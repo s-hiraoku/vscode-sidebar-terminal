@@ -2,10 +2,11 @@ import * as assert from 'assert';
 import * as vscode from 'vscode';
 
 suite('Extension Test Suite', () => {
-  vscode.window.showInformationMessage('Start all tests.');
+  void vscode.window.showInformationMessage('Start all tests.');
 
   test('Extension should be present', () => {
-    assert.ok(vscode.extensions.getExtension('your-publisher-name.vscode-sidebar-terminal'));
+    const extension = vscode.extensions.getExtension('s-hiraoku.vscode-sidebar-terminal');
+    assert.ok(extension);
   });
 
   test('Should register commands', async () => {

@@ -100,12 +100,14 @@ interface TerminalPane {
   element: HTMLElement;
   name: string;
   isActive: boolean;
+  isSplit: boolean;
 }
 
 class TerminalWebviewManager {
   private terminals = new Map<string, TerminalPane>();
   private activeTerminalId: string | undefined;
   private splitContainer: HTMLElement | undefined;
+  private splitMode: boolean = false;
 
   public initializeSplitView(): void {
     const container = document.getElementById('terminal');
@@ -116,12 +118,61 @@ class TerminalWebviewManager {
 
     container.innerHTML = `
       <div id="split-container" style="display: flex; flex-direction: column; height: 100%; width: 100%;">
-        <div id="terminal-tabs" style="display: flex; background: ${WEBVIEW_CONSTANTS.CSS_VARS.TAB_INACTIVE_BACKGROUND}; border-bottom: 1px solid ${WEBVIEW_CONSTANTS.CSS_VARS.TAB_BORDER}; min-height: 30px; align-items: center; padding: 0 8px; gap: 4px;"></div>
+        <div id="terminal-tabs" style="display: flex; background: ${WEBVIEW_CONSTANTS.CSS_VARS.TAB_INACTIVE_BACKGROUND}; border-bottom: 1px solid ${WEBVIEW_CONSTANTS.CSS_VARS.TAB_BORDER}; min-height: 30px; align-items: center; padding: 0 8px; gap: 4px;">
+          <div id="split-toggle" style="margin-left: auto; cursor: pointer; padding: 4px 8px; background: ${WEBVIEW_CONSTANTS.CSS_VARS.TAB_INACTIVE_BACKGROUND}; border: 1px solid ${WEBVIEW_CONSTANTS.CSS_VARS.TAB_BORDER}; border-radius: 3px; font-size: 12px; user-select: none;">Split View</div>
+        </div>
         <div id="terminal-panes" style="flex: 1; display: flex; flex-direction: row;"></div>
       </div>
     `;
 
     this.splitContainer = document.getElementById('terminal-panes') || undefined;
+
+    // Add split toggle event listener
+    const splitToggle = document.getElementById('split-toggle');
+    if (splitToggle) {
+      splitToggle.addEventListener('click', () => {
+        this.toggleSplitMode();
+      });
+    }
+  }
+
+  public toggleSplitMode(): void {
+    this.splitMode = !this.splitMode;
+    this.updateSplitView();
+
+    const splitToggle = document.getElementById('split-toggle');
+    if (splitToggle) {
+      splitToggle.textContent = this.splitMode ? 'Tab View' : 'Split View';
+      splitToggle.style.background = this.splitMode
+        ? WEBVIEW_CONSTANTS.CSS_VARS.TAB_ACTIVE_BACKGROUND
+        : WEBVIEW_CONSTANTS.CSS_VARS.TAB_INACTIVE_BACKGROUND;
+    }
+  }
+
+  private updateSplitView(): void {
+    if (this.splitMode) {
+      // Show all terminals in split view
+      for (const [, pane] of this.terminals) {
+        pane.isSplit = true;
+        pane.element.style.display = 'block';
+        pane.element.style.flex = `1`;
+        pane.element.style.minWidth = '0';
+        pane.element.style.borderRight = '1px solid var(--vscode-panel-border)';
+        pane.fitAddon.fit();
+      }
+    } else {
+      // Show only active terminal in tab view
+      for (const [, pane] of this.terminals) {
+        pane.isSplit = false;
+        pane.element.style.display = pane.isActive ? 'block' : 'none';
+        pane.element.style.flex = '1';
+        pane.element.style.minWidth = 'auto';
+        pane.element.style.borderRight = 'none';
+        if (pane.isActive) {
+          pane.fitAddon.fit();
+        }
+      }
+    }
   }
 
   public createTerminal(
@@ -188,6 +239,7 @@ class TerminalWebviewManager {
       element: paneElement,
       name,
       isActive,
+      isSplit: false,
     };
 
     this.terminals.set(id, terminalPane);
@@ -235,34 +287,29 @@ class TerminalWebviewManager {
   }
 
   public setActiveTerminal(terminalId: string): void {
-    // Hide all terminals
+    // Update all terminal states
     for (const [id, pane] of this.terminals) {
-      pane.element.style.display = 'none';
-      pane.isActive = false;
+      pane.isActive = id === terminalId;
 
       // Update tab appearance
       const tab = document.getElementById(`terminal-tab-${id}`);
       if (tab) {
-        tab.style.background = WEBVIEW_CONSTANTS.CSS_VARS.TAB_INACTIVE_BACKGROUND;
-        tab.style.color = WEBVIEW_CONSTANTS.CSS_VARS.TAB_INACTIVE_FOREGROUND;
+        tab.style.background = pane.isActive
+          ? WEBVIEW_CONSTANTS.CSS_VARS.TAB_ACTIVE_BACKGROUND
+          : WEBVIEW_CONSTANTS.CSS_VARS.TAB_INACTIVE_BACKGROUND;
+        tab.style.color = pane.isActive
+          ? WEBVIEW_CONSTANTS.CSS_VARS.TAB_ACTIVE_FOREGROUND
+          : WEBVIEW_CONSTANTS.CSS_VARS.TAB_INACTIVE_FOREGROUND;
       }
     }
 
-    // Show active terminal
     const activePane = this.terminals.get(terminalId);
     if (activePane) {
-      activePane.element.style.display = 'block';
-      activePane.isActive = true;
-      activePane.terminal.focus();
-      activePane.fitAddon.fit();
       this.activeTerminalId = terminalId;
+      activePane.terminal.focus();
 
-      // Update tab appearance
-      const tab = document.getElementById(`terminal-tab-${terminalId}`);
-      if (tab) {
-        tab.style.background = WEBVIEW_CONSTANTS.CSS_VARS.TAB_ACTIVE_BACKGROUND;
-        tab.style.color = WEBVIEW_CONSTANTS.CSS_VARS.TAB_ACTIVE_FOREGROUND;
-      }
+      // Update display based on current mode
+      this.updateSplitView();
 
       // Notify extension
       vscode.postMessage({
@@ -373,7 +420,7 @@ window.addEventListener('message', (event) => {
           `\r\n[Process exited with code ${message.exitCode ?? 'unknown'}]\r\n`
         );
         setTimeout(
-          () => terminalManager.removeTerminal(message.terminalId!),
+          () => terminalManager.removeTerminal(message.terminalId as string),
           TERMINAL_CONSTANTS.TERMINAL_REMOVE_DELAY
         );
       }

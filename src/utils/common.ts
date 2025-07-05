@@ -4,7 +4,7 @@
 
 import * as vscode from 'vscode';
 import * as os from 'os';
-import { TERMINAL_CONSTANTS, ERROR_MESSAGES } from '../constants';
+import { TERMINAL_CONSTANTS } from '../constants';
 import { TerminalConfig, TerminalInfo } from '../types/common';
 
 /**

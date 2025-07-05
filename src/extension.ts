@@ -33,7 +33,7 @@ export function activate(context: vscode.ExtensionContext): void {
     console.log('Sidebar Terminal extension activated successfully');
   } catch (error) {
     console.error('Failed to activate Sidebar Terminal extension:', error);
-    vscode.window.showErrorMessage(`Failed to activate Sidebar Terminal: ${String(error)}`);
+    void vscode.window.showErrorMessage(`Failed to activate Sidebar Terminal: ${String(error)}`);
   }
 }
 

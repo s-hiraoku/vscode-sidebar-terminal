@@ -40,7 +40,7 @@ suite('Integration Test Suite', () => {
   test('Should integrate TerminalManager with Provider', () => {
     assert.ok(terminalManager);
     assert.ok(provider);
-    
+
     // Test provider methods
     assert.ok(typeof provider.createNewTerminal === 'function');
     assert.ok(typeof provider.clearTerminal === 'function');
@@ -50,17 +50,17 @@ suite('Integration Test Suite', () => {
 
   test('Should handle terminal events through provider', (done) => {
     let eventReceived = false;
-    
+
     terminalManager.onTerminalCreated((terminal) => {
       eventReceived = true;
       assert.ok(terminal.id);
       assert.ok(terminal.name);
-      
+
       if (eventReceived) {
         done();
       }
     });
-    
+
     // Create terminal through provider
     provider.createNewTerminal();
   });
@@ -70,11 +70,11 @@ suite('Integration Test Suite', () => {
     const terminalId = terminalManager.createTerminal();
     assert.ok(terminalId);
     assert.strictEqual(terminalManager.hasActiveTerminal(), true);
-    
+
     // Split terminal
     provider.splitTerminal();
     assert.strictEqual(terminalManager.getTerminals().length, 2);
-    
+
     // Kill terminal
     provider.killTerminal();
     assert.strictEqual(terminalManager.getTerminals().length, 1);
@@ -82,7 +82,7 @@ suite('Integration Test Suite', () => {
 
   test('Should handle configuration changes', () => {
     const config = vscode.workspace.getConfiguration('sidebarTerminal');
-    
+
     // Test that provider respects configuration
     assert.ok(config.get('fontSize'));
     assert.ok(config.get('fontFamily'));
@@ -91,20 +91,20 @@ suite('Integration Test Suite', () => {
 
   test('Should handle terminal data flow', (done) => {
     let dataReceived = false;
-    
+
     terminalManager.onData((event) => {
       dataReceived = true;
       assert.ok(event.terminalId);
       assert.ok(event.data);
-      
+
       if (dataReceived) {
         done();
       }
     });
-    
+
     // Create terminal and simulate data
     const terminalId = terminalManager.createTerminal();
-    
+
     // Simulate data event (this would normally come from PTY)
     setTimeout(() => {
       terminalManager.sendInput('test\n', terminalId);
@@ -113,16 +113,16 @@ suite('Integration Test Suite', () => {
 
   test('Should handle terminal exit gracefully', (done) => {
     let exitReceived = false;
-    
+
     terminalManager.onExit((event) => {
       exitReceived = true;
       assert.ok(event.terminalId);
-      
+
       if (exitReceived) {
         done();
       }
     });
-    
+
     // Create and immediately kill terminal
     const terminalId = terminalManager.createTerminal();
     terminalManager.killTerminal(terminalId);
@@ -133,19 +133,19 @@ suite('Integration Test Suite', () => {
     const terminal1 = terminalManager.createTerminal();
     const terminal2 = terminalManager.createTerminal();
     const terminal3 = terminalManager.createTerminal();
-    
+
     // Verify state
     assert.strictEqual(terminalManager.getTerminals().length, 3);
     assert.strictEqual(terminalManager.getActiveTerminalId(), terminal3);
-    
+
     // Switch active terminal
     terminalManager.setActiveTerminal(terminal1);
     assert.strictEqual(terminalManager.getActiveTerminalId(), terminal1);
-    
+
     // Remove terminal
     terminalManager.killTerminal(terminal2);
     assert.strictEqual(terminalManager.getTerminals().length, 2);
-    
+
     // Verify active terminal is still correct
     assert.strictEqual(terminalManager.getActiveTerminalId(), terminal1);
   });
@@ -166,14 +166,10 @@ suite('Integration Test Suite', () => {
       visible: true,
       viewType: 'sidebarTerminal',
     } as any;
-    
+
     // Test resolveWebviewView
     assert.doesNotThrow(() => {
-      provider.resolveWebviewView(
-        mockWebviewView,
-        {} as any,
-        {} as any
-      );
+      provider.resolveWebviewView(mockWebviewView, {} as any, {} as any);
     });
   });
 });

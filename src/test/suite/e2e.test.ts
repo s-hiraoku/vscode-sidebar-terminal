@@ -10,9 +10,9 @@ suite('E2E Test Suite', () => {
     if (extension && !extension.isActive) {
       await extension.activate();
     }
-    
+
     // Wait for VS Code to be ready
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise((resolve) => setTimeout(resolve, 2000));
   });
 
   test('Extension should be active', async () => {
@@ -28,7 +28,7 @@ suite('E2E Test Suite', () => {
         getChildren: () => [],
       },
     });
-    
+
     assert.ok(terminalView);
     terminalView.dispose();
   });
@@ -76,14 +76,14 @@ suite('E2E Test Suite', () => {
   test('Should respect configuration changes', async () => {
     const config = vscode.workspace.getConfiguration('sidebarTerminal');
     const originalFontSize = config.get<number>('fontSize', 14);
-    
+
     // Change configuration
     await config.update('fontSize', 16, vscode.ConfigurationTarget.Global);
-    
+
     // Verify change
     const newFontSize = config.get<number>('fontSize', 14);
     assert.strictEqual(newFontSize, 16);
-    
+
     // Restore original configuration
     await config.update('fontSize', originalFontSize, vscode.ConfigurationTarget.Global);
   });
@@ -94,7 +94,7 @@ suite('E2E Test Suite', () => {
       await vscode.commands.executeCommand('sidebarTerminal.createTerminal');
       await vscode.commands.executeCommand('sidebarTerminal.createTerminal');
       await vscode.commands.executeCommand('sidebarTerminal.createTerminal');
-      
+
       assert.ok(true, 'Multiple terminals created successfully');
     } catch (error) {
       assert.fail(`Multiple terminal creation failed: ${String(error)}`);
@@ -104,7 +104,7 @@ suite('E2E Test Suite', () => {
   test('Should handle terminal limits', async () => {
     const config = vscode.workspace.getConfiguration('sidebarTerminal');
     const maxTerminals = config.get<number>('maxTerminals', 5);
-    
+
     // Try to create more than the limit
     for (let i = 0; i < maxTerminals + 2; i++) {
       try {
@@ -113,7 +113,7 @@ suite('E2E Test Suite', () => {
         // Expected to fail after reaching limit
       }
     }
-    
+
     assert.ok(true, 'Terminal limit handling works correctly');
   });
 

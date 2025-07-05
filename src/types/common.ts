@@ -36,7 +36,7 @@ export interface VsCodeMessage {
 
 export interface TerminalInstance {
   id: string;
-  pty: any; // node-pty IPty
+  pty: import('node-pty').IPty;
   name: string;
   isActive: boolean;
 }
