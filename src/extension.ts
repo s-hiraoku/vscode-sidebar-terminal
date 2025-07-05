@@ -48,9 +48,15 @@ function registerCommands(
   const commands = [
     {
       command: 'sidebarTerminal.createTerminal',
-      callback: () => {
+      callback: async () => {
         console.log('🔧 [DEBUG] Command executed: createTerminal');
-        provider.createNewTerminal();
+        try {
+          provider.createNewTerminal();
+          // Re-initialize to show the new terminal
+          await provider._initializeTerminal();
+        } catch (error) {
+          console.error('❌ [ERROR] Command createTerminal failed:', error);
+        }
       },
     },
     {
@@ -72,6 +78,41 @@ function registerCommands(
       callback: () => {
         console.log('🔧 [DEBUG] Command executed: splitTerminal');
         provider.splitTerminal();
+      },
+    },
+    {
+      command: 'sidebarTerminal.moveToRightPanel',
+      callback: async () => {
+        console.log('🔧 [DEBUG] Command executed: moveToRightPanel');
+        // Open auxiliary bar (right panel)
+        await vscode.commands.executeCommand('workbench.action.toggleAuxiliaryBar');
+        
+        // Show guide message
+        const result = await vscode.window.showInformationMessage(
+          '右側パネルが開きました。ターミナルビューをドラッグして右側に移動してください。',
+          'ガイドを表示',
+          '今後表示しない'
+        );
+        
+        if (result === 'ガイドを表示') {
+          await vscode.commands.executeCommand('sidebarTerminal.showRightPanelGuide');
+        } else if (result === '今後表示しない') {
+          // Save setting
+          await vscode.workspace.getConfiguration('sidebarTerminal').update('showRightPanelGuide', false, true);
+        }
+      },
+    },
+    {
+      command: 'sidebarTerminal.showRightPanelGuide',
+      callback: async () => {
+        console.log('🔧 [DEBUG] Command executed: showRightPanelGuide');
+        await vscode.window.showInformationMessage(
+          '右側パネルにターミナルを移動する方法:\n\n' +
+          '1. ターミナルビューのタイトルバーをクリック\n' +
+          '2. 右側パネルにドラッグ&ドロップ\n' +
+          '3. ターミナルが右側に表示されます',
+          'OK'
+        );
       },
     },
   ];

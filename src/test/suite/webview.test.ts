@@ -142,7 +142,7 @@ suite('Webview Test Suite', () => {
 
     provider.createNewTerminal = () => {
       createTerminalCalled = true;
-      originalCreateNewTerminal.call(provider);
+      return originalCreateNewTerminal.call(provider);
     };
 
     provider.clearTerminal = () => {

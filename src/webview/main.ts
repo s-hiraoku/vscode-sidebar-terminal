@@ -85,6 +85,7 @@ class TerminalWebviewManager {
   private fitAddon: FitAddon | null = null;
   private terminalContainer: HTMLElement | null = null;
   private isComposing: boolean = false;
+  private activeTerminalId: string | null = null;
 
   public initializeSimpleTerminal(): void {
     const container = document.getElementById('terminal');
@@ -240,7 +241,7 @@ class TerminalWebviewManager {
         vscode.postMessage({
           command: 'input' as const,
           data: e.data,
-          terminalId: 'terminal-initial', // Current terminal ID
+          terminalId: this.activeTerminalId || 'terminal-initial',
         });
       }
     });
@@ -259,6 +260,11 @@ class TerminalWebviewManager {
     document.head.appendChild(style);
     
     console.log('🌐 [WEBVIEW] IME handling setup complete');
+  }
+
+  public setActiveTerminalId(terminalId: string): void {
+    this.activeTerminalId = terminalId;
+    console.log('🎯 [WEBVIEW] Active terminal ID set to:', terminalId);
   }
 
   public createTerminal(
@@ -368,20 +374,20 @@ class TerminalWebviewManager {
         
         // Process the input based on character codes
         if (charCode === 127) {
-          // Backspace key (DEL character)
-          console.log('⌫ [WEBVIEW] Backspace detected');
+          // Backspace key (DEL character) - send as-is for proper handling
+          console.log('⌫ [WEBVIEW] DEL character detected (Backspace key)');
           vscode.postMessage({
             command: 'input' as const,
-            data: '\x08', // Send BS (backspace) instead of DEL
-            terminalId: id,
+            data: data, // Send DEL as-is - let pty handle it
+            terminalId: this.activeTerminalId || id,
           });
         } else if (charCode === 8) {
           // BS (backspace) character
-          console.log('⌫ [WEBVIEW] BS (backspace) detected');
+          console.log('⌫ [WEBVIEW] BS character detected');
           vscode.postMessage({
             command: 'input' as const,
             data: data, // Pass through as-is
-            terminalId: id,
+            terminalId: this.activeTerminalId || id,
           });
         } else if (charCode === 13) {
           // Enter key
@@ -389,7 +395,7 @@ class TerminalWebviewManager {
           vscode.postMessage({
             command: 'input' as const,
             data: '\r', // Ensure proper line ending
-            terminalId: id,
+            terminalId: this.activeTerminalId || id,
           });
         } else if (data.startsWith('\x1b[')) {
           // Arrow keys and other escape sequences
@@ -397,7 +403,7 @@ class TerminalWebviewManager {
           vscode.postMessage({
             command: 'input' as const,
             data: data,
-            terminalId: id,
+            terminalId: this.activeTerminalId || id,
           });
         } else if (charCode === 3) {
           // Ctrl+C (SIGINT)
@@ -405,7 +411,7 @@ class TerminalWebviewManager {
           vscode.postMessage({
             command: 'input' as const,
             data: '\x03',
-            terminalId: id,
+            terminalId: this.activeTerminalId || id,
           });
         } else if (charCode === 12) {
           // Ctrl+L (clear screen)
@@ -413,7 +419,7 @@ class TerminalWebviewManager {
           vscode.postMessage({
             command: 'input' as const,
             data: '\x0c',
-            terminalId: id,
+            terminalId: this.activeTerminalId || id,
           });
         } else if (charCode === 4) {
           // Ctrl+D (EOF)
@@ -421,7 +427,7 @@ class TerminalWebviewManager {
           vscode.postMessage({
             command: 'input' as const,
             data: '\x04',
-            terminalId: id,
+            terminalId: this.activeTerminalId || id,
           });
         } else if (charCode === 9) {
           // Tab (for completion)
@@ -429,14 +435,14 @@ class TerminalWebviewManager {
           vscode.postMessage({
             command: 'input' as const,
             data: '\x09',
-            terminalId: id,
+            terminalId: this.activeTerminalId || id,
           });
         } else {
           // Regular character input
           vscode.postMessage({
             command: 'input' as const,
             data,
-            terminalId: id,
+            terminalId: this.activeTerminalId || id,
           });
         }
       });
@@ -512,11 +518,17 @@ window.addEventListener('message', (event) => {
         console.log('🎯 [WEBVIEW] Initializing simple terminal');
         terminalManager.initializeSimpleTerminal();
         
-        // Create first terminal
+        // Set active terminal ID
+        if (message.activeTerminalId) {
+          terminalManager.setActiveTerminalId(message.activeTerminalId);
+          console.log('🎯 [WEBVIEW] Set active terminal ID:', message.activeTerminalId);
+        }
+        
+        // Create terminal with correct ID
         updateStatus('Creating initial terminal');
         console.log('🎯 [WEBVIEW] Creating initial terminal');
-        const firstTerminalId = 'terminal-initial';
-        terminalManager.createTerminal(firstTerminalId, 'Terminal 1', message.config);
+        const terminalId = message.activeTerminalId || 'terminal-initial';
+        terminalManager.createTerminal(terminalId, 'Terminal 1', message.config);
         
         updateStatus('Terminal ready');
         console.log('🎯 [WEBVIEW] Terminal initialization completed');

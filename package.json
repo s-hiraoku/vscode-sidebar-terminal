@@ -72,6 +72,15 @@
         "command": "sidebarTerminal.splitTerminal",
         "title": "Split Terminal",
         "icon": "$(split-vertical)"
+      },
+      {
+        "command": "sidebarTerminal.moveToRightPanel",
+        "title": "Move to Right Panel",
+        "icon": "$(arrow-right)"
+      },
+      {
+        "command": "sidebarTerminal.showRightPanelGuide",
+        "title": "Show Right Panel Guide"
       }
     ],
     "menus": {
@@ -95,6 +104,11 @@
           "command": "sidebarTerminal.killTerminal",
           "when": "view == sidebarTerminal",
           "group": "navigation@4"
+        },
+        {
+          "command": "sidebarTerminal.moveToRightPanel",
+          "when": "view == sidebarTerminal",
+          "group": "navigation@5"
         }
       ]
     },
@@ -125,6 +139,11 @@
           "type": "number",
           "default": 5,
           "description": "Maximum number of terminals allowed."
+        },
+        "sidebarTerminal.showRightPanelGuide": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show guidance for moving terminal to right panel."
         }
       }
     }

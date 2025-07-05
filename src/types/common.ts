@@ -24,6 +24,7 @@ export interface WebviewMessage {
   terminalId?: string;
   terminalName?: string;
   terminals?: TerminalInfo[];
+  activeTerminalId?: string;
 }
 
 export interface VsCodeMessage {

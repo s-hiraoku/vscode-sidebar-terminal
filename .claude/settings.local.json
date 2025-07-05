@@ -5,7 +5,11 @@
       "Bash(gh issue list:*)",
       "Bash(ls:*)",
       "Bash(npm run lint)",
-      "Bash(npm run compile:*)"
+      "Bash(npm run compile:*)",
+      "Bash(gh issue close:*)",
+      "Bash(gh issue create:*)",
+      "Bash(gh label create:*)",
+      "Bash(gh issue comment:*)"
     ],
     "deny": []
   }
