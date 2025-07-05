@@ -38,7 +38,7 @@ suite('TerminalManager Test Suite', () => {
   test('Should manage multiple terminals', () => {
     const terminal1 = terminalManager.createTerminal();
     const terminal2 = terminalManager.createTerminal();
-    
+
     assert.notStrictEqual(terminal1, terminal2);
     assert.strictEqual(terminalManager.getTerminals().length, 2);
     assert.strictEqual(terminalManager.getActiveTerminalId(), terminal2);
@@ -47,9 +47,9 @@ suite('TerminalManager Test Suite', () => {
   test('Should switch active terminal', () => {
     const terminal1 = terminalManager.createTerminal();
     const terminal2 = terminalManager.createTerminal();
-    
+
     assert.strictEqual(terminalManager.getActiveTerminalId(), terminal2);
-    
+
     terminalManager.setActiveTerminal(terminal1);
     assert.strictEqual(terminalManager.getActiveTerminalId(), terminal1);
   });
@@ -60,9 +60,9 @@ suite('TerminalManager Test Suite', () => {
     for (let i = 0; i < 5; i++) {
       terminals.push(terminalManager.createTerminal());
     }
-    
+
     assert.strictEqual(terminalManager.getTerminals().length, 5);
-    
+
     // Try to create one more (should not create)
     const extraTerminal = terminalManager.createTerminal();
     assert.strictEqual(terminalManager.getTerminals().length, 5);
@@ -72,9 +72,9 @@ suite('TerminalManager Test Suite', () => {
   test('Should remove terminal', () => {
     const terminal1 = terminalManager.createTerminal();
     const terminal2 = terminalManager.createTerminal();
-    
+
     assert.strictEqual(terminalManager.getTerminals().length, 2);
-    
+
     terminalManager.killTerminal(terminal1);
     assert.strictEqual(terminalManager.getTerminals().length, 1);
     assert.strictEqual(terminalManager.getActiveTerminalId(), terminal2);
@@ -82,18 +82,18 @@ suite('TerminalManager Test Suite', () => {
 
   test('Should handle terminal events', (done) => {
     let terminalCreatedCalled = false;
-    
+
     terminalManager.onTerminalCreated((terminal) => {
       terminalCreatedCalled = true;
       assert.ok(terminal.id);
       assert.ok(terminal.name);
       assert.strictEqual(terminal.isActive, true);
-      
+
       if (terminalCreatedCalled) {
         done();
       }
     });
-    
+
     terminalManager.createTerminal();
   });
 });

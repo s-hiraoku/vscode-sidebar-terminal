@@ -9,22 +9,22 @@ export const TERMINAL_CONSTANTS = {
   DEFAULT_FONT_FAMILY: 'Consolas, "Courier New", monospace',
   DEFAULT_COLS: 80,
   DEFAULT_ROWS: 30,
-  
+
   // ターミナル設定
   TERMINAL_NAME_PREFIX: 'Terminal',
   SCROLLBACK_LINES: 10000,
-  
+
   // タイミング
   TERMINAL_REMOVE_DELAY: 2000,
   NONCE_LENGTH: 32,
-  
+
   // プラットフォーム固有
   PLATFORMS: {
     WINDOWS: 'win32',
     DARWIN: 'darwin',
     LINUX: 'linux',
   } as const,
-  
+
   // 設定キー
   CONFIG_KEYS: {
     SIDEBAR_TERMINAL: 'sidebarTerminal',
@@ -38,7 +38,7 @@ export const TERMINAL_CONSTANTS = {
     SHELL_OSX: 'shell.osx',
     SHELL_LINUX: 'shell.linux',
   } as const,
-  
+
   // イベント名
   EVENTS: {
     DATA: 'data',
@@ -47,7 +47,7 @@ export const TERMINAL_CONSTANTS = {
     TERMINAL_CREATED: 'terminalCreated',
     TERMINAL_REMOVED: 'terminalRemoved',
   } as const,
-  
+
   // メッセージコマンド
   COMMANDS: {
     READY: 'ready',
@@ -74,7 +74,7 @@ export const WEBVIEW_CONSTANTS = {
     TAB_BORDER: 'var(--vscode-tab-border)',
     EDITOR_BACKGROUND: 'var(--vscode-editor-background)',
   } as const,
-  
+
   // デフォルトテーマ
   DARK_THEME: {
     background: '#1e1e1e',
@@ -98,7 +98,7 @@ export const WEBVIEW_CONSTANTS = {
     brightCyan: '#29b8db',
     brightWhite: '#ffffff',
   } as const,
-  
+
   LIGHT_THEME: {
     background: '#ffffff',
     foreground: '#333333',

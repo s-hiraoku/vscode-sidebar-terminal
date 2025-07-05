@@ -33,7 +33,7 @@ export class TerminalManager {
 
   public createTerminal(): string {
     const config = getTerminalConfig();
-    
+
     if (this._terminals.size >= config.maxTerminals) {
       showWarningMessage(`${ERROR_MESSAGES.MAX_TERMINALS_REACHED} (${config.maxTerminals})`);
       return this._activeTerminalManager.getActive() || '';
@@ -157,7 +157,7 @@ export class TerminalManager {
   private _removeTerminal(terminalId: string): void {
     this._terminals.delete(terminalId);
     this._terminalRemovedEmitter.fire(terminalId);
-    
+
     // アクティブターミナルだった場合、別のターミナルをアクティブにする
     if (this._activeTerminalManager.isActive(terminalId)) {
       const remaining = getFirstValue(this._terminals);

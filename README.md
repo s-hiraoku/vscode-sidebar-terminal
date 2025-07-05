@@ -1,241 +1,219 @@
 # VS Code Sidebar Terminal
 
-サイドバーに統合されたターミナル機能を提供するVisual Studio Code拡張です。複数のターミナルタブと分割表示をサポートし、直感的なUI/UXでターミナル操作を効率化します。
+[![GitHub license](https://img.shields.io/github/license/s-hiraoku/vscode-sidebar-terminal)](https://github.com/s-hiraoku/vscode-sidebar-terminal/blob/main/LICENSE)
+[![GitHub issues](https://img.shields.io/github/issues/s-hiraoku/vscode-sidebar-terminal)](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues)
+[![GitHub stars](https://img.shields.io/github/stars/s-hiraoku/vscode-sidebar-terminal)](https://github.com/s-hiraoku/vscode-sidebar-terminal/stargazers)
 
-## 機能
+VS Code のサイドパネルにターミナルを表示する拡張機能です。複数のターミナルを縦分割で同時に表示し、効率的な開発作業をサポートします。
 
-### 🖥️ 主な機能
-- **サイドバー統合**: メインエディタエリアを占有せずにターミナルを使用
-- **複数ターミナル**: 最大5つまでのターミナルインスタンスを同時実行
-- **タブベースUI**: 各ターミナルをタブで切り替え可能
-- **プラットフォーム対応**: Windows、macOS、Linuxすべてで動作
-- **設定可能**: フォント、シェル、動作設定をカスタマイズ可能
+## 🚀 主な機能
 
-### ⚡ 高度な機能
-- **xterm.js統合**: フル機能のターミナルエミュレーション
-- **Unicode対応**: 絵文字や多言語文字の完全サポート
-- **リンク検出**: URLの自動検出とクリック対応
-- **リサイズ対応**: ウィンドウサイズに応じた自動調整
-- **テーマ連携**: VS Codeのダーク/ライトテーマに自動対応
+- **サイドパネル表示**: Explorer パネルでターミナルを確認しながら作業
+- **複数ターミナル管理**: 最大5つのターミナルを同時に実行
+- **タブ切り替え**: 直感的なタブでターミナル間の切り替え
+- **分割機能**: ターミナルを縦分割して同時に表示
+- **カスタマイズ可能**: フォント、サイズ、シェルの設定が可能
+- **クロスプラットフォーム**: Windows、macOS、Linux 対応
 
-## インストール
+## 📦 インストール
 
-### Visual Studio Code Marketplace経由
-1. VS Codeを開く
-2. 拡張機能ビュー（`Ctrl+Shift+X`）を開く
-3. "Sidebar Terminal"を検索
+### VS Code Marketplace からのインストール（予定）
+
+1. VS Code を開く
+2. 拡張機能パネル（`Ctrl+Shift+X`）を開く
+3. "Sidebar Terminal" を検索
 4. インストールボタンをクリック
 
 ### 手動インストール
+
+1. [Releases](https://github.com/s-hiraoku/vscode-sidebar-terminal/releases) から最新の `.vsix` ファイルをダウンロード
+2. VS Code で `Ctrl+Shift+P` を押してコマンドパレットを開く
+3. "Extensions: Install from VSIX..." を選択
+4. ダウンロードした `.vsix` ファイルを選択
+
+## 🎯 使用方法
+
+### 基本操作
+
+1. **ターミナルを開く**: Explorer パネルで "Terminal" ビューをクリック
+2. **新しいターミナル作成**: タイトルバーの `+` ボタンをクリック
+3. **ターミナル分割**: タイトルバーの分割ボタンをクリック
+4. **ターミナル切り替え**: タブをクリックして切り替え
+5. **ターミナル終了**: タイトルバーの `×` ボタンをクリック
+
+### コマンドパレット
+
+- `Sidebar Terminal: Create New Terminal` - 新しいターミナルを作成
+- `Sidebar Terminal: Split Terminal` - ターミナルを分割
+- `Sidebar Terminal: Clear Terminal` - アクティブなターミナルをクリア
+- `Sidebar Terminal: Kill Terminal` - アクティブなターミナルを終了
+
+## ⚙️ 設定
+
+VS Code の設定（`settings.json`）で以下の項目をカスタマイズできます：
+
+```json
+{
+  "sidebarTerminal.shell": "",
+  "sidebarTerminal.shellArgs": [],
+  "sidebarTerminal.fontSize": 14,
+  "sidebarTerminal.fontFamily": "Consolas, 'Courier New', monospace",
+  "sidebarTerminal.maxTerminals": 5
+}
+```
+
+### 設定項目詳細
+
+| 設定項目 | 型 | デフォルト値 | 説明 |
+|---------|---|------------|------|
+| `shell` | string | "" | 使用するシェルのパス（空文字でシステムデフォルト） |
+| `shellArgs` | array | [] | シェルに渡す引数 |
+| `fontSize` | number | 14 | ターミナルのフォントサイズ |
+| `fontFamily` | string | "Consolas, 'Courier New', monospace" | ターミナルのフォントファミリー |
+| `maxTerminals` | number | 5 | 同時実行可能なターミナルの最大数 |
+
+## 🛠️ 開発
+
+### 必要な環境
+
+- Node.js 18+
+- VS Code 1.74.0+
+- npm または yarn
+
+### セットアップ
+
 ```bash
 # リポジトリをクローン
-git clone https://github.com/yourusername/vscode-sidebar-terminal.git
+git clone https://github.com/s-hiraoku/vscode-sidebar-terminal.git
 cd vscode-sidebar-terminal
 
 # 依存関係をインストール
 npm install
 
-# 拡張をビルド
-npm run compile
-
-# VS Codeで開発モードで実行
-# F5キーを押して開発ホストでテスト
-```
-
-## 使用方法
-
-### 基本操作
-
-#### ターミナルの開始
-1. VS Codeのサイドバーで「ターミナル」ビューを選択
-2. 自動的に最初のターミナルが作成されます
-
-#### 新しいターミナルの作成
-- コマンドパレット（`Ctrl+Shift+P`）で「Sidebar Terminal: Create Terminal」を実行
-- または、既存のターミナルタブの隣の「+」ボタンをクリック
-
-#### ターミナルの切り替え
-- タブをクリックして切り替え
-- キーボードショートカット（設定可能）
-
-#### ターミナルの終了
-- コマンドパレットで「Sidebar Terminal: Kill Terminal」を実行
-- または、ターミナル内で`exit`コマンドを実行
-
-### キーボードショートカット
-
-| コマンド | デフォルト | 説明 |
-|---------|-----------|------|
-| 新しいターミナル作成 | `Ctrl+Shift+`` | サイドバーに新しいターミナルを作成 |
-| ターミナルクリア | `Ctrl+K` | アクティブなターミナルの内容をクリア |
-| ターミナル終了 | `Ctrl+Shift+K` | アクティブなターミナルを終了 |
-
-## 設定
-
-### 設定項目
-
-```json
-{
-  // 最大ターミナル数（1-10）
-  "sidebarTerminal.maxTerminals": 5,
-  
-  // フォント設定
-  "sidebarTerminal.fontSize": 14,
-  "sidebarTerminal.fontFamily": "Consolas, 'Courier New', monospace",
-  
-  // シェル設定（空の場合はシステムデフォルト）
-  "sidebarTerminal.shell": "",
-  "sidebarTerminal.shellArgs": []
-}
-```
-
-### プラットフォーム別設定
-
-#### Windows
-```json
-{
-  "sidebarTerminal.shell": "powershell.exe",
-  "sidebarTerminal.shellArgs": ["-NoLogo"]
-}
-```
-
-#### macOS
-```json
-{
-  "sidebarTerminal.shell": "/bin/zsh",
-  "sidebarTerminal.shellArgs": ["-l"]
-}
-```
-
-#### Linux
-```json
-{
-  "sidebarTerminal.shell": "/bin/bash",
-  "sidebarTerminal.shellArgs": ["--login"]
-}
-```
-
-## 開発
-
-### 技術スタック
-- **TypeScript**: メインの開発言語
-- **node-pty**: ターミナルプロセス管理
-- **xterm.js**: ターミナルUI
-- **VS Code API**: 拡張機能フレームワーク
-
-### プロジェクト構造
-```
-src/
-├── constants/          # 定数定義
-│   └── index.ts
-├── providers/          # VS Code プロバイダー
-│   └── SidebarTerminalProvider.ts
-├── terminals/          # ターミナル管理
-│   └── TerminalManager.ts
-├── types/             # TypeScript型定義
-│   └── common.ts
-├── utils/             # ユーティリティ関数
-│   └── common.ts
-├── webview/           # Webview（フロントエンド）
-│   └── main.ts
-└── extension.ts       # 拡張エントリーポイント
-```
-
-### ビルドスクリプト
-```bash
-# 開発ビルド
+# 開発用ビルド
 npm run compile
 
 # ウォッチモード
 npm run watch
-
-# 本番ビルド
-npm run package
-
-# テスト実行
-npm test
-
-# リンター実行
-npm run lint
-
-# フォーマット
-npm run format
 ```
 
 ### デバッグ
-1. VS Codeでプロジェクトを開く
-2. `F5`キーを押して開発ホストを起動
-3. 新しいVS Codeウィンドウで拡張をテスト
-4. `Ctrl+Shift+I`で開発者ツールを開く
 
-## トラブルシューティング
+1. VS Code でプロジェクトを開く
+2. `F5` キーを押してExtension Development Hostを起動
+3. 新しいウィンドウでExplorerパネルの"Terminal"を確認
+
+### テスト実行
+
+```bash
+# 単体テスト
+npm test
+
+# リンター
+npm run lint
+
+# フォーマッター
+npm run format
+
+# プロダクションビルド
+npm run package
+```
+
+## 🏗️ アーキテクチャ
+
+```
+src/
+├── constants/          # 定数定義
+├── providers/          # WebView プロバイダー
+├── terminals/          # ターミナル管理
+├── types/             # 型定義
+├── utils/             # ユーティリティ関数
+├── webview/           # フロントエンド
+└── extension.ts       # エントリーポイント
+```
+
+### 主要コンポーネント
+
+- **TerminalManager**: 複数ターミナルの状態管理
+- **SidebarTerminalProvider**: VS Code WebView との連携
+- **WebView (xterm.js)**: ターミナル UI の描画
+- **PTY Process**: システムレベルのシェル連携
+
+## 🤝 コントリビューション
+
+コントリビューションを歓迎します！以下の手順でお願いします：
+
+1. このリポジトリをフォーク
+2. 機能ブランチを作成 (`git checkout -b feature/amazing-feature`)
+3. 変更をコミット (`git commit -m 'Add some amazing feature'`)
+4. ブランチにプッシュ (`git push origin feature/amazing-feature`)
+5. Pull Request を作成
+
+### コントリビューションガイドライン
+
+- TypeScript の型安全性を保つ
+- ESLint と Prettier のルールに従う
+- テストを追加して機能をカバー
+- コミットメッセージは [Conventional Commits](https://conventionalcommits.org/) 形式で記述
+
+## 🐛 トラブルシューティング
 
 ### よくある問題
 
-#### ターミナルが表示されない
-1. VS Codeのバージョンが最新か確認
-2. 拡張が有効になっているか確認
-3. 設定のシェルパスが正しいか確認
+**Q: ターミナルが表示されない**
+A: VS Code を再起動するか、拡張機能を無効/有効にしてください。
 
-#### パフォーマンスの問題
-1. 同時に開くターミナル数を制限（設定で調整）
-2. 不要なターミナルを終了
-3. スクロールバックの行数を調整
+**Q: シェルが起動しない**
+A: `sidebarTerminal.shell` 設定でシェルのパスが正しいか確認してください。
 
-#### 文字化け
-1. フォントファミリの設定を確認
-2. Unicode対応フォントを使用
-3. シェルのエンコーディング設定を確認
+**Q: 日本語が文字化けする**
+A: ターミナルの文字コード設定を UTF-8 に変更してください。
 
-### ログの確認
-1. 開発者ツール（`Ctrl+Shift+I`）を開く
-2. コンソールタブでエラーメッセージを確認
-3. 出力パネルで"Sidebar Terminal"チャンネルを選択
+**Q: パフォーマンスが遅い**
+A: `maxTerminals` 設定で同時実行数を減らしてください。
 
-## コントリビューション
+### デバッグ情報
 
-### 貢献方法
-1. このリポジトリをフォーク
-2. 機能ブランチを作成（`git checkout -b feature/amazing-feature`）
-3. 変更をコミット（`git commit -m 'Add amazing feature'`）
-4. ブランチをプッシュ（`git push origin feature/amazing-feature`）
-5. プルリクエストを作成
+問題が発生した場合は、以下の情報を含めて Issue を作成してください：
 
-### 開発ガイドライン
-- TypeScriptの厳密な型チェックを使用
-- ESLintとPrettierの設定に従う
-- 新機能にはテストを追加
-- コミットメッセージは[Conventional Commits](https://conventionalcommits.org/)形式
-
-### バグレポート
-GitHubのIssuesでバグレポートを作成してください。以下の情報を含めてください：
-- OS（Windows/macOS/Linux）
-- VS Codeバージョン
-- 拡張バージョン
+- VS Code バージョン
+- 拡張機能バージョン
+- OS とバージョン
+- 使用しているシェル
+- エラーメッセージ
 - 再現手順
-- 期待される動作
-- 実際の動作
 
-## ライセンス
+## 📄 ライセンス
 
-このプロジェクトはMITライセンスの下で公開されています。詳細は[LICENSE](LICENSE)ファイルを参照してください。
+このプロジェクトは [MIT License](LICENSE) の下で公開されています。
 
-## 謝辞
+## 📝 更新履歴
 
-- [xterm.js](https://xtermjs.org/) - 優れたターミナルエミュレーター
-- [node-pty](https://github.com/microsoft/node-pty) - クロスプラットフォームターミナル
-- VS Code チーム - 素晴らしい拡張API
+### v0.0.1 (開発中)
 
-## 変更履歴
+- 初期リリース
+- サイドパネルターミナル表示
+- 複数ターミナル管理
+- 縦分割機能
+- 設定カスタマイズ
 
-### v1.0.0 (予定)
-- 初回リリース
-- 基本的なターミナル機能
-- 複数ターミナルサポート
-- 設定可能なオプション
+## 🙏 謝辞
+
+このプロジェクトは以下の優れたライブラリを使用しています：
+
+- [xterm.js](https://xtermjs.org/) - ターミナルエミュレーター
+- [node-pty](https://github.com/microsoft/node-pty) - PTY プロセス管理
+- [VS Code Extension API](https://code.visualstudio.com/api) - 拡張機能フレームワーク
+
+## 🔗 関連リンク
+
+- [VS Code Extension API](https://code.visualstudio.com/api)
+- [xterm.js Documentation](https://xtermjs.org/docs/)
+- [node-pty Documentation](https://github.com/microsoft/node-pty)
 
 ---
 
-**作者**: Your Name
-**リポジトリ**: https://github.com/yourusername/vscode-sidebar-terminal
-**バグレポート**: https://github.com/yourusername/vscode-sidebar-terminal/issues
+**開発者**: [s-hiraoku](https://github.com/s-hiraoku)  
+**リポジトリ**: [vscode-sidebar-terminal](https://github.com/s-hiraoku/vscode-sidebar-terminal)  
+**ライセンス**: MIT  
+**サポート**: [Issues](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues)

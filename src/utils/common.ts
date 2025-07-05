@@ -12,11 +12,20 @@ import { TerminalConfig, TerminalInfo } from '../types/common';
  */
 export function getTerminalConfig(): TerminalConfig {
   const config = vscode.workspace.getConfiguration(TERMINAL_CONSTANTS.CONFIG_KEYS.SIDEBAR_TERMINAL);
-  
+
   return {
-    fontSize: config.get<number>(TERMINAL_CONSTANTS.CONFIG_KEYS.FONT_SIZE, TERMINAL_CONSTANTS.DEFAULT_FONT_SIZE),
-    fontFamily: config.get<string>(TERMINAL_CONSTANTS.CONFIG_KEYS.FONT_FAMILY, TERMINAL_CONSTANTS.DEFAULT_FONT_FAMILY),
-    maxTerminals: config.get<number>(TERMINAL_CONSTANTS.CONFIG_KEYS.MAX_TERMINALS, TERMINAL_CONSTANTS.DEFAULT_MAX_TERMINALS),
+    fontSize: config.get<number>(
+      TERMINAL_CONSTANTS.CONFIG_KEYS.FONT_SIZE,
+      TERMINAL_CONSTANTS.DEFAULT_FONT_SIZE
+    ),
+    fontFamily: config.get<string>(
+      TERMINAL_CONSTANTS.CONFIG_KEYS.FONT_FAMILY,
+      TERMINAL_CONSTANTS.DEFAULT_FONT_FAMILY
+    ),
+    maxTerminals: config.get<number>(
+      TERMINAL_CONSTANTS.CONFIG_KEYS.MAX_TERMINALS,
+      TERMINAL_CONSTANTS.DEFAULT_MAX_TERMINALS
+    ),
     shell: config.get<string>(TERMINAL_CONSTANTS.CONFIG_KEYS.SHELL, ''),
     shellArgs: config.get<string[]>(TERMINAL_CONSTANTS.CONFIG_KEYS.SHELL_ARGS, []),
   };
@@ -31,23 +40,31 @@ export function getShellForPlatform(customShell: string): string {
   }
 
   // VS Code の統合ターミナル設定をフォールバックとして使用
-  const terminalConfig = vscode.workspace.getConfiguration(TERMINAL_CONSTANTS.CONFIG_KEYS.TERMINAL_INTEGRATED);
+  const terminalConfig = vscode.workspace.getConfiguration(
+    TERMINAL_CONSTANTS.CONFIG_KEYS.TERMINAL_INTEGRATED
+  );
 
   switch (process.platform) {
     case TERMINAL_CONSTANTS.PLATFORMS.WINDOWS:
-      return terminalConfig.get<string>(TERMINAL_CONSTANTS.CONFIG_KEYS.SHELL_WINDOWS) || 
-             process.env['COMSPEC'] || 
-             'cmd.exe';
-    
+      return (
+        terminalConfig.get<string>(TERMINAL_CONSTANTS.CONFIG_KEYS.SHELL_WINDOWS) ||
+        process.env['COMSPEC'] ||
+        'cmd.exe'
+      );
+
     case TERMINAL_CONSTANTS.PLATFORMS.DARWIN:
-      return terminalConfig.get<string>(TERMINAL_CONSTANTS.CONFIG_KEYS.SHELL_OSX) || 
-             process.env['SHELL'] || 
-             '/bin/zsh';
-    
+      return (
+        terminalConfig.get<string>(TERMINAL_CONSTANTS.CONFIG_KEYS.SHELL_OSX) ||
+        process.env['SHELL'] ||
+        '/bin/zsh'
+      );
+
     default:
-      return terminalConfig.get<string>(TERMINAL_CONSTANTS.CONFIG_KEYS.SHELL_LINUX) || 
-             process.env['SHELL'] || 
-             '/bin/bash';
+      return (
+        terminalConfig.get<string>(TERMINAL_CONSTANTS.CONFIG_KEYS.SHELL_LINUX) ||
+        process.env['SHELL'] ||
+        '/bin/bash'
+      );
   }
 }
 
@@ -83,7 +100,11 @@ export function showWarningMessage(message: string): void {
 /**
  * ターミナル情報を正規化
  */
-export function normalizeTerminalInfo(terminal: { id: string; name: string; isActive: boolean }): TerminalInfo {
+export function normalizeTerminalInfo(terminal: {
+  id: string;
+  name: string;
+  isActive: boolean;
+}): TerminalInfo {
   return {
     id: terminal.id,
     name: terminal.name,
@@ -171,7 +192,7 @@ export function getFirstValue<T>(map: Map<string, T>): T | undefined {
  * 遅延実行
  */
 export function delay(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**

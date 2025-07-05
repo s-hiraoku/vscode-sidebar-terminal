@@ -40,7 +40,10 @@ export function activate(context: vscode.ExtensionContext): void {
 /**
  * コマンドを登録する
  */
-function registerCommands(context: vscode.ExtensionContext, provider: SidebarTerminalProvider): void {
+function registerCommands(
+  context: vscode.ExtensionContext,
+  provider: SidebarTerminalProvider
+): void {
   const commands = [
     {
       command: 'sidebarTerminal.createTerminal',
@@ -67,15 +70,15 @@ function registerCommands(context: vscode.ExtensionContext, provider: SidebarTer
 
 export function deactivate(): void {
   console.log('Deactivating Sidebar Terminal extension...');
-  
+
   try {
     if (terminalManager) {
       terminalManager.dispose();
       terminalManager = undefined;
     }
-    
+
     sidebarProvider = undefined;
-    
+
     console.log('Sidebar Terminal extension deactivated successfully');
   } catch (error) {
     console.error('Error during deactivation:', error);

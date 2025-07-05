@@ -10,7 +10,7 @@ suite('Extension Test Suite', () => {
 
   test('Should register commands', async () => {
     const commands = await vscode.commands.getCommands(true);
-    
+
     assert.ok(commands.includes('sidebarTerminal.createTerminal'));
     assert.ok(commands.includes('sidebarTerminal.clearTerminal'));
     assert.ok(commands.includes('sidebarTerminal.killTerminal'));
@@ -20,11 +20,11 @@ suite('Extension Test Suite', () => {
   test('Should activate extension', async () => {
     const extension = vscode.extensions.getExtension('your-publisher-name.vscode-sidebar-terminal');
     assert.ok(extension);
-    
+
     if (!extension!.isActive) {
       await extension!.activate();
     }
-    
+
     assert.ok(extension!.isActive);
   });
 });

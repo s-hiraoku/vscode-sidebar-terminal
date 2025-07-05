@@ -60,7 +60,12 @@ class TerminalWebviewManager {
     this.splitContainer = document.getElementById('terminal-panes') || undefined;
   }
 
-  public createTerminal(id: string, name: string, config: TerminalConfig, isActive: boolean = false): void {
+  public createTerminal(
+    id: string,
+    name: string,
+    config: TerminalConfig,
+    isActive: boolean = false
+  ): void {
     if (!this.splitContainer) {
       this.initializeSplitView();
     }
@@ -170,7 +175,7 @@ class TerminalWebviewManager {
     for (const [id, pane] of this.terminals) {
       pane.element.style.display = 'none';
       pane.isActive = false;
-      
+
       // Update tab appearance
       const tab = document.getElementById(`terminal-tab-${id}`);
       if (tab) {
@@ -187,7 +192,7 @@ class TerminalWebviewManager {
       activePane.terminal.focus();
       activePane.fitAddon.fit();
       this.activeTerminalId = terminalId;
-      
+
       // Update tab appearance
       const tab = document.getElementById(`terminal-tab-${terminalId}`);
       if (tab) {
@@ -209,13 +214,13 @@ class TerminalWebviewManager {
       pane.terminal.dispose();
       pane.element.remove();
       this.terminals.delete(terminalId);
-      
+
       // Remove tab
       const tab = document.getElementById(`terminal-tab-${terminalId}`);
       if (tab) {
         tab.remove();
       }
-      
+
       // If this was the active terminal, activate another one
       if (this.activeTerminalId === terminalId) {
         const remaining = Array.from(this.terminals.keys());
@@ -254,7 +259,9 @@ const terminalManager = new TerminalWebviewManager();
 
 function getTheme(): { [key: string]: string } {
   const style = getComputedStyle(document.body);
-  const isDark = style.getPropertyValue(WEBVIEW_CONSTANTS.CSS_VARS.EDITOR_BACKGROUND).includes('1e1e1e');
+  const isDark = style
+    .getPropertyValue(WEBVIEW_CONSTANTS.CSS_VARS.EDITOR_BACKGROUND)
+    .includes('1e1e1e');
 
   return isDark ? WEBVIEW_CONSTANTS.DARK_THEME : WEBVIEW_CONSTANTS.LIGHT_THEME;
 }
@@ -270,7 +277,12 @@ window.addEventListener('message', (event) => {
         // Initialize existing terminals
         if (message.terminals && message.terminals.length > 0) {
           for (const terminal of message.terminals) {
-            terminalManager.createTerminal(terminal.id, terminal.name, message.config, terminal.isActive);
+            terminalManager.createTerminal(
+              terminal.id,
+              terminal.name,
+              message.config,
+              terminal.isActive
+            );
           }
         } else {
           // Create first terminal if none exist
@@ -296,14 +308,22 @@ window.addEventListener('message', (event) => {
           message.terminalId,
           `\r\n[Process exited with code ${message.exitCode ?? 'unknown'}]\r\n`
         );
-        setTimeout(() => terminalManager.removeTerminal(message.terminalId!), TERMINAL_CONSTANTS.TERMINAL_REMOVE_DELAY);
+        setTimeout(
+          () => terminalManager.removeTerminal(message.terminalId!),
+          TERMINAL_CONSTANTS.TERMINAL_REMOVE_DELAY
+        );
       }
       break;
 
     case TERMINAL_CONSTANTS.COMMANDS.SPLIT:
     case TERMINAL_CONSTANTS.COMMANDS.TERMINAL_CREATED:
       if (message.terminalId && message.terminalName && message.config) {
-        terminalManager.createTerminal(message.terminalId, message.terminalName, message.config, true);
+        terminalManager.createTerminal(
+          message.terminalId,
+          message.terminalName,
+          message.config,
+          true
+        );
       }
       break;
 
