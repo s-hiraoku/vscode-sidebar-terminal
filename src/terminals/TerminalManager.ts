@@ -87,9 +87,17 @@ export class TerminalManager {
 
   public sendInput(data: string, terminalId?: string): void {
     const id = terminalId || this._activeTerminalManager.getActive();
+    console.log('🔧 [DEBUG] TerminalManager.sendInput called with data:', JSON.stringify(data), 'terminalId:', id);
     if (id) {
       const terminal = this._terminals.get(id);
-      terminal?.pty.write(data);
+      if (terminal) {
+        console.log('🔧 [DEBUG] Writing to pty:', JSON.stringify(data));
+        terminal.pty.write(data);
+      } else {
+        console.warn('⚠️ [WARN] Terminal not found for id:', id);
+      }
+    } else {
+      console.warn('⚠️ [WARN] No active terminal to send input to');
     }
   }
 

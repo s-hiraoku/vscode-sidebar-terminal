@@ -33,10 +33,10 @@
   "main": "./dist/extension.js",
   "contributes": {
     "viewsContainers": {
-      "panel": [
+      "activitybar": [
         {
           "id": "sidebarTerminalContainer",
-          "title": "Terminal",
+          "title": "Sidebar Terminal",
           "icon": "$(terminal)"
         }
       ]

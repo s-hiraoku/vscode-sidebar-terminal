@@ -27,7 +27,7 @@ export interface WebviewMessage {
 }
 
 export interface VsCodeMessage {
-  command: 'ready' | 'input' | 'resize' | 'switchTerminal';
+  command: 'ready' | 'input' | 'resize' | 'switchTerminal' | 'createTerminal' | 'splitTerminal' | 'clear';
   data?: string;
   cols?: number;
   rows?: number;

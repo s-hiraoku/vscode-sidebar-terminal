@@ -22,6 +22,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
     console.log('🔧 [DEBUG] SidebarTerminalProvider.resolveWebviewView called');
     this._view = webviewView;
 
+    // Enable scripts and set resource roots
     webviewView.webview.options = {
       enableScripts: true,
       localResourceRoots: [this._extensionContext.extensionUri],
@@ -30,7 +31,9 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
     try {
       const html = this._getHtmlForWebview(webviewView.webview);
       console.log('🔧 [DEBUG] Generated HTML length:', html.length);
+      console.log('🔧 [DEBUG] Setting webview HTML...');
       webviewView.webview.html = html;
+      console.log('✅ [DEBUG] HTML set successfully');
     } catch (error) {
       console.error('❌ [ERROR] Failed to generate HTML for webview:', error);
       void vscode.window.showErrorMessage(`Failed to generate webview HTML: ${String(error)}`);
@@ -40,7 +43,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
     // Handle messages from the webview
     webviewView.webview.onDidReceiveMessage(
       async (message: VsCodeMessage) => {
-        console.log('📨 [DEBUG] Received message from webview:', message.command);
+        console.log('📨 [DEBUG] Received message from webview:', message.command, message);
         await this._handleWebviewMessage(message);
       },
       null,
@@ -49,6 +52,12 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
 
     // Set up terminal event listeners
     this._setupTerminalEventListeners();
+
+    // Force initial terminal creation
+    setTimeout(() => {
+      console.log('🔧 [DEBUG] Force creating initial terminal...');
+      this.createNewTerminal();
+    }, 1000);
 
     console.log('✅ [DEBUG] WebviewView setup completed');
   }
@@ -149,7 +158,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
           break;
         case TERMINAL_CONSTANTS.COMMANDS.INPUT:
           if (message.data) {
-            console.log('⌨️ [DEBUG] Terminal input:', message.data.length, 'chars');
+            console.log('⌨️ [DEBUG] Terminal input:', message.data.length, 'chars, data:', JSON.stringify(message.data), 'terminalId:', message.terminalId);
             this._terminalManager.sendInput(message.data, message.terminalId);
           }
           break;
@@ -164,6 +173,18 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
             console.log('🔄 [DEBUG] Switching to terminal:', message.terminalId);
             this._terminalManager.setActiveTerminal(message.terminalId);
           }
+          break;
+        case 'createTerminal':
+          console.log('🆕 [DEBUG] Creating new terminal from webview...');
+          this.createNewTerminal();
+          break;
+        case 'splitTerminal':
+          console.log('🔀 [DEBUG] Splitting terminal from webview...');
+          this.splitTerminal();
+          break;
+        case 'clear':
+          console.log('🧹 [DEBUG] Clear command from webview...');
+          this.clearTerminal();
           break;
         default:
           console.warn('⚠️ [WARN] Unknown command received:', message.command);
@@ -180,11 +201,14 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
   private _setupTerminalEventListeners(): void {
     // Handle terminal output
     this._terminalManager.onData((event) => {
-      void this._sendMessage({
-        command: TERMINAL_CONSTANTS.COMMANDS.OUTPUT,
-        data: event.data,
-        terminalId: event.terminalId,
-      });
+      if (event.data) {
+        console.log('📤 [DEBUG] Terminal output received:', event.data.length, 'chars, terminalId:', event.terminalId);
+        void this._sendMessage({
+          command: TERMINAL_CONSTANTS.COMMANDS.OUTPUT,
+          data: event.data,
+          terminalId: event.terminalId,
+        });
+      }
     });
 
     // Handle terminal exit
@@ -198,10 +222,12 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
 
     // Handle terminal creation
     this._terminalManager.onTerminalCreated((terminal) => {
+      console.log('🆕 [DEBUG] Terminal created:', terminal.id, terminal.name);
       void this._sendMessage({
         command: TERMINAL_CONSTANTS.COMMANDS.TERMINAL_CREATED,
         terminalId: terminal.id,
         terminalName: terminal.name,
+        config: getTerminalConfig(),
       });
     });
 
@@ -270,25 +296,48 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
                 padding: 0;
                 overflow: hidden;
                 background-color: var(--vscode-editor-background, #1e1e1e);
+                color: var(--vscode-foreground, #cccccc);
+                font-family: var(--vscode-font-family, monospace);
             }
             #terminal {
-                width: 100vw;
+                width: 100%;
                 height: 100vh;
+                position: relative;
+            }
+            .status {
+                position: absolute;
+                top: 5px;
+                left: 5px;
+                z-index: 1000;
+                color: #00ff00;
+                font-size: 11px;
+                font-family: monospace;
+                background: rgba(0, 0, 0, 0.8);
+                padding: 2px 6px;
+                border-radius: 3px;
+                max-width: 300px;
+                word-break: break-all;
             }
             .loading {
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 height: 100vh;
-                color: var(--vscode-foreground);
-                font-family: var(--vscode-font-family);
+                color: var(--vscode-foreground, #cccccc);
+                font-family: var(--vscode-font-family, monospace);
+                background: var(--vscode-editor-background, #1e1e1e);
             }
         </style>
     </head>
     <body>
-        <div id="terminal">
-            <div class="loading">Loading terminal...</div>
+        <div class="status" id="status">Initializing...</div>
+        <div id="terminal" style="position: absolute; top: 30px; left: 0; right: 0; bottom: 0; background: #000; border: 2px solid #00ff00;">
+            <!-- Simple terminal container -->
         </div>
+        <script nonce="${nonce}">
+            console.log('🎯 [WEBVIEW] Script loaded');
+            document.getElementById('status').textContent = 'Script loaded';
+        </script>
         <script nonce="${nonce}" src="${scriptUri.toString()}"></script>
     </body>
     </html>`;
