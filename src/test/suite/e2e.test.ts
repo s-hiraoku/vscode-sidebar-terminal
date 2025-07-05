@@ -2,11 +2,11 @@ import * as assert from 'assert';
 import * as vscode from 'vscode';
 
 suite('E2E Test Suite', () => {
-  let extension: vscode.Extension<any> | undefined;
+  let extension: vscode.Extension<unknown> | undefined;
 
   suiteSetup(async () => {
     // Wait for extension to activate
-    extension = vscode.extensions.getExtension('your-publisher-name.vscode-sidebar-terminal');
+    extension = vscode.extensions.getExtension('s-hiraoku.vscode-sidebar-terminal');
     if (extension && !extension.isActive) {
       await extension.activate();
     }
@@ -15,12 +15,12 @@ suite('E2E Test Suite', () => {
     await new Promise((resolve) => setTimeout(resolve, 2000));
   });
 
-  test('Extension should be active', async () => {
+  test('Extension should be active', () => {
     assert.ok(extension);
-    assert.ok(extension!.isActive);
+    assert.ok(extension && extension.isActive);
   });
 
-  test('Should register terminal view', async () => {
+  test('Should register terminal view', () => {
     // Check if the terminal view is registered
     const terminalView = vscode.window.createTreeView('sidebarTerminal', {
       treeDataProvider: {

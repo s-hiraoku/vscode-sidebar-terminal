@@ -47,7 +47,7 @@ const webviewConfig = {
   target: 'web',
   mode: 'none',
   
-  entry: './src/webview/main.ts',
+  entry: './src/webview/simple.ts',
   output: {
     path: path.resolve(__dirname, 'dist'),
     filename: 'webview.js',

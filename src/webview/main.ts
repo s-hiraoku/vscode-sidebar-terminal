@@ -447,4 +447,5 @@ window.addEventListener('message', (event) => {
 });
 
 // Notify extension that webview is ready
+console.log('🎯 [DEBUG] Webview loaded and ready');
 vscode.postMessage({ command: 'ready' as const });

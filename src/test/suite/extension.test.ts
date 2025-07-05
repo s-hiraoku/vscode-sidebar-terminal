@@ -19,13 +19,13 @@ suite('Extension Test Suite', () => {
   });
 
   test('Should activate extension', async () => {
-    const extension = vscode.extensions.getExtension('your-publisher-name.vscode-sidebar-terminal');
+    const extension = vscode.extensions.getExtension('s-hiraoku.vscode-sidebar-terminal');
     assert.ok(extension);
 
-    if (!extension!.isActive) {
-      await extension!.activate();
+    if (extension && !extension.isActive) {
+      await extension.activate();
     }
 
-    assert.ok(extension!.isActive);
+    assert.ok(extension && extension.isActive);
   });
 });

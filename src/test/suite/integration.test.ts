@@ -13,11 +13,11 @@ suite('Integration Test Suite', () => {
       subscriptions: [],
       extensionPath: '',
       extensionUri: vscode.Uri.file(''),
-      globalState: {} as any,
-      workspaceState: {} as any,
+      globalState: {} as vscode.Memento & { setKeysForSync(keys: readonly string[]): void },
+      workspaceState: {} as vscode.Memento,
       asAbsolutePath: (relativePath: string) => relativePath,
-      secrets: {} as any,
-      environmentVariableCollection: {} as any,
+      secrets: {} as vscode.SecretStorage,
+      environmentVariableCollection: {} as vscode.EnvironmentVariableCollection,
       storageUri: undefined,
       storagePath: undefined,
       globalStorageUri: vscode.Uri.file(''),
@@ -25,8 +25,8 @@ suite('Integration Test Suite', () => {
       logUri: vscode.Uri.file(''),
       logPath: '',
       extensionMode: vscode.ExtensionMode.Test,
-      extension: {} as any,
-      languageModelAccessInformation: {} as any,
+      extension: {} as vscode.Extension<unknown>,
+      languageModelAccessInformation: {} as vscode.LanguageModelAccessInformation,
     } as unknown as vscode.ExtensionContext;
 
     terminalManager = new TerminalManager(mockContext);
@@ -165,11 +165,16 @@ suite('Integration Test Suite', () => {
       onDidChangeVisibility: () => ({ dispose: () => {} }),
       visible: true,
       viewType: 'sidebarTerminal',
-    } as any;
+      show: () => {},
+    } as vscode.WebviewView;
 
     // Test resolveWebviewView
     assert.doesNotThrow(() => {
-      provider.resolveWebviewView(mockWebviewView, {} as any, {} as any);
+      provider.resolveWebviewView(
+        mockWebviewView,
+        {} as vscode.WebviewViewResolveContext,
+        {} as vscode.CancellationToken
+      );
     });
   });
 });

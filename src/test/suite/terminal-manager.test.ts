@@ -11,11 +11,11 @@ suite('TerminalManager Test Suite', () => {
       subscriptions: [],
       extensionPath: '',
       extensionUri: vscode.Uri.file(''),
-      globalState: {} as any,
-      workspaceState: {} as any,
+      globalState: {} as vscode.Memento & { setKeysForSync(keys: readonly string[]): void },
+      workspaceState: {} as vscode.Memento,
       asAbsolutePath: (relativePath: string) => relativePath,
-      secrets: {} as any,
-      environmentVariableCollection: {} as any,
+      secrets: {} as vscode.SecretStorage,
+      environmentVariableCollection: {} as vscode.EnvironmentVariableCollection,
       storageUri: undefined,
       storagePath: undefined,
       globalStorageUri: vscode.Uri.file(''),
@@ -23,8 +23,8 @@ suite('TerminalManager Test Suite', () => {
       logUri: vscode.Uri.file(''),
       logPath: '',
       extensionMode: vscode.ExtensionMode.Test,
-      extension: {} as any,
-      languageModelAccessInformation: {} as any,
+      extension: {} as vscode.Extension<unknown>,
+      languageModelAccessInformation: {} as vscode.LanguageModelAccessInformation,
     } as unknown as vscode.ExtensionContext;
 
     terminalManager = new TerminalManager(mockContext);

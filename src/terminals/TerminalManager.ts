@@ -32,7 +32,9 @@ export class TerminalManager {
   }
 
   public createTerminal(): string {
+    console.log('🔧 [DEBUG] TerminalManager.createTerminal called');
     const config = getTerminalConfig();
+    console.log('🔧 [DEBUG] Terminal config:', config);
 
     if (this._terminals.size >= config.maxTerminals) {
       showWarningMessage(`${ERROR_MESSAGES.MAX_TERMINALS_REACHED} (${config.maxTerminals})`);

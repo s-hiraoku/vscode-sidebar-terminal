@@ -6,7 +6,8 @@ let terminalManager: TerminalManager | undefined;
 let sidebarProvider: SidebarTerminalProvider | undefined;
 
 export function activate(context: vscode.ExtensionContext): void {
-  console.log('Sidebar Terminal extension is now active!');
+  console.log('🚀 [DEBUG] Sidebar Terminal extension is now active!');
+  console.log('🚀 [DEBUG] Extension path:', context.extensionPath);
 
   try {
     // Initialize terminal manager
@@ -47,25 +48,41 @@ function registerCommands(
   const commands = [
     {
       command: 'sidebarTerminal.createTerminal',
-      callback: () => provider.createNewTerminal(),
+      callback: () => {
+        console.log('🔧 [DEBUG] Command executed: createTerminal');
+        provider.createNewTerminal();
+      },
     },
     {
       command: 'sidebarTerminal.clearTerminal',
-      callback: () => provider.clearTerminal(),
+      callback: () => {
+        console.log('🔧 [DEBUG] Command executed: clearTerminal');
+        provider.clearTerminal();
+      },
     },
     {
       command: 'sidebarTerminal.killTerminal',
-      callback: () => provider.killTerminal(),
+      callback: () => {
+        console.log('🔧 [DEBUG] Command executed: killTerminal');
+        provider.killTerminal();
+      },
     },
     {
       command: 'sidebarTerminal.splitTerminal',
-      callback: () => provider.splitTerminal(),
+      callback: () => {
+        console.log('🔧 [DEBUG] Command executed: splitTerminal');
+        provider.splitTerminal();
+      },
     },
   ];
 
   for (const { command, callback } of commands) {
-    context.subscriptions.push(vscode.commands.registerCommand(command, callback));
+    const commandRegistration = vscode.commands.registerCommand(command, callback);
+    context.subscriptions.push(commandRegistration);
+    console.log('✅ [DEBUG] Command registered:', command);
   }
+
+  console.log('✅ [DEBUG] All commands registered successfully');
 }
 
 export function deactivate(): void {

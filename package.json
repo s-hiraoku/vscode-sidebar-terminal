@@ -32,8 +32,17 @@
   "license": "MIT",
   "main": "./dist/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "panel": [
+        {
+          "id": "sidebarTerminalContainer",
+          "title": "Terminal",
+          "icon": "$(terminal)"
+        }
+      ]
+    },
     "views": {
-      "explorer": [
+      "sidebarTerminalContainer": [
         {
           "id": "sidebarTerminal",
           "name": "Terminal",
