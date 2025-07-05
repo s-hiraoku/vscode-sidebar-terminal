@@ -274,6 +274,27 @@ function handle_tech_decision() {
 }
 ```
 
+### Context Management for Autonomous Operation
+
+```bash
+# Use /compact command before context overflow
+function check_context_size() {
+    local context_size=$(wc -c < ~/.claude/CLAUDE.md)
+
+    if [[ $context_size > 100000 ]]; then
+        echo "📋 Context becoming too large - using /compact to optimize"
+        /compact "Optimize memory for autonomous operation"
+        echo "✅ Context optimized for continued autonomous workflow"
+    fi
+}
+
+# Proactive context optimization
+function optimize_context() {
+    echo "🔄 Proactive context optimization to maintain autonomous operation capability"
+    /compact "Condense content to ensure smooth autonomous workflow execution"
+}
+```
+
 ## 📊 Execution Completion Report
 
 ### Project Completion Report Generation
