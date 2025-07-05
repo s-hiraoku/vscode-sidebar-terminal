@@ -399,6 +399,38 @@ class TerminalWebviewManager {
             data: data,
             terminalId: id,
           });
+        } else if (charCode === 3) {
+          // Ctrl+C (SIGINT)
+          console.log('🛑 [WEBVIEW] Ctrl+C detected');
+          vscode.postMessage({
+            command: 'input' as const,
+            data: '\x03',
+            terminalId: id,
+          });
+        } else if (charCode === 12) {
+          // Ctrl+L (clear screen)
+          console.log('🧹 [WEBVIEW] Ctrl+L detected');
+          vscode.postMessage({
+            command: 'input' as const,
+            data: '\x0c',
+            terminalId: id,
+          });
+        } else if (charCode === 4) {
+          // Ctrl+D (EOF)
+          console.log('📄 [WEBVIEW] Ctrl+D detected');
+          vscode.postMessage({
+            command: 'input' as const,
+            data: '\x04',
+            terminalId: id,
+          });
+        } else if (charCode === 9) {
+          // Tab (for completion)
+          console.log('⭾ [WEBVIEW] Tab detected');
+          vscode.postMessage({
+            command: 'input' as const,
+            data: '\x09',
+            terminalId: id,
+          });
         } else {
           // Regular character input
           vscode.postMessage({
