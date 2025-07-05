@@ -417,6 +417,120 @@ function check_escalation() {
 }
 ```
 
+## 🧪 Test Quality Enhancement and Bug Prevention Strategy
+
+### Root Cause Analysis of Current Bugs
+
+The root causes of current bugs are as follows:
+
+#### 1. **Tests Don't Validate Actual Functionality**
+- **Issue**: Tests only verify command existence, not actual behavior
+- **Impact**: Real issues like non-displaying webview and non-functional buttons go undetected
+- **Cause**: Insufficient integration testing of actual user operation flows
+
+#### 2. **Publisher Name Mismatch**
+- **Issue**: Test code uses `your-publisher-name`, actual publisher is `s-hiraoku`
+- **Impact**: Extension activation tests fail
+- **Cause**: Template code was not properly updated
+
+#### 3. **Lack of Quality Assurance Due to ESLint Errors**
+- **Issue**: 43 TypeScript/ESLint errors prevent test execution
+- **Impact**: Tests cannot run, code quality is not guaranteed
+- **Cause**: Test code written ignoring type safety
+
+#### 4. **Missing Visual and Functional Tests**
+- **Issue**: No testing of webview rendering or actual terminal operations
+- **Impact**: UI/UX issues remain undetected
+- **Cause**: Insufficient E2E testing
+
+### Test Quality Enhancement Strategy
+
+#### 1. **Multi-Layer Testing Strategy Implementation**
+```typescript
+// 1. Unit Tests - Individual component behavior
+// 2. Integration Tests - Component interaction
+// 3. E2E Tests - Actual user operation flows
+// 4. Visual Tests - Webview rendering verification
+// 5. Performance Tests - Memory usage, response time
+```
+
+#### 2. **Comprehensive Testing of Actual Behavior**
+- **Webview Rendering Tests**: Verify webview actually displays
+- **Terminal Operation Tests**: Verify actual shell commands execute
+- **Message Communication Tests**: Verify extension-webview communication
+- **Button Functionality Tests**: Verify all buttons work as expected
+
+#### 3. **Type Safety Assurance**
+- **Strict Type Definitions**: Eliminate `any` types, use strict type definitions
+- **Null Safety**: Avoid non-null assertions, use proper null checks
+- **Interface Definitions**: Proper type definitions for mock objects
+
+#### 4. **Continuous Quality Monitoring**
+- **Pre-commit Hooks**: Test execution and lint checks before commits
+- **CI/CD Pipeline**: Automated execution of all tests
+- **Coverage Reports**: Maintain 90%+ test coverage
+
+### Test Categories to Implement
+
+#### 1. **Visual Regression Tests**
+```typescript
+// Webview rendering verification
+// Terminal display verification
+// Button layout verification
+// Theme application verification
+```
+
+#### 2. **Functional Integration Tests**
+```typescript
+// Command execution flows
+// Terminal creation-deletion flows
+// Split display flows
+// Configuration change reflection flows
+```
+
+#### 3. **Error Handling Tests**
+```typescript
+// Terminal process abnormal termination
+// Webview communication errors
+// Invalid configuration values
+// Resource shortage scenarios
+```
+
+#### 4. **Performance Tests**
+```typescript
+// Memory usage monitoring
+// Response time measurement
+// Large data processing
+// Long-running operation tests
+```
+
+### Test Quality Metrics
+
+#### 1. **Coverage Targets**
+- **Line Coverage**: 90%+ 
+- **Branch Coverage**: 85%+
+- **Function Coverage**: 95%+
+
+#### 2. **Quality Check Items**
+- **ESLint**: 0 errors
+- **TypeScript**: 0 type errors
+- **Test Execution**: All tests pass
+- **Build**: No errors
+
+#### 3. **Continuous Improvement**
+- **Weekly**: Test coverage review
+- **Monthly**: Test strategy review
+- **Quarterly**: Performance analysis
+
+### Future Development Guidelines
+
+1. **Test-First Approach**: Create tests before implementing features
+2. **Quality Gates**: All tests pass + 0 ESLint errors as mandatory conditions
+3. **Usability Testing**: Focus on actual user operation flows
+4. **Security Testing**: Input validation, permission checks, and other security aspects
+
+---
+
 ## 📝 Execution Logs and Traceability
 
 ### Complete Auto-Execution Log
