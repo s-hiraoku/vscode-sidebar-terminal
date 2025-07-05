@@ -1,21 +1,26 @@
 import * as vscode from 'vscode';
 import * as pty from 'node-pty';
-import * as os from 'os';
-
-interface TerminalInstance {
-  id: string;
-  pty: pty.IPty;
-  name: string;
-  isActive: boolean;
-}
+import { TerminalInstance, TerminalEvent } from '../types/common';
+import { TERMINAL_CONSTANTS, ERROR_MESSAGES } from '../constants';
+import {
+  getTerminalConfig,
+  getShellForPlatform,
+  getWorkingDirectory,
+  generateTerminalId,
+  generateTerminalName,
+  showErrorMessage,
+  showWarningMessage,
+  ActiveTerminalManager,
+  getFirstValue,
+} from '../utils/common';
 
 export class TerminalManager {
-  private _terminals = new Map<string, TerminalInstance>();
-  private _activeTerminalId?: string;
-  private _dataEmitter = new vscode.EventEmitter<{terminalId: string; data: string}>();
-  private _exitEmitter = new vscode.EventEmitter<{terminalId: string; exitCode: number | undefined}>();
-  private _terminalCreatedEmitter = new vscode.EventEmitter<TerminalInstance>();
-  private _terminalRemovedEmitter = new vscode.EventEmitter<string>();
+  private readonly _terminals = new Map<string, TerminalInstance>();
+  private readonly _activeTerminalManager = new ActiveTerminalManager();
+  private readonly _dataEmitter = new vscode.EventEmitter<TerminalEvent>();
+  private readonly _exitEmitter = new vscode.EventEmitter<TerminalEvent>();
+  private readonly _terminalCreatedEmitter = new vscode.EventEmitter<TerminalInstance>();
+  private readonly _terminalRemovedEmitter = new vscode.EventEmitter<string>();
 
   public readonly onData = this._dataEmitter.event;
   public readonly onExit = this._exitEmitter.event;
@@ -26,77 +31,142 @@ export class TerminalManager {
     // Context may be used in future for storing state
   }
 
-  public createTerminal(): void {
-    this.killTerminal();
+  public createTerminal(): string {
+    const config = getTerminalConfig();
+    
+    if (this._terminals.size >= config.maxTerminals) {
+      showWarningMessage(`${ERROR_MESSAGES.MAX_TERMINALS_REACHED} (${config.maxTerminals})`);
+      return this._activeTerminalManager.getActive() || '';
+    }
 
-    const config = vscode.workspace.getConfiguration('sidebarTerminal');
-    const shell = this._getShell(config);
-    const shellArgs = config.get<string[]>('shellArgs', []);
-    const cwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || os.homedir();
+    const terminalId = generateTerminalId();
+    const shell = getShellForPlatform(config.shell);
+    const shellArgs = config.shellArgs;
+    const cwd = getWorkingDirectory();
 
     try {
-      this._terminal = pty.spawn(shell, shellArgs, {
+      const ptyProcess = pty.spawn(shell, shellArgs, {
         name: 'xterm-color',
-        cols: 80,
-        rows: 30,
+        cols: TERMINAL_CONSTANTS.DEFAULT_COLS,
+        rows: TERMINAL_CONSTANTS.DEFAULT_ROWS,
         cwd,
         env: process.env as { [key: string]: string },
       });
 
-      this._terminal.onData((data) => {
-        this._dataEmitter.fire(data);
+      const terminal: TerminalInstance = {
+        id: terminalId,
+        pty: ptyProcess,
+        name: generateTerminalName(this._terminals.size + 1),
+        isActive: true,
+      };
+
+      // Set all other terminals as inactive
+      this._deactivateAllTerminals();
+
+      this._terminals.set(terminalId, terminal);
+      this._activeTerminalManager.setActive(terminalId);
+
+      ptyProcess.onData((data) => {
+        this._dataEmitter.fire({ terminalId, data });
       });
 
-      this._terminal.onExit((exitCode) => {
-        this._exitEmitter.fire(exitCode.exitCode);
-        this._terminal = undefined;
+      ptyProcess.onExit((exitCode) => {
+        this._exitEmitter.fire({ terminalId, exitCode: exitCode.exitCode });
+        this._removeTerminal(terminalId);
       });
+
+      this._terminalCreatedEmitter.fire(terminal);
+      return terminalId;
     } catch (error) {
-      void vscode.window.showErrorMessage(`Failed to create terminal: ${String(error)}`);
+      showErrorMessage(ERROR_MESSAGES.TERMINAL_CREATION_FAILED, error);
       throw error;
     }
   }
 
-  public sendInput(data: string): void {
-    this._terminal?.write(data);
+  public sendInput(data: string, terminalId?: string): void {
+    const id = terminalId || this._activeTerminalManager.getActive();
+    if (id) {
+      const terminal = this._terminals.get(id);
+      terminal?.pty.write(data);
+    }
   }
 
-  public resize(cols: number, rows: number): void {
-    this._terminal?.resize(cols, rows);
+  public resize(cols: number, rows: number, terminalId?: string): void {
+    const id = terminalId || this._activeTerminalManager.getActive();
+    if (id) {
+      const terminal = this._terminals.get(id);
+      terminal?.pty.resize(cols, rows);
+    }
   }
 
-  public killTerminal(): void {
-    if (this._terminal) {
-      this._terminal.kill();
-      this._terminal = undefined;
+  public killTerminal(terminalId?: string): void {
+    const id = terminalId || this._activeTerminalManager.getActive();
+    if (id) {
+      const terminal = this._terminals.get(id);
+      if (terminal) {
+        terminal.pty.kill();
+        this._removeTerminal(id);
+      }
     }
   }
 
   public hasActiveTerminal(): boolean {
-    return this._terminal !== undefined;
+    return this._activeTerminalManager.hasActive();
+  }
+
+  public getActiveTerminalId(): string | undefined {
+    return this._activeTerminalManager.getActive();
+  }
+
+  public getTerminals(): TerminalInstance[] {
+    return Array.from(this._terminals.values());
+  }
+
+  public setActiveTerminal(terminalId: string): void {
+    const terminal = this._terminals.get(terminalId);
+    if (terminal) {
+      this._deactivateAllTerminals();
+      terminal.isActive = true;
+      this._activeTerminalManager.setActive(terminalId);
+    }
   }
 
   public dispose(): void {
-    this.killTerminal();
+    for (const terminal of this._terminals.values()) {
+      terminal.pty.kill();
+    }
+    this._terminals.clear();
     this._dataEmitter.dispose();
     this._exitEmitter.dispose();
+    this._terminalCreatedEmitter.dispose();
+    this._terminalRemovedEmitter.dispose();
   }
 
-  private _getShell(config: vscode.WorkspaceConfiguration): string {
-    const customShell = config.get<string>('shell', '');
-    if (customShell) {
-      return customShell;
+  /**
+   * 全てのターミナルを非アクティブにする
+   */
+  private _deactivateAllTerminals(): void {
+    for (const term of this._terminals.values()) {
+      term.isActive = false;
     }
+  }
 
-    // Use VS Code's integrated terminal shell settings as fallback
-    const terminalConfig = vscode.workspace.getConfiguration('terminal.integrated');
-
-    if (process.platform === 'win32') {
-      return terminalConfig.get<string>('shell.windows') || process.env['COMSPEC'] || 'cmd.exe';
-    } else if (process.platform === 'darwin') {
-      return terminalConfig.get<string>('shell.osx') || process.env['SHELL'] || '/bin/zsh';
-    } else {
-      return terminalConfig.get<string>('shell.linux') || process.env['SHELL'] || '/bin/bash';
+  /**
+   * ターミナルを削除し、必要に応じて他のターミナルをアクティブにする
+   */
+  private _removeTerminal(terminalId: string): void {
+    this._terminals.delete(terminalId);
+    this._terminalRemovedEmitter.fire(terminalId);
+    
+    // アクティブターミナルだった場合、別のターミナルをアクティブにする
+    if (this._activeTerminalManager.isActive(terminalId)) {
+      const remaining = getFirstValue(this._terminals);
+      if (remaining) {
+        this._activeTerminalManager.setActive(remaining.id);
+        remaining.isActive = true;
+      } else {
+        this._activeTerminalManager.clearActive();
+      }
     }
   }
 }

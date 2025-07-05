@@ -135,6 +135,8 @@
   "devDependencies": {
     "@types/node": "20.x",
     "@types/vscode": "^1.74.0",
+    "@types/mocha": "^10.0.6",
+    "@types/glob": "^8.1.0",
     "@typescript-eslint/eslint-plugin": "^6.15.0",
     "@typescript-eslint/parser": "^6.15.0",
     "@vscode/test-electron": "^2.3.8",
@@ -142,6 +144,8 @@
     "eslint": "^8.56.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.1.2",
+    "glob": "^10.3.10",
+    "mocha": "^10.2.0",
     "prettier": "^3.1.1",
     "style-loader": "^4.0.0",
     "ts-loader": "^9.5.1",
