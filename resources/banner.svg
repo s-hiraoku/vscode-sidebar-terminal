@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1280" height="640" viewBox="0 0 1280 640" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background gradient -->
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e1e1e;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2d2d30;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <rect width="1280" height="640" fill="url(#bg)"/>
+  
+  <!-- Main title -->
+  <text x="640" y="200" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="72" font-weight="bold" fill="#ffffff">
+    Sidebar Terminal
+  </text>
+  
+  <!-- Subtitle -->
+  <text x="640" y="260" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="32" fill="#cccccc">
+    Terminal in VS Code Sidebar with Split Functionality
+  </text>
+  
+  <!-- Feature list -->
+  <text x="640" y="360" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="24" fill="#569cd6">
+    • Multiple Terminals • Split View • Cross Platform • Customizable
+  </text>
+  
+  <!-- VS Code logo inspiration -->
+  <rect x="560" y="420" width="160" height="120" rx="16" fill="#007acc" opacity="0.1"/>
+  <path d="M600 450 L600 570 L680 570 L680 450 M640 450 L640 570" stroke="#007acc" stroke-width="4" fill="none"/>
+  
+  <!-- Copyright -->
+  <text x="640" y="600" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="16" fill="#888888">
+    VS Code Extension
+  </text>
+</svg>

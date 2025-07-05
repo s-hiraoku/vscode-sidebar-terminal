@@ -14,7 +14,18 @@ suite('TerminalManager Test Suite', () => {
       globalState: {} as any,
       workspaceState: {} as any,
       asAbsolutePath: (relativePath: string) => relativePath,
-    } as vscode.ExtensionContext;
+      secrets: {} as any,
+      environmentVariableCollection: {} as any,
+      storageUri: undefined,
+      storagePath: undefined,
+      globalStorageUri: vscode.Uri.file(''),
+      globalStoragePath: '',
+      logUri: vscode.Uri.file(''),
+      logPath: '',
+      extensionMode: vscode.ExtensionMode.Test,
+      extension: {} as any,
+      languageModelAccessInformation: {} as any,
+    } as unknown as vscode.ExtensionContext;
 
     terminalManager = new TerminalManager(mockContext);
   });

@@ -3,7 +3,7 @@
   "displayName": "Sidebar Terminal",
   "description": "VS Code のサイドパネルにターミナルを表示する拡張機能です。",
   "version": "0.0.1",
-  "publisher": "your-publisher-name",
+  "publisher": "s-hiraoku",
   "engines": {
     "vscode": "^1.74.0"
   },
@@ -23,12 +23,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-username/vscode-sidebar-terminal"
+    "url": "https://github.com/s-hiraoku/vscode-sidebar-terminal"
   },
   "bugs": {
-    "url": "https://github.com/your-username/vscode-sidebar-terminal/issues"
+    "url": "https://github.com/s-hiraoku/vscode-sidebar-terminal/issues"
   },
-  "homepage": "https://github.com/your-username/vscode-sidebar-terminal#readme",
+  "homepage": "https://github.com/s-hiraoku/vscode-sidebar-terminal#readme",
   "license": "MIT",
   "main": "./dist/extension.js",
   "contributes": {
@@ -130,7 +130,10 @@
     "pretest": "npm run compile-tests && npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
     "test": "node ./out/test/runTest.js",
-    "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css,md}\""
+    "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
+    "vsce:package": "vsce package",
+    "vsce:publish": "vsce publish",
+    "create-icons": "node scripts/create-icon.js"
   },
   "devDependencies": {
     "@types/node": "20.x",

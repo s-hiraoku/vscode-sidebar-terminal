@@ -3,23 +3,87 @@ import { FitAddon } from 'xterm-addon-fit';
 import { WebLinksAddon } from 'xterm-addon-web-links';
 import { Unicode11Addon } from 'xterm-addon-unicode11';
 
-interface WebviewMessage {
-  command: 'init' | 'output' | 'clear' | 'exit' | 'split' | 'terminalCreated' | 'terminalRemoved';
-  config?: { fontSize: number; fontFamily: string };
-  data?: string;
-  exitCode?: number;
-  terminalId?: string;
-  terminalName?: string;
-  terminals?: Array<{ id: string; name: string; isActive: boolean }>;
-}
+// Import types and constants for webview
+import type { WebviewMessage, VsCodeMessage, TerminalConfig } from '../types/common';
 
-interface VsCodeMessage {
-  command: 'ready' | 'input' | 'resize' | 'switchTerminal';
-  data?: string;
-  cols?: number;
-  rows?: number;
-  terminalId?: string;
-}
+// Constants for webview (duplicated to avoid import issues)
+const WEBVIEW_CONSTANTS = {
+  CSS_VARS: {
+    TAB_INACTIVE_BACKGROUND: 'var(--vscode-tab-inactiveBackground)',
+    TAB_ACTIVE_BACKGROUND: 'var(--vscode-tab-activeBackground)',
+    TAB_INACTIVE_FOREGROUND: 'var(--vscode-tab-inactiveForeground)',
+    TAB_ACTIVE_FOREGROUND: 'var(--vscode-tab-activeForeground)',
+    TAB_BORDER: 'var(--vscode-tab-border)',
+    EDITOR_BACKGROUND: 'var(--vscode-editor-background)',
+  },
+  DARK_THEME: {
+    background: '#1e1e1e',
+    foreground: '#cccccc',
+    cursor: '#ffffff',
+    cursorAccent: '#000000',
+    black: '#000000',
+    red: '#cd3131',
+    green: '#0dbc79',
+    yellow: '#e5e510',
+    blue: '#2472c8',
+    magenta: '#bc3fbc',
+    cyan: '#11a8cd',
+    white: '#e5e5e5',
+    brightBlack: '#666666',
+    brightRed: '#f14c4c',
+    brightGreen: '#23d18b',
+    brightYellow: '#f5f543',
+    brightBlue: '#3b8eea',
+    brightMagenta: '#d670d6',
+    brightCyan: '#29b8db',
+    brightWhite: '#ffffff',
+  },
+  LIGHT_THEME: {
+    background: '#ffffff',
+    foreground: '#333333',
+    cursor: '#000000',
+    cursorAccent: '#ffffff',
+    black: '#000000',
+    red: '#cd3131',
+    green: '#00bc00',
+    yellow: '#949800',
+    blue: '#0451a5',
+    magenta: '#bc05bc',
+    cyan: '#0598bc',
+    white: '#555555',
+    brightBlack: '#666666',
+    brightRed: '#cd3131',
+    brightGreen: '#14ce14',
+    brightYellow: '#b5ba00',
+    brightBlue: '#0451a5',
+    brightMagenta: '#bc05bc',
+    brightCyan: '#0598bc',
+    brightWhite: '#a5a5a5',
+  },
+};
+
+const TERMINAL_CONSTANTS = {
+  TERMINAL_REMOVE_DELAY: 2000,
+  COMMANDS: {
+    READY: 'ready',
+    INIT: 'init',
+    INPUT: 'input',
+    OUTPUT: 'output',
+    RESIZE: 'resize',
+    CLEAR: 'clear',
+    EXIT: 'exit',
+    SPLIT: 'split',
+    TERMINAL_CREATED: 'terminalCreated',
+    TERMINAL_REMOVED: 'terminalRemoved',
+    SWITCH_TERMINAL: 'switchTerminal',
+  },
+};
+
+const ERROR_MESSAGES = {
+  TERMINAL_CONTAINER_NOT_FOUND: 'Terminal container not found',
+};
+
+// Types are now imported from ../types/common
 
 declare const acquireVsCodeApi: () => {
   postMessage: (message: VsCodeMessage) => void;
@@ -76,7 +140,7 @@ class TerminalWebviewManager {
       theme: getTheme(),
       cursorBlink: true,
       allowTransparency: true,
-      scrollback: TERMINAL_CONSTANTS.SCROLLBACK_LINES,
+      scrollback: 10000,
     });
 
     const fitAddon = new FitAddon();
@@ -101,7 +165,7 @@ class TerminalWebviewManager {
     // Handle terminal input
     terminal.onData((data) => {
       vscode.postMessage({
-        command: TERMINAL_CONSTANTS.COMMANDS.INPUT,
+        command: 'input' as const,
         data,
         terminalId: id,
       });
@@ -110,7 +174,7 @@ class TerminalWebviewManager {
     // Handle resize
     terminal.onResize((size) => {
       vscode.postMessage({
-        command: TERMINAL_CONSTANTS.COMMANDS.RESIZE,
+        command: 'resize' as const,
         cols: size.cols,
         rows: size.rows,
         terminalId: id,
@@ -202,7 +266,7 @@ class TerminalWebviewManager {
 
       // Notify extension
       vscode.postMessage({
-        command: TERMINAL_CONSTANTS.COMMANDS.SWITCH_TERMINAL,
+        command: 'switchTerminal' as const,
         terminalId,
       });
     }
@@ -336,4 +400,4 @@ window.addEventListener('message', (event) => {
 });
 
 // Notify extension that webview is ready
-vscode.postMessage({ command: TERMINAL_CONSTANTS.COMMANDS.READY });
+vscode.postMessage({ command: 'ready' as const });
