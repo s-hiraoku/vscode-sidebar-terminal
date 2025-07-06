@@ -87,7 +87,7 @@ suite('UX Feedback Test Suite', () => {
     try {
       // Create maximum number of terminals to trigger warning
       for (let i = 0; i < 10; i++) {
-        provider.createNewTerminal();
+        terminalManager.createTerminal();
       }
 
       if (warningMessageShown) {
@@ -109,7 +109,7 @@ suite('UX Feedback Test Suite', () => {
 
     try {
       // These operations should complete quickly and successfully
-      const terminalId = provider.createNewTerminal();
+      const terminalId = terminalManager.createTerminal();
       assert.ok(terminalId, 'Terminal creation should return an ID');
 
       provider.clearTerminal();

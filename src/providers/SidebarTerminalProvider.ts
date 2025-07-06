@@ -60,20 +60,6 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
     console.log('✅ [DEBUG] WebviewView setup completed');
   }
 
-  public createNewTerminal(): string {
-    console.log('🔧 [DEBUG] Creating new terminal...');
-    try {
-      const terminalId = this._terminalManager.createTerminal();
-      console.log('✅ [DEBUG] New terminal created with ID:', terminalId);
-      showSuccess('Terminal created successfully');
-      return terminalId;
-    } catch (error) {
-      console.error('❌ [ERROR] Failed to create new terminal:', error);
-      TerminalErrorHandler.handleTerminalCreationError(error);
-      throw error;
-    }
-  }
-
   public splitTerminal(): void {
     console.log('🔧 [DEBUG] Splitting terminal...');
     try {
@@ -125,26 +111,62 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
     console.log('🔧 [DEBUG] Killing terminal...');
     try {
       const activeTerminalId = this._terminalManager.getActiveTerminalId();
-      if (activeTerminalId) {
-        console.log('🔧 [DEBUG] Killing active terminal:', activeTerminalId);
-
-        // Kill the terminal process
-        this._terminalManager.killTerminal(activeTerminalId);
-
-        // Notify webview to remove the terminal from UI
-        void this._sendMessage({
-          command: 'terminalRemoved',
-          terminalId: activeTerminalId,
-        });
-
-        console.log('✅ [DEBUG] Terminal killed successfully');
-        showSuccess('Terminal closed');
-      } else {
+      if (!activeTerminalId) {
         console.warn('⚠️ [WARN] No active terminal to kill');
         TerminalErrorHandler.handleTerminalNotFound();
+        return;
+      }
+
+      // Check terminal count protection
+      const terminals = this._terminalManager.getTerminals();
+      const config = vscode.workspace.getConfiguration('sidebarTerminal');
+      const minTerminalCount = config.get<number>('minTerminalCount', 1);
+      const protectLastTerminal = config.get<boolean>('protectLastTerminal', true);
+
+      if (protectLastTerminal && terminals.length <= minTerminalCount) {
+        console.warn('🛡️ [WARN] Cannot kill terminal - minimum count protection active');
+        showError(
+          `Cannot close terminal: Minimum ${minTerminalCount} terminal(s) must remain open`
+        );
+        return;
+      }
+
+      console.log('🔧 [DEBUG] Killing active terminal:', activeTerminalId);
+
+      // Check if confirmation is needed
+      const confirmBeforeKill = config.get<boolean>('confirmBeforeKill', false);
+      if (confirmBeforeKill) {
+        void vscode.window
+          .showWarningMessage(`Close terminal "${activeTerminalId}"?`, { modal: true }, 'Close')
+          .then((selection) => {
+            if (selection === 'Close') {
+              this._performKillTerminal(activeTerminalId);
+            }
+          });
+      } else {
+        this._performKillTerminal(activeTerminalId);
       }
     } catch (error) {
       console.error('❌ [ERROR] Failed to kill terminal:', error);
+      showError(`Failed to close terminal: ${String(error)}`);
+    }
+  }
+
+  private _performKillTerminal(terminalId: string): void {
+    try {
+      // Kill the terminal process
+      this._terminalManager.killTerminal(terminalId);
+
+      // Notify webview to remove the terminal from UI
+      void this._sendMessage({
+        command: 'terminalRemoved',
+        terminalId: terminalId,
+      });
+
+      console.log('✅ [DEBUG] Terminal killed successfully');
+      showSuccess('Terminal closed');
+    } catch (error) {
+      console.error('❌ [ERROR] Failed to perform kill terminal:', error);
       showError(`Failed to close terminal: ${String(error)}`);
     }
   }
@@ -260,14 +282,6 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
             this._terminalManager.setActiveTerminal(message.terminalId);
           }
           break;
-        case 'createTerminal': {
-          console.log('🆕 [DEBUG] Creating new terminal from webview...');
-          const newTerminalId = this.createNewTerminal();
-          console.log('🆕 [DEBUG] New terminal created with ID:', newTerminalId);
-          // Re-initialize to show the new terminal
-          await this._initializeTerminal();
-          break;
-        }
         case 'splitTerminal':
           console.log('🔀 [DEBUG] Splitting terminal from webview...');
           this.splitTerminal();

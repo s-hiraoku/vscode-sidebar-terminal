@@ -47,19 +47,6 @@ function registerCommands(
 ): void {
   const commands = [
     {
-      command: 'sidebarTerminal.createTerminal',
-      callback: async () => {
-        console.log('🔧 [DEBUG] Command executed: createTerminal');
-        try {
-          provider.createNewTerminal();
-          // Re-initialize to show the new terminal
-          await provider._initializeTerminal();
-        } catch (error) {
-          console.error('❌ [ERROR] Command createTerminal failed:', error);
-        }
-      },
-    },
-    {
       command: 'sidebarTerminal.clearTerminal',
       callback: () => {
         console.log('🔧 [DEBUG] Command executed: clearTerminal');

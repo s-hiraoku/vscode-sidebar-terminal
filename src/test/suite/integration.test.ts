@@ -42,10 +42,10 @@ suite('Integration Test Suite', () => {
     assert.ok(provider);
 
     // Test provider methods
-    assert.ok(typeof provider.createNewTerminal === 'function');
     assert.ok(typeof provider.clearTerminal === 'function');
     assert.ok(typeof provider.killTerminal === 'function');
     assert.ok(typeof provider.splitTerminal === 'function');
+    assert.ok(typeof provider.openSettings === 'function');
   });
 
   test('Should handle terminal events through provider', (done) => {
@@ -61,8 +61,8 @@ suite('Integration Test Suite', () => {
       }
     });
 
-    // Create terminal through provider
-    provider.createNewTerminal();
+    // Create terminal through terminal manager
+    terminalManager.createTerminal();
   });
 
   test('Should manage terminal lifecycle', () => {

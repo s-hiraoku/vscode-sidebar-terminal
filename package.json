@@ -54,11 +54,6 @@
     },
     "commands": [
       {
-        "command": "sidebarTerminal.createTerminal",
-        "title": "Create New Terminal",
-        "icon": "$(add)"
-      },
-      {
         "command": "sidebarTerminal.clearTerminal",
         "title": "Clear Terminal",
         "icon": "$(clear-all)"
@@ -82,29 +77,24 @@
     "menus": {
       "view/title": [
         {
-          "command": "sidebarTerminal.createTerminal",
+          "command": "sidebarTerminal.splitTerminal",
           "when": "view == sidebarTerminal",
           "group": "navigation@1"
         },
         {
-          "command": "sidebarTerminal.splitTerminal",
+          "command": "sidebarTerminal.clearTerminal",
           "when": "view == sidebarTerminal",
           "group": "navigation@2"
         },
         {
-          "command": "sidebarTerminal.clearTerminal",
+          "command": "sidebarTerminal.killTerminal",
           "when": "view == sidebarTerminal",
           "group": "navigation@3"
         },
         {
-          "command": "sidebarTerminal.killTerminal",
-          "when": "view == sidebarTerminal",
-          "group": "navigation@4"
-        },
-        {
           "command": "sidebarTerminal.openSettings",
           "when": "view == sidebarTerminal",
-          "group": "navigation@5"
+          "group": "navigation@4"
         }
       ]
     },
@@ -204,6 +194,16 @@
           "type": "boolean",
           "default": true,
           "description": "Show last status message when user performs actions"
+        },
+        "sidebarTerminal.showWebViewHeader": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show title and command icons in the webview header"
+        },
+        "sidebarTerminal.webViewTitle": {
+          "type": "string",
+          "default": "Terminal",
+          "description": "Title to display in the webview header"
         }
       }
     }
