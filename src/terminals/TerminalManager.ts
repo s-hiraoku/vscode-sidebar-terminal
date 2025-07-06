@@ -51,7 +51,7 @@ export class TerminalManager {
     const shell = getShellForPlatform(config.shell);
     const shellArgs = config.shellArgs;
     const cwd = getWorkingDirectory();
-    
+
     console.log('📁 [TERMINAL] Creating terminal with:');
     console.log('📁 [TERMINAL] - ID:', terminalId);
     console.log('📁 [TERMINAL] - Shell:', shell);
@@ -64,10 +64,11 @@ export class TerminalManager {
         ...process.env,
         PWD: cwd,
         // Add VS Code workspace information if available
-        ...(vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0 && {
-          VSCODE_WORKSPACE: vscode.workspace.workspaceFolders[0].uri.fsPath,
-          VSCODE_PROJECT_NAME: vscode.workspace.workspaceFolders[0].name
-        })
+        ...(vscode.workspace.workspaceFolders &&
+          vscode.workspace.workspaceFolders.length > 0 && {
+            VSCODE_WORKSPACE: vscode.workspace.workspaceFolders[0]?.uri.fsPath || '',
+            VSCODE_PROJECT_NAME: vscode.workspace.workspaceFolders[0]?.name || '',
+          }),
       } as { [key: string]: string };
 
       console.log('📁 [TERMINAL] Environment variables:');
@@ -119,17 +120,9 @@ export class TerminalManager {
         this._removeTerminal(terminalId);
       });
 
-      // Wait for PTY to be ready before returning
-      setTimeout(() => {
-        console.log('✅ [DEBUG] PTY process should be ready for input');
-        // Send a command to verify the working directory
-        console.log('📁 [TERMINAL] Verifying working directory...');
-        ptyProcess.write('pwd\r');
-      }, 200);
-
       console.log('✅ [TERMINAL] Terminal created successfully with ID:', terminalId);
       console.log('📁 [TERMINAL] Expected working directory:', cwd);
-      
+
       this._terminalCreatedEmitter.fire(terminal);
       return terminalId;
     } catch (error) {

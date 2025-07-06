@@ -1,5 +1,7 @@
 import type { StatusType } from './terminal.types';
 
+export type { StatusType };
+
 export interface ExtensionConfig {
   fontSize: number;
   fontFamily: string;

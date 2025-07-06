@@ -16,7 +16,7 @@ export class StatusManager {
   private lastType: StatusType = 'info';
   private isStatusVisible = false;
   private readonly STATUS_HEIGHT = TERMINAL_CONSTANTS.SIZES.STATUS_BAR_HEIGHT;
-  private layoutAdjustTimer: NodeJS.Timeout | null = null;
+  private layoutAdjustTimer: number | null = null;
 
   /**
    * ステータスメッセージを表示
@@ -36,7 +36,8 @@ export class StatusManager {
 
       const autoHide = true; // TODO: Read from configuration
       if (autoHide) {
-        const duration = type === 'error' ? this.ERROR_DISPLAY_DURATION : this.DEFAULT_DISPLAY_DURATION;
+        const duration =
+          type === 'error' ? this.ERROR_DISPLAY_DURATION : this.DEFAULT_DISPLAY_DURATION;
         this.hideTimer = window.setTimeout(() => {
           this.hideStatusWithAnimation();
         }, duration);
@@ -78,7 +79,10 @@ export class StatusManager {
       }
       this.clearTimer();
     } catch (error) {
-      ErrorHandler.getInstance().handleGenericError(error as Error, 'StatusManager.hideStatusWithAnimation');
+      ErrorHandler.getInstance().handleGenericError(
+        error as Error,
+        'StatusManager.hideStatusWithAnimation'
+      );
     }
   }
 
@@ -92,7 +96,10 @@ export class StatusManager {
         this.showStatus(this.lastMessage, this.lastType);
       }
     } catch (error) {
-      ErrorHandler.getInstance().handleGenericError(error as Error, 'StatusManager.showLastStatusOnActivity');
+      ErrorHandler.getInstance().handleGenericError(
+        error as Error,
+        'StatusManager.showLastStatusOnActivity'
+      );
     }
   }
 
@@ -110,7 +117,10 @@ export class StatusManager {
       }
       return this.statusElement || document.createElement('div');
     } catch (error) {
-      ErrorHandler.getInstance().handleGenericError(error as Error, 'StatusManager.getOrCreateStatusElement');
+      ErrorHandler.getInstance().handleGenericError(
+        error as Error,
+        'StatusManager.getOrCreateStatusElement'
+      );
       return document.createElement('div');
     }
   }
@@ -139,7 +149,10 @@ export class StatusManager {
         this.hideStatusWithAnimation();
       });
     } catch (error) {
-      ErrorHandler.getInstance().handleGenericError(error as Error, 'StatusManager.setupStatusInteraction');
+      ErrorHandler.getInstance().handleGenericError(
+        error as Error,
+        'StatusManager.setupStatusInteraction'
+      );
     }
   }
 
@@ -191,7 +204,10 @@ export class StatusManager {
         document.head.appendChild(style);
       }
     } catch (error) {
-      ErrorHandler.getInstance().handleGenericError(error as Error, 'StatusManager.addStatusStyles');
+      ErrorHandler.getInstance().handleGenericError(
+        error as Error,
+        'StatusManager.addStatusStyles'
+      );
     }
   }
 
@@ -243,9 +259,14 @@ export class StatusManager {
       this.adjustSplitContainersHeight(dimensions.availableHeight);
       this.resizeAllTerminals();
 
-      console.log(`✅ [LAYOUT] Terminal layout adjusted: ${dimensions.availableHeight}px available`);
+      console.log(
+        `✅ [LAYOUT] Terminal layout adjusted: ${dimensions.availableHeight}px available`
+      );
     } catch (error) {
-      ErrorHandler.getInstance().handleLayoutError(error as Error, 'StatusManager.adjustTerminalLayout');
+      ErrorHandler.getInstance().handleLayoutError(
+        error as Error,
+        'StatusManager.adjustTerminalLayout'
+      );
     }
   }
 
@@ -264,8 +285,12 @@ export class StatusManager {
       }
 
       const containerHeight = terminalContainer.clientHeight;
-      const webviewHeaderHeight = webviewHeader ? webviewHeader.clientHeight : TERMINAL_CONSTANTS.SIZES.HEADER_HEIGHT;
-      const terminalHeaderHeight = terminalHeader ? terminalHeader.clientHeight : TERMINAL_CONSTANTS.SIZES.TERMINAL_HEADER_HEIGHT;
+      const webviewHeaderHeight = webviewHeader
+        ? webviewHeader.clientHeight
+        : TERMINAL_CONSTANTS.SIZES.HEADER_HEIGHT;
+      const terminalHeaderHeight = terminalHeader
+        ? terminalHeader.clientHeight
+        : TERMINAL_CONSTANTS.SIZES.TERMINAL_HEADER_HEIGHT;
       const totalHeaderHeight = webviewHeaderHeight + terminalHeaderHeight;
       const statusHeight = statusVisible ? this.STATUS_HEIGHT : 0;
       const availableHeight = containerHeight - totalHeaderHeight - statusHeight;
@@ -277,7 +302,10 @@ export class StatusManager {
         availableHeight,
       };
     } catch (error) {
-      ErrorHandler.getInstance().handleLayoutError(error as Error, 'StatusManager.calculateLayoutDimensions');
+      ErrorHandler.getInstance().handleLayoutError(
+        error as Error,
+        'StatusManager.calculateLayoutDimensions'
+      );
       return null;
     }
   }
@@ -311,7 +339,10 @@ export class StatusManager {
         });
       }
     } catch (error) {
-      ErrorHandler.getInstance().handleLayoutError(error as Error, 'StatusManager.adjustSplitContainersHeight');
+      ErrorHandler.getInstance().handleLayoutError(
+        error as Error,
+        'StatusManager.adjustSplitContainersHeight'
+      );
     }
   }
 
@@ -321,7 +352,17 @@ export class StatusManager {
   private resizeAllTerminals(): void {
     try {
       // メインターミナルのリサイズ
-      const terminalManager = (window as any).terminalManager;
+      const windowWithManager = window as unknown as Record<string, unknown> & {
+        terminalManager?: {
+          terminal?: { fit?: () => void };
+          fitAddon?: { fit: () => void };
+          secondaryTerminal?: { fit?: () => void };
+          secondaryFitAddon?: { fit: () => void };
+          terminals?: Map<string, { fitAddon: { fit: () => void } }>;
+        };
+      };
+
+      const terminalManager = windowWithManager.terminalManager;
       if (terminalManager?.terminal && terminalManager?.fitAddon) {
         setTimeout(() => {
           terminalManager.fitAddon?.fit();
@@ -337,7 +378,7 @@ export class StatusManager {
 
       // 複数ターミナルのリサイズ
       if (terminalManager?.terminals) {
-        terminalManager.terminals.forEach((terminalData: any) => {
+        terminalManager.terminals.forEach((terminalData) => {
           if (terminalData.fitAddon) {
             setTimeout(() => {
               terminalData.fitAddon.fit();
@@ -346,7 +387,10 @@ export class StatusManager {
         });
       }
     } catch (error) {
-      ErrorHandler.getInstance().handleLayoutError(error as Error, 'StatusManager.resizeAllTerminals');
+      ErrorHandler.getInstance().handleLayoutError(
+        error as Error,
+        'StatusManager.resizeAllTerminals'
+      );
     }
   }
 
@@ -361,11 +405,18 @@ export class StatusManager {
         this.adjustTerminalLayout(this.isStatusVisible);
       }, TERMINAL_CONSTANTS.DELAYS.RESIZE_DEBOUNCE_DELAY);
 
-      DOMUtils.addEventListenerSafe(window, 'resize', debouncedAdjustLayout);
+      DOMUtils.addEventListenerSafe(
+        window as unknown as HTMLElement,
+        'resize',
+        debouncedAdjustLayout
+      );
 
       console.log('📐 [LAYOUT] Layout management initialized');
     } catch (error) {
-      ErrorHandler.getInstance().handleLayoutError(error as Error, 'StatusManager.initializeLayoutManagement');
+      ErrorHandler.getInstance().handleLayoutError(
+        error as Error,
+        'StatusManager.initializeLayoutManagement'
+      );
     }
   }
 
@@ -377,15 +428,20 @@ export class StatusManager {
       const terminalContainer = DOMUtils.getElement('#terminal');
       if (!terminalContainer) return;
 
-      const resizeObserver = new ResizeObserver(PerformanceUtils.debounce(() => {
-        console.log('📐 [LAYOUT] Container resized, readjusting layout');
-        this.adjustTerminalLayout(this.isStatusVisible);
-      }, TERMINAL_CONSTANTS.DELAYS.RESIZE_DEBOUNCE_DELAY));
+      const resizeObserver = new ResizeObserver(
+        PerformanceUtils.debounce(() => {
+          console.log('📐 [LAYOUT] Container resized, readjusting layout');
+          this.adjustTerminalLayout(this.isStatusVisible);
+        }, TERMINAL_CONSTANTS.DELAYS.RESIZE_DEBOUNCE_DELAY)
+      );
 
       resizeObserver.observe(terminalContainer);
       console.log('📐 [LAYOUT] Layout resize observer set up');
     } catch (error) {
-      ErrorHandler.getInstance().handleLayoutError(error as Error, 'StatusManager.setupLayoutResizeObserver');
+      ErrorHandler.getInstance().handleLayoutError(
+        error as Error,
+        'StatusManager.setupLayoutResizeObserver'
+      );
     }
   }
 
@@ -395,8 +451,8 @@ export class StatusManager {
   public dispose(): void {
     try {
       this.clearTimer();
-      if (this.layoutAdjustTimer) {
-        clearTimeout(this.layoutAdjustTimer);
+      if (this.layoutAdjustTimer !== null) {
+        window.clearTimeout(this.layoutAdjustTimer);
         this.layoutAdjustTimer = null;
       }
       this.statusElement = null;

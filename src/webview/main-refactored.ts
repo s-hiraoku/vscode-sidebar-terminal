@@ -1,6 +1,6 @@
 /**
  * リファクタリング後のWebViewメインエントリーポイント
- * 
+ *
  * この実装は既存のmain.tsの代替として設計されており、
  * 将来的にmain.tsを置き換える予定です。
  */
@@ -13,8 +13,38 @@ import { WebLinksAddon } from 'xterm-addon-web-links';
 import type { WebviewMessage, VsCodeMessage, TerminalConfig } from './types/events.types';
 import type { TerminalSettings } from './types/terminal.types';
 
+// 型定義の追加
+interface TerminalInstance {
+  terminal: Terminal;
+  fitAddon: FitAddon;
+  id: string;
+  name: string;
+}
+
+interface InitMessage {
+  command: string;
+  config: TerminalConfig;
+  activeTerminalId: string;
+}
+
+interface OutputMessage {
+  command: string;
+  data: string;
+}
+
+interface TerminalCreatedMessage {
+  command: string;
+  terminalId: string;
+  terminalName: string;
+}
+
+interface SettingsMessage {
+  command: string;
+  settings: TerminalSettings;
+}
+
 // 定数のインポート
-import { TERMINAL_CONSTANTS, THEME_CONSTANTS } from './constants';
+import { TERMINAL_CONSTANTS } from './constants';
 
 // ユーティリティのインポート
 import { DOMUtils } from './utils/DOMUtils';
@@ -52,7 +82,7 @@ class TerminalWebviewManager {
   private settingsPanel: SettingsPanel;
 
   // ターミナル管理
-  public terminals = new Map<string, any>();
+  public terminals = new Map<string, TerminalInstance>();
 
   constructor() {
     this.statusManager = new StatusManager();
@@ -63,32 +93,35 @@ class TerminalWebviewManager {
     });
 
     // グローバルアクセス用
-    (window as any).statusManager = this.statusManager;
-    (window as any).terminalManager = this;
+    (window as unknown as Record<string, unknown>).statusManager = this.statusManager;
+    (window as unknown as Record<string, unknown>).terminalManager = this;
   }
 
   /**
    * 初期化
    */
-  public async initialize(): Promise<void> {
+  public initialize(): void {
     try {
       console.log('🎯 [MANAGER] Initializing TerminalWebviewManager');
 
-      await this.initializeDOM();
+      this.initializeDOM();
       this.setupMessageHandling();
       this.setupEventListeners();
       this.statusManager.initializeLayoutManagement();
 
       console.log('✅ [MANAGER] TerminalWebviewManager initialized');
     } catch (error) {
-      ErrorHandler.getInstance().handleGenericError(error as Error, 'TerminalWebviewManager.initialize');
+      ErrorHandler.getInstance().handleGenericError(
+        error as Error,
+        'TerminalWebviewManager.initialize'
+      );
     }
   }
 
   /**
    * DOM初期化
    */
-  private async initializeDOM(): Promise<void> {
+  private initializeDOM(): void {
     const container = DOMUtils.getElement('#terminal');
     if (!container) {
       throw new Error('Terminal container not found');
@@ -139,16 +172,14 @@ class TerminalWebviewManager {
       </div>
     `;
 
-    await PerformanceUtils.requestIdleCallback(() => {
-      this.terminalContainer = DOMUtils.getElement('#terminal-body');
-      
-      if (this.terminalContainer) {
-        this.updateStatus('Terminal interface initialized', 'success');
-        console.log('🎯 [MANAGER] Terminal container created successfully');
-      } else {
-        throw new Error('Failed to create terminal container');
-      }
-    });
+    this.terminalContainer = DOMUtils.getElement('#terminal-body');
+
+    if (this.terminalContainer) {
+      this.updateStatus('Terminal interface initialized', 'success');
+      console.log('🎯 [MANAGER] Terminal container created successfully');
+    } else {
+      throw new Error('Failed to create terminal container');
+    }
 
     // WebViewヘッダーを作成
     this.headerManager.createWebViewHeader();
@@ -161,7 +192,7 @@ class TerminalWebviewManager {
     window.addEventListener('message', (event) => {
       const message = event.data as WebviewMessage;
       console.log('🎯 [MANAGER] Received message:', message.command);
-      
+
       PerformanceUtils.measurePerformance(`Handle ${message.command}`, () => {
         void this.handleMessage(message);
       });
@@ -173,19 +204,19 @@ class TerminalWebviewManager {
    */
   private setupEventListeners(): void {
     // キーボードアクティビティでステータス再表示
-    DOMUtils.addEventListenerSafe(document, 'keydown', () => {
+    DOMUtils.addEventListenerSafe(document.documentElement, 'keydown', () => {
       this.statusManager.showLastStatusOnActivity();
     });
 
     // マウスアクティビティでステータス再表示
-    DOMUtils.addEventListenerSafe(document, 'click', (e) => {
+    DOMUtils.addEventListenerSafe(document.documentElement, 'click', (e) => {
       if (!(e.target as HTMLElement)?.closest('.status')) {
         this.statusManager.showLastStatusOnActivity();
       }
     });
 
     // ESCキーでステータス非表示
-    DOMUtils.addEventListenerSafe(document, 'keydown', (e) => {
+    DOMUtils.addEventListenerSafe(document.documentElement, 'keydown', (e) => {
       if (e.key === 'Escape') {
         this.statusManager.hideStatus();
       }
@@ -201,43 +232,46 @@ class TerminalWebviewManager {
     try {
       switch (message.command) {
         case TERMINAL_CONSTANTS.COMMANDS.INIT:
-          await this.handleInitMessage(message as any);
+          await this.handleInitMessage(message as InitMessage);
           break;
         case TERMINAL_CONSTANTS.COMMANDS.OUTPUT:
-          this.handleOutputMessage(message as any);
+          this.handleOutputMessage(message as OutputMessage);
           break;
         case TERMINAL_CONSTANTS.COMMANDS.TERMINAL_CREATED:
-          this.handleTerminalCreated(message as any);
+          this.handleTerminalCreated(message as TerminalCreatedMessage);
           break;
         case TERMINAL_CONSTANTS.COMMANDS.CLEAR:
           this.handleClearCommand();
           break;
-        case 'openSettings':
-          this.openSettingsPanel();
+        case TERMINAL_CONSTANTS.COMMANDS.SETTINGS_RESPONSE:
+          this.handleSettingsResponse(message as SettingsMessage);
           break;
         case 'getSettings':
           this.handleGetSettings();
           break;
         case 'settingsResponse':
-          this.handleSettingsResponse(message as any);
+          this.handleSettingsResponse(message as SettingsMessage);
           break;
         default:
           console.warn('⚠️ [MANAGER] Unknown command:', message.command);
       }
     } catch (error) {
-      ErrorHandler.getInstance().handleCommunicationError(error as Error, `handleMessage.${message.command}`);
+      ErrorHandler.getInstance().handleCommunicationError(
+        error as Error,
+        `handleMessage.${message.command}`
+      );
     }
   }
 
   /**
    * 初期化メッセージの処理
    */
-  private async handleInitMessage(message: any): Promise<void> {
+  private async handleInitMessage(message: InitMessage): Promise<void> {
     this.updateStatus('Received initialization data');
 
     if (message.config && message.activeTerminalId) {
       this.activeTerminalId = message.activeTerminalId;
-      
+
       // ターミナルを作成
       const terminal = await this.createTerminalInstance(
         message.activeTerminalId,
@@ -254,7 +288,7 @@ class TerminalWebviewManager {
   /**
    * 出力メッセージの処理
    */
-  private handleOutputMessage(message: any): void {
+  private handleOutputMessage(message: OutputMessage): void {
     if (message.data && this.terminal) {
       this.terminal.write(message.data);
     }
@@ -263,7 +297,7 @@ class TerminalWebviewManager {
   /**
    * ターミナル作成イベントの処理
    */
-  private handleTerminalCreated(message: any): void {
+  private handleTerminalCreated(message: TerminalCreatedMessage): void {
     console.log('🆕 [MANAGER] Terminal created:', message.terminalId);
     this.addTerminalTab(message.terminalId, message.terminalName || 'Terminal');
     this.headerManager.updateTerminalCountBadge();
@@ -291,8 +325,8 @@ class TerminalWebviewManager {
         throw new Error('Terminal container not available');
       }
 
-      const theme = ThemeUtils.getThemeColors(config.theme as any);
-      
+      const theme = ThemeUtils.getThemeColors(config.theme as 'auto' | 'dark' | 'light');
+
       const terminal = new Terminal({
         fontSize: config.fontSize || 14,
         fontFamily: config.fontFamily || 'monospace',
@@ -313,13 +347,17 @@ class TerminalWebviewManager {
       }
 
       // ターミナルコンテナを作成
-      const terminalDiv = DOMUtils.createElement('div', {
-        width: '100%',
-        height: '100%',
-      }, {
-        'data-terminal-container': 'primary',
-        id: 'primary-terminal',
-      });
+      const terminalDiv = DOMUtils.createElement(
+        'div',
+        {
+          width: '100%',
+          height: '100%',
+        },
+        {
+          'data-terminal-container': 'primary',
+          id: 'primary-terminal',
+        }
+      );
 
       this.terminalContainer.appendChild(terminalDiv);
 
@@ -327,7 +365,7 @@ class TerminalWebviewManager {
       await new Promise<void>((resolve) => {
         setTimeout(() => {
           terminal.open(terminalDiv);
-          
+
           setTimeout(() => {
             fitAddon.fit();
             terminal.focus();
@@ -344,7 +382,6 @@ class TerminalWebviewManager {
 
       console.log('✅ [MANAGER] Terminal instance created successfully');
       return terminal;
-
     } catch (error) {
       ErrorHandler.getInstance().handleTerminalError(error as Error, 'createTerminalInstance');
       return null;
@@ -384,30 +421,38 @@ class TerminalWebviewManager {
       return;
     }
 
-    const tab = DOMUtils.createElement('div', {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '4px',
-      padding: '4px 8px',
-      background: 'var(--vscode-tab-inactiveBackground, #2d2d30)',
-      border: '1px solid var(--vscode-tab-border, #333)',
-      borderRadius: '3px 3px 0 0',
-      cursor: 'pointer',
-      fontSize: '12px',
-      color: 'var(--vscode-tab-inactiveForeground, #969696)',
-      maxWidth: '150px',
-    }, {
-      id: `tab-${id}`,
-    });
+    const tab = DOMUtils.createElement(
+      'div',
+      {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '4px',
+        padding: '4px 8px',
+        background: 'var(--vscode-tab-inactiveBackground, #2d2d30)',
+        border: '1px solid var(--vscode-tab-border, #333)',
+        borderRadius: '3px 3px 0 0',
+        cursor: 'pointer',
+        fontSize: '12px',
+        color: 'var(--vscode-tab-inactiveForeground, #969696)',
+        maxWidth: '150px',
+      },
+      {
+        id: `tab-${id}`,
+      }
+    );
 
-    const tabLabel = DOMUtils.createElement('span', {
-      overflow: 'hidden',
-      textOverflow: 'ellipsis',
-      whiteSpace: 'nowrap',
-      flex: '1',
-    }, {
-      textContent: name,
-    });
+    const tabLabel = DOMUtils.createElement(
+      'span',
+      {
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+        flex: '1',
+      },
+      {
+        textContent: name,
+      }
+    );
 
     tab.appendChild(tabLabel);
     tabsContainer.appendChild(tab);
@@ -435,7 +480,7 @@ class TerminalWebviewManager {
   /**
    * 設定レスポンスの処理
    */
-  private handleSettingsResponse(message: any): void {
+  private handleSettingsResponse(message: SettingsMessage): void {
     if (message.settings) {
       this.settingsPanel.show(message.settings);
     }
@@ -463,8 +508,8 @@ class TerminalWebviewManager {
     if (!this.terminal) return;
 
     try {
-      const theme = ThemeUtils.getThemeColors(settings.theme as any);
-      
+      const theme = ThemeUtils.getThemeColors(settings.theme as 'auto' | 'dark' | 'light');
+
       this.terminal.options.fontSize = settings.fontSize;
       this.terminal.options.fontFamily = settings.fontFamily;
       this.terminal.options.cursorBlink = settings.cursorBlink;
@@ -517,12 +562,12 @@ function sendReadyMessage(): void {
 /**
  * アプリケーション初期化
  */
-async function initializeApp(): Promise<void> {
+function initializeApp(): void {
   try {
     console.log('🚀 [MAIN] Starting terminal webview application');
-    
-    await terminalManager.initialize();
-    
+
+    terminalManager.initialize();
+
     console.log('✅ [MAIN] Application initialized successfully');
   } catch (error) {
     console.error('❌ [MAIN] Failed to initialize application:', error);
@@ -535,16 +580,15 @@ async function initializeApp(): Promise<void> {
  */
 if (document.readyState === 'loading') {
   console.log('🎯 [MAIN] DOM is loading, waiting for DOMContentLoaded...');
-  document.addEventListener('DOMContentLoaded', async () => {
+  document.addEventListener('DOMContentLoaded', () => {
     console.log('🎯 [MAIN] DOMContentLoaded event fired');
-    await initializeApp();
+    initializeApp();
     sendReadyMessage();
   });
 } else {
   console.log('🎯 [MAIN] DOM is already ready');
-  void initializeApp().then(() => {
-    sendReadyMessage();
-  });
+  initializeApp();
+  sendReadyMessage();
 }
 
 // エラーハンドリング
@@ -557,7 +601,7 @@ window.addEventListener('error', (event) => {
 
 window.addEventListener('unhandledrejection', (event) => {
   ErrorHandler.getInstance().handleGenericError(
-    new Error(event.reason),
+    new Error(String(event.reason)),
     'Unhandled promise rejection'
   );
 });

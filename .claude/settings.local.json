@@ -15,7 +15,17 @@
       "Bash(npm run lint:*)",
       "Bash(node:*)",
       "Bash(grep:*)",
-      "Bash(gh issue edit:*)"
+      "Bash(gh issue edit:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm rebuild:*)",
+      "Bash(pkill:*)",
+      "Bash(code:*)",
+      "Bash(rm:*)",
+      "Bash(arch:*)",
+      "Bash(sysctl:*)",
+      "Bash(npm cache clean:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run test:*)"
     ],
     "deny": []
   }

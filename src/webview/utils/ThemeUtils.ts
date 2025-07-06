@@ -4,14 +4,14 @@ import type { ThemeColors } from '../types/webview.types';
 /**
  * テーマ関連のユーティリティクラス
  */
-export class ThemeUtils {
+export const ThemeUtils = {
   /**
    * 現在のVS Codeテーマを検出
    */
-  public static detectTheme(): 'dark' | 'light' {
+  detectTheme(): 'dark' | 'light' {
     const style = getComputedStyle(document.body);
-    
-    const bgColor = 
+
+    const bgColor =
       style.getPropertyValue('--vscode-editor-background') ||
       style.getPropertyValue('--vscode-panel-background') ||
       style.backgroundColor;
@@ -58,34 +58,33 @@ export class ThemeUtils {
 
     console.log('🎨 [THEME] Theme detected as:', isDark ? 'dark' : 'light');
     return isDark ? 'dark' : 'light';
-  }
+  },
 
   /**
    * テーマに基づいて適切なカラーパレットを取得
    */
-  public static getThemeColors(theme?: 'auto' | 'dark' | 'light'): ThemeColors {
+  getThemeColors(theme?: 'auto' | 'dark' | 'light'): ThemeColors {
     const detectedTheme = theme === 'auto' ? this.detectTheme() : theme || 'dark';
-    
-    const colors = detectedTheme === 'dark' 
-      ? THEME_CONSTANTS.DARK_THEME 
-      : THEME_CONSTANTS.LIGHT_THEME;
+
+    const colors =
+      detectedTheme === 'dark' ? THEME_CONSTANTS.DARK_THEME : THEME_CONSTANTS.LIGHT_THEME;
 
     console.log('🎨 [THEME] Applied theme colors:', colors);
     return colors;
-  }
+  },
 
   /**
    * VS Code CSS変数から色を取得
    */
-  public static getVSCodeColor(variableName: string, fallback: string): string {
+  getVSCodeColor(variableName: string, fallback: string): string {
     const style = getComputedStyle(document.documentElement);
     return style.getPropertyValue(`--vscode-${variableName}`) || fallback;
-  }
+  },
 
   /**
    * 色の明度を計算
    */
-  public static calculateBrightness(color: string): number {
+  calculateBrightness(color: string): number {
     // RGB値を抽出
     let r: number, g: number, b: number;
 
@@ -97,51 +96,51 @@ export class ThemeUtils {
     } else if (color.includes('rgb')) {
       const values = color.match(/\d+/g);
       if (!values || values.length < 3) return 0;
-      r = parseInt(values[0]);
-      g = parseInt(values[1]);
-      b = parseInt(values[2]);
+      r = parseInt(values[0] ?? '0');
+      g = parseInt(values[1] ?? '0');
+      b = parseInt(values[2] ?? '0');
     } else {
       return 0;
     }
 
     // 明度を計算（Y = 0.299*R + 0.587*G + 0.114*B）
     return (r * 299 + g * 587 + b * 114) / 1000;
-  }
+  },
 
   /**
    * 色が暗いかどうか判定
    */
-  public static isDarkColor(color: string): boolean {
+  isDarkColor(color: string): boolean {
     return this.calculateBrightness(color) < 128;
-  }
+  },
 
   /**
    * アクセント色を生成
    */
-  public static generateAccentColor(baseColor: string, factor: number = 0.2): string {
+  generateAccentColor(baseColor: string, factor: number = 0.2): string {
     const brightness = this.calculateBrightness(baseColor);
     const isDark = brightness < 128;
-    
+
     // 暗い色の場合は明るく、明るい色の場合は暗くする
-    const adjustment = isDark ? factor : -factor;
-    
+    const _adjustment = isDark ? factor : -factor;
+
     // 簡易的な色調整（実際の実装では色空間変換が望ましい）
     return isDark ? this.lightenColor(baseColor, factor) : this.darkenColor(baseColor, factor);
-  }
+  },
 
   /**
    * 色を明るくする
    */
-  private static lightenColor(color: string, factor: number): string {
+  lightenColor(color: string, _factor: number): string {
     // 簡易実装：より正確な実装が必要な場合はcolor-manipulationライブラリを使用
     return color; // プレースホルダー
-  }
+  },
 
   /**
    * 色を暗くする
    */
-  private static darkenColor(color: string, factor: number): string {
+  darkenColor(color: string, _factor: number): string {
     // 簡易実装：より正確な実装が必要な場合はcolor-manipulationライブラリを使用
     return color; // プレースホルダー
-  }
-}
+  },
+};

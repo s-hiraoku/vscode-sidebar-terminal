@@ -78,22 +78,22 @@ function validateDirectory(dirPath: string): boolean {
   try {
     const stat = fs.statSync(dirPath);
     const isDirectory = stat.isDirectory();
-    
+
     // Try to access the directory
     fs.accessSync(dirPath, fs.constants.R_OK | fs.constants.X_OK);
-    
+
     console.log('📁 [VALIDATE] Directory validation:', {
       path: dirPath,
       exists: true,
       isDirectory,
-      accessible: true
+      accessible: true,
     });
-    
+
     return isDirectory;
   } catch (error) {
     console.warn('⚠️ [VALIDATE] Directory validation failed:', {
       path: dirPath,
-      error: String(error)
+      error: String(error),
     });
     return false;
   }
@@ -121,14 +121,17 @@ export function getWorkingDirectory(): string {
 
   // Check workspace folders
   const workspaceFolders = vscode.workspace.workspaceFolders;
-  console.log('📁 [WORKDIR] Workspace folders:', workspaceFolders?.map(f => f.uri.fsPath));
+  console.log(
+    '📁 [WORKDIR] Workspace folders:',
+    workspaceFolders?.map((f) => f.uri.fsPath)
+  );
 
   if (workspaceFolders && workspaceFolders.length > 0) {
-    const workspaceRoot = workspaceFolders[0].uri.fsPath;
+    const workspaceRoot = workspaceFolders[0]?.uri.fsPath;
     console.log('📁 [WORKDIR] Candidate workspace root:', workspaceRoot);
-    
+
     // Validate directory exists and is accessible
-    if (validateDirectory(workspaceRoot)) {
+    if (workspaceRoot && validateDirectory(workspaceRoot)) {
       console.log('📁 [WORKDIR] Using validated workspace root:', workspaceRoot);
       return workspaceRoot;
     } else {
@@ -141,7 +144,7 @@ export function getWorkingDirectory(): string {
   if (activeEditor && activeEditor.document.uri.scheme === 'file') {
     const activeFileDir = path.dirname(activeEditor.document.uri.fsPath);
     console.log('📁 [WORKDIR] Candidate active file directory:', activeFileDir);
-    
+
     if (validateDirectory(activeFileDir)) {
       console.log('📁 [WORKDIR] Using validated active file directory:', activeFileDir);
       return activeFileDir;
@@ -151,12 +154,12 @@ export function getWorkingDirectory(): string {
   // Fallback to home directory
   const homeDir = os.homedir();
   console.log('📁 [WORKDIR] Using fallback home directory:', homeDir);
-  
+
   // Final validation of home directory
   if (validateDirectory(homeDir)) {
     return homeDir;
   }
-  
+
   // Last resort - current process directory
   const processDir = process.cwd();
   console.log('📁 [WORKDIR] Last resort - process cwd:', processDir);

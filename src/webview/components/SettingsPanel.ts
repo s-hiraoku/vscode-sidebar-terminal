@@ -72,20 +72,24 @@ export class SettingsPanel {
    * 設定パネルを作成
    */
   private createPanel(): void {
-    this.panelElement = DOMUtils.createElement('div', {
-      position: 'fixed',
-      top: '0',
-      left: '0',
-      right: '0',
-      bottom: '0',
-      background: 'rgba(0, 0, 0, 0.8)',
-      zIndex: '10000',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-    }, {
-      id: 'settings-panel',
-    });
+    this.panelElement = DOMUtils.createElement(
+      'div',
+      {
+        position: 'fixed',
+        top: '0',
+        left: '0',
+        right: '0',
+        bottom: '0',
+        background: 'rgba(0, 0, 0, 0.8)',
+        zIndex: '10000',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      },
+      {
+        id: 'settings-panel',
+      }
+    );
 
     const settingsContent = this.createSettingsContent();
     this.panelElement.appendChild(settingsContent);
@@ -295,7 +299,7 @@ export class SettingsPanel {
     });
 
     // ESCキーで閉じる
-    DOMUtils.addEventListenerSafe(document, 'keydown', (e) => {
+    DOMUtils.addEventListenerSafe(document.documentElement, 'keydown', (e) => {
       if (e.key === 'Escape' && this.isVisible) {
         this.hide();
       }
@@ -370,9 +374,13 @@ export class SettingsPanel {
     }
 
     const fontSizeSlider = this.panelElement.querySelector('#font-size-slider') as HTMLInputElement;
-    const fontFamilySelect = this.panelElement.querySelector('#font-family-select') as HTMLSelectElement;
+    const fontFamilySelect = this.panelElement.querySelector(
+      '#font-family-select'
+    ) as HTMLSelectElement;
     const themeSelect = this.panelElement.querySelector('#theme-select') as HTMLSelectElement;
-    const cursorBlinkCheckbox = this.panelElement.querySelector('#cursor-blink') as HTMLInputElement;
+    const cursorBlinkCheckbox = this.panelElement.querySelector(
+      '#cursor-blink'
+    ) as HTMLInputElement;
 
     return {
       fontSize: parseInt(fontSizeSlider?.value || '14'),
@@ -389,11 +397,17 @@ export class SettingsPanel {
     if (!settings || !this.panelElement) return;
 
     try {
-      const fontSizeSlider = this.panelElement.querySelector('#font-size-slider') as HTMLInputElement;
+      const fontSizeSlider = this.panelElement.querySelector(
+        '#font-size-slider'
+      ) as HTMLInputElement;
       const fontSizeValue = this.panelElement.querySelector('#font-size-value');
-      const fontFamilySelect = this.panelElement.querySelector('#font-family-select') as HTMLSelectElement;
+      const fontFamilySelect = this.panelElement.querySelector(
+        '#font-family-select'
+      ) as HTMLSelectElement;
       const themeSelect = this.panelElement.querySelector('#theme-select') as HTMLSelectElement;
-      const cursorBlinkCheckbox = this.panelElement.querySelector('#cursor-blink') as HTMLInputElement;
+      const cursorBlinkCheckbox = this.panelElement.querySelector(
+        '#cursor-blink'
+      ) as HTMLInputElement;
 
       if (fontSizeSlider) {
         fontSizeSlider.value = settings.fontSize.toString();
@@ -414,7 +428,10 @@ export class SettingsPanel {
         cursorBlinkCheckbox.checked = settings.cursorBlink;
       }
     } catch (error) {
-      ErrorHandler.getInstance().handleSettingsError(error as Error, 'SettingsPanel.populateSettings');
+      ErrorHandler.getInstance().handleSettingsError(
+        error as Error,
+        'SettingsPanel.populateSettings'
+      );
     }
   }
 
@@ -428,7 +445,7 @@ export class SettingsPanel {
 
       // アニメーション用の初期スタイル
       this.panelElement.style.opacity = '0';
-      
+
       requestAnimationFrame(() => {
         if (this.panelElement) {
           this.panelElement.style.transition = 'opacity 0.2s ease';

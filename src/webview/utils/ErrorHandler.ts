@@ -16,10 +16,10 @@ export class ErrorHandler {
    */
   public handleTerminalError(error: Error, context: string): void {
     console.error(`[TERMINAL_ERROR] ${context}:`, error);
-    
+
     // ユーザーに表示するエラーメッセージ
     this.showUserError(`Terminal Error: ${error.message}`);
-    
+
     // 拡張機能にエラー詳細を送信
     this.reportToExtension({
       type: 'terminal',
@@ -34,7 +34,7 @@ export class ErrorHandler {
    */
   public handleLayoutError(error: Error, context: string): void {
     console.error(`[LAYOUT_ERROR] ${context}:`, error);
-    
+
     // レイアウトエラーは表示のみでユーザーには通知しない
     // 重大な場合のみ処理を継続
     if (this.isCriticalLayoutError(error)) {
@@ -48,7 +48,7 @@ export class ErrorHandler {
   public handleSettingsError(error: Error, context: string): void {
     console.error(`[SETTINGS_ERROR] ${context}:`, error);
     this.showUserError('Settings update failed');
-    
+
     this.reportToExtension({
       type: 'settings',
       message: error.message,
@@ -63,7 +63,7 @@ export class ErrorHandler {
   public handleCommunicationError(error: Error, context: string): void {
     console.error(`[COMMUNICATION_ERROR] ${context}:`, error);
     this.showUserError('Communication with extension failed');
-    
+
     this.reportToExtension({
       type: 'communication',
       message: error.message,
@@ -77,7 +77,7 @@ export class ErrorHandler {
    */
   public handleDOMError(error: Error, context: string): void {
     console.error(`[DOM_ERROR] ${context}:`, error);
-    
+
     // DOM操作エラーは通常回復可能
     if (this.isCriticalDOMError(error)) {
       this.showUserError('Interface update failed');
@@ -90,7 +90,7 @@ export class ErrorHandler {
   public handleGenericError(error: Error, context: string): void {
     console.error(`[GENERIC_ERROR] ${context}:`, error);
     this.showUserError('An unexpected error occurred');
-    
+
     this.reportToExtension({
       type: 'generic',
       message: error.message,
@@ -104,8 +104,14 @@ export class ErrorHandler {
    */
   private showUserError(message: string): void {
     // ステータスマネージャーが利用可能な場合は使用
-    if (typeof window !== 'undefined' && (window as any).statusManager) {
-      (window as any).statusManager.showStatus(message, 'error');
+    const windowWithStatus = window as unknown as Record<string, unknown> & {
+      statusManager?: {
+        showStatus: (message: string, type: 'error') => void;
+      };
+    };
+
+    if (typeof window !== 'undefined' && windowWithStatus.statusManager) {
+      windowWithStatus.statusManager.showStatus(message, 'error');
     } else {
       // フォールバック：コンソールログのみ
       console.warn('Status manager not available, error message:', message);
@@ -122,8 +128,14 @@ export class ErrorHandler {
     stack?: string;
   }): void {
     try {
-      if (typeof window !== 'undefined' && (window as any).vscode) {
-        (window as any).vscode.postMessage({
+      const windowWithVscode = window as unknown as Record<string, unknown> & {
+        vscode?: {
+          postMessage: (message: Record<string, unknown>) => void;
+        };
+      };
+
+      if (typeof window !== 'undefined' && windowWithVscode.vscode) {
+        windowWithVscode.vscode.postMessage({
           command: 'error',
           ...errorInfo,
           timestamp: Date.now(),
@@ -143,10 +155,8 @@ export class ErrorHandler {
       'terminal body not available',
       'failed to initialize layout',
     ];
-    
-    return criticalMessages.some(msg => 
-      error.message.toLowerCase().includes(msg)
-    );
+
+    return criticalMessages.some((msg) => error.message.toLowerCase().includes(msg));
   }
 
   /**
@@ -158,20 +168,14 @@ export class ErrorHandler {
       'null is not an object',
       'failed to create element',
     ];
-    
-    return criticalMessages.some(msg => 
-      error.message.toLowerCase().includes(msg)
-    );
+
+    return criticalMessages.some((msg) => error.message.toLowerCase().includes(msg));
   }
 
   /**
    * 安全な関数実行ラッパー
    */
-  public static safeExecute<T>(
-    fn: () => T,
-    context: string,
-    fallback?: T
-  ): T | undefined {
+  public static safeExecute<T>(fn: () => T, context: string, fallback?: T): T | undefined {
     try {
       return fn();
     } catch (error) {

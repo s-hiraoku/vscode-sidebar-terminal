@@ -1,5 +1,7 @@
 import type { TerminalConfig, TerminalSettings } from './terminal.types';
 
+export type { TerminalConfig };
+
 export interface WebviewMessageBase {
   readonly command: string;
   readonly timestamp?: number;
@@ -41,6 +43,10 @@ export interface SettingsMessage extends WebviewMessageBase {
   readonly settings?: TerminalSettings;
 }
 
+export interface OpenSettingsMessage extends WebviewMessageBase {
+  readonly command: 'openSettings';
+}
+
 export interface ClearCommandMessage extends WebviewMessageBase {
   readonly command: 'clear';
   readonly terminalId?: string;
@@ -53,17 +59,18 @@ export interface ReadyMessage extends WebviewMessageBase {
 export interface InitMessage extends WebviewMessageBase {
   readonly command: 'init';
   readonly config?: TerminalConfig;
-  readonly terminals?: any[];
+  readonly terminals?: TerminalConfig[];
   readonly activeTerminalId?: string;
 }
 
-export type WebviewMessage = 
-  | TerminalCreatedMessage 
-  | TerminalOutputMessage 
+export type WebviewMessage =
+  | TerminalCreatedMessage
+  | TerminalOutputMessage
   | TerminalInputMessage
   | TerminalResizeMessage
-  | SplitCommandMessage 
+  | SplitCommandMessage
   | SettingsMessage
+  | OpenSettingsMessage
   | ClearCommandMessage
   | ReadyMessage
   | InitMessage;

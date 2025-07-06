@@ -1,21 +1,38 @@
 /**
  * パフォーマンス最適化のためのユーティリティクラス
  */
-export class PerformanceUtils {
+
+// 型定義
+interface MemoryInfo {
+  usedJSHeapSize: number;
+  totalJSHeapSize: number;
+  jsHeapSizeLimit: number;
+}
+
+interface IdleCallbackOptions {
+  timeout: number;
+}
+
+interface RequestIdleCallbackFunction {
+  (callback: () => void, options?: IdleCallbackOptions): void;
+}
+
+/* eslint-disable @typescript-eslint/no-namespace */
+export namespace PerformanceUtils {
   /**
    * 関数の実行を指定時間遅延させる（デバウンス）
    */
-  public static debounce<T extends (...args: any[]) => any>(
+  export function debounce<T extends (...args: unknown[]) => unknown>(
     func: T,
     delay: number
   ): (...args: Parameters<T>) => void {
     let timeoutId: number | null = null;
-    
+
     return (...args: Parameters<T>) => {
       if (timeoutId !== null) {
         window.clearTimeout(timeoutId);
       }
-      
+
       timeoutId = window.setTimeout(() => {
         func(...args);
         timeoutId = null;
@@ -26,25 +43,28 @@ export class PerformanceUtils {
   /**
    * 関数の実行頻度を制限する（スロットル）
    */
-  public static throttle<T extends (...args: any[]) => any>(
+  export function throttle<T extends (...args: unknown[]) => unknown>(
     func: T,
     delay: number
   ): (...args: Parameters<T>) => void {
     let lastCall = 0;
     let timeoutId: number | null = null;
-    
+
     return (...args: Parameters<T>) => {
       const now = Date.now();
-      
+
       if (now - lastCall >= delay) {
         lastCall = now;
         func(...args);
       } else if (timeoutId === null) {
-        timeoutId = window.setTimeout(() => {
-          lastCall = Date.now();
-          func(...args);
-          timeoutId = null;
-        }, delay - (now - lastCall));
+        timeoutId = window.setTimeout(
+          () => {
+            lastCall = Date.now();
+            func(...args);
+            timeoutId = null;
+          },
+          delay - (now - lastCall)
+        );
       }
     };
   }
@@ -52,9 +72,13 @@ export class PerformanceUtils {
   /**
    * アイドル時間での実行
    */
-  public static requestIdleCallback(callback: () => void, timeout = 5000): void {
+  export function requestIdleCallback(callback: () => void, timeout = 5000): void {
     if ('requestIdleCallback' in window) {
-      (window as any).requestIdleCallback(callback, { timeout });
+      (
+        window as unknown as Record<string, unknown> & {
+          requestIdleCallback: RequestIdleCallbackFunction;
+        }
+      ).requestIdleCallback(callback, { timeout });
     } else {
       // フォールバック：setTimeout を使用
       setTimeout(callback, 1);
@@ -64,14 +88,14 @@ export class PerformanceUtils {
   /**
    * RAF（requestAnimationFrame）での実行
    */
-  public static requestAnimationFrame(callback: () => void): number {
+  export function requestAnimationFrame(callback: () => void): number {
     return window.requestAnimationFrame(callback);
   }
 
   /**
    * 複数のRAFを連続実行
    */
-  public static doubleRequestAnimationFrame(callback: () => void): void {
+  export function doubleRequestAnimationFrame(callback: () => void): void {
     window.requestAnimationFrame(() => {
       window.requestAnimationFrame(callback);
     });
@@ -80,14 +104,11 @@ export class PerformanceUtils {
   /**
    * パフォーマンス測定
    */
-  public static measurePerformance<T>(
-    label: string,
-    fn: () => T
-  ): T {
+  export function measurePerformance<T>(label: string, fn: () => T): T {
     const startTime = performance.now();
     const result = fn();
     const endTime = performance.now();
-    
+
     console.log(`⚡ [PERFORMANCE] ${label}: ${(endTime - startTime).toFixed(2)}ms`);
     return result;
   }
@@ -95,14 +116,14 @@ export class PerformanceUtils {
   /**
    * 非同期関数のパフォーマンス測定
    */
-  public static async measurePerformanceAsync<T>(
+  export async function measurePerformanceAsync<T>(
     label: string,
     fn: () => Promise<T>
   ): Promise<T> {
     const startTime = performance.now();
     const result = await fn();
     const endTime = performance.now();
-    
+
     console.log(`⚡ [PERFORMANCE] ${label}: ${(endTime - startTime).toFixed(2)}ms`);
     return result;
   }
@@ -110,9 +131,10 @@ export class PerformanceUtils {
   /**
    * メモリ使用量の取得
    */
-  public static getMemoryUsage(): Record<string, number> | null {
-    if ('memory' in performance) {
-      const memory = (performance as any).memory;
+  export function getMemoryUsage(): Record<string, number> | null {
+    const perfWithMemory = performance as Performance & { memory?: MemoryInfo };
+    if (perfWithMemory.memory) {
+      const memory = perfWithMemory.memory;
       return {
         usedJSHeapSize: memory.usedJSHeapSize,
         totalJSHeapSize: memory.totalJSHeapSize,
@@ -125,13 +147,13 @@ export class PerformanceUtils {
   /**
    * メモリ使用量をログ出力
    */
-  public static logMemoryUsage(label: string): void {
-    const memory = this.getMemoryUsage();
+  export function logMemoryUsage(label: string): void {
+    const memory = getMemoryUsage();
     if (memory) {
       console.log(`🧠 [MEMORY] ${label}:`, {
-        used: `${(memory.usedJSHeapSize / 1024 / 1024).toFixed(2)}MB`,
-        total: `${(memory.totalJSHeapSize / 1024 / 1024).toFixed(2)}MB`,
-        limit: `${(memory.jsHeapSizeLimit / 1024 / 1024).toFixed(2)}MB`,
+        used: `${((memory.usedJSHeapSize ?? 0) / 1024 / 1024).toFixed(2)}MB`,
+        total: `${((memory.totalJSHeapSize ?? 0) / 1024 / 1024).toFixed(2)}MB`,
+        limit: `${((memory.jsHeapSizeLimit ?? 0) / 1024 / 1024).toFixed(2)}MB`,
       });
     }
   }
@@ -139,7 +161,7 @@ export class PerformanceUtils {
   /**
    * 長い処理を分割して実行
    */
-  public static async processInChunks<T>(
+  export async function processInChunks<T>(
     items: T[],
     processor: (item: T) => void,
     chunkSize = 100,
@@ -147,12 +169,12 @@ export class PerformanceUtils {
   ): Promise<void> {
     for (let i = 0; i < items.length; i += chunkSize) {
       const chunk = items.slice(i, i + chunkSize);
-      
+
       chunk.forEach(processor);
-      
+
       // 次のチャンクまで待機
       if (i + chunkSize < items.length && delay > 0) {
-        await new Promise(resolve => setTimeout(resolve, delay));
+        await new Promise((resolve) => setTimeout(resolve, delay));
       }
     }
   }
@@ -160,27 +182,30 @@ export class PerformanceUtils {
   /**
    * プロミスの並列処理（制限付き）
    */
-  public static async processInParallel<T, R>(
+  export async function processInParallel<T, R>(
     items: T[],
     processor: (item: T) => Promise<R>,
     concurrency = 3
   ): Promise<R[]> {
     const results: R[] = [];
     const executing: Promise<void>[] = [];
-    
+
     for (const item of items) {
-      const promise = processor(item).then(result => {
+      const promise = processor(item).then((result) => {
         results.push(result);
       });
-      
+
       executing.push(promise);
-      
+
       if (executing.length >= concurrency) {
         await Promise.race(executing);
-        executing.splice(executing.findIndex(p => p === promise), 1);
+        void executing.splice(
+          executing.findIndex((p) => p === promise),
+          1
+        );
       }
     }
-    
+
     await Promise.all(executing);
     return results;
   }
@@ -188,47 +213,47 @@ export class PerformanceUtils {
   /**
    * オブジェクトのディープクローン（パフォーマンス重視）
    */
-  public static deepClone<T>(obj: T): T {
+  export function deepClone<T>(obj: T): T {
     if (obj === null || typeof obj !== 'object') {
       return obj;
     }
-    
+
     if (obj instanceof Date) {
       return new Date(obj.getTime()) as unknown as T;
     }
-    
+
     if (obj instanceof Array) {
-      return obj.map(item => this.deepClone(item)) as unknown as T;
+      return obj.map((item: unknown) => deepClone(item)) as unknown as T;
     }
-    
+
     if (typeof obj === 'object') {
       const cloned = {} as T;
-      Object.keys(obj).forEach(key => {
-        (cloned as any)[key] = this.deepClone((obj as any)[key]);
+      Object.keys(obj).forEach((key) => {
+        (cloned as Record<string, unknown>)[key] = deepClone((obj as Record<string, unknown>)[key]);
       });
       return cloned;
     }
-    
+
     return obj;
   }
 
   /**
    * 配列の高速検索（バイナリサーチ）
    */
-  public static binarySearch<T>(
-    arr: T[],
-    target: T,
-    compareFn?: (a: T, b: T) => number
-  ): number {
-    const compare = compareFn || ((a, b) => a < b ? -1 : a > b ? 1 : 0);
-    
+  export function binarySearch<T>(arr: T[], target: T, compareFn?: (a: T, b: T) => number): number {
+    const compare = compareFn || ((a: T, b: T): number => (a < b ? -1 : a > b ? 1 : 0));
+
     let left = 0;
     let right = arr.length - 1;
-    
+
     while (left <= right) {
       const mid = Math.floor((left + right) / 2);
-      const comparison = compare(arr[mid], target);
-      
+      const midValue = arr[mid];
+      if (midValue === undefined) {
+        return -1;
+      }
+      const comparison = compare(midValue, target);
+
       if (comparison === 0) {
         return mid;
       } else if (comparison < 0) {
@@ -237,7 +262,7 @@ export class PerformanceUtils {
         right = mid - 1;
       }
     }
-    
+
     return -1;
   }
 }
