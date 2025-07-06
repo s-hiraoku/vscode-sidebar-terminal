@@ -508,68 +508,10 @@ class TerminalWebviewManager {
     }, this.RESIZE_DEBOUNCE_DELAY);
   }
 
-  // Split functionality methods
+  // Split functionality methods (controlled by panel commands)
   public initializeSplitControls(): void {
-    console.log('🔀 [WEBVIEW] Initializing split controls');
-
-    // Add split controls to existing header if it exists
-    const header = document.getElementById('terminal-header');
-    if (header) {
-      const controlsHtml = `
-        <div id="split-controls" style="display: flex; gap: 4px;">
-          <button id="split-horizontal" title="Split Horizontally" style="
-            background: transparent;
-            border: 1px solid var(--vscode-widget-border, #454545);
-            color: var(--vscode-foreground, #cccccc);
-            border-radius: 3px;
-            padding: 2px 6px;
-            font-size: 11px;
-            cursor: pointer;
-          ">⫽</button>
-          <button id="split-vertical" title="Split Vertically" style="
-            background: transparent;
-            border: 1px solid var(--vscode-widget-border, #454545);
-            color: var(--vscode-foreground, #cccccc);
-            border-radius: 3px;
-            padding: 2px 6px;
-            font-size: 11px;
-            cursor: pointer;
-          ">⫿</button>
-          <button id="unsplit" title="Remove Split" style="
-            background: transparent;
-            border: 1px solid var(--vscode-widget-border, #454545);
-            color: var(--vscode-foreground, #cccccc);
-            border-radius: 3px;
-            padding: 2px 6px;
-            font-size: 11px;
-            cursor: pointer;
-            display: none;
-          ">⨯</button>
-        </div>
-      `;
-
-      const rightSection = header.querySelector('div:last-child');
-      if (rightSection) {
-        rightSection.innerHTML = controlsHtml;
-      }
-    }
-
-    // Add event listeners
-    const splitHorizontal = document.getElementById('split-horizontal');
-    const splitVertical = document.getElementById('split-vertical');
-    const unsplit = document.getElementById('unsplit');
-
-    if (splitHorizontal) {
-      splitHorizontal.addEventListener('click', () => this.splitTerminal('horizontal'));
-    }
-
-    if (splitVertical) {
-      splitVertical.addEventListener('click', () => this.splitTerminal('vertical'));
-    }
-
-    if (unsplit) {
-      unsplit.addEventListener('click', () => this.unsplitTerminal());
-    }
+    console.log('🔀 [WEBVIEW] Split controls ready (using panel commands)');
+    // No UI controls needed - using VS Code panel commands
   }
 
   public splitTerminal(direction: 'horizontal' | 'vertical'): void {
@@ -638,18 +580,15 @@ class TerminalWebviewManager {
     // Create secondary terminal
     this.createSecondaryTerminal(secondaryContainer);
 
-    // Update UI
-    this.updateSplitControls();
+    // Update UI (no controls to update - using panel commands)
 
     // Resize terminals
     setTimeout(() => {
       this.resizeTerminals();
     }, 100);
 
-    // Request new terminal from extension
-    vscode.postMessage({
-      command: 'splitTerminal' as const,
-    });
+    // Notify extension that split was completed
+    console.log('🔀 [WEBVIEW] Split layout completed');
   }
 
   private createSecondaryTerminal(container: HTMLElement): void {
@@ -735,7 +674,7 @@ class TerminalWebviewManager {
     // Update state
     this.isSplitMode = false;
     this.splitDirection = null;
-    this.updateSplitControls();
+    // No UI controls to update - using panel commands
 
     // Resize main terminal
     setTimeout(() => {
@@ -743,21 +682,7 @@ class TerminalWebviewManager {
     }, 100);
   }
 
-  private updateSplitControls(): void {
-    const splitHorizontal = document.getElementById('split-horizontal');
-    const splitVertical = document.getElementById('split-vertical');
-    const unsplit = document.getElementById('unsplit');
-
-    if (this.isSplitMode) {
-      if (splitHorizontal) splitHorizontal.style.display = 'none';
-      if (splitVertical) splitVertical.style.display = 'none';
-      if (unsplit) unsplit.style.display = 'block';
-    } else {
-      if (splitHorizontal) splitHorizontal.style.display = 'block';
-      if (splitVertical) splitVertical.style.display = 'block';
-      if (unsplit) unsplit.style.display = 'none';
-    }
-  }
+  // Split controls managed by VS Code panel - no internal UI needed
 
   private resizeTerminals(): void {
     if (this.fitAddon && this.terminal) {
@@ -905,6 +830,11 @@ window.addEventListener('message', (event) => {
       break;
 
     case TERMINAL_CONSTANTS.COMMANDS.SPLIT:
+      console.log('🔀 [WEBVIEW] Received SPLIT command');
+      // Default to horizontal split (can be extended to support direction)
+      terminalManager.splitTerminal('horizontal');
+      break;
+
     case TERMINAL_CONSTANTS.COMMANDS.TERMINAL_CREATED:
       if (message.terminalId && message.terminalName && message.config) {
         terminalManager.createTerminal(message.terminalId, message.terminalName, message.config);
