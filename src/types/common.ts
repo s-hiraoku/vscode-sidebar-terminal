@@ -32,7 +32,8 @@ export interface WebviewMessage {
     | 'split'
     | 'terminalCreated'
     | 'terminalRemoved'
-    | 'settingsResponse';
+    | 'settingsResponse'
+    | 'openSettings';
   config?: TerminalConfig;
   data?: string;
   exitCode?: number;

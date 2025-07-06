@@ -93,6 +93,20 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
     }
   }
 
+  public openSettings(): void {
+    console.log('⚙️ [DEBUG] Opening settings...');
+    try {
+      // Send message to webview to open settings panel
+      void this._sendMessage({
+        command: 'openSettings',
+      });
+      console.log('✅ [DEBUG] Settings open command sent');
+    } catch (error) {
+      console.error('❌ [ERROR] Failed to open settings:', error);
+      void vscode.window.showErrorMessage(`Failed to open settings: ${String(error)}`);
+    }
+  }
+
   public clearTerminal(): void {
     console.log('🔧 [DEBUG] Clearing terminal...');
     try {

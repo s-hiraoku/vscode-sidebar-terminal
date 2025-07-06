@@ -72,6 +72,11 @@
         "command": "sidebarTerminal.splitTerminal",
         "title": "Split Terminal",
         "icon": "$(split-vertical)"
+      },
+      {
+        "command": "sidebarTerminal.openSettings",
+        "title": "Terminal Settings",
+        "icon": "$(settings-gear)"
       }
     ],
     "menus": {
@@ -95,6 +100,11 @@
           "command": "sidebarTerminal.killTerminal",
           "when": "view == sidebarTerminal",
           "group": "navigation@4"
+        },
+        {
+          "command": "sidebarTerminal.openSettings",
+          "when": "view == sidebarTerminal",
+          "group": "navigation@5"
         }
       ]
     },

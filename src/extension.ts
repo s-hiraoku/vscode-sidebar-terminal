@@ -80,6 +80,13 @@ function registerCommands(
         provider.splitTerminal();
       },
     },
+    {
+      command: 'sidebarTerminal.openSettings',
+      callback: () => {
+        console.log('🔧 [DEBUG] Command executed: openSettings');
+        provider.openSettings();
+      },
+    },
   ];
 
   for (const { command, callback } of commands) {

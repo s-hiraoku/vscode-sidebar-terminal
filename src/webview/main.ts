@@ -132,24 +132,6 @@ class TerminalWebviewManager {
           color: var(--vscode-foreground, #cccccc);
           font-family: var(--vscode-font-family, monospace);
         ">Terminal</div>
-        <div style="display: flex; gap: 4px; align-items: center;">
-          <button id="settings-btn" style="
-            background: transparent;
-            border: 1px solid var(--vscode-widget-border, #454545);
-            border-radius: 3px;
-            color: var(--vscode-foreground, #cccccc);
-            padding: 4px 6px;
-            font-size: 11px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-width: 24px;
-            height: 24px;
-          " title="Settings">
-            ⚙️
-          </button>
-        </div>
       </div>
       <div id="terminal-body" style="
         flex: 1;
@@ -187,41 +169,13 @@ class TerminalWebviewManager {
         console.error('❌ [WEBVIEW] Failed to create terminal container');
         console.error('❌ [WEBVIEW] Available elements:', document.querySelectorAll('*'));
       }
-
-      // Setup settings button event handler
-      this.setupSettingsButton();
     }, 1);
 
     // Setup IME support
     this.setupIMEHandling();
   }
 
-  private setupSettingsButton(): void {
-    const settingsBtn = document.getElementById('settings-btn');
-    if (settingsBtn) {
-      settingsBtn.addEventListener('click', () => {
-        console.log('⚙️ [WEBVIEW] Settings button clicked');
-        this.openSettingsPanel();
-      });
-
-      // Add hover effects
-      settingsBtn.addEventListener('mouseenter', () => {
-        settingsBtn.style.background = 'var(--vscode-button-hoverBackground, #1f3447)';
-        settingsBtn.style.borderColor = 'var(--vscode-focusBorder, #007acc)';
-      });
-
-      settingsBtn.addEventListener('mouseleave', () => {
-        settingsBtn.style.background = 'transparent';
-        settingsBtn.style.borderColor = 'var(--vscode-widget-border, #454545)';
-      });
-
-      console.log('⚙️ [WEBVIEW] Settings button setup complete');
-    } else {
-      console.error('❌ [WEBVIEW] Settings button not found');
-    }
-  }
-
-  private openSettingsPanel(): void {
+  public openSettingsPanel(): void {
     console.log('⚙️ [WEBVIEW] Opening settings panel');
 
     // Check if settings panel already exists
@@ -1327,6 +1281,11 @@ window.addEventListener('message', (event) => {
         console.log('⚙️ [WEBVIEW] Received settings from extension:', message.settings);
         terminalManager.populateSettingsForm(message.settings);
       }
+      break;
+
+    case 'openSettings':
+      console.log('⚙️ [WEBVIEW] Received openSettings command from panel');
+      terminalManager.openSettingsPanel();
       break;
 
     default:
