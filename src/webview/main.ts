@@ -1307,6 +1307,29 @@ class TerminalWebviewManager {
     // No UI controls needed - using VS Code panel commands
   }
 
+  public prepareSplitMode(direction: 'horizontal' | 'vertical'): void {
+    console.log('🔀 [WEBVIEW] Preparing split mode:', direction);
+
+    // Set split mode flag and direction
+    this.isSplitMode = true;
+    this.splitDirection = direction;
+
+    // Initialize multi-split layout if this is the first split
+    if (this.splitTerminals.size === 0) {
+      this.initializeMultiSplitLayout();
+
+      // Add the current terminal to split layout
+      if (this.activeTerminalId) {
+        const activeTerminalData = this.terminals.get(this.activeTerminalId);
+        if (activeTerminalData) {
+          this.addTerminalToSplitLayout(this.activeTerminalId, activeTerminalData.name);
+        }
+      }
+    }
+
+    console.log('✅ [WEBVIEW] Split mode prepared, waiting for new terminal');
+  }
+
   public splitTerminal(direction: 'horizontal' | 'vertical'): void {
     // Debug current state
     this.logSplitState();
@@ -1440,6 +1463,71 @@ class TerminalWebviewManager {
     this.splitTerminals.set(terminalId, splitContainer);
 
     console.log('✅ [WEBVIEW] Terminal added to split layout:', terminalId);
+  }
+
+  public addNewTerminalToSplit(terminalId: string, terminalName: string): void {
+    console.log('🔀 [WEBVIEW] Adding new terminal to split:', terminalId, terminalName);
+
+    // Check if we can split
+    const layoutInfo = this.calculateSplitLayout();
+    if (!layoutInfo.canSplit) {
+      console.error('❌ [WEBVIEW] Cannot add more terminals to split:', layoutInfo.reason);
+      return;
+    }
+
+    // Move the terminal container to split layout
+    this.moveTerminalToSplitLayout(terminalId, terminalName);
+
+    console.log('✅ [WEBVIEW] New terminal added to split layout:', terminalId);
+  }
+
+  private moveTerminalToSplitLayout(terminalId: string, terminalName: string): void {
+    // Get the existing terminal data
+    const terminalData = this.terminals.get(terminalId);
+    if (!terminalData) {
+      console.error('❌ [WEBVIEW] Terminal data not found for:', terminalId);
+      return;
+    }
+
+    // Calculate layout
+    const layoutInfo = this.calculateSplitLayout();
+    if (!layoutInfo.canSplit) {
+      console.error('❌ [WEBVIEW] Cannot move terminal to split layout');
+      return;
+    }
+
+    // Create split container for this terminal
+    const splitContainer = this.createSplitTerminalContainer(
+      terminalId,
+      terminalName,
+      layoutInfo.terminalHeight
+    );
+
+    // Move the terminal container to the split area
+    const terminalArea = splitContainer.querySelector(`#split-terminal-area-${terminalId}`);
+    const terminalContainer = this.terminalContainers.get(terminalId);
+    if (terminalArea && terminalContainer) {
+      // Move the terminal container into the split area
+      terminalArea.appendChild(terminalContainer);
+
+      // Adjust container styles for split layout
+      terminalContainer.style.cssText = `
+        width: 100%;
+        height: 100%;
+      `;
+    }
+
+    // Add to split DOM
+    this.addToSplitDOM(splitContainer);
+
+    // Redistribute all terminals
+    this.redistributeSplitTerminals(layoutInfo.terminalHeight);
+
+    // Store reference
+    this.splitTerminals.set(terminalId, splitContainer);
+
+    // Set as active terminal
+    this.setActiveTerminalId(terminalId);
   }
 
   private createSplitTerminalContainer(id: string, name: string, height: number): HTMLElement {
@@ -2054,25 +2142,24 @@ window.addEventListener('message', (event) => {
 
     case TERMINAL_CONSTANTS.COMMANDS.SPLIT:
       console.log('🔀 [WEBVIEW] Received SPLIT command');
-      // Default to vertical split (top/bottom)
-      terminalManager.splitTerminal('vertical');
+      // Prepare for split mode (the new terminal will be created by the extension)
+      terminalManager.prepareSplitMode('vertical');
       break;
 
     case TERMINAL_CONSTANTS.COMMANDS.TERMINAL_CREATED:
       if (message.terminalId && message.terminalName && message.config) {
-        // If we're in split mode and this is a new terminal, treat it as secondary
+        // If we're in split mode and this is a new terminal, add it to split layout
         if (
           terminalManager.isSplitMode &&
-          !terminalManager.secondaryTerminal &&
           message.terminalId !== terminalManager.activeTerminalId
         ) {
-          console.log('🔀 [WEBVIEW] Creating secondary terminal in split mode');
-          terminalManager.createSecondaryTerminal(
-            message.terminalId,
-            message.terminalName,
-            message.config
-          );
+          console.log('🔀 [WEBVIEW] Adding new terminal to split layout');
+          // Create the terminal first
+          terminalManager.createTerminal(message.terminalId, message.terminalName, message.config);
+          // Then add it to split layout
+          terminalManager.addNewTerminalToSplit(message.terminalId, message.terminalName);
         } else {
+          // Normal terminal creation
           terminalManager.createTerminal(message.terminalId, message.terminalName, message.config);
         }
 
