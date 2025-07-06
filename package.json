@@ -161,10 +161,10 @@
         },
         "sidebarTerminal.maxSplitTerminals": {
           "type": "number",
-          "default": 5,
+          "default": 2,
           "minimum": 2,
-          "maximum": 10,
-          "description": "Maximum number of terminals to display in split view"
+          "maximum": 2,
+          "description": "Maximum number of terminals to display in split view (fixed at 2 for stability)"
         },
         "sidebarTerminal.minTerminalHeight": {
           "type": "number",

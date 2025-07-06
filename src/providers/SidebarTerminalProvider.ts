@@ -63,6 +63,16 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
   public splitTerminal(): void {
     console.log('🔧 [DEBUG] Splitting terminal...');
     try {
+      // Check if we can split (2 terminal limit)
+      const terminals = this._terminalManager.getTerminals();
+      const maxSplitTerminals = 2;
+      
+      if (terminals.length >= maxSplitTerminals) {
+        console.warn('⚠️ [DEBUG] Cannot split - already at maximum terminals:', terminals.length);
+        void vscode.window.showWarningMessage(`Split view supports up to ${maxSplitTerminals} terminals`);
+        return;
+      }
+
       // First send the SPLIT command to prepare the UI
       void this._sendMessage({
         command: TERMINAL_CONSTANTS.COMMANDS.SPLIT,
