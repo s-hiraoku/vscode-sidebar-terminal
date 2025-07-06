@@ -78,13 +78,19 @@ declare const acquireVsCodeApi: () => {
 
 const vscode = acquireVsCodeApi();
 
-// Performance-optimized terminal management
+// Performance-optimized terminal management with split support
 class TerminalWebviewManager {
   private terminal: Terminal | null = null;
   private fitAddon: FitAddon | null = null;
   public terminalContainer: HTMLElement | null = null;
   private isComposing: boolean = false;
   private activeTerminalId: string | null = null;
+
+  // Split functionality
+  public secondaryTerminal: Terminal | null = null;
+  private secondaryFitAddon: FitAddon | null = null;
+  private isSplitMode = false;
+  private splitDirection: 'horizontal' | 'vertical' | null = null;
 
   // Performance optimization: Buffer output and batch writes
   private outputBuffer: string[] = [];
@@ -457,6 +463,15 @@ class TerminalWebviewManager {
     }
   }
 
+  public writeToSecondaryTerminal(data: string): void {
+    if (this.secondaryTerminal) {
+      console.log('📝 [WEBVIEW] Writing to secondary terminal:', data.length, 'chars');
+      this.secondaryTerminal.write(data);
+    } else {
+      console.warn('⚠️ [WEBVIEW] No secondary terminal instance to write to');
+    }
+  }
+
   private scheduleBufferFlush(): void {
     if (this.bufferFlushTimer === null) {
       this.bufferFlushTimer = window.setTimeout(() => {
@@ -493,6 +508,267 @@ class TerminalWebviewManager {
     }, this.RESIZE_DEBOUNCE_DELAY);
   }
 
+  // Split functionality methods
+  public initializeSplitControls(): void {
+    console.log('🔀 [WEBVIEW] Initializing split controls');
+
+    // Add split controls to existing header if it exists
+    const header = document.getElementById('terminal-header');
+    if (header) {
+      const controlsHtml = `
+        <div id="split-controls" style="display: flex; gap: 4px;">
+          <button id="split-horizontal" title="Split Horizontally" style="
+            background: transparent;
+            border: 1px solid var(--vscode-widget-border, #454545);
+            color: var(--vscode-foreground, #cccccc);
+            border-radius: 3px;
+            padding: 2px 6px;
+            font-size: 11px;
+            cursor: pointer;
+          ">⫽</button>
+          <button id="split-vertical" title="Split Vertically" style="
+            background: transparent;
+            border: 1px solid var(--vscode-widget-border, #454545);
+            color: var(--vscode-foreground, #cccccc);
+            border-radius: 3px;
+            padding: 2px 6px;
+            font-size: 11px;
+            cursor: pointer;
+          ">⫿</button>
+          <button id="unsplit" title="Remove Split" style="
+            background: transparent;
+            border: 1px solid var(--vscode-widget-border, #454545);
+            color: var(--vscode-foreground, #cccccc);
+            border-radius: 3px;
+            padding: 2px 6px;
+            font-size: 11px;
+            cursor: pointer;
+            display: none;
+          ">⨯</button>
+        </div>
+      `;
+
+      const rightSection = header.querySelector('div:last-child');
+      if (rightSection) {
+        rightSection.innerHTML = controlsHtml;
+      }
+    }
+
+    // Add event listeners
+    const splitHorizontal = document.getElementById('split-horizontal');
+    const splitVertical = document.getElementById('split-vertical');
+    const unsplit = document.getElementById('unsplit');
+
+    if (splitHorizontal) {
+      splitHorizontal.addEventListener('click', () => this.splitTerminal('horizontal'));
+    }
+
+    if (splitVertical) {
+      splitVertical.addEventListener('click', () => this.splitTerminal('vertical'));
+    }
+
+    if (unsplit) {
+      unsplit.addEventListener('click', () => this.unsplitTerminal());
+    }
+  }
+
+  public splitTerminal(direction: 'horizontal' | 'vertical'): void {
+    if (this.isSplitMode) {
+      console.log('Already in split mode');
+      return;
+    }
+
+    console.log(`🔀 [WEBVIEW] Splitting terminal ${direction}ly`);
+
+    const terminalBody = document.getElementById('terminal-body');
+
+    if (!terminalBody) {
+      console.error('Terminal body not found');
+      return;
+    }
+
+    // Set split direction
+    this.splitDirection = direction;
+    this.isSplitMode = true;
+
+    // Modify terminal body for split layout
+    terminalBody.style.display = 'flex';
+    terminalBody.style.flexDirection = direction === 'horizontal' ? 'row' : 'column';
+
+    // Get existing terminal container
+    const existingTerminal = terminalBody.querySelector('[data-terminal-container]');
+
+    if (existingTerminal) {
+      // Make existing terminal take half space
+      (existingTerminal as HTMLElement).style.flex = '1';
+      (existingTerminal as HTMLElement).style.minWidth =
+        direction === 'horizontal' ? '200px' : 'auto';
+      (existingTerminal as HTMLElement).style.minHeight =
+        direction === 'vertical' ? '100px' : 'auto';
+    }
+
+    // Create splitter
+    const splitter = document.createElement('div');
+    splitter.style.cssText = `
+      background: var(--vscode-widget-border, #454545);
+      ${direction === 'horizontal' ? 'width: 4px; cursor: col-resize;' : 'height: 4px; cursor: row-resize;'}
+      flex-shrink: 0;
+    `;
+    splitter.addEventListener('mouseenter', () => {
+      splitter.style.background = 'var(--vscode-focusBorder, #007acc)';
+    });
+    splitter.addEventListener('mouseleave', () => {
+      splitter.style.background = 'var(--vscode-widget-border, #454545)';
+    });
+
+    // Create secondary terminal container
+    const secondaryContainer = document.createElement('div');
+    secondaryContainer.style.cssText = `
+      flex: 1;
+      background: #000;
+      ${direction === 'horizontal' ? 'min-width: 200px;' : 'min-height: 100px;'}
+    `;
+    secondaryContainer.setAttribute('data-terminal-container', 'secondary');
+    secondaryContainer.id = 'secondary-terminal';
+
+    // Add to DOM
+    terminalBody.appendChild(splitter);
+    terminalBody.appendChild(secondaryContainer);
+
+    // Create secondary terminal
+    this.createSecondaryTerminal(secondaryContainer);
+
+    // Update UI
+    this.updateSplitControls();
+
+    // Resize terminals
+    setTimeout(() => {
+      this.resizeTerminals();
+    }, 100);
+
+    // Request new terminal from extension
+    vscode.postMessage({
+      command: 'splitTerminal' as const,
+    });
+  }
+
+  private createSecondaryTerminal(container: HTMLElement): void {
+    try {
+      this.secondaryTerminal = new Terminal({
+        fontSize: 14,
+        fontFamily: 'Consolas, monospace',
+        cursorBlink: true,
+        theme: {
+          background: '#000000',
+          foreground: '#ffffff',
+        },
+      });
+
+      this.secondaryFitAddon = new FitAddon();
+      this.secondaryTerminal.loadAddon(this.secondaryFitAddon);
+      this.secondaryTerminal.open(container);
+
+      // Set up event handlers for secondary terminal
+      this.secondaryTerminal.onData((data) => {
+        vscode.postMessage({
+          command: 'input' as const,
+          data,
+          terminalId: 'secondary',
+        });
+      });
+
+      console.log('✅ [WEBVIEW] Secondary terminal created successfully');
+    } catch (error) {
+      console.error('❌ [WEBVIEW] Error creating secondary terminal:', error);
+    }
+  }
+
+  public unsplitTerminal(): void {
+    if (!this.isSplitMode) {
+      console.log('Not in split mode');
+      return;
+    }
+
+    console.log('🔀 [WEBVIEW] Removing split');
+
+    const terminalBody = document.getElementById('terminal-body');
+
+    if (!terminalBody) {
+      console.error('Terminal body not found');
+      return;
+    }
+
+    // Clean up secondary terminal
+    if (this.secondaryTerminal) {
+      this.secondaryTerminal.dispose();
+      this.secondaryTerminal = null;
+    }
+
+    if (this.secondaryFitAddon) {
+      this.secondaryFitAddon = null;
+    }
+
+    // Remove split elements
+    const splitter = terminalBody.querySelector('[style*="cursor:"]');
+    const secondaryContainer = document.getElementById('secondary-terminal');
+
+    if (splitter) {
+      terminalBody.removeChild(splitter);
+    }
+
+    if (secondaryContainer) {
+      terminalBody.removeChild(secondaryContainer);
+    }
+
+    // Reset terminal body layout
+    terminalBody.style.display = 'block';
+    terminalBody.style.flexDirection = '';
+
+    // Reset existing terminal styles
+    const existingTerminal = terminalBody.querySelector('[data-terminal-container]');
+    if (existingTerminal) {
+      (existingTerminal as HTMLElement).style.flex = '';
+      (existingTerminal as HTMLElement).style.minWidth = '';
+      (existingTerminal as HTMLElement).style.minHeight = '';
+    }
+
+    // Update state
+    this.isSplitMode = false;
+    this.splitDirection = null;
+    this.updateSplitControls();
+
+    // Resize main terminal
+    setTimeout(() => {
+      this.resizeTerminals();
+    }, 100);
+  }
+
+  private updateSplitControls(): void {
+    const splitHorizontal = document.getElementById('split-horizontal');
+    const splitVertical = document.getElementById('split-vertical');
+    const unsplit = document.getElementById('unsplit');
+
+    if (this.isSplitMode) {
+      if (splitHorizontal) splitHorizontal.style.display = 'none';
+      if (splitVertical) splitVertical.style.display = 'none';
+      if (unsplit) unsplit.style.display = 'block';
+    } else {
+      if (splitHorizontal) splitHorizontal.style.display = 'block';
+      if (splitVertical) splitVertical.style.display = 'block';
+      if (unsplit) unsplit.style.display = 'none';
+    }
+  }
+
+  private resizeTerminals(): void {
+    if (this.fitAddon && this.terminal) {
+      this.fitAddon.fit();
+    }
+
+    if (this.isSplitMode && this.secondaryFitAddon && this.secondaryTerminal) {
+      this.secondaryFitAddon.fit();
+    }
+  }
+
   // Performance optimization: Cleanup method
   public dispose(): void {
     this.flushOutputBuffer();
@@ -512,7 +788,13 @@ class TerminalWebviewManager {
       this.terminal = null;
     }
 
+    if (this.secondaryTerminal) {
+      this.secondaryTerminal.dispose();
+      this.secondaryTerminal = null;
+    }
+
     this.fitAddon = null;
+    this.secondaryFitAddon = null;
     this.terminalContainer = null;
   }
 }
@@ -566,6 +848,10 @@ window.addEventListener('message', (event) => {
               } else {
                 throw new Error('No terminal config provided');
               }
+
+              // Initialize split controls after terminal is ready
+              terminalManager.initializeSplitControls();
+
               updateStatus('Terminal ready');
               console.log('🎯 [WEBVIEW] Terminal initialization completed');
             } catch (error) {
@@ -592,9 +878,17 @@ window.addEventListener('message', (event) => {
           '📥 [WEBVIEW] Received output data:',
           message.data.length,
           'chars:',
-          JSON.stringify(message.data.substring(0, 50))
+          JSON.stringify(message.data.substring(0, 50)),
+          'terminalId:',
+          message.terminalId
         );
-        terminalManager.writeToTerminal(message.data);
+
+        // Route output to correct terminal
+        if (message.terminalId === 'secondary' && terminalManager.secondaryTerminal) {
+          terminalManager.writeToSecondaryTerminal(message.data);
+        } else {
+          terminalManager.writeToTerminal(message.data);
+        }
       }
       break;
 

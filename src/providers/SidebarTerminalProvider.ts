@@ -379,11 +379,120 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
                 color: var(--vscode-foreground, #cccccc);
                 font-family: var(--vscode-font-family, monospace);
             }
-            #terminal {
+            
+            /* Split layout container */
+            .terminal-layout {
                 width: 100%;
                 height: 100vh;
+                display: flex;
+                flex-direction: column;
                 position: relative;
             }
+            
+            /* Split panes container */
+            .split-container {
+                flex: 1;
+                display: flex;
+                position: relative;
+            }
+            
+            .split-container.horizontal {
+                flex-direction: row;
+            }
+            
+            .split-container.vertical {
+                flex-direction: column;
+            }
+            
+            /* Terminal panes */
+            .terminal-pane {
+                position: relative;
+                background: #000;
+                min-width: 200px;
+                min-height: 100px;
+                display: flex;
+                flex-direction: column;
+            }
+            
+            .terminal-pane.single {
+                flex: 1;
+            }
+            
+            .terminal-pane.split {
+                flex: 1;
+            }
+            
+            /* Resize splitter */
+            .splitter {
+                background: var(--vscode-widget-border, #454545);
+                position: relative;
+                z-index: 10;
+            }
+            
+            .splitter.horizontal {
+                width: 4px;
+                cursor: col-resize;
+                min-width: 4px;
+            }
+            
+            .splitter.vertical {
+                height: 4px;
+                cursor: row-resize;
+                min-height: 4px;
+            }
+            
+            .splitter:hover {
+                background: var(--vscode-focusBorder, #007acc);
+            }
+            
+            .splitter.dragging {
+                background: var(--vscode-focusBorder, #007acc);
+            }
+            
+            /* Terminal containers */
+            #terminal {
+                width: 100%;
+                height: 100%;
+                position: relative;
+            }
+            
+            .secondary-terminal {
+                width: 100%;
+                height: 100%;
+                position: relative;
+            }
+            
+            /* Split controls */
+            .split-controls {
+                position: absolute;
+                top: 5px;
+                right: 5px;
+                z-index: 1000;
+                display: flex;
+                gap: 4px;
+            }
+            
+            .split-btn {
+                background: rgba(0, 0, 0, 0.7);
+                color: var(--vscode-foreground, #cccccc);
+                border: 1px solid var(--vscode-widget-border, #454545);
+                border-radius: 3px;
+                padding: 4px 8px;
+                font-size: 11px;
+                cursor: pointer;
+                user-select: none;
+            }
+            
+            .split-btn:hover {
+                background: rgba(0, 0, 0, 0.9);
+                border-color: var(--vscode-focusBorder, #007acc);
+            }
+            
+            .split-btn.active {
+                background: var(--vscode-button-background, #0e639c);
+                border-color: var(--vscode-button-background, #0e639c);
+            }
+            
             .status {
                 position: absolute;
                 top: 5px;
@@ -398,6 +507,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
                 max-width: 300px;
                 word-break: break-all;
             }
+            
             .loading {
                 display: flex;
                 align-items: center;
