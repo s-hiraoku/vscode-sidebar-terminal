@@ -108,6 +108,11 @@ class TerminalWebviewManager {
   private terminals = new Map<string, { terminal: Terminal; fitAddon: FitAddon; name: string }>();
   private terminalContainers = new Map<string, HTMLElement>();
 
+  // Multi-split layout management
+  private splitTerminals = new Map<string, HTMLElement>();
+  private maxSplitCount = 5;
+  private minTerminalHeight = 100; // px
+
   public initializeSimpleTerminal(): void {
     const container = document.getElementById('terminal');
     if (!container) {
@@ -308,7 +313,186 @@ class TerminalWebviewManager {
   }
 
   public closeTerminal(id: string): void {
-    console.log('🗑️ [WEBVIEW] Closing terminal:', id);
+    console.log('🗑️ [WEBVIEW] Close terminal requested:', id);
+
+    // Check if this is a safe kill attempt
+    if (!this.canKillTerminal(id)) {
+      return;
+    }
+
+    // Check if confirmation is needed
+    if (this.shouldShowKillConfirmation()) {
+      this.showKillConfirmationDialog(id);
+      return;
+    }
+
+    // Perform the actual kill
+    this.performKillTerminal(id);
+  }
+
+  private canKillTerminal(_id: string): boolean {
+    const terminalCount = this.terminals.size;
+    const minTerminalCount = this.getMinTerminalCount();
+
+    if (terminalCount <= minTerminalCount) {
+      console.warn('🛡️ [WEBVIEW] Cannot kill terminal - would go below minimum count');
+      this.showLastTerminalWarning(minTerminalCount);
+      return false;
+    }
+
+    return true;
+  }
+
+  private getMinTerminalCount(): number {
+    // For now, default to 1. Later this will be read from settings
+    return 1;
+  }
+
+  private shouldShowKillConfirmation(): boolean {
+    // For now, default to false. Later this will be read from settings
+    return false;
+  }
+
+  private showLastTerminalWarning(minCount: number): void {
+    const warningOverlay = document.createElement('div');
+    warningOverlay.style.cssText = `
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: var(--vscode-notifications-background, #1e1e1e);
+      border: 2px solid var(--vscode-errorBackground, #f14c4c);
+      border-radius: 6px;
+      padding: 16px 20px;
+      color: var(--vscode-errorForeground, #ffffff);
+      font-size: 12px;
+      z-index: 10000;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+      animation: shake 0.5s ease-in-out;
+      text-align: center;
+    `;
+
+    warningOverlay.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 8px; justify-content: center; margin-bottom: 8px;">
+        <span style="font-size: 16px;">⚠️</span>
+        <span><strong>Cannot close terminal</strong></span>
+      </div>
+      <div style="margin-bottom: 4px;">
+        Must keep at least ${minCount} terminal${minCount > 1 ? 's' : ''} open
+      </div>
+      <div style="font-size: 10px; opacity: 0.8;">
+        Create a new terminal first if you want to replace this one
+      </div>
+    `;
+
+    // Add shake animation CSS if not already added
+    if (!document.getElementById('terminal-warning-styles')) {
+      const style = document.createElement('style');
+      style.id = 'terminal-warning-styles';
+      style.textContent = `
+        @keyframes shake {
+          0%, 100% { transform: translate(-50%, -50%) translateX(0); }
+          25% { transform: translate(-50%, -50%) translateX(-5px); }
+          75% { transform: translate(-50%, -50%) translateX(5px); }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
+    document.body.appendChild(warningOverlay);
+
+    // Auto-remove after 3 seconds
+    setTimeout(() => {
+      if (warningOverlay.parentNode) {
+        warningOverlay.remove();
+      }
+    }, 3000);
+  }
+
+  private showKillConfirmationDialog(terminalId: string): void {
+    const terminalData = this.terminals.get(terminalId);
+    const terminalName = terminalData?.name || 'Unknown Terminal';
+
+    const confirmDialog = document.createElement('div');
+    confirmDialog.style.cssText = `
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    `;
+
+    confirmDialog.innerHTML = `
+      <div style="
+        background: var(--vscode-editor-background, #1e1e1e);
+        border: 1px solid var(--vscode-widget-border, #454545);
+        border-radius: 6px;
+        padding: 20px;
+        min-width: 300px;
+        text-align: center;
+      ">
+        <h3 style="margin: 0 0 12px 0; color: var(--vscode-foreground);">
+          Close Terminal?
+        </h3>
+        <p style="margin: 0 0 20px 0; color: var(--vscode-descriptionForeground); font-size: 12px;">
+          Are you sure you want to close "<strong>${terminalName}</strong>"?<br>
+          Any running processes will be terminated.
+        </p>
+        <div style="display: flex; gap: 8px; justify-content: center;">
+          <button id="kill-cancel-${terminalId}" style="
+            background: transparent;
+            border: 1px solid var(--vscode-widget-border);
+            color: var(--vscode-foreground);
+            padding: 6px 12px;
+            border-radius: 3px;
+            cursor: pointer;
+          ">Cancel</button>
+          <button id="kill-confirm-${terminalId}" style="
+            background: var(--vscode-errorBackground, #f14c4c);
+            border: 1px solid var(--vscode-errorBackground, #f14c4c);
+            color: var(--vscode-errorForeground, #ffffff);
+            padding: 6px 12px;
+            border-radius: 3px;
+            cursor: pointer;
+          ">Close Terminal</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(confirmDialog);
+
+    // Event handlers
+    const cancelBtn = confirmDialog.querySelector(`#kill-cancel-${terminalId}`);
+    const confirmBtn = confirmDialog.querySelector(`#kill-confirm-${terminalId}`);
+
+    const closeDialog = (): void => {
+      confirmDialog.remove();
+    };
+
+    cancelBtn?.addEventListener('click', closeDialog);
+
+    confirmBtn?.addEventListener('click', () => {
+      closeDialog();
+      this.performKillTerminal(terminalId);
+    });
+
+    // ESC key to cancel
+    const escHandler = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') {
+        closeDialog();
+        document.removeEventListener('keydown', escHandler);
+      }
+    };
+    document.addEventListener('keydown', escHandler);
+  }
+
+  private performKillTerminal(id: string): void {
+    console.log('🗑️ [WEBVIEW] Performing kill for terminal:', id);
 
     // Remove terminal instance
     const terminalData = this.terminals.get(id);
@@ -1115,36 +1299,291 @@ class TerminalWebviewManager {
     // Debug current state
     this.logSplitState();
 
-    // Check if already in split mode
+    // Use the new multi-split system
+    if (direction === 'vertical') {
+      this.addTerminalToMultiSplit();
+    } else {
+      // Keep horizontal split as the old 2-pane split for now
+      this.performHorizontalSplit();
+    }
+  }
+
+  private addTerminalToMultiSplit(): void {
+    console.log('📐 [WEBVIEW] Adding terminal to multi-split layout');
+
+    const layoutInfo = this.calculateSplitLayout();
+    if (!layoutInfo.canSplit) {
+      this.showSplitLimitWarning(layoutInfo.reason || 'Cannot add more terminals');
+      return;
+    }
+
+    // Get the current active terminal ID to add to split
+    if (!this.activeTerminalId) {
+      console.error('❌ [WEBVIEW] No active terminal to add to split');
+      return;
+    }
+
+    const activeTerminalData = this.terminals.get(this.activeTerminalId);
+    if (!activeTerminalData) {
+      console.error('❌ [WEBVIEW] Active terminal data not found');
+      return;
+    }
+
+    // If this is the first split, convert to multi-split layout
+    if (this.splitTerminals.size === 0) {
+      this.initializeMultiSplitLayout();
+    }
+
+    // Add current terminal to split layout
+    this.addTerminalToSplitLayout(this.activeTerminalId, activeTerminalData.name);
+
+    console.log('✅ [WEBVIEW] Terminal added to multi-split layout');
+  }
+
+  private calculateSplitLayout(): { canSplit: boolean; terminalHeight: number; reason?: string } {
+    const terminalBody = document.getElementById('terminal-body');
+    if (!terminalBody) {
+      return { canSplit: false, terminalHeight: 0, reason: 'Terminal body not found' };
+    }
+
+    const availableHeight = terminalBody.clientHeight;
+    const headerHeight = 24; // Terminal header height
+    const splitterHeight = 4; // Splitter height
+
+    // Current split count plus the one we want to add
+    const nextSplitCount = this.splitTerminals.size + 1;
+
+    // Check maximum split limit
+    if (nextSplitCount > this.maxSplitCount) {
+      return {
+        canSplit: false,
+        terminalHeight: 0,
+        reason: `Maximum ${this.maxSplitCount} terminals can be displayed in split view`,
+      };
+    }
+
+    // Calculate required height for all terminals with headers and splitters
+    const totalHeaderHeight = nextSplitCount * headerHeight;
+    const totalSplitterHeight = Math.max(0, nextSplitCount - 1) * splitterHeight;
+    const availableTerminalHeight = availableHeight - totalHeaderHeight - totalSplitterHeight;
+
+    // Calculate height per terminal
+    const terminalHeight = Math.floor(availableTerminalHeight / nextSplitCount);
+
+    // Check minimum height constraint
+    if (terminalHeight < this.minTerminalHeight) {
+      return {
+        canSplit: false,
+        terminalHeight: 0,
+        reason: `Terminal height would be too small (min: ${this.minTerminalHeight}px)`,
+      };
+    }
+
+    return { canSplit: true, terminalHeight };
+  }
+
+  private initializeMultiSplitLayout(): void {
+    console.log('📐 [WEBVIEW] Initializing multi-split layout');
+
+    const terminalBody = document.getElementById('terminal-body');
+    if (!terminalBody) {
+      console.error('❌ [WEBVIEW] Terminal body not found');
+      return;
+    }
+
+    // Set up flex column layout for vertical splits
+    terminalBody.style.cssText = `
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      overflow: hidden;
+    `;
+
+    this.isSplitMode = true;
+    this.splitDirection = 'vertical';
+    console.log('✅ [WEBVIEW] Multi-split layout initialized');
+  }
+
+  private addTerminalToSplitLayout(terminalId: string, terminalName: string): void {
+    const layoutInfo = this.calculateSplitLayout();
+    if (!layoutInfo.canSplit) {
+      console.error('❌ [WEBVIEW] Cannot add terminal to split layout');
+      return;
+    }
+
+    // Create split terminal container
+    const splitContainer = this.createSplitTerminalContainer(
+      terminalId,
+      terminalName,
+      layoutInfo.terminalHeight
+    );
+
+    // Add to split layout
+    this.addToSplitDOM(splitContainer);
+
+    // Redistribute existing terminals
+    this.redistributeSplitTerminals(layoutInfo.terminalHeight);
+
+    // Store reference
+    this.splitTerminals.set(terminalId, splitContainer);
+
+    console.log('✅ [WEBVIEW] Terminal added to split layout:', terminalId);
+  }
+
+  private createSplitTerminalContainer(id: string, name: string, height: number): HTMLElement {
+    const container = document.createElement('div');
+    container.id = `split-terminal-${id}`;
+    container.className = 'split-terminal-container';
+    container.style.cssText = `
+      height: ${height}px;
+      min-height: ${this.minTerminalHeight}px;
+      background: #000;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border-bottom: 1px solid var(--vscode-widget-border, #454545);
+    `;
+
+    // Create terminal header
+    const header = document.createElement('div');
+    header.style.cssText = `
+      height: 24px;
+      background: var(--vscode-tab-inactiveBackground, #2d2d30);
+      color: var(--vscode-foreground, #cccccc);
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      padding: 0 8px;
+      border-bottom: 1px solid var(--vscode-tab-border, #333);
+      flex-shrink: 0;
+    `;
+    header.textContent = name;
+
+    // Create terminal area
+    const terminalArea = document.createElement('div');
+    terminalArea.id = `split-terminal-area-${id}`;
+    terminalArea.style.cssText = `
+      flex: 1;
+      background: #000;
+      overflow: hidden;
+    `;
+
+    container.appendChild(header);
+    container.appendChild(terminalArea);
+
+    return container;
+  }
+
+  private addToSplitDOM(container: HTMLElement): void {
+    const terminalBody = document.getElementById('terminal-body');
+    if (!terminalBody) {
+      console.error('❌ [WEBVIEW] Terminal body not found');
+      return;
+    }
+
+    // Add splitter if this is not the first terminal
+    if (this.splitTerminals.size > 0) {
+      const splitter = this.createSplitter();
+      terminalBody.appendChild(splitter);
+    }
+
+    terminalBody.appendChild(container);
+  }
+
+  private createSplitter(): HTMLElement {
+    const splitter = document.createElement('div');
+    splitter.className = 'split-resizer';
+    splitter.style.cssText = `
+      height: 4px;
+      background: var(--vscode-widget-border, #454545);
+      cursor: row-resize;
+      flex-shrink: 0;
+      transition: background-color 0.2s ease;
+    `;
+
+    splitter.addEventListener('mouseenter', (): void => {
+      splitter.style.background = 'var(--vscode-focusBorder, #007acc)';
+    });
+
+    splitter.addEventListener('mouseleave', (): void => {
+      splitter.style.background = 'var(--vscode-widget-border, #454545)';
+    });
+
+    return splitter;
+  }
+
+  private redistributeSplitTerminals(newHeight: number): void {
+    console.log(
+      `📐 [WEBVIEW] Redistributing ${this.splitTerminals.size} terminals to height: ${newHeight}px`
+    );
+
+    this.splitTerminals.forEach((container, terminalId) => {
+      container.style.height = `${newHeight}px`;
+
+      // Resize terminal instance if it exists
+      const terminalData = this.terminals.get(terminalId);
+      if (terminalData?.fitAddon) {
+        setTimeout(() => {
+          terminalData.fitAddon.fit();
+        }, 100);
+      }
+    });
+  }
+
+  private showSplitLimitWarning(reason: string): void {
+    console.warn('⚠️ [WEBVIEW] Split limit reached:', reason);
+
+    const warning = document.createElement('div');
+    warning.style.cssText = `
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: var(--vscode-notifications-background, #1e1e1e);
+      border: 2px solid var(--vscode-notificationWarning-border, #ffcc02);
+      border-radius: 6px;
+      padding: 12px 16px;
+      color: var(--vscode-notificationWarning-foreground, #ffffff);
+      font-size: 11px;
+      z-index: 10000;
+      max-width: 300px;
+      text-align: center;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    `;
+
+    warning.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; justify-content: center;">
+        <span>⚠️</span>
+        <strong>Split Limit Reached</strong>
+      </div>
+      <div style="font-size: 10px;">${reason}</div>
+    `;
+
+    document.body.appendChild(warning);
+
+    setTimeout(() => {
+      if (warning.parentNode) {
+        warning.remove();
+      }
+    }, 4000);
+  }
+
+  private performHorizontalSplit(): void {
+    // Keep the existing horizontal split logic for backward compatibility
     if (this.isSplitMode) {
       console.warn('🔀 [WEBVIEW] Already in split mode - ignoring split request');
       return;
     }
 
-    // Check for existing DOM elements that might indicate inconsistent state
-    const existingSplitter = document.querySelector('[style*="cursor:"]');
-    const existingSecondary = document.getElementById('secondary-terminal');
-
-    if (existingSplitter || existingSecondary) {
-      console.warn(
-        '🔀 [WEBVIEW] Split elements found but isSplitMode is false - cleaning up first'
-      );
-      this.cleanupSplitElements();
-    }
-
-    console.log(`🔀 [WEBVIEW] Starting split operation: ${direction}`);
-
     const terminalBody = document.getElementById('terminal-body');
-
     if (!terminalBody) {
       console.error('❌ [WEBVIEW] Terminal body not found');
       return;
     }
 
     try {
-      // Perform split in a atomic operation
-      this.performSplit(direction, terminalBody);
-      console.log('✅ [WEBVIEW] Split operation completed successfully');
+      this.performSplit('horizontal', terminalBody);
+      console.log('✅ [WEBVIEW] Horizontal split operation completed successfully');
     } catch (error) {
       console.error('❌ [WEBVIEW] Split operation failed:', error);
       this.cleanupSplitElements();

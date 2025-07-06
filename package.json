@@ -151,6 +151,42 @@
           "type": "string",
           "default": "",
           "description": "Default directory for new terminals. Leave empty to use workspace root."
+        },
+        "sidebarTerminal.confirmBeforeKill": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show confirmation dialog before closing terminals"
+        },
+        "sidebarTerminal.protectLastTerminal": {
+          "type": "boolean",
+          "default": true,
+          "description": "Prevent closing the last terminal"
+        },
+        "sidebarTerminal.minTerminalCount": {
+          "type": "number",
+          "default": 1,
+          "minimum": 0,
+          "maximum": 5,
+          "description": "Minimum number of terminals to keep open"
+        },
+        "sidebarTerminal.maxSplitTerminals": {
+          "type": "number",
+          "default": 5,
+          "minimum": 2,
+          "maximum": 10,
+          "description": "Maximum number of terminals to display in split view"
+        },
+        "sidebarTerminal.minTerminalHeight": {
+          "type": "number",
+          "default": 100,
+          "minimum": 50,
+          "maximum": 200,
+          "description": "Minimum height for each terminal in split view (pixels)"
+        },
+        "sidebarTerminal.enableSplitResize": {
+          "type": "boolean",
+          "default": true,
+          "description": "Allow resizing split terminals by dragging splitters"
         }
       }
     }

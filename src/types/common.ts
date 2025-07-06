@@ -22,6 +22,9 @@ export interface TerminalSettings {
   fontFamily: string;
   theme?: string;
   cursorBlink: boolean;
+  confirmBeforeKill?: boolean;
+  protectLastTerminal?: boolean;
+  minTerminalCount?: number;
 }
 
 export interface WebviewMessage {
