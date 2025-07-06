@@ -570,13 +570,19 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
     return html;
   }
 
-  private getCurrentSettings(): { fontSize: number; fontFamily: string; cursorBlink: boolean } {
+  private getCurrentSettings(): {
+    fontSize: number;
+    fontFamily: string;
+    cursorBlink: boolean;
+    theme: string;
+  } {
     const config = vscode.workspace.getConfiguration('sidebarTerminal');
 
     return {
       fontSize: config.get<number>('fontSize') ?? 14,
       fontFamily: config.get<string>('fontFamily') ?? 'Consolas, monospace',
       cursorBlink: config.get<boolean>('cursorBlink') ?? true,
+      theme: config.get<string>('theme') ?? 'auto',
     };
   }
 
@@ -593,6 +599,9 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
       await config.update('fontSize', settings.fontSize, vscode.ConfigurationTarget.Global);
       await config.update('fontFamily', settings.fontFamily, vscode.ConfigurationTarget.Global);
       await config.update('cursorBlink', settings.cursorBlink, vscode.ConfigurationTarget.Global);
+      if (settings.theme) {
+        await config.update('theme', settings.theme, vscode.ConfigurationTarget.Global);
+      }
 
       console.log('✅ [DEBUG] Settings updated successfully');
       showSuccess('Settings updated successfully');

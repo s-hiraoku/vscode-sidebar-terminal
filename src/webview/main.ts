@@ -488,12 +488,29 @@ class TerminalWebviewManager {
   }): void {
     console.log('⚙️ [WEBVIEW] Applying settings to terminal:', settings);
 
+    // Determine the theme to use
+    let terminalTheme;
+    if (settings.theme === 'auto') {
+      terminalTheme = getTheme();
+    } else if (settings.theme === 'dark') {
+      terminalTheme = WEBVIEW_CONSTANTS.DARK_THEME;
+    } else if (settings.theme === 'light') {
+      terminalTheme = WEBVIEW_CONSTANTS.LIGHT_THEME;
+    } else {
+      terminalTheme = getTheme(); // Fallback to auto detection
+    }
+
+    console.log('🎨 [WEBVIEW] Applying theme:', settings.theme, 'resolved to:', terminalTheme);
+
     // Apply to main terminal
     if (this.terminal) {
       this.terminal.options.fontSize = settings.fontSize;
       this.terminal.options.fontFamily = settings.fontFamily;
       this.terminal.options.cursorBlink = settings.cursorBlink;
-      this.terminal.options.theme = getTheme(); // Will use updated theme
+      this.terminal.options.theme = terminalTheme;
+
+      // Force refresh to apply changes
+      this.terminal.refresh(0, this.terminal.rows - 1);
 
       if (this.fitAddon) {
         this.fitAddon.fit();
@@ -505,7 +522,10 @@ class TerminalWebviewManager {
       this.secondaryTerminal.options.fontSize = settings.fontSize;
       this.secondaryTerminal.options.fontFamily = settings.fontFamily;
       this.secondaryTerminal.options.cursorBlink = settings.cursorBlink;
-      this.secondaryTerminal.options.theme = getTheme();
+      this.secondaryTerminal.options.theme = terminalTheme;
+
+      // Force refresh to apply changes
+      this.secondaryTerminal.refresh(0, this.secondaryTerminal.rows - 1);
 
       if (this.secondaryFitAddon) {
         this.secondaryFitAddon.fit();
@@ -597,10 +617,13 @@ class TerminalWebviewManager {
     }
 
     try {
+      const terminalTheme = getTheme();
+      console.log('🎨 [WEBVIEW] Creating terminal with theme:', terminalTheme);
+
       const terminal = new Terminal({
         fontSize: config.fontSize || 14,
         fontFamily: config.fontFamily || 'monospace',
-        theme: getTheme(),
+        theme: terminalTheme,
         cursorBlink: true,
         allowTransparency: true,
         scrollback: 10000,
@@ -995,11 +1018,14 @@ class TerminalWebviewManager {
 
       this.secondaryTerminalId = id;
 
+      const terminalTheme = getTheme();
+      console.log('🎨 [WEBVIEW] Creating secondary terminal with theme:', terminalTheme);
+
       this.secondaryTerminal = new Terminal({
         fontSize: config.fontSize || 14,
         fontFamily: config.fontFamily || 'Consolas, monospace',
         cursorBlink: true,
-        theme: getTheme(),
+        theme: terminalTheme,
         allowTransparency: true,
         scrollback: 10000,
       });
@@ -1146,10 +1172,65 @@ class TerminalWebviewManager {
 const terminalManager = new TerminalWebviewManager();
 
 function getTheme(): { [key: string]: string } {
+  // VS Code provides CSS variables for theme detection
   const style = getComputedStyle(document.body);
-  const isDark = style.backgroundColor.includes('30') || style.backgroundColor.includes('1e1e1e');
 
-  return isDark ? WEBVIEW_CONSTANTS.DARK_THEME : WEBVIEW_CONSTANTS.LIGHT_THEME;
+  // Get the background color and convert to RGB values
+  const bgColor =
+    style.getPropertyValue('--vscode-editor-background') ||
+    style.getPropertyValue('--vscode-panel-background') ||
+    style.backgroundColor;
+
+  console.log('🎨 [WEBVIEW] Detected background color:', bgColor);
+
+  // Check if dark theme by analyzing background color
+  let isDark = true; // Default to dark
+
+  if (bgColor) {
+    // Handle hex colors
+    if (bgColor.startsWith('#')) {
+      const hex = bgColor.substring(1);
+      const r = parseInt(hex.substr(0, 2), 16);
+      const g = parseInt(hex.substr(2, 2), 16);
+      const b = parseInt(hex.substr(4, 2), 16);
+      const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+      isDark = brightness < 128;
+    }
+    // Handle rgb/rgba colors
+    else if (bgColor.includes('rgb')) {
+      const values = bgColor.match(/\d+/g);
+      if (values && values.length >= 3) {
+        const r = parseInt(values[0] || '0');
+        const g = parseInt(values[1] || '0');
+        const b = parseInt(values[2] || '0');
+        const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+        isDark = brightness < 128;
+      }
+    }
+    // Handle specific dark theme indicators
+    else if (
+      bgColor.includes('1e1e1e') ||
+      bgColor.includes('2d2d30') ||
+      bgColor.includes('252526')
+    ) {
+      isDark = true;
+    }
+    // Handle light theme indicators
+    else if (
+      bgColor.includes('ffffff') ||
+      bgColor.includes('f3f3f3') ||
+      bgColor.includes('fffffe')
+    ) {
+      isDark = false;
+    }
+  }
+
+  console.log('🎨 [WEBVIEW] Theme detected as:', isDark ? 'dark' : 'light');
+
+  const theme = isDark ? WEBVIEW_CONSTANTS.DARK_THEME : WEBVIEW_CONSTANTS.LIGHT_THEME;
+  console.log('🎨 [WEBVIEW] Applied theme:', theme);
+
+  return theme;
 }
 
 // Handle messages from the extension
