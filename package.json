@@ -204,6 +204,18 @@
           "type": "string",
           "default": "Terminal",
           "description": "Title to display in the webview header"
+        },
+        "sidebarTerminal.showSampleIcons": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show sample command icons in webview header (display only)"
+        },
+        "sidebarTerminal.sampleIconOpacity": {
+          "type": "number",
+          "default": 0.4,
+          "minimum": 0.1,
+          "maximum": 1.0,
+          "description": "Opacity of sample icons (0.1 to 1.0)"
         }
       }
     }

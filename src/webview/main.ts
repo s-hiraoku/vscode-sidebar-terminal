@@ -80,8 +80,8 @@ const vscode = acquireVsCodeApi();
 
 // Performance-optimized terminal management with split support
 class TerminalWebviewManager {
-  private terminal: Terminal | null = null;
-  private fitAddon: FitAddon | null = null;
+  public terminal: Terminal | null = null;
+  public fitAddon: FitAddon | null = null;
   public terminalContainer: HTMLElement | null = null;
   private isComposing: boolean = false;
   public activeTerminalId: string | null = null;
@@ -89,7 +89,7 @@ class TerminalWebviewManager {
   // Split functionality
   public secondaryTerminal: Terminal | null = null;
   public secondaryTerminalId: string | null = null;
-  private secondaryFitAddon: FitAddon | null = null;
+  public secondaryFitAddon: FitAddon | null = null;
   private secondaryContainer: HTMLElement | null = null;
   public isSplitMode = false;
   private splitDirection: 'horizontal' | 'vertical' | null = null;
@@ -1858,215 +1858,6 @@ class TerminalWebviewManager {
     }
   }
 
-  // WebView Header Management
-  public createWebViewHeader(): void {
-    // Check if header should be shown (for now, always true - will read from settings later)
-    const showHeader = true;
-    if (!showHeader) return;
-
-    // Check if header already exists
-    if (this.headerElement) return;
-
-    const headerContainer = document.createElement('div');
-    headerContainer.id = 'webview-header';
-    headerContainer.style.cssText = `
-      height: 28px;
-      background: var(--vscode-sideBar-background, #252526);
-      border-bottom: 1px solid var(--vscode-widget-border, #454545);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 8px;
-      flex-shrink: 0;
-      z-index: 1000;
-    `;
-
-    // Create title section
-    const titleSection = this.createTitleSection();
-
-    // Create command section
-    const commandSection = this.createCommandSection();
-
-    headerContainer.appendChild(titleSection);
-    headerContainer.appendChild(commandSection);
-
-    // Insert at the very top of the main container
-    const mainContainer = document.getElementById('terminal');
-    if (mainContainer) {
-      mainContainer.insertBefore(headerContainer, mainContainer.firstChild);
-
-      // Adjust main content to account for header height
-      const terminalHeader = document.getElementById('terminal-header');
-      if (terminalHeader) {
-        terminalHeader.style.marginTop = '0px';
-      }
-    }
-
-    this.headerElement = headerContainer;
-
-    // Update initial terminal count
-    this.updateTerminalCountBadge();
-  }
-
-  private createTitleSection(): HTMLElement {
-    const titleSection = document.createElement('div');
-    titleSection.style.cssText = `
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    `;
-
-    // Terminal icon (using Unicode for simplicity)
-    const terminalIcon = document.createElement('span');
-    terminalIcon.style.cssText = `
-      font-size: 14px;
-      color: var(--vscode-symbolIcon-colorForeground, #cccccc);
-    `;
-    terminalIcon.textContent = '⚡'; // Terminal-like icon
-
-    // Title text
-    const titleText = document.createElement('span');
-    titleText.style.cssText = `
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--vscode-foreground, #cccccc);
-      font-family: var(--vscode-font-family, 'Segoe UI', sans-serif);
-      line-height: 1;
-    `;
-    titleText.textContent = 'Terminal';
-
-    // Terminal count badge
-    const terminalCount = document.createElement('span');
-    terminalCount.id = 'terminal-count-badge';
-    terminalCount.style.cssText = `
-      font-size: 9px;
-      color: var(--vscode-badge-foreground, #ffffff);
-      background: var(--vscode-badge-background, #4ec9b0);
-      border-radius: 8px;
-      padding: 1px 4px;
-      min-width: 12px;
-      text-align: center;
-      line-height: 12px;
-      font-weight: 600;
-    `;
-    terminalCount.textContent = '1';
-
-    titleSection.appendChild(terminalIcon);
-    titleSection.appendChild(titleText);
-    titleSection.appendChild(terminalCount);
-
-    return titleSection;
-  }
-
-  private createCommandSection(): HTMLElement {
-    const commandSection = document.createElement('div');
-    commandSection.style.cssText = `
-      display: flex;
-      align-items: center;
-      gap: 2px;
-    `;
-
-    // Command icons with Unicode symbols for simplicity
-    const commandIcons = [
-      { icon: '➕', title: 'New Terminal', action: 'newTerminal' },
-      { icon: '⧄', title: 'Split Terminal', action: 'splitTerminal' },
-      { icon: '🧹', title: 'Clear Terminal', action: 'clearTerminal' },
-      { icon: '❌', title: 'Kill Terminal', action: 'killTerminal' },
-      { icon: '⚙️', title: 'Terminal Settings', action: 'openSettings' },
-    ];
-
-    commandIcons.forEach(({ icon, title, action }) => {
-      const iconButton = this.createCommandIcon(icon, title, action);
-      commandSection.appendChild(iconButton);
-    });
-
-    return commandSection;
-  }
-
-  private createCommandIcon(icon: string, title: string, action: string): HTMLElement {
-    const iconButton = document.createElement('button');
-    iconButton.style.cssText = `
-      background: transparent;
-      border: none;
-      color: var(--vscode-foreground, #cccccc);
-      font-size: 10px;
-      cursor: pointer;
-      padding: 2px;
-      border-radius: 2px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 18px;
-      height: 18px;
-      transition: background-color 0.2s ease;
-      outline: none;
-    `;
-    iconButton.textContent = icon;
-    iconButton.title = title;
-
-    // Hover effects
-    iconButton.addEventListener('mouseenter', (): void => {
-      iconButton.style.background = 'var(--vscode-toolbar-hoverBackground, #2a2d2e)';
-    });
-
-    iconButton.addEventListener('mouseleave', (): void => {
-      iconButton.style.background = 'transparent';
-    });
-
-    // Click event
-    iconButton.addEventListener('click', (): void => {
-      this.handleCommandAction(action);
-    });
-
-    return iconButton;
-  }
-
-  private handleCommandAction(action: string): void {
-    console.log(`🎯 [WEBVIEW] Header command action triggered: ${action}`);
-
-    switch (action) {
-      case 'newTerminal':
-        vscode.postMessage({ command: 'createTerminal' });
-        break;
-      case 'splitTerminal':
-        vscode.postMessage({ command: 'splitTerminal' });
-        break;
-      case 'clearTerminal':
-        this.clearTerminal();
-        break;
-      case 'killTerminal':
-        if (this.activeTerminalId) {
-          this.closeTerminal(this.activeTerminalId);
-        }
-        break;
-      case 'openSettings':
-        this.openSettingsPanel();
-        break;
-      default:
-        console.warn(`Unknown command action: ${action}`);
-    }
-  }
-
-  public updateTerminalCountBadge(): void {
-    const badge = document.getElementById('terminal-count-badge');
-    if (badge) {
-      const count = this.terminals.size;
-      badge.textContent = count.toString();
-
-      // Change color based on count
-      if (count === 0) {
-        badge.style.background = 'var(--vscode-errorBackground, #f14c4c)';
-        badge.style.color = 'var(--vscode-errorForeground, #ffffff)';
-      } else if (count >= 5) {
-        badge.style.background = 'var(--vscode-notificationWarning-background, #ffcc02)';
-        badge.style.color = 'var(--vscode-notificationWarning-foreground, #000000)';
-      } else {
-        badge.style.background = 'var(--vscode-badge-background, #4ec9b0)';
-        badge.style.color = 'var(--vscode-badge-foreground, #ffffff)';
-      }
-    }
-  }
-
   // Performance optimization: Cleanup method
   public dispose(): void {
     this.flushOutputBuffer();
@@ -2317,7 +2108,7 @@ window.addEventListener('message', (event) => {
   }
 });
 
-// Status Manager for auto-hide functionality
+// Status Manager for auto-hide functionality with layout adjustment
 class StatusManager {
   private statusElement: HTMLElement | null = null;
   private hideTimer: number | null = null;
@@ -2325,6 +2116,9 @@ class StatusManager {
   private readonly ERROR_DISPLAY_DURATION = 5000; // 5 seconds for errors
   private lastMessage = '';
   private lastType: 'info' | 'success' | 'error' = 'info';
+  private isStatusVisible = false;
+  private readonly STATUS_HEIGHT = 24; // Status bar height in pixels
+  private layoutAdjustTimer: NodeJS.Timeout | null = null;
 
   public showStatus(message: string, type: 'info' | 'success' | 'error' = 'info'): void {
     this.lastMessage = message;
@@ -2334,7 +2128,12 @@ class StatusManager {
     const statusEl = this.getOrCreateStatusElement();
     statusEl.textContent = message;
     statusEl.className = `status status-${type}`;
-    statusEl.style.display = 'block';
+
+    // Show status with animation
+    this.showStatusElement();
+
+    // Adjust terminal layout to accommodate status
+    this.adjustTerminalLayout(true);
 
     // Clear existing timer
     this.clearTimer();
@@ -2367,13 +2166,10 @@ class StatusManager {
       this.statusElement.style.opacity = '0';
       this.statusElement.style.transform = 'translateY(-100%)';
 
-      // Hide after animation completes
+      // Hide after animation completes and adjust layout
       setTimeout(() => {
-        if (this.statusElement) {
-          this.statusElement.style.display = 'none';
-          this.statusElement.style.opacity = '1';
-          this.statusElement.style.transform = 'translateY(0)';
-        }
+        this.hideStatusElement();
+        this.adjustTerminalLayout(false);
       }, 300);
     }
     this.clearTimer();
@@ -2443,6 +2239,26 @@ class StatusManager {
         .status:hover {
           opacity: 0.8;
         }
+
+        /* Layout adjustment styles */
+        #terminal-body {
+          transition: height 0.3s ease-out;
+          overflow: hidden;
+        }
+
+        .split-terminal-container {
+          transition: height 0.3s ease-out;
+        }
+
+        /* Status bar positioning */
+        .status {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 24px;
+          z-index: 1000;
+        }
       `;
       document.head.appendChild(style);
     }
@@ -2453,6 +2269,133 @@ class StatusManager {
       window.clearTimeout(this.hideTimer);
       this.hideTimer = null;
     }
+  }
+
+  private showStatusElement(): void {
+    if (this.statusElement) {
+      this.statusElement.style.display = 'block';
+      this.statusElement.style.opacity = '1';
+      this.statusElement.style.transform = 'translateY(0)';
+      this.isStatusVisible = true;
+    }
+  }
+
+  private hideStatusElement(): void {
+    if (this.statusElement) {
+      this.statusElement.style.display = 'none';
+      this.isStatusVisible = false;
+
+      // Reset styles for next show
+      this.statusElement.style.opacity = '1';
+      this.statusElement.style.transform = 'translateY(0)';
+    }
+  }
+
+  private adjustTerminalLayout(statusVisible: boolean): void {
+    console.log(`📐 [LAYOUT] Adjusting terminal layout, status visible: ${statusVisible}`);
+
+    const terminalContainer = document.getElementById('terminal');
+    const terminalBody = document.getElementById('terminal-body');
+    const terminalHeader = document.getElementById('terminal-header');
+
+    if (!terminalContainer || !terminalBody) {
+      console.warn('⚠️ [LAYOUT] Terminal containers not found');
+      return;
+    }
+
+    // Calculate container height
+    const containerHeight = terminalContainer.clientHeight;
+    const headerHeight = terminalHeader ? terminalHeader.clientHeight : 32;
+    const statusHeight = statusVisible ? this.STATUS_HEIGHT : 0;
+
+    // Calculate available height for terminal body
+    const availableHeight = containerHeight - headerHeight - statusHeight;
+
+    // Adjust terminal body height
+    terminalBody.style.height = `${availableHeight}px`;
+
+    // Adjust split containers if present
+    this.adjustSplitContainersHeight(availableHeight);
+
+    // Resize all terminal instances
+    this.resizeAllTerminals();
+
+    console.log(`✅ [LAYOUT] Terminal layout adjusted: ${availableHeight}px available`);
+  }
+
+  private adjustSplitContainersHeight(availableHeight: number): void {
+    const splitContainers = document.querySelectorAll('.split-terminal-container');
+    if (splitContainers.length > 0) {
+      console.log(`📐 [LAYOUT] Adjusting ${splitContainers.length} split containers`);
+
+      // Recalculate height for each split terminal
+      const splitCount = splitContainers.length;
+      const splitterHeight = 4;
+      const totalSplitterHeight = (splitCount - 1) * splitterHeight;
+      const terminalHeight = Math.floor((availableHeight - totalSplitterHeight) / splitCount);
+
+      splitContainers.forEach((container) => {
+        (container as HTMLElement).style.height = `${terminalHeight}px`;
+      });
+    }
+  }
+
+  private resizeAllTerminals(): void {
+    // Resize main terminal
+    if (terminalManager.terminal && terminalManager.fitAddon) {
+      setTimeout(() => {
+        terminalManager.fitAddon?.fit();
+      }, 100);
+    }
+
+    // Resize secondary terminal
+    if (terminalManager.secondaryTerminal && terminalManager.secondaryFitAddon) {
+      setTimeout(() => {
+        terminalManager.secondaryFitAddon?.fit();
+      }, 100);
+    }
+
+    // Resize multiple terminals
+    terminalManager.terminals.forEach((terminalData) => {
+      if (terminalData.fitAddon) {
+        setTimeout(() => {
+          terminalData.fitAddon.fit();
+        }, 100);
+      }
+    });
+  }
+
+  public initializeLayoutManagement(): void {
+    // Setup resize observer for dynamic layout adjustment
+    this.setupLayoutResizeObserver();
+
+    // Handle window resize events
+    window.addEventListener('resize', () => {
+      // Debounced layout adjustment
+      if (this.layoutAdjustTimer) {
+        clearTimeout(this.layoutAdjustTimer);
+      }
+      this.layoutAdjustTimer = setTimeout(() => {
+        this.adjustTerminalLayout(this.isStatusVisible);
+      }, 150);
+    });
+
+    console.log('📐 [LAYOUT] Layout management initialized');
+  }
+
+  private setupLayoutResizeObserver(): void {
+    const terminalContainer = document.getElementById('terminal');
+    if (!terminalContainer) return;
+
+    const resizeObserver = new ResizeObserver((_entries) => {
+      console.log('📐 [LAYOUT] Container resized, readjusting layout');
+
+      // Maintain status display state during layout adjustment
+      this.adjustTerminalLayout(this.isStatusVisible);
+    });
+
+    resizeObserver.observe(terminalContainer);
+    console.log('📐 [LAYOUT] Layout resize observer set up');
   }
 }
 
@@ -2545,107 +2488,104 @@ TerminalWebviewManager.prototype.createWebViewHeader = function (
   titleSection.appendChild(titleText);
   titleSection.appendChild(countBadge);
 
-  // Create command section inline
+  // Create sample icons section (display only)
   const commandSection = document.createElement('div');
+  commandSection.className = 'sample-icons';
   commandSection.style.cssText = `
     display: flex;
     align-items: center;
-    gap: 2px;
+    gap: 4px;
+    position: relative;
   `;
 
-  const commands = [
-    { id: 'split', icon: '⫶', title: 'Split Terminal', action: 'splitTerminal' },
-    { id: 'clear', icon: '🗑️', title: 'Clear Terminal', action: 'clear' },
-    { id: 'kill', icon: '❌', title: 'Kill Active Terminal', action: 'killTerminal' },
-    { id: 'settings', icon: '⚙️', title: 'Settings', action: 'openSettings' },
-  ];
+  // Check if sample icons should be shown (TODO: Read from settings)
+  const showSampleIcons = true; // TODO: Get from configuration
+  const sampleIconOpacity = 0.4; // TODO: Get from configuration
 
-  commands.forEach((cmd) => {
-    const button = document.createElement('button');
-    button.id = `header-btn-${cmd.id}`;
-    button.title = cmd.title;
-    button.textContent = cmd.icon;
-    button.style.cssText = `
-      background: transparent;
-      border: none;
-      color: var(--vscode-titleBar-activeForeground, #cccccc);
-      font-size: 10px;
-      padding: 4px 6px;
-      border-radius: 3px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 22px;
-      height: 20px;
-      opacity: 0.8;
-      transition: all 0.15s ease;
-    `;
+  if (showSampleIcons) {
+    // Sample icons for display only (no functionality)
+    const sampleIcons = [
+      { icon: '➕', title: 'New Terminal (Use panel button)' },
+      { icon: '⫶', title: 'Split Terminal (Use panel button)' },
+      { icon: '🧹', title: 'Clear Terminal (Use panel button)' },
+      { icon: '🗑️', title: 'Kill Terminal (Use panel button)' },
+      { icon: '⚙️', title: 'Settings (Use panel button)' },
+    ];
 
-    button.addEventListener('mouseenter', () => {
-      button.style.background = 'var(--vscode-toolbar-hoverBackground, rgba(255, 255, 255, 0.1))';
-      button.style.opacity = '1';
+    sampleIcons.forEach((sample) => {
+      const iconElement = document.createElement('div'); // Use div instead of button
+      iconElement.className = 'sample-icon';
+      iconElement.textContent = sample.icon;
+      iconElement.title = sample.title;
+      iconElement.style.cssText = `
+        background: transparent;
+        color: var(--vscode-descriptionForeground, #969696);
+        font-size: 12px;
+        padding: 4px;
+        border-radius: 3px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        height: 20px;
+        opacity: ${sampleIconOpacity};
+        cursor: default;
+        user-select: none;
+        filter: grayscale(30%);
+      `;
+
+      // Subtle hover effect to show it's non-interactive
+      iconElement.addEventListener('mouseenter', () => {
+        iconElement.style.opacity = '0.6';
+      });
+
+      iconElement.addEventListener('mouseleave', () => {
+        iconElement.style.opacity = '0.4';
+      });
+
+      commandSection.appendChild(iconElement);
     });
 
-    button.addEventListener('mouseleave', () => {
-      button.style.background = 'transparent';
-      button.style.opacity = '0.8';
+    // Add help tooltip
+    const helpTooltip = document.createElement('div');
+    helpTooltip.className = 'help-tooltip';
+    helpTooltip.style.cssText = `
+    position: absolute;
+    bottom: -35px;
+    right: 0;
+    background: var(--vscode-tooltip-background, #2c2c2c);
+    border: 1px solid var(--vscode-tooltip-border, #454545);
+    border-radius: 3px;
+    padding: 6px 8px;
+    font-size: 10px;
+    color: var(--vscode-tooltip-foreground, #cccccc);
+    white-space: nowrap;
+    z-index: 1001;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+  `;
+    helpTooltip.innerHTML = `
+    <div style="display: flex; align-items: center; gap: 4px;">
+      <span>📌</span>
+      <span>Sample Icons (Display Only)</span>
+    </div>
+    <div style="margin-top: 2px; color: var(--vscode-descriptionForeground, #969696);">
+      Use VS Code panel buttons for actions
+    </div>
+  `;
+
+    // Show tooltip on hover
+    commandSection.addEventListener('mouseenter', () => {
+      helpTooltip.style.opacity = '1';
     });
 
-    button.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-
-      button.style.background = 'var(--vscode-toolbar-activeBackground, rgba(255, 255, 255, 0.2))';
-      setTimeout(() => {
-        button.style.background = 'var(--vscode-toolbar-hoverBackground, rgba(255, 255, 255, 0.1))';
-      }, 100);
-
-      try {
-        console.log(`🎯 [WEBVIEW] Sending command from header: ${cmd.action}`);
-
-        switch (cmd.action) {
-          case 'splitTerminal':
-            vscode.postMessage({ command: 'splitTerminal' as const });
-            break;
-          case 'clear':
-            vscode.postMessage({ command: 'clear' as const });
-            break;
-          case 'killTerminal':
-            // Check if we can safely kill the terminal
-            if (terminalManager.activeTerminalId) {
-              // Check minimum terminal count protection
-              const terminalCount = terminalManager.terminals.size;
-              const minTerminalCount = 1; // TODO: Get from settings
-
-              if (terminalCount <= minTerminalCount) {
-                updateStatus('Cannot kill last terminal - minimum count protection', 'error');
-                return;
-              }
-
-              // Send kill command for active terminal
-              vscode.postMessage({
-                command: 'terminalClosed' as const,
-                terminalId: terminalManager.activeTerminalId,
-              });
-            } else {
-              updateStatus('No active terminal to kill', 'error');
-            }
-            break;
-          case 'openSettings':
-            vscode.postMessage({ command: 'getSettings' as const });
-            break;
-        }
-
-        updateStatus(`Command executed: ${cmd.action}`, 'success');
-      } catch (error) {
-        console.error(`❌ [WEBVIEW] Header command failed: ${cmd.id}`, error);
-        updateStatus(`Command failed: ${cmd.action}`, 'error');
-      }
+    commandSection.addEventListener('mouseleave', () => {
+      helpTooltip.style.opacity = '0';
     });
 
-    commandSection.appendChild(button);
-  });
+    commandSection.appendChild(helpTooltip);
+  }
 
   // Assemble header
   this.headerElement.appendChild(titleSection);
@@ -2693,6 +2633,9 @@ TerminalWebviewManager.prototype.updateTerminalCountBadge = function (
 
 // Global status manager instance
 const statusManager = new StatusManager();
+
+// Initialize layout management
+statusManager.initializeLayoutManagement();
 
 // Enhanced update status function with auto-hide
 function updateStatus(message: string, type: 'info' | 'success' | 'error' = 'info'): void {
