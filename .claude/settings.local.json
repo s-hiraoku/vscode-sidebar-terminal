@@ -13,7 +13,9 @@
       "WebFetch(domain:stackoverflow.com)",
       "Bash(npm test)",
       "Bash(npm run lint:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(grep:*)",
+      "Bash(gh issue edit:*)"
     ],
     "deny": []
   }

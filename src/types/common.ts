@@ -16,8 +16,23 @@ export interface TerminalConfig {
   shellArgs: string[];
 }
 
+export interface TerminalSettings {
+  fontSize: number;
+  fontFamily: string;
+  theme?: string;
+  cursorBlink: boolean;
+}
+
 export interface WebviewMessage {
-  command: 'init' | 'output' | 'clear' | 'exit' | 'split' | 'terminalCreated' | 'terminalRemoved';
+  command:
+    | 'init'
+    | 'output'
+    | 'clear'
+    | 'exit'
+    | 'split'
+    | 'terminalCreated'
+    | 'terminalRemoved'
+    | 'settingsResponse';
   config?: TerminalConfig;
   data?: string;
   exitCode?: number;
@@ -25,6 +40,7 @@ export interface WebviewMessage {
   terminalName?: string;
   terminals?: TerminalInfo[];
   activeTerminalId?: string;
+  settings?: TerminalSettings;
 }
 
 export interface VsCodeMessage {
@@ -35,11 +51,14 @@ export interface VsCodeMessage {
     | 'switchTerminal'
     | 'createTerminal'
     | 'splitTerminal'
-    | 'clear';
+    | 'clear'
+    | 'getSettings'
+    | 'updateSettings';
   data?: string;
   cols?: number;
   rows?: number;
   terminalId?: string;
+  settings?: TerminalSettings;
 }
 
 export interface TerminalInstance {

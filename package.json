@@ -125,6 +125,11 @@
           "type": "number",
           "default": 5,
           "description": "Maximum number of terminals allowed."
+        },
+        "sidebarTerminal.cursorBlink": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable cursor blinking in terminal."
         }
       }
     }

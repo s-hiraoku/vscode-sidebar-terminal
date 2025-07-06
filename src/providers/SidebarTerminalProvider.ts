@@ -265,6 +265,22 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
           }
           break;
         }
+        case 'getSettings': {
+          console.log('⚙️ [DEBUG] Getting settings from webview...');
+          const settings = this.getCurrentSettings();
+          await this._sendMessage({
+            command: 'settingsResponse',
+            settings,
+          });
+          break;
+        }
+        case 'updateSettings': {
+          console.log('⚙️ [DEBUG] Updating settings from webview:', message.settings);
+          if (message.settings) {
+            await this.updateSettings(message.settings);
+          }
+          break;
+        }
         default:
           console.warn('⚠️ [WARN] Unknown command received:', message.command);
       }
@@ -538,5 +554,40 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
 
     console.log('✅ [DEBUG] HTML generation completed');
     return html;
+  }
+
+  private getCurrentSettings(): { fontSize: number; fontFamily: string; cursorBlink: boolean } {
+    const config = vscode.workspace.getConfiguration('sidebarTerminal');
+
+    return {
+      fontSize: config.get<number>('fontSize') ?? 14,
+      fontFamily: config.get<string>('fontFamily') ?? 'Consolas, monospace',
+      cursorBlink: config.get<boolean>('cursorBlink') ?? true,
+    };
+  }
+
+  private async updateSettings(settings: {
+    fontSize: number;
+    fontFamily: string;
+    theme?: string;
+    cursorBlink: boolean;
+  }): Promise<void> {
+    try {
+      const config = vscode.workspace.getConfiguration('sidebarTerminal');
+
+      // Update VS Code settings
+      await config.update('fontSize', settings.fontSize, vscode.ConfigurationTarget.Global);
+      await config.update('fontFamily', settings.fontFamily, vscode.ConfigurationTarget.Global);
+      await config.update('cursorBlink', settings.cursorBlink, vscode.ConfigurationTarget.Global);
+
+      console.log('✅ [DEBUG] Settings updated successfully');
+      showSuccess('Settings updated successfully');
+
+      // Reinitialize terminal with new settings to apply changes
+      await this._initializeTerminal();
+    } catch (error) {
+      console.error('❌ [ERROR] Failed to update settings:', error);
+      showError(`Failed to update settings: ${String(error)}`);
+    }
   }
 }

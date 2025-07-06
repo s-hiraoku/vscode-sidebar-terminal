@@ -71,7 +71,7 @@ graph TD
 # → Claude Code auto-executes
 /orchestrator "ToDo app planning, design, and implementation"
 # → Auto-create GitHub Issues
-# → Generate React+TypeScript app with /modern-code
+# → Generate VS Code Extension with /modern-code
 # → If issues arise, use /bug-hunter, /discuss-with-gemini, /deep-research
 # → Optimize code with /refactor-similarity
 # → Quality check with /code-review
@@ -154,7 +154,7 @@ gh pr create --title "🚀 [Auto] Project implementation complete" \
 
 # Epic Issue
 gh issue create --title "📋 [Epic] ToDo App Development" \
-  --body "## Overview\nDevelop ToDo app with React + TypeScript\n\n## Requirements\n- Add/delete/edit tasks\n- Manage completion status\n- Persist with local storage"
+  --body "## Overview\nDevelop VS Code Sidebar Terminal Extension with TypeScript\n\n## Requirements\n- Sidebar terminal display\n- xterm.js terminal emulation\n- Split terminal functionality\n- Multiple terminal management"
 
 # Detailed task Issues
 gh issue create --title "🎨 UI/UX Design" --assignee @me
@@ -347,10 +347,10 @@ function create_completion_pr() {
 $(gh issue list --state closed --json title --jq '.[] | "- " + .title')
 
 ### 🔧 Tech Stack Used
-- Framework: React 18 + TypeScript
-- Styling: Tailwind CSS
-- Testing: Vitest + Testing Library
-- Build: Vite
+- Framework: VS Code Extension API + TypeScript
+- Terminal: xterm.js + node-pty
+- Testing: Mocha + VS Code Test API
+- Build: Webpack
 
 ### 📊 Quality Metrics
 - TypeScript type coverage: 100%
@@ -554,7 +554,7 @@ The root causes of current bugs are as follows:
       "command": "/modern-code",
       "duration": 2400,
       "result": "success",
-      "output": "React + TypeScript app generated"
+      "output": "VS Code Extension with TypeScript generated"
     },
     {
       "phase": "optimization",
@@ -645,7 +645,7 @@ The root causes of current bugs are as follows:
 ### Deliverables
 
 - ✅ Fully functional application/library
-- ✅ Latest tech stack (React 18, TypeScript 5.x, etc.)
+- ✅ Latest tech stack (VS Code Extension API, TypeScript 5.x, etc.)
 - ✅ High-quality code (type safety, tests, documentation)
 - ✅ Reviewed (security, performance addressed)
 - ✅ Ready-to-merge PR

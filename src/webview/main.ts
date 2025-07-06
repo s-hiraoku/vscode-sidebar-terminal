@@ -132,6 +132,24 @@ class TerminalWebviewManager {
           color: var(--vscode-foreground, #cccccc);
           font-family: var(--vscode-font-family, monospace);
         ">Terminal</div>
+        <div style="display: flex; gap: 4px; align-items: center;">
+          <button id="settings-btn" style="
+            background: transparent;
+            border: 1px solid var(--vscode-widget-border, #454545);
+            border-radius: 3px;
+            color: var(--vscode-foreground, #cccccc);
+            padding: 4px 6px;
+            font-size: 11px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 24px;
+            height: 24px;
+          " title="Settings">
+            ⚙️
+          </button>
+        </div>
       </div>
       <div id="terminal-body" style="
         flex: 1;
@@ -169,10 +187,397 @@ class TerminalWebviewManager {
         console.error('❌ [WEBVIEW] Failed to create terminal container');
         console.error('❌ [WEBVIEW] Available elements:', document.querySelectorAll('*'));
       }
+
+      // Setup settings button event handler
+      this.setupSettingsButton();
     }, 1);
 
     // Setup IME support
     this.setupIMEHandling();
+  }
+
+  private setupSettingsButton(): void {
+    const settingsBtn = document.getElementById('settings-btn');
+    if (settingsBtn) {
+      settingsBtn.addEventListener('click', () => {
+        console.log('⚙️ [WEBVIEW] Settings button clicked');
+        this.openSettingsPanel();
+      });
+
+      // Add hover effects
+      settingsBtn.addEventListener('mouseenter', () => {
+        settingsBtn.style.background = 'var(--vscode-button-hoverBackground, #1f3447)';
+        settingsBtn.style.borderColor = 'var(--vscode-focusBorder, #007acc)';
+      });
+
+      settingsBtn.addEventListener('mouseleave', () => {
+        settingsBtn.style.background = 'transparent';
+        settingsBtn.style.borderColor = 'var(--vscode-widget-border, #454545)';
+      });
+
+      console.log('⚙️ [WEBVIEW] Settings button setup complete');
+    } else {
+      console.error('❌ [WEBVIEW] Settings button not found');
+    }
+  }
+
+  private openSettingsPanel(): void {
+    console.log('⚙️ [WEBVIEW] Opening settings panel');
+
+    // Check if settings panel already exists
+    let settingsPanel = document.getElementById('settings-panel');
+    if (settingsPanel) {
+      // Toggle visibility if already exists
+      const isVisible = settingsPanel.style.display !== 'none';
+      settingsPanel.style.display = isVisible ? 'none' : 'flex';
+      return;
+    }
+
+    // Create settings panel
+    settingsPanel = document.createElement('div');
+    settingsPanel.id = 'settings-panel';
+    settingsPanel.style.cssText = `
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    `;
+
+    const settingsDialog = document.createElement('div');
+    settingsDialog.style.cssText = `
+      background: var(--vscode-editor-background, #1e1e1e);
+      border: 1px solid var(--vscode-widget-border, #454545);
+      border-radius: 6px;
+      padding: 20px;
+      min-width: 400px;
+      max-width: 500px;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    `;
+
+    settingsDialog.innerHTML = `
+      <div style="
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        border-bottom: 1px solid var(--vscode-widget-border, #454545);
+        padding-bottom: 10px;
+      ">
+        <h3 style="
+          margin: 0;
+          color: var(--vscode-foreground, #cccccc);
+          font-size: 16px;
+          font-weight: 600;
+        ">Terminal Settings</h3>
+        <button id="close-settings" style="
+          background: transparent;
+          border: none;
+          color: var(--vscode-foreground, #cccccc);
+          font-size: 18px;
+          cursor: pointer;
+          padding: 4px;
+          border-radius: 3px;
+        ">×</button>
+      </div>
+
+      <div id="settings-content">
+        <div style="margin-bottom: 16px;">
+          <label style="
+            display: block;
+            color: var(--vscode-foreground, #cccccc);
+            font-size: 12px;
+            margin-bottom: 6px;
+            font-weight: 500;
+          ">Font Size</label>
+          <input type="range" id="font-size-slider" min="10" max="24" value="14" style="
+            width: 100%;
+            margin-bottom: 4px;
+          ">
+          <div style="
+            display: flex;
+            justify-content: space-between;
+            color: var(--vscode-descriptionForeground, #888);
+            font-size: 11px;
+          ">
+            <span>10px</span>
+            <span id="font-size-value">14px</span>
+            <span>24px</span>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 16px;">
+          <label style="
+            display: block;
+            color: var(--vscode-foreground, #cccccc);
+            font-size: 12px;
+            margin-bottom: 6px;
+            font-weight: 500;
+          ">Font Family</label>
+          <select id="font-family-select" style="
+            width: 100%;
+            padding: 6px 8px;
+            background: var(--vscode-input-background, #3c3c3c);
+            border: 1px solid var(--vscode-widget-border, #454545);
+            border-radius: 3px;
+            color: var(--vscode-foreground, #cccccc);
+            font-size: 12px;
+          ">
+            <option value="Consolas, monospace">Consolas</option>
+            <option value="'Courier New', monospace">Courier New</option>
+            <option value="Monaco, monospace">Monaco</option>
+            <option value="'SF Mono', monospace">SF Mono</option>
+            <option value="'JetBrains Mono', monospace">JetBrains Mono</option>
+          </select>
+        </div>
+
+        <div style="margin-bottom: 16px;">
+          <label style="
+            display: block;
+            color: var(--vscode-foreground, #cccccc);
+            font-size: 12px;
+            margin-bottom: 6px;
+            font-weight: 500;
+          ">Theme</label>
+          <select id="theme-select" style="
+            width: 100%;
+            padding: 6px 8px;
+            background: var(--vscode-input-background, #3c3c3c);
+            border: 1px solid var(--vscode-widget-border, #454545);
+            border-radius: 3px;
+            color: var(--vscode-foreground, #cccccc);
+            font-size: 12px;
+          ">
+            <option value="auto">Auto (Follow VS Code)</option>
+            <option value="dark">Dark</option>
+            <option value="light">Light</option>
+          </select>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <label style="
+            display: flex;
+            align-items: center;
+            color: var(--vscode-foreground, #cccccc);
+            font-size: 12px;
+            cursor: pointer;
+          ">
+            <input type="checkbox" id="cursor-blink" style="margin-right: 8px;">
+            Enable cursor blinking
+          </label>
+        </div>
+
+        <div style="
+          display: flex;
+          gap: 8px;
+          justify-content: flex-end;
+          border-top: 1px solid var(--vscode-widget-border, #454545);
+          padding-top: 16px;
+        ">
+          <button id="reset-settings" style="
+            background: transparent;
+            border: 1px solid var(--vscode-widget-border, #454545);
+            color: var(--vscode-foreground, #cccccc);
+            padding: 6px 12px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 11px;
+          ">Reset</button>
+          <button id="apply-settings" style="
+            background: var(--vscode-button-background, #0e639c);
+            border: 1px solid var(--vscode-button-background, #0e639c);
+            color: var(--vscode-button-foreground, #ffffff);
+            padding: 6px 12px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 11px;
+          ">Apply</button>
+        </div>
+      </div>
+    `;
+
+    settingsPanel.appendChild(settingsDialog);
+    document.body.appendChild(settingsPanel);
+
+    // Setup event handlers for settings panel
+    this.setupSettingsPanelEventHandlers();
+
+    // Load current settings
+    this.loadCurrentSettings();
+  }
+
+  private setupSettingsPanelEventHandlers(): void {
+    // Close button
+    const closeBtn = document.getElementById('close-settings');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', () => {
+        this.closeSettingsPanel();
+      });
+    }
+
+    // Click outside to close
+    const settingsPanel = document.getElementById('settings-panel');
+    if (settingsPanel) {
+      settingsPanel.addEventListener('click', (e) => {
+        if (e.target === settingsPanel) {
+          this.closeSettingsPanel();
+        }
+      });
+    }
+
+    // Font size slider
+    const fontSizeSlider = document.getElementById('font-size-slider') as HTMLInputElement;
+    const fontSizeValue = document.getElementById('font-size-value');
+    if (fontSizeSlider && fontSizeValue) {
+      fontSizeSlider.addEventListener('input', () => {
+        fontSizeValue.textContent = `${fontSizeSlider.value}px`;
+      });
+    }
+
+    // Apply button
+    const applyBtn = document.getElementById('apply-settings');
+    if (applyBtn) {
+      applyBtn.addEventListener('click', () => {
+        this.applySettings();
+      });
+    }
+
+    // Reset button
+    const resetBtn = document.getElementById('reset-settings');
+    if (resetBtn) {
+      resetBtn.addEventListener('click', () => {
+        this.resetSettings();
+      });
+    }
+  }
+
+  private closeSettingsPanel(): void {
+    const settingsPanel = document.getElementById('settings-panel');
+    if (settingsPanel) {
+      settingsPanel.remove();
+    }
+  }
+
+  private loadCurrentSettings(): void {
+    // Load current settings and populate form
+    console.log('⚙️ [WEBVIEW] Loading current settings');
+
+    // Request current settings from extension
+    vscode.postMessage({
+      command: 'getSettings',
+    });
+  }
+
+  private applySettings(): void {
+    console.log('⚙️ [WEBVIEW] Applying settings');
+
+    const fontSizeSlider = document.getElementById('font-size-slider') as HTMLInputElement;
+    const fontFamilySelect = document.getElementById('font-family-select') as HTMLSelectElement;
+    const themeSelect = document.getElementById('theme-select') as HTMLSelectElement;
+    const cursorBlinkCheckbox = document.getElementById('cursor-blink') as HTMLInputElement;
+
+    const settings = {
+      fontSize: parseInt(fontSizeSlider?.value || '14'),
+      fontFamily: fontFamilySelect?.value || 'Consolas, monospace',
+      theme: themeSelect?.value || 'auto',
+      cursorBlink: cursorBlinkCheckbox?.checked || true,
+    };
+
+    // Send settings to extension
+    vscode.postMessage({
+      command: 'updateSettings',
+      settings,
+    });
+
+    // Apply settings immediately to current terminal
+    this.applySettingsToTerminal(settings);
+
+    this.closeSettingsPanel();
+  }
+
+  private resetSettings(): void {
+    console.log('⚙️ [WEBVIEW] Resetting settings to defaults');
+
+    const defaultSettings = {
+      fontSize: 14,
+      fontFamily: 'Consolas, monospace',
+      theme: 'auto',
+      cursorBlink: true,
+    };
+
+    // Update form with defaults
+    const fontSizeSlider = document.getElementById('font-size-slider') as HTMLInputElement;
+    const fontSizeValue = document.getElementById('font-size-value');
+    const fontFamilySelect = document.getElementById('font-family-select') as HTMLSelectElement;
+    const themeSelect = document.getElementById('theme-select') as HTMLSelectElement;
+    const cursorBlinkCheckbox = document.getElementById('cursor-blink') as HTMLInputElement;
+
+    if (fontSizeSlider) fontSizeSlider.value = defaultSettings.fontSize.toString();
+    if (fontSizeValue) fontSizeValue.textContent = `${defaultSettings.fontSize}px`;
+    if (fontFamilySelect) fontFamilySelect.value = defaultSettings.fontFamily;
+    if (themeSelect) themeSelect.value = defaultSettings.theme;
+    if (cursorBlinkCheckbox) cursorBlinkCheckbox.checked = defaultSettings.cursorBlink;
+  }
+
+  private applySettingsToTerminal(settings: {
+    fontSize: number;
+    fontFamily: string;
+    theme: string;
+    cursorBlink: boolean;
+  }): void {
+    console.log('⚙️ [WEBVIEW] Applying settings to terminal:', settings);
+
+    // Apply to main terminal
+    if (this.terminal) {
+      this.terminal.options.fontSize = settings.fontSize;
+      this.terminal.options.fontFamily = settings.fontFamily;
+      this.terminal.options.cursorBlink = settings.cursorBlink;
+      this.terminal.options.theme = getTheme(); // Will use updated theme
+
+      if (this.fitAddon) {
+        this.fitAddon.fit();
+      }
+    }
+
+    // Apply to secondary terminal if exists
+    if (this.secondaryTerminal) {
+      this.secondaryTerminal.options.fontSize = settings.fontSize;
+      this.secondaryTerminal.options.fontFamily = settings.fontFamily;
+      this.secondaryTerminal.options.cursorBlink = settings.cursorBlink;
+      this.secondaryTerminal.options.theme = getTheme();
+
+      if (this.secondaryFitAddon) {
+        this.secondaryFitAddon.fit();
+      }
+    }
+  }
+
+  public populateSettingsForm(settings: {
+    fontSize: number;
+    fontFamily: string;
+    theme?: string;
+    cursorBlink: boolean;
+  }): void {
+    console.log('⚙️ [WEBVIEW] Populating settings form with:', settings);
+
+    const fontSizeSlider = document.getElementById('font-size-slider') as HTMLInputElement;
+    const fontSizeValue = document.getElementById('font-size-value');
+    const fontFamilySelect = document.getElementById('font-family-select') as HTMLSelectElement;
+    const themeSelect = document.getElementById('theme-select') as HTMLSelectElement;
+    const cursorBlinkCheckbox = document.getElementById('cursor-blink') as HTMLInputElement;
+
+    if (fontSizeSlider) fontSizeSlider.value = settings.fontSize.toString();
+    if (fontSizeValue) fontSizeValue.textContent = `${settings.fontSize}px`;
+    if (fontFamilySelect) fontFamilySelect.value = settings.fontFamily;
+    if (themeSelect && settings.theme) themeSelect.value = settings.theme;
+    if (cursorBlinkCheckbox) cursorBlinkCheckbox.checked = settings.cursorBlink;
   }
 
   private setupIMEHandling(): void {
@@ -916,6 +1321,16 @@ window.addEventListener('message', (event) => {
         }
       }
       break;
+
+    case 'settingsResponse':
+      if (message.settings) {
+        console.log('⚙️ [WEBVIEW] Received settings from extension:', message.settings);
+        terminalManager.populateSettingsForm(message.settings);
+      }
+      break;
+
+    default:
+      console.warn('⚠️ [WEBVIEW] Unknown command received:', message.command);
   }
 });
 
