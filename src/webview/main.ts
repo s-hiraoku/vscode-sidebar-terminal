@@ -1,7 +1,6 @@
 import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import { WebLinksAddon } from 'xterm-addon-web-links';
-import { Unicode11Addon } from 'xterm-addon-unicode11';
 
 // Import types and constants for webview
 import type { WebviewMessage, VsCodeMessage, TerminalConfig } from '../types/common';
@@ -139,15 +138,20 @@ class TerminalWebviewManager {
       </div>
     `;
 
-    this.terminalContainer = document.getElementById('terminal-body');
+    // Force DOM update by using a small delay
+    setTimeout(() => {
+      this.terminalContainer = document.getElementById('terminal-body');
 
-    if (this.terminalContainer) {
-      updateStatus('Simple terminal view initialized');
-      console.log('🎯 [WEBVIEW] Simple terminal container created successfully');
-    } else {
-      updateStatus('ERROR: Failed to create terminal container');
-      console.error('❌ [WEBVIEW] Failed to create terminal container');
-    }
+      if (this.terminalContainer) {
+        updateStatus('Simple terminal view initialized');
+        console.log('🎯 [WEBVIEW] Simple terminal container created successfully');
+        console.log('🎯 [WEBVIEW] Container element:', this.terminalContainer);
+      } else {
+        updateStatus('ERROR: Failed to create terminal container');
+        console.error('❌ [WEBVIEW] Failed to create terminal container');
+        console.error('❌ [WEBVIEW] Available elements:', document.querySelectorAll('*'));
+      }
+    }, 1);
 
 
     // Setup IME support
@@ -232,7 +236,6 @@ class TerminalWebviewManager {
       const fitAddon = new FitAddon();
       terminal.loadAddon(fitAddon);
       terminal.loadAddon(new WebLinksAddon());
-      terminal.loadAddon(new Unicode11Addon());
 
       updateStatus(`Loading addons for: ${name}`);
       console.log('🎯 [WEBVIEW] Terminal addons loaded');
@@ -450,7 +453,10 @@ function getTheme(): { [key: string]: string } {
 
 // Handle messages from the extension
 window.addEventListener('message', (event) => {
+  console.log('🎯 [WEBVIEW] Received message event:', event);
   const message = event.data as WebviewMessage;
+  console.log('🎯 [WEBVIEW] Message data:', message);
+  console.log('🎯 [WEBVIEW] Message command:', message.command);
 
   switch (message.command) {
     case TERMINAL_CONSTANTS.COMMANDS.INIT:
@@ -467,22 +473,33 @@ window.addEventListener('message', (event) => {
           console.log('🎯 [WEBVIEW] Set active terminal ID:', message.activeTerminalId);
         }
 
-        // Create terminal with correct ID after DOM is ready
-        setTimeout(() => {
-          try {
+        // Wait for terminal container to be available
+        const checkContainerAndCreate = () => {
+          updateStatus('Checking terminal container availability');
+          console.log('🎯 [WEBVIEW] Checking terminal container...');
+          console.log('🎯 [WEBVIEW] Container available:', !!terminalManager.terminalContainer);
+          
+          if (terminalManager.terminalContainer) {
             updateStatus('Creating initial terminal');
             console.log('🎯 [WEBVIEW] Creating initial terminal');
             const terminalId = message.activeTerminalId || 'terminal-initial';
-            console.log('🎯 [WEBVIEW] Terminal container status:', !!terminalManager.terminalContainer);
-            terminalManager.createTerminal(terminalId, 'Terminal 1', message.config!);
             
-            updateStatus('Terminal ready');
-            console.log('🎯 [WEBVIEW] Terminal initialization completed');
-          } catch (error) {
-            console.error('❌ [WEBVIEW] Error during terminal creation:', error);
-            updateStatus(`ERROR: ${String(error)}`);
+            try {
+              terminalManager.createTerminal(terminalId, 'Terminal 1', message.config!);
+              updateStatus('Terminal ready');
+              console.log('🎯 [WEBVIEW] Terminal initialization completed');
+            } catch (error) {
+              console.error('❌ [WEBVIEW] Error during terminal creation:', error);
+              updateStatus(`ERROR: ${String(error)}`);
+            }
+          } else {
+            console.log('🎯 [WEBVIEW] Container not ready, waiting...');
+            updateStatus('Waiting for container...');
+            setTimeout(checkContainerAndCreate, 50);
           }
-        }, 100);
+        };
+        
+        setTimeout(checkContainerAndCreate, 10);
       } else {
         updateStatus('ERROR: No config');
         console.error('❌ [WEBVIEW] No config provided in INIT message');
@@ -535,13 +552,29 @@ function updateStatus(message: string): void {
 console.log('🎯 [WEBVIEW] Webview script starting...');
 updateStatus('Webview script loaded');
 
+function sendReadyMessage() {
+  console.log('🎯 [WEBVIEW] Sending READY message to extension');
+  updateStatus('Sending ready message to extension');
+  try {
+    vscode.postMessage({ command: 'ready' as const });
+    console.log('✅ [WEBVIEW] READY message sent successfully');
+    updateStatus('Ready message sent, waiting for response...');
+  } catch (error) {
+    console.error('❌ [WEBVIEW] Failed to send READY message:', error);
+    updateStatus(`ERROR sending ready: ${String(error)}`);
+  }
+}
+
 // Wait for DOM to be fully loaded
 if (document.readyState === 'loading') {
+  console.log('🎯 [WEBVIEW] DOM is loading, waiting for DOMContentLoaded...');
   document.addEventListener('DOMContentLoaded', () => {
+    console.log('🎯 [WEBVIEW] DOMContentLoaded event fired');
     updateStatus('DOM loaded, sending ready message');
-    vscode.postMessage({ command: 'ready' as const });
+    sendReadyMessage();
   });
 } else {
+  console.log('🎯 [WEBVIEW] DOM is already ready');
   updateStatus('DOM ready, sending ready message');
-  vscode.postMessage({ command: 'ready' as const });
+  sendReadyMessage();
 }
