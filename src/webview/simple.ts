@@ -19,7 +19,7 @@ const vscode = acquireVsCodeApi();
 // Simple terminal implementation
 function createSimpleTerminal() {
   updateStatus('Creating simple terminal...');
-  
+
   const container = document.getElementById('terminal');
   if (!container) {
     updateStatus('ERROR: No terminal container');
@@ -73,12 +73,10 @@ function createSimpleTerminal() {
             terminal.write('\n$ ');
           }
         });
-
       } catch (error) {
         updateStatus(`Error fitting: ${error}`);
       }
     }, 500);
-
   } catch (error) {
     updateStatus(`Error creating terminal: ${error}`);
     console.error('Terminal creation error:', error);

@@ -93,7 +93,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Some terminal features depend on shell capabilities
 
 ### Planned Features
-- [ ] Horizontal terminal splitting
+- [ ] Enhanced terminal splitting
 - [ ] Terminal session persistence
 - [ ] Custom terminal themes
 - [ ] Integrated terminal search

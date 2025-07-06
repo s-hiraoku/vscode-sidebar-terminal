@@ -83,7 +83,7 @@ const vscode = acquireVsCodeApi();
 class TerminalWebviewManager {
   private terminal: Terminal | null = null;
   private fitAddon: FitAddon | null = null;
-  private terminalContainer: HTMLElement | null = null;
+  public terminalContainer: HTMLElement | null = null;
   private isComposing: boolean = false;
   private activeTerminalId: string | null = null;
 
@@ -115,35 +115,6 @@ class TerminalWebviewManager {
           color: var(--vscode-foreground, #cccccc);
           font-family: var(--vscode-font-family, monospace);
         ">Terminal</div>
-        <div id="terminal-buttons" style="display: flex; gap: 4px;">
-          <button id="btn-clear" style="
-            background: var(--vscode-button-secondaryBackground, #3c3c3c);
-            color: var(--vscode-button-secondaryForeground, #cccccc);
-            border: 1px solid var(--vscode-button-border, #555);
-            padding: 4px 8px;
-            border-radius: 3px;
-            cursor: pointer;
-            font-size: 11px;
-          ">Clear</button>
-          <button id="btn-new" style="
-            background: var(--vscode-button-background, #0e639c);
-            color: var(--vscode-button-foreground, #fff);
-            border: 1px solid var(--vscode-button-border, #0e639c);
-            padding: 4px 8px;
-            border-radius: 3px;
-            cursor: pointer;
-            font-size: 11px;
-          ">New</button>
-          <button id="btn-split" style="
-            background: var(--vscode-button-secondaryBackground, #3c3c3c);
-            color: var(--vscode-button-secondaryForeground, #cccccc);
-            border: 1px solid var(--vscode-button-border, #555);
-            padding: 4px 8px;
-            border-radius: 3px;
-            cursor: pointer;
-            font-size: 11px;
-          ">Split</button>
-        </div>
       </div>
       <div id="terminal-body" style="
         flex: 1;
@@ -169,7 +140,7 @@ class TerminalWebviewManager {
     `;
 
     this.terminalContainer = document.getElementById('terminal-body');
-    
+
     if (this.terminalContainer) {
       updateStatus('Simple terminal view initialized');
       console.log('🎯 [WEBVIEW] Simple terminal container created successfully');
@@ -178,50 +149,16 @@ class TerminalWebviewManager {
       console.error('❌ [WEBVIEW] Failed to create terminal container');
     }
 
-    // Add button event listeners
-    this.setupButtonListeners();
-    
+
     // Setup IME support
     this.setupIMEHandling();
   }
 
-  private setupButtonListeners(): void {
-    const clearBtn = document.getElementById('btn-clear');
-    const newBtn = document.getElementById('btn-new');
-    const splitBtn = document.getElementById('btn-split');
-
-    if (clearBtn) {
-      clearBtn.addEventListener('click', () => {
-        console.log('🎯 [WEBVIEW] Clear button clicked');
-        this.clearTerminal();
-        // Also send clear command to extension
-        vscode.postMessage({ command: 'clear' });
-      });
-    }
-
-    if (newBtn) {
-      newBtn.addEventListener('click', () => {
-        console.log('🎯 [WEBVIEW] New button clicked');
-        vscode.postMessage({ command: 'createTerminal' });
-      });
-    }
-
-    if (splitBtn) {
-      splitBtn.addEventListener('click', () => {
-        console.log('🎯 [WEBVIEW] Split button clicked');
-        vscode.postMessage({ command: 'splitTerminal' });
-      });
-    }
-
-    updateStatus('Button listeners set up');
-    console.log('🎯 [WEBVIEW] Button event listeners added');
-  }
-
   private setupIMEHandling(): void {
     console.log('🌐 [WEBVIEW] Setting up IME handling');
-    
+
     // Listen for composition events on the document
-    document.addEventListener('compositionstart', (e) => {
+    document.addEventListener('compositionstart', (_e) => {
       console.log('🌐 [WEBVIEW] Composition started');
       this.isComposing = true;
     });
@@ -234,7 +171,7 @@ class TerminalWebviewManager {
     document.addEventListener('compositionend', (e) => {
       console.log('🌐 [WEBVIEW] Composition ended:', e.data);
       this.isComposing = false;
-      
+
       // Send the composed text when IME composition is complete
       if (e.data && this.terminal) {
         console.log('🌐 [WEBVIEW] Sending composed text:', e.data);
@@ -258,7 +195,7 @@ class TerminalWebviewManager {
       }
     `;
     document.head.appendChild(style);
-    
+
     console.log('🌐 [WEBVIEW] IME handling setup complete');
   }
 
@@ -267,20 +204,17 @@ class TerminalWebviewManager {
     console.log('🎯 [WEBVIEW] Active terminal ID set to:', terminalId);
   }
 
-  public createTerminal(
-    id: string,
-    name: string,
-    config: TerminalConfig
-  ): void {
+  public createTerminal(id: string, name: string, config: TerminalConfig): void {
     updateStatus(`Creating terminal: ${name}`);
+    this.setActiveTerminalId(id); // Set active terminal ID immediately
     console.log('🎯 [WEBVIEW] Creating terminal:', id, name);
-    
-    if (!this.terminalContainer) {
-      console.log('🎯 [WEBVIEW] No terminal container, initializing...');
-      this.initializeSimpleTerminal();
-    }
-
     console.log('🎯 [WEBVIEW] Terminal container available:', !!this.terminalContainer);
+
+    if (!this.terminalContainer) {
+      console.error('❌ [WEBVIEW] No terminal container available');
+      updateStatus('ERROR: No terminal container');
+      return;
+    }
 
     try {
       const terminal = new Terminal({
@@ -291,7 +225,7 @@ class TerminalWebviewManager {
         allowTransparency: true,
         scrollback: 10000,
       });
-      
+
       updateStatus(`Terminal instance created: ${name}`);
       console.log('🎯 [WEBVIEW] Terminal instance created successfully');
 
@@ -304,51 +238,52 @@ class TerminalWebviewManager {
       console.log('🎯 [WEBVIEW] Terminal addons loaded');
 
       if (this.terminalContainer) {
-        // Clear placeholder
+        // Clear placeholder immediately
         const placeholder = document.getElementById('terminal-placeholder');
         if (placeholder) {
           placeholder.remove();
+          console.log('🎯 [WEBVIEW] Placeholder removed');
+        } else {
+          console.log('🎯 [WEBVIEW] No placeholder found to remove');
         }
-        
+
         updateStatus(`Opening terminal: ${name}`);
         console.log('🎯 [WEBVIEW] Opening terminal in container');
-        
+
         // Give the DOM time to settle before opening terminal
         setTimeout(() => {
           try {
             console.log('🎯 [WEBVIEW] Calling terminal.open()');
-            terminal.open(this.terminalContainer!);
+            terminal.open(this.terminalContainer as HTMLElement);
             console.log('🎯 [WEBVIEW] Terminal.open() completed');
-            
+
             updateStatus(`Terminal opened: ${name}`);
-            
+
             // Wait for terminal to be fully rendered
             setTimeout(() => {
               updateStatus(`Fitting terminal: ${name}`);
               console.log('🎯 [WEBVIEW] Fitting terminal');
-              
+
               try {
                 fitAddon.fit();
                 console.log('🎯 [WEBVIEW] Terminal fitted successfully');
-                
+
                 // Force refresh after fitting
                 terminal.refresh(0, terminal.rows - 1);
-                
+
                 console.log('🎯 [WEBVIEW] Focusing terminal and ready for pty connection');
                 terminal.focus();
-                
+
                 updateStatus(`✅ ${name} ACTIVE`);
-                
+
                 // Store reference
                 this.terminal = terminal;
                 this.fitAddon = fitAddon;
-                
               } catch (fitError) {
                 console.error('❌ [WEBVIEW] Error during fitting:', fitError);
                 updateStatus(`Error fitting: ${fitError}`);
               }
             }, 300);
-            
           } catch (openError) {
             console.error('❌ [WEBVIEW] Error opening terminal:', openError);
             updateStatus(`Error opening: ${openError}`);
@@ -361,28 +296,37 @@ class TerminalWebviewManager {
 
       // Handle terminal input with special key processing
       terminal.onData((data) => {
-        console.log('🎯 [WEBVIEW] Terminal input data:', data, 'length:', data.length, 'charCode:', data.charCodeAt(0));
-        
+        console.log(
+          '🎯 [WEBVIEW] Terminal input data:',
+          data,
+          'length:',
+          data.length,
+          'charCode:',
+          data.charCodeAt(0)
+        );
+
         // Skip processing if we're in IME composition mode
         if (this.isComposing) {
           console.log('🌐 [WEBVIEW] Skipping input during IME composition');
           return;
         }
-        
+
         // Handle special keys
         const charCode = data.charCodeAt(0);
-        
+
         // Process the input based on character codes
         if (charCode === 127) {
-          // Backspace key (DEL character) - send as-is for proper handling
-          console.log('⌫ [WEBVIEW] DEL character detected (Backspace key)');
+          // Backspace key (DEL character) - convert to proper backspace
+          console.log(
+            '⌫ [WEBVIEW] DEL character detected (Backspace key), converting to backspace'
+          );
           vscode.postMessage({
             command: 'input' as const,
-            data: data, // Send DEL as-is - let pty handle it
+            data: '\x08', // Send proper backspace character
             terminalId: this.activeTerminalId || id,
           });
         } else if (charCode === 8) {
-          // BS (backspace) character
+          // BS (backspace) character - send as-is
           console.log('⌫ [WEBVIEW] BS character detected');
           vscode.postMessage({
             command: 'input' as const,
@@ -468,7 +412,6 @@ class TerminalWebviewManager {
       }
 
       console.log('🎯 [WEBVIEW] Terminal creation completed successfully');
-      
     } catch (error) {
       console.error('❌ [WEBVIEW] Error creating terminal:', error);
       updateStatus(`Error creating terminal: ${error}`);
@@ -517,21 +460,29 @@ window.addEventListener('message', (event) => {
         updateStatus('Initializing terminal UI');
         console.log('🎯 [WEBVIEW] Initializing simple terminal');
         terminalManager.initializeSimpleTerminal();
-        
+
         // Set active terminal ID
         if (message.activeTerminalId) {
           terminalManager.setActiveTerminalId(message.activeTerminalId);
           console.log('🎯 [WEBVIEW] Set active terminal ID:', message.activeTerminalId);
         }
-        
-        // Create terminal with correct ID
-        updateStatus('Creating initial terminal');
-        console.log('🎯 [WEBVIEW] Creating initial terminal');
-        const terminalId = message.activeTerminalId || 'terminal-initial';
-        terminalManager.createTerminal(terminalId, 'Terminal 1', message.config);
-        
-        updateStatus('Terminal ready');
-        console.log('🎯 [WEBVIEW] Terminal initialization completed');
+
+        // Create terminal with correct ID after DOM is ready
+        setTimeout(() => {
+          try {
+            updateStatus('Creating initial terminal');
+            console.log('🎯 [WEBVIEW] Creating initial terminal');
+            const terminalId = message.activeTerminalId || 'terminal-initial';
+            console.log('🎯 [WEBVIEW] Terminal container status:', !!terminalManager.terminalContainer);
+            terminalManager.createTerminal(terminalId, 'Terminal 1', message.config!);
+            
+            updateStatus('Terminal ready');
+            console.log('🎯 [WEBVIEW] Terminal initialization completed');
+          } catch (error) {
+            console.error('❌ [WEBVIEW] Error during terminal creation:', error);
+            updateStatus(`ERROR: ${String(error)}`);
+          }
+        }, 100);
       } else {
         updateStatus('ERROR: No config');
         console.error('❌ [WEBVIEW] No config provided in INIT message');
@@ -540,7 +491,12 @@ window.addEventListener('message', (event) => {
 
     case TERMINAL_CONSTANTS.COMMANDS.OUTPUT:
       if (message.data) {
-        console.log('📥 [WEBVIEW] Received output data:', message.data.length, 'chars:', JSON.stringify(message.data.substring(0, 50)));
+        console.log(
+          '📥 [WEBVIEW] Received output data:',
+          message.data.length,
+          'chars:',
+          JSON.stringify(message.data.substring(0, 50))
+        );
         terminalManager.writeToTerminal(message.data);
       }
       break;
@@ -560,18 +516,14 @@ window.addEventListener('message', (event) => {
     case TERMINAL_CONSTANTS.COMMANDS.SPLIT:
     case TERMINAL_CONSTANTS.COMMANDS.TERMINAL_CREATED:
       if (message.terminalId && message.terminalName && message.config) {
-        terminalManager.createTerminal(
-          message.terminalId,
-          message.terminalName,
-          message.config
-        );
+        terminalManager.createTerminal(message.terminalId, message.terminalName, message.config);
       }
       break;
   }
 });
 
 // Update status display
-function updateStatus(message: string) {
+function updateStatus(message: string): void {
   const statusEl = document.getElementById('status');
   if (statusEl) {
     statusEl.textContent = message;

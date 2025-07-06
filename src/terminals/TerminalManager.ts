@@ -69,13 +69,30 @@ export class TerminalManager {
       this._activeTerminalManager.setActive(terminalId);
 
       ptyProcess.onData((data) => {
+        console.log(
+          '📤 [DEBUG] PTY data received:',
+          data.length,
+          'chars for terminal:',
+          terminalId
+        );
         this._dataEmitter.fire({ terminalId, data });
       });
 
       ptyProcess.onExit((exitCode) => {
+        console.log(
+          '🚪 [DEBUG] PTY process exited:',
+          exitCode.exitCode,
+          'for terminal:',
+          terminalId
+        );
         this._exitEmitter.fire({ terminalId, exitCode: exitCode.exitCode });
         this._removeTerminal(terminalId);
       });
+
+      // Wait for PTY to be ready before returning
+      setTimeout(() => {
+        console.log('✅ [DEBUG] PTY process should be ready for input');
+      }, 100);
 
       this._terminalCreatedEmitter.fire(terminal);
       return terminalId;
@@ -87,17 +104,31 @@ export class TerminalManager {
 
   public sendInput(data: string, terminalId?: string): void {
     const id = terminalId || this._activeTerminalManager.getActive();
-    console.log('🔧 [DEBUG] TerminalManager.sendInput called with data:', JSON.stringify(data), 'terminalId:', id);
-    if (id) {
-      const terminal = this._terminals.get(id);
-      if (terminal) {
-        console.log('🔧 [DEBUG] Writing to pty:', JSON.stringify(data));
-        terminal.pty.write(data);
-      } else {
-        console.warn('⚠️ [WARN] Terminal not found for id:', id);
-      }
-    } else {
-      console.warn('⚠️ [WARN] No active terminal to send input to');
+    console.log(
+      '🔧 [DEBUG] TerminalManager.sendInput called with data:',
+      JSON.stringify(data),
+      'terminalId:',
+      id
+    );
+
+    if (!id) {
+      console.warn('⚠️ [WARN] No terminal ID provided and no active terminal');
+      return;
+    }
+
+    const terminal = this._terminals.get(id);
+    if (!terminal) {
+      console.warn('⚠️ [WARN] Terminal not found for id:', id);
+      return;
+    }
+
+    try {
+      console.log('🔧 [DEBUG] Writing to pty:', JSON.stringify(data));
+      terminal.pty.write(data);
+      console.log('✅ [DEBUG] Successfully wrote to pty');
+    } catch (error) {
+      console.error('❌ [ERROR] Failed to write to pty:', error);
+      showErrorMessage('Failed to send input to terminal', error);
     }
   }
 
