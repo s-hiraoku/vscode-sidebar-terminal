@@ -90,6 +90,7 @@ class TerminalWebviewManager {
   public secondaryTerminal: Terminal | null = null;
   public secondaryTerminalId: string | null = null;
   private secondaryFitAddon: FitAddon | null = null;
+  private secondaryContainer: HTMLElement | null = null;
   public isSplitMode = false;
   private splitDirection: 'horizontal' | 'vertical' | null = null;
 
@@ -607,35 +608,58 @@ class TerminalWebviewManager {
     terminalBody.appendChild(splitter);
     terminalBody.appendChild(secondaryContainer);
 
-    // Create secondary terminal
-    this.createSecondaryTerminal(secondaryContainer);
+    // Mark that secondary container is ready for terminal
+    this.secondaryContainer = secondaryContainer;
 
     // Update UI (no controls to update - using panel commands)
 
     // Resize terminals
     setTimeout(() => {
-      this.resizeTerminals();
+      if (this.fitAddon && this.terminal) {
+        this.fitAddon.fit();
+      }
     }, 100);
 
     // Notify extension that split was completed
     console.log('🔀 [WEBVIEW] Split layout completed');
   }
 
-  private createSecondaryTerminal(container: HTMLElement): void {
+  public createSecondaryTerminal(id: string, name: string, config: TerminalConfig): void {
+    if (!this.secondaryContainer) {
+      console.error('❌ [WEBVIEW] Secondary container not found');
+      return;
+    }
+
     try {
+      updateStatus(`Creating secondary terminal: ${name}`);
+      console.log('🔀 [WEBVIEW] Creating secondary terminal:', id, name);
+
+      this.secondaryTerminalId = id;
+
       this.secondaryTerminal = new Terminal({
-        fontSize: 14,
-        fontFamily: 'Consolas, monospace',
+        fontSize: config.fontSize || 14,
+        fontFamily: config.fontFamily || 'Consolas, monospace',
         cursorBlink: true,
-        theme: {
-          background: '#000000',
-          foreground: '#ffffff',
-        },
+        theme: getTheme(),
+        allowTransparency: true,
+        scrollback: 10000,
       });
 
       this.secondaryFitAddon = new FitAddon();
       this.secondaryTerminal.loadAddon(this.secondaryFitAddon);
-      this.secondaryTerminal.open(container);
+      this.secondaryTerminal.loadAddon(new WebLinksAddon());
+
+      // Open in secondary container
+      this.secondaryTerminal.open(this.secondaryContainer);
+
+      // Fit after opening
+      setTimeout(() => {
+        if (this.secondaryFitAddon && this.secondaryTerminal) {
+          this.secondaryFitAddon.fit();
+          this.secondaryTerminal.refresh(0, this.secondaryTerminal.rows - 1);
+          this.secondaryTerminal.focus();
+        }
+      }, 50);
 
       // Set up event handlers for secondary terminal
       this.secondaryTerminal.onData((data) => {
@@ -647,10 +671,10 @@ class TerminalWebviewManager {
       });
 
       console.log('✅ [WEBVIEW] Secondary terminal created successfully');
-
-      // The extension will create the secondary terminal process when split command is sent
+      updateStatus(`✅ ${name} ACTIVE`);
     } catch (error) {
       console.error('❌ [WEBVIEW] Error creating secondary terminal:', error);
+      updateStatus(`ERROR: ${String(error)}`);
     }
   }
 
@@ -707,6 +731,7 @@ class TerminalWebviewManager {
     this.isSplitMode = false;
     this.splitDirection = null;
     this.secondaryTerminalId = null;
+    this.secondaryContainer = null;
     // No UI controls to update - using panel commands
 
     // Resize main terminal
@@ -754,6 +779,7 @@ class TerminalWebviewManager {
     this.fitAddon = null;
     this.secondaryFitAddon = null;
     this.terminalContainer = null;
+    this.secondaryContainer = null;
   }
 }
 
@@ -867,8 +893,8 @@ window.addEventListener('message', (event) => {
 
     case TERMINAL_CONSTANTS.COMMANDS.SPLIT:
       console.log('🔀 [WEBVIEW] Received SPLIT command');
-      // Default to horizontal split (can be extended to support direction)
-      terminalManager.splitTerminal('horizontal');
+      // Default to vertical split (top/bottom)
+      terminalManager.splitTerminal('vertical');
       break;
 
     case TERMINAL_CONSTANTS.COMMANDS.TERMINAL_CREATED:
@@ -879,9 +905,12 @@ window.addEventListener('message', (event) => {
           !terminalManager.secondaryTerminal &&
           message.terminalId !== terminalManager.activeTerminalId
         ) {
-          console.log('🔀 [WEBVIEW] Routing new terminal to secondary in split mode');
-          // The secondary terminal visual is already created, just link the data
-          terminalManager.secondaryTerminalId = message.terminalId;
+          console.log('🔀 [WEBVIEW] Creating secondary terminal in split mode');
+          terminalManager.createSecondaryTerminal(
+            message.terminalId,
+            message.terminalName,
+            message.config
+          );
         } else {
           terminalManager.createTerminal(message.terminalId, message.terminalName, message.config);
         }
