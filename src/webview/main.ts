@@ -153,7 +153,6 @@ class TerminalWebviewManager {
       }
     }, 1);
 
-
     // Setup IME support
     this.setupIMEHandling();
   }
@@ -284,12 +283,12 @@ class TerminalWebviewManager {
                 this.fitAddon = fitAddon;
               } catch (fitError) {
                 console.error('❌ [WEBVIEW] Error during fitting:', fitError);
-                updateStatus(`Error fitting: ${fitError}`);
+                updateStatus(`Error fitting: ${String(fitError)}`);
               }
             }, 300);
           } catch (openError) {
             console.error('❌ [WEBVIEW] Error opening terminal:', openError);
-            updateStatus(`Error opening: ${openError}`);
+            updateStatus(`Error opening: ${String(openError)}`);
           }
         }, 100);
       } else {
@@ -417,7 +416,7 @@ class TerminalWebviewManager {
       console.log('🎯 [WEBVIEW] Terminal creation completed successfully');
     } catch (error) {
       console.error('❌ [WEBVIEW] Error creating terminal:', error);
-      updateStatus(`Error creating terminal: ${error}`);
+      updateStatus(`Error creating terminal: ${String(error)}`);
     }
   }
 
@@ -474,18 +473,22 @@ window.addEventListener('message', (event) => {
         }
 
         // Wait for terminal container to be available
-        const checkContainerAndCreate = () => {
+        const checkContainerAndCreate = (): void => {
           updateStatus('Checking terminal container availability');
           console.log('🎯 [WEBVIEW] Checking terminal container...');
           console.log('🎯 [WEBVIEW] Container available:', !!terminalManager.terminalContainer);
-          
+
           if (terminalManager.terminalContainer) {
             updateStatus('Creating initial terminal');
             console.log('🎯 [WEBVIEW] Creating initial terminal');
             const terminalId = message.activeTerminalId || 'terminal-initial';
-            
+
             try {
-              terminalManager.createTerminal(terminalId, 'Terminal 1', message.config!);
+              if (message.config) {
+                terminalManager.createTerminal(terminalId, 'Terminal 1', message.config);
+              } else {
+                throw new Error('No terminal config provided');
+              }
               updateStatus('Terminal ready');
               console.log('🎯 [WEBVIEW] Terminal initialization completed');
             } catch (error) {
@@ -498,7 +501,7 @@ window.addEventListener('message', (event) => {
             setTimeout(checkContainerAndCreate, 50);
           }
         };
-        
+
         setTimeout(checkContainerAndCreate, 10);
       } else {
         updateStatus('ERROR: No config');
@@ -552,7 +555,7 @@ function updateStatus(message: string): void {
 console.log('🎯 [WEBVIEW] Webview script starting...');
 updateStatus('Webview script loaded');
 
-function sendReadyMessage() {
+function sendReadyMessage(): void {
   console.log('🎯 [WEBVIEW] Sending READY message to extension');
   updateStatus('Sending ready message to extension');
   try {

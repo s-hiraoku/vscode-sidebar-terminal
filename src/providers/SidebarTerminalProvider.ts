@@ -127,7 +127,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
       // Check if we have an active terminal
       const hasActive = this._terminalManager.hasActiveTerminal();
       console.log('🔧 [DEBUG] Has active terminal:', hasActive);
-      
+
       let terminalId: string;
       if (!hasActive) {
         console.log('🔧 [DEBUG] No active terminal, creating new one...');
@@ -161,7 +161,10 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
         activeTerminalId: terminalId,
       };
 
-      console.log('🔧 [DEBUG] Sending init message to webview:', JSON.stringify(initMessage, null, 2));
+      console.log(
+        '🔧 [DEBUG] Sending init message to webview:',
+        JSON.stringify(initMessage, null, 2)
+      );
       try {
         await this._sendMessage(initMessage);
         console.log('✅ [DEBUG] INIT message sent successfully');
@@ -192,8 +195,13 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
             await this._initializeTerminal();
             console.log('✅ [DEBUG] Terminal initialization completed in message handler');
           } catch (initError) {
-            console.error('❌ [ERROR] Terminal initialization failed in message handler:', initError);
-            void vscode.window.showErrorMessage(`Terminal initialization failed: ${String(initError)}`);
+            console.error(
+              '❌ [ERROR] Terminal initialization failed in message handler:',
+              initError
+            );
+            void vscode.window.showErrorMessage(
+              `Terminal initialization failed: ${String(initError)}`
+            );
           }
           break;
         case TERMINAL_CONSTANTS.COMMANDS.INPUT:

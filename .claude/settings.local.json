@@ -9,7 +9,11 @@
       "Bash(gh issue close:*)",
       "Bash(gh issue create:*)",
       "Bash(gh label create:*)",
-      "Bash(gh issue comment:*)"
+      "Bash(gh issue comment:*)",
+      "WebFetch(domain:stackoverflow.com)",
+      "Bash(npm test)",
+      "Bash(npm run lint:*)",
+      "Bash(node:*)"
     ],
     "deny": []
   }

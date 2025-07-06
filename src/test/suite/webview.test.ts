@@ -43,8 +43,10 @@ suite('Webview Test Suite', () => {
       cspSource: 'vscode-resource:',
     } as vscode.Webview;
 
-    // Use private method through any cast for testing
-    const html = (provider as any)._getHtmlForWebview(mockWebview);
+    // Use private method through type assertion for testing
+    const html = (
+      provider as unknown as { _getHtmlForWebview: (webview: vscode.Webview) => string }
+    )._getHtmlForWebview(mockWebview);
 
     assert.ok(html);
     assert.ok(typeof html === 'string');
@@ -86,17 +88,17 @@ suite('Webview Test Suite', () => {
 
   test('Should handle webview message communication', async () => {
     let messageHandled = false;
-    let lastMessage: any = null;
+    let lastMessage: unknown = null;
 
     const mockWebviewView = {
       webview: {
         options: {},
         html: '',
-        postMessage: (message: any) => {
+        postMessage: (message: unknown) => {
           lastMessage = message;
           return Promise.resolve(true);
         },
-        onDidReceiveMessage: (callback: (message: any) => void) => {
+        onDidReceiveMessage: (callback: (message: unknown) => void) => {
           // Simulate webview ready message
           setTimeout(() => {
             messageHandled = true;
@@ -125,7 +127,11 @@ suite('Webview Test Suite', () => {
 
     assert.ok(messageHandled, 'Webview message should be handled');
     assert.ok(lastMessage, 'Message should be sent to webview');
-    assert.strictEqual(lastMessage.command, 'init', 'Init message should be sent');
+    assert.strictEqual(
+      (lastMessage as { command: string }).command,
+      'init',
+      'Init message should be sent'
+    );
   });
 
   test('Should handle command execution through provider', () => {
@@ -135,29 +141,29 @@ suite('Webview Test Suite', () => {
     let splitTerminalCalled = false;
 
     // Mock the methods to track calls
-    const originalCreateNewTerminal = provider.createNewTerminal;
-    const originalClearTerminal = provider.clearTerminal;
-    const originalKillTerminal = provider.killTerminal;
-    const originalSplitTerminal = provider.splitTerminal;
+    const originalCreateNewTerminal = provider.createNewTerminal.bind(provider);
+    const originalClearTerminal = provider.clearTerminal.bind(provider);
+    const originalKillTerminal = provider.killTerminal.bind(provider);
+    const originalSplitTerminal = provider.splitTerminal.bind(provider);
 
     provider.createNewTerminal = () => {
       createTerminalCalled = true;
-      return originalCreateNewTerminal.call(provider);
+      return originalCreateNewTerminal();
     };
 
     provider.clearTerminal = () => {
       clearTerminalCalled = true;
-      originalClearTerminal.call(provider);
+      originalClearTerminal();
     };
 
     provider.killTerminal = () => {
       killTerminalCalled = true;
-      originalKillTerminal.call(provider);
+      originalKillTerminal();
     };
 
     provider.splitTerminal = () => {
       splitTerminalCalled = true;
-      originalSplitTerminal.call(provider);
+      originalSplitTerminal();
     };
 
     // Test command execution
@@ -182,18 +188,18 @@ suite('Webview Test Suite', () => {
   });
 
   test('Should handle error cases gracefully', async () => {
-    let errorOccurred = false;
+    let _errorOccurred = false;
 
     // Mock vscode.window.showErrorMessage to capture errors
     const originalShowErrorMessage = vscode.window.showErrorMessage;
     vscode.window.showErrorMessage = () => {
-      errorOccurred = true;
+      _errorOccurred = true;
       return Promise.resolve(undefined);
     };
 
     try {
       // Test with invalid webview view
-      const invalidWebviewView = null as any;
+      const invalidWebviewView = null as unknown as vscode.WebviewView;
 
       assert.doesNotThrow(() => {
         try {
@@ -208,7 +214,9 @@ suite('Webview Test Suite', () => {
       });
 
       // Test sending message without webview
-      await (provider as any)._sendMessage({ command: 'test' });
+      await (
+        provider as unknown as { _sendMessage: (message: unknown) => Promise<void> }
+      )._sendMessage({ command: 'test' });
 
       // Give time for error handling
       await new Promise((resolve) => setTimeout(resolve, 10));
@@ -227,7 +235,7 @@ suite('Webview Test Suite', () => {
         options: {},
         html: '',
         postMessage: () => Promise.resolve(true),
-        onDidReceiveMessage: (callback: (message: any) => void) => {
+        onDidReceiveMessage: (callback: (message: unknown) => void) => {
           // Test different message types
           messageTypes.forEach((command) => {
             const message = {
