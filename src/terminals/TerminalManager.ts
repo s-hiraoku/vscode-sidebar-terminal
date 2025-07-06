@@ -51,14 +51,36 @@ export class TerminalManager {
     const shell = getShellForPlatform(config.shell);
     const shellArgs = config.shellArgs;
     const cwd = getWorkingDirectory();
+    
+    console.log('📁 [TERMINAL] Creating terminal with:');
+    console.log('📁 [TERMINAL] - ID:', terminalId);
+    console.log('📁 [TERMINAL] - Shell:', shell);
+    console.log('📁 [TERMINAL] - Shell Args:', shellArgs);
+    console.log('📁 [TERMINAL] - Working Directory (cwd):', cwd);
 
     try {
+      // Prepare environment variables with explicit PWD
+      const env = {
+        ...process.env,
+        PWD: cwd,
+        // Add VS Code workspace information if available
+        ...(vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0 && {
+          VSCODE_WORKSPACE: vscode.workspace.workspaceFolders[0].uri.fsPath,
+          VSCODE_PROJECT_NAME: vscode.workspace.workspaceFolders[0].name
+        })
+      } as { [key: string]: string };
+
+      console.log('📁 [TERMINAL] Environment variables:');
+      console.log('📁 [TERMINAL] - PWD:', env.PWD);
+      console.log('📁 [TERMINAL] - VSCODE_WORKSPACE:', env.VSCODE_WORKSPACE);
+      console.log('📁 [TERMINAL] - VSCODE_PROJECT_NAME:', env.VSCODE_PROJECT_NAME);
+
       const ptyProcess = pty.spawn(shell, shellArgs, {
         name: 'xterm-color',
         cols: TERMINAL_CONSTANTS.DEFAULT_COLS,
         rows: TERMINAL_CONSTANTS.DEFAULT_ROWS,
         cwd,
-        env: process.env as { [key: string]: string },
+        env,
       });
 
       const terminal: TerminalInstance = {
@@ -100,8 +122,14 @@ export class TerminalManager {
       // Wait for PTY to be ready before returning
       setTimeout(() => {
         console.log('✅ [DEBUG] PTY process should be ready for input');
-      }, 100);
+        // Send a command to verify the working directory
+        console.log('📁 [TERMINAL] Verifying working directory...');
+        ptyProcess.write('pwd\r');
+      }, 200);
 
+      console.log('✅ [TERMINAL] Terminal created successfully with ID:', terminalId);
+      console.log('📁 [TERMINAL] Expected working directory:', cwd);
+      
       this._terminalCreatedEmitter.fire(terminal);
       return terminalId;
     } catch (error) {

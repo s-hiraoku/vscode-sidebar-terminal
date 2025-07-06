@@ -4,6 +4,8 @@
 
 import * as vscode from 'vscode';
 import * as os from 'os';
+import * as path from 'path';
+import * as fs from 'fs';
 import { TERMINAL_CONSTANTS } from '../constants';
 import { TerminalConfig, TerminalInfo } from '../types/common';
 
@@ -70,18 +72,95 @@ export function getShellForPlatform(customShell: string): string {
 }
 
 /**
+ * ディレクトリが存在し、アクセス可能かを検証
+ */
+function validateDirectory(dirPath: string): boolean {
+  try {
+    const stat = fs.statSync(dirPath);
+    const isDirectory = stat.isDirectory();
+    
+    // Try to access the directory
+    fs.accessSync(dirPath, fs.constants.R_OK | fs.constants.X_OK);
+    
+    console.log('📁 [VALIDATE] Directory validation:', {
+      path: dirPath,
+      exists: true,
+      isDirectory,
+      accessible: true
+    });
+    
+    return isDirectory;
+  } catch (error) {
+    console.warn('⚠️ [VALIDATE] Directory validation failed:', {
+      path: dirPath,
+      error: String(error)
+    });
+    return false;
+  }
+}
+
+/**
  * 作業ディレクトリを取得
  */
 export function getWorkingDirectory(): string {
   const config = vscode.workspace.getConfiguration(TERMINAL_CONSTANTS.CONFIG_KEYS.SIDEBAR_TERMINAL);
   const customDir = config.get<string>('defaultDirectory', '');
 
+  console.log('📁 [WORKDIR] Getting working directory...');
+  console.log('📁 [WORKDIR] Custom directory from config:', customDir);
+
   if (customDir && customDir.trim()) {
-    return customDir;
+    console.log('📁 [WORKDIR] Candidate custom directory:', customDir);
+    if (validateDirectory(customDir.trim())) {
+      console.log('📁 [WORKDIR] Using validated custom directory:', customDir);
+      return customDir.trim();
+    } else {
+      console.warn('⚠️ [WORKDIR] Custom directory not accessible, trying alternatives');
+    }
   }
 
-  // Default to workspace root, fallback to home directory
-  return vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || os.homedir();
+  // Check workspace folders
+  const workspaceFolders = vscode.workspace.workspaceFolders;
+  console.log('📁 [WORKDIR] Workspace folders:', workspaceFolders?.map(f => f.uri.fsPath));
+
+  if (workspaceFolders && workspaceFolders.length > 0) {
+    const workspaceRoot = workspaceFolders[0].uri.fsPath;
+    console.log('📁 [WORKDIR] Candidate workspace root:', workspaceRoot);
+    
+    // Validate directory exists and is accessible
+    if (validateDirectory(workspaceRoot)) {
+      console.log('📁 [WORKDIR] Using validated workspace root:', workspaceRoot);
+      return workspaceRoot;
+    } else {
+      console.warn('⚠️ [WORKDIR] Workspace root not accessible, trying alternatives');
+    }
+  }
+
+  // Check active editor for file directory
+  const activeEditor = vscode.window.activeTextEditor;
+  if (activeEditor && activeEditor.document.uri.scheme === 'file') {
+    const activeFileDir = path.dirname(activeEditor.document.uri.fsPath);
+    console.log('📁 [WORKDIR] Candidate active file directory:', activeFileDir);
+    
+    if (validateDirectory(activeFileDir)) {
+      console.log('📁 [WORKDIR] Using validated active file directory:', activeFileDir);
+      return activeFileDir;
+    }
+  }
+
+  // Fallback to home directory
+  const homeDir = os.homedir();
+  console.log('📁 [WORKDIR] Using fallback home directory:', homeDir);
+  
+  // Final validation of home directory
+  if (validateDirectory(homeDir)) {
+    return homeDir;
+  }
+  
+  // Last resort - current process directory
+  const processDir = process.cwd();
+  console.log('📁 [WORKDIR] Last resort - process cwd:', processDir);
+  return processDir;
 }
 
 /**
