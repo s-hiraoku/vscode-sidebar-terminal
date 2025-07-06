@@ -3,6 +3,7 @@ import { TerminalManager } from '../terminals/TerminalManager';
 import { VsCodeMessage, WebviewMessage } from '../types/common';
 import { TERMINAL_CONSTANTS } from '../constants';
 import { getTerminalConfig, generateNonce, normalizeTerminalInfo } from '../utils/common';
+import { showSuccess, showError, TerminalErrorHandler } from '../utils/feedback';
 
 export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = 'sidebarTerminal';
@@ -64,10 +65,11 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
     try {
       const terminalId = this._terminalManager.createTerminal();
       console.log('✅ [DEBUG] New terminal created with ID:', terminalId);
+      showSuccess('Terminal created successfully');
       return terminalId;
     } catch (error) {
       console.error('❌ [ERROR] Failed to create new terminal:', error);
-      void vscode.window.showErrorMessage(`Failed to create new terminal: ${String(error)}`);
+      TerminalErrorHandler.handleTerminalCreationError(error);
       throw error;
     }
   }
@@ -94,9 +96,10 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
         command: TERMINAL_CONSTANTS.COMMANDS.CLEAR,
       });
       console.log('✅ [DEBUG] Clear command sent');
+      showSuccess('Terminal cleared');
     } catch (error) {
       console.error('❌ [ERROR] Failed to clear terminal:', error);
-      void vscode.window.showErrorMessage(`Failed to clear terminal: ${String(error)}`);
+      showError(`Failed to clear terminal: ${String(error)}`);
     }
   }
 
@@ -108,13 +111,14 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
         console.log('🔧 [DEBUG] Killing active terminal:', activeTerminalId);
         this._terminalManager.killTerminal(activeTerminalId);
         console.log('✅ [DEBUG] Terminal killed successfully');
+        showSuccess('Terminal closed');
       } else {
         console.warn('⚠️ [WARN] No active terminal to kill');
-        void vscode.window.showWarningMessage('No active terminal to kill');
+        TerminalErrorHandler.handleTerminalNotFound();
       }
     } catch (error) {
       console.error('❌ [ERROR] Failed to kill terminal:', error);
-      void vscode.window.showErrorMessage(`Failed to kill terminal: ${String(error)}`);
+      showError(`Failed to close terminal: ${String(error)}`);
     }
   }
 

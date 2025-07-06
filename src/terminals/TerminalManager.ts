@@ -22,6 +22,12 @@ export class TerminalManager {
   private readonly _terminalCreatedEmitter = new vscode.EventEmitter<TerminalInstance>();
   private readonly _terminalRemovedEmitter = new vscode.EventEmitter<string>();
 
+  // Performance optimization: Data batching for high-frequency output
+  private readonly _dataBuffers = new Map<string, string[]>();
+  private readonly _dataFlushTimers = new Map<string, NodeJS.Timeout>();
+  private readonly DATA_FLUSH_INTERVAL = 16; // ~60fps
+  private readonly MAX_BUFFER_SIZE = 50;
+
   public readonly onData = this._dataEmitter.event;
   public readonly onExit = this._exitEmitter.event;
   public readonly onTerminalCreated = this._terminalCreatedEmitter.event;
@@ -75,7 +81,9 @@ export class TerminalManager {
           'chars for terminal:',
           terminalId
         );
-        this._dataEmitter.fire({ terminalId, data });
+
+        // Performance optimization: Batch small data chunks
+        this._bufferData(terminalId, data);
       });
 
       ptyProcess.onExit((exitCode) => {
@@ -173,6 +181,14 @@ export class TerminalManager {
   }
 
   public dispose(): void {
+    // Clean up data buffers and timers
+    this._flushAllBuffers();
+    for (const timer of this._dataFlushTimers.values()) {
+      clearTimeout(timer);
+    }
+    this._dataBuffers.clear();
+    this._dataFlushTimers.clear();
+
     for (const terminal of this._terminals.values()) {
       terminal.pty.kill();
     }
@@ -181,6 +197,57 @@ export class TerminalManager {
     this._exitEmitter.dispose();
     this._terminalCreatedEmitter.dispose();
     this._terminalRemovedEmitter.dispose();
+  }
+
+  // Performance optimization: Buffer data to reduce event frequency
+  private _bufferData(terminalId: string, data: string): void {
+    if (!this._dataBuffers.has(terminalId)) {
+      this._dataBuffers.set(terminalId, []);
+    }
+
+    const buffer = this._dataBuffers.get(terminalId);
+    if (!buffer) {
+      this._dataBuffers.set(terminalId, []);
+      return;
+    }
+    buffer.push(data);
+
+    // Flush immediately if buffer is full or data is large
+    if (buffer.length >= this.MAX_BUFFER_SIZE || data.length > 1000) {
+      this._flushBuffer(terminalId);
+    } else {
+      this._scheduleFlush(terminalId);
+    }
+  }
+
+  private _scheduleFlush(terminalId: string): void {
+    if (!this._dataFlushTimers.has(terminalId)) {
+      const timer = setTimeout(() => {
+        this._flushBuffer(terminalId);
+      }, this.DATA_FLUSH_INTERVAL);
+      this._dataFlushTimers.set(terminalId, timer);
+    }
+  }
+
+  private _flushBuffer(terminalId: string): void {
+    const timer = this._dataFlushTimers.get(terminalId);
+    if (timer) {
+      clearTimeout(timer);
+      this._dataFlushTimers.delete(terminalId);
+    }
+
+    const buffer = this._dataBuffers.get(terminalId);
+    if (buffer && buffer.length > 0) {
+      const combinedData = buffer.join('');
+      buffer.length = 0; // Clear buffer
+      this._dataEmitter.fire({ terminalId, data: combinedData });
+    }
+  }
+
+  private _flushAllBuffers(): void {
+    for (const terminalId of this._dataBuffers.keys()) {
+      this._flushBuffer(terminalId);
+    }
   }
 
   /**
@@ -196,6 +263,15 @@ export class TerminalManager {
    * ターミナルを削除し、必要に応じて他のターミナルをアクティブにする
    */
   private _removeTerminal(terminalId: string): void {
+    // Clean up data buffers for this terminal
+    this._flushBuffer(terminalId);
+    this._dataBuffers.delete(terminalId);
+    const timer = this._dataFlushTimers.get(terminalId);
+    if (timer) {
+      clearTimeout(timer);
+      this._dataFlushTimers.delete(terminalId);
+    }
+
     this._terminals.delete(terminalId);
     this._terminalRemovedEmitter.fire(terminalId);
 

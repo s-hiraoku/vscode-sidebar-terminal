@@ -78,13 +78,23 @@ declare const acquireVsCodeApi: () => {
 
 const vscode = acquireVsCodeApi();
 
-// Simple terminal management without complex splitting
+// Performance-optimized terminal management
 class TerminalWebviewManager {
   private terminal: Terminal | null = null;
   private fitAddon: FitAddon | null = null;
   public terminalContainer: HTMLElement | null = null;
   private isComposing: boolean = false;
   private activeTerminalId: string | null = null;
+
+  // Performance optimization: Buffer output and batch writes
+  private outputBuffer: string[] = [];
+  private bufferFlushTimer: number | null = null;
+  private readonly BUFFER_FLUSH_INTERVAL = 16; // ~60fps
+  private readonly MAX_BUFFER_SIZE = 100;
+
+  // Performance optimization: Debounce resize operations
+  private resizeDebounceTimer: number | null = null;
+  private readonly RESIZE_DEBOUNCE_DELAY = 150;
 
   public initializeSimpleTerminal(): void {
     const container = document.getElementById('terminal');
@@ -403,11 +413,12 @@ class TerminalWebviewManager {
         });
       });
 
-      // Observe container resize
+      // Performance optimization: Use debounced resize observer
       if (this.terminalContainer) {
         const resizeObserver = new ResizeObserver(() => {
-          if (this.fitAddon) {
-            this.fitAddon.fit();
+          if (this.fitAddon && this.terminal) {
+            // Use debounced resize to prevent excessive calls during window resizing
+            this.debouncedResize(this.terminal.cols, this.terminal.rows);
           }
         });
         resizeObserver.observe(this.terminalContainer);
@@ -432,11 +443,77 @@ class TerminalWebviewManager {
 
   public writeToTerminal(data: string): void {
     if (this.terminal) {
-      console.log('✍️ [WEBVIEW] Writing to xterm:', JSON.stringify(data.substring(0, 50)));
-      this.terminal.write(data);
+      // Performance optimization: Buffer small outputs for batching
+      if (data.length < 1000 && this.outputBuffer.length < this.MAX_BUFFER_SIZE) {
+        this.outputBuffer.push(data);
+        this.scheduleBufferFlush();
+      } else {
+        // Flush any buffered data first, then write large data directly
+        this.flushOutputBuffer();
+        this.terminal.write(data);
+      }
     } else {
       console.warn('⚠️ [WEBVIEW] No terminal instance to write to');
     }
+  }
+
+  private scheduleBufferFlush(): void {
+    if (this.bufferFlushTimer === null) {
+      this.bufferFlushTimer = window.setTimeout(() => {
+        this.flushOutputBuffer();
+      }, this.BUFFER_FLUSH_INTERVAL);
+    }
+  }
+
+  private flushOutputBuffer(): void {
+    if (this.bufferFlushTimer !== null) {
+      window.clearTimeout(this.bufferFlushTimer);
+      this.bufferFlushTimer = null;
+    }
+
+    if (this.outputBuffer.length > 0 && this.terminal) {
+      const bufferedData = this.outputBuffer.join('');
+      this.outputBuffer = [];
+      this.terminal.write(bufferedData);
+    }
+  }
+
+  // Performance optimization: Debounced resize to prevent excessive calls
+  public debouncedResize(cols: number, rows: number): void {
+    if (this.resizeDebounceTimer !== null) {
+      window.clearTimeout(this.resizeDebounceTimer);
+    }
+
+    this.resizeDebounceTimer = window.setTimeout(() => {
+      if (this.fitAddon && this.terminal) {
+        this.terminal.resize(cols, rows);
+        this.fitAddon.fit();
+      }
+      this.resizeDebounceTimer = null;
+    }, this.RESIZE_DEBOUNCE_DELAY);
+  }
+
+  // Performance optimization: Cleanup method
+  public dispose(): void {
+    this.flushOutputBuffer();
+
+    if (this.bufferFlushTimer !== null) {
+      window.clearTimeout(this.bufferFlushTimer);
+      this.bufferFlushTimer = null;
+    }
+
+    if (this.resizeDebounceTimer !== null) {
+      window.clearTimeout(this.resizeDebounceTimer);
+      this.resizeDebounceTimer = null;
+    }
+
+    if (this.terminal) {
+      this.terminal.dispose();
+      this.terminal = null;
+    }
+
+    this.fitAddon = null;
+    this.terminalContainer = null;
   }
 }
 
