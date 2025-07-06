@@ -28,6 +28,7 @@ export function getTerminalConfig(): TerminalConfig {
     ),
     shell: config.get<string>(TERMINAL_CONSTANTS.CONFIG_KEYS.SHELL, ''),
     shellArgs: config.get<string[]>(TERMINAL_CONSTANTS.CONFIG_KEYS.SHELL_ARGS, []),
+    defaultDirectory: config.get<string>('defaultDirectory', ''),
   };
 }
 
@@ -72,6 +73,14 @@ export function getShellForPlatform(customShell: string): string {
  * 作業ディレクトリを取得
  */
 export function getWorkingDirectory(): string {
+  const config = vscode.workspace.getConfiguration(TERMINAL_CONSTANTS.CONFIG_KEYS.SIDEBAR_TERMINAL);
+  const customDir = config.get<string>('defaultDirectory', '');
+
+  if (customDir && customDir.trim()) {
+    return customDir;
+  }
+
+  // Default to workspace root, fallback to home directory
   return vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || os.homedir();
 }
 

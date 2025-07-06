@@ -180,6 +180,10 @@ export class TerminalManager {
     }
   }
 
+  public removeTerminal(terminalId: string): void {
+    this._removeTerminal(terminalId);
+  }
+
   public dispose(): void {
     // Clean up data buffers and timers
     this._flushAllBuffers();

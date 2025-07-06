@@ -14,6 +14,7 @@ export interface TerminalConfig {
   maxTerminals: number;
   shell: string;
   shellArgs: string[];
+  defaultDirectory?: string;
 }
 
 export interface TerminalSettings {
@@ -54,7 +55,8 @@ export interface VsCodeMessage {
     | 'splitTerminal'
     | 'clear'
     | 'getSettings'
-    | 'updateSettings';
+    | 'updateSettings'
+    | 'terminalClosed';
   data?: string;
   cols?: number;
   rows?: number;

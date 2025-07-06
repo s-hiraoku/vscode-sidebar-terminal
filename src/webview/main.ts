@@ -104,6 +104,10 @@ class TerminalWebviewManager {
   private resizeDebounceTimer: number | null = null;
   private readonly RESIZE_DEBOUNCE_DELAY = 150;
 
+  // Multiple terminal management
+  private terminals = new Map<string, { terminal: Terminal; fitAddon: FitAddon; name: string }>();
+  private terminalContainers = new Map<string, HTMLElement>();
+
   public initializeSimpleTerminal(): void {
     const container = document.getElementById('terminal');
     if (!container) {
@@ -127,11 +131,14 @@ class TerminalWebviewManager {
         justify-content: space-between;
         min-height: 32px;
       ">
-        <div style="
-          font-size: 12px;
-          color: var(--vscode-foreground, #cccccc);
-          font-family: var(--vscode-font-family, monospace);
-        ">Terminal</div>
+        <div id="terminal-tabs" style="
+          display: flex;
+          gap: 2px;
+          flex: 1;
+          overflow-x: auto;
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        "></div>
       </div>
       <div id="terminal-body" style="
         flex: 1;
@@ -173,6 +180,199 @@ class TerminalWebviewManager {
 
     // Setup IME support
     this.setupIMEHandling();
+  }
+
+  public addTerminalTab(id: string, name: string): void {
+    const tabsContainer = document.getElementById('terminal-tabs');
+    if (!tabsContainer) {
+      console.error('❌ [WEBVIEW] Terminal tabs container not found');
+      return;
+    }
+
+    // Check if tab already exists
+    if (document.getElementById(`tab-${id}`)) {
+      console.log('🎯 [WEBVIEW] Tab already exists for terminal:', id);
+      return;
+    }
+
+    const tab = document.createElement('div');
+    tab.id = `tab-${id}`;
+    tab.style.cssText = `
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 8px;
+      background: var(--vscode-tab-inactiveBackground, #2d2d30);
+      border: 1px solid var(--vscode-tab-border, #333);
+      border-radius: 3px 3px 0 0;
+      color: var(--vscode-tab-inactiveForeground, #969696);
+      font-size: 11px;
+      cursor: pointer;
+      user-select: none;
+      white-space: nowrap;
+      min-width: 80px;
+      max-width: 150px;
+    `;
+
+    const tabLabel = document.createElement('span');
+    tabLabel.textContent = name;
+    tabLabel.style.cssText = `
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex: 1;
+    `;
+
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = '×';
+    closeBtn.style.cssText = `
+      background: transparent;
+      border: none;
+      color: var(--vscode-tab-inactiveForeground, #969696);
+      font-size: 12px;
+      cursor: pointer;
+      padding: 0;
+      width: 16px;
+      height: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 2px;
+    `;
+    closeBtn.title = 'Close Terminal';
+
+    // Tab click to switch
+    tab.addEventListener('click', (e) => {
+      if (e.target !== closeBtn) {
+        this.switchToTerminal(id);
+      }
+    });
+
+    // Close button click
+    closeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.closeTerminal(id);
+    });
+
+    // Close button hover
+    closeBtn.addEventListener('mouseenter', () => {
+      closeBtn.style.background = 'var(--vscode-button-hoverBackground, #1f3447)';
+    });
+    closeBtn.addEventListener('mouseleave', () => {
+      closeBtn.style.background = 'transparent';
+    });
+
+    tab.appendChild(tabLabel);
+    tab.appendChild(closeBtn);
+    tabsContainer.appendChild(tab);
+
+    console.log('✅ [WEBVIEW] Added tab for terminal:', id, name);
+  }
+
+  public switchToTerminal(id: string): void {
+    console.log('🔄 [WEBVIEW] Switching to terminal:', id);
+
+    // Update active terminal ID
+    this.setActiveTerminalId(id);
+
+    // Hide all terminal containers
+    this.terminalContainers.forEach((container, terminalId) => {
+      container.style.display = terminalId === id ? 'block' : 'none';
+    });
+
+    // Update tab appearances
+    const tabsContainer = document.getElementById('terminal-tabs');
+    if (tabsContainer) {
+      tabsContainer.childNodes.forEach((tabNode) => {
+        const tab = tabNode as HTMLElement;
+        const isActive = tab.id === `tab-${id}`;
+
+        tab.style.background = isActive
+          ? 'var(--vscode-tab-activeBackground, #1e1e1e)'
+          : 'var(--vscode-tab-inactiveBackground, #2d2d30)';
+        tab.style.color = isActive
+          ? 'var(--vscode-tab-activeForeground, #ffffff)'
+          : 'var(--vscode-tab-inactiveForeground, #969696)';
+      });
+    }
+
+    // Focus the active terminal
+    const terminalData = this.terminals.get(id);
+    if (terminalData?.terminal) {
+      terminalData.terminal.focus();
+      if (terminalData.fitAddon) {
+        terminalData.fitAddon.fit();
+      }
+    }
+
+    console.log('✅ [WEBVIEW] Switched to terminal:', id);
+  }
+
+  public closeTerminal(id: string): void {
+    console.log('🗑️ [WEBVIEW] Closing terminal:', id);
+
+    // Remove terminal instance
+    const terminalData = this.terminals.get(id);
+    if (terminalData) {
+      terminalData.terminal.dispose();
+      this.terminals.delete(id);
+    }
+
+    // Remove terminal container
+    const container = this.terminalContainers.get(id);
+    if (container) {
+      container.remove();
+      this.terminalContainers.delete(id);
+    }
+
+    // Remove tab
+    const tab = document.getElementById(`tab-${id}`);
+    if (tab) {
+      tab.remove();
+    }
+
+    // If this was the active terminal, switch to another one
+    if (this.activeTerminalId === id) {
+      const remainingTerminals = Array.from(this.terminals.keys());
+      if (remainingTerminals.length > 0) {
+        const nextTerminalId = remainingTerminals[0];
+        if (nextTerminalId) {
+          this.switchToTerminal(nextTerminalId);
+        }
+      } else {
+        this.activeTerminalId = null;
+        // Show placeholder if no terminals left
+        this.showTerminalPlaceholder();
+      }
+    }
+
+    // Notify extension about terminal closure
+    vscode.postMessage({
+      command: 'terminalClosed',
+      terminalId: id,
+    });
+
+    console.log('✅ [WEBVIEW] Terminal closed:', id);
+  }
+
+  private showTerminalPlaceholder(): void {
+    const terminalBody = document.getElementById('terminal-body');
+    if (terminalBody) {
+      terminalBody.innerHTML = `
+        <div id="terminal-placeholder" style="
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          color: #888;
+          font-family: monospace;
+          font-size: 14px;
+          text-align: center;
+        ">
+          <div>No Terminal</div>
+          <div style="font-size: 12px; margin-top: 8px;">Create a new terminal to get started</div>
+        </div>
+      `;
+    }
   }
 
   public openSettingsPanel(): void {
@@ -912,21 +1112,48 @@ class TerminalWebviewManager {
   }
 
   public splitTerminal(direction: 'horizontal' | 'vertical'): void {
+    // Debug current state
+    this.logSplitState();
+
+    // Check if already in split mode
     if (this.isSplitMode) {
-      console.log('Already in split mode');
+      console.warn('🔀 [WEBVIEW] Already in split mode - ignoring split request');
       return;
     }
 
-    console.log(`🔀 [WEBVIEW] Splitting terminal ${direction}ly`);
+    // Check for existing DOM elements that might indicate inconsistent state
+    const existingSplitter = document.querySelector('[style*="cursor:"]');
+    const existingSecondary = document.getElementById('secondary-terminal');
+
+    if (existingSplitter || existingSecondary) {
+      console.warn(
+        '🔀 [WEBVIEW] Split elements found but isSplitMode is false - cleaning up first'
+      );
+      this.cleanupSplitElements();
+    }
+
+    console.log(`🔀 [WEBVIEW] Starting split operation: ${direction}`);
 
     const terminalBody = document.getElementById('terminal-body');
 
     if (!terminalBody) {
-      console.error('Terminal body not found');
+      console.error('❌ [WEBVIEW] Terminal body not found');
       return;
     }
 
-    // Set split direction
+    try {
+      // Perform split in a atomic operation
+      this.performSplit(direction, terminalBody);
+      console.log('✅ [WEBVIEW] Split operation completed successfully');
+    } catch (error) {
+      console.error('❌ [WEBVIEW] Split operation failed:', error);
+      this.cleanupSplitElements();
+      throw error;
+    }
+  }
+
+  private performSplit(direction: 'horizontal' | 'vertical', terminalBody: HTMLElement): void {
+    // Set split direction and mode
     this.splitDirection = direction;
     this.isSplitMode = true;
 
@@ -1064,22 +1291,62 @@ class TerminalWebviewManager {
   }
 
   public unsplitTerminal(): void {
+    // Debug current state
+    this.logSplitState();
+
     if (!this.isSplitMode) {
-      console.log('Not in split mode');
+      console.log('🔀 [WEBVIEW] Not in split mode - checking for orphaned elements');
+
+      // Check for orphaned DOM elements
+      const orphanedSplitter = document.querySelector('[style*="cursor:"]');
+      const orphanedSecondary = document.getElementById('secondary-terminal');
+
+      if (orphanedSplitter || orphanedSecondary) {
+        console.warn('🔀 [WEBVIEW] Found orphaned split elements - cleaning up');
+        this.cleanupSplitElements();
+      }
       return;
     }
 
-    console.log('🔀 [WEBVIEW] Removing split');
+    console.log('🔀 [WEBVIEW] Starting unsplit operation');
 
-    const terminalBody = document.getElementById('terminal-body');
+    try {
+      // Use centralized cleanup
+      this.cleanupSplitElements();
 
-    if (!terminalBody) {
-      console.error('Terminal body not found');
-      return;
+      // Resize main terminal
+      setTimeout(() => {
+        this.resizeTerminals();
+      }, 100);
+
+      console.log('✅ [WEBVIEW] Unsplit operation completed successfully');
+    } catch (error) {
+      console.error('❌ [WEBVIEW] Unsplit operation failed:', error);
+      // Force cleanup even if error occurred
+      this.cleanupSplitElements();
+    }
+  }
+
+  private cleanupSplitElements(): void {
+    console.log('🧹 [WEBVIEW] Cleaning up split elements');
+
+    // Remove all splitter elements
+    const splitters = document.querySelectorAll('[style*="cursor:"]');
+    splitters.forEach((splitter, index) => {
+      console.log(`🧹 [WEBVIEW] Removing splitter ${index + 1}`);
+      splitter.remove();
+    });
+
+    // Remove secondary terminal container
+    const secondaryContainer = document.getElementById('secondary-terminal');
+    if (secondaryContainer) {
+      console.log('🧹 [WEBVIEW] Removing secondary terminal container');
+      secondaryContainer.remove();
     }
 
-    // Clean up secondary terminal
+    // Clean up secondary terminal instance
     if (this.secondaryTerminal) {
+      console.log('🧹 [WEBVIEW] Disposing secondary terminal');
       this.secondaryTerminal.dispose();
       this.secondaryTerminal = null;
     }
@@ -1088,41 +1355,44 @@ class TerminalWebviewManager {
       this.secondaryFitAddon = null;
     }
 
-    // Remove split elements
-    const splitter = terminalBody.querySelector('[style*="cursor:"]');
-    const secondaryContainer = document.getElementById('secondary-terminal');
-
-    if (splitter) {
-      terminalBody.removeChild(splitter);
-    }
-
-    if (secondaryContainer) {
-      terminalBody.removeChild(secondaryContainer);
-    }
-
     // Reset terminal body layout
-    terminalBody.style.display = 'block';
-    terminalBody.style.flexDirection = '';
+    const terminalBody = document.getElementById('terminal-body');
+    if (terminalBody) {
+      terminalBody.style.display = 'block';
+      terminalBody.style.flexDirection = '';
 
-    // Reset existing terminal styles
-    const existingTerminal = terminalBody.querySelector('[data-terminal-container]');
-    if (existingTerminal) {
-      (existingTerminal as HTMLElement).style.flex = '';
-      (existingTerminal as HTMLElement).style.minWidth = '';
-      (existingTerminal as HTMLElement).style.minHeight = '';
+      // Reset existing terminal styles
+      const existingTerminal = terminalBody.querySelector('[data-terminal-container]');
+      if (existingTerminal) {
+        (existingTerminal as HTMLElement).style.flex = '';
+        (existingTerminal as HTMLElement).style.minWidth = '';
+        (existingTerminal as HTMLElement).style.minHeight = '';
+      }
     }
 
-    // Update state
+    // Reset state variables
     this.isSplitMode = false;
     this.splitDirection = null;
     this.secondaryTerminalId = null;
     this.secondaryContainer = null;
-    // No UI controls to update - using panel commands
 
-    // Resize main terminal
-    setTimeout(() => {
-      this.resizeTerminals();
-    }, 100);
+    console.log('✅ [WEBVIEW] Split cleanup completed');
+  }
+
+  private logSplitState(): void {
+    const splitState = {
+      isSplitMode: this.isSplitMode,
+      splitDirection: this.splitDirection,
+      secondaryTerminalId: this.secondaryTerminalId,
+      hasSecondaryTerminal: !!this.secondaryTerminal,
+      hasSecondaryContainer: !!this.secondaryContainer,
+      domSplitters: document.querySelectorAll('[style*="cursor:"]').length,
+      domSecondaryContainer: !!document.getElementById('secondary-terminal'),
+      terminalBodyDisplay: document.getElementById('terminal-body')?.style.display,
+      terminalBodyFlexDirection: document.getElementById('terminal-body')?.style.flexDirection,
+    };
+
+    console.log('🔀 [DEBUG] Current split state:', splitState);
   }
 
   // Split controls managed by VS Code panel - no internal UI needed
@@ -1367,6 +1637,13 @@ window.addEventListener('message', (event) => {
     case 'openSettings':
       console.log('⚙️ [WEBVIEW] Received openSettings command from panel');
       terminalManager.openSettingsPanel();
+      break;
+
+    case TERMINAL_CONSTANTS.COMMANDS.TERMINAL_REMOVED:
+      if (message.terminalId) {
+        console.log('🗑️ [WEBVIEW] Received terminal removal command for:', message.terminalId);
+        terminalManager.closeTerminal(message.terminalId);
+      }
       break;
 
     default:

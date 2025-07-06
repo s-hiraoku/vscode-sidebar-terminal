@@ -146,6 +146,11 @@
           "default": "auto",
           "enum": ["auto", "dark", "light"],
           "description": "Terminal theme. Auto follows VS Code theme."
+        },
+        "sidebarTerminal.defaultDirectory": {
+          "type": "string",
+          "default": "",
+          "description": "Default directory for new terminals. Leave empty to use workspace root."
         }
       }
     }

@@ -127,7 +127,16 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
       const activeTerminalId = this._terminalManager.getActiveTerminalId();
       if (activeTerminalId) {
         console.log('🔧 [DEBUG] Killing active terminal:', activeTerminalId);
+
+        // Kill the terminal process
         this._terminalManager.killTerminal(activeTerminalId);
+
+        // Notify webview to remove the terminal from UI
+        void this._sendMessage({
+          command: 'terminalRemoved',
+          terminalId: activeTerminalId,
+        });
+
         console.log('✅ [DEBUG] Terminal killed successfully');
         showSuccess('Terminal closed');
       } else {
@@ -292,6 +301,14 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
           console.log('⚙️ [DEBUG] Updating settings from webview:', message.settings);
           if (message.settings) {
             await this.updateSettings(message.settings);
+          }
+          break;
+        }
+        case 'terminalClosed': {
+          console.log('🗑️ [DEBUG] Terminal closed from webview:', message.terminalId);
+          if (message.terminalId) {
+            // The terminal has already been disposed in webview, just cleanup extension side
+            this._terminalManager.removeTerminal(message.terminalId);
           }
           break;
         }
