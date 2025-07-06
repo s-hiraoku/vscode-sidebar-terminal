@@ -2305,11 +2305,14 @@ class StatusManager {
 
     // Calculate container height
     const containerHeight = terminalContainer.clientHeight;
-    const headerHeight = terminalHeader ? terminalHeader.clientHeight : 32;
+    const webviewHeader = document.getElementById('webview-header');
+    const webviewHeaderHeight = webviewHeader ? webviewHeader.clientHeight : 36;
+    const terminalHeaderHeight = terminalHeader ? terminalHeader.clientHeight : 32;
+    const totalHeaderHeight = webviewHeaderHeight + terminalHeaderHeight;
     const statusHeight = statusVisible ? this.STATUS_HEIGHT : 0;
 
     // Calculate available height for terminal body
-    const availableHeight = containerHeight - headerHeight - statusHeight;
+    const availableHeight = containerHeight - totalHeaderHeight - statusHeight;
 
     // Adjust terminal body height
     terminalBody.style.height = `${availableHeight}px`;
@@ -2433,14 +2436,14 @@ TerminalWebviewManager.prototype.createWebViewHeader = function (
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 4px 8px;
+    padding: 6px 12px;
     background: var(--vscode-titleBar-activeBackground, #3c3c3c);
     border-bottom: 1px solid var(--vscode-titleBar-border, #454545);
     color: var(--vscode-titleBar-activeForeground, #cccccc);
-    font-size: 11px;
+    font-size: 12px;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     user-select: none;
-    min-height: 28px;
+    min-height: 36px;
     flex-shrink: 0;
   `;
 
@@ -2449,7 +2452,7 @@ TerminalWebviewManager.prototype.createWebViewHeader = function (
   titleSection.style.cssText = `
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 10px;
     flex: 1;
   `;
 
@@ -2457,16 +2460,19 @@ TerminalWebviewManager.prototype.createWebViewHeader = function (
   const terminalIcon = document.createElement('span');
   terminalIcon.textContent = '🖥️';
   terminalIcon.style.cssText = `
-    font-size: 12px;
+    font-size: 20px;
     opacity: 0.8;
+    line-height: 1;
   `;
 
   // Title text
   const titleText = document.createElement('span');
   titleText.textContent = 'Terminal';
   titleText.style.cssText = `
-    font-weight: 500;
+    font-size: 14px;
+    font-weight: 600;
     letter-spacing: 0.02em;
+    line-height: 1.2;
   `;
 
   // Terminal count badge
@@ -2475,13 +2481,13 @@ TerminalWebviewManager.prototype.createWebViewHeader = function (
   countBadge.style.cssText = `
     background: var(--vscode-badge-background, #007acc);
     color: var(--vscode-badge-foreground, #ffffff);
-    border-radius: 10px;
-    padding: 1px 6px;
-    font-size: 9px;
-    font-weight: 600;
-    min-width: 16px;
+    border-radius: 12px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 500;
+    min-width: 20px;
     text-align: center;
-    line-height: 16px;
+    line-height: 18px;
   `;
 
   titleSection.appendChild(terminalIcon);
@@ -2494,7 +2500,7 @@ TerminalWebviewManager.prototype.createWebViewHeader = function (
   commandSection.style.cssText = `
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
     position: relative;
   `;
 
@@ -2520,18 +2526,19 @@ TerminalWebviewManager.prototype.createWebViewHeader = function (
       iconElement.style.cssText = `
         background: transparent;
         color: var(--vscode-descriptionForeground, #969696);
-        font-size: 12px;
-        padding: 4px;
-        border-radius: 3px;
+        font-size: 16px;
+        padding: 6px;
+        border-radius: 4px;
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 20px;
-        height: 20px;
+        min-width: 28px;
+        height: 28px;
         opacity: ${sampleIconOpacity};
         cursor: default;
         user-select: none;
         filter: grayscale(30%);
+        transition: opacity 0.2s ease;
       `;
 
       // Subtle hover effect to show it's non-interactive

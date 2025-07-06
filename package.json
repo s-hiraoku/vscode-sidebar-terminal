@@ -216,6 +216,27 @@
           "minimum": 0.1,
           "maximum": 1.0,
           "description": "Opacity of sample icons (0.1 to 1.0)"
+        },
+        "sidebarTerminal.headerFontSize": {
+          "type": "number",
+          "default": 14,
+          "minimum": 10,
+          "maximum": 20,
+          "description": "Font size for webview header title"
+        },
+        "sidebarTerminal.headerIconSize": {
+          "type": "number",
+          "default": 20,
+          "minimum": 14,
+          "maximum": 28,
+          "description": "Size of terminal icon in webview header"
+        },
+        "sidebarTerminal.sampleIconSize": {
+          "type": "number",
+          "default": 16,
+          "minimum": 12,
+          "maximum": 24,
+          "description": "Size of sample icons in webview header"
         }
       }
     }
