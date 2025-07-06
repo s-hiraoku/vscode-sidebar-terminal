@@ -117,7 +117,7 @@ class TerminalWebviewManager {
     const container = document.getElementById('terminal');
     if (!container) {
       console.error('Terminal container not found');
-      updateStatus('ERROR: Terminal container not found');
+      updateStatus('ERROR: Terminal container not found', 'error');
       return;
     }
 
@@ -173,11 +173,11 @@ class TerminalWebviewManager {
       this.terminalContainer = document.getElementById('terminal-body');
 
       if (this.terminalContainer) {
-        updateStatus('Simple terminal view initialized');
+        updateStatus('Simple terminal view initialized', 'success');
         console.log('🎯 [WEBVIEW] Simple terminal container created successfully');
         console.log('🎯 [WEBVIEW] Container element:', this.terminalContainer);
       } else {
-        updateStatus('ERROR: Failed to create terminal container');
+        updateStatus('ERROR: Failed to create terminal container', 'error');
         console.error('❌ [WEBVIEW] Failed to create terminal container');
         console.error('❌ [WEBVIEW] Available elements:', document.querySelectorAll('*'));
       }
@@ -1073,19 +1073,19 @@ class TerminalWebviewManager {
                 console.log('🎯 [WEBVIEW] Focusing terminal and ready for pty connection');
                 terminal.focus();
 
-                updateStatus(`✅ ${name} ACTIVE`);
+                updateStatus(`✅ ${name} ACTIVE`, 'success');
 
                 // Store reference
                 this.terminal = terminal;
                 this.fitAddon = fitAddon;
               } catch (fitError) {
                 console.error('❌ [WEBVIEW] Error during fitting:', fitError);
-                updateStatus(`Error fitting: ${String(fitError)}`);
+                updateStatus(`Error fitting: ${String(fitError)}`, 'error');
               }
             }, 300);
           } catch (openError) {
             console.error('❌ [WEBVIEW] Error opening terminal:', openError);
-            updateStatus(`Error opening: ${String(openError)}`);
+            updateStatus(`Error opening: ${String(openError)}`, 'error');
           }
         }, 100);
       } else {
@@ -1214,7 +1214,7 @@ class TerminalWebviewManager {
       console.log('🎯 [WEBVIEW] Terminal creation completed successfully');
     } catch (error) {
       console.error('❌ [WEBVIEW] Error creating terminal:', error);
-      updateStatus(`Error creating terminal: ${String(error)}`);
+      updateStatus(`Error creating terminal: ${String(error)}`, 'error');
     }
   }
 
@@ -1224,7 +1224,7 @@ class TerminalWebviewManager {
       this.terminal.clear();
       // Also clear scrollback
       this.terminal.write('\x1b[2J\x1b[H'); // Clear screen and move cursor to home
-      updateStatus('Terminal cleared');
+      updateStatus('Terminal cleared', 'success');
     }
   }
 
@@ -1722,10 +1722,10 @@ class TerminalWebviewManager {
       });
 
       console.log('✅ [WEBVIEW] Secondary terminal created successfully');
-      updateStatus(`✅ ${name} ACTIVE`);
+      updateStatus(`✅ ${name} ACTIVE`, 'success');
     } catch (error) {
       console.error('❌ [WEBVIEW] Error creating secondary terminal:', error);
-      updateStatus(`ERROR: ${String(error)}`);
+      updateStatus(`ERROR: ${String(error)}`, 'error');
     }
   }
 
@@ -1989,7 +1989,7 @@ window.addEventListener('message', (event) => {
               console.log('🎯 [WEBVIEW] Terminal initialization completed');
             } catch (error) {
               console.error('❌ [WEBVIEW] Error during terminal creation:', error);
-              updateStatus(`ERROR: ${String(error)}`);
+              updateStatus(`ERROR: ${String(error)}`, 'error');
             }
           } else {
             console.log('🎯 [WEBVIEW] Container not ready, waiting...');
@@ -2090,18 +2090,188 @@ window.addEventListener('message', (event) => {
   }
 });
 
-// Update status display
-function updateStatus(message: string): void {
-  const statusEl = document.getElementById('status');
-  if (statusEl) {
+// Status Manager for auto-hide functionality
+class StatusManager {
+  private statusElement: HTMLElement | null = null;
+  private hideTimer: number | null = null;
+  private readonly DEFAULT_DISPLAY_DURATION = 3000; // 3 seconds
+  private readonly ERROR_DISPLAY_DURATION = 5000; // 5 seconds for errors
+  private lastMessage = '';
+  private lastType: 'info' | 'success' | 'error' = 'info';
+
+  public showStatus(message: string, type: 'info' | 'success' | 'error' = 'info'): void {
+    this.lastMessage = message;
+    this.lastType = type;
+
+    // Get or create status element
+    const statusEl = this.getOrCreateStatusElement();
     statusEl.textContent = message;
+    statusEl.className = `status status-${type}`;
+    statusEl.style.display = 'block';
+
+    // Clear existing timer
+    this.clearTimer();
+
+    // Check if auto-hide is enabled (for now, always true - will read from settings later)
+    const autoHide = true;
+    if (autoHide) {
+      // Set timer based on message type
+      const duration =
+        type === 'error' ? this.ERROR_DISPLAY_DURATION : this.DEFAULT_DISPLAY_DURATION;
+
+      this.hideTimer = window.setTimeout(() => {
+        this.hideStatusWithAnimation();
+      }, duration);
+    }
+
+    console.log(`🎯 [WEBVIEW] [${type.toUpperCase()}]`, message);
   }
-  console.log('🎯 [WEBVIEW]', message);
+
+  public hideStatus(): void {
+    if (this.statusElement) {
+      this.statusElement.style.display = 'none';
+    }
+    this.clearTimer();
+  }
+
+  private hideStatusWithAnimation(): void {
+    if (this.statusElement) {
+      // Fade out animation
+      this.statusElement.style.opacity = '0';
+      this.statusElement.style.transform = 'translateY(-100%)';
+
+      // Hide after animation completes
+      setTimeout(() => {
+        if (this.statusElement) {
+          this.statusElement.style.display = 'none';
+          this.statusElement.style.opacity = '1';
+          this.statusElement.style.transform = 'translateY(0)';
+        }
+      }, 300);
+    }
+    this.clearTimer();
+  }
+
+  public showLastStatusOnActivity(): void {
+    if (this.lastMessage && this.statusElement?.style.display === 'none') {
+      console.log('📱 [STATUS] Showing status due to user activity');
+      this.showStatus(this.lastMessage, this.lastType);
+    }
+  }
+
+  private getOrCreateStatusElement(): HTMLElement {
+    if (!this.statusElement) {
+      this.statusElement = document.getElementById('status');
+      if (this.statusElement) {
+        this.setupStatusInteraction();
+        this.addStatusStyles();
+      }
+    }
+    return this.statusElement || document.createElement('div');
+  }
+
+  private setupStatusInteraction(): void {
+    if (this.statusElement) {
+      // Mouse hover stops the timer
+      this.statusElement.addEventListener('mouseenter', () => {
+        this.clearTimer();
+      });
+
+      // Mouse leave restarts timer (shorter duration)
+      this.statusElement.addEventListener('mouseleave', () => {
+        this.hideTimer = window.setTimeout(() => {
+          this.hideStatusWithAnimation();
+        }, 1000); // 1 second after mouse leaves
+      });
+
+      // Click to immediately hide
+      this.statusElement.addEventListener('click', () => {
+        this.hideStatusWithAnimation();
+      });
+    }
+  }
+
+  private addStatusStyles(): void {
+    // Add status styling if not already added
+    if (!document.getElementById('status-styles')) {
+      const style = document.createElement('style');
+      style.id = 'status-styles';
+      style.textContent = `
+        .status {
+          transition: opacity 0.3s ease, transform 0.3s ease;
+          cursor: pointer;
+        }
+        .status-info {
+          background: var(--vscode-statusBar-background, #007acc);
+          color: var(--vscode-statusBar-foreground, #ffffff);
+        }
+        .status-success {
+          background: var(--vscode-statusBarItem-prominentBackground, #16825d);
+          color: var(--vscode-statusBarItem-prominentForeground, #ffffff);
+        }
+        .status-error {
+          background: var(--vscode-errorBackground, #f14c4c);
+          color: var(--vscode-errorForeground, #ffffff);
+        }
+        .status:hover {
+          opacity: 0.8;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }
+
+  private clearTimer(): void {
+    if (this.hideTimer !== null) {
+      window.clearTimeout(this.hideTimer);
+      this.hideTimer = null;
+    }
+  }
 }
+
+// Global status manager instance
+const statusManager = new StatusManager();
+
+// Enhanced update status function with auto-hide
+function updateStatus(message: string, type: 'info' | 'success' | 'error' = 'info'): void {
+  statusManager.showStatus(message, type);
+}
+
+// Setup activity listeners for status re-display
+function setupActivityListeners(): void {
+  // Keyboard activity
+  document.addEventListener('keydown', () => {
+    statusManager.showLastStatusOnActivity();
+  });
+
+  // Mouse activity (excluding status element clicks)
+  document.addEventListener('click', (e) => {
+    if (!(e.target as HTMLElement)?.closest('.status')) {
+      statusManager.showLastStatusOnActivity();
+    }
+  });
+
+  // Focus events
+  window.addEventListener('focus', () => {
+    statusManager.showLastStatusOnActivity();
+  });
+
+  console.log('📱 [WEBVIEW] Activity listeners set up for status re-display');
+}
+
+// ESC key to hide status immediately
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    statusManager.hideStatus();
+  }
+});
 
 // Notify extension that webview is ready
 console.log('🎯 [WEBVIEW] Webview script starting...');
 updateStatus('Webview script loaded');
+
+// Initialize activity listeners
+setupActivityListeners();
 
 function sendReadyMessage(): void {
   console.log('🎯 [WEBVIEW] Sending READY message to extension');

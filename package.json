@@ -187,6 +187,23 @@
           "type": "boolean",
           "default": true,
           "description": "Allow resizing split terminals by dragging splitters"
+        },
+        "sidebarTerminal.statusDisplayDuration": {
+          "type": "number",
+          "default": 3000,
+          "minimum": 1000,
+          "maximum": 10000,
+          "description": "Duration to display status messages (milliseconds)"
+        },
+        "sidebarTerminal.autoHideStatus": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically hide status messages after specified duration"
+        },
+        "sidebarTerminal.showStatusOnActivity": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show last status message when user performs actions"
         }
       }
     }
