@@ -77,12 +77,16 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
   public splitTerminal(): void {
     console.log('🔧 [DEBUG] Splitting terminal...');
     try {
-      const terminalId = this._terminalManager.createTerminal();
-      console.log('✅ [DEBUG] Split terminal created with ID:', terminalId);
+      // First send the SPLIT command to prepare the UI
       void this._sendMessage({
         command: TERMINAL_CONSTANTS.COMMANDS.SPLIT,
-        terminalId,
       });
+
+      // Then create a new terminal which will be used as secondary
+      const terminalId = this._terminalManager.createTerminal();
+      console.log('✅ [DEBUG] Split terminal created with ID:', terminalId);
+
+      // The terminal creation event will send TERMINAL_CREATED to webview
     } catch (error) {
       console.error('❌ [ERROR] Failed to split terminal:', error);
       void vscode.window.showErrorMessage(`Failed to split terminal: ${String(error)}`);

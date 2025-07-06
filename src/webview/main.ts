@@ -84,12 +84,13 @@ class TerminalWebviewManager {
   private fitAddon: FitAddon | null = null;
   public terminalContainer: HTMLElement | null = null;
   private isComposing: boolean = false;
-  private activeTerminalId: string | null = null;
+  public activeTerminalId: string | null = null;
 
   // Split functionality
   public secondaryTerminal: Terminal | null = null;
+  public secondaryTerminalId: string | null = null;
   private secondaryFitAddon: FitAddon | null = null;
-  private isSplitMode = false;
+  public isSplitMode = false;
   private splitDirection: 'horizontal' | 'vertical' | null = null;
 
   // Performance optimization: Buffer output and batch writes
@@ -268,11 +269,24 @@ class TerminalWebviewManager {
         updateStatus(`Opening terminal: ${name}`);
         console.log('🎯 [WEBVIEW] Opening terminal in container');
 
+        // Create a terminal container div if not in split mode
+        let targetContainer = this.terminalContainer;
+
+        if (!this.isSplitMode) {
+          // Create initial terminal container
+          const terminalDiv = document.createElement('div');
+          terminalDiv.style.cssText = 'width: 100%; height: 100%;';
+          terminalDiv.setAttribute('data-terminal-container', 'primary');
+          terminalDiv.id = 'primary-terminal';
+          this.terminalContainer.appendChild(terminalDiv);
+          targetContainer = terminalDiv;
+        }
+
         // Give the DOM time to settle before opening terminal
         setTimeout(() => {
           try {
             console.log('🎯 [WEBVIEW] Calling terminal.open()');
-            terminal.open(this.terminalContainer as HTMLElement);
+            terminal.open(targetContainer);
             console.log('🎯 [WEBVIEW] Terminal.open() completed');
 
             updateStatus(`Terminal opened: ${name}`);
@@ -537,8 +551,24 @@ class TerminalWebviewManager {
     terminalBody.style.display = 'flex';
     terminalBody.style.flexDirection = direction === 'horizontal' ? 'row' : 'column';
 
-    // Get existing terminal container
-    const existingTerminal = terminalBody.querySelector('[data-terminal-container]');
+    // Get existing terminal container or create one
+    let existingTerminal = terminalBody.querySelector('[data-terminal-container]');
+
+    if (!existingTerminal) {
+      // If no terminal container exists, wrap the terminal in a container
+      const primaryContainer = document.createElement('div');
+      primaryContainer.style.cssText = 'width: 100%; height: 100%;';
+      primaryContainer.setAttribute('data-terminal-container', 'primary');
+      primaryContainer.id = 'primary-terminal';
+
+      // Move all existing content into the container
+      while (terminalBody.firstChild) {
+        primaryContainer.appendChild(terminalBody.firstChild);
+      }
+
+      terminalBody.appendChild(primaryContainer);
+      existingTerminal = primaryContainer;
+    }
 
     if (existingTerminal) {
       // Make existing terminal take half space
@@ -612,11 +642,13 @@ class TerminalWebviewManager {
         vscode.postMessage({
           command: 'input' as const,
           data,
-          terminalId: 'secondary',
+          terminalId: this.secondaryTerminalId || 'secondary',
         });
       });
 
       console.log('✅ [WEBVIEW] Secondary terminal created successfully');
+
+      // The extension will create the secondary terminal process when split command is sent
     } catch (error) {
       console.error('❌ [WEBVIEW] Error creating secondary terminal:', error);
     }
@@ -674,6 +706,7 @@ class TerminalWebviewManager {
     // Update state
     this.isSplitMode = false;
     this.splitDirection = null;
+    this.secondaryTerminalId = null;
     // No UI controls to update - using panel commands
 
     // Resize main terminal
@@ -809,7 +842,10 @@ window.addEventListener('message', (event) => {
         );
 
         // Route output to correct terminal
-        if (message.terminalId === 'secondary' && terminalManager.secondaryTerminal) {
+        if (
+          message.terminalId === terminalManager.secondaryTerminalId &&
+          terminalManager.secondaryTerminal
+        ) {
           terminalManager.writeToSecondaryTerminal(message.data);
         } else {
           terminalManager.writeToTerminal(message.data);
@@ -837,7 +873,18 @@ window.addEventListener('message', (event) => {
 
     case TERMINAL_CONSTANTS.COMMANDS.TERMINAL_CREATED:
       if (message.terminalId && message.terminalName && message.config) {
-        terminalManager.createTerminal(message.terminalId, message.terminalName, message.config);
+        // If we're in split mode and this is a new terminal, treat it as secondary
+        if (
+          terminalManager.isSplitMode &&
+          !terminalManager.secondaryTerminal &&
+          message.terminalId !== terminalManager.activeTerminalId
+        ) {
+          console.log('🔀 [WEBVIEW] Routing new terminal to secondary in split mode');
+          // The secondary terminal visual is already created, just link the data
+          terminalManager.secondaryTerminalId = message.terminalId;
+        } else {
+          terminalManager.createTerminal(message.terminalId, message.terminalName, message.config);
+        }
       }
       break;
   }
