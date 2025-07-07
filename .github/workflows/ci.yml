@@ -23,8 +23,22 @@ jobs:
         node-version: 18
         cache: 'npm'
 
+    - name: Setup MSBuild (Windows)
+      if: runner.os == 'Windows'
+      uses: microsoft/setup-msbuild@v2
+
+    - name: Install Python (Windows)
+      if: runner.os == 'Windows'
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
     - name: Install dependencies
-      run: npm ci
+      run: |
+        npm config set fetch-timeout 600000
+        npm config set fetch-retry-mintimeout 60000
+        npm config set fetch-retry-maxtimeout 120000
+        npm ci
 
     - name: Run lint
       run: npm run lint
@@ -35,13 +49,13 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y xvfb
 
-    - name: Run tests
-      run: |
-        if [ "$RUNNER_OS" == "Linux" ]; then
-          xvfb-run -a npm test
-        else
-          npm test
-        fi
+    - name: Run tests (Linux)
+      if: runner.os == 'Linux'
+      run: xvfb-run -a npm test
+
+    - name: Run tests (macOS/Windows)
+      if: runner.os != 'Linux'
+      run: npm test
 
     - name: Build extension
       run: npm run package
@@ -65,7 +79,11 @@ jobs:
         cache: 'npm'
 
     - name: Install dependencies
-      run: npm ci
+      run: |
+        npm config set fetch-timeout 600000
+        npm config set fetch-retry-mintimeout 60000
+        npm config set fetch-retry-maxtimeout 120000
+        npm ci
 
     - name: Run security audit
       run: npm audit --audit-level moderate
