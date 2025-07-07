@@ -350,9 +350,16 @@ class TerminalWebviewManager {
     this.performKillTerminal(id);
   }
 
-  private canKillTerminal(_id: string): boolean {
+  private canKillTerminal(id: string): boolean {
     const terminalCount = this.splitManager.getTerminals().size;
     const minTerminalCount = 1;
+
+    console.log('🔧 [WEBVIEW] canKillTerminal check:', {
+      terminalId: id,
+      terminalCount,
+      minTerminalCount,
+      activeTerminalId: this.activeTerminalId
+    });
 
     if (terminalCount <= minTerminalCount) {
       console.warn('🛡️ [WEBVIEW] Cannot kill terminal - would go below minimum count');
@@ -402,12 +409,15 @@ class TerminalWebviewManager {
 
   private performKillTerminal(id: string): void {
     console.log('🗑️ [WEBVIEW] Performing kill for terminal:', id);
+    console.log('🗑️ [WEBVIEW] Current active terminal:', this.activeTerminalId);
+    console.log('🗑️ [WEBVIEW] Terminals before removal:', Array.from(this.splitManager.getTerminals().keys()));
 
     // Remove terminal instance
     const terminalData = this.splitManager.getTerminals().get(id);
     if (terminalData) {
       terminalData.terminal.dispose();
       this.splitManager.getTerminals().delete(id);
+      console.log('🗑️ [WEBVIEW] Terminal instance removed:', id);
     }
 
     // Remove terminal container
@@ -415,10 +425,12 @@ class TerminalWebviewManager {
     if (container) {
       container.remove();
       this.splitManager.getTerminalContainers().delete(id);
+      console.log('🗑️ [WEBVIEW] Terminal container removed:', id);
     }
 
     // Adjust remaining terminal layouts
     const remainingTerminals = Array.from(this.splitManager.getTerminals().keys());
+    console.log('🗑️ [WEBVIEW] Remaining terminals:', remainingTerminals);
 
     if (remainingTerminals.length === 1) {
       // Only one terminal left - make it full height
@@ -428,6 +440,7 @@ class TerminalWebviewManager {
         if (remainingContainer) {
           remainingContainer.style.height = '100%';
           remainingContainer.style.border = 'none';
+          console.log('🗑️ [WEBVIEW] Set remaining terminal to full height:', remainingId);
         }
       }
     }
@@ -438,11 +451,16 @@ class TerminalWebviewManager {
         const nextTerminalId = remainingTerminals[0];
         if (nextTerminalId) {
           this.switchToTerminal(nextTerminalId);
+          this.statusManager.showStatus(`Switched to terminal ${nextTerminalId}`, 'info');
         }
       } else {
         this.activeTerminalId = null;
         this.showTerminalPlaceholder();
+        this.statusManager.showStatus('All terminals closed', 'info');
       }
+    } else {
+      // Update status for terminal closure
+      this.statusManager.showStatus(`Terminal ${id} closed`, 'success');
     }
 
     // Notify extension about terminal closure

@@ -123,29 +123,29 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
     console.log('🔧 [DEBUG] Killing terminal...');
     try {
       const activeTerminalId = this._terminalManager.getActiveTerminalId();
+      const terminals = this._terminalManager.getTerminals();
+      
+      console.log('🔧 [DEBUG] Active terminal ID:', activeTerminalId);
+      console.log('🔧 [DEBUG] Total terminals:', terminals.length);
+      console.log('🔧 [DEBUG] Terminal list:', terminals.map(t => t.id));
+      
       if (!activeTerminalId) {
         console.warn('⚠️ [WARN] No active terminal to kill');
         TerminalErrorHandler.handleTerminalNotFound();
         return;
       }
 
-      // Check terminal count protection
-      const terminals = this._terminalManager.getTerminals();
-      const config = vscode.workspace.getConfiguration('sidebarTerminal');
-      const minTerminalCount = config.get<number>('minTerminalCount', 1);
-      const protectLastTerminal = config.get<boolean>('protectLastTerminal', true);
-
-      if (protectLastTerminal && terminals.length <= minTerminalCount) {
-        console.warn('🛡️ [WARN] Cannot kill terminal - minimum count protection active');
-        showError(
-          `Cannot close terminal: Minimum ${minTerminalCount} terminal(s) must remain open`
-        );
+      // Check terminal count protection - only protect if there's 1 terminal
+      if (terminals.length <= 1) {
+        console.warn('🛡️ [WARN] Cannot kill terminal - only one terminal remaining');
+        showError('Cannot close terminal: At least one terminal must remain open');
         return;
       }
 
-      console.log('🔧 [DEBUG] Killing active terminal:', activeTerminalId);
+      console.log('🔧 [DEBUG] Proceeding to kill active terminal:', activeTerminalId);
 
       // Check if confirmation is needed
+      const config = vscode.workspace.getConfiguration('sidebarTerminal');
       const confirmBeforeKill = config.get<boolean>('confirmBeforeKill', false);
       if (confirmBeforeKill) {
         void vscode.window
@@ -166,7 +166,9 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
 
   private _performKillTerminal(terminalId: string): void {
     try {
-      // Kill the terminal process
+      console.log('🗑️ [PROVIDER] Performing kill for terminal:', terminalId);
+      
+      // Kill the terminal process in TerminalManager
       this._terminalManager.killTerminal(terminalId);
 
       // Notify webview to remove the terminal from UI
@@ -175,10 +177,10 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
         terminalId: terminalId,
       });
 
-      console.log('✅ [DEBUG] Terminal killed successfully');
-      showSuccess('Terminal closed');
+      console.log('✅ [PROVIDER] Terminal killed successfully:', terminalId);
+      showSuccess(`Terminal ${terminalId} closed`);
     } catch (error) {
-      console.error('❌ [ERROR] Failed to perform kill terminal:', error);
+      console.error('❌ [PROVIDER] Failed to perform kill terminal:', error);
       showError(`Failed to close terminal: ${String(error)}`);
     }
   }

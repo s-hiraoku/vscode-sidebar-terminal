@@ -169,17 +169,6 @@ export class TerminalManager {
     }
   }
 
-  public killTerminal(terminalId?: string): void {
-    const id = terminalId || this._activeTerminalManager.getActive();
-    if (id) {
-      const terminal = this._terminals.get(id);
-      if (terminal) {
-        terminal.pty.kill();
-        this._removeTerminal(id);
-      }
-    }
-  }
-
   public hasActiveTerminal(): boolean {
     return this._activeTerminalManager.hasActive();
   }
@@ -203,6 +192,34 @@ export class TerminalManager {
 
   public removeTerminal(terminalId: string): void {
     this._removeTerminal(terminalId);
+  }
+
+  public killTerminal(terminalId?: string): void {
+    const id = terminalId || this._activeTerminalManager.getActive();
+    if (!id) {
+      console.warn('⚠️ [WARN] No terminal ID provided and no active terminal');
+      return;
+    }
+
+    console.log('🗑️ [TERMINAL] Killing terminal:', id);
+    const terminal = this._terminals.get(id);
+    if (terminal) {
+      try {
+        // Kill the actual terminal process
+        terminal.pty.kill();
+        console.log('🗑️ [TERMINAL] Terminal process killed:', id);
+        
+        // Clean up terminal data
+        this._removeTerminal(id);
+        console.log('🗑️ [TERMINAL] Terminal data cleaned up:', id);
+      } catch (error) {
+        console.error('❌ [TERMINAL] Error killing terminal:', error);
+        // Still try to clean up data even if kill fails
+        this._removeTerminal(id);
+      }
+    } else {
+      console.warn('⚠️ [WARN] Terminal not found for kill:', id);
+    }
   }
 
   public dispose(): void {
@@ -288,6 +305,21 @@ export class TerminalManager {
    * ターミナルを削除し、必要に応じて他のターミナルをアクティブにする
    */
   private _removeTerminal(terminalId: string): void {
+    console.log('🗑️ [TERMINAL] Removing terminal:', terminalId);
+
+    // Get terminal instance before removal
+    const terminal = this._terminals.get(terminalId);
+    
+    // Kill the terminal process if it's still running (safety check)
+    if (terminal) {
+      try {
+        terminal.pty.kill();
+        console.log('🗑️ [TERMINAL] Process killed during removal:', terminalId);
+      } catch (error) {
+        console.warn('⚠️ [TERMINAL] Error killing process during removal:', error);
+      }
+    }
+
     // Clean up data buffers for this terminal
     this._flushBuffer(terminalId);
     this._dataBuffers.delete(terminalId);
@@ -297,8 +329,12 @@ export class TerminalManager {
       this._dataFlushTimers.delete(terminalId);
     }
 
+    // Remove from terminals map
     this._terminals.delete(terminalId);
     this._terminalRemovedEmitter.fire(terminalId);
+
+    console.log('🗑️ [TERMINAL] Terminal removed from map:', terminalId);
+    console.log('🗑️ [TERMINAL] Remaining terminals:', Array.from(this._terminals.keys()));
 
     // アクティブターミナルだった場合、別のターミナルをアクティブにする
     if (this._activeTerminalManager.isActive(terminalId)) {
@@ -306,8 +342,10 @@ export class TerminalManager {
       if (remaining) {
         this._activeTerminalManager.setActive(remaining.id);
         remaining.isActive = true;
+        console.log('🗑️ [TERMINAL] Set new active terminal:', remaining.id);
       } else {
         this._activeTerminalManager.clearActive();
+        console.log('🗑️ [TERMINAL] No remaining terminals, cleared active');
       }
     }
   }
