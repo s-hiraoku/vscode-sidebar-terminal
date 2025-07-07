@@ -21,7 +21,7 @@ jobs:
     - name: Install Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: 18
+        node-version: 22
         cache: 'npm'
 
     - name: Setup MSBuild (Windows)
@@ -44,6 +44,9 @@ jobs:
     - name: Install dependencies
       run: npm ci --prefer-offline --no-audit
 
+    - name: Rebuild native modules
+      run: npm rebuild
+
     - name: Run lint
       run: npm run lint
 
@@ -56,10 +59,14 @@ jobs:
     - name: Run tests (Linux)
       if: runner.os == 'Linux'
       run: xvfb-run -a npm test
+      env:
+        NODE_PTY_SKIP_DOWNLOAD_BINARY: 1
 
     - name: Run tests (macOS/Windows)
       if: runner.os != 'Linux'
       run: npm test
+      env:
+        NODE_PTY_SKIP_DOWNLOAD_BINARY: 1
 
     - name: Build extension
       run: npm run package
@@ -80,7 +87,7 @@ jobs:
     - name: Install Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: 18
+        node-version: 22
         cache: 'npm'
 
     - name: Configure npm settings
@@ -92,6 +99,9 @@ jobs:
 
     - name: Install dependencies
       run: npm ci --prefer-offline --no-audit
+
+    - name: Rebuild native modules
+      run: npm rebuild
 
     - name: Run security audit
       run: npm audit --audit-level moderate
