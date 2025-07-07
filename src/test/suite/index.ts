@@ -3,6 +3,12 @@ import Mocha from 'mocha';
 import { glob } from 'glob';
 
 // Setup global mock for node-pty before any test files are loaded
+/* eslint-disable @typescript-eslint/no-var-requires */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable prefer-rest-params */
 const Module = require('module');
 const originalRequire = Module.prototype.require;
 
@@ -13,6 +19,12 @@ Module.prototype.require = function (id: string) {
   }
   return originalRequire.apply(this, arguments);
 };
+/* eslint-enable prefer-rest-params */
+/* eslint-enable @typescript-eslint/no-unsafe-return */
+/* eslint-enable @typescript-eslint/no-unsafe-call */
+/* eslint-enable @typescript-eslint/no-unsafe-member-access */
+/* eslint-enable @typescript-eslint/no-unsafe-assignment */
+/* eslint-enable @typescript-eslint/no-var-requires */
 
 export function run(): Promise<void> {
   // Create the mocha test
