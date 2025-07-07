@@ -27,7 +27,9 @@
       "Bash(npm install:*)",
       "Bash(npm run test:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(npm run vsce:package:*)",
+      "Bash(cp:*)"
     ],
     "deny": []
   }
