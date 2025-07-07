@@ -1,10 +1,9 @@
 /**
  * ターミナル分割管理クラス
  */
-import { Terminal, type ITerminalOptions } from 'xterm';
+import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import { SPLIT_CONSTANTS } from '../constants/webview';
-import type { TerminalConfig } from '../../types/common';
 
 export interface TerminalInstance {
   terminal: Terminal;
@@ -38,7 +37,7 @@ export class SplitManager {
 
     // Get the current terminal body height (this is what we want to split)
     const availableHeight = terminalBody.clientHeight;
-    
+
     // Include existing primary terminal in the count
     const existingPrimaryTerminal = document.getElementById('primary-terminal');
     const currentTerminalCount = existingPrimaryTerminal ? 1 : 0;
@@ -66,7 +65,9 @@ export class SplitManager {
       };
     }
 
-    console.log(`📐 [SPLIT] Equal split: ${availableHeight}px ÷ ${totalTerminalCount} terminals = ${terminalHeight}px per terminal`);
+    console.log(
+      `📐 [SPLIT] Equal split: ${availableHeight}px ÷ ${totalTerminalCount} terminals = ${terminalHeight}px per terminal`
+    );
     return { canSplit: true, terminalHeight };
   }
 
@@ -91,11 +92,11 @@ export class SplitManager {
     const existingPrimaryTerminal = document.getElementById('primary-terminal');
     if (existingPrimaryTerminal) {
       console.log('📐 [WEBVIEW] Adjusting existing primary terminal for split layout');
-      
+
       // Calculate height for 2 terminals (existing + new one that will be added)
       const availableHeight = terminalBody.clientHeight;
       const heightPerTerminal = Math.floor(availableHeight / 2);
-      
+
       // Set the existing terminal to half height
       existingPrimaryTerminal.style.cssText = `
         height: ${heightPerTerminal}px;
@@ -106,7 +107,7 @@ export class SplitManager {
         border-bottom: 1px solid var(--vscode-widget-border, #454545);
         flex-shrink: 0;
       `;
-      
+
       console.log(`📐 [WEBVIEW] Set existing terminal height to ${heightPerTerminal}px`);
     }
 
@@ -119,7 +120,7 @@ export class SplitManager {
     const container = document.createElement('div');
     container.id = `split-terminal-${id}`;
     container.className = 'split-terminal-container';
-    
+
     // Simple: use the calculated height directly
     container.style.cssText = `
       height: ${height}px;
@@ -162,19 +163,25 @@ export class SplitManager {
     return container;
   }
 
-  public redistributeSplitTerminals(newHeight: number, mainTerminal?: Terminal, mainFitAddon?: FitAddon): void {
+  public redistributeSplitTerminals(
+    newHeight: number,
+    mainTerminal?: Terminal,
+    mainFitAddon?: FitAddon
+  ): void {
     const totalTerminals = this.splitTerminals.size;
-    
+
     // Include existing primary terminal if it exists
     const existingPrimaryTerminal = document.getElementById('primary-terminal');
     const actualTerminalCount = existingPrimaryTerminal ? totalTerminals + 1 : totalTerminals;
-    
-    console.log(`📐 [WEBVIEW] Redistributing ${actualTerminalCount} terminals (${totalTerminals} split + ${existingPrimaryTerminal ? 1 : 0} primary) to ${newHeight}px each`);
+
+    console.log(
+      `📐 [WEBVIEW] Redistributing ${actualTerminalCount} terminals (${totalTerminals} split + ${existingPrimaryTerminal ? 1 : 0} primary) to ${newHeight}px each`
+    );
 
     // Adjust existing primary terminal if it exists
     if (existingPrimaryTerminal) {
       existingPrimaryTerminal.style.height = `${newHeight}px`;
-      
+
       // Resize main terminal instance
       if (mainTerminal && mainFitAddon) {
         setTimeout(() => {
