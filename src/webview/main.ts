@@ -8,9 +8,10 @@ import { WebLinksAddon } from 'xterm-addon-web-links';
 // Types and constants
 import type { WebviewMessage, VsCodeMessage, TerminalConfig } from '../types/common';
 import { WEBVIEW_TERMINAL_CONSTANTS, SPLIT_CONSTANTS } from './constants/webview';
-import { getWebviewTheme } from './utils/WebviewThemeUtils';
+import { getWebviewTheme, WEBVIEW_THEME_CONSTANTS } from './utils/WebviewThemeUtils';
 import { SimpleStatusManager } from './managers/SimpleStatusManager';
 import { SplitManager } from './managers/SplitManager';
+import { SettingsPanel } from './components/SettingsPanel';
 
 // Type definitions
 interface TerminalMessage extends WebviewMessage {
@@ -57,10 +58,16 @@ class TerminalWebviewManager {
   // Managers
   private splitManager: SplitManager;
   private statusManager: SimpleStatusManager;
+  private settingsPanel: SettingsPanel;
 
   constructor() {
     this.splitManager = new SplitManager();
     this.statusManager = new SimpleStatusManager();
+    this.settingsPanel = new SettingsPanel({
+      onSettingsChange: (settings) => {
+        this.applySettings(settings);
+      }
+    });
   }
 
   public initializeSimpleTerminal(): void {
@@ -620,6 +627,58 @@ class TerminalWebviewManager {
     }
   }
 
+  public openSettings(): void {
+    const currentSettings = {
+      fontSize: 14,
+      fontFamily: 'Consolas, monospace',
+      theme: 'auto' as const,
+      cursorBlink: true
+    };
+    this.settingsPanel.show(currentSettings);
+  }
+
+  private applySettings(settings: any): void {
+    // Apply settings to all terminals
+    this.splitManager.getTerminals().forEach((terminalData) => {
+      if (terminalData.terminal) {
+        terminalData.terminal.options.fontSize = settings.fontSize;
+        terminalData.terminal.options.fontFamily = settings.fontFamily;
+        terminalData.terminal.options.cursorBlink = settings.cursorBlink;
+        
+        // Apply theme if needed
+        if (settings.theme && settings.theme !== 'auto') {
+          terminalData.terminal.options.theme = settings.theme === 'dark' 
+            ? WEBVIEW_THEME_CONSTANTS.DARK_THEME 
+            : WEBVIEW_THEME_CONSTANTS.LIGHT_THEME;
+        }
+        
+        // Refresh terminal to apply changes
+        if (terminalData.fitAddon) {
+          terminalData.fitAddon.fit();
+        }
+      }
+    });
+
+    // Also apply to the main terminal if it exists
+    if (this.terminal) {
+      this.terminal.options.fontSize = settings.fontSize;
+      this.terminal.options.fontFamily = settings.fontFamily;
+      this.terminal.options.cursorBlink = settings.cursorBlink;
+      
+      if (settings.theme && settings.theme !== 'auto') {
+        this.terminal.options.theme = settings.theme === 'dark'
+          ? WEBVIEW_THEME_CONSTANTS.DARK_THEME
+          : WEBVIEW_THEME_CONSTANTS.LIGHT_THEME;
+      }
+      
+      if (this.fitAddon) {
+        this.fitAddon.fit();
+      }
+    }
+
+    this.statusManager.showStatus('Settings applied', 'success');
+  }
+
   public dispose(): void {
     this.flushOutputBuffer();
 
@@ -733,6 +792,11 @@ window.addEventListener('message', (event) => {
         console.log('🗑️ [WEBVIEW] Received terminal removal command for:', message.terminalId);
         terminalManager.closeTerminal(message.terminalId);
       }
+      break;
+
+    case 'openSettings':
+      console.log('⚙️ [WEBVIEW] Opening settings panel');
+      terminalManager.openSettings();
       break;
 
     default:
