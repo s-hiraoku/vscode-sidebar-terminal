@@ -119,10 +119,13 @@ export class TerminalManager {
           'for terminal:',
           terminalId
         );
-        
+
         // Check if this terminal is being manually killed to prevent infinite loop
         if (this._terminalBeingKilled.has(terminalId)) {
-          console.log('🗑️ [DEBUG] Terminal exit triggered by manual kill, cleaning up:', terminalId);
+          console.log(
+            '🗑️ [DEBUG] Terminal exit triggered by manual kill, cleaning up:',
+            terminalId
+          );
           this._terminalBeingKilled.delete(terminalId);
           this._cleanupTerminalData(terminalId);
         } else {

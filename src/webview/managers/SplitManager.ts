@@ -4,7 +4,7 @@
 import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import { SPLIT_CONSTANTS } from '../constants/webview';
-import { NotificationUtils } from '../utils/NotificationUtils';
+import { showSplitLimitWarning } from '../utils/NotificationUtils';
 
 export interface TerminalInstance {
   terminal: Terminal;
@@ -81,22 +81,24 @@ export class SplitManager {
       console.warn('⚠️ [HEIGHT] Terminal body not found, using fallback');
       return 100; // Fallback
     }
-    
+
     // Get the actual available height from terminal-body
     const bodyRect = terminalBody.getBoundingClientRect();
     const availableHeight = bodyRect.height;
-    
+
     // Always use the current number of terminal containers
     const actualTerminalCount = Math.max(1, this.terminalContainers.size);
-    
-    console.log(`📐 [HEIGHT] Terminal-body height: ${availableHeight}px, Terminal count: ${actualTerminalCount}`);
+
+    console.log(
+      `📐 [HEIGHT] Terminal-body height: ${availableHeight}px, Terminal count: ${actualTerminalCount}`
+    );
     console.log(`📐 [HEIGHT] Body rect:`, bodyRect);
     console.log(`📐 [HEIGHT] Terminal containers:`, Array.from(this.terminalContainers.keys()));
-    
+
     // Calculate equal height for all terminals
     const calculatedHeight = Math.floor(availableHeight / actualTerminalCount);
     console.log(`📐 [HEIGHT] Calculated height per terminal: ${calculatedHeight}px`);
-    
+
     return calculatedHeight;
   }
 
@@ -359,7 +361,7 @@ export class SplitManager {
 
   public showSplitLimitWarning(reason: string): void {
     console.warn('⚠️ [WEBVIEW] Split limit reached:', reason);
-    NotificationUtils.showSplitLimitWarning(reason);
+    showSplitLimitWarning(reason);
   }
 
   public prepareSplitMode(direction: 'horizontal' | 'vertical'): void {

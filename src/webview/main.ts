@@ -6,12 +6,17 @@ import { FitAddon } from 'xterm-addon-fit';
 import { WebLinksAddon } from 'xterm-addon-web-links';
 
 // Types and constants
-import type { WebviewMessage, VsCodeMessage, TerminalConfig } from '../types/common';
+import type {
+  WebviewMessage,
+  VsCodeMessage,
+  TerminalConfig,
+  TerminalSettings,
+} from '../types/common';
 import { WEBVIEW_TERMINAL_CONSTANTS, SPLIT_CONSTANTS } from './constants/webview';
 import { getWebviewTheme, WEBVIEW_THEME_CONSTANTS } from './utils/WebviewThemeUtils';
 import { SplitManager } from './managers/SplitManager';
 import { SettingsPanel } from './components/SettingsPanel';
-import { NotificationUtils } from './utils/NotificationUtils';
+import { showTerminalKillError, showTerminalCloseError } from './utils/NotificationUtils';
 
 // Type definitions
 interface TerminalMessage extends WebviewMessage {
@@ -60,10 +65,10 @@ class TerminalWebviewManager {
   private settingsPanel: SettingsPanel;
 
   // Current settings
-  private currentSettings = {
+  private currentSettings: TerminalSettings = {
     fontSize: 14,
     fontFamily: 'Consolas, monospace',
-    theme: 'auto' as const,
+    theme: 'auto',
     cursorBlink: true,
   };
 
@@ -132,7 +137,7 @@ class TerminalWebviewManager {
     this.setupIMEHandling();
   }
 
-  public createTerminal(id: string, name: string, config: TerminalConfig): void {
+  public createTerminal(id: string, name: string, _config: TerminalConfig): void {
     this.setActiveTerminalId(id);
     console.log('🎯 [WEBVIEW] Creating terminal:', id, name);
 
@@ -275,7 +280,6 @@ class TerminalWebviewManager {
             terminal.refresh(0, terminal.rows - 1);
             terminal.focus();
 
-
             // Only set as main terminal if it's the first one or not in split mode
             if (!this.splitManager.getIsSplitMode() || !this.terminal) {
               this.terminal = terminal;
@@ -357,7 +361,7 @@ class TerminalWebviewManager {
     this.setActiveTerminalId(id);
 
     // Apply consistent flex styling to all terminals
-    this.splitManager.getTerminalContainers().forEach((container, terminalId) => {
+    this.splitManager.getTerminalContainers().forEach((container, _terminalId) => {
       container.style.cssText = `
         width: 100%; 
         flex: 1;
@@ -411,7 +415,7 @@ class TerminalWebviewManager {
 
     if (!activeTerminalId) {
       console.warn('⚠️ [WEBVIEW] No active terminal to close');
-      NotificationUtils.showTerminalKillError('No active terminal to close');
+      showTerminalKillError('No active terminal to close');
       return;
     }
 
@@ -454,7 +458,7 @@ class TerminalWebviewManager {
   }
 
   private showLastTerminalWarning(minCount: number): void {
-    NotificationUtils.showTerminalCloseError(minCount);
+    showTerminalCloseError(minCount);
   }
 
   private performKillTerminal(id: string): void {
@@ -520,7 +524,7 @@ class TerminalWebviewManager {
         const nextTerminalId = remainingTerminals[0];
         if (nextTerminalId) {
           this.switchToTerminal(nextTerminalId);
-            }
+        }
       } else {
         this.activeTerminalId = null;
         this.showTerminalPlaceholder();
@@ -631,7 +635,6 @@ class TerminalWebviewManager {
       `;
     }
   }
-
 
   public writeToTerminal(data: string, _terminalId?: string): void {
     // Determine which terminal to write to
@@ -767,7 +770,6 @@ class TerminalWebviewManager {
     return this.splitManager;
   }
 
-
   public switchToNextTerminal(): void {
     const terminalIds = Array.from(this.splitManager.getTerminals().keys());
     if (terminalIds.length <= 1) return;
@@ -792,9 +794,9 @@ class TerminalWebviewManager {
     this.settingsPanel.show(this.currentSettings);
   }
 
-  public applySettings(settings: any): void {
+  public applySettings(settings: TerminalSettings): void {
     // Update current settings
-    this.currentSettings = { ...settings };
+    this.currentSettings = { ...this.currentSettings, ...settings };
 
     // Save settings to VS Code state
     this.saveSettings();
@@ -802,19 +804,20 @@ class TerminalWebviewManager {
     // Apply settings to all terminals
     this.splitManager.getTerminals().forEach((terminalData) => {
       if (terminalData.terminal) {
-        terminalData.terminal.options.fontSize = settings.fontSize;
-        terminalData.terminal.options.fontFamily = settings.fontFamily;
-        terminalData.terminal.options.cursorBlink = settings.cursorBlink;
+        const terminal = terminalData.terminal;
+        terminal.options.fontSize = settings.fontSize;
+        terminal.options.fontFamily = settings.fontFamily;
+        terminal.options.cursorBlink = settings.cursorBlink;
 
         // Apply theme if needed
         if (settings.theme && settings.theme !== 'auto') {
-          terminalData.terminal.options.theme =
+          terminal.options.theme =
             settings.theme === 'dark'
               ? WEBVIEW_THEME_CONSTANTS.DARK_THEME
               : WEBVIEW_THEME_CONSTANTS.LIGHT_THEME;
         } else {
           // Auto theme - use current VS Code theme
-          terminalData.terminal.options.theme = getWebviewTheme();
+          terminal.options.theme = getWebviewTheme();
         }
 
         // Refresh terminal to apply changes
@@ -826,30 +829,30 @@ class TerminalWebviewManager {
 
     // Also apply to the main terminal if it exists
     if (this.terminal) {
-      this.terminal.options.fontSize = settings.fontSize;
-      this.terminal.options.fontFamily = settings.fontFamily;
-      this.terminal.options.cursorBlink = settings.cursorBlink;
+      const terminal = this.terminal;
+      terminal.options.fontSize = settings.fontSize;
+      terminal.options.fontFamily = settings.fontFamily;
+      terminal.options.cursorBlink = settings.cursorBlink;
 
       if (settings.theme && settings.theme !== 'auto') {
-        this.terminal.options.theme =
+        terminal.options.theme =
           settings.theme === 'dark'
             ? WEBVIEW_THEME_CONSTANTS.DARK_THEME
             : WEBVIEW_THEME_CONSTANTS.LIGHT_THEME;
       } else {
-        this.terminal.options.theme = getWebviewTheme();
+        terminal.options.theme = getWebviewTheme();
       }
 
       if (this.fitAddon) {
         this.fitAddon.fit();
       }
     }
-
   }
 
   private loadSettings(): void {
     try {
-      const state = vscode.getState() as any;
-      if (state && state.terminalSettings) {
+      const state = vscode.getState() as { terminalSettings?: TerminalSettings } | undefined;
+      if (state?.terminalSettings) {
         this.currentSettings = { ...this.currentSettings, ...state.terminalSettings };
         console.log('📋 [WEBVIEW] Loaded settings:', this.currentSettings);
       }
@@ -860,7 +863,8 @@ class TerminalWebviewManager {
 
   private saveSettings(): void {
     try {
-      const state = (vscode.getState() as any) || {};
+      const state =
+        (vscode.getState() as { terminalSettings?: TerminalSettings } | undefined) || {};
       vscode.setState({
         ...state,
         terminalSettings: this.currentSettings,
@@ -947,7 +951,6 @@ window.addEventListener('message', (event) => {
       }
       break;
 
-
     case WEBVIEW_TERMINAL_CONSTANTS.COMMANDS.EXIT:
       if (message.exitCode !== undefined) {
         terminalManager.writeToTerminal(
@@ -992,7 +995,7 @@ window.addEventListener('message', (event) => {
       break;
 
     default:
-      if ((message as any).command === 'killTerminal') {
+      if ((message as { command: string }).command === 'killTerminal') {
         console.log('🗑️ [WEBVIEW] Received killTerminal command');
         terminalManager.closeTerminal(); // Will kill active terminal
       } else {
@@ -1002,8 +1005,7 @@ window.addEventListener('message', (event) => {
 });
 
 // Enhanced update status function
-function updateStatus(message: string, type: 'info' | 'success' | 'error' = 'info'): void {
-}
+function updateStatus(_message: string, _type: 'info' | 'success' | 'error' = 'info'): void {}
 
 // Activity listeners disabled to maintain toast behavior
 function setupActivityListeners(): void {
@@ -1012,7 +1014,6 @@ function setupActivityListeners(): void {
 }
 
 document.addEventListener('keydown', (e) => {
-
   // Ctrl+Tab to switch between terminals
   if (e.ctrlKey && e.key === 'Tab') {
     e.preventDefault();
