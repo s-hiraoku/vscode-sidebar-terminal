@@ -12,6 +12,7 @@ jobs:
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     
     steps:
     - name: Checkout
@@ -33,12 +34,15 @@ jobs:
       with:
         python-version: '3.11'
 
-    - name: Install dependencies
+    - name: Configure npm settings
       run: |
         npm config set fetch-timeout 600000
         npm config set fetch-retry-mintimeout 60000
         npm config set fetch-retry-maxtimeout 120000
-        npm ci
+        npm config set progress false
+
+    - name: Install dependencies
+      run: npm ci --prefer-offline --no-audit
 
     - name: Run lint
       run: npm run lint
@@ -68,6 +72,7 @@ jobs:
 
   security:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
     - name: Checkout
       uses: actions/checkout@v4
@@ -78,12 +83,15 @@ jobs:
         node-version: 18
         cache: 'npm'
 
-    - name: Install dependencies
+    - name: Configure npm settings
       run: |
         npm config set fetch-timeout 600000
         npm config set fetch-retry-mintimeout 60000
         npm config set fetch-retry-maxtimeout 120000
-        npm ci
+        npm config set progress false
+
+    - name: Install dependencies
+      run: npm ci --prefer-offline --no-audit
 
     - name: Run security audit
       run: npm audit --audit-level moderate
