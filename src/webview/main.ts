@@ -65,7 +65,7 @@ class TerminalWebviewManager {
     fontSize: 14,
     fontFamily: 'Consolas, monospace',
     theme: 'auto' as const,
-    cursorBlink: true
+    cursorBlink: true,
   };
 
   constructor() {
@@ -74,9 +74,9 @@ class TerminalWebviewManager {
     this.settingsPanel = new SettingsPanel({
       onSettingsChange: (settings) => {
         this.applySettings(settings);
-      }
+      },
     });
-    
+
     // Load settings from VS Code state if available
     this.loadSettings();
   }
@@ -101,6 +101,9 @@ class TerminalWebviewManager {
         width: 100%;
         height: 100%;
         overflow: hidden;
+        margin: 0;
+        padding: 0;
+        gap: 0;
       ">
         <div id="terminal-placeholder" style="
           position: absolute;
@@ -154,11 +157,12 @@ class TerminalWebviewManager {
       const terminalOptions = {
         fontSize: this.currentSettings.fontSize,
         fontFamily: this.currentSettings.fontFamily,
-        theme: this.currentSettings.theme === 'auto' 
-          ? terminalTheme 
-          : (this.currentSettings.theme === 'dark' 
-            ? WEBVIEW_THEME_CONSTANTS.DARK_THEME 
-            : WEBVIEW_THEME_CONSTANTS.LIGHT_THEME),
+        theme:
+          this.currentSettings.theme === 'auto'
+            ? terminalTheme
+            : this.currentSettings.theme === 'dark'
+              ? WEBVIEW_THEME_CONSTANTS.DARK_THEME
+              : WEBVIEW_THEME_CONSTANTS.LIGHT_THEME,
         cursorBlink: this.currentSettings.cursorBlink,
         allowTransparency: true,
         scrollback: 10000,
@@ -182,18 +186,18 @@ class TerminalWebviewManager {
       const terminalDiv = document.createElement('div');
       terminalDiv.setAttribute('data-terminal-container', 'terminal');
       terminalDiv.id = `terminal-container-${id}`;
-      
+
       // Set split mode if this is the second terminal
       if (this.splitManager.getTerminals().size >= 1 && !this.splitManager.getIsSplitMode()) {
         this.splitManager.prepareSplitMode('vertical');
       }
-      
+
       // Add to DOM first
       this.terminalContainer.appendChild(terminalDiv);
-      
+
       // Register the container with split manager
       this.splitManager.getTerminalContainers().set(id, terminalDiv);
-      
+
       // Apply flex-based styling to the new terminal
       terminalDiv.style.cssText = `
         width: 100%; 
@@ -201,14 +205,19 @@ class TerminalWebviewManager {
         display: flex;
         flex-direction: column;
         overflow: hidden;
-        border: 1px solid transparent;
+        margin: 0;
+        padding: 2px;
         min-height: 100px;
+        border: none;
+        outline: none;
       `;
       console.log(`📐 [MAIN] Applied flex layout for terminal ${id}`);
-      
+
       // CRITICAL: Apply flex layout to ALL terminals IMMEDIATELY (before terminal.open)
-      console.log(`📐 [MAIN] Applying flex layout to all ${this.splitManager.getTerminalContainers().size} terminals IMMEDIATELY`);
-      
+      console.log(
+        `📐 [MAIN] Applying flex layout to all ${this.splitManager.getTerminalContainers().size} terminals IMMEDIATELY`
+      );
+
       this.splitManager.getTerminalContainers().forEach((container, terminalId) => {
         container.style.cssText = `
           width: 100%; 
@@ -216,12 +225,15 @@ class TerminalWebviewManager {
           display: flex;
           flex-direction: column;
           overflow: hidden;
-          border: 1px solid transparent;
+          margin: 0;
+          padding: 2px;
           min-height: 100px;
+          border: none;
+          outline: none;
         `;
-        
+
         console.log(`📐 [MAIN] Applied flex layout to terminal ${terminalId}`);
-        
+
         // Add click event if not already added
         if (!container.hasAttribute('data-click-handler')) {
           container.setAttribute('data-click-handler', 'true');
@@ -232,13 +244,15 @@ class TerminalWebviewManager {
           });
         }
       });
-      
+
       // Force layout recalculation BEFORE opening terminal
       this.splitManager.getTerminalContainers().forEach((container) => {
         container.offsetHeight; // Force reflow
       });
-      console.log(`📐 [MAIN] Forced layout recalculation for all ${this.splitManager.getTerminalContainers().size} containers`);
-      
+      console.log(
+        `📐 [MAIN] Forced layout recalculation for all ${this.splitManager.getTerminalContainers().size} containers`
+      );
+
       const targetContainer = terminalDiv;
 
       // Open terminal AFTER flex layout is applied
@@ -246,23 +260,27 @@ class TerminalWebviewManager {
         try {
           console.log(`🎨 [MAIN] Opening terminal ${id} after flex layout applied`);
           terminal.open(targetContainer);
-          
+
           // Wait longer for DOM and flex layout to fully stabilize before fitting
           setTimeout(() => {
             // Force layout recalculation before fit
             targetContainer.offsetHeight; // Trigger reflow
-            
+
             const terminalBody = document.getElementById('terminal-body');
             const terminalMain = document.getElementById('terminal');
-            
+
             console.log(`🔧 [MAIN] Hierarchy sizes before fit:`, {
-              terminal: terminalMain ? { w: terminalMain.offsetWidth, h: terminalMain.offsetHeight } : 'not found',
-              terminalBody: terminalBody ? { w: terminalBody.offsetWidth, h: terminalBody.offsetHeight } : 'not found',
+              terminal: terminalMain
+                ? { w: terminalMain.offsetWidth, h: terminalMain.offsetHeight }
+                : 'not found',
+              terminalBody: terminalBody
+                ? { w: terminalBody.offsetWidth, h: terminalBody.offsetHeight }
+                : 'not found',
               targetContainer: { w: targetContainer.offsetWidth, h: targetContainer.offsetHeight },
               containerStyle: targetContainer.style.cssText,
-              terminalCount: this.splitManager.getTerminalContainers().size
+              terminalCount: this.splitManager.getTerminalContainers().size,
             });
-            
+
             fitAddon.fit();
             terminal.refresh(0, terminal.rows - 1);
             terminal.focus();
@@ -277,7 +295,7 @@ class TerminalWebviewManager {
 
             // Switch to the newly created terminal
             this.switchToTerminal(id);
-            
+
             // Re-fit ALL terminals to ensure consistent sizing
             setTimeout(() => {
               console.log(`🔧 [MAIN] Re-fitting ALL terminals for consistency`);
@@ -287,7 +305,9 @@ class TerminalWebviewManager {
                   if (container) {
                     container.offsetHeight; // Force reflow
                     terminalData.fitAddon.fit();
-                    console.log(`🔧 [MAIN] Re-fitted terminal ${terminalId}, size: ${container.offsetWidth}x${container.offsetHeight}`);
+                    console.log(
+                      `🔧 [MAIN] Re-fitted terminal ${terminalId}, size: ${container.offsetWidth}x${container.offsetHeight}`
+                    );
                   }
                 }
               });
@@ -348,7 +368,7 @@ class TerminalWebviewManager {
     console.log('🔄 [WEBVIEW] Switching to terminal:', id);
 
     this.setActiveTerminalId(id);
-    
+
     // Apply consistent flex styling to all terminals
     this.splitManager.getTerminalContainers().forEach((container, terminalId) => {
       container.style.cssText = `
@@ -358,7 +378,10 @@ class TerminalWebviewManager {
         flex-direction: column;
         overflow: hidden;
         min-height: 100px;
-        border: ${terminalId === id ? '1px solid var(--vscode-focusBorder, #0078d4)' : '1px solid transparent'};
+        margin: 0;
+        padding: 2px;
+        border: none;
+        outline: none;
       `;
     });
 
@@ -371,13 +394,13 @@ class TerminalWebviewManager {
         if (container) {
           // Force layout recalculation
           container.offsetHeight;
-          
+
           console.log(`🔧 [SWITCH] Container size for terminal ${id}:`, {
             width: container.offsetWidth,
-            height: container.offsetHeight
+            height: container.offsetHeight,
           });
         }
-        
+
         terminalData.terminal.focus();
         if (terminalData.fitAddon) {
           terminalData.fitAddon.fit();
@@ -408,7 +431,7 @@ class TerminalWebviewManager {
       terminalId: id,
       terminalCount,
       minTerminalCount,
-      activeTerminalId: this.activeTerminalId
+      activeTerminalId: this.activeTerminalId,
     });
 
     if (terminalCount <= minTerminalCount) {
@@ -460,7 +483,10 @@ class TerminalWebviewManager {
   private performKillTerminal(id: string): void {
     console.log('🗑️ [WEBVIEW] Performing kill for terminal:', id);
     console.log('🗑️ [WEBVIEW] Current active terminal:', this.activeTerminalId);
-    console.log('🗑️ [WEBVIEW] Terminals before removal:', Array.from(this.splitManager.getTerminals().keys()));
+    console.log(
+      '🗑️ [WEBVIEW] Terminals before removal:',
+      Array.from(this.splitManager.getTerminals().keys())
+    );
 
     // Remove terminal instance
     const terminalData = this.splitManager.getTerminals().get(id);
@@ -483,9 +509,11 @@ class TerminalWebviewManager {
     console.log('🗑️ [WEBVIEW] Remaining terminals:', remainingTerminals);
 
     // Update all remaining terminals to use flex layout
-    console.log(`🗑️ [WEBVIEW] Updating ${remainingTerminals.length} remaining terminals with flex layout`);
-    
-    remainingTerminals.forEach(terminalId => {
+    console.log(
+      `🗑️ [WEBVIEW] Updating ${remainingTerminals.length} remaining terminals with flex layout`
+    );
+
+    remainingTerminals.forEach((terminalId) => {
       const container = this.splitManager.getTerminalContainers().get(terminalId);
       if (container) {
         // Apply unified flex styling to all remaining terminals
@@ -496,7 +524,10 @@ class TerminalWebviewManager {
           flex-direction: column;
           overflow: hidden;
           min-height: 100px;
-          border: 1px solid transparent;
+          margin: 0;
+          padding: 2px;
+          border: none;
+          outline: none;
         `;
         console.log(`🗑️ [WEBVIEW] Updated terminal ${terminalId} with flex layout`);
       }
@@ -734,27 +765,28 @@ class TerminalWebviewManager {
   public applySettings(settings: any): void {
     // Update current settings
     this.currentSettings = { ...settings };
-    
+
     // Save settings to VS Code state
     this.saveSettings();
-    
+
     // Apply settings to all terminals
     this.splitManager.getTerminals().forEach((terminalData) => {
       if (terminalData.terminal) {
         terminalData.terminal.options.fontSize = settings.fontSize;
         terminalData.terminal.options.fontFamily = settings.fontFamily;
         terminalData.terminal.options.cursorBlink = settings.cursorBlink;
-        
+
         // Apply theme if needed
         if (settings.theme && settings.theme !== 'auto') {
-          terminalData.terminal.options.theme = settings.theme === 'dark' 
-            ? WEBVIEW_THEME_CONSTANTS.DARK_THEME 
-            : WEBVIEW_THEME_CONSTANTS.LIGHT_THEME;
+          terminalData.terminal.options.theme =
+            settings.theme === 'dark'
+              ? WEBVIEW_THEME_CONSTANTS.DARK_THEME
+              : WEBVIEW_THEME_CONSTANTS.LIGHT_THEME;
         } else {
           // Auto theme - use current VS Code theme
           terminalData.terminal.options.theme = getWebviewTheme();
         }
-        
+
         // Refresh terminal to apply changes
         if (terminalData.fitAddon) {
           terminalData.fitAddon.fit();
@@ -767,15 +799,16 @@ class TerminalWebviewManager {
       this.terminal.options.fontSize = settings.fontSize;
       this.terminal.options.fontFamily = settings.fontFamily;
       this.terminal.options.cursorBlink = settings.cursorBlink;
-      
+
       if (settings.theme && settings.theme !== 'auto') {
-        this.terminal.options.theme = settings.theme === 'dark'
-          ? WEBVIEW_THEME_CONSTANTS.DARK_THEME
-          : WEBVIEW_THEME_CONSTANTS.LIGHT_THEME;
+        this.terminal.options.theme =
+          settings.theme === 'dark'
+            ? WEBVIEW_THEME_CONSTANTS.DARK_THEME
+            : WEBVIEW_THEME_CONSTANTS.LIGHT_THEME;
       } else {
         this.terminal.options.theme = getWebviewTheme();
       }
-      
+
       if (this.fitAddon) {
         this.fitAddon.fit();
       }
@@ -801,7 +834,7 @@ class TerminalWebviewManager {
       const state = (vscode.getState() as any) || {};
       vscode.setState({
         ...state,
-        terminalSettings: this.currentSettings
+        terminalSettings: this.currentSettings,
       });
       console.log('💾 [WEBVIEW] Saved settings:', this.currentSettings);
     } catch (error) {
@@ -851,7 +884,7 @@ window.addEventListener('message', (event) => {
         if (message.activeTerminalId) {
           terminalManager.setActiveTerminalId(message.activeTerminalId);
         }
-        
+
         // Apply settings if provided
         if (message.settings) {
           terminalManager.applySettings(message.settings);
@@ -905,7 +938,10 @@ window.addEventListener('message', (event) => {
     case WEBVIEW_TERMINAL_CONSTANTS.COMMANDS.SPLIT:
       console.log('🔀 [WEBVIEW] Received SPLIT command - preparing split mode');
       terminalManager.prepareSplitMode('vertical');
-      console.log('🔀 [WEBVIEW] Split mode prepared, isSplitMode:', terminalManager.getIsSplitMode());
+      console.log(
+        '🔀 [WEBVIEW] Split mode prepared, isSplitMode:',
+        terminalManager.getIsSplitMode()
+      );
       break;
 
     case WEBVIEW_TERMINAL_CONSTANTS.COMMANDS.TERMINAL_CREATED:
@@ -913,9 +949,9 @@ window.addEventListener('message', (event) => {
         console.log('🔀 [WEBVIEW] Creating terminal:', {
           terminalId: message.terminalId,
           isSplitMode: terminalManager.getIsSplitMode(),
-          activeTerminalId: terminalManager.activeTerminalId
+          activeTerminalId: terminalManager.activeTerminalId,
         });
-        
+
         // createTerminal handles all split logic internally - no need for addNewTerminalToSplit
         terminalManager.createTerminal(message.terminalId, message.terminalName, message.config);
       }

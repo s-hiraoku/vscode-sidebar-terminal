@@ -454,6 +454,12 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
         } 'unsafe-inline'; script-src 'nonce-${nonce}'; font-src ${webview.cspSource};">
         <link href="${xtermCssUri.toString()}" rel="stylesheet">
         <style>
+            *, *::before, *::after {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+            
             body {
                 margin: 0;
                 padding: 0;
@@ -464,6 +470,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
                 height: 100vh;
                 display: flex;
                 flex-direction: column;
+                gap: 0;
             }
             
             /* Split layout container */
@@ -537,15 +544,16 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
             
             /* Status bar */
             .status {
-                height: 20px;
+                height: 30px;
                 flex-shrink: 0;
                 position: relative;
                 z-index: 1000;
                 color: #00ff00;
-                font-size: 10px;
+                font-size: 11px;
                 font-family: monospace;
                 background: rgba(0, 0, 0, 0.8);
                 padding: 2px 6px;
+                margin: 0;
                 display: flex;
                 align-items: center;
                 max-width: 300px;
@@ -559,12 +567,48 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
                 background: #000;
                 position: relative;
                 overflow: hidden;
+                margin: 0;
+                padding: 0;
             }
             
             .secondary-terminal {
                 width: 100%;
                 height: 100%;
                 position: relative;
+            }
+            
+            /* XTerm.js container fixes */
+            .xterm {
+                margin: 0 !important;
+                padding: 0 !important;
+                height: 100% !important;
+            }
+            
+            .xterm-viewport {
+                margin: 0 !important;
+                padding: 0 !important;
+                height: 100% !important;
+            }
+            
+            .xterm-screen {
+                margin: 0 !important;
+                padding: 0 !important;
+                height: 100% !important;
+            }
+            
+            /* Terminal container fixes */
+            [data-terminal-container] {
+                margin: 0 !important;
+                padding: 2px !important;
+                height: 100% !important;
+                flex: 1 !important;
+            }
+            
+            /* Ensure full height usage */
+            html, body {
+                height: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
             }
             
             /* Split controls */
