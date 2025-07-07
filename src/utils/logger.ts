@@ -28,27 +28,43 @@ class Logger {
     this.level = level;
   }
 
+  private safeStringify(obj: unknown): string {
+    if (typeof obj === 'string') return obj;
+    if (typeof obj === 'number' || typeof obj === 'boolean') return String(obj);
+    if (obj === null || obj === undefined) return String(obj);
+
+    try {
+      return JSON.stringify(obj, null, 2);
+    } catch {
+      return '[Complex Object]';
+    }
+  }
+
   debug(...args: unknown[]): void {
     if (this.level <= LogLevel.DEBUG) {
-      console.log('[DEBUG]', ...args);
+      const safeArgs = args.map((arg) => (typeof arg === 'object' ? this.safeStringify(arg) : arg));
+      console.log('[DEBUG]', ...safeArgs);
     }
   }
 
   info(...args: unknown[]): void {
     if (this.level <= LogLevel.INFO) {
-      console.log('[INFO]', ...args);
+      const safeArgs = args.map((arg) => (typeof arg === 'object' ? this.safeStringify(arg) : arg));
+      console.log('[INFO]', ...safeArgs);
     }
   }
 
   warn(...args: unknown[]): void {
     if (this.level <= LogLevel.WARN) {
-      console.warn('[WARN]', ...args);
+      const safeArgs = args.map((arg) => (typeof arg === 'object' ? this.safeStringify(arg) : arg));
+      console.warn('[WARN]', ...safeArgs);
     }
   }
 
   error(...args: unknown[]): void {
     if (this.level <= LogLevel.ERROR) {
-      console.error('[ERROR]', ...args);
+      const safeArgs = args.map((arg) => (typeof arg === 'object' ? this.safeStringify(arg) : arg));
+      console.error('[ERROR]', ...safeArgs);
     }
   }
 

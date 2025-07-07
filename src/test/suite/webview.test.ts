@@ -54,7 +54,7 @@ suite('Webview Test Suite', () => {
     assert.ok(html.includes('<div id="terminal">'));
     assert.ok(html.includes('webview.js'));
     assert.ok(html.includes('xterm.css'));
-    assert.ok(html.includes('Loading terminal...'));
+    assert.ok(html.includes('Simple terminal container'));
   });
 
   test('Should handle webview view resolution', () => {

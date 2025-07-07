@@ -93,7 +93,9 @@ suite('UX Feedback Test Suite', () => {
       if (warningMessageShown) {
         assert.ok(warningMessage.length > 0, 'Warning message should not be empty');
         assert.ok(
-          warningMessage.includes('maximum') || warningMessage.includes('limit'),
+          warningMessage.includes('maximum') ||
+            warningMessage.includes('limit') ||
+            warningMessage.includes('Maximum'),
           'Warning should mention limits or maximum'
         );
       }
