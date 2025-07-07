@@ -12,6 +12,7 @@ import type {
   TerminalConfig,
   TerminalSettings,
 } from '../types/common';
+import { webview as log } from '../utils/logger';
 import { WEBVIEW_TERMINAL_CONSTANTS, SPLIT_CONSTANTS } from './constants/webview';
 import { getWebviewTheme, WEBVIEW_THEME_CONSTANTS } from './utils/WebviewThemeUtils';
 import { SplitManager } from './managers/SplitManager';
@@ -87,11 +88,11 @@ class TerminalWebviewManager {
   public initializeSimpleTerminal(): void {
     const container = document.getElementById('terminal');
     if (!container) {
-      console.error('Terminal container not found');
+      log('Terminal container not found');
       return;
     }
 
-    console.log('🎯 [WEBVIEW] Initializing simple terminal');
+    log('🎯 [WEBVIEW] Initializing simple terminal');
 
     // Create simple terminal container
     container.innerHTML = `
@@ -127,9 +128,9 @@ class TerminalWebviewManager {
       this.terminalContainer = document.getElementById('terminal-body');
 
       if (this.terminalContainer) {
-        console.log('🎯 [WEBVIEW] Simple terminal container created successfully');
+        log('🎯 [WEBVIEW] Simple terminal container created successfully');
       } else {
-        console.error('❌ [WEBVIEW] Failed to create terminal container');
+        log('❌ [WEBVIEW] Failed to create terminal container');
       }
     }, 1);
 
@@ -139,16 +140,16 @@ class TerminalWebviewManager {
 
   public createTerminal(id: string, name: string, _config: TerminalConfig): void {
     this.setActiveTerminalId(id);
-    console.log('🎯 [WEBVIEW] Creating terminal:', id, name);
+    log('🎯 [WEBVIEW] Creating terminal:', id, name);
 
     if (!this.terminalContainer) {
-      console.error('❌ [WEBVIEW] No terminal container available');
+      log('❌ [WEBVIEW] No terminal container available');
       return;
     }
 
     try {
       const terminalTheme = getWebviewTheme();
-      console.log('🎨 [WEBVIEW] Creating terminal with theme:', terminalTheme);
+      log('🎨 [WEBVIEW] Creating terminal with theme:', terminalTheme);
 
       // Apply current settings to new terminal
       const terminalOptions = {
@@ -206,10 +207,10 @@ class TerminalWebviewManager {
         border: none;
         outline: none;
       `;
-      console.log(`📐 [MAIN] Applied flex layout for terminal ${id}`);
+      log(`📐 [MAIN] Applied flex layout for terminal ${id}`);
 
       // CRITICAL: Apply flex layout to ALL terminals IMMEDIATELY (before terminal.open)
-      console.log(
+      log(
         `📐 [MAIN] Applying flex layout to all ${this.splitManager.getTerminalContainers().size} terminals IMMEDIATELY`
       );
 
@@ -227,7 +228,7 @@ class TerminalWebviewManager {
           outline: none;
         `;
 
-        console.log(`📐 [MAIN] Applied flex layout to terminal ${terminalId}`);
+        log(`📐 [MAIN] Applied flex layout to terminal ${terminalId}`);
 
         // Add click event if not already added
         if (!container.hasAttribute('data-click-handler')) {
@@ -244,7 +245,7 @@ class TerminalWebviewManager {
       this.splitManager.getTerminalContainers().forEach((container) => {
         container.offsetHeight; // Force reflow
       });
-      console.log(
+      log(
         `📐 [MAIN] Forced layout recalculation for all ${this.splitManager.getTerminalContainers().size} containers`
       );
 
@@ -253,7 +254,7 @@ class TerminalWebviewManager {
       // Open terminal AFTER flex layout is applied
       setTimeout(() => {
         try {
-          console.log(`🎨 [MAIN] Opening terminal ${id} after flex layout applied`);
+          log(`🎨 [MAIN] Opening terminal ${id} after flex layout applied`);
           terminal.open(targetContainer);
 
           // Wait longer for DOM and flex layout to fully stabilize before fitting
@@ -264,7 +265,7 @@ class TerminalWebviewManager {
             const terminalBody = document.getElementById('terminal-body');
             const terminalMain = document.getElementById('terminal');
 
-            console.log(`🔧 [MAIN] Hierarchy sizes before fit:`, {
+            log(`🔧 [MAIN] Hierarchy sizes before fit:`, {
               terminal: terminalMain
                 ? { w: terminalMain.offsetWidth, h: terminalMain.offsetHeight }
                 : 'not found',
@@ -291,14 +292,14 @@ class TerminalWebviewManager {
 
             // Re-fit ALL terminals to ensure consistent sizing
             setTimeout(() => {
-              console.log(`🔧 [MAIN] Re-fitting ALL terminals for consistency`);
+              log(`🔧 [MAIN] Re-fitting ALL terminals for consistency`);
               this.splitManager.getTerminals().forEach((terminalData, terminalId) => {
                 if (terminalData.fitAddon) {
                   const container = this.splitManager.getTerminalContainers().get(terminalId);
                   if (container) {
                     container.offsetHeight; // Force reflow
                     terminalData.fitAddon.fit();
-                    console.log(
+                    log(
                       `🔧 [MAIN] Re-fitted terminal ${terminalId}, size: ${container.offsetWidth}x${container.offsetHeight}`
                     );
                   }
@@ -307,7 +308,7 @@ class TerminalWebviewManager {
             }, 200);
           }, 500); // Increased delay for flex layout stabilization
         } catch (openError) {
-          console.error('❌ [WEBVIEW] Error opening terminal:', openError);
+          log('❌ [WEBVIEW] Error opening terminal:', openError);
         }
       }, 100);
 
@@ -351,12 +352,12 @@ class TerminalWebviewManager {
         resizeObserver.observe(this.terminalContainer);
       }
     } catch (error) {
-      console.error('❌ [WEBVIEW] Error creating terminal:', error);
+      log('❌ [WEBVIEW] Error creating terminal:', error);
     }
   }
 
   public switchToTerminal(id: string): void {
-    console.log('🔄 [WEBVIEW] Switching to terminal:', id);
+    log('🔄 [WEBVIEW] Switching to terminal:', id);
 
     this.setActiveTerminalId(id);
 
@@ -386,7 +387,7 @@ class TerminalWebviewManager {
           // Force layout recalculation
           container.offsetHeight;
 
-          console.log(`🔧 [SWITCH] Container size for terminal ${id}:`, {
+          log(`🔧 [SWITCH] Container size for terminal ${id}:`, {
             width: container.offsetWidth,
             height: container.offsetHeight,
           });
@@ -395,18 +396,18 @@ class TerminalWebviewManager {
         terminalData.terminal.focus();
         if (terminalData.fitAddon) {
           terminalData.fitAddon.fit();
-          console.log(`🔧 [SWITCH] Fit applied for terminal ${id}`);
+          log(`🔧 [SWITCH] Fit applied for terminal ${id}`);
         }
       }, 50);
     }
 
-    console.log('✅ [WEBVIEW] Switched to terminal:', id);
+    log('✅ [WEBVIEW] Switched to terminal:', id);
   }
 
   public closeTerminal(id?: string): void {
     // According to the spec: always kill the ACTIVE terminal, not the specified one
     const activeTerminalId = this.activeTerminalId;
-    console.log(
+    log(
       '🗑️ [WEBVIEW] Close terminal requested for:',
       id,
       'but will close active terminal:',
@@ -414,7 +415,7 @@ class TerminalWebviewManager {
     );
 
     if (!activeTerminalId) {
-      console.warn('⚠️ [WEBVIEW] No active terminal to close');
+      log('⚠️ [WEBVIEW] No active terminal to close');
       showTerminalKillError('No active terminal to close');
       return;
     }
@@ -433,14 +434,14 @@ class TerminalWebviewManager {
   private canKillTerminal(id: string): boolean {
     // Prevent double processing
     if (this.terminalsBeingClosed.has(id)) {
-      console.log('🔄 [WEBVIEW] Terminal already being closed:', id);
+      log('🔄 [WEBVIEW] Terminal already being closed:', id);
       return false;
     }
 
     const terminalCount = this.splitManager.getTerminals().size;
     const minTerminalCount = 1;
 
-    console.log('🔧 [WEBVIEW] canKillTerminal check:', {
+    log('🔧 [WEBVIEW] canKillTerminal check:', {
       terminalId: id,
       terminalCount,
       minTerminalCount,
@@ -449,7 +450,7 @@ class TerminalWebviewManager {
     });
 
     if (terminalCount <= minTerminalCount) {
-      console.warn('🛡️ [WEBVIEW] Cannot kill terminal - would go below minimum count');
+      log('🛡️ [WEBVIEW] Cannot kill terminal - would go below minimum count');
       this.showLastTerminalWarning(minTerminalCount);
       return false;
     }
@@ -462,13 +463,13 @@ class TerminalWebviewManager {
   }
 
   private performKillTerminal(id: string): void {
-    console.log('🗑️ [WEBVIEW] Performing kill for terminal:', id);
+    log('🗑️ [WEBVIEW] Performing kill for terminal:', id);
 
     // Mark terminal as being closed
     this.terminalsBeingClosed.add(id);
 
-    console.log('🗑️ [WEBVIEW] Current active terminal:', this.activeTerminalId);
-    console.log(
+    log('🗑️ [WEBVIEW] Current active terminal:', this.activeTerminalId);
+    log(
       '🗑️ [WEBVIEW] Terminals before removal:',
       Array.from(this.splitManager.getTerminals().keys())
     );
@@ -478,7 +479,7 @@ class TerminalWebviewManager {
     if (terminalData) {
       terminalData.terminal.dispose();
       this.splitManager.getTerminals().delete(id);
-      console.log('🗑️ [WEBVIEW] Terminal instance removed:', id);
+      log('🗑️ [WEBVIEW] Terminal instance removed:', id);
     }
 
     // Remove terminal container
@@ -486,15 +487,15 @@ class TerminalWebviewManager {
     if (container) {
       container.remove();
       this.splitManager.getTerminalContainers().delete(id);
-      console.log('🗑️ [WEBVIEW] Terminal container removed:', id);
+      log('🗑️ [WEBVIEW] Terminal container removed:', id);
     }
 
     // Adjust remaining terminal layouts
     const remainingTerminals = Array.from(this.splitManager.getTerminals().keys());
-    console.log('🗑️ [WEBVIEW] Remaining terminals:', remainingTerminals);
+    log('🗑️ [WEBVIEW] Remaining terminals:', remainingTerminals);
 
     // Update all remaining terminals to use flex layout
-    console.log(
+    log(
       `🗑️ [WEBVIEW] Updating ${remainingTerminals.length} remaining terminals with flex layout`
     );
 
@@ -514,7 +515,7 @@ class TerminalWebviewManager {
           border: none;
           outline: none;
         `;
-        console.log(`🗑️ [WEBVIEW] Updated terminal ${terminalId} with flex layout`);
+        log(`🗑️ [WEBVIEW] Updated terminal ${terminalId} with flex layout`);
       }
     });
 
@@ -539,17 +540,17 @@ class TerminalWebviewManager {
         command: 'terminalClosed',
         terminalId: id,
       });
-      console.log('📤 [WEBVIEW] Sent terminalClosed message to extension for:', id);
+      log('📤 [WEBVIEW] Sent terminalClosed message to extension for:', id);
     }
 
-    console.log('✅ [WEBVIEW] Terminal closed:', id);
+    log('✅ [WEBVIEW] Terminal closed:', id);
   }
 
   /**
    * Handle terminal removal notification from extension (UI cleanup only)
    */
   public handleTerminalRemovedFromExtension(id: string): void {
-    console.log('🗑️ [WEBVIEW] Handling terminal removal from extension:', id);
+    log('🗑️ [WEBVIEW] Handling terminal removal from extension:', id);
 
     // Remove from being closed tracking (if it exists)
     this.terminalsBeingClosed.delete(id);
@@ -559,7 +560,7 @@ class TerminalWebviewManager {
     const container = this.splitManager.getTerminalContainers().get(id);
 
     if (!terminalData && !container) {
-      console.log('🔄 [WEBVIEW] Terminal already removed from webview:', id);
+      log('🔄 [WEBVIEW] Terminal already removed from webview:', id);
       return;
     }
 
@@ -567,18 +568,18 @@ class TerminalWebviewManager {
     if (terminalData) {
       terminalData.terminal.dispose();
       this.splitManager.getTerminals().delete(id);
-      console.log('🗑️ [WEBVIEW] Terminal instance cleaned up:', id);
+      log('🗑️ [WEBVIEW] Terminal instance cleaned up:', id);
     }
 
     if (container) {
       container.remove();
       this.splitManager.getTerminalContainers().delete(id);
-      console.log('🗑️ [WEBVIEW] Terminal container cleaned up:', id);
+      log('🗑️ [WEBVIEW] Terminal container cleaned up:', id);
     }
 
     // Update remaining terminals layout
     const remainingTerminals = Array.from(this.splitManager.getTerminals().keys());
-    console.log('🗑️ [WEBVIEW] Remaining terminals after extension removal:', remainingTerminals);
+    log('🗑️ [WEBVIEW] Remaining terminals after extension removal:', remainingTerminals);
 
     // Apply flex layout to remaining terminals
     remainingTerminals.forEach((terminalId) => {
@@ -612,7 +613,7 @@ class TerminalWebviewManager {
       }
     }
 
-    console.log('✅ [WEBVIEW] Terminal removal from extension handled:', id);
+    log('✅ [WEBVIEW] Terminal removal from extension handled:', id);
   }
 
   private showTerminalPlaceholder(): void {
@@ -656,7 +657,7 @@ class TerminalWebviewManager {
         targetTerminal.write(data);
       }
     } else {
-      console.warn('⚠️ [WEBVIEW] No terminal instance to write to');
+      log('⚠️ [WEBVIEW] No terminal instance to write to');
     }
   }
 
@@ -709,7 +710,7 @@ class TerminalWebviewManager {
 
   // Split functionality methods
   public initializeSplitControls(): void {
-    console.log('🔀 [WEBVIEW] Split controls ready (using panel commands)');
+    log('🔀 [WEBVIEW] Split controls ready (using panel commands)');
   }
 
   public prepareSplitMode(direction: 'horizontal' | 'vertical'): void {
@@ -725,7 +726,7 @@ class TerminalWebviewManager {
   }
 
   private setupIMEHandling(): void {
-    console.log('🌐 [WEBVIEW] Setting up IME handling');
+    log('🌐 [WEBVIEW] Setting up IME handling');
 
     document.addEventListener('compositionstart', (_e) => {
       this.isComposing = true;
@@ -758,7 +759,7 @@ class TerminalWebviewManager {
 
   public setActiveTerminalId(terminalId: string): void {
     this.activeTerminalId = terminalId;
-    console.log('🎯 [WEBVIEW] Active terminal ID set to:', terminalId);
+    log('🎯 [WEBVIEW] Active terminal ID set to:', terminalId);
   }
 
   // Getters for split manager integration
@@ -786,7 +787,7 @@ class TerminalWebviewManager {
   private calculateTerminalHeight(): string {
     // For debugging purposes - actual height is now managed by flex layout
     const pixelHeight = this.splitManager.calculateTerminalHeightPixels();
-    console.log(`📐 [DEBUG] Theoretical height: ${pixelHeight}px (flex layout overrides this)`);
+    log(`📐 [DEBUG] Theoretical height: ${pixelHeight}px (flex layout overrides this)`);
     return `${pixelHeight}px`;
   }
 
@@ -854,10 +855,10 @@ class TerminalWebviewManager {
       const state = vscode.getState() as { terminalSettings?: TerminalSettings } | undefined;
       if (state?.terminalSettings) {
         this.currentSettings = { ...this.currentSettings, ...state.terminalSettings };
-        console.log('📋 [WEBVIEW] Loaded settings:', this.currentSettings);
+        log('📋 [WEBVIEW] Loaded settings:', this.currentSettings);
       }
     } catch (error) {
-      console.error('❌ [WEBVIEW] Error loading settings:', error);
+      log('❌ [WEBVIEW] Error loading settings:', error);
     }
   }
 
@@ -869,9 +870,9 @@ class TerminalWebviewManager {
         ...state,
         terminalSettings: this.currentSettings,
       });
-      console.log('💾 [WEBVIEW] Saved settings:', this.currentSettings);
+      log('💾 [WEBVIEW] Saved settings:', this.currentSettings);
     } catch (error) {
-      console.error('❌ [WEBVIEW] Error saving settings:', error);
+      log('❌ [WEBVIEW] Error saving settings:', error);
     }
   }
 
@@ -904,11 +905,11 @@ const terminalManager = new TerminalWebviewManager();
 // Handle messages from the extension
 window.addEventListener('message', (event) => {
   const message = event.data as TerminalMessage;
-  console.log('🎯 [WEBVIEW] Message data:', message);
+  log('🎯 [WEBVIEW] Message data:', message);
 
   switch (message.command) {
     case WEBVIEW_TERMINAL_CONSTANTS.COMMANDS.INIT:
-      console.log('🎯 [WEBVIEW] Received INIT command', message);
+      log('🎯 [WEBVIEW] Received INIT command', message);
       if (message.config) {
         terminalManager.initializeSimpleTerminal();
 
@@ -932,7 +933,7 @@ window.addEventListener('message', (event) => {
               }
               terminalManager.initializeSplitControls();
             } catch (error) {
-              console.error('❌ [WEBVIEW] Error during terminal creation:', error);
+              log('❌ [WEBVIEW] Error during terminal creation:', error);
             }
           } else {
             setTimeout(checkContainerAndCreate, 50);
@@ -941,7 +942,7 @@ window.addEventListener('message', (event) => {
 
         setTimeout(checkContainerAndCreate, 10);
       } else {
-        console.error('❌ [WEBVIEW] No config provided in INIT message');
+        log('❌ [WEBVIEW] No config provided in INIT message');
       }
       break;
 
@@ -960,9 +961,9 @@ window.addEventListener('message', (event) => {
       break;
 
     case WEBVIEW_TERMINAL_CONSTANTS.COMMANDS.SPLIT:
-      console.log('🔀 [WEBVIEW] Received SPLIT command - preparing split mode');
+      log('🔀 [WEBVIEW] Received SPLIT command - preparing split mode');
       terminalManager.prepareSplitMode('vertical');
-      console.log(
+      log(
         '🔀 [WEBVIEW] Split mode prepared, isSplitMode:',
         terminalManager.getIsSplitMode()
       );
@@ -970,7 +971,7 @@ window.addEventListener('message', (event) => {
 
     case WEBVIEW_TERMINAL_CONSTANTS.COMMANDS.TERMINAL_CREATED:
       if (message.terminalId && message.terminalName && message.config) {
-        console.log('🔀 [WEBVIEW] Creating terminal:', {
+        log('🔀 [WEBVIEW] Creating terminal:', {
           terminalId: message.terminalId,
           isSplitMode: terminalManager.getIsSplitMode(),
           activeTerminalId: terminalManager.activeTerminalId,
@@ -983,23 +984,23 @@ window.addEventListener('message', (event) => {
 
     case WEBVIEW_TERMINAL_CONSTANTS.COMMANDS.TERMINAL_REMOVED:
       if (message.terminalId) {
-        console.log('🗑️ [WEBVIEW] Received terminal removal command for:', message.terminalId);
+        log('🗑️ [WEBVIEW] Received terminal removal command for:', message.terminalId);
         // Terminal was already removed on extension side, just cleanup UI
         terminalManager.handleTerminalRemovedFromExtension(message.terminalId);
       }
       break;
 
     case 'openSettings':
-      console.log('⚙️ [WEBVIEW] Opening settings panel');
+      log('⚙️ [WEBVIEW] Opening settings panel');
       terminalManager.openSettings();
       break;
 
     default:
       if ((message as { command: string }).command === 'killTerminal') {
-        console.log('🗑️ [WEBVIEW] Received killTerminal command');
+        log('🗑️ [WEBVIEW] Received killTerminal command');
         terminalManager.closeTerminal(); // Will kill active terminal
       } else {
-        console.warn('⚠️ [WEBVIEW] Unknown command received:', message.command);
+        log('⚠️ [WEBVIEW] Unknown command received:', message.command);
       }
   }
 });
@@ -1009,7 +1010,7 @@ function updateStatus(_message: string, _type: 'info' | 'success' | 'error' = 'i
 
 // Activity listeners disabled to maintain toast behavior
 function setupActivityListeners(): void {
-  console.log('📱 [ACTIVITY] Activity listeners disabled to prevent status re-show');
+  log('📱 [ACTIVITY] Activity listeners disabled to prevent status re-show');
   // Removed activity listeners that were causing status to re-appear
 }
 
@@ -1022,20 +1023,20 @@ document.addEventListener('keydown', (e) => {
 });
 
 // Notify extension that webview is ready
-console.log('🎯 [WEBVIEW] Webview script starting...');
+log('🎯 [WEBVIEW] Webview script starting...');
 updateStatus('Webview script loaded');
 
 setupActivityListeners();
 
 function sendReadyMessage(): void {
-  console.log('🎯 [WEBVIEW] Sending READY message to extension');
+  log('🎯 [WEBVIEW] Sending READY message to extension');
   updateStatus('Sending ready message to extension');
   try {
     vscode.postMessage({ command: 'ready' as const });
-    console.log('✅ [WEBVIEW] READY message sent successfully');
+    log('✅ [WEBVIEW] READY message sent successfully');
     updateStatus('Ready message sent, waiting for response...');
   } catch (error) {
-    console.error('❌ [WEBVIEW] Failed to send READY message:', error);
+    log('❌ [WEBVIEW] Failed to send READY message:', error);
     updateStatus(`ERROR sending ready: ${String(error)}`);
   }
 }

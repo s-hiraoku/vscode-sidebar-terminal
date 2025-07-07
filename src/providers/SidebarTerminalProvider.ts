@@ -4,6 +4,7 @@ import { VsCodeMessage, WebviewMessage } from '../types/common';
 import { TERMINAL_CONSTANTS } from '../constants';
 import { getTerminalConfig, generateNonce, normalizeTerminalInfo } from '../utils/common';
 import { showSuccess, showError, TerminalErrorHandler } from '../utils/feedback';
+import { provider as log } from '../utils/logger';
 
 export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = 'sidebarTerminal';
@@ -20,7 +21,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
     _context: vscode.WebviewViewResolveContext,
     _token: vscode.CancellationToken
   ): void {
-    console.log('🔧 [DEBUG] SidebarTerminalProvider.resolveWebviewView called');
+    log('🔧 [DEBUG] SidebarTerminalProvider.resolveWebviewView called');
     this._view = webviewView;
 
     // Enable scripts and set resource roots
@@ -31,10 +32,10 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
 
     try {
       const html = this._getHtmlForWebview(webviewView.webview);
-      console.log('🔧 [DEBUG] Generated HTML length:', html.length);
-      console.log('🔧 [DEBUG] Setting webview HTML...');
+      log('🔧 [DEBUG] Generated HTML length:', html.length);
+      log('🔧 [DEBUG] Setting webview HTML...');
       webviewView.webview.html = html;
-      console.log('✅ [DEBUG] HTML set successfully');
+      log('✅ [DEBUG] HTML set successfully');
     } catch (error) {
       console.error('❌ [ERROR] Failed to generate HTML for webview:', error);
       void vscode.window.showErrorMessage(`Failed to generate webview HTML: ${String(error)}`);
@@ -44,7 +45,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
     // Handle messages from the webview
     webviewView.webview.onDidReceiveMessage(
       async (message: VsCodeMessage) => {
-        console.log('📨 [DEBUG] Received message from webview:', message.command, message);
+        log('📨 [DEBUG] Received message from webview:', message.command, message);
         await this._handleWebviewMessage(message);
       },
       null,
@@ -57,11 +58,11 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
     // Do not force initial terminal creation here
     // Let _initializeTerminal handle it when webview is ready
 
-    console.log('✅ [DEBUG] WebviewView setup completed');
+    log('✅ [DEBUG] WebviewView setup completed');
   }
 
   public splitTerminal(): void {
-    console.log('🔧 [DEBUG] Splitting terminal...');
+    log('🔧 [DEBUG] Splitting terminal...');
     try {
       // Check if we can split (use configured terminal limit)
       const terminals = this._terminalManager.getTerminals();
@@ -81,7 +82,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
 
       // Then create a new terminal which will be used as secondary
       const terminalId = this._terminalManager.createTerminal();
-      console.log('✅ [DEBUG] Split terminal created with ID:', terminalId);
+      log('✅ [DEBUG] Split terminal created with ID:', terminalId);
 
       // The terminal creation event will send TERMINAL_CREATED to webview
     } catch (error) {
@@ -91,13 +92,13 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
   }
 
   public openSettings(): void {
-    console.log('⚙️ [DEBUG] Opening settings...');
+    log('⚙️ [DEBUG] Opening settings...');
     try {
       // Send message to webview to open settings panel
       void this._sendMessage({
         command: 'openSettings',
       });
-      console.log('✅ [DEBUG] Settings open command sent');
+      log('✅ [DEBUG] Settings open command sent');
     } catch (error) {
       console.error('❌ [ERROR] Failed to open settings:', error);
       void vscode.window.showErrorMessage(`Failed to open settings: ${String(error)}`);
@@ -105,14 +106,14 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
   }
 
   public killTerminal(): void {
-    console.log('🔧 [DEBUG] Killing terminal...');
+    log('🔧 [DEBUG] Killing terminal...');
     try {
       const activeTerminalId = this._terminalManager.getActiveTerminalId();
       const terminals = this._terminalManager.getTerminals();
 
-      console.log('🔧 [DEBUG] Active terminal ID:', activeTerminalId);
-      console.log('🔧 [DEBUG] Total terminals:', terminals.length);
-      console.log(
+      log('🔧 [DEBUG] Active terminal ID:', activeTerminalId);
+      log('🔧 [DEBUG] Total terminals:', terminals.length);
+      log(
         '🔧 [DEBUG] Terminal list:',
         terminals.map((t) => t.id)
       );
@@ -130,7 +131,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
         return;
       }
 
-      console.log('🔧 [DEBUG] Proceeding to kill active terminal:', activeTerminalId);
+      log('🔧 [DEBUG] Proceeding to kill active terminal:', activeTerminalId);
 
       // Check if confirmation is needed
       const config = vscode.workspace.getConfiguration('sidebarTerminal');
@@ -154,7 +155,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
 
   private _performKillTerminal(terminalId: string): void {
     try {
-      console.log('🗑️ [PROVIDER] Performing kill for active terminal:', terminalId);
+      log('🗑️ [PROVIDER] Performing kill for active terminal:', terminalId);
 
       // Kill the terminal process in TerminalManager
       // Note: TerminalManager.killTerminal always kills the active terminal regardless of ID
@@ -166,7 +167,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
         terminalId: terminalId,
       });
 
-      console.log('✅ [PROVIDER] Terminal killed successfully:', terminalId);
+      log('✅ [PROVIDER] Terminal killed successfully:', terminalId);
       showSuccess(`Terminal ${terminalId} closed`);
     } catch (error) {
       console.error('❌ [PROVIDER] Failed to perform kill terminal:', error);
@@ -175,28 +176,28 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
   }
 
   public async _initializeTerminal(): Promise<void> {
-    console.log('🔧 [DEBUG] Initializing terminal...');
-    console.log('🔧 [DEBUG] Terminal manager available:', !!this._terminalManager);
-    console.log('🔧 [DEBUG] Webview available:', !!this._view);
+    log('🔧 [DEBUG] Initializing terminal...');
+    log('🔧 [DEBUG] Terminal manager available:', !!this._terminalManager);
+    log('🔧 [DEBUG] Webview available:', !!this._view);
 
     try {
       // Check if we have an active terminal
       const hasActive = this._terminalManager.hasActiveTerminal();
-      console.log('🔧 [DEBUG] Has active terminal:', hasActive);
+      log('🔧 [DEBUG] Has active terminal:', hasActive);
 
       let terminalId: string;
       if (!hasActive) {
-        console.log('🔧 [DEBUG] No active terminal, creating new one...');
+        log('🔧 [DEBUG] No active terminal, creating new one...');
         try {
           terminalId = this._terminalManager.createTerminal();
-          console.log('🔧 [DEBUG] New terminal created with ID:', terminalId);
+          log('🔧 [DEBUG] New terminal created with ID:', terminalId);
         } catch (createError) {
           console.error('❌ [ERROR] Failed to create terminal:', createError);
           throw new Error(`Failed to create terminal: ${String(createError)}`);
         }
       } else {
         terminalId = this._terminalManager.getActiveTerminalId() || '';
-        console.log('🔧 [DEBUG] Using existing active terminal:', terminalId);
+        log('🔧 [DEBUG] Using existing active terminal:', terminalId);
       }
 
       if (!terminalId) {
@@ -206,9 +207,9 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
       const config = getTerminalConfig();
       const terminals = this._terminalManager.getTerminals();
 
-      console.log('🔧 [DEBUG] Terminal config:', config);
-      console.log('🔧 [DEBUG] Available terminals:', terminals.length);
-      console.log('🔧 [DEBUG] Active terminal ID:', terminalId);
+      log('🔧 [DEBUG] Terminal config:', config);
+      log('🔧 [DEBUG] Available terminals:', terminals.length);
+      log('🔧 [DEBUG] Active terminal ID:', terminalId);
 
       const initMessage = {
         command: TERMINAL_CONSTANTS.COMMANDS.INIT,
@@ -217,18 +218,18 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
         activeTerminalId: terminalId,
       };
 
-      console.log(
+      log(
         '🔧 [DEBUG] Sending init message to webview:',
         JSON.stringify(initMessage, null, 2)
       );
       try {
         await this._sendMessage(initMessage);
-        console.log('✅ [DEBUG] INIT message sent successfully');
+        log('✅ [DEBUG] INIT message sent successfully');
       } catch (sendError) {
         console.error('❌ [ERROR] Failed to send INIT message:', sendError);
         throw new Error(`Failed to send INIT message: ${String(sendError)}`);
       }
-      console.log('✅ [DEBUG] Terminal initialization completed successfully');
+      log('✅ [DEBUG] Terminal initialization completed successfully');
     } catch (error) {
       console.error('❌ [ERROR] Failed to initialize terminal:', error);
       void vscode.window.showErrorMessage(`Failed to initialize terminal: ${String(error)}`);
@@ -240,16 +241,16 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
    * Webviewメッセージを処理する
    */
   private async _handleWebviewMessage(message: VsCodeMessage): Promise<void> {
-    console.log('📨 [DEBUG] Handling webview message:', message.command);
-    console.log('📨 [DEBUG] Full message object:', JSON.stringify(message, null, 2));
+    log('📨 [DEBUG] Handling webview message:', message.command);
+    log('📨 [DEBUG] Full message object:', JSON.stringify(message, null, 2));
 
     try {
       switch (message.command) {
         case TERMINAL_CONSTANTS.COMMANDS.READY:
-          console.log('✅ [DEBUG] Webview is ready, initializing terminal...');
+          log('✅ [DEBUG] Webview is ready, initializing terminal...');
           try {
             await this._initializeTerminal();
-            console.log('✅ [DEBUG] Terminal initialization completed in message handler');
+            log('✅ [DEBUG] Terminal initialization completed in message handler');
           } catch (initError) {
             console.error(
               '❌ [ERROR] Terminal initialization failed in message handler:',
@@ -262,7 +263,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
           break;
         case TERMINAL_CONSTANTS.COMMANDS.INPUT:
           if (message.data) {
-            console.log(
+            log(
               '⌨️ [DEBUG] Terminal input:',
               message.data.length,
               'chars, data:',
@@ -275,22 +276,22 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
           break;
         case TERMINAL_CONSTANTS.COMMANDS.RESIZE:
           if (message.cols && message.rows) {
-            console.log('📏 [DEBUG] Terminal resize:', message.cols, 'x', message.rows);
+            log('📏 [DEBUG] Terminal resize:', message.cols, 'x', message.rows);
             this._terminalManager.resize(message.cols, message.rows, message.terminalId);
           }
           break;
         case TERMINAL_CONSTANTS.COMMANDS.SWITCH_TERMINAL:
           if (message.terminalId) {
-            console.log('🔄 [DEBUG] Switching to terminal:', message.terminalId);
+            log('🔄 [DEBUG] Switching to terminal:', message.terminalId);
             this._terminalManager.setActiveTerminal(message.terminalId);
           }
           break;
         case 'splitTerminal':
-          console.log('🔀 [DEBUG] Splitting terminal from webview...');
+          log('🔀 [DEBUG] Splitting terminal from webview...');
           this.splitTerminal();
           break;
         case 'getSettings': {
-          console.log('⚙️ [DEBUG] Getting settings from webview...');
+          log('⚙️ [DEBUG] Getting settings from webview...');
           const settings = this.getCurrentSettings();
           await this._sendMessage({
             command: 'settingsResponse',
@@ -299,24 +300,24 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
           break;
         }
         case 'updateSettings': {
-          console.log('⚙️ [DEBUG] Updating settings from webview:', message.settings);
+          log('⚙️ [DEBUG] Updating settings from webview:', message.settings);
           if (message.settings) {
             await this.updateSettings(message.settings);
           }
           break;
         }
         case 'terminalClosed': {
-          console.log('🗑️ [DEBUG] Terminal closed from webview:', message.terminalId);
+          log('🗑️ [DEBUG] Terminal closed from webview:', message.terminalId);
           if (message.terminalId) {
             // Check if terminal still exists before removing
             const terminals = this._terminalManager.getTerminals();
             const terminalExists = terminals.some((t) => t.id === message.terminalId);
 
             if (terminalExists) {
-              console.log('🗑️ [DEBUG] Removing terminal from extension side:', message.terminalId);
+              log('🗑️ [DEBUG] Removing terminal from extension side:', message.terminalId);
               this._terminalManager.removeTerminal(message.terminalId);
             } else {
-              console.log(
+              log(
                 '🔄 [DEBUG] Terminal already removed from extension side:',
                 message.terminalId
               );
@@ -340,7 +341,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
     // Handle terminal output
     this._terminalManager.onData((event) => {
       if (event.data) {
-        console.log(
+        log(
           '📤 [DEBUG] Terminal output received:',
           event.data.length,
           'chars, terminalId:',
@@ -365,7 +366,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
 
     // Handle terminal creation
     this._terminalManager.onTerminalCreated((terminal) => {
-      console.log('🆕 [DEBUG] Terminal created:', terminal.id, terminal.name);
+      log('🆕 [DEBUG] Terminal created:', terminal.id, terminal.name);
       void this._sendMessage({
         command: TERMINAL_CONSTANTS.COMMANDS.TERMINAL_CREATED,
         terminalId: terminal.id,
@@ -393,7 +394,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
     }
 
     try {
-      console.log('📤 [DEBUG] Sending message to webview:', message.command);
+      log('📤 [DEBUG] Sending message to webview:', message.command);
       await this._view.webview.postMessage(message);
     } catch (error) {
       console.error('❌ [ERROR] Failed to send message to webview:', error);
@@ -402,7 +403,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
   }
 
   private _getHtmlForWebview(webview: vscode.Webview): string {
-    console.log('🔧 [DEBUG] Generating HTML for webview...');
+    log('🔧 [DEBUG] Generating HTML for webview...');
 
     const scriptUri = webview.asWebviewUri(
       vscode.Uri.joinPath(this._extensionContext.extensionUri, 'dist', 'webview.js')
@@ -420,9 +421,9 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
 
     const nonce = generateNonce();
 
-    console.log('🔧 [DEBUG] Script URI:', scriptUri.toString());
-    console.log('🔧 [DEBUG] XTerm CSS URI:', xtermCssUri.toString());
-    console.log('🔧 [DEBUG] CSP nonce:', nonce);
+    log('🔧 [DEBUG] Script URI:', scriptUri.toString());
+    log('🔧 [DEBUG] XTerm CSS URI:', xtermCssUri.toString());
+    log('🔧 [DEBUG] CSP nonce:', nonce);
 
     const html = `<!DOCTYPE html>
     <html lang="en">
@@ -621,13 +622,13 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
             <!-- Simple terminal container -->
         </div>
         <script nonce="${nonce}">
-            console.log('🎯 [WEBVIEW] Script loaded');
+            log('🎯 [WEBVIEW] Script loaded');
         </script>
         <script nonce="${nonce}" src="${scriptUri.toString()}"></script>
     </body>
     </html>`;
 
-    console.log('✅ [DEBUG] HTML generation completed');
+    log('✅ [DEBUG] HTML generation completed');
     return html;
   }
 
@@ -664,7 +665,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
         await config.update('theme', settings.theme, vscode.ConfigurationTarget.Global);
       }
 
-      console.log('✅ [DEBUG] Settings updated successfully');
+      log('✅ [DEBUG] Settings updated successfully');
       showSuccess('Settings updated successfully');
 
       // Reinitialize terminal with new settings to apply changes

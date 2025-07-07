@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as pty from 'node-pty';
 import { TerminalInstance, TerminalEvent } from '../types/common';
 import { TERMINAL_CONSTANTS, ERROR_MESSAGES } from '../constants';
+import { terminal as log } from '../utils/logger';
 import {
   getTerminalConfig,
   getShellForPlatform,
@@ -41,9 +42,9 @@ export class TerminalManager {
   }
 
   public createTerminal(): string {
-    console.log('🔧 [DEBUG] TerminalManager.createTerminal called');
+    log('🔧 [DEBUG] TerminalManager.createTerminal called');
     const config = getTerminalConfig();
-    console.log('🔧 [DEBUG] Terminal config:', config);
+    log('🔧 [DEBUG] Terminal config:', config);
 
     if (this._terminals.size >= config.maxTerminals) {
       showWarningMessage(`${ERROR_MESSAGES.MAX_TERMINALS_REACHED} (${config.maxTerminals})`);
@@ -55,11 +56,11 @@ export class TerminalManager {
     const shellArgs = config.shellArgs;
     const cwd = getWorkingDirectory();
 
-    console.log('📁 [TERMINAL] Creating terminal with:');
-    console.log('📁 [TERMINAL] - ID:', terminalId);
-    console.log('📁 [TERMINAL] - Shell:', shell);
-    console.log('📁 [TERMINAL] - Shell Args:', shellArgs);
-    console.log('📁 [TERMINAL] - Working Directory (cwd):', cwd);
+    log('📁 [TERMINAL] Creating terminal with:');
+    log('📁 [TERMINAL] - ID:', terminalId);
+    log('📁 [TERMINAL] - Shell:', shell);
+    log('📁 [TERMINAL] - Shell Args:', shellArgs);
+    log('📁 [TERMINAL] - Working Directory (cwd):', cwd);
 
     try {
       // Prepare environment variables with explicit PWD
@@ -74,10 +75,10 @@ export class TerminalManager {
           }),
       } as { [key: string]: string };
 
-      console.log('📁 [TERMINAL] Environment variables:');
-      console.log('📁 [TERMINAL] - PWD:', env.PWD);
-      console.log('📁 [TERMINAL] - VSCODE_WORKSPACE:', env.VSCODE_WORKSPACE);
-      console.log('📁 [TERMINAL] - VSCODE_PROJECT_NAME:', env.VSCODE_PROJECT_NAME);
+      log('📁 [TERMINAL] Environment variables:');
+      log('📁 [TERMINAL] - PWD:', env.PWD);
+      log('📁 [TERMINAL] - VSCODE_WORKSPACE:', env.VSCODE_WORKSPACE);
+      log('📁 [TERMINAL] - VSCODE_PROJECT_NAME:', env.VSCODE_PROJECT_NAME);
 
       const ptyProcess = pty.spawn(shell, shellArgs, {
         name: 'xterm-color',
@@ -101,7 +102,7 @@ export class TerminalManager {
       this._activeTerminalManager.setActive(terminalId);
 
       ptyProcess.onData((data) => {
-        console.log(
+        log(
           '📤 [DEBUG] PTY data received:',
           data.length,
           'chars for terminal:',
@@ -113,7 +114,7 @@ export class TerminalManager {
       });
 
       ptyProcess.onExit((exitCode) => {
-        console.log(
+        log(
           '🚪 [DEBUG] PTY process exited:',
           exitCode.exitCode,
           'for terminal:',
@@ -122,21 +123,21 @@ export class TerminalManager {
 
         // Check if this terminal is being manually killed to prevent infinite loop
         if (this._terminalBeingKilled.has(terminalId)) {
-          console.log(
+          log(
             '🗑️ [DEBUG] Terminal exit triggered by manual kill, cleaning up:',
             terminalId
           );
           this._terminalBeingKilled.delete(terminalId);
           this._cleanupTerminalData(terminalId);
         } else {
-          console.log('🚪 [DEBUG] Terminal exited naturally, removing:', terminalId);
+          log('🚪 [DEBUG] Terminal exited naturally, removing:', terminalId);
           this._exitEmitter.fire({ terminalId, exitCode: exitCode.exitCode });
           this._removeTerminal(terminalId);
         }
       });
 
-      console.log('✅ [TERMINAL] Terminal created successfully with ID:', terminalId);
-      console.log('📁 [TERMINAL] Expected working directory:', cwd);
+      log('✅ [TERMINAL] Terminal created successfully with ID:', terminalId);
+      log('📁 [TERMINAL] Expected working directory:', cwd);
 
       this._terminalCreatedEmitter.fire(terminal);
       return terminalId;
@@ -148,7 +149,7 @@ export class TerminalManager {
 
   public sendInput(data: string, terminalId?: string): void {
     const id = terminalId || this._activeTerminalManager.getActive();
-    console.log(
+    log(
       '🔧 [DEBUG] TerminalManager.sendInput called with data:',
       JSON.stringify(data),
       'terminalId:',
@@ -167,9 +168,9 @@ export class TerminalManager {
     }
 
     try {
-      console.log('🔧 [DEBUG] Writing to pty:', JSON.stringify(data));
+      log('🔧 [DEBUG] Writing to pty:', JSON.stringify(data));
       terminal.pty.write(data);
-      console.log('✅ [DEBUG] Successfully wrote to pty');
+      log('✅ [DEBUG] Successfully wrote to pty');
     } catch (error) {
       console.error('❌ [ERROR] Failed to write to pty:', error);
       showErrorMessage('Failed to send input to terminal', error);
@@ -254,7 +255,7 @@ export class TerminalManager {
     }
 
     if (terminalId && terminalId !== activeId) {
-      console.log(
+      log(
         '🔄 [TERMINAL] Requested to safely kill:',
         terminalId,
         'but will kill active terminal:',
@@ -283,7 +284,7 @@ export class TerminalManager {
     }
 
     if (terminalId && terminalId !== activeId) {
-      console.log(
+      log(
         '🔄 [TERMINAL] Requested to kill:',
         terminalId,
         'but will kill active terminal:',
@@ -293,11 +294,11 @@ export class TerminalManager {
 
     // Prevent infinite loop by tracking kill state
     if (this._terminalBeingKilled.has(activeId)) {
-      console.log('🗑️ [WARN] Active terminal already being killed:', activeId);
+      log('🗑️ [WARN] Active terminal already being killed:', activeId);
       return;
     }
 
-    console.log('🗑️ [TERMINAL] Killing active terminal:', activeId);
+    log('🗑️ [TERMINAL] Killing active terminal:', activeId);
     const terminal = this._terminals.get(activeId);
     if (terminal) {
       try {
@@ -306,7 +307,7 @@ export class TerminalManager {
 
         // Kill the actual terminal process
         terminal.pty.kill();
-        console.log('🗑️ [TERMINAL] Terminal process killed:', activeId);
+        log('🗑️ [TERMINAL] Terminal process killed:', activeId);
 
         // Note: cleanup will be handled by onExit handler to avoid double cleanup
       } catch (error) {
@@ -406,7 +407,7 @@ export class TerminalManager {
    * ターミナルデータのクリーンアップのみを行う（プロセスはkillしない）
    */
   private _cleanupTerminalData(terminalId: string): void {
-    console.log('🧹 [TERMINAL] Cleaning up terminal data:', terminalId);
+    log('🧹 [TERMINAL] Cleaning up terminal data:', terminalId);
 
     // Clean up data buffers for this terminal
     this._flushBuffer(terminalId);
@@ -421,8 +422,8 @@ export class TerminalManager {
     this._terminals.delete(terminalId);
     this._terminalRemovedEmitter.fire(terminalId);
 
-    console.log('🧹 [TERMINAL] Terminal data cleaned up:', terminalId);
-    console.log('🧹 [TERMINAL] Remaining terminals:', Array.from(this._terminals.keys()));
+    log('🧹 [TERMINAL] Terminal data cleaned up:', terminalId);
+    log('🧹 [TERMINAL] Remaining terminals:', Array.from(this._terminals.keys()));
 
     // アクティブターミナルだった場合、別のターミナルをアクティブにする
     this._updateActiveTerminalAfterRemoval(terminalId);
@@ -432,7 +433,7 @@ export class TerminalManager {
    * ターミナルを削除し、必要に応じて他のターミナルをアクティブにする
    */
   private _removeTerminal(terminalId: string): void {
-    console.log('🗑️ [TERMINAL] Removing terminal:', terminalId);
+    log('🗑️ [TERMINAL] Removing terminal:', terminalId);
 
     // Get terminal instance before removal
     const terminal = this._terminals.get(terminalId);
@@ -441,7 +442,7 @@ export class TerminalManager {
     if (terminal) {
       try {
         terminal.pty.kill();
-        console.log('🗑️ [TERMINAL] Process killed during removal:', terminalId);
+        log('🗑️ [TERMINAL] Process killed during removal:', terminalId);
       } catch (error) {
         console.warn('⚠️ [TERMINAL] Error killing process during removal:', error);
       }
@@ -460,10 +461,10 @@ export class TerminalManager {
       if (remaining) {
         this._activeTerminalManager.setActive(remaining.id);
         remaining.isActive = true;
-        console.log('🔄 [TERMINAL] Set new active terminal:', remaining.id);
+        log('🔄 [TERMINAL] Set new active terminal:', remaining.id);
       } else {
         this._activeTerminalManager.clearActive();
-        console.log('🔄 [TERMINAL] No remaining terminals, cleared active');
+        log('🔄 [TERMINAL] No remaining terminals, cleared active');
       }
     }
   }
