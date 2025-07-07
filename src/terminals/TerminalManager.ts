@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import * as vscode from 'vscode';
 import * as pty from 'node-pty';
 import { TerminalInstance, TerminalEvent } from '../types/common';
@@ -108,8 +112,17 @@ export class TerminalManager {
         this._bufferData(terminalId, data);
       });
 
-      ptyProcess.onExit((exitCode) => {
-        log('🚪 [DEBUG] PTY process exited:', exitCode.exitCode, 'for terminal:', terminalId);
+      ptyProcess.onExit((event) => {
+        const exitCode = typeof event === 'number' ? event : event.exitCode;
+        const signal = typeof event === 'object' ? event.signal : undefined;
+        log(
+          '🚪 [DEBUG] PTY process exited:',
+          exitCode,
+          'signal:',
+          signal,
+          'for terminal:',
+          terminalId
+        );
 
         // Check if this terminal is being manually killed to prevent infinite loop
         if (this._terminalBeingKilled.has(terminalId)) {
@@ -118,7 +131,7 @@ export class TerminalManager {
           this._cleanupTerminalData(terminalId);
         } else {
           log('🚪 [DEBUG] Terminal exited naturally, removing:', terminalId);
-          this._exitEmitter.fire({ terminalId, exitCode: exitCode.exitCode });
+          this._exitEmitter.fire({ terminalId, exitCode });
           this._removeTerminal(terminalId);
         }
       });

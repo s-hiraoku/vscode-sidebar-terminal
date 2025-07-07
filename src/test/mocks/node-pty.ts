@@ -2,24 +2,15 @@
  * Mock implementation of node-pty for testing environments
  */
 
-export interface IPty {
-  pid: number;
-  cols: number;
-  rows: number;
-  handleFlowControl: boolean;
-  onData: (callback: (data: string) => void) => void;
-  onExit: (callback: (exitCode: number, signal?: number) => void) => void;
-  write: (data: string) => void;
-  resize: (cols: number, rows: number) => void;
-  kill: (signal?: string) => void;
-  clear?: () => void;
-}
+import type { IPty } from '../../types/common';
+
+export type { IPty };
 
 export class MockPty implements IPty {
   pid = 1234;
   cols = 80;
   rows = 24;
-  handleFlowControl = false;
+  handleFlowControl? = false;
 
   private dataCallback?: (data: string) => void;
   private exitCallback?: (exitCode: number, signal?: number) => void;
