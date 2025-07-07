@@ -22,6 +22,9 @@ export class TerminalManager {
   private readonly _terminalCreatedEmitter = new vscode.EventEmitter<TerminalInstance>();
   private readonly _terminalRemovedEmitter = new vscode.EventEmitter<string>();
 
+  // Track terminals being killed to prevent infinite loops
+  private readonly _terminalBeingKilled = new Set<string>();
+
   // Performance optimization: Data batching for high-frequency output
   private readonly _dataBuffers = new Map<string, string[]>();
   private readonly _dataFlushTimers = new Map<string, NodeJS.Timeout>();
@@ -116,8 +119,17 @@ export class TerminalManager {
           'for terminal:',
           terminalId
         );
-        this._exitEmitter.fire({ terminalId, exitCode: exitCode.exitCode });
-        this._removeTerminal(terminalId);
+        
+        // Check if this terminal is being manually killed to prevent infinite loop
+        if (this._terminalBeingKilled.has(terminalId)) {
+          console.log('🗑️ [DEBUG] Terminal exit triggered by manual kill, cleaning up:', terminalId);
+          this._terminalBeingKilled.delete(terminalId);
+          this._cleanupTerminalData(terminalId);
+        } else {
+          console.log('🚪 [DEBUG] Terminal exited naturally, removing:', terminalId);
+          this._exitEmitter.fire({ terminalId, exitCode: exitCode.exitCode });
+          this._removeTerminal(terminalId);
+        }
       });
 
       console.log('✅ [TERMINAL] Terminal created successfully with ID:', terminalId);
@@ -194,31 +206,114 @@ export class TerminalManager {
     this._removeTerminal(terminalId);
   }
 
+  /**
+   * ターミナルが削除可能かチェック
+   */
+  public canRemoveTerminal(terminalId: string): { canRemove: boolean; reason?: string } {
+    if (!this._terminals.has(terminalId)) {
+      return { canRemove: false, reason: 'Terminal not found' };
+    }
+
+    // 最低1つのターミナルは保持する
+    if (this._terminals.size <= 1) {
+      return { canRemove: false, reason: 'Must keep at least 1 terminal open' };
+    }
+
+    return { canRemove: true };
+  }
+
+  /**
+   * 安全なターミナル削除（削除前の検証付き）
+   */
+  public safeRemoveTerminal(terminalId: string): boolean {
+    const validation = this.canRemoveTerminal(terminalId);
+    if (!validation.canRemove) {
+      console.warn('⚠️ [TERMINAL] Cannot remove terminal:', validation.reason);
+      showWarningMessage(validation.reason || 'Cannot remove terminal');
+      return false;
+    }
+
+    this._removeTerminal(terminalId);
+    return true;
+  }
+
+  /**
+   * 安全なターミナルキル（削除前の検証付き）
+   * 常にアクティブターミナルをkillする
+   */
+  public safeKillTerminal(terminalId?: string): boolean {
+    const activeId = this._activeTerminalManager.getActive();
+    if (!activeId) {
+      const message = 'No active terminal to kill';
+      console.warn('⚠️ [WARN]', message);
+      showWarningMessage(message);
+      return false;
+    }
+
+    if (terminalId && terminalId !== activeId) {
+      console.log(
+        '🔄 [TERMINAL] Requested to safely kill:',
+        terminalId,
+        'but will kill active terminal:',
+        activeId
+      );
+    }
+
+    const validation = this.canRemoveTerminal(activeId);
+    if (!validation.canRemove) {
+      console.warn('⚠️ [TERMINAL] Cannot kill active terminal:', validation.reason);
+      showWarningMessage(validation.reason || 'Cannot kill active terminal');
+      return false;
+    }
+
+    this.killTerminal(); // No ID needed, will use active terminal
+    return true;
+  }
+
   public killTerminal(terminalId?: string): void {
-    const id = terminalId || this._activeTerminalManager.getActive();
-    if (!id) {
-      console.warn('⚠️ [WARN] No terminal ID provided and no active terminal');
+    // According to the spec: always kill the ACTIVE terminal, ignore provided ID
+    const activeId = this._activeTerminalManager.getActive();
+    if (!activeId) {
+      console.warn('⚠️ [WARN] No active terminal to kill');
+      showWarningMessage('No active terminal to kill');
       return;
     }
 
-    console.log('🗑️ [TERMINAL] Killing terminal:', id);
-    const terminal = this._terminals.get(id);
+    if (terminalId && terminalId !== activeId) {
+      console.log(
+        '🔄 [TERMINAL] Requested to kill:',
+        terminalId,
+        'but will kill active terminal:',
+        activeId
+      );
+    }
+
+    // Prevent infinite loop by tracking kill state
+    if (this._terminalBeingKilled.has(activeId)) {
+      console.log('🗑️ [WARN] Active terminal already being killed:', activeId);
+      return;
+    }
+
+    console.log('🗑️ [TERMINAL] Killing active terminal:', activeId);
+    const terminal = this._terminals.get(activeId);
     if (terminal) {
       try {
+        // Mark terminal as being killed before killing the process
+        this._terminalBeingKilled.add(activeId);
+
         // Kill the actual terminal process
         terminal.pty.kill();
-        console.log('🗑️ [TERMINAL] Terminal process killed:', id);
+        console.log('🗑️ [TERMINAL] Terminal process killed:', activeId);
 
-        // Clean up terminal data
-        this._removeTerminal(id);
-        console.log('🗑️ [TERMINAL] Terminal data cleaned up:', id);
+        // Note: cleanup will be handled by onExit handler to avoid double cleanup
       } catch (error) {
         console.error('❌ [TERMINAL] Error killing terminal:', error);
-        // Still try to clean up data even if kill fails
-        this._removeTerminal(id);
+        // Remove from kill tracking and cleanup if kill fails
+        this._terminalBeingKilled.delete(activeId);
+        this._removeTerminal(activeId);
       }
     } else {
-      console.warn('⚠️ [WARN] Terminal not found for kill:', id);
+      console.warn('⚠️ [WARN] Active terminal not found for kill:', activeId);
     }
   }
 
@@ -230,6 +325,9 @@ export class TerminalManager {
     }
     this._dataBuffers.clear();
     this._dataFlushTimers.clear();
+
+    // Clear kill tracking
+    this._terminalBeingKilled.clear();
 
     for (const terminal of this._terminals.values()) {
       terminal.pty.kill();
@@ -302,6 +400,32 @@ export class TerminalManager {
   }
 
   /**
+   * ターミナルデータのクリーンアップのみを行う（プロセスはkillしない）
+   */
+  private _cleanupTerminalData(terminalId: string): void {
+    console.log('🧹 [TERMINAL] Cleaning up terminal data:', terminalId);
+
+    // Clean up data buffers for this terminal
+    this._flushBuffer(terminalId);
+    this._dataBuffers.delete(terminalId);
+    const timer = this._dataFlushTimers.get(terminalId);
+    if (timer) {
+      clearTimeout(timer);
+      this._dataFlushTimers.delete(terminalId);
+    }
+
+    // Remove from terminals map
+    this._terminals.delete(terminalId);
+    this._terminalRemovedEmitter.fire(terminalId);
+
+    console.log('🧹 [TERMINAL] Terminal data cleaned up:', terminalId);
+    console.log('🧹 [TERMINAL] Remaining terminals:', Array.from(this._terminals.keys()));
+
+    // アクティブターミナルだった場合、別のターミナルをアクティブにする
+    this._updateActiveTerminalAfterRemoval(terminalId);
+  }
+
+  /**
    * ターミナルを削除し、必要に応じて他のターミナルをアクティブにする
    */
   private _removeTerminal(terminalId: string): void {
@@ -320,32 +444,23 @@ export class TerminalManager {
       }
     }
 
-    // Clean up data buffers for this terminal
-    this._flushBuffer(terminalId);
-    this._dataBuffers.delete(terminalId);
-    const timer = this._dataFlushTimers.get(terminalId);
-    if (timer) {
-      clearTimeout(timer);
-      this._dataFlushTimers.delete(terminalId);
-    }
+    // Clean up terminal data
+    this._cleanupTerminalData(terminalId);
+  }
 
-    // Remove from terminals map
-    this._terminals.delete(terminalId);
-    this._terminalRemovedEmitter.fire(terminalId);
-
-    console.log('🗑️ [TERMINAL] Terminal removed from map:', terminalId);
-    console.log('🗑️ [TERMINAL] Remaining terminals:', Array.from(this._terminals.keys()));
-
-    // アクティブターミナルだった場合、別のターミナルをアクティブにする
+  /**
+   * ターミナル削除後のアクティブターミナル更新処理
+   */
+  private _updateActiveTerminalAfterRemoval(terminalId: string): void {
     if (this._activeTerminalManager.isActive(terminalId)) {
       const remaining = getFirstValue(this._terminals);
       if (remaining) {
         this._activeTerminalManager.setActive(remaining.id);
         remaining.isActive = true;
-        console.log('🗑️ [TERMINAL] Set new active terminal:', remaining.id);
+        console.log('🔄 [TERMINAL] Set new active terminal:', remaining.id);
       } else {
         this._activeTerminalManager.clearActive();
-        console.log('🗑️ [TERMINAL] No remaining terminals, cleared active');
+        console.log('🔄 [TERMINAL] No remaining terminals, cleared active');
       }
     }
   }

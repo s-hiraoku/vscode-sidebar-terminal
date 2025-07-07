@@ -12,6 +12,7 @@ import { getWebviewTheme, WEBVIEW_THEME_CONSTANTS } from './utils/WebviewThemeUt
 import { SimpleStatusManager } from './managers/SimpleStatusManager';
 import { SplitManager } from './managers/SplitManager';
 import { SettingsPanel } from './components/SettingsPanel';
+import { NotificationUtils } from './utils/NotificationUtils';
 
 // Type definitions
 interface TerminalMessage extends WebviewMessage {
@@ -89,7 +90,6 @@ class TerminalWebviewManager {
       return;
     }
 
-    this.statusManager.showStatus('Initializing simple terminal');
     console.log('🎯 [WEBVIEW] Initializing simple terminal');
 
     // Create simple terminal container
@@ -126,7 +126,6 @@ class TerminalWebviewManager {
       this.terminalContainer = document.getElementById('terminal-body');
 
       if (this.terminalContainer) {
-        this.statusManager.showStatus('Simple terminal view initialized', 'success');
         console.log('🎯 [WEBVIEW] Simple terminal container created successfully');
       } else {
         this.statusManager.showStatus('ERROR: Failed to create terminal container', 'error');
@@ -139,7 +138,6 @@ class TerminalWebviewManager {
   }
 
   public createTerminal(id: string, name: string, config: TerminalConfig): void {
-    this.statusManager.showStatus(`Creating terminal: ${name}`);
     this.setActiveTerminalId(id);
     console.log('🎯 [WEBVIEW] Creating terminal:', id, name);
 
@@ -169,8 +167,6 @@ class TerminalWebviewManager {
       };
 
       const terminal = new Terminal(terminalOptions);
-
-      this.statusManager.showStatus(`Terminal instance created: ${name}`);
 
       const fitAddon = new FitAddon();
       terminal.loadAddon(fitAddon);
@@ -412,18 +408,40 @@ class TerminalWebviewManager {
     console.log('✅ [WEBVIEW] Switched to terminal:', id);
   }
 
-  public closeTerminal(id: string): void {
-    console.log('🗑️ [WEBVIEW] Close terminal requested:', id);
+  public closeTerminal(id?: string): void {
+    // According to the spec: always kill the ACTIVE terminal, not the specified one
+    const activeTerminalId = this.activeTerminalId;
+    console.log(
+      '🗑️ [WEBVIEW] Close terminal requested for:',
+      id,
+      'but will close active terminal:',
+      activeTerminalId
+    );
 
-    // Check if this is a safe kill attempt
-    if (!this.canKillTerminal(id)) {
+    if (!activeTerminalId) {
+      console.warn('⚠️ [WEBVIEW] No active terminal to close');
+      NotificationUtils.showTerminalKillError('No active terminal to close');
       return;
     }
 
-    this.performKillTerminal(id);
+    // Check if this is a safe kill attempt using the ACTIVE terminal
+    if (!this.canKillTerminal(activeTerminalId)) {
+      return;
+    }
+
+    this.performKillTerminal(activeTerminalId);
   }
 
+  // Track terminals being closed to prevent double processing
+  private terminalsBeingClosed = new Set<string>();
+
   private canKillTerminal(id: string): boolean {
+    // Prevent double processing
+    if (this.terminalsBeingClosed.has(id)) {
+      console.log('🔄 [WEBVIEW] Terminal already being closed:', id);
+      return false;
+    }
+
     const terminalCount = this.splitManager.getTerminals().size;
     const minTerminalCount = 1;
 
@@ -432,6 +450,7 @@ class TerminalWebviewManager {
       terminalCount,
       minTerminalCount,
       activeTerminalId: this.activeTerminalId,
+      beingClosed: Array.from(this.terminalsBeingClosed),
     });
 
     if (terminalCount <= minTerminalCount) {
@@ -444,44 +463,15 @@ class TerminalWebviewManager {
   }
 
   private showLastTerminalWarning(minCount: number): void {
-    const warningOverlay = document.createElement('div');
-    warningOverlay.style.cssText = `
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: var(--vscode-notifications-background, #1e1e1e);
-      border: 2px solid var(--vscode-errorBackground, #f14c4c);
-      border-radius: 6px;
-      padding: 16px 20px;
-      color: var(--vscode-errorForeground, #ffffff);
-      font-size: 12px;
-      z-index: 10000;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-      text-align: center;
-    `;
-
-    warningOverlay.innerHTML = `
-      <div style="display: flex; align-items: center; gap: 8px; justify-content: center; margin-bottom: 8px;">
-        <span style="font-size: 16px;">⚠️</span>
-        <span><strong>Cannot close terminal</strong></span>
-      </div>
-      <div style="margin-bottom: 4px;">
-        Must keep at least ${minCount} terminal${minCount > 1 ? 's' : ''} open
-      </div>
-    `;
-
-    document.body.appendChild(warningOverlay);
-
-    setTimeout(() => {
-      if (warningOverlay.parentNode) {
-        warningOverlay.remove();
-      }
-    }, 3000);
+    NotificationUtils.showTerminalCloseError(minCount);
   }
 
   private performKillTerminal(id: string): void {
     console.log('🗑️ [WEBVIEW] Performing kill for terminal:', id);
+
+    // Mark terminal as being closed
+    this.terminalsBeingClosed.add(id);
+
     console.log('🗑️ [WEBVIEW] Current active terminal:', this.activeTerminalId);
     console.log(
       '🗑️ [WEBVIEW] Terminals before removal:',
@@ -551,13 +541,88 @@ class TerminalWebviewManager {
       this.statusManager.showStatus(`Terminal ${id} closed`, 'success');
     }
 
-    // Notify extension about terminal closure
-    vscode.postMessage({
-      command: 'terminalClosed',
-      terminalId: id,
-    });
+    // Notify extension about terminal closure ONLY if terminal actually existed
+    if (terminalData) {
+      vscode.postMessage({
+        command: 'terminalClosed',
+        terminalId: id,
+      });
+      console.log('📤 [WEBVIEW] Sent terminalClosed message to extension for:', id);
+    }
 
     console.log('✅ [WEBVIEW] Terminal closed:', id);
+  }
+
+  /**
+   * Handle terminal removal notification from extension (UI cleanup only)
+   */
+  public handleTerminalRemovedFromExtension(id: string): void {
+    console.log('🗑️ [WEBVIEW] Handling terminal removal from extension:', id);
+
+    // Remove from being closed tracking (if it exists)
+    this.terminalsBeingClosed.delete(id);
+
+    // Check if terminal exists in webview
+    const terminalData = this.splitManager.getTerminals().get(id);
+    const container = this.splitManager.getTerminalContainers().get(id);
+
+    if (!terminalData && !container) {
+      console.log('🔄 [WEBVIEW] Terminal already removed from webview:', id);
+      return;
+    }
+
+    // UI cleanup only (no extension communication)
+    if (terminalData) {
+      terminalData.terminal.dispose();
+      this.splitManager.getTerminals().delete(id);
+      console.log('🗑️ [WEBVIEW] Terminal instance cleaned up:', id);
+    }
+
+    if (container) {
+      container.remove();
+      this.splitManager.getTerminalContainers().delete(id);
+      console.log('🗑️ [WEBVIEW] Terminal container cleaned up:', id);
+    }
+
+    // Update remaining terminals layout
+    const remainingTerminals = Array.from(this.splitManager.getTerminals().keys());
+    console.log('🗑️ [WEBVIEW] Remaining terminals after extension removal:', remainingTerminals);
+
+    // Apply flex layout to remaining terminals
+    remainingTerminals.forEach((terminalId) => {
+      const terminalContainer = this.splitManager.getTerminalContainers().get(terminalId);
+      if (terminalContainer) {
+        terminalContainer.style.cssText = `
+          width: 100%; 
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+          min-height: 100px;
+          margin: 0;
+          padding: 2px;
+          border: none;
+          outline: none;
+        `;
+      }
+    });
+
+    // Handle active terminal change
+    if (this.activeTerminalId === id) {
+      if (remainingTerminals.length > 0) {
+        const nextTerminalId = remainingTerminals[0];
+        if (nextTerminalId) {
+          this.switchToTerminal(nextTerminalId);
+          this.statusManager.showStatus(`Switched to terminal ${nextTerminalId}`, 'info');
+        }
+      } else {
+        this.activeTerminalId = null;
+        this.showTerminalPlaceholder();
+        this.statusManager.showStatus('All terminals closed', 'info');
+      }
+    }
+
+    console.log('✅ [WEBVIEW] Terminal removal from extension handled:', id);
   }
 
   private showTerminalPlaceholder(): void {
@@ -875,10 +940,8 @@ window.addEventListener('message', (event) => {
 
   switch (message.command) {
     case WEBVIEW_TERMINAL_CONSTANTS.COMMANDS.INIT:
-      terminalManager.getStatusManager().showStatus('Received INIT command');
       console.log('🎯 [WEBVIEW] Received INIT command', message);
       if (message.config) {
-        terminalManager.getStatusManager().showStatus('Initializing terminal UI');
         terminalManager.initializeSimpleTerminal();
 
         if (message.activeTerminalId) {
@@ -960,7 +1023,8 @@ window.addEventListener('message', (event) => {
     case WEBVIEW_TERMINAL_CONSTANTS.COMMANDS.TERMINAL_REMOVED:
       if (message.terminalId) {
         console.log('🗑️ [WEBVIEW] Received terminal removal command for:', message.terminalId);
-        terminalManager.closeTerminal(message.terminalId);
+        // Terminal was already removed on extension side, just cleanup UI
+        terminalManager.handleTerminalRemovedFromExtension(message.terminalId);
       }
       break;
 
@@ -970,7 +1034,12 @@ window.addEventListener('message', (event) => {
       break;
 
     default:
-      console.warn('⚠️ [WEBVIEW] Unknown command received:', message.command);
+      if ((message as any).command === 'killTerminal') {
+        console.log('🗑️ [WEBVIEW] Received killTerminal command');
+        terminalManager.closeTerminal(); // Will kill active terminal
+      } else {
+        console.warn('⚠️ [WEBVIEW] Unknown command received:', message.command);
+      }
   }
 });
 

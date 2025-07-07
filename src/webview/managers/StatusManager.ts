@@ -31,7 +31,6 @@ export class StatusManager {
       statusEl.className = `${CSS_CLASSES.STATUS} ${CSS_CLASSES[`STATUS_${type.toUpperCase()}` as keyof typeof CSS_CLASSES]}`;
 
       this.showStatusElement();
-      this.adjustTerminalLayout(true);
       this.clearTimer();
 
       const autoHide = true; // TODO: Read from configuration
@@ -74,7 +73,6 @@ export class StatusManager {
 
         setTimeout(() => {
           this.hideStatusElement();
-          this.adjustTerminalLayout(false);
         }, TERMINAL_CONSTANTS.DELAYS.FADE_DURATION);
       }
       this.clearTimer();
@@ -237,164 +235,16 @@ export class StatusManager {
   }
 
   /**
-   * ターミナルレイアウトを調整
-   */
-  private adjustTerminalLayout(statusVisible: boolean): void {
-    try {
-      console.log(`📐 [LAYOUT] Adjusting terminal layout, status visible: ${statusVisible}`);
-
-      const dimensions = this.calculateLayoutDimensions(statusVisible);
-      if (!dimensions) return;
-
-      this.updateTerminalBodyHeight(dimensions);
-      this.adjustSplitContainersHeight(dimensions.availableHeight);
-      this.resizeAllTerminals();
-
-      console.log(
-        `✅ [LAYOUT] Terminal layout adjusted: ${dimensions.availableHeight}px available`
-      );
-    } catch (error) {
-      ErrorHandler.getInstance().handleLayoutError(
-        error as Error,
-        'StatusManager.adjustTerminalLayout'
-      );
-    }
-  }
-
-  /**
-   * レイアウト寸法を計算
-   */
-  private calculateLayoutDimensions(statusVisible: boolean): LayoutDimensions | null {
-    try {
-      const terminalContainer = DOMUtils.getElement('#terminal');
-      const terminalHeader = DOMUtils.getElement('#terminal-header');
-      const webviewHeader = DOMUtils.getElement('#webview-header');
-
-      if (!terminalContainer) {
-        console.warn('⚠️ [LAYOUT] Terminal container not found');
-        return null;
-      }
-
-      const containerHeight = terminalContainer.clientHeight;
-      const webviewHeaderHeight = webviewHeader
-        ? webviewHeader.clientHeight
-        : TERMINAL_CONSTANTS.SIZES.HEADER_HEIGHT;
-      const terminalHeaderHeight = terminalHeader
-        ? terminalHeader.clientHeight
-        : TERMINAL_CONSTANTS.SIZES.TERMINAL_HEADER_HEIGHT;
-      const totalHeaderHeight = webviewHeaderHeight + terminalHeaderHeight;
-      const statusHeight = statusVisible ? this.STATUS_HEIGHT : 0;
-      const availableHeight = containerHeight - totalHeaderHeight - statusHeight;
-
-      return {
-        containerHeight,
-        headerHeight: totalHeaderHeight,
-        statusHeight,
-        availableHeight,
-      };
-    } catch (error) {
-      ErrorHandler.getInstance().handleLayoutError(
-        error as Error,
-        'StatusManager.calculateLayoutDimensions'
-      );
-      return null;
-    }
-  }
-
-  /**
-   * ターミナルボディの高さを更新
-   */
-  private updateTerminalBodyHeight(dimensions: LayoutDimensions): void {
-    const terminalBody = DOMUtils.getElement('#terminal-body');
-    if (terminalBody) {
-      terminalBody.style.height = `${dimensions.availableHeight}px`;
-    }
-  }
-
-  /**
-   * 分割コンテナの高さを調整
-   */
-  private adjustSplitContainersHeight(availableHeight: number): void {
-    try {
-      const splitContainers = document.querySelectorAll(`.${CSS_CLASSES.SPLIT_CONTAINER}`);
-      if (splitContainers.length > 0) {
-        console.log(`📐 [LAYOUT] Adjusting ${splitContainers.length} split containers`);
-
-        const splitCount = splitContainers.length;
-        const splitterHeight = TERMINAL_CONSTANTS.SIZES.SPLITTER_HEIGHT;
-        const totalSplitterHeight = (splitCount - 1) * splitterHeight;
-        const terminalHeight = Math.floor((availableHeight - totalSplitterHeight) / splitCount);
-
-        splitContainers.forEach((container) => {
-          (container as HTMLElement).style.height = `${terminalHeight}px`;
-        });
-      }
-    } catch (error) {
-      ErrorHandler.getInstance().handleLayoutError(
-        error as Error,
-        'StatusManager.adjustSplitContainersHeight'
-      );
-    }
-  }
-
-  /**
-   * 全ターミナルをリサイズ
-   */
-  private resizeAllTerminals(): void {
-    try {
-      // メインターミナルのリサイズ
-      const windowWithManager = window as unknown as Record<string, unknown> & {
-        terminalManager?: {
-          terminal?: { fit?: () => void };
-          fitAddon?: { fit: () => void };
-          secondaryTerminal?: { fit?: () => void };
-          secondaryFitAddon?: { fit: () => void };
-          terminals?: Map<string, { fitAddon: { fit: () => void } }>;
-        };
-      };
-
-      const terminalManager = windowWithManager.terminalManager;
-      if (terminalManager?.terminal && terminalManager?.fitAddon) {
-        setTimeout(() => {
-          terminalManager.fitAddon?.fit();
-        }, 100);
-      }
-
-      // セカンダリターミナルのリサイズ
-      if (terminalManager?.secondaryTerminal && terminalManager?.secondaryFitAddon) {
-        setTimeout(() => {
-          terminalManager.secondaryFitAddon?.fit();
-        }, 100);
-      }
-
-      // 複数ターミナルのリサイズ
-      if (terminalManager?.terminals) {
-        terminalManager.terminals.forEach((terminalData) => {
-          if (terminalData.fitAddon) {
-            setTimeout(() => {
-              terminalData.fitAddon.fit();
-            }, 100);
-          }
-        });
-      }
-    } catch (error) {
-      ErrorHandler.getInstance().handleLayoutError(
-        error as Error,
-        'StatusManager.resizeAllTerminals'
-      );
-    }
-  }
-
-  /**
    * レイアウト管理の初期化
    */
   public initializeLayoutManagement(): void {
     try {
       this.setupLayoutResizeObserver();
 
-      const debouncedAdjustLayout = PerformanceUtils.debounce(() => {
-        this.adjustTerminalLayout(this.isStatusVisible);
-      }, TERMINAL_CONSTANTS.DELAYS.RESIZE_DEBOUNCE_DELAY);
+      const debouncedAdjustLayout = PerformanceUtils.debounce(
+        () => {},
+        TERMINAL_CONSTANTS.DELAYS.RESIZE_DEBOUNCE_DELAY
+      );
 
       DOMUtils.addEventListenerSafe(
         window as unknown as HTMLElement,
@@ -422,7 +272,6 @@ export class StatusManager {
       const resizeObserver = new ResizeObserver(
         PerformanceUtils.debounce(() => {
           console.log('📐 [LAYOUT] Container resized, readjusting layout');
-          this.adjustTerminalLayout(this.isStatusVisible);
         }, TERMINAL_CONSTANTS.DELAYS.RESIZE_DEBOUNCE_DELAY)
       );
 

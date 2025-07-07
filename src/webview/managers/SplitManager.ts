@@ -4,6 +4,7 @@
 import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import { SPLIT_CONSTANTS } from '../constants/webview';
+import { NotificationUtils } from '../utils/NotificationUtils';
 
 export interface TerminalInstance {
   terminal: Terminal;
@@ -358,40 +359,7 @@ export class SplitManager {
 
   public showSplitLimitWarning(reason: string): void {
     console.warn('⚠️ [WEBVIEW] Split limit reached:', reason);
-
-    const warning = document.createElement('div');
-    warning.style.cssText = `
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: var(--vscode-notifications-background, #1e1e1e);
-      border: 2px solid var(--vscode-notificationWarning-border, #ffcc02);
-      border-radius: 6px;
-      padding: 12px 16px;
-      color: var(--vscode-notificationWarning-foreground, #ffffff);
-      font-size: 11px;
-      z-index: 10000;
-      max-width: 300px;
-      text-align: center;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-    `;
-
-    warning.innerHTML = `
-      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; justify-content: center;">
-        <span>⚠️</span>
-        <strong>Split Limit Reached</strong>
-      </div>
-      <div style="font-size: 10px;">${reason}</div>
-    `;
-
-    document.body.appendChild(warning);
-
-    setTimeout(() => {
-      if (warning.parentNode) {
-        warning.remove();
-      }
-    }, 4000);
+    NotificationUtils.showSplitLimitWarning(reason);
   }
 
   public prepareSplitMode(direction: 'horizontal' | 'vertical'): void {
