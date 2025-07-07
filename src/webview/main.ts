@@ -10,7 +10,7 @@ import type { WebviewMessage, VsCodeMessage, TerminalConfig } from '../types/com
 import { WEBVIEW_TERMINAL_CONSTANTS, SPLIT_CONSTANTS } from './constants/webview';
 import { getWebviewTheme } from './utils/WebviewThemeUtils';
 import { SimpleStatusManager } from './managers/SimpleStatusManager';
-import { SplitManager, type TerminalInstance } from './managers/SplitManager';
+import { SplitManager } from './managers/SplitManager';
 
 // Type definitions
 interface TerminalMessage extends WebviewMessage {
@@ -276,16 +276,11 @@ class TerminalWebviewManager {
         }
       });
     } else {
-      // Split mode - show all terminals but focus the active one
-      this.splitManager.getTerminalContainers().forEach((container, terminalId) => {
+      // Split mode - show all terminals
+      this.splitManager.getTerminalContainers().forEach((container, _terminalId) => {
         container.style.display = 'block';
         container.style.height = '50%';
-        // Add visual indicator for active terminal
-        if (terminalId === id) {
-          container.style.border = '2px solid var(--vscode-focusBorder, #007acc)';
-        } else {
-          container.style.border = '1px solid var(--vscode-panel-border, #454545)';
-        }
+        container.style.border = 'none';
       });
     }
 
