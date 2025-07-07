@@ -646,23 +646,6 @@ class TerminalWebviewManager {
     }
   }
 
-  public clearTerminal(): void {
-    // Clear active terminal
-    let targetTerminal = this.terminal;
-    if (this.activeTerminalId) {
-      const terminalData = this.splitManager.getTerminals().get(this.activeTerminalId);
-      if (terminalData) {
-        targetTerminal = terminalData.terminal;
-      }
-    }
-
-    if (targetTerminal) {
-      console.log('🧹 [WEBVIEW] Clearing terminal screen');
-      targetTerminal.clear();
-      targetTerminal.write('\x1b[2J\x1b[H');
-      this.statusManager.showStatus('Terminal cleared', 'success');
-    }
-  }
 
   public writeToTerminal(data: string, _terminalId?: string): void {
     // Determine which terminal to write to
@@ -986,9 +969,6 @@ window.addEventListener('message', (event) => {
       }
       break;
 
-    case WEBVIEW_TERMINAL_CONSTANTS.COMMANDS.CLEAR:
-      terminalManager.clearTerminal();
-      break;
 
     case WEBVIEW_TERMINAL_CONSTANTS.COMMANDS.EXIT:
       if (message.exitCode !== undefined) {

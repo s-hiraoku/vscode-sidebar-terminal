@@ -112,7 +112,6 @@ suite('UX Feedback Test Suite', () => {
       const terminalId = terminalManager.createTerminal();
       assert.ok(terminalId, 'Terminal creation should return an ID');
 
-      provider.clearTerminal();
       provider.killTerminal();
 
       const endTime = Date.now();

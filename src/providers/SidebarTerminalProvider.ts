@@ -70,9 +70,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
 
       if (terminals.length >= maxSplitTerminals) {
         console.warn('⚠️ [DEBUG] Cannot split - already at maximum terminals:', terminals.length);
-        void vscode.window.showWarningMessage(
-          `Split view supports up to ${maxSplitTerminals} terminals`
-        );
+        showError(`Cannot split terminal: Maximum of ${maxSplitTerminals} terminals reached`);
         return;
       }
 
@@ -103,20 +101,6 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
     } catch (error) {
       console.error('❌ [ERROR] Failed to open settings:', error);
       void vscode.window.showErrorMessage(`Failed to open settings: ${String(error)}`);
-    }
-  }
-
-  public clearTerminal(): void {
-    console.log('🔧 [DEBUG] Clearing terminal...');
-    try {
-      void this._sendMessage({
-        command: TERMINAL_CONSTANTS.COMMANDS.CLEAR,
-      });
-      console.log('✅ [DEBUG] Clear command sent');
-      showSuccess('Terminal cleared');
-    } catch (error) {
-      console.error('❌ [ERROR] Failed to clear terminal:', error);
-      showError(`Failed to clear terminal: ${String(error)}`);
     }
   }
 
@@ -305,22 +289,6 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
           console.log('🔀 [DEBUG] Splitting terminal from webview...');
           this.splitTerminal();
           break;
-        case 'clear': {
-          console.log('🧹 [DEBUG] Clear command from webview...');
-          // Send clear command to webview (for visual clear)
-          await this._sendMessage({
-            command: TERMINAL_CONSTANTS.COMMANDS.CLEAR,
-          });
-          // Also send Ctrl+L to the actual terminal process
-          const activeId = this._terminalManager.getActiveTerminalId();
-          if (activeId) {
-            console.log('🧹 [DEBUG] Sending Ctrl+L to terminal:', activeId);
-            this._terminalManager.sendInput('\x0c', activeId);
-          } else {
-            console.warn('⚠️ [WARN] No active terminal to clear');
-          }
-          break;
-        }
         case 'getSettings': {
           console.log('⚙️ [DEBUG] Getting settings from webview...');
           const settings = this.getCurrentSettings();

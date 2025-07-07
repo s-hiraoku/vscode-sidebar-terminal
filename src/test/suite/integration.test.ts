@@ -42,7 +42,6 @@ suite('Integration Test Suite', () => {
     assert.ok(provider);
 
     // Test provider methods
-    assert.ok(typeof provider.clearTerminal === 'function');
     assert.ok(typeof provider.killTerminal === 'function');
     assert.ok(typeof provider.splitTerminal === 'function');
     assert.ok(typeof provider.openSettings === 'function');

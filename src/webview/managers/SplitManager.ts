@@ -44,7 +44,7 @@ export class SplitManager {
       return {
         canSplit: false,
         terminalHeight: 0,
-        reason: `Split view supports up to ${this.maxSplitCount} terminals`,
+        reason: `Cannot split terminal: Maximum of ${this.maxSplitCount} terminals reached`,
       };
     }
 

@@ -136,12 +136,10 @@ suite('Webview Test Suite', () => {
 
   test('Should handle command execution through provider', () => {
     let createTerminalCalled = false;
-    let clearTerminalCalled = false;
     let killTerminalCalled = false;
     let splitTerminalCalled = false;
 
     // Mock the methods to track calls
-    const originalClearTerminal = provider.clearTerminal.bind(provider);
     const originalKillTerminal = provider.killTerminal.bind(provider);
     const originalSplitTerminal = provider.splitTerminal.bind(provider);
 
@@ -150,11 +148,6 @@ suite('Webview Test Suite', () => {
     terminalManager.createTerminal = () => {
       createTerminalCalled = true;
       return originalCreateTerminal();
-    };
-
-    provider.clearTerminal = () => {
-      clearTerminalCalled = true;
-      originalClearTerminal();
     };
 
     provider.killTerminal = () => {
@@ -169,7 +162,6 @@ suite('Webview Test Suite', () => {
 
     // Test command execution
     terminalManager.createTerminal();
-    provider.clearTerminal();
     provider.splitTerminal();
 
     // Create a terminal first before killing
@@ -177,13 +169,11 @@ suite('Webview Test Suite', () => {
     provider.killTerminal();
 
     assert.ok(createTerminalCalled, 'Create terminal command should be called');
-    assert.ok(clearTerminalCalled, 'Clear terminal command should be called');
     assert.ok(killTerminalCalled, 'Kill terminal command should be called');
     assert.ok(splitTerminalCalled, 'Split terminal command should be called');
 
     // Restore original methods
     terminalManager.createTerminal = originalCreateTerminal;
-    provider.clearTerminal = originalClearTerminal;
     provider.killTerminal = originalKillTerminal;
     provider.splitTerminal = originalSplitTerminal;
   });

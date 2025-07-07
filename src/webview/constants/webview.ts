@@ -10,7 +10,6 @@ export const WEBVIEW_TERMINAL_CONSTANTS = {
     INPUT: 'input',
     OUTPUT: 'output',
     RESIZE: 'resize',
-    CLEAR: 'clear',
     EXIT: 'exit',
     SPLIT: 'split',
     TERMINAL_CREATED: 'terminalCreated',

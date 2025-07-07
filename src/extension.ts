@@ -47,13 +47,6 @@ function registerCommands(
 ): void {
   const commands = [
     {
-      command: 'sidebarTerminal.clearTerminal',
-      callback: () => {
-        console.log('🔧 [DEBUG] Command executed: clearTerminal');
-        provider.clearTerminal();
-      },
-    },
-    {
       command: 'sidebarTerminal.killTerminal',
       callback: () => {
         console.log('🔧 [DEBUG] Command executed: killTerminal');

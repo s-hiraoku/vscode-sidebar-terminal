@@ -54,11 +54,6 @@
     },
     "commands": [
       {
-        "command": "sidebarTerminal.clearTerminal",
-        "title": "Clear Terminal",
-        "icon": "$(clear-all)"
-      },
-      {
         "command": "sidebarTerminal.killTerminal",
         "title": "Kill Terminal",
         "icon": "$(trash)"
@@ -80,11 +75,6 @@
           "command": "sidebarTerminal.splitTerminal",
           "when": "view == sidebarTerminal",
           "group": "navigation@1"
-        },
-        {
-          "command": "sidebarTerminal.clearTerminal",
-          "when": "view == sidebarTerminal",
-          "group": "navigation@2"
         },
         {
           "command": "sidebarTerminal.killTerminal",
@@ -134,7 +124,11 @@
         "sidebarTerminal.theme": {
           "type": "string",
           "default": "auto",
-          "enum": ["auto", "dark", "light"],
+          "enum": [
+            "auto",
+            "dark",
+            "light"
+          ],
           "description": "Terminal theme. Auto follows VS Code theme."
         },
         "sidebarTerminal.defaultDirectory": {
@@ -161,10 +155,10 @@
         },
         "sidebarTerminal.maxSplitTerminals": {
           "type": "number",
-          "default": 2,
-          "minimum": 2,
-          "maximum": 2,
-          "description": "Maximum number of terminals to display in split view (fixed at 2 for stability)"
+          "default": 5,
+          "minimum": 1,
+          "maximum": 5,
+          "description": "Maximum number of terminals to display in split view"
         },
         "sidebarTerminal.minTerminalHeight": {
           "type": "number",
@@ -214,7 +208,7 @@
           "type": "number",
           "default": 0.4,
           "minimum": 0.1,
-          "maximum": 1.0,
+          "maximum": 1,
           "description": "Opacity of sample icons (0.1 to 1.0)"
         },
         "sidebarTerminal.headerFontSize": {
