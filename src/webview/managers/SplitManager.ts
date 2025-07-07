@@ -156,7 +156,7 @@ export class SplitManager {
       overflow: hidden;
     `;
 
-    container.appendChild(header);
+    // container.appendChild(header);
     container.appendChild(terminalArea);
 
     console.log(`📐 [SPLIT] Created container for ${name}: ${height}px total`);
