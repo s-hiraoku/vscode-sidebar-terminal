@@ -29,7 +29,9 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(npm run vsce:package:*)",
-      "Bash(cp:*)"
+      "Bash(cp:*)",
+      "Bash(echo $HOME)",
+      "Bash(cat:*)"
     ],
     "deny": []
   }

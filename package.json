@@ -1,7 +1,7 @@
 {
   "name": "vscode-sidebar-terminal",
   "displayName": "Sidebar Terminal",
-  "description": "A VS Code extension that displays a terminal in the sidebar for efficient development workflow.",
+  "description": "A powerful VS Code extension that displays a terminal interface in the sidebar, supporting split terminals, customizable themes, and efficient development workflow management.",
   "version": "0.0.1",
   "publisher": "s-hiraoku",
   "engines": {
@@ -22,7 +22,11 @@
     "development",
     "productivity",
     "xterm",
-    "pty"
+    "pty",
+    "split terminal",
+    "developer tools",
+    "workflow",
+    "integrated terminal"
   ],
   "icon": "resources/icon.png",
   "galleryBanner": {
