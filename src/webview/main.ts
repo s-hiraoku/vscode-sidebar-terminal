@@ -74,32 +74,13 @@ class TerminalWebviewManager {
     this.statusManager.showStatus('Initializing simple terminal');
     console.log('🎯 [WEBVIEW] Initializing simple terminal');
 
-    // Create a simple terminal container with buttons
+    // Create simple terminal container
     container.innerHTML = `
-      <div id="terminal-header" style="
-        display: flex;
-        background: var(--vscode-tab-inactiveBackground, #2d2d30);
-        border-bottom: 1px solid var(--vscode-tab-border, #333);
-        padding: 4px 8px;
-        gap: 4px;
-        align-items: center;
-        justify-content: space-between;
-        min-height: 32px;
-      ">
-        <div id="terminal-tabs" style="
-          display: flex;
-          gap: 2px;
-          flex: 1;
-          overflow-x: auto;
-          scrollbar-width: none;
-          -ms-overflow-style: none;
-        "></div>
-      </div>
       <div id="terminal-body" style="
         flex: 1;
         background: #000;
         position: relative;
-        height: calc(100% - 32px);
+        height: 100%;
         min-height: 200px;
       ">
         <div id="terminal-placeholder" style="
@@ -171,16 +152,39 @@ class TerminalWebviewManager {
         placeholder.remove();
       }
 
-      // Create terminal container div if not in split mode
+      // Create terminal container div
       let targetContainer = this.terminalContainer;
 
       if (!this.splitManager.getIsSplitMode()) {
+        // First terminal - create primary container
         const terminalDiv = document.createElement('div');
         terminalDiv.style.cssText = 'width: 100%; height: 100%;';
         terminalDiv.setAttribute('data-terminal-container', 'primary');
-        terminalDiv.id = 'primary-terminal';
+        terminalDiv.id = `terminal-container-${id}`;
         this.terminalContainer.appendChild(terminalDiv);
         targetContainer = terminalDiv;
+
+        // Register the container with split manager
+        this.splitManager.getTerminalContainers().set(id, terminalDiv);
+      } else {
+        // Split mode - create container for the new terminal
+        const terminalDiv = document.createElement('div');
+        terminalDiv.style.cssText = 'width: 100%; height: 50%; display: block;';
+        terminalDiv.setAttribute('data-terminal-container', 'split');
+        terminalDiv.id = `terminal-container-${id}`;
+        this.terminalContainer.appendChild(terminalDiv);
+        targetContainer = terminalDiv;
+
+        // Register the container with split manager
+        this.splitManager.getTerminalContainers().set(id, terminalDiv);
+
+        // Adjust existing terminal containers to 50% height
+        this.splitManager.getTerminalContainers().forEach((container, terminalId) => {
+          if (terminalId !== id) {
+            container.style.height = '50%';
+            container.style.display = 'block';
+          }
+        });
       }
 
       // Open terminal
@@ -191,10 +195,17 @@ class TerminalWebviewManager {
             fitAddon.fit();
             terminal.refresh(0, terminal.rows - 1);
             terminal.focus();
-            
+
             this.statusManager.showStatus(`✅ ${name} ACTIVE`, 'success');
-            this.terminal = terminal;
-            this.fitAddon = fitAddon;
+
+            // Only set as main terminal if it's the first one or not in split mode
+            if (!this.splitManager.getIsSplitMode() || !this.terminal) {
+              this.terminal = terminal;
+              this.fitAddon = fitAddon;
+            }
+
+            // Switch to the newly created terminal
+            this.switchToTerminal(id);
           }, 300);
         } catch (openError) {
           console.error('❌ [WEBVIEW] Error opening terminal:', openError);
@@ -241,89 +252,10 @@ class TerminalWebviewManager {
         });
         resizeObserver.observe(this.terminalContainer);
       }
-
     } catch (error) {
       console.error('❌ [WEBVIEW] Error creating terminal:', error);
       this.statusManager.showStatus(`Error creating terminal: ${String(error)}`, 'error');
     }
-  }
-
-  public addTerminalTab(id: string, name: string): void {
-    const tabsContainer = document.getElementById('terminal-tabs');
-    if (!tabsContainer) {
-      console.error('❌ [WEBVIEW] Terminal tabs container not found');
-      return;
-    }
-
-    // Check if tab already exists
-    if (document.getElementById(`tab-${id}`)) {
-      console.log('🎯 [WEBVIEW] Tab already exists for terminal:', id);
-      return;
-    }
-
-    const tab = document.createElement('div');
-    tab.id = `tab-${id}`;
-    tab.style.cssText = `
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      padding: 4px 8px;
-      background: var(--vscode-tab-inactiveBackground, #2d2d30);
-      border: 1px solid var(--vscode-tab-border, #333);
-      border-radius: 3px 3px 0 0;
-      color: var(--vscode-tab-inactiveForeground, #969696);
-      font-size: 11px;
-      cursor: pointer;
-      user-select: none;
-      white-space: nowrap;
-      min-width: 80px;
-      max-width: 150px;
-    `;
-
-    const tabLabel = document.createElement('span');
-    tabLabel.textContent = name;
-    tabLabel.style.cssText = `
-      overflow: hidden;
-      text-overflow: ellipsis;
-      flex: 1;
-    `;
-
-    const closeBtn = document.createElement('button');
-    closeBtn.textContent = '×';
-    closeBtn.style.cssText = `
-      background: transparent;
-      border: none;
-      color: var(--vscode-tab-inactiveForeground, #969696);
-      font-size: 12px;
-      cursor: pointer;
-      padding: 0;
-      width: 16px;
-      height: 16px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 2px;
-    `;
-    closeBtn.title = 'Close Terminal';
-
-    // Tab click to switch
-    tab.addEventListener('click', (e) => {
-      if (e.target !== closeBtn) {
-        this.switchToTerminal(id);
-      }
-    });
-
-    // Close button click
-    closeBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      this.closeTerminal(id);
-    });
-
-    tab.appendChild(tabLabel);
-    tab.appendChild(closeBtn);
-    tabsContainer.appendChild(tab);
-
-    console.log('✅ [WEBVIEW] Added tab for terminal:', id, name);
   }
 
   public switchToTerminal(id: string): void {
@@ -331,24 +263,29 @@ class TerminalWebviewManager {
 
     this.setActiveTerminalId(id);
 
-    // Hide all terminal containers
-    this.splitManager.getTerminalContainers().forEach((container, terminalId) => {
-      container.style.display = terminalId === id ? 'block' : 'none';
-    });
+    const terminalCount = this.splitManager.getTerminals().size;
 
-    // Update tab appearances
-    const tabsContainer = document.getElementById('terminal-tabs');
-    if (tabsContainer) {
-      tabsContainer.childNodes.forEach((tabNode) => {
-        const tab = tabNode as HTMLElement;
-        const isActive = tab.id === `tab-${id}`;
-
-        tab.style.background = isActive
-          ? 'var(--vscode-tab-activeBackground, #1e1e1e)'
-          : 'var(--vscode-tab-inactiveBackground, #2d2d30)';
-        tab.style.color = isActive
-          ? 'var(--vscode-tab-activeForeground, #ffffff)'
-          : 'var(--vscode-tab-inactiveForeground, #969696)';
+    if (terminalCount <= 1) {
+      // Single terminal mode - show only the active terminal
+      this.splitManager.getTerminalContainers().forEach((container, terminalId) => {
+        if (terminalId === id) {
+          container.style.display = 'block';
+          container.style.height = '100%';
+        } else {
+          container.style.display = 'none';
+        }
+      });
+    } else {
+      // Split mode - show all terminals but focus the active one
+      this.splitManager.getTerminalContainers().forEach((container, terminalId) => {
+        container.style.display = 'block';
+        container.style.height = '50%';
+        // Add visual indicator for active terminal
+        if (terminalId === id) {
+          container.style.border = '2px solid var(--vscode-focusBorder, #007acc)';
+        } else {
+          container.style.border = '1px solid var(--vscode-panel-border, #454545)';
+        }
       });
     }
 
@@ -442,15 +379,23 @@ class TerminalWebviewManager {
       this.splitManager.getTerminalContainers().delete(id);
     }
 
-    // Remove tab
-    const tab = document.getElementById(`tab-${id}`);
-    if (tab) {
-      tab.remove();
+    // Adjust remaining terminal layouts
+    const remainingTerminals = Array.from(this.splitManager.getTerminals().keys());
+
+    if (remainingTerminals.length === 1) {
+      // Only one terminal left - make it full height
+      const remainingId = remainingTerminals[0];
+      if (remainingId) {
+        const remainingContainer = this.splitManager.getTerminalContainers().get(remainingId);
+        if (remainingContainer) {
+          remainingContainer.style.height = '100%';
+          remainingContainer.style.border = 'none';
+        }
+      }
     }
 
     // If this was the active terminal, switch to another one
     if (this.activeTerminalId === id) {
-      const remainingTerminals = Array.from(this.splitManager.getTerminals().keys());
       if (remainingTerminals.length > 0) {
         const nextTerminalId = remainingTerminals[0];
         if (nextTerminalId) {
@@ -493,22 +438,41 @@ class TerminalWebviewManager {
   }
 
   public clearTerminal(): void {
-    if (this.terminal) {
+    // Clear active terminal
+    let targetTerminal = this.terminal;
+    if (this.activeTerminalId) {
+      const terminalData = this.splitManager.getTerminals().get(this.activeTerminalId);
+      if (terminalData) {
+        targetTerminal = terminalData.terminal;
+      }
+    }
+
+    if (targetTerminal) {
       console.log('🧹 [WEBVIEW] Clearing terminal screen');
-      this.terminal.clear();
-      this.terminal.write('\x1b[2J\x1b[H');
+      targetTerminal.clear();
+      targetTerminal.write('\x1b[2J\x1b[H');
       this.statusManager.showStatus('Terminal cleared', 'success');
     }
   }
 
-  public writeToTerminal(data: string): void {
-    if (this.terminal) {
+  public writeToTerminal(data: string, _terminalId?: string): void {
+    // Determine which terminal to write to
+    let targetTerminal = this.terminal;
+
+    if (this.activeTerminalId) {
+      const terminalData = this.splitManager.getTerminals().get(this.activeTerminalId);
+      if (terminalData) {
+        targetTerminal = terminalData.terminal;
+      }
+    }
+
+    if (targetTerminal) {
       if (data.length < 1000 && this.outputBuffer.length < this.MAX_BUFFER_SIZE) {
         this.outputBuffer.push(data);
         this.scheduleBufferFlush();
       } else {
         this.flushOutputBuffer();
-        this.terminal.write(data);
+        targetTerminal.write(data);
       }
     } else {
       console.warn('⚠️ [WEBVIEW] No terminal instance to write to');
@@ -529,10 +493,22 @@ class TerminalWebviewManager {
       this.bufferFlushTimer = null;
     }
 
-    if (this.outputBuffer.length > 0 && this.terminal) {
+    if (this.outputBuffer.length > 0) {
       const bufferedData = this.outputBuffer.join('');
       this.outputBuffer = [];
-      this.terminal.write(bufferedData);
+
+      // Write to active terminal
+      let targetTerminal = this.terminal;
+      if (this.activeTerminalId) {
+        const terminalData = this.splitManager.getTerminals().get(this.activeTerminalId);
+        if (terminalData) {
+          targetTerminal = terminalData.terminal;
+        }
+      }
+
+      if (targetTerminal) {
+        targetTerminal.write(bufferedData);
+      }
     }
   }
 
@@ -617,6 +593,20 @@ class TerminalWebviewManager {
     return this.statusManager;
   }
 
+  public switchToNextTerminal(): void {
+    const terminalIds = Array.from(this.splitManager.getTerminals().keys());
+    if (terminalIds.length <= 1) return;
+
+    const currentIndex = terminalIds.indexOf(this.activeTerminalId || '');
+    const nextIndex = (currentIndex + 1) % terminalIds.length;
+    const nextTerminalId = terminalIds[nextIndex];
+
+    if (nextTerminalId) {
+      this.switchToTerminal(nextTerminalId);
+      this.statusManager.showStatus(`Switched to terminal ${nextIndex + 1}`, 'info');
+    }
+  }
+
   public dispose(): void {
     this.flushOutputBuffer();
 
@@ -689,7 +679,7 @@ window.addEventListener('message', (event) => {
 
     case WEBVIEW_TERMINAL_CONSTANTS.COMMANDS.OUTPUT:
       if (message.data) {
-        terminalManager.writeToTerminal(message.data);
+        terminalManager.writeToTerminal(message.data, message.terminalId);
       }
       break;
 
@@ -762,6 +752,12 @@ function setupActivityListeners(): void {
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     terminalManager.getStatusManager().hideStatus();
+  }
+
+  // Ctrl+Tab to switch between terminals
+  if (e.ctrlKey && e.key === 'Tab') {
+    e.preventDefault();
+    terminalManager.switchToNextTerminal();
   }
 });
 
