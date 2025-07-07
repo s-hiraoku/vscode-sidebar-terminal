@@ -102,31 +102,18 @@ export class TerminalManager {
       this._activeTerminalManager.setActive(terminalId);
 
       ptyProcess.onData((data) => {
-        log(
-          '📤 [DEBUG] PTY data received:',
-          data.length,
-          'chars for terminal:',
-          terminalId
-        );
+        log('📤 [DEBUG] PTY data received:', data.length, 'chars for terminal:', terminalId);
 
         // Performance optimization: Batch small data chunks
         this._bufferData(terminalId, data);
       });
 
       ptyProcess.onExit((exitCode) => {
-        log(
-          '🚪 [DEBUG] PTY process exited:',
-          exitCode.exitCode,
-          'for terminal:',
-          terminalId
-        );
+        log('🚪 [DEBUG] PTY process exited:', exitCode.exitCode, 'for terminal:', terminalId);
 
         // Check if this terminal is being manually killed to prevent infinite loop
         if (this._terminalBeingKilled.has(terminalId)) {
-          log(
-            '🗑️ [DEBUG] Terminal exit triggered by manual kill, cleaning up:',
-            terminalId
-          );
+          log('🗑️ [DEBUG] Terminal exit triggered by manual kill, cleaning up:', terminalId);
           this._terminalBeingKilled.delete(terminalId);
           this._cleanupTerminalData(terminalId);
         } else {

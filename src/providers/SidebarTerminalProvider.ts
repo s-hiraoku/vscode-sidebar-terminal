@@ -37,7 +37,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
       webviewView.webview.html = html;
       log('✅ [DEBUG] HTML set successfully');
     } catch (error) {
-      console.error('❌ [ERROR] Failed to generate HTML for webview:', error);
+      log('❌ [ERROR] Failed to generate HTML for webview:', error);
       void vscode.window.showErrorMessage(`Failed to generate webview HTML: ${String(error)}`);
       return;
     }
@@ -70,7 +70,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
       const maxSplitTerminals = config.get<number>('maxTerminals', 5);
 
       if (terminals.length >= maxSplitTerminals) {
-        console.warn('⚠️ [DEBUG] Cannot split - already at maximum terminals:', terminals.length);
+        log('⚠️ [DEBUG] Cannot split - already at maximum terminals:', terminals.length);
         showError(`Cannot split terminal: Maximum of ${maxSplitTerminals} terminals reached`);
         return;
       }
@@ -86,7 +86,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
 
       // The terminal creation event will send TERMINAL_CREATED to webview
     } catch (error) {
-      console.error('❌ [ERROR] Failed to split terminal:', error);
+      log('❌ [ERROR] Failed to split terminal:', error);
       void vscode.window.showErrorMessage(`Failed to split terminal: ${String(error)}`);
     }
   }
@@ -100,7 +100,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
       });
       log('✅ [DEBUG] Settings open command sent');
     } catch (error) {
-      console.error('❌ [ERROR] Failed to open settings:', error);
+      log('❌ [ERROR] Failed to open settings:', error);
       void vscode.window.showErrorMessage(`Failed to open settings: ${String(error)}`);
     }
   }
@@ -119,14 +119,14 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
       );
 
       if (!activeTerminalId) {
-        console.warn('⚠️ [WARN] No active terminal to kill');
+        log('⚠️ [WARN] No active terminal to kill');
         TerminalErrorHandler.handleTerminalNotFound();
         return;
       }
 
       // Check terminal count protection - only protect if there's 1 terminal
       if (terminals.length <= 1) {
-        console.warn('🛡️ [WARN] Cannot kill terminal - only one terminal remaining');
+        log('🛡️ [WARN] Cannot kill terminal - only one terminal remaining');
         showError('Cannot close terminal: At least one terminal must remain open');
         return;
       }
@@ -148,7 +148,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
         this._performKillTerminal(activeTerminalId);
       }
     } catch (error) {
-      console.error('❌ [ERROR] Failed to kill terminal:', error);
+      log('❌ [ERROR] Failed to kill terminal:', error);
       showError(`Failed to close terminal: ${String(error)}`);
     }
   }
@@ -170,7 +170,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
       log('✅ [PROVIDER] Terminal killed successfully:', terminalId);
       showSuccess(`Terminal ${terminalId} closed`);
     } catch (error) {
-      console.error('❌ [PROVIDER] Failed to perform kill terminal:', error);
+      log('❌ [PROVIDER] Failed to perform kill terminal:', error);
       showError(`Failed to close terminal: ${String(error)}`);
     }
   }
@@ -192,7 +192,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
           terminalId = this._terminalManager.createTerminal();
           log('🔧 [DEBUG] New terminal created with ID:', terminalId);
         } catch (createError) {
-          console.error('❌ [ERROR] Failed to create terminal:', createError);
+          log('❌ [ERROR] Failed to create terminal:', createError);
           throw new Error(`Failed to create terminal: ${String(createError)}`);
         }
       } else {
@@ -218,20 +218,17 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
         activeTerminalId: terminalId,
       };
 
-      log(
-        '🔧 [DEBUG] Sending init message to webview:',
-        JSON.stringify(initMessage, null, 2)
-      );
+      log('🔧 [DEBUG] Sending init message to webview:', JSON.stringify(initMessage, null, 2));
       try {
         await this._sendMessage(initMessage);
         log('✅ [DEBUG] INIT message sent successfully');
       } catch (sendError) {
-        console.error('❌ [ERROR] Failed to send INIT message:', sendError);
+        log('❌ [ERROR] Failed to send INIT message:', sendError);
         throw new Error(`Failed to send INIT message: ${String(sendError)}`);
       }
       log('✅ [DEBUG] Terminal initialization completed successfully');
     } catch (error) {
-      console.error('❌ [ERROR] Failed to initialize terminal:', error);
+      log('❌ [ERROR] Failed to initialize terminal:', error);
       void vscode.window.showErrorMessage(`Failed to initialize terminal: ${String(error)}`);
       throw error;
     }
@@ -252,10 +249,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
             await this._initializeTerminal();
             log('✅ [DEBUG] Terminal initialization completed in message handler');
           } catch (initError) {
-            console.error(
-              '❌ [ERROR] Terminal initialization failed in message handler:',
-              initError
-            );
+            log('❌ [ERROR] Terminal initialization failed in message handler:', initError);
             void vscode.window.showErrorMessage(
               `Terminal initialization failed: ${String(initError)}`
             );
@@ -317,19 +311,16 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
               log('🗑️ [DEBUG] Removing terminal from extension side:', message.terminalId);
               this._terminalManager.removeTerminal(message.terminalId);
             } else {
-              log(
-                '🔄 [DEBUG] Terminal already removed from extension side:',
-                message.terminalId
-              );
+              log('🔄 [DEBUG] Terminal already removed from extension side:', message.terminalId);
             }
           }
           break;
         }
         default:
-          console.warn('⚠️ [WARN] Unknown command received:', message.command);
+          log('⚠️ [WARN] Unknown command received:', message.command);
       }
     } catch (error) {
-      console.error('❌ [ERROR] Failed to handle webview message:', error);
+      log('❌ [ERROR] Failed to handle webview message:', error);
       void vscode.window.showErrorMessage(`Failed to handle webview message: ${String(error)}`);
     }
   }
@@ -389,7 +380,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
    */
   private async _sendMessage(message: WebviewMessage): Promise<void> {
     if (!this._view) {
-      console.warn('⚠️ [WARN] No webview available to send message');
+      log('⚠️ [WARN] No webview available to send message');
       return;
     }
 
@@ -397,7 +388,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
       log('📤 [DEBUG] Sending message to webview:', message.command);
       await this._view.webview.postMessage(message);
     } catch (error) {
-      console.error('❌ [ERROR] Failed to send message to webview:', error);
+      log('❌ [ERROR] Failed to send message to webview:', error);
       void vscode.window.showErrorMessage(`Failed to send message to webview: ${String(error)}`);
     }
   }
@@ -671,7 +662,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
       // Reinitialize terminal with new settings to apply changes
       await this._initializeTerminal();
     } catch (error) {
-      console.error('❌ [ERROR] Failed to update settings:', error);
+      log('❌ [ERROR] Failed to update settings:', error);
       showError(`Failed to update settings: ${String(error)}`);
     }
   }

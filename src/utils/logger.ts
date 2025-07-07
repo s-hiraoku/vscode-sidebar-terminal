@@ -17,9 +17,9 @@ class Logger {
 
   constructor() {
     // Check if running in development mode
-    this.isDevelopment = process.env.NODE_ENV === 'development' || 
-                        process.env.VSCODE_DEBUG_MODE === 'true';
-    
+    this.isDevelopment =
+      process.env.NODE_ENV === 'development' || process.env.VSCODE_DEBUG_MODE === 'true';
+
     // Set log level based on environment
     this.level = this.isDevelopment ? LogLevel.DEBUG : LogLevel.WARN;
   }
@@ -78,4 +78,12 @@ class Logger {
 export const logger = new Logger();
 
 // Export convenience functions
-export const { debug, info, warn, error, terminal, webview, provider, extension, performance } = logger;
+export const debug = (...args: unknown[]): void => logger.debug(...args);
+export const info = (...args: unknown[]): void => logger.info(...args);
+export const warn = (...args: unknown[]): void => logger.warn(...args);
+export const error = (...args: unknown[]): void => logger.error(...args);
+export const terminal = (...args: unknown[]): void => logger.terminal(...args);
+export const webview = (...args: unknown[]): void => logger.webview(...args);
+export const provider = (...args: unknown[]): void => logger.provider(...args);
+export const extension = (...args: unknown[]): void => logger.extension(...args);
+export const performance = (...args: unknown[]): void => logger.performance(...args);

@@ -495,9 +495,7 @@ class TerminalWebviewManager {
     log('🗑️ [WEBVIEW] Remaining terminals:', remainingTerminals);
 
     // Update all remaining terminals to use flex layout
-    log(
-      `🗑️ [WEBVIEW] Updating ${remainingTerminals.length} remaining terminals with flex layout`
-    );
+    log(`🗑️ [WEBVIEW] Updating ${remainingTerminals.length} remaining terminals with flex layout`);
 
     remainingTerminals.forEach((terminalId) => {
       const container = this.splitManager.getTerminalContainers().get(terminalId);
@@ -784,13 +782,6 @@ class TerminalWebviewManager {
     }
   }
 
-  private calculateTerminalHeight(): string {
-    // For debugging purposes - actual height is now managed by flex layout
-    const pixelHeight = this.splitManager.calculateTerminalHeightPixels();
-    log(`📐 [DEBUG] Theoretical height: ${pixelHeight}px (flex layout overrides this)`);
-    return `${pixelHeight}px`;
-  }
-
   public openSettings(): void {
     this.settingsPanel.show(this.currentSettings);
   }
@@ -963,10 +954,7 @@ window.addEventListener('message', (event) => {
     case WEBVIEW_TERMINAL_CONSTANTS.COMMANDS.SPLIT:
       log('🔀 [WEBVIEW] Received SPLIT command - preparing split mode');
       terminalManager.prepareSplitMode('vertical');
-      log(
-        '🔀 [WEBVIEW] Split mode prepared, isSplitMode:',
-        terminalManager.getIsSplitMode()
-      );
+      log('🔀 [WEBVIEW] Split mode prepared, isSplitMode:', terminalManager.getIsSplitMode());
       break;
 
     case WEBVIEW_TERMINAL_CONSTANTS.COMMANDS.TERMINAL_CREATED:
