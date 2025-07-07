@@ -400,20 +400,9 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
       vscode.Uri.joinPath(this._extensionContext.extensionUri, 'dist', 'webview.js')
     );
 
-    const xtermCssUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(
-        this._extensionContext.extensionUri,
-        'node_modules',
-        'xterm',
-        'css',
-        'xterm.css'
-      )
-    );
-
     const nonce = generateNonce();
 
     log('🔧 [DEBUG] Script URI:', scriptUri.toString());
-    log('🔧 [DEBUG] XTerm CSS URI:', xtermCssUri.toString());
     log('🔧 [DEBUG] CSP nonce:', nonce);
 
     const html = `<!DOCTYPE html>
@@ -424,7 +413,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
         <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${
           webview.cspSource
         } 'unsafe-inline'; script-src 'nonce-${nonce}'; font-src ${webview.cspSource};">
-        <link href="${xtermCssUri.toString()}" rel="stylesheet">
+        <!-- XTerm CSS is now bundled in webview.js -->
         <style>
             *, *::before, *::after {
                 box-sizing: border-box;
@@ -525,6 +514,19 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
                 padding: 0;
             }
             
+            #terminal-body {
+                flex: 1;
+                width: 100%;
+                height: 100%;
+                background: #000;
+                position: relative;
+                overflow: hidden;
+                margin: 0;
+                padding: 0;
+                display: flex;
+                flex-direction: column;
+            }
+            
             .secondary-terminal {
                 width: 100%;
                 height: 100%;
@@ -609,11 +611,11 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
         </style>
     </head>
     <body>
-        <div id="terminal">
+        <div id="terminal-body">
             <!-- Simple terminal container -->
         </div>
         <script nonce="${nonce}">
-            log('🎯 [WEBVIEW] Script loaded');
+            console.log('🎯 [WEBVIEW] Script loaded');
         </script>
         <script nonce="${nonce}" src="${scriptUri.toString()}"></script>
     </body>

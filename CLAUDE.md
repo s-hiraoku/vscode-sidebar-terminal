@@ -123,3 +123,23 @@ The extension provides extensive configuration options in `package.json`:
 - UI customization: icon opacity, header title, icon sizes
 
 Configuration values are accessed via `vscode.workspace.getConfiguration('sidebarTerminal')` and can be changed at runtime.
+
+### Common Development Patterns
+
+**Webpack Build System**
+- Uses dual webpack configuration for extension (Node.js) and webview (browser)
+- Extension builds to `dist/extension.js`, webview builds to `dist/webview.js`  
+- CSS is bundled into webview.js via style-loader/css-loader
+- Process polyfill required for webview environment (`process/browser`)
+
+**VSIX Packaging Issues**
+- Development mode uses different paths than packaged extension
+- CSS resources must be bundled, not referenced as external files
+- Node.js globals (like `process`) need polyfills in webview context
+- `node-pty` is bundled as dependency via `bundledDependencies` in package.json
+
+**Debugging Packaged Extensions**
+- Test both F5 development mode AND installed .vsix package
+- Use browser dev tools for webview debugging (`Ctrl+Shift+I`)
+- Check for 404 errors on CSS/resource loading
+- Verify process polyfills are working in webview environment

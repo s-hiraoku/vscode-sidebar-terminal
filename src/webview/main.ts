@@ -4,6 +4,7 @@
 import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import { WebLinksAddon } from 'xterm-addon-web-links';
+import 'xterm/css/xterm.css';
 
 // Types and constants
 import type {
@@ -86,7 +87,7 @@ class TerminalWebviewManager {
   }
 
   public initializeSimpleTerminal(): void {
-    const container = document.getElementById('terminal');
+    const container = document.getElementById('terminal-body');
     if (!container) {
       log('Terminal container not found');
       return;
@@ -94,45 +95,44 @@ class TerminalWebviewManager {
 
     log('🎯 [WEBVIEW] Initializing simple terminal');
 
-    // Create simple terminal container
+    // Use the existing terminal-body container
+    this.terminalContainer = container;
+    
+    // Style the container
+    container.style.cssText = `
+      display: flex;
+      flex-direction: column;
+      background: #000;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      margin: 0;
+      padding: 0;
+      gap: 0;
+    `;
+    
+    // Add placeholder content
     container.innerHTML = `
-      <div id="terminal-body" style="
-        display: flex;
-        flex-direction: column;
-        background: #000;
-        width: 100%;
-        height: 100%;
-        overflow: hidden;
-        margin: 0;
-        padding: 0;
-        gap: 0;
+      <div id="terminal-placeholder" style="
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: #888;
+        font-family: monospace;
+        font-size: 14px;
+        text-align: center;
       ">
-        <div id="terminal-placeholder" style="
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          color: #888;
-          font-family: monospace;
-          font-size: 14px;
-          text-align: center;
-        ">
-          <div>Terminal Ready</div>
-          <div style="font-size: 12px; margin-top: 8px;">Waiting for initialization...</div>
-        </div>
+        <div>Terminal Ready</div>
+        <div style="font-size: 12px; margin-top: 8px;">Waiting for initialization...</div>
       </div>
     `;
 
-    // Force DOM update by using a small delay
-    setTimeout(() => {
-      this.terminalContainer = document.getElementById('terminal-body');
-
-      if (this.terminalContainer) {
-        log('🎯 [WEBVIEW] Simple terminal container created successfully');
-      } else {
-        log('❌ [WEBVIEW] Failed to create terminal container');
-      }
-    }, 1);
+    if (this.terminalContainer) {
+      log('🎯 [WEBVIEW] Simple terminal container initialized successfully');
+    } else {
+      log('❌ [WEBVIEW] Failed to initialize terminal container');
+    }
 
     // Setup IME support
     this.setupIMEHandling();
@@ -143,8 +143,13 @@ class TerminalWebviewManager {
     log('🎯 [WEBVIEW] Creating terminal:', id, name);
 
     if (!this.terminalContainer) {
-      log('❌ [WEBVIEW] No terminal container available');
-      return;
+      // Try to get the container again
+      this.terminalContainer = document.getElementById('terminal-body');
+      if (!this.terminalContainer) {
+        log('❌ [WEBVIEW] No terminal container available');
+        return;
+      }
+      log('🎯 [WEBVIEW] Terminal container found on retry');
     }
 
     try {

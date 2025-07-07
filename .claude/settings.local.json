@@ -25,7 +25,9 @@
       "Bash(sysctl:*)",
       "Bash(npm cache clean:*)",
       "Bash(npm install:*)",
-      "Bash(npm run test:*)"
+      "Bash(npm run test:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ],
     "deny": []
   }

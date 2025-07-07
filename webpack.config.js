@@ -17,7 +17,7 @@ const extensionConfig = {
   },
   externals: {
     vscode: 'commonjs vscode',
-    // node-pty is a native module and should be externalized
+    // Keep node-pty as external since it's included in the package
     'node-pty': 'commonjs node-pty',
   },
   resolve: {
@@ -52,6 +52,9 @@ const webviewConfig = {
     path: path.resolve(__dirname, 'dist'),
     filename: 'webview.js',
   },
+  optimization: {
+    minimize: false,
+  },
   resolve: {
     extensions: ['.ts', '.js'],
     fallback: {
@@ -60,6 +63,7 @@ const webviewConfig = {
       fs: false,
       os: false,
       crypto: false,
+      process: false,
     },
   },
   module: {
@@ -84,7 +88,10 @@ const webviewConfig = {
   },
   plugins: [
     new webpack.DefinePlugin({
-      'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
+      'process.env.NODE_ENV': JSON.stringify('production'),
+    }),
+    new webpack.ProvidePlugin({
+      process: 'process/browser',
     }),
   ],
   devtool: 'nosources-source-map',

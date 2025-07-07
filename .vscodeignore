@@ -1,16 +1,24 @@
+# VS Code files
 .vscode/**
 .vscode-test/**
+
+# Source files (only include dist)
 src/**
+**/tsconfig.json
+**/*.ts
+**/*.map
+
+# Development and build
+node_modules/**
+!node_modules/node-pty/**
+webpack.config.js
 .gitignore
 .yarnrc
 vsc-extension-quickstart.md
-**/tsconfig.json
 **/.eslintrc.json
-**/*.map
-**/*.ts
-**/node_modules/**
 **/.github/**
 **/test/**
+out/test/**
 **/.nyc_output/**
 **/coverage/**
 **/*.vsix
@@ -18,3 +26,16 @@ vsc-extension-quickstart.md
 .prettierrc.json
 .prettierignore
 renovate.json
+
+# Documentation (keep only essential files)
+docs/**
+DEBUG.md
+CLAUDE.md
+README-EN.md
+create-github-issues.sh
+test-extension.js
+test-terminal-functionality.js
+
+# Development directories
+.claude/**
+.devcontainer/**
