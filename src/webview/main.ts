@@ -60,6 +60,14 @@ class TerminalWebviewManager {
   private statusManager: SimpleStatusManager;
   private settingsPanel: SettingsPanel;
 
+  // Current settings
+  private currentSettings = {
+    fontSize: 14,
+    fontFamily: 'Consolas, monospace',
+    theme: 'auto' as const,
+    cursorBlink: true
+  };
+
   constructor() {
     this.splitManager = new SplitManager();
     this.statusManager = new SimpleStatusManager();
@@ -68,6 +76,9 @@ class TerminalWebviewManager {
         this.applySettings(settings);
       }
     });
+    
+    // Load settings from VS Code state if available
+    this.loadSettings();
   }
 
   public initializeSimpleTerminal(): void {
@@ -138,14 +149,21 @@ class TerminalWebviewManager {
       const terminalTheme = getWebviewTheme();
       console.log('🎨 [WEBVIEW] Creating terminal with theme:', terminalTheme);
 
-      const terminal = new Terminal({
-        fontSize: config.fontSize || 14,
-        fontFamily: config.fontFamily || 'monospace',
-        theme: terminalTheme,
-        cursorBlink: true,
+      // Apply current settings to new terminal
+      const terminalOptions = {
+        fontSize: this.currentSettings.fontSize,
+        fontFamily: this.currentSettings.fontFamily,
+        theme: this.currentSettings.theme === 'auto' 
+          ? terminalTheme 
+          : (this.currentSettings.theme === 'dark' 
+            ? WEBVIEW_THEME_CONSTANTS.DARK_THEME 
+            : WEBVIEW_THEME_CONSTANTS.LIGHT_THEME),
+        cursorBlink: this.currentSettings.cursorBlink,
         allowTransparency: true,
         scrollback: 10000,
-      });
+      };
+
+      const terminal = new Terminal(terminalOptions);
 
       this.statusManager.showStatus(`Terminal instance created: ${name}`);
 
@@ -628,16 +646,16 @@ class TerminalWebviewManager {
   }
 
   public openSettings(): void {
-    const currentSettings = {
-      fontSize: 14,
-      fontFamily: 'Consolas, monospace',
-      theme: 'auto' as const,
-      cursorBlink: true
-    };
-    this.settingsPanel.show(currentSettings);
+    this.settingsPanel.show(this.currentSettings);
   }
 
-  private applySettings(settings: any): void {
+  public applySettings(settings: any): void {
+    // Update current settings
+    this.currentSettings = { ...settings };
+    
+    // Save settings to VS Code state
+    this.saveSettings();
+    
     // Apply settings to all terminals
     this.splitManager.getTerminals().forEach((terminalData) => {
       if (terminalData.terminal) {
@@ -650,6 +668,9 @@ class TerminalWebviewManager {
           terminalData.terminal.options.theme = settings.theme === 'dark' 
             ? WEBVIEW_THEME_CONSTANTS.DARK_THEME 
             : WEBVIEW_THEME_CONSTANTS.LIGHT_THEME;
+        } else {
+          // Auto theme - use current VS Code theme
+          terminalData.terminal.options.theme = getWebviewTheme();
         }
         
         // Refresh terminal to apply changes
@@ -669,6 +690,8 @@ class TerminalWebviewManager {
         this.terminal.options.theme = settings.theme === 'dark'
           ? WEBVIEW_THEME_CONSTANTS.DARK_THEME
           : WEBVIEW_THEME_CONSTANTS.LIGHT_THEME;
+      } else {
+        this.terminal.options.theme = getWebviewTheme();
       }
       
       if (this.fitAddon) {
@@ -677,6 +700,31 @@ class TerminalWebviewManager {
     }
 
     this.statusManager.showStatus('Settings applied', 'success');
+  }
+
+  private loadSettings(): void {
+    try {
+      const state = vscode.getState() as any;
+      if (state && state.terminalSettings) {
+        this.currentSettings = { ...this.currentSettings, ...state.terminalSettings };
+        console.log('📋 [WEBVIEW] Loaded settings:', this.currentSettings);
+      }
+    } catch (error) {
+      console.error('❌ [WEBVIEW] Error loading settings:', error);
+    }
+  }
+
+  private saveSettings(): void {
+    try {
+      const state = (vscode.getState() as any) || {};
+      vscode.setState({
+        ...state,
+        terminalSettings: this.currentSettings
+      });
+      console.log('💾 [WEBVIEW] Saved settings:', this.currentSettings);
+    } catch (error) {
+      console.error('❌ [WEBVIEW] Error saving settings:', error);
+    }
   }
 
   public dispose(): void {
@@ -720,6 +768,11 @@ window.addEventListener('message', (event) => {
 
         if (message.activeTerminalId) {
           terminalManager.setActiveTerminalId(message.activeTerminalId);
+        }
+        
+        // Apply settings if provided
+        if (message.settings) {
+          terminalManager.applySettings(message.settings);
         }
 
         const checkContainerAndCreate = (): void => {
