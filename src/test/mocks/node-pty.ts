@@ -85,7 +85,10 @@ export function spawn(
   return new MockPty();
 }
 
-// Default exports for compatibility
-export default {
+// CommonJS compatibility
+module.exports = {
   spawn,
+  IPty: MockPty,
+  IWindowsPtyForkOptions: {},
+  IUnixForkOptions: {},
 };

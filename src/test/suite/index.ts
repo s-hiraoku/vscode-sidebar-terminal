@@ -2,6 +2,18 @@ import * as path from 'path';
 import Mocha from 'mocha';
 import { glob } from 'glob';
 
+// Setup global mock for node-pty before any test files are loaded
+const Module = require('module');
+const originalRequire = Module.prototype.require;
+
+Module.prototype.require = function (id: string) {
+  if (id === 'node-pty') {
+    const mockPath = path.resolve(__dirname, '../mocks/node-pty');
+    return originalRequire.call(this, mockPath);
+  }
+  return originalRequire.apply(this, arguments);
+};
+
 export function run(): Promise<void> {
   // Create the mocha test
   const mocha = new Mocha({

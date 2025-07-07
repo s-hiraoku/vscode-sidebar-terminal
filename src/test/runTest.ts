@@ -1,6 +1,18 @@
 import * as path from 'path';
 import { runTests } from '@vscode/test-electron';
 
+// Setup node-pty mock before anything else
+const Module = require('module');
+const originalRequire = Module.prototype.require;
+
+Module.prototype.require = function (id: string) {
+  if (id === 'node-pty') {
+    const mockPath = path.resolve(__dirname, './mocks/node-pty');
+    return originalRequire.call(this, mockPath);
+  }
+  return originalRequire.apply(this, arguments);
+};
+
 async function main(): Promise<void> {
   try {
     // The folder containing the Extension Manifest package.json
