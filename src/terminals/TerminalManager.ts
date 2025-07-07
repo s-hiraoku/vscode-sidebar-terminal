@@ -105,14 +105,14 @@ export class TerminalManager {
       this._terminals.set(terminalId, terminal);
       this._activeTerminalManager.setActive(terminalId);
 
-      ptyProcess.onData((data) => {
+      ptyProcess.onData((data: string) => {
         log('📤 [DEBUG] PTY data received:', data.length, 'chars for terminal:', terminalId);
 
         // Performance optimization: Batch small data chunks
         this._bufferData(terminalId, data);
       });
 
-      ptyProcess.onExit((event) => {
+      ptyProcess.onExit((event: number | { exitCode: number; signal?: number }) => {
         const exitCode = typeof event === 'number' ? event : event.exitCode;
         const signal = typeof event === 'object' ? event.signal : undefined;
         log(
