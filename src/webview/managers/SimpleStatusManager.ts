@@ -105,7 +105,7 @@ export class SimpleStatusManager {
       this.statusElement.style.display = 'block';
       this.statusElement.style.opacity = '0';
       this.statusElement.style.transform = 'translateY(-100%)';
-      
+
       // Trigger reflow and animate in
       setTimeout(() => {
         if (this.statusElement) {
