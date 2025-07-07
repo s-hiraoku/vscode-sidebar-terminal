@@ -111,20 +111,29 @@ suite('Integration Test Suite', () => {
   });
 
   test('Should handle terminal exit gracefully', (done) => {
-    let exitReceived = false;
+    const timeout = setTimeout(() => {
+      done(new Error('Terminal exit event not received within timeout'));
+    }, 1500);
 
     terminalManager.onExit((event) => {
-      exitReceived = true;
+      clearTimeout(timeout);
       assert.ok(event.terminalId);
-
-      if (exitReceived) {
-        done();
-      }
+      done();
     });
 
-    // Create and immediately kill terminal
+    // Create terminal and kill it (killTerminal kills the active terminal)
     const terminalId = terminalManager.createTerminal();
-    terminalManager.killTerminal(terminalId);
+    
+    // Give terminal time to be fully created before killing
+    setTimeout(() => {
+      const activeTerminalId = terminalManager.getActiveTerminalId();
+      if (activeTerminalId) {
+        terminalManager.killTerminal(activeTerminalId);
+      } else {
+        clearTimeout(timeout);
+        done(new Error('No active terminal found to kill'));
+      }
+    }, 100);
   });
 
   test('Should maintain terminal state consistency', () => {

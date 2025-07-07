@@ -4,15 +4,18 @@ import * as vscode from 'vscode';
 suite('E2E Test Suite', () => {
   let extension: vscode.Extension<unknown> | undefined;
 
-  suiteSetup(async () => {
+  suiteSetup(async function() {
+    // Increase timeout for this setup
+    this.timeout(5000);
+    
     // Wait for extension to activate
     extension = vscode.extensions.getExtension('s-hiraoku.vscode-sidebar-terminal');
     if (extension && !extension.isActive) {
       await extension.activate();
     }
 
-    // Wait for VS Code to be ready
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    // Shorter wait time for VS Code to be ready
+    await new Promise((resolve) => setTimeout(resolve, 1000));
   });
 
   test('Extension should be active', () => {
