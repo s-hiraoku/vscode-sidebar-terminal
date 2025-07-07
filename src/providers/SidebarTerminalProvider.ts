@@ -63,9 +63,10 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
   public splitTerminal(): void {
     console.log('🔧 [DEBUG] Splitting terminal...');
     try {
-      // Check if we can split (2 terminal limit)
+      // Check if we can split (use configured terminal limit)
       const terminals = this._terminalManager.getTerminals();
-      const maxSplitTerminals = 2;
+      const config = vscode.workspace.getConfiguration('sidebarTerminal');
+      const maxSplitTerminals = config.get<number>('maxTerminals', 5);
 
       if (terminals.length >= maxSplitTerminals) {
         console.warn('⚠️ [DEBUG] Cannot split - already at maximum terminals:', terminals.length);
@@ -124,11 +125,14 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
     try {
       const activeTerminalId = this._terminalManager.getActiveTerminalId();
       const terminals = this._terminalManager.getTerminals();
-      
+
       console.log('🔧 [DEBUG] Active terminal ID:', activeTerminalId);
       console.log('🔧 [DEBUG] Total terminals:', terminals.length);
-      console.log('🔧 [DEBUG] Terminal list:', terminals.map(t => t.id));
-      
+      console.log(
+        '🔧 [DEBUG] Terminal list:',
+        terminals.map((t) => t.id)
+      );
+
       if (!activeTerminalId) {
         console.warn('⚠️ [WARN] No active terminal to kill');
         TerminalErrorHandler.handleTerminalNotFound();
@@ -167,7 +171,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
   private _performKillTerminal(terminalId: string): void {
     try {
       console.log('🗑️ [PROVIDER] Performing kill for terminal:', terminalId);
-      
+
       // Kill the terminal process in TerminalManager
       this._terminalManager.killTerminal(terminalId);
 
@@ -457,6 +461,9 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
                 background-color: var(--vscode-editor-background, #1e1e1e);
                 color: var(--vscode-foreground, #cccccc);
                 font-family: var(--vscode-font-family, monospace);
+                height: 100vh;
+                display: flex;
+                flex-direction: column;
             }
             
             /* Split layout container */
@@ -528,11 +535,30 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
                 background: var(--vscode-focusBorder, #007acc);
             }
             
+            /* Status bar */
+            .status {
+                height: 20px;
+                flex-shrink: 0;
+                position: relative;
+                z-index: 1000;
+                color: #00ff00;
+                font-size: 10px;
+                font-family: monospace;
+                background: rgba(0, 0, 0, 0.8);
+                padding: 2px 6px;
+                display: flex;
+                align-items: center;
+                max-width: 300px;
+                word-break: break-all;
+            }
+            
             /* Terminal containers */
             #terminal {
+                flex: 1;
                 width: 100%;
-                height: 100%;
+                background: #000;
                 position: relative;
+                overflow: hidden;
             }
             
             .secondary-terminal {
@@ -572,20 +598,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
                 border-color: var(--vscode-button-background, #0e639c);
             }
             
-            .status {
-                position: absolute;
-                top: 5px;
-                left: 5px;
-                z-index: 1000;
-                color: #00ff00;
-                font-size: 11px;
-                font-family: monospace;
-                background: rgba(0, 0, 0, 0.8);
-                padding: 2px 6px;
-                border-radius: 3px;
-                max-width: 300px;
-                word-break: break-all;
-            }
+            /* Status class moved above - now using flex layout */
             
             .loading {
                 display: flex;
@@ -600,7 +613,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
     </head>
     <body>
         <div class="status" id="status">Initializing...</div>
-        <div id="terminal" style="position: absolute; top: 30px; left: 0; right: 0; bottom: 0; background: #000;">
+        <div id="terminal">
             <!-- Simple terminal container -->
         </div>
         <script nonce="${nonce}">

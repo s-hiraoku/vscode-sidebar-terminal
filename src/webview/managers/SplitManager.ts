@@ -13,10 +13,6 @@ export interface TerminalInstance {
 
 export class SplitManager {
   // Split functionality
-  public secondaryTerminal: Terminal | null = null;
-  public secondaryTerminalId: string | null = null;
-  public secondaryFitAddon: FitAddon | null = null;
-  private secondaryContainer: HTMLElement | null = null;
   public isSplitMode = false;
   private splitDirection: 'horizontal' | 'vertical' | null = null;
 
@@ -38,11 +34,9 @@ export class SplitManager {
     // Get the current terminal body height (this is what we want to split)
     const availableHeight = terminalBody.clientHeight;
 
-    // Include existing primary terminal in the count
-    const existingPrimaryTerminal = document.getElementById('primary-terminal');
-    const currentTerminalCount = existingPrimaryTerminal ? 1 : 0;
-    const nextSplitCount = this.splitTerminals.size + 1; // New terminal to be added
-    const totalTerminalCount = currentTerminalCount + nextSplitCount;
+    // Use actual terminal count from our terminals map
+    const currentTerminalCount = this.terminals.size;
+    const totalTerminalCount = currentTerminalCount + 1; // Include new terminal being added
 
     // Check maximum split limit
     if (totalTerminalCount > this.maxSplitCount) {
@@ -71,6 +65,40 @@ export class SplitManager {
     return { canSplit: true, terminalHeight };
   }
 
+  public calculateTerminalHeightPercentage(): string {
+    const terminalCount = this.terminals.size;
+    if (terminalCount <= 1) {
+      return '100%';
+    }
+    return `${Math.floor(100 / terminalCount)}%`;
+  }
+
+  public calculateTerminalHeightPixels(): number {
+    // Use terminal-body as the reference for available height
+    const terminalBody = document.getElementById('terminal-body');
+    if (!terminalBody) {
+      console.warn('⚠️ [HEIGHT] Terminal body not found, using fallback');
+      return 100; // Fallback
+    }
+    
+    // Get the actual available height from terminal-body
+    const bodyRect = terminalBody.getBoundingClientRect();
+    const availableHeight = bodyRect.height;
+    
+    // Always use the current number of terminal containers
+    const actualTerminalCount = Math.max(1, this.terminalContainers.size);
+    
+    console.log(`📐 [HEIGHT] Terminal-body height: ${availableHeight}px, Terminal count: ${actualTerminalCount}`);
+    console.log(`📐 [HEIGHT] Body rect:`, bodyRect);
+    console.log(`📐 [HEIGHT] Terminal containers:`, Array.from(this.terminalContainers.keys()));
+    
+    // Calculate equal height for all terminals
+    const calculatedHeight = Math.floor(availableHeight / actualTerminalCount);
+    console.log(`📐 [HEIGHT] Calculated height per terminal: ${calculatedHeight}px`);
+    
+    return calculatedHeight;
+  }
+
   public initializeMultiSplitLayout(): void {
     console.log('📐 [WEBVIEW] Initializing multi-split layout');
 
@@ -93,11 +121,12 @@ export class SplitManager {
     if (existingPrimaryTerminal) {
       console.log('📐 [WEBVIEW] Adjusting existing primary terminal for split layout');
 
-      // Calculate height for 2 terminals (existing + new one that will be added)
+      // Calculate height for all terminals (existing + new one that will be added)
       const availableHeight = terminalBody.clientHeight;
-      const heightPerTerminal = Math.floor(availableHeight / 2);
+      const totalTerminals = this.terminals.size + 1; // Include new terminal being added
+      const heightPerTerminal = Math.floor(availableHeight / totalTerminals);
 
-      // Set the existing terminal to half height
+      // Set the existing terminal to calculated height
       existingPrimaryTerminal.style.cssText = `
         height: ${heightPerTerminal}px;
         background: #000;
