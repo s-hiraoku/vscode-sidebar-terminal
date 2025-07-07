@@ -1,74 +1,39 @@
+/**
+ * リファクタリング後のWebViewメインエントリーポイント
+ */
 import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import { WebLinksAddon } from 'xterm-addon-web-links';
 
-// Import types and constants for webview
-import type { WebviewMessage, VsCodeMessage, TerminalConfig } from '../types/common';
+// Types and constants
+import type {
+  WebviewMessage,
+  VsCodeMessage,
+  TerminalConfig,
+  TerminalSettings,
+} from '../types/common';
+import { webview as log } from '../utils/logger';
+import { WEBVIEW_TERMINAL_CONSTANTS, SPLIT_CONSTANTS } from './constants/webview';
+import { getWebviewTheme, WEBVIEW_THEME_CONSTANTS } from './utils/WebviewThemeUtils';
+import { SplitManager } from './managers/SplitManager';
+import { SettingsPanel } from './components/SettingsPanel';
+import { showTerminalKillError, showTerminalCloseError } from './utils/NotificationUtils';
 
-// Constants for webview (duplicated to avoid import issues)
-const WEBVIEW_CONSTANTS = {
-  DARK_THEME: {
-    background: '#1e1e1e',
-    foreground: '#cccccc',
-    cursor: '#ffffff',
-    cursorAccent: '#000000',
-    black: '#000000',
-    red: '#cd3131',
-    green: '#0dbc79',
-    yellow: '#e5e510',
-    blue: '#2472c8',
-    magenta: '#bc3fbc',
-    cyan: '#11a8cd',
-    white: '#e5e5e5',
-    brightBlack: '#666666',
-    brightRed: '#f14c4c',
-    brightGreen: '#23d18b',
-    brightYellow: '#f5f543',
-    brightBlue: '#3b8eea',
-    brightMagenta: '#d670d6',
-    brightCyan: '#29b8db',
-    brightWhite: '#ffffff',
-  },
-  LIGHT_THEME: {
-    background: '#ffffff',
-    foreground: '#333333',
-    cursor: '#000000',
-    cursorAccent: '#ffffff',
-    black: '#000000',
-    red: '#cd3131',
-    green: '#00bc00',
-    yellow: '#949800',
-    blue: '#0451a5',
-    magenta: '#bc05bc',
-    cyan: '#0598bc',
-    white: '#555555',
-    brightBlack: '#666666',
-    brightRed: '#cd3131',
-    brightGreen: '#14ce14',
-    brightYellow: '#b5ba00',
-    brightBlue: '#0451a5',
-    brightMagenta: '#bc05bc',
-    brightCyan: '#0598bc',
-    brightWhite: '#a5a5a5',
-  },
-};
-
-const TERMINAL_CONSTANTS = {
-  TERMINAL_REMOVE_DELAY: 2000,
-  COMMANDS: {
-    READY: 'ready',
-    INIT: 'init',
-    INPUT: 'input',
-    OUTPUT: 'output',
-    RESIZE: 'resize',
-    CLEAR: 'clear',
-    EXIT: 'exit',
-    SPLIT: 'split',
-    TERMINAL_CREATED: 'terminalCreated',
-    TERMINAL_REMOVED: 'terminalRemoved',
-    SWITCH_TERMINAL: 'switchTerminal',
-  },
-};
+// Type definitions
+interface TerminalMessage extends WebviewMessage {
+  terminalId?: string;
+  terminalName?: string;
+  data?: string;
+  config?: TerminalConfig;
+  activeTerminalId?: string;
+  exitCode?: number;
+  settings?: {
+    fontSize: number;
+    fontFamily: string;
+    theme?: string;
+    cursorBlink: boolean;
+  };
+}
 
 declare const acquireVsCodeApi: () => {
   postMessage: (message: VsCodeMessage) => void;
@@ -78,74 +43,69 @@ declare const acquireVsCodeApi: () => {
 
 const vscode = acquireVsCodeApi();
 
-// Performance-optimized terminal management with split support
+// Main terminal management class
 class TerminalWebviewManager {
-  private terminal: Terminal | null = null;
-  private fitAddon: FitAddon | null = null;
+  public terminal: Terminal | null = null;
+  public fitAddon: FitAddon | null = null;
   public terminalContainer: HTMLElement | null = null;
   private isComposing: boolean = false;
   public activeTerminalId: string | null = null;
 
-  // Split functionality
-  public secondaryTerminal: Terminal | null = null;
-  public secondaryTerminalId: string | null = null;
-  private secondaryFitAddon: FitAddon | null = null;
-  private secondaryContainer: HTMLElement | null = null;
-  public isSplitMode = false;
-  private splitDirection: 'horizontal' | 'vertical' | null = null;
-
   // Performance optimization: Buffer output and batch writes
   private outputBuffer: string[] = [];
   private bufferFlushTimer: number | null = null;
-  private readonly BUFFER_FLUSH_INTERVAL = 16; // ~60fps
-  private readonly MAX_BUFFER_SIZE = 100;
+  private readonly BUFFER_FLUSH_INTERVAL = SPLIT_CONSTANTS.BUFFER_FLUSH_INTERVAL;
+  private readonly MAX_BUFFER_SIZE = SPLIT_CONSTANTS.MAX_BUFFER_SIZE;
 
   // Performance optimization: Debounce resize operations
   private resizeDebounceTimer: number | null = null;
-  private readonly RESIZE_DEBOUNCE_DELAY = 150;
+  private readonly RESIZE_DEBOUNCE_DELAY = SPLIT_CONSTANTS.RESIZE_DEBOUNCE_DELAY;
 
-  // Multiple terminal management
-  private terminals = new Map<string, { terminal: Terminal; fitAddon: FitAddon; name: string }>();
-  private terminalContainers = new Map<string, HTMLElement>();
+  // Managers
+  private splitManager: SplitManager;
+  private settingsPanel: SettingsPanel;
+
+  // Current settings
+  private currentSettings: TerminalSettings = {
+    fontSize: 14,
+    fontFamily: 'Consolas, monospace',
+    theme: 'auto',
+    cursorBlink: true,
+  };
+
+  constructor() {
+    this.splitManager = new SplitManager();
+    this.settingsPanel = new SettingsPanel({
+      onSettingsChange: (settings) => {
+        this.applySettings(settings);
+      },
+    });
+
+    // Load settings from VS Code state if available
+    this.loadSettings();
+  }
 
   public initializeSimpleTerminal(): void {
     const container = document.getElementById('terminal');
     if (!container) {
-      console.error('Terminal container not found');
-      updateStatus('ERROR: Terminal container not found');
+      log('Terminal container not found');
       return;
     }
 
-    updateStatus('Initializing simple terminal');
-    console.log('🎯 [WEBVIEW] Initializing simple terminal');
+    log('🎯 [WEBVIEW] Initializing simple terminal');
 
-    // Create a simple terminal container with buttons
+    // Create simple terminal container
     container.innerHTML = `
-      <div id="terminal-header" style="
-        display: flex;
-        background: var(--vscode-tab-inactiveBackground, #2d2d30);
-        border-bottom: 1px solid var(--vscode-tab-border, #333);
-        padding: 4px 8px;
-        gap: 4px;
-        align-items: center;
-        justify-content: space-between;
-        min-height: 32px;
-      ">
-        <div id="terminal-tabs" style="
-          display: flex;
-          gap: 2px;
-          flex: 1;
-          overflow-x: auto;
-          scrollbar-width: none;
-          -ms-overflow-style: none;
-        "></div>
-      </div>
       <div id="terminal-body" style="
-        flex: 1;
+        display: flex;
+        flex-direction: column;
         background: #000;
-        position: relative;
-        height: calc(100% - 32px);
-        min-height: 200px;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        margin: 0;
+        padding: 0;
+        gap: 0;
       ">
         <div id="terminal-placeholder" style="
           position: absolute;
@@ -168,13 +128,9 @@ class TerminalWebviewManager {
       this.terminalContainer = document.getElementById('terminal-body');
 
       if (this.terminalContainer) {
-        updateStatus('Simple terminal view initialized');
-        console.log('🎯 [WEBVIEW] Simple terminal container created successfully');
-        console.log('🎯 [WEBVIEW] Container element:', this.terminalContainer);
+        log('🎯 [WEBVIEW] Simple terminal container created successfully');
       } else {
-        updateStatus('ERROR: Failed to create terminal container');
-        console.error('❌ [WEBVIEW] Failed to create terminal container');
-        console.error('❌ [WEBVIEW] Available elements:', document.querySelectorAll('*'));
+        log('❌ [WEBVIEW] Failed to create terminal container');
       }
     }, 1);
 
@@ -182,157 +138,387 @@ class TerminalWebviewManager {
     this.setupIMEHandling();
   }
 
-  public addTerminalTab(id: string, name: string): void {
-    const tabsContainer = document.getElementById('terminal-tabs');
-    if (!tabsContainer) {
-      console.error('❌ [WEBVIEW] Terminal tabs container not found');
+  public createTerminal(id: string, name: string, _config: TerminalConfig): void {
+    this.setActiveTerminalId(id);
+    log('🎯 [WEBVIEW] Creating terminal:', id, name);
+
+    if (!this.terminalContainer) {
+      log('❌ [WEBVIEW] No terminal container available');
       return;
     }
 
-    // Check if tab already exists
-    if (document.getElementById(`tab-${id}`)) {
-      console.log('🎯 [WEBVIEW] Tab already exists for terminal:', id);
-      return;
-    }
+    try {
+      const terminalTheme = getWebviewTheme();
+      log('🎨 [WEBVIEW] Creating terminal with theme:', terminalTheme);
 
-    const tab = document.createElement('div');
-    tab.id = `tab-${id}`;
-    tab.style.cssText = `
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      padding: 4px 8px;
-      background: var(--vscode-tab-inactiveBackground, #2d2d30);
-      border: 1px solid var(--vscode-tab-border, #333);
-      border-radius: 3px 3px 0 0;
-      color: var(--vscode-tab-inactiveForeground, #969696);
-      font-size: 11px;
-      cursor: pointer;
-      user-select: none;
-      white-space: nowrap;
-      min-width: 80px;
-      max-width: 150px;
-    `;
+      // Apply current settings to new terminal
+      const terminalOptions = {
+        fontSize: this.currentSettings.fontSize,
+        fontFamily: this.currentSettings.fontFamily,
+        theme:
+          this.currentSettings.theme === 'auto'
+            ? terminalTheme
+            : this.currentSettings.theme === 'dark'
+              ? WEBVIEW_THEME_CONSTANTS.DARK_THEME
+              : WEBVIEW_THEME_CONSTANTS.LIGHT_THEME,
+        cursorBlink: this.currentSettings.cursorBlink,
+        allowTransparency: true,
+        scrollback: 10000,
+      };
 
-    const tabLabel = document.createElement('span');
-    tabLabel.textContent = name;
-    tabLabel.style.cssText = `
-      overflow: hidden;
-      text-overflow: ellipsis;
-      flex: 1;
-    `;
+      const terminal = new Terminal(terminalOptions);
 
-    const closeBtn = document.createElement('button');
-    closeBtn.textContent = '×';
-    closeBtn.style.cssText = `
-      background: transparent;
-      border: none;
-      color: var(--vscode-tab-inactiveForeground, #969696);
-      font-size: 12px;
-      cursor: pointer;
-      padding: 0;
-      width: 16px;
-      height: 16px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 2px;
-    `;
-    closeBtn.title = 'Close Terminal';
+      const fitAddon = new FitAddon();
+      terminal.loadAddon(fitAddon);
+      terminal.loadAddon(new WebLinksAddon());
 
-    // Tab click to switch
-    tab.addEventListener('click', (e) => {
-      if (e.target !== closeBtn) {
-        this.switchToTerminal(id);
+      // Clear placeholder
+      const placeholder = document.getElementById('terminal-placeholder');
+      if (placeholder) {
+        placeholder.remove();
       }
-    });
 
-    // Close button click
-    closeBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      this.closeTerminal(id);
-    });
+      // Create terminal container div - unified logic for all terminals
+      const terminalDiv = document.createElement('div');
+      terminalDiv.setAttribute('data-terminal-container', 'terminal');
+      terminalDiv.id = `terminal-container-${id}`;
 
-    // Close button hover
-    closeBtn.addEventListener('mouseenter', () => {
-      closeBtn.style.background = 'var(--vscode-button-hoverBackground, #1f3447)';
-    });
-    closeBtn.addEventListener('mouseleave', () => {
-      closeBtn.style.background = 'transparent';
-    });
+      // Set split mode if this is the second terminal
+      if (this.splitManager.getTerminals().size >= 1 && !this.splitManager.getIsSplitMode()) {
+        this.splitManager.prepareSplitMode('vertical');
+      }
 
-    tab.appendChild(tabLabel);
-    tab.appendChild(closeBtn);
-    tabsContainer.appendChild(tab);
+      // Add to DOM first
+      this.terminalContainer.appendChild(terminalDiv);
 
-    console.log('✅ [WEBVIEW] Added tab for terminal:', id, name);
+      // Register the container with split manager
+      this.splitManager.getTerminalContainers().set(id, terminalDiv);
+
+      // Apply flex-based styling to the new terminal
+      terminalDiv.style.cssText = `
+        width: 100%; 
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        margin: 0;
+        padding: 2px;
+        min-height: 100px;
+        border: none;
+        outline: none;
+      `;
+      log(`📐 [MAIN] Applied flex layout for terminal ${id}`);
+
+      // CRITICAL: Apply flex layout to ALL terminals IMMEDIATELY (before terminal.open)
+      log(
+        `📐 [MAIN] Applying flex layout to all ${this.splitManager.getTerminalContainers().size} terminals IMMEDIATELY`
+      );
+
+      this.splitManager.getTerminalContainers().forEach((container, terminalId) => {
+        container.style.cssText = `
+          width: 100%; 
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+          margin: 0;
+          padding: 2px;
+          min-height: 100px;
+          border: none;
+          outline: none;
+        `;
+
+        log(`📐 [MAIN] Applied flex layout to terminal ${terminalId}`);
+
+        // Add click event if not already added
+        if (!container.hasAttribute('data-click-handler')) {
+          container.setAttribute('data-click-handler', 'true');
+          container.addEventListener('click', () => {
+            if (this.activeTerminalId !== terminalId) {
+              this.switchToTerminal(terminalId);
+            }
+          });
+        }
+      });
+
+      // Force layout recalculation BEFORE opening terminal
+      this.splitManager.getTerminalContainers().forEach((container) => {
+        container.offsetHeight; // Force reflow
+      });
+      log(
+        `📐 [MAIN] Forced layout recalculation for all ${this.splitManager.getTerminalContainers().size} containers`
+      );
+
+      const targetContainer = terminalDiv;
+
+      // Open terminal AFTER flex layout is applied
+      setTimeout(() => {
+        try {
+          log(`🎨 [MAIN] Opening terminal ${id} after flex layout applied`);
+          terminal.open(targetContainer);
+
+          // Wait longer for DOM and flex layout to fully stabilize before fitting
+          setTimeout(() => {
+            // Force layout recalculation before fit
+            targetContainer.offsetHeight; // Trigger reflow
+
+            const terminalBody = document.getElementById('terminal-body');
+            const terminalMain = document.getElementById('terminal');
+
+            log(`🔧 [MAIN] Hierarchy sizes before fit:`, {
+              terminal: terminalMain
+                ? { w: terminalMain.offsetWidth, h: terminalMain.offsetHeight }
+                : 'not found',
+              terminalBody: terminalBody
+                ? { w: terminalBody.offsetWidth, h: terminalBody.offsetHeight }
+                : 'not found',
+              targetContainer: { w: targetContainer.offsetWidth, h: targetContainer.offsetHeight },
+              containerStyle: targetContainer.style.cssText,
+              terminalCount: this.splitManager.getTerminalContainers().size,
+            });
+
+            fitAddon.fit();
+            terminal.refresh(0, terminal.rows - 1);
+            terminal.focus();
+
+            // Only set as main terminal if it's the first one or not in split mode
+            if (!this.splitManager.getIsSplitMode() || !this.terminal) {
+              this.terminal = terminal;
+              this.fitAddon = fitAddon;
+            }
+
+            // Switch to the newly created terminal
+            this.switchToTerminal(id);
+
+            // Re-fit ALL terminals to ensure consistent sizing
+            setTimeout(() => {
+              log(`🔧 [MAIN] Re-fitting ALL terminals for consistency`);
+              this.splitManager.getTerminals().forEach((terminalData, terminalId) => {
+                if (terminalData.fitAddon) {
+                  const container = this.splitManager.getTerminalContainers().get(terminalId);
+                  if (container) {
+                    container.offsetHeight; // Force reflow
+                    terminalData.fitAddon.fit();
+                    log(
+                      `🔧 [MAIN] Re-fitted terminal ${terminalId}, size: ${container.offsetWidth}x${container.offsetHeight}`
+                    );
+                  }
+                }
+              });
+            }, 200);
+          }, 500); // Increased delay for flex layout stabilization
+        } catch (openError) {
+          log('❌ [WEBVIEW] Error opening terminal:', openError);
+        }
+      }, 100);
+
+      // Handle terminal input
+      terminal.onData((data) => {
+        if (this.isComposing) {
+          return;
+        }
+
+        vscode.postMessage({
+          command: 'input' as const,
+          data,
+          terminalId: this.activeTerminalId || id,
+        });
+      });
+
+      // Handle resize
+      terminal.onResize((size) => {
+        vscode.postMessage({
+          command: 'resize' as const,
+          cols: size.cols,
+          rows: size.rows,
+          terminalId: id,
+        });
+      });
+
+      // Store terminal instance
+      this.splitManager.setTerminal(id, {
+        terminal,
+        fitAddon,
+        name,
+      });
+
+      // Performance optimization: Use debounced resize observer
+      if (this.terminalContainer) {
+        const resizeObserver = new ResizeObserver(() => {
+          if (this.fitAddon && this.terminal) {
+            this.debouncedResize(this.terminal.cols, this.terminal.rows);
+          }
+        });
+        resizeObserver.observe(this.terminalContainer);
+      }
+    } catch (error) {
+      log('❌ [WEBVIEW] Error creating terminal:', error);
+    }
   }
 
   public switchToTerminal(id: string): void {
-    console.log('🔄 [WEBVIEW] Switching to terminal:', id);
+    log('🔄 [WEBVIEW] Switching to terminal:', id);
 
-    // Update active terminal ID
     this.setActiveTerminalId(id);
 
-    // Hide all terminal containers
-    this.terminalContainers.forEach((container, terminalId) => {
-      container.style.display = terminalId === id ? 'block' : 'none';
+    // Apply consistent flex styling to all terminals
+    this.splitManager.getTerminalContainers().forEach((container, _terminalId) => {
+      container.style.cssText = `
+        width: 100%; 
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        min-height: 100px;
+        margin: 0;
+        padding: 2px;
+        border: none;
+        outline: none;
+      `;
     });
 
-    // Update tab appearances
-    const tabsContainer = document.getElementById('terminal-tabs');
-    if (tabsContainer) {
-      tabsContainer.childNodes.forEach((tabNode) => {
-        const tab = tabNode as HTMLElement;
-        const isActive = tab.id === `tab-${id}`;
-
-        tab.style.background = isActive
-          ? 'var(--vscode-tab-activeBackground, #1e1e1e)'
-          : 'var(--vscode-tab-inactiveBackground, #2d2d30)';
-        tab.style.color = isActive
-          ? 'var(--vscode-tab-activeForeground, #ffffff)'
-          : 'var(--vscode-tab-inactiveForeground, #969696)';
-      });
-    }
-
-    // Focus the active terminal
-    const terminalData = this.terminals.get(id);
+    // Focus the active terminal and ensure proper fit
+    const terminalData = this.splitManager.getTerminals().get(id);
     if (terminalData?.terminal) {
-      terminalData.terminal.focus();
-      if (terminalData.fitAddon) {
-        terminalData.fitAddon.fit();
-      }
+      // Wait for CSS updates to be applied
+      setTimeout(() => {
+        const container = this.splitManager.getTerminalContainers().get(id);
+        if (container) {
+          // Force layout recalculation
+          container.offsetHeight;
+
+          log(`🔧 [SWITCH] Container size for terminal ${id}:`, {
+            width: container.offsetWidth,
+            height: container.offsetHeight,
+          });
+        }
+
+        terminalData.terminal.focus();
+        if (terminalData.fitAddon) {
+          terminalData.fitAddon.fit();
+          log(`🔧 [SWITCH] Fit applied for terminal ${id}`);
+        }
+      }, 50);
     }
 
-    console.log('✅ [WEBVIEW] Switched to terminal:', id);
+    log('✅ [WEBVIEW] Switched to terminal:', id);
   }
 
-  public closeTerminal(id: string): void {
-    console.log('🗑️ [WEBVIEW] Closing terminal:', id);
+  public closeTerminal(id?: string): void {
+    // According to the spec: always kill the ACTIVE terminal, not the specified one
+    const activeTerminalId = this.activeTerminalId;
+    log(
+      '🗑️ [WEBVIEW] Close terminal requested for:',
+      id,
+      'but will close active terminal:',
+      activeTerminalId
+    );
+
+    if (!activeTerminalId) {
+      log('⚠️ [WEBVIEW] No active terminal to close');
+      showTerminalKillError('No active terminal to close');
+      return;
+    }
+
+    // Check if this is a safe kill attempt using the ACTIVE terminal
+    if (!this.canKillTerminal(activeTerminalId)) {
+      return;
+    }
+
+    this.performKillTerminal(activeTerminalId);
+  }
+
+  // Track terminals being closed to prevent double processing
+  private terminalsBeingClosed = new Set<string>();
+
+  private canKillTerminal(id: string): boolean {
+    // Prevent double processing
+    if (this.terminalsBeingClosed.has(id)) {
+      log('🔄 [WEBVIEW] Terminal already being closed:', id);
+      return false;
+    }
+
+    const terminalCount = this.splitManager.getTerminals().size;
+    const minTerminalCount = 1;
+
+    log('🔧 [WEBVIEW] canKillTerminal check:', {
+      terminalId: id,
+      terminalCount,
+      minTerminalCount,
+      activeTerminalId: this.activeTerminalId,
+      beingClosed: Array.from(this.terminalsBeingClosed),
+    });
+
+    if (terminalCount <= minTerminalCount) {
+      log('🛡️ [WEBVIEW] Cannot kill terminal - would go below minimum count');
+      this.showLastTerminalWarning(minTerminalCount);
+      return false;
+    }
+
+    return true;
+  }
+
+  private showLastTerminalWarning(minCount: number): void {
+    showTerminalCloseError(minCount);
+  }
+
+  private performKillTerminal(id: string): void {
+    log('🗑️ [WEBVIEW] Performing kill for terminal:', id);
+
+    // Mark terminal as being closed
+    this.terminalsBeingClosed.add(id);
+
+    log('🗑️ [WEBVIEW] Current active terminal:', this.activeTerminalId);
+    log(
+      '🗑️ [WEBVIEW] Terminals before removal:',
+      Array.from(this.splitManager.getTerminals().keys())
+    );
 
     // Remove terminal instance
-    const terminalData = this.terminals.get(id);
+    const terminalData = this.splitManager.getTerminals().get(id);
     if (terminalData) {
       terminalData.terminal.dispose();
-      this.terminals.delete(id);
+      this.splitManager.getTerminals().delete(id);
+      log('🗑️ [WEBVIEW] Terminal instance removed:', id);
     }
 
     // Remove terminal container
-    const container = this.terminalContainers.get(id);
+    const container = this.splitManager.getTerminalContainers().get(id);
     if (container) {
       container.remove();
-      this.terminalContainers.delete(id);
+      this.splitManager.getTerminalContainers().delete(id);
+      log('🗑️ [WEBVIEW] Terminal container removed:', id);
     }
 
-    // Remove tab
-    const tab = document.getElementById(`tab-${id}`);
-    if (tab) {
-      tab.remove();
-    }
+    // Adjust remaining terminal layouts
+    const remainingTerminals = Array.from(this.splitManager.getTerminals().keys());
+    log('🗑️ [WEBVIEW] Remaining terminals:', remainingTerminals);
+
+    // Update all remaining terminals to use flex layout
+    log(`🗑️ [WEBVIEW] Updating ${remainingTerminals.length} remaining terminals with flex layout`);
+
+    remainingTerminals.forEach((terminalId) => {
+      const container = this.splitManager.getTerminalContainers().get(terminalId);
+      if (container) {
+        // Apply unified flex styling to all remaining terminals
+        container.style.cssText = `
+          width: 100%; 
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+          min-height: 100px;
+          margin: 0;
+          padding: 2px;
+          border: none;
+          outline: none;
+        `;
+        log(`🗑️ [WEBVIEW] Updated terminal ${terminalId} with flex layout`);
+      }
+    });
 
     // If this was the active terminal, switch to another one
     if (this.activeTerminalId === id) {
-      const remainingTerminals = Array.from(this.terminals.keys());
       if (remainingTerminals.length > 0) {
         const nextTerminalId = remainingTerminals[0];
         if (nextTerminalId) {
@@ -340,18 +526,92 @@ class TerminalWebviewManager {
         }
       } else {
         this.activeTerminalId = null;
-        // Show placeholder if no terminals left
+        this.showTerminalPlaceholder();
+      }
+    } else {
+      // Update status for terminal closure
+    }
+
+    // Notify extension about terminal closure ONLY if terminal actually existed
+    if (terminalData) {
+      vscode.postMessage({
+        command: 'terminalClosed',
+        terminalId: id,
+      });
+      log('📤 [WEBVIEW] Sent terminalClosed message to extension for:', id);
+    }
+
+    log('✅ [WEBVIEW] Terminal closed:', id);
+  }
+
+  /**
+   * Handle terminal removal notification from extension (UI cleanup only)
+   */
+  public handleTerminalRemovedFromExtension(id: string): void {
+    log('🗑️ [WEBVIEW] Handling terminal removal from extension:', id);
+
+    // Remove from being closed tracking (if it exists)
+    this.terminalsBeingClosed.delete(id);
+
+    // Check if terminal exists in webview
+    const terminalData = this.splitManager.getTerminals().get(id);
+    const container = this.splitManager.getTerminalContainers().get(id);
+
+    if (!terminalData && !container) {
+      log('🔄 [WEBVIEW] Terminal already removed from webview:', id);
+      return;
+    }
+
+    // UI cleanup only (no extension communication)
+    if (terminalData) {
+      terminalData.terminal.dispose();
+      this.splitManager.getTerminals().delete(id);
+      log('🗑️ [WEBVIEW] Terminal instance cleaned up:', id);
+    }
+
+    if (container) {
+      container.remove();
+      this.splitManager.getTerminalContainers().delete(id);
+      log('🗑️ [WEBVIEW] Terminal container cleaned up:', id);
+    }
+
+    // Update remaining terminals layout
+    const remainingTerminals = Array.from(this.splitManager.getTerminals().keys());
+    log('🗑️ [WEBVIEW] Remaining terminals after extension removal:', remainingTerminals);
+
+    // Apply flex layout to remaining terminals
+    remainingTerminals.forEach((terminalId) => {
+      const terminalContainer = this.splitManager.getTerminalContainers().get(terminalId);
+      if (terminalContainer) {
+        terminalContainer.style.cssText = `
+          width: 100%; 
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+          min-height: 100px;
+          margin: 0;
+          padding: 2px;
+          border: none;
+          outline: none;
+        `;
+      }
+    });
+
+    // Handle active terminal change
+    if (this.activeTerminalId === id) {
+      if (remainingTerminals.length > 0) {
+        const nextTerminalId = remainingTerminals[0];
+        if (nextTerminalId) {
+          this.switchToTerminal(nextTerminalId);
+        }
+      } else {
+        this.activeTerminalId = null;
         this.showTerminalPlaceholder();
       }
     }
 
-    // Notify extension about terminal closure
-    vscode.postMessage({
-      command: 'terminalClosed',
-      terminalId: id,
-    });
-
-    console.log('✅ [WEBVIEW] Terminal closed:', id);
+    log('✅ [WEBVIEW] Terminal removal from extension handled:', id);
   }
 
   private showTerminalPlaceholder(): void {
@@ -375,697 +635,27 @@ class TerminalWebviewManager {
     }
   }
 
-  public openSettingsPanel(): void {
-    console.log('⚙️ [WEBVIEW] Opening settings panel');
+  public writeToTerminal(data: string, _terminalId?: string): void {
+    // Determine which terminal to write to
+    let targetTerminal = this.terminal;
 
-    // Check if settings panel already exists
-    let settingsPanel = document.getElementById('settings-panel');
-    if (settingsPanel) {
-      // Toggle visibility if already exists
-      const isVisible = settingsPanel.style.display !== 'none';
-      settingsPanel.style.display = isVisible ? 'none' : 'flex';
-      return;
-    }
-
-    // Create settings panel
-    settingsPanel = document.createElement('div');
-    settingsPanel.id = 'settings-panel';
-    settingsPanel.style.cssText = `
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.7);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 9999;
-    `;
-
-    const settingsDialog = document.createElement('div');
-    settingsDialog.style.cssText = `
-      background: var(--vscode-editor-background, #1e1e1e);
-      border: 1px solid var(--vscode-widget-border, #454545);
-      border-radius: 6px;
-      padding: 20px;
-      min-width: 400px;
-      max-width: 500px;
-      max-height: 80vh;
-      overflow-y: auto;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-    `;
-
-    settingsDialog.innerHTML = `
-      <div style="
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 20px;
-        border-bottom: 1px solid var(--vscode-widget-border, #454545);
-        padding-bottom: 10px;
-      ">
-        <h3 style="
-          margin: 0;
-          color: var(--vscode-foreground, #cccccc);
-          font-size: 16px;
-          font-weight: 600;
-        ">Terminal Settings</h3>
-        <button id="close-settings" style="
-          background: transparent;
-          border: none;
-          color: var(--vscode-foreground, #cccccc);
-          font-size: 18px;
-          cursor: pointer;
-          padding: 4px;
-          border-radius: 3px;
-        ">×</button>
-      </div>
-
-      <div id="settings-content">
-        <div style="margin-bottom: 16px;">
-          <label style="
-            display: block;
-            color: var(--vscode-foreground, #cccccc);
-            font-size: 12px;
-            margin-bottom: 6px;
-            font-weight: 500;
-          ">Font Size</label>
-          <input type="range" id="font-size-slider" min="10" max="24" value="14" style="
-            width: 100%;
-            margin-bottom: 4px;
-          ">
-          <div style="
-            display: flex;
-            justify-content: space-between;
-            color: var(--vscode-descriptionForeground, #888);
-            font-size: 11px;
-          ">
-            <span>10px</span>
-            <span id="font-size-value">14px</span>
-            <span>24px</span>
-          </div>
-        </div>
-
-        <div style="margin-bottom: 16px;">
-          <label style="
-            display: block;
-            color: var(--vscode-foreground, #cccccc);
-            font-size: 12px;
-            margin-bottom: 6px;
-            font-weight: 500;
-          ">Font Family</label>
-          <select id="font-family-select" style="
-            width: 100%;
-            padding: 6px 8px;
-            background: var(--vscode-input-background, #3c3c3c);
-            border: 1px solid var(--vscode-widget-border, #454545);
-            border-radius: 3px;
-            color: var(--vscode-foreground, #cccccc);
-            font-size: 12px;
-          ">
-            <option value="Consolas, monospace">Consolas</option>
-            <option value="'Courier New', monospace">Courier New</option>
-            <option value="Monaco, monospace">Monaco</option>
-            <option value="'SF Mono', monospace">SF Mono</option>
-            <option value="'JetBrains Mono', monospace">JetBrains Mono</option>
-          </select>
-        </div>
-
-        <div style="margin-bottom: 16px;">
-          <label style="
-            display: block;
-            color: var(--vscode-foreground, #cccccc);
-            font-size: 12px;
-            margin-bottom: 6px;
-            font-weight: 500;
-          ">Theme</label>
-          <select id="theme-select" style="
-            width: 100%;
-            padding: 6px 8px;
-            background: var(--vscode-input-background, #3c3c3c);
-            border: 1px solid var(--vscode-widget-border, #454545);
-            border-radius: 3px;
-            color: var(--vscode-foreground, #cccccc);
-            font-size: 12px;
-          ">
-            <option value="auto">Auto (Follow VS Code)</option>
-            <option value="dark">Dark</option>
-            <option value="light">Light</option>
-          </select>
-        </div>
-
-        <div style="margin-bottom: 20px;">
-          <label style="
-            display: flex;
-            align-items: center;
-            color: var(--vscode-foreground, #cccccc);
-            font-size: 12px;
-            cursor: pointer;
-          ">
-            <input type="checkbox" id="cursor-blink" style="margin-right: 8px;">
-            Enable cursor blinking
-          </label>
-        </div>
-
-        <div style="
-          display: flex;
-          gap: 8px;
-          justify-content: flex-end;
-          border-top: 1px solid var(--vscode-widget-border, #454545);
-          padding-top: 16px;
-        ">
-          <button id="reset-settings" style="
-            background: transparent;
-            border: 1px solid var(--vscode-widget-border, #454545);
-            color: var(--vscode-foreground, #cccccc);
-            padding: 6px 12px;
-            border-radius: 3px;
-            cursor: pointer;
-            font-size: 11px;
-          ">Reset</button>
-          <button id="apply-settings" style="
-            background: var(--vscode-button-background, #0e639c);
-            border: 1px solid var(--vscode-button-background, #0e639c);
-            color: var(--vscode-button-foreground, #ffffff);
-            padding: 6px 12px;
-            border-radius: 3px;
-            cursor: pointer;
-            font-size: 11px;
-          ">Apply</button>
-        </div>
-      </div>
-    `;
-
-    settingsPanel.appendChild(settingsDialog);
-    document.body.appendChild(settingsPanel);
-
-    // Setup event handlers for settings panel
-    this.setupSettingsPanelEventHandlers();
-
-    // Load current settings
-    this.loadCurrentSettings();
-  }
-
-  private setupSettingsPanelEventHandlers(): void {
-    // Close button
-    const closeBtn = document.getElementById('close-settings');
-    if (closeBtn) {
-      closeBtn.addEventListener('click', () => {
-        this.closeSettingsPanel();
-      });
-    }
-
-    // Click outside to close
-    const settingsPanel = document.getElementById('settings-panel');
-    if (settingsPanel) {
-      settingsPanel.addEventListener('click', (e) => {
-        if (e.target === settingsPanel) {
-          this.closeSettingsPanel();
-        }
-      });
-    }
-
-    // Font size slider
-    const fontSizeSlider = document.getElementById('font-size-slider') as HTMLInputElement;
-    const fontSizeValue = document.getElementById('font-size-value');
-    if (fontSizeSlider && fontSizeValue) {
-      fontSizeSlider.addEventListener('input', () => {
-        fontSizeValue.textContent = `${fontSizeSlider.value}px`;
-      });
-    }
-
-    // Apply button
-    const applyBtn = document.getElementById('apply-settings');
-    if (applyBtn) {
-      applyBtn.addEventListener('click', () => {
-        this.applySettings();
-      });
-    }
-
-    // Reset button
-    const resetBtn = document.getElementById('reset-settings');
-    if (resetBtn) {
-      resetBtn.addEventListener('click', () => {
-        this.resetSettings();
-      });
-    }
-  }
-
-  private closeSettingsPanel(): void {
-    const settingsPanel = document.getElementById('settings-panel');
-    if (settingsPanel) {
-      settingsPanel.remove();
-    }
-  }
-
-  private loadCurrentSettings(): void {
-    // Load current settings and populate form
-    console.log('⚙️ [WEBVIEW] Loading current settings');
-
-    // Request current settings from extension
-    vscode.postMessage({
-      command: 'getSettings',
-    });
-  }
-
-  private applySettings(): void {
-    console.log('⚙️ [WEBVIEW] Applying settings');
-
-    const fontSizeSlider = document.getElementById('font-size-slider') as HTMLInputElement;
-    const fontFamilySelect = document.getElementById('font-family-select') as HTMLSelectElement;
-    const themeSelect = document.getElementById('theme-select') as HTMLSelectElement;
-    const cursorBlinkCheckbox = document.getElementById('cursor-blink') as HTMLInputElement;
-
-    const settings = {
-      fontSize: parseInt(fontSizeSlider?.value || '14'),
-      fontFamily: fontFamilySelect?.value || 'Consolas, monospace',
-      theme: themeSelect?.value || 'auto',
-      cursorBlink: cursorBlinkCheckbox?.checked || true,
-    };
-
-    // Send settings to extension
-    vscode.postMessage({
-      command: 'updateSettings',
-      settings,
-    });
-
-    // Apply settings immediately to current terminal
-    this.applySettingsToTerminal(settings);
-
-    this.closeSettingsPanel();
-  }
-
-  private resetSettings(): void {
-    console.log('⚙️ [WEBVIEW] Resetting settings to defaults');
-
-    const defaultSettings = {
-      fontSize: 14,
-      fontFamily: 'Consolas, monospace',
-      theme: 'auto',
-      cursorBlink: true,
-    };
-
-    // Update form with defaults
-    const fontSizeSlider = document.getElementById('font-size-slider') as HTMLInputElement;
-    const fontSizeValue = document.getElementById('font-size-value');
-    const fontFamilySelect = document.getElementById('font-family-select') as HTMLSelectElement;
-    const themeSelect = document.getElementById('theme-select') as HTMLSelectElement;
-    const cursorBlinkCheckbox = document.getElementById('cursor-blink') as HTMLInputElement;
-
-    if (fontSizeSlider) fontSizeSlider.value = defaultSettings.fontSize.toString();
-    if (fontSizeValue) fontSizeValue.textContent = `${defaultSettings.fontSize}px`;
-    if (fontFamilySelect) fontFamilySelect.value = defaultSettings.fontFamily;
-    if (themeSelect) themeSelect.value = defaultSettings.theme;
-    if (cursorBlinkCheckbox) cursorBlinkCheckbox.checked = defaultSettings.cursorBlink;
-  }
-
-  private applySettingsToTerminal(settings: {
-    fontSize: number;
-    fontFamily: string;
-    theme: string;
-    cursorBlink: boolean;
-  }): void {
-    console.log('⚙️ [WEBVIEW] Applying settings to terminal:', settings);
-
-    // Determine the theme to use
-    let terminalTheme;
-    if (settings.theme === 'auto') {
-      terminalTheme = getTheme();
-    } else if (settings.theme === 'dark') {
-      terminalTheme = WEBVIEW_CONSTANTS.DARK_THEME;
-    } else if (settings.theme === 'light') {
-      terminalTheme = WEBVIEW_CONSTANTS.LIGHT_THEME;
-    } else {
-      terminalTheme = getTheme(); // Fallback to auto detection
-    }
-
-    console.log('🎨 [WEBVIEW] Applying theme:', settings.theme, 'resolved to:', terminalTheme);
-
-    // Apply to main terminal
-    if (this.terminal) {
-      this.terminal.options.fontSize = settings.fontSize;
-      this.terminal.options.fontFamily = settings.fontFamily;
-      this.terminal.options.cursorBlink = settings.cursorBlink;
-      this.terminal.options.theme = terminalTheme;
-
-      // Force refresh to apply changes
-      this.terminal.refresh(0, this.terminal.rows - 1);
-
-      if (this.fitAddon) {
-        this.fitAddon.fit();
+    if (this.activeTerminalId) {
+      const terminalData = this.splitManager.getTerminals().get(this.activeTerminalId);
+      if (terminalData) {
+        targetTerminal = terminalData.terminal;
       }
     }
 
-    // Apply to secondary terminal if exists
-    if (this.secondaryTerminal) {
-      this.secondaryTerminal.options.fontSize = settings.fontSize;
-      this.secondaryTerminal.options.fontFamily = settings.fontFamily;
-      this.secondaryTerminal.options.cursorBlink = settings.cursorBlink;
-      this.secondaryTerminal.options.theme = terminalTheme;
-
-      // Force refresh to apply changes
-      this.secondaryTerminal.refresh(0, this.secondaryTerminal.rows - 1);
-
-      if (this.secondaryFitAddon) {
-        this.secondaryFitAddon.fit();
-      }
-    }
-  }
-
-  public populateSettingsForm(settings: {
-    fontSize: number;
-    fontFamily: string;
-    theme?: string;
-    cursorBlink: boolean;
-  }): void {
-    console.log('⚙️ [WEBVIEW] Populating settings form with:', settings);
-
-    const fontSizeSlider = document.getElementById('font-size-slider') as HTMLInputElement;
-    const fontSizeValue = document.getElementById('font-size-value');
-    const fontFamilySelect = document.getElementById('font-family-select') as HTMLSelectElement;
-    const themeSelect = document.getElementById('theme-select') as HTMLSelectElement;
-    const cursorBlinkCheckbox = document.getElementById('cursor-blink') as HTMLInputElement;
-
-    if (fontSizeSlider) fontSizeSlider.value = settings.fontSize.toString();
-    if (fontSizeValue) fontSizeValue.textContent = `${settings.fontSize}px`;
-    if (fontFamilySelect) fontFamilySelect.value = settings.fontFamily;
-    if (themeSelect && settings.theme) themeSelect.value = settings.theme;
-    if (cursorBlinkCheckbox) cursorBlinkCheckbox.checked = settings.cursorBlink;
-  }
-
-  private setupIMEHandling(): void {
-    console.log('🌐 [WEBVIEW] Setting up IME handling');
-
-    // Listen for composition events on the document
-    document.addEventListener('compositionstart', (_e) => {
-      console.log('🌐 [WEBVIEW] Composition started');
-      this.isComposing = true;
-    });
-
-    document.addEventListener('compositionupdate', (e) => {
-      console.log('🌐 [WEBVIEW] Composition updating:', e.data);
-      // Don't send data during composition updates
-    });
-
-    document.addEventListener('compositionend', (e) => {
-      console.log('🌐 [WEBVIEW] Composition ended:', e.data);
-      this.isComposing = false;
-
-      // Send the composed text when IME composition is complete
-      if (e.data && this.terminal) {
-        console.log('🌐 [WEBVIEW] Sending composed text:', e.data);
-        vscode.postMessage({
-          command: 'input' as const,
-          data: e.data,
-          terminalId: this.activeTerminalId || 'terminal-initial',
-        });
-      }
-    });
-
-    // Add CSS for IME stability
-    const style = document.createElement('style');
-    style.textContent = `
-      .xterm-screen {
-        min-width: 1px; /* IME input stability fix */
-      }
-      .xterm-composition-view {
-        background: rgba(255, 255, 0, 0.3);
-        border-bottom: 1px solid #ffff00;
-      }
-    `;
-    document.head.appendChild(style);
-
-    console.log('🌐 [WEBVIEW] IME handling setup complete');
-  }
-
-  public setActiveTerminalId(terminalId: string): void {
-    this.activeTerminalId = terminalId;
-    console.log('🎯 [WEBVIEW] Active terminal ID set to:', terminalId);
-  }
-
-  public createTerminal(id: string, name: string, config: TerminalConfig): void {
-    updateStatus(`Creating terminal: ${name}`);
-    this.setActiveTerminalId(id); // Set active terminal ID immediately
-    console.log('🎯 [WEBVIEW] Creating terminal:', id, name);
-    console.log('🎯 [WEBVIEW] Terminal container available:', !!this.terminalContainer);
-
-    if (!this.terminalContainer) {
-      console.error('❌ [WEBVIEW] No terminal container available');
-      updateStatus('ERROR: No terminal container');
-      return;
-    }
-
-    try {
-      const terminalTheme = getTheme();
-      console.log('🎨 [WEBVIEW] Creating terminal with theme:', terminalTheme);
-
-      const terminal = new Terminal({
-        fontSize: config.fontSize || 14,
-        fontFamily: config.fontFamily || 'monospace',
-        theme: terminalTheme,
-        cursorBlink: true,
-        allowTransparency: true,
-        scrollback: 10000,
-      });
-
-      updateStatus(`Terminal instance created: ${name}`);
-      console.log('🎯 [WEBVIEW] Terminal instance created successfully');
-
-      const fitAddon = new FitAddon();
-      terminal.loadAddon(fitAddon);
-      terminal.loadAddon(new WebLinksAddon());
-
-      updateStatus(`Loading addons for: ${name}`);
-      console.log('🎯 [WEBVIEW] Terminal addons loaded');
-
-      if (this.terminalContainer) {
-        // Clear placeholder immediately
-        const placeholder = document.getElementById('terminal-placeholder');
-        if (placeholder) {
-          placeholder.remove();
-          console.log('🎯 [WEBVIEW] Placeholder removed');
-        } else {
-          console.log('🎯 [WEBVIEW] No placeholder found to remove');
-        }
-
-        updateStatus(`Opening terminal: ${name}`);
-        console.log('🎯 [WEBVIEW] Opening terminal in container');
-
-        // Create a terminal container div if not in split mode
-        let targetContainer = this.terminalContainer;
-
-        if (!this.isSplitMode) {
-          // Create initial terminal container
-          const terminalDiv = document.createElement('div');
-          terminalDiv.style.cssText = 'width: 100%; height: 100%;';
-          terminalDiv.setAttribute('data-terminal-container', 'primary');
-          terminalDiv.id = 'primary-terminal';
-          this.terminalContainer.appendChild(terminalDiv);
-          targetContainer = terminalDiv;
-        }
-
-        // Give the DOM time to settle before opening terminal
-        setTimeout(() => {
-          try {
-            console.log('🎯 [WEBVIEW] Calling terminal.open()');
-            terminal.open(targetContainer);
-            console.log('🎯 [WEBVIEW] Terminal.open() completed');
-
-            updateStatus(`Terminal opened: ${name}`);
-
-            // Wait for terminal to be fully rendered
-            setTimeout(() => {
-              updateStatus(`Fitting terminal: ${name}`);
-              console.log('🎯 [WEBVIEW] Fitting terminal');
-
-              try {
-                fitAddon.fit();
-                console.log('🎯 [WEBVIEW] Terminal fitted successfully');
-
-                // Force refresh after fitting
-                terminal.refresh(0, terminal.rows - 1);
-
-                console.log('🎯 [WEBVIEW] Focusing terminal and ready for pty connection');
-                terminal.focus();
-
-                updateStatus(`✅ ${name} ACTIVE`);
-
-                // Store reference
-                this.terminal = terminal;
-                this.fitAddon = fitAddon;
-              } catch (fitError) {
-                console.error('❌ [WEBVIEW] Error during fitting:', fitError);
-                updateStatus(`Error fitting: ${String(fitError)}`);
-              }
-            }, 300);
-          } catch (openError) {
-            console.error('❌ [WEBVIEW] Error opening terminal:', openError);
-            updateStatus(`Error opening: ${String(openError)}`);
-          }
-        }, 100);
-      } else {
-        console.error('❌ [WEBVIEW] No terminal container available!');
-        updateStatus('ERROR: No terminal container');
-      }
-
-      // Handle terminal input with special key processing
-      terminal.onData((data) => {
-        console.log(
-          '🎯 [WEBVIEW] Terminal input data:',
-          data,
-          'length:',
-          data.length,
-          'charCode:',
-          data.charCodeAt(0)
-        );
-
-        // Skip processing if we're in IME composition mode
-        if (this.isComposing) {
-          console.log('🌐 [WEBVIEW] Skipping input during IME composition');
-          return;
-        }
-
-        // Handle special keys
-        const charCode = data.charCodeAt(0);
-
-        // Process the input based on character codes
-        if (charCode === 127) {
-          // Backspace key (DEL character) - convert to proper backspace
-          console.log(
-            '⌫ [WEBVIEW] DEL character detected (Backspace key), converting to backspace'
-          );
-          vscode.postMessage({
-            command: 'input' as const,
-            data: '\x08', // Send proper backspace character
-            terminalId: this.activeTerminalId || id,
-          });
-        } else if (charCode === 8) {
-          // BS (backspace) character - send as-is
-          console.log('⌫ [WEBVIEW] BS character detected');
-          vscode.postMessage({
-            command: 'input' as const,
-            data: data, // Pass through as-is
-            terminalId: this.activeTerminalId || id,
-          });
-        } else if (charCode === 13) {
-          // Enter key
-          console.log('↵ [WEBVIEW] Enter detected');
-          vscode.postMessage({
-            command: 'input' as const,
-            data: '\r', // Ensure proper line ending
-            terminalId: this.activeTerminalId || id,
-          });
-        } else if (data.startsWith('\x1b[')) {
-          // Arrow keys and other escape sequences
-          console.log('🔄 [WEBVIEW] Escape sequence detected:', JSON.stringify(data));
-          vscode.postMessage({
-            command: 'input' as const,
-            data: data,
-            terminalId: this.activeTerminalId || id,
-          });
-        } else if (charCode === 3) {
-          // Ctrl+C (SIGINT)
-          console.log('🛑 [WEBVIEW] Ctrl+C detected');
-          vscode.postMessage({
-            command: 'input' as const,
-            data: '\x03',
-            terminalId: this.activeTerminalId || id,
-          });
-        } else if (charCode === 12) {
-          // Ctrl+L (clear screen)
-          console.log('🧹 [WEBVIEW] Ctrl+L detected');
-          vscode.postMessage({
-            command: 'input' as const,
-            data: '\x0c',
-            terminalId: this.activeTerminalId || id,
-          });
-        } else if (charCode === 4) {
-          // Ctrl+D (EOF)
-          console.log('📄 [WEBVIEW] Ctrl+D detected');
-          vscode.postMessage({
-            command: 'input' as const,
-            data: '\x04',
-            terminalId: this.activeTerminalId || id,
-          });
-        } else if (charCode === 9) {
-          // Tab (for completion)
-          console.log('⭾ [WEBVIEW] Tab detected');
-          vscode.postMessage({
-            command: 'input' as const,
-            data: '\x09',
-            terminalId: this.activeTerminalId || id,
-          });
-        } else {
-          // Regular character input
-          vscode.postMessage({
-            command: 'input' as const,
-            data,
-            terminalId: this.activeTerminalId || id,
-          });
-        }
-      });
-
-      // Handle resize
-      terminal.onResize((size) => {
-        vscode.postMessage({
-          command: 'resize' as const,
-          cols: size.cols,
-          rows: size.rows,
-          terminalId: id,
-        });
-      });
-
-      // Performance optimization: Use debounced resize observer
-      if (this.terminalContainer) {
-        const resizeObserver = new ResizeObserver(() => {
-          if (this.fitAddon && this.terminal) {
-            // Use debounced resize to prevent excessive calls during window resizing
-            this.debouncedResize(this.terminal.cols, this.terminal.rows);
-          }
-        });
-        resizeObserver.observe(this.terminalContainer);
-      }
-
-      console.log('🎯 [WEBVIEW] Terminal creation completed successfully');
-    } catch (error) {
-      console.error('❌ [WEBVIEW] Error creating terminal:', error);
-      updateStatus(`Error creating terminal: ${String(error)}`);
-    }
-  }
-
-  public clearTerminal(): void {
-    if (this.terminal) {
-      console.log('🧹 [WEBVIEW] Clearing terminal screen');
-      this.terminal.clear();
-      // Also clear scrollback
-      this.terminal.write('\x1b[2J\x1b[H'); // Clear screen and move cursor to home
-      updateStatus('Terminal cleared');
-    }
-  }
-
-  public writeToTerminal(data: string): void {
-    if (this.terminal) {
-      // Performance optimization: Buffer small outputs for batching
+    if (targetTerminal) {
       if (data.length < 1000 && this.outputBuffer.length < this.MAX_BUFFER_SIZE) {
         this.outputBuffer.push(data);
         this.scheduleBufferFlush();
       } else {
-        // Flush any buffered data first, then write large data directly
         this.flushOutputBuffer();
-        this.terminal.write(data);
+        targetTerminal.write(data);
       }
     } else {
-      console.warn('⚠️ [WEBVIEW] No terminal instance to write to');
-    }
-  }
-
-  public writeToSecondaryTerminal(data: string): void {
-    if (this.secondaryTerminal) {
-      console.log('📝 [WEBVIEW] Writing to secondary terminal:', data.length, 'chars');
-      this.secondaryTerminal.write(data);
-    } else {
-      console.warn('⚠️ [WEBVIEW] No secondary terminal instance to write to');
+      log('⚠️ [WEBVIEW] No terminal instance to write to');
     }
   }
 
@@ -1083,14 +673,25 @@ class TerminalWebviewManager {
       this.bufferFlushTimer = null;
     }
 
-    if (this.outputBuffer.length > 0 && this.terminal) {
+    if (this.outputBuffer.length > 0) {
       const bufferedData = this.outputBuffer.join('');
       this.outputBuffer = [];
-      this.terminal.write(bufferedData);
+
+      // Write to active terminal
+      let targetTerminal = this.terminal;
+      if (this.activeTerminalId) {
+        const terminalData = this.splitManager.getTerminals().get(this.activeTerminalId);
+        if (terminalData) {
+          targetTerminal = terminalData.terminal;
+        }
+      }
+
+      if (targetTerminal) {
+        targetTerminal.write(bufferedData);
+      }
     }
   }
 
-  // Performance optimization: Debounced resize to prevent excessive calls
   public debouncedResize(cols: number, rows: number): void {
     if (this.resizeDebounceTimer !== null) {
       window.clearTimeout(this.resizeDebounceTimer);
@@ -1105,309 +706,167 @@ class TerminalWebviewManager {
     }, this.RESIZE_DEBOUNCE_DELAY);
   }
 
-  // Split functionality methods (controlled by panel commands)
+  // Split functionality methods
   public initializeSplitControls(): void {
-    console.log('🔀 [WEBVIEW] Split controls ready (using panel commands)');
-    // No UI controls needed - using VS Code panel commands
+    log('🔀 [WEBVIEW] Split controls ready (using panel commands)');
+  }
+
+  public prepareSplitMode(direction: 'horizontal' | 'vertical'): void {
+    this.splitManager.prepareSplitMode(direction);
   }
 
   public splitTerminal(direction: 'horizontal' | 'vertical'): void {
-    // Debug current state
-    this.logSplitState();
-
-    // Check if already in split mode
-    if (this.isSplitMode) {
-      console.warn('🔀 [WEBVIEW] Already in split mode - ignoring split request');
-      return;
-    }
-
-    // Check for existing DOM elements that might indicate inconsistent state
-    const existingSplitter = document.querySelector('[style*="cursor:"]');
-    const existingSecondary = document.getElementById('secondary-terminal');
-
-    if (existingSplitter || existingSecondary) {
-      console.warn(
-        '🔀 [WEBVIEW] Split elements found but isSplitMode is false - cleaning up first'
-      );
-      this.cleanupSplitElements();
-    }
-
-    console.log(`🔀 [WEBVIEW] Starting split operation: ${direction}`);
-
-    const terminalBody = document.getElementById('terminal-body');
-
-    if (!terminalBody) {
-      console.error('❌ [WEBVIEW] Terminal body not found');
-      return;
-    }
-
-    try {
-      // Perform split in a atomic operation
-      this.performSplit(direction, terminalBody);
-      console.log('✅ [WEBVIEW] Split operation completed successfully');
-    } catch (error) {
-      console.error('❌ [WEBVIEW] Split operation failed:', error);
-      this.cleanupSplitElements();
-      throw error;
-    }
+    this.splitManager.splitTerminal(direction);
   }
 
-  private performSplit(direction: 'horizontal' | 'vertical', terminalBody: HTMLElement): void {
-    // Set split direction and mode
-    this.splitDirection = direction;
-    this.isSplitMode = true;
-
-    // Modify terminal body for split layout
-    terminalBody.style.display = 'flex';
-    terminalBody.style.flexDirection = direction === 'horizontal' ? 'row' : 'column';
-
-    // Get existing terminal container or create one
-    let existingTerminal = terminalBody.querySelector('[data-terminal-container]');
-
-    if (!existingTerminal) {
-      // If no terminal container exists, wrap the terminal in a container
-      const primaryContainer = document.createElement('div');
-      primaryContainer.style.cssText = 'width: 100%; height: 100%;';
-      primaryContainer.setAttribute('data-terminal-container', 'primary');
-      primaryContainer.id = 'primary-terminal';
-
-      // Move all existing content into the container
-      while (terminalBody.firstChild) {
-        primaryContainer.appendChild(terminalBody.firstChild);
-      }
-
-      terminalBody.appendChild(primaryContainer);
-      existingTerminal = primaryContainer;
-    }
-
-    if (existingTerminal) {
-      // Make existing terminal take half space
-      (existingTerminal as HTMLElement).style.flex = '1';
-      (existingTerminal as HTMLElement).style.minWidth =
-        direction === 'horizontal' ? '200px' : 'auto';
-      (existingTerminal as HTMLElement).style.minHeight =
-        direction === 'vertical' ? '100px' : 'auto';
-    }
-
-    // Create splitter
-    const splitter = document.createElement('div');
-    splitter.style.cssText = `
-      background: var(--vscode-widget-border, #454545);
-      ${direction === 'horizontal' ? 'width: 4px; cursor: col-resize;' : 'height: 4px; cursor: row-resize;'}
-      flex-shrink: 0;
-    `;
-    splitter.addEventListener('mouseenter', () => {
-      splitter.style.background = 'var(--vscode-focusBorder, #007acc)';
-    });
-    splitter.addEventListener('mouseleave', () => {
-      splitter.style.background = 'var(--vscode-widget-border, #454545)';
-    });
-
-    // Create secondary terminal container
-    const secondaryContainer = document.createElement('div');
-    secondaryContainer.style.cssText = `
-      flex: 1;
-      background: #000;
-      ${direction === 'horizontal' ? 'min-width: 200px;' : 'min-height: 100px;'}
-    `;
-    secondaryContainer.setAttribute('data-terminal-container', 'secondary');
-    secondaryContainer.id = 'secondary-terminal';
-
-    // Add to DOM
-    terminalBody.appendChild(splitter);
-    terminalBody.appendChild(secondaryContainer);
-
-    // Mark that secondary container is ready for terminal
-    this.secondaryContainer = secondaryContainer;
-
-    // Update UI (no controls to update - using panel commands)
-
-    // Resize terminals
-    setTimeout(() => {
-      if (this.fitAddon && this.terminal) {
-        this.fitAddon.fit();
-      }
-    }, 100);
-
-    // Notify extension that split was completed
-    console.log('🔀 [WEBVIEW] Split layout completed');
+  public addNewTerminalToSplit(terminalId: string, terminalName: string): void {
+    this.splitManager.addNewTerminalToSplit(terminalId, terminalName);
   }
 
-  public createSecondaryTerminal(id: string, name: string, config: TerminalConfig): void {
-    if (!this.secondaryContainer) {
-      console.error('❌ [WEBVIEW] Secondary container not found');
-      return;
-    }
+  private setupIMEHandling(): void {
+    log('🌐 [WEBVIEW] Setting up IME handling');
 
-    try {
-      updateStatus(`Creating secondary terminal: ${name}`);
-      console.log('🔀 [WEBVIEW] Creating secondary terminal:', id, name);
+    document.addEventListener('compositionstart', (_e) => {
+      this.isComposing = true;
+    });
 
-      this.secondaryTerminalId = id;
+    document.addEventListener('compositionend', (e) => {
+      this.isComposing = false;
 
-      const terminalTheme = getTheme();
-      console.log('🎨 [WEBVIEW] Creating secondary terminal with theme:', terminalTheme);
-
-      this.secondaryTerminal = new Terminal({
-        fontSize: config.fontSize || 14,
-        fontFamily: config.fontFamily || 'Consolas, monospace',
-        cursorBlink: true,
-        theme: terminalTheme,
-        allowTransparency: true,
-        scrollback: 10000,
-      });
-
-      this.secondaryFitAddon = new FitAddon();
-      this.secondaryTerminal.loadAddon(this.secondaryFitAddon);
-      this.secondaryTerminal.loadAddon(new WebLinksAddon());
-
-      // Open in secondary container
-      this.secondaryTerminal.open(this.secondaryContainer);
-
-      // Fit after opening
-      setTimeout(() => {
-        if (this.secondaryFitAddon && this.secondaryTerminal) {
-          this.secondaryFitAddon.fit();
-          this.secondaryTerminal.refresh(0, this.secondaryTerminal.rows - 1);
-          this.secondaryTerminal.focus();
-        }
-      }, 50);
-
-      // Set up event handlers for secondary terminal
-      this.secondaryTerminal.onData((data) => {
+      if (e.data && this.terminal) {
         vscode.postMessage({
           command: 'input' as const,
-          data,
-          terminalId: this.secondaryTerminalId || 'secondary',
+          data: e.data,
+          terminalId: this.activeTerminalId || 'terminal-initial',
         });
-      });
-
-      console.log('✅ [WEBVIEW] Secondary terminal created successfully');
-      updateStatus(`✅ ${name} ACTIVE`);
-    } catch (error) {
-      console.error('❌ [WEBVIEW] Error creating secondary terminal:', error);
-      updateStatus(`ERROR: ${String(error)}`);
-    }
-  }
-
-  public unsplitTerminal(): void {
-    // Debug current state
-    this.logSplitState();
-
-    if (!this.isSplitMode) {
-      console.log('🔀 [WEBVIEW] Not in split mode - checking for orphaned elements');
-
-      // Check for orphaned DOM elements
-      const orphanedSplitter = document.querySelector('[style*="cursor:"]');
-      const orphanedSecondary = document.getElementById('secondary-terminal');
-
-      if (orphanedSplitter || orphanedSecondary) {
-        console.warn('🔀 [WEBVIEW] Found orphaned split elements - cleaning up');
-        this.cleanupSplitElements();
       }
-      return;
-    }
-
-    console.log('🔀 [WEBVIEW] Starting unsplit operation');
-
-    try {
-      // Use centralized cleanup
-      this.cleanupSplitElements();
-
-      // Resize main terminal
-      setTimeout(() => {
-        this.resizeTerminals();
-      }, 100);
-
-      console.log('✅ [WEBVIEW] Unsplit operation completed successfully');
-    } catch (error) {
-      console.error('❌ [WEBVIEW] Unsplit operation failed:', error);
-      // Force cleanup even if error occurred
-      this.cleanupSplitElements();
-    }
-  }
-
-  private cleanupSplitElements(): void {
-    console.log('🧹 [WEBVIEW] Cleaning up split elements');
-
-    // Remove all splitter elements
-    const splitters = document.querySelectorAll('[style*="cursor:"]');
-    splitters.forEach((splitter, index) => {
-      console.log(`🧹 [WEBVIEW] Removing splitter ${index + 1}`);
-      splitter.remove();
     });
 
-    // Remove secondary terminal container
-    const secondaryContainer = document.getElementById('secondary-terminal');
-    if (secondaryContainer) {
-      console.log('🧹 [WEBVIEW] Removing secondary terminal container');
-      secondaryContainer.remove();
+    const style = document.createElement('style');
+    style.textContent = `
+      .xterm-screen {
+        min-width: 1px;
+      }
+      .xterm-composition-view {
+        background: rgba(255, 255, 0, 0.3);
+        border-bottom: 1px solid #ffff00;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  public setActiveTerminalId(terminalId: string): void {
+    this.activeTerminalId = terminalId;
+    log('🎯 [WEBVIEW] Active terminal ID set to:', terminalId);
+  }
+
+  // Getters for split manager integration
+  public getIsSplitMode(): boolean {
+    return this.splitManager.getIsSplitMode();
+  }
+
+  public getSplitManager(): SplitManager {
+    return this.splitManager;
+  }
+
+  public switchToNextTerminal(): void {
+    const terminalIds = Array.from(this.splitManager.getTerminals().keys());
+    if (terminalIds.length <= 1) return;
+
+    const currentIndex = terminalIds.indexOf(this.activeTerminalId || '');
+    const nextIndex = (currentIndex + 1) % terminalIds.length;
+    const nextTerminalId = terminalIds[nextIndex];
+
+    if (nextTerminalId) {
+      this.switchToTerminal(nextTerminalId);
     }
+  }
 
-    // Clean up secondary terminal instance
-    if (this.secondaryTerminal) {
-      console.log('🧹 [WEBVIEW] Disposing secondary terminal');
-      this.secondaryTerminal.dispose();
-      this.secondaryTerminal = null;
-    }
+  public openSettings(): void {
+    this.settingsPanel.show(this.currentSettings);
+  }
 
-    if (this.secondaryFitAddon) {
-      this.secondaryFitAddon = null;
-    }
+  public applySettings(settings: TerminalSettings): void {
+    // Update current settings
+    this.currentSettings = { ...this.currentSettings, ...settings };
 
-    // Reset terminal body layout
-    const terminalBody = document.getElementById('terminal-body');
-    if (terminalBody) {
-      terminalBody.style.display = 'block';
-      terminalBody.style.flexDirection = '';
+    // Save settings to VS Code state
+    this.saveSettings();
 
-      // Reset existing terminal styles
-      const existingTerminal = terminalBody.querySelector('[data-terminal-container]');
-      if (existingTerminal) {
-        (existingTerminal as HTMLElement).style.flex = '';
-        (existingTerminal as HTMLElement).style.minWidth = '';
-        (existingTerminal as HTMLElement).style.minHeight = '';
+    // Apply settings to all terminals
+    this.splitManager.getTerminals().forEach((terminalData) => {
+      if (terminalData.terminal) {
+        const terminal = terminalData.terminal;
+        terminal.options.fontSize = settings.fontSize;
+        terminal.options.fontFamily = settings.fontFamily;
+        terminal.options.cursorBlink = settings.cursorBlink;
+
+        // Apply theme if needed
+        if (settings.theme && settings.theme !== 'auto') {
+          terminal.options.theme =
+            settings.theme === 'dark'
+              ? WEBVIEW_THEME_CONSTANTS.DARK_THEME
+              : WEBVIEW_THEME_CONSTANTS.LIGHT_THEME;
+        } else {
+          // Auto theme - use current VS Code theme
+          terminal.options.theme = getWebviewTheme();
+        }
+
+        // Refresh terminal to apply changes
+        if (terminalData.fitAddon) {
+          terminalData.fitAddon.fit();
+        }
+      }
+    });
+
+    // Also apply to the main terminal if it exists
+    if (this.terminal) {
+      const terminal = this.terminal;
+      terminal.options.fontSize = settings.fontSize;
+      terminal.options.fontFamily = settings.fontFamily;
+      terminal.options.cursorBlink = settings.cursorBlink;
+
+      if (settings.theme && settings.theme !== 'auto') {
+        terminal.options.theme =
+          settings.theme === 'dark'
+            ? WEBVIEW_THEME_CONSTANTS.DARK_THEME
+            : WEBVIEW_THEME_CONSTANTS.LIGHT_THEME;
+      } else {
+        terminal.options.theme = getWebviewTheme();
+      }
+
+      if (this.fitAddon) {
+        this.fitAddon.fit();
       }
     }
-
-    // Reset state variables
-    this.isSplitMode = false;
-    this.splitDirection = null;
-    this.secondaryTerminalId = null;
-    this.secondaryContainer = null;
-
-    console.log('✅ [WEBVIEW] Split cleanup completed');
   }
 
-  private logSplitState(): void {
-    const splitState = {
-      isSplitMode: this.isSplitMode,
-      splitDirection: this.splitDirection,
-      secondaryTerminalId: this.secondaryTerminalId,
-      hasSecondaryTerminal: !!this.secondaryTerminal,
-      hasSecondaryContainer: !!this.secondaryContainer,
-      domSplitters: document.querySelectorAll('[style*="cursor:"]').length,
-      domSecondaryContainer: !!document.getElementById('secondary-terminal'),
-      terminalBodyDisplay: document.getElementById('terminal-body')?.style.display,
-      terminalBodyFlexDirection: document.getElementById('terminal-body')?.style.flexDirection,
-    };
-
-    console.log('🔀 [DEBUG] Current split state:', splitState);
-  }
-
-  // Split controls managed by VS Code panel - no internal UI needed
-
-  private resizeTerminals(): void {
-    if (this.fitAddon && this.terminal) {
-      this.fitAddon.fit();
-    }
-
-    if (this.isSplitMode && this.secondaryFitAddon && this.secondaryTerminal) {
-      this.secondaryFitAddon.fit();
+  private loadSettings(): void {
+    try {
+      const state = vscode.getState() as { terminalSettings?: TerminalSettings } | undefined;
+      if (state?.terminalSettings) {
+        this.currentSettings = { ...this.currentSettings, ...state.terminalSettings };
+        log('📋 [WEBVIEW] Loaded settings:', this.currentSettings);
+      }
+    } catch (error) {
+      log('❌ [WEBVIEW] Error loading settings:', error);
     }
   }
 
-  // Performance optimization: Cleanup method
+  private saveSettings(): void {
+    try {
+      const state =
+        (vscode.getState() as { terminalSettings?: TerminalSettings } | undefined) || {};
+      vscode.setState({
+        ...state,
+        terminalSettings: this.currentSettings,
+      });
+      log('💾 [WEBVIEW] Saved settings:', this.currentSettings);
+    } catch (error) {
+      log('❌ [WEBVIEW] Error saving settings:', error);
+    }
+  }
+
   public dispose(): void {
     this.flushOutputBuffer();
 
@@ -1426,174 +885,65 @@ class TerminalWebviewManager {
       this.terminal = null;
     }
 
-    if (this.secondaryTerminal) {
-      this.secondaryTerminal.dispose();
-      this.secondaryTerminal = null;
-    }
-
     this.fitAddon = null;
-    this.secondaryFitAddon = null;
     this.terminalContainer = null;
-    this.secondaryContainer = null;
   }
 }
 
 // Global instance
 const terminalManager = new TerminalWebviewManager();
 
-function getTheme(): { [key: string]: string } {
-  // VS Code provides CSS variables for theme detection
-  const style = getComputedStyle(document.body);
-
-  // Get the background color and convert to RGB values
-  const bgColor =
-    style.getPropertyValue('--vscode-editor-background') ||
-    style.getPropertyValue('--vscode-panel-background') ||
-    style.backgroundColor;
-
-  console.log('🎨 [WEBVIEW] Detected background color:', bgColor);
-
-  // Check if dark theme by analyzing background color
-  let isDark = true; // Default to dark
-
-  if (bgColor) {
-    // Handle hex colors
-    if (bgColor.startsWith('#')) {
-      const hex = bgColor.substring(1);
-      const r = parseInt(hex.substr(0, 2), 16);
-      const g = parseInt(hex.substr(2, 2), 16);
-      const b = parseInt(hex.substr(4, 2), 16);
-      const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-      isDark = brightness < 128;
-    }
-    // Handle rgb/rgba colors
-    else if (bgColor.includes('rgb')) {
-      const values = bgColor.match(/\d+/g);
-      if (values && values.length >= 3) {
-        const r = parseInt(values[0] || '0');
-        const g = parseInt(values[1] || '0');
-        const b = parseInt(values[2] || '0');
-        const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-        isDark = brightness < 128;
-      }
-    }
-    // Handle specific dark theme indicators
-    else if (
-      bgColor.includes('1e1e1e') ||
-      bgColor.includes('2d2d30') ||
-      bgColor.includes('252526')
-    ) {
-      isDark = true;
-    }
-    // Handle light theme indicators
-    else if (
-      bgColor.includes('ffffff') ||
-      bgColor.includes('f3f3f3') ||
-      bgColor.includes('fffffe')
-    ) {
-      isDark = false;
-    }
-  }
-
-  console.log('🎨 [WEBVIEW] Theme detected as:', isDark ? 'dark' : 'light');
-
-  const theme = isDark ? WEBVIEW_CONSTANTS.DARK_THEME : WEBVIEW_CONSTANTS.LIGHT_THEME;
-  console.log('🎨 [WEBVIEW] Applied theme:', theme);
-
-  return theme;
-}
-
 // Handle messages from the extension
 window.addEventListener('message', (event) => {
-  console.log('🎯 [WEBVIEW] Received message event:', event);
-  const message = event.data as WebviewMessage;
-  console.log('🎯 [WEBVIEW] Message data:', message);
-  console.log('🎯 [WEBVIEW] Message command:', message.command);
+  const message = event.data as TerminalMessage;
+  log('🎯 [WEBVIEW] Message data:', message);
 
   switch (message.command) {
-    case TERMINAL_CONSTANTS.COMMANDS.INIT:
-      updateStatus('Received INIT command');
-      console.log('🎯 [WEBVIEW] Received INIT command', message);
+    case WEBVIEW_TERMINAL_CONSTANTS.COMMANDS.INIT:
+      log('🎯 [WEBVIEW] Received INIT command', message);
       if (message.config) {
-        updateStatus('Initializing terminal UI');
-        console.log('🎯 [WEBVIEW] Initializing simple terminal');
         terminalManager.initializeSimpleTerminal();
 
-        // Set active terminal ID
         if (message.activeTerminalId) {
           terminalManager.setActiveTerminalId(message.activeTerminalId);
-          console.log('🎯 [WEBVIEW] Set active terminal ID:', message.activeTerminalId);
         }
 
-        // Wait for terminal container to be available
+        // Apply settings if provided
+        if (message.settings) {
+          terminalManager.applySettings(message.settings);
+        }
+
         const checkContainerAndCreate = (): void => {
-          updateStatus('Checking terminal container availability');
-          console.log('🎯 [WEBVIEW] Checking terminal container...');
-          console.log('🎯 [WEBVIEW] Container available:', !!terminalManager.terminalContainer);
-
           if (terminalManager.terminalContainer) {
-            updateStatus('Creating initial terminal');
-            console.log('🎯 [WEBVIEW] Creating initial terminal');
             const terminalId = message.activeTerminalId || 'terminal-initial';
-
             try {
               if (message.config) {
                 terminalManager.createTerminal(terminalId, 'Terminal 1', message.config);
               } else {
                 throw new Error('No terminal config provided');
               }
-
-              // Initialize split controls after terminal is ready
               terminalManager.initializeSplitControls();
-
-              updateStatus('Terminal ready');
-              console.log('🎯 [WEBVIEW] Terminal initialization completed');
             } catch (error) {
-              console.error('❌ [WEBVIEW] Error during terminal creation:', error);
-              updateStatus(`ERROR: ${String(error)}`);
+              log('❌ [WEBVIEW] Error during terminal creation:', error);
             }
           } else {
-            console.log('🎯 [WEBVIEW] Container not ready, waiting...');
-            updateStatus('Waiting for container...');
             setTimeout(checkContainerAndCreate, 50);
           }
         };
 
         setTimeout(checkContainerAndCreate, 10);
       } else {
-        updateStatus('ERROR: No config');
-        console.error('❌ [WEBVIEW] No config provided in INIT message');
+        log('❌ [WEBVIEW] No config provided in INIT message');
       }
       break;
 
-    case TERMINAL_CONSTANTS.COMMANDS.OUTPUT:
+    case WEBVIEW_TERMINAL_CONSTANTS.COMMANDS.OUTPUT:
       if (message.data) {
-        console.log(
-          '📥 [WEBVIEW] Received output data:',
-          message.data.length,
-          'chars:',
-          JSON.stringify(message.data.substring(0, 50)),
-          'terminalId:',
-          message.terminalId
-        );
-
-        // Route output to correct terminal
-        if (
-          message.terminalId === terminalManager.secondaryTerminalId &&
-          terminalManager.secondaryTerminal
-        ) {
-          terminalManager.writeToSecondaryTerminal(message.data);
-        } else {
-          terminalManager.writeToTerminal(message.data);
-        }
+        terminalManager.writeToTerminal(message.data, message.terminalId);
       }
       break;
 
-    case TERMINAL_CONSTANTS.COMMANDS.CLEAR:
-      terminalManager.clearTerminal();
-      break;
-
-    case TERMINAL_CONSTANTS.COMMANDS.EXIT:
+    case WEBVIEW_TERMINAL_CONSTANTS.COMMANDS.EXIT:
       if (message.exitCode !== undefined) {
         terminalManager.writeToTerminal(
           `\r\n[Process exited with code ${message.exitCode ?? 'unknown'}]\r\n`
@@ -1601,92 +951,91 @@ window.addEventListener('message', (event) => {
       }
       break;
 
-    case TERMINAL_CONSTANTS.COMMANDS.SPLIT:
-      console.log('🔀 [WEBVIEW] Received SPLIT command');
-      // Default to vertical split (top/bottom)
-      terminalManager.splitTerminal('vertical');
+    case WEBVIEW_TERMINAL_CONSTANTS.COMMANDS.SPLIT:
+      log('🔀 [WEBVIEW] Received SPLIT command - preparing split mode');
+      terminalManager.prepareSplitMode('vertical');
+      log('🔀 [WEBVIEW] Split mode prepared, isSplitMode:', terminalManager.getIsSplitMode());
       break;
 
-    case TERMINAL_CONSTANTS.COMMANDS.TERMINAL_CREATED:
+    case WEBVIEW_TERMINAL_CONSTANTS.COMMANDS.TERMINAL_CREATED:
       if (message.terminalId && message.terminalName && message.config) {
-        // If we're in split mode and this is a new terminal, treat it as secondary
-        if (
-          terminalManager.isSplitMode &&
-          !terminalManager.secondaryTerminal &&
-          message.terminalId !== terminalManager.activeTerminalId
-        ) {
-          console.log('🔀 [WEBVIEW] Creating secondary terminal in split mode');
-          terminalManager.createSecondaryTerminal(
-            message.terminalId,
-            message.terminalName,
-            message.config
-          );
-        } else {
-          terminalManager.createTerminal(message.terminalId, message.terminalName, message.config);
-        }
+        log('🔀 [WEBVIEW] Creating terminal:', {
+          terminalId: message.terminalId,
+          isSplitMode: terminalManager.getIsSplitMode(),
+          activeTerminalId: terminalManager.activeTerminalId,
+        });
+
+        // createTerminal handles all split logic internally - no need for addNewTerminalToSplit
+        terminalManager.createTerminal(message.terminalId, message.terminalName, message.config);
       }
       break;
 
-    case 'settingsResponse':
-      if (message.settings) {
-        console.log('⚙️ [WEBVIEW] Received settings from extension:', message.settings);
-        terminalManager.populateSettingsForm(message.settings);
+    case WEBVIEW_TERMINAL_CONSTANTS.COMMANDS.TERMINAL_REMOVED:
+      if (message.terminalId) {
+        log('🗑️ [WEBVIEW] Received terminal removal command for:', message.terminalId);
+        // Terminal was already removed on extension side, just cleanup UI
+        terminalManager.handleTerminalRemovedFromExtension(message.terminalId);
       }
       break;
 
     case 'openSettings':
-      console.log('⚙️ [WEBVIEW] Received openSettings command from panel');
-      terminalManager.openSettingsPanel();
-      break;
-
-    case TERMINAL_CONSTANTS.COMMANDS.TERMINAL_REMOVED:
-      if (message.terminalId) {
-        console.log('🗑️ [WEBVIEW] Received terminal removal command for:', message.terminalId);
-        terminalManager.closeTerminal(message.terminalId);
-      }
+      log('⚙️ [WEBVIEW] Opening settings panel');
+      terminalManager.openSettings();
       break;
 
     default:
-      console.warn('⚠️ [WEBVIEW] Unknown command received:', message.command);
+      if ((message as { command: string }).command === 'killTerminal') {
+        log('🗑️ [WEBVIEW] Received killTerminal command');
+        terminalManager.closeTerminal(); // Will kill active terminal
+      } else {
+        log('⚠️ [WEBVIEW] Unknown command received:', message.command);
+      }
   }
 });
 
-// Update status display
-function updateStatus(message: string): void {
-  const statusEl = document.getElementById('status');
-  if (statusEl) {
-    statusEl.textContent = message;
-  }
-  console.log('🎯 [WEBVIEW]', message);
+// Enhanced update status function
+function updateStatus(_message: string, _type: 'info' | 'success' | 'error' = 'info'): void {}
+
+// Activity listeners disabled to maintain toast behavior
+function setupActivityListeners(): void {
+  log('📱 [ACTIVITY] Activity listeners disabled to prevent status re-show');
+  // Removed activity listeners that were causing status to re-appear
 }
 
+document.addEventListener('keydown', (e) => {
+  // Ctrl+Tab to switch between terminals
+  if (e.ctrlKey && e.key === 'Tab') {
+    e.preventDefault();
+    terminalManager.switchToNextTerminal();
+  }
+});
+
 // Notify extension that webview is ready
-console.log('🎯 [WEBVIEW] Webview script starting...');
+log('🎯 [WEBVIEW] Webview script starting...');
 updateStatus('Webview script loaded');
 
+setupActivityListeners();
+
 function sendReadyMessage(): void {
-  console.log('🎯 [WEBVIEW] Sending READY message to extension');
+  log('🎯 [WEBVIEW] Sending READY message to extension');
   updateStatus('Sending ready message to extension');
   try {
     vscode.postMessage({ command: 'ready' as const });
-    console.log('✅ [WEBVIEW] READY message sent successfully');
+    log('✅ [WEBVIEW] READY message sent successfully');
     updateStatus('Ready message sent, waiting for response...');
   } catch (error) {
-    console.error('❌ [WEBVIEW] Failed to send READY message:', error);
+    log('❌ [WEBVIEW] Failed to send READY message:', error);
     updateStatus(`ERROR sending ready: ${String(error)}`);
   }
 }
 
 // Wait for DOM to be fully loaded
 if (document.readyState === 'loading') {
-  console.log('🎯 [WEBVIEW] DOM is loading, waiting for DOMContentLoaded...');
   document.addEventListener('DOMContentLoaded', () => {
-    console.log('🎯 [WEBVIEW] DOMContentLoaded event fired');
     updateStatus('DOM loaded, sending ready message');
     sendReadyMessage();
   });
 } else {
-  console.log('🎯 [WEBVIEW] DOM is already ready');
   updateStatus('DOM ready, sending ready message');
   sendReadyMessage();
 }

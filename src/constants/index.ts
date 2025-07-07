@@ -55,7 +55,6 @@ export const TERMINAL_CONSTANTS = {
     INPUT: 'input',
     OUTPUT: 'output',
     RESIZE: 'resize',
-    CLEAR: 'clear',
     EXIT: 'exit',
     SPLIT: 'split',
     SWITCH_TERMINAL: 'switchTerminal',

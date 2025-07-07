@@ -5,7 +5,8 @@
   "version": "0.0.1",
   "publisher": "s-hiraoku",
   "engines": {
-    "vscode": "^1.74.0"
+    "vscode": "^1.74.0",
+    "node": ">=18.0.0"
   },
   "categories": [
     "Other"
@@ -54,16 +55,6 @@
     },
     "commands": [
       {
-        "command": "sidebarTerminal.createTerminal",
-        "title": "Create New Terminal",
-        "icon": "$(add)"
-      },
-      {
-        "command": "sidebarTerminal.clearTerminal",
-        "title": "Clear Terminal",
-        "icon": "$(clear-all)"
-      },
-      {
         "command": "sidebarTerminal.killTerminal",
         "title": "Kill Terminal",
         "icon": "$(trash)"
@@ -82,29 +73,19 @@
     "menus": {
       "view/title": [
         {
-          "command": "sidebarTerminal.createTerminal",
+          "command": "sidebarTerminal.splitTerminal",
           "when": "view == sidebarTerminal",
           "group": "navigation@1"
         },
         {
-          "command": "sidebarTerminal.splitTerminal",
-          "when": "view == sidebarTerminal",
-          "group": "navigation@2"
-        },
-        {
-          "command": "sidebarTerminal.clearTerminal",
+          "command": "sidebarTerminal.killTerminal",
           "when": "view == sidebarTerminal",
           "group": "navigation@3"
         },
         {
-          "command": "sidebarTerminal.killTerminal",
-          "when": "view == sidebarTerminal",
-          "group": "navigation@4"
-        },
-        {
           "command": "sidebarTerminal.openSettings",
           "when": "view == sidebarTerminal",
-          "group": "navigation@5"
+          "group": "navigation@4"
         }
       ]
     },
@@ -144,13 +125,113 @@
         "sidebarTerminal.theme": {
           "type": "string",
           "default": "auto",
-          "enum": ["auto", "dark", "light"],
+          "enum": [
+            "auto",
+            "dark",
+            "light"
+          ],
           "description": "Terminal theme. Auto follows VS Code theme."
         },
         "sidebarTerminal.defaultDirectory": {
           "type": "string",
           "default": "",
           "description": "Default directory for new terminals. Leave empty to use workspace root."
+        },
+        "sidebarTerminal.confirmBeforeKill": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show confirmation dialog before closing terminals"
+        },
+        "sidebarTerminal.protectLastTerminal": {
+          "type": "boolean",
+          "default": true,
+          "description": "Prevent closing the last terminal"
+        },
+        "sidebarTerminal.minTerminalCount": {
+          "type": "number",
+          "default": 1,
+          "minimum": 0,
+          "maximum": 5,
+          "description": "Minimum number of terminals to keep open"
+        },
+        "sidebarTerminal.maxSplitTerminals": {
+          "type": "number",
+          "default": 5,
+          "minimum": 1,
+          "maximum": 5,
+          "description": "Maximum number of terminals to display in split view"
+        },
+        "sidebarTerminal.minTerminalHeight": {
+          "type": "number",
+          "default": 100,
+          "minimum": 50,
+          "maximum": 200,
+          "description": "Minimum height for each terminal in split view (pixels)"
+        },
+        "sidebarTerminal.enableSplitResize": {
+          "type": "boolean",
+          "default": true,
+          "description": "Allow resizing split terminals by dragging splitters"
+        },
+        "sidebarTerminal.statusDisplayDuration": {
+          "type": "number",
+          "default": 3000,
+          "minimum": 1000,
+          "maximum": 10000,
+          "description": "Duration to display status messages (milliseconds)"
+        },
+        "sidebarTerminal.autoHideStatus": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically hide status messages after specified duration"
+        },
+        "sidebarTerminal.showStatusOnActivity": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show last status message when user performs actions"
+        },
+        "sidebarTerminal.showWebViewHeader": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show title and command icons in the webview header"
+        },
+        "sidebarTerminal.webViewTitle": {
+          "type": "string",
+          "default": "Terminal",
+          "description": "Title to display in the webview header"
+        },
+        "sidebarTerminal.showSampleIcons": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show sample command icons in webview header (display only)"
+        },
+        "sidebarTerminal.sampleIconOpacity": {
+          "type": "number",
+          "default": 0.4,
+          "minimum": 0.1,
+          "maximum": 1,
+          "description": "Opacity of sample icons (0.1 to 1.0)"
+        },
+        "sidebarTerminal.headerFontSize": {
+          "type": "number",
+          "default": 14,
+          "minimum": 10,
+          "maximum": 20,
+          "description": "Font size for webview header title"
+        },
+        "sidebarTerminal.headerIconSize": {
+          "type": "number",
+          "default": 20,
+          "minimum": 14,
+          "maximum": 28,
+          "description": "Size of terminal icon in webview header"
+        },
+        "sidebarTerminal.sampleIconSize": {
+          "type": "number",
+          "default": 16,
+          "minimum": 12,
+          "maximum": 24,
+          "description": "Size of sample icons in webview header"
         }
       }
     }

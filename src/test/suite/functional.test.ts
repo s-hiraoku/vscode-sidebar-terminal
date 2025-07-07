@@ -24,10 +24,9 @@ suite('Functional Test Suite', () => {
   test('All required commands should be registered', async () => {
     const commands = await vscode.commands.getCommands(true);
     const requiredCommands = [
-      'sidebarTerminal.createTerminal',
-      'sidebarTerminal.clearTerminal',
       'sidebarTerminal.killTerminal',
       'sidebarTerminal.splitTerminal',
+      'sidebarTerminal.openSettings',
     ];
 
     for (const command of requiredCommands) {
@@ -36,12 +35,7 @@ suite('Functional Test Suite', () => {
   });
 
   test('Commands should execute without throwing errors', async () => {
-    const commandsToTest = [
-      'sidebarTerminal.createTerminal',
-      'sidebarTerminal.splitTerminal',
-      'sidebarTerminal.clearTerminal',
-      'sidebarTerminal.killTerminal',
-    ];
+    const commandsToTest = ['sidebarTerminal.splitTerminal', 'sidebarTerminal.openSettings'];
 
     for (const command of commandsToTest) {
       try {
@@ -55,11 +49,9 @@ suite('Functional Test Suite', () => {
 
   test('Extension should handle rapid command execution', async () => {
     const rapidCommands = [
-      'sidebarTerminal.createTerminal',
-      'sidebarTerminal.createTerminal',
       'sidebarTerminal.splitTerminal',
-      'sidebarTerminal.clearTerminal',
-      'sidebarTerminal.killTerminal',
+      'sidebarTerminal.openSettings',
+      'sidebarTerminal.splitTerminal',
     ];
 
     try {
@@ -102,12 +94,16 @@ suite('Functional Test Suite', () => {
       // Change configuration
       await config.update('fontSize', originalFontSize + 2, vscode.ConfigurationTarget.Global);
 
+      // Wait for configuration to be applied
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
       // Verify change
-      const newFontSize = config.get<number>('fontSize', 14);
+      const updatedConfig = vscode.workspace.getConfiguration('sidebarTerminal');
+      const newFontSize = updatedConfig.get<number>('fontSize', 14);
       assert.strictEqual(newFontSize, originalFontSize + 2, 'Configuration should be updated');
 
       // Test that extension handles configuration change
-      await vscode.commands.executeCommand('sidebarTerminal.createTerminal');
+      await vscode.commands.executeCommand('sidebarTerminal.splitTerminal');
       assert.ok(true, 'Extension should handle configuration changes');
     } finally {
       // Restore original configuration
@@ -119,8 +115,8 @@ suite('Functional Test Suite', () => {
     // Test that extension continues to work after simulated workspace events
     try {
       // Execute commands after potential workspace changes
-      await vscode.commands.executeCommand('sidebarTerminal.createTerminal');
-      await vscode.commands.executeCommand('sidebarTerminal.clearTerminal');
+      await vscode.commands.executeCommand('sidebarTerminal.splitTerminal');
+      await vscode.commands.executeCommand('sidebarTerminal.openSettings');
 
       assert.ok(true, 'Extension should handle workspace changes');
     } catch (error) {
@@ -133,10 +129,10 @@ suite('Functional Test Suite', () => {
     const maxTerminals = config.get<number>('maxTerminals', 5);
 
     try {
-      // Try to create more terminals than the limit
+      // Try to create more terminals than the limit using split terminal
       const createPromises = [];
       for (let i = 0; i < maxTerminals + 3; i++) {
-        createPromises.push(vscode.commands.executeCommand('sidebarTerminal.createTerminal'));
+        createPromises.push(vscode.commands.executeCommand('sidebarTerminal.splitTerminal'));
       }
 
       await Promise.allSettled(createPromises);

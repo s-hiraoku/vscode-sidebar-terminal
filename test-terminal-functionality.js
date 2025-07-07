@@ -16,13 +16,13 @@ console.log('\n1. Testing PTY Creation...');
 try {
   const shell = os.platform() === 'win32' ? 'powershell.exe' : process.env.SHELL || '/bin/bash';
   console.log(`Using shell: ${shell}`);
-  
+
   const ptyProcess = pty.spawn(shell, [], {
     name: 'xterm-color',
     cols: 80,
     rows: 24,
     cwd: process.cwd(),
-    env: process.env
+    env: process.env,
   });
 
   console.log('✅ PTY process created successfully');
@@ -30,7 +30,7 @@ try {
 
   // Test 2: Data Communication
   console.log('\n2. Testing PTY Communication...');
-  
+
   let outputReceived = false;
   let testCompleted = false;
 
@@ -53,7 +53,7 @@ try {
 
   // Test 3: Input/Output
   console.log('\n3. Testing Input/Output...');
-  
+
   setTimeout(() => {
     console.log('Sending test command...');
     ptyProcess.write('echo "Hello Terminal Test"\r');
@@ -73,7 +73,6 @@ try {
       process.exit(0);
     }
   }, 5000);
-
 } catch (error) {
   console.error('❌ PTY creation failed:', error);
   process.exit(1);
@@ -89,7 +88,7 @@ const testSequences = [
   { name: 'Ctrl+L', code: '\x0c', charCode: 12 },
 ];
 
-testSequences.forEach(seq => {
+testSequences.forEach((seq) => {
   console.log(`${seq.name}: '${JSON.stringify(seq.code)}' (charCode: ${seq.charCode})`);
 });
 

@@ -46,7 +46,7 @@ const extensionConfig = {
 const webviewConfig = {
   target: 'web',
   mode: 'none',
-  
+
   entry: './src/webview/main.ts',
   output: {
     path: path.resolve(__dirname, 'dist'),

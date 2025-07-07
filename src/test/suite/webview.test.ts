@@ -54,7 +54,7 @@ suite('Webview Test Suite', () => {
     assert.ok(html.includes('<div id="terminal">'));
     assert.ok(html.includes('webview.js'));
     assert.ok(html.includes('xterm.css'));
-    assert.ok(html.includes('Loading terminal...'));
+    assert.ok(html.includes('Simple terminal container'));
   });
 
   test('Should handle webview view resolution', () => {
@@ -136,24 +136,18 @@ suite('Webview Test Suite', () => {
 
   test('Should handle command execution through provider', () => {
     let createTerminalCalled = false;
-    let clearTerminalCalled = false;
     let killTerminalCalled = false;
     let splitTerminalCalled = false;
 
     // Mock the methods to track calls
-    const originalCreateNewTerminal = provider.createNewTerminal.bind(provider);
-    const originalClearTerminal = provider.clearTerminal.bind(provider);
     const originalKillTerminal = provider.killTerminal.bind(provider);
     const originalSplitTerminal = provider.splitTerminal.bind(provider);
 
-    provider.createNewTerminal = () => {
+    // Mock terminal manager createTerminal method
+    const originalCreateTerminal = terminalManager.createTerminal.bind(terminalManager);
+    terminalManager.createTerminal = () => {
       createTerminalCalled = true;
-      return originalCreateNewTerminal();
-    };
-
-    provider.clearTerminal = () => {
-      clearTerminalCalled = true;
-      originalClearTerminal();
+      return originalCreateTerminal();
     };
 
     provider.killTerminal = () => {
@@ -167,8 +161,7 @@ suite('Webview Test Suite', () => {
     };
 
     // Test command execution
-    provider.createNewTerminal();
-    provider.clearTerminal();
+    terminalManager.createTerminal();
     provider.splitTerminal();
 
     // Create a terminal first before killing
@@ -176,13 +169,11 @@ suite('Webview Test Suite', () => {
     provider.killTerminal();
 
     assert.ok(createTerminalCalled, 'Create terminal command should be called');
-    assert.ok(clearTerminalCalled, 'Clear terminal command should be called');
     assert.ok(killTerminalCalled, 'Kill terminal command should be called');
     assert.ok(splitTerminalCalled, 'Split terminal command should be called');
 
     // Restore original methods
-    provider.createNewTerminal = originalCreateNewTerminal;
-    provider.clearTerminal = originalClearTerminal;
+    terminalManager.createTerminal = originalCreateTerminal;
     provider.killTerminal = originalKillTerminal;
     provider.splitTerminal = originalSplitTerminal;
   });

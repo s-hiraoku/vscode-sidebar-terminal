@@ -1,1 +1,2 @@
-console.log('Terminal Extension Test'); process.exit(0);
+console.log('Terminal Extension Test');
+process.exit(0);

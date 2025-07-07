@@ -2,6 +2,20 @@
  * 共通の型定義とインターフェース
  */
 
+// IPty interface for type safety when using node-pty or mocks
+export interface IPty {
+  pid: number;
+  cols: number;
+  rows: number;
+  handleFlowControl?: boolean;
+  onData: (callback: (data: string) => void) => void;
+  onExit: (callback: (exitCode: number, signal?: number) => void) => void;
+  write: (data: string) => void;
+  resize: (cols: number, rows: number) => void;
+  kill: (signal?: string) => void;
+  clear?: () => void;
+}
+
 export interface TerminalInfo {
   id: string;
   name: string;
@@ -22,6 +36,9 @@ export interface TerminalSettings {
   fontFamily: string;
   theme?: string;
   cursorBlink: boolean;
+  confirmBeforeKill?: boolean;
+  protectLastTerminal?: boolean;
+  minTerminalCount?: number;
 }
 
 export interface WebviewMessage {
@@ -66,7 +83,8 @@ export interface VsCodeMessage {
 
 export interface TerminalInstance {
   id: string;
-  pty: import('node-pty').IPty;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  pty: any; // Using any for node-pty compatibility with both real and mock implementations
   name: string;
   isActive: boolean;
 }

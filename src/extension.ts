@@ -1,13 +1,21 @@
 import * as vscode from 'vscode';
 import { SidebarTerminalProvider } from './providers/SidebarTerminalProvider';
 import { TerminalManager } from './terminals/TerminalManager';
+import { extension as log, logger, LogLevel } from './utils/logger';
 
 let terminalManager: TerminalManager | undefined;
 let sidebarProvider: SidebarTerminalProvider | undefined;
 
 export function activate(context: vscode.ExtensionContext): void {
-  console.log('🚀 [DEBUG] Sidebar Terminal extension is now active!');
-  console.log('🚀 [DEBUG] Extension path:', context.extensionPath);
+  // Configure logger based on extension mode
+  if (context.extensionMode === vscode.ExtensionMode.Development) {
+    logger.setLevel(LogLevel.DEBUG);
+  } else {
+    logger.setLevel(LogLevel.WARN);
+  }
+
+  log('Sidebar Terminal extension is now active!');
+  log('Extension path:', context.extensionPath);
 
   try {
     // Initialize terminal manager
@@ -31,9 +39,9 @@ export function activate(context: vscode.ExtensionContext): void {
     // Register commands
     registerCommands(context, sidebarProvider);
 
-    console.log('Sidebar Terminal extension activated successfully');
+    log('Sidebar Terminal extension activated successfully');
   } catch (error) {
-    console.error('Failed to activate Sidebar Terminal extension:', error);
+    log('Failed to activate Sidebar Terminal extension:', error);
     void vscode.window.showErrorMessage(`Failed to activate Sidebar Terminal: ${String(error)}`);
   }
 }
@@ -47,43 +55,23 @@ function registerCommands(
 ): void {
   const commands = [
     {
-      command: 'sidebarTerminal.createTerminal',
-      callback: async () => {
-        console.log('🔧 [DEBUG] Command executed: createTerminal');
-        try {
-          provider.createNewTerminal();
-          // Re-initialize to show the new terminal
-          await provider._initializeTerminal();
-        } catch (error) {
-          console.error('❌ [ERROR] Command createTerminal failed:', error);
-        }
-      },
-    },
-    {
-      command: 'sidebarTerminal.clearTerminal',
-      callback: () => {
-        console.log('🔧 [DEBUG] Command executed: clearTerminal');
-        provider.clearTerminal();
-      },
-    },
-    {
       command: 'sidebarTerminal.killTerminal',
       callback: () => {
-        console.log('🔧 [DEBUG] Command executed: killTerminal');
+        log('🔧 [DEBUG] Command executed: killTerminal');
         provider.killTerminal();
       },
     },
     {
       command: 'sidebarTerminal.splitTerminal',
       callback: () => {
-        console.log('🔧 [DEBUG] Command executed: splitTerminal');
+        log('🔧 [DEBUG] Command executed: splitTerminal');
         provider.splitTerminal();
       },
     },
     {
       command: 'sidebarTerminal.openSettings',
       callback: () => {
-        console.log('🔧 [DEBUG] Command executed: openSettings');
+        log('🔧 [DEBUG] Command executed: openSettings');
         provider.openSettings();
       },
     },
@@ -92,14 +80,14 @@ function registerCommands(
   for (const { command, callback } of commands) {
     const commandRegistration = vscode.commands.registerCommand(command, callback);
     context.subscriptions.push(commandRegistration);
-    console.log('✅ [DEBUG] Command registered:', command);
+    log('✅ [DEBUG] Command registered:', command);
   }
 
-  console.log('✅ [DEBUG] All commands registered successfully');
+  log('✅ [DEBUG] All commands registered successfully');
 }
 
 export function deactivate(): void {
-  console.log('Deactivating Sidebar Terminal extension...');
+  log('Deactivating Sidebar Terminal extension...');
 
   try {
     if (terminalManager) {
@@ -109,8 +97,8 @@ export function deactivate(): void {
 
     sidebarProvider = undefined;
 
-    console.log('Sidebar Terminal extension deactivated successfully');
+    log('Sidebar Terminal extension deactivated successfully');
   } catch (error) {
-    console.error('Error during deactivation:', error);
+    log('Error during deactivation:', error);
   }
 }
