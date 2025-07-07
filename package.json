@@ -1,7 +1,7 @@
 {
   "name": "vscode-sidebar-terminal",
   "displayName": "Sidebar Terminal",
-  "description": "VS Code のサイドパネルにターミナルを表示する拡張機能です。",
+  "description": "A VS Code extension that displays a terminal in the sidebar for efficient development workflow.",
   "version": "0.0.1",
   "publisher": "s-hiraoku",
   "engines": {
@@ -9,13 +9,20 @@
     "node": ">=18.0.0"
   },
   "categories": [
-    "Other"
+    "Other",
+    "Terminal"
   ],
   "keywords": [
     "terminal",
     "sidebar",
     "shell",
-    "console"
+    "console",
+    "command line",
+    "cli",
+    "development",
+    "productivity",
+    "xterm",
+    "pty"
   ],
   "icon": "resources/icon.png",
   "galleryBanner": {
