@@ -122,8 +122,8 @@ suite('Integration Test Suite', () => {
     });
 
     // Create terminal and kill it (killTerminal kills the active terminal)
-    const terminalId = terminalManager.createTerminal();
-    
+    const _terminalId = terminalManager.createTerminal();
+
     // Give terminal time to be fully created before killing
     setTimeout(() => {
       const activeTerminalId = terminalManager.getActiveTerminalId();
