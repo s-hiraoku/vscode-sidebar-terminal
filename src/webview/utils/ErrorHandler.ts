@@ -111,7 +111,6 @@ export class ErrorHandler {
     };
 
     if (typeof window !== 'undefined' && windowWithStatus.statusManager) {
-      windowWithStatus.statusManager.showStatus(message, 'error');
     } else {
       // フォールバック：コンソールログのみ
       console.warn('Status manager not available, error message:', message);

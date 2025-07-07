@@ -86,7 +86,6 @@ class TerminalWebviewManager {
     const container = document.getElementById('terminal');
     if (!container) {
       console.error('Terminal container not found');
-      this.statusManager.showStatus('ERROR: Terminal container not found', 'error');
       return;
     }
 
@@ -128,7 +127,6 @@ class TerminalWebviewManager {
       if (this.terminalContainer) {
         console.log('🎯 [WEBVIEW] Simple terminal container created successfully');
       } else {
-        this.statusManager.showStatus('ERROR: Failed to create terminal container', 'error');
         console.error('❌ [WEBVIEW] Failed to create terminal container');
       }
     }, 1);
@@ -143,7 +141,6 @@ class TerminalWebviewManager {
 
     if (!this.terminalContainer) {
       console.error('❌ [WEBVIEW] No terminal container available');
-      this.statusManager.showStatus('ERROR: No terminal container');
       return;
     }
 
@@ -281,7 +278,6 @@ class TerminalWebviewManager {
             terminal.refresh(0, terminal.rows - 1);
             terminal.focus();
 
-            this.statusManager.showStatus(`✅ ${name} ACTIVE`, 'success');
 
             // Only set as main terminal if it's the first one or not in split mode
             if (!this.splitManager.getIsSplitMode() || !this.terminal) {
@@ -311,7 +307,6 @@ class TerminalWebviewManager {
           }, 500); // Increased delay for flex layout stabilization
         } catch (openError) {
           console.error('❌ [WEBVIEW] Error opening terminal:', openError);
-          this.statusManager.showStatus(`Error opening: ${String(openError)}`, 'error');
         }
       }, 100);
 
@@ -356,7 +351,6 @@ class TerminalWebviewManager {
       }
     } catch (error) {
       console.error('❌ [WEBVIEW] Error creating terminal:', error);
-      this.statusManager.showStatus(`Error creating terminal: ${String(error)}`, 'error');
     }
   }
 
@@ -529,16 +523,13 @@ class TerminalWebviewManager {
         const nextTerminalId = remainingTerminals[0];
         if (nextTerminalId) {
           this.switchToTerminal(nextTerminalId);
-          this.statusManager.showStatus(`Switched to terminal ${nextTerminalId}`, 'info');
-        }
+            }
       } else {
         this.activeTerminalId = null;
         this.showTerminalPlaceholder();
-        this.statusManager.showStatus('All terminals closed', 'info');
       }
     } else {
       // Update status for terminal closure
-      this.statusManager.showStatus(`Terminal ${id} closed`, 'success');
     }
 
     // Notify extension about terminal closure ONLY if terminal actually existed
@@ -613,12 +604,10 @@ class TerminalWebviewManager {
         const nextTerminalId = remainingTerminals[0];
         if (nextTerminalId) {
           this.switchToTerminal(nextTerminalId);
-          this.statusManager.showStatus(`Switched to terminal ${nextTerminalId}`, 'info');
         }
       } else {
         this.activeTerminalId = null;
         this.showTerminalPlaceholder();
-        this.statusManager.showStatus('All terminals closed', 'info');
       }
     }
 
@@ -795,7 +784,6 @@ class TerminalWebviewManager {
 
     if (nextTerminalId) {
       this.switchToTerminal(nextTerminalId);
-      this.statusManager.showStatus(`Switched to terminal ${nextIndex + 1}`, 'info');
     }
   }
 
@@ -862,7 +850,6 @@ class TerminalWebviewManager {
       }
     }
 
-    this.statusManager.showStatus('Settings applied', 'success');
   }
 
   private loadSettings(): void {
@@ -946,10 +933,8 @@ window.addEventListener('message', (event) => {
                 throw new Error('No terminal config provided');
               }
               terminalManager.initializeSplitControls();
-              terminalManager.getStatusManager().showStatus('Terminal ready');
             } catch (error) {
               console.error('❌ [WEBVIEW] Error during terminal creation:', error);
-              terminalManager.getStatusManager().showStatus(`ERROR: ${String(error)}`, 'error');
             }
           } else {
             setTimeout(checkContainerAndCreate, 50);
@@ -958,7 +943,6 @@ window.addEventListener('message', (event) => {
 
         setTimeout(checkContainerAndCreate, 10);
       } else {
-        terminalManager.getStatusManager().showStatus('ERROR: No config');
         console.error('❌ [WEBVIEW] No config provided in INIT message');
       }
       break;
@@ -1025,7 +1009,6 @@ window.addEventListener('message', (event) => {
 
 // Enhanced update status function
 function updateStatus(message: string, type: 'info' | 'success' | 'error' = 'info'): void {
-  terminalManager.getStatusManager().showStatus(message, type);
 }
 
 // Activity listeners disabled to maintain toast behavior
