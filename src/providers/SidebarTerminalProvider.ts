@@ -544,20 +544,49 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
             
             /* Status bar */
             .status {
-                height: 30px;
-                flex-shrink: 0;
-                position: relative;
-                z-index: 1000;
+                height: 20px;
+                position: fixed;
+                top: 0;
+                right: 0;
+                left: auto;
+                z-index: 9999;
                 color: #00ff00;
                 font-size: 11px;
                 font-family: monospace;
                 background: rgba(0, 0, 0, 0.8);
                 padding: 2px 6px;
                 margin: 0;
-                display: flex;
-                align-items: center;
-                max-width: 300px;
+                display: block;
+                width: auto;
+                max-width: 200px;
+                min-width: 100px;
                 word-break: break-all;
+                border-radius: 0 0 0 4px;
+                text-align: right;
+                box-sizing: border-box;
+                cursor: pointer;
+                transition: opacity 0.3s ease, transform 0.3s ease;
+                opacity: 1;
+                transform: translateY(0);
+            }
+            
+            .status-info {
+                background: var(--vscode-statusBar-background, #007acc);
+                color: var(--vscode-statusBar-foreground, #ffffff);
+            }
+            
+            .status-success {
+                background: var(--vscode-statusBarItem-prominentBackground, #16825d);
+                color: var(--vscode-statusBarItem-prominentForeground, #ffffff);
+            }
+            
+            .status-error {
+                background: var(--vscode-errorBackground, #f14c4c);
+                color: var(--vscode-errorForeground, #ffffff);
+            }
+            
+            .status:hover {
+                opacity: 0.8;
             }
             
             /* Terminal containers */

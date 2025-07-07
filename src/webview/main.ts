@@ -979,21 +979,10 @@ function updateStatus(message: string, type: 'info' | 'success' | 'error' = 'inf
   terminalManager.getStatusManager().showStatus(message, type);
 }
 
-// Setup activity listeners
+// Activity listeners disabled to maintain toast behavior
 function setupActivityListeners(): void {
-  document.addEventListener('keydown', () => {
-    terminalManager.getStatusManager().showLastStatusOnActivity();
-  });
-
-  document.addEventListener('click', (e) => {
-    if (!(e.target as HTMLElement)?.closest('.status')) {
-      terminalManager.getStatusManager().showLastStatusOnActivity();
-    }
-  });
-
-  window.addEventListener('focus', () => {
-    terminalManager.getStatusManager().showLastStatusOnActivity();
-  });
+  console.log('📱 [ACTIVITY] Activity listeners disabled to prevent status re-show');
+  // Removed activity listeners that were causing status to re-appear
 }
 
 document.addEventListener('keydown', (e) => {

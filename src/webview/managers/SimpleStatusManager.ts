@@ -6,14 +6,8 @@ export class SimpleStatusManager {
   private hideTimer: number | null = null;
   private readonly DEFAULT_DISPLAY_DURATION = 3000;
   private readonly ERROR_DISPLAY_DURATION = 5000;
-  private lastMessage = '';
-  private lastType: 'info' | 'success' | 'error' = 'info';
-  private isStatusVisible = false;
 
   public showStatus(message: string, type: 'info' | 'success' | 'error' = 'info'): void {
-    this.lastMessage = message;
-    this.lastType = type;
-
     // Get or create status element
     const statusEl = this.getOrCreateStatusElement();
     statusEl.textContent = message;
@@ -43,10 +37,8 @@ export class SimpleStatusManager {
   }
 
   public showLastStatusOnActivity(): void {
-    if (this.lastMessage && this.statusElement?.style.display === 'none') {
-      console.log('📱 [STATUS] Showing status due to user activity');
-      this.showStatus(this.lastMessage, this.lastType);
-    }
+    // Disabled: Do not re-show status on activity to maintain toast behavior
+    console.log('📱 [STATUS] Activity detected but auto re-show disabled');
   }
 
   private hideStatusWithAnimation(): void {
@@ -96,45 +88,8 @@ export class SimpleStatusManager {
   }
 
   private addStatusStyles(): void {
-    // Add status styling if not already added
-    if (!document.getElementById('status-styles')) {
-      const style = document.createElement('style');
-      style.id = 'status-styles';
-      style.textContent = `
-        .status {
-          transition: opacity 0.3s ease, transform 0.3s ease;
-          cursor: pointer;
-          position: absolute;
-          top: 5px;
-          left: 5px;
-          z-index: 1000;
-          color: #00ff00;
-          font-size: 11px;
-          font-family: monospace;
-          background: rgba(0, 0, 0, 0.8);
-          padding: 2px 6px;
-          border-radius: 3px;
-          max-width: 300px;
-          word-break: break-all;
-        }
-        .status-info {
-          background: var(--vscode-statusBar-background, #007acc);
-          color: var(--vscode-statusBar-foreground, #ffffff);
-        }
-        .status-success {
-          background: var(--vscode-statusBarItem-prominentBackground, #16825d);
-          color: var(--vscode-statusBarItem-prominentForeground, #ffffff);
-        }
-        .status-error {
-          background: var(--vscode-errorBackground, #f14c4c);
-          color: var(--vscode-errorForeground, #ffffff);
-        }
-        .status:hover {
-          opacity: 0.8;
-        }
-      `;
-      document.head.appendChild(style);
-    }
+    // Status styles are now defined in CSS - no need for duplicate styles
+    console.log('📱 [STATUS] Using CSS-defined status styles');
   }
 
   private clearTimer(): void {
@@ -146,17 +101,24 @@ export class SimpleStatusManager {
 
   private showStatusElement(): void {
     if (this.statusElement) {
+      // Start with slide-in animation from top
       this.statusElement.style.display = 'block';
-      this.statusElement.style.opacity = '1';
-      this.statusElement.style.transform = 'translateY(0)';
-      this.isStatusVisible = true;
+      this.statusElement.style.opacity = '0';
+      this.statusElement.style.transform = 'translateY(-100%)';
+      
+      // Trigger reflow and animate in
+      setTimeout(() => {
+        if (this.statusElement) {
+          this.statusElement.style.opacity = '1';
+          this.statusElement.style.transform = 'translateY(0)';
+        }
+      }, 10);
     }
   }
 
   private hideStatusElement(): void {
     if (this.statusElement) {
       this.statusElement.style.display = 'none';
-      this.isStatusVisible = false;
 
       // Reset styles for next show
       this.statusElement.style.opacity = '1';

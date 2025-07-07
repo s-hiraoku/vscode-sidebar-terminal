@@ -208,7 +208,7 @@ export class TerminalManager {
         // Kill the actual terminal process
         terminal.pty.kill();
         console.log('🗑️ [TERMINAL] Terminal process killed:', id);
-        
+
         // Clean up terminal data
         this._removeTerminal(id);
         console.log('🗑️ [TERMINAL] Terminal data cleaned up:', id);
@@ -309,7 +309,7 @@ export class TerminalManager {
 
     // Get terminal instance before removal
     const terminal = this._terminals.get(terminalId);
-    
+
     // Kill the terminal process if it's still running (safety check)
     if (terminal) {
       try {

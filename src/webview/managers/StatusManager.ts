@@ -87,20 +87,11 @@ export class StatusManager {
   }
 
   /**
-   * ユーザーアクティビティ時に最後のステータスを再表示
+   * ユーザーアクティビティ時に最後のステータスを再表示（無効化）
    */
   public showLastStatusOnActivity(): void {
-    try {
-      if (this.lastMessage && this.statusElement?.style.display === 'none') {
-        console.log('📱 [STATUS] Showing status due to user activity');
-        this.showStatus(this.lastMessage, this.lastType);
-      }
-    } catch (error) {
-      ErrorHandler.getInstance().handleGenericError(
-        error as Error,
-        'StatusManager.showLastStatusOnActivity'
-      );
-    }
+    // Disabled: Do not re-show status on activity to maintain toast behavior
+    console.log('📱 [STATUS] Activity detected but auto re-show disabled (StatusManager)');
   }
 
   /**
