@@ -4,43 +4,50 @@ about: Ask a question about usage or configuration
 title: '[QUESTION] '
 labels: question
 assignees: s-hiraoku
-
 ---
 
 ## ❓ Question
 
 ### 📝 Description
+
 A clear and concise description of your question.
 
 ### 🎯 What are you trying to achieve?
+
 Describe what you want to accomplish.
 
 ### 🔄 What have you tried?
+
 Describe what you've already attempted.
 
 ### 🖥️ Environment
+
 **VS Code Version:** (e.g., 1.74.0)
 **Extension Version:** (e.g., 0.0.1)
 **OS:** (e.g., Windows 10, macOS 13.0, Ubuntu 20.04)
 
 ### 📋 Current Configuration
+
 ```json
 // Include relevant settings from settings.json
 {
   "sidebarTerminal.shell": "",
-  "sidebarTerminal.fontSize": 14,
+  "sidebarTerminal.fontSize": 14
   // ... other relevant settings
 }
 ```
 
 ### 🔗 Related Documentation
+
 Have you checked these resources?
+
 - [ ] README.md
 - [ ] VS Code Extension Marketplace page
 - [ ] Existing GitHub Issues
 - [ ] VS Code Documentation
 
 ### 📊 Additional Context
+
 Add any other context about the question here.
 
 ---

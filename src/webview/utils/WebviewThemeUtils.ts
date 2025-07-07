@@ -6,8 +6,8 @@ export const WEBVIEW_THEME_CONSTANTS = {
   DARK_THEME: {
     background: '#1e1e1e',
     foreground: '#cccccc',
-    cursor: '#ffffff',
-    cursorAccent: '#000000',
+    cursor: '#cccccc',
+    selection: '#264f78',
     black: '#000000',
     red: '#cd3131',
     green: '#0dbc79',
@@ -23,13 +23,13 @@ export const WEBVIEW_THEME_CONSTANTS = {
     brightBlue: '#3b8eea',
     brightMagenta: '#d670d6',
     brightCyan: '#29b8db',
-    brightWhite: '#ffffff',
+    brightWhite: '#e5e5e5',
   },
   LIGHT_THEME: {
     background: '#ffffff',
     foreground: '#333333',
-    cursor: '#000000',
-    cursorAccent: '#ffffff',
+    cursor: '#333333',
+    selection: '#add6ff',
     black: '#000000',
     red: '#cd3131',
     green: '#00bc00',
@@ -49,64 +49,21 @@ export const WEBVIEW_THEME_CONSTANTS = {
   },
 };
 
-export function getWebviewTheme(): { [key: string]: string } {
-  // VS Code provides CSS variables for theme detection
-  const style = getComputedStyle(document.body);
+/**
+ * VS Code テーマを取得
+ */
+export function getWebviewTheme(): object {
+  // VS Code の body クラスを確認してテーマを判定
+  const body = document.body;
+  const classList = body.classList;
 
-  // Get the background color and convert to RGB values
-  const bgColor =
-    style.getPropertyValue('--vscode-editor-background') ||
-    style.getPropertyValue('--vscode-panel-background') ||
-    style.backgroundColor;
-
-  console.log('🎨 [WEBVIEW] Detected background color:', bgColor);
-
-  // Check if dark theme by analyzing background color
-  let isDark = true; // Default to dark
-
-  if (bgColor) {
-    // Handle hex colors
-    if (bgColor.startsWith('#')) {
-      const hex = bgColor.substring(1);
-      const r = parseInt(hex.substring(0, 2), 16);
-      const g = parseInt(hex.substring(2, 4), 16);
-      const b = parseInt(hex.substring(4, 6), 16);
-      const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-      isDark = brightness < 128;
-    }
-    // Handle rgb/rgba colors
-    else if (bgColor.includes('rgb')) {
-      const values = bgColor.match(/\d+/g);
-      if (values && values.length >= 3) {
-        const r = parseInt(values[0] || '0');
-        const g = parseInt(values[1] || '0');
-        const b = parseInt(values[2] || '0');
-        const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-        isDark = brightness < 128;
-      }
-    }
-    // Handle specific dark theme indicators
-    else if (
-      bgColor.includes('1e1e1e') ||
-      bgColor.includes('2d2d30') ||
-      bgColor.includes('252526')
-    ) {
-      isDark = true;
-    }
-    // Handle light theme indicators
-    else if (
-      bgColor.includes('ffffff') ||
-      bgColor.includes('f3f3f3') ||
-      bgColor.includes('fffffe')
-    ) {
-      isDark = false;
-    }
+  // VS Code は 'vscode-dark' または 'vscode-light' クラスを body に設定する
+  if (classList.contains('vscode-dark')) {
+    return WEBVIEW_THEME_CONSTANTS.DARK_THEME;
+  } else if (classList.contains('vscode-light')) {
+    return WEBVIEW_THEME_CONSTANTS.LIGHT_THEME;
   }
 
-  console.log('🎨 [WEBVIEW] Theme detected as:', isDark ? 'dark' : 'light');
-
-  const theme = isDark ? WEBVIEW_THEME_CONSTANTS.DARK_THEME : WEBVIEW_THEME_CONSTANTS.LIGHT_THEME;
-  console.log('🎨 [WEBVIEW] Applied theme:', theme);
-
-  return theme;
+  // デフォルトはダークテーマ
+  return WEBVIEW_THEME_CONSTANTS.DARK_THEME;
 }
