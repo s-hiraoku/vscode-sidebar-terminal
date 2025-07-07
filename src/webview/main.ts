@@ -9,7 +9,6 @@ import { WebLinksAddon } from 'xterm-addon-web-links';
 import type { WebviewMessage, VsCodeMessage, TerminalConfig } from '../types/common';
 import { WEBVIEW_TERMINAL_CONSTANTS, SPLIT_CONSTANTS } from './constants/webview';
 import { getWebviewTheme, WEBVIEW_THEME_CONSTANTS } from './utils/WebviewThemeUtils';
-import { SimpleStatusManager } from './managers/SimpleStatusManager';
 import { SplitManager } from './managers/SplitManager';
 import { SettingsPanel } from './components/SettingsPanel';
 import { NotificationUtils } from './utils/NotificationUtils';
@@ -58,7 +57,6 @@ class TerminalWebviewManager {
 
   // Managers
   private splitManager: SplitManager;
-  private statusManager: SimpleStatusManager;
   private settingsPanel: SettingsPanel;
 
   // Current settings
@@ -71,7 +69,6 @@ class TerminalWebviewManager {
 
   constructor() {
     this.splitManager = new SplitManager();
-    this.statusManager = new SimpleStatusManager();
     this.settingsPanel = new SettingsPanel({
       onSettingsChange: (settings) => {
         this.applySettings(settings);
@@ -770,9 +767,6 @@ class TerminalWebviewManager {
     return this.splitManager;
   }
 
-  public getStatusManager(): SimpleStatusManager {
-    return this.statusManager;
-  }
 
   public switchToNextTerminal(): void {
     const terminalIds = Array.from(this.splitManager.getTerminals().keys());
@@ -1018,9 +1012,6 @@ function setupActivityListeners(): void {
 }
 
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') {
-    terminalManager.getStatusManager().hideStatus();
-  }
 
   // Ctrl+Tab to switch between terminals
   if (e.ctrlKey && e.key === 'Tab') {

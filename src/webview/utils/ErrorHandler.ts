@@ -103,18 +103,8 @@ export class ErrorHandler {
    * ユーザーにエラーメッセージを表示
    */
   private showUserError(message: string): void {
-    // ステータスマネージャーが利用可能な場合は使用
-    const windowWithStatus = window as unknown as Record<string, unknown> & {
-      statusManager?: {
-        showStatus: (message: string, type: 'error') => void;
-      };
-    };
-
-    if (typeof window !== 'undefined' && windowWithStatus.statusManager) {
-    } else {
-      // フォールバック：コンソールログのみ
-      console.warn('Status manager not available, error message:', message);
-    }
+    // コンソールログのみ
+    console.warn('Error message:', message);
   }
 
   /**

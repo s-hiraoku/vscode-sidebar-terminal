@@ -522,53 +522,6 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
                 background: var(--vscode-focusBorder, #007acc);
             }
             
-            /* Status bar */
-            .status {
-                height: 20px;
-                position: fixed;
-                top: 0;
-                right: 0;
-                left: auto;
-                z-index: 9999;
-                color: #00ff00;
-                font-size: 11px;
-                font-family: monospace;
-                background: rgba(0, 0, 0, 0.8);
-                padding: 2px 6px;
-                margin: 0;
-                display: block;
-                width: auto;
-                max-width: 200px;
-                min-width: 100px;
-                word-break: break-all;
-                border-radius: 0 0 0 4px;
-                text-align: right;
-                box-sizing: border-box;
-                cursor: pointer;
-                transition: opacity 0.3s ease, transform 0.3s ease;
-                opacity: 1;
-                transform: translateY(0);
-            }
-            
-            .status-info {
-                background: var(--vscode-statusBar-background, #007acc);
-                color: var(--vscode-statusBar-foreground, #ffffff);
-            }
-            
-            .status-success {
-                background: var(--vscode-statusBarItem-prominentBackground, #16825d);
-                color: var(--vscode-statusBarItem-prominentForeground, #ffffff);
-            }
-            
-            .status-error {
-                background: var(--vscode-errorBackground, #f14c4c);
-                color: var(--vscode-errorForeground, #ffffff);
-            }
-            
-            .status:hover {
-                opacity: 0.8;
-            }
-            
             /* Terminal containers */
             #terminal {
                 flex: 1;
@@ -651,7 +604,6 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
                 border-color: var(--vscode-button-background, #0e639c);
             }
             
-            /* Status class moved above - now using flex layout */
             
             .loading {
                 display: flex;
@@ -665,13 +617,11 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
         </style>
     </head>
     <body>
-        <div class="status" id="status">Initializing...</div>
         <div id="terminal">
             <!-- Simple terminal container -->
         </div>
         <script nonce="${nonce}">
             console.log('🎯 [WEBVIEW] Script loaded');
-            document.getElementById('status').textContent = 'Script loaded';
         </script>
         <script nonce="${nonce}" src="${scriptUri.toString()}"></script>
     </body>
