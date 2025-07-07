@@ -183,9 +183,27 @@ class TerminalWebviewManager {
           if (terminalId !== id) {
             container.style.height = '50%';
             container.style.display = 'block';
+            
+            // Add click event to existing terminals if not already added
+            if (!container.hasAttribute('data-click-handler')) {
+              container.setAttribute('data-click-handler', 'true');
+              container.addEventListener('click', () => {
+                if (this.activeTerminalId !== terminalId) {
+                  this.switchToTerminal(terminalId);
+                }
+              });
+            }
           }
         });
       }
+
+      // Add click event to switch focus when clicking on terminal
+      targetContainer.setAttribute('data-click-handler', 'true');
+      targetContainer.addEventListener('click', () => {
+        if (this.activeTerminalId !== id) {
+          this.switchToTerminal(id);
+        }
+      });
 
       // Open terminal
       setTimeout(() => {
