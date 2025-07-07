@@ -34,6 +34,13 @@ jobs:
       with:
         python-version: '3.11'
 
+    - name: Configure Windows environment for node-gyp (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        npm config set msvs_version 2022 --global
+        npm config set python python3 --global
+        npm config set node_gyp "C:\Program Files\nodejs\node_modules\npm\node_modules\node-gyp\bin\node-gyp.js" --global
+
     - name: Configure npm settings
       run: |
         npm config set fetch-timeout 600000
@@ -44,8 +51,20 @@ jobs:
     - name: Install dependencies
       run: npm ci --prefer-offline --no-audit
 
-    - name: Rebuild native modules
+    - name: Rebuild native modules (non-Windows)
+      if: runner.os != 'Windows'
       run: npm rebuild
+
+    - name: Rebuild native modules (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        npm config set msvs_version 2022 --global
+        npm config set python python3 --global
+        npm rebuild
+      env:
+        npm_config_build_from_source: true
+        npm_config_runtime: node
+        npm_config_disturl: https://nodejs.org/dist
 
     - name: Run lint
       run: npm run lint
@@ -65,8 +84,11 @@ jobs:
     - name: Run tests (macOS/Windows)
       if: runner.os != 'Linux'
       run: npm test
+      timeout-minutes: 15
       env:
         NODE_PTY_SKIP_DOWNLOAD_BINARY: 1
+        NODE_OPTIONS: --max-old-space-size=4096
+        VSCODE_TEST_DATA_DIR: ${{ runner.temp }}/vscode-test
 
     - name: Build extension
       run: npm run package

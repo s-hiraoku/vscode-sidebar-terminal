@@ -13,8 +13,27 @@ const originalRequire = Module.prototype.require;
 
 Module.prototype.require = function (id: string) {
   if (id === 'node-pty') {
-    const mockPath = path.resolve(__dirname, './mocks/node-pty');
-    return originalRequire.call(this, mockPath);
+    try {
+      const mockPath = path.resolve(__dirname, './mocks/node-pty');
+      console.log('🔧 [TEST] Loading node-pty mock from:', mockPath);
+      return originalRequire.call(this, mockPath);
+    } catch (error) {
+      console.error('❌ [TEST] Failed to load node-pty mock:', error);
+      // Fallback to inline mock for Windows compatibility
+      return {
+        spawn: () => ({
+          pid: 1234,
+          cols: 80,
+          rows: 24,
+          handleFlowControl: false,
+          onData: () => {},
+          onExit: () => {},
+          write: () => {},
+          resize: () => {},
+          kill: () => {},
+        }),
+      };
+    }
   }
   return originalRequire.apply(this, arguments);
 };
