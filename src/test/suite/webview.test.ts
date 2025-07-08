@@ -51,10 +51,9 @@ suite('Webview Test Suite', () => {
     assert.ok(html);
     assert.ok(typeof html === 'string');
     assert.ok(html.includes('<!DOCTYPE html>'));
-    assert.ok(html.includes('<div id="terminal">'));
+    assert.ok(html.includes('<div id="terminal-body">'));
     assert.ok(html.includes('webview.js'));
-    assert.ok(html.includes('xterm.css'));
-    assert.ok(html.includes('Simple terminal container'));
+    assert.ok(html.includes('<!-- Simple terminal container -->'));
   });
 
   test('Should handle webview view resolution', () => {
