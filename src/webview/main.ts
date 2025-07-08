@@ -644,24 +644,47 @@ class TerminalWebviewManager {
     }
   }
 
-  public writeToTerminal(data: string, _terminalId?: string): void {
+  public writeToTerminal(data: string, terminalId?: string): void {
     // Determine which terminal to write to
     let targetTerminal = this.terminal;
 
-    if (this.activeTerminalId) {
-      const terminalData = this.splitManager.getTerminals().get(this.activeTerminalId);
+    // First, try to use the specified terminal ID
+    if (terminalId) {
+      const terminalData = this.splitManager.getTerminals().get(terminalId);
       if (terminalData) {
         targetTerminal = terminalData.terminal;
+        log(`📤 [WEBVIEW] Writing to specified terminal: ${terminalId}`);
+      } else {
+        log(
+          `⚠️ [WEBVIEW] Specified terminal not found: ${terminalId}, falling back to active terminal`
+        );
+      }
+    }
+
+    // If no terminal ID specified or terminal not found, use active terminal
+    if (!targetTerminal || (!terminalId && this.activeTerminalId)) {
+      if (this.activeTerminalId) {
+        const terminalData = this.splitManager.getTerminals().get(this.activeTerminalId);
+        if (terminalData) {
+          targetTerminal = terminalData.terminal;
+          log(`📤 [WEBVIEW] Writing to active terminal: ${this.activeTerminalId}`);
+        }
       }
     }
 
     if (targetTerminal) {
-      if (data.length < 1000 && this.outputBuffer.length < this.MAX_BUFFER_SIZE) {
-        this.outputBuffer.push(data);
-        this.scheduleBufferFlush();
-      } else {
-        this.flushOutputBuffer();
+      // If a specific terminal ID is provided, write directly to avoid cross-terminal buffering issues
+      if (terminalId) {
         targetTerminal.write(data);
+      } else {
+        // Use buffering only for active terminal (default behavior)
+        if (data.length < 1000 && this.outputBuffer.length < this.MAX_BUFFER_SIZE) {
+          this.outputBuffer.push(data);
+          this.scheduleBufferFlush();
+        } else {
+          this.flushOutputBuffer();
+          targetTerminal.write(data);
+        }
       }
     } else {
       log('⚠️ [WEBVIEW] No terminal instance to write to');
