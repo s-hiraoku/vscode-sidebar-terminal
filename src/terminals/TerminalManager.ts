@@ -85,11 +85,18 @@ export class TerminalManager {
       log('📁 [TERMINAL] - VSCODE_PROJECT_NAME:', env.VSCODE_PROJECT_NAME);
 
       const ptyProcess = pty.spawn(shell, shellArgs, {
-        name: 'xterm-color',
+        name: 'xterm-256color',
         cols: TERMINAL_CONSTANTS.DEFAULT_COLS,
         rows: TERMINAL_CONSTANTS.DEFAULT_ROWS,
         cwd,
-        env,
+        env: {
+          ...env,
+          // Ensure proper UTF-8 encoding for Japanese characters
+          LANG: env.LANG || 'en_US.UTF-8',
+          LC_ALL: env.LC_ALL || 'en_US.UTF-8',
+          LC_CTYPE: env.LC_CTYPE || 'en_US.UTF-8',
+        },
+        encoding: 'utf8',
       });
 
       const terminal: TerminalInstance = {
@@ -152,6 +159,10 @@ export class TerminalManager {
     log(
       '🔧 [DEBUG] TerminalManager.sendInput called with data:',
       JSON.stringify(data),
+      'length:',
+      data.length,
+      'bytes:',
+      new TextEncoder().encode(data).length,
       'terminalId:',
       id
     );
@@ -168,8 +179,17 @@ export class TerminalManager {
     }
 
     try {
-      log('🔧 [DEBUG] Writing to pty:', JSON.stringify(data));
-      terminal.pty.write(data);
+      // Ensure data is properly encoded as UTF-8
+      const encoder = new TextEncoder();
+      const bytes = encoder.encode(data);
+      const decoder = new TextDecoder('utf-8');
+      const validatedData = decoder.decode(bytes);
+
+      log('🔧 [DEBUG] Writing to pty - original:', JSON.stringify(data));
+      log('🔧 [DEBUG] Writing to pty - validated:', JSON.stringify(validatedData));
+      log('🔧 [DEBUG] Byte count:', bytes.length);
+
+      terminal.pty.write(validatedData);
       log('✅ [DEBUG] Successfully wrote to pty');
     } catch (error) {
       console.error('❌ [ERROR] Failed to write to pty:', error);

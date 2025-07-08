@@ -97,7 +97,7 @@ class TerminalWebviewManager {
 
     // Use the existing terminal-body container
     this.terminalContainer = container;
-    
+
     // Style the container
     container.style.cssText = `
       display: flex;
@@ -110,7 +110,7 @@ class TerminalWebviewManager {
       padding: 0;
       gap: 0;
     `;
-    
+
     // Add placeholder content
     container.innerHTML = `
       <div id="terminal-placeholder" style="
@@ -317,11 +317,15 @@ class TerminalWebviewManager {
         }
       }, 100);
 
-      // Handle terminal input
+      // Handle terminal input with IME support
       terminal.onData((data) => {
-        if (this.isComposing) {
-          return;
-        }
+        // Don't block IME input - let xterm.js handle it naturally
+        log('🌐 [INPUT] Terminal data received:', {
+          data: data,
+          length: data.length,
+          isComposing: this.isComposing,
+          charCodes: Array.from(data).map((c) => c.charCodeAt(0)),
+        });
 
         vscode.postMessage({
           command: 'input' as const,
@@ -729,22 +733,23 @@ class TerminalWebviewManager {
   }
 
   private setupIMEHandling(): void {
-    log('🌐 [WEBVIEW] Setting up IME handling');
+    log('🌐 [WEBVIEW] Setting up IME handling - let xterm.js handle composition');
 
-    document.addEventListener('compositionstart', (_e) => {
+    // Let xterm.js handle IME composition natively
+    // Only use compositionstart/end to track state, don't send data manually
+    document.addEventListener('compositionstart', () => {
       this.isComposing = true;
+      log('🌐 [IME] Composition started - blocking terminal input');
     });
 
-    document.addEventListener('compositionend', (e) => {
-      this.isComposing = false;
+    document.addEventListener('compositionend', () => {
+      log('🌐 [IME] Composition ended - letting xterm.js handle the data');
 
-      if (e.data && this.terminal) {
-        vscode.postMessage({
-          command: 'input' as const,
-          data: e.data,
-          terminalId: this.activeTerminalId || 'terminal-initial',
-        });
-      }
+      // Reset composition state after a short delay to allow xterm.js to process
+      setTimeout(() => {
+        this.isComposing = false;
+        log('🌐 [IME] Composition state reset');
+      }, 10);
     });
 
     const style = document.createElement('style');
