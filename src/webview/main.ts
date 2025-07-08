@@ -72,6 +72,8 @@ class TerminalWebviewManager {
     fontFamily: 'Consolas, monospace',
     theme: 'auto',
     cursorBlink: true,
+    altClickMovesCursor: true,
+    multiCursorModifier: 'alt',
   };
 
   constructor() {
@@ -136,6 +138,9 @@ class TerminalWebviewManager {
 
     // Setup IME support
     this.setupIMEHandling();
+
+    // Setup Alt key visual feedback (VS Code standard)
+    this.setupAltKeyVisualFeedback();
   }
 
   public createTerminal(id: string, name: string, _config: TerminalConfig): void {
@@ -169,6 +174,8 @@ class TerminalWebviewManager {
         cursorBlink: this.currentSettings.cursorBlink,
         allowTransparency: true,
         scrollback: 10000,
+        // VS Code standard: Enable Alt+Click cursor positioning based on setting
+        altClickMovesCursor: this.getAltClickMovesCursorSetting(),
       };
 
       const terminal = new Terminal(terminalOptions);
@@ -239,6 +246,14 @@ class TerminalWebviewManager {
         if (!container.hasAttribute('data-click-handler')) {
           container.setAttribute('data-click-handler', 'true');
           container.addEventListener('click', () => {
+            log(
+              `🖱️ [CLICK] Terminal clicked: ${terminalId}, current active: ${this.activeTerminalId}`
+            );
+
+            // Always ensure the clicked terminal gets focus, even if it's already active
+            this.ensureTerminalFocus(terminalId);
+
+            // Switch terminals if different terminal is clicked
             if (this.activeTerminalId !== terminalId) {
               this.switchToTerminal(terminalId);
             }
@@ -285,6 +300,9 @@ class TerminalWebviewManager {
             fitAddon.fit();
             terminal.refresh(0, terminal.rows - 1);
             terminal.focus();
+
+            // Add click event to xterm.js terminal area for reliable focus handling
+            this.addXtermClickHandler(terminal, id, targetContainer);
 
             // Only set as main terminal if it's the first one or not in split mode
             if (!this.splitManager.getIsSplitMode() || !this.terminal) {
@@ -389,7 +407,15 @@ class TerminalWebviewManager {
     // Focus the active terminal and ensure proper fit
     const terminalData = this.splitManager.getTerminals().get(id);
     if (terminalData?.terminal) {
-      // Wait for CSS updates to be applied
+      // Apply immediate focus first
+      try {
+        terminalData.terminal.focus();
+        log(`🎯 [SWITCH] Immediate focus applied to terminal ${id}`);
+      } catch (error) {
+        log(`⚠️ [SWITCH] Error applying immediate focus to terminal ${id}:`, error);
+      }
+
+      // Wait for CSS updates to be applied, then apply delayed focus and fit
       setTimeout(() => {
         const container = this.splitManager.getTerminalContainers().get(id);
         if (container) {
@@ -402,10 +428,15 @@ class TerminalWebviewManager {
           });
         }
 
-        terminalData.terminal.focus();
-        if (terminalData.fitAddon) {
-          terminalData.fitAddon.fit();
-          log(`🔧 [SWITCH] Fit applied for terminal ${id}`);
+        // Re-apply focus after layout changes
+        try {
+          terminalData.terminal.focus();
+          if (terminalData.fitAddon) {
+            terminalData.fitAddon.fit();
+            log(`🔧 [SWITCH] Delayed focus and fit applied for terminal ${id}`);
+          }
+        } catch (error) {
+          log(`⚠️ [SWITCH] Error applying delayed focus to terminal ${id}:`, error);
         }
       }, 50);
     }
@@ -676,14 +707,24 @@ class TerminalWebviewManager {
       // If a specific terminal ID is provided, write directly to avoid cross-terminal buffering issues
       if (terminalId) {
         targetTerminal.write(data);
+        log(`📤 [WEBVIEW] Direct write to terminal ${terminalId}: ${data.length} chars`);
       } else {
         // Use buffering only for active terminal (default behavior)
-        if (data.length < 1000 && this.outputBuffer.length < this.MAX_BUFFER_SIZE) {
-          this.outputBuffer.push(data);
-          this.scheduleBufferFlush();
-        } else {
+        // For better Alt+Click compatibility, flush buffer more frequently during Claude Code output
+        const isLargeOutput = data.length >= 1000;
+        const bufferFull = this.outputBuffer.length >= this.MAX_BUFFER_SIZE;
+        const shouldFlushImmediately = isLargeOutput || bufferFull;
+
+        if (shouldFlushImmediately) {
           this.flushOutputBuffer();
           targetTerminal.write(data);
+          log(`📤 [WEBVIEW] Immediate write to active terminal: ${data.length} chars`);
+        } else {
+          this.outputBuffer.push(data);
+          this.scheduleBufferFlush();
+          log(
+            `📤 [WEBVIEW] Buffered write to active terminal: ${data.length} chars (buffer: ${this.outputBuffer.length})`
+          );
         }
       }
     } else {
@@ -693,9 +734,11 @@ class TerminalWebviewManager {
 
   private scheduleBufferFlush(): void {
     if (this.bufferFlushTimer === null) {
+      // Use shorter interval for better Alt+Click compatibility during Claude Code output
+      const flushInterval = this.outputBuffer.length > 5 ? 8 : this.BUFFER_FLUSH_INTERVAL; // 8ms for frequent output, 16ms for normal
       this.bufferFlushTimer = window.setTimeout(() => {
         this.flushOutputBuffer();
-      }, this.BUFFER_FLUSH_INTERVAL);
+      }, flushInterval);
     }
   }
 
@@ -788,6 +831,130 @@ class TerminalWebviewManager {
     document.head.appendChild(style);
   }
 
+  /**
+   * Setup Alt key visual feedback (VS Code standard)
+   * Shows visual cursor indication when Alt key is pressed to indicate Alt+Click functionality
+   */
+  private setupAltKeyVisualFeedback(): void {
+    log('⌨️ [WEBVIEW] Setting up Alt key visual feedback');
+
+    // Add CSS for Alt key visual feedback and cursor position feedback
+    const style = document.createElement('style');
+    style.textContent = `
+      /* VS Code standard: Show default cursor when Alt is pressed to indicate Alt+Click functionality */
+      .alt-active .xterm-screen {
+        cursor: default !important;
+      }
+      .alt-active .xterm-viewport {
+        cursor: default !important;
+      }
+      .alt-active .xterm {
+        cursor: default !important;
+      }
+      
+      /* Cursor position feedback (VS Code standard) */
+      .cursor-position-feedback {
+        position: absolute;
+        background: rgba(0, 122, 255, 0.3);
+        border: 1px solid rgba(0, 122, 255, 0.6);
+        border-radius: 2px;
+        pointer-events: none;
+        z-index: 1000;
+        animation: cursor-feedback-fade 1s ease-out forwards;
+      }
+      
+      @keyframes cursor-feedback-fade {
+        0% { opacity: 0.8; transform: scale(1.2); }
+        50% { opacity: 0.6; transform: scale(1.0); }
+        100% { opacity: 0; transform: scale(0.8); }
+      }
+    `;
+    document.head.appendChild(style);
+
+    // Track Alt key state
+    let isAltPressed = false;
+
+    // Add keydown event listener for Alt key
+    document.addEventListener('keydown', (event) => {
+      if (event.altKey && !isAltPressed) {
+        isAltPressed = true;
+        document.body.classList.add('alt-active');
+        log('⌨️ [ALT] Alt key pressed - showing cursor feedback');
+      }
+    });
+
+    // Add keyup event listener to remove Alt state
+    document.addEventListener('keyup', (event) => {
+      if (!event.altKey && isAltPressed) {
+        isAltPressed = false;
+        document.body.classList.remove('alt-active');
+        log('⌨️ [ALT] Alt key released - hiding cursor feedback');
+      }
+    });
+
+    // Handle window focus events to ensure consistent state
+    window.addEventListener('blur', () => {
+      if (isAltPressed) {
+        isAltPressed = false;
+        document.body.classList.remove('alt-active');
+        log('⌨️ [ALT] Window lost focus - resetting Alt state');
+      }
+    });
+
+    // Add Alt+Click cursor position feedback
+    this.setupCursorPositionFeedback();
+  }
+
+  /**
+   * Setup cursor position feedback for Alt+Click (VS Code standard)
+   */
+  private setupCursorPositionFeedback(): void {
+    log('🎯 [CURSOR] Setting up cursor position feedback');
+
+    // Listen for Alt+Click events on terminal elements
+    document.addEventListener('click', (event) => {
+      if (event.altKey && this.getAltClickMovesCursorSetting()) {
+        this.showCursorPositionFeedback(event);
+      }
+    });
+  }
+
+  /**
+   * Show visual feedback for cursor position after Alt+Click
+   */
+  private showCursorPositionFeedback(event: MouseEvent): void {
+    const target = event.target as HTMLElement;
+    const terminalElement = target.closest('.xterm-screen') || target.closest('.xterm-viewport');
+
+    if (terminalElement) {
+      log('🎯 [CURSOR] Showing cursor position feedback');
+
+      // Create feedback element
+      const feedback = document.createElement('div');
+      feedback.className = 'cursor-position-feedback';
+
+      // Position feedback at click location
+      const rect = terminalElement.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+
+      feedback.style.left = `${x - 2}px`;
+      feedback.style.top = `${y - 2}px`;
+      feedback.style.width = '4px';
+      feedback.style.height = '16px';
+
+      // Add to terminal element
+      terminalElement.appendChild(feedback);
+
+      // Remove feedback after animation
+      setTimeout(() => {
+        if (feedback.parentElement) {
+          feedback.parentElement.removeChild(feedback);
+        }
+      }, 1000);
+    }
+  }
+
   public setActiveTerminalId(terminalId: string): void {
     this.activeTerminalId = terminalId;
     log('🎯 [WEBVIEW] Active terminal ID set to:', terminalId);
@@ -815,6 +982,126 @@ class TerminalWebviewManager {
     }
   }
 
+  /**
+   * Ensure the specified terminal has focus immediately
+   */
+  public ensureTerminalFocus(terminalId: string): void {
+    log(`🎯 [FOCUS] Ensuring focus for terminal: ${terminalId}`);
+
+    const terminalData = this.splitManager.getTerminals().get(terminalId);
+    if (!terminalData?.terminal) {
+      log(`⚠️ [FOCUS] Terminal not found: ${terminalId}`);
+      return;
+    }
+
+    try {
+      // Force focus immediately without delay
+      terminalData.terminal.focus();
+      log(`✅ [FOCUS] Focus applied to terminal: ${terminalId}`);
+
+      // Also trigger fit to ensure proper rendering
+      if (terminalData.fitAddon) {
+        terminalData.fitAddon.fit();
+        log(`📏 [FOCUS] Fit applied to terminal: ${terminalId}`);
+      }
+    } catch (error) {
+      log(`❌ [FOCUS] Error focusing terminal ${terminalId}:`, error);
+    }
+  }
+
+  /**
+   * Get Alt+Click cursor positioning setting (VS Code standard)
+   * VS Code logic: altClickMovesCursor && multiCursorModifier === 'alt'
+   */
+  private getAltClickMovesCursorSetting(): boolean {
+    const altClickSetting = this.currentSettings.altClickMovesCursor;
+    const multiCursorModifier = this.currentSettings.multiCursorModifier;
+
+    // VS Code standard: Both conditions must be true
+    const altClickEnabled = altClickSetting !== undefined ? Boolean(altClickSetting) : true;
+    const multiCursorIsAlt = multiCursorModifier === 'alt';
+
+    const result = altClickEnabled && multiCursorIsAlt;
+    log(
+      `⌨️ [ALT-CLICK] Setting check: altClick=${altClickEnabled}, multiCursor=${multiCursorModifier}, result=${result}`
+    );
+
+    return result;
+  }
+
+  /**
+   * Add click event handler to xterm.js DOM elements for reliable focus (VS Code standard)
+   */
+  private addXtermClickHandler(
+    _terminal: Terminal,
+    terminalId: string,
+    container: HTMLElement
+  ): void {
+    // Wait for xterm.js to fully render DOM elements
+    setTimeout(() => {
+      try {
+        // Find the xterm viewport element (where terminal content is displayed)
+        const xtermViewport = container.querySelector('.xterm-viewport');
+        const xtermScreen = container.querySelector('.xterm-screen');
+        const xtermRows = container.querySelector('.xterm-rows');
+
+        // Add click handlers to multiple xterm elements to ensure coverage
+        const xtermElements = [xtermViewport, xtermScreen, xtermRows].filter(Boolean);
+
+        xtermElements.forEach((element, index) => {
+          if (element && !element.hasAttribute('data-terminal-click-handler')) {
+            element.setAttribute('data-terminal-click-handler', terminalId);
+            element.addEventListener('click', (event) => {
+              // Prevent event bubbling to avoid double handling
+              event.stopPropagation();
+
+              // VS Code standard: Only handle focus, let xterm.js handle Alt+Click cursor positioning
+              this.ensureTerminalFocus(terminalId);
+
+              if (this.activeTerminalId !== terminalId) {
+                this.switchToTerminal(terminalId);
+              }
+            });
+
+            log(
+              `✅ [XTERM-CLICK] Added click handler to xterm element ${index} for terminal: ${terminalId}`
+            );
+          }
+        });
+
+        // Also add a general click handler to the entire container as fallback
+        if (!container.hasAttribute('data-xterm-fallback-click')) {
+          container.setAttribute('data-xterm-fallback-click', terminalId);
+          container.addEventListener('click', (event) => {
+            // Only handle if the click wasn't already handled by xterm elements
+            if (
+              event.target &&
+              (event.target as Element).closest('.xterm-viewport, .xterm-screen, .xterm-rows')
+            ) {
+              return; // Let the xterm handlers handle it
+            }
+
+            // VS Code standard: Only handle focus for fallback
+            this.ensureTerminalFocus(terminalId);
+
+            if (this.activeTerminalId !== terminalId) {
+              this.switchToTerminal(terminalId);
+            }
+          });
+
+          log(
+            `✅ [CONTAINER-CLICK] Added fallback click handler to container for terminal: ${terminalId}`
+          );
+        }
+      } catch (error) {
+        log(
+          `❌ [XTERM-CLICK] Error adding xterm click handlers for terminal ${terminalId}:`,
+          error
+        );
+      }
+    }, 100); // Give xterm.js time to render DOM elements
+  }
+
   public openSettings(): void {
     this.settingsPanel.show(this.currentSettings);
   }
@@ -833,6 +1120,18 @@ class TerminalWebviewManager {
         terminal.options.fontSize = settings.fontSize;
         terminal.options.fontFamily = settings.fontFamily;
         terminal.options.cursorBlink = settings.cursorBlink;
+        // Note: altClickMovesCursor cannot be changed after terminal creation in xterm.js
+        // This setting will only apply to newly created terminals
+        // However, we can log the current setting evaluation for debugging
+        if (
+          settings.altClickMovesCursor !== undefined ||
+          settings.multiCursorModifier !== undefined
+        ) {
+          const effectiveAltClick = this.getAltClickMovesCursorSetting();
+          log(
+            `⌨️ [SETTINGS] Alt+Click setting updated: ${effectiveAltClick} (applies to new terminals only)`
+          );
+        }
 
         // Apply theme if needed
         if (settings.theme && settings.theme !== 'auto') {
@@ -858,6 +1157,18 @@ class TerminalWebviewManager {
       terminal.options.fontSize = settings.fontSize;
       terminal.options.fontFamily = settings.fontFamily;
       terminal.options.cursorBlink = settings.cursorBlink;
+      // Note: altClickMovesCursor cannot be changed after terminal creation in xterm.js
+      // This setting will only apply to newly created terminals
+      // However, we can log the current setting evaluation for debugging
+      if (
+        settings.altClickMovesCursor !== undefined ||
+        settings.multiCursorModifier !== undefined
+      ) {
+        const effectiveAltClick = this.getAltClickMovesCursorSetting();
+        log(
+          `⌨️ [SETTINGS] Alt+Click setting updated: ${effectiveAltClick} (applies to new terminals only)`
+        );
+      }
 
       if (settings.theme && settings.theme !== 'auto') {
         terminal.options.theme =
@@ -1014,6 +1325,13 @@ window.addEventListener('message', (event) => {
     case 'openSettings':
       log('⚙️ [WEBVIEW] Opening settings panel');
       terminalManager.openSettings();
+      break;
+
+    case 'settingsResponse':
+      log('⚙️ [WEBVIEW] Received settings response:', message.settings);
+      if (message.settings) {
+        terminalManager.applySettings(message.settings);
+      }
       break;
 
     default:

@@ -39,6 +39,8 @@ export interface TerminalSettings {
   confirmBeforeKill?: boolean;
   protectLastTerminal?: boolean;
   minTerminalCount?: number;
+  altClickMovesCursor?: boolean;
+  multiCursorModifier?: string;
 }
 
 export interface WebviewMessage {

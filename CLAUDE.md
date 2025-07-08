@@ -143,3 +143,38 @@ Configuration values are accessed via `vscode.workspace.getConfiguration('sideba
 - Use browser dev tools for webview debugging (`Ctrl+Shift+I`)
 - Check for 404 errors on CSS/resource loading
 - Verify process polyfills are working in webview environment
+
+### VS Code Standard Alt+Click Implementation
+
+**Alt+Click Cursor Positioning**
+- Follows VS Code standard: `altClickMovesCursor && multiCursorModifier === 'alt'`
+- Extension retrieves settings from `terminal.integrated.altClickMovesCursor` and `editor.multiCursorModifier`
+- WebView receives settings via `settingsResponse` message and applies VS Code standard logic
+- Only enabled when both conditions are met (VS Code standard behavior)
+
+**Settings Integration**
+- Extension monitors configuration changes for `editor.multiCursorModifier` and `terminal.integrated.altClickMovesCursor`
+- Dynamic setting updates sent to WebView without requiring restart
+- Settings applied to new terminals immediately; existing terminals require recreation
+
+**Visual Feedback**
+- Alt key press shows `cursor: default` on terminal elements
+- Alt+Click shows blue highlight feedback at cursor position with fade animation
+- Follows VS Code standard visual patterns for consistency
+
+**Performance Optimizations for Claude Code Output**
+- Adaptive buffering: shorter flush intervals during frequent output (8ms vs 16ms)
+- Direct writes for specific terminal IDs to avoid cross-terminal interference
+- Immediate flush for large outputs (≥1000 chars) to maintain cursor accuracy
+
+### Recent Architecture Changes
+
+**Configuration Flow**
+```
+VS Code Settings → Extension (SidebarTerminalProvider) → WebView Message → TerminalWebviewManager
+```
+
+**Key Implementation Files**
+- `src/providers/SidebarTerminalProvider.ts`: VS Code settings integration and change monitoring
+- `src/webview/main.ts`: Alt+Click logic, visual feedback, and settings application
+- `src/types/common.ts`: Extended TerminalSettings interface for Alt+Click settings

@@ -242,6 +242,11 @@
           "minimum": 12,
           "maximum": 24,
           "description": "Size of sample icons in webview header"
+        },
+        "sidebarTerminal.altClickMovesCursor": {
+          "type": "boolean",
+          "default": true,
+          "description": "Controls whether Alt/Option + click will reposition the prompt cursor to underneath the mouse. This feature may not work reliably for some shells or programs."
         }
       }
     }
