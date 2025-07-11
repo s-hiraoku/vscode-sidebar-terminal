@@ -298,6 +298,7 @@ class TerminalWebviewManager {
 
       // Force layout recalculation BEFORE opening terminal
       this.splitManager.getTerminalContainers().forEach((container) => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-expressions
         container.offsetHeight; // Force reflow
       });
       log(
@@ -315,6 +316,7 @@ class TerminalWebviewManager {
           // Wait longer for DOM and flex layout to fully stabilize before fitting
           setTimeout(() => {
             // Force layout recalculation before fit
+            // eslint-disable-next-line @typescript-eslint/no-unused-expressions
             targetContainer.offsetHeight; // Trigger reflow
 
             const terminalBody = document.getElementById('terminal-body');
@@ -355,6 +357,7 @@ class TerminalWebviewManager {
                 if (terminalData.fitAddon) {
                   const container = this.splitManager.getTerminalContainers().get(terminalId);
                   if (container) {
+                    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
                     container.offsetHeight; // Force reflow
                     terminalData.fitAddon.fit();
                     log(
@@ -455,6 +458,7 @@ class TerminalWebviewManager {
         const container = this.splitManager.getTerminalContainers().get(id);
         if (container) {
           // Force layout recalculation
+          // eslint-disable-next-line @typescript-eslint/no-unused-expressions
           container.offsetHeight;
 
           log(`🔧 [SWITCH] Container size for terminal ${id}:`, {
