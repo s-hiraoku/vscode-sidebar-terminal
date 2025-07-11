@@ -1,7 +1,6 @@
 {
   "require": [
-    "source-map-support/register",
-    "out/test/unit/test-setup.js"
+    "source-map-support/register"
   ],
   "timeout": 10000,
   "recursive": true,

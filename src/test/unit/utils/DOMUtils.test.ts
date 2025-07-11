@@ -9,12 +9,27 @@ use(sinonChai);
 import { JSDOM } from 'jsdom';
 import { DOMUtils } from '../../../webview/utils/DOMUtils';
 
+// Mock setup for this test file
+const setupTestEnvironment = () => {
+  // Mock globals that might be needed
+  if (typeof (global as any).vscode === 'undefined') {
+    (global as any).vscode = {
+      workspace: {
+        getConfiguration: () => ({ get: () => undefined })
+      }
+    };
+  }
+};
+
 describe('DOMUtils', () => {
   let dom: JSDOM;
   let document: Document;
   let sandbox: sinon.SinonSandbox;
 
   beforeEach(() => {
+    // Test environment setup
+    setupTestEnvironment();
+    
     // セットアップ: JSDOM環境を作成
     dom = new JSDOM('<!DOCTYPE html><html><body></body></html>');
     document = dom.window.document;

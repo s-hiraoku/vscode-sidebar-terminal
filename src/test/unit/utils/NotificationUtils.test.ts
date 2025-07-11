@@ -15,6 +15,18 @@ import {
   NotificationConfig,
 } from '../../../webview/utils/NotificationUtils';
 
+// Mock setup for this test file
+const setupTestEnvironment = () => {
+  // Mock globals that might be needed
+  if (typeof (global as any).vscode === 'undefined') {
+    (global as any).vscode = {
+      workspace: {
+        getConfiguration: () => ({ get: () => undefined })
+      }
+    };
+  }
+};
+
 describe('NotificationUtils', () => {
   let dom: JSDOM;
   let document: Document;
@@ -22,6 +34,9 @@ describe('NotificationUtils', () => {
   let clock: sinon.SinonFakeTimers;
 
   beforeEach(() => {
+    // Test environment setup
+    setupTestEnvironment();
+    
     // JSDOM環境をセットアップ
     dom = new JSDOM(`
       <!DOCTYPE html>
