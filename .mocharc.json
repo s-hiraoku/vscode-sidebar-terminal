@@ -1,0 +1,9 @@
+{
+  "require": [
+    "source-map-support/register"
+  ],
+  "timeout": 10000,
+  "recursive": true,
+  "reporter": "spec",
+  "ui": "bdd"
+}

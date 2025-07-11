@@ -3,62 +3,72 @@
 [![GitHub license](https://img.shields.io/github/license/s-hiraoku/vscode-sidebar-terminal)](https://github.com/s-hiraoku/vscode-sidebar-terminal/blob/main/LICENSE)
 [![GitHub issues](https://img.shields.io/github/issues/s-hiraoku/vscode-sidebar-terminal)](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues)
 [![GitHub stars](https://img.shields.io/github/stars/s-hiraoku/vscode-sidebar-terminal)](https://github.com/s-hiraoku/vscode-sidebar-terminal/stargazers)
+[![CI](https://github.com/s-hiraoku/vscode-sidebar-terminal/workflows/CI/badge.svg)](https://github.com/s-hiraoku/vscode-sidebar-terminal/actions)
 
-VS Code のサイドバーにターミナルを表示する拡張機能です。左側のPrimary Sidebarに配置し、効率的な開発作業をサポートします。
+A powerful VS Code extension that displays a terminal in the sidebar for efficient development workflow. Seamlessly integrated into the Primary Sidebar (left side) alongside other views.
 
-## 🚀 主な機能
+## 🚀 Features
 
-- **サイドバー配置**: Primary Sidebar（左側）にターミナルを表示
-- **複数ターミナル管理**: 最大5つのターミナルを同時に実行
-- **実際のターミナル機能**: node-pty による完全なシェル実行環境
-- **キー入力対応**: Backspace、Ctrl+C、Ctrl+L等の特殊キー対応
-- **ボタン操作**: Clear、New、Split ボタンによる直感的操作
-- **IME対応**: 日本語入力等の多言語入力サポート
-- **カスタマイズ可能**: フォント、サイズ、シェルの設定が可能
-- **クロスプラットフォーム**: Windows、macOS、Linux 対応
+- **Sidebar Integration**: Terminal integrated into Primary Sidebar (left side)
+- **Multiple Terminal Management**: Run up to 5 terminals simultaneously
+- **Full Terminal Functionality**: Complete shell execution environment powered by node-pty
+- **Special Key Support**: Backspace, Ctrl+C, Ctrl+L, and other special key combinations
+- **Intuitive Controls**: Clear, New, and Split buttons for easy terminal management
+- **IME Support**: Multi-language input support including Japanese, Chinese, and Korean
+- **Highly Customizable**: Configure fonts, sizes, shell, and other preferences
+- **Cross-Platform**: Full support for Windows, macOS, and Linux
+- **Alt+Click Cursor Positioning**: VS Code-standard Alt+Click to move cursor (with Claude Code detection)
 
-## 📦 インストール
+## 📦 Installation
 
-### VS Code Marketplace からのインストール（予定）
+### From VS Code Marketplace
 
-1. VS Code を開く
-2. 拡張機能パネル（`Ctrl+Shift+X`）を開く
-3. "Sidebar Terminal" を検索
-4. インストールボタンをクリック
+1. Open VS Code
+2. Open Extensions panel (`Ctrl+Shift+X` or `Cmd+Shift+X`)
+3. Search for "Sidebar Terminal"
+4. Click Install
 
-### 手動インストール
+### Manual Installation
 
-1. [Releases](https://github.com/s-hiraoku/vscode-sidebar-terminal/releases) から最新の `.vsix` ファイルをダウンロード
-2. VS Code で `Ctrl+Shift+P` を押してコマンドパレットを開く
-3. "Extensions: Install from VSIX..." を選択
-4. ダウンロードした `.vsix` ファイルを選択
+1. Download the latest `.vsix` file from [Releases](https://github.com/s-hiraoku/vscode-sidebar-terminal/releases)
+2. Open VS Code and press `Ctrl+Shift+P` (`Cmd+Shift+P` on Mac)
+3. Select "Extensions: Install from VSIX..."
+4. Choose the downloaded `.vsix` file
 
-## 🎯 使用方法
+## 🎯 Usage
 
-### 基本操作
+### Basic Operations
 
-1. **ターミナルを開く**: Explorer パネルで "Terminal" ビューをクリック
-2. **新しいターミナル作成**: ターミナル内の「New」ボタンをクリック
-3. **ターミナル分割**: ターミナル内の「Split」ボタンをクリック  
-4. **ターミナルクリア**: ターミナル内の「Clear」ボタンをクリック
-5. **コマンド実行**: 通常のターミナルと同様にコマンド入力が可能
+1. **Open Terminal**: Click "Terminal" view in the Explorer panel
+2. **Create New Terminal**: Click the "New" button in the terminal header
+3. **Split Terminal**: Click the "Split" button to create a split view
+4. **Clear Terminal**: Click the "Clear" button to clear the active terminal
+5. **Execute Commands**: Type commands as you would in any terminal
 
-### 配置について
+### Sidebar Placement
 
-#### Primary Sidebar（左側）
-- ターミナルは左側のExplorerパネルに表示されます
-- 他のサイドバービューと同じ場所に配置され、タブで切り替えができます
+#### Primary Sidebar (Left Side)
+- Terminal appears in the Explorer panel on the left side
+- Integrated with other sidebar views, switchable via tabs
+- Maintains context when switching between views
 
-### コマンドパレット
+### Command Palette
 
-- `Sidebar Terminal: Create New Terminal` - 新しいターミナルを作成
-- `Sidebar Terminal: Split Terminal` - ターミナルを分割
-- `Sidebar Terminal: Clear Terminal` - アクティブなターミナルをクリア
-- `Sidebar Terminal: Kill Terminal` - アクティブなターミナルを終了
+- `Sidebar Terminal: Create New Terminal` - Create a new terminal instance
+- `Sidebar Terminal: Split Terminal` - Split the current terminal
+- `Sidebar Terminal: Clear Terminal` - Clear the active terminal
+- `Sidebar Terminal: Kill Terminal` - Terminate the active terminal
 
-## ⚙️ 設定
+### Alt+Click Cursor Positioning
 
-VS Code の設定（`settings.json`）で以下の項目をカスタマイズできます：
+- **Standard VS Code Behavior**: Alt+Click to move cursor to mouse position
+- **Claude Code Detection**: Automatically disabled during Claude Code execution for optimal performance
+- **Visual Feedback**: Blue highlight shows cursor position with fade animation
+- **Requirements**: Both `terminal.integrated.altClickMovesCursor` and `editor.multiCursorModifier: "alt"` must be enabled
+
+## ⚙️ Configuration
+
+Customize the extension through VS Code settings (`settings.json`):
 
 ```json
 {
@@ -66,178 +76,216 @@ VS Code の設定（`settings.json`）で以下の項目をカスタマイズで
   "sidebarTerminal.shellArgs": [],
   "sidebarTerminal.fontSize": 14,
   "sidebarTerminal.fontFamily": "Consolas, 'Courier New', monospace",
-  "sidebarTerminal.maxTerminals": 5
+  "sidebarTerminal.maxTerminals": 5,
+  "sidebarTerminal.theme": "auto",
+  "sidebarTerminal.cursorBlink": true,
+  "sidebarTerminal.altClickMovesCursor": true
 }
 ```
 
-### 設定項目詳細
+### Configuration Options
 
-| 設定項目 | 型 | デフォルト値 | 説明 |
-|---------|---|------------|------|
-| `shell` | string | "" | 使用するシェルのパス（空文字でシステムデフォルト） |
-| `shellArgs` | array | [] | シェルに渡す引数 |
-| `fontSize` | number | 14 | ターミナルのフォントサイズ |
-| `fontFamily` | string | "Consolas, 'Courier New', monospace" | ターミナルのフォントファミリー |
-| `maxTerminals` | number | 5 | 同時実行可能なターミナルの最大数 |
+| Setting | Type | Default | Description |
+|---------|------|---------|-------------|
+| `shell` | string | "" | Path to shell executable (empty for system default) |
+| `shellArgs` | array | [] | Arguments to pass to the shell |
+| `fontSize` | number | 14 | Terminal font size |
+| `fontFamily` | string | "Consolas, 'Courier New', monospace" | Terminal font family |
+| `maxTerminals` | number | 5 | Maximum number of concurrent terminals |
+| `theme` | string | "auto" | Terminal theme (auto/dark/light) |
+| `cursorBlink` | boolean | true | Enable cursor blinking |
+| `altClickMovesCursor` | boolean | true | Enable Alt+Click cursor positioning |
 
-## 🛠️ 開発
+## 🛠️ Development
 
-### 必要な環境
+### Prerequisites
 
 - Node.js 18+
 - VS Code 1.74.0+
-- npm または yarn
+- npm or yarn
 
-### セットアップ
+### Setup
 
 ```bash
-# リポジトリをクローン
+# Clone the repository
 git clone https://github.com/s-hiraoku/vscode-sidebar-terminal.git
 cd vscode-sidebar-terminal
 
-# 依存関係をインストール
+# Install dependencies
 npm install
 
-# 開発用ビルド
+# Development build
 npm run compile
 
-# ウォッチモード
+# Watch mode for development
 npm run watch
 ```
 
-### デバッグ
-
-1. VS Code でプロジェクトを開く
-2. `F5` キーを押してExtension Development Hostを起動
-3. 新しいウィンドウでExplorerパネルの"Terminal"を確認
-
-### テスト実行
+### Testing
 
 ```bash
-# 単体テスト
+# Run unit tests with coverage
+npm run test:unit
+
+# Run all tests
 npm test
 
-# リンター
+# Run linter
 npm run lint
 
-# フォーマッター
+# Format code
 npm run format
 
-# プロダクションビルド
+# Production build
 npm run package
 ```
 
-## 🏗️ アーキテクチャ
+### Debugging
+
+1. Open the project in VS Code
+2. Press `F5` to launch Extension Development Host
+3. In the new window, check the "Terminal" view in the Explorer panel
+
+## 🧪 Testing Strategy
+
+This extension uses comprehensive testing with modern tooling:
+
+- **Unit Tests**: 47 test cases covering utilities and core functionality
+- **Integration Tests**: VS Code extension testing with mocked APIs
+- **Code Coverage**: nyc (Istanbul) with detailed reporting
+- **CI/CD Pipeline**: Multi-platform testing on Windows, macOS, and Linux
+- **Modern Tools**: Mocha, Chai, Sinon, JSDOM, and @testing-library
+
+Test coverage includes:
+- DOM manipulation utilities (22 tests)
+- Notification system (8 tests) 
+- Alt+Click functionality (17 tests)
+- VS Code API integration
+- Cross-platform compatibility
+
+## 🏗️ Architecture
 
 ```
 src/
-├── constants/          # 定数定義
-├── providers/          # WebView プロバイダー
-├── terminals/          # ターミナル管理
-├── types/             # 型定義
-├── utils/             # ユーティリティ関数
-├── webview/           # フロントエンド
-└── extension.ts       # エントリーポイント
+├── constants/          # Application constants
+├── providers/          # WebView providers
+├── terminals/          # Terminal management
+├── types/             # TypeScript type definitions
+├── utils/             # Utility functions
+├── webview/           # Frontend components
+│   ├── components/    # UI components
+│   ├── managers/      # UI managers
+│   └── utils/         # WebView utilities
+└── extension.ts       # Extension entry point
 ```
 
-### 主要コンポーネント
+### Key Components
 
-- **TerminalManager**: 複数ターミナルの状態管理
-- **SidebarTerminalProvider**: VS Code WebView との連携
-- **WebView (xterm.js)**: ターミナル UI の描画
-- **PTY Process**: システムレベルのシェル連携
+- **TerminalManager**: Multi-terminal state management
+- **SidebarTerminalProvider**: VS Code WebView integration
+- **WebView (xterm.js)**: Terminal UI rendering
+- **PTY Process**: System-level shell integration
+- **SplitManager**: Terminal split functionality
+- **HeaderManager**: UI header management
 
-## 🤝 コントリビューション
+## 🤝 Contributing
 
-コントリビューションを歓迎します！以下の手順でお願いします：
+Contributions are welcome! Please follow these steps:
 
-1. このリポジトリをフォーク
-2. 機能ブランチを作成 (`git checkout -b feature/amazing-feature`)
-3. 変更をコミット (`git commit -m 'Add some amazing feature'`)
-4. ブランチにプッシュ (`git push origin feature/amazing-feature`)
-5. Pull Request を作成
+1. Fork this repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-### コントリビューションガイドライン
+### Contribution Guidelines
 
-- TypeScript の型安全性を保つ
-- ESLint と Prettier のルールに従う
-- テストを追加して機能をカバー
-- コミットメッセージは [Conventional Commits](https://conventionalcommits.org/) 形式で記述
+- Maintain TypeScript type safety
+- Follow ESLint and Prettier rules
+- Add tests to cover new functionality
+- Use [Conventional Commits](https://conventionalcommits.org/) format
+- Ensure CI tests pass on all platforms
 
-## 🐛 トラブルシューティング
+## 🐛 Troubleshooting
 
-### よくある問題
+### Common Issues
 
-**Q: ターミナルが表示されない**
-A: VS Code を再起動するか、拡張機能を無効/有効にしてください。
+**Q: Terminal doesn't appear**  
+A: Restart VS Code or disable/enable the extension.
 
-**Q: コマンドが実行されない**
-A: PTY通信の問題です。VS Codeを再起動し、拡張機能を再有効化してください。
+**Q: Commands don't execute**  
+A: This is a PTY communication issue. Restart VS Code and re-enable the extension.
 
-**Q: Backspaceキーが動作しない**  
-A: 特殊キー処理が修正されました。最新版をご利用ください。
+**Q: Backspace key doesn't work**  
+A: Special key handling has been fixed. Please use the latest version.
 
-**Q: ボタン（Clear/New/Split）が機能しない**
-A: ボタン機能が実装されました。Webview通信を確認してください。
+**Q: Buttons (Clear/New/Split) don't work**  
+A: Button functionality has been implemented. Check WebView communication.
 
+**Q: Shell doesn't start**  
+A: Verify that the `sidebarTerminal.shell` setting has the correct shell path.
 
-**Q: シェルが起動しない**
-A: `sidebarTerminal.shell` 設定でシェルのパスが正しいか確認してください。
+**Q: Japanese/Unicode characters are garbled**  
+A: Change terminal character encoding to UTF-8. IME support has been added.
 
-**Q: 日本語が文字化けする**
-A: ターミナルの文字コード設定を UTF-8 に変更してください。IME対応が追加されています。
+**Q: Performance is slow**  
+A: Reduce the number of concurrent terminals using the `maxTerminals` setting.
 
-**Q: パフォーマンスが遅い**
-A: `maxTerminals` 設定で同時実行数を減らしてください。
+**Q: Alt+Click doesn't work**  
+A: Ensure both `terminal.integrated.altClickMovesCursor` and `editor.multiCursorModifier: "alt"` are enabled in VS Code settings.
 
-### デバッグ情報
+### Debug Information
 
-問題が発生した場合は、以下の情報を含めて Issue を作成してください：
+When reporting issues, please include:
 
-- VS Code バージョン
-- 拡張機能バージョン
-- OS とバージョン
-- 使用しているシェル
-- エラーメッセージ
-- 再現手順
+- VS Code version
+- Extension version
+- OS and version
+- Shell being used
+- Error messages
+- Steps to reproduce
 
-## 📄 ライセンス
+## 📄 License
 
-このプロジェクトは [MIT License](LICENSE) の下で公開されています。
+This project is licensed under the [MIT License](LICENSE).
 
-## 📝 更新履歴
+## 📝 Changelog
 
-### v0.0.1 (開発中)
+### v0.0.1 (In Development)
 
-- 初期リリース
-- サイドバー・パネルターミナル表示
-- 複数ターミナル管理
-- 分割機能（Split Button）
-- PTY通信の修正・改善
-- Backspace キー処理の修正
-- Clear/New/Split ボタン実装
-- IME（日本語入力）対応
-- 設定カスタマイズ
+#### Features
+- Initial release
+- Sidebar terminal display
+- Multiple terminal management
+- Split terminal functionality
+- PTY communication improvements
+- Special key handling (Backspace, Ctrl+C, etc.)
+- Clear/New/Split button implementation
+- IME (multi-language input) support
+- Customizable settings
+- Alt+Click cursor positioning with Claude Code detection
+- Comprehensive testing strategy
 
-### 修正された問題 (Recent Fixes)
+#### Recent Fixes
+- ✅ Fixed PTY communication issues
+- ✅ Fixed Backspace key functionality
+- ✅ Fixed Clear/New/Split button functionality
+- ✅ Fixed WebView entry point (simple.ts → main.ts)
+- ✅ Resolved TypeScript/ESLint errors
+- ✅ Improved terminal execution environment
+- ✅ Enhanced user guidance
+- ✅ Implemented comprehensive testing with 47 test cases
+- ✅ Added CI/CD pipeline with multi-platform support
 
-- ✅ PTY通信が動作しない問題を修正
-- ✅ Backspaceキーが正常に動作しない問題を修正  
-- ✅ Clear・New・Splitボタンが機能しない問題を修正
-- ✅ Webviewエントリーポイントの修正（simple.ts → main.ts）
-- ✅ TypeScript/ESLint エラーの修正
-- ✅ Terminal実行環境の改善
-- ✅ ユーザーガイダンスの強化
+## 🙏 Acknowledgments
 
-## 🙏 謝辞
+This project uses these excellent libraries:
 
-このプロジェクトは以下の優れたライブラリを使用しています：
+- [xterm.js](https://xtermjs.org/) - Terminal emulator
+- [node-pty](https://github.com/microsoft/node-pty) - PTY process management
+- [VS Code Extension API](https://code.visualstudio.com/api) - Extension framework
 
-- [xterm.js](https://xtermjs.org/) - ターミナルエミュレーター
-- [node-pty](https://github.com/microsoft/node-pty) - PTY プロセス管理
-- [VS Code Extension API](https://code.visualstudio.com/api) - 拡張機能フレームワーク
-
-## 🔗 関連リンク
+## 🔗 Related Links
 
 - [VS Code Extension API](https://code.visualstudio.com/api)
 - [xterm.js Documentation](https://xtermjs.org/docs/)
@@ -245,7 +293,7 @@ A: `maxTerminals` 設定で同時実行数を減らしてください。
 
 ---
 
-**開発者**: [s-hiraoku](https://github.com/s-hiraoku)  
-**リポジトリ**: [vscode-sidebar-terminal](https://github.com/s-hiraoku/vscode-sidebar-terminal)  
-**ライセンス**: MIT  
-**サポート**: [Issues](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues)
+**Developer**: [s-hiraoku](https://github.com/s-hiraoku)  
+**Repository**: [vscode-sidebar-terminal](https://github.com/s-hiraoku/vscode-sidebar-terminal)  
+**License**: MIT  
+**Support**: [Issues](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues)

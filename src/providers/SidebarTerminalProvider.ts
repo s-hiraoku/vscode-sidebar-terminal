@@ -55,6 +55,9 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
     // Set up terminal event listeners
     this._setupTerminalEventListeners();
 
+    // Set up configuration change listeners for VS Code standard settings
+    this._setupConfigurationChangeListeners();
+
     // Do not force initial terminal creation here
     // Let _initializeTerminal handle it when webview is ready
 
@@ -376,6 +379,31 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
   }
 
   /**
+   * Set up configuration change listeners for VS Code standard settings
+   */
+  private _setupConfigurationChangeListeners(): void {
+    // Monitor editor.multiCursorModifier and terminal.integrated.altClickMovesCursor changes
+    const configChangeDisposable = vscode.workspace.onDidChangeConfiguration((event) => {
+      if (
+        event.affectsConfiguration('editor.multiCursorModifier') ||
+        event.affectsConfiguration('terminal.integrated.altClickMovesCursor') ||
+        event.affectsConfiguration('sidebarTerminal.altClickMovesCursor')
+      ) {
+        log('⚙️ [DEBUG] VS Code standard settings changed, updating webview...');
+        // Send updated settings to webview
+        const settings = this.getCurrentSettings();
+        void this._sendMessage({
+          command: 'settingsResponse',
+          settings,
+        });
+      }
+    });
+
+    // Add to disposables
+    this._extensionContext.subscriptions.push(configChangeDisposable);
+  }
+
+  /**
    * Webviewにメッセージを送信する
    */
   private async _sendMessage(message: WebviewMessage): Promise<void> {
@@ -630,14 +658,21 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
     fontFamily: string;
     cursorBlink: boolean;
     theme: string;
+    altClickMovesCursor: boolean;
+    multiCursorModifier: string;
   } {
     const config = vscode.workspace.getConfiguration('sidebarTerminal');
+    const editorConfig = vscode.workspace.getConfiguration('editor');
+    const terminalConfig = vscode.workspace.getConfiguration('terminal.integrated');
 
     return {
       fontSize: config.get<number>('fontSize') ?? 14,
       fontFamily: config.get<string>('fontFamily') ?? 'Consolas, monospace',
       cursorBlink: config.get<boolean>('cursorBlink') ?? true,
       theme: config.get<string>('theme') ?? 'auto',
+      // VS Code standard settings for Alt+Click functionality
+      altClickMovesCursor: terminalConfig.get<boolean>('altClickMovesCursor') ?? true,
+      multiCursorModifier: editorConfig.get<string>('multiCursorModifier') ?? 'alt',
     };
   }
 

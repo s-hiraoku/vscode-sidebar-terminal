@@ -1,7 +1,7 @@
 {
   "name": "vscode-sidebar-terminal",
   "displayName": "Sidebar Terminal",
-  "description": "A VS Code extension that displays a terminal in the sidebar for efficient development workflow.",
+  "description": "A powerful VS Code extension that displays a fully-featured terminal in the sidebar with split support, Alt+Click cursor positioning, and multi-platform compatibility.",
   "version": "0.0.1",
   "publisher": "s-hiraoku",
   "engines": {
@@ -10,7 +10,7 @@
   },
   "categories": [
     "Other",
-    "Terminal"
+    "Debuggers"
   ],
   "keywords": [
     "terminal",
@@ -22,7 +22,15 @@
     "development",
     "productivity",
     "xterm",
-    "pty"
+    "pty",
+    "split terminal",
+    "multi-terminal",
+    "alt click",
+    "cursor positioning",
+    "ime support",
+    "japanese input",
+    "cross platform",
+    "node-pty"
   ],
   "icon": "resources/icon.png",
   "galleryBanner": {
@@ -38,10 +46,9 @@
   },
   "homepage": "https://github.com/s-hiraoku/vscode-sidebar-terminal#readme",
   "license": "MIT",
+  "qna": "https://github.com/s-hiraoku/vscode-sidebar-terminal/discussions",
+  "preview": false,
   "main": "./dist/extension.js",
-  "activationEvents": [
-    "onView:sidebarTerminal"
-  ],
   "contributes": {
     "viewsContainers": {
       "activitybar": [
@@ -242,6 +249,11 @@
           "minimum": 12,
           "maximum": 24,
           "description": "Size of sample icons in webview header"
+        },
+        "sidebarTerminal.altClickMovesCursor": {
+          "type": "boolean",
+          "default": true,
+          "description": "Controls whether Alt/Option + click will reposition the prompt cursor to underneath the mouse. This feature may not work reliably for some shells or programs."
         }
       }
     }
@@ -256,29 +268,49 @@
     "pretest": "npm run compile-tests && npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
     "test": "node ./out/test/runTest.js",
+    "test:coverage": "nyc --reporter=text --reporter=html --reporter=lcov npm run test",
+    "test:watch": "npm run watch-tests & npm run test",
+    "test:unit": "nyc mocha 'out/test/unit/**/*.test.js'",
+    "test:integration": "nyc mocha 'out/test/integration/**/*.test.js'",
+    "coverage:report": "nyc report --reporter=text --reporter=html",
+    "coverage:check": "nyc check-coverage --lines 70 --functions 70 --branches 60",
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
     "vsce:package": "vsce package",
     "vsce:publish": "vsce publish",
     "create-icons": "node scripts/create-icon.js"
   },
   "devDependencies": {
+    "@istanbuljs/nyc-config-typescript": "^1.0.2",
+    "@testing-library/dom": "^10.4.0",
+    "@types/chai": "^5.2.2",
     "@types/glob": "^8.1.0",
+    "@types/jsdom": "^21.1.7",
     "@types/mocha": "^10.0.6",
     "@types/node": "20.x",
+    "@types/sinon": "^17.0.4",
+    "@types/sinon-chai": "^4.0.0",
     "@types/vscode": "^1.74.0",
     "@typescript-eslint/eslint-plugin": "^6.15.0",
     "@typescript-eslint/parser": "^6.15.0",
     "@vscode/test-electron": "^2.3.8",
+    "chai": "^5.2.1",
     "css-loader": "^7.1.2",
     "eslint": "^8.56.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.1.2",
     "glob": "^10.3.10",
+    "jsdom": "^26.1.0",
     "mocha": "^10.2.0",
+    "nyc": "^17.1.0",
     "prettier": "^3.1.1",
+    "sinon": "^21.0.0",
+    "sinon-chai": "^4.0.0",
+    "source-map-support": "^0.5.21",
     "style-loader": "^4.0.0",
     "ts-loader": "^9.5.1",
+    "ts-node": "^10.9.2",
     "typescript": "^5.3.3",
+    "vscode-test": "^1.6.1",
     "webpack": "^5.89.0",
     "webpack-cli": "^5.1.4"
   },

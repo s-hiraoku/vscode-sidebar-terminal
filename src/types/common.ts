@@ -39,6 +39,8 @@ export interface TerminalSettings {
   confirmBeforeKill?: boolean;
   protectLastTerminal?: boolean;
   minTerminalCount?: number;
+  altClickMovesCursor?: boolean;
+  multiCursorModifier?: string;
 }
 
 export interface WebviewMessage {
@@ -98,4 +100,24 @@ export interface TerminalEvent {
   terminalId: string;
   data?: string;
   exitCode?: number;
+}
+
+export interface ClaudeCodeState {
+  isActive: boolean;
+  terminalId?: string;
+  startTime?: number;
+  outputVolume?: number;
+}
+
+export interface AltClickState {
+  isEnabled: boolean;
+  isTemporarilyDisabled: boolean;
+  disableReason?: string;
+}
+
+export interface TerminalInteractionEvent {
+  type: 'alt-click' | 'output-detected' | 'claude-code-start' | 'claude-code-end';
+  terminalId: string;
+  timestamp: number;
+  data?: unknown;
 }

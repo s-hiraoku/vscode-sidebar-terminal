@@ -7,114 +7,122 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.0.1] - 2024-01-15
+## [0.0.1] - 2025-07-11
 
 ### Added
-- 🎉 Initial release of VS Code Sidebar Terminal
-- ✨ **Core Features**
-  - Terminal display in VS Code sidebar (Explorer panel)
-  - Multiple terminal management (up to 5 terminals)
-  - Tab-based terminal switching with intuitive UI
-  - Terminal split functionality for side-by-side view
-  - Cross-platform support (Windows, macOS, Linux)
+- Initial release of Sidebar Terminal extension
+- **Core Features**:
+  - Terminal integration in VS Code Primary Sidebar (Explorer panel)
+  - Multiple terminal management (up to 5 concurrent terminals)
+  - Split terminal functionality with flexible layout
+  - Clear, New, and Split button controls
+  - Full shell execution environment powered by node-pty
 
-- 🎨 **User Interface**
-  - Clean and intuitive terminal interface using xterm.js
-  - VS Code theme integration (dark/light mode support)
-  - Resizable terminal panes
-  - Terminal tabs with close buttons
-  - Split terminal button in title bar
+- **Platform Support**:
+  - Cross-platform compatibility (Windows, macOS, Linux)
+  - IME support for multi-language input (Japanese, Chinese, Korean)
+  - Special key handling (Backspace, Ctrl+C, Ctrl+L, etc.)
 
-- ⚙️ **Configuration Options**
-  - Customizable shell selection (`sidebarTerminal.shell`)
-  - Font size and family settings (`sidebarTerminal.fontSize`, `sidebarTerminal.fontFamily`)
-  - Shell arguments configuration (`sidebarTerminal.shellArgs`)
-  - Maximum terminal limit setting (`sidebarTerminal.maxTerminals`)
+- **Advanced Features**:
+  - Alt+Click cursor positioning with VS Code standard behavior
+  - Claude Code detection for optimal performance during AI interactions
+  - Visual feedback with blue cursor highlight and fade animation
+  - Automatic conflict resolution for terminal output interference
 
-- 🔧 **Commands**
-  - `Sidebar Terminal: Create New Terminal` - Create a new terminal instance
-  - `Sidebar Terminal: Split Terminal` - Split the current terminal view
-  - `Sidebar Terminal: Clear Terminal` - Clear the active terminal content
-  - `Sidebar Terminal: Kill Terminal` - Close the active terminal
+- **Customization Options**:
+  - Configurable shell and shell arguments
+  - Font family and size customization
+  - Terminal theme support (auto/dark/light)
+  - Cursor blinking controls
+  - Maximum terminal count settings
 
-- 💻 **Technical Features**
-  - TypeScript implementation with full type safety
-  - WebView-based architecture for performance
-  - PTY process management with node-pty
-  - Memory-efficient terminal handling
-  - Proper resource cleanup and disposal
+- **Developer Experience**:
+  - Comprehensive testing strategy with 47 test cases
+  - Modern testing tooling (nyc, Mocha, Chai, Sinon, JSDOM)
+  - Multi-platform CI/CD pipeline
+  - Code coverage reporting with 85% target
+  - ESLint and Prettier integration
 
-- 🧪 **Quality Assurance**
-  - Comprehensive unit tests for core functionality
-  - Integration tests for component interaction
-  - E2E tests for user workflow validation
-  - ESLint and Prettier code formatting
-  - CI/CD pipeline with GitHub Actions
+### Technical Implementation
+- **Architecture**: Clean separation between extension host (Node.js) and WebView (browser)
+- **Terminal Rendering**: xterm.js for high-performance terminal emulation
+- **Process Management**: node-pty for cross-platform PTY support
+- **State Management**: Centralized TerminalManager for multi-terminal coordination
+- **Communication**: Event-driven architecture with proper message handling
 
-- 📦 **Development Tools**
-  - Webpack-based build system
-  - Hot reload development environment
-  - Automated testing and linting
-  - VSIX packaging for distribution
+### Testing & Quality Assurance
+- **Unit Tests**: 47 test cases covering core functionality
+  - DOM manipulation utilities (22 tests)
+  - Notification system (8 tests)
+  - Alt+Click functionality (17 tests)
+- **Integration Tests**: VS Code extension testing with mocked APIs
+- **Code Coverage**: Comprehensive coverage reporting with nyc (Istanbul)
+- **CI/CD**: GitHub Actions workflow for multi-platform testing
+- **Code Quality**: ESLint, Prettier, and TypeScript strict mode
 
-### Technical Details
-- **Framework**: VS Code Extension API 1.74.0+
-- **Terminal Emulator**: xterm.js 5.3.0
-- **Process Management**: node-pty 1.0.0
-- **Build System**: Webpack 5.89.0
-- **Language**: TypeScript 5.3.3
+### Fixed Issues
+- ✅ PTY communication reliability improvements
+- ✅ Backspace key and special character handling
+- ✅ WebView entry point resolution (simple.ts → main.ts)
+- ✅ Clear/New/Split button functionality
+- ✅ TypeScript and ESLint error resolution
+- ✅ Cross-platform terminal execution environment
+- ✅ User guidance and error handling enhancements
 
-### Platform Support
-- ✅ Windows (cmd.exe, PowerShell)
-- ✅ macOS (zsh, bash)
-- ✅ Linux (bash, zsh, fish)
+### Performance Optimizations
+- **Output Buffering**: Adaptive buffering (8ms vs 16ms) for optimal performance
+- **Claude Code Detection**: Automatic performance optimization during AI interactions
+- **Memory Management**: Proper cleanup and disposal patterns
+- **Resize Handling**: Debounced terminal resize operations
 
-### Architecture
-- **Extension Host**: Main extension logic and terminal management
-- **WebView**: xterm.js-based terminal UI with split view support
-- **PTY Layer**: System shell integration with node-pty
-- **Configuration**: VS Code settings integration
+### Security & Reliability
+- **Input Validation**: Comprehensive input sanitization
+- **Error Handling**: Graceful degradation and user-friendly error messages
+- **Resource Management**: Proper cleanup of PTY processes and WebView resources
+- **Security Testing**: CodeQL analysis and dependency vulnerability scanning
 
-### Performance
-- **Memory Usage**: Optimized for multiple terminal instances
-- **Startup Time**: Fast initialization with lazy loading
-- **Resource Management**: Automatic cleanup of inactive terminals
-- **Bundle Size**: ~308KB total (extension + webview)
-
-### Security
-- Content Security Policy (CSP) enforcement
-- Sandboxed WebView execution
-- Input validation and sanitization
-- No external network dependencies
-
-### Known Limitations
-- Maximum 5 concurrent terminals (configurable)
-- WebView bundle size may affect initial load time
-- Some terminal features depend on shell capabilities
+## [0.0.2] - Future Release (Planned)
 
 ### Planned Features
-- [ ] Enhanced terminal splitting
-- [ ] Terminal session persistence
-- [ ] Custom terminal themes
-- [ ] Integrated terminal search
-- [ ] Terminal export functionality
+- **Enhanced Testing**: Complete Phase 2 WebView component testing
+  - SplitManager comprehensive test suite
+  - HeaderManager functionality tests
+  - SettingsPanel component testing
+- **Advanced Testing**: Phase 3 implementation
+  - Performance testing framework
+  - Accessibility testing with axe-core
+  - Load testing for multiple terminals
+- **User Experience**:
+  - Terminal session persistence
+  - Custom themes and color schemes
+  - Enhanced keyboard shortcuts
+  - Terminal history management
 
 ---
 
 ## Development Notes
 
-### Build Information
-- Built with modern TypeScript and ES2020 target
-- Bundled with Webpack for optimal performance
-- All dependencies are production-ready versions
-- Tested on multiple operating systems
+### Testing Strategy Evolution
+This release implements a comprehensive 3-phase testing strategy:
 
-### Contributing
-This project follows [Conventional Commits](https://conventionalcommits.org/) for commit messages and maintains high code quality standards with automated testing and linting.
+- **Phase 1** ✅: Modern testing infrastructure (nyc, Sinon, Chai, JSDOM)
+- **Phase 2** 🔄: WebView component testing (partially complete)
+- **Phase 3** 📋: Advanced testing strategies (planned for v0.0.2)
 
-### Feedback
-Please report issues, suggest features, or contribute to the project on [GitHub](https://github.com/s-hiraoku/vscode-sidebar-terminal).
+### Architecture Highlights
+The extension follows VS Code best practices with:
+- Clean separation of concerns between extension host and WebView
+- Event-driven communication patterns
+- Proper resource management and cleanup
+- TypeScript strict mode for type safety
+- Comprehensive error handling and user feedback
+
+### Compatibility Notes
+- **VS Code**: Requires VS Code 1.74.0 or higher
+- **Node.js**: Requires Node.js 18.0.0 or higher
+- **Operating Systems**: Full support for Windows 10+, macOS 10.15+, Ubuntu 18.04+
 
 ---
 
-**Enjoy the enhanced terminal experience in VS Code! 🚀**
+For more details about features and usage, see the [README](README.md).
+For reporting issues or feature requests, visit our [GitHub Issues](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues).
