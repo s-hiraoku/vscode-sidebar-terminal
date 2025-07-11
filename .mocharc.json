@@ -1,0 +1,10 @@
+{
+  "require": [
+    "source-map-support/register",
+    "out/test/unit/test-setup.js"
+  ],
+  "timeout": 10000,
+  "recursive": true,
+  "reporter": "spec",
+  "ui": "bdd"
+}
