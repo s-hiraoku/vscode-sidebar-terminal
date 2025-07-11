@@ -58,7 +58,7 @@ const mockVscode = {
 function setupTestEnvironment() {
   // Mock VS Code module
   (global as any).vscode = mockVscode;
-  
+
   // Mock Node.js modules
   (global as any).require = sinon.stub();
   (global as any).module = { exports: {} };
@@ -81,7 +81,7 @@ describe('Common Utils', () => {
 
   beforeEach(() => {
     setupTestEnvironment();
-    
+
     // Mock console before JSDOM creation
     (global as Record<string, unknown>).console = {
       log: sinon.stub(),
@@ -120,7 +120,7 @@ describe('Common Utils', () => {
       mockVscode.workspace.getConfiguration.returns(mockConfig);
 
       const config = getTerminalConfig();
-      
+
       expect(config).to.be.an('object');
       expect(mockVscode.workspace.getConfiguration).to.have.been.calledWith('sidebarTerminal');
     });
@@ -132,7 +132,7 @@ describe('Common Utils', () => {
       mockVscode.workspace.getConfiguration.returns(mockConfig);
 
       const config = getTerminalConfig();
-      
+
       expect(config).to.be.an('object');
     });
 
@@ -146,7 +146,7 @@ describe('Common Utils', () => {
       mockVscode.workspace.getConfiguration.returns(mockConfig);
 
       const config = getTerminalConfig();
-      
+
       expect(config.fontSize).to.equal(16);
       expect(config.customProperty).to.equal('test');
     });
@@ -155,54 +155,52 @@ describe('Common Utils', () => {
   describe('getShellForPlatform', () => {
     it('should return bash for Linux', () => {
       (global as any).process.platform = 'linux';
-      
+
       const shell = getShellForPlatform();
-      
+
       expect(shell).to.equal('/bin/bash');
     });
 
     it('should return zsh for macOS', () => {
       (global as any).process.platform = 'darwin';
-      
+
       const shell = getShellForPlatform();
-      
+
       expect(shell).to.equal('/bin/zsh');
     });
 
     it('should return cmd for Windows', () => {
       (global as any).process.platform = 'win32';
-      
+
       const shell = getShellForPlatform();
-      
+
       expect(shell).to.equal('cmd.exe');
     });
 
     it('should return bash for unknown platforms', () => {
       (global as any).process.platform = 'unknown';
-      
+
       const shell = getShellForPlatform();
-      
+
       expect(shell).to.equal('/bin/bash');
     });
   });
 
   describe('getWorkingDirectory', () => {
     it('should return workspace folder path when available', () => {
-      mockVscode.workspace.workspaceFolders = [
-        { uri: { fsPath: '/workspace/path' } },
-      ];
-      
+      mockVscode.workspace.workspaceFolders = [{ uri: { fsPath: '/workspace/path' } }];
+
       const workingDir = getWorkingDirectory();
-      
+
       expect(workingDir).to.equal('/workspace/path');
     });
 
     it('should return home directory when no workspace folder', () => {
       mockVscode.workspace.workspaceFolders = undefined;
       (global as any).process.env.HOME = '/home/user';
-      
+
       const workingDir = getWorkingDirectory();
-      
+
       expect(workingDir).to.equal('/home/user');
     });
 
@@ -210,9 +208,9 @@ describe('Common Utils', () => {
       mockVscode.workspace.workspaceFolders = undefined;
       (global as any).process.env.HOME = undefined;
       (global as any).process.cwd.returns('/current/dir');
-      
+
       const workingDir = getWorkingDirectory();
-      
+
       expect(workingDir).to.equal('/current/dir');
     });
 
@@ -220,9 +218,9 @@ describe('Common Utils', () => {
       mockVscode.workspace.workspaceFolders = undefined;
       (global as any).process.platform = 'win32';
       (global as any).process.env.USERPROFILE = 'C:\\Users\\user';
-      
+
       const workingDir = getWorkingDirectory();
-      
+
       expect(workingDir).to.equal('C:\\Users\\user');
     });
   });
@@ -230,13 +228,13 @@ describe('Common Utils', () => {
   describe('validateDirectory', () => {
     it('should return true for valid directory path', () => {
       const isValid = validateDirectory('/valid/path');
-      
+
       expect(isValid).to.be.true;
     });
 
     it('should return false for invalid directory path', () => {
       const isValid = validateDirectory('');
-      
+
       expect(isValid).to.be.false;
     });
 
@@ -247,7 +245,7 @@ describe('Common Utils', () => {
 
     it('should handle special characters in path', () => {
       const isValid = validateDirectory('/path with spaces/special-chars_123');
-      
+
       expect(isValid).to.be.true;
     });
   });
@@ -256,7 +254,7 @@ describe('Common Utils', () => {
     it('should generate unique terminal ID', () => {
       const id1 = generateTerminalId();
       const id2 = generateTerminalId();
-      
+
       expect(id1).to.be.a('string');
       expect(id2).to.be.a('string');
       expect(id1).to.not.equal(id2);
@@ -264,17 +262,17 @@ describe('Common Utils', () => {
 
     it('should generate ID with expected format', () => {
       const id = generateTerminalId();
-      
+
       expect(id).to.match(/^terminal-\d+-[a-f0-9]{8}$/);
     });
 
     it('should generate IDs with incrementing numbers', () => {
       const id1 = generateTerminalId();
       const id2 = generateTerminalId();
-      
+
       const num1 = parseInt(id1.split('-')[1]);
       const num2 = parseInt(id2.split('-')[1]);
-      
+
       expect(num2).to.be.greaterThan(num1);
     });
   });
@@ -292,24 +290,24 @@ describe('Common Utils', () => {
 
     it('should set and get active terminal ID', () => {
       const terminalId = 'terminal-1';
-      
+
       manager.setActiveTerminalId(terminalId);
-      
+
       expect(manager.getActiveTerminalId()).to.equal(terminalId);
     });
 
     it('should clear active terminal ID', () => {
       manager.setActiveTerminalId('terminal-1');
       manager.clearActiveTerminalId();
-      
+
       expect(manager.getActiveTerminalId()).to.be.null;
     });
 
     it('should check if terminal is active', () => {
       const terminalId = 'terminal-1';
-      
+
       manager.setActiveTerminalId(terminalId);
-      
+
       expect(manager.isActiveTerminal(terminalId)).to.be.true;
       expect(manager.isActiveTerminal('terminal-2')).to.be.false;
     });
@@ -317,7 +315,7 @@ describe('Common Utils', () => {
     it('should handle setting null/undefined ID', () => {
       manager.setActiveTerminalId(null);
       expect(manager.getActiveTerminalId()).to.be.null;
-      
+
       manager.setActiveTerminalId(undefined);
       expect(manager.getActiveTerminalId()).to.be.null;
     });
@@ -326,7 +324,7 @@ describe('Common Utils', () => {
   describe('generateNonce', () => {
     it('should generate a nonce string', () => {
       const nonce = generateNonce();
-      
+
       expect(nonce).to.be.a('string');
       expect(nonce.length).to.be.greaterThan(0);
     });
@@ -334,13 +332,13 @@ describe('Common Utils', () => {
     it('should generate unique nonces', () => {
       const nonce1 = generateNonce();
       const nonce2 = generateNonce();
-      
+
       expect(nonce1).to.not.equal(nonce2);
     });
 
     it('should generate alphanumeric nonce', () => {
       const nonce = generateNonce();
-      
+
       expect(nonce).to.match(/^[a-zA-Z0-9]+$/);
     });
   });
@@ -348,15 +346,15 @@ describe('Common Utils', () => {
   describe('getFirstItem', () => {
     it('should return first item from array', () => {
       const array = ['first', 'second', 'third'];
-      
+
       const result = getFirstItem(array);
-      
+
       expect(result).to.equal('first');
     });
 
     it('should return undefined for empty array', () => {
       const result = getFirstItem([]);
-      
+
       expect(result).to.be.undefined;
     });
 
@@ -369,19 +367,19 @@ describe('Common Utils', () => {
   describe('getFirstValue', () => {
     it('should return first non-null value', () => {
       const result = getFirstValue(null, undefined, 'valid', 'second');
-      
+
       expect(result).to.equal('valid');
     });
 
     it('should return undefined if all values are null/undefined', () => {
       const result = getFirstValue(null, undefined);
-      
+
       expect(result).to.be.undefined;
     });
 
     it('should return first value if it is valid', () => {
       const result = getFirstValue('first', 'second');
-      
+
       expect(result).to.equal('first');
     });
   });
@@ -389,18 +387,18 @@ describe('Common Utils', () => {
   describe('delay', () => {
     it('should delay execution for specified milliseconds', async () => {
       const start = Date.now();
-      
+
       await delay(100);
-      
+
       const end = Date.now();
       expect(end - start).to.be.at.least(95); // Allow for some timing variance
     });
 
     it('should handle zero delay', async () => {
       const start = Date.now();
-      
+
       await delay(0);
-      
+
       const end = Date.now();
       expect(end - start).to.be.at.most(50); // Should be very quick
     });
@@ -409,18 +407,18 @@ describe('Common Utils', () => {
   describe('safeStringify', () => {
     it('should stringify simple object', () => {
       const obj = { name: 'test', value: 123 };
-      
+
       const result = safeStringify(obj);
-      
+
       expect(result).to.equal('{"name":"test","value":123}');
     });
 
     it('should handle circular references', () => {
       const obj: any = { name: 'test' };
       obj.self = obj;
-      
+
       const result = safeStringify(obj);
-      
+
       expect(result).to.be.a('string');
       expect(result).to.include('name');
     });
@@ -445,9 +443,9 @@ describe('Common Utils', () => {
         },
         array: [1, 2, 3],
       };
-      
+
       const result = safeStringify(obj);
-      
+
       expect(result).to.include('deep value');
       expect(result).to.include('[1,2,3]');
     });

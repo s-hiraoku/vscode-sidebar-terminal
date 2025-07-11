@@ -41,7 +41,7 @@ const mockVscode = {
 function setupTestEnvironment() {
   // Mock VS Code module
   (global as any).vscode = mockVscode;
-  
+
   // Mock Node.js modules
   (global as any).require = sinon.stub();
   (global as any).module = { exports: {} };
@@ -64,7 +64,7 @@ describe('SidebarTerminalProvider Extended', () => {
 
   beforeEach(() => {
     setupTestEnvironment();
-    
+
     // Mock console before JSDOM creation
     (global as Record<string, unknown>).console = {
       log: sinon.stub(),
@@ -142,16 +142,16 @@ describe('SidebarTerminalProvider Extended', () => {
   describe('WebView initialization', () => {
     it('should resolve webview view', () => {
       mockProvider.resolveWebviewView(mockWebviewView);
-      
+
       expect(mockProvider.resolveWebviewView).to.have.been.calledWith(mockWebviewView);
     });
 
     it('should set webview HTML content', () => {
       const htmlContent = '<html><body>Terminal WebView</body></html>';
       mockProvider._getHtmlForWebview.returns(htmlContent);
-      
+
       mockWebview.html = mockProvider._getHtmlForWebview(mockWebview);
-      
+
       expect(mockWebview.html).to.equal(htmlContent);
     });
 
@@ -161,18 +161,18 @@ describe('SidebarTerminalProvider Extended', () => {
         retainContextWhenHidden: true,
         localResourceRoots: [mockProvider.context.extensionUri],
       };
-      
+
       mockWebview.options = options;
-      
+
       expect(mockWebview.options.enableScripts).to.be.true;
       expect(mockWebview.options.retainContextWhenHidden).to.be.true;
     });
 
     it('should setup message listeners', () => {
       mockWebview.onDidReceiveMessage.returns({ dispose: sinon.spy() });
-      
+
       const disposable = mockWebview.onDidReceiveMessage(() => {});
-      
+
       expect(mockWebview.onDidReceiveMessage).to.have.been.called;
       expect(disposable.dispose).to.be.a('function');
     });
@@ -181,40 +181,40 @@ describe('SidebarTerminalProvider Extended', () => {
   describe('Terminal operations', () => {
     it('should initialize terminal', () => {
       mockProvider._initializeTerminal();
-      
+
       expect(mockProvider._initializeTerminal).to.have.been.called;
     });
 
     it('should create new terminal', () => {
       const terminalId = 'terminal-123';
       mockTerminalManager.createTerminal.returns(terminalId);
-      
+
       const result = mockTerminalManager.createTerminal();
-      
+
       expect(result).to.equal(terminalId);
       expect(mockTerminalManager.createTerminal).to.have.been.called;
     });
 
     it('should kill terminal', () => {
       const terminalId = 'terminal-123';
-      
+
       mockProvider._performKillTerminal(terminalId);
-      
+
       expect(mockProvider._performKillTerminal).to.have.been.calledWith(terminalId);
     });
 
     it('should split terminal', () => {
       mockProvider.splitTerminal();
-      
+
       expect(mockProvider.splitTerminal).to.have.been.called;
     });
 
     it('should write to terminal', () => {
       const terminalId = 'terminal-123';
       const data = 'echo "Hello World"';
-      
+
       mockTerminalManager.writeToTerminal(terminalId, data);
-      
+
       expect(mockTerminalManager.writeToTerminal).to.have.been.calledWith(terminalId, data);
     });
 
@@ -222,9 +222,9 @@ describe('SidebarTerminalProvider Extended', () => {
       const terminalId = 'terminal-123';
       const rows = 30;
       const cols = 100;
-      
+
       mockTerminalManager.resizeTerminal(terminalId, rows, cols);
-      
+
       expect(mockTerminalManager.resizeTerminal).to.have.been.calledWith(terminalId, rows, cols);
     });
   });
@@ -232,9 +232,9 @@ describe('SidebarTerminalProvider Extended', () => {
   describe('Message handling', () => {
     it('should handle init message', () => {
       const message = { type: 'init' };
-      
+
       mockProvider._handleMessage(message);
-      
+
       expect(mockProvider._handleMessage).to.have.been.calledWith(message);
     });
 
@@ -244,9 +244,9 @@ describe('SidebarTerminalProvider Extended', () => {
         terminalId: 'terminal-123',
         data: 'ls -la',
       };
-      
+
       mockProvider._handleMessage(message);
-      
+
       expect(mockProvider._handleMessage).to.have.been.calledWith(message);
     });
 
@@ -257,9 +257,9 @@ describe('SidebarTerminalProvider Extended', () => {
         rows: 25,
         cols: 80,
       };
-      
+
       mockProvider._handleMessage(message);
-      
+
       expect(mockProvider._handleMessage).to.have.been.calledWith(message);
     });
 
@@ -268,25 +268,25 @@ describe('SidebarTerminalProvider Extended', () => {
         type: 'killTerminal',
         terminalId: 'terminal-123',
       };
-      
+
       mockProvider._handleMessage(message);
-      
+
       expect(mockProvider._handleMessage).to.have.been.calledWith(message);
     });
 
     it('should handle split terminal message', () => {
       const message = { type: 'splitTerminal' };
-      
+
       mockProvider._handleMessage(message);
-      
+
       expect(mockProvider._handleMessage).to.have.been.calledWith(message);
     });
 
     it('should handle settings message', () => {
       const message = { type: 'openSettings' };
-      
+
       mockProvider._handleMessage(message);
-      
+
       expect(mockProvider._handleMessage).to.have.been.calledWith(message);
     });
   });
@@ -294,7 +294,7 @@ describe('SidebarTerminalProvider Extended', () => {
   describe('Settings integration', () => {
     it('should open settings panel', () => {
       mockProvider.openSettings();
-      
+
       expect(mockProvider.openSettings).to.have.been.called;
     });
 
@@ -302,9 +302,9 @@ describe('SidebarTerminalProvider Extended', () => {
       const configChange = {
         affectsConfiguration: sinon.stub().returns(true),
       };
-      
+
       mockVscode.workspace.onDidChangeConfiguration.callsArgWith(0, configChange);
-      
+
       expect(mockVscode.workspace.onDidChangeConfiguration).to.have.been.called;
     });
 
@@ -316,14 +316,14 @@ describe('SidebarTerminalProvider Extended', () => {
         fontFamily: 'monospace',
         theme: 'dark',
       };
-      
+
       mockVscode.workspace.getConfiguration.returns({
         get: sinon.stub().returns(config),
       });
-      
+
       const terminalConfig = mockVscode.workspace.getConfiguration('sidebarTerminal');
       const settings = terminalConfig.get('terminal');
-      
+
       expect(settings).to.deep.equal(config);
     });
 
@@ -333,14 +333,14 @@ describe('SidebarTerminalProvider Extended', () => {
         fontFamily: 'Monaco',
         theme: 'light',
       };
-      
+
       const message = {
         type: 'settingsResponse',
         settings: settings,
       };
-      
+
       mockWebview.postMessage(message);
-      
+
       expect(mockWebview.postMessage).to.have.been.calledWith(message);
     });
   });
@@ -351,27 +351,30 @@ describe('SidebarTerminalProvider Extended', () => {
         altClickMovesCursor: true,
         multiCursorModifier: 'alt',
       };
-      
+
       const message = {
         type: 'altClickSettings',
         settings: altClickSettings,
       };
-      
+
       mockWebview.postMessage(message);
-      
+
       expect(mockWebview.postMessage).to.have.been.calledWith(message);
     });
 
     it('should handle Alt+Click configuration changes', () => {
       const configChange = {
-        affectsConfiguration: sinon.stub().withArgs('terminal.integrated.altClickMovesCursor').returns(true),
+        affectsConfiguration: sinon
+          .stub()
+          .withArgs('terminal.integrated.altClickMovesCursor')
+          .returns(true),
       };
-      
+
       mockVscode.workspace.onDidChangeConfiguration.callsArgWith(0, configChange);
-      
+
       const listener = mockVscode.workspace.onDidChangeConfiguration.getCall(0).args[0];
       listener(configChange);
-      
+
       expect(configChange.affectsConfiguration).to.have.been.called;
     });
   });
@@ -380,24 +383,24 @@ describe('SidebarTerminalProvider Extended', () => {
     it('should get webview resource URIs', () => {
       const resourcePath = '/resources/icon.png';
       const resourceUri = mockVscode.Uri.file(resourcePath);
-      
+
       mockWebview.asWebviewUri.returns(resourceUri);
-      
+
       const webviewUri = mockWebview.asWebviewUri(resourceUri);
-      
+
       expect(webviewUri).to.equal(resourceUri);
     });
 
     it('should handle CSS and JavaScript resources', () => {
       const cssPath = '/dist/webview.css';
       const jsPath = '/dist/webview.js';
-      
+
       mockWebview.asWebviewUri.withArgs(cssPath).returns(`vscode-webview://path${cssPath}`);
       mockWebview.asWebviewUri.withArgs(jsPath).returns(`vscode-webview://path${jsPath}`);
-      
+
       const cssUri = mockWebview.asWebviewUri(cssPath);
       const jsUri = mockWebview.asWebviewUri(jsPath);
-      
+
       expect(cssUri).to.include(cssPath);
       expect(jsUri).to.include(jsPath);
     });
@@ -407,7 +410,7 @@ describe('SidebarTerminalProvider Extended', () => {
     it('should handle terminal creation errors', () => {
       const error = new Error('Terminal creation failed');
       mockTerminalManager.createTerminal.throws(error);
-      
+
       try {
         mockTerminalManager.createTerminal();
       } catch (e) {
@@ -417,16 +420,16 @@ describe('SidebarTerminalProvider Extended', () => {
 
     it('should handle webview message errors', () => {
       const invalidMessage = { type: 'invalid' };
-      
+
       expect(() => mockProvider._handleMessage(invalidMessage)).to.not.throw();
     });
 
     it('should handle webview disposal', () => {
       const disposeCallback = sinon.spy();
       mockWebviewView.onDidDispose.returns({ dispose: disposeCallback });
-      
+
       const disposable = mockWebviewView.onDidDispose(() => {});
-      
+
       expect(mockWebviewView.onDidDispose).to.have.been.called;
     });
   });
@@ -437,12 +440,12 @@ describe('SidebarTerminalProvider Extended', () => {
       const debouncedOutput = sinon.spy(() => {
         outputCount++;
       });
-      
+
       // Simulate debounced output
       debouncedOutput();
       debouncedOutput();
       debouncedOutput();
-      
+
       expect(debouncedOutput).to.have.been.calledThrice;
     });
 
@@ -452,11 +455,11 @@ describe('SidebarTerminalProvider Extended', () => {
         { type: 'write', data: 'line 2' },
         { type: 'write', data: 'line 3' },
       ];
-      
-      operations.forEach(op => {
+
+      operations.forEach((op) => {
         mockTerminalManager.writeToTerminal('terminal-123', op.data);
       });
-      
+
       expect(mockTerminalManager.writeToTerminal).to.have.been.calledThrice;
     });
   });
@@ -468,11 +471,11 @@ describe('SidebarTerminalProvider Extended', () => {
         terminals: ['terminal-123', 'terminal-456'],
         settings: { fontSize: 14 },
       };
-      
+
       mockWebview.getState = sinon.stub().returns(state);
-      
+
       const currentState = mockWebview.getState();
-      
+
       expect(currentState).to.deep.equal(state);
     });
 
@@ -481,9 +484,9 @@ describe('SidebarTerminalProvider Extended', () => {
         activeTerminalId: 'terminal-456',
         terminals: ['terminal-123', 'terminal-456', 'terminal-789'],
       };
-      
+
       mockWebview.setState(newState);
-      
+
       expect(mockWebview.setState).to.have.been.calledWith(newState);
     });
   });
@@ -494,22 +497,22 @@ describe('SidebarTerminalProvider Extended', () => {
         subscriptions: [],
         extensionUri: mockVscode.Uri.file('/extension/path'),
       };
-      
+
       mockProvider.context = context;
-      
+
       expect(mockProvider.context.subscriptions).to.be.an('array');
       expect(mockProvider.context.extensionUri).to.exist;
     });
 
     it('should cleanup resources on disposal', () => {
       mockProvider.dispose();
-      
+
       expect(mockProvider.dispose).to.have.been.called;
     });
 
     it('should dispose terminal manager', () => {
       mockTerminalManager.dispose();
-      
+
       expect(mockTerminalManager.dispose).to.have.been.called;
     });
   });
@@ -518,16 +521,16 @@ describe('SidebarTerminalProvider Extended', () => {
     it('should handle webview visibility changes', () => {
       const visibilityCallback = sinon.spy();
       mockWebviewView.onDidChangeVisibility.returns({ dispose: sinon.spy() });
-      
+
       const disposable = mockWebviewView.onDidChangeVisibility(visibilityCallback);
-      
+
       expect(mockWebviewView.onDidChangeVisibility).to.have.been.called;
       expect(disposable.dispose).to.be.a('function');
     });
 
     it('should maintain context when hidden', () => {
       mockWebview.options.retainContextWhenHidden = true;
-      
+
       expect(mockWebview.options.retainContextWhenHidden).to.be.true;
     });
   });
