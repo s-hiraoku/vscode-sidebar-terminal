@@ -1,6 +1,14 @@
 /**
  * Unit test setup - Mock VS Code API and other dependencies
  */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-var-requires */
+/* eslint-disable @typescript-eslint/explicit-function-return-type */
+/* eslint-disable @typescript-eslint/no-useless-constructor */
+/* eslint-disable prefer-rest-params */
 
 // Mock VS Code API
 const vscode = {
@@ -8,12 +16,12 @@ const vscode = {
     workspaceFolders: [
       {
         uri: { fsPath: '/workspace/test' },
-        name: 'test-project'
-      }
+        name: 'test-project',
+      },
     ],
     getConfiguration: () => ({
-      get: () => undefined
-    })
+      get: () => undefined,
+    }),
   },
   EventEmitter: class {
     constructor() {}
@@ -23,26 +31,26 @@ const vscode = {
   },
   Uri: {
     file: (path: string) => ({ fsPath: path }),
-    parse: (uri: string) => ({ fsPath: uri })
+    parse: (uri: string) => ({ fsPath: uri }),
   },
   window: {
     showErrorMessage: () => Promise.resolve(),
     showWarningMessage: () => Promise.resolve(),
-    showInformationMessage: () => Promise.resolve()
+    showInformationMessage: () => Promise.resolve(),
   },
   commands: {
     registerCommand: () => ({ dispose: () => {} }),
-    executeCommand: () => Promise.resolve()
+    executeCommand: () => Promise.resolve(),
   },
   ViewColumn: {
     One: 1,
     Two: 2,
-    Three: 3
-  }
+    Three: 3,
+  },
 };
 
 // Register the mock globally
-(global as any).vscode = vscode;
+(global as Record<string, unknown>).vscode = vscode;
 
 // Mock node-pty
 const mockPtyProcess = {
@@ -51,18 +59,18 @@ const mockPtyProcess = {
   onExit: () => {},
   write: () => {},
   resize: () => {},
-  kill: () => {}
+  kill: () => {},
 };
 
 const ptyMock = {
-  spawn: () => mockPtyProcess
+  spawn: () => mockPtyProcess,
 };
 
 // Override module loading for node-pty
 const Module = require('module');
 const originalRequire = Module.prototype.require;
 
-Module.prototype.require = function(id: string) {
+Module.prototype.require = function (id: string) {
   if (id === 'vscode') {
     return vscode;
   }
