@@ -30,7 +30,7 @@ const mockVscode = {
 function setupTestEnvironment() {
   // Mock VS Code module
   (global as any).vscode = mockVscode;
-  
+
   // Mock Node.js modules
   (global as any).require = sinon.stub();
   (global as any).module = { exports: {} };
@@ -51,7 +51,7 @@ describe('WebView Main', () => {
 
   beforeEach(() => {
     setupTestEnvironment();
-    
+
     // Mock console before JSDOM creation
     (global as Record<string, unknown>).console = {
       log: sinon.stub(),
@@ -77,7 +77,7 @@ describe('WebView Main', () => {
       cols: 80,
     };
 
-    (global as any).Terminal = function() {
+    (global as any).Terminal = function () {
       return mockTerminal;
     };
 
@@ -194,7 +194,7 @@ describe('WebView Main', () => {
         const addBtn = document.getElementById('add-terminal-btn');
         const splitBtn = document.getElementById('split-terminal-btn');
         const settingsBtn = document.getElementById('settings-btn');
-        
+
         expect(addBtn).to.exist;
         expect(splitBtn).to.exist;
         expect(settingsBtn).to.exist;
@@ -209,14 +209,14 @@ describe('WebView Main', () => {
           terminal: mockTerminal,
           element: document.createElement('div'),
         });
-        
+
         expect(manager.terminals.has(terminalId)).to.be.true;
       });
 
       it('should set active terminal', () => {
         const terminalId = 'terminal-test-1';
         manager.activeTerminalId = terminalId;
-        
+
         expect(manager.activeTerminalId).to.equal(terminalId);
       });
 
@@ -227,18 +227,18 @@ describe('WebView Main', () => {
           terminal: mockTerminal,
           element: document.createElement('div'),
         });
-        
+
         manager.terminals.delete(terminalId);
-        
+
         expect(manager.terminals.has(terminalId)).to.be.false;
       });
 
       it('should update terminal count badge', () => {
         manager.terminals.set('terminal-1', { id: 'terminal-1' });
         manager.terminals.set('terminal-2', { id: 'terminal-2' });
-        
+
         manager.statusManager.updateTerminalCount(manager.terminals.size);
-        
+
         expect(manager.statusManager.updateTerminalCount).to.have.been.calledWith(2);
       });
     });
@@ -249,9 +249,9 @@ describe('WebView Main', () => {
           type: 'init',
           terminalId: 'terminal-1',
         };
-        
+
         manager.vscode.postMessage(initMessage);
-        
+
         expect(manager.vscode.postMessage).to.have.been.calledWith(initMessage);
       });
 
@@ -261,12 +261,12 @@ describe('WebView Main', () => {
           terminalId: 'terminal-1',
           data: 'Hello World\n',
         };
-        
+
         // Simulate receiving output
         if (manager.terminals.has('terminal-1')) {
           const terminal = manager.terminals.get('terminal-1');
           terminal.terminal.write(outputMessage.data);
-          
+
           expect(mockTerminal.write).to.have.been.calledWith(outputMessage.data);
         }
       });
@@ -277,9 +277,9 @@ describe('WebView Main', () => {
           terminalId: 'terminal-1',
           data: 'ls\n',
         };
-        
+
         manager.vscode.postMessage(inputMessage);
-        
+
         expect(manager.vscode.postMessage).to.have.been.calledWith(inputMessage);
       });
 
@@ -290,9 +290,9 @@ describe('WebView Main', () => {
           rows: 30,
           cols: 100,
         };
-        
+
         manager.vscode.postMessage(resizeMessage);
-        
+
         expect(manager.vscode.postMessage).to.have.been.calledWith(resizeMessage);
       });
     });
@@ -300,19 +300,19 @@ describe('WebView Main', () => {
     describe('terminal splitting', () => {
       it('should check if split is possible', () => {
         const canSplit = manager.splitManager.canSplit();
-        
+
         expect(canSplit).to.be.true;
       });
 
       it('should create split terminal', () => {
         manager.splitManager.createSplit('terminal-1');
-        
+
         expect(manager.splitManager.createSplit).to.have.been.calledWith('terminal-1');
       });
 
       it('should remove split terminal', () => {
         manager.splitManager.removeSplit('terminal-1');
-        
+
         expect(manager.splitManager.removeSplit).to.have.been.calledWith('terminal-1');
       });
     });
@@ -320,19 +320,19 @@ describe('WebView Main', () => {
     describe('settings management', () => {
       it('should show settings panel', () => {
         manager.settingsPanel.show();
-        
+
         expect(manager.settingsPanel.show).to.have.been.called;
       });
 
       it('should hide settings panel', () => {
         manager.settingsPanel.hide();
-        
+
         expect(manager.settingsPanel.hide).to.have.been.called;
       });
 
       it('should check if settings panel is visible', () => {
         const isVisible = manager.settingsPanel.isVisible();
-        
+
         expect(isVisible).to.be.false;
       });
     });
@@ -345,37 +345,37 @@ describe('WebView Main', () => {
           /🤖 Generated with/,
           /Co-Authored-By: Claude/,
         ];
-        
+
         const testOutput = '🤖 Generated with Claude Code';
-        const isClaudeCode = claudeCodePatterns.some(pattern => pattern.test(testOutput));
-        
+        const isClaudeCode = claudeCodePatterns.some((pattern) => pattern.test(testOutput));
+
         expect(isClaudeCode).to.be.true;
       });
 
       it('should handle high-frequency Claude Code output', () => {
         const startTime = Date.now();
         let outputCount = 0;
-        
+
         // Simulate high-frequency output
         for (let i = 0; i < 10; i++) {
           outputCount++;
         }
-        
+
         const endTime = Date.now();
-        const isHighFrequency = (endTime - startTime) < 100 && outputCount > 5;
-        
+        const isHighFrequency = endTime - startTime < 100 && outputCount > 5;
+
         expect(isHighFrequency).to.be.true;
       });
 
       it('should disable Alt+Click during Claude Code sessions', () => {
         let altClickDisabled = false;
-        
+
         // Simulate Claude Code detection
         const claudeCodeActive = true;
         if (claudeCodeActive) {
           altClickDisabled = true;
         }
-        
+
         expect(altClickDisabled).to.be.true;
       });
     });
@@ -388,12 +388,12 @@ describe('WebView Main', () => {
           clientY: 200,
           preventDefault: sinon.spy(),
         };
-        
+
         // Simulate Alt+Click handling
         if (clickEvent.altKey) {
           clickEvent.preventDefault();
         }
-        
+
         expect(clickEvent.preventDefault).to.have.been.called;
       });
 
@@ -402,10 +402,10 @@ describe('WebView Main', () => {
         const clickY = 200;
         const charWidth = 8;
         const lineHeight = 16;
-        
+
         const col = Math.floor(clickX / charWidth);
         const row = Math.floor(clickY / lineHeight);
-        
+
         expect(col).to.be.a('number');
         expect(row).to.be.a('number');
       });
@@ -416,9 +416,9 @@ describe('WebView Main', () => {
         feedbackElement.style.position = 'absolute';
         feedbackElement.style.left = '100px';
         feedbackElement.style.top = '200px';
-        
+
         document.body.appendChild(feedbackElement);
-        
+
         const addedElement = document.querySelector('.alt-click-feedback');
         expect(addedElement).to.exist;
       });
@@ -428,16 +428,16 @@ describe('WebView Main', () => {
       it('should buffer terminal output', () => {
         const outputBuffer = [];
         const maxBufferSize = 100;
-        
+
         // Simulate buffering
         for (let i = 0; i < 10; i++) {
           outputBuffer.push(`Line ${i}\n`);
         }
-        
+
         if (outputBuffer.length > maxBufferSize) {
           outputBuffer.splice(0, outputBuffer.length - maxBufferSize);
         }
-        
+
         expect(outputBuffer.length).to.equal(10);
       });
 
@@ -446,12 +446,12 @@ describe('WebView Main', () => {
         const debouncedResize = () => {
           resizeCount++;
         };
-        
+
         // Simulate multiple resize events
         debouncedResize();
         debouncedResize();
         debouncedResize();
-        
+
         expect(resizeCount).to.equal(3);
       });
 
@@ -460,10 +460,10 @@ describe('WebView Main', () => {
         const throttledUpdate = () => {
           updateCount++;
         };
-        
+
         // Simulate throttled updates
         throttledUpdate();
-        
+
         expect(updateCount).to.equal(1);
       });
     });
@@ -471,32 +471,32 @@ describe('WebView Main', () => {
     describe('error handling', () => {
       it('should handle terminal creation errors', () => {
         const errorHandler = sinon.spy();
-        
+
         try {
           throw new Error('Terminal creation failed');
         } catch (error) {
           errorHandler(error);
         }
-        
+
         expect(errorHandler).to.have.been.called;
       });
 
       it('should handle WebView communication errors', () => {
         const errorHandler = sinon.spy();
-        
+
         try {
           // Simulate communication error
           manager.vscode.postMessage(null);
         } catch (error) {
           errorHandler(error);
         }
-        
+
         expect(errorHandler).to.have.been.called;
       });
 
       it('should handle DOM manipulation errors', () => {
         const errorHandler = sinon.spy();
-        
+
         try {
           // Simulate DOM error
           const nonExistentElement = document.getElementById('non-existent');
@@ -504,7 +504,7 @@ describe('WebView Main', () => {
         } catch (error) {
           errorHandler(error);
         }
-        
+
         expect(errorHandler).to.have.been.called;
       });
     });
@@ -513,25 +513,25 @@ describe('WebView Main', () => {
       it('should dispose all terminals', () => {
         manager.terminals.set('terminal-1', { terminal: mockTerminal });
         manager.terminals.set('terminal-2', { terminal: mockTerminal });
-        
+
         // Simulate cleanup
         manager.terminals.forEach(({ terminal }) => {
           terminal.dispose();
         });
         manager.terminals.clear();
-        
+
         expect(mockTerminal.dispose).to.have.been.called;
         expect(manager.terminals.size).to.equal(0);
       });
 
       it('should remove event listeners', () => {
         const removeEventListenerSpy = sinon.spy(document, 'removeEventListener');
-        
+
         // Simulate cleanup
         document.removeEventListener('click', () => {});
-        
+
         expect(removeEventListenerSpy).to.have.been.called;
-        
+
         removeEventListenerSpy.restore();
       });
     });

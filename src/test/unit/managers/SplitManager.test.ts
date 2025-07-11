@@ -337,14 +337,14 @@ describe('SplitManager', () => {
       // Add split terminals
       const container1 = document.createElement('div');
       const container2 = document.createElement('div');
-      
+
       splitManager.getSplitTerminals().set('terminal-1', container1);
       splitManager.getSplitTerminals().set('terminal-2', container2);
 
       // Add terminal instances with fit addons
       const mockFitAddon1 = { fit: sinon.stub() };
       const mockFitAddon2 = { fit: sinon.stub() };
-      
+
       splitManager.setTerminal('terminal-1', {
         terminal: {} as any,
         fitAddon: mockFitAddon1,
@@ -387,7 +387,10 @@ describe('SplitManager', () => {
 
       splitManager.showSplitLimitWarning('Test reason');
 
-      expect(consoleWarnSpy).to.have.been.calledWith('⚠️ [WEBVIEW] Split limit reached:', 'Test reason');
+      expect(consoleWarnSpy).to.have.been.calledWith(
+        '⚠️ [WEBVIEW] Split limit reached:',
+        'Test reason'
+      );
     });
   });
 

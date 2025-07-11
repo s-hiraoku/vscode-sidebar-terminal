@@ -41,7 +41,7 @@ const mockVscode = {
 function setupTestEnvironment() {
   // Mock VS Code module
   (global as any).vscode = mockVscode;
-  
+
   // Mock Node.js modules
   (global as any).require = sinon.stub();
   (global as any).module = { exports: {} };
@@ -61,7 +61,7 @@ describe('FeedbackManager', () => {
 
   beforeEach(() => {
     setupTestEnvironment();
-    
+
     // Mock console before JSDOM creation
     (global as Record<string, unknown>).console = {
       log: sinon.stub(),
@@ -93,7 +93,7 @@ describe('FeedbackManager', () => {
     it('should return same instance on multiple calls', () => {
       const instance1 = FeedbackManager.getInstance();
       const instance2 = FeedbackManager.getInstance();
-      
+
       expect(instance1).to.equal(instance2);
     });
 
@@ -107,35 +107,38 @@ describe('FeedbackManager', () => {
   describe('showFeedback method', () => {
     it('should show info feedback', async () => {
       await feedbackManager.showFeedback('Test info message', 'info');
-      
+
       expect(mockVscode.window.showInformationMessage).to.have.been.calledWith('Test info message');
     });
 
     it('should show warning feedback', async () => {
       await feedbackManager.showFeedback('Test warning message', 'warning');
-      
+
       expect(mockVscode.window.showWarningMessage).to.have.been.calledWith('Test warning message');
     });
 
     it('should show error feedback', async () => {
       await feedbackManager.showFeedback('Test error message', 'error');
-      
+
       expect(mockVscode.window.showErrorMessage).to.have.been.calledWith('Test error message');
     });
 
     it('should handle feedback with actions', async () => {
       const actions = ['Action 1', 'Action 2'];
-      
+
       await feedbackManager.showFeedback('Test message', 'info', actions);
-      
-      expect(mockVscode.window.showInformationMessage).to.have.been.calledWith('Test message', ...actions);
+
+      expect(mockVscode.window.showInformationMessage).to.have.been.calledWith(
+        'Test message',
+        ...actions
+      );
     });
 
     it('should not show feedback when disabled', async () => {
       feedbackManager.setEnabled(false);
-      
+
       await feedbackManager.showFeedback('Test message', 'info');
-      
+
       expect(mockVscode.window.showInformationMessage).to.not.have.been.called;
     });
   });
@@ -144,18 +147,22 @@ describe('FeedbackManager', () => {
     it('should show progress notification', async () => {
       const progressSpy = sinon.spy();
       mockVscode.window.withProgress.returns(Promise.resolve('completed'));
-      
+
       await feedbackManager.showProgress('Processing...', progressSpy);
-      
+
       expect(mockVscode.window.withProgress).to.have.been.called;
     });
 
     it('should handle progress with custom location', async () => {
       const progressSpy = sinon.spy();
       mockVscode.window.withProgress.returns(Promise.resolve('completed'));
-      
-      await feedbackManager.showProgress('Processing...', progressSpy, mockVscode.ProgressLocation.Window);
-      
+
+      await feedbackManager.showProgress(
+        'Processing...',
+        progressSpy,
+        mockVscode.ProgressLocation.Window
+      );
+
       expect(mockVscode.window.withProgress).to.have.been.calledWith({
         location: mockVscode.ProgressLocation.Window,
         title: 'Processing...',
@@ -167,9 +174,9 @@ describe('FeedbackManager', () => {
       const progressSpy = sinon.spy();
       const cancelToken = { isCancellationRequested: true };
       mockVscode.window.withProgress.callsArgWith(1, { report: sinon.spy() }, cancelToken);
-      
+
       await feedbackManager.showProgress('Processing...', progressSpy);
-      
+
       expect(mockVscode.window.withProgress).to.have.been.called;
     });
   });
@@ -184,9 +191,9 @@ describe('FeedbackManager', () => {
         dispose: sinon.spy(),
       };
       mockVscode.window.createStatusBarItem.returns(statusBarItem);
-      
+
       feedbackManager.createStatusBarItem('test-item');
-      
+
       expect(mockVscode.window.createStatusBarItem).to.have.been.called;
     });
 
@@ -199,10 +206,10 @@ describe('FeedbackManager', () => {
         dispose: sinon.spy(),
       };
       mockVscode.window.createStatusBarItem.returns(statusBarItem);
-      
+
       feedbackManager.createStatusBarItem('test-item');
       feedbackManager.updateStatusBarItem('test-item', 'Updated text', 'Updated tooltip');
-      
+
       expect(statusBarItem.text).to.equal('Updated text');
       expect(statusBarItem.tooltip).to.equal('Updated tooltip');
     });
@@ -216,11 +223,11 @@ describe('FeedbackManager', () => {
         dispose: sinon.spy(),
       };
       mockVscode.window.createStatusBarItem.returns(statusBarItem);
-      
+
       feedbackManager.createStatusBarItem('test-item');
       feedbackManager.showStatusBarItem('test-item');
       feedbackManager.hideStatusBarItem('test-item');
-      
+
       expect(statusBarItem.show).to.have.been.called;
       expect(statusBarItem.hide).to.have.been.called;
     });
@@ -233,9 +240,9 @@ describe('FeedbackManager', () => {
         autoHide: false,
         duration: 10000,
       };
-      
+
       feedbackManager.updateConfig(config);
-      
+
       expect(feedbackManager.isEnabled).to.be.false;
       expect(feedbackManager.autoHide).to.be.false;
       expect(feedbackManager.duration).to.equal(10000);
@@ -244,7 +251,7 @@ describe('FeedbackManager', () => {
     it('should enable/disable feedback', () => {
       feedbackManager.setEnabled(false);
       expect(feedbackManager.isEnabled).to.be.false;
-      
+
       feedbackManager.setEnabled(true);
       expect(feedbackManager.isEnabled).to.be.true;
     });
@@ -252,7 +259,7 @@ describe('FeedbackManager', () => {
     it('should set auto-hide behavior', () => {
       feedbackManager.setAutoHide(false);
       expect(feedbackManager.autoHide).to.be.false;
-      
+
       feedbackManager.setAutoHide(true);
       expect(feedbackManager.autoHide).to.be.true;
     });
@@ -273,10 +280,10 @@ describe('FeedbackManager', () => {
         dispose: sinon.spy(),
       };
       mockVscode.window.createStatusBarItem.returns(statusBarItem);
-      
+
       feedbackManager.createStatusBarItem('test-item');
       feedbackManager.cleanup();
-      
+
       expect(statusBarItem.dispose).to.have.been.called;
     });
   });
@@ -290,7 +297,7 @@ describe('TerminalErrorHandler', () => {
 
   beforeEach(() => {
     setupTestEnvironment();
-    
+
     // Mock console before JSDOM creation
     (global as Record<string, unknown>).console = {
       log: sinon.stub(),
@@ -328,7 +335,7 @@ describe('TerminalErrorHandler', () => {
         showUserNotifications: false,
         logLevel: 'debug',
       });
-      
+
       expect(customHandler.isEnabled).to.be.false;
       expect(customHandler.showUserNotifications).to.be.false;
     });
@@ -337,34 +344,34 @@ describe('TerminalErrorHandler', () => {
   describe('handleTerminalError method', () => {
     it('should handle terminal creation error', async () => {
       const error = new Error('Terminal creation failed');
-      
+
       await errorHandler.handleTerminalError(error, 'create');
-      
+
       expect(mockVscode.window.showErrorMessage).to.have.been.called;
     });
 
     it('should handle terminal connection error', async () => {
       const error = new Error('Connection failed');
-      
+
       await errorHandler.handleTerminalError(error, 'connect');
-      
+
       expect(mockVscode.window.showErrorMessage).to.have.been.called;
     });
 
     it('should handle terminal kill error', async () => {
       const error = new Error('Kill failed');
-      
+
       await errorHandler.handleTerminalError(error, 'kill');
-      
+
       expect(mockVscode.window.showErrorMessage).to.have.been.called;
     });
 
     it('should not show notifications when disabled', async () => {
       errorHandler.setShowUserNotifications(false);
       const error = new Error('Test error');
-      
+
       await errorHandler.handleTerminalError(error, 'create');
-      
+
       expect(mockVscode.window.showErrorMessage).to.not.have.been.called;
     });
   });
@@ -372,17 +379,17 @@ describe('TerminalErrorHandler', () => {
   describe('handleWebviewError method', () => {
     it('should handle webview communication error', async () => {
       const error = new Error('Communication failed');
-      
+
       await errorHandler.handleWebviewError(error, 'communication');
-      
+
       expect(mockVscode.window.showErrorMessage).to.have.been.called;
     });
 
     it('should handle webview initialization error', async () => {
       const error = new Error('Initialization failed');
-      
+
       await errorHandler.handleWebviewError(error, 'initialization');
-      
+
       expect(mockVscode.window.showErrorMessage).to.have.been.called;
     });
   });
@@ -390,17 +397,17 @@ describe('TerminalErrorHandler', () => {
   describe('handleConfigurationError method', () => {
     it('should handle configuration loading error', async () => {
       const error = new Error('Configuration loading failed');
-      
+
       await errorHandler.handleConfigurationError(error, 'load');
-      
+
       expect(mockVscode.window.showErrorMessage).to.have.been.called;
     });
 
     it('should handle configuration validation error', async () => {
       const error = new Error('Validation failed');
-      
+
       await errorHandler.handleConfigurationError(error, 'validate');
-      
+
       expect(mockVscode.window.showErrorMessage).to.have.been.called;
     });
   });
@@ -408,9 +415,9 @@ describe('TerminalErrorHandler', () => {
   describe('error recovery', () => {
     it('should provide recovery actions for terminal errors', async () => {
       const error = new Error('Terminal creation failed');
-      
+
       await errorHandler.handleTerminalError(error, 'create');
-      
+
       const callArgs = mockVscode.window.showErrorMessage.getCall(0).args;
       expect(callArgs).to.include('Retry');
     });
@@ -418,10 +425,10 @@ describe('TerminalErrorHandler', () => {
     it('should handle retry action', async () => {
       const retryCallback = sinon.spy();
       errorHandler.setRetryCallback(retryCallback);
-      
+
       const error = new Error('Terminal creation failed');
       await errorHandler.handleTerminalError(error, 'create');
-      
+
       // Simulate user clicking retry
       const callArgs = mockVscode.window.showErrorMessage.getCall(0).args;
       if (callArgs.includes('Retry')) {
@@ -435,9 +442,9 @@ describe('TerminalErrorHandler', () => {
     it('should generate error report', () => {
       const error = new Error('Test error');
       const context = { action: 'create', terminalId: 'test-123' };
-      
+
       const report = errorHandler.generateErrorReport(error, context);
-      
+
       expect(report).to.include('Test error');
       expect(report).to.include('create');
       expect(report).to.include('test-123');
@@ -447,9 +454,9 @@ describe('TerminalErrorHandler', () => {
       errorHandler.setLogLevel('debug');
       const error = new Error('Test error');
       error.stack = 'Error: Test error\n  at test.js:1:1';
-      
+
       const report = errorHandler.generateErrorReport(error, {});
-      
+
       expect(report).to.include('Error: Test error');
       expect(report).to.include('at test.js:1:1');
     });
@@ -462,9 +469,9 @@ describe('TerminalErrorHandler', () => {
         showUserNotifications: false,
         logLevel: 'error',
       };
-      
+
       errorHandler.updateConfig(config);
-      
+
       expect(errorHandler.isEnabled).to.be.false;
       expect(errorHandler.showUserNotifications).to.be.false;
       expect(errorHandler.logLevel).to.equal('error');
@@ -473,7 +480,7 @@ describe('TerminalErrorHandler', () => {
     it('should enable/disable error handling', () => {
       errorHandler.setEnabled(false);
       expect(errorHandler.isEnabled).to.be.false;
-      
+
       errorHandler.setEnabled(true);
       expect(errorHandler.isEnabled).to.be.true;
     });
@@ -487,14 +494,14 @@ describe('TerminalErrorHandler', () => {
   describe('cleanup', () => {
     it('should cleanup resources', () => {
       errorHandler.cleanup();
-      
+
       expect(errorHandler.isCleanedUp).to.be.true;
     });
 
     it('should handle cleanup when already cleaned', () => {
       errorHandler.cleanup();
       errorHandler.cleanup();
-      
+
       expect(errorHandler.isCleanedUp).to.be.true;
     });
   });
