@@ -135,6 +135,10 @@ class TerminalWebviewManager {
     // Use the existing terminal-body container
     this.terminalContainer = container;
 
+    // Add terminal container class for border styling
+    container.className = 'terminal-container';
+    container.setAttribute('data-terminal-id', 'primary');
+
     // Style the container
     container.style.cssText = `
       display: flex;
@@ -146,6 +150,8 @@ class TerminalWebviewManager {
       margin: 0;
       padding: 0;
       gap: 0;
+      border: 1px solid transparent;
+      transition: border-color 0.2s ease-in-out;
     `;
 
     // Add placeholder content
@@ -228,7 +234,10 @@ class TerminalWebviewManager {
       // Create terminal container div - unified logic for all terminals
       const terminalDiv = document.createElement('div');
       terminalDiv.setAttribute('data-terminal-container', 'terminal');
+      terminalDiv.setAttribute('data-terminal-id', id);
       terminalDiv.id = `terminal-container-${id}`;
+      terminalDiv.className = 'terminal-container';
+      terminalDiv.tabIndex = -1; // Make focusable
 
       // Set split mode if this is the second terminal
       if (this.splitManager.getTerminals().size >= 1 && !this.splitManager.getIsSplitMode()) {
@@ -387,6 +396,13 @@ class TerminalWebviewManager {
         });
       });
 
+      // Handle terminal focus events for border updates
+      // Note: xterm.js doesn't have onFocus, we'll handle focus via DOM events
+      terminalDiv.addEventListener('focus', () => {
+        log(`🔵 [FOCUS] Terminal ${id} received focus - updating borders`);
+        this.setActiveTerminalId(id);
+      }, true);
+
       // Handle resize
       terminal.onResize((size) => {
         vscode.postMessage({
@@ -402,7 +418,11 @@ class TerminalWebviewManager {
         terminal,
         fitAddon,
         name,
+        container: terminalDiv,
       });
+
+      // Set this terminal as active and update borders
+      this.setActiveTerminalId(id);
 
       // Performance optimization: Use debounced resize observer
       if (this.terminalContainer) {
@@ -1136,6 +1156,75 @@ class TerminalWebviewManager {
   public setActiveTerminalId(terminalId: string): void {
     this.activeTerminalId = terminalId;
     log('🎯 [WEBVIEW] Active terminal ID set to:', terminalId);
+    
+    // Update terminal borders to highlight active terminal
+    this.updateTerminalBorders(terminalId);
+  }
+
+  /**
+   * Update terminal borders to highlight the active terminal
+   */
+  private updateTerminalBorders(activeTerminalId: string): void {
+    try {
+      // Get all terminal containers
+      const allTerminals = this.splitManager.getTerminals();
+      
+      allTerminals.forEach((terminalData, terminalId) => {
+        const container = terminalData.container;
+        if (!container) return;
+
+        // Remove existing border classes
+        container.classList.remove('active', 'inactive');
+        
+        // Add appropriate border class
+        if (terminalId === activeTerminalId) {
+          container.classList.add('active');
+          log(`🔵 [BORDER] Added active border to terminal: ${terminalId}`);
+        } else {
+          container.classList.add('inactive');
+          log(`⚪ [BORDER] Added inactive border to terminal: ${terminalId}`);
+        }
+      });
+
+      // Also update terminal panes if in split mode
+      if (this.splitManager.getIsSplitMode()) {
+        this.updateSplitTerminalBorders(activeTerminalId);
+      }
+    } catch (error) {
+      log('❌ [BORDER] Error updating terminal borders:', error);
+    }
+  }
+
+  /**
+   * Update borders for split terminal panes
+   */
+  private updateSplitTerminalBorders(activeTerminalId: string): void {
+    try {
+      const panes = document.querySelectorAll('.terminal-pane');
+      
+      panes.forEach((pane) => {
+        const paneElement = pane as HTMLElement;
+        const terminalContainer = paneElement.querySelector('[data-terminal-id]') as HTMLElement;
+        
+        if (!terminalContainer) return;
+        
+        const terminalId = terminalContainer.getAttribute('data-terminal-id');
+        
+        // Remove existing classes
+        paneElement.classList.remove('active', 'inactive');
+        
+        // Add appropriate class
+        if (terminalId === activeTerminalId) {
+          paneElement.classList.add('active');
+          log(`🔵 [SPLIT-BORDER] Added active border to split pane: ${terminalId}`);
+        } else {
+          paneElement.classList.add('inactive');
+          log(`⚪ [SPLIT-BORDER] Added inactive border to split pane: ${terminalId}`);
+        }
+      });
+    } catch (error) {
+      log('❌ [SPLIT-BORDER] Error updating split terminal borders:', error);
+    }
   }
 
   // Getters for split manager integration
