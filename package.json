@@ -298,7 +298,7 @@
     "eslint": "^8.56.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.1.2",
-    "glob": "^10.3.10",
+    "glob": "^11.0.0",
     "jsdom": "^26.1.0",
     "mocha": "^10.2.0",
     "nyc": "^17.1.0",
