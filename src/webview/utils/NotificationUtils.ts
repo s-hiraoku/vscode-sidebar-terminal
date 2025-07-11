@@ -52,6 +52,72 @@ export function showSplitLimitWarning(reason: string): void {
 }
 
 /**
+ * Claude Code検出通知の表示
+ */
+export function showClaudeCodeDetected(): void {
+  showNotification({
+    type: 'info',
+    title: 'Claude Code Detected',
+    message: 'Alt+Click temporarily disabled for optimal performance during AI interaction',
+    icon: '🤖',
+    duration: 6000,
+  });
+}
+
+/**
+ * Claude Code終了通知の表示
+ */
+export function showClaudeCodeEnded(): void {
+  showNotification({
+    type: 'success',
+    title: 'Claude Code Session Ended',
+    message: 'Alt+Click cursor positioning re-enabled',
+    icon: '✅',
+    duration: 3000,
+  });
+}
+
+/**
+ * Alt+Click無効化警告の表示
+ */
+export function showAltClickDisabledWarning(reason?: string): void {
+  showNotification({
+    type: 'warning',
+    title: 'Alt+Click Disabled',
+    message: reason || 'Alt+Click cursor positioning is currently disabled',
+    icon: '🚫',
+    duration: 4000,
+  });
+}
+
+/**
+ * Alt+Click設定エラーの表示
+ */
+export function showAltClickSettingError(): void {
+  showNotification({
+    type: 'warning',
+    title: 'Alt+Click Configuration',
+    message:
+      'Check VS Code settings: terminal.integrated.altClickMovesCursor and editor.multiCursorModifier',
+    icon: '⚙️',
+    duration: 6000,
+  });
+}
+
+/**
+ * Terminal相互作用問題の表示
+ */
+export function showTerminalInteractionIssue(details: string): void {
+  showNotification({
+    type: 'warning',
+    title: 'Terminal Interaction Issue',
+    message: details,
+    icon: '⚡',
+    duration: 5000,
+  });
+}
+
+/**
  * 汎用的な通知表示
  */
 export function showNotification(config: NotificationConfig): void {

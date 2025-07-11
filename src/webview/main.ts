@@ -12,13 +12,23 @@ import type {
   VsCodeMessage,
   TerminalConfig,
   TerminalSettings,
+  ClaudeCodeState,
+  AltClickState,
+  TerminalInteractionEvent,
 } from '../types/common';
 import { webview as log } from '../utils/logger';
 import { WEBVIEW_TERMINAL_CONSTANTS, SPLIT_CONSTANTS } from './constants/webview';
 import { getWebviewTheme, WEBVIEW_THEME_CONSTANTS } from './utils/WebviewThemeUtils';
 import { SplitManager } from './managers/SplitManager';
 import { SettingsPanel } from './components/SettingsPanel';
-import { showTerminalKillError, showTerminalCloseError } from './utils/NotificationUtils';
+import {
+  showTerminalKillError,
+  showTerminalCloseError,
+  showClaudeCodeDetected,
+  showClaudeCodeEnded,
+  showAltClickDisabledWarning as _showAltClickDisabledWarning,
+  showTerminalInteractionIssue as _showTerminalInteractionIssue,
+} from './utils/NotificationUtils';
 
 // Type definitions
 interface TerminalMessage extends WebviewMessage {
@@ -75,6 +85,31 @@ class TerminalWebviewManager {
     altClickMovesCursor: true,
     multiCursorModifier: 'alt',
   };
+
+  // Claude Code detection and Alt+Click control
+  private claudeCodeState: ClaudeCodeState = {
+    isActive: false,
+  };
+
+  private altClickState: AltClickState = {
+    isEnabled: true,
+    isTemporarilyDisabled: false,
+  };
+
+  // Claude Code detection patterns
+  private readonly CLAUDE_CODE_PATTERNS = [
+    /claude/i,
+    /\[agent\]/i,
+    /\[tool\]/i,
+    /\[thinking\]/i,
+    /anthropic/i,
+    /ai\s*assistant/i,
+  ];
+
+  // Output monitoring for Claude Code detection
+  private outputMonitoringInterval: number | null = null;
+  private recentOutputVolume = 0;
+  private lastOutputTime = 0;
 
   constructor() {
     this.splitManager = new SplitManager();
@@ -174,8 +209,8 @@ class TerminalWebviewManager {
         cursorBlink: this.currentSettings.cursorBlink,
         allowTransparency: true,
         scrollback: 10000,
-        // VS Code standard: Enable Alt+Click cursor positioning based on setting
-        altClickMovesCursor: this.getAltClickMovesCursorSetting(),
+        // VS Code standard: Enable Alt+Click cursor positioning
+        altClickMovesCursor: this.isVSCodeAltClickEnabled(),
       };
 
       const terminal = new Terminal(terminalOptions);
@@ -676,6 +711,9 @@ class TerminalWebviewManager {
   }
 
   public writeToTerminal(data: string, terminalId?: string): void {
+    // Monitor output for Claude Code detection
+    this.monitorTerminalOutput(data, terminalId);
+
     // Determine which terminal to write to
     let targetTerminal = this.terminal;
 
@@ -710,20 +748,30 @@ class TerminalWebviewManager {
         log(`📤 [WEBVIEW] Direct write to terminal ${terminalId}: ${data.length} chars`);
       } else {
         // Use buffering only for active terminal (default behavior)
-        // For better Alt+Click compatibility, flush buffer more frequently during Claude Code output
+        // Enhanced buffering strategy for Claude Code compatibility
         const isLargeOutput = data.length >= 1000;
         const bufferFull = this.outputBuffer.length >= this.MAX_BUFFER_SIZE;
-        const shouldFlushImmediately = isLargeOutput || bufferFull;
+        const isClaudeCodeActive = this.claudeCodeState.isActive;
+        const isModerateOutput = data.length >= 100; // Medium-sized chunks
+
+        // Immediate flush conditions (prioritized for cursor accuracy)
+        const shouldFlushImmediately =
+          isLargeOutput || bufferFull || (isClaudeCodeActive && isModerateOutput);
 
         if (shouldFlushImmediately) {
           this.flushOutputBuffer();
           targetTerminal.write(data);
-          log(`📤 [WEBVIEW] Immediate write to active terminal: ${data.length} chars`);
+          const reason = isClaudeCodeActive
+            ? 'Claude Code mode'
+            : isLargeOutput
+              ? 'large output'
+              : 'buffer full';
+          log(`📤 [WEBVIEW] Immediate write to active terminal: ${data.length} chars (${reason})`);
         } else {
           this.outputBuffer.push(data);
           this.scheduleBufferFlush();
           log(
-            `📤 [WEBVIEW] Buffered write to active terminal: ${data.length} chars (buffer: ${this.outputBuffer.length})`
+            `📤 [WEBVIEW] Buffered write to active terminal: ${data.length} chars (buffer: ${this.outputBuffer.length}, Claude Code: ${isClaudeCodeActive})`
           );
         }
       }
@@ -734,11 +782,24 @@ class TerminalWebviewManager {
 
   private scheduleBufferFlush(): void {
     if (this.bufferFlushTimer === null) {
-      // Use shorter interval for better Alt+Click compatibility during Claude Code output
-      const flushInterval = this.outputBuffer.length > 5 ? 8 : this.BUFFER_FLUSH_INTERVAL; // 8ms for frequent output, 16ms for normal
+      // Dynamic flush interval based on Claude Code state and output frequency
+      let flushInterval = this.BUFFER_FLUSH_INTERVAL; // Default 16ms
+
+      if (this.claudeCodeState.isActive) {
+        // Claude Code active: Use very aggressive flushing for cursor accuracy
+        flushInterval = 4; // 4ms for Claude Code output
+      } else if (this.outputBuffer.length > 5) {
+        // High-frequency output: Use shorter interval
+        flushInterval = 8; // 8ms for frequent output
+      }
+
       this.bufferFlushTimer = window.setTimeout(() => {
         this.flushOutputBuffer();
       }, flushInterval);
+
+      log(
+        `📊 [BUFFER] Scheduled flush in ${flushInterval}ms (Claude Code: ${this.claudeCodeState.isActive}, buffer size: ${this.outputBuffer.length})`
+      );
     }
   }
 
@@ -765,6 +826,193 @@ class TerminalWebviewManager {
         targetTerminal.write(bufferedData);
       }
     }
+  }
+
+  /**
+   * Monitor terminal output for Claude Code detection
+   */
+  private monitorTerminalOutput(data: string, terminalId?: string): void {
+    const currentTime = Date.now();
+    this.recentOutputVolume += data.length;
+    this.lastOutputTime = currentTime;
+
+    // Check for Claude Code patterns in the output
+    const containsClaudeCodePattern = this.CLAUDE_CODE_PATTERNS.some((pattern) =>
+      pattern.test(data)
+    );
+
+    // High-frequency output detection (potential Claude Code activity)
+    const isHighFrequencyOutput =
+      this.recentOutputVolume > 500 &&
+      currentTime - (this.claudeCodeState.startTime || currentTime) < 2000;
+
+    // Large output chunks (typical of Claude Code responses)
+    const isLargeOutput = data.length >= 1000;
+
+    if (containsClaudeCodePattern || isHighFrequencyOutput || isLargeOutput) {
+      this.activateClaudeCodeMode(terminalId || this.activeTerminalId || '');
+    }
+
+    // Reset output volume periodically
+    if (!this.outputMonitoringInterval) {
+      this.outputMonitoringInterval = window.setTimeout(() => {
+        this.recentOutputVolume = 0;
+        this.outputMonitoringInterval = null;
+
+        // Deactivate Claude Code mode if no recent activity
+        if (currentTime - this.lastOutputTime > 3000 && this.claudeCodeState.isActive) {
+          this.deactivateClaudeCodeMode();
+        }
+      }, 5000);
+    }
+  }
+
+  /**
+   * Activate Claude Code mode and temporarily disable Alt+Click via xterm.js
+   */
+  private activateClaudeCodeMode(terminalId: string): void {
+    if (!this.claudeCodeState.isActive) {
+      this.claudeCodeState = {
+        isActive: true,
+        terminalId,
+        startTime: Date.now(),
+        outputVolume: 0,
+      };
+
+      // VS Code approach: Disable Alt+Click at xterm.js level for performance
+      this.setAltClickForAllTerminals(false);
+
+      log('🤖 [CLAUDE-CODE] Claude Code mode activated, Alt+Click disabled via xterm.js');
+      this.emitTerminalInteractionEvent('claude-code-start', terminalId);
+      this.showClaudeCodeNotification(true);
+    }
+
+    // Update output volume
+    this.claudeCodeState.outputVolume = (this.claudeCodeState.outputVolume || 0) + 1;
+  }
+
+  /**
+   * Deactivate Claude Code mode and re-enable Alt+Click via xterm.js
+   */
+  private deactivateClaudeCodeMode(): void {
+    if (this.claudeCodeState.isActive) {
+      const terminalId = this.claudeCodeState.terminalId || '';
+
+      this.claudeCodeState = {
+        isActive: false,
+      };
+
+      // VS Code approach: Re-enable Alt+Click at xterm.js level
+      this.setAltClickForAllTerminals(this.isVSCodeAltClickEnabled());
+
+      log('🤖 [CLAUDE-CODE] Claude Code mode deactivated, Alt+Click re-enabled via xterm.js');
+      this.emitTerminalInteractionEvent('claude-code-end', terminalId);
+      this.showClaudeCodeNotification(false);
+    }
+  }
+
+  /**
+   * Set Alt+Click setting for all terminals at xterm.js level
+   */
+  private setAltClickForAllTerminals(enabled: boolean): void {
+    // Update all existing terminals
+    this.splitManager.getTerminals().forEach((terminalData, terminalId) => {
+      if (terminalData.terminal && terminalData.terminal.options) {
+        terminalData.terminal.options.altClickMovesCursor = enabled;
+        log(`⌨️ [CLAUDE-CODE] Set Alt+Click for terminal ${terminalId}: ${enabled}`);
+      }
+    });
+
+    // Update main terminal if it exists
+    if (this.terminal && this.terminal.options) {
+      this.terminal.options.altClickMovesCursor = enabled;
+      log(`⌨️ [CLAUDE-CODE] Set Alt+Click for main terminal: ${enabled}`);
+    }
+  }
+
+  /**
+   * Show notification about Claude Code state
+   */
+  private showClaudeCodeNotification(isActive: boolean): void {
+    if (isActive) {
+      showClaudeCodeDetected();
+    } else {
+      showClaudeCodeEnded();
+    }
+
+    // Also show subtle notification in the terminal for immediate context
+    const message = isActive
+      ? 'Claude Code detected - Alt+Click temporarily disabled'
+      : 'Claude Code ended - Alt+Click re-enabled';
+    this.showNotificationInTerminal(message, isActive ? 'info' : 'success');
+  }
+
+  /**
+   * Show notification in terminal overlay
+   */
+  private showNotificationInTerminal(message: string, type: 'info' | 'success' | 'warning'): void {
+    const terminalBody = document.getElementById('terminal-body');
+    if (!terminalBody) return;
+
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `claude-code-notification ${type}`;
+    notification.textContent = message;
+    notification.style.cssText = `
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-family: monospace;
+      z-index: 1000;
+      max-width: 300px;
+      opacity: 0.9;
+      transition: opacity 0.3s ease;
+      ${type === 'info' ? 'background: rgba(0, 122, 255, 0.8); color: white;' : ''}
+      ${type === 'success' ? 'background: rgba(40, 167, 69, 0.8); color: white;' : ''}
+      ${type === 'warning' ? 'background: rgba(255, 193, 7, 0.8); color: black;' : ''}
+    `;
+
+    // Remove existing notification
+    const existingNotification = terminalBody.querySelector('.claude-code-notification');
+    if (existingNotification) {
+      existingNotification.remove();
+    }
+
+    // Add new notification
+    terminalBody.appendChild(notification);
+
+    // Auto-remove after 3 seconds
+    setTimeout(() => {
+      if (notification.parentElement) {
+        notification.style.opacity = '0';
+        setTimeout(() => {
+          if (notification.parentElement) {
+            notification.remove();
+          }
+        }, 300);
+      }
+    }, 3000);
+  }
+
+  /**
+   * Emit terminal interaction event for logging
+   */
+  private emitTerminalInteractionEvent(
+    type: TerminalInteractionEvent['type'],
+    terminalId: string,
+    data?: unknown
+  ): void {
+    const event: TerminalInteractionEvent = {
+      type,
+      terminalId,
+      timestamp: Date.now(),
+      data,
+    };
+
+    log(`📊 [INTERACTION] Event: ${type}`, event);
   }
 
   public debouncedResize(cols: number, rows: number): void {
@@ -836,9 +1084,9 @@ class TerminalWebviewManager {
    * Shows visual cursor indication when Alt key is pressed to indicate Alt+Click functionality
    */
   private setupAltKeyVisualFeedback(): void {
-    log('⌨️ [WEBVIEW] Setting up Alt key visual feedback');
+    log('⌨️ [WEBVIEW] Setting up VS Code standard Alt key visual feedback');
 
-    // Add CSS for Alt key visual feedback and cursor position feedback
+    // Add CSS for VS Code standard Alt key visual feedback
     const style = document.createElement('style');
     style.textContent = `
       /* VS Code standard: Show default cursor when Alt is pressed to indicate Alt+Click functionality */
@@ -851,23 +1099,6 @@ class TerminalWebviewManager {
       .alt-active .xterm {
         cursor: default !important;
       }
-      
-      /* Cursor position feedback (VS Code standard) */
-      .cursor-position-feedback {
-        position: absolute;
-        background: rgba(0, 122, 255, 0.3);
-        border: 1px solid rgba(0, 122, 255, 0.6);
-        border-radius: 2px;
-        pointer-events: none;
-        z-index: 1000;
-        animation: cursor-feedback-fade 1s ease-out forwards;
-      }
-      
-      @keyframes cursor-feedback-fade {
-        0% { opacity: 0.8; transform: scale(1.2); }
-        50% { opacity: 0.6; transform: scale(1.0); }
-        100% { opacity: 0; transform: scale(0.8); }
-      }
     `;
     document.head.appendChild(style);
 
@@ -879,7 +1110,7 @@ class TerminalWebviewManager {
       if (event.altKey && !isAltPressed) {
         isAltPressed = true;
         document.body.classList.add('alt-active');
-        log('⌨️ [ALT] Alt key pressed - showing cursor feedback');
+        log('⌨️ [ALT] Alt key pressed - showing VS Code standard cursor feedback');
       }
     });
 
@@ -900,59 +1131,6 @@ class TerminalWebviewManager {
         log('⌨️ [ALT] Window lost focus - resetting Alt state');
       }
     });
-
-    // Add Alt+Click cursor position feedback
-    this.setupCursorPositionFeedback();
-  }
-
-  /**
-   * Setup cursor position feedback for Alt+Click (VS Code standard)
-   */
-  private setupCursorPositionFeedback(): void {
-    log('🎯 [CURSOR] Setting up cursor position feedback');
-
-    // Listen for Alt+Click events on terminal elements
-    document.addEventListener('click', (event) => {
-      if (event.altKey && this.getAltClickMovesCursorSetting()) {
-        this.showCursorPositionFeedback(event);
-      }
-    });
-  }
-
-  /**
-   * Show visual feedback for cursor position after Alt+Click
-   */
-  private showCursorPositionFeedback(event: MouseEvent): void {
-    const target = event.target as HTMLElement;
-    const terminalElement = target.closest('.xterm-screen') || target.closest('.xterm-viewport');
-
-    if (terminalElement) {
-      log('🎯 [CURSOR] Showing cursor position feedback');
-
-      // Create feedback element
-      const feedback = document.createElement('div');
-      feedback.className = 'cursor-position-feedback';
-
-      // Position feedback at click location
-      const rect = terminalElement.getBoundingClientRect();
-      const x = event.clientX - rect.left;
-      const y = event.clientY - rect.top;
-
-      feedback.style.left = `${x - 2}px`;
-      feedback.style.top = `${y - 2}px`;
-      feedback.style.width = '4px';
-      feedback.style.height = '16px';
-
-      // Add to terminal element
-      terminalElement.appendChild(feedback);
-
-      // Remove feedback after animation
-      setTimeout(() => {
-        if (feedback.parentElement) {
-          feedback.parentElement.removeChild(feedback);
-        }
-      }, 1000);
-    }
   }
 
   public setActiveTerminalId(terminalId: string): void {
@@ -1010,10 +1188,10 @@ class TerminalWebviewManager {
   }
 
   /**
-   * Get Alt+Click cursor positioning setting (VS Code standard)
-   * VS Code logic: altClickMovesCursor && multiCursorModifier === 'alt'
+   * Check if VS Code Alt+Click cursor positioning should be enabled (VS Code standard)
+   * VS Code logic: terminal.integrated.altClickMovesCursor && editor.multiCursorModifier === 'alt'
    */
-  private getAltClickMovesCursorSetting(): boolean {
+  private isVSCodeAltClickEnabled(): boolean {
     const altClickSetting = this.currentSettings.altClickMovesCursor;
     const multiCursorModifier = this.currentSettings.multiCursorModifier;
 
@@ -1023,10 +1201,31 @@ class TerminalWebviewManager {
 
     const result = altClickEnabled && multiCursorIsAlt;
     log(
-      `⌨️ [ALT-CLICK] Setting check: altClick=${altClickEnabled}, multiCursor=${multiCursorModifier}, result=${result}`
+      `⌨️ [VS-CODE-ALT-CLICK] Setting check: terminal.integrated.altClickMovesCursor=${altClickEnabled}, editor.multiCursorModifier=${multiCursorModifier}, enabled=${result}`
     );
 
     return result;
+  }
+
+  /**
+   * Update xterm.js altClickMovesCursor setting dynamically (VS Code standard)
+   */
+  private updateAltClickSetting(): void {
+    const isEnabled = this.isVSCodeAltClickEnabled();
+
+    // Update all existing terminals
+    this.splitManager.getTerminals().forEach((terminalData, terminalId) => {
+      if (terminalData.terminal && terminalData.terminal.options) {
+        terminalData.terminal.options.altClickMovesCursor = isEnabled;
+        log(`⌨️ [UPDATE] Updated Alt+Click setting for terminal ${terminalId}: ${isEnabled}`);
+      }
+    });
+
+    // Update main terminal if it exists
+    if (this.terminal && this.terminal.options) {
+      this.terminal.options.altClickMovesCursor = isEnabled;
+      log(`⌨️ [UPDATE] Updated Alt+Click setting for main terminal: ${isEnabled}`);
+    }
   }
 
   /**
@@ -1052,10 +1251,13 @@ class TerminalWebviewManager {
           if (element && !element.hasAttribute('data-terminal-click-handler')) {
             element.setAttribute('data-terminal-click-handler', terminalId);
             element.addEventListener('click', (event) => {
-              // Prevent event bubbling to avoid double handling
-              event.stopPropagation();
+              // VS Code standard: Only prevent bubbling for non-Alt clicks
+              // Allow Alt+Click events to reach xterm.js for cursor positioning
+              if (!(event as MouseEvent).altKey) {
+                event.stopPropagation();
+              }
 
-              // VS Code standard: Only handle focus, let xterm.js handle Alt+Click cursor positioning
+              // VS Code standard: Handle focus management
               this.ensureTerminalFocus(terminalId);
 
               if (this.activeTerminalId !== terminalId) {
@@ -1064,7 +1266,7 @@ class TerminalWebviewManager {
             });
 
             log(
-              `✅ [XTERM-CLICK] Added click handler to xterm element ${index} for terminal: ${terminalId}`
+              `✅ [XTERM-CLICK] Added VS Code standard click handler to xterm element ${index} for terminal: ${terminalId}`
             );
           }
         });
@@ -1120,18 +1322,6 @@ class TerminalWebviewManager {
         terminal.options.fontSize = settings.fontSize;
         terminal.options.fontFamily = settings.fontFamily;
         terminal.options.cursorBlink = settings.cursorBlink;
-        // Note: altClickMovesCursor cannot be changed after terminal creation in xterm.js
-        // This setting will only apply to newly created terminals
-        // However, we can log the current setting evaluation for debugging
-        if (
-          settings.altClickMovesCursor !== undefined ||
-          settings.multiCursorModifier !== undefined
-        ) {
-          const effectiveAltClick = this.getAltClickMovesCursorSetting();
-          log(
-            `⌨️ [SETTINGS] Alt+Click setting updated: ${effectiveAltClick} (applies to new terminals only)`
-          );
-        }
 
         // Apply theme if needed
         if (settings.theme && settings.theme !== 'auto') {
@@ -1151,24 +1341,17 @@ class TerminalWebviewManager {
       }
     });
 
+    // Update Alt+Click settings if they changed
+    if (settings.altClickMovesCursor !== undefined || settings.multiCursorModifier !== undefined) {
+      this.updateAltClickSetting();
+    }
+
     // Also apply to the main terminal if it exists
     if (this.terminal) {
       const terminal = this.terminal;
       terminal.options.fontSize = settings.fontSize;
       terminal.options.fontFamily = settings.fontFamily;
       terminal.options.cursorBlink = settings.cursorBlink;
-      // Note: altClickMovesCursor cannot be changed after terminal creation in xterm.js
-      // This setting will only apply to newly created terminals
-      // However, we can log the current setting evaluation for debugging
-      if (
-        settings.altClickMovesCursor !== undefined ||
-        settings.multiCursorModifier !== undefined
-      ) {
-        const effectiveAltClick = this.getAltClickMovesCursorSetting();
-        log(
-          `⌨️ [SETTINGS] Alt+Click setting updated: ${effectiveAltClick} (applies to new terminals only)`
-        );
-      }
 
       if (settings.theme && settings.theme !== 'auto') {
         terminal.options.theme =

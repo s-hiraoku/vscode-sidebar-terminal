@@ -101,3 +101,23 @@ export interface TerminalEvent {
   data?: string;
   exitCode?: number;
 }
+
+export interface ClaudeCodeState {
+  isActive: boolean;
+  terminalId?: string;
+  startTime?: number;
+  outputVolume?: number;
+}
+
+export interface AltClickState {
+  isEnabled: boolean;
+  isTemporarilyDisabled: boolean;
+  disableReason?: string;
+}
+
+export interface TerminalInteractionEvent {
+  type: 'alt-click' | 'output-detected' | 'claude-code-start' | 'claude-code-end';
+  terminalId: string;
+  timestamp: number;
+  data?: unknown;
+}

@@ -167,6 +167,50 @@ Configuration values are accessed via `vscode.workspace.getConfiguration('sideba
 - Direct writes for specific terminal IDs to avoid cross-terminal interference
 - Immediate flush for large outputs (≥1000 chars) to maintain cursor accuracy
 
+## Alt+Click Cursor Positioning
+
+### Overview
+This extension implements VS Code standard Alt+Click cursor positioning with intelligent conflict detection for Claude Code interactions.
+
+### Current Limitations
+- **Claude Code Interference**: Alt+Click may not work reliably during Claude Code execution due to:
+  - High-frequency output causing cursor position desynchronization
+  - Raw mode terminal conflicts with xterm.js Alt+Click implementation
+  - Escape sequences being output directly instead of cursor positioning
+
+### Intelligent Conflict Resolution
+The extension automatically detects Claude Code activity and temporarily disables Alt+Click during:
+- Claude Code execution sessions (detected by output patterns)
+- High-frequency terminal output (>500 chars in 2 seconds)
+- Large output chunks (≥1000 characters)
+
+### User Experience
+- **Visual Feedback**: When Alt+Click is disabled, users see:
+  - "⚡ Claude Code Active" tooltip at click location
+  - System notification explaining the temporary disable state
+  - Re-enablement notification when Claude Code session ends
+
+### Configuration Requirements
+Alt+Click requires both VS Code settings to be enabled:
+```json
+{
+  "terminal.integrated.altClickMovesCursor": true,
+  "editor.multiCursorModifier": "alt"
+}
+```
+
+### Best Practices
+1. **Regular Terminal Use**: Alt+Click works normally for standard shell commands
+2. **Claude Code Sessions**: Alt+Click is temporarily disabled for optimal performance
+3. **Manual Re-enable**: Alt+Click automatically re-enables after Claude Code detection ends
+4. **Troubleshooting**: Check VS Code Developer Console for Alt+Click event logs
+
+### Technical Implementation
+- **Detection Patterns**: Uses regex patterns to identify Claude Code output
+- **Buffer Optimization**: Claude Code output uses 4ms flush intervals vs 16ms normal
+- **State Management**: Tracks Claude Code activity and Alt+Click availability
+- **Error Handling**: Graceful fallback with user notifications
+
 ### Recent Architecture Changes
 
 **Configuration Flow**
