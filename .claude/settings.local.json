@@ -39,7 +39,8 @@
       "Bash(npm run format:*)",
       "Bash(npm run:*)",
       "Bash(git push:*)",
-      "Bash(git pull:*)"
+      "Bash(git pull:*)",
+      "Bash(gh issue view:*)"
     ],
     "deny": []
   }

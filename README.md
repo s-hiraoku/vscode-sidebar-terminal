@@ -7,6 +7,34 @@
 
 A powerful VS Code extension that displays a terminal in the sidebar for efficient development workflow. Seamlessly integrated into the Primary Sidebar (left side) alongside other views.
 
+## 📸 Screenshots
+
+### Main Interface
+![Main Interface](./docs/images/screenshots/main-interface.png)
+*Terminal integrated into VS Code sidebar with multiple tabs and controls*
+
+### Multiple Terminals
+![Multiple Terminals](./docs/images/screenshots/multiple-terminals.png)
+*Manage multiple terminal sessions with easy tab switching*
+
+### Split Terminal View
+![Split Terminal](./docs/images/screenshots/split-terminal.png)
+*Split terminal functionality for parallel command execution*
+
+## 🎬 Demos
+
+### Basic Usage
+![Basic Usage](./docs/images/gifs/basic-usage.gif)
+*Quick demonstration of opening terminal and running commands*
+
+### Terminal Management
+![Terminal Management](./docs/images/gifs/terminal-management.gif)
+*Creating, switching, and managing multiple terminals*
+
+### Settings Configuration
+![Settings Demo](./docs/images/gifs/settings-demo.gif)
+*Customizing font size, theme, and other settings*
+
 ## 🚀 Features
 
 - **Sidebar Integration**: Terminal integrated into Primary Sidebar (left side)
