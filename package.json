@@ -296,7 +296,7 @@
     "chai": "^5.2.1",
     "css-loader": "^7.1.2",
     "eslint": "^8.56.0",
-    "eslint-config-prettier": "^9.1.0",
+    "eslint-config-prettier": "^10.0.0",
     "eslint-plugin-prettier": "^5.1.2",
     "glob": "^10.3.10",
     "jsdom": "^26.1.0",
