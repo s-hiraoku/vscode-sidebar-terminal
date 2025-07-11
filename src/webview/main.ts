@@ -136,10 +136,10 @@ class TerminalWebviewManager {
     this.terminalContainer = container;
 
     // Add terminal container class for border styling
-    container.className = 'terminal-container';
+    container.className = 'terminal-container active'; // Start as active
     container.setAttribute('data-terminal-id', 'primary');
 
-    // Style the container
+    // Style the container (let CSS classes handle borders)
     container.style.cssText = `
       display: flex;
       flex-direction: column;
@@ -150,8 +150,6 @@ class TerminalWebviewManager {
       margin: 0;
       padding: 0;
       gap: 0;
-      border: 1px solid transparent;
-      transition: border-color 0.2s ease-in-out;
     `;
 
     // Add placeholder content
@@ -185,8 +183,8 @@ class TerminalWebviewManager {
   }
 
   public createTerminal(id: string, name: string, _config: TerminalConfig): void {
-    this.setActiveTerminalId(id);
     log('🎯 [WEBVIEW] Creating terminal:', id, name);
+    // Don't set active here - it will be set after the terminal is stored
 
     if (!this.terminalContainer) {
       // Try to get the container again
@@ -250,7 +248,7 @@ class TerminalWebviewManager {
       // Register the container with split manager
       this.splitManager.getTerminalContainers().set(id, terminalDiv);
 
-      // Apply flex-based styling to the new terminal
+      // Apply flex-based styling to the new terminal (let CSS classes handle borders)
       terminalDiv.style.cssText = `
         width: 100%; 
         flex: 1;
@@ -260,7 +258,6 @@ class TerminalWebviewManager {
         margin: 0;
         padding: 2px;
         min-height: 100px;
-        border: none;
         outline: none;
       `;
       log(`📐 [MAIN] Applied flex layout for terminal ${id}`);
@@ -271,18 +268,16 @@ class TerminalWebviewManager {
       );
 
       this.splitManager.getTerminalContainers().forEach((container, terminalId) => {
-        container.style.cssText = `
-          width: 100%; 
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          overflow: hidden;
-          margin: 0;
-          padding: 2px;
-          min-height: 100px;
-          border: none;
-          outline: none;
-        `;
+        // Update only necessary styles, don't override border styles
+        container.style.width = '100%';
+        container.style.flex = '1';
+        container.style.display = 'flex';
+        container.style.flexDirection = 'column';
+        container.style.overflow = 'hidden';
+        container.style.margin = '0';
+        container.style.padding = '2px';
+        container.style.minHeight = '100px';
+        container.style.outline = 'none';
 
         log(`📐 [MAIN] Applied flex layout to terminal ${terminalId}`);
 
@@ -443,20 +438,18 @@ class TerminalWebviewManager {
 
     this.setActiveTerminalId(id);
 
-    // Apply consistent flex styling to all terminals
+    // Apply consistent flex styling to all terminals (preserve CSS border classes)
     this.splitManager.getTerminalContainers().forEach((container, _terminalId) => {
-      container.style.cssText = `
-        width: 100%; 
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-        min-height: 100px;
-        margin: 0;
-        padding: 2px;
-        border: none;
-        outline: none;
-      `;
+      // Update only necessary styles, don't override border styles
+      container.style.width = '100%';
+      container.style.flex = '1';
+      container.style.display = 'flex';
+      container.style.flexDirection = 'column';
+      container.style.overflow = 'hidden';
+      container.style.minHeight = '100px';
+      container.style.margin = '0';
+      container.style.padding = '2px';
+      container.style.outline = 'none';
     });
 
     // Focus the active terminal and ensure proper fit
@@ -595,19 +588,16 @@ class TerminalWebviewManager {
     remainingTerminals.forEach((terminalId) => {
       const container = this.splitManager.getTerminalContainers().get(terminalId);
       if (container) {
-        // Apply unified flex styling to all remaining terminals
-        container.style.cssText = `
-          width: 100%; 
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          overflow: hidden;
-          min-height: 100px;
-          margin: 0;
-          padding: 2px;
-          border: none;
-          outline: none;
-        `;
+        // Apply unified flex styling to all remaining terminals (preserve CSS border classes)
+        container.style.width = '100%';
+        container.style.flex = '1';
+        container.style.display = 'flex';
+        container.style.flexDirection = 'column';
+        container.style.overflow = 'hidden';
+        container.style.minHeight = '100px';
+        container.style.margin = '0';
+        container.style.padding = '2px';
+        container.style.outline = 'none';
         log(`🗑️ [WEBVIEW] Updated terminal ${terminalId} with flex layout`);
       }
     });
@@ -678,18 +668,16 @@ class TerminalWebviewManager {
     remainingTerminals.forEach((terminalId) => {
       const terminalContainer = this.splitManager.getTerminalContainers().get(terminalId);
       if (terminalContainer) {
-        terminalContainer.style.cssText = `
-          width: 100%; 
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          overflow: hidden;
-          min-height: 100px;
-          margin: 0;
-          padding: 2px;
-          border: none;
-          outline: none;
-        `;
+        // Update only necessary styles, don't override border styles
+        terminalContainer.style.width = '100%';
+        terminalContainer.style.flex = '1';
+        terminalContainer.style.display = 'flex';
+        terminalContainer.style.flexDirection = 'column';
+        terminalContainer.style.overflow = 'hidden';
+        terminalContainer.style.minHeight = '100px';
+        terminalContainer.style.margin = '0';
+        terminalContainer.style.padding = '2px';
+        terminalContainer.style.outline = 'none';
       }
     });
 
@@ -1167,10 +1155,9 @@ class TerminalWebviewManager {
   private updateTerminalBorders(activeTerminalId: string): void {
     try {
       // Get all terminal containers
-      const allTerminals = this.splitManager.getTerminals();
+      const allContainers = this.splitManager.getTerminalContainers();
       
-      allTerminals.forEach((terminalData, terminalId) => {
-        const container = terminalData.container;
+      allContainers.forEach((container, terminalId) => {
         if (!container) return;
 
         // Remove existing border classes
@@ -1185,6 +1172,16 @@ class TerminalWebviewManager {
           log(`⚪ [BORDER] Added inactive border to terminal: ${terminalId}`);
         }
       });
+
+      // Also update for the main terminal-body if it's the initial terminal
+      const terminalBody = document.getElementById('terminal-body');
+      if (terminalBody && terminalBody.classList.contains('terminal-container')) {
+        terminalBody.classList.remove('active', 'inactive');
+        if (activeTerminalId === 'primary' || allContainers.size === 0) {
+          terminalBody.classList.add('active');
+          log(`🔵 [BORDER] Added active border to primary terminal body`);
+        }
+      }
 
       // Also update terminal panes if in split mode
       if (this.splitManager.getIsSplitMode()) {
