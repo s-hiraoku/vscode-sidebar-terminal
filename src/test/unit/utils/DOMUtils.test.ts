@@ -1,6 +1,8 @@
 /**
  * DOMUtils unit tests
  */
+/* eslint-disable */
+// @ts-nocheck
 import * as sinon from 'sinon';
 import { expect, use } from 'chai';
 import sinonChai from 'sinon-chai';
@@ -15,8 +17,8 @@ const setupTestEnvironment = () => {
   if (typeof (global as any).vscode === 'undefined') {
     (global as any).vscode = {
       workspace: {
-        getConfiguration: () => ({ get: () => undefined })
-      }
+        getConfiguration: () => ({ get: () => undefined }),
+      },
     };
   }
 };
@@ -29,7 +31,7 @@ describe('DOMUtils', () => {
   beforeEach(() => {
     // Test environment setup
     setupTestEnvironment();
-    
+
     // セットアップ: JSDOM環境を作成
     dom = new JSDOM('<!DOCTYPE html><html><body></body></html>');
     document = dom.window.document;

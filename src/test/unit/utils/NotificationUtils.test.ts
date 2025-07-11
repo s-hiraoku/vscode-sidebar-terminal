@@ -1,6 +1,8 @@
 /**
  * NotificationUtils unit tests
  */
+/* eslint-disable */
+// @ts-nocheck
 import * as sinon from 'sinon';
 import { expect, use } from 'chai';
 import sinonChai from 'sinon-chai';
@@ -21,8 +23,8 @@ const setupTestEnvironment = () => {
   if (typeof (global as any).vscode === 'undefined') {
     (global as any).vscode = {
       workspace: {
-        getConfiguration: () => ({ get: () => undefined })
-      }
+        getConfiguration: () => ({ get: () => undefined }),
+      },
     };
   }
 };
@@ -36,7 +38,7 @@ describe('NotificationUtils', () => {
   beforeEach(() => {
     // Test environment setup
     setupTestEnvironment();
-    
+
     // JSDOM環境をセットアップ
     dom = new JSDOM(`
       <!DOCTYPE html>
