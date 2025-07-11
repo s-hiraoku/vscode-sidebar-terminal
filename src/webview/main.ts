@@ -393,10 +393,14 @@ class TerminalWebviewManager {
 
       // Handle terminal focus events for border updates
       // Note: xterm.js doesn't have onFocus, we'll handle focus via DOM events
-      terminalDiv.addEventListener('focus', () => {
-        log(`🔵 [FOCUS] Terminal ${id} received focus - updating borders`);
-        this.setActiveTerminalId(id);
-      }, true);
+      terminalDiv.addEventListener(
+        'focus',
+        () => {
+          log(`🔵 [FOCUS] Terminal ${id} received focus - updating borders`);
+          this.setActiveTerminalId(id);
+        },
+        true
+      );
 
       // Handle resize
       terminal.onResize((size) => {
@@ -1144,7 +1148,7 @@ class TerminalWebviewManager {
   public setActiveTerminalId(terminalId: string): void {
     this.activeTerminalId = terminalId;
     log('🎯 [WEBVIEW] Active terminal ID set to:', terminalId);
-    
+
     // Update terminal borders to highlight active terminal
     this.updateTerminalBorders(terminalId);
   }
@@ -1156,13 +1160,13 @@ class TerminalWebviewManager {
     try {
       // Get all terminal containers
       const allContainers = this.splitManager.getTerminalContainers();
-      
+
       allContainers.forEach((container, terminalId) => {
         if (!container) return;
 
         // Remove existing border classes
         container.classList.remove('active', 'inactive');
-        
+
         // Add appropriate border class
         if (terminalId === activeTerminalId) {
           container.classList.add('active');
@@ -1198,18 +1202,18 @@ class TerminalWebviewManager {
   private updateSplitTerminalBorders(activeTerminalId: string): void {
     try {
       const panes = document.querySelectorAll('.terminal-pane');
-      
+
       panes.forEach((pane) => {
         const paneElement = pane as HTMLElement;
         const terminalContainer = paneElement.querySelector('[data-terminal-id]') as HTMLElement;
-        
+
         if (!terminalContainer) return;
-        
+
         const terminalId = terminalContainer.getAttribute('data-terminal-id');
-        
+
         // Remove existing classes
         paneElement.classList.remove('active', 'inactive');
-        
+
         // Add appropriate class
         if (terminalId === activeTerminalId) {
           paneElement.classList.add('active');
