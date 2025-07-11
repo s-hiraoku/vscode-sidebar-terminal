@@ -312,7 +312,7 @@
     "typescript": "^5.3.3",
     "vscode-test": "^1.6.1",
     "webpack": "^5.89.0",
-    "webpack-cli": "^5.1.4"
+    "webpack-cli": "^6.0.0"
   },
   "dependencies": {
     "node-pty": "^1.0.0",
