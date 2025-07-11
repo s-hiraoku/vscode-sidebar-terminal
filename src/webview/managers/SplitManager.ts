@@ -10,6 +10,7 @@ export interface TerminalInstance {
   terminal: Terminal;
   fitAddon: FitAddon;
   name: string;
+  container?: HTMLElement;
 }
 
 export class SplitManager {
@@ -151,7 +152,8 @@ export class SplitManager {
   public createSplitTerminalContainer(id: string, name: string, height: number): HTMLElement {
     const container = document.createElement('div');
     container.id = `split-terminal-${id}`;
-    container.className = 'split-terminal-container';
+    container.className = 'split-terminal-container terminal-container';
+    container.setAttribute('data-terminal-id', id);
 
     // Simple: use the calculated height directly
     container.style.cssText = `
@@ -162,6 +164,8 @@ export class SplitManager {
       overflow: hidden;
       border-bottom: 1px solid var(--vscode-widget-border, #454545);
       flex-shrink: 0;
+      border: 1px solid transparent;
+      transition: border-color 0.2s ease-in-out;
     `;
 
     // Create terminal header (small, fixed height)

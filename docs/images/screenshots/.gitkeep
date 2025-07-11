@@ -1,0 +1,19 @@
+# Screenshots Directory
+
+This directory will contain PNG screenshots of the VS Code Sidebar Terminal extension.
+
+## Planned Screenshots:
+
+1. **main-interface.png** - Main terminal interface in VS Code sidebar
+2. **multiple-terminals.png** - Multiple terminal tabs demonstration
+3. **split-terminal.png** - Split terminal functionality
+4. **settings-panel.png** - Settings configuration panel
+5. **theme-variations.png** - Light and dark theme comparison
+
+## Recording Notes:
+
+- Use 1920x1080 resolution or higher
+- Ensure clear, readable text
+- Show realistic terminal usage
+- Maintain consistent VS Code theme
+- Include UI elements like buttons and badges

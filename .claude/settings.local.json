@@ -36,7 +36,11 @@
       "Bash(rg:*)",
       "mcp__context7__resolve-library-id",
       "mcp__context7__get-library-docs",
-      "Bash(npm run format:*)"
+      "Bash(npm run format:*)",
+      "Bash(npm run:*)",
+      "Bash(git push:*)",
+      "Bash(git pull:*)",
+      "Bash(gh issue view:*)"
     ],
     "deny": []
   }

@@ -561,6 +561,46 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
                 position: relative;
             }
             
+            /* Terminal active border styles */
+            .terminal-container {
+                position: relative;
+                width: 100%;
+                height: 100%;
+                border: 1px solid transparent;
+                transition: border-color 0.2s ease-in-out;
+            }
+            
+            .terminal-container.active {
+                border-color: var(--vscode-focusBorder, #007acc);
+                border-width: 1px;
+                border-style: solid;
+            }
+            
+            .terminal-container.inactive {
+                border-color: transparent;
+            }
+            
+            /* Terminal pane border styles */
+            .terminal-pane {
+                position: relative;
+                background: #000;
+                min-width: 200px;
+                min-height: 100px;
+                display: flex;
+                flex-direction: column;
+                border: 1px solid transparent;
+                transition: border-color 0.2s ease-in-out;
+            }
+            
+            .terminal-pane.active {
+                border-color: var(--vscode-focusBorder, #007acc);
+            }
+            
+            .terminal-pane.inactive {
+                border-color: var(--vscode-widget-border, #454545);
+                opacity: 0.8;
+            }
+            
             /* XTerm.js container fixes */
             .xterm {
                 margin: 0 !important;
