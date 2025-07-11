@@ -1,7 +1,7 @@
 {
   "name": "vscode-sidebar-terminal",
   "displayName": "Sidebar Terminal",
-  "description": "A VS Code extension that displays a terminal in the sidebar for efficient development workflow.",
+  "description": "A powerful VS Code extension that displays a fully-featured terminal in the sidebar with split support, Alt+Click cursor positioning, and multi-platform compatibility.",
   "version": "0.0.1",
   "publisher": "s-hiraoku",
   "engines": {
@@ -10,7 +10,7 @@
   },
   "categories": [
     "Other",
-    "Terminal"
+    "Debuggers"
   ],
   "keywords": [
     "terminal",
@@ -22,7 +22,15 @@
     "development",
     "productivity",
     "xterm",
-    "pty"
+    "pty",
+    "split terminal",
+    "multi-terminal",
+    "alt click",
+    "cursor positioning",
+    "ime support",
+    "japanese input",
+    "cross platform",
+    "node-pty"
   ],
   "icon": "resources/icon.png",
   "galleryBanner": {
@@ -38,10 +46,9 @@
   },
   "homepage": "https://github.com/s-hiraoku/vscode-sidebar-terminal#readme",
   "license": "MIT",
+  "qna": "https://github.com/s-hiraoku/vscode-sidebar-terminal/discussions",
+  "preview": false,
   "main": "./dist/extension.js",
-  "activationEvents": [
-    "onView:sidebarTerminal"
-  ],
   "contributes": {
     "viewsContainers": {
       "activitybar": [
