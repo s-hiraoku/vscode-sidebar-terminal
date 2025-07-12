@@ -1,7 +1,7 @@
 {
   "require": [
     "source-map-support/register",
-    "/workspaces/vscode-sidebar-terminal/out/test/shared/TestSetup.js"
+    "out/test/shared/TestSetup.js"
   ],
   "timeout": 10000,
   "recursive": true,
