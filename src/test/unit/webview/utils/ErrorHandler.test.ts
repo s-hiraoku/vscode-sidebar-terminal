@@ -176,10 +176,7 @@ describe('ErrorHandler', () => {
 
       errorHandler.handleTerminalError(error, 'destroy');
 
-      expect(consoleErrorStub).to.have.been.calledWith(
-        '[TERMINAL ERROR]',
-        'Terminal destruction failed'
-      );
+      expect(consoleErrorStub).to.have.been.calledWith('[TERMINAL_ERROR] destroy:', error);
     });
 
     it('should include action context in error message', () => {
@@ -187,77 +184,65 @@ describe('ErrorHandler', () => {
 
       errorHandler.handleTerminalError(error, 'split');
 
-      expect(consoleErrorStub).to.have.been.calledWith('[TERMINAL ERROR]', 'Action failed');
+      expect(consoleErrorStub).to.have.been.calledWith('[TERMINAL_ERROR] split:', error);
     });
   });
 
-  describe('handleWebviewError method', () => {
+  describe('handleCommunicationError method', () => {
     it('should handle webview communication error', () => {
       const error = new Error('Webview communication failed');
 
-      errorHandler.handleWebviewError(error, 'communication');
+      errorHandler.handleCommunicationError(error, 'communication');
 
       expect(consoleErrorStub).to.have.been.calledWith(
-        '[WEBVIEW ERROR]',
-        'Webview communication failed'
+        '[COMMUNICATION_ERROR] communication:',
+        error
       );
     });
 
     it('should handle webview initialization error', () => {
       const error = new Error('Webview initialization failed');
 
-      errorHandler.handleWebviewError(error, 'initialization');
+      errorHandler.handleCommunicationError(error, 'initialization');
 
       expect(consoleErrorStub).to.have.been.calledWith(
-        '[WEBVIEW ERROR]',
-        'Webview initialization failed'
+        '[COMMUNICATION_ERROR] initialization:',
+        error
       );
     });
 
     it('should handle webview rendering error', () => {
       const error = new Error('Webview rendering failed');
 
-      errorHandler.handleWebviewError(error, 'rendering');
+      errorHandler.handleCommunicationError(error, 'rendering');
 
-      expect(consoleErrorStub).to.have.been.calledWith(
-        '[WEBVIEW ERROR]',
-        'Webview rendering failed'
-      );
+      expect(consoleErrorStub).to.have.been.calledWith('[COMMUNICATION_ERROR] rendering:', error);
     });
   });
 
-  describe('handleConfigurationError method', () => {
+  describe('handleSettingsError method', () => {
     it('should handle configuration loading error', () => {
       const error = new Error('Configuration loading failed');
 
-      errorHandler.handleConfigurationError(error, 'load');
+      errorHandler.handleSettingsError(error, 'load');
 
-      expect(consoleErrorStub).to.have.been.calledWith(
-        '[CONFIG ERROR]',
-        'Configuration loading failed'
-      );
+      expect(consoleErrorStub).to.have.been.calledWith('[SETTINGS_ERROR] load:', error);
     });
 
     it('should handle configuration validation error', () => {
       const error = new Error('Configuration validation failed');
 
-      errorHandler.handleConfigurationError(error, 'validate');
+      errorHandler.handleSettingsError(error, 'validate');
 
-      expect(consoleErrorStub).to.have.been.calledWith(
-        '[CONFIG ERROR]',
-        'Configuration validation failed'
-      );
+      expect(consoleErrorStub).to.have.been.calledWith('[SETTINGS_ERROR] validate:', error);
     });
 
     it('should handle configuration update error', () => {
       const error = new Error('Configuration update failed');
 
-      errorHandler.handleConfigurationError(error, 'update');
+      errorHandler.handleSettingsError(error, 'update');
 
-      expect(consoleErrorStub).to.have.been.calledWith(
-        '[CONFIG ERROR]',
-        'Configuration update failed'
-      );
+      expect(consoleErrorStub).to.have.been.calledWith('[SETTINGS_ERROR] update:', error);
     });
   });
 
