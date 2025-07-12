@@ -20,7 +20,7 @@ const mockVscode = {
     showInformationMessage: sinon.stub(),
     createStatusBarItem: sinon.stub(),
   },
-  StatusBarAlignment: { Left: 1 },
+  StatusBarAlignment: { Left: 1, Right: 2 },
   commands: {
     executeCommand: sinon.stub(),
   },

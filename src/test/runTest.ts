@@ -55,7 +55,17 @@ async function main(): Promise<void> {
     const extensionTestsPath = path.resolve(__dirname, './suite/index');
 
     // Download VS Code, unzip it and run the integration test
-    await runTests({ extensionDevelopmentPath, extensionTestsPath });
+    await runTests({
+      extensionDevelopmentPath,
+      extensionTestsPath,
+      launchArgs: [
+        '--headless',
+        '--disable-gpu',
+        '--disable-dev-shm-usage',
+        '--disable-software-rasterizer',
+        '--no-sandbox',
+      ],
+    });
   } catch (err) {
     console.error('Failed to run tests', err);
     process.exit(1);
