@@ -157,12 +157,12 @@ export function setupJSDOMEnvironment(htmlContent?: string): {
   // グローバルにDOM要素を設定
   (global as any).window = window;
   (global as any).document = document;
-  
+
   // navigatorは既に存在する場合があるので安全に設定
   if (!(global as any).navigator) {
     (global as any).navigator = window.navigator;
   }
-  
+
   (global as any).HTMLElement = window.HTMLElement;
   (global as any).Element = window.Element;
   (global as any).Node = window.Node;
