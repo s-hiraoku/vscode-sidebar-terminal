@@ -43,7 +43,8 @@
       "Bash(gh issue view:*)",
       "Bash(git fetch:*)",
       "Bash(gh pr create:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(vsce package:*)"
     ],
     "deny": []
   }
