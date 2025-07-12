@@ -5,6 +5,9 @@ import { expect } from 'chai';
 import * as sinon from 'sinon';
 import { JSDOM } from 'jsdom';
 
+// Import shared test setup
+import '../test-setup';
+
 // Mock VS Code API
 const mockVscode = {
   workspace: {
@@ -80,6 +83,7 @@ describe('SidebarTerminalProvider Extended', () => {
       onDidReceiveMessage: sinon.stub(),
       asWebviewUri: sinon.stub(),
       cspSource: 'vscode-webview:',
+      setState: sinon.spy(),
     };
 
     // Mock webview view
