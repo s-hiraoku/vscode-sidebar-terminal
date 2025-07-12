@@ -4,6 +4,9 @@
 import { expect } from 'chai';
 import * as sinon from 'sinon';
 import { JSDOM } from 'jsdom';
+
+// Import shared test setup
+import '../test-setup';
 import { FeedbackManager, TerminalErrorHandler } from '../../../utils/feedback';
 
 // Mock VS Code API

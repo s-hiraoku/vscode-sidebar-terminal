@@ -6,6 +6,9 @@
 import { expect } from 'chai';
 import * as sinon from 'sinon';
 import { JSDOM } from 'jsdom';
+
+// Import shared test setup
+import '../test-setup';
 import * as vscode from 'vscode';
 import {
   getTerminalConfig,
