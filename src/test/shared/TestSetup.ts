@@ -69,7 +69,10 @@ export function setupTestEnvironment(): void {
   // Mock Node.js modules
   (global as any).require = sinon.stub();
   (global as any).module = { exports: {} };
+  // Processオブジェクトを安全に拡張
+  const existingProcess = (global as any).process || process;
   (global as any).process = {
+    ...existingProcess,
     platform: 'linux',
     env: {
       NODE_ENV: 'test',
@@ -80,6 +83,9 @@ export function setupTestEnvironment(): void {
     nextTick: process.nextTick.bind(process),
     stdout: process.stdout,
     stderr: process.stderr,
+    on: process.on.bind(process),
+    removeListener: process.removeListener.bind(process),
+    removeAllListeners: process.removeAllListeners.bind(process),
   };
 
   // Mock global objects that might be needed
@@ -151,7 +157,12 @@ export function setupJSDOMEnvironment(htmlContent?: string): {
   // グローバルにDOM要素を設定
   (global as any).window = window;
   (global as any).document = document;
-  (global as any).navigator = window.navigator;
+  
+  // navigatorは既に存在する場合があるので安全に設定
+  if (!(global as any).navigator) {
+    (global as any).navigator = window.navigator;
+  }
+  
   (global as any).HTMLElement = window.HTMLElement;
   (global as any).Element = window.Element;
   (global as any).Node = window.Node;

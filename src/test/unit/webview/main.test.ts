@@ -14,7 +14,7 @@ describe('WebView Main', () => {
   let mockWebviewManager: any;
 
   beforeEach(() => {
-    setupTestEnvironment();
+    sandbox = sinon.createSandbox();
 
     // Mock console before JSDOM creation
     (global as Record<string, unknown>).console = {
