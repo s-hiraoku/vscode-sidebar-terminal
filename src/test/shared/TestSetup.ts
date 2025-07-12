@@ -69,24 +69,15 @@ export function setupTestEnvironment(): void {
   // Mock Node.js modules
   (global as any).require = sinon.stub();
   (global as any).module = { exports: {} };
-  // Processオブジェクトを安全に拡張
-  const existingProcess = (global as any).process || process;
-  (global as any).process = {
-    ...existingProcess,
-    platform: 'linux',
-    env: {
-      NODE_ENV: 'test',
-      ...process.env,
-    },
-    cwd: sinon.stub().returns('/test'),
-    exit: sinon.stub(),
-    nextTick: process.nextTick.bind(process),
-    stdout: process.stdout,
-    stderr: process.stderr,
-    on: process.on.bind(process),
-    removeListener: process.removeListener.bind(process),
-    removeAllListeners: process.removeAllListeners.bind(process),
-  };
+  // Processオブジェクトは上書きせず、必要なプロパティのみ安全に設定
+  if (!(global as any).process) {
+    (global as any).process = process;
+  }
+  
+  // テスト用の環境変数を一時的に設定（復元可能な形で）
+  if (!process.env.NODE_ENV) {
+    process.env.NODE_ENV = 'test';
+  }
 
   // Mock global objects that might be needed
   (global as any).Buffer = Buffer;
