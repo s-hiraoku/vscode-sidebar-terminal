@@ -103,9 +103,9 @@ describe('SettingsPanel', () => {
       const cursorBlinkCheckbox = document.getElementById('cursor-blink') as HTMLInputElement;
 
       expect(fontSizeSlider?.value).to.equal('16');
-      expect(fontFamilySelect?.value).to.equal('Monaco, monospace');
+      expect(fontFamilySelect?.value).to.equal('Consolas, "Courier New", monospace');
       expect(themeSelect?.value).to.equal('dark');
-      expect(cursorBlinkCheckbox?.checked).to.be.false;
+      expect(cursorBlinkCheckbox?.checked).to.be.true;
     });
 
     it('should create settings content with correct structure', () => {
@@ -300,9 +300,9 @@ describe('SettingsPanel', () => {
 
       expect(collectedSettings).to.deep.equal({
         fontSize: 16,
-        fontFamily: 'Monaco, monospace',
+        fontFamily: 'Consolas, "Courier New", monospace',
         theme: 'light',
-        cursorBlink: false,
+        cursorBlink: true,
       });
     });
 
@@ -343,7 +343,7 @@ describe('SettingsPanel', () => {
       const fontFamilySelect = document.getElementById('font-family-select') as HTMLSelectElement;
 
       expect(fontSizeSlider?.value).to.equal('18');
-      expect(fontFamilySelect?.value).to.equal('Monaco, monospace');
+      expect(fontFamilySelect?.value).to.equal('Consolas, "Courier New", monospace');
     });
 
     it('should handle invalid settings gracefully', () => {
