@@ -3,10 +3,21 @@
  * This ensures VS Code mocks are available before any module imports
  */
 
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-var-requires */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/explicit-function-return-type */
+/* eslint-disable @typescript-eslint/no-extraneous-class */
+/* eslint-disable prefer-rest-params */
+
 // Override module resolution before any imports
 const Module = require('module');
 const originalRequire = Module.prototype.require;
-const path = require('path');
 
 // Import sinon for mocking
 import * as sinon from 'sinon';
