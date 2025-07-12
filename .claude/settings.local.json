@@ -46,7 +46,8 @@
       "Bash(find:*)",
       "Bash(vsce package:*)",
       "mcp__ide__getDiagnostics",
-      "Bash(git tag:*)"
+      "Bash(git tag:*)",
+      "WebFetch(domain:www.npmjs.com)"
     ],
     "deny": []
   }
