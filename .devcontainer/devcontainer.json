@@ -9,6 +9,8 @@
     "ghcr.io/devcontainers/features/git:1": {},
     "ghcr.io/devcontainers/features/github-cli:1": {}
   },
+  "workspaceMount": "source=${localWorkspaceFolder}/..,target=/workspaces,type=bind,consistency=cached",
+  "workspaceFolder": "/workspaces/vscode-sidebar-terminal",
   "customizations": {
     "vscode": {
       "extensions": [
@@ -35,6 +37,7 @@
   },
   "forwardPorts": [],
   "postCreateCommand": "npm install && npm run compile",
+  "postStartCommand": "sudo chown node:node /workspaces",
   "remoteUser": "node",
   "mounts": [
     // 拡張機能のデバッグ時にホストのVS Codeと連携
