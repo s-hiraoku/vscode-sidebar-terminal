@@ -49,3 +49,38 @@ const mockPtyProcess = {
 const _ptyMock = {
   spawn: () => mockPtyProcess,
 };
+
+// Fix Mocha runner removeListener issue
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const originalProcess = global.process as any;
+if (originalProcess && !originalProcess.removeListener) {
+  originalProcess.removeListener =
+    originalProcess.off ||
+    function () {
+      return originalProcess;
+    };
+}
+
+// Ensure process has EventEmitter methods for Mocha compatibility
+if (originalProcess) {
+  if (!originalProcess.on) {
+    originalProcess.on = function () {
+      return originalProcess;
+    };
+  }
+  if (!originalProcess.off) {
+    originalProcess.off = function () {
+      return originalProcess;
+    };
+  }
+  if (!originalProcess.removeListener) {
+    originalProcess.removeListener = function () {
+      return originalProcess;
+    };
+  }
+  if (!originalProcess.removeAllListeners) {
+    originalProcess.removeAllListeners = function () {
+      return originalProcess;
+    };
+  }
+}

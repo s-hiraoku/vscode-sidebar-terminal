@@ -66,6 +66,31 @@ export function setupTestEnvironment(): void {
   // Mock VS Code module
   (global as any).vscode = mockVscode;
 
+  // Override module loading for vscode and node-pty
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const Module = require('module');
+  const originalRequire = Module.prototype.require;
+
+  Module.prototype.require = function (id: string) {
+    if (id === 'vscode') {
+      return mockVscode;
+    }
+    if (id === 'node-pty') {
+      return {
+        spawn: () => ({
+          pid: 1234,
+          onData: () => ({ dispose: () => {} }),
+          onExit: () => ({ dispose: () => {} }),
+          write: () => {},
+          resize: () => {},
+          kill: () => {},
+        }),
+      };
+    }
+    // eslint-disable-next-line prefer-rest-params, @typescript-eslint/no-unsafe-return
+    return originalRequire.apply(this, arguments);
+  };
+
   // Mock Node.js modules
   (global as any).require = sinon.stub();
   (global as any).module = { exports: {} };
@@ -241,6 +266,16 @@ export function cleanupTestEnvironment(sandbox?: sinon.SinonSandbox, dom?: JSDOM
   delete (global as any).document;
   delete (global as any).navigator;
 }
+
+// Fix process.removeListener issue for Mocha
+if (process && !process.removeListener) {
+  (process as any).removeListener = function () {
+    return process;
+  };
+}
+
+// Auto-setup when this module is imported
+setupTestEnvironment();
 
 /**
  * TypeScript型定義の拡張
