@@ -8,6 +8,13 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  packages: write
+  actions: write
+
 jobs:
   build:
     name: Build ${{ matrix.target }}
@@ -57,7 +64,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - name: Setup Python (for node-gyp)
@@ -109,8 +116,22 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     permissions:
       contents: write
+      issues: write
+      pull-requests: write
+      packages: write
+      actions: write
     
     steps:
+      - name: Debug GitHub context
+        run: |
+          echo "Event name: ${{ github.event_name }}"
+          echo "Ref: ${{ github.ref }}"
+          echo "Ref name: ${{ github.ref_name }}"
+          echo "Head commit: ${{ github.event.head_commit.message }}"
+          echo "GitHub token permissions: ${{ github.token }}"
+          echo "Repository: ${{ github.repository }}"
+          echo "Actor: ${{ github.actor }}"
+          
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -140,6 +161,9 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     permissions:
       contents: read
+      issues: write
+      pull-requests: write
+      packages: write
     
     steps:
       - name: Checkout code
@@ -148,7 +172,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - name: Download all artifacts

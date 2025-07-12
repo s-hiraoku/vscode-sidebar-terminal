@@ -47,7 +47,11 @@
       "Bash(vsce package:*)",
       "mcp__ide__getDiagnostics",
       "Bash(git tag:*)",
-      "WebFetch(domain:www.npmjs.com)"
+      "WebFetch(domain:www.npmjs.com)",
+      "Bash(gh api:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh run view:*)",
+      "Bash(gh run download:*)"
     ],
     "deny": []
   }
