@@ -289,7 +289,10 @@
     "vsce:package:darwin-arm64": "vsce package --target darwin-arm64",
     "vsce:package:alpine-x64": "vsce package --target alpine-x64",
     "vsce:package:alpine-arm64": "vsce package --target alpine-arm64",
-    "create-icons": "node scripts/create-icon.js"
+    "create-icons": "node scripts/create-icon.js",
+    "release:patch": "npm version patch && git push origin --follow-tags",
+    "release:minor": "npm version minor && git push origin --follow-tags",
+    "release:major": "npm version major && git push origin --follow-tags"
   },
   "devDependencies": {
     "@istanbuljs/nyc-config-typescript": "^1.0.2",

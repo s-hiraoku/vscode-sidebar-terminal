@@ -56,24 +56,38 @@ git commit -m "feat: 新機能を追加"
 git checkout for-publish
 git merge feature/new-feature
 
-# バージョンアップ
-npm version patch   # 0.1.0 → 0.1.1 (バグフィックス)
-npm version minor   # 0.1.0 → 0.2.0 (新機能)
-npm version major   # 0.1.0 → 1.0.0 (破壊的変更)
-
-# 変更をプッシュ
+# 変更をプッシュ（バージョンアップ前）
 git push origin for-publish
 ```
 
-### 3. リリース実行
+### 3. リリース実行（自動化版）
 
 ```bash
+# バグフィックス（パッチリリース）
+npm run release:patch
+
+# 新機能追加（マイナーリリース）
+npm run release:minor
+
+# 破壊的変更（メジャーリリース）
+npm run release:major
+```
+
+**これだけで自動バージョンアップ・タグ作成・プッシュが実行され、自動リリースが開始されます！**
+
+### 3-2. 手動リリース（従来方式）
+
+```bash
+# 手動でバージョンアップ
+npm version patch   # または minor/major
+
+# 変更をプッシュ
+git push origin for-publish
+
 # リリースタグを作成してプッシュ
 git tag v$(node -p "require('./package.json').version")
 git push origin --tags
 ```
-
-**これだけで自動リリースが開始されます！**
 
 ## 🤖 自動実行される処理
 
@@ -204,10 +218,8 @@ git checkout -b hotfix/critical-bug
 git checkout for-publish
 git merge hotfix/critical-bug
 
-# パッチバージョンアップして即座にリリース
-npm version patch
-git push origin for-publish
-git push origin --tags
+# 自動化されたパッチリリース
+npm run release:patch
 ```
 
 ## 📝 リリースノート作成
@@ -240,9 +252,23 @@ GitHub Actions が自動生成しますが、手動で編集も可能：
 
 このリリース手順により：
 
-✅ **自動化**: タグプッシュだけで全プラットフォーム対応リリース  
+✅ **完全自動化**: コマンド1つで全プラットフォーム対応リリース  
 ✅ **安全性**: 各環境でのネイティブビルドによる互換性保証  
 ✅ **効率性**: 並列ビルドによる高速リリース  
-✅ **追跡性**: 完全なリリース履歴とアーティファクト管理
+✅ **追跡性**: 完全なリリース履歴とアーティファクト管理  
+✅ **ミス防止**: 手動タグ作成によるタイミング問題を回避
 
-**タグをプッシュするだけで、すべてのプラットフォーム向けの拡張機能が自動でリリースされます！** 🎉
+**`npm run release:patch` だけで、すべてのプラットフォーム向けの拡張機能が自動でリリースされます！** 🎉
+
+### 自動化の流れ
+```
+npm run release:patch
+  ↓
+1. package.jsonのバージョン自動更新
+2. Gitコミット自動作成
+3. Gitタグ自動作成・プッシュ
+4. GitHub Actions自動実行
+5. 全プラットフォームビルド
+6. GitHub Release自動作成
+7. VS Code Marketplace自動公開
+```
