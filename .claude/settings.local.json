@@ -42,7 +42,8 @@
       "Bash(git pull:*)",
       "Bash(gh issue view:*)",
       "Bash(git fetch:*)",
-      "Bash(gh pr create:*)"
+      "Bash(gh pr create:*)",
+      "Bash(find:*)"
     ],
     "deny": []
   }

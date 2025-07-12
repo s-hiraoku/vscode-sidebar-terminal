@@ -10,7 +10,6 @@ src/**
 
 # Development and build
 node_modules/**
-!node_modules/node-pty/**
 webpack.config.js
 .gitignore
 .yarnrc
