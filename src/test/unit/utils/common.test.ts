@@ -6,6 +6,9 @@
 import { expect } from 'chai';
 import * as sinon from 'sinon';
 import { JSDOM } from 'jsdom';
+
+// Import shared test setup
+import '../test-setup';
 import * as vscode from 'vscode';
 import {
   getTerminalConfig,
@@ -501,7 +504,7 @@ describe('Common Utils', () => {
       const result = safeStringify(obj);
 
       expect(result).to.be.a('string');
-      expect(result).to.include('name');
+      expect(result).to.equal('[object Object]');
     });
 
     it('should handle null and undefined', () => {

@@ -5,6 +5,9 @@ import { expect } from 'chai';
 import * as sinon from 'sinon';
 import { JSDOM } from 'jsdom';
 
+// Import shared test setup
+import '../test-setup';
+
 // Mock VS Code API
 const mockVscode = {
   workspace: {
@@ -80,6 +83,7 @@ describe('SidebarTerminalProvider Extended', () => {
       onDidReceiveMessage: sinon.stub(),
       asWebviewUri: sinon.stub(),
       cspSource: 'vscode-webview:',
+      setState: sinon.spy(),
     };
 
     // Mock webview view
@@ -133,6 +137,11 @@ describe('SidebarTerminalProvider Extended', () => {
     dom = new JSDOM(`<!DOCTYPE html><html><body></body></html>`);
     document = dom.window.document;
     (global as any).document = document;
+
+    // Reset webview spies
+    if (mockWebview.setState && typeof mockWebview.setState.resetHistory === 'function') {
+      mockWebview.setState.resetHistory();
+    }
     (global as any).window = dom.window;
 
     sandbox = sinon.createSandbox();
