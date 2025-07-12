@@ -24,7 +24,9 @@ export const mockVscode = {
       inspect: sinon.stub().returns(undefined),
       update: sinon.stub().resolves(),
     }),
-    onDidChangeConfiguration: sinon.stub(),
+    onDidChangeConfiguration: sinon.stub().returns({
+      dispose: sinon.stub(),
+    }),
     workspaceFolders: [],
     name: 'test-workspace',
   },
@@ -75,6 +77,9 @@ export function setupTestEnvironment(): void {
     },
     cwd: sinon.stub().returns('/test'),
     exit: sinon.stub(),
+    nextTick: process.nextTick.bind(process),
+    stdout: process.stdout,
+    stderr: process.stderr,
   };
 
   // Mock global objects that might be needed

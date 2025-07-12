@@ -5,7 +5,7 @@ import { TERMINAL_CONSTANTS } from '../constants';
 import { getTerminalConfig, generateNonce, normalizeTerminalInfo } from '../utils/common';
 import { showSuccess, showError, TerminalErrorHandler } from '../utils/feedback';
 import { provider as log } from '../utils/logger';
-import { configManager } from '../config/ConfigManager';
+import { getConfigManager } from '../config/ConfigManager';
 import { PartialTerminalSettings } from '../types/shared';
 
 export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
@@ -71,7 +71,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
     try {
       // Check if we can split (use configured terminal limit)
       const terminals = this._terminalManager.getTerminals();
-      const config = configManager.getExtensionTerminalConfig();
+      const config = getConfigManager().getExtensionTerminalConfig();
       const maxSplitTerminals = config.maxTerminals;
 
       if (terminals.length >= maxSplitTerminals) {
@@ -139,7 +139,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
       log('🔧 [DEBUG] Proceeding to kill active terminal:', activeTerminalId);
 
       // Check if confirmation is needed
-      const settings = configManager.getCompleteTerminalSettings();
+      const settings = getConfigManager().getCompleteTerminalSettings();
       const confirmBeforeKill = settings.confirmBeforeKill || false;
       if (confirmBeforeKill) {
         void vscode.window
@@ -707,8 +707,8 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
   }
 
   private getCurrentSettings(): PartialTerminalSettings {
-    const settings = configManager.getCompleteTerminalSettings();
-    const altClickSettings = configManager.getAltClickSettings();
+    const settings = getConfigManager().getCompleteTerminalSettings();
+    const altClickSettings = getConfigManager().getAltClickSettings();
 
     return {
       fontSize: settings.fontSize,

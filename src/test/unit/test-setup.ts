@@ -22,6 +22,9 @@ const vscode = {
     getConfiguration: () => ({
       get: () => undefined,
     }),
+    onDidChangeConfiguration: () => ({
+      dispose: () => {},
+    }),
   },
   EventEmitter: class {
     constructor() {}

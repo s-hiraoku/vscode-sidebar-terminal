@@ -8,22 +8,22 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { TERMINAL_CONSTANTS } from '../constants';
 import { TerminalConfig, TerminalInfo } from '../types/common';
-import { configManager } from '../config/ConfigManager';
+import { getConfigManager } from '../config/ConfigManager';
 
 /**
  * 設定を取得して正規化する
- * @deprecated configManager.getExtensionTerminalConfig() を使用してください
+ * @deprecated getConfigManager().getExtensionTerminalConfig() を使用してください
  */
 export function getTerminalConfig(): TerminalConfig {
-  return configManager.getExtensionTerminalConfig();
+  return getConfigManager().getExtensionTerminalConfig();
 }
 
 /**
  * プラットフォームに応じたシェルを取得
- * @deprecated configManager.getShellForPlatform() を使用してください
+ * @deprecated getConfigManager().getShellForPlatform() を使用してください
  */
 export function getShellForPlatform(customShell: string): string {
-  return configManager.getShellForPlatform(customShell);
+  return getConfigManager().getShellForPlatform(customShell);
 }
 
 /**
@@ -58,7 +58,7 @@ export function validateDirectory(dirPath: string): boolean {
  * 作業ディレクトリを取得
  */
 export function getWorkingDirectory(): string {
-  const config = configManager.getExtensionTerminalConfig();
+  const config = getConfigManager().getExtensionTerminalConfig();
   const customDir = config.defaultDirectory || '';
 
   console.log('📁 [WORKDIR] Getting working directory...');

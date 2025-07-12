@@ -32,17 +32,36 @@ export class ConfigManager {
     return ConfigManager._instance;
   }
 
+  private _initialized = false;
+
   private constructor() {
-    // VS Code設定変更イベントを監視してキャッシュをクリア
-    vscode.workspace.onDidChangeConfiguration((event) => {
-      if (
-        event.affectsConfiguration(CONFIG_SECTIONS.SIDEBAR_TERMINAL) ||
-        event.affectsConfiguration(CONFIG_SECTIONS.EDITOR) ||
-        event.affectsConfiguration(CONFIG_SECTIONS.TERMINAL_INTEGRATED)
-      ) {
-        this.clearCache();
+    // 遅延初期化
+  }
+
+  private _ensureInitialized(): void {
+    if (this._initialized) {
+      return;
+    }
+
+    // VS Code設定変更イベントを監視してキャッシュをクリア（テスト環境では安全にスキップ）
+    try {
+      if (vscode?.workspace?.onDidChangeConfiguration) {
+        vscode.workspace.onDidChangeConfiguration((event) => {
+          if (
+            event.affectsConfiguration(CONFIG_SECTIONS.SIDEBAR_TERMINAL) ||
+            event.affectsConfiguration(CONFIG_SECTIONS.EDITOR) ||
+            event.affectsConfiguration(CONFIG_SECTIONS.TERMINAL_INTEGRATED)
+          ) {
+            this.clearCache();
+          }
+        });
       }
-    });
+    } catch (error) {
+      // テスト環境やモック環境では無視
+      console.warn('ConfigManager: VS Code workspace API not available:', error);
+    }
+
+    this._initialized = true;
   }
 
   /**
@@ -80,6 +99,7 @@ export class ConfigManager {
    * 従来の getTerminalConfig() の置き換え
    */
   public getExtensionTerminalConfig(): ExtensionTerminalConfig {
+    this._ensureInitialized();
     const section = CONFIG_SECTIONS.SIDEBAR_TERMINAL;
 
     return {
@@ -108,6 +128,7 @@ export class ConfigManager {
    * 完全なターミナル設定を取得
    */
   public getCompleteTerminalSettings(): CompleteTerminalSettings {
+    this._ensureInitialized();
     const sidebarConfig = this.getExtensionTerminalConfig();
 
     return {
@@ -172,6 +193,7 @@ export class ConfigManager {
    * プラットフォーム固有のシェル設定を取得
    */
   public getShellForPlatform(customShell?: string): string {
+    this._ensureInitialized();
     if (customShell) {
       return customShell;
     }
@@ -204,6 +226,7 @@ export class ConfigManager {
    * Alt+Click設定を取得
    */
   public getAltClickSettings(): { altClickMovesCursor: boolean; multiCursorModifier: string } {
+    this._ensureInitialized();
     return {
       altClickMovesCursor: this.getConfig(
         CONFIG_SECTIONS.TERMINAL_INTEGRATED,
@@ -252,7 +275,9 @@ export class ConfigManager {
 }
 
 /**
- * ConfigManager のシングルトンインスタンス
- * 他モジュールからのアクセス用
+ * ConfigManager のシングルトンインスタンスを取得するヘルパー関数
+ * 他モジュールからのアクセス用（遅延初期化）
  */
-export const configManager = ConfigManager.getInstance();
+export function getConfigManager(): ConfigManager {
+  return ConfigManager.getInstance();
+}
