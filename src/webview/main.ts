@@ -1188,7 +1188,7 @@ class TerminalWebviewManager {
       const terminalBody = document.getElementById('terminal-body');
       if (terminalBody && terminalBody.classList.contains('terminal-container')) {
         terminalBody.classList.remove('active', 'inactive');
-        if (activeTerminalId === 'primary' || allContainers.size === 0) {
+        if (activeTerminalId === 'primary' || allTerminals.size === 0) {
           terminalBody.classList.add('active');
           log(`🔵 [BORDER] Added active border to primary terminal body`);
         }
