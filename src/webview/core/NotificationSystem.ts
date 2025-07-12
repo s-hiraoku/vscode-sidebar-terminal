@@ -35,7 +35,7 @@ export class NotificationSystem {
   private readonly _observers = new Set<NotificationObserver>();
   private readonly _notifications = new Map<string, NotificationData>();
   private readonly _filters = new Map<string, NotificationFilter>();
-  
+
   // Feature flag for gradual migration
   private _enabled = false;
   private _fallbackMode = true; // 既存システムへのフォールバック
@@ -71,13 +71,13 @@ export class NotificationSystem {
    */
   public subscribe(observer: NotificationObserver, filter?: NotificationFilter): string {
     this._observers.add(observer);
-    
+
     if (filter) {
       const filterId = this._generateFilterId();
       this._filters.set(filterId, filter);
       return filterId;
     }
-    
+
     return 'default';
   }
 
@@ -107,14 +107,14 @@ export class NotificationSystem {
       duration: config.duration || 4000,
       icon: config.icon,
       timestamp: Date.now(),
-      source: config.source || 'unknown'
+      source: config.source || 'unknown',
     };
 
     // 新システムが有効な場合のみ処理
     if (this._enabled) {
       this._notifications.set(notification.id, notification);
       this._notifyObservers(notification);
-      
+
       // 自動削除の設定
       if (notification.duration && notification.duration > 0) {
         setTimeout(() => {
@@ -150,12 +150,12 @@ export class NotificationSystem {
    */
   public getActiveNotifications(filter?: NotificationFilter): NotificationData[] {
     const notifications = Array.from(this._notifications.values());
-    
+
     if (!filter) {
       return notifications;
     }
 
-    return notifications.filter(notification => this._matchesFilter(notification, filter));
+    return notifications.filter((notification) => this._matchesFilter(notification, filter));
   }
 
   /**
@@ -164,8 +164,8 @@ export class NotificationSystem {
   public clearAll(): void {
     const notificationIds = Array.from(this._notifications.keys());
     this._notifications.clear();
-    
-    notificationIds.forEach(id => {
+
+    notificationIds.forEach((id) => {
       this._notifyObserversOfRemoval(id);
     });
   }
@@ -180,30 +180,36 @@ export class NotificationSystem {
     bySource: Record<string, number>;
   } {
     const notifications = Array.from(this._notifications.values());
-    
-    const byType = notifications.reduce((acc, n) => {
-      acc[n.type] = (acc[n.type] || 0) + 1;
-      return acc;
-    }, {} as Record<NotificationType, number>);
 
-    const bySource = notifications.reduce((acc, n) => {
-      const source = n.source || 'unknown';
-      acc[source] = (acc[source] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    const byType = notifications.reduce(
+      (acc, n) => {
+        acc[n.type] = (acc[n.type] || 0) + 1;
+        return acc;
+      },
+      {} as Record<NotificationType, number>
+    );
+
+    const bySource = notifications.reduce(
+      (acc, n) => {
+        const source = n.source || 'unknown';
+        acc[source] = (acc[source] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>
+    );
 
     return {
       totalNotifications: this._notifications.size,
       activeObservers: this._observers.size,
       byType,
-      bySource
+      bySource,
     };
   }
 
   // Private methods
 
   private _notifyObservers(notification: NotificationData): void {
-    this._observers.forEach(observer => {
+    this._observers.forEach((observer) => {
       try {
         observer.onNotification(notification);
       } catch (error) {
@@ -213,7 +219,7 @@ export class NotificationSystem {
   }
 
   private _notifyObserversOfRemoval(id: string): void {
-    this._observers.forEach(observer => {
+    this._observers.forEach((observer) => {
       try {
         observer.onNotificationRemoved?.(id);
       } catch (error) {
@@ -242,18 +248,20 @@ export class NotificationSystem {
   }
 
   private _generateNotificationId(): string {
-    return `notification_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `notification_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
   }
 
   private _generateFilterId(): string {
-    return `filter_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `filter_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
   }
 
   private _isLegacyNotificationUtilsAvailable(): boolean {
     // 既存NotificationUtilsの存在確認
     try {
-      return typeof window !== 'undefined' && 
-             'showNotification' in (globalThis as unknown as Record<string, unknown>);
+      return (
+        typeof window !== 'undefined' &&
+        'showNotification' in (globalThis as unknown as Record<string, unknown>)
+      );
     } catch {
       return false;
     }
@@ -268,7 +276,8 @@ export class NotificationSystem {
   }): void {
     try {
       // 既存のNotificationUtilsのshowNotification関数を呼び出し
-      const showNotification = (globalThis as unknown as Record<string, unknown>)['showNotification'] as unknown;
+      const globalAny = globalThis as unknown as Record<string, unknown>;
+      const showNotification = globalAny['showNotification'];
       if (typeof showNotification === 'function') {
         (showNotification as (config: unknown) => void)(config);
       }

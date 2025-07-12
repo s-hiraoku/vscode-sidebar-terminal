@@ -3,7 +3,7 @@
  * 段階的移行を可能にし、後方互換性を保証
  */
 
-import { NotificationSystem, NotificationType } from './NotificationSystem';
+import { NotificationSystem } from './NotificationSystem';
 import type { NotificationConfig } from '../utils/NotificationUtils';
 
 /**
@@ -34,7 +34,7 @@ export class NotificationBridge {
    */
   public setMigrationMode(mode: 'legacy' | 'hybrid' | 'unified'): void {
     this._migrationMode = mode;
-    
+
     switch (mode) {
       case 'legacy':
         this._notificationSystem.setEnabled(false);
@@ -58,28 +58,29 @@ export class NotificationBridge {
   /**
    * 既存NotificationUtilsのAPIと互換性のあるshow関数
    */
-  public showNotification(config: NotificationConfig): string | void {
+  public showNotification(config: NotificationConfig): string | undefined {
     const source = this._determineSource();
-    
+
     switch (this._migrationMode) {
       case 'legacy':
         return this._callLegacyShowNotification(config);
-      
-      case 'hybrid':
+
+      case 'hybrid': {
         // 両方のシステムで通知
-        const legacyResult = this._callLegacyShowNotification(config);
+        this._callLegacyShowNotification(config);
         const unifiedId = this._notificationSystem.notify({
           ...config,
-          source
+          source,
         });
         return unifiedId; // 新システムのIDを返す
-      
+      }
+
       case 'unified':
         return this._notificationSystem.notify({
           ...config,
-          source
+          source,
         });
-      
+
       default:
         return this._callLegacyShowNotification(config);
     }
@@ -88,7 +89,7 @@ export class NotificationBridge {
   /**
    * 既存の特定通知関数との互換性
    */
-  public showTerminalCloseError(minCount: number): string | void {
+  public showTerminalCloseError(minCount: number): string | undefined {
     return this.showNotification({
       type: 'warning',
       title: 'Cannot close terminal',
@@ -97,7 +98,7 @@ export class NotificationBridge {
     });
   }
 
-  public showTerminalKillError(reason: string): string | void {
+  public showTerminalKillError(reason: string): string | undefined {
     return this.showNotification({
       type: 'error',
       title: 'Terminal kill failed',
@@ -106,7 +107,7 @@ export class NotificationBridge {
     });
   }
 
-  public showSplitLimitWarning(reason: string): string | void {
+  public showSplitLimitWarning(reason: string): string | undefined {
     return this.showNotification({
       type: 'warning',
       title: 'Split Limit Reached',
@@ -115,7 +116,7 @@ export class NotificationBridge {
     });
   }
 
-  public showClaudeCodeDetected(): string | void {
+  public showClaudeCodeDetected(): string | undefined {
     return this.showNotification({
       type: 'info',
       title: 'Claude Code Detected',
@@ -125,7 +126,7 @@ export class NotificationBridge {
     });
   }
 
-  public showClaudeCodeEnded(): string | void {
+  public showClaudeCodeEnded(): string | undefined {
     return this.showNotification({
       type: 'success',
       title: 'Claude Code Session Ended',
@@ -135,7 +136,7 @@ export class NotificationBridge {
     });
   }
 
-  public showAltClickDisabledWarning(reason?: string): string | void {
+  public showAltClickDisabledWarning(reason?: string): string | undefined {
     return this.showNotification({
       type: 'warning',
       title: 'Alt+Click Disabled',
@@ -145,17 +146,18 @@ export class NotificationBridge {
     });
   }
 
-  public showAltClickSettingError(): string | void {
+  public showAltClickSettingError(): string | undefined {
     return this.showNotification({
       type: 'warning',
       title: 'Alt+Click Configuration',
-      message: 'Check VS Code settings: terminal.integrated.altClickMovesCursor and editor.multiCursorModifier',
+      message:
+        'Check VS Code settings: terminal.integrated.altClickMovesCursor and editor.multiCursorModifier',
       icon: '⚙️',
       duration: 6000,
     });
   }
 
-  public showTerminalInteractionIssue(details: string): string | void {
+  public showTerminalInteractionIssue(details: string): string | undefined {
     return this.showNotification({
       type: 'warning',
       title: 'Terminal Interaction Issue',
@@ -193,13 +195,13 @@ export class NotificationBridge {
       mode: this._migrationMode,
       unifiedSystemActive: this._notificationSystem.isEnabled(),
       legacySystemAvailable: this._isLegacySystemAvailable(),
-      unifiedStats: this._notificationSystem.getStats()
+      unifiedStats: this._notificationSystem.getStats(),
     };
   }
 
   // Private methods
 
-  private _callLegacyShowNotification(config: NotificationConfig): void {
+  private _callLegacyShowNotification(config: NotificationConfig): undefined {
     try {
       // 既存のshowNotification関数を呼び出し
       if (this._isLegacySystemAvailable()) {
@@ -228,8 +230,7 @@ export class NotificationBridge {
 
   private _isLegacySystemAvailable(): boolean {
     try {
-      return typeof window !== 'undefined' && 
-             this._getLegacyShowNotification() !== null;
+      return typeof window !== 'undefined' && this._getLegacyShowNotification() !== null;
     } catch {
       return false;
     }
@@ -239,7 +240,9 @@ export class NotificationBridge {
     try {
       const globalAny = globalThis as unknown as Record<string, unknown>;
       const showNotification = globalAny['showNotification'];
-      return typeof showNotification === 'function' ? showNotification as (config: NotificationConfig) => void : null;
+      return typeof showNotification === 'function'
+        ? (showNotification as (config: NotificationConfig) => void)
+        : null;
     } catch {
       return null;
     }
@@ -249,7 +252,9 @@ export class NotificationBridge {
     try {
       const globalAny = globalThis as unknown as Record<string, unknown>;
       const clearAllNotifications = globalAny['clearAllNotifications'];
-      return typeof clearAllNotifications === 'function' ? clearAllNotifications as () => void : null;
+      return typeof clearAllNotifications === 'function'
+        ? (clearAllNotifications as () => void)
+        : null;
     } catch {
       return null;
     }
@@ -262,18 +267,18 @@ export class NotificationBridge {
       if (stack) {
         const stackLines = stack.split('\n');
         const callerLine = stackLines[3] || stackLines[2]; // 呼び出し元の行を取得
-        
-        if (callerLine.includes('main.ts')) return 'webview-main';
-        if (callerLine.includes('SplitManager')) return 'split-manager';
-        if (callerLine.includes('HeaderManager')) return 'header-manager';
-        if (callerLine.includes('SettingsPanel')) return 'settings-panel';
-        
+
+        if (callerLine?.includes('main.ts')) return 'webview-main';
+        if (callerLine?.includes('SplitManager')) return 'split-manager';
+        if (callerLine?.includes('HeaderManager')) return 'header-manager';
+        if (callerLine?.includes('SettingsPanel')) return 'settings-panel';
+
         return 'webview-unknown';
       }
     } catch {
       // スタックトレース取得に失敗した場合
     }
-    
+
     return 'unknown';
   }
 }
