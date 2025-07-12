@@ -97,22 +97,25 @@ Module.prototype.require = function (id: string) {
   if (id === 'node-pty') {
     return mockPty;
   }
-  
+
   // Intercept ConfigManager imports
-  const isConfigManagerImport = id.includes('ConfigManager') || 
+  const isConfigManagerImport =
+    id.includes('ConfigManager') ||
     id.includes('../config/ConfigManager') ||
     id.includes('../../config/ConfigManager') ||
     id.includes('../../../config/ConfigManager');
-    
+
   if (isConfigManagerImport) {
-    return { 
+    return {
       getConfigManager: () => mockConfigManager,
       ConfigManager: class MockConfigManager {
-        static getInstance() { return mockConfigManager; }
-      }
+        static getInstance() {
+          return mockConfigManager;
+        }
+      },
     };
   }
-  
+
   return originalRequire.apply(this, arguments);
 };
 

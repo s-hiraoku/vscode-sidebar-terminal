@@ -5,7 +5,10 @@ import { expect } from 'chai';
 import * as sinon from 'sinon';
 import { JSDOM } from 'jsdom';
 import { setupCompleteTestEnvironment, cleanupTestEnvironment } from '../../../shared/TestSetup';
-import { getWebviewTheme, WEBVIEW_THEME_CONSTANTS } from '../../../../webview/utils/WebviewThemeUtils';
+import {
+  getWebviewTheme,
+  WEBVIEW_THEME_CONSTANTS,
+} from '../../../../webview/utils/WebviewThemeUtils';
 
 describe('WebviewThemeUtils', () => {
   let sandbox: sinon.SinonSandbox;
@@ -14,7 +17,7 @@ describe('WebviewThemeUtils', () => {
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-    
+
     const testEnv = setupCompleteTestEnvironment(`
       <!DOCTYPE html>
       <html>
@@ -33,7 +36,7 @@ describe('WebviewThemeUtils', () => {
         </body>
       </html>
     `);
-    
+
     dom = testEnv.dom;
     document = testEnv.document;
   });
@@ -45,7 +48,7 @@ describe('WebviewThemeUtils', () => {
   describe('getWebviewTheme', () => {
     it('should return theme object', () => {
       const theme = getWebviewTheme();
-      
+
       expect(theme).to.be.an('object');
       expect(theme).to.have.property('background');
       expect(theme).to.have.property('foreground');
@@ -53,15 +56,15 @@ describe('WebviewThemeUtils', () => {
 
     it('should detect dark theme from body class', () => {
       document.body.classList.add('vscode-dark');
-      
+
       const theme = getWebviewTheme();
 
       expect(theme).to.equal(WEBVIEW_THEME_CONSTANTS.DARK_THEME);
     });
-    
+
     it('should detect light theme from body class', () => {
       document.body.classList.add('vscode-light');
-      
+
       const theme = getWebviewTheme();
 
       expect(theme).to.equal(WEBVIEW_THEME_CONSTANTS.LIGHT_THEME);

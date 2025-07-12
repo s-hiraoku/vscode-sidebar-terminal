@@ -110,10 +110,10 @@ describe('HeaderManager', () => {
       // Check for title section structure
       const titleSection = header?.firstElementChild;
       expect(titleSection).to.not.be.null;
-      
+
       // Check that title section has child elements (icon, text, badge)
       expect(titleSection?.children.length).to.be.greaterThan(0);
-      
+
       // Check for terminal text content (more reliable than emoji in test env)
       const textContent = titleSection?.textContent || '';
       expect(textContent).to.include('Terminal');
@@ -134,14 +134,15 @@ describe('HeaderManager', () => {
 
       const header = document.getElementById('webview-header');
       expect(header).to.not.be.null;
-      
+
       // Sample icons should be in the command section (second child of header)
       const commandSection = header?.children[1];
       expect(commandSection).to.not.be.null;
-      
+
       // Check if command section has sample-icons class or contains sample icons
-      const hasIcons = commandSection?.classList.contains('sample-icons') || 
-                      commandSection?.querySelectorAll('.sample-icon').length > 0;
+      const hasIcons =
+        commandSection?.classList.contains('sample-icons') ||
+        commandSection?.querySelectorAll('.sample-icon').length > 0;
       expect(hasIcons).to.be.true;
     });
 
@@ -264,7 +265,7 @@ describe('HeaderManager', () => {
 
     it('should change opacity on mouseenter', () => {
       const icon = document.querySelector('.sample-icon') as HTMLElement;
-      
+
       // If no sample icon exists, check if showIcons is working
       if (!icon) {
         const commandSection = document.querySelector('.sample-icons');
@@ -281,7 +282,7 @@ describe('HeaderManager', () => {
 
     it('should restore opacity on mouseleave', () => {
       const icon = document.querySelector('.sample-icon') as HTMLElement;
-      
+
       // If no sample icon exists, check if showIcons is working
       if (!icon) {
         const commandSection = document.querySelector('.sample-icons');

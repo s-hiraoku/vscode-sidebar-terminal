@@ -14,7 +14,7 @@ describe('ThemeUtils', () => {
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-    
+
     const testEnv = setupCompleteTestEnvironment(`
       <!DOCTYPE html>
       <html>
@@ -23,10 +23,10 @@ describe('ThemeUtils', () => {
         </body>
       </html>
     `);
-    
+
     dom = testEnv.dom;
     document = testEnv.document;
-    
+
     // Mock getComputedStyle
     (global as any).getComputedStyle = sinon.stub().returns({
       getPropertyValue: sinon.stub().returns('#ffffff'),
@@ -46,14 +46,14 @@ describe('ThemeUtils', () => {
 
     it('should detect theme from document', () => {
       const theme = ThemeUtils.detectTheme();
-      
+
       expect(theme).to.be.oneOf(['light', 'dark']);
     });
 
     it('should handle missing DOM elements gracefully', () => {
       // Remove document body
       document.body.remove();
-      
+
       expect(() => {
         ThemeUtils.detectTheme();
       }).to.not.throw();
