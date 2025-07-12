@@ -90,9 +90,9 @@ describe('SettingsPanel', () => {
     it('should populate settings when provided', () => {
       const testSettings = {
         fontSize: 16,
-        fontFamily: 'Monaco, monospace',
+        fontFamily: 'Consolas, "Courier New", monospace',
         theme: 'dark',
-        cursorBlink: false,
+        cursorBlink: true,
       };
 
       settingsPanel.show(testSettings);
@@ -286,9 +286,9 @@ describe('SettingsPanel', () => {
       const cursorBlinkCheckbox = document.getElementById('cursor-blink') as HTMLInputElement;
 
       fontSizeSlider.value = '16';
-      fontFamilySelect.value = 'Monaco, monospace';
+      fontFamilySelect.value = 'Consolas, "Courier New", monospace';
       themeSelect.value = 'light';
-      cursorBlinkCheckbox.checked = false;
+      cursorBlinkCheckbox.checked = true;
 
       // Trigger apply to collect settings
       const applyBtn = document.getElementById('apply-settings');
@@ -333,7 +333,7 @@ describe('SettingsPanel', () => {
     it('should handle partial settings', () => {
       const partialSettings = {
         fontSize: 18,
-        fontFamily: 'Monaco, monospace',
+        fontFamily: 'Consolas, "Courier New", monospace',
         // Missing theme and cursorBlink
       };
 
