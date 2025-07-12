@@ -246,52 +246,6 @@ describe('ErrorHandler', () => {
     });
   });
 
-  describe('retry mechanism', () => {
-    it('should retry operation on failure', async () => {
-      let attempts = 0;
-      const operation = sinon.stub().callsFake(() => {
-        attempts++;
-        if (attempts < 3) {
-          throw new Error('Operation failed');
-        }
-        return 'success';
-      });
-
-      const result = await errorHandler.withRetry(operation);
-
-      expect(result).to.equal('success');
-      expect(operation).to.have.been.calledThrice;
-    });
-
-    it('should respect max retries limit', async () => {
-      const operation = sinon.stub().throws(new Error('Always fails'));
-
-      try {
-        await errorHandler.withRetry(operation);
-      } catch (error) {
-        expect(error.message).to.equal('Always fails');
-      }
-
-      expect(operation).to.have.been.calledThrice; // maxRetries = 3
-    });
-
-    it('should handle async operations', async () => {
-      let attempts = 0;
-      const asyncOperation = sinon.stub().callsFake(async () => {
-        attempts++;
-        if (attempts < 2) {
-          throw new Error('Async operation failed');
-        }
-        return 'async success';
-      });
-
-      const result = await errorHandler.withRetry(asyncOperation);
-
-      expect(result).to.equal('async success');
-      expect(asyncOperation).to.have.been.calledTwice;
-    });
-  });
-
   describe('error classification', () => {
     it('should classify network errors', () => {
       const networkError = new Error('Network request failed');

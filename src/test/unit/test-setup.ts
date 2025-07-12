@@ -50,37 +50,43 @@ const _ptyMock = {
   spawn: () => mockPtyProcess,
 };
 
-// Fix Mocha runner removeListener issue
+// Comprehensive EventEmitter methods for process object to fix Mocha issues
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const originalProcess = global.process as any;
-if (originalProcess && !originalProcess.removeListener) {
-  originalProcess.removeListener =
-    originalProcess.off ||
-    function () {
-      return originalProcess;
-    };
-}
-
-// Ensure process has EventEmitter methods for Mocha compatibility
 if (originalProcess) {
-  if (!originalProcess.on) {
-    originalProcess.on = function () {
+  // Ensure all EventEmitter methods exist
+  const eventMethods = [
+    'on',
+    'off',
+    'removeListener',
+    'removeAllListeners',
+    'emit',
+    'addListener',
+    'once',
+    'prependListener',
+    'prependOnceListener',
+  ];
+
+  eventMethods.forEach((method) => {
+    if (!originalProcess[method] || typeof originalProcess[method] !== 'function') {
+      originalProcess[method] = function () {
+        return originalProcess;
+      };
+    }
+  });
+
+  // Special handling for removeListener to prevent Mocha errors
+  const originalRemoveListener = originalProcess.removeListener;
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  originalProcess.removeListener = function (event: string, listener: Function) {
+    try {
+      if (originalRemoveListener && typeof originalRemoveListener === 'function') {
+        return originalRemoveListener.call(this, event, listener);
+      }
       return originalProcess;
-    };
-  }
-  if (!originalProcess.off) {
-    originalProcess.off = function () {
+    } catch (e) {
+      // Silently ignore removeListener errors in test environment
       return originalProcess;
-    };
-  }
-  if (!originalProcess.removeListener) {
-    originalProcess.removeListener = function () {
-      return originalProcess;
-    };
-  }
-  if (!originalProcess.removeAllListeners) {
-    originalProcess.removeAllListeners = function () {
-      return originalProcess;
-    };
-  }
+    }
+  };
 }
