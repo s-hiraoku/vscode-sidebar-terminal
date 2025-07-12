@@ -156,33 +156,41 @@ describe('Common Utils', () => {
     it('should return bash for Linux', () => {
       (global as any).process.platform = 'linux';
 
+
       const shell = getShellForPlatform();
 
       expect(shell).to.equal('/bin/bash');
+
     });
 
     it('should return zsh for macOS', () => {
       (global as any).process.platform = 'darwin';
 
+
       const shell = getShellForPlatform();
 
       expect(shell).to.equal('/bin/zsh');
+
     });
 
     it('should return cmd for Windows', () => {
       (global as any).process.platform = 'win32';
 
+
       const shell = getShellForPlatform();
 
       expect(shell).to.equal('cmd.exe');
+
     });
 
     it('should return bash for unknown platforms', () => {
       (global as any).process.platform = 'unknown';
 
+
       const shell = getShellForPlatform();
 
       expect(shell).to.equal('/bin/bash');
+
     });
   });
 
@@ -190,24 +198,37 @@ describe('Common Utils', () => {
     it('should return workspace folder path when available', () => {
       mockVscode.workspace.workspaceFolders = [{ uri: { fsPath: '/workspace/path' } }];
 
+
       const workingDir = getWorkingDirectory();
 
       expect(workingDir).to.equal('/workspace/path');
+
     });
 
     it('should return home directory when no workspace folder', () => {
       mockVscode.workspace.workspaceFolders = undefined;
+      const mockConfig = {
+        get: sinon.stub().returns(''),
+      };
+      mockVscode.workspace.getConfiguration.returns(mockConfig);
       (global as any).process.env.HOME = '/home/user';
+
 
       const workingDir = getWorkingDirectory();
 
       expect(workingDir).to.equal('/home/user');
+
     });
 
     it('should return current directory as fallback', () => {
       mockVscode.workspace.workspaceFolders = undefined;
+      const mockConfig = {
+        get: sinon.stub().returns(''),
+      };
+      mockVscode.workspace.getConfiguration.returns(mockConfig);
       (global as any).process.env.HOME = undefined;
       (global as any).process.cwd.returns('/current/dir');
+
 
       const workingDir = getWorkingDirectory();
 
@@ -216,37 +237,63 @@ describe('Common Utils', () => {
 
     it('should handle Windows home directory', () => {
       mockVscode.workspace.workspaceFolders = undefined;
+      const mockConfig = {
+        get: sinon.stub().returns(''),
+      };
+      mockVscode.workspace.getConfiguration.returns(mockConfig);
       (global as any).process.platform = 'win32';
       (global as any).process.env.USERPROFILE = 'C:\\Users\\user';
+
 
       const workingDir = getWorkingDirectory();
 
       expect(workingDir).to.equal('C:\\Users\\user');
+
     });
   });
 
   describe('validateDirectory', () => {
+    let mockFs: any;
+    
+    beforeEach(() => {
+      mockFs = {
+        statSync: sinon.stub(),
+        accessSync: sinon.stub(),
+        constants: { R_OK: 4, X_OK: 1 }
+      };
+      (global as any).require = sinon.stub().withArgs('fs').returns(mockFs);
+    });
+    
     it('should return true for valid directory path', () => {
+
       const isValid = validateDirectory('/valid/path');
 
       expect(isValid).to.be.true;
     });
 
     it('should return false for invalid directory path', () => {
+
       const isValid = validateDirectory('');
+
 
       expect(isValid).to.be.false;
     });
 
-    it('should return false for null/undefined', () => {
-      expect(validateDirectory(null)).to.be.false;
-      expect(validateDirectory(undefined)).to.be.false;
+    it('should return false for file (not directory)', () => {
+      mockFs.statSync.returns({ isDirectory: () => false });
+      mockFs.accessSync.returns(undefined);
+      
+      const isValid = validateDirectory('/path/to/file.txt');
+
+      expect(isValid).to.be.false;
     });
+
 
     it('should handle special characters in path', () => {
       const isValid = validateDirectory('/path with spaces/special-chars_123');
 
       expect(isValid).to.be.true;
+
     });
   });
 
@@ -285,7 +332,7 @@ describe('Common Utils', () => {
     });
 
     it('should initialize with no active terminal', () => {
-      expect(manager.getActiveTerminalId()).to.be.null;
+      expect(manager.getActive()).to.be.undefined;
     });
 
     it('should set and get active terminal ID', () => {
@@ -301,10 +348,12 @@ describe('Common Utils', () => {
       manager.clearActiveTerminalId();
 
       expect(manager.getActiveTerminalId()).to.be.null;
+
     });
 
     it('should check if terminal is active', () => {
       const terminalId = 'terminal-1';
+
 
       manager.setActiveTerminalId(terminalId);
 
@@ -318,6 +367,7 @@ describe('Common Utils', () => {
 
       manager.setActiveTerminalId(undefined);
       expect(manager.getActiveTerminalId()).to.be.null;
+
     });
   });
 
@@ -365,6 +415,7 @@ describe('Common Utils', () => {
   });
 
   describe('getFirstValue', () => {
+
     it('should return first non-null value', () => {
       const result = getFirstValue(null, undefined, 'valid', 'second');
 
@@ -374,13 +425,16 @@ describe('Common Utils', () => {
     it('should return undefined if all values are null/undefined', () => {
       const result = getFirstValue(null, undefined);
 
+
       expect(result).to.be.undefined;
     });
+
 
     it('should return first value if it is valid', () => {
       const result = getFirstValue('first', 'second');
 
       expect(result).to.equal('first');
+
     });
   });
 

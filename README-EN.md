@@ -14,6 +14,7 @@ A VS Code extension that displays a terminal in the sidebar for efficient develo
 - **Key Input Support**: Support for special keys like Backspace, Ctrl+C, Ctrl+L
 - **Button Controls**: Intuitive operation with Clear, New, Split buttons
 - **IME Support**: Multi-language input support including Japanese
+- **Visual Focus Indicators**: Active terminal highlighted with colored border
 - **Customizable**: Configurable font, size, and shell settings
 - **Cross-Platform**: Windows, macOS, Linux support
 
