@@ -40,7 +40,9 @@
       "Bash(npm run:*)",
       "Bash(git push:*)",
       "Bash(git pull:*)",
-      "Bash(gh issue view:*)"
+      "Bash(gh issue view:*)",
+      "Bash(git fetch:*)",
+      "Bash(gh pr create:*)"
     ],
     "deny": []
   }

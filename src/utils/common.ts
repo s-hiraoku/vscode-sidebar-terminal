@@ -74,7 +74,7 @@ export function getShellForPlatform(customShell: string): string {
 /**
  * ディレクトリが存在し、アクセス可能かを検証
  */
-function validateDirectory(dirPath: string): boolean {
+export function validateDirectory(dirPath: string): boolean {
   try {
     const stat = fs.statSync(dirPath);
     const isDirectory = stat.isDirectory();

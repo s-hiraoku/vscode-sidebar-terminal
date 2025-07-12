@@ -94,7 +94,7 @@ describe('HeaderManager', () => {
       // Since config is private, we verify through behavior
       // The header should not be created when showHeader is false
       headerManager.createWebViewHeader();
-      
+
       const header = document.getElementById('webview-header');
       expect(header).to.be.null;
     });
@@ -102,9 +102,9 @@ describe('HeaderManager', () => {
     it('should recreate header when header element exists', () => {
       // First create a header
       headerManager.createWebViewHeader();
-      
+
       const recreateHeaderSpy = sinon.spy(headerManager as any, 'recreateHeader');
-      
+
       headerManager.updateConfig({ title: 'New Title' });
 
       expect(recreateHeaderSpy).to.have.been.calledOnce;
@@ -315,7 +315,7 @@ describe('HeaderManager', () => {
     it('should show tooltip on mouseenter', () => {
       const commandSection = document.querySelector('.sample-icons') as HTMLElement;
       const tooltip = document.querySelector('.help-tooltip') as HTMLElement;
-      
+
       expect(commandSection).to.not.be.null;
       expect(tooltip).to.not.be.null;
 
@@ -329,7 +329,7 @@ describe('HeaderManager', () => {
     it('should hide tooltip on mouseleave', () => {
       const commandSection = document.querySelector('.sample-icons') as HTMLElement;
       const tooltip = document.querySelector('.help-tooltip') as HTMLElement;
-      
+
       expect(commandSection).to.not.be.null;
       expect(tooltip).to.not.be.null;
 
@@ -345,7 +345,7 @@ describe('HeaderManager', () => {
 
     it('should contain correct tooltip content', () => {
       const tooltip = document.querySelector('.help-tooltip') as HTMLElement;
-      
+
       expect(tooltip).to.not.be.null;
       expect(tooltip.innerHTML).to.include('Sample Icons (Display Only)');
       expect(tooltip.innerHTML).to.include('Use VS Code panel buttons for actions');
@@ -358,7 +358,7 @@ describe('HeaderManager', () => {
 
       const terminal = document.getElementById('terminal');
       const header = document.getElementById('webview-header');
-      
+
       expect(terminal).to.not.be.null;
       expect(header).to.not.be.null;
       expect(terminal?.firstElementChild).to.equal(header);
@@ -376,7 +376,7 @@ describe('HeaderManager', () => {
   describe('dispose', () => {
     it('should remove header element', () => {
       headerManager.createWebViewHeader();
-      
+
       const header = document.getElementById('webview-header');
       expect(header).to.not.be.null;
 
@@ -411,7 +411,7 @@ describe('HeaderManager', () => {
 
       const header = document.getElementById('webview-header');
       const titleElement = header?.querySelector('span[style*="font-weight: 600"]') as HTMLElement;
-      
+
       expect(titleElement).to.not.be.null;
       expect(titleElement.style.fontSize).to.equal('18px');
     });
@@ -438,7 +438,7 @@ describe('HeaderManager', () => {
   describe('recreateHeader', () => {
     it('should remove existing header and create new one', () => {
       headerManager.createWebViewHeader();
-      
+
       const originalHeader = document.getElementById('webview-header');
       expect(originalHeader).to.not.be.null;
 

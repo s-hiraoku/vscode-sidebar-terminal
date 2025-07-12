@@ -184,7 +184,7 @@ describe('SettingsPanel', () => {
 
     it('should handle hide when panel not visible', () => {
       settingsPanel.hide();
-      
+
       // Hide again should not throw
       expect(() => settingsPanel.hide()).to.not.throw();
       expect(onCloseSpy).to.have.been.calledTwice;
@@ -228,7 +228,7 @@ describe('SettingsPanel', () => {
 
     it('should close panel when close button is clicked', () => {
       const closeBtn = document.getElementById('close-settings');
-      
+
       const clickEvent = new dom.window.Event('click');
       closeBtn?.dispatchEvent(clickEvent);
 
@@ -237,7 +237,7 @@ describe('SettingsPanel', () => {
 
     it('should apply settings when apply button is clicked', () => {
       const applyBtn = document.getElementById('apply-settings');
-      
+
       const clickEvent = new dom.window.Event('click');
       applyBtn?.dispatchEvent(clickEvent);
 
@@ -282,7 +282,7 @@ describe('SettingsPanel', () => {
 
     it('should close panel when background is clicked', () => {
       const panel = document.getElementById('settings-panel');
-      
+
       const clickEvent = new dom.window.Event('click');
       Object.defineProperty(clickEvent, 'target', { value: panel });
       panel?.dispatchEvent(clickEvent);
@@ -293,7 +293,7 @@ describe('SettingsPanel', () => {
     it('should not close panel when content is clicked', () => {
       const panel = document.getElementById('settings-panel');
       const content = panel?.firstElementChild;
-      
+
       const clickEvent = new dom.window.Event('click');
       Object.defineProperty(clickEvent, 'target', { value: content });
       panel?.dispatchEvent(clickEvent);
@@ -354,7 +354,7 @@ describe('SettingsPanel', () => {
   describe('settings population', () => {
     it('should handle missing settings gracefully', () => {
       settingsPanel.show();
-      
+
       // Should not throw when no settings provided
       expect(() => settingsPanel.show()).to.not.throw();
     });
@@ -395,14 +395,14 @@ describe('SettingsPanel', () => {
 
     it('should have correct font family options', () => {
       const fontFamilySelect = document.getElementById('font-family-select') as HTMLSelectElement;
-      const options = Array.from(fontFamilySelect.options).map(opt => opt.value);
+      const options = Array.from(fontFamilySelect.options).map((opt) => opt.value);
 
       expect(options).to.include('Consolas, monospace');
-      expect(options).to.include('\'Monaco\', monospace');
-      expect(options).to.include('\'Menlo\', monospace');
-      expect(options).to.include('\'Ubuntu Mono\', monospace');
-      expect(options).to.include('\'Courier New\', monospace');
-      expect(options).to.include('\'SF Mono\', monospace');
+      expect(options).to.include("'Monaco', monospace");
+      expect(options).to.include("'Menlo', monospace");
+      expect(options).to.include("'Ubuntu Mono', monospace");
+      expect(options).to.include("'Courier New', monospace");
+      expect(options).to.include("'SF Mono', monospace");
     });
   });
 
@@ -413,7 +413,7 @@ describe('SettingsPanel', () => {
 
     it('should have correct theme options', () => {
       const themeSelect = document.getElementById('theme-select') as HTMLSelectElement;
-      const options = Array.from(themeSelect.options).map(opt => opt.value);
+      const options = Array.from(themeSelect.options).map((opt) => opt.value);
 
       expect(options).to.include('auto');
       expect(options).to.include('dark');
@@ -476,7 +476,7 @@ describe('SettingsPanel', () => {
 
     it('should set up animation styles when showing', () => {
       const panel = document.getElementById('settings-panel');
-      
+
       expect(panel?.style.opacity).to.equal('1');
       expect(panel?.style.transition).to.include('opacity');
     });
@@ -501,7 +501,7 @@ describe('SettingsPanel', () => {
 
     it('should have close button with title attribute', () => {
       const closeBtn = document.getElementById('close-settings');
-      
+
       expect(closeBtn?.getAttribute('title')).to.equal('Close');
     });
   });

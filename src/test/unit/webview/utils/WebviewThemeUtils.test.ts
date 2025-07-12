@@ -31,7 +31,7 @@ const mockVscode = {
 function setupTestEnvironment() {
   // Mock VS Code module
   (global as any).vscode = mockVscode;
-  
+
   // Mock Node.js modules
   (global as any).require = sinon.stub();
   (global as any).module = { exports: {} };
@@ -51,7 +51,7 @@ describe('WebviewThemeUtils', () => {
 
   beforeEach(() => {
     setupTestEnvironment();
-    
+
     // Mock console before JSDOM creation
     (global as Record<string, unknown>).console = {
       log: sinon.stub(),
@@ -102,7 +102,7 @@ describe('WebviewThemeUtils', () => {
 
     it('should detect VS Code theme from CSS variables', () => {
       const detectedTheme = themeUtils.detectVSCodeTheme();
-      
+
       expect(detectedTheme).to.be.oneOf(['light', 'dark', 'high-contrast']);
     });
   });
@@ -110,7 +110,7 @@ describe('WebviewThemeUtils', () => {
   describe('getVSCodeThemeVariables method', () => {
     it('should extract VS Code theme variables', () => {
       const variables = themeUtils.getVSCodeThemeVariables();
-      
+
       expect(variables).to.be.an('object');
       expect(variables).to.have.property('editorBackground');
       expect(variables).to.have.property('editorForeground');
@@ -121,9 +121,9 @@ describe('WebviewThemeUtils', () => {
     it('should handle missing CSS variables gracefully', () => {
       // Remove CSS variables
       document.documentElement.style.removeProperty('--vscode-editor-background');
-      
+
       const variables = themeUtils.getVSCodeThemeVariables();
-      
+
       expect(variables).to.be.an('object');
       expect(variables.editorBackground).to.be.a('string');
     });
@@ -131,9 +131,9 @@ describe('WebviewThemeUtils', () => {
     it('should parse CSS variables correctly', () => {
       document.documentElement.style.setProperty('--vscode-editor-background', '#ffffff');
       document.documentElement.style.setProperty('--vscode-editor-foreground', '#000000');
-      
+
       const variables = themeUtils.getVSCodeThemeVariables();
-      
+
       expect(variables.editorBackground).to.equal('#ffffff');
       expect(variables.editorForeground).to.equal('#000000');
     });
@@ -142,7 +142,7 @@ describe('WebviewThemeUtils', () => {
   describe('generateTerminalTheme method', () => {
     it('should generate xterm.js compatible theme', () => {
       const terminalTheme = themeUtils.generateTerminalTheme();
-      
+
       expect(terminalTheme).to.be.an('object');
       expect(terminalTheme).to.have.property('background');
       expect(terminalTheme).to.have.property('foreground');
@@ -152,7 +152,7 @@ describe('WebviewThemeUtils', () => {
 
     it('should include complete color palette', () => {
       const terminalTheme = themeUtils.generateTerminalTheme();
-      
+
       // Check basic colors
       expect(terminalTheme).to.have.property('black');
       expect(terminalTheme).to.have.property('red');
@@ -162,7 +162,7 @@ describe('WebviewThemeUtils', () => {
       expect(terminalTheme).to.have.property('magenta');
       expect(terminalTheme).to.have.property('cyan');
       expect(terminalTheme).to.have.property('white');
-      
+
       // Check bright colors
       expect(terminalTheme).to.have.property('brightBlack');
       expect(terminalTheme).to.have.property('brightRed');
@@ -177,9 +177,9 @@ describe('WebviewThemeUtils', () => {
     it('should adapt to VS Code theme variables', () => {
       document.documentElement.style.setProperty('--vscode-terminal-background', '#000000');
       document.documentElement.style.setProperty('--vscode-terminal-foreground', '#ffffff');
-      
+
       const terminalTheme = themeUtils.generateTerminalTheme();
-      
+
       expect(terminalTheme.background).to.equal('#000000');
       expect(terminalTheme.foreground).to.equal('#ffffff');
     });
@@ -188,19 +188,19 @@ describe('WebviewThemeUtils', () => {
   describe('applyWebviewTheme method', () => {
     it('should apply theme to webview elements', () => {
       const container = document.getElementById('terminal-container');
-      
+
       themeUtils.applyWebviewTheme();
-      
+
       expect(container.style.backgroundColor).to.not.be.empty;
       expect(container.style.color).to.not.be.empty;
     });
 
     it('should set CSS custom properties', () => {
       themeUtils.applyWebviewTheme();
-      
+
       const bgColor = document.documentElement.style.getPropertyValue('--webview-background');
       const fgColor = document.documentElement.style.getPropertyValue('--webview-foreground');
-      
+
       expect(bgColor).to.be.a('string');
       expect(fgColor).to.be.a('string');
     });
@@ -208,9 +208,9 @@ describe('WebviewThemeUtils', () => {
     it('should handle theme application errors gracefully', () => {
       // Mock getElementById to return null
       const getElementByIdStub = sinon.stub(document, 'getElementById').returns(null);
-      
+
       expect(() => themeUtils.applyWebviewTheme()).to.not.throw();
-      
+
       getElementByIdStub.restore();
     });
   });
@@ -218,17 +218,17 @@ describe('WebviewThemeUtils', () => {
   describe('theme detection', () => {
     it('should detect light theme', () => {
       document.documentElement.style.setProperty('--vscode-editor-background', '#ffffff');
-      
+
       const theme = themeUtils.detectVSCodeTheme();
-      
+
       expect(theme).to.equal('light');
     });
 
     it('should detect dark theme', () => {
       document.documentElement.style.setProperty('--vscode-editor-background', '#1e1e1e');
-      
+
       const theme = themeUtils.detectVSCodeTheme();
-      
+
       expect(theme).to.equal('dark');
     });
 
@@ -236,9 +236,9 @@ describe('WebviewThemeUtils', () => {
       document.documentElement.style.setProperty('--vscode-editor-background', '#000000');
       document.documentElement.style.setProperty('--vscode-editor-foreground', '#ffffff');
       document.documentElement.style.setProperty('--vscode-contrastBorder', '#ffffff');
-      
+
       const theme = themeUtils.detectVSCodeTheme();
-      
+
       expect(theme).to.equal('high-contrast');
     });
   });
@@ -246,32 +246,32 @@ describe('WebviewThemeUtils', () => {
   describe('color utilities', () => {
     it('should convert RGB to hex', () => {
       const hex = themeUtils.rgbToHex('rgb(255, 255, 255)');
-      
+
       expect(hex).to.equal('#ffffff');
     });
 
     it('should convert hex to RGB', () => {
       const rgb = themeUtils.hexToRgb('#ffffff');
-      
+
       expect(rgb).to.deep.equal({ r: 255, g: 255, b: 255 });
     });
 
     it('should calculate relative luminance', () => {
       const whiteLuminance = themeUtils.getRelativeLuminance('#ffffff');
       const blackLuminance = themeUtils.getRelativeLuminance('#000000');
-      
+
       expect(whiteLuminance).to.be.greaterThan(blackLuminance);
     });
 
     it('should calculate contrast ratio', () => {
       const contrastRatio = themeUtils.getContrastRatio('#ffffff', '#000000');
-      
+
       expect(contrastRatio).to.be.at.least(21); // Perfect contrast
     });
 
     it('should handle invalid color formats', () => {
       const rgb = themeUtils.hexToRgb('invalid-color');
-      
+
       expect(rgb).to.be.null;
     });
   });
@@ -280,23 +280,23 @@ describe('WebviewThemeUtils', () => {
     it('should synchronize with VS Code theme changes', () => {
       const syncCallback = sinon.spy();
       themeUtils.onThemeChange(syncCallback);
-      
+
       // Simulate theme change
       document.documentElement.style.setProperty('--vscode-editor-background', '#ffffff');
       themeUtils.syncWithVSCode();
-      
+
       expect(syncCallback).to.have.been.called;
     });
 
     it('should update terminal theme on sync', () => {
       const initialTheme = themeUtils.generateTerminalTheme();
-      
+
       // Change VS Code theme
       document.documentElement.style.setProperty('--vscode-terminal-background', '#333333');
       themeUtils.syncWithVSCode();
-      
+
       const updatedTheme = themeUtils.generateTerminalTheme();
-      
+
       expect(updatedTheme.background).to.not.equal(initialTheme.background);
     });
   });
@@ -304,20 +304,20 @@ describe('WebviewThemeUtils', () => {
   describe('accessibility', () => {
     it('should ensure sufficient contrast ratios', () => {
       const terminalTheme = themeUtils.generateTerminalTheme();
-      
+
       const contrastRatio = themeUtils.getContrastRatio(
         terminalTheme.background,
         terminalTheme.foreground
       );
-      
+
       expect(contrastRatio).to.be.at.least(4.5); // WCAG AA compliance
     });
 
     it('should provide high contrast alternatives', () => {
       document.documentElement.style.setProperty('--vscode-contrastBorder', '#ffffff');
-      
+
       const terminalTheme = themeUtils.generateTerminalTheme();
-      
+
       expect(terminalTheme).to.have.property('selectionBackground');
       expect(terminalTheme.selectionBackground).to.not.equal(terminalTheme.background);
     });
@@ -326,20 +326,20 @@ describe('WebviewThemeUtils', () => {
   describe('performance optimization', () => {
     it('should cache theme calculations', () => {
       const spy = sinon.spy(themeUtils, 'calculateThemeColors');
-      
+
       themeUtils.generateTerminalTheme();
       themeUtils.generateTerminalTheme();
-      
+
       expect(spy).to.have.been.calledOnce;
     });
 
     it('should debounce theme updates', () => {
       const updateSpy = sinon.spy(themeUtils, 'updateTheme');
-      
+
       themeUtils.syncWithVSCode();
       themeUtils.syncWithVSCode();
       themeUtils.syncWithVSCode();
-      
+
       expect(updateSpy).to.have.been.calledOnce;
     });
   });
@@ -347,7 +347,7 @@ describe('WebviewThemeUtils', () => {
   describe('error handling', () => {
     it('should handle CSS variable parsing errors', () => {
       document.documentElement.style.setProperty('--vscode-editor-background', 'invalid-color');
-      
+
       expect(() => themeUtils.getVSCodeThemeVariables()).to.not.throw();
     });
 
@@ -358,9 +358,9 @@ describe('WebviewThemeUtils', () => {
       style.removeProperty('--vscode-editor-foreground');
       style.removeProperty('--vscode-terminal-background');
       style.removeProperty('--vscode-terminal-foreground');
-      
+
       const variables = themeUtils.getVSCodeThemeVariables();
-      
+
       expect(variables.editorBackground).to.be.a('string');
       expect(variables.editorForeground).to.be.a('string');
       expect(variables.terminalBackground).to.be.a('string');
@@ -372,9 +372,9 @@ describe('WebviewThemeUtils', () => {
     it('should cleanup event listeners', () => {
       const callback = sinon.spy();
       themeUtils.onThemeChange(callback);
-      
+
       themeUtils.cleanup();
-      
+
       // Theme change should not trigger callback after cleanup
       themeUtils.syncWithVSCode();
       expect(callback).to.not.have.been.called;
