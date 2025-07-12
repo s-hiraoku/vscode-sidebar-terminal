@@ -73,7 +73,7 @@ export function setupTestEnvironment(): void {
   if (!(global as any).process) {
     (global as any).process = process;
   }
-  
+
   // テスト用の環境変数を一時的に設定（復元可能な形で）
   if (!process.env.NODE_ENV) {
     process.env.NODE_ENV = 'test';
