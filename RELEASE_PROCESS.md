@@ -126,6 +126,38 @@ git push origin --tags
 - URL: https://marketplace.visualstudio.com/items?itemName=s-hiraoku.vscode-sidebar-terminal
 - 公開状況とユーザー向け情報の確認
 
+## 🛠️ 手動リリース手順（自動化失敗時）
+
+### GitHub Releaseとmarketplace公開が失敗した場合
+
+```bash
+# 1. Artifactsをダウンロード
+gh run download [run-id]
+
+# 2. GitHub Release作成
+gh release create v[version] \
+  --title "Release v[version]" \
+  --notes "[リリースノート内容]" \
+  ./vscode-sidebar-terminal-*/vscode-sidebar-terminal-*-[version].vsix
+
+# 3. VS Code Marketplace公開
+find . -name "*[version].vsix" -exec vsce publish --packagePath {} \;
+```
+
+### 自動化が機能しない場合の確認項目
+
+1. **タグイベントの確認**
+   - GitHub Actionsでタグイベントが正しく発火しているか
+   - `startsWith(github.ref, 'refs/tags/v')`条件に合致しているか
+
+2. **buildジョブの状態確認**
+   - 全9プラットフォームのビルドが成功しているか
+   - 失敗したプラットフォームがある場合は修正後に再実行
+
+3. **GitHub Secrets確認**
+   - `VSCE_PAT`が正しく設定されているか
+   - Personal Access Tokenの有効期限確認
+
 ## 🔧 トラブルシューティング
 
 ### よくある問題と解決方法

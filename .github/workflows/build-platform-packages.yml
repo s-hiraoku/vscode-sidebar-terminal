@@ -111,6 +111,13 @@ jobs:
       contents: write
     
     steps:
+      - name: Debug GitHub context
+        run: |
+          echo "Event name: ${{ github.event_name }}"
+          echo "Ref: ${{ github.ref }}"
+          echo "Ref name: ${{ github.ref_name }}"
+          echo "Head commit: ${{ github.event.head_commit.message }}"
+          
       - name: Checkout code
         uses: actions/checkout@v4
 
