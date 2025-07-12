@@ -154,7 +154,7 @@ suite('Functional Test Suite', () => {
 
       // Extension should handle these gracefully
       assert.ok(true, 'Extension should handle error conditions gracefully');
-    } catch (error) {
+    } catch (_error) {
       // Some errors might be expected, but the extension shouldn't crash
       assert.ok(true, 'Extension should handle errors without crashing completely');
     }

@@ -116,7 +116,7 @@ suite('E2E Test Suite', () => {
     for (let i = 0; i < maxTerminals + 2; i++) {
       try {
         await vscode.commands.executeCommand('sidebarTerminal.splitTerminal');
-      } catch (error) {
+      } catch (_error) {
         // Expected to fail after reaching limit
       }
     }

@@ -6,6 +6,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/no-var-requires */
+/* eslint-disable @typescript-eslint/no-require-imports */
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 /* eslint-disable @typescript-eslint/no-useless-constructor */
 /* eslint-disable prefer-rest-params */
@@ -51,6 +52,23 @@ const vscode = {
 
 // Register the mock globally
 (global as Record<string, unknown>).vscode = vscode;
+
+// Mock Node.js process more completely but preserve existing functionality
+const originalProcess = (global as any).process;
+if (originalProcess && !originalProcess.nextTick) {
+  originalProcess.nextTick = (callback: () => void) => {
+    setImmediate(callback);
+  };
+}
+if (originalProcess && !originalProcess.env) {
+  originalProcess.env = {};
+}
+if (originalProcess && !originalProcess.platform) {
+  originalProcess.platform = 'test';
+}
+if (originalProcess && !originalProcess.versions) {
+  originalProcess.versions = { node: '18.0.0' };
+}
 
 // Mock node-pty
 const mockPtyProcess = {

@@ -364,7 +364,9 @@ describe('ErrorHandler', () => {
 
     it('should handle errors without stack trace', () => {
       const error = new Error('Test error');
+
       error.stack = undefined;
+
 
       const report = errorHandler.formatErrorReport(error);
 

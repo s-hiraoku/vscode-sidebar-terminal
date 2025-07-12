@@ -177,7 +177,9 @@ export function generateTerminalId(): string {
  * エラーメッセージを表示
  */
 export function showErrorMessage(message: string, error?: unknown): void {
-  const errorMessage = error ? `${message}: ${String(error)}` : message;
+  const errorMessage = error
+    ? `${message}: ${error instanceof Error ? error.message : JSON.stringify(error)}`
+    : message;
   void vscode.window.showErrorMessage(errorMessage);
 }
 

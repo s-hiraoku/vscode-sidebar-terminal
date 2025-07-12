@@ -3,6 +3,7 @@ import { runTests } from '@vscode/test-electron';
 
 // Setup node-pty mock before anything else
 /* eslint-disable @typescript-eslint/no-var-requires */
+/* eslint-disable @typescript-eslint/no-require-imports */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
@@ -42,6 +43,7 @@ Module.prototype.require = function (id: string) {
 /* eslint-enable @typescript-eslint/no-unsafe-call */
 /* eslint-enable @typescript-eslint/no-unsafe-member-access */
 /* eslint-enable @typescript-eslint/no-unsafe-assignment */
+/* eslint-enable @typescript-eslint/no-require-imports */
 /* eslint-enable @typescript-eslint/no-var-requires */
 
 async function main(): Promise<void> {

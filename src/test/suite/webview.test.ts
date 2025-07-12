@@ -198,7 +198,7 @@ suite('Webview Test Suite', () => {
             {} as vscode.WebviewViewResolveContext,
             {} as vscode.CancellationToken
           );
-        } catch (error) {
+        } catch (_error) {
           // Expected to fail gracefully
         }
       });
@@ -241,7 +241,7 @@ suite('Webview Test Suite', () => {
             try {
               callback(message);
               processedMessages.push(command);
-            } catch (error) {
+            } catch (_error) {
               // Some messages might fail due to missing terminal, that's expected
             }
           });

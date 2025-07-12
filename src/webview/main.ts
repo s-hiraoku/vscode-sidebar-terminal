@@ -302,6 +302,7 @@ class TerminalWebviewManager {
 
       // Force layout recalculation BEFORE opening terminal
       this.splitManager.getTerminalContainers().forEach((container) => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-expressions
         container.offsetHeight; // Force reflow
       });
       log(
@@ -319,6 +320,7 @@ class TerminalWebviewManager {
           // Wait longer for DOM and flex layout to fully stabilize before fitting
           setTimeout(() => {
             // Force layout recalculation before fit
+            // eslint-disable-next-line @typescript-eslint/no-unused-expressions
             targetContainer.offsetHeight; // Trigger reflow
 
             const terminalBody = document.getElementById('terminal-body');
@@ -359,6 +361,7 @@ class TerminalWebviewManager {
                 if (terminalData.fitAddon) {
                   const container = this.splitManager.getTerminalContainers().get(terminalId);
                   if (container) {
+                    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
                     container.offsetHeight; // Force reflow
                     terminalData.fitAddon.fit();
                     log(
@@ -472,6 +475,7 @@ class TerminalWebviewManager {
         const container = this.splitManager.getTerminalContainers().get(id);
         if (container) {
           // Force layout recalculation
+          // eslint-disable-next-line @typescript-eslint/no-unused-expressions
           container.offsetHeight;
 
           log(`🔧 [SWITCH] Container size for terminal ${id}:`, {
@@ -1159,9 +1163,12 @@ class TerminalWebviewManager {
   private updateTerminalBorders(activeTerminalId: string): void {
     try {
       // Get all terminal containers
-      const allContainers = this.splitManager.getTerminalContainers();
 
-      allContainers.forEach((container, terminalId) => {
+      const allTerminals = this.splitManager.getTerminals();
+
+      allTerminals.forEach((terminalData, terminalId) => {
+        const container = terminalData.container;
+
         if (!container) return;
 
         // Remove existing border classes
@@ -1181,7 +1188,7 @@ class TerminalWebviewManager {
       const terminalBody = document.getElementById('terminal-body');
       if (terminalBody && terminalBody.classList.contains('terminal-container')) {
         terminalBody.classList.remove('active', 'inactive');
-        if (activeTerminalId === 'primary' || allContainers.size === 0) {
+        if (activeTerminalId === 'primary' || allTerminals.size === 0) {
           terminalBody.classList.add('active');
           log(`🔵 [BORDER] Added active border to primary terminal body`);
         }
