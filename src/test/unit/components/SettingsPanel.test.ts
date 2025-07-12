@@ -10,18 +10,7 @@ import sinonChai from 'sinon-chai';
 use(sinonChai);
 import { JSDOM } from 'jsdom';
 import { SettingsPanel } from '../../../webview/components/SettingsPanel';
-
-// Mock setup for this test file
-const setupTestEnvironment = (): void => {
-  // Mock globals that might be needed
-  if (typeof (global as any).vscode === 'undefined') {
-    (global as any).vscode = {
-      workspace: {
-        getConfiguration: () => ({ get: () => undefined }),
-      },
-    };
-  }
-};
+import { setupCompleteTestEnvironment, cleanupTestEnvironment } from '../../shared/TestSetup';
 
 describe('SettingsPanel', () => {
   let dom: JSDOM;
@@ -32,32 +21,19 @@ describe('SettingsPanel', () => {
   let onCloseSpy: sinon.SinonSpy;
 
   beforeEach(() => {
-    // Test environment setup
-    setupTestEnvironment();
-
-    // Mock console before JSDOM creation
-    (global as Record<string, unknown>).console = {
-      log: sinon.stub(),
-      warn: sinon.stub(),
-      error: sinon.stub(),
-    };
-
-    // JSDOM環境をセットアップ
-    dom = new JSDOM(`
+    // 統合されたテスト環境セットアップを使用
+    const testEnv = setupCompleteTestEnvironment(`
       <!DOCTYPE html>
       <html>
         <body>
         </body>
       </html>
     `);
-    document = dom.window.document;
 
-    // グローバルに設定
-    (global as Record<string, unknown>).document = document;
-    (global as Record<string, unknown>).window = dom.window;
-    (global as Record<string, unknown>).HTMLElement = dom.window.HTMLElement;
-    (global as Record<string, unknown>).HTMLInputElement = dom.window.HTMLInputElement;
-    (global as Record<string, unknown>).HTMLSelectElement = dom.window.HTMLSelectElement;
+    dom = testEnv.dom;
+    document = testEnv.document;
+
+    // アニメーション関連のモックを追加
     (global as Record<string, unknown>).requestAnimationFrame = sinon.stub().callsArg(0);
 
     sandbox = sinon.createSandbox();
@@ -71,16 +47,11 @@ describe('SettingsPanel', () => {
   });
 
   afterEach(() => {
-    sandbox.restore();
+    // 統合されたクリーンアップを使用
+    cleanupTestEnvironment(sandbox, dom);
 
-    // クリーンアップ
-    delete (global as Record<string, unknown>).document;
-    delete (global as Record<string, unknown>).window;
-    delete (global as Record<string, unknown>).HTMLElement;
-    delete (global as Record<string, unknown>).HTMLInputElement;
-    delete (global as Record<string, unknown>).HTMLSelectElement;
+    // 追加されたモックのクリーンアップ
     delete (global as Record<string, unknown>).requestAnimationFrame;
-    delete (global as Record<string, unknown>).console;
   });
 
   describe('constructor', () => {

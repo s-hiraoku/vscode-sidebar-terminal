@@ -8,67 +8,22 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { TERMINAL_CONSTANTS } from '../constants';
 import { TerminalConfig, TerminalInfo } from '../types/common';
+import { configManager } from '../config/ConfigManager';
 
 /**
  * 設定を取得して正規化する
+ * @deprecated configManager.getExtensionTerminalConfig() を使用してください
  */
 export function getTerminalConfig(): TerminalConfig {
-  const config = vscode.workspace.getConfiguration(TERMINAL_CONSTANTS.CONFIG_KEYS.SIDEBAR_TERMINAL);
-
-  return {
-    fontSize: config.get<number>(
-      TERMINAL_CONSTANTS.CONFIG_KEYS.FONT_SIZE,
-      TERMINAL_CONSTANTS.DEFAULT_FONT_SIZE
-    ),
-    fontFamily: config.get<string>(
-      TERMINAL_CONSTANTS.CONFIG_KEYS.FONT_FAMILY,
-      TERMINAL_CONSTANTS.DEFAULT_FONT_FAMILY
-    ),
-    maxTerminals: config.get<number>(
-      TERMINAL_CONSTANTS.CONFIG_KEYS.MAX_TERMINALS,
-      TERMINAL_CONSTANTS.DEFAULT_MAX_TERMINALS
-    ),
-    shell: config.get<string>(TERMINAL_CONSTANTS.CONFIG_KEYS.SHELL, ''),
-    shellArgs: config.get<string[]>(TERMINAL_CONSTANTS.CONFIG_KEYS.SHELL_ARGS, []),
-    defaultDirectory: config.get<string>('defaultDirectory', ''),
-  };
+  return configManager.getExtensionTerminalConfig();
 }
 
 /**
  * プラットフォームに応じたシェルを取得
+ * @deprecated configManager.getShellForPlatform() を使用してください
  */
 export function getShellForPlatform(customShell: string): string {
-  if (customShell) {
-    return customShell;
-  }
-
-  // VS Code の統合ターミナル設定をフォールバックとして使用
-  const terminalConfig = vscode.workspace.getConfiguration(
-    TERMINAL_CONSTANTS.CONFIG_KEYS.TERMINAL_INTEGRATED
-  );
-
-  switch (process.platform) {
-    case TERMINAL_CONSTANTS.PLATFORMS.WINDOWS:
-      return (
-        terminalConfig.get<string>(TERMINAL_CONSTANTS.CONFIG_KEYS.SHELL_WINDOWS) ||
-        process.env['COMSPEC'] ||
-        'cmd.exe'
-      );
-
-    case TERMINAL_CONSTANTS.PLATFORMS.DARWIN:
-      return (
-        terminalConfig.get<string>(TERMINAL_CONSTANTS.CONFIG_KEYS.SHELL_OSX) ||
-        process.env['SHELL'] ||
-        '/bin/zsh'
-      );
-
-    default:
-      return (
-        terminalConfig.get<string>(TERMINAL_CONSTANTS.CONFIG_KEYS.SHELL_LINUX) ||
-        process.env['SHELL'] ||
-        '/bin/bash'
-      );
-  }
+  return configManager.getShellForPlatform(customShell);
 }
 
 /**
@@ -103,8 +58,8 @@ export function validateDirectory(dirPath: string): boolean {
  * 作業ディレクトリを取得
  */
 export function getWorkingDirectory(): string {
-  const config = vscode.workspace.getConfiguration(TERMINAL_CONSTANTS.CONFIG_KEYS.SIDEBAR_TERMINAL);
-  const customDir = config.get<string>('defaultDirectory', '');
+  const config = configManager.getExtensionTerminalConfig();
+  const customDir = config.defaultDirectory || '';
 
   console.log('📁 [WORKDIR] Getting working directory...');
   console.log('📁 [WORKDIR] Custom directory from config:', customDir);

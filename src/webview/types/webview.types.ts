@@ -1,24 +1,13 @@
 import type { StatusType } from './terminal.types';
+import { CompleteExtensionConfig } from '../../types/shared';
 
 export type { StatusType };
 
-export interface ExtensionConfig {
-  fontSize: number;
-  fontFamily: string;
-  theme: string;
-  cursorBlink: boolean;
-  maxTerminals: number;
-  minTerminalHeight: number;
-  autoHideStatus: boolean;
-  statusDisplayDuration: number;
-  showWebViewHeader: boolean;
-  webViewTitle: string;
-  showSampleIcons: boolean;
-  sampleIconOpacity: number;
-  headerFontSize: number;
-  headerIconSize: number;
-  sampleIconSize: number;
-}
+/**
+ * WebView拡張設定
+ * @deprecated shared.ts の CompleteExtensionConfig を使用してください
+ */
+export type ExtensionConfig = CompleteExtensionConfig;
 
 export interface StatusOptions {
   type: StatusType;

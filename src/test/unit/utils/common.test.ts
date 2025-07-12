@@ -209,12 +209,12 @@ describe('Common Utils', () => {
         get: sinon.stub().returns(''),
       };
       mockVscode.workspace.getConfiguration.returns(mockConfig);
-      
+
       // Mock fs.statSync to make directory validation pass
       const mockFs = {
         statSync: sinon.stub().returns({ isDirectory: () => true }),
         accessSync: sinon.stub(),
-        constants: { R_OK: 4, X_OK: 1 }
+        constants: { R_OK: 4, X_OK: 1 },
       };
       (global as any).require = sinon.stub().withArgs('fs').returns(mockFs);
 
@@ -230,10 +230,10 @@ describe('Common Utils', () => {
       };
       mockVscode.workspace.getConfiguration.returns(mockConfig);
       (global as any).process.env.HOME = '/home/user';
-      
+
       // Mock os.homedir
       const mockOs = {
-        homedir: sinon.stub().returns('/home/user')
+        homedir: sinon.stub().returns('/home/user'),
       };
       (global as any).require = sinon.stub().withArgs('os').returns(mockOs);
 
@@ -250,10 +250,10 @@ describe('Common Utils', () => {
       mockVscode.workspace.getConfiguration.returns(mockConfig);
       (global as any).process.env.HOME = undefined;
       (global as any).process.cwd.returns('/current/dir');
-      
+
       // Mock os.homedir to fail
       const mockOs = {
-        homedir: sinon.stub().throws(new Error('No home dir'))
+        homedir: sinon.stub().throws(new Error('No home dir')),
       };
       (global as any).require = sinon.stub().withArgs('os').returns(mockOs);
 
@@ -270,10 +270,10 @@ describe('Common Utils', () => {
       mockVscode.workspace.getConfiguration.returns(mockConfig);
       (global as any).process.platform = 'win32';
       (global as any).process.env.USERPROFILE = 'C:\\Users\\user';
-      
+
       // Mock os.homedir
       const mockOs = {
-        homedir: sinon.stub().returns('C:\\Users\\user')
+        homedir: sinon.stub().returns('C:\\Users\\user'),
       };
       (global as any).require = sinon.stub().withArgs('os').returns(mockOs);
 
@@ -285,20 +285,20 @@ describe('Common Utils', () => {
 
   describe('validateDirectory', () => {
     let mockFs: any;
-    
+
     beforeEach(() => {
       mockFs = {
         statSync: sinon.stub(),
         accessSync: sinon.stub(),
-        constants: { R_OK: 4, X_OK: 1 }
+        constants: { R_OK: 4, X_OK: 1 },
       };
       (global as any).require = sinon.stub().withArgs('fs').returns(mockFs);
     });
-    
+
     it('should return true for valid directory path', () => {
       mockFs.statSync.returns({ isDirectory: () => true });
       mockFs.accessSync.returns(undefined);
-      
+
       const isValid = validateDirectory('/valid/path');
 
       expect(isValid).to.be.true;
@@ -306,7 +306,7 @@ describe('Common Utils', () => {
 
     it('should return false for invalid directory path', () => {
       mockFs.statSync.throws(new Error('ENOENT'));
-      
+
       const isValid = validateDirectory('/invalid/path');
 
       expect(isValid).to.be.false;
@@ -315,7 +315,7 @@ describe('Common Utils', () => {
     it('should return false for file (not directory)', () => {
       mockFs.statSync.returns({ isDirectory: () => false });
       mockFs.accessSync.returns(undefined);
-      
+
       const isValid = validateDirectory('/path/to/file.txt');
 
       expect(isValid).to.be.false;
@@ -324,7 +324,7 @@ describe('Common Utils', () => {
     it('should return false for inaccessible directory', () => {
       mockFs.statSync.returns({ isDirectory: () => true });
       mockFs.accessSync.throws(new Error('EACCES'));
-      
+
       const isValid = validateDirectory('/inaccessible/path');
 
       expect(isValid).to.be.false;
@@ -395,10 +395,10 @@ describe('Common Utils', () => {
 
     it('should check if has active terminal', () => {
       expect(manager.hasActive()).to.be.false;
-      
+
       manager.setActive('terminal-1');
       expect(manager.hasActive()).to.be.true;
-      
+
       manager.clearActive();
       expect(manager.hasActive()).to.be.false;
     });
@@ -452,7 +452,7 @@ describe('Common Utils', () => {
       const map = new Map();
       map.set('key1', 'first');
       map.set('key2', 'second');
-      
+
       const result = getFirstValue(map);
 
       expect(result).to.equal('first');
@@ -460,7 +460,7 @@ describe('Common Utils', () => {
 
     it('should return undefined for empty Map', () => {
       const map = new Map();
-      
+
       const result = getFirstValue(map);
 
       expect(result).to.be.undefined;
@@ -469,7 +469,7 @@ describe('Common Utils', () => {
     it('should handle Map with single value', () => {
       const map = new Map();
       map.set('key1', 'onlyvalue');
-      
+
       const result = getFirstValue(map);
 
       expect(result).to.equal('onlyvalue');

@@ -1,14 +1,17 @@
 import type { Terminal } from 'xterm';
 import type { FitAddon } from 'xterm-addon-fit';
+import {
+  WebViewTerminalConfig,
+  TerminalTheme,
+  SplitDirection,
+  StatusType,
+} from '../../types/shared';
 
-export interface TerminalConfig {
-  readonly fontSize: number;
-  readonly fontFamily: string;
-  readonly theme: TerminalTheme;
-  readonly cursorBlink: boolean;
-  readonly shell?: string;
-  readonly cwd?: string;
-}
+/**
+ * WebView用ターミナル設定
+ * @deprecated shared.ts の WebViewTerminalConfig を使用してください
+ */
+export type TerminalConfig = WebViewTerminalConfig;
 
 export interface TerminalInstance {
   readonly id: string;
@@ -20,10 +23,13 @@ export interface TerminalInstance {
   isActive: boolean;
 }
 
-export type TerminalTheme = 'auto' | 'dark' | 'light';
-export type SplitDirection = 'horizontal' | 'vertical';
-export type StatusType = 'info' | 'success' | 'error' | 'warning';
+// 型エイリアスは shared.ts からインポート済み
+export { TerminalTheme, SplitDirection, StatusType };
 
+/**
+ * WebView用ターミナル設定（詳細版）
+ * @deprecated shared.ts の CompleteTerminalSettings を使用してください
+ */
 export interface TerminalSettings {
   fontSize: number;
   fontFamily: string;
