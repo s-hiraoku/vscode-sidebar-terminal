@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { SidebarTerminalProvider } from './providers/SidebarTerminalProvider';
 import { TerminalManager } from './terminals/TerminalManager';
 import { extension as log, logger, LogLevel } from './utils/logger';
+import { TerminalErrorHandler } from './utils/feedback';
 
 let terminalManager: TerminalManager | undefined;
 let sidebarProvider: SidebarTerminalProvider | undefined;
@@ -42,7 +43,7 @@ export function activate(context: vscode.ExtensionContext): void {
     log('Sidebar Terminal extension activated successfully');
   } catch (error) {
     log('Failed to activate Sidebar Terminal extension:', error);
-    void vscode.window.showErrorMessage(`Failed to activate Sidebar Terminal: ${String(error)}`);
+    TerminalErrorHandler.handleWebviewError(error);
   }
 }
 
