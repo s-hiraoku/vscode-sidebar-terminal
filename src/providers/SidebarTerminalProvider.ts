@@ -5,6 +5,8 @@ import { TERMINAL_CONSTANTS } from '../constants';
 import { getTerminalConfig, generateNonce, normalizeTerminalInfo } from '../utils/common';
 import { showSuccess, showError, TerminalErrorHandler } from '../utils/feedback';
 import { provider as log } from '../utils/logger';
+import { getConfigManager } from '../config/ConfigManager';
+import { PartialTerminalSettings } from '../types/shared';
 
 export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = 'sidebarTerminal';
@@ -69,8 +71,8 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
     try {
       // Check if we can split (use configured terminal limit)
       const terminals = this._terminalManager.getTerminals();
-      const config = vscode.workspace.getConfiguration('sidebarTerminal');
-      const maxSplitTerminals = config.get<number>('maxTerminals', 5);
+      const config = getConfigManager().getExtensionTerminalConfig();
+      const maxSplitTerminals = config.maxTerminals;
 
       if (terminals.length >= maxSplitTerminals) {
         log('⚠️ [DEBUG] Cannot split - already at maximum terminals:', terminals.length);
@@ -137,8 +139,8 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
       log('🔧 [DEBUG] Proceeding to kill active terminal:', activeTerminalId);
 
       // Check if confirmation is needed
-      const config = vscode.workspace.getConfiguration('sidebarTerminal');
-      const confirmBeforeKill = config.get<boolean>('confirmBeforeKill', false);
+      const settings = getConfigManager().getCompleteTerminalSettings();
+      const confirmBeforeKill = settings.confirmBeforeKill || false;
       if (confirmBeforeKill) {
         void vscode.window
           .showWarningMessage(`Close terminal "${activeTerminalId}"?`, { modal: true }, 'Close')
@@ -704,37 +706,25 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
     return html;
   }
 
-  private getCurrentSettings(): {
-    fontSize: number;
-    fontFamily: string;
-    cursorBlink: boolean;
-    theme: string;
-    altClickMovesCursor: boolean;
-    multiCursorModifier: string;
-  } {
-    const config = vscode.workspace.getConfiguration('sidebarTerminal');
-    const editorConfig = vscode.workspace.getConfiguration('editor');
-    const terminalConfig = vscode.workspace.getConfiguration('terminal.integrated');
+  private getCurrentSettings(): PartialTerminalSettings {
+    const settings = getConfigManager().getCompleteTerminalSettings();
+    const altClickSettings = getConfigManager().getAltClickSettings();
 
     return {
-      fontSize: config.get<number>('fontSize') ?? 14,
-      fontFamily: config.get<string>('fontFamily') ?? 'Consolas, monospace',
-      cursorBlink: config.get<boolean>('cursorBlink') ?? true,
-      theme: config.get<string>('theme') ?? 'auto',
+      fontSize: settings.fontSize,
+      fontFamily: settings.fontFamily,
+      cursorBlink: settings.cursorBlink,
+      theme: settings.theme || 'auto',
       // VS Code standard settings for Alt+Click functionality
-      altClickMovesCursor: terminalConfig.get<boolean>('altClickMovesCursor') ?? true,
-      multiCursorModifier: editorConfig.get<string>('multiCursorModifier') ?? 'alt',
+      altClickMovesCursor: altClickSettings.altClickMovesCursor,
+      multiCursorModifier: altClickSettings.multiCursorModifier,
     };
   }
 
-  private async updateSettings(settings: {
-    fontSize: number;
-    fontFamily: string;
-    theme?: string;
-    cursorBlink: boolean;
-  }): Promise<void> {
+  private async updateSettings(settings: PartialTerminalSettings): Promise<void> {
     try {
       const config = vscode.workspace.getConfiguration('sidebarTerminal');
+      // Note: ConfigManager handles reading, but writing must still use VS Code API
 
       // Update VS Code settings
       await config.update('fontSize', settings.fontSize, vscode.ConfigurationTarget.Global);

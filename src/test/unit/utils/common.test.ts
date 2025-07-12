@@ -1,6 +1,8 @@
 /* eslint-disable */
 // @ts-nocheck
 
+// VS Code mocks are now set up globally via mocha-setup.ts
+
 import { expect } from 'chai';
 import * as sinon from 'sinon';
 import { JSDOM } from 'jsdom';
@@ -19,45 +21,18 @@ import {
   safeStringify,
 } from '../../../utils/common';
 
-// Mock VS Code API
-const mockVscode = {
-  workspace: {
-    getConfiguration: sinon.stub(),
-    workspaceFolders: [],
-    getWorkspaceFolder: sinon.stub(),
-  },
-  window: {
-    showErrorMessage: sinon.stub(),
-    showWarningMessage: sinon.stub(),
-    showInformationMessage: sinon.stub(),
-  },
-  Uri: {
-    file: sinon.stub(),
-    parse: sinon.stub(),
-  },
-  env: {
-    isWindows: false,
-    isMacOS: false,
-    isLinux: true,
-  },
-  ExtensionContext: sinon.stub(),
-  ViewColumn: { One: 1 },
-  TreeDataProvider: sinon.stub(),
-  EventEmitter: sinon.stub(),
-  CancellationToken: sinon.stub(),
-  commands: {
-    registerCommand: sinon.stub(),
-    executeCommand: sinon.stub(),
-  },
-  languages: {
-    registerDocumentFormattingEditProvider: sinon.stub(),
-  },
-};
+// Get the global VS Code mock (set up in mocha-setup.ts)
+const mockVscode = (global as any).vscode;
+
+// Get the global ConfigManager mock (set up in mocha-setup.ts)
+const mockConfigManager = (global as any)._originalConfigManager;
 
 // Setup test environment
 function setupTestEnvironment() {
-  // Mock VS Code module
-  (global as any).vscode = mockVscode;
+  // Reset Sinon stubs on the global VS Code mock
+  if (mockVscode.workspace.getConfiguration.reset) {
+    mockVscode.workspace.getConfiguration.reset();
+  }
 
   // Mock Node.js modules
   (global as any).require = sinon.stub();
@@ -82,11 +57,23 @@ describe('Common Utils', () => {
   beforeEach(() => {
     setupTestEnvironment();
 
+    // Reset ConfigManager stubs
+    mockConfigManager.getExtensionTerminalConfig.reset();
+    mockConfigManager.getShellForPlatform.reset();
+
     // Mock console before JSDOM creation
     (global as Record<string, unknown>).console = {
       log: sinon.stub(),
       warn: sinon.stub(),
       error: sinon.stub(),
+    };
+
+    // Set up process.nextTick before JSDOM creation
+    const originalProcess = global.process;
+    (global as any).process = {
+      ...originalProcess,
+      nextTick: (callback: () => void) => setImmediate(callback),
+      env: { ...originalProcess.env, NODE_ENV: 'test' },
     };
 
     dom = new JSDOM(`<!DOCTYPE html><html><body></body></html>`);
@@ -108,28 +95,23 @@ describe('Common Utils', () => {
 
   describe('getTerminalConfig', () => {
     it('should return default terminal configuration', () => {
-      const mockConfig = {
-        get: sinon.stub().returns({
-          shell: '/bin/bash',
-          shellArgs: ['-l'],
-          maxTerminals: 5,
-          fontSize: 14,
-          fontFamily: 'monospace',
-        }),
+      const expectedConfig = {
+        shell: '/bin/bash',
+        shellArgs: ['-l'],
+        maxTerminals: 5,
+        fontSize: 14,
+        fontFamily: 'monospace',
       };
-      mockVscode.workspace.getConfiguration.returns(mockConfig);
+      mockConfigManager.getExtensionTerminalConfig.returns(expectedConfig);
 
       const config = getTerminalConfig();
 
-      expect(config).to.be.an('object');
-      expect(mockVscode.workspace.getConfiguration).to.have.been.calledWith('sidebarTerminal');
+      expect(config).to.deep.equal(expectedConfig);
+      expect(mockConfigManager.getExtensionTerminalConfig).to.have.been.called;
     });
 
     it('should handle missing configuration gracefully', () => {
-      const mockConfig = {
-        get: sinon.stub().returns(undefined),
-      };
-      mockVscode.workspace.getConfiguration.returns(mockConfig);
+      mockConfigManager.getExtensionTerminalConfig.returns({});
 
       const config = getTerminalConfig();
 
@@ -137,13 +119,11 @@ describe('Common Utils', () => {
     });
 
     it('should merge custom configuration with defaults', () => {
-      const mockConfig = {
-        get: sinon.stub().returns({
-          fontSize: 16,
-          customProperty: 'test',
-        }),
+      const expectedConfig = {
+        fontSize: 16,
+        customProperty: 'test',
       };
-      mockVscode.workspace.getConfiguration.returns(mockConfig);
+      mockConfigManager.getExtensionTerminalConfig.returns(expectedConfig);
 
       const config = getTerminalConfig();
 
@@ -154,108 +134,105 @@ describe('Common Utils', () => {
 
   describe('getShellForPlatform', () => {
     it('should return bash for Linux', () => {
-      (global as any).process.platform = 'linux';
-      const mockConfig = {
-        get: sinon.stub().returns(undefined),
-      };
-      mockVscode.workspace.getConfiguration.returns(mockConfig);
+      mockConfigManager.getShellForPlatform.returns('/bin/bash');
 
       const shell = getShellForPlatform('');
 
-      expect(shell).to.contain('/bin/bash');
+      expect(shell).to.equal('/bin/bash');
+      expect(mockConfigManager.getShellForPlatform).to.have.been.calledWith('');
     });
 
     it('should return zsh for macOS', () => {
-      (global as any).process.platform = 'darwin';
-      const mockConfig = {
-        get: sinon.stub().returns(undefined),
-      };
-      mockVscode.workspace.getConfiguration.returns(mockConfig);
+      mockConfigManager.getShellForPlatform.returns('/bin/zsh');
 
       const shell = getShellForPlatform('');
 
-      expect(shell).to.contain('/bin/zsh');
+      expect(shell).to.equal('/bin/zsh');
+      expect(mockConfigManager.getShellForPlatform).to.have.been.calledWith('');
     });
 
     it('should return cmd for Windows', () => {
-      (global as any).process.platform = 'win32';
-      const mockConfig = {
-        get: sinon.stub().returns(undefined),
-      };
-      mockVscode.workspace.getConfiguration.returns(mockConfig);
+      mockConfigManager.getShellForPlatform.returns('cmd.exe');
 
       const shell = getShellForPlatform('');
 
-      expect(shell).to.contain('cmd.exe');
+      expect(shell).to.equal('cmd.exe');
+      expect(mockConfigManager.getShellForPlatform).to.have.been.calledWith('');
     });
 
     it('should return bash for unknown platforms', () => {
-      (global as any).process.platform = 'unknown';
-      const mockConfig = {
-        get: sinon.stub().returns(undefined),
-      };
-      mockVscode.workspace.getConfiguration.returns(mockConfig);
+      mockConfigManager.getShellForPlatform.returns('/bin/bash');
 
       const shell = getShellForPlatform('');
 
-      expect(shell).to.contain('/bin/bash');
+      expect(shell).to.equal('/bin/bash');
+      expect(mockConfigManager.getShellForPlatform).to.have.been.calledWith('');
     });
   });
 
   describe('getWorkingDirectory', () => {
     it('should return workspace folder path when available', () => {
       mockVscode.workspace.workspaceFolders = [{ uri: { fsPath: '/workspace/path' } }];
-      const mockConfig = {
-        get: sinon.stub().returns(''),
-      };
-      mockVscode.workspace.getConfiguration.returns(mockConfig);
-      
+      mockConfigManager.getExtensionTerminalConfig.returns({ defaultDirectory: '' });
+
       // Mock fs.statSync to make directory validation pass
       const mockFs = {
         statSync: sinon.stub().returns({ isDirectory: () => true }),
         accessSync: sinon.stub(),
-        constants: { R_OK: 4, X_OK: 1 }
+        constants: { R_OK: 4, X_OK: 1 },
       };
       (global as any).require = sinon.stub().withArgs('fs').returns(mockFs);
 
       const workingDir = getWorkingDirectory();
 
-      expect(workingDir).to.contain('/workspace/path');
+      expect(workingDir).to.equal('/workspace/path');
     });
 
     it('should return home directory when no workspace folder', () => {
       mockVscode.workspace.workspaceFolders = undefined;
-      const mockConfig = {
-        get: sinon.stub().returns(''),
-      };
-      mockVscode.workspace.getConfiguration.returns(mockConfig);
+      mockVscode.window.activeTextEditor = undefined;
+      mockConfigManager.getExtensionTerminalConfig.returns({ defaultDirectory: '' });
       (global as any).process.env.HOME = '/home/user';
-      
-      // Mock os.homedir
+
+      // Mock os.homedir and fs to make home directory validation pass
       const mockOs = {
-        homedir: sinon.stub().returns('/home/user')
+        homedir: sinon.stub().returns('/home/user'),
       };
-      (global as any).require = sinon.stub().withArgs('os').returns(mockOs);
+      const mockFs = {
+        statSync: sinon.stub().returns({ isDirectory: () => true }),
+        accessSync: sinon.stub(),
+        constants: { R_OK: 4, X_OK: 1 },
+      };
+      const mockRequire = sinon.stub();
+      mockRequire.withArgs('os').returns(mockOs);
+      mockRequire.withArgs('fs').returns(mockFs);
+      (global as any).require = mockRequire;
 
       const workingDir = getWorkingDirectory();
 
-      expect(workingDir).to.contain('/home/user');
+      expect(workingDir).to.equal('/home/user');
     });
 
     it('should return current directory as fallback', () => {
       mockVscode.workspace.workspaceFolders = undefined;
-      const mockConfig = {
-        get: sinon.stub().returns(''),
-      };
-      mockVscode.workspace.getConfiguration.returns(mockConfig);
+      mockVscode.window.activeTextEditor = undefined;
+      mockConfigManager.getExtensionTerminalConfig.returns({ defaultDirectory: '' });
       (global as any).process.env.HOME = undefined;
       (global as any).process.cwd.returns('/current/dir');
-      
-      // Mock os.homedir to fail
+
+      // Mock os.homedir to fail, fs.statSync to fail for home but pass for cwd
       const mockOs = {
-        homedir: sinon.stub().throws(new Error('No home dir'))
+        homedir: sinon.stub().throws(new Error('No home dir')),
       };
-      (global as any).require = sinon.stub().withArgs('os').returns(mockOs);
+      const mockFs = {
+        statSync: sinon.stub().throws(new Error('No access')),
+        accessSync: sinon.stub(),
+        constants: { R_OK: 4, X_OK: 1 },
+      };
+      const mockRequire = sinon.stub();
+      mockRequire.withArgs('os').returns(mockOs);
+      mockRequire.withArgs('fs').returns(mockFs);
+      (global as any).require = mockRequire;
 
       const workingDir = getWorkingDirectory();
 
@@ -264,41 +241,47 @@ describe('Common Utils', () => {
 
     it('should handle Windows home directory', () => {
       mockVscode.workspace.workspaceFolders = undefined;
-      const mockConfig = {
-        get: sinon.stub().returns(''),
-      };
-      mockVscode.workspace.getConfiguration.returns(mockConfig);
+      mockVscode.window.activeTextEditor = undefined;
+      mockConfigManager.getExtensionTerminalConfig.returns({ defaultDirectory: '' });
       (global as any).process.platform = 'win32';
       (global as any).process.env.USERPROFILE = 'C:\\Users\\user';
-      
-      // Mock os.homedir
+
+      // Mock os.homedir and fs to make Windows home directory validation pass
       const mockOs = {
-        homedir: sinon.stub().returns('C:\\Users\\user')
+        homedir: sinon.stub().returns('C:\\Users\\user'),
       };
-      (global as any).require = sinon.stub().withArgs('os').returns(mockOs);
+      const mockFs = {
+        statSync: sinon.stub().returns({ isDirectory: () => true }),
+        accessSync: sinon.stub(),
+        constants: { R_OK: 4, X_OK: 1 },
+      };
+      const mockRequire = sinon.stub();
+      mockRequire.withArgs('os').returns(mockOs);
+      mockRequire.withArgs('fs').returns(mockFs);
+      (global as any).require = mockRequire;
 
       const workingDir = getWorkingDirectory();
 
-      expect(workingDir).to.contain('C:\\Users\\user');
+      expect(workingDir).to.equal('C:\\Users\\user');
     });
   });
 
   describe('validateDirectory', () => {
     let mockFs: any;
-    
+
     beforeEach(() => {
       mockFs = {
         statSync: sinon.stub(),
         accessSync: sinon.stub(),
-        constants: { R_OK: 4, X_OK: 1 }
+        constants: { R_OK: 4, X_OK: 1 },
       };
       (global as any).require = sinon.stub().withArgs('fs').returns(mockFs);
     });
-    
+
     it('should return true for valid directory path', () => {
       mockFs.statSync.returns({ isDirectory: () => true });
       mockFs.accessSync.returns(undefined);
-      
+
       const isValid = validateDirectory('/valid/path');
 
       expect(isValid).to.be.true;
@@ -306,7 +289,7 @@ describe('Common Utils', () => {
 
     it('should return false for invalid directory path', () => {
       mockFs.statSync.throws(new Error('ENOENT'));
-      
+
       const isValid = validateDirectory('/invalid/path');
 
       expect(isValid).to.be.false;
@@ -315,7 +298,7 @@ describe('Common Utils', () => {
     it('should return false for file (not directory)', () => {
       mockFs.statSync.returns({ isDirectory: () => false });
       mockFs.accessSync.returns(undefined);
-      
+
       const isValid = validateDirectory('/path/to/file.txt');
 
       expect(isValid).to.be.false;
@@ -324,7 +307,7 @@ describe('Common Utils', () => {
     it('should return false for inaccessible directory', () => {
       mockFs.statSync.returns({ isDirectory: () => true });
       mockFs.accessSync.throws(new Error('EACCES'));
-      
+
       const isValid = validateDirectory('/inaccessible/path');
 
       expect(isValid).to.be.false;
@@ -344,17 +327,23 @@ describe('Common Utils', () => {
     it('should generate ID with expected format', () => {
       const id = generateTerminalId();
 
-      expect(id).to.match(/^terminal-\d+-[a-f0-9]{8}$/);
+      // Format is: terminal-{timestamp}-{random base36 string}
+      expect(id).to.match(/^terminal-\d+-[a-z0-9]+$/);
     });
 
-    it('should generate IDs with incrementing numbers', () => {
+    it('should generate IDs with incrementing timestamps', () => {
       const id1 = generateTerminalId();
+      // Small delay to ensure different timestamps
+      const start = Date.now();
+      while (Date.now() - start < 2) {
+        // Wait 2ms to ensure timestamp difference
+      }
       const id2 = generateTerminalId();
 
-      const num1 = parseInt(id1.split('-')[1]);
-      const num2 = parseInt(id2.split('-')[1]);
+      const timestamp1 = parseInt(id1.split('-')[1]);
+      const timestamp2 = parseInt(id2.split('-')[1]);
 
-      expect(num2).to.be.greaterThan(num1);
+      expect(timestamp2).to.be.greaterThan(timestamp1);
     });
   });
 
@@ -395,10 +384,10 @@ describe('Common Utils', () => {
 
     it('should check if has active terminal', () => {
       expect(manager.hasActive()).to.be.false;
-      
+
       manager.setActive('terminal-1');
       expect(manager.hasActive()).to.be.true;
-      
+
       manager.clearActive();
       expect(manager.hasActive()).to.be.false;
     });
@@ -452,7 +441,7 @@ describe('Common Utils', () => {
       const map = new Map();
       map.set('key1', 'first');
       map.set('key2', 'second');
-      
+
       const result = getFirstValue(map);
 
       expect(result).to.equal('first');
@@ -460,7 +449,7 @@ describe('Common Utils', () => {
 
     it('should return undefined for empty Map', () => {
       const map = new Map();
-      
+
       const result = getFirstValue(map);
 
       expect(result).to.be.undefined;
@@ -469,7 +458,7 @@ describe('Common Utils', () => {
     it('should handle Map with single value', () => {
       const map = new Map();
       map.set('key1', 'onlyvalue');
-      
+
       const result = getFirstValue(map);
 
       expect(result).to.equal('onlyvalue');

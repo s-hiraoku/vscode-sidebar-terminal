@@ -10,18 +10,7 @@ import sinonChai from 'sinon-chai';
 use(sinonChai);
 import { JSDOM } from 'jsdom';
 import { SplitManager, TerminalInstance } from '../../../webview/managers/SplitManager';
-
-// Mock setup for this test file
-const setupTestEnvironment = (): void => {
-  // Mock globals that might be needed
-  if (typeof (global as any).vscode === 'undefined') {
-    (global as any).vscode = {
-      workspace: {
-        getConfiguration: () => ({ get: () => undefined }),
-      },
-    };
-  }
-};
+import { setupCompleteTestEnvironment, cleanupTestEnvironment } from '../../shared/TestSetup';
 
 describe('SplitManager', () => {
   let dom: JSDOM;
@@ -30,18 +19,8 @@ describe('SplitManager', () => {
   let splitManager: SplitManager;
 
   beforeEach(() => {
-    // Test environment setup
-    setupTestEnvironment();
-
-    // Mock console before JSDOM creation
-    (global as Record<string, unknown>).console = {
-      log: sinon.stub(),
-      warn: sinon.stub(),
-      error: sinon.stub(),
-    };
-
-    // JSDOM環境をセットアップ
-    dom = new JSDOM(`
+    // 統合されたテスト環境セットアップを使用
+    const testEnv = setupCompleteTestEnvironment(`
       <!DOCTYPE html>
       <html>
         <body>
@@ -51,25 +30,17 @@ describe('SplitManager', () => {
         </body>
       </html>
     `);
-    document = dom.window.document;
 
-    // グローバルに設定
-    (global as Record<string, unknown>).document = document;
-    (global as Record<string, unknown>).window = dom.window;
-    (global as Record<string, unknown>).HTMLElement = dom.window.HTMLElement;
+    dom = testEnv.dom;
+    document = testEnv.document;
 
     sandbox = sinon.createSandbox();
     splitManager = new SplitManager();
   });
 
   afterEach(() => {
-    sandbox.restore();
-
-    // クリーンアップ
-    delete (global as Record<string, unknown>).document;
-    delete (global as Record<string, unknown>).window;
-    delete (global as Record<string, unknown>).HTMLElement;
-    delete (global as Record<string, unknown>).console;
+    // 統合されたクリーンアップを使用
+    cleanupTestEnvironment(sandbox, dom);
   });
 
   describe('constructor', () => {

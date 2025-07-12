@@ -1,58 +1,42 @@
 /**
- * Unit test setup - Mock VS Code API and other dependencies
+ * Unit test setup - Imports from shared test utilities
+ * This file serves as a compatibility layer for legacy test setup
  */
+
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/no-var-requires */
-/* eslint-disable @typescript-eslint/explicit-function-return-type */
-/* eslint-disable @typescript-eslint/no-useless-constructor */
 /* eslint-disable prefer-rest-params */
 
-// Mock VS Code API
-const vscode = {
-  workspace: {
-    workspaceFolders: [
-      {
-        uri: { fsPath: '/workspace/test' },
-        name: 'test-project',
-      },
-    ],
-    getConfiguration: () => ({
-      get: () => undefined,
-    }),
-  },
-  EventEmitter: class {
-    constructor() {}
-    event = () => {};
-    fire = () => {};
-    dispose = () => {};
-  },
-  Uri: {
-    file: (path: string) => ({ fsPath: path }),
-    parse: (uri: string) => ({ fsPath: uri }),
-  },
-  window: {
-    showErrorMessage: () => Promise.resolve(),
-    showWarningMessage: () => Promise.resolve(),
-    showInformationMessage: () => Promise.resolve(),
-  },
-  commands: {
-    registerCommand: () => ({ dispose: () => {} }),
-    executeCommand: () => Promise.resolve(),
-  },
-  ViewColumn: {
-    One: 1,
-    Two: 2,
-    Three: 3,
-  },
+// Import shared test setup functionality
+import { setupTestEnvironment, mockVscode } from '../shared/TestSetup';
+
+// Set up test environment using shared utilities
+setupTestEnvironment();
+
+// Re-export VS Code mock for compatibility
+const vscode = mockVscode;
+
+// Export for legacy compatibility
+module.exports = { vscode };
+
+// Override module loading for vscode (stronger hook)
+const Module = require('module');
+const originalRequire = Module.prototype.require;
+
+Module.prototype.require = function (id: string) {
+  if (id === 'vscode') {
+    return vscode;
+  }
+  if (id === 'node-pty') {
+    return _ptyMock;
+  }
+  return originalRequire.apply(this, arguments);
 };
 
-// Register the mock globally
-(global as Record<string, unknown>).vscode = vscode;
-
-// Mock node-pty
+// Mock node-pty using shared patterns
 const mockPtyProcess = {
   pid: 1234,
   onData: () => {},
@@ -62,23 +46,6 @@ const mockPtyProcess = {
   kill: () => {},
 };
 
-const ptyMock = {
+const _ptyMock = {
   spawn: () => mockPtyProcess,
 };
-
-// Override module loading for node-pty
-const Module = require('module');
-const originalRequire = Module.prototype.require;
-
-Module.prototype.require = function (id: string) {
-  if (id === 'vscode') {
-    return vscode;
-  }
-  if (id === 'node-pty') {
-    return ptyMock;
-  }
-  return originalRequire.apply(this, arguments);
-};
-
-// Set up test environment - no mocha hooks here since this is a require module
-// The cleanup will be handled by individual test files if needed

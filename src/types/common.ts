@@ -1,6 +1,16 @@
 /**
  * 共通の型定義とインターフェース
+ *
+ * NOTE: TerminalConfig と TerminalSettings は shared.ts に移行済み
+ * 段階的移行のため、ここでは shared.ts からのインポートとエイリアスを提供
  */
+
+// 新しい型システムからのインポート
+import {
+  ExtensionTerminalConfig,
+  CompleteTerminalSettings,
+  PartialTerminalSettings,
+} from './shared';
 
 // IPty interface for type safety when using node-pty or mocks
 export interface IPty {
@@ -22,26 +32,20 @@ export interface TerminalInfo {
   isActive: boolean;
 }
 
-export interface TerminalConfig {
-  fontSize: number;
-  fontFamily: string;
-  maxTerminals: number;
-  shell: string;
-  shellArgs: string[];
-  defaultDirectory?: string;
-}
+// ===== 後方互換性のための型エイリアス =====
+// 段階的移行期間中の後方互換性を保つため、shared.ts の型をエイリアス
 
-export interface TerminalSettings {
-  fontSize: number;
-  fontFamily: string;
-  theme?: string;
-  cursorBlink: boolean;
-  confirmBeforeKill?: boolean;
-  protectLastTerminal?: boolean;
-  minTerminalCount?: number;
-  altClickMovesCursor?: boolean;
-  multiCursorModifier?: string;
-}
+/**
+ * ターミナル設定インターフェース
+ * @deprecated shared.ts の ExtensionTerminalConfig を使用してください
+ */
+export type TerminalConfig = ExtensionTerminalConfig;
+
+/**
+ * ターミナル設定の詳細インターフェース
+ * @deprecated shared.ts の CompleteTerminalSettings を使用してください
+ */
+export type TerminalSettings = CompleteTerminalSettings;
 
 export interface WebviewMessage {
   command:
@@ -61,7 +65,7 @@ export interface WebviewMessage {
   terminalName?: string;
   terminals?: TerminalInfo[];
   activeTerminalId?: string;
-  settings?: TerminalSettings;
+  settings?: PartialTerminalSettings; // 部分的な設定を受け取るよう修正
 }
 
 export interface VsCodeMessage {
@@ -80,7 +84,7 @@ export interface VsCodeMessage {
   cols?: number;
   rows?: number;
   terminalId?: string;
-  settings?: TerminalSettings;
+  settings?: PartialTerminalSettings; // 部分的な設定を送信するよう修正
 }
 
 export interface TerminalInstance {

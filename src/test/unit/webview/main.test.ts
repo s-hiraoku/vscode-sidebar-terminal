@@ -4,43 +4,7 @@
 import { expect } from 'chai';
 import * as sinon from 'sinon';
 import { JSDOM } from 'jsdom';
-
-// Mock VS Code API
-const mockVscode = {
-  workspace: {
-    getConfiguration: sinon.stub(),
-  },
-  window: {
-    showErrorMessage: sinon.stub(),
-    showWarningMessage: sinon.stub(),
-    showInformationMessage: sinon.stub(),
-  },
-  ExtensionContext: sinon.stub(),
-  ViewColumn: { One: 1 },
-  TreeDataProvider: sinon.stub(),
-  EventEmitter: sinon.stub(),
-  CancellationToken: sinon.stub(),
-  commands: {
-    registerCommand: sinon.stub(),
-    executeCommand: sinon.stub(),
-  },
-};
-
-// Setup test environment
-function setupTestEnvironment() {
-  // Mock VS Code module
-  (global as any).vscode = mockVscode;
-
-  // Mock Node.js modules
-  (global as any).require = sinon.stub();
-  (global as any).module = { exports: {} };
-  (global as any).process = {
-    platform: 'linux',
-    env: {
-      NODE_ENV: 'test',
-    },
-  };
-}
+import { setupCompleteTestEnvironment, cleanupTestEnvironment } from '../../shared/TestSetup';
 
 describe('WebView Main', () => {
   let sandbox: sinon.SinonSandbox;
@@ -50,7 +14,7 @@ describe('WebView Main', () => {
   let mockWebviewManager: any;
 
   beforeEach(() => {
-    setupTestEnvironment();
+    sandbox = sinon.createSandbox();
 
     // Mock console before JSDOM creation
     (global as Record<string, unknown>).console = {
@@ -87,6 +51,14 @@ describe('WebView Main', () => {
       setState: sinon.spy(),
       getState: sinon.stub().returns({}),
     });
+
+    // Set up process.nextTick before JSDOM creation
+    const originalProcess = global.process;
+    (global as any).process = {
+      ...originalProcess,
+      nextTick: (callback: () => void) => setImmediate(callback),
+      env: { ...originalProcess.env, NODE_ENV: 'test' },
+    };
 
     dom = new JSDOM(`
       <!DOCTYPE html>

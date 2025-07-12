@@ -270,7 +270,7 @@
     "test": "node ./out/test/runTest.js",
     "test:coverage": "nyc --reporter=text --reporter=html --reporter=lcov npm run test",
     "test:watch": "npm run watch-tests & npm run test",
-    "test:unit": "nyc mocha 'out/test/unit/**/*.test.js'",
+    "test:unit": "nyc mocha --require out/test/unit/mocha-setup.js 'out/test/unit/**/*.test.js'",
     "test:integration": "nyc mocha 'out/test/integration/**/*.test.js'",
     "coverage:report": "nyc report --reporter=text --reporter=html",
     "coverage:check": "nyc check-coverage --lines 70 --functions 70 --branches 60",

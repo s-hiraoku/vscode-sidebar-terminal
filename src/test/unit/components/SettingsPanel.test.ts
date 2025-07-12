@@ -10,18 +10,7 @@ import sinonChai from 'sinon-chai';
 use(sinonChai);
 import { JSDOM } from 'jsdom';
 import { SettingsPanel } from '../../../webview/components/SettingsPanel';
-
-// Mock setup for this test file
-const setupTestEnvironment = (): void => {
-  // Mock globals that might be needed
-  if (typeof (global as any).vscode === 'undefined') {
-    (global as any).vscode = {
-      workspace: {
-        getConfiguration: () => ({ get: () => undefined }),
-      },
-    };
-  }
-};
+import { setupCompleteTestEnvironment, cleanupTestEnvironment } from '../../shared/TestSetup';
 
 describe('SettingsPanel', () => {
   let dom: JSDOM;
@@ -32,32 +21,19 @@ describe('SettingsPanel', () => {
   let onCloseSpy: sinon.SinonSpy;
 
   beforeEach(() => {
-    // Test environment setup
-    setupTestEnvironment();
-
-    // Mock console before JSDOM creation
-    (global as Record<string, unknown>).console = {
-      log: sinon.stub(),
-      warn: sinon.stub(),
-      error: sinon.stub(),
-    };
-
-    // JSDOM環境をセットアップ
-    dom = new JSDOM(`
+    // 統合されたテスト環境セットアップを使用
+    const testEnv = setupCompleteTestEnvironment(`
       <!DOCTYPE html>
       <html>
         <body>
         </body>
       </html>
     `);
-    document = dom.window.document;
 
-    // グローバルに設定
-    (global as Record<string, unknown>).document = document;
-    (global as Record<string, unknown>).window = dom.window;
-    (global as Record<string, unknown>).HTMLElement = dom.window.HTMLElement;
-    (global as Record<string, unknown>).HTMLInputElement = dom.window.HTMLInputElement;
-    (global as Record<string, unknown>).HTMLSelectElement = dom.window.HTMLSelectElement;
+    dom = testEnv.dom;
+    document = testEnv.document;
+
+    // アニメーション関連のモックを追加
     (global as Record<string, unknown>).requestAnimationFrame = sinon.stub().callsArg(0);
 
     sandbox = sinon.createSandbox();
@@ -71,16 +47,11 @@ describe('SettingsPanel', () => {
   });
 
   afterEach(() => {
-    sandbox.restore();
+    // 統合されたクリーンアップを使用
+    cleanupTestEnvironment(sandbox, dom);
 
-    // クリーンアップ
-    delete (global as Record<string, unknown>).document;
-    delete (global as Record<string, unknown>).window;
-    delete (global as Record<string, unknown>).HTMLElement;
-    delete (global as Record<string, unknown>).HTMLInputElement;
-    delete (global as Record<string, unknown>).HTMLSelectElement;
+    // 追加されたモックのクリーンアップ
     delete (global as Record<string, unknown>).requestAnimationFrame;
-    delete (global as Record<string, unknown>).console;
   });
 
   describe('constructor', () => {
@@ -119,9 +90,9 @@ describe('SettingsPanel', () => {
     it('should populate settings when provided', () => {
       const testSettings = {
         fontSize: 16,
-        fontFamily: 'Monaco, monospace',
+        fontFamily: 'Consolas, "Courier New", monospace',
         theme: 'dark',
-        cursorBlink: false,
+        cursorBlink: true,
       };
 
       settingsPanel.show(testSettings);
@@ -132,9 +103,9 @@ describe('SettingsPanel', () => {
       const cursorBlinkCheckbox = document.getElementById('cursor-blink') as HTMLInputElement;
 
       expect(fontSizeSlider?.value).to.equal('16');
-      expect(fontFamilySelect?.value).to.equal('Monaco, monospace');
+      expect(fontFamilySelect?.value).to.equal('Consolas, "Courier New", monospace');
       expect(themeSelect?.value).to.equal('dark');
-      expect(cursorBlinkCheckbox?.checked).to.be.false;
+      expect(cursorBlinkCheckbox?.checked).to.be.true;
     });
 
     it('should create settings content with correct structure', () => {
@@ -315,9 +286,9 @@ describe('SettingsPanel', () => {
       const cursorBlinkCheckbox = document.getElementById('cursor-blink') as HTMLInputElement;
 
       fontSizeSlider.value = '16';
-      fontFamilySelect.value = 'Monaco, monospace';
+      fontFamilySelect.value = 'Consolas, "Courier New", monospace';
       themeSelect.value = 'light';
-      cursorBlinkCheckbox.checked = false;
+      cursorBlinkCheckbox.checked = true;
 
       // Trigger apply to collect settings
       const applyBtn = document.getElementById('apply-settings');
@@ -329,9 +300,9 @@ describe('SettingsPanel', () => {
 
       expect(collectedSettings).to.deep.equal({
         fontSize: 16,
-        fontFamily: 'Monaco, monospace',
+        fontFamily: 'Consolas, "Courier New", monospace',
         theme: 'light',
-        cursorBlink: false,
+        cursorBlink: true,
       });
     });
 
@@ -362,7 +333,7 @@ describe('SettingsPanel', () => {
     it('should handle partial settings', () => {
       const partialSettings = {
         fontSize: 18,
-        fontFamily: 'Monaco, monospace',
+        fontFamily: 'Consolas, "Courier New", monospace',
         // Missing theme and cursorBlink
       };
 
@@ -372,7 +343,7 @@ describe('SettingsPanel', () => {
       const fontFamilySelect = document.getElementById('font-family-select') as HTMLSelectElement;
 
       expect(fontSizeSlider?.value).to.equal('18');
-      expect(fontFamilySelect?.value).to.equal('Monaco, monospace');
+      expect(fontFamilySelect?.value).to.equal('Consolas, "Courier New", monospace');
     });
 
     it('should handle invalid settings gracefully', () => {

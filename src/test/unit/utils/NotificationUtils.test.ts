@@ -39,6 +39,14 @@ describe('NotificationUtils', () => {
     // Test environment setup
     setupTestEnvironment();
 
+    // Set up process.nextTick before JSDOM creation
+    const originalProcess = global.process;
+    (global as any).process = {
+      ...originalProcess,
+      nextTick: (callback: () => void) => setImmediate(callback),
+      env: { ...originalProcess.env, NODE_ENV: 'test' },
+    };
+
     // JSDOM環境をセットアップ
     dom = new JSDOM(`
       <!DOCTYPE html>

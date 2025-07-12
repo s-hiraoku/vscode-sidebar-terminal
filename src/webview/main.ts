@@ -16,6 +16,7 @@ import type {
   AltClickState,
   TerminalInteractionEvent,
 } from '../types/common';
+import { PartialTerminalSettings } from '../types/shared';
 import { webview as log } from '../utils/logger';
 import { WEBVIEW_TERMINAL_CONSTANTS, SPLIT_CONSTANTS } from './constants/webview';
 import { getWebviewTheme, WEBVIEW_THEME_CONSTANTS } from './utils/WebviewThemeUtils';
@@ -38,12 +39,7 @@ interface TerminalMessage extends WebviewMessage {
   config?: TerminalConfig;
   activeTerminalId?: string;
   exitCode?: number;
-  settings?: {
-    fontSize: number;
-    fontFamily: string;
-    theme?: string;
-    cursorBlink: boolean;
-  };
+  // settings は継承されたものを使用（PartialTerminalSettings）
 }
 
 declare const acquireVsCodeApi: () => {
@@ -77,7 +73,7 @@ class TerminalWebviewManager {
   private settingsPanel: SettingsPanel;
 
   // Current settings
-  private currentSettings: TerminalSettings = {
+  private currentSettings: PartialTerminalSettings = {
     fontSize: 14,
     fontFamily: 'Consolas, monospace',
     theme: 'auto',
@@ -1398,7 +1394,7 @@ class TerminalWebviewManager {
     this.settingsPanel.show(this.currentSettings);
   }
 
-  public applySettings(settings: TerminalSettings): void {
+  public applySettings(settings: PartialTerminalSettings): void {
     // Update current settings
     this.currentSettings = { ...this.currentSettings, ...settings };
 
@@ -1460,7 +1456,7 @@ class TerminalWebviewManager {
 
   private loadSettings(): void {
     try {
-      const state = vscode.getState() as { terminalSettings?: TerminalSettings } | undefined;
+      const state = vscode.getState() as { terminalSettings?: PartialTerminalSettings } | undefined;
       if (state?.terminalSettings) {
         this.currentSettings = { ...this.currentSettings, ...state.terminalSettings };
         log('📋 [WEBVIEW] Loaded settings:', this.currentSettings);
