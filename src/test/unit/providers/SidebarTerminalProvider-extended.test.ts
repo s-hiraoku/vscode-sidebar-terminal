@@ -122,6 +122,14 @@ describe('SidebarTerminalProvider Extended', () => {
       dispose: sinon.spy(),
     };
 
+    // Set up process.nextTick before JSDOM creation
+    const originalProcess = global.process;
+    (global as any).process = {
+      ...originalProcess,
+      nextTick: (callback: () => void) => setImmediate(callback),
+      env: { ...originalProcess.env, NODE_ENV: 'test' },
+    };
+
     dom = new JSDOM(`<!DOCTYPE html><html><body></body></html>`);
     document = dom.window.document;
     (global as any).document = document;

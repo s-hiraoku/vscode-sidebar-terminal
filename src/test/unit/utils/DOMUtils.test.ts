@@ -32,6 +32,14 @@ describe('DOMUtils', () => {
     // Test environment setup
     setupTestEnvironment();
 
+    // Set up process.nextTick before JSDOM creation
+    const originalProcess = global.process;
+    (global as any).process = {
+      ...originalProcess,
+      nextTick: (callback: () => void) => setImmediate(callback),
+      env: { ...originalProcess.env, NODE_ENV: 'test' },
+    };
+
     // セットアップ: JSDOM環境を作成
     dom = new JSDOM('<!DOCTYPE html><html><body></body></html>');
     document = dom.window.document;

@@ -18,6 +18,20 @@ const vscode = mockVscode;
 // Export for legacy compatibility
 module.exports = { vscode };
 
+// Override module loading for vscode (stronger hook)
+const Module = require('module');
+const originalRequire = Module.prototype.require;
+
+Module.prototype.require = function (id: string) {
+  if (id === 'vscode') {
+    return vscode;
+  }
+  if (id === 'node-pty') {
+    return _ptyMock;
+  }
+  return originalRequire.apply(this, arguments);
+};
+
 // Mock node-pty using shared patterns
 const mockPtyProcess = {
   pid: 1234,

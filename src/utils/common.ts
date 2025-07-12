@@ -222,8 +222,8 @@ export function generateNonce(): string {
 /**
  * 配列から最初の要素を安全に取得
  */
-export function getFirstItem<T>(array: T[]): T | undefined {
-  return array.length > 0 ? array[0] : undefined;
+export function getFirstItem<T>(array: T[] | null | undefined): T | undefined {
+  return array && array.length > 0 ? array[0] : undefined;
 }
 
 /**
@@ -246,7 +246,8 @@ export function delay(ms: number): Promise<void> {
  */
 export function safeStringify(obj: unknown): string {
   try {
-    return JSON.stringify(obj);
+    const result = JSON.stringify(obj);
+    return result !== undefined ? result : String(obj);
   } catch {
     return String(obj);
   }
