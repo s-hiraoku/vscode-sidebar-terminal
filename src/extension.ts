@@ -18,6 +18,9 @@ export function activate(context: vscode.ExtensionContext): void {
   log('Extension path:', context.extensionPath);
 
   try {
+    // Ensure node-pty looks for release binaries
+    process.env.NODE_PSTY_DEBUG = '0';
+
     // Initialize terminal manager
     terminalManager = new TerminalManager(context);
 
