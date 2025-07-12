@@ -49,6 +49,9 @@
   "qna": "https://github.com/s-hiraoku/vscode-sidebar-terminal/discussions",
   "preview": false,
   "main": "./dist/extension.js",
+  "activationEvents": [
+    "onView:sidebarTerminal"
+  ],
   "contributes": {
     "viewsContainers": {
       "activitybar": [
