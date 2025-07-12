@@ -222,3 +222,88 @@ VS Code Settings → Extension (SidebarTerminalProvider) → WebView Message →
 - `src/providers/SidebarTerminalProvider.ts`: VS Code settings integration and change monitoring
 - `src/webview/main.ts`: Alt+Click logic, visual feedback, and settings application
 - `src/types/common.ts`: Extended TerminalSettings interface for Alt+Click settings
+
+## Platform-Specific Extension Architecture
+
+This extension uses VS Code's platform-specific extension system to handle native dependencies (node-pty) across different operating systems and architectures.
+
+### Platform Target Support
+
+The extension builds for 9 platform targets:
+- **Windows**: win32-x64, win32-arm64
+- **macOS**: darwin-x64, darwin-arm64  
+- **Linux**: linux-x64, linux-arm64, linux-armhf
+- **Alpine**: alpine-x64, alpine-arm64
+
+### Platform-Specific Build Commands
+
+```bash
+# Individual platform builds
+npm run vsce:package:win32-x64      # Windows 64-bit
+npm run vsce:package:darwin-x64     # macOS Intel
+npm run vsce:package:darwin-arm64   # macOS Apple Silicon
+npm run vsce:package:linux-x64      # Linux 64-bit
+npm run vsce:package:linux-arm64    # Linux ARM64
+
+# All platforms via script
+./scripts/package-all-platforms.sh
+```
+
+### Native Dependency Management
+
+**node-pty Handling**:
+- Listed in `bundledDependencies` to ensure inclusion in VSIX packages
+- `npm rebuild` runs during `vscode:prepublish` to compile for target platform
+- Each platform build contains the appropriate native binary
+- Users automatically receive the correct platform version from VS Code Marketplace
+
+### CI/CD Release Process
+
+**GitHub Actions Workflow** (`.github/workflows/build-platform-packages.yml`):
+1. **Trigger**: Git tag push (`v*` pattern)
+2. **Build Matrix**: Parallel builds on Windows, macOS, Linux runners
+3. **Platform Targeting**: Each job builds for specific architecture using `vsce package --target`
+4. **Artifact Collection**: All platform VSIXs collected and uploaded
+5. **Release Creation**: GitHub Release with all platform packages attached
+6. **Marketplace Publishing**: Automatic publishing to VS Code Marketplace
+
+### Release Workflow
+
+```bash
+# Development workflow
+npm version patch|minor|major   # Update package.json version
+git push origin for-publish     # Push changes
+git tag vX.X.X                 # Create release tag
+git push origin vX.X.X         # Trigger automated release
+
+# GitHub Actions automatically:
+# 1. Builds all 9 platform packages
+# 2. Creates GitHub Release
+# 3. Publishes to VS Code Marketplace
+```
+
+### Marketplace Integration
+
+VS Code Marketplace automatically serves the correct platform package to users based on their system:
+- Users see a single extension listing
+- VS Code automatically downloads the appropriate platform binary
+- No user action required for platform selection
+
+### Development Testing
+
+**Local Platform Testing**:
+```bash
+# Test current platform build
+npm run vsce:package
+
+# Test specific platform (may not work cross-platform)
+npm run vsce:package:darwin-x64
+
+# Install and test locally
+code --install-extension package.vsix
+```
+
+**Cross-Platform Validation**:
+- Use GitHub Actions for testing on actual target platforms
+- Each platform build includes native node-pty compilation
+- VSIX packages contain platform-specific binaries in `node_modules/node-pty/build/`
