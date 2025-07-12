@@ -107,6 +107,8 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
     
     steps:
       - name: Checkout code
@@ -124,20 +126,20 @@ jobs:
           ls -la ./release/
 
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: ./release/*.vsix
           draft: false
           prerelease: ${{ contains(github.ref, '-') }}
           generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   publish-marketplace:
     name: Publish to VS Code Marketplace
     needs: build
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: read
     
     steps:
       - name: Checkout code
