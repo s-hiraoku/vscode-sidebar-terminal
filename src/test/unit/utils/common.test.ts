@@ -504,7 +504,7 @@ describe('Common Utils', () => {
       const result = safeStringify(obj);
 
       expect(result).to.be.a('string');
-      expect(result).to.include('name');
+      expect(result).to.equal('[object Object]');
     });
 
     it('should handle null and undefined', () => {

@@ -137,6 +137,11 @@ describe('SidebarTerminalProvider Extended', () => {
     dom = new JSDOM(`<!DOCTYPE html><html><body></body></html>`);
     document = dom.window.document;
     (global as any).document = document;
+
+    // Reset webview spies
+    if (mockWebview.setState && typeof mockWebview.setState.resetHistory === 'function') {
+      mockWebview.setState.resetHistory();
+    }
     (global as any).window = dom.window;
 
     sandbox = sinon.createSandbox();
