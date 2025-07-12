@@ -71,7 +71,20 @@ export function setupTestEnvironment(): void {
   (global as any).module = { exports: {} };
   // Processオブジェクトは上書きせず、必要なプロパティのみ安全に設定
   if (!(global as any).process) {
-    (global as any).process = process;
+    (global as any).process = {
+      ...process,
+      nextTick: (callback: () => void) => setImmediate(callback),
+      env: { ...process.env, NODE_ENV: 'test' },
+      platform: process.platform,
+      cwd: () => process.cwd(),
+      argv: process.argv,
+      pid: process.pid,
+    };
+  } else {
+    // 既存のprocessオブジェクトにnextTickが無い場合は追加
+    if (!(global as any).process.nextTick) {
+      (global as any).process.nextTick = (callback: () => void) => setImmediate(callback);
+    }
   }
 
   // テスト用の環境変数を一時的に設定（復元可能な形で）
@@ -140,6 +153,13 @@ export function setupJSDOMEnvironment(htmlContent?: string): {
     contentType: 'text/html',
     includeNodeLocations: true,
     storageQuota: 10000000,
+    beforeParse(window) {
+      // Ensure process.nextTick is available for JSDOM
+      (window as any).process = {
+        nextTick: (callback: () => void) => setImmediate(callback),
+        env: { NODE_ENV: 'test' },
+      };
+    },
   });
 
   const { window } = dom;
