@@ -48,9 +48,6 @@
   "license": "MIT",
   "qna": "https://github.com/s-hiraoku/vscode-sidebar-terminal/discussions",
   "preview": false,
-  "activationEvents": [
-    "onView:sidebarTerminal"
-  ],
   "main": "./dist/extension.js",
   "contributes": {
     "viewsContainers": {
@@ -262,7 +259,7 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm rebuild && npm run package",
+    "vscode:prepublish": "npm run package",
     "compile": "webpack",
     "watch": "webpack --watch",
     "package": "webpack --mode production --devtool hidden-source-map",
@@ -332,7 +329,7 @@
     "webpack-cli": "^6.0.0"
   },
   "dependencies": {
-    "node-pty": "^1.1.0-beta34",
+    "node-pty": "^1.0.0",
     "process": "^0.11.10",
     "xterm": "^5.3.0",
     "xterm-addon-fit": "^0.8.0",

@@ -95,10 +95,24 @@ jobs:
         run: npm ci
 
       - name: Rebuild native dependencies for target platform
-        run: npm rebuild
+        run: |
+          # Clean node-pty build artifacts
+          rm -rf node_modules/node-pty/build
+          # Rebuild for target platform
+          npm rebuild node-pty --update-binary
 
       - name: Install VSCE
         run: npm install -g @vscode/vsce
+
+      - name: Validate native module build
+        run: |
+          echo "Checking node-pty binary for ${{ matrix.target }}..."
+          if [ -f "node_modules/node-pty/build/Release/pty.node" ]; then
+            file node_modules/node-pty/build/Release/pty.node || true
+          else
+            echo "ERROR: pty.node not found!"
+            exit 1
+          fi
 
       - name: Package extension for ${{ matrix.target }}
         run: vsce package --target ${{ matrix.target }}
