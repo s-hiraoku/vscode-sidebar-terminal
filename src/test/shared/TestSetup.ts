@@ -252,14 +252,14 @@ export function cleanupTestEnvironment(sandbox?: sinon.SinonSandbox, dom?: JSDOM
   }
 
   // グローバル状態をクリア
-  Object.keys(mockVscode.workspace.getConfiguration()).forEach((key) => {
-    if (
-      typeof mockVscode.workspace.getConfiguration()[key] === 'object' &&
-      mockVscode.workspace.getConfiguration()[key].reset
-    ) {
-      mockVscode.workspace.getConfiguration()[key].reset();
-    }
-  });
+  const config = mockVscode.workspace.getConfiguration();
+  if (config && typeof config === 'object') {
+    Object.keys(config).forEach((key) => {
+      if (typeof config[key] === 'object' && config[key] && config[key].reset) {
+        config[key].reset();
+      }
+    });
+  }
 
   // グローバルオブジェクトの部分的クリアアップ
   delete (global as any).window;

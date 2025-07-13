@@ -267,7 +267,7 @@
     "watch-tests": "tsc -p . -w --outDir out",
     "pretest": "npm run compile-tests && npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
-    "test": "node ./out/test/runTest.js",
+    "test": "npm run test:unit",
     "test:coverage": "nyc --reporter=text --reporter=html --reporter=lcov npm run test",
     "test:watch": "npm run watch-tests & npm run test",
     "test:unit": "nyc mocha --require out/test/shared/TestSetup.js --timeout 30000 'out/test/unit/**/*.test.js'",

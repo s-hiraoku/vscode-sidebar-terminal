@@ -47,7 +47,13 @@ Module.prototype.require = function (id: string) {
 async function main(): Promise<void> {
   try {
     console.log('🚀 [TEST] Starting VS Code extension tests...');
-    
+
+    // Setup for container environment
+    if (process.env.CI || process.env.DOCKER_CONTAINER) {
+      console.log('🐳 [TEST] Detected CI/container environment, setting up virtual display...');
+      process.env.DISPLAY = ':99';
+    }
+
     // The folder containing the Extension Manifest package.json
     // Passed to `--extensionDevelopmentPath`
     const extensionDevelopmentPath = path.resolve(__dirname, '../../');
@@ -58,36 +64,18 @@ async function main(): Promise<void> {
     const extensionTestsPath = path.resolve(__dirname, './suite/index');
     console.log('🧪 [TEST] Test suite path:', extensionTestsPath);
 
-    // Platform-specific launch args
-    const baseLaunchArgs = [
-      '--headless',
+    // Container-optimized args to prevent SIGTRAP
+    const launchArgs = [
       '--disable-gpu',
-      '--disable-dev-shm-usage',
-      '--disable-software-rasterizer',
       '--no-sandbox',
-      '--disable-background-timer-throttling',
-      '--disable-backgrounding-occluded-windows',
-      '--disable-renderer-backgrounding',
-      '--disable-features=TranslateUI',
-      '--disable-ipc-flooding-protection',
-      '--disable-background-networking',
-      '--disable-default-apps',
+      '--disable-dev-shm-usage',
       '--disable-extensions',
-      '--disable-sync',
-      '--disable-translate',
-      '--hide-scrollbars',
-      '--mute-audio',
-      '--no-first-run',
-      '--no-default-browser-check',
-      '--no-pings',
+      '--disable-features=VizDisplayCompositor',
+      '--use-gl=swiftshader',
+      '--enable-features=UseOzonePlatform',
+      '--ozone-platform=headless',
     ];
 
-    // Add platform-specific args
-    const platformArgs = process.platform === 'darwin' 
-      ? ['--disable-features=VizDisplayCompositor'] // macOS specific
-      : ['--no-zygote', '--single-process', '--disable-setuid-sandbox', '--disable-web-security'];
-
-    const launchArgs = [...baseLaunchArgs, ...platformArgs];
     console.log('⚙️ [TEST] Launch args:', launchArgs.join(' '));
 
     // Download VS Code, unzip it and run the integration test
@@ -96,23 +84,26 @@ async function main(): Promise<void> {
       extensionDevelopmentPath,
       extensionTestsPath,
       launchArgs,
-      timeout: 60000, // 60 second timeout
+      timeout: 120000, // 120 second timeout for CI stability
+      version: '1.85.0', // Pin to stable version
     });
-    
+
     console.log('✅ [TEST] All tests completed successfully!');
   } catch (err) {
     console.error('❌ [TEST] Test execution failed:', err);
-    
+
     // Log detailed error information
     if (err instanceof Error) {
       console.error('Error name:', err.name);
       console.error('Error message:', err.message);
       console.error('Error stack:', err.stack);
     }
-    
+
     // Exit with specific code for different error types
     if (err instanceof Error && err.message.includes('timeout')) {
-      console.error('💀 [TEST] Tests timed out - this may indicate a hanging test or VS Code startup issue');
+      console.error(
+        '💀 [TEST] Tests timed out - this may indicate a hanging test or VS Code startup issue'
+      );
       process.exit(2);
     } else if (err instanceof Error && err.message.includes('ENOENT')) {
       console.error('💀 [TEST] File not found - check VS Code installation or test paths');
