@@ -300,7 +300,7 @@ This project is licensed under the [MIT License](LICENSE).
 
 ## 📝 Changelog
 
-### v0.0.1 (In Development)
+### v0.1.13 (Released)
 
 #### Features
 - Initial release
