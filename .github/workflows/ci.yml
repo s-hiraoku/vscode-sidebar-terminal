@@ -86,24 +86,11 @@ jobs:
 
       - name: Run unit tests with coverage (Linux)
         if: runner.os == 'Linux'
-        run: npm run test:unit
-        env:
-          NODE_PTY_SKIP_DOWNLOAD_BINARY: 1
-
-      - name: Run VS Code integration tests (Linux)
-        if: runner.os == 'Linux'
         run: xvfb-run -a npm test
         env:
           NODE_PTY_SKIP_DOWNLOAD_BINARY: 1
 
       - name: Run unit tests with coverage (macOS/Windows)
-        if: runner.os != 'Linux'
-        run: npm run test:unit
-        timeout-minutes: 15
-        env:
-          NODE_PTY_SKIP_DOWNLOAD_BINARY: 1
-
-      - name: Run VS Code integration tests (macOS/Windows)
         if: runner.os != 'Linux'
         run: npm test
         timeout-minutes: 15
