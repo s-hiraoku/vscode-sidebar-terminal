@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Custom themes and color schemes
 - Advanced keyboard shortcuts
 
-## [0.0.1] - 2025-07-13
+## [0.1.13] - 2025-07-13
 
 ### Added
 - Initial release of Sidebar Terminal extension
@@ -88,7 +88,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Resource Management**: Proper cleanup of PTY processes and WebView resources
 - **Security Testing**: CodeQL analysis and dependency vulnerability scanning
 
-## [0.0.2] - Future Release (Planned)
+## [0.2.0] - Future Release (Planned)
 
 ### Planned Features
 - **Enhanced Testing**: Complete Phase 2 WebView component testing
