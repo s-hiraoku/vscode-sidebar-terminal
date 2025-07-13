@@ -143,7 +143,7 @@ describe('HeaderManager', () => {
 
       // Check if command section has sample-icons class
       expect(commandSection?.classList.contains('sample-icons')).to.be.true;
-      
+
       // Check if it contains sample icons
       const sampleIcons = commandSection?.querySelectorAll('.sample-icon');
       expect(sampleIcons && sampleIcons.length > 0).to.be.true;

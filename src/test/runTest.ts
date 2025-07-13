@@ -46,29 +46,81 @@ Module.prototype.require = function (id: string) {
 
 async function main(): Promise<void> {
   try {
+    console.log('🚀 [TEST] Starting VS Code extension tests...');
+    
     // The folder containing the Extension Manifest package.json
     // Passed to `--extensionDevelopmentPath`
     const extensionDevelopmentPath = path.resolve(__dirname, '../../');
+    console.log('📁 [TEST] Extension path:', extensionDevelopmentPath);
 
     // The path to test runner
     // Passed to --extensionTestsPath
     const extensionTestsPath = path.resolve(__dirname, './suite/index');
+    console.log('🧪 [TEST] Test suite path:', extensionTestsPath);
+
+    // Platform-specific launch args
+    const baseLaunchArgs = [
+      '--headless',
+      '--disable-gpu',
+      '--disable-dev-shm-usage',
+      '--disable-software-rasterizer',
+      '--no-sandbox',
+      '--disable-background-timer-throttling',
+      '--disable-backgrounding-occluded-windows',
+      '--disable-renderer-backgrounding',
+      '--disable-features=TranslateUI',
+      '--disable-ipc-flooding-protection',
+      '--disable-background-networking',
+      '--disable-default-apps',
+      '--disable-extensions',
+      '--disable-sync',
+      '--disable-translate',
+      '--hide-scrollbars',
+      '--mute-audio',
+      '--no-first-run',
+      '--no-default-browser-check',
+      '--no-pings',
+    ];
+
+    // Add platform-specific args
+    const platformArgs = process.platform === 'darwin' 
+      ? ['--disable-features=VizDisplayCompositor'] // macOS specific
+      : ['--no-zygote', '--single-process', '--disable-setuid-sandbox', '--disable-web-security'];
+
+    const launchArgs = [...baseLaunchArgs, ...platformArgs];
+    console.log('⚙️ [TEST] Launch args:', launchArgs.join(' '));
 
     // Download VS Code, unzip it and run the integration test
+    console.log('📥 [TEST] Starting VS Code test runner...');
     await runTests({
       extensionDevelopmentPath,
       extensionTestsPath,
-      launchArgs: [
-        '--headless',
-        '--disable-gpu',
-        '--disable-dev-shm-usage',
-        '--disable-software-rasterizer',
-        '--no-sandbox',
-      ],
+      launchArgs,
+      timeout: 60000, // 60 second timeout
     });
+    
+    console.log('✅ [TEST] All tests completed successfully!');
   } catch (err) {
-    console.error('Failed to run tests', err);
-    process.exit(1);
+    console.error('❌ [TEST] Test execution failed:', err);
+    
+    // Log detailed error information
+    if (err instanceof Error) {
+      console.error('Error name:', err.name);
+      console.error('Error message:', err.message);
+      console.error('Error stack:', err.stack);
+    }
+    
+    // Exit with specific code for different error types
+    if (err instanceof Error && err.message.includes('timeout')) {
+      console.error('💀 [TEST] Tests timed out - this may indicate a hanging test or VS Code startup issue');
+      process.exit(2);
+    } else if (err instanceof Error && err.message.includes('ENOENT')) {
+      console.error('💀 [TEST] File not found - check VS Code installation or test paths');
+      process.exit(3);
+    } else {
+      console.error('💀 [TEST] Unknown test failure');
+      process.exit(1);
+    }
   }
 }
 
