@@ -48,6 +48,9 @@
   "license": "MIT",
   "qna": "https://github.com/s-hiraoku/vscode-sidebar-terminal/discussions",
   "preview": false,
+  "activationEvents": [
+    "onView:sidebarTerminal"
+  ],
   "main": "./dist/extension.js",
   "contributes": {
     "viewsContainers": {

@@ -7,15 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-- Active terminal border visualization
-  - 1px border around the terminal with cursor focus
-  - Blue border (--vscode-focusBorder) for active terminal
-  - Gray border (--vscode-widget-border) for inactive terminals
-  - Smooth transition animations (0.2s)
-  - Visual feedback for terminal focus state
+### Planning
+- Enhanced terminal session persistence
+- Custom themes and color schemes
+- Advanced keyboard shortcuts
 
-## [0.0.1] - 2025-07-11
+## [0.0.1] - 2025-07-13
 
 ### Added
 - Initial release of Sidebar Terminal extension
@@ -36,6 +33,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Claude Code detection for optimal performance during AI interactions
   - Visual feedback with blue cursor highlight and fade animation
   - Automatic conflict resolution for terminal output interference
+  - Active terminal border visualization with smooth transitions
+  - Multi-platform node-pty support with enhanced error handling
 
 - **Customization Options**:
   - Configurable shell and shell arguments
