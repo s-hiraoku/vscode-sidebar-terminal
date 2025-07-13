@@ -275,8 +275,8 @@
     "coverage:report": "nyc report --reporter=text --reporter=html",
     "coverage:check": "nyc check-coverage --lines 70 --functions 70 --branches 60",
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
-    "vsce:package": "vsce package",
-    "vsce:publish": "vsce publish",
+    "vsce:package": "@vscode/vsce package",
+    "vsce:publish": "@vscode/vsce publish",
     "create-icons": "node scripts/create-icon.js"
   },
   "devDependencies": {
