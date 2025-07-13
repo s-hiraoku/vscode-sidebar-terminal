@@ -3,7 +3,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 import * as vscode from 'vscode';
-import * as pty from 'node-pty';
 import { TerminalInstance, TerminalEvent } from '../types/common';
 import { TERMINAL_CONSTANTS, ERROR_MESSAGES } from '../constants';
 import { terminal as log } from '../utils/logger';
@@ -18,6 +17,7 @@ import {
   ActiveTerminalManager,
   getFirstValue,
 } from '../utils/common';
+import { getPlatformInfo, validatePlatformSupport } from '../utils/platform';
 
 export class TerminalManager {
   private readonly _terminals = new Map<string, TerminalInstance>();
@@ -29,6 +29,10 @@ export class TerminalManager {
 
   // Track terminals being killed to prevent infinite loops
   private readonly _terminalBeingKilled = new Set<string>();
+
+  // node-pty module with runtime validation
+  private _pty: typeof import('node-pty') | null = null;
+  private _ptyLoadError: Error | null = null;
 
   // Performance optimization: Data batching for high-frequency output
   private readonly _dataBuffers = new Map<string, string[]>();
@@ -42,11 +46,109 @@ export class TerminalManager {
   public readonly onTerminalRemoved = this._terminalRemovedEmitter.event;
 
   constructor(private readonly _context: vscode.ExtensionContext) {
-    // Context may be used in future for storing state
+    // Initialize node-pty with error handling
+    void this._initializeNodePty();
+  }
+
+  private async _initializeNodePty(): Promise<void> {
+    try {
+      log('🔧 [DEBUG] Initializing node-pty module...');
+
+      // Check platform support first
+      const platformInfo = getPlatformInfo();
+      const platformSupport = validatePlatformSupport();
+
+      log('🔍 [PLATFORM] Current platform:', platformInfo.description);
+
+      if (!platformSupport.supported) {
+        throw new Error(`Platform not supported: ${platformSupport.message}`);
+      }
+
+      // Dynamic import with error handling
+      this._pty = await import('node-pty');
+
+      log('✅ [SUCCESS] node-pty module loaded successfully');
+      log('🔧 [DEBUG] node-pty spawn function:', typeof this._pty?.spawn);
+
+      // Test node-pty functionality
+      const testResult = this._validateNodePty();
+      if (!testResult.success) {
+        throw new Error(`node-pty validation failed: ${testResult.error}`);
+      }
+    } catch (error) {
+      this._ptyLoadError = error as Error;
+      log('❌ [ERROR] Failed to load node-pty:', error);
+
+      // Show user-friendly error message
+      const errorMessage = this._getPtyErrorMessage(error as Error);
+      void vscode.window
+        .showErrorMessage(`Sidebar Terminal: ${errorMessage}`, 'Platform Diagnostics', 'Learn More')
+        .then((selection) => {
+          if (selection === 'Platform Diagnostics') {
+            void import('../utils/platform').then(({ showPlatformDiagnostics }) => {
+              void showPlatformDiagnostics();
+            });
+          } else if (selection === 'Learn More') {
+            void vscode.env.openExternal(
+              vscode.Uri.parse(
+                'https://github.com/s-hiraoku/vscode-sidebar-terminal#troubleshooting'
+              )
+            );
+          }
+        });
+    }
+  }
+
+  private _validateNodePty(): { success: boolean; error?: string } {
+    if (!this._pty) {
+      return { success: false, error: 'node-pty module not loaded' };
+    }
+
+    try {
+      // Check if spawn function exists
+      if (typeof this._pty.spawn !== 'function') {
+        return { success: false, error: 'node-pty.spawn is not a function' };
+      }
+
+      log('✅ [SUCCESS] node-pty validation passed');
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: `Validation error: ${String(error)}` };
+    }
+  }
+
+  private _getPtyErrorMessage(error: Error): string {
+    const message = error.message.toLowerCase();
+
+    if (message.includes('cannot find module') || message.includes('.node')) {
+      return `Native module loading failed. Please ensure you have the correct platform-specific package installed. Platform: ${process.platform}-${process.arch}`;
+    }
+
+    if (message.includes('debug') && message.includes('release')) {
+      return 'Native module build configuration issue. Please try reinstalling the extension.';
+    }
+
+    if (message.includes('permission')) {
+      return 'Permission denied accessing native module. Please check file permissions.';
+    }
+
+    return `Failed to initialize terminal functionality: ${error.message}`;
   }
 
   public createTerminal(): string {
     log('🔧 [DEBUG] TerminalManager.createTerminal called');
+
+    // Check if node-pty is available
+    if (!this._pty) {
+      const errorMsg = this._ptyLoadError
+        ? `Terminal creation failed: ${this._ptyLoadError.message}`
+        : 'Terminal creation failed: node-pty module not available';
+
+      log('❌ [ERROR] Cannot create terminal:', errorMsg);
+      showErrorMessage(errorMsg);
+      return '';
+    }
+
     const config = getTerminalConfig();
     log('🔧 [DEBUG] Terminal config:', config);
 
@@ -84,7 +186,7 @@ export class TerminalManager {
       log('📁 [TERMINAL] - VSCODE_WORKSPACE:', env.VSCODE_WORKSPACE);
       log('📁 [TERMINAL] - VSCODE_PROJECT_NAME:', env.VSCODE_PROJECT_NAME);
 
-      const ptyProcess = pty.spawn(shell, shellArgs, {
+      const ptyProcess = this._pty.spawn(shell, shellArgs, {
         name: 'xterm-256color',
         cols: TERMINAL_CONSTANTS.DEFAULT_COLS,
         rows: TERMINAL_CONSTANTS.DEFAULT_ROWS,
