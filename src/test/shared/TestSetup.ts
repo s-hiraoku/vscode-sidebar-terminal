@@ -274,6 +274,19 @@ if (process && !process.removeListener) {
   };
 }
 
+// Additional process polyfills for Mocha compatibility
+if (process) {
+  // Ensure all required event emitter methods exist
+  const requiredMethods = ['removeListener', 'removeAllListeners', 'off'];
+  requiredMethods.forEach(method => {
+    if (!(process as any)[method]) {
+      (process as any)[method] = function () {
+        return process;
+      };
+    }
+  });
+}
+
 // Auto-setup when this module is imported
 setupTestEnvironment();
 
