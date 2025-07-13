@@ -293,8 +293,8 @@ VS Code Marketplace automatically serves the correct platform package to users b
 
 **Local Platform Testing**:
 ```bash
-# Test current platform build
-npm run vsce:package
+# Test current platform build and validate node-pty
+./scripts/test-local-build.sh
 
 # Test specific platform (may not work cross-platform)
 npm run vsce:package:darwin-x64
@@ -307,3 +307,20 @@ code --install-extension package.vsix
 - Use GitHub Actions for testing on actual target platforms
 - Each platform build includes native node-pty compilation
 - VSIX packages contain platform-specific binaries in `node_modules/node-pty/build/`
+
+## Critical Development Guidelines
+
+### node-pty Native Module Handling
+- **Dynamic Import**: TerminalManager uses `await import('node-pty')` with comprehensive error handling
+- **Platform Validation**: Extension validates platform support before attempting to load node-pty
+- **Error Messages**: Platform-specific error messages for Mach-O (macOS), ELF (Linux), and DLL (Windows) issues
+- **Build Verification**: Use `scripts/test-local-build.sh` to verify native module builds
+
+### Pull Request Protocol
+**IMPORTANT**: Never merge pull requests automatically. Always request explicit approval before merging.
+
+### Multi-Platform Build Requirements
+- Each platform requires native compilation on matching OS (macOS for darwin targets, Linux for linux targets, etc.)
+- `bundledDependencies` configuration ensures node-pty is included in VSIX packages
+- CI/CD pipeline at `.github/workflows/build-platform-packages.yml` handles cross-platform builds
+- Use `npm rebuild node-pty --update-binary` when switching platforms during development
