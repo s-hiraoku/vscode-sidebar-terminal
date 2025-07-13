@@ -31,7 +31,7 @@ export class TerminalManager {
   private readonly _terminalBeingKilled = new Set<string>();
 
   // node-pty module with runtime validation
-  private _pty: typeof import('node-pty') | null = null;
+  private _pty: typeof import('@homebridge/node-pty-prebuilt-multiarch') | null = null;
   private _ptyLoadError: Error | null = null;
 
   // Performance optimization: Data batching for high-frequency output
@@ -65,7 +65,7 @@ export class TerminalManager {
       }
 
       // Dynamic import with error handling
-      this._pty = await import('node-pty');
+      this._pty = await import('@homebridge/node-pty-prebuilt-multiarch');
 
       log('✅ [SUCCESS] node-pty module loaded successfully');
       log('🔧 [DEBUG] node-pty spawn function:', typeof this._pty?.spawn);

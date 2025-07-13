@@ -300,7 +300,14 @@ This project is licensed under the [MIT License](LICENSE).
 
 ## 📝 Changelog
 
-### v0.1.13 (Released)
+### v0.1.15 (Latest)
+
+#### Critical Fixes
+- **macOS ARM64 Support**: Resolved "slice is not valid mach-o file" error by migrating to `@homebridge/node-pty-prebuilt-multiarch`
+- **Cross-Platform Reliability**: Eliminated GitHub Actions cross-compilation issues with prebuilt binaries
+- **Build System**: Simplified and more reliable platform-specific packaging
+
+### v0.1.13-0.1.14 (Previous)
 
 #### Features
 - Initial release

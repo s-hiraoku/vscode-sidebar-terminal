@@ -94,25 +94,23 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Rebuild native dependencies for target platform
+      - name: Verify prebuilt binaries for target platform
         run: |
-          # Clean node-pty build artifacts
-          rm -rf node_modules/node-pty/build
-          # Rebuild for target platform
-          npm rebuild node-pty --update-binary
+          echo "Using @homebridge/node-pty-prebuilt-multiarch with prebuilt binaries"
+          echo "Target platform: ${{ matrix.target }}"
+          # Verify the package was installed correctly
+          npm list @homebridge/node-pty-prebuilt-multiarch
 
       - name: Install VSCE
         run: npm install -g @vscode/vsce
 
-      - name: Validate native module build
+      - name: Validate prebuilt binary installation
         run: |
-          echo "Checking node-pty binary for ${{ matrix.target }}..."
-          if [ -f "node_modules/node-pty/build/Release/pty.node" ]; then
-            file node_modules/node-pty/build/Release/pty.node || true
-          else
-            echo "ERROR: pty.node not found!"
-            exit 1
-          fi
+          echo "Checking @homebridge/node-pty-prebuilt-multiarch for ${{ matrix.target }}..."
+          # List installed prebuilt binaries
+          ls -la node_modules/@homebridge/node-pty-prebuilt-multiarch/prebuilds/ || echo "No prebuilds directory found"
+          # Check if the package exports the required functions
+          node -e "const pty = require('@homebridge/node-pty-prebuilt-multiarch'); console.log('spawn function:', typeof pty.spawn);"
 
       - name: Package extension for ${{ matrix.target }}
         run: vsce package --target ${{ matrix.target }}

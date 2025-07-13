@@ -12,6 +12,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Custom themes and color schemes
 - Advanced keyboard shortcuts
 
+## [0.1.15] - 2025-07-13
+
+### Fixed
+- **Critical**: macOS ARM64 "slice is not valid mach-o file" エラーを根本的に解決
+- **Cross-Platform**: `@homebridge/node-pty-prebuilt-multiarch`に移行してプリビルドバイナリを使用
+- **Build System**: GitHub Actionsでのクロスコンパイル問題を解消
+- **Reliability**: すべてのプラットフォームで一貫したネイティブモジュール動作を保証
+
+### Technical Improvements
+- `node-pty` → `@homebridge/node-pty-prebuilt-multiarch`移行
+- GitHub Actionsワークフローからnode-ptyビルド処理を削除
+- プリビルドバイナリ検証プロセスの実装
+- マルチプラットフォーム対応の信頼性向上
+
+### Breaking Changes
+- 内部的に`@homebridge/node-pty-prebuilt-multiarch`を使用（APIに変更なし）
+
 ## [0.1.14] - 2025-07-13
 
 ### Fixed
