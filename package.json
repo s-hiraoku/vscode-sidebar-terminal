@@ -262,7 +262,7 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm run package",
+    "vscode:prepublish": "npm rebuild && npm run package",
     "compile": "webpack",
     "watch": "webpack --watch",
     "package": "webpack --mode production --devtool hidden-source-map",
@@ -286,9 +286,14 @@
     "vsce:package:linux-armhf": "vsce package --target linux-armhf",
     "vsce:package:darwin-x64": "vsce package --target darwin-x64",
     "vsce:package:darwin-arm64": "vsce package --target darwin-arm64",
-    "vsce:package:all": "npm run vsce:package:win32-x64 && npm run vsce:package:win32-arm64 && npm run vsce:package:linux-x64 && npm run vsce:package:linux-arm64 && npm run vsce:package:linux-armhf && npm run vsce:package:darwin-x64 && npm run vsce:package:darwin-arm64",
+    "vsce:package:alpine-x64": "vsce package --target alpine-x64",
+    "vsce:package:alpine-arm64": "vsce package --target alpine-arm64",
+    "vsce:package:all": "npm run vsce:package:win32-x64 && npm run vsce:package:win32-arm64 && npm run vsce:package:linux-x64 && npm run vsce:package:linux-arm64 && npm run vsce:package:linux-armhf && npm run vsce:package:darwin-x64 && npm run vsce:package:darwin-arm64 && npm run vsce:package:alpine-x64 && npm run vsce:package:alpine-arm64",
     "vsce:publish": "vsce publish",
-    "create-icons": "node scripts/create-icon.js"
+    "create-icons": "node scripts/create-icon.js",
+    "release:patch": "npm version patch && git push origin --follow-tags",
+    "release:minor": "npm version minor && git push origin --follow-tags",
+    "release:major": "npm version major && git push origin --follow-tags"
   },
   "devDependencies": {
     "@istanbuljs/nyc-config-typescript": "^1.0.2",
@@ -321,21 +326,19 @@
     "ts-loader": "^9.5.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3",
+    "vsce": "^2.15.0",
     "vscode-test": "^1.6.1",
     "webpack": "^5.89.0",
     "webpack-cli": "^6.0.0"
   },
   "dependencies": {
-    "node-pty": "^1.0.0",
+    "node-pty": "^1.1.0-beta34",
     "process": "^0.11.10",
     "xterm": "^5.3.0",
     "xterm-addon-fit": "^0.8.0",
     "xterm-addon-web-links": "^0.9.0"
   },
   "bundledDependencies": [
-    "node-pty"
-  ],
-  "bundleDependencies": [
     "node-pty"
   ]
 }
