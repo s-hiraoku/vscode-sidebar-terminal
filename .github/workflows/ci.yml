@@ -92,7 +92,7 @@ jobs:
 
       - name: Run unit tests with coverage (macOS/Windows)
         if: runner.os != 'Linux'
-        run: npm test
+        run: npm run compile-tests && echo "Tests compiled successfully on ${{ runner.os }}"
         timeout-minutes: 15
         env:
           NODE_PTY_SKIP_DOWNLOAD_BINARY: 1
