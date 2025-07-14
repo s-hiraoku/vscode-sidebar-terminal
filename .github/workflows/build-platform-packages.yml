@@ -20,7 +20,6 @@ jobs:
     name: Build ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
       matrix:
         include:
           # Windows
@@ -46,10 +45,9 @@ jobs:
           - os: ubuntu-latest
             target: linux-arm64
             npm_config_cache: ~/.npm
-# Temporarily disabled due to build issues
-          # - os: ubuntu-latest
-          #   target: linux-armhf
-          #   npm_config_cache: ~/.npm
+          - os: ubuntu-latest
+            target: linux-armhf
+            npm_config_cache: ~/.npm
           
           # Alpine
           - os: ubuntu-latest
@@ -61,10 +59,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: 'npm'
@@ -118,7 +116,7 @@ jobs:
         run: vsce package --target ${{ matrix.target }}
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: vscode-sidebar-terminal-${{ matrix.target }}
           path: '*.vsix'
@@ -147,10 +145,10 @@ jobs:
           echo "Actor: ${{ github.actor }}"
           
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           path: ./artifacts
 
@@ -181,16 +179,16 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: 'npm'
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           path: ./artifacts
 
