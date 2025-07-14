@@ -19,7 +19,13 @@ export namespace DOMUtils {
 
     if (attributes) {
       Object.entries(attributes).forEach(([key, value]) => {
-        element.setAttribute(key, value);
+        if (key === 'textContent') {
+          element.textContent = value;
+        } else if (key === 'className') {
+          element.className = value;
+        } else {
+          element.setAttribute(key, value);
+        }
       });
     }
 

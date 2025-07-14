@@ -7,15 +7,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-- Active terminal border visualization
-  - 1px border around the terminal with cursor focus
-  - Blue border (--vscode-focusBorder) for active terminal
-  - Gray border (--vscode-widget-border) for inactive terminals
-  - Smooth transition animations (0.2s)
-  - Visual feedback for terminal focus state
+### Planning
+- Enhanced terminal session persistence
+- Custom themes and color schemes
+- Advanced keyboard shortcuts
 
-## [0.0.1] - 2025-07-11
+## [0.1.15] - 2025-07-13
+
+### Fixed
+- **Critical**: macOS ARM64 "slice is not valid mach-o file" エラーを根本的に解決
+- **Cross-Platform**: `@homebridge/node-pty-prebuilt-multiarch`に移行してプリビルドバイナリを使用
+- **Build System**: GitHub Actionsでのクロスコンパイル問題を解消
+- **Reliability**: すべてのプラットフォームで一貫したネイティブモジュール動作を保証
+
+### Technical Improvements
+- `node-pty` → `@homebridge/node-pty-prebuilt-multiarch`移行
+- GitHub Actionsワークフローからnode-ptyビルド処理を削除
+- プリビルドバイナリ検証プロセスの実装
+- マルチプラットフォーム対応の信頼性向上
+
+### Breaking Changes
+- 内部的に`@homebridge/node-pty-prebuilt-multiarch`を使用（APIに変更なし）
+
+## [0.1.14] - 2025-07-13
+
+### Fixed
+- **Critical**: 根本的なマルチプラットフォーム対応問題を解決
+- **node-pty**: package.json依存関係重複とバージョン不一致を解消
+- **Error Handling**: Mach-O, ELF, DLL対応の詳細エラーメッセージ追加
+- **macOS**: "slice is not valid mach-o file"エラーの詳細診断
+- **Linux**: アーキテクチャミスマッチの詳細検出
+- **Windows**: VC++ Redistributables要件の案内
+- **CI/CD**: GitHub Actionsワークフロー重複削除と最適化
+- **Build**: プラットフォーム固有ネイティブバイナリ検証機能追加
+- **Diagnostics**: VS Code 1.75+ activationEvents自動生成対応
+
+### Technical Improvements
+- bundledDependencies設定の重複削除
+- vscode:prepublishスクリプト最適化
+- ネイティブモジュールビルド検証の自動化
+- プラットフォーム診断機能の強化
+
+### Scripts Added
+- `scripts/test-local-build.sh` - ローカルビルドテスト
+- `scripts/package-all-platforms.sh` - マルチプラットフォームパッケージング改善
+
+## [0.1.13] - 2025-07-13
 
 ### Added
 - Initial release of Sidebar Terminal extension
@@ -36,6 +73,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Claude Code detection for optimal performance during AI interactions
   - Visual feedback with blue cursor highlight and fade animation
   - Automatic conflict resolution for terminal output interference
+  - Active terminal border visualization with smooth transitions
+  - Multi-platform node-pty support with enhanced error handling
 
 - **Customization Options**:
   - Configurable shell and shell arguments
@@ -89,7 +128,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Resource Management**: Proper cleanup of PTY processes and WebView resources
 - **Security Testing**: CodeQL analysis and dependency vulnerability scanning
 
-## [0.0.2] - Future Release (Planned)
+## [0.2.0] - Future Release (Planned)
 
 ### Planned Features
 - **Enhanced Testing**: Complete Phase 2 WebView component testing

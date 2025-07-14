@@ -58,7 +58,10 @@ A powerful VS Code extension that displays a terminal in the sidebar for efficie
 
 ### Manual Installation
 
-1. Download the latest `.vsix` file from [Releases](https://github.com/s-hiraoku/vscode-sidebar-terminal/releases)
+1. Download the appropriate `.vsix` file for your platform from [Releases](https://github.com/s-hiraoku/vscode-sidebar-terminal/releases):
+   - **Windows**: `vscode-sidebar-terminal-win32-x64-*.vsix` (64-bit) or `vscode-sidebar-terminal-win32-arm64-*.vsix` (ARM64)
+   - **macOS**: `vscode-sidebar-terminal-darwin-x64-*.vsix` (Intel) or `vscode-sidebar-terminal-darwin-arm64-*.vsix` (Apple Silicon)
+   - **Linux**: `vscode-sidebar-terminal-linux-x64-*.vsix` (64-bit), `vscode-sidebar-terminal-linux-arm64-*.vsix` (ARM64), or `vscode-sidebar-terminal-linux-armhf-*.vsix` (ARM 32-bit)
 2. Open VS Code and press `Ctrl+Shift+P` (`Cmd+Shift+P` on Mac)
 3. Select "Extensions: Install from VSIX..."
 4. Choose the downloaded `.vsix` file
@@ -174,6 +177,24 @@ npm run package
 2. Press `F5` to launch Extension Development Host
 3. In the new window, check the "Terminal" view in the Explorer panel
 
+### Building Platform-Specific Packages
+
+Due to native dependencies (node-pty), platform-specific packages must be built:
+
+```bash
+# Build for specific platforms
+npm run vsce:package:win32-x64     # Windows 64-bit
+npm run vsce:package:win32-arm64   # Windows ARM64
+npm run vsce:package:linux-x64     # Linux 64-bit
+npm run vsce:package:linux-arm64   # Linux ARM64
+npm run vsce:package:linux-armhf   # Linux ARM 32-bit
+npm run vsce:package:darwin-x64    # macOS Intel
+npm run vsce:package:darwin-arm64  # macOS Apple Silicon
+
+# Build all platforms
+npm run vsce:package:all
+```
+
 ## 🧪 Testing Strategy
 
 This extension uses comprehensive testing with modern tooling:
@@ -279,7 +300,14 @@ This project is licensed under the [MIT License](LICENSE).
 
 ## 📝 Changelog
 
-### v0.0.1 (In Development)
+### v0.1.15 (Latest)
+
+#### Critical Fixes
+- **macOS ARM64 Support**: Resolved "slice is not valid mach-o file" error by migrating to `@homebridge/node-pty-prebuilt-multiarch`
+- **Cross-Platform Reliability**: Eliminated GitHub Actions cross-compilation issues with prebuilt binaries
+- **Build System**: Simplified and more reliable platform-specific packaging
+
+### v0.1.13-0.1.14 (Previous)
 
 #### Features
 - Initial release

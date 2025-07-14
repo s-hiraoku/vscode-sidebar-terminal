@@ -23,9 +23,12 @@ for platform in "${platforms[@]}"; do
     echo ""
     echo "📦 Building package for $platform..."
     
-    # node-ptyを該当プラットフォーム用にリビルド
-    echo "  → Rebuilding node-pty for $platform..."
-    npm rebuild --target-platform=${platform%%-*} --target-arch=${platform##*-}
+    # Clean previous build artifacts
+    echo "  → Cleaning previous build artifacts..."
+    rm -rf node_modules/node-pty/build
+    
+    # Note: Platform-specific rebuilding should happen on the target platform
+    echo "  → Note: For accurate builds, run this on the target platform or use CI"
     
     # プラットフォーム固有のVSIXパッケージを作成
     echo "  → Creating VSIX package..."

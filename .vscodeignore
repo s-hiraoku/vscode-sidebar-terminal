@@ -11,6 +11,7 @@ src/**
 # Development and build
 node_modules/**
 !node_modules/node-pty/**
+!node_modules/nan/**
 webpack.config.js
 .gitignore
 .yarnrc

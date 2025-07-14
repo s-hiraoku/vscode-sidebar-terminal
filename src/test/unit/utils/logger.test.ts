@@ -4,45 +4,10 @@
 import { expect } from 'chai';
 import * as sinon from 'sinon';
 import { JSDOM } from 'jsdom';
-import { Logger } from '../../../utils/logger';
+import { logger, LogLevel } from '../../../utils/logger';
 
-// Mock VS Code API
-const mockVscode = {
-  workspace: {
-    getConfiguration: sinon.stub(),
-  },
-  window: {
-    showErrorMessage: sinon.stub(),
-    showWarningMessage: sinon.stub(),
-    showInformationMessage: sinon.stub(),
-  },
-  ExtensionContext: sinon.stub(),
-  ViewColumn: { One: 1 },
-  TreeDataProvider: sinon.stub(),
-  EventEmitter: sinon.stub(),
-  CancellationToken: sinon.stub(),
-  commands: {
-    registerCommand: sinon.stub(),
-    executeCommand: sinon.stub(),
-  },
-};
-
-// Setup test environment
-function setupTestEnvironment() {
-  // Mock VS Code module
-  (global as any).vscode = mockVscode;
-
-  // Mock Node.js modules
-  (global as any).require = sinon.stub();
-  (global as any).module = { exports: {} };
-  (global as any).process = {
-    platform: 'linux',
-    env: {
-      NODE_ENV: 'test',
-      DEBUG: '',
-    },
-  };
-}
+// Import shared test setup
+import '../test-setup';
 
 describe('Logger', () => {
   let sandbox: sinon.SinonSandbox;
@@ -53,8 +18,6 @@ describe('Logger', () => {
   let consoleErrorStub: sinon.SinonStub;
 
   beforeEach(() => {
-    setupTestEnvironment();
-
     // Mock console before JSDOM creation
     consoleLogStub = sinon.stub();
     consoleWarnStub = sinon.stub();
@@ -64,67 +27,61 @@ describe('Logger', () => {
       log: consoleLogStub,
       warn: consoleWarnStub,
       error: consoleErrorStub,
+      debug: sinon.stub(),
+      info: sinon.stub(),
+      trace: sinon.stub(),
+      assert: sinon.stub(),
+      clear: sinon.stub(),
+      count: sinon.stub(),
+      countReset: sinon.stub(),
+      group: sinon.stub(),
+      groupCollapsed: sinon.stub(),
+      groupEnd: sinon.stub(),
+      table: sinon.stub(),
+      time: sinon.stub(),
+      timeEnd: sinon.stub(),
+      timeLog: sinon.stub(),
+      timeStamp: sinon.stub(),
+      profile: sinon.stub(),
+      profileEnd: sinon.stub(),
+      dir: sinon.stub(),
+      dirxml: sinon.stub(),
     };
-
-    // Set up process.nextTick before JSDOM creation
-    const originalProcess = global.process;
-    (global as any).process = {
-      ...originalProcess,
-      nextTick: (callback: () => void) => setImmediate(callback),
-      env: { ...originalProcess.env, NODE_ENV: 'test' },
-    };
-
-    dom = new JSDOM(`<!DOCTYPE html><html><body></body></html>`);
-    document = dom.window.document;
-    (global as any).document = document;
-    (global as any).window = dom.window;
 
     sandbox = sinon.createSandbox();
+
+    // Mock DOM environment
+    dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {
+      url: 'http://localhost',
+      pretendToBeVisual: true,
+      resources: 'usable',
+    });
+
+    document = dom.window.document;
+    (global as Record<string, unknown>).window = dom.window;
+    (global as Record<string, unknown>).document = document;
+
+    // Reset logger to default state
+    logger.setLevel(LogLevel.DEBUG);
   });
 
   afterEach(() => {
-    if (sandbox) {
-      sandbox.restore();
-    }
-    if (dom) {
-      dom.window.close();
-    }
+    sandbox.restore();
+    dom.window.close();
   });
 
-  describe('Logger class', () => {
-    it('should initialize with default log level', () => {
-      const logger = new Logger();
-
-      expect(logger).to.be.an('object');
-      expect(logger.level).to.equal('info');
-    });
-
-    it('should initialize with custom log level', () => {
-      const logger = new Logger('debug');
-
-      expect(logger.level).to.equal('debug');
-    });
-
+  describe('setLevel method', () => {
     it('should set log level', () => {
-      const logger = new Logger();
-
-      logger.setLevel('error');
-
-      expect(logger.level).to.equal('error');
-    });
-
-    it('should handle invalid log level', () => {
-      const logger = new Logger();
-
-      logger.setLevel('invalid');
-
-      expect(logger.level).to.equal('info'); // Should default to info
+      logger.setLevel(LogLevel.ERROR);
+      // Test that the level was set by checking logging behavior
+      logger.debug('debug message');
+      expect(consoleLogStub).not.to.have.been.called;
     });
   });
 
   describe('debug method', () => {
     it('should log debug message when level is debug', () => {
-      const logger = new Logger('debug');
+      logger.setLevel(LogLevel.DEBUG);
 
       logger.debug('test debug message');
 
@@ -132,33 +89,17 @@ describe('Logger', () => {
     });
 
     it('should not log debug message when level is info', () => {
-      const logger = new Logger('info');
+      logger.setLevel(LogLevel.INFO);
 
       logger.debug('test debug message');
 
-      expect(consoleLogStub).to.not.have.been.called;
-    });
-
-    it('should log debug message with multiple arguments', () => {
-      const logger = new Logger('debug');
-
-      logger.debug('message', { key: 'value' }, 123);
-
-      expect(consoleLogStub).to.have.been.calledWith('[DEBUG]', 'message', { key: 'value' }, 123);
+      expect(consoleLogStub).not.to.have.been.called;
     });
   });
 
   describe('info method', () => {
-    it('should log info message when level is debug', () => {
-      const logger = new Logger('debug');
-
-      logger.info('test info message');
-
-      expect(consoleLogStub).to.have.been.calledWith('[INFO]', 'test info message');
-    });
-
     it('should log info message when level is info', () => {
-      const logger = new Logger('info');
+      logger.setLevel(LogLevel.INFO);
 
       logger.info('test info message');
 
@@ -166,25 +107,17 @@ describe('Logger', () => {
     });
 
     it('should not log info message when level is warn', () => {
-      const logger = new Logger('warn');
+      logger.setLevel(LogLevel.WARN);
 
       logger.info('test info message');
 
-      expect(consoleLogStub).to.not.have.been.called;
+      expect(consoleLogStub).not.to.have.been.called;
     });
   });
 
   describe('warn method', () => {
-    it('should log warn message when level is debug', () => {
-      const logger = new Logger('debug');
-
-      logger.warn('test warn message');
-
-      expect(consoleWarnStub).to.have.been.calledWith('[WARN]', 'test warn message');
-    });
-
     it('should log warn message when level is warn', () => {
-      const logger = new Logger('warn');
+      logger.setLevel(LogLevel.WARN);
 
       logger.warn('test warn message');
 
@@ -192,233 +125,112 @@ describe('Logger', () => {
     });
 
     it('should not log warn message when level is error', () => {
-      const logger = new Logger('error');
+      logger.setLevel(LogLevel.ERROR);
 
       logger.warn('test warn message');
 
-      expect(consoleWarnStub).to.not.have.been.called;
+      expect(consoleWarnStub).not.to.have.been.called;
     });
   });
 
   describe('error method', () => {
-    it('should log error message at any level', () => {
-      const logger = new Logger('error');
+    it('should log error message when level is error', () => {
+      logger.setLevel(LogLevel.ERROR);
 
       logger.error('test error message');
 
       expect(consoleErrorStub).to.have.been.calledWith('[ERROR]', 'test error message');
     });
 
-    it('should log error message with Error object', () => {
-      const logger = new Logger('error');
-      const error = new Error('test error');
-
-      logger.error('error occurred', error);
-
-      expect(consoleErrorStub).to.have.been.calledWith('[ERROR]', 'error occurred', error);
-    });
-
-    it('should log error message even with debug level', () => {
-      const logger = new Logger('debug');
+    it('should not log error message when level is none', () => {
+      logger.setLevel(LogLevel.NONE);
 
       logger.error('test error message');
 
-      expect(consoleErrorStub).to.have.been.calledWith('[ERROR]', 'test error message');
-    });
-  });
-
-  describe('safeStringify method', () => {
-    it('should stringify simple object', () => {
-      const logger = new Logger();
-      const obj = { name: 'test', value: 123 };
-
-      const result = logger.safeStringify(obj);
-
-      expect(result).to.equal('{"name":"test","value":123}');
-    });
-
-    it('should handle circular references', () => {
-      const logger = new Logger();
-      const obj: any = { name: 'test' };
-      obj.self = obj;
-
-      const result = logger.safeStringify(obj);
-
-      expect(result).to.be.a('string');
-      expect(result).to.include('name');
-    });
-
-    it('should handle null and undefined', () => {
-      const logger = new Logger();
-
-      expect(logger.safeStringify(null)).to.equal('null');
-      expect(logger.safeStringify(undefined)).to.equal('undefined');
-    });
-
-    it('should handle primitive values', () => {
-      const logger = new Logger();
-
-      expect(logger.safeStringify('string')).to.equal('"string"');
-      expect(logger.safeStringify(123)).to.equal('123');
-      expect(logger.safeStringify(true)).to.equal('true');
+      expect(consoleErrorStub).not.to.have.been.called;
     });
   });
 
   describe('convenience methods', () => {
-    let logger: Logger;
-
     beforeEach(() => {
-      logger = new Logger('debug');
+      logger.setLevel(LogLevel.DEBUG);
     });
 
-    it('should provide terminal convenience method', () => {
-      const terminalLogger = logger.terminal();
+    it('should log terminal message', () => {
+      logger.terminal('terminal test');
 
-      expect(terminalLogger).to.be.a('function');
-
-      terminalLogger('test message');
-
-      expect(consoleLogStub).to.have.been.calledWith('[TERMINAL]', 'test message');
+      expect(consoleLogStub).to.have.been.calledWith('[DEBUG]', '🔌 [TERMINAL]', 'terminal test');
     });
 
-    it('should provide webview convenience method', () => {
-      const webviewLogger = logger.webview();
+    it('should log webview message', () => {
+      logger.webview('webview test');
 
-      expect(webviewLogger).to.be.a('function');
-
-      webviewLogger('test message');
-
-      expect(consoleLogStub).to.have.been.calledWith('[WEBVIEW]', 'test message');
+      expect(consoleLogStub).to.have.been.calledWith('[DEBUG]', '🌐 [WEBVIEW]', 'webview test');
     });
 
-    it('should provide provider convenience method', () => {
-      const providerLogger = logger.provider();
+    it('should log provider message', () => {
+      logger.provider('provider test');
 
-      expect(providerLogger).to.be.a('function');
-
-      providerLogger('test message');
-
-      expect(consoleLogStub).to.have.been.calledWith('[PROVIDER]', 'test message');
+      expect(consoleLogStub).to.have.been.calledWith('[DEBUG]', '📡 [PROVIDER]', 'provider test');
     });
 
-    it('should provide extension convenience method', () => {
-      const extensionLogger = logger.extension();
+    it('should log extension message', () => {
+      logger.extension('extension test');
 
-      expect(extensionLogger).to.be.a('function');
+      expect(consoleLogStub).to.have.been.calledWith('[DEBUG]', '🔧 [EXTENSION]', 'extension test');
+    });
 
-      extensionLogger('test message');
+    it('should log performance message', () => {
+      logger.performance('performance test');
 
-      expect(consoleLogStub).to.have.been.calledWith('[EXTENSION]', 'test message');
+      expect(consoleLogStub).to.have.been.calledWith('[DEBUG]', '⚡ [PERF]', 'performance test');
     });
   });
 
-  describe('log level hierarchy', () => {
-    it('should respect log level hierarchy for debug', () => {
-      const logger = new Logger('debug');
-
-      logger.debug('debug message');
-      logger.info('info message');
-      logger.warn('warn message');
-      logger.error('error message');
-
-      expect(consoleLogStub).to.have.been.calledWith('[DEBUG]', 'debug message');
-      expect(consoleLogStub).to.have.been.calledWith('[INFO]', 'info message');
-      expect(consoleWarnStub).to.have.been.calledWith('[WARN]', 'warn message');
-      expect(consoleErrorStub).to.have.been.calledWith('[ERROR]', 'error message');
+  describe('object logging', () => {
+    beforeEach(() => {
+      logger.setLevel(LogLevel.DEBUG);
     });
 
-    it('should respect log level hierarchy for info', () => {
-      const logger = new Logger('info');
+    it('should safely stringify objects', () => {
+      const testObj = { key: 'value', nested: { prop: 'test' } };
 
-      logger.debug('debug message');
-      logger.info('info message');
-      logger.warn('warn message');
-      logger.error('error message');
+      logger.debug('object test', testObj);
 
-      expect(consoleLogStub).to.not.have.been.calledWith('[DEBUG]', 'debug message');
-      expect(consoleLogStub).to.have.been.calledWith('[INFO]', 'info message');
-      expect(consoleWarnStub).to.have.been.calledWith('[WARN]', 'warn message');
-      expect(consoleErrorStub).to.have.been.calledWith('[ERROR]', 'error message');
+      expect(consoleLogStub).to.have.been.calledWith(
+        '[DEBUG]',
+        'object test',
+        JSON.stringify(testObj, null, 2)
+      );
     });
 
-    it('should respect log level hierarchy for warn', () => {
-      const logger = new Logger('warn');
+    it('should handle circular references', () => {
+      const circularObj: any = { prop: 'value' };
+      circularObj.self = circularObj;
 
-      logger.debug('debug message');
-      logger.info('info message');
-      logger.warn('warn message');
-      logger.error('error message');
+      logger.debug('circular test', circularObj);
 
-      expect(consoleLogStub).to.not.have.been.calledWith('[DEBUG]', 'debug message');
-      expect(consoleLogStub).to.not.have.been.calledWith('[INFO]', 'info message');
-      expect(consoleWarnStub).to.have.been.calledWith('[WARN]', 'warn message');
-      expect(consoleErrorStub).to.have.been.calledWith('[ERROR]', 'error message');
+      expect(consoleLogStub).to.have.been.calledWith(
+        '[DEBUG]',
+        'circular test',
+        '[Complex Object]'
+      );
     });
 
-    it('should respect log level hierarchy for error', () => {
-      const logger = new Logger('error');
+    it('should handle primitives', () => {
+      logger.debug('string', 'test', 'number', 123, 'boolean', true, 'null', null);
 
-      logger.debug('debug message');
-      logger.info('info message');
-      logger.warn('warn message');
-      logger.error('error message');
-
-      expect(consoleLogStub).to.not.have.been.calledWith('[DEBUG]', 'debug message');
-      expect(consoleLogStub).to.not.have.been.calledWith('[INFO]', 'info message');
-      expect(consoleWarnStub).to.not.have.been.calledWith('[WARN]', 'warn message');
-      expect(consoleErrorStub).to.have.been.calledWith('[ERROR]', 'error message');
-    });
-  });
-
-  describe('environment detection', () => {
-    it('should detect test environment', () => {
-      (global as any).process.env.NODE_ENV = 'test';
-
-      const logger = new Logger();
-
-      expect(logger.isTestEnvironment()).to.be.true;
-    });
-
-    it('should detect development environment', () => {
-      (global as any).process.env.NODE_ENV = 'development';
-
-      const logger = new Logger();
-
-      expect(logger.isTestEnvironment()).to.be.false;
-    });
-
-    it('should handle debug environment variable', () => {
-      (global as any).process.env.DEBUG = 'sidebarTerminal:*';
-
-      const logger = new Logger();
-
-      expect(logger.isDebugEnabled()).to.be.true;
-    });
-
-    it('should handle no debug environment variable', () => {
-      (global as any).process.env.DEBUG = '';
-
-      const logger = new Logger();
-
-      expect(logger.isDebugEnabled()).to.be.false;
-    });
-  });
-
-  describe('singleton pattern', () => {
-    it('should provide singleton instance', () => {
-      const logger1 = Logger.getInstance();
-      const logger2 = Logger.getInstance();
-
-      expect(logger1).to.equal(logger2);
-    });
-
-    it('should maintain singleton state', () => {
-      const logger1 = Logger.getInstance();
-      logger1.setLevel('debug');
-
-      const logger2 = Logger.getInstance();
-
-      expect(logger2.level).to.equal('debug');
+      expect(consoleLogStub).to.have.been.calledWith(
+        '[DEBUG]',
+        'string',
+        'test',
+        'number',
+        123,
+        'boolean',
+        true,
+        'null',
+        'null'
+      );
     });
   });
 });

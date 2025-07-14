@@ -90,7 +90,7 @@ describe('SettingsPanel', () => {
     it('should populate settings when provided', () => {
       const testSettings = {
         fontSize: 16,
-        fontFamily: 'Consolas, "Courier New", monospace',
+        fontFamily: 'Consolas, monospace',
         theme: 'dark',
         cursorBlink: true,
       };
@@ -103,7 +103,7 @@ describe('SettingsPanel', () => {
       const cursorBlinkCheckbox = document.getElementById('cursor-blink') as HTMLInputElement;
 
       expect(fontSizeSlider?.value).to.equal('16');
-      expect(fontFamilySelect?.value).to.equal('Consolas, "Courier New", monospace');
+      expect(fontFamilySelect?.value).to.equal('Consolas, monospace');
       expect(themeSelect?.value).to.equal('dark');
       expect(cursorBlinkCheckbox?.checked).to.be.true;
     });
@@ -286,7 +286,7 @@ describe('SettingsPanel', () => {
       const cursorBlinkCheckbox = document.getElementById('cursor-blink') as HTMLInputElement;
 
       fontSizeSlider.value = '16';
-      fontFamilySelect.value = 'Consolas, "Courier New", monospace';
+      fontFamilySelect.value = 'Consolas, monospace';
       themeSelect.value = 'light';
       cursorBlinkCheckbox.checked = true;
 
@@ -300,7 +300,7 @@ describe('SettingsPanel', () => {
 
       expect(collectedSettings).to.deep.equal({
         fontSize: 16,
-        fontFamily: 'Consolas, "Courier New", monospace',
+        fontFamily: 'Consolas, monospace',
         theme: 'light',
         cursorBlink: true,
       });
@@ -333,7 +333,7 @@ describe('SettingsPanel', () => {
     it('should handle partial settings', () => {
       const partialSettings = {
         fontSize: 18,
-        fontFamily: 'Consolas, "Courier New", monospace',
+        fontFamily: 'Consolas, monospace',
         // Missing theme and cursorBlink
       };
 
@@ -343,7 +343,7 @@ describe('SettingsPanel', () => {
       const fontFamilySelect = document.getElementById('font-family-select') as HTMLSelectElement;
 
       expect(fontSizeSlider?.value).to.equal('18');
-      expect(fontFamilySelect?.value).to.equal('Consolas, "Courier New", monospace');
+      expect(fontFamilySelect?.value).to.equal('Consolas, monospace');
     });
 
     it('should handle invalid settings gracefully', () => {
