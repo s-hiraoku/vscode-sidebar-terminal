@@ -13,6 +13,9 @@ npm run package          # Production build with optimizations
 
 # Testing
 npm test                 # Run all tests
+npm run test:unit        # Run unit tests only with coverage
+npm run test:integration # Run integration tests only
+npm run test:coverage    # Run all tests with coverage report
 npm run pretest         # Compile tests + build + lint (runs before test)
 npm run compile-tests   # Compile test files only
 npm run watch-tests     # Watch test files
@@ -136,7 +139,8 @@ Configuration values are accessed via `vscode.workspace.getConfiguration('sideba
 - Development mode uses different paths than packaged extension
 - CSS resources must be bundled, not referenced as external files
 - Node.js globals (like `process`) need polyfills in webview context
-- `node-pty` is bundled as dependency via `bundledDependencies` in package.json
+- `@homebridge/node-pty-prebuilt-multiarch` is bundled as dependency via `bundledDependencies` in package.json
+- Prebuilt binaries eliminate build-time dependencies and compilation issues
 
 **Debugging Packaged Extensions**
 - Test both F5 development mode AND installed .vsix package
@@ -251,10 +255,12 @@ npm run vsce:package:linux-arm64    # Linux ARM64
 
 ### Native Dependency Management
 
-**node-pty Handling**:
-- Listed in `bundledDependencies` to ensure inclusion in VSIX packages
-- `npm rebuild` runs during `vscode:prepublish` to compile for target platform
-- Each platform build contains the appropriate native binary
+**@homebridge/node-pty-prebuilt-multiarch Handling**:
+- Uses prebuilt binaries instead of compile-time native modules for reliability
+- Listed in `bundledDependencies` to ensure inclusion in VSIX packages  
+- No compilation required during CI/CD - uses pre-compiled platform-specific binaries
+- Eliminates cross-compilation issues on GitHub Actions runners
+- Each platform build contains the appropriate prebuilt binary
 - Users automatically receive the correct platform version from VS Code Marketplace
 
 ### CI/CD Release Process
@@ -305,22 +311,48 @@ code --install-extension package.vsix
 
 **Cross-Platform Validation**:
 - Use GitHub Actions for testing on actual target platforms
-- Each platform build includes native node-pty compilation
-- VSIX packages contain platform-specific binaries in `node_modules/node-pty/build/`
+- Each platform build includes prebuilt binaries from `@homebridge/node-pty-prebuilt-multiarch`
+- VSIX packages contain platform-specific prebuilt binaries
+- Validation checks verify prebuilt module functionality via `node -e "require('@homebridge/node-pty-prebuilt-multiarch')"`
 
 ## Critical Development Guidelines
 
-### node-pty Native Module Handling
-- **Dynamic Import**: TerminalManager uses `await import('node-pty')` with comprehensive error handling
-- **Platform Validation**: Extension validates platform support before attempting to load node-pty
-- **Error Messages**: Platform-specific error messages for Mach-O (macOS), ELF (Linux), and DLL (Windows) issues
-- **Build Verification**: Use `scripts/test-local-build.sh` to verify native module builds
+### @homebridge/node-pty-prebuilt-multiarch Native Module Handling
+- **Dynamic Import**: TerminalManager uses `await import('@homebridge/node-pty-prebuilt-multiarch')` with comprehensive error handling
+- **Platform Validation**: Extension validates platform support before attempting to load the prebuilt module
+- **Error Messages**: Platform-specific error messages for Mach-O (macOS), ELF (Linux), and DLL (Windows) issues with detailed architecture diagnostics
+- **Build Verification**: Use `scripts/test-local-build.sh` to verify prebuilt module installation
+- **Prebuilt Benefits**: No cross-compilation issues, reliable ARM64/x64 binaries, eliminates "slice is not valid mach-o file" errors
 
 ### Pull Request Protocol
 **IMPORTANT**: Never merge pull requests automatically. Always request explicit approval before merging.
 
 ### Multi-Platform Build Requirements
-- Each platform requires native compilation on matching OS (macOS for darwin targets, Linux for linux targets, etc.)
-- `bundledDependencies` configuration ensures node-pty is included in VSIX packages
-- CI/CD pipeline at `.github/workflows/build-platform-packages.yml` handles cross-platform builds
-- Use `npm rebuild node-pty --update-binary` when switching platforms during development
+- **Prebuilt Binaries**: Uses `@homebridge/node-pty-prebuilt-multiarch` eliminating need for cross-compilation
+- `bundledDependencies` configuration ensures prebuilt module is included in VSIX packages
+- CI/CD pipeline at `.github/workflows/build-platform-packages.yml` handles cross-platform builds without native compilation
+- Platform-specific builds automatically include correct prebuilt binaries for target architecture
+- No need for `npm rebuild` during development - prebuilt binaries work across platforms
+
+### Code Quality Requirements
+**Always run before committing:**
+```bash
+npm run format    # Prettier code formatting
+npm run lint      # ESLint code quality checks
+```
+
+## Recent Critical Fixes (v0.1.15)
+
+### macOS ARM64 Compatibility Resolution
+The extension previously suffered from "slice is not valid mach-o file" errors on macOS M1/M2 systems due to:
+- GitHub Actions `macos-latest` runners being Intel x64 machines
+- Cross-compilation issues when building `darwin-arm64` targets with `npm rebuild node-pty`
+- Incompatible x64 binaries being packaged in ARM64 VSIXs
+
+**Solution Implemented:**
+- Migrated from `node-pty` to `@homebridge/node-pty-prebuilt-multiarch`
+- Eliminated cross-compilation requirements in CI/CD
+- Prebuilt binaries ensure correct architecture matching for all platforms
+- Updated GitHub Actions workflow to verify prebuilt binary installation instead of compilation
+
+This architectural change ensures reliable operation across all supported platforms without compilation dependencies.
