@@ -120,17 +120,17 @@ export class TerminalManager {
   private _getPtyErrorMessage(error: Error): string {
     const message = error.message.toLowerCase();
     const platform = `${process.platform}-${process.arch}`;
-    
+
     // Mach-O error for macOS
     if (message.includes('mach-o') || message.includes('slice is not valid')) {
       return `Native module incompatible with your macOS architecture. The extension contains a binary for a different processor type. Platform: ${platform}. Please install the correct version from VS Code Marketplace.`;
     }
-    
+
     // General module loading errors
     if (message.includes('cannot find module') || message.includes('.node')) {
       return `Native module loading failed. Please ensure you have the correct platform-specific package installed. Platform: ${platform}`;
     }
-    
+
     // ELF/Linux binary errors
     if (message.includes('elf') || message.includes('wrong elf class')) {
       return `Native module architecture mismatch. The installed binary doesn't match your system architecture. Platform: ${platform}`;
@@ -143,7 +143,7 @@ export class TerminalManager {
     if (message.includes('permission')) {
       return 'Permission denied accessing native module. Please check file permissions.';
     }
-    
+
     // Windows specific errors
     if (message.includes('dll') || message.includes('specified module')) {
       return `Windows native module loading failed. Visual C++ Redistributables may be required. Platform: ${platform}`;
