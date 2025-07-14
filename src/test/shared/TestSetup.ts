@@ -278,7 +278,7 @@ if (process && !process.removeListener) {
 if (process) {
   // Ensure all required event emitter methods exist
   const requiredMethods = ['removeListener', 'removeAllListeners', 'off'];
-  requiredMethods.forEach(method => {
+  requiredMethods.forEach((method) => {
     if (!(process as any)[method]) {
       (process as any)[method] = function () {
         return process;
