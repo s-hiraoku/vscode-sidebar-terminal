@@ -58,26 +58,23 @@ jobs:
       - name: Package extension
         run: vsce package
 
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
+      - name: Create Release and Upload Assets
+        run: |
+          # Extract version from tag
+          VERSION=${GITHUB_REF#refs/tags/}
+          echo "Creating release for version: $VERSION"
+          
+          # Find the VSIX file
+          VSIX_FILE=$(find . -name "*.vsix" | head -1)
+          echo "Found VSIX file: $VSIX_FILE"
+          
+          # Create release with VSIX file
+          gh release create "$VERSION" \
+            --title "Release $VERSION" \
+            --notes "Automated release $VERSION with CI test improvements and cross-platform support" \
+            "$VSIX_FILE"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          draft: false
-          prerelease: false
-
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./vscode-sidebar-terminal-*.vsix
-          asset_name: vscode-sidebar-terminal.vsix
-          asset_content_type: application/zip
 
       - name: Publish to Marketplace
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
