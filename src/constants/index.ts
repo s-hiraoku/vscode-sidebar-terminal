@@ -5,8 +5,6 @@
 export const TERMINAL_CONSTANTS = {
   // デフォルト値
   DEFAULT_MAX_TERMINALS: 5,
-  DEFAULT_FONT_SIZE: 14,
-  DEFAULT_FONT_FAMILY: 'Consolas, "Courier New", monospace',
   DEFAULT_COLS: 80,
   DEFAULT_ROWS: 30,
 
@@ -30,8 +28,6 @@ export const TERMINAL_CONSTANTS = {
     SIDEBAR_TERMINAL: 'sidebarTerminal',
     TERMINAL_INTEGRATED: 'terminal.integrated',
     MAX_TERMINALS: 'maxTerminals',
-    FONT_SIZE: 'fontSize',
-    FONT_FAMILY: 'fontFamily',
     SHELL: 'shell',
     SHELL_ARGS: 'shellArgs',
     SHELL_WINDOWS: 'shell.windows',

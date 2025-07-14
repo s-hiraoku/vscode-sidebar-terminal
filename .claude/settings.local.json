@@ -52,7 +52,8 @@
       "Bash(gh run list:*)",
       "Bash(gh run view:*)",
       "Bash(gh run download:*)",
-      "Bash(gh label:*)"
+      "Bash(gh label:*)",
+      "Bash(npx webpack:*)"
     ],
     "deny": []
   }

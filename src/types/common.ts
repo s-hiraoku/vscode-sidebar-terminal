@@ -10,6 +10,7 @@ import {
   ExtensionTerminalConfig,
   CompleteTerminalSettings,
   PartialTerminalSettings,
+  WebViewFontSettings,
 } from './shared';
 
 // IPty interface for type safety when using node-pty or mocks
@@ -57,6 +58,7 @@ export interface WebviewMessage {
     | 'terminalCreated'
     | 'terminalRemoved'
     | 'settingsResponse'
+    | 'fontSettingsUpdate'
     | 'openSettings';
   config?: TerminalConfig;
   data?: string;
@@ -66,6 +68,7 @@ export interface WebviewMessage {
   terminals?: TerminalInfo[];
   activeTerminalId?: string;
   settings?: PartialTerminalSettings; // 部分的な設定を受け取るよう修正
+  fontSettings?: WebViewFontSettings; // フォント設定を受け取る
 }
 
 export interface VsCodeMessage {
