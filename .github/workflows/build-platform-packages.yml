@@ -20,6 +20,7 @@ jobs:
     name: Build ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         include:
           # Windows
@@ -45,9 +46,10 @@ jobs:
           - os: ubuntu-latest
             target: linux-arm64
             npm_config_cache: ~/.npm
-          - os: ubuntu-latest
-            target: linux-armhf
-            npm_config_cache: ~/.npm
+# Temporarily disabled due to build issues
+          # - os: ubuntu-latest
+          #   target: linux-armhf
+          #   npm_config_cache: ~/.npm
           
           # Alpine
           - os: ubuntu-latest
