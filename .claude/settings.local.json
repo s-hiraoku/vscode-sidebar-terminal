@@ -54,7 +54,8 @@
       "Bash(gh run download:*)",
       "Bash(gh label:*)",
       "Bash(npx webpack:*)",
-      "Bash(gh release list:*)"
+      "Bash(gh release list:*)",
+      "Bash(gh release view:*)"
     ],
     "deny": []
   }
