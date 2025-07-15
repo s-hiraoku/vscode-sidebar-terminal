@@ -3,7 +3,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 import * as vscode from 'vscode';
-import * as pty from 'node-pty';
+import * as pty from '@homebridge/node-pty-prebuilt-multiarch';
 import { TerminalInstance, TerminalEvent } from '../types/common';
 import { TERMINAL_CONSTANTS, ERROR_MESSAGES } from '../constants';
 import { terminal as log } from '../utils/logger';

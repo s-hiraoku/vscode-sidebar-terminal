@@ -10,7 +10,7 @@ src/**
 
 # Development and build
 node_modules/**
-!node_modules/node-pty/**
+!node_modules/@homebridge/node-pty-prebuilt-multiarch/**
 webpack.config.js
 .gitignore
 .yarnrc
