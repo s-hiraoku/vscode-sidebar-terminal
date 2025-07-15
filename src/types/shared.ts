@@ -9,15 +9,14 @@
  * 基本ターミナル設定インターフェース
  * 全てのターミナル設定の基盤となる型
  */
-export interface BaseTerminalConfig {
-  readonly fontSize: number;
-  readonly fontFamily: string;
-}
+export interface BaseTerminalConfig {}
 
 /**
  * 表示関連設定
  */
 export interface DisplayConfig extends BaseTerminalConfig {
+  readonly fontSize: number;
+  readonly fontFamily: string;
   readonly theme?: string;
   readonly cursorBlink: boolean;
 }
@@ -75,13 +74,29 @@ export interface WebViewTerminalConfig extends DisplayConfig, ShellConfig {
 /**
  * 部分的なターミナル設定
  * WebView から Extension への設定更新で使用
+ * フォント設定はVS Code設定から直接取得するため除外
  */
-export interface PartialTerminalSettings extends BaseTerminalConfig {
+export interface PartialTerminalSettings {
   readonly theme?: string;
-  readonly cursorBlink: boolean;
+  readonly cursorBlink?: boolean;
   readonly altClickMovesCursor?: boolean;
   readonly multiCursorModifier?: string;
 }
+
+/**
+ * WebView用フォント設定値
+ * 設定変更ではなく、現在の値を受信するためのインターフェース
+ */
+export interface WebViewFontSettings {
+  readonly fontSize: number;
+  readonly fontFamily: string;
+}
+
+/**
+ * WebView用統合設定
+ * PartialTerminalSettings + フォント設定値
+ */
+export interface WebViewTerminalSettings extends PartialTerminalSettings, WebViewFontSettings {}
 
 /**
  * 完全なターミナル設定
@@ -147,8 +162,6 @@ export const CONFIG_SECTIONS = {
 
 export const CONFIG_KEYS = {
   // sidebarTerminal セクション
-  FONT_SIZE: 'fontSize',
-  FONT_FAMILY: 'fontFamily',
   THEME: 'theme',
   CURSOR_BLINK: 'cursorBlink',
   MAX_TERMINALS: 'maxTerminals',
@@ -175,12 +188,7 @@ export const CONFIG_KEYS = {
  * BaseTerminalConfig の型ガード
  */
 export function isBaseTerminalConfig(obj: unknown): obj is BaseTerminalConfig {
-  return (
-    typeof obj === 'object' &&
-    obj !== null &&
-    typeof (obj as BaseTerminalConfig).fontSize === 'number' &&
-    typeof (obj as BaseTerminalConfig).fontFamily === 'string'
-  );
+  return typeof obj === 'object' && obj !== null;
 }
 
 /**

@@ -103,16 +103,6 @@ export class ConfigManager {
     const section = CONFIG_SECTIONS.SIDEBAR_TERMINAL;
 
     return {
-      fontSize: this.getConfig(
-        section,
-        CONFIG_KEYS.FONT_SIZE,
-        TERMINAL_CONSTANTS.DEFAULT_FONT_SIZE
-      ),
-      fontFamily: this.getConfig(
-        section,
-        CONFIG_KEYS.FONT_FAMILY,
-        TERMINAL_CONSTANTS.DEFAULT_FONT_FAMILY
-      ),
       maxTerminals: this.getConfig(
         section,
         CONFIG_KEYS.MAX_TERMINALS,
@@ -133,6 +123,8 @@ export class ConfigManager {
 
     return {
       ...sidebarConfig,
+      fontSize: this.getFontSize(),
+      fontFamily: this.getFontFamily(),
       theme: this.getConfig(CONFIG_SECTIONS.SIDEBAR_TERMINAL, CONFIG_KEYS.THEME, 'auto'),
       cursorBlink: this.getConfig(CONFIG_SECTIONS.SIDEBAR_TERMINAL, CONFIG_KEYS.CURSOR_BLINK, true),
       confirmBeforeKill: this.getConfig(
@@ -239,6 +231,80 @@ export class ConfigManager {
         'ctrlCmd'
       ),
     };
+  }
+
+  /**
+   * VS Codeのフォント設定を取得
+   * 優先順位：terminal.integrated.fontFamily > editor.fontFamily > system monospace
+   */
+  public getFontFamily(): string {
+    this._ensureInitialized();
+
+    try {
+      // 1. ターミナル専用のフォント設定を確認
+      const terminalConfig = vscode.workspace.getConfiguration('terminal.integrated');
+      const terminalFontFamily = terminalConfig.get<string>('fontFamily');
+
+      console.log('[ConfigManager] Terminal fontFamily from VS Code:', terminalFontFamily);
+
+      if (terminalFontFamily && terminalFontFamily.trim()) {
+        return terminalFontFamily.trim();
+      }
+
+      // 2. エディタのフォント設定をフォールバック
+      const editorConfig = vscode.workspace.getConfiguration('editor');
+      const editorFontFamily = editorConfig.get<string>('fontFamily');
+
+      console.log('[ConfigManager] Editor fontFamily from VS Code:', editorFontFamily);
+
+      if (editorFontFamily && editorFontFamily.trim()) {
+        return editorFontFamily.trim();
+      }
+
+      // 3. システムデフォルトのmonospaceフォント
+      console.log('[ConfigManager] Using default fontFamily: monospace');
+      return 'monospace';
+    } catch (error) {
+      console.error('[ConfigManager] Error getting fontFamily:', error);
+      return 'monospace';
+    }
+  }
+
+  /**
+   * VS Codeのフォントサイズ設定を取得
+   * 優先順位：terminal.integrated.fontSize > editor.fontSize > default(14)
+   */
+  public getFontSize(): number {
+    this._ensureInitialized();
+
+    try {
+      // 1. ターミナル専用のフォントサイズ設定を確認
+      const terminalConfig = vscode.workspace.getConfiguration('terminal.integrated');
+      const terminalFontSize = terminalConfig.get<number>('fontSize');
+
+      console.log('[ConfigManager] Terminal fontSize from VS Code:', terminalFontSize);
+
+      if (terminalFontSize && terminalFontSize > 0) {
+        return terminalFontSize;
+      }
+
+      // 2. エディタのフォントサイズ設定をフォールバック
+      const editorConfig = vscode.workspace.getConfiguration('editor');
+      const editorFontSize = editorConfig.get<number>('fontSize');
+
+      console.log('[ConfigManager] Editor fontSize from VS Code:', editorFontSize);
+
+      if (editorFontSize && editorFontSize > 0) {
+        return editorFontSize;
+      }
+
+      // 3. デフォルトフォントサイズ
+      console.log('[ConfigManager] Using default fontSize: 14');
+      return 14;
+    } catch (error) {
+      console.error('[ConfigManager] Error getting fontSize:', error);
+      return 14;
+    }
   }
 
   /**

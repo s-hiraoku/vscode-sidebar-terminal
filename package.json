@@ -122,16 +122,6 @@
           "default": [],
           "description": "Arguments to pass to the shell."
         },
-        "sidebarTerminal.fontSize": {
-          "type": "number",
-          "default": 14,
-          "description": "Terminal font size."
-        },
-        "sidebarTerminal.fontFamily": {
-          "type": "string",
-          "default": "Consolas, 'Courier New', monospace",
-          "description": "Terminal font family."
-        },
         "sidebarTerminal.maxTerminals": {
           "type": "number",
           "default": 5,

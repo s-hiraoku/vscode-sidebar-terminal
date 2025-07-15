@@ -1,6 +1,6 @@
 import { DOMUtils } from '../utils/DOMUtils';
 import { ErrorHandler } from '../utils/ErrorHandler';
-import type { TerminalSettings } from '../types/terminal.types';
+import type { PartialTerminalSettings } from '../../types/shared';
 
 /**
  * 設定パネルコンポーネント
@@ -8,14 +8,14 @@ import type { TerminalSettings } from '../types/terminal.types';
 export class SettingsPanel {
   private panelElement: HTMLElement | null = null;
   private isVisible = false;
-  private onSettingsChange?: (settings: TerminalSettings) => void;
+  private onSettingsChange?: (settings: PartialTerminalSettings) => void;
   private onClose?: () => void;
 
   /**
    * コンストラクタ
    */
   constructor(options?: {
-    onSettingsChange?: (settings: TerminalSettings) => void;
+    onSettingsChange?: (settings: PartialTerminalSettings) => void;
     onClose?: () => void;
   }) {
     this.onSettingsChange = options?.onSettingsChange;
@@ -25,20 +25,27 @@ export class SettingsPanel {
   /**
    * 設定パネルを表示
    */
-  public show(currentSettings?: TerminalSettings): void {
+  public show(currentSettings?: PartialTerminalSettings): void {
+    console.log('⚙️ [SETTINGS] Starting to show settings panel, isVisible:', this.isVisible);
     try {
       if (this.isVisible) {
+        console.log('⚙️ [SETTINGS] Panel already visible, hiding first');
         this.hide();
         return;
       }
 
+      console.log('⚙️ [SETTINGS] Creating panel...');
       this.createPanel();
+      console.log('⚙️ [SETTINGS] Populating settings...');
       this.populateSettings(currentSettings);
+      console.log('⚙️ [SETTINGS] Setting up event listeners...');
       this.setupEventListeners();
+      console.log('⚙️ [SETTINGS] Showing panel...');
       this.showPanel();
 
-      console.log('⚙️ [SETTINGS] Settings panel opened');
+      console.log('⚙️ [SETTINGS] Settings panel opened successfully');
     } catch (error) {
+      console.error('❌ [SETTINGS] Error in show():', error);
       ErrorHandler.getInstance().handleGenericError(error as Error, 'SettingsPanel.show');
     }
   }
@@ -128,8 +135,6 @@ export class SettingsPanel {
       </div>
 
       <div style="display: grid; gap: 16px;">
-        ${this.createFontSizeControl()}
-        ${this.createFontFamilyControl()}
         ${this.createThemeControl()}
         ${this.createCursorBlinkControl()}
       </div>
@@ -157,72 +162,6 @@ export class SettingsPanel {
     `;
 
     return content;
-  }
-
-  /**
-   * フォントサイズコントロールを作成
-   */
-  private createFontSizeControl(): string {
-    return `
-      <div>
-        <label style="
-          color: var(--vscode-foreground, #cccccc);
-          font-size: 13px;
-          font-weight: 500;
-          display: block;
-          margin-bottom: 6px;
-        ">Font Size</label>
-        <div style="display: flex; align-items: center; gap: 12px;">
-          <input
-            type="range"
-            id="font-size-slider"
-            min="8"
-            max="24"
-            value="14"
-            style="flex: 1;"
-          />
-          <span id="font-size-value" style="
-            color: var(--vscode-descriptionForeground, #969696);
-            font-size: 12px;
-            min-width: 40px;
-            text-align: right;
-          ">14px</span>
-        </div>
-      </div>
-    `;
-  }
-
-  /**
-   * フォントファミリーコントロールを作成
-   */
-  private createFontFamilyControl(): string {
-    return `
-      <div>
-        <label style="
-          color: var(--vscode-foreground, #cccccc);
-          font-size: 13px;
-          font-weight: 500;
-          display: block;
-          margin-bottom: 6px;
-        ">Font Family</label>
-        <select id="font-family-select" style="
-          background: var(--vscode-input-background, #3c3c3c);
-          color: var(--vscode-input-foreground, #cccccc);
-          border: 1px solid var(--vscode-input-border, #454545);
-          padding: 6px 8px;
-          border-radius: 3px;
-          width: 100%;
-          font-size: 13px;
-        ">
-          <option value="Consolas, monospace">Consolas</option>
-          <option value="'Monaco', monospace">Monaco</option>
-          <option value="'Menlo', monospace">Menlo</option>
-          <option value="'Ubuntu Mono', monospace">Ubuntu Mono</option>
-          <option value="'Courier New', monospace">Courier New</option>
-          <option value="'SF Mono', monospace">SF Mono</option>
-        </select>
-      </div>
-    `;
   }
 
   /**
@@ -312,15 +251,6 @@ export class SettingsPanel {
       }
     });
 
-    // フォントサイズスライダー
-    const fontSizeSlider = this.panelElement.querySelector('#font-size-slider') as HTMLInputElement;
-    const fontSizeValue = this.panelElement.querySelector('#font-size-value');
-    DOMUtils.addEventListenerSafe(fontSizeSlider, 'input', () => {
-      if (fontSizeValue) {
-        fontSizeValue.textContent = `${fontSizeSlider.value}px`;
-      }
-    });
-
     // 適用ボタン
     const applyBtn = this.panelElement.querySelector('#apply-settings');
     DOMUtils.addEventListenerSafe(applyBtn as HTMLElement, 'click', () => {
@@ -352,9 +282,7 @@ export class SettingsPanel {
    */
   private resetSettings(): void {
     try {
-      const defaultSettings: TerminalSettings = {
-        fontSize: 14,
-        fontFamily: 'Consolas, monospace',
+      const defaultSettings: PartialTerminalSettings = {
         theme: 'auto',
         cursorBlink: true,
       };
@@ -368,23 +296,17 @@ export class SettingsPanel {
   /**
    * 現在の設定値を収集
    */
-  private collectSettings(): TerminalSettings {
+  private collectSettings(): PartialTerminalSettings {
     if (!this.panelElement) {
       throw new Error('Settings panel not available');
     }
 
-    const fontSizeSlider = this.panelElement.querySelector('#font-size-slider') as HTMLInputElement;
-    const fontFamilySelect = this.panelElement.querySelector(
-      '#font-family-select'
-    ) as HTMLSelectElement;
     const themeSelect = this.panelElement.querySelector('#theme-select') as HTMLSelectElement;
     const cursorBlinkCheckbox = this.panelElement.querySelector(
       '#cursor-blink'
     ) as HTMLInputElement;
 
     return {
-      fontSize: parseInt(fontSizeSlider?.value || '14'),
-      fontFamily: fontFamilySelect?.value || 'Consolas, monospace',
       theme: themeSelect?.value || 'auto',
       cursorBlink: cursorBlinkCheckbox?.checked || true,
     };
@@ -393,38 +315,20 @@ export class SettingsPanel {
   /**
    * 設定値をフォームに反映
    */
-  private populateSettings(settings?: TerminalSettings): void {
+  private populateSettings(settings?: PartialTerminalSettings): void {
     if (!settings || !this.panelElement) return;
 
     try {
-      const fontSizeSlider = this.panelElement.querySelector(
-        '#font-size-slider'
-      ) as HTMLInputElement;
-      const fontSizeValue = this.panelElement.querySelector('#font-size-value');
-      const fontFamilySelect = this.panelElement.querySelector(
-        '#font-family-select'
-      ) as HTMLSelectElement;
       const themeSelect = this.panelElement.querySelector('#theme-select') as HTMLSelectElement;
       const cursorBlinkCheckbox = this.panelElement.querySelector(
         '#cursor-blink'
       ) as HTMLInputElement;
 
-      if (fontSizeSlider) {
-        fontSizeSlider.value = settings.fontSize.toString();
-        if (fontSizeValue) {
-          fontSizeValue.textContent = `${settings.fontSize}px`;
-        }
-      }
-
-      if (fontFamilySelect) {
-        fontFamilySelect.value = settings.fontFamily;
-      }
-
       if (themeSelect && settings.theme) {
         themeSelect.value = settings.theme;
       }
 
-      if (cursorBlinkCheckbox) {
+      if (cursorBlinkCheckbox && settings.cursorBlink !== undefined) {
         cursorBlinkCheckbox.checked = settings.cursorBlink;
       }
     } catch (error) {
@@ -440,8 +344,19 @@ export class SettingsPanel {
    */
   private showPanel(): void {
     if (this.panelElement) {
+      console.log('⚙️ [SETTINGS] Adding panel to document.body...');
       document.body.appendChild(this.panelElement);
       this.isVisible = true;
+      console.log('⚙️ [SETTINGS] Panel added, isVisible set to true');
+
+      // Ensure panel is visible immediately for debugging
+      this.panelElement.style.zIndex = '10000';
+      this.panelElement.style.position = 'fixed';
+      this.panelElement.style.top = '0';
+      this.panelElement.style.left = '0';
+      this.panelElement.style.right = '0';
+      this.panelElement.style.bottom = '0';
+      this.panelElement.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
 
       // アニメーション用の初期スタイル
       this.panelElement.style.opacity = '0';
@@ -450,8 +365,11 @@ export class SettingsPanel {
         if (this.panelElement) {
           this.panelElement.style.transition = 'opacity 0.2s ease';
           this.panelElement.style.opacity = '1';
+          console.log('⚙️ [SETTINGS] Animation applied, panel should be visible');
         }
       });
+    } else {
+      console.error('❌ [SETTINGS] panelElement is null, cannot show panel');
     }
   }
 

@@ -6,7 +6,7 @@ import { getTerminalConfig, generateNonce, normalizeTerminalInfo } from '../util
 import { showSuccess, showError, TerminalErrorHandler } from '../utils/feedback';
 import { provider as log } from '../utils/logger';
 import { getConfigManager } from '../config/ConfigManager';
-import { PartialTerminalSettings } from '../types/shared';
+import { PartialTerminalSettings, WebViewFontSettings } from '../types/shared';
 
 export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = 'sidebarTerminal';
@@ -227,6 +227,14 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
       try {
         await this._sendMessage(initMessage);
         log('✅ [DEBUG] INIT message sent successfully');
+
+        // Send font settings immediately after INIT to ensure webview has current font settings
+        const fontSettings = this.getCurrentFontSettings();
+        await this._sendMessage({
+          command: 'fontSettingsUpdate',
+          fontSettings,
+        });
+        log('✅ [DEBUG] Font settings sent during initialization:', fontSettings);
       } catch (sendError) {
         log('❌ [ERROR] Failed to send INIT message:', sendError);
         throw new Error(`Failed to send INIT message: ${String(sendError)}`);
@@ -290,9 +298,15 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
         case 'getSettings': {
           log('⚙️ [DEBUG] Getting settings from webview...');
           const settings = this.getCurrentSettings();
+          const fontSettings = this.getCurrentFontSettings();
           await this._sendMessage({
             command: 'settingsResponse',
             settings,
+          });
+          // Send font settings separately
+          await this._sendMessage({
+            command: 'fontSettingsUpdate',
+            fontSettings,
           });
           break;
         }
@@ -382,19 +396,47 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
    * Set up configuration change listeners for VS Code standard settings
    */
   private _setupConfigurationChangeListeners(): void {
-    // Monitor editor.multiCursorModifier and terminal.integrated.altClickMovesCursor changes
+    // Monitor VS Code settings changes
     const configChangeDisposable = vscode.workspace.onDidChangeConfiguration((event) => {
+      let shouldUpdateSettings = false;
+      let shouldUpdateFontSettings = false;
+
+      // Check for general settings changes
       if (
         event.affectsConfiguration('editor.multiCursorModifier') ||
         event.affectsConfiguration('terminal.integrated.altClickMovesCursor') ||
-        event.affectsConfiguration('sidebarTerminal.altClickMovesCursor')
+        event.affectsConfiguration('sidebarTerminal.altClickMovesCursor') ||
+        event.affectsConfiguration('sidebarTerminal.theme') ||
+        event.affectsConfiguration('sidebarTerminal.cursorBlink')
       ) {
-        log('⚙️ [DEBUG] VS Code standard settings changed, updating webview...');
-        // Send updated settings to webview
+        shouldUpdateSettings = true;
+      }
+
+      // Check for font settings changes
+      if (
+        event.affectsConfiguration('terminal.integrated.fontSize') ||
+        event.affectsConfiguration('terminal.integrated.fontFamily') ||
+        event.affectsConfiguration('editor.fontSize') ||
+        event.affectsConfiguration('editor.fontFamily')
+      ) {
+        shouldUpdateFontSettings = true;
+      }
+
+      if (shouldUpdateSettings) {
+        log('⚙️ [DEBUG] VS Code settings changed, updating webview...');
         const settings = this.getCurrentSettings();
         void this._sendMessage({
           command: 'settingsResponse',
           settings,
+        });
+      }
+
+      if (shouldUpdateFontSettings) {
+        log('🎨 [DEBUG] VS Code font settings changed, updating webview...');
+        const fontSettings = this.getCurrentFontSettings();
+        void this._sendMessage({
+          command: 'fontSettingsUpdate',
+          fontSettings,
         });
       }
     });
@@ -709,8 +751,6 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
     const altClickSettings = getConfigManager().getAltClickSettings();
 
     return {
-      fontSize: settings.fontSize,
-      fontFamily: settings.fontFamily,
       cursorBlink: settings.cursorBlink,
       theme: settings.theme || 'auto',
       // VS Code standard settings for Alt+Click functionality
@@ -719,18 +759,28 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
     };
   }
 
+  private getCurrentFontSettings(): WebViewFontSettings {
+    const configManager = getConfigManager();
+
+    return {
+      fontSize: configManager.getFontSize(),
+      fontFamily: configManager.getFontFamily(),
+    };
+  }
+
   private async updateSettings(settings: PartialTerminalSettings): Promise<void> {
     try {
       const config = vscode.workspace.getConfiguration('sidebarTerminal');
       // Note: ConfigManager handles reading, but writing must still use VS Code API
 
-      // Update VS Code settings
-      await config.update('fontSize', settings.fontSize, vscode.ConfigurationTarget.Global);
-      await config.update('fontFamily', settings.fontFamily, vscode.ConfigurationTarget.Global);
-      await config.update('cursorBlink', settings.cursorBlink, vscode.ConfigurationTarget.Global);
+      // Update VS Code settings (font settings are managed by VS Code directly)
+      if (settings.cursorBlink !== undefined) {
+        await config.update('cursorBlink', settings.cursorBlink, vscode.ConfigurationTarget.Global);
+      }
       if (settings.theme) {
         await config.update('theme', settings.theme, vscode.ConfigurationTarget.Global);
       }
+      // Note: Font settings are read directly from VS Code's terminal/editor settings
 
       log('✅ [DEBUG] Settings updated successfully');
       showSuccess('Settings updated successfully');

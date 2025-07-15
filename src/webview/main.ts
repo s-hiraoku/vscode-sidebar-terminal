@@ -16,7 +16,7 @@ import type {
   AltClickState,
   TerminalInteractionEvent,
 } from '../types/common';
-import { PartialTerminalSettings } from '../types/shared';
+import { PartialTerminalSettings, WebViewFontSettings } from '../types/shared';
 import { webview as log } from '../utils/logger';
 import { WEBVIEW_TERMINAL_CONSTANTS, SPLIT_CONSTANTS } from './constants/webview';
 import { getWebviewTheme, WEBVIEW_THEME_CONSTANTS } from './utils/WebviewThemeUtils';
@@ -88,14 +88,18 @@ class TerminalWebviewManager {
   private splitManager: SplitManager;
   private settingsPanel: SettingsPanel;
 
-  // Current settings
+  // Current settings (without font settings - they come from VS Code)
   private currentSettings: PartialTerminalSettings = {
-    fontSize: 14,
-    fontFamily: 'Consolas, monospace',
     theme: 'auto',
     cursorBlink: true,
     altClickMovesCursor: true,
     multiCursorModifier: 'alt',
+  };
+
+  // Current font settings from VS Code
+  private currentFontSettings: WebViewFontSettings = {
+    fontSize: 14,
+    fontFamily: 'monospace',
   };
 
   // Claude Code detection and Alt+Click control
@@ -231,8 +235,8 @@ class TerminalWebviewManager {
 
       // Apply current settings to new terminal
       const terminalOptions = {
-        fontSize: this.currentSettings.fontSize,
-        fontFamily: this.currentSettings.fontFamily,
+        fontSize: this.currentFontSettings.fontSize,
+        fontFamily: this.currentFontSettings.fontFamily,
         theme:
           this.currentSettings.theme === 'auto'
             ? terminalTheme
@@ -1347,7 +1351,13 @@ class TerminalWebviewManager {
   }
 
   public openSettings(): void {
-    this.settingsPanel.show(this.currentSettings);
+    log('⚙️ [WEBVIEW] Opening settings panel with current settings:', this.currentSettings);
+    try {
+      this.settingsPanel.show(this.currentSettings);
+      log('✅ [WEBVIEW] Settings panel show() called successfully');
+    } catch (error) {
+      log('❌ [WEBVIEW] Error opening settings panel:', error);
+    }
   }
 
   public applySettings(settings: PartialTerminalSettings): void {
@@ -1357,13 +1367,13 @@ class TerminalWebviewManager {
     // Save settings to VS Code state
     this.saveSettings();
 
-    // Apply settings to all terminals
+    // Apply settings to all terminals (font settings are handled separately)
     this.splitManager.getTerminals().forEach((terminalData) => {
       if (terminalData.terminal) {
         const terminal = terminalData.terminal;
-        terminal.options.fontSize = settings.fontSize;
-        terminal.options.fontFamily = settings.fontFamily;
-        terminal.options.cursorBlink = settings.cursorBlink;
+        if (settings.cursorBlink !== undefined) {
+          terminal.options.cursorBlink = settings.cursorBlink;
+        }
 
         // Apply theme if needed
         if (settings.theme && settings.theme !== 'auto') {
@@ -1388,12 +1398,12 @@ class TerminalWebviewManager {
       this.updateAltClickSetting();
     }
 
-    // Also apply to the main terminal if it exists
+    // Also apply to the main terminal if it exists (font settings are handled separately)
     if (this.terminal) {
       const terminal = this.terminal;
-      terminal.options.fontSize = settings.fontSize;
-      terminal.options.fontFamily = settings.fontFamily;
-      terminal.options.cursorBlink = settings.cursorBlink;
+      if (settings.cursorBlink !== undefined) {
+        terminal.options.cursorBlink = settings.cursorBlink;
+      }
 
       if (settings.theme && settings.theme !== 'auto') {
         terminal.options.theme =
@@ -1408,6 +1418,67 @@ class TerminalWebviewManager {
         this.fitAddon.fit();
       }
     }
+  }
+
+  /**
+   * Apply font settings from VS Code to all terminals
+   */
+  public applyFontSettings(fontSettings: WebViewFontSettings): void {
+    log('🎨 [WEBVIEW] Applying font settings from VS Code:', fontSettings);
+
+    // Update current font settings
+    this.currentFontSettings = { ...fontSettings };
+
+    // Apply to all terminals using setOption() method
+    this.splitManager.getTerminals().forEach((terminalData, terminalId) => {
+      if (terminalData.terminal) {
+        const terminal = terminalData.terminal;
+
+        log(
+          `🎨 [WEBVIEW] Updating terminal ${terminalId} fontSize: ${fontSettings.fontSize}, fontFamily: ${fontSettings.fontFamily}`
+        );
+
+        try {
+          // Use options property to properly update xterm.js settings (v5.0+ API)
+          terminal.options.fontSize = fontSettings.fontSize;
+          terminal.options.fontFamily = fontSettings.fontFamily;
+
+          // Refresh terminal to apply changes and refit
+          if (terminalData.fitAddon) {
+            terminalData.fitAddon.fit();
+          }
+          terminal.refresh(0, terminal.rows - 1);
+
+          log(`✅ [WEBVIEW] Font settings applied to terminal ${terminalId}`);
+        } catch (error) {
+          log(`❌ [WEBVIEW] Error applying font settings to terminal ${terminalId}:`, error);
+        }
+      }
+    });
+
+    // Also apply to main terminal if it exists
+    if (this.terminal) {
+      log(
+        `🎨 [WEBVIEW] Updating main terminal fontSize: ${fontSettings.fontSize}, fontFamily: ${fontSettings.fontFamily}`
+      );
+
+      try {
+        // Use options property to properly update xterm.js settings (v5.0+ API)
+        this.terminal.options.fontSize = fontSettings.fontSize;
+        this.terminal.options.fontFamily = fontSettings.fontFamily;
+
+        if (this.fitAddon) {
+          this.fitAddon.fit();
+        }
+        this.terminal.refresh(0, this.terminal.rows - 1);
+
+        log('✅ [WEBVIEW] Font settings applied to main terminal');
+      } catch (error) {
+        log('❌ [WEBVIEW] Error applying font settings to main terminal:', error);
+      }
+    }
+
+    log('✅ [WEBVIEW] Font settings applied to all terminals using options property (v5.0+ API)');
   }
 
   private loadSettings(): void {
@@ -1551,6 +1622,13 @@ window.addEventListener('message', (event) => {
       log('⚙️ [WEBVIEW] Received settings response:', message.settings);
       if (message.settings) {
         terminalManager.applySettings(message.settings);
+      }
+      break;
+
+    case 'fontSettingsUpdate':
+      log('🎨 [WEBVIEW] Received font settings update:', message.fontSettings);
+      if (message.fontSettings) {
+        terminalManager.applyFontSettings(message.fontSettings);
       }
       break;
 
