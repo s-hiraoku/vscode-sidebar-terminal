@@ -17,8 +17,8 @@ const extensionConfig = {
   },
   externals: {
     vscode: 'commonjs vscode',
-    // Keep node-pty as external since it's included in the package
-    'node-pty': 'commonjs node-pty',
+    // Keep @homebridge/node-pty-prebuilt-multiarch as external since it's included in the package
+    '@homebridge/node-pty-prebuilt-multiarch': 'commonjs @homebridge/node-pty-prebuilt-multiarch',
   },
   resolve: {
     extensions: ['.ts', '.js'],
