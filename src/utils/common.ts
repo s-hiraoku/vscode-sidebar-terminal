@@ -7,7 +7,8 @@ import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
 import { TERMINAL_CONSTANTS } from '../constants';
-import { TerminalConfig, TerminalInfo } from '../types/common';
+import { TerminalInfo } from '../types/common';
+import { TerminalConfig } from '../types/shared';
 import { getConfigManager } from '../config/ConfigManager';
 
 /**

@@ -3,7 +3,7 @@
  * Provides minimal type definitions for node-pty compatibility
  */
 
-declare module 'node-pty' {
+declare module '@homebridge/node-pty-prebuilt-multiarch' {
   export interface IPty {
     pid: number;
     cols: number;

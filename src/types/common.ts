@@ -6,26 +6,10 @@
  */
 
 // 新しい型システムからのインポート
-import {
-  ExtensionTerminalConfig,
-  CompleteTerminalSettings,
-  PartialTerminalSettings,
-  WebViewFontSettings,
-} from './shared';
+import { PartialTerminalSettings, WebViewFontSettings, TerminalConfig } from './shared';
 
-// IPty interface for type safety when using node-pty or mocks
-export interface IPty {
-  pid: number;
-  cols: number;
-  rows: number;
-  handleFlowControl?: boolean;
-  onData: (callback: (data: string) => void) => void;
-  onExit: (callback: (exitCode: number, signal?: number) => void) => void;
-  write: (data: string) => void;
-  resize: (cols: number, rows: number) => void;
-  kill: (signal?: string) => void;
-  clear?: () => void;
-}
+// IPty interface is now defined in node-pty.d.ts for @homebridge/node-pty-prebuilt-multiarch
+// Import IPty from the node-pty module when needed
 
 export interface TerminalInfo {
   id: string;
@@ -40,13 +24,15 @@ export interface TerminalInfo {
  * ターミナル設定インターフェース
  * @deprecated shared.ts の ExtensionTerminalConfig を使用してください
  */
-export type TerminalConfig = ExtensionTerminalConfig;
+// TerminalConfig type alias is now centrally defined in shared.ts
+// Use: import { TerminalConfig } from './shared' when needed
 
 /**
  * ターミナル設定の詳細インターフェース
  * @deprecated shared.ts の CompleteTerminalSettings を使用してください
  */
-export type TerminalSettings = CompleteTerminalSettings;
+// TerminalSettings type alias is now centrally defined in shared.ts
+// Use: import { TerminalSettings } from './shared' when needed
 
 export interface WebviewMessage {
   command:
