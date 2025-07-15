@@ -30,6 +30,8 @@ import {
   showAltClickDisabledWarning as _showAltClickDisabledWarning,
   showTerminalInteractionIssue as _showTerminalInteractionIssue,
 } from './utils/NotificationUtils';
+import { enableHybridNotifications } from './core/NotificationBridge';
+import { LoggingBufferManager } from './utils/BufferManager';
 
 // Type definitions
 interface TerminalMessage extends WebviewMessage {
@@ -48,6 +50,23 @@ declare const acquireVsCodeApi: () => {
   setState: (state: unknown) => void;
 };
 
+/**
+ * Apply consistent flex layout styles to terminal containers
+ * This eliminates duplicate style application code throughout the file
+ */
+function applyTerminalContainerStyles(container: HTMLElement): void {
+  // Update only necessary styles, don't override border styles
+  container.style.width = '100%';
+  container.style.flex = '1';
+  container.style.display = 'flex';
+  container.style.flexDirection = 'column';
+  container.style.overflow = 'hidden';
+  container.style.minHeight = '100px';
+  container.style.margin = '0';
+  container.style.padding = '2px';
+  container.style.outline = 'none';
+}
+
 const vscode = acquireVsCodeApi();
 
 // Main terminal management class
@@ -58,11 +77,8 @@ class TerminalWebviewManager {
   private isComposing: boolean = false;
   public activeTerminalId: string | null = null;
 
-  // Performance optimization: Buffer output and batch writes
-  private outputBuffer: string[] = [];
-  private bufferFlushTimer: number | null = null;
-  private readonly BUFFER_FLUSH_INTERVAL = SPLIT_CONSTANTS.BUFFER_FLUSH_INTERVAL;
-  private readonly MAX_BUFFER_SIZE = SPLIT_CONSTANTS.MAX_BUFFER_SIZE;
+  // Performance optimization: Unified buffer management
+  private bufferManager: LoggingBufferManager;
 
   // Performance optimization: Debounce resize operations
   private resizeDebounceTimer: number | null = null;
@@ -112,11 +128,28 @@ class TerminalWebviewManager {
   private lastOutputTime = 0;
 
   constructor() {
+    // Initialize unified notification system in hybrid mode for gradual migration
+    enableHybridNotifications();
+
+    // Initialize unified buffer manager with logging
+    this.bufferManager = new LoggingBufferManager(
+      {
+        maxBufferSize: SPLIT_CONSTANTS.MAX_BUFFER_SIZE,
+        defaultFlushInterval: SPLIT_CONSTANTS.BUFFER_FLUSH_INTERVAL,
+      },
+      log
+    );
+
     this.splitManager = new SplitManager();
     this.settingsPanel = new SettingsPanel({
       onSettingsChange: (settings) => {
         this.applySettings(settings);
       },
+    });
+
+    // Set up buffer manager flush callback
+    this.bufferManager.setFlushCallback((data: string) => {
+      this.writeBufferedDataToTerminal(data);
     });
 
     // Load settings from VS Code state if available
@@ -268,16 +301,7 @@ class TerminalWebviewManager {
       );
 
       this.splitManager.getTerminalContainers().forEach((container, terminalId) => {
-        // Update only necessary styles, don't override border styles
-        container.style.width = '100%';
-        container.style.flex = '1';
-        container.style.display = 'flex';
-        container.style.flexDirection = 'column';
-        container.style.overflow = 'hidden';
-        container.style.margin = '0';
-        container.style.padding = '2px';
-        container.style.minHeight = '100px';
-        container.style.outline = 'none';
+        applyTerminalContainerStyles(container);
 
         log(`📐 [MAIN] Applied flex layout to terminal ${terminalId}`);
 
@@ -444,16 +468,7 @@ class TerminalWebviewManager {
 
     // Apply consistent flex styling to all terminals (preserve CSS border classes)
     this.splitManager.getTerminalContainers().forEach((container, _terminalId) => {
-      // Update only necessary styles, don't override border styles
-      container.style.width = '100%';
-      container.style.flex = '1';
-      container.style.display = 'flex';
-      container.style.flexDirection = 'column';
-      container.style.overflow = 'hidden';
-      container.style.minHeight = '100px';
-      container.style.margin = '0';
-      container.style.padding = '2px';
-      container.style.outline = 'none';
+      applyTerminalContainerStyles(container);
     });
 
     // Focus the active terminal and ensure proper fit
@@ -593,15 +608,7 @@ class TerminalWebviewManager {
       const container = this.splitManager.getTerminalContainers().get(terminalId);
       if (container) {
         // Apply unified flex styling to all remaining terminals (preserve CSS border classes)
-        container.style.width = '100%';
-        container.style.flex = '1';
-        container.style.display = 'flex';
-        container.style.flexDirection = 'column';
-        container.style.overflow = 'hidden';
-        container.style.minHeight = '100px';
-        container.style.margin = '0';
-        container.style.padding = '2px';
-        container.style.outline = 'none';
+        applyTerminalContainerStyles(container);
         log(`🗑️ [WEBVIEW] Updated terminal ${terminalId} with flex layout`);
       }
     });
@@ -672,16 +679,7 @@ class TerminalWebviewManager {
     remainingTerminals.forEach((terminalId) => {
       const terminalContainer = this.splitManager.getTerminalContainers().get(terminalId);
       if (terminalContainer) {
-        // Update only necessary styles, don't override border styles
-        terminalContainer.style.width = '100%';
-        terminalContainer.style.flex = '1';
-        terminalContainer.style.display = 'flex';
-        terminalContainer.style.flexDirection = 'column';
-        terminalContainer.style.overflow = 'hidden';
-        terminalContainer.style.minHeight = '100px';
-        terminalContainer.style.margin = '0';
-        terminalContainer.style.padding = '2px';
-        terminalContainer.style.outline = 'none';
+        applyTerminalContainerStyles(terminalContainer);
       }
     });
 
@@ -759,85 +757,43 @@ class TerminalWebviewManager {
         targetTerminal.write(data);
         log(`📤 [WEBVIEW] Direct write to terminal ${terminalId}: ${data.length} chars`);
       } else {
-        // Use buffering only for active terminal (default behavior)
-        // Enhanced buffering strategy for Claude Code compatibility
-        const isLargeOutput = data.length >= 1000;
-        const bufferFull = this.outputBuffer.length >= this.MAX_BUFFER_SIZE;
-        const isClaudeCodeActive = this.claudeCodeState.isActive;
-        const isModerateOutput = data.length >= 100; // Medium-sized chunks
-
-        // Immediate flush conditions (prioritized for cursor accuracy)
-        const shouldFlushImmediately =
-          isLargeOutput || bufferFull || (isClaudeCodeActive && isModerateOutput);
-
-        if (shouldFlushImmediately) {
-          this.flushOutputBuffer();
-          targetTerminal.write(data);
-          const reason = isClaudeCodeActive
-            ? 'Claude Code mode'
-            : isLargeOutput
-              ? 'large output'
-              : 'buffer full';
-          log(`📤 [WEBVIEW] Immediate write to active terminal: ${data.length} chars (${reason})`);
-        } else {
-          this.outputBuffer.push(data);
-          this.scheduleBufferFlush();
-          log(
-            `📤 [WEBVIEW] Buffered write to active terminal: ${data.length} chars (buffer: ${this.outputBuffer.length}, Claude Code: ${isClaudeCodeActive})`
-          );
-        }
+        // Use unified buffer manager for active terminal (default behavior)
+        this.bufferManager.setClaudeCodeActive(this.claudeCodeState.isActive);
+        this.bufferManager.addData(data);
       }
     } else {
       log('⚠️ [WEBVIEW] No terminal instance to write to');
     }
   }
 
-  private scheduleBufferFlush(): void {
-    if (this.bufferFlushTimer === null) {
-      // Dynamic flush interval based on Claude Code state and output frequency
-      let flushInterval = this.BUFFER_FLUSH_INTERVAL; // Default 16ms
+  /**
+   * Write buffered data to the active terminal
+   * Called by BufferManager flush callback
+   */
+  private writeBufferedDataToTerminal(data: string): void {
+    let targetTerminal = this.terminal;
 
-      if (this.claudeCodeState.isActive) {
-        // Claude Code active: Use very aggressive flushing for cursor accuracy
-        flushInterval = 4; // 4ms for Claude Code output
-      } else if (this.outputBuffer.length > 5) {
-        // High-frequency output: Use shorter interval
-        flushInterval = 8; // 8ms for frequent output
+    if (this.activeTerminalId) {
+      const terminalData = this.splitManager.getTerminals().get(this.activeTerminalId);
+      if (terminalData) {
+        targetTerminal = terminalData.terminal;
       }
+    }
 
-      this.bufferFlushTimer = window.setTimeout(() => {
-        this.flushOutputBuffer();
-      }, flushInterval);
-
-      log(
-        `📊 [BUFFER] Scheduled flush in ${flushInterval}ms (Claude Code: ${this.claudeCodeState.isActive}, buffer size: ${this.outputBuffer.length})`
-      );
+    if (targetTerminal) {
+      targetTerminal.write(data);
+      log(`📤 [WEBVIEW] Buffer flush write: ${data.length} chars`);
+    } else {
+      log('⚠️ [WEBVIEW] No target terminal for buffer flush');
     }
   }
 
+  /**
+   * Flush any pending buffer data
+   * Delegates to BufferManager
+   */
   private flushOutputBuffer(): void {
-    if (this.bufferFlushTimer !== null) {
-      window.clearTimeout(this.bufferFlushTimer);
-      this.bufferFlushTimer = null;
-    }
-
-    if (this.outputBuffer.length > 0) {
-      const bufferedData = this.outputBuffer.join('');
-      this.outputBuffer = [];
-
-      // Write to active terminal
-      let targetTerminal = this.terminal;
-      if (this.activeTerminalId) {
-        const terminalData = this.splitManager.getTerminals().get(this.activeTerminalId);
-        if (terminalData) {
-          targetTerminal = terminalData.terminal;
-        }
-      }
-
-      if (targetTerminal) {
-        targetTerminal.write(bufferedData);
-      }
-    }
+    this.bufferManager.flush();
   }
 
   /**
@@ -1552,12 +1508,7 @@ class TerminalWebviewManager {
   }
 
   public dispose(): void {
-    this.flushOutputBuffer();
-
-    if (this.bufferFlushTimer !== null) {
-      window.clearTimeout(this.bufferFlushTimer);
-      this.bufferFlushTimer = null;
-    }
+    this.bufferManager.dispose();
 
     if (this.resizeDebounceTimer !== null) {
       window.clearTimeout(this.resizeDebounceTimer);

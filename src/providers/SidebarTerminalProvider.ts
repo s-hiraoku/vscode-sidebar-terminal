@@ -40,7 +40,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
       log('✅ [DEBUG] HTML set successfully');
     } catch (error) {
       log('❌ [ERROR] Failed to generate HTML for webview:', error);
-      void vscode.window.showErrorMessage(`Failed to generate webview HTML: ${String(error)}`);
+      TerminalErrorHandler.handleWebviewError(error);
       return;
     }
 
@@ -92,7 +92,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
       // The terminal creation event will send TERMINAL_CREATED to webview
     } catch (error) {
       log('❌ [ERROR] Failed to split terminal:', error);
-      void vscode.window.showErrorMessage(`Failed to split terminal: ${String(error)}`);
+      TerminalErrorHandler.handleWebviewError(error);
     }
   }
 
@@ -106,7 +106,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
       log('✅ [DEBUG] Settings open command sent');
     } catch (error) {
       log('❌ [ERROR] Failed to open settings:', error);
-      void vscode.window.showErrorMessage(`Failed to open settings: ${String(error)}`);
+      TerminalErrorHandler.handleWebviewError(error);
     }
   }
 
@@ -242,7 +242,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
       log('✅ [DEBUG] Terminal initialization completed successfully');
     } catch (error) {
       log('❌ [ERROR] Failed to initialize terminal:', error);
-      void vscode.window.showErrorMessage(`Failed to initialize terminal: ${String(error)}`);
+      TerminalErrorHandler.handleTerminalCreationError(error);
       throw error;
     }
   }
@@ -263,9 +263,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
             log('✅ [DEBUG] Terminal initialization completed in message handler');
           } catch (initError) {
             log('❌ [ERROR] Terminal initialization failed in message handler:', initError);
-            void vscode.window.showErrorMessage(
-              `Terminal initialization failed: ${String(initError)}`
-            );
+            TerminalErrorHandler.handleTerminalCreationError(initError);
           }
           break;
         case TERMINAL_CONSTANTS.COMMANDS.INPUT:
@@ -340,7 +338,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
       }
     } catch (error) {
       log('❌ [ERROR] Failed to handle webview message:', error);
-      void vscode.window.showErrorMessage(`Failed to handle webview message: ${String(error)}`);
+      TerminalErrorHandler.handleWebviewError(error);
     }
   }
 
@@ -461,7 +459,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
       await this._view.webview.postMessage(message);
     } catch (error) {
       log('❌ [ERROR] Failed to send message to webview:', error);
-      void vscode.window.showErrorMessage(`Failed to send message to webview: ${String(error)}`);
+      TerminalErrorHandler.handleWebviewError(error);
     }
   }
 
