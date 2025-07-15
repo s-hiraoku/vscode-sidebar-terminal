@@ -1473,31 +1473,56 @@ class TerminalWebviewManager {
     // Update current font settings
     this.currentFontSettings = { ...fontSettings };
 
-    // Apply to all terminals
-    this.splitManager.getTerminals().forEach((terminalData) => {
+    // Apply to all terminals using setOption() method
+    this.splitManager.getTerminals().forEach((terminalData, terminalId) => {
       if (terminalData.terminal) {
         const terminal = terminalData.terminal;
-        terminal.options.fontSize = fontSettings.fontSize;
-        terminal.options.fontFamily = fontSettings.fontFamily;
 
-        // Refresh terminal to apply changes
-        if (terminalData.fitAddon) {
-          terminalData.fitAddon.fit();
+        log(
+          `🎨 [WEBVIEW] Updating terminal ${terminalId} fontSize: ${fontSettings.fontSize}, fontFamily: ${fontSettings.fontFamily}`
+        );
+
+        try {
+          // Use options property to properly update xterm.js settings (v5.0+ API)
+          terminal.options.fontSize = fontSettings.fontSize;
+          terminal.options.fontFamily = fontSettings.fontFamily;
+
+          // Refresh terminal to apply changes and refit
+          if (terminalData.fitAddon) {
+            terminalData.fitAddon.fit();
+          }
+          terminal.refresh(0, terminal.rows - 1);
+
+          log(`✅ [WEBVIEW] Font settings applied to terminal ${terminalId}`);
+        } catch (error) {
+          log(`❌ [WEBVIEW] Error applying font settings to terminal ${terminalId}:`, error);
         }
       }
     });
 
     // Also apply to main terminal if it exists
     if (this.terminal) {
-      this.terminal.options.fontSize = fontSettings.fontSize;
-      this.terminal.options.fontFamily = fontSettings.fontFamily;
+      log(
+        `🎨 [WEBVIEW] Updating main terminal fontSize: ${fontSettings.fontSize}, fontFamily: ${fontSettings.fontFamily}`
+      );
 
-      if (this.fitAddon) {
-        this.fitAddon.fit();
+      try {
+        // Use options property to properly update xterm.js settings (v5.0+ API)
+        this.terminal.options.fontSize = fontSettings.fontSize;
+        this.terminal.options.fontFamily = fontSettings.fontFamily;
+
+        if (this.fitAddon) {
+          this.fitAddon.fit();
+        }
+        this.terminal.refresh(0, this.terminal.rows - 1);
+
+        log('✅ [WEBVIEW] Font settings applied to main terminal');
+      } catch (error) {
+        log('❌ [WEBVIEW] Error applying font settings to main terminal:', error);
       }
     }
 
-    log('✅ [WEBVIEW] Font settings applied to all terminals');
+    log('✅ [WEBVIEW] Font settings applied to all terminals using options property (v5.0+ API)');
   }
 
   private loadSettings(): void {

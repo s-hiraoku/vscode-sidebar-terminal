@@ -227,6 +227,14 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
       try {
         await this._sendMessage(initMessage);
         log('✅ [DEBUG] INIT message sent successfully');
+
+        // Send font settings immediately after INIT to ensure webview has current font settings
+        const fontSettings = this.getCurrentFontSettings();
+        await this._sendMessage({
+          command: 'fontSettingsUpdate',
+          fontSettings,
+        });
+        log('✅ [DEBUG] Font settings sent during initialization:', fontSettings);
       } catch (sendError) {
         log('❌ [ERROR] Failed to send INIT message:', sendError);
         throw new Error(`Failed to send INIT message: ${String(sendError)}`);
