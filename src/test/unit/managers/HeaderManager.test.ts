@@ -114,9 +114,11 @@ describe('HeaderManager', () => {
       // Check that title section has child elements (icon, text, badge)
       expect(titleSection?.children.length).to.be.greaterThan(0);
 
-      // Check for terminal text content (more reliable than emoji in test env)
-      const textContent = titleSection?.textContent || '';
-      expect(textContent).to.include('Terminal');
+      // Check for terminal text content in the specific title span
+      // The title section contains: icon, title text, and badge
+      // We need to check the middle element (title text)
+      const titleText = titleSection?.children[1] as HTMLElement;
+      expect(titleText?.textContent).to.equal('Terminal');
     });
 
     it('should create terminal count badge', () => {
@@ -139,11 +141,12 @@ describe('HeaderManager', () => {
       const commandSection = header?.children[1];
       expect(commandSection).to.not.be.null;
 
-      // Check if command section has sample-icons class or contains sample icons
-      const hasIcons =
-        commandSection?.classList.contains('sample-icons') ||
-        commandSection?.querySelectorAll('.sample-icon').length > 0;
-      expect(hasIcons).to.be.true;
+      // Check if command section has sample-icons class
+      expect(commandSection?.classList.contains('sample-icons')).to.be.true;
+
+      // Check if it contains sample icons
+      const sampleIcons = commandSection?.querySelectorAll('.sample-icon');
+      expect(sampleIcons && sampleIcons.length > 0).to.be.true;
     });
 
     it('should not create sample icons when showIcons is false', () => {
