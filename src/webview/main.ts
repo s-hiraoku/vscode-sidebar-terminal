@@ -10,13 +10,11 @@ import 'xterm/css/xterm.css';
 import type {
   WebviewMessage,
   VsCodeMessage,
-  TerminalConfig,
-  TerminalSettings,
   ClaudeCodeState,
   AltClickState,
   TerminalInteractionEvent,
 } from '../types/common';
-import { PartialTerminalSettings, WebViewFontSettings } from '../types/shared';
+import { PartialTerminalSettings, WebViewFontSettings, TerminalConfig } from '../types/shared';
 import { webview as log } from '../utils/logger';
 import { WEBVIEW_TERMINAL_CONSTANTS, SPLIT_CONSTANTS } from './constants/webview';
 import { getWebviewTheme, WEBVIEW_THEME_CONSTANTS } from './utils/WebviewThemeUtils';
@@ -1496,7 +1494,7 @@ class TerminalWebviewManager {
   private saveSettings(): void {
     try {
       const state =
-        (vscode.getState() as { terminalSettings?: TerminalSettings } | undefined) || {};
+        (vscode.getState() as { terminalSettings?: PartialTerminalSettings } | undefined) || {};
       vscode.setState({
         ...state,
         terminalSettings: this.currentSettings,

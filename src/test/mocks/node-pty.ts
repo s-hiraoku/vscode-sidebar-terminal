@@ -2,25 +2,51 @@
  * Mock implementation of node-pty for testing environments
  */
 
-import type { IPty } from '../../types/common';
+import type { IPty, IEvent, IDisposable } from '@homebridge/node-pty-prebuilt-multiarch';
 
 export type { IPty };
 
+class MockDisposable implements IDisposable {
+  dispose(): void {
+    // Mock implementation
+  }
+}
+
 export class MockPty implements IPty {
-  pid = 1234;
-  cols = 80;
-  rows = 24;
-  handleFlowControl? = false;
+  readonly pid = 1234;
+  readonly cols = 80;
+  readonly rows = 24;
+  readonly process = 'bash';
+  handleFlowControl = false;
 
   private dataCallback?: (data: string) => void;
-  private exitCallback?: (exitCode: number, signal?: number) => void;
+  private exitCallback?: (event: { exitCode: number; signal?: number }) => void;
 
-  onData(callback: (data: string) => void): void {
-    this.dataCallback = callback;
-  }
+  readonly onData: IEvent<string> = (listener: (e: string) => void): IDisposable => {
+    this.dataCallback = listener;
+    return new MockDisposable();
+  };
 
-  onExit(callback: (exitCode: number, signal?: number) => void): void {
-    this.exitCallback = callback;
+  readonly onExit: IEvent<{ exitCode: number; signal?: number }> = (
+    listener: (e: { exitCode: number; signal?: number }) => void
+  ): IDisposable => {
+    this.exitCallback = listener;
+    return new MockDisposable();
+  };
+
+  // Deprecated methods for backward compatibility
+  on(event: 'data', listener: (data: string) => void): void;
+  on(event: 'exit', listener: (exitCode: number, signal?: number) => void): void;
+  on(
+    event: string,
+    listener: ((data: string) => void) | ((exitCode: number, signal?: number) => void)
+  ): void {
+    if (event === 'data') {
+      this.dataCallback = listener as (data: string) => void;
+    } else if (event === 'exit') {
+      const exitListener = listener as (exitCode: number, signal?: number) => void;
+      this.exitCallback = (e) => exitListener(e.exitCode, e.signal);
+    }
   }
 
   write(data: string): void {
@@ -31,17 +57,26 @@ export class MockPty implements IPty {
   }
 
   resize(cols: number, rows: number): void {
-    this.cols = cols;
-    this.rows = rows;
+    // Override readonly properties for testing
+    Object.defineProperty(this, 'cols', { value: cols });
+    Object.defineProperty(this, 'rows', { value: rows });
   }
 
   kill(_signal?: string): void {
     if (this.exitCallback) {
-      this.exitCallback(0);
+      this.exitCallback({ exitCode: 0 });
     }
   }
 
   clear(): void {
+    // Mock implementation
+  }
+
+  pause(): void {
+    // Mock implementation
+  }
+
+  resume(): void {
     // Mock implementation
   }
 }
