@@ -18,16 +18,52 @@ import { JSDOM } from 'jsdom';
  */
 export const mockVscode = {
   workspace: {
-    getConfiguration: sinon.stub().returns({
-      get: sinon.stub().returns(undefined),
-      has: sinon.stub().returns(false),
-      inspect: sinon.stub().returns(undefined),
-      update: sinon.stub().resolves(),
+    getConfiguration: sinon.stub().callsFake((section) => {
+      const config = {
+        get: sinon.stub().callsFake((key: string, defaultValue?: any) => {
+          // Return reasonable defaults for common configuration keys
+          if (section === 'sidebarTerminal') {
+            const defaults: { [key: string]: any } = {
+              shell: '/bin/bash',
+              shellArgs: [],
+              fontSize: 14,
+              fontFamily: 'monospace',
+              maxTerminals: 5,
+              theme: 'auto',
+              cursorBlink: true,
+              startDirectory: '',
+              showHeader: true,
+              showIcons: true,
+              altClickMovesCursor: true
+            };
+            return defaults[key] !== undefined ? defaults[key] : defaultValue;
+          }
+          if (section === 'terminal.integrated') {
+            const defaults: { [key: string]: any } = {
+              shell: '/bin/bash',
+              shellArgs: [],
+              altClickMovesCursor: true
+            };
+            return defaults[key] !== undefined ? defaults[key] : defaultValue;
+          }
+          if (section === 'editor') {
+            const defaults: { [key: string]: any } = {
+              multiCursorModifier: 'alt'
+            };
+            return defaults[key] !== undefined ? defaults[key] : defaultValue;
+          }
+          return defaultValue;
+        }),
+        has: sinon.stub().returns(true),
+        inspect: sinon.stub().returns({ defaultValue: undefined }),
+        update: sinon.stub().resolves(),
+      };
+      return config;
     }),
     onDidChangeConfiguration: sinon.stub().returns({
       dispose: sinon.stub(),
     }),
-    workspaceFolders: [],
+    workspaceFolders: [{ uri: { fsPath: '/test/workspace' } }],
     name: 'test-workspace',
   },
   window: {
@@ -44,9 +80,13 @@ export const mockVscode = {
     executeCommand: sinon.stub().resolves(),
   },
   ExtensionContext: sinon.stub(),
-  ViewColumn: { One: 1, Two: 2, Three: 3 },
+  ViewColumn: { One: 1, Two: 2, Three: 3, Left: 1, Right: 2 },
   TreeDataProvider: sinon.stub(),
-  EventEmitter: sinon.stub(),
+  EventEmitter: class MockEventEmitter {
+    fire = sinon.stub();
+    event = sinon.stub();
+    dispose = sinon.stub();
+  },
   CancellationToken: sinon.stub(),
   Uri: {
     file: sinon.stub(),
@@ -195,7 +235,12 @@ export function setupJSDOMEnvironment(htmlContent?: string): {
       (window as any).process = {
         nextTick: (callback: () => void) => setImmediate(callback),
         env: { NODE_ENV: 'test' },
+        platform: 'linux',
+        cwd: () => '/test',
       };
+      // Add missing methods that might be needed
+      (window as any).setImmediate = setImmediate;
+      (window as any).clearImmediate = clearImmediate;
     },
   });
 

@@ -264,7 +264,7 @@
     "test:coverage": "nyc --reporter=text --reporter=html --reporter=lcov npm run test",
     "test:watch": "npm run watch-tests & npm run test",
     "test:unit": "nyc mocha --require ./src/test/shared/setup-exit-handler.js --require out/test/shared/TestSetup.js --timeout 30000 'out/test/unit/**/*.test.js'",
-    "test:integration": "nyc mocha 'out/test/integration/**/*.test.js'",
+    "test:integration": "nyc mocha --require ./src/test/shared/setup-exit-handler.js --require out/test/shared/TestSetup.js --timeout 60000 'out/test/integration/**/*.test.js'",
     "coverage:report": "nyc report --reporter=text --reporter=html",
     "coverage:check": "nyc check-coverage --lines 70 --functions 70 --branches 60",
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css,md}\"",

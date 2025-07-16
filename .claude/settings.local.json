@@ -6,7 +6,11 @@
       "Bash(npm run test:unit:*)",
       "Bash(npm run compile:*)",
       "Bash(npx mocha:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh release view:*)",
+      "WebFetch(domain:marketplace.visualstudio.com)"
     ],
     "deny": []
   }
