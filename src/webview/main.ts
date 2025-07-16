@@ -21,6 +21,7 @@ import { getWebviewTheme, WEBVIEW_THEME_CONSTANTS } from './utils/WebviewThemeUt
 import { SplitManager } from './managers/SplitManager';
 import { SettingsPanel } from './components/SettingsPanel';
 import { NotificationManager } from './managers/NotificationManager';
+import { ConfigManager } from './managers/ConfigManager';
 import {
   showClaudeCodeDetected,
   showClaudeCodeEnded,
@@ -69,6 +70,7 @@ class TerminalWebviewManager {
   private splitManager: SplitManager;
   private settingsPanel: SettingsPanel;
   private notificationManager: NotificationManager;
+  private configManager: ConfigManager;
 
   // Current settings (without font settings - they come from VS Code)
   private currentSettings: PartialTerminalSettings = {
@@ -118,6 +120,7 @@ class TerminalWebviewManager {
       },
     });
     this.notificationManager = new NotificationManager();
+    this.configManager = new ConfigManager();
 
     // Setup notification styles on initialization
     this.notificationManager.setupNotificationStyles();
@@ -1529,29 +1532,12 @@ class TerminalWebviewManager {
   }
 
   private loadSettings(): void {
-    try {
-      const state = vscode.getState() as { terminalSettings?: PartialTerminalSettings } | undefined;
-      if (state?.terminalSettings) {
-        this.currentSettings = { ...this.currentSettings, ...state.terminalSettings };
-        log('📋 [WEBVIEW] Loaded settings:', this.currentSettings);
-      }
-    } catch (error) {
-      log('❌ [WEBVIEW] Error loading settings:', error);
-    }
+    const loadedSettings = this.configManager.loadSettings();
+    this.currentSettings = { ...this.currentSettings, ...loadedSettings };
   }
 
   private saveSettings(): void {
-    try {
-      const state =
-        (vscode.getState() as { terminalSettings?: PartialTerminalSettings } | undefined) || {};
-      vscode.setState({
-        ...state,
-        terminalSettings: this.currentSettings,
-      });
-      log('💾 [WEBVIEW] Saved settings:', this.currentSettings);
-    } catch (error) {
-      log('❌ [WEBVIEW] Error saving settings:', error);
-    }
+    this.configManager.saveSettings(this.currentSettings);
   }
 
   public dispose(): void {
