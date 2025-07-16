@@ -22,6 +22,7 @@ import { SplitManager } from './managers/SplitManager';
 import { SettingsPanel } from './components/SettingsPanel';
 import { NotificationManager } from './managers/NotificationManager';
 import { ConfigManager } from './managers/ConfigManager';
+import { PerformanceManager } from './managers/PerformanceManager';
 import {
   showClaudeCodeDetected,
   showClaudeCodeEnded,
@@ -56,13 +57,7 @@ class TerminalWebviewManager {
   private isComposing: boolean = false;
   public activeTerminalId: string | null = null;
 
-  // Performance optimization: Buffer output and batch writes
-  private outputBuffer: string[] = [];
-  private bufferFlushTimer: number | null = null;
-  private readonly BUFFER_FLUSH_INTERVAL = SPLIT_CONSTANTS.BUFFER_FLUSH_INTERVAL;
-  private readonly MAX_BUFFER_SIZE = SPLIT_CONSTANTS.MAX_BUFFER_SIZE;
-
-  // Performance optimization: Debounce resize operations
+  // Performance optimization: Debounce resize operations (managed by PerformanceManager)
   private resizeDebounceTimer: number | null = null;
   private readonly RESIZE_DEBOUNCE_DELAY = SPLIT_CONSTANTS.RESIZE_DEBOUNCE_DELAY;
 
@@ -71,6 +66,7 @@ class TerminalWebviewManager {
   private settingsPanel: SettingsPanel;
   private notificationManager: NotificationManager;
   private configManager: ConfigManager;
+  private performanceManager: PerformanceManager;
 
   // Current settings (without font settings - they come from VS Code)
   private currentSettings: PartialTerminalSettings = {
@@ -121,6 +117,7 @@ class TerminalWebviewManager {
     });
     this.notificationManager = new NotificationManager();
     this.configManager = new ConfigManager();
+    this.performanceManager = new PerformanceManager();
 
     // Setup notification styles on initialization
     this.notificationManager.setupNotificationStyles();
@@ -765,86 +762,18 @@ class TerminalWebviewManager {
         targetTerminal.write(data);
         log(`📤 [WEBVIEW] Direct write to terminal ${terminalId}: ${data.length} chars`);
       } else {
-        // Use buffering only for active terminal (default behavior)
-        // Enhanced buffering strategy for Claude Code compatibility
-        const isLargeOutput = data.length >= 1000;
-        const bufferFull = this.outputBuffer.length >= this.MAX_BUFFER_SIZE;
-        const isClaudeCodeActive = this.claudeCodeState.isActive;
-        const isModerateOutput = data.length >= 100; // Medium-sized chunks
-
-        // Immediate flush conditions (prioritized for cursor accuracy)
-        const shouldFlushImmediately =
-          isLargeOutput || bufferFull || (isClaudeCodeActive && isModerateOutput);
-
-        if (shouldFlushImmediately) {
-          this.flushOutputBuffer();
-          targetTerminal.write(data);
-          const reason = isClaudeCodeActive
-            ? 'Claude Code mode'
-            : isLargeOutput
-              ? 'large output'
-              : 'buffer full';
-          log(`📤 [WEBVIEW] Immediate write to active terminal: ${data.length} chars (${reason})`);
-        } else {
-          this.outputBuffer.push(data);
-          this.scheduleBufferFlush();
-          log(
-            `📤 [WEBVIEW] Buffered write to active terminal: ${data.length} chars (buffer: ${this.outputBuffer.length}, Claude Code: ${isClaudeCodeActive})`
-          );
+        // Use PerformanceManager for buffering (active terminal only)
+        // Only update Claude Code mode if it has changed to avoid overhead
+        if (this.performanceManager.getClaudeCodeMode() !== this.claudeCodeState.isActive) {
+          this.performanceManager.setClaudeCodeMode(this.claudeCodeState.isActive);
         }
+        this.performanceManager.scheduleOutputBuffer(data, targetTerminal);
       }
     } else {
       log('⚠️ [WEBVIEW] No terminal instance to write to');
     }
   }
 
-  private scheduleBufferFlush(): void {
-    if (this.bufferFlushTimer === null) {
-      // Dynamic flush interval based on Claude Code state and output frequency
-      let flushInterval = this.BUFFER_FLUSH_INTERVAL; // Default 16ms
-
-      if (this.claudeCodeState.isActive) {
-        // Claude Code active: Use very aggressive flushing for cursor accuracy
-        flushInterval = 4; // 4ms for Claude Code output
-      } else if (this.outputBuffer.length > 5) {
-        // High-frequency output: Use shorter interval
-        flushInterval = 8; // 8ms for frequent output
-      }
-
-      this.bufferFlushTimer = window.setTimeout(() => {
-        this.flushOutputBuffer();
-      }, flushInterval);
-
-      log(
-        `📊 [BUFFER] Scheduled flush in ${flushInterval}ms (Claude Code: ${this.claudeCodeState.isActive}, buffer size: ${this.outputBuffer.length})`
-      );
-    }
-  }
-
-  private flushOutputBuffer(): void {
-    if (this.bufferFlushTimer !== null) {
-      window.clearTimeout(this.bufferFlushTimer);
-      this.bufferFlushTimer = null;
-    }
-
-    if (this.outputBuffer.length > 0) {
-      const bufferedData = this.outputBuffer.join('');
-      this.outputBuffer = [];
-
-      // Write to active terminal
-      let targetTerminal = this.terminal;
-      if (this.activeTerminalId) {
-        const terminalData = this.splitManager.getTerminals().get(this.activeTerminalId);
-        if (terminalData) {
-          targetTerminal = terminalData.terminal;
-        }
-      }
-
-      if (targetTerminal) {
-        targetTerminal.write(bufferedData);
-      }
-    }
-  }
 
   /**
    * Monitor terminal output for Claude Code detection
@@ -1541,12 +1470,8 @@ class TerminalWebviewManager {
   }
 
   public dispose(): void {
-    this.flushOutputBuffer();
-
-    if (this.bufferFlushTimer !== null) {
-      window.clearTimeout(this.bufferFlushTimer);
-      this.bufferFlushTimer = null;
-    }
+    // PerformanceManager handles its own cleanup
+    this.performanceManager.dispose();
 
     if (this.resizeDebounceTimer !== null) {
       window.clearTimeout(this.resizeDebounceTimer);
