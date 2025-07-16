@@ -20,9 +20,8 @@ import { WEBVIEW_TERMINAL_CONSTANTS, SPLIT_CONSTANTS } from './constants/webview
 import { getWebviewTheme, WEBVIEW_THEME_CONSTANTS } from './utils/WebviewThemeUtils';
 import { SplitManager } from './managers/SplitManager';
 import { SettingsPanel } from './components/SettingsPanel';
+import { NotificationManager } from './managers/NotificationManager';
 import {
-  showTerminalKillError,
-  showTerminalCloseError,
   showClaudeCodeDetected,
   showClaudeCodeEnded,
   showAltClickDisabledWarning as _showAltClickDisabledWarning,
@@ -69,6 +68,7 @@ class TerminalWebviewManager {
   // Managers
   private splitManager: SplitManager;
   private settingsPanel: SettingsPanel;
+  private notificationManager: NotificationManager;
 
   // Current settings (without font settings - they come from VS Code)
   private currentSettings: PartialTerminalSettings = {
@@ -90,8 +90,9 @@ class TerminalWebviewManager {
   };
 
   private altClickState: AltClickState = {
-    isEnabled: true,
-    isTemporarilyDisabled: false,
+    isVSCodeAltClickEnabled: true,
+    isAltKeyPressed: false,
+    isClaudeCodeBlocking: false,
   };
 
   // Claude Code detection patterns
@@ -116,6 +117,10 @@ class TerminalWebviewManager {
         this.applySettings(settings);
       },
     });
+    this.notificationManager = new NotificationManager();
+
+    // Setup notification styles on initialization
+    this.notificationManager.setupNotificationStyles();
 
     // Load settings from VS Code state if available
     this.loadSettings();
@@ -506,7 +511,7 @@ class TerminalWebviewManager {
 
     if (!activeTerminalId) {
       log('⚠️ [WEBVIEW] No active terminal to close');
-      showTerminalKillError('No active terminal to close');
+      this.notificationManager.showTerminalKillError('No active terminal to close');
       return;
     }
 
@@ -549,7 +554,7 @@ class TerminalWebviewManager {
   }
 
   private showLastTerminalWarning(minCount: number): void {
-    showTerminalCloseError(minCount);
+    this.notificationManager.showTerminalCloseError(minCount);
   }
 
   private performKillTerminal(id: string): void {

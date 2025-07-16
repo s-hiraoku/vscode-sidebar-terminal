@@ -54,7 +54,13 @@
       "Bash(gh run download:*)",
       "Bash(gh label:*)",
       "Bash(npx webpack:*)",
-      "Bash(gh pr list:*)"
+      "Bash(gh pr list:*)",
+      "Bash(gh pr edit:*)",
+      "Bash(gh pr view:*)",
+      "Bash(npx similarity-ts:*)",
+      "Bash(npm ls:*)",
+      "Bash(git stash:*)",
+      "Bash(git checkout:*)"
     ],
     "deny": []
   }
