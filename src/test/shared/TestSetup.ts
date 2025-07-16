@@ -75,7 +75,7 @@ export function setupTestEnvironment(): void {
     if (id === 'vscode') {
       return mockVscode;
     }
-    if (id === 'node-pty') {
+    if (id === 'node-pty' || id === '@homebridge/node-pty-prebuilt-multiarch') {
       return {
         spawn: () => ({
           pid: 1234,
@@ -84,9 +84,11 @@ export function setupTestEnvironment(): void {
           write: () => {},
           resize: () => {},
           kill: () => {},
+          dispose: () => {},
         }),
       };
     }
+    // Allow actual source code to be loaded for coverage
     // eslint-disable-next-line prefer-rest-params, @typescript-eslint/no-unsafe-return
     return originalRequire.apply(this, arguments);
   };
@@ -121,6 +123,16 @@ export function setupTestEnvironment(): void {
   (global as any).Buffer = Buffer;
   (global as any).setImmediate = setImmediate;
   (global as any).clearImmediate = clearImmediate;
+
+  // Fix process event handler methods for Mocha compatibility
+  const requiredMethods = ['removeListener', 'removeAllListeners', 'off'];
+  requiredMethods.forEach((method) => {
+    if (!(process as any)[method]) {
+      (process as any)[method] = function () {
+        return process;
+      };
+    }
+  });
 }
 
 /**
