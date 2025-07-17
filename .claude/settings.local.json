@@ -21,7 +21,8 @@
       "Bash(git stash:*)",
       "Bash(git checkout:*)",
       "Bash(gh release view:*)",
-      "WebFetch(domain:marketplace.visualstudio.com)"
+      "WebFetch(domain:marketplace.visualstudio.com)",
+      "Bash(npm run release:patch:*)"
     ],
     "deny": []
   }
