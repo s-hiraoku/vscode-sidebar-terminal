@@ -15,6 +15,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Smooth transition animations (0.2s)
   - Visual feedback for terminal focus state
 
+### Changed
+- **WebView Architecture Refactoring**
+  - Transformed monolithic `main.ts` into a modular system with 9 focused managers (Performance, ClaudeCode, Input, UI, Config, Message, Notification, TerminalCoordinator).
+  - Achieved significant improvements in code organization, maintainability, and performance.
+  - Implemented intelligent buffering, debounced operations, and efficient resource management.
+  - Enhanced type safety through comprehensive interfaces and strong typing.
+
 ## [0.0.1] - 2025-07-11
 
 ### Added

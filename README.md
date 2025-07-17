@@ -170,9 +170,11 @@ npm run package
 
 ### Debugging
 
-1. Open the project in VS Code
-2. Press `F5` to launch Extension Development Host
-3. In the new window, check the "Terminal" view in the Explorer panel
+For detailed debugging instructions, including how to launch the extension, check logs, and troubleshoot common issues, please refer to the [Debugging Guide (Japanese)](./DEBUG.md).
+
+### Release Process
+
+For detailed instructions on how to release new versions of the extension, including automated and manual publishing steps, please refer to the [Release Process Guide (Japanese)](./RELEASE_PROCESS.md).
 
 ## 🧪 Testing Strategy
 
@@ -279,31 +281,62 @@ This project is licensed under the [MIT License](LICENSE).
 
 ## 📝 Changelog
 
-### v0.0.1 (In Development)
+### v0.0.1 (Initial Release)
 
 #### Features
-- Initial release
-- Sidebar terminal display
-- Multiple terminal management
-- Split terminal functionality
-- PTY communication improvements
-- Special key handling (Backspace, Ctrl+C, etc.)
-- Clear/New/Split button implementation
-- IME (multi-language input) support
-- Customizable settings
-- Alt+Click cursor positioning with Claude Code detection
-- Comprehensive testing strategy
+- Initial release of Sidebar Terminal extension
+- **Core Features**: Terminal integration in VS Code Primary Sidebar, multiple terminal management (up to 5), split terminal functionality, Clear, New, and Split button controls, full shell execution environment powered by node-pty.
+- **Platform Support**: Cross-platform compatibility (Windows, macOS, Linux), IME support for multi-language input, special key handling.
+- **Advanced Features**: Alt+Click cursor positioning with VS Code standard behavior, Claude Code detection for optimal performance, visual feedback with blue cursor highlight, automatic conflict resolution for terminal output interference.
+- **Customization Options**: Configurable shell and shell arguments, font family and size customization, terminal theme support, cursor blinking controls, maximum terminal count settings.
+- **Developer Experience**: Comprehensive testing strategy with 47 test cases, modern testing tooling, multi-platform CI/CD pipeline, code coverage reporting, ESLint and Prettier integration.
 
-#### Recent Fixes
-- ✅ Fixed PTY communication issues
-- ✅ Fixed Backspace key functionality
-- ✅ Fixed Clear/New/Split button functionality
-- ✅ Fixed WebView entry point (simple.ts → main.ts)
-- ✅ Resolved TypeScript/ESLint errors
-- ✅ Improved terminal execution environment
-- ✅ Enhanced user guidance
-- ✅ Implemented comprehensive testing with 47 test cases
-- ✅ Added CI/CD pipeline with multi-platform support
+#### Technical Implementation
+- **Architecture**: Clean separation between extension host (Node.js) and WebView (browser).
+- **Terminal Rendering**: xterm.js for high-performance terminal emulation.
+- **Process Management**: node-pty for cross-platform PTY support.
+- **State Management**: Centralized TerminalManager for multi-terminal coordination.
+- **Communication**: Event-driven architecture with proper message handling.
+
+#### Testing & Quality Assurance
+- **Unit Tests**: 47 test cases covering core functionality (DOM manipulation, notification system, Alt+Click).
+- **Integration Tests**: VS Code extension testing with mocked APIs.
+- **Code Coverage**: Comprehensive coverage reporting with nyc (Istanbul).
+- **CI/CD**: GitHub Actions workflow for multi-platform testing.
+- **Code Quality**: ESLint, Prettier, and TypeScript strict mode.
+
+#### Fixed Issues
+- ✅ PTY communication reliability improvements.
+- ✅ Backspace key and special character handling.
+- ✅ WebView entry point resolution (simple.ts → main.ts).
+- ✅ Clear/New/Split button functionality.
+- ✅ TypeScript and ESLint error resolution.
+- ✅ Cross-platform terminal execution environment.
+- ✅ User guidance and error handling enhancements.
+
+#### Performance Optimizations
+- **Output Buffering**: Adaptive buffering (8ms vs 16ms) for optimal performance.
+- **Claude Code Detection**: Automatic performance optimization during AI interactions.
+- **Memory Management**: Proper cleanup and disposal patterns.
+- **Resize Handling**: Debounced terminal resize operations.
+
+#### Security & Reliability
+- **Input Validation**: Comprehensive input sanitization.
+- **Error Handling**: Graceful degradation and user-friendly error messages.
+- **Resource Management**: Proper cleanup of PTY processes and WebView resources.
+- **Security Testing**: CodeQL analysis and dependency vulnerability scanning.
+
+### v0.0.2 (Future Release - Planned)
+
+#### Planned Features
+- **Enhanced Testing**: Complete Phase 2 WebView component testing (SplitManager, HeaderManager, SettingsPanel).
+- **Advanced Testing**: Phase 3 implementation (Performance testing framework, Accessibility testing with axe-core, Load testing for multiple terminals).
+- **User Experience**: Terminal session persistence, custom themes and color schemes, enhanced keyboard shortcuts, terminal history management.
+
+#### WebView Architecture Refactoring (Completed in v0.0.2)
+- Transformed monolithic `main.ts` into a modular system with 9 focused managers (Performance, ClaudeCode, Input, UI, Config, Message, Notification, TerminalCoordinator).
+- Achieved significant improvements in code organization, maintainability, and performance.
+- Implemented intelligent buffering, debounced operations, and efficient resource management.
 
 ## 🙏 Acknowledgments
 
