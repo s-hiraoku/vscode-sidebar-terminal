@@ -4,7 +4,13 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 import * as vscode from 'vscode';
 import * as pty from '@homebridge/node-pty-prebuilt-multiarch';
-import { TerminalInstance, TerminalEvent } from '../types/common';
+import {
+  TerminalInstance,
+  TerminalEvent,
+  TerminalState,
+  TerminalInfo,
+  DeleteResult,
+} from '../types/common';
 import { TERMINAL_CONSTANTS, ERROR_MESSAGES } from '../constants';
 import { terminal as log } from '../utils/logger';
 import {
@@ -26,6 +32,10 @@ export class TerminalManager {
   private readonly _exitEmitter = new vscode.EventEmitter<TerminalEvent>();
   private readonly _terminalCreatedEmitter = new vscode.EventEmitter<TerminalInstance>();
   private readonly _terminalRemovedEmitter = new vscode.EventEmitter<string>();
+  private readonly _stateUpdateEmitter = new vscode.EventEmitter<TerminalState>();
+
+  // 操作の順序保証のためのキュー
+  private operationQueue: Promise<void> = Promise.resolve();
 
   // Track terminals being killed to prevent infinite loops
   private readonly _terminalBeingKilled = new Set<string>();
@@ -40,9 +50,61 @@ export class TerminalManager {
   public readonly onExit = this._exitEmitter.event;
   public readonly onTerminalCreated = this._terminalCreatedEmitter.event;
   public readonly onTerminalRemoved = this._terminalRemovedEmitter.event;
+  public readonly onStateUpdate = this._stateUpdateEmitter.event;
 
   constructor(private readonly _context: vscode.ExtensionContext) {
     // Context may be used in future for storing state
+  }
+
+  /**
+   * 利用可能な最小番号を検索する
+   */
+  private _findAvailableTerminalNumber(): number {
+    const config = getTerminalConfig();
+    const usedNumbers = new Set<number>();
+
+    // 既存のターミナル名から番号を抽出
+    for (const terminal of this._terminals.values()) {
+      const match = terminal.name.match(/Terminal (\d+)/);
+      if (match && match[1]) {
+        usedNumbers.add(parseInt(match[1], 10));
+      }
+    }
+
+    // 1から最大ターミナル数まで空き番号を探す
+    for (let i = 1; i <= config.maxTerminals; i++) {
+      if (!usedNumbers.has(i)) {
+        return i;
+      }
+    }
+
+    // 見つからない場合は最大値を返す（エラーケース）
+    return config.maxTerminals;
+  }
+
+  /**
+   * 新しいターミナルを作成できるかどうかを判定する
+   */
+  private _canCreateTerminal(): boolean {
+    const config = getTerminalConfig();
+    const usedNumbers = new Set<number>();
+
+    // 既存のターミナル名から番号を抽出
+    for (const terminal of this._terminals.values()) {
+      const match = terminal.name.match(/Terminal (\d+)/);
+      if (match && match[1]) {
+        usedNumbers.add(parseInt(match[1], 10));
+      }
+    }
+
+    // 1から最大ターミナル数まで空き番号があるかチェック
+    for (let i = 1; i <= config.maxTerminals; i++) {
+      if (!usedNumbers.has(i)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   public createTerminal(): string {
@@ -50,10 +112,21 @@ export class TerminalManager {
     const config = getTerminalConfig();
     log('🔧 [DEBUG] Terminal config:', config);
 
-    if (this._terminals.size >= config.maxTerminals) {
+    // デバッグ情報: 現在のターミナル状況を表示
+    const existingTerminals = Array.from(this._terminals.values());
+    log('🔧 [DEBUG] Existing terminals:');
+    existingTerminals.forEach((terminal) => {
+      log(`🔧 [DEBUG] - ${terminal.name} (ID: ${terminal.id})`);
+    });
+
+    if (!this._canCreateTerminal()) {
+      log('🔧 [DEBUG] Cannot create terminal: all slots used');
       showWarningMessage(`${ERROR_MESSAGES.MAX_TERMINALS_REACHED} (${config.maxTerminals})`);
       return this._activeTerminalManager.getActive() || '';
     }
+
+    const terminalNumber = this._findAvailableTerminalNumber();
+    log(`🔧 [DEBUG] Found available terminal number: ${terminalNumber}`);
 
     const terminalId = generateTerminalId();
     const shell = getShellForPlatform(config.shell);
@@ -102,7 +175,7 @@ export class TerminalManager {
       const terminal: TerminalInstance = {
         id: terminalId,
         pty: ptyProcess,
-        name: generateTerminalName(this._terminals.size + 1),
+        name: generateTerminalName(terminalNumber),
         isActive: true,
       };
 
@@ -143,10 +216,16 @@ export class TerminalManager {
         }
       });
 
-      log('✅ [TERMINAL] Terminal created successfully with ID:', terminalId);
+      log('✅ [TERMINAL] Terminal created successfully:');
+      log(`✅ [TERMINAL] - Name: ${terminal.name}`);
+      log(`✅ [TERMINAL] - ID: ${terminalId}`);
       log('📁 [TERMINAL] Expected working directory:', cwd);
 
       this._terminalCreatedEmitter.fire(terminal);
+
+      // 状態更新を通知
+      this._notifyStateUpdate();
+
       return terminalId;
     } catch (error) {
       showErrorMessage(ERROR_MESSAGES.TERMINAL_CREATION_FAILED, error);
@@ -262,6 +341,124 @@ export class TerminalManager {
   }
 
   /**
+   * 新しいアーキテクチャ: 統一されたターミナル削除メソッド
+   * 指定されたターミナルIDを削除し、新しい状態を返す
+   */
+  public async deleteTerminal(
+    terminalId: string,
+    requestSource: 'header' | 'panel' = 'panel'
+  ): Promise<DeleteResult> {
+    // 操作をキューに追加してレースコンディションを防ぐ
+    return new Promise<DeleteResult>((resolve, reject) => {
+      this.operationQueue = this.operationQueue.then(() => {
+        try {
+          const result = this.performDeleteOperation(terminalId, requestSource);
+          resolve(result);
+        } catch (error) {
+          reject(error);
+        }
+      });
+    });
+  }
+
+  /**
+   * アトミックな削除処理
+   */
+  private performDeleteOperation(
+    terminalId: string,
+    requestSource: 'header' | 'panel'
+  ): DeleteResult {
+    log(
+      `🗑️ [DELETE] Starting delete operation for terminal: ${terminalId} (source: ${requestSource})`
+    );
+
+    // 1. 削除前の検証
+    const validation = this.canRemoveTerminal(terminalId);
+    if (!validation.canRemove) {
+      log(`⚠️ [DELETE] Cannot delete terminal: ${validation.reason}`);
+      showWarningMessage(validation.reason || 'Cannot delete terminal');
+      return { success: false, reason: validation.reason };
+    }
+
+    // 2. ターミナルの存在確認
+    const terminal = this._terminals.get(terminalId);
+    if (!terminal) {
+      log(`⚠️ [DELETE] Terminal not found: ${terminalId}`);
+      return { success: false, reason: 'Terminal not found' };
+    }
+
+    try {
+      // 3. プロセスの終了
+      log(`🗑️ [DELETE] Killing terminal process: ${terminalId}`);
+      this._terminalBeingKilled.add(terminalId);
+      terminal.pty.kill();
+
+      // 4. 状態の更新は onExit ハンドラで行われる
+      log(`✅ [DELETE] Delete operation completed for: ${terminalId}`);
+
+      // 5. 新しい状態を返す (非同期なので現在の状態を返す)
+      return { success: true, newState: this.getCurrentState() };
+    } catch (error) {
+      log(`❌ [DELETE] Error during delete operation:`, error);
+      this._terminalBeingKilled.delete(terminalId);
+      return { success: false, reason: `Delete failed: ${String(error)}` };
+    }
+  }
+
+  /**
+   * 現在の状態を取得
+   */
+  public getCurrentState(): TerminalState {
+    const terminals: TerminalInfo[] = Array.from(this._terminals.values()).map((terminal) => ({
+      id: terminal.id,
+      name: terminal.name,
+      isActive: terminal.isActive,
+    }));
+
+    return {
+      terminals,
+      activeTerminalId: this._activeTerminalManager.getActive() || null,
+      maxTerminals: getTerminalConfig().maxTerminals,
+      availableSlots: this._getAvailableSlots(),
+    };
+  }
+
+  /**
+   * 利用可能なスロットを取得
+   */
+  private _getAvailableSlots(): number[] {
+    const config = getTerminalConfig();
+    const usedNumbers = new Set<number>();
+
+    // 既存のターミナル名から番号を抽出
+    for (const terminal of this._terminals.values()) {
+      const match = terminal.name.match(/Terminal (\d+)/);
+      if (match && match[1]) {
+        usedNumbers.add(parseInt(match[1], 10));
+      }
+    }
+
+    // 利用可能なスロットを返す
+    const availableSlots: number[] = [];
+    for (let i = 1; i <= config.maxTerminals; i++) {
+      if (!usedNumbers.has(i)) {
+        availableSlots.push(i);
+      }
+    }
+
+    return availableSlots;
+  }
+
+  /**
+   * WebView に状態更新を通知
+   */
+  private _notifyStateUpdate(): void {
+    const state = this.getCurrentState();
+    this._stateUpdateEmitter.fire(state);
+    log(`📡 [STATE] State update notification sent:`, state);
+  }
+
+  /**
    * 安全なターミナルキル（削除前の検証付き）
    * 常にアクティブターミナルをkillする
    */
@@ -361,6 +558,7 @@ export class TerminalManager {
     this._exitEmitter.dispose();
     this._terminalCreatedEmitter.dispose();
     this._terminalRemovedEmitter.dispose();
+    this._stateUpdateEmitter.dispose();
   }
 
   // Performance optimization: Buffer data to reduce event frequency

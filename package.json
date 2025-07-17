@@ -32,7 +32,7 @@
     "cross platform",
     "node-pty"
   ],
-  "icon": "resources/icon.png",
+  "icon": "resources/icon.svg",
   "galleryBanner": {
     "color": "#1e1e1e",
     "theme": "dark"

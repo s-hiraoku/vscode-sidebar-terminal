@@ -10,21 +10,23 @@ import 'xterm/css/xterm.css';
 import type {
   WebviewMessage,
   VsCodeMessage,
-  ClaudeCodeState,
-  AltClickState,
   TerminalInteractionEvent,
+  TerminalState,
 } from '../types/common';
 import { PartialTerminalSettings, WebViewFontSettings, TerminalConfig } from '../types/shared';
 import { webview as log } from '../utils/logger';
-import { WEBVIEW_TERMINAL_CONSTANTS, SPLIT_CONSTANTS } from './constants/webview';
+import { SPLIT_CONSTANTS } from './constants/webview';
 import { getWebviewTheme, WEBVIEW_THEME_CONSTANTS } from './utils/WebviewThemeUtils';
 import { SplitManager } from './managers/SplitManager';
 import { SettingsPanel } from './components/SettingsPanel';
+import { NotificationManager } from './managers/NotificationManager';
+import { ConfigManager } from './managers/ConfigManager';
+import { PerformanceManager } from './managers/PerformanceManager';
+import { UIManager } from './managers/UIManager';
+import { InputManager } from './managers/InputManager';
+import { MessageManager } from './managers/MessageManager';
+import { TerminalInstance } from './interfaces/ManagerInterfaces';
 import {
-  showTerminalKillError,
-  showTerminalCloseError,
-  showClaudeCodeDetected,
-  showClaudeCodeEnded,
   showAltClickDisabledWarning as _showAltClickDisabledWarning,
   showTerminalInteractionIssue as _showTerminalInteractionIssue,
 } from './utils/NotificationUtils';
@@ -69,22 +71,68 @@ const vscode = acquireVsCodeApi();
 
 // Main terminal management class
 class TerminalWebviewManager {
+  // IManagerCoordinator interface methods
+  public getActiveTerminalId(): string | null {
+    return this.activeTerminalId;
+  }
+
+  public getTerminalInstance(terminalId: string): TerminalInstance | undefined {
+    return this.splitManager.getTerminals().get(terminalId);
+  }
+
+  public getAllTerminalInstances(): Map<string, TerminalInstance> {
+    return this.splitManager.getTerminals();
+  }
+
+  public getAllTerminalContainers(): Map<string, HTMLElement> {
+    return this.splitManager.getTerminalContainers();
+  }
+
+  public postMessageToExtension(message: unknown): void {
+    vscode.postMessage(message as VsCodeMessage);
+  }
+
+  public log(message: string, ...args: unknown[]): void {
+    log(message, ...args);
+  }
+
+  public getManagers(): {
+    performance: PerformanceManager;
+    input: InputManager;
+    ui: UIManager;
+    config: ConfigManager;
+    message: MessageManager;
+    notification: NotificationManager;
+  } {
+    return {
+      performance: this.performanceManager,
+      input: this.inputManager,
+      ui: this.uiManager,
+      config: this.configManager,
+      message: this.messageManager,
+      notification: this.notificationManager,
+    };
+  }
   public terminal: Terminal | null = null;
   public fitAddon: FitAddon | null = null;
   public terminalContainer: HTMLElement | null = null;
   private isComposing: boolean = false;
   public activeTerminalId: string | null = null;
 
-  // Performance optimization: Unified buffer management
-  private bufferManager: LoggingBufferManager;
+  // Performance optimization: Debounce resize operations (managed by PerformanceManager)
 
-  // Performance optimization: Debounce resize operations
   private resizeDebounceTimer: number | null = null;
   private readonly RESIZE_DEBOUNCE_DELAY = SPLIT_CONSTANTS.RESIZE_DEBOUNCE_DELAY;
 
   // Managers
   private splitManager: SplitManager;
   private settingsPanel: SettingsPanel;
+  private notificationManager: NotificationManager;
+  private configManager: ConfigManager;
+  private performanceManager: PerformanceManager;
+  private uiManager: UIManager;
+  private inputManager: InputManager;
+  public messageManager: MessageManager;
 
   // Current settings (without font settings - they come from VS Code)
   private currentSettings: PartialTerminalSettings = {
@@ -99,31 +147,6 @@ class TerminalWebviewManager {
     fontSize: 14,
     fontFamily: 'monospace',
   };
-
-  // Claude Code detection and Alt+Click control
-  private claudeCodeState: ClaudeCodeState = {
-    isActive: false,
-  };
-
-  private altClickState: AltClickState = {
-    isEnabled: true,
-    isTemporarilyDisabled: false,
-  };
-
-  // Claude Code detection patterns
-  private readonly CLAUDE_CODE_PATTERNS = [
-    /claude/i,
-    /\[agent\]/i,
-    /\[tool\]/i,
-    /\[thinking\]/i,
-    /anthropic/i,
-    /ai\s*assistant/i,
-  ];
-
-  // Output monitoring for Claude Code detection
-  private outputMonitoringInterval: number | null = null;
-  private recentOutputVolume = 0;
-  private lastOutputTime = 0;
 
   constructor() {
     // Initialize unified notification system in hybrid mode for gradual migration
@@ -144,6 +167,18 @@ class TerminalWebviewManager {
         this.applySettings(settings);
       },
     });
+    this.notificationManager = new NotificationManager();
+    this.configManager = new ConfigManager();
+    this.performanceManager = new PerformanceManager();
+    this.uiManager = new UIManager();
+    this.inputManager = new InputManager();
+    this.messageManager = new MessageManager();
+
+    // Setup notification styles on initialization
+    this.notificationManager.setupNotificationStyles();
+
+    // Setup InputManager with NotificationManager reference
+    this.inputManager.setNotificationManager(this.notificationManager);
 
     // Set up buffer manager flush callback
     this.bufferManager.setFlushCallback((data: string) => {
@@ -206,11 +241,9 @@ class TerminalWebviewManager {
       log('❌ [WEBVIEW] Failed to initialize terminal container');
     }
 
-    // Setup IME support
-    this.setupIMEHandling();
-
-    // Setup Alt key visual feedback (VS Code standard)
-    this.setupAltKeyVisualFeedback();
+    // Setup input handling
+    this.inputManager.setupIMEHandling();
+    this.inputManager.setupAltKeyVisualFeedback();
   }
 
   public createTerminal(id: string, name: string, _config: TerminalConfig): void {
@@ -245,7 +278,7 @@ class TerminalWebviewManager {
         allowTransparency: true,
         scrollback: 10000,
         // VS Code standard: Enable Alt+Click cursor positioning
-        altClickMovesCursor: this.isVSCodeAltClickEnabled(),
+        altClickMovesCursor: this.inputManager.isVSCodeAltClickEnabled(this.currentSettings),
       };
 
       const terminal = new Terminal(terminalOptions);
@@ -267,6 +300,113 @@ class TerminalWebviewManager {
       terminalDiv.id = `terminal-container-${id}`;
       terminalDiv.className = 'terminal-container';
       terminalDiv.tabIndex = -1; // Make focusable
+
+      // Create terminal header with delete button
+      const terminalHeader = document.createElement('div');
+      terminalHeader.className = 'terminal-header';
+      terminalHeader.style.cssText = `
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        height: 24px;
+        padding: 2px 8px;
+        background: var(--vscode-tab-inactiveBackground, #2d2d30);
+        border-bottom: 1px solid var(--vscode-widget-border, #454545);
+        font-size: 11px;
+        color: var(--vscode-tab-inactiveForeground, #969696);
+        user-select: none;
+      `;
+
+      // Terminal title
+      const terminalTitle = document.createElement('span');
+      terminalTitle.textContent = name || `Terminal ${id.slice(-4)}`;
+      terminalTitle.style.cssText = `
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      `;
+
+      // Delete button
+      const deleteButton = document.createElement('button');
+      deleteButton.innerHTML = '×';
+      deleteButton.title = `Close ${name || 'Terminal'}`;
+      deleteButton.setAttribute('data-terminal-close', id);
+      deleteButton.style.cssText = `
+        background: none;
+        border: none;
+        color: var(--vscode-tab-inactiveForeground, #969696);
+        font-size: 18px;
+        font-weight: bold;
+        cursor: pointer;
+        padding: 0;
+        width: 20px;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 2px;
+        line-height: 1;
+        position: relative;
+        z-index: 100;
+      `;
+
+      // Delete button hover effect
+      deleteButton.addEventListener('mouseenter', () => {
+        log(`🖱️ [DELETE] Mouse enter on delete button for terminal: ${id}`);
+        deleteButton.style.background = 'var(--vscode-toolbar-hoverBackground, #37373d)';
+        deleteButton.style.color = 'var(--vscode-foreground, #cccccc)';
+      });
+
+      deleteButton.addEventListener('mouseleave', () => {
+        log(`🖱️ [DELETE] Mouse leave on delete button for terminal: ${id}`);
+        deleteButton.style.background = 'none';
+        deleteButton.style.color = 'var(--vscode-tab-inactiveForeground, #969696)';
+      });
+
+      // Delete button click handler with detailed debugging
+      deleteButton.addEventListener(
+        'click',
+        (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+
+          log(`🗑️ [DELETE] ========== DELETE BUTTON CLICKED ==========`);
+          log(`🗑️ [DELETE] Terminal ID: ${id}`);
+          log(`🗑️ [DELETE] Button element:`, deleteButton);
+          log(`🗑️ [DELETE] Event:`, e);
+          log(
+            `🗑️ [DELETE] Current terminals:`,
+            Array.from(this.splitManager.getTerminals().keys())
+          );
+
+          try {
+            // ヘッダの×ボタン用 - 指定されたターミナルを直接削除
+            log(`🗑️ [HEADER] Deleting specific terminal: ${id}`);
+            // 新しいアーキテクチャ: 統一された削除要求を送信（WebViewは判定しない）
+            this.messageManager.sendDeleteTerminalMessage(id, 'header', this);
+            log(`🗑️ [HEADER] Delete message sent to extension for: ${id}`);
+          } catch (error) {
+            log(`🗑️ [HEADER] Error sending delete message:`, error);
+          }
+        },
+        true
+      ); // Use capture phase
+
+      terminalHeader.appendChild(terminalTitle);
+      terminalHeader.appendChild(deleteButton);
+
+      // Create terminal content area
+      const terminalContent = document.createElement('div');
+      terminalContent.className = 'terminal-content';
+      terminalContent.style.cssText = `
+        flex: 1;
+        overflow: hidden;
+      `;
+
+      terminalDiv.appendChild(terminalHeader);
+      terminalDiv.appendChild(terminalContent);
 
       // Set split mode if this is the second terminal
       if (this.splitManager.getTerminals().size >= 1 && !this.splitManager.getIsSplitMode()) {
@@ -330,7 +470,7 @@ class TerminalWebviewManager {
         `📐 [MAIN] Forced layout recalculation for all ${this.splitManager.getTerminalContainers().size} containers`
       );
 
-      const targetContainer = terminalDiv;
+      const targetContainer = terminalContent;
 
       // Open terminal AFTER flex layout is applied
       setTimeout(() => {
@@ -363,7 +503,7 @@ class TerminalWebviewManager {
             terminal.focus();
 
             // Add click event to xterm.js terminal area for reliable focus handling
-            this.addXtermClickHandler(terminal, id, targetContainer);
+            this.inputManager.addXtermClickHandler(terminal, id, targetContainer, this);
 
             // Only set as main terminal if it's the first one or not in split mode
             if (!this.splitManager.getIsSplitMode() || !this.terminal) {
@@ -436,6 +576,7 @@ class TerminalWebviewManager {
 
       // Store terminal instance
       this.splitManager.setTerminal(id, {
+        id,
         terminal,
         fitAddon,
         name,
@@ -510,139 +651,118 @@ class TerminalWebviewManager {
   }
 
   public closeTerminal(id?: string): void {
-    // According to the spec: always kill the ACTIVE terminal, not the specified one
+    // パネルのゴミ箱ボタン用 - アクティブターミナルを削除
     const activeTerminalId = this.activeTerminalId;
     log(
-      '🗑️ [WEBVIEW] Close terminal requested for:',
+      '🗑️ [PANEL] Close terminal requested for:',
       id,
       'but will close active terminal:',
       activeTerminalId
     );
 
     if (!activeTerminalId) {
-      log('⚠️ [WEBVIEW] No active terminal to close');
-      showTerminalKillError('No active terminal to close');
+      log('⚠️ [PANEL] No active terminal to close');
+      this.notificationManager.showTerminalKillError('No active terminal to close');
       return;
     }
 
-    // Check if this is a safe kill attempt using the ACTIVE terminal
-    if (!this.canKillTerminal(activeTerminalId)) {
-      return;
-    }
-
-    this.performKillTerminal(activeTerminalId);
+    // 新しいアーキテクチャ: 統一された削除要求を送信（WebViewは判定しない）
+    log('📤 [PANEL] Sending delete terminal message to extension');
+    this.messageManager.sendDeleteTerminalMessage(activeTerminalId, 'panel', this);
   }
 
-  // Track terminals being closed to prevent double processing
+  // 削除中のターミナルを追跡（Extension側で管理されるまでの一時的な状態）
   private terminalsBeingClosed = new Set<string>();
 
-  private canKillTerminal(id: string): boolean {
-    // Prevent double processing
-    if (this.terminalsBeingClosed.has(id)) {
-      log('🔄 [WEBVIEW] Terminal already being closed:', id);
-      return false;
+  /**
+   * 新しいアーキテクチャ: Extension からの状態更新を処理
+   */
+  public updateState(state: TerminalState): void {
+    log('🔄 [WEBVIEW] ========== STATE UPDATE RECEIVED ==========');
+    log('🔄 [WEBVIEW] New state:', state);
+
+    if (!state || !state.terminals) {
+      log('⚠️ [WEBVIEW] Invalid state received');
+      return;
     }
 
-    const terminalCount = this.splitManager.getTerminals().size;
-    const minTerminalCount = 1;
+    // 現在の状態をログ出力
+    log('🔄 [WEBVIEW] Current terminals:', Array.from(this.splitManager.getTerminals().keys()));
+    log('🔄 [WEBVIEW] Current active terminal:', this.activeTerminalId);
 
-    log('🔧 [WEBVIEW] canKillTerminal check:', {
-      terminalId: id,
-      terminalCount,
-      minTerminalCount,
-      activeTerminalId: this.activeTerminalId,
-      beingClosed: Array.from(this.terminalsBeingClosed),
-    });
-
-    if (terminalCount <= minTerminalCount) {
-      log('🛡️ [WEBVIEW] Cannot kill terminal - would go below minimum count');
-      this.showLastTerminalWarning(minTerminalCount);
-      return false;
-    }
-
-    return true;
+    // 新しい状態に基づいてUIを更新
+    this.synchronizeWithState(state);
   }
 
-  private showLastTerminalWarning(minCount: number): void {
-    showTerminalCloseError(minCount);
+  /**
+   * 状態に基づいてUIを同期
+   */
+  private synchronizeWithState(state: TerminalState): void {
+    log('🔄 [WEBVIEW] Synchronizing UI with state:', state);
+
+    // 現在のターミナルリストと新しい状態を比較
+    const currentTerminals = new Set(this.splitManager.getTerminals().keys());
+    const newTerminals = new Set(state.terminals.map((t) => t.id));
+
+    log('🔄 [WEBVIEW] Current terminal IDs:', Array.from(currentTerminals));
+    log('🔄 [WEBVIEW] New terminal IDs:', Array.from(newTerminals));
+
+    // 削除されたターミナルをUIから削除
+    for (const terminalId of currentTerminals) {
+      if (!newTerminals.has(terminalId)) {
+        log(`🗑️ [WEBVIEW] Removing terminal from UI: ${terminalId}`);
+        this.removeTerminalFromUI(terminalId);
+      }
+    }
+
+    // 新しく追加されたターミナルをUIに追加
+    for (const terminal of state.terminals) {
+      if (!currentTerminals.has(terminal.id)) {
+        log(`➕ [WEBVIEW] Adding terminal to UI: ${terminal.id}`);
+        // 新しいターミナルは既にcreateTerminalで作成されているはず
+        // ここでは特別な処理は不要
+
+      }
+    }
+
+    // アクティブターミナルの更新
+    if (state.activeTerminalId && state.activeTerminalId !== this.activeTerminalId) {
+      log(
+        `🎯 [WEBVIEW] Updating active terminal: ${this.activeTerminalId} -> ${state.activeTerminalId}`
+      );
+      this.switchToTerminal(state.activeTerminalId);
+    }
+
+    log('✅ [WEBVIEW] State synchronization completed');
   }
 
-  private performKillTerminal(id: string): void {
-    log('🗑️ [WEBVIEW] Performing kill for terminal:', id);
-
-    // Mark terminal as being closed
-    this.terminalsBeingClosed.add(id);
-
-    log('🗑️ [WEBVIEW] Current active terminal:', this.activeTerminalId);
-    log(
-      '🗑️ [WEBVIEW] Terminals before removal:',
-      Array.from(this.splitManager.getTerminals().keys())
-    );
-
-    // Remove terminal instance
-    const terminalData = this.splitManager.getTerminals().get(id);
-    if (terminalData) {
-      terminalData.terminal.dispose();
-      this.splitManager.getTerminals().delete(id);
-      log('🗑️ [WEBVIEW] Terminal instance removed:', id);
+  /**
+   * UIからターミナルを削除（状態同期用）
+   */
+  private removeTerminalFromUI(terminalId: string): void {
+    try {
+      // SplitManagerを使用してクリーンアップ
+      this.splitManager.removeTerminal(terminalId);
+      log(`✅ [WEBVIEW] Terminal removed from UI: ${terminalId}`);
+    } catch (error) {
+      log(`❌ [WEBVIEW] Error removing terminal from UI:`, error);
     }
-
-    // Remove terminal container
-    const container = this.splitManager.getTerminalContainers().get(id);
-    if (container) {
-      container.remove();
-      this.splitManager.getTerminalContainers().delete(id);
-      log('🗑️ [WEBVIEW] Terminal container removed:', id);
-    }
-
-    // Adjust remaining terminal layouts
-    const remainingTerminals = Array.from(this.splitManager.getTerminals().keys());
-    log('🗑️ [WEBVIEW] Remaining terminals:', remainingTerminals);
-
-    // Update all remaining terminals to use flex layout
-    log(`🗑️ [WEBVIEW] Updating ${remainingTerminals.length} remaining terminals with flex layout`);
-
-    remainingTerminals.forEach((terminalId) => {
-      const container = this.splitManager.getTerminalContainers().get(terminalId);
-      if (container) {
-        // Apply unified flex styling to all remaining terminals (preserve CSS border classes)
-        applyTerminalContainerStyles(container);
-        log(`🗑️ [WEBVIEW] Updated terminal ${terminalId} with flex layout`);
-      }
-    });
-
-    // If this was the active terminal, switch to another one
-    if (this.activeTerminalId === id) {
-      if (remainingTerminals.length > 0) {
-        const nextTerminalId = remainingTerminals[0];
-        if (nextTerminalId) {
-          this.switchToTerminal(nextTerminalId);
-        }
-      } else {
-        this.activeTerminalId = null;
-        this.showTerminalPlaceholder();
-      }
-    } else {
-      // Update status for terminal closure
-    }
-
-    // Notify extension about terminal closure ONLY if terminal actually existed
-    if (terminalData) {
-      vscode.postMessage({
-        command: 'terminalClosed',
-        terminalId: id,
-      });
-      log('📤 [WEBVIEW] Sent terminalClosed message to extension for:', id);
-    }
-
-    log('✅ [WEBVIEW] Terminal closed:', id);
   }
 
   /**
    * Handle terminal removal notification from extension (UI cleanup only)
    */
   public handleTerminalRemovedFromExtension(id: string): void {
-    log('🗑️ [WEBVIEW] Handling terminal removal from extension:', id);
+    log('🗑️ [WEBVIEW] ========== HANDLING TERMINAL REMOVAL FROM EXTENSION ==========');
+    log('🗑️ [WEBVIEW] Terminal ID to remove:', id);
+    log(
+      '🗑️ [WEBVIEW] All terminals before removal:',
+      Array.from(this.splitManager.getTerminals().keys())
+    );
+    log(
+      '🗑️ [WEBVIEW] All containers before removal:',
+      Array.from(this.splitManager.getTerminalContainers().keys())
+    );
 
     // Remove from being closed tracking (if it exists)
     this.terminalsBeingClosed.delete(id);
@@ -651,33 +771,61 @@ class TerminalWebviewManager {
     const terminalData = this.splitManager.getTerminals().get(id);
     const container = this.splitManager.getTerminalContainers().get(id);
 
+    log('🗑️ [WEBVIEW] Terminal data exists:', !!terminalData);
+    log('🗑️ [WEBVIEW] Container exists:', !!container);
+
     if (!terminalData && !container) {
       log('🔄 [WEBVIEW] Terminal already removed from webview:', id);
       return;
     }
 
     // UI cleanup only (no extension communication)
-    if (terminalData) {
-      terminalData.terminal.dispose();
-      this.splitManager.getTerminals().delete(id);
-      log('🗑️ [WEBVIEW] Terminal instance cleaned up:', id);
+    // Use SplitManager's removeTerminal method for proper cleanup
+    log('🗑️ [WEBVIEW] Calling SplitManager.removeTerminal for:', id);
+    try {
+      this.splitManager.removeTerminal(id);
+      log('🗑️ [WEBVIEW] SplitManager.removeTerminal completed for:', id);
+    } catch (error) {
+      log('❌ [WEBVIEW] Error in SplitManager.removeTerminal:', error);
     }
 
-    if (container) {
-      container.remove();
-      this.splitManager.getTerminalContainers().delete(id);
-      log('🗑️ [WEBVIEW] Terminal container cleaned up:', id);
-    }
+    log(
+      '🗑️ [WEBVIEW] All terminals after removal:',
+      Array.from(this.splitManager.getTerminals().keys())
+    );
+    log(
+      '🗑️ [WEBVIEW] All containers after removal:',
+      Array.from(this.splitManager.getTerminalContainers().keys())
+    );
 
     // Update remaining terminals layout
     const remainingTerminals = Array.from(this.splitManager.getTerminals().keys());
     log('🗑️ [WEBVIEW] Remaining terminals after extension removal:', remainingTerminals);
 
-    // Apply flex layout to remaining terminals
+    // Apply flex layout to remaining terminals and trigger re-fit
     remainingTerminals.forEach((terminalId) => {
       const terminalContainer = this.splitManager.getTerminalContainers().get(terminalId);
       if (terminalContainer) {
-        applyTerminalContainerStyles(terminalContainer);
+        // Update only necessary styles, don't override border styles
+        terminalContainer.style.width = '100%';
+        terminalContainer.style.flex = '1';
+        terminalContainer.style.display = 'flex';
+        terminalContainer.style.flexDirection = 'column';
+        terminalContainer.style.overflow = 'hidden';
+        terminalContainer.style.minHeight = '100px';
+        terminalContainer.style.margin = '0';
+        terminalContainer.style.padding = '2px';
+        terminalContainer.style.outline = 'none';
+
+        // Force layout recalculation and re-fit terminal
+        setTimeout(() => {
+          terminalContainer.offsetHeight; // Force reflow
+          const terminalInstance = this.splitManager.getTerminals().get(terminalId);
+          if (terminalInstance && terminalInstance.fitAddon) {
+            terminalInstance.fitAddon.fit();
+            log(`🔧 [WEBVIEW] Re-fitted terminal ${terminalId} after removal`);
+          }
+        }, 100);
       }
     });
 
@@ -690,38 +838,14 @@ class TerminalWebviewManager {
         }
       } else {
         this.activeTerminalId = null;
-        this.showTerminalPlaceholder();
+        this.uiManager.showTerminalPlaceholder();
       }
     }
 
     log('✅ [WEBVIEW] Terminal removal from extension handled:', id);
   }
 
-  private showTerminalPlaceholder(): void {
-    const terminalBody = document.getElementById('terminal-body');
-    if (terminalBody) {
-      terminalBody.innerHTML = `
-        <div id="terminal-placeholder" style="
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          color: #888;
-          font-family: monospace;
-          font-size: 14px;
-          text-align: center;
-        ">
-          <div>No Terminal</div>
-          <div style="font-size: 12px; margin-top: 8px;">Create a new terminal to get started</div>
-        </div>
-      `;
-    }
-  }
-
   public writeToTerminal(data: string, terminalId?: string): void {
-    // Monitor output for Claude Code detection
-    this.monitorTerminalOutput(data, terminalId);
-
     // Determine which terminal to write to
     let targetTerminal = this.terminal;
 
@@ -755,162 +879,14 @@ class TerminalWebviewManager {
         targetTerminal.write(data);
         log(`📤 [WEBVIEW] Direct write to terminal ${terminalId}: ${data.length} chars`);
       } else {
-        // Use unified buffer manager for active terminal (default behavior)
-        this.bufferManager.setClaudeCodeActive(this.claudeCodeState.isActive);
-        this.bufferManager.addData(data);
+
+        // Use PerformanceManager for buffering (active terminal only)
+        this.performanceManager.scheduleOutputBuffer(data, targetTerminal);
+
       }
     } else {
       log('⚠️ [WEBVIEW] No terminal instance to write to');
     }
-  }
-
-  /**
-   * Write buffered data to the active terminal
-   * Called by BufferManager flush callback
-   */
-  private writeBufferedDataToTerminal(data: string): void {
-    let targetTerminal = this.terminal;
-
-    if (this.activeTerminalId) {
-      const terminalData = this.splitManager.getTerminals().get(this.activeTerminalId);
-      if (terminalData) {
-        targetTerminal = terminalData.terminal;
-      }
-    }
-
-    if (targetTerminal) {
-      targetTerminal.write(data);
-      log(`📤 [WEBVIEW] Buffer flush write: ${data.length} chars`);
-    } else {
-      log('⚠️ [WEBVIEW] No target terminal for buffer flush');
-    }
-  }
-
-  /**
-   * Flush any pending buffer data
-   * Delegates to BufferManager
-   */
-  private flushOutputBuffer(): void {
-    this.bufferManager.flush();
-  }
-
-  /**
-   * Monitor terminal output for Claude Code detection
-   */
-  private monitorTerminalOutput(data: string, terminalId?: string): void {
-    const currentTime = Date.now();
-    this.recentOutputVolume += data.length;
-    this.lastOutputTime = currentTime;
-
-    // Check for Claude Code patterns in the output
-    const containsClaudeCodePattern = this.CLAUDE_CODE_PATTERNS.some((pattern) =>
-      pattern.test(data)
-    );
-
-    // High-frequency output detection (potential Claude Code activity)
-    const isHighFrequencyOutput =
-      this.recentOutputVolume > 500 &&
-      currentTime - (this.claudeCodeState.startTime || currentTime) < 2000;
-
-    // Large output chunks (typical of Claude Code responses)
-    const isLargeOutput = data.length >= 1000;
-
-    if (containsClaudeCodePattern || isHighFrequencyOutput || isLargeOutput) {
-      this.activateClaudeCodeMode(terminalId || this.activeTerminalId || '');
-    }
-
-    // Reset output volume periodically
-    if (!this.outputMonitoringInterval) {
-      this.outputMonitoringInterval = window.setTimeout(() => {
-        this.recentOutputVolume = 0;
-        this.outputMonitoringInterval = null;
-
-        // Deactivate Claude Code mode if no recent activity
-        if (currentTime - this.lastOutputTime > 3000 && this.claudeCodeState.isActive) {
-          this.deactivateClaudeCodeMode();
-        }
-      }, 5000);
-    }
-  }
-
-  /**
-   * Activate Claude Code mode and temporarily disable Alt+Click via xterm.js
-   */
-  private activateClaudeCodeMode(terminalId: string): void {
-    if (!this.claudeCodeState.isActive) {
-      this.claudeCodeState = {
-        isActive: true,
-        terminalId,
-        startTime: Date.now(),
-        outputVolume: 0,
-      };
-
-      // VS Code approach: Disable Alt+Click at xterm.js level for performance
-      this.setAltClickForAllTerminals(false);
-
-      log('🤖 [CLAUDE-CODE] Claude Code mode activated, Alt+Click disabled via xterm.js');
-      this.emitTerminalInteractionEvent('claude-code-start', terminalId);
-      this.showClaudeCodeNotification(true);
-    }
-
-    // Update output volume
-    this.claudeCodeState.outputVolume = (this.claudeCodeState.outputVolume || 0) + 1;
-  }
-
-  /**
-   * Deactivate Claude Code mode and re-enable Alt+Click via xterm.js
-   */
-  private deactivateClaudeCodeMode(): void {
-    if (this.claudeCodeState.isActive) {
-      const terminalId = this.claudeCodeState.terminalId || '';
-
-      this.claudeCodeState = {
-        isActive: false,
-      };
-
-      // VS Code approach: Re-enable Alt+Click at xterm.js level
-      this.setAltClickForAllTerminals(this.isVSCodeAltClickEnabled());
-
-      log('🤖 [CLAUDE-CODE] Claude Code mode deactivated, Alt+Click re-enabled via xterm.js');
-      this.emitTerminalInteractionEvent('claude-code-end', terminalId);
-      this.showClaudeCodeNotification(false);
-    }
-  }
-
-  /**
-   * Set Alt+Click setting for all terminals at xterm.js level
-   */
-  private setAltClickForAllTerminals(enabled: boolean): void {
-    // Update all existing terminals
-    this.splitManager.getTerminals().forEach((terminalData, terminalId) => {
-      if (terminalData.terminal && terminalData.terminal.options) {
-        terminalData.terminal.options.altClickMovesCursor = enabled;
-        log(`⌨️ [CLAUDE-CODE] Set Alt+Click for terminal ${terminalId}: ${enabled}`);
-      }
-    });
-
-    // Update main terminal if it exists
-    if (this.terminal && this.terminal.options) {
-      this.terminal.options.altClickMovesCursor = enabled;
-      log(`⌨️ [CLAUDE-CODE] Set Alt+Click for main terminal: ${enabled}`);
-    }
-  }
-
-  /**
-   * Show notification about Claude Code state
-   */
-  private showClaudeCodeNotification(isActive: boolean): void {
-    if (isActive) {
-      showClaudeCodeDetected();
-    } else {
-      showClaudeCodeEnded();
-    }
-
-    // Also show subtle notification in the terminal for immediate context
-    const message = isActive
-      ? 'Claude Code detected - Alt+Click temporarily disabled'
-      : 'Claude Code ended - Alt+Click re-enabled';
-    this.showNotificationInTerminal(message, isActive ? 'info' : 'success');
   }
 
   /**
@@ -1012,174 +988,12 @@ class TerminalWebviewManager {
     this.splitManager.addNewTerminalToSplit(terminalId, terminalName);
   }
 
-  private setupIMEHandling(): void {
-    log('🌐 [WEBVIEW] Setting up IME handling - let xterm.js handle composition');
-
-    // Let xterm.js handle IME composition natively
-    // Only use compositionstart/end to track state, don't send data manually
-    document.addEventListener('compositionstart', () => {
-      this.isComposing = true;
-      log('🌐 [IME] Composition started - blocking terminal input');
-    });
-
-    document.addEventListener('compositionend', () => {
-      log('🌐 [IME] Composition ended - letting xterm.js handle the data');
-
-      // Reset composition state after a short delay to allow xterm.js to process
-      setTimeout(() => {
-        this.isComposing = false;
-        log('🌐 [IME] Composition state reset');
-      }, 10);
-    });
-
-    const style = document.createElement('style');
-    style.textContent = `
-      .xterm-screen {
-        min-width: 1px;
-      }
-      .xterm-composition-view {
-        background: rgba(255, 255, 0, 0.3);
-        border-bottom: 1px solid #ffff00;
-      }
-    `;
-    document.head.appendChild(style);
-  }
-
-  /**
-   * Setup Alt key visual feedback (VS Code standard)
-   * Shows visual cursor indication when Alt key is pressed to indicate Alt+Click functionality
-   */
-  private setupAltKeyVisualFeedback(): void {
-    log('⌨️ [WEBVIEW] Setting up VS Code standard Alt key visual feedback');
-
-    // Add CSS for VS Code standard Alt key visual feedback
-    const style = document.createElement('style');
-    style.textContent = `
-      /* VS Code standard: Show default cursor when Alt is pressed to indicate Alt+Click functionality */
-      .alt-active .xterm-screen {
-        cursor: default !important;
-      }
-      .alt-active .xterm-viewport {
-        cursor: default !important;
-      }
-      .alt-active .xterm {
-        cursor: default !important;
-      }
-    `;
-    document.head.appendChild(style);
-
-    // Track Alt key state
-    let isAltPressed = false;
-
-    // Add keydown event listener for Alt key
-    document.addEventListener('keydown', (event) => {
-      if (event.altKey && !isAltPressed) {
-        isAltPressed = true;
-        document.body.classList.add('alt-active');
-        log('⌨️ [ALT] Alt key pressed - showing VS Code standard cursor feedback');
-      }
-    });
-
-    // Add keyup event listener to remove Alt state
-    document.addEventListener('keyup', (event) => {
-      if (!event.altKey && isAltPressed) {
-        isAltPressed = false;
-        document.body.classList.remove('alt-active');
-        log('⌨️ [ALT] Alt key released - hiding cursor feedback');
-      }
-    });
-
-    // Handle window focus events to ensure consistent state
-    window.addEventListener('blur', () => {
-      if (isAltPressed) {
-        isAltPressed = false;
-        document.body.classList.remove('alt-active');
-        log('⌨️ [ALT] Window lost focus - resetting Alt state');
-      }
-    });
-  }
-
   public setActiveTerminalId(terminalId: string): void {
     this.activeTerminalId = terminalId;
     log('🎯 [WEBVIEW] Active terminal ID set to:', terminalId);
 
     // Update terminal borders to highlight active terminal
-    this.updateTerminalBorders(terminalId);
-  }
-
-  /**
-   * Update terminal borders to highlight the active terminal
-   */
-  private updateTerminalBorders(activeTerminalId: string): void {
-    try {
-      // Get all terminal containers
-      const allContainers = this.splitManager.getTerminalContainers();
-
-      allContainers.forEach((container, terminalId) => {
-        if (!container) return;
-
-        // Remove existing border classes
-        container.classList.remove('active', 'inactive');
-
-        // Add appropriate border class
-        if (terminalId === activeTerminalId) {
-          container.classList.add('active');
-          log(`🔵 [BORDER] Added active border to terminal: ${terminalId}`);
-        } else {
-          container.classList.add('inactive');
-          log(`⚪ [BORDER] Added inactive border to terminal: ${terminalId}`);
-        }
-      });
-
-      // Also update for the main terminal-body if it's the initial terminal
-      const terminalBody = document.getElementById('terminal-body');
-      if (terminalBody && terminalBody.classList.contains('terminal-container')) {
-        terminalBody.classList.remove('active', 'inactive');
-        if (activeTerminalId === 'primary' || allContainers.size === 0) {
-          terminalBody.classList.add('active');
-          log(`🔵 [BORDER] Added active border to primary terminal body`);
-        }
-      }
-
-      // Also update terminal panes if in split mode
-      if (this.splitManager.getIsSplitMode()) {
-        this.updateSplitTerminalBorders(activeTerminalId);
-      }
-    } catch (error) {
-      log('❌ [BORDER] Error updating terminal borders:', error);
-    }
-  }
-
-  /**
-   * Update borders for split terminal panes
-   */
-  private updateSplitTerminalBorders(activeTerminalId: string): void {
-    try {
-      const panes = document.querySelectorAll('.terminal-pane');
-
-      panes.forEach((pane) => {
-        const paneElement = pane as HTMLElement;
-        const terminalContainer = paneElement.querySelector('[data-terminal-id]') as HTMLElement;
-
-        if (!terminalContainer) return;
-
-        const terminalId = terminalContainer.getAttribute('data-terminal-id');
-
-        // Remove existing classes
-        paneElement.classList.remove('active', 'inactive');
-
-        // Add appropriate class
-        if (terminalId === activeTerminalId) {
-          paneElement.classList.add('active');
-          log(`🔵 [SPLIT-BORDER] Added active border to split pane: ${terminalId}`);
-        } else {
-          paneElement.classList.add('inactive');
-          log(`⚪ [SPLIT-BORDER] Added inactive border to split pane: ${terminalId}`);
-        }
-      });
-    } catch (error) {
-      log('❌ [SPLIT-BORDER] Error updating split terminal borders:', error);
-    }
+    this.uiManager.updateTerminalBorders(terminalId, this.splitManager.getTerminalContainers());
   }
 
   // Getters for split manager integration
@@ -1231,123 +1045,6 @@ class TerminalWebviewManager {
     }
   }
 
-  /**
-   * Check if VS Code Alt+Click cursor positioning should be enabled (VS Code standard)
-   * VS Code logic: terminal.integrated.altClickMovesCursor && editor.multiCursorModifier === 'alt'
-   */
-  private isVSCodeAltClickEnabled(): boolean {
-    const altClickSetting = this.currentSettings.altClickMovesCursor;
-    const multiCursorModifier = this.currentSettings.multiCursorModifier;
-
-    // VS Code standard: Both conditions must be true
-    const altClickEnabled = altClickSetting !== undefined ? Boolean(altClickSetting) : true;
-    const multiCursorIsAlt = multiCursorModifier === 'alt';
-
-    const result = altClickEnabled && multiCursorIsAlt;
-    log(
-      `⌨️ [VS-CODE-ALT-CLICK] Setting check: terminal.integrated.altClickMovesCursor=${altClickEnabled}, editor.multiCursorModifier=${multiCursorModifier}, enabled=${result}`
-    );
-
-    return result;
-  }
-
-  /**
-   * Update xterm.js altClickMovesCursor setting dynamically (VS Code standard)
-   */
-  private updateAltClickSetting(): void {
-    const isEnabled = this.isVSCodeAltClickEnabled();
-
-    // Update all existing terminals
-    this.splitManager.getTerminals().forEach((terminalData, terminalId) => {
-      if (terminalData.terminal && terminalData.terminal.options) {
-        terminalData.terminal.options.altClickMovesCursor = isEnabled;
-        log(`⌨️ [UPDATE] Updated Alt+Click setting for terminal ${terminalId}: ${isEnabled}`);
-      }
-    });
-
-    // Update main terminal if it exists
-    if (this.terminal && this.terminal.options) {
-      this.terminal.options.altClickMovesCursor = isEnabled;
-      log(`⌨️ [UPDATE] Updated Alt+Click setting for main terminal: ${isEnabled}`);
-    }
-  }
-
-  /**
-   * Add click event handler to xterm.js DOM elements for reliable focus (VS Code standard)
-   */
-  private addXtermClickHandler(
-    _terminal: Terminal,
-    terminalId: string,
-    container: HTMLElement
-  ): void {
-    // Wait for xterm.js to fully render DOM elements
-    setTimeout(() => {
-      try {
-        // Find the xterm viewport element (where terminal content is displayed)
-        const xtermViewport = container.querySelector('.xterm-viewport');
-        const xtermScreen = container.querySelector('.xterm-screen');
-        const xtermRows = container.querySelector('.xterm-rows');
-
-        // Add click handlers to multiple xterm elements to ensure coverage
-        const xtermElements = [xtermViewport, xtermScreen, xtermRows].filter(Boolean);
-
-        xtermElements.forEach((element, index) => {
-          if (element && !element.hasAttribute('data-terminal-click-handler')) {
-            element.setAttribute('data-terminal-click-handler', terminalId);
-            element.addEventListener('click', (event) => {
-              // VS Code standard: Only prevent bubbling for non-Alt clicks
-              // Allow Alt+Click events to reach xterm.js for cursor positioning
-              if (!(event as MouseEvent).altKey) {
-                event.stopPropagation();
-              }
-
-              // VS Code standard: Handle focus management
-              this.ensureTerminalFocus(terminalId);
-
-              if (this.activeTerminalId !== terminalId) {
-                this.switchToTerminal(terminalId);
-              }
-            });
-
-            log(
-              `✅ [XTERM-CLICK] Added VS Code standard click handler to xterm element ${index} for terminal: ${terminalId}`
-            );
-          }
-        });
-
-        // Also add a general click handler to the entire container as fallback
-        if (!container.hasAttribute('data-xterm-fallback-click')) {
-          container.setAttribute('data-xterm-fallback-click', terminalId);
-          container.addEventListener('click', (event) => {
-            // Only handle if the click wasn't already handled by xterm elements
-            if (
-              event.target &&
-              (event.target as Element).closest('.xterm-viewport, .xterm-screen, .xterm-rows')
-            ) {
-              return; // Let the xterm handlers handle it
-            }
-
-            // VS Code standard: Only handle focus for fallback
-            this.ensureTerminalFocus(terminalId);
-
-            if (this.activeTerminalId !== terminalId) {
-              this.switchToTerminal(terminalId);
-            }
-          });
-
-          log(
-            `✅ [CONTAINER-CLICK] Added fallback click handler to container for terminal: ${terminalId}`
-          );
-        }
-      } catch (error) {
-        log(
-          `❌ [XTERM-CLICK] Error adding xterm click handlers for terminal ${terminalId}:`,
-          error
-        );
-      }
-    }, 100); // Give xterm.js time to render DOM elements
-  }
-
   public openSettings(): void {
     log('⚙️ [WEBVIEW] Opening settings panel with current settings:', this.currentSettings);
     try {
@@ -1393,7 +1090,7 @@ class TerminalWebviewManager {
 
     // Update Alt+Click settings if they changed
     if (settings.altClickMovesCursor !== undefined || settings.multiCursorModifier !== undefined) {
-      this.updateAltClickSetting();
+      this.inputManager.updateAltClickSettings(settings);
     }
 
     // Also apply to the main terminal if it exists (font settings are handled separately)
@@ -1480,33 +1177,18 @@ class TerminalWebviewManager {
   }
 
   private loadSettings(): void {
-    try {
-      const state = vscode.getState() as { terminalSettings?: PartialTerminalSettings } | undefined;
-      if (state?.terminalSettings) {
-        this.currentSettings = { ...this.currentSettings, ...state.terminalSettings };
-        log('📋 [WEBVIEW] Loaded settings:', this.currentSettings);
-      }
-    } catch (error) {
-      log('❌ [WEBVIEW] Error loading settings:', error);
-    }
+    const loadedSettings = this.configManager.loadSettings();
+    this.currentSettings = { ...this.currentSettings, ...loadedSettings };
   }
 
   private saveSettings(): void {
-    try {
-      const state =
-        (vscode.getState() as { terminalSettings?: PartialTerminalSettings } | undefined) || {};
-      vscode.setState({
-        ...state,
-        terminalSettings: this.currentSettings,
-      });
-      log('💾 [WEBVIEW] Saved settings:', this.currentSettings);
-    } catch (error) {
-      log('❌ [WEBVIEW] Error saving settings:', error);
-    }
+    this.configManager.saveSettings(this.currentSettings);
   }
 
   public dispose(): void {
-    this.bufferManager.dispose();
+    // PerformanceManager handles its own cleanup
+    this.performanceManager.dispose();
+
 
     if (this.resizeDebounceTimer !== null) {
       window.clearTimeout(this.resizeDebounceTimer);
@@ -1531,113 +1213,8 @@ window.addEventListener('message', (event) => {
   const message = event.data as TerminalMessage;
   log('🎯 [WEBVIEW] Message data:', message);
 
-  switch (message.command) {
-    case WEBVIEW_TERMINAL_CONSTANTS.COMMANDS.INIT:
-      log('🎯 [WEBVIEW] Received INIT command', message);
-      if (message.config) {
-        terminalManager.initializeSimpleTerminal();
-
-        if (message.activeTerminalId) {
-          terminalManager.setActiveTerminalId(message.activeTerminalId);
-        }
-
-        // Apply settings if provided
-        if (message.settings) {
-          terminalManager.applySettings(message.settings);
-        }
-
-        const checkContainerAndCreate = (): void => {
-          if (terminalManager.terminalContainer) {
-            const terminalId = message.activeTerminalId || 'terminal-initial';
-            try {
-              if (message.config) {
-                terminalManager.createTerminal(terminalId, 'Terminal 1', message.config);
-              } else {
-                throw new Error('No terminal config provided');
-              }
-              terminalManager.initializeSplitControls();
-            } catch (error) {
-              log('❌ [WEBVIEW] Error during terminal creation:', error);
-            }
-          } else {
-            setTimeout(checkContainerAndCreate, 50);
-          }
-        };
-
-        setTimeout(checkContainerAndCreate, 10);
-      } else {
-        log('❌ [WEBVIEW] No config provided in INIT message');
-      }
-      break;
-
-    case WEBVIEW_TERMINAL_CONSTANTS.COMMANDS.OUTPUT:
-      if (message.data) {
-        terminalManager.writeToTerminal(message.data, message.terminalId);
-      }
-      break;
-
-    case WEBVIEW_TERMINAL_CONSTANTS.COMMANDS.EXIT:
-      if (message.exitCode !== undefined) {
-        terminalManager.writeToTerminal(
-          `\r\n[Process exited with code ${message.exitCode ?? 'unknown'}]\r\n`
-        );
-      }
-      break;
-
-    case WEBVIEW_TERMINAL_CONSTANTS.COMMANDS.SPLIT:
-      log('🔀 [WEBVIEW] Received SPLIT command - preparing split mode');
-      terminalManager.prepareSplitMode('vertical');
-      log('🔀 [WEBVIEW] Split mode prepared, isSplitMode:', terminalManager.getIsSplitMode());
-      break;
-
-    case WEBVIEW_TERMINAL_CONSTANTS.COMMANDS.TERMINAL_CREATED:
-      if (message.terminalId && message.terminalName && message.config) {
-        log('🔀 [WEBVIEW] Creating terminal:', {
-          terminalId: message.terminalId,
-          isSplitMode: terminalManager.getIsSplitMode(),
-          activeTerminalId: terminalManager.activeTerminalId,
-        });
-
-        // createTerminal handles all split logic internally - no need for addNewTerminalToSplit
-        terminalManager.createTerminal(message.terminalId, message.terminalName, message.config);
-      }
-      break;
-
-    case WEBVIEW_TERMINAL_CONSTANTS.COMMANDS.TERMINAL_REMOVED:
-      if (message.terminalId) {
-        log('🗑️ [WEBVIEW] Received terminal removal command for:', message.terminalId);
-        // Terminal was already removed on extension side, just cleanup UI
-        terminalManager.handleTerminalRemovedFromExtension(message.terminalId);
-      }
-      break;
-
-    case 'openSettings':
-      log('⚙️ [WEBVIEW] Opening settings panel');
-      terminalManager.openSettings();
-      break;
-
-    case 'settingsResponse':
-      log('⚙️ [WEBVIEW] Received settings response:', message.settings);
-      if (message.settings) {
-        terminalManager.applySettings(message.settings);
-      }
-      break;
-
-    case 'fontSettingsUpdate':
-      log('🎨 [WEBVIEW] Received font settings update:', message.fontSettings);
-      if (message.fontSettings) {
-        terminalManager.applyFontSettings(message.fontSettings);
-      }
-      break;
-
-    default:
-      if ((message as { command: string }).command === 'killTerminal') {
-        log('🗑️ [WEBVIEW] Received killTerminal command');
-        terminalManager.closeTerminal(); // Will kill active terminal
-      } else {
-        log('⚠️ [WEBVIEW] Unknown command received:', message.command);
-      }
-  }
+  // Delegate to MessageManager
+  terminalManager.messageManager.handleMessage(message, terminalManager);
 });
 
 // Enhanced update status function
@@ -1667,7 +1244,7 @@ function sendReadyMessage(): void {
   log('🎯 [WEBVIEW] Sending READY message to extension');
   updateStatus('Sending ready message to extension');
   try {
-    vscode.postMessage({ command: 'ready' as const });
+    terminalManager.messageManager.sendReadyMessage(terminalManager);
     log('✅ [WEBVIEW] READY message sent successfully');
     updateStatus('Ready message sent, waiting for response...');
   } catch (error) {

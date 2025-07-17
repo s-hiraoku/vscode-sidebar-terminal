@@ -7,10 +7,11 @@ import { SPLIT_CONSTANTS } from '../constants/webview';
 import { showSplitLimitWarning } from '../utils/NotificationUtils';
 
 export interface TerminalInstance {
+  id: string;
   terminal: Terminal;
   fitAddon: FitAddon;
   name: string;
-  container?: HTMLElement;
+  container: HTMLElement;
 }
 
 export class SplitManager {
@@ -428,10 +429,55 @@ export class SplitManager {
 
   // Setters
   public setTerminal(id: string, terminal: TerminalInstance): void {
+    // Ensure terminal has the correct id
+    terminal.id = id;
     this.terminals.set(id, terminal);
   }
 
   public setTerminalContainer(id: string, container: HTMLElement): void {
     this.terminalContainers.set(id, container);
+  }
+
+  // Remove methods
+  public removeTerminal(id: string): void {
+    const terminal = this.terminals.get(id);
+    const container = this.terminalContainers.get(id);
+
+    console.log(
+      `🗑️ [SPLIT] Removing terminal ${id}, terminal:`,
+      !!terminal,
+      'container:',
+      !!container
+    );
+
+    if (terminal) {
+      // Dispose terminal
+      try {
+        terminal.terminal.dispose();
+        console.log(`🗑️ [SPLIT] Terminal ${id} disposed successfully`);
+      } catch (error) {
+        console.error(`Error disposing terminal ${id}:`, error);
+      }
+
+      // Remove from terminals map
+      this.terminals.delete(id);
+    }
+
+    if (container) {
+      try {
+        // Remove container from DOM
+        container.remove();
+        console.log(`🗑️ [SPLIT] Container for terminal ${id} removed from DOM`);
+      } catch (error) {
+        console.error(`Error removing container for terminal ${id}:`, error);
+      }
+
+      // Remove from containers map
+      this.terminalContainers.delete(id);
+    }
+
+    console.log(`🗑️ [SPLIT] Terminal ${id} fully removed from SplitManager`);
+    console.log(`🗑️ [SPLIT] Remaining terminals:`, Array.from(this.terminals.keys()));
+    console.log(`🗑️ [SPLIT] Remaining containers:`, Array.from(this.terminalContainers.keys()));
   }
 }

@@ -57,6 +57,7 @@ export interface InteractionConfig {
  */
 export interface ExtensionTerminalConfig
   extends BaseTerminalConfig,
+    DisplayConfig,
     ShellConfig,
     TerminalLimitsConfig {
   readonly shell: string; // Extension では必須
@@ -77,10 +78,14 @@ export interface WebViewTerminalConfig extends DisplayConfig, ShellConfig {
  * フォント設定はVS Code設定から直接取得するため除外
  */
 export interface PartialTerminalSettings {
-  readonly theme?: string;
-  readonly cursorBlink?: boolean;
-  readonly altClickMovesCursor?: boolean;
-  readonly multiCursorModifier?: string;
+  fontSize?: number;
+  fontFamily?: string;
+  theme?: string;
+  cursorBlink?: boolean;
+  scrollback?: number;
+  bellSound?: boolean;
+  altClickMovesCursor?: boolean;
+  multiCursorModifier?: string;
 }
 
 /**
@@ -88,15 +93,18 @@ export interface PartialTerminalSettings {
  * 設定変更ではなく、現在の値を受信するためのインターフェース
  */
 export interface WebViewFontSettings {
-  readonly fontSize: number;
-  readonly fontFamily: string;
+  fontSize: number;
+  fontFamily: string;
 }
 
 /**
  * WebView用統合設定
  * PartialTerminalSettings + フォント設定値
  */
-export interface WebViewTerminalSettings extends PartialTerminalSettings, WebViewFontSettings {}
+export interface WebViewTerminalSettings extends PartialTerminalSettings {
+  fontSize: number;
+  fontFamily: string;
+}
 
 /**
  * 完全なターミナル設定
