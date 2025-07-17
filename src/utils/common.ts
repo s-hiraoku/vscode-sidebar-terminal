@@ -131,17 +131,27 @@ export function generateTerminalId(): string {
 
 /**
  * エラーメッセージを表示
+ * @deprecated Use showError from ../utils/feedback instead
  */
 export function showErrorMessage(message: string, error?: unknown): void {
+  // Import dynamically to avoid circular dependency
+  // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-unsafe-assignment
+  const { showError } = require('./feedback');
   const errorMessage = error ? `${message}: ${String(error)}` : message;
-  void vscode.window.showErrorMessage(errorMessage);
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+  showError(errorMessage);
 }
 
 /**
  * 警告メッセージを表示
+ * @deprecated Use showWarning from ../utils/feedback instead
  */
 export function showWarningMessage(message: string): void {
-  void vscode.window.showWarningMessage(message);
+  // Import dynamically to avoid circular dependency
+  // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-unsafe-assignment
+  const { showWarning } = require('./feedback');
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+  showWarning(message);
 }
 
 /**

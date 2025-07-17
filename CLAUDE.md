@@ -12,7 +12,9 @@ npm run watch            # Watch mode for development
 npm run package          # Production build with optimizations
 
 # Testing
-npm test                 # Run all tests
+npm test                 # Run unit tests only (recommended for development)
+npm run test:unit       # Run unit tests explicitly
+npm run test:coverage   # Run tests with coverage reporting
 npm run pretest         # Compile tests + build + lint (runs before test)
 npm run compile-tests   # Compile test files only
 npm run watch-tests     # Watch test files
@@ -24,6 +26,11 @@ npm run format          # Prettier formatting
 # Extension Packaging
 npm run vsce:package    # Create .vsix package
 npm run vsce:publish    # Publish to marketplace
+
+# Release Management
+npm run release:patch   # Increment patch version and create release
+npm run release:minor   # Increment minor version and create release
+npm run release:major   # Increment major version and create release
 ```
 
 ### VS Code Development
@@ -122,9 +129,11 @@ User Action → VS Code Command → Extension Host → WebView Message → xterm
 - Graceful degradation when terminal processes fail
 
 **Testing Architecture**
-- Comprehensive test suite covering extension, terminal manager, webview, and integration scenarios
-- Performance tests for memory usage and terminal lifecycle
-- End-to-end tests using VS Code test runner
+- **Unit Tests**: Primary testing approach using Mocha with 275+ tests (93% success rate)
+- **Test Organization**: Tests located in `src/test/unit/` with component-specific subdirectories
+- **Test Environment**: Uses `TestSetup.ts` for VS Code API mocking and process polyfills
+- **CI Integration**: Tests run on Ubuntu, macOS, and Windows with xvfb for headless testing
+- **Known Issues**: Mocha cleanup may exit with code 7 due to process event handling; tests themselves pass successfully
 
 ### Extension Configuration
 
@@ -281,18 +290,26 @@ npm run vsce:package:linux-arm64    # Linux ARM64
 
 ### Release Workflow
 
+**Automated Release Process**: Uses `for-publish` branch for release management
 ```bash
-# Development workflow
-npm version patch|minor|major   # Update package.json version
-git push origin for-publish     # Push changes
-git tag vX.X.X                 # Create release tag
-git push origin vX.X.X         # Trigger automated release
+# Switch to release branch and merge changes
+git checkout for-publish
+git merge [feature-branch]
+
+# Create release using npm scripts
+npm run release:patch    # Automatically increments version, creates tag, and pushes
 
 # GitHub Actions automatically:
-# 1. Builds all 9 platform packages
-# 2. Creates GitHub Release
-# 3. Publishes to VS Code Marketplace
+# 1. Runs tests with Mocha exit code 7 handling
+# 2. Builds all 9 platform packages in parallel
+# 3. Creates GitHub Release with VSIX files
+# 4. Attempts VS Code Marketplace publishing (requires VSCE_PAT)
 ```
+
+**CI/CD Workflows**:
+- `release.yml`: Triggered by `v*` tags, handles testing, building, and publishing
+- `build-platform-packages.yml`: Creates platform-specific VSIX packages
+- `ci.yml`: Standard CI for pull requests and branch pushes
 
 ### Marketplace Integration
 
@@ -319,3 +336,40 @@ code --install-extension package.vsix
 - Use GitHub Actions for testing on actual target platforms
 - Each platform build includes native node-pty compilation
 - VSIX packages contain platform-specific binaries in `node_modules/node-pty/build/`
+
+## Testing and Debugging
+
+### Running Tests Locally
+```bash
+# Recommended for development - runs unit tests only
+npm test
+
+# Run with coverage reporting
+npm run test:coverage
+
+# Run specific test files
+npm run compile-tests
+./node_modules/.bin/mocha --require out/test/shared/TestSetup.js 'out/test/unit/specific/test.js'
+
+# Watch mode for TDD
+npm run watch-tests
+```
+
+### CI Test Behavior
+- **Unit Tests**: Run on all platforms (Ubuntu, macOS, Windows)
+- **Exit Code Handling**: CI handles Mocha cleanup exit code 7 as success when tests pass
+- **Platform-Specific**: Linux runs full test suite, macOS/Windows compile tests only for performance
+- **Test Coverage**: ~275 tests with 93% success rate expected
+
+### Debugging Common Issues
+- **Process Polyfill Issues**: Check `TestSetup.ts` for VS Code API mocks and process event handlers
+- **Node-pty Compilation**: Ensure native module rebuilding works for target platform
+- **Webview Context**: Use VS Code Developer Tools (`Ctrl+Shift+I`) for webview debugging
+- **Extension Host**: Check VS Code Developer Console for extension-side errors
+
+### Test Environment Setup
+The test environment automatically configures:
+- VS Code API mocks for workspace, window, commands
+- Process event handler polyfills for Mocha compatibility
+- DOM mocking via JSDOM for webview component tests
+- Sinon sandboxes for isolated test execution

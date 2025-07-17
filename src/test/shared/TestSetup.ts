@@ -18,16 +18,52 @@ import { JSDOM } from 'jsdom';
  */
 export const mockVscode = {
   workspace: {
-    getConfiguration: sinon.stub().returns({
-      get: sinon.stub().returns(undefined),
-      has: sinon.stub().returns(false),
-      inspect: sinon.stub().returns(undefined),
-      update: sinon.stub().resolves(),
+    getConfiguration: sinon.stub().callsFake((section) => {
+      const config = {
+        get: sinon.stub().callsFake((key: string, defaultValue?: any) => {
+          // Return reasonable defaults for common configuration keys
+          if (section === 'sidebarTerminal') {
+            const defaults: { [key: string]: any } = {
+              shell: '/bin/bash',
+              shellArgs: [],
+              fontSize: 14,
+              fontFamily: 'monospace',
+              maxTerminals: 5,
+              theme: 'auto',
+              cursorBlink: true,
+              startDirectory: '',
+              showHeader: true,
+              showIcons: true,
+              altClickMovesCursor: true
+            };
+            return defaults[key] !== undefined ? defaults[key] : defaultValue;
+          }
+          if (section === 'terminal.integrated') {
+            const defaults: { [key: string]: any } = {
+              shell: '/bin/bash',
+              shellArgs: [],
+              altClickMovesCursor: true
+            };
+            return defaults[key] !== undefined ? defaults[key] : defaultValue;
+          }
+          if (section === 'editor') {
+            const defaults: { [key: string]: any } = {
+              multiCursorModifier: 'alt'
+            };
+            return defaults[key] !== undefined ? defaults[key] : defaultValue;
+          }
+          return defaultValue;
+        }),
+        has: sinon.stub().returns(true),
+        inspect: sinon.stub().returns({ defaultValue: undefined }),
+        update: sinon.stub().resolves(),
+      };
+      return config;
     }),
     onDidChangeConfiguration: sinon.stub().returns({
       dispose: sinon.stub(),
     }),
-    workspaceFolders: [],
+    workspaceFolders: [{ uri: { fsPath: '/test/workspace' } }],
     name: 'test-workspace',
   },
   window: {
@@ -44,9 +80,13 @@ export const mockVscode = {
     executeCommand: sinon.stub().resolves(),
   },
   ExtensionContext: sinon.stub(),
-  ViewColumn: { One: 1, Two: 2, Three: 3 },
+  ViewColumn: { One: 1, Two: 2, Three: 3, Left: 1, Right: 2 },
   TreeDataProvider: sinon.stub(),
-  EventEmitter: sinon.stub(),
+  EventEmitter: class MockEventEmitter {
+    fire = sinon.stub();
+    event = sinon.stub();
+    dispose = sinon.stub();
+  },
   CancellationToken: sinon.stub(),
   Uri: {
     file: sinon.stub(),
@@ -65,6 +105,33 @@ export const mockVscode = {
 export function setupTestEnvironment(): void {
   // Mock VS Code module
   (global as any).vscode = mockVscode;
+
+  // Override module loading for vscode and node-pty
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const Module = require('module');
+  const originalRequire = Module.prototype.require;
+
+  Module.prototype.require = function (id: string) {
+    if (id === 'vscode') {
+      return mockVscode;
+    }
+    if (id === 'node-pty' || id === '@homebridge/node-pty-prebuilt-multiarch') {
+      return {
+        spawn: () => ({
+          pid: 1234,
+          onData: () => ({ dispose: () => {} }),
+          onExit: () => ({ dispose: () => {} }),
+          write: () => {},
+          resize: () => {},
+          kill: () => {},
+          dispose: () => {},
+        }),
+      };
+    }
+    // Allow actual source code to be loaded for coverage
+    // eslint-disable-next-line prefer-rest-params, @typescript-eslint/no-unsafe-return
+    return originalRequire.apply(this, arguments);
+  };
 
   // Mock Node.js modules
   (global as any).require = sinon.stub();
@@ -96,6 +163,16 @@ export function setupTestEnvironment(): void {
   (global as any).Buffer = Buffer;
   (global as any).setImmediate = setImmediate;
   (global as any).clearImmediate = clearImmediate;
+
+  // Fix process event handler methods for Mocha compatibility
+  const requiredMethods = ['removeListener', 'removeAllListeners', 'off'];
+  requiredMethods.forEach((method) => {
+    if (!(process as any)[method]) {
+      (process as any)[method] = function () {
+        return process;
+      };
+    }
+  });
 }
 
 /**
@@ -158,7 +235,12 @@ export function setupJSDOMEnvironment(htmlContent?: string): {
       (window as any).process = {
         nextTick: (callback: () => void) => setImmediate(callback),
         env: { NODE_ENV: 'test' },
+        platform: 'linux',
+        cwd: () => '/test',
       };
+      // Add missing methods that might be needed
+      (window as any).setImmediate = setImmediate;
+      (window as any).clearImmediate = clearImmediate;
     },
   });
 
@@ -227,20 +309,43 @@ export function cleanupTestEnvironment(sandbox?: sinon.SinonSandbox, dom?: JSDOM
   }
 
   // グローバル状態をクリア
-  Object.keys(mockVscode.workspace.getConfiguration()).forEach((key) => {
-    if (
-      typeof mockVscode.workspace.getConfiguration()[key] === 'object' &&
-      mockVscode.workspace.getConfiguration()[key].reset
-    ) {
-      mockVscode.workspace.getConfiguration()[key].reset();
-    }
-  });
+  const config = mockVscode.workspace.getConfiguration();
+  if (config && typeof config === 'object') {
+    Object.keys(config).forEach((key) => {
+      if (typeof config[key] === 'object' && config[key] && config[key].reset) {
+        config[key].reset();
+      }
+    });
+  }
 
   // グローバルオブジェクトの部分的クリアアップ
   delete (global as any).window;
   delete (global as any).document;
   delete (global as any).navigator;
 }
+
+// Fix process.removeListener issue for Mocha
+if (process && !process.removeListener) {
+  (process as any).removeListener = function () {
+    return process;
+  };
+}
+
+// Additional process polyfills for Mocha compatibility
+if (process) {
+  // Ensure all required event emitter methods exist
+  const requiredMethods = ['removeListener', 'removeAllListeners', 'off'];
+  requiredMethods.forEach((method) => {
+    if (!(process as any)[method]) {
+      (process as any)[method] = function () {
+        return process;
+      };
+    }
+  });
+}
+
+// Auto-setup when this module is imported
+setupTestEnvironment();
 
 /**
  * TypeScript型定義の拡張
