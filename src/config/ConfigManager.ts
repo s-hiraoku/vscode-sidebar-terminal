@@ -111,6 +111,9 @@ export class ConfigManager {
       shell: this.getConfig(section, CONFIG_KEYS.SHELL, ''),
       shellArgs: this.getConfig(section, CONFIG_KEYS.SHELL_ARGS, []),
       defaultDirectory: this.getConfig(section, CONFIG_KEYS.DEFAULT_DIRECTORY, ''),
+      fontSize: this.getFontSize(),
+      fontFamily: this.getFontFamily(),
+      cursorBlink: this.getConfig(section, CONFIG_KEYS.CURSOR_BLINK, true),
     };
   }
 

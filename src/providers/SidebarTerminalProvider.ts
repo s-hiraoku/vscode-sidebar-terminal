@@ -335,6 +335,17 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
           }
           break;
         }
+        case 'terminalInteraction': {
+          log(
+            '⚡ [DEBUG] Terminal interaction received:',
+            message.type,
+            'terminalId:',
+            message.terminalId
+          );
+          // Handle terminal interaction events from webview
+          // This is informational - the webview is notifying us of user interactions
+          break;
+        }
         default:
           log('⚠️ [WARN] Unknown command received:', message.command);
       }

@@ -10,7 +10,6 @@ import 'xterm/css/xterm.css';
 import type {
   WebviewMessage,
   VsCodeMessage,
-  ClaudeCodeState,
   AltClickState,
   TerminalInteractionEvent,
 } from '../types/common';
@@ -25,8 +24,6 @@ import { ConfigManager } from './managers/ConfigManager';
 import { PerformanceManager } from './managers/PerformanceManager';
 import { UIManager } from './managers/UIManager';
 import {
-  showClaudeCodeDetected,
-  showClaudeCodeEnded,
   showAltClickDisabledWarning as _showAltClickDisabledWarning,
   showTerminalInteractionIssue as _showTerminalInteractionIssue,
 } from './utils/NotificationUtils';
@@ -84,31 +81,11 @@ class TerminalWebviewManager {
     fontFamily: 'monospace',
   };
 
-  // Claude Code detection and Alt+Click control
-  private claudeCodeState: ClaudeCodeState = {
-    isActive: false,
-  };
-
+  // Alt+Click control
   private altClickState: AltClickState = {
     isVSCodeAltClickEnabled: true,
     isAltKeyPressed: false,
-    isClaudeCodeBlocking: false,
   };
-
-  // Claude Code detection patterns
-  private readonly CLAUDE_CODE_PATTERNS = [
-    /claude/i,
-    /\[agent\]/i,
-    /\[tool\]/i,
-    /\[thinking\]/i,
-    /anthropic/i,
-    /ai\s*assistant/i,
-  ];
-
-  // Output monitoring for Claude Code detection
-  private outputMonitoringInterval: number | null = null;
-  private recentOutputVolume = 0;
-  private lastOutputTime = 0;
 
   constructor() {
     this.splitManager = new SplitManager();
@@ -709,8 +686,6 @@ class TerminalWebviewManager {
 
 
   public writeToTerminal(data: string, terminalId?: string): void {
-    // Monitor output for Claude Code detection
-    // this.monitorTerminalOutput(data, terminalId); // Claude Code detection disabled
 
     // Determine which terminal to write to
     let targetTerminal = this.terminal;
@@ -746,11 +721,6 @@ class TerminalWebviewManager {
         log(`📤 [WEBVIEW] Direct write to terminal ${terminalId}: ${data.length} chars`);
       } else {
         // Use PerformanceManager for buffering (active terminal only)
-        // Claude Code mode disabled - always use standard buffering
-        // if (this.performanceManager.getClaudeCodeMode() !== this.claudeCodeState.isActive) {
-        //   this.performanceManager.setClaudeCodeMode(this.claudeCodeState.isActive);
-        // }
-        this.performanceManager.setClaudeCodeMode(false); // Force disable Claude Code mode
         this.performanceManager.scheduleOutputBuffer(data, targetTerminal);
       }
     } else {
@@ -759,124 +729,6 @@ class TerminalWebviewManager {
   }
 
 
-  /**
-   * Monitor terminal output for Claude Code detection
-   */
-  private monitorTerminalOutput(data: string, terminalId?: string): void {
-    const currentTime = Date.now();
-    this.recentOutputVolume += data.length;
-    this.lastOutputTime = currentTime;
-
-    // Check for Claude Code patterns in the output
-    const containsClaudeCodePattern = this.CLAUDE_CODE_PATTERNS.some((pattern) =>
-      pattern.test(data)
-    );
-
-    // High-frequency output detection (potential Claude Code activity)
-    const isHighFrequencyOutput =
-      this.recentOutputVolume > 500 &&
-      currentTime - (this.claudeCodeState.startTime || currentTime) < 2000;
-
-    // Large output chunks (typical of Claude Code responses)
-    const isLargeOutput = data.length >= 1000;
-
-    if (containsClaudeCodePattern || isHighFrequencyOutput || isLargeOutput) {
-      this.activateClaudeCodeMode(terminalId || this.activeTerminalId || '');
-    }
-
-    // Reset output volume periodically
-    if (!this.outputMonitoringInterval) {
-      this.outputMonitoringInterval = window.setTimeout(() => {
-        this.recentOutputVolume = 0;
-        this.outputMonitoringInterval = null;
-
-        // Deactivate Claude Code mode if no recent activity
-        if (currentTime - this.lastOutputTime > 3000 && this.claudeCodeState.isActive) {
-          this.deactivateClaudeCodeMode();
-        }
-      }, 5000);
-    }
-  }
-
-  /**
-   * Activate Claude Code mode and temporarily disable Alt+Click via xterm.js
-   */
-  private activateClaudeCodeMode(terminalId: string): void {
-    if (!this.claudeCodeState.isActive) {
-      this.claudeCodeState = {
-        isActive: true,
-        terminalId,
-        startTime: Date.now(),
-        outputVolume: 0,
-      };
-
-      // VS Code approach: Disable Alt+Click at xterm.js level for performance
-      this.setAltClickForAllTerminals(false);
-
-      log('🤖 [CLAUDE-CODE] Claude Code mode activated, Alt+Click disabled via xterm.js');
-      this.emitTerminalInteractionEvent('claude-code-start', terminalId);
-      this.showClaudeCodeNotification(true);
-    }
-
-    // Update output volume
-    this.claudeCodeState.outputVolume = (this.claudeCodeState.outputVolume || 0) + 1;
-  }
-
-  /**
-   * Deactivate Claude Code mode and re-enable Alt+Click via xterm.js
-   */
-  private deactivateClaudeCodeMode(): void {
-    if (this.claudeCodeState.isActive) {
-      const terminalId = this.claudeCodeState.terminalId || '';
-
-      this.claudeCodeState = {
-        isActive: false,
-      };
-
-      // VS Code approach: Re-enable Alt+Click at xterm.js level
-      this.setAltClickForAllTerminals(this.isVSCodeAltClickEnabled());
-
-      log('🤖 [CLAUDE-CODE] Claude Code mode deactivated, Alt+Click re-enabled via xterm.js');
-      this.emitTerminalInteractionEvent('claude-code-end', terminalId);
-      this.showClaudeCodeNotification(false);
-    }
-  }
-
-  /**
-   * Set Alt+Click setting for all terminals at xterm.js level
-   */
-  private setAltClickForAllTerminals(enabled: boolean): void {
-    // Update all existing terminals
-    this.splitManager.getTerminals().forEach((terminalData, terminalId) => {
-      if (terminalData.terminal && terminalData.terminal.options) {
-        terminalData.terminal.options.altClickMovesCursor = enabled;
-        log(`⌨️ [CLAUDE-CODE] Set Alt+Click for terminal ${terminalId}: ${enabled}`);
-      }
-    });
-
-    // Update main terminal if it exists
-    if (this.terminal && this.terminal.options) {
-      this.terminal.options.altClickMovesCursor = enabled;
-      log(`⌨️ [CLAUDE-CODE] Set Alt+Click for main terminal: ${enabled}`);
-    }
-  }
-
-  /**
-   * Show notification about Claude Code state
-   */
-  private showClaudeCodeNotification(isActive: boolean): void {
-    if (isActive) {
-      showClaudeCodeDetected();
-    } else {
-      showClaudeCodeEnded();
-    }
-
-    // Also show subtle notification in the terminal for immediate context
-    const message = isActive
-      ? 'Claude Code detected - Alt+Click temporarily disabled'
-      : 'Claude Code ended - Alt+Click re-enabled';
-    this.showNotificationInTerminal(message, isActive ? 'info' : 'success');
-  }
 
   /**
    * Show notification in terminal overlay

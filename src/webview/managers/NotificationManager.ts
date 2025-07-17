@@ -38,44 +38,6 @@ export class NotificationManager implements INotificationManager {
     log(`📢 [NOTIFICATION] Showed ${type} notification: ${message}`);
   }
 
-  /**
-   * Show Claude Code activity notification
-   */
-  public showClaudeCodeNotification(isActive: boolean): void {
-    const existingNotification = this.activeNotifications.get('claude-code-status');
-    if (existingNotification) {
-      this.removeNotification('claude-code-status');
-    }
-
-    if (isActive) {
-      const notification = this.createNotification(
-        '🤖 Claude Code Active - Alt+Click temporarily disabled',
-        {
-          type: 'info',
-          persistent: true,
-          position: 'top',
-        }
-      );
-      notification.classList.add('claude-code-notification');
-      notification.id = 'claude-code-notification';
-
-      this.activeNotifications.set('claude-code-status', notification);
-      this.addNotificationToTerminal(notification);
-      log('🤖 [NOTIFICATION] Claude Code active notification shown');
-    } else {
-      const notification = this.createNotification(
-        '✅ Claude Code session ended - Alt+Click re-enabled',
-        {
-          type: 'success',
-          duration: 2000,
-          position: 'top',
-        }
-      );
-
-      this.addNotificationToTerminal(notification);
-      log('✅ [NOTIFICATION] Claude Code ended notification shown');
-    }
-  }
 
   /**
    * Show terminal kill error
@@ -123,36 +85,6 @@ export class NotificationManager implements INotificationManager {
     log(`⌨️ [NOTIFICATION] Alt+Click feedback shown at (${x}, ${y})`);
   }
 
-  /**
-   * Show Claude Code Alt+Click blocked notification
-   */
-  public showClaudeCodeAltClickBlocked(x: number, y: number): void {
-    const notification = document.createElement('div');
-    notification.className = 'claude-code-blocked-notification';
-    notification.textContent = '⚡ Claude Code Active';
-    notification.style.cssText = `
-      position: fixed;
-      left: ${x - 50}px;
-      top: ${y - 30}px;
-      background: rgba(255, 165, 0, 0.9);
-      color: white;
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-size: 12px;
-      pointer-events: none;
-      z-index: 10000;
-      animation: fadeInOut 1.5s ease-out forwards;
-    `;
-
-    document.body.appendChild(notification);
-
-    // Remove after animation
-    setTimeout(() => {
-      notification.remove();
-    }, 1500);
-
-    log(`🚫 [NOTIFICATION] Claude Code Alt+Click blocked notification shown at (${x}, ${y})`);
-  }
 
   /**
    * Clear all notifications
@@ -164,7 +96,7 @@ export class NotificationManager implements INotificationManager {
 
     // Clear any remaining notification elements
     const notifications = document.querySelectorAll(
-      '.notification, .claude-code-notification, .alt-click-feedback'
+      '.notification, .alt-click-feedback'
     );
     notifications.forEach((notification) => {
       notification.remove();

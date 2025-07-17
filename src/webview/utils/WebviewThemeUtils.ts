@@ -47,12 +47,34 @@ export const WEBVIEW_THEME_CONSTANTS = {
     brightCyan: '#0598bc',
     brightWhite: '#a5a5a5',
   },
+  // UI constants
+  ACTIVE_BORDER_COLOR: '#007acc',
+  INACTIVE_BORDER_COLOR: '#464647',
+  SEPARATOR_COLOR: '#464647',
 };
+
+/**
+ * Terminal theme type
+ */
+export interface TerminalTheme {
+  background: string;
+  foreground: string;
+  cursor: string;
+  selection: string;
+  [key: string]: string;
+}
 
 /**
  * VS Code テーマを取得
  */
-export function getWebviewTheme(): object {
+export function getWebviewTheme(settings?: { theme?: string }): TerminalTheme {
+  // Settings-based theme selection
+  if (settings?.theme === 'light') {
+    return WEBVIEW_THEME_CONSTANTS.LIGHT_THEME;
+  } else if (settings?.theme === 'dark') {
+    return WEBVIEW_THEME_CONSTANTS.DARK_THEME;
+  }
+
   // VS Code の body クラスを確認してテーマを判定
   const body = document.body;
   const classList = body.classList;

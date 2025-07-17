@@ -68,11 +68,13 @@ export interface VsCodeMessage {
     | 'clear'
     | 'getSettings'
     | 'updateSettings'
-    | 'terminalClosed';
+    | 'terminalClosed'
+    | 'terminalInteraction';
   data?: string;
   cols?: number;
   rows?: number;
   terminalId?: string;
+  type?: TerminalInteractionEvent['type'];
   settings?: PartialTerminalSettings; // 部分的な設定を送信するよう修正
 }
 
@@ -95,21 +97,28 @@ export interface TerminalEvent {
   exitCode?: number;
 }
 
-export interface ClaudeCodeState {
-  isActive: boolean;
-  terminalId?: string;
-  startTime?: number;
-  outputVolume?: number;
-}
 
 export interface AltClickState {
-  isEnabled: boolean;
-  isTemporarilyDisabled: boolean;
-  disableReason?: string;
+  isVSCodeAltClickEnabled: boolean;
+  isAltKeyPressed: boolean;
 }
 
 export interface TerminalInteractionEvent {
-  type: 'alt-click' | 'output-detected' | 'claude-code-start' | 'claude-code-end';
+  type:
+    | 'alt-click'
+    | 'alt-click-blocked'
+    | 'output-detected'
+    | 'focus'
+    | 'switch-next'
+    | 'webview-ready'
+    | 'terminal-removed'
+    | 'font-settings-update'
+    | 'settings-update'
+    | 'new-terminal'
+    | 'resize'
+    | 'kill'
+    | 'interrupt'
+    | 'paste';
   terminalId: string;
   timestamp: number;
   data?: unknown;
