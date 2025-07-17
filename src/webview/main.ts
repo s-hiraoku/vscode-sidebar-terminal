@@ -727,7 +727,7 @@ class TerminalWebviewManager {
 
   public writeToTerminal(data: string, terminalId?: string): void {
     // Monitor output for Claude Code detection
-    this.monitorTerminalOutput(data, terminalId);
+    // this.monitorTerminalOutput(data, terminalId); // Claude Code detection disabled
 
     // Determine which terminal to write to
     let targetTerminal = this.terminal;
@@ -763,10 +763,11 @@ class TerminalWebviewManager {
         log(`📤 [WEBVIEW] Direct write to terminal ${terminalId}: ${data.length} chars`);
       } else {
         // Use PerformanceManager for buffering (active terminal only)
-        // Only update Claude Code mode if it has changed to avoid overhead
-        if (this.performanceManager.getClaudeCodeMode() !== this.claudeCodeState.isActive) {
-          this.performanceManager.setClaudeCodeMode(this.claudeCodeState.isActive);
-        }
+        // Claude Code mode disabled - always use standard buffering
+        // if (this.performanceManager.getClaudeCodeMode() !== this.claudeCodeState.isActive) {
+        //   this.performanceManager.setClaudeCodeMode(this.claudeCodeState.isActive);
+        // }
+        this.performanceManager.setClaudeCodeMode(false); // Force disable Claude Code mode
         this.performanceManager.scheduleOutputBuffer(data, targetTerminal);
       }
     } else {
