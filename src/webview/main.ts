@@ -23,6 +23,7 @@ import { SettingsPanel } from './components/SettingsPanel';
 import { NotificationManager } from './managers/NotificationManager';
 import { ConfigManager } from './managers/ConfigManager';
 import { PerformanceManager } from './managers/PerformanceManager';
+import { UIManager } from './managers/UIManager';
 import {
   showClaudeCodeDetected,
   showClaudeCodeEnded,
@@ -67,6 +68,7 @@ class TerminalWebviewManager {
   private notificationManager: NotificationManager;
   private configManager: ConfigManager;
   private performanceManager: PerformanceManager;
+  private uiManager: UIManager;
 
   // Current settings (without font settings - they come from VS Code)
   private currentSettings: PartialTerminalSettings = {
@@ -118,6 +120,7 @@ class TerminalWebviewManager {
     this.notificationManager = new NotificationManager();
     this.configManager = new ConfigManager();
     this.performanceManager = new PerformanceManager();
+    this.uiManager = new UIManager();
 
     // Setup notification styles on initialization
     this.notificationManager.setupNotificationStyles();
@@ -618,7 +621,7 @@ class TerminalWebviewManager {
         }
       } else {
         this.activeTerminalId = null;
-        this.showTerminalPlaceholder();
+        this.uiManager.showTerminalPlaceholder();
       }
     } else {
       // Update status for terminal closure
@@ -697,33 +700,13 @@ class TerminalWebviewManager {
         }
       } else {
         this.activeTerminalId = null;
-        this.showTerminalPlaceholder();
+        this.uiManager.showTerminalPlaceholder();
       }
     }
 
     log('✅ [WEBVIEW] Terminal removal from extension handled:', id);
   }
 
-  private showTerminalPlaceholder(): void {
-    const terminalBody = document.getElementById('terminal-body');
-    if (terminalBody) {
-      terminalBody.innerHTML = `
-        <div id="terminal-placeholder" style="
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          color: #888;
-          font-family: monospace;
-          font-size: 14px;
-          text-align: center;
-        ">
-          <div>No Terminal</div>
-          <div style="font-size: 12px; margin-top: 8px;">Create a new terminal to get started</div>
-        </div>
-      `;
-    }
-  }
 
   public writeToTerminal(data: string, terminalId?: string): void {
     // Monitor output for Claude Code detection
@@ -1086,83 +1069,9 @@ class TerminalWebviewManager {
     log('🎯 [WEBVIEW] Active terminal ID set to:', terminalId);
 
     // Update terminal borders to highlight active terminal
-    this.updateTerminalBorders(terminalId);
+    this.uiManager.updateTerminalBorders(terminalId, this.splitManager.getTerminalContainers());
   }
 
-  /**
-   * Update terminal borders to highlight the active terminal
-   */
-  private updateTerminalBorders(activeTerminalId: string): void {
-    try {
-      // Get all terminal containers
-      const allContainers = this.splitManager.getTerminalContainers();
-
-      allContainers.forEach((container, terminalId) => {
-        if (!container) return;
-
-        // Remove existing border classes
-        container.classList.remove('active', 'inactive');
-
-        // Add appropriate border class
-        if (terminalId === activeTerminalId) {
-          container.classList.add('active');
-          log(`🔵 [BORDER] Added active border to terminal: ${terminalId}`);
-        } else {
-          container.classList.add('inactive');
-          log(`⚪ [BORDER] Added inactive border to terminal: ${terminalId}`);
-        }
-      });
-
-      // Also update for the main terminal-body if it's the initial terminal
-      const terminalBody = document.getElementById('terminal-body');
-      if (terminalBody && terminalBody.classList.contains('terminal-container')) {
-        terminalBody.classList.remove('active', 'inactive');
-        if (activeTerminalId === 'primary' || allContainers.size === 0) {
-          terminalBody.classList.add('active');
-          log(`🔵 [BORDER] Added active border to primary terminal body`);
-        }
-      }
-
-      // Also update terminal panes if in split mode
-      if (this.splitManager.getIsSplitMode()) {
-        this.updateSplitTerminalBorders(activeTerminalId);
-      }
-    } catch (error) {
-      log('❌ [BORDER] Error updating terminal borders:', error);
-    }
-  }
-
-  /**
-   * Update borders for split terminal panes
-   */
-  private updateSplitTerminalBorders(activeTerminalId: string): void {
-    try {
-      const panes = document.querySelectorAll('.terminal-pane');
-
-      panes.forEach((pane) => {
-        const paneElement = pane as HTMLElement;
-        const terminalContainer = paneElement.querySelector('[data-terminal-id]') as HTMLElement;
-
-        if (!terminalContainer) return;
-
-        const terminalId = terminalContainer.getAttribute('data-terminal-id');
-
-        // Remove existing classes
-        paneElement.classList.remove('active', 'inactive');
-
-        // Add appropriate class
-        if (terminalId === activeTerminalId) {
-          paneElement.classList.add('active');
-          log(`🔵 [SPLIT-BORDER] Added active border to split pane: ${terminalId}`);
-        } else {
-          paneElement.classList.add('inactive');
-          log(`⚪ [SPLIT-BORDER] Added inactive border to split pane: ${terminalId}`);
-        }
-      });
-    } catch (error) {
-      log('❌ [SPLIT-BORDER] Error updating split terminal borders:', error);
-    }
-  }
 
   // Getters for split manager integration
   public getIsSplitMode(): boolean {
