@@ -43,11 +43,15 @@ This is a VS Code extension that provides a terminal interface in the sidebar us
 - **Extension Entry Point**: Registers commands, providers, and handles extension activation/deactivation
 
 **WebView (Browser)**
-- **TerminalWebviewManager**: Main webview controller, manages xterm.js instances and UI state
+- **TerminalWebviewManager**: Main coordinator that implements IManagerCoordinator interface and orchestrates all WebView managers
+- **MessageManager**: Handles communication between WebView and Extension, processes incoming messages and queues outgoing messages
+- **InputManager**: Manages keyboard shortcuts, IME handling, and Alt+Click interactions  
+- **UIManager**: Controls visual feedback, theming, borders, and terminal appearance
+- **ConfigManager**: Manages settings persistence and configuration
+- **NotificationManager**: Provides user feedback and visual alerts
 - **SplitManager**: Handles terminal splitting functionality and layout calculations
-- **StatusManager/SimpleStatusManager**: User feedback and status display
-- **SettingsPanel**: In-webview settings configuration
-- **NotificationUtils**: Unified error/warning/info notifications
+- **PerformanceManager**: Manages output buffering, debouncing, and performance optimizations
+- **xterm.js**: Core terminal emulation library
 
 ### Communication Flow
 
@@ -62,13 +66,15 @@ User Action → VS Code Command → Extension Host → WebView Message → xterm
 **Terminal Lifecycle Management**
 - Each terminal has a unique ID and is tracked in TerminalManager
 - Active terminal concept: only one terminal receives input at a time
-- Kill operations always target the active terminal (not by ID)
+- Terminal numbering: Uses recycled numbers 1-5 instead of incrementing infinitely
+- Deletion operations are queued and processed atomically to prevent race conditions
 - Infinite loop prevention using `_terminalBeingKilled` tracking set
 
 **Message Communication**
 - Webview ↔ Extension communication via `postMessage` protocol
-- Commands: `init`, `output`, `input`, `resize`, `clear`, `killTerminal`, etc.
+- Commands: `init`, `output`, `input`, `resize`, `clear`, `killTerminal`, `deleteTerminal`, `stateUpdate`, etc.
 - Event-driven architecture with proper cleanup on disposal
+- MessageManager queues messages for reliable delivery and prevents race conditions
 
 **Performance Optimizations**
 - Data buffering: Terminal output is batched to reduce message frequency (16ms intervals, ~60fps)
@@ -84,10 +90,12 @@ User Action → VS Code Command → Extension Host → WebView Message → xterm
 - `webpack.config.js`: Dual build configuration (extension + webview)
 
 **WebView Frontend**
-- `src/webview/main.ts`: WebView entry point using xterm.js
-- `src/webview/managers/`: UI component managers (split, status, etc.)
-- `src/webview/components/`: Reusable UI components
+- `src/webview/main.ts`: WebView entry point containing TerminalWebviewManager class that coordinates all manager instances
+- `src/webview/managers/`: Manager implementations (MessageManager, InputManager, UIManager, PerformanceManager, NotificationManager, SplitManager, ConfigManager)
+- `src/webview/components/`: Reusable UI components (SettingsPanel)
 - `src/webview/utils/`: Utility functions for DOM, themes, notifications
+- `src/webview/core/`: Core logic (NotificationBridge, NotificationSystem)
+- `src/webview/interfaces/`: Manager interfaces and type definitions (IManagerCoordinator, IMessageManager, etc.)
 
 **Configuration and Types**
 - `package.json`: Extension manifest, commands, settings schema, menu contributions
@@ -96,9 +104,13 @@ User Action → VS Code Command → Extension Host → WebView Message → xterm
 
 ### Important Implementation Details
 
-**Terminal Kill Specification**
-- The kill button and `killTerminal` command always kill the **active terminal**, not a specific terminal ID
-- This is enforced in both TerminalManager and webview layers
+**New Terminal Management Architecture (Recently Implemented)**
+- **Single Source of Truth**: Extension (TerminalManager) is the sole authority for terminal state management
+- **Unified Deletion Protocol**: Both header × button and panel trash button use the same `deleteTerminal()` method
+- **Race Condition Prevention**: Operations are queued and processed atomically using `operationQueue`
+- **State Synchronization**: WebView receives automatic state updates via `onStateUpdate` event
+- **Terminal ID Recycling**: Terminal numbers (1-5) are properly reused when terminals are deleted
+- **Request Source Tracking**: Deletion requests are tagged with source ('header' or 'panel') for debugging
 
 **Webview Context Retention**
 - WebView uses `retainContextWhenHidden: true` to maintain state when sidebar is hidden

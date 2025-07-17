@@ -7,19 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **WebView Architecture Refactoring**
+  - Transformed monolithic `main.ts` into a modular system with 9 focused managers (Performance, ClaudeCode, Input, UI, Config, Message, Notification, TerminalCoordinator).
+  - Achieved significant improvements in code organization, maintainability, and performance.
+  - Implemented intelligent buffering, debounced operations, and efficient resource management.
+- Updated extension icon path to use SVG format (`resources/icon.svg`) for improved scalability and display consistency.
+
 ### Added
 - Active terminal border visualization
   - 1px border around the terminal with cursor focus
   - Blue border (--vscode-focusBorder) for active terminal
   - Gray border (--vscode-widget-border) for inactive terminals
   - Smooth transition animations (0.2s)
-  - Visual feedback for terminal focus state
-
-### Changed
-- **WebView Architecture Refactoring**
-  - Transformed monolithic `main.ts` into a modular system with 9 focused managers (Performance, ClaudeCode, Input, UI, Config, Message, Notification, TerminalCoordinator).
-  - Achieved significant improvements in code organization, maintainability, and performance.
-  - Implemented intelligent buffering, debounced operations, and efficient resource management.
+  - Visual feedback for terminal focus state.
   - Enhanced type safety through comprehensive interfaces and strong typing.
 
 ## [0.0.1] - 2025-07-11
