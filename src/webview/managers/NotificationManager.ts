@@ -38,7 +38,6 @@ export class NotificationManager implements INotificationManager {
     log(`📢 [NOTIFICATION] Showed ${type} notification: ${message}`);
   }
 
-
   /**
    * Show terminal kill error
    */
@@ -85,7 +84,6 @@ export class NotificationManager implements INotificationManager {
     log(`⌨️ [NOTIFICATION] Alt+Click feedback shown at (${x}, ${y})`);
   }
 
-
   /**
    * Clear all notifications
    */
@@ -95,9 +93,7 @@ export class NotificationManager implements INotificationManager {
     });
 
     // Clear any remaining notification elements
-    const notifications = document.querySelectorAll(
-      '.notification, .alt-click-feedback'
-    );
+    const notifications = document.querySelectorAll('.notification, .alt-click-feedback');
     notifications.forEach((notification) => {
       notification.remove();
     });

@@ -248,7 +248,7 @@ export class ConfigManager {
       const terminalConfig = vscode.workspace.getConfiguration('terminal.integrated');
       const terminalFontFamily = terminalConfig.get<string>('fontFamily');
 
-      console.log('[ConfigManager] Terminal fontFamily from VS Code:', terminalFontFamily);
+      // Debug log removed for production
 
       if (terminalFontFamily && terminalFontFamily.trim()) {
         return terminalFontFamily.trim();
@@ -258,14 +258,14 @@ export class ConfigManager {
       const editorConfig = vscode.workspace.getConfiguration('editor');
       const editorFontFamily = editorConfig.get<string>('fontFamily');
 
-      console.log('[ConfigManager] Editor fontFamily from VS Code:', editorFontFamily);
+      // Debug log removed for production
 
       if (editorFontFamily && editorFontFamily.trim()) {
         return editorFontFamily.trim();
       }
 
       // 3. システムデフォルトのmonospaceフォント
-      console.log('[ConfigManager] Using default fontFamily: monospace');
+      // Debug log removed for production
       return 'monospace';
     } catch (error) {
       console.error('[ConfigManager] Error getting fontFamily:', error);
@@ -285,7 +285,7 @@ export class ConfigManager {
       const terminalConfig = vscode.workspace.getConfiguration('terminal.integrated');
       const terminalFontSize = terminalConfig.get<number>('fontSize');
 
-      console.log('[ConfigManager] Terminal fontSize from VS Code:', terminalFontSize);
+      // Debug log removed for production
 
       if (terminalFontSize && terminalFontSize > 0) {
         return terminalFontSize;
@@ -295,14 +295,14 @@ export class ConfigManager {
       const editorConfig = vscode.workspace.getConfiguration('editor');
       const editorFontSize = editorConfig.get<number>('fontSize');
 
-      console.log('[ConfigManager] Editor fontSize from VS Code:', editorFontSize);
+      // Debug log removed for production
 
       if (editorFontSize && editorFontSize > 0) {
         return editorFontSize;
       }
 
       // 3. デフォルトフォントサイズ
-      console.log('[ConfigManager] Using default fontSize: 14');
+      // Debug log removed for production
       return 14;
     } catch (error) {
       console.error('[ConfigManager] Error getting fontSize:', error);

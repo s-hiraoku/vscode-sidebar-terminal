@@ -214,7 +214,6 @@ export class InputManager implements IInputManager {
     }
   }
 
-
   /**
    * Get current Alt+Click state
    */
@@ -243,9 +242,9 @@ export class InputManager implements IInputManager {
       if (type === 'focus') {
         const key = `${type}-${terminalId}`;
         if (this.eventDebounceTimers.has(key)) {
-          clearTimeout(this.eventDebounceTimers.get(key)!);
+          clearTimeout(this.eventDebounceTimers.get(key));
         }
-        
+
         const timer = window.setTimeout(() => {
           manager.postMessageToExtension({
             command: 'terminalInteraction',
@@ -256,7 +255,7 @@ export class InputManager implements IInputManager {
           });
           this.eventDebounceTimers.delete(key);
         }, 200);
-        
+
         this.eventDebounceTimers.set(key, timer);
       } else {
         // Emit other events immediately

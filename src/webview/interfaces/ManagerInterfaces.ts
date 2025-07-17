@@ -26,6 +26,9 @@ export interface IManagerCoordinator {
   postMessageToExtension(message: unknown): void;
   log(message: string, ...args: unknown[]): void;
   createTerminal(id: string, name: string, config: PartialTerminalSettings): void;
+  openSettings(): void;
+  applyFontSettings(fontSettings: WebViewFontSettings): void;
+  closeTerminal(id?: string): void;
   getManagers(): {
     performance: IPerformanceManager;
     input: IInputManager;
@@ -34,6 +37,9 @@ export interface IManagerCoordinator {
     message: IMessageManager;
     notification: INotificationManager;
   };
+  // 新しいアーキテクチャ: 状態更新処理
+  updateState?(state: unknown): void;
+  handleTerminalRemovedFromExtension?(terminalId: string): void;
 }
 
 // Terminal management interface
@@ -65,7 +71,6 @@ export interface IPerformanceManager {
   forceFlush(): void;
   dispose(): void;
 }
-
 
 // Input management interface
 export interface IInputManager {
@@ -139,6 +144,12 @@ export interface IMessageManager {
     rows: number,
     terminalId?: string,
     coordinator?: IManagerCoordinator
+  ): void;
+  // 新しいアーキテクチャ: 統一された削除メッセージ
+  sendDeleteTerminalMessage(
+    terminalId: string,
+    requestSource: 'header' | 'panel',
+    coordinator: IManagerCoordinator
   ): void;
   dispose(): void;
 }

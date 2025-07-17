@@ -17,6 +17,20 @@ export interface TerminalInfo {
   isActive: boolean;
 }
 
+// 新しいアーキテクチャ用の状態管理
+export interface TerminalState {
+  terminals: TerminalInfo[];
+  activeTerminalId: string | null;
+  maxTerminals: number;
+  availableSlots: number[];
+}
+
+export interface DeleteResult {
+  success: boolean;
+  reason?: string;
+  newState?: TerminalState;
+}
+
 // ===== 後方互換性のための型エイリアス =====
 // 段階的移行期間中の後方互換性を保つため、shared.ts の型をエイリアス
 
@@ -45,7 +59,8 @@ export interface WebviewMessage {
     | 'terminalRemoved'
     | 'settingsResponse'
     | 'fontSettingsUpdate'
-    | 'openSettings';
+    | 'openSettings'
+    | 'stateUpdate';
   config?: TerminalConfig;
   data?: string;
   exitCode?: number;
@@ -55,6 +70,7 @@ export interface WebviewMessage {
   activeTerminalId?: string;
   settings?: PartialTerminalSettings; // 部分的な設定を受け取るよう修正
   fontSettings?: WebViewFontSettings; // フォント設定を受け取る
+  state?: TerminalState; // 新しいアーキテクチャ用の状態更新
 }
 
 export interface VsCodeMessage {
@@ -69,13 +85,16 @@ export interface VsCodeMessage {
     | 'getSettings'
     | 'updateSettings'
     | 'terminalClosed'
-    | 'terminalInteraction';
+    | 'terminalInteraction'
+    | 'killTerminal'
+    | 'deleteTerminal';
   data?: string;
   cols?: number;
   rows?: number;
   terminalId?: string;
   type?: TerminalInteractionEvent['type'];
   settings?: PartialTerminalSettings; // 部分的な設定を送信するよう修正
+  requestSource?: 'header' | 'panel'; // 新しいアーキテクチャ用の削除要求元
 }
 
 export interface TerminalInstance {
@@ -96,7 +115,6 @@ export interface TerminalEvent {
   data?: string;
   exitCode?: number;
 }
-
 
 export interface AltClickState {
   isVSCodeAltClickEnabled: boolean;

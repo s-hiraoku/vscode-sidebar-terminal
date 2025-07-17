@@ -4,6 +4,7 @@
 
 import { webview as log } from '../../utils/logger';
 import { TerminalInteractionEvent } from '../../types/common';
+import { WebViewFontSettings } from '../../types/shared';
 import { IMessageManager, IManagerCoordinator } from '../interfaces/ManagerInterfaces';
 
 interface MessageCommand {
@@ -69,6 +70,15 @@ export class MessageManager implements IMessageManager {
           this.handleKillTerminalMessage(msg, coordinator);
           break;
 
+        case 'openSettings':
+          log('⚙️ [MESSAGE] Opening settings panel');
+          coordinator.openSettings();
+          break;
+
+        case 'stateUpdate':
+          this.handleStateUpdateMessage(msg, coordinator);
+          break;
+
         default:
           log(`⚠️ [MESSAGE] Unknown command: ${msg.command}`);
       }
@@ -89,6 +99,77 @@ export class MessageManager implements IMessageManager {
       coordinator
     );
     log('📤 [MESSAGE] Ready message sent');
+  }
+
+  /**
+   * Send kill terminal message to extension
+   */
+  public sendKillTerminalMessage(coordinator: IManagerCoordinator): void {
+    this.queueMessage(
+      {
+        command: 'killTerminal',
+        timestamp: Date.now(),
+      },
+      coordinator
+    );
+    log('📤 [MESSAGE] Kill terminal message sent');
+  }
+
+  /**
+   * Send kill specific terminal message to extension
+   */
+  public sendKillSpecificTerminalMessage(
+    terminalId: string,
+    coordinator: IManagerCoordinator
+  ): void {
+    log(`📤 [MESSAGE] ========== SENDING KILL SPECIFIC TERMINAL MESSAGE ==========`);
+    log(`📤 [MESSAGE] Terminal ID: ${terminalId}`);
+    log(`📤 [MESSAGE] Coordinator available:`, !!coordinator);
+
+    const message = {
+      command: 'killTerminal',
+      terminalId,
+      timestamp: Date.now(),
+    };
+
+    log(`📤 [MESSAGE] Message to send:`, message);
+
+    try {
+      this.queueMessage(message, coordinator);
+      log(`📤 [MESSAGE] Kill specific terminal message queued successfully for: ${terminalId}`);
+    } catch (error) {
+      log(`❌ [MESSAGE] Error queueing kill message:`, error);
+    }
+  }
+
+  /**
+   * 新しいアーキテクチャ: 統一された削除要求メッセージを送信
+   */
+  public sendDeleteTerminalMessage(
+    terminalId: string,
+    requestSource: 'header' | 'panel',
+    coordinator: IManagerCoordinator
+  ): void {
+    log(`📤 [MESSAGE] ========== SENDING DELETE TERMINAL MESSAGE ==========`);
+    log(`📤 [MESSAGE] Terminal ID: ${terminalId}`);
+    log(`📤 [MESSAGE] Request source: ${requestSource}`);
+    log(`📤 [MESSAGE] Coordinator available:`, !!coordinator);
+
+    const message = {
+      command: 'deleteTerminal',
+      terminalId,
+      requestSource,
+      timestamp: Date.now(),
+    };
+
+    log(`📤 [MESSAGE] Message to send:`, message);
+
+    try {
+      this.queueMessage(message, coordinator);
+      log(`📤 [MESSAGE] Delete terminal message queued successfully for: ${terminalId}`);
+    } catch (error) {
+      log(`❌ [MESSAGE] Error queueing delete message:`, error);
+    }
   }
 
   /**
@@ -144,7 +225,7 @@ export class MessageManager implements IMessageManager {
         // Write directly to terminal (performance manager would handle buffering in a full implementation)
         terminal.terminal.write(data);
         log(`📥 [MESSAGE] Output written to terminal ${terminalId}: ${data.length} chars`);
-        
+
         // Claude Code detection disabled
       } else {
         log(`⚠️ [MESSAGE] Output for unknown terminal: ${terminalId}`);
@@ -161,9 +242,29 @@ export class MessageManager implements IMessageManager {
   ): void {
     const terminalId = msg.terminalId as string;
     if (terminalId) {
-      // Forward to TerminalManager
-      log(`🗑️ [MESSAGE] Terminal removed: ${terminalId}`);
-      this.emitTerminalInteractionEvent('terminal-removed', terminalId, undefined, coordinator);
+      log(`🗑️ [MESSAGE] Terminal removed from extension: ${terminalId}`);
+      // Call the coordinator's method to handle terminal removal from UI
+      this.handleTerminalRemovedFromExtension(terminalId, coordinator);
+    }
+  }
+
+  /**
+   * Handle terminal removed from extension - clean up UI
+   */
+  private handleTerminalRemovedFromExtension(
+    terminalId: string,
+    coordinator: IManagerCoordinator
+  ): void {
+    log(`🗑️ [MESSAGE] Handling terminal removal from extension: ${terminalId}`);
+
+    // Use the coordinator's method to handle terminal removal from UI
+    if (
+      'handleTerminalRemovedFromExtension' in coordinator &&
+      typeof coordinator.handleTerminalRemovedFromExtension === 'function'
+    ) {
+      coordinator.handleTerminalRemovedFromExtension(terminalId);
+    } else {
+      log(`⚠️ [MESSAGE] handleTerminalRemovedFromExtension method not found on coordinator`);
     }
   }
 
@@ -188,9 +289,10 @@ export class MessageManager implements IMessageManager {
     msg: MessageCommand,
     coordinator: IManagerCoordinator
   ): void {
-    const fontSettings = msg.fontSettings;
+    const fontSettings = msg.fontSettings as WebViewFontSettings;
     if (fontSettings) {
-      log('🎨 [MESSAGE] Font settings update received');
+      log('🎨 [MESSAGE] Font settings update received:', fontSettings);
+      coordinator.applyFontSettings(fontSettings);
       this.emitTerminalInteractionEvent('font-settings-update', '', fontSettings, coordinator);
     }
   }
@@ -212,7 +314,10 @@ export class MessageManager implements IMessageManager {
   /**
    * Handle terminal created message from extension
    */
-  private handleTerminalCreatedMessage(msg: MessageCommand, coordinator: IManagerCoordinator): void {
+  private handleTerminalCreatedMessage(
+    msg: MessageCommand,
+    coordinator: IManagerCoordinator
+  ): void {
     const terminalId = msg.terminalId as string;
     const terminalName = msg.terminalName as string;
     const config = msg.config;
@@ -272,10 +377,27 @@ export class MessageManager implements IMessageManager {
    * Handle kill terminal message
    */
   private handleKillTerminalMessage(msg: MessageCommand, coordinator: IManagerCoordinator): void {
-    const terminalId = msg.terminalId as string;
-    if (terminalId) {
-      log(`⚰️ [MESSAGE] Kill terminal: ${terminalId}`);
-      this.emitTerminalInteractionEvent('kill', terminalId, undefined, coordinator);
+    log(`⚰️ [MESSAGE] Kill terminal command received`);
+    // Kill the active terminal (no specific terminalId needed)
+    coordinator.closeTerminal();
+  }
+
+  /**
+   * 新しいアーキテクチャ: 状態更新メッセージを処理
+   */
+  private handleStateUpdateMessage(msg: MessageCommand, coordinator: IManagerCoordinator): void {
+    const state = msg.state;
+    if (state) {
+      log('🔄 [MESSAGE] State update received:', state);
+
+      // IManagerCoordinatorにupdateStateメソッドがあることを確認
+      if ('updateState' in coordinator && typeof coordinator.updateState === 'function') {
+        coordinator.updateState(state);
+      } else {
+        log('⚠️ [MESSAGE] updateState method not found on coordinator');
+      }
+    } else {
+      log('⚠️ [MESSAGE] No state data in stateUpdate message');
     }
   }
 

@@ -20,9 +20,25 @@ export class UIManager implements IUIManager {
     activeTerminalId: string,
     allContainers: Map<string, HTMLElement>
   ): void {
-    allContainers.forEach((container, terminalId) => {
-      this.updateSingleTerminalBorder(container, terminalId === activeTerminalId);
+    // Reset terminal-body border to avoid interference
+    const terminalBody = document.getElementById('terminal-body');
+    if (terminalBody) {
+      terminalBody.style.setProperty('border-color', 'transparent', 'important');
+      terminalBody.style.setProperty('border-width', '0px', 'important');
+      terminalBody.classList.remove('active');
+    }
+
+    // First, ensure all terminals are marked as inactive
+    allContainers.forEach((container, _terminalId) => {
+      this.updateSingleTerminalBorder(container, false);
     });
+
+    // Then, mark only the active terminal as active
+    const activeContainer = allContainers.get(activeTerminalId);
+    if (activeContainer) {
+      this.updateSingleTerminalBorder(activeContainer, true);
+    }
+
     log(`🎨 [UI] Updated borders, active terminal: ${activeTerminalId}`);
   }
 
@@ -48,14 +64,25 @@ export class UIManager implements IUIManager {
     if (isActive) {
       container.classList.add('active');
       container.classList.remove('inactive');
-      container.style.borderColor = WEBVIEW_THEME_CONSTANTS.ACTIVE_BORDER_COLOR;
-      container.style.borderWidth = '2px';
+      container.style.setProperty(
+        'border-color',
+        WEBVIEW_THEME_CONSTANTS.ACTIVE_BORDER_COLOR,
+        'important'
+      );
+      container.style.setProperty('border-width', '2px', 'important');
+      container.style.setProperty('border-style', 'solid', 'important');
     } else {
       container.classList.remove('active');
       container.classList.add('inactive');
-      container.style.borderColor = WEBVIEW_THEME_CONSTANTS.INACTIVE_BORDER_COLOR;
-      container.style.borderWidth = '1px';
+      // Keep same border width to prevent layout shift, but make it transparent
+      container.style.setProperty('border-color', 'transparent', 'important');
+      container.style.setProperty('border-width', '2px', 'important');
+      container.style.setProperty('border-style', 'solid', 'important');
     }
+
+    log(
+      `🎨 [UI] Updated border for terminal: ${container.dataset.terminalId}, active: ${isActive}, color: ${isActive ? WEBVIEW_THEME_CONSTANTS.ACTIVE_BORDER_COLOR : 'transparent'}`
+    );
   }
 
   /**

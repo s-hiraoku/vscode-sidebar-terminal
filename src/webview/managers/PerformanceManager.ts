@@ -104,7 +104,9 @@ export class PerformanceManager implements IPerformanceManager {
         this.currentBufferTerminal.write(bufferedData);
         log(`📤 [PERFORMANCE] Flushed buffer: ${bufferedData.length} chars`);
       } else {
-        log(`⚠️ [PERFORMANCE] No terminal available for buffer flush: ${bufferedData.length} chars lost`);
+        log(
+          `⚠️ [PERFORMANCE] No terminal available for buffer flush: ${bufferedData.length} chars lost`
+        );
       }
     }
   }
