@@ -30,8 +30,6 @@ import {
   showAltClickDisabledWarning as _showAltClickDisabledWarning,
   showTerminalInteractionIssue as _showTerminalInteractionIssue,
 } from './utils/NotificationUtils';
-import { enableHybridNotifications } from './core/NotificationBridge';
-import { LoggingBufferManager } from './utils/BufferManager';
 
 // Type definitions
 interface TerminalMessage extends WebviewMessage {
@@ -49,23 +47,6 @@ declare const acquireVsCodeApi: () => {
   getState: () => unknown;
   setState: (state: unknown) => void;
 };
-
-/**
- * Apply consistent flex layout styles to terminal containers
- * This eliminates duplicate style application code throughout the file
- */
-function applyTerminalContainerStyles(container: HTMLElement): void {
-  // Update only necessary styles, don't override border styles
-  container.style.width = '100%';
-  container.style.flex = '1';
-  container.style.display = 'flex';
-  container.style.flexDirection = 'column';
-  container.style.overflow = 'hidden';
-  container.style.minHeight = '100px';
-  container.style.margin = '0';
-  container.style.padding = '2px';
-  container.style.outline = 'none';
-}
 
 const vscode = acquireVsCodeApi();
 
@@ -120,7 +101,6 @@ class TerminalWebviewManager {
   public activeTerminalId: string | null = null;
 
   // Performance optimization: Debounce resize operations (managed by PerformanceManager)
-
   private resizeDebounceTimer: number | null = null;
   private readonly RESIZE_DEBOUNCE_DELAY = SPLIT_CONSTANTS.RESIZE_DEBOUNCE_DELAY;
 
@@ -149,18 +129,6 @@ class TerminalWebviewManager {
   };
 
   constructor() {
-    // Initialize unified notification system in hybrid mode for gradual migration
-    enableHybridNotifications();
-
-    // Initialize unified buffer manager with logging
-    this.bufferManager = new LoggingBufferManager(
-      {
-        maxBufferSize: SPLIT_CONSTANTS.MAX_BUFFER_SIZE,
-        defaultFlushInterval: SPLIT_CONSTANTS.BUFFER_FLUSH_INTERVAL,
-      },
-      log
-    );
-
     this.splitManager = new SplitManager();
     this.settingsPanel = new SettingsPanel({
       onSettingsChange: (settings) => {
@@ -179,11 +147,6 @@ class TerminalWebviewManager {
 
     // Setup InputManager with NotificationManager reference
     this.inputManager.setNotificationManager(this.notificationManager);
-
-    // Set up buffer manager flush callback
-    this.bufferManager.setFlushCallback((data: string) => {
-      this.writeBufferedDataToTerminal(data);
-    });
 
     // Load settings from VS Code state if available
     this.loadSettings();
@@ -439,7 +402,16 @@ class TerminalWebviewManager {
       );
 
       this.splitManager.getTerminalContainers().forEach((container, terminalId) => {
-        applyTerminalContainerStyles(container);
+        // Update only necessary styles, don't override border styles
+        container.style.width = '100%';
+        container.style.flex = '1';
+        container.style.display = 'flex';
+        container.style.flexDirection = 'column';
+        container.style.overflow = 'hidden';
+        container.style.margin = '0';
+        container.style.padding = '2px';
+        container.style.minHeight = '100px';
+        container.style.outline = 'none';
 
         log(`📐 [MAIN] Applied flex layout to terminal ${terminalId}`);
 
@@ -607,7 +579,16 @@ class TerminalWebviewManager {
 
     // Apply consistent flex styling to all terminals (preserve CSS border classes)
     this.splitManager.getTerminalContainers().forEach((container, _terminalId) => {
-      applyTerminalContainerStyles(container);
+      // Update only necessary styles, don't override border styles
+      container.style.width = '100%';
+      container.style.flex = '1';
+      container.style.display = 'flex';
+      container.style.flexDirection = 'column';
+      container.style.overflow = 'hidden';
+      container.style.minHeight = '100px';
+      container.style.margin = '0';
+      container.style.padding = '2px';
+      container.style.outline = 'none';
     });
 
     // Focus the active terminal and ensure proper fit
@@ -721,7 +702,6 @@ class TerminalWebviewManager {
         log(`➕ [WEBVIEW] Adding terminal to UI: ${terminal.id}`);
         // 新しいターミナルは既にcreateTerminalで作成されているはず
         // ここでは特別な処理は不要
-
       }
     }
 
@@ -879,10 +859,8 @@ class TerminalWebviewManager {
         targetTerminal.write(data);
         log(`📤 [WEBVIEW] Direct write to terminal ${terminalId}: ${data.length} chars`);
       } else {
-
         // Use PerformanceManager for buffering (active terminal only)
         this.performanceManager.scheduleOutputBuffer(data, targetTerminal);
-
       }
     } else {
       log('⚠️ [WEBVIEW] No terminal instance to write to');
@@ -1188,7 +1166,6 @@ class TerminalWebviewManager {
   public dispose(): void {
     // PerformanceManager handles its own cleanup
     this.performanceManager.dispose();
-
 
     if (this.resizeDebounceTimer !== null) {
       window.clearTimeout(this.resizeDebounceTimer);
