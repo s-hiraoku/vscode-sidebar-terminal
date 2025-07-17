@@ -23,7 +23,8 @@
       "Bash(gh release view:*)",
       "WebFetch(domain:marketplace.visualstudio.com)",
       "Bash(npm run release:patch:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(ls:*)"
     ],
     "deny": []
   }
