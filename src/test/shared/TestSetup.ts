@@ -20,10 +20,10 @@ export const mockVscode = {
   workspace: {
     getConfiguration: sinon.stub().callsFake((section) => {
       const config = {
-        get: sinon.stub().callsFake((key: string, defaultValue?: any) => {
+        get: sinon.stub().callsFake((key: string, defaultValue?: unknown): unknown => {
           // Return reasonable defaults for common configuration keys
           if (section === 'sidebarTerminal') {
-            const defaults: { [key: string]: any } = {
+            const defaults: { [key: string]: unknown } = {
               shell: '/bin/bash',
               shellArgs: [],
               fontSize: 14,
@@ -34,21 +34,21 @@ export const mockVscode = {
               startDirectory: '',
               showHeader: true,
               showIcons: true,
-              altClickMovesCursor: true
+              altClickMovesCursor: true,
             };
             return defaults[key] !== undefined ? defaults[key] : defaultValue;
           }
           if (section === 'terminal.integrated') {
-            const defaults: { [key: string]: any } = {
+            const defaults: { [key: string]: unknown } = {
               shell: '/bin/bash',
               shellArgs: [],
-              altClickMovesCursor: true
+              altClickMovesCursor: true,
             };
             return defaults[key] !== undefined ? defaults[key] : defaultValue;
           }
           if (section === 'editor') {
-            const defaults: { [key: string]: any } = {
-              multiCursorModifier: 'alt'
+            const defaults: { [key: string]: unknown } = {
+              multiCursorModifier: 'alt',
             };
             return defaults[key] !== undefined ? defaults[key] : defaultValue;
           }

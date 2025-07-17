@@ -126,7 +126,7 @@ describe('PerformanceUtils', () => {
   describe('requestIdleCallback', () => {
     it('should execute callback when idle', (done) => {
       const callback = sinon.stub();
-      
+
       PerformanceUtils.requestIdleCallback(callback);
 
       // Since we're using fake timers, we need to handle this differently
@@ -138,7 +138,7 @@ describe('PerformanceUtils', () => {
 
     it('should handle timeout option', (done) => {
       const callback = sinon.stub();
-      
+
       PerformanceUtils.requestIdleCallback(callback, { timeout: 100 });
 
       setTimeout(() => {
@@ -194,8 +194,8 @@ describe('PerformanceUtils', () => {
         memory: {
           usedJSHeapSize: 1000000,
           totalJSHeapSize: 2000000,
-          jsHeapSizeLimit: 4000000
-        }
+          jsHeapSizeLimit: 4000000,
+        },
       };
 
       const usage = PerformanceUtils.getMemoryUsage();
@@ -207,7 +207,7 @@ describe('PerformanceUtils', () => {
 
     it('should handle missing performance.memory', () => {
       delete (global as any).performance;
-      
+
       const usage = PerformanceUtils.getMemoryUsage();
       expect(usage).to.be.an('object');
       expect(usage.used).to.equal('N/A');

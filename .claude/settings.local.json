@@ -24,7 +24,10 @@
       "WebFetch(domain:marketplace.visualstudio.com)",
       "Bash(npm run release:patch:*)",
       "Bash(grep:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(gh pr create:*)",
+      "Bash(npm run lint)",
+      "Bash(npm run format:*)"
     ],
     "deny": []
   }

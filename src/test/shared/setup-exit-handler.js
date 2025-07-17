@@ -5,16 +5,16 @@
 
 // Add missing event handler methods to process for Mocha compatibility
 if (!process.removeListener) {
-  process.removeListener = function(...args) {
+  process.removeListener = function (...args) {
     return this.off ? this.off(...args) : this;
   };
 }
 
 if (!process.removeAllListeners) {
-  process.removeAllListeners = function(event) {
+  process.removeAllListeners = function (event) {
     if (event && this.listeners) {
       const listeners = this.listeners(event);
-      listeners.forEach(listener => {
+      listeners.forEach((listener) => {
         this.removeListener(event, listener);
       });
     }
@@ -23,7 +23,7 @@ if (!process.removeAllListeners) {
 }
 
 if (!process.off) {
-  process.off = function(...args) {
+  process.off = function (...args) {
     return this.removeListener ? this.removeListener(...args) : this;
   };
 }
