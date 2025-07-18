@@ -32,7 +32,6 @@ export { TerminalTheme, SplitDirection, StatusType };
  */
 export interface TerminalSettings {
   fontSize: number;
-  fontFamily: string;
   theme?: string;
   cursorBlink: boolean;
   confirmBeforeKill?: boolean;

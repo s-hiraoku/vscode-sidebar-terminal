@@ -1,4 +1,5 @@
-import type { TerminalConfig, TerminalSettings } from './terminal.types';
+import type { TerminalConfig } from './terminal.types';
+import type { PartialTerminalSettings } from '../../types/shared';
 
 export type { TerminalConfig };
 
@@ -40,7 +41,7 @@ export interface SplitCommandMessage extends WebviewMessageBase {
 
 export interface SettingsMessage extends WebviewMessageBase {
   readonly command: 'getSettings' | 'updateSettings' | 'settingsResponse';
-  readonly settings?: TerminalSettings;
+  readonly settings?: PartialTerminalSettings;
 }
 
 export interface OpenSettingsMessage extends WebviewMessageBase {

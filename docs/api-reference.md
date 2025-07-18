@@ -190,12 +190,34 @@ terminal.onSelectionChange(() => {
 });
 ```
 
+## WebView Manager Architecture
+
+WebViewのフロントエンドは、以前のモノリシックな`main.ts`ファイルから、9つの特化したマネージャーで構成されるモジュラーアーキテクチャに再構築されました。これにより、コードの整理、保守性、パフォーマンスが大幅に向上しました。
+
+### 主要なマネージャーとその役割
+
+- **PerformanceManager**: 出力バッファリング、デバウンス、パフォーマンス最適化を管理します。
+- **ClaudeCodeManager**: AIインタラクションのインテリジェンスとAlt+Clickの競合解決を処理します。
+- **InputManager**: キーボードショートカット、IME処理、Alt+Clickインタラクションを管理します。
+- **UIManager**: 視覚的なフィードバック、テーマ設定、ボーダー、ターミナルの外観を処理します。
+- **ConfigManager**: 設定の永続化と構成管理を担当します。
+- **MessageManager**: WebViewとExtension間の通信を処理します。
+- **NotificationManager**: ユーザーフィードバックと視覚的なアラートを提供します。
+- **SplitManager**: ターミナルの分割機能とレイアウト計算を処理します。
+- **TerminalCoordinator**: すべてのマネージャーを調整するメインのオーケストレーターです。
+
+この新しいアーキテクチャでは、各マネージャーが単一の責任原則に従い、明確な関心事の分離を実現しています。
+
 ## WebView メッセージ API
 
-### 1. Extension → WebView
+WebViewとExtension間のメッセージ通信は、主に`MessageManager`によって処理されるようになりました。これにより、通信ロジックが一元化され、よりクリーンな分離が実現されています。
+
+### 1. Extension → WebView (MessageManager 経由)
+
 ```typescript
-// Extension側
-webviewView.webview.postMessage({
+// Extension側 (例: SidebarTerminalProvider.ts)
+// MessageManagerのインスタンスを介してメッセージを送信
+this.messageManager.postMessageToWebview({
   type: 'terminalOutput',
   data: data,
   terminalId: terminalId
@@ -203,21 +225,22 @@ webviewView.webview.postMessage({
 ```
 
 ```javascript
-// WebView側
-window.addEventListener('message', (event) => {
-  const message = event.data;
-  switch (message.type) {
-    case 'terminalOutput':
-      terminal.write(message.data);
-      break;
-  }
+// WebView側 (例: main.ts または TerminalCoordinator.ts)
+// MessageManagerがメッセージをリッスンし、適切なハンドラにディスパッチ
+// 直接のwindow.addEventListener('message')はMessageManager内部で処理されます
+// 例: TerminalCoordinatorがterminalOutputメッセージを購読
+this.messageManager.onDidReceiveMessage('terminalOutput', (message) => {
+  // ターミナルへの出力処理
+  this.terminalManager.getTerminal(message.terminalId).write(message.data);
 });
 ```
 
-### 2. WebView → Extension
+### 2. WebView → Extension (MessageManager 経由)
+
 ```javascript
-// WebView側
-vscode.postMessage({
+// WebView側 (例: InputManager.ts)
+// MessageManagerのインスタンスを介してメッセージを送信
+this.messageManager.postMessageToExtension({
   type: 'terminalInput',
   data: data,
   terminalId: terminalId
@@ -225,13 +248,12 @@ vscode.postMessage({
 ```
 
 ```typescript
-// Extension側
-webviewView.webview.onDidReceiveMessage((message) => {
-  switch (message.type) {
-    case 'terminalInput':
-      ptyProcess.write(message.data);
-      break;
-  }
+// Extension側 (例: SidebarTerminalProvider.ts)
+// MessageManagerがメッセージをリッスンし、適切なハンドラにディスパッチ
+// 例: SidebarTerminalProviderがterminalInputメッセージを購読
+this.messageManager.onDidReceiveMessage('terminalInput', (message) => {
+  // PTYへの入力処理
+  this.terminalManager.getTerminal(message.terminalId).write(message.data);
 });
 ```
 

@@ -6,7 +6,7 @@ import { getTerminalConfig, generateNonce, normalizeTerminalInfo } from '../util
 import { showSuccess, showError, TerminalErrorHandler } from '../utils/feedback';
 import { provider as log } from '../utils/logger';
 import { getConfigManager } from '../config/ConfigManager';
-import { PartialTerminalSettings } from '../types/shared';
+import { PartialTerminalSettings, WebViewFontSettings } from '../types/shared';
 
 export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = 'sidebarTerminal';
@@ -40,7 +40,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
       log('✅ [DEBUG] HTML set successfully');
     } catch (error) {
       log('❌ [ERROR] Failed to generate HTML for webview:', error);
-      void vscode.window.showErrorMessage(`Failed to generate webview HTML: ${String(error)}`);
+      TerminalErrorHandler.handleWebviewError(error);
       return;
     }
 
@@ -74,6 +74,12 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
       const config = getConfigManager().getExtensionTerminalConfig();
       const maxSplitTerminals = config.maxTerminals;
 
+      log('🔧 [DEBUG] Current terminals:', terminals.length);
+      log('🔧 [DEBUG] Max terminals allowed:', maxSplitTerminals);
+      terminals.forEach((terminal, index) => {
+        log(`🔧 [DEBUG] Terminal ${index + 1}: ${terminal.name} (ID: ${terminal.id})`);
+      });
+
       if (terminals.length >= maxSplitTerminals) {
         log('⚠️ [DEBUG] Cannot split - already at maximum terminals:', terminals.length);
         showError(`Cannot split terminal: Maximum of ${maxSplitTerminals} terminals reached`);
@@ -92,7 +98,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
       // The terminal creation event will send TERMINAL_CREATED to webview
     } catch (error) {
       log('❌ [ERROR] Failed to split terminal:', error);
-      void vscode.window.showErrorMessage(`Failed to split terminal: ${String(error)}`);
+      TerminalErrorHandler.handleWebviewError(error);
     }
   }
 
@@ -106,7 +112,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
       log('✅ [DEBUG] Settings open command sent');
     } catch (error) {
       log('❌ [ERROR] Failed to open settings:', error);
-      void vscode.window.showErrorMessage(`Failed to open settings: ${String(error)}`);
+      TerminalErrorHandler.handleWebviewError(error);
     }
   }
 
@@ -146,11 +152,11 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
           .showWarningMessage(`Close terminal "${activeTerminalId}"?`, { modal: true }, 'Close')
           .then((selection) => {
             if (selection === 'Close') {
-              this._performKillTerminal(activeTerminalId);
+              void this._performKillTerminal(activeTerminalId);
             }
           });
       } else {
-        this._performKillTerminal(activeTerminalId);
+        void this._performKillTerminal(activeTerminalId);
       }
     } catch (error) {
       log('❌ [ERROR] Failed to kill terminal:', error);
@@ -158,24 +164,93 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
     }
   }
 
-  private _performKillTerminal(terminalId: string): void {
+  private async _performKillTerminal(terminalId: string): Promise<void> {
     try {
       log('🗑️ [PROVIDER] Performing kill for active terminal:', terminalId);
 
-      // Kill the terminal process in TerminalManager
-      // Note: TerminalManager.killTerminal always kills the active terminal regardless of ID
-      this._terminalManager.killTerminal(terminalId);
+      // 新しいアーキテクチャ: 統一されたdeleteTerminalメソッドを使用
+      const result = await this._terminalManager.deleteTerminal(terminalId, 'panel');
 
-      // Notify webview to remove the terminal from UI
-      void this._sendMessage({
-        command: 'terminalRemoved',
-        terminalId: terminalId,
-      });
+      if (result.success) {
+        log('✅ [PROVIDER] Terminal killed successfully:', terminalId);
+        showSuccess(`Terminal ${terminalId} closed`);
 
-      log('✅ [PROVIDER] Terminal killed successfully:', terminalId);
-      showSuccess(`Terminal ${terminalId} closed`);
+        // 状態更新はonStateUpdateイベントで自動的に送信される
+      } else {
+        log('⚠️ [PROVIDER] Failed to kill terminal:', result.reason);
+        showError(result.reason || 'Failed to close terminal');
+      }
     } catch (error) {
       log('❌ [PROVIDER] Failed to perform kill terminal:', error);
+      showError(`Failed to close terminal: ${String(error)}`);
+    }
+  }
+
+  private async _performKillSpecificTerminal(terminalId: string): Promise<void> {
+    try {
+      log('🗑️ [PROVIDER] Performing kill for specific terminal:', terminalId);
+
+      // 新しいアーキテクチャ: 統一されたdeleteTerminalメソッドを使用
+      const result = await this._terminalManager.deleteTerminal(terminalId, 'header');
+
+      if (result.success) {
+        log('✅ [PROVIDER] Specific terminal killed successfully:', terminalId);
+        showSuccess(`Terminal ${terminalId} closed`);
+
+        // 状態更新はonStateUpdateイベントで自動的に送信される
+      } else {
+        log('⚠️ [PROVIDER] Failed to kill specific terminal:', result.reason);
+        showError(result.reason || 'Failed to close terminal');
+      }
+    } catch (error) {
+      log('❌ [PROVIDER] Failed to perform kill specific terminal:', error);
+      showError(`Failed to close terminal: ${String(error)}`);
+    }
+  }
+
+  public killSpecificTerminal(terminalId: string): void {
+    log(`🗑️ [DEBUG] Killing specific terminal: ${terminalId}`);
+    try {
+      const terminals = this._terminalManager.getTerminals();
+      const targetTerminal = terminals.find((t) => t.id === terminalId);
+
+      if (!targetTerminal) {
+        log(`⚠️ [WARN] Terminal ${terminalId} not found`);
+        showError(`Terminal ${terminalId} not found`);
+        return;
+      }
+
+      log('🔧 [DEBUG] Total terminals:', terminals.length);
+      log(
+        '🔧 [DEBUG] Terminal list:',
+        terminals.map((t) => t.id)
+      );
+
+      // Check terminal count protection - only protect if there's 1 terminal
+      if (terminals.length <= 1) {
+        log('🛡️ [WARN] Cannot kill terminal - only one terminal remaining');
+        showError('Cannot close terminal: At least one terminal must remain open');
+        return;
+      }
+
+      log(`🔧 [DEBUG] Proceeding to kill specific terminal: ${terminalId}`);
+
+      // Check if confirmation is needed
+      const settings = getConfigManager().getCompleteTerminalSettings();
+      const confirmBeforeKill = settings.confirmBeforeKill || false;
+      if (confirmBeforeKill) {
+        void vscode.window
+          .showWarningMessage(`Close terminal "${terminalId}"?`, { modal: true }, 'Close')
+          .then((selection) => {
+            if (selection === 'Close') {
+              void this._performKillSpecificTerminal(terminalId);
+            }
+          });
+      } else {
+        void this._performKillSpecificTerminal(terminalId);
+      }
+    } catch (error) {
+      log(`❌ [ERROR] Failed to kill specific terminal ${terminalId}:`, error);
       showError(`Failed to close terminal: ${String(error)}`);
     }
   }
@@ -227,6 +302,14 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
       try {
         await this._sendMessage(initMessage);
         log('✅ [DEBUG] INIT message sent successfully');
+
+        // Send font settings immediately after INIT to ensure webview has current font settings
+        const fontSettings = this.getCurrentFontSettings();
+        await this._sendMessage({
+          command: 'fontSettingsUpdate',
+          fontSettings,
+        });
+        log('✅ [DEBUG] Font settings sent during initialization:', fontSettings);
       } catch (sendError) {
         log('❌ [ERROR] Failed to send INIT message:', sendError);
         throw new Error(`Failed to send INIT message: ${String(sendError)}`);
@@ -234,7 +317,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
       log('✅ [DEBUG] Terminal initialization completed successfully');
     } catch (error) {
       log('❌ [ERROR] Failed to initialize terminal:', error);
-      void vscode.window.showErrorMessage(`Failed to initialize terminal: ${String(error)}`);
+      TerminalErrorHandler.handleTerminalCreationError(error);
       throw error;
     }
   }
@@ -255,9 +338,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
             log('✅ [DEBUG] Terminal initialization completed in message handler');
           } catch (initError) {
             log('❌ [ERROR] Terminal initialization failed in message handler:', initError);
-            void vscode.window.showErrorMessage(
-              `Terminal initialization failed: ${String(initError)}`
-            );
+            TerminalErrorHandler.handleTerminalCreationError(initError);
           }
           break;
         case TERMINAL_CONSTANTS.COMMANDS.INPUT:
@@ -292,9 +373,15 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
         case 'getSettings': {
           log('⚙️ [DEBUG] Getting settings from webview...');
           const settings = this.getCurrentSettings();
+          const fontSettings = this.getCurrentFontSettings();
           await this._sendMessage({
             command: 'settingsResponse',
             settings,
+          });
+          // Send font settings separately
+          await this._sendMessage({
+            command: 'fontSettingsUpdate',
+            fontSettings,
           });
           break;
         }
@@ -321,12 +408,69 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
           }
           break;
         }
+        case 'killTerminal': {
+          log('🗑️ [DEBUG] ========== KILL TERMINAL COMMAND RECEIVED ==========');
+          log('🗑️ [DEBUG] Full message:', message);
+          log('🗑️ [DEBUG] Message terminalId:', message.terminalId);
+
+          // Check if specific terminal ID is provided
+          if (message.terminalId) {
+            log(`🗑️ [DEBUG] Killing specific terminal: ${message.terminalId}`);
+            try {
+              this.killSpecificTerminal(message.terminalId);
+              log(`🗑️ [DEBUG] killSpecificTerminal completed for: ${message.terminalId}`);
+            } catch (error) {
+              log(`❌ [DEBUG] Error in killSpecificTerminal:`, error);
+            }
+          } else {
+            log('🗑️ [DEBUG] Killing active terminal (no specific ID provided)');
+            try {
+              this.killTerminal();
+              log('🗑️ [DEBUG] killTerminal completed');
+            } catch (error) {
+              log('❌ [DEBUG] Error in killTerminal:', error);
+            }
+          }
+          break;
+        }
+        case 'deleteTerminal': {
+          log('🗑️ [DEBUG] ========== DELETE TERMINAL COMMAND RECEIVED ==========');
+          log('🗑️ [DEBUG] Full message:', message);
+
+          const terminalId = message.terminalId as string;
+          const requestSource = (message.requestSource as 'header' | 'panel') || 'panel';
+
+          if (terminalId) {
+            log(`🗑️ [DEBUG] Deleting terminal: ${terminalId} (source: ${requestSource})`);
+            try {
+              // 新しいアーキテクチャ: 統一されたdeleteTerminalメソッドを使用
+              void this._terminalManager.deleteTerminal(terminalId, requestSource);
+              log(`🗑️ [DEBUG] deleteTerminal called for: ${terminalId}`);
+            } catch (error) {
+              log(`❌ [DEBUG] Error in deleteTerminal:`, error);
+            }
+          } else {
+            log('❌ [DEBUG] No terminal ID provided for deleteTerminal');
+          }
+          break;
+        }
+        case 'terminalInteraction': {
+          log(
+            '⚡ [DEBUG] Terminal interaction received:',
+            message.type,
+            'terminalId:',
+            message.terminalId
+          );
+          // Handle terminal interaction events from webview
+          // This is informational - the webview is notifying us of user interactions
+          break;
+        }
         default:
           log('⚠️ [WARN] Unknown command received:', message.command);
       }
     } catch (error) {
       log('❌ [ERROR] Failed to handle webview message:', error);
-      void vscode.window.showErrorMessage(`Failed to handle webview message: ${String(error)}`);
+      TerminalErrorHandler.handleWebviewError(error);
     }
   }
 
@@ -378,25 +522,61 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
         terminalId,
       });
     });
+
+    // 新しいアーキテクチャ: 状態更新イベントの処理
+    this._terminalManager.onStateUpdate((state) => {
+      void this._sendMessage({
+        command: 'stateUpdate',
+        state,
+      });
+    });
   }
 
   /**
    * Set up configuration change listeners for VS Code standard settings
    */
   private _setupConfigurationChangeListeners(): void {
-    // Monitor editor.multiCursorModifier and terminal.integrated.altClickMovesCursor changes
+    // Monitor VS Code settings changes
     const configChangeDisposable = vscode.workspace.onDidChangeConfiguration((event) => {
+      let shouldUpdateSettings = false;
+      let shouldUpdateFontSettings = false;
+
+      // Check for general settings changes
       if (
         event.affectsConfiguration('editor.multiCursorModifier') ||
         event.affectsConfiguration('terminal.integrated.altClickMovesCursor') ||
-        event.affectsConfiguration('sidebarTerminal.altClickMovesCursor')
+        event.affectsConfiguration('sidebarTerminal.altClickMovesCursor') ||
+        event.affectsConfiguration('sidebarTerminal.theme') ||
+        event.affectsConfiguration('sidebarTerminal.cursorBlink')
       ) {
-        log('⚙️ [DEBUG] VS Code standard settings changed, updating webview...');
-        // Send updated settings to webview
+        shouldUpdateSettings = true;
+      }
+
+      // Check for font settings changes
+      if (
+        event.affectsConfiguration('terminal.integrated.fontSize') ||
+        event.affectsConfiguration('terminal.integrated.fontFamily') ||
+        event.affectsConfiguration('editor.fontSize') ||
+        event.affectsConfiguration('editor.fontFamily')
+      ) {
+        shouldUpdateFontSettings = true;
+      }
+
+      if (shouldUpdateSettings) {
+        log('⚙️ [DEBUG] VS Code settings changed, updating webview...');
         const settings = this.getCurrentSettings();
         void this._sendMessage({
           command: 'settingsResponse',
           settings,
+        });
+      }
+
+      if (shouldUpdateFontSettings) {
+        log('🎨 [DEBUG] VS Code font settings changed, updating webview...');
+        const fontSettings = this.getCurrentFontSettings();
+        void this._sendMessage({
+          command: 'fontSettingsUpdate',
+          fontSettings,
         });
       }
     });
@@ -419,7 +599,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
       await this._view.webview.postMessage(message);
     } catch (error) {
       log('❌ [ERROR] Failed to send message to webview:', error);
-      void vscode.window.showErrorMessage(`Failed to send message to webview: ${String(error)}`);
+      TerminalErrorHandler.handleWebviewError(error);
     }
   }
 
@@ -696,7 +876,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
             <!-- Simple terminal container -->
         </div>
         <script nonce="${nonce}">
-            console.log('🎯 [WEBVIEW] Script loaded');
+            // Debug log removed for production
         </script>
         <script nonce="${nonce}" src="${scriptUri.toString()}"></script>
     </body>
@@ -711,8 +891,6 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
     const altClickSettings = getConfigManager().getAltClickSettings();
 
     return {
-      fontSize: settings.fontSize,
-      fontFamily: settings.fontFamily,
       cursorBlink: settings.cursorBlink,
       theme: settings.theme || 'auto',
       // VS Code standard settings for Alt+Click functionality
@@ -721,18 +899,28 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
     };
   }
 
+  private getCurrentFontSettings(): WebViewFontSettings {
+    const configManager = getConfigManager();
+
+    return {
+      fontSize: configManager.getFontSize(),
+      fontFamily: configManager.getFontFamily(),
+    };
+  }
+
   private async updateSettings(settings: PartialTerminalSettings): Promise<void> {
     try {
       const config = vscode.workspace.getConfiguration('sidebarTerminal');
       // Note: ConfigManager handles reading, but writing must still use VS Code API
 
-      // Update VS Code settings
-      await config.update('fontSize', settings.fontSize, vscode.ConfigurationTarget.Global);
-      await config.update('fontFamily', settings.fontFamily, vscode.ConfigurationTarget.Global);
-      await config.update('cursorBlink', settings.cursorBlink, vscode.ConfigurationTarget.Global);
+      // Update VS Code settings (font settings are managed by VS Code directly)
+      if (settings.cursorBlink !== undefined) {
+        await config.update('cursorBlink', settings.cursorBlink, vscode.ConfigurationTarget.Global);
+      }
       if (settings.theme) {
         await config.update('theme', settings.theme, vscode.ConfigurationTarget.Global);
       }
+      // Note: Font settings are read directly from VS Code's terminal/editor settings
 
       log('✅ [DEBUG] Settings updated successfully');
       showSuccess('Settings updated successfully');

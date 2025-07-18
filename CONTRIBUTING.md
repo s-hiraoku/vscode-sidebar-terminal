@@ -40,19 +40,40 @@ npm install
 # Compile the extension
 npm run compile
 
-# Run tests
-npm test
-
-# Start development
+# Start development in watch mode
 npm run watch
 ```
 
 ### 🧪 Testing Your Changes
 
-1. Open the project in VS Code
-2. Press `F5` to start Extension Development Host
-3. Test your changes in the new VS Code window
-4. Check the Console for errors (`Help > Toggle Developer Tools`)
+#### Running Tests
+
+```bash
+# Run all tests
+npm test
+
+# Run unit tests with coverage
+npm run test:unit
+
+# Compile tests only
+npm run compile-tests
+
+# Watch test files for changes
+npm run watch-tests
+
+# Run linter
+npm run lint
+
+# Format code
+npm run format
+
+# Create production build
+npm run package
+```
+
+#### Debugging in VS Code
+
+For detailed debugging instructions, including how to launch the extension, check logs, and troubleshoot common issues, please refer to the [Debugging Guide (Japanese)](./DEBUG.md).
 
 ## 📝 Pull Request Process
 
@@ -194,6 +215,7 @@ We especially welcome contributions in these areas:
 ### Project-Specific
 - [Architecture Overview](./docs/architecture.md) (if available)
 - [Testing Guide](./docs/testing.md) (if available)
+- [Release Process Guide (Japanese)](./RELEASE_PROCESS.md)
 
 ## 🤝 Code of Conduct
 

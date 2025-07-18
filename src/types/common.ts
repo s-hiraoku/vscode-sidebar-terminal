@@ -6,30 +6,29 @@
  */
 
 // 新しい型システムからのインポート
-import {
-  ExtensionTerminalConfig,
-  CompleteTerminalSettings,
-  PartialTerminalSettings,
-} from './shared';
+import { PartialTerminalSettings, WebViewFontSettings, TerminalConfig } from './shared';
 
-// IPty interface for type safety when using node-pty or mocks
-export interface IPty {
-  pid: number;
-  cols: number;
-  rows: number;
-  handleFlowControl?: boolean;
-  onData: (callback: (data: string) => void) => void;
-  onExit: (callback: (exitCode: number, signal?: number) => void) => void;
-  write: (data: string) => void;
-  resize: (cols: number, rows: number) => void;
-  kill: (signal?: string) => void;
-  clear?: () => void;
-}
+// IPty interface is now defined in node-pty.d.ts for @homebridge/node-pty-prebuilt-multiarch
+// Import IPty from the node-pty module when needed
 
 export interface TerminalInfo {
   id: string;
   name: string;
   isActive: boolean;
+}
+
+// 新しいアーキテクチャ用の状態管理
+export interface TerminalState {
+  terminals: TerminalInfo[];
+  activeTerminalId: string | null;
+  maxTerminals: number;
+  availableSlots: number[];
+}
+
+export interface DeleteResult {
+  success: boolean;
+  reason?: string;
+  newState?: TerminalState;
 }
 
 // ===== 後方互換性のための型エイリアス =====
@@ -39,13 +38,15 @@ export interface TerminalInfo {
  * ターミナル設定インターフェース
  * @deprecated shared.ts の ExtensionTerminalConfig を使用してください
  */
-export type TerminalConfig = ExtensionTerminalConfig;
+// TerminalConfig type alias is now centrally defined in shared.ts
+// Use: import { TerminalConfig } from './shared' when needed
 
 /**
  * ターミナル設定の詳細インターフェース
  * @deprecated shared.ts の CompleteTerminalSettings を使用してください
  */
-export type TerminalSettings = CompleteTerminalSettings;
+// TerminalSettings type alias is now centrally defined in shared.ts
+// Use: import { TerminalSettings } from './shared' when needed
 
 export interface WebviewMessage {
   command:
@@ -57,7 +58,9 @@ export interface WebviewMessage {
     | 'terminalCreated'
     | 'terminalRemoved'
     | 'settingsResponse'
-    | 'openSettings';
+    | 'fontSettingsUpdate'
+    | 'openSettings'
+    | 'stateUpdate';
   config?: TerminalConfig;
   data?: string;
   exitCode?: number;
@@ -66,6 +69,8 @@ export interface WebviewMessage {
   terminals?: TerminalInfo[];
   activeTerminalId?: string;
   settings?: PartialTerminalSettings; // 部分的な設定を受け取るよう修正
+  fontSettings?: WebViewFontSettings; // フォント設定を受け取る
+  state?: TerminalState; // 新しいアーキテクチャ用の状態更新
 }
 
 export interface VsCodeMessage {
@@ -79,12 +84,17 @@ export interface VsCodeMessage {
     | 'clear'
     | 'getSettings'
     | 'updateSettings'
-    | 'terminalClosed';
+    | 'terminalClosed'
+    | 'terminalInteraction'
+    | 'killTerminal'
+    | 'deleteTerminal';
   data?: string;
   cols?: number;
   rows?: number;
   terminalId?: string;
+  type?: TerminalInteractionEvent['type'];
   settings?: PartialTerminalSettings; // 部分的な設定を送信するよう修正
+  requestSource?: 'header' | 'panel'; // 新しいアーキテクチャ用の削除要求元
 }
 
 export interface TerminalInstance {
@@ -106,21 +116,27 @@ export interface TerminalEvent {
   exitCode?: number;
 }
 
-export interface ClaudeCodeState {
-  isActive: boolean;
-  terminalId?: string;
-  startTime?: number;
-  outputVolume?: number;
-}
-
 export interface AltClickState {
-  isEnabled: boolean;
-  isTemporarilyDisabled: boolean;
-  disableReason?: string;
+  isVSCodeAltClickEnabled: boolean;
+  isAltKeyPressed: boolean;
 }
 
 export interface TerminalInteractionEvent {
-  type: 'alt-click' | 'output-detected' | 'claude-code-start' | 'claude-code-end';
+  type:
+    | 'alt-click'
+    | 'alt-click-blocked'
+    | 'output-detected'
+    | 'focus'
+    | 'switch-next'
+    | 'webview-ready'
+    | 'terminal-removed'
+    | 'font-settings-update'
+    | 'settings-update'
+    | 'new-terminal'
+    | 'resize'
+    | 'kill'
+    | 'interrupt'
+    | 'paste';
   terminalId: string;
   timestamp: number;
   data?: unknown;

@@ -300,6 +300,23 @@ if (typeof document !== 'undefined') {
         opacity: 0;
       }
     }
+    
+    @keyframes altClickFade {
+      0% { opacity: 1; transform: scale(1); }
+      100% { opacity: 0; transform: scale(3); }
+    }
+    
+    @keyframes fadeInOut {
+      0% { opacity: 0; }
+      20% { opacity: 1; }
+      80% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+    
+    @keyframes notificationSlideIn {
+      from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+      to { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
   `;
   document.head.appendChild(style);
 }

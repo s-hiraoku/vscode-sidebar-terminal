@@ -49,3 +49,44 @@ const mockPtyProcess = {
 const _ptyMock = {
   spawn: () => mockPtyProcess,
 };
+
+// Comprehensive EventEmitter methods for process object to fix Mocha issues
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const originalProcess = global.process as any;
+if (originalProcess) {
+  // Ensure all EventEmitter methods exist
+  const eventMethods = [
+    'on',
+    'off',
+    'removeListener',
+    'removeAllListeners',
+    'emit',
+    'addListener',
+    'once',
+    'prependListener',
+    'prependOnceListener',
+  ];
+
+  eventMethods.forEach((method) => {
+    if (!originalProcess[method] || typeof originalProcess[method] !== 'function') {
+      originalProcess[method] = function () {
+        return originalProcess;
+      };
+    }
+  });
+
+  // Special handling for removeListener to prevent Mocha errors
+  const originalRemoveListener = originalProcess.removeListener;
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  originalProcess.removeListener = function (event: string, listener: Function) {
+    try {
+      if (originalRemoveListener && typeof originalRemoveListener === 'function') {
+        return originalRemoveListener.call(this, event, listener);
+      }
+      return originalProcess;
+    } catch (e) {
+      // Silently ignore removeListener errors in test environment
+      return originalProcess;
+    }
+  };
+}

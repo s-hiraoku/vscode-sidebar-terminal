@@ -454,16 +454,23 @@ describe('WebView Main', () => {
       });
 
       it('should handle WebView communication errors', () => {
+        // Mock vscode.postMessage to throw an error
+        const originalPostMessage = manager.vscode.postMessage;
+        manager.vscode.postMessage = sinon.stub().throws(new Error('Communication error'));
+
         const errorHandler = sinon.spy();
 
         try {
           // Simulate communication error
-          manager.vscode.postMessage(null);
+          manager.vscode.postMessage({ command: 'test' });
         } catch (error) {
           errorHandler(error);
         }
 
         expect(errorHandler).to.have.been.called;
+
+        // Restore original postMessage
+        manager.vscode.postMessage = originalPostMessage;
       });
 
       it('should handle DOM manipulation errors', () => {

@@ -12,7 +12,9 @@ npm run watch            # Watch mode for development
 npm run package          # Production build with optimizations
 
 # Testing
-npm test                 # Run all tests
+npm test                 # Run unit tests only (recommended for development)
+npm run test:unit       # Run unit tests explicitly
+npm run test:coverage   # Run tests with coverage reporting
 npm run pretest         # Compile tests + build + lint (runs before test)
 npm run compile-tests   # Compile test files only
 npm run watch-tests     # Watch test files
@@ -24,6 +26,11 @@ npm run format          # Prettier formatting
 # Extension Packaging
 npm run vsce:package    # Create .vsix package
 npm run vsce:publish    # Publish to marketplace
+
+# Release Management
+npm run release:patch   # Increment patch version and create release
+npm run release:minor   # Increment minor version and create release
+npm run release:major   # Increment major version and create release
 ```
 
 ### VS Code Development
@@ -43,11 +50,15 @@ This is a VS Code extension that provides a terminal interface in the sidebar us
 - **Extension Entry Point**: Registers commands, providers, and handles extension activation/deactivation
 
 **WebView (Browser)**
-- **TerminalWebviewManager**: Main webview controller, manages xterm.js instances and UI state
+- **TerminalWebviewManager**: Main coordinator that implements IManagerCoordinator interface and orchestrates all WebView managers
+- **MessageManager**: Handles communication between WebView and Extension, processes incoming messages and queues outgoing messages
+- **InputManager**: Manages keyboard shortcuts, IME handling, and Alt+Click interactions  
+- **UIManager**: Controls visual feedback, theming, borders, and terminal appearance
+- **ConfigManager**: Manages settings persistence and configuration
+- **NotificationManager**: Provides user feedback and visual alerts
 - **SplitManager**: Handles terminal splitting functionality and layout calculations
-- **StatusManager/SimpleStatusManager**: User feedback and status display
-- **SettingsPanel**: In-webview settings configuration
-- **NotificationUtils**: Unified error/warning/info notifications
+- **PerformanceManager**: Manages output buffering, debouncing, and performance optimizations
+- **xterm.js**: Core terminal emulation library
 
 ### Communication Flow
 
@@ -62,13 +73,15 @@ User Action → VS Code Command → Extension Host → WebView Message → xterm
 **Terminal Lifecycle Management**
 - Each terminal has a unique ID and is tracked in TerminalManager
 - Active terminal concept: only one terminal receives input at a time
-- Kill operations always target the active terminal (not by ID)
+- Terminal numbering: Uses recycled numbers 1-5 instead of incrementing infinitely
+- Deletion operations are queued and processed atomically to prevent race conditions
 - Infinite loop prevention using `_terminalBeingKilled` tracking set
 
 **Message Communication**
 - Webview ↔ Extension communication via `postMessage` protocol
-- Commands: `init`, `output`, `input`, `resize`, `clear`, `killTerminal`, etc.
+- Commands: `init`, `output`, `input`, `resize`, `clear`, `killTerminal`, `deleteTerminal`, `stateUpdate`, etc.
 - Event-driven architecture with proper cleanup on disposal
+- MessageManager queues messages for reliable delivery and prevents race conditions
 
 **Performance Optimizations**
 - Data buffering: Terminal output is batched to reduce message frequency (16ms intervals, ~60fps)
@@ -84,10 +97,12 @@ User Action → VS Code Command → Extension Host → WebView Message → xterm
 - `webpack.config.js`: Dual build configuration (extension + webview)
 
 **WebView Frontend**
-- `src/webview/main.ts`: WebView entry point using xterm.js
-- `src/webview/managers/`: UI component managers (split, status, etc.)
-- `src/webview/components/`: Reusable UI components
+- `src/webview/main.ts`: WebView entry point containing TerminalWebviewManager class that coordinates all manager instances
+- `src/webview/managers/`: Manager implementations (MessageManager, InputManager, UIManager, PerformanceManager, NotificationManager, SplitManager, ConfigManager)
+- `src/webview/components/`: Reusable UI components (SettingsPanel)
 - `src/webview/utils/`: Utility functions for DOM, themes, notifications
+- `src/webview/core/`: Core logic (NotificationBridge, NotificationSystem)
+- `src/webview/interfaces/`: Manager interfaces and type definitions (IManagerCoordinator, IMessageManager, etc.)
 
 **Configuration and Types**
 - `package.json`: Extension manifest, commands, settings schema, menu contributions
@@ -96,9 +111,13 @@ User Action → VS Code Command → Extension Host → WebView Message → xterm
 
 ### Important Implementation Details
 
-**Terminal Kill Specification**
-- The kill button and `killTerminal` command always kill the **active terminal**, not a specific terminal ID
-- This is enforced in both TerminalManager and webview layers
+**New Terminal Management Architecture (Recently Implemented)**
+- **Single Source of Truth**: Extension (TerminalManager) is the sole authority for terminal state management
+- **Unified Deletion Protocol**: Both header × button and panel trash button use the same `deleteTerminal()` method
+- **Race Condition Prevention**: Operations are queued and processed atomically using `operationQueue`
+- **State Synchronization**: WebView receives automatic state updates via `onStateUpdate` event
+- **Terminal ID Recycling**: Terminal numbers (1-5) are properly reused when terminals are deleted
+- **Request Source Tracking**: Deletion requests are tagged with source ('header' or 'panel') for debugging
 
 **Webview Context Retention**
 - WebView uses `retainContextWhenHidden: true` to maintain state when sidebar is hidden
@@ -110,9 +129,11 @@ User Action → VS Code Command → Extension Host → WebView Message → xterm
 - Graceful degradation when terminal processes fail
 
 **Testing Architecture**
-- Comprehensive test suite covering extension, terminal manager, webview, and integration scenarios
-- Performance tests for memory usage and terminal lifecycle
-- End-to-end tests using VS Code test runner
+- **Unit Tests**: Primary testing approach using Mocha with 275+ tests (93% success rate)
+- **Test Organization**: Tests located in `src/test/unit/` with component-specific subdirectories
+- **Test Environment**: Uses `TestSetup.ts` for VS Code API mocking and process polyfills
+- **CI Integration**: Tests run on Ubuntu, macOS, and Windows with xvfb for headless testing
+- **Known Issues**: Mocha cleanup may exit with code 7 due to process event handling; tests themselves pass successfully
 
 ### Extension Configuration
 
@@ -269,18 +290,26 @@ npm run vsce:package:linux-arm64    # Linux ARM64
 
 ### Release Workflow
 
+**Automated Release Process**: Uses `for-publish` branch for release management
 ```bash
-# Development workflow
-npm version patch|minor|major   # Update package.json version
-git push origin for-publish     # Push changes
-git tag vX.X.X                 # Create release tag
-git push origin vX.X.X         # Trigger automated release
+# Switch to release branch and merge changes
+git checkout for-publish
+git merge [feature-branch]
+
+# Create release using npm scripts
+npm run release:patch    # Automatically increments version, creates tag, and pushes
 
 # GitHub Actions automatically:
-# 1. Builds all 9 platform packages
-# 2. Creates GitHub Release
-# 3. Publishes to VS Code Marketplace
+# 1. Runs tests with Mocha exit code 7 handling
+# 2. Builds all 9 platform packages in parallel
+# 3. Creates GitHub Release with VSIX files
+# 4. Attempts VS Code Marketplace publishing (requires VSCE_PAT)
 ```
+
+**CI/CD Workflows**:
+- `release.yml`: Triggered by `v*` tags, handles testing, building, and publishing
+- `build-platform-packages.yml`: Creates platform-specific VSIX packages
+- `ci.yml`: Standard CI for pull requests and branch pushes
 
 ### Marketplace Integration
 
@@ -307,3 +336,40 @@ code --install-extension package.vsix
 - Use GitHub Actions for testing on actual target platforms
 - Each platform build includes native node-pty compilation
 - VSIX packages contain platform-specific binaries in `node_modules/node-pty/build/`
+
+## Testing and Debugging
+
+### Running Tests Locally
+```bash
+# Recommended for development - runs unit tests only
+npm test
+
+# Run with coverage reporting
+npm run test:coverage
+
+# Run specific test files
+npm run compile-tests
+./node_modules/.bin/mocha --require out/test/shared/TestSetup.js 'out/test/unit/specific/test.js'
+
+# Watch mode for TDD
+npm run watch-tests
+```
+
+### CI Test Behavior
+- **Unit Tests**: Run on all platforms (Ubuntu, macOS, Windows)
+- **Exit Code Handling**: CI handles Mocha cleanup exit code 7 as success when tests pass
+- **Platform-Specific**: Linux runs full test suite, macOS/Windows compile tests only for performance
+- **Test Coverage**: ~275 tests with 93% success rate expected
+
+### Debugging Common Issues
+- **Process Polyfill Issues**: Check `TestSetup.ts` for VS Code API mocks and process event handlers
+- **Node-pty Compilation**: Ensure native module rebuilding works for target platform
+- **Webview Context**: Use VS Code Developer Tools (`Ctrl+Shift+I`) for webview debugging
+- **Extension Host**: Check VS Code Developer Console for extension-side errors
+
+### Test Environment Setup
+The test environment automatically configures:
+- VS Code API mocks for workspace, window, commands
+- Process event handler polyfills for Mocha compatibility
+- DOM mocking via JSDOM for webview component tests
+- Sinon sandboxes for isolated test execution
