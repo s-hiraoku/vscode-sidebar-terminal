@@ -98,31 +98,31 @@ A powerful VS Code extension that displays a terminal in the sidebar for efficie
 
 Customize the extension through VS Code settings (`settings.json`):
 
-```json
-{
-  "sidebarTerminal.shell": "",
-  "sidebarTerminal.shellArgs": [],
-  "sidebarTerminal.fontSize": 14,
-  "sidebarTerminal.fontFamily": "Consolas, 'Courier New', monospace",
-  "sidebarTerminal.maxTerminals": 5,
-  "sidebarTerminal.theme": "auto",
-  "sidebarTerminal.cursorBlink": true,
-  "sidebarTerminal.altClickMovesCursor": true
-}
-```
-
-### Configuration Options
-
 | Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| `shell` | string | "" | Path to shell executable (empty for system default) |
-| `shellArgs` | array | [] | Arguments to pass to the shell |
-| `fontSize` | number | 14 | Terminal font size |
-| `fontFamily` | string | "Consolas, 'Courier New', monospace" | Terminal font family |
-| `maxTerminals` | number | 5 | Maximum number of concurrent terminals |
-| `theme` | string | "auto" | Terminal theme (auto/dark/light) |
-| `cursorBlink` | boolean | true | Enable cursor blinking |
-| `altClickMovesCursor` | boolean | true | Enable Alt+Click cursor positioning |
+|---|---|---|---|
+| `sidebarTerminal.shell` | string | `""` | Path to shell executable. Leave empty to use system default. |
+| `sidebarTerminal.shellArgs` | array | `[]` | Arguments to pass to the shell. |
+| `sidebarTerminal.maxTerminals` | number | 5 | Maximum number of terminals allowed. |
+| `sidebarTerminal.cursorBlink` | boolean | `true` | Enable cursor blinking in terminal. |
+| `sidebarTerminal.theme` | string | `auto` | Terminal theme. Auto follows VS Code theme. |
+| `sidebarTerminal.defaultDirectory` | string | `""` | Default directory for new terminals. Leave empty to use workspace root. |
+| `sidebarTerminal.confirmBeforeKill` | boolean | `false` | Show confirmation dialog before closing terminals |
+| `sidebarTerminal.protectLastTerminal` | boolean | `true` | Prevent closing the last terminal |
+| `sidebarTerminal.minTerminalCount` | number | 1 | Minimum number of terminals to keep open |
+| `sidebarTerminal.maxSplitTerminals` | number | 5 | Maximum number of terminals to display in split view |
+| `sidebarTerminal.minTerminalHeight` | number | 100 | Minimum height for each terminal in split view (pixels) |
+| `sidebarTerminal.enableSplitResize` | boolean | `true` | Allow resizing split terminals by dragging splitters |
+| `sidebarTerminal.statusDisplayDuration` | number | 3000 | Duration to display status messages (milliseconds) |
+| `sidebarTerminal.autoHideStatus` | boolean | `true` | Automatically hide status messages after specified duration |
+| `sidebarTerminal.showStatusOnActivity` | boolean | `true` | Show last status message when user performs actions |
+| `sidebarTerminal.showWebViewHeader` | boolean | `true` | Show title and command icons in the webview header |
+| `sidebarTerminal.webViewTitle` | string | `Terminal` | Title to display in the webview header |
+| `sidebarTerminal.showSampleIcons` | boolean | `true` | Show sample command icons in webview header (display only) |
+| `sidebarTerminal.sampleIconOpacity` | number | 0.4 | Opacity of sample icons (0.1 to 1.0) |
+| `sidebarTerminal.headerFontSize` | number | 14 | Font size for webview header title |
+| `sidebarTerminal.headerIconSize` | number | 20 | Size of terminal icon in webview header |
+| `sidebarTerminal.sampleIconSize` | number | 16 | Size of sample icons in webview header |
+| `sidebarTerminal.altClickMovesCursor` | boolean | `true` | Controls whether Alt/Option + click will reposition the prompt cursor. |
 
 ## 🛠️ Development
 
@@ -281,62 +281,17 @@ This project is licensed under the [MIT License](LICENSE).
 
 ## 📝 Changelog
 
+See [CHANGELOG.md](CHANGELOG.md) for detailed changes.
+
+### v0.1.25
+- **WebView Architecture Refactoring**: Transformed the frontend into a modular system with 9 focused managers, improving organization, maintainability, and performance.
+- **Active Terminal Visualization**: Added a border to the active terminal for better focus indication.
+- **SVG Icon**: Updated the extension icon to SVG for better scaling.
+
 ### v0.0.1 (Initial Release)
-
-#### Features
-- Initial release of Sidebar Terminal extension
-- **Core Features**: Terminal integration in VS Code Primary Sidebar, multiple terminal management (up to 5), split terminal functionality, Clear, New, and Split button controls, full shell execution environment powered by node-pty.
-- **Platform Support**: Cross-platform compatibility (Windows, macOS, Linux), IME support for multi-language input, special key handling.
-- **Advanced Features**: Alt+Click cursor positioning with VS Code standard behavior, Claude Code detection for optimal performance, visual feedback with blue cursor highlight, automatic conflict resolution for terminal output interference.
-- **Customization Options**: Configurable shell and shell arguments, font family and size customization, terminal theme support, cursor blinking controls, maximum terminal count settings.
-- **Developer Experience**: Comprehensive testing strategy with 47 test cases, modern testing tooling, multi-platform CI/CD pipeline, code coverage reporting, ESLint and Prettier integration.
-
-#### Technical Implementation
-- **Architecture**: Clean separation between extension host (Node.js) and WebView (browser).
-- **Terminal Rendering**: xterm.js for high-performance terminal emulation.
-- **Process Management**: node-pty for cross-platform PTY support.
-- **State Management**: Centralized TerminalManager for multi-terminal coordination.
-- **Communication**: Event-driven architecture with proper message handling.
-
-#### Testing & Quality Assurance
-- **Unit Tests**: 47 test cases covering core functionality (DOM manipulation, notification system, Alt+Click).
-- **Integration Tests**: VS Code extension testing with mocked APIs.
-- **Code Coverage**: Comprehensive coverage reporting with nyc (Istanbul).
-- **CI/CD**: GitHub Actions workflow for multi-platform testing.
-- **Code Quality**: ESLint, Prettier, and TypeScript strict mode.
-
-#### Fixed Issues
-- ✅ PTY communication reliability improvements.
-- ✅ Backspace key and special character handling.
-- ✅ WebView entry point resolution (simple.ts → main.ts).
-- ✅ Clear/New/Split button functionality.
-- ✅ TypeScript and ESLint error resolution.
-- ✅ Cross-platform terminal execution environment.
-- ✅ User guidance and error handling enhancements.
-
-#### Performance Optimizations
-- **Output Buffering**: Adaptive buffering (8ms vs 16ms) for optimal performance.
-- **Claude Code Detection**: Automatic performance optimization during AI interactions.
-- **Memory Management**: Proper cleanup and disposal patterns.
-- **Resize Handling**: Debounced terminal resize operations.
-
-#### Security & Reliability
-- **Input Validation**: Comprehensive input sanitization.
-- **Error Handling**: Graceful degradation and user-friendly error messages.
-- **Resource Management**: Proper cleanup of PTY processes and WebView resources.
-- **Security Testing**: CodeQL analysis and dependency vulnerability scanning.
-
-### v0.0.2 (Future Release - Planned)
-
-#### Planned Features
-- **Enhanced Testing**: Complete Phase 2 WebView component testing (SplitManager, HeaderManager, SettingsPanel).
-- **Advanced Testing**: Phase 3 implementation (Performance testing framework, Accessibility testing with axe-core, Load testing for multiple terminals).
-- **User Experience**: Terminal session persistence, custom themes and color schemes, enhanced keyboard shortcuts, terminal history management.
-
-#### WebView Architecture Refactoring (Completed in v0.0.2)
-- Transformed monolithic `main.ts` into a modular system with 9 focused managers (Performance, ClaudeCode, Input, UI, Config, Message, Notification, TerminalCoordinator).
-- Achieved significant improvements in code organization, maintainability, and performance.
-- Implemented intelligent buffering, debounced operations, and efficient resource management.
+- Core features including sidebar integration, multiple terminals, and split view.
+- Cross-platform support (Windows, macOS, Linux) with IME handling.
+- Advanced features like Alt+Click cursor positioning.
 
 ## 🙏 Acknowledgments
 
@@ -358,3 +313,7 @@ This project uses these excellent libraries:
 **Repository**: [vscode-sidebar-terminal](https://github.com/s-hiraoku/vscode-sidebar-terminal)  
 **License**: MIT  
 **Support**: [Issues](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues)
+
+---
+
+*This README was last updated on 2025-07-18.*
