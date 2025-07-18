@@ -444,9 +444,9 @@ export class SplitManager {
     const container = this.terminalContainers.get(id);
 
     console.log(
-      `🗑️ [SPLIT] Removing terminal ${id}, terminal:`,
+      '🗑️ [SPLIT] Removing terminal %s, terminal: %s, container: %s',
+      id,
       !!terminal,
-      'container:',
       !!container
     );
 
@@ -454,7 +454,7 @@ export class SplitManager {
       // Dispose terminal
       try {
         terminal.terminal.dispose();
-        console.log(`🗑️ [SPLIT] Terminal ${id} disposed successfully`);
+        console.log('🗑️ [SPLIT] Terminal %s disposed successfully', id);
       } catch (error) {
         console.error(`Error disposing terminal ${id}:`, error);
       }
@@ -467,7 +467,7 @@ export class SplitManager {
       try {
         // Remove container from DOM
         container.remove();
-        console.log(`🗑️ [SPLIT] Container for terminal ${id} removed from DOM`);
+        console.log('🗑️ [SPLIT] Container for terminal %s removed from DOM', id);
       } catch (error) {
         console.error(`Error removing container for terminal ${id}:`, error);
       }
@@ -476,7 +476,7 @@ export class SplitManager {
       this.terminalContainers.delete(id);
     }
 
-    console.log(`🗑️ [SPLIT] Terminal ${id} fully removed from SplitManager`);
+    console.log('🗑️ [SPLIT] Terminal %s fully removed from SplitManager', id);
     console.log(`🗑️ [SPLIT] Remaining terminals:`, Array.from(this.terminals.keys()));
     console.log(`🗑️ [SPLIT] Remaining containers:`, Array.from(this.terminalContainers.keys()));
   }
