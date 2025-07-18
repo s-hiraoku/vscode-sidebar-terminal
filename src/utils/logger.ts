@@ -21,7 +21,7 @@ class Logger {
       process.env.NODE_ENV === 'development' || process.env.VSCODE_DEBUG_MODE === 'true';
 
     // Set log level based on environment
-    // Production: Only show errors and warnings
+    // Production: Only show errors
     // Development: Show all logs including debug
     this.level = this.isDevelopment ? LogLevel.DEBUG : LogLevel.ERROR;
   }
