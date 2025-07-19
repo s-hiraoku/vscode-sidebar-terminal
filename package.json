@@ -262,6 +262,11 @@
           "type": "boolean",
           "default": false,
           "description": "Enable automatic @filename mention when Claude Code sends to standard terminal"
+        },
+        "sidebarTerminal.focusAfterAtMention": {
+          "type": "boolean",
+          "default": true,
+          "description": "Focus sidebar terminal after sending @filename with CMD+OPT+L"
         }
       }
     },

@@ -56,9 +56,42 @@ export function activate(context: vscode.ExtensionContext): void {
 }
 
 /**
+ * サイドバーターミナルにフォーカスを移動
+ */
+async function focusSidebarTerminal(): Promise<void> {
+  try {
+    // ユーザー設定を確認
+    const config = vscode.workspace.getConfiguration('sidebarTerminal');
+    const shouldFocus = config.get<boolean>('focusAfterAtMention', true);
+
+    if (!shouldFocus) {
+      log('🔧 [DEBUG] Focus disabled by user setting');
+      return;
+    }
+
+    log('🔧 [DEBUG] Attempting to focus sidebar terminal...');
+
+    // 1. サイドバーコンテナを表示してフォーカス
+    await vscode.commands.executeCommand('workbench.view.extension.sidebarTerminalContainer');
+
+    // 2. WebView内のターミナルにフォーカスを送信（将来の実装）
+    // TODO: SidebarTerminalProvider に sendFocusToTerminal メソッドを追加
+    // if (sidebarProvider && typeof sidebarProvider.sendFocusToTerminal === 'function') {
+    //   sidebarProvider.sendFocusToTerminal();
+    //   log('🔧 [DEBUG] Sent focus message to WebView');
+    // }
+
+    log('✅ [DEBUG] Successfully focused sidebar terminal');
+  } catch (error) {
+    log('⚠️ [WARN] Failed to focus sidebar terminal:', error);
+    // フォーカス失敗は致命的ではないので、エラーメッセージは表示しない
+  }
+}
+
+/**
  * 独立した @filename 送信処理（CMD+OPT+L）
  */
-function handleSendAtMention(): void {
+async function handleSendAtMention(): Promise<void> {
   try {
     log('🚀 [DEBUG] handleSendAtMention called');
 
@@ -76,7 +109,7 @@ function handleSendAtMention(): void {
     log('🔧 [DEBUG] Full file path:', fileName);
 
     const baseName = fileName.split('/').pop() || fileName.split('\\').pop() || fileName;
-    const text = `@${baseName}`;
+    const text = `@${baseName} `;
 
     log('🔧 [DEBUG] Generated @filename from active editor:', text);
     log('🔧 [DEBUG] TerminalManager status:', terminalManager ? 'available' : 'not available');
@@ -86,6 +119,9 @@ function handleSendAtMention(): void {
       log('🔧 [DEBUG] Attempting to send input to terminal manager...');
       terminalManager.sendInput(text);
       log('✅ [DEBUG] Sent @mention to sidebar terminal:', text);
+
+      // サイドバーパネルにフォーカスを移動
+      await focusSidebarTerminal();
 
       // 常に成功通知を表示（デバッグのため）
       void vscode.window.showInformationMessage(`✅ Sent ${text} to sidebar terminal`);
@@ -179,9 +215,9 @@ function registerCommands(
     },
     {
       command: 'sidebarTerminal.sendAtMention',
-      callback: () => {
+      callback: async () => {
         log('🔧 [DEBUG] Command executed: sendAtMention (independent @filename command)');
-        handleSendAtMention();
+        await handleSendAtMention();
       },
     },
   ];
