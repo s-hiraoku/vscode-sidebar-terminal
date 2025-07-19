@@ -56,6 +56,92 @@ export function activate(context: vscode.ExtensionContext): void {
 }
 
 /**
+ * 独立した @filename 送信処理（CMD+OPT+L）
+ */
+function handleSendAtMention(): void {
+  try {
+    log('🚀 [DEBUG] handleSendAtMention called');
+
+    // アクティブエディタから @filename を生成
+    const activeEditor = vscode.window.activeTextEditor;
+    log('🔧 [DEBUG] Active editor:', activeEditor ? 'found' : 'not found');
+
+    if (!activeEditor) {
+      log('⚠️ [WARN] No active editor found for @mention');
+      void vscode.window.showWarningMessage('No active file to mention. Please open a file first.');
+      return;
+    }
+
+    const fileName = activeEditor.document.fileName;
+    log('🔧 [DEBUG] Full file path:', fileName);
+
+    const baseName = fileName.split('/').pop() || fileName.split('\\').pop() || fileName;
+    const text = `@${baseName}`;
+
+    log('🔧 [DEBUG] Generated @filename from active editor:', text);
+    log('🔧 [DEBUG] TerminalManager status:', terminalManager ? 'available' : 'not available');
+
+    // サイドバーターミナルに送信
+    if (terminalManager) {
+      log('🔧 [DEBUG] Attempting to send input to terminal manager...');
+      terminalManager.sendInput(text);
+      log('✅ [DEBUG] Sent @mention to sidebar terminal:', text);
+
+      // 常に成功通知を表示（デバッグのため）
+      void vscode.window.showInformationMessage(`✅ Sent ${text} to sidebar terminal`);
+    } else {
+      log('⚠️ [WARN] TerminalManager not available');
+      void vscode.window.showWarningMessage(
+        'Sidebar terminal not available. Please open the sidebar terminal first.'
+      );
+    }
+  } catch (error) {
+    log('❌ [ERROR] Error in handleSendAtMention:', error);
+    void vscode.window.showErrorMessage(`Failed to send @mention: ${String(error)}`);
+  }
+}
+
+/**
+ * テキストをターミナルに送信する（Claude Code連携用）
+ */
+function handleSendToTerminal(content?: string): void {
+  try {
+    log('🔧 [DEBUG] HandleSendToTerminal called with content:', content);
+
+    let text: string | undefined = content;
+
+    // content が未定義の場合、アクティブエディタから @filename を生成
+    if (!text) {
+      const activeEditor = vscode.window.activeTextEditor;
+      if (activeEditor) {
+        const fileName = activeEditor.document.fileName;
+        const baseName = fileName.split('/').pop() || fileName.split('\\').pop() || fileName;
+        text = `@${baseName}`;
+        log('🔧 [DEBUG] Generated @filename from active editor:', text);
+      } else {
+        log('⚠️ [WARN] No content provided and no active editor found');
+        void vscode.window.showWarningMessage(
+          'No content to send. Please provide content or open a file first.'
+        );
+        return;
+      }
+    }
+
+    if (text && terminalManager) {
+      // TerminalManagerのsendInputメソッドを使用してテキストを送信
+      terminalManager.sendInput(text);
+      log('✅ [DEBUG] Successfully sent text to terminal:', text);
+    } else {
+      log('⚠️ [WARN] No text to send or terminalManager not available');
+      void vscode.window.showWarningMessage('Unable to send text to terminal');
+    }
+  } catch (error) {
+    log('❌ [ERROR] Error in handleSendToTerminal:', error);
+    void vscode.window.showErrorMessage(`Failed to send text to terminal: ${String(error)}`);
+  }
+}
+
+/**
  * コマンドを登録する
  */
 function registerCommands(
@@ -82,6 +168,20 @@ function registerCommands(
       callback: () => {
         log('🔧 [DEBUG] Command executed: openSettings');
         provider.openSettings();
+      },
+    },
+    {
+      command: 'sidebarTerminal.sendToTerminal',
+      callback: (content?: string) => {
+        log('🔧 [DEBUG] Command executed: sendToTerminal', 'content:', content);
+        handleSendToTerminal(content);
+      },
+    },
+    {
+      command: 'sidebarTerminal.sendAtMention',
+      callback: () => {
+        log('🔧 [DEBUG] Command executed: sendAtMention (independent @filename command)');
+        handleSendAtMention();
       },
     },
   ];

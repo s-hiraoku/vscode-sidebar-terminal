@@ -94,6 +94,13 @@ A powerful VS Code extension that displays a terminal in the sidebar for efficie
 - **Visual Feedback**: Blue highlight shows cursor position with fade animation
 - **Requirements**: Both `terminal.integrated.altClickMovesCursor` and `editor.multiCursorModifier: "alt"` must be enabled
 
+### 🤖 Claude Code Integration
+
+- **Independent Operation**: Works alongside Claude Code extension without conflicts
+- **Dedicated Keybinding**: `CMD+OPT+L` (Mac) / `Ctrl+Alt+L` (Windows/Linux) to send `@filename` to sidebar terminal
+- **Cooperative Design**: Claude Code (`CMD+OPT+K` → standard terminal) and Sidebar Terminal operate independently
+- **Command**: Use "Send @filename to Sidebar Terminal" from Command Palette
+
 ## ⚙️ Configuration
 
 Customize the extension through VS Code settings (`settings.json`):

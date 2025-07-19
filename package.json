@@ -88,6 +88,16 @@
         "command": "sidebarTerminal.openSettings",
         "title": "Terminal Settings",
         "icon": "$(settings-gear)"
+      },
+      {
+        "command": "sidebarTerminal.sendToTerminal",
+        "title": "Send to Sidebar Terminal",
+        "category": "Sidebar Terminal"
+      },
+      {
+        "command": "sidebarTerminal.sendAtMention",
+        "title": "Send @filename to Sidebar Terminal (CMD+OPT+L)",
+        "category": "Sidebar Terminal"
       }
     ],
     "menus": {
@@ -247,9 +257,22 @@
           "type": "boolean",
           "default": true,
           "description": "Controls whether Alt/Option + click will reposition the prompt cursor to underneath the mouse. This feature may not work reliably for some shells or programs."
+        },
+        "sidebarTerminal.enableAtMentionSync": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable automatic @filename mention when Claude Code sends to standard terminal"
         }
       }
-    }
+    },
+    "keybindings": [
+      {
+        "command": "sidebarTerminal.sendAtMention",
+        "key": "ctrl+alt+l",
+        "mac": "cmd+alt+l",
+        "when": "editorTextFocus"
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm rebuild && npm run package",

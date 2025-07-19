@@ -28,7 +28,17 @@
       "Bash(gh pr create:*)",
       "Bash(npm run lint)",
       "Bash(npm run format:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(gh issue list:*)",
+      "Bash(gh issue view:*)",
+      "Bash(gh issue comment:*)",
+      "Bash(npx eslint:*)",
+      "Bash(code:*)",
+      "Bash(find:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(gh issue edit:*)",
+      "Bash(npm run lint:*)",
+      "Bash(npm test)"
     ],
     "deny": []
   }
