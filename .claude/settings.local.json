@@ -38,7 +38,8 @@
       "WebFetch(domain:github.com)",
       "Bash(gh issue edit:*)",
       "Bash(npm run lint:*)",
-      "Bash(npm test)"
+      "Bash(npm test)",
+      "WebFetch(domain:code.visualstudio.com)"
     ],
     "deny": []
   }

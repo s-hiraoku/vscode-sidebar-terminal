@@ -890,12 +890,15 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
     const settings = getConfigManager().getCompleteTerminalSettings();
     const altClickSettings = getConfigManager().getAltClickSettings();
 
+    const config = vscode.workspace.getConfiguration('sidebarTerminal');
     return {
       cursorBlink: settings.cursorBlink,
       theme: settings.theme || 'auto',
       // VS Code standard settings for Alt+Click functionality
       altClickMovesCursor: altClickSettings.altClickMovesCursor,
       multiCursorModifier: altClickSettings.multiCursorModifier,
+      // Claude Code integration settings
+      enableClaudeCodeIntegration: config.get<boolean>('enableClaudeCodeIntegration', true),
     };
   }
 
@@ -919,6 +922,10 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
       }
       if (settings.theme) {
         await config.update('theme', settings.theme, vscode.ConfigurationTarget.Global);
+      }
+      if (settings.enableClaudeCodeIntegration !== undefined) {
+        await config.update('enableClaudeCodeIntegration', settings.enableClaudeCodeIntegration, vscode.ConfigurationTarget.Global);
+        log('🔧 [DEBUG] Claude Code integration setting updated:', settings.enableClaudeCodeIntegration);
       }
       // Note: Font settings are read directly from VS Code's terminal/editor settings
 

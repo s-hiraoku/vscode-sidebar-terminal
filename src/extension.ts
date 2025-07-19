@@ -60,15 +60,6 @@ export function activate(context: vscode.ExtensionContext): void {
  */
 async function focusSidebarTerminal(): Promise<void> {
   try {
-    // ユーザー設定を確認
-    const config = vscode.workspace.getConfiguration('sidebarTerminal');
-    const shouldFocus = config.get<boolean>('focusAfterAtMention', true);
-
-    if (!shouldFocus) {
-      log('🔧 [DEBUG] Focus disabled by user setting');
-      return;
-    }
-
     log('🔧 [DEBUG] Attempting to focus sidebar terminal...');
 
     // 1. サイドバーコンテナを表示してフォーカス
@@ -94,6 +85,20 @@ async function focusSidebarTerminal(): Promise<void> {
 async function handleSendAtMention(): Promise<void> {
   try {
     log('🚀 [DEBUG] handleSendAtMention called');
+
+    // Claude Code統合機能が有効かチェック
+    const config = vscode.workspace.getConfiguration('sidebarTerminal');
+    const isEnabled = config.get<boolean>('enableClaudeCodeIntegration', true);
+
+    if (!isEnabled) {
+      log('🔧 [DEBUG] Claude Code integration is disabled by user setting');
+      void vscode.window.showInformationMessage(
+        'File reference shortcuts are disabled. Enable them in Terminal Settings.'
+      );
+      return;
+    }
+
+    log('🔧 [DEBUG] Claude Code integration is enabled');
 
     // アクティブエディタから @filename を生成
     const activeEditor = vscode.window.activeTextEditor;

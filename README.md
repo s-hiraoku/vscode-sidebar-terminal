@@ -96,10 +96,15 @@ A powerful VS Code extension that displays a terminal in the sidebar for efficie
 
 ### 🤖 Claude Code Integration
 
+- **File reference shortcuts**: Use `Cmd+Option+L` (Mac) or `Alt+Ctrl+L` (Linux/Windows) to insert file references
 - **Independent Operation**: Works alongside Claude Code extension without conflicts
-- **Dedicated Keybinding**: `CMD+OPT+L` (Mac) / `Ctrl+Alt+L` (Windows/Linux) to send `@filename` to sidebar terminal
 - **Cooperative Design**: Claude Code (`CMD+OPT+K` → standard terminal) and Sidebar Terminal operate independently
 - **Command**: Use "Send @filename to Sidebar Terminal" from Command Palette
+
+## ⌨️ Keyboard Shortcuts
+
+- **File Reference**: `CMD+OPT+L` (Mac) / `Ctrl+Alt+L` (Windows/Linux) - Insert `@filename` reference
+- **Alt+Click**: Cursor positioning (when enabled in VS Code settings)
 
 ## ⚙️ Configuration
 

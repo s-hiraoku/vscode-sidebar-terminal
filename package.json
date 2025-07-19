@@ -96,7 +96,7 @@
       },
       {
         "command": "sidebarTerminal.sendAtMention",
-        "title": "Send @filename to Sidebar Terminal (CMD+OPT+L)",
+        "title": "Insert File Reference (Cmd+Option+L)",
         "category": "Sidebar Terminal"
       }
     ],
@@ -267,6 +267,11 @@
           "type": "boolean",
           "default": true,
           "description": "Focus sidebar terminal after sending @filename with CMD+OPT+L"
+        },
+        "sidebarTerminal.enableClaudeCodeIntegration": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable file reference shortcuts: Use Cmd+Option+L (Mac) or Alt+Ctrl+L (Linux/Windows) to insert file references"
         }
       }
     },

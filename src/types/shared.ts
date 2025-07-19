@@ -86,6 +86,7 @@ export interface PartialTerminalSettings {
   bellSound?: boolean;
   altClickMovesCursor?: boolean;
   multiCursorModifier?: string;
+  enableClaudeCodeIntegration?: boolean;
 }
 
 /**

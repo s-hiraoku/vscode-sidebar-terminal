@@ -367,13 +367,30 @@ Claude Code拡張機能は、VS Code標準のAPIを活用してエディタコ�
 
 ```json
 {
-  // 任意: @mention 送信時の通知を有効化
-  "sidebarTerminal.showMentionNotifications": false,
+  // ファイル参照ショートカット機能の有効/無効
+  "sidebarTerminal.enableClaudeCodeIntegration": true,
+  
+  // ショートカット実行後にサイドバーターミナルにフォーカス
+  "sidebarTerminal.focusAfterAtMention": true,
   
   // 将来機能: 自動同期（未実装）
   "sidebarTerminal.enableAtMentionSync": false
 }
 ```
+
+### VS Code 設定画面での設定
+
+VS Code の設定画面（`Ctrl/Cmd + ,`）で以下の項目を設定できます：
+
+**Sidebar Terminal > Enable Claude Code Integration**
+- **説明**: File reference shortcuts: Use Cmd+Option+L (Mac) or Alt+Ctrl+L (Linux/Windows) to insert file references
+- **デフォルト**: `true`
+- **効果**: この設定を無効にするとファイル参照ショートカット機能が完全に無効化されます
+
+**Sidebar Terminal > Focus After At Mention**
+- **説明**: Focus sidebar terminal after sending @filename with CMD+OPT+L
+- **デフォルト**: `true`
+- **効果**: ショートカット実行後、自動的にサイドバーターミナルにフォーカスが移ります
 
 ### Claude Code との併用
 

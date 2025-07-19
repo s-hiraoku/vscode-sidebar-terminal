@@ -137,6 +137,7 @@ export class SettingsPanel {
       <div style="display: grid; gap: 16px;">
         ${this.createThemeControl()}
         ${this.createCursorBlinkControl()}
+        ${this.createClaudeCodeIntegrationControl()}
       </div>
 
       <div style="display: flex; gap: 12px; margin-top: 24px; justify-content: flex-end;">
@@ -226,6 +227,55 @@ export class SettingsPanel {
   }
 
   /**
+   * Claude Code統合機能コントロールを作成
+   */
+  private createClaudeCodeIntegrationControl(): string {
+    return `
+      <div style="border-top: 1px solid var(--vscode-widget-border, #454545); padding-top: 16px;">
+        <h3 style="
+          color: var(--vscode-foreground, #cccccc);
+          font-size: 14px;
+          font-weight: 600;
+          margin: 0 0 12px 0;
+        ">Claude Code Integration</h3>
+        <label style="
+          color: var(--vscode-foreground, #cccccc);
+          font-size: 13px;
+          font-weight: 500;
+          display: flex;
+          align-items: flex-start;
+          gap: 8px;
+          cursor: pointer;
+        ">
+          <input
+            type="checkbox"
+            id="claude-code-integration"
+            checked
+            style="
+              width: 16px;
+              height: 16px;
+              cursor: pointer;
+              margin-top: 2px;
+            "
+          />
+          <div>
+            <div>Enable File Reference Shortcuts</div>
+            <div style="
+              font-size: 11px;
+              color: var(--vscode-descriptionForeground, #999999);
+              margin-top: 4px;
+              line-height: 1.4;
+            ">
+              Use Cmd+Option+L (Mac) or Alt+Ctrl+L (Linux/Windows) to insert file references
+            </div>
+          </div>
+        </label>
+      </div>
+    `;
+  }
+
+
+  /**
    * イベントリスナーを設定
    */
   private setupEventListeners(): void {
@@ -285,6 +335,7 @@ export class SettingsPanel {
       const defaultSettings: PartialTerminalSettings = {
         theme: 'auto',
         cursorBlink: true,
+        enableClaudeCodeIntegration: true,
       };
 
       this.populateSettings(defaultSettings);
@@ -305,10 +356,14 @@ export class SettingsPanel {
     const cursorBlinkCheckbox = this.panelElement.querySelector(
       '#cursor-blink'
     ) as HTMLInputElement;
+    const claudeCodeIntegrationCheckbox = this.panelElement.querySelector(
+      '#claude-code-integration'
+    ) as HTMLInputElement;
 
     return {
       theme: themeSelect?.value || 'auto',
       cursorBlink: cursorBlinkCheckbox?.checked || true,
+      enableClaudeCodeIntegration: claudeCodeIntegrationCheckbox?.checked || true,
     };
   }
 
@@ -323,6 +378,9 @@ export class SettingsPanel {
       const cursorBlinkCheckbox = this.panelElement.querySelector(
         '#cursor-blink'
       ) as HTMLInputElement;
+      const claudeCodeIntegrationCheckbox = this.panelElement.querySelector(
+        '#claude-code-integration'
+      ) as HTMLInputElement;
 
       if (themeSelect && settings.theme) {
         themeSelect.value = settings.theme;
@@ -330,6 +388,10 @@ export class SettingsPanel {
 
       if (cursorBlinkCheckbox && settings.cursorBlink !== undefined) {
         cursorBlinkCheckbox.checked = settings.cursorBlink;
+      }
+
+      if (claudeCodeIntegrationCheckbox && settings.enableClaudeCodeIntegration !== undefined) {
+        claudeCodeIntegrationCheckbox.checked = settings.enableClaudeCodeIntegration;
       }
     } catch (error) {
       ErrorHandler.getInstance().handleSettingsError(
