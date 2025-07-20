@@ -266,8 +266,8 @@ describe('Alt+Click Cursor Positioning', () => {
       let currentFlushInterval = normalFlushInterval;
 
       // Simulate CLI Agent detection
-      const isCLI AgentCodeActive = true;
-      if (isCLI AgentCodeActive) {
+      const isCliAgentCodeActive = true;
+      if (isCliAgentCodeActive) {
         currentFlushInterval = claudeCodeFlushInterval;
       }
 

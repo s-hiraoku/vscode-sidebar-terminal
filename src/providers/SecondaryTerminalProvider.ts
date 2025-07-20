@@ -25,7 +25,11 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider {
     _context: vscode.WebviewViewResolveContext,
     _token: vscode.CancellationToken
   ): void {
-    log('🔧 [DEBUG] SidebarTerminalProvider.resolveWebviewView called');
+    log('🔧 [DEBUG] SecondaryTerminalProvider.resolveWebviewView called');
+    
+    // Check if this is a panel move (WebView already exists but container changed)
+    const isPanelMove = this._view !== undefined && this._view.webview.html !== '';
+    
     this._view = webviewView;
 
     // Enable scripts and set resource roots
@@ -34,16 +38,31 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider {
       localResourceRoots: [this._extensionContext.extensionUri],
     };
 
-    try {
-      const html = this._getHtmlForWebview(webviewView.webview);
-      log('🔧 [DEBUG] Generated HTML length:', html.length);
-      log('🔧 [DEBUG] Setting webview HTML...');
-      webviewView.webview.html = html;
-      log('✅ [DEBUG] HTML set successfully');
-    } catch (error) {
-      log('❌ [ERROR] Failed to generate HTML for webview:', error);
-      TerminalErrorHandler.handleWebviewError(error);
-      return;
+    // Set up visibility change handler for panel move detection
+    webviewView.onDidChangeVisibility(() => {
+      if (webviewView.visible && isPanelMove) {
+        log('🔄 [DEBUG] WebView became visible after panel move - restoring state');
+        this._restoreWebviewState();
+      }
+    }, null, this._extensionContext.subscriptions);
+
+    // Only generate HTML if this is not a panel move or HTML is empty
+    if (!isPanelMove || webviewView.webview.html === '') {
+      try {
+        const html = this._getHtmlForWebview(webviewView.webview);
+        log('🔧 [DEBUG] Generated HTML length:', html.length);
+        log('🔧 [DEBUG] Setting webview HTML...');
+        webviewView.webview.html = html;
+        log('✅ [DEBUG] HTML set successfully');
+      } catch (error) {
+        log('❌ [ERROR] Failed to generate HTML for webview:', error);
+        TerminalErrorHandler.handleWebviewError(error);
+        return;
+      }
+    } else {
+      log('🔄 [DEBUG] Panel move detected - preserving HTML and restoring state');
+      // Immediate state restoration for panel moves
+      setTimeout(() => this._restoreWebviewState(), 100);
     }
 
     // Handle messages from the webview
@@ -510,6 +529,16 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider {
           // This is informational - the webview is notifying us of user interactions
           break;
         }
+        case 'requestStateRestoration': {
+          log('🔄 [DEBUG] State restoration requested from WebView');
+          try {
+            await this._restoreWebviewState();
+            log('✅ [DEBUG] State restoration completed');
+          } catch (error) {
+            log('❌ [ERROR] State restoration failed:', error);
+          }
+          break;
+        }
         default:
           log('⚠️ [WARN] Unknown command received:', message.command);
       }
@@ -589,7 +618,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider {
     const claudeStatusDisposable = this._terminalManager.onCliAgentStatusChange((event) => {
       try {
         const terminal = this._terminalManager.getTerminal(event.terminalId);
-        
+
         if (terminal) {
           const status = event.isActive ? 'connected' : 'disconnected';
           log(`🔔 [PROVIDER] CLI Agent status: ${terminal.name} -> ${status}`);
@@ -599,7 +628,9 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider {
           this.sendCliAgentStatusUpdate(null, 'none');
         }
       } catch (error) {
-        log(`❌ [PROVIDER] CLI Agent status change error: ${error instanceof Error ? error.message : String(error)}`);
+        log(
+          `❌ [PROVIDER] CLI Agent status change error: ${error instanceof Error ? error.message : String(error)}`
+        );
         if (error instanceof Error && error.stack) {
           log(`❌ [PROVIDER] Stack trace: ${error.stack}`);
         }
@@ -1163,5 +1194,96 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider {
     } catch (error) {
       log('❌ [SIDEBAR-PROVIDER] Failed to send CLI Agent status update:', error);
     }
+  }
+
+  /**
+   * Restore WebView state after panel move
+   */
+  private async _restoreWebviewState(): Promise<void> {
+    try {
+      log('🔄 [DEBUG] Starting WebView state restoration...');
+      
+      // Get current terminal state from TerminalManager
+      const currentState = this._terminalManager.getCurrentState();
+      log('🔄 [DEBUG] Current terminal state:', currentState);
+
+      // Wait a bit for WebView to be ready
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      // Send state restoration message to WebView
+      const restoreMessage = {
+        command: 'stateUpdate' as const,
+        state: currentState,
+      };
+
+      log('🔄 [DEBUG] Sending state restoration message:', restoreMessage);
+      await this._sendMessage(restoreMessage);
+
+      // Also send current settings
+      const settings = this._getCurrentSettings();
+      const settingsMessage = {
+        command: 'settingsResponse' as const,
+        settings,
+      };
+
+      log('🔄 [DEBUG] Sending settings restoration message');
+      await this._sendMessage(settingsMessage);
+
+      // Send Alt+Click settings
+      const altClickSettings = this._getAltClickSettings();
+      const altClickMessage = {
+        command: 'altClickSettings' as const,
+        settings: altClickSettings,
+      };
+
+      log('🔄 [DEBUG] Sending Alt+Click settings restoration message');
+      await this._sendMessage(altClickMessage);
+
+      log('✅ [DEBUG] WebView state restoration completed successfully');
+    } catch (error) {
+      log('❌ [ERROR] Failed to restore WebView state:', error);
+    }
+  }
+
+  /**
+   * Get current settings for restoration
+   */
+  private _getCurrentSettings(): PartialTerminalSettings {
+    const config = getConfigManager().getExtensionTerminalConfig();
+    return {
+      shell: config.shell || '',
+      shellArgs: config.shellArgs || [],
+      fontSize: config.fontSize || 14,
+      fontFamily: config.fontFamily || 'monospace',
+      theme: config.theme || 'dark',
+      cursor: config.cursor || {
+        style: 'block',
+        blink: true,
+      },
+      maxTerminals: config.maxTerminals || 5,
+      enableCliAgentIntegration: config.enableCliAgentIntegration || false,
+    };
+  }
+
+  /**
+   * Get Alt+Click settings for restoration
+   */
+  private _getAltClickSettings(): { altClickMovesCursor: boolean; multiCursorModifier: string } {
+    const vsCodeAltClickSetting = vscode.workspace
+      .getConfiguration('terminal.integrated')
+      .get<boolean>('altClickMovesCursor', false);
+    
+    const vsCodeMultiCursorModifier = vscode.workspace
+      .getConfiguration('editor')
+      .get<string>('multiCursorModifier', 'alt');
+
+    const extensionAltClickSetting = vscode.workspace
+      .getConfiguration('secondaryTerminal')
+      .get<boolean>('altClickMovesCursor', vsCodeAltClickSetting);
+
+    return {
+      altClickMovesCursor: extensionAltClickSetting,
+      multiCursorModifier: vsCodeMultiCursorModifier,
+    };
   }
 }

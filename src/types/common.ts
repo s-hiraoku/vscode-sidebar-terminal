@@ -67,6 +67,7 @@ export interface WebviewMessage {
     | 'killTerminal'
     | 'deleteTerminal'
     | 'getSettings'
+    | 'altClickSettings'
     | 'error';
   config?: TerminalConfig;
   data?: string;
@@ -111,6 +112,7 @@ export interface VsCodeMessage {
     | 'terminalInteraction'
     | 'killTerminal'
     | 'deleteTerminal'
+    | 'requestStateRestoration'
     | 'error';
   data?: string;
   cols?: number;

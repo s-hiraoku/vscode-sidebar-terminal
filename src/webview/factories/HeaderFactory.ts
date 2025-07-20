@@ -45,13 +45,18 @@ export interface HeaderConfig {
  * </div>
  */
 export class HeaderFactory {
-  
   /**
    * 統一されたターミナルヘッダーを作成
    */
   public static createTerminalHeader(config: HeaderConfig): TerminalHeaderElements {
-    const { terminalId, terminalName, showId = true, showSplitButton = true, customClasses = [] } = config;
-    
+    const {
+      terminalId,
+      terminalName,
+      showId = true,
+      showSplitButton = true,
+      customClasses = [],
+    } = config;
+
     // メインコンテナ
     const container = DOMUtils.createElement(
       'div',
@@ -215,7 +220,7 @@ export class HeaderFactory {
     ) as HTMLButtonElement;
 
     // ホバーエフェクトを追加
-    [splitButton, closeButton].forEach(button => {
+    [splitButton, closeButton].forEach((button) => {
       button.addEventListener('mouseenter', () => {
         button.style.opacity = '1';
         button.style.backgroundColor = 'var(--vscode-toolbar-hoverBackground)';
@@ -241,7 +246,7 @@ export class HeaderFactory {
       idSpan,
       statusSection,
       statusSpan: null, // CLI Agent status要素はまだ作成されていない
-      indicator: null,   // CLI Agent indicator要素はまだ作成されていない
+      indicator: null, // CLI Agent indicator要素はまだ作成されていない
       controlsSection,
       splitButton,
       closeButton,
@@ -258,7 +263,8 @@ export class HeaderFactory {
     // 既存のstatus要素を削除
     HeaderFactory.removeCliAgentStatus(elements);
 
-    const statusText = status === 'connected' ? 'CLI Agent Code connected' : 'CLI Agent Code disconnected';
+    const statusText =
+      status === 'connected' ? 'CLI Agent Code connected' : 'CLI Agent Code disconnected';
     const isConnected = status === 'connected';
 
     // ステータステキスト
@@ -303,9 +309,11 @@ export class HeaderFactory {
    * CLI Agent status要素を削除
    */
   public static removeCliAgentStatus(elements: TerminalHeaderElements): void {
-    const statusElements = elements.statusSection.querySelectorAll('.claude-status, .claude-indicator');
-    statusElements.forEach(element => element.remove());
-    
+    const statusElements = elements.statusSection.querySelectorAll(
+      '.claude-status, .claude-indicator'
+    );
+    statusElements.forEach((element) => element.remove());
+
     // 参照をクリア
     elements.statusSpan = null;
     elements.indicator = null;
@@ -320,7 +328,7 @@ export class HeaderFactory {
     const isConnected = status === 'connected';
     const statusContainer = document.createElement('span');
     statusContainer.className = 'claude-status-container';
-    
+
     const statusText = document.createElement('span');
     statusText.className = 'claude-status';
     statusText.textContent = isConnected ? 'CLI Agent Active' : 'CLI Agent Inactive';
@@ -328,7 +336,7 @@ export class HeaderFactory {
     statusText.style.color = isConnected ? '#007ACC' : '#666';
     statusText.style.fontWeight = 'bold';
     statusText.style.marginLeft = '10px';
-    
+
     statusContainer.appendChild(statusText);
     return statusContainer;
   }

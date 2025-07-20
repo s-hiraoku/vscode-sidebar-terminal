@@ -37,9 +37,7 @@ export class CliAgentTracker {
       CliAgentTracker.instance = new CliAgentTracker(context);
     }
     if (!CliAgentTracker.instance) {
-      throw new Error(
-        'CliAgentTracker not initialized. Call getInstance with context first.'
-      );
+      throw new Error('CliAgentTracker not initialized. Call getInstance with context first.');
     }
     return CliAgentTracker.instance;
   }
@@ -57,7 +55,9 @@ export class CliAgentTracker {
    * 注意: この機能は現在無効化されています。サイドバーターミナルのCLI Agent検出はTerminalManagerで行います。
    */
   private setupEventListeners(): void {
-    log('🔄 [CLAUDE-TRACKER] Event listeners disabled - CLI Agent detection moved to TerminalManager');
+    log(
+      '🔄 [CLAUDE-TRACKER] Event listeners disabled - CLI Agent detection moved to TerminalManager'
+    );
 
     // VS Code標準ターミナルの監視は無効化
     // サイドバーターミナルのCLI Agent検出はTerminalManagerで実装されています
@@ -153,7 +153,9 @@ export class CliAgentTracker {
 
       // CLI Agentが実際に起動している可能性が高い
       if (!this.cliAgentTerminals.has(this.getTerminalId(terminal))) {
-        log(`🚀 [CLAUDE-TRACKER] Activating CLI Agent terminal via output pattern: ${terminal.name}`);
+        log(
+          `🚀 [CLAUDE-TRACKER] Activating CLI Agent terminal via output pattern: ${terminal.name}`
+        );
         this.activateCliAgentTerminal(terminal);
       }
     }
@@ -428,7 +430,10 @@ export class CliAgentTracker {
           log(
             `📤 [CLAUDE-TRACKER] Sending disconnected status to WebView: ${latestTerminal.originalName}`
           );
-          this.sidebarProvider.sendCliAgentStatusUpdate(latestTerminal.originalName, 'disconnected');
+          this.sidebarProvider.sendCliAgentStatusUpdate(
+            latestTerminal.originalName,
+            'disconnected'
+          );
           log(
             `✅ [CLAUDE-TRACKER] Notified WebView: ${latestTerminal.originalName} -> disconnected`
           );

@@ -179,7 +179,7 @@ class TerminalWebviewManager {
     this.configManager = new ConfigManager();
     this.performanceManager = new PerformanceManager();
     this.uiManager = new UIManager();
-    
+
     // NotificationUtilsにUIManagerを設定
     setUIManager(this.uiManager);
     this.inputManager = new InputManager();
@@ -1399,6 +1399,13 @@ try {
         command: 'ready',
       });
       log('✅ [WEBVIEW] Traditional ready notification sent as fallback');
+
+      // Request state restoration (for panel moves or reconnection)
+      api.postMessage({
+        command: 'requestStateRestoration',
+        timestamp: Date.now(),
+      });
+      log('🔄 [WEBVIEW] State restoration request sent');
     }, 10);
   } else {
     log('❌ [WEBVIEW] No VS Code API available in window.vscodeApi');

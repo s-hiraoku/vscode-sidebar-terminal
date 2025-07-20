@@ -444,21 +444,21 @@ export class MessageManager implements IMessageManager {
         `🔄 [MESSAGE]   - activeTerminalName: "${cliAgentStatus.activeTerminalName}" (${typeof cliAgentStatus.activeTerminalName})`
       );
       log(`🔄 [MESSAGE]   - status: "${cliAgentStatus.status}" (${typeof cliAgentStatus.status})`);
-      log(`🔄 [MESSAGE] About to call coordinator.updateCliAgentStatus...`);
+      log(`🔄 [MESSAGE] About to call coordinator.updateClaudeStatus...`);
       log(`🔄 [MESSAGE] Coordinator available: ${!!coordinator}`);
       log(`🔄 [MESSAGE] Coordinator type: ${typeof coordinator}`);
       log(
-        `🔄 [MESSAGE] Coordinator.updateCliAgentStatus method: ${typeof coordinator.updateCliAgentStatus}`
+        `🔄 [MESSAGE] Coordinator.updateClaudeStatus method: ${typeof coordinator.updateClaudeStatus}`
       );
 
       try {
-        const result = coordinator.updateCliAgentStatus(
+        const result = coordinator.updateClaudeStatus(
           cliAgentStatus.activeTerminalName,
           cliAgentStatus.status
         );
-        log(`✅ [MESSAGE] coordinator.updateCliAgentStatus called successfully, result: ${result}`);
+        log(`✅ [MESSAGE] coordinator.updateClaudeStatus called successfully, result: ${result}`);
       } catch (error) {
-        log(`❌ [MESSAGE] Error calling coordinator.updateCliAgentStatus:`, error);
+        log(`❌ [MESSAGE] Error calling coordinator.updateClaudeStatus:`, error);
         log(`❌ [MESSAGE] Error name: ${error instanceof Error ? error.name : 'unknown'}`);
         log(
           `❌ [MESSAGE] Error message: ${error instanceof Error ? error.message : String(error)}`

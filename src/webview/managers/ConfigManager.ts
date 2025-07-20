@@ -42,6 +42,15 @@ export class ConfigManager implements IConfigManager {
     bellSound: false,
     altClickMovesCursor: false,
     multiCursorModifier: 'alt',
+    shell: '',
+    shellArgs: [],
+    cwd: '',
+    defaultDirectory: '',
+    maxTerminals: 5,
+    cursor: {
+      style: 'block',
+      blink: true,
+    },
   };
 
   // Font settings validation
@@ -300,6 +309,59 @@ export class ConfigManager implements IConfigManager {
       typeof settings.enableCliAgentIntegration === 'boolean'
         ? settings.enableCliAgentIntegration
         : this.DEFAULTS.enableCliAgentIntegration;
+
+    // Shell validation
+    if (typeof settings.shell === 'string') {
+      normalized.shell = settings.shell;
+    } else {
+      normalized.shell = this.DEFAULTS.shell;
+    }
+
+    // Shell args validation
+    if (Array.isArray(settings.shellArgs)) {
+      normalized.shellArgs = settings.shellArgs.filter((arg): arg is string => typeof arg === 'string');
+    } else {
+      normalized.shellArgs = this.DEFAULTS.shellArgs;
+    }
+
+    // CWD validation
+    if (typeof settings.cwd === 'string') {
+      normalized.cwd = settings.cwd;
+    } else {
+      normalized.cwd = this.DEFAULTS.cwd;
+    }
+
+    // Default directory validation
+    if (typeof settings.defaultDirectory === 'string') {
+      normalized.defaultDirectory = settings.defaultDirectory;
+    } else {
+      normalized.defaultDirectory = this.DEFAULTS.defaultDirectory;
+    }
+
+    // Max terminals validation
+    if (
+      typeof settings.maxTerminals === 'number' &&
+      settings.maxTerminals >= 1 &&
+      settings.maxTerminals <= 10
+    ) {
+      normalized.maxTerminals = Math.round(settings.maxTerminals);
+    } else {
+      normalized.maxTerminals = this.DEFAULTS.maxTerminals;
+    }
+
+    // Cursor validation
+    if (settings.cursor && typeof settings.cursor === 'object') {
+      normalized.cursor = {
+        style: ['block', 'underline', 'bar'].includes(settings.cursor.style || '')
+          ? settings.cursor.style as 'block' | 'underline' | 'bar'
+          : this.DEFAULTS.cursor.style,
+        blink: typeof settings.cursor.blink === 'boolean'
+          ? settings.cursor.blink
+          : this.DEFAULTS.cursor.blink,
+      };
+    } else {
+      normalized.cursor = this.DEFAULTS.cursor;
+    }
 
     return normalized;
   }

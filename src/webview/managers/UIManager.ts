@@ -331,7 +331,7 @@ export class UIManager implements IUIManager {
     const colors = this.getNotificationColors(config.type);
     const notification = this.createNotificationContainer(colors);
     const content = this.createNotificationContent(config, colors);
-    
+
     notification.appendChild(content);
     log(`📢 [UI] Created notification: ${config.type} - ${config.title}`);
     return notification;
@@ -418,9 +418,9 @@ export class UIManager implements IUIManager {
 
       // フォールバック: キャッシュにない古いヘッダー用
       const uncachedHeaders = this.findTerminalHeaders().filter(
-        header => !this.headerElementsCache.has(header.getAttribute('data-terminal-id') || '')
+        (header) => !this.headerElementsCache.has(header.getAttribute('data-terminal-id') || '')
       );
-      
+
       uncachedHeaders.forEach((headerElement: HTMLElement) => {
         if (this.updateLegacyCliAgentStatus(headerElement, activeTerminalName, status)) {
           updatedCount++;
@@ -509,7 +509,9 @@ export class UIManager implements IUIManager {
    * Update legacy Claude status (moved from DOMManager)
    */
   public updateLegacyClaudeStatus(terminalId: string, isActive: boolean): void {
-    const header = document.querySelector(`[data-terminal-id="${terminalId}"] .terminal-header`) as HTMLElement;
+    const header = document.querySelector(
+      `[data-terminal-id="${terminalId}"] .terminal-header`
+    ) as HTMLElement;
     if (!header) return;
 
     this.removeCliAgentStatusElements(header);
@@ -637,7 +639,7 @@ export class UIManager implements IUIManager {
   private createNotificationContent(config: NotificationConfig, colors: any): HTMLElement {
     const container = document.createElement('div');
     const icon = config.icon || this.getDefaultIcon(config.type);
-    
+
     container.innerHTML = `
       <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
         <span style="font-size: 14px;">${icon}</span>
@@ -648,7 +650,7 @@ export class UIManager implements IUIManager {
 
     const closeBtn = this.createNotificationCloseButton(colors);
     container.appendChild(closeBtn);
-    
+
     return container;
   }
 

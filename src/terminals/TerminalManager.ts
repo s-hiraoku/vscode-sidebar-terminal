@@ -199,14 +199,18 @@ export class TerminalManager {
       ptyProcess.onData((data: string) => {
         // Only log large data chunks or when debugging is specifically needed
         if (data.length > 1000) {
-          log('📤 [DEBUG] Large PTY data received:', data.length, 'chars for terminal:', terminalId);
+          log(
+            '📤 [DEBUG] Large PTY data received:',
+            data.length,
+            'chars for terminal:',
+            terminalId
+          );
         }
 
         // Performance optimization: Batch small data chunks
         this._bufferData(terminalId, data);
 
         // Check for CLI Agent patterns in output
-        
       });
 
       ptyProcess.onExit((event: number | { exitCode: number; signal?: number }) => {

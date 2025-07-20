@@ -35,13 +35,14 @@ class Logger {
     // Check for development indicators in WebView environment
     if (typeof window !== 'undefined') {
       // VS Code development host detection
-      const isDevHost = window.location?.hostname === 'localhost' || 
-                       window.location?.protocol === 'vscode-webview:';
-      
+      const isDevHost =
+        window.location?.hostname === 'localhost' ||
+        window.location?.protocol === 'vscode-webview:';
+
       // Check for debug flags in URL or global variables
-      const hasDebugFlag = window.location?.search?.includes('debug=true') ||
-                          (window as any).VSCODE_DEBUG === true;
-      
+      const hasDebugFlag =
+        window.location?.search?.includes('debug=true') || (window as any).VSCODE_DEBUG === true;
+
       return isDevHost || hasDebugFlag;
     }
     return false;
