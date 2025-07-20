@@ -587,53 +587,22 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
 
     // Listen to Claude status changes from TerminalManager
     const claudeStatusDisposable = this._terminalManager.onClaudeStatusChange((event) => {
-      log(
-        `🔔🔔🔔 [PROVIDER] Claude status changed: ${event.terminalId} -> ${event.isActive ? 'active' : 'inactive'}`
-      );
-      log(
-        `🔔 [PROVIDER] Claude status changed: ${event.terminalId} -> ${event.isActive ? 'active' : 'inactive'}`
-      );
-
       try {
-        log(`🔍 [PROVIDER] Processing Claude status change event:`);
-        log(`🔍 [PROVIDER]   - terminalId: ${event.terminalId} (${typeof event.terminalId})`);
-        log(`🔍 [PROVIDER]   - isActive: ${event.isActive} (${typeof event.isActive})`);
-        log(`🔍 [PROVIDER]   - event object: ${JSON.stringify(event)}`);
-
-        // Get terminal info for the changed terminal
-        log(`🔍 [PROVIDER] Calling _terminalManager.getTerminal(${event.terminalId})...`);
         const terminal = this._terminalManager.getTerminal(event.terminalId);
-        log(`🔍 [PROVIDER] getTerminal result:`, terminal);
-
+        
         if (terminal) {
           const status = event.isActive ? 'connected' : 'disconnected';
-          log(`🚀🚀🚀 [PROVIDER] Sending Claude status update: ${terminal.name} -> ${status}`);
-          log(`🔍 [PROVIDER] About to call sendClaudeStatusUpdate...`);
-
+          log(`🔔 [PROVIDER] Claude status: ${terminal.name} -> ${status}`);
           this.sendClaudeStatusUpdate(terminal.name, status);
-          log(`✅ [PROVIDER] sendClaudeStatusUpdate completed successfully`);
         } else {
-          log(`⚠️ [PROVIDER] Terminal not found for Claude status change: ${event.terminalId}`);
-          log(
-            `🔍 [PROVIDER] Available terminals: ${this._terminalManager
-              .getTerminals()
-              .map((t) => `${t.id}:${t.name}`)
-              .join(', ')}`
-          );
-          // Send 'none' status if terminal not found
+          log(`⚠️ [PROVIDER] Terminal ${event.terminalId} not found for Claude status change`);
           this.sendClaudeStatusUpdate(null, 'none');
         }
       } catch (error) {
-        log(`❌ [PROVIDER] Error handling Claude status change:`);
-        log(`❌ [PROVIDER] Error type: ${typeof error}`);
-        log(`❌ [PROVIDER] Error constructor: ${error?.constructor?.name}`);
-        log(`❌ [PROVIDER] Error message: ${error instanceof Error ? error.message : 'unknown'}`);
-        log(`❌ [PROVIDER] Error name: ${error instanceof Error ? error.name : 'unknown'}`);
-        log(`❌ [PROVIDER] Error stack: ${error instanceof Error ? error.stack : 'unknown'}`);
-        log(`❌ [PROVIDER] Error string: ${String(error)}`);
-        log(
-          `❌ [PROVIDER] Error JSON: ${JSON.stringify(error, Object.getOwnPropertyNames(error))}`
-        );
+        log(`❌ [PROVIDER] Claude status change error: ${error instanceof Error ? error.message : String(error)}`);
+        if (error instanceof Error && error.stack) {
+          log(`❌ [PROVIDER] Stack trace: ${error.stack}`);
+        }
       }
     });
 

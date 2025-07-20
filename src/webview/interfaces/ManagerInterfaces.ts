@@ -111,7 +111,7 @@ export interface IUIManager {
   addFocusIndicator(container: HTMLElement): void;
   createTerminalHeader(terminalId: string, terminalName: string): HTMLElement;
   updateTerminalHeader(terminalId: string, newName: string): void;
-  updateClaudeStatusDisplay(
+  updateCliAgentStatusDisplay(
     activeTerminalName: string | null,
     status: 'connected' | 'disconnected' | 'none'
   ): void;

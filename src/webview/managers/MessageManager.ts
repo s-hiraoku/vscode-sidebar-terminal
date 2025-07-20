@@ -6,6 +6,8 @@ import { webview as log } from '../../utils/logger';
 import { TerminalInteractionEvent } from '../../types/common';
 import { WebViewFontSettings } from '../../types/shared';
 import { IMessageManager, IManagerCoordinator } from '../interfaces/ManagerInterfaces';
+import { CommunicationManager } from './CommunicationManager';
+import { LoggerManager } from './LoggerManager';
 
 interface MessageCommand {
   command: string;
@@ -20,6 +22,10 @@ export class MessageManager implements IMessageManager {
   // Message processing queue for reliability
   private messageQueue: unknown[] = [];
   private isProcessingQueue = false;
+
+  // Unified managers
+  private commManager = CommunicationManager.getInstance();
+  private logger = LoggerManager.getInstance();
 
   /**
    * Handle incoming messages from the extension

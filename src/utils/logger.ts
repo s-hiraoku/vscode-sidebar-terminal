@@ -16,20 +16,35 @@ class Logger {
   private isDevelopment: boolean;
 
   constructor() {
-    // Check if running in development mode
-    // WebView環境では process.env が利用できないため、常にDEBUGレベルを使用
+    // Check environment and set appropriate log level
     const isWebViewEnvironment = typeof window !== 'undefined' && typeof process === 'undefined';
 
     if (isWebViewEnvironment) {
-      // WebView環境では常にDEBUGレベル
-      this.isDevelopment = true;
-      this.level = LogLevel.DEBUG;
+      // WebView environment - use conservative logging in production
+      this.isDevelopment = this.detectWebViewDevMode();
+      this.level = this.isDevelopment ? LogLevel.INFO : LogLevel.WARN;
     } else {
-      // Extension環境
+      // Extension environment
       this.isDevelopment =
         process.env.NODE_ENV === 'development' || process.env.VSCODE_DEBUG_MODE === 'true';
       this.level = this.isDevelopment ? LogLevel.DEBUG : LogLevel.ERROR;
     }
+  }
+
+  private detectWebViewDevMode(): boolean {
+    // Check for development indicators in WebView environment
+    if (typeof window !== 'undefined') {
+      // VS Code development host detection
+      const isDevHost = window.location?.hostname === 'localhost' || 
+                       window.location?.protocol === 'vscode-webview:';
+      
+      // Check for debug flags in URL or global variables
+      const hasDebugFlag = window.location?.search?.includes('debug=true') ||
+                          (window as any).VSCODE_DEBUG === true;
+      
+      return isDevHost || hasDebugFlag;
+    }
+    return false;
   }
 
   setLevel(level: LogLevel): void {

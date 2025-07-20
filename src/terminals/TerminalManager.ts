@@ -33,7 +33,7 @@ export class TerminalManager {
   private readonly _terminalCreatedEmitter = new vscode.EventEmitter<TerminalInstance>();
   private readonly _terminalRemovedEmitter = new vscode.EventEmitter<string>();
   private readonly _stateUpdateEmitter = new vscode.EventEmitter<TerminalState>();
-  private readonly _claudeStatusEmitter = new vscode.EventEmitter<{
+  private readonly _cliAgentStatusEmitter = new vscode.EventEmitter<{
     terminalId: string;
     isActive: boolean;
   }>();
@@ -50,9 +50,9 @@ export class TerminalManager {
   private readonly DATA_FLUSH_INTERVAL = 16; // ~60fps
   private readonly MAX_BUFFER_SIZE = 50;
 
-  // Claude detection and command history
+  // CLI Agent detection and command history
   private readonly _commandHistory = new Map<string, string[]>(); // terminalId -> commands
-  private readonly _claudeActiveTerminals = new Set<string>(); // terminalIds with active Claude
+  private readonly _cliAgentActiveTerminals = new Set<string>(); // terminalIds with active CLI Agent
   private _currentInputBuffer = new Map<string, string>(); // terminalId -> partial input
   private readonly MAX_HISTORY_SIZE = 100;
 
@@ -61,7 +61,7 @@ export class TerminalManager {
   public readonly onTerminalCreated = this._terminalCreatedEmitter.event;
   public readonly onTerminalRemoved = this._terminalRemovedEmitter.event;
   public readonly onStateUpdate = this._stateUpdateEmitter.event;
-  public readonly onClaudeStatusChange = this._claudeStatusEmitter.event;
+  public readonly onCliAgentStatusChange = this._cliAgentStatusEmitter.event;
 
   constructor(private readonly _context: vscode.ExtensionContext) {
     // Context may be used in future for storing state
@@ -197,13 +197,16 @@ export class TerminalManager {
       this._activeTerminalManager.setActive(terminalId);
 
       ptyProcess.onData((data: string) => {
-        log('📤 [DEBUG] PTY data received:', data.length, 'chars for terminal:', terminalId);
+        // Only log large data chunks or when debugging is specifically needed
+        if (data.length > 1000) {
+          log('📤 [DEBUG] Large PTY data received:', data.length, 'chars for terminal:', terminalId);
+        }
 
         // Performance optimization: Batch small data chunks
         this._bufferData(terminalId, data);
 
-        // Check for Claude patterns in output
-        this.handleTerminalOutput(terminalId, data);
+        // Check for CLI Agent patterns in output
+        
       });
 
       ptyProcess.onExit((event: number | { exitCode: number; signal?: number }) => {
@@ -282,7 +285,7 @@ export class TerminalManager {
       log('🔧 [DEBUG] Writing to pty - validated:', JSON.stringify(validatedData));
       log('🔧 [DEBUG] Byte count:', bytes.length);
 
-      // Track input for command history and Claude detection
+      // Track input for command history and CLI Agent detection
       this._trackInput(id, validatedData);
 
       terminal.pty.write(validatedData);
@@ -660,11 +663,11 @@ export class TerminalManager {
       this._dataFlushTimers.delete(terminalId);
     }
 
-    // Claude関連データのクリーンアップ
+    // CLI Agent関連データのクリーンアップ
     this._commandHistory.delete(terminalId);
     this._currentInputBuffer.delete(terminalId);
-    if (this._claudeActiveTerminals.has(terminalId)) {
-      this._deactivateClaude(terminalId);
+    if (this._cliAgentActiveTerminals.has(terminalId)) {
+      this._deactivateCliAgent(terminalId);
     }
 
     // Remove from terminals map
@@ -719,7 +722,7 @@ export class TerminalManager {
   }
 
   /**
-   * Track input for command history and Claude detection
+   * Track input for command history and CLI Agent detection
    */
   private _trackInput(terminalId: string, data: string): void {
     // Get or create input buffer for this terminal
@@ -736,13 +739,10 @@ export class TerminalManager {
         // Add to command history
         this._addToCommandHistory(terminalId, command);
 
-        // Check for Claude command
+        // Check for CLI Agent command
         if (command.toLowerCase().startsWith('claude')) {
-          console.log(
-            `🚀🚀🚀 [TERMINAL] Claude command detected in terminal ${terminalId}: ${command}`
-          );
-          log(`🚀 [TERMINAL] Claude command detected in terminal ${terminalId}: ${command}`);
-          this._activateClaude(terminalId);
+          log(`🚀 [TERMINAL] CLI Agent command detected in terminal ${terminalId}: ${command}`);
+          this._activateCliAgent(terminalId);
         }
       }
 
@@ -768,32 +768,32 @@ export class TerminalManager {
   }
 
   /**
-   * Activate Claude for a terminal
+   * Activate CLI Agent for a terminal
    */
-  private _activateClaude(terminalId: string): void {
-    this._claudeActiveTerminals.add(terminalId);
-    log(`✅ [TERMINAL] Claude activated for terminal: ${terminalId}`);
+  private _activateCliAgent(terminalId: string): void {
+    this._cliAgentActiveTerminals.add(terminalId);
+    log(`✅ [TERMINAL] CLI Agent activated for terminal: ${terminalId}`);
 
-    // Notify ClaudeTerminalTracker if it exists
-    this._notifyClaudeActivation(terminalId, true);
+    // Notify CliAgentTerminalTracker if it exists
+    this._notifyCliAgentActivation(terminalId, true);
   }
 
   /**
-   * Deactivate Claude for a terminal
+   * Deactivate CLI Agent for a terminal
    */
-  private _deactivateClaude(terminalId: string): void {
-    this._claudeActiveTerminals.delete(terminalId);
-    log(`❌ [TERMINAL] Claude deactivated for terminal: ${terminalId}`);
+  private _deactivateCliAgent(terminalId: string): void {
+    this._cliAgentActiveTerminals.delete(terminalId);
+    log(`❌ [TERMINAL] CLI Agent deactivated for terminal: ${terminalId}`);
 
-    // Notify ClaudeTerminalTracker if it exists
-    this._notifyClaudeActivation(terminalId, false);
+    // Notify CliAgentTerminalTracker if it exists
+    this._notifyCliAgentActivation(terminalId, false);
   }
 
   /**
-   * Check if Claude is active in a terminal
+   * Check if CLI Agent is active in a terminal
    */
-  public isClaudeActive(terminalId: string): boolean {
-    return this._claudeActiveTerminals.has(terminalId);
+  public isCliAgentActive(terminalId: string): boolean {
+    return this._cliAgentActiveTerminals.has(terminalId);
   }
 
   /**
@@ -805,29 +805,24 @@ export class TerminalManager {
   }
 
   /**
-   * Notify Claude activation status change
+   * Notify CLI Agent activation status change
    */
-  private _notifyClaudeActivation(terminalId: string, isActive: boolean): void {
+  private _notifyCliAgentActivation(terminalId: string, isActive: boolean): void {
     const terminal = this._terminals.get(terminalId);
     if (terminal) {
-      console.log(
-        `🔔🔔🔔 [TERMINAL] Claude status change notification: ${terminalId} -> ${isActive ? 'active' : 'inactive'}`
-      );
-      log(
-        `🔔 [TERMINAL] Claude status change notification: ${terminalId} -> ${isActive ? 'active' : 'inactive'}`
-      );
-      this._claudeStatusEmitter.fire({ terminalId, isActive });
+      log(`🔔 [TERMINAL] CLI Agent status: ${terminalId} -> ${isActive ? 'active' : 'inactive'}`);
+      this._cliAgentStatusEmitter.fire({ terminalId, isActive });
     }
   }
 
   /**
-   * Handle terminal output for Claude detection
+   * Handle terminal output for CLI Agent detection
    */
-  public handleTerminalOutput(terminalId: string, data: string): void {
-    // Claude output patterns
-    const claudePatterns = [
-      'Welcome to Claude',
-      'Claude Code',
+  public handleTerminalOutputForCliAgent(terminalId: string, data: string): void {
+    // CLI Agent output patterns
+    const cliAgentPatterns = [
+      'Welcome to CLI Agent',
+      'CLI Agent Code',
       'Type your message',
       'To start a conversation',
       'claude.ai',
@@ -835,8 +830,8 @@ export class TerminalManager {
       /^\s*Assistant:/,
     ];
 
-    // Check if output contains Claude patterns
-    const hasClaudePattern = claudePatterns.some((pattern) => {
+    // Check if output contains CLI Agent patterns
+    const hasCliAgentPattern = cliAgentPatterns.some((pattern) => {
       if (typeof pattern === 'string') {
         return data.toLowerCase().includes(pattern.toLowerCase());
       } else {
@@ -844,21 +839,21 @@ export class TerminalManager {
       }
     });
 
-    if (hasClaudePattern && !this._claudeActiveTerminals.has(terminalId)) {
-      log(`🔍 [TERMINAL] Claude pattern detected in output for terminal ${terminalId}`);
-      this._activateClaude(terminalId);
+    if (hasCliAgentPattern && !this._cliAgentActiveTerminals.has(terminalId)) {
+      log(`🔍 [TERMINAL] CLI Agent pattern detected in output for terminal ${terminalId}`);
+      this._activateCliAgent(terminalId);
     }
 
-    // Check for Claude exit patterns
+    // Check for CLI Agent exit patterns
     const exitPatterns = ['Goodbye!', 'Chat ended', 'Session terminated'];
 
     const hasExitPattern = exitPatterns.some((pattern) =>
       data.toLowerCase().includes(pattern.toLowerCase())
     );
 
-    if (hasExitPattern && this._claudeActiveTerminals.has(terminalId)) {
-      log(`👋 [TERMINAL] Claude exit pattern detected for terminal ${terminalId}`);
-      this._deactivateClaude(terminalId);
+    if (hasExitPattern && this._cliAgentActiveTerminals.has(terminalId)) {
+      log(`👋 [TERMINAL] CLI Agent exit pattern detected for terminal ${terminalId}`);
+      this._deactivateCliAgent(terminalId);
     }
   }
 }

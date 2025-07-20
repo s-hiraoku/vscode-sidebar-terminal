@@ -1,11 +1,11 @@
 import * as vscode from 'vscode';
 import { extension as log } from '../utils/logger';
-import type { SidebarTerminalProvider } from '../providers/SidebarTerminalProvider';
+import type { SecondaryTerminalProvider } from '../providers/SecondaryTerminalProvider';
 
 /**
- * Claude Terminal情報を管理するインターフェース
+ * CLI Agent Terminal情報を管理するインターフェース
  */
-interface ClaudeTerminalInfo {
+interface CliAgentTerminalInfo {
   terminalId: string;
   terminal: vscode.Terminal;
   originalName: string;
@@ -14,16 +14,16 @@ interface ClaudeTerminalInfo {
 }
 
 /**
- * Claude Code のターミナル検出・状態管理を行うクラス
- * - Claude起動時のターミナル検出
+ * CLI Agent のターミナル検出・状態管理を行うクラス
+ * - CLI Agent起動時のターミナル検出
  * - ターミナル名の状態管理 (○ IDE connected/disconnected)
  * - ターミナル削除時の自動昇格処理
  */
-export class ClaudeTerminalTracker {
-  private static instance: ClaudeTerminalTracker | undefined;
-  private claudeTerminals = new Map<string, ClaudeTerminalInfo>();
+export class CliAgentTracker {
+  private static instance: CliAgentTracker | undefined;
+  private cliAgentTerminals = new Map<string, CliAgentTerminalInfo>();
   private disposables: vscode.Disposable[] = [];
-  private sidebarProvider: SidebarTerminalProvider | undefined;
+  private sidebarProvider: SecondaryTerminalProvider | undefined;
 
   private constructor(private context: vscode.ExtensionContext) {
     this.setupEventListeners();
@@ -32,48 +32,48 @@ export class ClaudeTerminalTracker {
   /**
    * シングルトンインスタンスを取得
    */
-  public static getInstance(context?: vscode.ExtensionContext): ClaudeTerminalTracker {
-    if (!ClaudeTerminalTracker.instance && context) {
-      ClaudeTerminalTracker.instance = new ClaudeTerminalTracker(context);
+  public static getInstance(context?: vscode.ExtensionContext): CliAgentTracker {
+    if (!CliAgentTracker.instance && context) {
+      CliAgentTracker.instance = new CliAgentTracker(context);
     }
-    if (!ClaudeTerminalTracker.instance) {
+    if (!CliAgentTracker.instance) {
       throw new Error(
-        'ClaudeTerminalTracker not initialized. Call getInstance with context first.'
+        'CliAgentTracker not initialized. Call getInstance with context first.'
       );
     }
-    return ClaudeTerminalTracker.instance;
+    return CliAgentTracker.instance;
   }
 
   /**
    * SidebarTerminalProviderを設定
    */
-  public setSidebarProvider(provider: SidebarTerminalProvider): void {
+  public setSidebarProvider(provider: SecondaryTerminalProvider): void {
     this.sidebarProvider = provider;
     log('🔧 [CLAUDE-TRACKER] SidebarTerminalProvider reference set');
   }
 
   /**
    * VS Code ターミナルイベントのリスナーを設定
-   * 注意: この機能は現在無効化されています。サイドバーターミナルのClaude検出はTerminalManagerで行います。
+   * 注意: この機能は現在無効化されています。サイドバーターミナルのCLI Agent検出はTerminalManagerで行います。
    */
   private setupEventListeners(): void {
-    log('🔄 [CLAUDE-TRACKER] Event listeners disabled - Claude detection moved to TerminalManager');
+    log('🔄 [CLAUDE-TRACKER] Event listeners disabled - CLI Agent detection moved to TerminalManager');
 
     // VS Code標準ターミナルの監視は無効化
-    // サイドバーターミナルのClaude検出はTerminalManagerで実装されています
+    // サイドバーターミナルのCLI Agent検出はTerminalManagerで実装されています
 
     // 将来的にVS Code標準ターミナルとの統合が必要な場合は、以下のコードを有効化してください：
     /*
-    // Claude コマンド開始監視
+    // CLI Agent コマンド開始監視
     const startListener = vscode.window.onDidStartTerminalShellExecution((event) => {
       log(`🔍 [CLAUDE-TRACKER] Shell execution started: ${event.execution.commandLine.value}`);
-      this.handleClaudeStart(event.execution);
+      this.handleCliAgentStart(event.execution);
     });
 
-    // Claude コマンド終了監視
+    // CLI Agent コマンド終了監視
     const endListener = vscode.window.onDidEndTerminalShellExecution((event) => {
       log(`🔍 [CLAUDE-TRACKER] Shell execution ended: ${event.execution.commandLine.value}`);
-      this.handleClaudeEnd(event.execution);
+      this.handleCliAgentEnd(event.execution);
     });
 
     // ターミナル削除監視
@@ -90,20 +90,20 @@ export class ClaudeTerminalTracker {
   }
 
   /**
-   * Claude コマンド開始時の処理
+   * CLI Agent コマンド開始時の処理
    */
-  private handleClaudeStart(execution: vscode.TerminalShellExecution): void {
+  private handleCliAgentStart(execution: vscode.TerminalShellExecution): void {
     const command = execution.commandLine.value.trim();
     log(`🔍 [CLAUDE-TRACKER] Handling command start: "${command}"`);
 
     // 設定チェック
-    if (!this.isClaudeIntegrationEnabled()) {
-      log('⚠️ [CLAUDE-TRACKER] Claude integration disabled in settings');
+    if (!this.isCliAgentIntegrationEnabled()) {
+      log('⚠️ [CLAUDE-TRACKER] CLI Agent integration disabled in settings');
       return;
     }
 
     if (command.startsWith('claude')) {
-      log(`🚀 [CLAUDE-TRACKER] Claude command detected: ${command}`);
+      log(`🚀 [CLAUDE-TRACKER] CLI Agent command detected: ${command}`);
 
       // 実行中のターミナルを見つける（TerminalShellExecutionにはterminal参照がないため、現在アクティブなターミナルを使用）
       const currentTerminal = vscode.window.activeTerminal;
@@ -118,10 +118,10 @@ export class ClaudeTerminalTracker {
       });
 
       if (currentTerminal) {
-        log(`🎯 [CLAUDE-TRACKER] Activating Claude terminal: ${currentTerminal.name}`);
-        this.activateClaudeTerminal(currentTerminal);
+        log(`🎯 [CLAUDE-TRACKER] Activating CLI Agent terminal: ${currentTerminal.name}`);
+        this.activateCliAgentTerminal(currentTerminal);
       } else {
-        log('⚠️ [CLAUDE-TRACKER] No active terminal found for Claude command');
+        log('⚠️ [CLAUDE-TRACKER] No active terminal found for CLI Agent command');
       }
     } else {
       log(`🔍 [CLAUDE-TRACKER] Command does not start with "claude": ${command}`);
@@ -129,32 +129,32 @@ export class ClaudeTerminalTracker {
   }
 
   /**
-   * ターミナル出力監視（Claude Code特有のパターンを検出）
+   * ターミナル出力監視（CLI Agent特有のパターンを検出）
    */
   private handleTerminalOutput(terminal: vscode.Terminal, data: string): void {
-    // Claude Code特有のパターンを検出
+    // CLI Agent特有のパターンを検出
     const claudePatterns = [
-      'Claude Code',
+      'CLI Agent',
       'chat input field',
       'To start a conversation',
-      'Welcome to Claude',
-      'Starting Claude',
+      'Welcome to CLI Agent',
+      'Starting CLI Agent',
       'claude.ai',
     ];
 
-    const hasClaudePattern = claudePatterns.some((pattern) =>
+    const hasCliAgentPattern = claudePatterns.some((pattern) =>
       data.toLowerCase().includes(pattern.toLowerCase())
     );
 
-    if (hasClaudePattern) {
+    if (hasCliAgentPattern) {
       log(
-        `🔍 [CLAUDE-TRACKER] Claude pattern detected in terminal ${terminal.name}: "${data.slice(0, 100)}..."`
+        `🔍 [CLAUDE-TRACKER] CLI Agent pattern detected in terminal ${terminal.name}: "${data.slice(0, 100)}..."`
       );
 
-      // Claude Codeが実際に起動している可能性が高い
-      if (!this.claudeTerminals.has(this.getTerminalId(terminal))) {
-        log(`🚀 [CLAUDE-TRACKER] Activating Claude terminal via output pattern: ${terminal.name}`);
-        this.activateClaudeTerminal(terminal);
+      // CLI Agentが実際に起動している可能性が高い
+      if (!this.cliAgentTerminals.has(this.getTerminalId(terminal))) {
+        log(`🚀 [CLAUDE-TRACKER] Activating CLI Agent terminal via output pattern: ${terminal.name}`);
+        this.activateCliAgentTerminal(terminal);
       }
     }
 
@@ -165,13 +165,13 @@ export class ClaudeTerminalTracker {
   }
 
   /**
-   * Claude コマンド終了時の処理
+   * CLI Agent コマンド終了時の処理
    */
-  private handleClaudeEnd(execution: vscode.TerminalShellExecution): void {
+  private handleCliAgentEnd(execution: vscode.TerminalShellExecution): void {
     const command = execution.commandLine.value.trim();
 
     // 設定チェック
-    if (!this.isClaudeIntegrationEnabled()) {
+    if (!this.isCliAgentIntegrationEnabled()) {
       return;
     }
 
@@ -181,17 +181,17 @@ export class ClaudeTerminalTracker {
 
       if (currentTerminal) {
         const terminalId = this.getTerminalId(currentTerminal);
-        const claudeInfo = this.claudeTerminals.get(terminalId);
+        const claudeInfo = this.cliAgentTerminals.get(terminalId);
 
         if (claudeInfo) {
-          log(`🔄 [CLAUDE-TRACKER] Claude terminated in terminal: ${terminalId}`);
+          log(`🔄 [CLAUDE-TRACKER] CLI Agent terminated in terminal: ${terminalId}`);
 
           // 表示を元に戻す（IDE connected/disconnected 表示を削除）
           // ターミナル名を元に戻す
           this.restoreTerminalName(currentTerminal, claudeInfo.originalName);
 
           // 内部追跡から削除
-          this.claudeTerminals.delete(terminalId);
+          this.cliAgentTerminals.delete(terminalId);
 
           // WebViewに状態変更を通知
           this.notifyWebViewOfStatusChange();
@@ -206,19 +206,19 @@ export class ClaudeTerminalTracker {
    * ターミナル削除時の処理
    */
   private handleTerminalClosed(closedTerminal: vscode.Terminal): void {
-    if (!this.isClaudeIntegrationEnabled()) {
+    if (!this.isCliAgentIntegrationEnabled()) {
       return;
     }
 
     const closedTerminalId = this.getTerminalId(closedTerminal);
-    const claudeInfo = this.claudeTerminals.get(closedTerminalId);
+    const claudeInfo = this.cliAgentTerminals.get(closedTerminalId);
 
     if (claudeInfo && claudeInfo.isActive) {
       // Connected ターミナルが削除された場合
-      log(`🔄 [CLAUDE-TRACKER] Active Claude terminal closed: ${closedTerminalId}`);
+      log(`🔄 [CLAUDE-TRACKER] Active CLI Agent terminal closed: ${closedTerminalId}`);
 
       // 内部追跡から削除
-      this.claudeTerminals.delete(closedTerminalId);
+      this.cliAgentTerminals.delete(closedTerminalId);
 
       // Disconnected ターミナルの中から最も若い番号を昇格
       this.promoteOldestDisconnectedTerminal();
@@ -227,31 +227,31 @@ export class ClaudeTerminalTracker {
       this.notifyWebViewOfStatusChange();
     } else if (claudeInfo) {
       // Disconnected ターミナルが削除された場合
-      this.claudeTerminals.delete(closedTerminalId);
+      this.cliAgentTerminals.delete(closedTerminalId);
 
       // WebViewに状態変更を通知
       this.notifyWebViewOfStatusChange();
 
-      log(`🗑️ [CLAUDE-TRACKER] Disconnected Claude terminal removed: ${closedTerminalId}`);
+      log(`🗑️ [CLAUDE-TRACKER] Disconnected CLI Agent terminal removed: ${closedTerminalId}`);
     }
   }
 
   /**
-   * 新しいターミナルをClaude Activeターミナルとして設定
+   * 新しいターミナルをCLI Agent Activeターミナルとして設定
    */
-  private activateClaudeTerminal(newTerminal: vscode.Terminal): void {
+  private activateCliAgentTerminal(newTerminal: vscode.Terminal): void {
     const newTerminalId = this.getTerminalId(newTerminal);
     const originalName = newTerminal.name;
 
-    log(`🔧 [CLAUDE-TRACKER] Activating Claude terminal: ${newTerminalId} (${originalName})`);
+    log(`🔧 [CLAUDE-TRACKER] Activating CLI Agent terminal: ${newTerminalId} (${originalName})`);
 
     // 1. 既存のconnectedターミナルをdisconnectedに変更
-    log(`🔧 [CLAUDE-TRACKER] Deactivating existing Claude terminals...`);
-    this.deactivateAllClaudeTerminals();
+    log(`🔧 [CLAUDE-TRACKER] Deactivating existing CLI Agent terminals...`);
+    this.deactivateAllCliAgentTerminals();
 
     // 2. 新しいターミナルを追跡開始
     log(`🔧 [CLAUDE-TRACKER] Adding terminal to tracking map: ${newTerminalId}`);
-    this.claudeTerminals.set(newTerminalId, {
+    this.cliAgentTerminals.set(newTerminalId, {
       terminalId: newTerminalId,
       terminal: newTerminal,
       originalName: originalName, // 元の名前を保存
@@ -268,16 +268,16 @@ export class ClaudeTerminalTracker {
     this.notifyWebViewOfStatusChange();
 
     log(
-      `✅ [CLAUDE-TRACKER] Claude activated in terminal: ${newTerminalId} (original: ${originalName})`
+      `✅ [CLAUDE-TRACKER] CLI Agent activated in terminal: ${newTerminalId} (original: ${originalName})`
     );
-    log(`🔍 [CLAUDE-TRACKER] Total tracked terminals: ${this.claudeTerminals.size}`);
+    log(`🔍 [CLAUDE-TRACKER] Total tracked terminals: ${this.cliAgentTerminals.size}`);
   }
 
   /**
-   * すべてのアクティブなClaudeターミナルを非アクティブにする
+   * すべてのアクティブなCLI Agentターミナルを非アクティブにする
    */
-  private deactivateAllClaudeTerminals(): void {
-    for (const [terminalId, info] of this.claudeTerminals) {
+  private deactivateAllCliAgentTerminals(): void {
+    for (const [terminalId, info] of this.cliAgentTerminals) {
       if (info.isActive) {
         this.setTerminalStatus(info.terminal, 'disconnected');
         info.isActive = false;
@@ -291,12 +291,12 @@ export class ClaudeTerminalTracker {
    */
   private promoteOldestDisconnectedTerminal(): void {
     // Disconnected なターミナルを取得
-    const disconnectedTerminals = Array.from(this.claudeTerminals.values()).filter(
+    const disconnectedTerminals = Array.from(this.cliAgentTerminals.values()).filter(
       (info) => !info.isActive
     );
 
     if (disconnectedTerminals.length === 0) {
-      log('ℹ️ [CLAUDE-TRACKER] No disconnected Claude terminals to promote');
+      log('ℹ️ [CLAUDE-TRACKER] No disconnected CLI Agent terminals to promote');
       return;
     }
 
@@ -322,7 +322,7 @@ export class ClaudeTerminalTracker {
    */
   private setTerminalStatus(terminal: vscode.Terminal, status: 'connected' | 'disconnected'): void {
     const terminalId = this.getTerminalId(terminal);
-    const claudeInfo = this.claudeTerminals.get(terminalId);
+    const claudeInfo = this.cliAgentTerminals.get(terminalId);
 
     if (!claudeInfo) return;
 
@@ -384,15 +384,15 @@ export class ClaudeTerminalTracker {
   }
 
   /**
-   * Claude統合機能が有効かどうかを確認
+   * CLI Agent統合機能が有効かどうかを確認
    */
-  private isClaudeIntegrationEnabled(): boolean {
-    const config = vscode.workspace.getConfiguration('sidebarTerminal');
-    return config.get<boolean>('enableClaudeCodeIntegration', true);
+  private isCliAgentIntegrationEnabled(): boolean {
+    const config = vscode.workspace.getConfiguration('secondaryTerminal');
+    return config.get<boolean>('enableCliAgentIntegration', true);
   }
 
   /**
-   * WebViewにClaude状態を通知
+   * WebViewにCLI Agent状態を通知
    */
   private notifyWebViewOfStatusChange(): void {
     log('🔔 [CLAUDE-TRACKER] Starting WebView notification process...');
@@ -402,19 +402,19 @@ export class ClaudeTerminalTracker {
       return;
     }
 
-    const activeTerminal = this.getActiveClaudeTerminal();
+    const activeTerminal = this.getActiveCliAgentTerminal();
     log(
-      `🔍 [CLAUDE-TRACKER] Active Claude terminal: ${activeTerminal ? activeTerminal.terminalId : 'none'}`
+      `🔍 [CLAUDE-TRACKER] Active CLI Agent terminal: ${activeTerminal ? activeTerminal.terminalId : 'none'}`
     );
 
     if (activeTerminal) {
       const terminalName = activeTerminal.originalName;
       log(`📤 [CLAUDE-TRACKER] Sending connected status to WebView: ${terminalName}`);
-      this.sidebarProvider.sendClaudeStatusUpdate(terminalName, 'connected');
+      this.sidebarProvider.sendCliAgentStatusUpdate(terminalName, 'connected');
       log(`✅ [CLAUDE-TRACKER] Notified WebView: ${terminalName} -> connected`);
     } else {
       // Check if any disconnected terminals exist
-      const disconnectedTerminals = Array.from(this.claudeTerminals.values()).filter(
+      const disconnectedTerminals = Array.from(this.cliAgentTerminals.values()).filter(
         (info) => !info.isActive
       );
       log(`🔍 [CLAUDE-TRACKER] Found ${disconnectedTerminals.length} disconnected terminals`);
@@ -428,31 +428,31 @@ export class ClaudeTerminalTracker {
           log(
             `📤 [CLAUDE-TRACKER] Sending disconnected status to WebView: ${latestTerminal.originalName}`
           );
-          this.sidebarProvider.sendClaudeStatusUpdate(latestTerminal.originalName, 'disconnected');
+          this.sidebarProvider.sendCliAgentStatusUpdate(latestTerminal.originalName, 'disconnected');
           log(
             `✅ [CLAUDE-TRACKER] Notified WebView: ${latestTerminal.originalName} -> disconnected`
           );
         }
       } else {
-        // No Claude terminals at all
+        // No CLI Agent terminals at all
         log('📤 [CLAUDE-TRACKER] Sending "none" status to WebView');
-        this.sidebarProvider.sendClaudeStatusUpdate(null, 'none');
-        log('✅ [CLAUDE-TRACKER] Notified WebView: no Claude terminals');
+        this.sidebarProvider.sendCliAgentStatusUpdate(null, 'none');
+        log('✅ [CLAUDE-TRACKER] Notified WebView: no CLI Agent terminals');
       }
     }
   }
 
   /**
-   * 現在アクティブなClaudeターミナルを取得
+   * 現在アクティブなCLI Agentターミナルを取得
    * 注意: VS Code標準ターミナルの監視は無効化されています。
-   * サイドバーターミナルのClaude検出はTerminalManager.isClaudeActive()を使用してください。
+   * サイドバーターミナルのCLI Agent検出はTerminalManager.isCliAgentActive()を使用してください。
    */
-  public getActiveClaudeTerminal(): ClaudeTerminalInfo | undefined {
+  public getActiveCliAgentTerminal(): CliAgentTerminalInfo | undefined {
     log(
-      '⚠️ [CLAUDE-TRACKER] getActiveClaudeTerminal called but VS Code terminal monitoring is disabled'
+      '⚠️ [CLAUDE-TRACKER] getActiveCliAgentTerminal called but VS Code terminal monitoring is disabled'
     );
     log(
-      '💡 [CLAUDE-TRACKER] Use TerminalManager.isClaudeActive() for sidebar terminal Claude detection'
+      '💡 [CLAUDE-TRACKER] Use TerminalManager.isCliAgentActive() for sidebar terminal CLI Agent detection'
     );
 
     // VS Code標準ターミナルの監視は無効化されているため、常にundefinedを返す
@@ -460,10 +460,10 @@ export class ClaudeTerminalTracker {
   }
 
   /**
-   * すべてのClaudeターミナル情報を取得（デバッグ用）
+   * すべてのCLI Agentターミナル情報を取得（デバッグ用）
    */
-  public getAllClaudeTerminals(): ClaudeTerminalInfo[] {
-    return Array.from(this.claudeTerminals.values());
+  public getAllCliAgentTerminals(): CliAgentTerminalInfo[] {
+    return Array.from(this.cliAgentTerminals.values());
   }
 
   /**
@@ -473,8 +473,8 @@ export class ClaudeTerminalTracker {
     this.disposables.forEach((disposable: vscode.Disposable) => {
       disposable.dispose();
     });
-    this.claudeTerminals.clear();
-    ClaudeTerminalTracker.instance = undefined;
+    this.cliAgentTerminals.clear();
+    CliAgentTracker.instance = undefined;
     log('🧹 [CLAUDE-TRACKER] Disposed and cleaned up');
   }
 }

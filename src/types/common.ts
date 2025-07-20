@@ -51,6 +51,8 @@ export interface DeleteResult {
 export interface WebviewMessage {
   command:
     | 'init'
+    | 'input'
+    | 'resize'
     | 'output'
     | 'clear'
     | 'exit'
@@ -61,7 +63,11 @@ export interface WebviewMessage {
     | 'fontSettingsUpdate'
     | 'openSettings'
     | 'stateUpdate'
-    | 'claudeStatusUpdate';
+    | 'claudeStatusUpdate'
+    | 'killTerminal'
+    | 'deleteTerminal'
+    | 'getSettings'
+    | 'error';
   config?: TerminalConfig;
   data?: string;
   exitCode?: number;
@@ -76,6 +82,14 @@ export interface WebviewMessage {
     activeTerminalName: string | null;
     status: 'connected' | 'disconnected' | 'none';
   }; // Claude接続状態の情報
+  cols?: number; // リサイズ用
+  rows?: number; // リサイズ用
+  requestSource?: 'header' | 'panel'; // 削除リクエストの送信元
+  timestamp?: number; // エラー報告用
+  type?: string; // エラー報告用
+  message?: string; // エラー報告用
+  context?: string; // エラー報告用
+  stack?: string; // エラー報告用
 }
 
 export interface VsCodeMessage {
@@ -96,7 +110,8 @@ export interface VsCodeMessage {
     | 'terminalClosed'
     | 'terminalInteraction'
     | 'killTerminal'
-    | 'deleteTerminal';
+    | 'deleteTerminal'
+    | 'error';
   data?: string;
   cols?: number;
   rows?: number;

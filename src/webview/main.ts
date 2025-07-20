@@ -36,7 +36,8 @@ import { MessageManager } from './managers/MessageManager';
 import { TerminalInstance } from './interfaces/ManagerInterfaces';
 import {
   showAltClickDisabledWarning as _showAltClickDisabledWarning,
-  showTerminalInteractionIssue as _showTerminalInteractionIssue,
+  showTerminalInteractionWarning as _showTerminalInteractionWarning,
+  setUIManager,
 } from './utils/NotificationUtils';
 
 // Type definitions
@@ -178,6 +179,9 @@ class TerminalWebviewManager {
     this.configManager = new ConfigManager();
     this.performanceManager = new PerformanceManager();
     this.uiManager = new UIManager();
+    
+    // NotificationUtilsにUIManagerを設定
+    setUIManager(this.uiManager);
     this.inputManager = new InputManager();
     this.messageManager = new MessageManager();
 
@@ -1213,14 +1217,14 @@ class TerminalWebviewManager {
     log(`🔄 [WEBVIEW] status: ${status}`);
     log(`🔄 [WEBVIEW] UIManager available: ${!!this.uiManager}`);
     log(
-      `🔄 [WEBVIEW] UIManager.updateClaudeStatusDisplay method: ${typeof this.uiManager.updateClaudeStatusDisplay}`
+      `🔄 [WEBVIEW] UIManager.updateCliAgentStatusDisplay method: ${typeof this.uiManager.updateCliAgentStatusDisplay}`
     );
 
     try {
-      this.uiManager.updateClaudeStatusDisplay(activeTerminalName, status);
-      log(`✅ [WEBVIEW] UIManager.updateClaudeStatusDisplay called successfully`);
+      this.uiManager.updateCliAgentStatusDisplay(activeTerminalName, status);
+      log(`✅ [WEBVIEW] UIManager.updateCliAgentStatusDisplay called successfully`);
     } catch (error) {
-      log(`❌ [WEBVIEW] Error calling UIManager.updateClaudeStatusDisplay:`, error);
+      log(`❌ [WEBVIEW] Error calling UIManager.updateCliAgentStatusDisplay:`, error);
     }
 
     log(`🔄 [WEBVIEW] ========== UPDATE CLAUDE STATUS COMPLETE ==========`);
