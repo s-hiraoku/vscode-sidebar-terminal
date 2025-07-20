@@ -356,7 +356,8 @@ export class UIManager implements IUIManager {
   private updateLegacyCliAgentStatus(
     headerElement: HTMLElement,
     activeTerminalName: string | null,
-    status: 'connected' | 'disconnected' | 'none'
+    status: 'connected' | 'disconnected' | 'none',
+    agentType: string | null = null
   ): boolean {
     const terminalId = headerElement.getAttribute('data-terminal-id');
     if (!terminalId) {
@@ -377,10 +378,10 @@ export class UIManager implements IUIManager {
     const statusSection = headerElement.querySelector('.terminal-status');
     if (statusSection) {
       // HeaderFactory構造の場合
-      this.updateHeaderFactoryStatus(statusSection, status, isActiveTerminal);
+      this.updateHeaderFactoryStatus(statusSection, status, isActiveTerminal, agentType);
     } else {
       // レガシー構造のフォールバック
-      this.updateLegacyHeaderStatus(headerElement, status, isActiveTerminal);
+      this.updateLegacyHeaderStatus(headerElement, status, isActiveTerminal, agentType);
     }
 
     log(`✅ [UI] Updated CLI Agent status: ${terminalId} -> ${status}`);
@@ -392,7 +393,8 @@ export class UIManager implements IUIManager {
    */
   public updateCliAgentStatusDisplay(
     activeTerminalName: string | null,
-    status: 'connected' | 'disconnected' | 'none'
+    status: 'connected' | 'disconnected' | 'none',
+    agentType: string | null = null
   ): void {
     // Use performance measurement
     return this.logger.performance.measure('updateCliAgentStatusDisplay', () => {
@@ -411,7 +413,7 @@ export class UIManager implements IUIManager {
           HeaderFactory.removeCliAgentStatus(headerElements);
         } else {
           // CLI Agent statusを挿入/更新
-          HeaderFactory.insertCliAgentStatus(headerElements, status);
+          HeaderFactory.insertCliAgentStatus(headerElements, status, agentType);
         }
         updatedCount++;
       }
@@ -422,7 +424,7 @@ export class UIManager implements IUIManager {
       );
 
       uncachedHeaders.forEach((headerElement: HTMLElement) => {
-        if (this.updateLegacyCliAgentStatus(headerElement, activeTerminalName, status)) {
+        if (this.updateLegacyCliAgentStatus(headerElement, activeTerminalName, status, agentType)) {
           updatedCount++;
         }
       });
@@ -551,13 +553,14 @@ export class UIManager implements IUIManager {
   private updateHeaderFactoryStatus(
     statusSection: Element,
     status: 'connected' | 'disconnected' | 'none',
-    isActiveTerminal: boolean
+    isActiveTerminal: boolean,
+    agentType: string | null = null
   ): void {
     // Clear existing status
     statusSection.innerHTML = '';
 
     if (status !== 'none' && isActiveTerminal) {
-      const statusElement = HeaderFactory.createCliAgentStatusElement(status);
+      const statusElement = HeaderFactory.createCliAgentStatusElement(status, agentType);
       statusSection.appendChild(statusElement);
     }
   }
@@ -568,12 +571,20 @@ export class UIManager implements IUIManager {
   private updateLegacyHeaderStatus(
     headerElement: HTMLElement,
     status: 'connected' | 'disconnected' | 'none',
-    isActiveTerminal: boolean
+    isActiveTerminal: boolean,
+    agentType: string | null = null
   ): void {
     // Remove existing status elements
     this.removeCliAgentStatusElements(headerElement);
 
     if (status !== 'none' && isActiveTerminal) {
+      // Agent type based display text
+      const agentDisplayName = agentType 
+        ? (agentType === 'claude' ? 'CLAUDE CLI' : 'GEMINI CLI')
+        : 'CLI Agent';
+      
+      const statusText = status === 'connected' ? `${agentDisplayName} Active` : `${agentDisplayName} Inactive`;
+      
       const statusSpan = DOMUtils.createElement(
         'span',
         {
@@ -584,7 +595,7 @@ export class UIManager implements IUIManager {
         },
         {
           className: 'claude-status',
-          textContent: status === 'connected' ? 'CLI Agent Active' : 'CLI Agent Inactive',
+          textContent: statusText,
         }
       );
 

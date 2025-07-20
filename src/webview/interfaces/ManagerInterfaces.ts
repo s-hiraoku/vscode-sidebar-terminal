@@ -43,7 +43,8 @@ export interface IManagerCoordinator {
   // Claude状態管理
   updateClaudeStatus(
     activeTerminalName: string | null,
-    status: 'connected' | 'disconnected' | 'none'
+    status: 'connected' | 'disconnected' | 'none',
+    agentType: string | null
   ): void;
 }
 
@@ -113,7 +114,8 @@ export interface IUIManager {
   updateTerminalHeader(terminalId: string, newName: string): void;
   updateCliAgentStatusDisplay(
     activeTerminalName: string | null,
-    status: 'connected' | 'disconnected' | 'none'
+    status: 'connected' | 'disconnected' | 'none',
+    agentType: string | null
   ): void;
   applyVSCodeStyling(container: HTMLElement): void;
   dispose(): void;

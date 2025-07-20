@@ -258,13 +258,19 @@ export class HeaderFactory {
    */
   public static insertCliAgentStatus(
     elements: TerminalHeaderElements,
-    status: 'connected' | 'disconnected'
+    status: 'connected' | 'disconnected',
+    agentType: string | null = null
   ): void {
     // 既存のstatus要素を削除
     HeaderFactory.removeCliAgentStatus(elements);
 
+    // Agent type based display text
+    const agentDisplayName = agentType 
+      ? (agentType === 'claude' ? 'CLAUDE CLI' : 'GEMINI CLI')
+      : 'CLI Agent';
+    
     const statusText =
-      status === 'connected' ? 'CLI Agent Code connected' : 'CLI Agent Code disconnected';
+      status === 'connected' ? `${agentDisplayName} connected` : `${agentDisplayName} disconnected`;
     const isConnected = status === 'connected';
 
     // ステータステキスト
@@ -324,14 +330,22 @@ export class HeaderFactory {
   /**
    * CLI Agent status要素を作成（レガシーサポート用）
    */
-  public static createCliAgentStatusElement(status: 'connected' | 'disconnected'): HTMLElement {
+  public static createCliAgentStatusElement(
+    status: 'connected' | 'disconnected',
+    agentType: string | null = null
+  ): HTMLElement {
     const isConnected = status === 'connected';
     const statusContainer = document.createElement('span');
     statusContainer.className = 'claude-status-container';
 
     const statusText = document.createElement('span');
     statusText.className = 'claude-status';
-    statusText.textContent = isConnected ? 'CLI Agent Active' : 'CLI Agent Inactive';
+    // Agent type based display text
+    const agentDisplayName = agentType 
+      ? (agentType === 'claude' ? 'CLAUDE CLI' : 'GEMINI CLI')
+      : 'CLI Agent';
+    
+    statusText.textContent = isConnected ? `${agentDisplayName} Active` : `${agentDisplayName} Inactive`;
     statusText.style.fontSize = '11px';
     statusText.style.color = isConnected ? '#007ACC' : '#666';
     statusText.style.fontWeight = 'bold';

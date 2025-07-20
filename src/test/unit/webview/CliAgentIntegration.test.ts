@@ -116,7 +116,7 @@ describe('CLI Agent Integration', () => {
 
     it('should update Claude status for active terminal', () => {
       // Act
-      uiManager.updateCliAgentStatusDisplay('Terminal 1', 'connected');
+      uiManager.updateCliAgentStatusDisplay('Terminal 1', 'connected', 'claude');
 
       // Assert
       const header1 = document.querySelector('[data-terminal-id="term1"]') as HTMLElement;
@@ -136,7 +136,7 @@ describe('CLI Agent Integration', () => {
 
     it('should show disconnected status correctly', () => {
       // Act
-      uiManager.updateCliAgentStatusDisplay('Terminal 1', 'disconnected');
+      uiManager.updateCliAgentStatusDisplay('Terminal 1', 'disconnected', 'claude');
 
       // Assert
       const header = document.querySelector('[data-terminal-id="term1"]') as HTMLElement;
@@ -151,10 +151,10 @@ describe('CLI Agent Integration', () => {
 
     it('should clear status when none is specified', () => {
       // Setup - first set connected status
-      uiManager.updateCliAgentStatusDisplay('Terminal 1', 'connected');
+      uiManager.updateCliAgentStatusDisplay('Terminal 1', 'connected', 'claude');
 
       // Act - clear status
-      uiManager.updateCliAgentStatusDisplay('Terminal 1', 'none');
+      uiManager.updateCliAgentStatusDisplay('Terminal 1', 'none', null);
 
       // Assert
       const header = document.querySelector('[data-terminal-id="term1"]') as HTMLElement;
@@ -174,13 +174,13 @@ describe('CLI Agent Integration', () => {
 
       // Act & Assert - should not throw
       expect(() => {
-        uiManager.updateCliAgentStatusDisplay('Terminal 1', 'connected');
+        uiManager.updateCliAgentStatusDisplay('Terminal 1', 'connected', 'claude');
       }).to.not.throw();
     });
 
     it('should apply correct styling for connected status', () => {
       // Act
-      uiManager.updateCliAgentStatusDisplay('Terminal 1', 'connected');
+      uiManager.updateCliAgentStatusDisplay('Terminal 1', 'connected', 'claude');
 
       // Assert
       const header = document.querySelector('[data-terminal-id="term1"]') as HTMLElement;
@@ -342,6 +342,7 @@ describe('CLI Agent Integration', () => {
         claudeStatus: {
           activeTerminalName: 'Terminal 1',
           status: 'connected',
+          agentType: 'claude',
         },
       });
 
@@ -353,6 +354,7 @@ describe('CLI Agent Integration', () => {
         claudeStatus: {
           activeTerminalName: 'Terminal 1',
           status: 'connected',
+          agentType: 'claude',
         },
       });
     });
@@ -374,6 +376,7 @@ describe('CLI Agent Integration', () => {
         claudeStatus: {
           activeTerminalName: 'Terminal 1',
           status: 'connected' as const,
+          agentType: 'claude',
         },
       };
       messageManager.handleMessage(message, mockCoordinator);
@@ -451,7 +454,7 @@ describe('CLI Agent Integration', () => {
       container.appendChild(header);
 
       // Act - use UIManager instead of domManager
-      uiManager.updateCliAgentStatusDisplay('Terminal 1', 'connected');
+      uiManager.updateCliAgentStatusDisplay('Terminal 1', 'connected', 'claude');
 
       // Assert - check the header was updated
       const statusSpan = header.querySelector('.claude-status');
@@ -469,7 +472,7 @@ describe('CLI Agent Integration', () => {
       container.appendChild(header);
 
       // Act - update Claude status using UIManager
-      uiManager.updateCliAgentStatusDisplay('Terminal 1', 'connected');
+      uiManager.updateCliAgentStatusDisplay('Terminal 1', 'connected', 'claude');
 
       // Assert - status should be added and close button should remain at rightmost position
 
@@ -493,14 +496,14 @@ describe('CLI Agent Integration', () => {
       container.appendChild(header);
 
       // First add Claude status using UIManager
-      uiManager.updateCliAgentStatusDisplay('Terminal 1', 'connected');
+      uiManager.updateCliAgentStatusDisplay('Terminal 1', 'connected', 'claude');
 
       // Verify status was added
       expect(header.querySelector('.claude-status')).to.not.be.null;
       expect(header.querySelector('.claude-indicator')).to.not.be.null;
 
       // Act - clear Claude status
-      uiManager.updateCliAgentStatusDisplay('Terminal 1', 'none');
+      uiManager.updateCliAgentStatusDisplay('Terminal 1', 'none', null);
 
       // Assert - Claude status removed but close button preserved at rightmost position
       expect(header.querySelector('.claude-status')).to.be.null;
@@ -606,6 +609,7 @@ describe('CLI Agent Integration', () => {
         claudeStatus: {
           activeTerminalName: 'Terminal 1',
           status: 'connected' as const,
+          agentType: 'claude',
         },
       };
       messageManager.handleMessage(message, mockCoordinator);
@@ -643,9 +647,9 @@ describe('CLI Agent Integration', () => {
       container.appendChild(header2);
 
       // Act - multiple status updates
-      uiManager.updateCliAgentStatusDisplay('Terminal 1', 'connected');
-      uiManager.updateCliAgentStatusDisplay('Terminal 2', 'disconnected');
-      uiManager.updateCliAgentStatusDisplay('Terminal 1', 'none');
+      uiManager.updateCliAgentStatusDisplay('Terminal 1', 'connected', 'claude');
+      uiManager.updateCliAgentStatusDisplay('Terminal 2', 'disconnected', 'gemini');
+      uiManager.updateCliAgentStatusDisplay('Terminal 1', 'none', null);
 
       // Assert - check final state
       const status1 = header1.querySelector('.claude-status');

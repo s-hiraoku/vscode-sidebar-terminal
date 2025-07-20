@@ -82,7 +82,8 @@ export interface WebviewMessage {
   claudeStatus?: {
     activeTerminalName: string | null;
     status: 'connected' | 'disconnected' | 'none';
-  }; // Claude接続状態の情報
+    agentType: string | null;
+  }; // CLI Agent接続状態の情報
   cols?: number; // リサイズ用
   rows?: number; // リサイズ用
   requestSource?: 'header' | 'panel'; // 削除リクエストの送信元

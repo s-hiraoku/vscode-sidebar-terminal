@@ -14,6 +14,7 @@ interface MessageCommand {
   cliAgentStatus?: {
     activeTerminalName: string | null;
     status: 'connected' | 'disconnected' | 'none';
+    agentType: string | null;
   };
   [key: string]: unknown;
 }
@@ -454,7 +455,8 @@ export class MessageManager implements IMessageManager {
       try {
         const result = coordinator.updateClaudeStatus(
           cliAgentStatus.activeTerminalName,
-          cliAgentStatus.status
+          cliAgentStatus.status,
+          cliAgentStatus.agentType || null
         );
         log(`✅ [MESSAGE] coordinator.updateClaudeStatus called successfully, result: ${result}`);
       } catch (error) {

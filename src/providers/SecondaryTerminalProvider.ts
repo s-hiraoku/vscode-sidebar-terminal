@@ -193,7 +193,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider {
       log('🗑️ [PROVIDER] Performing kill for active terminal:', terminalId);
 
       // 新しいアーキテクチャ: 統一されたdeleteTerminalメソッドを使用
-      const result = await this._terminalManager.deleteTerminal(terminalId, 'panel');
+      const result = await this._terminalManager.deleteTerminal(terminalId, { source: 'panel' });
 
       if (result.success) {
         log('✅ [PROVIDER] Terminal killed successfully:', terminalId);
@@ -215,7 +215,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider {
       log('🗑️ [PROVIDER] Performing kill for specific terminal:', terminalId);
 
       // 新しいアーキテクチャ: 統一されたdeleteTerminalメソッドを使用
-      const result = await this._terminalManager.deleteTerminal(terminalId, 'header');
+      const result = await this._terminalManager.deleteTerminal(terminalId, { source: 'header' });
 
       if (result.success) {
         log('✅ [PROVIDER] Specific terminal killed successfully:', terminalId);
@@ -508,7 +508,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider {
             log(`🗑️ [DEBUG] Deleting terminal: ${terminalId} (source: ${requestSource})`);
             try {
               // 新しいアーキテクチャ: 統一されたdeleteTerminalメソッドを使用
-              void this._terminalManager.deleteTerminal(terminalId, requestSource);
+              void this._terminalManager.deleteTerminal(terminalId, { source: requestSource });
               log(`🗑️ [DEBUG] deleteTerminal called for: ${terminalId}`);
             } catch (error) {
               log(`❌ [DEBUG] Error in deleteTerminal:`, error);
@@ -621,11 +621,14 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider {
 
         if (terminal) {
           const status = event.isActive ? 'connected' : 'disconnected';
-          log(`🔔 [PROVIDER] CLI Agent status: ${terminal.name} -> ${status}`);
-          this.sendCliAgentStatusUpdate(terminal.name, status);
+          const agentType = this._terminalManager.getActiveAgentType(event.terminalId);
+          const agentName = agentType ? `${agentType.toUpperCase()} CLI` : 'CLI Agent';
+          
+          log(`🔔 [PROVIDER] ${agentName} status: ${terminal.name} -> ${status}`);
+          this.sendCliAgentStatusUpdate(terminal.name, status, agentType);
         } else {
           log(`⚠️ [PROVIDER] Terminal ${event.terminalId} not found for CLI Agent status change`);
-          this.sendCliAgentStatusUpdate(null, 'none');
+          this.sendCliAgentStatusUpdate(null, 'none', null);
         }
       } catch (error) {
         log(
@@ -1177,7 +1180,8 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider {
    */
   public sendCliAgentStatusUpdate(
     activeTerminalName: string | null,
-    status: 'connected' | 'disconnected' | 'none'
+    status: 'connected' | 'disconnected' | 'none',
+    agentType: string | null = null
   ): void {
     try {
       const message = {
@@ -1185,6 +1189,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider {
         claudeStatus: {
           activeTerminalName,
           status,
+          agentType,
         },
       };
 

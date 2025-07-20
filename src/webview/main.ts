@@ -1210,7 +1210,8 @@ class TerminalWebviewManager {
    */
   public updateClaudeStatus(
     activeTerminalName: string | null,
-    status: 'connected' | 'disconnected' | 'none'
+    status: 'connected' | 'disconnected' | 'none',
+    agentType: string | null = null
   ): void {
     log(`🔄 [WEBVIEW] ========== UPDATE CLAUDE STATUS CALLED ==========`);
     log(`🔄 [WEBVIEW] activeTerminalName: ${activeTerminalName}`);
@@ -1221,7 +1222,7 @@ class TerminalWebviewManager {
     );
 
     try {
-      this.uiManager.updateCliAgentStatusDisplay(activeTerminalName, status);
+      this.uiManager.updateCliAgentStatusDisplay(activeTerminalName, status, agentType);
       log(`✅ [WEBVIEW] UIManager.updateCliAgentStatusDisplay called successfully`);
     } catch (error) {
       log(`❌ [WEBVIEW] Error calling UIManager.updateCliAgentStatusDisplay:`, error);
