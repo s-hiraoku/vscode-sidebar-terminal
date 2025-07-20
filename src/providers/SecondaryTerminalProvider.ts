@@ -8,8 +8,8 @@ import { provider as log } from '../utils/logger';
 import { getConfigManager } from '../config/ConfigManager';
 import { PartialTerminalSettings, WebViewFontSettings } from '../types/shared';
 
-export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
-  public static readonly viewType = 'sidebarTerminal';
+export class SecondaryTerminalProvider implements vscode.WebviewViewProvider {
+  public static readonly viewType = 'secondaryTerminal';
 
   private _view?: vscode.WebviewView;
   private _webviewReady = false;
@@ -59,8 +59,8 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
     // Set up terminal event listeners
     this._setupTerminalEventListeners();
 
-    // Set up Claude status change listeners
-    this._setupClaudeStatusListeners();
+    // Set up CLI Agent status change listeners
+    this._setupCliAgentStatusListeners();
 
     // Set up configuration change listeners for VS Code standard settings
     this._setupConfigurationChangeListeners();
@@ -353,18 +353,18 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
           log('🧪 [DEBUG] Test message content:', message);
           log('🧪 [DEBUG] WebView communication is working!');
 
-          // Send a test Claude status update immediately
-          log('🧪 [DEBUG] Sending test Claude status update...');
-          this.sendClaudeStatusUpdate('Terminal 1', 'connected');
+          // Send a test CLI Agent status update immediately
+          log('🧪 [DEBUG] Sending test CLI Agent status update...');
+          this.sendCliAgentStatusUpdate('Terminal 1', 'connected');
 
           setTimeout(() => {
-            log('🧪 [DEBUG] Sending test Claude status update (disconnected)...');
-            this.sendClaudeStatusUpdate('Terminal 1', 'disconnected');
+            log('🧪 [DEBUG] Sending test CLI Agent status update (disconnected)...');
+            this.sendCliAgentStatusUpdate('Terminal 1', 'disconnected');
           }, 2000);
 
           setTimeout(() => {
-            log('🧪 [DEBUG] Sending test Claude status update (none)...');
-            this.sendClaudeStatusUpdate(null, 'none');
+            log('🧪 [DEBUG] Sending test CLI Agent status update (none)...');
+            this.sendCliAgentStatusUpdate(null, 'none');
           }, 4000);
           break;
 
@@ -576,37 +576,37 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
       });
     });
 
-    // Note: Claude status change events are handled by _setupClaudeStatusListeners()
+    // Note: CLI Agent status change events are handled by _setupCliAgentStatusListeners()
   }
 
   /**
-   * Set up Claude status change listeners
+   * Set up CLI Agent status change listeners
    */
-  private _setupClaudeStatusListeners(): void {
-    log('🔧 [DEBUG] Setting up Claude status change listeners...');
+  private _setupCliAgentStatusListeners(): void {
+    log('🔧 [DEBUG] Setting up CLI Agent status change listeners...');
 
-    // Listen to Claude status changes from TerminalManager
-    const claudeStatusDisposable = this._terminalManager.onClaudeStatusChange((event) => {
+    // Listen to CLI Agent status changes from TerminalManager
+    const claudeStatusDisposable = this._terminalManager.onCliAgentStatusChange((event) => {
       try {
         const terminal = this._terminalManager.getTerminal(event.terminalId);
         
         if (terminal) {
           const status = event.isActive ? 'connected' : 'disconnected';
-          log(`🔔 [PROVIDER] Claude status: ${terminal.name} -> ${status}`);
-          this.sendClaudeStatusUpdate(terminal.name, status);
+          log(`🔔 [PROVIDER] CLI Agent status: ${terminal.name} -> ${status}`);
+          this.sendCliAgentStatusUpdate(terminal.name, status);
         } else {
-          log(`⚠️ [PROVIDER] Terminal ${event.terminalId} not found for Claude status change`);
-          this.sendClaudeStatusUpdate(null, 'none');
+          log(`⚠️ [PROVIDER] Terminal ${event.terminalId} not found for CLI Agent status change`);
+          this.sendCliAgentStatusUpdate(null, 'none');
         }
       } catch (error) {
-        log(`❌ [PROVIDER] Claude status change error: ${error instanceof Error ? error.message : String(error)}`);
+        log(`❌ [PROVIDER] CLI Agent status change error: ${error instanceof Error ? error.message : String(error)}`);
         if (error instanceof Error && error.stack) {
           log(`❌ [PROVIDER] Stack trace: ${error.stack}`);
         }
       }
     });
 
-    log('✅ [DEBUG] Claude status change listeners set up successfully');
+    log('✅ [DEBUG] CLI Agent status change listeners set up successfully');
 
     // Add to disposables
     this._extensionContext.subscriptions.push(claudeStatusDisposable);
@@ -625,9 +625,9 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
       if (
         event.affectsConfiguration('editor.multiCursorModifier') ||
         event.affectsConfiguration('terminal.integrated.altClickMovesCursor') ||
-        event.affectsConfiguration('sidebarTerminal.altClickMovesCursor') ||
-        event.affectsConfiguration('sidebarTerminal.theme') ||
-        event.affectsConfiguration('sidebarTerminal.cursorBlink')
+        event.affectsConfiguration('secondaryTerminal.altClickMovesCursor') ||
+        event.affectsConfiguration('secondaryTerminal.theme') ||
+        event.affectsConfiguration('secondaryTerminal.cursorBlink')
       ) {
         shouldUpdateSettings = true;
       }
@@ -1001,13 +1001,13 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
                 border-color: var(--vscode-button-background, #0e639c);
             }
             
-            /* Claude status indicators */
+            /* CLI Agent status indicators */
             .terminal-name {
                 color: var(--vscode-foreground) !important; /* Standard color */
                 font-weight: normal;
             }
             
-            /* Claude indicator styles */
+            /* CLI Agent indicator styles */
             .claude-indicator {
                 display: inline-block;
                 width: 8px;
@@ -1084,15 +1084,15 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
     const settings = getConfigManager().getCompleteTerminalSettings();
     const altClickSettings = getConfigManager().getAltClickSettings();
 
-    const config = vscode.workspace.getConfiguration('sidebarTerminal');
+    const config = vscode.workspace.getConfiguration('secondaryTerminal');
     return {
       cursorBlink: settings.cursorBlink,
       theme: settings.theme || 'auto',
       // VS Code standard settings for Alt+Click functionality
       altClickMovesCursor: altClickSettings.altClickMovesCursor,
       multiCursorModifier: altClickSettings.multiCursorModifier,
-      // Claude Code integration settings
-      enableClaudeCodeIntegration: config.get<boolean>('enableClaudeCodeIntegration', true),
+      // CLI Agent Code integration settings
+      enableCliAgentIntegration: config.get<boolean>('enableCliAgentIntegration', true),
     };
   }
 
@@ -1107,7 +1107,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
 
   private async updateSettings(settings: PartialTerminalSettings): Promise<void> {
     try {
-      const config = vscode.workspace.getConfiguration('sidebarTerminal');
+      const config = vscode.workspace.getConfiguration('secondaryTerminal');
       // Note: ConfigManager handles reading, but writing must still use VS Code API
 
       // Update VS Code settings (font settings are managed by VS Code directly)
@@ -1117,15 +1117,15 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
       if (settings.theme) {
         await config.update('theme', settings.theme, vscode.ConfigurationTarget.Global);
       }
-      if (settings.enableClaudeCodeIntegration !== undefined) {
+      if (settings.enableCliAgentIntegration !== undefined) {
         await config.update(
-          'enableClaudeCodeIntegration',
-          settings.enableClaudeCodeIntegration,
+          'enableCliAgentIntegration',
+          settings.enableCliAgentIntegration,
           vscode.ConfigurationTarget.Global
         );
         log(
-          '🔧 [DEBUG] Claude Code integration setting updated:',
-          settings.enableClaudeCodeIntegration
+          '🔧 [DEBUG] CLI Agent Code integration setting updated:',
+          settings.enableCliAgentIntegration
         );
       }
       // Note: Font settings are read directly from VS Code's terminal/editor settings
@@ -1142,9 +1142,9 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
   }
 
   /**
-   * Claude状態をWebViewに送信
+   * CLI Agent状態をWebViewに送信
    */
-  public sendClaudeStatusUpdate(
+  public sendCliAgentStatusUpdate(
     activeTerminalName: string | null,
     status: 'connected' | 'disconnected' | 'none'
   ): void {
@@ -1157,11 +1157,11 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
         },
       };
 
-      log(`📤 [SIDEBAR-PROVIDER] Preparing Claude status message: ${JSON.stringify(message)}`);
+      log(`📤 [SIDEBAR-PROVIDER] Preparing CLI Agent status message: ${JSON.stringify(message)}`);
       void this._sendMessage(message);
-      log(`✅ [SIDEBAR-PROVIDER] Claude status update sent: ${activeTerminalName} -> ${status}`);
+      log(`✅ [SIDEBAR-PROVIDER] CLI Agent status update sent: ${activeTerminalName} -> ${status}`);
     } catch (error) {
-      log('❌ [SIDEBAR-PROVIDER] Failed to send Claude status update:', error);
+      log('❌ [SIDEBAR-PROVIDER] Failed to send CLI Agent status update:', error);
     }
   }
 }
