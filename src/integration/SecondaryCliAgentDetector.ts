@@ -1,6 +1,5 @@
 import { terminal as log } from '../utils/logger';
 import type { TerminalManager } from '../terminals/TerminalManager';
-import type { TerminalEvent } from '../types/common';
 import * as vscode from 'vscode';
 
 /**
@@ -81,7 +80,9 @@ export class SecondaryCliAgentDetector {
         // Check for CLI Agents commands
         const agentType = this._detectAgentFromCommand(command);
         if (agentType) {
-          log(`🚀 [CLI-AGENTS-DETECTOR] ${agentType.toUpperCase()} CLI command detected in terminal ${terminalId}: ${command}`);
+          log(
+            `🚀 [CLI-AGENTS-DETECTOR] ${agentType.toUpperCase()} CLI command detected in terminal ${terminalId}: ${command}`
+          );
           this._activateCliAgent(terminalId, agentType);
         }
       }
@@ -101,11 +102,13 @@ export class SecondaryCliAgentDetector {
   public handleTerminalOutput(terminalId: string, data: string): void {
     // 各CLI Agentの出力パターンをチェック
     const detectedAgent = this._detectAgentFromOutput(data);
-    
+
     if (detectedAgent) {
       const currentAgent = this._cliAgentsInfo.get(terminalId);
       if (!currentAgent || !currentAgent.isActive) {
-        log(`🔍 [CLI-AGENTS-DETECTOR] ${detectedAgent.toUpperCase()} CLI pattern detected in output for terminal ${terminalId}`);
+        log(
+          `🔍 [CLI-AGENTS-DETECTOR] ${detectedAgent.toUpperCase()} CLI pattern detected in output for terminal ${terminalId}`
+        );
         this._activateCliAgent(terminalId, detectedAgent);
       }
     }
@@ -115,7 +118,9 @@ export class SecondaryCliAgentDetector {
     if (hasExitPattern) {
       const agentInfo = this._cliAgentsInfo.get(terminalId);
       if (agentInfo && agentInfo.isActive) {
-        log(`👋 [CLI-AGENTS-DETECTOR] ${agentInfo.type.toUpperCase()} CLI exit pattern detected for terminal ${terminalId}`);
+        log(
+          `👋 [CLI-AGENTS-DETECTOR] ${agentInfo.type.toUpperCase()} CLI exit pattern detected for terminal ${terminalId}`
+        );
         this._deactivateCliAgent(terminalId);
       }
     }
@@ -129,17 +134,17 @@ export class SecondaryCliAgentDetector {
    */
   private _detectAgentFromCommand(command: string): CliAgentType | null {
     const lowerCommand = command.toLowerCase().trim();
-    
+
     // Claude Code CLI detection
     if (lowerCommand.startsWith('claude')) {
       return 'claude';
     }
-    
+
     // Gemini CLI detection
     if (lowerCommand.startsWith('gemini')) {
       return 'gemini';
     }
-    
+
     return null;
   }
 
@@ -148,7 +153,7 @@ export class SecondaryCliAgentDetector {
    */
   private _detectAgentFromOutput(data: string): CliAgentType | null {
     const lowerData = data.toLowerCase();
-    
+
     // Claude Code CLI patterns
     const claudePatterns = [
       'welcome to claude code',
@@ -158,9 +163,9 @@ export class SecondaryCliAgentDetector {
       'human:',
       'assistant:',
       'type your message',
-      'to start a conversation'
+      'to start a conversation',
     ];
-    
+
     // Gemini CLI patterns
     const geminiPatterns = [
       'welcome to gemini',
@@ -170,23 +175,23 @@ export class SecondaryCliAgentDetector {
       'user:',
       'model:',
       'enter your prompt',
-      'gemini is ready'
+      'gemini is ready',
     ];
-    
+
     // Check Claude patterns
     for (const pattern of claudePatterns) {
       if (lowerData.includes(pattern)) {
         return 'claude';
       }
     }
-    
+
     // Check Gemini patterns
     for (const pattern of geminiPatterns) {
       if (lowerData.includes(pattern)) {
         return 'gemini';
       }
     }
-    
+
     return null;
   }
 
@@ -195,7 +200,7 @@ export class SecondaryCliAgentDetector {
    */
   private _detectExitPattern(data: string): boolean {
     const lowerData = data.toLowerCase();
-    
+
     // 共通の終了パターン
     const exitPatterns = [
       'goodbye',
@@ -206,9 +211,9 @@ export class SecondaryCliAgentDetector {
       'quit',
       'exit',
       'session closed',
-      'connection closed'
+      'connection closed',
     ];
-    
+
     // EOF markers (プロセス終了)
     const eofPatterns = [
       '\u0004', // EOT (End of Transmission)
@@ -216,16 +221,16 @@ export class SecondaryCliAgentDetector {
       'process exit',
       'command not found',
       'terminated',
-      'killed'
+      'killed',
     ];
-    
+
     // Check exit patterns
     for (const pattern of [...exitPatterns, ...eofPatterns]) {
       if (lowerData.includes(pattern)) {
         return true;
       }
     }
-    
+
     return false;
   }
 
@@ -249,7 +254,9 @@ export class SecondaryCliAgentDetector {
 
     // Set new activity timer for auto-deactivation
     const newTimer = setTimeout(() => {
-      log(`⏰ [CLI-AGENTS-DETECTOR] Auto-deactivating ${agentInfo.type.toUpperCase()} CLI due to inactivity: ${terminalId}`);
+      log(
+        `⏰ [CLI-AGENTS-DETECTOR] Auto-deactivating ${agentInfo.type.toUpperCase()} CLI due to inactivity: ${terminalId}`
+      );
       this._deactivateCliAgent(terminalId);
     }, this.ACTIVITY_TIMEOUT);
 
@@ -277,7 +284,7 @@ export class SecondaryCliAgentDetector {
    */
   private _activateCliAgent(terminalId: string, type: CliAgentType): void {
     const now = new Date();
-    
+
     // Deactivate any existing agent in this terminal
     const existingAgent = this._cliAgentsInfo.get(terminalId);
     if (existingAgent && existingAgent.isActive) {
@@ -289,17 +296,17 @@ export class SecondaryCliAgentDetector {
       type,
       isActive: true,
       startTime: now,
-      lastActivity: now
+      lastActivity: now,
     };
 
     this._cliAgentsInfo.set(terminalId, agentInfo);
     log(`✅ [CLI-AGENTS-DETECTOR] ${type.toUpperCase()} CLI activated for terminal: ${terminalId}`);
 
     // Emit status change event
-    this._cliAgentStatusEmitter.fire({ 
-      terminalId, 
-      type, 
-      isActive: true 
+    this._cliAgentStatusEmitter.fire({
+      terminalId,
+      type,
+      isActive: true,
     });
 
     // Start activity monitoring
@@ -324,13 +331,15 @@ export class SecondaryCliAgentDetector {
 
     // Update agent info
     agentInfo.isActive = false;
-    log(`❌ [CLI-AGENTS-DETECTOR] ${agentInfo.type.toUpperCase()} CLI deactivated for terminal: ${terminalId}`);
+    log(
+      `❌ [CLI-AGENTS-DETECTOR] ${agentInfo.type.toUpperCase()} CLI deactivated for terminal: ${terminalId}`
+    );
 
     // Emit status change event
-    this._cliAgentStatusEmitter.fire({ 
-      terminalId, 
-      type: agentInfo.type, 
-      isActive: false 
+    this._cliAgentStatusEmitter.fire({
+      terminalId,
+      type: agentInfo.type,
+      isActive: false,
     });
   }
 
@@ -370,13 +379,13 @@ export class SecondaryCliAgentDetector {
    */
   public getActiveAgents(): Array<{ terminalId: string; agentInfo: CliAgentInfo }> {
     const activeAgents: Array<{ terminalId: string; agentInfo: CliAgentInfo }> = [];
-    
+
     for (const [terminalId, agentInfo] of this._cliAgentsInfo.entries()) {
       if (agentInfo.isActive) {
         activeAgents.push({ terminalId, agentInfo });
       }
     }
-    
+
     return activeAgents;
   }
 
@@ -405,12 +414,12 @@ export class SecondaryCliAgentDetector {
     // CLI Agents関連データのクリーンアップ
     this._commandHistory.delete(terminalId);
     this._currentInputBuffer.delete(terminalId);
-    
+
     const agentInfo = this._cliAgentsInfo.get(terminalId);
     if (agentInfo && agentInfo.isActive) {
       this._deactivateCliAgent(terminalId);
     }
-    
+
     this._cliAgentsInfo.delete(terminalId);
     log(`🧹 [CLI-AGENTS-DETECTOR] Cleaned up CLI Agents data for terminal: ${terminalId}`);
   }

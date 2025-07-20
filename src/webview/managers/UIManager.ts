@@ -579,12 +579,15 @@ export class UIManager implements IUIManager {
 
     if (status !== 'none' && isActiveTerminal) {
       // Agent type based display text
-      const agentDisplayName = agentType 
-        ? (agentType === 'claude' ? 'CLAUDE CLI' : 'GEMINI CLI')
+      const agentDisplayName = agentType
+        ? agentType === 'claude'
+          ? 'CLAUDE CLI'
+          : 'GEMINI CLI'
         : 'CLI Agent';
-      
-      const statusText = status === 'connected' ? `${agentDisplayName} Active` : `${agentDisplayName} Inactive`;
-      
+
+      const statusText =
+        status === 'connected' ? `${agentDisplayName} Active` : `${agentDisplayName} Inactive`;
+
       const statusSpan = DOMUtils.createElement(
         'span',
         {
@@ -685,7 +688,7 @@ export class UIManager implements IUIManager {
         textContent: '✕',
         className: 'notification-close',
       }
-    ) as HTMLButtonElement;
+    );
   }
 
   /**

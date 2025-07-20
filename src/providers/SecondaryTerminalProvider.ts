@@ -13,6 +13,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider {
 
   private _view?: vscode.WebviewView;
   private _webviewReady = false;
+  private _terminalInitialized = false;
   private _pendingMessages: WebviewMessage[] = [];
 
   constructor(
@@ -26,10 +27,14 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider {
     _token: vscode.CancellationToken
   ): void {
     log('🔧 [DEBUG] SecondaryTerminalProvider.resolveWebviewView called');
-    
+
+    // Reset initialization flags for fresh start
+    this._webviewReady = false;
+    this._terminalInitialized = false;
+
     // Check if this is a panel move (WebView already exists but container changed)
     const isPanelMove = this._view !== undefined && this._view.webview.html !== '';
-    
+
     this._view = webviewView;
 
     // Enable scripts and set resource roots
@@ -39,30 +44,28 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider {
     };
 
     // Set up visibility change handler for panel move detection
-    webviewView.onDidChangeVisibility(() => {
-      if (webviewView.visible && isPanelMove) {
-        log('🔄 [DEBUG] WebView became visible after panel move - restoring state');
-        this._restoreWebviewState();
-      }
-    }, null, this._extensionContext.subscriptions);
+    webviewView.onDidChangeVisibility(
+      () => {
+        if (webviewView.visible && isPanelMove) {
+          log('🔄 [DEBUG] WebView became visible after panel move - restoring state');
+          void this._restoreWebviewState();
+        }
+      },
+      null,
+      this._extensionContext.subscriptions
+    );
 
-    // Only generate HTML if this is not a panel move or HTML is empty
-    if (!isPanelMove || webviewView.webview.html === '') {
-      try {
-        const html = this._getHtmlForWebview(webviewView.webview);
-        log('🔧 [DEBUG] Generated HTML length:', html.length);
-        log('🔧 [DEBUG] Setting webview HTML...');
-        webviewView.webview.html = html;
-        log('✅ [DEBUG] HTML set successfully');
-      } catch (error) {
-        log('❌ [ERROR] Failed to generate HTML for webview:', error);
-        TerminalErrorHandler.handleWebviewError(error);
-        return;
-      }
-    } else {
-      log('🔄 [DEBUG] Panel move detected - preserving HTML and restoring state');
-      // Immediate state restoration for panel moves
-      setTimeout(() => this._restoreWebviewState(), 100);
+    // Always generate fresh HTML to ensure clean state
+    try {
+      const html = this._getHtmlForWebview(webviewView.webview);
+      log('🔧 [DEBUG] Generated HTML length:', html.length);
+      log('🔧 [DEBUG] Setting webview HTML...');
+      webviewView.webview.html = html;
+      log('✅ [DEBUG] HTML set successfully');
+    } catch (error) {
+      log('❌ [ERROR] Failed to generate HTML for webview:', error);
+      TerminalErrorHandler.handleWebviewError(error);
+      return;
     }
 
     // Handle messages from the webview
@@ -280,6 +283,11 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider {
   }
 
   public async _initializeTerminal(): Promise<void> {
+    if (this._terminalInitialized) {
+      log('⚠️ [DEBUG] Terminal already initialized, skipping...');
+      return;
+    }
+
     log('🔧 [DEBUG] Initializing terminal...');
     log('🔧 [DEBUG] Terminal manager available:', !!this._terminalManager);
     log('🔧 [DEBUG] Webview available:', !!this._view);
@@ -338,6 +346,8 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider {
         log('❌ [ERROR] Failed to send INIT message:', sendError);
         throw new Error(`Failed to send INIT message: ${String(sendError)}`);
       }
+
+      this._terminalInitialized = true;
       log('✅ [DEBUG] Terminal initialization completed successfully');
     } catch (error) {
       log('❌ [ERROR] Failed to initialize terminal:', error);
@@ -388,21 +398,29 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider {
           break;
 
         case 'webviewReady':
-          log('🎉 [DEBUG] ========== WEBVIEW READY NOTIFICATION RECEIVED ==========');
-          await this._handleWebviewReady();
-          break;
-
         case TERMINAL_CONSTANTS.COMMANDS.READY:
-          log('✅ [DEBUG] Traditional ready command received, handling webview ready...');
+          log('🎉 [DEBUG] ========== WEBVIEW READY NOTIFICATION RECEIVED ==========');
+          log('🎉 [DEBUG] Message type:', message.command);
+
+          // Handle webview ready state
           await this._handleWebviewReady();
 
-          // Initialize terminal if not done yet
-          try {
-            await this._initializeTerminal();
-            log('✅ [DEBUG] Terminal initialization completed in message handler');
-          } catch (initError) {
-            log('❌ [ERROR] Terminal initialization failed in message handler:', initError);
-            TerminalErrorHandler.handleTerminalCreationError(initError);
+          // Initialize terminal only once after webview is ready
+          if (!this._terminalInitialized) {
+            setTimeout(() => {
+              void (async () => {
+                try {
+                  log('🔄 [DEBUG] Starting delayed terminal initialization...');
+                  await this._initializeTerminal();
+                  log('✅ [DEBUG] Terminal initialization completed after webview ready');
+                } catch (initError) {
+                  log('❌ [ERROR] Terminal initialization failed after webview ready:', initError);
+                  TerminalErrorHandler.handleTerminalCreationError(initError);
+                }
+              })();
+            }, 300);
+          } else {
+            log('⚠️ [DEBUG] Terminal already initialized, skipping initialization');
           }
           break;
         case TERMINAL_CONSTANTS.COMMANDS.INPUT:
@@ -623,7 +641,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider {
           const status = event.isActive ? 'connected' : 'disconnected';
           const agentType = this._terminalManager.getActiveAgentType(event.terminalId);
           const agentName = agentType ? `${agentType.toUpperCase()} CLI` : 'CLI Agent';
-          
+
           log(`🔔 [PROVIDER] ${agentName} status: ${terminal.name} -> ${status}`);
           this.sendCliAgentStatusUpdate(terminal.name, status, agentType);
         } else {
@@ -1207,13 +1225,13 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider {
   private async _restoreWebviewState(): Promise<void> {
     try {
       log('🔄 [DEBUG] Starting WebView state restoration...');
-      
+
       // Get current terminal state from TerminalManager
       const currentState = this._terminalManager.getCurrentState();
       log('🔄 [DEBUG] Current terminal state:', currentState);
 
       // Wait a bit for WebView to be ready
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       // Send state restoration message to WebView
       const restoreMessage = {
@@ -1277,7 +1295,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider {
     const vsCodeAltClickSetting = vscode.workspace
       .getConfiguration('terminal.integrated')
       .get<boolean>('altClickMovesCursor', false);
-    
+
     const vsCodeMultiCursorModifier = vscode.workspace
       .getConfiguration('editor')
       .get<string>('multiCursorModifier', 'alt');

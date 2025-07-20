@@ -192,7 +192,7 @@ export class HeaderFactory {
         title: 'Split Terminal',
         'data-terminal-id': terminalId,
       }
-    ) as HTMLButtonElement;
+    );
 
     // 閉じるボタン
     const closeButton = DOMUtils.createElement(
@@ -217,7 +217,7 @@ export class HeaderFactory {
         title: 'Close Terminal',
         'data-terminal-id': terminalId,
       }
-    ) as HTMLButtonElement;
+    );
 
     // ホバーエフェクトを追加
     [splitButton, closeButton].forEach((button) => {
@@ -265,10 +265,12 @@ export class HeaderFactory {
     HeaderFactory.removeCliAgentStatus(elements);
 
     // Agent type based display text
-    const agentDisplayName = agentType 
-      ? (agentType === 'claude' ? 'CLAUDE CLI' : 'GEMINI CLI')
+    const agentDisplayName = agentType
+      ? agentType === 'claude'
+        ? 'CLAUDE CLI'
+        : 'GEMINI CLI'
       : 'CLI Agent';
-    
+
     const statusText =
       status === 'connected' ? `${agentDisplayName} connected` : `${agentDisplayName} disconnected`;
     const isConnected = status === 'connected';
@@ -341,11 +343,15 @@ export class HeaderFactory {
     const statusText = document.createElement('span');
     statusText.className = 'claude-status';
     // Agent type based display text
-    const agentDisplayName = agentType 
-      ? (agentType === 'claude' ? 'CLAUDE CLI' : 'GEMINI CLI')
+    const agentDisplayName = agentType
+      ? agentType === 'claude'
+        ? 'CLAUDE CLI'
+        : 'GEMINI CLI'
       : 'CLI Agent';
-    
-    statusText.textContent = isConnected ? `${agentDisplayName} Active` : `${agentDisplayName} Inactive`;
+
+    statusText.textContent = isConnected
+      ? `${agentDisplayName} Active`
+      : `${agentDisplayName} Inactive`;
     statusText.style.fontSize = '11px';
     statusText.style.color = isConnected ? '#007ACC' : '#666';
     statusText.style.fontWeight = 'bold';

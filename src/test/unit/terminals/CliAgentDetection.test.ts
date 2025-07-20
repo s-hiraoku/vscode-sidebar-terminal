@@ -87,7 +87,7 @@ describe('CliAgentDetection in Terminal Manager', () => {
     mockPty.spawn.returns(mockPtyProcess);
 
     // Create terminal manager
-    terminalManager = new TerminalManager(mockContext);
+    terminalManager = new TerminalManager();
 
     // Setup CLI Agent status change spy
     cliAgentStatusSpy = sinon.spy();

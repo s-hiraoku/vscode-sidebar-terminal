@@ -25,7 +25,7 @@ import {
   getFirstValue,
 } from '../utils/common';
 import { TerminalNumberManager } from '../utils/TerminalNumberManager';
-import { SecondaryCliAgentDetector, CliAgentStatusEvent } from '../integration/SecondaryCliAgentDetector';
+import { SecondaryCliAgentDetector } from '../integration/SecondaryCliAgentDetector';
 
 export class TerminalManager {
   private readonly _terminals = new Map<string, TerminalInstance>();
@@ -60,7 +60,7 @@ export class TerminalManager {
     // Initialize terminal number manager with max terminals config
     const config = getTerminalConfig();
     this._terminalNumberManager = new TerminalNumberManager(config.maxTerminals);
-    
+
     // Initialize CLI Agent detector
     this._cliAgentDetector = new SecondaryCliAgentDetector(this);
   }
@@ -68,7 +68,7 @@ export class TerminalManager {
   /**
    * Get CLI Agent status change event
    */
-  public get onCliAgentStatusChange() {
+  public get onCliAgentStatusChange(): vscode.Event<any> {
     return this._cliAgentDetector.onCliAgentStatusChange;
   }
 
@@ -413,7 +413,7 @@ export class TerminalManager {
     }
 
     const result = this.deleteTerminal(activeId, { source: 'command' });
-    return result.then(r => r.success).catch(() => false) as unknown as boolean;
+    return result.then((r) => r.success).catch(() => false) as unknown as boolean;
   }
 
   public killTerminal(terminalId?: string): void {
@@ -507,10 +507,10 @@ export class TerminalManager {
     if (buffer && buffer.length > 0) {
       const combinedData = buffer.join('');
       buffer.length = 0; // Clear buffer
-      
+
       // Send to CLI Agent detector for pattern detection
       this._cliAgentDetector.handleTerminalOutput(terminalId, combinedData);
-      
+
       this._dataEmitter.fire({ terminalId, data: combinedData });
     }
   }
@@ -547,7 +547,7 @@ export class TerminalManager {
 
     // CLI Agent関連データのクリーンアップ
     this._cliAgentDetector.cleanupTerminal(terminalId);
-    
+
     // Remove from terminals map
     this._terminals.delete(terminalId);
     this._terminalRemovedEmitter.fire(terminalId);
@@ -630,8 +630,7 @@ export class TerminalManager {
   /**
    * Get all active CLI Agents
    */
-  public getActiveAgents(): Array<{ terminalId: string; agentInfo: any }> {
+  public getActiveAgents(): Array<{ terminalId: string; agentInfo: unknown }> {
     return this._cliAgentDetector.getActiveAgents();
   }
-
 }

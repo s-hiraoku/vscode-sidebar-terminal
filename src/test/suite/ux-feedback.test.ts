@@ -29,7 +29,7 @@ suite('UX Feedback Test Suite', () => {
       languageModelAccessInformation: {} as vscode.LanguageModelAccessInformation,
     } as unknown as vscode.ExtensionContext;
 
-    terminalManager = new TerminalManager(mockContext);
+    terminalManager = new TerminalManager();
     provider = new SecondaryTerminalProvider(mockContext, terminalManager);
   });
 

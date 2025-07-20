@@ -319,7 +319,9 @@ export class ConfigManager implements IConfigManager {
 
     // Shell args validation
     if (Array.isArray(settings.shellArgs)) {
-      normalized.shellArgs = settings.shellArgs.filter((arg): arg is string => typeof arg === 'string');
+      normalized.shellArgs = settings.shellArgs.filter(
+        (arg): arg is string => typeof arg === 'string'
+      );
     } else {
       normalized.shellArgs = this.DEFAULTS.shellArgs;
     }
@@ -353,11 +355,12 @@ export class ConfigManager implements IConfigManager {
     if (settings.cursor && typeof settings.cursor === 'object') {
       normalized.cursor = {
         style: ['block', 'underline', 'bar'].includes(settings.cursor.style || '')
-          ? settings.cursor.style as 'block' | 'underline' | 'bar'
+          ? (settings.cursor.style as 'block' | 'underline' | 'bar')
           : this.DEFAULTS.cursor.style,
-        blink: typeof settings.cursor.blink === 'boolean'
-          ? settings.cursor.blink
-          : this.DEFAULTS.cursor.blink,
+        blink:
+          typeof settings.cursor.blink === 'boolean'
+            ? settings.cursor.blink
+            : this.DEFAULTS.cursor.blink,
       };
     } else {
       normalized.cursor = this.DEFAULTS.cursor;

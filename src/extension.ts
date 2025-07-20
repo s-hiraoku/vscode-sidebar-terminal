@@ -30,7 +30,7 @@ export function activate(context: vscode.ExtensionContext): void {
     process.env.NODE_PSTY_DEBUG = '0';
 
     // Initialize terminal manager
-    terminalManager = new TerminalManager(context);
+    terminalManager = new TerminalManager();
 
     // Register the sidebar terminal provider
     sidebarProvider = new SecondaryTerminalProvider(context, terminalManager);
