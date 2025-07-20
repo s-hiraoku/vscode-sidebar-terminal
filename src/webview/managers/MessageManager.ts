@@ -11,7 +11,7 @@ import { LoggerManager } from './LoggerManager';
 
 interface MessageCommand {
   command: string;
-  claudeStatus?: {
+  cliAgentStatus?: {
     activeTerminalName: string | null;
     status: 'connected' | 'disconnected' | 'none';
   };
@@ -97,7 +97,7 @@ export class MessageManager implements IMessageManager {
           this.handleStateUpdateMessage(msg, coordinator);
           break;
 
-        case 'claudeStatusUpdate':
+        case 'cliAgentStatusUpdate':
           this.handleClaudeStatusUpdateMessage(msg, coordinator);
           break;
 
@@ -248,7 +248,7 @@ export class MessageManager implements IMessageManager {
         terminal.terminal.write(data);
         log(`📥 [MESSAGE] Output written to terminal ${terminalId}: ${data.length} chars`);
 
-        // Claude Code detection disabled
+        // CLI Agent detection disabled
       } else {
         log(`⚠️ [MESSAGE] Output for unknown terminal: ${terminalId}`);
       }
@@ -434,31 +434,31 @@ export class MessageManager implements IMessageManager {
     log(`📨 [MESSAGE] Message received at: ${new Date().toISOString()}`);
     log(`📨 [MESSAGE] Full message received: ${JSON.stringify(msg, null, 2)}`);
     log(`📨 [MESSAGE] Message command: ${msg.command}`);
-    log(`📨 [MESSAGE] Message claudeStatus: ${JSON.stringify(msg.claudeStatus)}`);
-    log(`📨 [MESSAGE] Message claudeStatus type: ${typeof msg.claudeStatus}`);
+    log(`📨 [MESSAGE] Message cliAgentStatus: ${JSON.stringify(msg.cliAgentStatus)}`);
+    log(`📨 [MESSAGE] Message cliAgentStatus type: ${typeof msg.cliAgentStatus}`);
 
-    const claudeStatus = msg.claudeStatus;
-    if (claudeStatus) {
+    const cliAgentStatus = msg.cliAgentStatus;
+    if (cliAgentStatus) {
       log(`🔄 [MESSAGE] Claude status data found:`);
       log(
-        `🔄 [MESSAGE]   - activeTerminalName: "${claudeStatus.activeTerminalName}" (${typeof claudeStatus.activeTerminalName})`
+        `🔄 [MESSAGE]   - activeTerminalName: "${cliAgentStatus.activeTerminalName}" (${typeof cliAgentStatus.activeTerminalName})`
       );
-      log(`🔄 [MESSAGE]   - status: "${claudeStatus.status}" (${typeof claudeStatus.status})`);
-      log(`🔄 [MESSAGE] About to call coordinator.updateClaudeStatus...`);
+      log(`🔄 [MESSAGE]   - status: "${cliAgentStatus.status}" (${typeof cliAgentStatus.status})`);
+      log(`🔄 [MESSAGE] About to call coordinator.updateCliAgentStatus...`);
       log(`🔄 [MESSAGE] Coordinator available: ${!!coordinator}`);
       log(`🔄 [MESSAGE] Coordinator type: ${typeof coordinator}`);
       log(
-        `🔄 [MESSAGE] Coordinator.updateClaudeStatus method: ${typeof coordinator.updateClaudeStatus}`
+        `🔄 [MESSAGE] Coordinator.updateCliAgentStatus method: ${typeof coordinator.updateCliAgentStatus}`
       );
 
       try {
-        const result = coordinator.updateClaudeStatus(
-          claudeStatus.activeTerminalName,
-          claudeStatus.status
+        const result = coordinator.updateCliAgentStatus(
+          cliAgentStatus.activeTerminalName,
+          cliAgentStatus.status
         );
-        log(`✅ [MESSAGE] coordinator.updateClaudeStatus called successfully, result: ${result}`);
+        log(`✅ [MESSAGE] coordinator.updateCliAgentStatus called successfully, result: ${result}`);
       } catch (error) {
-        log(`❌ [MESSAGE] Error calling coordinator.updateClaudeStatus:`, error);
+        log(`❌ [MESSAGE] Error calling coordinator.updateCliAgentStatus:`, error);
         log(`❌ [MESSAGE] Error name: ${error instanceof Error ? error.name : 'unknown'}`);
         log(
           `❌ [MESSAGE] Error message: ${error instanceof Error ? error.message : String(error)}`
@@ -466,7 +466,7 @@ export class MessageManager implements IMessageManager {
         log(`❌ [MESSAGE] Error stack: ${error instanceof Error ? error.stack : 'no stack'}`);
       }
     } else {
-      log('⚠️ [MESSAGE] No Claude status data in claudeStatusUpdate message');
+      log('⚠️ [MESSAGE] No Claude status data in cliAgentStatusUpdate message');
       log(`⚠️ [MESSAGE] Message keys: ${Object.keys(msg)}`);
       log(`⚠️ [MESSAGE] Message properties check:`);
       for (const [key, value] of Object.entries(msg)) {

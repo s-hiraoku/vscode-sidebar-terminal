@@ -37,7 +37,7 @@ export class ConfigManager implements IConfigManager {
     fontFamily: 'Consolas, "Courier New", monospace',
     theme: 'dark',
     cursorBlink: true,
-    enableClaudeCodeIntegration: true,
+    enableCliAgentIntegration: true,
     scrollback: 1000,
     bellSound: false,
     altClickMovesCursor: false,
@@ -295,11 +295,11 @@ export class ConfigManager implements IConfigManager {
       normalized.multiCursorModifier = this.DEFAULTS.multiCursorModifier;
     }
 
-    // Claude Code integration validation
-    normalized.enableClaudeCodeIntegration =
-      typeof settings.enableClaudeCodeIntegration === 'boolean'
-        ? settings.enableClaudeCodeIntegration
-        : this.DEFAULTS.enableClaudeCodeIntegration;
+    // CLI Agent integration validation
+    normalized.enableCliAgentIntegration =
+      typeof settings.enableCliAgentIntegration === 'boolean'
+        ? settings.enableCliAgentIntegration
+        : this.DEFAULTS.enableCliAgentIntegration;
 
     return normalized;
   }

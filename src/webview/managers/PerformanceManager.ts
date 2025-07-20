@@ -19,8 +19,8 @@ export class PerformanceManager implements IPerformanceManager {
   private resizeDebounceTimer: number | null = null;
   private readonly RESIZE_DEBOUNCE_DELAY = SPLIT_CONSTANTS.RESIZE_DEBOUNCE_DELAY;
 
-  // Claude Code mode for performance optimization
-  private isClaudeCodeMode = false;
+  // CLI Agent mode for performance optimization
+  private isCliAgentMode = false;
 
   // Current terminal for buffer operations
   private currentBufferTerminal: Terminal | null = null;
@@ -31,22 +31,22 @@ export class PerformanceManager implements IPerformanceManager {
   public scheduleOutputBuffer(data: string, targetTerminal: Terminal): void {
     this.currentBufferTerminal = targetTerminal;
 
-    // Enhanced buffering strategy for Claude Code compatibility
+    // Enhanced buffering strategy for CLI Agent compatibility
     const isLargeOutput = data.length >= 1000;
     const bufferFull = this.outputBuffer.length >= this.MAX_BUFFER_SIZE;
     const isModerateOutput = data.length >= 100; // Medium-sized chunks
 
     // Immediate flush conditions (prioritized for cursor accuracy)
     // Only flush immediately for large output (≥1000 chars) or buffer full
-    // Moderate output (≥100 chars) should only flush immediately during Claude Code mode
+    // Moderate output (≥100 chars) should only flush immediately during CLI Agent mode
     const shouldFlushImmediately =
-      isLargeOutput || bufferFull || (this.isClaudeCodeMode && isModerateOutput);
+      isLargeOutput || bufferFull || (this.isCliAgentMode && isModerateOutput);
 
     if (shouldFlushImmediately) {
       this.flushOutputBuffer();
       targetTerminal.write(data);
-      const reason = this.isClaudeCodeMode
-        ? 'Claude Code mode'
+      const reason = this.isCliAgentMode
+        ? 'CLI Agent mode'
         : isLargeOutput
           ? 'large output'
           : 'buffer full';
@@ -55,7 +55,7 @@ export class PerformanceManager implements IPerformanceManager {
       this.outputBuffer.push(data);
       this.scheduleBufferFlush();
       log(
-        `📤 [PERFORMANCE] Buffered write: ${data.length} chars (buffer: ${this.outputBuffer.length}, Claude Code: ${this.isClaudeCodeMode})`
+        `📤 [PERFORMANCE] Buffered write: ${data.length} chars (buffer: ${this.outputBuffer.length}, CLI Agent: ${this.isCliAgentMode})`
       );
     }
   }
@@ -65,12 +65,12 @@ export class PerformanceManager implements IPerformanceManager {
    */
   private scheduleBufferFlush(): void {
     if (this.bufferFlushTimer === null) {
-      // Dynamic flush interval based on Claude Code state and output frequency
+      // Dynamic flush interval based on CLI Agent state and output frequency
       let flushInterval = this.BUFFER_FLUSH_INTERVAL; // Default 16ms
 
-      if (this.isClaudeCodeMode) {
-        // Claude Code active: Use very aggressive flushing for cursor accuracy
-        flushInterval = 4; // 4ms for Claude Code output
+      if (this.isCliAgentMode) {
+        // CLI Agent active: Use very aggressive flushing for cursor accuracy
+        flushInterval = 4; // 4ms for CLI Agent output
       } else if (this.outputBuffer.length > 5) {
         // High-frequency output: Use shorter interval
         flushInterval = 8; // 8ms for frequent output
@@ -81,7 +81,7 @@ export class PerformanceManager implements IPerformanceManager {
       }, flushInterval);
 
       log(
-        `📊 [PERFORMANCE] Scheduled flush in ${flushInterval}ms (Claude Code: ${this.isClaudeCodeMode}, buffer size: ${this.outputBuffer.length})`
+        `📊 [PERFORMANCE] Scheduled flush in ${flushInterval}ms (CLI Agent: ${this.isCliAgentMode}, buffer size: ${this.outputBuffer.length})`
       );
     }
   }
@@ -134,12 +134,12 @@ export class PerformanceManager implements IPerformanceManager {
   }
 
   /**
-   * Set Claude Code mode for performance optimization
+   * Set CLI Agent mode for performance optimization
    */
-  public setClaudeCodeMode(isActive: boolean): void {
-    if (this.isClaudeCodeMode !== isActive) {
-      this.isClaudeCodeMode = isActive;
-      log(`⚡ [PERFORMANCE] Claude Code mode: ${isActive ? 'ACTIVE' : 'INACTIVE'}`);
+  public setCliAgentMode(isActive: boolean): void {
+    if (this.isCliAgentMode !== isActive) {
+      this.isCliAgentMode = isActive;
+      log(`⚡ [PERFORMANCE] CLI Agent mode: ${isActive ? 'ACTIVE' : 'INACTIVE'}`);
 
       // Flush immediately when mode changes
       if (!isActive) {
@@ -148,8 +148,8 @@ export class PerformanceManager implements IPerformanceManager {
     }
   }
 
-  public getClaudeCodeMode(): boolean {
-    return this.isClaudeCodeMode;
+  public getCliAgentMode(): boolean {
+    return this.isCliAgentMode;
   }
 
   /**
@@ -158,13 +158,13 @@ export class PerformanceManager implements IPerformanceManager {
   public getBufferStats(): {
     bufferSize: number;
     isFlushScheduled: boolean;
-    isClaudeCodeMode: boolean;
+    isCliAgentMode: boolean;
     currentTerminal: boolean;
   } {
     return {
       bufferSize: this.outputBuffer.length,
       isFlushScheduled: this.bufferFlushTimer !== null,
-      isClaudeCodeMode: this.isClaudeCodeMode,
+      isCliAgentMode: this.isCliAgentMode,
       currentTerminal: this.currentBufferTerminal !== null,
     };
   }
@@ -217,7 +217,7 @@ export class PerformanceManager implements IPerformanceManager {
     // Clear references
     this.currentBufferTerminal = null;
     this.outputBuffer = [];
-    this.isClaudeCodeMode = false;
+    this.isCliAgentMode = false;
 
     log('✅ [PERFORMANCE] Performance manager disposed');
   }

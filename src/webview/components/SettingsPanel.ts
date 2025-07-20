@@ -227,7 +227,7 @@ export class SettingsPanel {
   }
 
   /**
-   * Claude Code統合機能コントロールを作成
+   * CLI Agent統合機能コントロールを作成
    */
   private createClaudeCodeIntegrationControl(): string {
     return `
@@ -237,7 +237,7 @@ export class SettingsPanel {
           font-size: 14px;
           font-weight: 600;
           margin: 0 0 12px 0;
-        ">Claude Code Integration</h3>
+        ">CLI Agent Integration</h3>
         <label style="
           color: var(--vscode-foreground, #cccccc);
           font-size: 13px;
@@ -249,7 +249,7 @@ export class SettingsPanel {
         ">
           <input
             type="checkbox"
-            id="claude-code-integration"
+            id="cli-agent-integration"
             checked
             style="
               width: 16px;
@@ -334,7 +334,7 @@ export class SettingsPanel {
       const defaultSettings: PartialTerminalSettings = {
         theme: 'auto',
         cursorBlink: true,
-        enableClaudeCodeIntegration: true,
+        enableCliAgentIntegration: true,
       };
 
       this.populateSettings(defaultSettings);
@@ -356,13 +356,13 @@ export class SettingsPanel {
       '#cursor-blink'
     ) as HTMLInputElement;
     const claudeCodeIntegrationCheckbox = this.panelElement.querySelector(
-      '#claude-code-integration'
+      '#cli-agent-integration'
     ) as HTMLInputElement;
 
     return {
       theme: themeSelect?.value || 'auto',
       cursorBlink: cursorBlinkCheckbox?.checked || true,
-      enableClaudeCodeIntegration: claudeCodeIntegrationCheckbox?.checked || true,
+      enableCliAgentIntegration: claudeCodeIntegrationCheckbox?.checked || true,
     };
   }
 
@@ -378,7 +378,7 @@ export class SettingsPanel {
         '#cursor-blink'
       ) as HTMLInputElement;
       const claudeCodeIntegrationCheckbox = this.panelElement.querySelector(
-        '#claude-code-integration'
+        '#cli-agent-integration'
       ) as HTMLInputElement;
 
       if (themeSelect && settings.theme) {
@@ -389,8 +389,8 @@ export class SettingsPanel {
         cursorBlinkCheckbox.checked = settings.cursorBlink;
       }
 
-      if (claudeCodeIntegrationCheckbox && settings.enableClaudeCodeIntegration !== undefined) {
-        claudeCodeIntegrationCheckbox.checked = settings.enableClaudeCodeIntegration;
+      if (claudeCodeIntegrationCheckbox && settings.enableCliAgentIntegration !== undefined) {
+        claudeCodeIntegrationCheckbox.checked = settings.enableCliAgentIntegration;
       }
     } catch (error) {
       ErrorHandler.getInstance().handleSettingsError(

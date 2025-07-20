@@ -74,13 +74,22 @@ export type WebviewMessage =
   | OpenSettingsMessage
   | ClearCommandMessage
   | ReadyMessage
-  | InitMessage;
+  | InitMessage
+  | CliAgentStatusUpdateMessage;
 
 export type VsCodeMessage = WebviewMessage;
 
 export interface TerminalDataEvent {
   terminalId: string;
   data: string;
+}
+
+export interface CliAgentStatusUpdateMessage extends WebviewMessageBase {
+  readonly command: 'cliAgentStatusUpdate';
+  readonly cliAgentStatus: {
+    activeTerminalName: string | null;
+    status: 'connected' | 'disconnected' | 'none';
+  };
 }
 
 export interface TerminalExitEvent {
