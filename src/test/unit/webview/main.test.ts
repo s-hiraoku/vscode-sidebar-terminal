@@ -309,22 +309,22 @@ describe('WebView Main', () => {
       });
     });
 
-    describe('Claude Code integration', () => {
-      it('should detect Claude Code output patterns', () => {
+    describe('CLI Agent integration', () => {
+      it('should detect CLI Agent output patterns', () => {
         const claudeCodePatterns = [
-          /\[Claude Code\]/,
+          /\[CLI Agent\]/,
           /claude\.ai\/code/,
           /🤖 Generated with/,
-          /Co-Authored-By: Claude/,
+          /Co-Authored-By: CLI Agent/,
         ];
 
-        const testOutput = '🤖 Generated with Claude Code';
-        const isClaudeCode = claudeCodePatterns.some((pattern) => pattern.test(testOutput));
+        const testOutput = '🤖 Generated with CLI Agent';
+        const isCLI AgentCode = claudeCodePatterns.some((pattern) => pattern.test(testOutput));
 
-        expect(isClaudeCode).to.be.true;
+        expect(isCLI AgentCode).to.be.true;
       });
 
-      it('should handle high-frequency Claude Code output', () => {
+      it('should handle high-frequency CLI Agent output', () => {
         const startTime = Date.now();
         let outputCount = 0;
 
@@ -339,10 +339,10 @@ describe('WebView Main', () => {
         expect(isHighFrequency).to.be.true;
       });
 
-      it('should disable Alt+Click during Claude Code sessions', () => {
+      it('should disable Alt+Click during CLI Agent sessions', () => {
         let altClickDisabled = false;
 
-        // Simulate Claude Code detection
+        // Simulate CLI Agent detection
         const claudeCodeActive = true;
         if (claudeCodeActive) {
           altClickDisabled = true;

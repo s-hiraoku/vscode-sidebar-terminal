@@ -22,7 +22,7 @@ export const mockVscode = {
       const config = {
         get: sinon.stub().callsFake((key: string, defaultValue?: unknown): unknown => {
           // Return reasonable defaults for common configuration keys
-          if (section === 'sidebarTerminal') {
+          if (section === 'secondaryTerminal') {
             const defaults: { [key: string]: unknown } = {
               shell: '/bin/bash',
               shellArgs: [],
