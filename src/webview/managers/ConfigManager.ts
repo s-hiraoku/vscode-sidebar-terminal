@@ -37,6 +37,7 @@ export class ConfigManager implements IConfigManager {
     fontFamily: 'Consolas, "Courier New", monospace',
     theme: 'dark',
     cursorBlink: true,
+    enableCliAgentIntegration: true,
     scrollback: 1000,
     bellSound: false,
     altClickMovesCursor: false,
@@ -293,6 +294,12 @@ export class ConfigManager implements IConfigManager {
     } else {
       normalized.multiCursorModifier = this.DEFAULTS.multiCursorModifier;
     }
+
+    // CLI Agent integration validation
+    normalized.enableCliAgentIntegration =
+      typeof settings.enableCliAgentIntegration === 'boolean'
+        ? settings.enableCliAgentIntegration
+        : this.DEFAULTS.enableCliAgentIntegration;
 
     return normalized;
   }

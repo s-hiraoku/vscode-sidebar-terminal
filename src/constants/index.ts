@@ -25,7 +25,7 @@ export const TERMINAL_CONSTANTS = {
 
   // 設定キー
   CONFIG_KEYS: {
-    SIDEBAR_TERMINAL: 'sidebarTerminal',
+    SIDEBAR_TERMINAL: 'secondaryTerminal',
     TERMINAL_INTEGRATED: 'terminal.integrated',
     MAX_TERMINALS: 'maxTerminals',
     SHELL: 'shell',

@@ -1,6 +1,14 @@
 /**
  * リファクタリング後のWebViewメインエントリーポイント
  */
+
+// CRITICAL: Add immediate diagnostic logging
+console.log('🚀 [WEBVIEW-SCRIPT] ========== WEBVIEW.JS SCRIPT STARTED ==========');
+console.log('🚀 [WEBVIEW-SCRIPT] Script execution time:', new Date().toISOString());
+console.log('🚀 [WEBVIEW-SCRIPT] Window object exists:', typeof window !== 'undefined');
+console.log('🚀 [WEBVIEW-SCRIPT] Document ready state:', document?.readyState);
+console.log('🚀 [WEBVIEW-SCRIPT] VS Code API available:', typeof (window as any)?.acquireVsCodeApi);
+
 import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import { WebLinksAddon } from 'xterm-addon-web-links';
@@ -28,7 +36,8 @@ import { MessageManager } from './managers/MessageManager';
 import { TerminalInstance } from './interfaces/ManagerInterfaces';
 import {
   showAltClickDisabledWarning as _showAltClickDisabledWarning,
-  showTerminalInteractionIssue as _showTerminalInteractionIssue,
+  showTerminalInteractionWarning as _showTerminalInteractionWarning,
+  setUIManager,
 } from './utils/NotificationUtils';
 
 // Type definitions
@@ -48,7 +57,33 @@ declare const acquireVsCodeApi: () => {
   setState: (state: unknown) => void;
 };
 
-const vscode = acquireVsCodeApi();
+// Use the globally stored VS Code API with fallback and safety checks
+let vscode: any = null;
+
+// Function to safely get VS Code API
+function getVsCodeApi() {
+  console.log('🔍 [WEBVIEW] getVsCodeApi called');
+  console.log('🔍 [WEBVIEW] Current vscode variable:', !!vscode);
+  console.log('🔍 [WEBVIEW] window.vscodeApi available:', !!(window as any).vscodeApi);
+  console.log('🔍 [WEBVIEW] window.vscodeApi type:', typeof (window as any).vscodeApi);
+
+  if (vscode) {
+    console.log('🔍 [WEBVIEW] Returning cached vscode API');
+    return vscode;
+  }
+
+  // Try to get from global storage first
+  if ((window as any).vscodeApi) {
+    vscode = (window as any).vscodeApi;
+    console.log('📱 [WEBVIEW] Using globally stored VS Code API');
+    console.log('📱 [WEBVIEW] VS Code API postMessage type:', typeof vscode.postMessage);
+    return vscode;
+  }
+
+  // Should not reach here, but just in case
+  console.log('❌ [WEBVIEW] No VS Code API available');
+  return null;
+}
 
 // Main terminal management class
 class TerminalWebviewManager {
@@ -70,7 +105,12 @@ class TerminalWebviewManager {
   }
 
   public postMessageToExtension(message: unknown): void {
-    vscode.postMessage(message as VsCodeMessage);
+    const api = getVsCodeApi();
+    if (api) {
+      api.postMessage(message as VsCodeMessage);
+    } else {
+      console.log('❌ [WEBVIEW] Cannot send message: No VS Code API available');
+    }
   }
 
   public log(message: string, ...args: unknown[]): void {
@@ -139,6 +179,9 @@ class TerminalWebviewManager {
     this.configManager = new ConfigManager();
     this.performanceManager = new PerformanceManager();
     this.uiManager = new UIManager();
+    
+    // NotificationUtilsにUIManagerを設定
+    setUIManager(this.uiManager);
     this.inputManager = new InputManager();
     this.messageManager = new MessageManager();
 
@@ -267,6 +310,7 @@ class TerminalWebviewManager {
       // Create terminal header with delete button
       const terminalHeader = document.createElement('div');
       terminalHeader.className = 'terminal-header';
+      terminalHeader.setAttribute('data-terminal-id', id); // Add terminal ID to header
       terminalHeader.style.cssText = `
         display: flex;
         justify-content: space-between;
@@ -280,8 +324,9 @@ class TerminalWebviewManager {
         user-select: none;
       `;
 
-      // Terminal title
+      // Terminal title with proper class for Claude status updates
       const terminalTitle = document.createElement('span');
+      terminalTitle.className = 'terminal-name'; // Add class for proper DOM structure
       terminalTitle.textContent = name || `Terminal ${id.slice(-4)}`;
       terminalTitle.style.cssText = `
         flex: 1;
@@ -518,11 +563,14 @@ class TerminalWebviewManager {
           charCodes: Array.from(data).map((c) => c.charCodeAt(0)),
         });
 
-        vscode.postMessage({
-          command: 'input' as const,
-          data,
-          terminalId: this.activeTerminalId || id,
-        });
+        const api = getVsCodeApi();
+        if (api) {
+          api.postMessage({
+            command: 'input' as const,
+            data,
+            terminalId: this.activeTerminalId || id,
+          });
+        }
       });
 
       // Handle terminal focus events for border updates
@@ -538,12 +586,15 @@ class TerminalWebviewManager {
 
       // Handle resize
       terminal.onResize((size) => {
-        vscode.postMessage({
-          command: 'resize' as const,
-          cols: size.cols,
-          rows: size.rows,
-          terminalId: id,
-        });
+        const api = getVsCodeApi();
+        if (api) {
+          api.postMessage({
+            command: 'resize' as const,
+            cols: size.cols,
+            rows: size.rows,
+            terminalId: id,
+          });
+        }
       });
 
       // Store terminal instance
@@ -1154,6 +1205,31 @@ class TerminalWebviewManager {
     log('✅ [WEBVIEW] Font settings applied to all terminals using options property (v5.0+ API)');
   }
 
+  /**
+   * Update Claude status display in sidebar terminal headers
+   */
+  public updateClaudeStatus(
+    activeTerminalName: string | null,
+    status: 'connected' | 'disconnected' | 'none'
+  ): void {
+    log(`🔄 [WEBVIEW] ========== UPDATE CLAUDE STATUS CALLED ==========`);
+    log(`🔄 [WEBVIEW] activeTerminalName: ${activeTerminalName}`);
+    log(`🔄 [WEBVIEW] status: ${status}`);
+    log(`🔄 [WEBVIEW] UIManager available: ${!!this.uiManager}`);
+    log(
+      `🔄 [WEBVIEW] UIManager.updateCliAgentStatusDisplay method: ${typeof this.uiManager.updateCliAgentStatusDisplay}`
+    );
+
+    try {
+      this.uiManager.updateCliAgentStatusDisplay(activeTerminalName, status);
+      log(`✅ [WEBVIEW] UIManager.updateCliAgentStatusDisplay called successfully`);
+    } catch (error) {
+      log(`❌ [WEBVIEW] Error calling UIManager.updateCliAgentStatusDisplay:`, error);
+    }
+
+    log(`🔄 [WEBVIEW] ========== UPDATE CLAUDE STATUS COMPLETE ==========`);
+  }
+
   private loadSettings(): void {
     const loadedSettings = this.configManager.loadSettings();
     this.currentSettings = { ...this.currentSettings, ...loadedSettings };
@@ -1185,14 +1261,208 @@ class TerminalWebviewManager {
 // Global instance
 const terminalManager = new TerminalWebviewManager();
 
+// Expose to window for debugging and external access
+(window as { terminalManager?: TerminalWebviewManager }).terminalManager = terminalManager;
+
+// Debug: Check if addEventListener is available
+log('🔧 [WEBVIEW] ========== SETTING UP MESSAGE LISTENER ==========');
+log('🔧 [WEBVIEW] window object exists:', typeof window !== 'undefined');
+log('🔧 [WEBVIEW] addEventListener available:', typeof window.addEventListener === 'function');
+log('🔧 [WEBVIEW] document.readyState:', document.readyState);
+log('🔧 [WEBVIEW] Current location:', window.location?.href);
+log('🔧 [WEBVIEW] UserAgent:', navigator?.userAgent);
+
+// Alternative event listener approach for debugging
+window.onmessage = (event) => {
+  log('🚨 [WEBVIEW-ALT] Alternative message listener fired!');
+  log('🚨 [WEBVIEW-ALT] Event source:', event.source);
+  log('🚨 [WEBVIEW-ALT] Event origin:', event.origin);
+  log('🚨 [WEBVIEW-ALT] Event data:', event.data);
+  log('🚨 [WEBVIEW-ALT] Event data command:', event.data?.command);
+
+  // Skip general message display to reduce clutter
+
+  if (event.data?.command === 'claudeStatusUpdate') {
+    log('🎉 [WEBVIEW-ALT] *** CLAUDE STATUS UPDATE DETECTED IN ALT LISTENER ***');
+    log('🎉 [WEBVIEW-ALT] Claude status data:', event.data.claudeStatus);
+
+    // Skip Claude status display to reduce clutter
+
+    // Debug: Check if the terminalManager is available and working
+    if ((window as any).terminalManager) {
+      // Skip TerminalManager available display
+
+      try {
+        // Manually call updateClaudeStatus to test
+        (window as any).terminalManager.updateClaudeStatus(
+          event.data.claudeStatus.activeTerminalName,
+          event.data.claudeStatus.status
+        );
+
+        // Skip success display
+
+        // Try again after a delay to see if DOM is ready
+        setTimeout(() => {
+          const names = document.querySelectorAll('.terminal-name');
+          if (names.length > 0) {
+            // Try updating again
+            (window as any).terminalManager.updateClaudeStatus(
+              event.data.claudeStatus.activeTerminalName,
+              event.data.claudeStatus.status
+            );
+          }
+        }, 1000); // Wait 1 second
+      } catch (error) {
+        const errorDiv = document.createElement('div');
+        errorDiv.style.cssText =
+          'position: fixed; top: 160px; right: 10px; background: red; color: white; padding: 5px; z-index: 9999; font-size: 12px;';
+        errorDiv.textContent = `Error: ${String(error)}`;
+        document.body.appendChild(errorDiv);
+        setTimeout(() => errorDiv.remove(), 8000);
+      }
+    } else {
+      const noManagerDiv = document.createElement('div');
+      noManagerDiv.style.cssText =
+        'position: fixed; top: 120px; right: 10px; background: #FFA500; color: black; padding: 5px; z-index: 9999; font-size: 12px; border: 1px solid black;';
+      noManagerDiv.textContent = 'TerminalManager: NOT AVAILABLE';
+      document.body.appendChild(noManagerDiv);
+      setTimeout(() => noManagerDiv.remove(), 5000);
+    }
+  }
+};
+
 // Handle messages from the extension
 window.addEventListener('message', (event) => {
-  const message = event.data as TerminalMessage;
-  log('🎯 [WEBVIEW] Message data:', message);
+  log('🎯 [WEBVIEW] ========== RAW MESSAGE RECEIVED ==========');
+  log('🎯 [WEBVIEW] Event received at:', new Date().toISOString());
+  log('🎯 [WEBVIEW] Event type:', event.type);
+  log('🎯 [WEBVIEW] Event source:', event.source);
+  log('🎯 [WEBVIEW] Event origin:', event.origin);
+  log('🎯 [WEBVIEW] Event isTrusted:', event.isTrusted);
 
-  // Delegate to MessageManager
-  terminalManager.messageManager.handleMessage(message, terminalManager);
+  try {
+    const message = event.data as TerminalMessage;
+    log('🎯 [WEBVIEW] Raw event.data:', event.data);
+    log('🎯 [WEBVIEW] Message after cast:', message);
+    log('🎯 [WEBVIEW] Message type:', typeof message);
+    log('🎯 [WEBVIEW] Message command:', message?.command);
+    log('🎯 [WEBVIEW] Message keys:', Object.keys(message || {}));
+
+    if (message?.command === 'claudeStatusUpdate') {
+      log('🔔 [WEBVIEW] *** CLAUDE STATUS UPDATE MESSAGE DETECTED ***');
+      log('🔔 [WEBVIEW] Claude status data:', message.claudeStatus);
+      log(
+        '🔔 [WEBVIEW] Claude status activeTerminalName:',
+        message.claudeStatus?.activeTerminalName
+      );
+      log('🔔 [WEBVIEW] Claude status status:', message.claudeStatus?.status);
+    }
+
+    // Delegate to MessageManager
+    log('🎯 [WEBVIEW] About to call MessageManager.handleMessage...');
+    log('🎯 [WEBVIEW] TerminalManager available:', !!terminalManager);
+    log('🎯 [WEBVIEW] MessageManager available:', !!terminalManager.messageManager);
+
+    terminalManager.messageManager.handleMessage(message, terminalManager);
+    log('🎯 [WEBVIEW] MessageManager.handleMessage completed successfully');
+  } catch (error) {
+    log('❌ [WEBVIEW] Error processing message:', error);
+    log('❌ [WEBVIEW] Error name:', error instanceof Error ? error.name : 'unknown');
+    log('❌ [WEBVIEW] Error message:', error instanceof Error ? error.message : String(error));
+    log('❌ [WEBVIEW] Error stack:', error instanceof Error ? error.stack : 'no stack');
+  }
+
+  log('🎯 [WEBVIEW] ========== RAW MESSAGE PROCESSING COMPLETE ==========');
 });
+
+log('✅ [WEBVIEW] Message listener registered successfully');
+
+// Send ready notification to extension
+log('📢 [WEBVIEW] Sending ready notification to extension...');
+try {
+  // Use globally stored VS Code API instead of acquiring again
+  const api = getVsCodeApi();
+  if (api) {
+    log('📢 [WEBVIEW] Using globally stored VS Code API');
+    log('📢 [WEBVIEW] vscode object:', typeof api);
+    log('📢 [WEBVIEW] vscode.postMessage:', typeof api.postMessage);
+
+    api.postMessage({
+      command: 'webviewReady',
+      timestamp: Date.now(),
+    });
+    log('✅ [WEBVIEW] Ready notification sent via vscode.postMessage');
+
+    // Also send traditional ready message for backward compatibility
+    setTimeout(() => {
+      api.postMessage({
+        command: 'ready',
+      });
+      log('✅ [WEBVIEW] Traditional ready notification sent as fallback');
+    }, 10);
+  } else {
+    log('❌ [WEBVIEW] No VS Code API available in window.vscodeApi');
+    log(
+      '📢 [WEBVIEW] Available window properties:',
+      Object.keys(window).filter((k) => k.includes('vscode') || k.includes('api'))
+    );
+
+    // Fallback: try to acquire VS Code API directly (will fail if already acquired)
+    try {
+      if (typeof (window as any).acquireVsCodeApi === 'function') {
+        const fallbackVscode = (window as any).acquireVsCodeApi();
+        log('📢 [WEBVIEW] Fallback: VS Code API acquired directly');
+        fallbackVscode.postMessage({
+          command: 'webviewReady',
+          timestamp: Date.now(),
+        });
+      }
+    } catch (fallbackError) {
+      log('❌ [WEBVIEW] Fallback API acquisition also failed:', fallbackError);
+    }
+  }
+} catch (error) {
+  log('❌ [WEBVIEW] Failed to send ready notification:', error);
+  log('❌ [WEBVIEW] Error details:', {
+    name: error instanceof Error ? error.name : 'unknown',
+    message: error instanceof Error ? error.message : String(error),
+    stack: error instanceof Error ? error.stack : 'no stack',
+  });
+}
+
+// Test if console and logging is working in WebView context
+log('🧪 [WEBVIEW] ========== WEBVIEW CONTEXT TEST ==========');
+log('🧪 [WEBVIEW] Testing console.log function:', typeof console.log);
+log('🧪 [WEBVIEW] Testing log function:', typeof log);
+log('🧪 [WEBVIEW] Window location:', window.location.href);
+log('🧪 [WEBVIEW] Document title:', document.title);
+log('🧪 [WEBVIEW] Document body className:', document.body?.className);
+log('🧪 [WEBVIEW] Is in VS Code webview context:', !!(window as any).acquireVsCodeApi);
+
+// Try to send a test message immediately
+log('🧪 [WEBVIEW] Attempting to send test message...');
+try {
+  const api = getVsCodeApi();
+  if (api && typeof api.postMessage === 'function') {
+    api.postMessage({
+      command: 'test',
+      message: 'WebView script is running and can send messages',
+    });
+    log('🧪 [WEBVIEW] Test message sent successfully using global vscodeApi');
+  } else {
+    log('❌ [WEBVIEW] No vscodeApi available for test message');
+  }
+} catch (error) {
+  log('🧪 [WEBVIEW] Failed to send test message:', error);
+}
+
+log('🔧 [WEBVIEW] ========== MESSAGE LISTENER SETUP COMPLETE ==========');
+
+// CRITICAL: Final script execution confirmation
+console.log('🎉 [WEBVIEW-SCRIPT] ========== WEBVIEW.JS SCRIPT COMPLETED ==========');
+console.log('🎉 [WEBVIEW-SCRIPT] Script completion time:', new Date().toISOString());
+console.log('🎉 [WEBVIEW-SCRIPT] TerminalManager created:', !!terminalManager);
+console.log('🎉 [WEBVIEW-SCRIPT] Message listeners set up successfully');
 
 // Enhanced update status function
 function updateStatus(_message: string, _type: 'info' | 'success' | 'error' = 'info'): void {}
@@ -1219,6 +1489,9 @@ setupActivityListeners();
 
 function sendReadyMessage(): void {
   log('🎯 [WEBVIEW] Sending READY message to extension');
+  log('🎯 [WEBVIEW] VS Code API available:', !!getVsCodeApi());
+  log('🎯 [WEBVIEW] Terminal manager available:', !!terminalManager);
+  log('🎯 [WEBVIEW] Message manager available:', !!terminalManager?.messageManager);
   updateStatus('Sending ready message to extension');
   try {
     terminalManager.messageManager.sendReadyMessage(terminalManager);

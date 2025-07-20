@@ -1,7 +1,7 @@
-import type { StatusType } from './terminal.types';
+import type { CliAgentStatusType } from './terminal.types';
 import { CompleteExtensionConfig } from '../../types/shared';
 
-export type { StatusType };
+export type { CliAgentStatusType };
 
 /**
  * WebView拡張設定

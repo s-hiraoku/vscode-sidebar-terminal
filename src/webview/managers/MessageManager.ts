@@ -6,9 +6,15 @@ import { webview as log } from '../../utils/logger';
 import { TerminalInteractionEvent } from '../../types/common';
 import { WebViewFontSettings } from '../../types/shared';
 import { IMessageManager, IManagerCoordinator } from '../interfaces/ManagerInterfaces';
+import { CommunicationManager } from './CommunicationManager';
+import { LoggerManager } from './LoggerManager';
 
 interface MessageCommand {
   command: string;
+  cliAgentStatus?: {
+    activeTerminalName: string | null;
+    status: 'connected' | 'disconnected' | 'none';
+  };
   [key: string]: unknown;
 }
 
@@ -17,12 +23,24 @@ export class MessageManager implements IMessageManager {
   private messageQueue: unknown[] = [];
   private isProcessingQueue = false;
 
+  // Unified managers
+  private commManager = CommunicationManager.getInstance();
+  private logger = LoggerManager.getInstance();
+
   /**
    * Handle incoming messages from the extension
    */
   public handleMessage(message: unknown, coordinator: IManagerCoordinator): void {
+    log(`📨 [MESSAGE] ========== MESSAGE MANAGER HANDLE MESSAGE ==========`);
+    log(`📨 [MESSAGE] Raw message:`, message);
+    log(`📨 [MESSAGE] Message type:`, typeof message);
+    log(`📨 [MESSAGE] Message is null/undefined:`, message == null);
+
     try {
       const msg = message as MessageCommand;
+      log(`📨 [MESSAGE] Casted message:`, msg);
+      log(`📨 [MESSAGE] Message command:`, msg?.command);
+      log(`📨 [MESSAGE] Message keys:`, Object.keys(msg || {}));
       log(`📨 [MESSAGE] Received command: ${msg.command}`);
 
       switch (msg.command) {
@@ -77,6 +95,10 @@ export class MessageManager implements IMessageManager {
 
         case 'stateUpdate':
           this.handleStateUpdateMessage(msg, coordinator);
+          break;
+
+        case 'cliAgentStatusUpdate':
+          this.handleClaudeStatusUpdateMessage(msg, coordinator);
           break;
 
         default:
@@ -226,7 +248,7 @@ export class MessageManager implements IMessageManager {
         terminal.terminal.write(data);
         log(`📥 [MESSAGE] Output written to terminal ${terminalId}: ${data.length} chars`);
 
-        // Claude Code detection disabled
+        // CLI Agent detection disabled
       } else {
         log(`⚠️ [MESSAGE] Output for unknown terminal: ${terminalId}`);
       }
@@ -399,6 +421,61 @@ export class MessageManager implements IMessageManager {
     } else {
       log('⚠️ [MESSAGE] No state data in stateUpdate message');
     }
+  }
+
+  /**
+   * Handle Claude status update message from extension
+   */
+  private handleClaudeStatusUpdateMessage(
+    msg: MessageCommand,
+    coordinator: IManagerCoordinator
+  ): void {
+    log(`📨 [MESSAGE] ========== CLAUDE STATUS UPDATE MESSAGE RECEIVED ==========`);
+    log(`📨 [MESSAGE] Message received at: ${new Date().toISOString()}`);
+    log(`📨 [MESSAGE] Full message received: ${JSON.stringify(msg, null, 2)}`);
+    log(`📨 [MESSAGE] Message command: ${msg.command}`);
+    log(`📨 [MESSAGE] Message cliAgentStatus: ${JSON.stringify(msg.cliAgentStatus)}`);
+    log(`📨 [MESSAGE] Message cliAgentStatus type: ${typeof msg.cliAgentStatus}`);
+
+    const cliAgentStatus = msg.cliAgentStatus;
+    if (cliAgentStatus) {
+      log(`🔄 [MESSAGE] Claude status data found:`);
+      log(
+        `🔄 [MESSAGE]   - activeTerminalName: "${cliAgentStatus.activeTerminalName}" (${typeof cliAgentStatus.activeTerminalName})`
+      );
+      log(`🔄 [MESSAGE]   - status: "${cliAgentStatus.status}" (${typeof cliAgentStatus.status})`);
+      log(`🔄 [MESSAGE] About to call coordinator.updateCliAgentStatus...`);
+      log(`🔄 [MESSAGE] Coordinator available: ${!!coordinator}`);
+      log(`🔄 [MESSAGE] Coordinator type: ${typeof coordinator}`);
+      log(
+        `🔄 [MESSAGE] Coordinator.updateCliAgentStatus method: ${typeof coordinator.updateCliAgentStatus}`
+      );
+
+      try {
+        const result = coordinator.updateCliAgentStatus(
+          cliAgentStatus.activeTerminalName,
+          cliAgentStatus.status
+        );
+        log(`✅ [MESSAGE] coordinator.updateCliAgentStatus called successfully, result: ${result}`);
+      } catch (error) {
+        log(`❌ [MESSAGE] Error calling coordinator.updateCliAgentStatus:`, error);
+        log(`❌ [MESSAGE] Error name: ${error instanceof Error ? error.name : 'unknown'}`);
+        log(
+          `❌ [MESSAGE] Error message: ${error instanceof Error ? error.message : String(error)}`
+        );
+        log(`❌ [MESSAGE] Error stack: ${error instanceof Error ? error.stack : 'no stack'}`);
+      }
+    } else {
+      log('⚠️ [MESSAGE] No Claude status data in cliAgentStatusUpdate message');
+      log(`⚠️ [MESSAGE] Message keys: ${Object.keys(msg)}`);
+      log(`⚠️ [MESSAGE] Message properties check:`);
+      for (const [key, value] of Object.entries(msg)) {
+        log(`⚠️ [MESSAGE]   - ${key}: ${JSON.stringify(value)} (${typeof value})`);
+      }
+      log(`⚠️ [MESSAGE] Full message structure: ${JSON.stringify(msg, null, 2)}`);
+    }
+
+    log(`📨 [MESSAGE] ========== CLAUDE STATUS UPDATE PROCESSING COMPLETE ==========`);
   }
 
   /**

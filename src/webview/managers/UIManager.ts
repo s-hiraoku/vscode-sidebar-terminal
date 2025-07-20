@@ -4,14 +4,35 @@
 
 import { Terminal } from 'xterm';
 import { webview as log } from '../../utils/logger';
+import { LoggerManager } from './LoggerManager';
 import { PartialTerminalSettings, WebViewFontSettings } from '../../types/shared';
 import { getWebviewTheme, WEBVIEW_THEME_CONSTANTS } from '../utils/WebviewThemeUtils';
 import { IUIManager } from '../interfaces/ManagerInterfaces';
+import { HeaderFactory, TerminalHeaderElements } from '../factories/HeaderFactory';
+import { DOMUtils } from '../utils/DOMUtils';
+
+export interface NotificationConfig {
+  type: 'error' | 'warning' | 'info' | 'success';
+  title: string;
+  message: string;
+  duration?: number;
+  icon?: string;
+}
 
 export class UIManager implements IUIManager {
   // Theme cache for performance
   private currentTheme: string | null = null;
   private themeApplied = false;
+
+  // Prevent rapid successive updates that could cause duplication
+  private lastUpdateTimestamp = 0;
+  private readonly UPDATE_DEBOUNCE_MS = 100;
+
+  // Header elements cache for efficient CLI Agent status updates
+  private headerElementsCache = new Map<string, TerminalHeaderElements>();
+
+  // Logger manager
+  private logger = LoggerManager.getInstance();
 
   /**
    * Update borders for all terminals based on active state
@@ -243,35 +264,187 @@ export class UIManager implements IUIManager {
    * Create terminal header with title and controls
    */
   public createTerminalHeader(terminalId: string, terminalName: string): HTMLElement {
-    const header = document.createElement('div');
-    header.className = 'terminal-header';
-    header.dataset.terminalId = terminalId;
+    // HeaderFactoryを使用して統一された構造を作成
+    const headerElements = HeaderFactory.createTerminalHeader({
+      terminalId,
+      terminalName,
+      showId: true,
+      showSplitButton: true,
+    });
 
-    header.innerHTML = `
-      <div class="terminal-title">
-        <span class="terminal-icon">⚡</span>
-        <span class="terminal-name">${terminalName}</span>
-        <span class="terminal-id">(${terminalId})</span>
-      </div>
-      <div class="terminal-controls">
-        <button class="terminal-control split-btn" title="Split Terminal">⊞</button>
-        <button class="terminal-control close-btn" title="Close Terminal">✕</button>
-      </div>
-    `;
+    // ヘッダー要素をキャッシュ（CLI Agent status更新用）
+    this.headerElementsCache.set(terminalId, headerElements);
 
-    log(`🎨 [UI] Terminal header created for ${terminalId}`);
-    return header;
+    log(`🎨 [UI] Terminal header created using HeaderFactory for ${terminalId}`);
+    return headerElements.container;
   }
 
   /**
    * Update terminal header title
    */
   public updateTerminalHeader(terminalId: string, newName: string): void {
-    const header = document.querySelector(`[data-terminal-id="${terminalId}"] .terminal-name`);
-    if (header) {
-      header.textContent = newName;
-      log(`🎨 [UI] Updated terminal header for ${terminalId}: ${newName}`);
+    const headerElements = this.headerElementsCache.get(terminalId);
+    if (headerElements) {
+      // HeaderFactoryを使用して名前を更新
+      HeaderFactory.updateTerminalName(headerElements, newName);
+    } else {
+      // フォールバック: 直接DOMを更新
+      const header = document.querySelector(`[data-terminal-id="${terminalId}"] .terminal-name`);
+      if (header) {
+        header.textContent = newName;
+        log(`🎨 [UI] Updated terminal header (fallback) for ${terminalId}: ${newName}`);
+      }
     }
+  }
+
+  /**
+   * Remove terminal header from cache when terminal is closed
+   */
+  public removeTerminalHeader(terminalId: string): void {
+    if (this.headerElementsCache.has(terminalId)) {
+      this.headerElementsCache.delete(terminalId);
+      log(`🧹 [UI] Removed terminal header cache for ${terminalId}`);
+    }
+  }
+
+  /**
+   * Clear all cached header elements
+   */
+  public clearHeaderCache(): void {
+    this.headerElementsCache.clear();
+    log(`🧹 [UI] Cleared all header cache`);
+  }
+
+  /**
+   * Find all terminal headers in the DOM (moved from DOMManager)
+   */
+  public findTerminalHeaders(): HTMLElement[] {
+    const headers = Array.from(document.querySelectorAll('.terminal-header')) as HTMLElement[];
+    log(`🔍 [UI] Found ${headers.length} terminal headers`);
+    return headers;
+  }
+
+  /**
+   * Create notification element with consistent styling (moved from DOMManager)
+   */
+  public createNotificationElement(config: NotificationConfig): HTMLElement {
+    const colors = this.getNotificationColors(config.type);
+    const notification = this.createNotificationContainer(colors);
+    const content = this.createNotificationContent(config, colors);
+    
+    notification.appendChild(content);
+    log(`📢 [UI] Created notification: ${config.type} - ${config.title}`);
+    return notification;
+  }
+
+  /**
+   * Add CSS animations to document if not already present (moved from DOMManager)
+   */
+  public ensureAnimationsLoaded(): void {
+    if (!document.querySelector('#ui-manager-animations')) {
+      const style = document.createElement('style');
+      style.id = 'ui-manager-animations';
+      style.textContent = this.getAnimationCSS();
+      document.head.appendChild(style);
+      log('🎨 [UI] CSS animations loaded');
+    }
+  }
+
+  /**
+   * Update CLI Agent status display for legacy headers (moved from DOMManager)
+   */
+  private updateLegacyCliAgentStatus(
+    headerElement: HTMLElement,
+    activeTerminalName: string | null,
+    status: 'connected' | 'disconnected' | 'none'
+  ): boolean {
+    const terminalId = headerElement.getAttribute('data-terminal-id');
+    if (!terminalId) {
+      log(`⚠️ [UI] Header missing data-terminal-id attribute`);
+      return false;
+    }
+
+    const nameElement = headerElement.querySelector('.terminal-name');
+    if (!nameElement) {
+      log(`⚠️ [UI] Terminal name element not found in header: ${terminalId}`);
+      return false;
+    }
+
+    const terminalName = nameElement.textContent?.trim();
+    const isActiveTerminal = terminalName === activeTerminalName;
+
+    // HeaderFactory構造対応: .terminal-statusセクションを優先
+    const statusSection = headerElement.querySelector('.terminal-status');
+    if (statusSection) {
+      // HeaderFactory構造の場合
+      this.updateHeaderFactoryStatus(statusSection, status, isActiveTerminal);
+    } else {
+      // レガシー構造のフォールバック
+      this.updateLegacyHeaderStatus(headerElement, status, isActiveTerminal);
+    }
+
+    log(`✅ [UI] Updated CLI Agent status: ${terminalId} -> ${status}`);
+    return true;
+  }
+
+  /**
+   * Update CLI Agent status display in sidebar terminal headers (optimized)
+   */
+  public updateCliAgentStatusDisplay(
+    activeTerminalName: string | null,
+    status: 'connected' | 'disconnected' | 'none'
+  ): void {
+    // Use performance measurement
+    return this.logger.performance.measure('updateCliAgentStatusDisplay', () => {
+      // Debounce rapid successive calls
+      if (!this._shouldProcessCliAgentUpdate()) return;
+
+      let updatedCount = 0;
+
+      // キャッシュされたヘッダー要素を使用（高速）
+      for (const [terminalId, headerElements] of this.headerElementsCache) {
+        const terminalName = headerElements.nameSpan.textContent?.trim();
+        const isActiveTerminal = terminalName === activeTerminalName;
+
+        if (status === 'none' || !isActiveTerminal) {
+          // CLI Agent statusを削除
+          HeaderFactory.removeCliAgentStatus(headerElements);
+        } else {
+          // CLI Agent statusを挿入/更新
+          HeaderFactory.insertCliAgentStatus(headerElements, status);
+        }
+        updatedCount++;
+      }
+
+      // フォールバック: キャッシュにない古いヘッダー用
+      const uncachedHeaders = this.findTerminalHeaders().filter(
+        header => !this.headerElementsCache.has(header.getAttribute('data-terminal-id') || '')
+      );
+      
+      uncachedHeaders.forEach((headerElement: HTMLElement) => {
+        if (this.updateLegacyCliAgentStatus(headerElement, activeTerminalName, status)) {
+          updatedCount++;
+        }
+      });
+
+      if (updatedCount > 0) {
+        this.logger.ui.info(
+          `CLI Agent status updated: ${activeTerminalName} -> ${status} (${updatedCount} terminals)`
+        );
+      }
+    });
+  }
+
+  /**
+   * Check if CLI Agent update should be processed (debouncing)
+   */
+  private _shouldProcessCliAgentUpdate(): boolean {
+    const now = Date.now();
+    if (now - this.lastUpdateTimestamp < this.UPDATE_DEBOUNCE_MS) {
+      return false;
+    }
+    this.lastUpdateTimestamp = now;
+    return true;
   }
 
   /**
@@ -330,6 +503,253 @@ export class UIManager implements IUIManager {
 
     log(`🎨 [UI] Split separator created: ${direction}`);
     return separator;
+  }
+
+  /**
+   * Update legacy Claude status (moved from DOMManager)
+   */
+  public updateLegacyClaudeStatus(terminalId: string, isActive: boolean): void {
+    const header = document.querySelector(`[data-terminal-id="${terminalId}"] .terminal-header`) as HTMLElement;
+    if (!header) return;
+
+    this.removeCliAgentStatusElements(header);
+
+    if (isActive) {
+      const statusSpan = DOMUtils.createElement(
+        'span',
+        {
+          color: '#007ACC',
+          fontWeight: 'bold',
+          marginLeft: '10px',
+          fontSize: '11px',
+        },
+        {
+          className: 'claude-status',
+          textContent: 'CLI Agent Active',
+        }
+      );
+
+      const controlsContainer = header.querySelector('.terminal-controls');
+      if (controlsContainer) {
+        header.insertBefore(statusSpan, controlsContainer);
+      } else {
+        const closeButton = header.querySelector('.close-btn');
+        if (closeButton) {
+          header.insertBefore(statusSpan, closeButton);
+        } else {
+          header.appendChild(statusSpan);
+        }
+      }
+    }
+  }
+
+  /**
+   * Update HeaderFactory status section
+   */
+  private updateHeaderFactoryStatus(
+    statusSection: Element,
+    status: 'connected' | 'disconnected' | 'none',
+    isActiveTerminal: boolean
+  ): void {
+    // Clear existing status
+    statusSection.innerHTML = '';
+
+    if (status !== 'none' && isActiveTerminal) {
+      const statusElement = HeaderFactory.createCliAgentStatusElement(status);
+      statusSection.appendChild(statusElement);
+    }
+  }
+
+  /**
+   * Update legacy header status
+   */
+  private updateLegacyHeaderStatus(
+    headerElement: HTMLElement,
+    status: 'connected' | 'disconnected' | 'none',
+    isActiveTerminal: boolean
+  ): void {
+    // Remove existing status elements
+    this.removeCliAgentStatusElements(headerElement);
+
+    if (status !== 'none' && isActiveTerminal) {
+      const statusSpan = DOMUtils.createElement(
+        'span',
+        {
+          color: status === 'connected' ? '#007ACC' : '#666',
+          fontWeight: 'bold',
+          marginLeft: '10px',
+          fontSize: '11px',
+        },
+        {
+          className: 'claude-status',
+          textContent: status === 'connected' ? 'CLI Agent Active' : 'CLI Agent Inactive',
+        }
+      );
+
+      // Find insertion point
+      const controlsContainer = headerElement.querySelector('.terminal-controls');
+      if (controlsContainer) {
+        headerElement.insertBefore(statusSpan, controlsContainer);
+      } else {
+        const closeButton = headerElement.querySelector('.close-btn');
+        if (closeButton) {
+          headerElement.insertBefore(statusSpan, closeButton);
+        } else {
+          headerElement.appendChild(statusSpan);
+        }
+      }
+    }
+  }
+
+  /**
+   * プライベートメソッド（DOMManagerから移行）
+   */
+  private removeCliAgentStatusElements(headerElement: HTMLElement): void {
+    const statusElements = headerElement.querySelectorAll('.claude-status, .claude-indicator');
+    statusElements.forEach((element) => element.remove());
+  }
+
+  private createNotificationContainer(colors: any): HTMLElement {
+    return DOMUtils.createElement(
+      'div',
+      {
+        position: 'fixed',
+        top: '20px',
+        right: '20px',
+        background: colors.background,
+        border: `2px solid ${colors.border}`,
+        borderRadius: '6px',
+        padding: '12px 16px',
+        color: colors.foreground,
+        fontSize: '11px',
+        zIndex: '10000',
+        maxWidth: '300px',
+        minWidth: '200px',
+        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)',
+        animation: 'slideInFromRight 0.3s ease-out',
+      },
+      {
+        className: 'terminal-notification',
+      }
+    );
+  }
+
+  private createNotificationContent(config: NotificationConfig, colors: any): HTMLElement {
+    const container = document.createElement('div');
+    const icon = config.icon || this.getDefaultIcon(config.type);
+    
+    container.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+        <span style="font-size: 14px;">${icon}</span>
+        <strong>${config.title}</strong>
+      </div>
+      <div style="font-size: 10px; line-height: 1.4;">${config.message}</div>
+    `;
+
+    const closeBtn = this.createNotificationCloseButton(colors);
+    container.appendChild(closeBtn);
+    
+    return container;
+  }
+
+  private createNotificationCloseButton(colors: any): HTMLButtonElement {
+    return DOMUtils.createElement(
+      'button',
+      {
+        position: 'absolute',
+        top: '4px',
+        right: '6px',
+        background: 'none',
+        border: 'none',
+        color: colors.foreground,
+        cursor: 'pointer',
+        fontSize: '12px',
+        padding: '2px',
+        opacity: '0.7',
+        transition: 'opacity 0.2s',
+      },
+      {
+        textContent: '✕',
+        className: 'notification-close',
+      }
+    ) as HTMLButtonElement;
+  }
+
+  /**
+   * Get notification colors based on type
+   */
+  private getNotificationColors(type: string): {
+    background: string;
+    border: string;
+    foreground: string;
+  } {
+    switch (type) {
+      case 'error':
+        return {
+          background: 'var(--vscode-notifications-background, #1e1e1e)',
+          border: 'var(--vscode-notificationError-border, #f44747)',
+          foreground: 'var(--vscode-notificationError-foreground, #ffffff)',
+        };
+      case 'warning':
+        return {
+          background: 'var(--vscode-notifications-background, #1e1e1e)',
+          border: 'var(--vscode-notificationWarning-border, #ffcc02)',
+          foreground: 'var(--vscode-notificationWarning-foreground, #ffffff)',
+        };
+      case 'success':
+        return {
+          background: 'var(--vscode-notifications-background, #1e1e1e)',
+          border: 'var(--vscode-notification-successIcon-foreground, #73c991)',
+          foreground: 'var(--vscode-notification-foreground, #ffffff)',
+        };
+      case 'info':
+      default:
+        return {
+          background: 'var(--vscode-notifications-background, #1e1e1e)',
+          border: 'var(--vscode-notification-infoIcon-foreground, #3794ff)',
+          foreground: 'var(--vscode-notification-foreground, #ffffff)',
+        };
+    }
+  }
+
+  /**
+   * Get default icon for notification type
+   */
+  private getDefaultIcon(type: string): string {
+    switch (type) {
+      case 'error':
+        return '❌';
+      case 'warning':
+        return '⚠️';
+      case 'success':
+        return '✅';
+      case 'info':
+      default:
+        return 'ℹ️';
+    }
+  }
+
+  private getAnimationCSS(): string {
+    return `
+      @keyframes slideInFromRight {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+      }
+      @keyframes slideOutToRight {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+      }
+      @keyframes blink {
+        0%, 50% { opacity: 1; }
+        51%, 100% { opacity: 0.3; }
+      }
+      @keyframes fadeInOut {
+        0% { opacity: 0; }
+        20% { opacity: 1; }
+        80% { opacity: 1; }
+        100% { opacity: 0; }
+      }
+    `;
   }
 
   /**

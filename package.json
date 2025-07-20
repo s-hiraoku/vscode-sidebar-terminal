@@ -1,6 +1,6 @@
 {
   "name": "vscode-sidebar-terminal",
-  "displayName": "Sidebar Terminal",
+  "displayName": "Secondary Terminal",
   "description": "A powerful VS Code extension that displays a fully-featured terminal in the sidebar with split support, Alt+Click cursor positioning, and multi-platform compatibility.",
   "version": "0.1.25",
   "publisher": "s-hiraoku",
@@ -50,89 +50,104 @@
   "preview": false,
   "main": "./dist/extension.js",
   "activationEvents": [
-    "onView:sidebarTerminal"
+    "onView:secondaryTerminal"
   ],
   "contributes": {
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "sidebarTerminalContainer",
-          "title": "Sidebar Terminal",
+          "id": "secondaryTerminalContainer",
+          "title": "Secondary Terminal",
           "icon": "$(terminal)"
         }
       ]
     },
     "views": {
-      "sidebarTerminalContainer": [
+      "secondaryTerminalContainer": [
         {
-          "id": "sidebarTerminal",
+          "id": "secondaryTerminal",
           "name": "Terminal",
           "type": "webview",
           "icon": "$(terminal)",
-          "contextualTitle": "Sidebar Terminal"
+          "contextualTitle": "Secondary Terminal"
         }
       ]
     },
     "commands": [
       {
-        "command": "sidebarTerminal.killTerminal",
+        "command": "secondaryTerminal.killTerminal",
         "title": "Kill Terminal",
         "icon": "$(trash)"
       },
       {
-        "command": "sidebarTerminal.splitTerminal",
+        "command": "secondaryTerminal.splitTerminal",
         "title": "Split Terminal",
         "icon": "$(split-vertical)"
       },
       {
-        "command": "sidebarTerminal.openSettings",
+        "command": "secondaryTerminal.openSettings",
         "title": "Terminal Settings",
         "icon": "$(settings-gear)"
+      },
+      {
+        "command": "secondaryTerminal.sendToTerminal",
+        "title": "Send to Secondary Terminal",
+        "category": "Secondary Terminal"
+      },
+      {
+        "command": "secondaryTerminal.sendAtMention",
+        "title": "Insert File Reference (Cmd+Option+L)",
+        "category": "Secondary Terminal"
+      },
+      {
+        "command": "secondaryTerminal.testCliAgentStatus",
+        "title": "Test Claude Status Update",
+        "category": "Secondary Terminal"
       }
     ],
     "menus": {
       "view/title": [
         {
-          "command": "sidebarTerminal.splitTerminal",
-          "when": "view == sidebarTerminal",
+          "command": "secondaryTerminal.splitTerminal",
+          "when": "view == secondaryTerminal",
           "group": "navigation@1"
         },
         {
-          "command": "sidebarTerminal.killTerminal",
-          "when": "view == sidebarTerminal",
+          "command": "secondaryTerminal.killTerminal",
+          "when": "view == secondaryTerminal",
           "group": "navigation@3"
         },
         {
-          "command": "sidebarTerminal.openSettings",
-          "when": "view == sidebarTerminal",
+          "command": "secondaryTerminal.openSettings",
+          "when": "view == secondaryTerminal",
           "group": "navigation@4"
         }
       ]
     },
     "configuration": {
-      "title": "Sidebar Terminal",
+      "title": "Secondary Terminal",
       "properties": {
-        "sidebarTerminal.shell": {
+        "secondaryTerminal.shell": {
           "type": "string",
           "default": "",
           "description": "Path to shell executable. Leave empty to use system default."
         },
-        "sidebarTerminal.shellArgs": {
+        "secondaryTerminal.shellArgs": {
           "type": "array",
           "default": [],
           "description": "Arguments to pass to the shell."
         },
-        "sidebarTerminal.maxTerminals": {
+        "secondaryTerminal.maxTerminals": {
           "type": "number",
           "default": 5,
           "description": "Maximum number of terminals allowed."
         },
-        "sidebarTerminal.cursorBlink": {
+        "secondaryTerminal.cursorBlink": {
           "type": "boolean",
           "default": true,
           "description": "Enable cursor blinking in terminal."
         },
-        "sidebarTerminal.theme": {
+        "secondaryTerminal.theme": {
           "type": "string",
           "default": "auto",
           "enum": [
@@ -142,114 +157,137 @@
           ],
           "description": "Terminal theme. Auto follows VS Code theme."
         },
-        "sidebarTerminal.defaultDirectory": {
+        "secondaryTerminal.defaultDirectory": {
           "type": "string",
           "default": "",
           "description": "Default directory for new terminals. Leave empty to use workspace root."
         },
-        "sidebarTerminal.confirmBeforeKill": {
+        "secondaryTerminal.confirmBeforeKill": {
           "type": "boolean",
           "default": false,
           "description": "Show confirmation dialog before closing terminals"
         },
-        "sidebarTerminal.protectLastTerminal": {
+        "secondaryTerminal.protectLastTerminal": {
           "type": "boolean",
           "default": true,
           "description": "Prevent closing the last terminal"
         },
-        "sidebarTerminal.minTerminalCount": {
+        "secondaryTerminal.minTerminalCount": {
           "type": "number",
           "default": 1,
           "minimum": 0,
           "maximum": 5,
           "description": "Minimum number of terminals to keep open"
         },
-        "sidebarTerminal.maxSplitTerminals": {
+        "secondaryTerminal.maxSplitTerminals": {
           "type": "number",
           "default": 5,
           "minimum": 1,
           "maximum": 5,
           "description": "Maximum number of terminals to display in split view"
         },
-        "sidebarTerminal.minTerminalHeight": {
+        "secondaryTerminal.minTerminalHeight": {
           "type": "number",
           "default": 100,
           "minimum": 50,
           "maximum": 200,
           "description": "Minimum height for each terminal in split view (pixels)"
         },
-        "sidebarTerminal.enableSplitResize": {
+        "secondaryTerminal.enableSplitResize": {
           "type": "boolean",
           "default": true,
           "description": "Allow resizing split terminals by dragging splitters"
         },
-        "sidebarTerminal.statusDisplayDuration": {
+        "secondaryTerminal.statusDisplayDuration": {
           "type": "number",
           "default": 3000,
           "minimum": 1000,
           "maximum": 10000,
           "description": "Duration to display status messages (milliseconds)"
         },
-        "sidebarTerminal.autoHideStatus": {
+        "secondaryTerminal.autoHideStatus": {
           "type": "boolean",
           "default": true,
           "description": "Automatically hide status messages after specified duration"
         },
-        "sidebarTerminal.showStatusOnActivity": {
+        "secondaryTerminal.showStatusOnActivity": {
           "type": "boolean",
           "default": true,
           "description": "Show last status message when user performs actions"
         },
-        "sidebarTerminal.showWebViewHeader": {
+        "secondaryTerminal.showWebViewHeader": {
           "type": "boolean",
           "default": true,
           "description": "Show title and command icons in the webview header"
         },
-        "sidebarTerminal.webViewTitle": {
+        "secondaryTerminal.webViewTitle": {
           "type": "string",
           "default": "Terminal",
           "description": "Title to display in the webview header"
         },
-        "sidebarTerminal.showSampleIcons": {
+        "secondaryTerminal.showSampleIcons": {
           "type": "boolean",
           "default": true,
           "description": "Show sample command icons in webview header (display only)"
         },
-        "sidebarTerminal.sampleIconOpacity": {
+        "secondaryTerminal.sampleIconOpacity": {
           "type": "number",
           "default": 0.4,
           "minimum": 0.1,
           "maximum": 1,
           "description": "Opacity of sample icons (0.1 to 1.0)"
         },
-        "sidebarTerminal.headerFontSize": {
+        "secondaryTerminal.headerFontSize": {
           "type": "number",
           "default": 14,
           "minimum": 10,
           "maximum": 20,
           "description": "Font size for webview header title"
         },
-        "sidebarTerminal.headerIconSize": {
+        "secondaryTerminal.headerIconSize": {
           "type": "number",
           "default": 20,
           "minimum": 14,
           "maximum": 28,
           "description": "Size of terminal icon in webview header"
         },
-        "sidebarTerminal.sampleIconSize": {
+        "secondaryTerminal.sampleIconSize": {
           "type": "number",
           "default": 16,
           "minimum": 12,
           "maximum": 24,
           "description": "Size of sample icons in webview header"
         },
-        "sidebarTerminal.altClickMovesCursor": {
+        "secondaryTerminal.altClickMovesCursor": {
           "type": "boolean",
           "default": true,
           "description": "Controls whether Alt/Option + click will reposition the prompt cursor to underneath the mouse. This feature may not work reliably for some shells or programs."
+        },
+        "secondaryTerminal.enableAtMentionSync": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable automatic @filename mention when CLI Agent sends to standard terminal"
+        },
+        "secondaryTerminal.focusAfterAtMention": {
+          "type": "boolean",
+          "default": true,
+          "description": "Focus secondary terminal after sending @filename with CMD+OPT+L"
+        },
+        "secondaryTerminal.enableCliAgentIntegration": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable file reference shortcuts: Use Cmd+Option+L (Mac) or Alt+Ctrl+L (Linux/Windows) to insert file references"
         }
       }
-    }
+    },
+    "keybindings": [
+      {
+        "command": "secondaryTerminal.sendAtMention",
+        "key": "ctrl+alt+l",
+        "mac": "cmd+alt+l",
+        "when": "editorTextFocus"
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm rebuild && npm run package",

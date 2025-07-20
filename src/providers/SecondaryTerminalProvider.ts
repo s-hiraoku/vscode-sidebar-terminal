@@ -8,10 +8,12 @@ import { provider as log } from '../utils/logger';
 import { getConfigManager } from '../config/ConfigManager';
 import { PartialTerminalSettings, WebViewFontSettings } from '../types/shared';
 
-export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
-  public static readonly viewType = 'sidebarTerminal';
+export class SecondaryTerminalProvider implements vscode.WebviewViewProvider {
+  public static readonly viewType = 'secondaryTerminal';
 
   private _view?: vscode.WebviewView;
+  private _webviewReady = false;
+  private _pendingMessages: WebviewMessage[] = [];
 
   constructor(
     private readonly _extensionContext: vscode.ExtensionContext,
@@ -56,6 +58,9 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
 
     // Set up terminal event listeners
     this._setupTerminalEventListeners();
+
+    // Set up CLI Agent status change listeners
+    this._setupCliAgentStatusListeners();
 
     // Set up configuration change listeners for VS Code standard settings
     this._setupConfigurationChangeListeners();
@@ -331,8 +336,48 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
 
     try {
       switch (message.command) {
+        case 'htmlScriptTest':
+          log('🔥 [DEBUG] ========== HTML INLINE SCRIPT TEST MESSAGE RECEIVED ==========');
+          log('🔥 [DEBUG] HTML script communication is working!');
+          log('🔥 [DEBUG] Message content:', message);
+          break;
+
+        case 'timeoutTest':
+          log('🔥 [DEBUG] ========== HTML TIMEOUT TEST MESSAGE RECEIVED ==========');
+          log('🔥 [DEBUG] Timeout test communication is working!');
+          log('🔥 [DEBUG] Message content:', message);
+          break;
+
+        case 'test':
+          log('🧪 [DEBUG] ========== TEST MESSAGE RECEIVED FROM WEBVIEW ==========');
+          log('🧪 [DEBUG] Test message content:', message);
+          log('🧪 [DEBUG] WebView communication is working!');
+
+          // Send a test CLI Agent status update immediately
+          log('🧪 [DEBUG] Sending test CLI Agent status update...');
+          this.sendCliAgentStatusUpdate('Terminal 1', 'connected');
+
+          setTimeout(() => {
+            log('🧪 [DEBUG] Sending test CLI Agent status update (disconnected)...');
+            this.sendCliAgentStatusUpdate('Terminal 1', 'disconnected');
+          }, 2000);
+
+          setTimeout(() => {
+            log('🧪 [DEBUG] Sending test CLI Agent status update (none)...');
+            this.sendCliAgentStatusUpdate(null, 'none');
+          }, 4000);
+          break;
+
+        case 'webviewReady':
+          log('🎉 [DEBUG] ========== WEBVIEW READY NOTIFICATION RECEIVED ==========');
+          await this._handleWebviewReady();
+          break;
+
         case TERMINAL_CONSTANTS.COMMANDS.READY:
-          log('✅ [DEBUG] Webview is ready, initializing terminal...');
+          log('✅ [DEBUG] Traditional ready command received, handling webview ready...');
+          await this._handleWebviewReady();
+
+          // Initialize terminal if not done yet
           try {
             await this._initializeTerminal();
             log('✅ [DEBUG] Terminal initialization completed in message handler');
@@ -530,6 +575,41 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
         state,
       });
     });
+
+    // Note: CLI Agent status change events are handled by _setupCliAgentStatusListeners()
+  }
+
+  /**
+   * Set up CLI Agent status change listeners
+   */
+  private _setupCliAgentStatusListeners(): void {
+    log('🔧 [DEBUG] Setting up CLI Agent status change listeners...');
+
+    // Listen to CLI Agent status changes from TerminalManager
+    const claudeStatusDisposable = this._terminalManager.onCliAgentStatusChange((event) => {
+      try {
+        const terminal = this._terminalManager.getTerminal(event.terminalId);
+        
+        if (terminal) {
+          const status = event.isActive ? 'connected' : 'disconnected';
+          log(`🔔 [PROVIDER] CLI Agent status: ${terminal.name} -> ${status}`);
+          this.sendCliAgentStatusUpdate(terminal.name, status);
+        } else {
+          log(`⚠️ [PROVIDER] Terminal ${event.terminalId} not found for CLI Agent status change`);
+          this.sendCliAgentStatusUpdate(null, 'none');
+        }
+      } catch (error) {
+        log(`❌ [PROVIDER] CLI Agent status change error: ${error instanceof Error ? error.message : String(error)}`);
+        if (error instanceof Error && error.stack) {
+          log(`❌ [PROVIDER] Stack trace: ${error.stack}`);
+        }
+      }
+    });
+
+    log('✅ [DEBUG] CLI Agent status change listeners set up successfully');
+
+    // Add to disposables
+    this._extensionContext.subscriptions.push(claudeStatusDisposable);
   }
 
   /**
@@ -545,9 +625,9 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
       if (
         event.affectsConfiguration('editor.multiCursorModifier') ||
         event.affectsConfiguration('terminal.integrated.altClickMovesCursor') ||
-        event.affectsConfiguration('sidebarTerminal.altClickMovesCursor') ||
-        event.affectsConfiguration('sidebarTerminal.theme') ||
-        event.affectsConfiguration('sidebarTerminal.cursorBlink')
+        event.affectsConfiguration('secondaryTerminal.altClickMovesCursor') ||
+        event.affectsConfiguration('secondaryTerminal.theme') ||
+        event.affectsConfiguration('secondaryTerminal.cursorBlink')
       ) {
         shouldUpdateSettings = true;
       }
@@ -586,6 +666,35 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
   }
 
   /**
+   * Handle WebView ready state
+   */
+  private async _handleWebviewReady(): Promise<void> {
+    if (this._webviewReady) {
+      log('⚠️ [DEBUG] WebView already marked as ready, skipping...');
+      return;
+    }
+
+    log('🎉 [DEBUG] ========== WEBVIEW READY PROCESSING START ==========');
+    this._webviewReady = true;
+    log(`✅ [DEBUG] WebView marked as ready, pending messages: ${this._pendingMessages.length}`);
+
+    // Send any pending messages
+    if (this._pendingMessages.length > 0) {
+      log(`📤 [DEBUG] Sending ${this._pendingMessages.length} pending messages...`);
+      for (const pendingMessage of this._pendingMessages) {
+        log(`📤 [DEBUG] Sending pending message: ${pendingMessage.command}`);
+        await this._sendMessageDirect(pendingMessage);
+      }
+      this._pendingMessages = [];
+      log('✅ [DEBUG] All pending messages sent');
+    } else {
+      log('ℹ️ [DEBUG] No pending messages to send');
+    }
+
+    log('🎉 [DEBUG] ========== WEBVIEW READY PROCESSING COMPLETE ==========');
+  }
+
+  /**
    * Webviewにメッセージを送信する
    */
   private async _sendMessage(message: WebviewMessage): Promise<void> {
@@ -594,11 +703,44 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
       return;
     }
 
+    // Check if WebView is ready
+    if (!this._webviewReady) {
+      log(`📋 [DEBUG] WebView not ready, queuing message: ${message.command}`);
+      this._pendingMessages.push(message);
+      log(`📋 [DEBUG] Pending messages count: ${this._pendingMessages.length}`);
+      return;
+    }
+
+    await this._sendMessageDirect(message);
+  }
+
+  private async _sendMessageDirect(message: WebviewMessage): Promise<void> {
+    if (!this._view) {
+      log('⚠️ [WARN] No webview available to send message');
+      return;
+    }
+
     try {
-      log('📤 [DEBUG] Sending message to webview:', message.command);
-      await this._view.webview.postMessage(message);
+      log(`📤 [DEBUG] ========== SENDING MESSAGE TO WEBVIEW ==========`);
+      log(`📤 [DEBUG] Message command: ${message.command}`);
+      log(`📤 [DEBUG] Full message: ${JSON.stringify(message, null, 2)}`);
+      log(
+        `📤 [DEBUG] WebView state: visible=${this._view.visible}, viewType=${this._view.viewType}`
+      );
+      log(`📤 [DEBUG] WebView webview object exists: ${!!this._view.webview}`);
+      log(`📤 [DEBUG] WebView ready: ${this._webviewReady}`);
+
+      const result = await this._view.webview.postMessage(message);
+
+      log(`✅ [DEBUG] postMessage call completed, result: ${result}`);
+      log(`📤 [DEBUG] ========== MESSAGE SEND COMPLETE ==========`);
     } catch (error) {
       log('❌ [ERROR] Failed to send message to webview:', error);
+      log('❌ [ERROR] Error details:', {
+        name: error instanceof Error ? error.name : 'unknown',
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : 'no stack',
+      });
       TerminalErrorHandler.handleWebviewError(error);
     }
   }
@@ -622,7 +764,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${
           webview.cspSource
-        } 'unsafe-inline'; script-src 'nonce-${nonce}'; font-src ${webview.cspSource};">
+        } 'unsafe-inline'; script-src 'nonce-${nonce}' ${webview.cspSource}; font-src ${webview.cspSource};">
         <!-- XTerm CSS is now bundled in webview.js -->
         <style>
             *, *::before, *::after {
@@ -859,6 +1001,35 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
                 border-color: var(--vscode-button-background, #0e639c);
             }
             
+            /* CLI Agent status indicators */
+            .terminal-name {
+                color: var(--vscode-foreground) !important; /* Standard color */
+                font-weight: normal;
+            }
+            
+            /* CLI Agent indicator styles */
+            .claude-indicator {
+                display: inline-block;
+                width: 8px;
+                height: 8px;
+                line-height: 1;
+            }
+            
+            .claude-indicator.claude-connected {
+                color: #4CAF50; /* Green for connected */
+                animation: blink 1.5s infinite;
+            }
+            
+            .claude-indicator.claude-disconnected {
+                color: #F44336; /* Red for disconnected */
+                /* No animation - solid color */
+            }
+            
+            @keyframes blink {
+                0% { opacity: 1; }
+                50% { opacity: 0.3; }
+                100% { opacity: 1; }
+            }
             
             .loading {
                 display: flex;
@@ -876,9 +1047,32 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
             <!-- Simple terminal container -->
         </div>
         <script nonce="${nonce}">
-            // Debug log removed for production
+            console.log('🔥 [HTML] ========== INLINE SCRIPT EXECUTING ==========');
+            console.log('🔥 [HTML] Script execution time:', new Date().toISOString());
+            console.log('🔥 [HTML] window available:', typeof window);
+            console.log('🔥 [HTML] document available:', typeof document);
+            
+            // Acquire VS Code API once and store it globally for webview.js to use
+            try {
+                if (typeof window.acquireVsCodeApi === 'function') {
+                    const vscode = window.acquireVsCodeApi();
+                    window.vscodeApi = vscode;
+                    console.log('✅ [HTML] VS Code API acquired and stored');
+                } else {
+                    console.log('❌ [HTML] acquireVsCodeApi not available');
+                }
+            } catch (error) {
+                console.log('❌ [HTML] Error acquiring VS Code API:', error);
+            }
+            
+            console.log('🔥 [HTML] Inline script completed');
+            console.log('🔥 [HTML] About to load script:', '${scriptUri.toString()}');
+            console.log('🔥 [HTML] VS Code API in window.vscodeApi:', !!window.vscodeApi);
+            console.log('🔥 [HTML] VS Code API postMessage available:', typeof window.vscodeApi?.postMessage);
         </script>
-        <script nonce="${nonce}" src="${scriptUri.toString()}"></script>
+        <script nonce="${nonce}" src="${scriptUri.toString()}" 
+                onload="console.log('✅ [HTML] webview.js loaded successfully')"
+                onerror="console.error('❌ [HTML] webview.js failed to load', event)"></script>
     </body>
     </html>`;
 
@@ -890,12 +1084,15 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
     const settings = getConfigManager().getCompleteTerminalSettings();
     const altClickSettings = getConfigManager().getAltClickSettings();
 
+    const config = vscode.workspace.getConfiguration('secondaryTerminal');
     return {
       cursorBlink: settings.cursorBlink,
       theme: settings.theme || 'auto',
       // VS Code standard settings for Alt+Click functionality
       altClickMovesCursor: altClickSettings.altClickMovesCursor,
       multiCursorModifier: altClickSettings.multiCursorModifier,
+      // CLI Agent Code integration settings
+      enableCliAgentIntegration: config.get<boolean>('enableCliAgentIntegration', true),
     };
   }
 
@@ -910,7 +1107,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
 
   private async updateSettings(settings: PartialTerminalSettings): Promise<void> {
     try {
-      const config = vscode.workspace.getConfiguration('sidebarTerminal');
+      const config = vscode.workspace.getConfiguration('secondaryTerminal');
       // Note: ConfigManager handles reading, but writing must still use VS Code API
 
       // Update VS Code settings (font settings are managed by VS Code directly)
@@ -919,6 +1116,17 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
       }
       if (settings.theme) {
         await config.update('theme', settings.theme, vscode.ConfigurationTarget.Global);
+      }
+      if (settings.enableCliAgentIntegration !== undefined) {
+        await config.update(
+          'enableCliAgentIntegration',
+          settings.enableCliAgentIntegration,
+          vscode.ConfigurationTarget.Global
+        );
+        log(
+          '🔧 [DEBUG] CLI Agent Code integration setting updated:',
+          settings.enableCliAgentIntegration
+        );
       }
       // Note: Font settings are read directly from VS Code's terminal/editor settings
 
@@ -930,6 +1138,30 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
     } catch (error) {
       log('❌ [ERROR] Failed to update settings:', error);
       showError(`Failed to update settings: ${String(error)}`);
+    }
+  }
+
+  /**
+   * CLI Agent状態をWebViewに送信
+   */
+  public sendCliAgentStatusUpdate(
+    activeTerminalName: string | null,
+    status: 'connected' | 'disconnected' | 'none'
+  ): void {
+    try {
+      const message = {
+        command: 'claudeStatusUpdate' as const,
+        claudeStatus: {
+          activeTerminalName,
+          status,
+        },
+      };
+
+      log(`📤 [SIDEBAR-PROVIDER] Preparing CLI Agent status message: ${JSON.stringify(message)}`);
+      void this._sendMessage(message);
+      log(`✅ [SIDEBAR-PROVIDER] CLI Agent status update sent: ${activeTerminalName} -> ${status}`);
+    } catch (error) {
+      log('❌ [SIDEBAR-PROVIDER] Failed to send CLI Agent status update:', error);
     }
   }
 }
