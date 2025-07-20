@@ -9,6 +9,10 @@ import { IMessageManager, IManagerCoordinator } from '../interfaces/ManagerInter
 
 interface MessageCommand {
   command: string;
+  claudeStatus?: {
+    activeTerminalName: string | null;
+    status: 'connected' | 'disconnected' | 'none';
+  };
   [key: string]: unknown;
 }
 
@@ -21,8 +25,16 @@ export class MessageManager implements IMessageManager {
    * Handle incoming messages from the extension
    */
   public handleMessage(message: unknown, coordinator: IManagerCoordinator): void {
+    log(`📨 [MESSAGE] ========== MESSAGE MANAGER HANDLE MESSAGE ==========`);
+    log(`📨 [MESSAGE] Raw message:`, message);
+    log(`📨 [MESSAGE] Message type:`, typeof message);
+    log(`📨 [MESSAGE] Message is null/undefined:`, message == null);
+
     try {
       const msg = message as MessageCommand;
+      log(`📨 [MESSAGE] Casted message:`, msg);
+      log(`📨 [MESSAGE] Message command:`, msg?.command);
+      log(`📨 [MESSAGE] Message keys:`, Object.keys(msg || {}));
       log(`📨 [MESSAGE] Received command: ${msg.command}`);
 
       switch (msg.command) {
@@ -77,6 +89,10 @@ export class MessageManager implements IMessageManager {
 
         case 'stateUpdate':
           this.handleStateUpdateMessage(msg, coordinator);
+          break;
+
+        case 'claudeStatusUpdate':
+          this.handleClaudeStatusUpdateMessage(msg, coordinator);
           break;
 
         default:
@@ -399,6 +415,61 @@ export class MessageManager implements IMessageManager {
     } else {
       log('⚠️ [MESSAGE] No state data in stateUpdate message');
     }
+  }
+
+  /**
+   * Handle Claude status update message from extension
+   */
+  private handleClaudeStatusUpdateMessage(
+    msg: MessageCommand,
+    coordinator: IManagerCoordinator
+  ): void {
+    log(`📨 [MESSAGE] ========== CLAUDE STATUS UPDATE MESSAGE RECEIVED ==========`);
+    log(`📨 [MESSAGE] Message received at: ${new Date().toISOString()}`);
+    log(`📨 [MESSAGE] Full message received: ${JSON.stringify(msg, null, 2)}`);
+    log(`📨 [MESSAGE] Message command: ${msg.command}`);
+    log(`📨 [MESSAGE] Message claudeStatus: ${JSON.stringify(msg.claudeStatus)}`);
+    log(`📨 [MESSAGE] Message claudeStatus type: ${typeof msg.claudeStatus}`);
+
+    const claudeStatus = msg.claudeStatus;
+    if (claudeStatus) {
+      log(`🔄 [MESSAGE] Claude status data found:`);
+      log(
+        `🔄 [MESSAGE]   - activeTerminalName: "${claudeStatus.activeTerminalName}" (${typeof claudeStatus.activeTerminalName})`
+      );
+      log(`🔄 [MESSAGE]   - status: "${claudeStatus.status}" (${typeof claudeStatus.status})`);
+      log(`🔄 [MESSAGE] About to call coordinator.updateClaudeStatus...`);
+      log(`🔄 [MESSAGE] Coordinator available: ${!!coordinator}`);
+      log(`🔄 [MESSAGE] Coordinator type: ${typeof coordinator}`);
+      log(
+        `🔄 [MESSAGE] Coordinator.updateClaudeStatus method: ${typeof coordinator.updateClaudeStatus}`
+      );
+
+      try {
+        const result = coordinator.updateClaudeStatus(
+          claudeStatus.activeTerminalName,
+          claudeStatus.status
+        );
+        log(`✅ [MESSAGE] coordinator.updateClaudeStatus called successfully, result: ${result}`);
+      } catch (error) {
+        log(`❌ [MESSAGE] Error calling coordinator.updateClaudeStatus:`, error);
+        log(`❌ [MESSAGE] Error name: ${error instanceof Error ? error.name : 'unknown'}`);
+        log(
+          `❌ [MESSAGE] Error message: ${error instanceof Error ? error.message : String(error)}`
+        );
+        log(`❌ [MESSAGE] Error stack: ${error instanceof Error ? error.stack : 'no stack'}`);
+      }
+    } else {
+      log('⚠️ [MESSAGE] No Claude status data in claudeStatusUpdate message');
+      log(`⚠️ [MESSAGE] Message keys: ${Object.keys(msg)}`);
+      log(`⚠️ [MESSAGE] Message properties check:`);
+      for (const [key, value] of Object.entries(msg)) {
+        log(`⚠️ [MESSAGE]   - ${key}: ${JSON.stringify(value)} (${typeof value})`);
+      }
+      log(`⚠️ [MESSAGE] Full message structure: ${JSON.stringify(msg, null, 2)}`);
+    }
+
+    log(`📨 [MESSAGE] ========== CLAUDE STATUS UPDATE PROCESSING COMPLETE ==========`);
   }
 
   /**

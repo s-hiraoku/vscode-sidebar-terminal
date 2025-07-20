@@ -40,6 +40,11 @@ export interface IManagerCoordinator {
   // 新しいアーキテクチャ: 状態更新処理
   updateState?(state: unknown): void;
   handleTerminalRemovedFromExtension?(terminalId: string): void;
+  // Claude状態管理
+  updateClaudeStatus(
+    activeTerminalName: string | null,
+    status: 'connected' | 'disconnected' | 'none'
+  ): void;
 }
 
 // Terminal management interface
@@ -105,6 +110,11 @@ export interface IUIManager {
   applyAllVisualSettings(terminal: Terminal, settings: PartialTerminalSettings): void;
   addFocusIndicator(container: HTMLElement): void;
   createTerminalHeader(terminalId: string, terminalName: string): HTMLElement;
+  updateTerminalHeader(terminalId: string, newName: string): void;
+  updateClaudeStatusDisplay(
+    activeTerminalName: string | null,
+    status: 'connected' | 'disconnected' | 'none'
+  ): void;
   applyVSCodeStyling(container: HTMLElement): void;
   dispose(): void;
 }

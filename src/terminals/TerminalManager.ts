@@ -33,6 +33,10 @@ export class TerminalManager {
   private readonly _terminalCreatedEmitter = new vscode.EventEmitter<TerminalInstance>();
   private readonly _terminalRemovedEmitter = new vscode.EventEmitter<string>();
   private readonly _stateUpdateEmitter = new vscode.EventEmitter<TerminalState>();
+  private readonly _claudeStatusEmitter = new vscode.EventEmitter<{
+    terminalId: string;
+    isActive: boolean;
+  }>();
 
   // 操作の順序保証のためのキュー
   private operationQueue: Promise<void> = Promise.resolve();
@@ -46,11 +50,18 @@ export class TerminalManager {
   private readonly DATA_FLUSH_INTERVAL = 16; // ~60fps
   private readonly MAX_BUFFER_SIZE = 50;
 
+  // Claude detection and command history
+  private readonly _commandHistory = new Map<string, string[]>(); // terminalId -> commands
+  private readonly _claudeActiveTerminals = new Set<string>(); // terminalIds with active Claude
+  private _currentInputBuffer = new Map<string, string>(); // terminalId -> partial input
+  private readonly MAX_HISTORY_SIZE = 100;
+
   public readonly onData = this._dataEmitter.event;
   public readonly onExit = this._exitEmitter.event;
   public readonly onTerminalCreated = this._terminalCreatedEmitter.event;
   public readonly onTerminalRemoved = this._terminalRemovedEmitter.event;
   public readonly onStateUpdate = this._stateUpdateEmitter.event;
+  public readonly onClaudeStatusChange = this._claudeStatusEmitter.event;
 
   constructor(private readonly _context: vscode.ExtensionContext) {
     // Context may be used in future for storing state
@@ -190,6 +201,9 @@ export class TerminalManager {
 
         // Performance optimization: Batch small data chunks
         this._bufferData(terminalId, data);
+
+        // Check for Claude patterns in output
+        this.handleTerminalOutput(terminalId, data);
       });
 
       ptyProcess.onExit((event: number | { exitCode: number; signal?: number }) => {
@@ -268,6 +282,9 @@ export class TerminalManager {
       log('🔧 [DEBUG] Writing to pty - validated:', JSON.stringify(validatedData));
       log('🔧 [DEBUG] Byte count:', bytes.length);
 
+      // Track input for command history and Claude detection
+      this._trackInput(id, validatedData);
+
       terminal.pty.write(validatedData);
       log('✅ [DEBUG] Successfully wrote to pty');
     } catch (error) {
@@ -294,6 +311,13 @@ export class TerminalManager {
 
   public getTerminals(): TerminalInstance[] {
     return Array.from(this._terminals.values());
+  }
+
+  /**
+   * Get a specific terminal by ID
+   */
+  public getTerminal(terminalId: string): TerminalInstance | undefined {
+    return this._terminals.get(terminalId);
   }
 
   public setActiveTerminal(terminalId: string): void {
@@ -636,6 +660,13 @@ export class TerminalManager {
       this._dataFlushTimers.delete(terminalId);
     }
 
+    // Claude関連データのクリーンアップ
+    this._commandHistory.delete(terminalId);
+    this._currentInputBuffer.delete(terminalId);
+    if (this._claudeActiveTerminals.has(terminalId)) {
+      this._deactivateClaude(terminalId);
+    }
+
     // Remove from terminals map
     this._terminals.delete(terminalId);
     this._terminalRemovedEmitter.fire(terminalId);
@@ -684,6 +715,150 @@ export class TerminalManager {
         this._activeTerminalManager.clearActive();
         log('🔄 [TERMINAL] No remaining terminals, cleared active');
       }
+    }
+  }
+
+  /**
+   * Track input for command history and Claude detection
+   */
+  private _trackInput(terminalId: string, data: string): void {
+    // Get or create input buffer for this terminal
+    let buffer = this._currentInputBuffer.get(terminalId) || '';
+    buffer += data;
+    this._currentInputBuffer.set(terminalId, buffer);
+
+    // Check if we have a complete command (ends with newline)
+    if (data.includes('\r') || data.includes('\n')) {
+      // Extract the command from buffer
+      const command = buffer.trim();
+
+      if (command) {
+        // Add to command history
+        this._addToCommandHistory(terminalId, command);
+
+        // Check for Claude command
+        if (command.toLowerCase().startsWith('claude')) {
+          console.log(
+            `🚀🚀🚀 [TERMINAL] Claude command detected in terminal ${terminalId}: ${command}`
+          );
+          log(`🚀 [TERMINAL] Claude command detected in terminal ${terminalId}: ${command}`);
+          this._activateClaude(terminalId);
+        }
+      }
+
+      // Clear the buffer
+      this._currentInputBuffer.set(terminalId, '');
+    }
+  }
+
+  /**
+   * Add command to history
+   */
+  private _addToCommandHistory(terminalId: string, command: string): void {
+    const history = this._commandHistory.get(terminalId) || [];
+    history.push(command);
+
+    // Limit history size
+    if (history.length > this.MAX_HISTORY_SIZE) {
+      history.shift();
+    }
+
+    this._commandHistory.set(terminalId, history);
+    log(`📝 [TERMINAL] Command added to history for ${terminalId}: ${command}`);
+  }
+
+  /**
+   * Activate Claude for a terminal
+   */
+  private _activateClaude(terminalId: string): void {
+    this._claudeActiveTerminals.add(terminalId);
+    log(`✅ [TERMINAL] Claude activated for terminal: ${terminalId}`);
+
+    // Notify ClaudeTerminalTracker if it exists
+    this._notifyClaudeActivation(terminalId, true);
+  }
+
+  /**
+   * Deactivate Claude for a terminal
+   */
+  private _deactivateClaude(terminalId: string): void {
+    this._claudeActiveTerminals.delete(terminalId);
+    log(`❌ [TERMINAL] Claude deactivated for terminal: ${terminalId}`);
+
+    // Notify ClaudeTerminalTracker if it exists
+    this._notifyClaudeActivation(terminalId, false);
+  }
+
+  /**
+   * Check if Claude is active in a terminal
+   */
+  public isClaudeActive(terminalId: string): boolean {
+    return this._claudeActiveTerminals.has(terminalId);
+  }
+
+  /**
+   * Get the last executed command for a terminal
+   */
+  public getLastCommand(terminalId: string): string | undefined {
+    const history = this._commandHistory.get(terminalId);
+    return history && history.length > 0 ? history[history.length - 1] : undefined;
+  }
+
+  /**
+   * Notify Claude activation status change
+   */
+  private _notifyClaudeActivation(terminalId: string, isActive: boolean): void {
+    const terminal = this._terminals.get(terminalId);
+    if (terminal) {
+      console.log(
+        `🔔🔔🔔 [TERMINAL] Claude status change notification: ${terminalId} -> ${isActive ? 'active' : 'inactive'}`
+      );
+      log(
+        `🔔 [TERMINAL] Claude status change notification: ${terminalId} -> ${isActive ? 'active' : 'inactive'}`
+      );
+      this._claudeStatusEmitter.fire({ terminalId, isActive });
+    }
+  }
+
+  /**
+   * Handle terminal output for Claude detection
+   */
+  public handleTerminalOutput(terminalId: string, data: string): void {
+    // Claude output patterns
+    const claudePatterns = [
+      'Welcome to Claude',
+      'Claude Code',
+      'Type your message',
+      'To start a conversation',
+      'claude.ai',
+      /^\s*Human:/,
+      /^\s*Assistant:/,
+    ];
+
+    // Check if output contains Claude patterns
+    const hasClaudePattern = claudePatterns.some((pattern) => {
+      if (typeof pattern === 'string') {
+        return data.toLowerCase().includes(pattern.toLowerCase());
+      } else {
+        return pattern.test(data);
+      }
+    });
+
+    if (hasClaudePattern && !this._claudeActiveTerminals.has(terminalId)) {
+      log(`🔍 [TERMINAL] Claude pattern detected in output for terminal ${terminalId}`);
+      this._activateClaude(terminalId);
+    }
+
+    // Check for Claude exit patterns
+    const exitPatterns = ['Goodbye!', 'Chat ended', 'Session terminated'];
+
+    const hasExitPattern = exitPatterns.some((pattern) =>
+      data.toLowerCase().includes(pattern.toLowerCase())
+    );
+
+    if (hasExitPattern && this._claudeActiveTerminals.has(terminalId)) {
+      log(`👋 [TERMINAL] Claude exit pattern detected for terminal ${terminalId}`);
+      this._deactivateClaude(terminalId);
     }
   }
 }

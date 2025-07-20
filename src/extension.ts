@@ -3,9 +3,11 @@ import { SidebarTerminalProvider } from './providers/SidebarTerminalProvider';
 import { TerminalManager } from './terminals/TerminalManager';
 import { extension as log, logger, LogLevel } from './utils/logger';
 import { TerminalErrorHandler } from './utils/feedback';
+import { ClaudeTerminalTracker } from './integration/ClaudeTerminalTracker';
 
 let terminalManager: TerminalManager | undefined;
 let sidebarProvider: SidebarTerminalProvider | undefined;
+let claudeTracker: ClaudeTerminalTracker | undefined;
 
 export function activate(context: vscode.ExtensionContext): void {
   // Configure logger based on extension mode
@@ -45,8 +47,38 @@ export function activate(context: vscode.ExtensionContext): void {
     );
     context.subscriptions.push(sidebarWebviewProvider);
 
+    // Initialize Claude Terminal Tracker
+    claudeTracker = ClaudeTerminalTracker.getInstance(context);
+
+    // Set SidebarTerminalProvider reference for WebView notifications
+    claudeTracker.setSidebarProvider(sidebarProvider);
+
     // Register commands
     registerCommands(context, sidebarProvider);
+
+    // Add test command for Claude status update
+    const testClaudeStatusCommand = vscode.commands.registerCommand(
+      'sidebarTerminal.testClaudeStatus',
+      () => {
+        log('🧪 [DEBUG] Test Claude status command executed');
+        if (sidebarProvider) {
+          sidebarProvider.sendClaudeStatusUpdate('Terminal 1', 'connected');
+
+          setTimeout(() => {
+            if (sidebarProvider) {
+              sidebarProvider.sendClaudeStatusUpdate('Terminal 1', 'disconnected');
+            }
+          }, 2000);
+
+          setTimeout(() => {
+            if (sidebarProvider) {
+              sidebarProvider.sendClaudeStatusUpdate(null, 'none');
+            }
+          }, 4000);
+        }
+      }
+    );
+    context.subscriptions.push(testClaudeStatusCommand);
 
     log('Sidebar Terminal extension activated successfully');
   } catch (error) {
@@ -80,11 +112,11 @@ async function focusSidebarTerminal(): Promise<void> {
 }
 
 /**
- * 独立した @filename 送信処理（CMD+OPT+L）
+ * @filename 送信処理
  */
 async function handleSendAtMention(): Promise<void> {
   try {
-    log('🚀 [DEBUG] handleSendAtMention called');
+    log('🚀 [DEBUG] handleSendAtMention called with sidebar terminal Claude detection');
 
     // Claude Code統合機能が有効かチェック
     const config = vscode.workspace.getConfiguration('sidebarTerminal');
@@ -98,47 +130,86 @@ async function handleSendAtMention(): Promise<void> {
       return;
     }
 
-    log('🔧 [DEBUG] Claude Code integration is enabled');
-
-    // アクティブエディタから @filename を生成
+    // アクティブエディタの確認
     const activeEditor = vscode.window.activeTextEditor;
-    log('🔧 [DEBUG] Active editor:', activeEditor ? 'found' : 'not found');
-
     if (!activeEditor) {
       log('⚠️ [WARN] No active editor found for @mention');
       void vscode.window.showWarningMessage('No active file to mention. Please open a file first.');
       return;
     }
 
-    const fileName = activeEditor.document.fileName;
-    log('🔧 [DEBUG] Full file path:', fileName);
+    // アクティブなサイドバーターミナルを確認
+    if (!terminalManager || !terminalManager.hasActiveTerminal()) {
+      log('⚠️ [WARN] No active sidebar terminal');
+      void vscode.window.showWarningMessage(
+        'No sidebar terminal available. Please open the sidebar terminal first.'
+      );
+      return;
+    }
 
+    const activeTerminalId = terminalManager.getActiveTerminalId();
+    if (!activeTerminalId) {
+      log('⚠️ [WARN] Could not get active terminal ID');
+      return;
+    }
+
+    // サイドバーターミナルでClaudeが実行中かチェック
+    const isClaudeActive = terminalManager.isClaudeActive(activeTerminalId);
+    log(`🔍 [DEBUG] Claude active in sidebar terminal ${activeTerminalId}: ${isClaudeActive}`);
+
+    if (!isClaudeActive) {
+      log('⚠️ [DEBUG] Claude not running, refusing to send @filename');
+      void vscode.window.showInformationMessage(
+        'ℹ️ Please start Claude first to use file references. Run "claude" command in the terminal.'
+      );
+      return;
+    }
+
+    // Claudeが実行中の場合のみファイル参照を送信
+    const fileName = activeEditor.document.fileName;
     const baseName = fileName.split('/').pop() || fileName.split('\\').pop() || fileName;
     const text = `@${baseName} `;
 
-    log('🔧 [DEBUG] Generated @filename from active editor:', text);
-    log('🔧 [DEBUG] TerminalManager status:', terminalManager ? 'available' : 'not available');
-
     // サイドバーターミナルに送信
+    terminalManager.sendInput(text);
+    await focusSidebarTerminal();
+
+    void vscode.window.showInformationMessage(
+      '✅ Sent file reference to Claude in sidebar terminal'
+    );
+    log('✅ [DEBUG] Successfully sent to Claude in sidebar terminal');
+  } catch (error) {
+    log('❌ [ERROR] Error in handleSendAtMention:', error);
+    void vscode.window.showErrorMessage(`Failed to send @mention: ${String(error)}`);
+  }
+}
+
+/**
+ * サイドバーターミナルに送信する処理（フォールバック用）
+ */
+async function sendToSidebarTerminal(): Promise<void> {
+  try {
+    const activeEditor = vscode.window.activeTextEditor;
+    if (!activeEditor) {
+      return;
+    }
+
+    const fileName = activeEditor.document.fileName;
+    const baseName = fileName.split('/').pop() || fileName.split('\\').pop() || fileName;
+    const text = `@${baseName} `;
+
     if (terminalManager) {
-      log('🔧 [DEBUG] Attempting to send input to terminal manager...');
       terminalManager.sendInput(text);
-      log('✅ [DEBUG] Sent @mention to sidebar terminal:', text);
-
-      // サイドバーパネルにフォーカスを移動
       await focusSidebarTerminal();
-
-      // 常に成功通知を表示（デバッグのため）
-      void vscode.window.showInformationMessage(`✅ Sent ${text} to sidebar terminal`);
+      log('✅ [DEBUG] Sent to sidebar terminal as fallback:', text);
     } else {
-      log('⚠️ [WARN] TerminalManager not available');
+      log('⚠️ [WARN] TerminalManager not available for fallback');
       void vscode.window.showWarningMessage(
         'Sidebar terminal not available. Please open the sidebar terminal first.'
       );
     }
   } catch (error) {
-    log('❌ [ERROR] Error in handleSendAtMention:', error);
-    void vscode.window.showErrorMessage(`Failed to send @mention: ${String(error)}`);
+    log('❌ [ERROR] Error in sendToSidebarTerminal:', error);
   }
 }
 
@@ -246,6 +317,11 @@ export function deactivate(): void {
     }
 
     sidebarProvider = undefined;
+
+    if (claudeTracker) {
+      claudeTracker.dispose();
+      claudeTracker = undefined;
+    }
 
     log('Sidebar Terminal extension deactivated successfully');
   } catch (error) {

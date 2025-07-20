@@ -274,7 +274,6 @@ export class SettingsPanel {
     `;
   }
 
-
   /**
    * イベントリスナーを設定
    */

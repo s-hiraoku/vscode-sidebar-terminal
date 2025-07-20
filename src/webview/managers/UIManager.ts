@@ -12,6 +12,10 @@ export class UIManager implements IUIManager {
   // Theme cache for performance
   private currentTheme: string | null = null;
   private themeApplied = false;
+  
+  // Prevent rapid successive updates that could cause duplication
+  private lastUpdateTimestamp = 0;
+  private readonly UPDATE_DEBOUNCE_MS = 100;
 
   /**
    * Update borders for all terminals based on active state
@@ -272,6 +276,190 @@ export class UIManager implements IUIManager {
       header.textContent = newName;
       log(`🎨 [UI] Updated terminal header for ${terminalId}: ${newName}`);
     }
+  }
+
+  /**
+   * Update Claude status display in sidebar terminal headers
+   */
+  public updateClaudeStatusDisplay(
+    activeTerminalName: string | null,
+    status: 'connected' | 'disconnected' | 'none'
+  ): void {
+    const now = Date.now();
+    
+    // Debounce rapid successive calls to prevent duplication
+    if (now - this.lastUpdateTimestamp < this.UPDATE_DEBOUNCE_MS) {
+      log(`🎨 [UI] Debouncing update - too soon after last update`);
+      return;
+    }
+    this.lastUpdateTimestamp = now;
+    
+    log(`🎨 [UI] ========== CLAUDE STATUS DISPLAY UPDATE START ==========`);
+    log(`🎨 [UI] Parameters: activeTerminalName="${activeTerminalName}", status="${status}"`);
+    log(`🎨 [UI] Document ready state: ${document.readyState}`);
+    log(`🎨 [UI] Document body exists: ${!!document.body}`);
+
+    // Always process updates to ensure proper cleanup
+
+    // Skip UI UPDATE display
+
+    // Log DOM structure for debugging
+    const allHeaders = document.querySelectorAll('.terminal-header');
+    log(`🎨 [UI] Total terminal-header elements found: ${allHeaders.length}`);
+
+    // Skip HEADERS display
+
+    if (allHeaders.length > 0) {
+      allHeaders.forEach((header, i) => {
+        const terminalId = header.getAttribute('data-terminal-id');
+        const nameElement = header.querySelector('.terminal-name');
+        log(`🎨 [UI] Header ${i}: id="${terminalId}", name="${nameElement?.textContent}"`);
+      });
+    }
+
+    // Find all terminal headers and update them
+    const terminalHeaders = document.querySelectorAll('.terminal-header .terminal-name');
+    log(`🎨 [UI] Found ${terminalHeaders.length} terminal-name elements to update`);
+
+    // Skip TERMINAL-NAME display
+
+    if (terminalHeaders.length === 0) {
+      log(`⚠️ [UI] No terminal headers found! Trying alternative selectors...`);
+      const altHeaders = document.querySelectorAll('.terminal-name');
+      log(`🎨 [UI] Alternative search found ${altHeaders.length} terminal-name elements`);
+
+      // Skip alternative search display
+
+      if (altHeaders.length === 0) {
+        log(`❌ [UI] No terminal-name elements found at all! DOM may not be ready`);
+        log(
+          `🎨 [UI] Available classes in document:`,
+          Array.from(document.querySelectorAll('*'))
+            .map((el) => el.className)
+            .filter((c) => c)
+            .slice(0, 10)
+        );
+
+        // Debug boxes removed - no longer needed
+        return;
+      }
+    }
+
+    const targetHeaders =
+      terminalHeaders.length > 0 ? terminalHeaders : document.querySelectorAll('.terminal-name');
+
+    // Debug display removed
+
+    targetHeaders.forEach((header, index) => {
+      const headerElement = header as HTMLElement;
+      const terminalId = headerElement
+        .closest('.terminal-header')
+        ?.getAttribute('data-terminal-id');
+
+      log(`🎨 [UI] Processing header ${index}:`);
+      log(`🎨 [UI]   - terminalId: ${terminalId}`);
+      log(`🎨 [UI]   - current text: "${headerElement.textContent}"`);
+      log(`🎨 [UI]   - current innerHTML: "${headerElement.innerHTML}"`);
+      log(`🎨 [UI]   - current className: "${headerElement.className}"`);
+
+      if (terminalId) {
+        try {
+          // Get current terminal name without Claude status
+          let currentName = headerElement.textContent || '';
+          log(`🎨 [UI]   - original name: "${currentName}"`);
+
+          // Extract only the basic terminal name (Terminal X format)
+          // This prevents accumulation of status text
+          const terminalMatch = currentName.match(/^(Terminal \d+)/);
+          if (terminalMatch && terminalMatch[1]) {
+            currentName = terminalMatch[1];
+          } else {
+            // Fallback: aggressive cleanup
+            currentName = currentName
+              .replace(/\s*Claude Code (connected|disconnected)/g, '')
+              .replace(/\s*●+/g, '') // Remove all ● symbols
+              .replace(/\s*○+/g, '') // Remove all ○ symbols  
+              .trim();
+          }
+          log(`🎨 [UI]   - cleaned name: "${currentName}"`);
+
+          // Update display based on active terminal and status
+          let statusClass = '';
+
+          // Only show status for the specific terminal that matches the active Claude terminal
+          // For sidebar terminals, we show status only if this terminal name matches
+          const isActiveClaudeTerminal = activeTerminalName && currentName.includes(activeTerminalName);
+          const shouldShowStatus = isActiveClaudeTerminal && status !== 'none';
+          
+          if (shouldShowStatus) {
+            if (status === 'connected') {
+              statusClass = 'claude-connected';
+            } else if (status === 'disconnected') {
+              statusClass = 'claude-disconnected';
+            }
+          }
+
+          log(`🎨 [UI]   - current name: "${currentName}"`);
+          log(`🎨 [UI]   - active terminal name: "${activeTerminalName}"`);
+          log(`🎨 [UI]   - is active claude terminal: ${isActiveClaudeTerminal}`);
+          log(`🎨 [UI]   - status class: "${statusClass}"`);
+          log(`🎨 [UI]   - should show status: ${shouldShowStatus}`);
+
+          // Always clear and rebuild the header element completely
+          log(`🎨 [UI]   - BEFORE clear: innerHTML="${headerElement.innerHTML}"`);
+          headerElement.innerHTML = '';
+          log(`🎨 [UI]   - AFTER clear: innerHTML="${headerElement.innerHTML}"`);
+
+          // Add terminal name (standard color)
+          const terminalNameSpan = document.createElement('span');
+          terminalNameSpan.textContent = currentName;
+          terminalNameSpan.style.color = 'var(--vscode-foreground)';
+          headerElement.appendChild(terminalNameSpan);
+          log(`🎨 [UI]   - AFTER adding name: innerHTML="${headerElement.innerHTML}"`);
+
+          // Add Claude status text with color if needed
+          if (shouldShowStatus && statusClass) {
+            log(`🎨 [UI]   - Adding Claude status for ${status}`);
+            
+            const statusSpan = document.createElement('span');
+            if (status === 'connected') {
+              statusSpan.textContent = 'Claude Code connected';
+              statusSpan.style.color = '#4CAF50'; // Green for connected
+            } else if (status === 'disconnected') {
+              statusSpan.textContent = 'Claude Code disconnected';
+              statusSpan.style.color = '#F44336'; // Red for disconnected
+            }
+            statusSpan.style.marginLeft = '16px'; // Add spacing before Claude Code text
+            headerElement.appendChild(statusSpan);
+            log(`🎨 [UI]   - AFTER adding status: innerHTML="${headerElement.innerHTML}"`);
+
+            // Add indicator after the status text
+            const indicator = document.createElement('span');
+            indicator.className = `claude-indicator ${statusClass}`;
+            indicator.textContent = ' ●';
+            indicator.style.cssText = `
+              margin-left: 8px;
+              font-size: 10px;
+              vertical-align: middle;
+              display: inline-flex;
+              align-items: center;
+              line-height: 1;
+              height: 100%;
+            `;
+            headerElement.appendChild(indicator);
+            log(`🎨 [UI]   - FINAL innerHTML: "${headerElement.innerHTML}"`);
+          }
+
+          log(`✅ [UI] Updated terminal header ${terminalId} successfully`);
+        } catch (error) {
+          log(`❌ [UI] Error updating terminal header ${terminalId}:`, error);
+        }
+      } else {
+        log(`⚠️ [UI] No terminalId found for header ${index} - element may be orphaned`);
+      }
+    });
+
+    log(`🎨 [UI] ========== CLAUDE STATUS DISPLAY UPDATE COMPLETE ==========`);
   }
 
   /**

@@ -39,7 +39,9 @@
       "Bash(gh issue edit:*)",
       "Bash(npm run lint:*)",
       "Bash(npm test)",
-      "WebFetch(domain:code.visualstudio.com)"
+      "WebFetch(domain:code.visualstudio.com)",
+      "Bash(./node_modules/.bin/mocha --require out/test/shared/TestSetup.js 'out/test/unit/terminals/TerminalManager.test.js')",
+      "Bash(npm run:*)"
     ],
     "deny": []
   }

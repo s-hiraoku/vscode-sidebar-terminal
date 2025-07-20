@@ -12,6 +12,8 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = 'sidebarTerminal';
 
   private _view?: vscode.WebviewView;
+  private _webviewReady = false;
+  private _pendingMessages: WebviewMessage[] = [];
 
   constructor(
     private readonly _extensionContext: vscode.ExtensionContext,
@@ -56,6 +58,9 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
 
     // Set up terminal event listeners
     this._setupTerminalEventListeners();
+
+    // Set up Claude status change listeners
+    this._setupClaudeStatusListeners();
 
     // Set up configuration change listeners for VS Code standard settings
     this._setupConfigurationChangeListeners();
@@ -331,8 +336,48 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
 
     try {
       switch (message.command) {
+        case 'htmlScriptTest':
+          log('🔥 [DEBUG] ========== HTML INLINE SCRIPT TEST MESSAGE RECEIVED ==========');
+          log('🔥 [DEBUG] HTML script communication is working!');
+          log('🔥 [DEBUG] Message content:', message);
+          break;
+
+        case 'timeoutTest':
+          log('🔥 [DEBUG] ========== HTML TIMEOUT TEST MESSAGE RECEIVED ==========');
+          log('🔥 [DEBUG] Timeout test communication is working!');
+          log('🔥 [DEBUG] Message content:', message);
+          break;
+
+        case 'test':
+          log('🧪 [DEBUG] ========== TEST MESSAGE RECEIVED FROM WEBVIEW ==========');
+          log('🧪 [DEBUG] Test message content:', message);
+          log('🧪 [DEBUG] WebView communication is working!');
+
+          // Send a test Claude status update immediately
+          log('🧪 [DEBUG] Sending test Claude status update...');
+          this.sendClaudeStatusUpdate('Terminal 1', 'connected');
+
+          setTimeout(() => {
+            log('🧪 [DEBUG] Sending test Claude status update (disconnected)...');
+            this.sendClaudeStatusUpdate('Terminal 1', 'disconnected');
+          }, 2000);
+
+          setTimeout(() => {
+            log('🧪 [DEBUG] Sending test Claude status update (none)...');
+            this.sendClaudeStatusUpdate(null, 'none');
+          }, 4000);
+          break;
+
+        case 'webviewReady':
+          log('🎉 [DEBUG] ========== WEBVIEW READY NOTIFICATION RECEIVED ==========');
+          await this._handleWebviewReady();
+          break;
+
         case TERMINAL_CONSTANTS.COMMANDS.READY:
-          log('✅ [DEBUG] Webview is ready, initializing terminal...');
+          log('✅ [DEBUG] Traditional ready command received, handling webview ready...');
+          await this._handleWebviewReady();
+
+          // Initialize terminal if not done yet
           try {
             await this._initializeTerminal();
             log('✅ [DEBUG] Terminal initialization completed in message handler');
@@ -530,6 +575,72 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
         state,
       });
     });
+
+    // Note: Claude status change events are handled by _setupClaudeStatusListeners()
+  }
+
+  /**
+   * Set up Claude status change listeners
+   */
+  private _setupClaudeStatusListeners(): void {
+    log('🔧 [DEBUG] Setting up Claude status change listeners...');
+
+    // Listen to Claude status changes from TerminalManager
+    const claudeStatusDisposable = this._terminalManager.onClaudeStatusChange((event) => {
+      log(
+        `🔔🔔🔔 [PROVIDER] Claude status changed: ${event.terminalId} -> ${event.isActive ? 'active' : 'inactive'}`
+      );
+      log(
+        `🔔 [PROVIDER] Claude status changed: ${event.terminalId} -> ${event.isActive ? 'active' : 'inactive'}`
+      );
+
+      try {
+        log(`🔍 [PROVIDER] Processing Claude status change event:`);
+        log(`🔍 [PROVIDER]   - terminalId: ${event.terminalId} (${typeof event.terminalId})`);
+        log(`🔍 [PROVIDER]   - isActive: ${event.isActive} (${typeof event.isActive})`);
+        log(`🔍 [PROVIDER]   - event object: ${JSON.stringify(event)}`);
+
+        // Get terminal info for the changed terminal
+        log(`🔍 [PROVIDER] Calling _terminalManager.getTerminal(${event.terminalId})...`);
+        const terminal = this._terminalManager.getTerminal(event.terminalId);
+        log(`🔍 [PROVIDER] getTerminal result:`, terminal);
+
+        if (terminal) {
+          const status = event.isActive ? 'connected' : 'disconnected';
+          log(`🚀🚀🚀 [PROVIDER] Sending Claude status update: ${terminal.name} -> ${status}`);
+          log(`🔍 [PROVIDER] About to call sendClaudeStatusUpdate...`);
+
+          this.sendClaudeStatusUpdate(terminal.name, status);
+          log(`✅ [PROVIDER] sendClaudeStatusUpdate completed successfully`);
+        } else {
+          log(`⚠️ [PROVIDER] Terminal not found for Claude status change: ${event.terminalId}`);
+          log(
+            `🔍 [PROVIDER] Available terminals: ${this._terminalManager
+              .getTerminals()
+              .map((t) => `${t.id}:${t.name}`)
+              .join(', ')}`
+          );
+          // Send 'none' status if terminal not found
+          this.sendClaudeStatusUpdate(null, 'none');
+        }
+      } catch (error) {
+        log(`❌ [PROVIDER] Error handling Claude status change:`);
+        log(`❌ [PROVIDER] Error type: ${typeof error}`);
+        log(`❌ [PROVIDER] Error constructor: ${error?.constructor?.name}`);
+        log(`❌ [PROVIDER] Error message: ${error instanceof Error ? error.message : 'unknown'}`);
+        log(`❌ [PROVIDER] Error name: ${error instanceof Error ? error.name : 'unknown'}`);
+        log(`❌ [PROVIDER] Error stack: ${error instanceof Error ? error.stack : 'unknown'}`);
+        log(`❌ [PROVIDER] Error string: ${String(error)}`);
+        log(
+          `❌ [PROVIDER] Error JSON: ${JSON.stringify(error, Object.getOwnPropertyNames(error))}`
+        );
+      }
+    });
+
+    log('✅ [DEBUG] Claude status change listeners set up successfully');
+
+    // Add to disposables
+    this._extensionContext.subscriptions.push(claudeStatusDisposable);
   }
 
   /**
@@ -586,6 +697,35 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
   }
 
   /**
+   * Handle WebView ready state
+   */
+  private async _handleWebviewReady(): Promise<void> {
+    if (this._webviewReady) {
+      log('⚠️ [DEBUG] WebView already marked as ready, skipping...');
+      return;
+    }
+
+    log('🎉 [DEBUG] ========== WEBVIEW READY PROCESSING START ==========');
+    this._webviewReady = true;
+    log(`✅ [DEBUG] WebView marked as ready, pending messages: ${this._pendingMessages.length}`);
+
+    // Send any pending messages
+    if (this._pendingMessages.length > 0) {
+      log(`📤 [DEBUG] Sending ${this._pendingMessages.length} pending messages...`);
+      for (const pendingMessage of this._pendingMessages) {
+        log(`📤 [DEBUG] Sending pending message: ${pendingMessage.command}`);
+        await this._sendMessageDirect(pendingMessage);
+      }
+      this._pendingMessages = [];
+      log('✅ [DEBUG] All pending messages sent');
+    } else {
+      log('ℹ️ [DEBUG] No pending messages to send');
+    }
+
+    log('🎉 [DEBUG] ========== WEBVIEW READY PROCESSING COMPLETE ==========');
+  }
+
+  /**
    * Webviewにメッセージを送信する
    */
   private async _sendMessage(message: WebviewMessage): Promise<void> {
@@ -594,11 +734,44 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
       return;
     }
 
+    // Check if WebView is ready
+    if (!this._webviewReady) {
+      log(`📋 [DEBUG] WebView not ready, queuing message: ${message.command}`);
+      this._pendingMessages.push(message);
+      log(`📋 [DEBUG] Pending messages count: ${this._pendingMessages.length}`);
+      return;
+    }
+
+    await this._sendMessageDirect(message);
+  }
+
+  private async _sendMessageDirect(message: WebviewMessage): Promise<void> {
+    if (!this._view) {
+      log('⚠️ [WARN] No webview available to send message');
+      return;
+    }
+
     try {
-      log('📤 [DEBUG] Sending message to webview:', message.command);
-      await this._view.webview.postMessage(message);
+      log(`📤 [DEBUG] ========== SENDING MESSAGE TO WEBVIEW ==========`);
+      log(`📤 [DEBUG] Message command: ${message.command}`);
+      log(`📤 [DEBUG] Full message: ${JSON.stringify(message, null, 2)}`);
+      log(
+        `📤 [DEBUG] WebView state: visible=${this._view.visible}, viewType=${this._view.viewType}`
+      );
+      log(`📤 [DEBUG] WebView webview object exists: ${!!this._view.webview}`);
+      log(`📤 [DEBUG] WebView ready: ${this._webviewReady}`);
+
+      const result = await this._view.webview.postMessage(message);
+
+      log(`✅ [DEBUG] postMessage call completed, result: ${result}`);
+      log(`📤 [DEBUG] ========== MESSAGE SEND COMPLETE ==========`);
     } catch (error) {
       log('❌ [ERROR] Failed to send message to webview:', error);
+      log('❌ [ERROR] Error details:', {
+        name: error instanceof Error ? error.name : 'unknown',
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : 'no stack',
+      });
       TerminalErrorHandler.handleWebviewError(error);
     }
   }
@@ -622,7 +795,7 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${
           webview.cspSource
-        } 'unsafe-inline'; script-src 'nonce-${nonce}'; font-src ${webview.cspSource};">
+        } 'unsafe-inline'; script-src 'nonce-${nonce}' ${webview.cspSource}; font-src ${webview.cspSource};">
         <!-- XTerm CSS is now bundled in webview.js -->
         <style>
             *, *::before, *::after {
@@ -859,6 +1032,35 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
                 border-color: var(--vscode-button-background, #0e639c);
             }
             
+            /* Claude status indicators */
+            .terminal-name {
+                color: var(--vscode-foreground) !important; /* Standard color */
+                font-weight: normal;
+            }
+            
+            /* Claude indicator styles */
+            .claude-indicator {
+                display: inline-block;
+                width: 8px;
+                height: 8px;
+                line-height: 1;
+            }
+            
+            .claude-indicator.claude-connected {
+                color: #4CAF50; /* Green for connected */
+                animation: blink 1.5s infinite;
+            }
+            
+            .claude-indicator.claude-disconnected {
+                color: #F44336; /* Red for disconnected */
+                /* No animation - solid color */
+            }
+            
+            @keyframes blink {
+                0% { opacity: 1; }
+                50% { opacity: 0.3; }
+                100% { opacity: 1; }
+            }
             
             .loading {
                 display: flex;
@@ -876,9 +1078,32 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
             <!-- Simple terminal container -->
         </div>
         <script nonce="${nonce}">
-            // Debug log removed for production
+            console.log('🔥 [HTML] ========== INLINE SCRIPT EXECUTING ==========');
+            console.log('🔥 [HTML] Script execution time:', new Date().toISOString());
+            console.log('🔥 [HTML] window available:', typeof window);
+            console.log('🔥 [HTML] document available:', typeof document);
+            
+            // Acquire VS Code API once and store it globally for webview.js to use
+            try {
+                if (typeof window.acquireVsCodeApi === 'function') {
+                    const vscode = window.acquireVsCodeApi();
+                    window.vscodeApi = vscode;
+                    console.log('✅ [HTML] VS Code API acquired and stored');
+                } else {
+                    console.log('❌ [HTML] acquireVsCodeApi not available');
+                }
+            } catch (error) {
+                console.log('❌ [HTML] Error acquiring VS Code API:', error);
+            }
+            
+            console.log('🔥 [HTML] Inline script completed');
+            console.log('🔥 [HTML] About to load script:', '${scriptUri.toString()}');
+            console.log('🔥 [HTML] VS Code API in window.vscodeApi:', !!window.vscodeApi);
+            console.log('🔥 [HTML] VS Code API postMessage available:', typeof window.vscodeApi?.postMessage);
         </script>
-        <script nonce="${nonce}" src="${scriptUri.toString()}"></script>
+        <script nonce="${nonce}" src="${scriptUri.toString()}" 
+                onload="console.log('✅ [HTML] webview.js loaded successfully')"
+                onerror="console.error('❌ [HTML] webview.js failed to load', event)"></script>
     </body>
     </html>`;
 
@@ -924,8 +1149,15 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
         await config.update('theme', settings.theme, vscode.ConfigurationTarget.Global);
       }
       if (settings.enableClaudeCodeIntegration !== undefined) {
-        await config.update('enableClaudeCodeIntegration', settings.enableClaudeCodeIntegration, vscode.ConfigurationTarget.Global);
-        log('🔧 [DEBUG] Claude Code integration setting updated:', settings.enableClaudeCodeIntegration);
+        await config.update(
+          'enableClaudeCodeIntegration',
+          settings.enableClaudeCodeIntegration,
+          vscode.ConfigurationTarget.Global
+        );
+        log(
+          '🔧 [DEBUG] Claude Code integration setting updated:',
+          settings.enableClaudeCodeIntegration
+        );
       }
       // Note: Font settings are read directly from VS Code's terminal/editor settings
 
@@ -937,6 +1169,30 @@ export class SidebarTerminalProvider implements vscode.WebviewViewProvider {
     } catch (error) {
       log('❌ [ERROR] Failed to update settings:', error);
       showError(`Failed to update settings: ${String(error)}`);
+    }
+  }
+
+  /**
+   * Claude状態をWebViewに送信
+   */
+  public sendClaudeStatusUpdate(
+    activeTerminalName: string | null,
+    status: 'connected' | 'disconnected' | 'none'
+  ): void {
+    try {
+      const message = {
+        command: 'claudeStatusUpdate' as const,
+        claudeStatus: {
+          activeTerminalName,
+          status,
+        },
+      };
+
+      log(`📤 [SIDEBAR-PROVIDER] Preparing Claude status message: ${JSON.stringify(message)}`);
+      void this._sendMessage(message);
+      log(`✅ [SIDEBAR-PROVIDER] Claude status update sent: ${activeTerminalName} -> ${status}`);
+    } catch (error) {
+      log('❌ [SIDEBAR-PROVIDER] Failed to send Claude status update:', error);
     }
   }
 }

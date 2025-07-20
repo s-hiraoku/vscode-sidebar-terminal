@@ -98,6 +98,11 @@
         "command": "sidebarTerminal.sendAtMention",
         "title": "Insert File Reference (Cmd+Option+L)",
         "category": "Sidebar Terminal"
+      },
+      {
+        "command": "sidebarTerminal.testClaudeStatus",
+        "title": "Test Claude Status Update",
+        "category": "Sidebar Terminal"
       }
     ],
     "menus": {

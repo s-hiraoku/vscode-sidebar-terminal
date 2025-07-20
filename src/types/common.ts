@@ -60,7 +60,8 @@ export interface WebviewMessage {
     | 'settingsResponse'
     | 'fontSettingsUpdate'
     | 'openSettings'
-    | 'stateUpdate';
+    | 'stateUpdate'
+    | 'claudeStatusUpdate';
   config?: TerminalConfig;
   data?: string;
   exitCode?: number;
@@ -71,11 +72,19 @@ export interface WebviewMessage {
   settings?: PartialTerminalSettings; // 部分的な設定を受け取るよう修正
   fontSettings?: WebViewFontSettings; // フォント設定を受け取る
   state?: TerminalState; // 新しいアーキテクチャ用の状態更新
+  claudeStatus?: {
+    activeTerminalName: string | null;
+    status: 'connected' | 'disconnected' | 'none';
+  }; // Claude接続状態の情報
 }
 
 export interface VsCodeMessage {
   command:
     | 'ready'
+    | 'webviewReady'
+    | 'htmlScriptTest'
+    | 'timeoutTest'
+    | 'test'
     | 'input'
     | 'resize'
     | 'switchTerminal'

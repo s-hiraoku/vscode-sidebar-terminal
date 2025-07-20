@@ -17,13 +17,19 @@ class Logger {
 
   constructor() {
     // Check if running in development mode
-    this.isDevelopment =
-      process.env.NODE_ENV === 'development' || process.env.VSCODE_DEBUG_MODE === 'true';
+    // WebView環境では process.env が利用できないため、常にDEBUGレベルを使用
+    const isWebViewEnvironment = typeof window !== 'undefined' && typeof process === 'undefined';
 
-    // Set log level based on environment
-    // Production: Only show errors
-    // Development: Show all logs including debug
-    this.level = this.isDevelopment ? LogLevel.DEBUG : LogLevel.ERROR;
+    if (isWebViewEnvironment) {
+      // WebView環境では常にDEBUGレベル
+      this.isDevelopment = true;
+      this.level = LogLevel.DEBUG;
+    } else {
+      // Extension環境
+      this.isDevelopment =
+        process.env.NODE_ENV === 'development' || process.env.VSCODE_DEBUG_MODE === 'true';
+      this.level = this.isDevelopment ? LogLevel.DEBUG : LogLevel.ERROR;
+    }
   }
 
   setLevel(level: LogLevel): void {
