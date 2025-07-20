@@ -45,7 +45,7 @@ A powerful VS Code extension that displays a terminal in the sidebar for efficie
 - **IME Support**: Multi-language input support including Japanese, Chinese, and Korean
 - **Highly Customizable**: Configure fonts, sizes, shell, and other preferences
 - **Cross-Platform**: Full support for Windows, macOS, and Linux
-- **Alt+Click Cursor Positioning**: VS Code-standard Alt+Click to move cursor (with Claude Code detection)
+- **Alt+Click Cursor Positioning**: VS Code-standard Alt+Click to move cursor (with CLI Agent detection)
 
 ## 📦 Installation
 
@@ -90,15 +90,15 @@ A powerful VS Code extension that displays a terminal in the sidebar for efficie
 ### Alt+Click Cursor Positioning
 
 - **Standard VS Code Behavior**: Alt+Click to move cursor to mouse position
-- **Claude Code Detection**: Automatically disabled during Claude Code execution for optimal performance
+- **CLI Agent Detection**: Automatically disabled during CLI Agent execution for optimal performance
 - **Visual Feedback**: Blue highlight shows cursor position with fade animation
 - **Requirements**: Both `terminal.integrated.altClickMovesCursor` and `editor.multiCursorModifier: "alt"` must be enabled
 
-### 🤖 Claude Code Integration
+### 🤖 CLI Agent Integration
 
 - **File reference shortcuts**: Use `Cmd+Option+L` (Mac) or `Alt+Ctrl+L` (Linux/Windows) to insert file references
-- **Independent Operation**: Works alongside Claude Code extension without conflicts
-- **Cooperative Design**: Claude Code (`CMD+OPT+K` → standard terminal) and Sidebar Terminal operate independently
+- **Independent Operation**: Works alongside CLI Agent extension without conflicts
+- **Cooperative Design**: CLI Agent (`CMD+OPT+K` → standard terminal) and Sidebar Terminal operate independently
 - **Command**: Use "Send @filename to Sidebar Terminal" from Command Palette
 
 ## ⌨️ Keyboard Shortcuts

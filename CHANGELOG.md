@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - **WebView Architecture Refactoring**
-  - Transformed monolithic `main.ts` into a modular system with 9 focused managers (Performance, ClaudeCode, Input, UI, Config, Message, Notification, TerminalCoordinator).
+  - Transformed monolithic `main.ts` into a modular system with 9 focused managers (Performance, CliAgent, Input, UI, Config, Message, Notification, TerminalCoordinator).
   - Achieved significant improvements in code organization, maintainability, and performance.
   - Implemented intelligent buffering, debounced operations, and efficient resource management.
 - Updated extension icon path to use SVG format (`resources/icon.svg`) for improved scalability and display consistency.
@@ -43,7 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Advanced Features**:
   - Alt+Click cursor positioning with VS Code standard behavior
-  - Claude Code detection for optimal performance during AI interactions
+  - CLI Agent detection for optimal performance during AI interactions
   - Visual feedback with blue cursor highlight and fade animation
   - Automatic conflict resolution for terminal output interference
 
@@ -89,7 +89,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Performance Optimizations
 - **Output Buffering**: Adaptive buffering (8ms vs 16ms) for optimal performance
-- **Claude Code Detection**: Automatic performance optimization during AI interactions
+- **CLI Agent Detection**: Automatic performance optimization during AI interactions
 - **Memory Management**: Proper cleanup and disposal patterns
 - **Resize Handling**: Debounced terminal resize operations
 
