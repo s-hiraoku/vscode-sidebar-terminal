@@ -1,11 +1,11 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import { SidebarTerminalProvider } from '../../providers/SidebarTerminalProvider';
+import { SecondaryTerminalProvider } from '../../providers/SecondaryTerminalProvider';
 import { TerminalManager } from '../../terminals/TerminalManager';
 
 suite('Webview Test Suite', () => {
   let terminalManager: TerminalManager;
-  let provider: SidebarTerminalProvider;
+  let provider: SecondaryTerminalProvider;
   let mockContext: vscode.ExtensionContext;
 
   setup(() => {
@@ -30,7 +30,7 @@ suite('Webview Test Suite', () => {
     } as unknown as vscode.ExtensionContext;
 
     terminalManager = new TerminalManager(mockContext);
-    provider = new SidebarTerminalProvider(mockContext, terminalManager);
+    provider = new SecondaryTerminalProvider(mockContext, terminalManager);
   });
 
   teardown(() => {
@@ -69,7 +69,7 @@ suite('Webview Test Suite', () => {
       onDidDispose: () => ({ dispose: () => {} }),
       onDidChangeVisibility: () => ({ dispose: () => {} }),
       visible: true,
-      viewType: 'sidebarTerminal',
+      viewType: 'secondaryTerminal',
       show: () => {},
     } as vscode.WebviewView;
 
@@ -111,7 +111,7 @@ suite('Webview Test Suite', () => {
       onDidDispose: () => ({ dispose: () => {} }),
       onDidChangeVisibility: () => ({ dispose: () => {} }),
       visible: true,
-      viewType: 'sidebarTerminal',
+      viewType: 'secondaryTerminal',
       show: () => {},
     } as vscode.WebviewView;
 
@@ -254,7 +254,7 @@ suite('Webview Test Suite', () => {
       onDidDispose: () => ({ dispose: () => {} }),
       onDidChangeVisibility: () => ({ dispose: () => {} }),
       visible: true,
-      viewType: 'sidebarTerminal',
+      viewType: 'secondaryTerminal',
       show: () => {},
     } as vscode.WebviewView;
 
