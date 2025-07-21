@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { TerminalManager } from '../terminals/TerminalManager';
+import { CliAgentStatus } from '../integration/SecondaryCliAgentDetector';
 import { VsCodeMessage, WebviewMessage } from '../types/common';
 import { TERMINAL_CONSTANTS } from '../constants';
 import { getTerminalConfig, generateNonce, normalizeTerminalInfo } from '../utils/common';
@@ -637,7 +638,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider {
       try {
         const terminal = this._terminalManager.getTerminal(event.terminalId);
 
-        if (terminal && event.status !== 'none') {
+        if (terminal && event.status !== CliAgentStatus.NONE) {
           // Connected or Disconnected状態の場合
           const status = event.status; // 'connected' | 'disconnected'
           const agentType = event.type;
