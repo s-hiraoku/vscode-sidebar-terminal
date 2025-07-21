@@ -25,7 +25,7 @@ import {
   getFirstValue,
 } from '../utils/common';
 import { TerminalNumberManager } from '../utils/TerminalNumberManager';
-import { SecondaryCliAgentDetector } from '../integration/SecondaryCliAgentDetector';
+import { SecondaryCliAgentDetector, CliAgentStatusEvent } from '../integration/SecondaryCliAgentDetector';
 
 export class TerminalManager {
   private readonly _terminals = new Map<string, TerminalInstance>();
@@ -68,7 +68,7 @@ export class TerminalManager {
   /**
    * Get CLI Agent status change event
    */
-  public get onCliAgentStatusChange(): vscode.Event<any> {
+  public get onCliAgentStatusChange(): vscode.Event<CliAgentStatusEvent> {
     return this._cliAgentDetector.onCliAgentStatusChange;
   }
 

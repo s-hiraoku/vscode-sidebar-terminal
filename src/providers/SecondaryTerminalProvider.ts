@@ -639,8 +639,8 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider {
 
         if (terminal) {
           const status = event.isActive ? 'connected' : 'disconnected';
-          const agentType = this._terminalManager.getActiveAgentType(event.terminalId);
-          const agentName = agentType ? `${agentType.toUpperCase()} CLI` : 'CLI Agent';
+          const agentType = event.type; // Use event.type instead of getActiveAgentType()
+          const agentName = agentType ? `${agentType.toUpperCase()} CLI` : 'CLI Agents';
 
           log(`🔔 [PROVIDER] ${agentName} status: ${terminal.name} -> ${status}`);
           this.sendCliAgentStatusUpdate(terminal.name, status, agentType);
@@ -1203,8 +1203,8 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider {
   ): void {
     try {
       const message = {
-        command: 'claudeStatusUpdate' as const,
-        claudeStatus: {
+        command: 'cliAgentStatusUpdate' as const,
+        cliAgentStatus: {
           activeTerminalName,
           status,
           agentType,

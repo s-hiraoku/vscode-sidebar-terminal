@@ -55,6 +55,8 @@ export class SecondaryCliAgentDetector {
    * TerminalManagerのイベントリスナーを設定
    */
   private setupEventListeners(): void {
+    // TerminalManagerが既に直接handleTerminalOutputを呼び出しているため、
+    // 追加のイベントリスナーは不要（重複を避けるため）
     log('✅ [CLI-AGENTS-DETECTOR] Event listeners setup completed for multiple CLI Agents');
   }
 
