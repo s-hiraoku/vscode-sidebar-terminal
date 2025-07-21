@@ -37,9 +37,14 @@ export class SecondaryCliAgentDetector {
   private _currentInputBuffer = new Map<string, string>(); // terminalId -> partial input
   private readonly MAX_HISTORY_SIZE = 100;
 
-  // Activity monitoring for auto-deactivation
-  private readonly _activityTimers = new Map<string, NodeJS.Timeout>();
-  private readonly ACTIVITY_TIMEOUT = 30000; // 30秒間活動なしで自動終了検知
+  // Activity monitoring (タイムアウト機能は削除 - CLI Agentが存在する限り送信対象として維持)
+
+  // Additional monitoring for more accurate detection
+  private readonly _lastOutputTime = new Map<string, number>();
+  private readonly _promptDetectionBuffer = new Map<string, string[]>(); // Store recent output lines for prompt detection
+
+  // Global state management for mutual exclusion
+  private _globalActiveAgent: { terminalId: string; type: CliAgentType } | null = null; // Only one CLI Agent active globally
 
   // Event emitter for CLI Agent status changes
   private readonly _cliAgentStatusEmitter = new vscode.EventEmitter<CliAgentStatusEvent>();
@@ -93,8 +98,8 @@ export class SecondaryCliAgentDetector {
       this._currentInputBuffer.set(terminalId, '');
     }
 
-    // Update activity for active agents
-    this._updateActivity(terminalId);
+    // Update last activity time for reference (no timeout action)
+    this._updateLastActivityTime(terminalId);
   }
 
   /**
@@ -102,21 +107,44 @@ export class SecondaryCliAgentDetector {
    * TerminalManagerのonDataイベントから呼び出される
    */
   public handleTerminalOutput(terminalId: string, data: string): void {
+    // 詳細なデバッグログ（最初の100文字のみ表示）
+    const shortData = data.substring(0, 100).replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+    log(
+      `📥 [CLI-AGENTS-DETECTOR] Terminal ${terminalId} output: "${shortData}${data.length > 100 ? '...' : ''}"`
+    );
+
+    // Update last output time for accurate timeout detection
+    this._lastOutputTime.set(terminalId, Date.now());
+
+    // Update prompt detection buffer
+    this._updatePromptBuffer(terminalId, data);
+
+    // 現在のエージェント状態をログ
+    const currentAgent = this._cliAgentsInfo.get(terminalId);
+    if (currentAgent) {
+      log(
+        `📊 [CLI-AGENTS-DETECTOR] Current agent status: ${currentAgent.type.toUpperCase()} - ${currentAgent.isActive ? 'ACTIVE' : 'INACTIVE'}`
+      );
+    }
+
     // 各CLI Agentの出力パターンをチェック
     const detectedAgent = this._detectAgentFromOutput(data);
 
     if (detectedAgent) {
-      const currentAgent = this._cliAgentsInfo.get(terminalId);
       if (!currentAgent || !currentAgent.isActive) {
         log(
           `🔍 [CLI-AGENTS-DETECTOR] ${detectedAgent.toUpperCase()} CLI pattern detected in output for terminal ${terminalId}`
         );
         this._activateCliAgent(terminalId, detectedAgent);
+      } else {
+        log(
+          `🔄 [CLI-AGENTS-DETECTOR] ${detectedAgent.toUpperCase()} CLI already active for terminal ${terminalId}`
+        );
       }
     }
 
-    // 終了パターンをチェック
-    const hasExitPattern = this._detectExitPattern(data);
+    // 終了パターンをチェック（改良版）
+    const hasExitPattern = this._detectExitPattern(data) || this._detectPromptReturn(terminalId);
     if (hasExitPattern) {
       const agentInfo = this._cliAgentsInfo.get(terminalId);
       if (agentInfo && agentInfo.isActive) {
@@ -124,11 +152,19 @@ export class SecondaryCliAgentDetector {
           `👋 [CLI-AGENTS-DETECTOR] ${agentInfo.type.toUpperCase()} CLI exit pattern detected for terminal ${terminalId}`
         );
         this._deactivateCliAgent(terminalId);
+      } else if (agentInfo) {
+        log(
+          `🔄 [CLI-AGENTS-DETECTOR] Exit pattern detected but ${agentInfo.type.toUpperCase()} CLI already inactive for terminal ${terminalId}`
+        );
+      } else {
+        log(
+          `⚠️ [CLI-AGENTS-DETECTOR] Exit pattern detected but no agent found for terminal ${terminalId}`
+        );
       }
     }
 
-    // Update activity for active agents
-    this._updateActivity(terminalId);
+    // Update last activity time for reference (no timeout action)
+    this._updateLastActivityTime(terminalId);
   }
 
   /**
@@ -226,9 +262,40 @@ export class SecondaryCliAgentDetector {
       'killed',
     ];
 
-    // Check exit patterns
-    for (const pattern of [...exitPatterns, ...eofPatterns]) {
+    // 実用的な終了パターン（Ctrl+C、プロンプト復帰、エラー終了）
+    const practicalExitPatterns = [
+      '^c', // Ctrl+C中断
+      'keyboardinterrupt', // Python KeyboardInterrupt
+      'sigint', // SIGINT signal
+      'interrupted', // 中断メッセージ
+      'cancelled', // キャンセルメッセージ
+    ];
+
+    // プロンプト復帰パターン（CLI Agentからシェルに戻った）
+    const promptPatterns = [
+      /\$\s*$/, // bash prompt at end
+      /%\s*$/, // zsh prompt at end
+      />\s*$/, // cmd prompt at end
+      /bash-\d+\.\d+\$/, // bash version prompt
+      /➜\s+/, // oh-my-zsh prompt
+    ];
+
+    // Check text-based exit patterns
+    for (const pattern of [...exitPatterns, ...eofPatterns, ...practicalExitPatterns]) {
       if (lowerData.includes(pattern)) {
+        log(
+          `🔍 [CLI-AGENTS-DETECTOR] Exit pattern detected: "${pattern}" in data: "${data.substring(0, 100)}..."`
+        );
+        return true;
+      }
+    }
+
+    // Check regex-based prompt patterns
+    for (const pattern of promptPatterns) {
+      if (pattern.test(data)) {
+        log(
+          `🔍 [CLI-AGENTS-DETECTOR] Prompt pattern detected: ${pattern} in data: "${data.substring(0, 100)}..."`
+        );
         return true;
       }
     }
@@ -237,32 +304,63 @@ export class SecondaryCliAgentDetector {
   }
 
   /**
-   * CLI Agentの活動を更新
+   * プロンプト検知バッファを更新
    */
-  private _updateActivity(terminalId: string): void {
+  private _updatePromptBuffer(terminalId: string, data: string): void {
+    const lines = data.split('\n');
+    let buffer = this._promptDetectionBuffer.get(terminalId) || [];
+
+    // Add new lines to buffer
+    buffer.push(...lines);
+
+    // Keep only last 10 lines for analysis
+    if (buffer.length > 10) {
+      buffer = buffer.slice(-10);
+    }
+
+    this._promptDetectionBuffer.set(terminalId, buffer);
+  }
+
+  /**
+   * プロンプト復帰を検知（バッファ分析による）
+   */
+  private _detectPromptReturn(terminalId: string): boolean {
+    const buffer = this._promptDetectionBuffer.get(terminalId) || [];
+    const recentLines = buffer.slice(-3); // 最新3行を分析
+
+    // 複数行にわたるプロンプトパターンをチェック
+    const combinedText = recentLines.join('\n');
+
+    // Shell prompt patterns at the end of output
+    const shellPromptPatterns = [
+      /\$\s*$/m, // bash prompt
+      /%\s*$/m, // zsh prompt
+      />\s*$/m, // cmd prompt
+      /bash-[0-9.]+\$\s*$/m, // bash version prompt
+      /➜\s+\w*\s*$/m, // oh-my-zsh prompt
+      /\[\w+@\w+\s+[^\]]+\]\$\s*$/m, // [user@host dir]$ prompt
+    ];
+
+    for (const pattern of shellPromptPatterns) {
+      if (pattern.test(combinedText)) {
+        log(
+          `🔍 [CLI-AGENTS-DETECTOR] Shell prompt return detected: ${pattern} in "${combinedText.replace(/\n/g, '\\n')}"`
+        );
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * 最終活動時刻を更新（参考情報として記録）
+   */
+  private _updateLastActivityTime(terminalId: string): void {
     const agentInfo = this._cliAgentsInfo.get(terminalId);
-    if (!agentInfo || !agentInfo.isActive) {
-      return;
+    if (agentInfo && agentInfo.isActive) {
+      agentInfo.lastActivity = new Date();
     }
-
-    // Update last activity time
-    agentInfo.lastActivity = new Date();
-
-    // Reset activity timer
-    const existingTimer = this._activityTimers.get(terminalId);
-    if (existingTimer) {
-      clearTimeout(existingTimer);
-    }
-
-    // Set new activity timer for auto-deactivation
-    const newTimer = setTimeout(() => {
-      log(
-        `⏰ [CLI-AGENTS-DETECTOR] Auto-deactivating ${agentInfo.type.toUpperCase()} CLI due to inactivity: ${terminalId}`
-      );
-      this._deactivateCliAgent(terminalId);
-    }, this.ACTIVITY_TIMEOUT);
-
-    this._activityTimers.set(terminalId, newTimer);
   }
 
   /**
@@ -282,14 +380,25 @@ export class SecondaryCliAgentDetector {
   }
 
   /**
-   * Activate CLI Agent for a terminal
+   * Activate CLI Agent for a terminal (with mutual exclusion)
    */
   private _activateCliAgent(terminalId: string, type: CliAgentType): void {
     const now = new Date();
 
-    // Deactivate any existing agent in this terminal
+    // MUTUAL EXCLUSION: Deactivate any existing CLI Agent globally (regardless of type)
+    if (this._globalActiveAgent && this._globalActiveAgent.terminalId !== terminalId) {
+      log(
+        `🔄 [CLI-AGENTS-DETECTOR] Deactivating existing ${this._globalActiveAgent.type.toUpperCase()} CLI in terminal ${this._globalActiveAgent.terminalId} due to new ${type.toUpperCase()} CLI activation in ${terminalId}`
+      );
+      this._deactivateCliAgent(this._globalActiveAgent.terminalId);
+    }
+
+    // Deactivate any existing agent in this terminal (different type)
     const existingAgent = this._cliAgentsInfo.get(terminalId);
-    if (existingAgent && existingAgent.isActive) {
+    if (existingAgent && existingAgent.isActive && existingAgent.type !== type) {
+      log(
+        `🔄 [CLI-AGENTS-DETECTOR] Deactivating existing ${existingAgent.type.toUpperCase()} CLI in terminal ${terminalId} for new ${type.toUpperCase()} CLI`
+      );
       this._deactivateCliAgent(terminalId);
     }
 
@@ -302,7 +411,16 @@ export class SecondaryCliAgentDetector {
     };
 
     this._cliAgentsInfo.set(terminalId, agentInfo);
-    log(`✅ [CLI-AGENTS-DETECTOR] ${type.toUpperCase()} CLI activated for terminal: ${terminalId}`);
+
+    // Update global active agent state
+    this._globalActiveAgent = { terminalId, type };
+
+    log(
+      `✅ [CLI-AGENTS-DETECTOR] ${type.toUpperCase()} CLI activated for terminal: ${terminalId} (now globally active)`
+    );
+    log(
+      `📊 [CLI-AGENTS-DETECTOR] Global active agent: ${this._globalActiveAgent.type.toUpperCase()} in terminal ${this._globalActiveAgent.terminalId}`
+    );
 
     // Emit status change event
     this._cliAgentStatusEmitter.fire({
@@ -311,12 +429,12 @@ export class SecondaryCliAgentDetector {
       isActive: true,
     });
 
-    // Start activity monitoring
-    this._updateActivity(terminalId);
+    // Record initial activity time
+    this._updateLastActivityTime(terminalId);
   }
 
   /**
-   * Deactivate CLI Agent for a terminal
+   * Deactivate CLI Agent for a terminal (with global state management)
    */
   private _deactivateCliAgent(terminalId: string): void {
     const agentInfo = this._cliAgentsInfo.get(terminalId);
@@ -324,18 +442,20 @@ export class SecondaryCliAgentDetector {
       return;
     }
 
-    // Clear activity timer
-    const timer = this._activityTimers.get(terminalId);
-    if (timer) {
-      clearTimeout(timer);
-      this._activityTimers.delete(terminalId);
-    }
-
     // Update agent info
     agentInfo.isActive = false;
-    log(
-      `❌ [CLI-AGENTS-DETECTOR] ${agentInfo.type.toUpperCase()} CLI deactivated for terminal: ${terminalId}`
-    );
+
+    // Update global active agent state if this was the globally active one
+    if (this._globalActiveAgent && this._globalActiveAgent.terminalId === terminalId) {
+      this._globalActiveAgent = null;
+      log(
+        `❌ [CLI-AGENTS-DETECTOR] ${agentInfo.type.toUpperCase()} CLI deactivated for terminal: ${terminalId} (was globally active)`
+      );
+    } else {
+      log(
+        `❌ [CLI-AGENTS-DETECTOR] ${agentInfo.type.toUpperCase()} CLI deactivated for terminal: ${terminalId} (was not globally active)`
+      );
+    }
 
     // Emit status change event
     this._cliAgentStatusEmitter.fire({
@@ -392,6 +512,20 @@ export class SecondaryCliAgentDetector {
   }
 
   /**
+   * Get currently globally active agent
+   */
+  public getCurrentGloballyActiveAgent(): { terminalId: string; type: CliAgentType } | null {
+    return this._globalActiveAgent;
+  }
+
+  /**
+   * Check if a specific terminal has the globally active agent
+   */
+  public isGloballyActive(terminalId: string): boolean {
+    return this._globalActiveAgent?.terminalId === terminalId || false;
+  }
+
+  /**
    * Force deactivate all CLI Agents (for cleanup)
    */
   public deactivateAllAgents(): void {
@@ -400,26 +534,36 @@ export class SecondaryCliAgentDetector {
         this._deactivateCliAgent(terminalId);
       }
     }
+
+    // Clear global state
+    this._globalActiveAgent = null;
+    log('🧹 [CLI-AGENTS-DETECTOR] All CLI Agents deactivated and global state cleared');
   }
 
   /**
    * Clean up resources for a terminal
    */
   public cleanupTerminal(terminalId: string): void {
-    // Clear activity timer
-    const timer = this._activityTimers.get(terminalId);
-    if (timer) {
-      clearTimeout(timer);
-      this._activityTimers.delete(terminalId);
-    }
-
     // CLI Agents関連データのクリーンアップ
     this._commandHistory.delete(terminalId);
     this._currentInputBuffer.delete(terminalId);
+    this._lastOutputTime.delete(terminalId);
+    this._promptDetectionBuffer.delete(terminalId);
 
     const agentInfo = this._cliAgentsInfo.get(terminalId);
-    if (agentInfo && agentInfo.isActive) {
-      this._deactivateCliAgent(terminalId);
+    if (agentInfo) {
+      // Check if this terminal was globally active and remove from global state
+      if (this._globalActiveAgent && this._globalActiveAgent.terminalId === terminalId) {
+        this._globalActiveAgent = null;
+        log(
+          `🧹 [CLI-AGENTS-DETECTOR] Removed ${agentInfo.type.toUpperCase()} CLI from global active state (terminal: ${terminalId})`
+        );
+      }
+
+      // Deactivate if still active
+      if (agentInfo.isActive) {
+        this._deactivateCliAgent(terminalId);
+      }
     }
 
     this._cliAgentsInfo.delete(terminalId);
@@ -430,17 +574,16 @@ export class SecondaryCliAgentDetector {
    * リソースのクリーンアップ
    */
   public dispose(): void {
-    // Clear all activity timers
-    for (const timer of this._activityTimers.values()) {
-      clearTimeout(timer);
-    }
-    this._activityTimers.clear();
-
     // Clear all data
     this._commandHistory.clear();
     this._currentInputBuffer.clear();
+    this._lastOutputTime.clear();
+    this._promptDetectionBuffer.clear();
+    this._globalActiveAgent = null;
     this._cliAgentsInfo.clear();
     this._cliAgentStatusEmitter.dispose();
-    log('🧹 [CLI-AGENTS-DETECTOR] Disposed and cleaned up all CLI Agents data');
+    log(
+      '🧹 [CLI-AGENTS-DETECTOR] Disposed and cleaned up all CLI Agents data including global state'
+    );
   }
 }

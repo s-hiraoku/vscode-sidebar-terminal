@@ -25,7 +25,10 @@ import {
   getFirstValue,
 } from '../utils/common';
 import { TerminalNumberManager } from '../utils/TerminalNumberManager';
-import { SecondaryCliAgentDetector, CliAgentStatusEvent } from '../integration/SecondaryCliAgentDetector';
+import {
+  SecondaryCliAgentDetector,
+  CliAgentStatusEvent,
+} from '../integration/SecondaryCliAgentDetector';
 
 export class TerminalManager {
   private readonly _terminals = new Map<string, TerminalInstance>();

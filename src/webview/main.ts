@@ -308,8 +308,10 @@ class TerminalWebviewManager {
       terminalDiv.tabIndex = -1; // Make focusable
 
       // Create terminal header using UIManager and HeaderFactory
-      const terminalHeader = this.uiManager.createTerminalHeader(id, name || `Terminal ${id.slice(-4)}`);
-
+      const terminalHeader = this.uiManager.createTerminalHeader(
+        id,
+        name || `Terminal ${id.slice(-4)}`
+      );
 
       // Setup delete button event handler (HeaderFactory already created the button)
       const deleteButton = terminalHeader.querySelector('.close-btn') as HTMLButtonElement;
@@ -723,10 +725,10 @@ class TerminalWebviewManager {
     try {
       // SplitManagerを使用してクリーンアップ
       this.splitManager.removeTerminal(terminalId);
-      
+
       // UIManagerのヘッダーキャッシュもクリア
       this.uiManager.removeTerminalHeader(terminalId);
-      
+
       log(`✅ [WEBVIEW] Terminal removed from UI: ${terminalId}`);
     } catch (error) {
       log(`❌ [WEBVIEW] Error removing terminal from UI:`, error);
