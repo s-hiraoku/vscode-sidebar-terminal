@@ -88,30 +88,6 @@ export function activate(context: vscode.ExtensionContext): void {
 }
 
 /**
- * サイドバーターミナルにフォーカスを移動
- */
-async function focusSidebarTerminal(): Promise<void> {
-  try {
-    log('🔧 [DEBUG] Attempting to focus sidebar terminal...');
-
-    // 1. サイドバーコンテナを表示してフォーカス
-    await vscode.commands.executeCommand('workbench.view.extension.secondaryTerminalContainer');
-
-    // 2. WebView内のターミナルにフォーカスを送信（将来の実装）
-    // TODO: SecondaryTerminalProvider に sendFocusToTerminal メソッドを追加
-    // if (sidebarProvider && typeof sidebarProvider.sendFocusToTerminal === 'function') {
-    //   sidebarProvider.sendFocusToTerminal();
-    //   log('🔧 [DEBUG] Sent focus message to WebView');
-    // }
-
-    log('✅ [DEBUG] Successfully focused sidebar terminal');
-  } catch (error) {
-    log('⚠️ [WARN] Failed to focus sidebar terminal:', error);
-    // フォーカス失敗は致命的ではないので、エラーメッセージは表示しない
-  }
-}
-
-/**
  * @filename 送信処理
  */
 async function handleSendAtMention(): Promise<void> {
@@ -172,44 +148,14 @@ async function handleSendAtMention(): Promise<void> {
 
     // サイドバーターミナルに送信
     terminalManager.sendInput(text);
-    await focusSidebarTerminal();
 
     void vscode.window.showInformationMessage(
-      '✅ Sent file reference to CLI Agent in sidebar terminal'
+      '✅ Sent file reference to CLI Agent in secondary terminal'
     );
-    log('✅ [DEBUG] Successfully sent to CLI Agent in sidebar terminal');
+    log('✅ [DEBUG] Successfully sent to CLI Agent in secondary terminal');
   } catch (error) {
     log('❌ [ERROR] Error in handleSendAtMention:', error);
     void vscode.window.showErrorMessage(`Failed to send @mention: ${String(error)}`);
-  }
-}
-
-/**
- * サイドバーターミナルに送信する処理（フォールバック用）
- */
-async function sendToSidebarTerminal(): Promise<void> {
-  try {
-    const activeEditor = vscode.window.activeTextEditor;
-    if (!activeEditor) {
-      return;
-    }
-
-    const fileName = activeEditor.document.fileName;
-    const baseName = fileName.split('/').pop() || fileName.split('\\').pop() || fileName;
-    const text = `@${baseName} `;
-
-    if (terminalManager) {
-      terminalManager.sendInput(text);
-      await focusSidebarTerminal();
-      log('✅ [DEBUG] Sent to sidebar terminal as fallback:', text);
-    } else {
-      log('⚠️ [WARN] TerminalManager not available for fallback');
-      void vscode.window.showWarningMessage(
-        'Sidebar terminal not available. Please open the sidebar terminal first.'
-      );
-    }
-  } catch (error) {
-    log('❌ [ERROR] Error in sendToSidebarTerminal:', error);
   }
 }
 
