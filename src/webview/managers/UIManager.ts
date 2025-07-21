@@ -360,8 +360,8 @@ export class UIManager implements IUIManager {
   ): void {
     // Use performance measurement
     return this.logger.performance.measure('updateCliAgentStatusDisplay', () => {
-      // Debounce rapid successive calls
-      if (!this._shouldProcessCliAgentUpdate()) return;
+      // CLI Agentステータス更新は即座に処理する（デバウンスをスキップ）
+      // 相互排他制御により短時間で複数のステータス変更が発生するため
 
       let updatedCount = 0;
 

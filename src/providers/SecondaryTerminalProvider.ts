@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { TerminalManager } from '../terminals/TerminalManager';
-import { CliAgentStatus } from '../integration/SecondaryCliAgentDetector';
+import { CliAgentStatus } from '../integration/CliAgentStateService';
 import { VsCodeMessage, WebviewMessage } from '../types/common';
 import { TERMINAL_CONSTANTS } from '../constants';
 import { getTerminalConfig, generateNonce, normalizeTerminalInfo } from '../utils/common';

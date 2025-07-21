@@ -26,9 +26,9 @@ import {
 } from '../utils/common';
 import { TerminalNumberManager } from '../utils/TerminalNumberManager';
 import {
-  SecondaryCliAgentDetector,
+  CliAgentIntegrationManager,
   CliAgentStatusEvent,
-} from '../integration/SecondaryCliAgentDetector';
+} from '../integration/CliAgentIntegrationManager';
 
 export class TerminalManager {
   private readonly _terminals = new Map<string, TerminalInstance>();
@@ -39,7 +39,7 @@ export class TerminalManager {
   private readonly _terminalRemovedEmitter = new vscode.EventEmitter<string>();
   private readonly _stateUpdateEmitter = new vscode.EventEmitter<TerminalState>();
   private readonly _terminalNumberManager: TerminalNumberManager;
-  private readonly _cliAgentDetector: SecondaryCliAgentDetector;
+  private readonly _cliAgentManager: CliAgentIntegrationManager;
 
   // 操作の順序保証のためのキュー
   private operationQueue: Promise<void> = Promise.resolve();
@@ -64,15 +64,15 @@ export class TerminalManager {
     const config = getTerminalConfig();
     this._terminalNumberManager = new TerminalNumberManager(config.maxTerminals);
 
-    // Initialize CLI Agent detector
-    this._cliAgentDetector = new SecondaryCliAgentDetector(this);
+    // Initialize CLI Agent integration manager
+    this._cliAgentManager = new CliAgentIntegrationManager();
   }
 
   /**
    * Get CLI Agent status change event
    */
   public get onCliAgentStatusChange(): vscode.Event<CliAgentStatusEvent> {
-    return this._cliAgentDetector.onCliAgentStatusChange;
+    return this._cliAgentManager.onCliAgentStatusChange;
   }
 
   public createTerminal(): string {
@@ -134,6 +134,9 @@ export class TerminalManager {
 
       this._terminals.set(terminalId, terminal);
       this._activeTerminalManager.setActive(terminalId);
+      
+      // Notify CLI Agent manager about terminal name
+      this._cliAgentManager.setTerminalName(terminalId, terminal.name);
 
       ptyProcess.onData((data: string) => {
         // Only log large data chunks or when debugging is specifically needed
@@ -204,7 +207,7 @@ export class TerminalManager {
 
     try {
       // Track input for CLI Agent detection
-      this._cliAgentDetector.trackInput(id, data);
+      this._cliAgentManager.trackInput(id, data);
       terminal.pty.write(data);
     } catch (error) {
       console.error('❌ [ERROR] Failed to write to pty:', error);
@@ -455,8 +458,8 @@ export class TerminalManager {
     // Clear kill tracking
     this._terminalBeingKilled.clear();
 
-    // Dispose CLI Agent detector
-    this._cliAgentDetector.dispose();
+    // Dispose CLI Agent integration manager
+    this._cliAgentManager.dispose();
 
     for (const terminal of this._terminals.values()) {
       terminal.pty.kill();
@@ -511,8 +514,8 @@ export class TerminalManager {
       const combinedData = buffer.join('');
       buffer.length = 0; // Clear buffer
 
-      // Send to CLI Agent detector for pattern detection
-      this._cliAgentDetector.handleTerminalOutput(terminalId, combinedData);
+      // Send to CLI Agent manager for pattern detection and state management
+      this._cliAgentManager.handleTerminalOutput(terminalId, combinedData);
 
       this._dataEmitter.fire({ terminalId, data: combinedData });
     }
@@ -549,7 +552,7 @@ export class TerminalManager {
     }
 
     // CLI Agent関連データのクリーンアップ
-    this._cliAgentDetector.cleanupTerminal(terminalId);
+    this._cliAgentManager.cleanupTerminal(terminalId);
 
     // Remove from terminals map
     this._terminals.delete(terminalId);
@@ -606,34 +609,48 @@ export class TerminalManager {
    * Check if CLI Agent is active in a terminal
    */
   public isCliAgentConnected(terminalId: string): boolean {
-    return this._cliAgentDetector.isCliAgentConnected(terminalId);
+    return this._cliAgentManager.isCliAgentConnected(terminalId);
+  }
+
+  /**
+   * Check if CLI Agent is running in a terminal (CONNECTED or DISCONNECTED)
+   */
+  public isCliAgentRunning(terminalId: string): boolean {
+    return this._cliAgentManager.isCliAgentRunning(terminalId);
+  }
+
+  /**
+   * Get currently globally active CLI Agent
+   */
+  public getCurrentGloballyActiveAgent(): { terminalId: string; type: string } | null {
+    return this._cliAgentManager.getCurrentGloballyActiveAgent();
   }
 
   /**
    * Get the last executed command for a terminal
    */
   public getLastCommand(terminalId: string): string | undefined {
-    return this._cliAgentDetector.getLastCommand(terminalId);
+    return this._cliAgentManager.getLastCommand(terminalId);
   }
 
   /**
    * Handle terminal output for CLI Agent detection (public API)
    */
   public handleTerminalOutputForCliAgent(terminalId: string, data: string): void {
-    this._cliAgentDetector.handleTerminalOutput(terminalId, data);
+    this._cliAgentManager.handleTerminalOutput(terminalId, data);
   }
 
   /**
    * Get the active CLI Agent type for a terminal
    */
   public getAgentType(terminalId: string): string | null {
-    return this._cliAgentDetector.getAgentType(terminalId);
+    return this._cliAgentManager.getAgentType(terminalId);
   }
 
   /**
    * Get all active CLI Agents
    */
   public getConnectedAgents(): Array<{ terminalId: string; agentInfo: unknown }> {
-    return this._cliAgentDetector.getConnectedAgents();
+    return this._cliAgentManager.getConnectedAgents();
   }
 }
