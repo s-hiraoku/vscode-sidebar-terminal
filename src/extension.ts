@@ -130,10 +130,12 @@ async function handleSendAtMention(): Promise<void> {
     }
 
     // サイドバーターミナルでCLI Agentが実行中かチェック
-    const isCliAgentActive = terminalManager.isCliAgentActive(activeTerminalId);
-    log(`🔍 [DEBUG] Claude active in sidebar terminal ${activeTerminalId}: ${isCliAgentActive}`);
+    const isCliAgentConnected = terminalManager.isCliAgentConnected(activeTerminalId);
+    log(
+      `🔍 [DEBUG] CLI Agent connected in sidebar terminal ${activeTerminalId}: ${isCliAgentConnected}`
+    );
 
-    if (!isCliAgentActive) {
+    if (!isCliAgentConnected) {
       log('⚠️ [DEBUG] CLI Agent not running, refusing to send @filename');
       void vscode.window.showInformationMessage(
         'ℹ️ Please start CLI Agent first to use file references. Run "cli-agent" command in the terminal.'

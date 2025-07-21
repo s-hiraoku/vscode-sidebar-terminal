@@ -605,8 +605,8 @@ export class TerminalManager {
   /**
    * Check if CLI Agent is active in a terminal
    */
-  public isCliAgentActive(terminalId: string): boolean {
-    return this._cliAgentDetector.isCliAgentActive(terminalId);
+  public isCliAgentConnected(terminalId: string): boolean {
+    return this._cliAgentDetector.isCliAgentConnected(terminalId);
   }
 
   /**
@@ -626,14 +626,14 @@ export class TerminalManager {
   /**
    * Get the active CLI Agent type for a terminal
    */
-  public getActiveAgentType(terminalId: string): string | null {
-    return this._cliAgentDetector.getActiveAgentType(terminalId);
+  public getAgentType(terminalId: string): string | null {
+    return this._cliAgentDetector.getAgentType(terminalId);
   }
 
   /**
    * Get all active CLI Agents
    */
-  public getActiveAgents(): Array<{ terminalId: string; agentInfo: unknown }> {
-    return this._cliAgentDetector.getActiveAgents();
+  public getConnectedAgents(): Array<{ terminalId: string; agentInfo: unknown }> {
+    return this._cliAgentDetector.getConnectedAgents();
   }
 }

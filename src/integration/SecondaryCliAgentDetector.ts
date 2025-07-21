@@ -8,11 +8,20 @@ import * as vscode from 'vscode';
 export type CliAgentType = 'claude' | 'gemini';
 
 /**
+ * CLI Agent の状態
+ */
+export enum CliAgentStatus {
+  NONE = 'none', // CLI Agentが検出されていない、または終了済み
+  CONNECTED = 'connected', // CLI Agentが実行中でグローバルアクティブ
+  DISCONNECTED = 'disconnected', // CLI Agentが実行中だが他のターミナルがアクティブ
+}
+
+/**
  * CLI Agent の状態情報
  */
 interface CliAgentInfo {
   type: CliAgentType;
-  isActive: boolean;
+  status: CliAgentStatus;
   startTime: Date;
   lastActivity: Date;
 }
@@ -23,7 +32,7 @@ interface CliAgentInfo {
 export interface CliAgentStatusEvent {
   terminalId: string;
   type: CliAgentType | null;
-  isActive: boolean;
+  status: CliAgentStatus;
 }
 
 /**
@@ -123,7 +132,7 @@ export class SecondaryCliAgentDetector {
     const currentAgent = this._cliAgentsInfo.get(terminalId);
     if (currentAgent) {
       log(
-        `📊 [CLI-AGENTS-DETECTOR] Current agent status: ${currentAgent.type.toUpperCase()} - ${currentAgent.isActive ? 'ACTIVE' : 'INACTIVE'}`
+        `📊 [CLI-AGENTS-DETECTOR] Current agent status: ${currentAgent.type.toUpperCase()} - ${currentAgent.status.toUpperCase()}`
       );
     }
 
@@ -131,14 +140,14 @@ export class SecondaryCliAgentDetector {
     const detectedAgent = this._detectAgentFromOutput(data);
 
     if (detectedAgent) {
-      if (!currentAgent || !currentAgent.isActive) {
+      if (!currentAgent || currentAgent.status === CliAgentStatus.NONE) {
         log(
           `🔍 [CLI-AGENTS-DETECTOR] ${detectedAgent.toUpperCase()} CLI pattern detected in output for terminal ${terminalId}`
         );
         this._activateCliAgent(terminalId, detectedAgent);
       } else {
         log(
-          `🔄 [CLI-AGENTS-DETECTOR] ${detectedAgent.toUpperCase()} CLI already active for terminal ${terminalId}`
+          `🔄 [CLI-AGENTS-DETECTOR] ${detectedAgent.toUpperCase()} CLI already detected for terminal ${terminalId} (status: ${currentAgent.status})`
         );
       }
     }
@@ -147,15 +156,11 @@ export class SecondaryCliAgentDetector {
     const hasExitPattern = this._detectExitPattern(data) || this._detectPromptReturn(terminalId);
     if (hasExitPattern) {
       const agentInfo = this._cliAgentsInfo.get(terminalId);
-      if (agentInfo && agentInfo.isActive) {
+      if (agentInfo) {
         log(
-          `👋 [CLI-AGENTS-DETECTOR] ${agentInfo.type.toUpperCase()} CLI exit pattern detected for terminal ${terminalId}`
+          `👋 [CLI-AGENTS-DETECTOR] ${agentInfo.type.toUpperCase()} CLI exit pattern detected for terminal ${terminalId} (current status: ${agentInfo.status})`
         );
         this._deactivateCliAgent(terminalId);
-      } else if (agentInfo) {
-        log(
-          `🔄 [CLI-AGENTS-DETECTOR] Exit pattern detected but ${agentInfo.type.toUpperCase()} CLI already inactive for terminal ${terminalId}`
-        );
       } else {
         log(
           `⚠️ [CLI-AGENTS-DETECTOR] Exit pattern detected but no agent found for terminal ${terminalId}`
@@ -358,7 +363,7 @@ export class SecondaryCliAgentDetector {
    */
   private _updateLastActivityTime(terminalId: string): void {
     const agentInfo = this._cliAgentsInfo.get(terminalId);
-    if (agentInfo && agentInfo.isActive) {
+    if (agentInfo) {
       agentInfo.lastActivity = new Date();
     }
   }
@@ -385,32 +390,48 @@ export class SecondaryCliAgentDetector {
   private _activateCliAgent(terminalId: string, type: CliAgentType): void {
     const now = new Date();
 
-    // MUTUAL EXCLUSION: Deactivate any existing CLI Agent globally (regardless of type)
+    // MUTUAL EXCLUSION: 既存のCONNECTEDをDISCONNECTEDに変更
     if (this._globalActiveAgent && this._globalActiveAgent.terminalId !== terminalId) {
-      log(
-        `🔄 [CLI-AGENTS-DETECTOR] Deactivating existing ${this._globalActiveAgent.type.toUpperCase()} CLI in terminal ${this._globalActiveAgent.terminalId} due to new ${type.toUpperCase()} CLI activation in ${terminalId}`
-      );
-      this._deactivateCliAgent(this._globalActiveAgent.terminalId);
+      const previousTerminalId = this._globalActiveAgent.terminalId;
+      const previousAgentInfo = this._cliAgentsInfo.get(previousTerminalId);
+
+      if (previousAgentInfo && previousAgentInfo.status === CliAgentStatus.CONNECTED) {
+        previousAgentInfo.status = CliAgentStatus.DISCONNECTED;
+        log(
+          `🔄 [CLI-AGENTS-DETECTOR] Changed ${this._globalActiveAgent.type.toUpperCase()} CLI in terminal ${previousTerminalId} from CONNECTED to DISCONNECTED`
+        );
+
+        // Emit status change event for previous terminal
+        this._cliAgentStatusEmitter.fire({
+          terminalId: previousTerminalId,
+          type: previousAgentInfo.type,
+          status: CliAgentStatus.DISCONNECTED,
+        });
+      }
     }
 
-    // Deactivate any existing agent in this terminal (different type)
-    const existingAgent = this._cliAgentsInfo.get(terminalId);
-    if (existingAgent && existingAgent.isActive && existingAgent.type !== type) {
+    // 既存のエージェント情報を取得または作成
+    let agentInfo = this._cliAgentsInfo.get(terminalId);
+    if (!agentInfo) {
+      // 新しいエージェント情報を作成
+      agentInfo = {
+        type,
+        status: CliAgentStatus.CONNECTED,
+        startTime: now,
+        lastActivity: now,
+      };
+      this._cliAgentsInfo.set(terminalId, agentInfo);
       log(
-        `🔄 [CLI-AGENTS-DETECTOR] Deactivating existing ${existingAgent.type.toUpperCase()} CLI in terminal ${terminalId} for new ${type.toUpperCase()} CLI`
+        `✨ [CLI-AGENTS-DETECTOR] Created new ${type.toUpperCase()} CLI agent for terminal: ${terminalId}`
       );
-      this._deactivateCliAgent(terminalId);
+    } else {
+      // 既存のエージェントをCONNECTEDに変更
+      agentInfo.status = CliAgentStatus.CONNECTED;
+      agentInfo.lastActivity = now;
+      log(
+        `🔄 [CLI-AGENTS-DETECTOR] Changed existing ${type.toUpperCase()} CLI in terminal ${terminalId} to CONNECTED`
+      );
     }
-
-    // Create new agent info
-    const agentInfo: CliAgentInfo = {
-      type,
-      isActive: true,
-      startTime: now,
-      lastActivity: now,
-    };
-
-    this._cliAgentsInfo.set(terminalId, agentInfo);
 
     // Update global active agent state
     this._globalActiveAgent = { terminalId, type };
@@ -426,7 +447,7 @@ export class SecondaryCliAgentDetector {
     this._cliAgentStatusEmitter.fire({
       terminalId,
       type,
-      isActive: true,
+      status: CliAgentStatus.CONNECTED,
     });
 
     // Record initial activity time
@@ -434,7 +455,7 @@ export class SecondaryCliAgentDetector {
   }
 
   /**
-   * Deactivate CLI Agent for a terminal (with global state management)
+   * Terminate CLI Agent for a terminal (complete removal and state promotion)
    */
   private _deactivateCliAgent(terminalId: string): void {
     const agentInfo = this._cliAgentsInfo.get(terminalId);
@@ -442,43 +463,86 @@ export class SecondaryCliAgentDetector {
       return;
     }
 
-    // Update agent info
-    agentInfo.isActive = false;
+    log(
+      `❌ [CLI-AGENTS-DETECTOR] ${agentInfo.type.toUpperCase()} CLI terminated for terminal: ${terminalId} (status: ${agentInfo.status})`
+    );
 
-    // Update global active agent state if this was the globally active one
+    // 完全に削除（NONE状態にする）
+    this._cliAgentsInfo.delete(terminalId);
+
+    // グローバルアクティブエージェントの更新
+    let newGlobalAgent: { terminalId: string; type: CliAgentType } | null = null;
+
     if (this._globalActiveAgent && this._globalActiveAgent.terminalId === terminalId) {
+      // 現在グローバルアクティブだったエージェントが終了した場合
       this._globalActiveAgent = null;
-      log(
-        `❌ [CLI-AGENTS-DETECTOR] ${agentInfo.type.toUpperCase()} CLI deactivated for terminal: ${terminalId} (was globally active)`
-      );
-    } else {
-      log(
-        `❌ [CLI-AGENTS-DETECTOR] ${agentInfo.type.toUpperCase()} CLI deactivated for terminal: ${terminalId} (was not globally active)`
-      );
+
+      // DISCONNECTEDの中から1つを選んでCONNECTEDに昇格
+      newGlobalAgent = this._promoteDisconnectedAgent();
     }
 
-    // Emit status change event
+    // 終了イベントを発火（NONE状態）
     this._cliAgentStatusEmitter.fire({
       terminalId,
-      type: agentInfo.type,
-      isActive: false,
+      type: null, // 終了時はnull
+      status: CliAgentStatus.NONE,
     });
+
+    // 新しいグローバルエージェントがあれば、そのイベントも発火
+    if (newGlobalAgent) {
+      this._cliAgentStatusEmitter.fire({
+        terminalId: newGlobalAgent.terminalId,
+        type: newGlobalAgent.type,
+        status: CliAgentStatus.CONNECTED,
+      });
+    }
   }
 
   /**
-   * Check if any CLI Agent is active in a terminal
+   * DISCONNECTEDエージェントの中から1つをCONNECTEDに昇格
    */
-  public isCliAgentActive(terminalId: string): boolean {
-    const agentInfo = this._cliAgentsInfo.get(terminalId);
-    return agentInfo ? agentInfo.isActive : false;
+  private _promoteDisconnectedAgent(): { terminalId: string; type: CliAgentType } | null {
+    // DISCONNECTEDなエージェントを探す
+    for (const [terminalId, agentInfo] of this._cliAgentsInfo.entries()) {
+      if (agentInfo.status === CliAgentStatus.DISCONNECTED) {
+        // 最初に見つかったDISCONNECTEDをCONNECTEDに昇格
+        agentInfo.status = CliAgentStatus.CONNECTED;
+        this._globalActiveAgent = { terminalId, type: agentInfo.type };
+
+        log(
+          `⬆️ [CLI-AGENTS-DETECTOR] Promoted ${agentInfo.type.toUpperCase()} CLI in terminal ${terminalId} from DISCONNECTED to CONNECTED`
+        );
+
+        return this._globalActiveAgent;
+      }
+    }
+
+    log(`📭 [CLI-AGENTS-DETECTOR] No DISCONNECTED agents found to promote`);
+    return null;
   }
 
   /**
-   * Get the active CLI Agent type for a terminal
+   * Check if any CLI Agent is connected (globally active) in a terminal
    */
-  public getActiveAgentType(terminalId: string): CliAgentType | null {
+  public isCliAgentConnected(terminalId: string): boolean {
     const agentInfo = this._cliAgentsInfo.get(terminalId);
-    return agentInfo && agentInfo.isActive ? agentInfo.type : null;
+    return agentInfo ? agentInfo.status === CliAgentStatus.CONNECTED : false;
+  }
+
+  /**
+   * Get CLI Agent status for a terminal
+   */
+  public getCliAgentStatus(terminalId: string): CliAgentStatus {
+    const agentInfo = this._cliAgentsInfo.get(terminalId);
+    return agentInfo ? agentInfo.status : CliAgentStatus.NONE;
+  }
+
+  /**
+   * Get the CLI Agent type for a terminal (regardless of status)
+   */
+  public getAgentType(terminalId: string): CliAgentType | null {
+    const agentInfo = this._cliAgentsInfo.get(terminalId);
+    return agentInfo ? agentInfo.type : null;
   }
 
   /**
@@ -497,18 +561,31 @@ export class SecondaryCliAgentDetector {
   }
 
   /**
-   * Get all active CLI Agents
+   * Get all CLI Agents with their status
    */
-  public getActiveAgents(): Array<{ terminalId: string; agentInfo: CliAgentInfo }> {
-    const activeAgents: Array<{ terminalId: string; agentInfo: CliAgentInfo }> = [];
+  public getAllAgents(): Array<{ terminalId: string; agentInfo: CliAgentInfo }> {
+    const allAgents: Array<{ terminalId: string; agentInfo: CliAgentInfo }> = [];
 
     for (const [terminalId, agentInfo] of this._cliAgentsInfo.entries()) {
-      if (agentInfo.isActive) {
-        activeAgents.push({ terminalId, agentInfo });
+      allAgents.push({ terminalId, agentInfo });
+    }
+
+    return allAgents;
+  }
+
+  /**
+   * Get connected (globally active) CLI Agents
+   */
+  public getConnectedAgents(): Array<{ terminalId: string; agentInfo: CliAgentInfo }> {
+    const connectedAgents: Array<{ terminalId: string; agentInfo: CliAgentInfo }> = [];
+
+    for (const [terminalId, agentInfo] of this._cliAgentsInfo.entries()) {
+      if (agentInfo.status === CliAgentStatus.CONNECTED) {
+        connectedAgents.push({ terminalId, agentInfo });
       }
     }
 
-    return activeAgents;
+    return connectedAgents;
   }
 
   /**
@@ -526,18 +603,16 @@ export class SecondaryCliAgentDetector {
   }
 
   /**
-   * Force deactivate all CLI Agents (for cleanup)
+   * Force terminate all CLI Agents (for cleanup)
    */
   public deactivateAllAgents(): void {
-    for (const [terminalId, agentInfo] of this._cliAgentsInfo.entries()) {
-      if (agentInfo.isActive) {
-        this._deactivateCliAgent(terminalId);
-      }
+    for (const [terminalId] of this._cliAgentsInfo.entries()) {
+      this._deactivateCliAgent(terminalId);
     }
 
     // Clear global state
     this._globalActiveAgent = null;
-    log('🧹 [CLI-AGENTS-DETECTOR] All CLI Agents deactivated and global state cleared');
+    log('🧹 [CLI-AGENTS-DETECTOR] All CLI Agents terminated and global state cleared');
   }
 
   /**
@@ -560,10 +635,8 @@ export class SecondaryCliAgentDetector {
         );
       }
 
-      // Deactivate if still active
-      if (agentInfo.isActive) {
-        this._deactivateCliAgent(terminalId);
-      }
+      // Deactivate if still exists
+      this._deactivateCliAgent(terminalId);
     }
 
     this._cliAgentsInfo.delete(terminalId);

@@ -637,15 +637,17 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider {
       try {
         const terminal = this._terminalManager.getTerminal(event.terminalId);
 
-        if (terminal) {
-          const status = event.isActive ? 'connected' : 'disconnected';
-          const agentType = event.type; // Use event.type instead of getActiveAgentType()
+        if (terminal && event.status !== 'none') {
+          // Connected or Disconnected状態の場合
+          const status = event.status; // 'connected' | 'disconnected'
+          const agentType = event.type;
           const agentName = agentType ? `${agentType.toUpperCase()} CLI` : 'CLI Agents';
 
           log(`🔔 [PROVIDER] ${agentName} status: ${terminal.name} -> ${status}`);
           this.sendCliAgentStatusUpdate(terminal.name, status, agentType);
         } else {
-          log(`⚠️ [PROVIDER] Terminal ${event.terminalId} not found for CLI Agent status change`);
+          // None状態の場合（終了時）
+          log(`⚠️ [PROVIDER] CLI Agent terminated for terminal ${event.terminalId}`);
           this.sendCliAgentStatusUpdate(null, 'none', null);
         }
       } catch (error) {

@@ -35,9 +35,9 @@
 ## ステータス表示
 
 ### 表示状態
-1. **Connected (アクティブ)**: CLI Agentが実行中
-2. **Disconnected (非アクティブ)**: CLI Agentが終了済み
-3. **None**: CLI Agentが検出されていない
+1. **Connected (アクティブ)**: CLI Agentが実行中でグローバルアクティブ
+2. **Disconnected (非アクティブ)**: CLI Agentが立ち上がっているが、Active状態を他のターミナルに取られた状態
+3. **None**: CLI Agentが検出されていない、または以前は検出されたが現在はCLI Agentが終了している状態
 
 ### 表示形式
 ```
@@ -63,17 +63,24 @@
 **グローバル単一アクティブ**: 全システムで同時にアクティブになれるCLI Agentは1つのみ
 
 ### 動作例
-1. ターミナル1で `claude cli` 起動 → ターミナル1がActive
-2. ターミナル2で `claude cli` 起動 → ターミナル2がActive、ターミナル1がInactive
-3. ターミナル3で `gemini cli` 起動 → ターミナル3がActive、ターミナル2がInactive
+1. ターミナル1で `claude cli` 起動 → ターミナル1がConnected
+2. ターミナル2で `claude cli` 起動 → ターミナル2がConnected、ターミナル1がDisconnected
+3. ターミナル3で `gemini cli` 起動 → ターミナル3がConnected、ターミナル2がDisconnected
+4. ターミナル3でCLI Agentを終了 → ターミナル3がNone、ターミナル2が自動的にConnectedに昇格
 
-### 切り替えロジック
+### 状態遷移ロジック
 ```typescript
-// 新しいCLI Agent起動時
+// 新しいCLI Agent起動時（相互排他制御）
 if (existingGlobalAgent && existingGlobalAgent.terminalId !== newTerminalId) {
-  deactivate(existingGlobalAgent.terminalId);
+  changeStatus(existingGlobalAgent.terminalId, 'disconnected');
 }
-activate(newTerminalId, agentType);
+changeStatus(newTerminalId, 'connected');
+
+// CLI Agent終了時（自動昇格）
+if (terminatingAgent.status === 'connected') {
+  removeAgent(terminalId); // -> 'none'
+  promoteFirstDisconnectedAgent(); // 他の'disconnected' -> 'connected'
+}
 ```
 
 ## アーキテクチャ
