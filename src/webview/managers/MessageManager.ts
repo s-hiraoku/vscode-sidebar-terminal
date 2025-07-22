@@ -238,16 +238,23 @@ export class MessageManager implements IMessageManager {
 
       // CRITICAL: Send confirmation back to extension that INIT was processed
       log('🎆 [MESSAGE] Sending initComplete confirmation to extension...');
-      this.queueMessage(
-        {
-          command: 'test',
-          type: 'initComplete',
-          data: 'WebView successfully processed INIT message',
-          timestamp: Date.now(),
-        },
-        coordinator
-      );
-      log('✅ [MESSAGE] initComplete confirmation queued');
+      const confirmMessage = {
+        command: 'test',
+        type: 'initComplete',
+        data: 'WebView successfully processed INIT message',
+        timestamp: Date.now(),
+      };
+      
+      // Send directly instead of queuing to ensure immediate delivery
+      try {
+        coordinator.postMessageToExtension(confirmMessage);
+        log('✅ [MESSAGE] initComplete confirmation sent directly to extension');
+      } catch (sendError) {
+        log('❌ [MESSAGE] Failed to send initComplete confirmation:', sendError);
+        // Fallback: queue it
+        this.queueMessage(confirmMessage, coordinator);
+        log('🔄 [MESSAGE] initComplete confirmation queued as fallback');
+      }
     } catch (error) {
       log('❌ [MESSAGE] Error processing INIT message:', error);
       // Send error notification to extension
