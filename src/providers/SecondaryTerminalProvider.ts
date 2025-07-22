@@ -262,8 +262,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     }
   }
 
-  private _initRetryCount = 0;
-  private readonly _maxInitRetries = 5;
+  // Removed retry logic - initialization happens directly after webviewReady
 
   public async _initializeTerminal(): Promise<void> {
     if (this._terminalInitialized) {
@@ -271,27 +270,11 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       return;
     }
 
-    // Simple webview availability check (no complex health check)
-    if (!this._view || !this._webviewReady) {
-      if (this._initRetryCount < this._maxInitRetries) {
-        this._initRetryCount++;
-        log(`⚠️ [DEBUG] WebView not ready, retry ${this._initRetryCount}/${this._maxInitRetries}`);
-        setTimeout(() => {
-          void this._initializeTerminal();
-        }, 500);
-        return;
-      } else {
-        log('❌ [ERROR] WebView failed to become ready after maximum retries');
-        return;
-      }
-    }
-
-    // Reset retry count on successful initialization attempt
-    this._initRetryCount = 0;
-
+    // No webview readiness check needed - this is called AFTER webviewReady message
     log('🔧 [DEBUG] Initializing terminal...');
     log('🔧 [DEBUG] Terminal manager available:', !!this._terminalManager);
     log('🔧 [DEBUG] Webview available:', !!this._view);
+    log('🔧 [DEBUG] Webview ready state:', this._webviewReady);
 
     try {
       // Check if we have an active terminal
