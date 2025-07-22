@@ -325,6 +325,17 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
           fontSettings,
         });
         log('✅ [TRACE] Font settings sent successfully:', fontSettings);
+      
+      // Wait a bit and check if WebView is functioning
+      setTimeout(() => {
+        log('🎆 [TRACE] ===============================');
+        log('🎆 [TRACE] POST-INIT WEBVIEW STATUS CHECK:');
+        log('🎆 [TRACE] WebView visible:', this._view?.visible);
+        log('🎆 [TRACE] WebView HTML length:', this._view?.webview.html.length);
+        log('🎆 [TRACE] If WebView is functional, we should see initComplete message soon');
+        log('🎆 [TRACE] If no initComplete message appears, WebView JavaScript is not working');
+      }, 2000);
+      
       } catch (sendError) {
         log('❌ [TRACE] Failed to send INIT message:', sendError);
         throw new Error(`Failed to send INIT message: ${String(sendError)}`);
@@ -524,8 +535,25 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
           log('🔄 [DEBUG] State restoration requested - but using fresh start approach, no action needed');
           break;
         }
+        case 'test': {
+          if ((message as any).type === 'initComplete') {
+            log('🎆 [TRACE] ===============================');
+            log('🎆 [TRACE] WEBVIEW CONFIRMS INIT COMPLETE!');
+            log('🎆 [TRACE] Message data:', message);
+            log('🎆 [TRACE] This means WebView successfully processed INIT message');
+          } else {
+            log('🔧 [TRACE] Test message received:', message);
+          }
+          break;
+        }
+        case 'error': {
+          log('❌ [TRACE] WEBVIEW REPORTED ERROR!');
+          log('❌ [TRACE] Error message:', message);
+          break;
+        }
         default:
-          log('⚠️ [WARN] Unknown command received:', message.command);
+          log('⚠️ [TRACE] Unknown/Unexpected message received:', message.command, message);
+          log('⚠️ [TRACE] This could indicate WebView is sending unexpected messages');
       }
     } catch (error) {
       log('❌ [ERROR] Failed to handle webview message:', error);
@@ -722,7 +750,19 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
       const result = await this._view.webview.postMessage(message);
 
-      log(`✅ [DEBUG] postMessage call completed, result: ${result}`);
+      log(`✅ [TRACE] postMessage call completed, result: ${result}`);
+      log(`🎆 [TRACE] MESSAGE TRANSMISSION RESULT: ${result ? 'SUCCESS' : 'FAILED'}`);
+      
+      // Add timeout to detect if WebView receives and responds to critical messages
+      if (message.command === 'init') {
+        log(`⏰ [TRACE] Starting WebView response timeout for INIT message...`);
+        setTimeout(() => {
+          log(`⏰ [TRACE] 5 seconds passed since INIT message - checking WebView status`);
+          log(`⏰ [TRACE] WebView visible: ${this._view?.visible}`);
+          log(`⏰ [TRACE] WebView HTML length: ${this._view?.webview.html.length}`);
+        }, 5000);
+      }
+      
       log(`📤 [DEBUG] ========== MESSAGE SEND COMPLETE ==========`);
     } catch (error) {
       // Handle webview disposal errors specifically - but don't queue indefinitely
