@@ -35,18 +35,17 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       this._webviewReady = false;
       this._terminalInitialized = false;
 
-      // Enhanced panel move detection
-      const isPanelMove = this._view !== undefined && 
-        this._view !== webviewView && 
-        this._webviewReady;
+      // Simple panel move detection - only check if view exists and differs
+      const isPanelMove = this._view !== undefined && this._view !== webviewView;
       
       if (isPanelMove) {
-        log('🔄 [DEBUG] Panel move detected - resetting state for clean initialization');
-        // Reset state for clean initialization
-        this._webviewReady = false;
-        this._terminalInitialized = false;
-        this._pendingMessages = [];
+        log('🔄 [DEBUG] Panel move detected - preparing for clean initialization');
       }
+      
+      // Always reset state for clean initialization (simplifies flow)
+      this._webviewReady = false;
+      this._terminalInitialized = false;
+      this._pendingMessages = [];
 
       log('🔧 [DEBUG] Panel move detected:', isPanelMove);
       log('🔧 [DEBUG] Previous view exists:', !!this._view);
@@ -263,25 +262,36 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     }
   }
 
+  private _initRetryCount = 0;
+  private readonly _maxInitRetries = 5;
+
   public async _initializeTerminal(): Promise<void> {
     if (this._terminalInitialized) {
       log('⚠️ [DEBUG] Terminal already initialized, skipping...');
       return;
     }
 
-    // Check webview health before attempting initialization
-    if (!this._isWebviewHealthy()) {
-      log('⚠️ [DEBUG] Webview not healthy, delaying initialization');
-      setTimeout(() => {
-        void this._initializeTerminal();
-      }, 500);
-      return;
+    // Simple webview availability check (no complex health check)
+    if (!this._view || !this._webviewReady) {
+      if (this._initRetryCount < this._maxInitRetries) {
+        this._initRetryCount++;
+        log(`⚠️ [DEBUG] WebView not ready, retry ${this._initRetryCount}/${this._maxInitRetries}`);
+        setTimeout(() => {
+          void this._initializeTerminal();
+        }, 500);
+        return;
+      } else {
+        log('❌ [ERROR] WebView failed to become ready after maximum retries');
+        return;
+      }
     }
+
+    // Reset retry count on successful initialization attempt
+    this._initRetryCount = 0;
 
     log('🔧 [DEBUG] Initializing terminal...');
     log('🔧 [DEBUG] Terminal manager available:', !!this._terminalManager);
     log('🔧 [DEBUG] Webview available:', !!this._view);
-    log('🔧 [DEBUG] Webview healthy:', this._isWebviewHealthy());
 
     try {
       // Check if we have an active terminal
@@ -396,26 +406,16 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
           // Handle webview ready state
           await this._handleWebviewReady();
 
-          // Process any pending messages first
-          await this._processPendingMessages();
-
-          // Initialize terminal only once after webview is ready
+          // Initialize terminal directly - no complex queuing or delays
           if (!this._terminalInitialized) {
-            setTimeout(() => {
-              void (async () => {
-                try {
-                  log('🔄 [DEBUG] Starting delayed terminal initialization...');
-                  await this._initializeTerminal();
-                  log('✅ [DEBUG] Terminal initialization completed after webview ready');
-                  
-                  // Process any additional pending messages after initialization
-                  await this._processPendingMessages();
-                } catch (initError) {
-                  log('❌ [ERROR] Terminal initialization failed after webview ready:', initError);
-                  TerminalErrorHandler.handleTerminalCreationError(initError);
-                }
-              })();
-            }, 300);
+            try {
+              log('🔄 [DEBUG] Starting terminal initialization after webview ready...');
+              await this._initializeTerminal();
+              log('✅ [DEBUG] Terminal initialization completed');
+            } catch (initError) {
+              log('❌ [ERROR] Terminal initialization failed:', initError);
+              TerminalErrorHandler.handleTerminalCreationError(initError);
+            }
           } else {
             log('⚠️ [DEBUG] Terminal already initialized, skipping initialization');
           }
@@ -725,24 +725,13 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       return;
     }
 
-    log('🎉 [DEBUG] ========== WEBVIEW READY PROCESSING START ==========');
+    log('🎉 [DEBUG] WebView ready - marking as available for terminal initialization');
     this._webviewReady = true;
-    log(`✅ [DEBUG] WebView marked as ready, pending messages: ${this._pendingMessages.length}`);
-
-    // Send any pending messages
-    if (this._pendingMessages.length > 0) {
-      log(`📤 [DEBUG] Sending ${this._pendingMessages.length} pending messages...`);
-      for (const pendingMessage of this._pendingMessages) {
-        log(`📤 [DEBUG] Sending pending message: ${pendingMessage.command}`);
-        await this._sendMessageDirect(pendingMessage);
-      }
-      this._pendingMessages = [];
-      log('✅ [DEBUG] All pending messages sent');
-    } else {
-      log('ℹ️ [DEBUG] No pending messages to send');
-    }
-
-    log('🎉 [DEBUG] ========== WEBVIEW READY PROCESSING COMPLETE ==========');
+    
+    // Clear any pending messages since we're starting fresh
+    this._pendingMessages = [];
+    
+    log('✅ [DEBUG] WebView ready processing complete');
   }
 
   /**
@@ -771,13 +760,6 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       return;
     }
 
-    // Check if webview is healthy before sending message
-    if (!this._isWebviewHealthy()) {
-      log('⚠️ [WARN] Webview appears to be disposed, queuing message for retry');
-      this._pendingMessages.push(message);
-      return;
-    }
-
     try {
       log(`📤 [DEBUG] ========== SENDING MESSAGE TO WEBVIEW ==========`);
       log(`📤 [DEBUG] Message command: ${message.command}`);
@@ -793,12 +775,11 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       log(`✅ [DEBUG] postMessage call completed, result: ${result}`);
       log(`📤 [DEBUG] ========== MESSAGE SEND COMPLETE ==========`);
     } catch (error) {
-      // Handle webview disposal errors specifically
+      // Handle webview disposal errors specifically - but don't queue indefinitely
       if (error instanceof Error && 
           (error.message.includes('disposed') || 
            error.message.includes('Webview is disposed'))) {
-        log('⚠️ [WARN] Webview disposed during message send, queuing message for retry');
-        this._pendingMessages.push(message);
+        log('⚠️ [WARN] Webview disposed during message send - terminal will reinitialize on next interaction');
         return;
       }
       
@@ -1313,14 +1294,10 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
           if (webviewView.visible) {
             log('👁️ [DEBUG] WebView became visible');
             if (isPanelMove) {
-              log('🔄 [DEBUG] WebView visible after panel move - scheduling state restoration');
-              // Delay state restoration to allow WebView to stabilize
+              log('🔄 [DEBUG] WebView visible after panel move - restoring state');
+              // Simplified state restoration
               setTimeout(() => {
-                void (async () => {
-                  await this._restoreWebviewState();
-                  // Process any pending messages after panel move
-                  await this._processPendingMessages();
-                })();
+                void this._restoreWebviewState();
               }, 200);
             }
           } else {
@@ -1508,44 +1485,13 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   }
 
   /**
-   * Check if webview is healthy and accessible
+   * Simple webview availability check (removed complex health check)
    */
-  private _isWebviewHealthy(): boolean {
-    if (!this._view) {
-      return false;
-    }
-    
-    try {
-      // Test webview accessibility by accessing a property
-      const _test = this._view.webview.options;
-      return true;
-    } catch (error) {
-      log('🔍 [HEALTH] Webview health check failed:', error);
-      return false;
-    }
+  private _isWebviewAvailable(): boolean {
+    return !!(this._view && this._view.webview);
   }
 
-  /**
-   * Process pending messages after webview becomes healthy
-   */
-  private async _processPendingMessages(): Promise<void> {
-    if (!this._isWebviewHealthy() || this._pendingMessages.length === 0) {
-      return;
-    }
-
-    log(`🔄 [DEBUG] Processing ${this._pendingMessages.length} pending messages...`);
-    const messagesToProcess = [...this._pendingMessages];
-    this._pendingMessages = [];
-
-    for (const message of messagesToProcess) {
-      try {
-        await this._sendMessageDirect(message);
-      } catch (error) {
-        log('⚠️ [WARN] Failed to process pending message, re-queuing:', error);
-        this._pendingMessages.push(message);
-      }
-    }
-  }
+  // Removed complex message processing - simplified approach
 
   /**
    * Clean up resources
