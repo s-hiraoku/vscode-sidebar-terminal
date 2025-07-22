@@ -29,21 +29,37 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     log('🔧 [DEBUG] SecondaryTerminalProvider.resolveWebviewView called');
 
     try {
-      // Always treat as fresh start - no complex state management needed
-      log('🎆 [DEBUG] Starting fresh WebView initialization (startup or panel move)');
-
-      // No need to detect panel moves - same initialization for all cases
+      // Comprehensive debugging to identify the root cause
+      log('🎆 [TRACE] ===========================================');
+      log('🎆 [TRACE] resolveWebviewView called');
+      log('🎆 [TRACE] Current _view exists:', !!this._view);
+      log('🎆 [TRACE] New webviewView exists:', !!webviewView);
+      log('🎆 [TRACE] Views are different objects:', this._view !== webviewView);
+      log('🎆 [TRACE] WebviewView.visible:', webviewView.visible);
+      log('🎆 [TRACE] WebviewView.viewType:', webviewView.viewType);
+      
+      const isPanelMove = this._view !== undefined && this._view !== webviewView;
+      log('🎆 [TRACE] DETECTED AS PANEL MOVE:', isPanelMove);
 
       this._view = webviewView;
 
       // Always configure webview options
       this._configureWebview(webviewView);
 
-      // Generate and set HTML (fresh start every time)
-      this._setWebviewHtml(webviewView, false);
+      // Trace HTML setting process
+      log('🎆 [TRACE] About to set WebView HTML...');
+      this._setWebviewHtml(webviewView, isPanelMove);
+      log('🎆 [TRACE] WebView HTML setting completed');
+      
+      // Verify HTML was actually set
+      const htmlLength = webviewView.webview.html.length;
+      log('🎆 [TRACE] HTML length after setting:', htmlLength);
+      log('🎆 [TRACE] HTML preview (first 200 chars):', webviewView.webview.html.substring(0, 200));
 
-      // Set up event listeners (fresh start)
-      this._setupWebviewEventListeners(webviewView, false);
+      // Trace event listener setup
+      log('🎆 [TRACE] About to set up event listeners...');
+      this._setupWebviewEventListeners(webviewView, isPanelMove);
+      log('🎆 [TRACE] Event listeners setup completed');
 
       // Set up other listeners
       this._setupTerminalEventListeners();
@@ -247,9 +263,12 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   }
 
   public async _initializeTerminal(): Promise<void> {
-    log('🎆 [DEBUG] Fresh terminal initialization starting...');
-    log('🔧 [DEBUG] Terminal manager available:', !!this._terminalManager);
-    log('🔧 [DEBUG] Webview available:', !!this._view);
+    log('🎆 [TRACE] ===========================================');
+    log('🎆 [TRACE] _initializeTerminal() called');
+    log('🎆 [TRACE] Terminal manager available:', !!this._terminalManager);
+    log('🎆 [TRACE] Webview available:', !!this._view);
+    log('🎆 [TRACE] Webview visible:', this._view?.visible);
+    log('🎆 [TRACE] Webview HTML length:', this._view?.webview.html.length);
 
     try {
       // Check if we have an active terminal
@@ -289,20 +308,25 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         activeTerminalId: terminalId,
       };
 
-      log('🔧 [DEBUG] Sending init message to webview:', JSON.stringify(initMessage, null, 2));
+      log('🎆 [TRACE] About to send INIT message...');
+      log('🎆 [TRACE] INIT message data:', JSON.stringify(initMessage, null, 2));
+      log('🎆 [TRACE] Terminal count:', terminals.length);
+      log('🎆 [TRACE] Active terminal ID:', terminalId);
+      
       try {
         await this._sendMessage(initMessage);
-        log('✅ [DEBUG] INIT message sent successfully');
+        log('✅ [TRACE] INIT message sent successfully');
 
         // Send font settings immediately after INIT to ensure webview has current font settings
+        log('🎆 [TRACE] About to send font settings...');
         const fontSettings = this.getCurrentFontSettings();
         await this._sendMessage({
           command: 'fontSettingsUpdate',
           fontSettings,
         });
-        log('✅ [DEBUG] Font settings sent during initialization:', fontSettings);
+        log('✅ [TRACE] Font settings sent successfully:', fontSettings);
       } catch (sendError) {
-        log('❌ [ERROR] Failed to send INIT message:', sendError);
+        log('❌ [TRACE] Failed to send INIT message:', sendError);
         throw new Error(`Failed to send INIT message: ${String(sendError)}`);
       }
 
@@ -357,13 +381,18 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
         case 'webviewReady':
         case TERMINAL_CONSTANTS.COMMANDS.READY:
-          log('🎆 [DEBUG] WebView ready - starting fresh terminal initialization');
+          log('🎆 [TRACE] ===========================================');
+          log('🎆 [TRACE] webviewReady message received!');
+          log('🎆 [TRACE] Message command:', message.command);
+          log('🎆 [TRACE] Message data:', message);
+          log('🎆 [TRACE] WebView visible:', this._view?.visible);
+          log('🎆 [TRACE] Starting terminal initialization...');
           
           try {
             await this._initializeTerminal();
-            log('✅ [DEBUG] Fresh terminal initialization completed successfully');
+            log('✅ [TRACE] Terminal initialization completed successfully');
           } catch (initError) {
-            log('❌ [ERROR] Terminal initialization failed:', initError);
+            log('❌ [TRACE] Terminal initialization failed:', initError);
             TerminalErrorHandler.handleTerminalCreationError(initError);
           }
           break;
@@ -1161,9 +1190,13 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   /**
    * Set WebView HTML with robust error handling
    */
-  private _setWebviewHtml(webviewView: vscode.WebviewView, _isPanelMove: boolean): void {
+  private _setWebviewHtml(webviewView: vscode.WebviewView, isPanelMove: boolean): void {
     try {
-      log('🔧 [DEBUG] Generating HTML for WebView...');
+      log('🎆 [TRACE] ===========================================');
+      log('🎆 [TRACE] _setWebviewHtml called');
+      log('🎆 [TRACE] isPanelMove:', isPanelMove);
+      log('🎆 [TRACE] WebView object exists:', !!webviewView.webview);
+      log('🎆 [TRACE] Generating HTML for WebView...');
 
       const html = this._getHtmlForWebview(webviewView.webview);
 
@@ -1171,12 +1204,15 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         throw new Error('Generated HTML is empty');
       }
 
-      log('🔧 [DEBUG] Generated HTML length:', html.length);
-      log('🔧 [DEBUG] Setting webview HTML...');
+      log('🎆 [TRACE] Generated HTML length:', html.length);
+      log('🎆 [TRACE] HTML preview (first 300 chars):', html.substring(0, 300));
+      log('🎆 [TRACE] Setting webview HTML...');
 
       webviewView.webview.html = html;
 
-      log('✅ [DEBUG] HTML set successfully');
+      log('✅ [TRACE] HTML set successfully');
+      log('🎆 [TRACE] Verifying HTML was set...');
+      log('🎆 [TRACE] WebView HTML length after setting:', webviewView.webview.html.length);
     } catch (error) {
       log('❌ [ERROR] Failed to set WebView HTML:', error);
 
@@ -1192,22 +1228,28 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   /**
    * Set up WebView event listeners
    */
-  private _setupWebviewEventListeners(webviewView: vscode.WebviewView, _isPanelMove: boolean): void {
+  private _setupWebviewEventListeners(webviewView: vscode.WebviewView, isPanelMove: boolean): void {
     try {
-      log('🔧 [DEBUG] Setting up WebView event listeners...');
-
-      // Clear existing listeners if any (prevent duplicates)
-      // Note: VS Code automatically handles disposal of old listeners when WebView is recreated
-
+      log('🎆 [TRACE] ===========================================');
+      log('🎆 [TRACE] _setupWebviewEventListeners called');
+      log('🎆 [TRACE] isPanelMove:', isPanelMove);
+      log('🎆 [TRACE] WebView exists:', !!webviewView.webview);
+      
       // Handle messages from the webview
+      log('🎆 [TRACE] Setting up message listener...');
       webviewView.webview.onDidReceiveMessage(
         async (message: VsCodeMessage) => {
-          log('📨 [DEBUG] Received message from webview:', message.command, message);
+          log('📨 [TRACE] ===========================================');
+          log('📨 [TRACE] MESSAGE RECEIVED FROM WEBVIEW!');
+          log('📨 [TRACE] Message command:', message.command);
+          log('📨 [TRACE] Message data:', message);
+          log('📨 [TRACE] WebView visible when received:', webviewView.visible);
           await this._handleWebviewMessage(message);
         },
         null,
         this._extensionContext.subscriptions
       );
+      log('🎆 [TRACE] Message listener set up successfully');
 
       // Set up visibility change handler for panel move detection
       webviewView.onDidChangeVisibility(
