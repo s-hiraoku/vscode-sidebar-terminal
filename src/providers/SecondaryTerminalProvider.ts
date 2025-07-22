@@ -14,9 +14,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   private _disposables: vscode.Disposable[] = [];
 
   private _view?: vscode.WebviewView;
-  private _webviewReady = false;
-  private _terminalInitialized = false;
-  private _pendingMessages: WebviewMessage[] = [];
+  // Removed all state variables - using simple "fresh start" approach
 
   constructor(
     private readonly _extensionContext: vscode.ExtensionContext,
@@ -31,35 +29,21 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     log('🔧 [DEBUG] SecondaryTerminalProvider.resolveWebviewView called');
 
     try {
-      // Reset initialization flags for fresh start
-      this._webviewReady = false;
-      this._terminalInitialized = false;
+      // Always treat as fresh start - no complex state management needed
+      log('🎆 [DEBUG] Starting fresh WebView initialization (startup or panel move)');
 
-      // Simple panel move detection - only check if view exists and differs
-      const isPanelMove = this._view !== undefined && this._view !== webviewView;
-      
-      if (isPanelMove) {
-        log('🔄 [DEBUG] Panel move detected - preparing for clean initialization');
-      }
-      
-      // Always reset state for clean initialization (simplifies flow)
-      this._webviewReady = false;
-      this._terminalInitialized = false;
-      this._pendingMessages = [];
-
-      log('🔧 [DEBUG] Panel move detected:', isPanelMove);
-      log('🔧 [DEBUG] Previous view exists:', !!this._view);
+      // No need to detect panel moves - same initialization for all cases
 
       this._view = webviewView;
 
       // Always configure webview options
       this._configureWebview(webviewView);
 
-      // Generate and set HTML with robust error handling
-      this._setWebviewHtml(webviewView, isPanelMove);
+      // Generate and set HTML (fresh start every time)
+      this._setWebviewHtml(webviewView, false);
 
-      // Set up event listeners
-      this._setupWebviewEventListeners(webviewView, isPanelMove);
+      // Set up event listeners (fresh start)
+      this._setupWebviewEventListeners(webviewView, false);
 
       // Set up other listeners
       this._setupTerminalEventListeners();
@@ -262,19 +246,10 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     }
   }
 
-  // Removed retry logic - initialization happens directly after webviewReady
-
   public async _initializeTerminal(): Promise<void> {
-    if (this._terminalInitialized) {
-      log('⚠️ [DEBUG] Terminal already initialized, skipping...');
-      return;
-    }
-
-    // No webview readiness check needed - this is called AFTER webviewReady message
-    log('🔧 [DEBUG] Initializing terminal...');
+    log('🎆 [DEBUG] Fresh terminal initialization starting...');
     log('🔧 [DEBUG] Terminal manager available:', !!this._terminalManager);
     log('🔧 [DEBUG] Webview available:', !!this._view);
-    log('🔧 [DEBUG] Webview ready state:', this._webviewReady);
 
     try {
       // Check if we have an active terminal
@@ -331,8 +306,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         throw new Error(`Failed to send INIT message: ${String(sendError)}`);
       }
 
-      this._terminalInitialized = true;
-      log('✅ [DEBUG] Terminal initialization completed successfully');
+      log('✅ [DEBUG] Fresh terminal initialization completed successfully');
     } catch (error) {
       log('❌ [ERROR] Failed to initialize terminal:', error);
       TerminalErrorHandler.handleTerminalCreationError(error);
@@ -383,24 +357,14 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
         case 'webviewReady':
         case TERMINAL_CONSTANTS.COMMANDS.READY:
-          log('🎉 [DEBUG] ========== WEBVIEW READY NOTIFICATION RECEIVED ==========');
-          log('🎉 [DEBUG] Message type:', message.command);
-
-          // Handle webview ready state
-          await this._handleWebviewReady();
-
-          // Initialize terminal directly - no complex queuing or delays
-          if (!this._terminalInitialized) {
-            try {
-              log('🔄 [DEBUG] Starting terminal initialization after webview ready...');
-              await this._initializeTerminal();
-              log('✅ [DEBUG] Terminal initialization completed');
-            } catch (initError) {
-              log('❌ [ERROR] Terminal initialization failed:', initError);
-              TerminalErrorHandler.handleTerminalCreationError(initError);
-            }
-          } else {
-            log('⚠️ [DEBUG] Terminal already initialized, skipping initialization');
+          log('🎆 [DEBUG] WebView ready - starting fresh terminal initialization');
+          
+          try {
+            await this._initializeTerminal();
+            log('✅ [DEBUG] Fresh terminal initialization completed successfully');
+          } catch (initError) {
+            log('❌ [ERROR] Terminal initialization failed:', initError);
+            TerminalErrorHandler.handleTerminalCreationError(initError);
           }
           break;
         case TERMINAL_CONSTANTS.COMMANDS.INPUT:
@@ -528,13 +492,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
           break;
         }
         case 'requestStateRestoration': {
-          log('🔄 [DEBUG] State restoration requested from WebView');
-          try {
-            await this._restoreWebviewState();
-            log('✅ [DEBUG] State restoration completed');
-          } catch (error) {
-            log('❌ [ERROR] State restoration failed:', error);
-          }
+          log('🔄 [DEBUG] State restoration requested - but using fresh start approach, no action needed');
           break;
         }
         default:
@@ -702,35 +660,15 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   /**
    * Handle WebView ready state
    */
-  private async _handleWebviewReady(): Promise<void> {
-    if (this._webviewReady) {
-      log('⚠️ [DEBUG] WebView already marked as ready, skipping...');
-      return;
-    }
-
-    log('🎉 [DEBUG] WebView ready - marking as available for terminal initialization');
-    this._webviewReady = true;
-    
-    // Clear any pending messages since we're starting fresh
-    this._pendingMessages = [];
-    
-    log('✅ [DEBUG] WebView ready processing complete');
-  }
+  // Removed _handleWebviewReady - not needed with fresh start approach
 
   /**
    * Webviewにメッセージを送信する
    */
   private async _sendMessage(message: WebviewMessage): Promise<void> {
+    // Simple direct sending - no state management needed with fresh start approach
     if (!this._view) {
       log('⚠️ [WARN] No webview available to send message');
-      return;
-    }
-
-    // Check if WebView is ready
-    if (!this._webviewReady) {
-      log(`📋 [DEBUG] WebView not ready, queuing message: ${message.command}`);
-      this._pendingMessages.push(message);
-      log(`📋 [DEBUG] Pending messages count: ${this._pendingMessages.length}`);
       return;
     }
 
@@ -751,7 +689,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         `📤 [DEBUG] WebView state: visible=${this._view.visible}, viewType=${this._view.viewType}`
       );
       log(`📤 [DEBUG] WebView webview object exists: ${!!this._view.webview}`);
-      log(`📤 [DEBUG] WebView ready: ${this._webviewReady}`);
+      log(`📤 [DEBUG] Fresh start messaging - no state checks needed`);
 
       const result = await this._view.webview.postMessage(message);
 
@@ -1254,7 +1192,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   /**
    * Set up WebView event listeners
    */
-  private _setupWebviewEventListeners(webviewView: vscode.WebviewView, isPanelMove: boolean): void {
+  private _setupWebviewEventListeners(webviewView: vscode.WebviewView, _isPanelMove: boolean): void {
     try {
       log('🔧 [DEBUG] Setting up WebView event listeners...');
 
@@ -1275,14 +1213,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       webviewView.onDidChangeVisibility(
         () => {
           if (webviewView.visible) {
-            log('👁️ [DEBUG] WebView became visible');
-            if (isPanelMove) {
-              log('🔄 [DEBUG] WebView visible after panel move - restoring state');
-              // Simplified state restoration
-              setTimeout(() => {
-                void this._restoreWebviewState();
-              }, 200);
-            }
+            log('👁️ [DEBUG] WebView became visible - fresh start approach, no special handling needed');
           } else {
             log('👁️ [DEBUG] WebView became hidden');
           }
@@ -1379,51 +1310,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     </html>`;
   }
 
-  private async _restoreWebviewState(): Promise<void> {
-    try {
-      log('🔄 [DEBUG] Starting WebView state restoration...');
-
-      // Get current terminal state from TerminalManager
-      const currentState = this._terminalManager.getCurrentState();
-      log('🔄 [DEBUG] Current terminal state:', currentState);
-
-      // Brief wait for WebView to stabilize
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      // Send state restoration message to WebView
-      const restoreMessage = {
-        command: 'stateUpdate' as const,
-        state: currentState,
-      };
-
-      log('🔄 [DEBUG] Sending state restoration message:', restoreMessage);
-      await this._sendMessage(restoreMessage);
-
-      // Also send current settings
-      const settings = this._getCurrentSettings();
-      const settingsMessage = {
-        command: 'settingsResponse' as const,
-        settings,
-      };
-
-      log('🔄 [DEBUG] Sending settings restoration message');
-      await this._sendMessage(settingsMessage);
-
-      // Send Alt+Click settings
-      const altClickSettings = this._getAltClickSettings();
-      const altClickMessage = {
-        command: 'altClickSettings' as const,
-        settings: altClickSettings,
-      };
-
-      log('🔄 [DEBUG] Sending Alt+Click settings restoration message');
-      await this._sendMessage(altClickMessage);
-
-      log('✅ [DEBUG] WebView state restoration completed successfully');
-    } catch (error) {
-      log('❌ [ERROR] Failed to restore WebView state:', error);
-    }
-  }
+  // Removed _restoreWebviewState - not needed with fresh start approach
 
   /**
    * Get current settings for restoration
@@ -1490,8 +1377,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
     // Clear references
     this._view = undefined;
-    this._webviewReady = false;
-    this._terminalInitialized = false;
+    // No state variables to clear with fresh start approach
 
     log('✅ [DEBUG] SecondaryTerminalProvider disposed');
   }
