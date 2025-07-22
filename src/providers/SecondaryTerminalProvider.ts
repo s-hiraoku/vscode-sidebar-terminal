@@ -30,69 +30,38 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   ): void {
     log('🔧 [DEBUG] SecondaryTerminalProvider.resolveWebviewView called');
 
-    // Reset initialization flags for fresh start
-    this._webviewReady = false;
-    this._terminalInitialized = false;
-
-    // Check if this is a panel move (WebView already exists but container changed)
-    const isPanelMove = this._view !== undefined && this._view.webview.html !== '';
-
-    this._view = webviewView;
-
-    // Enable scripts and set resource roots
-    webviewView.webview.options = {
-      enableScripts: true,
-      localResourceRoots: [this._extensionContext.extensionUri],
-    };
-
-    // Set up visibility change handler for panel move detection
-    webviewView.onDidChangeVisibility(
-      () => {
-        if (webviewView.visible && isPanelMove) {
-          log('🔄 [DEBUG] WebView became visible after panel move - restoring state');
-          void this._restoreWebviewState();
-        }
-      },
-      null,
-      this._extensionContext.subscriptions
-    );
-
-    // Always generate fresh HTML to ensure clean state
     try {
-      const html = this._getHtmlForWebview(webviewView.webview);
-      log('🔧 [DEBUG] Generated HTML length:', html.length);
-      log('🔧 [DEBUG] Setting webview HTML...');
-      webviewView.webview.html = html;
-      log('✅ [DEBUG] HTML set successfully');
+      // Reset initialization flags for fresh start
+      this._webviewReady = false;
+      this._terminalInitialized = false;
+
+      // Check if this is a panel move (WebView already exists but container changed)
+      const isPanelMove = this._view !== undefined && this._view.webview.html !== '';
+
+      log('🔧 [DEBUG] Panel move detected:', isPanelMove);
+      log('🔧 [DEBUG] Previous view exists:', !!this._view);
+
+      this._view = webviewView;
+
+      // Always configure webview options
+      this._configureWebview(webviewView);
+
+      // Generate and set HTML with robust error handling
+      this._setWebviewHtml(webviewView, isPanelMove);
+
+      // Set up event listeners
+      this._setupWebviewEventListeners(webviewView, isPanelMove);
+
+      // Set up other listeners
+      this._setupTerminalEventListeners();
+      this._setupCliAgentStatusListeners();
+      this._setupConfigurationChangeListeners();
+
+      log('✅ [DEBUG] WebviewView setup completed successfully');
     } catch (error) {
-      log('❌ [ERROR] Failed to generate HTML for webview:', error);
-      TerminalErrorHandler.handleWebviewError(error);
-      return;
+      log('❌ [CRITICAL] Failed to resolve WebView:', error);
+      this._handleWebviewSetupError(webviewView, error);
     }
-
-    // Handle messages from the webview
-    webviewView.webview.onDidReceiveMessage(
-      async (message: VsCodeMessage) => {
-        log('📨 [DEBUG] Received message from webview:', message.command, message);
-        await this._handleWebviewMessage(message);
-      },
-      null,
-      this._extensionContext.subscriptions
-    );
-
-    // Set up terminal event listeners
-    this._setupTerminalEventListeners();
-
-    // Set up CLI Agent status change listeners
-    this._setupCliAgentStatusListeners();
-
-    // Set up configuration change listeners for VS Code standard settings
-    this._setupConfigurationChangeListeners();
-
-    // Do not force initial terminal creation here
-    // Let _initializeTerminal handle it when webview is ready
-
-    log('✅ [DEBUG] WebviewView setup completed');
   }
 
   public splitTerminal(): void {
@@ -1226,6 +1195,184 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   /**
    * Restore WebView state after panel move
    */
+  /**
+   * Configure WebView options and security
+   */
+  private _configureWebview(webviewView: vscode.WebviewView): void {
+    try {
+      log('🔧 [DEBUG] Configuring WebView options...');
+
+      webviewView.webview.options = {
+        enableScripts: true,
+        localResourceRoots: [this._extensionContext.extensionUri],
+      };
+
+      log('✅ [DEBUG] WebView options configured successfully');
+    } catch (error) {
+      log('❌ [ERROR] Failed to configure WebView options:', error);
+      throw error; // Re-throw to be handled by caller
+    }
+  }
+
+  /**
+   * Set WebView HTML with robust error handling
+   */
+  private _setWebviewHtml(webviewView: vscode.WebviewView, _isPanelMove: boolean): void {
+    try {
+      log('🔧 [DEBUG] Generating HTML for WebView...');
+
+      const html = this._getHtmlForWebview(webviewView.webview);
+
+      if (!html || html.length === 0) {
+        throw new Error('Generated HTML is empty');
+      }
+
+      log('🔧 [DEBUG] Generated HTML length:', html.length);
+      log('🔧 [DEBUG] Setting webview HTML...');
+
+      webviewView.webview.html = html;
+
+      log('✅ [DEBUG] HTML set successfully');
+    } catch (error) {
+      log('❌ [ERROR] Failed to set WebView HTML:', error);
+
+      // Set fallback HTML to prevent complete failure
+      const fallbackHtml = this._getFallbackHtml();
+      webviewView.webview.html = fallbackHtml;
+
+      log('🔄 [DEBUG] Fallback HTML set');
+      throw error; // Re-throw to be handled by caller
+    }
+  }
+
+  /**
+   * Set up WebView event listeners
+   */
+  private _setupWebviewEventListeners(webviewView: vscode.WebviewView, isPanelMove: boolean): void {
+    try {
+      log('🔧 [DEBUG] Setting up WebView event listeners...');
+
+      // Clear existing listeners if any (prevent duplicates)
+      // Note: VS Code automatically handles disposal of old listeners when WebView is recreated
+
+      // Handle messages from the webview
+      webviewView.webview.onDidReceiveMessage(
+        async (message: VsCodeMessage) => {
+          log('📨 [DEBUG] Received message from webview:', message.command, message);
+          await this._handleWebviewMessage(message);
+        },
+        null,
+        this._extensionContext.subscriptions
+      );
+
+      // Set up visibility change handler for panel move detection
+      webviewView.onDidChangeVisibility(
+        () => {
+          if (webviewView.visible) {
+            log('👁️ [DEBUG] WebView became visible');
+            if (isPanelMove) {
+              log('🔄 [DEBUG] WebView visible after panel move - scheduling state restoration');
+              // Delay state restoration to allow WebView to stabilize
+              setTimeout(() => {
+                void this._restoreWebviewState();
+              }, 200);
+            }
+          } else {
+            log('👁️ [DEBUG] WebView became hidden');
+          }
+        },
+        null,
+        this._extensionContext.subscriptions
+      );
+
+      log('✅ [DEBUG] WebView event listeners set up successfully');
+    } catch (error) {
+      log('❌ [ERROR] Failed to set up WebView event listeners:', error);
+      throw error; // Re-throw to be handled by caller
+    }
+  }
+
+  /**
+   * Handle WebView setup errors gracefully
+   */
+  private _handleWebviewSetupError(webviewView: vscode.WebviewView, error: unknown): void {
+    try {
+      log('🚨 [DEBUG] Handling WebView setup error...');
+
+      // Ensure we have some HTML set, even if it's just an error message
+      const errorHtml = this._getErrorHtml(error);
+      webviewView.webview.html = errorHtml;
+
+      // Report error through standard channels
+      TerminalErrorHandler.handleWebviewError(error);
+
+      log('🔄 [DEBUG] Error HTML set as fallback');
+    } catch (fallbackError) {
+      log('💥 [CRITICAL] Failed to handle WebView setup error:', fallbackError);
+
+      // Last resort: set minimal HTML
+      webviewView.webview.html =
+        '<html><body><h3>Terminal initialization failed</h3></body></html>';
+    }
+  }
+
+  /**
+   * Generate fallback HTML when main HTML generation fails
+   */
+  private _getFallbackHtml(): string {
+    return `<!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Terminal Loading...</title>
+        <style>
+            body {
+                font-family: var(--vscode-font-family, monospace);
+                background-color: var(--vscode-editor-background, #1e1e1e);
+                color: var(--vscode-foreground, #cccccc);
+                padding: 20px;
+                text-align: center;
+            }
+        </style>
+    </head>
+    <body>
+        <h3>🔄 Terminal is loading...</h3>
+        <p>Please wait while the terminal initializes.</p>
+    </body>
+    </html>`;
+  }
+
+  /**
+   * Generate error HTML when setup fails
+   */
+  private _getErrorHtml(error: unknown): string {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+
+    return `<!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Terminal Error</title>
+        <style>
+            body {
+                font-family: var(--vscode-font-family, monospace);
+                background-color: var(--vscode-editor-background, #1e1e1e);
+                color: var(--vscode-errorForeground, #f44747);
+                padding: 20px;
+                text-align: center;
+            }
+        </style>
+    </head>
+    <body>
+        <h3>❌ Terminal initialization failed</h3>
+        <p>Error: ${errorMessage}</p>
+        <p>Please try reloading the terminal view.</p>
+    </body>
+    </html>`;
+  }
+
   private async _restoreWebviewState(): Promise<void> {
     try {
       log('🔄 [DEBUG] Starting WebView state restoration...');
@@ -1234,8 +1381,8 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       const currentState = this._terminalManager.getCurrentState();
       log('🔄 [DEBUG] Current terminal state:', currentState);
 
-      // Wait a bit for WebView to be ready
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      // Brief wait for WebView to stabilize
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Send state restoration message to WebView
       const restoreMessage = {
@@ -1319,18 +1466,18 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
    */
   dispose(): void {
     log('🔧 [DEBUG] SecondaryTerminalProvider disposing resources...');
-    
+
     // Dispose all registered disposables
     for (const disposable of this._disposables) {
       disposable.dispose();
     }
     this._disposables.length = 0;
-    
+
     // Clear references
     this._view = undefined;
     this._webviewReady = false;
     this._terminalInitialized = false;
-    
+
     log('✅ [DEBUG] SecondaryTerminalProvider disposed');
   }
 

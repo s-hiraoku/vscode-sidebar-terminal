@@ -12,7 +12,7 @@ export class FileReferenceCommand {
   /**
    * @filename 送信処理（CLI Agent連携）
    */
-  async handleSendAtMention(): Promise<void> {
+  handleSendAtMention(): void {
     try {
       log('🚀 [DEBUG] handleSendAtMention called with CLI Agent integration');
 
@@ -29,7 +29,9 @@ export class FileReferenceCommand {
       const fileInfo = this.getActiveFileBaseName();
       if (!fileInfo) {
         log('⚠️ [WARN] No active editor found for @mention');
-        void vscode.window.showWarningMessage('No active file to mention. Please open a file first.');
+        void vscode.window.showWarningMessage(
+          'No active file to mention. Please open a file first.'
+        );
         return;
       }
 
@@ -67,7 +69,11 @@ export class FileReferenceCommand {
   /**
    * アクティブエディタからファイルのベース名を取得
    */
-  private getActiveFileBaseName(): { baseName: string; fullPath: string; relativePath: string } | null {
+  private getActiveFileBaseName(): {
+    baseName: string;
+    fullPath: string;
+    relativePath: string;
+  } | null {
     const activeEditor = vscode.window.activeTextEditor;
     if (!activeEditor) {
       return null;

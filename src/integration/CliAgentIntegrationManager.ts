@@ -4,7 +4,6 @@ import {
   CliAgentStatus,
   CliAgentType,
   CliAgentInfo,
-  CliAgentStateChangeEvent,
 } from './CliAgentStateService';
 import { CliAgentDetectionService } from './CliAgentDetectionService';
 import { CliAgentDisplayService, DisplayUpdateEvent } from './CliAgentDisplayService';

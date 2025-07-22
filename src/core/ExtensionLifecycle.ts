@@ -101,7 +101,9 @@ export class ExtensionLifecycle {
         handler: () => {
           log('🔧 [DEBUG] Command executed: createTerminal');
           // TODO: SecondaryTerminalProviderにhandleNewTerminalメソッドを追加する必要があります
-          void vscode.window.showInformationMessage('Create terminal functionality needs to be implemented');
+          void vscode.window.showInformationMessage(
+            'Create terminal functionality needs to be implemented'
+          );
         },
       },
       {
