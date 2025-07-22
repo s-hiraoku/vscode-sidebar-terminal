@@ -222,17 +222,44 @@ export class MessageManager implements IMessageManager {
    */
   private handleInitMessage(msg: MessageCommand, coordinator: IManagerCoordinator): void {
     log('🚀 [MESSAGE] Handling init message');
+    log('🚀 [MESSAGE] INIT message data:', msg);
 
-    // Request current settings
-    this.queueMessage(
-      {
-        command: 'getSettings',
-      },
-      coordinator
-    );
+    try {
+      // Request current settings
+      this.queueMessage(
+        {
+          command: 'getSettings',
+        },
+        coordinator
+      );
 
-    // Emit ready event
-    this.emitTerminalInteractionEvent('webview-ready', '', undefined, coordinator);
+      // Emit ready event
+      this.emitTerminalInteractionEvent('webview-ready', '', undefined, coordinator);
+
+      // CRITICAL: Send confirmation back to extension that INIT was processed
+      log('🎆 [MESSAGE] Sending initComplete confirmation to extension...');
+      this.queueMessage(
+        {
+          command: 'test',
+          type: 'initComplete',
+          data: 'WebView successfully processed INIT message',
+          timestamp: Date.now(),
+        },
+        coordinator
+      );
+      log('✅ [MESSAGE] initComplete confirmation queued');
+    } catch (error) {
+      log('❌ [MESSAGE] Error processing INIT message:', error);
+      // Send error notification to extension
+      this.queueMessage(
+        {
+          command: 'error',
+          message: `WebView INIT processing failed: ${String(error)}`,
+          timestamp: Date.now(),
+        },
+        coordinator
+      );
+    }
   }
 
   /**
