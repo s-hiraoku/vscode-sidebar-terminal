@@ -1,5 +1,11 @@
 import { EventEmitter } from 'vscode';
-import { CliAgentStateService, CliAgentStatus, CliAgentType, CliAgentInfo, CliAgentStateChangeEvent } from './CliAgentStateService';
+import {
+  CliAgentStateService,
+  CliAgentStatus,
+  CliAgentType,
+  CliAgentInfo,
+  CliAgentStateChangeEvent,
+} from './CliAgentStateService';
 import { CliAgentDetectionService } from './CliAgentDetectionService';
 import { CliAgentDisplayService, DisplayUpdateEvent } from './CliAgentDisplayService';
 import { terminal as log } from '../utils/logger';
@@ -23,7 +29,7 @@ export interface CliAgentStatusEvent {
 
 /**
  * CLI Agent統合管理サービス
- * 
+ *
  * 責務：
  * - 各サービスの統合と調整
  * - 外部APIの提供（TerminalManager向け）
@@ -39,7 +45,7 @@ export class CliAgentIntegrationManager {
   private readonly _commandHistory = new Map<string, string[]>();
   private readonly _inputBuffers = new Map<string, string>();
   private readonly _outputBuffers = new Map<string, OutputBuffer>();
-  
+
   // 設定
   private readonly MAX_HISTORY_SIZE = 100;
   private readonly OUTPUT_BUFFER_SIZE = 10;
@@ -55,7 +61,7 @@ export class CliAgentIntegrationManager {
     this._displayService = new CliAgentDisplayService();
 
     this._setupEventListeners();
-    
+
     log('✅ [CLI-AGENT-MANAGER] Initialized CLI Agent integration manager');
   }
 
@@ -74,7 +80,7 @@ export class CliAgentIntegrationManager {
       // 完全なコマンドかチェック（改行で終了）
       if (data.includes('\r') || data.includes('\n')) {
         const command = buffer.trim();
-        
+
         if (command) {
           // コマンド履歴に追加
           this._addToCommandHistory(terminalId, command);
@@ -89,7 +95,6 @@ export class CliAgentIntegrationManager {
         // バッファをクリア
         this._inputBuffers.set(terminalId, '');
       }
-
     } catch (error) {
       log(`❌ [CLI-AGENT-MANAGER] Error tracking input: ${error}`);
     }
@@ -104,7 +109,7 @@ export class CliAgentIntegrationManager {
       this._updateOutputBuffer(terminalId, data);
 
       const currentAgent = this._stateService.getAgentInfo(terminalId);
-      
+
       // CLI Agent検出（まだ検出されていない場合）
       if (!currentAgent) {
         const detectionResult = this._detectionService.detectFromOutput(data);
@@ -121,7 +126,6 @@ export class CliAgentIntegrationManager {
           this._stateService.deactivateAgent(terminalId);
         }
       }
-
     } catch (error) {
       log(`❌ [CLI-AGENT-MANAGER] Error handling output: ${error}`);
     }
@@ -136,7 +140,7 @@ export class CliAgentIntegrationManager {
     this._commandHistory.delete(terminalId);
     this._inputBuffers.delete(terminalId);
     this._outputBuffers.delete(terminalId);
-    
+
     log(`🧹 [CLI-AGENT-MANAGER] Cleaned up terminal: ${terminalId}`);
   }
 
@@ -174,16 +178,16 @@ export class CliAgentIntegrationManager {
   }
 
   public getAllAgents(): Array<{ terminalId: string; agentInfo: CliAgentInfo }> {
-    return this._stateService.getAllAgents().map(info => ({ 
-      terminalId: info.terminalId, 
-      agentInfo: info 
+    return this._stateService.getAllAgents().map((info) => ({
+      terminalId: info.terminalId,
+      agentInfo: info,
     }));
   }
 
   public getConnectedAgents(): Array<{ terminalId: string; agentInfo: CliAgentInfo }> {
-    return this._stateService.getConnectedAgents().map(info => ({ 
-      terminalId: info.terminalId, 
-      agentInfo: info 
+    return this._stateService.getConnectedAgents().map((info) => ({
+      terminalId: info.terminalId,
+      agentInfo: info,
     }));
   }
 
@@ -202,11 +206,11 @@ export class CliAgentIntegrationManager {
     this._stateService.dispose();
     this._displayService.dispose();
     this._onStatusChange.dispose();
-    
+
     this._commandHistory.clear();
     this._inputBuffers.clear();
     this._outputBuffers.clear();
-    
+
     log('🧹 [CLI-AGENT-MANAGER] Disposed CLI Agent integration manager');
   }
 
@@ -223,7 +227,9 @@ export class CliAgentIntegrationManager {
   /**
    * WebView向けメッセージを生成
    */
-  public generateWebViewMessage(terminalId: string): ReturnType<typeof this._displayService.generateWebViewMessage> {
+  public generateWebViewMessage(
+    terminalId: string
+  ): ReturnType<typeof this._displayService.generateWebViewMessage> {
     const agentInfo = this._stateService.getAgentInfo(terminalId);
     return this._displayService.generateWebViewMessage(terminalId, agentInfo);
   }
@@ -235,13 +241,13 @@ export class CliAgentIntegrationManager {
    */
   private _setupEventListeners(): void {
     // 状態変更イベントを外部APIイベントに変換
-    this._stateService.onStateChange(event => {
+    this._stateService.onStateChange((event) => {
       const compatibilityEvent: CliAgentStatusEvent = {
         terminalId: event.terminalId,
         type: event.type,
         status: event.status,
       };
-      
+
       this._onStatusChange.fire(compatibilityEvent);
     });
   }
@@ -267,7 +273,7 @@ export class CliAgentIntegrationManager {
   private _updateOutputBuffer(terminalId: string, data: string): void {
     const now = Date.now();
     const buffer = this._outputBuffers.get(terminalId) || { lines: [], lastUpdate: now };
-    
+
     // 新しい行を追加
     const lines = data.split('\n');
     buffer.lines.push(...lines);
@@ -307,7 +313,7 @@ export class CliAgentIntegrationManager {
    */
   private _cleanupOldBuffers(): void {
     const now = Date.now();
-    
+
     for (const [terminalId, buffer] of this._outputBuffers.entries()) {
       if (now - buffer.lastUpdate > this.OUTPUT_BUFFER_TTL) {
         this._outputBuffers.delete(terminalId);

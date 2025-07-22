@@ -5,7 +5,7 @@ import { terminal as log } from '../utils/logger';
  * CLI Agent の状態定義
  */
 export enum CliAgentStatus {
-  NONE = 'none',           // CLI Agentが検出されていない、または終了済み
+  NONE = 'none', // CLI Agentが検出されていない、または終了済み
   CONNECTED = 'connected', // CLI Agentが実行中でグローバルアクティブ
   DISCONNECTED = 'disconnected', // CLI Agentが実行中だが他のターミナルがアクティブ
 }
@@ -38,7 +38,7 @@ export interface CliAgentStateChangeEvent {
 
 /**
  * CLI Agent状態管理サービス
- * 
+ *
  * 責務：
  * - 全CLI Agentの状態を一元管理
  * - 相互排他制御の実装
@@ -105,12 +105,14 @@ export class CliAgentStateService {
     // グローバルアクティブエージェントの更新
     if (this._globalActiveAgent && this._globalActiveAgent.terminalId === terminalId) {
       this._globalActiveAgent = null;
-      
+
       // 自動昇格: DISCONNECTEDの中から1つを選択
       this._promoteNextAgent();
     }
 
-    log(`❌ [CLI-AGENT-STATE] Deactivated ${agentType.toUpperCase()} CLI in terminal ${terminalId}`);
+    log(
+      `❌ [CLI-AGENT-STATE] Deactivated ${agentType.toUpperCase()} CLI in terminal ${terminalId}`
+    );
 
     // イベント発火
     this._onStateChange.fire({
@@ -173,7 +175,7 @@ export class CliAgentStateService {
   }
 
   public getConnectedAgents(): CliAgentInfo[] {
-    return this.getAllAgents().filter(agent => agent.status === CliAgentStatus.CONNECTED);
+    return this.getAllAgents().filter((agent) => agent.status === CliAgentStatus.CONNECTED);
   }
 
   /**
@@ -181,7 +183,7 @@ export class CliAgentStateService {
    */
   public deactivateAllAgents(): void {
     const terminalIds = Array.from(this._agents.keys());
-    terminalIds.forEach(terminalId => this.deactivateAgent(terminalId));
+    terminalIds.forEach((terminalId) => this.deactivateAgent(terminalId));
   }
 
   /**
@@ -209,7 +211,9 @@ export class CliAgentStateService {
     agentInfo.status = status;
     agentInfo.lastActivity = new Date();
 
-    log(`🔄 [CLI-AGENT-STATE] Changed ${agentInfo.type.toUpperCase()} CLI in terminal ${terminalId} from ${previousStatus} to ${status}`);
+    log(
+      `🔄 [CLI-AGENT-STATE] Changed ${agentInfo.type.toUpperCase()} CLI in terminal ${terminalId} from ${previousStatus} to ${status}`
+    );
 
     // イベント発火
     this._onStateChange.fire({
@@ -229,8 +233,10 @@ export class CliAgentStateService {
       if (agentInfo.status === CliAgentStatus.DISCONNECTED) {
         this._changeAgentStatus(terminalId, CliAgentStatus.CONNECTED);
         this._globalActiveAgent = { terminalId, type: agentInfo.type };
-        
-        log(`⬆️ [CLI-AGENT-STATE] Promoted ${agentInfo.type.toUpperCase()} CLI in terminal ${terminalId} to CONNECTED`);
+
+        log(
+          `⬆️ [CLI-AGENT-STATE] Promoted ${agentInfo.type.toUpperCase()} CLI in terminal ${terminalId} to CONNECTED`
+        );
         return;
       }
     }

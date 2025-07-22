@@ -22,7 +22,7 @@ export interface DisplayUpdateEvent {
 
 /**
  * CLI Agent表示同期サービス
- * 
+ *
  * 責務：
  * - ターミナル表示名の生成
  * - CLI Agent状態表示の統一管理
@@ -52,11 +52,11 @@ export class CliAgentDisplayService {
    * CLI Agent状態に基づく表示更新データを生成
    */
   public generateDisplayUpdate(
-    terminalId: string, 
+    terminalId: string,
     agentInfo: CliAgentInfo | null
   ): DisplayUpdateEvent {
     const terminalName = this.getTerminalName(terminalId);
-    
+
     const displayUpdate: DisplayUpdateEvent = {
       terminalId,
       displayName: this._formatDisplayName(terminalName, agentInfo),
@@ -66,9 +66,11 @@ export class CliAgentDisplayService {
 
     // キャッシュに保存
     this._displayCache.set(terminalId, displayUpdate);
-    
-    log(`🔄 [CLI-AGENT-DISPLAY] Generated display update: ${terminalId} -> ${displayUpdate.displayName} (${displayUpdate.status})`);
-    
+
+    log(
+      `🔄 [CLI-AGENT-DISPLAY] Generated display update: ${terminalId} -> ${displayUpdate.displayName} (${displayUpdate.status})`
+    );
+
     return displayUpdate;
   }
 
@@ -101,11 +103,12 @@ export class CliAgentDisplayService {
     };
   } {
     const displayUpdate = this.generateDisplayUpdate(terminalId, agentInfo);
-    
+
     return {
       command: 'cliAgentStatusUpdate',
       cliAgentStatus: {
-        activeTerminalName: displayUpdate.status !== CliAgentStatus.NONE ? displayUpdate.displayName : null,
+        activeTerminalName:
+          displayUpdate.status !== CliAgentStatus.NONE ? displayUpdate.displayName : null,
         status: displayUpdate.status,
         agentType: displayUpdate.agentType,
       },
@@ -152,7 +155,7 @@ export class CliAgentDisplayService {
     // CLI Agent情報を含む表示名を生成
     const agentDisplayName = this._getAgentDisplayName(agentInfo.type);
     const statusDisplayName = this._getStatusDisplayName(agentInfo.status);
-    
+
     return `${baseName} [${agentDisplayName} ${statusDisplayName}]`;
   }
 

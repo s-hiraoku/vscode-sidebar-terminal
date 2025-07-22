@@ -1,5 +1,5 @@
 /**
- * リファクタリング後のWebViewメインエントリーポイント
+ * WebViewメインエントリーポイント
  */
 
 // CRITICAL: Add immediate diagnostic logging

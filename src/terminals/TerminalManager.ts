@@ -134,7 +134,7 @@ export class TerminalManager {
 
       this._terminals.set(terminalId, terminal);
       this._activeTerminalManager.setActive(terminalId);
-      
+
       // Notify CLI Agent manager about terminal name
       this._cliAgentManager.setTerminalName(terminalId, terminal.name);
 
