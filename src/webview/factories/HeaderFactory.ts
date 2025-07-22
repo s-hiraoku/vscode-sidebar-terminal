@@ -22,24 +22,19 @@ export interface TerminalHeaderElements {
 export interface HeaderConfig {
   terminalId: string;
   terminalName: string;
-  showId?: boolean;
-  showSplitButton?: boolean;
   customClasses?: string[];
 }
 
 /**
- * 統一されたヘッダー構造:
+ * シンプルなヘッダー構造:
  * <div class="terminal-header">
  *   <div class="terminal-title">
- *     <span class="terminal-icon">⚡</span>
  *     <span class="terminal-name">Terminal Name</span>
- *     <span class="terminal-id">(terminalId)</span>
  *   </div>
  *   <div class="terminal-status">
  *     <!-- CLI Agent status elements inserted here -->
  *   </div>
  *   <div class="terminal-controls">
- *     <button class="terminal-control split-btn">⊞</button>
  *     <button class="terminal-control close-btn">✕</button>
  *   </div>
  * </div>
@@ -49,13 +44,7 @@ export class HeaderFactory {
    * 統一されたターミナルヘッダーを作成
    */
   public static createTerminalHeader(config: HeaderConfig): TerminalHeaderElements {
-    const {
-      terminalId,
-      terminalName,
-      showId = true,
-      showSplitButton = true,
-      customClasses = [],
-    } = config;
+    const { terminalId, terminalName, customClasses = [] } = config;
 
     // メインコンテナ
     const container = DOMUtils.createElement(
@@ -86,25 +75,11 @@ export class HeaderFactory {
       {
         display: 'flex',
         alignItems: 'center',
-        gap: '4px',
         flexGrow: '1',
         minWidth: '0', // flexアイテムの縮小を許可
       },
       {
         className: 'terminal-title',
-      }
-    );
-
-    // アイコン
-    const iconSpan = DOMUtils.createElement(
-      'span',
-      {
-        fontSize: '12px',
-        flexShrink: '0',
-      },
-      {
-        textContent: '⚡',
-        className: 'terminal-icon',
       }
     );
 
@@ -124,19 +99,11 @@ export class HeaderFactory {
       }
     );
 
-    // ターミナルID
+    // ダミーのidSpan（既存インターフェース互換性のため）
     const idSpan = DOMUtils.createElement(
       'span',
-      {
-        fontSize: '9px',
-        opacity: '0.7',
-        flexShrink: '0',
-        display: showId ? 'inline' : 'none',
-      },
-      {
-        textContent: `(${terminalId})`,
-        className: 'terminal-id',
-      }
+      { display: 'none' },
+      { className: 'terminal-id' }
     );
 
     // ステータスセクション（CLI Agent用）
@@ -169,31 +136,6 @@ export class HeaderFactory {
       }
     );
 
-    // 分割ボタン
-    const splitButton = DOMUtils.createElement(
-      'button',
-      {
-        background: 'none',
-        border: 'none',
-        color: 'var(--vscode-tab-activeForeground)',
-        cursor: 'pointer',
-        fontSize: '11px',
-        padding: '2px 4px',
-        borderRadius: '2px',
-        display: showSplitButton ? 'flex' : 'none',
-        alignItems: 'center',
-        justifyContent: 'center',
-        opacity: '0.7',
-        transition: 'opacity 0.2s, background-color 0.2s',
-      },
-      {
-        textContent: '⊞',
-        className: 'terminal-control split-btn',
-        title: 'Split Terminal',
-        'data-terminal-id': terminalId,
-      }
-    );
-
     // 閉じるボタン
     const closeButton = DOMUtils.createElement(
       'button',
@@ -219,22 +161,27 @@ export class HeaderFactory {
       }
     );
 
-    // ホバーエフェクトを追加
-    [splitButton, closeButton].forEach((button) => {
-      button.addEventListener('mouseenter', () => {
-        button.style.opacity = '1';
-        button.style.backgroundColor = 'var(--vscode-toolbar-hoverBackground)';
-      });
+    // ダミーのsplitButton（既存インターフェース互換性のため）
+    const splitButton = DOMUtils.createElement(
+      'button',
+      { display: 'none' },
+      { className: 'split-btn' }
+    );
 
-      button.addEventListener('mouseleave', () => {
-        button.style.opacity = '0.7';
-        button.style.backgroundColor = 'transparent';
-      });
+    // ホバーエフェクトを追加
+    closeButton.addEventListener('mouseenter', () => {
+      closeButton.style.opacity = '1';
+      closeButton.style.backgroundColor = 'var(--vscode-toolbar-hoverBackground)';
+    });
+
+    closeButton.addEventListener('mouseleave', () => {
+      closeButton.style.opacity = '0.7';
+      closeButton.style.backgroundColor = 'transparent';
     });
 
     // 要素を組み立て
-    DOMUtils.appendChildren(titleSection, iconSpan, nameSpan, idSpan);
-    DOMUtils.appendChildren(controlsSection, splitButton, closeButton);
+    DOMUtils.appendChildren(titleSection, nameSpan);
+    DOMUtils.appendChildren(controlsSection, closeButton);
     DOMUtils.appendChildren(container, titleSection, statusSection, controlsSection);
 
     log(`🏗️ [HeaderFactory] Created unified header for terminal: ${terminalId}`);

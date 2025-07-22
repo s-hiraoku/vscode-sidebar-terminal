@@ -264,12 +264,10 @@ export class UIManager implements IUIManager {
    * Create terminal header with title and controls
    */
   public createTerminalHeader(terminalId: string, terminalName: string): HTMLElement {
-    // HeaderFactoryを使用して統一された構造を作成
+    // HeaderFactoryを使用してシンプルな構造を作成
     const headerElements = HeaderFactory.createTerminalHeader({
       terminalId,
       terminalName,
-      showId: true,
-      showSplitButton: true,
     });
 
     // ヘッダー要素をキャッシュ（CLI Agent status更新用）
