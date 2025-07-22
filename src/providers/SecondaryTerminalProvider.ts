@@ -752,15 +752,30 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
       log(`✅ [TRACE] postMessage call completed, result: ${result}`);
       log(`🎆 [TRACE] MESSAGE TRANSMISSION RESULT: ${result ? 'SUCCESS' : 'FAILED'}`);
+      log(`🎆 [TRACE] postMessage result type: ${typeof result}`);
+      log(`🎆 [TRACE] postMessage result value: ${JSON.stringify(result)}`);
       
       // Add timeout to detect if WebView receives and responds to critical messages
       if (message.command === 'init') {
-        log(`⏰ [TRACE] Starting WebView response timeout for INIT message...`);
+        log(`⏰ [TRACE] ========================================`);
+        log(`⏰ [TRACE] CRITICAL: INIT MESSAGE SENT TO WEBVIEW`);
+        log(`⏰ [TRACE] Message data: ${JSON.stringify(message, null, 2)}`);
+        log(`⏰ [TRACE] If WebView processes this, we should see handleInitMessage logs`);
+        log(`⏰ [TRACE] Starting 5-second response timeout...`);
+        
         setTimeout(() => {
-          log(`⏰ [TRACE] 5 seconds passed since INIT message - checking WebView status`);
+          log(`⏰ [TRACE] ========================================`);
+          log(`⏰ [TRACE] 5 SECONDS TIMEOUT - WEBVIEW STATUS CHECK`);
           log(`⏰ [TRACE] WebView visible: ${this._view?.visible}`);
           log(`⏰ [TRACE] WebView HTML length: ${this._view?.webview.html.length}`);
+          log(`⏰ [TRACE] Expected: WebView should have sent initComplete by now`);
+          log(`⏰ [TRACE] If no initComplete received = WebView not processing messages`);
         }, 5000);
+        
+        // Also add shorter timeout to catch faster responses
+        setTimeout(() => {
+          log(`⏰ [TRACE] 1 second check - any initComplete received yet?`);
+        }, 1000);
       }
       
       log(`📤 [DEBUG] ========== MESSAGE SEND COMPLETE ==========`);

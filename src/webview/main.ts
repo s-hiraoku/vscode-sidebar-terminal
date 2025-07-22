@@ -1477,6 +1477,14 @@ window.addEventListener('message', (event) => {
       log('🔔 [WEBVIEW] CLI Agent status status:', message.cliAgentStatus?.status);
     }
 
+    if (message?.command === 'init') {
+      log('🚀 [WEBVIEW] ******************************************');
+      log('🚀 [WEBVIEW] *** INIT MESSAGE DETECTED IN WEBVIEW! ***');
+      log('🚀 [WEBVIEW] ******************************************');
+      log('🚀 [WEBVIEW] Full INIT message data:', message);
+      log('🚀 [WEBVIEW] This should trigger handleInitMessage in MessageManager');
+    }
+
     // Delegate to MessageManager
     log('🎯 [WEBVIEW] About to call MessageManager.handleMessage...');
     log('🎯 [WEBVIEW] TerminalManager available:', !!terminalManager);
