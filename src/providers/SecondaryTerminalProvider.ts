@@ -9,8 +9,9 @@ import { provider as log } from '../utils/logger';
 import { getConfigManager } from '../config/ConfigManager';
 import { PartialTerminalSettings, WebViewFontSettings } from '../types/shared';
 
-export class SecondaryTerminalProvider implements vscode.WebviewViewProvider {
+export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vscode.Disposable {
   public static readonly viewType = 'secondaryTerminal';
+  private _disposables: vscode.Disposable[] = [];
 
   private _view?: vscode.WebviewView;
   private _webviewReady = false;
@@ -1311,5 +1312,32 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider {
       altClickMovesCursor: extensionAltClickSetting,
       multiCursorModifier: vsCodeMultiCursorModifier,
     };
+  }
+
+  /**
+   * Clean up resources
+   */
+  dispose(): void {
+    log('🔧 [DEBUG] SecondaryTerminalProvider disposing resources...');
+    
+    // Dispose all registered disposables
+    for (const disposable of this._disposables) {
+      disposable.dispose();
+    }
+    this._disposables.length = 0;
+    
+    // Clear references
+    this._view = undefined;
+    this._webviewReady = false;
+    this._terminalInitialized = false;
+    
+    log('✅ [DEBUG] SecondaryTerminalProvider disposed');
+  }
+
+  /**
+   * Add a disposable to be cleaned up later
+   */
+  private _addDisposable(disposable: vscode.Disposable): void {
+    this._disposables.push(disposable);
   }
 }
