@@ -317,7 +317,7 @@ export class UIManager implements IUIManager {
    * Find all terminal headers in the DOM (moved from DOMManager)
    */
   public findTerminalHeaders(): HTMLElement[] {
-    const headers = Array.from(document.querySelectorAll('.terminal-header'));
+    const headers = Array.from(document.querySelectorAll('.terminal-header')) as HTMLElement[];
     log(`🔍 [UI] Found ${headers.length} terminal headers`);
     return headers;
   }
