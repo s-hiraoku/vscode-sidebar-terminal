@@ -4,7 +4,16 @@
  */
 
 export type LogLevel = 'DEBUG' | 'INFO' | 'WARN' | 'ERROR';
-export type LogCategory = 'DOM' | 'COMM' | 'UI' | 'PERF' | 'INPUT' | 'SPLIT' | 'CONFIG' | 'NOTIFICATION' | 'GENERAL';
+export type LogCategory =
+  | 'DOM'
+  | 'COMM'
+  | 'UI'
+  | 'PERF'
+  | 'INPUT'
+  | 'SPLIT'
+  | 'CONFIG'
+  | 'NOTIFICATION'
+  | 'GENERAL';
 
 export interface LogEntry {
   timestamp: number;
@@ -28,17 +37,27 @@ export class LoggerManager {
   private logEntries: LogEntry[] = [];
   private config: LogConfig = {
     level: 'INFO',
-    categories: ['DOM', 'COMM', 'UI', 'PERF', 'INPUT', 'SPLIT', 'CONFIG', 'NOTIFICATION', 'GENERAL'],
+    categories: [
+      'DOM',
+      'COMM',
+      'UI',
+      'PERF',
+      'INPUT',
+      'SPLIT',
+      'CONFIG',
+      'NOTIFICATION',
+      'GENERAL',
+    ],
     enablePerformanceLogging: true,
     enableCategoryFiltering: false,
     maxLogEntries: 1000,
   };
 
   private readonly levelPriority: Record<LogLevel, number> = {
-    'DEBUG': 0,
-    'INFO': 1,
-    'WARN': 2,
-    'ERROR': 3,
+    DEBUG: 0,
+    INFO: 1,
+    WARN: 2,
+    ERROR: 3,
   };
 
   public static getInstance(): LoggerManager {
@@ -59,7 +78,13 @@ export class LoggerManager {
   /**
    * Main logging method with category and level support
    */
-  public log(category: LogCategory, level: LogLevel, message: string, data?: any, context?: string): void {
+  public log(
+    category: LogCategory,
+    level: LogLevel,
+    message: string,
+    data?: any,
+    context?: string
+  ): void {
     // Check if log level meets minimum threshold
     if (this.levelPriority[level] < this.levelPriority[this.config.level]) {
       return;
@@ -125,8 +150,10 @@ export class LoggerManager {
    * Performance-specific logging methods
    */
   public perf = {
-    debug: (message: string, data?: any) => this.config.enablePerformanceLogging && this.log('PERF', 'DEBUG', message, data),
-    info: (message: string, data?: any) => this.config.enablePerformanceLogging && this.log('PERF', 'INFO', message, data),
+    debug: (message: string, data?: any) =>
+      this.config.enablePerformanceLogging && this.log('PERF', 'DEBUG', message, data),
+    info: (message: string, data?: any) =>
+      this.config.enablePerformanceLogging && this.log('PERF', 'INFO', message, data),
     warn: (message: string, data?: any) => this.log('PERF', 'WARN', message, data),
     error: (message: string, data?: any) => this.log('PERF', 'ERROR', message, data),
   };
@@ -194,10 +221,10 @@ export class LoggerManager {
     end: (label: string, startTime: number): number => {
       const endTime = performance.now();
       const duration = endTime - startTime;
-      this.perf.info(`Performance end: ${label}`, { 
-        startTime, 
-        endTime, 
-        duration: `${duration.toFixed(2)}ms` 
+      this.perf.info(`Performance end: ${label}`, {
+        startTime,
+        endTime,
+        duration: `${duration.toFixed(2)}ms`,
       });
       return duration;
     },
@@ -284,18 +311,14 @@ export class LoggerManager {
    * Get logs by category
    */
   public getLogsByCategory(category: LogCategory, count = 50): LogEntry[] {
-    return this.logEntries
-      .filter(entry => entry.category === category)
-      .slice(-count);
+    return this.logEntries.filter((entry) => entry.category === category).slice(-count);
   }
 
   /**
    * Get logs by level
    */
   public getLogsByLevel(level: LogLevel, count = 50): LogEntry[] {
-    return this.logEntries
-      .filter(entry => entry.level === level)
-      .slice(-count);
+    return this.logEntries.filter((entry) => entry.level === level).slice(-count);
   }
 
   /**
@@ -303,7 +326,7 @@ export class LoggerManager {
    */
   public searchLogs(searchTerm: string, count = 50): LogEntry[] {
     return this.logEntries
-      .filter(entry => entry.message.toLowerCase().includes(searchTerm.toLowerCase()))
+      .filter((entry) => entry.message.toLowerCase().includes(searchTerm.toLowerCase()))
       .slice(-count);
   }
 
@@ -317,22 +340,29 @@ export class LoggerManager {
     oldestEntry: number | null;
     newestEntry: number | null;
   } {
-    const entriesByLevel = this.logEntries.reduce((acc, entry) => {
-      acc[entry.level] = (acc[entry.level] || 0) + 1;
-      return acc;
-    }, {} as Record<LogLevel, number>);
+    const entriesByLevel = this.logEntries.reduce(
+      (acc, entry) => {
+        acc[entry.level] = (acc[entry.level] || 0) + 1;
+        return acc;
+      },
+      {} as Record<LogLevel, number>
+    );
 
-    const entriesByCategory = this.logEntries.reduce((acc, entry) => {
-      acc[entry.category] = (acc[entry.category] || 0) + 1;
-      return acc;
-    }, {} as Record<LogCategory, number>);
+    const entriesByCategory = this.logEntries.reduce(
+      (acc, entry) => {
+        acc[entry.category] = (acc[entry.category] || 0) + 1;
+        return acc;
+      },
+      {} as Record<LogCategory, number>
+    );
 
     return {
       totalEntries: this.logEntries.length,
       entriesByLevel,
       entriesByCategory,
       oldestEntry: this.logEntries.length > 0 ? this.logEntries[0]!.timestamp : null,
-      newestEntry: this.logEntries.length > 0 ? this.logEntries[this.logEntries.length - 1]!.timestamp : null,
+      newestEntry:
+        this.logEntries.length > 0 ? this.logEntries[this.logEntries.length - 1]!.timestamp : null,
     };
   }
 
@@ -340,11 +370,15 @@ export class LoggerManager {
    * Export logs as JSON
    */
   public exportLogs(): string {
-    return JSON.stringify({
-      config: this.config,
-      entries: this.logEntries,
-      exportedAt: Date.now(),
-    }, null, 2);
+    return JSON.stringify(
+      {
+        config: this.config,
+        entries: this.logEntries,
+        exportedAt: Date.now(),
+      },
+      null,
+      2
+    );
   }
 
   /**
@@ -380,7 +414,9 @@ export class LoggerManager {
     if (categories) {
       this.config.categories = categories;
     }
-    this.log('CONFIG', 'INFO', `Category filtering ${enabled ? 'enabled' : 'disabled'}`, { categories: this.config.categories });
+    this.log('CONFIG', 'INFO', `Category filtering ${enabled ? 'enabled' : 'disabled'}`, {
+      categories: this.config.categories,
+    });
   }
 
   /**

@@ -3,11 +3,11 @@ import { SecondaryTerminalProvider } from './providers/SecondaryTerminalProvider
 import { TerminalManager } from './terminals/TerminalManager';
 import { extension as log, logger, LogLevel } from './utils/logger';
 import { TerminalErrorHandler } from './utils/feedback';
-import { CliAgentTracker } from './integration/CliAgentTerminalTracker';
+// CliAgentTracker is no longer needed - CLI Agent integration is now handled by TerminalManager
 
 let terminalManager: TerminalManager | undefined;
 let sidebarProvider: SecondaryTerminalProvider | undefined;
-let cliAgentTracker: CliAgentTracker | undefined;
+// CLI Agent integration is now handled by TerminalManager
 
 export function activate(context: vscode.ExtensionContext): void {
   // Configure logger based on extension mode
@@ -30,7 +30,7 @@ export function activate(context: vscode.ExtensionContext): void {
     process.env.NODE_PSTY_DEBUG = '0';
 
     // Initialize terminal manager
-    terminalManager = new TerminalManager(context);
+    terminalManager = new TerminalManager();
 
     // Register the sidebar terminal provider
     sidebarProvider = new SecondaryTerminalProvider(context, terminalManager);
@@ -47,11 +47,8 @@ export function activate(context: vscode.ExtensionContext): void {
     );
     context.subscriptions.push(sidebarWebviewProvider);
 
-    // Initialize Claude Terminal Tracker
-    cliAgentTracker = CliAgentTracker.getInstance(context);
-
-    // Set SecondaryTerminalProvider reference for WebView notifications
-    cliAgentTracker.setSidebarProvider(sidebarProvider);
+    // CLI Agent integration is now handled directly by TerminalManager
+    // No need for separate CLI Agent tracker
 
     // Register commands
     registerCommands(context, sidebarProvider);
@@ -87,42 +84,117 @@ export function activate(context: vscode.ExtensionContext): void {
   }
 }
 
+// =================== 共通ユーティリティ関数 ===================
+
 /**
- * サイドバーターミナルにフォーカスを移動
+ * アクティブエディタからファイルのベース名を取得
  */
-async function focusSidebarTerminal(): Promise<void> {
-  try {
-    log('🔧 [DEBUG] Attempting to focus sidebar terminal...');
-
-    // 1. サイドバーコンテナを表示してフォーカス
-    await vscode.commands.executeCommand('workbench.view.extension.secondaryTerminalContainer');
-
-    // 2. WebView内のターミナルにフォーカスを送信（将来の実装）
-    // TODO: SecondaryTerminalProvider に sendFocusToTerminal メソッドを追加
-    // if (sidebarProvider && typeof sidebarProvider.sendFocusToTerminal === 'function') {
-    //   sidebarProvider.sendFocusToTerminal();
-    //   log('🔧 [DEBUG] Sent focus message to WebView');
-    // }
-
-    log('✅ [DEBUG] Successfully focused sidebar terminal');
-  } catch (error) {
-    log('⚠️ [WARN] Failed to focus sidebar terminal:', error);
-    // フォーカス失敗は致命的ではないので、エラーメッセージは表示しない
+function getActiveFileBaseName(): { baseName: string; fullPath: string } | null {
+  const activeEditor = vscode.window.activeTextEditor;
+  if (!activeEditor) {
+    return null;
   }
+
+  const fullPath = activeEditor.document.fileName;
+  const baseName = fullPath.split('/').pop() || fullPath.split('\\').pop() || fullPath;
+  return { baseName, fullPath };
 }
 
 /**
- * @filename 送信処理
+ * CLI Agent統合機能が有効かチェック
+ */
+function isCliAgentIntegrationEnabled(): boolean {
+  const config = vscode.workspace.getConfiguration('secondaryTerminal');
+  return config.get<boolean>('enableCliAgentIntegration', true);
+}
+
+/**
+ * ターミナルマネージャーとアクティブターミナルの確認
+ */
+function validateTerminalEnvironment(): { activeTerminalId: string } | null {
+  if (!terminalManager || !terminalManager.hasActiveTerminal()) {
+    log('⚠️ [WARN] No active sidebar terminal');
+    void vscode.window.showWarningMessage(
+      'No sidebar terminal available. Please open the sidebar terminal first.'
+    );
+    return null;
+  }
+
+  const activeTerminalId = terminalManager.getActiveTerminalId();
+  if (!activeTerminalId) {
+    log('⚠️ [WARN] Could not get active terminal ID');
+    return null;
+  }
+
+  return { activeTerminalId };
+}
+
+/**
+ * 最適なCLI Agent送信対象を決定
+ */
+function determineCliAgentTarget(activeTerminalId: string): {
+  targetTerminalId: string;
+  agentType: string;
+  isCurrentTerminal: boolean;
+} | null {
+  if (!terminalManager) {
+    log('❌ [ERROR] TerminalManager not available');
+    return null;
+  }
+
+  // 現在のターミナルでCLI Agentが動いているかチェック
+  const isRunningInCurrent = terminalManager.isCliAgentRunning(activeTerminalId);
+  const isCurrentActive = terminalManager.isCliAgentConnected(activeTerminalId);
+
+  if (isCurrentActive) {
+    // 現在のターミナルがアクティブな場合
+    const agentType = terminalManager.getAgentType(activeTerminalId);
+    return {
+      targetTerminalId: activeTerminalId,
+      agentType: agentType?.toUpperCase() || 'CLI AGENT',
+      isCurrentTerminal: true,
+    };
+  }
+
+  // グローバルアクティブなCLI Agentを確認
+  const globallyActiveAgent = terminalManager.getCurrentGloballyActiveAgent();
+  if (globallyActiveAgent) {
+    return {
+      targetTerminalId: globallyActiveAgent.terminalId,
+      agentType: globallyActiveAgent.type.toUpperCase(),
+      isCurrentTerminal: false,
+    };
+  }
+
+  // 現在のターミナルでCLI Agentが動いている場合（DISCONNECTED状態）
+  if (isRunningInCurrent) {
+    const agentType = terminalManager.getAgentType(activeTerminalId);
+    log('⚠️ [WARN] CLI Agent running in current terminal but not active globally');
+    void vscode.window.showInformationMessage(
+      `ℹ️ ${agentType?.toUpperCase() || 'CLI Agent'} is running but not active. Please activate it or use the active CLI Agent in another terminal.`
+    );
+    return null;
+  }
+
+  // CLI Agentが全く動いていない
+  log('⚠️ [DEBUG] No CLI Agent running');
+  void vscode.window.showInformationMessage(
+    'ℹ️ Please start CLI Agent first to use file references. Run "claude" or "gemini" command in a terminal.'
+  );
+  return null;
+}
+
+// =================== メイン機能関数 ===================
+
+/**
+ * @filename 送信処理（CLI Agent連携）
  */
 async function handleSendAtMention(): Promise<void> {
   try {
-    log('🚀 [DEBUG] handleSendAtMention called with sidebar terminal Claude detection');
+    log('🚀 [DEBUG] handleSendAtMention called with CLI Agent integration');
 
     // CLI Agent統合機能が有効かチェック
-    const config = vscode.workspace.getConfiguration('secondaryTerminal');
-    const isEnabled = config.get<boolean>('enableCliAgentIntegration', true);
-
-    if (!isEnabled) {
+    if (!isCliAgentIntegrationEnabled()) {
       log('🔧 [DEBUG] CLI Agent integration is disabled by user setting');
       void vscode.window.showInformationMessage(
         'File reference shortcuts are disabled. Enable them in Terminal Settings.'
@@ -131,53 +203,43 @@ async function handleSendAtMention(): Promise<void> {
     }
 
     // アクティブエディタの確認
-    const activeEditor = vscode.window.activeTextEditor;
-    if (!activeEditor) {
+    const fileInfo = getActiveFileBaseName();
+    if (!fileInfo) {
       log('⚠️ [WARN] No active editor found for @mention');
       void vscode.window.showWarningMessage('No active file to mention. Please open a file first.');
       return;
     }
 
-    // アクティブなサイドバーターミナルを確認
-    if (!terminalManager || !terminalManager.hasActiveTerminal()) {
-      log('⚠️ [WARN] No active sidebar terminal');
-      void vscode.window.showWarningMessage(
-        'No sidebar terminal available. Please open the sidebar terminal first.'
-      );
+    // ターミナル環境の確認
+    const terminalEnv = validateTerminalEnvironment();
+    if (!terminalEnv) {
       return;
     }
 
-    const activeTerminalId = terminalManager.getActiveTerminalId();
-    if (!activeTerminalId) {
-      log('⚠️ [WARN] Could not get active terminal ID');
+    // CLI Agent送信対象の決定
+    const target = determineCliAgentTarget(terminalEnv.activeTerminalId);
+    if (!target) {
       return;
     }
 
-    // サイドバーターミナルでCLI Agentが実行中かチェック
-    const isCliAgentActive = terminalManager.isCliAgentActive(activeTerminalId);
-    log(`🔍 [DEBUG] Claude active in sidebar terminal ${activeTerminalId}: ${isCliAgentActive}`);
-
-    if (!isCliAgentActive) {
-      log('⚠️ [DEBUG] CLI Agent not running, refusing to send @filename');
-      void vscode.window.showInformationMessage(
-        'ℹ️ Please start CLI Agent first to use file references. Run "cli-agent" command in the terminal.'
-      );
+    // ファイル参照を送信
+    if (!terminalManager) {
+      log('❌ [ERROR] TerminalManager not available for sending');
       return;
     }
 
-    // CLI Agentが実行中の場合のみファイル参照を送信
-    const fileName = activeEditor.document.fileName;
-    const baseName = fileName.split('/').pop() || fileName.split('\\').pop() || fileName;
-    const text = `@${baseName} `;
+    const text = `@${fileInfo.baseName} `;
+    terminalManager.sendInput(text, target.targetTerminalId);
 
-    // サイドバーターミナルに送信
-    terminalManager.sendInput(text);
-    await focusSidebarTerminal();
+    // 成功メッセージ
+    const message = target.isCurrentTerminal
+      ? `✅ Sent file reference to ${target.agentType} in current terminal`
+      : `✅ Sent file reference to active ${target.agentType} in terminal ${target.targetTerminalId}`;
 
-    void vscode.window.showInformationMessage(
-      '✅ Sent file reference to CLI Agent in sidebar terminal'
+    void vscode.window.showInformationMessage(message);
+    log(
+      `✅ [DEBUG] Successfully sent @${fileInfo.baseName} to ${target.agentType} in terminal ${target.targetTerminalId}`
     );
-    log('✅ [DEBUG] Successfully sent to CLI Agent in sidebar terminal');
   } catch (error) {
     log('❌ [ERROR] Error in handleSendAtMention:', error);
     void vscode.window.showErrorMessage(`Failed to send @mention: ${String(error)}`);
@@ -185,50 +247,19 @@ async function handleSendAtMention(): Promise<void> {
 }
 
 /**
- * サイドバーターミナルに送信する処理（フォールバック用）
- */
-async function sendToSidebarTerminal(): Promise<void> {
-  try {
-    const activeEditor = vscode.window.activeTextEditor;
-    if (!activeEditor) {
-      return;
-    }
-
-    const fileName = activeEditor.document.fileName;
-    const baseName = fileName.split('/').pop() || fileName.split('\\').pop() || fileName;
-    const text = `@${baseName} `;
-
-    if (terminalManager) {
-      terminalManager.sendInput(text);
-      await focusSidebarTerminal();
-      log('✅ [DEBUG] Sent to sidebar terminal as fallback:', text);
-    } else {
-      log('⚠️ [WARN] TerminalManager not available for fallback');
-      void vscode.window.showWarningMessage(
-        'Sidebar terminal not available. Please open the sidebar terminal first.'
-      );
-    }
-  } catch (error) {
-    log('❌ [ERROR] Error in sendToSidebarTerminal:', error);
-  }
-}
-
-/**
- * テキストをターミナルに送信する（CLI Agent連携用）
+ * テキストをターミナルに送信する（汎用）
  */
 function handleSendToTerminal(content?: string): void {
   try {
-    log('🔧 [DEBUG] HandleSendToTerminal called with content:', content);
+    log('🔧 [DEBUG] handleSendToTerminal called with content:', content);
 
     let text: string | undefined = content;
 
     // content が未定義の場合、アクティブエディタから @filename を生成
     if (!text) {
-      const activeEditor = vscode.window.activeTextEditor;
-      if (activeEditor) {
-        const fileName = activeEditor.document.fileName;
-        const baseName = fileName.split('/').pop() || fileName.split('\\').pop() || fileName;
-        text = `@${baseName}`;
+      const fileInfo = getActiveFileBaseName();
+      if (fileInfo) {
+        text = `@${fileInfo.baseName}`;
         log('🔧 [DEBUG] Generated @filename from active editor:', text);
       } else {
         log('⚠️ [WARN] No content provided and no active editor found');
@@ -239,14 +270,20 @@ function handleSendToTerminal(content?: string): void {
       }
     }
 
-    if (text && terminalManager) {
-      // TerminalManagerのsendInputメソッドを使用してテキストを送信
-      terminalManager.sendInput(text);
-      log('✅ [DEBUG] Successfully sent text to terminal:', text);
-    } else {
-      log('⚠️ [WARN] No text to send or terminalManager not available');
-      void vscode.window.showWarningMessage('Unable to send text to terminal');
+    // ターミナル環境の確認
+    const terminalEnv = validateTerminalEnvironment();
+    if (!terminalEnv || !text) {
+      return;
     }
+
+    // テキストを送信
+    if (!terminalManager) {
+      log('❌ [ERROR] TerminalManager not available for sending');
+      return;
+    }
+
+    terminalManager.sendInput(text, terminalEnv.activeTerminalId);
+    log('✅ [DEBUG] Successfully sent text to terminal:', text);
   } catch (error) {
     log('❌ [ERROR] Error in handleSendToTerminal:', error);
     void vscode.window.showErrorMessage(`Failed to send text to terminal: ${String(error)}`);
@@ -318,10 +355,7 @@ export function deactivate(): void {
 
     sidebarProvider = undefined;
 
-    if (cliAgentTracker) {
-      cliAgentTracker.dispose();
-      cliAgentTracker = undefined;
-    }
+    // CLI Agent integration disposal is handled by TerminalManager
 
     log('Sidebar Terminal extension deactivated successfully');
   } catch (error) {

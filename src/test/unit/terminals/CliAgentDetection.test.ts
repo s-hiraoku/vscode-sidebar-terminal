@@ -87,7 +87,7 @@ describe('CliAgentDetection in Terminal Manager', () => {
     mockPty.spawn.returns(mockPtyProcess);
 
     // Create terminal manager
-    terminalManager = new TerminalManager(mockContext);
+    terminalManager = new TerminalManager();
 
     // Setup CLI Agent status change spy
     cliAgentStatusSpy = sinon.spy();
@@ -120,7 +120,7 @@ describe('CliAgentDetection in Terminal Manager', () => {
         terminalId,
         isActive: true,
       });
-      expect(terminalManager.isCLI AgentActive(terminalId)).to.be.true;
+      expect(terminalManager.isCliAgentConnected(terminalId)).to.be.true;
     });
 
     it('should detect variations of claude commands', () => {
@@ -141,7 +141,7 @@ describe('CliAgentDetection in Terminal Manager', () => {
         terminalManager.sendInput(`${command}\r`, terminalId);
 
         // Assert
-        expect(terminalManager.isCLI AgentActive(terminalId)).to.be.true;
+        expect(terminalManager.isCliAgentConnected(terminalId)).to.be.true;
         expect(cliAgentStatusSpy.callCount).to.equal(1); // Should only activate once
       });
     });
@@ -151,7 +151,7 @@ describe('CliAgentDetection in Terminal Manager', () => {
       const terminalId = terminalManager.createTerminal();
 
       // Act - send non-claude commands
-      const nonCLI AgentCommands = [
+      const nonCliAgentCommands = [
         'ls -la',
         'npm install',
         'git status',
@@ -159,13 +159,13 @@ describe('CliAgentDetection in Terminal Manager', () => {
         'help claude',
       ];
 
-      nonCLI AgentCommands.forEach((command) => {
+      nonCliAgentCommands.forEach((command) => {
         terminalManager.sendInput(`${command}\r`, terminalId);
       });
 
       // Assert
       expect(cliAgentStatusSpy.called).to.be.false;
-      expect(terminalManager.isCLI AgentActive(terminalId)).to.be.false;
+      expect(terminalManager.isCliAgentConnected(terminalId)).to.be.false;
     });
 
     it('should track command history correctly', () => {
@@ -180,7 +180,7 @@ describe('CliAgentDetection in Terminal Manager', () => {
       // Assert
       const lastCommand = terminalManager.getLastCommand(terminalId);
       expect(lastCommand).to.equal('git status');
-      expect(terminalManager.isCLI AgentActive(terminalId)).to.be.true;
+      expect(terminalManager.isCliAgentConnected(terminalId)).to.be.true;
     });
 
     it('should handle partial input properly', () => {
@@ -193,7 +193,7 @@ describe('CliAgentDetection in Terminal Manager', () => {
       terminalManager.sendInput('lp\r', terminalId);
 
       // Assert - should detect complete command
-      expect(terminalManager.isCLI AgentActive(terminalId)).to.be.true;
+      expect(terminalManager.isCliAgentConnected(terminalId)).to.be.true;
       expect(terminalManager.getLastCommand(terminalId)).to.equal('claude help');
     });
   });
@@ -204,11 +204,11 @@ describe('CliAgentDetection in Terminal Manager', () => {
       const terminalId = terminalManager.createTerminal();
 
       // Act - simulate CLI Agent output
-      terminalManager.handleTerminalOutput(terminalId, 'Welcome to CLI Agent\n');
+      terminalManager.handleTerminalOutputForCliAgent(terminalId, 'Welcome to CLI Agent\n');
 
       // Assert
       expect(cliAgentStatusSpy.calledOnce).to.be.true;
-      expect(terminalManager.isCLI AgentActive(terminalId)).to.be.true;
+      expect(terminalManager.isCliAgentConnected(terminalId)).to.be.true;
     });
 
     it('should detect CLI Agent Code output patterns', () => {
@@ -227,15 +227,15 @@ describe('CliAgentDetection in Terminal Manager', () => {
         // Reset state
         if (index > 0) {
           // Simulate session end for clean test
-          terminalManager.handleTerminalOutput(terminalId, 'Goodbye!\n');
+          terminalManager.handleTerminalOutputForCliAgent(terminalId, 'Goodbye!\n');
           cliAgentStatusSpy.resetHistory();
         }
 
         // Act
-        terminalManager.handleTerminalOutput(terminalId, pattern);
+        terminalManager.handleTerminalOutputForCliAgent(terminalId, pattern);
 
         // Assert
-        expect(terminalManager.isCLI AgentActive(terminalId)).to.be.true;
+        expect(terminalManager.isCliAgentConnected(terminalId)).to.be.true;
         expect(cliAgentStatusSpy.calledOnce).to.be.true;
       });
     });
@@ -245,27 +245,30 @@ describe('CliAgentDetection in Terminal Manager', () => {
       const terminalId = terminalManager.createTerminal();
 
       // Act - simulate conversation output
-      terminalManager.handleTerminalOutput(terminalId, '\nHuman: Hello CLI Agent\n');
-      terminalManager.handleTerminalOutput(terminalId, '\nAssistant: Hello! How can I help you today?\n');
+      terminalManager.handleTerminalOutputForCliAgent(terminalId, '\nHuman: Hello CLI Agent\n');
+      terminalManager.handleTerminalOutputForCliAgent(
+        terminalId,
+        '\nAssistant: Hello! How can I help you today?\n'
+      );
 
       // Assert
-      expect(terminalManager.isCLI AgentActive(terminalId)).to.be.true;
+      expect(terminalManager.isCliAgentConnected(terminalId)).to.be.true;
     });
 
     it('should detect CLI Agent exit patterns', () => {
       // Setup
       const terminalId = terminalManager.createTerminal();
-      
+
       // First activate CLI Agent
-      terminalManager.handleTerminalOutput(terminalId, 'Welcome to CLI Agent');
-      expect(terminalManager.isCLI AgentActive(terminalId)).to.be.true;
+      terminalManager.handleTerminalOutputForCliAgent(terminalId, 'Welcome to CLI Agent');
+      expect(terminalManager.isCliAgentConnected(terminalId)).to.be.true;
       cliAgentStatusSpy.resetHistory();
 
       // Act - simulate exit
-      terminalManager.handleTerminalOutput(terminalId, 'Goodbye!\n');
+      terminalManager.handleTerminalOutputForCliAgent(terminalId, 'Goodbye!\n');
 
       // Assert
-      expect(terminalManager.isCLI AgentActive(terminalId)).to.be.false;
+      expect(terminalManager.isCliAgentConnected(terminalId)).to.be.false;
       expect(cliAgentStatusSpy.calledOnce).to.be.true;
       const call = cliAgentStatusSpy.getCall(0);
       expect(call.args[0]).to.deep.include({
@@ -279,12 +282,12 @@ describe('CliAgentDetection in Terminal Manager', () => {
       const terminalId = terminalManager.createTerminal();
 
       // Act - test case variations
-      terminalManager.handleTerminalOutput(terminalId, 'WELCOME TO CLAUDE');
-      expect(terminalManager.isCLI AgentActive(terminalId)).to.be.true;
+      terminalManager.handleTerminalOutputForCliAgent(terminalId, 'WELCOME TO CLAUDE');
+      expect(terminalManager.isCliAgentConnected(terminalId)).to.be.true;
 
       // Reset and test another variation
-      terminalManager.handleTerminalOutput(terminalId, 'goodbye!');
-      expect(terminalManager.isCLI AgentActive(terminalId)).to.be.false;
+      terminalManager.handleTerminalOutputForCliAgent(terminalId, 'goodbye!');
+      expect(terminalManager.isCliAgentConnected(terminalId)).to.be.false;
     });
 
     it('should not detect false positives', () => {
@@ -300,11 +303,11 @@ describe('CliAgentDetection in Terminal Manager', () => {
       ];
 
       falsePositives.forEach((output) => {
-        terminalManager.handleTerminalOutput(terminalId, output);
+        terminalManager.handleTerminalOutputForCliAgent(terminalId, output);
       });
 
       // Assert - should not activate CLI Agent
-      expect(terminalManager.isCLI AgentActive(terminalId)).to.be.false;
+      expect(terminalManager.isCliAgentConnected(terminalId)).to.be.false;
       expect(cliAgentStatusSpy.called).to.be.false;
     });
   });
@@ -318,12 +321,12 @@ describe('CliAgentDetection in Terminal Manager', () => {
 
       // Act - activate CLI Agent in terminal1 and terminal3
       terminalManager.sendInput('claude help\r', terminal1);
-      terminalManager.handleTerminalOutput(terminal3, 'Welcome to CLI Agent');
+      terminalManager.handleTerminalOutputForCliAgent(terminal3, 'Welcome to CLI Agent');
 
       // Assert
-      expect(terminalManager.isCLI AgentActive(terminal1)).to.be.true;
-      expect(terminalManager.isCLI AgentActive(terminal2)).to.be.false;
-      expect(terminalManager.isCLI AgentActive(terminal3)).to.be.true;
+      expect(terminalManager.isCliAgentConnected(terminal1)).to.be.true;
+      expect(terminalManager.isCliAgentConnected(terminal2)).to.be.false;
+      expect(terminalManager.isCliAgentConnected(terminal3)).to.be.true;
     });
 
     it('should deactivate CLI Agent independently', () => {
@@ -335,28 +338,28 @@ describe('CliAgentDetection in Terminal Manager', () => {
       terminalManager.sendInput('claude help\r', terminal1);
       terminalManager.sendInput('claude help\r', terminal2);
 
-      expect(terminalManager.isCLI AgentActive(terminal1)).to.be.true;
-      expect(terminalManager.isCLI AgentActive(terminal2)).to.be.true;
+      expect(terminalManager.isCliAgentConnected(terminal1)).to.be.true;
+      expect(terminalManager.isCliAgentConnected(terminal2)).to.be.true;
 
       // Act - deactivate only terminal1
-      terminalManager.handleTerminalOutput(terminal1, 'Goodbye!');
+      terminalManager.handleTerminalOutputForCliAgent(terminal1, 'Goodbye!');
 
       // Assert
-      expect(terminalManager.isCLI AgentActive(terminal1)).to.be.false;
-      expect(terminalManager.isCLI AgentActive(terminal2)).to.be.true;
+      expect(terminalManager.isCliAgentConnected(terminal1)).to.be.false;
+      expect(terminalManager.isCliAgentConnected(terminal2)).to.be.true;
     });
 
     it('should clean up CLI Agent state when terminal is removed', () => {
       // Setup
       const terminalId = terminalManager.createTerminal();
       terminalManager.sendInput('claude help\r', terminalId);
-      expect(terminalManager.isCLI AgentActive(terminalId)).to.be.true;
+      expect(terminalManager.isCliAgentConnected(terminalId)).to.be.true;
 
       // Act - remove terminal
       terminalManager.removeTerminal(terminalId);
 
       // Assert - should clean up CLI Agent state
-      expect(terminalManager.isCLI AgentActive(terminalId)).to.be.false;
+      expect(terminalManager.isCliAgentConnected(terminalId)).to.be.false;
     });
   });
 
@@ -429,7 +432,7 @@ describe('CliAgentDetection in Terminal Manager', () => {
     it('should handle invalid terminal IDs gracefully', () => {
       // Act & Assert - should not throw
       expect(() => {
-        terminalManager.handleTerminalOutput('invalid-id', 'Welcome to CLI Agent');
+        terminalManager.handleTerminalOutputForCliAgent('invalid-id', 'Welcome to CLI Agent');
       }).to.not.throw();
 
       expect(() => {
@@ -437,7 +440,7 @@ describe('CliAgentDetection in Terminal Manager', () => {
       }).to.not.throw();
 
       expect(() => {
-        const result = terminalManager.isCLI AgentActive('invalid-id');
+        const result = terminalManager.isCliAgentConnected('invalid-id');
         expect(result).to.be.false;
       }).to.not.throw();
     });
@@ -467,7 +470,7 @@ describe('CliAgentDetection in Terminal Manager', () => {
       }
 
       // Assert - should maintain correct state
-      expect(terminalManager.isCLI AgentActive(terminalId)).to.be.true;
+      expect(terminalManager.isCliAgentConnected(terminalId)).to.be.true;
       expect(terminalManager.getLastCommand(terminalId)).to.be.a('string');
     });
 
@@ -477,10 +480,10 @@ describe('CliAgentDetection in Terminal Manager', () => {
 
       // Act - simulate large output with CLI Agent pattern
       const largeOutput = 'x'.repeat(10000) + 'Welcome to CLI Agent' + 'y'.repeat(10000);
-      terminalManager.handleTerminalOutput(terminalId, largeOutput);
+      terminalManager.handleTerminalOutputForCliAgent(terminalId, largeOutput);
 
       // Assert
-      expect(terminalManager.isCLI AgentActive(terminalId)).to.be.true;
+      expect(terminalManager.isCliAgentConnected(terminalId)).to.be.true;
     });
 
     it('should handle concurrent operations safely', (done) => {
@@ -494,12 +497,12 @@ describe('CliAgentDetection in Terminal Manager', () => {
         setTimeout(() => {
           try {
             terminalManager.sendInput(`claude command-${i}\r`, terminalId);
-            terminalManager.handleTerminalOutput(terminalId, `Output ${i}`);
+            terminalManager.handleTerminalOutputForCliAgent(terminalId, `Output ${i}`);
             operationsCompleted++;
 
             if (operationsCompleted === totalOperations) {
               // Assert - should maintain consistent state
-              expect(terminalManager.isCLI AgentActive(terminalId)).to.be.true;
+              expect(terminalManager.isCliAgentConnected(terminalId)).to.be.true;
               done();
             }
           } catch (error) {

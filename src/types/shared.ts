@@ -62,6 +62,11 @@ export interface ExtensionTerminalConfig
     TerminalLimitsConfig {
   readonly shell: string; // Extension では必須
   readonly shellArgs: string[]; // Extension では必須
+  readonly cursor?: {
+    style?: 'block' | 'underline' | 'bar';
+    blink?: boolean;
+  };
+  readonly enableCliAgentIntegration?: boolean;
 }
 
 /**
@@ -87,6 +92,15 @@ export interface PartialTerminalSettings {
   altClickMovesCursor?: boolean;
   multiCursorModifier?: string;
   enableCliAgentIntegration?: boolean;
+  shell?: string;
+  shellArgs?: string[];
+  cwd?: string;
+  defaultDirectory?: string;
+  maxTerminals?: number;
+  cursor?: {
+    style?: 'block' | 'underline' | 'bar';
+    blink?: boolean;
+  };
 }
 
 /**

@@ -22,36 +22,30 @@ export interface TerminalHeaderElements {
 export interface HeaderConfig {
   terminalId: string;
   terminalName: string;
-  showId?: boolean;
-  showSplitButton?: boolean;
   customClasses?: string[];
 }
 
 /**
- * 統一されたヘッダー構造:
+ * シンプルなヘッダー構造:
  * <div class="terminal-header">
  *   <div class="terminal-title">
- *     <span class="terminal-icon">⚡</span>
  *     <span class="terminal-name">Terminal Name</span>
- *     <span class="terminal-id">(terminalId)</span>
  *   </div>
  *   <div class="terminal-status">
  *     <!-- CLI Agent status elements inserted here -->
  *   </div>
  *   <div class="terminal-controls">
- *     <button class="terminal-control split-btn">⊞</button>
  *     <button class="terminal-control close-btn">✕</button>
  *   </div>
  * </div>
  */
 export class HeaderFactory {
-  
   /**
    * 統一されたターミナルヘッダーを作成
    */
   public static createTerminalHeader(config: HeaderConfig): TerminalHeaderElements {
-    const { terminalId, terminalName, showId = true, showSplitButton = true, customClasses = [] } = config;
-    
+    const { terminalId, terminalName, customClasses = [] } = config;
+
     // メインコンテナ
     const container = DOMUtils.createElement(
       'div',
@@ -81,25 +75,11 @@ export class HeaderFactory {
       {
         display: 'flex',
         alignItems: 'center',
-        gap: '4px',
         flexGrow: '1',
         minWidth: '0', // flexアイテムの縮小を許可
       },
       {
         className: 'terminal-title',
-      }
-    );
-
-    // アイコン
-    const iconSpan = DOMUtils.createElement(
-      'span',
-      {
-        fontSize: '12px',
-        flexShrink: '0',
-      },
-      {
-        textContent: '⚡',
-        className: 'terminal-icon',
       }
     );
 
@@ -119,19 +99,11 @@ export class HeaderFactory {
       }
     );
 
-    // ターミナルID
+    // ダミーのidSpan（既存インターフェース互換性のため）
     const idSpan = DOMUtils.createElement(
       'span',
-      {
-        fontSize: '9px',
-        opacity: '0.7',
-        flexShrink: '0',
-        display: showId ? 'inline' : 'none',
-      },
-      {
-        textContent: `(${terminalId})`,
-        className: 'terminal-id',
-      }
+      { display: 'none' },
+      { className: 'terminal-id' }
     );
 
     // ステータスセクション（CLI Agent用）
@@ -164,31 +136,6 @@ export class HeaderFactory {
       }
     );
 
-    // 分割ボタン
-    const splitButton = DOMUtils.createElement(
-      'button',
-      {
-        background: 'none',
-        border: 'none',
-        color: 'var(--vscode-tab-activeForeground)',
-        cursor: 'pointer',
-        fontSize: '11px',
-        padding: '2px 4px',
-        borderRadius: '2px',
-        display: showSplitButton ? 'flex' : 'none',
-        alignItems: 'center',
-        justifyContent: 'center',
-        opacity: '0.7',
-        transition: 'opacity 0.2s, background-color 0.2s',
-      },
-      {
-        textContent: '⊞',
-        className: 'terminal-control split-btn',
-        title: 'Split Terminal',
-        'data-terminal-id': terminalId,
-      }
-    ) as HTMLButtonElement;
-
     // 閉じるボタン
     const closeButton = DOMUtils.createElement(
       'button',
@@ -212,24 +159,29 @@ export class HeaderFactory {
         title: 'Close Terminal',
         'data-terminal-id': terminalId,
       }
-    ) as HTMLButtonElement;
+    );
+
+    // ダミーのsplitButton（既存インターフェース互換性のため）
+    const splitButton = DOMUtils.createElement(
+      'button',
+      { display: 'none' },
+      { className: 'split-btn' }
+    );
 
     // ホバーエフェクトを追加
-    [splitButton, closeButton].forEach(button => {
-      button.addEventListener('mouseenter', () => {
-        button.style.opacity = '1';
-        button.style.backgroundColor = 'var(--vscode-toolbar-hoverBackground)';
-      });
+    closeButton.addEventListener('mouseenter', () => {
+      closeButton.style.opacity = '1';
+      closeButton.style.backgroundColor = 'var(--vscode-toolbar-hoverBackground)';
+    });
 
-      button.addEventListener('mouseleave', () => {
-        button.style.opacity = '0.7';
-        button.style.backgroundColor = 'transparent';
-      });
+    closeButton.addEventListener('mouseleave', () => {
+      closeButton.style.opacity = '0.7';
+      closeButton.style.backgroundColor = 'transparent';
     });
 
     // 要素を組み立て
-    DOMUtils.appendChildren(titleSection, iconSpan, nameSpan, idSpan);
-    DOMUtils.appendChildren(controlsSection, splitButton, closeButton);
+    DOMUtils.appendChildren(titleSection, nameSpan);
+    DOMUtils.appendChildren(controlsSection, closeButton);
     DOMUtils.appendChildren(container, titleSection, statusSection, controlsSection);
 
     log(`🏗️ [HeaderFactory] Created unified header for terminal: ${terminalId}`);
@@ -241,7 +193,7 @@ export class HeaderFactory {
       idSpan,
       statusSection,
       statusSpan: null, // CLI Agent status要素はまだ作成されていない
-      indicator: null,   // CLI Agent indicator要素はまだ作成されていない
+      indicator: null, // CLI Agent indicator要素はまだ作成されていない
       controlsSection,
       splitButton,
       closeButton,
@@ -253,12 +205,21 @@ export class HeaderFactory {
    */
   public static insertCliAgentStatus(
     elements: TerminalHeaderElements,
-    status: 'connected' | 'disconnected'
+    status: 'connected' | 'disconnected',
+    agentType: string | null = null
   ): void {
     // 既存のstatus要素を削除
     HeaderFactory.removeCliAgentStatus(elements);
 
-    const statusText = status === 'connected' ? 'CLI Agent Code connected' : 'CLI Agent Code disconnected';
+    // Agent type based display text
+    const agentDisplayName = agentType
+      ? agentType === 'claude'
+        ? 'CLAUDE CLI'
+        : 'GEMINI CLI'
+      : 'CLI Agent';
+
+    const statusText =
+      status === 'connected' ? `${agentDisplayName} connected` : `${agentDisplayName} disconnected`;
     const isConnected = status === 'connected';
 
     // ステータステキスト
@@ -303,9 +264,11 @@ export class HeaderFactory {
    * CLI Agent status要素を削除
    */
   public static removeCliAgentStatus(elements: TerminalHeaderElements): void {
-    const statusElements = elements.statusSection.querySelectorAll('.claude-status, .claude-indicator');
-    statusElements.forEach(element => element.remove());
-    
+    const statusElements = elements.statusSection.querySelectorAll(
+      '.claude-status, .claude-indicator'
+    );
+    statusElements.forEach((element) => element.remove());
+
     // 参照をクリア
     elements.statusSpan = null;
     elements.indicator = null;
@@ -316,19 +279,31 @@ export class HeaderFactory {
   /**
    * CLI Agent status要素を作成（レガシーサポート用）
    */
-  public static createCliAgentStatusElement(status: 'connected' | 'disconnected'): HTMLElement {
+  public static createCliAgentStatusElement(
+    status: 'connected' | 'disconnected',
+    agentType: string | null = null
+  ): HTMLElement {
     const isConnected = status === 'connected';
     const statusContainer = document.createElement('span');
     statusContainer.className = 'claude-status-container';
-    
+
     const statusText = document.createElement('span');
     statusText.className = 'claude-status';
-    statusText.textContent = isConnected ? 'CLI Agent Active' : 'CLI Agent Inactive';
+    // Agent type based display text
+    const agentDisplayName = agentType
+      ? agentType === 'claude'
+        ? 'CLAUDE CLI'
+        : 'GEMINI CLI'
+      : 'CLI Agent';
+
+    statusText.textContent = isConnected
+      ? `${agentDisplayName} Active`
+      : `${agentDisplayName} Inactive`;
     statusText.style.fontSize = '11px';
     statusText.style.color = isConnected ? '#007ACC' : '#666';
     statusText.style.fontWeight = 'bold';
     statusText.style.marginLeft = '10px';
-    
+
     statusContainer.appendChild(statusText);
     return statusContainer;
   }

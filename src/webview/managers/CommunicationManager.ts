@@ -64,7 +64,10 @@ export class CommunicationManager {
       log(`📤 [COMM] Message sent: ${message.command}`, message);
     } catch (error) {
       log(`❌ [COMM] Failed to send message: ${message.command}`, error);
-      ErrorHandler.getInstance().handleCommunicationError(error as Error, `sendMessage-${message.command}`);
+      ErrorHandler.getInstance().handleCommunicationError(
+        error as Error,
+        `sendMessage-${message.command}`
+      );
       this.queueMessage(message);
     }
   }
@@ -222,18 +225,20 @@ export class CommunicationManager {
         log(`📤 [COMM] Queued message sent: ${queueItem.message.command}`);
       } catch (error) {
         log(`❌ [COMM] Failed to send queued message: ${queueItem.message.command}`, error);
-        
+
         // Retry logic
         if (queueItem.retryCount < this.MAX_RETRY_COUNT) {
           queueItem.retryCount++;
           setTimeout(() => {
             this.messageQueue.push(queueItem);
-            log(`🔄 [COMM] Retrying message: ${queueItem.message.command} (attempt ${queueItem.retryCount})`);
+            log(
+              `🔄 [COMM] Retrying message: ${queueItem.message.command} (attempt ${queueItem.retryCount})`
+            );
           }, this.RETRY_DELAY * queueItem.retryCount);
         } else {
           log(`❌ [COMM] Max retries exceeded for message: ${queueItem.message.command}`);
           ErrorHandler.getInstance().handleCommunicationError(
-            error as Error, 
+            error as Error,
             `processQueue-${queueItem.message.command}`
           );
         }

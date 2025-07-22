@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { TerminalManager } from '../terminals/TerminalManager';
+import { CliAgentStatus } from '../integration/CliAgentStateService';
 import { VsCodeMessage, WebviewMessage } from '../types/common';
 import { TERMINAL_CONSTANTS } from '../constants';
 import { getTerminalConfig, generateNonce, normalizeTerminalInfo } from '../utils/common';
@@ -13,6 +14,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider {
 
   private _view?: vscode.WebviewView;
   private _webviewReady = false;
+  private _terminalInitialized = false;
   private _pendingMessages: WebviewMessage[] = [];
 
   constructor(
@@ -25,7 +27,15 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider {
     _context: vscode.WebviewViewResolveContext,
     _token: vscode.CancellationToken
   ): void {
-    log('🔧 [DEBUG] SidebarTerminalProvider.resolveWebviewView called');
+    log('🔧 [DEBUG] SecondaryTerminalProvider.resolveWebviewView called');
+
+    // Reset initialization flags for fresh start
+    this._webviewReady = false;
+    this._terminalInitialized = false;
+
+    // Check if this is a panel move (WebView already exists but container changed)
+    const isPanelMove = this._view !== undefined && this._view.webview.html !== '';
+
     this._view = webviewView;
 
     // Enable scripts and set resource roots
@@ -34,6 +44,19 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider {
       localResourceRoots: [this._extensionContext.extensionUri],
     };
 
+    // Set up visibility change handler for panel move detection
+    webviewView.onDidChangeVisibility(
+      () => {
+        if (webviewView.visible && isPanelMove) {
+          log('🔄 [DEBUG] WebView became visible after panel move - restoring state');
+          void this._restoreWebviewState();
+        }
+      },
+      null,
+      this._extensionContext.subscriptions
+    );
+
+    // Always generate fresh HTML to ensure clean state
     try {
       const html = this._getHtmlForWebview(webviewView.webview);
       log('🔧 [DEBUG] Generated HTML length:', html.length);
@@ -174,7 +197,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider {
       log('🗑️ [PROVIDER] Performing kill for active terminal:', terminalId);
 
       // 新しいアーキテクチャ: 統一されたdeleteTerminalメソッドを使用
-      const result = await this._terminalManager.deleteTerminal(terminalId, 'panel');
+      const result = await this._terminalManager.deleteTerminal(terminalId, { source: 'panel' });
 
       if (result.success) {
         log('✅ [PROVIDER] Terminal killed successfully:', terminalId);
@@ -196,7 +219,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider {
       log('🗑️ [PROVIDER] Performing kill for specific terminal:', terminalId);
 
       // 新しいアーキテクチャ: 統一されたdeleteTerminalメソッドを使用
-      const result = await this._terminalManager.deleteTerminal(terminalId, 'header');
+      const result = await this._terminalManager.deleteTerminal(terminalId, { source: 'header' });
 
       if (result.success) {
         log('✅ [PROVIDER] Specific terminal killed successfully:', terminalId);
@@ -261,6 +284,11 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider {
   }
 
   public async _initializeTerminal(): Promise<void> {
+    if (this._terminalInitialized) {
+      log('⚠️ [DEBUG] Terminal already initialized, skipping...');
+      return;
+    }
+
     log('🔧 [DEBUG] Initializing terminal...');
     log('🔧 [DEBUG] Terminal manager available:', !!this._terminalManager);
     log('🔧 [DEBUG] Webview available:', !!this._view);
@@ -319,6 +347,8 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider {
         log('❌ [ERROR] Failed to send INIT message:', sendError);
         throw new Error(`Failed to send INIT message: ${String(sendError)}`);
       }
+
+      this._terminalInitialized = true;
       log('✅ [DEBUG] Terminal initialization completed successfully');
     } catch (error) {
       log('❌ [ERROR] Failed to initialize terminal:', error);
@@ -369,21 +399,29 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider {
           break;
 
         case 'webviewReady':
-          log('🎉 [DEBUG] ========== WEBVIEW READY NOTIFICATION RECEIVED ==========');
-          await this._handleWebviewReady();
-          break;
-
         case TERMINAL_CONSTANTS.COMMANDS.READY:
-          log('✅ [DEBUG] Traditional ready command received, handling webview ready...');
+          log('🎉 [DEBUG] ========== WEBVIEW READY NOTIFICATION RECEIVED ==========');
+          log('🎉 [DEBUG] Message type:', message.command);
+
+          // Handle webview ready state
           await this._handleWebviewReady();
 
-          // Initialize terminal if not done yet
-          try {
-            await this._initializeTerminal();
-            log('✅ [DEBUG] Terminal initialization completed in message handler');
-          } catch (initError) {
-            log('❌ [ERROR] Terminal initialization failed in message handler:', initError);
-            TerminalErrorHandler.handleTerminalCreationError(initError);
+          // Initialize terminal only once after webview is ready
+          if (!this._terminalInitialized) {
+            setTimeout(() => {
+              void (async () => {
+                try {
+                  log('🔄 [DEBUG] Starting delayed terminal initialization...');
+                  await this._initializeTerminal();
+                  log('✅ [DEBUG] Terminal initialization completed after webview ready');
+                } catch (initError) {
+                  log('❌ [ERROR] Terminal initialization failed after webview ready:', initError);
+                  TerminalErrorHandler.handleTerminalCreationError(initError);
+                }
+              })();
+            }, 300);
+          } else {
+            log('⚠️ [DEBUG] Terminal already initialized, skipping initialization');
           }
           break;
         case TERMINAL_CONSTANTS.COMMANDS.INPUT:
@@ -489,7 +527,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider {
             log(`🗑️ [DEBUG] Deleting terminal: ${terminalId} (source: ${requestSource})`);
             try {
               // 新しいアーキテクチャ: 統一されたdeleteTerminalメソッドを使用
-              void this._terminalManager.deleteTerminal(terminalId, requestSource);
+              void this._terminalManager.deleteTerminal(terminalId, { source: requestSource });
               log(`🗑️ [DEBUG] deleteTerminal called for: ${terminalId}`);
             } catch (error) {
               log(`❌ [DEBUG] Error in deleteTerminal:`, error);
@@ -508,6 +546,16 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider {
           );
           // Handle terminal interaction events from webview
           // This is informational - the webview is notifying us of user interactions
+          break;
+        }
+        case 'requestStateRestoration': {
+          log('🔄 [DEBUG] State restoration requested from WebView');
+          try {
+            await this._restoreWebviewState();
+            log('✅ [DEBUG] State restoration completed');
+          } catch (error) {
+            log('❌ [ERROR] State restoration failed:', error);
+          }
           break;
         }
         default:
@@ -589,17 +637,24 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider {
     const claudeStatusDisposable = this._terminalManager.onCliAgentStatusChange((event) => {
       try {
         const terminal = this._terminalManager.getTerminal(event.terminalId);
-        
-        if (terminal) {
-          const status = event.isActive ? 'connected' : 'disconnected';
-          log(`🔔 [PROVIDER] CLI Agent status: ${terminal.name} -> ${status}`);
-          this.sendCliAgentStatusUpdate(terminal.name, status);
+
+        if (terminal && event.status !== CliAgentStatus.NONE) {
+          // Connected or Disconnected状態の場合
+          const status = event.status; // 'connected' | 'disconnected'
+          const agentType = event.type;
+          const agentName = agentType ? `${agentType.toUpperCase()} CLI` : 'CLI Agents';
+
+          log(`🔔 [PROVIDER] ${agentName} status: ${terminal.name} -> ${status}`);
+          this.sendCliAgentStatusUpdate(terminal.name, status, agentType);
         } else {
-          log(`⚠️ [PROVIDER] Terminal ${event.terminalId} not found for CLI Agent status change`);
-          this.sendCliAgentStatusUpdate(null, 'none');
+          // None状態の場合（終了時）
+          log(`⚠️ [PROVIDER] CLI Agent terminated for terminal ${event.terminalId}`);
+          this.sendCliAgentStatusUpdate(null, 'none', null);
         }
       } catch (error) {
-        log(`❌ [PROVIDER] CLI Agent status change error: ${error instanceof Error ? error.message : String(error)}`);
+        log(
+          `❌ [PROVIDER] CLI Agent status change error: ${error instanceof Error ? error.message : String(error)}`
+        );
         if (error instanceof Error && error.stack) {
           log(`❌ [PROVIDER] Stack trace: ${error.stack}`);
         }
@@ -1146,14 +1201,16 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider {
    */
   public sendCliAgentStatusUpdate(
     activeTerminalName: string | null,
-    status: 'connected' | 'disconnected' | 'none'
+    status: 'connected' | 'disconnected' | 'none',
+    agentType: string | null = null
   ): void {
     try {
       const message = {
-        command: 'claudeStatusUpdate' as const,
-        claudeStatus: {
+        command: 'cliAgentStatusUpdate' as const,
+        cliAgentStatus: {
           activeTerminalName,
           status,
+          agentType,
         },
       };
 
@@ -1163,5 +1220,96 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider {
     } catch (error) {
       log('❌ [SIDEBAR-PROVIDER] Failed to send CLI Agent status update:', error);
     }
+  }
+
+  /**
+   * Restore WebView state after panel move
+   */
+  private async _restoreWebviewState(): Promise<void> {
+    try {
+      log('🔄 [DEBUG] Starting WebView state restoration...');
+
+      // Get current terminal state from TerminalManager
+      const currentState = this._terminalManager.getCurrentState();
+      log('🔄 [DEBUG] Current terminal state:', currentState);
+
+      // Wait a bit for WebView to be ready
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Send state restoration message to WebView
+      const restoreMessage = {
+        command: 'stateUpdate' as const,
+        state: currentState,
+      };
+
+      log('🔄 [DEBUG] Sending state restoration message:', restoreMessage);
+      await this._sendMessage(restoreMessage);
+
+      // Also send current settings
+      const settings = this._getCurrentSettings();
+      const settingsMessage = {
+        command: 'settingsResponse' as const,
+        settings,
+      };
+
+      log('🔄 [DEBUG] Sending settings restoration message');
+      await this._sendMessage(settingsMessage);
+
+      // Send Alt+Click settings
+      const altClickSettings = this._getAltClickSettings();
+      const altClickMessage = {
+        command: 'altClickSettings' as const,
+        settings: altClickSettings,
+      };
+
+      log('🔄 [DEBUG] Sending Alt+Click settings restoration message');
+      await this._sendMessage(altClickMessage);
+
+      log('✅ [DEBUG] WebView state restoration completed successfully');
+    } catch (error) {
+      log('❌ [ERROR] Failed to restore WebView state:', error);
+    }
+  }
+
+  /**
+   * Get current settings for restoration
+   */
+  private _getCurrentSettings(): PartialTerminalSettings {
+    const config = getConfigManager().getExtensionTerminalConfig();
+    return {
+      shell: config.shell || '',
+      shellArgs: config.shellArgs || [],
+      fontSize: config.fontSize || 14,
+      fontFamily: config.fontFamily || 'monospace',
+      theme: config.theme || 'dark',
+      cursor: config.cursor || {
+        style: 'block',
+        blink: true,
+      },
+      maxTerminals: config.maxTerminals || 5,
+      enableCliAgentIntegration: config.enableCliAgentIntegration || false,
+    };
+  }
+
+  /**
+   * Get Alt+Click settings for restoration
+   */
+  private _getAltClickSettings(): { altClickMovesCursor: boolean; multiCursorModifier: string } {
+    const vsCodeAltClickSetting = vscode.workspace
+      .getConfiguration('terminal.integrated')
+      .get<boolean>('altClickMovesCursor', false);
+
+    const vsCodeMultiCursorModifier = vscode.workspace
+      .getConfiguration('editor')
+      .get<string>('multiCursorModifier', 'alt');
+
+    const extensionAltClickSetting = vscode.workspace
+      .getConfiguration('secondaryTerminal')
+      .get<boolean>('altClickMovesCursor', vsCodeAltClickSetting);
+
+    return {
+      altClickMovesCursor: extensionAltClickSetting,
+      multiCursorModifier: vsCodeMultiCursorModifier,
+    };
   }
 }

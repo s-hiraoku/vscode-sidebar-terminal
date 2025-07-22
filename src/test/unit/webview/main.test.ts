@@ -319,9 +319,9 @@ describe('WebView Main', () => {
         ];
 
         const testOutput = '🤖 Generated with CLI Agent';
-        const isCLI AgentCode = claudeCodePatterns.some((pattern) => pattern.test(testOutput));
+        const isCliAgentCode = claudeCodePatterns.some((pattern) => pattern.test(testOutput));
 
-        expect(isCLI AgentCode).to.be.true;
+        expect(isCliAgentCode).to.be.true;
       });
 
       it('should handle high-frequency CLI Agent output', () => {

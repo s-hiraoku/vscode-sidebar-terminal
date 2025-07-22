@@ -10,7 +10,7 @@ export type { CliAgentStatusType };
 export type ExtensionConfig = CompleteExtensionConfig;
 
 export interface StatusOptions {
-  type: StatusType;
+  type: CliAgentStatusType;
   duration?: number;
   persistent?: boolean;
 }

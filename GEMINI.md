@@ -1,20 +1,21 @@
-# Gemini Notes for Sidebar Terminal Extension
+# Gemini Notes for Secondary Terminal Extension
 
-This file is intended to store notes, configurations, or specific instructions relevant to developing and interacting with the Sidebar Terminal extension using the Gemini CLI.
+This file is intended to store notes, configurations, or specific instructions relevant to developing and interacting with the Secondary Terminal extension using the Gemini CLI.
 
 ## Current Status
 
 - Initial setup complete.
 - `CHANGELOG.md` updated with webview refactoring details.
 
-## Gemini CLI の役割とコンテキスト
+## Role and Context of Gemini CLI
 
-このプロジェクトにおいて、Gemini CLIは以下の役割を担い、プロジェクトのコンテキストを把握しています。
+In this project, the Gemini CLI plays the following roles and understands the project context:
 
--   **ドキュメント管理**: プロジェクト全体のドキュメントのレビュー、更新、および一貫性の維持を担当しています。これには、`README.md`、`CONTRIBUTING.md`、`CLAUDE.md`、`docs/`ディレクトリ内の各種ドキュメントの最新化と相互参照の確立が含まれます。
--   **アーキテクチャと機能の理解**: VS Code Extension HostとWebView間のモジュラーアーキテクチャ（特にWebViewのリファクタリングによるマネージャーベースの構造）や、Alt+Click、CLI Agent連携などの主要な機能について理解しています。
--   **リリースプロセス**: 自動化されたリリースプロセス（GitHub Actionsと`npm`スクリプト）の仕組みと、関連するドキュメント（`RELEASE_PROCESS.md`）の管理を把握しています。
--   **UI/UX要素の表示**: 拡張機能のアイコン表示など、VS Code UIにおける要素の管理方法に関する知見を持っています。
+- **No Source Code Modification**: In this project, the Gemini CLI cannot directly modify the source code.
+- **Document Management**: Responsible for reviewing, updating, and maintaining consistency across all project documentation. This includes keeping `README.md`, `CONTRIBUTING.md`, `CLAUDE.md`, and various documents within the `docs/` directory up-to-date and establishing cross-references.
+- **Understanding Architecture and Features**: Understands the modular architecture between the VS Code Extension Host and WebView (especially the manager-based structure due to WebView refactoring), and key features such as Alt+Click and CLI Agent integration.
+- **Release Process**: Understands the mechanism of the automated release process (GitHub Actions and `npm` scripts) and manages related documentation (`RELEASE_PROCESS.md`).
+- **Display of UI/UX Elements**: Possesses knowledge regarding the management of elements in the VS Code UI, such as the display of extension icons.
 
 ## Future Considerations
 

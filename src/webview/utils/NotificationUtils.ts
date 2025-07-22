@@ -128,10 +128,10 @@ export function showNotification(config: NotificationConfig): void {
     console.error('UIManager not initialized for NotificationUtils');
     return;
   }
-  
+
   uiManager.ensureAnimationsLoaded();
   const notification = uiManager.createNotificationElement(config);
-  
+
   // Add close button event listener
   const closeBtn = notification.querySelector('.notification-close');
   if (closeBtn) {
@@ -139,7 +139,7 @@ export function showNotification(config: NotificationConfig): void {
       removeNotification(notification);
     });
   }
-  
+
   document.body.appendChild(notification);
   activeNotifications.add(notification);
 

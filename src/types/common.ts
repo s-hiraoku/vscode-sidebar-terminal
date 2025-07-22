@@ -64,9 +64,11 @@ export interface WebviewMessage {
     | 'openSettings'
     | 'stateUpdate'
     | 'claudeStatusUpdate'
+    | 'cliAgentStatusUpdate'
     | 'killTerminal'
     | 'deleteTerminal'
     | 'getSettings'
+    | 'altClickSettings'
     | 'error';
   config?: TerminalConfig;
   data?: string;
@@ -81,7 +83,13 @@ export interface WebviewMessage {
   claudeStatus?: {
     activeTerminalName: string | null;
     status: 'connected' | 'disconnected' | 'none';
-  }; // Claude接続状態の情報
+    agentType: string | null;
+  }; // CLI Agent接続状態の情報
+  cliAgentStatus?: {
+    activeTerminalName: string | null;
+    status: 'connected' | 'disconnected' | 'none';
+    agentType: string | null;
+  }; // CLI Agent接続状態の情報（新しい名前）
   cols?: number; // リサイズ用
   rows?: number; // リサイズ用
   requestSource?: 'header' | 'panel'; // 削除リクエストの送信元
@@ -111,6 +119,7 @@ export interface VsCodeMessage {
     | 'terminalInteraction'
     | 'killTerminal'
     | 'deleteTerminal'
+    | 'requestStateRestoration'
     | 'error';
   data?: string;
   cols?: number;

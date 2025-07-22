@@ -1,5 +1,5 @@
 /**
- * リファクタリング後のWebViewメインエントリーポイント
+ * WebViewメインエントリーポイント
  */
 
 // CRITICAL: Add immediate diagnostic logging
@@ -179,7 +179,7 @@ class TerminalWebviewManager {
     this.configManager = new ConfigManager();
     this.performanceManager = new PerformanceManager();
     this.uiManager = new UIManager();
-    
+
     // NotificationUtilsにUIManagerを設定
     setUIManager(this.uiManager);
     this.inputManager = new InputManager();
@@ -307,103 +307,54 @@ class TerminalWebviewManager {
       terminalDiv.className = 'terminal-container';
       terminalDiv.tabIndex = -1; // Make focusable
 
-      // Create terminal header with delete button
-      const terminalHeader = document.createElement('div');
-      terminalHeader.className = 'terminal-header';
-      terminalHeader.setAttribute('data-terminal-id', id); // Add terminal ID to header
-      terminalHeader.style.cssText = `
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        height: 24px;
-        padding: 2px 8px;
-        background: var(--vscode-tab-inactiveBackground, #2d2d30);
-        border-bottom: 1px solid var(--vscode-widget-border, #454545);
-        font-size: 11px;
-        color: var(--vscode-tab-inactiveForeground, #969696);
-        user-select: none;
-      `;
+      // Create terminal header using UIManager and HeaderFactory
+      const terminalHeader = this.uiManager.createTerminalHeader(
+        id,
+        name || `Terminal ${id.slice(-4)}`
+      );
 
-      // Terminal title with proper class for Claude status updates
-      const terminalTitle = document.createElement('span');
-      terminalTitle.className = 'terminal-name'; // Add class for proper DOM structure
-      terminalTitle.textContent = name || `Terminal ${id.slice(-4)}`;
-      terminalTitle.style.cssText = `
-        flex: 1;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      `;
+      // Setup delete button event handler (HeaderFactory already created the button)
+      const deleteButton = terminalHeader.querySelector('.close-btn') as HTMLButtonElement;
 
-      // Delete button
-      const deleteButton = document.createElement('button');
-      deleteButton.innerHTML = '×';
-      deleteButton.title = `Close ${name || 'Terminal'}`;
-      deleteButton.setAttribute('data-terminal-close', id);
-      deleteButton.style.cssText = `
-        background: none;
-        border: none;
-        color: var(--vscode-tab-inactiveForeground, #969696);
-        font-size: 18px;
-        font-weight: bold;
-        cursor: pointer;
-        padding: 0;
-        width: 20px;
-        height: 20px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 2px;
-        line-height: 1;
-        position: relative;
-        z-index: 100;
-      `;
+      // HeaderFactory already handles hover effects for the button
 
-      // Delete button hover effect
-      deleteButton.addEventListener('mouseenter', () => {
-        log(`🖱️ [DELETE] Mouse enter on delete button for terminal: ${id}`);
-        deleteButton.style.background = 'var(--vscode-toolbar-hoverBackground, #37373d)';
-        deleteButton.style.color = 'var(--vscode-foreground, #cccccc)';
-      });
+      // Setup delete button click handler
+      if (deleteButton) {
+        deleteButton.addEventListener(
+          'click',
+          (event) => {
+            event.stopPropagation();
+            try {
+              // ヘッダの×ボタン用 - 指定されたターミナルを直接削除
+              log(`🗑️ [HEADER] Deleting specific terminal: ${id}`);
 
-      deleteButton.addEventListener('mouseleave', () => {
-        log(`🖱️ [DELETE] Mouse leave on delete button for terminal: ${id}`);
-        deleteButton.style.background = 'none';
-        deleteButton.style.color = 'var(--vscode-tab-inactiveForeground, #969696)';
-      });
+              // 新しいアーキテクチャ: 統一された削除要求を送信（WebViewは判定しない）
+              this.messageManager.sendDeleteTerminalMessage(id, 'header', this);
+              log(`🗑️ [HEADER] Delete message sent to extension for: ${id}`);
+            } catch (error) {
+              log(`🗑️ [HEADER] Error sending delete message:`, error);
+            }
+          },
+          true
+        ); // Use capture phase
+      }
 
-      // Delete button click handler with detailed debugging
-      deleteButton.addEventListener(
-        'click',
-        (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          e.stopImmediatePropagation();
-
-          log(`🗑️ [DELETE] ========== DELETE BUTTON CLICKED ==========`);
-          log(`🗑️ [DELETE] Terminal ID: ${id}`);
-          log(`🗑️ [DELETE] Button element:`, deleteButton);
-          log(`🗑️ [DELETE] Event:`, e);
-          log(
-            `🗑️ [DELETE] Current terminals:`,
-            Array.from(this.splitManager.getTerminals().keys())
-          );
-
+      // Setup split button click handler
+      const splitButton = terminalHeader.querySelector('.split-btn') as HTMLButtonElement;
+      if (splitButton) {
+        splitButton.addEventListener('click', (event) => {
+          event.stopPropagation();
           try {
-            // ヘッダの×ボタン用 - 指定されたターミナルを直接削除
-            log(`🗑️ [HEADER] Deleting specific terminal: ${id}`);
-            // 新しいアーキテクチャ: 統一された削除要求を送信（WebViewは判定しない）
-            this.messageManager.sendDeleteTerminalMessage(id, 'header', this);
-            log(`🗑️ [HEADER] Delete message sent to extension for: ${id}`);
+            log(`🔀 [HEADER] Split button clicked for terminal: ${id}`);
+            // TODO: Implement split functionality using correct message method
+            log(`🔀 [HEADER] Split functionality temporarily disabled`);
           } catch (error) {
-            log(`🗑️ [HEADER] Error sending delete message:`, error);
+            log(`❌ [HEADER] Error handling split button click:`, error);
           }
-        },
-        true
-      ); // Use capture phase
+        });
+      }
 
-      terminalHeader.appendChild(terminalTitle);
-      terminalHeader.appendChild(deleteButton);
+      // HeaderFactory already assembled the complete header structure
 
       // Create terminal content area
       const terminalContent = document.createElement('div');
@@ -774,6 +725,10 @@ class TerminalWebviewManager {
     try {
       // SplitManagerを使用してクリーンアップ
       this.splitManager.removeTerminal(terminalId);
+
+      // UIManagerのヘッダーキャッシュもクリア
+      this.uiManager.removeTerminalHeader(terminalId);
+
       log(`✅ [WEBVIEW] Terminal removed from UI: ${terminalId}`);
     } catch (error) {
       log(`❌ [WEBVIEW] Error removing terminal from UI:`, error);
@@ -1210,7 +1165,8 @@ class TerminalWebviewManager {
    */
   public updateClaudeStatus(
     activeTerminalName: string | null,
-    status: 'connected' | 'disconnected' | 'none'
+    status: 'connected' | 'disconnected' | 'none',
+    agentType: string | null = null
   ): void {
     log(`🔄 [WEBVIEW] ========== UPDATE CLAUDE STATUS CALLED ==========`);
     log(`🔄 [WEBVIEW] activeTerminalName: ${activeTerminalName}`);
@@ -1221,7 +1177,7 @@ class TerminalWebviewManager {
     );
 
     try {
-      this.uiManager.updateCliAgentStatusDisplay(activeTerminalName, status);
+      this.uiManager.updateCliAgentStatusDisplay(activeTerminalName, status, agentType);
       log(`✅ [WEBVIEW] UIManager.updateCliAgentStatusDisplay called successfully`);
     } catch (error) {
       log(`❌ [WEBVIEW] Error calling UIManager.updateCliAgentStatusDisplay:`, error);
@@ -1282,9 +1238,9 @@ window.onmessage = (event) => {
 
   // Skip general message display to reduce clutter
 
-  if (event.data?.command === 'claudeStatusUpdate') {
-    log('🎉 [WEBVIEW-ALT] *** CLAUDE STATUS UPDATE DETECTED IN ALT LISTENER ***');
-    log('🎉 [WEBVIEW-ALT] Claude status data:', event.data.claudeStatus);
+  if (event.data?.command === 'cliAgentStatusUpdate') {
+    log('🎉 [WEBVIEW-ALT] *** CLI AGENT STATUS UPDATE DETECTED IN ALT LISTENER ***');
+    log('🎉 [WEBVIEW-ALT] CLI Agent status data:', event.data.cliAgentStatus);
 
     // Skip Claude status display to reduce clutter
 
@@ -1295,8 +1251,8 @@ window.onmessage = (event) => {
       try {
         // Manually call updateClaudeStatus to test
         (window as any).terminalManager.updateClaudeStatus(
-          event.data.claudeStatus.activeTerminalName,
-          event.data.claudeStatus.status
+          event.data.cliAgentStatus.activeTerminalName,
+          event.data.cliAgentStatus.status
         );
 
         // Skip success display
@@ -1307,8 +1263,8 @@ window.onmessage = (event) => {
           if (names.length > 0) {
             // Try updating again
             (window as any).terminalManager.updateClaudeStatus(
-              event.data.claudeStatus.activeTerminalName,
-              event.data.claudeStatus.status
+              event.data.cliAgentStatus.activeTerminalName,
+              event.data.cliAgentStatus.status
             );
           }
         }, 1000); // Wait 1 second
@@ -1348,14 +1304,14 @@ window.addEventListener('message', (event) => {
     log('🎯 [WEBVIEW] Message command:', message?.command);
     log('🎯 [WEBVIEW] Message keys:', Object.keys(message || {}));
 
-    if (message?.command === 'claudeStatusUpdate') {
-      log('🔔 [WEBVIEW] *** CLAUDE STATUS UPDATE MESSAGE DETECTED ***');
-      log('🔔 [WEBVIEW] Claude status data:', message.claudeStatus);
+    if (message?.command === 'cliAgentStatusUpdate') {
+      log('🔔 [WEBVIEW] *** CLI AGENT STATUS UPDATE MESSAGE DETECTED ***');
+      log('🔔 [WEBVIEW] CLI Agent status data:', message.cliAgentStatus);
       log(
-        '🔔 [WEBVIEW] Claude status activeTerminalName:',
-        message.claudeStatus?.activeTerminalName
+        '🔔 [WEBVIEW] CLI Agent status activeTerminalName:',
+        message.cliAgentStatus?.activeTerminalName
       );
-      log('🔔 [WEBVIEW] Claude status status:', message.claudeStatus?.status);
+      log('🔔 [WEBVIEW] CLI Agent status status:', message.cliAgentStatus?.status);
     }
 
     // Delegate to MessageManager
@@ -1399,6 +1355,13 @@ try {
         command: 'ready',
       });
       log('✅ [WEBVIEW] Traditional ready notification sent as fallback');
+
+      // Request state restoration (for panel moves or reconnection)
+      api.postMessage({
+        command: 'requestStateRestoration',
+        timestamp: Date.now(),
+      });
+      log('🔄 [WEBVIEW] State restoration request sent');
     }, 10);
   } else {
     log('❌ [WEBVIEW] No VS Code API available in window.vscodeApi');

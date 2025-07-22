@@ -114,6 +114,11 @@ export class ConfigManager {
       fontSize: this.getFontSize(),
       fontFamily: this.getFontFamily(),
       cursorBlink: this.getConfig(section, CONFIG_KEYS.CURSOR_BLINK, true),
+      cursor: {
+        style: 'block',
+        blink: this.getConfig(section, CONFIG_KEYS.CURSOR_BLINK, true),
+      },
+      enableCliAgentIntegration: this.getConfig(section, 'enableCliAgentIntegration', true),
     };
   }
 
