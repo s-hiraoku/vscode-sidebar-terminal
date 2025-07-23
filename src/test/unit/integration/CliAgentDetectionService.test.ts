@@ -90,6 +90,20 @@ describe('CliAgentDetectionService', () => {
       expect(detectionService.detectExit('Connection lost')).to.be.true;
     });
 
+    it('should detect kill signals', () => {
+      expect(detectionService.detectExit('killed')).to.be.true;
+      expect(detectionService.detectExit('terminated')).to.be.true;
+      expect(detectionService.detectExit('SIGTERM')).to.be.true;
+      expect(detectionService.detectExit('SIGKILL')).to.be.true;
+      expect(detectionService.detectExit('process killed')).to.be.true;
+    });
+
+    it('should detect command not found (common when CLI agent is killed)', () => {
+      expect(detectionService.detectExit('command not found')).to.be.true;
+      expect(detectionService.detectExit('no such file or directory')).to.be.true;
+      expect(detectionService.detectExit('exit code 1')).to.be.true;
+    });
+
     it('should detect goodbye messages', () => {
       expect(detectionService.detectExit('Goodbye!')).to.be.true;
       expect(detectionService.detectExit('Session ended')).to.be.true;

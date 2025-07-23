@@ -47,14 +47,24 @@ export class CliAgentDetectionService {
     /sigint received/i,
     /\^c/i,
     
-    // プロセス終了
+    // プロセス終了・kill関連
     /process terminated/i,
     /process exited/i,
+    /process killed/i,
     /connection lost/i,
+    /killed/i,
+    /terminated/i,
+    /sigterm/i,
+    /sigkill/i,
+    /exit code/i,
+    /command not found/i,
+    /no such file or directory/i,
     
     // CLI Agent特有の終了メッセージ
     /goodbye/i,
     /session ended/i,
+    /session closed/i,
+    /disconnected/i,
   ];
 
   // プロンプトパターン（シェルに戻ったかの判定）
@@ -129,8 +139,8 @@ export class CliAgentDetectionService {
 
     const cleanOutput = output.toLowerCase().trim();
 
-    // 短すぎる出力は無視
-    if (cleanOutput.length < 3) {
+    // 短すぎる出力は無視（killシグナルなどの短い出力も検出するため閾値を下げる）
+    if (cleanOutput.length < 2) {
       return false;
     }
 
