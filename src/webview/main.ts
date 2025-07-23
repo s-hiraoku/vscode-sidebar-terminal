@@ -1504,9 +1504,14 @@ window.addEventListener('message', (event) => {
 
 log('✅ [WEBVIEW] Message listener registered successfully');
 
-// Send ready notification to extension
-log('📢 [WEBVIEW] Sending ready notification to extension...');
-try {
+// Add immediate test to verify message listener is functional
+log('🧪 [WEBVIEW] Testing message listener functionality...');
+setTimeout(() => {
+  log('🧪 [WEBVIEW] Message listener should be fully active now');
+  
+  // Send ready notification to extension
+  log('📢 [WEBVIEW] Sending ready notification to extension...');
+  try {
   // Use globally stored VS Code API instead of acquiring again
   const api = getVsCodeApi();
   if (api) {
@@ -1574,6 +1579,7 @@ try {
     stack: error instanceof Error ? error.stack : 'no stack',
   });
 }
+}, 100); // Close the setTimeout callback
 
 // Test if console and logging is working in WebView context
 log('🧪 [WEBVIEW] ========== WEBVIEW CONTEXT TEST ==========');

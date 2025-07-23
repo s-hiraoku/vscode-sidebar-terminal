@@ -12,8 +12,10 @@ import { PartialTerminalSettings, WebViewFontSettings } from '../types/shared';
 export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vscode.Disposable {
   public static readonly viewType = 'secondaryTerminal';
   private _disposables: vscode.Disposable[] = [];
+  private _terminalEventDisposables: vscode.Disposable[] = [];
 
   private _view?: vscode.WebviewView;
+  private _isInitialized = false; // Prevent duplicate initialization
   // Removed all state variables - using simple "fresh start" approach
 
   constructor(
@@ -29,39 +31,18 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     log('🔧 [DEBUG] SecondaryTerminalProvider.resolveWebviewView called');
 
     try {
-      // Comprehensive debugging to identify the root cause
-      log('🎆 [TRACE] ===========================================');
-      log('🎆 [TRACE] resolveWebviewView called');
-      log('🎆 [TRACE] Current _view exists:', !!this._view);
-      log('🎆 [TRACE] New webviewView exists:', !!webviewView);
-      log('🎆 [TRACE] Views are different objects:', this._view !== webviewView);
-      log('🎆 [TRACE] WebviewView.visible:', webviewView.visible);
-      log('🎆 [TRACE] WebviewView.viewType:', webviewView.viewType);
-      
-      const isPanelMove = this._view !== undefined && this._view !== webviewView;
-      log('🎆 [TRACE] DETECTED AS PANEL MOVE:', isPanelMove);
-
       this._view = webviewView;
+      // Reset initialization flag for new WebView (including panel moves)
+      this._isInitialized = false;
 
-      // Always configure webview options
+      // Configure webview options
       this._configureWebview(webviewView);
 
-      // Trace HTML setting process
-      log('🎆 [TRACE] About to set WebView HTML...');
-      this._setWebviewHtml(webviewView, isPanelMove);
-      log('🎆 [TRACE] WebView HTML setting completed');
-      
-      // Verify HTML was actually set
-      const htmlLength = webviewView.webview.html.length;
-      log('🎆 [TRACE] HTML length after setting:', htmlLength);
-      log('🎆 [TRACE] HTML preview (first 200 chars):', webviewView.webview.html.substring(0, 200));
+      // Set HTML
+      this._setWebviewHtml(webviewView, false);
 
-      // Trace event listener setup
-      log('🎆 [TRACE] About to set up event listeners...');
-      this._setupWebviewEventListeners(webviewView, isPanelMove);
-      log('🎆 [TRACE] Event listeners setup completed');
-
-      // Set up other listeners
+      // Set up event listeners
+      this._setupWebviewEventListeners(webviewView, false);
       this._setupTerminalEventListeners();
       this._setupCliAgentStatusListeners();
       this._setupConfigurationChangeListeners();
@@ -263,85 +244,59 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   }
 
   public async _initializeTerminal(): Promise<void> {
-    log('🎆 [TRACE] ===========================================');
-    log('🎆 [TRACE] _initializeTerminal() called');
-    log('🎆 [TRACE] Terminal manager available:', !!this._terminalManager);
-    log('🎆 [TRACE] Webview available:', !!this._view);
-    log('🎆 [TRACE] Webview visible:', this._view?.visible);
-    log('🎆 [TRACE] Webview HTML length:', this._view?.webview.html.length);
+    log('🔧 [DEBUG] Initializing terminal');
 
     try {
-      // Check if we have an active terminal
-      const hasActive = this._terminalManager.hasActiveTerminal();
-      log('🔧 [DEBUG] Has active terminal:', hasActive);
+      const config = getTerminalConfig();
+      const existingTerminals = this._terminalManager.getTerminals();
+
+      log('🔧 [DEBUG] Current terminals:', existingTerminals.length);
+      existingTerminals.forEach((terminal) => {
+        log(`🔧 [DEBUG] - Terminal: ${terminal.name} (${terminal.id})`);
+      });
 
       let terminalId: string;
-      if (!hasActive) {
-        log('🔧 [DEBUG] No active terminal, creating new one...');
-        try {
-          terminalId = this._terminalManager.createTerminal();
-          log('🔧 [DEBUG] New terminal created with ID:', terminalId);
-        } catch (createError) {
-          log('❌ [ERROR] Failed to create terminal:', createError);
-          throw new Error(`Failed to create terminal: ${String(createError)}`);
-        }
+      if (existingTerminals.length === 0) {
+        // No terminals exist - create new one
+        terminalId = this._terminalManager.createTerminal();
+        log('🔧 [DEBUG] Created new terminal:', terminalId);
       } else {
-        terminalId = this._terminalManager.getActiveTerminalId() || '';
-        log('🔧 [DEBUG] Using existing active terminal:', terminalId);
+        // Terminals exist - use active one or first one
+        const activeId = this._terminalManager.getActiveTerminalId();
+        terminalId = activeId || existingTerminals[0]?.id || '';
+        log('🔧 [DEBUG] Using existing terminal:', terminalId);
+
+        // CRITICAL: For existing terminals, manually send terminalCreated messages
+        // to ensure WebView recreates them (panel move scenario)
+        for (const terminal of existingTerminals) {
+          log('📤 [DEBUG] Sending terminalCreated for existing terminal:', terminal.id);
+          await this._sendMessage({
+            command: TERMINAL_CONSTANTS.COMMANDS.TERMINAL_CREATED,
+            terminalId: terminal.id,
+            terminalName: terminal.name,
+            config: config,
+          });
+        }
       }
 
-      if (!terminalId) {
-        throw new Error('Failed to get or create terminal ID');
-      }
-
-      const config = getTerminalConfig();
-      const terminals = this._terminalManager.getTerminals();
-
-      log('🔧 [DEBUG] Terminal config:', config);
-      log('🔧 [DEBUG] Available terminals:', terminals.length);
-      log('🔧 [DEBUG] Active terminal ID:', terminalId);
-
+      // Send INIT message with all terminal info
       const initMessage = {
         command: TERMINAL_CONSTANTS.COMMANDS.INIT,
         config,
-        terminals: terminals.map(normalizeTerminalInfo),
+        terminals: this._terminalManager.getTerminals().map(normalizeTerminalInfo),
         activeTerminalId: terminalId,
       };
 
-      log('🎆 [TRACE] About to send INIT message...');
-      log('🎆 [TRACE] INIT message data:', JSON.stringify(initMessage, null, 2));
-      log('🎆 [TRACE] Terminal count:', terminals.length);
-      log('🎆 [TRACE] Active terminal ID:', terminalId);
-      
-      try {
-        await this._sendMessage(initMessage);
-        log('✅ [TRACE] INIT message sent successfully');
+      await this._sendMessage(initMessage);
 
-        // Send font settings immediately after INIT to ensure webview has current font settings
-        log('🎆 [TRACE] About to send font settings...');
-        const fontSettings = this.getCurrentFontSettings();
-        await this._sendMessage({
-          command: 'fontSettingsUpdate',
-          fontSettings,
-        });
-        log('✅ [TRACE] Font settings sent successfully:', fontSettings);
-      
-      // Wait a bit and check if WebView is functioning
-      setTimeout(() => {
-        log('🎆 [TRACE] ===============================');
-        log('🎆 [TRACE] POST-INIT WEBVIEW STATUS CHECK:');
-        log('🎆 [TRACE] WebView visible:', this._view?.visible);
-        log('🎆 [TRACE] WebView HTML length:', this._view?.webview.html.length);
-        log('🎆 [TRACE] If WebView is functional, we should see initComplete message soon');
-        log('🎆 [TRACE] If no initComplete message appears, WebView JavaScript is not working');
-      }, 2000);
-      
-      } catch (sendError) {
-        log('❌ [TRACE] Failed to send INIT message:', sendError);
-        throw new Error(`Failed to send INIT message: ${String(sendError)}`);
-      }
+      // Send font settings
+      const fontSettings = this.getCurrentFontSettings();
+      await this._sendMessage({
+        command: 'fontSettingsUpdate',
+        fontSettings,
+      });
 
-      log('✅ [DEBUG] Fresh terminal initialization completed successfully');
+      log('✅ [DEBUG] Terminal initialization completed');
     } catch (error) {
       log('❌ [ERROR] Failed to initialize terminal:', error);
       TerminalErrorHandler.handleTerminalCreationError(error);
@@ -371,41 +326,56 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
           break;
 
         case 'test':
-          log('🧪 [DEBUG] ========== TEST MESSAGE RECEIVED FROM WEBVIEW ==========');
-          log('🧪 [DEBUG] Test message content:', message);
-          log('🧪 [DEBUG] WebView communication is working!');
+          if ((message as any).type === 'initComplete') {
+            log('🎆 [TRACE] ===============================');
+            log('🎆 [TRACE] WEBVIEW CONFIRMS INIT COMPLETE!');
+            log('🎆 [TRACE] Message data:', message);
+            log('🎆 [TRACE] This means WebView successfully processed INIT message');
+          } else {
+            log('🧪 [DEBUG] ========== TEST MESSAGE RECEIVED FROM WEBVIEW ==========');
+            log('🧪 [DEBUG] Test message content:', message);
+            log('🧪 [DEBUG] WebView communication is working!');
 
-          // Send a test CLI Agent status update immediately
-          log('🧪 [DEBUG] Sending test CLI Agent status update...');
-          this.sendCliAgentStatusUpdate('Terminal 1', 'connected');
+            // Send a test CLI Agent status update immediately
+            log('🧪 [DEBUG] Sending test CLI Agent status update...');
+            this.sendCliAgentStatusUpdate('Terminal 1', 'connected');
 
-          setTimeout(() => {
-            log('🧪 [DEBUG] Sending test CLI Agent status update (disconnected)...');
-            this.sendCliAgentStatusUpdate('Terminal 1', 'disconnected');
-          }, 2000);
+            setTimeout(() => {
+              log('🧪 [DEBUG] Sending test CLI Agent status update (disconnected)...');
+              this.sendCliAgentStatusUpdate('Terminal 1', 'disconnected');
+            }, 2000);
 
-          setTimeout(() => {
-            log('🧪 [DEBUG] Sending test CLI Agent status update (none)...');
-            this.sendCliAgentStatusUpdate(null, 'none');
-          }, 4000);
+            setTimeout(() => {
+              log('🧪 [DEBUG] Sending test CLI Agent status update (none)...');
+              this.sendCliAgentStatusUpdate(null, 'none');
+            }, 4000);
+          }
           break;
 
         case 'webviewReady':
         case TERMINAL_CONSTANTS.COMMANDS.READY:
-          log('🎆 [TRACE] ===========================================');
-          log('🎆 [TRACE] webviewReady message received!');
-          log('🎆 [TRACE] Message command:', message.command);
-          log('🎆 [TRACE] Message data:', message);
-          log('🎆 [TRACE] WebView visible:', this._view?.visible);
-          log('🎆 [TRACE] Starting terminal initialization...');
-          
-          try {
-            await this._initializeTerminal();
-            log('✅ [TRACE] Terminal initialization completed successfully');
-          } catch (initError) {
-            log('❌ [TRACE] Terminal initialization failed:', initError);
-            TerminalErrorHandler.handleTerminalCreationError(initError);
+          if (this._isInitialized) {
+            log('🔄 [DEBUG] WebView already initialized, skipping duplicate initialization');
+            break;
           }
+
+          log('🎯 [DEBUG] WebView ready - initializing terminal');
+          this._isInitialized = true;
+
+          // Simple delay and initialize
+          setTimeout(() => {
+            void (async () => {
+              try {
+                await this._initializeTerminal();
+                log('✅ [DEBUG] Terminal initialization completed');
+              } catch (error) {
+                log('❌ [ERROR] Terminal initialization failed:', error);
+                TerminalErrorHandler.handleTerminalCreationError(error);
+                // Reset flag on error to allow retry
+                this._isInitialized = false;
+              }
+            })();
+          }, 500);
           break;
         case TERMINAL_CONSTANTS.COMMANDS.INPUT:
           if (message.data) {
@@ -532,18 +502,9 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
           break;
         }
         case 'requestStateRestoration': {
-          log('🔄 [DEBUG] State restoration requested - but using fresh start approach, no action needed');
-          break;
-        }
-        case 'test': {
-          if ((message as any).type === 'initComplete') {
-            log('🎆 [TRACE] ===============================');
-            log('🎆 [TRACE] WEBVIEW CONFIRMS INIT COMPLETE!');
-            log('🎆 [TRACE] Message data:', message);
-            log('🎆 [TRACE] This means WebView successfully processed INIT message');
-          } else {
-            log('🔧 [TRACE] Test message received:', message);
-          }
+          log(
+            '🔄 [DEBUG] State restoration requested - but using fresh start approach, no action needed'
+          );
           break;
         }
         case 'error': {
@@ -565,8 +526,11 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
    * ターミナルイベントリスナーを設定する
    */
   private _setupTerminalEventListeners(): void {
+    // Clear existing listeners to prevent duplicates during panel moves
+    this._clearTerminalEventListeners();
+
     // Handle terminal output
-    this._terminalManager.onData((event) => {
+    const dataDisposable = this._terminalManager.onData((event) => {
       if (event.data) {
         log(
           '📤 [DEBUG] Terminal output received:',
@@ -583,7 +547,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     });
 
     // Handle terminal exit
-    this._terminalManager.onExit((event) => {
+    const exitDisposable = this._terminalManager.onExit((event) => {
       void this._sendMessage({
         command: TERMINAL_CONSTANTS.COMMANDS.EXIT,
         exitCode: event.exitCode,
@@ -592,7 +556,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     });
 
     // Handle terminal creation
-    this._terminalManager.onTerminalCreated((terminal) => {
+    const createdDisposable = this._terminalManager.onTerminalCreated((terminal) => {
       log('🆕 [DEBUG] Terminal created:', terminal.id, terminal.name);
       void this._sendMessage({
         command: TERMINAL_CONSTANTS.COMMANDS.TERMINAL_CREATED,
@@ -602,8 +566,11 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       });
     });
 
+    // Store disposables for cleanup
+    this._terminalEventDisposables.push(dataDisposable, exitDisposable, createdDisposable);
+
     // Handle terminal removal
-    this._terminalManager.onTerminalRemoved((terminalId) => {
+    const removedDisposable = this._terminalManager.onTerminalRemoved((terminalId) => {
       void this._sendMessage({
         command: TERMINAL_CONSTANTS.COMMANDS.TERMINAL_REMOVED,
         terminalId,
@@ -611,14 +578,26 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     });
 
     // 新しいアーキテクチャ: 状態更新イベントの処理
-    this._terminalManager.onStateUpdate((state) => {
+    const stateUpdateDisposable = this._terminalManager.onStateUpdate((state) => {
       void this._sendMessage({
         command: 'stateUpdate',
         state,
       });
     });
 
+    // Add remaining disposables
+    this._terminalEventDisposables.push(removedDisposable, stateUpdateDisposable);
+
     // Note: CLI Agent status change events are handled by _setupCliAgentStatusListeners()
+  }
+
+  /**
+   * Clear terminal event listeners to prevent duplicates
+   */
+  private _clearTerminalEventListeners(): void {
+    this._terminalEventDisposables.forEach((disposable) => disposable.dispose());
+    this._terminalEventDisposables = [];
+    log('🧹 [DEBUG] Terminal event listeners cleared');
   }
 
   /**
@@ -739,61 +718,18 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     }
 
     try {
-      log(`📤 [DEBUG] ========== SENDING MESSAGE TO WEBVIEW ==========`);
-      log(`📤 [DEBUG] Message command: ${message.command}`);
-      log(`📤 [DEBUG] Full message: ${JSON.stringify(message, null, 2)}`);
-      log(
-        `📤 [DEBUG] WebView state: visible=${this._view.visible}, viewType=${this._view.viewType}`
-      );
-      log(`📤 [DEBUG] WebView webview object exists: ${!!this._view.webview}`);
-      log(`📤 [DEBUG] Fresh start messaging - no state checks needed`);
-
-      const result = await this._view.webview.postMessage(message);
-
-      log(`✅ [TRACE] postMessage call completed, result: ${result}`);
-      log(`🎆 [TRACE] MESSAGE TRANSMISSION RESULT: ${result ? 'SUCCESS' : 'FAILED'}`);
-      log(`🎆 [TRACE] postMessage result type: ${typeof result}`);
-      log(`🎆 [TRACE] postMessage result value: ${JSON.stringify(result)}`);
-      
-      // Add timeout to detect if WebView receives and responds to critical messages
-      if (message.command === 'init') {
-        log(`⏰ [TRACE] ========================================`);
-        log(`⏰ [TRACE] CRITICAL: INIT MESSAGE SENT TO WEBVIEW`);
-        log(`⏰ [TRACE] Message data: ${JSON.stringify(message, null, 2)}`);
-        log(`⏰ [TRACE] If WebView processes this, we should see handleInitMessage logs`);
-        log(`⏰ [TRACE] Starting 5-second response timeout...`);
-        
-        setTimeout(() => {
-          log(`⏰ [TRACE] ========================================`);
-          log(`⏰ [TRACE] 5 SECONDS TIMEOUT - WEBVIEW STATUS CHECK`);
-          log(`⏰ [TRACE] WebView visible: ${this._view?.visible}`);
-          log(`⏰ [TRACE] WebView HTML length: ${this._view?.webview.html.length}`);
-          log(`⏰ [TRACE] Expected: WebView should have sent initComplete by now`);
-          log(`⏰ [TRACE] If no initComplete received = WebView not processing messages`);
-        }, 5000);
-        
-        // Also add shorter timeout to catch faster responses
-        setTimeout(() => {
-          log(`⏰ [TRACE] 1 second check - any initComplete received yet?`);
-        }, 1000);
-      }
-      
-      log(`📤 [DEBUG] ========== MESSAGE SEND COMPLETE ==========`);
+      await this._view.webview.postMessage(message);
+      log(`📤 [DEBUG] Sent message: ${message.command}`);
     } catch (error) {
-      // Handle webview disposal errors specifically - but don't queue indefinitely
-      if (error instanceof Error && 
-          (error.message.includes('disposed') || 
-           error.message.includes('Webview is disposed'))) {
-        log('⚠️ [WARN] Webview disposed during message send - terminal will reinitialize on next interaction');
+      if (
+        error instanceof Error &&
+        (error.message.includes('disposed') || error.message.includes('Webview is disposed'))
+      ) {
+        log('⚠️ [WARN] Webview disposed during message send');
         return;
       }
-      
+
       log('❌ [ERROR] Failed to send message to webview:', error);
-      log('❌ [ERROR] Error details:', {
-        name: error instanceof Error ? error.name : 'unknown',
-        message: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : 'no stack',
-      });
       TerminalErrorHandler.handleWebviewError(error);
     }
   }
@@ -1289,7 +1225,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       log('🎆 [TRACE] _setupWebviewEventListeners called');
       log('🎆 [TRACE] isPanelMove:', isPanelMove);
       log('🎆 [TRACE] WebView exists:', !!webviewView.webview);
-      
+
       // Handle messages from the webview
       log('🎆 [TRACE] Setting up message listener...');
       webviewView.webview.onDidReceiveMessage(
@@ -1310,7 +1246,9 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       webviewView.onDidChangeVisibility(
         () => {
           if (webviewView.visible) {
-            log('👁️ [DEBUG] WebView became visible - fresh start approach, no special handling needed');
+            log(
+              '👁️ [DEBUG] WebView became visible - fresh start approach, no special handling needed'
+            );
           } else {
             log('👁️ [DEBUG] WebView became hidden');
           }
@@ -1466,15 +1404,18 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   dispose(): void {
     log('🔧 [DEBUG] SecondaryTerminalProvider disposing resources...');
 
+    // Clear terminal event listeners
+    this._clearTerminalEventListeners();
+
     // Dispose all registered disposables
     for (const disposable of this._disposables) {
       disposable.dispose();
     }
     this._disposables.length = 0;
 
-    // Clear references
+    // Clear references and reset state
     this._view = undefined;
-    // No state variables to clear with fresh start approach
+    this._isInitialized = false;
 
     log('✅ [DEBUG] SecondaryTerminalProvider disposed');
   }

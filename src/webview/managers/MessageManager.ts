@@ -222,7 +222,6 @@ export class MessageManager implements IMessageManager {
    */
   private handleInitMessage(msg: MessageCommand, coordinator: IManagerCoordinator): void {
     log('🚀 [MESSAGE] Handling init message');
-    log('🚀 [MESSAGE] INIT message data:', msg);
 
     try {
       // Request current settings
@@ -236,36 +235,17 @@ export class MessageManager implements IMessageManager {
       // Emit ready event
       this.emitTerminalInteractionEvent('webview-ready', '', undefined, coordinator);
 
-      // CRITICAL: Send confirmation back to extension that INIT was processed
-      log('🎆 [MESSAGE] Sending initComplete confirmation to extension...');
-      const confirmMessage = {
+      // Send confirmation back to extension
+      coordinator.postMessageToExtension({
         command: 'test',
         type: 'initComplete',
-        data: 'WebView successfully processed INIT message',
+        data: 'WebView processed INIT message',
         timestamp: Date.now(),
-      };
+      });
       
-      // Send directly instead of queuing to ensure immediate delivery
-      try {
-        coordinator.postMessageToExtension(confirmMessage);
-        log('✅ [MESSAGE] initComplete confirmation sent directly to extension');
-      } catch (sendError) {
-        log('❌ [MESSAGE] Failed to send initComplete confirmation:', sendError);
-        // Fallback: queue it
-        this.queueMessage(confirmMessage, coordinator);
-        log('🔄 [MESSAGE] initComplete confirmation queued as fallback');
-      }
+      log('✅ [MESSAGE] INIT processing completed');
     } catch (error) {
       log('❌ [MESSAGE] Error processing INIT message:', error);
-      // Send error notification to extension
-      this.queueMessage(
-        {
-          command: 'error',
-          message: `WebView INIT processing failed: ${String(error)}`,
-          timestamp: Date.now(),
-        },
-        coordinator
-      );
     }
   }
 
