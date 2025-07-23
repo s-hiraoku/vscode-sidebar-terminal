@@ -118,11 +118,14 @@ export class CliAgentIntegrationManager {
         }
       }
 
-      // 終了検出（CONNECTED・DISCONNECTEDいずれのエージェントも対象）
+      // 終了検出（既存のエージェントがある場合のみ）
       if (currentAgent) {
-        const hasExit = this._detectExit(terminalId, data);
-        if (hasExit) {
-          log(`🔚 [CLI-AGENT-MANAGER] Detected exit for ${currentAgent.type} in terminal ${terminalId}`);
+        const hasDirectExit = this._detectionService.detectExit(data);
+        const hasShellReturn = this._hasShellPromptReturn(terminalId);
+        
+        if (hasDirectExit || hasShellReturn) {
+          const exitReason = hasDirectExit ? 'direct exit pattern' : 'shell prompt return';
+          log(`🔚 [CLI-AGENT-MANAGER] Detected exit (${exitReason}) for ${currentAgent.type} in terminal ${terminalId}`);
           this._stateService.deactivateAgent(terminalId);
         }
       }
@@ -291,21 +294,15 @@ export class CliAgentIntegrationManager {
   }
 
   /**
-   * 終了検出（統合版）
+   * シェルプロンプト復帰検出
    */
-  private _detectExit(terminalId: string, data: string): boolean {
-    // テキストベースの終了パターン
-    if (this._detectionService.detectExit(data)) {
-      return true;
-    }
-
-    // プロンプト復帰パターン
+  private _hasShellPromptReturn(terminalId: string): boolean {
     const buffer = this._outputBuffers.get(terminalId);
-    if (buffer && buffer.lines.length > 0) {
-      return this._detectionService.detectPromptReturn(buffer.lines);
+    if (!buffer || buffer.lines.length === 0) {
+      return false;
     }
 
-    return false;
+    return this._detectionService.detectShellPromptReturn(buffer.lines);
   }
 
   /**

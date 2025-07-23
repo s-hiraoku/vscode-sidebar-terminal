@@ -10,79 +10,63 @@ export interface DetectionResult {
 }
 
 /**
- * CLI Agent検出サービス
+ * CLI Agent検出サービス（シンプルで確実な実装）
  *
- * 責務：
- * - コマンド入力からのCLI Agent検出
- * - ターミナル出力からのCLI Agent検出
- * - 終了パターンの検出
- * - 検出パターンの管理
+ * 設計原則:
+ * - 誤検出よりも見逃しを減らす
+ * - シンプルで理解しやすいロジック
+ * - 明確な検出条件
  */
 export class CliAgentDetectionService {
-  // 検出パターン定義
+  // 起動コマンドパターン（厳密）
   private static readonly COMMAND_PATTERNS = {
-    claude: /^(claude)(\s|$)/i,
-    gemini: /^(gemini)(\s|$)/i,
+    claude: /^claude(\s|$)/i,
+    gemini: /^gemini(\s|$)/i,
   };
 
-  private static readonly OUTPUT_PATTERNS = {
+  // 起動時の出力パターン（確実な検出用）
+  private static readonly STARTUP_PATTERNS = {
     claude: [
-      /welcome to claude code/i,
-      /claude code cli/i,
-      /claude\.ai/i,
+      /claude code/i,
       /anthropic/i,
       /human:/i,
       /assistant:/i,
-      /type your message/i,
-      /to start a conversation/i,
     ],
     gemini: [
-      /welcome to gemini/i,
-      /gemini cli/i,
-      /google ai/i,
-      /bard/i,
+      /gemini/i,
+      /google/i,
       /user:/i,
       /model:/i,
-      /enter your prompt/i,
-      /gemini is ready/i,
     ],
   };
 
+  // 終了パターン（確実なもののみ）
   private static readonly EXIT_PATTERNS = [
-    // Claude Code特有の終了パターン
-    /goodbye/i,
-    /chat\s+ended/i,
-    /session\s+terminated/i,
-    /session\s+closed/i,
-    /connection\s+closed/i,
-    /claude\s+code\s+session\s+ended/i,
-    /exiting\s+claude/i,
-
-    // Gemini特有の終了パターン
-    /gemini\s+session\s+ended/i,
-    /exiting\s+gemini/i,
-
-    // プロセス終了パターン（より具体的）
-    /process\s+exit\s+code/i,
-    /command\s+not\s+found:\s+(claude|gemini)/i,
-    /^(claude|gemini):\s+command\s+not\s+found/i,
-
-    // Ctrl+C による中断（より具体的）
+    // Ctrl+C による中断（最確実）
     /keyboardinterrupt/i,
-    /sigint/i,
+    /sigint received/i,
+    /\^c/i,
+    
+    // プロセス終了
+    /process terminated/i,
+    /process exited/i,
+    /connection lost/i,
+    
+    // CLI Agent特有の終了メッセージ
+    /goodbye/i,
+    /session ended/i,
   ];
 
-  private static readonly PROMPT_PATTERNS = [
-    /\$\s*$/, // bash prompt
-    /%\s*$/, // zsh prompt
-    />\s*$/, // cmd prompt
-    /bash-[0-9.]+\$/, // bash version prompt
-    /➜\s+/, // oh-my-zsh prompt
-    /\[\w+@\w+\s+[^\]]+\]\$\s*$/, // [user@host dir]$ prompt
+  // プロンプトパターン（シェルに戻ったかの判定）
+  private static readonly SHELL_PROMPT_PATTERNS = [
+    /^\$\s*$/m,           // bash prompt
+    /^%\s*$/m,            // zsh prompt  
+    /^>\s*$/m,            // cmd prompt
+    /^[a-zA-Z0-9_-]+@[a-zA-Z0-9_-]+:\S+\$\s*$/m, // user@host:path$
   ];
 
   /**
-   * コマンド入力からCLI Agentを検出
+   * コマンド入力からCLI Agent検出
    */
   public detectFromCommand(command: string): DetectionResult | null {
     if (!command || typeof command !== 'string') {
@@ -90,23 +74,24 @@ export class CliAgentDetectionService {
     }
 
     const cleanCommand = command.trim().toLowerCase();
+    
+    // Claude Code検出
+    if (CliAgentDetectionService.COMMAND_PATTERNS.claude.test(cleanCommand)) {
+      log(`🔍 [CLI-AGENT-DETECTION] Claude Code detected from command: ${command}`);
+      return { type: 'claude', confidence: 1.0 };
+    }
 
-    // 各パターンをチェック
-    for (const [type, pattern] of Object.entries(CliAgentDetectionService.COMMAND_PATTERNS)) {
-      if (pattern.test(cleanCommand)) {
-        log(`🔍 [CLI-AGENT-DETECTION] Detected ${type.toUpperCase()} CLI from command: ${command}`);
-        return {
-          type: type as CliAgentType,
-          confidence: 1.0, // コマンドベースの検出は高信頼度
-        };
-      }
+    // Gemini検出
+    if (CliAgentDetectionService.COMMAND_PATTERNS.gemini.test(cleanCommand)) {
+      log(`🔍 [CLI-AGENT-DETECTION] Gemini detected from command: ${command}`);
+      return { type: 'gemini', confidence: 1.0 };
     }
 
     return null;
   }
 
   /**
-   * ターミナル出力からCLI Agentを検出
+   * 出力からCLI Agent検出（起動確認用）
    */
   public detectFromOutput(output: string): DetectionResult | null {
     if (!output || typeof output !== 'string') {
@@ -115,19 +100,19 @@ export class CliAgentDetectionService {
 
     const cleanOutput = output.toLowerCase();
 
-    // 各タイプのパターンをチェック
-    for (const [type, patterns] of Object.entries(CliAgentDetectionService.OUTPUT_PATTERNS)) {
-      for (const pattern of patterns) {
-        if (pattern.test(cleanOutput)) {
-          const confidence = this._calculateOutputConfidence(cleanOutput, patterns);
-          log(
-            `🔍 [CLI-AGENT-DETECTION] Detected ${type.toUpperCase()} CLI from output pattern: ${pattern}`
-          );
-          return {
-            type: type as CliAgentType,
-            confidence,
-          };
-        }
+    // Claude Code検出
+    for (const pattern of CliAgentDetectionService.STARTUP_PATTERNS.claude) {
+      if (pattern.test(cleanOutput)) {
+        log(`🔍 [CLI-AGENT-DETECTION] Claude Code detected from output pattern: ${pattern.source}`);
+        return { type: 'claude', confidence: 0.8 };
+      }
+    }
+
+    // Gemini検出
+    for (const pattern of CliAgentDetectionService.STARTUP_PATTERNS.gemini) {
+      if (pattern.test(cleanOutput)) {
+        log(`🔍 [CLI-AGENT-DETECTION] Gemini detected from output pattern: ${pattern.source}`);
+        return { type: 'gemini', confidence: 0.8 };
       }
     }
 
@@ -135,7 +120,7 @@ export class CliAgentDetectionService {
   }
 
   /**
-   * 終了パターンを検出（より厳密なチェック）
+   * CLI Agent終了検出（シンプルで確実）
    */
   public detectExit(output: string): boolean {
     if (!output || typeof output !== 'string') {
@@ -144,22 +129,15 @@ export class CliAgentDetectionService {
 
     const cleanOutput = output.toLowerCase().trim();
 
-    // 空の出力や非常に短い出力は無視
+    // 短すぎる出力は無視
     if (cleanOutput.length < 3) {
       return false;
     }
 
-    // CLI Agent特有の終了パターンのみチェック
+    // 終了パターンをチェック
     for (const pattern of CliAgentDetectionService.EXIT_PATTERNS) {
       if (pattern.test(cleanOutput)) {
-        log(`🔍 [CLI-AGENT-DETECTION] Exit pattern detected: ${pattern.source}`);
-        
-        // 追加の安全チェック: 通常のシェルコマンドではないことを確認
-        if (this._isLikelyShellCommand(cleanOutput)) {
-          log(`🔍 [CLI-AGENT-DETECTION] False positive: looks like shell command`);
-          continue;
-        }
-        
+        log(`🔚 [CLI-AGENT-DETECTION] Exit pattern detected: ${pattern.source}`);
         return true;
       }
     }
@@ -168,44 +146,19 @@ export class CliAgentDetectionService {
   }
 
   /**
-   * 通常のシェルコマンドかどうかを判定（誤検出防止）
+   * シェルプロンプトへの復帰検出
    */
-  private _isLikelyShellCommand(output: string): boolean {
-    // シェルコマンドっぽいパターン
-    const shellCommandPatterns = [
-      /^ls\s/,
-      /^cd\s/,
-      /^mkdir\s/,
-      /^rm\s/,
-      /^cp\s/,
-      /^mv\s/,
-      /^cat\s/,
-      /^grep\s/,
-      /^find\s/,
-      /^ps\s/,
-      /^kill\s/,
-      /^npm\s/,
-      /^node\s/,
-      /^git\s/,
-    ];
-
-    return shellCommandPatterns.some(pattern => pattern.test(output));
-  }
-
-  /**
-   * プロンプト復帰を検出
-   */
-  public detectPromptReturn(recentOutput: string[]): boolean {
+  public detectShellPromptReturn(recentOutput: string[]): boolean {
     if (!recentOutput || recentOutput.length === 0) {
       return false;
     }
 
-    // 最近の出力を結合して分析
-    const combinedOutput = recentOutput.slice(-3).join('\n');
-
-    for (const pattern of CliAgentDetectionService.PROMPT_PATTERNS) {
-      if (pattern.test(combinedOutput)) {
-        log(`🔍 [CLI-AGENT-DETECTION] Prompt return detected: ${pattern}`);
+    // 最新の出力行をチェック
+    const latestLines = recentOutput.slice(-3).join('\n');
+    
+    for (const pattern of CliAgentDetectionService.SHELL_PROMPT_PATTERNS) {
+      if (pattern.test(latestLines)) {
+        log(`🔚 [CLI-AGENT-DETECTION] Shell prompt return detected: ${pattern.source}`);
         return true;
       }
     }
@@ -214,60 +167,14 @@ export class CliAgentDetectionService {
   }
 
   /**
-   * 検出パターンの有効性を検証（テスト用）
+   * デバッグ用：検出パターンの一覧を取得
    */
-  public validatePatterns(): { valid: boolean; errors: string[] } {
-    const errors: string[] = [];
-
-    try {
-      // コマンドパターンの検証
-      for (const [type, pattern] of Object.entries(CliAgentDetectionService.COMMAND_PATTERNS)) {
-        if (!(pattern instanceof RegExp)) {
-          errors.push(`Invalid command pattern for ${type}: not a RegExp`);
-        }
-      }
-
-      // 出力パターンの検証
-      for (const [type, patterns] of Object.entries(CliAgentDetectionService.OUTPUT_PATTERNS)) {
-        if (!Array.isArray(patterns)) {
-          errors.push(`Invalid output patterns for ${type}: not an array`);
-          continue;
-        }
-
-        patterns.forEach((pattern, index) => {
-          if (!(pattern instanceof RegExp)) {
-            errors.push(`Invalid output pattern for ${type}[${index}]: not a RegExp`);
-          }
-        });
-      }
-    } catch (error) {
-      errors.push(`Pattern validation failed: ${error}`);
-    }
-
+  public getPatterns() {
     return {
-      valid: errors.length === 0,
-      errors,
+      commands: CliAgentDetectionService.COMMAND_PATTERNS,
+      startup: CliAgentDetectionService.STARTUP_PATTERNS,
+      exit: CliAgentDetectionService.EXIT_PATTERNS,
+      shellPrompt: CliAgentDetectionService.SHELL_PROMPT_PATTERNS,
     };
-  }
-
-  // =================== Private Methods ===================
-
-  /**
-   * 出力パターンマッチの信頼度を計算
-   */
-  private _calculateOutputConfidence(output: string, patterns: RegExp[]): number {
-    let matches = 0;
-
-    for (const pattern of patterns) {
-      if (pattern.test(output)) {
-        matches++;
-      }
-    }
-
-    // マッチしたパターン数に基づいて信頼度を計算
-    const baseConfidence = 0.7; // 基本信頼度
-    const bonusConfidence = Math.min(matches * 0.1, 0.3); // 複数マッチのボーナス
-
-    return Math.min(baseConfidence + bonusConfidence, 1.0);
   }
 }
