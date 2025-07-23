@@ -223,16 +223,30 @@ export class MessageManager implements IMessageManager {
   private handleInitMessage(msg: MessageCommand, coordinator: IManagerCoordinator): void {
     log('🚀 [MESSAGE] Handling init message');
 
-    // Request current settings
-    this.queueMessage(
-      {
-        command: 'getSettings',
-      },
-      coordinator
-    );
+    try {
+      // Request current settings
+      this.queueMessage(
+        {
+          command: 'getSettings',
+        },
+        coordinator
+      );
 
-    // Emit ready event
-    this.emitTerminalInteractionEvent('webview-ready', '', undefined, coordinator);
+      // Emit ready event
+      this.emitTerminalInteractionEvent('webview-ready', '', undefined, coordinator);
+
+      // Send confirmation back to extension
+      coordinator.postMessageToExtension({
+        command: 'test',
+        type: 'initComplete',
+        data: 'WebView processed INIT message',
+        timestamp: Date.now(),
+      });
+      
+      log('✅ [MESSAGE] INIT processing completed');
+    } catch (error) {
+      log('❌ [MESSAGE] Error processing INIT message:', error);
+    }
   }
 
   /**

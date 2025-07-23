@@ -683,6 +683,10 @@ class TerminalWebviewManager {
   private synchronizeWithState(state: TerminalState): void {
     log('🔄 [WEBVIEW] Synchronizing UI with state:', state);
 
+    // WebView初期化中かどうかを判定
+    const isInitializing = this.isWebViewInitializing();
+    log('🔄 [WEBVIEW] Is WebView initializing:', isInitializing);
+
     // 現在のターミナルリストと新しい状態を比較
     const currentTerminals = new Set(this.splitManager.getTerminals().keys());
     const newTerminals = new Set(state.terminals.map((t) => t.id));
@@ -698,12 +702,20 @@ class TerminalWebviewManager {
       }
     }
 
-    // 新しく追加されたターミナルをUIに追加
+    // ターミナルの追加・復元処理
     for (const terminal of state.terminals) {
       if (!currentTerminals.has(terminal.id)) {
-        log(`➕ [WEBVIEW] Adding terminal to UI: ${terminal.id}`);
-        // 新しいターミナルは既にcreateTerminalで作成されているはず
-        // ここでは特別な処理は不要
+        // 完全に新しいターミナル
+        log(`➕ [WEBVIEW] Adding new terminal to UI: ${terminal.id}`);
+        this.requestTerminalCreation(terminal);
+      } else if (!isInitializing) {
+        // 初期化完了後のみDOM健全性をチェック
+        const needsRecreation = this.checkIfTerminalNeedsRecreation(terminal.id);
+        if (needsRecreation) {
+          log(`🔄 [WEBVIEW] Terminal ${terminal.id} needs DOM recreation after panel move`);
+          this.cleanupTerminalData(terminal.id);
+          this.requestTerminalCreation(terminal);
+        }
       }
     }
 
@@ -716,6 +728,157 @@ class TerminalWebviewManager {
     }
 
     log('✅ [WEBVIEW] State synchronization completed');
+  }
+
+  /**
+   * ターミナルがDOM再作成を必要とするかチェック
+   */
+  private checkIfTerminalNeedsRecreation(terminalId: string): boolean {
+    try {
+      // SplitManagerにターミナルが登録されているかチェック
+      const terminals = this.splitManager.getTerminals();
+      const terminalInstance = terminals.get(terminalId);
+
+      if (!terminalInstance) {
+        log(`🔍 [WEBVIEW] Terminal ${terminalId} not found in SplitManager`);
+        return true;
+      }
+
+      // DOM要素コンテナをチェック
+      const terminalContainers = this.splitManager.getTerminalContainers();
+      const terminalContainer = terminalContainers.get(terminalId);
+
+      if (!terminalContainer) {
+        log(`🔍 [WEBVIEW] Terminal ${terminalId} container not found`);
+        return true;
+      }
+
+      // DOM要素が実際にDOMツリーに存在するかチェック
+      if (!terminalContainer.isConnected || !document.contains(terminalContainer)) {
+        log(`🔍 [WEBVIEW] Terminal ${terminalId} DOM element is disconnected`);
+        return true;
+      }
+
+      // xterm.js インスタンスの存在チェック（terminal要素内のcanvas要素の存在で判定）
+      const canvasElement = terminalContainer.querySelector('.xterm-screen canvas');
+      if (!canvasElement) {
+        log(`🔍 [WEBVIEW] Terminal ${terminalId} xterm.js canvas not found`);
+        return true;
+      }
+
+      log(`✅ [WEBVIEW] Terminal ${terminalId} DOM elements are healthy`);
+      return false;
+    } catch (error) {
+      log(`❌ [WEBVIEW] Error checking terminal recreation need:`, error);
+      return true; // エラーの場合は安全のため再作成
+    }
+  }
+
+  /**
+   * 既存のターミナルデータをクリーンアップ
+   */
+  private cleanupTerminalData(terminalId: string): void {
+    try {
+      log(`🧹 [WEBVIEW] Cleaning up terminal data: ${terminalId}`);
+
+      // SplitManagerから削除
+      this.splitManager.removeTerminal(terminalId);
+
+      // UIManagerのヘッダーキャッシュも削除
+      this.uiManager.removeTerminalHeader(terminalId);
+
+      log(`✅ [WEBVIEW] Terminal data cleaned up: ${terminalId}`);
+    } catch (error) {
+      log(`❌ [WEBVIEW] Error cleaning up terminal data:`, error);
+    }
+  }
+
+  /**
+   * WebViewが初期化中かどうかを判定
+   */
+  private isWebViewInitializing(): boolean {
+    try {
+      // DOM要素の基本構造が完成しているかチェック
+      const terminalBody = document.getElementById('terminal-body');
+      if (!terminalBody) {
+        log('🔍 [WEBVIEW] Terminal body not found - still initializing');
+        return true;
+      }
+
+      // SplitManagerとUIManagerが適切に初期化されているかチェック
+      if (!this.splitManager || !this.uiManager) {
+        log('🔍 [WEBVIEW] Managers not initialized - still initializing');
+        return true;
+      }
+
+      // 基本的なHTML構造が存在するかチェック
+      const essentialElements = ['terminal-body', 'terminal-header-controls'];
+
+      for (const elementId of essentialElements) {
+        if (!document.getElementById(elementId)) {
+          log(`🔍 [WEBVIEW] Essential element ${elementId} not found - still initializing`);
+          return true;
+        }
+      }
+
+      log('✅ [WEBVIEW] WebView initialization appears complete');
+      return false;
+    } catch (error) {
+      log('❌ [WEBVIEW] Error checking initialization state:', error);
+      return true; // エラーの場合は初期化中として扱う
+    }
+  }
+
+  /**
+   * 安全なターミナル作成リクエスト
+   */
+  private requestTerminalCreation(terminal: { id: string; name: string }): void {
+    try {
+      log(`🔄 [WEBVIEW] Requesting terminal creation: ${terminal.id} (${terminal.name})`);
+
+      // Extensionに正規のターミナル作成をリクエスト
+      this.postMessageToExtension({
+        command: 'createTerminal',
+        terminalId: terminal.id,
+        terminalName: terminal.name,
+      });
+
+      log(`✅ [WEBVIEW] Terminal creation request sent: ${terminal.id}`);
+    } catch (error) {
+      log(`❌ [WEBVIEW] Error requesting terminal creation:`, error);
+    }
+  }
+
+  /**
+   * WebViewが再接続かどうかを検出
+   */
+  private detectWebViewReconnection(): boolean {
+    try {
+      // 既存のManagerインスタンスが存在する場合は再接続の可能性が高い
+      const hasExistingManagers = !!(this.splitManager && this.uiManager && this.configManager);
+
+      // ローカルストレージに何らかの状態が保存されている場合も再接続の可能性
+      const hasStoredState =
+        typeof window.localStorage !== 'undefined' && window.localStorage.length > 0;
+
+      // DOM要素に何らかのターミナル関連要素が残っている場合
+      const terminalBody = document.getElementById('terminal-body');
+      const hasExistingTerminalElements = terminalBody && terminalBody.children.length > 0;
+
+      const isReconnecting = hasExistingManagers || hasStoredState || hasExistingTerminalElements;
+
+      log('🔍 [WEBVIEW] Reconnection detection:', {
+        hasExistingManagers,
+        hasStoredState,
+        hasExistingTerminalElements,
+        isReconnecting,
+      });
+
+      return isReconnecting;
+    } catch (error) {
+      log('❌ [WEBVIEW] Error detecting reconnection:', error);
+      return false; // エラーの場合は初期ロードとして扱う
+    }
   }
 
   /**
@@ -1314,6 +1477,14 @@ window.addEventListener('message', (event) => {
       log('🔔 [WEBVIEW] CLI Agent status status:', message.cliAgentStatus?.status);
     }
 
+    if (message?.command === 'init') {
+      log('🚀 [WEBVIEW] ******************************************');
+      log('🚀 [WEBVIEW] *** INIT MESSAGE DETECTED IN WEBVIEW! ***');
+      log('🚀 [WEBVIEW] ******************************************');
+      log('🚀 [WEBVIEW] Full INIT message data:', message);
+      log('🚀 [WEBVIEW] This should trigger handleInitMessage in MessageManager');
+    }
+
     // Delegate to MessageManager
     log('🎯 [WEBVIEW] About to call MessageManager.handleMessage...');
     log('🎯 [WEBVIEW] TerminalManager available:', !!terminalManager);
@@ -1333,9 +1504,14 @@ window.addEventListener('message', (event) => {
 
 log('✅ [WEBVIEW] Message listener registered successfully');
 
-// Send ready notification to extension
-log('📢 [WEBVIEW] Sending ready notification to extension...');
-try {
+// Add immediate test to verify message listener is functional
+log('🧪 [WEBVIEW] Testing message listener functionality...');
+setTimeout(() => {
+  log('🧪 [WEBVIEW] Message listener should be fully active now');
+  
+  // Send ready notification to extension
+  log('📢 [WEBVIEW] Sending ready notification to extension...');
+  try {
   // Use globally stored VS Code API instead of acquiring again
   const api = getVsCodeApi();
   if (api) {
@@ -1356,12 +1532,23 @@ try {
       });
       log('✅ [WEBVIEW] Traditional ready notification sent as fallback');
 
-      // Request state restoration (for panel moves or reconnection)
-      api.postMessage({
-        command: 'requestStateRestoration',
-        timestamp: Date.now(),
-      });
-      log('🔄 [WEBVIEW] State restoration request sent');
+      // Request state restoration only if WebView appears to be reconnecting
+      // (not during initial load)
+      const detectReconnection = () => {
+        try {
+          // Skip reconnection detection for now - just always request restoration
+          // The WebView side will handle filtering appropriately
+          api.postMessage({
+            command: 'requestStateRestoration',
+            timestamp: Date.now(),
+          });
+          log('🔄 [WEBVIEW] State restoration request sent');
+        } catch (error) {
+          log('❌ [WEBVIEW] Error during state restoration request:', error);
+        }
+      };
+
+      setTimeout(detectReconnection, 50);
     }, 10);
   } else {
     log('❌ [WEBVIEW] No VS Code API available in window.vscodeApi');
@@ -1392,6 +1579,7 @@ try {
     stack: error instanceof Error ? error.stack : 'no stack',
   });
 }
+}, 100); // Close the setTimeout callback
 
 // Test if console and logging is working in WebView context
 log('🧪 [WEBVIEW] ========== WEBVIEW CONTEXT TEST ==========');
