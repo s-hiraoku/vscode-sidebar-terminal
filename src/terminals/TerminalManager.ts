@@ -29,6 +29,7 @@ import {
   CliAgentIntegrationManager,
   CliAgentStatusEvent,
 } from '../integration/CliAgentIntegrationManager';
+import { CliAgentInfo } from '../integration/CliAgentStateService';
 
 export class TerminalManager {
   private readonly _terminals = new Map<string, TerminalInstance>();
@@ -650,7 +651,7 @@ export class TerminalManager {
   /**
    * Get all active CLI Agents
    */
-  public getConnectedAgents(): Array<{ terminalId: string; agentInfo: unknown }> {
+  public getConnectedAgents(): Array<{ terminalId: string; agentInfo: CliAgentInfo }> {
     return this._cliAgentManager.getConnectedAgents();
   }
 }

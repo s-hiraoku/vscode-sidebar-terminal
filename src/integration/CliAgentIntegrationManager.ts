@@ -118,10 +118,11 @@ export class CliAgentIntegrationManager {
         }
       }
 
-      // 終了検出（CONNECTEDなエージェントのみ対象）
-      if (currentAgent && currentAgent.status === CliAgentStatus.CONNECTED) {
+      // 終了検出（CONNECTED・DISCONNECTEDいずれのエージェントも対象）
+      if (currentAgent) {
         const hasExit = this._detectExit(terminalId, data);
         if (hasExit) {
+          log(`🔚 [CLI-AGENT-MANAGER] Detected exit for ${currentAgent.type} in terminal ${terminalId}`);
           this._stateService.deactivateAgent(terminalId);
         }
       }

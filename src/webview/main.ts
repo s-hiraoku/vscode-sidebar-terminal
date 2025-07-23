@@ -1141,6 +1141,12 @@ class TerminalWebviewManager {
 
     // Update terminal borders to highlight active terminal
     this.uiManager.updateTerminalBorders(terminalId, this.splitManager.getTerminalContainers());
+
+    // Notify Extension about the active terminal change
+    this.postMessageToExtension({
+      command: 'switchTerminal',
+      terminalId: terminalId,
+    });
   }
 
   // Getters for split manager integration

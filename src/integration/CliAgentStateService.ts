@@ -225,17 +225,23 @@ export class CliAgentStateService {
   }
 
   /**
-   * 次のエージェントを自動昇格
+   * 次のエージェントを自動昇格（最も最近に開始されたDISCONNECTEDエージェントを選択）
    */
   private _promoteNextAgent(): void {
-    // DISCONNECTEDエージェントを探して昇格
-    for (const [terminalId, agentInfo] of this._agents.entries()) {
-      if (agentInfo.status === CliAgentStatus.DISCONNECTED) {
+    // DISCONNECTEDエージェントを開始時刻の降順でソートして最新のものを取得
+    const disconnectedAgents = Array.from(this._agents.entries())
+      .filter(([, agentInfo]) => agentInfo.status === CliAgentStatus.DISCONNECTED)
+      .sort(([, a], [, b]) => b.startTime.getTime() - a.startTime.getTime()); // 新しい順
+
+    if (disconnectedAgents.length > 0) {
+      const mostRecentAgent = disconnectedAgents[0];
+      if (mostRecentAgent) {
+        const [terminalId, agentInfo] = mostRecentAgent;
         this._changeAgentStatus(terminalId, CliAgentStatus.CONNECTED);
         this._globalActiveAgent = { terminalId, type: agentInfo.type };
 
         log(
-          `⬆️ [CLI-AGENT-STATE] Promoted ${agentInfo.type.toUpperCase()} CLI in terminal ${terminalId} to CONNECTED`
+          `⬆️ [CLI-AGENT-STATE] Promoted most recent ${agentInfo.type.toUpperCase()} CLI in terminal ${terminalId} to CONNECTED`
         );
         return;
       }

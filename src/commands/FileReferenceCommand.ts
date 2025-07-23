@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { TerminalManager } from '../terminals/TerminalManager';
 import { extension as log } from '../utils/logger';
+import { CliAgentStatus } from '../integration/CliAgentStateService';
 
 /**
  * ファイル参照コマンドのハンドラー
@@ -131,45 +132,38 @@ export class FileReferenceCommand {
   }
 
   /**
-   * CLI Agent送信対象の決定（優先順位付き）
+   * CLI Agent送信対象の決定（CONNECTEDのみ）
    */
   private determineCliAgentTarget(activeTerminalId: string): {
     targetTerminalId: string;
     agentType: string;
     isCurrentTerminal: boolean;
   } | null {
-    // TODO: TerminalManagerにgetCliAgentInfoメソッドを追加する必要があります
-    // 現在はTerminalManager内部のCliAgentIntegrationManagerを通じて情報を取得
-    const cliAgentInfo = new Map<string, { type: string; status: string }>();
+    // TerminalManagerからCLI Agent情報を取得
+    const connectedAgents = this.terminalManager.getConnectedAgents();
+    log(`🔍 [DEBUG] Found ${connectedAgents.length} CLI agents`);
 
-    // 1. 現在のターミナルにCLI Agentがあれば優先
-    const currentTerminalAgent = cliAgentInfo.get(activeTerminalId);
-    if (currentTerminalAgent && currentTerminalAgent.status === 'active') {
-      log(`🎯 [DEBUG] Using CLI Agent in current terminal: ${currentTerminalAgent.type}`);
-      return {
-        targetTerminalId: activeTerminalId,
-        agentType: currentTerminalAgent.type,
-        isCurrentTerminal: true,
-      };
-    }
-
-    // 2. 他のアクティブなCLI Agentを探す
-    for (const [terminalId, agentInfo] of cliAgentInfo) {
-      if (terminalId !== activeTerminalId && agentInfo.status === 'active') {
-        log(`🎯 [DEBUG] Found active CLI Agent in terminal ${terminalId}: ${agentInfo.type}`);
-        return {
-          targetTerminalId: terminalId,
-          agentType: agentInfo.type,
-          isCurrentTerminal: false,
-        };
-      }
-    }
-
-    // 3. CLI Agentが見つからない場合
-    log('⚠️ [WARN] No active CLI Agent found in any terminal');
-    void vscode.window.showWarningMessage(
-      'No active CLI Agent found. Please start a CLI Agent in one of your terminals.'
+    // CONNECTED状態のCLI Agentのみを対象とする
+    const connectedAgent = connectedAgents.find(
+      (agent) => agent.agentInfo.status === CliAgentStatus.CONNECTED
     );
-    return null;
+
+    if (!connectedAgent) {
+      log('⚠️ [WARN] No connected CLI Agent found');
+      void vscode.window.showWarningMessage(
+        'No active CLI Agent found. Please ensure a CLI Agent is running and connected.'
+      );
+      return null;
+    }
+
+    log(
+      `🎯 [DEBUG] Found connected CLI Agent in terminal ${connectedAgent.terminalId}: ${connectedAgent.agentInfo.type}`
+    );
+
+    return {
+      targetTerminalId: connectedAgent.terminalId,
+      agentType: connectedAgent.agentInfo.type,
+      isCurrentTerminal: connectedAgent.terminalId === activeTerminalId,
+    };
   }
 }

@@ -49,29 +49,27 @@ export class CliAgentDetectionService {
   };
 
   private static readonly EXIT_PATTERNS = [
-    // 明示的終了パターン
+    // Claude Code特有の終了パターン
     /goodbye/i,
-    /chat ended/i,
-    /session terminated/i,
-    /exiting/i,
-    /bye/i,
-    /quit/i,
-    /exit/i,
-    /session closed/i,
-    /connection closed/i,
+    /chat\s+ended/i,
+    /session\s+terminated/i,
+    /session\s+closed/i,
+    /connection\s+closed/i,
+    /claude\s+code\s+session\s+ended/i,
+    /exiting\s+claude/i,
 
-    // 中断パターン
-    /\^c/i,
+    // Gemini特有の終了パターン
+    /gemini\s+session\s+ended/i,
+    /exiting\s+gemini/i,
+
+    // プロセス終了パターン（より具体的）
+    /process\s+exit\s+code/i,
+    /command\s+not\s+found:\s+(claude|gemini)/i,
+    /^(claude|gemini):\s+command\s+not\s+found/i,
+
+    // Ctrl+C による中断（より具体的）
     /keyboardinterrupt/i,
     /sigint/i,
-    /interrupted/i,
-    /cancelled/i,
-
-    // プロセス終了パターン
-    /process exit/i,
-    /command not found/i,
-    /terminated/i,
-    /killed/i,
   ];
 
   private static readonly PROMPT_PATTERNS = [
@@ -137,24 +135,61 @@ export class CliAgentDetectionService {
   }
 
   /**
-   * 終了パターンを検出
+   * 終了パターンを検出（より厳密なチェック）
    */
   public detectExit(output: string): boolean {
     if (!output || typeof output !== 'string') {
       return false;
     }
 
-    const cleanOutput = output.toLowerCase();
+    const cleanOutput = output.toLowerCase().trim();
 
-    // テキストベースの終了パターン
+    // 空の出力や非常に短い出力は無視
+    if (cleanOutput.length < 3) {
+      return false;
+    }
+
+    // CLI Agent特有の終了パターンのみチェック
     for (const pattern of CliAgentDetectionService.EXIT_PATTERNS) {
       if (pattern.test(cleanOutput)) {
-        log(`🔍 [CLI-AGENT-DETECTION] Exit pattern detected: ${pattern}`);
+        log(`🔍 [CLI-AGENT-DETECTION] Exit pattern detected: ${pattern.source}`);
+        
+        // 追加の安全チェック: 通常のシェルコマンドではないことを確認
+        if (this._isLikelyShellCommand(cleanOutput)) {
+          log(`🔍 [CLI-AGENT-DETECTION] False positive: looks like shell command`);
+          continue;
+        }
+        
         return true;
       }
     }
 
     return false;
+  }
+
+  /**
+   * 通常のシェルコマンドかどうかを判定（誤検出防止）
+   */
+  private _isLikelyShellCommand(output: string): boolean {
+    // シェルコマンドっぽいパターン
+    const shellCommandPatterns = [
+      /^ls\s/,
+      /^cd\s/,
+      /^mkdir\s/,
+      /^rm\s/,
+      /^cp\s/,
+      /^mv\s/,
+      /^cat\s/,
+      /^grep\s/,
+      /^find\s/,
+      /^ps\s/,
+      /^kill\s/,
+      /^npm\s/,
+      /^node\s/,
+      /^git\s/,
+    ];
+
+    return shellCommandPatterns.some(pattern => pattern.test(output));
   }
 
   /**
