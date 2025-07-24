@@ -3,6 +3,14 @@
 ## Overview
 This document describes the status management behavior for CLI Agents (Claude Code and Gemini) in the Secondary Terminal extension.
 
+## Core Purpose: Message Routing Management
+The CLI Agent status system serves a critical function: **ensuring accurate message routing to active CLI Agents**. The status must reflect the **actual runtime state** of CLI Agents to enable proper message delivery to the correct terminal.
+
+### Key Requirements
+1. **Accurate State Tracking**: Status must reflect the **actual process state**, not user input
+2. **Message Routing**: Only terminals with active CLI Agents should receive messages
+3. **Real-time Updates**: Status changes only when CLI Agents actually start/stop
+
 ## Status Types
 
 ### 1. CONNECTED
@@ -29,12 +37,35 @@ This document describes the status management behavior for CLI Agents (Claude Co
    - Only the most recently started CLI Agent has CONNECTED status
 
 ### Stopping a CLI Agent
-1. When a CONNECTED CLI Agent is terminated:
+
+⚠️ **CRITICAL**: Status changes must occur **only when CLI Agents actually terminate**, not when exit commands are entered.
+
+#### Incorrect Behavior (MUST AVOID):
+```
+User types "/exit" → Status immediately changes to NONE (❌ WRONG)
+CLI Agent still processing exit → Agent still running
+CLI Agent actually terminates → No status change (already changed)
+```
+
+#### Correct Behavior:
+```
+User types "/exit" → Status remains unchanged (CLI Agent still running)
+CLI Agent processes exit command → Status remains unchanged  
+CLI Agent actually terminates → Status changes to NONE (✅ CORRECT)
+```
+
+#### Status Change Triggers:
+1. **Process Termination Detection**: PTY process exit events
+2. **Output Pattern Detection**: CLI Agent goodbye messages, shell prompt return
+3. **Never on Input Commands**: Exit commands (`/exit`, `quit`) do not trigger status changes
+
+#### Termination Rules:
+1. When a CONNECTED CLI Agent is **actually terminated**:
    - That terminal's status becomes **NONE**
    - If any DISCONNECTED terminals exist, one of them automatically becomes **CONNECTED**
    - Priority: The most recently started DISCONNECTED agent becomes CONNECTED
 
-2. When a DISCONNECTED CLI Agent is terminated:
+2. When a DISCONNECTED CLI Agent is **actually terminated**:
    - That terminal's status becomes **NONE**
    - No other status changes occur
 
@@ -68,10 +99,51 @@ This document describes the status management behavior for CLI Agents (Claude Co
 1. Terminal 1 with CLI Agent: CONNECTED
 2. Terminal 2 with CLI Agent: DISCONNECTED  
 3. Terminal 3 with CLI Agent: DISCONNECTED
-4. Stop Terminal 1's CLI Agent → Terminal 3 (most recent) automatically becomes CONNECTED
+4. Stop Terminal 1's CLI Agent → Terminal 3 (most recent) automatic∏ally becomes CONNECTED
+
+## Message Routing and Sending Management
+
+### Purpose
+The primary purpose of CLI Agent status management is to enable **accurate message routing** to active CLI Agents. The system must know which terminals have running CLI Agents to route messages correctly.
+
+### Routing Rules
+1. **CONNECTED Terminal**: Primary message destination
+   - File references are sent to the CONNECTED terminal
+   - Commands are routed to the active CLI Agent
+   
+2. **DISCONNECTED Terminals**: Secondary destinations
+   - May receive messages in specific scenarios
+   - Maintained as fallback options
+   
+3. **NONE Terminals**: No message routing
+   - Do not receive CLI Agent messages
+   - Status indicators are hidden
+
+### Status Display Requirements
+1. **Show Status**: When CLI Agent is **actually running** (CONNECTED or DISCONNECTED)
+   - Display appropriate status indicator in terminal
+   - Enable message routing to that terminal
+   
+2. **Hide Status**: When CLI Agent is **not running** (NONE)
+   - Remove status indicators
+   - Disable message routing
+
+### Critical Timing
+```
+❌ WRONG: Status changes on command input
+User: "/exit" → Status: NONE (CLI Agent still running!)
+Message routing: DISABLED (messages lost!)
+
+✅ CORRECT: Status changes on actual termination  
+User: "/exit" → Status: CONNECTED (CLI Agent processing)
+CLI Agent: Terminating... → Status: CONNECTED (still running)
+Process: Terminated → Status: NONE (actually terminated)
+Message routing: Properly managed throughout process
+```
 
 ## Implementation Notes
 
 - The extension maintains a global state tracker for all CLI Agent instances
 - Status changes are propagated to both the Extension host and WebView for UI updates
 - The automatic promotion logic ensures consistent behavior when CONNECTED agents terminate
+- **Status must reflect actual process state**, not user commands or intentions
