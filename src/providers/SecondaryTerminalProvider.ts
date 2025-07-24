@@ -609,39 +609,18 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         console.log('[DEBUG] Received CLI Agent status change:', event);
         const terminal = this._terminalManager.getTerminal(event.terminalId);
 
-        if (terminal && event.status !== 'none') {
-          // CLI Agentがアクティブな場合（シンプル）
-          console.log(
-            '[DEBUG] Sending status update to WebView:',
-            terminal.name,
-            'connected',
-            event.type
-          );
+        if (terminal && event.status === 'connected') {
+          // CLI Agent connected
+          console.log('[DEBUG] Sending connected status to WebView:', terminal.name, event.type);
           this.sendCliAgentStatusUpdate(terminal.name, 'connected', event.type);
+        } else if (terminal && event.status === 'disconnected') {
+          // CLI Agent disconnected
+          console.log('[DEBUG] Sending disconnected status to WebView:', terminal.name, event.type);
+          this.sendCliAgentStatusUpdate(terminal.name, 'disconnected', event.type);
         } else {
-          // CLI Agentが終了した場合（シンプル）
-          // 他にアクティブなエージェントがあるかチェック
-          const connectedAgents = this._terminalManager.getConnectedAgents();
-          if (connectedAgents.length > 0) {
-            // 最初のアクティブなエージェントに切り替え
-            const firstAgent = connectedAgents[0];
-            if (firstAgent) {
-              const agentTerminal = this._terminalManager.getTerminal(firstAgent.terminalId);
-              if (agentTerminal) {
-                this.sendCliAgentStatusUpdate(
-                  agentTerminal.name,
-                  'connected',
-                  firstAgent.agentInfo.type
-                );
-              } else {
-                this.sendCliAgentStatusUpdate(null, 'none', null);
-              }
-            } else {
-              this.sendCliAgentStatusUpdate(null, 'none', null);
-            }
-          } else {
-            this.sendCliAgentStatusUpdate(null, 'none', null);
-          }
+          // CLI Agent none
+          console.log('[DEBUG] Sending none status to WebView');
+          this.sendCliAgentStatusUpdate(null, 'none', null);
         }
       } catch (error) {
         log('❌ [ERROR] CLI Agent status change processing failed:', error);

@@ -36,14 +36,10 @@ export class TerminalManager {
   private readonly _stateUpdateEmitter = new vscode.EventEmitter<TerminalState>();
   private readonly _terminalNumberManager: TerminalNumberManager;
   // CLI Agent 状態管理（超シンプル）
-  private _currentAgent: {
-    terminalId: string;
-    type: 'claude' | 'gemini';
-    terminalName: string;
-  } | null = null;
+  private _connectedAgentTerminalId: string | null = null;
   private readonly _onCliAgentStatusChange = new vscode.EventEmitter<{
     terminalId: string;
-    status: 'connected' | 'none';
+    status: 'connected' | 'disconnected' | 'none';
     type: string | null;
     terminalName?: string;
   }>();
@@ -472,7 +468,7 @@ export class TerminalManager {
     this._terminalBeingKilled.clear();
 
     // Dispose CLI Agent integration manager
-    this._currentAgent = null;
+    this._connectedAgentTerminalId = null;
     this._onCliAgentStatusChange.dispose();
 
     for (const terminal of this._terminals.values()) {
@@ -566,8 +562,8 @@ export class TerminalManager {
     }
 
     // CLI Agent関連データのクリーンアップ（超シンプル）
-    if (this._currentAgent && this._currentAgent.terminalId === terminalId) {
-      this._currentAgent = null;
+    if (this._connectedAgentTerminalId === terminalId) {
+      this._connectedAgentTerminalId = null;
       this._onCliAgentStatusChange.fire({
         terminalId,
         status: 'none',
@@ -630,22 +626,22 @@ export class TerminalManager {
    * Check if CLI Agent is active in a terminal
    */
   public isCliAgentConnected(terminalId: string): boolean {
-    return this._currentAgent?.terminalId === terminalId;
+    return this._connectedAgentTerminalId === terminalId;
   }
 
   /**
    * Check if CLI Agent is running in a terminal (CONNECTED or DISCONNECTED)
    */
   public isCliAgentRunning(terminalId: string): boolean {
-    return this._currentAgent?.terminalId === terminalId;
+    return this._connectedAgentTerminalId === terminalId;
   }
 
   /**
    * Get currently globally active CLI Agent
    */
   public getCurrentGloballyActiveAgent(): { terminalId: string; type: string } | null {
-    return this._currentAgent
-      ? { terminalId: this._currentAgent.terminalId, type: this._currentAgent.type }
+    return this._connectedAgentTerminalId 
+      ? { terminalId: this._connectedAgentTerminalId, type: 'claude' } 
       : null;
   }
 
@@ -667,18 +663,18 @@ export class TerminalManager {
    * Get the active CLI Agent type for a terminal
    */
   public getAgentType(terminalId: string): string | null {
-    return this._currentAgent?.terminalId === terminalId ? this._currentAgent.type : null;
+    return this._connectedAgentTerminalId === terminalId ? 'claude' : null;
   }
 
   /**
    * Get all active CLI Agents
    */
   public getConnectedAgents(): Array<{ terminalId: string; agentInfo: { type: string } }> {
-    return this._currentAgent
+    return this._connectedAgentTerminalId
       ? [
           {
-            terminalId: this._currentAgent.terminalId,
-            agentInfo: { type: this._currentAgent.type },
+            terminalId: this._connectedAgentTerminalId,
+            agentInfo: { type: 'claude' },
           },
         ]
       : [];
@@ -772,7 +768,7 @@ export class TerminalManager {
   }
 
   /**
-   * 現在のCLI Agentを設定（超シンプル）
+   * 現在のCLI Agentを設定（すべてのターミナル状態を更新）
    */
   private _setCurrentAgent(terminalId: string, type: 'claude' | 'gemini'): void {
     const terminal = this._terminals.get(terminalId);
@@ -781,14 +777,28 @@ export class TerminalManager {
       return;
     }
 
-    console.log('[DEBUG] Setting current agent:', {
-      terminalId,
-      type,
-      terminalName: terminal.name,
-    });
-    this._currentAgent = { terminalId, type, terminalName: terminal.name };
+    console.log('[DEBUG] Setting current agent:', { terminalId, type, terminalName: terminal.name });
+    
+    // 前のconnectedなAgentを保存
+    const previousConnectedId = this._connectedAgentTerminalId;
+    this._connectedAgentTerminalId = terminalId;
 
-    console.log('[DEBUG] Firing status change event');
+    // 1. 前にconnectedだったターミナルを先にdisconnectedにする
+    if (previousConnectedId && previousConnectedId !== terminalId) {
+      const previousTerminal = this._terminals.get(previousConnectedId);
+      if (previousTerminal) {
+        console.log('[DEBUG] Disconnecting previous terminal:', previousConnectedId);
+        this._onCliAgentStatusChange.fire({
+          terminalId: previousConnectedId,
+          status: 'disconnected',
+          type,
+          terminalName: previousTerminal.name,
+        });
+      }
+    }
+
+    // 2. 新しく検知されたターミナルをconnectedにする
+    console.log('[DEBUG] Connecting new terminal:', terminalId);
     this._onCliAgentStatusChange.fire({
       terminalId,
       status: 'connected',
