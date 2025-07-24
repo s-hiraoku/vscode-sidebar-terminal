@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import { TerminalManager } from '../terminals/TerminalManager';
-import { CliAgentStatus } from '../integration/CliAgentStateService';
 import { VsCodeMessage, WebviewMessage } from '../types/common';
 import { TERMINAL_CONSTANTS } from '../constants';
 import { getTerminalConfig, generateNonce, normalizeTerminalInfo } from '../utils/common';
@@ -280,21 +279,26 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       }
 
       // Send INIT message with all terminal info
-      const initMessage = {
-        command: TERMINAL_CONSTANTS.COMMANDS.INIT,
-        config,
-        terminals: this._terminalManager.getTerminals().map(normalizeTerminalInfo),
-        activeTerminalId: terminalId,
-      };
+      try {
+        const initMessage = {
+          command: TERMINAL_CONSTANTS.COMMANDS.INIT,
+          config,
+          terminals: this._terminalManager.getTerminals().map(normalizeTerminalInfo),
+          activeTerminalId: terminalId,
+        };
 
-      await this._sendMessage(initMessage);
+        await this._sendMessage(initMessage);
 
-      // Send font settings
-      const fontSettings = this.getCurrentFontSettings();
-      await this._sendMessage({
-        command: 'fontSettingsUpdate',
-        fontSettings,
-      });
+        // Send font settings
+        const fontSettings = this.getCurrentFontSettings();
+        await this._sendMessage({
+          command: 'fontSettingsUpdate',
+          fontSettings,
+        });
+
+      } catch (error) {
+        throw error;
+      }
 
       log('✅ [DEBUG] Terminal initialization completed');
     } catch (error) {
@@ -604,39 +608,44 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
    * Set up CLI Agent status change listeners
    */
   private _setupCliAgentStatusListeners(): void {
-    log('🔧 [DEBUG] Setting up CLI Agent status change listeners...');
-
-    // Listen to CLI Agent status changes from TerminalManager
+    // CLI Agentステータス変更を監視（シンプル化）
     const claudeStatusDisposable = this._terminalManager.onCliAgentStatusChange((event) => {
       try {
+        console.log('[DEBUG] Received CLI Agent status change:', event);
         const terminal = this._terminalManager.getTerminal(event.terminalId);
 
-        if (terminal && event.status !== CliAgentStatus.NONE) {
-          // Connected or Disconnected状態の場合
-          const status = event.status; // 'connected' | 'disconnected'
-          const agentType = event.type;
-          const agentName = agentType ? `${agentType.toUpperCase()} CLI` : 'CLI Agents';
-
-          log(`🔔 [PROVIDER] ${agentName} status: ${terminal.name} -> ${status}`);
-          this.sendCliAgentStatusUpdate(terminal.name, status, agentType);
+        if (terminal && event.status !== 'none') {
+          // CLI Agentがアクティブな場合（シンプル）
+          console.log('[DEBUG] Sending status update to WebView:', terminal.name, 'connected', event.type);
+          this.sendCliAgentStatusUpdate(terminal.name, 'connected', event.type);
         } else {
-          // None状態の場合（終了時）
-          log(`⚠️ [PROVIDER] CLI Agent terminated for terminal ${event.terminalId}`);
-          this.sendCliAgentStatusUpdate(null, 'none', null);
+          // CLI Agentが終了した場合（シンプル）
+          // 他にアクティブなエージェントがあるかチェック
+          const connectedAgents = this._terminalManager.getConnectedAgents();
+          if (connectedAgents.length > 0) {
+            // 最初のアクティブなエージェントに切り替え
+            const firstAgent = connectedAgents[0];
+            if (firstAgent) {
+              const agentTerminal = this._terminalManager.getTerminal(firstAgent.terminalId);
+              if (agentTerminal) {
+                this.sendCliAgentStatusUpdate(agentTerminal.name, 'connected', firstAgent.agentInfo.type);
+              } else {
+                this.sendCliAgentStatusUpdate(null, 'none', null);
+              }
+            } else {
+              this.sendCliAgentStatusUpdate(null, 'none', null);
+            }
+          } else {
+            this.sendCliAgentStatusUpdate(null, 'none', null);
+          }
         }
       } catch (error) {
-        log(
-          `❌ [PROVIDER] CLI Agent status change error: ${error instanceof Error ? error.message : String(error)}`
-        );
-        if (error instanceof Error && error.stack) {
-          log(`❌ [PROVIDER] Stack trace: ${error.stack}`);
-        }
+        log('❌ [ERROR] CLI Agent status change processing failed:', error);
+        // エラーがあっても継続
       }
     });
 
-    log('✅ [DEBUG] CLI Agent status change listeners set up successfully');
-
-    // Add to disposables
+    // disposablesに追加
     this._extensionContext.subscriptions.push(claudeStatusDisposable);
   }
 
@@ -1148,13 +1157,13 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         },
       };
 
-      log(`📤 [SIDEBAR-PROVIDER] Preparing CLI Agent status message: ${JSON.stringify(message)}`);
+      console.log('[DEBUG] Sending message to WebView:', message);
       void this._sendMessage(message);
-      log(`✅ [SIDEBAR-PROVIDER] CLI Agent status update sent: ${activeTerminalName} -> ${status}`);
     } catch (error) {
-      log('❌ [SIDEBAR-PROVIDER] Failed to send CLI Agent status update:', error);
+      // エラーがあっても継続
     }
   }
+
 
   /**
    * Restore WebView state after panel move

@@ -25,10 +25,6 @@ import {
   getFirstValue,
 } from '../utils/common';
 import { TerminalNumberManager } from '../utils/TerminalNumberManager';
-import {
-  CliAgentIntegrationManager,
-  CliAgentStatusEvent,
-} from '../integration/CliAgentIntegrationManager';
 
 export class TerminalManager {
   private readonly _terminals = new Map<string, TerminalInstance>();
@@ -39,7 +35,9 @@ export class TerminalManager {
   private readonly _terminalRemovedEmitter = new vscode.EventEmitter<string>();
   private readonly _stateUpdateEmitter = new vscode.EventEmitter<TerminalState>();
   private readonly _terminalNumberManager: TerminalNumberManager;
-  private readonly _cliAgentManager: CliAgentIntegrationManager;
+  // CLI Agent 状態管理（超シンプル）
+  private _currentAgent: { terminalId: string; type: 'claude' | 'gemini'; terminalName: string } | null = null;
+  private readonly _onCliAgentStatusChange = new vscode.EventEmitter<{ terminalId: string; status: 'connected' | 'none'; type: string | null; terminalName?: string }>();
 
   // 操作の順序保証のためのキュー
   private operationQueue: Promise<void> = Promise.resolve();
@@ -65,14 +63,13 @@ export class TerminalManager {
     this._terminalNumberManager = new TerminalNumberManager(config.maxTerminals);
 
     // Initialize CLI Agent integration manager
-    this._cliAgentManager = new CliAgentIntegrationManager();
   }
 
   /**
    * Get CLI Agent status change event
    */
-  public get onCliAgentStatusChange(): vscode.Event<CliAgentStatusEvent> {
-    return this._cliAgentManager.onCliAgentStatusChange;
+  public get onCliAgentStatusChange(): vscode.Event<{ terminalId: string; status: 'connected' | 'none'; type: string | null; terminalName?: string }> {
+    return this._onCliAgentStatusChange.event;
   }
 
   public createTerminal(): string {
@@ -135,8 +132,6 @@ export class TerminalManager {
       this._terminals.set(terminalId, terminal);
       this._activeTerminalManager.setActive(terminalId);
 
-      // Notify CLI Agent manager about terminal name
-      this._cliAgentManager.setTerminalName(terminalId, terminal.name);
 
       ptyProcess.onData((data: string) => {
         // Only log large data chunks or when debugging is specifically needed
@@ -148,6 +143,9 @@ export class TerminalManager {
             terminalId
           );
         }
+
+        // CLI Agent コマンドを検出（超シンプル）
+        this._detectCliAgent(terminalId, data);
 
         // Performance optimization: Batch small data chunks
         this._bufferData(terminalId, data);
@@ -164,6 +162,8 @@ export class TerminalManager {
           'for terminal:',
           terminalId
         );
+
+        // 🛡️ プロセス終了イベント（CLI Agent終了検出は無効化）
 
         // Check if this terminal is being manually killed to prevent infinite loop
         if (this._terminalBeingKilled.has(terminalId)) {
@@ -206,8 +206,8 @@ export class TerminalManager {
     }
 
     try {
-      // Track input for CLI Agent detection
-      this._cliAgentManager.trackInput(id, data);
+      // CLI Agent コマンドを検出（超シンプル）
+      this._detectCliAgentFromInput(id, data);
       terminal.pty.write(data);
     } catch (error) {
       console.error('❌ [ERROR] Failed to write to pty:', error);
@@ -459,7 +459,8 @@ export class TerminalManager {
     this._terminalBeingKilled.clear();
 
     // Dispose CLI Agent integration manager
-    this._cliAgentManager.dispose();
+    this._currentAgent = null;
+    this._onCliAgentStatusChange.dispose();
 
     for (const terminal of this._terminals.values()) {
       terminal.pty.kill();
@@ -515,7 +516,7 @@ export class TerminalManager {
       buffer.length = 0; // Clear buffer
 
       // Send to CLI Agent manager for pattern detection and state management
-      this._cliAgentManager.handleTerminalOutput(terminalId, combinedData);
+      this._detectCliAgent(terminalId, combinedData);
 
       this._dataEmitter.fire({ terminalId, data: combinedData });
     }
@@ -551,8 +552,15 @@ export class TerminalManager {
       this._dataFlushTimers.delete(terminalId);
     }
 
-    // CLI Agent関連データのクリーンアップ
-    this._cliAgentManager.cleanupTerminal(terminalId);
+    // CLI Agent関連データのクリーンアップ（超シンプル）
+    if (this._currentAgent && this._currentAgent.terminalId === terminalId) {
+      this._currentAgent = null;
+      this._onCliAgentStatusChange.fire({
+        terminalId,
+        status: 'none',
+        type: null,
+      });
+    }
 
     // Remove from terminals map
     this._terminals.delete(terminalId);
@@ -609,48 +617,124 @@ export class TerminalManager {
    * Check if CLI Agent is active in a terminal
    */
   public isCliAgentConnected(terminalId: string): boolean {
-    return this._cliAgentManager.isCliAgentConnected(terminalId);
+    return this._currentAgent?.terminalId === terminalId;
   }
 
   /**
    * Check if CLI Agent is running in a terminal (CONNECTED or DISCONNECTED)
    */
   public isCliAgentRunning(terminalId: string): boolean {
-    return this._cliAgentManager.isCliAgentRunning(terminalId);
+    return this._currentAgent?.terminalId === terminalId;
   }
 
   /**
    * Get currently globally active CLI Agent
    */
   public getCurrentGloballyActiveAgent(): { terminalId: string; type: string } | null {
-    return this._cliAgentManager.getCurrentGloballyActiveAgent();
+    return this._currentAgent ? { terminalId: this._currentAgent.terminalId, type: this._currentAgent.type } : null;
   }
 
   /**
-   * Get the last executed command for a terminal
+   * Get the last executed command for a terminal (シンプル化で無効化)
    */
   public getLastCommand(terminalId: string): string | undefined {
-    return this._cliAgentManager.getLastCommand(terminalId);
+    return undefined; // シンプル化でコマンド履歴は無効化
   }
 
   /**
    * Handle terminal output for CLI Agent detection (public API)
    */
   public handleTerminalOutputForCliAgent(terminalId: string, data: string): void {
-    this._cliAgentManager.handleTerminalOutput(terminalId, data);
+    this._detectCliAgent(terminalId, data);
   }
 
   /**
    * Get the active CLI Agent type for a terminal
    */
   public getAgentType(terminalId: string): string | null {
-    return this._cliAgentManager.getAgentType(terminalId);
+    return this._currentAgent?.terminalId === terminalId ? this._currentAgent.type : null;
   }
 
   /**
    * Get all active CLI Agents
    */
-  public getConnectedAgents(): Array<{ terminalId: string; agentInfo: unknown }> {
-    return this._cliAgentManager.getConnectedAgents();
+  public getConnectedAgents(): Array<{ terminalId: string; agentInfo: { type: string } }> {
+    return this._currentAgent ? [{
+      terminalId: this._currentAgent.terminalId,
+      agentInfo: { type: this._currentAgent.type },
+    }] : [];
   }
+
+  // =================== CLI Agent Detection (Ultra Simple) ===================
+
+  /**
+   * 超シンプルなCLI Agent検出（出力から）
+   */
+  private _detectCliAgent(terminalId: string, data: string): void {
+    try {
+      const lines = data.split(/\r?\n/);
+      for (const line of lines) {
+        const trimmed = line.trim();
+        const cleanLine = trimmed.replace(/^[>$#%]\s*/, '');
+        
+        // Claude Codeが起動している時の特徴的なパターンをチェック
+        if (cleanLine.includes('Welcome to Claude Code!') || 
+            cleanLine.includes('Claude Opus') || 
+            cleanLine.includes('Claude Sonnet') ||  
+            cleanLine.includes('> Try "edit <filepath>')) {
+          this._setCurrentAgent(terminalId, 'claude');
+          break;
+        }
+        // Geminiが起動している時の特徴的なパターンをチェック
+        if (cleanLine.includes('█████████  ██████████') ||
+            cleanLine.includes('Tips for getting started:') ||
+            cleanLine.includes('GEMINI.md File') ||
+            cleanLine.includes('gemini-2.5-pro')) {
+          this._setCurrentAgent(terminalId, 'gemini');
+          break;
+        }
+      }
+    } catch (error) {
+      // エラーは無視
+    }
+  }
+
+  /**
+   * 超シンプルなCLI Agent検出（入力から）
+   */
+  private _detectCliAgentFromInput(terminalId: string, data: string): void {
+    try {
+      if (data.includes('\r') || data.includes('\n')) {
+        const command = data.replace(/[\r\n]/g, '').trim();
+        if (command.startsWith('claude') || command.startsWith('gemini')) {
+          this._setCurrentAgent(terminalId, command.startsWith('claude') ? 'claude' : 'gemini');
+        }
+      }
+    } catch (error) {
+      // エラーは無視
+    }
+  }
+
+  /**
+   * 現在のCLI Agentを設定（超シンプル）
+   */
+  private _setCurrentAgent(terminalId: string, type: 'claude' | 'gemini'): void {
+    const terminal = this._terminals.get(terminalId);
+    if (!terminal) {
+      console.log('[DEBUG] Terminal not found for ID:', terminalId);
+      return;
+    }
+
+    console.log('[DEBUG] Setting current agent:', { terminalId, type, terminalName: terminal.name });
+    this._currentAgent = { terminalId, type, terminalName: terminal.name };
+    
+    console.log('[DEBUG] Firing status change event');
+    this._onCliAgentStatusChange.fire({
+      terminalId,
+      status: 'connected',
+      type,
+      terminalName: terminal.name,
+    });
+  }
+
 }
