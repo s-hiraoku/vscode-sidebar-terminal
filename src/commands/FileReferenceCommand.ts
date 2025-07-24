@@ -58,9 +58,10 @@ export class FileReferenceCommand {
 
       // 成功メッセージ
       const agentTypes = connectedAgents.map((a) => a.agentType).join(', ');
-      const message = connectedAgents.length === 1
-        ? `✅ Sent file reference to ${agentTypes}`
-        : `✅ Sent file reference to ${connectedAgents.length} CLI Agents (${agentTypes})`;
+      const message =
+        connectedAgents.length === 1
+          ? `✅ Sent file reference to ${agentTypes}`
+          : `✅ Sent file reference to ${connectedAgents.length} CLI Agents (${agentTypes})`;
 
       void vscode.window.showInformationMessage(message);
       log(

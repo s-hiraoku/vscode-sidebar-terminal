@@ -279,26 +279,21 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       }
 
       // Send INIT message with all terminal info
-      try {
-        const initMessage = {
-          command: TERMINAL_CONSTANTS.COMMANDS.INIT,
-          config,
-          terminals: this._terminalManager.getTerminals().map(normalizeTerminalInfo),
-          activeTerminalId: terminalId,
-        };
+      const initMessage = {
+        command: TERMINAL_CONSTANTS.COMMANDS.INIT,
+        config,
+        terminals: this._terminalManager.getTerminals().map(normalizeTerminalInfo),
+        activeTerminalId: terminalId,
+      };
 
-        await this._sendMessage(initMessage);
+      await this._sendMessage(initMessage);
 
-        // Send font settings
-        const fontSettings = this.getCurrentFontSettings();
-        await this._sendMessage({
-          command: 'fontSettingsUpdate',
-          fontSettings,
-        });
-
-      } catch (error) {
-        throw error;
-      }
+      // Send font settings
+      const fontSettings = this.getCurrentFontSettings();
+      await this._sendMessage({
+        command: 'fontSettingsUpdate',
+        fontSettings,
+      });
 
       log('✅ [DEBUG] Terminal initialization completed');
     } catch (error) {
@@ -616,7 +611,12 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
         if (terminal && event.status !== 'none') {
           // CLI Agentがアクティブな場合（シンプル）
-          console.log('[DEBUG] Sending status update to WebView:', terminal.name, 'connected', event.type);
+          console.log(
+            '[DEBUG] Sending status update to WebView:',
+            terminal.name,
+            'connected',
+            event.type
+          );
           this.sendCliAgentStatusUpdate(terminal.name, 'connected', event.type);
         } else {
           // CLI Agentが終了した場合（シンプル）
@@ -628,7 +628,11 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
             if (firstAgent) {
               const agentTerminal = this._terminalManager.getTerminal(firstAgent.terminalId);
               if (agentTerminal) {
-                this.sendCliAgentStatusUpdate(agentTerminal.name, 'connected', firstAgent.agentInfo.type);
+                this.sendCliAgentStatusUpdate(
+                  agentTerminal.name,
+                  'connected',
+                  firstAgent.agentInfo.type
+                );
               } else {
                 this.sendCliAgentStatusUpdate(null, 'none', null);
               }
@@ -1163,7 +1167,6 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       // エラーがあっても継続
     }
   }
-
 
   /**
    * Restore WebView state after panel move
