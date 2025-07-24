@@ -36,8 +36,17 @@ export class TerminalManager {
   private readonly _stateUpdateEmitter = new vscode.EventEmitter<TerminalState>();
   private readonly _terminalNumberManager: TerminalNumberManager;
   // CLI Agent 状態管理（超シンプル）
-  private _currentAgent: { terminalId: string; type: 'claude' | 'gemini'; terminalName: string } | null = null;
-  private readonly _onCliAgentStatusChange = new vscode.EventEmitter<{ terminalId: string; status: 'connected' | 'none'; type: string | null; terminalName?: string }>();
+  private _currentAgent: {
+    terminalId: string;
+    type: 'claude' | 'gemini';
+    terminalName: string;
+  } | null = null;
+  private readonly _onCliAgentStatusChange = new vscode.EventEmitter<{
+    terminalId: string;
+    status: 'connected' | 'none';
+    type: string | null;
+    terminalName?: string;
+  }>();
 
   // 操作の順序保証のためのキュー
   private operationQueue: Promise<void> = Promise.resolve();
@@ -68,7 +77,12 @@ export class TerminalManager {
   /**
    * Get CLI Agent status change event
    */
-  public get onCliAgentStatusChange(): vscode.Event<{ terminalId: string; status: 'connected' | 'none'; type: string | null; terminalName?: string }> {
+  public get onCliAgentStatusChange(): vscode.Event<{
+    terminalId: string;
+    status: 'connected' | 'none';
+    type: string | null;
+    terminalName?: string;
+  }> {
     return this._onCliAgentStatusChange.event;
   }
 
@@ -131,7 +145,6 @@ export class TerminalManager {
 
       this._terminals.set(terminalId, terminal);
       this._activeTerminalManager.setActive(terminalId);
-
 
       ptyProcess.onData((data: string) => {
         // Only log large data chunks or when debugging is specifically needed
@@ -631,13 +644,15 @@ export class TerminalManager {
    * Get currently globally active CLI Agent
    */
   public getCurrentGloballyActiveAgent(): { terminalId: string; type: string } | null {
-    return this._currentAgent ? { terminalId: this._currentAgent.terminalId, type: this._currentAgent.type } : null;
+    return this._currentAgent
+      ? { terminalId: this._currentAgent.terminalId, type: this._currentAgent.type }
+      : null;
   }
 
   /**
    * Get the last executed command for a terminal (シンプル化で無効化)
    */
-  public getLastCommand(terminalId: string): string | undefined {
+  public getLastCommand(_terminalId: string): string | undefined {
     return undefined; // シンプル化でコマンド履歴は無効化
   }
 
@@ -659,10 +674,14 @@ export class TerminalManager {
    * Get all active CLI Agents
    */
   public getConnectedAgents(): Array<{ terminalId: string; agentInfo: { type: string } }> {
-    return this._currentAgent ? [{
-      terminalId: this._currentAgent.terminalId,
-      agentInfo: { type: this._currentAgent.type },
-    }] : [];
+    return this._currentAgent
+      ? [
+          {
+            terminalId: this._currentAgent.terminalId,
+            agentInfo: { type: this._currentAgent.type },
+          },
+        ]
+      : [];
   }
 
   // =================== CLI Agent Detection (Ultra Simple) ===================
@@ -676,20 +695,24 @@ export class TerminalManager {
       for (const line of lines) {
         const trimmed = line.trim();
         const cleanLine = trimmed.replace(/^[>$#%]\s*/, '');
-        
+
         // Claude Codeが起動している時の特徴的なパターンをチェック
-        if (cleanLine.includes('Welcome to Claude Code!') || 
-            cleanLine.includes('Claude Opus') || 
-            cleanLine.includes('Claude Sonnet') ||  
-            cleanLine.includes('> Try "edit <filepath>')) {
+        if (
+          cleanLine.includes('Welcome to Claude Code!') ||
+          cleanLine.includes('Claude Opus') ||
+          cleanLine.includes('Claude Sonnet') ||
+          cleanLine.includes('> Try "edit <filepath>')
+        ) {
           this._setCurrentAgent(terminalId, 'claude');
           break;
         }
         // Geminiが起動している時の特徴的なパターンをチェック
-        if (cleanLine.includes('█████████  ██████████') ||
-            cleanLine.includes('Tips for getting started:') ||
-            cleanLine.includes('GEMINI.md File') ||
-            cleanLine.includes('gemini-2.5-pro')) {
+        if (
+          cleanLine.includes('█████████  ██████████') ||
+          cleanLine.includes('Tips for getting started:') ||
+          cleanLine.includes('GEMINI.md File') ||
+          cleanLine.includes('gemini-2.5-pro')
+        ) {
           this._setCurrentAgent(terminalId, 'gemini');
           break;
         }
@@ -725,9 +748,13 @@ export class TerminalManager {
       return;
     }
 
-    console.log('[DEBUG] Setting current agent:', { terminalId, type, terminalName: terminal.name });
+    console.log('[DEBUG] Setting current agent:', {
+      terminalId,
+      type,
+      terminalName: terminal.name,
+    });
     this._currentAgent = { terminalId, type, terminalName: terminal.name };
-    
+
     console.log('[DEBUG] Firing status change event');
     this._onCliAgentStatusChange.fire({
       terminalId,
@@ -736,5 +763,4 @@ export class TerminalManager {
       terminalName: terminal.name,
     });
   }
-
 }
