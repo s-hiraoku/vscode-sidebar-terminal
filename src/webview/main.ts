@@ -1514,77 +1514,77 @@ log('✅ [WEBVIEW] Message listener registered successfully');
 log('🧪 [WEBVIEW] Testing message listener functionality...');
 setTimeout(() => {
   log('🧪 [WEBVIEW] Message listener should be fully active now');
-  
+
   // Send ready notification to extension
   log('📢 [WEBVIEW] Sending ready notification to extension...');
   try {
-  // Use globally stored VS Code API instead of acquiring again
-  const api = getVsCodeApi();
-  if (api) {
-    log('📢 [WEBVIEW] Using globally stored VS Code API');
-    log('📢 [WEBVIEW] vscode object:', typeof api);
-    log('📢 [WEBVIEW] vscode.postMessage:', typeof api.postMessage);
+    // Use globally stored VS Code API instead of acquiring again
+    const api = getVsCodeApi();
+    if (api) {
+      log('📢 [WEBVIEW] Using globally stored VS Code API');
+      log('📢 [WEBVIEW] vscode object:', typeof api);
+      log('📢 [WEBVIEW] vscode.postMessage:', typeof api.postMessage);
 
-    api.postMessage({
-      command: 'webviewReady',
-      timestamp: Date.now(),
-    });
-    log('✅ [WEBVIEW] Ready notification sent via vscode.postMessage');
-
-    // Also send traditional ready message for backward compatibility
-    setTimeout(() => {
       api.postMessage({
-        command: 'ready',
+        command: 'webviewReady',
+        timestamp: Date.now(),
       });
-      log('✅ [WEBVIEW] Traditional ready notification sent as fallback');
+      log('✅ [WEBVIEW] Ready notification sent via vscode.postMessage');
 
-      // Request state restoration only if WebView appears to be reconnecting
-      // (not during initial load)
-      const detectReconnection = () => {
-        try {
-          // Skip reconnection detection for now - just always request restoration
-          // The WebView side will handle filtering appropriately
-          api.postMessage({
-            command: 'requestStateRestoration',
+      // Also send traditional ready message for backward compatibility
+      setTimeout(() => {
+        api.postMessage({
+          command: 'ready',
+        });
+        log('✅ [WEBVIEW] Traditional ready notification sent as fallback');
+
+        // Request state restoration only if WebView appears to be reconnecting
+        // (not during initial load)
+        const detectReconnection = () => {
+          try {
+            // Skip reconnection detection for now - just always request restoration
+            // The WebView side will handle filtering appropriately
+            api.postMessage({
+              command: 'requestStateRestoration',
+              timestamp: Date.now(),
+            });
+            log('🔄 [WEBVIEW] State restoration request sent');
+          } catch (error) {
+            log('❌ [WEBVIEW] Error during state restoration request:', error);
+          }
+        };
+
+        setTimeout(detectReconnection, 50);
+      }, 10);
+    } else {
+      log('❌ [WEBVIEW] No VS Code API available in window.vscodeApi');
+      log(
+        '📢 [WEBVIEW] Available window properties:',
+        Object.keys(window).filter((k) => k.includes('vscode') || k.includes('api'))
+      );
+
+      // Fallback: try to acquire VS Code API directly (will fail if already acquired)
+      try {
+        if (typeof (window as any).acquireVsCodeApi === 'function') {
+          const fallbackVscode = (window as any).acquireVsCodeApi();
+          log('📢 [WEBVIEW] Fallback: VS Code API acquired directly');
+          fallbackVscode.postMessage({
+            command: 'webviewReady',
             timestamp: Date.now(),
           });
-          log('🔄 [WEBVIEW] State restoration request sent');
-        } catch (error) {
-          log('❌ [WEBVIEW] Error during state restoration request:', error);
         }
-      };
-
-      setTimeout(detectReconnection, 50);
-    }, 10);
-  } else {
-    log('❌ [WEBVIEW] No VS Code API available in window.vscodeApi');
-    log(
-      '📢 [WEBVIEW] Available window properties:',
-      Object.keys(window).filter((k) => k.includes('vscode') || k.includes('api'))
-    );
-
-    // Fallback: try to acquire VS Code API directly (will fail if already acquired)
-    try {
-      if (typeof (window as any).acquireVsCodeApi === 'function') {
-        const fallbackVscode = (window as any).acquireVsCodeApi();
-        log('📢 [WEBVIEW] Fallback: VS Code API acquired directly');
-        fallbackVscode.postMessage({
-          command: 'webviewReady',
-          timestamp: Date.now(),
-        });
+      } catch (fallbackError) {
+        log('❌ [WEBVIEW] Fallback API acquisition also failed:', fallbackError);
       }
-    } catch (fallbackError) {
-      log('❌ [WEBVIEW] Fallback API acquisition also failed:', fallbackError);
     }
+  } catch (error) {
+    log('❌ [WEBVIEW] Failed to send ready notification:', error);
+    log('❌ [WEBVIEW] Error details:', {
+      name: error instanceof Error ? error.name : 'unknown',
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : 'no stack',
+    });
   }
-} catch (error) {
-  log('❌ [WEBVIEW] Failed to send ready notification:', error);
-  log('❌ [WEBVIEW] Error details:', {
-    name: error instanceof Error ? error.name : 'unknown',
-    message: error instanceof Error ? error.message : String(error),
-    stack: error instanceof Error ? error.stack : 'no stack',
-  });
-}
 }, 100); // Close the setTimeout callback
 
 // Test if console and logging is working in WebView context

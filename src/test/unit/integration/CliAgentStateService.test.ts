@@ -25,7 +25,7 @@ describe('CliAgentStateService', () => {
 
       expect(stateService.getStatus('terminal1')).to.equal(CliAgentStatus.CONNECTED);
       expect(stateService.getAgentType('terminal1')).to.equal('claude');
-      
+
       const globalActive = stateService.getCurrentGloballyActiveAgent();
       expect(globalActive).to.deep.equal({ terminalId: 'terminal1', type: 'claude' });
     });
@@ -112,7 +112,7 @@ describe('CliAgentStateService', () => {
 
       // Should emit 2 events: deactivation and promotion
       expect(onStateChangeSpy.callCount).to.equal(2);
-      
+
       // Deactivation event
       expect(onStateChangeSpy).to.have.been.calledWith({
         terminalId: 'terminal2',

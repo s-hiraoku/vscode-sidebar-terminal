@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import { TerminalManager } from '../terminals/TerminalManager';
 import { extension as log } from '../utils/logger';
-import { CliAgentStatus } from '../integration/CliAgentStateService';
 
 /**
  * ファイル参照コマンドのハンドラー
@@ -42,24 +41,30 @@ export class FileReferenceCommand {
         return;
       }
 
-      // CLI Agent送信対象の決定
-      const target = this.determineCliAgentTarget(terminalEnv.activeTerminalId);
-      if (!target) {
+      // CONNECTED状態の全CLI Agentに送信
+      const connectedAgents = this.getConnectedAgents();
+      if (connectedAgents.length === 0) {
+        void vscode.window.showWarningMessage(
+          'No active CLI Agent found. Please ensure a CLI Agent is running.'
+        );
         return;
       }
 
       // ファイル参照を送信
       const text = `@${fileInfo.relativePath} `;
-      this.terminalManager.sendInput(text, target.targetTerminalId);
+      connectedAgents.forEach((agent) => {
+        this.terminalManager.sendInput(text, agent.terminalId);
+      });
 
       // 成功メッセージ
-      const message = target.isCurrentTerminal
-        ? `✅ Sent file reference to ${target.agentType} in current terminal`
-        : `✅ Sent file reference to active ${target.agentType} in terminal ${target.targetTerminalId}`;
+      const agentTypes = connectedAgents.map((a) => a.agentType).join(', ');
+      const message = connectedAgents.length === 1
+        ? `✅ Sent file reference to ${agentTypes}`
+        : `✅ Sent file reference to ${connectedAgents.length} CLI Agents (${agentTypes})`;
 
       void vscode.window.showInformationMessage(message);
       log(
-        `✅ [DEBUG] Successfully sent @${fileInfo.relativePath} to ${target.agentType} in terminal ${target.targetTerminalId}`
+        `✅ [DEBUG] Successfully sent @${fileInfo.relativePath} to ${connectedAgents.length} agents`
       );
     } catch (error) {
       log('❌ [ERROR] Error in handleSendAtMention:', error);
@@ -132,38 +137,15 @@ export class FileReferenceCommand {
   }
 
   /**
-   * CLI Agent送信対象の決定（CONNECTEDのみ）
+   * CONNECTED状態の全CLI Agentを取得
    */
-  private determineCliAgentTarget(activeTerminalId: string): {
-    targetTerminalId: string;
-    agentType: string;
-    isCurrentTerminal: boolean;
-  } | null {
-    // TerminalManagerからCLI Agent情報を取得
+  private getConnectedAgents(): Array<{ terminalId: string; agentType: string }> {
     const connectedAgents = this.terminalManager.getConnectedAgents();
-    log(`🔍 [DEBUG] Found ${connectedAgents.length} CLI agents`);
+    log(`🔍 [DEBUG] Found ${connectedAgents.length} connected CLI agents`);
 
-    // CONNECTED状態のCLI Agentのみを対象とする
-    const connectedAgent = connectedAgents.find(
-      (agent) => agent.agentInfo.status === CliAgentStatus.CONNECTED
-    );
-
-    if (!connectedAgent) {
-      log('⚠️ [WARN] No connected CLI Agent found');
-      void vscode.window.showWarningMessage(
-        'No active CLI Agent found. Please ensure a CLI Agent is running and connected.'
-      );
-      return null;
-    }
-
-    log(
-      `🎯 [DEBUG] Found connected CLI Agent in terminal ${connectedAgent.terminalId}: ${connectedAgent.agentInfo.type}`
-    );
-
-    return {
-      targetTerminalId: connectedAgent.terminalId,
-      agentType: connectedAgent.agentInfo.type,
-      isCurrentTerminal: connectedAgent.terminalId === activeTerminalId,
-    };
+    return connectedAgents.map((agent) => ({
+      terminalId: agent.terminalId,
+      agentType: agent.agentInfo.type,
+    }));
   }
 }

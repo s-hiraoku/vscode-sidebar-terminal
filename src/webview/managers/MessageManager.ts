@@ -242,7 +242,7 @@ export class MessageManager implements IMessageManager {
         data: 'WebView processed INIT message',
         timestamp: Date.now(),
       });
-      
+
       log('✅ [MESSAGE] INIT processing completed');
     } catch (error) {
       log('❌ [MESSAGE] Error processing INIT message:', error);

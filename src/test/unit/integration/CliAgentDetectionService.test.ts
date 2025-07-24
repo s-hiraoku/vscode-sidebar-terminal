@@ -109,6 +109,28 @@ describe('CliAgentDetectionService', () => {
       expect(detectionService.detectExit('Session ended')).to.be.true;
     });
 
+    it('should detect exit commands', () => {
+      expect(detectionService.detectExit('/exit')).to.be.true;
+      expect(detectionService.detectExit('exit')).to.be.true;
+      expect(detectionService.detectExit('quit')).to.be.true;
+      expect(detectionService.detectExit('bye')).to.be.true;
+      expect(detectionService.detectExit('/quit')).to.be.true;
+      expect(detectionService.detectExit('q')).to.be.true;
+    });
+
+    it('should detect CTRL+C patterns', () => {
+      expect(detectionService.detectExit('^C')).to.be.true;
+      expect(detectionService.detectExit('^C^C')).to.be.true;
+      expect(detectionService.detectExit('interrupted')).to.be.true;
+    });
+
+    it('should detect connection/socket errors', () => {
+      expect(detectionService.detectExit('broken pipe')).to.be.true;
+      expect(detectionService.detectExit('connection reset')).to.be.true;
+      expect(detectionService.detectExit('socket closed')).to.be.true;
+      expect(detectionService.detectExit('EOF')).to.be.true;
+    });
+
     it('should not detect from normal output', () => {
       expect(detectionService.detectExit('Hello world')).to.be.false;
       expect(detectionService.detectExit('Processing...')).to.be.false;
