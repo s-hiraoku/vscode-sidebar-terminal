@@ -696,13 +696,36 @@ export class TerminalManager {
         const trimmed = line.trim();
         const cleanLine = trimmed.replace(/^[>$#%]\s*/, '');
 
+        // デバッグ用ログを追加
+        if (cleanLine.length > 0) {
+          console.log('[DEBUG] Checking CLI Agent patterns for line:', { terminalId, cleanLine });
+        }
+
         // Claude Codeが起動している時の特徴的なパターンをチェック
         if (
           cleanLine.includes('Welcome to Claude Code!') ||
           cleanLine.includes('Claude Opus') ||
           cleanLine.includes('Claude Sonnet') ||
-          cleanLine.includes('> Try "edit <filepath>')
+          cleanLine.includes('Claude Haiku') ||
+          cleanLine.includes('> Try "edit <filepath>') ||
+          cleanLine.includes('Anthropic') ||
+          cleanLine.includes('claude.ai') ||
+          cleanLine.includes('Claude Code') ||
+          cleanLine.includes('I\'m Claude') ||
+          cleanLine.includes('I am Claude') ||
+          // 実際のClaude Code CLIの起動パターンを追加
+          cleanLine.includes('anthropic claude') ||
+          cleanLine.includes('Powered by Claude') ||
+          cleanLine.includes('CLI tool for Claude') ||
+          // より広範なClaude検知パターン
+          (cleanLine.toLowerCase().includes('claude') && 
+           (cleanLine.includes('activated') || 
+            cleanLine.includes('connected') || 
+            cleanLine.includes('ready') ||
+            cleanLine.includes('started') ||
+            cleanLine.includes('available')))
         ) {
+          console.log('[DEBUG] Claude pattern matched, setting current agent');
           this._setCurrentAgent(terminalId, 'claude');
           break;
         }
@@ -711,8 +734,18 @@ export class TerminalManager {
           cleanLine.includes('█████████  ██████████') ||
           cleanLine.includes('Tips for getting started:') ||
           cleanLine.includes('GEMINI.md File') ||
-          cleanLine.includes('gemini-2.5-pro')
+          cleanLine.includes('gemini-2.5-pro') ||
+          cleanLine.includes('Google AI') ||
+          cleanLine.includes('Gemini') ||
+          // より広範なGemini検知パターン
+          (cleanLine.toLowerCase().includes('gemini') && 
+           (cleanLine.includes('activated') || 
+            cleanLine.includes('connected') || 
+            cleanLine.includes('ready') ||
+            cleanLine.includes('started') ||
+            cleanLine.includes('available')))
         ) {
+          console.log('[DEBUG] Gemini pattern matched, setting current agent');
           this._setCurrentAgent(terminalId, 'gemini');
           break;
         }
