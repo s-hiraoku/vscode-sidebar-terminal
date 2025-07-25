@@ -38,6 +38,74 @@ npm run release:major   # Increment major version and create release
 - Use "Developer: Reload Window" command to reload during development
 - Console logs are visible in VS Code Developer Tools (`Ctrl+Shift+I`)
 
+## Code Quality and Maintainability Guidelines
+
+### Essential Practices for Long-term Development
+
+**CRITICAL**: This codebase requires ongoing development and maintenance. Poor code quality will lead to technical debt and system breakdown. Follow these guidelines strictly:
+
+#### 1. Naming Conventions and Clarity
+- **Use descriptive, unambiguous names**: `focusTerminal` not `switchTerminal`
+- **Avoid misleading terminology**: Names should accurately reflect what the code does
+- **Consistent naming patterns**: Use the same verb/noun patterns across similar functions
+- **Update related constants**: When renaming, update ALL references including constants, tests, and documentation
+
+#### 2. Interface Consistency and Type Safety
+- **Complete interface implementations**: When adding methods to interfaces, update ALL implementing classes
+- **Proper TypeScript usage**: Define strict types, avoid `any` unless absolutely necessary
+- **Message protocol consistency**: Keep command names synchronized across extension ↔ webview communication
+- **Update tests**: When changing interfaces, update mock objects and test cases
+
+#### 3. Event-Driven Architecture Maintenance
+- **Clear event naming**: Events should describe what happened, not what might happen
+- **Proper disposal**: Always dispose EventEmitters to prevent memory leaks
+- **Event documentation**: Document the purpose and data structure of each event
+- **Avoid event proliferation**: Use existing events when possible rather than creating new ones
+
+#### 4. Communication Protocol Standards
+- **Explicit message types**: Use specific, descriptive command names in WebviewMessage types
+- **Consistent data structures**: Maintain the same parameter patterns across similar messages
+- **Backward compatibility**: When changing message protocols, consider migration strategies
+- **Error handling**: Include proper error cases in message handling
+
+#### 5. Code Organization and Documentation
+- **Logical file structure**: Group related functionality together
+- **Clear method responsibilities**: Each method should have a single, well-defined purpose
+- **Comprehensive comments**: Explain WHY code exists, not just what it does
+- **Update related documentation**: When changing behavior, update CLAUDE.md and inline docs
+
+#### 6. Testing and Validation
+- **Update test mocks**: When adding interface methods, update ALL test mock objects
+- **Meaningful test cases**: Test actual behavior, not just code coverage
+- **Edge case handling**: Test error conditions and boundary cases
+- **Compilation validation**: Always run `npm run compile-tests` before commits
+
+#### 7. Performance and Resource Management
+- **Proper cleanup**: Dispose of resources, event listeners, and subscriptions
+- **Memory leak prevention**: Be careful with closures and circular references
+- **Efficient messaging**: Avoid excessive message passing between extension and webview
+- **Resource lifecycle**: Match create/dispose calls appropriately
+
+### Development Workflow Checklist
+
+Before implementing any changes:
+1. [ ] Understand the full scope of the change across all affected files
+2. [ ] Update type definitions FIRST, then implementations
+3. [ ] Search for ALL references to changed names/types
+4. [ ] Update constants, tests, and documentation
+5. [ ] Run compilation checks frequently during development
+6. [ ] Test both happy path and error cases
+7. [ ] Verify no memory leaks or resource issues
+
+### Common Anti-Patterns to Avoid
+- **Incomplete renames**: Changing names in some files but not others
+- **Interface mismatches**: Adding methods to interfaces without updating implementations
+- **Orphaned constants**: Leaving old constant definitions after renaming
+- **Missing cleanup**: Creating resources without proper disposal
+- **Silent failures**: Not handling or logging error conditions properly
+
+**Remember**: This codebase serves as a foundation for ongoing development. Every shortcut taken now will compound into technical debt that makes future development exponentially more difficult.
+
 ## High-Level Architecture
 
 This is a VS Code extension that provides a terminal interface in the sidebar using a WebView. The architecture follows a clear separation between the extension host (Node.js) and the webview (browser environment).
