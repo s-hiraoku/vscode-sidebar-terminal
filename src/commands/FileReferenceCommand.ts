@@ -50,23 +50,19 @@ export class FileReferenceCommand {
         return;
       }
 
-      // ファイル参照を送信（全CLI統一: フォーカス→送信）
+      // ファイル参照を送信（フォーカス→送信の統一フロー）
       connectedAgents.forEach((agent) => {
         const text = `@${fileInfo.relativePath} `;
-        log(`🎯 [DEBUG] Focus then send approach for ${agent.agentType} terminal ${agent.terminalId}`);
         
-        // 1. 先にサイドバーターミナルビューにフォーカスを移す
+        // サイドバーターミナルビューにフォーカス
         void vscode.commands.executeCommand('secondaryTerminal.focus');
         
-        // 2. 特定のターミナルにフォーカス
+        // 特定のターミナルにフォーカス後、ファイル参照を送信
         setTimeout(() => {
           this.terminalManager.focusTerminal(agent.terminalId);
-          log(`🎯 [DEBUG] Focused ${agent.agentType} terminal ${agent.terminalId}`);
-          
-          // 3. フォーカス完了後にファイル参照を送信
           setTimeout(() => {
-            log(`📤 [DEBUG] Sending "${text}" to ${agent.agentType} terminal ${agent.terminalId}`);
             this.terminalManager.sendInput(text, agent.terminalId);
+            log(`📤 [DEBUG] Sent file reference to ${agent.agentType}: "${text}"`);
           }, 100);
         }, 50);
       });
@@ -79,9 +75,7 @@ export class FileReferenceCommand {
           : `✅ Sent file reference to ${connectedAgents.length} CLI Agents (${agentTypes})`;
 
       void vscode.window.showInformationMessage(message);
-      log(
-        `✅ [DEBUG] Successfully sent @${fileInfo.relativePath} to ${connectedAgents.length} agents`
-      );
+      log(`✅ [DEBUG] File reference sent to ${connectedAgents.length} CLI agents`);
     } catch (error) {
       log('❌ [ERROR] Error in handleSendAtMention:', error);
       void vscode.window.showErrorMessage(`Failed to send @mention: ${String(error)}`);

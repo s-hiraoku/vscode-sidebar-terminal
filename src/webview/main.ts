@@ -1142,7 +1142,7 @@ class TerminalWebviewManager {
     // Update terminal borders to highlight active terminal
     this.uiManager.updateTerminalBorders(terminalId, this.splitManager.getTerminalContainers());
 
-    // Notify Extension about the active terminal change
+    // Notify extension about terminal focus change
     this.postMessageToExtension({
       command: 'focusTerminal',
       terminalId: terminalId,

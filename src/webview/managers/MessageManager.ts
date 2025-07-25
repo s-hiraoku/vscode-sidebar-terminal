@@ -396,13 +396,13 @@ export class MessageManager implements IMessageManager {
   }
 
   /**
-   * Handle focus terminal message - move focus to specified terminal
+   * Handle focus terminal message
    */
   private handleFocusTerminalMessage(msg: MessageCommand, coordinator: IManagerCoordinator): void {
     const terminalId = msg.terminalId as string;
     if (terminalId) {
       coordinator.ensureTerminalFocus(terminalId);
-      log(`🎯 [MESSAGE] Focus moved to terminal: ${terminalId}`);
+      log(`🎯 [MESSAGE] Terminal focused: ${terminalId}`);
     }
   }
 
