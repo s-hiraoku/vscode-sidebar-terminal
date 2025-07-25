@@ -1,0 +1,37 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@latest"
+      ],
+      "env": {}
+    },
+    "arxiv-mcp-server": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "arxiv-mcp-server"
+      ],
+      "env": {}
+    },
+    "deepwiki": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "deepwiki-mcp"
+      ],
+      "env": {}
+    },
+    "context7": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "context7-mcp-server"
+      ],
+      "env": {}
+    }
+  }
+}

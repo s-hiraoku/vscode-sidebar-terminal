@@ -44,8 +44,16 @@
       "Bash(npm run:*)",
       "Bash(git worktree:*)",
       "Bash(docker system prune:*)",
-      "Bash(docker volume prune:*)"
+      "Bash(docker volume prune:*)",
+      "mcp__deepwiki__read_wiki_structure",
+      "mcp__context7__resolve-library-id"
     ],
     "deny": []
-  }
+  },
+  "enabledMcpjsonServers": [
+    "playwright",
+    "arxiv-mcp-server",
+    "deepwiki",
+    "context7"
+  ]
 }
