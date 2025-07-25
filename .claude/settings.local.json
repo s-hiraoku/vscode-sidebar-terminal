@@ -47,7 +47,9 @@
       "Bash(docker volume prune:*)",
       "mcp__deepwiki__read_wiki_structure",
       "mcp__context7__resolve-library-id",
-      "Bash(git pull:*)"
+      "Bash(git pull:*)",
+      "Bash(git tag:*)",
+      "Bash(npm version:*)"
     ],
     "deny": []
   },
