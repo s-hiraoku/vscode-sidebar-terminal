@@ -226,8 +226,13 @@ export class TerminalManager {
       this._detectCliAgentFromInput(id, data);
 
 
-      // すべてのCLI用の送信処理
-      terminal.pty.write(data);
+      // Gemini CLI v0.1.13+ bracketed paste mode対応
+      if (this._connectedAgentTerminalId === id && this._connectedAgentType === 'gemini') {
+        this._sendGeminiCompatibleInput(terminal, data);
+      } else {
+        // 通常のCLI用の送信処理
+        terminal.pty.write(data);
+      }
 
     } catch (error) {
       console.error('❌ [ERROR] Failed to write to pty:', error);
@@ -908,6 +913,42 @@ export class TerminalManager {
       type,
       terminalName: terminal.name,
     });
+  }
+
+  /**
+   * Gemini CLI v0.1.13+ bracketed paste mode対応の入力送信
+   */
+  private _sendGeminiCompatibleInput(terminal: TerminalInstance, data: string): void {
+    // 戦略1: Bracketed paste modeを一時的に無効化
+    if (!data.includes('\r') && !data.includes('\n') && data.length > 1) {
+      console.log(`[DEBUG] 🔧 Disabling bracketed paste mode for Gemini CLI: "${data}"`);
+      
+      // bracketed paste mode無効化
+      terminal.pty.write('\x1B[?2004l');
+      
+      // 入力送信
+      setTimeout(() => {
+        terminal.pty.write(data);
+        
+        // bracketed paste mode再有効化（50ms後）
+        setTimeout(() => {
+          terminal.pty.write('\x1B[?2004h');
+          console.log(`[DEBUG] 🔧 Re-enabled bracketed paste mode after input`);
+        }, 50);
+      }, 10);
+      return;
+    }
+
+    // 戦略2: 制御文字やEnterは直接送信
+    if (data.includes('\r') || data.includes('\n') || data.charCodeAt(0) < 32) {
+      console.log(`[DEBUG] 🔧 Sending control character directly: "${data}"`);
+      terminal.pty.write(data);
+      return;
+    }
+
+    // 戦略3: フォールバック - 通常送信
+    console.log(`[DEBUG] 🔧 Fallback - normal send: "${data}"`);
+    terminal.pty.write(data);
   }
 
 }
