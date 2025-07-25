@@ -26,7 +26,7 @@ export class FileReferenceCommand {
       }
 
       // アクティブエディタの確認
-      const fileInfo = this.getActiveFileBaseName();
+      const fileInfo = this.getActiveFileInfo();
       if (!fileInfo) {
         log('⚠️ [WARN] No active editor found for @mention');
         void vscode.window.showWarningMessage(
@@ -52,7 +52,7 @@ export class FileReferenceCommand {
 
       // ファイル参照を送信（フォーカス→送信の統一フロー）
       connectedAgents.forEach((agent) => {
-        const text = `@${fileInfo.relativePath} `;
+        const text = this.formatFileReference(fileInfo);
         
         // サイドバーターミナルビューにフォーカス
         void vscode.commands.executeCommand('secondaryTerminal.focus');
@@ -83,12 +83,17 @@ export class FileReferenceCommand {
   }
 
   /**
-   * アクティブエディタからファイルのベース名を取得
+   * アクティブエディタからファイル情報と選択範囲を取得
    */
-  private getActiveFileBaseName(): {
+  private getActiveFileInfo(): {
     baseName: string;
     fullPath: string;
     relativePath: string;
+    selection?: {
+      startLine: number;
+      endLine: number;
+      hasSelection: boolean;
+    };
   } | null {
     const activeEditor = vscode.window.activeTextEditor;
     if (!activeEditor) {
@@ -114,7 +119,54 @@ export class FileReferenceCommand {
       }
     }
 
-    return { baseName, fullPath, relativePath };
+    // 選択範囲の情報を取得
+    const selection = activeEditor.selection;
+    let selectionInfo = undefined;
+
+    if (!selection.isEmpty) {
+      // 選択がある場合の行番号を取得（1ベースに変換）
+      const startLine = selection.start.line + 1;
+      const endLine = selection.end.line + 1;
+
+      selectionInfo = {
+        startLine,
+        endLine,
+        hasSelection: true,
+      };
+
+      log(`🔍 [DEBUG] Selection detected: L${startLine}-L${endLine}`);
+    }
+
+    return { baseName, fullPath, relativePath, selection: selectionInfo };
+  }
+
+  /**
+   * ファイル参照文字列をフォーマット
+   */
+  private formatFileReference(fileInfo: {
+    relativePath: string;
+    selection?: {
+      startLine: number;
+      endLine: number;
+      hasSelection: boolean;
+    };
+  }): string {
+    let reference = `@${fileInfo.relativePath}`;
+
+    // 選択範囲がある場合は行番号を追加
+    if (fileInfo.selection?.hasSelection) {
+      const { startLine, endLine } = fileInfo.selection;
+
+      if (startLine === endLine) {
+        // 単一行の場合
+        reference += `#L${startLine}`;
+      } else {
+        // 複数行の場合
+        reference += `#L${startLine}-L${endLine}`;
+      }
+    }
+
+    return `${reference} `;
   }
 
   /**
