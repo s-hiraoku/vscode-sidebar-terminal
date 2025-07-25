@@ -214,9 +214,9 @@ export class HeaderFactory {
     // Agent type based display text
     const agentDisplayName = agentType
       ? agentType === 'claude'
-        ? 'CLAUDE CLI'
-        : 'GEMINI CLI'
-      : 'CLI Agent';
+        ? 'CLAUDE Code'
+        : 'GEMINI Cli'
+      : 'AI Agent';
 
     const statusText =
       status === 'connected' ? `${agentDisplayName} connected` : `${agentDisplayName} disconnected`;
