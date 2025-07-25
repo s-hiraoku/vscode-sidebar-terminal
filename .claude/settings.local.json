@@ -46,7 +46,8 @@
       "Bash(docker system prune:*)",
       "Bash(docker volume prune:*)",
       "mcp__deepwiki__read_wiki_structure",
-      "mcp__context7__resolve-library-id"
+      "mcp__context7__resolve-library-id",
+      "Bash(git pull:*)"
     ],
     "deny": []
   },
