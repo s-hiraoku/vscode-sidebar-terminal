@@ -584,7 +584,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       });
     });
     
-    // ターミナルフォーカスイベントの処理
+    // ターミナルフォーカスイベント処理
     const focusDisposable = this._terminalManager.onTerminalFocus((terminalId) => {
       void this._sendMessage({
         command: 'focusTerminal',

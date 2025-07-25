@@ -217,10 +217,8 @@ export class TerminalManager {
       return;
     }
 
-    // フォーカスイベントを発火
     this._terminalFocusEmitter.fire(terminalId);
-    
-    log(`🎯 [TERMINAL] Focused terminal: ${terminal.name} (${terminalId})`);
+    log(`🎯 [TERMINAL] Focused: ${terminal.name}`);
   }
 
   public sendInput(data: string, terminalId?: string): void {
@@ -240,11 +238,10 @@ export class TerminalManager {
 
 
     try {
-      // CLI Agent コマンドを検出（超シンプル）
+      // CLI Agent コマンドを検出
       this._detectCliAgentFromInput(id, data);
 
-
-      // 全てのCLI用の統一送信処理（フォーカス優先アプローチにより簡素化）
+      // 統一されたPTY入力処理
       terminal.pty.write(data);
 
     } catch (error) {
