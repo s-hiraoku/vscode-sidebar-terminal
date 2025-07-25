@@ -46,6 +46,7 @@ export interface IManagerCoordinator {
     status: 'connected' | 'disconnected' | 'none',
     agentType: string | null
   ): void;
+  ensureTerminalFocus(terminalId: string): void;
 }
 
 // Terminal management interface

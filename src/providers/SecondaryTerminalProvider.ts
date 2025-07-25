@@ -395,7 +395,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
             this._terminalManager.resize(message.cols, message.rows, message.terminalId);
           }
           break;
-        case TERMINAL_CONSTANTS.COMMANDS.SWITCH_TERMINAL:
+        case TERMINAL_CONSTANTS.COMMANDS.FOCUS_TERMINAL:
           if (message.terminalId) {
             log('🔄 [DEBUG] Switching to terminal:', message.terminalId);
             this._terminalManager.setActiveTerminal(message.terminalId);
@@ -583,9 +583,17 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         state,
       });
     });
+    
+    // ターミナルフォーカスイベントの処理
+    const focusDisposable = this._terminalManager.onTerminalFocus((terminalId) => {
+      void this._sendMessage({
+        command: 'focusTerminal',
+        terminalId,
+      });
+    });
 
     // Add remaining disposables
-    this._terminalEventDisposables.push(removedDisposable, stateUpdateDisposable);
+    this._terminalEventDisposables.push(removedDisposable, stateUpdateDisposable, focusDisposable);
 
     // Note: CLI Agent status change events are handled by _setupCliAgentStatusListeners()
   }
