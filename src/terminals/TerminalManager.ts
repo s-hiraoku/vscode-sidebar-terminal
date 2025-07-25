@@ -38,7 +38,6 @@ export class TerminalManager {
   // CLI Agent 状態管理（超シンプル）
   private _connectedAgentTerminalId: string | null = null;
   private _connectedAgentType: 'claude' | 'gemini' | null = null;
-  private _geminiPromptReady: boolean = false; // Gemini CLIのプロンプト準備状態
   private readonly _onCliAgentStatusChange = new vscode.EventEmitter<{
     terminalId: string;
     status: 'connected' | 'disconnected' | 'none';
@@ -209,9 +208,6 @@ export class TerminalManager {
   public sendInput(data: string, terminalId?: string): void {
     const id = terminalId || this._activeTerminalManager.getActive();
 
-    console.log(
-      `[DEBUG] sendInput called: data="${data}", terminalId="${terminalId}", resolved id="${id}"`
-    );
 
     if (!id) {
       console.warn('⚠️ [WARN] No terminal ID provided and no active terminal');
@@ -221,77 +217,18 @@ export class TerminalManager {
     const terminal = this._terminals.get(id);
     if (!terminal) {
       console.warn('⚠️ [WARN] Terminal not found for id:', id);
-      console.log(
-        `[DEBUG] Available terminal IDs: ${Array.from(this._terminals.keys()).join(', ')}`
-      );
       return;
     }
 
-    console.log(`[DEBUG] Terminal found, writing to pty: "${data}"`);
-    console.log(`[DEBUG] Terminal details:`, {
-      name: terminal.name,
-      ptyReadable: terminal.pty.readable,
-      ptyWritable: terminal.pty.writable,
-      connectedAgent: this._connectedAgentTerminalId === id ? this._connectedAgentType : 'none',
-    });
 
     try {
       // CLI Agent コマンドを検出（超シンプル）
       this._detectCliAgentFromInput(id, data);
 
-      // デバッグ: 送信前の詳細情報
-      console.log(`[DEBUG] About to write to PTY:`, {
-        terminalId: id,
-        data: data, // JSON.stringify()を削除
-        dataLength: data.length,
-        isGeminiAgent:
-          this._connectedAgentTerminalId === id && this._connectedAgentType === 'gemini',
-        ptyWritable: terminal.pty.writable,
-        ptyDestroyed: terminal.pty.destroyed,
-      });
 
-      // Gemini CLI用の特別な入力処理
-      if (this._connectedAgentTerminalId === id && this._connectedAgentType === 'gemini') {
-        this._sendGeminiInput(terminal, data);
-      } else {
-        // 通常のCLI用の送信処理
-        terminal.pty.write(data);
-      }
+      // すべてのCLI用の送信処理
+      terminal.pty.write(data);
 
-      // デバッグ: 送信後の確認
-      console.log(`[DEBUG] Successfully wrote "${data}" to pty for terminal ${id}`);
-
-      // Gemini CLI向けの追加デバッグ
-      if (this._connectedAgentTerminalId === id && this._connectedAgentType === 'gemini') {
-        console.log(`[DEBUG] 🔍 Gemini CLI specific debug:`, {
-          sentData: data,
-          hasCarriageReturn: data.includes('\r'),
-          hasNewline: data.includes('\n'),
-          endsWithSpace: data.endsWith(' '),
-          isControlChar: data.charCodeAt(0) < 32,
-          characterCodes: Array.from(data).map((c) => ({
-            char: c,
-            code: c.charCodeAt(0),
-            isVisible: c.charCodeAt(0) >= 32 && c.charCodeAt(0) <= 126,
-          })),
-        });
-
-        // PTYの状態も確認
-        console.log(`[DEBUG] 🔍 PTY State:`, {
-          pid: terminal.pty.pid,
-          readable: terminal.pty.readable,
-          writable: terminal.pty.writable,
-          destroyed: terminal.pty.destroyed,
-          readyState: terminal.pty.readyState,
-        });
-
-        // Gemini CLI特有の状態
-        console.log(`[DEBUG] 🔍 Gemini CLI State:`, {
-          promptReady: this._geminiPromptReady,
-          isConnectedAgent: this._connectedAgentTerminalId === id,
-          agentType: this._connectedAgentType,
-        });
-      }
     } catch (error) {
       console.error('❌ [ERROR] Failed to write to pty:', error);
       showErrorMessage('Failed to send input to terminal', error);
@@ -890,11 +827,6 @@ export class TerminalManager {
               cleanLine.length < 5 &&
               (cleanLine.includes('>') || cleanLine.includes(':') || cleanLine.includes('?')));
 
-          if (isPromptReady && !this._geminiPromptReady) {
-            this._geminiPromptReady = true;
-            console.log('[DEBUG] 🟢 Gemini CLI prompt is NOW ready for input!');
-            console.log(`[DEBUG] 🟢 Detected prompt pattern: "${cleanLine}"`);
-          }
         }
       }
     } catch (error) {
@@ -978,66 +910,4 @@ export class TerminalManager {
     });
   }
 
-  /**
-   * Gemini CLI用の特別な入力送信処理
-   * Manual typing behavior simulation for better compatibility
-   */
-  private _sendGeminiInput(terminal: TerminalInstance, data: string): void {
-    console.log(`[DEBUG] 🚀 Using enhanced Gemini CLI input strategy for: "${data}"`);
-    
-    // Strategy 1: Character-by-character input with proper timing
-    if (data.length > 1 && !data.includes('\r') && !data.includes('\n')) {
-      console.log(`[DEBUG] 📝 Sending character-by-character for better compatibility`);
-      this._sendCharacterByCharacter(terminal, data);
-      return;
-    }
-
-    // Strategy 2: For control characters and newlines, send directly but with delay
-    if (data.includes('\r') || data.includes('\n') || data.charCodeAt(0) < 32) {
-      console.log(`[DEBUG] ⚡ Sending control character with delay`);
-      setTimeout(() => {
-        terminal.pty.write(data);
-        console.log(`[DEBUG] ✅ Control character sent: "${data}"`);
-      }, 50);
-      return;
-    }
-
-    // Strategy 3: Fallback to normal write
-    console.log(`[DEBUG] 📤 Using fallback strategy for: "${data}"`);
-    terminal.pty.write(data);
-  }
-
-  /**
-   * Character-by-character input simulation
-   */
-  private _sendCharacterByCharacter(terminal: TerminalInstance, text: string): void {
-    console.log(`[DEBUG] 🔤 Starting character-by-character input for: "${text}"`);
-    
-    let index = 0;
-    const sendNextChar = () => {
-      if (index >= text.length) {
-        console.log(`[DEBUG] ✅ Character-by-character input completed`);
-        return;
-      }
-
-      const char = text[index];
-      console.log(`[DEBUG] 📝 Sending char ${index + 1}/${text.length}: "${char}"`);
-      
-      try {
-        terminal.pty.write(char);
-        index++;
-        
-        // Human-like typing speed: 20-100ms between characters
-        const delay = Math.random() * 80 + 20;
-        setTimeout(sendNextChar, delay);
-      } catch (error) {
-        console.error(`[DEBUG] ❌ Error sending character "${char}":`, error);
-        index++; // Skip problematic character
-        setTimeout(sendNextChar, 50);
-      }
-    };
-
-    // Start with small delay
-    setTimeout(sendNextChar, 50);
-  }
 }

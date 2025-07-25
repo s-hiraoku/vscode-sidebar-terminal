@@ -52,26 +52,9 @@ export class FileReferenceCommand {
 
       // ファイル参照を送信
       connectedAgents.forEach((agent) => {
-        if (agent.agentType === 'gemini') {
-          // Gemini CLI: Enhanced input strategy using character-by-character simulation
-          log(`📤 [GEMINI] Using enhanced character-by-character input strategy`);
-          
-          const fileReference = `@${fileInfo.relativePath}`;
-          
-          log(`📤 [GEMINI] Sending file reference: "${fileReference}"`);
-          this.terminalManager.sendInput(fileReference, agent.terminalId);
-          
-          // Send Enter after a short delay to complete the input
-          setTimeout(() => {
-            log(`📤 [GEMINI] Sending Enter to complete file reference`);
-            this.terminalManager.sendInput('\r', agent.terminalId);
-          }, 500);
-        } else {
-          // Claude用のフォーマット（従来通り）
-          const text = `@${fileInfo.relativePath} `;
-          log(`📤 [DEBUG] Sending "${text}" to Claude terminal ${agent.terminalId}`);
-          this.terminalManager.sendInput(text, agent.terminalId);
-        }
+        const text = `@${fileInfo.relativePath} `;
+        log(`📤 [DEBUG] Sending "${text}" to ${agent.agentType} terminal ${agent.terminalId}`);
+        this.terminalManager.sendInput(text, agent.terminalId);
       });
 
       // 成功メッセージ
