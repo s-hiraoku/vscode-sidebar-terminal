@@ -50,11 +50,25 @@ export class FileReferenceCommand {
         return;
       }
 
-      // ファイル参照を送信
+      // ファイル参照を送信（全CLI統一: フォーカス→送信）
       connectedAgents.forEach((agent) => {
         const text = `@${fileInfo.relativePath} `;
-        log(`📤 [DEBUG] Sending "${text}" to ${agent.agentType} terminal ${agent.terminalId}`);
-        this.terminalManager.sendInput(text, agent.terminalId);
+        log(`🎯 [DEBUG] Focus then send approach for ${agent.agentType} terminal ${agent.terminalId}`);
+        
+        // 1. 先にサイドバーターミナルビューにフォーカスを移す
+        void vscode.commands.executeCommand('secondaryTerminal.focus');
+        
+        // 2. 特定のターミナルにフォーカス
+        setTimeout(() => {
+          this.terminalManager.focusTerminal(agent.terminalId);
+          log(`🎯 [DEBUG] Focused ${agent.agentType} terminal ${agent.terminalId}`);
+          
+          // 3. フォーカス完了後にファイル参照を送信
+          setTimeout(() => {
+            log(`📤 [DEBUG] Sending "${text}" to ${agent.agentType} terminal ${agent.terminalId}`);
+            this.terminalManager.sendInput(text, agent.terminalId);
+          }, 100);
+        }, 50);
       });
 
       // 成功メッセージ

@@ -77,8 +77,8 @@ export class MessageManager implements IMessageManager {
           this.handleNewTerminalMessage(msg, coordinator);
           break;
 
-        case 'switchTerminal':
-          this.handleSwitchTerminalMessage(msg, coordinator);
+        case 'focusTerminal':
+          this.handleFocusTerminalMessage(msg, coordinator);
           break;
 
         case 'resizeTerminal':
@@ -396,13 +396,13 @@ export class MessageManager implements IMessageManager {
   }
 
   /**
-   * Handle switch terminal message
+   * Handle focus terminal message - move focus to specified terminal
    */
-  private handleSwitchTerminalMessage(msg: MessageCommand, coordinator: IManagerCoordinator): void {
+  private handleFocusTerminalMessage(msg: MessageCommand, coordinator: IManagerCoordinator): void {
     const terminalId = msg.terminalId as string;
     if (terminalId) {
-      coordinator.setActiveTerminalId(terminalId);
-      log(`🔄 [MESSAGE] Switch to terminal: ${terminalId}`);
+      coordinator.ensureTerminalFocus(terminalId);
+      log(`🎯 [MESSAGE] Focus moved to terminal: ${terminalId}`);
     }
   }
 

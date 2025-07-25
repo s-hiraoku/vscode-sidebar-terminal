@@ -69,6 +69,7 @@ export interface WebviewMessage {
     | 'deleteTerminal'
     | 'getSettings'
     | 'altClickSettings'
+    | 'focusTerminal'
     | 'error';
   config?: TerminalConfig;
   data?: string;
@@ -109,7 +110,7 @@ export interface VsCodeMessage {
     | 'test'
     | 'input'
     | 'resize'
-    | 'switchTerminal'
+    | 'focusTerminal'
     | 'createTerminal'
     | 'splitTerminal'
     | 'clear'

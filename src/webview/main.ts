@@ -1144,7 +1144,7 @@ class TerminalWebviewManager {
 
     // Notify Extension about the active terminal change
     this.postMessageToExtension({
-      command: 'switchTerminal',
+      command: 'focusTerminal',
       terminalId: terminalId,
     });
   }

@@ -217,7 +217,7 @@ suite('Webview Test Suite', () => {
   });
 
   test('Should handle different message types correctly', () => {
-    const messageTypes = ['ready', 'input', 'resize', 'switchTerminal'];
+    const messageTypes = ['ready', 'input', 'resize', 'focusTerminal'];
     const processedMessages: string[] = [];
 
     const mockWebviewView = {
@@ -233,7 +233,7 @@ suite('Webview Test Suite', () => {
               data: command === 'input' ? 'test data' : undefined,
               cols: command === 'resize' ? 80 : undefined,
               rows: command === 'resize' ? 24 : undefined,
-              terminalId: ['switchTerminal', 'input', 'resize'].includes(command)
+              terminalId: ['focusTerminal', 'input', 'resize'].includes(command)
                 ? 'test-terminal'
                 : undefined,
             };

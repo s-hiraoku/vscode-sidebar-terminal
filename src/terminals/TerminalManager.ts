@@ -34,6 +34,7 @@ export class TerminalManager {
   private readonly _terminalCreatedEmitter = new vscode.EventEmitter<TerminalInstance>();
   private readonly _terminalRemovedEmitter = new vscode.EventEmitter<string>();
   private readonly _stateUpdateEmitter = new vscode.EventEmitter<TerminalState>();
+  private readonly _terminalFocusEmitter = new vscode.EventEmitter<string>();
   private readonly _terminalNumberManager: TerminalNumberManager;
   // CLI Agent 状態管理（超シンプル）
   private _connectedAgentTerminalId: string | null = null;
@@ -62,6 +63,7 @@ export class TerminalManager {
   public readonly onTerminalCreated = this._terminalCreatedEmitter.event;
   public readonly onTerminalRemoved = this._terminalRemovedEmitter.event;
   public readonly onStateUpdate = this._stateUpdateEmitter.event;
+  public readonly onTerminalFocus = this._terminalFocusEmitter.event;
 
   constructor() {
     // Initialize terminal number manager with max terminals config
@@ -205,6 +207,22 @@ export class TerminalManager {
     }
   }
 
+  /**
+   * ターミナルにフォーカスを移す
+   */
+  public focusTerminal(terminalId: string): void {
+    const terminal = this._terminals.get(terminalId);
+    if (!terminal) {
+      console.warn('⚠️ [WARN] Terminal not found for focus:', terminalId);
+      return;
+    }
+
+    // フォーカスイベントを発火
+    this._terminalFocusEmitter.fire(terminalId);
+    
+    log(`🎯 [TERMINAL] Focused terminal: ${terminal.name} (${terminalId})`);
+  }
+
   public sendInput(data: string, terminalId?: string): void {
     const id = terminalId || this._activeTerminalManager.getActive();
 
@@ -226,13 +244,8 @@ export class TerminalManager {
       this._detectCliAgentFromInput(id, data);
 
 
-      // Gemini CLI v0.1.13+ bracketed paste mode対応
-      if (this._connectedAgentTerminalId === id && this._connectedAgentType === 'gemini') {
-        this._sendGeminiCompatibleInput(terminal, data);
-      } else {
-        // 通常のCLI用の送信処理
-        terminal.pty.write(data);
-      }
+      // 全てのCLI用の統一送信処理（フォーカス優先アプローチにより簡素化）
+      terminal.pty.write(data);
 
     } catch (error) {
       console.error('❌ [ERROR] Failed to write to pty:', error);
@@ -497,6 +510,7 @@ export class TerminalManager {
     this._terminalCreatedEmitter.dispose();
     this._terminalRemovedEmitter.dispose();
     this._stateUpdateEmitter.dispose();
+    this._terminalFocusEmitter.dispose();
   }
 
   // Performance optimization: Buffer data to reduce event frequency
@@ -915,40 +929,5 @@ export class TerminalManager {
     });
   }
 
-  /**
-   * Gemini CLI v0.1.13+ bracketed paste mode対応の入力送信
-   */
-  private _sendGeminiCompatibleInput(terminal: TerminalInstance, data: string): void {
-    // 戦略1: Bracketed paste modeを一時的に無効化
-    if (!data.includes('\r') && !data.includes('\n') && data.length > 1) {
-      console.log(`[DEBUG] 🔧 Disabling bracketed paste mode for Gemini CLI: "${data}"`);
-      
-      // bracketed paste mode無効化
-      terminal.pty.write('\x1B[?2004l');
-      
-      // 入力送信
-      setTimeout(() => {
-        terminal.pty.write(data);
-        
-        // bracketed paste mode再有効化（50ms後）
-        setTimeout(() => {
-          terminal.pty.write('\x1B[?2004h');
-          console.log(`[DEBUG] 🔧 Re-enabled bracketed paste mode after input`);
-        }, 50);
-      }, 10);
-      return;
-    }
-
-    // 戦略2: 制御文字やEnterは直接送信
-    if (data.includes('\r') || data.includes('\n') || data.charCodeAt(0) < 32) {
-      console.log(`[DEBUG] 🔧 Sending control character directly: "${data}"`);
-      terminal.pty.write(data);
-      return;
-    }
-
-    // 戦略3: フォールバック - 通常送信
-    console.log(`[DEBUG] 🔧 Fallback - normal send: "${data}"`);
-    terminal.pty.write(data);
-  }
 
 }

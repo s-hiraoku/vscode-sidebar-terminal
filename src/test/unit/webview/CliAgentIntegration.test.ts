@@ -66,6 +66,7 @@ describe('CLI Agent Integration', () => {
       applyFontSettings: () => {},
       closeTerminal: () => {},
       updateClaudeStatus: () => {},
+      ensureTerminalFocus: () => {},
       getManagers: () => ({
         ui: uiManager,
         message: messageManager,
