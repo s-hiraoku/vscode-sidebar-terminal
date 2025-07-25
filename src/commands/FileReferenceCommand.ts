@@ -51,9 +51,27 @@ export class FileReferenceCommand {
       }
 
       // ファイル参照を送信
-      const text = `@${fileInfo.relativePath} `;
       connectedAgents.forEach((agent) => {
-        this.terminalManager.sendInput(text, agent.terminalId);
+        if (agent.agentType === 'gemini') {
+          // Gemini CLI: Enhanced input strategy using character-by-character simulation
+          log(`📤 [GEMINI] Using enhanced character-by-character input strategy`);
+          
+          const fileReference = `@${fileInfo.relativePath}`;
+          
+          log(`📤 [GEMINI] Sending file reference: "${fileReference}"`);
+          this.terminalManager.sendInput(fileReference, agent.terminalId);
+          
+          // Send Enter after a short delay to complete the input
+          setTimeout(() => {
+            log(`📤 [GEMINI] Sending Enter to complete file reference`);
+            this.terminalManager.sendInput('\r', agent.terminalId);
+          }, 500);
+        } else {
+          // Claude用のフォーマット（従来通り）
+          const text = `@${fileInfo.relativePath} `;
+          log(`📤 [DEBUG] Sending "${text}" to Claude terminal ${agent.terminalId}`);
+          this.terminalManager.sendInput(text, agent.terminalId);
+        }
       });
 
       // 成功メッセージ
@@ -143,6 +161,17 @@ export class FileReferenceCommand {
   private getConnectedAgents(): Array<{ terminalId: string; agentType: string }> {
     const connectedAgents = this.terminalManager.getConnectedAgents();
     log(`🔍 [DEBUG] Found ${connectedAgents.length} connected CLI agents`);
+
+    // デバッグ: Agent詳細を出力
+    connectedAgents.forEach((agent, index) => {
+      log(
+        `🔍 [DEBUG] Agent ${index}: terminalId=${agent.terminalId}, type=${agent.agentInfo.type}`
+      );
+    });
+
+    // デバッグ: 現在アクティブなAgent情報も表示
+    const currentAgent = this.terminalManager.getCurrentGloballyActiveAgent();
+    log(`🔍 [DEBUG] Current globally active agent:`, currentAgent);
 
     return connectedAgents.map((agent) => ({
       terminalId: agent.terminalId,

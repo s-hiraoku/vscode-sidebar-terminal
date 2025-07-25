@@ -37,6 +37,8 @@ export class TerminalManager {
   private readonly _terminalNumberManager: TerminalNumberManager;
   // CLI Agent 状態管理（超シンプル）
   private _connectedAgentTerminalId: string | null = null;
+  private _connectedAgentType: 'claude' | 'gemini' | null = null;
+  private _geminiPromptReady: boolean = false; // Gemini CLIのプロンプト準備状態
   private readonly _onCliAgentStatusChange = new vscode.EventEmitter<{
     terminalId: string;
     status: 'connected' | 'disconnected' | 'none';
@@ -75,7 +77,7 @@ export class TerminalManager {
    */
   public get onCliAgentStatusChange(): vscode.Event<{
     terminalId: string;
-    status: 'connected' | 'none';
+    status: 'connected' | 'disconnected' | 'none';
     type: string | null;
     terminalName?: string;
   }> {
@@ -125,6 +127,10 @@ export class TerminalManager {
           LANG: env.LANG || 'en_US.UTF-8',
           LC_ALL: env.LC_ALL || 'en_US.UTF-8',
           LC_CTYPE: env.LC_CTYPE || 'en_US.UTF-8',
+          // Enhanced CLI compatibility flags
+          FORCE_COLOR: '1',
+          TERM: 'xterm-256color',
+          COLORTERM: 'truecolor',
         },
         encoding: 'utf8',
       });
@@ -203,6 +209,10 @@ export class TerminalManager {
   public sendInput(data: string, terminalId?: string): void {
     const id = terminalId || this._activeTerminalManager.getActive();
 
+    console.log(
+      `[DEBUG] sendInput called: data="${data}", terminalId="${terminalId}", resolved id="${id}"`
+    );
+
     if (!id) {
       console.warn('⚠️ [WARN] No terminal ID provided and no active terminal');
       return;
@@ -211,13 +221,77 @@ export class TerminalManager {
     const terminal = this._terminals.get(id);
     if (!terminal) {
       console.warn('⚠️ [WARN] Terminal not found for id:', id);
+      console.log(
+        `[DEBUG] Available terminal IDs: ${Array.from(this._terminals.keys()).join(', ')}`
+      );
       return;
     }
+
+    console.log(`[DEBUG] Terminal found, writing to pty: "${data}"`);
+    console.log(`[DEBUG] Terminal details:`, {
+      name: terminal.name,
+      ptyReadable: terminal.pty.readable,
+      ptyWritable: terminal.pty.writable,
+      connectedAgent: this._connectedAgentTerminalId === id ? this._connectedAgentType : 'none',
+    });
 
     try {
       // CLI Agent コマンドを検出（超シンプル）
       this._detectCliAgentFromInput(id, data);
-      terminal.pty.write(data);
+
+      // デバッグ: 送信前の詳細情報
+      console.log(`[DEBUG] About to write to PTY:`, {
+        terminalId: id,
+        data: data, // JSON.stringify()を削除
+        dataLength: data.length,
+        isGeminiAgent:
+          this._connectedAgentTerminalId === id && this._connectedAgentType === 'gemini',
+        ptyWritable: terminal.pty.writable,
+        ptyDestroyed: terminal.pty.destroyed,
+      });
+
+      // Gemini CLI用の特別な入力処理
+      if (this._connectedAgentTerminalId === id && this._connectedAgentType === 'gemini') {
+        this._sendGeminiInput(terminal, data);
+      } else {
+        // 通常のCLI用の送信処理
+        terminal.pty.write(data);
+      }
+
+      // デバッグ: 送信後の確認
+      console.log(`[DEBUG] Successfully wrote "${data}" to pty for terminal ${id}`);
+
+      // Gemini CLI向けの追加デバッグ
+      if (this._connectedAgentTerminalId === id && this._connectedAgentType === 'gemini') {
+        console.log(`[DEBUG] 🔍 Gemini CLI specific debug:`, {
+          sentData: data,
+          hasCarriageReturn: data.includes('\r'),
+          hasNewline: data.includes('\n'),
+          endsWithSpace: data.endsWith(' '),
+          isControlChar: data.charCodeAt(0) < 32,
+          characterCodes: Array.from(data).map((c) => ({
+            char: c,
+            code: c.charCodeAt(0),
+            isVisible: c.charCodeAt(0) >= 32 && c.charCodeAt(0) <= 126,
+          })),
+        });
+
+        // PTYの状態も確認
+        console.log(`[DEBUG] 🔍 PTY State:`, {
+          pid: terminal.pty.pid,
+          readable: terminal.pty.readable,
+          writable: terminal.pty.writable,
+          destroyed: terminal.pty.destroyed,
+          readyState: terminal.pty.readyState,
+        });
+
+        // Gemini CLI特有の状態
+        console.log(`[DEBUG] 🔍 Gemini CLI State:`, {
+          promptReady: this._geminiPromptReady,
+          isConnectedAgent: this._connectedAgentTerminalId === id,
+          agentType: this._connectedAgentType,
+        });
+      }
     } catch (error) {
       console.error('❌ [ERROR] Failed to write to pty:', error);
       showErrorMessage('Failed to send input to terminal', error);
@@ -469,6 +543,7 @@ export class TerminalManager {
 
     // Dispose CLI Agent integration manager
     this._connectedAgentTerminalId = null;
+    this._connectedAgentType = null;
     this._onCliAgentStatusChange.dispose();
 
     for (const terminal of this._terminals.values()) {
@@ -564,6 +639,7 @@ export class TerminalManager {
     // CLI Agent関連データのクリーンアップ（超シンプル）
     if (this._connectedAgentTerminalId === terminalId) {
       this._connectedAgentTerminalId = null;
+      this._connectedAgentType = null;
       this._onCliAgentStatusChange.fire({
         terminalId,
         status: 'none',
@@ -640,8 +716,8 @@ export class TerminalManager {
    * Get currently globally active CLI Agent
    */
   public getCurrentGloballyActiveAgent(): { terminalId: string; type: string } | null {
-    return this._connectedAgentTerminalId 
-      ? { terminalId: this._connectedAgentTerminalId, type: 'claude' } 
+    return this._connectedAgentTerminalId && this._connectedAgentType
+      ? { terminalId: this._connectedAgentTerminalId, type: this._connectedAgentType }
       : null;
   }
 
@@ -663,24 +739,73 @@ export class TerminalManager {
    * Get the active CLI Agent type for a terminal
    */
   public getAgentType(terminalId: string): string | null {
-    return this._connectedAgentTerminalId === terminalId ? 'claude' : null;
+    return this._connectedAgentTerminalId === terminalId ? this._connectedAgentType : null;
   }
 
   /**
    * Get all active CLI Agents
    */
   public getConnectedAgents(): Array<{ terminalId: string; agentInfo: { type: string } }> {
-    return this._connectedAgentTerminalId
+    return this._connectedAgentTerminalId && this._connectedAgentType
       ? [
           {
             terminalId: this._connectedAgentTerminalId,
-            agentInfo: { type: 'claude' },
+            agentInfo: { type: this._connectedAgentType },
           },
         ]
       : [];
   }
 
   // =================== CLI Agent Detection (Ultra Simple) ===================
+
+  /**
+   * Gemini CLI検知の改善されたパターンマッチング
+   */
+  private _isGeminiCliDetected(cleanLine: string): boolean {
+    const line = cleanLine.toLowerCase();
+
+    // 基本的なGeminiキーワード
+    if (line.includes('gemini')) {
+      // Gemini関連のコンテキスト
+      if (
+        line.includes('cli') ||
+        line.includes('code') ||
+        line.includes('chat') ||
+        line.includes('api') ||
+        line.includes('google') ||
+        line.includes('activated') ||
+        line.includes('connected') ||
+        line.includes('ready') ||
+        line.includes('started') ||
+        line.includes('available') ||
+        line.includes('welcome') ||
+        line.includes('help')
+      ) {
+        return true;
+      }
+    }
+
+    // 具体的なGemini CLI出力パターン
+    return (
+      line.includes('gemini-2.5-pro') ||
+      line.includes('gemini.md') ||
+      line.includes('tips for getting started') ||
+      line.includes('google ai') ||
+      line.includes('google generative ai') ||
+      line.includes('gemini api') ||
+      line.includes('ai studio') ||
+      // プロンプト関連
+      line.includes('gemini>') ||
+      line.includes('gemini $') ||
+      line.includes('gemini #') ||
+      // バナー関連（ASCII artは除外して文字パターンで）
+      (line.includes('█') && line.includes('gemini')) ||
+      // コマンド実行確認
+      line.includes('gemini --help') ||
+      line.includes('gemini chat') ||
+      line.includes('gemini code')
+    );
+  }
 
   /**
    * 超シンプルなCLI Agent検出（出力から）
@@ -707,43 +832,69 @@ export class TerminalManager {
           cleanLine.includes('Anthropic') ||
           cleanLine.includes('claude.ai') ||
           cleanLine.includes('Claude Code') ||
-          cleanLine.includes('I\'m Claude') ||
+          cleanLine.includes("I'm Claude") ||
           cleanLine.includes('I am Claude') ||
           // 実際のClaude Code CLIの起動パターンを追加
           cleanLine.includes('anthropic claude') ||
           cleanLine.includes('Powered by Claude') ||
           cleanLine.includes('CLI tool for Claude') ||
           // より広範なClaude検知パターン
-          (cleanLine.toLowerCase().includes('claude') && 
-           (cleanLine.includes('activated') || 
-            cleanLine.includes('connected') || 
-            cleanLine.includes('ready') ||
-            cleanLine.includes('started') ||
-            cleanLine.includes('available')))
+          (cleanLine.toLowerCase().includes('claude') &&
+            (cleanLine.includes('activated') ||
+              cleanLine.includes('connected') ||
+              cleanLine.includes('ready') ||
+              cleanLine.includes('started') ||
+              cleanLine.includes('available')))
         ) {
           console.log('[DEBUG] Claude pattern matched, setting current agent');
           this._setCurrentAgent(terminalId, 'claude');
           break;
         }
         // Geminiが起動している時の特徴的なパターンをチェック
-        if (
-          cleanLine.includes('█████████  ██████████') ||
-          cleanLine.includes('Tips for getting started:') ||
-          cleanLine.includes('GEMINI.md File') ||
-          cleanLine.includes('gemini-2.5-pro') ||
-          cleanLine.includes('Google AI') ||
-          cleanLine.includes('Gemini') ||
-          // より広範なGemini検知パターン
-          (cleanLine.toLowerCase().includes('gemini') && 
-           (cleanLine.includes('activated') || 
-            cleanLine.includes('connected') || 
-            cleanLine.includes('ready') ||
-            cleanLine.includes('started') ||
-            cleanLine.includes('available')))
-        ) {
+        if (this._isGeminiCliDetected(cleanLine)) {
           console.log('[DEBUG] Gemini pattern matched, setting current agent');
           this._setCurrentAgent(terminalId, 'gemini');
           break;
+        }
+
+        // Gemini CLIのプロンプト準備状態をチェック（改善版）
+        if (
+          this._connectedAgentTerminalId === terminalId &&
+          this._connectedAgentType === 'gemini'
+        ) {
+          // Gemini CLIの実際の出力をすべてログに記録
+          console.log(`[DEBUG] 🔍 Gemini CLI output line: "${cleanLine}"`);
+
+          // より包括的なプロンプト検知パターン
+          const isPromptReady =
+            // 標準的なプロンプト文字
+            cleanLine.includes('>') ||
+            cleanLine.includes('$') ||
+            cleanLine.includes('#') ||
+            // Gemini CLI特有のパターン
+            cleanLine.toLowerCase().includes('gemini:') ||
+            cleanLine.toLowerCase().includes('gemini >') ||
+            cleanLine.toLowerCase().includes('gemini$') ||
+            cleanLine.toLowerCase().includes('gemini#') ||
+            // 入力待機状態を示すパターン
+            cleanLine.includes('Enter your prompt') ||
+            cleanLine.includes('What would you like') ||
+            cleanLine.includes('How can I help') ||
+            // 空行または単純なプロンプト
+            (cleanLine.length === 0 && data.includes('\n')) ||
+            // カーソルのみの行
+            cleanLine === '_' ||
+            cleanLine === '|' ||
+            // 最後の手段: 任意の対話的なパターン
+            (cleanLine.length > 0 &&
+              cleanLine.length < 5 &&
+              (cleanLine.includes('>') || cleanLine.includes(':') || cleanLine.includes('?')));
+
+          if (isPromptReady && !this._geminiPromptReady) {
+            this._geminiPromptReady = true;
+            console.log('[DEBUG] 🟢 Gemini CLI prompt is NOW ready for input!');
+            console.log(`[DEBUG] 🟢 Detected prompt pattern: "${cleanLine}"`);
+          }
         }
       }
     } catch (error) {
@@ -758,12 +909,16 @@ export class TerminalManager {
     try {
       if (data.includes('\r') || data.includes('\n')) {
         const command = data.replace(/[\r\n]/g, '').trim();
+        console.log(`[DEBUG] CLI Agent input detection: "${command}" in terminal ${terminalId}`);
+
         if (command.startsWith('claude') || command.startsWith('gemini')) {
-          this._setCurrentAgent(terminalId, command.startsWith('claude') ? 'claude' : 'gemini');
+          const agentType = command.startsWith('claude') ? 'claude' : 'gemini';
+          console.log(`[DEBUG] Detected ${agentType} CLI from input command`);
+          this._setCurrentAgent(terminalId, agentType);
         }
       }
     } catch (error) {
-      // エラーは無視
+      console.warn('[DEBUG] Error in CLI Agent input detection:', error);
     }
   }
 
@@ -777,11 +932,27 @@ export class TerminalManager {
       return;
     }
 
-    console.log('[DEBUG] Setting current agent:', { terminalId, type, terminalName: terminal.name });
-    
+    // 既に同じターミナルが同じタイプで設定されている場合はスキップ
+    if (this._connectedAgentTerminalId === terminalId && this._connectedAgentType === type) {
+      console.log('[DEBUG] Agent already set for this terminal, skipping');
+      return;
+    }
+
+    console.log('[DEBUG] Setting current agent:', {
+      terminalId,
+      type,
+      terminalName: terminal.name,
+      previousAgent: this._connectedAgentTerminalId,
+      previousType: this._connectedAgentType,
+    });
+
     // 前のconnectedなAgentを保存
     const previousConnectedId = this._connectedAgentTerminalId;
+    const previousType = this._connectedAgentType;
+
+    // 新しいAgentを設定
     this._connectedAgentTerminalId = terminalId;
+    this._connectedAgentType = type;
 
     // 1. 前にconnectedだったターミナルを先にdisconnectedにする
     if (previousConnectedId && previousConnectedId !== terminalId) {
@@ -791,7 +962,7 @@ export class TerminalManager {
         this._onCliAgentStatusChange.fire({
           terminalId: previousConnectedId,
           status: 'disconnected',
-          type,
+          type: previousType,
           terminalName: previousTerminal.name,
         });
       }
@@ -805,5 +976,68 @@ export class TerminalManager {
       type,
       terminalName: terminal.name,
     });
+  }
+
+  /**
+   * Gemini CLI用の特別な入力送信処理
+   * Manual typing behavior simulation for better compatibility
+   */
+  private _sendGeminiInput(terminal: TerminalInstance, data: string): void {
+    console.log(`[DEBUG] 🚀 Using enhanced Gemini CLI input strategy for: "${data}"`);
+    
+    // Strategy 1: Character-by-character input with proper timing
+    if (data.length > 1 && !data.includes('\r') && !data.includes('\n')) {
+      console.log(`[DEBUG] 📝 Sending character-by-character for better compatibility`);
+      this._sendCharacterByCharacter(terminal, data);
+      return;
+    }
+
+    // Strategy 2: For control characters and newlines, send directly but with delay
+    if (data.includes('\r') || data.includes('\n') || data.charCodeAt(0) < 32) {
+      console.log(`[DEBUG] ⚡ Sending control character with delay`);
+      setTimeout(() => {
+        terminal.pty.write(data);
+        console.log(`[DEBUG] ✅ Control character sent: "${data}"`);
+      }, 50);
+      return;
+    }
+
+    // Strategy 3: Fallback to normal write
+    console.log(`[DEBUG] 📤 Using fallback strategy for: "${data}"`);
+    terminal.pty.write(data);
+  }
+
+  /**
+   * Character-by-character input simulation
+   */
+  private _sendCharacterByCharacter(terminal: TerminalInstance, text: string): void {
+    console.log(`[DEBUG] 🔤 Starting character-by-character input for: "${text}"`);
+    
+    let index = 0;
+    const sendNextChar = () => {
+      if (index >= text.length) {
+        console.log(`[DEBUG] ✅ Character-by-character input completed`);
+        return;
+      }
+
+      const char = text[index];
+      console.log(`[DEBUG] 📝 Sending char ${index + 1}/${text.length}: "${char}"`);
+      
+      try {
+        terminal.pty.write(char);
+        index++;
+        
+        // Human-like typing speed: 20-100ms between characters
+        const delay = Math.random() * 80 + 20;
+        setTimeout(sendNextChar, delay);
+      } catch (error) {
+        console.error(`[DEBUG] ❌ Error sending character "${char}":`, error);
+        index++; // Skip problematic character
+        setTimeout(sendNextChar, 50);
+      }
+    };
+
+    // Start with small delay
+    setTimeout(sendNextChar, 50);
   }
 }

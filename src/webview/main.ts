@@ -1340,6 +1340,7 @@ class TerminalWebviewManager {
     log(`🔄 [WEBVIEW] ========== UPDATE CLAUDE STATUS CALLED ==========`);
     log(`🔄 [WEBVIEW] activeTerminalName: ${activeTerminalName}`);
     log(`🔄 [WEBVIEW] status: ${status}`);
+    log(`🔄 [WEBVIEW] agentType: ${agentType}`);
     log(`🔄 [WEBVIEW] UIManager available: ${!!this.uiManager}`);
     log(
       `🔄 [WEBVIEW] UIManager.updateCliAgentStatusDisplay method: ${typeof this.uiManager.updateCliAgentStatusDisplay}`

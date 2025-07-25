@@ -259,6 +259,16 @@ export class MessageManager implements IMessageManager {
     if (data && terminalId) {
       const terminal = coordinator.getTerminalInstance(terminalId);
       if (terminal) {
+        // デバッグ: 出力データの詳細をログ
+        console.log(`🔍 [WEBVIEW] Terminal output debug:`, {
+          terminalId,
+          dataLength: data.length,
+          dataPreview: data.substring(0, 100),
+          containsGeminiPattern: data.includes('Gemini') || data.includes('gemini'),
+          hasEscapeSequences: data.includes('\x1b'),
+          rawData: JSON.stringify(data.substring(0, 50)),
+        });
+
         // Write directly to terminal (performance manager would handle buffering in a full implementation)
         terminal.terminal.write(data);
         log(`📥 [MESSAGE] Output written to terminal ${terminalId}: ${data.length} chars`);
