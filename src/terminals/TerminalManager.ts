@@ -224,7 +224,6 @@ export class TerminalManager {
   public sendInput(data: string, terminalId?: string): void {
     const id = terminalId || this._activeTerminalManager.getActive();
 
-
     if (!id) {
       console.warn('⚠️ [WARN] No terminal ID provided and no active terminal');
       return;
@@ -236,14 +235,12 @@ export class TerminalManager {
       return;
     }
 
-
     try {
       // CLI Agent コマンドを検出
       this._detectCliAgentFromInput(id, data);
 
       // 統一されたPTY入力処理
       terminal.pty.write(data);
-
     } catch (error) {
       console.error('❌ [ERROR] Failed to write to pty:', error);
       showErrorMessage('Failed to send input to terminal', error);
@@ -842,7 +839,6 @@ export class TerminalManager {
             (cleanLine.length > 0 &&
               cleanLine.length < 5 &&
               (cleanLine.includes('>') || cleanLine.includes(':') || cleanLine.includes('?')));
-
         }
       }
     } catch (error) {
@@ -925,6 +921,4 @@ export class TerminalManager {
       terminalName: terminal.name,
     });
   }
-
-
 }
