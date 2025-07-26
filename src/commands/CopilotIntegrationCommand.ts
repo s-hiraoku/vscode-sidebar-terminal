@@ -87,31 +87,7 @@ export class CopilotIntegrationCommand {
       hasSelection: boolean;
     };
   }): Promise<void> {
-    try {
-      // ファイル参照を直接Copilot Chatに送信（方法1が成功する可能性が高い）
-      log('🚀 [DEBUG] Attempting direct file reference insertion');
-      await this.sendFileReferenceToCopilot(fileInfo);
-      
-      // 成功した場合は処理終了
-      log('✅ [DEBUG] File reference successfully inserted into Copilot Chat');
-    } catch (error) {
-      log('❌ [ERROR] Error sending file reference to Copilot:', error);
-      
-      // フォールバック: 従来の方法（Copilot Chatを開いてからクリップボード）
-      try {
-        await this.activateCopilotChat();
-        const fileReference = this.formatCopilotFileReference(fileInfo);
-        await vscode.env.clipboard.writeText(fileReference);
-        
-        void vscode.window.showInformationMessage(
-          `Copilot Chat opened. File reference copied to clipboard: ${fileReference}`,
-          'Paste (Cmd+V)'
-        );
-      } catch (fallbackError) {
-        log('❌ [ERROR] Fallback method also failed:', fallbackError);
-        throw error;
-      }
-    }
+    await this.sendFileReferenceToCopilot(fileInfo);
   }
 
   /**
@@ -125,84 +101,13 @@ export class CopilotIntegrationCommand {
       hasSelection: boolean;
     };
   }): Promise<void> {
-    try {
-      const fileReference = this.formatCopilotFileReference(fileInfo);
-      log(`📤 [DEBUG] Attempting to send file reference to Copilot: "${fileReference}"`);
+    const fileReference = this.formatCopilotFileReference(fileInfo);
+    log(`📤 [DEBUG] Sending file reference to Copilot: "${fileReference}"`);
 
-      // 複数の方法を試す
-      
-      // 方法1: workbench.action.chat.openでクエリパラメータを使用
-      try {
-        await vscode.commands.executeCommand('workbench.action.chat.open', {
-          query: fileReference,
-          isPartialQuery: true
-        });
-        log('✅ [DEBUG] File reference sent using chat.open with query');
-        return;
-      } catch (e1) {
-        log('⚠️ [DEBUG] chat.open with query failed:', e1);
-      }
-
-      // 方法2: 一般的なchat.insertTextコマンドを試す
-      try {
-        await vscode.commands.executeCommand('workbench.action.chat.insertText', { text: fileReference });
-        log('✅ [DEBUG] File reference sent using insertText with object');
-        return;
-      } catch (e2) {
-        log('⚠️ [DEBUG] insertText with object failed:', e2);
-      }
-
-      // 方法3: シンプルなテキスト引数で試す
-      try {
-        await vscode.commands.executeCommand('workbench.action.chat.insertText', fileReference);
-        log('✅ [DEBUG] File reference sent using insertText with string');
-        return;
-      } catch (e3) {
-        log('⚠️ [DEBUG] insertText with string failed:', e3);
-      }
-
-      // 方法4: Copilot Chatにフォーカスしてからtypeコマンドを実行
-      try {
-        await vscode.commands.executeCommand('workbench.panel.chat.view.copilot.focus');
-        await new Promise(resolve => setTimeout(resolve, 300));
-        await vscode.commands.executeCommand('type', { text: fileReference });
-        log('✅ [DEBUG] File reference typed into focused chat');
-        return;
-      } catch (e4) {
-        log('⚠️ [DEBUG] focus + type command failed:', e4);
-      }
-
-      // 方法5: workbench.action.chat.submitを試す
-      try {
-        await vscode.commands.executeCommand('workbench.action.chat.submit', fileReference);
-        log('✅ [DEBUG] File reference submitted directly');
-        return;
-      } catch (e5) {
-        log('⚠️ [DEBUG] chat.submit failed:', e5);
-      }
-
-      // すべて失敗した場合はクリップボードにコピー
-      throw new Error('All insertion methods failed');
-      
-    } catch (error) {
-      log('⚠️ [WARN] All methods to insert file reference failed, using clipboard:', error);
-      
-      // 最終手段：クリップボードにコピーしてユーザーに通知
-      try {
-        const fileReference = this.formatCopilotFileReference(fileInfo);
-        await vscode.env.clipboard.writeText(fileReference);
-        void vscode.window.showInformationMessage(
-          `File reference ready: ${fileReference} (Press Cmd+V to paste)`,
-          'OK'
-        );
-      } catch (clipboardError) {
-        log('❌ [ERROR] Failed to copy to clipboard:', clipboardError);
-        const fileReference = this.formatCopilotFileReference(fileInfo);
-        void vscode.window.showWarningMessage(
-          `Manual copy required: ${fileReference}`
-        );
-      }
-    }
+    await vscode.commands.executeCommand('workbench.action.chat.open', {
+      query: fileReference,
+      isPartialQuery: true
+    });
   }
 
   /**
