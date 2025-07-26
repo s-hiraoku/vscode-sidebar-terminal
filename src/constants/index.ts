@@ -131,7 +131,15 @@ export const VSCODE_COMMANDS = {
   // Copilot Chat関連
   CHAT_OPEN: 'workbench.action.chat.open',
   CHAT_FOCUS_FALLBACK: 'workbench.panel.chat.view.copilot.focus',
-  
-  // その他のコマンド
+
+  // Secondary Terminal関連
+  SECONDARY_TERMINAL_FOCUS: 'secondaryTerminal.focus',
+  SECONDARY_TERMINAL_CREATE: 'secondaryTerminal.createTerminal',
+  SECONDARY_TERMINAL_KILL: 'secondaryTerminal.killTerminal',
+  SECONDARY_TERMINAL_VIEW_FOCUS: 'secondaryTerminalView.focus',
+
+  // Workbench関連
   SHOW_COMMANDS: 'workbench.action.showCommands',
+  WORKBENCH_OPEN_SETTINGS: 'workbench.action.openSettings',
+  WORKBENCH_RELOAD_WINDOW: 'workbench.action.reloadWindow',
 } as const;

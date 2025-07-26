@@ -256,9 +256,9 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
       let terminalId: string;
       if (existingTerminals.length === 0) {
-        // No terminals exist - create new one
+        // Always create initial terminal to ensure UI works - session restore will handle duplicates properly
         terminalId = this._terminalManager.createTerminal();
-        log('🔧 [DEBUG] Created new terminal:', terminalId);
+        log('🔧 [DEBUG] Created initial terminal:', terminalId);
       } else {
         // Terminals exist - use active one or first one
         const activeId = this._terminalManager.getActiveTerminalId();
@@ -502,8 +502,38 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         }
         case 'requestStateRestoration': {
           log(
-            '🔄 [DEBUG] State restoration requested - but using fresh start approach, no action needed'
+            '🔄 [DEBUG] State restoration requested - DISABLED FOR DEBUGGING, no action needed'
           );
+          break;
+        }
+        case 'getScrollbackData': {
+          log('📜 [DEBUG] Scrollback data request from webview - DISABLED FOR DEBUGGING:', message.terminalId);
+          // DISABLED FOR DEBUGGING - Session restoration functionality disabled
+          // if (message.terminalId) {
+          //   try {
+          //     const scrollbackLines = message.scrollbackLines || 100;
+          //     const scrollbackData = await this._terminalManager.getTerminalScrollback(
+          //       message.terminalId,
+          //       scrollbackLines
+          //     );
+
+          //     // WebViewに履歴データを送信
+          //     await this._sendMessage({
+          //       command: 'getScrollback',
+          //       terminalId: message.terminalId,
+          //       scrollbackData,
+          //     });
+
+          //     log(
+          //       `📜 [DEBUG] Sent ${scrollbackData.length} lines of scrollback data for terminal ${message.terminalId}`
+          //     );
+          //   } catch (error) {
+          //     log(
+          //       `❌ [ERROR] Failed to get scrollback data for terminal ${message.terminalId}:`,
+          //       error
+          //     );
+          //   }
+          // }
           break;
         }
         case 'error': {
@@ -557,12 +587,24 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     // Handle terminal creation
     const createdDisposable = this._terminalManager.onTerminalCreated((terminal) => {
       log('🆕 [DEBUG] Terminal created:', terminal.id, terminal.name);
-      void this._sendMessage({
+
+      // 基本的なターミナル作成メッセージ
+      const message: WebviewMessage = {
         command: TERMINAL_CONSTANTS.COMMANDS.TERMINAL_CREATED,
         terminalId: terminal.id,
         terminalName: terminal.name,
         config: getTerminalConfig(),
-      });
+      };
+
+      // セッション復元されたターミナルの場合、追加データを送信 - DISABLED FOR DEBUGGING
+      // if ((terminal as any).isSessionRestored) {
+      //   log('🔄 [DEBUG] Terminal is session restored, sending session data');
+      //   message.command = 'sessionRestore';
+      //   message.sessionRestoreMessage = (terminal as any).sessionRestoreMessage;
+      //   message.sessionScrollback = (terminal as any).sessionScrollback || [];
+      // }
+
+      void this._sendMessage(message);
     });
 
     // Store disposables for cleanup
@@ -583,7 +625,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         state,
       });
     });
-    
+
     // ターミナルフォーカスイベント処理
     const focusDisposable = this._terminalManager.onTerminalFocus((terminalId) => {
       void this._sendMessage({
@@ -1154,6 +1196,17 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       // エラーがあっても継続
     }
   }
+
+  /**
+   * Send session management message to WebView - DISABLED FOR DEBUGGING
+   */
+  // public sendSessionMessage(message: WebviewMessage): void {
+  //   try {
+  //     void this._sendMessage(message);
+  //   } catch (error) {
+  //     console.error('[SESSION] Error sending session message to WebView:', error);
+  //   }
+  // }
 
   /**
    * Restore WebView state after panel move

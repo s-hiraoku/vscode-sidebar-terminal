@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { TerminalManager } from '../terminals/TerminalManager';
 import { extension as log } from '../utils/logger';
+import { VSCODE_COMMANDS } from '../constants';
 
 /**
  * ファイル参照コマンドのハンドラー
@@ -53,10 +54,10 @@ export class FileReferenceCommand {
       // ファイル参照を送信（フォーカス→送信の統一フロー）
       connectedAgents.forEach((agent) => {
         const text = this.formatFileReference(fileInfo);
-        
+
         // サイドバーターミナルビューにフォーカス
-        void vscode.commands.executeCommand('secondaryTerminal.focus');
-        
+        void vscode.commands.executeCommand(VSCODE_COMMANDS.SECONDARY_TERMINAL_FOCUS);
+
         // 特定のターミナルにフォーカス後、ファイル参照を送信
         setTimeout(() => {
           this.terminalManager.focusTerminal(agent.terminalId);

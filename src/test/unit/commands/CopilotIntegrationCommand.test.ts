@@ -65,9 +65,7 @@ describe('CopilotIntegrationCommand', () => {
     it('should activate Copilot Chat and send file reference when file is open', () => {
       copilotIntegrationCommand.handleActivateCopilot();
 
-      expect(vscode.commands.executeCommand).to.have.been.calledWith(
-        'workbench.action.chat.open'
-      );
+      expect(vscode.commands.executeCommand).to.have.been.calledWith('workbench.action.chat.open');
     });
 
     it('should activate Copilot Chat without file reference when no file is open', () => {
@@ -75,9 +73,7 @@ describe('CopilotIntegrationCommand', () => {
 
       copilotIntegrationCommand.handleActivateCopilot();
 
-      expect(vscode.commands.executeCommand).to.have.been.calledWith(
-        'workbench.action.chat.open'
-      );
+      expect(vscode.commands.executeCommand).to.have.been.calledWith('workbench.action.chat.open');
     });
 
     it('should show information message when integration is disabled', () => {
@@ -97,9 +93,7 @@ describe('CopilotIntegrationCommand', () => {
 
     it('should handle command execution errors gracefully', () => {
       // Mock command failure
-      (vscode.commands.executeCommand as sinon.SinonStub).rejects(
-        new Error('Command failed')
-      );
+      (vscode.commands.executeCommand as sinon.SinonStub).rejects(new Error('Command failed'));
 
       copilotIntegrationCommand.handleActivateCopilot();
 
