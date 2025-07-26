@@ -4,6 +4,7 @@ import { TerminalManager } from '../terminals/TerminalManager';
 import { extension as log, logger, LogLevel } from '../utils/logger';
 import { FileReferenceCommand, TerminalCommand } from '../commands';
 import { CopilotIntegrationCommand } from '../commands/CopilotIntegrationCommand';
+import { VSCODE_COMMANDS } from '../constants';
 
 /**
  * VS Code拡張機能のライフサイクル管理
@@ -120,7 +121,7 @@ export class ExtensionLifecycle {
         command: 'secondaryTerminal.focus',
         handler: () => {
           log('🔧 [DEBUG] Command executed: focus');
-          void vscode.commands.executeCommand('secondaryTerminalView.focus');
+          void vscode.commands.executeCommand(VSCODE_COMMANDS.SECONDARY_TERMINAL_VIEW_FOCUS);
         },
       },
 
@@ -137,7 +138,9 @@ export class ExtensionLifecycle {
       {
         command: 'secondaryTerminal.activateCopilot',
         handler: () => {
-          log('🔧 [DEBUG] Command executed: activateCopilot (GitHub Copilot Chat integration - CMD+K CMD+C)');
+          log(
+            '🔧 [DEBUG] Command executed: activateCopilot (GitHub Copilot Chat integration - CMD+K CMD+C)'
+          );
           void this.copilotIntegrationCommand?.handleActivateCopilot();
         },
       },
