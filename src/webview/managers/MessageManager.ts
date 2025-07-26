@@ -815,7 +815,9 @@ export class MessageManager implements IMessageManager {
   private handleSessionRestoreCompletedMessage(msg: MessageCommand): void {
     const restoredCount = (msg.restoredCount as number) || 0;
     const skippedCount = (msg.skippedCount as number) || 0;
-    log(`✅ [MESSAGE] Session restore completed: ${restoredCount} restored, ${skippedCount} skipped`);
+    log(
+      `✅ [MESSAGE] Session restore completed: ${restoredCount} restored, ${skippedCount} skipped`
+    );
     showSessionRestoreCompleted(restoredCount, skippedCount);
   }
 
@@ -823,7 +825,9 @@ export class MessageManager implements IMessageManager {
     const error = (msg.error as string) || 'Unknown error';
     const partialSuccess = (msg.partialSuccess as boolean) || false;
     const errorType = (msg.errorType as string) || undefined;
-    log(`❌ [MESSAGE] Session restore error: ${error} (partial: ${partialSuccess}, type: ${errorType})`);
+    log(
+      `❌ [MESSAGE] Session restore error: ${error} (partial: ${partialSuccess}, type: ${errorType})`
+    );
     showSessionRestoreError(error, partialSuccess, errorType);
   }
 
@@ -854,7 +858,7 @@ export class MessageManager implements IMessageManager {
     const terminalName = (msg.terminalName as string) || 'Unknown terminal';
     const error = (msg.error as string) || 'Unknown error';
     log(`⚠️ [MESSAGE] Terminal restore error: ${terminalName} - ${error}`);
-    
+
     // Import the function here to avoid circular dependencies
     const { showTerminalRestoreError } = require('../utils/NotificationUtils');
     showTerminalRestoreError(terminalName, error);

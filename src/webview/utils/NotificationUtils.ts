@@ -149,10 +149,7 @@ export function showSessionRestoreProgress(restored: number, total: number): voi
 /**
  * セッション復元完了の通知
  */
-export function showSessionRestoreCompleted(
-  restoredCount: number,
-  skippedCount: number = 0
-): void {
+export function showSessionRestoreCompleted(restoredCount: number, skippedCount: number = 0): void {
   let message = `Successfully restored ${restoredCount} terminal${restoredCount > 1 ? 's' : ''}`;
   if (skippedCount > 0) {
     message += `, ${skippedCount} skipped`;
@@ -170,7 +167,11 @@ export function showSessionRestoreCompleted(
 /**
  * セッション復元エラーの通知
  */
-export function showSessionRestoreError(error: string, partialSuccess?: boolean, errorType?: string): void {
+export function showSessionRestoreError(
+  error: string,
+  partialSuccess?: boolean,
+  errorType?: string
+): void {
   let title = partialSuccess ? 'Partial Session Restore' : 'Session Restore Failed';
   let icon = '❌';
   let message = partialSuccess

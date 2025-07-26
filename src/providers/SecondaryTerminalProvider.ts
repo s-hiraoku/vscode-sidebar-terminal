@@ -501,13 +501,14 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
           break;
         }
         case 'requestStateRestoration': {
-          log(
-            '🔄 [DEBUG] State restoration requested - DISABLED FOR DEBUGGING, no action needed'
-          );
+          log('🔄 [DEBUG] State restoration requested - DISABLED FOR DEBUGGING, no action needed');
           break;
         }
         case 'getScrollbackData': {
-          log('📜 [DEBUG] Scrollback data request from webview - DISABLED FOR DEBUGGING:', message.terminalId);
+          log(
+            '📜 [DEBUG] Scrollback data request from webview - DISABLED FOR DEBUGGING:',
+            message.terminalId
+          );
           // DISABLED FOR DEBUGGING - Session restoration functionality disabled
           // if (message.terminalId) {
           //   try {

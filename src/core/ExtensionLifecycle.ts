@@ -24,7 +24,7 @@ export class ExtensionLifecycle {
    */
   async activate(context: vscode.ExtensionContext): Promise<void> {
     log('🚀 [EXTENSION] === ACTIVATION START ===');
-    
+
     // Configure logger based on extension mode
     if (context.extensionMode === vscode.ExtensionMode.Development) {
       logger.setLevel(LogLevel.DEBUG);
@@ -104,7 +104,7 @@ export class ExtensionLifecycle {
         'secondaryTerminal.debugSession',
         async () => {
           log('🔧 [DEBUG] === SESSION DEBUG COMMAND EXECUTED ===');
-          
+
           if (!this.simpleSessionManager || !this.terminalManager) {
             log('❌ [DEBUG] Managers not available');
             void vscode.window.showErrorMessage('Session managers not available');
@@ -136,8 +136,12 @@ export class ExtensionLifecycle {
               `Debug: ${terminals.length} terminals, session ${sessionInfo ? 'exists' : 'none'}, save ${saveResult.success ? 'success' : 'failed'}`
             );
           } catch (error) {
-            log(`❌ [DEBUG] Debug command error: ${error}`);
-            void vscode.window.showErrorMessage(`Debug error: ${error}`);
+            log(
+              `❌ [DEBUG] Debug command error: ${error instanceof Error ? error.message : String(error)}`
+            );
+            void vscode.window.showErrorMessage(
+              `Debug error: ${error instanceof Error ? error.message : String(error)}`
+            );
           }
         }
       );
@@ -145,13 +149,37 @@ export class ExtensionLifecycle {
 
       // シンプルセッション復元処理（初期化完了後に実行）
       log('🔄 [EXTENSION] === STARTING SIMPLE SESSION RESTORE ===');
+      log(`🔧 [EXTENSION] Current timestamp: ${new Date().toISOString()}`);
+      log(`🔧 [EXTENSION] Extension context: ${!!context}`);
       log(`🔧 [EXTENSION] SimpleSessionManager available: ${!!this.simpleSessionManager}`);
       log(`🔧 [EXTENSION] TerminalManager available: ${!!this.terminalManager}`);
-      
+      log(`🔧 [EXTENSION] SidebarProvider available: ${!!this.sidebarProvider}`);
+
+      // Manager state詳細チェック
+      if (this.simpleSessionManager) {
+        log(`🔧 [EXTENSION] SimpleSessionManager type: ${typeof this.simpleSessionManager}`);
+        log(
+          `🔧 [EXTENSION] SimpleSessionManager constructor: ${this.simpleSessionManager.constructor.name}`
+        );
+      }
+
+      if (this.terminalManager) {
+        log(`🔧 [EXTENSION] TerminalManager type: ${typeof this.terminalManager}`);
+        log(`🔧 [EXTENSION] TerminalManager constructor: ${this.terminalManager.constructor.name}`);
+      }
+
       if (this.simpleSessionManager && this.terminalManager) {
         log('✅ [EXTENSION] Both managers available, proceeding with restore...');
-        await this.restoreSimpleSessionOnStartup();
-        log('✅ [EXTENSION] === SIMPLE SESSION RESTORE COMPLETED ===');
+        try {
+          log('🔧 [EXTENSION] About to call restoreSimpleSessionOnStartup()...');
+          await this.restoreSimpleSessionOnStartup();
+          log('✅ [EXTENSION] === SIMPLE SESSION RESTORE COMPLETED ===');
+        } catch (error) {
+          log(
+            `❌ [EXTENSION] Error in restoreSimpleSessionOnStartup: ${error instanceof Error ? error.message : String(error)}`
+          );
+          log(`❌ [EXTENSION] Error stack: ${error instanceof Error ? error.stack : 'No stack'}`);
+        }
       } else {
         log('❌ [EXTENSION] Missing managers, cannot restore session');
         log(`   - SimpleSessionManager: ${!!this.simpleSessionManager}`);
@@ -475,7 +503,9 @@ export class ExtensionLifecycle {
 
       log('✅ [SIMPLE_SESSION] Session auto-save configured');
     } catch (error) {
-      log(`❌ [SIMPLE_SESSION] Error setting up auto-save: ${error}`);
+      log(
+        `❌ [SIMPLE_SESSION] Error setting up auto-save: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -674,10 +704,14 @@ export class ExtensionLifecycle {
           `Terminal session saved successfully (${result.terminalCount} terminal${result.terminalCount !== 1 ? 's' : ''})`
         );
       } else {
-        await vscode.window.showErrorMessage(`Failed to save session: ${result.error || 'Unknown error'}`);
+        await vscode.window.showErrorMessage(
+          `Failed to save session: ${result.error || 'Unknown error'}`
+        );
       }
     } catch (error) {
-      await vscode.window.showErrorMessage(`Failed to save session: ${error}`);
+      await vscode.window.showErrorMessage(
+        `Failed to save session: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -701,10 +735,14 @@ export class ExtensionLifecycle {
           await vscode.window.showInformationMessage('No previous session data found to restore');
         }
       } else {
-        await vscode.window.showErrorMessage(`Failed to restore session: ${result.error || 'Unknown error'}`);
+        await vscode.window.showErrorMessage(
+          `Failed to restore session: ${result.error || 'Unknown error'}`
+        );
       }
     } catch (error) {
-      await vscode.window.showErrorMessage(`Failed to restore session: ${error}`);
+      await vscode.window.showErrorMessage(
+        `Failed to restore session: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -729,7 +767,9 @@ export class ExtensionLifecycle {
         await this.simpleSessionManager.clearSession();
         await vscode.window.showInformationMessage('Terminal session data cleared successfully');
       } catch (error) {
-        await vscode.window.showErrorMessage(`Failed to clear session: ${error}`);
+        await vscode.window.showErrorMessage(
+          `Failed to clear session: ${error instanceof Error ? error.message : String(error)}`
+        );
       }
     }
   }
@@ -757,10 +797,14 @@ export class ExtensionLifecycle {
           }
         })
         .catch((error) => {
-          log(`❌ [SIMPLE_SESSION] Error saving session on exit: ${error}`);
+          log(
+            `❌ [SIMPLE_SESSION] Error saving session on exit: ${error instanceof Error ? error.message : String(error)}`
+          );
         });
     } catch (error) {
-      log(`❌ [SIMPLE_SESSION] Error during session save on exit: ${error}`);
+      log(
+        `❌ [SIMPLE_SESSION] Error during session save on exit: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -769,7 +813,7 @@ export class ExtensionLifecycle {
    */
   private async restoreSimpleSessionOnStartup(): Promise<void> {
     log('🎯 [SIMPLE_SESSION] === restoreSimpleSessionOnStartup() CALLED ===');
-    
+
     try {
       log('🔧 [SIMPLE_SESSION] Checking manager availability...');
       if (!this.simpleSessionManager || !this.terminalManager) {
@@ -783,8 +827,10 @@ export class ExtensionLifecycle {
 
       // 既存のターミナルがある場合は復元をスキップ
       const existingTerminals = this.terminalManager.getTerminals();
-      log(`🔧 [SIMPLE_SESSION] Existing terminals check: ${existingTerminals.length} terminals found`);
-      
+      log(
+        `🔧 [SIMPLE_SESSION] Existing terminals check: ${existingTerminals.length} terminals found`
+      );
+
       if (existingTerminals.length > 0) {
         log('📋 [SIMPLE_SESSION] Terminals already exist, skipping restore');
         existingTerminals.forEach((t, i) => {
@@ -801,6 +847,13 @@ export class ExtensionLifecycle {
         log(`   - Session timestamp: ${new Date(sessionInfo.timestamp).toISOString()}`);
       }
 
+      // セッション復元を実行
+      if (sessionInfo && sessionInfo.terminals.length > 0) {
+        log(
+          `🔔 [SIMPLE_SESSION] Starting session restore for ${sessionInfo.terminals.length} terminals...`
+        );
+      }
+
       // シンプルセッション復元を実行
       log('⚡ [SIMPLE_SESSION] Executing restoreSession()...');
       const result = await this.simpleSessionManager.restoreSession();
@@ -808,7 +861,7 @@ export class ExtensionLifecycle {
 
       if (result.success && result.restoredCount && result.restoredCount > 0) {
         log(`✅ [SIMPLE_SESSION] Session restored on startup: ${result.restoredCount} terminals`);
-        
+
         // 復元成功をユーザーに通知（控えめに）
         setTimeout(() => {
           void vscode.window.showInformationMessage(
@@ -825,7 +878,9 @@ export class ExtensionLifecycle {
         this.createInitialTerminal();
       }
     } catch (error) {
-      log(`❌ [SIMPLE_SESSION] Error during startup session restore: ${error}`);
+      log(
+        `❌ [SIMPLE_SESSION] Error during startup session restore: ${error instanceof Error ? error.message : String(error)}`
+      );
       // エラー時も初期ターミナルを作成
       this.createInitialTerminal();
     }
@@ -843,13 +898,17 @@ export class ExtensionLifecycle {
           const terminalId = this.terminalManager.createTerminal();
           log(`✅ [SIMPLE_SESSION] Initial terminal created: ${terminalId}`);
         } else {
-          log(`📋 [SIMPLE_SESSION] Skipping initial terminal creation - ${terminals.length} terminals already exist`);
+          log(
+            `📋 [SIMPLE_SESSION] Skipping initial terminal creation - ${terminals.length} terminals already exist`
+          );
         }
       } else {
         log('❌ [SIMPLE_SESSION] Cannot create initial terminal - terminal manager not available');
       }
     } catch (error) {
-      log(`❌ [SIMPLE_SESSION] Error creating initial terminal: ${error}`);
+      log(
+        `❌ [SIMPLE_SESSION] Error creating initial terminal: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 }

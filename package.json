@@ -50,8 +50,7 @@
   "preview": false,
   "main": "./dist/extension.js",
   "activationEvents": [
-    "onView:secondaryTerminal",
-    "*"
+    "onView:secondaryTerminal"
   ],
   "contributes": {
     "viewsContainers": {

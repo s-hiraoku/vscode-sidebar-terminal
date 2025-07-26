@@ -148,12 +148,12 @@ suite('TerminalManager Test Suite', () => {
     assert.ok(terminalId);
 
     const terminals = terminalManager.getTerminals();
-    const terminal = terminals.find(t => t.id === terminalId);
+    const terminal = terminals.find((t) => t.id === terminalId);
     assert.ok(terminal);
 
     // Ensure PTY instance exists and has required methods
     assert.ok(terminal.pty || terminal.ptyProcess, 'Terminal should have PTY instance');
-    
+
     const ptyInstance = terminal.ptyProcess || terminal.pty;
     assert.ok(ptyInstance, 'PTY instance should exist');
     assert.strictEqual(typeof ptyInstance.write, 'function', 'PTY should have write method');
