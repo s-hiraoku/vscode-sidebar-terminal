@@ -162,6 +162,8 @@ User Action → VS Code Command → Extension Host → WebView Message → xterm
 - `src/extension.ts`: Entry point, command registration
 - `src/providers/SidebarTerminalProvider.ts`: WebView provider implementation  
 - `src/terminals/TerminalManager.ts`: Terminal process management
+- `src/commands/FileReferenceCommand.ts`: CLI Agent file reference (@filename) implementation
+- `src/commands/CopilotIntegrationCommand.ts`: GitHub Copilot Chat integration (#file:) implementation
 - `webpack.config.js`: Dual build configuration (extension + webview)
 
 **WebView Frontend**
@@ -441,3 +443,47 @@ The test environment automatically configures:
 - Process event handler polyfills for Mocha compatibility
 - DOM mocking via JSDOM for webview component tests
 - Sinon sandboxes for isolated test execution
+
+## File Reference Features
+
+### Overview
+This extension provides two file reference commands for different AI assistants:
+1. **CLI Agent File Reference** (`@filename` format) - CMD+Option+L (Mac) / Ctrl+Alt+L (Windows/Linux)
+2. **GitHub Copilot Chat File Reference** (`#file:filename` format) - CMD+K CMD+C (Mac) / Ctrl+K Ctrl+C (Windows/Linux)
+
+### CLI Agent File Reference (@filename)
+- **Command**: `secondaryTerminal.sendAtMention`
+- **Keybinding**: CMD+Option+L (Mac) / Ctrl+Alt+L (Windows/Linux)
+- **Format**: `@filename` or `@filename#L10-L25` (with line range)
+- **Implementation**: `src/commands/FileReferenceCommand.ts`
+- **Features**:
+  - Sends file reference to active CLI Agent terminals
+  - Supports line range selection (e.g., `@src/test.ts#L5-L10`)
+  - Auto-focuses secondary terminal after sending
+  - Detects connected CLI Agents (Claude, Gemini)
+
+### GitHub Copilot Chat File Reference (#file:)
+- **Command**: `secondaryTerminal.activateCopilot`
+- **Keybinding**: CMD+K CMD+C (Mac) / Ctrl+K Ctrl+C (Windows/Linux)
+- **Format**: `#file:filename` (GitHub Copilot standard format)
+- **Implementation**: `src/commands/CopilotIntegrationCommand.ts`
+- **Features**:
+  - Opens GitHub Copilot Chat
+  - Copies file reference to clipboard for easy pasting
+  - Uses `#file:` prefix as per Copilot conventions
+  - Note: Line ranges are detected but not included in output (Copilot limitation)
+
+### Configuration Settings
+```json
+{
+  "secondaryTerminal.enableCliAgentIntegration": true,      // Enable @filename shortcuts
+  "secondaryTerminal.enableGitHubCopilotIntegration": true  // Enable #file: shortcuts
+}
+```
+
+### Implementation Details
+- Both commands share similar file detection logic but use different output formats
+- File paths are relative to workspace root
+- Selection detection converts VS Code's 0-based line numbers to 1-based
+- Copilot integration uses clipboard as fallback due to API limitations
+- Both features can be independently enabled/disabled via settings

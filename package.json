@@ -103,6 +103,11 @@
         "command": "secondaryTerminal.testCliAgentStatus",
         "title": "Test Claude Status Update",
         "category": "Secondary Terminal"
+      },
+      {
+        "command": "secondaryTerminal.activateCopilot",
+        "title": "Activate GitHub Copilot Chat",
+        "category": "Secondary Terminal"
       }
     ],
     "menus": {
@@ -277,6 +282,11 @@
           "type": "boolean",
           "default": true,
           "description": "Enable file reference shortcuts: Use Cmd+Option+L (Mac) or Alt+Ctrl+L (Linux/Windows) to insert file references"
+        },
+        "secondaryTerminal.enableGitHubCopilotIntegration": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable GitHub Copilot Chat integration: Use Cmd+K Cmd+C (Mac) or Ctrl+K Ctrl+C (Linux/Windows) to activate Copilot Chat"
         }
       }
     },
@@ -286,6 +296,11 @@
         "key": "ctrl+alt+l",
         "mac": "cmd+alt+l",
         "when": "editorTextFocus"
+      },
+      {
+        "command": "secondaryTerminal.activateCopilot",
+        "key": "ctrl+k ctrl+c",
+        "mac": "cmd+k cmd+c"
       }
     ]
   },
