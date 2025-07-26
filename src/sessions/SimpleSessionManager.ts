@@ -90,7 +90,9 @@ export class SimpleSessionManager {
         return { success: true, restoredCount: 0, skippedCount: 0 };
       }
 
-      log(`🔧 [SIMPLE_SESSION_MANAGER] Session data found - terminals: ${sessionData.terminals?.length || 0}`);
+      log(
+        `🔧 [SIMPLE_SESSION_MANAGER] Session data found - terminals: ${sessionData.terminals?.length || 0}`
+      );
 
       // データの有効性チェック
       log('🔍 [SIMPLE_SESSION_MANAGER] Validating session data...');
@@ -130,13 +132,13 @@ export class SimpleSessionManager {
       for (const terminalInfo of sessionData.terminals) {
         try {
           const terminalId = this.terminalManager.createTerminal();
-          
+
           if (terminalId && !activeTerminalSet && terminalInfo.isActive) {
             // アクティブターミナルを設定（最初の1回のみ）
             this.terminalManager.setActiveTerminal(terminalId);
             activeTerminalSet = true;
           }
-          
+
           restoredCount++;
           log(`✅ [SIMPLE_SESSION] Restored terminal: ${terminalInfo.name}`);
         } catch (error) {
@@ -181,12 +183,13 @@ export class SimpleSessionManager {
       Array.isArray(data.terminals) &&
       typeof data.timestamp === 'number' &&
       typeof data.version === 'string' &&
-      data.terminals.every((t: any) => 
-        typeof t.id === 'string' &&
-        typeof t.name === 'string' &&
-        typeof t.number === 'number' &&
-        typeof t.cwd === 'string' &&
-        typeof t.isActive === 'boolean'
+      data.terminals.every(
+        (t: any) =>
+          typeof t.id === 'string' &&
+          typeof t.name === 'string' &&
+          typeof t.number === 'number' &&
+          typeof t.cwd === 'string' &&
+          typeof t.isActive === 'boolean'
       )
     );
   }
@@ -205,6 +208,8 @@ export class SimpleSessionManager {
    * 保存されたセッション情報を取得（デバッグ用）
    */
   public async getSessionInfo(): Promise<SimpleSessionData | null> {
-    return this.context.globalState.get<SimpleSessionData>(SimpleSessionManager.STORAGE_KEY) || null;
+    return (
+      this.context.globalState.get<SimpleSessionData>(SimpleSessionManager.STORAGE_KEY) || null
+    );
   }
 }

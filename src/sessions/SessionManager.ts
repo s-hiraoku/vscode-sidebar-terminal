@@ -108,8 +108,10 @@ export class SessionManager extends EventEmitter {
 
       // 設定を確認
       const config = this.getSessionConfig();
-      log(`🔧 [SESSION_MANAGER] Session config - enablePersistentSessions: ${config.enablePersistentSessions}`);
-      
+      log(
+        `🔧 [SESSION_MANAGER] Session config - enablePersistentSessions: ${config.enablePersistentSessions}`
+      );
+
       if (!config.enablePersistentSessions) {
         log('📵 [SESSION_MANAGER] Persistent sessions disabled');
         this.emit('sessionRestoreSkipped', {
@@ -130,7 +132,7 @@ export class SessionManager extends EventEmitter {
       // セッションデータを復元
       log('🔄 [SESSION_MANAGER] Attempting to restore session data...');
       const sessionData = await this.storage.restoreSession(workspacePath || undefined);
-      
+
       if (!sessionData) {
         log('📭 [SESSION_MANAGER] No session data to restore');
         this.emit('sessionRestoreSkipped', {
@@ -144,10 +146,11 @@ export class SessionManager extends EventEmitter {
       }
 
       log(`🔄 [SESSION_MANAGER] Found session data with ${sessionData.terminals.length} terminals`);
-      log(`🔄 [SESSION_MANAGER] Session timestamp: ${new Date(sessionData.timestamp).toISOString()}`);
+      log(
+        `🔄 [SESSION_MANAGER] Session timestamp: ${new Date(sessionData.timestamp).toISOString()}`
+      );
       log(`🔄 [SESSION_MANAGER] Session version: ${sessionData.version}`);
       log(`🔄 [SESSION_MANAGER] Active terminal ID: ${sessionData.activeTerminalId}`);
-      
 
       // 復元開始イベントを発行
       this.emit('sessionRestoreStarted', {
@@ -181,7 +184,7 @@ export class SessionManager extends EventEmitter {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       const errorStack = error instanceof Error ? error.stack : undefined;
-      
+
       log(`❌ [SESSION_MANAGER] Unexpected error during session restore: ${errorMessage}`);
       if (errorStack) {
         log(`❌ [SESSION_MANAGER] Error stack: ${errorStack}`);
@@ -229,14 +232,28 @@ export class SessionManager extends EventEmitter {
   /**
    * エラーの種類を分類する
    */
-  private categorizeError(errorMessage: string): 'file' | 'permission' | 'corruption' | 'network' | 'unknown' {
+  private categorizeError(
+    errorMessage: string
+  ): 'file' | 'permission' | 'corruption' | 'network' | 'unknown' {
     if (errorMessage.includes('ENOENT') || errorMessage.includes('file not found')) {
       return 'file';
-    } else if (errorMessage.includes('Permission') || errorMessage.includes('EACCES') || errorMessage.includes('EPERM')) {
+    } else if (
+      errorMessage.includes('Permission') ||
+      errorMessage.includes('EACCES') ||
+      errorMessage.includes('EPERM')
+    ) {
       return 'permission';
-    } else if (errorMessage.includes('JSON') || errorMessage.includes('parse') || errorMessage.includes('corrupt')) {
+    } else if (
+      errorMessage.includes('JSON') ||
+      errorMessage.includes('parse') ||
+      errorMessage.includes('corrupt')
+    ) {
       return 'corruption';
-    } else if (errorMessage.includes('network') || errorMessage.includes('timeout') || errorMessage.includes('ECONNREFUSED')) {
+    } else if (
+      errorMessage.includes('network') ||
+      errorMessage.includes('timeout') ||
+      errorMessage.includes('ECONNREFUSED')
+    ) {
       return 'network';
     } else {
       return 'unknown';
@@ -294,7 +311,7 @@ export class SessionManager extends EventEmitter {
       // アクティブなターミナル一覧を取得
       const terminals = this.terminalManager.getAllTerminals();
       log(`🔧 [SESSION_MANAGER] Found ${terminals.length} terminals to save`);
-      
+
       if (terminals.length === 0) {
         log('📭 [SESSION_MANAGER] No terminals found for session save');
         return null;
@@ -402,10 +419,14 @@ export class SessionManager extends EventEmitter {
     try {
       // 既存ターミナルを確認
       const existingTerminals = this.terminalManager.getAllTerminals();
-      log(`🔍 [SESSION_MANAGER] Found ${existingTerminals.length} existing terminals before restore`);
-      
+      log(
+        `🔍 [SESSION_MANAGER] Found ${existingTerminals.length} existing terminals before restore`
+      );
+
       // 既存ターミナルは削除せず、セッション復元後に調整
-      log(`🔄 [SESSION_MANAGER] Starting terminal restoration for ${sessionData.terminals.length} terminals`);
+      log(
+        `🔄 [SESSION_MANAGER] Starting terminal restoration for ${sessionData.terminals.length} terminals`
+      );
       for (const terminalInfo of sessionData.terminals) {
         try {
           const restored = await this.restoreTerminal(terminalInfo);
@@ -423,11 +444,15 @@ export class SessionManager extends EventEmitter {
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error);
           const errorType = this.categorizeError(errorMessage);
-          
-          log(`⚠️ [SESSION_MANAGER] Failed to restore terminal ${terminalInfo.id}: ${errorMessage}`);
-          log(`⚠️ [SESSION_MANAGER] Terminal info: name=${terminalInfo.name}, cwd=${terminalInfo.cwd}`);
+
+          log(
+            `⚠️ [SESSION_MANAGER] Failed to restore terminal ${terminalInfo.id}: ${errorMessage}`
+          );
+          log(
+            `⚠️ [SESSION_MANAGER] Terminal info: name=${terminalInfo.name}, cwd=${terminalInfo.cwd}`
+          );
           log(`⚠️ [SESSION_MANAGER] Error type: ${errorType}`);
-          
+
           skippedCount++;
 
           // 個別ターミナルエラーの詳細イベントを発行
@@ -451,14 +476,14 @@ export class SessionManager extends EventEmitter {
       if (restoredCount > 0) {
         log(`🧹 [SESSION_MANAGER] Session restore successful - cleaning up initial terminals`);
         const allTerminals = this.terminalManager.getAllTerminals();
-        
+
         // 復元されたターミナル以外の既存ターミナルを削除
         for (const terminal of existingTerminals) {
           try {
-            const isRestoredTerminal = sessionData.terminals.some(info => 
-              terminal.name === info.name || terminal.cwd === info.cwd
+            const isRestoredTerminal = sessionData.terminals.some(
+              (info) => terminal.name === info.name || terminal.cwd === info.cwd
             );
-            
+
             if (!isRestoredTerminal) {
               log(`🗑️ [SESSION_MANAGER] Removing initial terminal: ${terminal.id}`);
               await this.terminalManager.deleteTerminal(terminal.id);

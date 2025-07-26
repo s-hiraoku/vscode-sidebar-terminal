@@ -255,7 +255,7 @@ export class TerminalManager {
           hasPty: !!terminal.pty,
           hasPtyProcess: !!terminal.ptyProcess,
           ptyType: terminal.pty ? typeof terminal.pty : 'undefined',
-          ptyProcessType: terminal.ptyProcess ? typeof terminal.ptyProcess : 'undefined'
+          ptyProcessType: terminal.ptyProcess ? typeof terminal.ptyProcess : 'undefined',
         });
       }
     } catch (error) {
