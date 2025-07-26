@@ -1,5 +1,13 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
 import { extension as log } from '../utils/logger';
+
+// VS Code コマンド定数
+const COMMANDS = {
+  CHAT_OPEN: 'workbench.action.chat.open',
+  CHAT_FOCUS_PRIMARY: 'workbench.action.chat.open',
+  CHAT_FOCUS_FALLBACK: 'workbench.panel.chat.view.copilot.focus'
+} as const;
 
 /**
  * GitHub Copilot連携コマンドのハンドラー
@@ -49,14 +57,14 @@ export class CopilotIntegrationCommand {
   private async activateCopilotChat(): Promise<void> {
     try {
       // 第一候補: workbench.action.chat.open
-      await vscode.commands.executeCommand('workbench.action.chat.open');
+      await vscode.commands.executeCommand(COMMANDS.CHAT_FOCUS_PRIMARY);
       log('📤 [DEBUG] Executed workbench.action.chat.open command');
     } catch (primaryError) {
       log('⚠️ [WARN] Primary command failed, trying fallback:', primaryError);
 
       try {
         // 代替案: Copilot Chatパネルにフォーカス
-        await vscode.commands.executeCommand('workbench.panel.chat.view.copilot.focus');
+        await vscode.commands.executeCommand(COMMANDS.CHAT_FOCUS_FALLBACK);
         log('📤 [DEBUG] Executed workbench.panel.chat.view.copilot.focus command');
       } catch (fallbackError) {
         log('❌ [ERROR] Both activation methods failed:', fallbackError);
@@ -104,7 +112,7 @@ export class CopilotIntegrationCommand {
     const fileReference = this.formatCopilotFileReference(fileInfo);
     log(`📤 [DEBUG] Sending file reference to Copilot: "${fileReference}"`);
 
-    await vscode.commands.executeCommand('workbench.action.chat.open', {
+    await vscode.commands.executeCommand(COMMANDS.CHAT_OPEN, {
       query: fileReference,
       isPartialQuery: true
     });
@@ -135,12 +143,10 @@ export class CopilotIntegrationCommand {
     if (workspaceFolder) {
       const workspaceRoot = workspaceFolder.uri.fsPath;
       if (fullPath.startsWith(workspaceRoot)) {
-        // ワークスペースルートからの相対パスを取得
-        relativePath = fullPath.substring(workspaceRoot.length);
-        // 先頭のスラッシュを削除
-        if (relativePath.startsWith('/') || relativePath.startsWith('\\')) {
-          relativePath = relativePath.substring(1);
-        }
+        // クロスプラットフォーム対応の相対パス計算
+        relativePath = path.relative(workspaceRoot, fullPath);
+        // パス区切り文字を正規化（Windowsの場合）
+        relativePath = relativePath.replace(/\\/g, '/');
       }
     }
 
@@ -195,45 +201,6 @@ export class CopilotIntegrationCommand {
     return `${fullReference}  `;
   }
 
-  /**
-   * より高度なファイル参照作成 - VS Code内部APIを活用
-   */
-  private async createAdvancedFileReference(fileInfo: {
-    relativePath: string;
-    selection?: {
-      startLine: number;
-      endLine: number;
-      hasSelection: boolean;
-    };
-  }): Promise<string> {
-    try {
-      const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-      if (!workspaceFolder) {
-        return this.formatCopilotFileReference(fileInfo);
-      }
-
-      const fileUri = vscode.Uri.joinPath(workspaceFolder.uri, fileInfo.relativePath);
-      
-      // VS CodeのファイルシステムAPIを使ってファイル存在確認
-      try {
-        await vscode.workspace.fs.stat(fileUri);
-        log(`✅ [DEBUG] File confirmed to exist: ${fileInfo.relativePath}`);
-        
-        // ファイルが存在する場合、シンプルな参照を作成
-        const reference = `#file:${fileInfo.relativePath}`;
-        
-        log(`📤 [DEBUG] Advanced file reference: ${reference}`);
-        
-        return `${reference}  `;
-      } catch (statError) {
-        log(`⚠️ [WARN] File may not exist: ${fileInfo.relativePath}`, statError);
-        return this.formatCopilotFileReference(fileInfo);
-      }
-    } catch (error) {
-      log(`❌ [ERROR] Error creating advanced file reference:`, error);
-      return this.formatCopilotFileReference(fileInfo);
-    }
-  }
 
   /**
    * GitHub Copilot連携機能が有効かチェック
