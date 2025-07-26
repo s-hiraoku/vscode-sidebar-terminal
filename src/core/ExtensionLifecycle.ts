@@ -145,13 +145,33 @@ export class ExtensionLifecycle {
 
       // シンプルセッション復元処理（初期化完了後に実行）
       log('🔄 [EXTENSION] === STARTING SIMPLE SESSION RESTORE ===');
+      log(`🔧 [EXTENSION] Current timestamp: ${new Date().toISOString()}`);
+      log(`🔧 [EXTENSION] Extension context: ${!!context}`);
       log(`🔧 [EXTENSION] SimpleSessionManager available: ${!!this.simpleSessionManager}`);
       log(`🔧 [EXTENSION] TerminalManager available: ${!!this.terminalManager}`);
+      log(`🔧 [EXTENSION] SidebarProvider available: ${!!this.sidebarProvider}`);
+      
+      // Manager state詳細チェック
+      if (this.simpleSessionManager) {
+        log(`🔧 [EXTENSION] SimpleSessionManager type: ${typeof this.simpleSessionManager}`);
+        log(`🔧 [EXTENSION] SimpleSessionManager constructor: ${this.simpleSessionManager.constructor.name}`);
+      }
+      
+      if (this.terminalManager) {
+        log(`🔧 [EXTENSION] TerminalManager type: ${typeof this.terminalManager}`);
+        log(`🔧 [EXTENSION] TerminalManager constructor: ${this.terminalManager.constructor.name}`);
+      }
       
       if (this.simpleSessionManager && this.terminalManager) {
         log('✅ [EXTENSION] Both managers available, proceeding with restore...');
-        await this.restoreSimpleSessionOnStartup();
-        log('✅ [EXTENSION] === SIMPLE SESSION RESTORE COMPLETED ===');
+        try {
+          log('🔧 [EXTENSION] About to call restoreSimpleSessionOnStartup()...');
+          await this.restoreSimpleSessionOnStartup();
+          log('✅ [EXTENSION] === SIMPLE SESSION RESTORE COMPLETED ===');
+        } catch (error) {
+          log(`❌ [EXTENSION] Error in restoreSimpleSessionOnStartup: ${error}`);
+          log(`❌ [EXTENSION] Error stack: ${error instanceof Error ? error.stack : 'No stack'}`);
+        }
       } else {
         log('❌ [EXTENSION] Missing managers, cannot restore session');
         log(`   - SimpleSessionManager: ${!!this.simpleSessionManager}`);
@@ -801,6 +821,11 @@ export class ExtensionLifecycle {
         log(`   - Session timestamp: ${new Date(sessionInfo.timestamp).toISOString()}`);
       }
 
+      // セッション復元を実行
+      if (sessionInfo && sessionInfo.terminals.length > 0) {
+        log(`🔔 [SIMPLE_SESSION] Starting session restore for ${sessionInfo.terminals.length} terminals...`);
+      }
+      
       // シンプルセッション復元を実行
       log('⚡ [SIMPLE_SESSION] Executing restoreSession()...');
       const result = await this.simpleSessionManager.restoreSession();
