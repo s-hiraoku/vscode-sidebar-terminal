@@ -134,9 +134,18 @@ export interface VsCodeMessage {
 export interface TerminalInstance {
   id: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  pty: any; // Using any for node-pty compatibility with both real and mock implementations
+  pty?: any; // Using any for node-pty compatibility with both real and mock implementations (ptyProcessに移行中)
+  ptyProcess?: any; // 新しいpty参照名（セッション復元対応）
   name: string;
+  number: number; // ターミナル番号（1-5）
+  cwd?: string; // 現在の作業ディレクトリ
   isActive: boolean;
+  createdAt?: number; // 作成日時
+  
+  // セッション復元関連のプロパティ
+  isSessionRestored?: boolean; // セッション復元で作成されたターミナルかどうか
+  sessionRestoreMessage?: string; // 復元メッセージ
+  sessionScrollback?: string[]; // 復元時の履歴データ
 }
 
 export interface TerminalDimensions {

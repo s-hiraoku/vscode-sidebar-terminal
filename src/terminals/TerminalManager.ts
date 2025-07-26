@@ -926,5 +926,187 @@ export class TerminalManager {
     });
   }
 
+  // ==================== セッション復元関連のメソッド ====================
+
+  /**
+   * 全ターミナルの情報を取得（セッション保存用）
+   */
+  public getAllTerminals(): Array<{
+    id: string;
+    name: string;
+    number: number;
+    cwd: string;
+    createdAt: number;
+    isActive: boolean;
+  }> {
+    return Array.from(this._terminals.values()).map(terminal => ({
+      id: terminal.id,
+      name: terminal.name,
+      number: terminal.number,
+      cwd: terminal.cwd || process.cwd(),
+      createdAt: terminal.createdAt || Date.now(),
+      isActive: terminal.isActive,
+    }));
+  }
+
+  /**
+   * 指定ターミナルのスクロールバック履歴を取得（セッション保存用）
+   */
+  public async getTerminalScrollback(terminalId: string, maxLines: number): Promise<string[]> {
+    const terminal = this._terminals.get(terminalId);
+    if (!terminal) {
+      log(`⚠️ [SESSION] Terminal not found for scrollback: ${terminalId}`);
+      return [];
+    }
+
+    try {
+      // 現在はプレースホルダー実装
+      // 実際の実装では、xterm.jsのbufferからスクロールバックを取得する必要がある
+      // これはWebView側との連携が必要
+      log(`📜 [SESSION] Getting scrollback for terminal ${terminalId} (max: ${maxLines} lines)`);
+      
+      // TODO: WebView側でxterm.js bufferからスクロールバックを取得する仕組みが必要
+      // 現在は空配列を返す（Phase 2で実装予定）
+      return [];
+    } catch (error) {
+      log(`❌ [SESSION] Error getting scrollback for ${terminalId}: ${error}`);
+      return [];
+    }
+  }
+
+  /**
+   * セッションデータからターミナルを作成（復元用）
+   */
+  public async createTerminalFromSession(sessionInfo: {
+    id: string;
+    name: string;
+    cwd: string;
+    terminalNumber: number;
+    restoreMessage: string;
+    scrollbackHistory: string[];
+  }): Promise<string | null> {
+    try {
+      log(`🔄 [SESSION] Creating terminal from session: ${sessionInfo.name}`);
+
+      // 既存のターミナル数をチェック
+      const config = getTerminalConfig();
+      if (this._terminals.size >= config.maxTerminals) {
+        log(`⚠️ [SESSION] Cannot restore terminal: max terminals reached (${config.maxTerminals})`);
+        return null;
+      }
+
+      // セッション用の特別なターミナル作成
+      return await this._createSessionTerminal(sessionInfo);
+    } catch (error) {
+      log(`❌ [SESSION] Error creating terminal from session: ${error}`);
+      return null;
+    }
+  }
+
+  /**
+   * セッション復元用のターミナルを内部的に作成
+   */
+  private async _createSessionTerminal(sessionInfo: {
+    id: string;
+    name: string;
+    cwd: string;
+    terminalNumber: number;
+    restoreMessage: string;
+    scrollbackHistory: string[];
+  }): Promise<string | null> {
+    return new Promise((resolve) => {
+      this.operationQueue = this.operationQueue.then(async () => {
+        try {
+          const config = getTerminalConfig();
+          const shell = getShellForPlatform();
+          const shellArgs = config.shellArgs || [];
+
+          // セッション用の新しいIDを生成（元のIDは参考用）
+          const terminalId = generateTerminalId();
+          
+          // ターミナル番号を確保
+          const terminalNumber = this._terminalNumberManager.allocateNumber(sessionInfo.terminalNumber);
+          if (terminalNumber === null) {
+            log(`⚠️ [SESSION] Cannot allocate terminal number for restoration`);
+            resolve(null);
+            return;
+          }
+
+          // ワーキングディレクトリを設定（セッションのcwdを使用）
+          const cwd = sessionInfo.cwd && require('fs').existsSync(sessionInfo.cwd) 
+            ? sessionInfo.cwd 
+            : getWorkingDirectory();
+
+          log(`🚀 [SESSION] Creating session terminal: shell=${shell}, cwd=${cwd}, number=${terminalNumber}`);
+
+          // PTYプロセスを作成
+          const ptyProcess = pty.spawn(shell, shellArgs, {
+            name: 'xterm-color',
+            cols: config.cols,
+            rows: config.rows,
+            cwd: cwd,
+            env: { ...process.env },
+            encoding: null,
+          });
+
+          // ターミナルインスタンスを作成
+          const terminal: TerminalInstance = {
+            id: terminalId,
+            name: sessionInfo.name,
+            number: terminalNumber,
+            ptyProcess,
+            cwd,
+            isActive: false,
+            createdAt: Date.now(),
+            isSessionRestored: true, // セッション復元フラグ
+            sessionRestoreMessage: sessionInfo.restoreMessage,
+            sessionScrollback: sessionInfo.scrollbackHistory,
+          };
+
+          // ターミナルをマップに追加
+          this._terminals.set(terminalId, terminal);
+
+          // PTYイベントを設定
+          this._setupPtyEvents(terminal);
+
+          // セッション復元処理をWebViewに通知
+          this._terminalCreatedEmitter.fire(terminal);
+
+          // 状態更新通知
+          this._notifyStateUpdate();
+
+          log(`✅ [SESSION] Session terminal created successfully: ${terminalId} (${sessionInfo.name})`);
+          resolve(terminalId);
+        } catch (error) {
+          log(`❌ [SESSION] Failed to create session terminal: ${error}`);
+          resolve(null);
+        }
+      });
+    });
+  }
+
+  /**
+   * セッション復元が完了した後の初期化処理
+   */
+  public finalizeSessionRestore(): void {
+    log('🎯 [SESSION] Finalizing session restore...');
+    
+    // 復元されたターミナルが1つ以上ある場合、最初のものをアクティブにする
+    const terminals = Array.from(this._terminals.values());
+    const restoredTerminals = terminals.filter(t => (t as any).isSessionRestored);
+    
+    if (restoredTerminals.length > 0) {
+      const firstTerminal = restoredTerminals[0];
+      this._activeTerminalManager.setActive(firstTerminal.id);
+      firstTerminal.isActive = true;
+      log(`🎯 [SESSION] Set first restored terminal as active: ${firstTerminal.id}`);
+    }
+
+    // 状態更新通知
+    this._notifyStateUpdate();
+    
+    log(`✅ [SESSION] Session restore finalized: ${restoredTerminals.length} terminals restored`);
+  }
+
 
 }

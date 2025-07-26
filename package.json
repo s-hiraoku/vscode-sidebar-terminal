@@ -287,6 +287,48 @@
           "type": "boolean",
           "default": true,
           "description": "Enable GitHub Copilot Chat integration: Use Cmd+K Cmd+C (Mac) or Ctrl+K Ctrl+C (Linux/Windows) to activate Copilot Chat"
+        },
+        "secondaryTerminal.enablePersistentSessions": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable terminal session persistence: Restore terminal contents and state after VS Code restart"
+        },
+        "secondaryTerminal.persistentSessionScrollback": {
+          "type": "number",
+          "default": 100,
+          "minimum": 0,
+          "maximum": 10000,
+          "description": "Number of lines to restore from terminal history (0 to disable scrollback restore)"
+        },
+        "secondaryTerminal.persistentSessionReviveProcess": {
+          "type": "string",
+          "default": "onExitAndWindowClose",
+          "enum": [
+            "never",
+            "onExit",
+            "onExitAndWindowClose"
+          ],
+          "enumDescriptions": [
+            "Never save terminal sessions",
+            "Save sessions when VS Code exits",
+            "Save sessions when VS Code exits or window closes"
+          ],
+          "description": "When to save terminal sessions for restoration"
+        },
+        "secondaryTerminal.hideOnStartup": {
+          "type": "string",
+          "default": "never",
+          "enum": [
+            "never",
+            "whenEmpty",
+            "always"
+          ],
+          "enumDescriptions": [
+            "Never hide the terminal view on startup",
+            "Hide terminal when no sessions are restored",
+            "Always hide terminal on startup"
+          ],
+          "description": "Control terminal visibility on VS Code startup"
         }
       }
     },
