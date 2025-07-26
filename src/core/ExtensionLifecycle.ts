@@ -3,6 +3,7 @@ import { SecondaryTerminalProvider } from '../providers/SecondaryTerminalProvide
 import { TerminalManager } from '../terminals/TerminalManager';
 import { extension as log, logger, LogLevel } from '../utils/logger';
 import { FileReferenceCommand, TerminalCommand } from '../commands';
+import { CopilotIntegrationCommand } from '../commands/CopilotIntegrationCommand';
 
 /**
  * VS Code拡張機能のライフサイクル管理
@@ -13,6 +14,7 @@ export class ExtensionLifecycle {
   private sidebarProvider: SecondaryTerminalProvider | undefined;
   private fileReferenceCommand: FileReferenceCommand | undefined;
   private terminalCommand: TerminalCommand | undefined;
+  private copilotIntegrationCommand: CopilotIntegrationCommand | undefined;
 
   /**
    * 拡張機能の起動処理
@@ -43,6 +45,7 @@ export class ExtensionLifecycle {
       // Initialize command handlers
       this.fileReferenceCommand = new FileReferenceCommand(this.terminalManager);
       this.terminalCommand = new TerminalCommand(this.terminalManager);
+      this.copilotIntegrationCommand = new CopilotIntegrationCommand();
 
       // Register the sidebar terminal provider
       this.sidebarProvider = new SecondaryTerminalProvider(context, this.terminalManager);
@@ -130,6 +133,15 @@ export class ExtensionLifecycle {
         },
       },
 
+      // ======================= GitHub Copilot統合コマンド =======================
+      {
+        command: 'secondaryTerminal.activateCopilot',
+        handler: () => {
+          log('🔧 [DEBUG] Command executed: activateCopilot (GitHub Copilot Chat integration - CMD+K CMD+C)');
+          void this.copilotIntegrationCommand?.handleActivateCopilot();
+        },
+      },
+
       // ======================= ターミナル操作コマンド =======================
       {
         command: 'secondaryTerminal.sendToTerminal',
@@ -179,6 +191,7 @@ export class ExtensionLifecycle {
     // Clear command handlers
     this.fileReferenceCommand = undefined;
     this.terminalCommand = undefined;
+    this.copilotIntegrationCommand = undefined;
 
     log('✅ [EXTENSION] Deactivation complete');
   }
