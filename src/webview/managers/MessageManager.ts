@@ -35,7 +35,7 @@ export class MessageManager implements IMessageManager {
     log(`📨 [MESSAGE] ========== MESSAGE MANAGER HANDLE MESSAGE ==========`);
     log(`📨 [MESSAGE] Raw message:`, message);
     log(`📨 [MESSAGE] Message type:`, typeof message);
-    log(`📨 [MESSAGE] Message is null/undefined:`, message == null);
+    log(`📨 [MESSAGE] Message is null/undefined:`, message === null);
 
     try {
       const msg = message as MessageCommand;
@@ -482,7 +482,9 @@ export class MessageManager implements IMessageManager {
           cliAgentStatus.status,
           cliAgentStatus.agentType || null
         );
-        log(`✅ [MESSAGE] coordinator.updateClaudeStatus called successfully, result: ${result}`);
+        log(
+          `✅ [MESSAGE] coordinator.updateClaudeStatus called successfully, result: ${String(result)}`
+        );
       } catch (error) {
         log(`❌ [MESSAGE] Error calling coordinator.updateClaudeStatus:`, error);
         log(`❌ [MESSAGE] Error name: ${error instanceof Error ? error.name : 'unknown'}`);
@@ -493,7 +495,7 @@ export class MessageManager implements IMessageManager {
       }
     } else {
       log('⚠️ [MESSAGE] No Claude status data in cliAgentStatusUpdate message');
-      log(`⚠️ [MESSAGE] Message keys: ${Object.keys(msg)}`);
+      log(`⚠️ [MESSAGE] Message keys: ${Object.keys(msg).join(', ')}`);
       log(`⚠️ [MESSAGE] Message properties check:`);
       for (const [key, value] of Object.entries(msg)) {
         log(`⚠️ [MESSAGE]   - ${key}: ${JSON.stringify(value)} (${typeof value})`);

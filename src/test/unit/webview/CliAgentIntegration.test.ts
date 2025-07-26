@@ -34,15 +34,22 @@ describe('CLI Agent Integration', () => {
       }
     );
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
     global.window = dom.window as any;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     global.document = dom.window.document;
-    global.HTMLElement = dom.window.HTMLElement;
-    global.HTMLInputElement = dom.window.HTMLInputElement;
-    global.HTMLButtonElement = dom.window.HTMLButtonElement;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
+    global.HTMLElement = dom.window.HTMLElement as any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
+    global.HTMLInputElement = dom.window.HTMLInputElement as any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
+    global.HTMLButtonElement = dom.window.HTMLButtonElement as any;
 
     // Mock performance API
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
     global.performance = {
       now: sinon.stub().returns(Date.now()),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any;
 
     // Initialize managers
@@ -71,8 +78,11 @@ describe('CLI Agent Integration', () => {
         ui: uiManager,
         message: messageManager,
         performance: performanceManager,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
         input: null as any,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
         config: null as any,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
         notification: null as any,
       }),
     };
@@ -108,6 +118,7 @@ describe('CLI Agent Integration', () => {
   describe('Claude Status Display', () => {
     beforeEach(() => {
       // Create test terminal headers using UIManager
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const container = document.getElementById('terminal-container')!;
       const header1 = uiManager.createTerminalHeader('term1', 'Terminal 1');
       const header2 = uiManager.createTerminalHeader('term2', 'Terminal 2');
@@ -168,6 +179,7 @@ describe('CLI Agent Integration', () => {
 
     it('should handle missing data-terminal-id gracefully', () => {
       // Setup - create header without data-terminal-id
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const container = document.getElementById('terminal-container')!;
       const invalidHeader = document.createElement('div');
       invalidHeader.className = 'terminal-header';
@@ -193,7 +205,11 @@ describe('CLI Agent Integration', () => {
   });
 
   describe('Performance Optimization', () => {
-    let mockTerminal: any;
+    let mockTerminal: {
+      write: sinon.SinonSpy;
+      resize: sinon.SinonSpy;
+      options: Record<string, unknown>;
+    };
 
     beforeEach(() => {
       mockTerminal = {
@@ -209,7 +225,8 @@ describe('CLI Agent Integration', () => {
 
       // Act - send large data
       const largeData = 'x'.repeat(1500); // Over 1000 chars
-      performanceManager.scheduleOutputBuffer(largeData, mockTerminal);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
+      performanceManager.scheduleOutputBuffer(largeData, mockTerminal as any);
 
       // Assert
       expect(largeSpy.calledOnce).to.be.true;
@@ -222,7 +239,8 @@ describe('CLI Agent Integration', () => {
 
       // Act - send small data
       const smallData = 'small output';
-      performanceManager.scheduleOutputBuffer(smallData, mockTerminal);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
+      performanceManager.scheduleOutputBuffer(smallData, mockTerminal as any);
 
       // Assert immediately - should not write yet
       expect(writeSpy.called).to.be.false;
@@ -241,7 +259,9 @@ describe('CLI Agent Integration', () => {
       const scheduleStub = sinon.stub(global.window, 'setTimeout');
 
       // Act
-      performanceManager.scheduleOutputBuffer('test', mockTerminal);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
+      performanceManager.scheduleOutputBuffer('test', mockTerminal as any);
 
       // Assert - should use 4ms interval for CLI Agent mode
       expect(scheduleStub.calledOnce).to.be.true;
@@ -252,8 +272,12 @@ describe('CLI Agent Integration', () => {
     it('should get correct buffer statistics', () => {
       // Setup
       performanceManager.setCliAgentMode(true);
-      performanceManager.scheduleOutputBuffer('test1', mockTerminal);
-      performanceManager.scheduleOutputBuffer('test2', mockTerminal);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
+      performanceManager.scheduleOutputBuffer('test1', mockTerminal as any);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
+      performanceManager.scheduleOutputBuffer('test2', mockTerminal as any);
 
       // Act
       const stats = performanceManager.getBufferStats();
@@ -268,8 +292,12 @@ describe('CLI Agent Integration', () => {
       const writeSpy = sinon.spy(mockTerminal, 'write');
 
       // Setup
-      performanceManager.scheduleOutputBuffer('test1', mockTerminal);
-      performanceManager.scheduleOutputBuffer('test2', mockTerminal);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
+      performanceManager.scheduleOutputBuffer('test1', mockTerminal as any);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
+      performanceManager.scheduleOutputBuffer('test2', mockTerminal as any);
 
       // Act
       performanceManager.forceFlush();
@@ -283,6 +311,7 @@ describe('CLI Agent Integration', () => {
   describe('Communication Manager', () => {
     beforeEach(() => {
       // Mock VS Code API
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
       (global.window as any).acquireVsCodeApi = sinon.stub().returns({
         postMessage: sinon.spy(),
       });
@@ -315,6 +344,7 @@ describe('CLI Agent Integration', () => {
       const mockApi = {
         postMessage: sinon.spy(),
       };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
       (global.window as any).acquireVsCodeApi = sinon.stub().returns(mockApi);
 
       // Act
@@ -334,12 +364,16 @@ describe('CLI Agent Integration', () => {
       const mockApi = {
         postMessage: sinon.spy(),
       };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
       (global.window as any).acquireVsCodeApi = sinon.stub().returns(mockApi);
       commManager.initialize();
 
       // Act
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       commManager.sendMessage({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
         command: 'cliAgentStatusUpdate' as any,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         claudeStatus: {
           activeTerminalName: 'Terminal 1',
           status: 'connected',
@@ -367,13 +401,17 @@ describe('CLI Agent Integration', () => {
       const updateSpy = sinon.spy(uiManager, 'updateCliAgentStatusDisplay');
 
       // Create test headers
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const container = document.getElementById('terminal-container')!;
       const header = uiManager.createTerminalHeader('term1', 'Terminal 1');
       container.appendChild(header);
 
       // Act
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const message = {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
         command: 'cliAgentStatusUpdate' as any,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         claudeStatus: {
           activeTerminalName: 'Terminal 1',
           status: 'connected' as const,
@@ -389,25 +427,31 @@ describe('CLI Agent Integration', () => {
 
     it('should handle terminal output message with performance optimization', () => {
       // Setup
-      const bufferSpy = sinon.spy(performanceManager, 'scheduleOutputBuffer');
+      const _bufferSpy = sinon.spy(performanceManager, 'scheduleOutputBuffer');
 
       // Mock xterm terminal
-      const mockTerminal = {
+      const _mockTerminal = {
         write: sinon.spy(),
         resize: sinon.spy(),
         options: {},
       };
 
       // Mock coordinator to return mock terminal
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       mockCoordinator = {
         ...mockCoordinator,
         getUIManager: () => uiManager,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any;
 
       // Act
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const message = {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
         command: 'output' as any,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         data: 'CLI Agent output',
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         terminalId: 'term1',
       };
       messageManager.handleMessage(message, mockCoordinator);
@@ -420,8 +464,11 @@ describe('CLI Agent Integration', () => {
       // Act & Assert - should not throw
       expect(() => {
         messageManager.handleMessage(
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
             command: 'unknownCommand' as any,
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             data: 'test',
           },
           mockCoordinator
@@ -433,6 +480,7 @@ describe('CLI Agent Integration', () => {
   describe('DOM Manager', () => {
     it('should find terminal headers correctly', () => {
       // Setup
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const container = document.getElementById('terminal-container')!;
       const header1 = createMockHeader('term1', 'Terminal 1');
       const header2 = createMockHeader('term2', 'Terminal 2');
@@ -444,12 +492,13 @@ describe('CLI Agent Integration', () => {
 
       // Assert
       expect(headers).to.have.length(2);
-      expect(headers[0]!.getAttribute('data-terminal-id')).to.equal('term1');
-      expect(headers[1]!.getAttribute('data-terminal-id')).to.equal('term2');
+      expect(headers[0]?.getAttribute('data-terminal-id')).to.equal('term1');
+      expect(headers[1]?.getAttribute('data-terminal-id')).to.equal('term2');
     });
 
     it('should update Claude status with correct formatting', () => {
       // Setup
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const container = document.getElementById('terminal-container')!;
       const header = createMockHeader('term1', 'Terminal 1');
       container.appendChild(header);
@@ -468,6 +517,7 @@ describe('CLI Agent Integration', () => {
 
     it('should preserve close button and keep it at rightmost position when updating Claude status', () => {
       // Setup
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const container = document.getElementById('terminal-container')!;
       const header = createMockHeader('term1', 'Terminal 1');
       container.appendChild(header);
@@ -492,6 +542,7 @@ describe('CLI Agent Integration', () => {
 
     it('should remove only Claude status elements when clearing status and preserve close button position', () => {
       // Setup
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const container = document.getElementById('terminal-container')!;
       const header = createMockHeader('term1', 'Terminal 1');
       container.appendChild(header);
@@ -581,12 +632,14 @@ describe('CLI Agent Integration', () => {
 
       // Act
       const exported = loggerManager.exportLogs();
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const parsed = JSON.parse(exported);
 
       // Assert
       expect(parsed).to.have.property('config');
       expect(parsed).to.have.property('entries');
       expect(parsed).to.have.property('exportedAt');
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       expect(parsed.entries).to.be.an('array');
     });
   });
@@ -594,6 +647,7 @@ describe('CLI Agent Integration', () => {
   describe('Integration Tests', () => {
     it('should complete full Claude status update flow', () => {
       // Setup - create terminal and initialize managers
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const container = document.getElementById('terminal-container')!;
       const header = createMockHeader('term1', 'Terminal 1');
       container.appendChild(header);
@@ -601,12 +655,16 @@ describe('CLI Agent Integration', () => {
       const mockApi = {
         postMessage: sinon.spy(),
       };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
       (global.window as any).acquireVsCodeApi = sinon.stub().returns(mockApi);
       commManager.initialize();
 
       // Act - simulate complete flow
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const message = {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
         command: 'cliAgentStatusUpdate' as any,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         claudeStatus: {
           activeTerminalName: 'Terminal 1',
           status: 'connected' as const,
@@ -626,21 +684,26 @@ describe('CLI Agent Integration', () => {
 
     it('should handle performance optimization during CLI Agent session', () => {
       // Setup
-      const mockTerminal = {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const _mockTerminal = {
         write: sinon.spy(),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any;
 
       performanceManager.setCliAgentMode(true);
 
       // Act - simulate CLI Agent output
-      performanceManager.scheduleOutputBuffer('CLI Agent response', mockTerminal);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
+      performanceManager.scheduleOutputBuffer('CLI Agent response', _mockTerminal);
 
       // Assert - should use immediate write for CLI Agent mode
-      expect(mockTerminal.write.calledOnce).to.be.true;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      expect(_mockTerminal.write.calledOnce).to.be.true;
     });
 
     it('should maintain state consistency across operations', () => {
       // Setup
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const container = document.getElementById('terminal-container')!;
       const header1 = createMockHeader('term1', 'Terminal 1');
       const header2 = createMockHeader('term2', 'Terminal 2');

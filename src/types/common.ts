@@ -70,7 +70,9 @@ export interface WebviewMessage {
     | 'getSettings'
     | 'altClickSettings'
     | 'focusTerminal'
-    | 'error';
+    | 'error'
+    | 'test'
+    | 'timeoutTest';
   config?: TerminalConfig;
   data?: string;
   exitCode?: number;
@@ -95,7 +97,7 @@ export interface WebviewMessage {
   rows?: number; // リサイズ用
   requestSource?: 'header' | 'panel'; // 削除リクエストの送信元
   timestamp?: number; // エラー報告用
-  type?: string; // エラー報告用
+  type?: string; // For test messages and error reporting
   message?: string; // エラー報告用
   context?: string; // エラー報告用
   stack?: string; // エラー報告用
@@ -129,6 +131,10 @@ export interface VsCodeMessage {
   type?: TerminalInteractionEvent['type'];
   settings?: PartialTerminalSettings; // 部分的な設定を送信するよう修正
   requestSource?: 'header' | 'panel'; // 新しいアーキテクチャ用の削除要求元
+  timestamp?: number; // エラー報告用
+  message?: string; // エラー報告用
+  context?: string; // エラー報告用
+  stack?: string; // エラー報告用
 }
 
 export interface TerminalInstance {

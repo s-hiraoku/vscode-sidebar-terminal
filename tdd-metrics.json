@@ -1,0 +1,30 @@
+{
+  "cycles": [
+    {
+      "startTime": "2025-07-26T20:13:59.508Z",
+      "red": {
+        "timestamp": "2025-07-26T20:13:59.509Z",
+        "results": {
+          "passing": 47,
+          "failing": 1,
+          "pending": 0,
+          "total": 48,
+          "duration": 288
+        },
+        "success": true
+      },
+      "green": {
+        "timestamp": "2025-07-26T20:14:52.057Z",
+        "results": {
+          "passing": 367,
+          "failing": 109,
+          "pending": 2,
+          "total": 478,
+          "duration": 104
+        },
+        "success": false
+      },
+      "refactor": null
+    }
+  ]
+}

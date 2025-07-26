@@ -1,0 +1,77 @@
+name: TDD Quality Check
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+  push:
+    branches: [ main ]
+
+jobs:
+  tdd-quality-check:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Compile TypeScript
+      run: npm run compile-tests
+      
+    - name: Run ESLint
+      run: npm run lint
+      
+    - name: Run tests with coverage
+      run: npm run test:coverage
+      
+    - name: TDD Quality Check
+      run: npm run tdd:check-quality
+      
+    - name: Generate TDD Report
+      run: |
+        npm run tdd:generate-report > tdd-report.md
+        echo "TDD_REPORT<<EOF" >> $GITHUB_ENV
+        cat tdd-report.md >> $GITHUB_ENV
+        echo "EOF" >> $GITHUB_ENV
+        
+    - name: Comment TDD Report on PR
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: `## 🧪 TDD Quality Report\n\n${process.env.TDD_REPORT}`
+          })
+          
+    - name: Upload TDD Metrics
+      uses: actions/upload-artifact@v4
+      with:
+        name: tdd-metrics-${{ matrix.node-version }}
+        path: |
+          tdd-metrics.json
+          coverage/
+          tdd-report.md
+          
+    - name: Quality Gate Check
+      run: |
+        if ! npm run tdd:quality-gate; then
+          echo "❌ TDD Quality Gate Failed"
+          echo "Please improve TDD compliance before merging"
+          exit 1
+        fi
+        echo "✅ TDD Quality Gate Passed"

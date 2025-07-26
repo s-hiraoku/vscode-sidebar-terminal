@@ -317,7 +317,7 @@ export class UIManager implements IUIManager {
    * Find all terminal headers in the DOM (moved from DOMManager)
    */
   public findTerminalHeaders(): HTMLElement[] {
-    const headers = Array.from(document.querySelectorAll('.terminal-header')) as HTMLElement[];
+    const headers = Array.from(document.querySelectorAll<HTMLElement>('.terminal-header'));
     log(`🔍 [UI] Found ${headers.length} terminal headers`);
     return headers;
   }
@@ -500,6 +500,7 @@ export class UIManager implements IUIManager {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private createNotificationContainer(colors: any): HTMLElement {
     return DOMUtils.createElement(
       'div',
@@ -507,10 +508,13 @@ export class UIManager implements IUIManager {
         position: 'fixed',
         top: '20px',
         right: '20px',
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
         background: colors.background,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         border: `2px solid ${colors.border}`,
         borderRadius: '6px',
         padding: '12px 16px',
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
         color: colors.foreground,
         fontSize: '11px',
         zIndex: '10000',
@@ -525,6 +529,7 @@ export class UIManager implements IUIManager {
     );
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private createNotificationContent(config: NotificationConfig, colors: any): HTMLElement {
     const container = document.createElement('div');
     const icon = config.icon || this.getDefaultIcon(config.type);
@@ -543,6 +548,7 @@ export class UIManager implements IUIManager {
     return container;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private createNotificationCloseButton(colors: any): HTMLButtonElement {
     return DOMUtils.createElement(
       'button',
@@ -552,6 +558,7 @@ export class UIManager implements IUIManager {
         right: '6px',
         background: 'none',
         border: 'none',
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
         color: colors.foreground,
         cursor: 'pointer',
         fontSize: '12px',

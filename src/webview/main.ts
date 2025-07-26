@@ -7,7 +7,10 @@ console.log('🚀 [WEBVIEW-SCRIPT] ========== WEBVIEW.JS SCRIPT STARTED ========
 console.log('🚀 [WEBVIEW-SCRIPT] Script execution time:', new Date().toISOString());
 console.log('🚀 [WEBVIEW-SCRIPT] Window object exists:', typeof window !== 'undefined');
 console.log('🚀 [WEBVIEW-SCRIPT] Document ready state:', document?.readyState);
-console.log('🚀 [WEBVIEW-SCRIPT] VS Code API available:', typeof (window as any)?.acquireVsCodeApi);
+console.log(
+  '🚀 [WEBVIEW-SCRIPT] VS Code API available:',
+  typeof (window as Window & { acquireVsCodeApi?: unknown })?.acquireVsCodeApi
+);
 
 import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
@@ -51,21 +54,31 @@ interface TerminalMessage extends WebviewMessage {
   // settings は継承されたものを使用（PartialTerminalSettings）
 }
 
-declare const acquireVsCodeApi: () => {
+declare const _acquireVsCodeApi: () => {
   postMessage: (message: VsCodeMessage) => void;
   getState: () => unknown;
   setState: (state: unknown) => void;
 };
 
 // Use the globally stored VS Code API with fallback and safety checks
-let vscode: any = null;
+let vscode: {
+  postMessage: (message: VsCodeMessage) => void;
+  getState: () => unknown;
+  setState: (state: unknown) => void;
+} | null = null;
 
 // Function to safely get VS Code API
-function getVsCodeApi() {
+function getVsCodeApi(): typeof vscode {
   console.log('🔍 [WEBVIEW] getVsCodeApi called');
   console.log('🔍 [WEBVIEW] Current vscode variable:', !!vscode);
-  console.log('🔍 [WEBVIEW] window.vscodeApi available:', !!(window as any).vscodeApi);
-  console.log('🔍 [WEBVIEW] window.vscodeApi type:', typeof (window as any).vscodeApi);
+  console.log(
+    '🔍 [WEBVIEW] window.vscodeApi available:',
+    !!(window as Window & { vscodeApi?: unknown }).vscodeApi
+  );
+  console.log(
+    '🔍 [WEBVIEW] window.vscodeApi type:',
+    typeof (window as Window & { vscodeApi?: unknown }).vscodeApi
+  );
 
   if (vscode) {
     console.log('🔍 [WEBVIEW] Returning cached vscode API');
@@ -73,8 +86,15 @@ function getVsCodeApi() {
   }
 
   // Try to get from global storage first
-  if ((window as any).vscodeApi) {
-    vscode = (window as any).vscodeApi;
+  const windowWithApi = window as Window & {
+    vscodeApi?: {
+      postMessage: (message: VsCodeMessage) => void;
+      getState: () => unknown;
+      setState: (state: unknown) => void;
+    };
+  };
+  if (windowWithApi.vscodeApi) {
+    vscode = windowWithApi.vscodeApi;
     console.log('📱 [WEBVIEW] Using globally stored VS Code API');
     console.log('📱 [WEBVIEW] VS Code API postMessage type:', typeof vscode.postMessage);
     return vscode;
@@ -1404,24 +1424,31 @@ window.onmessage = (event) => {
   log('🚨 [WEBVIEW-ALT] Event source:', event.source);
   log('🚨 [WEBVIEW-ALT] Event origin:', event.origin);
   log('🚨 [WEBVIEW-ALT] Event data:', event.data);
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
   log('🚨 [WEBVIEW-ALT] Event data command:', event.data?.command);
 
   // Skip general message display to reduce clutter
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
   if (event.data?.command === 'cliAgentStatusUpdate') {
     log('🎉 [WEBVIEW-ALT] *** CLI AGENT STATUS UPDATE DETECTED IN ALT LISTENER ***');
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     log('🎉 [WEBVIEW-ALT] CLI Agent status data:', event.data.cliAgentStatus);
 
     // Skip Claude status display to reduce clutter
 
     // Debug: Check if the terminalManager is available and working
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
     if ((window as any).terminalManager) {
       // Skip TerminalManager available display
 
       try {
         // Manually call updateClaudeStatus to test
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
         (window as any).terminalManager.updateClaudeStatus(
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
           event.data.cliAgentStatus.activeTerminalName,
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
           event.data.cliAgentStatus.status
         );
 
@@ -1432,8 +1459,11 @@ window.onmessage = (event) => {
           const names = document.querySelectorAll('.terminal-name');
           if (names.length > 0) {
             // Try updating again
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
             (window as any).terminalManager.updateClaudeStatus(
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
               event.data.cliAgentStatus.activeTerminalName,
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
               event.data.cliAgentStatus.status
             );
           }
@@ -1541,7 +1571,7 @@ setTimeout(() => {
 
         // Request state restoration only if WebView appears to be reconnecting
         // (not during initial load)
-        const detectReconnection = () => {
+        const detectReconnection = (): void => {
           try {
             // Skip reconnection detection for now - just always request restoration
             // The WebView side will handle filtering appropriately
@@ -1566,9 +1596,12 @@ setTimeout(() => {
 
       // Fallback: try to acquire VS Code API directly (will fail if already acquired)
       try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
         if (typeof (window as any).acquireVsCodeApi === 'function') {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
           const fallbackVscode = (window as any).acquireVsCodeApi();
           log('📢 [WEBVIEW] Fallback: VS Code API acquired directly');
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
           fallbackVscode.postMessage({
             command: 'webviewReady',
             timestamp: Date.now(),
@@ -1595,6 +1628,7 @@ log('🧪 [WEBVIEW] Testing log function:', typeof log);
 log('🧪 [WEBVIEW] Window location:', window.location.href);
 log('🧪 [WEBVIEW] Document title:', document.title);
 log('🧪 [WEBVIEW] Document body className:', document.body?.className);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
 log('🧪 [WEBVIEW] Is in VS Code webview context:', !!(window as any).acquireVsCodeApi);
 
 // Try to send a test message immediately

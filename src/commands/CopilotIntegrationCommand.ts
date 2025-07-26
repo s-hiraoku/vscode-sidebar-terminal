@@ -29,12 +29,12 @@ export class CopilotIntegrationCommand {
       if (!fileInfo) {
         log('⚠️ [DEBUG] No active editor found, activating Copilot without file reference');
         // ファイルが開いていなくてもCopilot Chatをアクティブ化
-        this.activateCopilotChat();
+        void this.activateCopilotChat();
         return;
       }
 
       // GitHub Copilot Chatをアクティブ化してファイル参照を送信
-      this.activateCopilotChatWithFileReference(fileInfo);
+      void this.activateCopilotChatWithFileReference(fileInfo);
 
       log('✅ [DEBUG] Successfully activated GitHub Copilot Chat with file reference');
     } catch (error) {
@@ -64,14 +64,16 @@ export class CopilotIntegrationCommand {
         log('❌ [ERROR] Both activation methods failed:', fallbackError);
 
         // エラー時の案内
-        void vscode.window.showWarningMessage(
-          'Could not activate GitHub Copilot Chat. Please ensure GitHub Copilot Chat extension is installed and enabled.',
-          'Open Command Palette'
-        ).then((selection) => {
-          if (selection === 'Open Command Palette') {
-            void vscode.commands.executeCommand(VSCODE_COMMANDS.SHOW_COMMANDS);
-          }
-        });
+        void vscode.window
+          .showWarningMessage(
+            'Could not activate GitHub Copilot Chat. Please ensure GitHub Copilot Chat extension is installed and enabled.',
+            'Open Command Palette'
+          )
+          .then((selection) => {
+            if (selection === 'Open Command Palette') {
+              void vscode.commands.executeCommand(VSCODE_COMMANDS.SHOW_COMMANDS);
+            }
+          });
 
         throw new Error('Failed to activate GitHub Copilot Chat');
       }
@@ -108,7 +110,7 @@ export class CopilotIntegrationCommand {
 
     await vscode.commands.executeCommand(VSCODE_COMMANDS.CHAT_OPEN, {
       query: fileReference,
-      isPartialQuery: true
+      isPartialQuery: true,
     });
   }
 
@@ -179,7 +181,7 @@ export class CopilotIntegrationCommand {
   }): string {
     // シンプルな #file: 形式（Copilotの正確な仕様を調査中）
     const fullReference = `#file:${fileInfo.relativePath}`;
-    
+
     // デバッグ用：ファイル参照情報をログ出力
     log(`🔍 [DEBUG] Creating file reference: ${fullReference}`);
 
@@ -187,14 +189,13 @@ export class CopilotIntegrationCommand {
     if (fileInfo.selection?.hasSelection) {
       const { startLine, endLine } = fileInfo.selection;
       log(`🔍 [DEBUG] File selection detected: lines ${startLine}-${endLine}`);
-      
+
       // 将来的な拡張: 選択範囲の情報も含める可能性
       // return `${fullReference} (lines ${startLine}-${endLine}) `;
     }
 
     return `${fullReference}  `;
   }
-
 
   /**
    * GitHub Copilot連携機能が有効かチェック
