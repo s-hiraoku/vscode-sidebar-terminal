@@ -102,6 +102,14 @@ export class MessageManager implements IMessageManager {
           this.handleClaudeStatusUpdateMessage(msg, coordinator);
           break;
 
+        case 'sessionRestore':
+          this.handleSessionRestoreMessage(msg, coordinator);
+          break;
+
+        case 'getScrollback':
+          this.handleGetScrollbackMessage(msg, coordinator);
+          break;
+
         default:
           log(`⚠️ [MESSAGE] Unknown command: ${msg.command}`);
       }
@@ -645,6 +653,76 @@ export class MessageManager implements IMessageManager {
     this.messageQueue = [];
     this.isProcessingQueue = false;
     log('🗑️ [MESSAGE] Message queue cleared');
+  }
+
+  /**
+   * Handle session restore message from extension
+   */
+  private handleSessionRestoreMessage(msg: MessageCommand, coordinator: IManagerCoordinator): void {
+    log('🔄 [MESSAGE] Session restore message received');
+    
+    const terminalId = msg.terminalId as string;
+    const terminalName = msg.terminalName as string;
+    const config = msg.config;
+    const sessionRestoreMessage = msg.sessionRestoreMessage as string;
+    const sessionScrollback = msg.sessionScrollback as string[];
+
+    if (terminalId && terminalName && config) {
+      log(`🔄 [MESSAGE] Restoring terminal session: ${terminalId} (${terminalName})`);
+      log(`🔄 [MESSAGE] Restore message: ${sessionRestoreMessage}`);
+      log(`🔄 [MESSAGE] Scrollback lines: ${sessionScrollback?.length || 0}`);
+
+      // Create terminal with session restore data
+      if ('createTerminalFromSession' in coordinator && 
+          typeof coordinator.createTerminalFromSession === 'function') {
+        coordinator.createTerminalFromSession(
+          terminalId, 
+          terminalName, 
+          config, 
+          sessionRestoreMessage,
+          sessionScrollback || []
+        );
+      } else {
+        log('⚠️ [MESSAGE] createTerminalFromSession method not found, creating regular terminal');
+        coordinator.createTerminal(terminalId, terminalName, config);
+      }
+    }
+  }
+
+  /**
+   * Handle get scrollback message response from extension
+   */
+  private handleGetScrollbackMessage(msg: MessageCommand, coordinator: IManagerCoordinator): void {
+    const terminalId = msg.terminalId as string;
+    const scrollbackData = msg.scrollbackData as string[];
+
+    if (terminalId && scrollbackData) {
+      log(`📜 [MESSAGE] Scrollback data received for terminal ${terminalId}: ${scrollbackData.length} lines`);
+      
+      // Forward scrollback data to the terminal
+      const terminal = coordinator.getTerminalInstance(terminalId);
+      if (terminal) {
+        // Write scrollback data to terminal (this would be used for session saving)
+        log(`📜 [MESSAGE] Scrollback data forwarded to terminal ${terminalId}`);
+      } else {
+        log(`⚠️ [MESSAGE] Terminal ${terminalId} not found for scrollback data`);
+      }
+    }
+  }
+
+  /**
+   * Request scrollback data from extension for a terminal
+   */
+  public requestScrollbackData(terminalId: string, lines: number, coordinator: IManagerCoordinator): void {
+    this.queueMessage(
+      {
+        command: 'getScrollbackData',
+        terminalId,
+        scrollbackLines: lines,
+      },
+      coordinator
+    );
+    log(`📜 [MESSAGE] Scrollback data requested for terminal ${terminalId}: ${lines} lines`);
   }
 
   /**

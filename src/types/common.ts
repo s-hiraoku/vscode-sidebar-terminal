@@ -70,6 +70,8 @@ export interface WebviewMessage {
     | 'getSettings'
     | 'altClickSettings'
     | 'focusTerminal'
+    | 'sessionRestore'
+    | 'getScrollback'
     | 'error';
   config?: TerminalConfig;
   data?: string;
@@ -99,6 +101,12 @@ export interface WebviewMessage {
   message?: string; // エラー報告用
   context?: string; // エラー報告用
   stack?: string; // エラー報告用
+  
+  // セッション復元関連
+  sessionRestoreMessage?: string; // 復元メッセージ
+  sessionScrollback?: string[]; // 復元する履歴データ
+  scrollbackLines?: number; // 取得する履歴行数
+  scrollbackData?: string[]; // 取得された履歴データ
 }
 
 export interface VsCodeMessage {
@@ -121,6 +129,7 @@ export interface VsCodeMessage {
     | 'killTerminal'
     | 'deleteTerminal'
     | 'requestStateRestoration'
+    | 'getScrollbackData'
     | 'error';
   data?: string;
   cols?: number;
@@ -129,6 +138,10 @@ export interface VsCodeMessage {
   type?: TerminalInteractionEvent['type'];
   settings?: PartialTerminalSettings; // 部分的な設定を送信するよう修正
   requestSource?: 'header' | 'panel'; // 新しいアーキテクチャ用の削除要求元
+  
+  // セッション復元関連
+  scrollbackLines?: number; // 取得する履歴行数
+  scrollbackData?: string[]; // 履歴データ
 }
 
 export interface TerminalInstance {
