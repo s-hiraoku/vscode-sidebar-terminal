@@ -97,6 +97,10 @@ export interface SessionRestoreResult {
   error?: string;
   /** 復元されたセッションのタイムスタンプ */
   sessionTimestamp?: number;
+  /** エラータイプ（失敗時） */
+  errorType?: 'file' | 'permission' | 'corruption' | 'network' | 'unknown';
+  /** 回復処理の説明（失敗時） */
+  recoveryAction?: string;
 }
 
 /**

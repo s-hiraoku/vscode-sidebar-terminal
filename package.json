@@ -50,7 +50,8 @@
   "preview": false,
   "main": "./dist/extension.js",
   "activationEvents": [
-    "onView:secondaryTerminal"
+    "onView:secondaryTerminal",
+    "*"
   ],
   "contributes": {
     "viewsContainers": {
@@ -103,6 +104,29 @@
         "command": "secondaryTerminal.testCliAgentStatus",
         "title": "Test Claude Status Update",
         "category": "Secondary Terminal"
+      },
+      {
+        "command": "secondaryTerminal.debugSession",
+        "title": "Debug Session State",
+        "category": "Secondary Terminal"
+      },
+      {
+        "command": "secondaryTerminal.saveSession",
+        "title": "Save Terminal Session",
+        "category": "Secondary Terminal",
+        "icon": "$(save)"
+      },
+      {
+        "command": "secondaryTerminal.restoreSession",
+        "title": "Restore Terminal Session",
+        "category": "Secondary Terminal",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "secondaryTerminal.clearSession",
+        "title": "Clear Terminal Session",
+        "category": "Secondary Terminal",
+        "icon": "$(clear-all)"
       },
       {
         "command": "secondaryTerminal.activateCopilot",

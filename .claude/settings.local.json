@@ -49,7 +49,8 @@
       "mcp__context7__resolve-library-id",
       "Bash(git pull:*)",
       "Bash(git tag:*)",
-      "Bash(npm version:*)"
+      "Bash(npm version:*)",
+      "WebFetch(domain:stackoverflow.com)"
     ],
     "deny": []
   },

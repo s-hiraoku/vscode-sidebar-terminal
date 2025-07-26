@@ -47,11 +47,11 @@ export interface IManagerCoordinator {
     agentType: string | null
   ): void;
   ensureTerminalFocus(terminalId: string): void;
-  
+
   // セッション復元関連
   createTerminalFromSession?(
-    id: string, 
-    name: string, 
+    id: string,
+    name: string,
     config: PartialTerminalSettings,
     restoreMessage: string,
     scrollbackData: string[]
@@ -71,17 +71,17 @@ export interface ITerminalManager {
   getAllTerminals(): Map<string, TerminalInstance>;
   getTerminalContainer(terminalId: string): HTMLElement | undefined;
   getAllTerminalContainers(): Map<string, HTMLElement>;
-  
+
   // セッション復元関連
   createTerminalFromSession?(
-    id: string, 
-    name: string, 
+    id: string,
+    name: string,
     config: PartialTerminalSettings,
     restoreMessage: string,
     scrollbackData: string[]
   ): void;
   getTerminalScrollback?(terminalId: string, maxLines: number): string[];
-  
+
   dispose(): void;
 }
 

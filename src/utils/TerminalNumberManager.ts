@@ -66,4 +66,24 @@ export class TerminalNumberManager {
     }
     return availableSlots;
   }
+
+  /**
+   * 特定の番号を確保（セッション復元用）
+   * 既に使用されている場合は利用可能な番号を返す
+   */
+  allocateNumber(preferredNumber: number, terminals: Map<string, TerminalInstance>): number {
+    const usedNumbers = this.getUsedNumbers(terminals);
+
+    // 希望番号が利用可能なら使用
+    if (
+      preferredNumber >= 1 &&
+      preferredNumber <= this.maxTerminals &&
+      !usedNumbers.has(preferredNumber)
+    ) {
+      return preferredNumber;
+    }
+
+    // 希望番号が使用できない場合は利用可能な最小番号を返す
+    return this.findAvailableNumber(terminals);
+  }
 }

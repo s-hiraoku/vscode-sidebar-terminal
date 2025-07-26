@@ -71,6 +71,15 @@ export interface WebviewMessage {
     | 'altClickSettings'
     | 'focusTerminal'
     | 'sessionRestore'
+    | 'sessionRestoreStarted'
+    | 'sessionRestoreProgress'
+    | 'sessionRestoreCompleted'
+    | 'sessionRestoreError'
+    | 'sessionRestoreSkipped'
+    | 'sessionSaved'
+    | 'sessionSaveError'
+    | 'sessionCleared'
+    | 'terminalRestoreError'
     | 'getScrollback'
     | 'error';
   config?: TerminalConfig;
@@ -78,6 +87,15 @@ export interface WebviewMessage {
   exitCode?: number;
   terminalId?: string;
   terminalName?: string;
+  // Session management properties
+  terminalCount?: number;
+  restored?: number;
+  total?: number;
+  restoredCount?: number;
+  skippedCount?: number;
+  error?: string;
+  partialSuccess?: boolean;
+  reason?: string;
   terminals?: TerminalInfo[];
   activeTerminalId?: string;
   settings?: PartialTerminalSettings; // 部分的な設定を受け取るよう修正
@@ -101,12 +119,14 @@ export interface WebviewMessage {
   message?: string; // エラー報告用
   context?: string; // エラー報告用
   stack?: string; // エラー報告用
-  
+
   // セッション復元関連
   sessionRestoreMessage?: string; // 復元メッセージ
   sessionScrollback?: string[]; // 復元する履歴データ
   scrollbackLines?: number; // 取得する履歴行数
   scrollbackData?: string[]; // 取得された履歴データ
+  errorType?: string; // エラータイプ (file, corruption, permission, network, unknown)
+  recoveryAction?: string; // 回復処理の説明
 }
 
 export interface VsCodeMessage {
@@ -138,7 +158,7 @@ export interface VsCodeMessage {
   type?: TerminalInteractionEvent['type'];
   settings?: PartialTerminalSettings; // 部分的な設定を送信するよう修正
   requestSource?: 'header' | 'panel'; // 新しいアーキテクチャ用の削除要求元
-  
+
   // セッション復元関連
   scrollbackLines?: number; // 取得する履歴行数
   scrollbackData?: string[]; // 履歴データ
@@ -154,7 +174,7 @@ export interface TerminalInstance {
   cwd?: string; // 現在の作業ディレクトリ
   isActive: boolean;
   createdAt?: number; // 作成日時
-  
+
   // セッション復元関連のプロパティ
   isSessionRestored?: boolean; // セッション復元で作成されたターミナルかどうか
   sessionRestoreMessage?: string; // 復元メッセージ

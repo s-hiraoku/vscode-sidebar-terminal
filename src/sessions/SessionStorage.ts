@@ -55,7 +55,9 @@ export class SessionStorage {
       // 最後の保存時刻を記録
       await this.context.globalState.update(SESSION_STORAGE_KEYS.LAST_SAVE_TIME, Date.now());
 
-      log(`✅ [SESSION] Successfully saved ${sessionData.terminals.length} terminals (${dataSizeMB.toFixed(2)}MB)`);
+      log(
+        `✅ [SESSION] Successfully saved ${sessionData.terminals.length} terminals (${dataSizeMB.toFixed(2)}MB)`
+      );
 
       return {
         success: true,
@@ -85,7 +87,9 @@ export class SessionStorage {
 
       // ワークスペース固有のデータを優先して検索
       if (workspacePath) {
-        sessionData = this.context.workspaceState.get<TerminalSessionData>(SESSION_STORAGE_KEYS.SESSION_DATA);
+        sessionData = this.context.workspaceState.get<TerminalSessionData>(
+          SESSION_STORAGE_KEYS.SESSION_DATA
+        );
         if (sessionData) {
           log(`🔄 [SESSION] Found workspace session: ${workspacePath}`);
         }
@@ -93,7 +97,9 @@ export class SessionStorage {
 
       // ワークスペース固有のデータがない場合はグローバルデータを検索
       if (!sessionData) {
-        sessionData = this.context.globalState.get<TerminalSessionData>(SESSION_STORAGE_KEYS.SESSION_DATA);
+        sessionData = this.context.globalState.get<TerminalSessionData>(
+          SESSION_STORAGE_KEYS.SESSION_DATA
+        );
         if (sessionData) {
           log('🔄 [SESSION] Found global session');
         }
@@ -110,7 +116,9 @@ export class SessionStorage {
       const maxAge = SESSION_LIMITS.SESSION_EXPIRY_DAYS * 24 * 60 * 60 * 1000;
 
       if (sessionAge > maxAge) {
-        log(`⏰ [SESSION] Session expired (${Math.round(sessionAge / (24 * 60 * 60 * 1000))} days old)`);
+        log(
+          `⏰ [SESSION] Session expired (${Math.round(sessionAge / (24 * 60 * 60 * 1000))} days old)`
+        );
         await this.clearSession(workspacePath);
         return null;
       }
@@ -146,15 +154,19 @@ export class SessionStorage {
    * セッション設定を復元する
    */
   getSessionConfig(): SessionRestoreOptions {
-    const config = this.context.globalState.get<SessionRestoreOptions>(SESSION_STORAGE_KEYS.SESSION_CONFIG);
-    
+    const config = this.context.globalState.get<SessionRestoreOptions>(
+      SESSION_STORAGE_KEYS.SESSION_CONFIG
+    );
+
     // デフォルト設定を返す
-    return config || {
-      enablePersistentSessions: true,
-      persistentSessionScrollback: 100,
-      persistentSessionReviveProcess: 'onExitAndWindowClose',
-      hideOnStartup: 'never',
-    };
+    return (
+      config || {
+        enablePersistentSessions: true,
+        persistentSessionScrollback: 100,
+        persistentSessionReviveProcess: 'onExitAndWindowClose',
+        hideOnStartup: 'never',
+      }
+    );
   }
 
   /**
@@ -208,7 +220,9 @@ export class SessionStorage {
 
       // アクティブターミナルIDの検証
       if (sessionData.activeTerminalId) {
-        const activeTerminalExists = sessionData.terminals.some(t => t.id === sessionData.activeTerminalId);
+        const activeTerminalExists = sessionData.terminals.some(
+          (t) => t.id === sessionData.activeTerminalId
+        );
         if (!activeTerminalExists) {
           log('⚠️ [SESSION] Active terminal ID not found in terminals list, clearing');
           sessionData.activeTerminalId = null;
@@ -231,10 +245,16 @@ export class SessionStorage {
     lastSaveTime: number | null;
     configExists: boolean;
   }> {
-    const workspaceSession = this.context.workspaceState.get<TerminalSessionData>(SESSION_STORAGE_KEYS.SESSION_DATA);
-    const globalSession = this.context.globalState.get<TerminalSessionData>(SESSION_STORAGE_KEYS.SESSION_DATA);
+    const workspaceSession = this.context.workspaceState.get<TerminalSessionData>(
+      SESSION_STORAGE_KEYS.SESSION_DATA
+    );
+    const globalSession = this.context.globalState.get<TerminalSessionData>(
+      SESSION_STORAGE_KEYS.SESSION_DATA
+    );
     const lastSaveTime = this.getLastSaveTime();
-    const config = this.context.globalState.get<SessionRestoreOptions>(SESSION_STORAGE_KEYS.SESSION_CONFIG);
+    const config = this.context.globalState.get<SessionRestoreOptions>(
+      SESSION_STORAGE_KEYS.SESSION_CONFIG
+    );
 
     return {
       hasWorkspaceSession: !!workspaceSession,
