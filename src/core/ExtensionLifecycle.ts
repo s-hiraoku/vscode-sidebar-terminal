@@ -137,7 +137,9 @@ export class ExtensionLifecycle {
       {
         command: 'secondaryTerminal.activateCopilot',
         handler: () => {
-          log('🔧 [DEBUG] Command executed: activateCopilot (GitHub Copilot Chat integration - CMD+K CMD+C)');
+          log(
+            '🔧 [DEBUG] Command executed: activateCopilot (GitHub Copilot Chat integration - CMD+K CMD+C)'
+          );
           void this.copilotIntegrationCommand?.handleActivateCopilot();
         },
       },

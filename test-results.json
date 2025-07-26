@@ -1,0 +1,103 @@
+[DEBUG] 🔧 [EXTENSION] 🚀 [DEBUG] handleActivateCopilot called
+[DEBUG] 🔧 [EXTENSION] 🔍 [DEBUG] Creating file reference: #file:src/test.ts
+[DEBUG] 🔧 [EXTENSION] 📤 [DEBUG] Sending file reference to Copilot: "#file:src/test.ts  "
+[DEBUG] 🔧 [EXTENSION] ✅ [DEBUG] Successfully activated GitHub Copilot Chat with file reference
+[DEBUG] 🔧 [EXTENSION] 🚀 [DEBUG] handleActivateCopilot called
+[DEBUG] 🔧 [EXTENSION] ⚠️ [DEBUG] No active editor found, activating Copilot without file reference
+[DEBUG] 🔧 [EXTENSION] 📤 [DEBUG] Executed workbench.action.chat.open command
+[DEBUG] 🔧 [EXTENSION] 🚀 [DEBUG] handleActivateCopilot called
+[DEBUG] 🔧 [EXTENSION] 🔧 [DEBUG] GitHub Copilot integration is disabled by user setting
+[DEBUG] 🔧 [EXTENSION] 🚀 [DEBUG] handleActivateCopilot called
+[DEBUG] 🔧 [EXTENSION] 🔍 [DEBUG] Creating file reference: #file:src/test.ts
+[DEBUG] 🔧 [EXTENSION] 📤 [DEBUG] Sending file reference to Copilot: "#file:src/test.ts  "
+[DEBUG] 🔧 [EXTENSION] ✅ [DEBUG] Successfully activated GitHub Copilot Chat with file reference
+[DEBUG] 🔧 [EXTENSION] 🚀 [DEBUG] handleActivateCopilot called
+[DEBUG] 🔧 [EXTENSION] 🔍 [DEBUG] Creating file reference: #file:src/test.ts
+[DEBUG] 🔧 [EXTENSION] 📤 [DEBUG] Sending file reference to Copilot: "#file:src/test.ts  "
+[DEBUG] 🔧 [EXTENSION] ✅ [DEBUG] Successfully activated GitHub Copilot Chat with file reference
+Unhandled promise rejection: Error: Command failed
+    at Context.<anonymous> (/workspaces/vscode-sidebar-terminal/src/test/unit/commands/CopilotIntegrationCommand.test.ts:101:9)
+    at callFn (/workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runnable.js:364:21)
+    at Test.Runnable.run (/workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runnable.js:352:5)
+    at Runner.runTest (/workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runner.js:677:10)
+    at /workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runner.js:800:12
+    at next (/workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runner.js:592:14)
+    at /workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runner.js:602:7
+    at next (/workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runner.js:485:14)
+    at cbHookRun (/workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runner.js:550:7)
+    at done (/workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runnable.js:308:5)
+    at callFn (/workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runnable.js:387:7)
+    at Hook.Runnable.run (/workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runnable.js:352:5)
+    at next (/workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runner.js:509:10)
+    at Immediate.<anonymous> (/workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runner.js:570:5)
+    at processImmediate (node:internal/timers:485:21)
+Unhandled promise rejection: Error: Command failed
+    at Context.<anonymous> (/workspaces/vscode-sidebar-terminal/src/test/unit/commands/CopilotIntegrationCommand.test.ts:101:9)
+    at callFn (/workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runnable.js:364:21)
+    at Test.Runnable.run (/workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runnable.js:352:5)
+    at Runner.runTest (/workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runner.js:677:10)
+    at /workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runner.js:800:12
+    at next (/workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runner.js:592:14)
+    at /workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runner.js:602:7
+    at next (/workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runner.js:485:14)
+    at cbHookRun (/workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runner.js:550:7)
+    at done (/workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runnable.js:308:5)
+    at callFn (/workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runnable.js:387:7)
+    at Hook.Runnable.run (/workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runnable.js:352:5)
+    at next (/workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runner.js:509:10)
+    at Immediate.<anonymous> (/workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runner.js:570:5)
+    at processImmediate (node:internal/timers:485:21)
+Unhandled promise rejection: Error: Command failed
+    at Context.<anonymous> (/workspaces/vscode-sidebar-terminal/src/test/unit/commands/CopilotIntegrationCommand.test.ts:101:9)
+    at callFn (/workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runnable.js:364:21)
+    at Test.Runnable.run (/workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runnable.js:352:5)
+    at Runner.runTest (/workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runner.js:677:10)
+    at /workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runner.js:800:12
+    at next (/workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runner.js:592:14)
+    at /workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runner.js:602:7
+    at next (/workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runner.js:485:14)
+    at cbHookRun (/workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runner.js:550:7)
+    at done (/workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runnable.js:308:5)
+    at callFn (/workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runnable.js:387:7)
+    at Hook.Runnable.run (/workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runnable.js:352:5)
+    at next (/workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runner.js:509:10)
+    at Immediate.<anonymous> (/workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runner.js:570:5)
+    at processImmediate (node:internal/timers:485:21)
+Unhandled promise rejection: Error: Command failed
+    at Context.<anonymous> (/workspaces/vscode-sidebar-terminal/src/test/unit/commands/CopilotIntegrationCommand.test.ts:101:9)
+    at callFn (/workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runnable.js:364:21)
+    at Test.Runnable.run (/workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runnable.js:352:5)
+    at Runner.runTest (/workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runner.js:677:10)
+    at /workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runner.js:800:12
+    at next (/workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runner.js:592:14)
+    at /workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runner.js:602:7
+    at next (/workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runner.js:485:14)
+    at cbHookRun (/workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runner.js:550:7)
+    at done (/workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runnable.js:308:5)
+    at callFn (/workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runnable.js:387:7)
+    at Hook.Runnable.run (/workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runnable.js:352:5)
+    at next (/workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runner.js:509:10)
+    at Immediate.<anonymous> (/workspaces/vscode-sidebar-terminal/node_modules/mocha/lib/runner.js:570:5)
+    at processImmediate (node:internal/timers:485:21)
+[DEBUG] 🔧 [EXTENSION] 🔍 [DEBUG] Creating file reference: #file:src/test.ts
+[DEBUG] 🔧 [EXTENSION] 🔍 [DEBUG] Creating file reference: #file:src/test.ts
+[DEBUG] 🔧 [EXTENSION] 🔍 [DEBUG] File selection detected: lines 5-5
+[DEBUG] 🔧 [EXTENSION] 🔍 [DEBUG] Creating file reference: #file:src/test.ts
+[DEBUG] 🔧 [EXTENSION] 🔍 [DEBUG] File selection detected: lines 3-7
+[DEBUG] 🔧 [EXTENSION] 🔍 [DEBUG] Selection detected: L5-L5
+[DEBUG] 🔧 [EXTENSION] 🔍 [DEBUG] Selection detected: L3-L7
+[DEBUG] 🔧 [EXTENSION] 🚀 [DEBUG] handleSendAtMention called with CLI Agent integration
+[DEBUG] 🔧 [EXTENSION] 🔍 [DEBUG] Found 1 connected CLI agents
+[DEBUG] 🔧 [EXTENSION] 🔍 [DEBUG] Agent 0: terminalId=terminal-1, type=claude
+[DEBUG] 🔧 [EXTENSION] 🔍 [DEBUG] Current globally active agent: undefined
+[DEBUG] 🔧 [EXTENSION] ✅ [DEBUG] File reference sent to 1 CLI agents
+[DEBUG] 🔧 [EXTENSION] 🚀 [DEBUG] handleSendAtMention called with CLI Agent integration
+[DEBUG] 🔧 [EXTENSION] 🔍 [DEBUG] Selection detected: L3-L7
+[DEBUG] 🔧 [EXTENSION] 🔍 [DEBUG] Found 1 connected CLI agents
+[DEBUG] 🔧 [EXTENSION] 🔍 [DEBUG] Agent 0: terminalId=terminal-1, type=claude
+[DEBUG] 🔧 [EXTENSION] 🔍 [DEBUG] Current globally active agent: undefined
+[DEBUG] 🔧 [EXTENSION] ✅ [DEBUG] File reference sent to 1 CLI agents
+[DEBUG] 🔧 [EXTENSION] 🚀 [DEBUG] handleSendAtMention called with CLI Agent integration
+[DEBUG] 🔧 [EXTENSION] ⚠️ [WARN] No active editor found for @mention
+[DEBUG] 🔧 [EXTENSION] 🚀 [DEBUG] handleSendAtMention called with CLI Agent integration
+[DEBUG] 🔧 [EXTENSION] 🔧 [DEBUG] CLI Agent integration is disabled by user setting

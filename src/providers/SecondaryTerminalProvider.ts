@@ -325,7 +325,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
           break;
 
         case 'test':
-          if ((message as any).type === 'initComplete') {
+          if ((message as WebviewMessage & { type?: string }).type === 'initComplete') {
             log('🎆 [TRACE] ===============================');
             log('🎆 [TRACE] WEBVIEW CONFIRMS INIT COMPLETE!');
             log('🎆 [TRACE] Message data:', message);
@@ -583,7 +583,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         state,
       });
     });
-    
+
     // ターミナルフォーカスイベント処理
     const focusDisposable = this._terminalManager.onTerminalFocus((terminalId) => {
       void this._sendMessage({
@@ -602,7 +602,9 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
    * Clear terminal event listeners to prevent duplicates
    */
   private _clearTerminalEventListeners(): void {
-    this._terminalEventDisposables.forEach((disposable) => disposable.dispose());
+    this._terminalEventDisposables.forEach((disposable) => {
+      disposable.dispose();
+    });
     this._terminalEventDisposables = [];
     log('🧹 [DEBUG] Terminal event listeners cleared');
   }

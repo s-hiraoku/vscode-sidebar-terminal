@@ -335,7 +335,15 @@
     "create-icons": "node scripts/create-icon.js",
     "release:patch": "npm version patch && git push origin --follow-tags",
     "release:minor": "npm version minor && git push origin --follow-tags",
-    "release:major": "npm version major && git push origin --follow-tags"
+    "release:major": "npm version major && git push origin --follow-tags",
+    "tdd:red": "node scripts/tdd-test-runner.js red",
+    "tdd:green": "node scripts/tdd-test-runner.js green",
+    "tdd:refactor": "node scripts/tdd-test-runner.js refactor",
+    "tdd:cycle": "node scripts/tdd-workflow-automation.js",
+    "tdd:check-quality": "node scripts/tdd-quality-checker.js",
+    "tdd:quality-gate": "node scripts/tdd-quality-gate.js",
+    "tdd:comprehensive-check": "npm run test:coverage && npm run tdd:check-quality && npm run tdd:quality-gate",
+    "tdd:generate-report": "node scripts/tdd-quality-checker.js --format=markdown"
   },
   "devDependencies": {
     "@istanbuljs/nyc-config-typescript": "^1.0.2",

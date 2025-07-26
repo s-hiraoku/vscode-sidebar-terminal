@@ -135,6 +135,8 @@ export class SettingsPanel {
       </div>
 
       <div style="display: grid; gap: 16px;">
+        ${this.createFontSizeControl()}
+        ${this.createFontFamilyControl()}
         ${this.createThemeControl()}
         ${this.createCursorBlinkControl()}
         ${this.createClaudeCodeIntegrationControl()}
@@ -163,6 +165,72 @@ export class SettingsPanel {
     `;
 
     return content;
+  }
+
+  /**
+   * フォントサイズコントロールを作成
+   */
+  private createFontSizeControl(): string {
+    return `
+      <div>
+        <label style="
+          color: var(--vscode-foreground, #cccccc);
+          font-size: 13px;
+          font-weight: 500;
+          display: block;
+          margin-bottom: 6px;
+        ">Font Size: <span id="font-size-value">14</span>px</label>
+        <input 
+          type="range" 
+          id="font-size-slider"
+          min="8" 
+          max="24" 
+          value="14"
+          style="
+            width: 100%;
+            height: 4px;
+            border-radius: 2px;
+            background: var(--vscode-input-background, #3c3c3c);
+            outline: none;
+            cursor: pointer;
+          "
+        />
+      </div>
+    `;
+  }
+
+  /**
+   * フォントファミリーコントロールを作成
+   */
+  private createFontFamilyControl(): string {
+    return `
+      <div>
+        <label style="
+          color: var(--vscode-foreground, #cccccc);
+          font-size: 13px;
+          font-weight: 500;
+          display: block;
+          margin-bottom: 6px;
+        ">Font Family</label>
+        <select id="font-family-select" style="
+          background: var(--vscode-input-background, #3c3c3c);
+          color: var(--vscode-input-foreground, #cccccc);
+          border: 1px solid var(--vscode-input-border, #454545);
+          padding: 6px 8px;
+          border-radius: 3px;
+          width: 100%;
+          font-size: 13px;
+        ">
+          <option value="Consolas, monospace">Consolas</option>
+          <option value="'Monaco', monospace">Monaco</option>
+          <option value="'Menlo', monospace">Menlo</option>
+          <option value="'Ubuntu Mono', monospace">Ubuntu Mono</option>
+          <option value="'Courier New', monospace">Courier New</option>
+          <option value="'SF Mono', monospace">SF Mono</option>
+          <option value="monospace">Default Monospace</option>
+        </select>
+      </div>
+    `;
   }
 
   /**
@@ -311,6 +379,15 @@ export class SettingsPanel {
     DOMUtils.addEventListenerSafe(resetBtn as HTMLElement, 'click', () => {
       this.resetSettings();
     });
+
+    // フォントサイズスライダー
+    const fontSizeSlider = this.panelElement.querySelector('#font-size-slider') as HTMLInputElement;
+    const fontSizeValue = this.panelElement.querySelector('#font-size-value');
+    DOMUtils.addEventListenerSafe(fontSizeSlider, 'input', () => {
+      if (fontSizeValue) {
+        fontSizeValue.textContent = fontSizeSlider.value + 'px';
+      }
+    });
   }
 
   /**
@@ -332,6 +409,8 @@ export class SettingsPanel {
   private resetSettings(): void {
     try {
       const defaultSettings: PartialTerminalSettings = {
+        fontSize: 14,
+        fontFamily: 'Consolas, monospace',
         theme: 'auto',
         cursorBlink: true,
         enableCliAgentIntegration: true,
@@ -351,6 +430,10 @@ export class SettingsPanel {
       throw new Error('Settings panel not available');
     }
 
+    const fontSizeSlider = this.panelElement.querySelector('#font-size-slider') as HTMLInputElement;
+    const fontFamilySelect = this.panelElement.querySelector(
+      '#font-family-select'
+    ) as HTMLSelectElement;
     const themeSelect = this.panelElement.querySelector('#theme-select') as HTMLSelectElement;
     const cursorBlinkCheckbox = this.panelElement.querySelector(
       '#cursor-blink'
@@ -360,6 +443,8 @@ export class SettingsPanel {
     ) as HTMLInputElement;
 
     return {
+      fontSize: parseInt(fontSizeSlider?.value || '14'),
+      fontFamily: fontFamilySelect?.value || 'monospace',
       theme: themeSelect?.value || 'auto',
       cursorBlink: cursorBlinkCheckbox?.checked || true,
       enableCliAgentIntegration: claudeCodeIntegrationCheckbox?.checked || true,
@@ -373,6 +458,13 @@ export class SettingsPanel {
     if (!settings || !this.panelElement) return;
 
     try {
+      const fontSizeSlider = this.panelElement.querySelector(
+        '#font-size-slider'
+      ) as HTMLInputElement;
+      const fontSizeValue = this.panelElement.querySelector('#font-size-value');
+      const fontFamilySelect = this.panelElement.querySelector(
+        '#font-family-select'
+      ) as HTMLSelectElement;
       const themeSelect = this.panelElement.querySelector('#theme-select') as HTMLSelectElement;
       const cursorBlinkCheckbox = this.panelElement.querySelector(
         '#cursor-blink'
@@ -380,6 +472,17 @@ export class SettingsPanel {
       const claudeCodeIntegrationCheckbox = this.panelElement.querySelector(
         '#cli-agent-integration'
       ) as HTMLInputElement;
+
+      if (fontSizeSlider && settings.fontSize !== undefined) {
+        fontSizeSlider.value = settings.fontSize.toString();
+        if (fontSizeValue) {
+          fontSizeValue.textContent = settings.fontSize.toString() + 'px';
+        }
+      }
+
+      if (fontFamilySelect && settings.fontFamily) {
+        fontFamilySelect.value = settings.fontFamily;
+      }
 
       if (themeSelect && settings.theme) {
         themeSelect.value = settings.theme;

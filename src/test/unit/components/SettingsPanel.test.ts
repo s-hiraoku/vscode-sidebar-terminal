@@ -303,6 +303,7 @@ describe('SettingsPanel', () => {
         fontFamily: 'Consolas, monospace',
         theme: 'light',
         cursorBlink: true,
+        enableCliAgentIntegration: true,
       });
     });
 

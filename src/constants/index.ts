@@ -131,7 +131,7 @@ export const VSCODE_COMMANDS = {
   // Copilot Chat関連
   CHAT_OPEN: 'workbench.action.chat.open',
   CHAT_FOCUS_FALLBACK: 'workbench.panel.chat.view.copilot.focus',
-  
+
   // その他のコマンド
   SHOW_COMMANDS: 'workbench.action.showCommands',
 } as const;

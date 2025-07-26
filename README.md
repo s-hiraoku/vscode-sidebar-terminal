@@ -205,6 +205,50 @@ Test coverage includes:
 - VS Code API integration
 - Cross-platform compatibility
 
+## 🧪 Test-Driven Development (TDD)
+
+This project follows **t-wada's TDD methodology** for sustainable, high-quality development:
+
+### TDD Infrastructure
+- **📊 Metrics Collection**: Real-time TDD compliance tracking
+- **🔄 Automated Workflows**: Red-Green-Refactor cycle automation
+- **📈 Quality Gates**: CI/CD integrated quality checks
+- **🎯 Interactive Sessions**: Guided TDD development experience
+
+### Available TDD Commands
+```bash
+# Interactive TDD workflow
+npm run tdd:interactive
+
+# Phase-specific commands
+npm run tdd:red      # Verify failing tests
+npm run tdd:green    # Verify passing tests  
+npm run tdd:refactor # Quality check after refactoring
+
+# Quality assessment
+npm run tdd:check-quality    # Comprehensive quality analysis
+npm run tdd:quality-gate     # CI/CD quality gate check
+```
+
+### TDD Metrics Dashboard
+- **TDD Compliance Rate**: 80%+ target (Red-Green-Refactor adherence)
+- **Test Coverage**: 90%+ target
+- **Code Quality Score**: 8.0+/10.0 target
+- **Real-time tracking** with historical trend analysis
+
+### Documentation
+- 📖 [TDD Operations Guide](./docs/TDD-OPERATIONS-GUIDE.md) - Complete workflow and daily usage
+- 🎯 [TDD Best Practices](./docs/TDD-BEST-PRACTICES.md) - Proven patterns and techniques
+- 🚀 [CI/CD Integration](./docs/CI-CD-INTEGRATION.md) - Quality gates and automation
+
+### VS Code Integration
+Access TDD workflows directly through VS Code tasks:
+- `Ctrl+Shift+P` → "Tasks: Run Task" → "TDD: Interactive Workflow"
+- Integrated quality checks in build process
+- Real-time TDD metrics in development
+
+*This TDD infrastructure ensures maintainable, testable code while preventing technical debt accumulation.*
+
 ## 🏗️ Architecture
 
 ```

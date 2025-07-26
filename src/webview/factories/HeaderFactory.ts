@@ -39,6 +39,7 @@ export interface HeaderConfig {
  *   </div>
  * </div>
  */
+// eslint-disable-next-line @typescript-eslint/no-extraneous-class
 export class HeaderFactory {
   /**
    * 統一されたターミナルヘッダーを作成

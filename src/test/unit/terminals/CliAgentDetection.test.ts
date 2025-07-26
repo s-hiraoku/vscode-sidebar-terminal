@@ -10,7 +10,19 @@ import { TerminalManager } from '../../../terminals/TerminalManager';
 import { EventEmitter } from 'vscode';
 
 // Mock vscode module
-const mockContext = {
+interface MockContext {
+  subscriptions: unknown[];
+  workspaceState: {
+    get: sinon.SinonStub;
+    update: sinon.SinonStub;
+  };
+  globalState: {
+    get: sinon.SinonStub;
+    update: sinon.SinonStub;
+  };
+}
+
+const _mockContext: MockContext = {
   subscriptions: [],
   workspaceState: {
     get: sinon.stub(),
@@ -20,10 +32,19 @@ const mockContext = {
     get: sinon.stub(),
     update: sinon.stub(),
   },
-} as any;
+};
 
 // Mock node-pty
-const mockPtyProcess = {
+interface MockPtyProcess {
+  write: sinon.SinonSpy;
+  kill: sinon.SinonSpy;
+  resize: sinon.SinonSpy;
+  onData: sinon.SinonStub;
+  onExit: sinon.SinonStub;
+  pid: number;
+}
+
+const mockPtyProcess: MockPtyProcess = {
   write: sinon.spy(),
   kill: sinon.spy(),
   resize: sinon.spy(),
@@ -32,12 +53,23 @@ const mockPtyProcess = {
   pid: 12345,
 };
 
-const mockPty = {
+interface MockPty {
+  spawn: sinon.SinonStub;
+}
+
+const mockPty: MockPty = {
   spawn: sinon.stub().returns(mockPtyProcess),
 };
 
 // Mock workspace
-const mockWorkspace = {
+interface MockWorkspace {
+  workspaceFolders: {
+    uri: { fsPath: string };
+    name: string;
+  }[];
+}
+
+const mockWorkspace: MockWorkspace = {
   workspaceFolders: [
     {
       uri: {
@@ -49,15 +81,20 @@ const mockWorkspace = {
 };
 
 // Mock vscode module
-const mockVscode = {
+interface MockVscode {
+  workspace: MockWorkspace;
+  EventEmitter: typeof EventEmitter;
+}
+
+const mockVscode: MockVscode = {
   workspace: mockWorkspace,
   EventEmitter,
 };
 
 describe('CliAgentDetection in Terminal Manager', () => {
   let terminalManager: TerminalManager;
-  let onDataCallback: (data: string) => void;
-  let onExitCallback: (code: number) => void;
+  let _onDataCallback: (data: string) => void;
+  let _onExitCallback: (code: number) => void;
   let cliAgentStatusSpy: sinon.SinonSpy;
 
   beforeEach(() => {
@@ -65,22 +102,28 @@ describe('CliAgentDetection in Terminal Manager', () => {
     sinon.restore();
 
     // Setup mock modules
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     require.cache[require.resolve('vscode')] = {
       exports: mockVscode,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any;
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     require.cache[require.resolve('@homebridge/node-pty-prebuilt-multiarch')] = {
       exports: mockPty,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any;
 
     // Reset pty mock
-    mockPtyProcess.onData = sinon.stub().callsFake((callback) => {
-      onDataCallback = callback;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    mockPtyProcess.onData = sinon.stub().callsFake((callback: (data: string) => void) => {
+      _onDataCallback = callback;
       return { dispose: sinon.stub() };
     });
 
-    mockPtyProcess.onExit = sinon.stub().callsFake((callback) => {
-      onExitCallback = callback;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    mockPtyProcess.onExit = sinon.stub().callsFake((callback: (code: number) => void) => {
+      _onExitCallback = callback;
       return { dispose: sinon.stub() };
     });
 
@@ -136,7 +179,7 @@ describe('CliAgentDetection in Terminal Manager', () => {
         '  claude   code  ',
       ];
 
-      claudeCommands.forEach((command, index) => {
+      claudeCommands.forEach((command, _index) => {
         // Act
         terminalManager.sendInput(`${command}\r`, terminalId);
 
@@ -452,7 +495,9 @@ describe('CliAgentDetection in Terminal Manager', () => {
       // Act & Assert - should not throw
       expect(() => {
         terminalManager.sendInput('', terminalId);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
         terminalManager.sendInput(null as any, terminalId);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
         terminalManager.sendInput(undefined as any, terminalId);
       }).to.not.throw();
     });

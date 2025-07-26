@@ -3,6 +3,11 @@
  * Eliminates code duplication across MessageManager and other components
  */
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+
 import { VsCodeMessage, WebviewMessage } from '../../types/common';
 import { webview as log } from '../../utils/logger';
 import { ErrorHandler } from '../utils/ErrorHandler';
