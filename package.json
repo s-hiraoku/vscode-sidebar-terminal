@@ -352,6 +352,35 @@
             "Always hide terminal on startup"
           ],
           "description": "Control terminal visibility on VS Code startup"
+        },
+        "secondaryTerminal.restoreScrollback": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable restoration of terminal command history and output (scrollback buffer)"
+        },
+        "secondaryTerminal.scrollbackLines": {
+          "type": "number",
+          "default": 1000,
+          "minimum": 0,
+          "maximum": 10000,
+          "description": "Maximum number of lines to restore from terminal history (0 to disable)"
+        },
+        "secondaryTerminal.scrollbackCompression": {
+          "type": "boolean",
+          "default": true,
+          "description": "Compress scrollback data to reduce storage size"
+        },
+        "secondaryTerminal.scrollbackProgressiveLoad": {
+          "type": "boolean",
+          "default": false,
+          "description": "Load scrollback data progressively for better performance with large histories"
+        },
+        "secondaryTerminal.scrollbackMaxStorageSize": {
+          "type": "number",
+          "default": 10485760,
+          "minimum": 1048576,
+          "maximum": 104857600,
+          "description": "Maximum storage size for scrollback data in bytes (1MB - 100MB)"
         }
       }
     },

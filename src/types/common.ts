@@ -84,6 +84,10 @@ export interface WebviewMessage {
     | 'sessionCleared'
     | 'terminalRestoreError'
     | 'getScrollback'
+    | 'restoreScrollback'
+    | 'scrollbackExtracted'
+    | 'scrollbackRestored'
+    | 'scrollbackProgress'
     | 'error';
   config?: TerminalConfig;
   data?: string;
@@ -130,6 +134,26 @@ export interface WebviewMessage {
   scrollbackData?: string[]; // 取得された履歴データ
   errorType?: string; // エラータイプ (file, corruption, permission, network, unknown)
   recoveryAction?: string; // 回復処理の説明
+  
+  // Scrollback復元関連
+  scrollbackContent?: Array<{
+    content: string;
+    type?: 'output' | 'input' | 'error';
+    timestamp?: number;
+  }>; // 復元するscrollback内容
+  scrollbackProgress?: {
+    terminalId: string;
+    progress: number;
+    currentLines: number;
+    totalLines: number;
+    stage: 'loading' | 'decompressing' | 'restoring';
+  }; // scrollback復元の進捗
+  maxLines?: number; // 取得する最大行数
+  useCompression?: boolean; // 圧縮を使用するか
+  cursorPosition?: {
+    x: number;
+    y: number;
+  }; // カーソル位置
 }
 
 export interface VsCodeMessage {
@@ -153,6 +177,9 @@ export interface VsCodeMessage {
     | 'deleteTerminal'
     | 'requestStateRestoration'
     | 'getScrollbackData'
+    | 'extractScrollback'
+    | 'restoreScrollbackData'
+    | 'scrollbackExtracted'
     | 'error';
   data?: string;
   cols?: number;

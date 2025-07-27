@@ -124,6 +124,11 @@ class TerminalWebviewManager {
     return this.splitManager.getTerminalContainers();
   }
 
+  public getTerminalElement(terminalId: string): HTMLElement | undefined {
+    const terminalInstance = this.splitManager.getTerminals().get(terminalId);
+    return terminalInstance?.container;
+  }
+
   public postMessageToExtension(message: unknown): void {
     const api = getVsCodeApi();
     if (api) {

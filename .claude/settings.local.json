@@ -50,7 +50,8 @@
       "Bash(git pull:*)",
       "Bash(git tag:*)",
       "Bash(npm version:*)",
-      "WebFetch(domain:stackoverflow.com)"
+      "WebFetch(domain:stackoverflow.com)",
+      "Bash(gh issue close:*)"
     ],
     "deny": []
   },

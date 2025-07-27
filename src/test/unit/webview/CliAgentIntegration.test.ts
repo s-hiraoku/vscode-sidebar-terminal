@@ -66,6 +66,7 @@ describe('CLI Agent Integration', () => {
       getTerminalInstance: () => undefined,
       getAllTerminalInstances: () => new Map(),
       getAllTerminalContainers: () => new Map(),
+      getTerminalElement: () => undefined,
       postMessageToExtension: () => {},
       log: () => {},
       createTerminal: () => {},
