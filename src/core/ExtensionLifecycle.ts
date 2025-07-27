@@ -22,6 +22,13 @@ export class ExtensionLifecycle {
   private copilotIntegrationCommand: CopilotIntegrationCommand | undefined;
 
   /**
+   * ScrollbackSessionManagerへのアクセスを提供
+   */
+  public getScrollbackSessionManager(): ScrollbackSessionManager | undefined {
+    return this.scrollbackSessionManager;
+  }
+
+  /**
    * 拡張機能の起動処理
    */
   async activate(context: vscode.ExtensionContext): Promise<void> {
@@ -296,6 +303,14 @@ export class ExtensionLifecycle {
         handler: async () => {
           log('🔧 [DEBUG] Command executed: clearSession (simple)');
           await this.handleSimpleClearSessionCommand();
+        },
+      },
+      // ======================= Scrollbackテストコマンド =======================
+      {
+        command: 'secondaryTerminal.testScrollback',
+        handler: async () => {
+          log('🔧 [DEBUG] Command executed: testScrollback');
+          await this.handleTestScrollbackCommand();
         },
       },
     ];
@@ -896,6 +911,53 @@ export class ExtensionLifecycle {
       );
       // エラー時も初期ターミナルを作成
       this.createInitialTerminal();
+    }
+  }
+
+  /**
+   * Scrollbackテストコマンドハンドラー
+   */
+  private async handleTestScrollbackCommand(): Promise<void> {
+    log('🧪 [SCROLLBACK_TEST] Starting scrollback test');
+    
+    if (!this.scrollbackSessionManager) {
+      await vscode.window.showErrorMessage('Scrollback manager not available');
+      return;
+    }
+
+    try {
+      // 現在のセッション情報を取得
+      const sessionInfo = await this.scrollbackSessionManager.getScrollbackSessionInfo();
+      
+      if (sessionInfo.exists) {
+        await vscode.window.showInformationMessage(
+          `Scrollback session exists: ${sessionInfo.terminalCount} terminals, ${sessionInfo.totalLines} lines, ${sessionInfo.dataSize} bytes`
+        );
+      } else {
+        await vscode.window.showInformationMessage('No scrollback session data found');
+      }
+      
+      // テスト用にモックScrollbackを抽出
+      const terminals = this.terminalManager?.getTerminals() || [];
+      if (terminals.length > 0) {
+        const terminal = terminals[0];
+        if (terminal) {
+          const scrollback = await this.scrollbackSessionManager.extractScrollbackFromTerminal(terminal.id);
+          
+          if (scrollback) {
+            log(`🧪 [SCROLLBACK_TEST] Extracted ${scrollback.lines.length} lines from terminal ${terminal.id}`);
+            await vscode.window.showInformationMessage(
+              `Extracted ${scrollback.lines.length} lines from terminal "${terminal.name}"`
+            );
+          }
+        }
+      }
+      
+    } catch (error) {
+      log(`❌ [SCROLLBACK_TEST] Test failed: ${error instanceof Error ? error.message : String(error)}`);
+      await vscode.window.showErrorMessage(
+        `Scrollback test failed: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 

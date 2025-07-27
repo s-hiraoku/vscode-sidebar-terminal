@@ -131,6 +131,11 @@
         "command": "secondaryTerminal.activateCopilot",
         "title": "Activate GitHub Copilot Chat",
         "category": "Secondary Terminal"
+      },
+      {
+        "command": "secondaryTerminal.testScrollback",
+        "title": "Test Scrollback Feature",
+        "category": "Secondary Terminal"
       }
     ],
     "menus": {

@@ -189,6 +189,12 @@ export interface VsCodeMessage {
   // セッション復元関連
   scrollbackLines?: number; // 取得する履歴行数
   scrollbackData?: string[]; // 履歴データ
+  maxLines?: number; // 取得する最大行数
+  scrollbackContent?: Array<{
+    content: string;
+    type?: 'output' | 'input' | 'error';
+    timestamp?: number;
+  }>; // 復元するscrollback内容
 }
 
 export interface TerminalInstance {

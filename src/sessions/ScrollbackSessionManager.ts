@@ -119,6 +119,11 @@ export class ScrollbackSessionManager {
       for (let i = 0; i < scrollback.lines.length; i++) {
         const line = scrollback.lines[i];
         
+        if (!line) {
+          log(`⚠️ [SCROLLBACK] Skipping undefined line at index ${i}`);
+          continue;
+        }
+        
         // 進捗更新
         if (this.onProgressCallback && i % 100 === 0) {
           this.onProgressCallback({
@@ -131,7 +136,8 @@ export class ScrollbackSessionManager {
         }
         
         // 実際の復元処理（後で実装）
-        log(`📝 [SCROLLBACK] Restoring line ${i + 1}/${scrollback.lines.length}: ${line.content.substring(0, 50)}...`);
+        const preview = line.content.length > 50 ? line.content.substring(0, 50) + '...' : line.content;
+        log(`📝 [SCROLLBACK] Restoring line ${i + 1}/${scrollback.lines.length}: ${preview}`);
       }
 
       // 最終進捗
