@@ -72,12 +72,33 @@ export interface WebviewMessage {
     | 'focusTerminal'
     | 'error'
     | 'test'
-    | 'timeoutTest';
+    | 'timeoutTest'
+    | 'sessionRestore'
+    | 'sessionRestoreStarted'
+    | 'sessionRestoreProgress'
+    | 'sessionRestoreCompleted'
+    | 'sessionRestoreError'
+    | 'sessionRestoreSkipped'
+    | 'sessionSaved'
+    | 'sessionSaveError'
+    | 'sessionCleared'
+    | 'terminalRestoreError'
+    | 'getScrollback'
+    | 'error';
   config?: TerminalConfig;
   data?: string;
   exitCode?: number;
   terminalId?: string;
   terminalName?: string;
+  // Session management properties
+  terminalCount?: number;
+  restored?: number;
+  total?: number;
+  restoredCount?: number;
+  skippedCount?: number;
+  error?: string;
+  partialSuccess?: boolean;
+  reason?: string;
   terminals?: TerminalInfo[];
   activeTerminalId?: string;
   settings?: PartialTerminalSettings; // 部分的な設定を受け取るよう修正
@@ -101,6 +122,14 @@ export interface WebviewMessage {
   message?: string; // エラー報告用
   context?: string; // エラー報告用
   stack?: string; // エラー報告用
+
+  // セッション復元関連
+  sessionRestoreMessage?: string; // 復元メッセージ
+  sessionScrollback?: string[]; // 復元する履歴データ
+  scrollbackLines?: number; // 取得する履歴行数
+  scrollbackData?: string[]; // 取得された履歴データ
+  errorType?: string; // エラータイプ (file, corruption, permission, network, unknown)
+  recoveryAction?: string; // 回復処理の説明
 }
 
 export interface VsCodeMessage {
@@ -123,6 +152,7 @@ export interface VsCodeMessage {
     | 'killTerminal'
     | 'deleteTerminal'
     | 'requestStateRestoration'
+    | 'getScrollbackData'
     | 'error';
   data?: string;
   cols?: number;
@@ -135,14 +165,27 @@ export interface VsCodeMessage {
   message?: string; // エラー報告用
   context?: string; // エラー報告用
   stack?: string; // エラー報告用
+
+  // セッション復元関連
+  scrollbackLines?: number; // 取得する履歴行数
+  scrollbackData?: string[]; // 履歴データ
 }
 
 export interface TerminalInstance {
   id: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  pty: any; // Using any for node-pty compatibility with both real and mock implementations
+  pty?: any; // Using any for node-pty compatibility with both real and mock implementations (ptyProcessに移行中)
+  ptyProcess?: any; // 新しいpty参照名（セッション復元対応）
   name: string;
+  number: number; // ターミナル番号（1-5）
+  cwd?: string; // 現在の作業ディレクトリ
   isActive: boolean;
+  createdAt?: number; // 作成日時
+
+  // セッション復元関連のプロパティ
+  isSessionRestored?: boolean; // セッション復元で作成されたターミナルかどうか
+  sessionRestoreMessage?: string; // 復元メッセージ
+  sessionScrollback?: string[]; // 復元時の履歴データ
 }
 
 export interface TerminalDimensions {

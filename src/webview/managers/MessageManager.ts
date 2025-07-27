@@ -8,6 +8,16 @@ import { WebViewFontSettings } from '../../types/shared';
 import { IMessageManager, IManagerCoordinator } from '../interfaces/ManagerInterfaces';
 import { CommunicationManager } from './CommunicationManager';
 import { LoggerManager } from './LoggerManager';
+import {
+  showSessionRestoreStarted,
+  showSessionRestoreProgress,
+  showSessionRestoreCompleted,
+  showSessionRestoreError,
+  showSessionSaved,
+  showSessionSaveError,
+  showSessionCleared,
+  showSessionRestoreSkipped,
+} from '../utils/NotificationUtils';
 
 interface MessageCommand {
   command: string;
@@ -100,6 +110,50 @@ export class MessageManager implements IMessageManager {
 
         case 'cliAgentStatusUpdate':
           this.handleClaudeStatusUpdateMessage(msg, coordinator);
+          break;
+
+        case 'sessionRestore':
+          this.handleSessionRestoreMessage(msg, coordinator);
+          break;
+
+        case 'sessionRestoreStarted':
+          this.handleSessionRestoreStartedMessage(msg);
+          break;
+
+        case 'sessionRestoreProgress':
+          this.handleSessionRestoreProgressMessage(msg);
+          break;
+
+        case 'sessionRestoreCompleted':
+          this.handleSessionRestoreCompletedMessage(msg);
+          break;
+
+        case 'sessionRestoreError':
+          this.handleSessionRestoreErrorMessage(msg);
+          break;
+
+        case 'sessionSaved':
+          this.handleSessionSavedMessage(msg);
+          break;
+
+        case 'sessionSaveError':
+          this.handleSessionSaveErrorMessage(msg);
+          break;
+
+        case 'sessionCleared':
+          this.handleSessionClearedMessage();
+          break;
+
+        case 'sessionRestoreSkipped':
+          this.handleSessionRestoreSkippedMessage(msg);
+          break;
+
+        case 'terminalRestoreError':
+          this.handleTerminalRestoreErrorMessage(msg);
+          break;
+
+        case 'getScrollback':
+          this.handleGetScrollbackMessage(msg, coordinator);
           break;
 
         default:
@@ -650,8 +704,168 @@ export class MessageManager implements IMessageManager {
   }
 
   /**
+   * Handle session restore message from extension
+   */
+  private handleSessionRestoreMessage(msg: MessageCommand, coordinator: IManagerCoordinator): void {
+    log('🔄 [MESSAGE] Session restore message received');
+
+    const terminalId = msg.terminalId as string;
+    const terminalName = msg.terminalName as string;
+    const config = msg.config;
+    const sessionRestoreMessage = msg.sessionRestoreMessage as string;
+    const sessionScrollback = msg.sessionScrollback as string[];
+
+    if (terminalId && terminalName && config) {
+      log(`🔄 [MESSAGE] Restoring terminal session: ${terminalId} (${terminalName})`);
+      log(`🔄 [MESSAGE] Restore message: ${sessionRestoreMessage}`);
+      log(`🔄 [MESSAGE] Scrollback lines: ${sessionScrollback?.length || 0}`);
+
+      try {
+        // Simple approach: Create terminal normally, then restore scrollback
+        coordinator.createTerminal(terminalId, terminalName, config);
+        log(`✅ [MESSAGE] Created terminal for session restore: ${terminalId}`);
+
+        // Restore scrollback data after a brief delay
+        if (sessionRestoreMessage || (sessionScrollback && sessionScrollback.length > 0)) {
+          setTimeout(() => {
+            if (
+              'restoreTerminalScrollback' in coordinator &&
+              typeof coordinator.restoreTerminalScrollback === 'function'
+            ) {
+              coordinator.restoreTerminalScrollback(
+                terminalId,
+                sessionRestoreMessage || '',
+                sessionScrollback || []
+              );
+              log(`✅ [MESSAGE] Restored scrollback for terminal: ${terminalId}`);
+            } else {
+              log('⚠️ [MESSAGE] restoreTerminalScrollback method not found');
+            }
+          }, 100);
+        }
+      } catch (error) {
+        log(`❌ [MESSAGE] Failed to restore terminal session ${terminalId}: ${error}`);
+        // Continue with regular terminal creation as fallback
+        coordinator.createTerminal(terminalId, terminalName, config);
+      }
+    } else {
+      log('❌ [MESSAGE] Invalid session restore data received');
+    }
+  }
+
+  /**
+   * Handle get scrollback message response from extension
+   */
+  private handleGetScrollbackMessage(msg: MessageCommand, coordinator: IManagerCoordinator): void {
+    const terminalId = msg.terminalId as string;
+    const scrollbackData = msg.scrollbackData as string[];
+
+    if (terminalId && scrollbackData) {
+      log(
+        `📜 [MESSAGE] Scrollback data received for terminal ${terminalId}: ${scrollbackData.length} lines`
+      );
+
+      // Forward scrollback data to the terminal
+      const terminal = coordinator.getTerminalInstance(terminalId);
+      if (terminal) {
+        // Write scrollback data to terminal (this would be used for session saving)
+        log(`📜 [MESSAGE] Scrollback data forwarded to terminal ${terminalId}`);
+      } else {
+        log(`⚠️ [MESSAGE] Terminal ${terminalId} not found for scrollback data`);
+      }
+    }
+  }
+
+  /**
+   * Request scrollback data from extension for a terminal
+   */
+  public requestScrollbackData(
+    terminalId: string,
+    lines: number,
+    coordinator: IManagerCoordinator
+  ): void {
+    this.queueMessage(
+      {
+        command: 'getScrollbackData',
+        terminalId,
+        scrollbackLines: lines,
+      },
+      coordinator
+    );
+    log(`📜 [MESSAGE] Scrollback data requested for terminal ${terminalId}: ${lines} lines`);
+  }
+
+  /**
    * Dispose and cleanup
    */
+  /**
+   * Session restore notification handlers
+   */
+  private handleSessionRestoreStartedMessage(msg: MessageCommand): void {
+    const terminalCount = (msg.terminalCount as number) || 0;
+    log(`🔄 [MESSAGE] Session restore started for ${terminalCount} terminals`);
+    showSessionRestoreStarted(terminalCount);
+  }
+
+  private handleSessionRestoreProgressMessage(msg: MessageCommand): void {
+    const restored = (msg.restored as number) || 0;
+    const total = (msg.total as number) || 0;
+    log(`⏳ [MESSAGE] Session restore progress: ${restored}/${total}`);
+    showSessionRestoreProgress(restored, total);
+  }
+
+  private handleSessionRestoreCompletedMessage(msg: MessageCommand): void {
+    const restoredCount = (msg.restoredCount as number) || 0;
+    const skippedCount = (msg.skippedCount as number) || 0;
+    log(
+      `✅ [MESSAGE] Session restore completed: ${restoredCount} restored, ${skippedCount} skipped`
+    );
+    showSessionRestoreCompleted(restoredCount, skippedCount);
+  }
+
+  private handleSessionRestoreErrorMessage(msg: MessageCommand): void {
+    const error = (msg.error as string) || 'Unknown error';
+    const partialSuccess = (msg.partialSuccess as boolean) || false;
+    const errorType = (msg.errorType as string) || undefined;
+    log(
+      `❌ [MESSAGE] Session restore error: ${error} (partial: ${partialSuccess}, type: ${errorType})`
+    );
+    showSessionRestoreError(error, partialSuccess, errorType);
+  }
+
+  private handleSessionSavedMessage(msg: MessageCommand): void {
+    const terminalCount = (msg.terminalCount as number) || 0;
+    log(`💾 [MESSAGE] Session saved with ${terminalCount} terminals`);
+    showSessionSaved(terminalCount);
+  }
+
+  private handleSessionSaveErrorMessage(msg: MessageCommand): void {
+    const error = (msg.error as string) || 'Unknown error';
+    log(`💾❌ [MESSAGE] Session save error: ${error}`);
+    showSessionSaveError(error);
+  }
+
+  private handleSessionClearedMessage(): void {
+    log('🗑️ [MESSAGE] Session cleared');
+    showSessionCleared();
+  }
+
+  private handleSessionRestoreSkippedMessage(msg: MessageCommand): void {
+    const reason = (msg.reason as string) || 'Unknown reason';
+    log(`⏭️ [MESSAGE] Session restore skipped: ${reason}`);
+    showSessionRestoreSkipped(reason);
+  }
+
+  private handleTerminalRestoreErrorMessage(msg: MessageCommand): void {
+    const terminalName = (msg.terminalName as string) || 'Unknown terminal';
+    const error = (msg.error as string) || 'Unknown error';
+    log(`⚠️ [MESSAGE] Terminal restore error: ${terminalName} - ${error}`);
+
+    // Import the function here to avoid circular dependencies
+    const { showTerminalRestoreError } = require('../utils/NotificationUtils');
+    showTerminalRestoreError(terminalName, error);
+  }
+
   public dispose(): void {
     log('🧹 [MESSAGE] Disposing message manager');
 

@@ -594,6 +594,47 @@ class TerminalWebviewManager {
     }
   }
 
+  /**
+   * Restore scrollback history to an existing terminal - DISABLED FOR DEBUGGING
+   */
+  /*
+  public restoreTerminalScrollback(
+    id: string,
+    restoreMessage: string,
+    scrollbackData: string[]
+  ): void {
+    log('🔄 [WEBVIEW] Restoring scrollback for terminal:', id);
+    
+    const terminalInstance = this.splitManager.getTerminals().get(id);
+    if (terminalInstance && terminalInstance.terminal) {
+      try {
+        // Show restore message first
+        if (restoreMessage) {
+          terminalInstance.terminal.writeln(restoreMessage);
+        }
+
+        // Restore scrollback history
+        if (scrollbackData && scrollbackData.length > 0) {
+          scrollbackData.forEach((line) => {
+            if (line && line.trim()) {
+              terminalInstance.terminal.writeln(line);
+            }
+          });
+          log(`✅ [WEBVIEW] Restored ${scrollbackData.length} scrollback lines`);
+        }
+
+        // Scroll to bottom after restoration
+        terminalInstance.terminal.scrollToBottom();
+        log(`✅ [WEBVIEW] Scrollback restore completed for terminal: ${id}`);
+      } catch (error) {
+        log(`❌ [WEBVIEW] Error restoring scrollback for ${id}:`, error);
+      }
+    } else {
+      log(`❌ [WEBVIEW] Terminal instance not found for scrollback restore: ${id}`);
+    }
+  }
+  */
+
   public switchToTerminal(id: string): void {
     log('🔄 [WEBVIEW] Switching to terminal:', id);
 
