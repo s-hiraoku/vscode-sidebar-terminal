@@ -326,7 +326,7 @@ export class TestDataFactory {
    * 期限切れセッションデータを生成
    */
   public static createExpiredSessionData(daysAgo: number): unknown {
-    const sessionData = this.createSessionData(1);
+    const sessionData = this.createSessionData(1) as any;
     return {
       ...sessionData,
       timestamp: Date.now() - (daysAgo * 24 * 60 * 60 * 1000),

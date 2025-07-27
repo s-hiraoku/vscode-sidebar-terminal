@@ -1,8 +1,7 @@
 import * as vscode from 'vscode';
 import { SecondaryTerminalProvider } from '../providers/SecondaryTerminalProvider';
 import { TerminalManager } from '../terminals/TerminalManager';
-import { SimpleSessionManager } from '../sessions/SimpleSessionManager';
-// import { ScrollbackSessionManager } from '../sessions/ScrollbackSessionManager'; // Temporarily disabled for simplified implementation
+import { UnifiedSessionManager } from '../sessions/UnifiedSessionManager';
 import { extension as log, logger, LogLevel } from '../utils/logger';
 import { FileReferenceCommand, TerminalCommand } from '../commands';
 import { CopilotIntegrationCommand } from '../commands/CopilotIntegrationCommand';
@@ -15,8 +14,7 @@ import { VSCODE_COMMANDS } from '../constants';
 export class ExtensionLifecycle {
   private terminalManager: TerminalManager | undefined;
   private sidebarProvider: SecondaryTerminalProvider | undefined;
-  private simpleSessionManager: SimpleSessionManager | undefined;
-  // private scrollbackSessionManager: ScrollbackSessionManager | undefined; // Temporarily disabled
+  private unifiedSessionManager: UnifiedSessionManager | undefined;
   private fileReferenceCommand: FileReferenceCommand | undefined;
   private terminalCommand: TerminalCommand | undefined;
   private copilotIntegrationCommand: CopilotIntegrationCommand | undefined;
@@ -62,10 +60,10 @@ export class ExtensionLifecycle {
       // Initialize terminal manager
       this.terminalManager = new TerminalManager();
 
-      // Initialize simple session manager
-      log('🔧 [EXTENSION] Initializing simple session manager...');
-      this.simpleSessionManager = new SimpleSessionManager(context, this.terminalManager);
-      log('✅ [EXTENSION] Simple session manager initialized');
+      // Initialize unified session manager
+      log('🔧 [EXTENSION] Initializing unified session manager...');
+      this.unifiedSessionManager = new UnifiedSessionManager(context, this.terminalManager);
+      log('✅ [EXTENSION] Unified session manager initialized');
 
       // Initialize scrollback session manager - Temporarily disabled
       // log('🔧 [EXTENSION] Initializing scrollback session manager...');
@@ -80,10 +78,10 @@ export class ExtensionLifecycle {
       // Register the sidebar terminal provider
       this.sidebarProvider = new SecondaryTerminalProvider(context, this.terminalManager);
 
-      // Set sidebar provider for SimpleSessionManager
-      if (this.simpleSessionManager) {
-        this.simpleSessionManager.setSidebarProvider(this.sidebarProvider);
-        log('🔧 [EXTENSION] Sidebar provider set for SimpleSessionManager');
+      // Set sidebar provider for UnifiedSessionManager
+      if (this.unifiedSessionManager) {
+        this.unifiedSessionManager.setSidebarProvider(this.sidebarProvider);
+        log('🔧 [EXTENSION] Sidebar provider set for UnifiedSessionManager');
       }
 
       // Register webview providers for both sidebar and panel
@@ -243,10 +241,10 @@ export class ExtensionLifecycle {
     // シンプルセッション保存処理
     this.saveSimpleSessionOnExit();
 
-    // Dispose simple session manager
-    if (this.simpleSessionManager) {
-      log('🔧 [EXTENSION] Disposing simple session manager...');
-      this.simpleSessionManager = undefined;
+    // Dispose unified session manager
+    if (this.unifiedSessionManager) {
+      log('🔧 [EXTENSION] Disposing unified session manager...');
+      this.unifiedSessionManager = undefined;
     }
 
     // Dispose scrollback session manager - Temporarily disabled
@@ -292,10 +290,10 @@ export class ExtensionLifecycle {
   }
 
   /**
-   * 現在のシンプルセッションマネージャーを取得（テスト用）
+   * 現在の統合セッションマネージャーを取得（テスト用）
    */
-  getSimpleSessionManager(): SimpleSessionManager | undefined {
-    return this.simpleSessionManager;
+  getUnifiedSessionManager(): UnifiedSessionManager | undefined {
+    return this.unifiedSessionManager;
   }
 
   // ==================== セッション管理関連のメソッド - DISABLED FOR DEBUGGING ====================
@@ -571,11 +569,11 @@ export class ExtensionLifecycle {
   // ==================== シンプルセッション管理メソッド ====================
 
   /**
-   * シンプルセッション保存コマンドハンドラー
+   * 統合セッション保存コマンドハンドラー
    */
   private async handleSimpleSaveSessionCommand(): Promise<void> {
-    if (!this.simpleSessionManager) {
-      await vscode.window.showErrorMessage('Simple session manager not available');
+    if (!this.unifiedSessionManager) {
+      await vscode.window.showErrorMessage('Unified session manager not available');
       return;
     }
 
@@ -586,7 +584,7 @@ export class ExtensionLifecycle {
       log('✅ [SIMPLE_SESSION] Scrollback extraction completed');
 
       // 通常のセッション保存を実行
-      const result = await this.simpleSessionManager.saveCurrentSession();
+      const result = await this.unifiedSessionManager.saveCurrentSession();
       if (result.success) {
         await vscode.window.showInformationMessage(
           `Terminal session saved successfully (${result.terminalCount} terminal${result.terminalCount !== 1 ? 's' : ''})`
@@ -604,16 +602,16 @@ export class ExtensionLifecycle {
   }
 
   /**
-   * シンプルセッション復元コマンドハンドラー
+   * 統合セッション復元コマンドハンドラー
    */
   private async handleSimpleRestoreSessionCommand(): Promise<void> {
-    if (!this.simpleSessionManager) {
-      await vscode.window.showErrorMessage('Simple session manager not available');
+    if (!this.unifiedSessionManager) {
+      await vscode.window.showErrorMessage('Unified session manager not available');
       return;
     }
 
     try {
-      const result = await this.simpleSessionManager.restoreSession();
+      const result = await this.unifiedSessionManager.restoreSession();
 
       if (result.success) {
         if (result.restoredCount && result.restoredCount > 0) {
@@ -639,11 +637,11 @@ export class ExtensionLifecycle {
   }
 
   /**
-   * シンプルセッションクリアコマンドハンドラー
+   * 統合セッションクリアコマンドハンドラー
    */
   private async handleSimpleClearSessionCommand(): Promise<void> {
-    if (!this.simpleSessionManager) {
-      await vscode.window.showErrorMessage('Simple session manager not available');
+    if (!this.unifiedSessionManager) {
+      await vscode.window.showErrorMessage('Unified session manager not available');
       return;
     }
 
@@ -656,7 +654,7 @@ export class ExtensionLifecycle {
 
     if (confirm === 'Clear Session') {
       try {
-        await this.simpleSessionManager.clearSession();
+        await this.unifiedSessionManager.clearSession();
         await vscode.window.showInformationMessage('Terminal session data cleared successfully');
       } catch (error) {
         await vscode.window.showErrorMessage(
@@ -667,32 +665,32 @@ export class ExtensionLifecycle {
   }
 
   /**
-   * 終了時のシンプルセッション保存処理
+   * 終了時の統合セッション保存処理
    */
   private saveSimpleSessionOnExit(): void {
     try {
-      if (!this.simpleSessionManager) {
-        log('⚠️ [SIMPLE_SESSION] Session manager not available, skipping save on exit');
+      if (!this.unifiedSessionManager) {
+        log('⚠️ [UNIFIED_SESSION] Session manager not available, skipping save on exit');
         return;
       }
 
-      log('💾 [SIMPLE_SESSION] Saving session on exit...');
+      log('💾 [UNIFIED_SESSION] Saving session on exit...');
 
       // 同期的に保存処理を実行
-      this.simpleSessionManager
+      this.unifiedSessionManager
         .saveCurrentSession()
         .then((result) => {
           if (result.success) {
-            log(`✅ [SIMPLE_SESSION] Session saved on exit: ${result.terminalCount} terminals`);
+            log(`✅ [UNIFIED_SESSION] Session saved on exit: ${result.terminalCount} terminals`);
           } else {
-            log(`❌ [SIMPLE_SESSION] Failed to save session on exit: ${result.error}`);
+            log(`❌ [UNIFIED_SESSION] Failed to save session on exit: ${result.error}`);
           }
         })
         .catch((error) => {
-          log(`❌ [SIMPLE_SESSION] Exception during session save on exit: ${String(error)}`);
+          log(`❌ [UNIFIED_SESSION] Exception during session save on exit: ${String(error)}`);
         });
     } catch (error) {
-      log(`❌ [SIMPLE_SESSION] Error during saveSimpleSessionOnExit: ${String(error)}`);
+      log(`❌ [UNIFIED_SESSION] Error during saveSimpleSessionOnExit: ${String(error)}`);
     }
   }
 
@@ -711,12 +709,12 @@ export class ExtensionLifecycle {
     try {
       log('🔄 [EXTENSION] Starting session restore...');
 
-      if (!this.simpleSessionManager) {
+      if (!this.unifiedSessionManager) {
         log('❌ [EXTENSION] Session manager not available');
         return;
       }
 
-      const result = await this.simpleSessionManager.restoreSession();
+      const result = await this.unifiedSessionManager.restoreSession();
 
       if (result.success && result.restoredCount && result.restoredCount > 0) {
         log(`✅ [EXTENSION] Restored ${result.restoredCount} terminals`);
@@ -738,7 +736,7 @@ export class ExtensionLifecycle {
     log('🔍 [SESSION] === RESTORE SESSION STARTUP CALLED ===');
 
     try {
-      if (!this.simpleSessionManager || !this.terminalManager) {
+      if (!this.unifiedSessionManager || !this.terminalManager) {
         log('⚠️ [SESSION] Managers not available');
         return;
       }
@@ -751,9 +749,9 @@ export class ExtensionLifecycle {
         return;
       }
 
-      log('🔍 [SESSION] About to call simpleSessionManager.restoreSession()');
+      log('🔍 [SESSION] About to call unifiedSessionManager.restoreSession()');
       // セッション復元を実行
-      const result = await this.simpleSessionManager.restoreSession();
+      const result = await this.unifiedSessionManager.restoreSession();
       log(`🔍 [SESSION] restoreSession() completed with result: ${JSON.stringify(result)}`);
 
       if (result.success && result.restoredCount && result.restoredCount > 0) {
