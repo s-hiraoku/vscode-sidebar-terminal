@@ -41,7 +41,8 @@ class Logger {
 
       // Check for debug flags in URL or global variables
       const hasDebugFlag =
-        window.location?.search?.includes('debug=true') || (window as any).VSCODE_DEBUG === true;
+        window.location?.search?.includes('debug=true') ||
+        (window as Window & { VSCODE_DEBUG?: boolean }).VSCODE_DEBUG === true;
 
       return isDevHost || hasDebugFlag;
     }

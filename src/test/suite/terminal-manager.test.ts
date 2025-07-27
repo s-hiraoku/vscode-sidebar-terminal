@@ -4,10 +4,10 @@ import { TerminalManager } from '../../terminals/TerminalManager';
 
 suite('TerminalManager Test Suite', () => {
   let terminalManager: TerminalManager;
-  let mockContext: vscode.ExtensionContext;
+  let _mockContext: vscode.ExtensionContext;
 
   setup(() => {
-    mockContext = {
+    _mockContext = {
       subscriptions: [],
       extensionPath: '',
       extensionUri: vscode.Uri.file(''),

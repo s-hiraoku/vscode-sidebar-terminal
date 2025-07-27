@@ -29,12 +29,12 @@ export class CopilotIntegrationCommand {
       if (!fileInfo) {
         log('⚠️ [DEBUG] No active editor found, activating Copilot without file reference');
         // ファイルが開いていなくてもCopilot Chatをアクティブ化
-        this.activateCopilotChat();
+        void this.activateCopilotChat();
         return;
       }
 
       // GitHub Copilot Chatをアクティブ化してファイル参照を送信
-      this.activateCopilotChatWithFileReference(fileInfo);
+      void this.activateCopilotChatWithFileReference(fileInfo);
 
       log('✅ [DEBUG] Successfully activated GitHub Copilot Chat with file reference');
     } catch (error) {

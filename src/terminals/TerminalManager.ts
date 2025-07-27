@@ -840,7 +840,7 @@ export class TerminalManager {
           console.log(`[DEBUG] 🔍 Gemini CLI output line: "${cleanLine}"`);
 
           // より包括的なプロンプト検知パターン
-          const isPromptReady =
+          const _isPromptReady =
             // 標準的なプロンプト文字
             cleanLine.includes('>') ||
             cleanLine.includes('$') ||
