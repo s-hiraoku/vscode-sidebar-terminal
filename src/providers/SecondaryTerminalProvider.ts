@@ -493,14 +493,14 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
           log('📋 [DEBUG] Extract scrollback request received');
           const terminalId = message.terminalId as string;
           const maxLines = (message.maxLines as number) || 1000;
-          
+
           if (terminalId) {
             // WebViewに対してScrollback取得要求を送信
             await this._sendMessage({
               command: 'getScrollback',
               terminalId,
               maxLines,
-              timestamp: Date.now()
+              timestamp: Date.now(),
             });
           }
           break;
@@ -509,24 +509,30 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
           log('📋 [DEBUG] Scrollback data received from WebView');
           const terminalId = message.terminalId as string;
           const scrollbackContent = message.scrollbackContent;
-          
-          // ScrollbackSessionManagerに転送する処理をここに実装
-          // TODO: ExtensionLifecycleのScrollbackSessionManagerにアクセスする方法を追加
-          log(`📋 [DEBUG] Scrollback data for terminal ${terminalId}: ${scrollbackContent?.length || 0} lines`);
+
+          // Scrollbackデータを一時的に保存（実際の実装では適切な場所に保存）
+          if (terminalId && scrollbackContent) {
+            // グローバルステートに直接保存（テスト用）
+            const scrollbackKey = `scrollback_${terminalId}`;
+            await this._extensionContext.globalState.update(scrollbackKey, scrollbackContent);
+            log(
+              `📋 [DEBUG] Scrollback data saved for terminal ${terminalId}: ${scrollbackContent?.length || 0} lines`
+            );
+          }
           break;
         }
         case 'restoreScrollbackData': {
           log('🔄 [DEBUG] Restore scrollback request received');
           const terminalId = message.terminalId as string;
           const scrollbackContent = message.scrollbackContent;
-          
+
           if (terminalId && scrollbackContent) {
             // WebViewに対してScrollback復元要求を送信
             await this._sendMessage({
               command: 'restoreScrollback',
               terminalId,
               scrollbackContent,
-              timestamp: Date.now()
+              timestamp: Date.now(),
             });
           }
           break;

@@ -49,35 +49,7 @@ export class CopilotIntegrationCommand {
    * GitHub Copilot Chatをアクティブ化する
    */
   private async activateCopilotChat(): Promise<void> {
-    try {
-      // 第一候補: workbench.action.chat.open
-      await vscode.commands.executeCommand(VSCODE_COMMANDS.CHAT_OPEN);
-      log('📤 [DEBUG] Executed workbench.action.chat.open command');
-    } catch (primaryError) {
-      log('⚠️ [WARN] Primary command failed, trying fallback:', primaryError);
-
-      try {
-        // 代替案: Copilot Chatパネルにフォーカス
-        await vscode.commands.executeCommand(VSCODE_COMMANDS.CHAT_FOCUS_FALLBACK);
-        log('📤 [DEBUG] Executed workbench.panel.chat.view.copilot.focus command');
-      } catch (fallbackError) {
-        log('❌ [ERROR] Both activation methods failed:', fallbackError);
-
-        // エラー時の案内
-        void vscode.window
-          .showWarningMessage(
-            'Could not activate GitHub Copilot Chat. Please ensure GitHub Copilot Chat extension is installed and enabled.',
-            'Open Command Palette'
-          )
-          .then((selection) => {
-            if (selection === 'Open Command Palette') {
-              void vscode.commands.executeCommand(VSCODE_COMMANDS.SHOW_COMMANDS);
-            }
-          });
-
-        throw new Error('Failed to activate GitHub Copilot Chat');
-      }
-    }
+    await vscode.commands.executeCommand(VSCODE_COMMANDS.CHAT_OPEN);
   }
 
   /**

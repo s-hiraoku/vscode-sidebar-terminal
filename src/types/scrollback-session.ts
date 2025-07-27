@@ -37,31 +37,10 @@ export interface TerminalScrollback {
 }
 
 /**
- * 履歴を含む拡張ターミナル情報
+ * Note: ExtendedTerminalInfo and ExtendedSessionData were removed
+ * to avoid type conflicts with SimpleTerminalInfo.
+ * The simplified implementation uses SimpleTerminalInfo.scrollback directly.
  */
-export interface ExtendedTerminalInfo extends SimpleTerminalInfo {
-  /** Scrollback履歴データ */
-  scrollback?: TerminalScrollback;
-  /** 履歴が利用可能かどうか */
-  hasScrollback: boolean;
-}
-
-/**
- * 履歴を含む拡張セッションデータ
- */
-export interface ExtendedSessionData extends SimpleSessionData {
-  /** 拡張ターミナル情報 */
-  terminals: ExtendedTerminalInfo[];
-  /** 全体の設定 */
-  scrollbackConfig: {
-    /** 復元する最大行数 */
-    maxLines: number;
-    /** 圧縮を使用するかどうか */
-    useCompression: boolean;
-    /** 最大ストレージサイズ（バイト） */
-    maxStorageSize: number;
-  };
-}
 
 /**
  * Scrollback復元の設定オプション

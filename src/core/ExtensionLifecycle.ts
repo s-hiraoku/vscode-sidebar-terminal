@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { SecondaryTerminalProvider } from '../providers/SecondaryTerminalProvider';
 import { TerminalManager } from '../terminals/TerminalManager';
 import { SimpleSessionManager } from '../sessions/SimpleSessionManager';
-import { ScrollbackSessionManager } from '../sessions/ScrollbackSessionManager';
+// import { ScrollbackSessionManager } from '../sessions/ScrollbackSessionManager'; // Temporarily disabled for simplified implementation
 import { extension as log, logger, LogLevel } from '../utils/logger';
 import { FileReferenceCommand, TerminalCommand } from '../commands';
 import { CopilotIntegrationCommand } from '../commands/CopilotIntegrationCommand';
@@ -16,17 +16,21 @@ export class ExtensionLifecycle {
   private terminalManager: TerminalManager | undefined;
   private sidebarProvider: SecondaryTerminalProvider | undefined;
   private simpleSessionManager: SimpleSessionManager | undefined;
-  private scrollbackSessionManager: ScrollbackSessionManager | undefined;
+  // private scrollbackSessionManager: ScrollbackSessionManager | undefined; // Temporarily disabled
   private fileReferenceCommand: FileReferenceCommand | undefined;
   private terminalCommand: TerminalCommand | undefined;
   private copilotIntegrationCommand: CopilotIntegrationCommand | undefined;
 
+  // シンプルな復元管理
+  private _restoreExecuted = false;
+
   /**
    * ScrollbackSessionManagerへのアクセスを提供
+   * Temporarily disabled for simplified implementation
    */
-  public getScrollbackSessionManager(): ScrollbackSessionManager | undefined {
-    return this.scrollbackSessionManager;
-  }
+  // public getScrollbackSessionManager(): ScrollbackSessionManager | undefined {
+  //   return this.scrollbackSessionManager;
+  // }
 
   /**
    * 拡張機能の起動処理
@@ -63,10 +67,10 @@ export class ExtensionLifecycle {
       this.simpleSessionManager = new SimpleSessionManager(context, this.terminalManager);
       log('✅ [EXTENSION] Simple session manager initialized');
 
-      // Initialize scrollback session manager
-      log('🔧 [EXTENSION] Initializing scrollback session manager...');
-      this.scrollbackSessionManager = new ScrollbackSessionManager(context);
-      log('✅ [EXTENSION] Scrollback session manager initialized');
+      // Initialize scrollback session manager - Temporarily disabled
+      // log('🔧 [EXTENSION] Initializing scrollback session manager...');
+      // this.scrollbackSessionManager = new ScrollbackSessionManager(context);
+      // log('✅ [EXTENSION] Scrollback session manager initialized');
 
       // Initialize command handlers
       this.fileReferenceCommand = new FileReferenceCommand(this.terminalManager);
@@ -75,6 +79,12 @@ export class ExtensionLifecycle {
 
       // Register the sidebar terminal provider
       this.sidebarProvider = new SecondaryTerminalProvider(context, this.terminalManager);
+
+      // Set sidebar provider for SimpleSessionManager
+      if (this.simpleSessionManager) {
+        this.simpleSessionManager.setSidebarProvider(this.sidebarProvider);
+        log('🔧 [EXTENSION] Sidebar provider set for SimpleSessionManager');
+      }
 
       // Register webview providers for both sidebar and panel
       const sidebarWebviewProvider = vscode.window.registerWebviewViewProvider(
@@ -94,116 +104,18 @@ export class ExtensionLifecycle {
       // Setup session manager event listeners - DISABLED FOR DEBUGGING
       // this.setupSessionEventListeners();
 
-      // Test command for Claude CLI Agent status display
-      const testClaudeStatusCommand = vscode.commands.registerCommand(
-        'secondaryTerminal.testClaudeStatus',
-        () => {
-          log('🔧 [DEBUG] Test Claude status command executed');
-          if (this.sidebarProvider) {
-            // Show active status
-            this.sidebarProvider.sendCliAgentStatusUpdate('test-terminal-1', 'connected');
-            // Clear after 4 seconds
-            setTimeout(() => {
-              if (this.sidebarProvider) {
-                this.sidebarProvider.sendCliAgentStatusUpdate(null, 'none');
-              }
-            }, 4000);
-          }
-        }
-      );
-      context.subscriptions.push(testClaudeStatusCommand);
+      // デバッグコマンドを完全削除 - 無限ループの原因防止
 
-      // Debug command for session debugging
-      const debugSessionCommand = vscode.commands.registerCommand(
-        'secondaryTerminal.debugSession',
-        async () => {
-          log('🔧 [DEBUG] === SESSION DEBUG COMMAND EXECUTED ===');
+      // VS Code完全初期化後に復元処理を実行（無限ループ修正済み）
+      log('🔧 [EXTENSION] Scheduling session restore after VS Code initialization...');
 
-          if (!this.simpleSessionManager || !this.terminalManager) {
-            log('❌ [DEBUG] Managers not available');
-            void vscode.window.showErrorMessage('Session managers not available');
-            return;
-          }
+      // 少し遅延させてVS Code完全初期化を待つ
+      setTimeout(() => {
+        void this.executeOneTimeRestore();
+      }, 2000); // 2秒遅延で確実性を確保
 
-          try {
-            // Show current terminal state
-            const terminals = this.terminalManager.getTerminals();
-            log(`🔧 [DEBUG] Current terminals: ${terminals.length}`);
-            terminals.forEach((t, i) => {
-              log(`   - Terminal ${i + 1}: ${t.id} (${t.name})`);
-            });
-
-            // Check stored session data
-            const sessionInfo = await this.simpleSessionManager.getSessionInfo();
-            log(`🔧 [DEBUG] Stored session: ${sessionInfo ? 'EXISTS' : 'NONE'}`);
-            if (sessionInfo) {
-              log(`   - Stored terminals: ${sessionInfo.terminals.length}`);
-              log(`   - Timestamp: ${new Date(sessionInfo.timestamp).toISOString()}`);
-            }
-
-            // Test save and restore
-            log('🔧 [DEBUG] Testing save...');
-            const saveResult = await this.simpleSessionManager.saveCurrentSession();
-            log(`🔧 [DEBUG] Save result: ${JSON.stringify(saveResult)}`);
-
-            void vscode.window.showInformationMessage(
-              `Debug: ${terminals.length} terminals, session ${sessionInfo ? 'exists' : 'none'}, save ${saveResult.success ? 'success' : 'failed'}`
-            );
-          } catch (error) {
-            log(
-              `❌ [DEBUG] Debug command error: ${error instanceof Error ? error.message : String(error)}`
-            );
-            void vscode.window.showErrorMessage(
-              `Debug error: ${error instanceof Error ? error.message : String(error)}`
-            );
-          }
-        }
-      );
-      context.subscriptions.push(debugSessionCommand);
-
-      // シンプルセッション復元処理（初期化完了後に実行）
-      log('🔄 [EXTENSION] === STARTING SIMPLE SESSION RESTORE ===');
-      log(`🔧 [EXTENSION] Current timestamp: ${new Date().toISOString()}`);
-      log(`🔧 [EXTENSION] Extension context: ${!!context}`);
-      log(`🔧 [EXTENSION] SimpleSessionManager available: ${!!this.simpleSessionManager}`);
-      log(`🔧 [EXTENSION] TerminalManager available: ${!!this.terminalManager}`);
-      log(`🔧 [EXTENSION] SidebarProvider available: ${!!this.sidebarProvider}`);
-
-      // Manager state詳細チェック
-      if (this.simpleSessionManager) {
-        log(`🔧 [EXTENSION] SimpleSessionManager type: ${typeof this.simpleSessionManager}`);
-        log(
-          `🔧 [EXTENSION] SimpleSessionManager constructor: ${this.simpleSessionManager.constructor.name}`
-        );
-      }
-
-      if (this.terminalManager) {
-        log(`🔧 [EXTENSION] TerminalManager type: ${typeof this.terminalManager}`);
-        log(`🔧 [EXTENSION] TerminalManager constructor: ${this.terminalManager.constructor.name}`);
-      }
-
-      if (this.simpleSessionManager && this.terminalManager) {
-        log('✅ [EXTENSION] Both managers available, proceeding with restore...');
-        try {
-          log('🔧 [EXTENSION] About to call restoreSimpleSessionOnStartup()...');
-          await this.restoreSimpleSessionOnStartup();
-          log('✅ [EXTENSION] === SIMPLE SESSION RESTORE COMPLETED ===');
-        } catch (error) {
-          log(
-            `❌ [EXTENSION] Error in restoreSimpleSessionOnStartup: ${error instanceof Error ? error.message : String(error)}`
-          );
-          log(`❌ [EXTENSION] Error stack: ${error instanceof Error ? error.stack : 'No stack'}`);
-        }
-      } else {
-        log('❌ [EXTENSION] Missing managers, cannot restore session');
-        log(`   - SimpleSessionManager: ${!!this.simpleSessionManager}`);
-        log(`   - TerminalManager: ${!!this.terminalManager}`);
-      }
-
-      // VS Code終了時の自動保存設定 - ENABLED FOR TESTING
-      log('🔧 [EXTENSION] Setting up session auto-save for testing...');
+      // 自動保存設定（復元完了後にのみ有効化）
       this.setupSessionAutoSave(context);
-      log('✅ [EXTENSION] Session auto-save configured');
 
       log('✅ Sidebar Terminal extension activated successfully');
     } catch (error) {
@@ -337,11 +249,11 @@ export class ExtensionLifecycle {
       this.simpleSessionManager = undefined;
     }
 
-    // Dispose scrollback session manager
-    if (this.scrollbackSessionManager) {
-      log('🔧 [EXTENSION] Disposing scrollback session manager...');
-      this.scrollbackSessionManager = undefined;
-    }
+    // Dispose scrollback session manager - Temporarily disabled
+    // if (this.scrollbackSessionManager) {
+    //   log('🔧 [EXTENSION] Disposing scrollback session manager...');
+    //   this.scrollbackSessionManager = undefined;
+    // }
 
     // Dispose terminal manager
     if (this.terminalManager) {
@@ -473,68 +385,10 @@ export class ExtensionLifecycle {
   /**
    * VS Code終了時の自動保存設定 - ENABLED FOR TESTING
    */
-  private setupSessionAutoSave(context: vscode.ExtensionContext): void {
-    try {
-      if (!this.simpleSessionManager) {
-        log('⚠️ [SIMPLE_SESSION] Session manager not available for auto-save setup');
-        return;
-      }
-
-      log('⚙️ [SIMPLE_SESSION] Setting up session auto-save...');
-
-      // ワークスペース変更時の保存
-      const workspaceWatcher = vscode.workspace.onDidChangeWorkspaceFolders(() => {
-        if (this.simpleSessionManager) {
-          this.simpleSessionManager
-            .saveCurrentSession()
-            .then((result) => {
-              if (result.success) {
-                log(
-                  `💾 [SIMPLE_SESSION] Session saved on workspace change: ${result.terminalCount} terminals`
-                );
-              }
-            })
-            .catch((error) => {
-              log(`❌ [SIMPLE_SESSION] Error saving session on workspace change: ${error}`);
-            });
-        }
-      });
-
-      context.subscriptions.push(workspaceWatcher);
-
-      // 定期保存（5分間隔）
-      const autoSaveInterval = setInterval(
-        () => {
-          if (this.simpleSessionManager) {
-            this.simpleSessionManager
-              .saveCurrentSession()
-              .then((result) => {
-                if (result.success && result.terminalCount && result.terminalCount > 0) {
-                  log(`💾 [SIMPLE_SESSION] Auto-save completed: ${result.terminalCount} terminals`);
-                }
-              })
-              .catch((error) => {
-                log(`❌ [SIMPLE_SESSION] Error during auto-save: ${error}`);
-              });
-          }
-        },
-        5 * 60 * 1000
-      ); // 5分
-
-      // 拡張停止時にインターバルをクリア
-      context.subscriptions.push({
-        dispose: () => {
-          clearInterval(autoSaveInterval);
-          log('🔧 [SIMPLE_SESSION] Auto-save interval cleared');
-        },
-      });
-
-      log('✅ [SIMPLE_SESSION] Session auto-save configured');
-    } catch (error) {
-      log(
-        `❌ [SIMPLE_SESSION] Error setting up auto-save: ${error instanceof Error ? error.message : String(error)}`
-      );
-    }
+  private setupSessionAutoSave(_context: vscode.ExtensionContext): void {
+    // 無限ループを防ぐため、VS Code終了時の保存のみ
+    // 定期保存や自動保存は完全無効化
+    log('🔧 [EXTENSION] Auto-save setup simplified (exit-only)');
   }
 
   /**
@@ -726,6 +580,12 @@ export class ExtensionLifecycle {
     }
 
     try {
+      // Scrollback抽出処理（復元機能を完全動作させるため）
+      log('📋 [SIMPLE_SESSION] Starting scrollback extraction...');
+      await this.extractScrollbackFromAllTerminals();
+      log('✅ [SIMPLE_SESSION] Scrollback extraction completed');
+
+      // 通常のセッション保存を実行
       const result = await this.simpleSessionManager.saveCurrentSession();
       if (result.success) {
         await vscode.window.showInformationMessage(
@@ -754,8 +614,12 @@ export class ExtensionLifecycle {
 
     try {
       const result = await this.simpleSessionManager.restoreSession();
+
       if (result.success) {
         if (result.restoredCount && result.restoredCount > 0) {
+          // Scrollbackデータも復元
+          await this.restoreScrollbackForAllTerminals();
+
           await vscode.window.showInformationMessage(
             `Terminal session restored: ${result.restoredCount} terminal${result.restoredCount > 1 ? 's' : ''} restored${result.skippedCount && result.skippedCount > 0 ? `, ${result.skippedCount} skipped` : ''}`
           );
@@ -808,7 +672,7 @@ export class ExtensionLifecycle {
   private saveSimpleSessionOnExit(): void {
     try {
       if (!this.simpleSessionManager) {
-        log('⚠️ [SIMPLE_SESSION] Session manager not available for save on exit');
+        log('⚠️ [SIMPLE_SESSION] Session manager not available, skipping save on exit');
         return;
       }
 
@@ -825,14 +689,45 @@ export class ExtensionLifecycle {
           }
         })
         .catch((error) => {
-          log(
-            `❌ [SIMPLE_SESSION] Error saving session on exit: ${error instanceof Error ? error.message : String(error)}`
-          );
+          log(`❌ [SIMPLE_SESSION] Exception during session save on exit: ${String(error)}`);
         });
     } catch (error) {
-      log(
-        `❌ [SIMPLE_SESSION] Error during session save on exit: ${error instanceof Error ? error.message : String(error)}`
-      );
+      log(`❌ [SIMPLE_SESSION] Error during saveSimpleSessionOnExit: ${String(error)}`);
+    }
+  }
+
+  /**
+   * シンプルな復元実行（1回のみ）
+   */
+  private async executeOneTimeRestore(): Promise<void> {
+    // 重複実行防止
+    if (this._restoreExecuted) {
+      log('⚠️ [EXTENSION] Restore already executed, skipping');
+      return;
+    }
+
+    this._restoreExecuted = true;
+
+    try {
+      log('🔄 [EXTENSION] Starting session restore...');
+
+      if (!this.simpleSessionManager) {
+        log('❌ [EXTENSION] Session manager not available');
+        return;
+      }
+
+      const result = await this.simpleSessionManager.restoreSession();
+
+      if (result.success && result.restoredCount && result.restoredCount > 0) {
+        log(`✅ [EXTENSION] Restored ${result.restoredCount} terminals`);
+        void vscode.window.showInformationMessage(
+          `Terminal session restored: ${result.restoredCount} terminal${result.restoredCount > 1 ? 's' : ''}`
+        );
+      } else {
+        log('📭 [EXTENSION] No terminals to restore');
+      }
+    } catch (error) {
+      log(`❌ [EXTENSION] Restore error: ${String(error)}`);
     }
   }
 
@@ -840,125 +735,192 @@ export class ExtensionLifecycle {
    * 起動時のシンプルセッション復元処理
    */
   private async restoreSimpleSessionOnStartup(): Promise<void> {
-    log('🎯 [SIMPLE_SESSION] === restoreSimpleSessionOnStartup() CALLED ===');
+    log('🔍 [SESSION] === RESTORE SESSION STARTUP CALLED ===');
 
     try {
-      log('🔧 [SIMPLE_SESSION] Checking manager availability...');
       if (!this.simpleSessionManager || !this.terminalManager) {
-        log('⚠️ [SIMPLE_SESSION] Session manager or terminal manager not initialized');
-        log(`   - SimpleSessionManager: ${!!this.simpleSessionManager}`);
-        log(`   - TerminalManager: ${!!this.terminalManager}`);
+        log('⚠️ [SESSION] Managers not available');
         return;
       }
-
-      log('🔄 [SIMPLE_SESSION] Starting session restore on startup...');
 
       // 既存のターミナルがある場合は復元をスキップ
       const existingTerminals = this.terminalManager.getTerminals();
-      log(
-        `🔧 [SIMPLE_SESSION] Existing terminals check: ${existingTerminals.length} terminals found`
-      );
-
+      log(`🔍 [SESSION] Existing terminals check: ${existingTerminals.length}`);
       if (existingTerminals.length > 0) {
-        log('📋 [SIMPLE_SESSION] Terminals already exist, skipping restore');
-        existingTerminals.forEach((t, i) => {
-          log(`   - Terminal ${i + 1}: ${t.id} (${t.name})`);
-        });
+        log('📋 [SESSION] Terminals already exist, skipping restore');
         return;
       }
 
-      // セッションデータの存在確認
-      const sessionInfo = await this.simpleSessionManager.getSessionInfo();
-      log(`🔧 [SIMPLE_SESSION] Session data check: ${sessionInfo ? 'FOUND' : 'NOT FOUND'}`);
-      if (sessionInfo) {
-        log(`   - Terminals in session: ${sessionInfo.terminals.length}`);
-        log(`   - Session timestamp: ${new Date(sessionInfo.timestamp).toISOString()}`);
-      }
-
+      log('🔍 [SESSION] About to call simpleSessionManager.restoreSession()');
       // セッション復元を実行
-      if (sessionInfo && sessionInfo.terminals.length > 0) {
-        log(
-          `🔔 [SIMPLE_SESSION] Starting session restore for ${sessionInfo.terminals.length} terminals...`
-        );
-      }
-
-      // シンプルセッション復元を実行
-      log('⚡ [SIMPLE_SESSION] Executing restoreSession()...');
       const result = await this.simpleSessionManager.restoreSession();
-      log(`🎯 [SIMPLE_SESSION] Restore result: ${JSON.stringify(result)}`);
+      log(`🔍 [SESSION] restoreSession() completed with result: ${JSON.stringify(result)}`);
 
       if (result.success && result.restoredCount && result.restoredCount > 0) {
-        log(`✅ [SIMPLE_SESSION] Session restored on startup: ${result.restoredCount} terminals`);
-
-        // 復元成功をユーザーに通知（控えめに）
+        log(`✅ [SESSION] Restored ${result.restoredCount} terminals`);
+        // 復元成功をユーザーに通知
         setTimeout(() => {
           void vscode.window.showInformationMessage(
             `Terminal session restored: ${result.restoredCount} terminal${(result.restoredCount || 0) > 1 ? 's' : ''}`
           );
         }, 1000);
       } else if (result.success && result.restoredCount === 0) {
-        log('📭 [SIMPLE_SESSION] No session data found - creating initial terminal');
-        // セッションデータがない場合は通常の初期ターミナルを作成
+        log('📭 [SESSION] No session data found - creating initial terminal');
         this.createInitialTerminal();
       } else {
-        log(`❌ [SIMPLE_SESSION] Session restore failed: ${result.error}`);
-        // 復元失敗時も初期ターミナルを作成
+        log(`❌ [SESSION] Restore failed: ${result.error}`);
         this.createInitialTerminal();
       }
     } catch (error) {
       log(
-        `❌ [SIMPLE_SESSION] Error during startup session restore: ${error instanceof Error ? error.message : String(error)}`
+        `❌ [SESSION] Error during restore: ${error instanceof Error ? error.message : String(error)}`
       );
+      log(`❌ [SESSION] Error stack: ${error instanceof Error ? error.stack : 'No stack'}`);
       // エラー時も初期ターミナルを作成
       this.createInitialTerminal();
     }
+
+    log('🔍 [SESSION] === RESTORE SESSION STARTUP FINISHED ===');
+  }
+
+  /**
+   * すべてのターミナルにScrollbackデータを復元
+   * Temporarily disabled - using SimpleSessionManager approach instead
+   */
+  private restoreScrollbackForAllTerminals(): Promise<void> {
+    log(
+      '🔄 [SCROLLBACK_RESTORE] Scrollback restoration temporarily disabled - using SimpleSessionManager'
+    );
+    return Promise.resolve();
+
+    // if (!this.terminalManager || !this.sidebarProvider || !this.scrollbackSessionManager) {
+    //   log('❌ [SCROLLBACK_RESTORE] Required managers not available');
+    //   return;
+    // }
+
+    // const terminals = this.terminalManager.getTerminals();
+    // log(`🔄 [SCROLLBACK_RESTORE] Found ${terminals.length} terminals to restore scrollback to`);
+
+    // for (const terminal of terminals) {
+    //   try {
+    //     log(`🔄 [SCROLLBACK_RESTORE] Restoring scrollback for terminal ${terminal.id}`);
+    //
+    //     // ScrollbackSessionManagerからデータを取得
+    //     const scrollback = await this.scrollbackSessionManager.extractScrollbackFromTerminal(terminal.id);
+    //
+    //     if (scrollback && scrollback.lines.length > 0) {
+    //       // WebViewにScrollback復元を要求
+    //       await (this.sidebarProvider as any)._sendMessage({
+    //         command: 'restoreScrollback',
+    //         terminalId: terminal.id,
+    //         scrollbackContent: scrollback.lines,
+    //         timestamp: Date.now()
+    //       });
+    //
+    //       log(`✅ [SCROLLBACK_RESTORE] Restored ${scrollback.lines.length} lines for terminal ${terminal.id}`);
+    //     } else {
+    //       log(`📭 [SCROLLBACK_RESTORE] No scrollback data found for terminal ${terminal.id}`);
+    //     }
+    //
+    //     // 少し待機してデータの処理を完了させる
+    //     await new Promise(resolve => setTimeout(resolve, 100));
+    //
+    //   } catch (error) {
+    //     log(`❌ [SCROLLBACK_RESTORE] Error restoring scrollback for terminal ${terminal.id}: ${error instanceof Error ? error.message : String(error)}`);
+    //   }
+    // }
+    //
+    // log('✅ [SCROLLBACK_RESTORE] Scrollback restoration completed for all terminals');
+  }
+
+  /**
+   * すべてのターミナルからScrollbackデータを抽出
+   */
+  private async extractScrollbackFromAllTerminals(): Promise<void> {
+    log('🔍 [SCROLLBACK_EXTRACT] Extracting scrollback from all terminals');
+
+    if (!this.terminalManager || !this.sidebarProvider) {
+      log('❌ [SCROLLBACK_EXTRACT] Terminal manager or sidebar provider not available');
+      return;
+    }
+
+    const terminals = this.terminalManager.getTerminals();
+    log(`🔍 [SCROLLBACK_EXTRACT] Found ${terminals.length} terminals to extract scrollback from`);
+
+    for (const terminal of terminals) {
+      try {
+        log(`🔍 [SCROLLBACK_EXTRACT] Requesting scrollback for terminal ${terminal.id}`);
+
+        // WebViewにScrollback抽出を要求
+        await (this.sidebarProvider as unknown as { _sendMessage: (msg: unknown) => Promise<void> })._sendMessage({
+          command: 'getScrollback',
+          terminalId: terminal.id,
+          maxLines: 1000,
+          timestamp: Date.now(),
+        });
+
+        // 少し待機してデータの処理を完了させる
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      } catch (error) {
+        log(
+          `❌ [SCROLLBACK_EXTRACT] Error extracting scrollback for terminal ${terminal.id}: ${error instanceof Error ? error.message : String(error)}`
+        );
+      }
+    }
+
+    log('✅ [SCROLLBACK_EXTRACT] Scrollback extraction requests sent for all terminals');
   }
 
   /**
    * Scrollbackテストコマンドハンドラー
+   * Temporarily disabled - using SimpleSessionManager approach instead
    */
   private async handleTestScrollbackCommand(): Promise<void> {
-    log('🧪 [SCROLLBACK_TEST] Starting scrollback test');
-    
-    if (!this.scrollbackSessionManager) {
-      await vscode.window.showErrorMessage('Scrollback manager not available');
-      return;
-    }
+    log('🧪 [SCROLLBACK_TEST] Scrollback test temporarily disabled - using SimpleSessionManager');
+    await vscode.window.showInformationMessage(
+      'Scrollback test temporarily disabled - using SimpleSessionManager approach instead'
+    );
+    return;
 
-    try {
-      // 現在のセッション情報を取得
-      const sessionInfo = await this.scrollbackSessionManager.getScrollbackSessionInfo();
-      
-      if (sessionInfo.exists) {
-        await vscode.window.showInformationMessage(
-          `Scrollback session exists: ${sessionInfo.terminalCount} terminals, ${sessionInfo.totalLines} lines, ${sessionInfo.dataSize} bytes`
-        );
-      } else {
-        await vscode.window.showInformationMessage('No scrollback session data found');
-      }
-      
-      // テスト用にモックScrollbackを抽出
-      const terminals = this.terminalManager?.getTerminals() || [];
-      if (terminals.length > 0) {
-        const terminal = terminals[0];
-        if (terminal) {
-          const scrollback = await this.scrollbackSessionManager.extractScrollbackFromTerminal(terminal.id);
-          
-          if (scrollback) {
-            log(`🧪 [SCROLLBACK_TEST] Extracted ${scrollback.lines.length} lines from terminal ${terminal.id}`);
-            await vscode.window.showInformationMessage(
-              `Extracted ${scrollback.lines.length} lines from terminal "${terminal.name}"`
-            );
-          }
-        }
-      }
-      
-    } catch (error) {
-      log(`❌ [SCROLLBACK_TEST] Test failed: ${error instanceof Error ? error.message : String(error)}`);
-      await vscode.window.showErrorMessage(
-        `Scrollback test failed: ${error instanceof Error ? error.message : String(error)}`
-      );
-    }
+    // if (!this.scrollbackSessionManager) {
+    //   await vscode.window.showErrorMessage('Scrollback manager not available');
+    //   return;
+    // }
+
+    // try {
+    //   // 現在のセッション情報を取得
+    //   const sessionInfo = await this.scrollbackSessionManager.getScrollbackSessionInfo();
+    //
+    //   if (sessionInfo.exists) {
+    //     await vscode.window.showInformationMessage(
+    //       `Scrollback session exists: ${sessionInfo.terminalCount} terminals, ${sessionInfo.totalLines} lines, ${sessionInfo.dataSize} bytes`
+    //     );
+    //   } else {
+    //     await vscode.window.showInformationMessage('No scrollback session data found');
+    //   }
+    //
+    //   // テスト用にモックScrollbackを抽出
+    //   const terminals = this.terminalManager?.getTerminals() || [];
+    //   if (terminals.length > 0) {
+    //     const terminal = terminals[0];
+    //     if (terminal) {
+    //       const scrollback = await this.scrollbackSessionManager.extractScrollbackFromTerminal(terminal.id);
+    //
+    //       if (scrollback) {
+    //         log(`🧪 [SCROLLBACK_TEST] Extracted ${scrollback.lines.length} lines from terminal ${terminal.id}`);
+    //         await vscode.window.showInformationMessage(
+    //           `Extracted ${scrollback.lines.length} lines from terminal "${terminal.name}"`
+    //         );
+    //       }
+    //     }
+    //   }
+    //
+    // } catch (error) {
+    //   log(`❌ [SCROLLBACK_TEST] Test failed: ${error instanceof Error ? error.message : String(error)}`);
+    //   await vscode.window.showErrorMessage(
+    //     `Scrollback test failed: ${error instanceof Error ? error.message : String(error)}`
+    //   );
+    // }
   }
 
   /**

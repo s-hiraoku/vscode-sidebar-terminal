@@ -6,8 +6,6 @@
 import * as vscode from 'vscode';
 import { extension as log } from '../utils/logger';
 import { 
-  ExtendedSessionData, 
-  ExtendedTerminalInfo, 
   TerminalScrollback,
   ScrollbackLine,
   ScrollbackRestoreOptions,
@@ -15,6 +13,7 @@ import {
   ScrollbackSaveResult,
   ScrollbackRestoreProgress
 } from '../types/scrollback-session';
+import { SimpleSessionData } from '../types/simple-session';
 
 /**
  * Scrollback履歴を管理するセッションマネージャー
@@ -66,22 +65,28 @@ export class ScrollbackSessionManager {
     try {
       log(`🔍 [SCROLLBACK] Extracting scrollback for terminal ${terminalId}`);
       
-      // TODO: WebViewからxtermのscrollback bufferを取得する実装
-      // この部分は後で実装（WebViewとの通信が必要）
+      // グローバルステートから保存済みのScrollbackデータを取得
+      const scrollbackKey = `scrollback_${terminalId}`;
+      const scrollbackContent = this.context.globalState.get<Array<{
+        content: string;
+        type?: 'output' | 'input' | 'error';
+        timestamp?: number;
+      }>>(scrollbackKey);
       
-      // 仮の実装（実際にはWebViewからデータを取得）
-      const mockScrollback: TerminalScrollback = {
-        terminalId,
-        lines: [
-          { content: '$ echo "Terminal history placeholder"', type: 'input' },
-          { content: 'Terminal history placeholder', type: 'output' }
-        ],
-        cursorPosition: { x: 0, y: 1 },
-        compressed: false
-      };
-      
-      log(`✅ [SCROLLBACK] Extracted ${mockScrollback.lines.length} lines for terminal ${terminalId}`);
-      return mockScrollback;
+      if (scrollbackContent && scrollbackContent.length > 0) {
+        const scrollback: TerminalScrollback = {
+          terminalId,
+          lines: scrollbackContent,
+          cursorPosition: { x: 0, y: scrollbackContent.length },
+          compressed: false
+        };
+        
+        log(`✅ [SCROLLBACK] Extracted ${scrollback.lines.length} lines for terminal ${terminalId}`);
+        return scrollback;
+      } else {
+        log(`📭 [SCROLLBACK] No scrollback data found for terminal ${terminalId}`);
+        return null;
+      }
       
     } catch (error) {
       log(`❌ [SCROLLBACK] Error extracting scrollback for terminal ${terminalId}: ${error instanceof Error ? error.message : String(error)}`);
@@ -164,7 +169,7 @@ export class ScrollbackSessionManager {
    * 拡張セッションデータを保存
    * @param sessionData 保存するセッションデータ
    */
-  public async saveExtendedSession(sessionData: ExtendedSessionData): Promise<ScrollbackSaveResult> {
+  public async saveExtendedSession(sessionData: SimpleSessionData): Promise<ScrollbackSaveResult> {
     try {
       log('💾 [SCROLLBACK] Saving extended session with scrollback data');
       
@@ -237,7 +242,7 @@ export class ScrollbackSessionManager {
       }
 
       // WorkspaceStateから読み込み
-      const sessionData = this.context.workspaceState.get<ExtendedSessionData>(this.STORAGE_KEY);
+      const sessionData = this.context.workspaceState.get<SimpleSessionData>(this.STORAGE_KEY);
       
       if (!sessionData) {
         log('📭 [SCROLLBACK] No extended session data found');
@@ -310,7 +315,7 @@ export class ScrollbackSessionManager {
     dataSize?: number;
   }> {
     try {
-      const sessionData = this.context.workspaceState.get<ExtendedSessionData>(this.STORAGE_KEY);
+      const sessionData = this.context.workspaceState.get<SimpleSessionData>(this.STORAGE_KEY);
       
       if (!sessionData) {
         return { exists: false };

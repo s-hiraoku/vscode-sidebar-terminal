@@ -86,23 +86,31 @@ export class TerminalManager {
   }
 
   public createTerminal(): string {
-    const config = getTerminalConfig();
+    log('🔍 [TERMINAL] === CREATE TERMINAL CALLED ===');
 
+    const config = getTerminalConfig();
+    log(`🔍 [TERMINAL] Config loaded: maxTerminals=${config.maxTerminals}`);
+
+    log(`🔍 [TERMINAL] Current terminals count: ${this._terminals.size}`);
     if (!this._terminalNumberManager.canCreate(this._terminals)) {
-      log('🔧 [DEBUG] Cannot create terminal: all slots used');
+      log('🔧 [TERMINAL] Cannot create terminal: all slots used');
       showWarningMessage(`${ERROR_MESSAGES.MAX_TERMINALS_REACHED} (${config.maxTerminals})`);
       return this._activeTerminalManager.getActive() || '';
     }
 
+    log('🔍 [TERMINAL] Finding available terminal number...');
     const terminalNumber = this._terminalNumberManager.findAvailableNumber(this._terminals);
-    log(`🔧 [DEBUG] Found available terminal number: ${terminalNumber}`);
+    log(`🔍 [TERMINAL] Found available terminal number: ${terminalNumber}`);
 
+    log('🔍 [TERMINAL] Generating terminal ID...');
     const terminalId = generateTerminalId();
+    log(`🔍 [TERMINAL] Generated terminal ID: ${terminalId}`);
+
     const shell = getShellForPlatform(config.shell);
     const shellArgs = config.shellArgs;
     const cwd = getWorkingDirectory();
 
-    log(`📁 [TERMINAL] Creating terminal: ID=${terminalId}, Shell=${shell}, CWD=${cwd}`);
+    log(`🔍 [TERMINAL] Creating terminal: ID=${terminalId}, Shell=${shell}, CWD=${cwd}`);
 
     try {
       // Prepare environment variables with explicit PWD
@@ -202,10 +210,17 @@ export class TerminalManager {
       this._terminalCreatedEmitter.fire(terminal);
 
       // 状態更新を通知
+      log('🔍 [TERMINAL] Notifying state update...');
       this._notifyStateUpdate();
+      log('🔍 [TERMINAL] State update completed');
 
+      log(`🔍 [TERMINAL] === CREATE TERMINAL FINISHED: ${terminalId} ===`);
       return terminalId;
     } catch (error) {
+      log(
+        `❌ [TERMINAL] Error creating terminal: ${error instanceof Error ? error.message : String(error)}`
+      );
+      log(`❌ [TERMINAL] Error stack: ${error instanceof Error ? error.stack : 'No stack'}`);
       showErrorMessage(ERROR_MESSAGES.TERMINAL_CREATION_FAILED, error);
       throw error;
     }

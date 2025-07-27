@@ -768,20 +768,14 @@ class TerminalWebviewManager {
       }
     }
 
-    // ターミナルの追加・復元処理
+    // ターミナルの追加・復元処理（無限ループ防止）
     for (const terminal of state.terminals) {
       if (!currentTerminals.has(terminal.id)) {
-        // 完全に新しいターミナル
-        log(`➕ [WEBVIEW] Adding new terminal to UI: ${terminal.id}`);
-        this.requestTerminalCreation(terminal);
-      } else if (!isInitializing) {
-        // 初期化完了後のみDOM健全性をチェック
-        const needsRecreation = this.checkIfTerminalNeedsRecreation(terminal.id);
-        if (needsRecreation) {
-          log(`🔄 [WEBVIEW] Terminal ${terminal.id} needs DOM recreation after panel move`);
-          this.cleanupTerminalData(terminal.id);
-          this.requestTerminalCreation(terminal);
-        }
+        // 無限ループ防止：WebViewは状態更新を受け取るだけ、新しいターミナル作成リクエストは送信しない
+        log(`📋 [WEBVIEW] New terminal ${terminal.id} detected - Extension will handle creation`);
+      } else {
+        // 既存ターミナル：何もしない（シンプル化）
+        log(`✅ [WEBVIEW] Terminal ${terminal.id} already exists in WebView`);
       }
     }
 

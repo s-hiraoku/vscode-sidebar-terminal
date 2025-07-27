@@ -134,7 +134,7 @@ export interface WebviewMessage {
   scrollbackData?: string[]; // 取得された履歴データ
   errorType?: string; // エラータイプ (file, corruption, permission, network, unknown)
   recoveryAction?: string; // 回復処理の説明
-  
+
   // Scrollback復元関連
   scrollbackContent?: Array<{
     content: string;

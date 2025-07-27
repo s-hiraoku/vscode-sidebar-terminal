@@ -9,7 +9,6 @@ import {
   SessionSaveResult,
   SessionRestoreResult,
   SessionRestoreOptions,
-  RestoreMessageInfo,
   SplitLayoutInfo,
   SESSION_RESTORE_MESSAGES,
 } from '../types/session';

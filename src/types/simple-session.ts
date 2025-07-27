@@ -17,6 +17,12 @@ export interface SimpleTerminalInfo {
   cwd: string;
   /** アクティブかどうか */
   isActive: boolean;
+  /** Scrollback履歴データ（オプション） */
+  scrollback?: Array<{
+    content: string;
+    type?: 'output' | 'input' | 'error';
+    timestamp?: number;
+  }>;
 }
 
 /**
