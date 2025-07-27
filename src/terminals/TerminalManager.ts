@@ -24,6 +24,7 @@ import {
   ActiveTerminalManager,
   getFirstValue,
 } from '../utils/common';
+import { TerminalNumberManager } from '../utils/TerminalNumberManager';
 
 export class TerminalManager {
   private readonly _terminals = new Map<string, TerminalInstance>();
@@ -33,6 +34,17 @@ export class TerminalManager {
   private readonly _terminalCreatedEmitter = new vscode.EventEmitter<TerminalInstance>();
   private readonly _terminalRemovedEmitter = new vscode.EventEmitter<string>();
   private readonly _stateUpdateEmitter = new vscode.EventEmitter<TerminalState>();
+  private readonly _terminalFocusEmitter = new vscode.EventEmitter<string>();
+  private readonly _terminalNumberManager: TerminalNumberManager;
+  // CLI Agent 状態管理（超シンプル）
+  private _connectedAgentTerminalId: string | null = null;
+  private _connectedAgentType: 'claude' | 'gemini' | null = null;
+  private readonly _onCliAgentStatusChange = new vscode.EventEmitter<{
+    terminalId: string;
+    status: 'connected' | 'disconnected' | 'none';
+    type: string | null;
+    terminalName?: string;
+  }>();
 
   // 操作の順序保証のためのキュー
   private operationQueue: Promise<void> = Promise.resolve();
@@ -51,81 +63,38 @@ export class TerminalManager {
   public readonly onTerminalCreated = this._terminalCreatedEmitter.event;
   public readonly onTerminalRemoved = this._terminalRemovedEmitter.event;
   public readonly onStateUpdate = this._stateUpdateEmitter.event;
+  public readonly onTerminalFocus = this._terminalFocusEmitter.event;
 
-  constructor(private readonly _context: vscode.ExtensionContext) {
-    // Context may be used in future for storing state
+  constructor() {
+    // Initialize terminal number manager with max terminals config
+    const config = getTerminalConfig();
+    this._terminalNumberManager = new TerminalNumberManager(config.maxTerminals);
+
+    // Initialize CLI Agent integration manager
   }
 
   /**
-   * 利用可能な最小番号を検索する
+   * Get CLI Agent status change event
    */
-  private _findAvailableTerminalNumber(): number {
-    const config = getTerminalConfig();
-    const usedNumbers = new Set<number>();
-
-    // 既存のターミナル名から番号を抽出
-    for (const terminal of this._terminals.values()) {
-      const match = terminal.name.match(/Terminal (\d+)/);
-      if (match && match[1]) {
-        usedNumbers.add(parseInt(match[1], 10));
-      }
-    }
-
-    // 1から最大ターミナル数まで空き番号を探す
-    for (let i = 1; i <= config.maxTerminals; i++) {
-      if (!usedNumbers.has(i)) {
-        return i;
-      }
-    }
-
-    // 見つからない場合は最大値を返す（エラーケース）
-    return config.maxTerminals;
-  }
-
-  /**
-   * 新しいターミナルを作成できるかどうかを判定する
-   */
-  private _canCreateTerminal(): boolean {
-    const config = getTerminalConfig();
-    const usedNumbers = new Set<number>();
-
-    // 既存のターミナル名から番号を抽出
-    for (const terminal of this._terminals.values()) {
-      const match = terminal.name.match(/Terminal (\d+)/);
-      if (match && match[1]) {
-        usedNumbers.add(parseInt(match[1], 10));
-      }
-    }
-
-    // 1から最大ターミナル数まで空き番号があるかチェック
-    for (let i = 1; i <= config.maxTerminals; i++) {
-      if (!usedNumbers.has(i)) {
-        return true;
-      }
-    }
-
-    return false;
+  public get onCliAgentStatusChange(): vscode.Event<{
+    terminalId: string;
+    status: 'connected' | 'disconnected' | 'none';
+    type: string | null;
+    terminalName?: string;
+  }> {
+    return this._onCliAgentStatusChange.event;
   }
 
   public createTerminal(): string {
-    log('🔧 [DEBUG] TerminalManager.createTerminal called');
     const config = getTerminalConfig();
-    log('🔧 [DEBUG] Terminal config:', config);
 
-    // デバッグ情報: 現在のターミナル状況を表示
-    const existingTerminals = Array.from(this._terminals.values());
-    log('🔧 [DEBUG] Existing terminals:');
-    existingTerminals.forEach((terminal) => {
-      log(`🔧 [DEBUG] - ${terminal.name} (ID: ${terminal.id})`);
-    });
-
-    if (!this._canCreateTerminal()) {
+    if (!this._terminalNumberManager.canCreate(this._terminals)) {
       log('🔧 [DEBUG] Cannot create terminal: all slots used');
       showWarningMessage(`${ERROR_MESSAGES.MAX_TERMINALS_REACHED} (${config.maxTerminals})`);
       return this._activeTerminalManager.getActive() || '';
     }
 
-    const terminalNumber = this._findAvailableTerminalNumber();
+    const terminalNumber = this._terminalNumberManager.findAvailableNumber(this._terminals);
     log(`🔧 [DEBUG] Found available terminal number: ${terminalNumber}`);
 
     const terminalId = generateTerminalId();
@@ -133,11 +102,7 @@ export class TerminalManager {
     const shellArgs = config.shellArgs;
     const cwd = getWorkingDirectory();
 
-    log('📁 [TERMINAL] Creating terminal with:');
-    log('📁 [TERMINAL] - ID:', terminalId);
-    log('📁 [TERMINAL] - Shell:', shell);
-    log('📁 [TERMINAL] - Shell Args:', shellArgs);
-    log('📁 [TERMINAL] - Working Directory (cwd):', cwd);
+    log(`📁 [TERMINAL] Creating terminal: ID=${terminalId}, Shell=${shell}, CWD=${cwd}`);
 
     try {
       // Prepare environment variables with explicit PWD
@@ -152,11 +117,6 @@ export class TerminalManager {
           }),
       } as { [key: string]: string };
 
-      log('📁 [TERMINAL] Environment variables:');
-      log('📁 [TERMINAL] - PWD:', env.PWD);
-      log('📁 [TERMINAL] - VSCODE_WORKSPACE:', env.VSCODE_WORKSPACE);
-      log('📁 [TERMINAL] - VSCODE_PROJECT_NAME:', env.VSCODE_PROJECT_NAME);
-
       const ptyProcess = pty.spawn(shell, shellArgs, {
         name: 'xterm-256color',
         cols: TERMINAL_CONSTANTS.DEFAULT_COLS,
@@ -168,6 +128,10 @@ export class TerminalManager {
           LANG: env.LANG || 'en_US.UTF-8',
           LC_ALL: env.LC_ALL || 'en_US.UTF-8',
           LC_CTYPE: env.LC_CTYPE || 'en_US.UTF-8',
+          // Enhanced CLI compatibility flags
+          FORCE_COLOR: '1',
+          TERM: 'xterm-256color',
+          COLORTERM: 'truecolor',
         },
         encoding: 'utf8',
       });
@@ -175,8 +139,12 @@ export class TerminalManager {
       const terminal: TerminalInstance = {
         id: terminalId,
         pty: ptyProcess,
+        ptyProcess: ptyProcess,
         name: generateTerminalName(terminalNumber),
+        number: terminalNumber,
+        cwd: cwd,
         isActive: true,
+        createdAt: Date.now(),
       };
 
       // Set all other terminals as inactive
@@ -186,7 +154,18 @@ export class TerminalManager {
       this._activeTerminalManager.setActive(terminalId);
 
       ptyProcess.onData((data: string) => {
-        log('📤 [DEBUG] PTY data received:', data.length, 'chars for terminal:', terminalId);
+        // Only log large data chunks or when debugging is specifically needed
+        if (data.length > 1000) {
+          log(
+            '📤 [DEBUG] Large PTY data received:',
+            data.length,
+            'chars for terminal:',
+            terminalId
+          );
+        }
+
+        // CLI Agent コマンドを検出（超シンプル）
+        this._detectCliAgent(terminalId, data);
 
         // Performance optimization: Batch small data chunks
         this._bufferData(terminalId, data);
@@ -204,6 +183,8 @@ export class TerminalManager {
           terminalId
         );
 
+        // 🛡️ プロセス終了イベント（CLI Agent終了検出は無効化）
+
         // Check if this terminal is being manually killed to prevent infinite loop
         if (this._terminalBeingKilled.has(terminalId)) {
           log('🗑️ [DEBUG] Terminal exit triggered by manual kill, cleaning up:', terminalId);
@@ -216,10 +197,7 @@ export class TerminalManager {
         }
       });
 
-      log('✅ [TERMINAL] Terminal created successfully:');
-      log(`✅ [TERMINAL] - Name: ${terminal.name}`);
-      log(`✅ [TERMINAL] - ID: ${terminalId}`);
-      log('📁 [TERMINAL] Expected working directory:', cwd);
+      log(`✅ [TERMINAL] Terminal created successfully: ${terminal.name} (${terminalId})`);
 
       this._terminalCreatedEmitter.fire(terminal);
 
@@ -233,18 +211,22 @@ export class TerminalManager {
     }
   }
 
+  /**
+   * ターミナルにフォーカスを移す
+   */
+  public focusTerminal(terminalId: string): void {
+    const terminal = this._terminals.get(terminalId);
+    if (!terminal) {
+      console.warn('⚠️ [WARN] Terminal not found for focus:', terminalId);
+      return;
+    }
+
+    this._terminalFocusEmitter.fire(terminalId);
+    log(`🎯 [TERMINAL] Focused: ${terminal.name}`);
+  }
+
   public sendInput(data: string, terminalId?: string): void {
     const id = terminalId || this._activeTerminalManager.getActive();
-    log(
-      '🔧 [DEBUG] TerminalManager.sendInput called with data:',
-      JSON.stringify(data),
-      'length:',
-      data.length,
-      'bytes:',
-      new TextEncoder().encode(data).length,
-      'terminalId:',
-      id
-    );
 
     if (!id) {
       console.warn('⚠️ [WARN] No terminal ID provided and no active terminal');
@@ -258,18 +240,24 @@ export class TerminalManager {
     }
 
     try {
-      // Ensure data is properly encoded as UTF-8
-      const encoder = new TextEncoder();
-      const bytes = encoder.encode(data);
-      const decoder = new TextDecoder('utf-8');
-      const validatedData = decoder.decode(bytes);
+      // CLI Agent コマンドを検出
+      this._detectCliAgentFromInput(id, data);
 
-      log('🔧 [DEBUG] Writing to pty - original:', JSON.stringify(data));
-      log('🔧 [DEBUG] Writing to pty - validated:', JSON.stringify(validatedData));
-      log('🔧 [DEBUG] Byte count:', bytes.length);
-
-      terminal.pty.write(validatedData);
-      log('✅ [DEBUG] Successfully wrote to pty');
+      // PTY入力処理（ptyProcess優先、フォールバックとしてpty）
+      const ptyInstance = terminal.ptyProcess || terminal.pty;
+      if (ptyInstance && ptyInstance.write) {
+        ptyInstance.write(data);
+      } else {
+        console.error('❌ [ERROR] PTY instance not found or write method unavailable');
+        console.error('❌ [ERROR] Terminal debug info:', {
+          id: terminal.id,
+          name: terminal.name,
+          hasPty: !!terminal.pty,
+          hasPtyProcess: !!terminal.ptyProcess,
+          ptyType: terminal.pty ? typeof terminal.pty : 'undefined',
+          ptyProcessType: terminal.ptyProcess ? typeof terminal.ptyProcess : 'undefined',
+        });
+      }
     } catch (error) {
       console.error('❌ [ERROR] Failed to write to pty:', error);
       showErrorMessage('Failed to send input to terminal', error);
@@ -280,7 +268,14 @@ export class TerminalManager {
     const id = terminalId || this._activeTerminalManager.getActive();
     if (id) {
       const terminal = this._terminals.get(id);
-      terminal?.pty.resize(cols, rows);
+      if (terminal) {
+        const ptyInstance = terminal.ptyProcess || terminal.pty;
+        if (ptyInstance && ptyInstance.resize) {
+          ptyInstance.resize(cols, rows);
+        } else {
+          console.error('❌ [ERROR] PTY instance not found for resize:', terminal.id);
+        }
+      }
     }
   }
 
@@ -294,6 +289,13 @@ export class TerminalManager {
 
   public getTerminals(): TerminalInstance[] {
     return Array.from(this._terminals.values());
+  }
+
+  /**
+   * Get a specific terminal by ID
+   */
+  public getTerminal(terminalId: string): TerminalInstance | undefined {
+    return this._terminals.get(terminalId);
   }
 
   public setActiveTerminal(terminalId: string): void {
@@ -310,49 +312,54 @@ export class TerminalManager {
   }
 
   /**
-   * ターミナルが削除可能かチェック
+   * ターミナルが削除可能かチェック（統一された検証ロジック）
    */
-  public canRemoveTerminal(terminalId: string): { canRemove: boolean; reason?: string } {
+  private _validateDeletion(terminalId: string): { canDelete: boolean; reason?: string } {
     if (!this._terminals.has(terminalId)) {
-      return { canRemove: false, reason: 'Terminal not found' };
+      return { canDelete: false, reason: 'Terminal not found' };
     }
 
     // 最低1つのターミナルは保持する
     if (this._terminals.size <= 1) {
-      return { canRemove: false, reason: 'Must keep at least 1 terminal open' };
+      return { canDelete: false, reason: 'Must keep at least 1 terminal open' };
     }
 
-    return { canRemove: true };
+    return { canDelete: true };
   }
 
   /**
-   * 安全なターミナル削除（削除前の検証付き）
+   * ターミナルが削除可能かチェック（公開API、後方互換性のため維持）
+   */
+  public canRemoveTerminal(terminalId: string): { canRemove: boolean; reason?: string } {
+    const validation = this._validateDeletion(terminalId);
+    return { canRemove: validation.canDelete, reason: validation.reason };
+  }
+
+  /**
+   * 安全なターミナル削除（削除前の検証付き、後方互換性のため維持）
+   * @deprecated Use deleteTerminal() instead
    */
   public safeRemoveTerminal(terminalId: string): boolean {
-    const validation = this.canRemoveTerminal(terminalId);
-    if (!validation.canRemove) {
-      console.warn('⚠️ [TERMINAL] Cannot remove terminal:', validation.reason);
-      showWarningMessage(validation.reason || 'Cannot remove terminal');
-      return false;
-    }
-
-    this._removeTerminal(terminalId);
-    return true;
+    const result = this.deleteTerminal(terminalId, { source: 'panel' });
+    return result.then((r) => r.success).catch(() => false) as unknown as boolean;
   }
 
   /**
-   * 新しいアーキテクチャ: 統一されたターミナル削除メソッド
+   * 統一されたターミナル削除メソッド
    * 指定されたターミナルIDを削除し、新しい状態を返す
    */
   public async deleteTerminal(
     terminalId: string,
-    requestSource: 'header' | 'panel' = 'panel'
+    options: {
+      force?: boolean;
+      source?: 'header' | 'panel' | 'command';
+    } = {}
   ): Promise<DeleteResult> {
     // 操作をキューに追加してレースコンディションを防ぐ
     return new Promise<DeleteResult>((resolve, reject) => {
       this.operationQueue = this.operationQueue.then(() => {
         try {
-          const result = this.performDeleteOperation(terminalId, requestSource);
+          const result = this.performDeleteOperation(terminalId, options);
           resolve(result);
         } catch (error) {
           reject(error);
@@ -366,18 +373,23 @@ export class TerminalManager {
    */
   private performDeleteOperation(
     terminalId: string,
-    requestSource: 'header' | 'panel'
+    options: {
+      force?: boolean;
+      source?: 'header' | 'panel' | 'command';
+    }
   ): DeleteResult {
     log(
-      `🗑️ [DELETE] Starting delete operation for terminal: ${terminalId} (source: ${requestSource})`
+      `🗑️ [DELETE] Starting delete operation for terminal: ${terminalId} (source: ${options.source || 'unknown'})`
     );
 
-    // 1. 削除前の検証
-    const validation = this.canRemoveTerminal(terminalId);
-    if (!validation.canRemove) {
-      log(`⚠️ [DELETE] Cannot delete terminal: ${validation.reason}`);
-      showWarningMessage(validation.reason || 'Cannot delete terminal');
-      return { success: false, reason: validation.reason };
+    // 1. 削除前の検証（forceオプションがない場合）
+    if (!options.force) {
+      const validation = this._validateDeletion(terminalId);
+      if (!validation.canDelete) {
+        log(`⚠️ [DELETE] Cannot delete terminal: ${validation.reason}`);
+        showWarningMessage(validation.reason || 'Cannot delete terminal');
+        return { success: false, reason: validation.reason };
+      }
     }
 
     // 2. ターミナルの存在確認
@@ -427,26 +439,7 @@ export class TerminalManager {
    * 利用可能なスロットを取得
    */
   private _getAvailableSlots(): number[] {
-    const config = getTerminalConfig();
-    const usedNumbers = new Set<number>();
-
-    // 既存のターミナル名から番号を抽出
-    for (const terminal of this._terminals.values()) {
-      const match = terminal.name.match(/Terminal (\d+)/);
-      if (match && match[1]) {
-        usedNumbers.add(parseInt(match[1], 10));
-      }
-    }
-
-    // 利用可能なスロットを返す
-    const availableSlots: number[] = [];
-    for (let i = 1; i <= config.maxTerminals; i++) {
-      if (!usedNumbers.has(i)) {
-        availableSlots.push(i);
-      }
-    }
-
-    return availableSlots;
+    return this._terminalNumberManager.getAvailableSlots(this._terminals);
   }
 
   /**
@@ -459,8 +452,9 @@ export class TerminalManager {
   }
 
   /**
-   * 安全なターミナルキル（削除前の検証付き）
+   * 安全なターミナルキル（削除前の検証付き、後方互換性のため維持）
    * 常にアクティブターミナルをkillする
+   * @deprecated Use deleteTerminal() with active terminal ID
    */
   public safeKillTerminal(terminalId?: string): boolean {
     const activeId = this._activeTerminalManager.getActive();
@@ -480,15 +474,8 @@ export class TerminalManager {
       );
     }
 
-    const validation = this.canRemoveTerminal(activeId);
-    if (!validation.canRemove) {
-      console.warn('⚠️ [TERMINAL] Cannot kill active terminal:', validation.reason);
-      showWarningMessage(validation.reason || 'Cannot kill active terminal');
-      return false;
-    }
-
-    this.killTerminal(); // No ID needed, will use active terminal
-    return true;
+    const result = this.deleteTerminal(activeId, { source: 'command' });
+    return result.then((r) => r.success).catch(() => false) as unknown as boolean;
   }
 
   public killTerminal(terminalId?: string): void {
@@ -509,33 +496,10 @@ export class TerminalManager {
       );
     }
 
-    // Prevent infinite loop by tracking kill state
-    if (this._terminalBeingKilled.has(activeId)) {
-      log('🗑️ [WARN] Active terminal already being killed:', activeId);
-      return;
-    }
-
-    log('🗑️ [TERMINAL] Killing active terminal:', activeId);
-    const terminal = this._terminals.get(activeId);
-    if (terminal) {
-      try {
-        // Mark terminal as being killed before killing the process
-        this._terminalBeingKilled.add(activeId);
-
-        // Kill the actual terminal process
-        terminal.pty.kill();
-        log('🗑️ [TERMINAL] Terminal process killed:', activeId);
-
-        // Note: cleanup will be handled by onExit handler to avoid double cleanup
-      } catch (error) {
-        console.error('❌ [TERMINAL] Error killing terminal:', error);
-        // Remove from kill tracking and cleanup if kill fails
-        this._terminalBeingKilled.delete(activeId);
-        this._removeTerminal(activeId);
-      }
-    } else {
-      console.warn('⚠️ [WARN] Active terminal not found for kill:', activeId);
-    }
+    // Use unified delete method with force option
+    this.deleteTerminal(activeId, { force: true, source: 'command' }).catch((error) => {
+      console.error('❌ [TERMINAL] Error killing terminal:', error);
+    });
   }
 
   public dispose(): void {
@@ -550,6 +514,11 @@ export class TerminalManager {
     // Clear kill tracking
     this._terminalBeingKilled.clear();
 
+    // Dispose CLI Agent integration manager
+    this._connectedAgentTerminalId = null;
+    this._connectedAgentType = null;
+    this._onCliAgentStatusChange.dispose();
+
     for (const terminal of this._terminals.values()) {
       terminal.pty.kill();
     }
@@ -559,6 +528,7 @@ export class TerminalManager {
     this._terminalCreatedEmitter.dispose();
     this._terminalRemovedEmitter.dispose();
     this._stateUpdateEmitter.dispose();
+    this._terminalFocusEmitter.dispose();
   }
 
   // Performance optimization: Buffer data to reduce event frequency
@@ -602,6 +572,10 @@ export class TerminalManager {
     if (buffer && buffer.length > 0) {
       const combinedData = buffer.join('');
       buffer.length = 0; // Clear buffer
+
+      // Send to CLI Agent manager for pattern detection and state management
+      this._detectCliAgent(terminalId, combinedData);
+
       this._dataEmitter.fire({ terminalId, data: combinedData });
     }
   }
@@ -634,6 +608,17 @@ export class TerminalManager {
     if (timer) {
       clearTimeout(timer);
       this._dataFlushTimers.delete(terminalId);
+    }
+
+    // CLI Agent関連データのクリーンアップ（超シンプル）
+    if (this._connectedAgentTerminalId === terminalId) {
+      this._connectedAgentTerminalId = null;
+      this._connectedAgentType = null;
+      this._onCliAgentStatusChange.fire({
+        terminalId,
+        status: 'none',
+        type: null,
+      });
     }
 
     // Remove from terminals map
@@ -685,5 +670,507 @@ export class TerminalManager {
         log('🔄 [TERMINAL] No remaining terminals, cleared active');
       }
     }
+  }
+
+  /**
+   * Check if CLI Agent is active in a terminal
+   */
+  public isCliAgentConnected(terminalId: string): boolean {
+    return this._connectedAgentTerminalId === terminalId;
+  }
+
+  /**
+   * Check if CLI Agent is running in a terminal (CONNECTED or DISCONNECTED)
+   */
+  public isCliAgentRunning(terminalId: string): boolean {
+    return this._connectedAgentTerminalId === terminalId;
+  }
+
+  /**
+   * Get currently globally active CLI Agent
+   */
+  public getCurrentGloballyActiveAgent(): { terminalId: string; type: string } | null {
+    return this._connectedAgentTerminalId && this._connectedAgentType
+      ? { terminalId: this._connectedAgentTerminalId, type: this._connectedAgentType }
+      : null;
+  }
+
+  /**
+   * Get the last executed command for a terminal (シンプル化で無効化)
+   */
+  public getLastCommand(_terminalId: string): string | undefined {
+    return undefined; // シンプル化でコマンド履歴は無効化
+  }
+
+  /**
+   * Handle terminal output for CLI Agent detection (public API)
+   */
+  public handleTerminalOutputForCliAgent(terminalId: string, data: string): void {
+    this._detectCliAgent(terminalId, data);
+  }
+
+  /**
+   * Get the active CLI Agent type for a terminal
+   */
+  public getAgentType(terminalId: string): string | null {
+    return this._connectedAgentTerminalId === terminalId ? this._connectedAgentType : null;
+  }
+
+  /**
+   * Get all active CLI Agents
+   */
+  public getConnectedAgents(): Array<{ terminalId: string; agentInfo: { type: string } }> {
+    return this._connectedAgentTerminalId && this._connectedAgentType
+      ? [
+          {
+            terminalId: this._connectedAgentTerminalId,
+            agentInfo: { type: this._connectedAgentType },
+          },
+        ]
+      : [];
+  }
+
+  // =================== CLI Agent Detection (Ultra Simple) ===================
+
+  /**
+   * Gemini CLI検知の改善されたパターンマッチング
+   */
+  private _isGeminiCliDetected(cleanLine: string): boolean {
+    const line = cleanLine.toLowerCase();
+
+    // 基本的なGeminiキーワード
+    if (line.includes('gemini')) {
+      // Gemini関連のコンテキスト
+      if (
+        line.includes('cli') ||
+        line.includes('code') ||
+        line.includes('chat') ||
+        line.includes('api') ||
+        line.includes('google') ||
+        line.includes('activated') ||
+        line.includes('connected') ||
+        line.includes('ready') ||
+        line.includes('started') ||
+        line.includes('available') ||
+        line.includes('welcome') ||
+        line.includes('help')
+      ) {
+        return true;
+      }
+    }
+
+    // 具体的なGemini CLI出力パターン
+    return (
+      line.includes('gemini-2.5-pro') ||
+      line.includes('gemini.md') ||
+      line.includes('tips for getting started') ||
+      line.includes('google ai') ||
+      line.includes('google generative ai') ||
+      line.includes('gemini api') ||
+      line.includes('ai studio') ||
+      // プロンプト関連
+      line.includes('gemini>') ||
+      line.includes('gemini $') ||
+      line.includes('gemini #') ||
+      // バナー関連（ASCII artは除外して文字パターンで）
+      (line.includes('█') && line.includes('gemini')) ||
+      // コマンド実行確認
+      line.includes('gemini --help') ||
+      line.includes('gemini chat') ||
+      line.includes('gemini code')
+    );
+  }
+
+  /**
+   * 超シンプルなCLI Agent検出（出力から）
+   */
+  private _detectCliAgent(terminalId: string, data: string): void {
+    try {
+      const lines = data.split(/\r?\n/);
+      for (const line of lines) {
+        const trimmed = line.trim();
+        const cleanLine = trimmed.replace(/^[>$#%]\s*/, '');
+
+        // デバッグ用ログを追加
+        if (cleanLine.length > 0) {
+          console.log('[DEBUG] Checking CLI Agent patterns for line:', { terminalId, cleanLine });
+        }
+
+        // Claude Codeが起動している時の特徴的なパターンをチェック
+        if (
+          cleanLine.includes('Welcome to Claude Code!') ||
+          cleanLine.includes('Claude Opus') ||
+          cleanLine.includes('Claude Sonnet') ||
+          cleanLine.includes('Claude Haiku') ||
+          cleanLine.includes('> Try "edit <filepath>') ||
+          cleanLine.includes('Anthropic') ||
+          cleanLine.includes('claude.ai') ||
+          cleanLine.includes('Claude Code') ||
+          cleanLine.includes("I'm Claude") ||
+          cleanLine.includes('I am Claude') ||
+          // 実際のClaude Code CLIの起動パターンを追加
+          cleanLine.includes('anthropic claude') ||
+          cleanLine.includes('Powered by Claude') ||
+          cleanLine.includes('CLI tool for Claude') ||
+          // より広範なClaude検知パターン
+          (cleanLine.toLowerCase().includes('claude') &&
+            (cleanLine.includes('activated') ||
+              cleanLine.includes('connected') ||
+              cleanLine.includes('ready') ||
+              cleanLine.includes('started') ||
+              cleanLine.includes('available')))
+        ) {
+          console.log('[DEBUG] Claude pattern matched, setting current agent');
+          this._setCurrentAgent(terminalId, 'claude');
+          break;
+        }
+        // Geminiが起動している時の特徴的なパターンをチェック
+        if (this._isGeminiCliDetected(cleanLine)) {
+          console.log('[DEBUG] Gemini pattern matched, setting current agent');
+          this._setCurrentAgent(terminalId, 'gemini');
+          break;
+        }
+
+        // Gemini CLIのプロンプト準備状態をチェック（改善版）
+        if (
+          this._connectedAgentTerminalId === terminalId &&
+          this._connectedAgentType === 'gemini'
+        ) {
+          // Gemini CLIの実際の出力をすべてログに記録
+          console.log(`[DEBUG] 🔍 Gemini CLI output line: "${cleanLine}"`);
+
+          // より包括的なプロンプト検知パターン
+          const isPromptReady =
+            // 標準的なプロンプト文字
+            cleanLine.includes('>') ||
+            cleanLine.includes('$') ||
+            cleanLine.includes('#') ||
+            // Gemini CLI特有のパターン
+            cleanLine.toLowerCase().includes('gemini:') ||
+            cleanLine.toLowerCase().includes('gemini >') ||
+            cleanLine.toLowerCase().includes('gemini$') ||
+            cleanLine.toLowerCase().includes('gemini#') ||
+            // 入力待機状態を示すパターン
+            cleanLine.includes('Enter your prompt') ||
+            cleanLine.includes('What would you like') ||
+            cleanLine.includes('How can I help') ||
+            // 空行または単純なプロンプト
+            (cleanLine.length === 0 && data.includes('\n')) ||
+            // カーソルのみの行
+            cleanLine === '_' ||
+            cleanLine === '|' ||
+            // 最後の手段: 任意の対話的なパターン
+            (cleanLine.length > 0 &&
+              cleanLine.length < 5 &&
+              (cleanLine.includes('>') || cleanLine.includes(':') || cleanLine.includes('?')));
+        }
+      }
+    } catch (error) {
+      // エラーは無視
+    }
+  }
+
+  /**
+   * 超シンプルなCLI Agent検出（入力から）
+   */
+  private _detectCliAgentFromInput(terminalId: string, data: string): void {
+    try {
+      if (data.includes('\r') || data.includes('\n')) {
+        const command = data.replace(/[\r\n]/g, '').trim();
+        console.log(`[DEBUG] CLI Agent input detection: "${command}" in terminal ${terminalId}`);
+
+        if (command.startsWith('claude') || command.startsWith('gemini')) {
+          const agentType = command.startsWith('claude') ? 'claude' : 'gemini';
+          console.log(`[DEBUG] Detected ${agentType} CLI from input command`);
+          this._setCurrentAgent(terminalId, agentType);
+        }
+      }
+    } catch (error) {
+      console.warn('[DEBUG] Error in CLI Agent input detection:', error);
+    }
+  }
+
+  /**
+   * 現在のCLI Agentを設定（すべてのターミナル状態を更新）
+   */
+  private _setCurrentAgent(terminalId: string, type: 'claude' | 'gemini'): void {
+    const terminal = this._terminals.get(terminalId);
+    if (!terminal) {
+      console.log('[DEBUG] Terminal not found for ID:', terminalId);
+      return;
+    }
+
+    // 既に同じターミナルが同じタイプで設定されている場合はスキップ
+    if (this._connectedAgentTerminalId === terminalId && this._connectedAgentType === type) {
+      console.log('[DEBUG] Agent already set for this terminal, skipping');
+      return;
+    }
+
+    console.log('[DEBUG] Setting current agent:', {
+      terminalId,
+      type,
+      terminalName: terminal.name,
+      previousAgent: this._connectedAgentTerminalId,
+      previousType: this._connectedAgentType,
+    });
+
+    // 前のconnectedなAgentを保存
+    const previousConnectedId = this._connectedAgentTerminalId;
+    const previousType = this._connectedAgentType;
+
+    // 新しいAgentを設定
+    this._connectedAgentTerminalId = terminalId;
+    this._connectedAgentType = type;
+
+    // 1. 前にconnectedだったターミナルを先にdisconnectedにする
+    if (previousConnectedId && previousConnectedId !== terminalId) {
+      const previousTerminal = this._terminals.get(previousConnectedId);
+      if (previousTerminal) {
+        console.log('[DEBUG] Disconnecting previous terminal:', previousConnectedId);
+        this._onCliAgentStatusChange.fire({
+          terminalId: previousConnectedId,
+          status: 'disconnected',
+          type: previousType,
+          terminalName: previousTerminal.name,
+        });
+      }
+    }
+
+    // 2. 新しく検知されたターミナルをconnectedにする
+    console.log('[DEBUG] Connecting new terminal:', terminalId);
+    this._onCliAgentStatusChange.fire({
+      terminalId,
+      status: 'connected',
+      type,
+      terminalName: terminal.name,
+    });
+  }
+
+  // ==================== セッション復元関連のメソッド ====================
+
+  /**
+   * 全ターミナルの情報を取得（セッション保存用）
+   */
+  public getAllTerminals(): Array<{
+    id: string;
+    name: string;
+    number: number;
+    cwd: string;
+    createdAt: number;
+    isActive: boolean;
+  }> {
+    return Array.from(this._terminals.values()).map((terminal) => ({
+      id: terminal.id,
+      name: terminal.name,
+      number: terminal.number,
+      cwd: terminal.cwd || process.cwd(),
+      createdAt: terminal.createdAt || Date.now(),
+      isActive: terminal.isActive,
+    }));
+  }
+
+  /**
+   * 指定ターミナルのスクロールバック履歴を取得（セッション保存用）
+   */
+  // SESSION SCROLLBACK METHOD - DISABLED FOR DEBUGGING
+  /*
+  public async getTerminalScrollback(terminalId: string, maxLines: number): Promise<string[]> {
+    const terminal = this._terminals.get(terminalId);
+    if (!terminal) {
+      log(`⚠️ [SESSION] Terminal not found for scrollback: ${terminalId}`);
+      return [];
+    }
+
+    try {
+      // 現在はプレースホルダー実装
+      // 実際の実装では、xterm.jsのbufferからスクロールバックを取得する必要がある
+      // これはWebView側との連携が必要
+      log(`📜 [SESSION] Getting scrollback for terminal ${terminalId} (max: ${maxLines} lines)`);
+
+      // TODO: WebView側でxterm.js bufferからスクロールバックを取得する仕組みが必要
+      // 現在は空配列を返す（Phase 2で実装予定）
+      return [];
+    } catch (error) {
+      log(`❌ [SESSION] Error getting scrollback for ${terminalId}: ${error}`);
+      return [];
+    }
+  }
+  */
+
+  /**
+   * セッションデータからターミナルを作成（復元用）
+   */
+  // SESSION RESTORATION METHODS - DISABLED FOR DEBUGGING
+  /*
+  public async createTerminalFromSession(sessionInfo: {
+    id: string;
+    name: string;
+    cwd: string;
+    terminalNumber: number;
+    restoreMessage: string;
+    scrollbackHistory: string[];
+  }): Promise<string | null> {
+    try {
+      log(`🔄 [SESSION] Creating terminal from session: ${sessionInfo.name}`);
+
+      // 既存のターミナル数をチェック
+      const config = getTerminalConfig();
+      if (this._terminals.size >= config.maxTerminals) {
+        log(`⚠️ [SESSION] Cannot restore terminal: max terminals reached (${config.maxTerminals})`);
+        return null;
+      }
+
+      // セッション用の特別なターミナル作成
+      return await this._createSessionTerminal(sessionInfo);
+    } catch (error) {
+      log(`❌ [SESSION] Error creating terminal from session: ${error}`);
+      return null;
+    }
+  }
+  */
+
+  /**
+   * セッション復元用のターミナルを内部的に作成 - DISABLED FOR DEBUGGING
+   */
+  /*
+  private async _createSessionTerminal(sessionInfo: {
+    id: string;
+    name: string;
+    cwd: string;
+    terminalNumber: number;
+    restoreMessage: string;
+    scrollbackHistory: string[];
+  }): Promise<string | null> {
+    return new Promise((resolve) => {
+      this.operationQueue = this.operationQueue.then(async () => {
+        try {
+          const config = getTerminalConfig();
+          const shell = getShellForPlatform(config.shell);
+          const shellArgs = config.shellArgs || [];
+
+          // セッション用の新しいIDを生成（元のIDは参考用）
+          const terminalId = generateTerminalId();
+
+          // ターミナル番号を確保
+          const terminalNumber = this._terminalNumberManager.allocateNumber(
+            sessionInfo.terminalNumber,
+            this._terminals
+          );
+          if (terminalNumber === 0) {
+            log(`⚠️ [SESSION] Cannot allocate terminal number for restoration`);
+            resolve(null);
+            return;
+          }
+
+          // ワーキングディレクトリを設定（セッションのcwdを使用）
+          const cwd =
+            sessionInfo.cwd && require('fs').existsSync(sessionInfo.cwd)
+              ? sessionInfo.cwd
+              : getWorkingDirectory();
+
+          log(
+            `🚀 [SESSION] Creating session terminal: shell=${shell}, cwd=${cwd}, number=${terminalNumber}`
+          );
+
+          // PTYプロセスを作成
+          const ptyProcess = pty.spawn(shell, shellArgs, {
+            name: 'xterm-color',
+            cols: TERMINAL_CONSTANTS.DEFAULT_COLS,
+            rows: TERMINAL_CONSTANTS.DEFAULT_ROWS,
+            cwd: cwd,
+            env: { ...process.env },
+            encoding: null,
+          });
+
+          // ターミナルインスタンスを作成（統一化のため両方設定）
+          const terminal: TerminalInstance = {
+            id: terminalId,
+            name: sessionInfo.name,
+            number: terminalNumber,
+            pty: ptyProcess,      // 統一化のため両方設定
+            ptyProcess,           // セッション復元用
+            cwd,
+            isActive: false,
+            createdAt: Date.now(),
+            isSessionRestored: true, // セッション復元フラグ
+            sessionRestoreMessage: sessionInfo.restoreMessage,
+            sessionScrollback: sessionInfo.scrollbackHistory,
+          };
+
+          // ターミナルをマップに追加
+          this._terminals.set(terminalId, terminal);
+
+          // PTYイベントを設定
+          ptyProcess.onData((data: string) => {
+            this._dataEmitter.fire({ terminalId, data });
+            this._bufferData(terminalId, data);
+          });
+
+          ptyProcess.onExit((event: number | { exitCode: number; signal?: number }) => {
+            const exitCode = typeof event === 'number' ? event : event.exitCode;
+            log(`💀 [SESSION] Session terminal ${terminalId} exited with code: ${exitCode}`);
+            this._exitEmitter.fire({ terminalId, exitCode });
+          });
+
+          // セッション復元処理をWebViewに通知
+          this._terminalCreatedEmitter.fire(terminal);
+
+          // 状態更新通知
+          this._notifyStateUpdate();
+
+          log(
+            `✅ [SESSION] Session terminal created successfully: ${terminalId} (${sessionInfo.name})`
+          );
+          resolve(terminalId);
+        } catch (error) {
+          log(`❌ [SESSION] Failed to create session terminal: ${error}`);
+          resolve(null);
+        }
+      });
+    });
+  }
+
+  /**
+   * セッション復元が完了した後の初期化処理 - DISABLED FOR DEBUGGING
+   */
+  /*
+  public finalizeSessionRestore(): void {
+    log('🎯 [SESSION] Finalizing session restore - DISABLED FOR DEBUGGING...');
+
+    // DISABLED - No session restoration functionality
+    // // 復元されたターミナルが1つ以上ある場合、最初のものをアクティブにする
+    // const terminals = Array.from(this._terminals.values());
+    // const restoredTerminals = terminals.filter((t) => (t as any).isSessionRestored);
+
+    // if (restoredTerminals.length > 0) {
+    //   const firstTerminal = restoredTerminals[0];
+    //   if (firstTerminal) {
+    //     this._activeTerminalManager.setActive(firstTerminal.id);
+    //     firstTerminal.isActive = true;
+    //     log(`🎯 [SESSION] Set first restored terminal as active: ${firstTerminal.id}`);
+    //   }
+    // }
+
+    // // 状態更新通知
+    // this._notifyStateUpdate();
+
+    log(`✅ [SESSION] Session restore finalized - DISABLED FOR DEBUGGING`);
+  }
+  */
+
+  // STUB METHODS TO PREVENT COMPILATION ERRORS - These prevent SessionManager compilation errors
+  public async getTerminalScrollback(terminalId: string, maxLines: number): Promise<string[]> {
+    // Disabled - return empty array to prevent compilation errors
+    return [];
+  }
+
+  public async createTerminalFromSession(sessionInfo: any): Promise<string | null> {
+    // Disabled - return null to prevent compilation errors
+    return null;
+  }
+
+  public finalizeSessionRestore(): void {
+    // Disabled - do nothing to prevent compilation errors
+    log('🎯 [SESSION] Finalizing session restore - STUB METHOD, DISABLED FOR DEBUGGING');
   }
 }

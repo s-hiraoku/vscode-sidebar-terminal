@@ -116,20 +116,20 @@ export class NotificationBridge {
     });
   }
 
-  public showClaudeCodeDetected(): string | undefined {
+  public showCliAgentDetected(): string | undefined {
     return this.showNotification({
       type: 'info',
-      title: 'Claude Code Detected',
+      title: 'CLI Agent Detected',
       message: 'Alt+Click temporarily disabled for optimal performance during AI interaction',
       icon: '🤖',
       duration: 6000,
     });
   }
 
-  public showClaudeCodeEnded(): string | undefined {
+  public showCliAgentEnded(): string | undefined {
     return this.showNotification({
       type: 'success',
-      title: 'Claude Code Session Ended',
+      title: 'CLI Agent Session Ended',
       message: 'Alt+Click cursor positioning re-enabled',
       icon: '✅',
       duration: 3000,

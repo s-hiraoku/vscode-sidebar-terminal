@@ -1,11 +1,11 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 import { TerminalManager } from '../../terminals/TerminalManager';
-import { SidebarTerminalProvider } from '../../providers/SidebarTerminalProvider';
+import { SecondaryTerminalProvider } from '../../providers/SecondaryTerminalProvider';
 
 suite('Integration Test Suite', () => {
   let terminalManager: TerminalManager;
-  let provider: SidebarTerminalProvider;
+  let provider: SecondaryTerminalProvider;
   let mockContext: vscode.ExtensionContext;
 
   setup(() => {
@@ -29,8 +29,8 @@ suite('Integration Test Suite', () => {
       languageModelAccessInformation: {} as vscode.LanguageModelAccessInformation,
     } as unknown as vscode.ExtensionContext;
 
-    terminalManager = new TerminalManager(mockContext);
-    provider = new SidebarTerminalProvider(mockContext, terminalManager);
+    terminalManager = new TerminalManager();
+    provider = new SecondaryTerminalProvider(mockContext, terminalManager);
   });
 
   teardown(() => {
@@ -80,7 +80,7 @@ suite('Integration Test Suite', () => {
   });
 
   test('Should handle configuration changes', () => {
-    const config = vscode.workspace.getConfiguration('sidebarTerminal');
+    const config = vscode.workspace.getConfiguration('secondaryTerminal');
 
     // Test that provider respects configuration
     assert.ok(config.get('fontSize'));
@@ -179,7 +179,7 @@ suite('Integration Test Suite', () => {
       onDidDispose: () => ({ dispose: () => {} }),
       onDidChangeVisibility: () => ({ dispose: () => {} }),
       visible: true,
-      viewType: 'sidebarTerminal',
+      viewType: 'secondaryTerminal',
       show: () => {},
     } as vscode.WebviewView;
 

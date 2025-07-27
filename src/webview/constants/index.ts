@@ -10,7 +10,7 @@ export const TERMINAL_CONSTANTS = {
     SPLIT: 'split',
     TERMINAL_CREATED: 'terminalCreated',
     TERMINAL_REMOVED: 'terminalRemoved',
-    SWITCH_TERMINAL: 'switchTerminal',
+    FOCUS_TERMINAL: 'focusTerminal',
     GET_SETTINGS: 'getSettings',
     UPDATE_SETTINGS: 'updateSettings',
     SETTINGS_RESPONSE: 'settingsResponse',

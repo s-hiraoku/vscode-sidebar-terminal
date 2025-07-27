@@ -28,8 +28,37 @@
       "Bash(gh pr create:*)",
       "Bash(npm run lint)",
       "Bash(npm run format:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(gh issue list:*)",
+      "Bash(gh issue view:*)",
+      "Bash(gh issue comment:*)",
+      "Bash(npx eslint:*)",
+      "Bash(code:*)",
+      "Bash(find:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(gh issue edit:*)",
+      "Bash(npm run lint:*)",
+      "Bash(npm test)",
+      "WebFetch(domain:code.visualstudio.com)",
+      "Bash(./node_modules/.bin/mocha --require out/test/shared/TestSetup.js 'out/test/unit/terminals/TerminalManager.test.js')",
+      "Bash(npm run:*)",
+      "Bash(git worktree:*)",
+      "Bash(docker system prune:*)",
+      "Bash(docker volume prune:*)",
+      "mcp__deepwiki__read_wiki_structure",
+      "mcp__context7__resolve-library-id",
+      "Bash(git pull:*)",
+      "Bash(git tag:*)",
+      "Bash(npm version:*)",
+      "WebFetch(domain:stackoverflow.com)",
+      "Bash(gh issue close:*)"
     ],
     "deny": []
-  }
+  },
+  "enabledMcpjsonServers": [
+    "playwright",
+    "arxiv-mcp-server",
+    "deepwiki",
+    "context7"
+  ]
 }

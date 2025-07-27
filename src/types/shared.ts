@@ -62,6 +62,11 @@ export interface ExtensionTerminalConfig
     TerminalLimitsConfig {
   readonly shell: string; // Extension では必須
   readonly shellArgs: string[]; // Extension では必須
+  readonly cursor?: {
+    style?: 'block' | 'underline' | 'bar';
+    blink?: boolean;
+  };
+  readonly enableCliAgentIntegration?: boolean;
 }
 
 /**
@@ -86,6 +91,16 @@ export interface PartialTerminalSettings {
   bellSound?: boolean;
   altClickMovesCursor?: boolean;
   multiCursorModifier?: string;
+  enableCliAgentIntegration?: boolean;
+  shell?: string;
+  shellArgs?: string[];
+  cwd?: string;
+  defaultDirectory?: string;
+  maxTerminals?: number;
+  cursor?: {
+    style?: 'block' | 'underline' | 'bar';
+    blink?: boolean;
+  };
 }
 
 /**
@@ -145,7 +160,7 @@ export interface CompleteExtensionConfig extends WebViewDisplayConfig, TerminalL
 
 export type TerminalTheme = 'auto' | 'dark' | 'light';
 export type SplitDirection = 'horizontal' | 'vertical';
-export type StatusType = 'info' | 'success' | 'error' | 'warning';
+export type CliAgentStatusType = 'info' | 'success' | 'error' | 'warning';
 
 // ===== 後方互換性のためのエイリアス =====
 
@@ -163,13 +178,13 @@ export type ExtensionConfig = CompleteExtensionConfig;
  * 設定アクセス用のキー定数
  */
 export const CONFIG_SECTIONS = {
-  SIDEBAR_TERMINAL: 'sidebarTerminal',
+  SIDEBAR_TERMINAL: 'secondaryTerminal',
   EDITOR: 'editor',
   TERMINAL_INTEGRATED: 'terminal.integrated',
 } as const;
 
 export const CONFIG_KEYS = {
-  // sidebarTerminal セクション
+  // secondaryTerminal セクション
   THEME: 'theme',
   CURSOR_BLINK: 'cursorBlink',
   MAX_TERMINALS: 'maxTerminals',

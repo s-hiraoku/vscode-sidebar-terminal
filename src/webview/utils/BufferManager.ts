@@ -6,7 +6,7 @@
 export interface BufferOptions {
   maxBufferSize?: number;
   defaultFlushInterval?: number;
-  claudeCodeFlushInterval?: number;
+  cliAgentFlushInterval?: number;
   highFrequencyFlushInterval?: number;
   highFrequencyThreshold?: number;
   largeOutputThreshold?: number;
@@ -33,14 +33,14 @@ export class BufferManager {
   private flushCallback: FlushCallback | null = null;
 
   // Adaptive state tracking
-  private isClaudeCodeActive = false;
+  private isCliAgentActive = false;
   private recentFlushIntervals: number[] = [];
 
   constructor(options: BufferOptions = {}) {
     this.options = {
       maxBufferSize: options.maxBufferSize ?? 50,
       defaultFlushInterval: options.defaultFlushInterval ?? 16,
-      claudeCodeFlushInterval: options.claudeCodeFlushInterval ?? 4,
+      cliAgentFlushInterval: options.cliAgentFlushInterval ?? 4,
       highFrequencyFlushInterval: options.highFrequencyFlushInterval ?? 8,
       highFrequencyThreshold: options.highFrequencyThreshold ?? 5,
       largeOutputThreshold: options.largeOutputThreshold ?? 1000,
@@ -73,7 +73,7 @@ export class BufferManager {
 
     // Immediate flush conditions (prioritized for cursor accuracy)
     const shouldFlushImmediately =
-      isLargeOutput || bufferFull || (this.isClaudeCodeActive && isModerateOutput);
+      isLargeOutput || bufferFull || (this.isCliAgentActive && isModerateOutput);
 
     if (shouldFlushImmediately) {
       this.flush();
@@ -81,8 +81,8 @@ export class BufferManager {
         this.flushCallback(data);
       }
 
-      const reason = this.isClaudeCodeActive
-        ? 'Claude Code mode'
+      const reason = this.isCliAgentActive
+        ? 'CLI Agent mode'
         : isLargeOutput
           ? 'large output'
           : 'buffer full';
@@ -92,7 +92,7 @@ export class BufferManager {
       this.buffer.push(data);
       this.scheduleFlush();
       this.logFlush(
-        `Buffered write: ${dataSize} chars (buffer: ${this.buffer.length}, Claude Code: ${this.isClaudeCodeActive})`
+        `Buffered write: ${dataSize} chars (buffer: ${this.buffer.length}, CLI Agent: ${this.isCliAgentActive})`
       );
     }
 
@@ -100,17 +100,17 @@ export class BufferManager {
   }
 
   /**
-   * Set Claude Code activity state for adaptive flushing
+   * Set CLI Agent activity state for adaptive flushing
    */
   public setClaudeCodeActive(active: boolean): void {
-    this.isClaudeCodeActive = active;
+    this.isCliAgentActive = active;
   }
 
   /**
-   * Get current Claude Code activity state
+   * Get current CLI Agent activity state
    */
-  public isClaudeCodeMode(): boolean {
-    return this.isClaudeCodeActive;
+  public isCliAgentMode(): boolean {
+    return this.isCliAgentActive;
   }
 
   /**
@@ -131,7 +131,7 @@ export class BufferManager {
       }
 
       this.logFlush(
-        `Scheduled flush in ${flushInterval}ms (Claude Code: ${this.isClaudeCodeActive}, buffer size: ${this.buffer.length})`
+        `Scheduled flush in ${flushInterval}ms (CLI Agent: ${this.isCliAgentActive}, buffer size: ${this.buffer.length})`
       );
     }
   }
@@ -140,9 +140,9 @@ export class BufferManager {
    * Calculate optimal flush interval based on current conditions
    */
   private calculateFlushInterval(): number {
-    if (this.isClaudeCodeActive) {
-      // Claude Code active: Use very aggressive flushing for cursor accuracy
-      return this.options.claudeCodeFlushInterval;
+    if (this.isCliAgentActive) {
+      // CLI Agent active: Use very aggressive flushing for cursor accuracy
+      return this.options.cliAgentFlushInterval;
     } else if (this.buffer.length > this.options.highFrequencyThreshold) {
       // High-frequency output: Use shorter interval
       return this.options.highFrequencyFlushInterval;
@@ -246,7 +246,7 @@ export function createTerminalBufferManager(options?: BufferOptions): BufferMana
   return new BufferManager({
     maxBufferSize: 50,
     defaultFlushInterval: 16, // ~60fps
-    claudeCodeFlushInterval: 4, // Very aggressive for Claude Code
+    cliAgentFlushInterval: 4, // Very aggressive for CLI Agent
     highFrequencyFlushInterval: 8, // Faster for frequent output
     highFrequencyThreshold: 5,
     largeOutputThreshold: 1000,

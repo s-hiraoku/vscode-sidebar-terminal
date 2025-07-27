@@ -1,6 +1,14 @@
 /**
- * リファクタリング後のWebViewメインエントリーポイント
+ * WebViewメインエントリーポイント
  */
+
+// CRITICAL: Add immediate diagnostic logging
+console.log('🚀 [WEBVIEW-SCRIPT] ========== WEBVIEW.JS SCRIPT STARTED ==========');
+console.log('🚀 [WEBVIEW-SCRIPT] Script execution time:', new Date().toISOString());
+console.log('🚀 [WEBVIEW-SCRIPT] Window object exists:', typeof window !== 'undefined');
+console.log('🚀 [WEBVIEW-SCRIPT] Document ready state:', document?.readyState);
+console.log('🚀 [WEBVIEW-SCRIPT] VS Code API available:', typeof (window as any)?.acquireVsCodeApi);
+
 import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import { WebLinksAddon } from 'xterm-addon-web-links';
@@ -28,7 +36,8 @@ import { MessageManager } from './managers/MessageManager';
 import { TerminalInstance } from './interfaces/ManagerInterfaces';
 import {
   showAltClickDisabledWarning as _showAltClickDisabledWarning,
-  showTerminalInteractionIssue as _showTerminalInteractionIssue,
+  showTerminalInteractionWarning as _showTerminalInteractionWarning,
+  setUIManager,
 } from './utils/NotificationUtils';
 
 // Type definitions
@@ -48,7 +57,33 @@ declare const acquireVsCodeApi: () => {
   setState: (state: unknown) => void;
 };
 
-const vscode = acquireVsCodeApi();
+// Use the globally stored VS Code API with fallback and safety checks
+let vscode: any = null;
+
+// Function to safely get VS Code API
+function getVsCodeApi() {
+  console.log('🔍 [WEBVIEW] getVsCodeApi called');
+  console.log('🔍 [WEBVIEW] Current vscode variable:', !!vscode);
+  console.log('🔍 [WEBVIEW] window.vscodeApi available:', !!(window as any).vscodeApi);
+  console.log('🔍 [WEBVIEW] window.vscodeApi type:', typeof (window as any).vscodeApi);
+
+  if (vscode) {
+    console.log('🔍 [WEBVIEW] Returning cached vscode API');
+    return vscode;
+  }
+
+  // Try to get from global storage first
+  if ((window as any).vscodeApi) {
+    vscode = (window as any).vscodeApi;
+    console.log('📱 [WEBVIEW] Using globally stored VS Code API');
+    console.log('📱 [WEBVIEW] VS Code API postMessage type:', typeof vscode.postMessage);
+    return vscode;
+  }
+
+  // Should not reach here, but just in case
+  console.log('❌ [WEBVIEW] No VS Code API available');
+  return null;
+}
 
 // Main terminal management class
 class TerminalWebviewManager {
@@ -69,8 +104,18 @@ class TerminalWebviewManager {
     return this.splitManager.getTerminalContainers();
   }
 
+  public getTerminalElement(terminalId: string): HTMLElement | undefined {
+    const terminalInstance = this.splitManager.getTerminals().get(terminalId);
+    return terminalInstance?.container;
+  }
+
   public postMessageToExtension(message: unknown): void {
-    vscode.postMessage(message as VsCodeMessage);
+    const api = getVsCodeApi();
+    if (api) {
+      api.postMessage(message as VsCodeMessage);
+    } else {
+      console.log('❌ [WEBVIEW] Cannot send message: No VS Code API available');
+    }
   }
 
   public log(message: string, ...args: unknown[]): void {
@@ -139,6 +184,9 @@ class TerminalWebviewManager {
     this.configManager = new ConfigManager();
     this.performanceManager = new PerformanceManager();
     this.uiManager = new UIManager();
+
+    // NotificationUtilsにUIManagerを設定
+    setUIManager(this.uiManager);
     this.inputManager = new InputManager();
     this.messageManager = new MessageManager();
 
@@ -264,101 +312,54 @@ class TerminalWebviewManager {
       terminalDiv.className = 'terminal-container';
       terminalDiv.tabIndex = -1; // Make focusable
 
-      // Create terminal header with delete button
-      const terminalHeader = document.createElement('div');
-      terminalHeader.className = 'terminal-header';
-      terminalHeader.style.cssText = `
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        height: 24px;
-        padding: 2px 8px;
-        background: var(--vscode-tab-inactiveBackground, #2d2d30);
-        border-bottom: 1px solid var(--vscode-widget-border, #454545);
-        font-size: 11px;
-        color: var(--vscode-tab-inactiveForeground, #969696);
-        user-select: none;
-      `;
+      // Create terminal header using UIManager and HeaderFactory
+      const terminalHeader = this.uiManager.createTerminalHeader(
+        id,
+        name || `Terminal ${id.slice(-4)}`
+      );
 
-      // Terminal title
-      const terminalTitle = document.createElement('span');
-      terminalTitle.textContent = name || `Terminal ${id.slice(-4)}`;
-      terminalTitle.style.cssText = `
-        flex: 1;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      `;
+      // Setup delete button event handler (HeaderFactory already created the button)
+      const deleteButton = terminalHeader.querySelector('.close-btn') as HTMLButtonElement;
 
-      // Delete button
-      const deleteButton = document.createElement('button');
-      deleteButton.innerHTML = '×';
-      deleteButton.title = `Close ${name || 'Terminal'}`;
-      deleteButton.setAttribute('data-terminal-close', id);
-      deleteButton.style.cssText = `
-        background: none;
-        border: none;
-        color: var(--vscode-tab-inactiveForeground, #969696);
-        font-size: 18px;
-        font-weight: bold;
-        cursor: pointer;
-        padding: 0;
-        width: 20px;
-        height: 20px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 2px;
-        line-height: 1;
-        position: relative;
-        z-index: 100;
-      `;
+      // HeaderFactory already handles hover effects for the button
 
-      // Delete button hover effect
-      deleteButton.addEventListener('mouseenter', () => {
-        log(`🖱️ [DELETE] Mouse enter on delete button for terminal: ${id}`);
-        deleteButton.style.background = 'var(--vscode-toolbar-hoverBackground, #37373d)';
-        deleteButton.style.color = 'var(--vscode-foreground, #cccccc)';
-      });
+      // Setup delete button click handler
+      if (deleteButton) {
+        deleteButton.addEventListener(
+          'click',
+          (event) => {
+            event.stopPropagation();
+            try {
+              // ヘッダの×ボタン用 - 指定されたターミナルを直接削除
+              log(`🗑️ [HEADER] Deleting specific terminal: ${id}`);
 
-      deleteButton.addEventListener('mouseleave', () => {
-        log(`🖱️ [DELETE] Mouse leave on delete button for terminal: ${id}`);
-        deleteButton.style.background = 'none';
-        deleteButton.style.color = 'var(--vscode-tab-inactiveForeground, #969696)';
-      });
+              // 新しいアーキテクチャ: 統一された削除要求を送信（WebViewは判定しない）
+              this.messageManager.sendDeleteTerminalMessage(id, 'header', this);
+              log(`🗑️ [HEADER] Delete message sent to extension for: ${id}`);
+            } catch (error) {
+              log(`🗑️ [HEADER] Error sending delete message:`, error);
+            }
+          },
+          true
+        ); // Use capture phase
+      }
 
-      // Delete button click handler with detailed debugging
-      deleteButton.addEventListener(
-        'click',
-        (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          e.stopImmediatePropagation();
-
-          log(`🗑️ [DELETE] ========== DELETE BUTTON CLICKED ==========`);
-          log(`🗑️ [DELETE] Terminal ID: ${id}`);
-          log(`🗑️ [DELETE] Button element:`, deleteButton);
-          log(`🗑️ [DELETE] Event:`, e);
-          log(
-            `🗑️ [DELETE] Current terminals:`,
-            Array.from(this.splitManager.getTerminals().keys())
-          );
-
+      // Setup split button click handler
+      const splitButton = terminalHeader.querySelector('.split-btn') as HTMLButtonElement;
+      if (splitButton) {
+        splitButton.addEventListener('click', (event) => {
+          event.stopPropagation();
           try {
-            // ヘッダの×ボタン用 - 指定されたターミナルを直接削除
-            log(`🗑️ [HEADER] Deleting specific terminal: ${id}`);
-            // 新しいアーキテクチャ: 統一された削除要求を送信（WebViewは判定しない）
-            this.messageManager.sendDeleteTerminalMessage(id, 'header', this);
-            log(`🗑️ [HEADER] Delete message sent to extension for: ${id}`);
+            log(`🔀 [HEADER] Split button clicked for terminal: ${id}`);
+            // TODO: Implement split functionality using correct message method
+            log(`🔀 [HEADER] Split functionality temporarily disabled`);
           } catch (error) {
-            log(`🗑️ [HEADER] Error sending delete message:`, error);
+            log(`❌ [HEADER] Error handling split button click:`, error);
           }
-        },
-        true
-      ); // Use capture phase
+        });
+      }
 
-      terminalHeader.appendChild(terminalTitle);
-      terminalHeader.appendChild(deleteButton);
+      // HeaderFactory already assembled the complete header structure
 
       // Create terminal content area
       const terminalContent = document.createElement('div');
@@ -518,11 +519,14 @@ class TerminalWebviewManager {
           charCodes: Array.from(data).map((c) => c.charCodeAt(0)),
         });
 
-        vscode.postMessage({
-          command: 'input' as const,
-          data,
-          terminalId: this.activeTerminalId || id,
-        });
+        const api = getVsCodeApi();
+        if (api) {
+          api.postMessage({
+            command: 'input' as const,
+            data,
+            terminalId: this.activeTerminalId || id,
+          });
+        }
       });
 
       // Handle terminal focus events for border updates
@@ -538,12 +542,15 @@ class TerminalWebviewManager {
 
       // Handle resize
       terminal.onResize((size) => {
-        vscode.postMessage({
-          command: 'resize' as const,
-          cols: size.cols,
-          rows: size.rows,
-          terminalId: id,
-        });
+        const api = getVsCodeApi();
+        if (api) {
+          api.postMessage({
+            command: 'resize' as const,
+            cols: size.cols,
+            rows: size.rows,
+            terminalId: id,
+          });
+        }
       });
 
       // Store terminal instance
@@ -571,6 +578,47 @@ class TerminalWebviewManager {
       log('❌ [WEBVIEW] Error creating terminal:', error);
     }
   }
+
+  /**
+   * Restore scrollback history to an existing terminal - DISABLED FOR DEBUGGING
+   */
+  /*
+  public restoreTerminalScrollback(
+    id: string,
+    restoreMessage: string,
+    scrollbackData: string[]
+  ): void {
+    log('🔄 [WEBVIEW] Restoring scrollback for terminal:', id);
+    
+    const terminalInstance = this.splitManager.getTerminals().get(id);
+    if (terminalInstance && terminalInstance.terminal) {
+      try {
+        // Show restore message first
+        if (restoreMessage) {
+          terminalInstance.terminal.writeln(restoreMessage);
+        }
+
+        // Restore scrollback history
+        if (scrollbackData && scrollbackData.length > 0) {
+          scrollbackData.forEach((line) => {
+            if (line && line.trim()) {
+              terminalInstance.terminal.writeln(line);
+            }
+          });
+          log(`✅ [WEBVIEW] Restored ${scrollbackData.length} scrollback lines`);
+        }
+
+        // Scroll to bottom after restoration
+        terminalInstance.terminal.scrollToBottom();
+        log(`✅ [WEBVIEW] Scrollback restore completed for terminal: ${id}`);
+      } catch (error) {
+        log(`❌ [WEBVIEW] Error restoring scrollback for ${id}:`, error);
+      }
+    } else {
+      log(`❌ [WEBVIEW] Terminal instance not found for scrollback restore: ${id}`);
+    }
+  }
+  */
 
   public switchToTerminal(id: string): void {
     log('🔄 [WEBVIEW] Switching to terminal:', id);
@@ -681,6 +729,10 @@ class TerminalWebviewManager {
   private synchronizeWithState(state: TerminalState): void {
     log('🔄 [WEBVIEW] Synchronizing UI with state:', state);
 
+    // WebView初期化中かどうかを判定
+    const isInitializing = this.isWebViewInitializing();
+    log('🔄 [WEBVIEW] Is WebView initializing:', isInitializing);
+
     // 現在のターミナルリストと新しい状態を比較
     const currentTerminals = new Set(this.splitManager.getTerminals().keys());
     const newTerminals = new Set(state.terminals.map((t) => t.id));
@@ -696,12 +748,20 @@ class TerminalWebviewManager {
       }
     }
 
-    // 新しく追加されたターミナルをUIに追加
+    // ターミナルの追加・復元処理
     for (const terminal of state.terminals) {
       if (!currentTerminals.has(terminal.id)) {
-        log(`➕ [WEBVIEW] Adding terminal to UI: ${terminal.id}`);
-        // 新しいターミナルは既にcreateTerminalで作成されているはず
-        // ここでは特別な処理は不要
+        // 完全に新しいターミナル
+        log(`➕ [WEBVIEW] Adding new terminal to UI: ${terminal.id}`);
+        this.requestTerminalCreation(terminal);
+      } else if (!isInitializing) {
+        // 初期化完了後のみDOM健全性をチェック
+        const needsRecreation = this.checkIfTerminalNeedsRecreation(terminal.id);
+        if (needsRecreation) {
+          log(`🔄 [WEBVIEW] Terminal ${terminal.id} needs DOM recreation after panel move`);
+          this.cleanupTerminalData(terminal.id);
+          this.requestTerminalCreation(terminal);
+        }
       }
     }
 
@@ -717,12 +777,167 @@ class TerminalWebviewManager {
   }
 
   /**
+   * ターミナルがDOM再作成を必要とするかチェック
+   */
+  private checkIfTerminalNeedsRecreation(terminalId: string): boolean {
+    try {
+      // SplitManagerにターミナルが登録されているかチェック
+      const terminals = this.splitManager.getTerminals();
+      const terminalInstance = terminals.get(terminalId);
+
+      if (!terminalInstance) {
+        log(`🔍 [WEBVIEW] Terminal ${terminalId} not found in SplitManager`);
+        return true;
+      }
+
+      // DOM要素コンテナをチェック
+      const terminalContainers = this.splitManager.getTerminalContainers();
+      const terminalContainer = terminalContainers.get(terminalId);
+
+      if (!terminalContainer) {
+        log(`🔍 [WEBVIEW] Terminal ${terminalId} container not found`);
+        return true;
+      }
+
+      // DOM要素が実際にDOMツリーに存在するかチェック
+      if (!terminalContainer.isConnected || !document.contains(terminalContainer)) {
+        log(`🔍 [WEBVIEW] Terminal ${terminalId} DOM element is disconnected`);
+        return true;
+      }
+
+      // xterm.js インスタンスの存在チェック（terminal要素内のcanvas要素の存在で判定）
+      const canvasElement = terminalContainer.querySelector('.xterm-screen canvas');
+      if (!canvasElement) {
+        log(`🔍 [WEBVIEW] Terminal ${terminalId} xterm.js canvas not found`);
+        return true;
+      }
+
+      log(`✅ [WEBVIEW] Terminal ${terminalId} DOM elements are healthy`);
+      return false;
+    } catch (error) {
+      log(`❌ [WEBVIEW] Error checking terminal recreation need:`, error);
+      return true; // エラーの場合は安全のため再作成
+    }
+  }
+
+  /**
+   * 既存のターミナルデータをクリーンアップ
+   */
+  private cleanupTerminalData(terminalId: string): void {
+    try {
+      log(`🧹 [WEBVIEW] Cleaning up terminal data: ${terminalId}`);
+
+      // SplitManagerから削除
+      this.splitManager.removeTerminal(terminalId);
+
+      // UIManagerのヘッダーキャッシュも削除
+      this.uiManager.removeTerminalHeader(terminalId);
+
+      log(`✅ [WEBVIEW] Terminal data cleaned up: ${terminalId}`);
+    } catch (error) {
+      log(`❌ [WEBVIEW] Error cleaning up terminal data:`, error);
+    }
+  }
+
+  /**
+   * WebViewが初期化中かどうかを判定
+   */
+  private isWebViewInitializing(): boolean {
+    try {
+      // DOM要素の基本構造が完成しているかチェック
+      const terminalBody = document.getElementById('terminal-body');
+      if (!terminalBody) {
+        log('🔍 [WEBVIEW] Terminal body not found - still initializing');
+        return true;
+      }
+
+      // SplitManagerとUIManagerが適切に初期化されているかチェック
+      if (!this.splitManager || !this.uiManager) {
+        log('🔍 [WEBVIEW] Managers not initialized - still initializing');
+        return true;
+      }
+
+      // 基本的なHTML構造が存在するかチェック
+      const essentialElements = ['terminal-body', 'terminal-header-controls'];
+
+      for (const elementId of essentialElements) {
+        if (!document.getElementById(elementId)) {
+          log(`🔍 [WEBVIEW] Essential element ${elementId} not found - still initializing`);
+          return true;
+        }
+      }
+
+      log('✅ [WEBVIEW] WebView initialization appears complete');
+      return false;
+    } catch (error) {
+      log('❌ [WEBVIEW] Error checking initialization state:', error);
+      return true; // エラーの場合は初期化中として扱う
+    }
+  }
+
+  /**
+   * 安全なターミナル作成リクエスト
+   */
+  private requestTerminalCreation(terminal: { id: string; name: string }): void {
+    try {
+      log(`🔄 [WEBVIEW] Requesting terminal creation: ${terminal.id} (${terminal.name})`);
+
+      // Extensionに正規のターミナル作成をリクエスト
+      this.postMessageToExtension({
+        command: 'createTerminal',
+        terminalId: terminal.id,
+        terminalName: terminal.name,
+      });
+
+      log(`✅ [WEBVIEW] Terminal creation request sent: ${terminal.id}`);
+    } catch (error) {
+      log(`❌ [WEBVIEW] Error requesting terminal creation:`, error);
+    }
+  }
+
+  /**
+   * WebViewが再接続かどうかを検出
+   */
+  private detectWebViewReconnection(): boolean {
+    try {
+      // 既存のManagerインスタンスが存在する場合は再接続の可能性が高い
+      const hasExistingManagers = !!(this.splitManager && this.uiManager && this.configManager);
+
+      // ローカルストレージに何らかの状態が保存されている場合も再接続の可能性
+      const hasStoredState =
+        typeof window.localStorage !== 'undefined' && window.localStorage.length > 0;
+
+      // DOM要素に何らかのターミナル関連要素が残っている場合
+      const terminalBody = document.getElementById('terminal-body');
+      const hasExistingTerminalElements = terminalBody && terminalBody.children.length > 0;
+
+      const isReconnecting = hasExistingManagers || hasStoredState || hasExistingTerminalElements;
+
+      log('🔍 [WEBVIEW] Reconnection detection:', {
+        hasExistingManagers,
+        hasStoredState,
+        hasExistingTerminalElements,
+        isReconnecting,
+      });
+
+      return isReconnecting;
+    } catch (error) {
+      log('❌ [WEBVIEW] Error detecting reconnection:', error);
+      return false; // エラーの場合は初期ロードとして扱う
+    }
+  }
+
+  /**
    * UIからターミナルを削除（状態同期用）
    */
   private removeTerminalFromUI(terminalId: string): void {
     try {
       // SplitManagerを使用してクリーンアップ
       this.splitManager.removeTerminal(terminalId);
+
+      // UIManagerのヘッダーキャッシュもクリア
+      this.uiManager.removeTerminalHeader(terminalId);
+
       log(`✅ [WEBVIEW] Terminal removed from UI: ${terminalId}`);
     } catch (error) {
       log(`❌ [WEBVIEW] Error removing terminal from UI:`, error);
@@ -972,6 +1187,12 @@ class TerminalWebviewManager {
 
     // Update terminal borders to highlight active terminal
     this.uiManager.updateTerminalBorders(terminalId, this.splitManager.getTerminalContainers());
+
+    // Notify extension about terminal focus change
+    this.postMessageToExtension({
+      command: 'focusTerminal',
+      terminalId: terminalId,
+    });
   }
 
   // Getters for split manager integration
@@ -1154,6 +1375,33 @@ class TerminalWebviewManager {
     log('✅ [WEBVIEW] Font settings applied to all terminals using options property (v5.0+ API)');
   }
 
+  /**
+   * Update Claude status display in sidebar terminal headers
+   */
+  public updateClaudeStatus(
+    activeTerminalName: string | null,
+    status: 'connected' | 'disconnected' | 'none',
+    agentType: string | null = null
+  ): void {
+    log(`🔄 [WEBVIEW] ========== UPDATE CLAUDE STATUS CALLED ==========`);
+    log(`🔄 [WEBVIEW] activeTerminalName: ${activeTerminalName}`);
+    log(`🔄 [WEBVIEW] status: ${status}`);
+    log(`🔄 [WEBVIEW] agentType: ${agentType}`);
+    log(`🔄 [WEBVIEW] UIManager available: ${!!this.uiManager}`);
+    log(
+      `🔄 [WEBVIEW] UIManager.updateCliAgentStatusDisplay method: ${typeof this.uiManager.updateCliAgentStatusDisplay}`
+    );
+
+    try {
+      this.uiManager.updateCliAgentStatusDisplay(activeTerminalName, status, agentType);
+      log(`✅ [WEBVIEW] UIManager.updateCliAgentStatusDisplay called successfully`);
+    } catch (error) {
+      log(`❌ [WEBVIEW] Error calling UIManager.updateCliAgentStatusDisplay:`, error);
+    }
+
+    log(`🔄 [WEBVIEW] ========== UPDATE CLAUDE STATUS COMPLETE ==========`);
+  }
+
   private loadSettings(): void {
     const loadedSettings = this.configManager.loadSettings();
     this.currentSettings = { ...this.currentSettings, ...loadedSettings };
@@ -1185,14 +1433,240 @@ class TerminalWebviewManager {
 // Global instance
 const terminalManager = new TerminalWebviewManager();
 
+// Expose to window for debugging and external access
+(window as { terminalManager?: TerminalWebviewManager }).terminalManager = terminalManager;
+
+// Debug: Check if addEventListener is available
+log('🔧 [WEBVIEW] ========== SETTING UP MESSAGE LISTENER ==========');
+log('🔧 [WEBVIEW] window object exists:', typeof window !== 'undefined');
+log('🔧 [WEBVIEW] addEventListener available:', typeof window.addEventListener === 'function');
+log('🔧 [WEBVIEW] document.readyState:', document.readyState);
+log('🔧 [WEBVIEW] Current location:', window.location?.href);
+log('🔧 [WEBVIEW] UserAgent:', navigator?.userAgent);
+
+// Alternative event listener approach for debugging
+window.onmessage = (event) => {
+  log('🚨 [WEBVIEW-ALT] Alternative message listener fired!');
+  log('🚨 [WEBVIEW-ALT] Event source:', event.source);
+  log('🚨 [WEBVIEW-ALT] Event origin:', event.origin);
+  log('🚨 [WEBVIEW-ALT] Event data:', event.data);
+  log('🚨 [WEBVIEW-ALT] Event data command:', event.data?.command);
+
+  // Skip general message display to reduce clutter
+
+  if (event.data?.command === 'cliAgentStatusUpdate') {
+    log('🎉 [WEBVIEW-ALT] *** CLI AGENT STATUS UPDATE DETECTED IN ALT LISTENER ***');
+    log('🎉 [WEBVIEW-ALT] CLI Agent status data:', event.data.cliAgentStatus);
+
+    // Skip Claude status display to reduce clutter
+
+    // Debug: Check if the terminalManager is available and working
+    if ((window as any).terminalManager) {
+      // Skip TerminalManager available display
+
+      try {
+        // Manually call updateClaudeStatus to test
+        (window as any).terminalManager.updateClaudeStatus(
+          event.data.cliAgentStatus.activeTerminalName,
+          event.data.cliAgentStatus.status
+        );
+
+        // Skip success display
+
+        // Try again after a delay to see if DOM is ready
+        setTimeout(() => {
+          const names = document.querySelectorAll('.terminal-name');
+          if (names.length > 0) {
+            // Try updating again
+            (window as any).terminalManager.updateClaudeStatus(
+              event.data.cliAgentStatus.activeTerminalName,
+              event.data.cliAgentStatus.status
+            );
+          }
+        }, 1000); // Wait 1 second
+      } catch (error) {
+        const errorDiv = document.createElement('div');
+        errorDiv.style.cssText =
+          'position: fixed; top: 160px; right: 10px; background: red; color: white; padding: 5px; z-index: 9999; font-size: 12px;';
+        errorDiv.textContent = `Error: ${String(error)}`;
+        document.body.appendChild(errorDiv);
+        setTimeout(() => errorDiv.remove(), 8000);
+      }
+    } else {
+      const noManagerDiv = document.createElement('div');
+      noManagerDiv.style.cssText =
+        'position: fixed; top: 120px; right: 10px; background: #FFA500; color: black; padding: 5px; z-index: 9999; font-size: 12px; border: 1px solid black;';
+      noManagerDiv.textContent = 'TerminalManager: NOT AVAILABLE';
+      document.body.appendChild(noManagerDiv);
+      setTimeout(() => noManagerDiv.remove(), 5000);
+    }
+  }
+};
+
 // Handle messages from the extension
 window.addEventListener('message', (event) => {
-  const message = event.data as TerminalMessage;
-  log('🎯 [WEBVIEW] Message data:', message);
+  log('🎯 [WEBVIEW] ========== RAW MESSAGE RECEIVED ==========');
+  log('🎯 [WEBVIEW] Event received at:', new Date().toISOString());
+  log('🎯 [WEBVIEW] Event type:', event.type);
+  log('🎯 [WEBVIEW] Event source:', event.source);
+  log('🎯 [WEBVIEW] Event origin:', event.origin);
+  log('🎯 [WEBVIEW] Event isTrusted:', event.isTrusted);
 
-  // Delegate to MessageManager
-  terminalManager.messageManager.handleMessage(message, terminalManager);
+  try {
+    const message = event.data as TerminalMessage;
+    log('🎯 [WEBVIEW] Raw event.data:', event.data);
+    log('🎯 [WEBVIEW] Message after cast:', message);
+    log('🎯 [WEBVIEW] Message type:', typeof message);
+    log('🎯 [WEBVIEW] Message command:', message?.command);
+    log('🎯 [WEBVIEW] Message keys:', Object.keys(message || {}));
+
+    if (message?.command === 'cliAgentStatusUpdate') {
+      log('🔔 [WEBVIEW] *** CLI AGENT STATUS UPDATE MESSAGE DETECTED ***');
+      log('🔔 [WEBVIEW] CLI Agent status data:', message.cliAgentStatus);
+      log(
+        '🔔 [WEBVIEW] CLI Agent status activeTerminalName:',
+        message.cliAgentStatus?.activeTerminalName
+      );
+      log('🔔 [WEBVIEW] CLI Agent status status:', message.cliAgentStatus?.status);
+    }
+
+    if (message?.command === 'init') {
+      log('🚀 [WEBVIEW] ******************************************');
+      log('🚀 [WEBVIEW] *** INIT MESSAGE DETECTED IN WEBVIEW! ***');
+      log('🚀 [WEBVIEW] ******************************************');
+      log('🚀 [WEBVIEW] Full INIT message data:', message);
+      log('🚀 [WEBVIEW] This should trigger handleInitMessage in MessageManager');
+    }
+
+    // Delegate to MessageManager
+    log('🎯 [WEBVIEW] About to call MessageManager.handleMessage...');
+    log('🎯 [WEBVIEW] TerminalManager available:', !!terminalManager);
+    log('🎯 [WEBVIEW] MessageManager available:', !!terminalManager.messageManager);
+
+    terminalManager.messageManager.handleMessage(message, terminalManager);
+    log('🎯 [WEBVIEW] MessageManager.handleMessage completed successfully');
+  } catch (error) {
+    log('❌ [WEBVIEW] Error processing message:', error);
+    log('❌ [WEBVIEW] Error name:', error instanceof Error ? error.name : 'unknown');
+    log('❌ [WEBVIEW] Error message:', error instanceof Error ? error.message : String(error));
+    log('❌ [WEBVIEW] Error stack:', error instanceof Error ? error.stack : 'no stack');
+  }
+
+  log('🎯 [WEBVIEW] ========== RAW MESSAGE PROCESSING COMPLETE ==========');
 });
+
+log('✅ [WEBVIEW] Message listener registered successfully');
+
+// Add immediate test to verify message listener is functional
+log('🧪 [WEBVIEW] Testing message listener functionality...');
+setTimeout(() => {
+  log('🧪 [WEBVIEW] Message listener should be fully active now');
+
+  // Send ready notification to extension
+  log('📢 [WEBVIEW] Sending ready notification to extension...');
+  try {
+    // Use globally stored VS Code API instead of acquiring again
+    const api = getVsCodeApi();
+    if (api) {
+      log('📢 [WEBVIEW] Using globally stored VS Code API');
+      log('📢 [WEBVIEW] vscode object:', typeof api);
+      log('📢 [WEBVIEW] vscode.postMessage:', typeof api.postMessage);
+
+      api.postMessage({
+        command: 'webviewReady',
+        timestamp: Date.now(),
+      });
+      log('✅ [WEBVIEW] Ready notification sent via vscode.postMessage');
+
+      // Also send traditional ready message for backward compatibility
+      setTimeout(() => {
+        api.postMessage({
+          command: 'ready',
+        });
+        log('✅ [WEBVIEW] Traditional ready notification sent as fallback');
+
+        // Request state restoration only if WebView appears to be reconnecting
+        // (not during initial load)
+        const detectReconnection = () => {
+          try {
+            // Skip reconnection detection for now - just always request restoration
+            // The WebView side will handle filtering appropriately
+            api.postMessage({
+              command: 'requestStateRestoration',
+              timestamp: Date.now(),
+            });
+            log('🔄 [WEBVIEW] State restoration request sent');
+          } catch (error) {
+            log('❌ [WEBVIEW] Error during state restoration request:', error);
+          }
+        };
+
+        setTimeout(detectReconnection, 50);
+      }, 10);
+    } else {
+      log('❌ [WEBVIEW] No VS Code API available in window.vscodeApi');
+      log(
+        '📢 [WEBVIEW] Available window properties:',
+        Object.keys(window).filter((k) => k.includes('vscode') || k.includes('api'))
+      );
+
+      // Fallback: try to acquire VS Code API directly (will fail if already acquired)
+      try {
+        if (typeof (window as any).acquireVsCodeApi === 'function') {
+          const fallbackVscode = (window as any).acquireVsCodeApi();
+          log('📢 [WEBVIEW] Fallback: VS Code API acquired directly');
+          fallbackVscode.postMessage({
+            command: 'webviewReady',
+            timestamp: Date.now(),
+          });
+        }
+      } catch (fallbackError) {
+        log('❌ [WEBVIEW] Fallback API acquisition also failed:', fallbackError);
+      }
+    }
+  } catch (error) {
+    log('❌ [WEBVIEW] Failed to send ready notification:', error);
+    log('❌ [WEBVIEW] Error details:', {
+      name: error instanceof Error ? error.name : 'unknown',
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : 'no stack',
+    });
+  }
+}, 100); // Close the setTimeout callback
+
+// Test if console and logging is working in WebView context
+log('🧪 [WEBVIEW] ========== WEBVIEW CONTEXT TEST ==========');
+log('🧪 [WEBVIEW] Testing console.log function:', typeof console.log);
+log('🧪 [WEBVIEW] Testing log function:', typeof log);
+log('🧪 [WEBVIEW] Window location:', window.location.href);
+log('🧪 [WEBVIEW] Document title:', document.title);
+log('🧪 [WEBVIEW] Document body className:', document.body?.className);
+log('🧪 [WEBVIEW] Is in VS Code webview context:', !!(window as any).acquireVsCodeApi);
+
+// Try to send a test message immediately
+log('🧪 [WEBVIEW] Attempting to send test message...');
+try {
+  const api = getVsCodeApi();
+  if (api && typeof api.postMessage === 'function') {
+    api.postMessage({
+      command: 'test',
+      message: 'WebView script is running and can send messages',
+    });
+    log('🧪 [WEBVIEW] Test message sent successfully using global vscodeApi');
+  } else {
+    log('❌ [WEBVIEW] No vscodeApi available for test message');
+  }
+} catch (error) {
+  log('🧪 [WEBVIEW] Failed to send test message:', error);
+}
+
+log('🔧 [WEBVIEW] ========== MESSAGE LISTENER SETUP COMPLETE ==========');
+
+// CRITICAL: Final script execution confirmation
+console.log('🎉 [WEBVIEW-SCRIPT] ========== WEBVIEW.JS SCRIPT COMPLETED ==========');
+console.log('🎉 [WEBVIEW-SCRIPT] Script completion time:', new Date().toISOString());
+console.log('🎉 [WEBVIEW-SCRIPT] TerminalManager created:', !!terminalManager);
+console.log('🎉 [WEBVIEW-SCRIPT] Message listeners set up successfully');
 
 // Enhanced update status function
 function updateStatus(_message: string, _type: 'info' | 'success' | 'error' = 'info'): void {}
@@ -1219,6 +1693,9 @@ setupActivityListeners();
 
 function sendReadyMessage(): void {
   log('🎯 [WEBVIEW] Sending READY message to extension');
+  log('🎯 [WEBVIEW] VS Code API available:', !!getVsCodeApi());
+  log('🎯 [WEBVIEW] Terminal manager available:', !!terminalManager);
+  log('🎯 [WEBVIEW] Message manager available:', !!terminalManager?.messageManager);
   updateStatus('Sending ready message to extension');
   try {
     terminalManager.messageManager.sendReadyMessage(terminalManager);

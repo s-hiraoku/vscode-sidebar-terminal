@@ -7,9 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.25] - 2025-07-18
+
 ### Changed
 - **WebView Architecture Refactoring**
-  - Transformed monolithic `main.ts` into a modular system with 9 focused managers (Performance, ClaudeCode, Input, UI, Config, Message, Notification, TerminalCoordinator).
+  - Transformed monolithic `main.ts` into a modular system with 9 focused managers (Performance, CliAgent, Input, UI, Config, Message, Notification, TerminalCoordinator).
   - Achieved significant improvements in code organization, maintainability, and performance.
   - Implemented intelligent buffering, debounced operations, and efficient resource management.
 - Updated extension icon path to use SVG format (`resources/icon.svg`) for improved scalability and display consistency.
@@ -41,7 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Advanced Features**:
   - Alt+Click cursor positioning with VS Code standard behavior
-  - Claude Code detection for optimal performance during AI interactions
+  - CLI Agent detection for optimal performance during AI interactions
   - Visual feedback with blue cursor highlight and fade animation
   - Automatic conflict resolution for terminal output interference
 
@@ -87,7 +89,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Performance Optimizations
 - **Output Buffering**: Adaptive buffering (8ms vs 16ms) for optimal performance
-- **Claude Code Detection**: Automatic performance optimization during AI interactions
+- **CLI Agent Detection**: Automatic performance optimization during AI interactions
 - **Memory Management**: Proper cleanup and disposal patterns
 - **Resize Handling**: Debounced terminal resize operations
 
@@ -96,23 +98,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Error Handling**: Graceful degradation and user-friendly error messages
 - **Resource Management**: Proper cleanup of PTY processes and WebView resources
 - **Security Testing**: CodeQL analysis and dependency vulnerability scanning
-
-## [0.0.2] - Future Release (Planned)
-
-### Planned Features
-- **Enhanced Testing**: Complete Phase 2 WebView component testing
-  - SplitManager comprehensive test suite
-  - HeaderManager functionality tests
-  - SettingsPanel component testing
-- **Advanced Testing**: Phase 3 implementation
-  - Performance testing framework
-  - Accessibility testing with axe-core
-  - Load testing for multiple terminals
-- **User Experience**:
-  - Terminal session persistence
-  - Custom themes and color schemes
-  - Enhanced keyboard shortcuts
-  - Terminal history management
 
 ---
 
@@ -123,7 +108,7 @@ This release implements a comprehensive 3-phase testing strategy:
 
 - **Phase 1** ✅: Modern testing infrastructure (nyc, Sinon, Chai, JSDOM)
 - **Phase 2** 🔄: WebView component testing (partially complete)
-- **Phase 3** 📋: Advanced testing strategies (planned for v0.0.2)
+- **Phase 3** 📋: Advanced testing strategies (planned for future releases)
 
 ### Architecture Highlights
 The extension follows VS Code best practices with:

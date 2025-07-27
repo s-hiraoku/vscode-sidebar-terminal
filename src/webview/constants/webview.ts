@@ -14,7 +14,7 @@ export const WEBVIEW_TERMINAL_CONSTANTS = {
     SPLIT: 'split',
     TERMINAL_CREATED: 'terminalCreated',
     TERMINAL_REMOVED: 'terminalRemoved',
-    SWITCH_TERMINAL: 'switchTerminal',
+    FOCUS_TERMINAL: 'focusTerminal',
   },
 };
 

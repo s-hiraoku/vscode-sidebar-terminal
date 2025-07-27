@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to CLI Agent (gemini.google.com/code) when working with code in this repository.
 
 ## Development Commands
 
@@ -37,6 +37,74 @@ npm run release:major   # Increment major version and create release
 - Press `F5` to launch Extension Development Host
 - Use "Developer: Reload Window" command to reload during development
 - Console logs are visible in VS Code Developer Tools (`Ctrl+Shift+I`)
+
+## Code Quality and Maintainability Guidelines
+
+### Essential Practices for Long-term Development
+
+**CRITICAL**: This codebase requires ongoing development and maintenance. Poor code quality will lead to technical debt and system breakdown. Follow these guidelines strictly:
+
+#### 1. Naming Conventions and Clarity
+- **Use descriptive, unambiguous names**: `focusTerminal` not `switchTerminal`
+- **Avoid misleading terminology**: Names should accurately reflect what the code does
+- **Consistent naming patterns**: Use the same verb/noun patterns across similar functions
+- **Update related constants**: When renaming, update ALL references including constants, tests, and documentation
+
+#### 2. Interface Consistency and Type Safety
+- **Complete interface implementations**: When adding methods to interfaces, update ALL implementing classes
+- **Proper TypeScript usage**: Define strict types, avoid `any` unless absolutely necessary
+- **Message protocol consistency**: Keep command names synchronized across extension ↔ webview communication
+- **Update tests**: When changing interfaces, update mock objects and test cases
+
+#### 3. Event-Driven Architecture Maintenance
+- **Clear event naming**: Events should describe what happened, not what might happen
+- **Proper disposal**: Always dispose EventEmitters to prevent memory leaks
+- **Event documentation**: Document the purpose and data structure of each event
+- **Avoid event proliferation**: Use existing events when possible rather than creating new ones
+
+#### 4. Communication Protocol Standards
+- **Explicit message types**: Use specific, descriptive command names in WebviewMessage types
+- **Consistent data structures**: Maintain the same parameter patterns across similar messages
+- **Backward compatibility**: When changing message protocols, consider migration strategies
+- **Error handling**: Include proper error cases in message handling
+
+#### 5. Code Organization and Documentation
+- **Logical file structure**: Group related functionality together
+- **Clear method responsibilities**: Each method should have a single, well-defined purpose
+- **Comprehensive comments**: Explain WHY code exists, not just what it does
+- **Update related documentation**: When changing behavior, update CLAUDE.md and inline docs
+
+#### 6. Testing and Validation
+- **Update test mocks**: When adding interface methods, update ALL test mock objects
+- **Meaningful test cases**: Test actual behavior, not just code coverage
+- **Edge case handling**: Test error conditions and boundary cases
+- **Compilation validation**: Always run `npm run compile-tests` before commits
+
+#### 7. Performance and Resource Management
+- **Proper cleanup**: Dispose of resources, event listeners, and subscriptions
+- **Memory leak prevention**: Be careful with closures and circular references
+- **Efficient messaging**: Avoid excessive message passing between extension and webview
+- **Resource lifecycle**: Match create/dispose calls appropriately
+
+### Development Workflow Checklist
+
+Before implementing any changes:
+1. [ ] Understand the full scope of the change across all affected files
+2. [ ] Update type definitions FIRST, then implementations
+3. [ ] Search for ALL references to changed names/types
+4. [ ] Update constants, tests, and documentation
+5. [ ] Run compilation checks frequently during development
+6. [ ] Test both happy path and error cases
+7. [ ] Verify no memory leaks or resource issues
+
+### Common Anti-Patterns to Avoid
+- **Incomplete renames**: Changing names in some files but not others
+- **Interface mismatches**: Adding methods to interfaces without updating implementations
+- **Orphaned constants**: Leaving old constant definitions after renaming
+- **Missing cleanup**: Creating resources without proper disposal
+- **Silent failures**: Not handling or logging error conditions properly
+
+**Remember**: This codebase serves as a foundation for ongoing development. Every shortcut taken now will compound into technical debt that makes future development exponentially more difficult.
 
 ## High-Level Architecture
 
@@ -94,6 +162,8 @@ User Action → VS Code Command → Extension Host → WebView Message → xterm
 - `src/extension.ts`: Entry point, command registration
 - `src/providers/SidebarTerminalProvider.ts`: WebView provider implementation  
 - `src/terminals/TerminalManager.ts`: Terminal process management
+- `src/commands/FileReferenceCommand.ts`: CLI Agent file reference (@filename) implementation
+- `src/commands/CopilotIntegrationCommand.ts`: GitHub Copilot Chat integration (#file:) implementation
 - `webpack.config.js`: Dual build configuration (extension + webview)
 
 **WebView Frontend**
@@ -183,7 +253,7 @@ Configuration values are accessed via `vscode.workspace.getConfiguration('sideba
 - Alt+Click shows blue highlight feedback at cursor position with fade animation
 - Follows VS Code standard visual patterns for consistency
 
-**Performance Optimizations for Claude Code Output**
+**Performance Optimizations for CLI Agent Output**
 - Adaptive buffering: shorter flush intervals during frequent output (8ms vs 16ms)
 - Direct writes for specific terminal IDs to avoid cross-terminal interference
 - Immediate flush for large outputs (≥1000 chars) to maintain cursor accuracy
@@ -191,25 +261,25 @@ Configuration values are accessed via `vscode.workspace.getConfiguration('sideba
 ## Alt+Click Cursor Positioning
 
 ### Overview
-This extension implements VS Code standard Alt+Click cursor positioning with intelligent conflict detection for Claude Code interactions.
+This extension implements VS Code standard Alt+Click cursor positioning with intelligent conflict detection for CLI Agent interactions.
 
 ### Current Limitations
-- **Claude Code Interference**: Alt+Click may not work reliably during Claude Code execution due to:
+- **CLI Agent Interference**: Alt+Click may not work reliably during CLI Agent execution due to:
   - High-frequency output causing cursor position desynchronization
   - Raw mode terminal conflicts with xterm.js Alt+Click implementation
   - Escape sequences being output directly instead of cursor positioning
 
 ### Intelligent Conflict Resolution
-The extension automatically detects Claude Code activity and temporarily disables Alt+Click during:
-- Claude Code execution sessions (detected by output patterns)
+The extension automatically detects CLI Agent activity and temporarily disables Alt+Click during:
+- CLI Agent execution sessions (detected by output patterns)
 - High-frequency terminal output (>500 chars in 2 seconds)
 - Large output chunks (≥1000 characters)
 
 ### User Experience
 - **Visual Feedback**: When Alt+Click is disabled, users see:
-  - "⚡ Claude Code Active" tooltip at click location
+  - "⚡ CLI Agent Active" tooltip at click location
   - System notification explaining the temporary disable state
-  - Re-enablement notification when Claude Code session ends
+  - Re-enablement notification when CLI Agent session ends
 
 ### Configuration Requirements
 Alt+Click requires both VS Code settings to be enabled:
@@ -222,14 +292,14 @@ Alt+Click requires both VS Code settings to be enabled:
 
 ### Best Practices
 1. **Regular Terminal Use**: Alt+Click works normally for standard shell commands
-2. **Claude Code Sessions**: Alt+Click is temporarily disabled for optimal performance
-3. **Manual Re-enable**: Alt+Click automatically re-enables after Claude Code detection ends
+2. **CLI Agent Sessions**: Alt+Click is temporarily disabled for optimal performance
+3. **Manual Re-enable**: Alt+Click automatically re-enables after CLI Agent detection ends
 4. **Troubleshooting**: Check VS Code Developer Console for Alt+Click event logs
 
 ### Technical Implementation
-- **Detection Patterns**: Uses regex patterns to identify Claude Code output
-- **Buffer Optimization**: Claude Code output uses 4ms flush intervals vs 16ms normal
-- **State Management**: Tracks Claude Code activity and Alt+Click availability
+- **Detection Patterns**: Uses regex patterns to identify CLI Agent output
+- **Buffer Optimization**: CLI Agent output uses 4ms flush intervals vs 16ms normal
+- **State Management**: Tracks CLI Agent activity and Alt+Click availability
 - **Error Handling**: Graceful fallback with user notifications
 
 ### Recent Architecture Changes
@@ -373,3 +443,47 @@ The test environment automatically configures:
 - Process event handler polyfills for Mocha compatibility
 - DOM mocking via JSDOM for webview component tests
 - Sinon sandboxes for isolated test execution
+
+## File Reference Features
+
+### Overview
+This extension provides two file reference commands for different AI assistants:
+1. **CLI Agent File Reference** (`@filename` format) - CMD+Option+L (Mac) / Ctrl+Alt+L (Windows/Linux)
+2. **GitHub Copilot Chat File Reference** (`#file:filename` format) - CMD+K CMD+C (Mac) / Ctrl+K Ctrl+C (Windows/Linux)
+
+### CLI Agent File Reference (@filename)
+- **Command**: `secondaryTerminal.sendAtMention`
+- **Keybinding**: CMD+Option+L (Mac) / Ctrl+Alt+L (Windows/Linux)
+- **Format**: `@filename` or `@filename#L10-L25` (with line range)
+- **Implementation**: `src/commands/FileReferenceCommand.ts`
+- **Features**:
+  - Sends file reference to active CLI Agent terminals
+  - Supports line range selection (e.g., `@src/test.ts#L5-L10`)
+  - Auto-focuses secondary terminal after sending
+  - Detects connected CLI Agents (Claude, Gemini)
+
+### GitHub Copilot Chat File Reference (#file:)
+- **Command**: `secondaryTerminal.activateCopilot`
+- **Keybinding**: CMD+K CMD+C (Mac) / Ctrl+K Ctrl+C (Windows/Linux)
+- **Format**: `#file:filename` (GitHub Copilot standard format)
+- **Implementation**: `src/commands/CopilotIntegrationCommand.ts`
+- **Features**:
+  - Opens GitHub Copilot Chat
+  - Copies file reference to clipboard for easy pasting
+  - Uses `#file:` prefix as per Copilot conventions
+  - Note: Line ranges are detected but not included in output (Copilot limitation)
+
+### Configuration Settings
+```json
+{
+  "secondaryTerminal.enableCliAgentIntegration": true,      // Enable @filename shortcuts
+  "secondaryTerminal.enableGitHubCopilotIntegration": true  // Enable #file: shortcuts
+}
+```
+
+### Implementation Details
+- Both commands share similar file detection logic but use different output formats
+- File paths are relative to workspace root
+- Selection detection converts VS Code's 0-based line numbers to 1-based
+- Copilot integration uses clipboard as fallback due to API limitations
+- Both features can be independently enabled/disabled via settings

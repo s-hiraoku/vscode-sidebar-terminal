@@ -56,7 +56,7 @@ function setupTestEnvironment() {
   };
 }
 
-describe('SidebarTerminalProvider Extended', () => {
+describe('SecondaryTerminalProvider Extended', () => {
   let sandbox: sinon.SinonSandbox;
   let dom: JSDOM;
   let document: Document;
@@ -325,7 +325,7 @@ describe('SidebarTerminalProvider Extended', () => {
       // Test that configuration change handling doesn't throw errors
       expect(() => {
         // Simulate the configuration change process
-        configChangeEvent.affectsConfiguration('sidebarTerminal');
+        configChangeEvent.affectsConfiguration('secondaryTerminal');
       }).to.not.throw();
 
       expect(configChangeEvent.affectsConfiguration).to.have.been.called;
@@ -344,7 +344,7 @@ describe('SidebarTerminalProvider Extended', () => {
         get: sinon.stub().returns(config),
       });
 
-      const terminalConfig = mockVscode.workspace.getConfiguration('sidebarTerminal');
+      const terminalConfig = mockVscode.workspace.getConfiguration('secondaryTerminal');
       const settings = terminalConfig.get('terminal');
 
       expect(settings).to.deep.equal(config);
@@ -392,7 +392,7 @@ describe('SidebarTerminalProvider Extended', () => {
           return (
             section === 'terminal.integrated.altClickMovesCursor' ||
             section === 'editor.multiCursorModifier' ||
-            section === 'sidebarTerminal.altClickMovesCursor'
+            section === 'secondaryTerminal.altClickMovesCursor'
           );
         }),
       };
@@ -402,7 +402,7 @@ describe('SidebarTerminalProvider Extended', () => {
         // Simulate checking each Alt+Click related setting
         configChangeEvent.affectsConfiguration('terminal.integrated.altClickMovesCursor');
         configChangeEvent.affectsConfiguration('editor.multiCursorModifier');
-        configChangeEvent.affectsConfiguration('sidebarTerminal.altClickMovesCursor');
+        configChangeEvent.affectsConfiguration('secondaryTerminal.altClickMovesCursor');
       }).to.not.throw();
 
       // Verify affectsConfiguration was called to check relevant settings

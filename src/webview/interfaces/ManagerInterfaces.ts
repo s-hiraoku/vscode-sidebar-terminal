@@ -23,6 +23,7 @@ export interface IManagerCoordinator {
   getTerminalInstance(terminalId: string): TerminalInstance | undefined;
   getAllTerminalInstances(): Map<string, TerminalInstance>;
   getAllTerminalContainers(): Map<string, HTMLElement>;
+  getTerminalElement(terminalId: string): HTMLElement | undefined;
   postMessageToExtension(message: unknown): void;
   log(message: string, ...args: unknown[]): void;
   createTerminal(id: string, name: string, config: PartialTerminalSettings): void;
@@ -40,6 +41,22 @@ export interface IManagerCoordinator {
   // 新しいアーキテクチャ: 状態更新処理
   updateState?(state: unknown): void;
   handleTerminalRemovedFromExtension?(terminalId: string): void;
+  // Claude状態管理
+  updateClaudeStatus(
+    activeTerminalName: string | null,
+    status: 'connected' | 'disconnected' | 'none',
+    agentType: string | null
+  ): void;
+  ensureTerminalFocus(terminalId: string): void;
+
+  // セッション復元関連
+  createTerminalFromSession?(
+    id: string,
+    name: string,
+    config: PartialTerminalSettings,
+    restoreMessage: string,
+    scrollbackData: string[]
+  ): void;
 }
 
 // Terminal management interface
@@ -55,6 +72,17 @@ export interface ITerminalManager {
   getAllTerminals(): Map<string, TerminalInstance>;
   getTerminalContainer(terminalId: string): HTMLElement | undefined;
   getAllTerminalContainers(): Map<string, HTMLElement>;
+
+  // セッション復元関連
+  createTerminalFromSession?(
+    id: string,
+    name: string,
+    config: PartialTerminalSettings,
+    restoreMessage: string,
+    scrollbackData: string[]
+  ): void;
+  getTerminalScrollback?(terminalId: string, maxLines: number): string[];
+
   dispose(): void;
 }
 
@@ -105,6 +133,12 @@ export interface IUIManager {
   applyAllVisualSettings(terminal: Terminal, settings: PartialTerminalSettings): void;
   addFocusIndicator(container: HTMLElement): void;
   createTerminalHeader(terminalId: string, terminalName: string): HTMLElement;
+  updateTerminalHeader(terminalId: string, newName: string): void;
+  updateCliAgentStatusDisplay(
+    activeTerminalName: string | null,
+    status: 'connected' | 'disconnected' | 'none',
+    agentType: string | null
+  ): void;
   applyVSCodeStyling(container: HTMLElement): void;
   dispose(): void;
 }

@@ -4,7 +4,7 @@ import {
   WebViewTerminalConfig,
   TerminalTheme,
   SplitDirection,
-  StatusType,
+  CliAgentStatusType,
 } from '../../types/shared';
 
 /**
@@ -24,7 +24,7 @@ export interface TerminalInstance {
 }
 
 // 型エイリアスは shared.ts からインポート済み
-export { TerminalTheme, SplitDirection, StatusType };
+export { TerminalTheme, SplitDirection, CliAgentStatusType };
 
 /**
  * WebView用ターミナル設定（詳細版）

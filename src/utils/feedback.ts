@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { VSCODE_COMMANDS } from '../constants';
 
 /**
  * Enhanced user feedback and error handling utilities
@@ -193,8 +194,8 @@ export class TerminalErrorHandler {
             title: 'Open Settings',
             action: () => {
               void vscode.commands.executeCommand(
-                'workbench.action.openSettings',
-                'sidebarTerminal.shell'
+                VSCODE_COMMANDS.WORKBENCH_OPEN_SETTINGS,
+                'secondaryTerminal.shell'
               );
             },
           },
@@ -221,7 +222,7 @@ export class TerminalErrorHandler {
           {
             title: 'Retry',
             action: () => {
-              void vscode.commands.executeCommand('sidebarTerminal.createTerminal');
+              void vscode.commands.executeCommand(VSCODE_COMMANDS.SECONDARY_TERMINAL_CREATE);
             },
           },
         ],
@@ -237,7 +238,7 @@ export class TerminalErrorHandler {
           {
             title: 'Kill Active Terminal',
             action: () => {
-              void vscode.commands.executeCommand('sidebarTerminal.killTerminal');
+              void vscode.commands.executeCommand(VSCODE_COMMANDS.SECONDARY_TERMINAL_KILL);
             },
           },
         ],
@@ -251,7 +252,7 @@ export class TerminalErrorHandler {
         {
           title: 'Create Terminal',
           action: () => {
-            void vscode.commands.executeCommand('sidebarTerminal.createTerminal');
+            void vscode.commands.executeCommand(VSCODE_COMMANDS.SECONDARY_TERMINAL_CREATE);
           },
         },
       ],
@@ -265,7 +266,7 @@ export class TerminalErrorHandler {
         {
           title: 'Refresh',
           action: () => {
-            void vscode.commands.executeCommand('workbench.action.reloadWindow');
+            void vscode.commands.executeCommand(VSCODE_COMMANDS.WORKBENCH_RELOAD_WINDOW);
           },
         },
       ],
