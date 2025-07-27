@@ -1,6 +1,6 @@
 /**
  * TDD (Test-Driven Development) ヘルパーユーティリティ
- * 
+ *
  * Red-Green-Refactorサイクルを支援するためのツール群
  */
 
@@ -20,7 +20,12 @@ import {
  */
 export class TDDWorkflowManager {
   private currentPhase: TDDPhase = TDD_PHASES.RED;
-  private testResults: Array<{ phase: TDDPhase; testName: string; passed: boolean; duration: number }> = [];
+  private testResults: Array<{
+    phase: TDDPhase;
+    testName: string;
+    passed: boolean;
+    duration: number;
+  }> = [];
 
   /**
    * Red フェーズ: 失敗するテストを書く
@@ -62,21 +67,23 @@ export class TDDWorkflowManager {
 
     const phaseIcon = this.getPhaseIcon(this.currentPhase);
     const statusIcon = passed ? '✅' : '❌';
-    console.log(`${phaseIcon} [TDD-${this.currentPhase}] ${statusIcon} ${testName} (${duration}ms)`);
+    console.log(
+      `${phaseIcon} [TDD-${this.currentPhase}] ${statusIcon} ${testName} (${duration}ms)`
+    );
   }
 
   /**
    * TDDサイクルの検証
    */
   public validateTDDCycle(testName: string): void {
-    const testHistory = this.testResults.filter(r => r.testName === testName);
-    
+    const testHistory = this.testResults.filter((r) => r.testName === testName);
+
     if (testHistory.length === 0) {
       throw new Error(`No test history found for: ${testName}`);
     }
 
     // Red-Green-Refactorサイクルの確認
-    const phases = testHistory.map(r => r.phase);
+    const phases = testHistory.map((r) => r.phase);
     console.log(`🔍 [TDD-VALIDATION] Test cycle for ${testName}: ${phases.join(' → ')}`);
   }
 
@@ -85,10 +92,14 @@ export class TDDWorkflowManager {
    */
   private getPhaseIcon(phase: TDDPhase): string {
     switch (phase) {
-      case TDD_PHASES.RED: return '🔴';
-      case TDD_PHASES.GREEN: return '🟢';
-      case TDD_PHASES.REFACTOR: return '🔵';
-      default: return '⚪';
+      case TDD_PHASES.RED:
+        return '🔴';
+      case TDD_PHASES.GREEN:
+        return '🟢';
+      case TDD_PHASES.REFACTOR:
+        return '🔵';
+      default:
+        return '⚪';
     }
   }
 
@@ -97,7 +108,7 @@ export class TDDWorkflowManager {
    */
   public generateTDDReport(): string {
     const totalTests = this.testResults.length;
-    const passedTests = this.testResults.filter(r => r.passed).length;
+    const passedTests = this.testResults.filter((r) => r.passed).length;
     const averageDuration = this.testResults.reduce((sum, r) => sum + r.duration, 0) / totalTests;
 
     return `
@@ -110,9 +121,9 @@ Success Rate: ${((passedTests / totalTests) * 100).toFixed(1)}%
 Average Duration: ${averageDuration.toFixed(1)}ms
 
 Phase Distribution:
-- RED: ${this.testResults.filter(r => r.phase === TDD_PHASES.RED).length}
-- GREEN: ${this.testResults.filter(r => r.phase === TDD_PHASES.GREEN).length}
-- REFACTOR: ${this.testResults.filter(r => r.phase === TDD_PHASES.REFACTOR).length}
+- RED: ${this.testResults.filter((r) => r.phase === TDD_PHASES.RED).length}
+- GREEN: ${this.testResults.filter((r) => r.phase === TDD_PHASES.GREEN).length}
+- REFACTOR: ${this.testResults.filter((r) => r.phase === TDD_PHASES.REFACTOR).length}
 `;
   }
 }
@@ -131,7 +142,7 @@ export class PerformanceTestHelper {
     const startTime = Date.now();
     const result = await fn();
     const duration = Date.now() - startTime;
-    
+
     console.log(`⏱️ [PERFORMANCE] ${testName}: ${duration}ms`);
     return { result, duration };
   }
@@ -145,7 +156,7 @@ export class PerformanceTestHelper {
     testName: string
   ): void {
     let threshold: number;
-    
+
     switch (operation) {
       case 'save':
         threshold = PERFORMANCE_THRESHOLDS.MAX_SAVE_TIME_MS;
@@ -159,14 +170,18 @@ export class PerformanceTestHelper {
     }
 
     if (duration > threshold) {
-      console.warn(`⚠️ [PERFORMANCE WARNING] ${testName} took ${duration}ms (threshold: ${threshold}ms)`);
+      console.warn(
+        `⚠️ [PERFORMANCE WARNING] ${testName} took ${duration}ms (threshold: ${threshold}ms)`
+      );
     } else {
       console.log(`✅ [PERFORMANCE OK] ${testName} completed in ${duration}ms`);
     }
 
     // アサーションとしても使用可能
-    expect(duration).to.be.lessThan(threshold, 
-      `Performance test failed: ${testName} took ${duration}ms (max: ${threshold}ms)`);
+    expect(duration).to.be.lessThan(
+      threshold,
+      `Performance test failed: ${testName} took ${duration}ms (max: ${threshold}ms)`
+    );
   }
 }
 
@@ -267,15 +282,17 @@ export class RestoreAssertionHelper {
     delayMs: number = 2000
   ): Promise<void> {
     // Scrollback復元の遅延を待つ
-    await new Promise(resolve => setTimeout(resolve, delayMs));
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
 
     expect(mockSidebarProvider._sendMessage.calledOnce).to.be.true;
     const sentMessage = mockSidebarProvider._sendMessage.firstCall.args[0];
     expect(sentMessage.command).to.equal('restoreScrollback');
     expect(sentMessage.terminalId).to.equal(expectedTerminalId);
     expect(sentMessage.scrollbackContent).to.have.length(expectedLines);
-    
-    console.log(`✅ [ASSERTION] Scrollback restored: ${expectedLines} lines to ${expectedTerminalId}`);
+
+    console.log(
+      `✅ [ASSERTION] Scrollback restored: ${expectedLines} lines to ${expectedTerminalId}`
+    );
   }
 }
 
@@ -293,7 +310,7 @@ export class TestDataFactory {
     includeScrollback: boolean = false
   ): unknown {
     const terminals = [];
-    
+
     for (let i = 1; i <= terminalCount; i++) {
       const terminalId = `term${i}`;
       const terminal: any = {
@@ -329,7 +346,7 @@ export class TestDataFactory {
     const sessionData = this.createSessionData(1) as any;
     return {
       ...sessionData,
-      timestamp: Date.now() - (daysAgo * 24 * 60 * 60 * 1000),
+      timestamp: Date.now() - daysAgo * 24 * 60 * 60 * 1000,
     };
   }
 
@@ -368,13 +385,13 @@ export abstract class TDDTestSuite {
   ): Promise<T> {
     // RED phase
     this.tddManager.startRedPhase(testName);
-    
+
     try {
       const { result, duration } = await PerformanceTestHelper.measureExecutionTime(
         testImplementation,
         testName
       );
-      
+
       this.tddManager.recordTestResult(testName, true, duration);
       return result;
     } catch (error) {

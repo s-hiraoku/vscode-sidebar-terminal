@@ -79,7 +79,7 @@ describe('CopilotIntegrationCommand', () => {
     it('should show information message when integration is disabled', () => {
       // Reset executeCommand spy to ensure clean state
       (vscode.commands.executeCommand as sinon.SinonStub).resetHistory();
-      
+
       // Mock integration disabled
       const mockConfig = {
         get: sandbox.stub().returns(false),

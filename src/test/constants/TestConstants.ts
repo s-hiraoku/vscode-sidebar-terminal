@@ -1,6 +1,6 @@
 /**
  * テスト用定数定義
- * 
+ *
  * TDD (Test-Driven Development) のベストプラクティスに従い、
  * テストで使用するマジックナンバーや文字列を定数として定義
  */
@@ -176,8 +176,8 @@ export const PERFORMANCE_THRESHOLDS = {
 // ========== エクスポート用型定義 ==========
 
 /** テスト定数の型安全性確保 */
-export type TestTerminalCount = typeof TEST_TERMINAL_COUNTS[keyof typeof TEST_TERMINAL_COUNTS];
-export type TestTerminalId = typeof TEST_TERMINAL_IDS[keyof typeof TEST_TERMINAL_IDS];
-export type TestTerminalName = typeof TEST_TERMINAL_NAMES[keyof typeof TEST_TERMINAL_NAMES];
-export type TDDPhase = typeof TDD_PHASES[keyof typeof TDD_PHASES];
-export type TestExecutionMode = typeof TEST_EXECUTION_MODES[keyof typeof TEST_EXECUTION_MODES];
+export type TestTerminalCount = (typeof TEST_TERMINAL_COUNTS)[keyof typeof TEST_TERMINAL_COUNTS];
+export type TestTerminalId = (typeof TEST_TERMINAL_IDS)[keyof typeof TEST_TERMINAL_IDS];
+export type TestTerminalName = (typeof TEST_TERMINAL_NAMES)[keyof typeof TEST_TERMINAL_NAMES];
+export type TDDPhase = (typeof TDD_PHASES)[keyof typeof TDD_PHASES];
+export type TestExecutionMode = (typeof TEST_EXECUTION_MODES)[keyof typeof TEST_EXECUTION_MODES];

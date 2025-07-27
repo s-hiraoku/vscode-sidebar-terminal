@@ -612,7 +612,7 @@ class TerminalWebviewManager {
     }>
   ): void {
     log('🔄 [WEBVIEW] Restoring scrollback for terminal:', id);
-    
+
     const terminalInstance = this.splitManager.getTerminals().get(id);
     if (terminalInstance && terminalInstance.terminal) {
       try {

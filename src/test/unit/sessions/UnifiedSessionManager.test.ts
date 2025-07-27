@@ -9,11 +9,28 @@ import { UnifiedSessionManager } from '../../../sessions/UnifiedSessionManager';
  */
 describe('🔄 UnifiedSessionManager Tests', () => {
   let sandbox: sinon.SinonSandbox;
-  let mockContext: any;
-  let mockTerminalManager: any;
-  let mockGlobalState: any;
+  let mockContext: {
+    globalState: {
+      get: sinon.SinonStub;
+      update: sinon.SinonStub;
+      keys: sinon.SinonStub;
+      setKeysForSync: sinon.SinonStub;
+    };
+    subscriptions: unknown[];
+    extensionPath: string;
+  };
+  let mockTerminalManager: {
+    getTerminals: sinon.SinonStub;
+    getActiveTerminalId: sinon.SinonStub;
+    createTerminal: sinon.SinonStub;
+    setActiveTerminal: sinon.SinonStub;
+    dispose: sinon.SinonStub;
+  };
+  let mockGlobalState: typeof mockContext.globalState;
   let sessionManager: UnifiedSessionManager;
-  let mockSidebarProvider: any;
+  let mockSidebarProvider: {
+    _sendMessage: sinon.SinonStub;
+  };
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
@@ -43,7 +60,7 @@ describe('🔄 UnifiedSessionManager Tests', () => {
       _sendMessage: sandbox.stub().resolves(),
     };
 
-    sessionManager = new UnifiedSessionManager(mockContext, mockTerminalManager);
+    sessionManager = new UnifiedSessionManager(mockContext as any, mockTerminalManager as any);
     sessionManager.setSidebarProvider(mockSidebarProvider);
   });
 
@@ -91,7 +108,7 @@ describe('🔄 UnifiedSessionManager Tests', () => {
       // Verify saved data structure
       const savedDataCall = mockGlobalState.update.getCall(0);
       const savedData = savedDataCall.args[1];
-      
+
       expect(savedData).to.have.property('terminals');
       expect(savedData).to.have.property('activeTerminalId', 'terminal-1');
       expect(savedData).to.have.property('timestamp');
@@ -198,7 +215,7 @@ describe('🔄 UnifiedSessionManager Tests', () => {
           },
         ],
         activeTerminalId: 'terminal-1',
-        timestamp: Date.now() - (8 * 24 * 60 * 60 * 1000), // 8 days ago
+        timestamp: Date.now() - 8 * 24 * 60 * 60 * 1000, // 8 days ago
         version: '2.0.0',
       };
 
@@ -319,9 +336,9 @@ describe('🔄 UnifiedSessionManager Tests', () => {
   describe('🔧 Sidebar Provider Integration', () => {
     it('should set sidebar provider correctly', () => {
       const newProvider = { _sendMessage: sandbox.stub() };
-      
+
       sessionManager.setSidebarProvider(newProvider);
-      
+
       // Verify by attempting to save with scrollback (should call the provider)
       // This is tested implicitly in save tests
     });
