@@ -131,6 +131,15 @@ export class MessageManager implements IMessageManager {
         case 'sessionRestoreError':
           this.handleSessionRestoreErrorMessage(msg);
           break;
+        case 'getScrollback':
+          this.handleGetScrollbackMessage(msg, coordinator);
+          break;
+        case 'restoreScrollback':
+          this.handleRestoreScrollbackMessage(msg, coordinator);
+          break;
+        case 'scrollbackProgress':
+          this.handleScrollbackProgressMessage(msg);
+          break;
 
         case 'sessionSaved':
           this.handleSessionSavedMessage(msg);
@@ -751,28 +760,6 @@ export class MessageManager implements IMessageManager {
     }
   }
 
-  /**
-   * Handle get scrollback message response from extension
-   */
-  private handleGetScrollbackMessage(msg: MessageCommand, coordinator: IManagerCoordinator): void {
-    const terminalId = msg.terminalId as string;
-    const scrollbackData = msg.scrollbackData as string[];
-
-    if (terminalId && scrollbackData) {
-      log(
-        `📜 [MESSAGE] Scrollback data received for terminal ${terminalId}: ${scrollbackData.length} lines`
-      );
-
-      // Forward scrollback data to the terminal
-      const terminal = coordinator.getTerminalInstance(terminalId);
-      if (terminal) {
-        // Write scrollback data to terminal (this would be used for session saving)
-        log(`📜 [MESSAGE] Scrollback data forwarded to terminal ${terminalId}`);
-      } else {
-        log(`⚠️ [MESSAGE] Terminal ${terminalId} not found for scrollback data`);
-      }
-    }
-  }
 
   /**
    * Request scrollback data from extension for a terminal
@@ -862,6 +849,193 @@ export class MessageManager implements IMessageManager {
     // Import the function here to avoid circular dependencies
     const { showTerminalRestoreError } = require('../utils/NotificationUtils');
     showTerminalRestoreError(terminalName, error);
+  }
+
+  /**
+   * Handle scrollback extraction request
+   */
+  private handleGetScrollbackMessage(msg: MessageCommand, coordinator: IManagerCoordinator): void {
+    log('📋 [MESSAGE] Handling get scrollback message');
+    
+    const terminalId = msg.terminalId as string;
+    const maxLines = (msg.maxLines as number) || 1000;
+    
+    if (!terminalId) {
+      log('❌ [MESSAGE] No terminal ID provided for scrollback extraction');
+      return;
+    }
+
+    // Get scrollback data from the current terminal
+    const terminalElement = coordinator.getTerminalElement(terminalId);
+    if (!terminalElement) {
+      log(`❌ [MESSAGE] Terminal element not found for ID: ${terminalId}`);
+      return;
+    }
+
+    try {
+      // Extract scrollback from xterm.js
+      const scrollbackContent = this.extractScrollbackFromTerminal(terminalElement, maxLines);
+      
+      // Send scrollback data back to extension
+      this.queueMessage({
+        command: 'scrollbackExtracted',
+        terminalId,
+        scrollbackContent,
+        timestamp: Date.now()
+      }, coordinator);
+      
+      log(`✅ [MESSAGE] Scrollback extracted for terminal ${terminalId}: ${scrollbackContent.length} lines`);
+      
+    } catch (error) {
+      log(`❌ [MESSAGE] Error extracting scrollback: ${error instanceof Error ? error.message : String(error)}`);
+      
+      this.queueMessage({
+        command: 'error',
+        error: `Failed to extract scrollback: ${error instanceof Error ? error.message : String(error)}`,
+        terminalId,
+        timestamp: Date.now()
+      }, coordinator);
+    }
+  }
+
+  /**
+   * Handle scrollback restoration request
+   */
+  private handleRestoreScrollbackMessage(msg: MessageCommand, coordinator: IManagerCoordinator): void {
+    log('🔄 [MESSAGE] Handling restore scrollback message');
+    
+    const terminalId = msg.terminalId as string;
+    const scrollbackContent = msg.scrollbackContent as Array<{
+      content: string;
+      type?: 'output' | 'input' | 'error';
+      timestamp?: number;
+    }>;
+    
+    if (!terminalId || !scrollbackContent) {
+      log('❌ [MESSAGE] Invalid scrollback restore request');
+      return;
+    }
+
+    try {
+      // Restore scrollback to the terminal
+      this.restoreScrollbackToTerminal(terminalId, scrollbackContent, coordinator);
+      
+      // Send confirmation back to extension
+      this.queueMessage({
+        command: 'scrollbackRestored',
+        terminalId,
+        restoredLines: scrollbackContent.length,
+        timestamp: Date.now()
+      }, coordinator);
+      
+      log(`✅ [MESSAGE] Scrollback restored for terminal ${terminalId}: ${scrollbackContent.length} lines`);
+      
+    } catch (error) {
+      log(`❌ [MESSAGE] Error restoring scrollback: ${error instanceof Error ? error.message : String(error)}`);
+      
+      this.queueMessage({
+        command: 'error',
+        error: `Failed to restore scrollback: ${error instanceof Error ? error.message : String(error)}`,
+        terminalId,
+        timestamp: Date.now()
+      }, coordinator);
+    }
+  }
+
+  /**
+   * Handle scrollback progress updates
+   */
+  private handleScrollbackProgressMessage(msg: MessageCommand): void {
+    log('📊 [MESSAGE] Handling scrollback progress message');
+    
+    const progressInfo = msg.scrollbackProgress as {
+      terminalId: string;
+      progress: number;
+      currentLines: number;
+      totalLines: number;
+      stage: 'loading' | 'decompressing' | 'restoring';
+    };
+    
+    if (!progressInfo) {
+      log('❌ [MESSAGE] No progress information provided');
+      return;
+    }
+
+    // Show progress notification
+    log(`📊 [MESSAGE] Scrollback progress: ${progressInfo.progress}% (${progressInfo.currentLines}/${progressInfo.totalLines})`);
+    
+    // TODO: Update progress UI if needed
+  }
+
+  /**
+   * Extract scrollback content from terminal element
+   */
+  private extractScrollbackFromTerminal(
+    terminalElement: HTMLElement, 
+    maxLines: number
+  ): Array<{ content: string; type?: 'output' | 'input' | 'error'; timestamp?: number }> {
+    log(`🔍 [MESSAGE] Extracting scrollback from terminal (max ${maxLines} lines)`);
+    
+    // Access xterm.js instance
+    const xtermInstance = (terminalElement as any).xterm;
+    if (!xtermInstance) {
+      throw new Error('xterm.js instance not found');
+    }
+
+    const scrollbackLines: Array<{ content: string; type?: 'output' | 'input' | 'error'; timestamp?: number }> = [];
+    
+    // Get buffer content
+    const buffer = xtermInstance.buffer.active;
+    const totalLines = Math.min(buffer.length, maxLines);
+    
+    for (let i = Math.max(0, buffer.length - totalLines); i < buffer.length; i++) {
+      const line = buffer.getLine(i);
+      if (line) {
+        const content = line.translateToString();
+        if (content.trim()) { // Skip empty lines
+          scrollbackLines.push({
+            content,
+            type: 'output', // Default to output, could be enhanced to detect input/error
+            timestamp: Date.now()
+          });
+        }
+      }
+    }
+    
+    log(`✅ [MESSAGE] Extracted ${scrollbackLines.length} lines from terminal`);
+    return scrollbackLines;
+  }
+
+  /**
+   * Restore scrollback content to terminal
+   */
+  private restoreScrollbackToTerminal(
+    terminalId: string,
+    scrollbackContent: Array<{ content: string; type?: 'output' | 'input' | 'error'; timestamp?: number }>,
+    coordinator: IManagerCoordinator
+  ): void {
+    log(`🔄 [MESSAGE] Restoring ${scrollbackContent.length} lines to terminal ${terminalId}`);
+    
+    const terminalElement = coordinator.getTerminalElement(terminalId);
+    if (!terminalElement) {
+      throw new Error(`Terminal element not found for ID: ${terminalId}`);
+    }
+
+    const xtermInstance = (terminalElement as any).xterm;
+    if (!xtermInstance) {
+      throw new Error('xterm.js instance not found');
+    }
+
+    // Clear current content and restore scrollback
+    // Note: This is a simplified implementation
+    // In practice, we might want to preserve the current prompt
+    
+    for (const line of scrollbackContent) {
+      // Write each line to the terminal
+      xtermInstance.writeln(line.content);
+    }
+    
+    log(`✅ [MESSAGE] Restored ${scrollbackContent.length} lines to terminal ${terminalId}`);
   }
 
   public dispose(): void {

@@ -23,6 +23,7 @@ export interface IManagerCoordinator {
   getTerminalInstance(terminalId: string): TerminalInstance | undefined;
   getAllTerminalInstances(): Map<string, TerminalInstance>;
   getAllTerminalContainers(): Map<string, HTMLElement>;
+  getTerminalElement(terminalId: string): HTMLElement | undefined;
   postMessageToExtension(message: unknown): void;
   log(message: string, ...args: unknown[]): void;
   createTerminal(id: string, name: string, config: PartialTerminalSettings): void;

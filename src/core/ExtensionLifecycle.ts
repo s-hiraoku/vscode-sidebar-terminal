@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { SecondaryTerminalProvider } from '../providers/SecondaryTerminalProvider';
 import { TerminalManager } from '../terminals/TerminalManager';
 import { SimpleSessionManager } from '../sessions/SimpleSessionManager';
+import { ScrollbackSessionManager } from '../sessions/ScrollbackSessionManager';
 import { extension as log, logger, LogLevel } from '../utils/logger';
 import { FileReferenceCommand, TerminalCommand } from '../commands';
 import { CopilotIntegrationCommand } from '../commands/CopilotIntegrationCommand';
@@ -15,6 +16,7 @@ export class ExtensionLifecycle {
   private terminalManager: TerminalManager | undefined;
   private sidebarProvider: SecondaryTerminalProvider | undefined;
   private simpleSessionManager: SimpleSessionManager | undefined;
+  private scrollbackSessionManager: ScrollbackSessionManager | undefined;
   private fileReferenceCommand: FileReferenceCommand | undefined;
   private terminalCommand: TerminalCommand | undefined;
   private copilotIntegrationCommand: CopilotIntegrationCommand | undefined;
@@ -53,6 +55,11 @@ export class ExtensionLifecycle {
       log('🔧 [EXTENSION] Initializing simple session manager...');
       this.simpleSessionManager = new SimpleSessionManager(context, this.terminalManager);
       log('✅ [EXTENSION] Simple session manager initialized');
+
+      // Initialize scrollback session manager
+      log('🔧 [EXTENSION] Initializing scrollback session manager...');
+      this.scrollbackSessionManager = new ScrollbackSessionManager(context);
+      log('✅ [EXTENSION] Scrollback session manager initialized');
 
       // Initialize command handlers
       this.fileReferenceCommand = new FileReferenceCommand(this.terminalManager);
@@ -313,6 +320,12 @@ export class ExtensionLifecycle {
     if (this.simpleSessionManager) {
       log('🔧 [EXTENSION] Disposing simple session manager...');
       this.simpleSessionManager = undefined;
+    }
+
+    // Dispose scrollback session manager
+    if (this.scrollbackSessionManager) {
+      log('🔧 [EXTENSION] Disposing scrollback session manager...');
+      this.scrollbackSessionManager = undefined;
     }
 
     // Dispose terminal manager
