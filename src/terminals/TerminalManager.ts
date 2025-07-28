@@ -46,6 +46,10 @@ export class TerminalManager {
     terminalName?: string;
   }>();
 
+  // 出力履歴保存用バッファ（最大1000行/ターミナル）
+  private readonly _outputHistory = new Map<string, string[]>();
+  private readonly MAX_OUTPUT_HISTORY = 1000;
+
   // 操作の順序保証のためのキュー
   private operationQueue: Promise<void> = Promise.resolve();
 
@@ -559,6 +563,9 @@ export class TerminalManager {
     }
     buffer.push(data);
 
+    // 出力履歴に追加
+    this.addToOutputHistory(terminalId, data);
+
     // Flush immediately if buffer is full or data is large
     if (buffer.length >= this.MAX_BUFFER_SIZE || data.length > 1000) {
       this._flushBuffer(terminalId);
@@ -638,6 +645,10 @@ export class TerminalManager {
 
     // Remove from terminals map
     this._terminals.delete(terminalId);
+
+    // 出力履歴もクリア
+    this.clearOutputHistory(terminalId);
+
     this._terminalRemovedEmitter.fire(terminalId);
 
     log('🧹 [TERMINAL] Terminal data cleaned up:', terminalId);
@@ -1187,5 +1198,263 @@ export class TerminalManager {
   public finalizeSessionRestore(): void {
     // Disabled - do nothing to prevent compilation errors
     log('🎯 [SESSION] Finalizing session restore - STUB METHOD, DISABLED FOR DEBUGGING');
+  }
+
+  // =================== Output History Management ===================
+
+  /**
+   * ANSIエスケープシーケンスを除去
+   */
+  private cleanAnsiEscapeSequences(text: string): string {
+    // ANSIエスケープシーケンスのパターン
+    // \u001b[0-9;]*[A-Za-z] - カラー、カーソル移動等
+    // \u001b]0;.*?\u0007 - ウィンドウタイトル設定
+    // \u001b]1;.*?\u0007 - タブタイトル設定  
+    // \u001b]7;.*?\u0007 - 作業ディレクトリ設定
+    // \u001b\\ - その他のエスケープシーケンス終了
+    return text
+      .replace(/\u001b\[[0-9;]*[A-Za-z]/g, '') // 基本的なANSIエスケープシーケンス
+      .replace(/\u001b\][0-9];[^\u0007]*\u0007/g, '') // OSCシーケンス
+      .replace(/\u001b\\/g, '') // エスケープシーケンス終了
+      .replace(/\r/g, '') // キャリッジリターン除去
+      .replace(/\u001b\?[0-9]*[hl]/g, '') // プライベートモード設定
+      .replace(/\u001b=/g, '') // アプリケーションキーパッド
+      .replace(/\u001b>/g, '') // 通常キーパッド
+      .trim();
+  }
+
+  /**
+   * プロンプトパターンかどうかを判定
+   */
+  private isPromptPattern(text: string): boolean {
+    // 一般的なプロンプトパターン
+    const promptPatterns = [
+      /^[\s~]*❯[\s\d.:]*$/, // ❯ with optional path and time
+      /^[\s~]*\$[\s\d.:]*$/, // $ with optional path and time  
+      /^[\s~]*%[\s\d.:]*$/, // % with optional path and time
+      /^[\s~]*#[\s\d.:]*$/, // # with optional path and time
+      /^[\s~]*>[\s\d.:]*$/, // > with optional path and time
+      /^[\w@-]+:[\w~/-]*[$#%>❯]\s*$/, // user@host:path$ format
+      /^[\s\w~/.:-]*❯[\s\d.:]*$/, // path ❯ time format
+      /^\s*[\d.:]+\s*$/, // time only (e.g., "00:30")
+      /^[\s\w~/-]*\s+[\d.:]+\s*$/, // path + time format
+    ];
+    
+    return promptPatterns.some(pattern => pattern.test(text));
+  }
+
+  /**
+   * コマンドパターンかどうかを判定（除外するため）
+   */
+  private isCommandPattern(text: string): boolean {
+    // 一般的なコマンドパターン（これらは除外したい）
+    const commandPatterns = [
+      /^[a-zA-Z][\w-]*(\s+.*)?$/, // starts with letter, followed by word chars
+      /^\.\/[\w.-]+(\s+.*)?$/, // ./script execution
+      /^\/[\w/-]+(\s+.*)?$/, // absolute path execution
+      /^echo\s+.*$/, // echo commands specifically
+      /^ls(\s+.*)?$/, // ls commands
+      /^cat(\s+.*)?$/, // cat commands
+      /^pwd(\s+.*)?$/, // pwd commands
+      /^cd(\s+.*)?$/, // cd commands
+      /^mkdir(\s+.*)?$/, // mkdir commands
+      /^rm(\s+.*)?$/, // rm commands
+      /^cp(\s+.*)?$/, // cp commands
+      /^mv(\s+.*)?$/, // mv commands
+      /^git(\s+.*)?$/, // git commands
+      /^npm(\s+.*)?$/, // npm commands
+      /^node(\s+.*)?$/, // node commands
+      /^python(\s+.*)?$/, // python commands
+    ];
+    
+    return commandPatterns.some(pattern => pattern.test(text));
+  }
+
+  /**
+   * 入力エコーバック（部分入力）かどうかを判定
+   */
+  private isPartialInput(text: string): boolean {
+    // 非常に短い文字列（1-3文字）で、完全なワードでない
+    if (text.length <= 3 && !/^\w+$/.test(text)) {
+      return true;
+    }
+    
+    // 単一文字
+    if (text.length === 1) {
+      return true;
+    }
+    
+    // 一般的なコマンドの部分入力パターン
+    const partialPatterns = [
+      /^e$/, /^ec$/, /^ech$/, /^echo$/,
+      /^l$/, /^ls$/,
+      /^c$/, /^ca$/, /^cat$/,
+      /^p$/, /^pw$/, /^pwd$/,
+      /^c$/, /^cd$/,
+      /^m$/, /^mk$/, /^mkd$/, /^mkdi$/,
+      /^r$/, /^rm$/,
+      /^c$/, /^cp$/,
+      /^m$/, /^mv$/,
+    ];
+    
+    return partialPatterns.some(pattern => pattern.test(text));
+  }
+
+  /**
+   * 有効な出力コンテンツかどうかを判定（出力のみ保存版）
+   */
+  private isSignificantContent(cleanText: string): boolean {
+    if (!cleanText || cleanText.length < 1) {
+      return false;
+    }
+    
+    // 空白のみの行は除外
+    if (/^\s*$/.test(cleanText)) {
+      return false;
+    }
+    
+    // プロンプトパターンは除外
+    if (this.isPromptPattern(cleanText)) {
+      return false;
+    }
+    
+    // 入力エコーバック（部分入力）は除外
+    if (this.isPartialInput(cleanText)) {
+      return false;
+    }
+    
+    // コマンド自体は除外（出力のみ保存したい）
+    if (this.isCommandPattern(cleanText)) {
+      return false;
+    }
+    
+    // 単一記号のみは除外
+    if (/^[^\w\s]+$/.test(cleanText) && cleanText.length <= 3) {
+      return false;
+    }
+    
+    // パス表示（/home/user など）は除外
+    if (/^\/[\w/-]+$/.test(cleanText)) {
+      return false;
+    }
+    
+    // 最小長チェック：意味のある出力は通常2文字以上
+    if (cleanText.length >= 2) {
+      return true;
+    }
+    
+    return false;
+  }
+
+  /**
+   * 重複や類似行を除去
+   */
+  private isDuplicateOrSimilar(newLine: string, history: string[]): boolean {
+    if (history.length === 0) {
+      return false;
+    }
+    
+    const lastLine = history[history.length - 1];
+    if (!lastLine) {
+      return false;
+    }
+    
+    // 完全一致は重複
+    if (lastLine === newLine) {
+      return true;
+    }
+    
+    // 短い行の場合、類似性をチェック
+    if (newLine.length <= 5) {
+      // 最後の行が現在の行を含んでいる場合（部分入力の可能性）
+      if (lastLine.includes(newLine) || newLine.includes(lastLine)) {
+        return true;
+      }
+    }
+    
+    // 直近の3行をチェック
+    const recentLines = history.slice(-3);
+    for (const recentLine of recentLines) {
+      if (recentLine === newLine) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+
+  /**
+   * 出力データを履歴に追加（高度版）
+   */
+  private addToOutputHistory(terminalId: string, data: string): void {
+    let history = this._outputHistory.get(terminalId);
+    if (!history) {
+      history = [];
+      this._outputHistory.set(terminalId, history);
+    }
+
+    // データを行ごとに分割して追加
+    const lines = data.split('\n');
+    for (const line of lines) {
+      // ANSIエスケープシーケンスを除去
+      const cleanLine = this.cleanAnsiEscapeSequences(line);
+      
+      // 意味のあるコンテンツかつ重複でないもののみを保存
+      if (this.isSignificantContent(cleanLine) && 
+          !this.isDuplicateOrSimilar(cleanLine, history)) {
+        
+        history.push(cleanLine);
+        
+        // バッファサイズ制限
+        if (history.length > this.MAX_OUTPUT_HISTORY) {
+          history.shift(); // 古い行を削除
+        }
+        
+        // デバッグログ: 保存された行を記録
+        log(`✅ [OUTPUT-ONLY] Saved output for ${terminalId}: "${cleanLine}"`);
+      } else {
+        // デバッグログ: 除外された行を記録
+        if (cleanLine.length > 0) {
+          let reason = 'unknown';
+          if (!this.isSignificantContent(cleanLine)) {
+            if (this.isPromptPattern(cleanLine)) reason = 'prompt';
+            else if (this.isPartialInput(cleanLine)) reason = 'partial-input';
+            else if (this.isCommandPattern(cleanLine)) reason = 'command';
+            else reason = 'not-significant';
+          } else if (this.isDuplicateOrSimilar(cleanLine, history)) {
+            reason = 'duplicate';
+          }
+          log(`🚫 [OUTPUT-ONLY] Filtered out (${reason}) for ${terminalId}: "${cleanLine}"`);
+        }
+      }
+    }
+  }
+
+  /**
+   * 最近の出力履歴を取得
+   */
+  public getRecentOutput(terminalId: string, maxLines: number = 100): string[] | null {
+    const history = this._outputHistory.get(terminalId);
+    if (!history || history.length === 0) {
+      return null;
+    }
+
+    // 最新のmaxLines行を返す
+    const startIndex = Math.max(0, history.length - maxLines);
+    return history.slice(startIndex);
+  }
+
+  /**
+   * ターミナルの出力履歴をクリア
+   */
+  public clearOutputHistory(terminalId: string): void {
+    this._outputHistory.delete(terminalId);
+  }
+
+  /**
+   * 全ての出力履歴をクリア
+   */
+  public clearAllOutputHistory(): void {
+    this._outputHistory.clear();
   }
 }

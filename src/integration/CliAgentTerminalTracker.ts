@@ -43,11 +43,11 @@ export class CliAgentTracker {
   }
 
   /**
-   * SidebarTerminalProviderを設定
+   * SecandarySidebarを設定
    */
   public setSidebarProvider(provider: SecondaryTerminalProvider): void {
     this.sidebarProvider = provider;
-    log('🔧 [CLAUDE-TRACKER] SidebarTerminalProvider reference set');
+    log('🔧 [CLAUDE-TRACKER] SecandarySidebar reference set');
   }
 
   /**

@@ -10,30 +10,36 @@ A powerful VS Code extension that displays a terminal in the sidebar for efficie
 ## 📸 Screenshots
 
 ### Main Interface
+
 ![Main Interface](./docs/images/screenshots/main-interface.png)
-*Terminal integrated into VS Code sidebar with multiple tabs and controls*
+_Terminal integrated into VS Code sidebar with multiple tabs and controls_
 
 ### Multiple Terminals
+
 ![Multiple Terminals](./docs/images/screenshots/multiple-terminals.png)
-*Manage multiple terminal sessions with easy tab switching*
+_Manage multiple terminal sessions with easy tab switching_
 
 ### Split Terminal View
+
 ![Split Terminal](./docs/images/screenshots/split-terminal.png)
-*Split terminal functionality for parallel command execution*
+_Split terminal functionality for parallel command execution_
 
 ## 🎬 Demos
 
 ### Basic Usage
+
 ![Basic Usage](./docs/images/gifs/basic-usage.gif)
-*Quick demonstration of opening terminal and running commands*
+_Quick demonstration of opening terminal and running commands_
 
 ### Terminal Management
+
 ![Terminal Management](./docs/images/gifs/terminal-management.gif)
-*Creating, switching, and managing multiple terminals*
+_Creating, switching, and managing multiple terminals_
 
 ### Settings Configuration
+
 ![Settings Demo](./docs/images/gifs/settings-demo.gif)
-*Customizing font size, theme, and other settings*
+_Customizing font size, theme, and other settings_
 
 ## 🚀 Features
 
@@ -76,6 +82,7 @@ A powerful VS Code extension that displays a terminal in the sidebar for efficie
 ### Sidebar Placement
 
 #### Primary Sidebar (Left Side)
+
 - Terminal appears in the Explorer panel on the left side
 - Integrated with other sidebar views, switchable via tabs
 - Maintains context when switching between views
@@ -110,31 +117,31 @@ A powerful VS Code extension that displays a terminal in the sidebar for efficie
 
 Customize the extension through VS Code settings (`settings.json`):
 
-| Setting | Type | Default | Description |
-|---|---|---|---|
-| `sidebarTerminal.shell` | string | `""` | Path to shell executable. Leave empty to use system default. |
-| `sidebarTerminal.shellArgs` | array | `[]` | Arguments to pass to the shell. |
-| `sidebarTerminal.maxTerminals` | number | 5 | Maximum number of terminals allowed. |
-| `sidebarTerminal.cursorBlink` | boolean | `true` | Enable cursor blinking in terminal. |
-| `sidebarTerminal.theme` | string | `auto` | Terminal theme. Auto follows VS Code theme. |
-| `sidebarTerminal.defaultDirectory` | string | `""` | Default directory for new terminals. Leave empty to use workspace root. |
-| `sidebarTerminal.confirmBeforeKill` | boolean | `false` | Show confirmation dialog before closing terminals |
-| `sidebarTerminal.protectLastTerminal` | boolean | `true` | Prevent closing the last terminal |
-| `sidebarTerminal.minTerminalCount` | number | 1 | Minimum number of terminals to keep open |
-| `sidebarTerminal.maxSplitTerminals` | number | 5 | Maximum number of terminals to display in split view |
-| `sidebarTerminal.minTerminalHeight` | number | 100 | Minimum height for each terminal in split view (pixels) |
-| `sidebarTerminal.enableSplitResize` | boolean | `true` | Allow resizing split terminals by dragging splitters |
-| `sidebarTerminal.statusDisplayDuration` | number | 3000 | Duration to display status messages (milliseconds) |
-| `sidebarTerminal.autoHideStatus` | boolean | `true` | Automatically hide status messages after specified duration |
-| `sidebarTerminal.showStatusOnActivity` | boolean | `true` | Show last status message when user performs actions |
-| `sidebarTerminal.showWebViewHeader` | boolean | `true` | Show title and command icons in the webview header |
-| `sidebarTerminal.webViewTitle` | string | `Terminal` | Title to display in the webview header |
-| `sidebarTerminal.showSampleIcons` | boolean | `true` | Show sample command icons in webview header (display only) |
-| `sidebarTerminal.sampleIconOpacity` | number | 0.4 | Opacity of sample icons (0.1 to 1.0) |
-| `sidebarTerminal.headerFontSize` | number | 14 | Font size for webview header title |
-| `sidebarTerminal.headerIconSize` | number | 20 | Size of terminal icon in webview header |
-| `sidebarTerminal.sampleIconSize` | number | 16 | Size of sample icons in webview header |
-| `sidebarTerminal.altClickMovesCursor` | boolean | `true` | Controls whether Alt/Option + click will reposition the prompt cursor. |
+| Setting                                 | Type    | Default    | Description                                                             |
+| --------------------------------------- | ------- | ---------- | ----------------------------------------------------------------------- |
+| `sidebarTerminal.shell`                 | string  | `""`       | Path to shell executable. Leave empty to use system default.            |
+| `sidebarTerminal.shellArgs`             | array   | `[]`       | Arguments to pass to the shell.                                         |
+| `sidebarTerminal.maxTerminals`          | number  | 5          | Maximum number of terminals allowed.                                    |
+| `sidebarTerminal.cursorBlink`           | boolean | `true`     | Enable cursor blinking in terminal.                                     |
+| `sidebarTerminal.theme`                 | string  | `auto`     | Terminal theme. Auto follows VS Code theme.                             |
+| `sidebarTerminal.defaultDirectory`      | string  | `""`       | Default directory for new terminals. Leave empty to use workspace root. |
+| `sidebarTerminal.confirmBeforeKill`     | boolean | `false`    | Show confirmation dialog before closing terminals                       |
+| `sidebarTerminal.protectLastTerminal`   | boolean | `true`     | Prevent closing the last terminal                                       |
+| `sidebarTerminal.minTerminalCount`      | number  | 1          | Minimum number of terminals to keep open                                |
+| `sidebarTerminal.maxSplitTerminals`     | number  | 5          | Maximum number of terminals to display in split view                    |
+| `sidebarTerminal.minTerminalHeight`     | number  | 100        | Minimum height for each terminal in split view (pixels)                 |
+| `sidebarTerminal.enableSplitResize`     | boolean | `true`     | Allow resizing split terminals by dragging splitters                    |
+| `sidebarTerminal.statusDisplayDuration` | number  | 3000       | Duration to display status messages (milliseconds)                      |
+| `sidebarTerminal.autoHideStatus`        | boolean | `true`     | Automatically hide status messages after specified duration             |
+| `sidebarTerminal.showStatusOnActivity`  | boolean | `true`     | Show last status message when user performs actions                     |
+| `sidebarTerminal.showWebViewHeader`     | boolean | `true`     | Show title and command icons in the webview header                      |
+| `sidebarTerminal.webViewTitle`          | string  | `Terminal` | Title to display in the webview header                                  |
+| `sidebarTerminal.showSampleIcons`       | boolean | `true`     | Show sample command icons in webview header (display only)              |
+| `sidebarTerminal.sampleIconOpacity`     | number  | 0.4        | Opacity of sample icons (0.1 to 1.0)                                    |
+| `sidebarTerminal.headerFontSize`        | number  | 14         | Font size for webview header title                                      |
+| `sidebarTerminal.headerIconSize`        | number  | 20         | Size of terminal icon in webview header                                 |
+| `sidebarTerminal.sampleIconSize`        | number  | 16         | Size of sample icons in webview header                                  |
+| `sidebarTerminal.altClickMovesCursor`   | boolean | `true`     | Controls whether Alt/Option + click will reposition the prompt cursor.  |
 
 ## 🛠️ Development
 
@@ -199,8 +206,9 @@ This extension uses comprehensive testing with modern tooling:
 - **Modern Tools**: Mocha, Chai, Sinon, JSDOM, and @testing-library
 
 Test coverage includes:
+
 - DOM manipulation utilities (22 tests)
-- Notification system (8 tests) 
+- Notification system (8 tests)
 - Alt+Click functionality (17 tests)
 - VS Code API integration
 - Cross-platform compatibility
@@ -210,19 +218,21 @@ Test coverage includes:
 This project follows **t-wada's TDD methodology** for sustainable, high-quality development:
 
 ### TDD Infrastructure
+
 - **📊 Metrics Collection**: Real-time TDD compliance tracking
 - **🔄 Automated Workflows**: Red-Green-Refactor cycle automation
 - **📈 Quality Gates**: CI/CD integrated quality checks
 - **🎯 Interactive Sessions**: Guided TDD development experience
 
 ### Available TDD Commands
+
 ```bash
 # Interactive TDD workflow
 npm run tdd:interactive
 
 # Phase-specific commands
 npm run tdd:red      # Verify failing tests
-npm run tdd:green    # Verify passing tests  
+npm run tdd:green    # Verify passing tests
 npm run tdd:refactor # Quality check after refactoring
 
 # Quality assessment
@@ -231,23 +241,27 @@ npm run tdd:quality-gate     # CI/CD quality gate check
 ```
 
 ### TDD Metrics Dashboard
+
 - **TDD Compliance Rate**: 80%+ target (Red-Green-Refactor adherence)
 - **Test Coverage**: 90%+ target
 - **Code Quality Score**: 8.0+/10.0 target
 - **Real-time tracking** with historical trend analysis
 
 ### Documentation
+
 - 📖 [TDD Operations Guide](./docs/TDD-OPERATIONS-GUIDE.md) - Complete workflow and daily usage
 - 🎯 [TDD Best Practices](./docs/TDD-BEST-PRACTICES.md) - Proven patterns and techniques
 - 🚀 [CI/CD Integration](./docs/CI-CD-INTEGRATION.md) - Quality gates and automation
 
 ### VS Code Integration
+
 Access TDD workflows directly through VS Code tasks:
+
 - `Ctrl+Shift+P` → "Tasks: Run Task" → "TDD: Interactive Workflow"
 - Integrated quality checks in build process
 - Real-time TDD metrics in development
 
-*This TDD infrastructure ensures maintainable, testable code while preventing technical debt accumulation.*
+_This TDD infrastructure ensures maintainable, testable code while preventing technical debt accumulation._
 
 ## 🏗️ Architecture
 
@@ -268,7 +282,7 @@ src/
 ### Key Components
 
 - **TerminalManager**: Multi-terminal state management
-- **SidebarTerminalProvider**: VS Code WebView integration
+- **SecandarySidebar**: VS Code WebView integration
 - **WebView (xterm.js)**: Terminal UI rendering
 - **PTY Process**: System-level shell integration
 - **SplitManager**: Terminal split functionality
@@ -340,11 +354,13 @@ This project is licensed under the [MIT License](LICENSE).
 See [CHANGELOG.md](CHANGELOG.md) for detailed changes.
 
 ### v0.1.25
+
 - **WebView Architecture Refactoring**: Transformed the frontend into a modular system with 9 focused managers, improving organization, maintainability, and performance.
 - **Active Terminal Visualization**: Added a border to the active terminal for better focus indication.
 - **SVG Icon**: Updated the extension icon to SVG for better scaling.
 
 ### v0.0.1 (Initial Release)
+
 - Core features including sidebar integration, multiple terminals, and split view.
 - Cross-platform support (Windows, macOS, Linux) with IME handling.
 - Advanced features like Alt+Click cursor positioning.
@@ -372,4 +388,4 @@ This project uses these excellent libraries:
 
 ---
 
-*This README was last updated on 2025-07-18.*
+_This README was last updated on 2025-07-18._

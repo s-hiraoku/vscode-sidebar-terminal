@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { SecondaryTerminalProvider } from '../providers/SecondaryTerminalProvider';
 import { TerminalManager } from '../terminals/TerminalManager';
-import { UnifiedSessionManager } from '../sessions/UnifiedSessionManager';
+import { StandardTerminalSessionManager } from '../sessions/StandardTerminalSessionManager';
 import { extension as log, logger, LogLevel } from '../utils/logger';
 import { FileReferenceCommand, TerminalCommand } from '../commands';
 import { CopilotIntegrationCommand } from '../commands/CopilotIntegrationCommand';
@@ -14,7 +14,7 @@ import { VSCODE_COMMANDS } from '../constants';
 export class ExtensionLifecycle {
   private terminalManager: TerminalManager | undefined;
   private sidebarProvider: SecondaryTerminalProvider | undefined;
-  private unifiedSessionManager: UnifiedSessionManager | undefined;
+  private standardSessionManager: StandardTerminalSessionManager | undefined;
   private fileReferenceCommand: FileReferenceCommand | undefined;
   private terminalCommand: TerminalCommand | undefined;
   private copilotIntegrationCommand: CopilotIntegrationCommand | undefined;
@@ -33,7 +33,7 @@ export class ExtensionLifecycle {
   /**
    * 拡張機能の起動処理
    */
-  activate(context: vscode.ExtensionContext): void {
+  async activate(context: vscode.ExtensionContext): Promise<void> {
     log('🚀 [EXTENSION] === ACTIVATION START ===');
 
     // Configure logger based on extension mode
@@ -60,10 +60,10 @@ export class ExtensionLifecycle {
       // Initialize terminal manager
       this.terminalManager = new TerminalManager();
 
-      // Initialize unified session manager
-      log('🔧 [EXTENSION] Initializing unified session manager...');
-      this.unifiedSessionManager = new UnifiedSessionManager(context, this.terminalManager);
-      log('✅ [EXTENSION] Unified session manager initialized');
+      // Initialize standard terminal session manager
+      log('🔧 [EXTENSION] Initializing VS Code standard session manager...');
+      this.standardSessionManager = new StandardTerminalSessionManager(context, this.terminalManager);
+      log('✅ [EXTENSION] Standard session manager initialized');
 
       // Initialize scrollback session manager - Temporarily disabled
       // log('🔧 [EXTENSION] Initializing scrollback session manager...');
@@ -76,15 +76,25 @@ export class ExtensionLifecycle {
       this.copilotIntegrationCommand = new CopilotIntegrationCommand();
 
       // Register the sidebar terminal provider
-      this.sidebarProvider = new SecondaryTerminalProvider(context, this.terminalManager);
+      this.sidebarProvider = new SecondaryTerminalProvider(context, this.terminalManager, this.standardSessionManager);
 
-      // Set sidebar provider for UnifiedSessionManager
-      if (this.unifiedSessionManager) {
-        this.unifiedSessionManager.setSidebarProvider(this.sidebarProvider);
-        log('🔧 [EXTENSION] Sidebar provider set for UnifiedSessionManager');
+      // Set sidebar provider for StandardSessionManager
+      if (this.standardSessionManager) {
+        this.standardSessionManager.setSidebarProvider(this.sidebarProvider);
+        log('🔧 [EXTENSION] Sidebar provider set for StandardSessionManager');
       }
 
-      // Register webview providers for both sidebar and panel
+      // Register all commands
+      this.registerCommands(context);
+
+      // Setup session manager event listeners - DISABLED (UnifiedSessionManager doesn't emit events)
+      // this.setupSessionEventListeners();
+
+      // Execute session restore BEFORE WebView registration to prevent initial terminal creation
+      log('🔧 [EXTENSION] Executing session restore before WebView initialization...');
+      await this.restoreSessionBeforeWebView();
+
+      // Register webview providers for both sidebar and panel AFTER restore
       const sidebarWebviewProvider = vscode.window.registerWebviewViewProvider(
         SecondaryTerminalProvider.viewType,
         this.sidebarProvider,
@@ -96,23 +106,7 @@ export class ExtensionLifecycle {
       );
       context.subscriptions.push(sidebarWebviewProvider);
 
-      // Register all commands
-      this.registerCommands(context);
-
-      // Setup session manager event listeners - DISABLED FOR DEBUGGING
-      // this.setupSessionEventListeners();
-
-      // デバッグコマンドを完全削除 - 無限ループの原因防止
-
-      // VS Code完全初期化後に復元処理を実行（無限ループ修正済み）
-      log('🔧 [EXTENSION] Scheduling session restore after VS Code initialization...');
-
-      // 少し遅延させてVS Code完全初期化を待つ
-      setTimeout(() => {
-        void this.executeOneTimeRestore();
-      }, 2000); // 2秒遅延で確実性を確保
-
-      // 自動保存設定（復元完了後にのみ有効化）
+      // 自動保存設定
       this.setupSessionAutoSave(context);
 
       log('✅ Sidebar Terminal extension activated successfully');
@@ -172,6 +166,29 @@ export class ExtensionLifecycle {
             '🔧 [DEBUG] Command executed: activateCopilot (GitHub Copilot Chat integration - CMD+K CMD+C)'
           );
           void this.copilotIntegrationCommand?.handleActivateCopilot();
+        },
+      },
+
+      // ======================= セッション管理コマンド =======================
+      {
+        command: 'secondaryTerminal.clearCorruptedHistory',
+        handler: async () => {
+          log('🔧 [DEBUG] Command executed: clearCorruptedHistory');
+          try {
+            if (this.standardSessionManager) {
+              await this.standardSessionManager.clearSession();
+              void vscode.window.showInformationMessage(
+                '🧹 Terminal session cleared! VS Code standard session will be saved from now on.'
+              );
+            } else {
+              void vscode.window.showErrorMessage('Session manager not available');
+            }
+          } catch (error) {
+            log(`❌ [ERROR] Failed to clear session: ${String(error)}`);
+            void vscode.window.showErrorMessage(
+              `Failed to clear session: ${error instanceof Error ? error.message : String(error)}`
+            );
+          }
         },
       },
 
@@ -241,10 +258,10 @@ export class ExtensionLifecycle {
     // シンプルセッション保存処理
     this.saveSimpleSessionOnExit();
 
-    // Dispose unified session manager
-    if (this.unifiedSessionManager) {
-      log('🔧 [EXTENSION] Disposing unified session manager...');
-      this.unifiedSessionManager = undefined;
+    // Dispose standard session manager
+    if (this.standardSessionManager) {
+      log('🔧 [EXTENSION] Disposing standard session manager...');
+      this.standardSessionManager = undefined;
     }
 
     // Dispose scrollback session manager - Temporarily disabled
@@ -290,217 +307,254 @@ export class ExtensionLifecycle {
   }
 
   /**
-   * 現在の統合セッションマネージャーを取得（テスト用）
+   * 現在の標準セッションマネージャーを取得（テスト用）
    */
-  getUnifiedSessionManager(): UnifiedSessionManager | undefined {
-    return this.unifiedSessionManager;
+  getStandardSessionManager(): StandardTerminalSessionManager | undefined {
+    return this.standardSessionManager;
   }
 
   // ==================== セッション管理関連のメソッド - DISABLED FOR DEBUGGING ====================
 
   /**
-   * 起動時のセッション復元処理 - DISABLED FOR DEBUGGING
+   * 起動時のセッション復元処理 - RE-ENABLED FOR TESTING
    */
-  /*
   private async restoreSessionOnStartup(): Promise<void> {
     try {
-      if (!this.sessionManager) {
-        log('⚠️ [SESSION] Session manager not initialized');
+      if (!this.standardSessionManager) {
+        log('⚠️ [SESSION] Standard session manager not initialized');
         return;
       }
 
-      log('🔄 [SESSION] Starting session restore on startup...');
+      log('🔄 [SESSION] Starting VS Code standard session restore on startup...');
 
       // 少し遅延させてから復元（他の初期化処理完了を待つ）
       try {
-        if (this.sessionManager && this.terminalManager) {
-          log('🔄 [SESSION] Executing session restore...');
-          const result = await this.sessionManager.restoreSession();
+        if (this.standardSessionManager && this.terminalManager) {
+          log('🔄 [SESSION] Executing VS Code standard session restore...');
+          const result = await this.standardSessionManager.restoreSession();
 
-          if (result.success && result.restoredTerminalCount > 0) {
-            log(`✅ [SESSION] Session restored: ${result.restoredTerminalCount} terminals`);
+          if (result.success && result.restoredCount && result.restoredCount > 0) {
+            log(`✅ [SESSION] VS Code standard session restored: ${result.restoredCount} terminals`);
 
             // 復元完了後の初期化処理
             this.terminalManager.finalizeSessionRestore();
 
             // ユーザーに通知（オプション）
             void vscode.window.showInformationMessage(
-              `Terminal session restored: ${result.restoredTerminalCount} terminals`
+              `Terminal session restored (VS Code standard): ${result.restoredCount} terminals`
             );
           } else {
             log('📭 [SESSION] No session data found - creating initial terminal');
             // Create initial terminal when no session data exists
-            this.createFallbackTerminal();
+            this.createInitialTerminal();
           }
         } else {
           log('⚠️ [SESSION] Session manager not available - creating initial terminal');
           if (this.terminalManager) {
-            this.createFallbackTerminal();
+            this.createInitialTerminal();
           }
         }
       } catch (error) {
         log(`❌ [SESSION] Error during session restore: ${error} - creating fallback terminal`);
-        this.createFallbackTerminal();
+        this.createInitialTerminal();
       }
     } catch (error) {
       log(`❌ [SESSION] Error during session restore: ${error}`);
     }
   }
-  */
 
-  /**
-   * 終了時のセッション保存処理 - DISABLED FOR DEBUGGING
-   */
-  /*
-  private saveSessionOnExit(): void {
-    try {
-      if (!this.sessionManager) {
-        log('⚠️ [SESSION] Session manager not available for save on exit');
-        return;
-      }
-
-      log('💾 [SESSION] Saving session on exit...');
-
-      // 同期的に保存処理を実行（非同期では拡張終了に間に合わない可能性）
-      this.sessionManager
-        .saveCurrentSession()
-        .then((result) => {
-          if (result.success) {
-            log(`✅ [SESSION] Session saved on exit: ${result.terminalCount} terminals`);
-          } else {
-            log(`❌ [SESSION] Failed to save session on exit: ${result.error}`);
-          }
-        })
-        .catch((error) => {
-          log(`❌ [SESSION] Error saving session on exit: ${error}`);
-        });
-    } catch (error) {
-      log(`❌ [SESSION] Error during session save on exit: ${error}`);
-    }
-  }
-  */
+  // Removed duplicate saveSessionOnExit method - keeping the async version below
 
   /**
    * VS Code終了時の自動保存設定 - ENABLED FOR TESTING
    */
-  private setupSessionAutoSave(_context: vscode.ExtensionContext): void {
-    // 無限ループを防ぐため、VS Code終了時の保存のみ
-    // 定期保存や自動保存は完全無効化
-    log('🔧 [EXTENSION] Auto-save setup simplified (exit-only)');
+  private setupSessionAutoSave(context: vscode.ExtensionContext): void {
+    // VS Code終了時の保存を設定
+    log('🔧 [EXTENSION] Setting up session auto-save on exit...');
+    
+    // Extension deactivation時にセッション保存
+    context.subscriptions.push({
+      dispose: () => {
+        log('🔧 [EXTENSION] Extension disposing, saving session...');
+        void this.saveSessionOnExit();
+      },
+    });
+
+    // ターミナル変更時の保存を設定（定期保存として）
+    const saveOnTerminalChange = setInterval(() => {
+      void this.saveSessionPeriodically();
+    }, 30000); // 30秒ごとに保存
+    
+    context.subscriptions.push({
+      dispose: () => clearInterval(saveOnTerminalChange),
+    });
+
+    log('✅ [EXTENSION] Session auto-save setup completed');
   }
 
   /**
-   * Setup session manager event listeners to forward notifications to WebView - DISABLED FOR DEBUGGING
+   * 終了時のセッション保存
    */
-  /*
+  private async saveSessionOnExit(): Promise<void> {
+    try {
+      if (!this.standardSessionManager) {
+        log('⚠️ [EXTENSION] Standard session manager not available for save');
+        return;
+      }
+
+      log('💾 [EXTENSION] Saving VS Code standard session on exit...');
+      const result = await this.standardSessionManager.saveCurrentSession();
+
+      if (result.success) {
+        log(`✅ [EXTENSION] VS Code standard session saved: ${result.terminalCount} terminals`);
+      } else {
+        log('⚠️ [EXTENSION] Session save failed or no terminals to save');
+      }
+    } catch (error) {
+      log(`❌ [EXTENSION] Error saving session on exit: ${String(error)}`);
+    }
+  }
+
+  /**
+   * 定期的なセッション保存
+   */
+  private async saveSessionPeriodically(): Promise<void> {
+    try {
+      if (!this.standardSessionManager || !this.terminalManager) {
+        return;
+      }
+
+      // ターミナルが存在する場合のみ保存
+      const terminals = this.terminalManager.getTerminals();
+      if (terminals.length === 0) {
+        return;
+      }
+
+      log(`💾 [EXTENSION] Periodic VS Code standard save: ${terminals.length} terminals`);
+      const result = await this.standardSessionManager.saveCurrentSession();
+
+      if (result.success) {
+        log(`✅ [EXTENSION] Periodic save completed: ${result.terminalCount} terminals`);
+      }
+    } catch (error) {
+      log(`❌ [EXTENSION] Error in periodic save: ${String(error)}`);
+    }
+  }
+
+  /**
+   * Setup session manager event listeners to forward notifications to WebView - RE-ENABLED FOR TESTING
+   */
   private setupSessionEventListeners(): void {
-    if (!this.sessionManager || !this.sidebarProvider) {
+    if (!this.standardSessionManager || !this.sidebarProvider) {
       log('❌ [SESSION] Cannot setup event listeners - missing dependencies');
       return;
     }
 
     log('🔧 [SESSION] Setting up session event listeners...');
 
-    // Session restore events
-    this.sessionManager.on('sessionRestoreStarted', (data: { terminalCount: number }) => {
-      this.sidebarProvider?.sendSessionMessage({
-        command: 'sessionRestoreStarted',
-        terminalCount: data.terminalCount,
-      });
-    });
+    // Note: UnifiedSessionManager doesn't implement EventEmitter pattern
+    // Session restore events would be handled differently
+    // This event listener setup is disabled since UnifiedSessionManager doesn't emit events
+    
+    // Session restore events (disabled - UnifiedSessionManager doesn't use events)
+    // this.unifiedSessionManager.on('sessionRestoreStarted', (data: { terminalCount: number }) => {
+    //   this.sidebarProvider?.sendSessionMessage({
+    //     command: 'sessionRestoreStarted',
+    //     terminalCount: data.terminalCount,
+    //   });
+    // });
 
-    this.sessionManager.on('sessionRestoreProgress', (data: { restored: number; total: number }) => {
-      this.sidebarProvider?.sendSessionMessage({
-        command: 'sessionRestoreProgress',
-        restored: data.restored,
-        total: data.total,
-      });
-    });
+    // this.unifiedSessionManager.on('sessionRestoreProgress', (data: { restored: number; total: number }) => {
+    //   this.sidebarProvider?.sendSessionMessage({
+    //     command: 'sessionRestoreProgress',
+    //     restored: data.restored,
+    //     total: data.total,
+    //   });
+    // });
 
-    this.sessionManager.on(
-      'sessionRestoreCompleted',
-      (data: { restoredCount: number; skippedCount: number }) => {
-        this.sidebarProvider?.sendSessionMessage({
-          command: 'sessionRestoreCompleted',
-          restoredCount: data.restoredCount,
-          skippedCount: data.skippedCount,
-        });
-      }
-    );
+    // this.unifiedSessionManager.on(
+    //   'sessionRestoreCompleted',
+    //   (data: { restoredCount: number; skippedCount: number }) => {
+    //     this.sidebarProvider?.sendSessionMessage({
+    //       command: 'sessionRestoreCompleted',
+    //       restoredCount: data.restoredCount,
+    //       skippedCount: data.skippedCount,
+    //     });
+    //   }
+    // );
 
-    this.sessionManager.on(
-      'sessionRestoreError',
-      (data: { error: string; partialSuccess: boolean; errorType?: string; recoveryAction?: string }) => {
-        this.sidebarProvider?.sendSessionMessage({
-          command: 'sessionRestoreError',
-          error: data.error,
-          partialSuccess: data.partialSuccess,
-          errorType: data.errorType,
-          recoveryAction: data.recoveryAction,
-        });
-      }
-    );
+    // this.unifiedSessionManager.on(
+    //   'sessionRestoreError',
+    //   (data: { error: string; partialSuccess: boolean; errorType?: string; recoveryAction?: string }) => {
+    //     this.sidebarProvider?.sendSessionMessage({
+    //       command: 'sessionRestoreError',
+    //       error: data.error,
+    //       partialSuccess: data.partialSuccess,
+    //       errorType: data.errorType,
+    //       recoveryAction: data.recoveryAction,
+    //     });
+    //   }
+    // );
 
-    this.sessionManager.on(
-      'terminalRestoreError',
-      (data: { terminalId: string; terminalName: string; error: string; errorType: string }) => {
-        this.sidebarProvider?.sendSessionMessage({
-          command: 'terminalRestoreError',
-          terminalId: data.terminalId,
-          terminalName: data.terminalName,
-          error: data.error,
-          errorType: data.errorType,
-        });
-      }
-    );
+    // this.unifiedSessionManager.on(
+    //   'terminalRestoreError',
+    //   (data: { terminalId: string; terminalName: string; error: string; errorType: string }) => {
+    //     this.sidebarProvider?.sendSessionMessage({
+    //       command: 'terminalRestoreError',
+    //       terminalId: data.terminalId,
+    //       terminalName: data.terminalName,
+    //       error: data.error,
+    //       errorType: data.errorType,
+    //     });
+    //   }
+    // );
 
-    this.sessionManager.on('sessionRestoreSkipped', (data: { reason: string }) => {
-      this.sidebarProvider?.sendSessionMessage({
-        command: 'sessionRestoreSkipped',
-        reason: data.reason,
-      });
-    });
+    // this.unifiedSessionManager.on('sessionRestoreSkipped', (data: { reason: string }) => {
+    //   this.sidebarProvider?.sendSessionMessage({
+    //     command: 'sessionRestoreSkipped',
+    //     reason: data.reason,
+    //   });
+    // });
 
-    // Session save events
-    this.sessionManager.on('sessionSaved', (data: { terminalCount: number }) => {
-      this.sidebarProvider?.sendSessionMessage({
-        command: 'sessionSaved',
-        terminalCount: data.terminalCount,
-      });
-    });
+    // Session save events (disabled - UnifiedSessionManager doesn't use events)
+    // this.unifiedSessionManager.on('sessionSaved', (data: { terminalCount: number }) => {
+    //   this.sidebarProvider?.sendSessionMessage({
+    //     command: 'sessionSaved',
+    //     terminalCount: data.terminalCount,
+    //   });
+    // });
 
-    this.sessionManager.on('sessionSaveError', (data: { error: string }) => {
-      this.sidebarProvider?.sendSessionMessage({
-        command: 'sessionSaveError',
-        error: data.error,
-      });
-    });
+    // this.unifiedSessionManager.on('sessionSaveError', (data: { error: string }) => {
+    //   this.sidebarProvider?.sendSessionMessage({
+    //     command: 'sessionSaveError',
+    //     error: data.error,
+    //   });
+    // });
 
-    // Session clear events
-    this.sessionManager.on('sessionCleared', () => {
-      this.sidebarProvider?.sendSessionMessage({
-        command: 'sessionCleared',
-      });
-    });
+    // Session clear events (disabled - UnifiedSessionManager doesn't use events)
+    // this.unifiedSessionManager.on('sessionCleared', () => {
+    //   this.sidebarProvider?.sendSessionMessage({
+    //     command: 'sessionCleared',
+    //   });
+    // });
 
     log('✅ [SESSION] Session event listeners configured');
   }
 
   /**
-   * Handle save session command - DISABLED FOR DEBUGGING
+   * Handle save session command - RE-ENABLED FOR TESTING
    */
-  /*
   private async handleSaveSessionCommand(): Promise<void> {
-    if (!this.sessionManager) {
-      await vscode.window.showErrorMessage('Session manager not available');
+    if (!this.standardSessionManager) {
+      await vscode.window.showErrorMessage('Standard session manager not available');
       return;
     }
 
     try {
-      const result = await this.sessionManager.saveCurrentSession();
+      const result = await this.standardSessionManager.saveCurrentSession();
       if (result.success) {
         await vscode.window.showInformationMessage(
-          `Terminal session saved successfully (${result.terminalCount} terminal${result.terminalCount > 1 ? 's' : ''})`
+          `Terminal session saved successfully (${result.terminalCount || 0} terminal${(result.terminalCount || 0) > 1 ? 's' : ''})`
         );
       } else {
         await vscode.window.showErrorMessage(`Failed to save session: ${result.error || 'Unknown error'}`);
@@ -511,21 +565,20 @@ export class ExtensionLifecycle {
   }
 
   /**
-   * Handle restore session command - DISABLED FOR DEBUGGING
+   * Handle restore session command - RE-ENABLED FOR TESTING
    */
-  /*
   private async handleRestoreSessionCommand(): Promise<void> {
-    if (!this.sessionManager) {
-      await vscode.window.showErrorMessage('Session manager not available');
+    if (!this.standardSessionManager) {
+      await vscode.window.showErrorMessage('Standard session manager not available');
       return;
     }
 
     try {
-      const result = await this.sessionManager.restoreSession();
+      const result = await this.standardSessionManager.restoreSession();
       if (result.success) {
-        if (result.restoredTerminalCount > 0) {
+        if (result.restoredCount && result.restoredCount > 0) {
           await vscode.window.showInformationMessage(
-            `Terminal session restored successfully: ${result.restoredTerminalCount} terminal${result.restoredTerminalCount > 1 ? 's' : ''} restored${result.skippedTerminalCount > 0 ? `, ${result.skippedTerminalCount} skipped` : ''}`
+            `Terminal session restored successfully: ${result.restoredCount} terminal${result.restoredCount > 1 ? 's' : ''} restored${result.skippedCount && result.skippedCount > 0 ? `, ${result.skippedCount} skipped` : ''}`
           );
         } else {
           await vscode.window.showInformationMessage('No previous session data found to restore');
@@ -539,12 +592,11 @@ export class ExtensionLifecycle {
   }
 
   /**
-   * Handle clear session command - DISABLED FOR DEBUGGING
+   * Handle clear session command - RE-ENABLED FOR TESTING
    */
-  /*
   private async handleClearSessionCommand(): Promise<void> {
-    if (!this.sessionManager) {
-      await vscode.window.showErrorMessage('Session manager not available');
+    if (!this.standardSessionManager) {
+      await vscode.window.showErrorMessage('Standard session manager not available');
       return;
     }
 
@@ -557,14 +609,13 @@ export class ExtensionLifecycle {
 
     if (confirm === 'Clear Session') {
       try {
-        await this.sessionManager.clearSession();
+        await this.standardSessionManager.clearSession();
         await vscode.window.showInformationMessage('Terminal session data cleared successfully');
       } catch (error) {
         await vscode.window.showErrorMessage(`Failed to clear session: ${error}`);
       }
     }
   }
-  */
 
   // ==================== シンプルセッション管理メソッド ====================
 
@@ -572,8 +623,8 @@ export class ExtensionLifecycle {
    * 統合セッション保存コマンドハンドラー
    */
   private async handleSimpleSaveSessionCommand(): Promise<void> {
-    if (!this.unifiedSessionManager) {
-      await vscode.window.showErrorMessage('Unified session manager not available');
+    if (!this.standardSessionManager) {
+      await vscode.window.showErrorMessage('Standard session manager not available');
       return;
     }
 
@@ -584,7 +635,7 @@ export class ExtensionLifecycle {
       log('✅ [SIMPLE_SESSION] Scrollback extraction completed');
 
       // 通常のセッション保存を実行
-      const result = await this.unifiedSessionManager.saveCurrentSession();
+      const result = await this.standardSessionManager.saveCurrentSession();
       if (result.success) {
         await vscode.window.showInformationMessage(
           `Terminal session saved successfully (${result.terminalCount} terminal${result.terminalCount !== 1 ? 's' : ''})`
@@ -605,13 +656,13 @@ export class ExtensionLifecycle {
    * 統合セッション復元コマンドハンドラー
    */
   private async handleSimpleRestoreSessionCommand(): Promise<void> {
-    if (!this.unifiedSessionManager) {
-      await vscode.window.showErrorMessage('Unified session manager not available');
+    if (!this.standardSessionManager) {
+      await vscode.window.showErrorMessage('Standard session manager not available');
       return;
     }
 
     try {
-      const result = await this.unifiedSessionManager.restoreSession();
+      const result = await this.standardSessionManager.restoreSession();
 
       if (result.success) {
         if (result.restoredCount && result.restoredCount > 0) {
@@ -640,8 +691,8 @@ export class ExtensionLifecycle {
    * 統合セッションクリアコマンドハンドラー
    */
   private async handleSimpleClearSessionCommand(): Promise<void> {
-    if (!this.unifiedSessionManager) {
-      await vscode.window.showErrorMessage('Unified session manager not available');
+    if (!this.standardSessionManager) {
+      await vscode.window.showErrorMessage('Standard session manager not available');
       return;
     }
 
@@ -654,7 +705,7 @@ export class ExtensionLifecycle {
 
     if (confirm === 'Clear Session') {
       try {
-        await this.unifiedSessionManager.clearSession();
+        await this.standardSessionManager.clearSession();
         await vscode.window.showInformationMessage('Terminal session data cleared successfully');
       } catch (error) {
         await vscode.window.showErrorMessage(
@@ -669,28 +720,28 @@ export class ExtensionLifecycle {
    */
   private saveSimpleSessionOnExit(): void {
     try {
-      if (!this.unifiedSessionManager) {
-        log('⚠️ [UNIFIED_SESSION] Session manager not available, skipping save on exit');
+      if (!this.standardSessionManager) {
+        log('⚠️ [STANDARD_SESSION] Session manager not available, skipping save on exit');
         return;
       }
 
-      log('💾 [UNIFIED_SESSION] Saving session on exit...');
+      log('💾 [STANDARD_SESSION] Saving session on exit...');
 
       // 同期的に保存処理を実行
-      this.unifiedSessionManager
+      this.standardSessionManager
         .saveCurrentSession()
         .then((result) => {
           if (result.success) {
-            log(`✅ [UNIFIED_SESSION] Session saved on exit: ${result.terminalCount} terminals`);
+            log(`✅ [STANDARD_SESSION] Session saved on exit: ${result.terminalCount} terminals`);
           } else {
-            log(`❌ [UNIFIED_SESSION] Failed to save session on exit: ${result.error}`);
+            log(`❌ [STANDARD_SESSION] Failed to save session on exit: ${result.error}`);
           }
         })
         .catch((error) => {
-          log(`❌ [UNIFIED_SESSION] Exception during session save on exit: ${String(error)}`);
+          log(`❌ [STANDARD_SESSION] Exception during session save on exit: ${String(error)}`);
         });
     } catch (error) {
-      log(`❌ [UNIFIED_SESSION] Error during saveSimpleSessionOnExit: ${String(error)}`);
+      log(`❌ [STANDARD_SESSION] Error during saveSimpleSessionOnExit: ${String(error)}`);
     }
   }
 
@@ -709,12 +760,12 @@ export class ExtensionLifecycle {
     try {
       log('🔄 [EXTENSION] Starting session restore...');
 
-      if (!this.unifiedSessionManager) {
+      if (!this.standardSessionManager) {
         log('❌ [EXTENSION] Session manager not available');
         return;
       }
 
-      const result = await this.unifiedSessionManager.restoreSession();
+      const result = await this.standardSessionManager.restoreSession();
 
       if (result.success && result.restoredCount && result.restoredCount > 0) {
         log(`✅ [EXTENSION] Restored ${result.restoredCount} terminals`);
@@ -736,7 +787,7 @@ export class ExtensionLifecycle {
     log('🔍 [SESSION] === RESTORE SESSION STARTUP CALLED ===');
 
     try {
-      if (!this.unifiedSessionManager || !this.terminalManager) {
+      if (!this.standardSessionManager || !this.terminalManager) {
         log('⚠️ [SESSION] Managers not available');
         return;
       }
@@ -749,9 +800,9 @@ export class ExtensionLifecycle {
         return;
       }
 
-      log('🔍 [SESSION] About to call unifiedSessionManager.restoreSession()');
+      log('🔍 [SESSION] About to call standardSessionManager.restoreSession()');
       // セッション復元を実行
-      const result = await this.unifiedSessionManager.restoreSession();
+      const result = await this.standardSessionManager.restoreSession();
       log(`🔍 [SESSION] restoreSession() completed with result: ${JSON.stringify(result)}`);
 
       if (result.success && result.restoredCount && result.restoredCount > 0) {
@@ -947,5 +998,51 @@ export class ExtensionLifecycle {
         `❌ [SIMPLE_SESSION] Error creating initial terminal: ${error instanceof Error ? error.message : String(error)}`
       );
     }
+  }
+
+  /**
+   * WebView初期化前のセッション復元処理
+   * 既存ターミナルのチェックを行わずに復元を実行
+   */
+  private async restoreSessionBeforeWebView(): Promise<void> {
+    log('🔍 [RESTORE_BEFORE_WEBVIEW] === SESSION RESTORE BEFORE WEBVIEW START ===');
+
+    try {
+      if (!this.standardSessionManager || !this.terminalManager) {
+        log('⚠️ [RESTORE_BEFORE_WEBVIEW] Managers not available');
+        return;
+      }
+
+      log('🔍 [RESTORE_BEFORE_WEBVIEW] About to call standardSessionManager.restoreSession() with forceRestore=true');
+      
+      // セッション復元を実行（既存ターミナルチェックなし、強制復元）
+      const result = await this.standardSessionManager.restoreSession(true);
+      log(`🔍 [RESTORE_BEFORE_WEBVIEW] restoreSession() completed with result: ${JSON.stringify(result)}`);
+
+      if (result.success && result.restoredCount && result.restoredCount > 0) {
+        log(`✅ [RESTORE_BEFORE_WEBVIEW] Restored ${result.restoredCount} terminals`);
+        
+        // 復元完了後の初期化処理
+        this.terminalManager.finalizeSessionRestore();
+        
+        // 復元成功をユーザーに通知
+        setTimeout(() => {
+          void vscode.window.showInformationMessage(
+            `Terminal session restored: ${result.restoredCount} terminal${(result.restoredCount || 0) > 1 ? 's' : ''}`
+          );
+        }, 1000);
+      } else {
+        log('📭 [RESTORE_BEFORE_WEBVIEW] No session data found - will create initial terminal via WebView');
+        // WebViewの初期化時にターミナルが作成されるため、ここでは何もしない
+      }
+    } catch (error) {
+      log(
+        `❌ [RESTORE_BEFORE_WEBVIEW] Error during restore: ${error instanceof Error ? error.message : String(error)}`
+      );
+      log(`❌ [RESTORE_BEFORE_WEBVIEW] Error stack: ${error instanceof Error ? error.stack : 'No stack'}`);
+      // エラー時はWebViewの初期化時にターミナルが作成される
+    }
+
+    log('🔍 [RESTORE_BEFORE_WEBVIEW] === SESSION RESTORE BEFORE WEBVIEW FINISHED ===');
   }
 }

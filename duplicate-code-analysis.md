@@ -1,14 +1,17 @@
 # Duplicate Code Analysis Report
 
 ## Summary
+
 This analysis identifies significant duplicate code patterns in the VS Code Sidebar Terminal extension that could benefit from refactoring to improve maintainability and reduce redundancy.
 
 ## 1. Terminal Management Logic
 
 ### Duplicate Pattern: Terminal Style Application
+
 **Location**: `/src/webview/main.ts`
 
 Found 4 identical instances of style application:
+
 - Lines 268-276
 - Lines 444-452
 - Lines 592-600
@@ -27,6 +30,7 @@ container.style.outline = 'none';
 ```
 
 **Recommendation**: Extract to a reusable function:
+
 ```typescript
 function applyTerminalContainerStyles(container: HTMLElement): void {
   Object.assign(container.style, {
@@ -38,7 +42,7 @@ function applyTerminalContainerStyles(container: HTMLElement): void {
     margin: '0',
     padding: '2px',
     minHeight: '100px',
-    outline: 'none'
+    outline: 'none',
   });
 }
 ```
@@ -46,14 +50,17 @@ function applyTerminalContainerStyles(container: HTMLElement): void {
 ## 2. Message Handling Patterns
 
 ### Duplicate Pattern: Error Message Display
-**Locations**: 
-- `/src/providers/SidebarTerminalProvider.ts`: Multiple instances using `vscode.window.showErrorMessage`
+
+**Locations**:
+
+- `/src/providers/SecandarySidebar.ts`: Multiple instances using `vscode.window.showErrorMessage`
 - `/src/terminals/TerminalManager.ts`: Using `showErrorMessage` and `showWarningMessage`
 - `/src/utils/feedback.ts`: Multiple error handling functions
 
 **Duplication**: Each module has its own error display logic with similar patterns:
+
 ```typescript
-// Pattern 1 (SidebarTerminalProvider.ts)
+// Pattern 1 (SecandarySidebar.ts)
 void vscode.window.showErrorMessage(`Failed to ${action}: ${String(error)}`);
 
 // Pattern 2 (TerminalManager.ts)
@@ -68,13 +75,14 @@ showError(`Failed to ${action}: ${message}`);
 ## 3. Configuration Handling
 
 ### Duplicate Pattern: Configuration Access
+
 **Locations**: Multiple files accessing configuration differently
 
 1. Direct VS Code API usage:
-   - `/src/providers/SidebarTerminalProvider.ts` line 726: `vscode.workspace.getConfiguration('sidebarTerminal')`
+   - `/src/providers/SecandarySidebar.ts` line 726: `vscode.workspace.getConfiguration('sidebarTerminal')`
 
 2. ConfigManager usage:
-   - `/src/providers/SidebarTerminalProvider.ts` line 73: `getConfigManager().getExtensionTerminalConfig()`
+   - `/src/providers/SecandarySidebar.ts` line 73: `getConfigManager().getExtensionTerminalConfig()`
    - `/src/terminals/TerminalManager.ts` line 50: `getTerminalConfig()`
 
 **Recommendation**: Standardize on ConfigManager for all configuration access.
@@ -82,11 +90,13 @@ showError(`Failed to ${action}: ${message}`);
 ## 4. UI Component Creation
 
 ### Duplicate Pattern: DOM Element Creation with Inline Styles
+
 **Location**: `/src/webview/main.ts`
 
 Large blocks of inline CSS text (lines 139-149, 249-258, 969-984) are used repeatedly for similar purposes.
 
 **Example**:
+
 ```typescript
 container.style.cssText = `
   display: flex;
@@ -106,12 +116,15 @@ container.style.cssText = `
 ## 5. Notification Handling
 
 ### Duplicate Pattern: Notification Creation
-**Locations**: 
+
+**Locations**:
+
 - `/src/webview/utils/NotificationUtils.ts`: Multiple similar notification functions
 - `/src/webview/core/NotificationBridge.ts`: Duplicate notification logic
 - `/src/webview/main.ts` line 960-1006: Custom notification implementation
 
 **Pattern**: Each notification type has its own function with similar structure:
+
 ```typescript
 export function showTerminalCloseError(minCount: number): void {
   showNotification({
@@ -131,11 +144,12 @@ export function showTerminalKillError(reason: string): void {
 ```
 
 **Recommendation**: Create a generic notification factory:
+
 ```typescript
 const NotificationFactory = {
-  terminalError: (title: string, message: string) => 
+  terminalError: (title: string, message: string) =>
     showNotification({ type: 'error', title, message }),
-  terminalWarning: (title: string, message: string) => 
+  terminalWarning: (title: string, message: string) =>
     showNotification({ type: 'warning', title, message }),
   // etc.
 };
@@ -144,9 +158,11 @@ const NotificationFactory = {
 ## 6. Event Handler Registration
 
 ### Duplicate Pattern: Click Handler Registration
+
 **Location**: `/src/webview/main.ts`
 
 Multiple instances of similar click handler registration with identical logic:
+
 - Lines 281-296: Terminal container click handler
 - Lines 1339-1378: XTerm click handler
 - Lines 392-399: Terminal div focus handler
@@ -156,7 +172,9 @@ Multiple instances of similar click handler registration with identical logic:
 ## 7. Terminal Lifecycle Management
 
 ### Duplicate Pattern: Terminal Cleanup
+
 **Locations**:
+
 - `/src/terminals/TerminalManager.ts` lines 429-450: `_cleanupTerminalData`
 - `/src/terminals/TerminalManager.ts` lines 455-473: `_removeTerminal`
 
@@ -167,7 +185,9 @@ Both methods perform similar cleanup operations with overlapping logic.
 ## 8. Buffer Management
 
 ### Duplicate Pattern: Data Buffering Logic
+
 **Locations**:
+
 - `/src/terminals/TerminalManager.ts`: Data buffer management (lines 34-38, 367-415)
 - `/src/webview/main.ts`: Output buffer management (lines 62-65, 715-799)
 

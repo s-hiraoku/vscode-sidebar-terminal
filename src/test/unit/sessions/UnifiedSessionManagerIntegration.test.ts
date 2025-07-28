@@ -1,7 +1,9 @@
 import { describe, it, beforeEach, afterEach } from 'mocha';
 import { expect } from 'chai';
 import * as sinon from 'sinon';
+import * as vscode from 'vscode';
 import { UnifiedSessionManager } from '../../../sessions/UnifiedSessionManager';
+import { TerminalManager } from '../../../terminals/TerminalManager';
 
 /**
  * 統合テスト: 実際のユースケースシナリオをテスト
@@ -9,11 +11,11 @@ import { UnifiedSessionManager } from '../../../sessions/UnifiedSessionManager';
  */
 describe('🎯 UnifiedSessionManager Integration Tests (Real World Scenarios)', () => {
   let sandbox: sinon.SinonSandbox;
-  let mockContext: any;
-  let mockTerminalManager: any;
-  let mockGlobalState: any;
+  let mockContext: vscode.ExtensionContext;
+  let mockTerminalManager: TerminalManager;
+  let mockGlobalState: sinon.SinonStubbedInstance<vscode.Memento>;
   let sessionManager: UnifiedSessionManager;
-  let mockSidebarProvider: any;
+  let mockSidebarProvider: unknown;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
@@ -23,13 +25,13 @@ describe('🎯 UnifiedSessionManager Integration Tests (Real World Scenarios)', 
       update: sandbox.stub().resolves(),
       keys: sandbox.stub(),
       setKeysForSync: sandbox.stub(),
-    };
+    } as unknown as sinon.SinonStubbedInstance<vscode.Memento>;
 
     mockContext = {
       globalState: mockGlobalState,
       subscriptions: [],
       extensionPath: '/test/path',
-    };
+    } as unknown as vscode.ExtensionContext;
 
     mockTerminalManager = {
       getTerminals: sandbox.stub().returns([]),
@@ -37,13 +39,13 @@ describe('🎯 UnifiedSessionManager Integration Tests (Real World Scenarios)', 
       createTerminal: sandbox.stub().returns('new-terminal-id'),
       setActiveTerminal: sandbox.stub(),
       dispose: sandbox.stub(),
-    };
+    } as unknown as TerminalManager;
 
     mockSidebarProvider = {
       _sendMessage: sandbox.stub().resolves(),
     };
 
-    sessionManager = new UnifiedSessionManager(mockContext as any, mockTerminalManager as any);
+    sessionManager = new UnifiedSessionManager(mockContext, mockTerminalManager);
     sessionManager.setSidebarProvider(mockSidebarProvider);
   });
 

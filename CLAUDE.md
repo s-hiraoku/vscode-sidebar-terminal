@@ -5,10 +5,11 @@ This file provides guidance to CLI Agent (gemini.google.com/code) when working w
 ## Development Commands
 
 ### Building and Testing
+
 ```bash
 # Main build commands
 npm run compile           # Build extension and webview
-npm run watch            # Watch mode for development  
+npm run watch            # Watch mode for development
 npm run package          # Production build with optimizations
 
 # Testing
@@ -34,6 +35,7 @@ npm run release:major   # Increment major version and create release
 ```
 
 ### VS Code Development
+
 - Press `F5` to launch Extension Development Host
 - Use "Developer: Reload Window" command to reload during development
 - Console logs are visible in VS Code Developer Tools (`Ctrl+Shift+I`)
@@ -45,42 +47,49 @@ npm run release:major   # Increment major version and create release
 **CRITICAL**: This codebase requires ongoing development and maintenance. Poor code quality will lead to technical debt and system breakdown. Follow these guidelines strictly:
 
 #### 1. Naming Conventions and Clarity
+
 - **Use descriptive, unambiguous names**: `focusTerminal` not `switchTerminal`
 - **Avoid misleading terminology**: Names should accurately reflect what the code does
 - **Consistent naming patterns**: Use the same verb/noun patterns across similar functions
 - **Update related constants**: When renaming, update ALL references including constants, tests, and documentation
 
 #### 2. Interface Consistency and Type Safety
+
 - **Complete interface implementations**: When adding methods to interfaces, update ALL implementing classes
 - **Proper TypeScript usage**: Define strict types, avoid `any` unless absolutely necessary
 - **Message protocol consistency**: Keep command names synchronized across extension ↔ webview communication
 - **Update tests**: When changing interfaces, update mock objects and test cases
 
 #### 3. Event-Driven Architecture Maintenance
+
 - **Clear event naming**: Events should describe what happened, not what might happen
 - **Proper disposal**: Always dispose EventEmitters to prevent memory leaks
 - **Event documentation**: Document the purpose and data structure of each event
 - **Avoid event proliferation**: Use existing events when possible rather than creating new ones
 
 #### 4. Communication Protocol Standards
+
 - **Explicit message types**: Use specific, descriptive command names in WebviewMessage types
 - **Consistent data structures**: Maintain the same parameter patterns across similar messages
 - **Backward compatibility**: When changing message protocols, consider migration strategies
 - **Error handling**: Include proper error cases in message handling
 
 #### 5. Code Organization and Documentation
+
 - **Logical file structure**: Group related functionality together
 - **Clear method responsibilities**: Each method should have a single, well-defined purpose
 - **Comprehensive comments**: Explain WHY code exists, not just what it does
 - **Update related documentation**: When changing behavior, update CLAUDE.md and inline docs
 
 #### 6. Testing and Validation
+
 - **Update test mocks**: When adding interface methods, update ALL test mock objects
 - **Meaningful test cases**: Test actual behavior, not just code coverage
 - **Edge case handling**: Test error conditions and boundary cases
 - **Compilation validation**: Always run `npm run compile-tests` before commits
 
 #### 7. Performance and Resource Management
+
 - **Proper cleanup**: Dispose of resources, event listeners, and subscriptions
 - **Memory leak prevention**: Be careful with closures and circular references
 - **Efficient messaging**: Avoid excessive message passing between extension and webview
@@ -89,6 +98,7 @@ npm run release:major   # Increment major version and create release
 ### Development Workflow Checklist
 
 Before implementing any changes:
+
 1. [ ] Understand the full scope of the change across all affected files
 2. [ ] Update type definitions FIRST, then implementations
 3. [ ] Search for ALL references to changed names/types
@@ -130,7 +140,32 @@ Before implementing any changes:
 
 **Remember: If it's not tested, it's not working. If it's not working, it's not implemented.**
 
+### テスト修正方針
+
+**基本原則**: テストの修正時は、そのテストの存在目的を理解し、その目的を損なわないように修正する
+
+1. **テストの目的を理解する**
+   - テストが何を検証しようとしているのかを把握
+   - 失敗している理由がテストの不備か、実装の問題かを判断
+   - テスト名とテスト内容を照らし合わせて、意図を明確化
+
+2. **修正アプローチ**
+   - **実装の問題**: テストが正しく実装の不備を指摘している場合は実装を修正
+   - **テストの問題**: テストのモックやセットアップに問題がある場合はテストを修正
+   - **環境の問題**: テスト環境やツールチェーンの問題の場合は環境を修正
+
+3. **修正時の禁止事項**
+   - テストを単純に削除することで問題を回避しない
+   - テストの検証内容を弱くして通りやすくしない
+   - テストの本来の目的を変更しない
+
+4. **修正後の確認**
+   - 修正後もテストが本来の目的を果たしているか確認
+   - 他のテストに影響を与えていないか確認
+   - 実装の品質が保たれているか確認
+
 ### Common Anti-Patterns to Avoid
+
 - **Incomplete renames**: Changing names in some files but not others
 - **Interface mismatches**: Adding methods to interfaces without updating implementations
 - **Orphaned constants**: Leaving old constant definitions after renaming
@@ -146,14 +181,16 @@ This is a VS Code extension that provides a terminal interface in the sidebar us
 ### Core Components
 
 **Extension Host (Node.js)**
+
 - **TerminalManager**: Manages multiple terminal instances using node-pty, handles PTY process lifecycle, data buffering for performance, and active terminal tracking
-- **SidebarTerminalProvider**: Implements VS Code WebviewViewProvider, bridges extension and webview communication, manages webview lifecycle and HTML generation
+- **SecandarySidebar**: Implements VS Code WebviewViewProvider, bridges extension and webview communication, manages webview lifecycle and HTML generation
 - **Extension Entry Point**: Registers commands, providers, and handles extension activation/deactivation
 
 **WebView (Browser)**
+
 - **TerminalWebviewManager**: Main coordinator that implements IManagerCoordinator interface and orchestrates all WebView managers
 - **MessageManager**: Handles communication between WebView and Extension, processes incoming messages and queues outgoing messages
-- **InputManager**: Manages keyboard shortcuts, IME handling, and Alt+Click interactions  
+- **InputManager**: Manages keyboard shortcuts, IME handling, and Alt+Click interactions
 - **UIManager**: Controls visual feedback, theming, borders, and terminal appearance
 - **ConfigManager**: Manages settings persistence and configuration
 - **NotificationManager**: Provides user feedback and visual alerts
@@ -172,6 +209,7 @@ User Action → VS Code Command → Extension Host → WebView Message → xterm
 ### Key Design Patterns
 
 **Terminal Lifecycle Management**
+
 - Each terminal has a unique ID and is tracked in TerminalManager
 - Active terminal concept: only one terminal receives input at a time
 - Terminal numbering: Uses recycled numbers 1-5 instead of incrementing infinitely
@@ -179,12 +217,14 @@ User Action → VS Code Command → Extension Host → WebView Message → xterm
 - Infinite loop prevention using `_terminalBeingKilled` tracking set
 
 **Message Communication**
+
 - Webview ↔ Extension communication via `postMessage` protocol
 - Commands: `init`, `output`, `input`, `resize`, `clear`, `killTerminal`, `deleteTerminal`, `stateUpdate`, etc.
 - Event-driven architecture with proper cleanup on disposal
 - MessageManager queues messages for reliable delivery and prevents race conditions
 
 **Performance Optimizations**
+
 - Data buffering: Terminal output is batched to reduce message frequency (16ms intervals, ~60fps)
 - Resize debouncing: Terminal resize operations are debounced (configurable delay)
 - Flex layout system: Terminals use CSS flexbox for responsive sizing
@@ -192,14 +232,16 @@ User Action → VS Code Command → Extension Host → WebView Message → xterm
 ### File Structure Context
 
 **Core Extension Files**
+
 - `src/extension.ts`: Entry point, command registration
-- `src/providers/SidebarTerminalProvider.ts`: WebView provider implementation  
+- `src/providers/SecandarySidebar.ts`: WebView provider implementation
 - `src/terminals/TerminalManager.ts`: Terminal process management
 - `src/commands/FileReferenceCommand.ts`: CLI Agent file reference (@filename) implementation
 - `src/commands/CopilotIntegrationCommand.ts`: GitHub Copilot Chat integration (#file:) implementation
 - `webpack.config.js`: Dual build configuration (extension + webview)
 
 **WebView Frontend**
+
 - `src/webview/main.ts`: WebView entry point containing TerminalWebviewManager class that coordinates all manager instances
 - `src/webview/managers/`: Manager implementations (MessageManager, InputManager, UIManager, PerformanceManager, NotificationManager, SplitManager, ConfigManager)
 - `src/webview/components/`: Reusable UI components (SettingsPanel)
@@ -208,6 +250,7 @@ User Action → VS Code Command → Extension Host → WebView Message → xterm
 - `src/webview/interfaces/`: Manager interfaces and type definitions (IManagerCoordinator, IMessageManager, etc.)
 
 **Configuration and Types**
+
 - `package.json`: Extension manifest, commands, settings schema, menu contributions
 - `src/types/common.ts`: Shared interfaces between extension and webview
 - `src/constants/`: Application constants and terminal configuration
@@ -215,6 +258,7 @@ User Action → VS Code Command → Extension Host → WebView Message → xterm
 ### Important Implementation Details
 
 **New Terminal Management Architecture (Recently Implemented)**
+
 - **Single Source of Truth**: Extension (TerminalManager) is the sole authority for terminal state management
 - **Unified Deletion Protocol**: Both header × button and panel trash button use the same `deleteTerminal()` method
 - **Race Condition Prevention**: Operations are queued and processed atomically using `operationQueue`
@@ -223,15 +267,18 @@ User Action → VS Code Command → Extension Host → WebView Message → xterm
 - **Request Source Tracking**: Deletion requests are tagged with source ('header' or 'panel') for debugging
 
 **Webview Context Retention**
+
 - WebView uses `retainContextWhenHidden: true` to maintain state when sidebar is hidden
 - Terminal processes continue running in background via node-pty
 
 **Error Handling Strategy**
+
 - Unified error display via NotificationUtils in webview
 - Extension-level error handling with user-friendly messages
 - Graceful degradation when terminal processes fail
 
 **Testing Architecture**
+
 - **Unit Tests**: Primary testing approach using Mocha with 275+ tests (93% success rate)
 - **Test Organization**: Tests located in `src/test/unit/` with component-specific subdirectories
 - **Test Environment**: Uses `TestSetup.ts` for VS Code API mocking and process polyfills
@@ -241,8 +288,9 @@ User Action → VS Code Command → Extension Host → WebView Message → xterm
 ### Extension Configuration
 
 The extension provides extensive configuration options in `package.json`:
+
 - Terminal behavior: shell, args, max terminals, cursor blink
-- Display: font family/size, theme, header settings  
+- Display: font family/size, theme, header settings
 - Status management: duration, auto-hide, activity triggers
 - UI customization: icon opacity, header title, icon sizes
 
@@ -251,18 +299,21 @@ Configuration values are accessed via `vscode.workspace.getConfiguration('sideba
 ### Common Development Patterns
 
 **Webpack Build System**
+
 - Uses dual webpack configuration for extension (Node.js) and webview (browser)
-- Extension builds to `dist/extension.js`, webview builds to `dist/webview.js`  
+- Extension builds to `dist/extension.js`, webview builds to `dist/webview.js`
 - CSS is bundled into webview.js via style-loader/css-loader
 - Process polyfill required for webview environment (`process/browser`)
 
 **VSIX Packaging Issues**
+
 - Development mode uses different paths than packaged extension
 - CSS resources must be bundled, not referenced as external files
 - Node.js globals (like `process`) need polyfills in webview context
 - `node-pty` is bundled as dependency via `bundledDependencies` in package.json
 
 **Debugging Packaged Extensions**
+
 - Test both F5 development mode AND installed .vsix package
 - Use browser dev tools for webview debugging (`Ctrl+Shift+I`)
 - Check for 404 errors on CSS/resource loading
@@ -271,22 +322,26 @@ Configuration values are accessed via `vscode.workspace.getConfiguration('sideba
 ### VS Code Standard Alt+Click Implementation
 
 **Alt+Click Cursor Positioning**
+
 - Follows VS Code standard: `altClickMovesCursor && multiCursorModifier === 'alt'`
 - Extension retrieves settings from `terminal.integrated.altClickMovesCursor` and `editor.multiCursorModifier`
 - WebView receives settings via `settingsResponse` message and applies VS Code standard logic
 - Only enabled when both conditions are met (VS Code standard behavior)
 
 **Settings Integration**
+
 - Extension monitors configuration changes for `editor.multiCursorModifier` and `terminal.integrated.altClickMovesCursor`
 - Dynamic setting updates sent to WebView without requiring restart
 - Settings applied to new terminals immediately; existing terminals require recreation
 
 **Visual Feedback**
+
 - Alt key press shows `cursor: default` on terminal elements
 - Alt+Click shows blue highlight feedback at cursor position with fade animation
 - Follows VS Code standard visual patterns for consistency
 
 **Performance Optimizations for CLI Agent Output**
+
 - Adaptive buffering: shorter flush intervals during frequent output (8ms vs 16ms)
 - Direct writes for specific terminal IDs to avoid cross-terminal interference
 - Immediate flush for large outputs (≥1000 chars) to maintain cursor accuracy
@@ -294,28 +349,35 @@ Configuration values are accessed via `vscode.workspace.getConfiguration('sideba
 ## Alt+Click Cursor Positioning
 
 ### Overview
+
 This extension implements VS Code standard Alt+Click cursor positioning with intelligent conflict detection for CLI Agent interactions.
 
 ### Current Limitations
+
 - **CLI Agent Interference**: Alt+Click may not work reliably during CLI Agent execution due to:
   - High-frequency output causing cursor position desynchronization
   - Raw mode terminal conflicts with xterm.js Alt+Click implementation
   - Escape sequences being output directly instead of cursor positioning
 
 ### Intelligent Conflict Resolution
+
 The extension automatically detects CLI Agent activity and temporarily disables Alt+Click during:
+
 - CLI Agent execution sessions (detected by output patterns)
 - High-frequency terminal output (>500 chars in 2 seconds)
 - Large output chunks (≥1000 characters)
 
 ### User Experience
+
 - **Visual Feedback**: When Alt+Click is disabled, users see:
   - "⚡ CLI Agent Active" tooltip at click location
   - System notification explaining the temporary disable state
   - Re-enablement notification when CLI Agent session ends
 
 ### Configuration Requirements
+
 Alt+Click requires both VS Code settings to be enabled:
+
 ```json
 {
   "terminal.integrated.altClickMovesCursor": true,
@@ -324,12 +386,14 @@ Alt+Click requires both VS Code settings to be enabled:
 ```
 
 ### Best Practices
+
 1. **Regular Terminal Use**: Alt+Click works normally for standard shell commands
 2. **CLI Agent Sessions**: Alt+Click is temporarily disabled for optimal performance
 3. **Manual Re-enable**: Alt+Click automatically re-enables after CLI Agent detection ends
 4. **Troubleshooting**: Check VS Code Developer Console for Alt+Click event logs
 
 ### Technical Implementation
+
 - **Detection Patterns**: Uses regex patterns to identify CLI Agent output
 - **Buffer Optimization**: CLI Agent output uses 4ms flush intervals vs 16ms normal
 - **State Management**: Tracks CLI Agent activity and Alt+Click availability
@@ -338,12 +402,14 @@ Alt+Click requires both VS Code settings to be enabled:
 ### Recent Architecture Changes
 
 **Configuration Flow**
+
 ```
-VS Code Settings → Extension (SidebarTerminalProvider) → WebView Message → TerminalWebviewManager
+VS Code Settings → Extension (SecandarySidebar) → WebView Message → TerminalWebviewManager
 ```
 
 **Key Implementation Files**
-- `src/providers/SidebarTerminalProvider.ts`: VS Code settings integration and change monitoring
+
+- `src/providers/SecandarySidebar.ts`: VS Code settings integration and change monitoring
 - `src/webview/main.ts`: Alt+Click logic, visual feedback, and settings application
 - `src/types/common.ts`: Extended TerminalSettings interface for Alt+Click settings
 
@@ -354,8 +420,9 @@ This extension uses VS Code's platform-specific extension system to handle nativ
 ### Platform Target Support
 
 The extension builds for 9 platform targets:
+
 - **Windows**: win32-x64, win32-arm64
-- **macOS**: darwin-x64, darwin-arm64  
+- **macOS**: darwin-x64, darwin-arm64
 - **Linux**: linux-x64, linux-arm64, linux-armhf
 - **Alpine**: alpine-x64, alpine-arm64
 
@@ -376,6 +443,7 @@ npm run vsce:package:linux-arm64    # Linux ARM64
 ### Native Dependency Management
 
 **node-pty Handling**:
+
 - Listed in `bundledDependencies` to ensure inclusion in VSIX packages
 - `npm rebuild` runs during `vscode:prepublish` to compile for target platform
 - Each platform build contains the appropriate native binary
@@ -384,6 +452,7 @@ npm run vsce:package:linux-arm64    # Linux ARM64
 ### CI/CD Release Process
 
 **GitHub Actions Workflow** (`.github/workflows/build-platform-packages.yml`):
+
 1. **Trigger**: Git tag push (`v*` pattern)
 2. **Build Matrix**: Parallel builds on Windows, macOS, Linux runners
 3. **Platform Targeting**: Each job builds for specific architecture using `vsce package --target`
@@ -394,6 +463,7 @@ npm run vsce:package:linux-arm64    # Linux ARM64
 ### Release Workflow
 
 **Automated Release Process**: Uses `for-publish` branch for release management
+
 ```bash
 # Switch to release branch and merge changes
 git checkout for-publish
@@ -410,6 +480,7 @@ npm run release:patch    # Automatically increments version, creates tag, and pu
 ```
 
 **CI/CD Workflows**:
+
 - `release.yml`: Triggered by `v*` tags, handles testing, building, and publishing
 - `build-platform-packages.yml`: Creates platform-specific VSIX packages
 - `ci.yml`: Standard CI for pull requests and branch pushes
@@ -417,6 +488,7 @@ npm run release:patch    # Automatically increments version, creates tag, and pu
 ### Marketplace Integration
 
 VS Code Marketplace automatically serves the correct platform package to users based on their system:
+
 - Users see a single extension listing
 - VS Code automatically downloads the appropriate platform binary
 - No user action required for platform selection
@@ -424,6 +496,7 @@ VS Code Marketplace automatically serves the correct platform package to users b
 ### Development Testing
 
 **Local Platform Testing**:
+
 ```bash
 # Test current platform build
 npm run vsce:package
@@ -436,6 +509,7 @@ code --install-extension package.vsix
 ```
 
 **Cross-Platform Validation**:
+
 - Use GitHub Actions for testing on actual target platforms
 - Each platform build includes native node-pty compilation
 - VSIX packages contain platform-specific binaries in `node_modules/node-pty/build/`
@@ -443,6 +517,7 @@ code --install-extension package.vsix
 ## Testing and Debugging
 
 ### Running Tests Locally
+
 ```bash
 # Recommended for development - runs unit tests only
 npm test
@@ -459,19 +534,23 @@ npm run watch-tests
 ```
 
 ### CI Test Behavior
+
 - **Unit Tests**: Run on all platforms (Ubuntu, macOS, Windows)
 - **Exit Code Handling**: CI handles Mocha cleanup exit code 7 as success when tests pass
 - **Platform-Specific**: Linux runs full test suite, macOS/Windows compile tests only for performance
 - **Test Coverage**: ~275 tests with 93% success rate expected
 
 ### Debugging Common Issues
+
 - **Process Polyfill Issues**: Check `TestSetup.ts` for VS Code API mocks and process event handlers
 - **Node-pty Compilation**: Ensure native module rebuilding works for target platform
 - **Webview Context**: Use VS Code Developer Tools (`Ctrl+Shift+I`) for webview debugging
 - **Extension Host**: Check VS Code Developer Console for extension-side errors
 
 ### Test Environment Setup
+
 The test environment automatically configures:
+
 - VS Code API mocks for workspace, window, commands
 - Process event handler polyfills for Mocha compatibility
 - DOM mocking via JSDOM for webview component tests
@@ -480,11 +559,14 @@ The test environment automatically configures:
 ## File Reference Features
 
 ### Overview
+
 This extension provides two file reference commands for different AI assistants:
+
 1. **CLI Agent File Reference** (`@filename` format) - CMD+Option+L (Mac) / Ctrl+Alt+L (Windows/Linux)
 2. **GitHub Copilot Chat File Reference** (`#file:filename` format) - CMD+K CMD+C (Mac) / Ctrl+K Ctrl+C (Windows/Linux)
 
 ### CLI Agent File Reference (@filename)
+
 - **Command**: `secondaryTerminal.sendAtMention`
 - **Keybinding**: CMD+Option+L (Mac) / Ctrl+Alt+L (Windows/Linux)
 - **Format**: `@filename` or `@filename#L10-L25` (with line range)
@@ -496,6 +578,7 @@ This extension provides two file reference commands for different AI assistants:
   - Detects connected CLI Agents (Claude, Gemini)
 
 ### GitHub Copilot Chat File Reference (#file:)
+
 - **Command**: `secondaryTerminal.activateCopilot`
 - **Keybinding**: CMD+K CMD+C (Mac) / Ctrl+K Ctrl+C (Windows/Linux)
 - **Format**: `#file:filename` (GitHub Copilot standard format)
@@ -507,14 +590,16 @@ This extension provides two file reference commands for different AI assistants:
   - Note: Line ranges are detected but not included in output (Copilot limitation)
 
 ### Configuration Settings
+
 ```json
 {
-  "secondaryTerminal.enableCliAgentIntegration": true,      // Enable @filename shortcuts
-  "secondaryTerminal.enableGitHubCopilotIntegration": true  // Enable #file: shortcuts
+  "secondaryTerminal.enableCliAgentIntegration": true, // Enable @filename shortcuts
+  "secondaryTerminal.enableGitHubCopilotIntegration": true // Enable #file: shortcuts
 }
 ```
 
 ### Implementation Details
+
 - Both commands share similar file detection logic but use different output formats
 - File paths are relative to workspace root
 - Selection detection converts VS Code's 0-based line numbers to 1-based
@@ -528,6 +613,7 @@ This extension provides two file reference commands for different AI assistants:
 **実装状況**: ✅ **完全実装済み**
 
 #### 主要成果
+
 1. **UnifiedSessionManager完全実装**
    - 複数ターミナル（2-5個）の確実な保存・復元機能
    - スクロールバック履歴の完全復元
@@ -548,6 +634,7 @@ This extension provides two file reference commands for different AI assistants:
    - 混合セッション環境での完全復元
 
 #### 技術仕様
+
 - **保存対象**: 最大5個のターミナル（VS Code制限）
 - **データ永続化**: VS Code Extension GlobalState使用
 - **セッション有効期間**: 7日間（自動期限切れ）
@@ -555,23 +642,27 @@ This extension provides two file reference commands for different AI assistants:
 - **復元精度**: 100%（テスト検証済み）
 
 #### 品質保証レベル
+
 - **TDD (Test-Driven Development)** 完全準拠
 - **TypeScript型安全性** 確保
 - **ESLint + Prettier** コード品質保証
 - **継続的統合テスト** 実装済み
 
 #### 実際の問題解決
+
 - ✅ **「2つのターミナルを立ち上げたのに1つしか復元されない」** → 完全解決
-- ✅ **「履歴が表示されない」** → 完全解決  
+- ✅ **「履歴が表示されない」** → 完全解決
 - ✅ **「無限ループが発生する」** → 完全解決
 - ✅ **「メモリリークが起こる」** → 予防策実装済み
 
 #### 動作確実性
+
 **「テストが通ったら、絶対に動作するレベル」を達成**
 
 本実装は実運用環境で確実に動作します。全ての主要機能とエッジケースがテストで検証されており、継続的な品質保証体制が確立されています。
 
 ### 実装ファイル一覧
+
 - `src/sessions/UnifiedSessionManager.ts`: メイン実装
 - `src/test/unit/sessions/UnifiedSessionManager.test.ts`: ユニットテスト
 - `src/test/unit/sessions/UnifiedSessionManagerIntegration.test.ts`: 統合テスト

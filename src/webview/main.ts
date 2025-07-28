@@ -42,6 +42,7 @@ import {
   showTerminalInteractionWarning as _showTerminalInteractionWarning,
   setUIManager,
 } from './utils/NotificationUtils';
+import { StandardTerminalPersistenceManager } from './managers/StandardTerminalPersistenceManager';
 
 // Type definitions
 interface TerminalMessage extends WebviewMessage {
@@ -178,6 +179,7 @@ class TerminalWebviewManager {
   private uiManager: UIManager;
   private inputManager: InputManager;
   public messageManager: MessageManager;
+  private persistenceManager: StandardTerminalPersistenceManager;
 
   // Current settings (without font settings - they come from VS Code)
   private currentSettings: PartialTerminalSettings = {
@@ -209,6 +211,7 @@ class TerminalWebviewManager {
     setUIManager(this.uiManager);
     this.inputManager = new InputManager();
     this.messageManager = new MessageManager();
+    this.persistenceManager = new StandardTerminalPersistenceManager();
 
     // Setup notification styles on initialization
     this.notificationManager.setupNotificationStyles();
@@ -317,6 +320,9 @@ class TerminalWebviewManager {
       const fitAddon = new FitAddon();
       terminal.loadAddon(fitAddon);
       terminal.loadAddon(new WebLinksAddon());
+
+      // Add VS Code standard terminal persistence
+      this.persistenceManager.addTerminal(id, terminal);
 
       // Clear placeholder
       const placeholder = document.getElementById('terminal-placeholder');
@@ -967,6 +973,9 @@ class TerminalWebviewManager {
 
       // UIManagerのヘッダーキャッシュもクリア
       this.uiManager.removeTerminalHeader(terminalId);
+
+      // VS Code standard persistence cleanup
+      this.persistenceManager.removeTerminal(terminalId);
 
       log(`✅ [WEBVIEW] Terminal removed from UI: ${terminalId}`);
     } catch (error) {

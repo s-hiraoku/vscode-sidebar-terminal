@@ -46,7 +46,7 @@ export class MessageManager implements IMessageManager {
     log(`📨 [MESSAGE] ========== MESSAGE MANAGER HANDLE MESSAGE ==========`);
     log(`📨 [MESSAGE] Raw message:`, message);
     log(`📨 [MESSAGE] Message type:`, typeof message);
-    log(`📨 [MESSAGE] Message is null/undefined:`, message == null);
+    log(`📨 [MESSAGE] Message is null/undefined:`, message === null || message === undefined);
 
     try {
       const msg = message as MessageCommand;
@@ -152,6 +152,18 @@ export class MessageManager implements IMessageManager {
 
         case 'sessionCleared':
           this.handleSessionClearedMessage();
+          break;
+
+        case 'serializeTerminal':
+          this.handleSerializeTerminalMessage(msg, coordinator);
+          break;
+
+        case 'restoreSerializedContent':
+          this.handleRestoreSerializedContentMessage(msg, coordinator);
+          break;
+
+        case 'terminalRestoreInfo':
+          this.handleTerminalRestoreInfoMessage(msg, coordinator);
           break;
 
         case 'sessionRestoreSkipped':
@@ -542,7 +554,9 @@ export class MessageManager implements IMessageManager {
           cliAgentStatus.status,
           cliAgentStatus.agentType || null
         );
-        log(`✅ [MESSAGE] coordinator.updateClaudeStatus called successfully, result: ${result}`);
+        log(
+          `✅ [MESSAGE] coordinator.updateClaudeStatus called successfully, result: ${String(result)}`
+        );
       } catch (error) {
         log(`❌ [MESSAGE] Error calling coordinator.updateClaudeStatus:`, error);
         log(`❌ [MESSAGE] Error name: ${error instanceof Error ? error.name : 'unknown'}`);
@@ -748,7 +762,7 @@ export class MessageManager implements IMessageManager {
           }, 100);
         }
       } catch (error) {
-        log(`❌ [MESSAGE] Failed to restore terminal session ${terminalId}: ${error}`);
+        log(`❌ [MESSAGE] Failed to restore terminal session ${terminalId}: ${String(error)}`);
         // Continue with regular terminal creation as fallback
         coordinator.createTerminal(terminalId, terminalName, config);
       }
@@ -1064,6 +1078,178 @@ export class MessageManager implements IMessageManager {
     }
 
     log(`✅ [MESSAGE] Restored ${scrollbackContent.length} lines to terminal`);
+  }
+
+  /**
+   * Handle terminal serialization request
+   */
+  private handleSerializeTerminalMessage(
+    msg: MessageCommand,
+    coordinator: IManagerCoordinator
+  ): void {
+    log('📋 [MESSAGE] Handling serialize terminal message');
+
+    const terminalId = msg.terminalId as string;
+    const scrollbackLines = (msg.scrollbackLines as number) || 100;
+
+    if (!terminalId) {
+      log('❌ [MESSAGE] Invalid serialize terminal request - missing terminalId');
+      return;
+    }
+
+    try {
+      // Get persistence manager from the coordinator
+      const terminalManager = coordinator as any; // Type assertion for access to persistence manager
+      const persistenceManager = terminalManager.persistenceManager;
+
+      if (!persistenceManager) {
+        throw new Error('Persistence manager not available');
+      }
+
+      // Serialize the terminal content
+      const serializedData = persistenceManager.serializeTerminal(terminalId, {
+        scrollback: scrollbackLines,
+        excludeModes: false,
+        excludeAltBuffer: true,
+      });
+
+      if (!serializedData) {
+        throw new Error(`Failed to serialize terminal ${terminalId}`);
+      }
+
+      // Send response back to extension
+      this.queueMessage(
+        {
+          command: 'serializationResponse',
+          terminalId,
+          serializedContent: serializedData.content,
+          serializedHtml: serializedData.html,
+          timestamp: Date.now(),
+        },
+        coordinator
+      );
+
+      log(`✅ [MESSAGE] Terminal ${terminalId} serialized: ${serializedData.content.length} chars`);
+    } catch (error) {
+      log(
+        `❌ [MESSAGE] Error serializing terminal: ${error instanceof Error ? error.message : String(error)}`
+      );
+
+      this.queueMessage(
+        {
+          command: 'serializationError',
+          terminalId,
+          error: `Failed to serialize terminal: ${error instanceof Error ? error.message : String(error)}`,
+          timestamp: Date.now(),
+        },
+        coordinator
+      );
+    }
+  }
+
+  /**
+   * Handle restore serialized content request
+   */
+  private handleRestoreSerializedContentMessage(
+    msg: MessageCommand,
+    coordinator: IManagerCoordinator
+  ): void {
+    log('🔄 [MESSAGE] Handling restore serialized content message');
+
+    const terminalId = msg.terminalId as string;
+    const serializedContent = msg.serializedContent as string;
+
+    if (!terminalId || !serializedContent) {
+      log('❌ [MESSAGE] Invalid restore serialized content request');
+      return;
+    }
+
+    try {
+      // Get persistence manager from the coordinator
+      const terminalManager = coordinator as any; // Type assertion for access to persistence manager
+      const persistenceManager = terminalManager.persistenceManager;
+
+      if (!persistenceManager) {
+        throw new Error('Persistence manager not available');
+      }
+
+      // Restore the serialized content
+      const success = persistenceManager.restoreTerminalContent(terminalId, serializedContent);
+
+      if (!success) {
+        throw new Error(`Failed to restore content to terminal ${terminalId}`);
+      }
+
+      log(`✅ [MESSAGE] Serialized content restored to terminal ${terminalId}: ${serializedContent.length} chars`);
+    } catch (error) {
+      log(
+        `❌ [MESSAGE] Error restoring serialized content: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+  }
+
+  /**
+   * Handle terminal restore info message (WebView初期化後の状態復元)
+   */
+  private handleTerminalRestoreInfoMessage(
+    msg: MessageCommand,
+    coordinator: IManagerCoordinator
+  ): void {
+    log('🔄 [MESSAGE] Handling terminal restore info message');
+
+    const terminals = msg.terminals as Array<{
+      id: string;
+      name: string;
+      number: number;
+      cwd: string;
+      isActive: boolean;
+    }>;
+    const activeTerminalId = msg.activeTerminalId as string;
+
+    if (!terminals || !Array.isArray(terminals)) {
+      log('❌ [MESSAGE] Invalid terminal restore info - no terminals array');
+      return;
+    }
+
+    try {
+      log(`📋 [MESSAGE] Processing restore info for ${terminals.length} terminals`);
+
+      // 各ターミナルについて状態復元を試行
+      for (const terminalInfo of terminals) {
+        try {
+          log(`🔄 [MESSAGE] Attempting restore for terminal ${terminalInfo.name} (${terminalInfo.id})`);
+          
+          // 現在のターミナル一覧と照合して、対応するターミナルを見つける
+          const existingTerminals = coordinator.getAllTerminalInstances();
+          const matchingTerminal = Array.from(existingTerminals.values()).find(
+            (t, index) => index === terminalInfo.number - 1 // Terminal numbering starts from 1
+          );
+
+          if (matchingTerminal) {
+            log(`✅ [MESSAGE] Found matching terminal for ${terminalInfo.name}`);
+            
+            // TODO: ここでserialize addonによる状態復元を行う
+            // 現在は基本情報のみ処理、serialize addonでの復元は将来の実装
+            
+            // アクティブターミナルの設定
+            if (terminalInfo.isActive) {
+              // Set as active terminal in coordinator
+              log(`🎯 [MESSAGE] Setting active terminal: ${terminalInfo.name}`);
+            }
+          } else {
+            log(`⚠️ [MESSAGE] No matching terminal found for ${terminalInfo.name}`);
+          }
+        } catch (terminalError) {
+          log(`❌ [MESSAGE] Error processing terminal ${terminalInfo.name}: ${String(terminalError)}`);
+        }
+      }
+
+      log(`✅ [MESSAGE] Terminal restore info processing completed`);
+    } catch (error) {
+      log(
+        `❌ [MESSAGE] Error processing terminal restore info: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
   }
 
   public dispose(): void {

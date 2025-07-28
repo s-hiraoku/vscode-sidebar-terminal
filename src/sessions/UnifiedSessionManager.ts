@@ -73,7 +73,7 @@ export class UnifiedSessionManager {
           // Get real scrollback data from WebView (synchronous for now)
           try {
             log(`📋 [SESSION] Attempting to get scrollback for terminal ${terminal.id}`);
-            const scrollbackData = await this.getScrollbackDataSync(terminal.id);
+            const scrollbackData = this.getScrollbackDataSync(terminal.id);
             if (scrollbackData && scrollbackData.length > 0) {
               terminalInfo.scrollback = scrollbackData;
               log(
@@ -136,8 +136,9 @@ export class UnifiedSessionManager {
 
   /**
    * 保存されたセッションを復元
+   * @param forceRestore 既存ターミナルがあっても強制的に復元する
    */
-  public async restoreSession(): Promise<SimpleRestoreResult> {
+  public async restoreSession(forceRestore = false): Promise<SimpleRestoreResult> {
     try {
       log('🔄 [SESSION] === Unified Session Restore Start ===');
 
@@ -167,15 +168,28 @@ export class UnifiedSessionManager {
         return { success: true, restoredCount: 0, skippedCount: 0 };
       }
 
-      // Skip if terminals already exist
+      // Handle existing terminals
       const existingTerminals = this.terminalManager.getTerminals();
       if (existingTerminals.length > 0) {
-        log(`⚠️ [SESSION] ${existingTerminals.length} terminals already exist, skipping restore`);
-        return {
-          success: true,
-          restoredCount: 0,
-          skippedCount: sessionData.terminals.length,
-        };
+        if (forceRestore) {
+          log(`🔧 [SESSION] Force restore: deleting ${existingTerminals.length} existing terminals`);
+          // Delete existing terminals before restore
+          for (const terminal of existingTerminals) {
+            try {
+              this.terminalManager.deleteTerminal(terminal.id);
+              log(`🗑️ [SESSION] Deleted existing terminal: ${terminal.id}`);
+            } catch (error) {
+              log(`⚠️ [SESSION] Error deleting terminal ${terminal.id}: ${error}`);
+            }
+          }
+        } else {
+          log(`⚠️ [SESSION] ${existingTerminals.length} terminals already exist, skipping restore`);
+          return {
+            success: true,
+            restoredCount: 0,
+            skippedCount: sessionData.terminals.length,
+          };
+        }
       }
 
       // Restore terminals
@@ -239,6 +253,108 @@ export class UnifiedSessionManager {
   }
 
   /**
+   * 汚れた履歴をクリアして新しいクリーンな履歴の保存を開始
+   */
+  public async clearCorruptedHistoryAndRestart(): Promise<void> {
+    try {
+      log('🧹 [SESSION] Clearing corrupted history and restarting clean session...');
+      
+      // 保存されたセッションデータをクリア
+      await this.clearSession();
+      
+      // TerminalManagerの出力履歴をクリア
+      const terminals = this.terminalManager.getTerminals();
+      for (const terminal of terminals) {
+        this.terminalManager.clearOutputHistory(terminal.id);
+        log(`🧹 [SESSION] Cleared output history for ${terminal.name} (${terminal.id})`);
+      }
+      
+      log('✅ [SESSION] Corrupted history cleared. New clean history will be saved from now on.');
+    } catch (error) {
+      log(`❌ [SESSION] Failed to clear corrupted history: ${String(error)}`);
+    }
+  }
+
+  /**
+   * 保存されたセッションのスクロールバック履歴を取得（WebView初期化後の再送信用）
+   */
+  public async getStoredScrollbackForWebView(): Promise<Map<string, Array<{
+    content: string;
+    type?: 'output' | 'input' | 'error';
+    timestamp?: number;
+  }>>> {
+    const scrollbackMap = new Map<string, Array<{
+      content: string;
+      type?: 'output' | 'input' | 'error';
+      timestamp?: number;
+    }>>();
+
+    try {
+      const sessionData = this.context.globalState.get<SimpleSessionData>(
+        UnifiedSessionManager.STORAGE_KEY
+      );
+
+      if (!sessionData || !sessionData.terminals) {
+        log('📭 [SESSION] No stored session data for scrollback retrieval');
+        return scrollbackMap;
+      }
+
+      // ターミナルIDと保存されたスクロールバック履歴をマップ
+      const currentTerminals = this.terminalManager.getTerminals();
+      for (const currentTerminal of currentTerminals) {
+        // ターミナル番号で保存されたデータを検索
+        const terminalNumber = parseInt(currentTerminal.name.replace('Terminal ', ''));
+        const savedTerminal = sessionData.terminals.find(
+          t => parseInt(t.name.replace('Terminal ', '')) === terminalNumber
+        );
+
+        if (savedTerminal && savedTerminal.scrollback && savedTerminal.scrollback.length > 0) {
+          scrollbackMap.set(currentTerminal.id, savedTerminal.scrollback);
+          log(`📋 [SESSION] Found ${savedTerminal.scrollback.length} scrollback lines for ${currentTerminal.name} (${currentTerminal.id})`);
+        }
+      }
+
+      log(`📋 [SESSION] Retrieved scrollback data for ${scrollbackMap.size} terminals`);
+      return scrollbackMap;
+    } catch (error) {
+      log(`❌ [SESSION] Failed to get stored scrollback: ${String(error)}`);
+      return scrollbackMap;
+    }
+  }
+
+  /**
+   * 特定のターミナルのスクロールバック履歴を再送信（WebView初期化後用）
+   */
+  public async resendScrollbackToWebView(
+    terminalId: string,
+    scrollbackData: Array<{
+      content: string;
+      type?: 'output' | 'input' | 'error';
+      timestamp?: number;
+    }>
+  ): Promise<void> {
+    if (!this.sidebarProvider || !scrollbackData.length) {
+      return;
+    }
+
+    try {
+      log(`🔄 [SESSION] Resending scrollback to WebView for terminal ${terminalId}: ${scrollbackData.length} lines`);
+      
+      await this.sidebarProvider._sendMessage({
+        command: 'restoreScrollback',
+        terminalId,
+        scrollbackContent: scrollbackData,
+        timestamp: Date.now(),
+        isResend: true, // フラグを追加して再送信であることを示す
+      });
+
+      log(`✅ [SESSION] Scrollback resent to WebView for terminal ${terminalId}`);
+    } catch (error) {
+      log(`❌ [SESSION] Failed to resend scrollback for ${terminalId}: ${String(error)}`);
+    }
+  }
+
+  /**
    * スクロールバックデータをWebViewから要求
    */
   private async requestScrollbackData(terminalId: string): Promise<void> {
@@ -272,33 +388,63 @@ export class UnifiedSessionManager {
     }
 
     try {
-      // WebViewからスクロールバックデータを直接取得する実装が必要
-      // 現在は簡易版として基本的なデモデータを返す
+      // WebViewからスクロールバックデータを取得
       log(`📋 [SESSION] Getting scrollback data for terminal ${terminalId}`);
 
-      // TODO: 実際のWebViewからのデータ取得実装
-      // 今は基本的なセッション復元メッセージを提供
-      return [
-        {
-          content: `Welcome back! This is ${terminalId}`,
-          type: 'output',
-          timestamp: Date.now(),
-        },
-        {
-          content: `Previous session for terminal ${terminalId}`,
-          type: 'output',
-          timestamp: Date.now() - 1000,
-        },
-        {
-          content: `pwd`,
-          type: 'input',
-          timestamp: Date.now() - 2000,
-        },
-      ];
+      // TerminalManagerから実際のバッファデータを取得
+      const terminalManager = this.terminalManager;
+      if (!terminalManager) {
+        log(`⚠️ [SESSION] No terminal manager available for ${terminalId}`);
+        return this.createFallbackScrollback(terminalId);
+      }
+
+      const terminal = terminalManager.getTerminal(terminalId);
+      if (!terminal) {
+        log(`⚠️ [SESSION] Terminal ${terminalId} not found in manager`);
+        return this.createFallbackScrollback(terminalId);
+      }
+
+      // 実際のptyプロセスからバッファデータを取得
+      // node-ptyは直接的なscrollback APIを提供しないため、
+      // 最近の出力履歴を保存しておく方式を使用
+      const recentOutput = terminalManager.getRecentOutput(terminalId, 100);
+      if (recentOutput && recentOutput.length > 0) {
+        log(`📋 [SESSION] Retrieved ${recentOutput.length} output lines for ${terminalId}`);
+        return recentOutput.map((line, index) => ({
+          content: line,
+          type: 'output' as const,
+          timestamp: Date.now() - (recentOutput.length - index) * 1000,
+        }));
+      }
+
+      // フォールバック: 基本的なセッション復元メッセージ
+      return this.createFallbackScrollback(terminalId);
     } catch (error) {
       log(`❌ [SESSION] Failed to get scrollback sync for ${terminalId}: ${String(error)}`);
-      return null;
+      return this.createFallbackScrollback(terminalId);
     }
+  }
+
+  /**
+   * フォールバック用のスクロールバックデータを作成
+   */
+  private createFallbackScrollback(terminalId: string): Array<{
+    content: string;
+    type?: 'output' | 'input' | 'error';
+    timestamp?: number;
+  }> {
+    return [
+      {
+        content: `# Terminal ${terminalId} session restored at ${new Date().toLocaleString()}`,
+        type: 'output',
+        timestamp: Date.now(),
+      },
+      {
+        content: `# Previous terminal history is being restored...`,
+        type: 'output',
+        timestamp: Date.now() - 1000,
+      },
+    ];
   }
 
   /**
@@ -379,12 +525,12 @@ export class UnifiedSessionManager {
   /**
    * セッション統計を取得
    */
-  public async getSessionStats(): Promise<{
+  public getSessionStats(): {
     hasSession: boolean;
     terminalCount: number;
     lastSaved: Date | null;
     isExpired: boolean;
-  }> {
+  } {
     const sessionData = this.getSessionInfo();
 
     if (!sessionData) {

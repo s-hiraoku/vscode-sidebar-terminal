@@ -19,7 +19,8 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
   constructor(
     private readonly _extensionContext: vscode.ExtensionContext,
-    private readonly _terminalManager: TerminalManager
+    private readonly _terminalManager: TerminalManager,
+    private readonly _standardSessionManager?: import('../sessions/StandardTerminalSessionManager').StandardTerminalSessionManager
   ) {}
 
   public resolveWebviewView(
@@ -294,6 +295,17 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         command: 'fontSettingsUpdate',
         fontSettings,
       });
+
+      // WebView初期化完了後にターミナル復元情報を送信
+      if (this._standardSessionManager) {
+        log('🔄 [DEBUG] Sending terminal restore info to WebView...');
+        try {
+          await this._standardSessionManager.sendTerminalRestoreInfoToWebView();
+          log('✅ [DEBUG] Terminal restore info sent to WebView');
+        } catch (error) {
+          log(`❌ [DEBUG] Failed to send terminal restore info: ${String(error)}`);
+        }
+      }
 
       log('✅ [DEBUG] Terminal initialization completed');
     } catch (error) {

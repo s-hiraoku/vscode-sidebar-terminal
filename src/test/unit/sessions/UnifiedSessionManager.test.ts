@@ -1,7 +1,9 @@
 import { describe, it, beforeEach, afterEach } from 'mocha';
 import { expect } from 'chai';
 import * as sinon from 'sinon';
+import * as vscode from 'vscode';
 import { UnifiedSessionManager } from '../../../sessions/UnifiedSessionManager';
+import { TerminalManager } from '../../../terminals/TerminalManager';
 
 /**
  * 統合セッション管理機能のテスト
@@ -60,7 +62,10 @@ describe('🔄 UnifiedSessionManager Tests', () => {
       _sendMessage: sandbox.stub().resolves(),
     };
 
-    sessionManager = new UnifiedSessionManager(mockContext as any, mockTerminalManager as any);
+    sessionManager = new UnifiedSessionManager(
+      mockContext as unknown as vscode.ExtensionContext,
+      mockTerminalManager as unknown as TerminalManager
+    );
     sessionManager.setSidebarProvider(mockSidebarProvider);
   });
 
@@ -293,7 +298,7 @@ describe('🔄 UnifiedSessionManager Tests', () => {
 
       mockGlobalState.get.returns(sessionData);
 
-      const info = await sessionManager.getSessionInfo();
+      const info = sessionManager.getSessionInfo();
 
       expect(info).to.deep.equal(sessionData);
     });
@@ -301,7 +306,7 @@ describe('🔄 UnifiedSessionManager Tests', () => {
     it('should return null when no session exists', async () => {
       mockGlobalState.get.returns(null);
 
-      const info = await sessionManager.getSessionInfo();
+      const info = sessionManager.getSessionInfo();
 
       expect(info).to.be.null;
     });
