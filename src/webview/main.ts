@@ -42,6 +42,7 @@ import {
   showTerminalInteractionWarning as _showTerminalInteractionWarning,
   setUIManager,
 } from './utils/NotificationUtils';
+import { StandardTerminalPersistenceManager } from './managers/StandardTerminalPersistenceManager';
 
 // Type definitions
 interface TerminalMessage extends WebviewMessage {
@@ -159,6 +160,7 @@ class TerminalWebviewManager {
       notification: this.notificationManager,
     };
   }
+
   public terminal: Terminal | null = null;
   public fitAddon: FitAddon | null = null;
   public terminalContainer: HTMLElement | null = null;
@@ -178,6 +180,7 @@ class TerminalWebviewManager {
   private uiManager: UIManager;
   private inputManager: InputManager;
   public messageManager: MessageManager;
+  private persistenceManager: StandardTerminalPersistenceManager;
 
   // Current settings (without font settings - they come from VS Code)
   private currentSettings: PartialTerminalSettings = {
@@ -209,6 +212,7 @@ class TerminalWebviewManager {
     setUIManager(this.uiManager);
     this.inputManager = new InputManager();
     this.messageManager = new MessageManager();
+    this.persistenceManager = new StandardTerminalPersistenceManager();
 
     // Setup notification styles on initialization
     this.notificationManager.setupNotificationStyles();
@@ -317,6 +321,11 @@ class TerminalWebviewManager {
       const fitAddon = new FitAddon();
       terminal.loadAddon(fitAddon);
       terminal.loadAddon(new WebLinksAddon());
+
+      // Add VS Code standard terminal persistence
+      this.persistenceManager.addTerminal(id, terminal);
+
+      // VS Code標準: ターミナルopen後の自動復元を実装済み（line 507-518で実行）
 
       // Clear placeholder
       const placeholder = document.getElementById('terminal-placeholder');
@@ -495,6 +504,19 @@ class TerminalWebviewManager {
             terminal.refresh(0, terminal.rows - 1);
             terminal.focus();
 
+            // VS Code標準: ターミナル初期化完了後に自動的にscrollback復元を実行
+            log(`🔄 [MAIN] Terminal ${id} fully initialized, attempting scrollback restoration`);
+            try {
+              const restored = this.persistenceManager.restoreTerminalFromStorage(id);
+              if (restored) {
+                log(`✅ [MAIN] Successfully restored scrollback for terminal ${id}`);
+              } else {
+                log(`📭 [MAIN] No saved scrollback found for terminal ${id}`);
+              }
+            } catch (restoreError) {
+              log(`❌ [MAIN] Failed to restore scrollback for terminal ${id}:`, restoreError);
+            }
+
             // Add click event to xterm.js terminal area for reliable focus handling
             this.inputManager.addXtermClickHandler(terminal, id, targetContainer, this);
 
@@ -600,29 +622,46 @@ class TerminalWebviewManager {
   }
 
   /**
-   * Restore scrollback history to an existing terminal - DISABLED FOR DEBUGGING
+   * Restore scrollback history to an existing terminal
    */
-  /*
   public restoreTerminalScrollback(
     id: string,
     restoreMessage: string,
-    scrollbackData: string[]
+    scrollbackData: Array<{
+      content: string;
+      type?: 'output' | 'input' | 'error';
+      timestamp?: number;
+    }>
   ): void {
     log('🔄 [WEBVIEW] Restoring scrollback for terminal:', id);
-    
+
     const terminalInstance = this.splitManager.getTerminals().get(id);
     if (terminalInstance && terminalInstance.terminal) {
       try {
         // Show restore message first
         if (restoreMessage) {
-          terminalInstance.terminal.writeln(restoreMessage);
+          terminalInstance.terminal.writeln(`\x1b[32m${restoreMessage}\x1b[0m`); // Green color
         }
 
         // Restore scrollback history
         if (scrollbackData && scrollbackData.length > 0) {
-          scrollbackData.forEach((line) => {
-            if (line && line.trim()) {
-              terminalInstance.terminal.writeln(line);
+          scrollbackData.forEach((lineData) => {
+            if (lineData && lineData.content && lineData.content.trim()) {
+              // Color-code based on type
+              let colorCode = '';
+              switch (lineData.type) {
+                case 'input':
+                  colorCode = '\x1b[36m'; // Cyan
+                  break;
+                case 'error':
+                  colorCode = '\x1b[31m'; // Red
+                  break;
+                case 'output':
+                default:
+                  colorCode = '\x1b[37m'; // White
+                  break;
+              }
+              terminalInstance.terminal.writeln(`${colorCode}${lineData.content}\x1b[0m`);
             }
           });
           log(`✅ [WEBVIEW] Restored ${scrollbackData.length} scrollback lines`);
@@ -638,7 +677,6 @@ class TerminalWebviewManager {
       log(`❌ [WEBVIEW] Terminal instance not found for scrollback restore: ${id}`);
     }
   }
-  */
 
   public switchToTerminal(id: string): void {
     log('🔄 [WEBVIEW] Switching to terminal:', id);
@@ -951,6 +989,9 @@ class TerminalWebviewManager {
 
       // UIManagerのヘッダーキャッシュもクリア
       this.uiManager.removeTerminalHeader(terminalId);
+
+      // VS Code standard persistence cleanup
+      this.persistenceManager.removeTerminal(terminalId);
 
       log(`✅ [WEBVIEW] Terminal removed from UI: ${terminalId}`);
     } catch (error) {
