@@ -43,12 +43,12 @@
   },
   "forwardPorts": [3000, 3001, 3002, 3003, 3004, 3005],
   "postCreateCommand": "npm install && npm run compile",
-  "postStartCommand": "sudo chown node:node /workspaces && cp /workspaces/vscode-sidebar-terminal/.devcontainer/setup-terminal.sh /tmp/ && chmod +x /tmp/setup-terminal.sh && bash /tmp/setup-terminal.sh",
+  "postStartCommand": "sudo chown node:node /workspaces && cp /workspaces/vscode-sidebar-terminal/.devcontainer/setup-terminal.sh /tmp/ && chmod +x /tmp/setup-terminal.sh && bash /tmp/setup-terminal.sh && echo 'export PATH=/usr/local/bin:/home/node/.volta/bin:$PATH' >> /home/node/.zshrc",
   "remoteUser": "node",
   "mounts": [
-    // 拡張機能のデバッグ時にホストのVS Codeと連携
     "source=${localEnv:HOME}/.vscode,target=/home/node/.vscode,type=bind,consistency=cached",
-    // ホストの ~/.claude をコンテナ内の同じパスにマウント
-    "source=${localEnv:HOME}/.claude,target=/home/node/.claude,type=bind,consistency=cached"
+    "source=${localEnv:HOME}/.claude,target=/home/node/.claude,type=bind,consistency=cached",
+    // ホストのclaude-codeを優先パスにマウント
+    "source=${localEnv:HOME}/.volta/bin/claude,target=/usr/local/bin/claude,type=bind,consistency=cached"
   ]
 }
