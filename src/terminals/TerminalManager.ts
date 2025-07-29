@@ -1209,7 +1209,7 @@ export class TerminalManager {
     // ANSIエスケープシーケンスのパターン
     // \u001b[0-9;]*[A-Za-z] - カラー、カーソル移動等
     // \u001b]0;.*?\u0007 - ウィンドウタイトル設定
-    // \u001b]1;.*?\u0007 - タブタイトル設定  
+    // \u001b]1;.*?\u0007 - タブタイトル設定
     // \u001b]7;.*?\u0007 - 作業ディレクトリ設定
     // \u001b\\ - その他のエスケープシーケンス終了
     return text
@@ -1230,7 +1230,7 @@ export class TerminalManager {
     // 一般的なプロンプトパターン
     const promptPatterns = [
       /^[\s~]*❯[\s\d.:]*$/, // ❯ with optional path and time
-      /^[\s~]*\$[\s\d.:]*$/, // $ with optional path and time  
+      /^[\s~]*\$[\s\d.:]*$/, // $ with optional path and time
       /^[\s~]*%[\s\d.:]*$/, // % with optional path and time
       /^[\s~]*#[\s\d.:]*$/, // # with optional path and time
       /^[\s~]*>[\s\d.:]*$/, // > with optional path and time
@@ -1239,8 +1239,8 @@ export class TerminalManager {
       /^\s*[\d.:]+\s*$/, // time only (e.g., "00:30")
       /^[\s\w~/-]*\s+[\d.:]+\s*$/, // path + time format
     ];
-    
-    return promptPatterns.some(pattern => pattern.test(text));
+
+    return promptPatterns.some((pattern) => pattern.test(text));
   }
 
   /**
@@ -1266,8 +1266,8 @@ export class TerminalManager {
       /^node(\s+.*)?$/, // node commands
       /^python(\s+.*)?$/, // python commands
     ];
-    
-    return commandPatterns.some(pattern => pattern.test(text));
+
+    return commandPatterns.some((pattern) => pattern.test(text));
   }
 
   /**
@@ -1278,26 +1278,41 @@ export class TerminalManager {
     if (text.length <= 3 && !/^\w+$/.test(text)) {
       return true;
     }
-    
+
     // 単一文字
     if (text.length === 1) {
       return true;
     }
-    
+
     // 一般的なコマンドの部分入力パターン
     const partialPatterns = [
-      /^e$/, /^ec$/, /^ech$/, /^echo$/,
-      /^l$/, /^ls$/,
-      /^c$/, /^ca$/, /^cat$/,
-      /^p$/, /^pw$/, /^pwd$/,
-      /^c$/, /^cd$/,
-      /^m$/, /^mk$/, /^mkd$/, /^mkdi$/,
-      /^r$/, /^rm$/,
-      /^c$/, /^cp$/,
-      /^m$/, /^mv$/,
+      /^e$/,
+      /^ec$/,
+      /^ech$/,
+      /^echo$/,
+      /^l$/,
+      /^ls$/,
+      /^c$/,
+      /^ca$/,
+      /^cat$/,
+      /^p$/,
+      /^pw$/,
+      /^pwd$/,
+      /^c$/,
+      /^cd$/,
+      /^m$/,
+      /^mk$/,
+      /^mkd$/,
+      /^mkdi$/,
+      /^r$/,
+      /^rm$/,
+      /^c$/,
+      /^cp$/,
+      /^m$/,
+      /^mv$/,
     ];
-    
-    return partialPatterns.some(pattern => pattern.test(text));
+
+    return partialPatterns.some((pattern) => pattern.test(text));
   }
 
   /**
@@ -1307,42 +1322,42 @@ export class TerminalManager {
     if (!cleanText || cleanText.length < 1) {
       return false;
     }
-    
+
     // 空白のみの行は除外
     if (/^\s*$/.test(cleanText)) {
       return false;
     }
-    
+
     // プロンプトパターンは除外
     if (this.isPromptPattern(cleanText)) {
       return false;
     }
-    
+
     // 入力エコーバック（部分入力）は除外
     if (this.isPartialInput(cleanText)) {
       return false;
     }
-    
+
     // コマンド自体は除外（出力のみ保存したい）
     if (this.isCommandPattern(cleanText)) {
       return false;
     }
-    
+
     // 単一記号のみは除外
     if (/^[^\w\s]+$/.test(cleanText) && cleanText.length <= 3) {
       return false;
     }
-    
+
     // パス表示（/home/user など）は除外
     if (/^\/[\w/-]+$/.test(cleanText)) {
       return false;
     }
-    
+
     // 最小長チェック：意味のある出力は通常2文字以上
     if (cleanText.length >= 2) {
       return true;
     }
-    
+
     return false;
   }
 
@@ -1353,17 +1368,17 @@ export class TerminalManager {
     if (history.length === 0) {
       return false;
     }
-    
+
     const lastLine = history[history.length - 1];
     if (!lastLine) {
       return false;
     }
-    
+
     // 完全一致は重複
     if (lastLine === newLine) {
       return true;
     }
-    
+
     // 短い行の場合、類似性をチェック
     if (newLine.length <= 5) {
       // 最後の行が現在の行を含んでいる場合（部分入力の可能性）
@@ -1371,7 +1386,7 @@ export class TerminalManager {
         return true;
       }
     }
-    
+
     // 直近の3行をチェック
     const recentLines = history.slice(-3);
     for (const recentLine of recentLines) {
@@ -1379,7 +1394,7 @@ export class TerminalManager {
         return true;
       }
     }
-    
+
     return false;
   }
 
@@ -1398,18 +1413,16 @@ export class TerminalManager {
     for (const line of lines) {
       // ANSIエスケープシーケンスを除去
       const cleanLine = this.cleanAnsiEscapeSequences(line);
-      
+
       // 意味のあるコンテンツかつ重複でないもののみを保存
-      if (this.isSignificantContent(cleanLine) && 
-          !this.isDuplicateOrSimilar(cleanLine, history)) {
-        
+      if (this.isSignificantContent(cleanLine) && !this.isDuplicateOrSimilar(cleanLine, history)) {
         history.push(cleanLine);
-        
+
         // バッファサイズ制限
         if (history.length > this.MAX_OUTPUT_HISTORY) {
           history.shift(); // 古い行を削除
         }
-        
+
         // デバッグログ: 保存された行を記録
         log(`✅ [OUTPUT-ONLY] Saved output for ${terminalId}: "${cleanLine}"`);
       } else {

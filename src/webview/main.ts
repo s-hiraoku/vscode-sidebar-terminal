@@ -160,6 +160,7 @@ class TerminalWebviewManager {
       notification: this.notificationManager,
     };
   }
+
   public terminal: Terminal | null = null;
   public fitAddon: FitAddon | null = null;
   public terminalContainer: HTMLElement | null = null;
@@ -323,6 +324,8 @@ class TerminalWebviewManager {
 
       // Add VS Code standard terminal persistence
       this.persistenceManager.addTerminal(id, terminal);
+
+      // VS Code標準: ターミナルopen後の自動復元を実装済み（line 507-518で実行）
 
       // Clear placeholder
       const placeholder = document.getElementById('terminal-placeholder');
@@ -500,6 +503,19 @@ class TerminalWebviewManager {
             fitAddon.fit();
             terminal.refresh(0, terminal.rows - 1);
             terminal.focus();
+
+            // VS Code標準: ターミナル初期化完了後に自動的にscrollback復元を実行
+            log(`🔄 [MAIN] Terminal ${id} fully initialized, attempting scrollback restoration`);
+            try {
+              const restored = this.persistenceManager.restoreTerminalFromStorage(id);
+              if (restored) {
+                log(`✅ [MAIN] Successfully restored scrollback for terminal ${id}`);
+              } else {
+                log(`📭 [MAIN] No saved scrollback found for terminal ${id}`);
+              }
+            } catch (restoreError) {
+              log(`❌ [MAIN] Failed to restore scrollback for terminal ${id}:`, restoreError);
+            }
 
             // Add click event to xterm.js terminal area for reliable focus handling
             this.inputManager.addXtermClickHandler(terminal, id, targetContainer, this);

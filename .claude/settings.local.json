@@ -51,10 +51,12 @@
       "Bash(git tag:*)",
       "Bash(npm version:*)",
       "WebFetch(domain:stackoverflow.com)",
-      "Bash(gh issue close:*)"
+      "Bash(gh issue close:*)",
+      "Bash(rm:*)"
     ],
     "deny": []
   },
+  "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "playwright",
     "arxiv-mcp-server",

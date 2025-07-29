@@ -62,7 +62,10 @@ export class ExtensionLifecycle {
 
       // Initialize standard terminal session manager
       log('🔧 [EXTENSION] Initializing VS Code standard session manager...');
-      this.standardSessionManager = new StandardTerminalSessionManager(context, this.terminalManager);
+      this.standardSessionManager = new StandardTerminalSessionManager(
+        context,
+        this.terminalManager
+      );
       log('✅ [EXTENSION] Standard session manager initialized');
 
       // Initialize scrollback session manager - Temporarily disabled
@@ -76,7 +79,11 @@ export class ExtensionLifecycle {
       this.copilotIntegrationCommand = new CopilotIntegrationCommand();
 
       // Register the sidebar terminal provider
-      this.sidebarProvider = new SecondaryTerminalProvider(context, this.terminalManager, this.standardSessionManager);
+      this.sidebarProvider = new SecondaryTerminalProvider(
+        context,
+        this.terminalManager,
+        this.standardSessionManager
+      );
 
       // Set sidebar provider for StandardSessionManager
       if (this.standardSessionManager) {
@@ -90,11 +97,15 @@ export class ExtensionLifecycle {
       // Setup session manager event listeners - DISABLED (UnifiedSessionManager doesn't emit events)
       // this.setupSessionEventListeners();
 
-      // Execute session restore BEFORE WebView registration to prevent initial terminal creation
-      log('🔧 [EXTENSION] Executing session restore before WebView initialization...');
-      await this.restoreSessionBeforeWebView();
+      // CRITICAL: Session restore is now handled by SecondaryTerminalProvider asynchronously
+      // This prevents VS Code activation spinner from hanging
+      log(
+        '🚀 [EXTENSION] Session restore will be handled asynchronously by SecondaryTerminalProvider'
+      );
+      log('✅ [EXTENSION] Activation will complete immediately to prevent spinner hang');
 
-      // Register webview providers for both sidebar and panel AFTER restore
+      // Register webview providers AFTER session restore completes
+      log('🔧 [EXTENSION] Registering WebView providers after session restore...');
       const sidebarWebviewProvider = vscode.window.registerWebviewViewProvider(
         SecondaryTerminalProvider.viewType,
         this.sidebarProvider,
@@ -110,11 +121,18 @@ export class ExtensionLifecycle {
       this.setupSessionAutoSave(context);
 
       log('✅ Sidebar Terminal extension activated successfully');
+
+      // CRITICAL: Ensure activation Promise resolves immediately
+      // This prevents VS Code progress spinner from hanging
+      return Promise.resolve();
     } catch (error) {
       log('Failed to activate Sidebar Terminal extension:', error);
       void vscode.window.showErrorMessage(
         `Failed to activate Sidebar Terminal: ${error instanceof Error ? error.message : String(error)}`
       );
+
+      // CRITICAL: Even on error, resolve activation Promise to prevent spinner hanging
+      return Promise.resolve();
     }
   }
 
@@ -334,7 +352,9 @@ export class ExtensionLifecycle {
           const result = await this.standardSessionManager.restoreSession();
 
           if (result.success && result.restoredCount && result.restoredCount > 0) {
-            log(`✅ [SESSION] VS Code standard session restored: ${result.restoredCount} terminals`);
+            log(
+              `✅ [SESSION] VS Code standard session restored: ${result.restoredCount} terminals`
+            );
 
             // 復元完了後の初期化処理
             this.terminalManager.finalizeSessionRestore();
@@ -371,7 +391,7 @@ export class ExtensionLifecycle {
   private setupSessionAutoSave(context: vscode.ExtensionContext): void {
     // VS Code終了時の保存を設定
     log('🔧 [EXTENSION] Setting up session auto-save on exit...');
-    
+
     // Extension deactivation時にセッション保存
     context.subscriptions.push({
       dispose: () => {
@@ -380,11 +400,26 @@ export class ExtensionLifecycle {
       },
     });
 
-    // ターミナル変更時の保存を設定（定期保存として）
+    // VS Code標準に準拠: ターミナル作成時に即座に保存
+    if (this.terminalManager) {
+      const terminalCreatedDisposable = this.terminalManager.onTerminalCreated((terminal) => {
+        log(`💾 [EXTENSION] Terminal created - immediate save: ${terminal.name}`);
+        void this.saveSessionImmediately('terminal_created');
+      });
+
+      const terminalRemovedDisposable = this.terminalManager.onTerminalRemoved((terminalId) => {
+        log(`💾 [EXTENSION] Terminal removed - immediate save: ${terminalId}`);
+        void this.saveSessionImmediately('terminal_removed');
+      });
+
+      context.subscriptions.push(terminalCreatedDisposable, terminalRemovedDisposable);
+    }
+
+    // ターミナル変更時の保存を設定（定期保存として - バックアップ用）
     const saveOnTerminalChange = setInterval(() => {
       void this.saveSessionPeriodically();
     }, 30000); // 30秒ごとに保存
-    
+
     context.subscriptions.push({
       dispose: () => clearInterval(saveOnTerminalChange),
     });
@@ -412,6 +447,34 @@ export class ExtensionLifecycle {
       }
     } catch (error) {
       log(`❌ [EXTENSION] Error saving session on exit: ${String(error)}`);
+    }
+  }
+
+  /**
+   * 即座のセッション保存（VS Code標準準拠）
+   */
+  private async saveSessionImmediately(trigger: string): Promise<void> {
+    try {
+      if (!this.standardSessionManager || !this.terminalManager) {
+        return;
+      }
+
+      const terminals = this.terminalManager.getTerminals();
+      log(`💾 [EXTENSION] Immediate save triggered by ${trigger}: ${terminals.length} terminals`);
+
+      const result = await this.standardSessionManager.saveCurrentSession();
+
+      if (result.success) {
+        log(
+          `✅ [EXTENSION] Immediate save completed (${trigger}): ${result.terminalCount} terminals`
+        );
+      } else {
+        log(
+          `⚠️ [EXTENSION] Immediate save failed (${trigger}): ${result.error || 'unknown error'}`
+        );
+      }
+    } catch (error) {
+      log(`❌ [EXTENSION] Error in immediate save (${trigger}): ${String(error)}`);
     }
   }
 
@@ -455,7 +518,7 @@ export class ExtensionLifecycle {
     // Note: UnifiedSessionManager doesn't implement EventEmitter pattern
     // Session restore events would be handled differently
     // This event listener setup is disabled since UnifiedSessionManager doesn't emit events
-    
+
     // Session restore events (disabled - UnifiedSessionManager doesn't use events)
     // this.unifiedSessionManager.on('sessionRestoreStarted', (data: { terminalCount: number }) => {
     //   this.sidebarProvider?.sendSessionMessage({
@@ -557,7 +620,9 @@ export class ExtensionLifecycle {
           `Terminal session saved successfully (${result.terminalCount || 0} terminal${(result.terminalCount || 0) > 1 ? 's' : ''})`
         );
       } else {
-        await vscode.window.showErrorMessage(`Failed to save session: ${result.error || 'Unknown error'}`);
+        await vscode.window.showErrorMessage(
+          `Failed to save session: ${result.error || 'Unknown error'}`
+        );
       }
     } catch (error) {
       await vscode.window.showErrorMessage(`Failed to save session: ${error}`);
@@ -584,7 +649,9 @@ export class ExtensionLifecycle {
           await vscode.window.showInformationMessage('No previous session data found to restore');
         }
       } else {
-        await vscode.window.showErrorMessage(`Failed to restore session: ${result.error || 'Unknown error'}`);
+        await vscode.window.showErrorMessage(
+          `Failed to restore session: ${result.error || 'Unknown error'}`
+        );
       }
     } catch (error) {
       await vscode.window.showErrorMessage(`Failed to restore session: ${error}`);
@@ -1001,48 +1068,11 @@ export class ExtensionLifecycle {
   }
 
   /**
-   * WebView初期化前のセッション復元処理
-   * 既存ターミナルのチェックを行わずに復元を実行
+   * SPINNER FIX: Remove synchronous session restore method
+   * Session restore is now handled asynchronously by WebView after activation
    */
-  private async restoreSessionBeforeWebView(): Promise<void> {
-    log('🔍 [RESTORE_BEFORE_WEBVIEW] === SESSION RESTORE BEFORE WEBVIEW START ===');
-
-    try {
-      if (!this.standardSessionManager || !this.terminalManager) {
-        log('⚠️ [RESTORE_BEFORE_WEBVIEW] Managers not available');
-        return;
-      }
-
-      log('🔍 [RESTORE_BEFORE_WEBVIEW] About to call standardSessionManager.restoreSession() with forceRestore=true');
-      
-      // セッション復元を実行（既存ターミナルチェックなし、強制復元）
-      const result = await this.standardSessionManager.restoreSession(true);
-      log(`🔍 [RESTORE_BEFORE_WEBVIEW] restoreSession() completed with result: ${JSON.stringify(result)}`);
-
-      if (result.success && result.restoredCount && result.restoredCount > 0) {
-        log(`✅ [RESTORE_BEFORE_WEBVIEW] Restored ${result.restoredCount} terminals`);
-        
-        // 復元完了後の初期化処理
-        this.terminalManager.finalizeSessionRestore();
-        
-        // 復元成功をユーザーに通知
-        setTimeout(() => {
-          void vscode.window.showInformationMessage(
-            `Terminal session restored: ${result.restoredCount} terminal${(result.restoredCount || 0) > 1 ? 's' : ''}`
-          );
-        }, 1000);
-      } else {
-        log('📭 [RESTORE_BEFORE_WEBVIEW] No session data found - will create initial terminal via WebView');
-        // WebViewの初期化時にターミナルが作成されるため、ここでは何もしない
-      }
-    } catch (error) {
-      log(
-        `❌ [RESTORE_BEFORE_WEBVIEW] Error during restore: ${error instanceof Error ? error.message : String(error)}`
-      );
-      log(`❌ [RESTORE_BEFORE_WEBVIEW] Error stack: ${error instanceof Error ? error.stack : 'No stack'}`);
-      // エラー時はWebViewの初期化時にターミナルが作成される
-    }
-
-    log('🔍 [RESTORE_BEFORE_WEBVIEW] === SESSION RESTORE BEFORE WEBVIEW FINISHED ===');
-  }
+  // private async performSynchronousSessionRestore(): Promise<void> {
+  //   // DISABLED: This method was causing VS Code spinner hang during extension activation
+  //   // Session restore is now handled by SecondaryTerminalProvider._performAsyncSessionRestore()
+  // }
 }

@@ -135,6 +135,8 @@ export class MessageManager implements IMessageManager {
         case 'getScrollback':
           this.handleGetScrollbackMessage(msg, coordinator);
           break;
+
+        // extractScrollbackData case removed - using VS Code standard approach with automatic persistence
         case 'restoreScrollback':
           this.handleRestoreScrollbackMessage(msg, coordinator);
           break;
@@ -164,6 +166,10 @@ export class MessageManager implements IMessageManager {
 
         case 'terminalRestoreInfo':
           this.handleTerminalRestoreInfoMessage(msg, coordinator);
+          break;
+
+        case 'saveAllTerminalSessions':
+          this.handleSaveAllTerminalSessionsMessage(msg, coordinator);
           break;
 
         case 'sessionRestoreSkipped':
@@ -582,6 +588,10 @@ export class MessageManager implements IMessageManager {
    * Queue message for reliable delivery
    */
   private queueMessage(message: unknown, coordinator: IManagerCoordinator): void {
+    const msgObj = message as any;
+    log(
+      `📤 [MESSAGE] Queueing message: ${msgObj?.command} (queue size: ${this.messageQueue.length})`
+    );
     this.messageQueue.push(message);
     void this.processMessageQueue(coordinator);
   }
@@ -862,6 +872,144 @@ export class MessageManager implements IMessageManager {
   }
 
   /**
+   * Handle scrollback data extraction request (new unified interface)
+   */
+  private handleExtractScrollbackDataMessage(
+    msg: MessageCommand,
+    coordinator: IManagerCoordinator
+  ): void {
+    log('📋 [MESSAGE] ========== EXTRACT SCROLLBACK DATA MESSAGE RECEIVED ==========');
+    log('📋 [MESSAGE] Full message:', msg);
+    log('📋 [MESSAGE] Message keys:', Object.keys(msg || {}));
+
+    const terminalId = msg.terminalId as string;
+    const maxLines = (msg.maxLines as number) || 1000;
+    const requestId = msg.requestId as string;
+
+    log(
+      `📋 [MESSAGE] Extracted parameters: terminalId=${terminalId}, maxLines=${maxLines}, requestId=${requestId}`
+    );
+
+    if (!terminalId) {
+      log('❌ [MESSAGE] No terminal ID provided for scrollback extraction');
+      return;
+    }
+
+    if (!requestId) {
+      log('❌ [MESSAGE] No request ID provided for scrollback extraction');
+      return;
+    }
+
+    // Debug coordinator state
+    log(
+      '📋 [MESSAGE] Coordinator available terminals:',
+      coordinator.getAllTerminalInstances().size
+    );
+    const allTerminals = coordinator.getAllTerminalInstances();
+    for (const [id, terminal] of allTerminals) {
+      log(`📋 [MESSAGE] Available terminal: ${id} (name: ${terminal.name})`);
+    }
+
+    // Get terminal instance
+    const terminalInstance = coordinator.getTerminalInstance(terminalId);
+    log(`📋 [MESSAGE] Terminal instance found: ${!!terminalInstance}`);
+    if (terminalInstance) {
+      log(
+        `📋 [MESSAGE] Terminal instance details: id=${terminalInstance.id}, name=${terminalInstance.name}, hasTerminal=${!!terminalInstance.terminal}`
+      );
+    }
+
+    if (!terminalInstance) {
+      log(`❌ [MESSAGE] Terminal instance not found for ID: ${terminalId}`);
+      log('❌ [MESSAGE] Sending error response...');
+
+      // Send error response
+      this.queueMessage(
+        {
+          command: 'scrollbackDataCollected',
+          terminalId,
+          requestId,
+          scrollbackData: [],
+          success: false,
+          error: `Terminal not found: ${terminalId}`,
+          timestamp: Date.now(),
+        },
+        coordinator
+      );
+      log('❌ [MESSAGE] Error response queued');
+      return;
+    }
+
+    try {
+      log('📋 [MESSAGE] Starting scrollback extraction process...');
+
+      // Try to extract scrollback from persistence manager first (if available)
+      let scrollbackData: Array<{ content: string; type?: string; timestamp?: number }> = [];
+
+      try {
+        log('📋 [MESSAGE] Attempting persistence manager extraction...');
+        scrollbackData = this.extractScrollbackFromPersistenceManager(
+          coordinator,
+          terminalId,
+          maxLines
+        );
+        log(`📋 [MESSAGE] Extracted ${scrollbackData.length} lines from persistence manager`);
+      } catch (persistenceError) {
+        log(
+          `⚠️ [MESSAGE] Persistence manager extraction failed, falling back to xterm buffer: ${String(persistenceError)}`
+        );
+
+        try {
+          log('📋 [MESSAGE] Attempting xterm buffer extraction...');
+          scrollbackData = this.extractScrollbackFromXterm(terminalInstance.terminal, maxLines);
+          log(`📋 [MESSAGE] Extracted ${scrollbackData.length} lines from xterm buffer`);
+        } catch (xtermError) {
+          log(`❌ [MESSAGE] Xterm buffer extraction also failed: ${String(xtermError)}`);
+          throw xtermError;
+        }
+      }
+
+      log('📋 [MESSAGE] Preparing to send scrollbackDataCollected response...');
+
+      // Send scrollback data back to extension with correct command name
+      const responseMessage = {
+        command: 'scrollbackDataCollected',
+        terminalId,
+        requestId,
+        scrollbackData,
+        success: true,
+        timestamp: Date.now(),
+      };
+
+      log('📋 [MESSAGE] Response message prepared:', responseMessage);
+
+      this.queueMessage(responseMessage, coordinator);
+
+      log(
+        `✅ [MESSAGE] Scrollback data collected for terminal ${terminalId}: ${scrollbackData.length} lines (requestId: ${requestId})`
+      );
+      log('✅ [MESSAGE] Response has been queued and should be sent to extension');
+    } catch (error) {
+      log(
+        `❌ [MESSAGE] Error extracting scrollback data: ${error instanceof Error ? error.message : String(error)}`
+      );
+
+      this.queueMessage(
+        {
+          command: 'scrollbackDataCollected',
+          terminalId,
+          requestId,
+          scrollbackData: [],
+          success: false,
+          error: `Failed to extract scrollback: ${error instanceof Error ? error.message : String(error)}`,
+          timestamp: Date.now(),
+        },
+        coordinator
+      );
+    }
+  }
+
+  /**
    * Handle scrollback extraction request
    */
   private handleGetScrollbackMessage(msg: MessageCommand, coordinator: IManagerCoordinator): void {
@@ -1010,7 +1158,7 @@ export class MessageManager implements IMessageManager {
   }
 
   /**
-   * Extract scrollback content from xterm terminal
+   * Extract scrollback content from xterm terminal (improved version)
    */
   private extractScrollbackFromXterm(
     terminal: Terminal,
@@ -1028,27 +1176,133 @@ export class MessageManager implements IMessageManager {
       timestamp?: number;
     }> = [];
 
-    // Get buffer content
-    const buffer = terminal.buffer.active;
-    const totalLines = Math.min(buffer.length, maxLines);
+    try {
+      // Get active buffer from xterm.js
+      const buffer = terminal.buffer.active;
+      const bufferLength = buffer.length;
+      const viewportY = buffer.viewportY;
+      const baseY = buffer.baseY;
 
-    for (let i = Math.max(0, buffer.length - totalLines); i < buffer.length; i++) {
-      const line = buffer.getLine(i);
-      if (line) {
-        const content = line.translateToString();
-        if (content.trim()) {
-          // Skip empty lines
-          scrollbackLines.push({
-            content,
-            type: 'output', // Default to output, could be enhanced to detect input/error
+      log(
+        `🔍 [MESSAGE] Buffer info: length=${bufferLength}, viewportY=${viewportY}, baseY=${baseY}`
+      );
+
+      // Calculate range to extract (include scrollback + viewport)
+      const startLine = Math.max(0, bufferLength - maxLines);
+      const endLine = bufferLength;
+
+      log(
+        `🔍 [MESSAGE] Extracting lines ${startLine} to ${endLine} (${endLine - startLine} lines)`
+      );
+
+      for (let i = startLine; i < endLine; i++) {
+        try {
+          const line = buffer.getLine(i);
+          if (line) {
+            const content = line.translateToString(true); // trim whitespace
+
+            // Include non-empty lines and preserve some empty lines for structure
+            if (content.trim() || scrollbackLines.length > 0) {
+              scrollbackLines.push({
+                content: content,
+                type: 'output', // Default type - could be enhanced to detect input/error patterns
+                timestamp: Date.now(),
+              });
+            }
+          }
+        } catch (lineError) {
+          log(`⚠️ [MESSAGE] Error extracting line ${i}: ${String(lineError)}`);
+          continue;
+        }
+      }
+
+      // 最後の不要な空行を削除
+      while (scrollbackLines.length > 0) {
+        const lastLine = scrollbackLines[scrollbackLines.length - 1];
+        if (!lastLine || !lastLine.content.trim()) {
+          scrollbackLines.pop();
+        } else {
+          break;
+        }
+      }
+
+      log(
+        `✅ [MESSAGE] Successfully extracted ${scrollbackLines.length} lines from terminal buffer`
+      );
+    } catch (error) {
+      log(`❌ [MESSAGE] Error accessing terminal buffer: ${String(error)}`);
+      throw error;
+    }
+
+    return scrollbackLines;
+  }
+
+  /**
+   * Extract scrollback from persistence manager (if available)
+   */
+  private extractScrollbackFromPersistenceManager(
+    coordinator: IManagerCoordinator,
+    terminalId: string,
+    maxLines: number
+  ): Array<{ content: string; type?: 'output' | 'input' | 'error'; timestamp?: number }> {
+    log(
+      `🔍 [MESSAGE] Attempting to extract scrollback from persistence manager for terminal ${terminalId}`
+    );
+
+    // Access persistence manager through coordinator
+    const terminalManager = coordinator as any;
+    const persistenceManager = terminalManager.persistenceManager;
+
+    if (!persistenceManager) {
+      throw new Error('Persistence manager not available');
+    }
+
+    // Try to serialize the terminal using the persistence manager
+    try {
+      const serializedData = persistenceManager.serializeTerminal(terminalId, {
+        scrollback: maxLines,
+        excludeModes: false,
+        excludeAltBuffer: true,
+      });
+
+      if (!serializedData || !serializedData.content) {
+        throw new Error('No serialized content returned from persistence manager');
+      }
+
+      // Parse the serialized content into line data
+      const lines = serializedData.content.split('\n');
+      const scrollbackData: Array<{
+        content: string;
+        type?: 'output' | 'input' | 'error';
+        timestamp?: number;
+      }> = [];
+
+      for (const line of lines) {
+        if (line.trim() || scrollbackData.length > 0) {
+          scrollbackData.push({
+            content: line,
+            type: 'output',
             timestamp: Date.now(),
           });
         }
       }
-    }
 
-    log(`✅ [MESSAGE] Extracted ${scrollbackLines.length} lines from terminal`);
-    return scrollbackLines;
+      // Remove trailing empty lines
+      while (scrollbackData.length > 0) {
+        const lastLine = scrollbackData[scrollbackData.length - 1];
+        if (!lastLine || !lastLine.content.trim()) {
+          scrollbackData.pop();
+        } else {
+          break;
+        }
+      }
+
+      log(`✅ [MESSAGE] Persistence manager extracted ${scrollbackData.length} lines`);
+      return scrollbackData;
+    } catch (error) {
+      log(`❌ [MESSAGE] Error in persistence manager extraction: ${String(error)}`);
+      throw error;
+    }
   }
 
   /**
@@ -1180,7 +1434,9 @@ export class MessageManager implements IMessageManager {
         throw new Error(`Failed to restore content to terminal ${terminalId}`);
       }
 
-      log(`✅ [MESSAGE] Serialized content restored to terminal ${terminalId}: ${serializedContent.length} chars`);
+      log(
+        `✅ [MESSAGE] Serialized content restored to terminal ${terminalId}: ${serializedContent.length} chars`
+      );
     } catch (error) {
       log(
         `❌ [MESSAGE] Error restoring serialized content: ${error instanceof Error ? error.message : String(error)}`
@@ -1217,8 +1473,10 @@ export class MessageManager implements IMessageManager {
       // 各ターミナルについて状態復元を試行
       for (const terminalInfo of terminals) {
         try {
-          log(`🔄 [MESSAGE] Attempting restore for terminal ${terminalInfo.name} (${terminalInfo.id})`);
-          
+          log(
+            `🔄 [MESSAGE] Attempting restore for terminal ${terminalInfo.name} (${terminalInfo.id})`
+          );
+
           // 現在のターミナル一覧と照合して、対応するターミナルを見つける
           const existingTerminals = coordinator.getAllTerminalInstances();
           const matchingTerminal = Array.from(existingTerminals.values()).find(
@@ -1227,20 +1485,35 @@ export class MessageManager implements IMessageManager {
 
           if (matchingTerminal) {
             log(`✅ [MESSAGE] Found matching terminal for ${terminalInfo.name}`);
-            
-            // TODO: ここでserialize addonによる状態復元を行う
-            // 現在は基本情報のみ処理、serialize addonでの復元は将来の実装
-            
+
+            // Persistence Managerを使用してコンテンツ復元
+            const terminalManager = coordinator as any;
+            const persistenceManager = terminalManager.persistenceManager;
+
+            if (persistenceManager) {
+              // 少し遅延を入れてターミナルが完全に初期化されるのを待つ
+              setTimeout(() => {
+                const restored = persistenceManager.restoreTerminalFromStorage(matchingTerminal.id);
+                if (restored) {
+                  log(`✅ [MESSAGE] Content restored for terminal ${terminalInfo.name}`);
+                } else {
+                  log(`⚠️ [MESSAGE] No saved content for terminal ${terminalInfo.name}`);
+                }
+              }, 100);
+            }
+
             // アクティブターミナルの設定
             if (terminalInfo.isActive) {
-              // Set as active terminal in coordinator
-              log(`🎯 [MESSAGE] Setting active terminal: ${terminalInfo.name}`);
+              coordinator.setActiveTerminalId(matchingTerminal.id);
+              log(`🎯 [MESSAGE] Set active terminal: ${terminalInfo.name}`);
             }
           } else {
             log(`⚠️ [MESSAGE] No matching terminal found for ${terminalInfo.name}`);
           }
         } catch (terminalError) {
-          log(`❌ [MESSAGE] Error processing terminal ${terminalInfo.name}: ${String(terminalError)}`);
+          log(
+            `❌ [MESSAGE] Error processing terminal ${terminalInfo.name}: ${String(terminalError)}`
+          );
         }
       }
 
@@ -1249,6 +1522,44 @@ export class MessageManager implements IMessageManager {
       log(
         `❌ [MESSAGE] Error processing terminal restore info: ${error instanceof Error ? error.message : String(error)}`
       );
+    }
+  }
+
+  /**
+   * Handle save all terminal sessions message
+   */
+  private handleSaveAllTerminalSessionsMessage(
+    msg: MessageCommand,
+    coordinator: IManagerCoordinator
+  ): void {
+    log('💾 [MESSAGE] Handling save all terminal sessions message');
+
+    try {
+      const terminalManager = coordinator as any;
+      const persistenceManager = terminalManager.persistenceManager;
+
+      if (!persistenceManager) {
+        log('⚠️ [MESSAGE] No persistence manager available');
+        return;
+      }
+
+      // 全ターミナルの保存を強制実行
+      const terminals = coordinator.getAllTerminalInstances();
+      let savedCount = 0;
+
+      for (const [terminalId, terminal] of terminals) {
+        try {
+          // 手動で保存メソッドを呼び出す
+          persistenceManager.saveTerminalContent(terminalId);
+          savedCount++;
+        } catch (error) {
+          log(`❌ [MESSAGE] Failed to save terminal ${terminalId}:`, error);
+        }
+      }
+
+      log(`✅ [MESSAGE] Saved ${savedCount}/${terminals.size} terminal sessions`);
+    } catch (error) {
+      log(`❌ [MESSAGE] Error saving all terminal sessions: ${String(error)}`);
     }
   }
 

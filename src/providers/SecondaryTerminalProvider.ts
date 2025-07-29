@@ -79,11 +79,18 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         command: TERMINAL_CONSTANTS.COMMANDS.SPLIT,
       });
 
-      // Then create a new terminal which will be used as secondary
-      const terminalId = this._terminalManager.createTerminal();
-      log('✅ [DEBUG] Split terminal created with ID:', terminalId);
+      // SPINNER FIX: Defer terminal creation for split operations too
+      setImmediate(() => {
+        try {
+          const terminalId = this._terminalManager.createTerminal();
+          log('✅ [DEBUG] Split terminal created with ID:', terminalId);
 
-      // The terminal creation event will send TERMINAL_CREATED to webview
+          // The terminal creation event will send TERMINAL_CREATED to webview automatically
+        } catch (error) {
+          log('❌ [DEBUG] Failed to create split terminal:', error);
+          showError('Failed to create split terminal');
+        }
+      });
     } catch (error) {
       log('❌ [ERROR] Failed to split terminal:', error);
       TerminalErrorHandler.handleWebviewError(error);
@@ -255,18 +262,17 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         log(`🔧 [DEBUG] - Terminal: ${terminal.name} (${terminal.id})`);
       });
 
-      let terminalId: string;
-      if (existingTerminals.length === 0) {
-        // Always create initial terminal to ensure UI works - session restore will handle duplicates properly
-        terminalId = this._terminalManager.createTerminal();
-        log('🔧 [DEBUG] Created initial terminal:', terminalId);
-      } else {
+      // VS CODE STANDARD: Don't create terminals during initialization
+      // Let session restore or first user interaction handle terminal creation
+      let terminalId: string | undefined;
+
+      if (existingTerminals.length > 0) {
         // Terminals exist - use active one or first one
         const activeId = this._terminalManager.getActiveTerminalId();
-        terminalId = activeId || existingTerminals[0]?.id || '';
+        terminalId = activeId || existingTerminals[0]?.id;
         log('🔧 [DEBUG] Using existing terminal:', terminalId);
 
-        // CRITICAL: For existing terminals, manually send terminalCreated messages
+        // For existing terminals, send terminalCreated messages
         // to ensure WebView recreates them (panel move scenario)
         for (const terminal of existingTerminals) {
           log('📤 [DEBUG] Sending terminalCreated for existing terminal:', terminal.id);
@@ -277,6 +283,9 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
             config: config,
           });
         }
+      } else {
+        log('📝 [DEBUG] No existing terminals - will handle via session restore or user action');
+        terminalId = undefined;
       }
 
       // Send INIT message with all terminal info
@@ -296,14 +305,31 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         fontSettings,
       });
 
-      // WebView初期化完了後にターミナル復元情報を送信
-      if (this._standardSessionManager) {
-        log('🔄 [DEBUG] Sending terminal restore info to WebView...');
-        try {
-          await this._standardSessionManager.sendTerminalRestoreInfoToWebView();
-          log('✅ [DEBUG] Terminal restore info sent to WebView');
-        } catch (error) {
-          log(`❌ [DEBUG] Failed to send terminal restore info: ${String(error)}`);
+      // VS CODE STANDARD: Session restore after WebView initialization
+      if (this._standardSessionManager && existingTerminals.length === 0) {
+        log('🔄 [DEBUG] Checking for session data to restore...');
+
+        // Check if session data exists without blocking
+        const sessionInfo = this._standardSessionManager.getSessionInfo();
+
+        if (
+          sessionInfo &&
+          sessionInfo.exists &&
+          sessionInfo.terminals &&
+          sessionInfo.terminals.length > 0
+        ) {
+          log(
+            `🔄 [DEBUG] Found session data with ${sessionInfo.terminals.length} terminals, initiating restore...`
+          );
+
+          // VS Code standard: Immediate but async restore
+          setImmediate(() => {
+            void this._performAsyncSessionRestore();
+          });
+        } else {
+          log('📭 [DEBUG] No session data found, will create initial terminal on first view');
+          // VS Code standard: Don't create terminal here, let WebView handle it
+          this._scheduleInitialTerminalCreation();
         }
       }
 
@@ -597,6 +623,29 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
           // }
           break;
         }
+        // getTerminalScrollbackData case removed - using VS Code standard approach with automatic persistence
+        // scrollbackDataCollected case removed - using VS Code standard approach with automatic persistence
+        case 'restoreTerminalScrollback': {
+          log('🔄 [DEBUG] Terminal scrollback restoration requested');
+          const terminalInfo = message.terminalInfo;
+          const scrollbackContent = message.scrollbackContent;
+
+          if (terminalInfo) {
+            log(
+              `🔄 [DEBUG] Restoring scrollback for: ${terminalInfo.name} (original: ${terminalInfo.originalId})`
+            );
+            log(`🔄 [DEBUG] Scrollback content available: ${!!scrollbackContent}`);
+
+            // WebViewに履歴復元要求を送信（履歴データ付き）
+            await this._sendMessage({
+              command: 'performScrollbackRestore',
+              terminalInfo,
+              scrollbackContent,
+              timestamp: Date.now(),
+            });
+          }
+          break;
+        }
         case 'error': {
           log('❌ [TRACE] WEBVIEW REPORTED ERROR!');
           log('❌ [TRACE] Error message:', message);
@@ -802,6 +851,14 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
    * Handle WebView ready state
    */
   // Removed _handleWebviewReady - not needed with fresh start approach
+
+  /**
+   * Public method for StandardTerminalSessionManager to send messages
+   */
+  public async sendMessageToWebview(message: WebviewMessage): Promise<void> {
+    log(`📤 [PROVIDER] Public sendMessageToWebview called: ${message.command}`);
+    await this._sendMessage(message);
+  }
 
   /**
    * Webviewにメッセージを送信する
@@ -1261,6 +1318,59 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   }
 
   /**
+   * VS Code standard: Immediate session restore without blocking
+   */
+  private async _performAsyncSessionRestore(): Promise<void> {
+    try {
+      if (!this._standardSessionManager) {
+        log('⚠️ [RESTORE] StandardSessionManager not available');
+        return;
+      }
+
+      log('🔄 [RESTORE] Starting VS Code standard session restore...');
+
+      // Direct session restore - VS Code handles this immediately
+      const result = await this._standardSessionManager.restoreSession(true);
+
+      if (result.success && result.restoredCount && result.restoredCount > 0) {
+        log(`✅ [RESTORE] Successfully restored ${result.restoredCount} terminals`);
+
+        // VS Code standard: Show success notification
+        void vscode.window.showInformationMessage(
+          `🔄 Terminal session restored: ${result.restoredCount} terminal${result.restoredCount > 1 ? 's' : ''}`
+        );
+      } else {
+        log('📭 [RESTORE] No session data found or restored');
+        // If restore failed, create initial terminal
+        this._scheduleInitialTerminalCreation();
+      }
+    } catch (error) {
+      log(`❌ [RESTORE] Session restore failed: ${String(error)}`);
+      // On restore failure, create initial terminal
+      this._scheduleInitialTerminalCreation();
+    }
+  }
+
+  /**
+   * VS Code standard: Schedule initial terminal creation when no session data
+   */
+  private _scheduleInitialTerminalCreation(): void {
+    // Schedule creation for when user actually views the terminal
+    // This mimics VS Code's behavior of creating terminals on-demand
+    setTimeout(() => {
+      if (this._terminalManager.getTerminals().length === 0) {
+        log('🎆 [INITIAL] Creating initial terminal (no session data)');
+        try {
+          const terminalId = this._terminalManager.createTerminal();
+          log(`✅ [INITIAL] Initial terminal created: ${terminalId}`);
+        } catch (error) {
+          log(`❌ [INITIAL] Failed to create initial terminal: ${String(error)}`);
+        }
+      }
+    }, 100); // Very short delay to ensure WebView is ready
+  }
+
+  /**
    * Send session management message to WebView - DISABLED FOR DEBUGGING
    */
   // public sendSessionMessage(message: WebviewMessage): void {
@@ -1518,6 +1628,14 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
    */
   dispose(): void {
     log('🔧 [DEBUG] SecondaryTerminalProvider disposing resources...');
+
+    // WebViewにセッション保存を依頼
+    if (this._view) {
+      void this._sendMessage({
+        command: 'saveAllTerminalSessions',
+        timestamp: Date.now(),
+      });
+    }
 
     // Clear terminal event listeners
     this._clearTerminalEventListeners();
