@@ -122,17 +122,16 @@ export class ExtensionLifecycle {
 
       log('✅ Sidebar Terminal extension activated successfully');
 
-      // CRITICAL: Ensure activation Promise resolves immediately
-      // This prevents VS Code progress spinner from hanging
-      return Promise.resolve();
+      // CRITICAL: Activation completes synchronously to prevent VS Code spinner hanging
+      log('✅ [EXTENSION] Activation completed successfully');
     } catch (error) {
       log('Failed to activate Sidebar Terminal extension:', error);
       void vscode.window.showErrorMessage(
         `Failed to activate Sidebar Terminal: ${error instanceof Error ? error.message : String(error)}`
       );
 
-      // CRITICAL: Even on error, resolve activation Promise to prevent spinner hanging
-      return Promise.resolve();
+      // CRITICAL: Allow activation to complete even on error to prevent spinner hanging
+      log('⚠️ [EXTENSION] Activation completed with errors');
     }
   }
 

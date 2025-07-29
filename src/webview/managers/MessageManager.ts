@@ -732,44 +732,64 @@ export class MessageManager implements IMessageManager {
   }
 
   /**
-   * Handle session restore message from extension
+   * Handle session restore message from extension with proper ID mapping
    */
   private handleSessionRestoreMessage(msg: MessageCommand, coordinator: IManagerCoordinator): void {
-    log('🔄 [MESSAGE] Session restore message received');
+    log('🔄 [MESSAGE] ========== SESSION RESTORE MESSAGE RECEIVED ==========');
+    log('🔄 [MESSAGE] Full message:', msg);
 
+    // Handle multiple terminals restoration
+    if (msg.terminals && Array.isArray(msg.terminals)) {
+      log(`🔄 [MESSAGE] Restoring multiple terminals: ${msg.terminals.length}`);
+      this.handleMultipleTerminalsRestore(msg.terminals, coordinator);
+      return;
+    }
+
+    // Handle single terminal restoration with StandardTerminalPersistenceManager integration
     const terminalId = msg.terminalId as string;
     const terminalName = msg.terminalName as string;
     const config = msg.config;
-    const sessionRestoreMessage = msg.sessionRestoreMessage as string;
-    const sessionScrollback = msg.sessionScrollback as string[];
+    const terminalInfo = msg.terminalInfo as {
+      originalId: string;
+      name: string;
+      number: number;
+      cwd: string;
+      isActive: boolean;
+    };
 
-    if (terminalId && terminalName && config) {
+    if (terminalId && terminalName && config && terminalInfo?.originalId) {
       log(`🔄 [MESSAGE] Restoring terminal session: ${terminalId} (${terminalName})`);
-      log(`🔄 [MESSAGE] Restore message: ${sessionRestoreMessage}`);
-      log(`🔄 [MESSAGE] Scrollback lines: ${sessionScrollback?.length || 0}`);
+      log(`🔄 [MESSAGE] Original ID: ${terminalInfo.originalId}, New ID: ${terminalId}`);
 
       try {
-        // Simple approach: Create terminal normally, then restore scrollback
+        // セッション復元情報をcoordinator（main.ts）に保存
+        if ('_pendingSessionRestore' in coordinator) {
+          if (!(coordinator as any)._pendingSessionRestore) {
+            (coordinator as any)._pendingSessionRestore = new Map();
+          }
+          (coordinator as any)._pendingSessionRestore.set(terminalId, {
+            originalId: terminalInfo.originalId,
+            terminalInfo: terminalInfo,
+          });
+          log(`💾 [MESSAGE] Saved session restore info for terminal ${terminalId}`);
+        }
+
+        // 通常のターミナル作成プロセスを実行
+        // 復元処理は自動的にmain.tsの遅延復元で処理される
         coordinator.createTerminal(terminalId, terminalName, config);
         log(`✅ [MESSAGE] Created terminal for session restore: ${terminalId}`);
 
-        // Restore scrollback data after a brief delay
-        if (sessionRestoreMessage || (sessionScrollback && sessionScrollback.length > 0)) {
+        // アクティブターミナル設定
+        if (terminalInfo.isActive) {
           setTimeout(() => {
             if (
-              'restoreTerminalScrollback' in coordinator &&
-              typeof coordinator.restoreTerminalScrollback === 'function'
+              'switchToTerminal' in coordinator &&
+              typeof coordinator.switchToTerminal === 'function'
             ) {
-              coordinator.restoreTerminalScrollback(
-                terminalId,
-                sessionRestoreMessage || '',
-                sessionScrollback || []
-              );
-              log(`✅ [MESSAGE] Restored scrollback for terminal: ${terminalId}`);
-            } else {
-              log('⚠️ [MESSAGE] restoreTerminalScrollback method not found');
+              coordinator.switchToTerminal(terminalId);
+              log(`🎯 [MESSAGE] Switched to active terminal: ${terminalId}`);
             }
-          }, 100);
+          }, 1500); // 復元処理完了を待つ
         }
       } catch (error) {
         log(`❌ [MESSAGE] Failed to restore terminal session ${terminalId}: ${String(error)}`);
@@ -777,8 +797,114 @@ export class MessageManager implements IMessageManager {
         coordinator.createTerminal(terminalId, terminalName, config);
       }
     } else {
-      log('❌ [MESSAGE] Invalid session restore data received');
+      log('❌ [MESSAGE] Invalid session restore data received - missing required fields');
+      log('🔍 [MESSAGE] Available fields:', {
+        terminalId,
+        terminalName,
+        config: !!config,
+        terminalInfo,
+      });
     }
+  }
+
+  /**
+   * Handle restoration of multiple terminals with proper ID mapping
+   */
+  private handleMultipleTerminalsRestore(
+    terminals: Array<{
+      terminalId: string;
+      terminalName: string;
+      config: any;
+      sessionRestoreMessage?: string;
+      sessionScrollback?: string[];
+      originalId?: string;
+      newId?: string;
+    }>,
+    coordinator: IManagerCoordinator
+  ): void {
+    log(`🔄 [MESSAGE] Processing ${terminals.length} terminals for restoration`);
+
+    terminals.forEach((terminal, index) => {
+      const {
+        terminalId,
+        terminalName,
+        config,
+        sessionRestoreMessage,
+        sessionScrollback,
+        originalId,
+        newId,
+      } = terminal;
+      const targetTerminalId = newId || terminalId;
+
+      log(
+        `🔄 [MESSAGE] Restoring terminal ${index + 1}/${terminals.length}: ${terminalName} (${targetTerminalId})`
+      );
+
+      try {
+        // Create terminal with mapped ID
+        coordinator.createTerminal(targetTerminalId, terminalName, config);
+        log(`✅ [MESSAGE] Created terminal: ${targetTerminalId}`);
+
+        // Restore scrollback with delay to ensure terminal is ready
+        if (sessionRestoreMessage || (sessionScrollback && sessionScrollback.length > 0)) {
+          setTimeout(
+            () => {
+              if (
+                'restoreTerminalScrollback' in coordinator &&
+                typeof coordinator.restoreTerminalScrollback === 'function'
+              ) {
+                const mappedScrollback = this.mapScrollbackIds(
+                  sessionScrollback || [],
+                  originalId,
+                  targetTerminalId
+                );
+                coordinator.restoreTerminalScrollback(
+                  targetTerminalId,
+                  sessionRestoreMessage || '',
+                  mappedScrollback
+                );
+                log(`✅ [MESSAGE] Restored scrollback for terminal: ${targetTerminalId}`);
+              }
+            },
+            150 + index * 50
+          ); // Stagger restoration to avoid conflicts
+        }
+      } catch (error) {
+        log(`❌ [MESSAGE] Failed to restore terminal ${terminalName}: ${String(error)}`);
+        // Fallback to regular creation
+        coordinator.createTerminal(targetTerminalId, terminalName, config);
+      }
+    });
+
+    log(`✅ [MESSAGE] All terminals processed for restoration`);
+  }
+
+  /**
+   * Map terminal IDs in scrollback content from original to new IDs
+   */
+  private mapScrollbackIds(
+    scrollback: string[],
+    originalId?: string,
+    newId?: string
+  ): Array<{ content: string; type?: 'output' | 'input' | 'error'; timestamp?: number }> {
+    if (!scrollback || !Array.isArray(scrollback)) {
+      return [];
+    }
+
+    return scrollback.map((line) => {
+      let content = typeof line === 'string' ? line : String(line);
+
+      // Replace terminal ID references in scrollback content if mapping is provided
+      if (originalId && newId && originalId !== newId) {
+        content = content.replace(new RegExp(originalId, 'g'), newId);
+      }
+
+      return {
+        content,
+        type: 'output', // Default type - could be enhanced to detect patterns
+        timestamp: Date.now(),
+      };
+    });
   }
 
   /**

@@ -48,22 +48,60 @@ export class StandardTerminalPersistenceManager {
   private setupAutoSave(terminalId: string, terminal: Terminal): void {
     // データ変更時に自動保存（デバウンス付き）
     let saveTimer: number | null = null;
+    let lastSaveTime = 0;
+    let changeCount = 0;
 
     const saveContent = () => {
+      changeCount++;
+
       if (saveTimer) {
         clearTimeout(saveTimer);
       }
 
+      // より積極的な保存戦略
+      const currentTime = Date.now();
+      const timeSinceLastSave = currentTime - lastSaveTime;
+
+      // 大量の変更がある場合（10回以上の変更）は早めに保存
+      // または最後の保存から5秒以上経過した場合も保存
+      const shouldSaveEarly = changeCount >= 10 || timeSinceLastSave >= 5000;
+      const debounceTime = shouldSaveEarly ? 500 : 2000; // 通常2秒、緊急時0.5秒
+
       saveTimer = window.setTimeout(() => {
         this.saveTerminalContent(terminalId);
-      }, 1000); // 1秒のデバウンス
+        lastSaveTime = Date.now();
+        changeCount = 0;
+      }, debounceTime);
     };
 
-    // ターミナルデータ変更イベント
+    // より多くのイベントでトリガー
     terminal.onData(saveContent);
     terminal.onLineFeed(saveContent);
+    terminal.onScroll(saveContent);
 
-    console.log(`🔧 [WEBVIEW-PERSISTENCE] Auto-save enabled for terminal ${terminalId}`);
+    // ターミナルフォーカス離脱時にも保存
+    terminal.onSelectionChange(() => {
+      // セレクション変更時は即座に保存
+      setTimeout(() => {
+        this.saveTerminalContent(terminalId);
+        lastSaveTime = Date.now();
+      }, 100);
+    });
+
+    // 定期的な保存（30秒毎）
+    const periodicSave = setInterval(() => {
+      if (changeCount > 0) {
+        this.saveTerminalContent(terminalId);
+        lastSaveTime = Date.now();
+        changeCount = 0;
+      }
+    }, 30000);
+
+    // クリーンアップ用にインターバルを保存
+    const cleanupKey = `periodic-${terminalId}`;
+    (this as any)[cleanupKey] = periodicSave;
+
+    console.log(`🔧 [WEBVIEW-PERSISTENCE] Enhanced auto-save enabled for terminal ${terminalId}`);
   }
 
   /**
@@ -127,6 +165,15 @@ export class StandardTerminalPersistenceManager {
       `🗑️ [WEBVIEW-PERSISTENCE] Removing terminal ${terminalId} from persistence manager`
     );
 
+    // 最後の保存を実行
+    try {
+      this.saveTerminalContent(terminalId);
+      console.log(`💾 [WEBVIEW-PERSISTENCE] Final save completed for terminal ${terminalId}`);
+    } catch (error) {
+      console.warn(`⚠️ [WEBVIEW-PERSISTENCE] Final save failed for ${terminalId}:`, error);
+    }
+
+    // SerializeAddonをクリーンアップ
     const serializeAddon = this.serializeAddons.get(terminalId);
     if (serializeAddon) {
       try {
@@ -137,6 +184,15 @@ export class StandardTerminalPersistenceManager {
           error
         );
       }
+    }
+
+    // 定期保存タイマーをクリーンアップ
+    const cleanupKey = `periodic-${terminalId}`;
+    const periodicSave = (this as any)[cleanupKey];
+    if (periodicSave) {
+      clearInterval(periodicSave);
+      delete (this as any)[cleanupKey];
+      console.log(`🧹 [WEBVIEW-PERSISTENCE] Cleaned up periodic save for ${terminalId}`);
     }
 
     this.serializeAddons.delete(terminalId);
@@ -202,11 +258,11 @@ export class StandardTerminalPersistenceManager {
   }
 
   /**
-   * 保存されたコンテンツからターミナルを復元
+   * 保存されたコンテンツからターミナルを復元（新しいIDで古いIDのデータを復元）
    */
-  public restoreTerminalFromStorage(terminalId: string): boolean {
+  public restoreTerminalFromStorage(terminalId: string, originalId?: string): boolean {
     console.log(
-      `🔄 [WEBVIEW-PERSISTENCE] Attempting to restore terminal ${terminalId} from storage`
+      `🔄 [WEBVIEW-PERSISTENCE] Attempting to restore terminal ${terminalId} from storage${originalId ? ` (original: ${originalId})` : ''}`
     );
 
     try {
@@ -228,16 +284,83 @@ export class StandardTerminalPersistenceManager {
       }
 
       const state = this.vscodeApi.getState() as Record<string, unknown> | null;
-      const storageKey = `${StandardTerminalPersistenceManager.STORAGE_KEY_PREFIX}${terminalId}`;
-      const storageData = state?.[storageKey] as {
-        content: string;
-        timestamp: number;
-        version: string;
-        terminalId: string;
-      } | undefined;
+
+      // 復元の優先順位:
+      // 1. originalIdがある場合はそれを使用
+      // 2. 現在のterminalIdを使用
+      // 3. 全てのキーを検索して最新のデータを使用
+      const searchIds = originalId ? [originalId, terminalId] : [terminalId];
+
+      let storageData:
+        | {
+            content: string;
+            timestamp: number;
+            version: string;
+            terminalId: string;
+          }
+        | undefined;
+
+      let foundKey: string | null = null;
+
+      for (const searchId of searchIds) {
+        const storageKey = `${StandardTerminalPersistenceManager.STORAGE_KEY_PREFIX}${searchId}`;
+        const data = state?.[storageKey] as typeof storageData;
+        if (data && data.content) {
+          storageData = data;
+          foundKey = storageKey;
+          console.log(`🔍 [WEBVIEW-PERSISTENCE] Found data with key: ${storageKey}`);
+          break;
+        }
+      }
+
+      // それでも見つからない場合は、prefix検索を実行
+      if (!storageData && state) {
+        const allKeys = Object.keys(state);
+        const terminalKeys = allKeys.filter((key) =>
+          key.startsWith(StandardTerminalPersistenceManager.STORAGE_KEY_PREFIX)
+        );
+
+        console.log(
+          `🔍 [WEBVIEW-PERSISTENCE] Searching among ${terminalKeys.length} terminal keys`
+        );
+
+        // 最新のタイムスタンプのデータを選択
+        let latestData:
+          | {
+              content: string;
+              timestamp: number;
+              version: string;
+              terminalId: string;
+            }
+          | undefined;
+        let latestTimestamp = 0;
+
+        for (const key of terminalKeys) {
+          const data = state[key] as
+            | {
+                content: string;
+                timestamp: number;
+                version: string;
+                terminalId: string;
+              }
+            | undefined;
+          if (data && data.content && data.timestamp > latestTimestamp) {
+            latestData = data;
+            latestTimestamp = data.timestamp;
+            foundKey = key;
+          }
+        }
+
+        if (latestData) {
+          storageData = latestData;
+          console.log(`🔍 [WEBVIEW-PERSISTENCE] Using latest data from key: ${foundKey}`);
+        }
+      }
 
       if (!storageData || !storageData.content) {
-        console.log(`📭 [WEBVIEW-PERSISTENCE] No saved content found for terminal ${terminalId}`);
+        console.log(
+          `📭 [WEBVIEW-PERSISTENCE] No saved content found for terminal ${terminalId}${originalId ? ` or ${originalId}` : ''}`
+        );
         return false;
       }
 
@@ -251,6 +374,9 @@ export class StandardTerminalPersistenceManager {
         return false;
       }
 
+      console.log(
+        `✅ [WEBVIEW-PERSISTENCE] Found valid data from ${foundKey}, restoring to terminal ${terminalId}`
+      );
       return this.restoreTerminalContent(terminalId, storageData.content);
     } catch (error) {
       console.error(
@@ -283,19 +409,57 @@ export class StandardTerminalPersistenceManager {
     }
 
     try {
-      // VS Code標準アプローチ: SerializeAddonのdeserialize機能を使用
-      // ただし、現在のxterm serialize addonにはdeserialize機能がないため、
-      // write()を使用してコンテンツを復元（VS Code互換）
+      // VS Code標準アプローチの改善版: より確実な復元処理
 
-      // ターミナルをクリアしてから復元
-      terminal.clear();
+      // Step 1: ターミナルをリセットして初期状態にする
+      terminal.reset();
 
-      // シリアル化されたコンテンツを復元
-      // VS Code標準: ANSI escape sequencesを含む完全な状態復元
-      terminal.write(serializedContent);
+      // Step 2: 復元メッセージを表示
+      const restoreTimestamp = new Date().toLocaleString();
+      terminal.writeln(`\x1b[32m📋 [${restoreTimestamp}] Restoring terminal history...\x1b[0m`);
+
+      // Step 3: シリアル化されたコンテンツを復元
+      // 改善: データを分割して段階的に復元することで、大量データでも確実に処理
+      const chunkSize = 1000; // 1000文字ずつ分割
+      const chunks: string[] = [];
+      for (let i = 0; i < serializedContent.length; i += chunkSize) {
+        chunks.push(serializedContent.slice(i, i + chunkSize));
+      }
+
+      // Step 4: 非同期で段階的に復元
+      let chunkIndex = 0;
+      const writeChunk = (): void => {
+        if (chunkIndex < chunks.length) {
+          const chunk = chunks[chunkIndex];
+          if (chunk !== undefined) {
+            terminal.write(chunk);
+          }
+          chunkIndex++;
+
+          // 次のチャンクを少し遅延させて処理
+          setTimeout(writeChunk, 10);
+        } else {
+          // Step 5: 復元完了後の処理
+          terminal.writeln(
+            `\x1b[32m✅ History restored (${serializedContent.length} characters)\x1b[0m`
+          );
+
+          // スクロール位置を適切に調整
+          setTimeout(() => {
+            // 最後の数行が見えるようにスクロール調整
+            const buffer = terminal.buffer.active;
+            if (buffer.length > terminal.rows) {
+              terminal.scrollToBottom();
+            }
+          }, 100);
+        }
+      };
+
+      // 復元処理を開始
+      setTimeout(writeChunk, 50);
 
       console.log(
-        `✅ [WEBVIEW-PERSISTENCE] Terminal state restored for ${terminalId}: ${serializedContent.length} chars`
+        `✅ [WEBVIEW-PERSISTENCE] Terminal state restoration initiated for ${terminalId}: ${serializedContent.length} chars`
       );
       return true;
     } catch (error) {

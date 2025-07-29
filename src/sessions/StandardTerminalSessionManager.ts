@@ -308,8 +308,30 @@ export class StandardTerminalSessionManager {
             log(`🎯 [STANDARD-SESSION] Set active terminal: ${terminalId}`);
           }
 
-          // WebView側でserialize addonによる状態復元を行う
-          // Extension側では基本的なターミナル作成のみ実行
+          // WebView側に復元情報を送信して、適切な履歴復元を実行
+          if (this.sidebarProvider) {
+            try {
+              // 復元用のメッセージを送信（新しいターミナルIDと元のターミナル情報の対応）
+              await this.sidebarProvider.sendMessageToWebview({
+                command: 'sessionRestore',
+                terminalId: terminalId,
+                terminalInfo: {
+                  originalId: terminalInfo.id, // 元のターミナルID
+                  name: terminalInfo.name,
+                  number: terminalInfo.number,
+                  cwd: terminalInfo.cwd,
+                  isActive: terminalInfo.isActive,
+                },
+                sessionRestoreMessage: `🔄 Restoring session for: ${terminalInfo.name}`,
+              });
+
+              log(
+                `📤 [STANDARD-SESSION] Sent restore message to WebView for terminal: ${terminalId} (original: ${terminalInfo.id})`
+              );
+            } catch (messageError) {
+              log(`⚠️ [STANDARD-SESSION] Failed to send restore message: ${String(messageError)}`);
+            }
+          }
 
           restoredCount++;
           log(`✅ [STANDARD-SESSION] Restored terminal: ${terminalInfo.name} (${terminalId})`);
@@ -520,7 +542,9 @@ export class StandardTerminalSessionManager {
       hasSession: true,
       terminalCount: sessionData.terminals?.length || 0,
       lastSaved: sessionData.timestamp ? new Date(sessionData.timestamp) : null,
-      isExpired: sessionData.timestamp ? this.isSessionExpired({ timestamp: sessionData.timestamp }) : false,
+      isExpired: sessionData.timestamp
+        ? this.isSessionExpired({ timestamp: sessionData.timestamp })
+        : false,
       configEnabled: config.enablePersistentSessions,
     };
   }

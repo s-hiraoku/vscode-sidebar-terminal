@@ -182,6 +182,21 @@ class TerminalWebviewManager {
   public messageManager: MessageManager;
   private persistenceManager: StandardTerminalPersistenceManager;
 
+  // Session restore tracking
+  private _pendingSessionRestore: Map<
+    string,
+    {
+      originalId: string;
+      terminalInfo: {
+        originalId: string;
+        name: string;
+        number: number;
+        cwd: string;
+        isActive: boolean;
+      };
+    }
+  > = new Map();
+
   // Current settings (without font settings - they come from VS Code)
   private currentSettings: PartialTerminalSettings = {
     theme: 'auto',
@@ -504,18 +519,42 @@ class TerminalWebviewManager {
             terminal.refresh(0, terminal.rows - 1);
             terminal.focus();
 
-            // VS Code標準: ターミナル初期化完了後に自動的にscrollback復元を実行
-            log(`🔄 [MAIN] Terminal ${id} fully initialized, attempting scrollback restoration`);
-            try {
-              const restored = this.persistenceManager.restoreTerminalFromStorage(id);
-              if (restored) {
-                log(`✅ [MAIN] Successfully restored scrollback for terminal ${id}`);
-              } else {
-                log(`📭 [MAIN] No saved scrollback found for terminal ${id}`);
+            // VS Code標準: ターミナル完全初期化後に遅延復元を実行
+            // 遅延を増やしてターミナルの完全な準備を待つ
+            setTimeout(() => {
+              log(
+                `🔄 [MAIN] Terminal ${id} fully initialized, attempting delayed scrollback restoration`
+              );
+              try {
+                // セッション復元時のoriginalIdを保存している場合はそれを使用
+                const sessionInfo = (this as any)._pendingSessionRestore?.get?.(id);
+                const originalId = sessionInfo?.originalId;
+
+                const restored = this.persistenceManager.restoreTerminalFromStorage(id, originalId);
+                if (restored) {
+                  log(
+                    `✅ [MAIN] Successfully restored scrollback for terminal ${id}${originalId ? ` (from ${originalId})` : ''}`
+                  );
+                  // 復元後にfit()を再実行して表示を最適化
+                  setTimeout(() => {
+                    fitAddon.fit();
+                    terminal.scrollToBottom();
+                    log(`🔧 [MAIN] Post-restoration fit and scroll completed for terminal ${id}`);
+                  }, 100);
+                } else {
+                  log(
+                    `📭 [MAIN] No saved scrollback found for terminal ${id}${originalId ? ` or ${originalId}` : ''}`
+                  );
+                }
+
+                // セッション復元情報をクリア
+                if ((this as any)._pendingSessionRestore) {
+                  (this as any)._pendingSessionRestore.delete(id);
+                }
+              } catch (restoreError) {
+                log(`❌ [MAIN] Failed to restore scrollback for terminal ${id}:`, restoreError);
               }
-            } catch (restoreError) {
-              log(`❌ [MAIN] Failed to restore scrollback for terminal ${id}:`, restoreError);
-            }
+            }, 1000); // 1秒の遅延でターミナルの完全な準備を待つ
 
             // Add click event to xterm.js terminal area for reliable focus handling
             this.inputManager.addXtermClickHandler(terminal, id, targetContainer, this);
