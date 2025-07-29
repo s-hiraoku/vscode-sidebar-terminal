@@ -4,8 +4,8 @@ import { ExtensionLifecycle } from './core/ExtensionLifecycle';
 // シングルトンインスタンス
 const lifecycle = new ExtensionLifecycle();
 
-export async function activate(context: vscode.ExtensionContext): Promise<void> {
-  await lifecycle.activate(context);
+export function activate(context: vscode.ExtensionContext): void {
+  lifecycle.activate(context);
 }
 
 export function deactivate(): void {

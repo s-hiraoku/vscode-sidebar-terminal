@@ -140,6 +140,37 @@ Before implementing any changes:
 
 **Remember: If it's not tested, it's not working. If it's not working, it's not implemented.**
 
+### Test-Driven Development (TDD) Best Practices
+
+**CRITICAL**: When writing tests, ALWAYS follow these steps:
+1. **Write the test FIRST** - Create failing tests before implementation
+2. **Run the test immediately** - Execute `npm test` to verify the test fails as expected
+3. **Implement minimal code** - Write just enough code to make the test pass
+4. **Run tests again** - Verify all tests pass with `npm test`
+5. **Refactor if needed** - Clean up code while keeping tests green
+
+**Common Commands for Testing**:
+```bash
+# Run unit tests (recommended for development)
+npm test
+
+# Run specific test file
+npm run compile-tests && ./node_modules/.bin/mocha --require out/test/shared/TestSetup.js 'out/test/unit/specific/test.js'
+
+# Run tests with coverage
+npm run test:coverage
+
+# Watch mode for TDD
+npm run watch-tests
+```
+
+**Test Verification Checklist**:
+- [ ] Did you run the test after writing it?
+- [ ] Did the test fail initially (RED phase)?
+- [ ] Did you run the test after implementation (GREEN phase)?
+- [ ] Are all lint errors fixed before committing?
+- [ ] Do all related tests still pass?
+
 ### テスト修正方針
 
 **基本原則**: テストの修正時は、そのテストの存在目的を理解し、その目的を損なわないように修正する

@@ -33,7 +33,7 @@ export class ExtensionLifecycle {
   /**
    * 拡張機能の起動処理
    */
-  async activate(context: vscode.ExtensionContext): Promise<void> {
+  activate(context: vscode.ExtensionContext): void {
     log('🚀 [EXTENSION] === ACTIVATION START ===');
 
     // Configure logger based on extension mode

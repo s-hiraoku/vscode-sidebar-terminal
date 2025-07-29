@@ -202,7 +202,7 @@ export class SessionManager extends EventEmitter {
           await this.storage.clearSession();
           log(`✅ [SESSION_MANAGER] Corrupted session data cleared`);
         } catch (clearError) {
-          log(`⚠️ [SESSION_MANAGER] Failed to clear corrupted session: ${clearError}`);
+          log(`⚠️ [SESSION_MANAGER] Failed to clear corrupted session: ${String(clearError)}`);
         }
       } else if (errorMessage.includes('Permission') || errorMessage.includes('EACCES')) {
         recoveryAction = 'Permission denied - using workspace storage fallback';
@@ -291,8 +291,8 @@ export class SessionManager extends EventEmitter {
   /**
    * セッション情報を取得する（デバッグ用）
    */
-  async getSessionInfo(): Promise<any> {
-    const storageInfo = await this.storage.getStorageInfo();
+  getSessionInfo(): Record<string, unknown> {
+    const storageInfo = this.storage.getStorageInfo();
     const config = this.getSessionConfig();
 
     return {
@@ -330,7 +330,9 @@ export class SessionManager extends EventEmitter {
             sessionTerminals.push(terminalInfo);
           }
         } catch (error) {
-          log(`⚠️ [SESSION_MANAGER] Failed to collect info for terminal ${terminal.id}: ${error}`);
+          log(
+            `⚠️ [SESSION_MANAGER] Failed to collect info for terminal ${terminal.id}: ${String(error)}`
+          );
         }
       }
 
@@ -353,7 +355,7 @@ export class SessionManager extends EventEmitter {
 
       return sessionData;
     } catch (error) {
-      log(`❌ [SESSION_MANAGER] Failed to collect session data: ${error}`);
+      log(`❌ [SESSION_MANAGER] Failed to collect session data: ${String(error)}`);
       return null;
     }
   }
@@ -362,7 +364,7 @@ export class SessionManager extends EventEmitter {
    * 単一ターミナルの情報を収集する
    */
   private async collectTerminalInfo(
-    terminal: any,
+    terminal: { id: string; name?: string; number?: number; cwd?: string; createdAt?: number },
     maxScrollback: number
   ): Promise<TerminalSessionInfo | null> {
     try {
@@ -380,10 +382,12 @@ export class SessionManager extends EventEmitter {
         isActive: terminal.id === this.terminalManager.getActiveTerminalId(),
         createdAt: terminal.createdAt || Date.now(),
         lastUpdated: Date.now(),
-        terminalNumber: terminal.number,
+        terminalNumber: terminal.number || 1,
       };
     } catch (error) {
-      log(`⚠️ [SESSION_MANAGER] Failed to collect terminal info for ${terminal.id}: ${error}`);
+      log(
+        `⚠️ [SESSION_MANAGER] Failed to collect terminal info for ${terminal.id}: ${String(error)}`
+      );
       return null;
     }
   }
@@ -474,7 +478,7 @@ export class SessionManager extends EventEmitter {
       // セッション復元が成功した場合、既存の初期ターミナルをクリーンアップ
       if (restoredCount > 0) {
         log(`🧹 [SESSION_MANAGER] Session restore successful - cleaning up initial terminals`);
-        const allTerminals = this.terminalManager.getAllTerminals();
+        const _allTerminals = this.terminalManager.getAllTerminals();
 
         // 復元されたターミナル以外の既存ターミナルを削除
         for (const terminal of existingTerminals) {
@@ -488,7 +492,9 @@ export class SessionManager extends EventEmitter {
               await this.terminalManager.deleteTerminal(terminal.id);
             }
           } catch (error) {
-            log(`⚠️ [SESSION_MANAGER] Failed to cleanup initial terminal ${terminal.id}: ${error}`);
+            log(
+              `⚠️ [SESSION_MANAGER] Failed to cleanup initial terminal ${terminal.id}: ${String(error)}`
+            );
           }
         }
       }
@@ -496,7 +502,9 @@ export class SessionManager extends EventEmitter {
       // アクティブターミナルを復元
       if (sessionData.activeTerminalId && restoredCount > 0) {
         setTimeout(() => {
-          this.terminalManager.focusTerminal(sessionData.activeTerminalId!);
+          if (sessionData.activeTerminalId) {
+            this.terminalManager.focusTerminal(sessionData.activeTerminalId);
+          }
         }, 100);
       }
 
@@ -541,7 +549,7 @@ export class SessionManager extends EventEmitter {
         return false;
       }
     } catch (error) {
-      log(`❌ [SESSION_MANAGER] Error restoring terminal ${terminalInfo.name}: ${error}`);
+      log(`❌ [SESSION_MANAGER] Error restoring terminal ${terminalInfo.name}: ${String(error)}`);
       return false;
     }
   }

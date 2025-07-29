@@ -9,13 +9,17 @@ import { SimpleSessionManager } from '../../../sessions/SimpleSessionManager';
  */
 describe('🚨 CRITICAL: Infinite Loop Detection', () => {
   let sandbox: sinon.SinonSandbox;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockContext: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockTerminalManager: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockGlobalState: any;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     mockGlobalState = {
       get: sandbox.stub(),
       update: sandbox.stub().resolves(),
@@ -23,12 +27,14 @@ describe('🚨 CRITICAL: Infinite Loop Detection', () => {
       setKeysForSync: sandbox.stub(),
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     mockContext = {
       globalState: mockGlobalState,
       subscriptions: [],
       extensionPath: '/test/path',
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     mockTerminalManager = {
       getTerminals: sandbox.stub().returns([]),
       getActiveTerminalId: sandbox.stub().returns(undefined),

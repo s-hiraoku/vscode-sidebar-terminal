@@ -3,7 +3,10 @@
  * Issue #126の実装用
  */
 
-// import { SimpleTerminalInfo, SimpleSessionData } from './simple-session';
+import {
+  SimpleTerminalInfo as _SimpleTerminalInfo,
+  SimpleSessionData as _SimpleSessionData,
+} from './simple-session';
 
 /**
  * Scrollback履歴データの単一行

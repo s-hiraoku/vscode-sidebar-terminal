@@ -8,10 +8,10 @@ import { expect } from 'chai';
 import * as sinon from 'sinon';
 import {
   TDD_PHASES,
-  TEST_EXECUTION_MODES,
+  // TEST_EXECUTION_MODES,
   PERFORMANCE_THRESHOLDS,
   type TDDPhase,
-  type TestExecutionMode,
+  type TestExecutionMode as _TestExecutionMode,
 } from '../constants/TestConstants';
 
 /**
@@ -131,6 +131,7 @@ Phase Distribution:
 /**
  * パフォーマンス測定ヘルパー
  */
+// eslint-disable-next-line @typescript-eslint/no-extraneous-class
 export class PerformanceTestHelper {
   /**
    * 関数の実行時間を測定
@@ -242,6 +243,7 @@ export class MockManager {
  * アサーションヘルパー
  * 復元機能テスト用の共通アサーション
  */
+// eslint-disable-next-line @typescript-eslint/no-extraneous-class
 export class RestoreAssertionHelper {
   /**
    * セッション復元の基本検証
@@ -300,6 +302,7 @@ export class RestoreAssertionHelper {
  * テストデータファクトリー
  * 一貫性のあるテストデータの生成
  */
+// eslint-disable-next-line @typescript-eslint/no-extraneous-class
 export class TestDataFactory {
   /**
    * セッションデータを生成
@@ -345,7 +348,7 @@ export class TestDataFactory {
   public static createExpiredSessionData(daysAgo: number): unknown {
     const sessionData = this.createSessionData(1) as any;
     return {
-      ...sessionData,
+      ...(sessionData as Record<string, unknown>),
       timestamp: Date.now() - daysAgo * 24 * 60 * 60 * 1000,
     };
   }

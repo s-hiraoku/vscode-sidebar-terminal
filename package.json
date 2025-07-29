@@ -497,5 +497,8 @@
   },
   "bundledDependencies": [
     "@homebridge/node-pty-prebuilt-multiarch"
+  ],
+  "bundleDependencies": [
+    "@homebridge/node-pty-prebuilt-multiarch"
   ]
 }
