@@ -414,10 +414,6 @@ export class StandardTerminalPersistenceManager {
       // Step 1: ターミナルをリセットして初期状態にする
       terminal.reset();
 
-      // Step 2: 復元メッセージを表示
-      const restoreTimestamp = new Date().toLocaleString();
-      terminal.writeln(`\x1b[32m📋 [${restoreTimestamp}] Restoring terminal history...\x1b[0m`);
-
       // Step 3: シリアル化されたコンテンツを復元
       // 改善: データを分割して段階的に復元することで、大量データでも確実に処理
       const chunkSize = 1000; // 1000文字ずつ分割
@@ -440,10 +436,6 @@ export class StandardTerminalPersistenceManager {
           setTimeout(writeChunk, 10);
         } else {
           // Step 5: 復元完了後の処理
-          terminal.writeln(
-            `\x1b[32m✅ History restored (${serializedContent.length} characters)\x1b[0m`
-          );
-
           // スクロール位置を適切に調整
           setTimeout(() => {
             // 最後の数行が見えるようにスクロール調整
