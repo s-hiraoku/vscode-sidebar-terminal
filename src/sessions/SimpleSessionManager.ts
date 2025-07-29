@@ -20,13 +20,13 @@ export class SimpleSessionManager {
   constructor(
     private readonly context: vscode.ExtensionContext,
     private readonly terminalManager: TerminalManager,
-    private sidebarProvider?: any // SecondaryTerminalProviderへの参照（Scrollback用）
+    private sidebarProvider?: { [key: string]: unknown } // SecondaryTerminalProviderへの参照（Scrollback用）
   ) {}
 
   /**
    * SidebarProviderを設定（Scrollback機能用）
    */
-  public setSidebarProvider(provider: any): void {
+  public setSidebarProvider(provider: { [key: string]: unknown }): void {
     this.sidebarProvider = provider;
   }
 
@@ -100,7 +100,7 @@ export class SimpleSessionManager {
         terminalCount: terminals.length,
       };
     } catch (error) {
-      log(`❌ [SIMPLE_SESSION] Save failed: ${error}`);
+      log(`❌ [SIMPLE_SESSION] Save failed: ${String(error)}`);
       return {
         success: false,
         error: String(error),
@@ -189,8 +189,12 @@ export class SimpleSessionManager {
 
             // 復元処理を少し遅延させてターミナルが初期化完了まで待つ
             setTimeout(() => {
-              if (this.sidebarProvider) {
-                this.sidebarProvider._sendMessage({
+              if (
+                this.sidebarProvider &&
+                '_sendMessage' in this.sidebarProvider &&
+                typeof this.sidebarProvider._sendMessage === 'function'
+              ) {
+                (this.sidebarProvider._sendMessage as (message: unknown) => void)({
                   command: 'restoreScrollback',
                   terminalId: terminalId,
                   scrollbackContent: terminalInfo.scrollback,
@@ -206,7 +210,9 @@ export class SimpleSessionManager {
           restoredCount++;
           log(`✅ [SIMPLE_SESSION] Restored terminal: ${terminalInfo.name}`);
         } catch (error) {
-          log(`❌ [SIMPLE_SESSION] Failed to restore terminal ${terminalInfo.name}: ${error}`);
+          log(
+            `❌ [SIMPLE_SESSION] Failed to restore terminal ${terminalInfo.name}: ${String(error)}`
+          );
         }
       }
 
@@ -217,7 +223,7 @@ export class SimpleSessionManager {
         skippedCount: sessionData.terminals.length - restoredCount,
       };
     } catch (error) {
-      log(`❌ [SIMPLE_SESSION] Restore failed: ${error}`);
+      log(`❌ [SIMPLE_SESSION] Restore failed: ${String(error)}`);
       return {
         success: false,
         error: String(error),
@@ -233,27 +239,39 @@ export class SimpleSessionManager {
       await this.context.globalState.update(SimpleSessionManager.STORAGE_KEY, undefined);
       log('🗑️ [SIMPLE_SESSION] Session data cleared');
     } catch (error) {
-      log(`❌ [SIMPLE_SESSION] Failed to clear session: ${error}`);
+      log(`❌ [SIMPLE_SESSION] Failed to clear session: ${String(error)}`);
     }
   }
 
   /**
    * セッションデータの有効性をチェック
    */
-  private isValidSessionData(data: any): data is SimpleSessionData {
+  private isValidSessionData(data: unknown): data is SimpleSessionData {
     return (
-      data &&
+      Boolean(data) &&
       typeof data === 'object' &&
-      Array.isArray(data.terminals) &&
-      typeof data.timestamp === 'number' &&
-      typeof data.version === 'string' &&
-      data.terminals.every(
-        (t: any) =>
-          typeof t.id === 'string' &&
-          typeof t.name === 'string' &&
-          typeof t.number === 'number' &&
-          typeof t.cwd === 'string' &&
-          typeof t.isActive === 'boolean'
+      data !== null &&
+      'terminals' in data &&
+      Array.isArray((data as Record<string, unknown>).terminals) &&
+      'timestamp' in data &&
+      typeof (data as Record<string, unknown>).timestamp === 'number' &&
+      'version' in data &&
+      typeof (data as Record<string, unknown>).version === 'string' &&
+      ((data as Record<string, unknown>).terminals as unknown[]).every(
+        (t: unknown) =>
+          Boolean(t) &&
+          typeof t === 'object' &&
+          t !== null &&
+          'id' in t &&
+          typeof (t as Record<string, unknown>).id === 'string' &&
+          'name' in t &&
+          typeof (t as Record<string, unknown>).name === 'string' &&
+          'number' in t &&
+          typeof (t as Record<string, unknown>).number === 'number' &&
+          'cwd' in t &&
+          typeof (t as Record<string, unknown>).cwd === 'string' &&
+          'isActive' in t &&
+          typeof (t as Record<string, unknown>).isActive === 'boolean'
       )
     );
   }
@@ -271,7 +289,7 @@ export class SimpleSessionManager {
   /**
    * 保存されたセッション情報を取得（デバッグ用）
    */
-  public async getSessionInfo(): Promise<SimpleSessionData | null> {
+  public getSessionInfo(): SimpleSessionData | null {
     return (
       this.context.globalState.get<SimpleSessionData>(SimpleSessionManager.STORAGE_KEY) || null
     );

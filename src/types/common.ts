@@ -87,8 +87,7 @@ export interface WebviewMessage {
     | 'restoreScrollback'
     | 'scrollbackExtracted'
     | 'scrollbackRestored'
-    | 'scrollbackProgress'
-    | 'error';
+    | 'scrollbackProgress';
   config?: TerminalConfig;
   data?: string;
   exitCode?: number;
@@ -208,7 +207,7 @@ export interface TerminalInstance {
   id: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   pty?: any; // Using any for node-pty compatibility with both real and mock implementations (ptyProcessに移行中)
-  ptyProcess?: any; // 新しいpty参照名（セッション復元対応）
+  ptyProcess?: unknown; // 新しいpty参照名（セッション復元対応）
   name: string;
   number: number; // ターミナル番号（1-5）
   cwd?: string; // 現在の作業ディレクトリ

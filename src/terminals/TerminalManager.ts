@@ -1174,14 +1174,14 @@ export class TerminalManager {
   */
 
   // STUB METHODS TO PREVENT COMPILATION ERRORS - These prevent SessionManager compilation errors
-  public async getTerminalScrollback(terminalId: string, maxLines: number): Promise<string[]> {
+  public getTerminalScrollback(_terminalId: string, _maxLines: number): Promise<string[]> {
     // Disabled - return empty array to prevent compilation errors
-    return [];
+    return Promise.resolve([]);
   }
 
-  public async createTerminalFromSession(sessionInfo: any): Promise<string | null> {
+  public createTerminalFromSession(_sessionInfo: Record<string, unknown>): Promise<string | null> {
     // Disabled - return null to prevent compilation errors
-    return null;
+    return Promise.resolve(null);
   }
 
   public finalizeSessionRestore(): void {

@@ -280,11 +280,11 @@ describe('🎯 RESTORE FUNCTIONALITY GUARANTEE TESTS', () => {
 
       // 各ターミナルデータの構造確認
       savedData.terminals.forEach((terminal: any, index: number) => {
-        expect(terminal).to.have.property('id', mockTerminals[index].id);
-        expect(terminal).to.have.property('name', mockTerminals[index].name);
-        expect(terminal).to.have.property('number', mockTerminals[index].number);
-        expect(terminal).to.have.property('cwd', mockTerminals[index].cwd);
-        expect(terminal).to.have.property('isActive', mockTerminals[index].isActive);
+        expect(terminal).to.have.property('id', mockTerminals[index]?.id);
+        expect(terminal).to.have.property('name', mockTerminals[index]?.name);
+        expect(terminal).to.have.property('number', mockTerminals[index]?.number);
+        expect(terminal).to.have.property('cwd', mockTerminals[index]?.cwd);
+        expect(terminal).to.have.property('isActive', mockTerminals[index]?.isActive);
         expect(terminal).to.have.property('scrollback');
       });
 

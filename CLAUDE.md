@@ -97,6 +97,37 @@ Before implementing any changes:
 6. [ ] Test both happy path and error cases
 7. [ ] Verify no memory leaks or resource issues
 
+### Test-Driven Development (TDD) Best Practices
+
+**CRITICAL**: When writing tests, ALWAYS follow these steps:
+1. **Write the test FIRST** - Create failing tests before implementation
+2. **Run the test immediately** - Execute `npm test` to verify the test fails as expected
+3. **Implement minimal code** - Write just enough code to make the test pass
+4. **Run tests again** - Verify all tests pass with `npm test`
+5. **Refactor if needed** - Clean up code while keeping tests green
+
+**Common Commands for Testing**:
+```bash
+# Run unit tests (recommended for development)
+npm test
+
+# Run specific test file
+npm run compile-tests && ./node_modules/.bin/mocha --require out/test/shared/TestSetup.js 'out/test/unit/specific/test.js'
+
+# Run tests with coverage
+npm run test:coverage
+
+# Watch mode for TDD
+npm run watch-tests
+```
+
+**Test Verification Checklist**:
+- [ ] Did you run the test after writing it?
+- [ ] Did the test fail initially (RED phase)?
+- [ ] Did you run the test after implementation (GREEN phase)?
+- [ ] Are all lint errors fixed before committing?
+- [ ] Do all related tests still pass?
+
 ### Common Anti-Patterns to Avoid
 - **Incomplete renames**: Changing names in some files but not others
 - **Interface mismatches**: Adding methods to interfaces without updating implementations

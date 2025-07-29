@@ -1,6 +1,6 @@
 /**
  * 最適化されたログ出力戦略
- * 
+ *
  * パフォーマンスを重視し、本番環境では必要最低限のログのみを出力する
  * 開発環境では詳細なデバッグ情報を提供
  */
@@ -64,14 +64,17 @@ export class OptimizedLogger {
    */
   public initialize(extensionMode: vscode.ExtensionMode): void {
     this.isProduction = extensionMode === vscode.ExtensionMode.Production;
-    
+
     if (this.isProduction) {
       this.currentLevel = LogLevel.WARN; // 本番: ERROR + WARN のみ
     } else {
       this.currentLevel = LogLevel.DEBUG; // 開発: ERROR + WARN + INFO + DEBUG
     }
 
-    this.info(LogCategory.EXTENSION, `Logger initialized - Mode: ${this.isProduction ? 'Production' : 'Development'}, Level: ${LogLevel[this.currentLevel]}`);
+    this.info(
+      LogCategory.EXTENSION,
+      `Logger initialized - Mode: ${this.isProduction ? 'Production' : 'Development'}, Level: ${LogLevel[this.currentLevel]}`
+    );
   }
 
   /**
@@ -109,8 +112,13 @@ export class OptimizedLogger {
   /**
    * パフォーマンス測定ログ
    */
-  public performance(operation: string, duration: number, category: LogCategory = LogCategory.PERFORMANCE): void {
-    if (duration > 1000) { // 1秒以上の場合は警告
+  public performance(
+    operation: string,
+    duration: number,
+    category: LogCategory = LogCategory.PERFORMANCE
+  ): void {
+    if (duration > 1000) {
+      // 1秒以上の場合は警告
       this.warn(category, `Performance warning: ${operation} took ${duration}ms`);
     } else if (!this.isProduction) {
       this.debug(category, `Performance: ${operation} completed in ${duration}ms`);
@@ -134,12 +142,16 @@ export class OptimizedLogger {
   /**
    * セッション復元専用ログ
    */
-  public sessionRestore(phase: 'start' | 'progress' | 'complete' | 'error', message: string, data?: unknown): void {
+  public sessionRestore(
+    phase: 'start' | 'progress' | 'complete' | 'error',
+    message: string,
+    data?: unknown
+  ): void {
     const icon = {
       start: '🔄',
       progress: '⏳',
       complete: '✅',
-      error: '❌'
+      error: '❌',
     }[phase];
 
     if (phase === 'error') {
@@ -154,12 +166,16 @@ export class OptimizedLogger {
   /**
    * ターミナル操作専用ログ
    */
-  public terminal(action: 'create' | 'remove' | 'focus' | 'error', terminalId: string, details?: string): void {
+  public terminal(
+    action: 'create' | 'remove' | 'focus' | 'error',
+    terminalId: string,
+    details?: string
+  ): void {
     const icon = {
       create: '➕',
       remove: '🗑️',
       focus: '🎯',
-      error: '❌'
+      error: '❌',
     }[action];
 
     const message = `${icon} Terminal ${action}: ${terminalId}${details ? ` - ${details}` : ''}`;
@@ -174,10 +190,14 @@ export class OptimizedLogger {
   /**
    * WebView通信専用ログ
    */
-  public webviewMessage(direction: 'send' | 'receive', command: string, success: boolean = true): void {
+  public webviewMessage(
+    direction: 'send' | 'receive',
+    command: string,
+    success: boolean = true
+  ): void {
     const icon = direction === 'send' ? '📤' : '📥';
     const status = success ? '✅' : '❌';
-    
+
     if (!success) {
       this.error(LogCategory.WEBVIEW, `${icon} ${status} WebView message ${direction}: ${command}`);
     } else {
@@ -220,9 +240,12 @@ export class OptimizedLogger {
   private sanitizeData(data: unknown): unknown {
     if (typeof data === 'string') {
       // パスワードやトークンらしき文字列をマスク
-      return data.replace(/(?:password|token|key|secret)[:=]\s*["']?([^"'\s,}]+)/gi, 'password=***');
+      return data.replace(
+        /(?:password|token|key|secret)[:=]\s*["']?([^"'\s,}]+)/gi,
+        'password=***'
+      );
     }
-    
+
     if (typeof data === 'object' && data !== null) {
       const sanitized: Record<string, unknown> = {};
       for (const [key, value] of Object.entries(data)) {
@@ -269,12 +292,18 @@ export class OptimizedLogger {
    */
   private getLevelIcon(level: LogLevel): string {
     switch (level) {
-      case LogLevel.ERROR: return '❌';
-      case LogLevel.WARN: return '⚠️';
-      case LogLevel.INFO: return 'ℹ️';
-      case LogLevel.DEBUG: return '🔧';
-      case LogLevel.TRACE: return '🔍';
-      default: return '📝';
+      case LogLevel.ERROR:
+        return '❌';
+      case LogLevel.WARN:
+        return '⚠️';
+      case LogLevel.INFO:
+        return 'ℹ️';
+      case LogLevel.DEBUG:
+        return '🔧';
+      case LogLevel.TRACE:
+        return '🔍';
+      default:
+        return '📝';
     }
   }
 
@@ -303,17 +332,29 @@ export const logger = OptimizedLogger.getInstance();
 
 // 簡潔なログ関数（後方互換性のため）
 export const log = {
-  error: (category: LogCategory, message: string, data?: unknown) => logger.error(category, message, data),
-  warn: (category: LogCategory, message: string, data?: unknown) => logger.warn(category, message, data),
-  info: (category: LogCategory, message: string, data?: unknown) => logger.info(category, message, data),
-  debug: (category: LogCategory, message: string, data?: unknown) => logger.debug(category, message, data),
+  error: (category: LogCategory, message: string, data?: unknown) =>
+    logger.error(category, message, data),
+  warn: (category: LogCategory, message: string, data?: unknown) =>
+    logger.warn(category, message, data),
+  info: (category: LogCategory, message: string, data?: unknown) =>
+    logger.info(category, message, data),
+  debug: (category: LogCategory, message: string, data?: unknown) =>
+    logger.debug(category, message, data),
   performance: (operation: string, duration: number) => logger.performance(operation, duration),
-  success: (category: LogCategory, message: string, data?: unknown) => logger.success(category, message, data),
-  operation: (category: LogCategory, operation: string, data?: unknown) => logger.operation(category, operation, data),
-  sessionRestore: (phase: 'start' | 'progress' | 'complete' | 'error', message: string, data?: unknown) => 
-    logger.sessionRestore(phase, message, data),
-  terminal: (action: 'create' | 'remove' | 'focus' | 'error', terminalId: string, details?: string) => 
-    logger.terminal(action, terminalId, details),
-  webviewMessage: (direction: 'send' | 'receive', command: string, success?: boolean) => 
+  success: (category: LogCategory, message: string, data?: unknown) =>
+    logger.success(category, message, data),
+  operation: (category: LogCategory, operation: string, data?: unknown) =>
+    logger.operation(category, operation, data),
+  sessionRestore: (
+    phase: 'start' | 'progress' | 'complete' | 'error',
+    message: string,
+    data?: unknown
+  ) => logger.sessionRestore(phase, message, data),
+  terminal: (
+    action: 'create' | 'remove' | 'focus' | 'error',
+    terminalId: string,
+    details?: string
+  ) => logger.terminal(action, terminalId, details),
+  webviewMessage: (direction: 'send' | 'receive', command: string, success?: boolean) =>
     logger.webviewMessage(direction, command, success),
 };

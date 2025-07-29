@@ -46,7 +46,7 @@ export class MessageManager implements IMessageManager {
     log(`📨 [MESSAGE] ========== MESSAGE MANAGER HANDLE MESSAGE ==========`);
     log(`📨 [MESSAGE] Raw message:`, message);
     log(`📨 [MESSAGE] Message type:`, typeof message);
-    log(`📨 [MESSAGE] Message is null/undefined:`, message == null);
+    log(`📨 [MESSAGE] Message is null/undefined:`, message === null || message === undefined);
 
     try {
       const msg = message as MessageCommand;
@@ -542,7 +542,9 @@ export class MessageManager implements IMessageManager {
           cliAgentStatus.status,
           cliAgentStatus.agentType || null
         );
-        log(`✅ [MESSAGE] coordinator.updateClaudeStatus called successfully, result: ${result}`);
+        log(
+          `✅ [MESSAGE] coordinator.updateClaudeStatus called successfully, result: ${String(result)}`
+        );
       } catch (error) {
         log(`❌ [MESSAGE] Error calling coordinator.updateClaudeStatus:`, error);
         log(`❌ [MESSAGE] Error name: ${error instanceof Error ? error.name : 'unknown'}`);
@@ -748,7 +750,7 @@ export class MessageManager implements IMessageManager {
           }, 100);
         }
       } catch (error) {
-        log(`❌ [MESSAGE] Failed to restore terminal session ${terminalId}: ${error}`);
+        log(`❌ [MESSAGE] Failed to restore terminal session ${terminalId}: ${String(error)}`);
         // Continue with regular terminal creation as fallback
         coordinator.createTerminal(terminalId, terminalName, config);
       }

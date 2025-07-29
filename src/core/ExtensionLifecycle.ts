@@ -35,7 +35,7 @@ export class ExtensionLifecycle {
   /**
    * 拡張機能の起動処理
    */
-  async activate(context: vscode.ExtensionContext): Promise<void> {
+  activate(context: vscode.ExtensionContext): void {
     log('🚀 [EXTENSION] === ACTIVATION START ===');
 
     // Configure logger based on extension mode
@@ -82,7 +82,9 @@ export class ExtensionLifecycle {
 
       // Set sidebar provider for SimpleSessionManager
       if (this.simpleSessionManager) {
-        this.simpleSessionManager.setSidebarProvider(this.sidebarProvider);
+        this.simpleSessionManager.setSidebarProvider(
+          this.sidebarProvider as unknown as { [key: string]: unknown }
+        );
         log('🔧 [EXTENSION] Sidebar provider set for SimpleSessionManager');
       }
 
@@ -852,7 +854,9 @@ export class ExtensionLifecycle {
         log(`🔍 [SCROLLBACK_EXTRACT] Requesting scrollback for terminal ${terminal.id}`);
 
         // WebViewにScrollback抽出を要求
-        await (this.sidebarProvider as unknown as { _sendMessage: (msg: unknown) => Promise<void> })._sendMessage({
+        await (
+          this.sidebarProvider as unknown as { _sendMessage: (msg: unknown) => Promise<void> }
+        )._sendMessage({
           command: 'getScrollback',
           terminalId: terminal.id,
           maxLines: 1000,

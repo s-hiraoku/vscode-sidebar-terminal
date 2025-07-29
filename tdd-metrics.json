@@ -3,15 +3,15 @@
     {
       "startTime": "2025-07-26T20:13:59.508Z",
       "red": {
-        "timestamp": "2025-07-26T20:13:59.509Z",
+        "timestamp": "2025-07-27T14:57:57.569Z",
         "results": {
-          "passing": 47,
-          "failing": 1,
+          "passing": 0,
+          "failing": 0,
           "pending": 0,
-          "total": 48,
-          "duration": 288
+          "total": 0,
+          "duration": 0
         },
-        "success": true
+        "success": false
       },
       "green": {
         "timestamp": "2025-07-26T20:14:52.057Z",

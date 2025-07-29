@@ -3,7 +3,7 @@ import { extension as log } from '../utils/logger';
 import {
   TerminalSessionData,
   SessionSaveResult,
-  SessionRestoreResult,
+  SessionRestoreResult as _SessionRestoreResult,
   SessionRestoreOptions,
   SESSION_STORAGE_KEYS,
   SESSION_LIMITS,
@@ -146,7 +146,7 @@ export class SessionStorage {
       await this.context.globalState.update(SESSION_STORAGE_KEYS.SESSION_CONFIG, config);
       log('⚙️ [SESSION] Session config saved');
     } catch (error) {
-      log(`❌ [SESSION] Failed to save config: ${error}`);
+      log(`❌ [SESSION] Failed to save config: ${String(error)}`);
     }
   }
 
@@ -182,7 +182,7 @@ export class SessionStorage {
         log('🗑️ [SESSION] Cleared global session');
       }
     } catch (error) {
-      log(`❌ [SESSION] Failed to clear session: ${error}`);
+      log(`❌ [SESSION] Failed to clear session: ${String(error)}`);
     }
   }
 
@@ -231,7 +231,7 @@ export class SessionStorage {
 
       return true;
     } catch (error) {
-      log(`❌ [SESSION] Validation error: ${error}`);
+      log(`❌ [SESSION] Validation error: ${String(error)}`);
       return false;
     }
   }
@@ -239,12 +239,12 @@ export class SessionStorage {
   /**
    * ストレージの使用量情報を取得する（デバッグ用）
    */
-  async getStorageInfo(): Promise<{
+  getStorageInfo(): {
     hasWorkspaceSession: boolean;
     hasGlobalSession: boolean;
     lastSaveTime: number | null;
     configExists: boolean;
-  }> {
+  } {
     const workspaceSession = this.context.workspaceState.get<TerminalSessionData>(
       SESSION_STORAGE_KEYS.SESSION_DATA
     );

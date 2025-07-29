@@ -55,6 +55,7 @@
     ],
     "deny": []
   },
+  "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "playwright",
     "arxiv-mcp-server",
