@@ -47,8 +47,6 @@
   "remoteUser": "node",
   "mounts": [
     "source=${localEnv:HOME}/.vscode,target=/home/node/.vscode,type=bind,consistency=cached",
-    "source=${localEnv:HOME}/.claude,target=/home/node/.claude,type=bind,consistency=cached",
-    // ホストのclaude-codeを優先パスにマウント
-    "source=${localEnv:HOME}/.volta/bin/claude,target=/usr/local/bin/claude,type=bind,consistency=cached"
+    "source=${localEnv:HOME}/.claude,target=/home/node/.claude,type=bind,consistency=cached"
   ]
 }
