@@ -218,6 +218,13 @@ export class ExtensionLifecycle {
           this.terminalCommand?.handleSendToTerminal(content);
         },
       },
+      {
+        command: 'secondaryTerminal.killTerminal',
+        handler: () => {
+          log('🔧 [DEBUG] Command executed: killTerminal');
+          this.sidebarProvider?.killTerminal();
+        },
+      },
 
       // ======================= 設定コマンド =======================
       {

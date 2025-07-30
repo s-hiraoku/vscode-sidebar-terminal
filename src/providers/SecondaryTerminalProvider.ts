@@ -112,49 +112,24 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   }
 
   public killTerminal(): void {
-    log('🔧 [DEBUG] Killing terminal...');
+    log('🔧 [DEBUG] Kill terminal command - delegating to deleteTerminal for active terminal');
+    
+    // Get active terminal ID
+    const activeTerminalId = this._terminalManager.getActiveTerminalId();
+    
+    if (!activeTerminalId) {
+      log('⚠️ [WARN] No active terminal to kill');
+      TerminalErrorHandler.handleTerminalNotFound();
+      return;
+    }
+
+    log('🔧 [DEBUG] Delegating to killSpecificTerminal for active terminal:', activeTerminalId);
+    
+    // Use the same logic as header × button (killSpecificTerminal)
     try {
-      const activeTerminalId = this._terminalManager.getActiveTerminalId();
-      const terminals = this._terminalManager.getTerminals();
-
-      log('🔧 [DEBUG] Active terminal ID:', activeTerminalId);
-      log('🔧 [DEBUG] Total terminals:', terminals.length);
-      log(
-        '🔧 [DEBUG] Terminal list:',
-        terminals.map((t) => t.id)
-      );
-
-      if (!activeTerminalId) {
-        log('⚠️ [WARN] No active terminal to kill');
-        TerminalErrorHandler.handleTerminalNotFound();
-        return;
-      }
-
-      // Check terminal count protection - only protect if there's 1 terminal
-      if (terminals.length <= 1) {
-        log('🛡️ [WARN] Cannot kill terminal - only one terminal remaining');
-        showError('Cannot close terminal: At least one terminal must remain open');
-        return;
-      }
-
-      log('🔧 [DEBUG] Proceeding to kill active terminal:', activeTerminalId);
-
-      // Check if confirmation is needed
-      const settings = getConfigManager().getCompleteTerminalSettings();
-      const confirmBeforeKill = settings.confirmBeforeKill || false;
-      if (confirmBeforeKill) {
-        void vscode.window
-          .showWarningMessage(`Close terminal "${activeTerminalId}"?`, { modal: true }, 'Close')
-          .then((selection) => {
-            if (selection === 'Close') {
-              void this._performKillTerminal(activeTerminalId);
-            }
-          });
-      } else {
-        void this._performKillTerminal(activeTerminalId);
-      }
+      this.killSpecificTerminal(activeTerminalId);
     } catch (error) {
-      log('❌ [ERROR] Failed to kill terminal:', error);
+      log('❌ [DEBUG] Error in killTerminal delegation:', error);
       showError(`Failed to close terminal: ${String(error)}`);
     }
   }
@@ -204,48 +179,14 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   }
 
   public killSpecificTerminal(terminalId: string): void {
-    log(`🗑️ [DEBUG] Killing specific terminal: ${terminalId}`);
+    log(`🗑️ [DEBUG] Kill specific terminal command - delegating to deleteTerminal: ${terminalId}`);
+    
+    // Use the same logic as deleteTerminal case (same as header × button)
     try {
-      const terminals = this._terminalManager.getTerminals();
-      const targetTerminal = terminals.find((t) => t.id === terminalId);
-
-      if (!targetTerminal) {
-        log(`⚠️ [WARN] Terminal ${terminalId} not found`);
-        showError(`Terminal ${terminalId} not found`);
-        return;
-      }
-
-      log('🔧 [DEBUG] Total terminals:', terminals.length);
-      log(
-        '🔧 [DEBUG] Terminal list:',
-        terminals.map((t) => t.id)
-      );
-
-      // Check terminal count protection - only protect if there's 1 terminal
-      if (terminals.length <= 1) {
-        log('🛡️ [WARN] Cannot kill terminal - only one terminal remaining');
-        showError('Cannot close terminal: At least one terminal must remain open');
-        return;
-      }
-
-      log(`🔧 [DEBUG] Proceeding to kill specific terminal: ${terminalId}`);
-
-      // Check if confirmation is needed
-      const settings = getConfigManager().getCompleteTerminalSettings();
-      const confirmBeforeKill = settings.confirmBeforeKill || false;
-      if (confirmBeforeKill) {
-        void vscode.window
-          .showWarningMessage(`Close terminal "${terminalId}"?`, { modal: true }, 'Close')
-          .then((selection) => {
-            if (selection === 'Close') {
-              void this._performKillSpecificTerminal(terminalId);
-            }
-          });
-      } else {
-        void this._performKillSpecificTerminal(terminalId);
-      }
+      log(`🗑️ [DEBUG] Delegating to TerminalManager.deleteTerminal for: ${terminalId}`);
+      void this._terminalManager.deleteTerminal(terminalId, { source: 'panel' });
     } catch (error) {
-      log(`❌ [ERROR] Failed to kill specific terminal ${terminalId}:`, error);
+      log(`❌ [DEBUG] Error in killSpecificTerminal delegation:`, error);
       showError(`Failed to close terminal: ${String(error)}`);
     }
   }

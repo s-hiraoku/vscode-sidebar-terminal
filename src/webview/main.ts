@@ -738,24 +738,25 @@ class TerminalWebviewManager {
   }
 
   public closeTerminal(id?: string): void {
-    // パネルのゴミ箱ボタン用 - アクティブターミナルを削除
-    const activeTerminalId = this.activeTerminalId;
+    // パネルのゴミ箱ボタン用 - 指定されたターミナルまたはアクティブターミナルを削除
+    const terminalIdToDelete = id || this.activeTerminalId;
+    
     log(
       '🗑️ [PANEL] Close terminal requested for:',
       id,
-      'but will close active terminal:',
-      activeTerminalId
+      'will delete terminal:',
+      terminalIdToDelete
     );
 
-    if (!activeTerminalId) {
-      log('⚠️ [PANEL] No active terminal to close');
-      this.notificationManager.showTerminalKillError('No active terminal to close');
+    if (!terminalIdToDelete) {
+      log('⚠️ [PANEL] No terminal to close');
+      this.notificationManager.showTerminalKillError('No terminal to close');
       return;
     }
 
-    // 新しいアーキテクチャ: 統一された削除要求を送信（WebViewは判定しない）
+    // 新しいアーキテクチャ: 統一された削除要求を送信（ヘッダーのバツボタンと同じ処理）
     log('📤 [PANEL] Sending delete terminal message to extension');
-    this.messageManager.sendDeleteTerminalMessage(activeTerminalId, 'panel', this);
+    this.messageManager.sendDeleteTerminalMessage(terminalIdToDelete, 'panel', this);
   }
 
   // 削除中のターミナルを追跡（Extension側で管理されるまでの一時的な状態）
