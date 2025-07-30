@@ -52,7 +52,14 @@
       "Bash(npm version:*)",
       "WebFetch(domain:stackoverflow.com)",
       "Bash(gh issue close:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(npm rebuild:*)",
+      "Bash(node:*)",
+      "Bash(npx node-gyp rebuild:*)",
+      "Bash(arch:*)",
+      "Bash(npm config:*)",
+      "Bash(TARGET_ARCH=arm64 npx node-gyp rebuild -C node_modules/@homebridge/node-pty-prebuilt-multiarch --arch=arm64)",
+      "Bash(lipo:*)"
     ],
     "deny": []
   },
