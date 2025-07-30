@@ -410,6 +410,7 @@
     ]
   },
   "scripts": {
+    "postinstall": "npm rebuild",
     "vscode:prepublish": "npm rebuild && npm run package",
     "compile": "webpack",
     "watch": "webpack --watch",
