@@ -28,7 +28,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     _context: vscode.WebviewViewResolveContext,
     _token: vscode.CancellationToken
   ): void {
-    log('🔧 [DEBUG] SecondaryTerminalProvider.resolveWebviewView called');
+    // WebView provider initialization
 
     try {
       this._view = webviewView;
@@ -47,7 +47,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       this._setupCliAgentStatusListeners();
       this._setupConfigurationChangeListeners();
 
-      log('✅ [DEBUG] WebviewView setup completed successfully');
+      log('WebView setup completed successfully');
     } catch (error) {
       log('❌ [CRITICAL] Failed to resolve WebView:', error);
       this._handleWebviewSetupError(webviewView, error);
@@ -55,21 +55,17 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   }
 
   public splitTerminal(): void {
-    log('🔧 [DEBUG] Splitting terminal...');
+    // Terminal split operation
     try {
       // Check if we can split (use configured terminal limit)
       const terminals = this._terminalManager.getTerminals();
       const config = getConfigManager().getExtensionTerminalConfig();
       const maxSplitTerminals = config.maxTerminals;
 
-      log('🔧 [DEBUG] Current terminals:', terminals.length);
-      log('🔧 [DEBUG] Max terminals allowed:', maxSplitTerminals);
-      terminals.forEach((terminal, index) => {
-        log(`🔧 [DEBUG] Terminal ${index + 1}: ${terminal.name} (ID: ${terminal.id})`);
-      });
+      // Check terminal limits
 
       if (terminals.length >= maxSplitTerminals) {
-        log('⚠️ [DEBUG] Cannot split - already at maximum terminals:', terminals.length);
+        log('Cannot split - maximum terminals reached:', terminals.length);
         showError(`Cannot split terminal: Maximum of ${maxSplitTerminals} terminals reached`);
         return;
       }
@@ -83,11 +79,11 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       setImmediate(() => {
         try {
           const terminalId = this._terminalManager.createTerminal();
-          log('✅ [DEBUG] Split terminal created with ID:', terminalId);
+          log('Split terminal created:', terminalId);
 
           // The terminal creation event will send TERMINAL_CREATED to webview automatically
         } catch (error) {
-          log('❌ [DEBUG] Failed to create split terminal:', error);
+          log('ERROR: Failed to create split terminal:', error);
           showError('Failed to create split terminal');
         }
       });
@@ -112,24 +108,24 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   }
 
   public killTerminal(): void {
-    log('🔧 [DEBUG] Kill terminal command - delegating to deleteTerminal for active terminal');
-    
+    // Kill active terminal
+
     // Get active terminal ID
     const activeTerminalId = this._terminalManager.getActiveTerminalId();
-    
+
     if (!activeTerminalId) {
       log('⚠️ [WARN] No active terminal to kill');
       TerminalErrorHandler.handleTerminalNotFound();
       return;
     }
 
-    log('🔧 [DEBUG] Delegating to killSpecificTerminal for active terminal:', activeTerminalId);
-    
+    // Delegating to killSpecificTerminal
+
     // Use the same logic as header × button (killSpecificTerminal)
     try {
       this.killSpecificTerminal(activeTerminalId);
     } catch (error) {
-      log('❌ [DEBUG] Error in killTerminal delegation:', error);
+      log('ERROR: Failed to kill terminal:', error);
       showError(`Failed to close terminal: ${String(error)}`);
     }
   }
@@ -179,14 +175,14 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   }
 
   public killSpecificTerminal(terminalId: string): void {
-    log(`🗑️ [DEBUG] Kill specific terminal command - delegating to deleteTerminal: ${terminalId}`);
-    
+    // Kill specific terminal
+
     // Use the same logic as deleteTerminal case (same as header × button)
     try {
-      log(`🗑️ [DEBUG] Delegating to TerminalManager.deleteTerminal for: ${terminalId}`);
+      // Delegating to TerminalManager
       void this._terminalManager.deleteTerminal(terminalId, { source: 'panel' });
     } catch (error) {
-      log(`❌ [DEBUG] Error in killSpecificTerminal delegation:`, error);
+      log('ERROR: Failed to kill specific terminal:', error);
       showError(`Failed to close terminal: ${String(error)}`);
     }
   }

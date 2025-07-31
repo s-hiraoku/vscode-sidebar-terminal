@@ -520,7 +520,9 @@ export class StandardTerminalSessionManager {
       hasSession: true,
       terminalCount: sessionData.terminals?.length || 0,
       lastSaved: sessionData.timestamp ? new Date(sessionData.timestamp) : null,
-      isExpired: sessionData.timestamp ? this.isSessionExpired({ timestamp: sessionData.timestamp }) : false,
+      isExpired: sessionData.timestamp
+        ? this.isSessionExpired({ timestamp: sessionData.timestamp })
+        : false,
       configEnabled: config.enablePersistentSessions,
     };
   }

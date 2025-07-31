@@ -23,14 +23,6 @@ export class ExtensionLifecycle {
   private _restoreExecuted = false;
 
   /**
-   * ScrollbackSessionManagerへのアクセスを提供
-   * Temporarily disabled for simplified implementation
-   */
-  // public getScrollbackSessionManager(): ScrollbackSessionManager | undefined {
-  //   return this.scrollbackSessionManager;
-  // }
-
-  /**
    * 拡張機能の起動処理
    */
   activate(context: vscode.ExtensionContext): Promise<void> {
@@ -68,11 +60,6 @@ export class ExtensionLifecycle {
       );
       log('✅ [EXTENSION] Standard session manager initialized');
 
-      // Initialize scrollback session manager - Temporarily disabled
-      // log('🔧 [EXTENSION] Initializing scrollback session manager...');
-      // this.scrollbackSessionManager = new ScrollbackSessionManager(context);
-      // log('✅ [EXTENSION] Scrollback session manager initialized');
-
       // Initialize command handlers
       this.fileReferenceCommand = new FileReferenceCommand(this.terminalManager);
       this.terminalCommand = new TerminalCommand(this.terminalManager);
@@ -93,9 +80,6 @@ export class ExtensionLifecycle {
 
       // Register all commands
       this.registerCommands(context);
-
-      // Setup session manager event listeners - DISABLED (UnifiedSessionManager doesn't emit events)
-      // this.setupSessionEventListeners();
 
       // CRITICAL: Session restore is now handled by SecondaryTerminalProvider asynchronously
       // This prevents VS Code activation spinner from hanging
@@ -142,16 +126,6 @@ export class ExtensionLifecycle {
   private registerCommands(context: vscode.ExtensionContext): void {
     const commandDisposables = [
       // ======================= メインコマンド =======================
-      {
-        command: 'secondaryTerminal.createTerminal',
-        handler: () => {
-          log('🔧 [DEBUG] Command executed: createTerminal');
-          // TODO: SecondaryTerminalProviderにhandleNewTerminalメソッドを追加する必要があります
-          void vscode.window.showInformationMessage(
-            'Create terminal functionality needs to be implemented'
-          );
-        },
-      },
       {
         command: 'secondaryTerminal.splitTerminal',
         handler: () => {

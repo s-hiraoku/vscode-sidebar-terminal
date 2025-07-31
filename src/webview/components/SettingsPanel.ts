@@ -165,7 +165,6 @@ export class SettingsPanel {
     return content;
   }
 
-
   /**
    * テーマコントロールを作成
    */
@@ -312,7 +311,6 @@ export class SettingsPanel {
     DOMUtils.addEventListenerSafe(resetBtn as HTMLElement, 'click', () => {
       this.resetSettings();
     });
-
   }
 
   /**

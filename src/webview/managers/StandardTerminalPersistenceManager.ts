@@ -229,12 +229,14 @@ export class StandardTerminalPersistenceManager {
 
       const state = this.vscodeApi.getState() as Record<string, unknown> | null;
       const storageKey = `${StandardTerminalPersistenceManager.STORAGE_KEY_PREFIX}${terminalId}`;
-      const storageData = state?.[storageKey] as {
-        content: string;
-        timestamp: number;
-        version: string;
-        terminalId: string;
-      } | undefined;
+      const storageData = state?.[storageKey] as
+        | {
+            content: string;
+            timestamp: number;
+            version: string;
+            terminalId: string;
+          }
+        | undefined;
 
       if (!storageData || !storageData.content) {
         console.log(`📭 [WEBVIEW-PERSISTENCE] No saved content found for terminal ${terminalId}`);

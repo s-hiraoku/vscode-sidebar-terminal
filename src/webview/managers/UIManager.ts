@@ -4,7 +4,6 @@
 
 import { Terminal } from 'xterm';
 import { webview as log } from '../../utils/logger';
-import { LoggerManager } from './LoggerManager';
 import { PartialTerminalSettings, WebViewFontSettings } from '../../types/shared';
 import { getWebviewTheme, WEBVIEW_THEME_CONSTANTS } from '../utils/WebviewThemeUtils';
 import { IUIManager } from '../interfaces/ManagerInterfaces';
@@ -32,7 +31,7 @@ export class UIManager implements IUIManager {
   private headerElementsCache = new Map<string, TerminalHeaderElements>();
 
   // Logger manager
-  private logger = LoggerManager.getInstance();
+  // Use direct logger instead of LoggerManager to avoid circular dependency
 
   /**
    * Update borders for all terminals based on active state
@@ -357,7 +356,7 @@ export class UIManager implements IUIManager {
     agentType: string | null = null
   ): void {
     // Use performance measurement
-    return this.logger.performance.measure('updateCliAgentStatusDisplay', () => {
+    // Performance measurement removed for simplification
       // CLI Agentステータス更新は即座に処理する（デバウンスをスキップ）
       // 相互排他制御により短時間で複数のステータス変更が発生するため
 
@@ -379,11 +378,8 @@ export class UIManager implements IUIManager {
       }
 
       if (updatedCount > 0) {
-        this.logger.ui.info(
-          `CLI Agent status updated: ${activeTerminalName} -> ${status} (${updatedCount} terminals)`
-        );
+        log(`CLI Agent status updated: ${activeTerminalName} -> ${status} (${updatedCount} terminals)`);
       }
-    });
   }
 
   /**

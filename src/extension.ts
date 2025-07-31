@@ -5,7 +5,7 @@ import { ExtensionLifecycle } from './core/ExtensionLifecycle';
 const lifecycle = new ExtensionLifecycle();
 
 export function activate(context: vscode.ExtensionContext): void {
-  lifecycle.activate(context);
+  void lifecycle.activate(context);
 }
 
 export function deactivate(): void {

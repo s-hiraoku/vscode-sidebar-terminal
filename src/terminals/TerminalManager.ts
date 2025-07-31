@@ -817,10 +817,7 @@ export class TerminalManager {
         const trimmed = line.trim();
         const cleanLine = trimmed.replace(/^[>$#%]\s*/, '');
 
-        // デバッグ用ログを追加
-        if (cleanLine.length > 0) {
-          console.log('[DEBUG] Checking CLI Agent patterns for line:', { terminalId, cleanLine });
-        }
+        // Check CLI Agent patterns
 
         // Claude Codeが起動している時の特徴的なパターンをチェック
         if (
@@ -846,13 +843,13 @@ export class TerminalManager {
               cleanLine.includes('started') ||
               cleanLine.includes('available')))
         ) {
-          console.log('[DEBUG] Claude pattern matched, setting current agent');
+          // Claude pattern matched
           this._setCurrentAgent(terminalId, 'claude');
           break;
         }
         // Geminiが起動している時の特徴的なパターンをチェック
         if (this._isGeminiCliDetected(cleanLine)) {
-          console.log('[DEBUG] Gemini pattern matched, setting current agent');
+          // Gemini pattern matched
           this._setCurrentAgent(terminalId, 'gemini');
           break;
         }
@@ -863,7 +860,7 @@ export class TerminalManager {
           this._connectedAgentType === 'gemini'
         ) {
           // Gemini CLIの実際の出力をすべてログに記録
-          console.log(`[DEBUG] 🔍 Gemini CLI output line: "${cleanLine}"`);
+          // Gemini CLI output detected
 
           // より包括的なプロンプト検知パターン
           const _isPromptReady =
@@ -903,16 +900,16 @@ export class TerminalManager {
     try {
       if (data.includes('\r') || data.includes('\n')) {
         const command = data.replace(/[\r\n]/g, '').trim();
-        console.log(`[DEBUG] CLI Agent input detection: "${command}" in terminal ${terminalId}`);
+        // CLI Agent input detection
 
         if (command.startsWith('claude') || command.startsWith('gemini')) {
           const agentType = command.startsWith('claude') ? 'claude' : 'gemini';
-          console.log(`[DEBUG] Detected ${agentType} CLI from input command`);
+          // CLI agent detected from input
           this._setCurrentAgent(terminalId, agentType);
         }
       }
     } catch (error) {
-      console.warn('[DEBUG] Error in CLI Agent input detection:', error);
+      log('ERROR: CLI Agent input detection failed:', error);
     }
   }
 
@@ -922,23 +919,17 @@ export class TerminalManager {
   private _setCurrentAgent(terminalId: string, type: 'claude' | 'gemini'): void {
     const terminal = this._terminals.get(terminalId);
     if (!terminal) {
-      console.log('[DEBUG] Terminal not found for ID:', terminalId);
+      // Terminal not found
       return;
     }
 
     // 既に同じターミナルが同じタイプで設定されている場合はスキップ
     if (this._connectedAgentTerminalId === terminalId && this._connectedAgentType === type) {
-      console.log('[DEBUG] Agent already set for this terminal, skipping');
+      // Agent already set
       return;
     }
 
-    console.log('[DEBUG] Setting current agent:', {
-      terminalId,
-      type,
-      terminalName: terminal.name,
-      previousAgent: this._connectedAgentTerminalId,
-      previousType: this._connectedAgentType,
-    });
+    // Setting current agent
 
     // 前のconnectedなAgentを保存
     const previousConnectedId = this._connectedAgentTerminalId;
@@ -952,7 +943,7 @@ export class TerminalManager {
     if (previousConnectedId && previousConnectedId !== terminalId) {
       const previousTerminal = this._terminals.get(previousConnectedId);
       if (previousTerminal) {
-        console.log('[DEBUG] Disconnecting previous terminal:', previousConnectedId);
+        // Disconnecting previous terminal
         this._onCliAgentStatusChange.fire({
           terminalId: previousConnectedId,
           status: 'disconnected',

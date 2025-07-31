@@ -45,12 +45,13 @@ _Customizing font size, theme, and other settings_
 
 - **Sidebar Integration**: Terminal integrated into Primary Sidebar (left side)
 - **Multiple Terminal Management**: Run up to 5 terminals simultaneously
+- **Session Persistence**: Automatic terminal session restore after VS Code restart
 - **Full Terminal Functionality**: Complete shell execution environment powered by node-pty
 - **Special Key Support**: Backspace, Ctrl+C, Ctrl+L, and other special key combinations
 - **Intuitive Controls**: Clear, New, and Split buttons for easy terminal management
 - **IME Support**: Multi-language input support including Japanese, Chinese, and Korean
-- **Highly Customizable**: Configure fonts, sizes, shell, and other preferences
-- **Cross-Platform**: Full support for Windows, macOS, and Linux
+- **CLI Agent Integration**: File reference shortcuts for Claude Code and GitHub Copilot
+- **Cross-Platform**: Full support for Windows, macOS, and Linux with native binaries
 - **Alt+Click Cursor Positioning**: VS Code-standard Alt+Click to move cursor (with CLI Agent detection)
 
 ## 📦 Installation
@@ -103,14 +104,22 @@ _Customizing font size, theme, and other settings_
 
 ### 🤖 CLI Agent Integration
 
-- **File reference shortcuts**: Use `Cmd+Option+L` (Mac) or `Alt+Ctrl+L` (Linux/Windows) to insert file references
-- **Independent Operation**: Works alongside CLI Agent extension without conflicts
-- **Cooperative Design**: CLI Agent (`CMD+OPT+K` → standard terminal) and Sidebar Terminal operate independently
-- **Command**: Use "Send @filename to Sidebar Terminal" from Command Palette
+- **File Reference Shortcuts**: Use `Cmd+Option+L` (Mac) or `Alt+Ctrl+L` (Linux/Windows) to insert `@filename` references
+- **GitHub Copilot Integration**: Use `Cmd+K Cmd+C` (Mac) or `Ctrl+K Ctrl+C` (Windows/Linux) for `#file:filename` format
+- **Independent Operation**: Works alongside CLI Agent extensions without conflicts
+- **Configurable**: Both integrations can be independently enabled/disabled in settings
+
+### 🔄 Session Persistence
+
+- **Automatic Restore**: Terminal contents and state restored after VS Code restart
+- **Scrollback History**: Up to 1000 lines of terminal history preserved per terminal
+- **Multi-Terminal Support**: All terminals (up to 5) restored with their individual states
+- **Configurable**: Session persistence can be customized or disabled
 
 ## ⌨️ Keyboard Shortcuts
 
-- **File Reference**: `CMD+OPT+L` (Mac) / `Ctrl+Alt+L` (Windows/Linux) - Insert `@filename` reference
+- **CLI Agent File Reference**: `CMD+OPT+L` (Mac) / `Ctrl+Alt+L` (Windows/Linux) - Insert `@filename` reference
+- **GitHub Copilot Integration**: `CMD+K CMD+C` (Mac) / `Ctrl+K Ctrl+C` (Windows/Linux) - Activate Copilot Chat with file reference
 - **Alt+Click**: Cursor positioning (when enabled in VS Code settings)
 
 ## ⚙️ Configuration
@@ -142,6 +151,11 @@ Customize the extension through VS Code settings (`settings.json`):
 | `sidebarTerminal.headerIconSize`        | number  | 20         | Size of terminal icon in webview header                                 |
 | `sidebarTerminal.sampleIconSize`        | number  | 16         | Size of sample icons in webview header                                  |
 | `sidebarTerminal.altClickMovesCursor`   | boolean | `true`     | Controls whether Alt/Option + click will reposition the prompt cursor.  |
+| `sidebarTerminal.enableCliAgentIntegration` | boolean | `true`     | Enable file reference shortcuts for CLI agents like Claude Code.        |
+| `sidebarTerminal.enableGitHubCopilotIntegration` | boolean | `true`     | Enable GitHub Copilot Chat integration shortcuts.                       |
+| `sidebarTerminal.enablePersistentSessions` | boolean | `true`     | Enable terminal session persistence across VS Code restarts.             |
+| `sidebarTerminal.scrollbackLines`      | number  | 1000       | Maximum number of lines to restore from terminal history.               |
+| `sidebarTerminal.scrollbackCompression` | boolean | `true`     | Compress scrollback data to reduce storage size.                        |
 
 ## 🛠️ Development
 
@@ -353,17 +367,19 @@ This project is licensed under the [MIT License](LICENSE).
 
 See [CHANGELOG.md](CHANGELOG.md) for detailed changes.
 
+### v0.1.31 (Latest)
+
+- **Session Persistence**: Complete terminal session restore functionality with scrollback history
+- **CLI Agent Integration**: File reference shortcuts for Claude Code (`@filename`) and GitHub Copilot (`#file:filename`)
+- **Cross-Platform Native Binaries**: Platform-specific builds for optimal performance
+- **Enhanced Logging**: Production-ready logging system with appropriate log levels
+- **Code Quality**: Comprehensive cleanup of debug logs and unused code
+
 ### v0.1.25
 
-- **WebView Architecture Refactoring**: Transformed the frontend into a modular system with 9 focused managers, improving organization, maintainability, and performance.
-- **Active Terminal Visualization**: Added a border to the active terminal for better focus indication.
-- **SVG Icon**: Updated the extension icon to SVG for better scaling.
-
-### v0.0.1 (Initial Release)
-
-- Core features including sidebar integration, multiple terminals, and split view.
-- Cross-platform support (Windows, macOS, Linux) with IME handling.
-- Advanced features like Alt+Click cursor positioning.
+- **WebView Architecture Refactoring**: Modular system with focused managers
+- **Active Terminal Visualization**: Border indication for active terminal
+- **SVG Icon**: Updated extension icon for better scaling
 
 ## 🙏 Acknowledgments
 
@@ -388,4 +404,4 @@ This project uses these excellent libraries:
 
 ---
 
-_This README was last updated on 2025-07-18._
+_This README was last updated on 2025-07-30._

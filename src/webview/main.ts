@@ -2,15 +2,11 @@
  * WebViewメインエントリーポイント
  */
 
-// CRITICAL: Add immediate diagnostic logging
-console.log('🚀 [WEBVIEW-SCRIPT] ========== WEBVIEW.JS SCRIPT STARTED ==========');
-console.log('🚀 [WEBVIEW-SCRIPT] Script execution time:', new Date().toISOString());
-console.log('🚀 [WEBVIEW-SCRIPT] Window object exists:', typeof window !== 'undefined');
-console.log('🚀 [WEBVIEW-SCRIPT] Document ready state:', document?.readyState);
-console.log(
-  '🚀 [WEBVIEW-SCRIPT] VS Code API available:',
-  typeof (window as Window & { acquireVsCodeApi?: unknown })?.acquireVsCodeApi
-);
+// Import logger first to avoid initialization order issues
+import { webview as log } from '../utils/logger';
+
+// WebView initialization logging
+log('WebView script started');
 
 import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
@@ -25,7 +21,6 @@ import type {
   TerminalState,
 } from '../types/common';
 import { PartialTerminalSettings, WebViewFontSettings, TerminalConfig } from '../types/shared';
-import { webview as log } from '../utils/logger';
 import { SPLIT_CONSTANTS } from './constants/webview';
 import { getWebviewTheme, WEBVIEW_THEME_CONSTANTS } from './utils/WebviewThemeUtils';
 import { SplitManager } from './managers/SplitManager';
@@ -70,19 +65,7 @@ let vscode: {
 
 // Function to safely get VS Code API
 function getVsCodeApi(): typeof vscode {
-  console.log('🔍 [WEBVIEW] getVsCodeApi called');
-  console.log('🔍 [WEBVIEW] Current vscode variable:', !!vscode);
-  console.log(
-    '🔍 [WEBVIEW] window.vscodeApi available:',
-    !!(window as Window & { vscodeApi?: unknown }).vscodeApi
-  );
-  console.log(
-    '🔍 [WEBVIEW] window.vscodeApi type:',
-    typeof (window as Window & { vscodeApi?: unknown }).vscodeApi
-  );
-
   if (vscode) {
-    console.log('🔍 [WEBVIEW] Returning cached vscode API');
     return vscode;
   }
 
@@ -96,13 +79,12 @@ function getVsCodeApi(): typeof vscode {
   };
   if (windowWithApi.vscodeApi) {
     vscode = windowWithApi.vscodeApi;
-    console.log('📱 [WEBVIEW] Using globally stored VS Code API');
-    console.log('📱 [WEBVIEW] VS Code API postMessage type:', typeof vscode.postMessage);
+    log('VS Code API initialized successfully');
     return vscode;
   }
 
   // Should not reach here, but just in case
-  console.log('❌ [WEBVIEW] No VS Code API available');
+  log('ERROR: No VS Code API available');
   return null;
 }
 
@@ -135,7 +117,7 @@ class TerminalWebviewManager {
     if (api) {
       api.postMessage(message as VsCodeMessage);
     } else {
-      console.log('❌ [WEBVIEW] Cannot send message: No VS Code API available');
+      log('ERROR: Cannot send message - No VS Code API available');
     }
   }
 
@@ -740,7 +722,7 @@ class TerminalWebviewManager {
   public closeTerminal(id?: string): void {
     // パネルのゴミ箱ボタン用 - 指定されたターミナルまたはアクティブターミナルを削除
     const terminalIdToDelete = id || this.activeTerminalId;
-    
+
     log(
       '🗑️ [PANEL] Close terminal requested for:',
       id,
@@ -1703,40 +1685,11 @@ setTimeout(() => {
   }
 }, 100); // Close the setTimeout callback
 
-// Test if console and logging is working in WebView context
-log('🧪 [WEBVIEW] ========== WEBVIEW CONTEXT TEST ==========');
-log('🧪 [WEBVIEW] Testing console.log function:', typeof console.log);
-log('🧪 [WEBVIEW] Testing log function:', typeof log);
-log('🧪 [WEBVIEW] Window location:', window.location.href);
-log('🧪 [WEBVIEW] Document title:', document.title);
-log('🧪 [WEBVIEW] Document body className:', document.body?.className);
-// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
-log('🧪 [WEBVIEW] Is in VS Code webview context:', !!(window as any).acquireVsCodeApi);
+// Initialize WebView context
+log('WebView context initialized successfully');
 
-// Try to send a test message immediately
-log('🧪 [WEBVIEW] Attempting to send test message...');
-try {
-  const api = getVsCodeApi();
-  if (api && typeof api.postMessage === 'function') {
-    api.postMessage({
-      command: 'test',
-      message: 'WebView script is running and can send messages',
-    });
-    log('🧪 [WEBVIEW] Test message sent successfully using global vscodeApi');
-  } else {
-    log('❌ [WEBVIEW] No vscodeApi available for test message');
-  }
-} catch (error) {
-  log('🧪 [WEBVIEW] Failed to send test message:', error);
-}
-
-log('🔧 [WEBVIEW] ========== MESSAGE LISTENER SETUP COMPLETE ==========');
-
-// CRITICAL: Final script execution confirmation
-console.log('🎉 [WEBVIEW-SCRIPT] ========== WEBVIEW.JS SCRIPT COMPLETED ==========');
-console.log('🎉 [WEBVIEW-SCRIPT] Script completion time:', new Date().toISOString());
-console.log('🎉 [WEBVIEW-SCRIPT] TerminalManager created:', !!terminalManager);
-console.log('🎉 [WEBVIEW-SCRIPT] Message listeners set up successfully');
+// WebView script execution completed
+log('WebView script loaded successfully');
 
 // Enhanced update status function
 function updateStatus(_message: string, _type: 'info' | 'success' | 'error' = 'info'): void {}

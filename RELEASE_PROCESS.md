@@ -52,7 +52,7 @@ git commit -m "feat: 新機能を追加"
 ### 2. リリース準備
 
 ```bash
-# メインブランチ（for-publish）にマージ
+# リリース用ブランチ（for-publish）にマージ
 git checkout for-publish
 git merge feature/new-feature
 
@@ -115,14 +115,17 @@ git push origin --tags
 ## 📊 進行状況の確認
 
 ### GitHub Actions
+
 - URL: https://github.com/s-hiraoku/vscode-sidebar-terminal/actions
 - ワークフローの実行状況をリアルタイム確認
 
-### GitHub Releases  
+### GitHub Releases
+
 - URL: https://github.com/s-hiraoku/vscode-sidebar-terminal/releases
 - 生成されたVSIXファイルの確認
 
 ### VS Code Marketplace
+
 - URL: https://marketplace.visualstudio.com/items?itemName=s-hiraoku.vscode-sidebar-terminal
 - 公開状況とユーザー向け情報の確認
 
@@ -174,7 +177,7 @@ npm run vsce:package:win32-x64
 #### 2. Personal Access Token エラー
 
 - PAT の有効期限を確認
-- Marketplace: Manage 権限があるか確認  
+- Marketplace: Manage 権限があるか確認
 - GitHub Secrets の `VSCE_PAT` が正しく設定されているか確認
 
 #### 3. Marketplace パブリッシュエラー
@@ -188,8 +191,9 @@ vsce publish --packagePath path/to/package.vsix
 #### 4. 特定プラットフォームでのエラー
 
 GitHub Actions の該当プラットフォームジョブのログを確認：
+
 - Windows: Visual Studio Build Tools の問題
-- macOS: Xcode Command Line Tools の問題  
+- macOS: Xcode Command Line Tools の問題
 - Linux: build-essential パッケージの問題
 
 ## 📈 リリース後の確認事項
@@ -199,7 +203,7 @@ GitHub Actions の該当プラットフォームジョブのログを確認：
 ```bash
 # 各プラットフォームでの動作確認
 # - Windows: WSL環境での動作
-# - macOS: Intel & Apple Silicon での動作  
+# - macOS: Intel & Apple Silicon での動作
 # - Linux: 各ディストリビューションでの動作
 ```
 
@@ -220,16 +224,17 @@ GitHub Actions の該当プラットフォームジョブのログを確認：
 [Semantic Versioning](https://semver.org/) に従います：
 
 - **MAJOR**: 破壊的変更 (例: 1.0.0 → 2.0.0)
-- **MINOR**: 新機能追加（後方互換性あり）(例: 1.0.0 → 1.1.0)  
+- **MINOR**: 新機能追加（後方互換性あり）(例: 1.0.0 → 1.1.0)
 - **PATCH**: バグフィックス (例: 1.0.0 → 1.0.1)
 
 ### 例：
+
 ```bash
 # バグフィックス
 npm version patch
 
 # 新機能
-npm version minor  
+npm version minor
 
 # 破壊的変更
 npm version major
@@ -263,17 +268,21 @@ GitHub Actions が自動生成しますが、手動で編集も可能：
 
 ```markdown
 ## 🚀 新機能
+
 - 新しいターミナル分割機能を追加
 
-## 🐛 バグフィックス  
+## 🐛 バグフィックス
+
 - macOSでのnode-pty互換性問題を修正
 - Alt+Clickでのカーソル位置の問題を修正
 
 ## 🔧 改善
+
 - パフォーマンスの向上
 - エラーメッセージの改善
 
 ## 📦 技術的変更
+
 - プラットフォーム固有拡張機能への移行
 - GitHub Actions CI/CDの改善
 ```
@@ -293,6 +302,7 @@ GitHub Actions が自動生成しますが、手動で編集も可能：
 **`npm run release:patch` だけで、すべてのプラットフォーム向けの拡張機能が自動でリリースされます！** 🎉
 
 ### 自動化の流れ
+
 ```
 npm run release:patch
   ↓

@@ -6,8 +6,6 @@ import { webview as log } from '../../utils/logger';
 import { TerminalInteractionEvent } from '../../types/common';
 import { WebViewFontSettings } from '../../types/shared';
 import { IMessageManager, IManagerCoordinator } from '../interfaces/ManagerInterfaces';
-import { CommunicationManager } from './CommunicationManager';
-import { LoggerManager } from './LoggerManager';
 import { Terminal } from 'xterm';
 import {
   showSessionRestoreStarted,
@@ -36,8 +34,8 @@ export class MessageManager implements IMessageManager {
   private isProcessingQueue = false;
 
   // Unified managers
-  private commManager = CommunicationManager.getInstance();
-  private logger = LoggerManager.getInstance();
+  // Use direct communication instead of CommunicationManager to avoid circular dependency
+  // Use direct logger instead of LoggerManager to avoid circular dependency
 
   /**
    * Handle incoming messages from the extension
