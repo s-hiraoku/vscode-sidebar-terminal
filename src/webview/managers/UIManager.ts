@@ -357,29 +357,31 @@ export class UIManager implements IUIManager {
   ): void {
     // Use performance measurement
     // Performance measurement removed for simplification
-      // CLI Agentステータス更新は即座に処理する（デバウンスをスキップ）
-      // 相互排他制御により短時間で複数のステータス変更が発生するため
+    // CLI Agentステータス更新は即座に処理する（デバウンスをスキップ）
+    // 相互排他制御により短時間で複数のステータス変更が発生するため
 
-      let updatedCount = 0;
+    let updatedCount = 0;
 
-      // キャッシュされたヘッダー要素を使用（高速）
-      for (const [_terminalId, headerElements] of this.headerElementsCache) {
-        const terminalName = headerElements.nameSpan.textContent?.trim();
-        const isTargetTerminal = terminalName === activeTerminalName;
+    // キャッシュされたヘッダー要素を使用（高速）
+    for (const [_terminalId, headerElements] of this.headerElementsCache) {
+      const terminalName = headerElements.nameSpan.textContent?.trim();
+      const isTargetTerminal = terminalName === activeTerminalName;
 
-        if (status === 'none') {
-          // CLI Agent statusを削除 (全ターミナルから削除)
-          HeaderFactory.removeCliAgentStatus(headerElements);
-        } else if (isTargetTerminal) {
-          // CLI Agent statusを挿入/更新 (該当ターミナルのみ)
-          HeaderFactory.insertCliAgentStatus(headerElements, status, agentType);
-        }
-        updatedCount++;
+      if (status === 'none') {
+        // CLI Agent statusを削除 (全ターミナルから削除)
+        HeaderFactory.removeCliAgentStatus(headerElements);
+      } else if (isTargetTerminal) {
+        // CLI Agent statusを挿入/更新 (該当ターミナルのみ)
+        HeaderFactory.insertCliAgentStatus(headerElements, status, agentType);
       }
+      updatedCount++;
+    }
 
-      if (updatedCount > 0) {
-        log(`CLI Agent status updated: ${activeTerminalName} -> ${status} (${updatedCount} terminals)`);
-      }
+    if (updatedCount > 0) {
+      log(
+        `CLI Agent status updated: ${activeTerminalName} -> ${status} (${updatedCount} terminals)`
+      );
+    }
   }
 
   /**

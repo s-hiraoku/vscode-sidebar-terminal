@@ -699,3 +699,78 @@ This extension provides two file reference commands for different AI assistants:
 - `src/test/unit/sessions/UnifiedSessionManagerIntegration.test.ts`: 統合テスト
 - `src/test/unit/sessions/SessionDebugger.test.ts`: デバッグテスト
 - `src/core/ExtensionLifecycle.ts`: 拡張機能統合
+
+## TDD運用体制とリリース前品質保証
+
+### TDD（Test-Driven Development）実践体制
+
+このプロジェクトでは**完全なTDD体制**を確立し、リリース前品質保証を自動化しています。
+
+#### TDD品質基準
+
+**リリース前必須クリア項目**:
+- **TDDコンプライアンス**: 50%以上（段階的に85%まで向上予定）
+- **テストカバレッジ**: 85%以上
+- **ESLint準拠**: 100%（エラー0個）
+- **テスト成功率**: 60%以上（段階的に90%まで向上予定）
+- **最低テスト数**: 70個以上
+
+#### 自動品質ゲート
+
+**リリース時の自動品質チェック**:
+```bash
+# リリース実行時に自動でTDD品質ゲートが実行される
+npm run release:patch  # → 自動でpre-release:checkが先に実行される
+npm run release:minor  # → TDD品質基準未達成時はリリース停止
+npm run release:major  # → GitHub Actionsでも二重チェック実行
+```
+
+**GitHub Actions統合**:
+- タグリリース時に`pre-release-quality-gate`ジョブが自動実行
+- TDD品質基準未達成時はビルド・リリースを自動停止
+- 品質レポートをGitHub Releaseに自動添付
+
+#### TDD実践コマンド
+
+**日常開発でのTDDサイクル**:
+```bash
+# Red-Green-Refactorサイクル
+npm run tdd:red        # 失敗するテストを書く
+npm run tdd:green      # テストを通す最小限のコードを書く
+npm run tdd:refactor   # コードを改善する
+
+# 自動TDDサイクル実行
+npm run tdd:cycle      # 全サイクルを自動実行
+```
+
+**品質チェックコマンド**:
+```bash
+# 開発中の品質確認
+npm run tdd:check-quality      # TDD品質チェック
+npm run tdd:comprehensive-check # 包括的品質チェック（カバレッジ+品質+ゲート）
+
+# リリース前必須チェック
+npm run tdd:quality-gate       # 品質ゲートチェック
+npm run pre-release:check      # リリース前総合チェック
+```
+
+#### TDD実践ガイドライン
+
+**必須遵守事項**:
+1. **テストファースト**: 実装前に必ずテストを書く
+2. **Red-Green-Refactor**: TDDサイクルを厳格に遵守
+3. **品質ゲートクリア**: リリース前に必ず品質基準をクリア
+4. **継続的改善**: 品質メトリクスの定期的な向上
+
+**詳細なTDD運用ルール**: [TDD_GUIDELINES.md](TDD_GUIDELINES.md)を参照
+
+#### 品質保証の自動化レベル
+
+**「品質基準未達成時はリリース不可能」レベルの厳格な品質保証体制**:
+
+1. **ローカル開発**: `npm run release:*`実行時にTDD品質チェック自動実行
+2. **GitHub Actions**: タグプッシュ時にCI/CDで品質ゲート実行
+3. **リリース阻止**: 品質基準未達成時は自動的にリリースプロセス停止
+4. **品質レポート**: リリース毎に詳細な品質メトリクスレポート生成
+
+この体制により、**「テストが通ったら、絶対に動作するレベル」**の品質を保証し、技術的負債の蓄積を防止しています。
