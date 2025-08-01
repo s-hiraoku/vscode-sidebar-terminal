@@ -14,5 +14,6 @@ yarn-debug.log*
 yarn-error.log*
 
 # Serena関連ファイル
+.serena/cache/
 .serena/memories/
 .serena/logs/
