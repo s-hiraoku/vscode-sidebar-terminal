@@ -1,4 +1,5 @@
 {
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "allow": [
       "Bash(gh issue create:*)",
@@ -59,7 +60,14 @@
       "Bash(arch:*)",
       "Bash(npm config:*)",
       "Bash(TARGET_ARCH=arm64 npx node-gyp rebuild -C node_modules/@homebridge/node-pty-prebuilt-multiarch --arch=arm64)",
-      "Bash(lipo:*)"
+      "Bash(lipo:*)",
+      "mcp__serena__check_onboarding_performed",
+      "mcp__serena__onboarding",
+      "mcp__serena__list_dir",
+      "mcp__serena__find_symbol",
+      "mcp__serena__get_symbols_overview",
+      "mcp__serena__think_about_collected_information",
+      "mcp__serena__write_memory"
     ],
     "deny": []
   },
