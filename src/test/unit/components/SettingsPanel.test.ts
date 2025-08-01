@@ -205,7 +205,7 @@ describe('SettingsPanel', () => {
       // First set some custom values for theme
       const themeSelect = document.getElementById('theme-select') as HTMLSelectElement;
       const cursorBlinkCheckbox = document.getElementById('cursor-blink') as HTMLInputElement;
-      
+
       if (themeSelect) themeSelect.value = 'light';
       if (cursorBlinkCheckbox) cursorBlinkCheckbox.checked = false;
 

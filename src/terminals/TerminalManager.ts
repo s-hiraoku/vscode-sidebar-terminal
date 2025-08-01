@@ -46,15 +46,15 @@ export class TerminalManager {
     terminalName?: string;
   }>();
 
-  // 出力履歴保存用バッファ（最大1000行/ターミナル）
-  private readonly _outputHistory = new Map<string, string[]>();
-  private readonly MAX_OUTPUT_HISTORY = 1000;
+
 
   // 操作の順序保証のためのキュー
   private operationQueue: Promise<void> = Promise.resolve();
 
   // Track terminals being killed to prevent infinite loops
   private readonly _terminalBeingKilled = new Set<string>();
+
+
 
   // Performance optimization: Data batching for high-frequency output
   private readonly _dataBuffers = new Map<string, string[]>();
@@ -195,7 +195,11 @@ export class TerminalManager {
           terminalId
         );
 
-        // 🛡️ プロセス終了イベント（CLI Agent終了検出は無効化）
+        // 🛡️ プロセス終了イベント（CLI Agent終了検出を含む）
+        // If this terminal has a connected CLI agent, terminate it
+        if (this._connectedAgentTerminalId === terminalId) {
+          this._setAgentTerminated(terminalId);
+        }
 
         // Check if this terminal is being manually killed to prevent infinite loop
         if (this._terminalBeingKilled.has(terminalId)) {
@@ -533,6 +537,8 @@ export class TerminalManager {
     // Clear kill tracking
     this._terminalBeingKilled.clear();
 
+
+
     // Dispose CLI Agent integration manager
     this._connectedAgentTerminalId = null;
     this._connectedAgentType = null;
@@ -563,8 +569,7 @@ export class TerminalManager {
     }
     buffer.push(data);
 
-    // 出力履歴に追加
-    this.addToOutputHistory(terminalId, data);
+
 
     // Flush immediately if buffer is full or data is large
     if (buffer.length >= this.MAX_BUFFER_SIZE || data.length > 1000) {
@@ -646,8 +651,7 @@ export class TerminalManager {
     // Remove from terminals map
     this._terminals.delete(terminalId);
 
-    // 出力履歴もクリア
-    this.clearOutputHistory(terminalId);
+
 
     this._terminalRemovedEmitter.fire(terminalId);
 
@@ -761,12 +765,204 @@ export class TerminalManager {
   /**
    * Gemini CLI検知の改善されたパターンマッチング
    */
+  // This method has been replaced by _detectGeminiCliStartup for better organization
+  // Keeping this stub for backward compatibility during transition
   private _isGeminiCliDetected(cleanLine: string): boolean {
+    return this._detectGeminiCliStartup(cleanLine);
+  }
+
+  /**
+   * 超シンプルなCLI Agent検出（出力から）
+   */
+  private _detectCliAgent(terminalId: string, data: string): void {
+    try {
+      const lines = data.split(/\r?\n/);
+      for (const line of lines) {
+        const trimmed = line.trim();
+        
+        // 完全なANSIエスケープシーケンスクリーニング
+        const cleanLine = this._cleanAnsiEscapeSequences(trimmed);
+        
+        // 追加のクリーニング：プロンプト記号とボックス文字を除去
+        const fullyCleanLine = cleanLine
+          .replace(/^[>$#%]\s+/, '') // プロンプト記号を除去
+          .replace(/[│╭╰─╯]/g, '') // ボックス文字除去
+          .trim();
+
+        // デバッグログを強化
+        if (fullyCleanLine && this._connectedAgentTerminalId === terminalId) {
+          log(`🔍 [TERMINATION-DEBUG] Processing line: "${trimmed}" → cleaned: "${fullyCleanLine}"`);
+        }
+
+        // === TERMINATION DETECTION ===
+        // Detect CLI Agent termination through shell prompt return or exit messages
+        if (this._connectedAgentTerminalId === terminalId) {
+          if (this._detectCliAgentTermination(terminalId, fullyCleanLine)) {
+            log(`🔚 [CLI-AGENT] Termination detected from output: "${fullyCleanLine}" in terminal ${terminalId}`);
+            return; // Exit early if termination detected
+          }
+        }
+
+        // === STARTUP DETECTION ===
+        // Claude Code startup patterns
+        if (this._detectClaudeCodeStartup(fullyCleanLine)) {
+          log(`🚀 [CLI-AGENT] Claude Code startup detected: "${fullyCleanLine}" in terminal ${terminalId}`);
+          this._setCurrentAgent(terminalId, 'claude');
+          break;
+        }
+
+        // Gemini CLI startup patterns
+        if (this._detectGeminiCliStartup(fullyCleanLine)) {
+          log(`🚀 [CLI-AGENT] Gemini CLI startup detected: "${fullyCleanLine}" in terminal ${terminalId}`);
+          this._setCurrentAgent(terminalId, 'gemini');
+          break;
+        }
+      }
+    } catch (error) {
+      // エラーは無視（ただしログ出力）
+      log('ERROR: CLI Agent detection failed:', error);
+    }
+  }
+
+  /**
+   * Detect CLI Agent termination based on shell prompt return and exit patterns
+   */
+  private _detectCliAgentTermination(terminalId: string, cleanLine: string): boolean {
+    // シンプルな終了判定: シェルプロンプトが表示されたら CLI エージェントは終了している
+    log(`🔍 [TERMINATION-DEBUG] Checking termination for terminal ${terminalId}: "${cleanLine}"`);
+
+    // Method 1: Shell prompt detection (primary method)
+    // シェルプロンプトが表示されたら CLI エージェントは確実に終了している
+    const isShellPrompt = this._detectShellPromptReturn(cleanLine);
+
+    if (isShellPrompt) {
+      log(`✅ [TERMINATION-SUCCESS] Shell prompt detected - CLI Agent terminated for terminal ${terminalId}`);
+      this._setAgentTerminated(terminalId);
+      return true;
+    }
+
+    // Method 2: User exit commands (/exit, /quit)
+    // ユーザーが明示的に終了コマンドを入力した場合も検知
+    const lowerLine = cleanLine.toLowerCase();
+    const isUserExitCommand = 
+      lowerLine === '/exit' ||
+      lowerLine === '/quit' ||
+      lowerLine === 'exit' ||
+      lowerLine === 'quit';
+
+    if (isUserExitCommand) {
+      log(`✅ [TERMINATION-SUCCESS] User exit command detected - CLI Agent will terminate for terminal ${terminalId}`);
+      // 注意: 実際の終了はシェルプロンプトの表示で確認されるまで待つ場合もある
+      this._setAgentTerminated(terminalId);
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Detect shell prompt return after CLI agent exits
+   */
+  private _detectShellPromptReturn(cleanLine: string): boolean {
+    // Look for common shell prompt patterns that appear after CLI tools exit
+    const shellPromptPatterns = [
+      // Standard bash/zsh prompts
+      /^[\w.-]+[@:].*[$>#]\s*$/,
+      // Oh My Zsh themes - arrow character
+      /^➜\s+[\w.-]+/,
+      // Starship prompt - triangle character (❯)
+      /^❯\s*$/,
+      // Starship prompt - triangle character with trailing space
+      /^❯\s+$/,
+      // PowerShell
+      /^PS\s+[\w:\\>]+>/,
+      // Fish shell
+      /^[\w.-]+\s+[\w/~]+>\s*$/,
+      // Simple prompts
+      /^[$>#]\s*$/,
+    ];
+
+    // Debug: Log the patterns being tested
+    const matched = shellPromptPatterns.some((pattern, index) => {
+      const result = pattern.test(cleanLine);
+      if (result) {
+        log(`✅ [DEBUG] Shell prompt matched pattern ${index}: ${pattern.source}`);
+      }
+      return result;
+    });
+
+    if (matched) {
+      log(`✅ [DEBUG] Shell prompt detected: "${cleanLine}"`);
+    } else {
+      log(`❌ [DEBUG] No shell prompt match for: "${cleanLine}" (length: ${cleanLine.length})`);
+      // Debug: Show character codes
+      const charCodes = Array.from(cleanLine).map(c => `${c}(${c.charCodeAt(0)})`).join(' ');
+      log(`❌ [DEBUG] Character breakdown: ${charCodes}`);
+    }
+
+    return matched;
+  }
+
+  /**
+   * Set CLI agent as terminated and update status
+   */
+  private _setAgentTerminated(terminalId: string): void {
+    if (this._connectedAgentTerminalId === terminalId) {
+      const agentType = this._connectedAgentType;
+
+      // Clear the connected agent
+      this._connectedAgentTerminalId = null;
+      this._connectedAgentType = null;
+
+      // Fire status change to 'none'
+      this._onCliAgentStatusChange.fire({
+        terminalId,
+        status: 'none',
+        type: null,
+        terminalName: this._terminals.get(terminalId)?.name,
+      });
+
+      console.log(`[CLI Agent] ${agentType} agent terminated in terminal: ${terminalId}`);
+    }
+  }
+
+  /**
+   * Detect Claude Code startup patterns
+   */
+  private _detectClaudeCodeStartup(cleanLine: string): boolean {
+    return (
+      cleanLine.includes('Welcome to Claude Code!') ||
+      cleanLine.includes('Claude Opus') ||
+      cleanLine.includes('Claude Sonnet') ||
+      cleanLine.includes('Claude Haiku') ||
+      cleanLine.includes('> Try "edit <filepath>') ||
+      cleanLine.includes('Anthropic') ||
+      cleanLine.includes('claude.ai') ||
+      cleanLine.includes('Claude Code') ||
+      cleanLine.includes("I'm Claude") ||
+      cleanLine.includes('I am Claude') ||
+      cleanLine.includes('anthropic claude') ||
+      cleanLine.includes('Powered by Claude') ||
+      cleanLine.includes('CLI tool for Claude') ||
+      // Generic activation patterns
+      (cleanLine.toLowerCase().includes('claude') &&
+        (cleanLine.includes('activated') ||
+          cleanLine.includes('connected') ||
+          cleanLine.includes('ready') ||
+          cleanLine.includes('started') ||
+          cleanLine.includes('available')))
+    );
+  }
+
+  /**
+   * Detect Gemini CLI startup patterns
+   */
+  private _detectGeminiCliStartup(cleanLine: string): boolean {
     const line = cleanLine.toLowerCase();
 
-    // 基本的なGeminiキーワード
+    // Basic Gemini keyword check with enhanced patterns
     if (line.includes('gemini')) {
-      // Gemini関連のコンテキスト
+      // Gemini context indicators
       if (
         line.includes('cli') ||
         line.includes('code') ||
@@ -779,118 +975,66 @@ export class TerminalManager {
         line.includes('started') ||
         line.includes('available') ||
         line.includes('welcome') ||
-        line.includes('help')
+        line.includes('help') ||
+        line.includes('initialized') ||
+        line.includes('launching') ||
+        line.includes('loading')
       ) {
         return true;
       }
     }
 
-    // 具体的なGemini CLI出力パターン
+    // Specific Gemini CLI output patterns (enhanced)
     return (
+      // Version patterns
       line.includes('gemini-2.5-pro') ||
+      line.includes('gemini-1.5-pro') ||
+      line.includes('gemini-pro') ||
+      line.includes('gemini flash') ||
+      
+      // File and documentation patterns
       line.includes('gemini.md') ||
       line.includes('tips for getting started') ||
+      
+      // Company/service patterns
       line.includes('google ai') ||
       line.includes('google generative ai') ||
       line.includes('gemini api') ||
       line.includes('ai studio') ||
-      // プロンプト関連
+      line.includes('vertex ai') ||
+      
+      // Prompt patterns
       line.includes('gemini>') ||
       line.includes('gemini $') ||
       line.includes('gemini #') ||
-      // バナー関連（ASCII artは除外して文字パターンで）
+      line.includes('gemini:') ||
+      
+      // Banner patterns (enhanced)
       (line.includes('█') && line.includes('gemini')) ||
-      // コマンド実行確認
+      (line.includes('*') && line.includes('gemini') && line.includes('*')) ||
+      (line.includes('=') && line.includes('gemini') && line.includes('=')) ||
+      
+      // Command execution confirmation
       line.includes('gemini --help') ||
       line.includes('gemini chat') ||
-      line.includes('gemini code')
+      line.includes('gemini code') ||
+      line.includes('gemini repl') ||
+      line.includes('gemini interactive') ||
+      
+      // Startup messages
+      line.includes('gemini cli starting') ||
+      line.includes('gemini session started') ||
+      line.includes('connecting to gemini') ||
+      line.includes('gemini model loaded') ||
+      
+      // Authentication patterns
+      line.includes('gemini authenticated') ||
+      line.includes('gemini login successful') ||
+      
+      // Additional model patterns
+      line.includes('using gemini') ||
+      (line.includes('model:') && line.includes('gemini'))
     );
-  }
-
-  /**
-   * 超シンプルなCLI Agent検出（出力から）
-   */
-  private _detectCliAgent(terminalId: string, data: string): void {
-    try {
-      const lines = data.split(/\r?\n/);
-      for (const line of lines) {
-        const trimmed = line.trim();
-        const cleanLine = trimmed.replace(/^[>$#%]\s*/, '');
-
-        // Check CLI Agent patterns
-
-        // Claude Codeが起動している時の特徴的なパターンをチェック
-        if (
-          cleanLine.includes('Welcome to Claude Code!') ||
-          cleanLine.includes('Claude Opus') ||
-          cleanLine.includes('Claude Sonnet') ||
-          cleanLine.includes('Claude Haiku') ||
-          cleanLine.includes('> Try "edit <filepath>') ||
-          cleanLine.includes('Anthropic') ||
-          cleanLine.includes('claude.ai') ||
-          cleanLine.includes('Claude Code') ||
-          cleanLine.includes("I'm Claude") ||
-          cleanLine.includes('I am Claude') ||
-          // 実際のClaude Code CLIの起動パターンを追加
-          cleanLine.includes('anthropic claude') ||
-          cleanLine.includes('Powered by Claude') ||
-          cleanLine.includes('CLI tool for Claude') ||
-          // より広範なClaude検知パターン
-          (cleanLine.toLowerCase().includes('claude') &&
-            (cleanLine.includes('activated') ||
-              cleanLine.includes('connected') ||
-              cleanLine.includes('ready') ||
-              cleanLine.includes('started') ||
-              cleanLine.includes('available')))
-        ) {
-          // Claude pattern matched
-          this._setCurrentAgent(terminalId, 'claude');
-          break;
-        }
-        // Geminiが起動している時の特徴的なパターンをチェック
-        if (this._isGeminiCliDetected(cleanLine)) {
-          // Gemini pattern matched
-          this._setCurrentAgent(terminalId, 'gemini');
-          break;
-        }
-
-        // Gemini CLIのプロンプト準備状態をチェック（改善版）
-        if (
-          this._connectedAgentTerminalId === terminalId &&
-          this._connectedAgentType === 'gemini'
-        ) {
-          // Gemini CLIの実際の出力をすべてログに記録
-          // Gemini CLI output detected
-
-          // より包括的なプロンプト検知パターン
-          const _isPromptReady =
-            // 標準的なプロンプト文字
-            cleanLine.includes('>') ||
-            cleanLine.includes('$') ||
-            cleanLine.includes('#') ||
-            // Gemini CLI特有のパターン
-            cleanLine.toLowerCase().includes('gemini:') ||
-            cleanLine.toLowerCase().includes('gemini >') ||
-            cleanLine.toLowerCase().includes('gemini$') ||
-            cleanLine.toLowerCase().includes('gemini#') ||
-            // 入力待機状態を示すパターン
-            cleanLine.includes('Enter your prompt') ||
-            cleanLine.includes('What would you like') ||
-            cleanLine.includes('How can I help') ||
-            // 空行または単純なプロンプト
-            (cleanLine.length === 0 && data.includes('\n')) ||
-            // カーソルのみの行
-            cleanLine === '_' ||
-            cleanLine === '|' ||
-            // 最後の手段: 任意の対話的なパターン
-            (cleanLine.length > 0 &&
-              cleanLine.length < 5 &&
-              (cleanLine.includes('>') || cleanLine.includes(':') || cleanLine.includes('?')));
-        }
-      }
-    } catch (error) {
-      // エラーは無視
-    }
   }
 
   /**
@@ -898,14 +1042,74 @@ export class TerminalManager {
    */
   private _detectCliAgentFromInput(terminalId: string, data: string): void {
     try {
+      // === CLI AGENT STARTUP DETECTION ===
       if (data.includes('\r') || data.includes('\n')) {
-        const command = data.replace(/[\r\n]/g, '').trim();
-        // CLI Agent input detection
-
-        if (command.startsWith('claude') || command.startsWith('gemini')) {
-          const agentType = command.startsWith('claude') ? 'claude' : 'gemini';
-          // CLI agent detected from input
+        const command = data.replace(/[\r\n]/g, '').trim().toLowerCase();
+        
+        // Enhanced startup detection for both Claude and Gemini
+        if (command.startsWith('claude') || 
+            command.startsWith('gemini') ||
+            command.includes('claude-code') ||
+            command.includes('gemini code')) {
+          
+          let agentType: 'claude' | 'gemini';
+          
+          if (command.includes('claude') || command.includes('claude-code')) {
+            agentType = 'claude';
+          } else {
+            agentType = 'gemini';
+          }
+          
+          log(`🚀 [CLI-AGENT] ${agentType} startup command detected from input: "${command}"`);
           this._setCurrentAgent(terminalId, agentType);
+        }
+        
+        // === CLI AGENT TERMINATION DETECTION FROM USER INPUT ===
+        // If a CLI agent is currently connected to this terminal, check for exit commands
+        if (this._connectedAgentTerminalId === terminalId) {
+          const isExitCommand = 
+            // Standard exit commands
+            command === '/exit' ||
+            command === '/quit' ||
+            command === 'exit' ||
+            command === 'quit' ||
+            
+            // Claude Code specific exit commands
+            command === '/end' ||
+            command === '/bye' ||
+            command === '/goodbye' ||
+            
+            // Gemini CLI specific exit commands (enhanced)
+            command === '/stop' ||
+            command === '/close' ||
+            command === '/disconnect' ||
+            command.startsWith('/exit') ||
+            command.startsWith('/quit') ||
+            
+            // Generic termination commands
+            command === 'q' ||
+            command === ':q' || // vim-style
+            command === ':quit' ||
+            command === ':exit' ||
+            
+            // Additional AI CLI patterns
+            command === '/clear' && command.includes('exit') ||
+            command === 'ctrl+c' ||
+            command === 'ctrl-c';
+            
+          if (isExitCommand) {
+            log(`🔚 [CLI-AGENT] Exit command detected from user input: "${command}" in terminal ${terminalId}`);
+            // Mark for termination detection (will be confirmed when CLI agent actually exits)
+            // Set a flag or timer to check for actual termination
+            setTimeout(() => {
+              // Give the CLI agent time to process the exit command and actually terminate
+              // Then check if it's still connected and force termination if needed
+              if (this._connectedAgentTerminalId === terminalId) {
+                log(`🔚 [CLI-AGENT] Forcing termination after exit command timeout for terminal ${terminalId}`);
+                this._setAgentTerminated(terminalId);
+              }
+            }, 2000); // 2 second timeout for CLI agent to actually exit
+          }
         }
       }
     } catch (error) {
@@ -963,502 +1167,34 @@ export class TerminalManager {
     });
   }
 
-  // ==================== セッション復元関連のメソッド ====================
-
   /**
-   * 全ターミナルの情報を取得（セッション保存用）
+   * ANSIエスケープシーケンスを完全に除去
    */
-  public getAllTerminals(): Array<{
-    id: string;
-    name: string;
-    number: number;
-    cwd: string;
-    createdAt: number;
-    isActive: boolean;
-  }> {
-    return Array.from(this._terminals.values()).map((terminal) => ({
-      id: terminal.id,
-      name: terminal.name,
-      number: terminal.number,
-      cwd: terminal.cwd || process.cwd(),
-      createdAt: terminal.createdAt || Date.now(),
-      isActive: terminal.isActive,
-    }));
-  }
-
-  /**
-   * 指定ターミナルのスクロールバック履歴を取得（セッション保存用）
-   */
-  // SESSION SCROLLBACK METHOD - DISABLED FOR DEBUGGING
-  /*
-  public async getTerminalScrollback(terminalId: string, maxLines: number): Promise<string[]> {
-    const terminal = this._terminals.get(terminalId);
-    if (!terminal) {
-      log(`⚠️ [SESSION] Terminal not found for scrollback: ${terminalId}`);
-      return [];
-    }
-
-    try {
-      // 現在はプレースホルダー実装
-      // 実際の実装では、xterm.jsのbufferからスクロールバックを取得する必要がある
-      // これはWebView側との連携が必要
-      log(`📜 [SESSION] Getting scrollback for terminal ${terminalId} (max: ${maxLines} lines)`);
-
-      // TODO: WebView側でxterm.js bufferからスクロールバックを取得する仕組みが必要
-      // 現在は空配列を返す（Phase 2で実装予定）
-      return [];
-    } catch (error) {
-      log(`❌ [SESSION] Error getting scrollback for ${terminalId}: ${error}`);
-      return [];
-    }
-  }
-  */
-
-  /**
-   * セッションデータからターミナルを作成（復元用）
-   */
-  // SESSION RESTORATION METHODS - DISABLED FOR DEBUGGING
-  /*
-  public async createTerminalFromSession(sessionInfo: {
-    id: string;
-    name: string;
-    cwd: string;
-    terminalNumber: number;
-    restoreMessage: string;
-    scrollbackHistory: string[];
-  }): Promise<string | null> {
-    try {
-      log(`🔄 [SESSION] Creating terminal from session: ${sessionInfo.name}`);
-
-      // 既存のターミナル数をチェック
-      const config = getTerminalConfig();
-      if (this._terminals.size >= config.maxTerminals) {
-        log(`⚠️ [SESSION] Cannot restore terminal: max terminals reached (${config.maxTerminals})`);
-        return null;
-      }
-
-      // セッション用の特別なターミナル作成
-      return await this._createSessionTerminal(sessionInfo);
-    } catch (error) {
-      log(`❌ [SESSION] Error creating terminal from session: ${error}`);
-      return null;
-    }
-  }
-  */
-
-  /**
-   * セッション復元用のターミナルを内部的に作成 - DISABLED FOR DEBUGGING
-   */
-  /*
-  private async _createSessionTerminal(sessionInfo: {
-    id: string;
-    name: string;
-    cwd: string;
-    terminalNumber: number;
-    restoreMessage: string;
-    scrollbackHistory: string[];
-  }): Promise<string | null> {
-    return new Promise((resolve) => {
-      this.operationQueue = this.operationQueue.then(async () => {
-        try {
-          const config = getTerminalConfig();
-          const shell = getShellForPlatform(config.shell);
-          const shellArgs = config.shellArgs || [];
-
-          // セッション用の新しいIDを生成（元のIDは参考用）
-          const terminalId = generateTerminalId();
-
-          // ターミナル番号を確保
-          const terminalNumber = this._terminalNumberManager.allocateNumber(
-            sessionInfo.terminalNumber,
-            this._terminals
-          );
-          if (terminalNumber === 0) {
-            log(`⚠️ [SESSION] Cannot allocate terminal number for restoration`);
-            resolve(null);
-            return;
-          }
-
-          // ワーキングディレクトリを設定（セッションのcwdを使用）
-          const cwd =
-            sessionInfo.cwd && require('fs').existsSync(sessionInfo.cwd)
-              ? sessionInfo.cwd
-              : getWorkingDirectory();
-
-          log(
-            `🚀 [SESSION] Creating session terminal: shell=${shell}, cwd=${cwd}, number=${terminalNumber}`
-          );
-
-          // PTYプロセスを作成
-          const ptyProcess = pty.spawn(shell, shellArgs, {
-            name: 'xterm-color',
-            cols: TERMINAL_CONSTANTS.DEFAULT_COLS,
-            rows: TERMINAL_CONSTANTS.DEFAULT_ROWS,
-            cwd: cwd,
-            env: { ...process.env },
-            encoding: null,
-          });
-
-          // ターミナルインスタンスを作成（統一化のため両方設定）
-          const terminal: TerminalInstance = {
-            id: terminalId,
-            name: sessionInfo.name,
-            number: terminalNumber,
-            pty: ptyProcess,      // 統一化のため両方設定
-            ptyProcess,           // セッション復元用
-            cwd,
-            isActive: false,
-            createdAt: Date.now(),
-            isSessionRestored: true, // セッション復元フラグ
-            sessionRestoreMessage: sessionInfo.restoreMessage,
-            sessionScrollback: sessionInfo.scrollbackHistory,
-          };
-
-          // ターミナルをマップに追加
-          this._terminals.set(terminalId, terminal);
-
-          // PTYイベントを設定
-          ptyProcess.onData((data: string) => {
-            this._dataEmitter.fire({ terminalId, data });
-            this._bufferData(terminalId, data);
-          });
-
-          ptyProcess.onExit((event: number | { exitCode: number; signal?: number }) => {
-            const exitCode = typeof event === 'number' ? event : event.exitCode;
-            log(`💀 [SESSION] Session terminal ${terminalId} exited with code: ${exitCode}`);
-            this._exitEmitter.fire({ terminalId, exitCode });
-          });
-
-          // セッション復元処理をWebViewに通知
-          this._terminalCreatedEmitter.fire(terminal);
-
-          // 状態更新通知
-          this._notifyStateUpdate();
-
-          log(
-            `✅ [SESSION] Session terminal created successfully: ${terminalId} (${sessionInfo.name})`
-          );
-          resolve(terminalId);
-        } catch (error) {
-          log(`❌ [SESSION] Failed to create session terminal: ${error}`);
-          resolve(null);
-        }
-      });
-    });
-  }
-
-  /**
-   * セッション復元が完了した後の初期化処理 - DISABLED FOR DEBUGGING
-   */
-  /*
-  public finalizeSessionRestore(): void {
-    log('🎯 [SESSION] Finalizing session restore - DISABLED FOR DEBUGGING...');
-
-    // DISABLED - No session restoration functionality
-    // // 復元されたターミナルが1つ以上ある場合、最初のものをアクティブにする
-    // const terminals = Array.from(this._terminals.values());
-    // const restoredTerminals = terminals.filter((t) => (t as any).isSessionRestored);
-
-    // if (restoredTerminals.length > 0) {
-    //   const firstTerminal = restoredTerminals[0];
-    //   if (firstTerminal) {
-    //     this._activeTerminalManager.setActive(firstTerminal.id);
-    //     firstTerminal.isActive = true;
-    //     log(`🎯 [SESSION] Set first restored terminal as active: ${firstTerminal.id}`);
-    //   }
-    // }
-
-    // // 状態更新通知
-    // this._notifyStateUpdate();
-
-    log(`✅ [SESSION] Session restore finalized - DISABLED FOR DEBUGGING`);
-  }
-  */
-
-  // STUB METHODS TO PREVENT COMPILATION ERRORS - These prevent SessionManager compilation errors
-  public getTerminalScrollback(_terminalId: string, _maxLines: number): Promise<string[]> {
-    // Disabled - return empty array to prevent compilation errors
-    return Promise.resolve([]);
-  }
-
-  public createTerminalFromSession(_sessionInfo: Record<string, unknown>): Promise<string | null> {
-    // Disabled - return null to prevent compilation errors
-    return Promise.resolve(null);
-  }
-
-  public finalizeSessionRestore(): void {
-    // Disabled - do nothing to prevent compilation errors
-    log('🎯 [SESSION] Finalizing session restore - STUB METHOD, DISABLED FOR DEBUGGING');
-  }
-
-  // =================== Output History Management ===================
-
-  /**
-   * ANSIエスケープシーケンスを除去
-   */
-  private cleanAnsiEscapeSequences(text: string): string {
-    // ANSIエスケープシーケンスのパターン
-    // \u001b[0-9;]*[A-Za-z] - カラー、カーソル移動等
-    // \u001b]0;.*?\u0007 - ウィンドウタイトル設定
-    // \u001b]1;.*?\u0007 - タブタイトル設定
-    // \u001b]7;.*?\u0007 - 作業ディレクトリ設定
-    // \u001b\\ - その他のエスケープシーケンス終了
+  private _cleanAnsiEscapeSequences(text: string): string {
     return text
-      .replace(/\u001b\[[0-9;]*[A-Za-z]/g, '') // 基本的なANSIエスケープシーケンス
-      .replace(/\u001b\][0-9];[^\u0007]*\u0007/g, '') // OSCシーケンス
-      .replace(/\u001b\\/g, '') // エスケープシーケンス終了
-      .replace(/\r/g, '') // キャリッジリターン除去
-      .replace(/\u001b\?[0-9]*[hl]/g, '') // プライベートモード設定
-      .replace(/\u001b=/g, '') // アプリケーションキーパッド
-      .replace(/\u001b>/g, '') // 通常キーパッド
+      // 基本的なANSIエスケープシーケンス（色、カーソル移動等）
+      .replace(/\x1b\[[0-9;]*[A-Za-z]/g, '')
+      // OSCシーケンス（ウィンドウタイトル設定等）
+      .replace(/\x1b\][0-9];[^\x07]*\x07/g, '')
+      // エスケープシーケンス終了
+      .replace(/\x1b\\/g, '')
+      // キャリッジリターン除去
+      .replace(/\r/g, '')
+      // プライベートモード設定
+      .replace(/\x1b\?[0-9]*[hl]/g, '')
+      // アプリケーション/通常キーパッド
+      .replace(/\x1b[=>]/g, '')
+      // 制御文字を除去
+      .replace(/[\x00-\x1F\x7F]/g, '')
       .trim();
   }
 
-  /**
-   * プロンプトパターンかどうかを判定
-   */
-  private isPromptPattern(text: string): boolean {
-    // 一般的なプロンプトパターン
-    const promptPatterns = [
-      /^[\s~]*❯[\s\d.:]*$/, // ❯ with optional path and time
-      /^[\s~]*\$[\s\d.:]*$/, // $ with optional path and time
-      /^[\s~]*%[\s\d.:]*$/, // % with optional path and time
-      /^[\s~]*#[\s\d.:]*$/, // # with optional path and time
-      /^[\s~]*>[\s\d.:]*$/, // > with optional path and time
-      /^[\w@-]+:[\w~/-]*[$#%>❯]\s*$/, // user@host:path$ format
-      /^[\s\w~/.:-]*❯[\s\d.:]*$/, // path ❯ time format
-      /^\s*[\d.:]+\s*$/, // time only (e.g., "00:30")
-      /^[\s\w~/-]*\s+[\d.:]+\s*$/, // path + time format
-    ];
 
-    return promptPatterns.some((pattern) => pattern.test(text));
-  }
 
-  /**
-   * コマンドパターンかどうかを判定（除外するため）
-   */
-  private isCommandPattern(text: string): boolean {
-    // 一般的なコマンドパターン（これらは除外したい）
-    const commandPatterns = [
-      /^[a-zA-Z][\w-]*(\s+.*)?$/, // starts with letter, followed by word chars
-      /^\.\/[\w.-]+(\s+.*)?$/, // ./script execution
-      /^\/[\w/-]+(\s+.*)?$/, // absolute path execution
-      /^echo\s+.*$/, // echo commands specifically
-      /^ls(\s+.*)?$/, // ls commands
-      /^cat(\s+.*)?$/, // cat commands
-      /^pwd(\s+.*)?$/, // pwd commands
-      /^cd(\s+.*)?$/, // cd commands
-      /^mkdir(\s+.*)?$/, // mkdir commands
-      /^rm(\s+.*)?$/, // rm commands
-      /^cp(\s+.*)?$/, // cp commands
-      /^mv(\s+.*)?$/, // mv commands
-      /^git(\s+.*)?$/, // git commands
-      /^npm(\s+.*)?$/, // npm commands
-      /^node(\s+.*)?$/, // node commands
-      /^python(\s+.*)?$/, // python commands
-    ];
 
-    return commandPatterns.some((pattern) => pattern.test(text));
-  }
 
-  /**
-   * 入力エコーバック（部分入力）かどうかを判定
-   */
-  private isPartialInput(text: string): boolean {
-    // 非常に短い文字列（1-3文字）で、完全なワードでない
-    if (text.length <= 3 && !/^\w+$/.test(text)) {
-      return true;
-    }
 
-    // 単一文字
-    if (text.length === 1) {
-      return true;
-    }
 
-    // 一般的なコマンドの部分入力パターン
-    const partialPatterns = [
-      /^e$/,
-      /^ec$/,
-      /^ech$/,
-      /^echo$/,
-      /^l$/,
-      /^ls$/,
-      /^c$/,
-      /^ca$/,
-      /^cat$/,
-      /^p$/,
-      /^pw$/,
-      /^pwd$/,
-      /^c$/,
-      /^cd$/,
-      /^m$/,
-      /^mk$/,
-      /^mkd$/,
-      /^mkdi$/,
-      /^r$/,
-      /^rm$/,
-      /^c$/,
-      /^cp$/,
-      /^m$/,
-      /^mv$/,
-    ];
 
-    return partialPatterns.some((pattern) => pattern.test(text));
-  }
 
-  /**
-   * 有効な出力コンテンツかどうかを判定（出力のみ保存版）
-   */
-  private isSignificantContent(cleanText: string): boolean {
-    if (!cleanText || cleanText.length < 1) {
-      return false;
-    }
-
-    // 空白のみの行は除外
-    if (/^\s*$/.test(cleanText)) {
-      return false;
-    }
-
-    // プロンプトパターンは除外
-    if (this.isPromptPattern(cleanText)) {
-      return false;
-    }
-
-    // 入力エコーバック（部分入力）は除外
-    if (this.isPartialInput(cleanText)) {
-      return false;
-    }
-
-    // コマンド自体は除外（出力のみ保存したい）
-    if (this.isCommandPattern(cleanText)) {
-      return false;
-    }
-
-    // 単一記号のみは除外
-    if (/^[^\w\s]+$/.test(cleanText) && cleanText.length <= 3) {
-      return false;
-    }
-
-    // パス表示（/home/user など）は除外
-    if (/^\/[\w/-]+$/.test(cleanText)) {
-      return false;
-    }
-
-    // 最小長チェック：意味のある出力は通常2文字以上
-    if (cleanText.length >= 2) {
-      return true;
-    }
-
-    return false;
-  }
-
-  /**
-   * 重複や類似行を除去
-   */
-  private isDuplicateOrSimilar(newLine: string, history: string[]): boolean {
-    if (history.length === 0) {
-      return false;
-    }
-
-    const lastLine = history[history.length - 1];
-    if (!lastLine) {
-      return false;
-    }
-
-    // 完全一致は重複
-    if (lastLine === newLine) {
-      return true;
-    }
-
-    // 短い行の場合、類似性をチェック
-    if (newLine.length <= 5) {
-      // 最後の行が現在の行を含んでいる場合（部分入力の可能性）
-      if (lastLine.includes(newLine) || newLine.includes(lastLine)) {
-        return true;
-      }
-    }
-
-    // 直近の3行をチェック
-    const recentLines = history.slice(-3);
-    for (const recentLine of recentLines) {
-      if (recentLine === newLine) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  /**
-   * 出力データを履歴に追加（高度版）
-   */
-  private addToOutputHistory(terminalId: string, data: string): void {
-    let history = this._outputHistory.get(terminalId);
-    if (!history) {
-      history = [];
-      this._outputHistory.set(terminalId, history);
-    }
-
-    // データを行ごとに分割して追加
-    const lines = data.split('\n');
-    for (const line of lines) {
-      // ANSIエスケープシーケンスを除去
-      const cleanLine = this.cleanAnsiEscapeSequences(line);
-
-      // 意味のあるコンテンツかつ重複でないもののみを保存
-      if (this.isSignificantContent(cleanLine) && !this.isDuplicateOrSimilar(cleanLine, history)) {
-        history.push(cleanLine);
-
-        // バッファサイズ制限
-        if (history.length > this.MAX_OUTPUT_HISTORY) {
-          history.shift(); // 古い行を削除
-        }
-
-        // デバッグログ: 保存された行を記録
-        log(`✅ [OUTPUT-ONLY] Saved output for ${terminalId}: "${cleanLine}"`);
-      } else {
-        // デバッグログ: 除外された行を記録
-        if (cleanLine.length > 0) {
-          let reason = 'unknown';
-          if (!this.isSignificantContent(cleanLine)) {
-            if (this.isPromptPattern(cleanLine)) reason = 'prompt';
-            else if (this.isPartialInput(cleanLine)) reason = 'partial-input';
-            else if (this.isCommandPattern(cleanLine)) reason = 'command';
-            else reason = 'not-significant';
-          } else if (this.isDuplicateOrSimilar(cleanLine, history)) {
-            reason = 'duplicate';
-          }
-          log(`🚫 [OUTPUT-ONLY] Filtered out (${reason}) for ${terminalId}: "${cleanLine}"`);
-        }
-      }
-    }
-  }
-
-  /**
-   * 最近の出力履歴を取得
-   */
-  public getRecentOutput(terminalId: string, maxLines: number = 100): string[] | null {
-    const history = this._outputHistory.get(terminalId);
-    if (!history || history.length === 0) {
-      return null;
-    }
-
-    // 最新のmaxLines行を返す
-    const startIndex = Math.max(0, history.length - maxLines);
-    return history.slice(startIndex);
-  }
-
-  /**
-   * ターミナルの出力履歴をクリア
-   */
-  public clearOutputHistory(terminalId: string): void {
-    this._outputHistory.delete(terminalId);
-  }
-
-  /**
-   * 全ての出力履歴をクリア
-   */
-  public clearAllOutputHistory(): void {
-    this._outputHistory.clear();
-  }
 }

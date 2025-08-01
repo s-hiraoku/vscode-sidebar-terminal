@@ -338,7 +338,7 @@ export class ExtensionLifecycle {
             );
 
             // 復元完了後の初期化処理
-            this.terminalManager.finalizeSessionRestore();
+            // Session restore finalization disabled for debugging
 
             // ユーザーに通知（オプション）
             void vscode.window.showInformationMessage(
