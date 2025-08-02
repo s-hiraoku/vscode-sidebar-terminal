@@ -13,233 +13,144 @@
 
 ### 重要な設計パターン
 
-#### ターミナル生命周期管理
-```typescript
-// ターミナル作成
-createTerminal(): Promise<TerminalInfo> {
-    const id = this.terminalNumberManager.getAvailableNumber();
-    const ptyProcess = spawn(shell, args, options);
-    
-    this.terminals.set(id, {
-        id,
-        ptyProcess,
-        name: `Terminal ${id}`,
-        isActive: false
-    });
-    
-    return terminalInfo;
-}
+#### ターミナル生命周期管理の設計思想
+**原子性保証システム**
+- 作成・削除操作の原子性保証
+- 無限ループ防止機構（削除中状態追跡）
+- リソースリーク防止（finally句でのクリーンアップ）
+- プロセス終了確認機構
 
-// 安全な削除 (無限ループ防止)
-async deleteTerminal(id: number): Promise<DeleteResult> {
-    if (this._terminalBeingKilled.has(id)) {
-        return { success: false, reason: 'Already being deleted' };
-    }
-    
-    this._terminalBeingKilled.add(id);
-    try {
-        await this.killTerminalProcess(id);
-        this.terminals.delete(id);
-        this.terminalNumberManager.releaseNumber(id);
-        return { success: true };
-    } finally {
-        this._terminalBeingKilled.delete(id);
-    }
-}
-```
+**状態管理の考え方**
+- ターミナル状態の一元管理
+- アクティブ・非アクティブ状態追跡
+- プロセスハンドル生命周期管理
 
-#### ターミナル番号管理
-```typescript
-// TerminalNumberManager による ID リサイクリング
-getAvailableNumber(): number {
-    // 1-5の範囲で再利用可能な番号を返す
-    for (let i = 1; i <= 5; i++) {
-        if (!this.usedNumbers.has(i)) {
-            this.usedNumbers.add(i);
-            return i;
-        }
-    }
-    throw new Error('Maximum terminals reached');
-}
+#### ターミナル番号管理アーキテクチャ
+**ID再利用システム**
+- 1-5番の固定範囲管理（VS Code制限対応）
+- 削除後の番号即座再利用
+- 最大数制限による安定性確保
 
-releaseNumber(id: number): void {
-    this.usedNumbers.delete(id);
-}
-```
+**番号割り当て戦略**
+- 最小空き番号優先割り当て
+- 使用済み番号セット管理
+- エラー時の適切な例外処理
 
-## 実装効率化テンプレート
+## 設計思想・実装パターン
 
-### データ処理最適化
-```typescript
-// バッファリング出力 (CLI Agent対応)
-private flushInterval = 16; // 60fps base
+### データ処理最適化アーキテクチャ
+**適応的バッファリング戦略**
+- 通常出力: 16ms間隔（60fps）
+- CLI Agent検出時: 4ms間隔（250fps）
+- 動的フラッシュ調整: 出力頻度に応じた最適化
 
-handleTerminalData(id: number, data: string): void {
-    if (this.isCliAgentActive) {
-        this.flushInterval = 4; // CLI Agent時は高速化
-    }
-    
-    this.bufferManager.addData(id, data);
-    this.scheduleFlush();
-}
+**パフォーマンス考慮点**
+- バッファサイズ動的調整
+- メモリ効率重視の実装
+- CPU使用率監視と調整
 
-private scheduleFlush(): void {
-    if (!this.flushTimer) {
-        this.flushTimer = setTimeout(() => {
-            this.flushAllBuffers();
-            this.flushTimer = null;
-        }, this.flushInterval);
-    }
-}
-```
+### リサイズ処理設計
+**デバウンス処理思想**
+- 連続リサイズイベントの効率処理
+- ターミナル個別タイマー管理
+- プロセス負荷軽減策
 
-### リサイズ処理
-```typescript
-// デバウンス付きリサイズ
-resizeTerminal(id: number, cols: number, rows: number): void {
-    const terminal = this.terminals.get(id);
-    if (!terminal) return;
-    
-    // デバウンス処理
-    clearTimeout(this.resizeTimers.get(id));
-    this.resizeTimers.set(id, setTimeout(() => {
-        terminal.ptyProcess.resize(cols, rows);
-        this.resizeTimers.delete(id);
-    }, 100));
-}
-```
+**レスポンシブ設計**
+- WebView サイズ変更への即応
+- 複数ターミナル同時リサイズ対応
+- エラー耐性のあるサイズ調整
 
-### エラーハンドリング
-```typescript
-// 堅牢なエラー処理
-private handleTerminalError(id: number, error: Error): void {
-    console.error(`Terminal ${id} error:`, error);
-    
-    // クリーンアップ
-    this.cleanupTerminalResources(id);
-    
-    // WebViewに通知
-    this.sendErrorToWebview(id, error.message);
-    
-    // 再作成が必要な場合
-    if (this.shouldRecreateTerminal(error)) {
-        this.recreateTerminal(id);
-    }
-}
-```
+### エラーハンドリング設計思想
+**多層防御システム**
+- プロセスレベルエラー検出
+- リソースクリーンアップ保証
+- 自動復旧機能（必要時）
+- ユーザーフィードバック統合
 
-## パフォーマンス最適化
+**エラー分類と対応**
+- 一時的エラー: 再試行機構
+- 致命的エラー: 安全な終了処理
+- 不明エラー: ログ記録とフォールバック
 
-### CLI Agent検出・対応
-```typescript
-// CLI Agent活動検出
-private detectCliAgent(data: string): boolean {
-    const patterns = [
-        /claude-code\s+["'].*?["']/,
-        /gemini\s+code\s+["'].*?["']/,
-        /\[Claude\s+Code\]/,
-        /anthropic\.com/
-    ];
-    
-    return patterns.some(pattern => pattern.test(data));
-}
+## パフォーマンス最適化戦略
 
-// 適応的バッファリング
-private adjustBufferingForCliAgent(): void {
-    if (this.cliAgentActive) {
-        this.flushInterval = 4; // 高速フラッシュ
-        this.maxBufferSize = 2000; // 大容量バッファ
-    } else {
-        this.flushInterval = 16; // 通常フラッシュ
-        this.maxBufferSize = 1000; // 標準バッファ
-    }
-}
-```
+### CLI Agent検出・対応システム
+**検出パターン設計**
+- 正規表現ベース多層検出
+- コマンド実行パターン認識
+- 出力頻度による活動判定
+- ANSI色コード対応正規化
 
-### メモリ効率化
-```typescript
-// 定期的なリソースクリーンアップ
-private scheduleCleanup(): void {
-    setInterval(() => {
-        this.cleanupDeadProcesses();
-        this.clearExpiredBuffers();
-        this.compactEventHandlers();
-    }, 30000); // 30秒間隔
-}
-```
+**適応的処理調整**
+- CLI Agent活動時の高速化
+- 通常時の効率バランス
+- 動的パラメータ調整
+- リソース使用量監視
 
-## Alt+Click 統合
+### メモリ効率化アーキテクチャ
+**定期的クリーンアップ戦略**
+- 30秒間隔の自動リソース整理
+- デッドプロセス検出・除去
+- 期限切れバッファクリア
+- イベントハンドラー最適化
 
-### VS Code標準Alt+Click実装
-```typescript
-// Alt+Click設定確認
-private checkAltClickSettings(): boolean {
-    const altClickEnabled = vscode.workspace.getConfiguration()
-        .get<boolean>('terminal.integrated.altClickMovesCursor', false);
-    const multiCursorModifier = vscode.workspace.getConfiguration()
-        .get<string>('editor.multiCursorModifier', 'ctrlCmd');
-    
-    return altClickEnabled && multiCursorModifier === 'alt';
-}
+**メモリリーク防止**
+- 循環参照回避設計
+- 適切なリソース解放
+- WeakMap/WeakSet活用
+- ガベージコレクション配慮
 
-// WebViewに設定送信
-private sendAltClickSettings(): void {
-    this.sendToWebview({
-        command: 'altClickSettings',
-        enabled: this.checkAltClickSettings()
-    });
-}
-```
+## Alt+Click 統合アーキテクチャ
 
-## トラブルシューティング
+### VS Code標準Alt+Click設計思想
+**設定統合システム**
+- VS Code標準設定準拠
+- 複数設定条件の論理結合
+- 動的設定変更対応
+- WebView への設定同期
 
-### よくある問題と解決法
+**互換性確保**
+- `terminal.integrated.altClickMovesCursor`準拠
+- `editor.multiCursorModifier`連携
+- VS Code標準動作との完全互換
+- 設定変更時の即座反映
 
-1. **ターミナルが作成されない**
-   ```typescript
-   // node-ptyプロセス確認
-   console.log('Available shells:', this.getAvailableShells());
-   console.log('Working directory:', process.cwd());
-   ```
+## トラブルシューティング戦略
 
-2. **メモリリーク**
-   ```typescript
-   // リソース確認
-   console.log('Active terminals:', this.terminals.size);
-   console.log('Event listeners:', this.getEventListenerCount());
-   ```
+### 一般的な問題パターンと診断手法
 
-3. **パフォーマンス低下**
-   ```typescript
-   // バッファ状態確認
-   console.log('Buffer sizes:', this.getBufferSizes());
-   console.log('Flush frequency:', this.flushInterval);
-   ```
+**ターミナル作成失敗**
+- node-ptyバイナリ互換性確認
+- シェル実行権限確認
+- 作業ディレクトリ存在確認
+- プラットフォーム固有問題調査
 
-## テスト戦略
+**メモリリーク診断**
+- アクティブターミナル数監視
+- イベントリスナー数追跡
+- プロセスハンドル数確認
+- ガベージコレクション強制実行
+
+**パフォーマンス劣化診断**
+- バッファサイズ状況確認
+- フラッシュ頻度測定
+- CPU使用率監視
+- メモリ使用量トレンド分析
+
+## テスト戦略設計
 
 ### 単体テスト重要ポイント
-```typescript
-// TerminalManager テスト
-describe('TerminalManager', () => {
-    it('should prevent infinite loops during deletion', async () => {
-        const manager = new TerminalManager();
-        
-        // 同時削除テスト
-        const deletePromises = [
-            manager.deleteTerminal(1),
-            manager.deleteTerminal(1),
-            manager.deleteTerminal(1)
-        ];
-        
-        const results = await Promise.all(deletePromises);
-        
-        // 1つだけ成功することを確認
-        const successCount = results.filter(r => r.success).length;
-        expect(successCount).to.equal(1);
-    });
-});
-```
+**無限ループ防止テスト**
+- 同時削除操作の原子性確認
+- 競合状態の適切な処理
+- リソース解放の完全性確認
+- エラー状態からの復旧確認
+
+**テスト項目設計**
+- プロセス生命周期管理
+- 番号リサイクリング機能
+- エラーハンドリング堅牢性
+- パフォーマンス劣化検出
 
 ## 実装チェックリスト
 

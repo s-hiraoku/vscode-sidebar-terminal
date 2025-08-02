@@ -22,130 +22,75 @@ TerminalWebviewManager
 └── ConfigManager - 設定永続化・構成管理
 ```
 
-## 実装効率化テンプレート
+## 設計思想・実装パターン
 
-### 新マネージャー作成時
-```typescript
-// 1. interfaces/ManagerInterfaces.ts にインターフェース定義
-export interface INewManager extends IManagerLifecycle {
-    // メソッド定義
-}
+### 新マネージャー作成の設計原則
+**3段階実装パターン**
+1. **インターフェース設計**: `interfaces/ManagerInterfaces.ts`で型定義
+2. **実装クラス作成**: `managers/`以下に具体実装
+3. **統合**: TerminalWebviewManagerへの組み込み
 
-// 2. managers/NewManager.ts に実装
-export class NewManager implements INewManager {
-    constructor(private coordinator: IManagerCoordinator) {}
-    
-    initialize(): void {}
-    dispose(): void {}
-}
+**必須実装要素**
+- `IManagerLifecycle`継承（initialize/dispose）
+- コーディネーター依存注入パターン
+- 適切なリソース解放実装
 
-// 3. main.ts のTerminalWebviewManagerに統合
-private newManager: INewManager;
-this.newManager = new NewManager(this);
-```
+### イベント処理アーキテクチャ
+**双方向通信設計**
+- Extension → WebView: コマンドベースメッセージング
+- WebView → Extension: postMessage APIによる非同期通信
+- エラーハンドリング: try-catch + フォールバック処理
 
-### イベント処理パターン
-```typescript
-// Extension → WebView メッセージ処理
-handleMessage(message: VsCodeMessage): void {
-    switch (message.command) {
-        case 'newCommand':
-            this.handleNewCommand(message);
-            break;
-    }
-}
+**メッセージプロトコル設計思想**
+- コマンド分離による拡張性
+- データペイロード標準化
+- バージョニング対応
 
-// WebView → Extension メッセージ送信
-this.coordinator.postMessage({
-    command: 'newCommand',
-    data: payload
-});
-```
+### パフォーマンス最適化戦略
+**バッファリング設計**
+- 高頻度出力の効率的処理
+- デバウンス処理による負荷軽減
+- メモリ効率を考慮したバッファ管理
 
-### パフォーマンス最適化
-```typescript
-// 高頻度出力のバッファリング
-this.performanceManager.bufferOutput(terminalId, data);
+**レンダリング最適化**
+- DOM更新の最小化
+- 仮想化による大量データ処理
+- CSS変更によるレイアウト回避
 
-// デバウンス処理
-this.performanceManager.debounce('resize', () => {
-    // リサイズ処理
-}, 100);
-```
+## 実装時の重要な考慮点
 
-## よく使う操作
+### Manager間の協調設計
+**責任分離の原則**
+- 各Managerの単一責任原則厳守
+- 相互依存の最小化
+- コーディネーター経由の疎結合
 
-### ターミナル操作
-```typescript
-// アクティブターミナル取得
-const activeTerminal = this.coordinator.getActiveTerminal();
+**よく使われる操作パターン**
+- ターミナル操作: コーディネーター経由
+- 通知表示: NotificationManager統一インターフェース
+- テーマ・UI操作: UIManager集約
 
-// ターミナル作成
-this.coordinator.createTerminal();
+### デバッグ・トラブルシューティング戦略
+**一般的な問題パターン**
+1. **通信断絶**: メッセージキューイング機能確認
+2. **メモリリーク**: dispose()パターン実装確認  
+3. **パフォーマンス**: バッファリング設定確認
 
-// ターミナル削除
-this.coordinator.deleteTerminal(terminalId);
-```
+**デバッグツール活用**
+- WebView Developer Tools活用
+- Extension Host ログ監視
+- パフォーマンス プロファイリング
 
-### 通知表示
-```typescript
-// 成功通知
-this.notificationManager.showSuccess('操作完了');
+### テスト戦略設計
+**テスト分類**
+- 単体テスト: 各Manager個別機能
+- 統合テスト: Manager間協調動作
+- E2Eテスト: 実WebView環境
 
-// エラー通知  
-this.notificationManager.showError('エラーメッセージ');
-
-// 進行状況
-this.notificationManager.showProgress('処理中...');
-```
-
-### テーマ・UI操作
-```typescript
-// テーマ適用
-this.uiManager.applyTheme(themeName);
-
-// ボーダー制御
-this.uiManager.updateBorder(terminalId, visible);
-
-// アイコン更新
-this.uiManager.updateIcon(terminalId, iconClass);
-```
-
-## デバッグ・トラブルシューティング
-
-### よくある問題
-1. **メッセージが届かない** → `MessageManager.queueMessage()`確認
-2. **メモリリーク** → `dispose()`メソッド実装確認
-3. **パフォーマンス低下** → `PerformanceManager`バッファリング確認
-
-### ログ出力
-```typescript
-// WebView専用ログ
-console.log('[WebView]', message);
-
-// Extension側への通知
-this.coordinator.postMessage({
-    command: 'log',
-    level: 'error',
-    message: 'エラー詳細'
-});
-```
-
-## テスト戦略
-
-### テストファイル配置
-- 単体テスト: `src/test/unit/webview/[component].test.ts`
-- 統合テスト: `src/test/unit/webview/main.test.ts`
-
-### モックパターン
-```typescript
-// WebView環境モック
-const mockCoordinator: IManagerCoordinator = {
-    postMessage: sinon.stub(),
-    getActiveTerminal: sinon.stub(),
-    // ...
-};
-```
+**モック設計思想**
+- インターフェースベースモック
+- 依存注入によるテスト容易性
+- 実環境に近いテストデータ
 
 ## 実装チェックリスト
 
