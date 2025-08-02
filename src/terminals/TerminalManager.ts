@@ -51,7 +51,7 @@ export class TerminalManager {
 
   // Timeout-based termination detection
   private _agentTimeoutChecks = new Map<string, NodeJS.Timeout>();
-  private readonly AGENT_TIMEOUT_MS = 10000; // 10 seconds of inactivity = considered terminated
+  private readonly AGENT_TIMEOUT_MS = 3000; // 3 seconds of inactivity = considered terminated (improved responsiveness)
   private readonly _onCliAgentStatusChange = new vscode.EventEmitter<{
     terminalId: string;
     status: 'connected' | 'disconnected' | 'none';
@@ -68,12 +68,12 @@ export class TerminalManager {
   // Performance optimization: Data batching for high-frequency output
   private readonly _dataBuffers = new Map<string, string[]>();
   private readonly _dataFlushTimers = new Map<string, NodeJS.Timeout>();
-  private readonly DATA_FLUSH_INTERVAL = 16; // ~60fps
+  private readonly DATA_FLUSH_INTERVAL = 8; // ~125fps for improved responsiveness
   private readonly MAX_BUFFER_SIZE = 50;
 
   // 🚨 OPTIMIZATION: CLI Agent detection efficiency improvements
   private readonly _detectionCache = new Map<string, { lastData: string; timestamp: number }>();
-  private readonly DETECTION_DEBOUNCE_MS = 50; // Minimum time between detections per terminal
+  private readonly DETECTION_DEBOUNCE_MS = 25; // Minimum time between detections per terminal (improved responsiveness)
   private readonly DETECTION_CACHE_TTL = 1000; // Cache TTL in milliseconds
 
   public readonly onData = this._dataEmitter.event;
@@ -1111,7 +1111,7 @@ export class TerminalManager {
       } catch (error) {
         log(`❌ [FORCE-PROMPT] Error sending prompt trigger: ${error}`);
       }
-    }, 100); // Small delay to let CLI agent finish
+    }, 50); // Small delay to let CLI agent finish (improved responsiveness)
   }
 
   /**
@@ -1466,7 +1466,7 @@ export class TerminalManager {
                 );
                 this._setAgentTerminated(terminalId);
               }
-            }, 2000); // 2 second timeout for CLI agent to actually exit
+            }, 500); // 500ms timeout for CLI agent to actually exit (improved responsiveness)
           }
         }
       }
