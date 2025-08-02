@@ -585,12 +585,12 @@ export class MessageManager implements IMessageManager {
     const connectedAgentId = msg.connectedAgentId;
     const connectedAgentType = msg.connectedAgentType;
     const disconnectedCount = msg.disconnectedCount;
-    
+
     log(`🔍 [MESSAGE] Extracted data:`, {
       terminalStates,
       connectedAgentId,
       connectedAgentType,
-      disconnectedCount
+      disconnectedCount,
     });
 
     if (terminalStates) {
@@ -603,14 +603,10 @@ export class MessageManager implements IMessageManager {
         // Apply all terminal states at once
         for (const [terminalId, stateInfo] of Object.entries(terminalStates)) {
           log(`🔄 [MESSAGE] About to update terminal ${terminalId}:`, stateInfo);
-          
+
           try {
-            coordinator.updateCliAgentStatus(
-              terminalId,
-              stateInfo.status,
-              stateInfo.agentType
-            );
-            
+            coordinator.updateCliAgentStatus(terminalId, stateInfo.status, stateInfo.agentType);
+
             log(
               `✅ [MESSAGE] Applied state: Terminal ${terminalId} -> ${stateInfo.status} (${stateInfo.agentType})`
             );
@@ -619,9 +615,7 @@ export class MessageManager implements IMessageManager {
           }
         }
 
-        log(
-          `🎯 [MESSAGE] Full CLI Agent state sync completed successfully`
-        );
+        log(`🎯 [MESSAGE] Full CLI Agent state sync completed successfully`);
       } catch (error) {
         log(`❌ [MESSAGE] Error during full state sync:`, error);
       }

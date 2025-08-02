@@ -779,7 +779,10 @@ export class TerminalManager {
   /**
    * Get the map of disconnected agents for full state sync
    */
-  public getDisconnectedAgents(): Map<string, { type: 'claude' | 'gemini'; startTime: Date; terminalName?: string }> {
+  public getDisconnectedAgents(): Map<
+    string,
+    { type: 'claude' | 'gemini'; startTime: Date; terminalName?: string }
+  > {
     return new Map(this._disconnectedAgents);
   }
 
@@ -818,7 +821,7 @@ export class TerminalManager {
     // 🚨 CRITICAL FIX: Never skip termination detection for CONNECTED terminals
     // Termination patterns like shell prompts must always be processed
     const isConnectedTerminal = this._connectedAgentTerminalId === terminalId;
-    
+
     if (isConnectedTerminal) {
       // For CONNECTED terminals, always run detection (no debouncing or caching)
       // This ensures termination detection is never missed
@@ -916,7 +919,7 @@ export class TerminalManager {
         // Only allow startup detection in terminals that don't already have a DISCONNECTED agent
         // This prevents focus-induced buffer flushes from incorrectly promoting DISCONNECTED agents
         const isDisconnectedAgent = this._disconnectedAgents.has(terminalId);
-        
+
         if (this._detectClaudeCodeStartup(fullyCleanLine)) {
           // 🚨 SPECIFICATION COMPLIANCE: Don't promote DISCONNECTED agents from old output
           if (isDisconnectedAgent) {
@@ -1501,7 +1504,7 @@ export class TerminalManager {
             log(
               `🔍 [CLI-AGENT] Exit command detected from user input: "${command}" in terminal ${terminalId}. Status will change only when CLI Agent ACTUALLY terminates.`
             );
-            
+
             // 🚨 REMOVED: Timeout-based forced termination (SPECIFICATION VIOLATION)
             // The specification explicitly states: "Status changes must occur only when CLI Agents actually terminate"
             // We must wait for actual termination via output detection or process exit events

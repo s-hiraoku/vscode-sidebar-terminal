@@ -78,42 +78,42 @@ describe('Full State Sync Integration', () => {
       (terminalManager as any)._detectCliAgentTermination(terminal3, 'user@macbook:~/workspace$ ');
 
       // Verify that sendFullCliAgentStateSync was called
-      const fullStateSyncCalls = sendMessageSpy.getCalls().filter(call => 
-        call.args[0]?.command === 'cliAgentFullStateSync'
-      );
+      const fullStateSyncCalls = sendMessageSpy
+        .getCalls()
+        .filter((call) => call.args[0]?.command === 'cliAgentFullStateSync');
 
       expect(fullStateSyncCalls.length).to.be.greaterThan(0);
 
       // Examine the full state sync message
       const stateSyncMessage = fullStateSyncCalls[fullStateSyncCalls.length - 1]?.args[0];
       expect(stateSyncMessage).to.exist;
-      
+
       console.log('🔍 [TEST] Full state sync message:', stateSyncMessage);
 
       expect(stateSyncMessage.command).to.equal('cliAgentFullStateSync');
       expect(stateSyncMessage.terminalStates).to.be.an('object');
-      
+
       // Verify the terminal states are correct
       const states = stateSyncMessage.terminalStates;
-      
+
       // Terminal3 should be 'none' (terminated)
       expect(states[terminal3]).to.deep.include({ status: 'none', agentType: null });
-      
+
       // One of terminal1/terminal2 should be 'connected' (auto-promoted)
-      const connectedTerminals = Object.keys(states).filter(id => 
-        states[id].status === 'connected'
+      const connectedTerminals = Object.keys(states).filter(
+        (id) => states[id].status === 'connected'
       );
       expect(connectedTerminals).to.have.length(1);
-      
+
       // One of terminal1/terminal2 should be 'disconnected' (remaining agent)
-      const disconnectedTerminals = Object.keys(states).filter(id => 
-        states[id].status === 'disconnected'
+      const disconnectedTerminals = Object.keys(states).filter(
+        (id) => states[id].status === 'disconnected'
       );
       expect(disconnectedTerminals).to.have.length(1);
 
       // Critical assertion: No terminal should be left as 'none' if it has an agent
-      const noneTerminals = Object.keys(states).filter(id => 
-        states[id].status === 'none' && states[id].agentType !== null
+      const noneTerminals = Object.keys(states).filter(
+        (id) => states[id].status === 'none' && states[id].agentType !== null
       );
       expect(noneTerminals).to.have.length(0);
 
@@ -141,8 +141,8 @@ describe('Full State Sync Integration', () => {
       // Track state sync messages
       const getLatestStateSyncMessage = () => {
         const calls = sendMessageSpy.getCalls();
-        const stateSyncCalls = calls.filter(call => 
-          call.args[0]?.command === 'cliAgentFullStateSync'
+        const stateSyncCalls = calls.filter(
+          (call) => call.args[0]?.command === 'cliAgentFullStateSync'
         );
         const latestCall = stateSyncCalls[stateSyncCalls.length - 1];
         return latestCall ? latestCall.args[0] : null;
@@ -152,15 +152,22 @@ describe('Full State Sync Integration', () => {
       sendMessageSpy.resetHistory();
 
       // First termination: Terminate CONNECTED terminal
-      (terminalManager as any)._detectCliAgentTermination(terminals[3], 'user@macbook:~/workspace$ ');
-      
+      (terminalManager as any)._detectCliAgentTermination(
+        terminals[3],
+        'user@macbook:~/workspace$ '
+      );
+
       let syncMessage = getLatestStateSyncMessage();
       expect(syncMessage).to.exist;
 
       // Count statuses after first termination
       let states = syncMessage.terminalStates;
-      let connectedCount = Object.values(states).filter((s: any) => s.status === 'connected').length;
-      let disconnectedCount = Object.values(states).filter((s: any) => s.status === 'disconnected').length;
+      let connectedCount = Object.values(states).filter(
+        (s: any) => s.status === 'connected'
+      ).length;
+      let disconnectedCount = Object.values(states).filter(
+        (s: any) => s.status === 'disconnected'
+      ).length;
       let noneCount = Object.values(states).filter((s: any) => s.status === 'none').length;
 
       expect(connectedCount).to.equal(1); // One auto-promoted
@@ -169,15 +176,20 @@ describe('Full State Sync Integration', () => {
 
       // Second termination: Terminate CONNECTED again
       const newConnectedId = (terminalManager as any)._connectedAgentTerminalId;
-      (terminalManager as any)._detectCliAgentTermination(newConnectedId, 'user@macbook:~/workspace$ ');
-      
+      (terminalManager as any)._detectCliAgentTermination(
+        newConnectedId,
+        'user@macbook:~/workspace$ '
+      );
+
       syncMessage = getLatestStateSyncMessage();
       expect(syncMessage).to.exist;
 
       // Count statuses after second termination
       states = syncMessage.terminalStates;
       connectedCount = Object.values(states).filter((s: any) => s.status === 'connected').length;
-      disconnectedCount = Object.values(states).filter((s: any) => s.status === 'disconnected').length;
+      disconnectedCount = Object.values(states).filter(
+        (s: any) => s.status === 'disconnected'
+      ).length;
       noneCount = Object.values(states).filter((s: any) => s.status === 'none').length;
 
       expect(connectedCount).to.equal(1); // One auto-promoted again
@@ -210,9 +222,9 @@ describe('Full State Sync Integration', () => {
       (terminalManager as any)._detectCliAgentTermination(terminal1, 'user@macbook:~/workspace$ ');
 
       // Verify final state: all terminals should be 'none'
-      const stateSyncCalls = sendMessageSpy.getCalls().filter(call => 
-        call.args[0]?.command === 'cliAgentFullStateSync'
-      );
+      const stateSyncCalls = sendMessageSpy
+        .getCalls()
+        .filter((call) => call.args[0]?.command === 'cliAgentFullStateSync');
       const finalMessage = stateSyncCalls[stateSyncCalls.length - 1]?.args[0];
 
       expect(finalMessage).to.exist;

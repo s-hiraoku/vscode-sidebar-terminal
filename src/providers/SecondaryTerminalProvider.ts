@@ -695,11 +695,10 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     const claudeStatusDisposable = this._terminalManager.onCliAgentStatusChange((event) => {
       try {
         console.log('📡 [PROVIDER] Received CLI Agent status change:', event);
-        
+
         // Full State Sync: 全ターミナルの状態を完全同期
         console.log('🔄 [PROVIDER] Triggering full CLI Agent state sync');
         this.sendFullCliAgentStateSync();
-        
       } catch (error) {
         log('❌ [ERROR] CLI Agent status change processing failed:', error);
         // エラーがあっても継続
@@ -1247,11 +1246,12 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
       console.log('🔍 [PROVIDER] Current CLI Agent state:', {
         connected: { id: connectedAgentId, type: connectedAgentType },
-        disconnected: Array.from(disconnectedAgents.entries())
+        disconnected: Array.from(disconnectedAgents.entries()),
       });
 
       // Build complete terminal states map
-      const terminalStates: { [terminalId: string]: { status: string; agentType: string | null } } = {};
+      const terminalStates: { [terminalId: string]: { status: string; agentType: string | null } } =
+        {};
 
       // Add connected agent
       if (connectedAgentId && connectedAgentType) {

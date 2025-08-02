@@ -76,7 +76,8 @@
       "Bash(./node_modules/.bin/mocha --require out/test/shared/TestSetup.js 'out/test/unit/terminals/CliAgentFalseDetectionPrevention.test.js')",
       "Bash(./node_modules/.bin/mocha:*)",
       "Bash(tsc:*)",
-      "Bash(npm test:*)"
+      "Bash(npm test:*)",
+      "Bash(mv:*)"
     ],
     "deny": []
   },

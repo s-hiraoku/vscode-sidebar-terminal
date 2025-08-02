@@ -43,18 +43,23 @@ describe('CLI Agent Termination Debug', () => {
 
       // Start Claude Code
       (terminalManager as any)._detectCliAgentOptimized(terminalId, 'Welcome to Claude Code!');
-      
+
       // Verify agent is CONNECTED
       expect((terminalManager as any)._connectedAgentTerminalId).to.equal(terminalId);
       expect((terminalManager as any)._connectedAgentType).to.equal('claude');
 
       // Test shell prompt detection directly first
       const shellPromptOutput = 'user@macbook:~/workspace$ ';
-      const promptDetected = (terminalManager as any)._detectShellPromptReturn(shellPromptOutput.trim());
+      const promptDetected = (terminalManager as any)._detectShellPromptReturn(
+        shellPromptOutput.trim()
+      );
       expect(promptDetected).to.be.true; // Shell prompt detection should work
 
       // Test termination detection directly
-      const terminationDetected = (terminalManager as any)._detectCliAgentTermination(terminalId, shellPromptOutput.trim());
+      const terminationDetected = (terminalManager as any)._detectCliAgentTermination(
+        terminalId,
+        shellPromptOutput.trim()
+      );
       expect(terminationDetected).to.be.true; // Termination detection should work
 
       // Now should be terminated
@@ -68,21 +73,24 @@ describe('CLI Agent Termination Debug', () => {
 
       // Start Claude in terminal1 (will be CONNECTED)
       (terminalManager as any)._setCurrentAgent(terminal1, 'claude');
-      
+
       // Start Gemini in terminal2 (should become DISCONNECTED because terminal1 is already CONNECTED)
       (terminalManager as any)._setCurrentAgent(terminal2, 'gemini');
 
       // Verify initial state - terminal2 should be CONNECTED (latest)
       expect((terminalManager as any)._connectedAgentTerminalId).to.equal(terminal2);
       expect((terminalManager as any)._connectedAgentType).to.equal('gemini');
-      
+
       // Verify terminal1 should be DISCONNECTED (previous)
       expect((terminalManager as any)._disconnectedAgents.has(terminal1)).to.be.true;
       const disconnectedAgent = (terminalManager as any)._disconnectedAgents.get(terminal1);
       expect(disconnectedAgent.type).to.equal('claude');
 
       // Terminate the CONNECTED agent (terminal2)
-      const terminationDetected = (terminalManager as any)._detectCliAgentTermination(terminal2, 'user@macbook:~/workspace$ ');
+      const terminationDetected = (terminalManager as any)._detectCliAgentTermination(
+        terminal2,
+        'user@macbook:~/workspace$ '
+      );
       expect(terminationDetected).to.be.true;
 
       // Should auto-promote terminal1 from DISCONNECTED to CONNECTED
@@ -117,7 +125,7 @@ describe('CLI Agent Termination Debug', () => {
         }
 
         console.log(`🔍 [DEBUG] Testing shell prompt: "${prompt}"`);
-        
+
         (terminalManager as any)._detectCliAgentOptimized(terminalId, prompt);
 
         expect((terminalManager as any)._connectedAgentTerminalId).to.be.null;
@@ -129,7 +137,9 @@ describe('CLI Agent Termination Debug', () => {
       const terminalId = terminalManager.createTerminal();
 
       // Test Claude startup detection
-      const claudeResult = (terminalManager as any)._detectClaudeCodeStartup('Welcome to Claude Code!');
+      const claudeResult = (terminalManager as any)._detectClaudeCodeStartup(
+        'Welcome to Claude Code!'
+      );
       expect(claudeResult).to.be.true;
 
       // Test Gemini startup detection
@@ -161,10 +171,10 @@ describe('CLI Agent Termination Debug', () => {
       // Start agents in three terminals
       // Terminal 1: Claude (should become DISCONNECTED)
       (terminalManager as any)._setCurrentAgent(terminal1, 'claude');
-      
+
       // Terminal 2: Gemini (should become DISCONNECTED when terminal3 starts)
       (terminalManager as any)._setCurrentAgent(terminal2, 'gemini');
-      
+
       // Terminal 3: Claude (should become CONNECTED - latest)
       (terminalManager as any)._setCurrentAgent(terminal3, 'claude');
 
@@ -202,21 +212,23 @@ describe('CLI Agent Termination Debug', () => {
       // Log all status change events
       statusChangeSpy.getCalls().forEach((call, index) => {
         const event = call.args[0];
-        console.log(`📡 [DEBUG] Status Event ${index + 1}: Terminal ${event.terminalId} -> ${event.status} (${event.type})`);
+        console.log(
+          `📡 [DEBUG] Status Event ${index + 1}: Terminal ${event.terminalId} -> ${event.status} (${event.type})`
+        );
       });
 
       // Expected behavior:
       // - One terminal should be CONNECTED (auto-promoted)
       // - One terminal should be DISCONNECTED (remaining agent)
       // - Terminal3 should be none (terminated)
-      
+
       expect(connectedId).to.be.oneOf([terminal1, terminal2]); // One should be promoted
       expect(disconnectedCount).to.equal(1); // One should remain DISCONNECTED
-      
+
       // The key assertion: the non-promoted terminal should still be tracked as DISCONNECTED
       const promotedTerminal = connectedId;
       const nonPromotedTerminal = promotedTerminal === terminal1 ? terminal2 : terminal1;
-      
+
       expect((terminalManager as any)._disconnectedAgents.has(nonPromotedTerminal)).to.be.true;
       expect((terminalManager as any)._disconnectedAgents.has(promotedTerminal)).to.be.false;
       expect((terminalManager as any)._disconnectedAgents.has(terminal3)).to.be.false;
