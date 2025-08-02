@@ -1710,7 +1710,8 @@ window.addEventListener('message', (event) => {
     log('🎯 [WEBVIEW] TerminalManager available:', !!terminalManager);
     log('🎯 [WEBVIEW] MessageManager available:', !!terminalManager.messageManager);
 
-    terminalManager.messageManager.handleMessage(message, terminalManager);
+    // Fix: handleMessage expects MessageEvent, not raw message
+    terminalManager.messageManager.handleMessage(event, terminalManager);
     log('🎯 [WEBVIEW] MessageManager.handleMessage completed successfully');
   } catch (error) {
     log('❌ [WEBVIEW] Error processing message:', error);

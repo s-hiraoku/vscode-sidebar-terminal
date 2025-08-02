@@ -40,18 +40,10 @@ export class MessageManager implements IMessageManager {
   /**
    * Handle incoming messages from the extension
    */
-  public handleMessage(message: unknown, coordinator: IManagerCoordinator): void {
-    log(`📨 [MESSAGE] ========== MESSAGE MANAGER HANDLE MESSAGE ==========`);
-    log(`📨 [MESSAGE] Raw message:`, message);
-    log(`📨 [MESSAGE] Message type:`, typeof message);
-    log(`📨 [MESSAGE] Message is null/undefined:`, message === null || message === undefined);
-
+  public handleMessage(message: MessageEvent, coordinator: IManagerCoordinator): void {
     try {
-      const msg = message as MessageCommand;
-      log(`📨 [MESSAGE] Casted message:`, msg);
-      log(`📨 [MESSAGE] Message command:`, msg?.command);
-      log(`📨 [MESSAGE] Message keys:`, Object.keys(msg || {}));
-      log(`📨 [MESSAGE] Received command: ${msg.command}`);
+      const msg = message.data as MessageCommand;
+      log(`📨 [MESSAGE] Received: ${msg.command}`);
 
       switch (msg.command) {
         case 'init':
@@ -66,7 +58,7 @@ export class MessageManager implements IMessageManager {
           this.handleTerminalRemovedMessage(msg, coordinator);
           break;
 
-        case 'clearTerminal':
+        case 'clear':
           this.handleClearTerminalMessage(msg, coordinator);
           break;
 
@@ -90,25 +82,16 @@ export class MessageManager implements IMessageManager {
           this.handleFocusTerminalMessage(msg, coordinator);
           break;
 
-        case 'resizeTerminal':
-          this.handleResizeTerminalMessage(msg, coordinator);
-          break;
-
-        case 'killTerminal':
-          this.handleKillTerminalMessage(msg, coordinator);
-          break;
-
-        case 'openSettings':
-          log('⚙️ [MESSAGE] Opening settings panel');
-          coordinator.openSettings();
-          break;
-
         case 'stateUpdate':
           this.handleStateUpdateMessage(msg, coordinator);
           break;
 
         case 'cliAgentStatusUpdate':
           this.handleClaudeStatusUpdateMessage(msg, coordinator);
+          break;
+
+        case 'cliAgentFullStateSync':
+          this.handleCliAgentFullStateSyncMessage(msg, coordinator);
           break;
 
         case 'sessionRestore':
@@ -584,6 +567,66 @@ export class MessageManager implements IMessageManager {
       default:
         log(`⚠️ [MESSAGE] Unknown legacy status: ${legacyStatus}, defaulting to 'none'`);
         return 'none';
+    }
+  }
+
+  /**
+   * 🔧 NEW: Handle full CLI Agent state sync message from extension
+   * Solves DISCONNECTED terminals showing as "none" instead of "disconnected"
+   */
+  private handleCliAgentFullStateSyncMessage(
+    msg: MessageCommand,
+    coordinator: IManagerCoordinator
+  ): void {
+    log(`📡 [MESSAGE] CLI Agent Full State Sync received`);
+    log(`🔍 [MESSAGE] Full message data:`, msg);
+
+    const terminalStates = msg.terminalStates;
+    const connectedAgentId = msg.connectedAgentId;
+    const connectedAgentType = msg.connectedAgentType;
+    const disconnectedCount = msg.disconnectedCount;
+    
+    log(`🔍 [MESSAGE] Extracted data:`, {
+      terminalStates,
+      connectedAgentId,
+      connectedAgentType,
+      disconnectedCount
+    });
+
+    if (terminalStates) {
+      log(
+        `🔄 [MESSAGE] Processing full state sync: CONNECTED=${connectedAgentId} (${connectedAgentType}), DISCONNECTED=${disconnectedCount}`
+      );
+      log(`📋 [MESSAGE] Terminal states:`, terminalStates);
+
+      try {
+        // Apply all terminal states at once
+        for (const [terminalId, stateInfo] of Object.entries(terminalStates)) {
+          log(`🔄 [MESSAGE] About to update terminal ${terminalId}:`, stateInfo);
+          
+          try {
+            coordinator.updateCliAgentStatus(
+              terminalId,
+              stateInfo.status,
+              stateInfo.agentType
+            );
+            
+            log(
+              `✅ [MESSAGE] Applied state: Terminal ${terminalId} -> ${stateInfo.status} (${stateInfo.agentType})`
+            );
+          } catch (error) {
+            log(`❌ [MESSAGE] Error updating terminal ${terminalId}:`, error);
+          }
+        }
+
+        log(
+          `🎯 [MESSAGE] Full CLI Agent state sync completed successfully`
+        );
+      } catch (error) {
+        log(`❌ [MESSAGE] Error during full state sync:`, error);
+      }
+    } else {
+      log('⚠️ [MESSAGE] No terminal states data in full state sync message');
     }
   }
 

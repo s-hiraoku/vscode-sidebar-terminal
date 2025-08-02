@@ -152,5 +152,74 @@ describe('CLI Agent Termination Debug', () => {
         expect(result).to.be.true;
       });
     });
+
+    it('should keep other agents as DISCONNECTED when CONNECTED terminal terminates', () => {
+      const terminal1 = terminalManager.createTerminal();
+      const terminal2 = terminalManager.createTerminal();
+      const terminal3 = terminalManager.createTerminal();
+
+      // Start agents in three terminals
+      // Terminal 1: Claude (should become DISCONNECTED)
+      (terminalManager as any)._setCurrentAgent(terminal1, 'claude');
+      
+      // Terminal 2: Gemini (should become DISCONNECTED when terminal3 starts)
+      (terminalManager as any)._setCurrentAgent(terminal2, 'gemini');
+      
+      // Terminal 3: Claude (should become CONNECTED - latest)
+      (terminalManager as any)._setCurrentAgent(terminal3, 'claude');
+
+      // Verify initial state: terminal3 is CONNECTED, others are DISCONNECTED
+      expect((terminalManager as any)._connectedAgentTerminalId).to.equal(terminal3);
+      expect((terminalManager as any)._disconnectedAgents.has(terminal1)).to.be.true;
+      expect((terminalManager as any)._disconnectedAgents.has(terminal2)).to.be.true;
+
+      console.log(`🔍 [DEBUG] Initial state:
+        CONNECTED: ${(terminalManager as any)._connectedAgentTerminalId}
+        DISCONNECTED count: ${(terminalManager as any)._disconnectedAgents.size}
+        DISCONNECTED terminals: ${Array.from((terminalManager as any)._disconnectedAgents.keys())}`);
+
+      // Set up spy to track all status change events
+      const statusChangeSpy = sinon.spy();
+      terminalManager.onCliAgentStatusChange(statusChangeSpy);
+
+      // Terminate the CONNECTED terminal (terminal3)
+      (terminalManager as any)._detectCliAgentTermination(terminal3, 'user@macbook:~/workspace$ ');
+
+      // Verify what happened:
+      // 1. Terminal3 should be terminated (none)
+      // 2. One of the DISCONNECTED should be promoted to CONNECTED
+      // 3. The other DISCONNECTED should remain DISCONNECTED (not none!)
+
+      const connectedId = (terminalManager as any)._connectedAgentTerminalId;
+      const disconnectedCount = (terminalManager as any)._disconnectedAgents.size;
+
+      console.log(`🔍 [DEBUG] After termination:
+        CONNECTED: ${connectedId}
+        DISCONNECTED count: ${disconnectedCount}
+        DISCONNECTED terminals: ${Array.from((terminalManager as any)._disconnectedAgents.keys())}
+        Status change events: ${statusChangeSpy.callCount}`);
+
+      // Log all status change events
+      statusChangeSpy.getCalls().forEach((call, index) => {
+        const event = call.args[0];
+        console.log(`📡 [DEBUG] Status Event ${index + 1}: Terminal ${event.terminalId} -> ${event.status} (${event.type})`);
+      });
+
+      // Expected behavior:
+      // - One terminal should be CONNECTED (auto-promoted)
+      // - One terminal should be DISCONNECTED (remaining agent)
+      // - Terminal3 should be none (terminated)
+      
+      expect(connectedId).to.be.oneOf([terminal1, terminal2]); // One should be promoted
+      expect(disconnectedCount).to.equal(1); // One should remain DISCONNECTED
+      
+      // The key assertion: the non-promoted terminal should still be tracked as DISCONNECTED
+      const promotedTerminal = connectedId;
+      const nonPromotedTerminal = promotedTerminal === terminal1 ? terminal2 : terminal1;
+      
+      expect((terminalManager as any)._disconnectedAgents.has(nonPromotedTerminal)).to.be.true;
+      expect((terminalManager as any)._disconnectedAgents.has(promotedTerminal)).to.be.false;
+      expect((terminalManager as any)._disconnectedAgents.has(terminal3)).to.be.false;
+    });
   });
 });

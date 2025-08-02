@@ -690,25 +690,16 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
    * Set up CLI Agent status change listeners
    */
   private _setupCliAgentStatusListeners(): void {
-    // CLI Agentステータス変更を監視（シンプル化）
+    console.log('🎯 [PROVIDER] Setting up CLI Agent status listeners');
+    // CLI Agent状態変更を監視 - Full State Sync方式で完全同期
     const claudeStatusDisposable = this._terminalManager.onCliAgentStatusChange((event) => {
       try {
-        console.log('[DEBUG] Received CLI Agent status change:', event);
-        const terminal = this._terminalManager.getTerminal(event.terminalId);
-
-        // Since CliAgentTerminalTracker is disabled, handle status updates here
-        if (terminal) {
-          console.log(
-            '[DEBUG] Sending CLI Agent status update:',
-            terminal.name,
-            event.status,
-            event.type
-          );
-          this.sendCliAgentStatusUpdate(terminal.name, event.status, event.type);
-        } else if (event.status === 'none') {
-          console.log('[DEBUG] Sending CLI Agent none status');
-          this.sendCliAgentStatusUpdate(null, 'none', null);
-        }
+        console.log('📡 [PROVIDER] Received CLI Agent status change:', event);
+        
+        // Full State Sync: 全ターミナルの状態を完全同期
+        console.log('🔄 [PROVIDER] Triggering full CLI Agent state sync');
+        this.sendFullCliAgentStateSync();
+        
       } catch (error) {
         log('❌ [ERROR] CLI Agent status change processing failed:', error);
         // エラーがあっても継続
@@ -717,6 +708,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
     // disposablesに追加
     this._extensionContext.subscriptions.push(claudeStatusDisposable);
+    console.log('✅ [PROVIDER] CLI Agent status listeners setup complete');
   }
 
   /**
@@ -1239,6 +1231,60 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       void this._sendMessage(message);
     } catch (error) {
       // エラーがあっても継続
+    }
+  }
+
+  /**
+   * 全てのターミナルのCLI Agent状態を完全同期する
+   * DISCONNECTED terminals状態保持問題の解決策
+   */
+  public sendFullCliAgentStateSync(): void {
+    console.log('🚀 [PROVIDER] sendFullCliAgentStateSync() called');
+    try {
+      const connectedAgentId = this._terminalManager.getConnectedAgentTerminalId();
+      const connectedAgentType = this._terminalManager.getConnectedAgentType();
+      const disconnectedAgents = this._terminalManager.getDisconnectedAgents();
+
+      console.log('🔍 [PROVIDER] Current CLI Agent state:', {
+        connected: { id: connectedAgentId, type: connectedAgentType },
+        disconnected: Array.from(disconnectedAgents.entries())
+      });
+
+      // Build complete terminal states map
+      const terminalStates: { [terminalId: string]: { status: string; agentType: string | null } } = {};
+
+      // Add connected agent
+      if (connectedAgentId && connectedAgentType) {
+        terminalStates[connectedAgentId] = {
+          status: 'connected',
+          agentType: connectedAgentType,
+        };
+      }
+
+      // Add disconnected agents
+      for (const [terminalId, agentInfo] of disconnectedAgents.entries()) {
+        terminalStates[terminalId] = {
+          status: 'disconnected',
+          agentType: agentInfo.type,
+        };
+      }
+
+      // Send complete state to WebView
+      const message = {
+        command: 'cliAgentFullStateSync',
+        terminalStates: terminalStates,
+      };
+
+      console.log('📤 [PROVIDER] Sending full CLI Agent state sync:', message);
+
+      if (this._view) {
+        this._view.webview.postMessage(message);
+        console.log('✅ [PROVIDER] Full CLI Agent state sync sent successfully');
+      } else {
+        console.warn('⚠️ [PROVIDER] WebView not available for full state sync');
+      }
+    } catch (error) {
+      log('❌ [ERROR] Failed to send full CLI Agent state sync:', error);
     }
   }
 

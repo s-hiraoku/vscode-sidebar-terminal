@@ -65,6 +65,7 @@ export interface WebviewMessage {
     | 'stateUpdate'
     | 'claudeStatusUpdate'
     | 'cliAgentStatusUpdate'
+    | 'cliAgentFullStateSync'
     | 'killTerminal'
     | 'deleteTerminal'
     | 'getSettings'
@@ -130,6 +131,17 @@ export interface WebviewMessage {
     status: 'connected' | 'disconnected' | 'none';
     agentType: string | null;
   }; // CLI Agent接続状態の情報（新しい名前）
+  
+  // 🔧 NEW: Full CLI Agent State Sync
+  terminalStates?: Record<string, { 
+    status: 'connected' | 'disconnected' | 'none'; 
+    agentType: string | null; 
+    terminalName: string 
+  }>;
+  connectedAgentId?: string | null;
+  connectedAgentType?: string | null;
+  disconnectedCount?: number;
+  
   cols?: number; // リサイズ用
   rows?: number; // リサイズ用
   requestSource?: 'header' | 'panel'; // 削除リクエストの送信元

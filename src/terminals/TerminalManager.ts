@@ -776,6 +776,27 @@ export class TerminalManager {
       : [];
   }
 
+  /**
+   * Get the map of disconnected agents for full state sync
+   */
+  public getDisconnectedAgents(): Map<string, { type: 'claude' | 'gemini'; startTime: Date; terminalName?: string }> {
+    return new Map(this._disconnectedAgents);
+  }
+
+  /**
+   * Get the connected agent terminal ID
+   */
+  public getConnectedAgentTerminalId(): string | null {
+    return this._connectedAgentTerminalId;
+  }
+
+  /**
+   * Get the connected agent type
+   */
+  public getConnectedAgentType(): 'claude' | 'gemini' | null {
+    return this._connectedAgentType;
+  }
+
   // =================== CLI Agent Detection (Ultra Simple & Optimized) ===================
 
   /**

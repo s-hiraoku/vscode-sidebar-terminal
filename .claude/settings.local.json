@@ -67,7 +67,16 @@
       "mcp__serena__find_symbol",
       "mcp__serena__get_symbols_overview",
       "mcp__serena__think_about_collected_information",
-      "mcp__serena__write_memory"
+      "mcp__serena__write_memory",
+      "mcp__serena__search_for_pattern",
+      "mcp__serena__insert_after_symbol",
+      "mcp__serena__replace_symbol_body",
+      "mcp__serena__replace_regex",
+      "Bash(./node_modules/.bin/mocha --require out/test/shared/TestSetup.js 'out/test/unit/terminals/CliAgentAutoPromotion.test.js' --reporter spec)",
+      "Bash(./node_modules/.bin/mocha --require out/test/shared/TestSetup.js 'out/test/unit/terminals/CliAgentFalseDetectionPrevention.test.js')",
+      "Bash(./node_modules/.bin/mocha:*)",
+      "Bash(tsc:*)",
+      "Bash(npm test:*)"
     ],
     "deny": []
   },
