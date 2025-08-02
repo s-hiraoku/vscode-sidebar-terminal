@@ -38,7 +38,7 @@ describe('HeaderFactory - CLI Agent Status Management', () => {
       headerElements = HeaderFactory.createTerminalHeader({
         terminalId: 'test-terminal-1',
         terminalName: 'Test Terminal',
-        customClasses: ['test-header']
+        customClasses: ['test-header'],
       });
     });
 
@@ -70,9 +70,11 @@ describe('HeaderFactory - CLI Agent Status Management', () => {
       // Assert
       expect(headerElements.statusSpan?.textContent).to.equal('AI Agent Disconnected');
       expect(headerElements.indicator?.className).to.equal('ai-agent-indicator');
-      
+
       // Verify correct elements are created (JSDOM style parsing may be inconsistent)
-      const statusElements = headerElements.statusSection.querySelectorAll('.ai-agent-status, .ai-agent-indicator');
+      const statusElements = headerElements.statusSection.querySelectorAll(
+        '.ai-agent-status, .ai-agent-indicator'
+      );
       expect(statusElements.length).to.equal(2);
     });
 
@@ -88,7 +90,7 @@ describe('HeaderFactory - CLI Agent Status Management', () => {
       // Assert
       expect(headerElements.statusSpan).to.be.null;
       expect(headerElements.indicator).to.be.null;
-      
+
       // Verify DOM elements are removed
       const statusElements = headerElements.statusSection.querySelectorAll(
         '.ai-agent-status, .ai-agent-indicator'
@@ -99,7 +101,7 @@ describe('HeaderFactory - CLI Agent Status Management', () => {
     it('should prevent multiple status displays by removing old elements first', () => {
       // Arrange - Insert first status
       HeaderFactory.insertCliAgentStatus(headerElements, 'connected', 'claude');
-      
+
       // Verify first status exists
       let statusElements = headerElements.statusSection.querySelectorAll(
         '.ai-agent-status, .ai-agent-indicator'
@@ -114,7 +116,7 @@ describe('HeaderFactory - CLI Agent Status Management', () => {
         '.ai-agent-status, .ai-agent-indicator'
       );
       expect(statusElements.length).to.equal(2);
-      
+
       // Verify content is updated to latest status
       expect(headerElements.statusSpan?.textContent).to.equal('AI Agent Disconnected');
     });
@@ -124,11 +126,11 @@ describe('HeaderFactory - CLI Agent Status Management', () => {
       const legacyStatus = document.createElement('span');
       legacyStatus.className = 'claude-status';
       legacyStatus.textContent = 'CLAUDE CLI Active';
-      
+
       const legacyIndicator = document.createElement('span');
       legacyIndicator.className = 'claude-indicator';
       legacyIndicator.textContent = '●';
-      
+
       headerElements.statusSection.appendChild(legacyStatus);
       headerElements.statusSection.appendChild(legacyIndicator);
 
@@ -155,10 +157,10 @@ describe('HeaderFactory - CLI Agent Status Management', () => {
         { status: 'disconnected' as const, type: 'claude' },
         { status: 'connected' as const, type: 'gemini' },
         { status: 'disconnected' as const, type: 'gemini' },
-        { status: 'connected' as const, type: 'claude' }
+        { status: 'connected' as const, type: 'claude' },
       ];
 
-      statusUpdates.forEach(update => {
+      statusUpdates.forEach((update) => {
         HeaderFactory.insertCliAgentStatus(headerElements, update.status, update.type);
       });
 
@@ -167,7 +169,7 @@ describe('HeaderFactory - CLI Agent Status Management', () => {
         '.ai-agent-status, .ai-agent-indicator, .claude-status, .claude-indicator'
       );
       expect(statusElements.length).to.equal(2);
-      
+
       // Final status should be the last one applied
       expect(headerElements.statusSpan?.textContent).to.equal('AI Agent Connected');
     });
@@ -176,10 +178,10 @@ describe('HeaderFactory - CLI Agent Status Management', () => {
       // Test different agent types all display as "AI Agent"
       const agentTypes = ['claude', 'gemini', null, 'unknown'];
 
-      agentTypes.forEach(agentType => {
+      agentTypes.forEach((agentType) => {
         HeaderFactory.insertCliAgentStatus(headerElements, 'connected', agentType);
         expect(headerElements.statusSpan?.textContent).to.equal('AI Agent Connected');
-        
+
         HeaderFactory.insertCliAgentStatus(headerElements, 'disconnected', agentType);
         expect(headerElements.statusSpan?.textContent).to.equal('AI Agent Disconnected');
       });
@@ -194,9 +196,11 @@ describe('HeaderFactory - CLI Agent Status Management', () => {
       expect(headerElements.statusSpan?.className).to.equal('ai-agent-status');
       expect(headerElements.indicator?.className).to.equal('ai-agent-indicator');
       expect(headerElements.indicator?.textContent).to.equal('●');
-      
+
       // Verify correct elements exist in DOM
-      const statusElements = headerElements.statusSection.querySelectorAll('.ai-agent-status, .ai-agent-indicator');
+      const statusElements = headerElements.statusSection.querySelectorAll(
+        '.ai-agent-status, .ai-agent-indicator'
+      );
       expect(statusElements.length).to.equal(2);
     });
 
@@ -220,13 +224,15 @@ describe('HeaderFactory - CLI Agent Status Management', () => {
       // Assert
       expect(statusElement).to.exist;
       expect(statusElement.className).to.equal('claude-status-container');
-      expect(statusElement.querySelector('.claude-status')?.textContent).to.include('CLAUDE CLI Active');
+      expect(statusElement.querySelector('.claude-status')?.textContent).to.include(
+        'CLAUDE CLI Active'
+      );
     });
 
     it('should handle mixed legacy and new status elements', () => {
       const headerElements = HeaderFactory.createTerminalHeader({
         terminalId: 'mixed-test',
-        terminalName: 'Mixed Test Terminal'
+        terminalName: 'Mixed Test Terminal',
       });
 
       // Add legacy element
@@ -238,11 +244,11 @@ describe('HeaderFactory - CLI Agent Status Management', () => {
 
       // Verify both types can be removed
       HeaderFactory.removeCliAgentStatus(headerElements);
-      
+
       const allStatusElements = headerElements.statusSection.querySelectorAll(
         '.claude-status, .claude-indicator, .ai-agent-status, .ai-agent-indicator, .claude-status-container'
       );
-      
+
       // Note: createCliAgentStatusElement creates a container that won't be removed by removeCliAgentStatus
       // This is expected behavior as they are different systems
       expect(allStatusElements.length).to.equal(1); // Only the legacy container remains
@@ -261,7 +267,7 @@ describe('HeaderFactory - CLI Agent Status Management', () => {
         indicator: null,
         controlsSection: document.createElement('div'),
         splitButton: document.createElement('button'),
-        closeButton: document.createElement('button')
+        closeButton: document.createElement('button'),
       } as TerminalHeaderElements;
 
       // Should not throw errors
@@ -279,7 +285,7 @@ describe('HeaderFactory - CLI Agent Status Management', () => {
     it('should not cause memory leaks with repeated status updates', () => {
       const headerElements = HeaderFactory.createTerminalHeader({
         terminalId: 'perf-test',
-        terminalName: 'Performance Test Terminal'
+        terminalName: 'Performance Test Terminal',
       });
 
       // Simulate many status updates

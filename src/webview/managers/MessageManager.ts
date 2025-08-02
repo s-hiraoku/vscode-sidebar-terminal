@@ -336,7 +336,10 @@ export class MessageManager implements IMessageManager {
       const terminal = coordinator.getTerminalInstance(terminalId);
       if (terminal) {
         // 🚨 OPTIMIZATION 8: Reduced debug logging - only log significant CLI agent patterns
-        if (data.length > 2000 && (data.includes('Gemini') || data.includes('gemini') || data.includes('Claude'))) {
+        if (
+          data.length > 2000 &&
+          (data.includes('Gemini') || data.includes('gemini') || data.includes('Claude'))
+        ) {
           console.log(`🔍 [WEBVIEW] CLI Agent output detected:`, {
             terminalId,
             dataLength: data.length,

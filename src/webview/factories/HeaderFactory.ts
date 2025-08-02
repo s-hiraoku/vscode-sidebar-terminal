@@ -255,7 +255,9 @@ export class HeaderFactory {
     elements.statusSpan = statusSpan;
     elements.indicator = indicator;
 
-    log(`✅ [HeaderFactory] Inserted unified AI Agent status: ${status} (type: ${agentType || 'unknown'})`);
+    log(
+      `✅ [HeaderFactory] Inserted unified AI Agent status: ${status} (type: ${agentType || 'unknown'})`
+    );
   }
 
   /**

@@ -698,7 +698,12 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
         // Since CliAgentTerminalTracker is disabled, handle status updates here
         if (terminal) {
-          console.log('[DEBUG] Sending CLI Agent status update:', terminal.name, event.status, event.type);
+          console.log(
+            '[DEBUG] Sending CLI Agent status update:',
+            terminal.name,
+            event.status,
+            event.type
+          );
           this.sendCliAgentStatusUpdate(terminal.name, event.status, event.type);
         } else if (event.status === 'none') {
           console.log('[DEBUG] Sending CLI Agent none status');
