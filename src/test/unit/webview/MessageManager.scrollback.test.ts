@@ -121,6 +121,7 @@ describe('MessageManager - Scrollback Extraction', () => {
         notification: {},
       }),
       updateClaudeStatus: sandbox.spy(),
+      updateCliAgentStatus: sandbox.spy(),
       ensureTerminalFocus: sandbox.spy(),
     };
 

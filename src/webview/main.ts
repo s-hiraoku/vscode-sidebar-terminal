@@ -149,6 +149,10 @@ class TerminalWebviewManager {
   private isComposing: boolean = false;
   public activeTerminalId: string | null = null;
 
+  // 🚨 NEW: CLI Agent status management - single source of truth
+  private cliAgentStates = new Map<string, { status: 'connected' | 'disconnected' | 'none'; terminalName: string; agentType: string | null }>();
+  private currentConnectedAgentId: string | null = null;
+
   // Performance optimization: Debounce resize operations (managed by PerformanceManager)
   private resizeDebounceTimer: number | null = null;
   private readonly RESIZE_DEBOUNCE_DELAY = SPLIT_CONSTANTS.RESIZE_DEBOUNCE_DELAY;
@@ -1231,6 +1235,98 @@ class TerminalWebviewManager {
       command: 'focusTerminal',
       terminalId: terminalId,
     });
+  }
+
+  /**
+   * 🚨 NEW: Update CLI Agent status following specification rules
+   * - Only ONE terminal can be CONNECTED at a time
+   * - Previous CONNECTED becomes DISCONNECTED  
+   * - NONE terminals don't show status
+   */
+  public updateCliAgentStatus(terminalId: string, status: 'connected' | 'disconnected' | 'none', agentType: string | null = null): void {
+    log(`🤖 [CLI-AGENT] Updating status for terminal ${terminalId}: ${status} (type: ${agentType})`);
+    
+    const terminalInstance = this.splitManager.getTerminals().get(terminalId);
+    if (!terminalInstance) {
+      log(`⚠️ [CLI-AGENT] Terminal ${terminalId} not found, ignoring status update`);
+      return;
+    }
+
+    const terminalName = terminalInstance.name || `Terminal ${terminalId}`;
+
+    // Handle status transitions according to specification
+    if (status === 'connected') {
+      // 🚨 SPECIFICATION: Only ONE terminal can be CONNECTED
+      // Previous CONNECTED terminal becomes DISCONNECTED
+      if (this.currentConnectedAgentId && this.currentConnectedAgentId !== terminalId) {
+        const previousState = this.cliAgentStates.get(this.currentConnectedAgentId);
+        if (previousState) {
+          // Previous CONNECTED becomes DISCONNECTED
+          this.cliAgentStates.set(this.currentConnectedAgentId, {
+            ...previousState,
+            status: 'disconnected'
+          });
+          this.uiManager.updateCliAgentStatusDisplay(previousState.terminalName, 'disconnected', previousState.agentType);
+          log(`📝 [CLI-AGENT] Previous CONNECTED terminal ${this.currentConnectedAgentId} → DISCONNECTED`);
+        }
+      }
+
+      // Set new CONNECTED terminal
+      this.currentConnectedAgentId = terminalId;
+      this.cliAgentStates.set(terminalId, { status: 'connected', terminalName, agentType });
+      this.uiManager.updateCliAgentStatusDisplay(terminalName, 'connected', agentType);
+      log(`✅ [CLI-AGENT] Terminal ${terminalId} → CONNECTED (Latest Takes Priority)`);
+
+    } else if (status === 'disconnected') {
+      // Terminal becomes DISCONNECTED (but keeps CLI Agent)
+      this.cliAgentStates.set(terminalId, { status: 'disconnected', terminalName, agentType });
+      this.uiManager.updateCliAgentStatusDisplay(terminalName, 'disconnected', agentType);
+      log(`🟡 [CLI-AGENT] Terminal ${terminalId} → DISCONNECTED`);
+
+    } else if (status === 'none') {  
+      // Remove CLI Agent status completely
+      this.cliAgentStates.delete(terminalId);
+      this.uiManager.updateCliAgentStatusDisplay(terminalName, 'none', null);
+      
+      // If this was the CONNECTED terminal, promote most recent DISCONNECTED
+      if (this.currentConnectedAgentId === terminalId) {
+        this.currentConnectedAgentId = null;
+        this.promoteLatestDisconnectedAgent();
+      }
+      log(`⚪ [CLI-AGENT] Terminal ${terminalId} → NONE`);
+    }
+
+    // Debug: Log current state
+    log(`🗂️ [CLI-AGENT] Current states:`, Array.from(this.cliAgentStates.entries()));
+    log(`🎯 [CLI-AGENT] Current CONNECTED: ${this.currentConnectedAgentId}`);
+  }
+
+  /**
+   * 🚨 SPECIFICATION: Automatic promotion when CONNECTED agent terminates
+   * Most recent DISCONNECTED agent becomes CONNECTED
+   */
+  private promoteLatestDisconnectedAgent(): void {
+    // Find most recent DISCONNECTED agent (latest in the map)
+    let latestDisconnectedId: string | null = null;
+    for (const [terminalId, state] of this.cliAgentStates.entries()) {
+      if (state.status === 'disconnected') {
+        latestDisconnectedId = terminalId; // Latest due to Map insertion order
+      }
+    }
+
+    if (latestDisconnectedId) {
+      const state = this.cliAgentStates.get(latestDisconnectedId);
+      if (state) {
+        // Promote to CONNECTED
+        this.currentConnectedAgentId = latestDisconnectedId;
+        this.cliAgentStates.set(latestDisconnectedId, {
+          ...state,
+          status: 'connected'
+        });
+        this.uiManager.updateCliAgentStatusDisplay(state.terminalName, 'connected', state.agentType);
+        log(`🚀 [CLI-AGENT] Auto-promoted terminal ${latestDisconnectedId} → CONNECTED (specification compliance)`);
+      }
+    }
   }
 
   // Getters for split manager integration

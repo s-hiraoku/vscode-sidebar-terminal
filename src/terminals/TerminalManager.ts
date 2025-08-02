@@ -46,21 +46,22 @@ export class TerminalManager {
     terminalName?: string;
   }>();
 
-
-
   // 操作の順序保証のためのキュー
   private operationQueue: Promise<void> = Promise.resolve();
 
   // Track terminals being killed to prevent infinite loops
   private readonly _terminalBeingKilled = new Set<string>();
 
-
-
   // Performance optimization: Data batching for high-frequency output
   private readonly _dataBuffers = new Map<string, string[]>();
   private readonly _dataFlushTimers = new Map<string, NodeJS.Timeout>();
   private readonly DATA_FLUSH_INTERVAL = 16; // ~60fps
   private readonly MAX_BUFFER_SIZE = 50;
+
+  // 🚨 OPTIMIZATION: CLI Agent detection efficiency improvements
+  private readonly _detectionCache = new Map<string, { lastData: string; timestamp: number }>();
+  private readonly DETECTION_DEBOUNCE_MS = 50; // Minimum time between detections per terminal
+  private readonly DETECTION_CACHE_TTL = 1000; // Cache TTL in milliseconds
 
   public readonly onData = this._dataEmitter.event;
   public readonly onExit = this._exitEmitter.event;
@@ -166,18 +167,13 @@ export class TerminalManager {
       this._activeTerminalManager.setActive(terminalId);
 
       ptyProcess.onData((data: string) => {
-        // Only log large data chunks or when debugging is specifically needed
-        if (data.length > 1000) {
-          log(
-            '📤 [DEBUG] Large PTY data received:',
-            data.length,
-            'chars for terminal:',
-            terminalId
-          );
+        // 🚨 OPTIMIZATION 7: Only log extremely large data chunks to reduce noise
+        if (data.length > 5000) {
+          log('📤 [LARGE-DATA] PTY data received:', data.length, 'chars for terminal:', terminalId);
         }
 
-        // CLI Agent コマンドを検出（超シンプル）
-        this._detectCliAgent(terminalId, data);
+        // 🚨 OPTIMIZED: Remove immediate detection to avoid duplication
+        // Detection will only happen in _flushBuffer for efficiency
 
         // Performance optimization: Batch small data chunks
         this._bufferData(terminalId, data);
@@ -236,6 +232,7 @@ export class TerminalManager {
 
   /**
    * ターミナルにフォーカスを移す
+   * 🚨 IMPORTANT: Focus should NOT change CLI Agent status (spec compliance)
    */
   public focusTerminal(terminalId: string): void {
     const terminal = this._terminals.get(terminalId);
@@ -244,8 +241,10 @@ export class TerminalManager {
       return;
     }
 
+    // 🚨 CRITICAL: フォーカス変更はCLI Agent状態に影響しない（仕様書準拠）
+    // Only fire focus event, do not change CLI Agent status
     this._terminalFocusEmitter.fire(terminalId);
-    log(`🎯 [TERMINAL] Focused: ${terminal.name}`);
+    log(`🎯 [TERMINAL] Focused: ${terminal.name} (NO status change - spec compliant)`);
   }
 
   public sendInput(data: string, terminalId?: string): void {
@@ -537,7 +536,8 @@ export class TerminalManager {
     // Clear kill tracking
     this._terminalBeingKilled.clear();
 
-
+    // 🚨 OPTIMIZATION: Clear detection cache
+    this._detectionCache.clear();
 
     // Dispose CLI Agent integration manager
     this._connectedAgentTerminalId = null;
@@ -569,8 +569,6 @@ export class TerminalManager {
     }
     buffer.push(data);
 
-
-
     // Flush immediately if buffer is full or data is large
     if (buffer.length >= this.MAX_BUFFER_SIZE || data.length > 1000) {
       this._flushBuffer(terminalId);
@@ -600,8 +598,8 @@ export class TerminalManager {
       const combinedData = buffer.join('');
       buffer.length = 0; // Clear buffer
 
-      // Send to CLI Agent manager for pattern detection and state management
-      this._detectCliAgent(terminalId, combinedData);
+      // 🚨 OPTIMIZED: Send to CLI Agent manager with debouncing for efficiency
+      this._detectCliAgentOptimized(terminalId, combinedData);
 
       this._dataEmitter.fire({ terminalId, data: combinedData });
     }
@@ -637,6 +635,9 @@ export class TerminalManager {
       this._dataFlushTimers.delete(terminalId);
     }
 
+    // 🚨 OPTIMIZATION: Clear detection cache for this terminal
+    this._detectionCache.delete(terminalId);
+
     // CLI Agent関連データのクリーンアップ（超シンプル）
     if (this._connectedAgentTerminalId === terminalId) {
       this._connectedAgentTerminalId = null;
@@ -650,8 +651,6 @@ export class TerminalManager {
 
     // Remove from terminals map
     this._terminals.delete(terminalId);
-
-
 
     this._terminalRemovedEmitter.fire(terminalId);
 
@@ -736,7 +735,7 @@ export class TerminalManager {
    * Handle terminal output for CLI Agent detection (public API)
    */
   public handleTerminalOutputForCliAgent(terminalId: string, data: string): void {
-    this._detectCliAgent(terminalId, data);
+    this._detectCliAgentOptimized(terminalId, data);
   }
 
   /**
@@ -760,7 +759,7 @@ export class TerminalManager {
       : [];
   }
 
-  // =================== CLI Agent Detection (Ultra Simple) ===================
+  // =================== CLI Agent Detection (Ultra Simple & Optimized) ===================
 
   /**
    * Gemini CLI検知の改善されたパターンマッチング
@@ -772,6 +771,42 @@ export class TerminalManager {
   }
 
   /**
+   * 🚨 OPTIMIZED: 効率的なCLI Agent検出（出力から）
+   * - Debouncing to prevent rapid multiple calls
+   * - Cache to avoid reprocessing same data
+   * - Early exit conditions
+   */
+  private _detectCliAgentOptimized(terminalId: string, data: string): void {
+    // 🚨 OPTIMIZATION 1: Debouncing - prevent rapid successive calls
+    const now = Date.now();
+    const cacheEntry = this._detectionCache.get(terminalId);
+
+    if (cacheEntry) {
+      // Check if we need to debounce
+      if (now - cacheEntry.timestamp < this.DETECTION_DEBOUNCE_MS) {
+        return; // Skip detection due to debounce
+      }
+
+      // Check if data is identical to previous (avoid reprocessing)
+      if (cacheEntry.lastData === data) {
+        this._detectionCache.set(terminalId, { lastData: data, timestamp: now });
+        return; // Skip identical data
+      }
+    }
+
+    // Update cache
+    this._detectionCache.set(terminalId, { lastData: data, timestamp: now });
+
+    // 🚨 OPTIMIZATION 2: Early exit for empty or insignificant data
+    if (!data || data.trim().length < 3) {
+      return; // Skip detection for minimal data
+    }
+
+    // Call optimized detection logic
+    this._detectCliAgent(terminalId, data);
+  }
+
+  /**
    * 超シンプルなCLI Agent検出（出力から）
    */
   private _detectCliAgent(terminalId: string, data: string): void {
@@ -779,42 +814,63 @@ export class TerminalManager {
       const lines = data.split(/\r?\n/);
       for (const line of lines) {
         const trimmed = line.trim();
-        
+
+        // 🚨 OPTIMIZATION 3: Skip empty lines early
+        if (!trimmed) continue;
+
         // 完全なANSIエスケープシーケンスクリーニング
         const cleanLine = this._cleanAnsiEscapeSequences(trimmed);
-        
+
         // 追加のクリーニング：プロンプト記号とボックス文字を除去
         const fullyCleanLine = cleanLine
           .replace(/^[>$#%]\s+/, '') // プロンプト記号を除去
           .replace(/[│╭╰─╯]/g, '') // ボックス文字除去
           .trim();
 
-        // デバッグログを強化
-        if (fullyCleanLine && this._connectedAgentTerminalId === terminalId) {
-          log(`🔍 [TERMINATION-DEBUG] Processing line: "${trimmed}" → cleaned: "${fullyCleanLine}"`);
+        // 🚨 OPTIMIZATION 4: Skip insignificant cleaned lines
+        if (!fullyCleanLine || fullyCleanLine.length < 2) continue;
+
+        // 🚨 OPTIMIZATION 5: Reduced debug logging (only for significant lines)
+        if (this._connectedAgentTerminalId === terminalId && fullyCleanLine.length > 10) {
+          // Only log longer lines that might contain meaningful content
+          log(
+            `🔍 [TERMINATION-DEBUG] Processing line: "${fullyCleanLine.substring(0, 50)}${fullyCleanLine.length > 50 ? '...' : ''}"`
+          );
         }
 
         // === TERMINATION DETECTION ===
-        // Detect CLI Agent termination through shell prompt return or exit messages
+        // 現在CONNECTEDなTerminalでのみ終了検知を実行
         if (this._connectedAgentTerminalId === terminalId) {
           if (this._detectCliAgentTermination(terminalId, fullyCleanLine)) {
-            log(`🔚 [CLI-AGENT] Termination detected from output: "${fullyCleanLine}" in terminal ${terminalId}`);
+            log(
+              `🔺 [CLI-AGENT] Termination detected from output: "${fullyCleanLine}" in terminal ${terminalId}`
+            );
             return; // Exit early if termination detected
           }
         }
 
         // === STARTUP DETECTION ===
-        // Claude Code startup patterns
+        // 🚨 CORRECTED: Allow startup detection in all terminals
+        // Both input-based and output-based detection should work
         if (this._detectClaudeCodeStartup(fullyCleanLine)) {
-          log(`🚀 [CLI-AGENT] Claude Code startup detected: "${fullyCleanLine}" in terminal ${terminalId}`);
-          this._setCurrentAgent(terminalId, 'claude');
+          // Check if already detected to prevent duplicate logging
+          if (this._connectedAgentTerminalId !== terminalId || this._connectedAgentType !== 'claude') {
+            log(
+              `🚀 [CLI-AGENT] Claude Code startup detected from output: "${fullyCleanLine}" in terminal ${terminalId}`
+            );
+            this._setCurrentAgent(terminalId, 'claude');
+          }
           break;
         }
 
-        // Gemini CLI startup patterns
         if (this._detectGeminiCliStartup(fullyCleanLine)) {
-          log(`🚀 [CLI-AGENT] Gemini CLI startup detected: "${fullyCleanLine}" in terminal ${terminalId}`);
-          this._setCurrentAgent(terminalId, 'gemini');
+          // Check if already detected to prevent duplicate logging
+          if (this._connectedAgentTerminalId !== terminalId || this._connectedAgentType !== 'gemini') {
+            log(
+              `🚀 [CLI-AGENT] Gemini CLI startup detected from output: "${fullyCleanLine}" in terminal ${terminalId}`
+            );
+            this._setCurrentAgent(terminalId, 'gemini');
+          }
           break;
         }
       }
@@ -829,14 +885,15 @@ export class TerminalManager {
    */
   private _detectCliAgentTermination(terminalId: string, cleanLine: string): boolean {
     // シンプルな終了判定: シェルプロンプトが表示されたら CLI エージェントは終了している
-    log(`🔍 [TERMINATION-DEBUG] Checking termination for terminal ${terminalId}: "${cleanLine}"`);
 
     // Method 1: Shell prompt detection (primary method)
     // シェルプロンプトが表示されたら CLI エージェントは確実に終了している
     const isShellPrompt = this._detectShellPromptReturn(cleanLine);
 
     if (isShellPrompt) {
-      log(`✅ [TERMINATION-SUCCESS] Shell prompt detected - CLI Agent terminated for terminal ${terminalId}`);
+      log(
+        `✅ [TERMINATION-SUCCESS] Shell prompt detected - CLI Agent terminated for terminal ${terminalId}`
+      );
       this._setAgentTerminated(terminalId);
       return true;
     }
@@ -844,14 +901,16 @@ export class TerminalManager {
     // Method 2: User exit commands (/exit, /quit)
     // ユーザーが明示的に終了コマンドを入力した場合も検知
     const lowerLine = cleanLine.toLowerCase();
-    const isUserExitCommand = 
+    const isUserExitCommand =
       lowerLine === '/exit' ||
       lowerLine === '/quit' ||
       lowerLine === 'exit' ||
       lowerLine === 'quit';
 
     if (isUserExitCommand) {
-      log(`✅ [TERMINATION-SUCCESS] User exit command detected - CLI Agent will terminate for terminal ${terminalId}`);
+      log(
+        `✅ [TERMINATION-SUCCESS] User exit command detected - CLI Agent will terminate for terminal ${terminalId}`
+      );
       // 注意: 実際の終了はシェルプロンプトの表示で確認されるまで待つ場合もある
       this._setAgentTerminated(terminalId);
       return true;
@@ -882,23 +941,13 @@ export class TerminalManager {
       /^[$>#]\s*$/,
     ];
 
-    // Debug: Log the patterns being tested
-    const matched = shellPromptPatterns.some((pattern, index) => {
-      const result = pattern.test(cleanLine);
-      if (result) {
-        log(`✅ [DEBUG] Shell prompt matched pattern ${index}: ${pattern.source}`);
-      }
-      return result;
-    });
+    // 🚨 OPTIMIZATION 6: Simplified shell prompt detection logging
+    const matched = shellPromptPatterns.some((pattern) => pattern.test(cleanLine));
 
     if (matched) {
-      log(`✅ [DEBUG] Shell prompt detected: "${cleanLine}"`);
-    } else {
-      log(`❌ [DEBUG] No shell prompt match for: "${cleanLine}" (length: ${cleanLine.length})`);
-      // Debug: Show character codes
-      const charCodes = Array.from(cleanLine).map(c => `${c}(${c.charCodeAt(0)})`).join(' ');
-      log(`❌ [DEBUG] Character breakdown: ${charCodes}`);
+      log(`✅ [SHELL-PROMPT] Detected: "${cleanLine}"`);
     }
+    // Removed excessive debug logging for non-matches to reduce noise
 
     return matched;
   }
@@ -930,6 +979,8 @@ export class TerminalManager {
    * Detect Claude Code startup patterns
    */
   private _detectClaudeCodeStartup(cleanLine: string): boolean {
+    const line = cleanLine.toLowerCase();
+    
     return (
       cleanLine.includes('Welcome to Claude Code!') ||
       cleanLine.includes('Claude Opus') ||
@@ -944,13 +995,25 @@ export class TerminalManager {
       cleanLine.includes('anthropic claude') ||
       cleanLine.includes('Powered by Claude') ||
       cleanLine.includes('CLI tool for Claude') ||
+      // Enhanced patterns for Claude Code detection
+      line.includes('claude code') ||
+      line.includes('claude-code') ||
+      line.includes('anthropic/claude') ||
+      line.includes('claude cli') ||
+      line.includes('claude-cli') ||
+      // Model-specific patterns
+      line.includes('claude-3') ||
+      line.includes('claude 3') ||
+      (line.includes('anthropic') && line.includes('assistant')) ||
       // Generic activation patterns
-      (cleanLine.toLowerCase().includes('claude') &&
-        (cleanLine.includes('activated') ||
-          cleanLine.includes('connected') ||
-          cleanLine.includes('ready') ||
-          cleanLine.includes('started') ||
-          cleanLine.includes('available')))
+      (line.includes('claude') &&
+        (line.includes('activated') ||
+          line.includes('connected') ||
+          line.includes('ready') ||
+          line.includes('started') ||
+          line.includes('available') ||
+          line.includes('launched') ||
+          line.includes('initialized')))
     );
   }
 
@@ -991,49 +1054,52 @@ export class TerminalManager {
       line.includes('gemini-1.5-pro') ||
       line.includes('gemini-pro') ||
       line.includes('gemini flash') ||
-      
       // File and documentation patterns
       line.includes('gemini.md') ||
       line.includes('tips for getting started') ||
-      
       // Company/service patterns
       line.includes('google ai') ||
       line.includes('google generative ai') ||
       line.includes('gemini api') ||
       line.includes('ai studio') ||
       line.includes('vertex ai') ||
-      
       // Prompt patterns
       line.includes('gemini>') ||
       line.includes('gemini $') ||
       line.includes('gemini #') ||
       line.includes('gemini:') ||
-      
       // Banner patterns (enhanced)
       (line.includes('█') && line.includes('gemini')) ||
       (line.includes('*') && line.includes('gemini') && line.includes('*')) ||
       (line.includes('=') && line.includes('gemini') && line.includes('=')) ||
-      
       // Command execution confirmation
       line.includes('gemini --help') ||
       line.includes('gemini chat') ||
       line.includes('gemini code') ||
       line.includes('gemini repl') ||
       line.includes('gemini interactive') ||
-      
       // Startup messages
       line.includes('gemini cli starting') ||
       line.includes('gemini session started') ||
       line.includes('connecting to gemini') ||
       line.includes('gemini model loaded') ||
-      
       // Authentication patterns
       line.includes('gemini authenticated') ||
       line.includes('gemini login successful') ||
-      
       // Additional model patterns
       line.includes('using gemini') ||
-      (line.includes('model:') && line.includes('gemini'))
+      (line.includes('model:') && line.includes('gemini')) ||
+      // Enhanced simple patterns
+      line.includes('gemini-exp') ||
+      line.includes('gemini experimental') ||
+      line.includes('gemini-thinking') ||
+      // Common startup indicators
+      (line.includes('google') && line.includes('ai') && line.includes('gemini')) ||
+      // Direct command execution patterns
+      line.startsWith('gemini ') ||
+      line.startsWith('gemini>') ||
+      line.includes('> gemini') ||
+      line.includes('$ gemini')
     );
   }
 
@@ -1044,68 +1110,117 @@ export class TerminalManager {
     try {
       // === CLI AGENT STARTUP DETECTION ===
       if (data.includes('\r') || data.includes('\n')) {
-        const command = data.replace(/[\r\n]/g, '').trim().toLowerCase();
-        
+        const command = data
+          .replace(/[\r\n]/g, '')
+          .trim()
+          .toLowerCase();
+
         // Enhanced startup detection for both Claude and Gemini
-        if (command.startsWith('claude') || 
-            command.startsWith('gemini') ||
-            command.includes('claude-code') ||
-            command.includes('gemini code')) {
-          
+        if (
+          command.startsWith('claude') ||
+          command.startsWith('gemini') ||
+          command.includes('claude-code') ||
+          command.includes('claude code') ||
+          command.includes('gemini code') ||
+          command.includes('gemini-code') ||
+          // Additional common CLI patterns
+          command.includes('/claude') ||
+          command.includes('/gemini') ||
+          command.includes('./claude') ||
+          command.includes('./gemini') ||
+          command.includes('npx claude') ||
+          command.includes('npx gemini') ||
+          // Python execution patterns
+          command.includes('python claude') ||
+          command.includes('python gemini') ||
+          command.includes('python -m claude') ||
+          command.includes('python -m gemini') ||
+          // Node execution patterns
+          command.includes('node claude') ||
+          command.includes('node gemini')
+        ) {
+          // 🚨 CRITICAL: 仕様書準拠 - 既存のCONNECTED Agentがある場合の制御
+          const existingConnectedId = this._connectedAgentTerminalId;
+          const currentTerminalIsConnected = existingConnectedId === terminalId;
+
+          // Case 1: 同じターミナルで同じAgentの再起動 → 許可
+          // Case 2: 別のターミナルにCONNECTED Agentがある → 上書き（仕様書：Latest Takes Priority）
+          // Case 3: CONNECTED Agentがない → 許可
+
           let agentType: 'claude' | 'gemini';
-          
+
           if (command.includes('claude') || command.includes('claude-code')) {
             agentType = 'claude';
           } else {
             agentType = 'gemini';
           }
-          
-          log(`🚀 [CLI-AGENT] ${agentType} startup command detected from input: "${command}"`);
+
+          // 既存のCONNECTED Agentと同じタイプで同じターミナルの場合はスキップ
+          if (currentTerminalIsConnected && this._connectedAgentType === agentType) {
+            log(
+              `🔄 [CLI-AGENT] Same ${agentType} agent already connected in terminal ${terminalId}, skipping`
+            );
+            return;
+          }
+
+          log(
+            `🚀 [CLI-AGENT] ${agentType} startup command detected from input: "${command}" in terminal ${terminalId}`
+          );
+
+          // 仕様書準拠：Latest Takes Priority - 新しいAgentが最も最近開始されたものになる
+          if (existingConnectedId && existingConnectedId !== terminalId) {
+            log(
+              `📝 [CLI-AGENT] Switching CONNECTED status from terminal ${existingConnectedId} to ${terminalId} (Latest Takes Priority)`
+            );
+          } else if (!existingConnectedId) {
+            log(`🆕 [CLI-AGENT] First CLI Agent detected - setting ${terminalId} as CONNECTED`);
+          }
+
           this._setCurrentAgent(terminalId, agentType);
         }
-        
+
         // === CLI AGENT TERMINATION DETECTION FROM USER INPUT ===
-        // If a CLI agent is currently connected to this terminal, check for exit commands
+        // 現在CONNECTEDなTerminalでのみ終了コマンドを検知
         if (this._connectedAgentTerminalId === terminalId) {
-          const isExitCommand = 
+          const isExitCommand =
             // Standard exit commands
             command === '/exit' ||
             command === '/quit' ||
             command === 'exit' ||
             command === 'quit' ||
-            
             // Claude Code specific exit commands
             command === '/end' ||
             command === '/bye' ||
             command === '/goodbye' ||
-            
             // Gemini CLI specific exit commands (enhanced)
             command === '/stop' ||
             command === '/close' ||
             command === '/disconnect' ||
             command.startsWith('/exit') ||
             command.startsWith('/quit') ||
-            
             // Generic termination commands
             command === 'q' ||
             command === ':q' || // vim-style
             command === ':quit' ||
             command === ':exit' ||
-            
             // Additional AI CLI patterns
-            command === '/clear' && command.includes('exit') ||
+            (command === '/clear' && command.includes('exit')) ||
             command === 'ctrl+c' ||
             command === 'ctrl-c';
-            
+
           if (isExitCommand) {
-            log(`🔚 [CLI-AGENT] Exit command detected from user input: "${command}" in terminal ${terminalId}`);
+            log(
+              `🔚 [CLI-AGENT] Exit command detected from user input: "${command}" in terminal ${terminalId}`
+            );
             // Mark for termination detection (will be confirmed when CLI agent actually exits)
             // Set a flag or timer to check for actual termination
             setTimeout(() => {
               // Give the CLI agent time to process the exit command and actually terminate
               // Then check if it's still connected and force termination if needed
               if (this._connectedAgentTerminalId === terminalId) {
-                log(`🔚 [CLI-AGENT] Forcing termination after exit command timeout for terminal ${terminalId}`);
+                log(
+                  `🔚 [CLI-AGENT] Forcing termination after exit command timeout for terminal ${terminalId}`
+                );
                 this._setAgentTerminated(terminalId);
               }
             }, 2000); // 2 second timeout for CLI agent to actually exit
@@ -1143,11 +1258,11 @@ export class TerminalManager {
     this._connectedAgentTerminalId = terminalId;
     this._connectedAgentType = type;
 
-    // 1. 前にconnectedだったターミナルを先にdisconnectedにする
+    // 1. 前にconnectedだったターミナルをDISCONNECTEDにする（仕様書準拠）
     if (previousConnectedId && previousConnectedId !== terminalId) {
       const previousTerminal = this._terminals.get(previousConnectedId);
       if (previousTerminal) {
-        // Disconnecting previous terminal
+        // 仕様書準拠: 前のCONNECTEDターミナルは DISCONNECTED になる
         this._onCliAgentStatusChange.fire({
           terminalId: previousConnectedId,
           status: 'disconnected',
@@ -1171,30 +1286,29 @@ export class TerminalManager {
    * ANSIエスケープシーケンスを完全に除去
    */
   private _cleanAnsiEscapeSequences(text: string): string {
-    return text
-      // 基本的なANSIエスケープシーケンス（色、カーソル移動等）
-      .replace(/\x1b\[[0-9;]*[A-Za-z]/g, '')
-      // OSCシーケンス（ウィンドウタイトル設定等）
-      .replace(/\x1b\][0-9];[^\x07]*\x07/g, '')
-      // エスケープシーケンス終了
-      .replace(/\x1b\\/g, '')
-      // キャリッジリターン除去
-      .replace(/\r/g, '')
-      // プライベートモード設定
-      .replace(/\x1b\?[0-9]*[hl]/g, '')
-      // アプリケーション/通常キーパッド
-      .replace(/\x1b[=>]/g, '')
-      // 制御文字を除去
-      .replace(/[\x00-\x1F\x7F]/g, '')
-      .trim();
+    return (
+      text
+        // 基本的なANSIエスケープシーケンス（色、カーソル移動等）
+        // eslint-disable-next-line no-control-regex
+        .replace(/\x1b\[[0-9;]*[A-Za-z]/g, '')
+        // OSCシーケンス（ウィンドウタイトル設定等）
+        // eslint-disable-next-line no-control-regex
+        .replace(/\x1b\][0-9];[^\x07]*\x07/g, '')
+        // エスケープシーケンス終了
+        // eslint-disable-next-line no-control-regex
+        .replace(/\x1b\\/g, '')
+        // キャリッジリターン除去
+        .replace(/\r/g, '')
+        // プライベートモード設定
+        // eslint-disable-next-line no-control-regex
+        .replace(/\x1b\?[0-9]*[hl]/g, '')
+        // アプリケーション/通常キーパッド
+        // eslint-disable-next-line no-control-regex
+        .replace(/\x1b[=>]/g, '')
+        // 制御文字を除去
+        // eslint-disable-next-line no-control-regex
+        .replace(/[\x00-\x1F\x7F]/g, '')
+        .trim()
+    );
   }
-
-
-
-
-
-
-
-
-
 }

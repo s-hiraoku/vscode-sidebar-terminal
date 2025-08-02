@@ -310,19 +310,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
             log('🧪 [DEBUG] Test message content:', message);
             log('🧪 [DEBUG] WebView communication is working!');
 
-            // Send a test CLI Agent status update immediately
-            log('🧪 [DEBUG] Sending test CLI Agent status update...');
-            this.sendCliAgentStatusUpdate('Terminal 1', 'connected');
-
-            setTimeout(() => {
-              log('🧪 [DEBUG] Sending test CLI Agent status update (disconnected)...');
-              this.sendCliAgentStatusUpdate('Terminal 1', 'disconnected');
-            }, 2000);
-
-            setTimeout(() => {
-              log('🧪 [DEBUG] Sending test CLI Agent status update (none)...');
-              this.sendCliAgentStatusUpdate(null, 'none');
-            }, 4000);
+            // Test mode CLI Agent status updates removed to prevent duplicate status displays
           }
           break;
 
@@ -708,17 +696,12 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         console.log('[DEBUG] Received CLI Agent status change:', event);
         const terminal = this._terminalManager.getTerminal(event.terminalId);
 
-        if (terminal && event.status === 'connected') {
-          // CLI Agent connected
-          console.log('[DEBUG] Sending connected status to WebView:', terminal.name, event.type);
-          this.sendCliAgentStatusUpdate(terminal.name, 'connected', event.type);
-        } else if (terminal && event.status === 'disconnected') {
-          // CLI Agent disconnected
-          console.log('[DEBUG] Sending disconnected status to WebView:', terminal.name, event.type);
-          this.sendCliAgentStatusUpdate(terminal.name, 'disconnected', event.type);
-        } else {
-          // CLI Agent none
-          console.log('[DEBUG] Sending none status to WebView');
+        // Since CliAgentTerminalTracker is disabled, handle status updates here
+        if (terminal) {
+          console.log('[DEBUG] Sending CLI Agent status update:', terminal.name, event.status, event.type);
+          this.sendCliAgentStatusUpdate(terminal.name, event.status, event.type);
+        } else if (event.status === 'none') {
+          console.log('[DEBUG] Sending CLI Agent none status');
           this.sendCliAgentStatusUpdate(null, 'none', null);
         }
       } catch (error) {

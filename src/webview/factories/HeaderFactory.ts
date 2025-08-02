@@ -212,15 +212,12 @@ export class HeaderFactory {
     // 既存のstatus要素を削除
     HeaderFactory.removeCliAgentStatus(elements);
 
-    // Agent type based display text
-    const agentDisplayName = agentType
-      ? agentType === 'claude'
-        ? 'CLAUDE Code'
-        : 'GEMINI Cli'
-      : 'AI Agent';
+    // 🚨 UNIFIED STATUS: Always use "AI Agent" to prevent flickering
+    // User requested: "ステータス表示を'AI Agent'で統一しチカチカを防止"
+    const agentDisplayName = 'AI Agent';
 
     const statusText =
-      status === 'connected' ? `${agentDisplayName} connected` : `${agentDisplayName} disconnected`;
+      status === 'connected' ? `${agentDisplayName} Connected` : `${agentDisplayName} Disconnected`;
     const isConnected = status === 'connected';
 
     // ステータステキスト
@@ -232,7 +229,7 @@ export class HeaderFactory {
       },
       {
         textContent: statusText,
-        className: 'claude-status',
+        className: 'ai-agent-status', // Renamed from claude-status to ai-agent-status
       }
     );
 
@@ -247,7 +244,7 @@ export class HeaderFactory {
       },
       {
         textContent: '●',
-        className: 'claude-indicator',
+        className: 'ai-agent-indicator', // Renamed from claude-indicator to ai-agent-indicator
       }
     );
 
@@ -258,7 +255,7 @@ export class HeaderFactory {
     elements.statusSpan = statusSpan;
     elements.indicator = indicator;
 
-    log(`✅ [HeaderFactory] Inserted CLI Agent status: ${status}`);
+    log(`✅ [HeaderFactory] Inserted unified AI Agent status: ${status} (type: ${agentType || 'unknown'})`);
   }
 
   /**

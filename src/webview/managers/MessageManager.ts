@@ -335,15 +335,15 @@ export class MessageManager implements IMessageManager {
     if (data && terminalId) {
       const terminal = coordinator.getTerminalInstance(terminalId);
       if (terminal) {
-        // デバッグ: 出力データの詳細をログ
-        console.log(`🔍 [WEBVIEW] Terminal output debug:`, {
-          terminalId,
-          dataLength: data.length,
-          dataPreview: data.substring(0, 100),
-          containsGeminiPattern: data.includes('Gemini') || data.includes('gemini'),
-          hasEscapeSequences: data.includes('\x1b'),
-          rawData: JSON.stringify(data.substring(0, 50)),
-        });
+        // 🚨 OPTIMIZATION 8: Reduced debug logging - only log significant CLI agent patterns
+        if (data.length > 2000 && (data.includes('Gemini') || data.includes('gemini') || data.includes('Claude'))) {
+          console.log(`🔍 [WEBVIEW] CLI Agent output detected:`, {
+            terminalId,
+            dataLength: data.length,
+            containsGeminiPattern: data.includes('Gemini') || data.includes('gemini'),
+            containsClaudePattern: data.includes('Claude') || data.includes('claude'),
+          });
+        }
 
         // Write directly to terminal (performance manager would handle buffering in a full implementation)
         terminal.terminal.write(data);
@@ -531,55 +531,57 @@ export class MessageManager implements IMessageManager {
     msg: MessageCommand,
     coordinator: IManagerCoordinator
   ): void {
-    log(`📨 [MESSAGE] ========== CLAUDE STATUS UPDATE MESSAGE RECEIVED ==========`);
-    log(`📨 [MESSAGE] Message received at: ${new Date().toISOString()}`);
-    log(`📨 [MESSAGE] Full message received: ${JSON.stringify(msg, null, 2)}`);
-    log(`📨 [MESSAGE] Message command: ${msg.command}`);
-    log(`📨 [MESSAGE] Message cliAgentStatus: ${JSON.stringify(msg.cliAgentStatus)}`);
-    log(`📨 [MESSAGE] Message cliAgentStatus type: ${typeof msg.cliAgentStatus}`);
+    log(`📨 [MESSAGE] CLI Agent Status Update received`);
 
     const cliAgentStatus = msg.cliAgentStatus;
     if (cliAgentStatus) {
-      log(`🔄 [MESSAGE] Claude status data found:`);
       log(
-        `🔄 [MESSAGE]   - activeTerminalName: "${cliAgentStatus.activeTerminalName}" (${typeof cliAgentStatus.activeTerminalName})`
-      );
-      log(`🔄 [MESSAGE]   - status: "${cliAgentStatus.status}" (${typeof cliAgentStatus.status})`);
-      log(`🔄 [MESSAGE] About to call coordinator.updateClaudeStatus...`);
-      log(`🔄 [MESSAGE] Coordinator available: ${!!coordinator}`);
-      log(`🔄 [MESSAGE] Coordinator type: ${typeof coordinator}`);
-      log(
-        `🔄 [MESSAGE] Coordinator.updateClaudeStatus method: ${typeof coordinator.updateClaudeStatus}`
+        `🔄 [MESSAGE] Processing status update: ${cliAgentStatus.status} for ${cliAgentStatus.activeTerminalName}`
       );
 
       try {
-        const result = coordinator.updateClaudeStatus(
-          cliAgentStatus.activeTerminalName,
-          cliAgentStatus.status,
+        // Use the new centralized CLI agent status management system
+        // Extract terminal ID from terminal name (e.g., "Terminal 1" -> "1")
+        const terminalId = cliAgentStatus.activeTerminalName?.replace('Terminal ', '') || '1';
+
+        // Map legacy status to new status format
+        const mappedStatus = this.mapLegacyStatus(cliAgentStatus.status);
+
+        // Call the centralized status management method
+        coordinator.updateCliAgentStatus(
+          terminalId,
+          mappedStatus,
           cliAgentStatus.agentType || null
         );
+
         log(
-          `✅ [MESSAGE] coordinator.updateClaudeStatus called successfully, result: ${String(result)}`
+          `✅ [MESSAGE] CLI Agent status updated successfully: ${mappedStatus} for terminal ${terminalId}`
         );
       } catch (error) {
-        log(`❌ [MESSAGE] Error calling coordinator.updateClaudeStatus:`, error);
-        log(`❌ [MESSAGE] Error name: ${error instanceof Error ? error.name : 'unknown'}`);
-        log(
-          `❌ [MESSAGE] Error message: ${error instanceof Error ? error.message : String(error)}`
-        );
-        log(`❌ [MESSAGE] Error stack: ${error instanceof Error ? error.stack : 'no stack'}`);
+        log(`❌ [MESSAGE] Error updating CLI Agent status:`, error);
       }
     } else {
-      log('⚠️ [MESSAGE] No Claude status data in cliAgentStatusUpdate message');
-      log(`⚠️ [MESSAGE] Message keys: ${Object.keys(msg).join(', ')}`);
-      log(`⚠️ [MESSAGE] Message properties check:`);
-      for (const [key, value] of Object.entries(msg)) {
-        log(`⚠️ [MESSAGE]   - ${key}: ${JSON.stringify(value)} (${typeof value})`);
-      }
-      log(`⚠️ [MESSAGE] Full message structure: ${JSON.stringify(msg, null, 2)}`);
+      log('⚠️ [MESSAGE] No CLI Agent status data in message');
     }
+  }
 
-    log(`📨 [MESSAGE] ========== CLAUDE STATUS UPDATE PROCESSING COMPLETE ==========`);
+  /**
+   * Map legacy status values to new status format
+   */
+  private mapLegacyStatus(legacyStatus: string): 'connected' | 'disconnected' | 'none' {
+    switch (legacyStatus.toLowerCase()) {
+      case 'connected':
+        return 'connected';
+      case 'disconnected':
+        return 'disconnected';
+      case 'none':
+      case 'inactive':
+      case 'terminated':
+        return 'none';
+      default:
+        log(`⚠️ [MESSAGE] Unknown legacy status: ${legacyStatus}, defaulting to 'none'`);
+        return 'none';
+    }
   }
 
   /**

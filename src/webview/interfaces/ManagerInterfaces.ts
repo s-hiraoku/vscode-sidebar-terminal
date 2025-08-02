@@ -41,9 +41,15 @@ export interface IManagerCoordinator {
   // 新しいアーキテクチャ: 状態更新処理
   updateState?(state: unknown): void;
   handleTerminalRemovedFromExtension?(terminalId: string): void;
-  // Claude状態管理
+  // Claude状態管理（レガシー）
   updateClaudeStatus(
     activeTerminalName: string | null,
+    status: 'connected' | 'disconnected' | 'none',
+    agentType: string | null
+  ): void;
+  // 新しい一元管理CLI Agent状態管理
+  updateCliAgentStatus(
+    terminalId: string,
     status: 'connected' | 'disconnected' | 'none',
     agentType: string | null
   ): void;
