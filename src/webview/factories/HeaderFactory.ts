@@ -263,7 +263,7 @@ export class HeaderFactory {
    */
   public static removeCliAgentStatus(elements: TerminalHeaderElements): void {
     const statusElements = elements.statusSection.querySelectorAll(
-      '.claude-status, .claude-indicator'
+      '.claude-status, .claude-indicator, .ai-agent-status, .ai-agent-indicator'
     );
     statusElements.forEach((element) => element.remove());
 
@@ -271,7 +271,7 @@ export class HeaderFactory {
     elements.statusSpan = null;
     elements.indicator = null;
 
-    log(`🧹 [HeaderFactory] Removed CLI Agent status elements`);
+    log(`🧹 [HeaderFactory] Removed CLI Agent status elements (updated selector)`);
   }
 
   /**
