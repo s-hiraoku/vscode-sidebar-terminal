@@ -39,6 +39,19 @@ export class TerminalManager {
   // CLI Agent 状態管理（超シンプル）
   private _connectedAgentTerminalId: string | null = null;
   private _connectedAgentType: 'claude' | 'gemini' | null = null;
+  // DISCONNECTED Agent tracking for automatic promotion
+  private _disconnectedAgents = new Map<
+    string,
+    {
+      type: 'claude' | 'gemini';
+      startTime: Date;
+      terminalName?: string;
+    }
+  >();
+
+  // Timeout-based termination detection
+  private _agentTimeoutChecks = new Map<string, NodeJS.Timeout>();
+  private readonly AGENT_TIMEOUT_MS = 10000; // 10 seconds of inactivity = considered terminated
   private readonly _onCliAgentStatusChange = new vscode.EventEmitter<{
     terminalId: string;
     status: 'connected' | 'disconnected' | 'none';
@@ -539,6 +552,13 @@ export class TerminalManager {
     // 🚨 OPTIMIZATION: Clear detection cache
     this._detectionCache.clear();
 
+    // Clear all timeout checks
+    for (const [terminalId, timeout] of this._agentTimeoutChecks.entries()) {
+      clearTimeout(timeout);
+      log(`⏰ [CLEANUP] Cleared timeout check for terminal ${terminalId}`);
+    }
+    this._agentTimeoutChecks.clear();
+
     // Dispose CLI Agent integration manager
     this._connectedAgentTerminalId = null;
     this._connectedAgentType = null;
@@ -841,12 +861,27 @@ export class TerminalManager {
         // === TERMINATION DETECTION ===
         // 現在CONNECTEDなTerminalでのみ終了検知を実行
         if (this._connectedAgentTerminalId === terminalId) {
+          log(
+            `🔍 [TERMINATION-CHECK] Checking line for termination: "${fullyCleanLine}" in connected terminal ${terminalId}`
+          );
           if (this._detectCliAgentTermination(terminalId, fullyCleanLine)) {
             log(
               `🔺 [CLI-AGENT] Termination detected from output: "${fullyCleanLine}" in terminal ${terminalId}`
             );
             return; // Exit early if termination detected
           }
+        } else {
+          // Log when termination check is skipped
+          if (fullyCleanLine.length > 5) {
+            log(
+              `⏭️ [TERMINATION-SKIP] Skipping termination check for terminal ${terminalId} (connected: ${this._connectedAgentTerminalId}): "${fullyCleanLine}"`
+            );
+          }
+        }
+
+        // Reset timeout if this is the connected terminal and it shows activity
+        if (this._connectedAgentTerminalId === terminalId && fullyCleanLine.length > 5) {
+          this._resetAgentTimeoutCheck(terminalId);
         }
 
         // === STARTUP DETECTION ===
@@ -854,7 +889,10 @@ export class TerminalManager {
         // Both input-based and output-based detection should work
         if (this._detectClaudeCodeStartup(fullyCleanLine)) {
           // Check if already detected to prevent duplicate logging
-          if (this._connectedAgentTerminalId !== terminalId || this._connectedAgentType !== 'claude') {
+          if (
+            this._connectedAgentTerminalId !== terminalId ||
+            this._connectedAgentType !== 'claude'
+          ) {
             log(
               `🚀 [CLI-AGENT] Claude Code startup detected from output: "${fullyCleanLine}" in terminal ${terminalId}`
             );
@@ -865,7 +903,10 @@ export class TerminalManager {
 
         if (this._detectGeminiCliStartup(fullyCleanLine)) {
           // Check if already detected to prevent duplicate logging
-          if (this._connectedAgentTerminalId !== terminalId || this._connectedAgentType !== 'gemini') {
+          if (
+            this._connectedAgentTerminalId !== terminalId ||
+            this._connectedAgentType !== 'gemini'
+          ) {
             log(
               `🚀 [CLI-AGENT] Gemini CLI startup detected from output: "${fullyCleanLine}" in terminal ${terminalId}`
             );
@@ -884,12 +925,10 @@ export class TerminalManager {
    * Detect CLI Agent termination based on shell prompt return and exit patterns
    */
   private _detectCliAgentTermination(terminalId: string, cleanLine: string): boolean {
-    // シンプルな終了判定: シェルプロンプトが表示されたら CLI エージェントは終了している
+    log(`🔍 [TERMINATION-ENTRY] Checking termination for line: "${cleanLine}"`);
 
     // Method 1: Shell prompt detection (primary method)
-    // シェルプロンプトが表示されたら CLI エージェントは確実に終了している
     const isShellPrompt = this._detectShellPromptReturn(cleanLine);
-
     if (isShellPrompt) {
       log(
         `✅ [TERMINATION-SUCCESS] Shell prompt detected - CLI Agent terminated for terminal ${terminalId}`
@@ -898,8 +937,7 @@ export class TerminalManager {
       return true;
     }
 
-    // Method 2: User exit commands (/exit, /quit)
-    // ユーザーが明示的に終了コマンドを入力した場合も検知
+    // Method 2: User exit commands
     const lowerLine = cleanLine.toLowerCase();
     const isUserExitCommand =
       lowerLine === '/exit' ||
@@ -911,11 +949,54 @@ export class TerminalManager {
       log(
         `✅ [TERMINATION-SUCCESS] User exit command detected - CLI Agent will terminate for terminal ${terminalId}`
       );
-      // 注意: 実際の終了はシェルプロンプトの表示で確認されるまで待つ場合もある
       this._setAgentTerminated(terminalId);
       return true;
     }
 
+    // Method 3: Explicit CLI Agent termination messages
+    const terminationMessages = [
+      'goodbye',
+      'bye',
+      'exiting',
+      'session ended',
+      'conversation ended',
+      'claude code session ended',
+      'gemini session ended',
+      'thanks for using',
+      'until next time',
+      'session complete',
+    ];
+
+    const hasTerminationMessage = terminationMessages.some((msg) => lowerLine.includes(msg));
+
+    if (hasTerminationMessage) {
+      log(
+        `✅ [TERMINATION-SUCCESS] Termination message detected - CLI Agent terminated for terminal ${terminalId}: "${cleanLine}"`
+      );
+      // Don't terminate immediately for termination messages, wait for shell prompt
+      // But mark it for faster termination detection
+      return false; // Let shell prompt detection handle the actual termination
+    }
+
+    // Method 4: Check for process exit indicators
+    const processExitIndicators = [
+      'process exited',
+      'command finished',
+      'task completed',
+      'execution finished',
+    ];
+
+    const hasProcessExit = processExitIndicators.some((indicator) => lowerLine.includes(indicator));
+
+    if (hasProcessExit) {
+      log(
+        `✅ [TERMINATION-SUCCESS] Process exit detected - CLI Agent terminated for terminal ${terminalId}: "${cleanLine}"`
+      );
+      this._setAgentTerminated(terminalId);
+      return true;
+    }
+
+    log(`❌ [TERMINATION-NONE] No termination detected for: "${cleanLine}"`);
     return false;
   }
 
@@ -925,31 +1006,112 @@ export class TerminalManager {
   private _detectShellPromptReturn(cleanLine: string): boolean {
     // Look for common shell prompt patterns that appear after CLI tools exit
     const shellPromptPatterns = [
-      // Standard bash/zsh prompts
-      /^[\w.-]+[@:].*[$>#]\s*$/,
-      // Oh My Zsh themes - arrow character
+      // Very specific patterns first
+      // Standard bash/zsh prompts with username@hostname
+      /^[\w.-]+@[\w.-]+:.*[$%]\s*$/,
+      /^[\w.-]+@[\w.-]+\s+.*[$%#>]\s*$/,
+
+      // Oh My Zsh themes with symbols
       /^➜\s+[\w.-]+/,
-      // Starship prompt - triangle character (❯)
+      /^[➜▶⚡]\s+[\w.-]+/,
+
+      // Starship prompt variations
       /^❯\s*$/,
-      // Starship prompt - triangle character with trailing space
-      /^❯\s+$/,
-      // PowerShell
-      /^PS\s+[\w:\\>]+>/,
-      // Fish shell
+      /^❯\s+.*$/,
+
+      // Simple shell prompts
+      /^[$%#>]\s*$/,
+      /^\$\s*$/,
+      /^%\s*$/,
+      /^#\s*$/,
+      /^>\s*$/,
+
+      // PowerShell patterns
+      /^PS\s+.*>/,
+
+      // Fish shell patterns
       /^[\w.-]+\s+[\w/~]+>\s*$/,
-      // Simple prompts
-      /^[$>#]\s*$/,
+
+      // Box drawing character prompts (Oh-My-Zsh themes)
+      /^[╭┌]─[\w.-]+@[\w.-]+/,
+
+      // Python/conda environment prompts
+      /^\([\w.-]+\)\s+.*[$%#>]\s*$/,
+
+      // More flexible patterns for various shell configurations
+      /^[\w.-]+:\s*.*[$%#>]\s*$/,
+      /^\w+\s+.*[$%#>]\s*$/,
+      /^.*@.*:\s*.*\$\s*$/,
+
+      // Very broad fallback patterns (order matters - these come last)
+      /.*[$%]$/,
+      /.*#$/,
+      /.*>$/,
+
+      // Terminal-specific patterns that might indicate CLI tool exit
+      /^Last login:/,
+      /^.*logout.*$/i,
+      /^.*session.*ended.*$/i,
+
+      // Even more generic - any line that looks like a prompt (DANGEROUS but necessary)
+      /^[^\s]+[$%#>]\s*$/,
+      /^[^\s]+\s+[^\s]+[$%#>]\s*$/,
     ];
 
-    // 🚨 OPTIMIZATION 6: Simplified shell prompt detection logging
-    const matched = shellPromptPatterns.some((pattern) => pattern.test(cleanLine));
+    // 🚨 CRITICAL DEBUG: Log ALL non-empty lines to understand actual terminal output
+    if (cleanLine.trim().length > 0) {
+      log(`🔍 [SHELL-PROMPT-DEBUG] Processing line: "${cleanLine}" (length: ${cleanLine.length})`);
+
+      // Show which patterns this line is being tested against
+      if (
+        cleanLine.includes('$') ||
+        cleanLine.includes('%') ||
+        cleanLine.includes('#') ||
+        cleanLine.includes('>')
+      ) {
+        log(`🔍 [SHELL-PROMPT-DEBUG] Line contains prompt symbols: $ % # >`);
+      }
+    }
+
+    const matched = shellPromptPatterns.some((pattern, index) => {
+      const result = pattern.test(cleanLine);
+      if (result) {
+        log(`✅ [SHELL-PROMPT] Pattern ${index} matched: ${pattern} for line: "${cleanLine}"`);
+      }
+      return result;
+    });
 
     if (matched) {
-      log(`✅ [SHELL-PROMPT] Detected: "${cleanLine}"`);
+      log(`✅ [SHELL-PROMPT] TERMINATION DETECTED: "${cleanLine}"`);
+    } else if (cleanLine.trim().length > 0 && cleanLine.trim().length < 200) {
+      log(`❌ [SHELL-PROMPT] NO MATCH: "${cleanLine}"`);
     }
-    // Removed excessive debug logging for non-matches to reduce noise
 
     return matched;
+  }
+
+  /**
+   * Force check for shell prompt by sending empty command and monitoring response
+   */
+  private _forcePromptCheck(terminalId: string): void {
+    const terminal = this._terminals.get(terminalId);
+    if (!terminal) return;
+
+    log(
+      `🔍 [FORCE-PROMPT] Sending empty command to force prompt display for terminal ${terminalId}`
+    );
+
+    // Send empty command to trigger prompt display
+    setTimeout(() => {
+      try {
+        const ptyInstance = terminal.ptyProcess || terminal.pty;
+        if (ptyInstance && ptyInstance.write) {
+          ptyInstance.write('\r'); // Send carriage return to trigger prompt
+        }
+      } catch (error) {
+        log(`❌ [FORCE-PROMPT] Error sending prompt trigger: ${error}`);
+      }
+    }, 100); // Small delay to let CLI agent finish
   }
 
   /**
@@ -959,9 +1121,29 @@ export class TerminalManager {
     if (this._connectedAgentTerminalId === terminalId) {
       const agentType = this._connectedAgentType;
 
+      // Clear timeout check for this terminal
+      this._clearAgentTimeoutCheck(terminalId);
+
       // Clear the connected agent
       this._connectedAgentTerminalId = null;
       this._connectedAgentType = null;
+
+      // Fire status change to 'none' for the terminated agent
+      this._onCliAgentStatusChange.fire({
+        terminalId,
+        status: 'none',
+        type: null,
+        terminalName: this._terminals.get(terminalId)?.name,
+      });
+
+      console.log(`[CLI Agent] ${agentType} agent terminated in terminal: ${terminalId}`);
+
+      // 🚀 NEW: Automatic promotion logic - find most recent DISCONNECTED agent
+      this._promoteLatestDisconnectedAgent();
+    } else if (this._disconnectedAgents.has(terminalId)) {
+      // DISCONNECTED agent terminated - just remove from tracking
+      const agentInfo = this._disconnectedAgents.get(terminalId);
+      this._disconnectedAgents.delete(terminalId);
 
       // Fire status change to 'none'
       this._onCliAgentStatusChange.fire({
@@ -971,7 +1153,56 @@ export class TerminalManager {
         terminalName: this._terminals.get(terminalId)?.name,
       });
 
-      console.log(`[CLI Agent] ${agentType} agent terminated in terminal: ${terminalId}`);
+      log(
+        `🗑️ [AUTO-PROMOTION] DISCONNECTED agent ${agentInfo?.type} terminated in terminal: ${terminalId}`
+      );
+    }
+  }
+
+  /**
+   * 🚀 NEW: Promote the most recently started DISCONNECTED agent to CONNECTED
+   * According to specification: "Priority: The most recently started DISCONNECTED agent becomes CONNECTED"
+   */
+  private _promoteLatestDisconnectedAgent(): void {
+    if (this._disconnectedAgents.size === 0) {
+      log('ℹ️ [AUTO-PROMOTION] No DISCONNECTED agents to promote');
+      return;
+    }
+
+    // Find the most recently started DISCONNECTED agent
+    let latestAgent: {
+      terminalId: string;
+      info: { type: 'claude' | 'gemini'; startTime: Date; terminalName?: string };
+    } | null = null;
+
+    for (const [terminalId, info] of this._disconnectedAgents.entries()) {
+      if (!latestAgent || info.startTime > latestAgent.info.startTime) {
+        latestAgent = { terminalId, info };
+      }
+    }
+
+    if (latestAgent) {
+      const { terminalId, info } = latestAgent;
+
+      // Remove from disconnected tracking
+      this._disconnectedAgents.delete(terminalId);
+
+      // Set as new CONNECTED agent
+      this._connectedAgentTerminalId = terminalId;
+      this._connectedAgentType = info.type;
+
+      // Fire status change to 'connected'
+      this._onCliAgentStatusChange.fire({
+        terminalId,
+        status: 'connected',
+        type: info.type,
+        terminalName: info.terminalName || this._terminals.get(terminalId)?.name,
+      });
+
+      log(
+        `🚀 [AUTO-PROMOTION] Promoted terminal ${terminalId} (${info.type}) from DISCONNECTED to CONNECTED (specification compliance)`
+      );
+      log(`📊 [AUTO-PROMOTION] Remaining DISCONNECTED agents: ${this._disconnectedAgents.size}`);
     }
   }
 
@@ -980,27 +1211,36 @@ export class TerminalManager {
    */
   private _detectClaudeCodeStartup(cleanLine: string): boolean {
     const line = cleanLine.toLowerCase();
-    
+
+    // 🚨 FIXED: Exclude permission messages and documentation mentions but allow legitimate startup patterns
+    if (
+      line.includes('may read') ||
+      line.includes('documentation is available') ||
+      line.includes('files are located')
+    ) {
+      return false;
+    }
+
     return (
       cleanLine.includes('Welcome to Claude Code!') ||
-      cleanLine.includes('Claude Opus') ||
-      cleanLine.includes('Claude Sonnet') ||
-      cleanLine.includes('Claude Haiku') ||
       cleanLine.includes('> Try "edit <filepath>') ||
-      cleanLine.includes('Anthropic') ||
-      cleanLine.includes('claude.ai') ||
-      cleanLine.includes('Claude Code') ||
       cleanLine.includes("I'm Claude") ||
       cleanLine.includes('I am Claude') ||
-      cleanLine.includes('anthropic claude') ||
       cleanLine.includes('Powered by Claude') ||
       cleanLine.includes('CLI tool for Claude') ||
-      // Enhanced patterns for Claude Code detection
-      line.includes('claude code') ||
-      line.includes('claude-code') ||
-      line.includes('anthropic/claude') ||
-      line.includes('claude cli') ||
-      line.includes('claude-cli') ||
+      // More specific startup patterns only
+      (line.includes('claude') && (line.includes('starting') || line.includes('initializing'))) ||
+      (line.includes('claude') && line.includes('ready')) ||
+      (line.includes('anthropic') && line.includes('claude')) ||
+      (line.includes('claude code') &&
+        (line.includes('starting') || line.includes('launched') || line.includes('welcome'))) ||
+      // Model-specific patterns - only if in startup context
+      (line.includes('claude sonnet') &&
+        (line.includes('ready') || line.includes('initialized') || line.includes('starting'))) ||
+      (line.includes('claude opus') &&
+        (line.includes('ready') || line.includes('initialized') || line.includes('starting'))) ||
+      (line.includes('claude haiku') &&
+        (line.includes('ready') || line.includes('initialized') || line.includes('starting'))) ||
       // Model-specific patterns
       line.includes('claude-3') ||
       line.includes('claude 3') ||
@@ -1023,25 +1263,28 @@ export class TerminalManager {
   private _detectGeminiCliStartup(cleanLine: string): boolean {
     const line = cleanLine.toLowerCase();
 
-    // Basic Gemini keyword check with enhanced patterns
+    // 🚨 FIXED: Exclude update notifications and other non-startup messages
+    if (
+      line.includes('update available') ||
+      line.includes('available!') ||
+      line.includes('model is available')
+    ) {
+      return false;
+    }
+
     if (line.includes('gemini')) {
-      // Gemini context indicators
+      // Specific startup context indicators only
       if (
-        line.includes('cli') ||
-        line.includes('code') ||
-        line.includes('chat') ||
-        line.includes('api') ||
-        line.includes('google') ||
-        line.includes('activated') ||
-        line.includes('connected') ||
-        line.includes('ready') ||
-        line.includes('started') ||
-        line.includes('available') ||
-        line.includes('welcome') ||
-        line.includes('help') ||
-        line.includes('initialized') ||
-        line.includes('launching') ||
-        line.includes('loading')
+        (line.includes('gemini cli') && (line.includes('starting') || line.includes('launched'))) ||
+        (line.includes('gemini') && line.includes('cli') && line.includes('ready')) ||
+        (line.includes('google') && line.includes('gemini') && line.includes('initialized')) ||
+        (line.includes('gemini') && line.includes('activated')) ||
+        (line.includes('gemini') && line.includes('connected') && line.includes('ready')) ||
+        (line.includes('gemini') && line.includes('started') && !line.includes('error')) ||
+        (line.includes('welcome') && line.includes('gemini')) ||
+        (line.includes('gemini') && line.includes('initialized')) ||
+        (line.includes('gemini') && line.includes('launching')) ||
+        (line.includes('gemini') && line.includes('loading') && !line.includes('error'))
       ) {
         return true;
       }
@@ -1233,6 +1476,54 @@ export class TerminalManager {
   }
 
   /**
+   * Start timeout-based termination detection for a CLI Agent
+   */
+  private _startAgentTimeoutCheck(terminalId: string): void {
+    // Clear any existing timeout for this terminal
+    this._clearAgentTimeoutCheck(terminalId);
+
+    log(
+      `⏰ [TIMEOUT-CHECK] Starting ${this.AGENT_TIMEOUT_MS}ms timeout check for terminal ${terminalId}`
+    );
+
+    const timeout = setTimeout(() => {
+      log(`⏰ [TIMEOUT-TRIGGER] CLI Agent timeout triggered for terminal ${terminalId}`);
+
+      // Check if agent is still connected and force termination
+      if (this._connectedAgentTerminalId === terminalId) {
+        log(
+          `🔚 [TIMEOUT-TERMINATION] Force terminating CLI Agent due to timeout in terminal ${terminalId}`
+        );
+        this._setAgentTerminated(terminalId);
+      }
+    }, this.AGENT_TIMEOUT_MS);
+
+    this._agentTimeoutChecks.set(terminalId, timeout);
+  }
+
+  /**
+   * Clear timeout check for a terminal
+   */
+  private _clearAgentTimeoutCheck(terminalId: string): void {
+    const timeout = this._agentTimeoutChecks.get(terminalId);
+    if (timeout) {
+      clearTimeout(timeout);
+      this._agentTimeoutChecks.delete(terminalId);
+      log(`⏰ [TIMEOUT-CLEAR] Cleared timeout check for terminal ${terminalId}`);
+    }
+  }
+
+  /**
+   * Reset timeout check (called when agent shows activity)
+   */
+  private _resetAgentTimeoutCheck(terminalId: string): void {
+    if (this._connectedAgentTerminalId === terminalId) {
+      log(`⏰ [TIMEOUT-RESET] Resetting timeout for active terminal ${terminalId}`);
+      this._startAgentTimeoutCheck(terminalId);
+    }
+  }
+
+  /**
    * 現在のCLI Agentを設定（すべてのターミナル状態を更新）
    */
   private _setCurrentAgent(terminalId: string, type: 'claude' | 'gemini'): void {
@@ -1258,10 +1549,20 @@ export class TerminalManager {
     this._connectedAgentTerminalId = terminalId;
     this._connectedAgentType = type;
 
+    // 🚀 NEW: Remove from disconnected agents if it was there
+    this._disconnectedAgents.delete(terminalId);
+
     // 1. 前にconnectedだったターミナルをDISCONNECTEDにする（仕様書準拠）
     if (previousConnectedId && previousConnectedId !== terminalId) {
       const previousTerminal = this._terminals.get(previousConnectedId);
-      if (previousTerminal) {
+      if (previousTerminal && previousType) {
+        // 🚀 NEW: Add previous CONNECTED agent to DISCONNECTED tracking
+        this._disconnectedAgents.set(previousConnectedId, {
+          type: previousType,
+          startTime: new Date(),
+          terminalName: previousTerminal.name,
+        });
+
         // 仕様書準拠: 前のCONNECTEDターミナルは DISCONNECTED になる
         this._onCliAgentStatusChange.fire({
           terminalId: previousConnectedId,
@@ -1269,6 +1570,10 @@ export class TerminalManager {
           type: previousType,
           terminalName: previousTerminal.name,
         });
+
+        log(
+          `📝 [AUTO-PROMOTION] Moved previous CONNECTED terminal ${previousConnectedId} to DISCONNECTED tracking`
+        );
       }
     }
 
@@ -1280,6 +1585,13 @@ export class TerminalManager {
       type,
       terminalName: terminal.name,
     });
+
+    log(
+      `🎯 [AUTO-PROMOTION] Set terminal ${terminalId} as CONNECTED (${type}). DISCONNECTED agents: ${this._disconnectedAgents.size}`
+    );
+
+    // Start timeout-based termination detection
+    this._startAgentTimeoutCheck(terminalId);
   }
 
   /**
