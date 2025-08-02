@@ -49,9 +49,10 @@ export class TerminalManager {
     }
   >();
 
-  // Timeout-based termination detection
-  private _agentTimeoutChecks = new Map<string, NodeJS.Timeout>();
-  private readonly AGENT_TIMEOUT_MS = 3000; // 3 seconds of inactivity = considered terminated (improved responsiveness)
+  // 🚨 REMOVED: Timeout-based termination detection (SPECIFICATION VIOLATION)
+  // Status changes must only occur when CLI Agents ACTUALLY terminate, not on timeouts
+  // private _agentTimeoutChecks = new Map<string, NodeJS.Timeout>();
+  // private readonly AGENT_TIMEOUT_MS = 3000;
   private readonly _onCliAgentStatusChange = new vscode.EventEmitter<{
     terminalId: string;
     status: 'connected' | 'disconnected' | 'none';
@@ -552,12 +553,8 @@ export class TerminalManager {
     // 🚨 OPTIMIZATION: Clear detection cache
     this._detectionCache.clear();
 
-    // Clear all timeout checks
-    for (const [terminalId, timeout] of this._agentTimeoutChecks.entries()) {
-      clearTimeout(timeout);
-      log(`⏰ [CLEANUP] Cleared timeout check for terminal ${terminalId}`);
-    }
-    this._agentTimeoutChecks.clear();
+    // 🚨 REMOVED: Timeout-based termination cleanup (SPECIFICATION VIOLATION)
+    // The specification states CLI Agent status changes must only occur when agents actually terminate
 
     // Dispose CLI Agent integration manager
     this._connectedAgentTerminalId = null;
@@ -797,7 +794,18 @@ export class TerminalManager {
    * - Early exit conditions
    */
   private _detectCliAgentOptimized(terminalId: string, data: string): void {
-    // 🚨 OPTIMIZATION 1: Debouncing - prevent rapid successive calls
+    // 🚨 CRITICAL FIX: Never skip termination detection for CONNECTED terminals
+    // Termination patterns like shell prompts must always be processed
+    const isConnectedTerminal = this._connectedAgentTerminalId === terminalId;
+    
+    if (isConnectedTerminal) {
+      // For CONNECTED terminals, always run detection (no debouncing or caching)
+      // This ensures termination detection is never missed
+      this._detectCliAgent(terminalId, data);
+      return;
+    }
+
+    // 🚨 OPTIMIZATION 1: Debouncing - prevent rapid successive calls (NON-CONNECTED terminals only)
     const now = Date.now();
     const cacheEntry = this._detectionCache.get(terminalId);
 
@@ -841,10 +849,10 @@ export class TerminalManager {
         // 完全なANSIエスケープシーケンスクリーニング
         const cleanLine = this._cleanAnsiEscapeSequences(trimmed);
 
-        // 追加のクリーニング：プロンプト記号とボックス文字を除去
+        // 追加のクリーニング：ボックス文字のみ除去
+        // 🚨 CRITICAL FIX: Do NOT remove shell prompt symbols ($#%>) for termination detection
         const fullyCleanLine = cleanLine
-          .replace(/^[>$#%]\s+/, '') // プロンプト記号を除去
-          .replace(/[│╭╰─╯]/g, '') // ボックス文字除去
+          .replace(/[│╭╰─╯]/g, '') // ボックス文字除去のみ
           .trim();
 
         // 🚨 OPTIMIZATION 4: Skip insignificant cleaned lines
@@ -879,38 +887,55 @@ export class TerminalManager {
           }
         }
 
-        // Reset timeout if this is the connected terminal and it shows activity
-        if (this._connectedAgentTerminalId === terminalId && fullyCleanLine.length > 5) {
-          this._resetAgentTimeoutCheck(terminalId);
-        }
+        // 🚨 REMOVED: Timeout reset on activity (SPECIFICATION VIOLATION)
+        // Status must only change when CLI Agents actually terminate, not on activity timeouts
 
         // === STARTUP DETECTION ===
-        // 🚨 CORRECTED: Allow startup detection in all terminals
-        // Both input-based and output-based detection should work
+        // 🚨 CRITICAL FIX: Prevent DISCONNECTED → CONNECTED promotion from old output
+        // Only allow startup detection in terminals that don't already have a DISCONNECTED agent
+        // This prevents focus-induced buffer flushes from incorrectly promoting DISCONNECTED agents
+        const isDisconnectedAgent = this._disconnectedAgents.has(terminalId);
+        
         if (this._detectClaudeCodeStartup(fullyCleanLine)) {
-          // Check if already detected to prevent duplicate logging
-          if (
-            this._connectedAgentTerminalId !== terminalId ||
-            this._connectedAgentType !== 'claude'
-          ) {
+          // 🚨 SPECIFICATION COMPLIANCE: Don't promote DISCONNECTED agents from old output
+          if (isDisconnectedAgent) {
             log(
-              `🚀 [CLI-AGENT] Claude Code startup detected from output: "${fullyCleanLine}" in terminal ${terminalId}`
+              `⏭️ [STARTUP-SKIP] Skipping Claude startup detection for DISCONNECTED agent in terminal ${terminalId}: "${fullyCleanLine}"`
             );
-            this._setCurrentAgent(terminalId, 'claude');
+            // Continue checking for termination, but don't promote to CONNECTED
+          } else {
+            // Check if already detected to prevent duplicate logging
+            if (
+              this._connectedAgentTerminalId !== terminalId ||
+              this._connectedAgentType !== 'claude'
+            ) {
+              log(
+                `🚀 [CLI-AGENT] Claude Code startup detected from output: "${fullyCleanLine}" in terminal ${terminalId}`
+              );
+              this._setCurrentAgent(terminalId, 'claude');
+            }
           }
           break;
         }
 
         if (this._detectGeminiCliStartup(fullyCleanLine)) {
-          // Check if already detected to prevent duplicate logging
-          if (
-            this._connectedAgentTerminalId !== terminalId ||
-            this._connectedAgentType !== 'gemini'
-          ) {
+          // 🚨 SPECIFICATION COMPLIANCE: Don't promote DISCONNECTED agents from old output
+          if (isDisconnectedAgent) {
             log(
-              `🚀 [CLI-AGENT] Gemini CLI startup detected from output: "${fullyCleanLine}" in terminal ${terminalId}`
+              `⏭️ [STARTUP-SKIP] Skipping Gemini startup detection for DISCONNECTED agent in terminal ${terminalId}: "${fullyCleanLine}"`
             );
-            this._setCurrentAgent(terminalId, 'gemini');
+            // Continue checking for termination, but don't promote to CONNECTED
+          } else {
+            // Check if already detected to prevent duplicate logging
+            if (
+              this._connectedAgentTerminalId !== terminalId ||
+              this._connectedAgentType !== 'gemini'
+            ) {
+              log(
+                `🚀 [CLI-AGENT] Gemini CLI startup detected from output: "${fullyCleanLine}" in terminal ${terminalId}`
+              );
+              this._setCurrentAgent(terminalId, 'gemini');
+            }
           }
           break;
         }
@@ -1121,8 +1146,8 @@ export class TerminalManager {
     if (this._connectedAgentTerminalId === terminalId) {
       const agentType = this._connectedAgentType;
 
-      // Clear timeout check for this terminal
-      this._clearAgentTimeoutCheck(terminalId);
+      // 🚨 REMOVED: Timeout check clearing (SPECIFICATION VIOLATION)
+      // Status changes must only occur when CLI Agents actually terminate
 
       // Clear the connected agent
       this._connectedAgentTerminalId = null;
@@ -1453,20 +1478,12 @@ export class TerminalManager {
 
           if (isExitCommand) {
             log(
-              `🔚 [CLI-AGENT] Exit command detected from user input: "${command}" in terminal ${terminalId}`
+              `🔍 [CLI-AGENT] Exit command detected from user input: "${command}" in terminal ${terminalId}. Status will change only when CLI Agent ACTUALLY terminates.`
             );
-            // Mark for termination detection (will be confirmed when CLI agent actually exits)
-            // Set a flag or timer to check for actual termination
-            setTimeout(() => {
-              // Give the CLI agent time to process the exit command and actually terminate
-              // Then check if it's still connected and force termination if needed
-              if (this._connectedAgentTerminalId === terminalId) {
-                log(
-                  `🔚 [CLI-AGENT] Forcing termination after exit command timeout for terminal ${terminalId}`
-                );
-                this._setAgentTerminated(terminalId);
-              }
-            }, 500); // 500ms timeout for CLI agent to actually exit (improved responsiveness)
+            
+            // 🚨 REMOVED: Timeout-based forced termination (SPECIFICATION VIOLATION)
+            // The specification explicitly states: "Status changes must occur only when CLI Agents actually terminate"
+            // We must wait for actual termination via output detection or process exit events
           }
         }
       }
@@ -1475,53 +1492,9 @@ export class TerminalManager {
     }
   }
 
-  /**
-   * Start timeout-based termination detection for a CLI Agent
-   */
-  private _startAgentTimeoutCheck(terminalId: string): void {
-    // Clear any existing timeout for this terminal
-    this._clearAgentTimeoutCheck(terminalId);
-
-    log(
-      `⏰ [TIMEOUT-CHECK] Starting ${this.AGENT_TIMEOUT_MS}ms timeout check for terminal ${terminalId}`
-    );
-
-    const timeout = setTimeout(() => {
-      log(`⏰ [TIMEOUT-TRIGGER] CLI Agent timeout triggered for terminal ${terminalId}`);
-
-      // Check if agent is still connected and force termination
-      if (this._connectedAgentTerminalId === terminalId) {
-        log(
-          `🔚 [TIMEOUT-TERMINATION] Force terminating CLI Agent due to timeout in terminal ${terminalId}`
-        );
-        this._setAgentTerminated(terminalId);
-      }
-    }, this.AGENT_TIMEOUT_MS);
-
-    this._agentTimeoutChecks.set(terminalId, timeout);
-  }
-
-  /**
-   * Clear timeout check for a terminal
-   */
-  private _clearAgentTimeoutCheck(terminalId: string): void {
-    const timeout = this._agentTimeoutChecks.get(terminalId);
-    if (timeout) {
-      clearTimeout(timeout);
-      this._agentTimeoutChecks.delete(terminalId);
-      log(`⏰ [TIMEOUT-CLEAR] Cleared timeout check for terminal ${terminalId}`);
-    }
-  }
-
-  /**
-   * Reset timeout check (called when agent shows activity)
-   */
-  private _resetAgentTimeoutCheck(terminalId: string): void {
-    if (this._connectedAgentTerminalId === terminalId) {
-      log(`⏰ [TIMEOUT-RESET] Resetting timeout for active terminal ${terminalId}`);
-      this._startAgentTimeoutCheck(terminalId);
-    }
-  }
+  // 🚨 REMOVED: All timeout-based termination detection methods (SPECIFICATION VIOLATION)
+  // The specification explicitly states: "Status changes must occur only when CLI Agents actually terminate"
+  // Timeout-based termination violates this requirement
 
   /**
    * 現在のCLI Agentを設定（すべてのターミナル状態を更新）
@@ -1590,8 +1563,8 @@ export class TerminalManager {
       `🎯 [AUTO-PROMOTION] Set terminal ${terminalId} as CONNECTED (${type}). DISCONNECTED agents: ${this._disconnectedAgents.size}`
     );
 
-    // Start timeout-based termination detection
-    this._startAgentTimeoutCheck(terminalId);
+    // 🚨 REMOVED: Timeout-based termination detection (SPECIFICATION VIOLATION)
+    // Status changes must only occur when CLI Agents ACTUALLY terminate
   }
 
   /**

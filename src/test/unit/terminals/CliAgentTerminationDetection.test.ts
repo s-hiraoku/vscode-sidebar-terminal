@@ -300,7 +300,7 @@ describe('CLI Agent Termination Detection', () => {
       expect((terminalManager as any)._connectedAgentType).to.be.null;
     });
 
-    it('should terminate CLI Agent when user types exit command', () => {
+    it('should NOT terminate CLI Agent on exit command without actual termination (SPECIFICATION COMPLIANT)', () => {
       const terminalId = terminalManager.createTerminal();
 
       // Simulate starting Gemini CLI
@@ -313,11 +313,24 @@ describe('CLI Agent Termination Detection', () => {
       // Simulate user typing exit command
       (terminalManager as any)._detectCliAgentFromInput(terminalId, '/exit\r');
 
-      // Wait for termination timeout (simulated)
-      const clock = sandbox.useFakeTimers();
-      clock.tick(2100); // More than 2 second timeout
+      // 🚨 SPECIFICATION REQUIREMENT: Status should NOT change on exit command alone
+      // CLI Agent status must only change when agent ACTUALLY terminates, not on user input
 
-      // Verify agent was terminated
+      // Wait for any potential timeout (should not change status)
+      const clock = sandbox.useFakeTimers();
+      clock.tick(5000); // 5 seconds - longer than any timeout
+
+      // Verify agent status remains CONNECTED (specification compliant)
+      expect((terminalManager as any)._connectedAgentTerminalId).to.equal(terminalId);
+      expect((terminalManager as any)._connectedAgentType).to.equal('gemini');
+
+      // Now simulate actual CLI Agent termination via shell prompt return
+      // Use a simple, clear shell prompt that will definitely match the detection pattern
+      const shellPromptOutput = 'user@macbook:~/workspace$ ';
+
+      (terminalManager as any)._detectCliAgent(terminalId, shellPromptOutput);
+
+      // Verify agent was terminated when shell prompt appeared (actual termination)
       expect((terminalManager as any)._connectedAgentTerminalId).to.be.null;
       expect((terminalManager as any)._connectedAgentType).to.be.null;
 
