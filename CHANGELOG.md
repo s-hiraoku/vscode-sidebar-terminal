@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.37] - 2025-08-03
+
+### Fixed
+
+- **CLI Agent State Synchronization**: Complete resolution of terminal status display issues
+  - Fixed connected agent termination causing other agents to show 'none' status instead of 'disconnected'
+  - Implemented Full State Synchronization System for reliable Extension ↔ WebView communication
+  - Added Auto-Promotion Logic for seamless DISCONNECTED → CONNECTED agent transitions
+  - Enhanced debugging with comprehensive message flow tracing logs
+  - Resolved MessageEvent type mismatches that prevented terminal display
+- **Test Infrastructure**: Restored and fixed disabled test files
+  - Fixed MessageEvent type errors in scrollback test suite
+  - Added createMessageEvent() helper function for proper test message handling
+  - Restored full test coverage for MessageManager functionality
+- **Repository Management**: Improved Git tracking configuration
+  - Removed .serena/cache/ files from Git tracking using git rm --cached
+  - Resolved .gitignore conflicts with previously tracked files
+  - Clean working directory with proper ignore patterns
+
+### Technical Improvements
+
+- **Debug Logging Enhancement**: Added comprehensive debug logging system
+  - Extension-side CLI Agent status change monitoring
+  - WebView-side message reception and processing logs
+  - Full state synchronization debugging with detailed trace information
+- **Message Architecture**: Strengthened Extension ↔ WebView communication
+  - Reliable cliAgentFullStateSync message delivery
+  - Error handling and fallback mechanisms for message failures
+  - Atomic operation queuing to prevent race conditions
+
+## [0.1.36] - 2025-08-02
+
+### Fixed
+
+- **CLI Agent Status Display**: Initial implementation of CLI Agent state synchronization
+  - Partial resolution of terminal status display inconsistencies
+  - Foundation for full state sync system
+
 ## [0.1.35] - 2025-07-31
 
 ### Added

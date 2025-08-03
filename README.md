@@ -106,6 +106,9 @@ _Customizing font size, theme, and other settings_
 
 - **File Reference Shortcuts**: Use `Cmd+Option+L` (Mac) or `Alt+Ctrl+L` (Linux/Windows) to insert `@filename` references
 - **GitHub Copilot Integration**: Use `Cmd+K Cmd+C` (Mac) or `Ctrl+K Ctrl+C` (Windows/Linux) for `#file:filename` format
+- **Advanced Status Management**: Real-time CLI Agent state tracking with CONNECTED/DISCONNECTED/NONE status display
+- **Auto-Promotion Logic**: Seamless transition from DISCONNECTED to CONNECTED when agents terminate
+- **Reliable State Sync**: Full state synchronization system ensures accurate status display across multiple terminals
 - **Independent Operation**: Works alongside CLI Agent extensions without conflicts
 - **Configurable**: Both integrations can be independently enabled/disabled in settings
 
