@@ -348,8 +348,8 @@ export class StandardTerminalSessionManager {
   /**
    * VS Code標準: WebViewから履歴データを取得
    */
-  private async requestScrollbackDataFromWebView(
-    terminals: Array<{
+  private requestScrollbackDataFromWebView(
+    _terminals: Array<{
       id: string;
       name: string;
       number: number;
@@ -365,7 +365,7 @@ export class StandardTerminalSessionManager {
     // 複雑なメッセージパッシングは不要
     const scrollbackData: Record<string, unknown> = {};
 
-    for (const terminal of terminals) {
+    for (const terminal of _terminals) {
       // VS Code標準のアプローチ: 復元用の基本的なメッセージを生成
       const terminalScrollback = [
         {
@@ -385,16 +385,16 @@ export class StandardTerminalSessionManager {
     }
 
     log(
-      `✅ [STANDARD-SESSION] Scrollback data prepared for ${terminals.length} terminals (VS Code standard approach)`
+      `✅ [STANDARD-SESSION] Scrollback data prepared for ${_terminals.length} terminals (VS Code standard approach)`
     );
-    return scrollbackData;
+    return Promise.resolve(scrollbackData);
   }
 
   /**
    * VS Code標準: WebViewに履歴復元要求を送信
    */
-  private async requestScrollbackRestoration(
-    terminals: Array<{
+  private requestScrollbackRestoration(
+    _terminals: Array<{
       id: string;
       name: string;
       number: number;
@@ -402,6 +402,7 @@ export class StandardTerminalSessionManager {
       isActive: boolean;
     }>
   ): Promise<void> {
+    return Promise.resolve();
     log(
       `🔄 [STANDARD-SESSION] VS Code standard approach - WebView StandardTerminalPersistenceManager handles restoration automatically`
     );
@@ -410,15 +411,16 @@ export class StandardTerminalSessionManager {
     // 新しく作成されたターミナルに対して、WebViewのPersistenceManagerが
     // 自動的にrestoreTerminalFromStorageを実行すべき
 
-    for (const terminalInfo of terminals) {
+    for (const terminalInfo of _terminals) {
       log(
         `🔄 [STANDARD-SESSION] Terminal ${terminalInfo.name} should be auto-restored by WebView PersistenceManager`
       );
     }
 
     log(
-      `✅ [STANDARD-SESSION] Scrollback restoration delegated to WebView PersistenceManager (${terminals.length} terminals)`
+      `✅ [STANDARD-SESSION] Scrollback restoration delegated to WebView PersistenceManager (${_terminals.length} terminals)`
     );
+    return Promise.resolve();
   }
 
   /**

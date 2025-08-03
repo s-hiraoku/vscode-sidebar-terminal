@@ -49,7 +49,7 @@ export class StandardTerminalPersistenceManager {
     // データ変更時に自動保存（デバウンス付き）
     let saveTimer: number | null = null;
 
-    const saveContent = () => {
+    const saveContent = (): void => {
       if (saveTimer) {
         clearTimeout(saveTimer);
       }
