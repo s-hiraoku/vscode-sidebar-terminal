@@ -27,6 +27,11 @@ describe('MessageManager - Scrollback Extraction', () => {
   let dom: any;
   let consoleMocks: any;
 
+  // Helper function to create MessageEvent from data
+  const createMessageEvent = (data: any): MessageEvent => {
+    return new MessageEvent('message', { data });
+  };
+
   beforeEach(() => {
     sandbox = sinon.createSandbox();
 
@@ -144,7 +149,7 @@ describe('MessageManager - Scrollback Extraction', () => {
       };
 
       // Act
-      messageManager.handleMessage(extractScrollbackMessage, mockCoordinator);
+      messageManager.handleMessage(createMessageEvent(extractScrollbackMessage), mockCoordinator);
 
       // Wait for async processing
       await new Promise((resolve) => setTimeout(resolve, 10));
@@ -185,7 +190,7 @@ describe('MessageManager - Scrollback Extraction', () => {
       };
 
       // Act
-      messageManager.handleMessage(extractScrollbackMessage, mockCoordinator);
+      messageManager.handleMessage(createMessageEvent(extractScrollbackMessage), mockCoordinator);
       await new Promise((resolve) => setTimeout(resolve, 10));
 
       // Assert - Check that scrollback extraction worked
@@ -221,7 +226,7 @@ describe('MessageManager - Scrollback Extraction', () => {
       };
 
       // Act
-      messageManager.handleMessage(extractScrollbackMessage, mockCoordinator);
+      messageManager.handleMessage(createMessageEvent(extractScrollbackMessage), mockCoordinator);
       await new Promise((resolve) => setTimeout(resolve, 10));
 
       // Assert
@@ -252,7 +257,7 @@ describe('MessageManager - Scrollback Extraction', () => {
       };
 
       // Act
-      messageManager.handleMessage(extractScrollbackMessage, mockCoordinator);
+      messageManager.handleMessage(createMessageEvent(extractScrollbackMessage), mockCoordinator);
       await new Promise((resolve) => setTimeout(resolve, 10));
 
       // Assert - should return early due to missing requestId
@@ -269,7 +274,7 @@ describe('MessageManager - Scrollback Extraction', () => {
       };
 
       // Act
-      messageManager.handleMessage(extractScrollbackMessage, mockCoordinator);
+      messageManager.handleMessage(createMessageEvent(extractScrollbackMessage), mockCoordinator);
       await new Promise((resolve) => setTimeout(resolve, 10));
 
       // Assert - should return early due to missing terminalId
@@ -286,7 +291,7 @@ describe('MessageManager - Scrollback Extraction', () => {
       };
 
       // Act
-      messageManager.handleMessage(extractScrollbackMessage, mockCoordinator);
+      messageManager.handleMessage(createMessageEvent(extractScrollbackMessage), mockCoordinator);
       await new Promise((resolve) => setTimeout(resolve, 10));
 
       // Assert
@@ -349,7 +354,7 @@ describe('MessageManager - Scrollback Extraction', () => {
       };
 
       // Act
-      messageManager.handleMessage(extractScrollbackMessage, mockCoordinator);
+      messageManager.handleMessage(createMessageEvent(extractScrollbackMessage), mockCoordinator);
       await new Promise((resolve) => setTimeout(resolve, 10));
 
       // Assert
@@ -386,7 +391,7 @@ describe('MessageManager - Scrollback Extraction', () => {
       };
 
       // Act
-      messageManager.handleMessage(extractScrollbackMessage, mockCoordinator);
+      messageManager.handleMessage(createMessageEvent(extractScrollbackMessage), mockCoordinator);
       await new Promise((resolve) => setTimeout(resolve, 10));
 
       // Assert
@@ -422,7 +427,7 @@ describe('MessageManager - Scrollback Extraction', () => {
       };
 
       // Act
-      messageManager.handleMessage(extractScrollbackMessage, mockCoordinator);
+      messageManager.handleMessage(createMessageEvent(extractScrollbackMessage), mockCoordinator);
       await new Promise((resolve) => setTimeout(resolve, 10));
 
       // Assert - Message should be sent through coordinator's postMessageToExtension
@@ -449,7 +454,10 @@ describe('MessageManager - Scrollback Extraction', () => {
 
       // Act & Assert - Should not throw error
       expect(() => {
-        messageManager.handleMessage(extractScrollbackMessage, limitedCoordinator);
+        messageManager.handleMessage(
+          createMessageEvent(extractScrollbackMessage),
+          limitedCoordinator
+        );
       }).to.not.throw();
     });
   });

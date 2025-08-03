@@ -1278,7 +1278,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       console.log('📤 [PROVIDER] Sending full CLI Agent state sync:', message);
 
       if (this._view) {
-        this._view.webview.postMessage(message);
+        void this._view.webview.postMessage(message);
         console.log('✅ [PROVIDER] Full CLI Agent state sync sent successfully');
       } else {
         console.warn('⚠️ [PROVIDER] WebView not available for full state sync');

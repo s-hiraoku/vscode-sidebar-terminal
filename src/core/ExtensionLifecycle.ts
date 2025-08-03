@@ -356,11 +356,13 @@ export class ExtensionLifecycle {
           }
         }
       } catch (error) {
-        log(`❌ [SESSION] Error during session restore: ${error} - creating fallback terminal`);
+        log(
+          `❌ [SESSION] Error during session restore: ${String(error)} - creating fallback terminal`
+        );
         this.createInitialTerminal();
       }
     } catch (error) {
-      log(`❌ [SESSION] Error during session restore: ${error}`);
+      log(`❌ [SESSION] Error during session restore: ${String(error)}`);
     }
   }
 
@@ -606,7 +608,7 @@ export class ExtensionLifecycle {
         );
       }
     } catch (error) {
-      await vscode.window.showErrorMessage(`Failed to save session: ${error}`);
+      await vscode.window.showErrorMessage(`Failed to save session: ${String(error)}`);
     }
   }
 
@@ -635,7 +637,7 @@ export class ExtensionLifecycle {
         );
       }
     } catch (error) {
-      await vscode.window.showErrorMessage(`Failed to restore session: ${error}`);
+      await vscode.window.showErrorMessage(`Failed to restore session: ${String(error)}`);
     }
   }
 
@@ -660,7 +662,7 @@ export class ExtensionLifecycle {
         await this.standardSessionManager.clearSession();
         await vscode.window.showInformationMessage('Terminal session data cleared successfully');
       } catch (error) {
-        await vscode.window.showErrorMessage(`Failed to clear session: ${error}`);
+        await vscode.window.showErrorMessage(`Failed to clear session: ${String(error)}`);
       }
     }
   }
