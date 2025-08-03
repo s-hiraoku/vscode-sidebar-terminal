@@ -452,6 +452,35 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
           }
           break;
         }
+        case 'switchAiAgent': {
+          log('🔄 [DEBUG] ========== SWITCH AI AGENT COMMAND RECEIVED ==========');
+          log('🔄 [DEBUG] Full message:', message);
+
+          const terminalId = message.terminalId as string;
+
+          if (terminalId) {
+            log(`🔄 [DEBUG] Switching AI Agent for terminal: ${terminalId}`);
+            try {
+              const result = this._terminalManager.switchAiAgentConnection(terminalId);
+              log(`🔄 [DEBUG] AI Agent switch result:`, result);
+
+              if (result.success) {
+                log(`✅ [DEBUG] AI Agent successfully switched: ${result.newStatus} (${result.agentType})`);
+                // Success notification will be handled by the status change event
+              } else {
+                log(`❌ [DEBUG] AI Agent switch failed: ${result.reason}`);
+                showError(`Failed to switch AI Agent: ${result.reason || 'Unknown error'}`);
+              }
+            } catch (error) {
+              log(`❌ [DEBUG] Error in switchAiAgent:`, error);
+              showError('Failed to switch AI Agent connection');
+            }
+          } else {
+            log('❌ [DEBUG] No terminal ID provided for switchAiAgent');
+            showError('No terminal ID provided for AI Agent switch');
+          }
+          break;
+        }
         case 'extractScrollback': {
           log('📋 [DEBUG] Extract scrollback request received');
           const terminalId = message.terminalId as string;

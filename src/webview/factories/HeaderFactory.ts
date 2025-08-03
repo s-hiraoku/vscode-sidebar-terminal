@@ -15,6 +15,7 @@ export interface TerminalHeaderElements {
   statusSpan: HTMLElement | null;
   indicator: HTMLElement | null;
   controlsSection: HTMLElement;
+  aiAgentToggleButton: HTMLButtonElement | null;
   splitButton: HTMLButtonElement;
   closeButton: HTMLButtonElement;
 }
@@ -137,6 +138,32 @@ export class HeaderFactory {
       }
     );
 
+    // AI Agent切り替えボタン
+    const aiAgentToggleButton = DOMUtils.createElement(
+      'button',
+      {
+        background: 'none',
+        border: 'none',
+        color: 'var(--vscode-tab-activeForeground)',
+        cursor: 'pointer',
+        fontSize: '12px',
+        padding: '2px 4px',
+        borderRadius: '2px',
+        display: 'none', // Initially hidden - will be shown when AI Agent is detected
+        alignItems: 'center',
+        justifyContent: 'center',
+        opacity: '0.7',
+        transition: 'opacity 0.2s, background-color 0.2s',
+        marginRight: '2px',
+      },
+      {
+        textContent: '🔄',
+        className: 'terminal-control ai-agent-toggle-btn',
+        title: 'Switch AI Agent Connection',
+        'data-terminal-id': terminalId,
+      }
+    );
+
     // 閉じるボタン
     const closeButton = DOMUtils.createElement(
       'button',
@@ -170,6 +197,16 @@ export class HeaderFactory {
     );
 
     // ホバーエフェクトを追加
+    aiAgentToggleButton.addEventListener('mouseenter', () => {
+      aiAgentToggleButton.style.opacity = '1';
+      aiAgentToggleButton.style.backgroundColor = 'var(--vscode-toolbar-hoverBackground)';
+    });
+
+    aiAgentToggleButton.addEventListener('mouseleave', () => {
+      aiAgentToggleButton.style.opacity = '0.7';
+      aiAgentToggleButton.style.backgroundColor = 'transparent';
+    });
+
     closeButton.addEventListener('mouseenter', () => {
       closeButton.style.opacity = '1';
       closeButton.style.backgroundColor = 'var(--vscode-toolbar-hoverBackground)';
@@ -182,7 +219,7 @@ export class HeaderFactory {
 
     // 要素を組み立て
     DOMUtils.appendChildren(titleSection, nameSpan);
-    DOMUtils.appendChildren(controlsSection, closeButton);
+    DOMUtils.appendChildren(controlsSection, aiAgentToggleButton, closeButton);
     DOMUtils.appendChildren(container, titleSection, statusSection, controlsSection);
 
     log(`🏗️ [HeaderFactory] Created unified header for terminal: ${terminalId}`);
@@ -196,6 +233,7 @@ export class HeaderFactory {
       statusSpan: null, // CLI Agent status要素はまだ作成されていない
       indicator: null, // CLI Agent indicator要素はまだ作成されていない
       controlsSection,
+      aiAgentToggleButton,
       splitButton,
       closeButton,
     };
@@ -329,5 +367,33 @@ export class HeaderFactory {
       header.style.color = 'var(--vscode-tab-inactiveForeground)';
     }
     log(`🎯 [HeaderFactory] Set active state: ${isActive}`);
+  }
+
+  /**
+   * AI Agent切り替えボタンの表示状態を制御
+   * Issue #122: AI Agent detected時にのみボタンを表示
+   */
+  public static setAiAgentToggleButtonVisibility(
+    elements: TerminalHeaderElements,
+    visible: boolean,
+    agentStatus?: 'connected' | 'disconnected'
+  ): void {
+    if (elements.aiAgentToggleButton) {
+      elements.aiAgentToggleButton.style.display = visible ? 'flex' : 'none';
+      
+      // Update button appearance based on connection status
+      if (visible && agentStatus) {
+        const isConnected = agentStatus === 'connected';
+        elements.aiAgentToggleButton.style.color = isConnected 
+          ? '#4CAF50' // Green for connected
+          : 'var(--vscode-tab-activeForeground)'; // Default for disconnected
+        
+        elements.aiAgentToggleButton.title = isConnected
+          ? 'Disconnect AI Agent'
+          : 'Connect AI Agent';
+      }
+      
+      log(`🔄 [HeaderFactory] AI Agent toggle button visibility: ${visible} (status: ${agentStatus || 'none'})`);
+    }
   }
 }

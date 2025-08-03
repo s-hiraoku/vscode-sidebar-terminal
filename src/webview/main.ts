@@ -366,6 +366,25 @@ class TerminalWebviewManager {
         ); // Use capture phase
       }
 
+      // Setup AI Agent toggle button event handler (Issue #122)
+      const aiAgentToggleButton = terminalHeader.querySelector('.ai-agent-toggle-btn') as HTMLButtonElement;
+      if (aiAgentToggleButton) {
+        aiAgentToggleButton.addEventListener(
+          'click',
+          (event) => {
+            event.stopPropagation();
+            try {
+              log(`🔄 [HEADER] AI Agent toggle button clicked for terminal: ${id}`);
+              this.messageManager.sendSwitchAiAgentMessage(id, this);
+              log(`🔄 [HEADER] Switch AI Agent message sent to extension for: ${id}`);
+            } catch (error) {
+              log(`🔄 [HEADER] Error sending switch AI Agent message:`, error);
+            }
+          },
+          true
+        ); // Use capture phase
+      }
+
       // Setup split button click handler
       const splitButton = terminalHeader.querySelector('.split-btn') as HTMLButtonElement;
       if (splitButton) {
