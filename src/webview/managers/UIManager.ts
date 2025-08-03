@@ -370,9 +370,18 @@ export class UIManager implements IUIManager {
       if (status === 'none') {
         // CLI Agent statusを削除 (全ターミナルから削除)
         HeaderFactory.removeCliAgentStatus(headerElements);
+        // AI Agent切り替えボタンを非表示 (Issue #122)
+        HeaderFactory.setAiAgentToggleButtonVisibility(headerElements, false);
       } else if (isTargetTerminal) {
         // CLI Agent statusを挿入/更新 (該当ターミナルのみ)
         HeaderFactory.insertCliAgentStatus(headerElements, status, agentType);
+        // AI Agent切り替えボタンを表示 (Issue #122)
+        HeaderFactory.setAiAgentToggleButtonVisibility(headerElements, true, status);
+      } else {
+        // 他のターミナルでAI Agentが検出されている場合もボタンを表示
+        if (status === 'connected' || status === 'disconnected') {
+          HeaderFactory.setAiAgentToggleButtonVisibility(headerElements, true, 'disconnected');
+        }
       }
       updatedCount++;
     }

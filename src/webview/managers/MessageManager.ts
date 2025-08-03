@@ -255,6 +255,30 @@ export class MessageManager implements IMessageManager {
   }
 
   /**
+   * Issue #122: AI Agent切り替え要求メッセージを送信
+   */
+  public sendSwitchAiAgentMessage(terminalId: string, coordinator: IManagerCoordinator): void {
+    log(`📤 [MESSAGE] ========== SENDING SWITCH AI AGENT MESSAGE ==========`);
+    log(`📤 [MESSAGE] Terminal ID: ${terminalId}`);
+    log(`📤 [MESSAGE] Coordinator available:`, !!coordinator);
+
+    const message = {
+      command: 'switchAiAgent',
+      terminalId,
+      timestamp: Date.now(),
+    };
+
+    log(`📤 [MESSAGE] Message to send:`, message);
+
+    try {
+      this.queueMessage(message, coordinator);
+      log(`📤 [MESSAGE] Switch AI Agent message queued successfully for: ${terminalId}`);
+    } catch (error) {
+      log(`❌ [MESSAGE] Error queueing switch AI Agent message:`, error);
+    }
+  }
+
+  /**
    * Emit terminal interaction event
    */
   public emitTerminalInteractionEvent(

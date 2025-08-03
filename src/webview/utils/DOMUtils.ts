@@ -21,6 +21,8 @@ export namespace DOMUtils {
       Object.entries(attributes).forEach(([key, value]) => {
         if (key === 'textContent') {
           element.textContent = value;
+        } else if (key === 'innerHTML') {
+          element.innerHTML = value;
         } else if (key === 'className') {
           element.className = value;
         } else {
