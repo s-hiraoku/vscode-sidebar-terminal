@@ -146,18 +146,20 @@ export class HeaderFactory {
         border: 'none',
         color: 'var(--vscode-tab-activeForeground)',
         cursor: 'pointer',
-        fontSize: '12px',
+        fontSize: '11px',
         padding: '2px 4px',
         borderRadius: '2px',
         display: 'none', // Initially hidden - will be shown when AI Agent is detected
         alignItems: 'center',
         justifyContent: 'center',
         opacity: '0.7',
-        transition: 'opacity 0.2s, background-color 0.2s',
+        transition: 'opacity 0.2s, background-color 0.2s, filter 0.2s',
         marginRight: '2px',
+        width: '16px',
+        height: '16px',
       },
       {
-        textContent: '🔄',
+        innerHTML: '<svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M11.534 7h3.932a.25.25 0 0 1 .192.41l-1.966 2.36a.25.25 0 0 1-.384 0l-1.966-2.36a.25.25 0 0 1 .192-.41zm-11 2h3.932a.25.25 0 0 0 .192-.41L2.692 6.23a.25.25 0 0 0-.384 0L.342 8.59A.25.25 0 0 0 .534 9z"/><path fill-rule="evenodd" d="M8 3c-1.552 0-2.94.707-3.857 1.818a.5.5 0 1 1-.771-.636A6.002 6.002 0 0 1 13.917 7H12.9A5.002 5.002 0 0 0 8 3zM3.1 9a5.002 5.002 0 0 0 8.757 2.182.5.5 0 1 1 .771.636A6.002 6.002 0 0 1 2.083 9H3.1z"/></svg>',
         className: 'terminal-control ai-agent-toggle-btn',
         title: 'Switch AI Agent Connection',
         'data-terminal-id': terminalId,
@@ -381,13 +383,9 @@ export class HeaderFactory {
     if (elements.aiAgentToggleButton) {
       elements.aiAgentToggleButton.style.display = visible ? 'flex' : 'none';
       
-      // Update button appearance based on connection status
+      // Update tooltip based on connection status
       if (visible && agentStatus) {
         const isConnected = agentStatus === 'connected';
-        elements.aiAgentToggleButton.style.color = isConnected 
-          ? '#4CAF50' // Green for connected
-          : 'var(--vscode-tab-activeForeground)'; // Default for disconnected
-        
         elements.aiAgentToggleButton.title = isConnected
           ? 'Disconnect AI Agent'
           : 'Connect AI Agent';

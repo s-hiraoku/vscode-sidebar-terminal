@@ -166,7 +166,7 @@ describe('AI Agent Toggle Button (Issue #122)', () => {
 
       expect(headerElements.aiAgentToggleButton).toBeDefined();
       expect(headerElements.aiAgentToggleButton?.className).toBe('terminal-control ai-agent-toggle-btn');
-      expect(headerElements.aiAgentToggleButton?.textContent).toBe('🔄');
+      expect(headerElements.aiAgentToggleButton?.innerHTML).toContain('<svg');
     });
 
     it('AI Agent検出時にボタンを表示する', () => {
