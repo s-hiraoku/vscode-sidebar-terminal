@@ -75,7 +75,7 @@ describe('AI Agent Toggle Button (Issue #122)', () => {
 
     it('AI Agentが検出されていないターミナルに対してエラーを返す', () => {
       const createdTerminalId = terminalManager.createTerminal();
-      
+
       const result = terminalManager.switchAiAgentConnection(createdTerminalId);
 
       assert.strictEqual(result.success, false);

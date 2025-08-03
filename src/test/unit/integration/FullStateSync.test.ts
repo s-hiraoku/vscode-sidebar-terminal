@@ -20,7 +20,7 @@ describe('Full State Sync Integration', () => {
   let provider: SecondaryTerminalProvider;
   let mockExtensionContext: any;
   let dom: any;
-  let consoleMocks: any;
+  let _consoleMocks: any;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
@@ -28,7 +28,7 @@ describe('Full State Sync Integration', () => {
     // Setup complete test environment
     const testEnv = setupCompleteTestEnvironment();
     dom = testEnv.dom;
-    consoleMocks = testEnv.consoleMocks;
+    _consoleMocks = testEnv.consoleMocks;
 
     // Create mock extension context
     mockExtensionContext = {

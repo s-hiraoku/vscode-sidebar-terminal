@@ -25,11 +25,11 @@ export interface FileReferenceOptions {
 /**
  * Shared service for file reference functionality
  */
-export abstract class FileReferenceService {
+export namespace FileReferenceService {
   /**
    * Get information about the currently active file
    */
-  public static getActiveFileInfo(): FileInfo | null {
+  export function getActiveFileInfo(): FileInfo | null {
     try {
       const activeEditor = vscode.window.activeTextEditor;
       if (!activeEditor?.document) {
@@ -75,7 +75,7 @@ export abstract class FileReferenceService {
   /**
    * Format file reference string based on options
    */
-  public static formatFileReference(fileInfo: FileInfo, options: FileReferenceOptions): string {
+  export function formatFileReference(fileInfo: FileInfo, options: FileReferenceOptions): string {
     const { format, includeLineNumbers = true, lineRange } = options;
 
     let reference = '';
@@ -118,7 +118,7 @@ export abstract class FileReferenceService {
   /**
    * Check if CLI Agent integration is enabled
    */
-  public static isCliAgentIntegrationEnabled(): boolean {
+  export function isCliAgentIntegrationEnabled(): boolean {
     try {
       const config = vscode.workspace.getConfiguration('secondaryTerminal');
       return config.get<boolean>('enableCliAgentIntegration', true);
@@ -131,7 +131,7 @@ export abstract class FileReferenceService {
   /**
    * Check if GitHub Copilot integration is enabled
    */
-  public static isGitHubCopilotIntegrationEnabled(): boolean {
+  export function isGitHubCopilotIntegrationEnabled(): boolean {
     try {
       const config = vscode.workspace.getConfiguration('secondaryTerminal');
       return config.get<boolean>('enableGitHubCopilotIntegration', true);
@@ -144,7 +144,7 @@ export abstract class FileReferenceService {
   /**
    * Parse line range from file reference string
    */
-  public static parseLineRange(reference: string): { start: number; end: number } | null {
+  export function parseLineRange(reference: string): { start: number; end: number } | null {
     // Try multi-line range first (#L10-L25)
     const multiLineMatch = reference.match(FILE_REFERENCE_CONSTANTS.PATTERNS.LINE_RANGE);
     if (multiLineMatch && multiLineMatch[1] && multiLineMatch[2]) {
@@ -170,7 +170,7 @@ export abstract class FileReferenceService {
   /**
    * Show user notification for file reference action
    */
-  public static showFileReferenceNotification(
+  export function showFileReferenceNotification(
     type: 'success' | 'warning' | 'error',
     message: string
   ): void {
@@ -190,7 +190,7 @@ export abstract class FileReferenceService {
   /**
    * Common validation for file reference commands
    */
-  public static validateFileReferencePrerequisites(integrationType: 'cli-agent' | 'copilot'): {
+  export function validateFileReferencePrerequisites(integrationType: 'cli-agent' | 'copilot'): {
     valid: boolean;
     fileInfo?: FileInfo;
     errorMessage?: string;
