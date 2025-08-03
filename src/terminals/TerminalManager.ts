@@ -800,6 +800,100 @@ export class TerminalManager {
     return this._connectedAgentType;
   }
 
+  /**
+   * 手動でAI Agent接続を切り替える
+   * Issue #122: AI Agent接続切り替えボタン機能
+   */
+  public switchAiAgentConnection(terminalId: string): {
+    success: boolean;
+    reason?: string;
+    newStatus: 'connected' | 'disconnected' | 'none';
+    agentType: string | null;
+  } {
+    const terminal = this._terminals.get(terminalId);
+    if (!terminal) {
+      return {
+        success: false,
+        reason: 'Terminal not found',
+        newStatus: 'none',
+        agentType: null,
+      };
+    }
+
+    // 現在の接続状態を確認
+    const isCurrentlyConnected = this._connectedAgentTerminalId === terminalId;
+
+    if (isCurrentlyConnected) {
+      // 現在接続されている場合: 無視（何もしない）
+      const currentType = this._connectedAgentType;
+      log(
+        `ℹ️ [AI-AGENT-SWITCH] AI Agent already connected to terminal: ${terminal.name}, ignoring`
+      );
+      return {
+        success: true,
+        newStatus: 'connected',
+        agentType: currentType,
+      };
+    } else {
+      // 現在接続されていない場合: 切断されたエージェントを検索して接続
+
+      // このターミナルに切断されたエージェントがあるかチェック
+      const disconnectedAgent = this._disconnectedAgents.get(terminalId);
+      if (disconnectedAgent) {
+        // 以前に他のターミナルに接続されているエージェントがあれば切断
+        if (this._connectedAgentTerminalId) {
+          const previousConnectedTerminal = this._terminals.get(this._connectedAgentTerminalId);
+          if (previousConnectedTerminal) {
+            this._disconnectedAgents.set(this._connectedAgentTerminalId, {
+              type: this._connectedAgentType as 'claude' | 'gemini',
+              startTime: new Date(),
+              terminalName: previousConnectedTerminal.name,
+            });
+
+            // 以前のターミナルの切断イベント
+            this._onCliAgentStatusChange.fire({
+              terminalId: this._connectedAgentTerminalId,
+              status: 'disconnected',
+              type: this._connectedAgentType,
+              terminalName: previousConnectedTerminal.name,
+            });
+          }
+        }
+
+        // 新しいターミナルに接続
+        this._connectedAgentTerminalId = terminalId;
+        this._connectedAgentType = disconnectedAgent.type;
+        this._disconnectedAgents.delete(terminalId);
+
+        // 接続イベントを発火
+        this._onCliAgentStatusChange.fire({
+          terminalId,
+          status: 'connected',
+          type: disconnectedAgent.type,
+          terminalName: terminal.name,
+        });
+
+        log(
+          `🔄 [AI-AGENT-SWITCH] Manually connected ${disconnectedAgent.type} to terminal: ${terminal.name}`
+        );
+
+        return {
+          success: true,
+          newStatus: 'connected',
+          agentType: disconnectedAgent.type,
+        };
+      } else {
+        // このターミナルにはAI Agentが検出されていない
+        return {
+          success: false,
+          reason: 'No AI Agent detected in this terminal',
+          newStatus: 'none',
+          agentType: null,
+        };
+      }
+    }
+  }
+
   // =================== CLI Agent Detection (Ultra Simple & Optimized) ===================
 
   /**

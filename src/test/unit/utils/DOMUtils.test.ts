@@ -8,10 +8,10 @@ import sinonChai from 'sinon-chai';
 
 use(sinonChai);
 import { DOMUtils } from '../../../webview/utils/DOMUtils';
-import { 
-  setupTestEnvironment, 
-  cleanupTestEnvironment, 
-  TestEnvironment 
+import {
+  setupTestEnvironment,
+  cleanupTestEnvironment,
+  TestEnvironment,
 } from '../../utils/CommonTestSetup';
 
 describe('DOMUtils', () => {
