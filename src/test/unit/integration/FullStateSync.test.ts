@@ -7,9 +7,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
 
 import { expect } from 'chai';
 import * as sinon from 'sinon';
+import * as vscode from 'vscode';
+import { JSDOM } from 'jsdom';
 import { setupCompleteTestEnvironment, cleanupTestEnvironment } from '../../shared/TestSetup';
 import { TerminalManager } from '../../../terminals/TerminalManager';
 import { SecondaryTerminalProvider } from '../../../providers/SecondaryTerminalProvider';
@@ -18,9 +22,13 @@ describe('Full State Sync Integration', () => {
   let sandbox: sinon.SinonSandbox;
   let terminalManager: TerminalManager;
   let provider: SecondaryTerminalProvider;
-  let mockExtensionContext: any;
-  let dom: any;
-  let _consoleMocks: any;
+  let mockExtensionContext: vscode.ExtensionContext;
+  let dom: JSDOM;
+  let _consoleMocks: {
+    log: sinon.SinonStub;
+    warn: sinon.SinonStub;
+    error: sinon.SinonStub;
+  };
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
@@ -36,8 +44,29 @@ describe('Full State Sync Integration', () => {
       globalState: {
         get: sandbox.stub().returns(undefined),
         update: sandbox.stub().resolves(),
+        keys: sandbox.stub().returns([]),
+        setKeysForSync: sandbox.stub(),
       },
-    };
+      workspaceState: {
+        get: sandbox.stub().returns(undefined),
+        update: sandbox.stub().resolves(),
+        keys: sandbox.stub().returns([]),
+      },
+      secrets: {} as vscode.SecretStorage,
+      extensionUri: {} as vscode.Uri,
+      extensionPath: '/test/path',
+      environmentVariableCollection: {} as vscode.EnvironmentVariableCollection,
+      asAbsolutePath: sandbox.stub().returnsArg(0),
+      storageUri: undefined,
+      storagePath: undefined,
+      globalStorageUri: {} as vscode.Uri,
+      globalStoragePath: '/test/global',
+      logUri: {} as vscode.Uri,
+      logPath: '/test/log',
+      extensionMode: vscode.ExtensionMode.Test,
+      extension: {} as vscode.Extension<unknown>,
+      languageModelAccessInformation: {} as vscode.LanguageModelAccessInformation,
+    } as unknown as vscode.ExtensionContext;
 
     // Create TerminalManager and SecondaryTerminalProvider
     terminalManager = new TerminalManager();
@@ -94,26 +123,29 @@ describe('Full State Sync Integration', () => {
       expect(stateSyncMessage.terminalStates).to.be.an('object');
 
       // Verify the terminal states are correct
-      const states = stateSyncMessage.terminalStates;
+      const states = stateSyncMessage.terminalStates as Record<
+        string,
+        { status: string; agentType: string | null }
+      >;
 
       // Terminal3 should be 'none' (terminated)
       expect(states[terminal3]).to.deep.include({ status: 'none', agentType: null });
 
       // One of terminal1/terminal2 should be 'connected' (auto-promoted)
       const connectedTerminals = Object.keys(states).filter(
-        (id) => states[id].status === 'connected'
+        (id) => states[id] && states[id].status === 'connected'
       );
       expect(connectedTerminals).to.have.length(1);
 
       // One of terminal1/terminal2 should be 'disconnected' (remaining agent)
       const disconnectedTerminals = Object.keys(states).filter(
-        (id) => states[id].status === 'disconnected'
+        (id) => states[id] && states[id].status === 'disconnected'
       );
       expect(disconnectedTerminals).to.have.length(1);
 
       // Critical assertion: No terminal should be left as 'none' if it has an agent
       const noneTerminals = Object.keys(states).filter(
-        (id) => states[id].status === 'none' && states[id].agentType !== null
+        (id) => states[id] && states[id].status === 'none' && states[id].agentType !== null
       );
       expect(noneTerminals).to.have.length(0);
 
@@ -139,7 +171,7 @@ describe('Full State Sync Integration', () => {
       (terminalManager as any)._setCurrentAgent(terminals[3], 'gemini');
 
       // Track state sync messages
-      const getLatestStateSyncMessage = () => {
+      const getLatestStateSyncMessage = (): any => {
         const calls = sendMessageSpy.getCalls();
         const stateSyncCalls = calls.filter(
           (call) => call.args[0]?.command === 'cliAgentFullStateSync'
@@ -161,14 +193,17 @@ describe('Full State Sync Integration', () => {
       expect(syncMessage).to.exist;
 
       // Count statuses after first termination
-      let states = syncMessage.terminalStates;
+      let states = syncMessage.terminalStates as Record<
+        string,
+        { status: string; agentType: string | null }
+      >;
       let connectedCount = Object.values(states).filter(
-        (s: any) => s.status === 'connected'
+        (s) => s && s.status === 'connected'
       ).length;
       let disconnectedCount = Object.values(states).filter(
-        (s: any) => s.status === 'disconnected'
+        (s) => s && s.status === 'disconnected'
       ).length;
-      let noneCount = Object.values(states).filter((s: any) => s.status === 'none').length;
+      let noneCount = Object.values(states).filter((s) => s && s.status === 'none').length;
 
       expect(connectedCount).to.equal(1); // One auto-promoted
       expect(disconnectedCount).to.equal(2); // Two remaining DISCONNECTED
@@ -185,12 +220,15 @@ describe('Full State Sync Integration', () => {
       expect(syncMessage).to.exist;
 
       // Count statuses after second termination
-      states = syncMessage.terminalStates;
-      connectedCount = Object.values(states).filter((s: any) => s.status === 'connected').length;
+      states = syncMessage.terminalStates as Record<
+        string,
+        { status: string; agentType: string | null }
+      >;
+      connectedCount = Object.values(states).filter((s) => s && s.status === 'connected').length;
       disconnectedCount = Object.values(states).filter(
-        (s: any) => s.status === 'disconnected'
+        (s) => s && s.status === 'disconnected'
       ).length;
-      noneCount = Object.values(states).filter((s: any) => s.status === 'none').length;
+      noneCount = Object.values(states).filter((s) => s && s.status === 'none').length;
 
       expect(connectedCount).to.equal(1); // One auto-promoted again
       expect(disconnectedCount).to.equal(1); // One remaining DISCONNECTED
@@ -228,11 +266,16 @@ describe('Full State Sync Integration', () => {
       const finalMessage = stateSyncCalls[stateSyncCalls.length - 1]?.args[0];
 
       expect(finalMessage).to.exist;
-      const states = finalMessage.terminalStates;
+      const states = finalMessage.terminalStates as Record<
+        string,
+        { status: string; agentType: string | null }
+      >;
 
-      Object.values(states).forEach((state: any) => {
-        expect(state.status).to.equal('none');
-        expect(state.agentType).to.be.null;
+      Object.values(states).forEach((state) => {
+        if (state) {
+          expect(state.status).to.equal('none');
+          expect(state.agentType).to.be.null;
+        }
       });
 
       expect(finalMessage.connectedAgentId).to.be.null;

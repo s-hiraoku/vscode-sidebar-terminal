@@ -6,17 +6,21 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 
 import { expect } from 'chai';
 import * as sinon from 'sinon';
+import { JSDOM } from 'jsdom';
 import { setupCompleteTestEnvironment, cleanupTestEnvironment } from '../../shared/TestSetup';
 import { TerminalManager } from '../../../terminals/TerminalManager';
 
 describe('CLI Agent False Detection Prevention', () => {
   let sandbox: sinon.SinonSandbox;
   let terminalManager: TerminalManager;
-  let dom: any;
-  let consoleMocks: any;
+  let dom: JSDOM;
+  let _consoleMocks: any;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
@@ -24,7 +28,7 @@ describe('CLI Agent False Detection Prevention', () => {
     // Setup complete test environment
     const testEnv = setupCompleteTestEnvironment();
     dom = testEnv.dom;
-    consoleMocks = testEnv.consoleMocks;
+    _consoleMocks = testEnv.consoleMocks;
 
     // Create TerminalManager instance
     terminalManager = new TerminalManager();
@@ -34,7 +38,7 @@ describe('CLI Agent False Detection Prevention', () => {
     if (terminalManager) {
       terminalManager.dispose();
     }
-    cleanupTestEnvironment(sandbox, dom);
+    cleanupTestEnvironment(sandbox, dom as any);
   });
 
   /**

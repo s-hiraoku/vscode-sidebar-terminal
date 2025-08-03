@@ -171,8 +171,7 @@ export interface WebviewMessage {
         type?: 'output' | 'input' | 'error';
         timestamp?: number;
       }>
-    | string[]
-    | any; // 復元するscrollback内容
+    | string[]; // 復元するscrollback内容
 
   // WebView側のコマンド名拡張（重複削除）
   scrollbackProgress?: {

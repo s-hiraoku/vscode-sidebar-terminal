@@ -7,17 +7,23 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
 
 import { expect } from 'chai';
 import * as sinon from 'sinon';
+import { JSDOM } from 'jsdom';
 import { setupCompleteTestEnvironment, cleanupTestEnvironment } from '../../shared/TestSetup';
 import { TerminalManager } from '../../../terminals/TerminalManager';
 
 describe('CLI Agent Auto-Promotion - Specification Compliance', () => {
   let sandbox: sinon.SinonSandbox;
   let terminalManager: TerminalManager;
-  let dom: any;
-  let consoleMocks: any;
+  let dom: JSDOM;
+  let _consoleMocks: {
+    log: sinon.SinonStub;
+    warn: sinon.SinonStub;
+    error: sinon.SinonStub;
+  };
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
@@ -25,7 +31,7 @@ describe('CLI Agent Auto-Promotion - Specification Compliance', () => {
     // Setup complete test environment
     const testEnv = setupCompleteTestEnvironment();
     dom = testEnv.dom;
-    consoleMocks = testEnv.consoleMocks;
+    _consoleMocks = testEnv.consoleMocks;
 
     // Create TerminalManager instance
     terminalManager = new TerminalManager();
@@ -35,7 +41,7 @@ describe('CLI Agent Auto-Promotion - Specification Compliance', () => {
     if (terminalManager) {
       terminalManager.dispose();
     }
-    cleanupTestEnvironment(sandbox, dom);
+    cleanupTestEnvironment(sandbox, dom as JSDOM | undefined);
   });
 
   /**

@@ -6,6 +6,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 
 import { expect } from 'chai';
 import * as sinon from 'sinon';
@@ -186,7 +189,7 @@ describe('CLI Agent Termination Debug', () => {
       console.log(`🔍 [DEBUG] Initial state:
         CONNECTED: ${(terminalManager as any)._connectedAgentTerminalId}
         DISCONNECTED count: ${(terminalManager as any)._disconnectedAgents.size}
-        DISCONNECTED terminals: ${Array.from((terminalManager as any)._disconnectedAgents.keys())}`);
+        DISCONNECTED terminals: ${String(Array.from((terminalManager as any)._disconnectedAgents.keys()))}`);
 
       // Set up spy to track all status change events
       const statusChangeSpy = sinon.spy();
@@ -206,7 +209,7 @@ describe('CLI Agent Termination Debug', () => {
       console.log(`🔍 [DEBUG] After termination:
         CONNECTED: ${connectedId}
         DISCONNECTED count: ${disconnectedCount}
-        DISCONNECTED terminals: ${Array.from((terminalManager as any)._disconnectedAgents.keys())}
+        DISCONNECTED terminals: ${String(Array.from((terminalManager as any)._disconnectedAgents.keys()))}
         Status change events: ${statusChangeSpy.callCount}`);
 
       // Log all status change events

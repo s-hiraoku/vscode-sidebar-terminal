@@ -1,6 +1,14 @@
 /**
  * Common test setup utilities to reduce code duplication across test files
  */
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+
 import * as sinon from 'sinon';
 import { JSDOM } from 'jsdom';
 
@@ -118,7 +126,12 @@ export const cleanupTestEnvironment = (env: TestEnvironment): void => {
 /**
  * Common CLI Agent test setup - Mock CLI Agent detection patterns
  */
-export const setupCliAgentTestMocks = (sandbox: sinon.SinonSandbox) => {
+export const setupCliAgentTestMocks = (
+  sandbox: sinon.SinonSandbox
+): {
+  mockCliAgentPatterns: Record<string, string>;
+  mockCliAgentStatus: Record<string, unknown>;
+} => {
   // Mock data patterns for CLI Agent tests
   const mockCliAgentPatterns = {
     claudePrompt: '> claude-code "',
@@ -143,7 +156,12 @@ export const setupCliAgentTestMocks = (sandbox: sinon.SinonSandbox) => {
 /**
  * Common terminal test setup - Mock terminal states and data
  */
-export const setupTerminalTestMocks = (sandbox: sinon.SinonSandbox) => {
+export const setupTerminalTestMocks = (
+  sandbox: sinon.SinonSandbox
+): {
+  mockTerminalData: Record<string, unknown>;
+  mockTerminalManagerState: Record<string, unknown>;
+} => {
   // Mock terminal data
   const mockTerminalData = {
     terminalId: 'test-terminal-1',
@@ -169,7 +187,12 @@ export const setupTerminalTestMocks = (sandbox: sinon.SinonSandbox) => {
 /**
  * CLI Agent specific test patterns and mocks
  */
-export const setupCliAgentTestPatterns = () => {
+export const setupCliAgentTestPatterns = (): {
+  validPromptPatterns: string[];
+  cliAgentCommands: Record<string, string[]>;
+  completionPatterns: string[];
+  falsePositivePatterns: string[];
+} => {
   // Standard shell prompts for termination detection
   const validPromptPatterns = [
     // Standard bash/zsh prompts
@@ -243,7 +266,9 @@ export const setupCliAgentTestPatterns = () => {
 /**
  * Mock CLI Agent detection service for testing
  */
-export const createMockCliAgentDetectionService = (sandbox: sinon.SinonSandbox) => {
+export const createMockCliAgentDetectionService = (
+  sandbox: sinon.SinonSandbox
+): Record<string, sinon.SinonStub> => {
   const mockService = {
     isCliAgentActive: sandbox.stub(),
     detectCliAgentActivity: sandbox.stub(),
@@ -267,7 +292,9 @@ export const createMockCliAgentDetectionService = (sandbox: sinon.SinonSandbox) 
 /**
  * Setup mock terminal manager for CLI Agent tests
  */
-export const setupMockTerminalManagerForCliAgent = (sandbox: sinon.SinonSandbox) => {
+export const setupMockTerminalManagerForCliAgent = (
+  sandbox: sinon.SinonSandbox
+): Record<string, sinon.SinonStub> => {
   const mockTerminalManager = {
     createTerminal: sandbox.stub(),
     killTerminal: sandbox.stub(),

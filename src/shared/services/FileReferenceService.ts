@@ -25,6 +25,7 @@ export interface FileReferenceOptions {
 /**
  * Shared service for file reference functionality
  */
+// eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace FileReferenceService {
   /**
    * Get information about the currently active file

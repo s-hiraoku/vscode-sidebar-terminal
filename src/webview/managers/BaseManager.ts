@@ -52,9 +52,10 @@ export abstract class BaseManager {
   /**
    * Initialize the manager - should be overridden by subclasses
    */
-  protected async initialize(): Promise<void> {
+  protected initialize(): Promise<void> {
     this.log('Initializing manager');
     this.isInitialized = true;
+    return Promise.resolve();
   }
 
   /**
@@ -91,7 +92,7 @@ export abstract class BaseManager {
   /**
    * Common debounce utility for managers
    */
-  protected debounce<T extends (...args: any[]) => any>(
+  protected debounce<T extends (...args: unknown[]) => unknown>(
     func: T,
     wait: number
   ): (...args: Parameters<T>) => void {
@@ -120,7 +121,7 @@ export abstract class BaseManager {
       return operation();
     } catch (error) {
       const message = errorMessage || 'DOM operation failed';
-      this.log(`${message}: ${error}`, 'error');
+      this.log(`${message}: ${String(error)}`, 'error');
       return fallback;
     }
   }

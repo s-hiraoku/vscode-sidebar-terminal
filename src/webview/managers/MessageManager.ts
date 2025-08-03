@@ -619,20 +619,28 @@ export class MessageManager implements IMessageManager {
 
     if (terminalStates) {
       log(
-        `🔄 [MESSAGE] Processing full state sync: CONNECTED=${connectedAgentId} (${connectedAgentType}), DISCONNECTED=${disconnectedCount}`
+        `🔄 [MESSAGE] Processing full state sync: CONNECTED=${String(connectedAgentId)} (${String(connectedAgentType)}), DISCONNECTED=${String(disconnectedCount)}`
       );
       log(`📋 [MESSAGE] Terminal states:`, terminalStates);
 
       try {
         // Apply all terminal states at once
         for (const [terminalId, stateInfo] of Object.entries(terminalStates)) {
-          log(`🔄 [MESSAGE] About to update terminal ${terminalId}:`, stateInfo);
+          const typedStateInfo = stateInfo as {
+            status: 'connected' | 'disconnected' | 'none';
+            agentType: string | null;
+          };
+          log(`🔄 [MESSAGE] About to update terminal ${terminalId}:`, typedStateInfo);
 
           try {
-            coordinator.updateCliAgentStatus(terminalId, stateInfo.status, stateInfo.agentType);
+            coordinator.updateCliAgentStatus(
+              terminalId,
+              typedStateInfo.status,
+              typedStateInfo.agentType
+            );
 
             log(
-              `✅ [MESSAGE] Applied state: Terminal ${terminalId} -> ${stateInfo.status} (${stateInfo.agentType})`
+              `✅ [MESSAGE] Applied state: Terminal ${terminalId} -> ${typedStateInfo.status} (${typedStateInfo.agentType})`
             );
           } catch (error) {
             log(`❌ [MESSAGE] Error updating terminal ${terminalId}:`, error);
@@ -652,9 +660,9 @@ export class MessageManager implements IMessageManager {
    * Queue message for reliable delivery
    */
   private queueMessage(message: unknown, coordinator: IManagerCoordinator): void {
-    const msgObj = message as any;
+    const msgObj = message as { command?: string };
     log(
-      `📤 [MESSAGE] Queueing message: ${msgObj?.command} (queue size: ${this.messageQueue.length})`
+      `📤 [MESSAGE] Queueing message: ${msgObj?.command || 'unknown'} (queue size: ${this.messageQueue.length})`
     );
     this.messageQueue.push(message);
     void this.processMessageQueue(coordinator);
@@ -1314,7 +1322,9 @@ export class MessageManager implements IMessageManager {
     );
 
     // Access persistence manager through coordinator
-    const terminalManager = coordinator as any;
+    const terminalManager = coordinator as {
+      persistenceManager?: { serializeTerminal: (id: string, options: unknown) => unknown };
+    };
     const persistenceManager = terminalManager.persistenceManager;
 
     if (!persistenceManager) {
@@ -1329,12 +1339,13 @@ export class MessageManager implements IMessageManager {
         excludeAltBuffer: true,
       });
 
-      if (!serializedData || !serializedData.content) {
+      const typedData = serializedData as { content?: string };
+      if (!serializedData || !typedData.content) {
         throw new Error('No serialized content returned from persistence manager');
       }
 
       // Parse the serialized content into line data
-      const lines = serializedData.content.split('\n');
+      const lines = typedData.content.split('\n');
       const scrollbackData: Array<{
         content: string;
         type?: 'output' | 'input' | 'error';
@@ -1417,7 +1428,14 @@ export class MessageManager implements IMessageManager {
 
     try {
       // Get persistence manager from the coordinator
-      const terminalManager = coordinator as any; // Type assertion for access to persistence manager
+      const terminalManager = coordinator as {
+        persistenceManager?: {
+          serializeTerminal: (
+            id: string,
+            options: unknown
+          ) => { content: string; html: string } | null;
+        };
+      };
       const persistenceManager = terminalManager.persistenceManager;
 
       if (!persistenceManager) {
@@ -1436,18 +1454,21 @@ export class MessageManager implements IMessageManager {
       }
 
       // Send response back to extension
+      const content = String(serializedData.content || '');
+      const html = String(serializedData.html || '');
+
       this.queueMessage(
         {
           command: 'serializationResponse',
           terminalId,
-          serializedContent: serializedData.content,
-          serializedHtml: serializedData.html,
+          serializedContent: content,
+          serializedHtml: html,
           timestamp: Date.now(),
         },
         coordinator
       );
 
-      log(`✅ [MESSAGE] Terminal ${terminalId} serialized: ${serializedData.content.length} chars`);
+      log(`✅ [MESSAGE] Terminal ${terminalId} serialized: ${content.length} chars`);
     } catch (error) {
       log(
         `❌ [MESSAGE] Error serializing terminal: ${error instanceof Error ? error.message : String(error)}`
@@ -1484,7 +1505,9 @@ export class MessageManager implements IMessageManager {
 
     try {
       // Get persistence manager from the coordinator
-      const terminalManager = coordinator as any; // Type assertion for access to persistence manager
+      const terminalManager = coordinator as {
+        persistenceManager?: { restoreTerminalContent: (id: string, content: string) => boolean };
+      };
       const persistenceManager = terminalManager.persistenceManager;
 
       if (!persistenceManager) {
@@ -1524,7 +1547,7 @@ export class MessageManager implements IMessageManager {
       cwd: string;
       isActive: boolean;
     }>;
-    const activeTerminalId = msg.activeTerminalId as string;
+    const _activeTerminalId = msg.activeTerminalId as string;
 
     if (!terminals || !Array.isArray(terminals)) {
       log('❌ [MESSAGE] Invalid terminal restore info - no terminals array');
@@ -1551,7 +1574,9 @@ export class MessageManager implements IMessageManager {
             log(`✅ [MESSAGE] Found matching terminal for ${terminalInfo.name}`);
 
             // Persistence Managerを使用してコンテンツ復元
-            const terminalManager = coordinator as any;
+            const terminalManager = coordinator as {
+              persistenceManager?: { restoreTerminalFromStorage: (id: string) => boolean };
+            };
             const persistenceManager = terminalManager.persistenceManager;
 
             if (persistenceManager) {
@@ -1599,7 +1624,9 @@ export class MessageManager implements IMessageManager {
     log('💾 [MESSAGE] Handling save all terminal sessions message');
 
     try {
-      const terminalManager = coordinator as any;
+      const terminalManager = coordinator as {
+        persistenceManager?: { saveTerminalContent: (id: string) => void };
+      };
       const persistenceManager = terminalManager.persistenceManager;
 
       if (!persistenceManager) {
@@ -1611,7 +1638,7 @@ export class MessageManager implements IMessageManager {
       const terminals = coordinator.getAllTerminalInstances();
       let savedCount = 0;
 
-      for (const [terminalId, terminal] of terminals) {
+      for (const [terminalId, _terminal] of terminals) {
         try {
           // 手動で保存メソッドを呼び出す
           persistenceManager.saveTerminalContent(terminalId);

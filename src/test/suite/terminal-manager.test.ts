@@ -1,3 +1,8 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion */
+
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 import { TerminalManager } from '../../terminals/TerminalManager';
@@ -156,7 +161,15 @@ suite('TerminalManager Test Suite', () => {
 
     const ptyInstance = terminal.ptyProcess || terminal.pty;
     assert.ok(ptyInstance, 'PTY instance should exist');
-    assert.strictEqual(typeof ptyInstance.write, 'function', 'PTY should have write method');
-    assert.strictEqual(typeof ptyInstance.resize, 'function', 'PTY should have resize method');
+    assert.strictEqual(
+      typeof (ptyInstance as any).write,
+      'function',
+      'PTY should have write method'
+    );
+    assert.strictEqual(
+      typeof (ptyInstance as any).resize,
+      'function',
+      'PTY should have resize method'
+    );
   });
 });
