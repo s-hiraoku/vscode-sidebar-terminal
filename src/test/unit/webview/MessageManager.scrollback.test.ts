@@ -454,7 +454,10 @@ describe('MessageManager - Scrollback Extraction', () => {
 
       // Act & Assert - Should not throw error
       expect(() => {
-        messageManager.handleMessage(createMessageEvent(extractScrollbackMessage), limitedCoordinator);
+        messageManager.handleMessage(
+          createMessageEvent(extractScrollbackMessage),
+          limitedCoordinator
+        );
       }).to.not.throw();
     });
   });

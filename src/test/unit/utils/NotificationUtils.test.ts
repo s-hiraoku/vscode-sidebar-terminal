@@ -3,12 +3,10 @@
  */
 /* eslint-disable */
 // @ts-nocheck
-import * as sinon from 'sinon';
 import { expect, use } from 'chai';
 import sinonChai from 'sinon-chai';
 
 use(sinonChai);
-import { JSDOM } from 'jsdom';
 import {
   showTerminalCloseError,
   showTerminalKillError,
@@ -16,65 +14,24 @@ import {
   showNotification,
   NotificationConfig,
 } from '../../../webview/utils/NotificationUtils';
-
-// Mock setup for this test file
-const setupTestEnvironment = () => {
-  // Mock globals that might be needed
-  if (typeof (global as any).vscode === 'undefined') {
-    (global as any).vscode = {
-      workspace: {
-        getConfiguration: () => ({ get: () => undefined }),
-      },
-    };
-  }
-};
+import { 
+  setupTestEnvironment, 
+  cleanupTestEnvironment, 
+  TestEnvironment 
+} from '../../utils/CommonTestSetup';
 
 describe('NotificationUtils', () => {
-  let dom: JSDOM;
-  let document: Document;
-  let sandbox: sinon.SinonSandbox;
-  let clock: sinon.SinonFakeTimers;
+  let testEnv: TestEnvironment;
 
   beforeEach(() => {
-    // Test environment setup
-    setupTestEnvironment();
-
-    // Set up process.nextTick before JSDOM creation
-    const originalProcess = global.process;
-    (global as any).process = {
-      ...originalProcess,
-      nextTick: (callback: () => void) => setImmediate(callback),
-      env: { ...originalProcess.env, NODE_ENV: 'test' },
-    };
-
-    // JSDOM環境をセットアップ
-    dom = new JSDOM(`
-      <!DOCTYPE html>
-      <html>
-        <body>
-          <div id="notification-container"></div>
-        </body>
-      </html>
-    `);
-    document = dom.window.document;
-
-    // グローバルに設定
-    (global as Record<string, unknown>).document = document;
-    (global as Record<string, unknown>).window = dom.window;
-    (global as Record<string, unknown>).HTMLElement = dom.window.HTMLElement;
-
-    sandbox = sinon.createSandbox();
-    clock = sinon.useFakeTimers();
+    testEnv = setupTestEnvironment({ 
+      withClock: true, 
+      withNotificationContainer: true 
+    });
   });
 
   afterEach(() => {
-    clock.restore();
-    sandbox.restore();
-
-    // クリーンアップ
-    delete (global as Record<string, unknown>).document;
-    delete (global as Record<string, unknown>).window;
-    delete (global as Record<string, unknown>).HTMLElement;
+    cleanupTestEnvironment(testEnv);
   });
 
   describe('showTerminalCloseError', () => {
@@ -82,7 +39,7 @@ describe('NotificationUtils', () => {
       showTerminalCloseError(1);
 
       // 通知が作成されているかチェック (正しいクラス名を使用)
-      const notifications = document.querySelectorAll('.terminal-notification');
+      const notifications = testEnv.document.querySelectorAll('.terminal-notification');
       expect(notifications.length).to.equal(1);
 
       const notification = notifications[0] as HTMLElement;
@@ -92,7 +49,7 @@ describe('NotificationUtils', () => {
     it('should show warning notification for multiple terminals', () => {
       showTerminalCloseError(3);
 
-      const notifications = document.querySelectorAll('.terminal-notification');
+      const notifications = testEnv.document.querySelectorAll('.terminal-notification');
       expect(notifications.length).to.equal(1);
 
       const notification = notifications[0] as HTMLElement;
@@ -105,7 +62,7 @@ describe('NotificationUtils', () => {
       const reason = 'Process is busy';
       showTerminalKillError(reason);
 
-      const notifications = document.querySelectorAll('.terminal-notification');
+      const notifications = testEnv.document.querySelectorAll('.terminal-notification');
       expect(notifications.length).to.equal(1);
 
       const notification = notifications[0] as HTMLElement;
@@ -119,7 +76,7 @@ describe('NotificationUtils', () => {
       const reason = 'Maximum 5 terminals allowed';
       showSplitLimitWarning(reason);
 
-      const notifications = document.querySelectorAll('.terminal-notification');
+      const notifications = testEnv.document.querySelectorAll('.terminal-notification');
       expect(notifications.length).to.equal(1);
 
       const notification = notifications[0] as HTMLElement;
@@ -140,7 +97,7 @@ describe('NotificationUtils', () => {
 
       showNotification(config);
 
-      const notifications = document.querySelectorAll('.terminal-notification');
+      const notifications = testEnv.document.querySelectorAll('.terminal-notification');
       expect(notifications.length).to.equal(1);
 
       const notification = notifications[0] as HTMLElement;
@@ -160,14 +117,14 @@ describe('NotificationUtils', () => {
       showNotification(config);
 
       // 通知が存在することを確認
-      let notifications = document.querySelectorAll('.terminal-notification');
+      let notifications = testEnv.document.querySelectorAll('.terminal-notification');
       expect(notifications.length).to.equal(1);
 
       // 時間を進める
       clock.tick(1000);
 
       // 通知が削除されていることを確認
-      notifications = document.querySelectorAll('.terminal-notification');
+      notifications = testEnv.document.querySelectorAll('.terminal-notification');
       expect(notifications.length).to.equal(0);
     });
 
@@ -181,17 +138,17 @@ describe('NotificationUtils', () => {
       showNotification(config);
 
       // 通知が存在することを確認
-      let notifications = document.querySelectorAll('.terminal-notification');
+      let notifications = testEnv.document.querySelectorAll('.terminal-notification');
       expect(notifications.length).to.equal(1);
 
       // デフォルトの時間未満では削除されない
       clock.tick(3000);
-      notifications = document.querySelectorAll('.terminal-notification');
+      notifications = testEnv.document.querySelectorAll('.terminal-notification');
       expect(notifications.length).to.equal(1);
 
       // デフォルトの時間（4000ms）後には削除される
       clock.tick(1000);
-      notifications = document.querySelectorAll('.terminal-notification');
+      notifications = testEnv.document.querySelectorAll('.terminal-notification');
       expect(notifications.length).to.equal(0);
     });
 
@@ -208,7 +165,7 @@ describe('NotificationUtils', () => {
         message: 'Second notification',
       });
 
-      const notifications = document.querySelectorAll('.terminal-notification');
+      const notifications = testEnv.document.querySelectorAll('.terminal-notification');
       expect(notifications.length).to.equal(2);
     });
 
@@ -221,7 +178,7 @@ describe('NotificationUtils', () => {
 
       showNotification(config);
 
-      const notifications = document.querySelectorAll('.terminal-notification');
+      const notifications = testEnv.document.querySelectorAll('.terminal-notification');
       expect(notifications.length).to.equal(1);
 
       const notification = notifications[0] as HTMLElement;
