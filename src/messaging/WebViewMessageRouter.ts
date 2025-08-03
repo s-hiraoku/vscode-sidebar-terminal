@@ -17,6 +17,7 @@ export interface IWebViewMessageRouter {
   sendMessageDirect(message: WebviewMessage): Promise<void>;
   addMessageHandler(command: string, handler: MessageHandler): void;
   removeMessageHandler(command: string): void;
+  getMessageStats(): { queueSize: number; isWebviewReady: boolean; handlerCount: number; maxQueueSize: number; };
   dispose(): void;
 }
 

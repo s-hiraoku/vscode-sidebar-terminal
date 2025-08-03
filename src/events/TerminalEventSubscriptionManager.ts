@@ -13,6 +13,7 @@ import { ITerminalLifecycleManager } from '../services/TerminalLifecycleManager'
 import { ICliAgentDetectionService } from '../interfaces/CliAgentService';
 import { ITerminalStateManager } from '../services/TerminalStateManager';
 import { ITerminalDataBufferingService } from '../services/TerminalDataBufferingService';
+import { getTerminalConfig } from '../utils/common';
 import { extension as log } from '../utils/logger';
 
 export interface ITerminalEventSubscriptionManager {
@@ -201,9 +202,11 @@ export class TerminalEventSubscriptionManager implements ITerminalEventSubscript
       log(`🎉 [EVENT-SUBSCRIPTION] Terminal created: ${terminal.name} (${terminal.id})`);
 
       // WebView にターミナル作成メッセージを送信
+      // 設定を取得
+      const config = getTerminalConfig();
       const message = MessageFactory.createTerminalCreatedMessage(
         terminal,
-        {} // config は別途取得して設定
+        config
       );
 
       await this.messageRouter.sendMessage(message);
@@ -299,7 +302,7 @@ export class TerminalEventSubscriptionManager implements ITerminalEventSubscript
       this.bufferingService.bufferData(event.terminalId, event.data);
 
       // CLI Agent検出
-      this.cliAgentService.detectAgentFromOutput(event.data, event.terminalId);
+      this.cliAgentService.detectFromOutput(event.data, event.terminalId);
     } catch (error) {
       log(`❌ [EVENT-SUBSCRIPTION] Error handling terminal data: ${String(error)}`);
     }
@@ -327,7 +330,7 @@ export class TerminalEventSubscriptionManager implements ITerminalEventSubscript
     try {
       log(`📊 [EVENT-SUBSCRIPTION] Sending state update: ${state.terminals.length} terminals`);
 
-      const message = MessageFactory.createStateUpdateMessage(state, state.activeTerminalId);
+      const message = MessageFactory.createStateUpdateMessage(state, state.activeTerminalId || undefined);
       await this.messageRouter.sendMessage(message);
     } catch (error) {
       log(`❌ [EVENT-SUBSCRIPTION] Error sending state update: ${String(error)}`);
