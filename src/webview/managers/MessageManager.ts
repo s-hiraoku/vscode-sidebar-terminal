@@ -257,10 +257,7 @@ export class MessageManager implements IMessageManager {
   /**
    * Issue #122: AI Agent切り替え要求メッセージを送信
    */
-  public sendSwitchAiAgentMessage(
-    terminalId: string,
-    coordinator: IManagerCoordinator
-  ): void {
+  public sendSwitchAiAgentMessage(terminalId: string, coordinator: IManagerCoordinator): void {
     log(`📤 [MESSAGE] ========== SENDING SWITCH AI AGENT MESSAGE ==========`);
     log(`📤 [MESSAGE] Terminal ID: ${terminalId}`);
     log(`📤 [MESSAGE] Coordinator available:`, !!coordinator);

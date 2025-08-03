@@ -465,7 +465,9 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
               log(`🔄 [DEBUG] AI Agent switch result:`, result);
 
               if (result.success) {
-                log(`✅ [DEBUG] AI Agent successfully switched: ${result.newStatus} (${result.agentType})`);
+                log(
+                  `✅ [DEBUG] AI Agent successfully switched: ${result.newStatus} (${result.agentType})`
+                );
                 // Success notification will be handled by the status change event
               } else {
                 log(`❌ [DEBUG] AI Agent switch failed: ${result.reason}`);
@@ -868,7 +870,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
                 margin: 0;
                 padding: 0;
             }
-            
+
             body {
                 margin: 0;
                 padding: 0;
@@ -881,7 +883,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
                 flex-direction: column;
                 gap: 0;
             }
-            
+
             /* Split layout container */
             .terminal-layout {
                 width: 100%;
@@ -890,22 +892,22 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
                 flex-direction: column;
                 position: relative;
             }
-            
+
             /* Split panes container */
             .split-container {
                 flex: 1;
                 display: flex;
                 position: relative;
             }
-            
+
             .split-container.horizontal {
                 flex-direction: row;
             }
-            
+
             .split-container.vertical {
                 flex-direction: column;
             }
-            
+
             /* Terminal panes */
             .terminal-pane {
                 position: relative;
@@ -915,42 +917,42 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
                 display: flex;
                 flex-direction: column;
             }
-            
+
             .terminal-pane.single {
                 flex: 1;
             }
-            
+
             .terminal-pane.split {
                 flex: 1;
             }
-            
+
             /* Resize splitter */
             .splitter {
                 background: var(--vscode-widget-border, #454545);
                 position: relative;
                 z-index: 10;
             }
-            
+
             .splitter.horizontal {
                 width: 4px;
                 cursor: col-resize;
                 min-width: 4px;
             }
-            
+
             .splitter.vertical {
                 height: 4px;
                 cursor: row-resize;
                 min-height: 4px;
             }
-            
+
             .splitter:hover {
                 background: var(--vscode-focusBorder, #007acc);
             }
-            
+
             .splitter.dragging {
                 background: var(--vscode-focusBorder, #007acc);
             }
-            
+
             /* Terminal containers */
             #terminal {
                 flex: 1;
@@ -961,7 +963,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
                 margin: 0;
                 padding: 0;
             }
-            
+
             #terminal-body {
                 flex: 1;
                 width: 100%;
@@ -974,13 +976,13 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
                 display: flex;
                 flex-direction: column;
             }
-            
+
             .secondary-terminal {
                 width: 100%;
                 height: 100%;
                 position: relative;
             }
-            
+
             /* Terminal active border styles */
             .terminal-container {
                 position: relative;
@@ -989,28 +991,28 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
                 border: 1px solid transparent !important;
                 transition: border-color 0.2s ease-in-out;
             }
-            
+
             .terminal-container.active {
                 border-color: var(--vscode-focusBorder, #007acc) !important;
                 border-width: 1px !important;
                 border-style: solid !important;
             }
-            
+
             .terminal-container.inactive {
                 border-color: var(--vscode-widget-border, #454545) !important;
                 opacity: 0.9;
             }
-            
+
             /* Terminal body active border */
             #terminal-body.terminal-container.active {
                 border-color: var(--vscode-focusBorder, #007acc) !important;
             }
-            
+
             /* Individual terminal containers */
             div[data-terminal-container].terminal-container.active {
                 border-color: var(--vscode-focusBorder, #007acc) !important;
             }
-            
+
             /* Terminal pane border styles */
             .terminal-pane {
                 position: relative;
@@ -1022,35 +1024,35 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
                 border: 1px solid transparent;
                 transition: border-color 0.2s ease-in-out;
             }
-            
+
             .terminal-pane.active {
                 border-color: var(--vscode-focusBorder, #007acc);
             }
-            
+
             .terminal-pane.inactive {
                 border-color: var(--vscode-widget-border, #454545);
                 opacity: 0.8;
             }
-            
+
             /* XTerm.js container fixes */
             .xterm {
                 margin: 0 !important;
                 padding: 0 !important;
                 height: 100% !important;
             }
-            
+
             .xterm-viewport {
                 margin: 0 !important;
                 padding: 0 !important;
                 height: 100% !important;
             }
-            
+
             .xterm-screen {
                 margin: 0 !important;
                 padding: 0 !important;
                 height: 100% !important;
             }
-            
+
             /* Terminal container fixes */
             [data-terminal-container] {
                 margin: 0 !important;
@@ -1058,14 +1060,14 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
                 height: 100% !important;
                 flex: 1 !important;
             }
-            
+
             /* Ensure full height usage */
             html, body {
                 height: 100% !important;
                 margin: 0 !important;
                 padding: 0 !important;
             }
-            
+
             /* Split controls */
             .split-controls {
                 position: absolute;
@@ -1075,7 +1077,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
                 display: flex;
                 gap: 4px;
             }
-            
+
             .split-btn {
                 background: rgba(0, 0, 0, 0.7);
                 color: var(--vscode-foreground, #cccccc);
@@ -1086,23 +1088,23 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
                 cursor: pointer;
                 user-select: none;
             }
-            
+
             .split-btn:hover {
                 background: rgba(0, 0, 0, 0.9);
                 border-color: var(--vscode-focusBorder, #007acc);
             }
-            
+
             .split-btn.active {
                 background: var(--vscode-button-background, #0e639c);
                 border-color: var(--vscode-button-background, #0e639c);
             }
-            
+
             /* CLI Agent status indicators */
             .terminal-name {
                 color: var(--vscode-foreground) !important; /* Standard color */
                 font-weight: normal;
             }
-            
+
             /* CLI Agent indicator styles */
             .claude-indicator {
                 display: inline-block;
@@ -1110,23 +1112,23 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
                 height: 8px;
                 line-height: 1;
             }
-            
+
             .claude-indicator.claude-connected {
                 color: #4CAF50; /* Green for connected */
                 animation: blink 1.5s infinite;
             }
-            
+
             .claude-indicator.claude-disconnected {
                 color: #F44336; /* Red for disconnected */
                 /* No animation - solid color */
             }
-            
+
             @keyframes blink {
                 0% { opacity: 1; }
                 50% { opacity: 0.3; }
                 100% { opacity: 1; }
             }
-            
+
             .loading {
                 display: flex;
                 align-items: center;
@@ -1147,7 +1149,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
             console.log('🔥 [HTML] Script execution time:', new Date().toISOString());
             console.log('🔥 [HTML] window available:', typeof window);
             console.log('🔥 [HTML] document available:', typeof document);
-            
+
             // Acquire VS Code API once and store it globally for webview.js to use
             try {
                 if (typeof window.acquireVsCodeApi === 'function') {
@@ -1160,13 +1162,13 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
             } catch (error) {
                 console.log('❌ [HTML] Error acquiring VS Code API:', error);
             }
-            
+
             console.log('🔥 [HTML] Inline script completed');
             console.log('🔥 [HTML] About to load script:', '${scriptUri.toString()}');
             console.log('🔥 [HTML] VS Code API in window.vscodeApi:', !!window.vscodeApi);
             console.log('🔥 [HTML] VS Code API postMessage available:', typeof window.vscodeApi?.postMessage);
         </script>
-        <script nonce="${nonce}" src="${scriptUri.toString()}" 
+        <script nonce="${nonce}" src="${scriptUri.toString()}"
                 onload="console.log('✅ [HTML] webview.js loaded successfully')"
                 onerror="console.error('❌ [HTML] webview.js failed to load', event)"></script>
     </body>

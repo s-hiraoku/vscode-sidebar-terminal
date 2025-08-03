@@ -65,7 +65,7 @@ describe('AI Agent Toggle Button (Issue #122)', () => {
     vi.clearAllMocks();
     terminalManager = new TerminalManager();
     messageManager = new MessageManager();
-    
+
     mockCoordinator = {
       getActiveTerminalId: vi.fn(),
       getTerminalInstance: vi.fn(),
@@ -99,12 +99,12 @@ describe('AI Agent Toggle Button (Issue #122)', () => {
   });
 
   describe('TerminalManager.switchAiAgentConnection', () => {
-    it('現在接続されているエージェントを切断できる', () => {
+    it('現在接続されているエージェントに対するクリックを無視する', () => {
       const terminalId = 'test-terminal-1';
-      
+
       // Create terminal first
       const createdTerminalId = terminalManager.createTerminal();
-      
+
       // Manually set connected agent
       (terminalManager as any)._connectedAgentTerminalId = createdTerminalId;
       (terminalManager as any)._connectedAgentType = 'claude';
@@ -112,9 +112,9 @@ describe('AI Agent Toggle Button (Issue #122)', () => {
       const result = terminalManager.switchAiAgentConnection(createdTerminalId);
 
       expect(result.success).toBe(true);
-      expect(result.newStatus).toBe('disconnected');
+      expect(result.newStatus).toBe('connected');
       expect(result.agentType).toBe('claude');
-      expect(terminalManager.getConnectedAgentTerminalId()).toBe(null);
+      expect(terminalManager.getConnectedAgentTerminalId()).toBe(createdTerminalId);
     });
 
     it('存在しないターミナルIDに対してエラーを返す', () => {
@@ -127,7 +127,7 @@ describe('AI Agent Toggle Button (Issue #122)', () => {
 
     it('AI Agentが検出されていないターミナルに対してエラーを返す', () => {
       const createdTerminalId = terminalManager.createTerminal();
-      
+
       const result = terminalManager.switchAiAgentConnection(createdTerminalId);
 
       expect(result.success).toBe(false);
@@ -137,10 +137,10 @@ describe('AI Agent Toggle Button (Issue #122)', () => {
 
     it('切断されたエージェントを再接続できる', () => {
       const terminalId = 'test-terminal-1';
-      
+
       // Create terminal
       const createdTerminalId = terminalManager.createTerminal();
-      
+
       // Set up disconnected agent
       (terminalManager as any)._disconnectedAgents.set(createdTerminalId, {
         type: 'gemini',
@@ -165,7 +165,9 @@ describe('AI Agent Toggle Button (Issue #122)', () => {
       });
 
       expect(headerElements.aiAgentToggleButton).toBeDefined();
-      expect(headerElements.aiAgentToggleButton?.className).toBe('terminal-control ai-agent-toggle-btn');
+      expect(headerElements.aiAgentToggleButton?.className).toBe(
+        'terminal-control ai-agent-toggle-btn'
+      );
       expect(headerElements.aiAgentToggleButton?.innerHTML).toContain('<svg');
     });
 
@@ -179,7 +181,7 @@ describe('AI Agent Toggle Button (Issue #122)', () => {
 
       expect(headerElements.aiAgentToggleButton?.style.display).toBe('flex');
       expect(headerElements.aiAgentToggleButton?.style.color).toBe('#4CAF50');
-      expect(headerElements.aiAgentToggleButton?.title).toBe('Disconnect AI Agent');
+      expect(headerElements.aiAgentToggleButton?.title).toBe('AI Agent Connected (click ignored)');
     });
 
     it('AI Agent未検出時にボタンを非表示にする', () => {
@@ -216,7 +218,7 @@ describe('AI Agent Toggle Button (Issue #122)', () => {
     it('AI Agent切り替えボタンクリック → Extension通信 → 状態更新のフロー', async () => {
       // 1. Create terminal with AI Agent
       const terminalId = terminalManager.createTerminal();
-      
+
       // 2. Set up connected agent
       (terminalManager as any)._connectedAgentTerminalId = terminalId;
       (terminalManager as any)._connectedAgentType = 'claude';
@@ -231,14 +233,14 @@ describe('AI Agent Toggle Button (Issue #122)', () => {
       HeaderFactory.setAiAgentToggleButtonVisibility(headerElements, true, 'connected');
       expect(headerElements.aiAgentToggleButton?.style.display).toBe('flex');
 
-      // 5. Simulate button click (extension side)
+      // 5. Simulate button click (extension side) - should be ignored
       const result = terminalManager.switchAiAgentConnection(terminalId);
       expect(result.success).toBe(true);
-      expect(result.newStatus).toBe('disconnected');
+      expect(result.newStatus).toBe('connected'); // Status remains connected
 
-      // 6. Update button appearance for disconnected state
-      HeaderFactory.setAiAgentToggleButtonVisibility(headerElements, true, 'disconnected');
-      expect(headerElements.aiAgentToggleButton?.title).toBe('Connect AI Agent');
+      // 6. Button appearance should remain for connected state
+      HeaderFactory.setAiAgentToggleButtonVisibility(headerElements, true, 'connected');
+      expect(headerElements.aiAgentToggleButton?.title).toBe('AI Agent Connected (click ignored)');
     });
   });
 });

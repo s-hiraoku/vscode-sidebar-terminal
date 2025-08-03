@@ -14,19 +14,19 @@ import {
   showNotification,
   NotificationConfig,
 } from '../../../webview/utils/NotificationUtils';
-import { 
-  setupTestEnvironment, 
-  cleanupTestEnvironment, 
-  TestEnvironment 
+import {
+  setupTestEnvironment,
+  cleanupTestEnvironment,
+  TestEnvironment,
 } from '../../utils/CommonTestSetup';
 
 describe('NotificationUtils', () => {
   let testEnv: TestEnvironment;
 
   beforeEach(() => {
-    testEnv = setupTestEnvironment({ 
-      withClock: true, 
-      withNotificationContainer: true 
+    testEnv = setupTestEnvironment({
+      withClock: true,
+      withNotificationContainer: true,
     });
   });
 

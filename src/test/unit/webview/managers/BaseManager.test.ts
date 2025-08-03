@@ -52,10 +52,18 @@ class TestManager extends BaseManager {
   }
 
   // Expose protected properties for testing
-  public get testIsInitialized(): boolean { return this.isInitialized; }
-  public get testIsDisposed(): boolean { return this.isDisposed; }
-  public get testLoggingEnabled(): boolean { return this.loggingEnabled; }
-  public set testLoggingEnabled(value: boolean) { this.loggingEnabled = value; }
+  public get testIsInitialized(): boolean {
+    return this.isInitialized;
+  }
+  public get testIsDisposed(): boolean {
+    return this.isDisposed;
+  }
+  public get testLoggingEnabled(): boolean {
+    return this.loggingEnabled;
+  }
+  public set testLoggingEnabled(value: boolean) {
+    this.loggingEnabled = value;
+  }
 }
 
 describe('BaseManager', () => {
@@ -297,7 +305,7 @@ describe('BaseManager', () => {
       class FailingManager extends BaseManager {
         public testIsInitialized = false;
         public testIsDisposed = false;
-        
+
         constructor() {
           super('FailingManager');
         }

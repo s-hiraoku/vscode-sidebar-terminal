@@ -387,7 +387,7 @@ export class HeaderFactory {
       if (visible && agentStatus) {
         const isConnected = agentStatus === 'connected';
         elements.aiAgentToggleButton.title = isConnected
-          ? 'Disconnect AI Agent'
+          ? 'AI Agent Connected (click ignored)'
           : 'Connect AI Agent';
       }
 

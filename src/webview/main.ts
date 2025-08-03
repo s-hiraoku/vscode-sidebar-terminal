@@ -367,7 +367,9 @@ class TerminalWebviewManager {
       }
 
       // Setup AI Agent toggle button event handler (Issue #122)
-      const aiAgentToggleButton = terminalHeader.querySelector('.ai-agent-toggle-btn') as HTMLButtonElement;
+      const aiAgentToggleButton = terminalHeader.querySelector(
+        '.ai-agent-toggle-btn'
+      ) as HTMLButtonElement;
       if (aiAgentToggleButton) {
         aiAgentToggleButton.addEventListener(
           'click',

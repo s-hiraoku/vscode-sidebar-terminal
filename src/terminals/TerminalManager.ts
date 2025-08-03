@@ -822,38 +822,21 @@ export class TerminalManager {
 
     // 現在の接続状態を確認
     const isCurrentlyConnected = this._connectedAgentTerminalId === terminalId;
-    
+
     if (isCurrentlyConnected) {
-      // 現在接続されている場合: 切断
-      const previousType = this._connectedAgentType;
-      this._connectedAgentTerminalId = null;
-      this._connectedAgentType = null;
-      
-      // 切断されたエージェントを追跡リストに追加
-      this._disconnectedAgents.set(terminalId, {
-        type: previousType as 'claude' | 'gemini',
-        startTime: new Date(),
-        terminalName: terminal.name,
-      });
-
-      // ステータス変更イベントを発火
-      this._onCliAgentStatusChange.fire({
-        terminalId,
-        status: 'disconnected',
-        type: previousType,
-        terminalName: terminal.name,
-      });
-
-      log(`🔄 [AI-AGENT-SWITCH] Manually disconnected ${previousType} from terminal: ${terminal.name}`);
-      
+      // 現在接続されている場合: 無視（何もしない）
+      const currentType = this._connectedAgentType;
+      log(
+        `ℹ️ [AI-AGENT-SWITCH] AI Agent already connected to terminal: ${terminal.name}, ignoring`
+      );
       return {
         success: true,
-        newStatus: 'disconnected',
-        agentType: previousType,
+        newStatus: 'connected',
+        agentType: currentType,
       };
     } else {
-      // 現在接続されていない場合: 他のターミナルのエージェントを検索して接続
-      
+      // 現在接続されていない場合: 切断されたエージェントを検索して接続
+
       // このターミナルに切断されたエージェントがあるかチェック
       const disconnectedAgent = this._disconnectedAgents.get(terminalId);
       if (disconnectedAgent) {
@@ -890,8 +873,10 @@ export class TerminalManager {
           terminalName: terminal.name,
         });
 
-        log(`🔄 [AI-AGENT-SWITCH] Manually connected ${disconnectedAgent.type} to terminal: ${terminal.name}`);
-        
+        log(
+          `🔄 [AI-AGENT-SWITCH] Manually connected ${disconnectedAgent.type} to terminal: ${terminal.name}`
+        );
+
         return {
           success: true,
           newStatus: 'connected',
