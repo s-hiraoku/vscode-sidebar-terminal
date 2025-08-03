@@ -25,6 +25,18 @@ export interface ITerminalStateManager {
   validateTerminalCreation(): OperationResult<void>;
   validateTerminalDeletion(terminalId: string): OperationResult<void>;
   
+  // 状態分析
+  getStateAnalysis(): {
+    terminalCount: number;
+    maxTerminals: number;
+    utilization: number;
+    availableSlots: number[];
+    activeTerminalId: string | null;
+    hasActiveTerminal: boolean;
+    terminalNames: string[];
+    duplicateNames: string[];
+  };
+  
   // イベント
   onStateUpdate: vscode.Event<TerminalState>;
   

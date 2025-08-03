@@ -12,7 +12,8 @@ import { extension as log } from '../utils/logger';
 
 // Services
 import { ITerminalLifecycleManager, TerminalLifecycleManager } from '../services/TerminalLifecycleManager';
-import { ICliAgentDetectionService, CliAgentDetectionService } from '../services/CliAgentDetectionService';
+import { ICliAgentDetectionService } from '../interfaces/CliAgentService';
+import { CliAgentDetectionService } from '../services/CliAgentDetectionService';
 import { ITerminalDataBufferingService, TerminalDataBufferingService } from '../services/TerminalDataBufferingService';
 import { ITerminalStateManager, TerminalStateManager } from '../services/TerminalStateManager';
 
@@ -285,7 +286,7 @@ export class RefactoredSecondaryTerminalProvider implements vscode.WebviewViewPr
     // 現在の状態をWebViewに送信
     const currentState = this.stateManager.getCurrentState();
     await this.messageRouter.sendMessage(
-      MessageFactory.createStateUpdateMessage(currentState, currentState.activeTerminalId)
+      MessageFactory.createStateUpdateMessage(currentState, currentState.activeTerminalId || undefined)
     );
   }
 

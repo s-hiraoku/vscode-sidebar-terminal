@@ -111,7 +111,7 @@ export class WebViewResourceManager implements IWebViewResourceManager {
    */
   setWebviewOptions(webview: vscode.Webview): void {
     const localResourceRoots = this.config.localResourceRoots.map(root =>
-      vscode.Uri.file(path.join(vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '', root))
+      vscode.Uri.file(path.join(vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || __dirname, root))
     );
 
     webview.options = {
@@ -309,6 +309,6 @@ export class WebViewResourceManager implements IWebViewResourceManager {
       '"': '&quot;',
       "'": '&#039;'
     };
-    return text.replace(/[&<>"']/g, (match) => map[match]);
+    return text.replace(/[&<>"']/g, (match) => map[match] || match);
   }
 }
