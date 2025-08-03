@@ -1158,7 +1158,7 @@ export class TerminalManager {
           ptyInstance.write('\r'); // Send carriage return to trigger prompt
         }
       } catch (error) {
-        log(`❌ [FORCE-PROMPT] Error sending prompt trigger: ${error}`);
+        log(`❌ [FORCE-PROMPT] Error sending prompt trigger: ${String(error)}`);
       }
     }, 50); // Small delay to let CLI agent finish (improved responsiveness)
   }
