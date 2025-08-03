@@ -198,8 +198,8 @@ export namespace FileReferenceService {
     // Check if integration is enabled
     const isEnabled =
       integrationType === 'cli-agent'
-        ? this.isCliAgentIntegrationEnabled()
-        : this.isGitHubCopilotIntegrationEnabled();
+        ? isCliAgentIntegrationEnabled()
+        : isGitHubCopilotIntegrationEnabled();
 
     if (!isEnabled) {
       return {
@@ -209,7 +209,7 @@ export namespace FileReferenceService {
     }
 
     // Get active file info
-    const fileInfo = this.getActiveFileInfo();
+    const fileInfo = getActiveFileInfo();
     if (!fileInfo) {
       return {
         valid: false,
