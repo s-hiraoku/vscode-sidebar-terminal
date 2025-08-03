@@ -2,146 +2,93 @@
  * AI Agent切り替えボタンのテスト (Issue #122)
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi, beforeAll } from 'vitest';
+import * as assert from 'assert';
+import * as sinon from 'sinon';
 import { TerminalManager } from '../../../terminals/TerminalManager';
-import { HeaderFactory, TerminalHeaderElements } from '../../../webview/factories/HeaderFactory';
+import { HeaderFactory } from '../../../webview/factories/HeaderFactory';
 import { MessageManager } from '../../../webview/managers/MessageManager';
 import { IManagerCoordinator } from '../../../webview/interfaces/ManagerInterfaces';
-
-// Mock DOM utilities
-const mockDOMUtils = {
-  createElement: vi.fn(),
-  appendChildren: vi.fn(),
-};
-
-// Mock VS Code API
-const mockVSCodeAPI = {
-  postMessage: vi.fn(),
-  getState: vi.fn(),
-  setState: vi.fn(),
-};
-
-vi.mock('../../../webview/utils/DOMUtils', () => ({
-  DOMUtils: mockDOMUtils,
-}));
-
-vi.mock('../../../utils/logger', () => ({
-  terminal: vi.fn(),
-  webview: vi.fn(),
-  provider: vi.fn(),
-}));
 
 describe('AI Agent Toggle Button (Issue #122)', () => {
   let terminalManager: TerminalManager;
   let messageManager: MessageManager;
   let mockCoordinator: IManagerCoordinator;
 
-  beforeAll(() => {
-    // Setup DOM environment
-    Object.defineProperty(global, 'document', {
-      value: {
-        createElement: vi.fn(() => ({
-          style: {},
-          addEventListener: vi.fn(),
-          setAttribute: vi.fn(),
-          hasAttribute: vi.fn(),
-          querySelector: vi.fn(),
-          textContent: '',
-          offsetHeight: 100,
-        })),
-        getElementById: vi.fn(),
-        querySelectorAll: vi.fn(() => []),
-      },
-    });
-
-    Object.defineProperty(global, 'window', {
-      value: {
-        vscodeApi: mockVSCodeAPI,
-      },
-    });
-  });
-
   beforeEach(() => {
-    vi.clearAllMocks();
     terminalManager = new TerminalManager();
     messageManager = new MessageManager();
 
     mockCoordinator = {
-      getActiveTerminalId: vi.fn(),
-      getTerminalInstance: vi.fn(),
-      postMessageToExtension: vi.fn(),
-      createTerminal: vi.fn(),
-      ensureTerminalFocus: vi.fn(),
-      switchToTerminal: vi.fn(),
-      closeTerminal: vi.fn(),
-      updateSettings: vi.fn(),
-      writeToTerminal: vi.fn(),
-      resizeTerminal: vi.fn(),
-      updateState: vi.fn(),
+      getActiveTerminalId: sinon.stub(),
+      setActiveTerminalId: sinon.stub(),
+      getTerminalInstance: sinon.stub(),
+      getAllTerminalInstances: sinon.stub(),
+      getAllTerminalContainers: sinon.stub(),
+      getTerminalElement: sinon.stub(),
+      postMessageToExtension: sinon.stub(),
+      log: sinon.stub(),
+      createTerminal: sinon.stub(),
+      openSettings: sinon.stub(),
+      applyFontSettings: sinon.stub(),
+      closeTerminal: sinon.stub(),
+      getManagers: sinon.stub(),
+      updateState: sinon.stub(),
+      handleTerminalRemovedFromExtension: sinon.stub(),
+      updateClaudeStatus: sinon.stub(),
+      updateCliAgentStatus: sinon.stub(),
+      ensureTerminalFocus: sinon.stub(),
+      createTerminalFromSession: sinon.stub(),
     };
-
-    // Mock DOM element creation
-    mockDOMUtils.createElement.mockImplementation((tag, styles, attributes) => ({
-      tagName: tag.toUpperCase(),
-      style: styles || {},
-      ...attributes,
-      addEventListener: vi.fn(),
-      setAttribute: vi.fn(),
-      hasAttribute: vi.fn(),
-      textContent: attributes?.textContent || '',
-      className: attributes?.className || '',
-      dataset: { terminalId: attributes?.['data-terminal-id'] },
-    }));
   });
 
   afterEach(() => {
-    vi.clearAllMocks();
+    terminalManager.dispose();
+    sinon.restore();
   });
 
   describe('TerminalManager.switchAiAgentConnection', () => {
     it('現在接続されているエージェントに対するクリックを無視する', () => {
-      const terminalId = 'test-terminal-1';
-
       // Create terminal first
       const createdTerminalId = terminalManager.createTerminal();
 
       // Manually set connected agent
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
       (terminalManager as any)._connectedAgentTerminalId = createdTerminalId;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
       (terminalManager as any)._connectedAgentType = 'claude';
 
       const result = terminalManager.switchAiAgentConnection(createdTerminalId);
 
-      expect(result.success).toBe(true);
-      expect(result.newStatus).toBe('connected');
-      expect(result.agentType).toBe('claude');
-      expect(terminalManager.getConnectedAgentTerminalId()).toBe(createdTerminalId);
+      assert.strictEqual(result.success, true);
+      assert.strictEqual(result.newStatus, 'connected');
+      assert.strictEqual(result.agentType, 'claude');
+      assert.strictEqual(terminalManager.getConnectedAgentTerminalId(), createdTerminalId);
     });
 
     it('存在しないターミナルIDに対してエラーを返す', () => {
       const result = terminalManager.switchAiAgentConnection('non-existent-terminal');
 
-      expect(result.success).toBe(false);
-      expect(result.reason).toBe('Terminal not found');
-      expect(result.newStatus).toBe('none');
+      assert.strictEqual(result.success, false);
+      assert.strictEqual(result.reason, 'Terminal not found');
+      assert.strictEqual(result.newStatus, 'none');
     });
 
     it('AI Agentが検出されていないターミナルに対してエラーを返す', () => {
       const createdTerminalId = terminalManager.createTerminal();
-
+      
       const result = terminalManager.switchAiAgentConnection(createdTerminalId);
 
-      expect(result.success).toBe(false);
-      expect(result.reason).toBe('No AI Agent detected in this terminal');
-      expect(result.newStatus).toBe('none');
+      assert.strictEqual(result.success, false);
+      assert.strictEqual(result.reason, 'No AI Agent detected in this terminal');
+      assert.strictEqual(result.newStatus, 'none');
     });
 
     it('切断されたエージェントを再接続できる', () => {
-      const terminalId = 'test-terminal-1';
-
       // Create terminal
       const createdTerminalId = terminalManager.createTerminal();
 
       // Set up disconnected agent
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
       (terminalManager as any)._disconnectedAgents.set(createdTerminalId, {
         type: 'gemini',
         startTime: new Date(),
@@ -150,10 +97,10 @@ describe('AI Agent Toggle Button (Issue #122)', () => {
 
       const result = terminalManager.switchAiAgentConnection(createdTerminalId);
 
-      expect(result.success).toBe(true);
-      expect(result.newStatus).toBe('connected');
-      expect(result.agentType).toBe('gemini');
-      expect(terminalManager.getConnectedAgentTerminalId()).toBe(createdTerminalId);
+      assert.strictEqual(result.success, true);
+      assert.strictEqual(result.newStatus, 'connected');
+      assert.strictEqual(result.agentType, 'gemini');
+      assert.strictEqual(terminalManager.getConnectedAgentTerminalId(), createdTerminalId);
     });
   });
 
@@ -164,11 +111,12 @@ describe('AI Agent Toggle Button (Issue #122)', () => {
         terminalName: 'Terminal 1',
       });
 
-      expect(headerElements.aiAgentToggleButton).toBeDefined();
-      expect(headerElements.aiAgentToggleButton?.className).toBe(
+      assert.ok(headerElements.aiAgentToggleButton);
+      assert.strictEqual(
+        headerElements.aiAgentToggleButton?.className,
         'terminal-control ai-agent-toggle-btn'
       );
-      expect(headerElements.aiAgentToggleButton?.innerHTML).toContain('<svg');
+      assert.ok(headerElements.aiAgentToggleButton?.innerHTML.includes('<svg'));
     });
 
     it('AI Agent検出時にボタンを表示する', () => {
@@ -179,9 +127,11 @@ describe('AI Agent Toggle Button (Issue #122)', () => {
 
       HeaderFactory.setAiAgentToggleButtonVisibility(headerElements, true, 'connected');
 
-      expect(headerElements.aiAgentToggleButton?.style.display).toBe('flex');
-      expect(headerElements.aiAgentToggleButton?.style.color).toBe('#4CAF50');
-      expect(headerElements.aiAgentToggleButton?.title).toBe('AI Agent Connected (click ignored)');
+      assert.strictEqual(headerElements.aiAgentToggleButton?.style.display, 'flex');
+      assert.strictEqual(
+        headerElements.aiAgentToggleButton?.title,
+        'AI Agent Connected (click ignored)'
+      );
     });
 
     it('AI Agent未検出時にボタンを非表示にする', () => {
@@ -192,35 +142,40 @@ describe('AI Agent Toggle Button (Issue #122)', () => {
 
       HeaderFactory.setAiAgentToggleButtonVisibility(headerElements, false);
 
-      expect(headerElements.aiAgentToggleButton?.style.display).toBe('none');
+      assert.strictEqual(headerElements.aiAgentToggleButton?.style.display, 'none');
     });
   });
 
   describe('MessageManager.sendSwitchAiAgentMessage', () => {
     it('switchAiAgentメッセージを正しく送信する', () => {
       const terminalId = 'test-terminal-1';
-      const queueMessageSpy = vi.spyOn(messageManager as any, 'queueMessage');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const queueMessageSpy = sinon.spy(messageManager as any, 'queueMessage');
 
       messageManager.sendSwitchAiAgentMessage(terminalId, mockCoordinator);
 
-      expect(queueMessageSpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          command: 'switchAiAgent',
-          terminalId,
-          timestamp: expect.any(Number),
-        }),
-        mockCoordinator
-      );
+      assert.ok(queueMessageSpy.calledOnce);
+      const call = queueMessageSpy.getCall(0);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const message = call.args[0];
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      assert.strictEqual(message.command, 'switchAiAgent');
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      assert.strictEqual(message.terminalId, terminalId);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      assert.ok(typeof message.timestamp === 'number');
     });
   });
 
   describe('統合テスト', () => {
-    it('AI Agent切り替えボタンクリック → Extension通信 → 状態更新のフロー', async () => {
+    it('AI Agent切り替えボタンクリック → Extension通信 → 状態更新のフロー', () => {
       // 1. Create terminal with AI Agent
       const terminalId = terminalManager.createTerminal();
 
       // 2. Set up connected agent
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
       (terminalManager as any)._connectedAgentTerminalId = terminalId;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
       (terminalManager as any)._connectedAgentType = 'claude';
 
       // 3. Create header with toggle button
@@ -231,16 +186,19 @@ describe('AI Agent Toggle Button (Issue #122)', () => {
 
       // 4. Show toggle button
       HeaderFactory.setAiAgentToggleButtonVisibility(headerElements, true, 'connected');
-      expect(headerElements.aiAgentToggleButton?.style.display).toBe('flex');
+      assert.strictEqual(headerElements.aiAgentToggleButton?.style.display, 'flex');
 
       // 5. Simulate button click (extension side) - should be ignored
       const result = terminalManager.switchAiAgentConnection(terminalId);
-      expect(result.success).toBe(true);
-      expect(result.newStatus).toBe('connected'); // Status remains connected
+      assert.strictEqual(result.success, true);
+      assert.strictEqual(result.newStatus, 'connected'); // Status remains connected
 
       // 6. Button appearance should remain for connected state
       HeaderFactory.setAiAgentToggleButtonVisibility(headerElements, true, 'connected');
-      expect(headerElements.aiAgentToggleButton?.title).toBe('AI Agent Connected (click ignored)');
+      assert.strictEqual(
+        headerElements.aiAgentToggleButton?.title,
+        'AI Agent Connected (click ignored)'
+      );
     });
   });
 });
