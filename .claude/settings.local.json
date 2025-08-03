@@ -77,7 +77,9 @@
       "Bash(./node_modules/.bin/mocha:*)",
       "Bash(tsc:*)",
       "Bash(npm test:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "mcp__brave-search__brave_web_search",
+      "mcp__serena__activate_project"
     ],
     "deny": []
   },
