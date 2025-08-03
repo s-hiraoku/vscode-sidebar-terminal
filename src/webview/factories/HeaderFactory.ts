@@ -155,11 +155,11 @@ export class HeaderFactory {
         opacity: '0.7',
         transition: 'opacity 0.2s, background-color 0.2s, filter 0.2s',
         marginRight: '2px',
-        width: '16px',
-        height: '16px',
+        width: '24px',
+        height: '24px',
       },
       {
-        innerHTML: '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M11.534 7h3.932a.25.25 0 0 1 .192.41l-1.966 2.36a.25.25 0 0 1-.384 0l-1.966-2.36a.25.25 0 0 1 .192-.41zm-11 2h3.932a.25.25 0 0 0 .192-.41L2.692 6.23a.25.25 0 0 0-.384 0L.342 8.59A.25.25 0 0 0 .534 9z"/><path fill-rule="evenodd" d="M8 3c-1.552 0-2.94.707-3.857 1.818a.5.5 0 1 1-.771-.636A6.002 6.002 0 0 1 13.917 7H12.9A5.002 5.002 0 0 0 8 3zM3.1 9a5.002 5.002 0 0 0 8.757 2.182.5.5 0 1 1 .771.636A6.002 6.002 0 0 1 2.083 9H3.1z"/></svg>',
+        innerHTML: `<svg width="24" height="24" viewBox="0 0 16 16" fill="currentColor"><path d="M11.534 7h3.932a.25.25 0 0 1 .192.41l-1.966 2.36a.25.25 0 0 1-.384 0l-1.966-2.36a.25.25 0 0 1 .192-.41zm-11 2h3.932a.25.25 0 0 0 .192-.41L2.692 6.23a.25.25 0 0 0-.384 0L.342 8.59A.25.25 0 0 0 .534 9z"/><path fill-rule="evenodd" d="M8 3c-1.552 0-2.94.707-3.857 1.818a.5.5 0 1 1-.771-.636A6.002 6.002 0 0 1 13.917 7H12.9A5.002 5.002 0 0 0 8 3zM3.1 9a5.002 5.002 0 0 0 8.757 2.182.5.5 0 1 1 .771.636A6.002 6.002 0 0 1 2.083 9H3.1z"/></svg>`,
         className: 'terminal-control ai-agent-toggle-btn',
         title: 'Switch AI Agent Connection',
         'data-terminal-id': terminalId,
@@ -382,7 +382,7 @@ export class HeaderFactory {
   ): void {
     if (elements.aiAgentToggleButton) {
       elements.aiAgentToggleButton.style.display = visible ? 'flex' : 'none';
-      
+
       // Update tooltip based on connection status
       if (visible && agentStatus) {
         const isConnected = agentStatus === 'connected';
@@ -390,8 +390,10 @@ export class HeaderFactory {
           ? 'Disconnect AI Agent'
           : 'Connect AI Agent';
       }
-      
-      log(`🔄 [HeaderFactory] AI Agent toggle button visibility: ${visible} (status: ${agentStatus || 'none'})`);
+
+      log(
+        `🔄 [HeaderFactory] AI Agent toggle button visibility: ${visible} (status: ${agentStatus || 'none'})`
+      );
     }
   }
 }
