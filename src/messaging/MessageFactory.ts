@@ -1,6 +1,6 @@
 /**
  * 統一されたメッセージファクトリー
- * 
+ *
  * Extension ↔ WebView 間の通信メッセージを一貫性をもって作成します。
  * 重複していたメッセージ構築パターンを統一します。
  */
@@ -159,10 +159,7 @@ export class MessageFactory {
   /**
    * ターミナル状態更新メッセージ
    */
-  static createStateUpdateMessage(
-    state: TerminalState,
-    activeTerminalId?: string
-  ): WebviewMessage {
+  static createStateUpdateMessage(state: TerminalState, activeTerminalId?: string): WebviewMessage {
     return this.createTerminalMessage('stateUpdate', activeTerminalId, {
       state,
       activeTerminalId,
@@ -190,11 +187,14 @@ export class MessageFactory {
    * CLI Agent完全状態同期メッセージ
    */
   static createCliAgentFullStateSync(
-    terminalStates: Record<string, {
-      status: 'connected' | 'disconnected' | 'none';
-      agentType: string | null;
-      terminalName: string;
-    }>,
+    terminalStates: Record<
+      string,
+      {
+        status: 'connected' | 'disconnected' | 'none';
+        agentType: string | null;
+        terminalName: string;
+      }
+    >,
     connectedAgentId: string | null,
     connectedAgentType: string | null,
     disconnectedCount: number
@@ -210,10 +210,7 @@ export class MessageFactory {
   /**
    * 設定応答メッセージ
    */
-  static createSettingsResponse(
-    settings: any,
-    fontSettings?: any
-  ): WebviewMessage {
+  static createSettingsResponse(settings: any, fontSettings?: any): WebviewMessage {
     return this.createTerminalMessage('settingsResponse', undefined, {
       settings,
       fontSettings,
@@ -225,11 +222,13 @@ export class MessageFactory {
    */
   static createScrollbackRestoreMessage(
     terminalId: string,
-    scrollbackContent: Array<{
-      content: string;
-      type?: 'output' | 'input' | 'error';
-      timestamp?: number;
-    }> | string[]
+    scrollbackContent:
+      | Array<{
+          content: string;
+          type?: 'output' | 'input' | 'error';
+          timestamp?: number;
+        }>
+      | string[]
   ): WebviewMessage {
     return this.createTerminalMessage('restoreScrollback', terminalId, {
       scrollbackContent,

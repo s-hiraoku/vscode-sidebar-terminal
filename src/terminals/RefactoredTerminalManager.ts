@@ -3,36 +3,34 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 import * as vscode from 'vscode';
-import {
-  TerminalInstance,
-  TerminalEvent,
-  TerminalState,
-  DeleteResult,
-} from '../types/common';
+import { TerminalInstance, TerminalEvent, TerminalState, DeleteResult } from '../types/common';
 import { terminal as log } from '../utils/logger';
-import {
-  showErrorMessage,
-  showWarningMessage,
-} from '../utils/common';
+import { showErrorMessage, showWarningMessage } from '../utils/common';
 import { CliAgentDetectionService } from '../services/CliAgentDetectionService';
 import { ICliAgentDetectionService } from '../interfaces/CliAgentService';
-import { TerminalLifecycleManager, ITerminalLifecycleManager } from '../services/TerminalLifecycleManager';
-import { TerminalDataBufferingService, ITerminalDataBufferingService } from '../services/TerminalDataBufferingService';
+import {
+  TerminalLifecycleManager,
+  ITerminalLifecycleManager,
+} from '../services/TerminalLifecycleManager';
+import {
+  TerminalDataBufferingService,
+  ITerminalDataBufferingService,
+} from '../services/TerminalDataBufferingService';
 import { TerminalStateManager, ITerminalStateManager } from '../services/TerminalStateManager';
 
 /**
  * Refactored TerminalManager using dependency injection and service composition.
- * 
+ *
  * This version dramatically reduces complexity from 1600+ lines to ~400 lines
  * by delegating responsibilities to specialized services while maintaining
  * full backward compatibility with the original API.
- * 
+ *
  * Architecture:
  * - TerminalLifecycleManager: Handle terminal creation/deletion
  * - CliAgentDetectionService: Manage CLI agent detection and state
  * - TerminalDataBufferingService: Handle data buffering and performance
  * - TerminalStateManager: Manage terminal state and validation
- * 
+ *
  * Key Benefits:
  * - 🎯 Single Responsibility: Each service has a focused purpose
  * - 🔧 Dependency Injection: Easy testing and service replacement
@@ -116,7 +114,7 @@ export class RefactoredTerminalManager {
     this.bufferingService.addFlushHandler((terminalId, data) => {
       // CLI Agent detection on buffered data
       this.cliAgentService.detectFromOutput(terminalId, data);
-      
+
       // Emit buffered data
       this._dataEmitter.fire({ terminalId, data });
     });
@@ -146,14 +144,14 @@ export class RefactoredTerminalManager {
    */
   public createTerminal(): string {
     log('🔧 [REFACTORED-TERMINAL-MANAGER] Creating terminal...');
-    
+
     try {
       const terminalId = this.lifecycleManager.createTerminal();
-      
+
       // Update state after creation
       const terminals = this.lifecycleManager.getAllTerminals();
       this.stateManager.updateTerminalState(terminals);
-      
+
       log(`✅ [REFACTORED-TERMINAL-MANAGER] Terminal created: ${terminalId}`);
       return terminalId;
     } catch (error) {
@@ -167,7 +165,7 @@ export class RefactoredTerminalManager {
    */
   public focusTerminal(terminalId: string): void {
     log(`🎯 [REFACTORED-TERMINAL-MANAGER] Focusing terminal: ${terminalId}`);
-    
+
     const terminal = this.lifecycleManager.getTerminal(terminalId);
     if (!terminal) {
       console.warn('⚠️ [WARN] Terminal not found for focus:', terminalId);
@@ -177,10 +175,10 @@ export class RefactoredTerminalManager {
     try {
       // Update active terminal in state manager
       this.stateManager.setActiveTerminal(terminalId);
-      
+
       // Emit focus event
       this._terminalFocusEmitter.fire(terminalId);
-      
+
       log(`✅ [REFACTORED-TERMINAL-MANAGER] Terminal focused: ${terminal.name}`);
     } catch (error) {
       log(`❌ [REFACTORED-TERMINAL-MANAGER] Error focusing terminal:`, error);
@@ -193,7 +191,7 @@ export class RefactoredTerminalManager {
    */
   public sendInput(data: string, terminalId?: string): void {
     const targetId = terminalId || this.stateManager.getActiveTerminalId();
-    
+
     if (!targetId) {
       console.warn('⚠️ [WARN] No terminal ID provided and no active terminal');
       return;
@@ -202,10 +200,9 @@ export class RefactoredTerminalManager {
     try {
       // CLI Agent input detection
       this.cliAgentService.detectFromInput(targetId, data);
-      
+
       // Delegate to lifecycle manager
       this.lifecycleManager.writeToTerminal(targetId, data);
-      
     } catch (error) {
       console.error('❌ [ERROR] Failed to send input to terminal:', error);
       showErrorMessage('Failed to send input to terminal', error);
@@ -238,7 +235,9 @@ export class RefactoredTerminalManager {
       source?: 'header' | 'panel' | 'command';
     } = {}
   ): Promise<DeleteResult> {
-    log(`🗑️ [REFACTORED-TERMINAL-MANAGER] Deleting terminal: ${terminalId} (source: ${options.source || 'unknown'})`);
+    log(
+      `🗑️ [REFACTORED-TERMINAL-MANAGER] Deleting terminal: ${terminalId} (source: ${options.source || 'unknown'})`
+    );
 
     // Queue operation to prevent race conditions
     return new Promise<DeleteResult>((resolve, reject) => {
@@ -275,14 +274,13 @@ export class RefactoredTerminalManager {
     try {
       // Delegate to lifecycle manager
       await this.lifecycleManager.killTerminal(terminalId);
-      
+
       // Update state
       const terminals = this.lifecycleManager.getAllTerminals();
       this.stateManager.updateTerminalState(terminals);
-      
+
       log(`✅ [REFACTORED-TERMINAL-MANAGER] Terminal deleted: ${terminalId}`);
       return { success: true, newState: this.stateManager.getCurrentState() };
-      
     } catch (error) {
       log(`❌ [REFACTORED-TERMINAL-MANAGER] Error deleting terminal:`, error);
       return { success: false, reason: `Delete failed: ${String(error)}` };
@@ -348,7 +346,12 @@ export class RefactoredTerminalManager {
     }
 
     if (terminalId && terminalId !== activeId) {
-      log('🔄 [REFACTORED-TERMINAL-MANAGER] Requested to kill:', terminalId, 'but will kill active terminal:', activeId);
+      log(
+        '🔄 [REFACTORED-TERMINAL-MANAGER] Requested to kill:',
+        terminalId,
+        'but will kill active terminal:',
+        activeId
+      );
     }
 
     this.deleteTerminal(activeId, { force: true, source: 'command' }).catch((error) => {
@@ -405,7 +408,10 @@ export class RefactoredTerminalManager {
       : [];
   }
 
-  public getDisconnectedAgents(): Map<string, { type: 'claude' | 'gemini'; startTime: Date; terminalName?: string }> {
+  public getDisconnectedAgents(): Map<
+    string,
+    { type: 'claude' | 'gemini'; startTime: Date; terminalName?: string }
+  > {
     return this.cliAgentService.getDisconnectedAgents();
   }
 

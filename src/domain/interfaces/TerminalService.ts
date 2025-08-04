@@ -1,6 +1,6 @@
 /**
  * Domain Layer - Terminal Service Interface
- * 
+ *
  * ビジネスロジック層のターミナルサービス定義
  */
 
@@ -35,15 +35,15 @@ export interface ITerminalService {
   deleteTerminal(terminalId: string): Promise<TerminalOperationResult>;
   getTerminal(terminalId: string): Terminal | null;
   getAllTerminals(): Terminal[];
-  
+
   // ターミナル操作
   writeToTerminal(terminalId: string, data: string): TerminalOperationResult;
   resizeTerminal(terminalId: string, cols: number, rows: number): TerminalOperationResult;
-  
+
   // 状態管理
   setActiveTerminal(terminalId: string): TerminalOperationResult;
   getActiveTerminal(): Terminal | null;
-  
+
   // イベント
   onTerminalCreated: (callback: (terminal: Terminal) => void) => void;
   onTerminalDeleted: (callback: (terminalId: string) => void) => void;

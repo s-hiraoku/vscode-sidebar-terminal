@@ -1,6 +1,6 @@
 /**
  * ターミナルイベントサブスクリプション管理
- * 
+ *
  * ターミナル関連のイベント購読を管理し、
  * WebView への通知を調整します。
  */
@@ -40,7 +40,7 @@ export interface EventSubscriptionConfig {
 export class TerminalEventSubscriptionManager implements ITerminalEventSubscriptionManager {
   private readonly disposables: vscode.Disposable[] = [];
   private readonly config: EventSubscriptionConfig;
-  
+
   // デバウンス用
   private stateUpdateTimer: NodeJS.Timeout | null = null;
 
@@ -59,9 +59,9 @@ export class TerminalEventSubscriptionManager implements ITerminalEventSubscript
       enableDataEvents: true,
       debounceStateUpdates: true,
       stateUpdateDelay: 100,
-      ...config
+      ...config,
     };
-    
+
     log('🎧 [EVENT-SUBSCRIPTION] Event subscription manager initialized');
   }
 
@@ -82,8 +82,8 @@ export class TerminalEventSubscriptionManager implements ITerminalEventSubscript
     this.disposables.push(createdDisposable);
 
     // ターミナル削除イベント
-    const removedDisposable = this.lifecycleManager.onTerminalRemoved(
-      (terminalId: string) => this.handleTerminalRemoved(terminalId)
+    const removedDisposable = this.lifecycleManager.onTerminalRemoved((terminalId: string) =>
+      this.handleTerminalRemoved(terminalId)
     );
     this.disposables.push(removedDisposable);
 
@@ -131,8 +131,8 @@ export class TerminalEventSubscriptionManager implements ITerminalEventSubscript
     log('🎧 [EVENT-SUBSCRIPTION] Subscribing to state events...');
 
     // 状態更新イベント
-    const stateUpdateDisposable = this.stateManager.onStateUpdate(
-      (state: TerminalState) => this.handleStateUpdate(state)
+    const stateUpdateDisposable = this.stateManager.onStateUpdate((state: TerminalState) =>
+      this.handleStateUpdate(state)
     );
     this.disposables.push(stateUpdateDisposable);
 
@@ -156,8 +156,8 @@ export class TerminalEventSubscriptionManager implements ITerminalEventSubscript
     this.disposables.push(dataDisposable);
 
     // データフラッシュイベント（バッファリングサービスから）
-    this.bufferingService.addFlushHandler(
-      (terminalId: string, data: string) => this.handleDataFlush(terminalId, data)
+    this.bufferingService.addFlushHandler((terminalId: string, data: string) =>
+      this.handleDataFlush(terminalId, data)
     );
 
     log('✅ [EVENT-SUBSCRIPTION] Data events subscribed');
@@ -168,16 +168,16 @@ export class TerminalEventSubscriptionManager implements ITerminalEventSubscript
    */
   unsubscribeAll(): void {
     log('🔇 [EVENT-SUBSCRIPTION] Unsubscribing from all events...');
-    
-    this.disposables.forEach(d => d.dispose());
+
+    this.disposables.forEach((d) => d.dispose());
     this.disposables.length = 0;
-    
+
     // デバウンスタイマーをクリア
     if (this.stateUpdateTimer) {
       clearTimeout(this.stateUpdateTimer);
       this.stateUpdateTimer = null;
     }
-    
+
     log('✅ [EVENT-SUBSCRIPTION] All events unsubscribed');
   }
 
@@ -186,9 +186,9 @@ export class TerminalEventSubscriptionManager implements ITerminalEventSubscript
    */
   dispose(): void {
     log('🗑️ [EVENT-SUBSCRIPTION] Disposing event subscription manager...');
-    
+
     this.unsubscribeAll();
-    
+
     log('✅ [EVENT-SUBSCRIPTION] Event subscription manager disposed');
   }
 
@@ -204,10 +204,7 @@ export class TerminalEventSubscriptionManager implements ITerminalEventSubscript
       // WebView にターミナル作成メッセージを送信
       // 設定を取得
       const config = getTerminalConfig();
-      const message = MessageFactory.createTerminalCreatedMessage(
-        terminal,
-        config
-      );
+      const message = MessageFactory.createTerminalCreatedMessage(terminal, config);
 
       await this.messageRouter.sendMessage(message);
     } catch (error) {
@@ -233,7 +230,10 @@ export class TerminalEventSubscriptionManager implements ITerminalEventSubscript
   /**
    * ターミナル終了イベントを処理
    */
-  private async handleTerminalExit(event: { terminalId: string; exitCode?: number }): Promise<void> {
+  private async handleTerminalExit(event: {
+    terminalId: string;
+    exitCode?: number;
+  }): Promise<void> {
     try {
       log(`🔚 [EVENT-SUBSCRIPTION] Terminal exited: ${event.terminalId} (code: ${event.exitCode})`);
 
@@ -254,7 +254,9 @@ export class TerminalEventSubscriptionManager implements ITerminalEventSubscript
     terminalName?: string;
   }): Promise<void> {
     try {
-      log(`🤖 [EVENT-SUBSCRIPTION] CLI Agent status changed: ${event.terminalId} -> ${event.status}`);
+      log(
+        `🤖 [EVENT-SUBSCRIPTION] CLI Agent status changed: ${event.terminalId} -> ${event.status}`
+      );
 
       // WebView にCLI Agent状態更新メッセージを送信
       const message = MessageFactory.createCliAgentStatusUpdate(
@@ -330,7 +332,10 @@ export class TerminalEventSubscriptionManager implements ITerminalEventSubscript
     try {
       log(`📊 [EVENT-SUBSCRIPTION] Sending state update: ${state.terminals.length} terminals`);
 
-      const message = MessageFactory.createStateUpdateMessage(state, state.activeTerminalId || undefined);
+      const message = MessageFactory.createStateUpdateMessage(
+        state,
+        state.activeTerminalId || undefined
+      );
       await this.messageRouter.sendMessage(message);
     } catch (error) {
       log(`❌ [EVENT-SUBSCRIPTION] Error sending state update: ${String(error)}`);

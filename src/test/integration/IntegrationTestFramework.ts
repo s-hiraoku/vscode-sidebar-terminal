@@ -1,13 +1,13 @@
 /**
  * Comprehensive Integration Test Framework for Refactored Terminal Management System
- * 
+ *
  * This framework provides:
  * - Service composition testing
  * - End-to-end workflow validation
  * - Event flow monitoring
  * - Performance tracking during tests
  * - Resource leak detection
- * 
+ *
  * Following TDD principles with comprehensive coverage of:
  * - RefactoredTerminalManager with all injected services
  * - RefactoredSecondaryTerminalProvider with WebView communication
@@ -99,32 +99,32 @@ export class MockServiceFactory {
    */
   public createMockLifecycleManager(): ITerminalLifecycleManager {
     const emitter = new EventEmitter();
-    
+
     return {
       // Events
       onTerminalCreated: emitter.on.bind(emitter, 'terminalCreated'),
       onTerminalRemoved: emitter.on.bind(emitter, 'terminalRemoved'),
       onTerminalExit: emitter.on.bind(emitter, 'terminalExit'),
       onTerminalData: emitter.on.bind(emitter, 'terminalData'),
-      
+
       // Operations
       createTerminal: this.sandbox.stub().returns('mock-terminal-id'),
       killTerminal: this.sandbox.stub().resolves({ success: true }),
       removeTerminal: this.sandbox.stub(),
       resizeTerminal: this.sandbox.stub().returns({ success: true }),
       writeToTerminal: this.sandbox.stub().returns({ success: true }),
-      
+
       // Queries
       getTerminal: this.sandbox.stub().returns(this.createMockTerminalInstance()),
       getAllTerminals: this.sandbox.stub().returns([]),
       getTerminalCount: this.sandbox.stub().returns(0),
       hasTerminal: this.sandbox.stub().returns(false),
-      
+
       // Lifecycle
       dispose: this.sandbox.stub(),
-      
+
       // Internal - for triggering events in tests
-      _emitter: emitter
+      _emitter: emitter,
     } as unknown as ITerminalLifecycleManager;
   }
 
@@ -133,15 +133,15 @@ export class MockServiceFactory {
    */
   public createMockCliAgentService(): ICliAgentDetectionService {
     const emitter = new EventEmitter();
-    
+
     return {
       // Events
       onCliAgentStatusChange: emitter.on.bind(emitter, 'statusChange'),
-      
+
       // Detection
       detectFromOutput: this.sandbox.stub(),
       detectFromInput: this.sandbox.stub(),
-      
+
       // State Management
       getAgentState: this.sandbox.stub().returns({ status: 'none', type: null }),
       getConnectedAgent: this.sandbox.stub().returns(null),
@@ -149,15 +149,15 @@ export class MockServiceFactory {
       switchAgentConnection: this.sandbox.stub().returns({
         success: true,
         newStatus: 'connected',
-        agentType: 'claude'
+        agentType: 'claude',
       }),
-      
+
       // Lifecycle
       handleTerminalRemoved: this.sandbox.stub(),
       dispose: this.sandbox.stub(),
-      
+
       // Internal - for triggering events in tests
-      _emitter: emitter
+      _emitter: emitter,
     } as unknown as ICliAgentDetectionService;
   }
 
@@ -171,21 +171,21 @@ export class MockServiceFactory {
       clearBuffer: this.sandbox.stub(),
       flushBuffer: this.sandbox.stub(),
       isBufferEmpty: this.sandbox.stub().returns(true),
-      
+
       // Handler Management
       addFlushHandler: this.sandbox.stub(),
       removeFlushHandler: this.sandbox.stub(),
-      
+
       // Statistics
       getAllStats: this.sandbox.stub().returns({}),
       getBufferStats: this.sandbox.stub().returns({
         size: 0,
         flushCount: 0,
-        lastFlush: Date.now()
+        lastFlush: Date.now(),
       }),
-      
+
       // Lifecycle
-      dispose: this.sandbox.stub()
+      dispose: this.sandbox.stub(),
     } as unknown as ITerminalDataBufferingService;
   }
 
@@ -194,26 +194,26 @@ export class MockServiceFactory {
    */
   public createMockStateManager(): ITerminalStateManager {
     const emitter = new EventEmitter();
-    
+
     return {
       // Events
       onStateUpdate: emitter.on.bind(emitter, 'stateUpdate'),
-      
+
       // State Operations
       getCurrentState: this.sandbox.stub().returns(this.createMockTerminalState()),
       updateTerminalState: this.sandbox.stub(),
       setActiveTerminal: this.sandbox.stub(),
       getActiveTerminalId: this.sandbox.stub().returns(null),
-      
+
       // Validation
       validateTerminalDeletion: this.sandbox.stub().returns({ success: true }),
       getStateAnalysis: this.sandbox.stub().returns({}),
-      
+
       // Lifecycle
       dispose: this.sandbox.stub(),
-      
+
       // Internal - for triggering events in tests
-      _emitter: emitter
+      _emitter: emitter,
     } as unknown as ITerminalStateManager;
   }
 
@@ -224,7 +224,7 @@ export class MockServiceFactory {
     return {
       configureWebview: this.sandbox.stub(),
       getWebviewContent: this.sandbox.stub().returns('<html>Mock WebView</html>'),
-      dispose: this.sandbox.stub()
+      dispose: this.sandbox.stub(),
     } as unknown as IWebViewResourceManager;
   }
 
@@ -240,9 +240,9 @@ export class MockServiceFactory {
       getMessageStats: this.sandbox.stub().returns({
         messagesSent: 0,
         messagesReceived: 0,
-        averageLatency: 0
+        averageLatency: 0,
       }),
-      dispose: this.sandbox.stub()
+      dispose: this.sandbox.stub(),
     } as unknown as IWebViewMessageRouter;
   }
 
@@ -255,7 +255,7 @@ export class MockServiceFactory {
       name: 'Mock Terminal',
       number: 1,
       cwd: '/mock',
-      isActive: false
+      isActive: false,
     };
   }
 
@@ -266,7 +266,8 @@ export class MockServiceFactory {
     return {
       terminals: [],
       activeTerminalId: null,
-      terminalCount: 0
+      maxTerminals: 5,
+      availableSlots: [1, 2, 3, 4, 5],
     };
   }
 }
@@ -312,7 +313,7 @@ export class EventFlowTracker {
       targetService,
       timestamp: Date.now(),
       payload,
-      processTime: 0
+      processTime: 0,
     };
 
     this.events.push(event);
@@ -329,11 +330,13 @@ export class EventFlowTracker {
    * Validate event sequence
    */
   public validateEventSequence(expectedSequence: string[]): void {
-    const actualSequence = this.events.map(e => e.eventType);
-    
-    expect(actualSequence).to.deep.equal(expectedSequence, 
-      `Event sequence mismatch. Expected: ${expectedSequence.join(' → ')}, Got: ${actualSequence.join(' → ')}`);
-    
+    const actualSequence = this.events.map((e) => e.eventType);
+
+    expect(actualSequence).to.deep.equal(
+      expectedSequence,
+      `Event sequence mismatch. Expected: ${expectedSequence.join(' → ')}, Got: ${actualSequence.join(' → ')}`
+    );
+
     console.log(`✅ [EVENT-TRACKER] Event sequence validated: ${expectedSequence.join(' → ')}`);
   }
 
@@ -342,12 +345,18 @@ export class EventFlowTracker {
    */
   public validateEventTiming(maxLatencyMs: number): void {
     for (let i = 1; i < this.events.length; i++) {
-      const latency = this.events[i].timestamp - this.events[i - 1].timestamp;
-      
-      expect(latency).to.be.lessThan(maxLatencyMs,
-        `Event latency too high: ${latency}ms between ${this.events[i - 1].eventType} and ${this.events[i].eventType}`);
+      const currentEvent = this.events[i];
+      const previousEvent = this.events[i - 1];
+      if (!currentEvent || !previousEvent) continue;
+
+      const latency = currentEvent.timestamp - previousEvent.timestamp;
+
+      expect(latency).to.be.lessThan(
+        maxLatencyMs,
+        `Event latency too high: ${latency}ms between ${previousEvent.eventType} and ${currentEvent.eventType}`
+      );
     }
-    
+
     console.log(`✅ [EVENT-TRACKER] Event timing validated (max: ${maxLatencyMs}ms)`);
   }
 
@@ -359,16 +368,26 @@ export class EventFlowTracker {
       return '📊 Event Flow Report: No events recorded';
     }
 
-    const eventTypes = new Set(this.events.map(e => e.eventType));
-    const services = new Set([...this.events.map(e => e.sourceService), ...this.events.map(e => e.targetService)]);
-    
+    const eventTypes = new Set(this.events.map((e) => e.eventType));
+    const services = new Set([
+      ...this.events.map((e) => e.sourceService),
+      ...this.events.map((e) => e.targetService),
+    ]);
+
     let report = `📊 Event Flow Report\n`;
     report += `==================\n`;
     report += `Total Events: ${this.events.length}\n`;
     report += `Event Types: ${eventTypes.size} (${Array.from(eventTypes).join(', ')})\n`;
     report += `Services Involved: ${services.size} (${Array.from(services).join(', ')})\n`;
-    report += `Duration: ${this.events[this.events.length - 1].timestamp - this.events[0].timestamp}ms\n\n`;
-    
+
+    if (this.events.length > 0) {
+      const firstEvent = this.events[0];
+      const lastEvent = this.events[this.events.length - 1];
+      if (firstEvent && lastEvent) {
+        report += `Duration: ${lastEvent.timestamp - firstEvent.timestamp}ms\n\n`;
+      }
+    }
+
     report += `Event Timeline:\n`;
     this.events.forEach((event, index) => {
       report += `${index + 1}. ${event.eventType} (${event.sourceService} → ${event.targetService})\n`;
@@ -413,7 +432,7 @@ export class PerformanceMonitor {
       eventLatency: 0,
       memoryUsage: this.getCurrentMemoryUsage(),
       messageRouteTime: 0,
-      operationThroughput: 0
+      operationThroughput: 0,
     };
 
     if (this.isMonitoring) {
@@ -430,10 +449,12 @@ export class PerformanceMonitor {
   public checkMemoryLeak(maxIncreaseKB: number = 1024): void {
     const currentMemory = this.getCurrentMemoryUsage();
     const increase = currentMemory - this.initialMemory;
-    
-    expect(increase).to.be.lessThan(maxIncreaseKB, 
-      `Memory leak detected: ${increase}KB increase (max allowed: ${maxIncreaseKB}KB)`);
-    
+
+    expect(increase).to.be.lessThan(
+      maxIncreaseKB,
+      `Memory leak detected: ${increase}KB increase (max allowed: ${maxIncreaseKB}KB)`
+    );
+
     console.log(`✅ [PERFORMANCE-MONITOR] Memory leak check passed: ${increase}KB increase`);
   }
 
@@ -455,9 +476,9 @@ export class PerformanceMonitor {
     }
 
     const avgMemory = this.metrics.reduce((sum, m) => sum + m.memoryUsage, 0) / this.metrics.length;
-    const maxMemory = Math.max(...this.metrics.map(m => m.memoryUsage));
-    const minMemory = Math.min(...this.metrics.map(m => m.memoryUsage));
-    
+    const maxMemory = Math.max(...this.metrics.map((m) => m.memoryUsage));
+    const minMemory = Math.min(...this.metrics.map((m) => m.memoryUsage));
+
     let report = `📊 Performance Report\n`;
     report += `====================\n`;
     report += `Samples: ${this.metrics.length}\n`;
@@ -487,7 +508,7 @@ export class IntegrationTestFramework {
     this.mockFactory = new MockServiceFactory(this.sandbox);
     this.eventTracker = new EventFlowTracker();
     this.performanceMonitor = new PerformanceMonitor();
-    
+
     this.config = {
       enablePerformanceMonitoring: true,
       enableMemoryLeakDetection: true,
@@ -495,7 +516,7 @@ export class IntegrationTestFramework {
       maxOperationTime: 1000,
       maxMemoryIncrease: 512,
       eventTimeoutMs: 5000,
-      ...config
+      ...config,
     };
   }
 
@@ -504,19 +525,19 @@ export class IntegrationTestFramework {
    */
   public async setup(): Promise<void> {
     console.log('🚀 [INTEGRATION-FRAMEWORK] Setting up test environment...');
-    
+
     // Setup VS Code test environment
     this.testEnvironment = setupCompleteTestEnvironment();
-    
+
     // Start monitoring if enabled
     if (this.config.enablePerformanceMonitoring) {
       this.performanceMonitor.startMonitoring();
     }
-    
+
     if (this.config.enableEventFlowTracking) {
       this.eventTracker.startTracking();
     }
-    
+
     console.log('✅ [INTEGRATION-FRAMEWORK] Test environment ready');
   }
 
@@ -525,23 +546,23 @@ export class IntegrationTestFramework {
    */
   public async cleanup(): Promise<void> {
     console.log('🧹 [INTEGRATION-FRAMEWORK] Cleaning up test environment...');
-    
+
     // Stop monitoring
     if (this.config.enablePerformanceMonitoring) {
       this.performanceMonitor.stopMonitoring();
-      
+
       if (this.config.enableMemoryLeakDetection) {
         this.performanceMonitor.checkMemoryLeak(this.config.maxMemoryIncrease);
       }
     }
-    
+
     if (this.config.enableEventFlowTracking) {
       this.eventTracker.stopTracking();
     }
-    
+
     // Cleanup test environment
     cleanupTestEnvironment(this.sandbox, this.testEnvironment.dom);
-    
+
     console.log('✅ [INTEGRATION-FRAMEWORK] Cleanup complete');
   }
 
@@ -612,7 +633,7 @@ export class IntegrationTestFramework {
     expect(health.cliAgent).to.be.true;
     expect(health.buffering).to.be.true;
     expect(health.state).to.be.true;
-    
+
     console.log('✅ [INTEGRATION-FRAMEWORK] Service health validated');
   }
 
@@ -626,12 +647,12 @@ export class IntegrationTestFramework {
         get: this.sandbox.stub(),
         update: this.sandbox.stub().resolves(),
         keys: this.sandbox.stub().returns([]),
-        setKeysForSync: this.sandbox.stub()
+        setKeysForSync: this.sandbox.stub(),
       },
       workspaceState: {
         get: this.sandbox.stub(),
         update: this.sandbox.stub().resolves(),
-        keys: this.sandbox.stub().returns([])
+        keys: this.sandbox.stub().returns([]),
       },
       extensionPath: '/test/extension/path',
       extensionUri: { fsPath: '/test/extension/path' } as vscode.Uri,
@@ -641,8 +662,13 @@ export class IntegrationTestFramework {
       globalStorageUri: { fsPath: '/test/global/storage' } as vscode.Uri,
       logUri: { fsPath: '/test/log' } as vscode.Uri,
       secrets: {} as any,
-      extension: {} as any
-    } as vscode.ExtensionContext;
+      extension: {} as any,
+      asAbsolutePath: (relativePath: string) => `/test/extension/path/${relativePath}`,
+      storagePath: '/test/storage/path',
+      globalStoragePath: '/test/global/storage/path',
+      logPath: '/test/log/path',
+      languageModelAccessInformation: {} as any,
+    } as unknown as vscode.ExtensionContext;
   }
 
   /**
@@ -651,15 +677,15 @@ export class IntegrationTestFramework {
   public generateTestReport(): string {
     let report = `\n🧪 Integration Test Report\n`;
     report += `=========================\n\n`;
-    
+
     if (this.config.enableEventFlowTracking) {
       report += this.eventTracker.generateFlowReport() + '\n\n';
     }
-    
+
     if (this.config.enablePerformanceMonitoring) {
       report += this.performanceMonitor.generatePerformanceReport() + '\n\n';
     }
-    
+
     return report;
   }
 }
@@ -681,10 +707,10 @@ export async function setupIntegrationTest(
   config?: Partial<IntegrationTestConfig>
 ): Promise<IntegrationTestFramework> {
   console.log(`\n🧪 [INTEGRATION-TEST] Setting up: ${testName}`);
-  
+
   const framework = createIntegrationTestFramework(config);
   await framework.setup();
-  
+
   return framework;
 }
 
@@ -696,9 +722,9 @@ export async function cleanupIntegrationTest(
   testName: string
 ): Promise<void> {
   console.log(`\n🧹 [INTEGRATION-TEST] Cleaning up: ${testName}`);
-  
+
   await framework.cleanup();
-  
+
   // Print test report
   console.log(framework.generateTestReport());
 }

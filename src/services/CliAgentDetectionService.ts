@@ -1,6 +1,6 @@
 /**
  * Comprehensive CLI Agent Detection Service
- * 
+ *
  * Extracted from TerminalManager to follow Single Responsibility Principle.
  * Handles all CLI Agent detection, state management, and termination logic.
  */
@@ -292,14 +292,13 @@ export class CliAgentStateManager implements ICliAgentStateManager {
   private _connectedAgentTerminalId: string | null = null;
   private _connectedAgentType: 'claude' | 'gemini' | null = null;
   private _disconnectedAgents = new Map<string, DisconnectedAgentInfo>();
-  
+
   private readonly _onStatusChange = new vscode.EventEmitter<{
     terminalId: string;
     status: 'connected' | 'disconnected' | 'none';
     type: string | null;
     terminalName?: string;
   }>();
-
 
   setConnectedAgent(terminalId: string, type: 'claude' | 'gemini', terminalName?: string): void {
     // Handle previous connected agent
@@ -328,7 +327,9 @@ export class CliAgentStateManager implements ICliAgentStateManager {
         terminalName,
       });
 
-      log(`📝 [STATE-MANAGER] Moved previous CONNECTED terminal ${previousConnectedId} to DISCONNECTED tracking`);
+      log(
+        `📝 [STATE-MANAGER] Moved previous CONNECTED terminal ${previousConnectedId} to DISCONNECTED tracking`
+      );
     }
 
     // Emit connected event for new agent
@@ -339,7 +340,9 @@ export class CliAgentStateManager implements ICliAgentStateManager {
       terminalName,
     });
 
-    log(`🎯 [STATE-MANAGER] Set terminal ${terminalId} as CONNECTED (${type}). DISCONNECTED agents: ${this._disconnectedAgents.size}`);
+    log(
+      `🎯 [STATE-MANAGER] Set terminal ${terminalId} as CONNECTED (${type}). DISCONNECTED agents: ${this._disconnectedAgents.size}`
+    );
   }
 
   setAgentTerminated(terminalId: string): void {
@@ -373,7 +376,9 @@ export class CliAgentStateManager implements ICliAgentStateManager {
         type: null,
       });
 
-      log(`🗑️ [STATE-MANAGER] DISCONNECTED agent ${agentInfo?.type} terminated in terminal: ${terminalId}`);
+      log(
+        `🗑️ [STATE-MANAGER] DISCONNECTED agent ${agentInfo?.type} terminated in terminal: ${terminalId}`
+      );
     }
   }
 
@@ -413,7 +418,9 @@ export class CliAgentStateManager implements ICliAgentStateManager {
         terminalName: info.terminalName,
       });
 
-      log(`🚀 [AUTO-PROMOTION] Promoted terminal ${terminalId} (${info.type}) from DISCONNECTED to CONNECTED (specification compliance)`);
+      log(
+        `🚀 [AUTO-PROMOTION] Promoted terminal ${terminalId} (${info.type}) from DISCONNECTED to CONNECTED (specification compliance)`
+      );
       log(`📊 [AUTO-PROMOTION] Remaining DISCONNECTED agents: ${this._disconnectedAgents.size}`);
     }
   }
@@ -482,7 +489,7 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
   private readonly patternDetector: ICliAgentPatternDetector;
   private readonly stateManager: ICliAgentStateManager;
   private readonly configManager: ICliAgentDetectionConfig;
-  
+
   // Detection cache and optimization
   private readonly detectionCache = new Map<string, DetectionCacheEntry>();
 
@@ -539,7 +546,9 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
             agentType = 'gemini';
           }
 
-          log(`🚀 [CLI-AGENT] ${agentType} startup command detected from input: "${command}" in terminal ${terminalId}`);
+          log(
+            `🚀 [CLI-AGENT] ${agentType} startup command detected from input: "${command}" in terminal ${terminalId}`
+          );
 
           return {
             type: agentType,
@@ -553,7 +562,9 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
         if (this.stateManager.isAgentConnected(terminalId)) {
           const isExitCommand = this.isExitCommand(command);
           if (isExitCommand) {
-            log(`🔍 [CLI-AGENT] Exit command detected from user input: "${command}" in terminal ${terminalId}`);
+            log(
+              `🔍 [CLI-AGENT] Exit command detected from user input: "${command}" in terminal ${terminalId}`
+            );
             // Note: We don't return a detection result here because termination
             // should be detected from output, not input
           }
@@ -568,10 +579,10 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
 
   detectFromOutput(terminalId: string, data: string): CliAgentDetectionResult | null {
     const config = this.configManager.getConfig();
-    
+
     // Optimization: Only apply debouncing for non-connected terminals
     const isConnectedTerminal = this.stateManager.isAgentConnected(terminalId);
-    
+
     if (!isConnectedTerminal) {
       // Apply debouncing and caching for non-connected terminals
       const now = Date.now();
@@ -734,7 +745,11 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
         // This will be handled by setConnectedAgent
       }
 
-      this.stateManager.setConnectedAgent(terminalId, disconnectedAgent.type, disconnectedAgent.terminalName);
+      this.stateManager.setConnectedAgent(
+        terminalId,
+        disconnectedAgent.type,
+        disconnectedAgent.terminalName
+      );
 
       return {
         success: true,
@@ -795,7 +810,9 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
           const terminationResult = this.detectTermination(terminalId, line);
           if (terminationResult.isTerminated) {
             this.stateManager.setAgentTerminated(terminalId);
-            log(`🔺 [CLI-AGENT] Termination detected from output: "${fullyCleanLine}" in terminal ${terminalId}`);
+            log(
+              `🔺 [CLI-AGENT] Termination detected from output: "${fullyCleanLine}" in terminal ${terminalId}`
+            );
             return null; // Termination handled, no detection result needed
           }
         }
@@ -808,9 +825,11 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
           // Claude startup detection
           if (this.patternDetector.detectClaudeStartup(fullyCleanLine)) {
             if (!this.stateManager.isAgentConnected(terminalId)) {
-              log(`🚀 [CLI-AGENT] Claude Code startup detected from output: "${fullyCleanLine}" in terminal ${terminalId}`);
+              log(
+                `🚀 [CLI-AGENT] Claude Code startup detected from output: "${fullyCleanLine}" in terminal ${terminalId}`
+              );
               this.stateManager.setConnectedAgent(terminalId, 'claude');
-              
+
               return {
                 type: 'claude',
                 confidence: 0.9,
@@ -823,9 +842,11 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
           // Gemini startup detection
           if (this.patternDetector.detectGeminiStartup(fullyCleanLine)) {
             if (!this.stateManager.isAgentConnected(terminalId)) {
-              log(`🚀 [CLI-AGENT] Gemini CLI startup detected from output: "${fullyCleanLine}" in terminal ${terminalId}`);
+              log(
+                `🚀 [CLI-AGENT] Gemini CLI startup detected from output: "${fullyCleanLine}" in terminal ${terminalId}`
+              );
               this.stateManager.setConnectedAgent(terminalId, 'gemini');
-              
+
               return {
                 type: 'gemini',
                 confidence: 0.9,

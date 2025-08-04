@@ -1,6 +1,6 @@
 /**
  * CLI Agent Detection Service Interfaces
- * 
+ *
  * These interfaces define the contract for CLI Agent detection and management services.
  * They follow the Single Responsibility Principle by separating detection logic
  * from terminal lifecycle management.
@@ -57,13 +57,13 @@ export interface DetectionConfig {
 
 /**
  * CLI Agent Detection Service Interface
- * 
+ *
  * Responsible for detecting CLI Agent startup, termination, and state changes
  * from terminal input/output data.
  */
 export interface ICliAgentDetectionService {
   // =================== Detection Methods ===================
-  
+
   /**
    * Detect CLI Agent from user input commands
    * @param terminalId Terminal ID where the input occurred
@@ -89,7 +89,7 @@ export interface ICliAgentDetectionService {
   detectTermination(terminalId: string, data: string): TerminationDetectionResult;
 
   // =================== State Management Methods ===================
-  
+
   /**
    * Get current CLI Agent state for a terminal
    * @param terminalId Terminal ID to query
@@ -122,7 +122,7 @@ export interface ICliAgentDetectionService {
   };
 
   // =================== Event Management ===================
-  
+
   /**
    * CLI Agent status change event
    * Emitted when agent status changes between connected/disconnected/none
@@ -135,7 +135,7 @@ export interface ICliAgentDetectionService {
   }>;
 
   // =================== Lifecycle Management ===================
-  
+
   /**
    * Handle terminal removal - cleanup agent state
    * @param terminalId Terminal ID that was removed
@@ -152,7 +152,7 @@ export interface ICliAgentDetectionService {
 
 /**
  * CLI Agent Pattern Detection Interface
- * 
+ *
  * Responsible for the low-level pattern matching logic for different CLI agents.
  */
 export interface ICliAgentPatternDetector {
@@ -164,7 +164,7 @@ export interface ICliAgentPatternDetector {
   detectClaudeStartup(cleanLine: string): boolean;
 
   /**
-   * Detect Gemini CLI startup patterns  
+   * Detect Gemini CLI startup patterns
    * @param cleanLine Cleaned terminal line
    * @returns True if Gemini startup detected
    */
@@ -189,7 +189,7 @@ export interface ICliAgentPatternDetector {
 
 /**
  * CLI Agent State Manager Interface
- * 
+ *
  * Responsible for managing the global state of CLI agents across terminals.
  */
 export interface ICliAgentStateManager {

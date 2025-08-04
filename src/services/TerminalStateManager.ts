@@ -1,6 +1,6 @@
 /**
  * ターミナル状態管理サービス
- * 
+ *
  * ターミナルの状態管理、バリデーション、アクティブターミナル管理を専門に行います。
  */
 
@@ -15,16 +15,16 @@ export interface ITerminalStateManager {
   setActiveTerminal(terminalId: string): OperationResult<void>;
   getActiveTerminalId(): string | null;
   getActiveTerminal(): TerminalInstance | null;
-  
+
   // 状態管理
   getCurrentState(): TerminalState;
   updateTerminalState(terminals: TerminalInstance[]): void;
-  
+
   // バリデーション
   validateOperation(terminalId: string, operation: string): OperationResult<void>;
   validateTerminalCreation(): OperationResult<void>;
   validateTerminalDeletion(terminalId: string): OperationResult<void>;
-  
+
   // 状態分析
   getStateAnalysis(): {
     terminalCount: number;
@@ -36,10 +36,10 @@ export interface ITerminalStateManager {
     terminalNames: string[];
     duplicateNames: string[];
   };
-  
+
   // イベント
   onStateUpdate: vscode.Event<TerminalState>;
-  
+
   // リソース管理
   dispose(): void;
 }
@@ -56,7 +56,7 @@ export interface StateValidationConfig {
 export class TerminalStateManager implements ITerminalStateManager {
   private readonly _activeTerminalManager = new ActiveTerminalManager();
   private readonly _stateUpdateEmitter = new vscode.EventEmitter<TerminalState>();
-  
+
   // 現在の状態
   private _currentState: TerminalState = {
     terminals: [],
@@ -64,10 +64,10 @@ export class TerminalStateManager implements ITerminalStateManager {
     maxTerminals: 5,
     availableSlots: [1, 2, 3, 4, 5],
   };
-  
+
   // 設定
   private readonly config: StateValidationConfig;
-  
+
   // リソース管理
   private readonly _disposables: vscode.Disposable[] = [];
 
@@ -76,15 +76,15 @@ export class TerminalStateManager implements ITerminalStateManager {
       maxTerminals: 5,
       allowDuplicateNames: false,
       validateBeforeOperations: true,
-      ...config
+      ...config,
     };
-    
+
     this._currentState.maxTerminals = this.config.maxTerminals;
     this._currentState.availableSlots = Array.from(
-      { length: this.config.maxTerminals }, 
+      { length: this.config.maxTerminals },
       (_, i) => i + 1
     );
-    
+
     log(`🎯 [STATE] Terminal state manager initialized with max: ${this.config.maxTerminals}`);
   }
 
@@ -109,21 +109,21 @@ export class TerminalStateManager implements ITerminalStateManager {
 
     try {
       const previousActiveId = this._activeTerminalManager.getActive();
-      
+
       // アクティブターミナルを設定
       this._activeTerminalManager.setActive(terminalId);
-      
+
       // 状態を更新
       this._currentState.activeTerminalId = terminalId;
-      
+
       // ターミナルのisActiveフラグを更新
       this.updateActiveFlags(terminalId);
-      
+
       log(`🎯 [STATE] Active terminal changed: ${previousActiveId} → ${terminalId}`);
-      
+
       // 状態更新イベントを発火
       this.emitStateUpdate();
-      
+
       return OperationResultHandler.success();
     } catch (error) {
       return OperationResultHandler.failure(`Failed to set active terminal: ${String(error)}`);
@@ -145,8 +145,8 @@ export class TerminalStateManager implements ITerminalStateManager {
     if (!activeId) {
       return null;
     }
-    
-    const terminalInfo = this._currentState.terminals.find(t => t.id === activeId);
+
+    const terminalInfo = this._currentState.terminals.find((t) => t.id === activeId);
     if (!terminalInfo) {
       return null;
     }
@@ -175,7 +175,7 @@ export class TerminalStateManager implements ITerminalStateManager {
    */
   updateTerminalState(terminals: TerminalInstance[]): void {
     // ターミナル情報を更新
-    this._currentState.terminals = terminals.map(terminal => ({
+    this._currentState.terminals = terminals.map((terminal) => ({
       id: terminal.id,
       name: terminal.name,
       isActive: terminal.isActive,
@@ -187,7 +187,9 @@ export class TerminalStateManager implements ITerminalStateManager {
     // アクティブターミナルの整合性確認
     this.validateActiveTerminalConsistency(terminals);
 
-    log(`📊 [STATE] State updated: ${terminals.length} terminals, active: ${this._currentState.activeTerminalId}`);
+    log(
+      `📊 [STATE] State updated: ${terminals.length} terminals, active: ${this._currentState.activeTerminalId}`
+    );
 
     // 状態更新イベントを発火
     this.emitStateUpdate();
@@ -205,9 +207,11 @@ export class TerminalStateManager implements ITerminalStateManager {
     }
 
     // ターミナルの存在確認
-    const terminalExists = this._currentState.terminals.some(t => t.id === terminalId);
+    const terminalExists = this._currentState.terminals.some((t) => t.id === terminalId);
     if (!terminalExists) {
-      return OperationResultHandler.failure(`Terminal ${terminalId} not found for operation ${operation}`);
+      return OperationResultHandler.failure(
+        `Terminal ${terminalId} not found for operation ${operation}`
+      );
     }
 
     return OperationResultHandler.success();
@@ -258,7 +262,7 @@ export class TerminalStateManager implements ITerminalStateManager {
     this._stateUpdateEmitter.dispose();
 
     // Disposableを解放
-    this._disposables.forEach(d => d.dispose());
+    this._disposables.forEach((d) => d.dispose());
     this._disposables.length = 0;
 
     // 状態をリセット
@@ -287,9 +291,9 @@ export class TerminalStateManager implements ITerminalStateManager {
     terminalNames: string[];
     duplicateNames: string[];
   } {
-    const terminalNames = this._currentState.terminals.map(t => t.name);
+    const terminalNames = this._currentState.terminals.map((t) => t.name);
     const duplicateNames = this.findDuplicateNames(terminalNames);
-    
+
     return {
       terminalCount: this._currentState.terminals.length,
       maxTerminals: this.config.maxTerminals,
@@ -316,7 +320,7 @@ export class TerminalStateManager implements ITerminalStateManager {
     // アクティブターミナルの整合性
     if (this._currentState.activeTerminalId) {
       const activeExists = this._currentState.terminals.some(
-        t => t.id === this._currentState.activeTerminalId
+        (t) => t.id === this._currentState.activeTerminalId
       );
       if (!activeExists) {
         issues.push('Active terminal ID does not match any existing terminal');
@@ -325,7 +329,7 @@ export class TerminalStateManager implements ITerminalStateManager {
 
     // 重複名前チェック
     if (!this.config.allowDuplicateNames) {
-      const duplicates = this.findDuplicateNames(this._currentState.terminals.map(t => t.name));
+      const duplicates = this.findDuplicateNames(this._currentState.terminals.map((t) => t.name));
       if (duplicates.length > 0) {
         warnings.push(`Duplicate terminal names found: ${duplicates.join(', ')}`);
       }
@@ -350,7 +354,7 @@ export class TerminalStateManager implements ITerminalStateManager {
    * アクティブフラグを更新
    */
   private updateActiveFlags(activeTerminalId: string): void {
-    this._currentState.terminals.forEach(terminal => {
+    this._currentState.terminals.forEach((terminal) => {
       terminal.isActive = terminal.id === activeTerminalId;
     });
   }
@@ -359,9 +363,9 @@ export class TerminalStateManager implements ITerminalStateManager {
    * 利用可能スロットを計算
    */
   private calculateAvailableSlots(terminals: TerminalInstance[]): void {
-    const usedNumbers = new Set(terminals.map(t => t.number));
+    const usedNumbers = new Set(terminals.map((t) => t.number));
     this._currentState.availableSlots = [];
-    
+
     for (let i = 1; i <= this.config.maxTerminals; i++) {
       if (!usedNumbers.has(i)) {
         this._currentState.availableSlots.push(i);
@@ -374,9 +378,9 @@ export class TerminalStateManager implements ITerminalStateManager {
    */
   private validateActiveTerminalConsistency(terminals: TerminalInstance[]): void {
     const activeId = this._currentState.activeTerminalId;
-    
+
     if (activeId) {
-      const activeTerminal = terminals.find(t => t.id === activeId);
+      const activeTerminal = terminals.find((t) => t.id === activeId);
       if (!activeTerminal) {
         // アクティブターミナルが存在しない場合はクリア
         log(`⚠️ [STATE] Active terminal ${activeId} not found, clearing active state`);
@@ -399,16 +403,17 @@ export class TerminalStateManager implements ITerminalStateManager {
   private findDuplicateNames(names: string[]): string[] {
     const nameCount = new Map<string, number>();
     const duplicates: string[] = [];
-    
-    names.forEach(name => {
+
+    names.forEach((name) => {
       const count = nameCount.get(name) || 0;
       nameCount.set(name, count + 1);
-      
-      if (count === 1) { // 2回目の出現で重複と判定
+
+      if (count === 1) {
+        // 2回目の出現で重複と判定
         duplicates.push(name);
       }
     });
-    
+
     return duplicates;
   }
 

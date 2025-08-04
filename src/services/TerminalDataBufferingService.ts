@@ -1,6 +1,6 @@
 /**
  * ターミナルデータバッファリングサービス
- * 
+ *
  * 高頻度のターミナル出力を効率的に処理するための
  * 適応的バッファリングシステムを提供します。
  */
@@ -22,11 +22,11 @@ export interface ITerminalDataBufferingService {
 }
 
 export interface BufferingConfig {
-  normalFlushInterval: number;    // 通常時のフラッシュ間隔 (ms)
-  fastFlushInterval: number;      // 高頻度時のフラッシュ間隔 (ms)  
-  maxBufferSize: number;          // バッファ最大サイズ
-  adaptiveThreshold: number;      // 適応的調整のしきい値
-  cliAgentFlushInterval: number;  // CLI Agent用フラッシュ間隔 (ms)
+  normalFlushInterval: number; // 通常時のフラッシュ間隔 (ms)
+  fastFlushInterval: number; // 高頻度時のフラッシュ間隔 (ms)
+  maxBufferSize: number; // バッファ最大サイズ
+  adaptiveThreshold: number; // 適応的調整のしきい値
+  cliAgentFlushInterval: number; // CLI Agent用フラッシュ間隔 (ms)
 }
 
 export interface DataFlushHandler {
@@ -40,34 +40,34 @@ export class TerminalDataBufferingService implements ITerminalDataBufferingServi
   private readonly _dataBuffers = new Map<string, string[]>();
   private readonly _dataFlushTimers = new Map<string, NodeJS.Timeout>();
   private readonly _flushHandlers = new Set<DataFlushHandler>();
-  
+
   // パフォーマンストラッキング
-  private readonly _bufferStats = new Map<string, {
-    lastFlushTime: number;
-    flushCount: number;
-    dataVolume: number;
-    averageInterval: number;
-  }>();
-  
+  private readonly _bufferStats = new Map<
+    string,
+    {
+      lastFlushTime: number;
+      flushCount: number;
+      dataVolume: number;
+      averageInterval: number;
+    }
+  >();
+
   // 適応的バッファリング設定
   private readonly config: BufferingConfig;
-  
-  constructor(
-    config: Partial<BufferingConfig> = {},
-    initialHandlers: DataFlushHandler[] = []
-  ) {
+
+  constructor(config: Partial<BufferingConfig> = {}, initialHandlers: DataFlushHandler[] = []) {
     this.config = {
-      normalFlushInterval: 16,      // 60fps for standard operation
-      fastFlushInterval: 8,         // 125fps for high-frequency data
-      maxBufferSize: 50,            // Maximum buffer entries
-      adaptiveThreshold: 100,       // Characters per flush to trigger fast mode
-      cliAgentFlushInterval: 4,     // 250fps for CLI Agent operations
-      ...config
+      normalFlushInterval: 16, // 60fps for standard operation
+      fastFlushInterval: 8, // 125fps for high-frequency data
+      maxBufferSize: 50, // Maximum buffer entries
+      adaptiveThreshold: 100, // Characters per flush to trigger fast mode
+      cliAgentFlushInterval: 4, // 250fps for CLI Agent operations
+      ...config,
     };
-    
+
     // 初期フラッシュハンドラーを設定
-    initialHandlers.forEach(handler => this.addFlushHandler(handler));
-    
+    initialHandlers.forEach((handler) => this.addFlushHandler(handler));
+
     log(`🚀 [DATA-BUFFER] Service initialized with config: ${JSON.stringify(this.config)}`);
   }
 
@@ -136,7 +136,7 @@ export class TerminalDataBufferingService implements ITerminalDataBufferingServi
     this.updateFlushStats(terminalId);
 
     // フラッシュハンドラーに通知
-    this._flushHandlers.forEach(handler => {
+    this._flushHandlers.forEach((handler) => {
       try {
         handler(terminalId, data);
       } catch (error) {
@@ -153,8 +153,8 @@ export class TerminalDataBufferingService implements ITerminalDataBufferingServi
   flushAllBuffers(): void {
     const terminalIds = Array.from(this._dataBuffers.keys());
     log(`💨 [DATA-BUFFER] Flushing all buffers for ${terminalIds.length} terminals`);
-    
-    terminalIds.forEach(terminalId => {
+
+    terminalIds.forEach((terminalId) => {
       this.flushBuffer(terminalId);
     });
   }
@@ -197,7 +197,7 @@ export class TerminalDataBufferingService implements ITerminalDataBufferingServi
    */
   dispose(): void {
     // 全てのタイマーをクリア
-    this._dataFlushTimers.forEach(timer => clearTimeout(timer));
+    this._dataFlushTimers.forEach((timer) => clearTimeout(timer));
     this._dataFlushTimers.clear();
 
     // 残りのバッファをフラッシュ
@@ -240,7 +240,7 @@ export class TerminalDataBufferingService implements ITerminalDataBufferingServi
    */
   getAllStats(): Record<string, ReturnType<typeof this.getBufferStats>> {
     const result: Record<string, ReturnType<typeof this.getBufferStats>> = {};
-    
+
     this._dataBuffers.forEach((_, terminalId) => {
       result[terminalId] = this.getBufferStats(terminalId);
     });
@@ -273,7 +273,7 @@ export class TerminalDataBufferingService implements ITerminalDataBufferingServi
    */
   private calculateFlushInterval(terminalId: string, dataSize: number): number {
     const stats = this._bufferStats.get(terminalId);
-    
+
     // CLI Agent検出パターン（高頻度出力）
     if (this.isHighFrequencyOutput(terminalId, dataSize)) {
       return this.config.cliAgentFlushInterval;
@@ -303,7 +303,7 @@ export class TerminalDataBufferingService implements ITerminalDataBufferingServi
 
     const now = Date.now();
     const timeSinceLastFlush = now - stats.lastFlushTime;
-    
+
     // 短時間に大量データの場合
     return timeSinceLastFlush < 100 && dataSize > 50;
   }
@@ -352,11 +352,11 @@ export class TerminalDataBufferingService implements ITerminalDataBufferingServi
 
     const now = Date.now();
     const interval = now - stats.lastFlushTime;
-    
+
     stats.flushCount++;
     stats.lastFlushTime = now;
-    
+
     // 移動平均でインターバルを計算
-    stats.averageInterval = (stats.averageInterval * 0.8) + (interval * 0.2);
+    stats.averageInterval = stats.averageInterval * 0.8 + interval * 0.2;
   }
 }

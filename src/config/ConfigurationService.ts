@@ -1,6 +1,6 @@
 /**
  * 統一された設定アクセスサービス
- * 
+ *
  * VS Code設定へのアクセスを集約し、キャッシュ機能付きで
  * 一貫性のある設定管理を提供します。
  */
@@ -45,7 +45,7 @@ export class ConfigurationService {
    * リソースを解放
    */
   dispose(): void {
-    this.disposables.forEach(d => d.dispose());
+    this.disposables.forEach((d) => d.dispose());
     this.disposables = [];
     this.configCache.clear();
     this.changeHandlers.clear();
@@ -88,11 +88,11 @@ export class ConfigurationService {
    */
   getCachedValue<T>(section: string, key: string, defaultValue: T): T {
     const cacheKey = `${section}.${key}`;
-    
+
     if (this.configCache.has(cacheKey)) {
       return this.configCache.get(cacheKey);
     }
-    
+
     const value = vscode.workspace.getConfiguration(section).get<T>(key, defaultValue);
     this.configCache.set(cacheKey, value);
     return value;
@@ -110,14 +110,16 @@ export class ConfigurationService {
   /**
    * 複数の設定値をバッチで取得
    */
-  getBatchValues(configs: Array<{ section: string; key: string; defaultValue: any }>): Record<string, any> {
+  getBatchValues(
+    configs: Array<{ section: string; key: string; defaultValue: any }>
+  ): Record<string, any> {
     const result: Record<string, any> = {};
-    
+
     for (const config of configs) {
       const fullKey = `${config.section}.${config.key}`;
       result[fullKey] = this.getCachedValue(config.section, config.key, config.defaultValue);
     }
-    
+
     return result;
   }
 
@@ -134,28 +136,40 @@ export class ConfigurationService {
       shellArgs: this.getCachedValue('secondaryTerminal', 'shellArgs', []),
       cwd: this.getCachedValue('secondaryTerminal', 'cwd', ''),
       env: this.getCachedValue('secondaryTerminal', 'env', {}),
-      
+
       // フォント設定
-      fontFamily: this.getCachedValue('secondaryTerminal', 'fontFamily', 'Menlo, Monaco, \'Courier New\', monospace'),
+      fontFamily: this.getCachedValue(
+        'secondaryTerminal',
+        'fontFamily',
+        "Menlo, Monaco, 'Courier New', monospace"
+      ),
       fontSize: this.getCachedValue('secondaryTerminal', 'fontSize', 12),
       lineHeight: this.getCachedValue('secondaryTerminal', 'lineHeight', 1.2),
-      
+
       // 表示設定
       cursorBlink: this.getCachedValue('secondaryTerminal', 'cursorBlink', true),
       cursorStyle: this.getCachedValue('secondaryTerminal', 'cursorStyle', 'block'),
       theme: this.getCachedValue('secondaryTerminal', 'theme', 'dark'),
-      
+
       // ヘッダー設定
       showHeader: this.getCachedValue('secondaryTerminal', 'showHeader', true),
       headerTitle: this.getCachedValue('secondaryTerminal', 'headerTitle', 'Terminal'),
-      
+
       // パフォーマンス設定
       scrollback: this.getCachedValue('secondaryTerminal', 'scrollback', 1000),
       fastScrollModifier: this.getCachedValue('secondaryTerminal', 'fastScrollModifier', 'alt'),
-      
+
       // CLI Agent設定
-      enableCliAgentIntegration: this.getCachedValue('secondaryTerminal', 'enableCliAgentIntegration', true),
-      enableGitHubCopilotIntegration: this.getCachedValue('secondaryTerminal', 'enableGitHubCopilotIntegration', true),
+      enableCliAgentIntegration: this.getCachedValue(
+        'secondaryTerminal',
+        'enableCliAgentIntegration',
+        true
+      ),
+      enableGitHubCopilotIntegration: this.getCachedValue(
+        'secondaryTerminal',
+        'enableGitHubCopilotIntegration',
+        true
+      ),
     };
   }
 
@@ -174,9 +188,21 @@ export class ConfigurationService {
    */
   getPersistentSessionSettings() {
     return {
-      enablePersistentSessions: this.getCachedValue('terminal.integrated', 'enablePersistentSessions', true),
-      persistentSessionScrollback: this.getCachedValue('terminal.integrated', 'persistentSessionScrollback', 100),
-      persistentSessionReviveProcess: this.getCachedValue('terminal.integrated', 'persistentSessionReviveProcess', 'onExitAndWindowClose'),
+      enablePersistentSessions: this.getCachedValue(
+        'terminal.integrated',
+        'enablePersistentSessions',
+        true
+      ),
+      persistentSessionScrollback: this.getCachedValue(
+        'terminal.integrated',
+        'persistentSessionScrollback',
+        100
+      ),
+      persistentSessionReviveProcess: this.getCachedValue(
+        'terminal.integrated',
+        'persistentSessionReviveProcess',
+        'onExitAndWindowClose'
+      ),
     };
   }
 
@@ -187,8 +213,16 @@ export class ConfigurationService {
     return {
       colorTheme: this.getCachedValue('workbench', 'colorTheme', 'Default Dark Modern'),
       iconTheme: this.getCachedValue('workbench', 'iconTheme', 'vs-seti'),
-      preferredDarkColorTheme: this.getCachedValue('workbench', 'preferredDarkColorTheme', 'Default Dark Modern'),
-      preferredLightColorTheme: this.getCachedValue('workbench', 'preferredLightColorTheme', 'Default Light Modern'),
+      preferredDarkColorTheme: this.getCachedValue(
+        'workbench',
+        'preferredDarkColorTheme',
+        'Default Dark Modern'
+      ),
+      preferredLightColorTheme: this.getCachedValue(
+        'workbench',
+        'preferredLightColorTheme',
+        'Default Light Modern'
+      ),
     };
   }
 
@@ -205,11 +239,11 @@ export class ConfigurationService {
   ): Promise<void> {
     try {
       await vscode.workspace.getConfiguration(section).update(key, value, target);
-      
+
       // キャッシュを更新
       const cacheKey = `${section}.${key}`;
       this.configCache.set(cacheKey, value);
-      
+
       log(`✅ [CONFIG] Updated ${section}.${key} = ${JSON.stringify(value)}`);
     } catch (error) {
       log(`❌ [CONFIG] Failed to update ${section}.${key}: ${String(error)}`);
@@ -229,7 +263,7 @@ export class ConfigurationService {
     }>
   ): Promise<void> {
     const errors: string[] = [];
-    
+
     for (const update of updates) {
       try {
         await this.updateValue(
@@ -242,7 +276,7 @@ export class ConfigurationService {
         errors.push(`${update.section}.${update.key}: ${String(error)}`);
       }
     }
-    
+
     if (errors.length > 0) {
       throw new Error(`Batch update failed for: ${errors.join(', ')}`);
     }
@@ -255,11 +289,11 @@ export class ConfigurationService {
    */
   onConfigurationChanged(handler: ConfigChangeHandler): vscode.Disposable {
     this.changeHandlers.add(handler);
-    
+
     return {
       dispose: () => {
         this.changeHandlers.delete(handler);
-      }
+      },
     };
   }
 
@@ -285,23 +319,18 @@ export class ConfigurationService {
   private setupConfigurationWatcher(): void {
     const disposable = vscode.workspace.onDidChangeConfiguration((event) => {
       // 関連セクションのキャッシュをクリア
-      const sectionsToWatch = [
-        'secondaryTerminal',
-        'terminal.integrated', 
-        'editor',
-        'workbench'
-      ];
-      
+      const sectionsToWatch = ['secondaryTerminal', 'terminal.integrated', 'editor', 'workbench'];
+
       for (const section of sectionsToWatch) {
         if (event.affectsConfiguration(section)) {
           this.clearSectionCache(section);
-          
+
           // 変更ハンドラーに通知
           this.notifyConfigurationChange(section, event);
         }
       }
     });
-    
+
     this.disposables.push(disposable);
   }
 
@@ -310,27 +339,24 @@ export class ConfigurationService {
    */
   private clearSectionCache(section: string): void {
     const keysToDelete: string[] = [];
-    
+
     this.configCache.forEach((value, key) => {
       if (key.startsWith(`${section}.`)) {
         keysToDelete.push(key);
       }
     });
-    
-    keysToDelete.forEach(key => this.configCache.delete(key));
+
+    keysToDelete.forEach((key) => this.configCache.delete(key));
     log(`🧹 [CONFIG] Cleared cache for section: ${section}`);
   }
 
   /**
    * 設定変更をハンドラーに通知
    */
-  private notifyConfigurationChange(
-    section: string,
-    event: vscode.ConfigurationChangeEvent
-  ): void {
+  private notifyConfigurationChange(section: string, event: vscode.ConfigurationChangeEvent): void {
     // 簡単な実装: セクション全体が変更されたと通知
     // より詳細な実装では、個別のキー変更を検出
-    this.changeHandlers.forEach(handler => {
+    this.changeHandlers.forEach((handler) => {
       handler(section, '*', null, null);
     });
   }

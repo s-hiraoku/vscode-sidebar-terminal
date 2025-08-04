@@ -1,6 +1,6 @@
 /**
  * WebView メッセージルーター
- * 
+ *
  * WebView との双方向通信を管理し、メッセージルーティングを行います。
  * Provider から分離してメッセージ処理のみに特化しています。
  */
@@ -8,7 +8,11 @@
 import * as vscode from 'vscode';
 import { WebviewMessage, VsCodeMessage } from '../types/common';
 import { MessageFactory } from './MessageFactory';
-import { OperationResult, OperationResultHandler, NotificationService } from '../utils/OperationResultHandler';
+import {
+  OperationResult,
+  OperationResultHandler,
+  NotificationService,
+} from '../utils/OperationResultHandler';
 import { extension as log } from '../utils/logger';
 
 export interface IWebViewMessageRouter {
@@ -17,7 +21,12 @@ export interface IWebViewMessageRouter {
   sendMessageDirect(message: WebviewMessage): Promise<void>;
   addMessageHandler(command: string, handler: MessageHandler): void;
   removeMessageHandler(command: string): void;
-  getMessageStats(): { queueSize: number; isWebviewReady: boolean; handlerCount: number; maxQueueSize: number; };
+  getMessageStats(): {
+    queueSize: number;
+    isWebviewReady: boolean;
+    handlerCount: number;
+    maxQueueSize: number;
+  };
   dispose(): void;
 }
 
@@ -40,7 +49,7 @@ export class WebViewMessageRouter implements IWebViewMessageRouter {
   private readonly messageQueue: WebviewMessage[] = [];
   private readonly config: MessageRouterConfig;
   private isWebviewReady = false;
-  
+
   // リソース管理
   private readonly disposables: vscode.Disposable[] = [];
 
@@ -54,9 +63,9 @@ export class WebViewMessageRouter implements IWebViewMessageRouter {
       messageTimeout: 5000,
       retryAttempts: 3,
       debugLogging: false,
-      ...config
+      ...config,
     };
-    
+
     log('📡 [MESSAGE-ROUTER] WebView message router initialized');
   }
 
@@ -65,13 +74,13 @@ export class WebViewMessageRouter implements IWebViewMessageRouter {
    */
   setupMessageHandling(webviewView: vscode.WebviewView): void {
     this.webviewView = webviewView;
-    
+
     // メッセージ受信ハンドラーを設定
-    const messageDisposable = webviewView.webview.onDidReceiveMessage(
-      (message: VsCodeMessage) => this.handleIncomingMessage(message)
+    const messageDisposable = webviewView.webview.onDidReceiveMessage((message: VsCodeMessage) =>
+      this.handleIncomingMessage(message)
     );
     this.disposables.push(messageDisposable);
-    
+
     // WebView可視性変更ハンドラー
     const visibilityDisposable = webviewView.onDidChangeVisibility(() => {
       if (webviewView.visible) {
@@ -79,7 +88,7 @@ export class WebViewMessageRouter implements IWebViewMessageRouter {
       }
     });
     this.disposables.push(visibilityDisposable);
-    
+
     log('📡 [MESSAGE-ROUTER] Message handling setup complete');
   }
 
@@ -111,19 +120,19 @@ export class WebViewMessageRouter implements IWebViewMessageRouter {
     try {
       // タイムスタンプを追加
       const messageWithTimestamp = MessageFactory.updateTimestamp(message);
-      
+
       await this.webviewView.webview.postMessage(messageWithTimestamp);
-      
+
       if (this.config.debugLogging) {
         log(`✅ [MESSAGE-ROUTER] Message sent successfully: ${message.command}`);
       }
     } catch (error) {
       log(`❌ [MESSAGE-ROUTER] Failed to send message ${message.command}: ${String(error)}`);
-      
+
       if (this.notificationService) {
         this.notificationService.showError(`Failed to send message: ${message.command}`);
       }
-      
+
       throw error;
     }
   }
@@ -149,17 +158,17 @@ export class WebViewMessageRouter implements IWebViewMessageRouter {
    */
   dispose(): void {
     log('🗑️ [MESSAGE-ROUTER] Disposing message router...');
-    
+
     // Disposableを解放
-    this.disposables.forEach(d => d.dispose());
+    this.disposables.forEach((d) => d.dispose());
     this.disposables.length = 0;
-    
+
     // データ構造をクリア
     this.messageHandlers.clear();
     this.messageQueue.length = 0;
     this.webviewView = null;
     this.isWebviewReady = false;
-    
+
     log('✅ [MESSAGE-ROUTER] Message router disposed');
   }
 
@@ -174,7 +183,7 @@ export class WebViewMessageRouter implements IWebViewMessageRouter {
     }
 
     const errors: string[] = [];
-    
+
     for (const message of messages) {
       try {
         await this.sendMessage(message);
@@ -201,7 +210,7 @@ export class WebViewMessageRouter implements IWebViewMessageRouter {
   setWebviewReady(isReady: boolean): void {
     const wasReady = this.isWebviewReady;
     this.isWebviewReady = isReady;
-    
+
     if (!wasReady && isReady) {
       log('🎯 [MESSAGE-ROUTER] WebView ready, flushing message queue');
       this.flushMessageQueue();
@@ -249,20 +258,22 @@ export class WebViewMessageRouter implements IWebViewMessageRouter {
 
     try {
       await handler(message);
-      
+
       if (this.config.debugLogging) {
         log(`✅ [MESSAGE-ROUTER] Message handled successfully: ${message.command}`);
       }
     } catch (error) {
       log(`❌ [MESSAGE-ROUTER] Handler error for ${message.command}: ${String(error)}`);
-      
+
       // エラーレスポンスを送信
       try {
-        await this.sendMessage(MessageFactory.createErrorMessage(
-          `Handler error: ${String(error)}`,
-          `command-${message.command}`,
-          message.terminalId
-        ));
+        await this.sendMessage(
+          MessageFactory.createErrorMessage(
+            `Handler error: ${String(error)}`,
+            `command-${message.command}`,
+            message.terminalId
+          )
+        );
       } catch (sendError) {
         log(`❌ [MESSAGE-ROUTER] Failed to send error response: ${String(sendError)}`);
       }
@@ -280,7 +291,9 @@ export class WebViewMessageRouter implements IWebViewMessageRouter {
     }
 
     this.messageQueue.push(message);
-    log(`📋 [MESSAGE-ROUTER] Message queued: ${message.command} (queue size: ${this.messageQueue.length})`);
+    log(
+      `📋 [MESSAGE-ROUTER] Message queued: ${message.command} (queue size: ${this.messageQueue.length})`
+    );
   }
 
   /**
@@ -301,7 +314,7 @@ export class WebViewMessageRouter implements IWebViewMessageRouter {
         await this.sendMessageDirect(message);
       } catch (error) {
         log(`❌ [MESSAGE-ROUTER] Failed to flush message ${message.command}: ${String(error)}`);
-        
+
         // 重要なメッセージは再キューに追加
         if (this.isImportantMessage(message)) {
           this.enqueueMessage(message);
@@ -322,9 +335,9 @@ export class WebViewMessageRouter implements IWebViewMessageRouter {
       'stateUpdate',
       'settingsResponse',
       'sessionRestoreCompleted',
-      'sessionRestoreError'
+      'sessionRestoreError',
     ];
-    
+
     return importantCommands.includes(message.command);
   }
 }
