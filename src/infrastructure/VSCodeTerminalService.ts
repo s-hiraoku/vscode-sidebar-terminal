@@ -1,10 +1,15 @@
 /**
  * Infrastructure Layer - VS Code Terminal Service Implementation
- * 
+ *
  * Domain層のITerminalServiceを実装し、実際のVS Code統合を提供
  */
 
-import { ITerminalService, Terminal, TerminalCreationOptions, TerminalOperationResult } from '../domain/interfaces/TerminalService';
+import {
+  ITerminalService,
+  Terminal,
+  TerminalCreationOptions,
+  TerminalOperationResult,
+} from '../domain/interfaces/TerminalService';
 import { ITerminalLifecycleManager } from '../services/TerminalLifecycleManager';
 import { ITerminalStateManager } from '../services/TerminalStateManager';
 import { OperationResultHandler } from '../utils/OperationResultHandler';
@@ -33,13 +38,15 @@ export class VSCodeTerminalService implements ITerminalService {
   /**
    * ターミナルを作成
    */
-  async createTerminal(options?: TerminalCreationOptions): Promise<TerminalOperationResult<string>> {
+  async createTerminal(
+    options?: TerminalCreationOptions
+  ): Promise<TerminalOperationResult<string>> {
     try {
       log('🚀 [INFRASTRUCTURE] Creating terminal with options:', options);
 
       // TODO: optionsをlifecycleManagerの形式に変換
       const terminalId = this.lifecycleManager.createTerminal();
-      
+
       return { success: true, data: terminalId };
     } catch (error) {
       return { success: false, error: `Failed to create terminal: ${String(error)}` };
@@ -54,7 +61,7 @@ export class VSCodeTerminalService implements ITerminalService {
       log(`🗑️ [INFRASTRUCTURE] Deleting terminal: ${terminalId}`);
 
       const result = await this.lifecycleManager.killTerminal(terminalId);
-      
+
       if (result.success) {
         return { success: true };
       } else {
@@ -82,7 +89,7 @@ export class VSCodeTerminalService implements ITerminalService {
    */
   getAllTerminals(): Terminal[] {
     const terminals = this.lifecycleManager.getAllTerminals();
-    return terminals.map(t => this.mapToTerminal(t));
+    return terminals.map((t) => this.mapToTerminal(t));
   }
 
   // === ターミナル操作 ===
@@ -92,7 +99,7 @@ export class VSCodeTerminalService implements ITerminalService {
    */
   writeToTerminal(terminalId: string, data: string): TerminalOperationResult {
     const result = this.lifecycleManager.writeToTerminal(terminalId, data);
-    
+
     if (result.success) {
       return { success: true };
     } else {
@@ -105,7 +112,7 @@ export class VSCodeTerminalService implements ITerminalService {
    */
   resizeTerminal(terminalId: string, cols: number, rows: number): TerminalOperationResult {
     const result = this.lifecycleManager.resizeTerminal(terminalId, cols, rows);
-    
+
     if (result.success) {
       return { success: true };
     } else {
@@ -120,7 +127,7 @@ export class VSCodeTerminalService implements ITerminalService {
    */
   setActiveTerminal(terminalId: string): TerminalOperationResult {
     const result = this.stateManager.setActiveTerminal(terminalId);
-    
+
     if (result.success) {
       return { success: true };
     } else {
@@ -172,7 +179,7 @@ export class VSCodeTerminalService implements ITerminalService {
     // ターミナル作成イベント
     this.lifecycleManager.onTerminalCreated((terminal) => {
       const domainTerminal = this.mapToTerminal(terminal);
-      this.callbacks.onTerminalCreated.forEach(callback => {
+      this.callbacks.onTerminalCreated.forEach((callback) => {
         try {
           callback(domainTerminal);
         } catch (error) {
@@ -183,7 +190,7 @@ export class VSCodeTerminalService implements ITerminalService {
 
     // ターミナル削除イベント
     this.lifecycleManager.onTerminalRemoved((terminalId) => {
-      this.callbacks.onTerminalDeleted.forEach(callback => {
+      this.callbacks.onTerminalDeleted.forEach((callback) => {
         try {
           callback(terminalId);
         } catch (error) {
@@ -194,7 +201,7 @@ export class VSCodeTerminalService implements ITerminalService {
 
     // ターミナルデータイベント
     this.lifecycleManager.onTerminalData((event) => {
-      this.callbacks.onTerminalDataReceived.forEach(callback => {
+      this.callbacks.onTerminalDataReceived.forEach((callback) => {
         try {
           callback(event.terminalId, event.data);
         } catch (error) {
@@ -225,7 +232,7 @@ export class VSCodeTerminalService implements ITerminalService {
     this.callbacks.onTerminalCreated.clear();
     this.callbacks.onTerminalDeleted.clear();
     this.callbacks.onTerminalDataReceived.clear();
-    
+
     log('🗑️ [INFRASTRUCTURE] VS Code terminal service disposed');
   }
 }

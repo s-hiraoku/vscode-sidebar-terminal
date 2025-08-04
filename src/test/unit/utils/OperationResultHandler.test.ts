@@ -1,6 +1,6 @@
 /**
  * OperationResultHandler unit tests
- * 
+ *
  * 統一されたオペレーション結果処理ユーティリティのテスト
  * 重複していたエラーハンドリングパターンを統一する機能を検証
  */
@@ -12,7 +12,11 @@ import * as sinon from 'sinon';
 
 use(sinonChai);
 
-import { OperationResultHandler, OperationResult, NotificationService } from '../../../utils/OperationResultHandler';
+import {
+  OperationResultHandler,
+  OperationResult,
+  NotificationService,
+} from '../../../utils/OperationResultHandler';
 import {
   setupTestEnvironment,
   cleanupTestEnvironment,
@@ -26,7 +30,7 @@ describe('OperationResultHandler', () => {
 
   beforeEach(() => {
     testEnv = setupTestEnvironment();
-    
+
     // Mock notification service
     mockNotificationService = {
       showSuccess: testEnv.sandbox.stub(),
@@ -151,7 +155,9 @@ describe('OperationResultHandler', () => {
     });
 
     it('should handle failed operation with reason', async () => {
-      const operation = testEnv.sandbox.stub().resolves(OperationResultHandler.failure('Terminal not found'));
+      const operation = testEnv.sandbox
+        .stub()
+        .resolves(OperationResultHandler.failure('Terminal not found'));
 
       const result = await OperationResultHandler.handleTerminalOperation(
         operation,
@@ -161,7 +167,9 @@ describe('OperationResultHandler', () => {
       );
 
       expect(result).to.be.null;
-      expect(logSpy).to.have.been.calledWith('⚠️ [DELETE_TERMINAL] Operation failed: Terminal not found');
+      expect(logSpy).to.have.been.calledWith(
+        '⚠️ [DELETE_TERMINAL] Operation failed: Terminal not found'
+      );
       expect(mockNotificationService.showError).to.have.been.calledWith('Terminal not found');
     });
 
@@ -176,7 +184,9 @@ describe('OperationResultHandler', () => {
       );
 
       expect(result).to.be.null;
-      expect(logSpy).to.have.been.calledWith('⚠️ [TEST_CONTEXT] Operation failed: Operation failed');
+      expect(logSpy).to.have.been.calledWith(
+        '⚠️ [TEST_CONTEXT] Operation failed: Operation failed'
+      );
       expect(mockNotificationService.showError).to.have.been.calledWith('Operation failed');
     });
 
@@ -192,8 +202,12 @@ describe('OperationResultHandler', () => {
       );
 
       expect(result).to.be.null;
-      expect(logSpy).to.have.been.calledWith('❌ [RISKY_OPERATION] Operation error: Error: Unexpected error');
-      expect(mockNotificationService.showError).to.have.been.calledWith('Operation error: Error: Unexpected error');
+      expect(logSpy).to.have.been.calledWith(
+        '❌ [RISKY_OPERATION] Operation error: Error: Unexpected error'
+      );
+      expect(mockNotificationService.showError).to.have.been.calledWith(
+        'Operation error: Error: Unexpected error'
+      );
     });
 
     it('should handle operation returning null data successfully', async () => {
@@ -227,7 +241,9 @@ describe('OperationResultHandler', () => {
     });
 
     it('should handle failed sync operation', () => {
-      const operation = testEnv.sandbox.stub().returns(OperationResultHandler.failure('Sync failed'));
+      const operation = testEnv.sandbox
+        .stub()
+        .returns(OperationResultHandler.failure('Sync failed'));
 
       const result = OperationResultHandler.handleSyncOperation(
         operation,
@@ -253,8 +269,12 @@ describe('OperationResultHandler', () => {
       );
 
       expect(result).to.be.null;
-      expect(logSpy).to.have.been.calledWith('❌ [SYNC_EXCEPTION] Operation error: Error: Sync exception');
-      expect(mockNotificationService.showError).to.have.been.calledWith('Operation error: Error: Sync exception');
+      expect(logSpy).to.have.been.calledWith(
+        '❌ [SYNC_EXCEPTION] Operation error: Error: Sync exception'
+      );
+      expect(mockNotificationService.showError).to.have.been.calledWith(
+        'Operation error: Error: Sync exception'
+      );
     });
 
     it('should handle sync operation without notification service', () => {
@@ -288,8 +308,12 @@ describe('OperationResultHandler', () => {
       expect(result.successful[1]).to.deep.equal({ id: 2 });
       expect(result.successful[2]).to.deep.equal({ id: 3 });
 
-      expect(logSpy).to.have.been.calledWith('📊 [BATCH_TEST] Batch operation completed: 3 successful, 0 failed');
-      expect(mockNotificationService.showSuccess).to.have.been.calledWith('All 3 operations completed successfully');
+      expect(logSpy).to.have.been.calledWith(
+        '📊 [BATCH_TEST] Batch operation completed: 3 successful, 0 failed'
+      );
+      expect(mockNotificationService.showSuccess).to.have.been.calledWith(
+        'All 3 operations completed successfully'
+      );
     });
 
     it('should handle mixed success and failure batch operations', async () => {
@@ -311,8 +335,12 @@ describe('OperationResultHandler', () => {
       expect(result.successful[1]).to.deep.equal({ id: 3 });
       expect(result.failed[0]).to.deep.equal({ index: 1, reason: 'Operation failed' });
 
-      expect(logSpy).to.have.been.calledWith('📊 [MIXED_BATCH] Batch operation completed: 2 successful, 1 failed');
-      expect(mockNotificationService.showWarning).to.have.been.calledWith('Batch operation completed: 2 successful, 1 failed');
+      expect(logSpy).to.have.been.calledWith(
+        '📊 [MIXED_BATCH] Batch operation completed: 2 successful, 1 failed'
+      );
+      expect(mockNotificationService.showWarning).to.have.been.calledWith(
+        'Batch operation completed: 2 successful, 1 failed'
+      );
     });
 
     it('should handle all failed batch operations', async () => {
@@ -345,8 +373,12 @@ describe('OperationResultHandler', () => {
       expect(result.successful).to.have.length(0);
       expect(result.failed).to.have.length(0);
 
-      expect(logSpy).to.have.been.calledWith('📊 [EMPTY_BATCH] Batch operation completed: 0 successful, 0 failed');
-      expect(mockNotificationService.showSuccess).to.have.been.calledWith('All 0 operations completed successfully');
+      expect(logSpy).to.have.been.calledWith(
+        '📊 [EMPTY_BATCH] Batch operation completed: 0 successful, 0 failed'
+      );
+      expect(mockNotificationService.showSuccess).to.have.been.calledWith(
+        'All 0 operations completed successfully'
+      );
     });
 
     it('should handle batch operations without notification service', async () => {
@@ -354,11 +386,16 @@ describe('OperationResultHandler', () => {
         testEnv.sandbox.stub().resolves(OperationResultHandler.success({ data: 'test' })),
       ];
 
-      const result = await OperationResultHandler.handleBatchOperations(operations, 'NO_NOTIFICATION');
+      const result = await OperationResultHandler.handleBatchOperations(
+        operations,
+        'NO_NOTIFICATION'
+      );
 
       expect(result.successful).to.have.length(1);
       expect(result.failed).to.have.length(0);
-      expect(logSpy).to.have.been.calledWith('📊 [NO_NOTIFICATION] Batch operation completed: 1 successful, 0 failed');
+      expect(logSpy).to.have.been.calledWith(
+        '📊 [NO_NOTIFICATION] Batch operation completed: 1 successful, 0 failed'
+      );
     });
 
     it('should handle operations throwing exceptions in batch', async () => {
@@ -395,7 +432,9 @@ describe('OperationResultHandler', () => {
 
       expect(result).to.be.null;
       expect(logSpy).to.have.been.calledWith('❌ [STRING_ERROR] Operation error: String error');
-      expect(mockNotificationService.showError).to.have.been.calledWith('Operation error: String error');
+      expect(mockNotificationService.showError).to.have.been.calledWith(
+        'Operation error: String error'
+      );
     });
 
     it('should handle null error object', async () => {
@@ -425,24 +464,36 @@ describe('OperationResultHandler', () => {
 
       expect(result).to.be.null;
       expect(logSpy).to.have.been.calledWith('❌ [UNDEFINED_ERROR] Operation error: undefined');
-      expect(mockNotificationService.showError).to.have.been.calledWith('Operation error: undefined');
+      expect(mockNotificationService.showError).to.have.been.calledWith(
+        'Operation error: undefined'
+      );
     });
   });
 
   describe('notification service integration', () => {
     it('should work without notification service for successful operations', async () => {
-      const operation = testEnv.sandbox.stub().resolves(OperationResultHandler.success({ data: 'test' }));
+      const operation = testEnv.sandbox
+        .stub()
+        .resolves(OperationResultHandler.success({ data: 'test' }));
 
-      const result = await OperationResultHandler.handleTerminalOperation(operation, 'NO_NOTIF_SUCCESS');
+      const result = await OperationResultHandler.handleTerminalOperation(
+        operation,
+        'NO_NOTIF_SUCCESS'
+      );
 
       expect(result).to.deep.equal({ data: 'test' });
       expect(logSpy).to.have.been.calledWith('✅ [NO_NOTIF_SUCCESS] Operation successful');
     });
 
     it('should work without notification service for failed operations', async () => {
-      const operation = testEnv.sandbox.stub().resolves(OperationResultHandler.failure('Test failure'));
+      const operation = testEnv.sandbox
+        .stub()
+        .resolves(OperationResultHandler.failure('Test failure'));
 
-      const result = await OperationResultHandler.handleTerminalOperation(operation, 'NO_NOTIF_FAIL');
+      const result = await OperationResultHandler.handleTerminalOperation(
+        operation,
+        'NO_NOTIF_FAIL'
+      );
 
       expect(result).to.be.null;
       expect(logSpy).to.have.been.calledWith('⚠️ [NO_NOTIF_FAIL] Operation failed: Test failure');
@@ -455,7 +506,9 @@ describe('OperationResultHandler', () => {
         showWarning: testEnv.sandbox.stub(),
       };
 
-      const operation = testEnv.sandbox.stub().resolves(OperationResultHandler.success({ data: 'test' }));
+      const operation = testEnv.sandbox
+        .stub()
+        .resolves(OperationResultHandler.success({ data: 'test' }));
 
       // Should not throw even if notification service throws
       const result = await OperationResultHandler.handleTerminalOperation(
@@ -493,19 +546,24 @@ describe('OperationResultHandler', () => {
             shell: '/bin/bash',
             args: ['--login'],
             env: { PATH: '/usr/bin:/bin' },
-            features: ['scrollback', 'unicode', 'colors']
+            features: ['scrollback', 'unicode', 'colors'],
           },
           state: {
             isActive: true,
             lastActivity: new Date().toISOString(),
-            scrollPosition: 0
-          }
-        }
+            scrollPosition: 0,
+          },
+        },
       };
 
-      const operation = testEnv.sandbox.stub().resolves(OperationResultHandler.success(complexData));
+      const operation = testEnv.sandbox
+        .stub()
+        .resolves(OperationResultHandler.success(complexData));
 
-      const result = await OperationResultHandler.handleTerminalOperation(operation, 'COMPLEX_DATA');
+      const result = await OperationResultHandler.handleTerminalOperation(
+        operation,
+        'COMPLEX_DATA'
+      );
 
       expect(result).to.deep.equal(complexData);
       expect(logSpy).to.have.been.calledWith('✅ [COMPLEX_DATA] Operation successful');

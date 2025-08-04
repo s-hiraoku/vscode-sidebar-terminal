@@ -1,6 +1,6 @@
 /**
  * WebView リソース管理サービス
- * 
+ *
  * WebView の HTML 生成、リソース管理、設定を専門に行います。
  * Provider から分離してリソース管理のみに特化しています。
  */
@@ -12,7 +12,11 @@ import { extension as log } from '../utils/logger';
 export interface IWebViewResourceManager {
   configureWebview(webviewView: vscode.WebviewView, context: vscode.ExtensionContext): void;
   generateHTML(webview: vscode.Webview, context: vscode.ExtensionContext): string;
-  getResourceUri(webview: vscode.Webview, context: vscode.ExtensionContext, ...pathSegments: string[]): vscode.Uri;
+  getResourceUri(
+    webview: vscode.Webview,
+    context: vscode.ExtensionContext,
+    ...pathSegments: string[]
+  ): vscode.Uri;
   setWebviewOptions(webview: vscode.Webview): void;
 }
 
@@ -29,7 +33,7 @@ export interface WebViewResourceConfig {
  */
 export class WebViewResourceManager implements IWebViewResourceManager {
   private readonly config: WebViewResourceConfig;
-  
+
   constructor(config: Partial<WebViewResourceConfig> = {}) {
     this.config = {
       enableScripts: true,
@@ -37,9 +41,9 @@ export class WebViewResourceManager implements IWebViewResourceManager {
       enableCommandUris: false,
       retainContextWhenHidden: true,
       localResourceRoots: ['dist', 'src/webview'],
-      ...config
+      ...config,
     };
-    
+
     log('🎨 [WEBVIEW-RESOURCE] WebView resource manager initialized');
   }
 
@@ -50,13 +54,13 @@ export class WebViewResourceManager implements IWebViewResourceManager {
     try {
       // WebView オプションを設定
       this.setWebviewOptions(webviewView.webview);
-      
+
       // HTML を生成・設定
       webviewView.webview.html = this.generateHTML(webviewView.webview, context);
-      
+
       // WebView の表示設定
       webviewView.show?.(true);
-      
+
       log('✅ [WEBVIEW-RESOURCE] WebView configured successfully');
     } catch (error) {
       log(`❌ [WEBVIEW-RESOURCE] Failed to configure WebView: ${String(error)}`);
@@ -71,9 +75,30 @@ export class WebViewResourceManager implements IWebViewResourceManager {
     try {
       // リソース URI を取得
       const scriptUri = this.getResourceUri(webview, context, 'dist', 'webview.js');
-      const styleResetUri = this.getResourceUri(webview, context, 'src', 'webview', 'styles', 'reset.css');
-      const styleVSCodeUri = this.getResourceUri(webview, context, 'src', 'webview', 'styles', 'vscode.css');
-      const styleMainUri = this.getResourceUri(webview, context, 'src', 'webview', 'styles', 'main.css');
+      const styleResetUri = this.getResourceUri(
+        webview,
+        context,
+        'src',
+        'webview',
+        'styles',
+        'reset.css'
+      );
+      const styleVSCodeUri = this.getResourceUri(
+        webview,
+        context,
+        'src',
+        'webview',
+        'styles',
+        'vscode.css'
+      );
+      const styleMainUri = this.getResourceUri(
+        webview,
+        context,
+        'src',
+        'webview',
+        'styles',
+        'main.css'
+      );
 
       // nonce を生成（セキュリティ）
       const nonce = this.generateNonce();
@@ -110,8 +135,10 @@ export class WebViewResourceManager implements IWebViewResourceManager {
    * WebView オプションを設定
    */
   setWebviewOptions(webview: vscode.Webview): void {
-    const localResourceRoots = this.config.localResourceRoots.map(root =>
-      vscode.Uri.file(path.join(vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || __dirname, root))
+    const localResourceRoots = this.config.localResourceRoots.map((root) =>
+      vscode.Uri.file(
+        path.join(vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || __dirname, root)
+      )
     );
 
     webview.options = {
@@ -307,7 +334,7 @@ export class WebViewResourceManager implements IWebViewResourceManager {
       '<': '&lt;',
       '>': '&gt;',
       '"': '&quot;',
-      "'": '&#039;'
+      "'": '&#039;',
     };
     return text.replace(/[&<>"']/g, (match) => map[match] || match);
   }

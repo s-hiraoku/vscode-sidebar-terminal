@@ -1,6 +1,6 @@
 /**
  * 統一されたオペレーション結果処理ユーティリティ
- * 
+ *
  * 重複していたエラーハンドリングパターンを統一し、
  * 一貫性のある成功/失敗処理を提供します。
  */
@@ -26,7 +26,7 @@ export interface NotificationService {
 export class OperationResultHandler {
   /**
    * ターミナル操作の結果を統一的に処理
-   * 
+   *
    * @param operation 実行するオペレーション
    * @param context ログ用のコンテキスト名
    * @param successMessage 成功時の通知メッセージ（省略時は通知なし）
@@ -41,7 +41,7 @@ export class OperationResultHandler {
   ): Promise<T | null> {
     try {
       const result = await operation();
-      
+
       if (result.success) {
         log(`✅ [${context}] Operation successful`);
         if (successMessage && notificationService) {
@@ -77,7 +77,7 @@ export class OperationResultHandler {
   ): T | null {
     try {
       const result = operation();
-      
+
       if (result.success) {
         log(`✅ [${context}] Operation successful`);
         if (successMessage && notificationService) {
@@ -138,10 +138,12 @@ export class OperationResultHandler {
 
     const summary = `Batch operation completed: ${successful.length} successful, ${failed.length} failed`;
     log(`📊 [${context}] ${summary}`);
-    
+
     if (notificationService) {
       if (failed.length === 0) {
-        notificationService.showSuccess(`All ${successful.length} operations completed successfully`);
+        notificationService.showSuccess(
+          `All ${successful.length} operations completed successfully`
+        );
       } else if (successful.length === 0) {
         notificationService.showError(`All ${failed.length} operations failed`);
       } else {
@@ -155,7 +157,12 @@ export class OperationResultHandler {
   /**
    * オペレーション結果を作成するヘルパー
    */
-  static createResult<T>(success: boolean, data?: T, reason?: string, error?: Error): OperationResult<T> {
+  static createResult<T>(
+    success: boolean,
+    data?: T,
+    reason?: string,
+    error?: Error
+  ): OperationResult<T> {
     return { success, data, reason, error };
   }
 

@@ -1,6 +1,6 @@
 /**
  * ターミナルライフサイクル管理サービス
- * 
+ *
  * ターミナルの作成・削除・プロセス管理を専門に行います。
  * 単一責務の原則に従って、ライフサイクル管理のみに特化しています。
  */
@@ -46,24 +46,30 @@ export interface TerminalLifecycleEvents {
 export class TerminalLifecycleManager implements ITerminalLifecycleManager {
   private readonly _terminals = new Map<string, TerminalInstance>();
   private readonly _terminalNumberManager: TerminalNumberManager;
-  
+
   // イベントエミッター
   private readonly _terminalCreatedEmitter = new vscode.EventEmitter<TerminalInstance>();
   private readonly _terminalRemovedEmitter = new vscode.EventEmitter<string>();
-  private readonly _terminalExitEmitter = new vscode.EventEmitter<{ terminalId: string; exitCode?: number }>();
-  private readonly _terminalDataEmitter = new vscode.EventEmitter<{ terminalId: string; data: string }>();
-  
+  private readonly _terminalExitEmitter = new vscode.EventEmitter<{
+    terminalId: string;
+    exitCode?: number;
+  }>();
+  private readonly _terminalDataEmitter = new vscode.EventEmitter<{
+    terminalId: string;
+    data: string;
+  }>();
+
   // 操作の原子性保証
   private readonly _terminalBeingKilled = new Set<string>();
   private operationQueue: Promise<void> = Promise.resolve();
-  
+
   // リソース管理
   private readonly _disposables: vscode.Disposable[] = [];
 
   constructor() {
     const config = getTerminalConfig();
     this._terminalNumberManager = new TerminalNumberManager(config.maxTerminals);
-    
+
     log('🚀 [LIFECYCLE] Terminal lifecycle manager initialized');
   }
 
@@ -92,7 +98,7 @@ export class TerminalLifecycleManager implements ITerminalLifecycleManager {
    */
   createTerminal(): string {
     const config = getTerminalConfig();
-    
+
     // 最大数チェック
     if (this._terminals.size >= config.maxTerminals) {
       throw new Error(`Maximum terminal limit reached (${config.maxTerminals})`);
@@ -291,7 +297,7 @@ export class TerminalLifecycleManager implements ITerminalLifecycleManager {
 
     // 全ターミナルを削除
     const terminalIds = Array.from(this._terminals.keys());
-    terminalIds.forEach(terminalId => {
+    terminalIds.forEach((terminalId) => {
       this.performKillTerminalSync(terminalId);
     });
 
@@ -302,7 +308,7 @@ export class TerminalLifecycleManager implements ITerminalLifecycleManager {
     this._terminalDataEmitter.dispose();
 
     // Disposableを解放
-    this._disposables.forEach(d => d.dispose());
+    this._disposables.forEach((d) => d.dispose());
     this._disposables.length = 0;
 
     // データ構造をクリア
@@ -392,8 +398,8 @@ export class TerminalLifecycleManager implements ITerminalLifecycleManager {
       }
 
       // 少し待機してからマップから削除
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
       this.removeTerminal(terminalId);
 
       return OperationResultHandler.success();

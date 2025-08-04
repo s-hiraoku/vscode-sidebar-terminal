@@ -15,14 +15,18 @@ This directory contains a comprehensive integration test framework specifically 
 ### Core Components
 
 #### 1. IntegrationTestFramework.ts
+
 The main framework that provides:
+
 - **MockServiceFactory** - Creates mock implementations of all services with realistic behavior
 - **EventFlowTracker** - Monitors event flow between services and validates proper sequencing
 - **PerformanceMonitor** - Tracks memory usage and detects leaks during test execution
 - **Test Environment Setup** - Configures VS Code test environment with proper mocks
 
 #### 2. TerminalManager.integration.test.ts
+
 Comprehensive tests for `RefactoredTerminalManager`:
+
 - Service composition and dependency injection validation
 - Complete terminal lifecycle testing (create → use → delete)
 - CLI Agent detection integration across services
@@ -31,7 +35,9 @@ Comprehensive tests for `RefactoredTerminalManager`:
 - Concurrent operations without race conditions
 
 #### 3. Provider.integration.test.ts
+
 Integration tests for `RefactoredSecondaryTerminalProvider`:
+
 - WebView resolution and resource management
 - Message routing and event coordination
 - Configuration flow and settings management
@@ -80,9 +86,8 @@ Continuously monitors performance and memory usage:
 
 ```typescript
 // Memory leak detection
-const { result, duration } = await framework.measureOperation(
-  'terminal-creation',
-  () => terminalManager.createTerminal()
+const { result, duration } = await framework.measureOperation('terminal-creation', () =>
+  terminalManager.createTerminal()
 );
 
 // Validate performance thresholds
@@ -114,7 +119,7 @@ const framework = await setupIntegrationTest('Test Name', {
   enableEventFlowTracking: true,
   maxOperationTime: 1000,
   maxMemoryIncrease: 512,
-  eventTimeoutMs: 5000
+  eventTimeoutMs: 5000,
 });
 ```
 
@@ -227,25 +232,30 @@ Memory Usage (KB):
 ## Performance Test Suite
 
 ### Service Initialization Performance
+
 - RefactoredTerminalManager initialization timing
 - RefactoredSecondaryTerminalProvider initialization timing
 - Multiple service initialization without degradation
 
 ### Terminal Operations Performance
+
 - Terminal creation under stress
 - Input operations under stress
 - Concurrent terminal operations
 - Terminal deletion performance
 
 ### Data Buffering Performance
+
 - High-frequency data buffering efficiency
 - Concurrent buffering load testing
 
 ### Event Handling Throughput
+
 - High-throughput event processing
 - Event ordering under high load
 
 ### Memory Leak Detection
+
 - Repeated service creation/disposal
 - Provider lifecycle stress testing
 - Resource cleanup under stress
@@ -253,25 +263,33 @@ Memory Usage (KB):
 ## Best Practices
 
 ### 1. TDD Implementation
+
 All tests follow Test-Driven Development principles:
+
 - Tests written before implementation
 - Red-Green-Refactor cycle adherence
 - Comprehensive coverage of user scenarios
 
 ### 2. Realistic Mock Behavior
+
 Mock services provide realistic behavior:
+
 - Event emitters for proper event flow
 - Asynchronous operations where appropriate
 - Error conditions for robustness testing
 
 ### 3. Performance Validation
+
 Every test includes performance validation:
+
 - Operation timing measurements
 - Memory usage monitoring
 - Throughput requirements verification
 
 ### 4. Error Handling Testing
+
 Comprehensive error scenario coverage:
+
 - Service failure isolation
 - Graceful degradation testing
 - Recovery mechanism validation
@@ -295,13 +313,15 @@ Comprehensive error scenario coverage:
 ### Debug Output
 
 Enable detailed debugging:
+
 ```typescript
 const framework = await setupIntegrationTest('Test Name', {
-  enableDebugging: true
+  enableDebugging: true,
 });
 ```
 
 This will provide verbose logging of:
+
 - Service initialization
 - Event flow tracking
 - Performance measurements

@@ -1,10 +1,15 @@
 /**
  * Application Layer - Create Terminal Use Case
- * 
+ *
  * ターミナル作成のビジネスロジックを含むユースケース
  */
 
-import { ITerminalService, Terminal, TerminalCreationOptions, TerminalOperationResult } from '../../domain/interfaces/TerminalService';
+import {
+  ITerminalService,
+  Terminal,
+  TerminalCreationOptions,
+  TerminalOperationResult,
+} from '../../domain/interfaces/TerminalService';
 import { IEventBus } from '../interfaces/EventBus';
 import { extension as log } from '../../utils/logger';
 
@@ -50,7 +55,7 @@ export class CreateTerminalUseCase {
 
       const terminalId = result.data!;
       const terminal = this.terminalService.getTerminal(terminalId);
-      
+
       if (!terminal) {
         return { success: false, error: 'Failed to retrieve created terminal' };
       }
@@ -67,28 +72,27 @@ export class CreateTerminalUseCase {
       this.eventBus.publish('terminal:created', {
         terminal,
         wasSetAsActive: command.setAsActive !== false,
-        sendNotification: command.sendNotification !== false
+        sendNotification: command.sendNotification !== false,
       });
 
       log(`✅ [USE-CASE] Terminal created successfully: ${terminal.name} (${terminalId})`);
 
       return {
         success: true,
-        terminal
+        terminal,
       };
-
     } catch (error) {
       const errorMessage = `Failed to create terminal: ${String(error)}`;
       log(`❌ [USE-CASE] ${errorMessage}`);
-      
+
       this.eventBus.publish('terminal:creation-failed', {
         error: errorMessage,
-        command
+        command,
       });
 
       return {
         success: false,
-        error: errorMessage
+        error: errorMessage,
       };
     }
   }
@@ -104,7 +108,7 @@ export class CreateTerminalUseCase {
     if (currentTerminals.length >= maxTerminals) {
       return {
         success: false,
-        error: `Maximum terminal limit reached (${maxTerminals})`
+        error: `Maximum terminal limit reached (${maxTerminals})`,
       };
     }
 

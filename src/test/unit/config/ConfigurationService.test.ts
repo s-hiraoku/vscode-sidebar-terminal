@@ -1,6 +1,6 @@
 /**
  * ConfigurationService unit tests
- * 
+ *
  * 統一された設定アクセスサービスのテスト
  * VS Code設定へのアクセス集約機能とキャッシュ機能を検証
  */
@@ -29,7 +29,7 @@ describe('ConfigurationService', () => {
 
   beforeEach(() => {
     testEnv = setupTestEnvironment();
-    
+
     // Mock VS Code workspace and configuration
     mockConfiguration = {
       get: testEnv.sandbox.stub(),
@@ -70,10 +70,10 @@ describe('ConfigurationService', () => {
     if (configService) {
       configService.dispose();
     }
-    
+
     // Reset singleton instance for next test
     (ConfigurationService as any).instance = undefined;
-    
+
     cleanupTestEnvironment(testEnv);
     delete (global as any).vscode;
   });
@@ -89,10 +89,10 @@ describe('ConfigurationService', () => {
     it('should create new instance after disposal', () => {
       const instance1 = ConfigurationService.getInstance();
       instance1.dispose();
-      
+
       // Reset singleton for test
       (ConfigurationService as any).instance = undefined;
-      
+
       const instance2 = ConfigurationService.getInstance();
 
       expect(instance1).to.not.equal(instance2);
@@ -177,7 +177,7 @@ describe('ConfigurationService', () => {
 
         // First call - should hit VS Code
         const result1 = configService.getCachedValue('cacheSection', 'cacheKey', defaultValue);
-        
+
         // Second call - should use cache
         const result2 = configService.getCachedValue('cacheSection', 'cacheKey', defaultValue);
 
@@ -236,7 +236,7 @@ describe('ConfigurationService', () => {
 
         // Refresh the value
         const refreshed = configService.refreshValue('section', 'refreshCacheKey', defaultValue);
-        
+
         // Second call should use the cached refreshed value
         const cached = configService.getCachedValue('section', 'refreshCacheKey', defaultValue);
 
@@ -257,10 +257,10 @@ describe('ConfigurationService', () => {
         // Mock different configuration sections
         const mockConfig1 = { get: testEnv.sandbox.stub() };
         const mockConfig2 = { get: testEnv.sandbox.stub() };
-        
+
         mockVSCodeWorkspace.getConfiguration.withArgs('section1').returns(mockConfig1);
         mockVSCodeWorkspace.getConfiguration.withArgs('section2').returns(mockConfig2);
-        
+
         mockConfig1.get.withArgs('key1', 'default1').returns('value1');
         mockConfig2.get.withArgs('key2', 'default2').returns('value2');
         mockConfig1.get.withArgs('key3', 'default3').returns('value3');
@@ -301,13 +301,14 @@ describe('ConfigurationService', () => {
       it('should use cached values for performance', () => {
         // First call
         configService.getTerminalSettings();
-        
+
         // Second call should use cached values
         configService.getTerminalSettings();
 
         // Should only call getConfiguration once per unique section
-        const sectionCalls = mockVSCodeWorkspace.getConfiguration.getCalls()
-          .filter(call => call.args[0] === 'secondaryTerminal');
+        const sectionCalls = mockVSCodeWorkspace.getConfiguration
+          .getCalls()
+          .filter((call) => call.args[0] === 'secondaryTerminal');
         expect(sectionCalls.length).to.equal(1);
       });
     });
@@ -316,10 +317,12 @@ describe('ConfigurationService', () => {
       it('should return Alt+Click related settings', () => {
         const mockTerminalConfig = { get: testEnv.sandbox.stub() };
         const mockEditorConfig = { get: testEnv.sandbox.stub() };
-        
-        mockVSCodeWorkspace.getConfiguration.withArgs('terminal.integrated').returns(mockTerminalConfig);
+
+        mockVSCodeWorkspace.getConfiguration
+          .withArgs('terminal.integrated')
+          .returns(mockTerminalConfig);
         mockVSCodeWorkspace.getConfiguration.withArgs('editor').returns(mockEditorConfig);
-        
+
         mockTerminalConfig.get.withArgs('altClickMovesCursor', true).returns(false);
         mockEditorConfig.get.withArgs('multiCursorModifier', 'alt').returns('ctrlCmd');
 
@@ -335,11 +338,15 @@ describe('ConfigurationService', () => {
     describe('getPersistentSessionSettings', () => {
       it('should return persistent session settings with defaults', () => {
         const mockTerminalConfig = { get: testEnv.sandbox.stub() };
-        mockVSCodeWorkspace.getConfiguration.withArgs('terminal.integrated').returns(mockTerminalConfig);
-        
+        mockVSCodeWorkspace.getConfiguration
+          .withArgs('terminal.integrated')
+          .returns(mockTerminalConfig);
+
         mockTerminalConfig.get.withArgs('enablePersistentSessions', true).returns(true);
         mockTerminalConfig.get.withArgs('persistentSessionScrollback', 100).returns(200);
-        mockTerminalConfig.get.withArgs('persistentSessionReviveProcess', 'onExitAndWindowClose').returns('onExit');
+        mockTerminalConfig.get
+          .withArgs('persistentSessionReviveProcess', 'onExitAndWindowClose')
+          .returns('onExit');
 
         const settings = configService.getPersistentSessionSettings();
 
@@ -355,11 +362,17 @@ describe('ConfigurationService', () => {
       it('should return theme-related settings', () => {
         const mockWorkbenchConfig = { get: testEnv.sandbox.stub() };
         mockVSCodeWorkspace.getConfiguration.withArgs('workbench').returns(mockWorkbenchConfig);
-        
-        mockWorkbenchConfig.get.withArgs('colorTheme', 'Default Dark Modern').returns('One Dark Pro');
+
+        mockWorkbenchConfig.get
+          .withArgs('colorTheme', 'Default Dark Modern')
+          .returns('One Dark Pro');
         mockWorkbenchConfig.get.withArgs('iconTheme', 'vs-seti').returns('material-icon-theme');
-        mockWorkbenchConfig.get.withArgs('preferredDarkColorTheme', 'Default Dark Modern').returns('One Dark Pro');
-        mockWorkbenchConfig.get.withArgs('preferredLightColorTheme', 'Default Light Modern').returns('Light+');
+        mockWorkbenchConfig.get
+          .withArgs('preferredDarkColorTheme', 'Default Dark Modern')
+          .returns('One Dark Pro');
+        mockWorkbenchConfig.get
+          .withArgs('preferredLightColorTheme', 'Default Light Modern')
+          .returns('Light+');
 
         const settings = configService.getThemeSettings();
 
@@ -379,14 +392,16 @@ describe('ConfigurationService', () => {
         const section = 'testSection';
         const key = 'testKey';
         const value = 'newValue';
-        
+
         mockConfiguration.update.withArgs(key, value, 2).resolves();
 
         await configService.updateValue(section, key, value);
 
         expect(mockVSCodeWorkspace.getConfiguration).to.have.been.calledWith(section);
         expect(mockConfiguration.update).to.have.been.calledWith(key, value, 2);
-        expect(logSpy).to.have.been.calledWith(`✅ [CONFIG] Updated ${section}.${key} = ${JSON.stringify(value)}`);
+        expect(logSpy).to.have.been.calledWith(
+          `✅ [CONFIG] Updated ${section}.${key} = ${JSON.stringify(value)}`
+        );
 
         // Verify cache is updated
         const cachedValue = configService.getCachedValue(section, key, 'default');
@@ -398,7 +413,7 @@ describe('ConfigurationService', () => {
         const key = 'failKey';
         const value = 'failValue';
         const error = new Error('Update failed');
-        
+
         mockConfiguration.update.withArgs(key, value, 2).rejects(error);
 
         try {
@@ -406,7 +421,9 @@ describe('ConfigurationService', () => {
           expect.fail('Should have thrown error');
         } catch (thrown) {
           expect(thrown).to.equal(error);
-          expect(logSpy).to.have.been.calledWith(`❌ [CONFIG] Failed to update ${section}.${key}: Error: Update failed`);
+          expect(logSpy).to.have.been.calledWith(
+            `❌ [CONFIG] Failed to update ${section}.${key}: Error: Update failed`
+          );
         }
       });
 
@@ -415,7 +432,7 @@ describe('ConfigurationService', () => {
         const key = 'targetKey';
         const value = 'targetValue';
         const target = 1; // Global target
-        
+
         mockConfiguration.update.withArgs(key, value, target).resolves();
 
         await configService.updateValue(section, key, value, target);
@@ -433,7 +450,7 @@ describe('ConfigurationService', () => {
 
         const mockConfig1 = { update: testEnv.sandbox.stub().resolves() };
         const mockConfig2 = { update: testEnv.sandbox.stub().resolves() };
-        
+
         mockVSCodeWorkspace.getConfiguration.withArgs('section1').returns(mockConfig1);
         mockVSCodeWorkspace.getConfiguration.withArgs('section2').returns(mockConfig2);
 
@@ -451,9 +468,13 @@ describe('ConfigurationService', () => {
         ];
 
         const mockConfig1 = { update: testEnv.sandbox.stub().resolves() };
-        const mockConfig2 = { update: testEnv.sandbox.stub().rejects(new Error('Update 2 failed')) };
-        const mockConfig3 = { update: testEnv.sandbox.stub().rejects(new Error('Update 3 failed')) };
-        
+        const mockConfig2 = {
+          update: testEnv.sandbox.stub().rejects(new Error('Update 2 failed')),
+        };
+        const mockConfig3 = {
+          update: testEnv.sandbox.stub().rejects(new Error('Update 3 failed')),
+        };
+
         mockVSCodeWorkspace.getConfiguration.withArgs('section1').returns(mockConfig1);
         mockVSCodeWorkspace.getConfiguration.withArgs('section2').returns(mockConfig2);
         mockVSCodeWorkspace.getConfiguration.withArgs('section3').returns(mockConfig3);
@@ -480,7 +501,7 @@ describe('ConfigurationService', () => {
     describe('onConfigurationChanged', () => {
       it('should register configuration change handler', () => {
         const handler: ConfigChangeHandler = testEnv.sandbox.stub();
-        
+
         const disposable = configService.onConfigurationChanged(handler);
 
         expect(disposable).to.have.property('dispose');
@@ -489,7 +510,7 @@ describe('ConfigurationService', () => {
 
       it('should remove handler when disposed', () => {
         const handler: ConfigChangeHandler = testEnv.sandbox.stub();
-        
+
         const disposable = configService.onConfigurationChanged(handler);
         disposable.dispose();
 
@@ -502,7 +523,7 @@ describe('ConfigurationService', () => {
     describe('onSectionChanged', () => {
       it('should register section-specific change handler', () => {
         const handler = testEnv.sandbox.stub();
-        
+
         const disposable = configService.onSectionChanged('secondaryTerminal', handler);
 
         expect(disposable).to.have.property('dispose');
@@ -512,7 +533,7 @@ describe('ConfigurationService', () => {
       it('should filter calls to section-specific handlers', () => {
         const terminalHandler = testEnv.sandbox.stub();
         const editorHandler = testEnv.sandbox.stub();
-        
+
         configService.onSectionChanged('secondaryTerminal', terminalHandler);
         configService.onSectionChanged('editor', editorHandler);
 
@@ -543,7 +564,7 @@ describe('ConfigurationService', () => {
 
       // Get the configuration change handler that was registered
       const changeHandler = mockVSCodeWorkspace.onDidChangeConfiguration.getCall(0).args[0];
-      
+
       // Mock configuration change event
       const mockEvent = {
         affectsConfiguration: testEnv.sandbox.stub(),
@@ -570,7 +591,7 @@ describe('ConfigurationService', () => {
 
       // Get the VS Code configuration change handler
       const vsCodeChangeHandler = mockVSCodeWorkspace.onDidChangeConfiguration.getCall(0).args[0];
-      
+
       // Mock configuration change event
       const mockEvent = {
         affectsConfiguration: testEnv.sandbox.stub().returns(true),
@@ -586,7 +607,9 @@ describe('ConfigurationService', () => {
 
   describe('Error Handling and Edge Cases', () => {
     it('should handle VS Code configuration throwing errors', () => {
-      mockVSCodeWorkspace.getConfiguration.withArgs('errorSection').throws(new Error('Configuration error'));
+      mockVSCodeWorkspace.getConfiguration
+        .withArgs('errorSection')
+        .throws(new Error('Configuration error'));
 
       expect(() => {
         configService.getCachedValue('errorSection', 'errorKey', 'default');
@@ -599,7 +622,7 @@ describe('ConfigurationService', () => {
         array: [1, 2, 3],
         fn: () => 'function',
       };
-      
+
       mockConfiguration.get.withArgs('complexKey', null).returns(complexObject);
 
       const result = configService.getCachedValue('section', 'complexKey', null);
@@ -641,7 +664,7 @@ describe('ConfigurationService', () => {
       const results = await Promise.all(promises);
 
       // All should return the same value
-      results.forEach(result => {
+      results.forEach((result) => {
         expect(result).to.equal('concurrentValue');
       });
 

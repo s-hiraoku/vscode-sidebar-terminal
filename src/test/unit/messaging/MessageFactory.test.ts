@@ -1,6 +1,6 @@
 /**
  * MessageFactory unit tests
- * 
+ *
  * 統一されたメッセージファクトリーのテスト
  * Extension ↔ WebView 間の通信メッセージ作成機能を検証
  */
@@ -13,7 +13,12 @@ import * as sinon from 'sinon';
 use(sinonChai);
 
 import { MessageFactory } from '../../../messaging/MessageFactory';
-import { WebviewMessage, VsCodeMessage, TerminalInstance, TerminalState } from '../../../types/common';
+import {
+  WebviewMessage,
+  VsCodeMessage,
+  TerminalInstance,
+  TerminalState,
+} from '../../../types/common';
 import { TerminalConfig } from '../../../types/shared';
 import {
   setupTestEnvironment,
@@ -29,7 +34,7 @@ describe('MessageFactory', () => {
 
   beforeEach(() => {
     testEnv = setupTestEnvironment();
-    
+
     // Mock terminal instance
     mockTerminalInstance = {
       id: 'terminal-123',
@@ -130,7 +135,10 @@ describe('MessageFactory', () => {
       });
 
       it('should create terminal deletion request with header source', () => {
-        const message = MessageFactory.createTerminalDeletionRequest('terminal-delete-456', 'header');
+        const message = MessageFactory.createTerminalDeletionRequest(
+          'terminal-delete-456',
+          'header'
+        );
 
         expect(message.command).to.equal('deleteTerminal');
         expect(message.terminalId).to.equal('terminal-delete-456');
@@ -203,7 +211,11 @@ describe('MessageFactory', () => {
 
     describe('createScrollbackDataRequest', () => {
       it('should create scrollback data request with parameters', () => {
-        const message = MessageFactory.createScrollbackDataRequest('scrollback-terminal', 500, 1000);
+        const message = MessageFactory.createScrollbackDataRequest(
+          'scrollback-terminal',
+          500,
+          1000
+        );
 
         expect(message.command).to.equal('getScrollbackData');
         expect(message.terminalId).to.equal('scrollback-terminal');
@@ -255,7 +267,10 @@ describe('MessageFactory', () => {
   describe('Extension → WebView message creation', () => {
     describe('createTerminalCreatedMessage', () => {
       it('should create terminal created message', () => {
-        const message = MessageFactory.createTerminalCreatedMessage(mockTerminalInstance, mockTerminalConfig);
+        const message = MessageFactory.createTerminalCreatedMessage(
+          mockTerminalInstance,
+          mockTerminalConfig
+        );
 
         expect(message.command).to.equal('terminalCreated');
         expect(message.terminalId).to.equal('terminal-123');
@@ -273,7 +288,10 @@ describe('MessageFactory', () => {
 
       it('should handle terminal instance without cwd', () => {
         const terminalWithoutCwd = { ...mockTerminalInstance, cwd: undefined };
-        const message = MessageFactory.createTerminalCreatedMessage(terminalWithoutCwd, mockTerminalConfig);
+        const message = MessageFactory.createTerminalCreatedMessage(
+          terminalWithoutCwd,
+          mockTerminalConfig
+        );
 
         expect(message.terminalInfo.cwd).to.equal(process.cwd());
       });
@@ -292,7 +310,10 @@ describe('MessageFactory', () => {
     describe('createTerminalOutputMessage', () => {
       it('should create terminal output message', () => {
         const outputData = 'user@host:~$ ls\nfile1.txt  file2.txt\n';
-        const message = MessageFactory.createTerminalOutputMessage('output-terminal-789', outputData);
+        const message = MessageFactory.createTerminalOutputMessage(
+          'output-terminal-789',
+          outputData
+        );
 
         expect(message.command).to.equal('output');
         expect(message.terminalId).to.equal('output-terminal-789');
@@ -302,7 +323,10 @@ describe('MessageFactory', () => {
 
       it('should handle large output data', () => {
         const largeOutput = 'A'.repeat(10000);
-        const message = MessageFactory.createTerminalOutputMessage('large-output-terminal', largeOutput);
+        const message = MessageFactory.createTerminalOutputMessage(
+          'large-output-terminal',
+          largeOutput
+        );
 
         expect(message.command).to.equal('output');
         expect(message.terminalId).to.equal('large-output-terminal');
@@ -313,7 +337,10 @@ describe('MessageFactory', () => {
 
     describe('createStateUpdateMessage', () => {
       it('should create state update message with active terminal', () => {
-        const message = MessageFactory.createStateUpdateMessage(mockTerminalState, 'active-terminal-123');
+        const message = MessageFactory.createStateUpdateMessage(
+          mockTerminalState,
+          'active-terminal-123'
+        );
 
         expect(message.command).to.equal('stateUpdate');
         expect(message.terminalId).to.equal('active-terminal-123');
@@ -334,7 +361,11 @@ describe('MessageFactory', () => {
 
     describe('createCliAgentStatusUpdate', () => {
       it('should create CLI Agent status update for connected state', () => {
-        const message = MessageFactory.createCliAgentStatusUpdate('Terminal 1', 'connected', 'claude');
+        const message = MessageFactory.createCliAgentStatusUpdate(
+          'Terminal 1',
+          'connected',
+          'claude'
+        );
 
         expect(message.command).to.equal('cliAgentStatusUpdate');
         expect(message.terminalId).to.be.undefined;
@@ -372,8 +403,16 @@ describe('MessageFactory', () => {
     describe('createCliAgentFullStateSync', () => {
       it('should create CLI Agent full state sync message', () => {
         const terminalStates = {
-          'terminal-1': { status: 'connected' as const, agentType: 'claude', terminalName: 'Terminal 1' },
-          'terminal-2': { status: 'disconnected' as const, agentType: null, terminalName: 'Terminal 2' },
+          'terminal-1': {
+            status: 'connected' as const,
+            agentType: 'claude',
+            terminalName: 'Terminal 1',
+          },
+          'terminal-2': {
+            status: 'disconnected' as const,
+            agentType: null,
+            terminalName: 'Terminal 2',
+          },
         };
 
         const message = MessageFactory.createCliAgentFullStateSync(
@@ -426,7 +465,10 @@ describe('MessageFactory', () => {
           { content: 'command not found: xyz', type: 'error' as const, timestamp: 1634567892000 },
         ];
 
-        const message = MessageFactory.createScrollbackRestoreMessage('scrollback-terminal', scrollbackContent);
+        const message = MessageFactory.createScrollbackRestoreMessage(
+          'scrollback-terminal',
+          scrollbackContent
+        );
 
         expect(message.command).to.equal('restoreScrollback');
         expect(message.terminalId).to.equal('scrollback-terminal');
@@ -437,7 +479,10 @@ describe('MessageFactory', () => {
       it('should create scrollback restore message with string array content', () => {
         const scrollbackContent = ['line 1', 'line 2', 'line 3'];
 
-        const message = MessageFactory.createScrollbackRestoreMessage('simple-scrollback-terminal', scrollbackContent);
+        const message = MessageFactory.createScrollbackRestoreMessage(
+          'simple-scrollback-terminal',
+          scrollbackContent
+        );
 
         expect(message.command).to.equal('restoreScrollback');
         expect(message.terminalId).to.equal('simple-scrollback-terminal');
@@ -539,7 +584,10 @@ describe('MessageFactory', () => {
       });
 
       it('should preserve all original message properties', () => {
-        const originalMessage = MessageFactory.createTerminalInputMessage('terminal-789', 'test input');
+        const originalMessage = MessageFactory.createTerminalInputMessage(
+          'terminal-789',
+          'test input'
+        );
         const messageWithRequestId = MessageFactory.addRequestId(originalMessage, 'req-789');
 
         expect(messageWithRequestId.requestId).to.equal('req-789');
@@ -555,7 +603,7 @@ describe('MessageFactory', () => {
         const originalTimestamp = originalMessage.timestamp;
 
         // Wait a bit to ensure timestamp difference
-        await new Promise(resolve => setTimeout(resolve, 1));
+        await new Promise((resolve) => setTimeout(resolve, 1));
 
         const updatedMessage = MessageFactory.updateTimestamp(originalMessage);
 
@@ -564,7 +612,10 @@ describe('MessageFactory', () => {
       });
 
       it('should preserve all other message properties', () => {
-        const originalMessage = MessageFactory.createTerminalOutputMessage('terminal-update', 'output data');
+        const originalMessage = MessageFactory.createTerminalOutputMessage(
+          'terminal-update',
+          'output data'
+        );
         const updatedMessage = MessageFactory.updateTimestamp(originalMessage);
 
         expect(updatedMessage.command).to.equal('output');
@@ -658,7 +709,11 @@ describe('MessageFactory', () => {
 
     it('should handle null and undefined values in terminal states', () => {
       const terminalStatesWithNulls = {
-        'terminal-null': { status: 'none' as const, agentType: null, terminalName: 'Terminal Null' },
+        'terminal-null': {
+          status: 'none' as const,
+          agentType: null,
+          terminalName: 'Terminal Null',
+        },
       };
 
       const message = MessageFactory.createCliAgentFullStateSync(
@@ -689,7 +744,10 @@ describe('MessageFactory', () => {
 
       messages.forEach((message, index) => {
         expect(message.timestamp, `Message ${index} should have timestamp`).to.be.a('number');
-        expect(message.timestamp, `Message ${index} timestamp should be recent`).to.be.closeTo(Date.now(), 1000);
+        expect(message.timestamp, `Message ${index} timestamp should be recent`).to.be.closeTo(
+          Date.now(),
+          1000
+        );
       });
     });
 
@@ -714,7 +772,10 @@ describe('MessageFactory', () => {
       expect(vsCodeMessage).to.have.property('timestamp');
 
       // WebView messages (Extension → WebView)
-      const webViewMessage = MessageFactory.createTerminalCreatedMessage(mockTerminalInstance, mockTerminalConfig);
+      const webViewMessage = MessageFactory.createTerminalCreatedMessage(
+        mockTerminalInstance,
+        mockTerminalConfig
+      );
       expect(webViewMessage).to.have.property('command');
       expect(webViewMessage).to.have.property('timestamp');
       expect(webViewMessage).to.have.property('terminalName');

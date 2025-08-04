@@ -1,6 +1,6 @@
 /**
  * リファクタリングされた Secondary Terminal Provider
- * 
+ *
  * 依存性注入とサービス構成を使用して、
  * 元の1,663行のプロバイダーを300行程度に縮小しています。
  */
@@ -11,19 +11,32 @@ import { getTerminalConfig } from '../utils/common';
 import { extension as log } from '../utils/logger';
 
 // Services
-import { ITerminalLifecycleManager, TerminalLifecycleManager } from '../services/TerminalLifecycleManager';
+import {
+  ITerminalLifecycleManager,
+  TerminalLifecycleManager,
+} from '../services/TerminalLifecycleManager';
 import { ICliAgentDetectionService } from '../interfaces/CliAgentService';
 import { CliAgentDetectionService } from '../services/CliAgentDetectionService';
-import { ITerminalDataBufferingService, TerminalDataBufferingService } from '../services/TerminalDataBufferingService';
+import {
+  ITerminalDataBufferingService,
+  TerminalDataBufferingService,
+} from '../services/TerminalDataBufferingService';
 import { ITerminalStateManager, TerminalStateManager } from '../services/TerminalStateManager';
 
 // Messaging and WebView
 import { IWebViewResourceManager, WebViewResourceManager } from '../webview/WebViewResourceManager';
-import { IWebViewMessageRouter, WebViewMessageRouter, MessageHandler } from '../messaging/WebViewMessageRouter';
+import {
+  IWebViewMessageRouter,
+  WebViewMessageRouter,
+  MessageHandler,
+} from '../messaging/WebViewMessageRouter';
 import { MessageFactory } from '../messaging/MessageFactory';
 
 // Event Management
-import { ITerminalEventSubscriptionManager, TerminalEventSubscriptionManager } from '../events/TerminalEventSubscriptionManager';
+import {
+  ITerminalEventSubscriptionManager,
+  TerminalEventSubscriptionManager,
+} from '../events/TerminalEventSubscriptionManager';
 
 // Utils
 import { OperationResultHandler, NotificationService } from '../utils/OperationResultHandler';
@@ -43,7 +56,7 @@ export interface ProviderConfig {
  */
 export class RefactoredSecondaryTerminalProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = 'secondaryTerminal';
-  
+
   // Services (Dependency Injection)
   private readonly lifecycleManager: ITerminalLifecycleManager;
   private readonly cliAgentService: ICliAgentDetectionService;
@@ -54,11 +67,11 @@ export class RefactoredSecondaryTerminalProvider implements vscode.WebviewViewPr
   private readonly eventSubscriptionManager: ITerminalEventSubscriptionManager;
   private readonly configService: ConfigurationService;
   private readonly notificationService: NotificationService;
-  
+
   // Provider 状態
   private webviewView: vscode.WebviewView | undefined;
   private readonly config: ProviderConfig;
-  
+
   // リソース管理
   private readonly disposables: vscode.Disposable[] = [];
 
@@ -80,11 +93,11 @@ export class RefactoredSecondaryTerminalProvider implements vscode.WebviewViewPr
     this.stateManager = stateManager || new TerminalStateManager();
     this.resourceManager = resourceManager || new WebViewResourceManager();
     this.messageRouter = messageRouter || new WebViewMessageRouter();
-    
+
     // 設定とユーティリティサービス
     this.configService = ConfigurationService.getInstance();
     this.notificationService = this.createNotificationService();
-    
+
     // イベント管理（サービス間の協調）
     this.eventSubscriptionManager = new TerminalEventSubscriptionManager(
       this.messageRouter,
@@ -93,18 +106,18 @@ export class RefactoredSecondaryTerminalProvider implements vscode.WebviewViewPr
       this.stateManager,
       this.bufferingService
     );
-    
+
     // 設定
     this.config = {
       enableAutoFocus: true,
       enableDebugging: false,
       maxRetryAttempts: 3,
-      ...config
+      ...config,
     };
-    
+
     // メッセージハンドラーを設定
     this.setupMessageHandlers();
-    
+
     log('🚀 [REFACTORED-PROVIDER] Refactored secondary terminal provider initialized');
   }
 
@@ -120,21 +133,21 @@ export class RefactoredSecondaryTerminalProvider implements vscode.WebviewViewPr
   ): Promise<void> {
     try {
       this.webviewView = webviewView;
-      
+
       log('🎯 [REFACTORED-PROVIDER] Resolving WebView...');
-      
+
       // WebView リソースを設定
       this.resourceManager.configureWebview(webviewView, this.context);
-      
+
       // メッセージルーターを設定
       this.messageRouter.setupMessageHandling(webviewView);
-      
+
       // イベント購読を開始
       this.subscribeToEvents();
-      
+
       // 初期設定をWebViewに送信
       await this.sendInitialSettings();
-      
+
       log('✅ [REFACTORED-PROVIDER] WebView resolved successfully');
     } catch (error) {
       log(`❌ [REFACTORED-PROVIDER] Failed to resolve WebView: ${String(error)}`);
@@ -178,10 +191,10 @@ export class RefactoredSecondaryTerminalProvider implements vscode.WebviewViewPr
    */
   public dispose(): void {
     log('🗑️ [REFACTORED-PROVIDER] Disposing provider...');
-    
+
     // イベント購読を解除
     this.eventSubscriptionManager.dispose();
-    
+
     // サービスを解放
     this.lifecycleManager.dispose();
     this.cliAgentService.dispose();
@@ -189,13 +202,13 @@ export class RefactoredSecondaryTerminalProvider implements vscode.WebviewViewPr
     this.stateManager.dispose();
     this.messageRouter.dispose();
     this.configService.dispose();
-    
+
     // Disposableを解放
-    this.disposables.forEach(d => d.dispose());
+    this.disposables.forEach((d) => d.dispose());
     this.disposables.length = 0;
-    
+
     this.webviewView = undefined;
-    
+
     log('✅ [REFACTORED-PROVIDER] Provider disposed');
   }
 
@@ -208,20 +221,20 @@ export class RefactoredSecondaryTerminalProvider implements vscode.WebviewViewPr
     // WebView 準備完了
     this.messageRouter.addMessageHandler('ready', this.handleWebViewReady.bind(this));
     this.messageRouter.addMessageHandler('webviewReady', this.handleWebViewReady.bind(this));
-    
+
     // ターミナル操作
     this.messageRouter.addMessageHandler('createTerminal', this.handleCreateTerminal.bind(this));
     this.messageRouter.addMessageHandler('deleteTerminal', this.handleDeleteTerminal.bind(this));
     this.messageRouter.addMessageHandler('input', this.handleTerminalInput.bind(this));
     this.messageRouter.addMessageHandler('resize', this.handleTerminalResize.bind(this));
     this.messageRouter.addMessageHandler('focusTerminal', this.handleFocusTerminal.bind(this));
-    
+
     // 設定
     this.messageRouter.addMessageHandler('getSettings', this.handleGetSettings.bind(this));
-    
+
     // エラー処理
     this.messageRouter.addMessageHandler('error', this.handleError.bind(this));
-    
+
     log('📝 [REFACTORED-PROVIDER] Message handlers setup complete');
   }
 
@@ -233,7 +246,7 @@ export class RefactoredSecondaryTerminalProvider implements vscode.WebviewViewPr
     this.eventSubscriptionManager.subscribeToCliAgentEvents();
     this.eventSubscriptionManager.subscribeToStateEvents();
     this.eventSubscriptionManager.subscribeToDataEvents();
-    
+
     log('🎧 [REFACTORED-PROVIDER] Event subscriptions activated');
   }
 
@@ -244,14 +257,11 @@ export class RefactoredSecondaryTerminalProvider implements vscode.WebviewViewPr
     try {
       const terminalSettings = this.configService.getTerminalSettings();
       const altClickSettings = this.configService.getAltClickSettings();
-      
-      const message = MessageFactory.createSettingsResponse(
-        terminalSettings,
-        { altClickSettings }
-      );
-      
+
+      const message = MessageFactory.createSettingsResponse(terminalSettings, { altClickSettings });
+
       await this.messageRouter.sendMessage(message);
-      
+
       log('⚙️ [REFACTORED-PROVIDER] Initial settings sent');
     } catch (error) {
       log(`❌ [REFACTORED-PROVIDER] Failed to send initial settings: ${String(error)}`);
@@ -271,7 +281,7 @@ export class RefactoredSecondaryTerminalProvider implements vscode.WebviewViewPr
       },
       showWarning: (message: string) => {
         vscode.window.showWarningMessage(message);
-      }
+      },
     };
   }
 
@@ -282,11 +292,14 @@ export class RefactoredSecondaryTerminalProvider implements vscode.WebviewViewPr
    */
   private async handleWebViewReady(message: VsCodeMessage): Promise<void> {
     log('🎯 [REFACTORED-PROVIDER] WebView ready received');
-    
+
     // 現在の状態をWebViewに送信
     const currentState = this.stateManager.getCurrentState();
     await this.messageRouter.sendMessage(
-      MessageFactory.createStateUpdateMessage(currentState, currentState.activeTerminalId || undefined)
+      MessageFactory.createStateUpdateMessage(
+        currentState,
+        currentState.activeTerminalId || undefined
+      )
     );
   }
 
@@ -381,7 +394,7 @@ export class RefactoredSecondaryTerminalProvider implements vscode.WebviewViewPr
    */
   private async handleError(message: VsCodeMessage): Promise<void> {
     log(`❌ [REFACTORED-PROVIDER] WebView error: ${message.message}`);
-    
+
     if (message.message && this.notificationService) {
       this.notificationService.showError(`Terminal Error: ${message.message}`);
     }

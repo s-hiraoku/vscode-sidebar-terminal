@@ -1,6 +1,6 @@
 /**
  * Event Bus Interface
- * 
+ *
  * イベント駆動アーキテクチャの中核となるイベントバス
  */
 
@@ -10,19 +10,19 @@ export interface IEventBus {
   // イベント発行
   publish<T>(eventType: string, data: T): Promise<void>;
   publishSync<T>(eventType: string, data: T): void;
-  
+
   // イベント購読
   subscribe<T>(eventType: string, callback: EventCallback<T>): string;
   subscribeOnce<T>(eventType: string, callback: EventCallback<T>): string;
-  
+
   // 購読解除
   unsubscribe(subscriptionId: string): void;
   unsubscribeAll(eventType?: string): void;
-  
+
   // イベントバス状態
   getSubscriberCount(eventType: string): number;
   getAllEventTypes(): string[];
-  
+
   // リソース管理
   dispose(): void;
 }
@@ -44,7 +44,7 @@ export class EventBus implements IEventBus {
     }
 
     const promises: Promise<void>[] = [];
-    
+
     for (const callback of eventSubscribers.values()) {
       try {
         const result = callback(data);
@@ -89,7 +89,7 @@ export class EventBus implements IEventBus {
 
     const subscriptionId = `${eventType}-${++this.subscriptionIdCounter}`;
     this.subscribers.get(eventType)!.set(subscriptionId, callback);
-    
+
     return subscriptionId;
   }
 
@@ -113,12 +113,12 @@ export class EventBus implements IEventBus {
     for (const [eventType, eventSubscribers] of this.subscribers) {
       if (eventSubscribers.has(subscriptionId)) {
         eventSubscribers.delete(subscriptionId);
-        
+
         // イベントタイプの購読者がいなくなったらマップから削除
         if (eventSubscribers.size === 0) {
           this.subscribers.delete(eventType);
         }
-        
+
         break;
       }
     }
