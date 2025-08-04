@@ -12,7 +12,7 @@ import {
   createCLIAgentMockData,
   createMockTerminalManager,
   TestEnvironment,
-} from '../../../utils/CommonTestSetup';
+} from '../../utils/CommonTestSetup';
 
 describe('CommonTestSetup', () => {
   let testEnv: TestEnvironment;
