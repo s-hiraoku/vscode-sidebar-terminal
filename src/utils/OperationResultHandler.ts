@@ -7,7 +7,7 @@
 
 import { extension as log } from './logger';
 
-export interface OperationResult<T = any> {
+export interface OperationResult<T = unknown> {
   success: boolean;
   data?: T;
   reason?: string;
@@ -176,7 +176,7 @@ export class OperationResultHandler {
   /**
    * 失敗結果を作成
    */
-  static failure<T = any>(reason: string, error?: Error): OperationResult<T> {
+  static failure<T = unknown>(reason: string, error?: Error): OperationResult<T> {
     return this.createResult<T>(false, undefined, reason, error);
   }
 }

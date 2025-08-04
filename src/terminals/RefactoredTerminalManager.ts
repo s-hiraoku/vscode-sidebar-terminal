@@ -64,7 +64,7 @@ export class RefactoredTerminalManager {
   public readonly onTerminalFocus = this._terminalFocusEmitter.event;
 
   // onStateUpdate will be initialized after stateManager is created
-  public get onStateUpdate() {
+  public get onStateUpdate(): vscode.Event<any> {
     return this.stateManager.onStateUpdate;
   }
 
@@ -359,7 +359,7 @@ export class RefactoredTerminalManager {
     });
   }
 
-  public safeKillTerminal(terminalId?: string): boolean {
+  public safeKillTerminal(_terminalId?: string): boolean {
     const activeId = this.stateManager.getActiveTerminalId();
     if (!activeId) {
       const message = 'No active terminal to kill';

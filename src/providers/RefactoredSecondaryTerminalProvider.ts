@@ -7,7 +7,7 @@
 
 import * as vscode from 'vscode';
 import { WebviewMessage, VsCodeMessage } from '../types/common';
-import { getTerminalConfig } from '../utils/common';
+import { getTerminalConfig as _getTerminalConfig } from '../utils/common';
 import { extension as log } from '../utils/logger';
 
 // Services
@@ -28,7 +28,7 @@ import { IWebViewResourceManager, WebViewResourceManager } from '../webview/WebV
 import {
   IWebViewMessageRouter,
   WebViewMessageRouter,
-  MessageHandler,
+  MessageHandler as _MessageHandler,
 } from '../messaging/WebViewMessageRouter';
 import { MessageFactory } from '../messaging/MessageFactory';
 
@@ -128,7 +128,7 @@ export class RefactoredSecondaryTerminalProvider implements vscode.WebviewViewPr
    */
   public async resolveWebviewView(
     webviewView: vscode.WebviewView,
-    context: vscode.WebviewViewResolveContext,
+    _context: vscode.WebviewViewResolveContext,
     _token: vscode.CancellationToken
   ): Promise<void> {
     try {
@@ -174,7 +174,7 @@ export class RefactoredSecondaryTerminalProvider implements vscode.WebviewViewPr
   /**
    * Provider統計を取得
    */
-  public getProviderStats() {
+  public getProviderStats(): Record<string, unknown> {
     return {
       terminalCount: this.lifecycleManager.getTerminalCount(),
       messageStats: this.messageRouter.getMessageStats(),
@@ -204,7 +204,9 @@ export class RefactoredSecondaryTerminalProvider implements vscode.WebviewViewPr
     this.configService.dispose();
 
     // Disposableを解放
-    this.disposables.forEach((d) => d.dispose());
+    this.disposables.forEach((d) => {
+      d.dispose();
+    });
     this.disposables.length = 0;
 
     this.webviewView = undefined;
@@ -274,13 +276,13 @@ export class RefactoredSecondaryTerminalProvider implements vscode.WebviewViewPr
   private createNotificationService(): NotificationService {
     return {
       showSuccess: (message: string) => {
-        vscode.window.showInformationMessage(message);
+        void vscode.window.showInformationMessage(message);
       },
       showError: (message: string) => {
-        vscode.window.showErrorMessage(message);
+        void vscode.window.showErrorMessage(message);
       },
       showWarning: (message: string) => {
-        vscode.window.showWarningMessage(message);
+        void vscode.window.showWarningMessage(message);
       },
     };
   }
@@ -290,7 +292,7 @@ export class RefactoredSecondaryTerminalProvider implements vscode.WebviewViewPr
   /**
    * WebView準備完了ハンドラー
    */
-  private async handleWebViewReady(message: VsCodeMessage): Promise<void> {
+  private async handleWebViewReady(_message: VsCodeMessage): Promise<void> {
     log('🎯 [REFACTORED-PROVIDER] WebView ready received');
 
     // 現在の状態をWebViewに送信
@@ -306,7 +308,7 @@ export class RefactoredSecondaryTerminalProvider implements vscode.WebviewViewPr
   /**
    * ターミナル作成ハンドラー
    */
-  private async handleCreateTerminal(message: VsCodeMessage): Promise<void> {
+  private async handleCreateTerminal(_message: VsCodeMessage): Promise<void> {
     const result = await OperationResultHandler.handleTerminalOperation(
       async () => {
         const terminalId = this.lifecycleManager.createTerminal();
@@ -333,7 +335,7 @@ export class RefactoredSecondaryTerminalProvider implements vscode.WebviewViewPr
     }
 
     await OperationResultHandler.handleTerminalOperation(
-      () => this.lifecycleManager.killTerminal(message.terminalId!),
+      () => this.lifecycleManager.killTerminal(message.terminalId as string),
       'DELETE-TERMINAL',
       `Terminal ${message.terminalId} deleted`,
       this.notificationService
@@ -343,13 +345,14 @@ export class RefactoredSecondaryTerminalProvider implements vscode.WebviewViewPr
   /**
    * ターミナル入力ハンドラー
    */
-  private async handleTerminalInput(message: VsCodeMessage): Promise<void> {
+  private handleTerminalInput(message: VsCodeMessage): void {
     if (!message.terminalId || !message.data) {
       return;
     }
 
     OperationResultHandler.handleSyncOperation(
-      () => this.lifecycleManager.writeToTerminal(message.terminalId!, message.data!),
+      () =>
+        this.lifecycleManager.writeToTerminal(message.terminalId as string, message.data as string),
       'TERMINAL-INPUT'
     );
   }
@@ -357,13 +360,18 @@ export class RefactoredSecondaryTerminalProvider implements vscode.WebviewViewPr
   /**
    * ターミナルリサイズハンドラー
    */
-  private async handleTerminalResize(message: VsCodeMessage): Promise<void> {
+  private handleTerminalResize(message: VsCodeMessage): void {
     if (!message.terminalId || !message.cols || !message.rows) {
       return;
     }
 
     OperationResultHandler.handleSyncOperation(
-      () => this.lifecycleManager.resizeTerminal(message.terminalId!, message.cols!, message.rows!),
+      () =>
+        this.lifecycleManager.resizeTerminal(
+          message.terminalId as string,
+          message.cols as number,
+          message.rows as number
+        ),
       'TERMINAL-RESIZE'
     );
   }
@@ -371,13 +379,13 @@ export class RefactoredSecondaryTerminalProvider implements vscode.WebviewViewPr
   /**
    * ターミナルフォーカスハンドラー
    */
-  private async handleFocusTerminal(message: VsCodeMessage): Promise<void> {
+  private handleFocusTerminal(message: VsCodeMessage): void {
     if (!message.terminalId) {
       return;
     }
 
     OperationResultHandler.handleSyncOperation(
-      () => this.stateManager.setActiveTerminal(message.terminalId!),
+      () => this.stateManager.setActiveTerminal(message.terminalId as string),
       'TERMINAL-FOCUS'
     );
   }
@@ -385,14 +393,14 @@ export class RefactoredSecondaryTerminalProvider implements vscode.WebviewViewPr
   /**
    * 設定取得ハンドラー
    */
-  private async handleGetSettings(message: VsCodeMessage): Promise<void> {
+  private async handleGetSettings(_message: VsCodeMessage): Promise<void> {
     await this.sendInitialSettings();
   }
 
   /**
    * エラーハンドラー
    */
-  private async handleError(message: VsCodeMessage): Promise<void> {
+  private handleError(message: VsCodeMessage): void {
     log(`❌ [REFACTORED-PROVIDER] WebView error: ${message.message}`);
 
     if (message.message && this.notificationService) {

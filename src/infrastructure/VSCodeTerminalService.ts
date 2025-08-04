@@ -12,7 +12,7 @@ import {
 } from '../domain/interfaces/TerminalService';
 import { ITerminalLifecycleManager } from '../services/TerminalLifecycleManager';
 import { ITerminalStateManager } from '../services/TerminalStateManager';
-import { OperationResultHandler } from '../utils/OperationResultHandler';
+import { OperationResultHandler as _OperationResultHandler } from '../utils/OperationResultHandler';
 import { extension as log } from '../utils/logger';
 
 /**
@@ -38,9 +38,7 @@ export class VSCodeTerminalService implements ITerminalService {
   /**
    * ターミナルを作成
    */
-  async createTerminal(
-    options?: TerminalCreationOptions
-  ): Promise<TerminalOperationResult<string>> {
+  createTerminal(options?: TerminalCreationOptions): Promise<TerminalOperationResult<string>> {
     try {
       log('🚀 [INFRASTRUCTURE] Creating terminal with options:', options);
 
@@ -214,7 +212,14 @@ export class VSCodeTerminalService implements ITerminalService {
   /**
    * インフラ層のターミナルをドメイン層のターミナルにマッピング
    */
-  private mapToTerminal(infraTerminal: any): Terminal {
+  private mapToTerminal(infraTerminal: {
+    id: string;
+    name: string;
+    number: number;
+    isActive: boolean;
+    cwd: string;
+    createdAt: Date;
+  }): Terminal {
     return {
       id: infraTerminal.id,
       name: infraTerminal.name,

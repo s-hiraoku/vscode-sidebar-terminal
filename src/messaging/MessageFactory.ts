@@ -14,7 +14,7 @@ import { TerminalConfig } from '../types/shared';
 interface BaseMessageData {
   terminalId?: string;
   timestamp?: number;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 /**
@@ -210,7 +210,7 @@ export class MessageFactory {
   /**
    * 設定応答メッセージ
    */
-  static createSettingsResponse(settings: any, fontSettings?: any): WebviewMessage {
+  static createSettingsResponse(settings: unknown, fontSettings?: unknown): WebviewMessage {
     return this.createTerminalMessage('settingsResponse', undefined, {
       settings,
       fontSettings,

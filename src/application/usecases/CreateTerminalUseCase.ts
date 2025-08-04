@@ -8,7 +8,6 @@ import {
   ITerminalService,
   Terminal,
   TerminalCreationOptions,
-  TerminalOperationResult,
 } from '../../domain/interfaces/TerminalService';
 import { IEventBus } from '../interfaces/EventBus';
 import { extension as log } from '../../utils/logger';
@@ -53,7 +52,10 @@ export class CreateTerminalUseCase {
         return { success: false, error: result.error };
       }
 
-      const terminalId = result.data!;
+      const terminalId = result.data;
+      if (!terminalId) {
+        return { success: false, error: 'Terminal ID not returned from service' };
+      }
       const terminal = this.terminalService.getTerminal(terminalId);
 
       if (!terminal) {
@@ -69,7 +71,7 @@ export class CreateTerminalUseCase {
       }
 
       // イベント発行
-      this.eventBus.publish('terminal:created', {
+      void this.eventBus.publish('terminal:created', {
         terminal,
         wasSetAsActive: command.setAsActive !== false,
         sendNotification: command.sendNotification !== false,
@@ -85,7 +87,7 @@ export class CreateTerminalUseCase {
       const errorMessage = `Failed to create terminal: ${String(error)}`;
       log(`❌ [USE-CASE] ${errorMessage}`);
 
-      this.eventBus.publish('terminal:creation-failed', {
+      void this.eventBus.publish('terminal:creation-failed', {
         error: errorMessage,
         command,
       });

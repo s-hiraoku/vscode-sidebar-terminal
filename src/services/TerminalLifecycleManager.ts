@@ -7,8 +7,8 @@
 
 import * as vscode from 'vscode';
 import * as pty from '@homebridge/node-pty-prebuilt-multiarch';
-import { TerminalInstance, DeleteResult } from '../types/common';
-import { TERMINAL_CONSTANTS, ERROR_MESSAGES } from '../constants';
+import { TerminalInstance, DeleteResult as _DeleteResult } from '../types/common';
+import { TERMINAL_CONSTANTS, ERROR_MESSAGES as _ERROR_MESSAGES } from '../constants';
 import { terminal as log } from '../utils/logger';
 import {
   getTerminalConfig,
@@ -123,7 +123,7 @@ export class TerminalLifecycleManager implements ITerminalLifecycleManager {
           rows: TERMINAL_CONSTANTS.DEFAULT_ROWS,
         },
         shellArgs: config.shellArgs,
-      });
+      }) as pty.IPty;
 
       // ターミナルインスタンスを作成
       const terminal: TerminalInstance = {
@@ -224,8 +224,8 @@ export class TerminalLifecycleManager implements ITerminalLifecycleManager {
     }
 
     try {
-      if (terminal.pty && typeof terminal.pty.resize === 'function') {
-        terminal.pty.resize(cols, rows);
+      if (terminal.pty && typeof (terminal.pty as pty.IPty).resize === 'function') {
+        (terminal.pty as pty.IPty).resize(cols, rows);
         log(`📏 [LIFECYCLE] Terminal resized: ${terminalId} (${cols}x${rows})`);
         return OperationResultHandler.success();
       } else {
@@ -246,8 +246,8 @@ export class TerminalLifecycleManager implements ITerminalLifecycleManager {
     }
 
     try {
-      if (terminal.pty && typeof terminal.pty.write === 'function') {
-        terminal.pty.write(data);
+      if (terminal.pty && typeof (terminal.pty as pty.IPty).write === 'function') {
+        (terminal.pty as pty.IPty).write(data);
         return OperationResultHandler.success();
       } else {
         return OperationResultHandler.failure('Terminal pty not available for write');

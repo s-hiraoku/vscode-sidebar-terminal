@@ -4,7 +4,7 @@
  * イベント駆動アーキテクチャの中核となるイベントバス
  */
 
-export type EventCallback<T = any> = (data: T) => void | Promise<void>;
+export type EventCallback<T = unknown> = (data: T) => void | Promise<void>;
 
 export interface IEventBus {
   // イベント発行
@@ -72,7 +72,12 @@ export class EventBus implements IEventBus {
 
     for (const callback of eventSubscribers.values()) {
       try {
-        callback(data);
+        const result = callback(data);
+        if (result instanceof Promise) {
+          void result.catch((error) => {
+            console.error(`Error in sync event callback for ${eventType}:`, error);
+          });
+        }
       } catch (error) {
         console.error(`Error in sync event callback for ${eventType}:`, error);
       }
@@ -88,7 +93,10 @@ export class EventBus implements IEventBus {
     }
 
     const subscriptionId = `${eventType}-${++this.subscriptionIdCounter}`;
-    this.subscribers.get(eventType)!.set(subscriptionId, callback);
+    const eventSubscribers = this.subscribers.get(eventType);
+    if (eventSubscribers) {
+      eventSubscribers.set(subscriptionId, callback);
+    }
 
     return subscriptionId;
   }
@@ -98,8 +106,14 @@ export class EventBus implements IEventBus {
    */
   subscribeOnce<T>(eventType: string, callback: EventCallback<T>): string {
     const onceCallback: EventCallback<T> = (data) => {
-      callback(data);
-      this.unsubscribe(subscriptionId);
+      const result = callback(data);
+      if (result instanceof Promise) {
+        void result.finally(() => {
+          this.unsubscribe(subscriptionId);
+        });
+      } else {
+        this.unsubscribe(subscriptionId);
+      }
     };
 
     const subscriptionId = this.subscribe(eventType, onceCallback);
