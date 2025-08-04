@@ -156,6 +156,9 @@ class TerminalWebviewManager {
       status: 'connected' | 'disconnected' | 'none';
       terminalName: string;
       agentType: string | null;
+      preserveScrollPosition: boolean; // Simple flag for scroll preservation
+      isDisplayingChoices?: boolean; // Track if agent is showing choice menu
+      lastChoiceDetected?: number; // Timestamp of last choice detection
     }
   >();
   private currentConnectedAgentId: string | null = null;
@@ -163,6 +166,13 @@ class TerminalWebviewManager {
   // Performance optimization: Debounce resize operations (managed by PerformanceManager)
   private resizeDebounceTimer: number | null = null;
   private readonly RESIZE_DEBOUNCE_DELAY = SPLIT_CONSTANTS.RESIZE_DEBOUNCE_DELAY;
+  // Simple agent output detection patterns
+  private readonly AGENT_OUTPUT_PATTERNS = [
+    /claude-code/i,
+    /gemini.*code/i,
+    /Thinking|Processing|Analyzing/i,
+    /Select|Choose|Option/i,
+  ];
 
   // Managers
   private splitManager: SplitManager;
@@ -1113,6 +1123,7 @@ class TerminalWebviewManager {
   public writeToTerminal(data: string, terminalId?: string): void {
     // Determine which terminal to write to
     let targetTerminal = this.terminal;
+    let actualTerminalId = terminalId;
 
     // First, try to use the specified terminal ID
     if (terminalId) {
@@ -1133,22 +1144,127 @@ class TerminalWebviewManager {
         const terminalData = this.splitManager.getTerminals().get(this.activeTerminalId);
         if (terminalData) {
           targetTerminal = terminalData.terminal;
+          actualTerminalId = this.activeTerminalId;
           log(`📤 [WEBVIEW] Writing to active terminal: ${this.activeTerminalId}`);
         }
       }
     }
 
-    if (targetTerminal) {
-      // If a specific terminal ID is provided, write directly to avoid cross-terminal buffering issues
+    if (targetTerminal && actualTerminalId) {
+      // Simple agent output detection
+      this.handleAgentOutput(data, actualTerminalId);
+
+      // Check if we should preserve scroll position
+      const agentState = this.cliAgentStates.get(actualTerminalId);
+      const shouldPreserveScroll = agentState?.preserveScrollPosition || false;
+
+      // Write with or without scroll preservation
       if (terminalId) {
-        targetTerminal.write(data);
-        log(`📤 [WEBVIEW] Direct write to terminal ${terminalId}: ${data.length} chars`);
+        // Direct write
+        if (shouldPreserveScroll) {
+          this.writeWithScrollPreservation(targetTerminal, data, terminalId);
+        } else {
+          targetTerminal.write(data);
+          log(`📤 [WEBVIEW] Direct write to terminal ${terminalId}: ${data.length} chars`);
+        }
       } else {
-        // Use PerformanceManager for buffering (active terminal only)
+        // Use PerformanceManager for buffering
         this.performanceManager.scheduleOutputBuffer(data, targetTerminal);
       }
     } else {
       log('⚠️ [WEBVIEW] No terminal instance to write to');
+    }
+  }
+
+  /**
+   * Write to terminal with simple scroll preservation
+   */
+  private writeWithScrollPreservation(terminal: any, data: string, terminalId: string): void {
+    try {
+      // Get scroll info before write
+      const wasAtBottom = this.isAtBottom(terminal);
+      const scrollTop = wasAtBottom ? null : this.getScrollTop(terminal);
+      
+      // Write the data
+      terminal.write(data);
+      
+      // Restore scroll position if not at bottom
+      if (!wasAtBottom && scrollTop !== null) {
+        setTimeout(() => {
+          this.setScrollTop(terminal, scrollTop);
+        }, 10); // Small delay to ensure content is rendered
+      }
+      
+      log(`📤 [WEBVIEW] Write with scroll preservation to ${terminalId}: ${data.length} chars`);
+    } catch (error) {
+      log(`⚠️ [WEBVIEW] Error in scroll preservation, fallback to normal write:`, error);
+      terminal.write(data); // Fallback
+    }
+  }
+
+  /**
+   * Simple scroll position helpers
+   */
+  private isAtBottom(terminal: any): boolean {
+    try {
+      const buffer = terminal.buffer?.active;
+      if (!buffer) return true;
+      
+      const viewport = terminal.element?.querySelector('.xterm-viewport');
+      if (!viewport) return true;
+      
+      const scrollTop = viewport.scrollTop;
+      const scrollHeight = viewport.scrollHeight;
+      const clientHeight = viewport.clientHeight;
+      
+      return scrollTop + clientHeight >= scrollHeight - 50; // 50px tolerance
+    } catch {
+      return true; // Default to bottom
+    }
+  }
+
+  private getScrollTop(terminal: any): number | null {
+    try {
+      const viewport = terminal.element?.querySelector('.xterm-viewport');
+      return viewport ? viewport.scrollTop : null;
+    } catch {
+      return null;
+    }
+  }
+
+  private setScrollTop(terminal: any, scrollTop: number): void {
+    try {
+      const viewport = terminal.element?.querySelector('.xterm-viewport');
+      if (viewport) {
+        viewport.scrollTop = scrollTop;
+      }
+    } catch (error) {
+      log(`⚠️ [WEBVIEW] Error setting scroll position:`, error);
+    }
+  }
+
+  /**
+   * Restore terminal scroll position
+   */
+  private restoreScrollPosition(terminal: any, scrollPosition: number): void {
+    try {
+      // Use requestAnimationFrame to ensure content is rendered
+      requestAnimationFrame(() => {
+        if (terminal._core?._scrollService) {
+          terminal._core._scrollService.scrollToLine(scrollPosition);
+          log(`🔄 [WEBVIEW] Restored scroll to line: ${scrollPosition}`);
+        } else {
+          // Fallback: try viewport scrolling
+          const viewport = terminal.element?.querySelector('.xterm-viewport');
+          if (viewport) {
+            const lineHeight = terminal._core?._charMeasure?.height || 16;
+            viewport.scrollTop = scrollPosition * lineHeight;
+            log(`🔄 [WEBVIEW] Restored scroll via viewport: ${scrollPosition}`);
+          }
+        }
+      });
+    } catch (error) {
+      log(`⚠️ [WEBVIEW] Error restoring scroll position:`, error);
     }
   }
 
@@ -1313,18 +1429,51 @@ class TerminalWebviewManager {
 
       // Set new CONNECTED terminal
       this.currentConnectedAgentId = terminalId;
-      this.cliAgentStates.set(terminalId, { status: 'connected', terminalName, agentType });
+      this.cliAgentStates.set(terminalId, { 
+        status: 'connected', 
+        terminalName, 
+        agentType,
+        preserveScrollPosition: true, // Enable scroll preservation for connected agents
+      });
       this.uiManager.updateCliAgentStatusDisplay(terminalName, 'connected', agentType);
+      
+      // Enable agent interaction mode for connected agents
+      this.inputManager.setAgentInteractionMode(true);
+      
+      // Enable CLI Agent mode for performance optimization
+      this.performanceManager.setCliAgentMode(true);
+      
       log(`✅ [CLI-AGENT] Terminal ${terminalId} → CONNECTED (Latest Takes Priority)`);
     } else if (status === 'disconnected') {
       // Terminal becomes DISCONNECTED (but keeps CLI Agent)
-      this.cliAgentStates.set(terminalId, { status: 'disconnected', terminalName, agentType });
+      const existingState = this.cliAgentStates.get(terminalId);
+      this.cliAgentStates.set(terminalId, { 
+        status: 'disconnected', 
+        terminalName, 
+        agentType,
+        preserveScrollPosition: existingState?.preserveScrollPosition || true,
+        isDisplayingChoices: existingState?.isDisplayingChoices || false,
+        lastChoiceDetected: existingState?.lastChoiceDetected || 0,
+      });
       this.uiManager.updateCliAgentStatusDisplay(terminalName, 'disconnected', agentType);
+      
+      // Keep agent interaction mode enabled for disconnected agents (they might reconnect)
+      this.inputManager.setAgentInteractionMode(true);
+      
+      // Keep CLI Agent mode enabled for performance optimization (disconnected agents might have residual output)
+      this.performanceManager.setCliAgentMode(true);
+      
       log(`🟡 [CLI-AGENT] Terminal ${terminalId} → DISCONNECTED`);
     } else if (status === 'none') {
-      // Remove CLI Agent status completely
+      // Remove CLI Agent status completely and reset choice state
       this.cliAgentStates.delete(terminalId);
       this.uiManager.updateCliAgentStatusDisplay(terminalName, 'none', null);
+      
+      // Disable agent interaction mode when no agent is present
+      this.inputManager.setAgentInteractionMode(false);
+      
+      // Disable CLI Agent mode for performance optimization
+      this.performanceManager.setCliAgentMode(false);
 
       // If this was the CONNECTED terminal, promote most recent DISCONNECTED
       if (this.currentConnectedAgentId === terminalId) {
@@ -1370,6 +1519,30 @@ class TerminalWebviewManager {
           `🚀 [CLI-AGENT] Auto-promoted terminal ${latestDisconnectedId} → CONNECTED (specification compliance)`
         );
       }
+    }
+  }
+
+  /**
+   * Simple agent output detection and scroll position management
+   */
+  private handleAgentOutput(output: string, terminalId: string): void {
+    const agentState = this.cliAgentStates.get(terminalId);
+    if (!agentState || agentState.status !== 'connected') {
+      return;
+    }
+
+    // Check if this looks like agent output
+    const isAgentOutput = this.AGENT_OUTPUT_PATTERNS.some(pattern => 
+      pattern.test(output)
+    );
+
+    if (isAgentOutput) {
+      // Enable scroll preservation for this terminal
+      this.cliAgentStates.set(terminalId, {
+        ...agentState,
+        preserveScrollPosition: true,
+      });
+      log(`🤖 [CLI-AGENT] Agent output detected, enabling scroll preservation for terminal ${terminalId}`);
     }
   }
 

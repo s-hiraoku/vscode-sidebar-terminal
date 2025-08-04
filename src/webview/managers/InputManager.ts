@@ -24,6 +24,9 @@ export class InputManager implements IInputManager {
 
   // Debounce timers for events
   private eventDebounceTimers = new Map<string, number>();
+  // Simple arrow key handling for agent interactions
+  private agentInteractionMode = false;
+  private arrowKeyListener?: (event: KeyboardEvent) => void;
 
   /**
    * Set the notification manager for Alt+Click feedback
@@ -229,6 +232,97 @@ export class InputManager implements IInputManager {
   }
 
   /**
+   * Enable/disable agent interaction mode (simplified approach)
+   */
+  public setAgentInteractionMode(enabled: boolean): void {
+    if (this.agentInteractionMode !== enabled) {
+      this.agentInteractionMode = enabled;
+      log(`🎯 [INPUT] Agent interaction mode: ${enabled}`);
+      
+      if (enabled && !this.arrowKeyListener) {
+        this.setupAgentArrowKeyHandler();
+      } else if (!enabled && this.arrowKeyListener) {
+        // Remove arrow key listener when disabling
+        document.removeEventListener('keydown', this.arrowKeyListener, true);
+        this.arrowKeyListener = undefined;
+      }
+    }
+  }
+
+  /**
+   * Check if agent interaction mode is enabled
+   */
+  public isAgentInteractionMode(): boolean {
+    return this.agentInteractionMode;
+  }
+
+  /**
+   * Setup simplified arrow key handler for agent interactions
+   */
+  private setupAgentArrowKeyHandler(): void {
+    log('⌨️ [INPUT] Setting up agent arrow key handler');
+
+    this.arrowKeyListener = (event: KeyboardEvent) => {
+      // Only handle when in agent interaction mode
+      if (!this.agentInteractionMode || this.isComposing) {
+        return;
+      }
+
+      // Check if this is an arrow key
+      if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) {
+        return;
+      }
+
+      // Find active terminal
+      const activeTerminal = document.querySelector('.terminal-container.active');
+      if (!activeTerminal) {
+        return;
+      }
+
+      const terminalId = activeTerminal.getAttribute('data-terminal-id');
+      if (!terminalId) {
+        return;
+      }
+
+      // Prevent default scrolling for arrow keys during agent interactions
+      event.preventDefault();
+      event.stopPropagation();
+      
+      log(`🎯 [INPUT] Arrow key ${event.key} handled for agent interaction in terminal ${terminalId}`);
+      
+      // Send arrow key to terminal
+      this.sendArrowKeyToTerminal(event.key, terminalId);
+    };
+
+    document.addEventListener('keydown', this.arrowKeyListener, true);
+  }
+
+  /**
+   * Send arrow key to terminal as ANSI sequence
+   */
+  private sendArrowKeyToTerminal(key: string, terminalId: string): void {
+    const sequences: Record<string, string> = {
+      'ArrowUp': '\x1b[A',
+      'ArrowDown': '\x1b[B', 
+      'ArrowRight': '\x1b[C',
+      'ArrowLeft': '\x1b[D',
+    };
+
+    const sequence = sequences[key];
+    if (sequence) {
+      const api = (window as any).acquireVsCodeApi?.();
+      if (api) {
+        api.postMessage({
+          command: 'input',
+          data: sequence,
+          terminalId: terminalId,
+        });
+        log(`📤 [INPUT] Sent ${key} (${sequence}) to terminal ${terminalId}`);
+      }
+    }
+  }
+
+  /**
    * Emit terminal interaction event with debouncing for frequent events
    */
   private emitTerminalInteractionEvent(
@@ -338,6 +432,9 @@ export class InputManager implements IInputManager {
     if (this.compositionEndListener) {
       document.removeEventListener('compositionend', this.compositionEndListener);
     }
+    if (this.arrowKeyListener) {
+      document.removeEventListener('keydown', this.arrowKeyListener, true);
+    }
 
     // Reset state
     this.altClickState = {
@@ -345,12 +442,14 @@ export class InputManager implements IInputManager {
       isAltKeyPressed: false,
     };
     this.isComposing = false;
+    this.agentInteractionMode = false;
 
     // Clear references
     this.keydownListener = undefined;
     this.keyupListener = undefined;
     this.compositionStartListener = undefined;
     this.compositionEndListener = undefined;
+    this.arrowKeyListener = undefined;
 
     log('✅ [INPUT] Input manager disposed');
   }

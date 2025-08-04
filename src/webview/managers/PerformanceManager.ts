@@ -44,13 +44,24 @@ export class PerformanceManager implements IPerformanceManager {
 
     if (shouldFlushImmediately) {
       this.flushOutputBuffer();
+      
+      // 🎯 NEW: Preserve scroll position for immediate writes too
+      const wasAtBottom = this.isTerminalScrolledToBottom(targetTerminal);
+      const scrollTop = this.getTerminalScrollTop(targetTerminal);
+      
       targetTerminal.write(data);
+      
+      // Restore scroll position if user wasn't at bottom
+      if (!wasAtBottom && scrollTop !== null) {
+        this.restoreTerminalScrollPosition(targetTerminal, scrollTop);
+      }
+      
       const reason = this.isCliAgentMode
         ? 'CLI Agent mode'
         : isLargeOutput
           ? 'large output'
           : 'buffer full';
-      log(`📤 [PERFORMANCE] Immediate write: ${data.length} chars (${reason})`);
+      log(`📤 [PERFORMANCE] Immediate write: ${data.length} chars (${reason}, scroll preserved: ${!wasAtBottom})`);
     } else {
       this.outputBuffer.push(data);
       this.scheduleBufferFlush();
@@ -101,13 +112,82 @@ export class PerformanceManager implements IPerformanceManager {
 
       // Use the most recently set terminal for buffer output
       if (this.currentBufferTerminal) {
+        // 🎯 NEW: Preserve scroll position during agent output
+        const wasAtBottom = this.isTerminalScrolledToBottom(this.currentBufferTerminal);
+        const scrollTop = this.getTerminalScrollTop(this.currentBufferTerminal);
+        
         this.currentBufferTerminal.write(bufferedData);
-        log(`📤 [PERFORMANCE] Flushed buffer: ${bufferedData.length} chars`);
+        
+        // Restore scroll position if user wasn't at bottom
+        if (!wasAtBottom && scrollTop !== null) {
+          this.restoreTerminalScrollPosition(this.currentBufferTerminal, scrollTop);
+        }
+        
+        log(`📤 [PERFORMANCE] Flushed buffer: ${bufferedData.length} chars (scroll preserved: ${!wasAtBottom})`);
       } else {
         log(
           `⚠️ [PERFORMANCE] No terminal available for buffer flush: ${bufferedData.length} chars lost`
         );
       }
+    }
+  }
+
+  /**
+   * Check if terminal is scrolled to bottom
+   */
+  private isTerminalScrolledToBottom(terminal: any): boolean {
+    try {
+      // xterm.js buffer API to check scroll position
+      const buffer = terminal.buffer?.active;
+      if (!buffer) return true;
+
+      const scrollPosition = terminal._core?._scrollService?.scrollPosition || 0;
+      const maxScrollPosition = Math.max(0, buffer.length - terminal.rows);
+      
+      // Consider "bottom" if within 3 lines of actual bottom
+      const isAtBottom = scrollPosition >= maxScrollPosition - 3;
+      
+      log(`📊 [PERFORMANCE] Scroll check - position: ${scrollPosition}, max: ${maxScrollPosition}, atBottom: ${isAtBottom}`);
+      return isAtBottom;
+    } catch (error) {
+      log(`⚠️ [PERFORMANCE] Error checking scroll position:`, error);
+      return true; // Default to bottom behavior
+    }
+  }
+
+  /**
+   * Get current terminal scroll position
+   */
+  private getTerminalScrollTop(terminal: any): number | null {
+    try {
+      return terminal._core?._scrollService?.scrollPosition || 0;
+    } catch (error) {
+      log(`⚠️ [PERFORMANCE] Error getting scroll position:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Restore terminal scroll position
+   */
+  private restoreTerminalScrollPosition(terminal: any, scrollTop: number): void {
+    try {
+      // Use requestAnimationFrame to ensure DOM is updated
+      requestAnimationFrame(() => {
+        if (terminal._core?._scrollService) {
+          terminal._core._scrollService.scrollToLine(scrollTop);
+          log(`🔄 [PERFORMANCE] Restored scroll position to: ${scrollTop}`);
+        } else {
+          // Fallback: scroll the DOM element
+          const xtermViewport = terminal.element?.querySelector('.xterm-viewport') as HTMLElement;
+          if (xtermViewport) {
+            xtermViewport.scrollTop = scrollTop * terminal._core?._charMeasure?.height || 0;
+            log(`🔄 [PERFORMANCE] Restored scroll via DOM: ${scrollTop}`);
+          }
+        }
+      });
+    } catch (error) {
+      log(`⚠️ [PERFORMANCE] Error restoring scroll position:`, error);
     }
   }
 
