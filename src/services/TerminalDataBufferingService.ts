@@ -99,7 +99,10 @@ export class TerminalDataBufferingService implements ITerminalDataBufferingServi
       this.initializeStats(terminalId);
     }
 
-    const buffer = this._dataBuffers.get(terminalId)!;
+    const buffer = this._dataBuffers.get(terminalId);
+    if (!buffer) {
+      return;
+    }
     buffer.push(data);
 
     // 統計情報を更新

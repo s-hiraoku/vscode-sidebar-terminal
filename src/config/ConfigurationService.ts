@@ -14,8 +14,8 @@ import { extension as log } from '../utils/logger';
 export type ConfigChangeHandler = (
   section: string,
   key: string,
-  newValue: any,
-  oldValue: any
+  newValue: unknown,
+  oldValue: unknown
 ) => void;
 
 /**
@@ -23,7 +23,7 @@ export type ConfigChangeHandler = (
  */
 export class ConfigurationService {
   private static instance: ConfigurationService;
-  private configCache = new Map<string, any>();
+  private configCache = new Map<string, unknown>();
   private changeHandlers = new Set<ConfigChangeHandler>();
   private disposables: vscode.Disposable[] = [];
 
@@ -45,7 +45,9 @@ export class ConfigurationService {
    * リソースを解放
    */
   dispose(): void {
-    this.disposables.forEach((d) => d.dispose());
+    this.disposables.forEach((d) => {
+      d.dispose();
+    });
     this.disposables = [];
     this.configCache.clear();
     this.changeHandlers.clear();
@@ -90,7 +92,7 @@ export class ConfigurationService {
     const cacheKey = `${section}.${key}`;
 
     if (this.configCache.has(cacheKey)) {
-      return this.configCache.get(cacheKey);
+      return this.configCache.get(cacheKey) as T;
     }
 
     const value = vscode.workspace.getConfiguration(section).get<T>(key, defaultValue);
@@ -111,9 +113,9 @@ export class ConfigurationService {
    * 複数の設定値をバッチで取得
    */
   getBatchValues(
-    configs: Array<{ section: string; key: string; defaultValue: any }>
-  ): Record<string, any> {
-    const result: Record<string, any> = {};
+    configs: Array<{ section: string; key: string; defaultValue: unknown }>
+  ): Record<string, unknown> {
+    const result: Record<string, unknown> = {};
 
     for (const config of configs) {
       const fullKey = `${config.section}.${config.key}`;
@@ -128,7 +130,7 @@ export class ConfigurationService {
   /**
    * Terminal関連設定を取得
    */
-  getTerminalSettings() {
+  getTerminalSettings(): Record<string, unknown> {
     return {
       // Secondary Terminal設定
       maxTerminals: this.getCachedValue('secondaryTerminal', 'maxTerminals', 5),
@@ -176,7 +178,7 @@ export class ConfigurationService {
   /**
    * Alt+Click関連設定を取得
    */
-  getAltClickSettings() {
+  getAltClickSettings(): Record<string, unknown> {
     return {
       altClickMovesCursor: this.getCachedValue('terminal.integrated', 'altClickMovesCursor', true),
       multiCursorModifier: this.getCachedValue('editor', 'multiCursorModifier', 'alt'),
@@ -186,7 +188,7 @@ export class ConfigurationService {
   /**
    * 永続化セッション設定を取得
    */
-  getPersistentSessionSettings() {
+  getPersistentSessionSettings(): Record<string, unknown> {
     return {
       enablePersistentSessions: this.getCachedValue(
         'terminal.integrated',
@@ -209,7 +211,7 @@ export class ConfigurationService {
   /**
    * テーマ関連設定を取得
    */
-  getThemeSettings() {
+  getThemeSettings(): Record<string, unknown> {
     return {
       colorTheme: this.getCachedValue('workbench', 'colorTheme', 'Default Dark Modern'),
       iconTheme: this.getCachedValue('workbench', 'iconTheme', 'vs-seti'),
@@ -234,7 +236,7 @@ export class ConfigurationService {
   async updateValue(
     section: string,
     key: string,
-    value: any,
+    value: unknown,
     target: vscode.ConfigurationTarget = vscode.ConfigurationTarget.Workspace
   ): Promise<void> {
     try {
@@ -258,7 +260,7 @@ export class ConfigurationService {
     updates: Array<{
       section: string;
       key: string;
-      value: any;
+      value: unknown;
       target?: vscode.ConfigurationTarget;
     }>
   ): Promise<void> {
@@ -302,7 +304,7 @@ export class ConfigurationService {
    */
   onSectionChanged(
     section: string,
-    handler: (key: string, newValue: any, oldValue: any) => void
+    handler: (key: string, newValue: unknown, oldValue: unknown) => void
   ): vscode.Disposable {
     return this.onConfigurationChanged((changedSection, key, newValue, oldValue) => {
       if (changedSection === section) {
@@ -353,7 +355,10 @@ export class ConfigurationService {
   /**
    * 設定変更をハンドラーに通知
    */
-  private notifyConfigurationChange(section: string, event: vscode.ConfigurationChangeEvent): void {
+  private notifyConfigurationChange(
+    section: string,
+    _event: vscode.ConfigurationChangeEvent
+  ): void {
     // 簡単な実装: セクション全体が変更されたと通知
     // より詳細な実装では、個別のキー変更を検出
     this.changeHandlers.forEach((handler) => {

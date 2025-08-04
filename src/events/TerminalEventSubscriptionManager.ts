@@ -156,9 +156,9 @@ export class TerminalEventSubscriptionManager implements ITerminalEventSubscript
     this.disposables.push(dataDisposable);
 
     // データフラッシュイベント（バッファリングサービスから）
-    this.bufferingService.addFlushHandler((terminalId: string, data: string) =>
-      this.handleDataFlush(terminalId, data)
-    );
+    this.bufferingService.addFlushHandler((terminalId: string, data: string) => {
+      void this.handleDataFlush(terminalId, data);
+    });
 
     log('✅ [EVENT-SUBSCRIPTION] Data events subscribed');
   }
@@ -169,7 +169,9 @@ export class TerminalEventSubscriptionManager implements ITerminalEventSubscript
   unsubscribeAll(): void {
     log('🔇 [EVENT-SUBSCRIPTION] Unsubscribing from all events...');
 
-    this.disposables.forEach((d) => d.dispose());
+    this.disposables.forEach((d) => {
+      d.dispose();
+    });
     this.disposables.length = 0;
 
     // デバウンスタイマーをクリア
@@ -230,10 +232,7 @@ export class TerminalEventSubscriptionManager implements ITerminalEventSubscript
   /**
    * ターミナル終了イベントを処理
    */
-  private async handleTerminalExit(event: {
-    terminalId: string;
-    exitCode?: number;
-  }): Promise<void> {
+  private handleTerminalExit(event: { terminalId: string; exitCode?: number }): void {
     try {
       log(`🔚 [EVENT-SUBSCRIPTION] Terminal exited: ${event.terminalId} (code: ${event.exitCode})`);
 
@@ -283,7 +282,7 @@ export class TerminalEventSubscriptionManager implements ITerminalEventSubscript
         }
 
         this.stateUpdateTimer = setTimeout(() => {
-          this.sendStateUpdate(state);
+          void this.sendStateUpdate(state);
           this.stateUpdateTimer = null;
         }, this.config.stateUpdateDelay);
       } else {

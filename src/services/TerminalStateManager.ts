@@ -5,7 +5,7 @@
  */
 
 import * as vscode from 'vscode';
-import { TerminalInstance, TerminalState, TerminalInfo } from '../types/common';
+import { TerminalInstance, TerminalState, TerminalInfo as _TerminalInfo } from '../types/common';
 import { terminal as log } from '../utils/logger';
 import { ActiveTerminalManager } from '../utils/common';
 import { OperationResult, OperationResultHandler } from '../utils/OperationResultHandler';
@@ -262,7 +262,9 @@ export class TerminalStateManager implements ITerminalStateManager {
     this._stateUpdateEmitter.dispose();
 
     // Disposableを解放
-    this._disposables.forEach((d) => d.dispose());
+    this._disposables.forEach((d) => {
+      d.dispose();
+    });
     this._disposables.length = 0;
 
     // 状態をリセット

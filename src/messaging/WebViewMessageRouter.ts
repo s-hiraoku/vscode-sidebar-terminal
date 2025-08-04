@@ -84,7 +84,7 @@ export class WebViewMessageRouter implements IWebViewMessageRouter {
     // WebView可視性変更ハンドラー
     const visibilityDisposable = webviewView.onDidChangeVisibility(() => {
       if (webviewView.visible) {
-        this.flushMessageQueue();
+        void this.flushMessageQueue();
       }
     });
     this.disposables.push(visibilityDisposable);
@@ -160,7 +160,9 @@ export class WebViewMessageRouter implements IWebViewMessageRouter {
     log('🗑️ [MESSAGE-ROUTER] Disposing message router...');
 
     // Disposableを解放
-    this.disposables.forEach((d) => d.dispose());
+    this.disposables.forEach((d) => {
+      d.dispose();
+    });
     this.disposables.length = 0;
 
     // データ構造をクリア
@@ -213,7 +215,7 @@ export class WebViewMessageRouter implements IWebViewMessageRouter {
 
     if (!wasReady && isReady) {
       log('🎯 [MESSAGE-ROUTER] WebView ready, flushing message queue');
-      this.flushMessageQueue();
+      void this.flushMessageQueue();
     }
   }
 
