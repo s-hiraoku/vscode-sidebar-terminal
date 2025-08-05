@@ -78,6 +78,9 @@ export class TerminalManager {
 
     // Initialize CLI Agent detection service
     this._cliAgentService = cliAgentService || new CliAgentDetectionService();
+
+    // 🚨 FIX: Start heartbeat mechanism for state validation
+    this._cliAgentService.startHeartbeat();
   }
 
   /**
@@ -706,6 +709,13 @@ export class TerminalManager {
    */
   public getCurrentGloballyActiveAgent(): { terminalId: string; type: string } | null {
     return this._cliAgentService.getConnectedAgent();
+  }
+
+  /**
+   * 🚨 NEW: Refresh CLI Agent state (fallback for file reference issues)
+   */
+  public refreshCliAgentState(): boolean {
+    return this._cliAgentService.refreshAgentState();
   }
 
   /**
