@@ -1221,11 +1221,7 @@ class TerminalWebviewManager {
       const buffer = terminal.buffer?.active;
       if (!buffer) return true;
 
-<<<<<<< HEAD
-      const viewport = terminal.element?.querySelector('.xterm-viewport');
-=======
       const viewport = terminal.element?.querySelector('.xterm-viewport') as HTMLElement | null;
->>>>>>> 3214ee9 (feat: PR #145 code review fixes and quality improvements)
       if (!viewport) return true;
 
       const scrollTop = viewport.scrollTop;
