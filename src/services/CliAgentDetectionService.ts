@@ -944,17 +944,17 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
           }
         }
 
-        // 🚨 FIX: Prevent duplicate detection for already connected agents
-        if (this.stateManager.isAgentConnected(terminalId)) {
-          // Agent is already connected, skip startup detection to prevent state churn
-          continue;
-        }
-
         // Check for startup patterns (only for non-connected and non-disconnected agents)
         const disconnectedAgents = this.stateManager.getDisconnectedAgents();
         const isDisconnectedAgent = disconnectedAgents.has(terminalId);
 
         if (!isDisconnectedAgent) {
+          // 🚨 HOTFIX: Prevent duplicate detection for already connected agents (STARTUP ONLY)
+          if (this.stateManager.isAgentConnected(terminalId)) {
+            // Agent is already connected, skip STARTUP detection only to prevent state churn
+            continue;
+          }
+
           // Claude startup detection
           if (this.patternDetector.detectClaudeStartup(fullyCleanLine)) {
             log(
