@@ -31,7 +31,7 @@ export interface IEventBus {
  * Event Bus Implementation
  */
 export class EventBus implements IEventBus {
-  private subscribers = new Map<string, Map<string, EventCallback>>();
+  private subscribers = new Map<string, Map<string, EventCallback<unknown>>>();
   private subscriptionIdCounter = 0;
 
   /**
@@ -95,7 +95,7 @@ export class EventBus implements IEventBus {
     const subscriptionId = `${eventType}-${++this.subscriptionIdCounter}`;
     const eventSubscribers = this.subscribers.get(eventType);
     if (eventSubscribers) {
-      eventSubscribers.set(subscriptionId, callback);
+      eventSubscribers.set(subscriptionId, callback as EventCallback<unknown>);
     }
 
     return subscriptionId;

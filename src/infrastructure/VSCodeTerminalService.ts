@@ -45,9 +45,12 @@ export class VSCodeTerminalService implements ITerminalService {
       // TODO: optionsをlifecycleManagerの形式に変換
       const terminalId = this.lifecycleManager.createTerminal();
 
-      return { success: true, data: terminalId };
+      return Promise.resolve({ success: true, data: terminalId });
     } catch (error) {
-      return { success: false, error: `Failed to create terminal: ${String(error)}` };
+      return Promise.resolve({
+        success: false,
+        error: `Failed to create terminal: ${String(error)}`,
+      });
     }
   }
 
@@ -217,15 +220,15 @@ export class VSCodeTerminalService implements ITerminalService {
     name: string;
     number: number;
     isActive: boolean;
-    cwd: string;
-    createdAt: Date;
+    cwd?: string;
+    createdAt?: number;
   }): Terminal {
     return {
       id: infraTerminal.id,
       name: infraTerminal.name,
       number: infraTerminal.number,
       isActive: infraTerminal.isActive,
-      cwd: infraTerminal.cwd,
+      cwd: infraTerminal.cwd || process.cwd(),
       createdAt: infraTerminal.createdAt,
     };
   }

@@ -8,7 +8,7 @@ import { IManagerCoordinator } from '../../../../webview/interfaces/ManagerInter
 describe('InputManager - Arrow Key Handling', () => {
   let dom: JSDOM;
   let inputManager: InputManager;
-  let mockCoordinator: sinon.SinonStubbedInstance<IManagerCoordinator>;
+  let mockCoordinator: any;
   let mockVsCodeApi: sinon.SinonStub;
 
   beforeEach(() => {
@@ -47,8 +47,15 @@ describe('InputManager - Arrow Key Handling', () => {
       getAllTerminalContainers: sinon.stub(),
       getTerminalElement: sinon.stub(),
       postMessageToExtension: sinon.stub(),
+      createTerminal: sinon.stub(),
+      openSettings: sinon.stub(),
+      applyFontSettings: sinon.stub(),
+      closeTerminal: sinon.stub(),
       log: sinon.stub(),
-      getManagers: sinon.stub()
+      getManagers: sinon.stub(),
+      updateClaudeStatus: sinon.stub(),
+      updateCliAgentStatus: sinon.stub(),
+      ensureTerminalFocus: sinon.stub()
     };
 
     inputManager = new InputManager();
