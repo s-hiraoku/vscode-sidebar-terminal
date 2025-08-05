@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.44] - 2025-08-05
+
+### Documentation
+
+- **Comprehensive Documentation Update**: Enhanced documentation to reflect latest terminal functionality improvements
+  - **CLAUDE.md**: Added critical fixes section documenting arrow key functionality restoration
+  - **README.md**: Updated feature descriptions with v0.1.43 terminal functionality improvements
+  - **Enhanced User Guidance**: Clear explanation of restored VS Code standard terminal behavior
+
+### Quality Improvements
+
+- **Code Quality**: ESLint 100% compliance maintained (0 errors)
+- **Code Formatting**: Prettier applied consistently across all files
+- **Documentation Accuracy**: All documentation reflects current functionality
+- **User Experience**: Clear communication of restored terminal capabilities
+
+### User Benefits
+
+- **Better Understanding**: Users can clearly see what terminal functions are available
+- **Improved Onboarding**: New users understand the extension's full capabilities
+- **Reduced Support**: Documentation clearly explains expected terminal behavior
+
 ## [0.1.43] - 2025-08-05
 
 ### Fixed
