@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.43] - 2025-08-05
+
+### Fixed
+
+- **Critical Arrow Key Functionality Restoration**: Restored VS Code standard terminal behavior for all arrow key operations
+  - **Bash History Navigation**: ↑↓ arrow keys now properly navigate command history
+  - **Tab Completion**: Shell completion functionality fully restored
+  - **Cursor Movement**: ←→ arrow keys work naturally for text editing and navigation
+  - **Shell Integration**: All terminal functions now work as expected in VS Code integrated terminal
+
+### Technical Improvements
+
+- **InputManager Arrow Key Handling**: Removed intrusive preventDefault() and stopPropagation() calls
+  - Agent interaction mode permanently disabled to preserve standard terminal functionality
+  - Arrow key events now flow naturally to xterm.js and shell processes
+  - Maintains logging for debugging while preserving functionality
+- **Enhanced xterm.js Configuration**: Added VS Code standard terminal options
+  - `macOptionIsMeta: true` - Proper macOS Option key handling
+  - `windowsMode: process.platform === 'win32'` - Windows terminal compatibility
+  - `convertEol: false` - Let shell handle line ending conversion
+  - `disableStdin: false` - Ensure standard input remains enabled
+- **VS Code Compatibility**: Terminal behavior now matches integrated terminal exactly
+
+### User Experience
+
+- **Restored Expected Behavior**: All terminal shortcuts and navigation work as users expect
+- **Improved Shell Compatibility**: Better integration with bash, zsh, and other shells
+- **Enhanced Productivity**: Command history and completion work seamlessly
+- **Reduced Friction**: No more blocked terminal functionality during CLI Agent sessions
+
+### Quality Metrics
+
+- **ESLint Compliance**: 100% (0 errors)
+- **Code Formatting**: Prettier applied throughout codebase
+- **Terminal Compatibility**: Matches VS Code integrated terminal behavior
+- **User Satisfaction**: Restored critical terminal functionality
+
 ## [0.1.42] - 2025-08-05
 
 ### Fixed
