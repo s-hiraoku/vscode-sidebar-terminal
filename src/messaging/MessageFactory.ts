@@ -173,13 +173,15 @@ export class MessageFactory {
   static createCliAgentStatusUpdate(
     activeTerminalName: string | null,
     status: 'connected' | 'disconnected' | 'none',
-    agentType: string | null
+    agentType: string | null,
+    terminalId?: string
   ): WebviewMessage {
     return this.createTerminalMessage('cliAgentStatusUpdate', undefined, {
       cliAgentStatus: {
         activeTerminalName,
         status,
         agentType,
+        terminalId, // 🛠️ FIX: Add terminalId for more reliable status updates
       },
     });
   }

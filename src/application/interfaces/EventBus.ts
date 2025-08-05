@@ -31,7 +31,7 @@ export interface IEventBus {
  * Event Bus Implementation
  */
 export class EventBus implements IEventBus {
-  private subscribers = new Map<string, Map<string, EventCallback>>();
+  private subscribers = new Map<string, Map<string, EventCallback<unknown>>>();
   private subscriptionIdCounter = 0;
 
   /**

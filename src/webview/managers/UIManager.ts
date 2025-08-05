@@ -378,10 +378,8 @@ export class UIManager implements IUIManager {
         // AI Agent切り替えボタンを表示 (Issue #122)
         HeaderFactory.setAiAgentToggleButtonVisibility(headerElements, true, status);
       } else {
-        // 他のターミナルでAI Agentが検出されている場合もボタンを表示
-        if (status === 'connected' || status === 'disconnected') {
-          HeaderFactory.setAiAgentToggleButtonVisibility(headerElements, true, 'disconnected');
-        }
+        // AI Agentステータスがないターミナルではボタンを非表示にする
+        HeaderFactory.setAiAgentToggleButtonVisibility(headerElements, false);
       }
       updatedCount++;
     }

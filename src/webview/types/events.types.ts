@@ -89,6 +89,8 @@ export interface CliAgentStatusUpdateMessage extends WebviewMessageBase {
   readonly cliAgentStatus: {
     activeTerminalName: string | null;
     status: 'connected' | 'disconnected' | 'none';
+    agentType?: string | null; // 🛠️ FIX: Add agentType field
+    terminalId?: string; // 🛠️ FIX: Add terminalId for reliable status updates
   };
 }
 

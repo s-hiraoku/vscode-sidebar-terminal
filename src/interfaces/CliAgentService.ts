@@ -146,6 +146,19 @@ export interface ICliAgentDetectionService {
    * Dispose of the service and cleanup resources
    */
   dispose(): void;
+
+  // =================== 🚨 NEW: Enhanced State Management ===================
+
+  /**
+   * Start heartbeat mechanism for state validation
+   */
+  startHeartbeat(): void;
+
+  /**
+   * Refresh CLI Agent state (fallback for file reference issues)
+   * @returns True if agent state is valid after refresh
+   */
+  refreshAgentState(): boolean;
 }
 
 // =================== Pattern Detection Interface ===================
@@ -256,6 +269,17 @@ export interface ICliAgentStateManager {
    * Dispose and clean up resources
    */
   dispose(): void;
+
+  /**
+   * 🚨 NEW: Validate connected agent state (heartbeat mechanism)
+   */
+  validateConnectedAgentState(): void;
+
+  /**
+   * 🚨 NEW: Force refresh connected agent state (fallback recovery)
+   * @returns True if connected agent state is valid after refresh
+   */
+  refreshConnectedAgentState(): boolean;
 }
 
 // =================== Configuration Interface ===================

@@ -53,11 +53,11 @@ describe('InputManager - Arrow Key Handling', () => {
       getAllTerminalContainers: sinon.stub(),
       getTerminalElement: sinon.stub(),
       postMessageToExtension: sinon.stub(),
-      log: sinon.stub(),
       createTerminal: sinon.stub(),
       openSettings: sinon.stub(),
       applyFontSettings: sinon.stub(),
       closeTerminal: sinon.stub(),
+      log: sinon.stub(),
       getManagers: sinon.stub(),
     } as unknown as sinon.SinonStubbedInstance<IManagerCoordinator>;
 

@@ -301,6 +301,14 @@ export class CliAgentStateManager implements ICliAgentStateManager {
   }>();
 
   setConnectedAgent(terminalId: string, type: 'claude' | 'gemini', terminalName?: string): void {
+    // 🚨 FIX: Prevent unnecessary state changes for already connected agent
+    if (this._connectedAgentTerminalId === terminalId && this._connectedAgentType === type) {
+      log(
+        `ℹ️ [STATE-MANAGER] Agent ${type} in terminal ${terminalId} is already CONNECTED, skipping state change`
+      );
+      return;
+    }
+
     // Handle previous connected agent
     const previousConnectedId = this._connectedAgentTerminalId;
     const previousType = this._connectedAgentType;
@@ -312,7 +320,7 @@ export class CliAgentStateManager implements ICliAgentStateManager {
     // Remove from disconnected if it was there
     this._disconnectedAgents.delete(terminalId);
 
-    // Move previous connected agent to disconnected
+    // Move previous connected agent to disconnected (only if different terminal)
     if (previousConnectedId && previousConnectedId !== terminalId && previousType) {
       this._disconnectedAgents.set(previousConnectedId, {
         type: previousType,
@@ -459,6 +467,47 @@ export class CliAgentStateManager implements ICliAgentStateManager {
   dispose(): void {
     this.clearAllState();
     this._onStatusChange.dispose();
+  }
+
+  /**
+   * 🚨 NEW: Heartbeat mechanism to validate connected agent state
+   * This helps prevent state loss during extended usage
+   */
+  validateConnectedAgentState(): void {
+    if (!this._connectedAgentTerminalId) {
+      return; // No connected agent to validate
+    }
+
+    const terminalId = this._connectedAgentTerminalId;
+    const agentType = this._connectedAgentType;
+
+    log(`💓 [HEARTBEAT] Validating connected agent state: terminal ${terminalId} (${agentType})`);
+
+    // For now, we just log the validation
+    // In the future, this could include more sophisticated checks
+    // like checking if the terminal process is still alive
+  }
+
+  /**
+   * 🚨 NEW: Force refresh connected agent state
+   * This can be used as fallback when file reference fails
+   */
+  refreshConnectedAgentState(): boolean {
+    const disconnectedAgents = this._disconnectedAgents;
+
+    if (disconnectedAgents.size > 0) {
+      log(
+        `🔄 [REFRESH] Attempting to refresh state from ${disconnectedAgents.size} disconnected agents`
+      );
+
+      // Try to promote the most recent disconnected agent if no connected agent exists
+      if (!this._connectedAgentTerminalId) {
+        this.promoteLatestDisconnectedAgent();
+        return this._connectedAgentTerminalId !== null;
+      }
+    }
+
+    return this._connectedAgentTerminalId !== null;
   }
 }
 
@@ -848,6 +897,25 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
     this.stateManager.dispose();
   }
 
+  /**
+   * 🚨 NEW: Start heartbeat mechanism for state validation
+   */
+  startHeartbeat(): void {
+    // Validate state every 30 seconds
+    setInterval(() => {
+      this.stateManager.validateConnectedAgentState();
+    }, 30000);
+
+    log('💓 [HEARTBEAT] Started CLI Agent state validation heartbeat (30s interval)');
+  }
+
+  /**
+   * 🚨 NEW: Public method to refresh agent state (for FileReferenceCommand fallback)
+   */
+  refreshAgentState(): boolean {
+    return this.stateManager.refreshConnectedAgentState();
+  }
+
   // =================== Private Helper Methods ===================
 
   private processOutputDetection(terminalId: string, data: string): CliAgentDetectionResult | null {
@@ -876,43 +944,45 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
           }
         }
 
-        // Check for startup patterns (only for non-disconnected agents)
+        // 🚨 FIX: Prevent duplicate detection for already connected agents
+        if (this.stateManager.isAgentConnected(terminalId)) {
+          // Agent is already connected, skip startup detection to prevent state churn
+          continue;
+        }
+
+        // Check for startup patterns (only for non-connected and non-disconnected agents)
         const disconnectedAgents = this.stateManager.getDisconnectedAgents();
         const isDisconnectedAgent = disconnectedAgents.has(terminalId);
 
         if (!isDisconnectedAgent) {
           // Claude startup detection
           if (this.patternDetector.detectClaudeStartup(fullyCleanLine)) {
-            if (!this.stateManager.isAgentConnected(terminalId)) {
-              log(
-                `🚀 [CLI-AGENT] Claude Code startup detected from output: "${fullyCleanLine}" in terminal ${terminalId}`
-              );
-              this.stateManager.setConnectedAgent(terminalId, 'claude');
+            log(
+              `🚀 [CLI-AGENT] Claude Code startup detected from output: "${fullyCleanLine}" in terminal ${terminalId}`
+            );
+            this.stateManager.setConnectedAgent(terminalId, 'claude');
 
-              return {
-                type: 'claude',
-                confidence: 0.9,
-                source: 'output',
-                detectedLine: fullyCleanLine,
-              };
-            }
+            return {
+              type: 'claude',
+              confidence: 0.9,
+              source: 'output',
+              detectedLine: fullyCleanLine,
+            };
           }
 
           // Gemini startup detection
           if (this.patternDetector.detectGeminiStartup(fullyCleanLine)) {
-            if (!this.stateManager.isAgentConnected(terminalId)) {
-              log(
-                `🚀 [CLI-AGENT] Gemini CLI startup detected from output: "${fullyCleanLine}" in terminal ${terminalId}`
-              );
-              this.stateManager.setConnectedAgent(terminalId, 'gemini');
+            log(
+              `🚀 [CLI-AGENT] Gemini CLI startup detected from output: "${fullyCleanLine}" in terminal ${terminalId}`
+            );
+            this.stateManager.setConnectedAgent(terminalId, 'gemini');
 
-              return {
-                type: 'gemini',
-                confidence: 0.9,
-                source: 'output',
-                detectedLine: fullyCleanLine,
-              };
-            }
+            return {
+              type: 'gemini',
+              confidence: 0.9,
+              source: 'output',
+              detectedLine: fullyCleanLine,
+            };
           }
         }
       }

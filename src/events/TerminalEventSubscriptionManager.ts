@@ -257,14 +257,30 @@ export class TerminalEventSubscriptionManager implements ITerminalEventSubscript
         `🤖 [EVENT-SUBSCRIPTION] CLI Agent status changed: ${event.terminalId} -> ${event.status}`
       );
 
+      // 🛠️ FIX: Get the correct terminal name from TerminalManager
+      // This ensures we always have a valid terminal name for WebView status updates
+      let terminalName = event.terminalName;
+
+      if (!terminalName) {
+        // Get terminal name from TerminalManager
+        const terminal = this.lifecycleManager.getTerminal(event.terminalId);
+        terminalName = terminal?.name || `Terminal ${event.terminalId}`;
+        log(`🔍 [EVENT-SUBSCRIPTION] Retrieved terminal name from manager: ${terminalName}`);
+      }
+
       // WebView にCLI Agent状態更新メッセージを送信
       const message = MessageFactory.createCliAgentStatusUpdate(
-        event.terminalName || null,
+        terminalName,
         event.status,
-        event.type
+        event.type,
+        event.terminalId // 🛠️ FIX: Include terminalId for reliable lookups
       );
 
       await this.messageRouter.sendMessage(message);
+
+      log(
+        `✅ [EVENT-SUBSCRIPTION] CLI Agent status update sent: ${terminalName} (${event.terminalId}) -> ${event.status}`
+      );
     } catch (error) {
       log(`❌ [EVENT-SUBSCRIPTION] Error handling CLI Agent status change: ${String(error)}`);
     }
