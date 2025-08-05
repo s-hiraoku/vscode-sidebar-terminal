@@ -203,8 +203,22 @@ export class FileReferenceCommand {
    * CONNECTED状態の全CLI Agentを取得
    */
   private getConnectedAgents(): Array<{ terminalId: string; agentType: string }> {
-    const connectedAgents = this.terminalManager.getConnectedAgents();
+    let connectedAgents = this.terminalManager.getConnectedAgents();
     log(`🔍 [DEBUG] Found ${connectedAgents.length} connected CLI agents`);
+
+    // 🚨 FIX: Fallback mechanism when no connected agents found
+    if (connectedAgents.length === 0) {
+      log('⚠️ [FALLBACK] No connected agents found, attempting state refresh...');
+
+      // Try to refresh agent state through TerminalManager
+      const refreshed = this.terminalManager.refreshCliAgentState();
+      if (refreshed) {
+        connectedAgents = this.terminalManager.getConnectedAgents();
+        log(
+          `🔄 [FALLBACK] State refresh ${refreshed ? 'successful' : 'failed'}, now found ${connectedAgents.length} agents`
+        );
+      }
+    }
 
     // デバッグ: Agent詳細を出力
     connectedAgents.forEach((agent, index) => {
