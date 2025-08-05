@@ -131,6 +131,7 @@ export interface WebviewMessage {
     activeTerminalName: string | null;
     status: 'connected' | 'disconnected' | 'none';
     agentType: string | null;
+    terminalId?: string; // 🛠️ FIX: Add terminalId for reliable status updates
   }; // CLI Agent接続状態の情報（新しい名前）
 
   // 🔧 NEW: Full CLI Agent State Sync
