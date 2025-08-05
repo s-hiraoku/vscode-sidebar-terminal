@@ -6,9 +6,10 @@ import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import { webview as log } from '../../utils/logger';
 import { SPLIT_CONSTANTS } from '../constants/webview';
-import { IPerformanceManager } from '../interfaces/ManagerInterfaces';
+import { IPerformanceManager, IManagerCoordinator } from '../interfaces/ManagerInterfaces';
 
 export class PerformanceManager implements IPerformanceManager {
+  private coordinator?: IManagerCoordinator;
   // Performance optimization: Buffer output and batch writes
   private outputBuffer: string[] = [];
   private bufferFlushTimer: number | null = null;
@@ -45,35 +46,16 @@ export class PerformanceManager implements IPerformanceManager {
     if (shouldFlushImmediately) {
       this.flushOutputBuffer();
 
-      // 🎯 NEW: Preserve scroll position for immediate writes too
-      const wasAtBottom = this.isTerminalScrolledToBottom(
-        targetTerminal as unknown as {
-          buffer?: { active?: { length: number } };
-          _core?: { _scrollService?: { scrollPosition: number } };
-          rows: number;
-        }
-      );
-      const scrollTop = this.getTerminalScrollTop(
-        targetTerminal as unknown as {
-          _core?: { _scrollService?: { scrollPosition: number } };
-        }
-      );
-
+      // xterm.js automatically preserves scroll position if user has scrolled up
+      // The terminal's internal isUserScrolling flag handles this behavior
       targetTerminal.write(data);
-
-      // Restore scroll position if user wasn't at bottom
-      if (!wasAtBottom && scrollTop !== null) {
-        this.restoreTerminalScrollPosition(targetTerminal, scrollTop);
-      }
 
       const reason = this.isCliAgentMode
         ? 'CLI Agent mode'
         : isLargeOutput
           ? 'large output'
           : 'buffer full';
-      log(
-        `📤 [PERFORMANCE] Immediate write: ${data.length} chars (${reason}, scroll preserved: ${!wasAtBottom})`
-      );
+      log(`📤 [PERFORMANCE] Immediate write: ${data.length} chars (${reason})`);
     } else {
       this.outputBuffer.push(data);
       this.scheduleBufferFlush();
@@ -132,30 +114,13 @@ export class PerformanceManager implements IPerformanceManager {
 
       // Use the most recently set terminal for buffer output
       if (this.currentBufferTerminal) {
-        // 🎯 NEW: Preserve scroll position during agent output
-        const wasAtBottom = this.isTerminalScrolledToBottom(
-          this.currentBufferTerminal as unknown as {
-            buffer?: { active?: { length: number } };
-            _core?: { _scrollService?: { scrollPosition: number } };
-            rows: number;
-          }
-        );
-        const scrollTop = this.getTerminalScrollTop(
-          this.currentBufferTerminal as unknown as {
-            _core?: { _scrollService?: { scrollPosition: number } };
-          }
-        );
-
-        this.currentBufferTerminal.write(bufferedData);
-
-        // Restore scroll position if user wasn't at bottom
-        if (!wasAtBottom && scrollTop !== null) {
-          this.restoreTerminalScrollPosition(this.currentBufferTerminal, scrollTop);
+        try {
+          // xterm.js automatically preserves scroll position if user has scrolled up
+          this.currentBufferTerminal.write(bufferedData);
+          log(`📤 [PERFORMANCE] Flushed buffer: ${bufferedData.length} chars`);
+        } catch (error) {
+          log(`❌ [PERFORMANCE] Error during buffer flush:`, error);
         }
-
-        log(
-          `📤 [PERFORMANCE] Flushed buffer: ${bufferedData.length} chars (scroll preserved: ${!wasAtBottom})`
-        );
       } else {
         log(
           `⚠️ [PERFORMANCE] No terminal available for buffer flush: ${bufferedData.length} chars lost`
@@ -165,85 +130,22 @@ export class PerformanceManager implements IPerformanceManager {
   }
 
   /**
-   * Check if terminal is scrolled to bottom
+   * Buffered write with scroll preservation (main API method)
    */
-  private isTerminalScrolledToBottom(terminal: {
-    buffer?: { active?: { length: number } };
-    _core?: { _scrollService?: { scrollPosition: number } };
-    rows: number;
-  }): boolean {
-    try {
-      // xterm.js buffer API to check scroll position
-      const buffer = terminal.buffer?.active;
-      if (!buffer) return true;
+  public bufferedWrite(data: string, targetTerminal: Terminal, _terminalId: string): void {
+    // Set the current terminal for buffering
+    this.currentBufferTerminal = targetTerminal;
 
-      const scrollPosition = terminal._core?._scrollService?.scrollPosition || 0;
-      const maxScrollPosition = Math.max(0, buffer.length - terminal.rows);
-
-      // Consider "bottom" if within 3 lines of actual bottom
-      const isAtBottom = scrollPosition >= maxScrollPosition - 3;
-
-      log(
-        `📊 [PERFORMANCE] Scroll check - position: ${scrollPosition}, max: ${maxScrollPosition}, atBottom: ${isAtBottom}`
-      );
-      return isAtBottom;
-    } catch (error) {
-      log(`⚠️ [PERFORMANCE] Error checking scroll position:`, error);
-      return true; // Default to bottom behavior
-    }
+    // Use existing optimization logic
+    this.scheduleOutputBuffer(data, targetTerminal);
   }
 
   /**
-   * Get current terminal scroll position
+   * Initialize the performance manager
    */
-  private getTerminalScrollTop(terminal: {
-    _core?: { _scrollService?: { scrollPosition: number } };
-  }): number | null {
-    try {
-      return terminal._core?._scrollService?.scrollPosition || 0;
-    } catch (error) {
-      log(`⚠️ [PERFORMANCE] Error getting scroll position:`, error);
-      return null;
-    }
-  }
-
-  /**
-   * Restore terminal scroll position
-   */
-  private restoreTerminalScrollPosition(
-    terminal: {
-      _core?: { _scrollService?: { scrollPosition: number } };
-      element?: { scrollTop: number };
-    },
-    scrollTop: number
-  ): void {
-    try {
-      // Use requestAnimationFrame to ensure DOM is updated
-      requestAnimationFrame(() => {
-        const coreService = terminal._core?._scrollService as
-          | { scrollToLine?: (line: number) => void }
-          | undefined;
-        if (coreService && coreService.scrollToLine) {
-          coreService.scrollToLine(scrollTop);
-          log(`🔄 [PERFORMANCE] Restored scroll position to: ${scrollTop}`);
-        } else {
-          // Fallback: scroll the DOM element
-          const element = terminal.element as
-            | { querySelector?: (selector: string) => HTMLElement | null }
-            | undefined;
-          const xtermViewport = element?.querySelector?.('.xterm-viewport') as HTMLElement;
-          if (xtermViewport) {
-            const charHeight =
-              (terminal._core as { _charMeasure?: { height: number } } | undefined)?._charMeasure
-                ?.height || 0;
-            xtermViewport.scrollTop = scrollTop * charHeight;
-            log(`🔄 [PERFORMANCE] Restored scroll via DOM: ${scrollTop}`);
-          }
-        }
-      });
-    } catch (error) {
-      log(`⚠️ [PERFORMANCE] Error restoring scroll position:`, error);
-    }
+  public initialize(coordinator: IManagerCoordinator): void {
+    this.coordinator = coordinator;
+    log('✨ [PERFORMANCE] Manager initialized');
   }
 
   /**

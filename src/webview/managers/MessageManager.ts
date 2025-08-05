@@ -356,9 +356,18 @@ export class MessageManager implements IMessageManager {
           });
         }
 
-        // Write directly to terminal (performance manager would handle buffering in a full implementation)
-        terminal.terminal.write(data);
-        log(`📥 [MESSAGE] Output written to terminal ${terminalId}: ${data.length} chars`);
+        // Use PerformanceManager for buffered write with scroll preservation
+        const managers = coordinator.getManagers();
+        if (managers && managers.performance) {
+          managers.performance.bufferedWrite(data, terminal.terminal, terminalId);
+          log(`📥 [MESSAGE] Output buffered to terminal ${terminalId}: ${data.length} chars`);
+        } else {
+          // Fallback to direct write if performance manager is not available
+          terminal.terminal.write(data);
+          log(
+            `📥 [MESSAGE] Output written directly to terminal ${terminalId}: ${data.length} chars`
+          );
+        }
 
         // CLI Agent detection disabled
       } else {
