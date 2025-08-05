@@ -10,6 +10,7 @@ import {
   TerminalCreationOptions,
   TerminalOperationResult,
 } from '../domain/interfaces/TerminalService';
+import { TerminalInstance } from '../types/common';
 import { ITerminalLifecycleManager } from '../services/TerminalLifecycleManager';
 import { ITerminalStateManager } from '../services/TerminalStateManager';
 import { OperationResultHandler as _OperationResultHandler } from '../utils/OperationResultHandler';
@@ -45,9 +46,12 @@ export class VSCodeTerminalService implements ITerminalService {
       // TODO: optionsをlifecycleManagerの形式に変換
       const terminalId = this.lifecycleManager.createTerminal();
 
-      return { success: true, data: terminalId };
+      return Promise.resolve({ success: true, data: terminalId });
     } catch (error) {
-      return { success: false, error: `Failed to create terminal: ${String(error)}` };
+      return Promise.resolve({
+        success: false,
+        error: `Failed to create terminal: ${String(error)}`,
+      });
     }
   }
 
@@ -212,21 +216,14 @@ export class VSCodeTerminalService implements ITerminalService {
   /**
    * インフラ層のターミナルをドメイン層のターミナルにマッピング
    */
-  private mapToTerminal(infraTerminal: {
-    id: string;
-    name: string;
-    number: number;
-    isActive: boolean;
-    cwd: string;
-    createdAt: Date;
-  }): Terminal {
+  private mapToTerminal(infraTerminal: TerminalInstance): Terminal {
     return {
       id: infraTerminal.id,
       name: infraTerminal.name,
       number: infraTerminal.number,
       isActive: infraTerminal.isActive,
-      cwd: infraTerminal.cwd,
-      createdAt: infraTerminal.createdAt,
+      cwd: infraTerminal.cwd || '/',
+      createdAt: infraTerminal.createdAt || Date.now(),
     };
   }
 

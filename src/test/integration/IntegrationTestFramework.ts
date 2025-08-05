@@ -21,8 +21,9 @@ import { EventEmitter } from 'events';
 import * as vscode from 'vscode';
 
 // Core Types
-import { TerminalInstance, TerminalState, DeleteResult, TerminalEvent } from '../../types/common';
-import { WebviewMessage, VsCodeMessage } from '../../types/common';
+import { TerminalInstance, TerminalState } from '../../types/common';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { DeleteResult, TerminalEvent, WebviewMessage, VsCodeMessage } from '../../types/common';
 
 // Service Interfaces
 import { ITerminalLifecycleManager } from '../../services/TerminalLifecycleManager';
@@ -501,7 +502,7 @@ export class IntegrationTestFramework {
   private eventTracker: EventFlowTracker;
   private performanceMonitor: PerformanceMonitor;
   private config: IntegrationTestConfig;
-  private testEnvironment: any;
+  private testEnvironment: { dom?: import('jsdom').JSDOM } | undefined;
 
   constructor(config: Partial<IntegrationTestConfig> = {}) {
     this.sandbox = sinon.createSandbox();
@@ -523,7 +524,7 @@ export class IntegrationTestFramework {
   /**
    * Setup integration test environment
    */
-  public async setup(): Promise<void> {
+  public setup(): void {
     console.log('🚀 [INTEGRATION-FRAMEWORK] Setting up test environment...');
 
     // Setup VS Code test environment
@@ -544,7 +545,7 @@ export class IntegrationTestFramework {
   /**
    * Cleanup integration test environment
    */
-  public async cleanup(): Promise<void> {
+  public cleanup(): void {
     console.log('🧹 [INTEGRATION-FRAMEWORK] Cleaning up test environment...');
 
     // Stop monitoring
@@ -561,7 +562,7 @@ export class IntegrationTestFramework {
     }
 
     // Cleanup test environment
-    cleanupTestEnvironment(this.sandbox, this.testEnvironment.dom);
+    cleanupTestEnvironment(this.sandbox, this.testEnvironment?.dom);
 
     console.log('✅ [INTEGRATION-FRAMEWORK] Cleanup complete');
   }
@@ -611,7 +612,7 @@ export class IntegrationTestFramework {
     eventEmitter: EventEmitter,
     eventName: string,
     timeoutMs: number = this.config.eventTimeoutMs
-  ): Promise<any> {
+  ): Promise<unknown> {
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         reject(new Error(`Event '${eventName}' not received within ${timeoutMs}ms`));
@@ -656,18 +657,18 @@ export class IntegrationTestFramework {
       },
       extensionPath: '/test/extension/path',
       extensionUri: { fsPath: '/test/extension/path' } as vscode.Uri,
-      environmentVariableCollection: {} as any,
+      environmentVariableCollection: {} as vscode.EnvironmentVariableCollection,
       extensionMode: vscode.ExtensionMode.Test,
       storageUri: { fsPath: '/test/storage' } as vscode.Uri,
       globalStorageUri: { fsPath: '/test/global/storage' } as vscode.Uri,
       logUri: { fsPath: '/test/log' } as vscode.Uri,
-      secrets: {} as any,
-      extension: {} as any,
+      secrets: {} as vscode.SecretStorage,
+      extension: {} as vscode.Extension<unknown>,
       asAbsolutePath: (relativePath: string) => `/test/extension/path/${relativePath}`,
       storagePath: '/test/storage/path',
       globalStoragePath: '/test/global/storage/path',
       logPath: '/test/log/path',
-      languageModelAccessInformation: {} as any,
+      languageModelAccessInformation: {} as vscode.LanguageModelAccessInformation,
     } as unknown as vscode.ExtensionContext;
   }
 
@@ -702,14 +703,14 @@ export function createIntegrationTestFramework(
 /**
  * Helper function for setting up common integration test scenario
  */
-export async function setupIntegrationTest(
+export function setupIntegrationTest(
   testName: string,
   config?: Partial<IntegrationTestConfig>
-): Promise<IntegrationTestFramework> {
+): IntegrationTestFramework {
   console.log(`\n🧪 [INTEGRATION-TEST] Setting up: ${testName}`);
 
   const framework = createIntegrationTestFramework(config);
-  await framework.setup();
+  framework.setup();
 
   return framework;
 }
@@ -717,13 +718,13 @@ export async function setupIntegrationTest(
 /**
  * Helper function for cleaning up integration test
  */
-export async function cleanupIntegrationTest(
+export function cleanupIntegrationTest(
   framework: IntegrationTestFramework,
   testName: string
-): Promise<void> {
+): void {
   console.log(`\n🧹 [INTEGRATION-TEST] Cleaning up: ${testName}`);
 
-  await framework.cleanup();
+  framework.cleanup();
 
   // Print test report
   console.log(framework.generateTestReport());

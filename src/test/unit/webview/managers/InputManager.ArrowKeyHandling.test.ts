@@ -8,12 +8,13 @@ import { IManagerCoordinator } from '../../../../webview/interfaces/ManagerInter
 describe('InputManager - Arrow Key Handling', () => {
   let dom: JSDOM;
   let inputManager: InputManager;
-  let mockCoordinator: sinon.SinonStubbedInstance<IManagerCoordinator>;
+  let _mockCoordinator: sinon.SinonStubbedInstance<IManagerCoordinator>;
   let mockVsCodeApi: sinon.SinonStub;
 
   beforeEach(() => {
     // Setup DOM environment
-    dom = new JSDOM(`
+    dom = new JSDOM(
+      `
       <!DOCTYPE html>
       <html>
         <body>
@@ -24,9 +25,11 @@ describe('InputManager - Arrow Key Handling', () => {
           </div>
         </body>
       </html>
-    `, { url: 'http://localhost' });
+    `,
+      { url: 'http://localhost' }
+    );
 
-    global.window = dom.window as any;
+    global.window = dom.window as unknown as Window & typeof globalThis;
     global.document = dom.window.document;
     global.HTMLElement = dom.window.HTMLElement;
     global.Event = dom.window.Event;
@@ -34,13 +37,16 @@ describe('InputManager - Arrow Key Handling', () => {
 
     // Mock VS Code API
     mockVsCodeApi = sinon.stub();
-    (global.window as any).acquireVsCodeApi = () => ({
-      postMessage: mockVsCodeApi
+    (
+      global.window as { acquireVsCodeApi?: () => { postMessage: sinon.SinonStub } }
+    ).acquireVsCodeApi = () => ({
+      postMessage: mockVsCodeApi,
     });
 
     // Create mock coordinator
-    mockCoordinator = {
-      getActiveTerminalId: sinon.stub().returns('terminal-1') as (() => string | null) & sinon.SinonStub<[], string | null>,
+    _mockCoordinator = {
+      getActiveTerminalId: sinon.stub().returns('terminal-1') as (() => string | null) &
+        sinon.SinonStub<[], string | null>,
       setActiveTerminalId: sinon.stub(),
       getTerminalInstance: sinon.stub(),
       getAllTerminalInstances: sinon.stub(),
@@ -48,8 +54,12 @@ describe('InputManager - Arrow Key Handling', () => {
       getTerminalElement: sinon.stub(),
       postMessageToExtension: sinon.stub(),
       log: sinon.stub(),
-      getManagers: sinon.stub()
-    };
+      createTerminal: sinon.stub(),
+      openSettings: sinon.stub(),
+      applyFontSettings: sinon.stub(),
+      closeTerminal: sinon.stub(),
+      getManagers: sinon.stub(),
+    } as unknown as sinon.SinonStubbedInstance<IManagerCoordinator>;
 
     inputManager = new InputManager();
   });
@@ -77,9 +87,9 @@ describe('InputManager - Arrow Key Handling', () => {
 
     it('should setup arrow key handler when agent interaction mode is enabled', () => {
       const addEventListenerSpy = sinon.spy(document, 'addEventListener');
-      
+
       inputManager.setAgentInteractionMode(true);
-      
+
       expect(addEventListenerSpy.calledWith('keydown', sinon.match.func, true)).to.be.true;
     });
   });
@@ -93,7 +103,7 @@ describe('InputManager - Arrow Key Handling', () => {
       const event = new dom.window.KeyboardEvent('keydown', {
         key: 'ArrowUp',
         bubbles: true,
-        cancelable: true
+        cancelable: true,
       });
 
       const preventDefaultSpy = sinon.spy(event, 'preventDefault');
@@ -111,7 +121,7 @@ describe('InputManager - Arrow Key Handling', () => {
         { key: 'ArrowUp', expected: '\x1b[A' },
         { key: 'ArrowDown', expected: '\x1b[B' },
         { key: 'ArrowRight', expected: '\x1b[C' },
-        { key: 'ArrowLeft', expected: '\x1b[D' }
+        { key: 'ArrowLeft', expected: '\x1b[D' },
       ];
 
       arrowKeyTests.forEach(({ key, expected }) => {
@@ -120,7 +130,7 @@ describe('InputManager - Arrow Key Handling', () => {
         const event = new dom.window.KeyboardEvent('keydown', {
           key,
           bubbles: true,
-          cancelable: true
+          cancelable: true,
         });
 
         document.dispatchEvent(event);
@@ -129,7 +139,7 @@ describe('InputManager - Arrow Key Handling', () => {
         expect(mockVsCodeApi.firstCall.args[0]).to.deep.include({
           command: 'input',
           data: expected,
-          terminalId: 'terminal-1'
+          terminalId: 'terminal-1',
         });
       });
     });
@@ -138,11 +148,11 @@ describe('InputManager - Arrow Key Handling', () => {
       const event = new dom.window.KeyboardEvent('keydown', {
         key: 'Enter',
         bubbles: true,
-        cancelable: true
+        cancelable: true,
       });
 
       const preventDefaultSpy = sinon.spy(event, 'preventDefault');
-      
+
       document.dispatchEvent(event);
 
       expect(preventDefaultSpy.called).to.be.false;
@@ -158,11 +168,11 @@ describe('InputManager - Arrow Key Handling', () => {
       const event = new dom.window.KeyboardEvent('keydown', {
         key: 'ArrowUp',
         bubbles: true,
-        cancelable: true
+        cancelable: true,
       });
 
       const preventDefaultSpy = sinon.spy(event, 'preventDefault');
-      
+
       document.dispatchEvent(event);
 
       expect(preventDefaultSpy.called).to.be.false;
@@ -175,11 +185,11 @@ describe('InputManager - Arrow Key Handling', () => {
       const event = new dom.window.KeyboardEvent('keydown', {
         key: 'ArrowUp',
         bubbles: true,
-        cancelable: true
+        cancelable: true,
       });
 
       const preventDefaultSpy = sinon.spy(event, 'preventDefault');
-      
+
       document.dispatchEvent(event);
 
       expect(preventDefaultSpy.called).to.be.false;
@@ -190,7 +200,7 @@ describe('InputManager - Arrow Key Handling', () => {
   describe('Cleanup and Disposal', () => {
     it('should remove arrow key listener on disposal', () => {
       const removeEventListenerSpy = sinon.spy(document, 'removeEventListener');
-      
+
       inputManager.setAgentInteractionMode(true);
       inputManager.dispose();
 
@@ -199,7 +209,7 @@ describe('InputManager - Arrow Key Handling', () => {
 
     it('should clear arrow key modes on disposal', () => {
       inputManager.setAgentInteractionMode(true);
-      
+
       inputManager.dispose();
 
       expect(inputManager.isAgentInteractionMode()).to.equal(false);
@@ -217,11 +227,11 @@ describe('InputManager - Arrow Key Handling', () => {
       const event = new dom.window.KeyboardEvent('keydown', {
         key: 'ArrowUp',
         bubbles: true,
-        cancelable: true
+        cancelable: true,
       });
 
       const preventDefaultSpy = sinon.spy(event, 'preventDefault');
-      
+
       // Should not throw an error
       expect(() => document.dispatchEvent(event)).to.not.throw();
       expect(preventDefaultSpy.called).to.be.false;
@@ -236,11 +246,11 @@ describe('InputManager - Arrow Key Handling', () => {
       const event = new dom.window.KeyboardEvent('keydown', {
         key: 'ArrowUp',
         bubbles: true,
-        cancelable: true
+        cancelable: true,
       });
 
       const preventDefaultSpy = sinon.spy(event, 'preventDefault');
-      
+
       expect(() => document.dispatchEvent(event)).to.not.throw();
       expect(preventDefaultSpy.called).to.be.false;
     });

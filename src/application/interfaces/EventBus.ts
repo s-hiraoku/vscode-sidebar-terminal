@@ -95,7 +95,7 @@ export class EventBus implements IEventBus {
     const subscriptionId = `${eventType}-${++this.subscriptionIdCounter}`;
     const eventSubscribers = this.subscribers.get(eventType);
     if (eventSubscribers) {
-      eventSubscribers.set(subscriptionId, callback);
+      eventSubscribers.set(subscriptionId, callback as EventCallback<unknown>);
     }
 
     return subscriptionId;

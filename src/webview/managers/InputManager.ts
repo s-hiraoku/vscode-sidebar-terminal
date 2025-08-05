@@ -238,7 +238,7 @@ export class InputManager implements IInputManager {
     if (this.agentInteractionMode !== enabled) {
       this.agentInteractionMode = enabled;
       log(`🎯 [INPUT] Agent interaction mode: ${enabled}`);
-      
+
       if (enabled && !this.arrowKeyListener) {
         this.setupAgentArrowKeyHandler();
       } else if (!enabled && this.arrowKeyListener) {
@@ -287,9 +287,11 @@ export class InputManager implements IInputManager {
       // Prevent default scrolling for arrow keys during agent interactions
       event.preventDefault();
       event.stopPropagation();
-      
-      log(`🎯 [INPUT] Arrow key ${event.key} handled for agent interaction in terminal ${terminalId}`);
-      
+
+      log(
+        `🎯 [INPUT] Arrow key ${event.key} handled for agent interaction in terminal ${terminalId}`
+      );
+
       // Send arrow key to terminal
       this.sendArrowKeyToTerminal(event.key, terminalId);
     };
@@ -302,15 +304,18 @@ export class InputManager implements IInputManager {
    */
   private sendArrowKeyToTerminal(key: string, terminalId: string): void {
     const sequences: Record<string, string> = {
-      'ArrowUp': '\x1b[A',
-      'ArrowDown': '\x1b[B', 
-      'ArrowRight': '\x1b[C',
-      'ArrowLeft': '\x1b[D',
+      ArrowUp: '\x1b[A',
+      ArrowDown: '\x1b[B',
+      ArrowRight: '\x1b[C',
+      ArrowLeft: '\x1b[D',
     };
 
     const sequence = sequences[key];
     if (sequence) {
-      const api = (window as any).acquireVsCodeApi?.();
+      const vsCodeWindow = window as {
+        acquireVsCodeApi?: () => { postMessage: (message: unknown) => void };
+      };
+      const api = vsCodeWindow.acquireVsCodeApi?.();
       if (api) {
         api.postMessage({
           command: 'input',

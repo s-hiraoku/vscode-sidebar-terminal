@@ -1179,22 +1179,30 @@ class TerminalWebviewManager {
   /**
    * Write to terminal with simple scroll preservation
    */
-  private writeWithScrollPreservation(terminal: any, data: string, terminalId: string): void {
+  private writeWithScrollPreservation(
+    terminal: {
+      write: (data: string) => void;
+      buffer?: { active?: { length: number } };
+      element?: { querySelector: (selector: string) => Element | null };
+    },
+    data: string,
+    terminalId: string
+  ): void {
     try {
       // Get scroll info before write
       const wasAtBottom = this.isAtBottom(terminal);
       const scrollTop = wasAtBottom ? null : this.getScrollTop(terminal);
-      
+
       // Write the data
       terminal.write(data);
-      
+
       // Restore scroll position if not at bottom
       if (!wasAtBottom && scrollTop !== null) {
         setTimeout(() => {
           this.setScrollTop(terminal, scrollTop);
         }, 10); // Small delay to ensure content is rendered
       }
-      
+
       log(`📤 [WEBVIEW] Write with scroll preservation to ${terminalId}: ${data.length} chars`);
     } catch (error) {
       log(`⚠️ [WEBVIEW] Error in scroll preservation, fallback to normal write:`, error);
@@ -1205,36 +1213,46 @@ class TerminalWebviewManager {
   /**
    * Simple scroll position helpers
    */
-  private isAtBottom(terminal: any): boolean {
+  private isAtBottom(terminal: {
+    buffer?: { active?: { length: number } };
+    element?: { querySelector: (selector: string) => Element | null };
+  }): boolean {
     try {
       const buffer = terminal.buffer?.active;
       if (!buffer) return true;
-      
-      const viewport = terminal.element?.querySelector('.xterm-viewport');
+
+      const viewport = terminal.element?.querySelector('.xterm-viewport') as HTMLElement | null;
       if (!viewport) return true;
-      
+
       const scrollTop = viewport.scrollTop;
       const scrollHeight = viewport.scrollHeight;
       const clientHeight = viewport.clientHeight;
-      
+
       return scrollTop + clientHeight >= scrollHeight - 50; // 50px tolerance
     } catch {
       return true; // Default to bottom
     }
   }
 
-  private getScrollTop(terminal: any): number | null {
+  private getScrollTop(terminal: {
+    element?: { querySelector: (selector: string) => Element | null };
+  }): number | null {
     try {
-      const viewport = terminal.element?.querySelector('.xterm-viewport');
+      const viewport = terminal.element?.querySelector('.xterm-viewport') as HTMLElement | null;
       return viewport ? viewport.scrollTop : null;
     } catch {
       return null;
     }
   }
 
-  private setScrollTop(terminal: any, scrollTop: number): void {
+  private setScrollTop(
+    terminal: {
+      element?: { querySelector: (selector: string) => Element | null };
+    },
+    scrollTop: number
+  ): void {
     try {
-      const viewport = terminal.element?.querySelector('.xterm-viewport');
+      const viewport = terminal.element?.querySelector('.xterm-viewport') as HTMLElement | null;
       if (viewport) {
         viewport.scrollTop = scrollTop;
       }
@@ -1246,18 +1264,27 @@ class TerminalWebviewManager {
   /**
    * Restore terminal scroll position
    */
-  private restoreScrollPosition(terminal: any, scrollPosition: number): void {
+  private restoreScrollPosition(
+    terminal: {
+      _core?: { _scrollService?: { scrollPosition: number } };
+      element?: { querySelector: (selector: string) => Element | null };
+    },
+    scrollPosition: number
+  ): void {
     try {
       // Use requestAnimationFrame to ensure content is rendered
       requestAnimationFrame(() => {
         if (terminal._core?._scrollService) {
-          terminal._core._scrollService.scrollToLine(scrollPosition);
+          (
+            terminal._core._scrollService as unknown as { scrollToLine: (line: number) => void }
+          ).scrollToLine(scrollPosition);
           log(`🔄 [WEBVIEW] Restored scroll to line: ${scrollPosition}`);
         } else {
           // Fallback: try viewport scrolling
-          const viewport = terminal.element?.querySelector('.xterm-viewport');
+          const viewport = terminal.element?.querySelector('.xterm-viewport') as HTMLElement | null;
           if (viewport) {
-            const lineHeight = terminal._core?._charMeasure?.height || 16;
+            const lineHeight =
+              (terminal._core as { _charMeasure?: { height: number } })?._charMeasure?.height || 16;
             viewport.scrollTop = scrollPosition * lineHeight;
             log(`🔄 [WEBVIEW] Restored scroll via viewport: ${scrollPosition}`);
           }
@@ -1429,49 +1456,49 @@ class TerminalWebviewManager {
 
       // Set new CONNECTED terminal
       this.currentConnectedAgentId = terminalId;
-      this.cliAgentStates.set(terminalId, { 
-        status: 'connected', 
-        terminalName, 
+      this.cliAgentStates.set(terminalId, {
+        status: 'connected',
+        terminalName,
         agentType,
         preserveScrollPosition: true, // Enable scroll preservation for connected agents
       });
       this.uiManager.updateCliAgentStatusDisplay(terminalName, 'connected', agentType);
-      
+
       // Enable agent interaction mode for connected agents
       this.inputManager.setAgentInteractionMode(true);
-      
+
       // Enable CLI Agent mode for performance optimization
       this.performanceManager.setCliAgentMode(true);
-      
+
       log(`✅ [CLI-AGENT] Terminal ${terminalId} → CONNECTED (Latest Takes Priority)`);
     } else if (status === 'disconnected') {
       // Terminal becomes DISCONNECTED (but keeps CLI Agent)
       const existingState = this.cliAgentStates.get(terminalId);
-      this.cliAgentStates.set(terminalId, { 
-        status: 'disconnected', 
-        terminalName, 
+      this.cliAgentStates.set(terminalId, {
+        status: 'disconnected',
+        terminalName,
         agentType,
         preserveScrollPosition: existingState?.preserveScrollPosition || true,
         isDisplayingChoices: existingState?.isDisplayingChoices || false,
         lastChoiceDetected: existingState?.lastChoiceDetected || 0,
       });
       this.uiManager.updateCliAgentStatusDisplay(terminalName, 'disconnected', agentType);
-      
+
       // Keep agent interaction mode enabled for disconnected agents (they might reconnect)
       this.inputManager.setAgentInteractionMode(true);
-      
+
       // Keep CLI Agent mode enabled for performance optimization (disconnected agents might have residual output)
       this.performanceManager.setCliAgentMode(true);
-      
+
       log(`🟡 [CLI-AGENT] Terminal ${terminalId} → DISCONNECTED`);
     } else if (status === 'none') {
       // Remove CLI Agent status completely and reset choice state
       this.cliAgentStates.delete(terminalId);
       this.uiManager.updateCliAgentStatusDisplay(terminalName, 'none', null);
-      
+
       // Disable agent interaction mode when no agent is present
       this.inputManager.setAgentInteractionMode(false);
-      
+
       // Disable CLI Agent mode for performance optimization
       this.performanceManager.setCliAgentMode(false);
 
@@ -1532,9 +1559,7 @@ class TerminalWebviewManager {
     }
 
     // Check if this looks like agent output
-    const isAgentOutput = this.AGENT_OUTPUT_PATTERNS.some(pattern => 
-      pattern.test(output)
-    );
+    const isAgentOutput = this.AGENT_OUTPUT_PATTERNS.some((pattern) => pattern.test(output));
 
     if (isAgentOutput) {
       // Enable scroll preservation for this terminal
@@ -1542,7 +1567,9 @@ class TerminalWebviewManager {
         ...agentState,
         preserveScrollPosition: true,
       });
-      log(`🤖 [CLI-AGENT] Agent output detected, enabling scroll preservation for terminal ${terminalId}`);
+      log(
+        `🤖 [CLI-AGENT] Agent output detected, enabling scroll preservation for terminal ${terminalId}`
+      );
     }
   }
 
