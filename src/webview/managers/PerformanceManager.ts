@@ -44,24 +44,26 @@ export class PerformanceManager implements IPerformanceManager {
 
     if (shouldFlushImmediately) {
       this.flushOutputBuffer();
-      
+
       // 🎯 NEW: Preserve scroll position for immediate writes too
       const wasAtBottom = this.isTerminalScrolledToBottom(targetTerminal);
       const scrollTop = this.getTerminalScrollTop(targetTerminal);
-      
+
       targetTerminal.write(data);
-      
+
       // Restore scroll position if user wasn't at bottom
       if (!wasAtBottom && scrollTop !== null) {
         this.restoreTerminalScrollPosition(targetTerminal, scrollTop);
       }
-      
+
       const reason = this.isCliAgentMode
         ? 'CLI Agent mode'
         : isLargeOutput
           ? 'large output'
           : 'buffer full';
-      log(`📤 [PERFORMANCE] Immediate write: ${data.length} chars (${reason}, scroll preserved: ${!wasAtBottom})`);
+      log(
+        `📤 [PERFORMANCE] Immediate write: ${data.length} chars (${reason}, scroll preserved: ${!wasAtBottom})`
+      );
     } else {
       this.outputBuffer.push(data);
       this.scheduleBufferFlush();
@@ -115,15 +117,17 @@ export class PerformanceManager implements IPerformanceManager {
         // 🎯 NEW: Preserve scroll position during agent output
         const wasAtBottom = this.isTerminalScrolledToBottom(this.currentBufferTerminal);
         const scrollTop = this.getTerminalScrollTop(this.currentBufferTerminal);
-        
+
         this.currentBufferTerminal.write(bufferedData);
-        
+
         // Restore scroll position if user wasn't at bottom
         if (!wasAtBottom && scrollTop !== null) {
           this.restoreTerminalScrollPosition(this.currentBufferTerminal, scrollTop);
         }
-        
-        log(`📤 [PERFORMANCE] Flushed buffer: ${bufferedData.length} chars (scroll preserved: ${!wasAtBottom})`);
+
+        log(
+          `📤 [PERFORMANCE] Flushed buffer: ${bufferedData.length} chars (scroll preserved: ${!wasAtBottom})`
+        );
       } else {
         log(
           `⚠️ [PERFORMANCE] No terminal available for buffer flush: ${bufferedData.length} chars lost`
@@ -143,11 +147,13 @@ export class PerformanceManager implements IPerformanceManager {
 
       const scrollPosition = terminal._core?._scrollService?.scrollPosition || 0;
       const maxScrollPosition = Math.max(0, buffer.length - terminal.rows);
-      
+
       // Consider "bottom" if within 3 lines of actual bottom
       const isAtBottom = scrollPosition >= maxScrollPosition - 3;
-      
-      log(`📊 [PERFORMANCE] Scroll check - position: ${scrollPosition}, max: ${maxScrollPosition}, atBottom: ${isAtBottom}`);
+
+      log(
+        `📊 [PERFORMANCE] Scroll check - position: ${scrollPosition}, max: ${maxScrollPosition}, atBottom: ${isAtBottom}`
+      );
       return isAtBottom;
     } catch (error) {
       log(`⚠️ [PERFORMANCE] Error checking scroll position:`, error);

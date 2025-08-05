@@ -24,6 +24,7 @@ interface MessageCommand {
     activeTerminalName: string | null;
     status: 'connected' | 'disconnected' | 'none';
     agentType: string | null;
+    terminalId?: string; // 🛠️ FIX: Add terminalId for reliable status updates
   };
   [key: string]: unknown;
 }
@@ -546,13 +547,28 @@ export class MessageManager implements IMessageManager {
     const cliAgentStatus = msg.cliAgentStatus;
     if (cliAgentStatus) {
       log(
-        `🔄 [MESSAGE] Processing status update: ${cliAgentStatus.status} for ${cliAgentStatus.activeTerminalName}`
+        `🔄 [MESSAGE] Processing status update: ${cliAgentStatus.status} for ${cliAgentStatus.activeTerminalName} (ID: ${cliAgentStatus.terminalId})`
       );
 
       try {
-        // Use the new centralized CLI agent status management system
-        // Extract terminal ID from terminal name (e.g., "Terminal 1" -> "1")
-        const terminalId = cliAgentStatus.activeTerminalName?.replace('Terminal ', '') || '1';
+        // 🛠️ FIX: Use terminalId directly if available, fallback to extracting from name
+        let terminalId: string;
+
+        if (cliAgentStatus.terminalId) {
+          // Use the provided terminalId directly (most reliable)
+          terminalId = cliAgentStatus.terminalId;
+          log(`🎯 [MESSAGE] Using provided terminalId: ${terminalId}`);
+        } else if (cliAgentStatus.activeTerminalName) {
+          // Fallback: Extract terminal ID from terminal name (e.g., "Terminal 1" -> "1")
+          terminalId = cliAgentStatus.activeTerminalName.replace('Terminal ', '') || '1';
+          log(`🔍 [MESSAGE] Extracted terminalId from name: ${terminalId}`);
+        } else {
+          // Last resort: Find terminal by status (for termination cases)
+          const allTerminals = coordinator.getAllTerminalInstances();
+          const connectedTerminal = Array.from(allTerminals.keys())[0]; // Use first terminal as fallback
+          terminalId = connectedTerminal || '1';
+          log(`⚠️ [MESSAGE] Using fallback terminalId: ${terminalId}`);
+        }
 
         // Map legacy status to new status format
         const mappedStatus = this.mapLegacyStatus(cliAgentStatus.status);
