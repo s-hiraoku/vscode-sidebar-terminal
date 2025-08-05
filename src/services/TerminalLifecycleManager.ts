@@ -308,7 +308,9 @@ export class TerminalLifecycleManager implements ITerminalLifecycleManager {
     this._terminalDataEmitter.dispose();
 
     // Disposableを解放
-    this._disposables.forEach((d) => d.dispose());
+    this._disposables.forEach((d) => {
+      d.dispose();
+    });
     this._disposables.length = 0;
 
     // データ構造をクリア
@@ -323,23 +325,27 @@ export class TerminalLifecycleManager implements ITerminalLifecycleManager {
   /**
    * pty プロセスを作成
    */
-  private createPtyProcess(config: any): any {
+  private createPtyProcess(config: Record<string, unknown>): unknown {
     const terminalConfig = getTerminalConfig();
     const shell = getShellForPlatform(terminalConfig.shell);
     const cwd = getWorkingDirectory();
+
+    const configEnv = config.env as Record<string, string> | undefined;
+    const configPtyOptions = config.ptyOptions as Record<string, unknown> | undefined;
+    const configShellArgs = config.shellArgs as string[] | undefined;
 
     const ptyOptions = {
       name: 'xterm-color',
       cols: 80,
       rows: 30,
       cwd,
-      env: { ...process.env, ...config.env },
-      ...config.ptyOptions,
+      env: { ...process.env, ...configEnv },
+      ...configPtyOptions,
     };
 
     log(`🔧 [LIFECYCLE] Creating pty: ${shell} with options:`, ptyOptions);
 
-    return pty.spawn(shell, config.shellArgs || [], ptyOptions);
+    return pty.spawn(shell, configShellArgs || [], ptyOptions) as unknown;
   }
 
   /**
@@ -351,25 +357,34 @@ export class TerminalLifecycleManager implements ITerminalLifecycleManager {
     }
 
     // データイベント
-    const dataHandler = (data: string) => {
+    const dataHandler = (data: string): void => {
       this._terminalDataEmitter.fire({ terminalId: terminal.id, data });
     };
-    terminal.pty.on('data', dataHandler);
+    (terminal.pty as { on: (event: string, handler: (data: string) => void) => void }).on(
+      'data',
+      dataHandler
+    );
 
     // 終了イベント
-    const exitHandler = (exitCode: number) => {
+    const exitHandler = (exitCode: number): void => {
       log(`🔚 [LIFECYCLE] Terminal exited: ${terminal.name} (code: ${exitCode})`);
       this._terminalExitEmitter.fire({ terminalId: terminal.id, exitCode });
       this.removeTerminal(terminal.id);
     };
-    terminal.pty.on('exit', exitHandler);
+    (terminal.pty as { on: (event: string, handler: (exitCode: number) => void) => void }).on(
+      'exit',
+      exitHandler
+    );
 
     // エラーイベント
-    const errorHandler = (error: Error) => {
+    const errorHandler = (error: Error): void => {
       log(`❌ [LIFECYCLE] Terminal error: ${terminal.name} - ${String(error)}`);
       this.removeTerminal(terminal.id);
     };
-    terminal.pty.on('error', errorHandler);
+    (terminal.pty as { on: (event: string, handler: (error: Error) => void) => void }).on(
+      'error',
+      errorHandler
+    );
   }
 
   /**
@@ -393,8 +408,9 @@ export class TerminalLifecycleManager implements ITerminalLifecycleManager {
       log(`🔪 [LIFECYCLE] Killing terminal: ${terminal.name} (${terminalId})`);
 
       // pty プロセスを終了
-      if (terminal.pty && typeof terminal.pty.kill === 'function') {
-        terminal.pty.kill();
+      const ptyProcess = terminal.pty as { kill?: () => void } | undefined;
+      if (ptyProcess && typeof ptyProcess.kill === 'function') {
+        ptyProcess.kill();
       }
 
       // 少し待機してからマップから削除
@@ -420,8 +436,9 @@ export class TerminalLifecycleManager implements ITerminalLifecycleManager {
     }
 
     try {
-      if (terminal.pty && typeof terminal.pty.kill === 'function') {
-        terminal.pty.kill();
+      const ptyProcess = terminal.pty as { kill?: () => void } | undefined;
+      if (ptyProcess && typeof ptyProcess.kill === 'function') {
+        ptyProcess.kill();
       }
       this.removeTerminal(terminalId);
     } catch (error) {

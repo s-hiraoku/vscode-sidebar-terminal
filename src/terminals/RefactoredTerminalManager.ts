@@ -64,7 +64,7 @@ export class RefactoredTerminalManager {
   public readonly onTerminalFocus = this._terminalFocusEmitter.event;
 
   // onStateUpdate will be initialized after stateManager is created
-  public get onStateUpdate(): vscode.Event<any> {
+  public get onStateUpdate(): vscode.Event<unknown> {
     return this.stateManager.onStateUpdate;
   }
 

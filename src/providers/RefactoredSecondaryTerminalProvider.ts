@@ -310,10 +310,10 @@ export class RefactoredSecondaryTerminalProvider implements vscode.WebviewViewPr
    */
   private async handleCreateTerminal(_message: VsCodeMessage): Promise<void> {
     const result = await OperationResultHandler.handleTerminalOperation(
-      async () => {
+      () => {
         const terminalId = this.lifecycleManager.createTerminal();
         this.stateManager.setActiveTerminal(terminalId);
-        return OperationResultHandler.success(terminalId);
+        return Promise.resolve(OperationResultHandler.success(terminalId));
       },
       'CREATE-TERMINAL',
       'Terminal created successfully',
@@ -321,7 +321,7 @@ export class RefactoredSecondaryTerminalProvider implements vscode.WebviewViewPr
     );
 
     if (result && this.config.enableAutoFocus) {
-      this.stateManager.setActiveTerminal(result);
+      this.stateManager.setActiveTerminal(String(result));
     }
   }
 

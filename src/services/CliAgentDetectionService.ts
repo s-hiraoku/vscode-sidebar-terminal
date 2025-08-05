@@ -30,11 +30,11 @@ export class CliAgentPatternDetector implements ICliAgentPatternDetector {
   detectClaudeStartup(cleanLine: string): boolean {
     const line = cleanLine.toLowerCase();
 
-    // 🚨 FIXED: Exclude permission messages and documentation mentions but allow legitimate startup patterns
+    // 🚨 FIXED: Exclude only specific non-startup messages with more precise patterns
     if (
-      line.includes('may read') ||
-      line.includes('documentation is available') ||
-      line.includes('files are located')
+      line.includes('claude may read') || // Permission messages
+      line.includes('documentation is available at') || // URL references
+      line.includes('configuration files are located') // Configuration paths
     ) {
       return false;
     }
@@ -81,11 +81,11 @@ export class CliAgentPatternDetector implements ICliAgentPatternDetector {
   detectGeminiStartup(cleanLine: string): boolean {
     const line = cleanLine.toLowerCase();
 
-    // 🚨 FIXED: Exclude update notifications and other non-startup messages
+    // 🚨 FIXED: Exclude only specific update notifications with more precise patterns
     if (
-      line.includes('update available') ||
-      line.includes('available!') ||
-      line.includes('model is available')
+      line.includes('update available:') || // Update notifications with colon
+      (line.includes('version') && line.includes('available!')) || // Version updates
+      line.includes('new model is available') // Model availability announcements
     ) {
       return false;
     }
@@ -532,6 +532,62 @@ export class CliAgentDetectionConfig implements ICliAgentDetectionConfig {
 }
 
 /**
+ * LRU Cache Implementation for Detection Cache
+ */
+class LRUCache<K, V> {
+  private cache: Map<K, V> = new Map();
+  private readonly maxSize: number;
+
+  constructor(maxSize: number = 100) {
+    this.maxSize = maxSize;
+  }
+
+  get(key: K): V | undefined {
+    const value = this.cache.get(key);
+    if (value !== undefined) {
+      // Move to end (most recently used)
+      this.cache.delete(key);
+      this.cache.set(key, value);
+    }
+    return value;
+  }
+
+  set(key: K, value: V): void {
+    // Remove old entry if exists
+    if (this.cache.has(key)) {
+      this.cache.delete(key);
+    }
+
+    // Add new entry
+    this.cache.set(key, value);
+
+    // Remove least recently used if over capacity
+    if (this.cache.size > this.maxSize) {
+      const firstKey = this.cache.keys().next().value;
+      if (firstKey !== undefined) {
+        this.cache.delete(firstKey);
+      }
+    }
+  }
+
+  has(key: K): boolean {
+    return this.cache.has(key);
+  }
+
+  delete(key: K): boolean {
+    return this.cache.delete(key);
+  }
+
+  clear(): void {
+    this.cache.clear();
+  }
+
+  get size(): number {
+    return this.cache.size;
+  }
+}
+
+/**
  * Main CLI Agent Detection Service Implementation
  */
 export class CliAgentDetectionService implements ICliAgentDetectionService {
@@ -539,8 +595,8 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
   private readonly stateManager: ICliAgentStateManager;
   private readonly configManager: ICliAgentDetectionConfig;
 
-  // Detection cache and optimization
-  private readonly detectionCache = new Map<string, DetectionCacheEntry>();
+  // Detection cache with LRU eviction
+  private readonly detectionCache: LRUCache<string, DetectionCacheEntry>;
 
   constructor(
     patternDetector?: ICliAgentPatternDetector,
@@ -550,6 +606,9 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
     this.patternDetector = patternDetector || new CliAgentPatternDetector();
     this.stateManager = stateManager || new CliAgentStateManager();
     this.configManager = configManager || new CliAgentDetectionConfig();
+
+    // Initialize LRU cache with reasonable size limit
+    this.detectionCache = new LRUCache<string, DetectionCacheEntry>(50);
   }
 
   // =================== Detection Methods ===================

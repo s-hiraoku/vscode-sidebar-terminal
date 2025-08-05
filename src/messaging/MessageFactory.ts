@@ -20,6 +20,7 @@ interface BaseMessageData {
 /**
  * 統一されたメッセージファクトリー
  */
+// eslint-disable-next-line @typescript-eslint/no-extraneous-class
 export class MessageFactory {
   /**
    * 基本的なターミナルメッセージを作成

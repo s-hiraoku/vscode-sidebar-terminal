@@ -312,7 +312,10 @@ export class InputManager implements IInputManager {
 
     const sequence = sequences[key];
     if (sequence) {
-      const api = (window as any).acquireVsCodeApi?.();
+      const vsCodeWindow = window as {
+        acquireVsCodeApi?: () => { postMessage: (message: unknown) => void };
+      };
+      const api = vsCodeWindow.acquireVsCodeApi?.();
       if (api) {
         api.postMessage({
           command: 'input',

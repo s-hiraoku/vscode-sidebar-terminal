@@ -1179,7 +1179,15 @@ class TerminalWebviewManager {
   /**
    * Write to terminal with simple scroll preservation
    */
-  private writeWithScrollPreservation(terminal: any, data: string, terminalId: string): void {
+  private writeWithScrollPreservation(
+    terminal: {
+      write: (data: string) => void;
+      buffer?: { active?: { length: number } };
+      element?: { querySelector: (selector: string) => Element | null };
+    },
+    data: string,
+    terminalId: string
+  ): void {
     try {
       // Get scroll info before write
       const wasAtBottom = this.isAtBottom(terminal);
@@ -1205,12 +1213,19 @@ class TerminalWebviewManager {
   /**
    * Simple scroll position helpers
    */
-  private isAtBottom(terminal: any): boolean {
+  private isAtBottom(terminal: {
+    buffer?: { active?: { length: number } };
+    element?: { querySelector: (selector: string) => Element | null };
+  }): boolean {
     try {
       const buffer = terminal.buffer?.active;
       if (!buffer) return true;
 
+<<<<<<< HEAD
       const viewport = terminal.element?.querySelector('.xterm-viewport');
+=======
+      const viewport = terminal.element?.querySelector('.xterm-viewport') as HTMLElement | null;
+>>>>>>> 3214ee9 (feat: PR #145 code review fixes and quality improvements)
       if (!viewport) return true;
 
       const scrollTop = viewport.scrollTop;
@@ -1223,18 +1238,25 @@ class TerminalWebviewManager {
     }
   }
 
-  private getScrollTop(terminal: any): number | null {
+  private getScrollTop(terminal: {
+    element?: { querySelector: (selector: string) => Element | null };
+  }): number | null {
     try {
-      const viewport = terminal.element?.querySelector('.xterm-viewport');
+      const viewport = terminal.element?.querySelector('.xterm-viewport') as HTMLElement | null;
       return viewport ? viewport.scrollTop : null;
     } catch {
       return null;
     }
   }
 
-  private setScrollTop(terminal: any, scrollTop: number): void {
+  private setScrollTop(
+    terminal: {
+      element?: { querySelector: (selector: string) => Element | null };
+    },
+    scrollTop: number
+  ): void {
     try {
-      const viewport = terminal.element?.querySelector('.xterm-viewport');
+      const viewport = terminal.element?.querySelector('.xterm-viewport') as HTMLElement | null;
       if (viewport) {
         viewport.scrollTop = scrollTop;
       }
@@ -1246,18 +1268,27 @@ class TerminalWebviewManager {
   /**
    * Restore terminal scroll position
    */
-  private restoreScrollPosition(terminal: any, scrollPosition: number): void {
+  private restoreScrollPosition(
+    terminal: {
+      _core?: { _scrollService?: { scrollPosition: number } };
+      element?: { querySelector: (selector: string) => Element | null };
+    },
+    scrollPosition: number
+  ): void {
     try {
       // Use requestAnimationFrame to ensure content is rendered
       requestAnimationFrame(() => {
         if (terminal._core?._scrollService) {
-          terminal._core._scrollService.scrollToLine(scrollPosition);
+          (
+            terminal._core._scrollService as unknown as { scrollToLine: (line: number) => void }
+          ).scrollToLine(scrollPosition);
           log(`🔄 [WEBVIEW] Restored scroll to line: ${scrollPosition}`);
         } else {
           // Fallback: try viewport scrolling
-          const viewport = terminal.element?.querySelector('.xterm-viewport');
+          const viewport = terminal.element?.querySelector('.xterm-viewport') as HTMLElement | null;
           if (viewport) {
-            const lineHeight = terminal._core?._charMeasure?.height || 16;
+            const lineHeight =
+              (terminal._core as { _charMeasure?: { height: number } })?._charMeasure?.height || 16;
             viewport.scrollTop = scrollPosition * lineHeight;
             log(`🔄 [WEBVIEW] Restored scroll via viewport: ${scrollPosition}`);
           }

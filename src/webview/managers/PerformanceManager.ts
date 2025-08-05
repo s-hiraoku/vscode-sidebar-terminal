@@ -46,8 +46,18 @@ export class PerformanceManager implements IPerformanceManager {
       this.flushOutputBuffer();
 
       // 🎯 NEW: Preserve scroll position for immediate writes too
-      const wasAtBottom = this.isTerminalScrolledToBottom(targetTerminal);
-      const scrollTop = this.getTerminalScrollTop(targetTerminal);
+      const wasAtBottom = this.isTerminalScrolledToBottom(
+        targetTerminal as unknown as {
+          buffer?: { active?: { length: number } };
+          _core?: { _scrollService?: { scrollPosition: number } };
+          rows: number;
+        }
+      );
+      const scrollTop = this.getTerminalScrollTop(
+        targetTerminal as unknown as {
+          _core?: { _scrollService?: { scrollPosition: number } };
+        }
+      );
 
       targetTerminal.write(data);
 
@@ -90,7 +100,15 @@ export class PerformanceManager implements IPerformanceManager {
       }
 
       this.bufferFlushTimer = window.setTimeout(() => {
-        this.flushOutputBuffer();
+        try {
+          this.flushOutputBuffer();
+        } catch (error) {
+          log(`❌ [PERFORMANCE] Error during buffer flush:`, error);
+          // Reset the timer to prevent stuck state
+          this.bufferFlushTimer = null;
+          // Clear the buffer to prevent memory issues
+          this.outputBuffer = [];
+        }
       }, flushInterval);
 
       log(
@@ -115,8 +133,18 @@ export class PerformanceManager implements IPerformanceManager {
       // Use the most recently set terminal for buffer output
       if (this.currentBufferTerminal) {
         // 🎯 NEW: Preserve scroll position during agent output
-        const wasAtBottom = this.isTerminalScrolledToBottom(this.currentBufferTerminal);
-        const scrollTop = this.getTerminalScrollTop(this.currentBufferTerminal);
+        const wasAtBottom = this.isTerminalScrolledToBottom(
+          this.currentBufferTerminal as unknown as {
+            buffer?: { active?: { length: number } };
+            _core?: { _scrollService?: { scrollPosition: number } };
+            rows: number;
+          }
+        );
+        const scrollTop = this.getTerminalScrollTop(
+          this.currentBufferTerminal as unknown as {
+            _core?: { _scrollService?: { scrollPosition: number } };
+          }
+        );
 
         this.currentBufferTerminal.write(bufferedData);
 
@@ -139,7 +167,11 @@ export class PerformanceManager implements IPerformanceManager {
   /**
    * Check if terminal is scrolled to bottom
    */
-  private isTerminalScrolledToBottom(terminal: any): boolean {
+  private isTerminalScrolledToBottom(terminal: {
+    buffer?: { active?: { length: number } };
+    _core?: { _scrollService?: { scrollPosition: number } };
+    rows: number;
+  }): boolean {
     try {
       // xterm.js buffer API to check scroll position
       const buffer = terminal.buffer?.active;
@@ -164,7 +196,9 @@ export class PerformanceManager implements IPerformanceManager {
   /**
    * Get current terminal scroll position
    */
-  private getTerminalScrollTop(terminal: any): number | null {
+  private getTerminalScrollTop(terminal: {
+    _core?: { _scrollService?: { scrollPosition: number } };
+  }): number | null {
     try {
       return terminal._core?._scrollService?.scrollPosition || 0;
     } catch (error) {
@@ -176,18 +210,33 @@ export class PerformanceManager implements IPerformanceManager {
   /**
    * Restore terminal scroll position
    */
-  private restoreTerminalScrollPosition(terminal: any, scrollTop: number): void {
+  private restoreTerminalScrollPosition(
+    terminal: {
+      _core?: { _scrollService?: { scrollPosition: number } };
+      element?: { scrollTop: number };
+    },
+    scrollTop: number
+  ): void {
     try {
       // Use requestAnimationFrame to ensure DOM is updated
       requestAnimationFrame(() => {
-        if (terminal._core?._scrollService) {
-          terminal._core._scrollService.scrollToLine(scrollTop);
+        const coreService = terminal._core?._scrollService as
+          | { scrollToLine?: (line: number) => void }
+          | undefined;
+        if (coreService && coreService.scrollToLine) {
+          coreService.scrollToLine(scrollTop);
           log(`🔄 [PERFORMANCE] Restored scroll position to: ${scrollTop}`);
         } else {
           // Fallback: scroll the DOM element
-          const xtermViewport = terminal.element?.querySelector('.xterm-viewport') as HTMLElement;
+          const element = terminal.element as
+            | { querySelector?: (selector: string) => HTMLElement | null }
+            | undefined;
+          const xtermViewport = element?.querySelector?.('.xterm-viewport') as HTMLElement;
           if (xtermViewport) {
-            xtermViewport.scrollTop = scrollTop * terminal._core?._charMeasure?.height || 0;
+            const charHeight =
+              (terminal._core as { _charMeasure?: { height: number } } | undefined)?._charMeasure
+                ?.height || 0;
+            xtermViewport.scrollTop = scrollTop * charHeight;
             log(`🔄 [PERFORMANCE] Restored scroll via DOM: ${scrollTop}`);
           }
         }
@@ -212,8 +261,10 @@ export class PerformanceManager implements IPerformanceManager {
         log(`🔧 [PERFORMANCE] Debounced resize applied: ${cols}x${rows}`);
       } catch (error) {
         log(`❌ [PERFORMANCE] Error during debounced resize:`, error);
+      } finally {
+        // Always reset the timer to prevent stuck state
+        this.resizeDebounceTimer = null;
       }
-      this.resizeDebounceTimer = null;
     }, this.RESIZE_DEBOUNCE_DELAY);
 
     log(`🔧 [PERFORMANCE] Debounced resize scheduled: ${cols}x${rows}`);

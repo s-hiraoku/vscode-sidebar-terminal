@@ -23,6 +23,7 @@ export interface NotificationService {
 /**
  * 統一されたオペレーション結果処理
  */
+// eslint-disable-next-line @typescript-eslint/no-extraneous-class
 export class OperationResultHandler {
   /**
    * ターミナル操作の結果を統一的に処理
