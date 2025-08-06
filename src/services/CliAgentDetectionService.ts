@@ -354,43 +354,48 @@ export class CliAgentStateManager implements ICliAgentStateManager {
   }
 
   setAgentTerminated(terminalId: string): void {
-    if (this._connectedAgentTerminalId === terminalId) {
-      const agentType = this._connectedAgentType;
+    let statusChanged = false;
+    let previousType: string | null = null;
 
-      // Clear the connected agent
+    // Handle connected agent termination
+    if (this._connectedAgentTerminalId === terminalId) {
+      previousType = this._connectedAgentType;
       this._connectedAgentTerminalId = null;
       this._connectedAgentType = null;
-
-      // 🔧 FIX: Set status to 'none' when agent is actually terminated (per specification)
-      // The agent is truly terminated, so status should reflect no agent running
-      this._onStatusChange.fire({
-        terminalId,
-        status: 'none',
-        type: null,
-      });
+      statusChanged = true;
 
       log(
-        `[CLI Agent] ${agentType || 'Unknown'} agent terminated, status set to NONE in terminal: ${terminalId}`
+        `🔄 [STATE-MANAGER] Connected terminal ${terminalId} (${previousType}) terminated`
       );
 
-      // Promote latest disconnected agent
+      // Promote latest disconnected agent if any
       this.promoteLatestDisconnectedAgent();
-    } else if (this._disconnectedAgents.has(terminalId)) {
-      // DISCONNECTED agent terminated - remove it and set status to 'none'
-      const agentInfo = this._disconnectedAgents.get(terminalId);
+    }
 
-      // 🔧 FIX: Remove the disconnected agent when terminated
+    // Handle disconnected agent termination
+    if (this._disconnectedAgents.has(terminalId)) {
+      const agentInfo = this._disconnectedAgents.get(terminalId)!;
+      if (!previousType) {
+        previousType = agentInfo.type;
+      }
       this._disconnectedAgents.delete(terminalId);
+      statusChanged = true;
 
-      // Fire status change to 'none' when disconnected agent terminates
+      log(
+        `🧹 [STATE-MANAGER] Removed terminal ${terminalId} (${agentInfo.type}) from DISCONNECTED state. DISCONNECTED agents: ${this._disconnectedAgents.size}`
+      );
+    }
+
+    // Fire status change to 'none' when agent session ends
+    if (statusChanged && previousType) {
       this._onStatusChange.fire({
         terminalId,
         status: 'none',
-        type: null,
+        type: previousType,
       });
 
       log(
-        `🟡 [STATE-MANAGER] DISCONNECTED agent ${agentInfo?.type} terminated, status set to NONE in terminal: ${terminalId}`
+        `❌ [STATE-MANAGER] Terminal ${terminalId} (${previousType}) status set to NONE (agent session ended)`
       );
     }
   }
