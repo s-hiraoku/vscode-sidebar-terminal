@@ -27,6 +27,7 @@ export interface ValidationOptions {
 /**
  * Centralized validation utilities class
  */
+// eslint-disable-next-line @typescript-eslint/no-extraneous-class
 export class ValidationUtils {
   /**
    * Validate string input

@@ -40,6 +40,7 @@ export interface TerminalTestData {
 /**
  * Centralized factory for creating consistent test environments
  */
+// eslint-disable-next-line @typescript-eslint/no-extraneous-class
 export class TestSetupFactory {
   /**
    * Create standard mock VS Code API
