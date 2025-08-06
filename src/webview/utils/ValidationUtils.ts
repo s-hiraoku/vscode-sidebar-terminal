@@ -187,7 +187,10 @@ export class ValidationUtils {
     try {
       const serialized = JSON.stringify(data);
       if (serialized.length > maxSize) {
-        return { isValid: false, error: `Data size exceeds maximum allowed size (${maxSize} bytes)` };
+        return {
+          isValid: false,
+          error: `Data size exceeds maximum allowed size (${maxSize} bytes)`,
+        };
       }
       return { isValid: true, value: JSON.parse(serialized) };
     } catch (error) {
@@ -249,8 +252,8 @@ export class ValidationUtils {
     return ((...args: Parameters<T>) => {
       try {
         // Run all validations
-        const batchResult = this.validateBatch(validations.map(v => () => v(args)));
-        
+        const batchResult = this.validateBatch(validations.map((v) => () => v(args)));
+
         if (!batchResult.isValid) {
           log(`${logPrefix} Validation failed: ${batchResult.error}`);
           throw new Error(batchResult.error);

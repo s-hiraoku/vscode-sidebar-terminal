@@ -56,9 +56,9 @@ export class TestSetupFactory {
               'sidebarTerminal.theme': 'auto',
               'sidebarTerminal.enableValidation': true,
               'terminal.integrated.altClickMovesCursor': true,
-              'editor.multiCursorModifier': 'alt'
+              'editor.multiCursorModifier': 'alt',
             };
-            return defaults[key] || null;
+            return (defaults as any)[key] || null;
           }),
           update: sinon.stub().resolves(),
           has: sinon.stub().returns(true),
@@ -66,18 +66,18 @@ export class TestSetupFactory {
             globalValue: undefined,
             workspaceValue: undefined,
             workspaceFolderValue: undefined,
-            defaultValue: null
-          })
+            defaultValue: null,
+          }),
         }),
         workspaceFolders: [
           {
             uri: { fsPath: '/test/workspace' },
             name: 'test-workspace',
-            index: 0
-          }
+            index: 0,
+          },
         ],
         onDidChangeConfiguration: sinon.stub(),
-        rootPath: '/test/workspace'
+        rootPath: '/test/workspace',
       },
       window: {
         showErrorMessage: sinon.stub().resolves(),
@@ -91,35 +91,35 @@ export class TestSetupFactory {
           hide: sinon.stub(),
           dispose: sinon.stub(),
           text: '',
-          tooltip: ''
+          tooltip: '',
         }),
-        withProgress: sinon.stub().callsFake((_options, task) => task())
+        withProgress: sinon.stub().callsFake((_options, task) => task()),
       },
       commands: {
         registerCommand: sinon.stub(),
         executeCommand: sinon.stub().resolves(),
-        getCommands: sinon.stub().resolves([])
+        getCommands: sinon.stub().resolves([]),
       },
       Uri: {
         file: sinon.stub().callsFake((path: string) => ({ fsPath: path })),
-        parse: sinon.stub().callsFake((uri: string) => ({ fsPath: uri }))
+        parse: sinon.stub().callsFake((uri: string) => ({ fsPath: uri })),
       },
       ViewColumn: {
         One: 1,
         Two: 2,
-        Three: 3
+        Three: 3,
       },
       StatusBarAlignment: {
         Left: 1,
-        Right: 2
+        Right: 2,
       },
       env: {
         clipboard: {
           writeText: sinon.stub().resolves(),
-          readText: sinon.stub().resolves('')
+          readText: sinon.stub().resolves(''),
         },
-        openExternal: sinon.stub().resolves()
-      }
+        openExternal: sinon.stub().resolves(),
+      },
     };
   }
 
@@ -143,19 +143,19 @@ export class TestSetupFactory {
               cursorY: 0,
               cursorX: 0,
               viewportY: 0,
-              length: 24
-            }
+              length: 24,
+            },
           },
           rows: 24,
-          cols: 80
+          cols: 80,
         },
         fitAddon: {
           fit: sinon.stub(),
-          dispose: sinon.stub()
+          dispose: sinon.stub(),
         },
         container: document.createElement('div'),
         id: 'terminal-1',
-        name: 'Terminal 1'
+        name: 'Terminal 1',
       }),
       getAllTerminalInstances: sinon.stub().returns(new Map()),
       getAllTerminalContainers: sinon.stub().returns(new Map()),
@@ -173,14 +173,14 @@ export class TestSetupFactory {
         performance: { bufferedWrite: sinon.stub() },
         notification: { showNotification: sinon.stub() },
         split: { updateSplitLayout: sinon.stub() },
-        config: { getConfiguration: sinon.stub() }
+        config: { getConfiguration: sinon.stub() },
       }),
       updateState: sinon.stub(),
       handleTerminalRemovedFromExtension: sinon.stub(),
       updateClaudeStatus: sinon.stub(),
       updateCliAgentStatus: sinon.stub(),
       ensureTerminalFocus: sinon.stub(),
-      createTerminalFromSession: sinon.stub()
+      createTerminalFromSession: sinon.stub(),
     };
   }
 
@@ -189,16 +189,16 @@ export class TestSetupFactory {
    */
   public static createTerminalTestData(count: number = 3): TerminalTestData {
     const terminals: TerminalInfo[] = Array.from({ length: count }, (_, i) => ({
-      id: i + 1,
+      id: String(i + 1),
       name: `Terminal ${i + 1}`,
       scrollback: [`Line ${i + 1}-1`, `Line ${i + 1}-2`, `Line ${i + 1}-3`],
-      isActive: i === 0
+      isActive: i === 0,
     }));
 
     return {
       terminals,
       activeTerminalId: '1',
-      scrollback: ['Line 1', 'Line 2', 'Line 3']
+      scrollback: ['Line 1', 'Line 2', 'Line 3'],
     };
   }
 
@@ -207,7 +207,7 @@ export class TestSetupFactory {
    */
   public static createTestEnvironment(options: MockOptions = {}): TestEnvironment {
     const sandbox = sinon.createSandbox();
-    
+
     // Mock global objects if needed
     if (options.mockWorkspace) {
       (global as any).vscode = this.createMockVscode();
@@ -226,7 +226,7 @@ export class TestSetupFactory {
       coordinator,
       sandbox,
       mockVscode: (global as any).vscode,
-      cleanup
+      cleanup,
     };
   }
 
@@ -247,7 +247,7 @@ export class TestSetupFactory {
           add: sinon.stub(),
           remove: sinon.stub(),
           contains: sinon.stub().returns(false),
-          toggle: sinon.stub()
+          toggle: sinon.stub(),
         },
         setAttribute: sinon.stub(),
         getAttribute: sinon.stub().returns(null),
@@ -261,7 +261,7 @@ export class TestSetupFactory {
         innerHTML: '',
         id: '',
         className: '',
-        dataset: {}
+        dataset: {},
       })),
       getElementById: sinon.stub().returns(null),
       querySelector: sinon.stub().returns(null),
@@ -270,12 +270,12 @@ export class TestSetupFactory {
       removeEventListener: sinon.stub(),
       body: {
         appendChild: sinon.stub(),
-        removeChild: sinon.stub()
+        removeChild: sinon.stub(),
       },
       head: {
         appendChild: sinon.stub(),
-        removeChild: sinon.stub()
-      }
+        removeChild: sinon.stub(),
+      },
     } as any;
 
     const mockWindow = {
@@ -288,9 +288,9 @@ export class TestSetupFactory {
       removeEventListener: sinon.stub(),
       location: {
         href: 'http://localhost',
-        origin: 'http://localhost'
+        origin: 'http://localhost',
       },
-      console: console
+      console: console,
     } as any;
 
     const cleanup = () => {
@@ -300,7 +300,7 @@ export class TestSetupFactory {
     return {
       document: mockDocument,
       window: mockWindow,
-      cleanup
+      cleanup,
     };
   }
 
@@ -329,9 +329,9 @@ export class TestSetupFactory {
           viewportY: 0,
           length: 24,
           getLine: sinon.stub().returns({
-            translateToString: sinon.stub().returns('test line')
-          })
-        }
+            translateToString: sinon.stub().returns('test line'),
+          }),
+        },
       },
       rows: options.rows || 24,
       cols: options.cols || 80,
@@ -340,7 +340,7 @@ export class TestSetupFactory {
         fontSize: options.fontSize || 14,
         fontFamily: options.fontFamily || 'monospace',
         cursorBlink: options.cursorBlink || true,
-        scrollback: options.scrollback || 1000
+        scrollback: options.scrollback || 1000,
       },
       // Mock xterm.js specific properties
       _core: {
@@ -348,10 +348,10 @@ export class TestSetupFactory {
           buffer: {
             ydisp: 0,
             ybase: 0,
-            isUserScrolling: false
-          }
-        }
-      }
+            isUserScrolling: false,
+          },
+        },
+      },
     };
   }
 
@@ -369,12 +369,12 @@ export class TestSetupFactory {
         return {
           heapUsed: current.heapUsed - memory.heapUsed,
           heapTotal: current.heapTotal - memory.heapTotal,
-          external: current.external - memory.external
+          external: current.external - memory.external,
         };
       },
       createLargeData: (size: number) => 'x'.repeat(size),
-      createMockHighFrequencyData: (count: number = 100) => 
-        Array.from({ length: count }, (_, i) => `Output ${i}\n`)
+      createMockHighFrequencyData: (count: number = 100) =>
+        Array.from({ length: count }, (_, i) => `Output ${i}\n`),
     };
   }
 
@@ -403,9 +403,11 @@ export class TestSetupFactory {
         const beforeValue = before();
         const afterValue = after();
         if (afterValue >= beforeValue) {
-          throw new Error(`Expected improvement but got: before=${beforeValue}, after=${afterValue}`);
+          throw new Error(
+            `Expected improvement but got: before=${beforeValue}, after=${afterValue}`
+          );
         }
-      }
+      },
     };
   }
 

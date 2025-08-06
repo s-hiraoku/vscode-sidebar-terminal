@@ -11,7 +11,10 @@ import type { IManagerCoordinator } from '../interfaces/ManagerInterfaces';
 /**
  * Message handler function type
  */
-export type MessageHandler<T = unknown> = (message: WebviewMessage, coordinator: IManagerCoordinator) => T | Promise<T>;
+export type MessageHandler<T = unknown> = (
+  message: WebviewMessage,
+  coordinator: IManagerCoordinator
+) => T | Promise<T>;
 
 /**
  * Message handler configuration
@@ -47,7 +50,9 @@ export class MessageHandlerFactory {
     handler: MessageHandler<T>
   ): void {
     if (this.handlers.has(config.command)) {
-      log(`⚠️ ${this.defaultLogPrefix} Handler for command '${config.command}' already exists, overriding`);
+      log(
+        `⚠️ ${this.defaultLogPrefix} Handler for command '${config.command}' already exists, overriding`
+      );
     }
 
     this.handlers.set(config.command, {
@@ -104,17 +109,16 @@ export class MessageHandlerFactory {
 
         // Execute handler
         log(`🔄 ${config.logPrefix} Processing command: ${command}`);
-        const result = config.async 
+        const result = config.async
           ? await handler(message, coordinator!)
           : handler(message, coordinator!);
 
         log(`✅ ${config.logPrefix} Successfully processed command: ${command}`);
         return result;
-
       } catch (error) {
         const errorMessage = `Handler for '${command}' failed: ${String(error)}`;
         log(`❌ ${config.logPrefix} ${errorMessage}`);
-        
+
         // Return error response instead of throwing to prevent cascading failures
         return this.createErrorResponse(command, errorMessage);
       }
@@ -129,22 +133,20 @@ export class MessageHandlerFactory {
     logPrefix: string = this.defaultLogPrefix
   ): (messages: WebviewMessage[]) => Promise<unknown[]> {
     const singleProcessor = this.createMessageProcessor(coordinator, logPrefix);
-    
+
     return async (messages: WebviewMessage[]) => {
       log(`📦 ${logPrefix} Processing batch of ${messages.length} messages`);
-      
-      const results = await Promise.allSettled(
-        messages.map(msg => singleProcessor(msg))
-      );
 
-      const successful = results.filter(r => r.status === 'fulfilled').length;
+      const results = await Promise.allSettled(messages.map((msg) => singleProcessor(msg)));
+
+      const successful = results.filter((r) => r.status === 'fulfilled').length;
       const failed = results.length - successful;
 
       log(`📊 ${logPrefix} Batch processing complete: ${successful} successful, ${failed} failed`);
-      
-      return results.map(result => 
-        result.status === 'fulfilled' 
-          ? result.value 
+
+      return results.map((result) =>
+        result.status === 'fulfilled'
+          ? result.value
           : this.createErrorResponse('batch', result.reason)
       );
     };
@@ -171,42 +173,49 @@ export class MessageHandlerFactory {
       maxConcurrent = 5,
       retryAttempts = 3,
       retryDelay = 1000,
-      logPrefix = this.defaultLogPrefix
+      logPrefix = this.defaultLogPrefix,
     } = options;
 
-    const queue: Array<{ message: WebviewMessage; resolve: (value: unknown) => void; reject: (error: Error) => void; attempts: number }> = [];
+    const queue: Array<{
+      message: WebviewMessage;
+      resolve: (value: unknown) => void;
+      reject: (error: Error) => void;
+      attempts: number;
+    }> = [];
     const processor = this.createMessageProcessor(coordinator, logPrefix);
     let processing = false;
 
     const processQueue = async (): Promise<void> => {
       if (processing || queue.length === 0) return;
-      
+
       processing = true;
       log(`🔄 ${logPrefix} Processing queue of ${queue.length} messages`);
 
       const concurrent = Math.min(maxConcurrent, queue.length);
       const batch = queue.splice(0, concurrent);
 
-      await Promise.all(batch.map(async (item) => {
-        try {
-          const result = await processor(item.message);
-          item.resolve(result);
-        } catch (error) {
-          item.attempts--;
-          if (item.attempts > 0) {
-            log(`🔄 ${logPrefix} Retrying message, ${item.attempts} attempts remaining`);
-            setTimeout(() => {
-              queue.unshift(item);
-              processQueue();
-            }, retryDelay);
-          } else {
-            item.reject(error instanceof Error ? error : new Error(String(error)));
+      await Promise.all(
+        batch.map(async (item) => {
+          try {
+            const result = await processor(item.message);
+            item.resolve(result);
+          } catch (error) {
+            item.attempts--;
+            if (item.attempts > 0) {
+              log(`🔄 ${logPrefix} Retrying message, ${item.attempts} attempts remaining`);
+              setTimeout(() => {
+                queue.unshift(item);
+                processQueue();
+              }, retryDelay);
+            } else {
+              item.reject(error instanceof Error ? error : new Error(String(error)));
+            }
           }
-        }
-      }));
+        })
+      );
 
       processing = false;
-      
+
       // Process remaining queue
       if (queue.length > 0) {
         setTimeout(processQueue, 0);
@@ -220,7 +229,7 @@ export class MessageHandlerFactory {
             message,
             resolve,
             reject,
-            attempts: retryAttempts
+            attempts: retryAttempts,
           });
           processQueue();
         });
@@ -230,7 +239,7 @@ export class MessageHandlerFactory {
       clearQueue: () => {
         queue.length = 0;
         processing = false;
-      }
+      },
     };
   }
 
@@ -242,7 +251,7 @@ export class MessageHandlerFactory {
       terminalId: (message: WebviewMessage): ValidationResult => {
         return ValidationUtils.validateTerminalId(message.terminalId);
       },
-      
+
       requiredData: (message: WebviewMessage): ValidationResult => {
         if (!message.data) {
           return { isValid: false, error: 'Message data is required' };
@@ -259,16 +268,16 @@ export class MessageHandlerFactory {
         if (!dataValidation.isValid) {
           return dataValidation;
         }
-        
+
         if (message.terminalId) {
           const idValidation = ValidationUtils.validateTerminalId(message.terminalId);
           if (!idValidation.isValid) {
             return idValidation;
           }
         }
-        
+
         return { isValid: true };
-      }
+      },
     };
   }
 
@@ -278,7 +287,7 @@ export class MessageHandlerFactory {
   public static getHandlersSummary(): Array<{ command: string; config: MessageHandlerConfig }> {
     return Array.from(this.handlers.entries()).map(([command, entry]) => ({
       command,
-      config: entry.config
+      config: entry.config,
     }));
   }
 
@@ -314,7 +323,7 @@ export class MessageHandlerFactory {
       success: false,
       command,
       error: message,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
   }
 
@@ -326,7 +335,7 @@ export class MessageHandlerFactory {
       success: false,
       command,
       error,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
   }
 }

@@ -32,14 +32,14 @@ export class RefactoredMessageManager extends BaseManager implements IMessageMan
     super('MessageManager', {
       enableLogging: true,
       enableValidation: true,
-      enableErrorRecovery: true
+      enableErrorRecovery: true,
     });
 
     this.queueProcessor = MessageHandlerFactory.createQueueProcessor(undefined, {
       maxConcurrent: 5,
       retryAttempts: 3,
       retryDelay: 1000,
-      logPrefix: this.logPrefix
+      logPrefix: this.logPrefix,
     });
 
     this.registerMessageHandlers();
@@ -55,7 +55,7 @@ export class RefactoredMessageManager extends BaseManager implements IMessageMan
         maxConcurrent: 5,
         retryAttempts: 3,
         retryDelay: 1000,
-        logPrefix: this.logPrefix
+        logPrefix: this.logPrefix,
       });
     });
   }
@@ -71,7 +71,7 @@ export class RefactoredMessageManager extends BaseManager implements IMessageMan
       {
         command: 'init',
         requiresCoordinator: true,
-        logPrefix: this.logPrefix
+        logPrefix: this.logPrefix,
       },
       (message, coordinator) => this.handleInitMessage(message, coordinator)
     );
@@ -82,7 +82,7 @@ export class RefactoredMessageManager extends BaseManager implements IMessageMan
         command: 'output',
         validator: validators.terminalOutput,
         requiresCoordinator: true,
-        logPrefix: this.logPrefix
+        logPrefix: this.logPrefix,
       },
       (message, coordinator) => this.handleOutputMessage(message, coordinator)
     );
@@ -93,7 +93,7 @@ export class RefactoredMessageManager extends BaseManager implements IMessageMan
         command: 'clear',
         validator: validators.terminalId,
         requiresCoordinator: true,
-        logPrefix: this.logPrefix
+        logPrefix: this.logPrefix,
       },
       (message, coordinator) => this.handleClearTerminalMessage(message, coordinator)
     );
@@ -103,7 +103,7 @@ export class RefactoredMessageManager extends BaseManager implements IMessageMan
       {
         command: 'cliAgentStatusUpdate',
         requiresCoordinator: true,
-        logPrefix: this.logPrefix
+        logPrefix: this.logPrefix,
       },
       (message, coordinator) => this.handleCliAgentStatusUpdate(message, coordinator)
     );
@@ -114,7 +114,7 @@ export class RefactoredMessageManager extends BaseManager implements IMessageMan
         command: 'settingsResponse',
         validator: validators.settings,
         requiresCoordinator: true,
-        logPrefix: this.logPrefix
+        logPrefix: this.logPrefix,
       },
       (message, coordinator) => this.handleSettingsResponseMessage(message, coordinator)
     );
@@ -133,13 +133,13 @@ export class RefactoredMessageManager extends BaseManager implements IMessageMan
         this.log(`📨 Received: ${msg.command}`);
 
         // Process message using queue processor
-        this.queueProcessor.process(msg).catch(error => {
+        this.queueProcessor.process(msg).catch((error) => {
           this.handleError(error, `Failed to process command: ${msg.command}`);
         });
       },
       [
         () => this.validateMessage(message.data),
-        () => ValidationUtils.validateCoordinator(coordinator)
+        () => ValidationUtils.validateCoordinator(coordinator),
       ],
       'Failed to handle message'
     );
@@ -154,10 +154,7 @@ export class RefactoredMessageManager extends BaseManager implements IMessageMan
         const managers = coordinator.getManagers();
         if (managers?.ui) {
           // Use safe coordinator operation
-          this.safeCoordinatorOperation(
-            (coord) => coord.log('UI Manager initialized'),
-            undefined
-          );
+          this.safeCoordinatorOperation((coord) => coord.log('UI Manager initialized'), undefined);
         }
         this.log('Init message processed successfully');
       },
@@ -170,7 +167,7 @@ export class RefactoredMessageManager extends BaseManager implements IMessageMan
     return this.validateAndExecute(
       () => {
         const { data, terminalId } = message;
-        
+
         if (!data) {
           throw new Error('Output data is required');
         }
@@ -193,7 +190,7 @@ export class RefactoredMessageManager extends BaseManager implements IMessageMan
       },
       [
         () => ValidationUtils.validateString(message.terminalId, 'Terminal ID'),
-        () => ValidationUtils.sanitizeData(message.data, 1024 * 1024)
+        () => ValidationUtils.sanitizeData(message.data, 1024 * 1024),
       ],
       'Failed to handle output message'
     );
@@ -204,7 +201,7 @@ export class RefactoredMessageManager extends BaseManager implements IMessageMan
       () => {
         const { terminalId } = message;
         const terminalInstance = coordinator.getTerminalInstance(terminalId);
-        
+
         if (!terminalInstance) {
           throw new Error(`Terminal ${terminalId} not found`);
         }
@@ -221,22 +218,19 @@ export class RefactoredMessageManager extends BaseManager implements IMessageMan
     return this.validateAndExecute(
       () => {
         const { cliAgentStatus } = message;
-        
+
         if (!cliAgentStatus) {
           throw new Error('CLI agent status data is required');
         }
 
         // Use safe coordinator operation for status update
-        this.safeCoordinatorOperation(
-          (coord) => {
-            coord.updateCliAgentStatus(
-              cliAgentStatus.activeTerminalName,
-              cliAgentStatus.status,
-              cliAgentStatus.agentType
-            );
-          },
-          undefined
-        );
+        this.safeCoordinatorOperation((coord) => {
+          coord.updateCliAgentStatus(
+            cliAgentStatus.activeTerminalName,
+            cliAgentStatus.status,
+            cliAgentStatus.agentType
+          );
+        }, undefined);
 
         this.log(`CLI Agent status updated: ${cliAgentStatus.status}`);
       },
@@ -249,7 +243,7 @@ export class RefactoredMessageManager extends BaseManager implements IMessageMan
     return this.validateAndExecute(
       () => {
         const { settings } = message;
-        
+
         if (!settings) {
           throw new Error('Settings data is required');
         }
@@ -308,7 +302,7 @@ export class RefactoredMessageManager extends BaseManager implements IMessageMan
   public queueMessage(message: unknown): void {
     return this.validateAndExecute(
       () => {
-        this.queueProcessor.process(message as any).catch(error => {
+        this.queueProcessor.process(message as any).catch((error) => {
           this.handleError(error, 'Failed to queue message');
         });
       },
@@ -326,13 +320,10 @@ export class RefactoredMessageManager extends BaseManager implements IMessageMan
         const message = {
           command: 'switchAiAgent',
           terminalId,
-          timestamp: Date.now()
+          timestamp: Date.now(),
         };
 
-        this.safeCoordinatorOperation(
-          (coord) => coord.postMessageToExtension(message),
-          undefined
-        );
+        this.safeCoordinatorOperation((coord) => coord.postMessageToExtension(message), undefined);
 
         this.log(`Switch AI Agent message sent for terminal: ${terminalId}`);
       },
@@ -347,14 +338,11 @@ export class RefactoredMessageManager extends BaseManager implements IMessageMan
   public sendReadyMessage(coordinator: IManagerCoordinator): void {
     const message = {
       command: 'webviewReady',
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
-    
-    this.safeCoordinatorOperation(
-      (coord) => coord.postMessageToExtension(message),
-      undefined
-    );
-    
+
+    this.safeCoordinatorOperation((coord) => coord.postMessageToExtension(message), undefined);
+
     this.log('Ready message sent');
   }
 
@@ -374,7 +362,7 @@ export class RefactoredMessageManager extends BaseManager implements IMessageMan
       type,
       terminalId,
       data,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
   }
 
@@ -384,7 +372,7 @@ export class RefactoredMessageManager extends BaseManager implements IMessageMan
   public getQueueStats(): { queueSize: number; isProcessing: boolean } {
     return {
       queueSize: this.queueProcessor.getQueueSize(),
-      isProcessing: this.queueProcessor.getQueueSize() > 0
+      isProcessing: this.queueProcessor.getQueueSize() > 0,
     };
   }
 
@@ -396,9 +384,9 @@ export class RefactoredMessageManager extends BaseManager implements IMessageMan
       command: 'input' as const,
       terminalId: terminalId || this.coordinator?.getActiveTerminalId() || '',
       data: input,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
-    
+
     const coord = coordinator || this.coordinator;
     if (coord) {
       coord.postMessageToExtension(message);
@@ -417,9 +405,9 @@ export class RefactoredMessageManager extends BaseManager implements IMessageMan
       command: 'deleteTerminal' as const,
       terminalId,
       requestSource,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
-    
+
     coordinator.postMessageToExtension(message);
   }
 
@@ -437,9 +425,9 @@ export class RefactoredMessageManager extends BaseManager implements IMessageMan
       terminalId: terminalId || this.coordinator?.getActiveTerminalId() || '',
       cols,
       rows,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
-    
+
     const coord = coordinator || this.coordinator;
     if (coord) {
       coord.postMessageToExtension(message);
@@ -452,13 +440,13 @@ export class RefactoredMessageManager extends BaseManager implements IMessageMan
   public override dispose(): void {
     // Clear queue processor
     this.queueProcessor.clearQueue();
-    
+
     // Clear registered handlers
     MessageHandlerFactory.clearHandlers();
-    
+
     // Call parent dispose
     super.dispose();
-    
+
     this.log('RefactoredMessageManager disposed successfully');
   }
 
@@ -473,7 +461,7 @@ export class RefactoredMessageManager extends BaseManager implements IMessageMan
     return {
       queueSize: this.queueProcessor.getQueueSize(),
       registeredHandlers: MessageHandlerFactory.getHandlersSummary().length,
-      status: this.getStatus()
+      status: this.getStatus(),
     };
   }
 }

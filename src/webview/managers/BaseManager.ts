@@ -71,7 +71,7 @@ export abstract class BaseManager {
    */
   protected initialize(coordinator?: IManagerCoordinator): Promise<void> {
     this.log('Initializing manager');
-    
+
     if (coordinator) {
       const validation = ValidationUtils.validateCoordinator(coordinator);
       if (!validation.isValid) {
@@ -79,7 +79,7 @@ export abstract class BaseManager {
       }
       this.coordinator = coordinator;
     }
-    
+
     this.isInitialized = true;
     this.errorCount = 0;
     return Promise.resolve();
@@ -103,10 +103,10 @@ export abstract class BaseManager {
    */
   public dispose(): void {
     this.log('Disposing manager');
-    
+
     // Clear all timers
     this.clearAllTimers();
-    
+
     this.isDisposed = true;
     this.isInitialized = false;
     this.coordinator = undefined;
