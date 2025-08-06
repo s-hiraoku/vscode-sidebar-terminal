@@ -119,19 +119,16 @@ describe('AI Agent Toggle Button (Issue #122)', () => {
       assert.ok(headerElements.aiAgentToggleButton?.innerHTML.includes('<svg'));
     });
 
-    it('AI Agent検出時にボタンを表示する', () => {
+    it('AI Agent切断時にボタンを表示する', () => {
       const headerElements = HeaderFactory.createTerminalHeader({
         terminalId: 'test-terminal-1',
         terminalName: 'Terminal 1',
       });
 
-      HeaderFactory.setAiAgentToggleButtonVisibility(headerElements, true, 'connected');
+      HeaderFactory.setAiAgentToggleButtonVisibility(headerElements, true, 'disconnected');
 
       assert.strictEqual(headerElements.aiAgentToggleButton?.style.display, 'flex');
-      assert.strictEqual(
-        headerElements.aiAgentToggleButton?.title,
-        'AI Agent Connected (click ignored)'
-      );
+      assert.strictEqual(headerElements.aiAgentToggleButton?.title, 'Connect AI Agent');
     });
 
     it('AI Agent未検出時にボタンを非表示にする', () => {
@@ -172,11 +169,11 @@ describe('AI Agent Toggle Button (Issue #122)', () => {
       // 1. Create terminal with AI Agent
       const terminalId = terminalManager.createTerminal();
 
-      // 2. Set up connected agent
+      // 2. Set up disconnected agent
       // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
-      (terminalManager as any)._connectedAgentTerminalId = terminalId;
+      (terminalManager as any)._connectedAgentTerminalId = null;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
-      (terminalManager as any)._connectedAgentType = 'claude';
+      (terminalManager as any)._connectedAgentType = null;
 
       // 3. Create header with toggle button
       const headerElements = HeaderFactory.createTerminalHeader({
@@ -184,21 +181,18 @@ describe('AI Agent Toggle Button (Issue #122)', () => {
         terminalName: 'Terminal 1',
       });
 
-      // 4. Show toggle button
-      HeaderFactory.setAiAgentToggleButtonVisibility(headerElements, true, 'connected');
+      // 4. Show toggle button (only when disconnected)
+      HeaderFactory.setAiAgentToggleButtonVisibility(headerElements, true, 'disconnected');
       assert.strictEqual(headerElements.aiAgentToggleButton?.style.display, 'flex');
 
-      // 5. Simulate button click (extension side) - should be ignored
+      // 5. Simulate button click (extension side) - should connect
       const result = terminalManager.switchAiAgentConnection(terminalId);
       assert.strictEqual(result.success, true);
-      assert.strictEqual(result.newStatus, 'connected'); // Status remains connected
+      assert.strictEqual(result.newStatus, 'connected'); // Status becomes connected
 
-      // 6. Button appearance should remain for connected state
-      HeaderFactory.setAiAgentToggleButtonVisibility(headerElements, true, 'connected');
-      assert.strictEqual(
-        headerElements.aiAgentToggleButton?.title,
-        'AI Agent Connected (click ignored)'
-      );
+      // 6. Button should be hidden when connected (new specification)
+      HeaderFactory.setAiAgentToggleButtonVisibility(headerElements, false, 'connected');
+      assert.strictEqual(headerElements.aiAgentToggleButton?.style.display, 'none');
     });
   });
 });

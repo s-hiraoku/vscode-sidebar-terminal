@@ -375,8 +375,12 @@ export class UIManager implements IUIManager {
       } else if (isTargetTerminal) {
         // CLI Agent statusを挿入/更新 (該当ターミナルのみ)
         HeaderFactory.insertCliAgentStatus(headerElements, status, agentType);
-        // AI Agent切り替えボタンを表示 (Issue #122)
-        HeaderFactory.setAiAgentToggleButtonVisibility(headerElements, true, status);
+        // AI Agent切り替えボタンを表示 (Issue #122) - disconnectedの場合のみ表示
+        HeaderFactory.setAiAgentToggleButtonVisibility(
+          headerElements,
+          status === 'disconnected',
+          status
+        );
       } else {
         // AI Agentステータスがないターミナルではボタンを非表示にする
         HeaderFactory.setAiAgentToggleButtonVisibility(headerElements, false);
