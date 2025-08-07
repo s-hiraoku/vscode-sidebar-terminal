@@ -166,6 +166,10 @@ export class MessageManager implements IMessageManager {
           this.handlePanelLocationUpdateMessage(msg, coordinator);
           break;
 
+        case 'requestPanelLocationDetection':
+          this.handleRequestPanelLocationDetectionMessage(coordinator);
+          break;
+
         default:
           log(`⚠️ [MESSAGE] Unknown command: ${msg.command}`);
       }
@@ -218,6 +222,92 @@ export class MessageManager implements IMessageManager {
 
     } catch (error) {
       log('❌ [MESSAGE] Error handling panel location update:', error);
+    }
+  }
+
+  /**
+   * 🆕 Handle panel location detection request from Extension (Issue #148)
+   * Analyzes WebView dimensions and reports back the detected location
+   */
+  private handleRequestPanelLocationDetectionMessage(coordinator: IManagerCoordinator): void {
+    try {
+      log('📏 [MESSAGE] Handling panel location detection request');
+      
+      // Analyze WebView dimensions to determine likely panel location
+      const detectedLocation = this.analyzeWebViewDimensions();
+      
+      log(`📏 [MESSAGE] Dimension analysis result: ${detectedLocation}`);
+      
+      // Report back to Extension
+      this.queueMessage(
+        {
+          command: 'reportPanelLocation',
+          location: detectedLocation,
+          timestamp: Date.now(),
+        },
+        coordinator
+      );
+      
+    } catch (error) {
+      log('❌ [MESSAGE] Error in panel location detection:', error);
+      // Fallback to sidebar
+      this.queueMessage(
+        {
+          command: 'reportPanelLocation',
+          location: 'sidebar',
+          timestamp: Date.now(),
+        },
+        coordinator
+      );
+    }
+  }
+
+  /**
+   * 🆕 Analyze WebView dimensions to determine panel location
+   * @returns Detected panel location based on aspect ratio
+   */
+  private analyzeWebViewDimensions(): 'sidebar' | 'panel' {
+    try {
+      // Get WebView container dimensions
+      const container = document.body;
+      if (!container) {
+        log('⚠️ [DIMENSION] No container found, defaulting to sidebar');
+        return 'sidebar';
+      }
+
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+      
+      log(`📏 [DIMENSION] Container dimensions: ${width}x${height}`);
+
+      if (width === 0 || height === 0) {
+        log('⚠️ [DIMENSION] Invalid dimensions, defaulting to sidebar');
+        return 'sidebar';
+      }
+
+      // Calculate aspect ratio (width/height)
+      const aspectRatio = width / height;
+      
+      log(`📏 [DIMENSION] Aspect ratio: ${aspectRatio.toFixed(2)}`);
+
+      // Heuristic: 
+      // - Sidebar: Usually narrow and tall (aspect ratio < 1.5)
+      // - Bottom panel: Usually wide and short (aspect ratio > 2.0)
+      if (aspectRatio > 2.0) {
+        log('📏 [DIMENSION] Wide layout detected → Bottom Panel');
+        return 'panel';
+      } else if (aspectRatio < 1.5) {
+        log('📏 [DIMENSION] Tall layout detected → Sidebar');
+        return 'sidebar';
+      } else {
+        // Ambiguous, default to sidebar
+        log('📏 [DIMENSION] Ambiguous aspect ratio, defaulting to sidebar');
+        return 'sidebar';
+      }
+      
+    } catch (error) {
+      log('❌ [DIMENSION] Error analyzing dimensions:', error);
+      return 'sidebar';
     }
   }
 

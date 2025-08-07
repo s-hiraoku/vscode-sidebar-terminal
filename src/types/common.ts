@@ -94,6 +94,8 @@ export interface WebviewMessage {
     | 'performScrollbackRestore'
     | 'scrollbackDataCollected'
     | 'panelLocationUpdate'
+    | 'requestPanelLocationDetection'
+    | 'reportPanelLocation'
     | 'error';
   config?: TerminalConfig;
   data?: string;
@@ -224,6 +226,7 @@ export interface VsCodeMessage {
     | 'performScrollbackRestore'
     | 'restoreTerminalScrollback'
     | 'scrollbackDataCollected'
+    | 'reportPanelLocation'
     | 'error';
   data?: string;
   cols?: number;
@@ -256,6 +259,9 @@ export interface VsCodeMessage {
     timestamp?: number;
   }>; // 復元するscrollback内容
   requestId?: string; // リクエストID（応答待機用）
+  
+  // 🆕 Panel location (Issue #148)
+  location?: 'sidebar' | 'panel'; // パネル位置情報
 }
 
 export interface TerminalInstance {
