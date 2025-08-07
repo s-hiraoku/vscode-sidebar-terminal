@@ -16,7 +16,6 @@ export interface TerminalHeaderElements {
   indicator: HTMLElement | null;
   controlsSection: HTMLElement;
   aiAgentToggleButton: HTMLButtonElement | null;
-  splitButton: HTMLButtonElement;
   closeButton: HTMLButtonElement;
 }
 
@@ -191,12 +190,6 @@ export class HeaderFactory {
       }
     );
 
-    // ダミーのsplitButton（既存インターフェース互換性のため）
-    const splitButton = DOMUtils.createElement(
-      'button',
-      { display: 'none' },
-      { className: 'split-btn' }
-    );
 
     // ホバーエフェクトを追加
     aiAgentToggleButton.addEventListener('mouseenter', () => {
@@ -236,7 +229,6 @@ export class HeaderFactory {
       indicator: null, // CLI Agent indicator要素はまだ作成されていない
       controlsSection,
       aiAgentToggleButton,
-      splitButton,
       closeButton,
     };
   }

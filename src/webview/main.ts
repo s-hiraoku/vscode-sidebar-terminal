@@ -402,20 +402,6 @@ class TerminalWebviewManager {
         ); // Use capture phase
       }
 
-      // Setup split button click handler
-      const splitButton = terminalHeader.querySelector('.split-btn') as HTMLButtonElement;
-      if (splitButton) {
-        splitButton.addEventListener('click', (event) => {
-          event.stopPropagation();
-          try {
-            log(`🔀 [HEADER] Split button clicked for terminal: ${id}`);
-            // TODO: Implement split functionality using correct message method
-            log(`🔀 [HEADER] Split functionality temporarily disabled`);
-          } catch (error) {
-            log(`❌ [HEADER] Error handling split button click:`, error);
-          }
-        });
-      }
 
       // HeaderFactory already assembled the complete header structure
 
