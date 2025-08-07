@@ -361,52 +361,37 @@ export class CliAgentStateManager implements ICliAgentStateManager {
       this._connectedAgentTerminalId = null;
       this._connectedAgentType = null;
 
-      // 🔧 FIX: Keep as 'disconnected' instead of 'none' to preserve button visibility
-      // Move the terminated connected agent to disconnected state
-      if (agentType) {
-        this._disconnectedAgents.set(terminalId, {
-          type: agentType,
-          startTime: new Date(),
-          terminalName: `Terminal ${terminalId}`, // Simple fallback name
-        });
+      // 🔧 FIX: Set status to 'none' when agent is actually terminated (per specification)
+      // The agent is truly terminated, so status should reflect no agent running
+      this._onStatusChange.fire({
+        terminalId,
+        status: 'none',
+        type: null,
+      });
 
-        // Fire status change to 'disconnected' instead of 'none'
-        this._onStatusChange.fire({
-          terminalId,
-          status: 'disconnected',
-          type: agentType,
-        });
-
-        log(
-          `[CLI Agent] ${agentType} agent terminated but kept as DISCONNECTED in terminal: ${terminalId}`
-        );
-      } else {
-        // Fallback to 'none' only if no agent type was available
-        this._onStatusChange.fire({
-          terminalId,
-          status: 'none',
-          type: null,
-        });
-
-        log(`[CLI Agent] Unknown agent terminated in terminal: ${terminalId}`);
-      }
+      log(
+        `[CLI Agent] ${agentType || 'Unknown'} agent terminated, status set to NONE in terminal: ${terminalId}`
+      );
 
       // Promote latest disconnected agent
       this.promoteLatestDisconnectedAgent();
     } else if (this._disconnectedAgents.has(terminalId)) {
-      // DISCONNECTED agent terminated - keep it disconnected instead of removing
+      // DISCONNECTED agent terminated - remove it and set status to 'none'
       const agentInfo = this._disconnectedAgents.get(terminalId);
 
-      // 🔧 FIX: Keep the disconnected agent instead of deleting it
-      // Only remove if explicitly requested (e.g., terminal actually deleted)
-      // this._disconnectedAgents.delete(terminalId); // REMOVED
+      // 🔧 FIX: Remove the disconnected agent when terminated
+      this._disconnectedAgents.delete(terminalId);
+
+      // Fire status change to 'none' when disconnected agent terminates
+      this._onStatusChange.fire({
+        terminalId,
+        status: 'none',
+        type: null,
+      });
 
       log(
-        `🟡 [STATE-MANAGER] DISCONNECTED agent ${agentInfo?.type} session ended but keeping status in terminal: ${terminalId}`
+        `🟡 [STATE-MANAGER] DISCONNECTED agent ${agentInfo?.type} terminated, status set to NONE in terminal: ${terminalId}`
       );
-
-      // Don't fire status change to 'none' - keep as 'disconnected'
-      // This preserves the button visibility for user interaction
     }
   }
 
