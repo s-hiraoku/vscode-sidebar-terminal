@@ -40,6 +40,25 @@ npm run release:major   # Increment major version and create release
 - Use "Developer: Reload Window" command to reload during development
 - Console logs are visible in VS Code Developer Tools (`Ctrl+Shift+I`)
 
+## Recent Critical Fixes (v0.1.43)
+
+### ✅ Arrow Key Terminal Functionality Restoration
+
+**Issue Fixed**: Terminal arrow keys were being intercepted and blocked, preventing standard terminal functions.
+
+**Solution Implemented**:
+- **InputManager.ts**: Removed `preventDefault()` and `stopPropagation()` from arrow key handling
+- **Agent Interaction Mode**: permanently disabled to preserve VS Code standard behavior
+- **xterm.js Configuration**: Enhanced with proper VS Code terminal options
+
+**Result**: 
+- ↑↓ Arrow keys: Bash history navigation works perfectly
+- ←→ Arrow keys: Natural cursor movement restored  
+- Tab completion: Shell completion functions properly
+- All terminal shortcuts work like VS Code integrated terminal
+
+**Key Learning**: Always preserve standard terminal behavior. Custom input handling should never interfere with core terminal functionality.
+
 ## Code Quality and Maintainability Guidelines
 
 ### Essential Practices for Long-term Development

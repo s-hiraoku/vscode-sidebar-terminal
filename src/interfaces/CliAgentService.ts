@@ -221,6 +221,11 @@ export interface ICliAgentStateManager {
   setAgentTerminated(terminalId: string): void;
 
   /**
+   * Completely remove CLI Agent state when terminal is deleted from the system
+   */
+  removeTerminalCompletely(terminalId: string): void;
+
+  /**
    * Promote the most recently started disconnected agent to connected
    */
   promoteLatestDisconnectedAgent(): void;

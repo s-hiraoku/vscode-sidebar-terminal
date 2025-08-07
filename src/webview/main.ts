@@ -317,6 +317,11 @@ class TerminalWebviewManager {
         scrollback: 10000,
         // VS Code standard: Enable Alt+Click cursor positioning
         altClickMovesCursor: this.inputManager.isVSCodeAltClickEnabled(this.currentSettings),
+        // VS Code standard: Ensure proper keyboard handling for terminal functions
+        macOptionIsMeta: true, // Enable proper Option key handling on macOS
+        windowsMode: process.platform === 'win32', // Enable proper Windows terminal mode
+        convertEol: false, // Don't convert line endings, let shell handle
+        disableStdin: false, // Enable standard input handling
       };
 
       const terminal = new Terminal(terminalOptions);
@@ -1464,8 +1469,9 @@ class TerminalWebviewManager {
       });
       this.uiManager.updateCliAgentStatusByTerminalId(terminalId, 'connected', agentType);
 
-      // Enable agent interaction mode for connected agents
-      this.inputManager.setAgentInteractionMode(true);
+      // VS Code Standard: Disable agent interaction mode to preserve terminal functionality
+      // Let xterm.js handle all keyboard input naturally for bash completion, history, etc.
+      this.inputManager.setAgentInteractionMode(false);
 
       // Enable CLI Agent mode for performance optimization
       this.performanceManager.setCliAgentMode(true);
@@ -1484,8 +1490,8 @@ class TerminalWebviewManager {
       });
       this.uiManager.updateCliAgentStatusByTerminalId(terminalId, 'disconnected', agentType);
 
-      // Keep agent interaction mode enabled for disconnected agents (they might reconnect)
-      this.inputManager.setAgentInteractionMode(true);
+      // VS Code Standard: Keep agent interaction mode disabled for standard terminal functionality
+      this.inputManager.setAgentInteractionMode(false);
 
       // Keep CLI Agent mode enabled for performance optimization (disconnected agents might have residual output)
       this.performanceManager.setCliAgentMode(true);

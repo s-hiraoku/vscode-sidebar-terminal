@@ -47,6 +47,7 @@ _Customizing font size, theme, and other settings_
 - **Multiple Terminal Management**: Run up to 5 terminals simultaneously
 - **Session Persistence**: Automatic terminal session restore after VS Code restart
 - **Full Terminal Functionality**: Complete shell execution environment powered by node-pty
+- **✅ VS Code Standard Behavior**: Arrow keys work perfectly for bash history, tab completion, and cursor movement
 - **Special Key Support**: Backspace, Ctrl+C, Ctrl+L, and other special key combinations
 - **Intuitive Controls**: Clear, New, and Split buttons for easy terminal management
 - **IME Support**: Multi-language input support including Japanese, Chinese, and Korean
@@ -95,10 +96,16 @@ _Customizing font size, theme, and other settings_
 - `Sidebar Terminal: Clear Terminal` - Clear the active terminal
 - `Sidebar Terminal: Kill Terminal` - Terminate the active terminal
 
+### ✅ Terminal Functionality (v0.1.43 Update)
+
+- **Arrow Key Navigation**: ↑↓ keys work perfectly for bash command history navigation
+- **Tab Completion**: Shell completion functions exactly like VS Code integrated terminal
+- **Cursor Movement**: ←→ keys provide natural text editing and cursor positioning
+- **Standard Terminal Shortcuts**: All Ctrl+C, Ctrl+L, and other shortcuts work as expected
+
 ### Alt+Click Cursor Positioning
 
 - **Standard VS Code Behavior**: Alt+Click to move cursor to mouse position
-- **CLI Agent Detection**: Automatically disabled during CLI Agent execution for optimal performance
 - **Visual Feedback**: Blue highlight shows cursor position with fade animation
 - **Requirements**: Both `terminal.integrated.altClickMovesCursor` and `editor.multiCursorModifier: "alt"` must be enabled
 

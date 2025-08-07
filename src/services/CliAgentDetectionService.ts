@@ -361,32 +361,92 @@ export class CliAgentStateManager implements ICliAgentStateManager {
       this._connectedAgentTerminalId = null;
       this._connectedAgentType = null;
 
-      // Fire status change to 'none' for the terminated agent
-      this._onStatusChange.fire({
-        terminalId,
-        status: 'none',
-        type: null,
-      });
+      // 🔧 FIX: Keep as 'disconnected' instead of 'none' to preserve button visibility
+      // Move the terminated connected agent to disconnected state
+      if (agentType) {
+        this._disconnectedAgents.set(terminalId, {
+          type: agentType,
+          startTime: new Date(),
+          terminalName: `Terminal ${terminalId}`, // Simple fallback name
+        });
 
-      log(`[CLI Agent] ${agentType} agent terminated in terminal: ${terminalId}`);
+        // Fire status change to 'disconnected' instead of 'none'
+        this._onStatusChange.fire({
+          terminalId,
+          status: 'disconnected',
+          type: agentType,
+        });
+
+        log(
+          `[CLI Agent] ${agentType} agent terminated but kept as DISCONNECTED in terminal: ${terminalId}`
+        );
+      } else {
+        // Fallback to 'none' only if no agent type was available
+        this._onStatusChange.fire({
+          terminalId,
+          status: 'none',
+          type: null,
+        });
+
+        log(`[CLI Agent] Unknown agent terminated in terminal: ${terminalId}`);
+      }
 
       // Promote latest disconnected agent
       this.promoteLatestDisconnectedAgent();
     } else if (this._disconnectedAgents.has(terminalId)) {
-      // DISCONNECTED agent terminated - just remove from tracking
+      // DISCONNECTED agent terminated - keep it disconnected instead of removing
       const agentInfo = this._disconnectedAgents.get(terminalId);
-      this._disconnectedAgents.delete(terminalId);
 
-      // Fire status change to 'none'
+      // 🔧 FIX: Keep the disconnected agent instead of deleting it
+      // Only remove if explicitly requested (e.g., terminal actually deleted)
+      // this._disconnectedAgents.delete(terminalId); // REMOVED
+
+      log(
+        `🟡 [STATE-MANAGER] DISCONNECTED agent ${agentInfo?.type} session ended but keeping status in terminal: ${terminalId}`
+      );
+
+      // Don't fire status change to 'none' - keep as 'disconnected'
+      // This preserves the button visibility for user interaction
+    }
+  }
+
+  /**
+   * 🔧 NEW: Completely remove CLI Agent state when terminal is actually deleted
+   * (not just when CLI Agent session ends)
+   */
+  removeTerminalCompletely(terminalId: string): void {
+    let wasConnected = false;
+    let wasDisconnected = false;
+    let agentType: string | null = null;
+
+    if (this._connectedAgentTerminalId === terminalId) {
+      agentType = this._connectedAgentType;
+      this._connectedAgentTerminalId = null;
+      this._connectedAgentType = null;
+      wasConnected = true;
+    }
+
+    if (this._disconnectedAgents.has(terminalId)) {
+      const agentInfo = this._disconnectedAgents.get(terminalId);
+      agentType = agentInfo?.type || agentType;
+      this._disconnectedAgents.delete(terminalId);
+      wasDisconnected = true;
+    }
+
+    if (wasConnected || wasDisconnected) {
+      // Fire status change to 'none' when terminal is actually removed
       this._onStatusChange.fire({
         terminalId,
         status: 'none',
         type: null,
       });
 
-      log(
-        `🗑️ [STATE-MANAGER] DISCONNECTED agent ${agentInfo?.type} terminated in terminal: ${terminalId}`
-      );
+      log(`🗑️ [STATE-MANAGER] Terminal ${terminalId} completely removed (${agentType} agent)`);
+
+      // Promote latest disconnected agent if needed
+      if (wasConnected) {
+        this.promoteLatestDisconnectedAgent();
+      }
     }
   }
 
@@ -889,7 +949,8 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
 
   handleTerminalRemoved(terminalId: string): void {
     this.detectionCache.delete(terminalId);
-    this.stateManager.setAgentTerminated(terminalId);
+    // 🔧 FIX: Use a separate method for actual terminal removal vs session termination
+    this.stateManager.removeTerminalCompletely(terminalId);
   }
 
   dispose(): void {

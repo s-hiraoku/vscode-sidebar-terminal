@@ -10,7 +10,12 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 
 import * as sinon from 'sinon';
+import * as chai from 'chai';
+import sinonChai from 'sinon-chai';
 import { JSDOM } from 'jsdom';
+
+// Set up sinon-chai
+chai.use(sinonChai);
 
 /**
  * VS Code API のモックオブジェクト

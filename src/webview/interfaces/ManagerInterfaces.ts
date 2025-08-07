@@ -95,14 +95,18 @@ export interface ITerminalManager {
 // Performance management interface
 export interface IPerformanceManager {
   scheduleOutputBuffer(data: string, targetTerminal: Terminal): void;
+  bufferedWrite(data: string, targetTerminal: Terminal, terminalId: string): void;
   flushOutputBuffer(): void;
   debouncedResize(cols: number, rows: number, terminal: Terminal, fitAddon: FitAddon): void;
+  setCliAgentMode(isActive: boolean): void;
+  getCliAgentMode(): boolean;
   getBufferStats(): {
     bufferSize: number;
     isFlushScheduled: boolean;
     currentTerminal: boolean;
   };
   forceFlush(): void;
+  initialize(coordinator: IManagerCoordinator): void;
   dispose(): void;
 }
 
