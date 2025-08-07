@@ -183,21 +183,24 @@ describe('FileReferenceCommand', () => {
   });
 
   describe('handleSendAtMention', () => {
-    it('should send file reference without line numbers when no selection', () => {
+    it('should send file reference without line numbers when no selection', (done) => {
       fileReferenceCommand.handleSendAtMention();
 
       // Verify that the correct text was sent
       setTimeout(() => {
-        setTimeout(() => {
+        try {
           expect(mockTerminalManager.sendInput).to.have.been.calledWith(
             '@src/test.ts ',
             'terminal-1'
           );
-        }, 150);
-      }, 100);
+          done();
+        } catch (error) {
+          done(error);
+        }
+      }, 200);
     });
 
-    it('should send file reference with line numbers when text is selected', () => {
+    it('should send file reference with line numbers when text is selected', (done) => {
       // Mock selection
       mockSelection.isEmpty = false;
       mockSelection.start = { line: 2 }; // 0-based
@@ -207,13 +210,16 @@ describe('FileReferenceCommand', () => {
 
       // Verify that the correct text with line range was sent
       setTimeout(() => {
-        setTimeout(() => {
+        try {
           expect(mockTerminalManager.sendInput).to.have.been.calledWith(
             '@src/test.ts#L3-L7 ',
             'terminal-1'
           );
-        }, 150);
-      }, 100);
+          done();
+        } catch (error) {
+          done(error);
+        }
+      }, 200);
     });
 
     it('should show warning when no active editor', () => {

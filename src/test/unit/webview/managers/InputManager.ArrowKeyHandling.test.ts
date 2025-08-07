@@ -3,16 +3,12 @@ import { expect } from 'chai';
 import * as sinon from 'sinon';
 import { JSDOM } from 'jsdom';
 import { InputManager } from '../../../../webview/managers/InputManager';
-import { IManagerCoordinator } from '../../../../webview/interfaces/ManagerInterfaces';
+import type { IManagerCoordinator } from '../../../../webview/interfaces/ManagerInterfaces';
 
 describe('InputManager - Arrow Key Handling', () => {
   let dom: JSDOM;
   let inputManager: InputManager;
-<<<<<<< HEAD
-  let mockCoordinator: any;
-=======
-  let _mockCoordinator: sinon.SinonStubbedInstance<IManagerCoordinator>;
->>>>>>> 3214ee9 (feat: PR #145 code review fixes and quality improvements)
+  let _mockCoordinator: Record<string, sinon.SinonStub>;
   let mockVsCodeApi: sinon.SinonStub;
 
   beforeEach(() => {
@@ -41,20 +37,13 @@ describe('InputManager - Arrow Key Handling', () => {
 
     // Mock VS Code API
     mockVsCodeApi = sinon.stub();
-<<<<<<< HEAD
     (global.window as any).acquireVsCodeApi = () => ({
-=======
-    (
-      global.window as { acquireVsCodeApi?: () => { postMessage: sinon.SinonStub } }
-    ).acquireVsCodeApi = () => ({
->>>>>>> 3214ee9 (feat: PR #145 code review fixes and quality improvements)
       postMessage: mockVsCodeApi,
     });
 
     // Create mock coordinator
     _mockCoordinator = {
-      getActiveTerminalId: sinon.stub().returns('terminal-1') as (() => string | null) &
-        sinon.SinonStub<[], string | null>,
+      getActiveTerminalId: sinon.stub().returns('terminal-1'),
       setActiveTerminalId: sinon.stub(),
       getTerminalInstance: sinon.stub(),
       getAllTerminalInstances: sinon.stub(),
@@ -66,20 +55,11 @@ describe('InputManager - Arrow Key Handling', () => {
       applyFontSettings: sinon.stub(),
       closeTerminal: sinon.stub(),
       log: sinon.stub(),
-<<<<<<< HEAD
       getManagers: sinon.stub(),
       updateClaudeStatus: sinon.stub(),
       updateCliAgentStatus: sinon.stub(),
       ensureTerminalFocus: sinon.stub(),
     };
-=======
-      createTerminal: sinon.stub(),
-      openSettings: sinon.stub(),
-      applyFontSettings: sinon.stub(),
-      closeTerminal: sinon.stub(),
-      getManagers: sinon.stub(),
-    } as unknown as sinon.SinonStubbedInstance<IManagerCoordinator>;
->>>>>>> 3214ee9 (feat: PR #145 code review fixes and quality improvements)
 
     inputManager = new InputManager();
   });

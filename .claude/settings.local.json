@@ -79,7 +79,8 @@
       "Bash(npm test:*)",
       "Bash(mv:*)",
       "mcp__brave-search__brave_web_search",
-      "mcp__serena__activate_project"
+      "mcp__serena__activate_project",
+      "mcp__serena__find_file"
     ],
     "deny": []
   },
