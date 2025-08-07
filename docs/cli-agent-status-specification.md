@@ -142,6 +142,24 @@ The primary purpose of CLI Agent status management is to enable **accurate messa
    - Remove status indicators
    - Disable message routing
 
+### AI Agent Toggle Button Display Rules
+
+The AI Agent toggle button (for switching between connected/disconnected agents) follows specific visibility rules:
+
+1. **CONNECTED Status**: Toggle button is **HIDDEN**
+   - The connected agent is already active and doesn't need switching
+   - User interaction should focus on the connected terminal
+
+2. **DISCONNECTED Status**: Toggle button is **VISIBLE** 
+   - Allows user to switch from connected agent to this disconnected agent
+   - Provides quick access to activate background agents
+
+3. **NONE Status**: Toggle button is **HIDDEN**
+   - No agent is running, so switching is not applicable
+   - UI remains clean for terminals without agents
+
+**Rationale**: The toggle button should only appear when it provides meaningful functionality - allowing users to switch TO a disconnected agent, not FROM a connected one.
+
 ### Critical Timing
 
 ```

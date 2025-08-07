@@ -1284,20 +1284,36 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       const terminalStates: { [terminalId: string]: { status: string; agentType: string | null } } =
         {};
 
-      // Add connected agent
-      if (connectedAgentId && connectedAgentType) {
-        terminalStates[connectedAgentId] = {
-          status: 'connected',
-          agentType: connectedAgentType,
-        };
-      }
+      // Get all terminals
+      const allTerminals = this._terminalManager.getTerminals();
 
-      // Add disconnected agents
-      for (const [terminalId, agentInfo] of disconnectedAgents.entries()) {
-        terminalStates[terminalId] = {
-          status: 'disconnected',
-          agentType: agentInfo.type,
-        };
+      // Set status for all terminals
+      for (const terminal of allTerminals) {
+        const terminalId = terminal.id;
+
+        if (connectedAgentId === terminalId && connectedAgentType) {
+          // Connected agent
+          terminalStates[terminalId] = {
+            status: 'connected',
+            agentType: connectedAgentType,
+          };
+        } else if (disconnectedAgents.has(terminalId)) {
+          // Disconnected agent
+          const agentInfo = disconnectedAgents.get(terminalId);
+          if (!agentInfo) {
+            continue;
+          }
+          terminalStates[terminalId] = {
+            status: 'disconnected',
+            agentType: agentInfo.type,
+          };
+        } else {
+          // No agent or terminated agent
+          terminalStates[terminalId] = {
+            status: 'none',
+            agentType: null,
+          };
+        }
       }
 
       // Send complete state to WebView

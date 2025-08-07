@@ -1443,8 +1443,8 @@ class TerminalWebviewManager {
             ...previousState,
             status: 'disconnected',
           });
-          this.uiManager.updateCliAgentStatusDisplay(
-            previousState.terminalName,
+          this.uiManager.updateCliAgentStatusByTerminalId(
+            this.currentConnectedAgentId,
             'disconnected',
             previousState.agentType
           );
@@ -1462,7 +1462,7 @@ class TerminalWebviewManager {
         agentType,
         preserveScrollPosition: true, // Enable scroll preservation for connected agents
       });
-      this.uiManager.updateCliAgentStatusDisplay(terminalName, 'connected', agentType);
+      this.uiManager.updateCliAgentStatusByTerminalId(terminalId, 'connected', agentType);
 
       // Enable agent interaction mode for connected agents
       this.inputManager.setAgentInteractionMode(true);
@@ -1482,7 +1482,7 @@ class TerminalWebviewManager {
         isDisplayingChoices: existingState?.isDisplayingChoices || false,
         lastChoiceDetected: existingState?.lastChoiceDetected || 0,
       });
-      this.uiManager.updateCliAgentStatusDisplay(terminalName, 'disconnected', agentType);
+      this.uiManager.updateCliAgentStatusByTerminalId(terminalId, 'disconnected', agentType);
 
       // Keep agent interaction mode enabled for disconnected agents (they might reconnect)
       this.inputManager.setAgentInteractionMode(true);
@@ -1494,7 +1494,7 @@ class TerminalWebviewManager {
     } else if (status === 'none') {
       // Remove CLI Agent status completely and reset choice state
       this.cliAgentStates.delete(terminalId);
-      this.uiManager.updateCliAgentStatusDisplay(terminalName, 'none', null);
+      this.uiManager.updateCliAgentStatusByTerminalId(terminalId, 'none', null);
 
       // Disable agent interaction mode when no agent is present
       this.inputManager.setAgentInteractionMode(false);
@@ -1537,8 +1537,8 @@ class TerminalWebviewManager {
           ...state,
           status: 'connected',
         });
-        this.uiManager.updateCliAgentStatusDisplay(
-          state.terminalName,
+        this.uiManager.updateCliAgentStatusByTerminalId(
+          latestDisconnectedId,
           'connected',
           state.agentType
         );
