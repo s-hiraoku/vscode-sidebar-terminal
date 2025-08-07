@@ -392,6 +392,26 @@
           "minimum": 1048576,
           "maximum": 104857600,
           "description": "Maximum storage size for scrollback data in bytes (1MB - 100MB)"
+        },
+        "secondaryTerminal.dynamicSplitDirection": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically adjust split direction based on panel location: horizontal splits in bottom panel, vertical splits in sidebar"
+        },
+        "secondaryTerminal.panelLocation": {
+          "type": "string",
+          "default": "auto",
+          "enum": [
+            "auto",
+            "sidebar",
+            "panel"
+          ],
+          "enumDescriptions": [
+            "Automatically detect panel location",
+            "Force sidebar location for split direction calculation",
+            "Force bottom panel location for split direction calculation"
+          ],
+          "description": "Panel location preference for dynamic split direction (Issue #148)"
         }
       }
     },

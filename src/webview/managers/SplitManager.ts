@@ -68,6 +68,172 @@ export class SplitManager {
     return { canSplit: true, terminalHeight };
   }
 
+  /**
+   * 🆕 Update split direction dynamically based on panel location (Issue #148)
+   * @param direction - New split direction
+   * @param location - Panel location that triggered the change
+   */
+  public updateSplitDirection(
+    direction: 'horizontal' | 'vertical',
+    location: 'sidebar' | 'panel'
+  ): void {
+    console.log(
+      `📍 [SPLIT] Updating split direction: ${this.splitDirection} -> ${direction} (location: ${location})`
+    );
+
+    // Check if direction actually changed
+    if (this.splitDirection === direction) {
+      console.log(`📍 [SPLIT] Split direction unchanged: ${direction}`);
+      return;
+    }
+
+    const previousDirection = this.splitDirection;
+    this.splitDirection = direction;
+
+    // If we're in split mode, update the layout immediately
+    if (this.isSplitMode && this.terminals.size > 1) {
+      this.applyNewSplitLayout(direction, previousDirection, location);
+    }
+
+    console.log(`✅ [SPLIT] Split direction updated to: ${direction}`);
+  }
+
+  /**
+   * 🆕 Apply new split layout while preserving terminal state
+   * @param newDirection - New split direction
+   * @param previousDirection - Previous split direction
+   * @param location - Panel location
+   */
+  private applyNewSplitLayout(
+    newDirection: 'horizontal' | 'vertical',
+    previousDirection: 'horizontal' | 'vertical' | null,
+    location: 'sidebar' | 'panel'
+  ): void {
+    console.log(
+      `🔄 [SPLIT] Applying new split layout: ${previousDirection} -> ${newDirection} (${this.terminals.size} terminals)`
+    );
+
+    const terminalBody = document.getElementById('terminal-body');
+    if (!terminalBody) {
+      console.error('❌ [SPLIT] Terminal body not found');
+      return;
+    }
+
+    try {
+      // Update the flex direction of the terminal body
+      const flexDirection = newDirection === 'horizontal' ? 'row' : 'column';
+      terminalBody.style.flexDirection = flexDirection;
+
+      console.log(`🔄 [SPLIT] Updated terminal-body flex-direction to: ${flexDirection}`);
+
+      // Update all terminal containers for the new layout
+      this.terminalContainers.forEach((container, terminalId) => {
+        this.updateTerminalContainerForDirection(container, terminalId, newDirection);
+      });
+
+      // Recalculate and apply sizing
+      this.recalculateSplitSizing(newDirection, location);
+
+      // Force layout recalculation and refit all terminals
+      setTimeout(() => {
+        this.refitAllTerminals();
+      }, 100);
+
+      console.log(`✅ [SPLIT] New split layout applied: ${newDirection}`);
+    } catch (error) {
+      console.error('❌ [SPLIT] Error applying new split layout:', error);
+    }
+  }
+
+  /**
+   * 🆕 Update individual terminal container for new split direction
+   */
+  private updateTerminalContainerForDirection(
+    container: HTMLElement,
+    terminalId: string,
+    direction: 'horizontal' | 'vertical'
+  ): void {
+    if (direction === 'horizontal') {
+      // Horizontal split: terminals side by side
+      container.style.width = 'auto';
+      container.style.height = '100%';
+      container.style.flex = '1';
+      container.style.minWidth = '200px';
+      container.style.minHeight = '0';
+    } else {
+      // Vertical split: terminals stacked
+      container.style.width = '100%';
+      container.style.height = 'auto';
+      container.style.flex = '1';
+      container.style.minHeight = '100px';
+      container.style.minWidth = '0';
+    }
+
+    console.log(`🔄 [SPLIT] Updated container for terminal ${terminalId} (${direction})`);
+  }
+
+  /**
+   * 🆕 Recalculate split sizing for new direction
+   */
+  private recalculateSplitSizing(direction: 'horizontal' | 'vertical', location: 'sidebar' | 'panel'): void {
+    const terminalCount = this.terminals.size;
+    if (terminalCount <= 1) return;
+
+    console.log(`📐 [SPLIT] Recalculating sizing for ${terminalCount} terminals (${direction}, ${location})`);
+
+    // Calculate optimal size per terminal
+    const terminalBody = document.getElementById('terminal-body');
+    if (!terminalBody) return;
+
+    const availableWidth = terminalBody.clientWidth;
+    const availableHeight = terminalBody.clientHeight;
+
+    if (direction === 'horizontal') {
+      // Horizontal split: equal width distribution
+      const widthPerTerminal = Math.floor(availableWidth / terminalCount);
+      this.terminalContainers.forEach((container, terminalId) => {
+        container.style.width = `${widthPerTerminal}px`;
+        container.style.height = '100%';
+        console.log(`📐 [SPLIT] Set terminal ${terminalId} width: ${widthPerTerminal}px`);
+      });
+    } else {
+      // Vertical split: equal height distribution
+      const heightPerTerminal = Math.floor(availableHeight / terminalCount);
+      this.terminalContainers.forEach((container, terminalId) => {
+        container.style.width = '100%';
+        container.style.height = `${heightPerTerminal}px`;
+        console.log(`📐 [SPLIT] Set terminal ${terminalId} height: ${heightPerTerminal}px`);
+      });
+    }
+  }
+
+  /**
+   * 🆕 Refit all terminals after layout change
+   */
+  private refitAllTerminals(): void {
+    console.log(`🔧 [SPLIT] Refitting all ${this.terminals.size} terminals`);
+
+    this.terminals.forEach((terminalData, terminalId) => {
+      if (terminalData.fitAddon && terminalData.terminal) {
+        try {
+          // Force layout recalculation
+          const container = this.terminalContainers.get(terminalId);
+          if (container) {
+            container.offsetHeight; // Trigger reflow
+          }
+
+          // Refit the terminal
+          terminalData.fitAddon.fit();
+          terminalData.terminal.refresh(0, terminalData.terminal.rows - 1);
+          
+          console.log(`🔧 [SPLIT] Refitted terminal ${terminalId}`);
+        } catch (error) {
+          console.error(`❌ [SPLIT] Error refitting terminal ${terminalId}:`, error);
+        }
+      }
+    });
+  }
+
   public calculateTerminalHeightPercentage(): string {
     const terminalCount = this.terminals.size;
     if (terminalCount <= 1) {

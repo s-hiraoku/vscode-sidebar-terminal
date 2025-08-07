@@ -162,11 +162,62 @@ export class MessageManager implements IMessageManager {
           void this.handleTerminalRestoreErrorMessage(msg);
           break;
 
+        case 'panelLocationUpdate':
+          this.handlePanelLocationUpdateMessage(msg, coordinator);
+          break;
+
         default:
           log(`⚠️ [MESSAGE] Unknown command: ${msg.command}`);
       }
     } catch (error) {
       log('❌ [MESSAGE] Error handling message:', error, message);
+    }
+  }
+
+  /**
+   * 🆕 Handle panel location update message (Issue #148)
+   * Updates split direction based on panel location
+   */
+  private handlePanelLocationUpdateMessage(msg: MessageCommand, coordinator: IManagerCoordinator): void {
+    try {
+      const location = msg.location || 'sidebar';
+      log(`📍 [MESSAGE] Panel location update: ${location}`);
+
+      // Get split manager from coordinator
+      const splitManager = (coordinator as any).getSplitManager?.();
+      if (!splitManager) {
+        log('⚠️ [MESSAGE] SplitManager not available on coordinator');
+        return;
+      }
+
+      // Check if dynamic split direction is enabled via settings
+      // This should be checked on the Extension side, but we can add a safeguard here
+      const configManager = (coordinator as any).getManagers?.()?.config;
+      let isDynamicSplitEnabled = true; // Default to enabled
+      
+      if (configManager) {
+        try {
+          const settings = configManager.loadSettings();
+          isDynamicSplitEnabled = settings.dynamicSplitDirection !== false;
+        } catch (error) {
+          log('⚠️ [MESSAGE] Could not load settings, using default behavior');
+        }
+      }
+
+      if (!isDynamicSplitEnabled) {
+        log('📍 [MESSAGE] Dynamic split direction is disabled via settings, ignoring location update');
+        return;
+      }
+
+      // Update split direction based on panel location
+      const newSplitDirection = location === 'panel' ? 'horizontal' : 'vertical';
+      log(`📍 [MESSAGE] Updating split direction to: ${newSplitDirection} (location: ${location})`);
+
+      // Update split direction if it has changed
+      splitManager.updateSplitDirection(newSplitDirection, location);
+
+    } catch (error) {
+      log('❌ [MESSAGE] Error handling panel location update:', error);
     }
   }
 

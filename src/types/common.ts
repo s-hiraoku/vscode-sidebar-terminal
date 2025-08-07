@@ -93,6 +93,7 @@ export interface WebviewMessage {
     | 'extractScrollbackData'
     | 'performScrollbackRestore'
     | 'scrollbackDataCollected'
+    | 'panelLocationUpdate'
     | 'error';
   config?: TerminalConfig;
   data?: string;
@@ -155,6 +156,9 @@ export interface WebviewMessage {
   message?: string; // エラー報告用
   context?: string; // エラー報告用
   stack?: string; // エラー報告用
+
+  // Panel location for dynamic split direction (Issue #148)
+  location?: 'sidebar' | 'panel'; // Panel location information
 
   // セッション復元関連
   sessionRestoreMessage?: string; // 復元メッセージ

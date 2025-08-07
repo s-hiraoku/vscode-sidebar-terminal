@@ -51,6 +51,9 @@ export class ConfigManager implements IConfigManager {
       style: 'block',
       blink: true,
     },
+    // 🆕 Issue #148: Dynamic split direction settings
+    dynamicSplitDirection: true,
+    panelLocation: 'auto',
   };
 
   // Font settings validation
