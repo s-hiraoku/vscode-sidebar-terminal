@@ -3,7 +3,7 @@ import { expect } from 'chai';
 import * as sinon from 'sinon';
 import { JSDOM } from 'jsdom';
 import { InputManager } from '../../../../webview/managers/InputManager';
-import type { IManagerCoordinator } from '../../../../webview/interfaces/ManagerInterfaces';
+import type { IManagerCoordinator as _IManagerCoordinator } from '../../../../webview/interfaces/ManagerInterfaces';
 
 describe('InputManager - Arrow Key Handling', () => {
   let dom: JSDOM;

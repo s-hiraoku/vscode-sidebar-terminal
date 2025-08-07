@@ -4,22 +4,11 @@
  */
 
 import { TerminalInteractionEvent } from '../../types/common';
-import { WebViewFontSettings } from '../../types/shared';
 import { IMessageManager, IManagerCoordinator } from '../interfaces/ManagerInterfaces';
 import { BaseManager } from './BaseManager';
 import { MessageHandlerFactory } from '../factories/MessageHandlerFactory';
 import { ValidationUtils } from '../utils/ValidationUtils';
 import { Terminal } from 'xterm';
-import {
-  showSessionRestoreStarted,
-  showSessionRestoreProgress,
-  showSessionRestoreCompleted,
-  showSessionRestoreError,
-  showSessionSaved,
-  showSessionSaveError,
-  showSessionCleared,
-  showSessionRestoreSkipped,
-} from '../utils/NotificationUtils';
 
 // Import proper message types
 import { WebviewMessage } from '../../types/common';
@@ -105,7 +94,7 @@ export class RefactoredMessageManager extends BaseManager implements IMessageMan
         requiresCoordinator: true,
         logPrefix: this.logPrefix,
       },
-      (message, coordinator) => this.handleCliAgentStatusUpdate(message, coordinator)
+      (message, _coordinator) => this.handleCliAgentStatusUpdate(message, _coordinator)
     );
 
     // Settings response handler
@@ -214,7 +203,7 @@ export class RefactoredMessageManager extends BaseManager implements IMessageMan
     );
   }
 
-  private handleCliAgentStatusUpdate(message: any, coordinator: IManagerCoordinator): void {
+  private handleCliAgentStatusUpdate(message: any, _coordinator: IManagerCoordinator): void {
     return this.validateAndExecute(
       () => {
         const { cliAgentStatus } = message;
@@ -314,7 +303,7 @@ export class RefactoredMessageManager extends BaseManager implements IMessageMan
   /**
    * Send switch AI agent message - using enhanced BaseManager
    */
-  public sendSwitchAiAgentMessage(terminalId: string, coordinator: IManagerCoordinator): void {
+  public sendSwitchAiAgentMessage(terminalId: string, _coordinator: IManagerCoordinator): void {
     return this.validateAndExecute(
       () => {
         const message = {
@@ -335,7 +324,7 @@ export class RefactoredMessageManager extends BaseManager implements IMessageMan
   /**
    * Send ready message - required by IMessageManager
    */
-  public sendReadyMessage(coordinator: IManagerCoordinator): void {
+  public sendReadyMessage(_coordinator: IManagerCoordinator): void {
     const message = {
       command: 'webviewReady',
       timestamp: Date.now(),

@@ -40,7 +40,23 @@ npm run release:major   # Increment major version and create release
 - Use "Developer: Reload Window" command to reload during development
 - Console logs are visible in VS Code Developer Tools (`Ctrl+Shift+I`)
 
-## Recent Critical Fixes (v0.1.43)
+## Recent Critical Fixes (v0.1.49)
+
+### ✅ AI Agent Status Management Fix
+
+**Issue Fixed**: AI Agent termination was not properly setting status to 'none', causing state inconsistencies and UI issues.
+
+**Solution Implemented**:
+- **CliAgentDetectionService.ts**: Fixed `setAgentTerminated()` method to properly emit 'none' status
+- **Status Transition Logic**: Improved handling for both connected and disconnected agent termination
+- **State Synchronization**: Enhanced proper cleanup and promotion logic for multiple agent scenarios
+
+**Result**:
+- AI Agent status correctly transitions: connected → disconnected → none → (removed)
+- Proper status lifecycle maintained across all agent termination scenarios
+- Fixed button visibility and interaction issues in terminal headers
+
+## Previous Critical Fixes (v0.1.43)
 
 ### ✅ Arrow Key Terminal Functionality Restoration
 

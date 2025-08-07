@@ -364,9 +364,7 @@ export class CliAgentStateManager implements ICliAgentStateManager {
       this._connectedAgentType = null;
       statusChanged = true;
 
-      log(
-        `🔄 [STATE-MANAGER] Connected terminal ${terminalId} (${previousType}) terminated`
-      );
+      log(`🔄 [STATE-MANAGER] Connected terminal ${terminalId} (${previousType}) terminated`);
 
       // Promote latest disconnected agent if any
       this.promoteLatestDisconnectedAgent();
