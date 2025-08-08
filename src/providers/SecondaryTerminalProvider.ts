@@ -46,15 +46,104 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       this._setupTerminalEventListeners();
       this._setupCliAgentStatusListeners();
       this._setupConfigurationChangeListeners();
+      
+      // 🆕 Set up panel location change listener
+      this._setupPanelLocationChangeListener(webviewView);
+
+      // 🆕 Panel location detection is now handled via getSettings message
+      // This ensures WebView is ready before detection starts
 
       log('WebView setup completed successfully');
     } catch (error) {
-      log('❌ [CRITICAL] Failed to resolve WebView:', error);
+      log('\u274c [CRITICAL] Failed to resolve WebView:', error);
       this._handleWebviewSetupError(webviewView, error);
     }
   }
 
-  public splitTerminal(): void {
+  /**
+   * 🆕 Request panel location detection from WebView
+   * Issue #148: Dynamic split direction based on panel location
+   */
+  private _requestPanelLocationDetection(): void {
+    try {
+      log('📍 [PANEL-DETECTION] Requesting panel location detection from WebView');
+      
+      // Send a message to WebView to analyze its dimensions and report back
+      this._sendMessage({
+        command: 'requestPanelLocationDetection'
+      });
+      
+    } catch (error) {
+      log('⚠️ [PANEL-DETECTION] Error requesting panel location detection:', error);
+      // Fallback to sidebar assumption
+      this._sendMessage({
+        command: 'panelLocationUpdate',
+        location: 'sidebar'
+      });
+
+      // Set fallback context key
+      void vscode.commands.executeCommand('setContext', 'secondaryTerminal.panelLocation', 'sidebar');
+    }
+  }
+
+  /**
+   * 🆕 Determine current panel location based on VS Code API inspection
+   */
+  private _getCurrentPanelLocation(): 'sidebar' | 'panel' {
+    const config = vscode.workspace.getConfiguration('sidebarTerminal');
+    
+    // Check if dynamic split direction feature is enabled
+    const isDynamicSplitEnabled = config.get<boolean>('dynamicSplitDirection', true);
+    if (!isDynamicSplitEnabled) {
+      log('📍 [PANEL-DETECTION] Dynamic split direction is disabled, defaulting to sidebar');
+      return 'sidebar';
+    }
+
+    // Get manual panel location setting
+    const manualPanelLocation = config.get<'sidebar' | 'panel' | 'auto'>('panelLocation', 'auto');
+    
+    if (manualPanelLocation !== 'auto') {
+      log(`📍 [PANEL-DETECTION] Using manual panel location: ${manualPanelLocation}`);
+      return manualPanelLocation;
+    }
+
+    // 🔧 For auto-detection, default to sidebar
+    // Actual detection will be done asynchronously via WebView
+    log('📍 [PANEL-DETECTION] Auto mode - defaulting to sidebar, will detect via WebView');
+    return 'sidebar';
+  }
+
+  /**
+   * 🆕 Set up listener for panel location changes (e.g., drag and drop)
+   */
+  private _setupPanelLocationChangeListener(webviewView: vscode.WebviewView): void {
+    // VS Code doesn't provide direct panel location change events
+    // We'll use view state changes as a proxy for potential location changes
+    
+    if (webviewView.onDidChangeVisibility) {
+      this._addDisposable(
+        webviewView.onDidChangeVisibility(() => {
+          // When visibility changes, re-detect panel location
+          setTimeout(() => {
+            log('📍 [PANEL-DETECTION] Panel location change detected - requesting detection');
+            this._requestPanelLocationDetection();
+          }, 100); // Small delay to ensure layout is settled
+        })
+      );
+    }
+
+    // Also listen for configuration changes
+    this._addDisposable(
+      vscode.workspace.onDidChangeConfiguration(event => {
+        if (event.affectsConfiguration('sidebarTerminal.panelLocation')) {
+          log(`📍 [PANEL-DETECTION] Panel location setting changed - requesting detection`);
+          this._requestPanelLocationDetection();
+        }
+      })
+    );
+  }
+
+  public splitTerminal(direction?: 'horizontal' | 'vertical'): void {
     // Terminal split operation
     try {
       // Check if we can split (use configured terminal limit)
@@ -73,6 +162,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       // First send the SPLIT command to prepare the UI
       void this._sendMessage({
         command: TERMINAL_CONSTANTS.COMMANDS.SPLIT,
+        direction: direction || 'vertical', // Default to vertical if not specified
       });
 
       // SPINNER FIX: Defer terminal creation for split operations too
@@ -381,12 +471,42 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
             command: 'fontSettingsUpdate',
             fontSettings,
           });
+          
+          // 🆕 Send initial panel location and request detection (Issue #148)
+          if (this._view) {
+            const panelLocation = this._getCurrentPanelLocation();
+            log(`📍 [SETTINGS] Sending initial panel location: ${panelLocation}`);
+            await this._sendMessage({
+              command: 'panelLocationUpdate',
+              location: panelLocation
+            });
+            
+            // Also request WebView to detect actual panel location
+            this._requestPanelLocationDetection();
+          }
+          
           break;
         }
         case 'updateSettings': {
           log('⚙️ [DEBUG] Updating settings from webview:', message.settings);
           if (message.settings) {
             await this.updateSettings(message.settings);
+          }
+          break;
+        }
+        case 'reportPanelLocation': {
+          log('📍 [DEBUG] Panel location reported from WebView:', message.location);
+          if (message.location) {
+            // Update context key for VS Code when clause
+            void vscode.commands.executeCommand('setContext', 'secondaryTerminal.panelLocation', message.location);
+            log('📍 [DEBUG] Context key updated with panel location:', message.location);
+            
+            // Update our understanding of the panel location and notify WebView
+            await this._sendMessage({
+              command: 'panelLocationUpdate',
+              location: message.location
+            });
+            log('📍 [DEBUG] Panel location update sent to WebView:', message.location);
           }
           break;
         }
@@ -749,6 +869,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     const configChangeDisposable = vscode.workspace.onDidChangeConfiguration((event) => {
       let shouldUpdateSettings = false;
       let shouldUpdateFontSettings = false;
+      let shouldUpdatePanelLocation = false;
 
       // Check for general settings changes
       if (
@@ -771,6 +892,15 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         shouldUpdateFontSettings = true;
       }
 
+      // 🆕 Check for dynamic split direction settings changes (Issue #148)
+      if (
+        event.affectsConfiguration('secondaryTerminal.dynamicSplitDirection') ||
+        event.affectsConfiguration('secondaryTerminal.panelLocation')
+      ) {
+        shouldUpdateSettings = true;
+        shouldUpdatePanelLocation = true;
+      }
+
       if (shouldUpdateSettings) {
         log('⚙️ [DEBUG] VS Code settings changed, updating webview...');
         const settings = this.getCurrentSettings();
@@ -787,6 +917,14 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
           command: 'fontSettingsUpdate',
           fontSettings,
         });
+      }
+
+      // 🆕 Handle panel location setting changes (Issue #148)
+      if (shouldUpdatePanelLocation) {
+        log('📍 [DEBUG] Panel location settings changed, re-detecting and updating...');
+        setTimeout(() => {
+          this._requestPanelLocationDetection();
+        }, 100); // Small delay to ensure settings are applied
       }
     });
 
@@ -1489,9 +1627,15 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       webviewView.onDidChangeVisibility(
         () => {
           if (webviewView.visible) {
-            log(
-              '👁️ [DEBUG] WebView became visible - fresh start approach, no special handling needed'
-            );
+            log('👁️ [DEBUG] WebView became visible - triggering panel location detection');
+            
+            // 🆕 Trigger panel location detection when WebView becomes visible
+            // This handles cases where the panel was moved while hidden
+            setTimeout(() => {
+              log('📍 [DEBUG] Requesting panel location detection after visibility change');
+              this._requestPanelLocationDetection();
+            }, 500); // Small delay to ensure WebView is fully loaded
+            
           } else {
             log('👁️ [DEBUG] WebView became hidden');
           }
@@ -1595,6 +1739,8 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
    */
   private _getCurrentSettings(): PartialTerminalSettings {
     const config = getConfigManager().getExtensionTerminalConfig();
+    const vsCodeConfig = vscode.workspace.getConfiguration('sidebarTerminal');
+    
     return {
       shell: config.shell || '',
       shellArgs: config.shellArgs || [],
@@ -1607,6 +1753,9 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       },
       maxTerminals: config.maxTerminals || 5,
       enableCliAgentIntegration: config.enableCliAgentIntegration || false,
+      // 🆕 Issue #148: Dynamic split direction settings
+      dynamicSplitDirection: vsCodeConfig.get<boolean>('dynamicSplitDirection', true),
+      panelLocation: vsCodeConfig.get<'auto' | 'sidebar' | 'panel'>('panelLocation', 'auto'),
     };
   }
 
