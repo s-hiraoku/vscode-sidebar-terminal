@@ -365,6 +365,63 @@ export class CliAgentStateManager implements ICliAgentStateManager {
     );
   }
 
+  /**
+   * 🔧 Promote a DISCONNECTED agent to CONNECTED (for legitimate user actions like toggle button)
+   * This bypasses the blocking logic in setConnectedAgent for explicit user operations
+   */
+  promoteDisconnectedAgentToConnected(terminalId: string): void {
+    const disconnectedAgent = this._disconnectedAgents.get(terminalId);
+    if (!disconnectedAgent) {
+      log(
+        `⚠️ [STATE-MANAGER] Cannot promote terminal ${terminalId}: not in DISCONNECTED state`
+      );
+      return;
+    }
+
+    log(
+      `🎯 [STATE-MANAGER] LEGITIMATE PROMOTION: User explicitly promoted DISCONNECTED agent ${disconnectedAgent.type} in terminal ${terminalId} to CONNECTED`
+    );
+
+    // Handle previous connected agent (move to disconnected)
+    const previousConnectedId = this._connectedAgentTerminalId;
+    const previousType = this._connectedAgentType;
+
+    // Set new connected agent
+    this._connectedAgentTerminalId = terminalId;
+    this._connectedAgentType = disconnectedAgent.type;
+
+    // Remove from disconnected
+    this._disconnectedAgents.delete(terminalId);
+
+    // Move previous connected agent to disconnected (if exists and different)
+    if (previousConnectedId && previousConnectedId !== terminalId && previousType) {
+      this._disconnectedAgents.set(previousConnectedId, {
+        type: previousType,
+        startTime: new Date(),
+        terminalName: disconnectedAgent.terminalName,
+      });
+
+      this._onStatusChange.fire({
+        terminalId: previousConnectedId,
+        status: 'disconnected',
+        type: previousType,
+        terminalName: disconnectedAgent.terminalName,
+      });
+    }
+
+    // Fire status change for newly connected agent
+    this._onStatusChange.fire({
+      terminalId,
+      status: 'connected',
+      type: disconnectedAgent.type,
+      terminalName: disconnectedAgent.terminalName,
+    });
+
+    log(
+      `✅ [STATE-MANAGER] Legitimate promotion completed: Terminal ${terminalId} (${disconnectedAgent.type}) is now CONNECTED`
+    );
+  }
+
   setAgentTerminated(terminalId: string): void {
     if (this._connectedAgentTerminalId === terminalId) {
       const agentType = this._connectedAgentType;
@@ -910,11 +967,7 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
         // This will be handled by setConnectedAgent
       }
 
-      this.stateManager.setConnectedAgent(
-        terminalId,
-        disconnectedAgent.type,
-        disconnectedAgent.terminalName
-      );
+      this.stateManager.promoteDisconnectedAgentToConnected(terminalId);
 
       return {
         success: true,
