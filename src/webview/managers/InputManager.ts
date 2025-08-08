@@ -39,26 +39,54 @@ export class InputManager implements IInputManager {
   private keydownListener?: (event: KeyboardEvent) => void;
   private keyupListener?: (event: KeyboardEvent) => void;
   private compositionStartListener?: (event: CompositionEvent) => void;
+  private compositionUpdateListener?: (event: CompositionEvent) => void;
   private compositionEndListener?: (event: CompositionEvent) => void;
 
   /**
-   * Setup IME composition handling
+   * Setup IME composition handling with improved processing
    */
   public setupIMEHandling(): void {
     log('⌨️ [INPUT] Setting up IME composition handling');
 
     this.compositionStartListener = (event: CompositionEvent) => {
       this.isComposing = true;
-      log('🈶 [INPUT] IME composition started:', event.data);
+      log('🈶 [INPUT] IME composition started:', event.data || 'no data');
+
+      // Clear any pending input events to avoid conflicts
+      this.clearPendingInputEvents();
+    };
+
+    this.compositionUpdateListener = (event: CompositionEvent) => {
+      // Keep composition state active during updates
+      this.isComposing = true;
+      log('🈶 [INPUT] IME composition update:', event.data || 'no data');
     };
 
     this.compositionEndListener = (event: CompositionEvent) => {
-      this.isComposing = false;
-      log('🈶 [INPUT] IME composition ended:', event.data);
+      // Small delay to ensure composition data is properly processed
+      setTimeout(() => {
+        this.isComposing = false;
+        log('🈶 [INPUT] IME composition ended:', event.data || 'no data');
+      }, 10);
     };
 
     document.addEventListener('compositionstart', this.compositionStartListener);
+    document.addEventListener('compositionupdate', this.compositionUpdateListener);
     document.addEventListener('compositionend', this.compositionEndListener);
+  }
+
+  /**
+   * Clear any pending input events that might conflict with IME
+   */
+  private clearPendingInputEvents(): void {
+    // Clear any debounced events that might interfere with IME composition
+    for (const [key, timer] of this.eventDebounceTimers) {
+      if (key.includes('input') || key.includes('keydown')) {
+        clearTimeout(timer);
+        this.eventDebounceTimers.delete(key);
+        log('🧹 [INPUT] Cleared pending input event:', key);
+      }
+    }
   }
 
   /**
@@ -322,7 +350,7 @@ export class InputManager implements IInputManager {
             timestamp: Date.now(),
           });
           this.eventDebounceTimers.delete(key);
-        }, 200);
+        }, 50); // Reduced from 200ms to 50ms for better responsiveness
 
         this.eventDebounceTimers.set(key, timer);
       } else {
@@ -403,6 +431,9 @@ export class InputManager implements IInputManager {
     if (this.compositionStartListener) {
       document.removeEventListener('compositionstart', this.compositionStartListener);
     }
+    if (this.compositionUpdateListener) {
+      document.removeEventListener('compositionupdate', this.compositionUpdateListener);
+    }
     if (this.compositionEndListener) {
       document.removeEventListener('compositionend', this.compositionEndListener);
     }
@@ -422,6 +453,7 @@ export class InputManager implements IInputManager {
     this.keydownListener = undefined;
     this.keyupListener = undefined;
     this.compositionStartListener = undefined;
+    this.compositionUpdateListener = undefined;
     this.compositionEndListener = undefined;
     this.arrowKeyListener = undefined;
 

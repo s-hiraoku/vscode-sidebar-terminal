@@ -84,7 +84,9 @@
       "Bash(npx tsc:*)",
       "Bash(sed:*)",
       "Bash(mkdir:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "mcp__serena__think_about_whether_you_are_done",
+      "mcp__deepwiki__ask_question"
     ],
     "deny": []
   },

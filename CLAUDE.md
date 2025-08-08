@@ -40,7 +40,38 @@ npm run release:major   # Increment major version and create release
 - Use "Developer: Reload Window" command to reload during development
 - Console logs are visible in VS Code Developer Tools (`Ctrl+Shift+I`)
 
-## Recent Critical Fixes (v0.1.54)
+## Recent Critical Fixes (v0.1.55)
+
+### ✅ AI Agent Status Stabilization Fix
+
+**Status**: Critical flickering issue resolved - AI agent status now stable during execution.
+
+**Issue Fixed**: AI Agent status was flickering between 'connected' and 'disconnected' during normal operation, causing UI instability and user confusion.
+
+**Root Cause Identified**:
+- **Over-aggressive shell prompt detection**: The `detectShellPrompt` method was using broad catch-all patterns that matched normal AI agent output
+- **Ambiguous termination patterns**: Patterns like `/.*[$%]$/`, `/.*#$/`, `/.*>$/` were detecting code examples, markdown syntax, and command prompts as "shell returns"
+- **State churn cycle**: Agent output → false termination detection → disconnected status → startup re-detection → connected status → repeat
+
+**Solution Implemented**:
+- **Strict termination detection**: New `detectStrictTermination` method for connected agents
+- **Pattern refinement**: Replaced broad catch-all patterns with specific, unambiguous shell prompt detection
+- **State protection**: Connected agents now skip startup re-detection to prevent state churn
+- **Enhanced logging**: Improved debugging output for termination detection analysis
+
+**Technical Changes**:
+- `src/services/CliAgentDetectionService.ts:937-1011`: Added `detectStrictTermination` method
+- `src/services/CliAgentDetectionService.ts:1013-1053`: Added `detectStrictShellPrompt` for precise detection  
+- `src/services/CliAgentDetectionService.ts:1055-1075`: Added `hasExplicitTerminationMessage` for clear termination signals
+- `src/services/CliAgentDetectionService.ts:975-1020`: Enhanced `processOutputDetection` with strict mode
+
+**Result**:
+- **Stable AI agent status**: No more connected/disconnected flickering during operation
+- **Improved reliability**: Only genuine termination events trigger status changes
+- **Better user experience**: Consistent status display and UI stability
+- **Preserved functionality**: All legitimate detection patterns still work correctly
+
+## Previous Critical Fixes (v0.1.54)
 
 ### ✅ Code Quality Maintenance and Test Environment Optimization
 

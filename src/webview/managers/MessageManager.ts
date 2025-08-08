@@ -30,9 +30,11 @@ interface MessageCommand {
 }
 
 export class MessageManager implements IMessageManager {
-  // Message processing queue for reliability
+  // Message processing queue for reliability with race condition protection
   private messageQueue: unknown[] = [];
   private isProcessingQueue = false;
+  private queueLock = false;
+  private highPriorityQueue: unknown[] = []; // For input messages that need immediate processing
 
   // Unified managers
   // Use direct communication instead of CommunicationManager to avoid circular dependency
@@ -483,39 +485,60 @@ export class MessageManager implements IMessageManager {
     const data = msg.data as string;
     const terminalId = msg.terminalId as string;
 
-    if (data && terminalId) {
-      const terminal = coordinator.getTerminalInstance(terminalId);
-      if (terminal) {
-        // 🚨 OPTIMIZATION 8: Reduced debug logging - only log significant CLI agent patterns
-        if (
-          data.length > 2000 &&
-          (data.includes('Gemini') || data.includes('gemini') || data.includes('Claude'))
-        ) {
-          console.log(`🔍 [WEBVIEW] CLI Agent output detected:`, {
-            terminalId,
-            dataLength: data.length,
-            containsGeminiPattern: data.includes('Gemini') || data.includes('gemini'),
-            containsClaudePattern: data.includes('Claude') || data.includes('claude'),
-          });
-        }
+    // ✅ CRITICAL FIX: Strict validation for output message handling
+    if (!data || !terminalId) {
+      console.error('🚨 [MESSAGE] Invalid output message - missing data or terminalId:', { 
+        hasData: !!data, 
+        hasTerminalId: !!terminalId,
+        terminalId: terminalId
+      });
+      return;
+    }
 
-        // Use PerformanceManager for buffered write with scroll preservation
-        const managers = coordinator.getManagers();
-        if (managers && managers.performance) {
-          managers.performance.bufferedWrite(data, terminal.terminal, terminalId);
-          log(`📥 [MESSAGE] Output buffered to terminal ${terminalId}: ${data.length} chars`);
-        } else {
-          // Fallback to direct write if performance manager is not available
-          terminal.terminal.write(data);
-          log(
-            `📥 [MESSAGE] Output written directly to terminal ${terminalId}: ${data.length} chars`
-          );
-        }
+    if (typeof terminalId !== 'string' || terminalId.trim() === '') {
+      console.error('🚨 [MESSAGE] Invalid terminalId format:', terminalId);
+      return;
+    }
 
-        // CLI Agent detection disabled
+    // ✅ CRITICAL: Validate terminal exists before processing output
+    const terminal = coordinator.getTerminalInstance(terminalId);
+    if (!terminal) {
+      console.error(`🚨 [MESSAGE] Output for non-existent terminal: ${terminalId}`);
+      console.log('🔍 [MESSAGE] Available terminals:', 
+        Array.from(coordinator.getAllTerminalInstances().keys())
+      );
+      return;
+    }
+
+    console.log(`📥 [MESSAGE] Processing output for terminal ${terminal.name} (${terminalId}): ${data.length} chars`);
+
+    // 🔍 OPTIMIZATION: Only log significant CLI agent patterns
+    if (
+      data.length > 2000 &&
+      (data.includes('Gemini') || data.includes('gemini') || data.includes('Claude'))
+    ) {
+      console.log(`🔍 [WEBVIEW] CLI Agent output detected for terminal ${terminal.name}:`, {
+        terminalId,
+        terminalName: terminal.name,
+        dataLength: data.length,
+        containsGeminiPattern: data.includes('Gemini') || data.includes('gemini'),
+        containsClaudePattern: data.includes('Claude') || data.includes('claude'),
+      });
+    }
+
+    try {
+      // Use PerformanceManager for buffered write with scroll preservation
+      const managers = coordinator.getManagers();
+      if (managers && managers.performance) {
+        managers.performance.bufferedWrite(data, terminal.terminal, terminalId);
+        console.log(`📤 [MESSAGE] Output buffered via PerformanceManager for ${terminal.name}: ${data.length} chars`);
       } else {
-        log(`⚠️ [MESSAGE] Output for unknown terminal: ${terminalId}`);
+        // Fallback to direct write if performance manager is not available
+        terminal.terminal.write(data);
+        console.log(`📤 [MESSAGE] Output written directly to ${terminal.name}: ${data.length} chars`);
       }
+    } catch (error) {
+      console.error(`🚨 [MESSAGE] Error writing output to terminal ${terminal.name}:`, error);
     }
   }
 
@@ -825,41 +848,87 @@ export class MessageManager implements IMessageManager {
   }
 
   /**
-   * Queue message for reliable delivery
+   * Queue message for reliable delivery with priority handling
    */
   private queueMessage(message: unknown, coordinator: IManagerCoordinator): void {
-    const msgObj = message as { command?: string };
-    log(
-      `📤 [MESSAGE] Queueing message: ${msgObj?.command || 'unknown'} (queue size: ${this.messageQueue.length})`
-    );
-    this.messageQueue.push(message);
+    const msgObj = message as { command?: string; type?: string };
+    const messageType = msgObj?.command || 'unknown';
+
+    // Determine if this is a high-priority input message
+    const isInputMessage =
+      messageType === 'input' ||
+      messageType === 'terminalInteraction' ||
+      (msgObj?.type && ['input', 'keydown', 'paste'].includes(msgObj.type as string));
+
+    if (isInputMessage) {
+      this.highPriorityQueue.push(message);
+      log(
+        `⚡ [MESSAGE] Queueing HIGH PRIORITY message: ${messageType} (hp queue: ${this.highPriorityQueue.length})`
+      );
+    } else {
+      this.messageQueue.push(message);
+      log(
+        `📤 [MESSAGE] Queueing message: ${messageType} (normal queue: ${this.messageQueue.length})`
+      );
+    }
+
     void this.processMessageQueue(coordinator);
   }
 
   /**
-   * Process message queue with error handling
+   * Process message queue with error handling and race condition protection
    */
   private async processMessageQueue(coordinator: IManagerCoordinator): Promise<void> {
-    if (this.isProcessingQueue || this.messageQueue.length === 0) {
+    // Prevent race conditions with a simple lock mechanism
+    if (this.queueLock) {
       return;
     }
 
-    this.isProcessingQueue = true;
-
-    while (this.messageQueue.length > 0) {
-      const message = this.messageQueue.shift();
-      try {
-        coordinator.postMessageToExtension(message);
-        await this.delay(1); // Small delay to prevent overwhelming the extension
-      } catch (error) {
-        log('❌ [MESSAGE] Error sending message:', error);
-        // Re-queue message for retry
-        this.messageQueue.unshift(message);
-        break;
-      }
+    if (this.isProcessingQueue) {
+      return;
     }
 
-    this.isProcessingQueue = false;
+    // Check if we have any messages to process
+    if (this.highPriorityQueue.length === 0 && this.messageQueue.length === 0) {
+      return;
+    }
+
+    this.queueLock = true;
+    this.isProcessingQueue = true;
+
+    try {
+      // Process high-priority messages first (input messages)
+      while (this.highPriorityQueue.length > 0) {
+        const message = this.highPriorityQueue.shift();
+        try {
+          coordinator.postMessageToExtension(message);
+          // No delay for high-priority messages - immediate processing
+        } catch (error) {
+          log('❌ [MESSAGE] Error sending HIGH PRIORITY message:', error);
+          // Re-queue high-priority message at the front
+          this.highPriorityQueue.unshift(message);
+          break;
+        }
+      }
+
+      // Process normal priority messages
+      while (this.messageQueue.length > 0) {
+        const message = this.messageQueue.shift();
+        try {
+          coordinator.postMessageToExtension(message);
+          await this.delay(1); // Small delay for normal messages to prevent overwhelming
+        } catch (error) {
+          log('❌ [MESSAGE] Error sending message:', error);
+          // Re-queue message for retry
+          this.messageQueue.unshift(message);
+          break;
+        }
+      }
+    } finally {
+      // Always release the lock, even if an error occurs
+      this.isProcessingQueue = false;
+      this.queueLock = false;
+    }
   }
 
   /**
@@ -867,15 +936,72 @@ export class MessageManager implements IMessageManager {
    */
   public sendInput(input: string, terminalId?: string, coordinator?: IManagerCoordinator): void {
     if (coordinator) {
+      // ✅ CRITICAL FIX: Robust terminal ID resolution with validation
+      let resolvedTerminalId: string;
+      
+      if (terminalId) {
+        // Use provided terminal ID, but validate it exists
+        const terminalInstance = coordinator.getTerminalInstance(terminalId);
+        if (!terminalInstance) {
+          console.error(`🚨 [MESSAGE] Invalid terminal ID provided: ${terminalId}`);
+          // Fallback to active terminal
+          const activeId = coordinator.getActiveTerminalId();
+          if (!activeId) {
+            console.error('🚨 [MESSAGE] No active terminal available for input');
+            return;
+          }
+          resolvedTerminalId = activeId;
+          console.warn(`⚠️ [MESSAGE] Falling back to active terminal: ${resolvedTerminalId}`);
+        } else {
+          resolvedTerminalId = terminalId;
+        }
+      } else {
+        // Get active terminal with validation
+        const activeId = coordinator.getActiveTerminalId();
+        if (!activeId) {
+          console.error('🚨 [MESSAGE] No active terminal ID available for input');
+          return;
+        }
+        
+        // Double-check the active terminal exists
+        const activeTerminal = coordinator.getTerminalInstance(activeId);
+        if (!activeTerminal) {
+          console.error(`🚨 [MESSAGE] Active terminal ID ${activeId} does not exist`);
+          // Try to find any available terminal as last resort
+          const allTerminals = coordinator.getAllTerminalInstances();
+          const firstTerminal = allTerminals.values().next().value;
+          if (!firstTerminal) {
+            console.error('🚨 [MESSAGE] No terminals available at all');
+            return;
+          }
+          resolvedTerminalId = firstTerminal.id;
+          console.warn(`⚠️ [MESSAGE] Emergency fallback to first available terminal: ${resolvedTerminalId}`);
+        } else {
+          resolvedTerminalId = activeId;
+        }
+      }
+
+      // ✅ CRITICAL: Final validation before sending input
+      const targetTerminal = coordinator.getTerminalInstance(resolvedTerminalId);
+      if (!targetTerminal) {
+        console.error(`🚨 [MESSAGE] Failed to resolve terminal for input: ${resolvedTerminalId}`);
+        return;
+      }
+
+      console.log(`⌨️ [MESSAGE] Sending input to terminal ${targetTerminal.name} (${resolvedTerminalId}): ${input.length} chars`);
+
       this.queueMessage(
         {
           command: 'input',
           data: input,
-          terminalId: terminalId || coordinator.getActiveTerminalId(),
+          terminalId: resolvedTerminalId,
+          timestamp: Date.now(), // Add timestamp for debugging
+          terminalName: targetTerminal.name, // Add terminal name for validation
         },
         coordinator
       );
-      log(`⌨️ [MESSAGE] Input sent: ${input.length} chars to ${terminalId || 'active terminal'}`);
+      
+      console.log(`⌨️ [MESSAGE] Input queued successfully for terminal: ${resolvedTerminalId}`);
     }
   }
 
@@ -953,22 +1079,38 @@ export class MessageManager implements IMessageManager {
   }
 
   /**
-   * Get message queue statistics
+   * Get message queue statistics with high-priority queue info
    */
-  public getQueueStats(): { queueSize: number; isProcessing: boolean } {
+  public getQueueStats(): {
+    queueSize: number;
+    highPriorityQueueSize: number;
+    isProcessing: boolean;
+    isLocked: boolean;
+  } {
     return {
       queueSize: this.messageQueue.length,
+      highPriorityQueueSize: this.highPriorityQueue.length,
       isProcessing: this.isProcessingQueue,
+      isLocked: this.queueLock,
     };
   }
 
   /**
-   * Clear message queue (emergency)
+   * Clear message queues (emergency) with race condition protection
    */
   public clearQueue(): void {
+    // Wait for current processing to finish before clearing
+    if (this.queueLock || this.isProcessingQueue) {
+      log('⚠️ [MESSAGE] Queue is busy, scheduling clear after current processing');
+      setTimeout(() => this.clearQueue(), 10);
+      return;
+    }
+
     this.messageQueue = [];
+    this.highPriorityQueue = [];
     this.isProcessingQueue = false;
-    log('🗑️ [MESSAGE] Message queue cleared');
+    this.queueLock = false;
+    log('🗑️ [MESSAGE] All message queues cleared');
   }
 
   /**
@@ -1824,9 +1966,11 @@ export class MessageManager implements IMessageManager {
   public dispose(): void {
     log('🧹 [MESSAGE] Disposing message manager');
 
-    // Clear queue
+    // Clear all queues and reset state
     this.messageQueue = [];
+    this.highPriorityQueue = [];
     this.isProcessingQueue = false;
+    this.queueLock = false;
 
     log('✅ [MESSAGE] Message manager disposed');
   }

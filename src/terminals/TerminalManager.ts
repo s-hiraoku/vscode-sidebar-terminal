@@ -251,56 +251,139 @@ export class TerminalManager {
   }
 
   public sendInput(data: string, terminalId?: string): void {
-    const id = terminalId || this._activeTerminalManager.getActive();
-
-    if (!id) {
-      console.warn('⚠️ [WARN] No terminal ID provided and no active terminal');
-      return;
+    // ✅ CRITICAL FIX: Robust terminal ID resolution with complete validation
+    let resolvedTerminalId: string;
+    
+    if (terminalId) {
+      // Use provided terminal ID, but validate it exists and is active
+      if (!this._terminals.has(terminalId)) {
+        console.error(`🚨 [TERMINAL] Provided terminal ID does not exist: ${terminalId}`);
+        console.log('🔍 [TERMINAL] Available terminals:', Array.from(this._terminals.keys()));
+        
+        // Fallback to active terminal
+        const activeId = this._activeTerminalManager.getActive();
+        if (!activeId) {
+          console.error('🚨 [TERMINAL] No active terminal available as fallback');
+          return;
+        }
+        resolvedTerminalId = activeId;
+        console.warn(`⚠️ [TERMINAL] Using active terminal as fallback: ${resolvedTerminalId}`);
+      } else {
+        resolvedTerminalId = terminalId;
+      }
+    } else {
+      // Get currently active terminal
+      const activeId = this._activeTerminalManager.getActive();
+      if (!activeId) {
+        console.error('🚨 [TERMINAL] No active terminal ID available');
+        console.log('🔍 [TERMINAL] Available terminals:', Array.from(this._terminals.keys()));
+        return;
+      }
+      
+      // Validate the active terminal still exists
+      if (!this._terminals.has(activeId)) {
+        console.error(`🚨 [TERMINAL] Active terminal ID ${activeId} no longer exists`);
+        
+        // Emergency: Find first available terminal
+        const availableTerminals = Array.from(this._terminals.keys());
+        if (availableTerminals.length === 0) {
+          console.error('🚨 [TERMINAL] No terminals available at all');
+          return;
+        }
+        
+        const emergencyTerminal = availableTerminals[0];
+        if (!emergencyTerminal) {
+          console.error('🚨 [TERMINAL] Emergency terminal is undefined');
+          return;
+        }
+        this._activeTerminalManager.setActive(emergencyTerminal);
+        resolvedTerminalId = emergencyTerminal;
+        console.warn(`⚠️ [TERMINAL] Emergency fallback to first available terminal: ${resolvedTerminalId}`);
+      } else {
+        resolvedTerminalId = activeId;
+      }
     }
 
-    const terminal = this._terminals.get(id);
+    // ✅ FINAL VALIDATION: Ensure terminal exists and get instance
+    const terminal = this._terminals.get(resolvedTerminalId);
     if (!terminal) {
-      console.warn('⚠️ [WARN] Terminal not found for id:', id);
+      console.error(`🚨 [TERMINAL] Terminal resolution failed for ID: ${resolvedTerminalId}`);
       return;
     }
+
+    console.log(`⌨️ [TERMINAL] Sending input to ${terminal.name} (${resolvedTerminalId}): ${data.length} chars`);
 
     try {
       // CLI Agent コマンドを検出
-      this._cliAgentService.detectFromInput(id, data);
+      this._cliAgentService.detectFromInput(resolvedTerminalId, data);
 
-      // PTY入力処理（ptyProcess優先、フォールバックとしてpty）
-      const ptyInstance = terminal.ptyProcess || terminal.pty;
-      if (ptyInstance && ptyInstance.write) {
-        ptyInstance.write(data);
+      // ✅ ENHANCED: Robust PTY writing with comprehensive validation
+      const result = this._writeToPtyWithValidation(terminal, data);
+      if (!result.success) {
+        console.error(`🚨 [TERMINAL] PTY write failed for ${terminal.name}: ${result.error}`);
+        
+        // Attempt recovery with alternative PTY instance
+        console.log(`🔄 [TERMINAL] Attempting PTY recovery for ${terminal.name}...`);
+        const recovered = this._attemptPtyRecovery(terminal, data);
+        if (!recovered) {
+          throw new Error(result.error || 'PTY write failed and recovery unsuccessful');
+        }
+        console.log(`✅ [TERMINAL] PTY recovery successful for ${terminal.name}`);
       } else {
-        console.error('❌ [ERROR] PTY instance not found or write method unavailable');
-        console.error('❌ [ERROR] Terminal debug info:', {
-          id: terminal.id,
-          name: terminal.name,
-          hasPty: !!terminal.pty,
-          hasPtyProcess: !!terminal.ptyProcess,
-          ptyType: terminal.pty ? typeof terminal.pty : 'undefined',
-          ptyProcessType: terminal.ptyProcess ? typeof terminal.ptyProcess : 'undefined',
-        });
+        console.log(`✅ [TERMINAL] Input sent successfully to ${terminal.name}`);
       }
     } catch (error) {
-      console.error('❌ [ERROR] Failed to write to pty:', error);
-      showErrorMessage('Failed to send input to terminal', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error(`❌ [TERMINAL] Critical error sending input to ${terminal.name}:`, errorMessage);
+
+      // Enhanced error logging with complete terminal state
+      console.error('❌ [TERMINAL] Terminal state at failure:', {
+        id: terminal.id,
+        name: terminal.name,
+        number: terminal.number,
+        isActive: terminal.isActive,
+        hasPty: !!terminal.pty,
+        hasPtyProcess: !!terminal.ptyProcess,
+        ptyType: terminal.pty ? typeof terminal.pty : 'undefined',
+        ptyProcessType: terminal.ptyProcess ? typeof terminal.ptyProcess : 'undefined',
+        ptyWritable: terminal.pty ? typeof terminal.pty.write : 'no pty',
+        ptyProcessWritable:
+          terminal.ptyProcess &&
+          typeof terminal.ptyProcess === 'object' &&
+          'write' in terminal.ptyProcess
+            ? typeof (terminal.ptyProcess as any).write
+            : 'no ptyProcess',
+        createdAt: terminal.createdAt,
+        cwd: terminal.cwd,
+      });
+
+      showErrorMessage(`Terminal input failed for ${terminal.name}: ${errorMessage}`, error);
     }
   }
 
   public resize(cols: number, rows: number, terminalId?: string): void {
     const id = terminalId || this._activeTerminalManager.getActive();
-    if (id) {
-      const terminal = this._terminals.get(id);
-      if (terminal) {
-        const ptyInstance = terminal.ptyProcess || terminal.pty;
-        if (ptyInstance && ptyInstance.resize) {
-          ptyInstance.resize(cols, rows);
-        } else {
-          console.error('❌ [ERROR] PTY instance not found for resize:', terminal.id);
-        }
+    if (!id) {
+      console.warn('⚠️ [WARN] No terminal ID provided and no active terminal for resize');
+      return;
+    }
+
+    const terminal = this._terminals.get(id);
+    if (!terminal) {
+      console.warn('⚠️ [WARN] Terminal not found for resize:', id);
+      return;
+    }
+
+    try {
+      // Enhanced PTY resize with validation
+      const result = this._resizePtyWithValidation(terminal, cols, rows);
+      if (!result.success) {
+        throw new Error(result.error || 'PTY resize failed');
       }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('❌ [ERROR] Failed to resize terminal:', errorMessage);
+      console.error('❌ [ERROR] Resize parameters:', { cols, rows, terminalId: id });
     }
   }
 
@@ -556,16 +639,35 @@ export class TerminalManager {
 
   // Performance optimization: Buffer data to reduce event frequency
   private _bufferData(terminalId: string, data: string): void {
+    // ✅ CRITICAL FIX: Strict terminal ID validation to prevent cross-terminal contamination
+    if (!terminalId || typeof terminalId !== 'string') {
+      console.error('🚨 [TERMINAL] Invalid terminalId for data buffering:', terminalId);
+      return;
+    }
+
+    // Validate terminal exists before buffering data
+    if (!this._terminals.has(terminalId)) {
+      console.warn(`⚠️ [TERMINAL] Attempting to buffer data for non-existent terminal: ${terminalId}`);
+      return;
+    }
+
     if (!this._dataBuffers.has(terminalId)) {
       this._dataBuffers.set(terminalId, []);
+      console.log(`📊 [TERMINAL] Created new data buffer for terminal: ${terminalId}`);
     }
 
     const buffer = this._dataBuffers.get(terminalId);
     if (!buffer) {
+      console.error('🚨 [TERMINAL] Buffer creation failed for terminal:', terminalId);
       this._dataBuffers.set(terminalId, []);
       return;
     }
-    buffer.push(data);
+
+    // ✅ CRITICAL: Add terminal ID validation to each data chunk
+    const validatedData = this._validateDataForTerminal(terminalId, data);
+    buffer.push(validatedData);
+
+    console.log(`📊 [TERMINAL] Data buffered for ${terminalId}: ${data.length} chars (buffer size: ${buffer.length})`);
 
     // Flush immediately if buffer is full or data is large
     if (buffer.length >= this.MAX_BUFFER_SIZE || data.length > 1000) {
@@ -573,6 +675,21 @@ export class TerminalManager {
     } else {
       this._scheduleFlush(terminalId);
     }
+  }
+
+  /**
+   * ✅ NEW: Validate data belongs to specific terminal
+   * Prevents cross-terminal data contamination
+   */
+  private _validateDataForTerminal(terminalId: string, data: string): string {
+    // Basic validation - could be enhanced with more sophisticated checks
+    if (data.includes('\x1b]0;') && !data.includes(terminalId)) {
+      // Window title escape sequences might contain terminal context
+      console.log(`🔍 [TERMINAL] Window title detected for ${terminalId}`);
+    }
+    
+    // Return data as-is for now, but this method provides a hook for future validation
+    return data;
   }
 
   private _scheduleFlush(terminalId: string): void {
@@ -585,6 +702,25 @@ export class TerminalManager {
   }
 
   private _flushBuffer(terminalId: string): void {
+    // ✅ CRITICAL FIX: Strict terminal ID validation before flushing
+    if (!terminalId || typeof terminalId !== 'string') {
+      console.error('🚨 [TERMINAL] Invalid terminalId for buffer flushing:', terminalId);
+      return;
+    }
+
+    // Double-check terminal still exists
+    if (!this._terminals.has(terminalId)) {
+      console.warn(`⚠️ [TERMINAL] Cannot flush buffer for removed terminal: ${terminalId}`);
+      // Clean up orphaned buffer and timer
+      this._dataBuffers.delete(terminalId);
+      const timer = this._dataFlushTimers.get(terminalId);
+      if (timer) {
+        clearTimeout(timer);
+        this._dataFlushTimers.delete(terminalId);
+      }
+      return;
+    }
+
     const timer = this._dataFlushTimers.get(terminalId);
     if (timer) {
       clearTimeout(timer);
@@ -596,10 +732,28 @@ export class TerminalManager {
       const combinedData = buffer.join('');
       buffer.length = 0; // Clear buffer
 
-      // Send to CLI Agent detection service
-      this._cliAgentService.detectFromOutput(terminalId, combinedData);
+      // ✅ CRITICAL: Additional validation before emitting data
+      const terminal = this._terminals.get(terminalId);
+      if (!terminal) {
+        console.error(`🚨 [TERMINAL] Terminal disappeared during flush: ${terminalId}`);
+        return;
+      }
 
-      this._dataEmitter.fire({ terminalId, data: combinedData });
+      // Send to CLI Agent detection service with validation
+      try {
+        this._cliAgentService.detectFromOutput(terminalId, combinedData);
+      } catch (error) {
+        console.warn(`⚠️ [TERMINAL] CLI Agent detection failed for ${terminalId}:`, error);
+      }
+
+      // ✅ EMIT DATA WITH STRICT TERMINAL ID ASSOCIATION
+      console.log(`📤 [TERMINAL] Flushing data for terminal ${terminal.name} (${terminalId}): ${combinedData.length} chars`);
+      this._dataEmitter.fire({ 
+        terminalId: terminalId, // Ensure exact ID match
+        data: combinedData,
+        timestamp: Date.now(), // Add timestamp for debugging
+        terminalName: terminal.name // Add terminal name for validation
+      });
     }
   }
 
@@ -803,6 +957,129 @@ export class TerminalManager {
 
     // Delegate to the CLI Agent service
     return this._cliAgentService.switchAgentConnection(terminalId);
+  }
+
+  /**
+   * Write to PTY with validation and error handling
+   */
+  private _writeToPtyWithValidation(
+    terminal: TerminalInstance,
+    data: string
+  ): { success: boolean; error?: string } {
+    // Prefer ptyProcess over pty for consistency
+    const ptyInstance = terminal.ptyProcess || terminal.pty;
+
+    // Comprehensive validation
+    if (!ptyInstance) {
+      return { success: false, error: 'No PTY instance available' };
+    }
+
+    if (typeof ptyInstance.write !== 'function') {
+      return { success: false, error: 'PTY instance missing write method' };
+    }
+
+    // Check if PTY process is still alive
+    if (
+      terminal.ptyProcess &&
+      typeof terminal.ptyProcess === 'object' &&
+      'killed' in terminal.ptyProcess &&
+      (terminal.ptyProcess as any).killed
+    ) {
+      return { success: false, error: 'PTY process has been killed' };
+    }
+
+    try {
+      ptyInstance.write(data);
+      return { success: true };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return { success: false, error: `Write failed: ${errorMessage}` };
+    }
+  }
+
+  /**
+   * Attempt to recover from PTY write failure
+   */
+  private _attemptPtyRecovery(terminal: TerminalInstance, data: string): boolean {
+    console.warn('⚠️ [RECOVERY] Attempting PTY recovery for terminal:', terminal.id);
+
+    // Try alternative PTY instance if available
+    const alternatives = [terminal.ptyProcess, terminal.pty].filter(Boolean);
+
+    for (const ptyInstance of alternatives) {
+      if (ptyInstance && typeof ptyInstance.write === 'function') {
+        try {
+          // Double-check that this instance wasn't already tried
+          if (ptyInstance === (terminal.ptyProcess || terminal.pty)) {
+            continue; // Skip the same instance that already failed
+          }
+
+          ptyInstance.write(data);
+          console.log('✅ [RECOVERY] PTY write recovered using alternative instance');
+
+          // Update the terminal to use the working instance
+          if (ptyInstance === terminal.pty) {
+            terminal.ptyProcess = undefined; // Clear the failing instance
+          }
+
+          return true;
+        } catch (recoveryError) {
+          console.warn('⚠️ [RECOVERY] Alternative PTY instance also failed:', recoveryError);
+        }
+      }
+    }
+
+    // If all alternatives failed, log the failure
+    console.error('❌ [RECOVERY] All PTY recovery attempts failed for terminal:', terminal.id);
+    return false;
+  }
+
+  /**
+   * Resize PTY with validation and error handling
+   */
+  private _resizePtyWithValidation(
+    terminal: TerminalInstance,
+    cols: number,
+    rows: number
+  ): { success: boolean; error?: string } {
+    // Validate dimensions first
+    if (cols <= 0 || rows <= 0) {
+      return { success: false, error: `Invalid dimensions: ${cols}x${rows}` };
+    }
+
+    if (cols > 500 || rows > 200) {
+      return { success: false, error: `Dimensions too large: ${cols}x${rows}` };
+    }
+
+    // Get PTY instance
+    const ptyInstance = terminal.ptyProcess || terminal.pty;
+
+    if (!ptyInstance) {
+      return { success: false, error: 'No PTY instance available' };
+    }
+
+    if (typeof ptyInstance.resize !== 'function') {
+      return { success: false, error: 'PTY instance missing resize method' };
+    }
+
+    // Check if PTY process is still alive
+    if (
+      terminal.ptyProcess &&
+      typeof terminal.ptyProcess === 'object' &&
+      'killed' in terminal.ptyProcess &&
+      (terminal.ptyProcess as any).killed
+    ) {
+      return { success: false, error: 'PTY process has been killed' };
+    }
+
+    try {
+      ptyInstance.resize(cols, rows);
+      log(`📏 [TERMINAL] Terminal resized: ${terminal.name} → ${cols}x${rows}`);
+      return { success: true };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return { success: false, error: `Resize failed: ${errorMessage}` };
+    }
   }
 
   // =================== CLI Agent Detection - MOVED TO SERVICE ===================

@@ -291,6 +291,8 @@ export interface TerminalEvent {
   terminalId: string;
   data?: string;
   exitCode?: number;
+  timestamp?: number;
+  terminalName?: string;
 }
 
 export interface AltClickState {

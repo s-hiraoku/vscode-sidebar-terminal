@@ -895,6 +895,177 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
     return { isTerminated: false, reason: 'shell_prompt' };
   }
 
+  /**
+   * 🔧 NEW: More strict termination detection for connected agents
+   * Only detects clear termination signals, not ambiguous shell prompts
+   */
+  private detectStrictTermination(terminalId: string, data: string): TerminationDetectionResult {
+    try {
+      const lines = data.split(/\r?\n/);
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+
+        const cleanLine = this.patternDetector.cleanAnsiEscapeSequences(trimmed);
+        const fullyCleanLine = cleanLine
+          .replace(/[│╭╰─╯]/g, '') // Remove box characters only
+          .trim();
+
+        if (!fullyCleanLine || fullyCleanLine.length < 2) continue;
+
+        const lowerLine = fullyCleanLine.toLowerCase();
+
+        // 🚨 CRITICAL: For connected agents, ONLY detect EXPLICIT termination signals
+        // NO shell prompt detection during agent execution to prevent false positives
+
+        // 1. User exit commands (most reliable)
+        if (this.isExitCommand(lowerLine)) {
+          log(
+            `🔻 [STRICT-TERMINATION] Exit command detected: "${fullyCleanLine}" in terminal ${terminalId}`
+          );
+          return {
+            isTerminated: true,
+            reason: 'exit_command',
+            detectedLine: fullyCleanLine,
+          };
+        }
+
+        // 2. Explicit termination messages from CLI agents (VERY specific only)
+        if (this.hasVeryExplicitTerminationMessage(lowerLine)) {
+          log(
+            `🔻 [STRICT-TERMINATION] Explicit termination message detected: "${fullyCleanLine}" in terminal ${terminalId}`
+          );
+          return {
+            isTerminated: true,
+            reason: 'termination_message',
+            detectedLine: fullyCleanLine,
+          };
+        }
+
+        // 3. Process crash/error indicators (only obvious crashes)
+        if (this.hasProcessCrashIndicator(lowerLine)) {
+          log(
+            `🔻 [STRICT-TERMINATION] Process crash detected: "${fullyCleanLine}" in terminal ${terminalId}`
+          );
+          return {
+            isTerminated: true,
+            reason: 'process_exit',
+            detectedLine: fullyCleanLine,
+          };
+        }
+
+        // 🚨 REMOVED: Shell prompt detection completely disabled for connected agents
+        // This prevents false termination during normal AI agent operation
+      }
+    } catch (error) {
+      log('ERROR: Strict CLI Agent termination detection failed:', error);
+    }
+
+    return { isTerminated: false, reason: 'shell_prompt' };
+  }
+
+  /**
+   * 🔧 NEW: Very strict shell prompt detection - only obvious shell prompts
+   */
+  private detectStrictShellPrompt(cleanLine: string): boolean {
+    // Only match VERY obvious shell prompt patterns
+    const strictShellPromptPatterns = [
+      // Very specific patterns only
+      // Standard bash/zsh prompts with username@hostname
+      /^[\w.-]+@[\w.-]+:.*[$%]\s*$/,
+      /^[\w.-]+@[\w.-]+\s+.*[$%#>]\s*$/,
+
+      // Oh My Zsh themes with symbols (but only at start of line)
+      /^➜\s+[\w.-]+/,
+      /^[➜▶⚡]\s+[\w.-]+/,
+
+      // Starship prompt variations (but only exact matches)
+      /^❯\s*$/,
+
+      // Simple shell prompts (but only if they're the entire line)
+      /^[$%#>]\s*$/,
+
+      // PowerShell patterns
+      /^PS\s+.*>/,
+
+      // Box drawing character prompts (Oh-My-Zsh themes)
+      /^[╭┌]─[\w.-]+@[\w.-]+/,
+
+      // Python/conda environment prompts
+      /^\([\w.-]+\)\s+.*[$%#>]\s*$/,
+
+      // Very specific patterns with path-like structures
+      /^[\w.-]+:\s*.*[$%#>]\s*$/,
+      /^.*@.*:\s*.*\$\s*$/,
+    ];
+
+    const matched = strictShellPromptPatterns.some((pattern, index) => {
+      const result = pattern.test(cleanLine);
+      if (result) {
+        log(
+          `✅ [STRICT-SHELL-PROMPT] Pattern ${index} matched: ${pattern} for line: "${cleanLine}"`
+        );
+      }
+      return result;
+    });
+
+    if (matched) {
+      log(`✅ [STRICT-SHELL-PROMPT] TERMINATION DETECTED: "${cleanLine}"`);
+    }
+
+    return matched;
+  }
+
+  /**
+   * 🔧 NEW: Only explicit termination messages, not generic ones
+   */
+  private hasVeryExplicitTerminationMessage(lowerLine: string): boolean {
+    // 🚨 ULTRA-STRICT: Only the most explicit termination messages
+    const ultraExplicitTerminationMessages = [
+      'claude code session ended',
+      'gemini session ended',
+      'session complete',
+      'conversation ended',
+      'goodbye!',
+      'bye!',
+      'thanks for using claude',
+      'thanks for using gemini',
+      'until next time!',
+      'exiting claude code',
+      'exiting gemini code',
+      'claude code terminated',
+      'gemini code terminated',
+      // Process termination messages
+      'process terminated',
+      'session terminated',
+      'connection closed',
+    ];
+
+    return ultraExplicitTerminationMessages.some((msg) => lowerLine.includes(msg));
+  }
+
+  /**
+   * 🔧 NEW: Detect only obvious process crashes, not normal shell returns
+   */
+  private hasProcessCrashIndicator(lowerLine: string): boolean {
+    const crashIndicators = [
+      'segmentation fault',
+      'segfault',
+      'core dumped',
+      'fatal error',
+      'unhandled exception',
+      'process crashed',
+      'abnormal termination',
+      'killed by signal',
+      'exit code 1',
+      'exit code -1',
+      'command not found', // Only if it's the main command
+      'permission denied', // Only for main process
+    ];
+
+    return crashIndicators.some((indicator) => lowerLine.includes(indicator));
+  }
+
   // =================== State Management Methods ===================
 
   getAgentState(terminalId: string): CliAgentState {
@@ -1046,14 +1217,17 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
 
         // Check for termination first (for connected terminals)
         if (this.stateManager.isAgentConnected(terminalId)) {
-          const terminationResult = this.detectTermination(terminalId, line);
+          // 🔧 FIX: Use more strict termination detection for connected agents
+          const terminationResult = this.detectStrictTermination(terminalId, line);
           if (terminationResult.isTerminated) {
             this.stateManager.setAgentTerminated(terminalId);
             log(
-              `🔺 [CLI-AGENT] Termination detected from output: "${fullyCleanLine}" in terminal ${terminalId}`
+              `🔻 [CLI-AGENT] Termination detected from output: "${fullyCleanLine}" in terminal ${terminalId}`
             );
             return null; // Termination handled, no detection result needed
           }
+          // 🚨 IMPORTANT: Skip ALL further detection for connected agents to prevent state churn
+          continue;
         }
 
         // Check for startup patterns (only for non-connected and non-disconnected agents)
@@ -1061,12 +1235,6 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
         const isDisconnectedAgent = disconnectedAgents.has(terminalId);
 
         if (!isDisconnectedAgent) {
-          // 🚨 HOTFIX: Prevent duplicate detection for already connected agents (STARTUP ONLY)
-          if (this.stateManager.isAgentConnected(terminalId)) {
-            // Agent is already connected, skip STARTUP detection only to prevent state churn
-            continue;
-          }
-
           // Claude startup detection
           if (this.patternDetector.detectClaudeStartup(fullyCleanLine)) {
             log(

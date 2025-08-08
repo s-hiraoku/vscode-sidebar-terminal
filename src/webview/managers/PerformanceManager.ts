@@ -33,15 +33,15 @@ export class PerformanceManager implements IPerformanceManager {
     this.currentBufferTerminal = targetTerminal;
 
     // Enhanced buffering strategy for CLI Agent compatibility
-    const isLargeOutput = data.length >= 1000;
+    const isLargeOutput = data.length >= 500; // Reduced from 1000 to 500 for better responsiveness
     const bufferFull = this.outputBuffer.length >= this.MAX_BUFFER_SIZE;
-    const isModerateOutput = data.length >= 100; // Medium-sized chunks
+    const isSmallInput = data.length <= 10; // New: Immediate flush for small inputs (typing)
+    const isModerateOutput = data.length >= 50; // Reduced from 100 to 50
 
-    // Immediate flush conditions (prioritized for cursor accuracy)
-    // Only flush immediately for large output (≥1000 chars) or buffer full
-    // Moderate output (≥100 chars) should only flush immediately during CLI Agent mode
+    // Immediate flush conditions (prioritized for cursor accuracy and input responsiveness)
+    // Immediate flush for: large output, buffer full, small inputs (typing), or CLI Agent mode
     const shouldFlushImmediately =
-      isLargeOutput || bufferFull || (this.isCliAgentMode && isModerateOutput);
+      isLargeOutput || bufferFull || isSmallInput || (this.isCliAgentMode && isModerateOutput);
 
     if (shouldFlushImmediately) {
       this.flushOutputBuffer();
@@ -50,11 +50,13 @@ export class PerformanceManager implements IPerformanceManager {
       // The terminal's internal isUserScrolling flag handles this behavior
       targetTerminal.write(data);
 
-      const reason = this.isCliAgentMode
-        ? 'CLI Agent mode'
-        : isLargeOutput
-          ? 'large output'
-          : 'buffer full';
+      const reason = isSmallInput
+        ? 'small input (typing)'
+        : this.isCliAgentMode
+          ? 'CLI Agent mode'
+          : isLargeOutput
+            ? 'large output'
+            : 'buffer full';
       log(`📤 [PERFORMANCE] Immediate write: ${data.length} chars (${reason})`);
     } else {
       this.outputBuffer.push(data);
@@ -71,14 +73,14 @@ export class PerformanceManager implements IPerformanceManager {
   private scheduleBufferFlush(): void {
     if (this.bufferFlushTimer === null) {
       // Dynamic flush interval based on CLI Agent state and output frequency
-      let flushInterval = this.BUFFER_FLUSH_INTERVAL; // Default 16ms
+      let flushInterval = this.BUFFER_FLUSH_INTERVAL; // Default 4ms (improved from 16ms)
 
       if (this.isCliAgentMode) {
         // CLI Agent active: Use very aggressive flushing for cursor accuracy
-        flushInterval = 4; // 4ms for CLI Agent output
-      } else if (this.outputBuffer.length > 5) {
-        // High-frequency output: Use shorter interval
-        flushInterval = 8; // 8ms for frequent output
+        flushInterval = 2; // Reduced from 4ms to 2ms for CLI Agent output
+      } else if (this.outputBuffer.length > 3) {
+        // High-frequency output: Use shorter interval (reduced threshold from 5 to 3)
+        flushInterval = 2; // Reduced from 8ms to 2ms for frequent output
       }
 
       this.bufferFlushTimer = window.setTimeout(() => {
