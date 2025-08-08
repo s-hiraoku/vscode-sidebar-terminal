@@ -309,6 +309,18 @@ export class CliAgentStateManager implements ICliAgentStateManager {
       return;
     }
 
+    // 🚨 CRITICAL FIX: Prevent promotion of DISCONNECTED agents to CONNECTED via old output re-processing
+    // According to specification: Only legitimate new agents or explicit user actions should change state
+    if (this._disconnectedAgents.has(terminalId)) {
+      log(
+        `🚨 [STATE-MANAGER] BLOCKED: Attempt to promote DISCONNECTED agent ${type} in terminal ${terminalId} to CONNECTED (likely from old output re-processing)`
+      );
+      log(
+        `📋 [STATE-MANAGER] Specification compliance: DISCONNECTED agents should only become CONNECTED via explicit user action or termination of current CONNECTED agent`
+      );
+      return; // Block the state change - this violates the specification
+    }
+
     // Handle previous connected agent
     const previousConnectedId = this._connectedAgentTerminalId;
     const previousType = this._connectedAgentType;
@@ -317,7 +329,7 @@ export class CliAgentStateManager implements ICliAgentStateManager {
     this._connectedAgentTerminalId = terminalId;
     this._connectedAgentType = type;
 
-    // Remove from disconnected if it was there
+    // Remove from disconnected if it was there (shouldn't happen due to check above, but safety measure)
     this._disconnectedAgents.delete(terminalId);
 
     // Move previous connected agent to disconnected (only if different terminal)
