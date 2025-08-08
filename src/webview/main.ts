@@ -89,7 +89,7 @@ function getVsCodeApi(): typeof vscode {
 }
 
 // Main terminal management class
-class TerminalWebviewManager {
+export class TerminalWebviewManager {
   // IManagerCoordinator interface methods
   public getActiveTerminalId(): string | null {
     return this.activeTerminalId;
@@ -175,7 +175,7 @@ class TerminalWebviewManager {
   ];
 
   // Managers
-  private splitManager: SplitManager;
+  public splitManager: SplitManager;
   private settingsPanel: SettingsPanel;
   private notificationManager: NotificationManager;
   private configManager: ConfigManager;
@@ -1572,6 +1572,26 @@ class TerminalWebviewManager {
 
   public getSplitManager(): SplitManager {
     return this.splitManager;
+  }
+
+  /**
+   * Public handleMessage method for testing
+   */
+  public async handleMessage(message: any): Promise<void> {
+    try {
+      if (this.messageManager) {
+        // Create a fake MessageEvent for compatibility
+        const fakeEvent = {
+          data: message,
+          origin: 'test',
+          source: null,
+        } as MessageEvent;
+        
+        await this.messageManager.handleMessage(fakeEvent, this);
+      }
+    } catch (error) {
+      log('❌ [WEBVIEW] Error in handleMessage:', error);
+    }
   }
 
   public switchToNextTerminal(): void {

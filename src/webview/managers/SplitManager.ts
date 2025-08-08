@@ -225,7 +225,7 @@ export class SplitManager {
           // Refit the terminal
           terminalData.fitAddon.fit();
           terminalData.terminal.refresh(0, terminalData.terminal.rows - 1);
-          
+
           console.log(`🔧 [SPLIT] Refitted terminal ${terminalId}`);
         } catch (error) {
           console.error(`❌ [SPLIT] Error refitting terminal ${terminalId}:`, error);
@@ -591,6 +591,17 @@ export class SplitManager {
 
   public getTerminalContainers(): Map<string, HTMLElement> {
     return this.terminalContainers;
+  }
+
+  /**
+   * Get optimal split direction based on panel location
+   */
+  public getOptimalSplitDirection(location: 'sidebar' | 'panel' | string): 'vertical' | 'horizontal' {
+    if (location === 'panel') {
+      return 'horizontal'; // Wide layout - horizontal split
+    } else {
+      return 'vertical'; // Sidebar or unknown - vertical split
+    }
   }
 
   // Setters

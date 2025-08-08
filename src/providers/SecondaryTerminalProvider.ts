@@ -46,9 +46,12 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       this._setupTerminalEventListeners();
       this._setupCliAgentStatusListeners();
       this._setupConfigurationChangeListeners();
+      
+      // 🆕 Set up panel location change listener
+      this._setupPanelLocationChangeListener(webviewView);
 
-      // 🆕 Panel location will be sent when WebView requests settings during initialization
-      // This ensures proper timing and avoids race conditions
+      // 🆕 Panel location detection is now handled via getSettings message
+      // This ensures WebView is ready before detection starts
 
       log('WebView setup completed successfully');
     } catch (error) {
@@ -58,32 +61,28 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   }
 
   /**
-   * 🆕 Detect current panel location and notify WebView for dynamic split direction
+   * 🆕 Request panel location detection from WebView
    * Issue #148: Dynamic split direction based on panel location
    */
-  private _detectAndNotifyPanelLocation(webviewView: vscode.WebviewView): void {
+  private _requestPanelLocationDetection(): void {
     try {
-      // Get the panel location by checking the view's visibility and container properties
-      const panelLocation = this._getCurrentPanelLocation();
+      log('📍 [PANEL-DETECTION] Requesting panel location detection from WebView');
       
-      log(`📍 [PANEL-DETECTION] Detected panel location: ${panelLocation}`);
-
-      // Send panel location to WebView for split direction optimization
+      // Send a message to WebView to analyze its dimensions and report back
       this._sendMessage({
-        command: 'panelLocationUpdate',
-        location: panelLocation
+        command: 'requestPanelLocationDetection'
       });
-
-      // Set up a listener for potential panel location changes
-      this._setupPanelLocationChangeListener(webviewView);
-
+      
     } catch (error) {
-      log('⚠️ [PANEL-DETECTION] Error detecting panel location:', error);
+      log('⚠️ [PANEL-DETECTION] Error requesting panel location detection:', error);
       // Fallback to sidebar assumption
       this._sendMessage({
         command: 'panelLocationUpdate',
         location: 'sidebar'
       });
+
+      // Set fallback context key
+      void vscode.commands.executeCommand('setContext', 'secondaryTerminal.panelLocation', 'sidebar');
     }
   }
 
@@ -108,31 +107,10 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       return manualPanelLocation;
     }
 
-    // 🔧 Enhanced auto-detection using WebView characteristics
-    try {
-      if (!this._view) {
-        log('📍 [PANEL-DETECTION] No WebView available, defaulting to sidebar');
-        return 'sidebar';
-      }
-
-      // Request WebView to help with detection by analyzing its dimensions
-      // This will be handled asynchronously
-      log('📍 [PANEL-DETECTION] Requesting dimension-based detection from WebView');
-      
-      // Send a message to WebView to analyze its dimensions and report back
-      this._sendMessage({
-        command: 'requestPanelLocationDetection'
-      });
-      
-      // For now, return sidebar as default while we wait for WebView analysis
-      // The actual location will be updated when WebView responds
-      log('📍 [PANEL-DETECTION] Auto-detection defaulting to sidebar (pending WebView analysis)');
-      return 'sidebar';
-      
-    } catch (error) {
-      log('⚠️ [PANEL-DETECTION] Error in auto-detection, defaulting to sidebar:', error);
-      return 'sidebar';
-    }
+    // 🔧 For auto-detection, default to sidebar
+    // Actual detection will be done asynchronously via WebView
+    log('📍 [PANEL-DETECTION] Auto mode - defaulting to sidebar, will detect via WebView');
+    return 'sidebar';
   }
 
   /**
@@ -147,13 +125,8 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         webviewView.onDidChangeVisibility(() => {
           // When visibility changes, re-detect panel location
           setTimeout(() => {
-            const newLocation = this._getCurrentPanelLocation();
-            log(`📍 [PANEL-DETECTION] Panel location change detected: ${newLocation}`);
-            
-            this._sendMessage({
-              command: 'panelLocationUpdate',
-              location: newLocation
-            });
+            log('📍 [PANEL-DETECTION] Panel location change detected - requesting detection');
+            this._requestPanelLocationDetection();
           }, 100); // Small delay to ensure layout is settled
         })
       );
@@ -163,19 +136,14 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     this._addDisposable(
       vscode.workspace.onDidChangeConfiguration(event => {
         if (event.affectsConfiguration('sidebarTerminal.panelLocation')) {
-          const newLocation = this._getCurrentPanelLocation();
-          log(`📍 [PANEL-DETECTION] Panel location setting changed: ${newLocation}`);
-          
-          this._sendMessage({
-            command: 'panelLocationUpdate',
-            location: newLocation
-          });
+          log(`📍 [PANEL-DETECTION] Panel location setting changed - requesting detection`);
+          this._requestPanelLocationDetection();
         }
       })
     );
   }
 
-  public splitTerminal(): void {
+  public splitTerminal(direction?: 'horizontal' | 'vertical'): void {
     // Terminal split operation
     try {
       // Check if we can split (use configured terminal limit)
@@ -194,6 +162,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       // First send the SPLIT command to prepare the UI
       void this._sendMessage({
         command: TERMINAL_CONSTANTS.COMMANDS.SPLIT,
+        direction: direction || 'vertical', // Default to vertical if not specified
       });
 
       // SPINNER FIX: Defer terminal creation for split operations too
@@ -503,7 +472,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
             fontSettings,
           });
           
-          // 🆕 Send initial panel location for dynamic split direction (Issue #148)
+          // 🆕 Send initial panel location and request detection (Issue #148)
           if (this._view) {
             const panelLocation = this._getCurrentPanelLocation();
             log(`📍 [SETTINGS] Sending initial panel location: ${panelLocation}`);
@@ -511,6 +480,9 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
               command: 'panelLocationUpdate',
               location: panelLocation
             });
+            
+            // Also request WebView to detect actual panel location
+            this._requestPanelLocationDetection();
           }
           
           break;
@@ -525,6 +497,10 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         case 'reportPanelLocation': {
           log('📍 [DEBUG] Panel location reported from WebView:', message.location);
           if (message.location) {
+            // Update context key for VS Code when clause
+            void vscode.commands.executeCommand('setContext', 'secondaryTerminal.panelLocation', message.location);
+            log('📍 [DEBUG] Context key updated with panel location:', message.location);
+            
             // Update our understanding of the panel location and notify WebView
             await this._sendMessage({
               command: 'panelLocationUpdate',
@@ -947,9 +923,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       if (shouldUpdatePanelLocation) {
         log('📍 [DEBUG] Panel location settings changed, re-detecting and updating...');
         setTimeout(() => {
-          if (this._view) {
-            this._detectAndNotifyPanelLocation(this._view);
-          }
+          this._requestPanelLocationDetection();
         }, 100); // Small delay to ensure settings are applied
       }
     });
@@ -1659,9 +1633,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
             // This handles cases where the panel was moved while hidden
             setTimeout(() => {
               log('📍 [DEBUG] Requesting panel location detection after visibility change');
-              this._sendMessage({
-                command: 'requestPanelLocationDetection'
-              });
+              this._requestPanelLocationDetection();
             }, 500); // Small delay to ensure WebView is fully loaded
             
           } else {

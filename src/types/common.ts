@@ -161,6 +161,7 @@ export interface WebviewMessage {
 
   // Panel location for dynamic split direction (Issue #148)
   location?: 'sidebar' | 'panel'; // Panel location information
+  direction?: 'horizontal' | 'vertical'; // Split direction for terminal splitting
 
   // セッション復元関連
   sessionRestoreMessage?: string; // 復元メッセージ
