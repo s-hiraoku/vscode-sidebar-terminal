@@ -372,9 +372,7 @@ export class CliAgentStateManager implements ICliAgentStateManager {
   promoteDisconnectedAgentToConnected(terminalId: string): void {
     const disconnectedAgent = this._disconnectedAgents.get(terminalId);
     if (!disconnectedAgent) {
-      log(
-        `⚠️ [STATE-MANAGER] Cannot promote terminal ${terminalId}: not in DISCONNECTED state`
-      );
+      log(`⚠️ [STATE-MANAGER] Cannot promote terminal ${terminalId}: not in DISCONNECTED state`);
       return;
     }
 
