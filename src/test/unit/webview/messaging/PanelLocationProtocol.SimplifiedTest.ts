@@ -60,7 +60,7 @@ describe('Panel Location Detection - Simplified Tests', function () {
 
       // Act - optimal split direction logic
       const optimalDirection: 'horizontal' | 'vertical' =
-        panelLocation === 'panel' ? 'horizontal' : 'vertical';
+        (panelLocation as string) === 'panel' ? 'horizontal' : 'vertical';
 
       // Assert
       expect(optimalDirection).to.equal('vertical');
@@ -183,7 +183,8 @@ describe('Panel Location Detection - Simplified Tests', function () {
     it('should handle typical sidebar to panel transition', function () {
       // Arrange - simulate transition scenario
       let currentLocation: 'sidebar' | 'panel' = 'sidebar';
-      let currentDirection = currentLocation === 'panel' ? 'horizontal' : 'vertical';
+      let currentDirection: 'horizontal' | 'vertical' =
+        (currentLocation as string) === 'panel' ? 'horizontal' : 'vertical';
 
       // Act - simulate panel move
       const newDimensions = { width: 1200, height: 300 };
@@ -192,8 +193,7 @@ describe('Panel Location Detection - Simplified Tests', function () {
 
       if (newLocation !== currentLocation) {
         currentLocation = newLocation;
-        currentDirection =
-          currentLocation === 'panel' ? ('horizontal' as const) : ('vertical' as const);
+        currentDirection = (currentLocation as string) === 'panel' ? 'horizontal' : 'vertical';
       }
 
       // Assert
@@ -204,7 +204,8 @@ describe('Panel Location Detection - Simplified Tests', function () {
     it('should handle panel to sidebar transition', function () {
       // Arrange - start in panel
       let currentLocation: 'sidebar' | 'panel' = 'panel';
-      let currentDirection = currentLocation === 'panel' ? 'horizontal' : 'vertical';
+      let currentDirection: 'horizontal' | 'vertical' =
+        currentLocation === 'panel' ? 'horizontal' : 'vertical';
 
       // Act - simulate move to sidebar
       const newDimensions = { width: 350, height: 900 };
@@ -213,8 +214,7 @@ describe('Panel Location Detection - Simplified Tests', function () {
 
       if (newLocation !== currentLocation) {
         currentLocation = newLocation;
-        currentDirection =
-          currentLocation === 'panel' ? ('horizontal' as const) : ('vertical' as const);
+        currentDirection = (currentLocation as string) === 'panel' ? 'horizontal' : 'vertical';
       }
 
       // Assert

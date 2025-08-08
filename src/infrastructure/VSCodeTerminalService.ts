@@ -13,7 +13,6 @@ import {
 import { TerminalInstance } from '../types/common';
 import { ITerminalLifecycleManager } from '../services/TerminalLifecycleManager';
 import { ITerminalStateManager } from '../services/TerminalStateManager';
-import { OperationResultHandler as _OperationResultHandler } from '../utils/OperationResultHandler';
 import { extension as log } from '../utils/logger';
 
 /**

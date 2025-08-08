@@ -32,11 +32,7 @@ import { UIManager } from './managers/UIManager';
 import { InputManager } from './managers/InputManager';
 import { MessageManager } from './managers/MessageManager';
 import { TerminalInstance } from './interfaces/ManagerInterfaces';
-import {
-  showAltClickDisabledWarning as _showAltClickDisabledWarning,
-  showTerminalInteractionWarning as _showTerminalInteractionWarning,
-  setUIManager,
-} from './utils/NotificationUtils';
+import { setUIManager } from './utils/NotificationUtils';
 import { StandardTerminalPersistenceManager } from './managers/StandardTerminalPersistenceManager';
 
 // Type definitions
@@ -49,12 +45,6 @@ interface TerminalMessage extends WebviewMessage {
   exitCode?: number;
   // settings は継承されたものを使用（PartialTerminalSettings）
 }
-
-declare const _acquireVsCodeApi: () => {
-  postMessage: (message: VsCodeMessage) => void;
-  getState: () => unknown;
-  setState: (state: unknown) => void;
-};
 
 // Use the globally stored VS Code API with fallback and safety checks
 let vscode: {

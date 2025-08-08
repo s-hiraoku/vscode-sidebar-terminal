@@ -1715,7 +1715,6 @@ export class MessageManager implements IMessageManager {
       cwd: string;
       isActive: boolean;
     }>;
-    const _activeTerminalId = msg.activeTerminalId as string;
 
     if (!terminals || !Array.isArray(terminals)) {
       log('❌ [MESSAGE] Invalid terminal restore info - no terminals array');
@@ -1806,7 +1805,7 @@ export class MessageManager implements IMessageManager {
       const terminals = coordinator.getAllTerminalInstances();
       let savedCount = 0;
 
-      for (const [terminalId, _terminal] of terminals) {
+      for (const [terminalId] of terminals) {
         try {
           // 手動で保存メソッドを呼び出す
           persistenceManager.saveTerminalContent(terminalId);

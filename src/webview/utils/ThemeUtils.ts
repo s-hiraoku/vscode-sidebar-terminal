@@ -121,9 +121,6 @@ export const ThemeUtils = {
     const brightness = this.calculateBrightness(baseColor);
     const isDark = brightness < 128;
 
-    // 暗い色の場合は明るく、明るい色の場合は暗くする
-    const _adjustment = isDark ? factor : -factor;
-
     // 簡易的な色調整（実際の実装では色空間変換が望ましい）
     return isDark ? this.lightenColor(baseColor, factor) : this.darkenColor(baseColor, factor);
   },

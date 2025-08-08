@@ -9,7 +9,7 @@ import * as sinon from 'sinon';
 import * as vscode from 'vscode';
 import { SecondaryTerminalProvider } from '../../../providers/SecondaryTerminalProvider';
 import { TerminalManager } from '../../../terminals/TerminalManager';
-import { VsCodeMessage, WebviewMessage } from '../../../types/common';
+import { VsCodeMessage } from '../../../types/common';
 
 describe('SecondaryTerminalProvider - Dynamic Split Direction (Issue #148)', function () {
   let provider: SecondaryTerminalProvider;

@@ -8,13 +8,14 @@ import { expect } from 'chai';
 import * as sinon from 'sinon';
 import { JSDOM } from 'jsdom';
 import { MessageManager } from '../../../../webview/managers/MessageManager';
-import { WebviewMessage, VsCodeMessage } from '../../../../types/common';
+import { WebviewMessage } from '../../../../types/common';
 
 describe('Panel Location Communication Protocol', function () {
   let dom: JSDOM;
   let messageManager: MessageManager;
   let mockVsCodeApi: any;
-  let postMessageSpy: sinon.SinonSpy;
+  let postMessageSpy: sinon.SinonStub;
+  let mockCoordinator: any;
 
   beforeEach(function () {
     // Set up DOM environment with different aspect ratios for testing
@@ -41,13 +42,31 @@ describe('Panel Location Communication Protocol', function () {
     global.HTMLElement = dom.window.HTMLElement;
 
     // Mock VS Code API
-    postMessageSpy = sinon.spy();
+    postMessageSpy = sinon.stub();
     mockVsCodeApi = {
       postMessage: postMessageSpy,
       setState: sinon.stub(),
       getState: sinon.stub().returns({}),
     };
     (global.window as any).vscodeApi = mockVsCodeApi;
+
+    // Create mock coordinator
+    mockCoordinator = {
+      getManagers: sinon.stub().returns({
+        message: null,
+        input: null,
+        ui: null,
+        config: null,
+        notification: null,
+        split: null,
+        performance: null,
+      }),
+      getTerminals: sinon.stub().returns(new Map()),
+      getActiveTerminal: sinon.stub().returns(null),
+      setActiveTerminal: sinon.stub(),
+      focusTerminal: sinon.stub(),
+      createNewTerminal: sinon.stub(),
+    };
 
     // Create MessageManager instance
     messageManager = new MessageManager();
@@ -137,7 +156,8 @@ describe('Panel Location Communication Protocol', function () {
       };
 
       // Act
-      await messageManager.handleMessage(message);
+      const mockEvent = { data: message } as MessageEvent;
+      await messageManager.handleMessage(mockEvent, mockCoordinator);
 
       // Assert - should process the update (exact behavior depends on implementation)
       // This test verifies the message is handled without error
@@ -152,7 +172,8 @@ describe('Panel Location Communication Protocol', function () {
       };
 
       // Act & Assert - should handle invalid location gracefully
-      await messageManager.handleMessage(invalidMessage);
+      const mockEvent2 = { data: invalidMessage } as MessageEvent;
+      await messageManager.handleMessage(mockEvent2, mockCoordinator);
 
       // Should not throw error and should handle gracefully
       expect(true).to.be.true;
@@ -195,7 +216,8 @@ describe('Panel Location Communication Protocol', function () {
           command: 'requestPanelLocationDetection',
         };
 
-        await messageManager.handleMessage(message);
+        const mockEvent = { data: message } as MessageEvent;
+        await messageManager.handleMessage(mockEvent, mockCoordinator);
 
         // Extract location from last postMessage call
         const lastCall = postMessageSpy.lastCall;
@@ -220,7 +242,8 @@ describe('Panel Location Communication Protocol', function () {
 
       // Act & Assert - should not throw error
       try {
-        await messageManager.handleMessage(message);
+        const mockEvent = { data: message } as MessageEvent;
+        await messageManager.handleMessage(mockEvent, mockCoordinator);
         expect(true).to.be.true; // If we reach here, it handled gracefully
       } catch (error) {
         // Test fails if error is thrown
@@ -238,7 +261,8 @@ describe('Panel Location Communication Protocol', function () {
 
       // Act & Assert - should handle error gracefully
       try {
-        await messageManager.handleMessage(message);
+        const mockEvent = { data: message } as MessageEvent;
+        await messageManager.handleMessage(mockEvent, mockCoordinator);
         expect(true).to.be.true; // Should handle error internally
       } catch (error) {
         expect.fail('Should handle postMessage failures gracefully');
@@ -259,7 +283,8 @@ describe('Panel Location Communication Protocol', function () {
       // Act & Assert - should handle all malformed messages
       for (const message of malformedMessages) {
         try {
-          await messageManager.handleMessage(message as any);
+          const mockEvent = { data: message as any } as MessageEvent;
+          await messageManager.handleMessage(mockEvent, mockCoordinator);
           expect(true).to.be.true; // Should not throw
         } catch (error) {
           expect.fail(`Should handle malformed message gracefully: ${JSON.stringify(message)}`);
@@ -316,7 +341,10 @@ describe('Panel Location Communication Protocol', function () {
       // Act - send multiple concurrent requests
       const promises = Array(5)
         .fill(0)
-        .map(() => messageManager.handleMessage(message));
+        .map(() => {
+          const mockEvent = { data: message } as MessageEvent;
+          return messageManager.handleMessage(mockEvent, mockCoordinator);
+        });
 
       // Assert - all should complete without error
       await Promise.all(promises);
@@ -338,7 +366,8 @@ describe('Panel Location Communication Protocol', function () {
 
       // Act - initial detection
       const message1: WebviewMessage = { command: 'requestPanelLocationDetection' };
-      await messageManager.handleMessage(message1);
+      const mockEvent1 = { data: message1 } as MessageEvent;
+      await messageManager.handleMessage(mockEvent1, mockCoordinator);
 
       // Change to panel configuration
       Object.defineProperty(dom.window, 'innerWidth', { value: 1200 });
@@ -346,12 +375,14 @@ describe('Panel Location Communication Protocol', function () {
 
       // Second detection
       const message2: WebviewMessage = { command: 'requestPanelLocationDetection' };
-      await messageManager.handleMessage(message2);
+      const mockEvent2 = { data: message2 } as MessageEvent;
+      await messageManager.handleMessage(mockEvent2, mockCoordinator);
 
       // Assert - should detect both states correctly
       const calls = postMessageSpy.getCalls();
-      expect(calls[0].args[0].location).to.equal('sidebar');
-      expect(calls[1].args[0].location).to.equal('panel');
+      expect(calls).to.have.length.at.least(2);
+      expect(calls[0]?.args[0]?.location).to.equal('sidebar');
+      expect(calls[1]?.args[0]?.location).to.equal('panel');
     });
 
     it('should handle panel to sidebar transition', async function () {
@@ -361,7 +392,8 @@ describe('Panel Location Communication Protocol', function () {
 
       // Act - initial detection
       const message1: WebviewMessage = { command: 'requestPanelLocationDetection' };
-      await messageManager.handleMessage(message1);
+      const mockEvent1 = { data: message1 } as MessageEvent;
+      await messageManager.handleMessage(mockEvent1, mockCoordinator);
 
       // Change to sidebar configuration
       Object.defineProperty(dom.window, 'innerWidth', { value: 350 });
@@ -369,12 +401,14 @@ describe('Panel Location Communication Protocol', function () {
 
       // Second detection
       const message2: WebviewMessage = { command: 'requestPanelLocationDetection' };
-      await messageManager.handleMessage(message2);
+      const mockEvent2 = { data: message2 } as MessageEvent;
+      await messageManager.handleMessage(mockEvent2, mockCoordinator);
 
       // Assert - should detect both states correctly
       const calls = postMessageSpy.getCalls();
-      expect(calls[0].args[0].location).to.equal('panel');
-      expect(calls[1].args[0].location).to.equal('sidebar');
+      expect(calls).to.have.length.at.least(2);
+      expect(calls[0]?.args[0]?.location).to.equal('panel');
+      expect(calls[1]?.args[0]?.location).to.equal('sidebar');
     });
   });
 });

@@ -7,7 +7,6 @@
 
 import * as vscode from 'vscode';
 import { WebviewMessage, VsCodeMessage } from '../types/common';
-import { getTerminalConfig as _getTerminalConfig } from '../utils/common';
 import { extension as log } from '../utils/logger';
 
 // Services
@@ -25,11 +24,7 @@ import { ITerminalStateManager, TerminalStateManager } from '../services/Termina
 
 // Messaging and WebView
 import { IWebViewResourceManager, WebViewResourceManager } from '../webview/WebViewResourceManager';
-import {
-  IWebViewMessageRouter,
-  WebViewMessageRouter,
-  MessageHandler as _MessageHandler,
-} from '../messaging/WebViewMessageRouter';
+import { IWebViewMessageRouter, WebViewMessageRouter } from '../messaging/WebViewMessageRouter';
 import { MessageFactory } from '../messaging/MessageFactory';
 
 // Event Management

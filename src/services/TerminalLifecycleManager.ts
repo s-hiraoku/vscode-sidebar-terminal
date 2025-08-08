@@ -7,8 +7,8 @@
 
 import * as vscode from 'vscode';
 import * as pty from '@homebridge/node-pty-prebuilt-multiarch';
-import { TerminalInstance, DeleteResult as _DeleteResult } from '../types/common';
-import { TERMINAL_CONSTANTS, ERROR_MESSAGES as _ERROR_MESSAGES } from '../constants';
+import { TerminalInstance } from '../types/common';
+import { TERMINAL_CONSTANTS } from '../constants';
 import { terminal as log } from '../utils/logger';
 import {
   getTerminalConfig,

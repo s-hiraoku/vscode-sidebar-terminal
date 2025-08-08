@@ -17,6 +17,7 @@ export interface TerminalHeaderElements {
   controlsSection: HTMLElement;
   aiAgentToggleButton: HTMLButtonElement | null;
   closeButton: HTMLButtonElement;
+  splitButton?: HTMLButtonElement | null;
 }
 
 export interface HeaderConfig {

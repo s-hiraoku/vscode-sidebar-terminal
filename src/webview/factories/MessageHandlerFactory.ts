@@ -5,7 +5,7 @@
 
 import { webview as log } from '../../utils/logger';
 import { ValidationUtils, ValidationResult } from '../utils/ValidationUtils';
-import type { WebviewMessage, VsCodeMessage } from '../../types/common';
+import type { WebviewMessage } from '../../types/common';
 import type { IManagerCoordinator } from '../interfaces/ManagerInterfaces';
 
 /**

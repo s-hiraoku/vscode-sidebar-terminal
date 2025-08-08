@@ -363,7 +363,7 @@ export class UIManager implements IUIManager {
     let updatedCount = 0;
 
     // キャッシュされたヘッダー要素を使用（高速）
-    for (const [_terminalId, headerElements] of this.headerElementsCache) {
+    for (const [, headerElements] of this.headerElementsCache) {
       const terminalName = headerElements.nameSpan.textContent?.trim();
       const isTargetTerminal = terminalName === activeTerminalName;
 

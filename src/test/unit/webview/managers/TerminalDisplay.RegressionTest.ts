@@ -357,14 +357,15 @@ describe('Terminal Display - Regression Tests', function () {
 
     it('should ensure all manager interfaces are properly implemented', function () {
       // Act - verify all managers are accessible and have expected methods
+      const managersObj = terminalWebviewManager.getManagers();
       const managers = [
-        terminalWebviewManager.messageManager,
+        managersObj.message,
         terminalWebviewManager.splitManager,
-        terminalWebviewManager.inputManager,
-        terminalWebviewManager.uiManager,
-        terminalWebviewManager.performanceManager,
-        terminalWebviewManager.notificationManager,
-        terminalWebviewManager.configManager,
+        managersObj.input,
+        managersObj.ui,
+        managersObj.performance,
+        managersObj.notification,
+        managersObj.config,
       ];
 
       // Assert - all managers should be defined
@@ -414,7 +415,7 @@ describe('Terminal Display - Regression Tests', function () {
         config: { shell: '/bin/bash', fontSize: 14, fontFamily: 'monospace' },
       });
 
-      const initialTerminalCount = terminalWebviewManager.splitManager.getTerminals().size;
+      const _initialTerminalCount = terminalWebviewManager.splitManager.getTerminals().size;
 
       // Act - simulate re-initialization
       await terminalWebviewManager.handleMessage({

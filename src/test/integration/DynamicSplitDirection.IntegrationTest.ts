@@ -336,7 +336,7 @@ describe('Dynamic Split Direction - Integration Tests', function () {
       await (provider as any)._handleWebviewMessage({ command: 'getSettings' });
 
       // Assert - should not request panel location detection when disabled
-      const detectionCalls = postMessageStub
+      const _detectionCalls = postMessageStub
         .getCalls()
         .filter((call) => call.args[0].command === 'requestPanelLocationDetection');
 
@@ -532,7 +532,7 @@ describe('Dynamic Split Direction - Integration Tests', function () {
         );
 
       expect(contextCalls.length).to.be.greaterThan(0);
-      expect(contextCalls[contextCalls.length - 1].args[2]).to.equal('panel');
+      expect(contextCalls[contextCalls.length - 1]?.args[2]).to.equal('panel');
     });
 
     it('should work with package.json command configuration', function () {
