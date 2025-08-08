@@ -285,6 +285,13 @@ export interface ICliAgentStateManager {
    * @returns True if connected agent state is valid after refresh
    */
   refreshConnectedAgentState(): boolean;
+
+  /**
+   * 🔧 NEW: Promote a DISCONNECTED agent to CONNECTED for legitimate user actions
+   * This bypasses the blocking logic in setConnectedAgent for explicit user operations like toggle button clicks
+   * @param terminalId Terminal ID of the DISCONNECTED agent to promote
+   */
+  promoteDisconnectedAgentToConnected(terminalId: string): void;
 }
 
 // =================== Configuration Interface ===================
