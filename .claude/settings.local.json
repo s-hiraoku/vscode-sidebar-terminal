@@ -80,7 +80,11 @@
       "Bash(mv:*)",
       "mcp__brave-search__brave_web_search",
       "mcp__serena__activate_project",
-      "mcp__serena__find_file"
+      "mcp__serena__find_file",
+      "Bash(npx tsc:*)",
+      "Bash(sed:*)",
+      "Bash(mkdir:*)",
+      "Bash(npm install:*)"
     ],
     "deny": []
   },

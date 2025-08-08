@@ -81,8 +81,13 @@
       },
       {
         "command": "secondaryTerminal.splitTerminal",
-        "title": "Split Terminal",
+        "title": "Split Terminal Vertically",
         "icon": "$(split-vertical)"
+      },
+      {
+        "command": "secondaryTerminal.splitTerminalHorizontal",
+        "title": "Split Terminal Horizontally",
+        "icon": "$(split-horizontal)"
       },
       {
         "command": "secondaryTerminal.openSettings",
@@ -148,7 +153,12 @@
       "view/title": [
         {
           "command": "secondaryTerminal.splitTerminal",
-          "when": "view == secondaryTerminal",
+          "when": "view == secondaryTerminal && secondaryTerminal.panelLocation == sidebar",
+          "group": "navigation@1"
+        },
+        {
+          "command": "secondaryTerminal.splitTerminalHorizontal",
+          "when": "view == secondaryTerminal && secondaryTerminal.panelLocation == panel",
           "group": "navigation@1"
         },
         {
@@ -392,6 +402,26 @@
           "minimum": 1048576,
           "maximum": 104857600,
           "description": "Maximum storage size for scrollback data in bytes (1MB - 100MB)"
+        },
+        "secondaryTerminal.dynamicSplitDirection": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically adjust split direction based on panel location: horizontal splits in bottom panel, vertical splits in sidebar"
+        },
+        "secondaryTerminal.panelLocation": {
+          "type": "string",
+          "default": "auto",
+          "enum": [
+            "auto",
+            "sidebar",
+            "panel"
+          ],
+          "enumDescriptions": [
+            "Automatically detect panel location",
+            "Force sidebar location for split direction calculation",
+            "Force bottom panel location for split direction calculation"
+          ],
+          "description": "Panel location preference for dynamic split direction (Issue #148)"
         }
       }
     },
@@ -469,14 +499,14 @@
     "@typescript-eslint/parser": "^6.15.0",
     "@vscode/test-electron": "^2.3.8",
     "@vscode/vsce": "^3.6.0",
-    "chai": "^4.3.10",
+    "chai": "^4.5.0",
     "css-loader": "^7.1.2",
     "eslint": "^8.56.0",
     "eslint-config-prettier": "^10.0.0",
     "eslint-plugin-prettier": "^5.1.2",
     "glob": "^11.0.0",
     "jsdom": "^26.1.0",
-    "mocha": "^10.2.0",
+    "mocha": "^10.8.2",
     "nyc": "^17.1.0",
     "prettier": "^3.1.1",
     "sinon": "^21.0.0",

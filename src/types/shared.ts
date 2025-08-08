@@ -101,6 +101,9 @@ export interface PartialTerminalSettings {
     style?: 'block' | 'underline' | 'bar';
     blink?: boolean;
   };
+  // 🆕 Issue #148: Dynamic split direction settings
+  dynamicSplitDirection?: boolean;
+  panelLocation?: 'auto' | 'sidebar' | 'panel';
 }
 
 /**

@@ -81,6 +81,9 @@ export class ExtensionLifecycle {
       // Register all commands
       this.registerCommands(context);
 
+      // Initialize context key for dynamic split icon functionality
+      void vscode.commands.executeCommand('setContext', 'secondaryTerminal.panelLocation', 'sidebar');
+
       // CRITICAL: Session restore is now handled by SecondaryTerminalProvider asynchronously
       // This prevents VS Code activation spinner from hanging
       log(
@@ -129,8 +132,15 @@ export class ExtensionLifecycle {
       {
         command: 'secondaryTerminal.splitTerminal',
         handler: () => {
-          log('🔧 [DEBUG] Command executed: splitTerminal');
-          this.sidebarProvider?.splitTerminal();
+          log('🔧 [DEBUG] Command executed: splitTerminal (vertical)');
+          this.sidebarProvider?.splitTerminal('vertical');
+        },
+      },
+      {
+        command: 'secondaryTerminal.splitTerminalHorizontal',
+        handler: () => {
+          log('🔧 [DEBUG] Command executed: splitTerminalHorizontal');
+          this.sidebarProvider?.splitTerminal('horizontal');
         },
       },
       {
