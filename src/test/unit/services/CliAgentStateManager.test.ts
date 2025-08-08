@@ -317,7 +317,7 @@ describe('🏗️ CLI Agent State Manager Unit Tests', () => {
       });
     });
 
-    it('should handle disconnected agent termination', () => {
+    it('should NOT terminate disconnected agents via setAgentTerminated (they are still running)', () => {
       // ARRANGE: Setup disconnected agent
       stateManager.setConnectedAgent('term1', 'claude');
       stateManager.setConnectedAgent('term2', 'gemini'); // term1 becomes disconnected
@@ -325,17 +325,63 @@ describe('🏗️ CLI Agent State Manager Unit Tests', () => {
       expect(stateManager.getDisconnectedAgents().has('term1')).to.be.true;
       statusChangeEvents = [];
 
-      // ACT: Terminate disconnected agent
+      // ACT: Attempt to terminate disconnected agent
       stateManager.setAgentTerminated('term1');
+
+      // ASSERT: Disconnected agent should REMAIN in disconnected state (not terminated)
+      expect(stateManager.getDisconnectedAgents().has('term1')).to.be.true; // 🔧 FIX: Should remain disconnected
+      expect(stateManager.getConnectedAgentTerminalId()).to.equal('term2'); // term2 still connected
+
+      // Check NO status change event is fired (disconnected agents are not terminated)
+      expect(statusChangeEvents).to.have.length(0); // 🔧 FIX: No event should be fired
+    });
+
+    it('should only terminate disconnected agents via removeTerminalCompletely (actual terminal deletion)', () => {
+      // ARRANGE: Setup disconnected agent
+      stateManager.setConnectedAgent('term1', 'claude');
+      stateManager.setConnectedAgent('term2', 'gemini'); // term1 becomes disconnected
+
+      expect(stateManager.getDisconnectedAgents().has('term1')).to.be.true;
+      statusChangeEvents = [];
+
+      // ACT: Remove terminal completely (actual terminal deletion)
+      stateManager.removeTerminalCompletely('term1');
 
       // ASSERT: Agent should be removed from disconnected state
       expect(stateManager.getDisconnectedAgents().has('term1')).to.be.false;
       expect(stateManager.getConnectedAgentTerminalId()).to.equal('term2'); // term2 still connected
 
-      // Check event
+      // Check event is fired for terminal removal
       expect(statusChangeEvents).to.have.length(1);
       expect(statusChangeEvents[0]).to.deep.include({
         terminalId: 'term1',
+        status: 'none',
+        type: null, // Type is null for terminal removal
+      });
+    });
+
+    it('should handle mixed connected and disconnected agent termination correctly', () => {
+      // ARRANGE: Setup multiple agents
+      stateManager.setConnectedAgent('term1', 'claude');
+      stateManager.setConnectedAgent('term2', 'gemini'); // term1 becomes disconnected
+      stateManager.setConnectedAgent('term3', 'claude');  // term2 becomes disconnected
+
+      expect(stateManager.getConnectedAgentTerminalId()).to.equal('term3');
+      expect(stateManager.getDisconnectedAgents().size).to.equal(2);
+      statusChangeEvents = [];
+
+      // ACT: Terminate connected agent (should work normally)
+      stateManager.setAgentTerminated('term3');
+
+      // ASSERT: Connected agent terminated, disconnected agents remain
+      expect(stateManager.getConnectedAgentTerminalId()).to.equal('term2'); // Latest disconnected promoted
+      expect(stateManager.getDisconnectedAgents().size).to.equal(1); // Only term1 remains disconnected
+      expect(stateManager.getDisconnectedAgents().has('term1')).to.be.true;
+
+      // Check status change event for connected agent termination
+      expect(statusChangeEvents).to.have.length(1);
+      expect(statusChangeEvents[0]).to.deep.include({
+        terminalId: 'term3',
         status: 'none',
         type: 'claude',
       });

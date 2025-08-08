@@ -424,7 +424,7 @@ export class CliAgentStateManager implements ICliAgentStateManager {
     let statusChanged = false;
     let previousType: string | null = null;
 
-    // Handle connected agent termination
+    // Handle connected agent termination ONLY
     if (this._connectedAgentTerminalId === terminalId) {
       previousType = this._connectedAgentType;
       this._connectedAgentTerminalId = null;
@@ -437,21 +437,18 @@ export class CliAgentStateManager implements ICliAgentStateManager {
       this.promoteLatestDisconnectedAgent();
     }
 
-    // Handle disconnected agent termination
+    // 🔧 FIX: Do NOT terminate disconnected agents - they are still running terminals
+    // Disconnected agents should only be removed via removeTerminalCompletely() when terminal is actually deleted
     if (this._disconnectedAgents.has(terminalId)) {
       const agentInfo = this._disconnectedAgents.get(terminalId)!;
-      if (!previousType) {
-        previousType = agentInfo.type;
-      }
-      this._disconnectedAgents.delete(terminalId);
-      statusChanged = true;
-
       log(
-        `🧹 [STATE-MANAGER] Removed terminal ${terminalId} (${agentInfo.type}) from DISCONNECTED state. DISCONNECTED agents: ${this._disconnectedAgents.size}`
+        `⚠️  [STATE-MANAGER] Terminal ${terminalId} (${agentInfo.type}) is in DISCONNECTED state - not terminating (terminal still running)`
       );
+      // Do NOT remove from disconnected agents or change status to 'none'
+      return;
     }
 
-    // Fire status change to 'none' when agent session ends
+    // Fire status change to 'none' ONLY when connected agent session ends
     if (statusChanged && previousType) {
       this._onStatusChange.fire({
         terminalId,
@@ -460,7 +457,7 @@ export class CliAgentStateManager implements ICliAgentStateManager {
       });
 
       log(
-        `❌ [STATE-MANAGER] Terminal ${terminalId} (${previousType}) status set to NONE (agent session ended)`
+        `❌ [STATE-MANAGER] Terminal ${terminalId} (${previousType}) status set to NONE (connected agent session ended)`
       );
     }
   }
@@ -1215,14 +1212,14 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
 
         if (!fullyCleanLine || fullyCleanLine.length < 2) continue;
 
-        // Check for termination first (for connected terminals)
+        // Check for termination first (for connected terminals ONLY)
         if (this.stateManager.isAgentConnected(terminalId)) {
           // 🔧 FIX: Use more strict termination detection for connected agents
           const terminationResult = this.detectStrictTermination(terminalId, line);
           if (terminationResult.isTerminated) {
             this.stateManager.setAgentTerminated(terminalId);
             log(
-              `🔻 [CLI-AGENT] Termination detected from output: "${fullyCleanLine}" in terminal ${terminalId}`
+              `🔻 [CLI-AGENT] Connected agent termination detected from output: "${fullyCleanLine}" in terminal ${terminalId}`
             );
             return null; // Termination handled, no detection result needed
           }
@@ -1230,11 +1227,18 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
           continue;
         }
 
-        // Check for startup patterns (only for non-connected and non-disconnected agents)
+        // 🔧 FIX: For disconnected agents, do NOT process termination detection
+        // Disconnected terminals are still running and should not be terminated from output
         const disconnectedAgents = this.stateManager.getDisconnectedAgents();
-        const isDisconnectedAgent = disconnectedAgents.has(terminalId);
+        if (disconnectedAgents.has(terminalId)) {
+          // Skip termination detection for disconnected agents - they're still active terminals
+          log(`🟡 [CLI-AGENT] Skipping termination detection for disconnected agent in terminal ${terminalId}`);
+          continue;
+        }
 
-        if (!isDisconnectedAgent) {
+        // Check for startup patterns (only for non-connected and non-disconnected agents)
+        // Already filtered out disconnected agents above, so we can proceed directly
+        {
           // Claude startup detection
           if (this.patternDetector.detectClaudeStartup(fullyCleanLine)) {
             log(
