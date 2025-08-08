@@ -40,7 +40,7 @@ npm run release:major   # Increment major version and create release
 - Use "Developer: Reload Window" command to reload during development
 - Console logs are visible in VS Code Developer Tools (`Ctrl+Shift+I`)
 
-## Recent Critical Fixes (v0.1.49)
+## Recent Critical Fixes (v0.1.50)
 
 ### ✅ AI Agent Status Management Fix
 
@@ -55,6 +55,8 @@ npm run release:major   # Increment major version and create release
 - AI Agent status correctly transitions: connected → disconnected → none → (removed)
 - Proper status lifecycle maintained across all agent termination scenarios
 - Fixed button visibility and interaction issues in terminal headers
+- Resolved Git conflicts and enhanced rebase workflow stability
+- Improved code quality with lint fixes and consistent formatting
 
 ## Previous Critical Fixes (v0.1.43)
 

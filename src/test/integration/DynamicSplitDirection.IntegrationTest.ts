@@ -23,7 +23,8 @@ describe('Dynamic Split Direction - Integration Tests', function () {
 
   beforeEach(function () {
     // Set up DOM environment for WebView simulation
-    dom = new JSDOM(`
+    dom = new JSDOM(
+      `
       <!DOCTYPE html>
       <html>
         <body>
@@ -32,7 +33,9 @@ describe('Dynamic Split Direction - Integration Tests', function () {
           </div>
         </body>
       </html>
-    `, { pretendToBeVisual: true });
+    `,
+      { pretendToBeVisual: true }
+    );
 
     global.window = dom.window as any;
     global.document = dom.window.document;
@@ -98,9 +101,9 @@ describe('Dynamic Split Direction - Integration Tests', function () {
 
       // Simulate WebView initialization
       await (provider as any)._handleWebviewMessage({ command: 'webviewReady' });
-      
+
       // Wait for initialization
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Act - simulate getSettings request (WebView fully loaded)
       await (provider as any)._handleWebviewMessage({ command: 'getSettings' });
@@ -122,14 +125,14 @@ describe('Dynamic Split Direction - Integration Tests', function () {
         'secondaryTerminal.panelLocation',
         'sidebar'
       );
-      
+
       expect(postMessageStub).to.have.been.calledWith(
         sinon.match({
           command: 'panelLocationUpdate',
           location: 'sidebar',
         })
       );
-      
+
       expect(postMessageStub).to.have.been.calledWith(
         sinon.match({
           command: 'requestPanelLocationDetection',
@@ -143,7 +146,7 @@ describe('Dynamic Split Direction - Integration Tests', function () {
 
       // Simulate WebView initialization and settings request
       await (provider as any)._handleWebviewMessage({ command: 'webviewReady' });
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
       await (provider as any)._handleWebviewMessage({ command: 'getSettings' });
 
       // Simulate WebView dimension analysis (panel dimensions)
@@ -163,7 +166,7 @@ describe('Dynamic Split Direction - Integration Tests', function () {
         'secondaryTerminal.panelLocation',
         'panel'
       );
-      
+
       expect(postMessageStub).to.have.been.calledWith(
         sinon.match({
           command: 'panelLocationUpdate',
@@ -249,15 +252,16 @@ describe('Dynamic Split Direction - Integration Tests', function () {
       postMessageStub.resetHistory();
 
       // Act - simulate move to panel
-      const visibilityCallback = (mockWebviewView.onDidChangeVisibility as sinon.SinonStub)
-        .getCall(0).args[0];
-      
+      const visibilityCallback = (mockWebviewView.onDidChangeVisibility as sinon.SinonStub).getCall(
+        0
+      ).args[0];
+
       // Simulate panel move via visibility change
       Object.defineProperty(mockWebviewView, 'visible', { value: true, configurable: true });
       visibilityCallback();
 
       // Wait for detection request
-      await new Promise(resolve => setTimeout(resolve, 600));
+      await new Promise((resolve) => setTimeout(resolve, 600));
 
       // Simulate WebView detecting new panel dimensions and reporting
       await (provider as any)._handleWebviewMessage({
@@ -290,13 +294,14 @@ describe('Dynamic Split Direction - Integration Tests', function () {
       postMessageStub.resetHistory();
 
       // Act - simulate move to sidebar
-      const visibilityCallback = (mockWebviewView.onDidChangeVisibility as sinon.SinonStub)
-        .getCall(0).args[0];
-      
+      const visibilityCallback = (mockWebviewView.onDidChangeVisibility as sinon.SinonStub).getCall(
+        0
+      ).args[0];
+
       Object.defineProperty(mockWebviewView, 'visible', { value: true, configurable: true });
       visibilityCallback();
 
-      await new Promise(resolve => setTimeout(resolve, 600));
+      await new Promise((resolve) => setTimeout(resolve, 600));
 
       // Simulate WebView detecting sidebar dimensions
       await (provider as any)._handleWebviewMessage({
@@ -331,10 +336,10 @@ describe('Dynamic Split Direction - Integration Tests', function () {
       await (provider as any)._handleWebviewMessage({ command: 'getSettings' });
 
       // Assert - should not request panel location detection when disabled
-      const detectionCalls = postMessageStub.getCalls().filter(call => 
-        call.args[0].command === 'requestPanelLocationDetection'
-      );
-      
+      const detectionCalls = postMessageStub
+        .getCalls()
+        .filter((call) => call.args[0].command === 'requestPanelLocationDetection');
+
       // May still have initial call, but behavior should be limited
       expect(mockConfig.get).to.have.been.calledWith('dynamicSplitDirection', true);
     });
@@ -441,25 +446,25 @@ describe('Dynamic Split Direction - Integration Tests', function () {
     it('should handle rapid panel location changes efficiently', async function () {
       // Arrange - sequence of rapid changes
       const locations = ['sidebar', 'panel', 'sidebar', 'panel', 'sidebar'];
-      
+
       // Act - send rapid changes
       const startTime = Date.now();
-      
+
       for (const location of locations) {
         await (provider as any)._handleWebviewMessage({
           command: 'reportPanelLocation',
           location,
         });
       }
-      
+
       const endTime = Date.now();
 
       // Assert - should complete quickly
       expect(endTime - startTime).to.be.lessThan(500);
-      
+
       // All changes should be processed
       expect(executeCommandStub).to.have.callCount(locations.length);
-      
+
       // Final state should be correct
       expect(executeCommandStub.lastCall).to.have.been.calledWith(
         'setContext',
@@ -478,20 +483,20 @@ describe('Dynamic Split Direction - Integration Tests', function () {
 
       // Act - perform operations with multiple terminals
       const startTime = Date.now();
-      
+
       // Simulate split operations with panel moves
       for (let i = 0; i < 10; i++) {
         const location = i % 2 === 0 ? 'sidebar' : 'panel';
         const direction = location === 'sidebar' ? 'vertical' : 'horizontal';
-        
+
         await (provider as any)._handleWebviewMessage({
           command: 'reportPanelLocation',
           location,
         });
-        
+
         provider.splitTerminal(direction);
       }
-      
+
       const endTime = Date.now();
 
       // Assert - should maintain good performance
@@ -512,14 +517,20 @@ describe('Dynamic Split Direction - Integration Tests', function () {
       });
 
       // Assert - should integrate properly with VS Code
-      expect(executeCommandStub).to.have.been.calledWith('setContext', sinon.match.string, sinon.match.string);
-      
-      // Check that the context key is set correctly for VS Code when clauses
-      const contextCalls = executeCommandStub.getCalls().filter(call => 
-        call.args[0] === 'setContext' && 
-        call.args[1] === 'secondaryTerminal.panelLocation'
+      expect(executeCommandStub).to.have.been.calledWith(
+        'setContext',
+        sinon.match.string,
+        sinon.match.string
       );
-      
+
+      // Check that the context key is set correctly for VS Code when clauses
+      const contextCalls = executeCommandStub
+        .getCalls()
+        .filter(
+          (call) =>
+            call.args[0] === 'setContext' && call.args[1] === 'secondaryTerminal.panelLocation'
+        );
+
       expect(contextCalls.length).to.be.greaterThan(0);
       expect(contextCalls[contextCalls.length - 1].args[2]).to.equal('panel');
     });
@@ -528,13 +539,13 @@ describe('Dynamic Split Direction - Integration Tests', function () {
       // This test verifies that the integration points with package.json are correct
       // In a real environment, we would test that the commands are properly registered
       // and the when clauses work correctly
-      
+
       // Arrange & Act - verify commands can be triggered
       provider.resolveWebviewView(mockWebviewView, {} as any, {} as any);
-      
+
       // Assert - provider should be ready to handle split commands
       expect(() => {
-        provider.splitTerminal('vertical');   // Should work for sidebar
+        provider.splitTerminal('vertical'); // Should work for sidebar
         provider.splitTerminal('horizontal'); // Should work for panel
       }).to.not.throw();
     });

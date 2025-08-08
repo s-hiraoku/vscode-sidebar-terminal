@@ -379,13 +379,14 @@ This project is licensed under the [MIT License](LICENSE).
 
 See [CHANGELOG.md](CHANGELOG.md) for detailed changes.
 
-### v0.1.31 (Latest)
+### v0.1.50 (Latest)
 
+- **AI Agent Status Management**: Fixed proper status transitions (connected → disconnected → none)
 - **Session Persistence**: Complete terminal session restore functionality with scrollback history
-- **CLI Agent Integration**: File reference shortcuts for Claude Code (`@filename`) and GitHub Copilot (`#file:filename`)
+- **CLI Agent Integration**: Enhanced file reference shortcuts for Claude Code (`@filename`) and GitHub Copilot (`#file:filename`)
 - **Cross-Platform Native Binaries**: Platform-specific builds for optimal performance
-- **Enhanced Logging**: Production-ready logging system with appropriate log levels
-- **Code Quality**: Comprehensive cleanup of debug logs and unused code
+- **Status Lifecycle**: Improved agent termination detection and UI synchronization
+- **Code Quality**: Comprehensive lint fixes and enhanced stability
 
 ### v0.1.25
 

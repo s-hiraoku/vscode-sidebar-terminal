@@ -43,17 +43,20 @@ describe('Dynamic Split Direction - Basic Logic Tests', function () {
     it('should handle boundary conditions correctly', function () {
       // Test cases around the 2.0 threshold
       const testCases = [
-        { width: 400, height: 200, expected: 'panel' },   // 2.0 - exactly at threshold
+        { width: 400, height: 200, expected: 'panel' }, // 2.0 - exactly at threshold
         { width: 399, height: 200, expected: 'sidebar' }, // 1.995 - just below
-        { width: 401, height: 200, expected: 'panel' },   // 2.005 - just above
+        { width: 401, height: 200, expected: 'panel' }, // 2.005 - just above
       ];
 
       testCases.forEach(({ width, height, expected }) => {
         const aspectRatio = width / height;
         const isPanel = aspectRatio > 2.0;
         const location = isPanel ? 'panel' : 'sidebar';
-        
-        expect(location).to.equal(expected, `Failed for ${width}x${height} (ratio: ${aspectRatio})`);
+
+        expect(location).to.equal(
+          expected,
+          `Failed for ${width}x${height} (ratio: ${aspectRatio})`
+        );
       });
     });
   });
@@ -101,8 +104,10 @@ describe('Dynamic Split Direction - Basic Logic Tests', function () {
 
       // Act - configuration logic
       const shouldUseDynamic = isDynamicSplitEnabled && detectedLocation !== undefined;
-      const finalDirection = shouldUseDynamic 
-        ? (detectedLocation === 'panel' ? 'horizontal' : 'vertical')
+      const finalDirection = shouldUseDynamic
+        ? detectedLocation === 'panel'
+          ? 'horizontal'
+          : 'vertical'
         : 'vertical'; // fallback
 
       // Assert
@@ -117,8 +122,10 @@ describe('Dynamic Split Direction - Basic Logic Tests', function () {
 
       // Act
       const shouldUseDynamic = isDynamicSplitEnabled && detectedLocation !== undefined;
-      const finalDirection = shouldUseDynamic 
-        ? (detectedLocation === 'panel' ? 'horizontal' : 'vertical')
+      const finalDirection = shouldUseDynamic
+        ? detectedLocation === 'panel'
+          ? 'horizontal'
+          : 'vertical'
         : 'vertical'; // fallback
 
       // Assert
@@ -181,7 +188,7 @@ describe('Dynamic Split Direction - Basic Logic Tests', function () {
         const isPanel = aspectRatio > 2.0;
         const location = isPanel ? 'panel' : 'sidebar';
         const direction = location === 'panel' ? 'horizontal' : 'vertical';
-        
+
         // Use results to prevent optimization
         if (direction.length === 0) break; // Never true, but prevents dead code elimination
       }
@@ -192,7 +199,7 @@ describe('Dynamic Split Direction - Basic Logic Tests', function () {
 
       // Assert - should be very fast
       expect(totalTime).to.be.lessThan(100); // Total time under 100ms
-      expect(avgTime).to.be.lessThan(0.1);   // Average under 0.1ms per calculation
+      expect(avgTime).to.be.lessThan(0.1); // Average under 0.1ms per calculation
     });
 
     it('should produce consistent results', function () {
@@ -219,7 +226,7 @@ describe('Dynamic Split Direction - Basic Logic Tests', function () {
     it('should handle typical sidebar to panel transition', function () {
       // Arrange - start in sidebar
       let currentDimensions = { width: 350, height: 900 };
-      
+
       // Act - initial state
       let aspectRatio = currentDimensions.width / currentDimensions.height;
       let currentLocation = aspectRatio > 2.0 ? 'panel' : 'sidebar';
@@ -233,7 +240,7 @@ describe('Dynamic Split Direction - Basic Logic Tests', function () {
       currentDimensions = { width: 1200, height: 300 };
       aspectRatio = currentDimensions.width / currentDimensions.height;
       const newLocation = aspectRatio > 2.0 ? 'panel' : 'sidebar';
-      
+
       if (newLocation !== currentLocation) {
         currentLocation = newLocation;
         currentDirection = (currentLocation as string) === 'panel' ? 'horizontal' : 'vertical';
@@ -253,7 +260,7 @@ describe('Dynamic Split Direction - Basic Logic Tests', function () {
       const newDimensions = { width: 320, height: 800 };
       const aspectRatio = newDimensions.width / newDimensions.height;
       const newLocation = aspectRatio > 2.0 ? 'panel' : 'sidebar';
-      
+
       if (newLocation !== currentLocation) {
         currentLocation = newLocation;
         currentDirection = (currentLocation as string) === 'panel' ? 'horizontal' : 'vertical';

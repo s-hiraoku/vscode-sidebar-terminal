@@ -175,11 +175,16 @@ export class SplitManager {
   /**
    * 🆕 Recalculate split sizing for new direction
    */
-  private recalculateSplitSizing(direction: 'horizontal' | 'vertical', location: 'sidebar' | 'panel'): void {
+  private recalculateSplitSizing(
+    direction: 'horizontal' | 'vertical',
+    location: 'sidebar' | 'panel'
+  ): void {
     const terminalCount = this.terminals.size;
     if (terminalCount <= 1) return;
 
-    console.log(`📐 [SPLIT] Recalculating sizing for ${terminalCount} terminals (${direction}, ${location})`);
+    console.log(
+      `📐 [SPLIT] Recalculating sizing for ${terminalCount} terminals (${direction}, ${location})`
+    );
 
     // Calculate optimal size per terminal
     const terminalBody = document.getElementById('terminal-body');
@@ -596,7 +601,9 @@ export class SplitManager {
   /**
    * Get optimal split direction based on panel location
    */
-  public getOptimalSplitDirection(location: 'sidebar' | 'panel' | string): 'vertical' | 'horizontal' {
+  public getOptimalSplitDirection(
+    location: 'sidebar' | 'panel' | string
+  ): 'vertical' | 'horizontal' {
     if (location === 'panel') {
       return 'horizontal'; // Wide layout - horizontal split
     } else {

@@ -190,7 +190,6 @@ export class HeaderFactory {
       }
     );
 
-
     // ホバーエフェクトを追加
     aiAgentToggleButton.addEventListener('mouseenter', () => {
       aiAgentToggleButton.style.opacity = '1';

@@ -402,7 +402,6 @@ export class TerminalWebviewManager {
         ); // Use capture phase
       }
 
-
       // HeaderFactory already assembled the complete header structure
 
       // Create terminal content area
@@ -1586,7 +1585,7 @@ export class TerminalWebviewManager {
           origin: 'test',
           source: null,
         } as MessageEvent;
-        
+
         await this.messageManager.handleMessage(fakeEvent, this);
       }
     } catch (error) {

@@ -69,7 +69,7 @@ describe('SecondaryTerminalProvider - Dynamic Split Direction (Issue #148)', fun
       provider.resolveWebviewView(mockWebviewView, {} as any, {} as any);
 
       // Wait for async operations
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       // Assert
       expect(executeCommandStub).to.have.been.calledWith(
@@ -193,15 +193,16 @@ describe('SecondaryTerminalProvider - Dynamic Split Direction (Issue #148)', fun
 
     it('should request panel location detection on visibility change', function () {
       // Arrange
-      const visibilityCallback = (mockWebviewView.onDidChangeVisibility as sinon.SinonStub)
-        .getCall(0).args[0];
+      const visibilityCallback = (mockWebviewView.onDidChangeVisibility as sinon.SinonStub).getCall(
+        0
+      ).args[0];
 
       // Act - simulate visibility change
       Object.defineProperty(mockWebviewView, 'visible', { value: true, configurable: true });
       visibilityCallback();
 
       // Assert - should request detection after delay
-      return new Promise(resolve => {
+      return new Promise((resolve) => {
         setTimeout(() => {
           expect(postMessageStub).to.have.been.calledWith(
             sinon.match({
@@ -230,7 +231,7 @@ describe('SecondaryTerminalProvider - Dynamic Split Direction (Issue #148)', fun
       configCallback(mockEvent);
 
       // Assert - should request detection after delay
-      return new Promise(resolve => {
+      return new Promise((resolve) => {
         setTimeout(() => {
           expect(postMessageStub).to.have.been.calledWith(
             sinon.match({
@@ -269,7 +270,7 @@ describe('SecondaryTerminalProvider - Dynamic Split Direction (Issue #148)', fun
     it('should set fallback context key when panel detection fails', async function () {
       // Arrange
       postMessageStub.rejects(new Error('WebView communication failed'));
-      
+
       // Act - trigger panel detection request
       const requestDetection = (provider as any)._requestPanelLocationDetection;
       await requestDetection.call(provider);
@@ -293,18 +294,18 @@ describe('SecondaryTerminalProvider - Dynamic Split Direction (Issue #148)', fun
     it('should maintain context key state across webview reloads', async function () {
       // Arrange
       provider.resolveWebviewView(mockWebviewView, {} as any, {} as any);
-      
+
       const reportMessage: VsCodeMessage = {
         command: 'reportPanelLocation',
         location: 'panel',
       };
-      
+
       // Act - simulate panel location report
       await (provider as any)._handleWebviewMessage(reportMessage);
-      
+
       // Reset stubs to check second call
       executeCommandStub.resetHistory();
-      
+
       // Dispose and recreate provider (simulating webview reload)
       provider.dispose();
       provider = new SecondaryTerminalProvider(mockContext, mockTerminalManager);
@@ -358,9 +359,7 @@ describe('SecondaryTerminalProvider - Dynamic Split Direction (Issue #148)', fun
 
     it('should handle WebView message delays gracefully', async function () {
       // Arrange - simulate slow WebView response
-      postMessageStub.callsFake(() => 
-        new Promise(resolve => setTimeout(resolve, 100))
-      );
+      postMessageStub.callsFake(() => new Promise((resolve) => setTimeout(resolve, 100)));
 
       // Act
       const startTime = Date.now();

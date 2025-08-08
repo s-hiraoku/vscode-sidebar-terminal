@@ -40,7 +40,7 @@ describe('Panel Location Detection - Simplified Tests', function () {
       // Test various edge case dimensions
       const testCases = [
         { width: 600, height: 600, expected: 'sidebar' }, // Square
-        { width: 800, height: 300, expected: 'panel' },   // Wide but not very wide
+        { width: 800, height: 300, expected: 'panel' }, // Wide but not very wide
         { width: 1000, height: 200, expected: 'panel' }, // Very wide
         { width: 200, height: 1000, expected: 'sidebar' }, // Very tall
       ];
@@ -59,7 +59,8 @@ describe('Panel Location Detection - Simplified Tests', function () {
       const panelLocation: 'sidebar' | 'panel' = 'sidebar';
 
       // Act - optimal split direction logic
-      const optimalDirection: 'horizontal' | 'vertical' = panelLocation === 'panel' ? 'horizontal' : 'vertical';
+      const optimalDirection: 'horizontal' | 'vertical' =
+        panelLocation === 'panel' ? 'horizontal' : 'vertical';
 
       // Assert
       expect(optimalDirection).to.equal('vertical');
@@ -70,7 +71,8 @@ describe('Panel Location Detection - Simplified Tests', function () {
       const panelLocation: 'sidebar' | 'panel' = 'panel';
 
       // Act
-      const optimalDirection: 'horizontal' | 'vertical' = panelLocation === 'panel' ? 'horizontal' : 'vertical';
+      const optimalDirection: 'horizontal' | 'vertical' =
+        panelLocation === 'panel' ? 'horizontal' : 'vertical';
 
       // Assert
       expect(optimalDirection).to.equal('horizontal');
@@ -85,9 +87,11 @@ describe('Panel Location Detection - Simplified Tests', function () {
 
       // Act - configuration-aware logic
       const shouldUseDynamicSplit = dynamicSplitEnabled && panelLocation !== undefined;
-      const direction = shouldUseDynamicSplit 
-        ? (panelLocation === 'panel' ? 'horizontal' : 'vertical')
-        : 'vertical' as const; // fallback
+      const direction = shouldUseDynamicSplit
+        ? panelLocation === 'panel'
+          ? 'horizontal'
+          : 'vertical'
+        : ('vertical' as const); // fallback
 
       // Assert
       expect(shouldUseDynamicSplit).to.be.true;
@@ -101,8 +105,10 @@ describe('Panel Location Detection - Simplified Tests', function () {
 
       // Act
       const shouldUseDynamicSplit = dynamicSplitEnabled && panelLocation !== undefined;
-      const direction = shouldUseDynamicSplit 
-        ? (panelLocation === 'panel' ? 'horizontal' : 'vertical')
+      const direction = shouldUseDynamicSplit
+        ? panelLocation === 'panel'
+          ? 'horizontal'
+          : 'vertical'
         : 'vertical'; // fallback
 
       // Assert
@@ -142,8 +148,8 @@ describe('Panel Location Detection - Simplified Tests', function () {
       ];
 
       edgeCases.forEach(({ location, expected }) => {
-        // Act - fallback logic  
-        const direction = (location === 'panel') ? 'horizontal' as const : 'vertical' as const;
+        // Act - fallback logic
+        const direction = location === 'panel' ? ('horizontal' as const) : ('vertical' as const);
 
         // Assert
         expect(direction).to.equal(expected);
@@ -183,10 +189,11 @@ describe('Panel Location Detection - Simplified Tests', function () {
       const newDimensions = { width: 1200, height: 300 };
       const newAspectRatio = newDimensions.width / newDimensions.height;
       const newLocation: 'sidebar' | 'panel' = newAspectRatio > 2.0 ? 'panel' : 'sidebar';
-      
+
       if (newLocation !== currentLocation) {
         currentLocation = newLocation;
-        currentDirection = currentLocation === 'panel' ? 'horizontal' as const : 'vertical' as const;
+        currentDirection =
+          currentLocation === 'panel' ? ('horizontal' as const) : ('vertical' as const);
       }
 
       // Assert
@@ -203,10 +210,11 @@ describe('Panel Location Detection - Simplified Tests', function () {
       const newDimensions = { width: 350, height: 900 };
       const newAspectRatio = newDimensions.width / newDimensions.height;
       const newLocation: 'sidebar' | 'panel' = newAspectRatio > 2.0 ? 'panel' : 'sidebar';
-      
+
       if (newLocation !== currentLocation) {
         currentLocation = newLocation;
-        currentDirection = currentLocation === 'panel' ? 'horizontal' as const : 'vertical' as const;
+        currentDirection =
+          currentLocation === 'panel' ? ('horizontal' as const) : ('vertical' as const);
       }
 
       // Assert

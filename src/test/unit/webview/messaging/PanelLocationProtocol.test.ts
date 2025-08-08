@@ -18,7 +18,8 @@ describe('Panel Location Communication Protocol', function () {
 
   beforeEach(function () {
     // Set up DOM environment with different aspect ratios for testing
-    dom = new JSDOM(`
+    dom = new JSDOM(
+      `
       <!DOCTYPE html>
       <html>
         <body style="margin: 0; padding: 0;">
@@ -27,10 +28,12 @@ describe('Panel Location Communication Protocol', function () {
           </div>
         </body>
       </html>
-    `, { 
-      pretendToBeVisual: true,
-      resources: 'usable'
-    });
+    `,
+      {
+        pretendToBeVisual: true,
+        resources: 'usable',
+      }
+    );
 
     // Set global DOM objects
     global.window = dom.window as any;
@@ -150,7 +153,7 @@ describe('Panel Location Communication Protocol', function () {
 
       // Act & Assert - should handle invalid location gracefully
       await messageManager.handleMessage(invalidMessage);
-      
+
       // Should not throw error and should handle gracefully
       expect(true).to.be.true;
     });
@@ -175,9 +178,9 @@ describe('Panel Location Communication Protocol', function () {
     it('should handle rapid dimension changes', async function () {
       // Arrange - simulate rapid window resizing
       const dimensions = [
-        { width: 300, height: 800 },  // sidebar
+        { width: 300, height: 800 }, // sidebar
         { width: 1200, height: 400 }, // panel
-        { width: 400, height: 600 },  // sidebar
+        { width: 400, height: 600 }, // sidebar
         { width: 1000, height: 300 }, // panel
       ];
 
@@ -187,13 +190,13 @@ describe('Panel Location Communication Protocol', function () {
       for (const dim of dimensions) {
         Object.defineProperty(dom.window, 'innerWidth', { value: dim.width });
         Object.defineProperty(dom.window, 'innerHeight', { value: dim.height });
-        
+
         const message: WebviewMessage = {
           command: 'requestPanelLocationDetection',
         };
-        
+
         await messageManager.handleMessage(message);
-        
+
         // Extract location from last postMessage call
         const lastCall = postMessageSpy.lastCall;
         if (lastCall && lastCall.args[0].location) {
@@ -274,11 +277,11 @@ describe('Panel Location Communication Protocol', function () {
       // Act - measure performance
       const iterations = 1000;
       const startTime = Date.now();
-      
+
       for (let i = 0; i < iterations; i++) {
         (messageManager as any).analyzeWebViewDimensions();
       }
-      
+
       const endTime = Date.now();
       const avgTime = (endTime - startTime) / iterations;
 
@@ -298,7 +301,7 @@ describe('Panel Location Communication Protocol', function () {
       }
 
       // Assert - all results should be identical
-      expect(results.every(result => result === 'panel')).to.be.true;
+      expect(results.every((result) => result === 'panel')).to.be.true;
     });
 
     it('should handle concurrent detection requests', async function () {
@@ -311,19 +314,19 @@ describe('Panel Location Communication Protocol', function () {
       };
 
       // Act - send multiple concurrent requests
-      const promises = Array(5).fill(0).map(() => 
-        messageManager.handleMessage(message)
-      );
+      const promises = Array(5)
+        .fill(0)
+        .map(() => messageManager.handleMessage(message));
 
       // Assert - all should complete without error
       await Promise.all(promises);
-      
+
       // Should have sent multiple reports
       expect(postMessageSpy.callCount).to.equal(5);
-      
+
       // All should report same location
-      const locations = postMessageSpy.getCalls().map(call => call.args[0].location);
-      expect(locations.every(loc => loc === 'sidebar')).to.be.true;
+      const locations = postMessageSpy.getCalls().map((call) => call.args[0].location);
+      expect(locations.every((loc) => loc === 'sidebar')).to.be.true;
     });
   });
 
@@ -360,7 +363,7 @@ describe('Panel Location Communication Protocol', function () {
       const message1: WebviewMessage = { command: 'requestPanelLocationDetection' };
       await messageManager.handleMessage(message1);
 
-      // Change to sidebar configuration  
+      // Change to sidebar configuration
       Object.defineProperty(dom.window, 'innerWidth', { value: 350 });
       Object.defineProperty(dom.window, 'innerHeight', { value: 900 });
 

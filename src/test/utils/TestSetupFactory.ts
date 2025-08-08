@@ -308,7 +308,7 @@ export class TestSetupFactory {
   /**
    * Create mock terminal for testing
    */
-  public static createMockTerminal(id: string = 'test-terminal', options: any = {}) {
+  public static createMockTerminal(_id: string = 'test-terminal', options: any = {}) {
     return {
       write: sinon.stub(),
       writeln: sinon.stub(),

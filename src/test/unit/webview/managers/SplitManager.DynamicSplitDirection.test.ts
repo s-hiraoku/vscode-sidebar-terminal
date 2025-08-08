@@ -1,5 +1,5 @@
 /**
- * SplitManager - Dynamic Split Direction Tests  
+ * SplitManager - Dynamic Split Direction Tests
  * Issue #148: Dynamic split direction based on panel location
  */
 
@@ -19,7 +19,8 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
 
   beforeEach(function () {
     // Set up DOM environment
-    dom = new JSDOM(`
+    dom = new JSDOM(
+      `
       <!DOCTYPE html>
       <html>
         <body>
@@ -28,7 +29,9 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
           </div>
         </body>
       </html>
-    `, { pretendToBeVisual: true });
+    `,
+      { pretendToBeVisual: true }
+    );
 
     // Set global DOM objects
     global.window = dom.window as any;
@@ -94,7 +97,7 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
 
       splitManager.terminals.set(terminalId, terminalInstance);
       splitManager.isSplitMode = true;
-      
+
       // Set initial horizontal layout
       splitManager.updateSplitDirection('horizontal', 'panel');
 
@@ -112,7 +115,7 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
       const terminalIds = ['terminal-1', 'terminal-2', 'terminal-3'];
       const terminalInstances: TerminalInstance[] = [];
 
-      terminalIds.forEach(id => {
+      terminalIds.forEach((id) => {
         const container = document.createElement('div');
         container.id = `terminal-container-${id}`;
         container.style.flex = '1'; // Simulate existing flex styling
@@ -136,7 +139,7 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
       splitManager.updateSplitDirection('horizontal', 'panel');
 
       // Assert - all containers should maintain flex: 1
-      terminalInstances.forEach(instance => {
+      terminalInstances.forEach((instance) => {
         expect(instance.container.style.flex).to.equal('1');
       });
 
@@ -195,7 +198,7 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
       splitManager.updateSplitDirection('horizontal', 'panel');
 
       // Wait for any async operations
-      return new Promise(resolve => {
+      return new Promise((resolve) => {
         setTimeout(() => {
           // Assert - fitAddon.fit should have been called for layout adjustment
           expect(mockFitAddon.fit).to.have.been.called;
@@ -215,7 +218,7 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
     });
 
     it('should determine optimal split direction for panel location', function () {
-      // Act  
+      // Act
       const direction = splitManager.getOptimalSplitDirection('panel');
 
       // Assert
@@ -247,7 +250,7 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
       const terminalInstance: TerminalInstance = {
         id: 'broken-terminal',
         terminal: mockTerminal,
-        fitAddon: mockFitAddon,  
+        fitAddon: mockFitAddon,
         name: 'Broken Terminal',
         container: null as any, // Simulate missing container
       };
@@ -274,7 +277,7 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
         id: terminalId,
         terminal: mockTerminal,
         fitAddon: mockFitAddon,
-        name: 'Terminal 1', 
+        name: 'Terminal 1',
         container,
       };
 
@@ -356,7 +359,7 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
     it('should apply correct CSS properties for horizontal layout', function () {
       // Arrange
       const terminalBody = document.getElementById('terminal-body')!;
-      
+
       // Act
       splitManager.updateSplitDirection('horizontal', 'panel');
 
@@ -369,7 +372,7 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
     it('should apply correct CSS properties for vertical layout', function () {
       // Arrange
       const terminalBody = document.getElementById('terminal-body')!;
-      
+
       // Act
       splitManager.updateSplitDirection('vertical', 'sidebar');
 
@@ -382,7 +385,7 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
     it('should maintain responsive layout during window resize simulation', function () {
       // Arrange
       const terminalIds = ['terminal-1', 'terminal-2'];
-      terminalIds.forEach(id => {
+      terminalIds.forEach((id) => {
         const container = document.createElement('div');
         container.style.flex = '1';
         document.getElementById('terminal-body')!.appendChild(container);
@@ -400,19 +403,19 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
 
       // Act - simulate layout changes as if window resized
       splitManager.updateSplitDirection('horizontal', 'panel');
-      
+
       // Simulate window resize by changing terminal body dimensions
       const terminalBody = document.getElementById('terminal-body')!;
-      terminalBody.style.width = '400px';  // Narrower
+      terminalBody.style.width = '400px'; // Narrower
       terminalBody.style.height = '1200px'; // Taller
-      
+
       splitManager.updateSplitDirection('vertical', 'sidebar'); // Switch to vertical for narrow layout
 
       // Assert - layout should adapt
       expect(terminalBody.style.flexDirection).to.equal('column');
-      
+
       // All terminals should still be present and properly sized
-      terminalIds.forEach(id => {
+      terminalIds.forEach((id) => {
         const instance = splitManager.terminals.get(id);
         expect(instance).to.not.be.undefined;
         expect(instance!.container.style.flex).to.equal('1');

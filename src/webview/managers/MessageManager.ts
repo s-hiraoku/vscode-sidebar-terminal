@@ -182,7 +182,10 @@ export class MessageManager implements IMessageManager {
    * 🆕 Handle panel location update message (Issue #148)
    * Updates split direction based on panel location
    */
-  private handlePanelLocationUpdateMessage(msg: MessageCommand, coordinator: IManagerCoordinator): void {
+  private handlePanelLocationUpdateMessage(
+    msg: MessageCommand,
+    coordinator: IManagerCoordinator
+  ): void {
     try {
       const location = msg.location || 'sidebar';
       log(`📍 [MESSAGE] Panel location update: ${location}`);
@@ -198,7 +201,7 @@ export class MessageManager implements IMessageManager {
       // This should be checked on the Extension side, but we can add a safeguard here
       const configManager = (coordinator as any).getManagers?.()?.config;
       let isDynamicSplitEnabled = true; // Default to enabled
-      
+
       if (configManager) {
         try {
           const settings = configManager.loadSettings();
@@ -209,7 +212,9 @@ export class MessageManager implements IMessageManager {
       }
 
       if (!isDynamicSplitEnabled) {
-        log('📍 [MESSAGE] Dynamic split direction is disabled via settings, ignoring location update');
+        log(
+          '📍 [MESSAGE] Dynamic split direction is disabled via settings, ignoring location update'
+        );
         return;
       }
 
@@ -219,7 +224,6 @@ export class MessageManager implements IMessageManager {
 
       // Update split direction if it has changed
       splitManager.updateSplitDirection(newSplitDirection, location);
-
     } catch (error) {
       log('❌ [MESSAGE] Error handling panel location update:', error);
     }
@@ -232,12 +236,12 @@ export class MessageManager implements IMessageManager {
   private handleRequestPanelLocationDetectionMessage(coordinator: IManagerCoordinator): void {
     try {
       log('📏 [MESSAGE] Handling panel location detection request');
-      
+
       // Analyze WebView dimensions to determine likely panel location
       const detectedLocation = this.analyzeWebViewDimensions();
-      
+
       log(`📏 [MESSAGE] Dimension analysis result: ${detectedLocation}`);
-      
+
       // Report back to Extension
       this.queueMessage(
         {
@@ -247,7 +251,6 @@ export class MessageManager implements IMessageManager {
         },
         coordinator
       );
-      
     } catch (error) {
       log('❌ [MESSAGE] Error in panel location detection:', error);
       // Fallback to sidebar
@@ -277,7 +280,7 @@ export class MessageManager implements IMessageManager {
 
       const width = container.clientWidth;
       const height = container.clientHeight;
-      
+
       log(`📏 [DIMENSION] Container dimensions: ${width}x${height}`);
 
       if (width === 0 || height === 0) {
@@ -287,10 +290,10 @@ export class MessageManager implements IMessageManager {
 
       // Calculate aspect ratio (width/height)
       const aspectRatio = width / height;
-      
+
       log(`📏 [DIMENSION] Aspect ratio: ${aspectRatio.toFixed(2)}`);
 
-      // Heuristic: 
+      // Heuristic:
       // - Sidebar: Usually narrow and tall (aspect ratio < 1.5)
       // - Bottom panel: Usually wide and short (aspect ratio > 2.0)
       if (aspectRatio > 2.0) {
@@ -304,7 +307,6 @@ export class MessageManager implements IMessageManager {
         log('📏 [DIMENSION] Ambiguous aspect ratio, defaulting to sidebar');
         return 'sidebar';
       }
-      
     } catch (error) {
       log('❌ [DIMENSION] Error analyzing dimensions:', error);
       return 'sidebar';

@@ -46,7 +46,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       this._setupTerminalEventListeners();
       this._setupCliAgentStatusListeners();
       this._setupConfigurationChangeListeners();
-      
+
       // 🆕 Set up panel location change listener
       this._setupPanelLocationChangeListener(webviewView);
 
@@ -67,22 +67,25 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   private _requestPanelLocationDetection(): void {
     try {
       log('📍 [PANEL-DETECTION] Requesting panel location detection from WebView');
-      
+
       // Send a message to WebView to analyze its dimensions and report back
       this._sendMessage({
-        command: 'requestPanelLocationDetection'
+        command: 'requestPanelLocationDetection',
       });
-      
     } catch (error) {
       log('⚠️ [PANEL-DETECTION] Error requesting panel location detection:', error);
       // Fallback to sidebar assumption
       this._sendMessage({
         command: 'panelLocationUpdate',
-        location: 'sidebar'
+        location: 'sidebar',
       });
 
       // Set fallback context key
-      void vscode.commands.executeCommand('setContext', 'secondaryTerminal.panelLocation', 'sidebar');
+      void vscode.commands.executeCommand(
+        'setContext',
+        'secondaryTerminal.panelLocation',
+        'sidebar'
+      );
     }
   }
 
@@ -91,7 +94,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
    */
   private _getCurrentPanelLocation(): 'sidebar' | 'panel' {
     const config = vscode.workspace.getConfiguration('sidebarTerminal');
-    
+
     // Check if dynamic split direction feature is enabled
     const isDynamicSplitEnabled = config.get<boolean>('dynamicSplitDirection', true);
     if (!isDynamicSplitEnabled) {
@@ -101,7 +104,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
     // Get manual panel location setting
     const manualPanelLocation = config.get<'sidebar' | 'panel' | 'auto'>('panelLocation', 'auto');
-    
+
     if (manualPanelLocation !== 'auto') {
       log(`📍 [PANEL-DETECTION] Using manual panel location: ${manualPanelLocation}`);
       return manualPanelLocation;
@@ -119,7 +122,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   private _setupPanelLocationChangeListener(webviewView: vscode.WebviewView): void {
     // VS Code doesn't provide direct panel location change events
     // We'll use view state changes as a proxy for potential location changes
-    
+
     if (webviewView.onDidChangeVisibility) {
       this._addDisposable(
         webviewView.onDidChangeVisibility(() => {
@@ -134,7 +137,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
     // Also listen for configuration changes
     this._addDisposable(
-      vscode.workspace.onDidChangeConfiguration(event => {
+      vscode.workspace.onDidChangeConfiguration((event) => {
         if (event.affectsConfiguration('sidebarTerminal.panelLocation')) {
           log(`📍 [PANEL-DETECTION] Panel location setting changed - requesting detection`);
           this._requestPanelLocationDetection();
@@ -471,20 +474,20 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
             command: 'fontSettingsUpdate',
             fontSettings,
           });
-          
+
           // 🆕 Send initial panel location and request detection (Issue #148)
           if (this._view) {
             const panelLocation = this._getCurrentPanelLocation();
             log(`📍 [SETTINGS] Sending initial panel location: ${panelLocation}`);
             await this._sendMessage({
               command: 'panelLocationUpdate',
-              location: panelLocation
+              location: panelLocation,
             });
-            
+
             // Also request WebView to detect actual panel location
             this._requestPanelLocationDetection();
           }
-          
+
           break;
         }
         case 'updateSettings': {
@@ -498,13 +501,17 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
           log('📍 [DEBUG] Panel location reported from WebView:', message.location);
           if (message.location) {
             // Update context key for VS Code when clause
-            void vscode.commands.executeCommand('setContext', 'secondaryTerminal.panelLocation', message.location);
+            void vscode.commands.executeCommand(
+              'setContext',
+              'secondaryTerminal.panelLocation',
+              message.location
+            );
             log('📍 [DEBUG] Context key updated with panel location:', message.location);
-            
+
             // Update our understanding of the panel location and notify WebView
             await this._sendMessage({
               command: 'panelLocationUpdate',
-              location: message.location
+              location: message.location,
             });
             log('📍 [DEBUG] Panel location update sent to WebView:', message.location);
           }
@@ -1628,14 +1635,13 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         () => {
           if (webviewView.visible) {
             log('👁️ [DEBUG] WebView became visible - triggering panel location detection');
-            
+
             // 🆕 Trigger panel location detection when WebView becomes visible
             // This handles cases where the panel was moved while hidden
             setTimeout(() => {
               log('📍 [DEBUG] Requesting panel location detection after visibility change');
               this._requestPanelLocationDetection();
             }, 500); // Small delay to ensure WebView is fully loaded
-            
           } else {
             log('👁️ [DEBUG] WebView became hidden');
           }
@@ -1740,7 +1746,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   private _getCurrentSettings(): PartialTerminalSettings {
     const config = getConfigManager().getExtensionTerminalConfig();
     const vsCodeConfig = vscode.workspace.getConfiguration('sidebarTerminal');
-    
+
     return {
       shell: config.shell || '',
       shellArgs: config.shellArgs || [],

@@ -17,7 +17,8 @@ describe('Terminal Display - Regression Tests', function () {
 
   beforeEach(function () {
     // Set up DOM environment
-    dom = new JSDOM(`
+    dom = new JSDOM(
+      `
       <!DOCTYPE html>
       <html>
         <head>
@@ -29,7 +30,9 @@ describe('Terminal Display - Regression Tests', function () {
           </div>
         </body>
       </html>
-    `, { pretendToBeVisual: true });
+    `,
+      { pretendToBeVisual: true }
+    );
 
     // Set global DOM objects
     global.window = dom.window as any;
@@ -61,8 +64,12 @@ describe('Terminal Display - Regression Tests', function () {
       focus() {}
       dispose() {}
       loadAddon() {}
-      onData() { return { dispose: () => {} }; }
-      onResize() { return { dispose: () => {} }; }
+      onData() {
+        return { dispose: () => {} };
+      }
+      onResize() {
+        return { dispose: () => {} };
+      }
     } as any;
 
     (global as any).FitAddon = class MockFitAddon {
@@ -102,7 +109,7 @@ describe('Terminal Display - Regression Tests', function () {
     it('should handle terminal-body DOM element access', function () {
       // Act - test DOM access patterns that previously caused issues
       const terminalBody = document.getElementById('terminal-body');
-      
+
       // Assert
       expect(terminalBody).to.not.be.null;
       expect(terminalBody!.style.display).to.equal('flex');
@@ -112,12 +119,12 @@ describe('Terminal Display - Regression Tests', function () {
     it('should support dynamic flex direction changes', function () {
       // Act - test flex direction changes that are part of dynamic split direction
       const terminalBody = document.getElementById('terminal-body')!;
-      
+
       // Simulate horizontal layout
       terminalBody.style.flexDirection = 'row';
       expect(terminalBody.style.flexDirection).to.equal('row');
 
-      // Simulate vertical layout  
+      // Simulate vertical layout
       terminalBody.style.flexDirection = 'column';
       expect(terminalBody.style.flexDirection).to.equal('column');
     });
@@ -135,7 +142,7 @@ describe('Terminal Display - Regression Tests', function () {
     it('should access terminal collections without compilation errors', function () {
       // Act - test the API access patterns that were causing TypeScript errors
       const splitManager = terminalWebviewManager.splitManager;
-      
+
       // Assert - these properties should be accessible
       expect(splitManager.terminals).to.be.an.instanceof(Map);
       expect(splitManager.isSplitMode).to.be.a('boolean');
@@ -144,7 +151,7 @@ describe('Terminal Display - Regression Tests', function () {
     it('should handle getTerminals() method access', function () {
       // Act - test the method that was causing compilation errors
       const splitManager = terminalWebviewManager.splitManager;
-      
+
       // Assert - getTerminals method should exist and be callable
       expect(() => {
         const terminals = splitManager.getTerminals();
@@ -155,7 +162,7 @@ describe('Terminal Display - Regression Tests', function () {
     it('should handle getTerminalContainers() method access', function () {
       // Act - test another method that was problematic
       const splitManager = terminalWebviewManager.splitManager;
-      
+
       // Assert - getTerminalContainers method should exist and be callable
       expect(() => {
         const containers = splitManager.getTerminalContainers();
@@ -264,7 +271,7 @@ describe('Terminal Display - Regression Tests', function () {
     it('should maintain functionality after repeated DOM manipulations', function () {
       // Act - perform operations that previously could cause issues
       const terminalBody = document.getElementById('terminal-body')!;
-      
+
       // Multiple layout changes
       for (let i = 0; i < 10; i++) {
         terminalBody.style.flexDirection = i % 2 === 0 ? 'row' : 'column';
@@ -280,11 +287,13 @@ describe('Terminal Display - Regression Tests', function () {
   describe('Performance Regression Prevention', function () {
     it('should handle rapid message processing without degradation', async function () {
       // Arrange - multiple messages to simulate heavy usage
-      const messages = Array(20).fill(0).map((_, i) => ({
-        command: 'output',
-        data: `Test output ${i}\r\n`,
-        terminalId: 'terminal-1',
-      }));
+      const messages = Array(20)
+        .fill(0)
+        .map((_, i) => ({
+          command: 'output',
+          data: `Test output ${i}\r\n`,
+          terminalId: 'terminal-1',
+        }));
 
       // First create a terminal
       await terminalWebviewManager.handleMessage({
@@ -296,11 +305,11 @@ describe('Terminal Display - Regression Tests', function () {
 
       // Act - process messages rapidly
       const startTime = Date.now();
-      
+
       for (const message of messages) {
         await terminalWebviewManager.handleMessage(message);
       }
-      
+
       const endTime = Date.now();
 
       // Assert - should complete in reasonable time
@@ -310,7 +319,7 @@ describe('Terminal Display - Regression Tests', function () {
     it('should maintain memory efficiency with multiple terminals', async function () {
       // Arrange - create multiple terminals
       const terminalCount = 5;
-      
+
       for (let i = 1; i <= terminalCount; i++) {
         await terminalWebviewManager.handleMessage({
           command: 'terminalCreated',
@@ -322,10 +331,10 @@ describe('Terminal Display - Regression Tests', function () {
 
       // Act - perform operations on all terminals
       const splitManager = terminalWebviewManager.splitManager;
-      
+
       // Assert - all terminals should be tracked correctly
       expect(splitManager.getTerminals().size).to.equal(terminalCount);
-      
+
       // Verify DOM structure is maintained
       const containers = document.querySelectorAll('[data-terminal-id]');
       expect(containers.length).to.equal(terminalCount);
@@ -336,7 +345,7 @@ describe('Terminal Display - Regression Tests', function () {
     it('should prevent syntax errors in SplitManager', function () {
       // This test ensures the syntax error we fixed doesn't regress
       const splitManager = terminalWebviewManager.splitManager;
-      
+
       // Act - access methods and properties that previously had syntax issues
       expect(() => {
         splitManager.getTerminals();
@@ -359,7 +368,7 @@ describe('Terminal Display - Regression Tests', function () {
       ];
 
       // Assert - all managers should be defined
-      managers.forEach(manager => {
+      managers.forEach((manager) => {
         expect(manager).to.not.be.undefined;
         expect(manager).to.not.be.null;
       });
@@ -368,12 +377,12 @@ describe('Terminal Display - Regression Tests', function () {
     it('should handle edge cases in method calls that could cause compilation issues', function () {
       // Act & Assert - test method calls with various parameters
       const splitManager = terminalWebviewManager.splitManager;
-      
+
       expect(() => {
         // Test with valid parameters
         splitManager.updateSplitDirection('vertical', 'sidebar');
         splitManager.updateSplitDirection('horizontal', 'panel');
-        
+
         // Test with edge case parameters
         splitManager.getOptimalSplitDirection('sidebar');
         splitManager.getOptimalSplitDirection('panel');
@@ -385,13 +394,13 @@ describe('Terminal Display - Regression Tests', function () {
     it('should maintain WebView state during panel moves', function () {
       // Arrange - simulate WebView state
       terminalWebviewManager.setActiveTerminalId('terminal-1');
-      
+
       // Act - simulate panel move (visibility change)
       const originalActiveId = terminalWebviewManager.getActiveTerminalId();
-      
+
       // Simulate WebView becoming hidden and visible again
       // (In real scenario, this would be handled by VS Code)
-      
+
       // Assert - state should be preserved
       expect(terminalWebviewManager.getActiveTerminalId()).to.equal(originalActiveId);
     });
@@ -418,9 +427,7 @@ describe('Terminal Display - Regression Tests', function () {
           theme: 'dark',
           cursor: { style: 'block', blink: true },
         },
-        terminals: [
-          { id: 'terminal-1', name: 'Terminal 1' },
-        ],
+        terminals: [{ id: 'terminal-1', name: 'Terminal 1' }],
         activeTerminalId: 'terminal-1',
       });
 
