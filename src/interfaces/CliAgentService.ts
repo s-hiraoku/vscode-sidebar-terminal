@@ -19,18 +19,16 @@ export interface CliAgentDetectionResult {
 
 export interface TerminationDetectionResult {
   isTerminated: boolean;
-  reason: 'shell_prompt' | 'exit_command' | 'termination_message' | 'process_exit';
+  confidence: number;
+  reason: string;
   detectedLine?: string;
 }
 
 // =================== Agent State Types ===================
 
 export interface CliAgentState {
-  terminalId: string;
-  type: 'claude' | 'gemini' | null;
   status: 'connected' | 'disconnected' | 'none';
-  terminalName?: string;
-  startTime?: Date;
+  agentType: 'claude' | 'gemini' | null;
 }
 
 export interface DisconnectedAgentInfo {
@@ -42,7 +40,7 @@ export interface DisconnectedAgentInfo {
 // =================== Cache and Optimization Types ===================
 
 export interface DetectionCacheEntry {
-  lastData: string;
+  result: CliAgentDetectionResult | null;
   timestamp: number;
 }
 

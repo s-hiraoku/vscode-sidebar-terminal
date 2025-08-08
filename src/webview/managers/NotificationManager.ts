@@ -2,8 +2,8 @@
  * Notification Manager - Handles user feedback, notifications, and visual alerts
  */
 
-import { webview as log } from '../../utils/logger';
 import { INotificationManager } from '../interfaces/ManagerInterfaces';
+import { BaseManager } from './BaseManager';
 
 interface NotificationOptions {
   duration?: number;
@@ -12,7 +12,15 @@ interface NotificationOptions {
   persistent?: boolean;
 }
 
-export class NotificationManager implements INotificationManager {
+export class NotificationManager extends BaseManager implements INotificationManager {
+  constructor() {
+    super('NotificationManager', {
+      enableLogging: true,
+      enableValidation: false,
+      enableErrorRecovery: true
+    });
+  }
+
   // Active notifications tracking
   private activeNotifications: Map<string, HTMLElement> = new Map();
   private notificationCounter = 0;
@@ -35,7 +43,7 @@ export class NotificationManager implements INotificationManager {
     });
 
     this.addNotificationToTerminal(notification);
-    log(`📢 [NOTIFICATION] Showed ${type} notification: ${message}`);
+    this.log(`📢 [NOTIFICATION] Showed ${type} notification: ${message}`);
   }
 
   /**
@@ -81,7 +89,7 @@ export class NotificationManager implements INotificationManager {
       feedback.remove();
     }, 600);
 
-    log(`⌨️ [NOTIFICATION] Alt+Click feedback shown at (${x}, ${y})`);
+    this.log(`⌨️ [NOTIFICATION] Alt+Click feedback shown at (${x}, ${y})`);
   }
 
   /**
@@ -98,7 +106,7 @@ export class NotificationManager implements INotificationManager {
       notification.remove();
     });
 
-    log('🧹 [NOTIFICATION] All notifications cleared');
+    this.log('🧹 [NOTIFICATION] All notifications cleared');
   }
 
   /**
@@ -222,7 +230,7 @@ export class NotificationManager implements INotificationManager {
     this.activeNotifications.set(id, notification);
     this.addNotificationToTerminal(notification);
 
-    log(`⏳ [NOTIFICATION] Loading notification shown: ${message}`);
+    this.log(`⏳ [NOTIFICATION] Loading notification shown: ${message}`);
     return id;
   }
 
@@ -231,7 +239,7 @@ export class NotificationManager implements INotificationManager {
    */
   public hideLoading(id: string): void {
     this.removeNotification(id);
-    log(`✅ [NOTIFICATION] Loading notification hidden: ${id}`);
+    this.log(`✅ [NOTIFICATION] Loading notification hidden: ${id}`);
   }
 
   /**
@@ -251,7 +259,7 @@ export class NotificationManager implements INotificationManager {
     notification.classList.add('toast-notification');
     this.addNotificationToTerminal(notification);
 
-    log(`🍞 [NOTIFICATION] Toast shown: ${message} (${type})`);
+    this.log(`🍞 [NOTIFICATION] Toast shown: ${message} (${type})`);
   }
 
   /**
@@ -289,7 +297,7 @@ export class NotificationManager implements INotificationManager {
     `;
 
     document.head.appendChild(style);
-    log('🎨 [NOTIFICATION] Notification styles setup');
+    this.log('🎨 [NOTIFICATION] Notification styles setup');
   }
 
   /**
@@ -305,8 +313,8 @@ export class NotificationManager implements INotificationManager {
   /**
    * Dispose and cleanup
    */
-  public dispose(): void {
-    log('🧹 [NOTIFICATION] Disposing notification manager');
+  public override dispose(): void {
+    this.log('🧹 [NOTIFICATION] Disposing notification manager');
 
     // Clear all notifications
     this.clearNotifications();
@@ -314,6 +322,9 @@ export class NotificationManager implements INotificationManager {
     // Reset counters
     this.notificationCounter = 0;
 
-    log('✅ [NOTIFICATION] Notification manager disposed');
+    this.log('✅ [NOTIFICATION] Notification manager disposed');
+    
+    // Call parent dispose
+    super.dispose();
   }
 }

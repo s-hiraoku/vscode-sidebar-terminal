@@ -5,6 +5,7 @@ import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import { SPLIT_CONSTANTS } from '../constants/webview';
 import { showSplitLimitWarning } from '../utils/NotificationUtils';
+import { BaseManager } from './BaseManager';
 
 export interface TerminalInstance {
   id: string;
@@ -14,7 +15,15 @@ export interface TerminalInstance {
   container: HTMLElement;
 }
 
-export class SplitManager {
+export class SplitManager extends BaseManager {
+  constructor() {
+    super('SplitManager', {
+      enableLogging: true,
+      enableValidation: false,
+      enableErrorRecovery: true
+    });
+  }
+
   // Split functionality
   public isSplitMode = false;
   private splitDirection: 'horizontal' | 'vertical' | null = null;
@@ -62,7 +71,7 @@ export class SplitManager {
       };
     }
 
-    console.log(
+    this.log(
       `📐 [SPLIT] Equal split: ${availableHeight}px ÷ ${totalTerminalCount} terminals = ${terminalHeight}px per terminal`
     );
     return { canSplit: true, terminalHeight };
@@ -77,13 +86,13 @@ export class SplitManager {
     direction: 'horizontal' | 'vertical',
     location: 'sidebar' | 'panel'
   ): void {
-    console.log(
+    this.log(
       `📍 [SPLIT] Updating split direction: ${this.splitDirection} -> ${direction} (location: ${location})`
     );
 
     // Check if direction actually changed
     if (this.splitDirection === direction) {
-      console.log(`📍 [SPLIT] Split direction unchanged: ${direction}`);
+      this.log(`📍 [SPLIT] Split direction unchanged: ${direction}`);
       return;
     }
 
@@ -95,7 +104,7 @@ export class SplitManager {
       this.applyNewSplitLayout(direction, previousDirection, location);
     }
 
-    console.log(`✅ [SPLIT] Split direction updated to: ${direction}`);
+    this.log(`✅ [SPLIT] Split direction updated to: ${direction}`);
   }
 
   /**
@@ -109,13 +118,13 @@ export class SplitManager {
     previousDirection: 'horizontal' | 'vertical' | null,
     location: 'sidebar' | 'panel'
   ): void {
-    console.log(
+    this.log(
       `🔄 [SPLIT] Applying new split layout: ${previousDirection} -> ${newDirection} (${this.terminals.size} terminals)`
     );
 
     const terminalBody = document.getElementById('terminal-body');
     if (!terminalBody) {
-      console.error('❌ [SPLIT] Terminal body not found');
+      this.log('❌ [SPLIT] Terminal body not found');
       return;
     }
 
@@ -124,7 +133,7 @@ export class SplitManager {
       const flexDirection = newDirection === 'horizontal' ? 'row' : 'column';
       terminalBody.style.flexDirection = flexDirection;
 
-      console.log(`🔄 [SPLIT] Updated terminal-body flex-direction to: ${flexDirection}`);
+      this.log(`🔄 [SPLIT] Updated terminal-body flex-direction to: ${flexDirection}`);
 
       // Update all terminal containers for the new layout
       this.terminalContainers.forEach((container, terminalId) => {
@@ -139,7 +148,7 @@ export class SplitManager {
         this.refitAllTerminals();
       }, 100);
 
-      console.log(`✅ [SPLIT] New split layout applied: ${newDirection}`);
+      this.log(`✅ [SPLIT] New split layout applied: ${newDirection}`);
     } catch (error) {
       console.error('❌ [SPLIT] Error applying new split layout:', error);
     }
@@ -169,7 +178,7 @@ export class SplitManager {
       container.style.minWidth = '0';
     }
 
-    console.log(`🔄 [SPLIT] Updated container for terminal ${terminalId} (${direction})`);
+    this.log(`🔄 [SPLIT] Updated container for terminal ${terminalId} (${direction})`);
   }
 
   /**
@@ -182,7 +191,7 @@ export class SplitManager {
     const terminalCount = this.terminals.size;
     if (terminalCount <= 1) return;
 
-    console.log(
+    this.log(
       `📐 [SPLIT] Recalculating sizing for ${terminalCount} terminals (${direction}, ${location})`
     );
 
@@ -199,7 +208,7 @@ export class SplitManager {
       this.terminalContainers.forEach((container, terminalId) => {
         container.style.width = `${widthPerTerminal}px`;
         container.style.height = '100%';
-        console.log(`📐 [SPLIT] Set terminal ${terminalId} width: ${widthPerTerminal}px`);
+        this.log(`📐 [SPLIT] Set terminal ${terminalId} width: ${widthPerTerminal}px`);
       });
     } else {
       // Vertical split: equal height distribution
@@ -207,7 +216,7 @@ export class SplitManager {
       this.terminalContainers.forEach((container, terminalId) => {
         container.style.width = '100%';
         container.style.height = `${heightPerTerminal}px`;
-        console.log(`📐 [SPLIT] Set terminal ${terminalId} height: ${heightPerTerminal}px`);
+        this.log(`📐 [SPLIT] Set terminal ${terminalId} height: ${heightPerTerminal}px`);
       });
     }
   }
@@ -216,7 +225,7 @@ export class SplitManager {
    * 🆕 Refit all terminals after layout change
    */
   private refitAllTerminals(): void {
-    console.log(`🔧 [SPLIT] Refitting all ${this.terminals.size} terminals`);
+    this.log(`🔧 [SPLIT] Refitting all ${this.terminals.size} terminals`);
 
     this.terminals.forEach((terminalData, terminalId) => {
       if (terminalData.fitAddon && terminalData.terminal) {
@@ -231,7 +240,7 @@ export class SplitManager {
           terminalData.fitAddon.fit();
           terminalData.terminal.refresh(0, terminalData.terminal.rows - 1);
 
-          console.log(`🔧 [SPLIT] Refitted terminal ${terminalId}`);
+          this.log(`🔧 [SPLIT] Refitted terminal ${terminalId}`);
         } catch (error) {
           console.error(`❌ [SPLIT] Error refitting terminal ${terminalId}:`, error);
         }
@@ -262,21 +271,21 @@ export class SplitManager {
     // Always use the current number of terminal containers
     const actualTerminalCount = Math.max(1, this.terminalContainers.size);
 
-    console.log(
+    this.log(
       `📐 [HEIGHT] Terminal-body height: ${availableHeight}px, Terminal count: ${actualTerminalCount}`
     );
-    console.log(`📐 [HEIGHT] Body rect:`, bodyRect);
-    console.log(`📐 [HEIGHT] Terminal containers:`, Array.from(this.terminalContainers.keys()));
+    this.log(`📐 [HEIGHT] Body rect:`, bodyRect);
+    this.log(`📐 [HEIGHT] Terminal containers:`, Array.from(this.terminalContainers.keys()));
 
     // Calculate equal height for all terminals
     const calculatedHeight = Math.floor(availableHeight / actualTerminalCount);
-    console.log(`📐 [HEIGHT] Calculated height per terminal: ${calculatedHeight}px`);
+    this.log(`📐 [HEIGHT] Calculated height per terminal: ${calculatedHeight}px`);
 
     return calculatedHeight;
   }
 
   public initializeMultiSplitLayout(): void {
-    console.log('📐 [WEBVIEW] Initializing multi-split layout');
+    this.log('📐 [WEBVIEW] Initializing multi-split layout');
 
     const terminalBody = document.getElementById('terminal-body');
     if (!terminalBody) {
@@ -295,7 +304,7 @@ export class SplitManager {
     // Find and adjust existing terminal container
     const existingPrimaryTerminal = document.getElementById('primary-terminal');
     if (existingPrimaryTerminal) {
-      console.log('📐 [WEBVIEW] Adjusting existing primary terminal for split layout');
+      this.log('📐 [WEBVIEW] Adjusting existing primary terminal for split layout');
 
       // Calculate height for all terminals (existing + new one that will be added)
       const availableHeight = terminalBody.clientHeight;
@@ -313,12 +322,12 @@ export class SplitManager {
         flex-shrink: 0;
       `;
 
-      console.log(`📐 [WEBVIEW] Set existing terminal height to ${heightPerTerminal}px`);
+      this.log(`📐 [WEBVIEW] Set existing terminal height to ${heightPerTerminal}px`);
     }
 
     this.isSplitMode = true;
     this.splitDirection = 'vertical';
-    console.log('✅ [WEBVIEW] Multi-split layout initialized');
+    this.log('✅ [WEBVIEW] Multi-split layout initialized');
   }
 
   public createSplitTerminalContainer(id: string, name: string, height: number): HTMLElement {
@@ -367,7 +376,7 @@ export class SplitManager {
     // container.appendChild(header);
     container.appendChild(terminalArea);
 
-    console.log(`📐 [SPLIT] Created container for ${name}: ${height}px total`);
+    this.log(`📐 [SPLIT] Created container for ${name}: ${height}px total`);
     return container;
   }
 
@@ -382,7 +391,7 @@ export class SplitManager {
     const existingPrimaryTerminal = document.getElementById('primary-terminal');
     const actualTerminalCount = existingPrimaryTerminal ? totalTerminals + 1 : totalTerminals;
 
-    console.log(
+    this.log(
       `📐 [WEBVIEW] Redistributing ${actualTerminalCount} terminals (${totalTerminals} split + ${existingPrimaryTerminal ? 1 : 0} primary) to ${newHeight}px each`
     );
 
@@ -470,11 +479,11 @@ export class SplitManager {
     // Store reference
     this.splitTerminals.set(terminalId, splitContainer);
 
-    console.log('✅ [WEBVIEW] Terminal added to split layout:', terminalId);
+    this.log('✅ [WEBVIEW] Terminal added to split layout:', terminalId);
   }
 
   public addNewTerminalToSplit(terminalId: string, terminalName: string): void {
-    console.log('🔀 [WEBVIEW] Adding new terminal to split:', terminalId, terminalName);
+    this.log('🔀 [WEBVIEW] Adding new terminal to split:', terminalId, terminalName);
 
     // Check if we can split
     const layoutInfo = this.calculateSplitLayout();
@@ -486,7 +495,7 @@ export class SplitManager {
     // Move the terminal container to split layout
     this.moveTerminalToSplitLayout(terminalId, terminalName);
 
-    console.log('✅ [WEBVIEW] New terminal added to split layout:', terminalId);
+    this.log('✅ [WEBVIEW] New terminal added to split layout:', terminalId);
   }
 
   private moveTerminalToSplitLayout(terminalId: string, terminalName: string): void {
@@ -541,7 +550,7 @@ export class SplitManager {
   }
 
   public prepareSplitMode(direction: 'horizontal' | 'vertical'): void {
-    console.log('🔀 [WEBVIEW] Preparing split mode:', direction);
+    this.log('🔀 [WEBVIEW] Preparing split mode:', direction);
 
     // Set split mode flag and direction
     this.isSplitMode = true;
@@ -552,7 +561,7 @@ export class SplitManager {
       this.initializeMultiSplitLayout();
     }
 
-    console.log('✅ [WEBVIEW] Split mode prepared, waiting for new terminal');
+    this.log('✅ [WEBVIEW] Split mode prepared, waiting for new terminal');
   }
 
   public splitTerminal(direction: 'horizontal' | 'vertical'): void {
@@ -560,12 +569,12 @@ export class SplitManager {
       this.addTerminalToMultiSplit();
     } else {
       // Keep horizontal split as the old 2-pane split for now
-      console.log('🔀 [WEBVIEW] Horizontal split not implemented in this version');
+      this.log('🔀 [WEBVIEW] Horizontal split not implemented in this version');
     }
   }
 
   private addTerminalToMultiSplit(): void {
-    console.log('📐 [WEBVIEW] Adding terminal to multi-split layout');
+    this.log('📐 [WEBVIEW] Adding terminal to multi-split layout');
 
     const layoutInfo = this.calculateSplitLayout();
     if (!layoutInfo.canSplit) {
@@ -578,7 +587,7 @@ export class SplitManager {
       this.initializeMultiSplitLayout();
     }
 
-    console.log('✅ [WEBVIEW] Terminal added to multi-split layout');
+    this.log('✅ [WEBVIEW] Terminal added to multi-split layout');
   }
 
   // Getters
@@ -627,7 +636,7 @@ export class SplitManager {
     const terminal = this.terminals.get(id);
     const container = this.terminalContainers.get(id);
 
-    console.log(
+    this.log(
       '🗑️ [SPLIT] Removing terminal %s, terminal: %s, container: %s',
       id,
       !!terminal,
@@ -638,7 +647,7 @@ export class SplitManager {
       // Dispose terminal
       try {
         terminal.terminal.dispose();
-        console.log('🗑️ [SPLIT] Terminal %s disposed successfully', id);
+        this.log('🗑️ [SPLIT] Terminal %s disposed successfully', id);
       } catch (error) {
         console.error(`Error disposing terminal ${id}:`, error);
       }
@@ -651,7 +660,7 @@ export class SplitManager {
       try {
         // Remove container from DOM
         container.remove();
-        console.log('🗑️ [SPLIT] Container for terminal %s removed from DOM', id);
+        this.log('🗑️ [SPLIT] Container for terminal %s removed from DOM', id);
       } catch (error) {
         console.error(`Error removing container for terminal ${id}:`, error);
       }
@@ -660,8 +669,36 @@ export class SplitManager {
       this.terminalContainers.delete(id);
     }
 
-    console.log('🗑️ [SPLIT] Terminal %s fully removed from SplitManager', id);
-    console.log(`🗑️ [SPLIT] Remaining terminals:`, Array.from(this.terminals.keys()));
-    console.log(`🗑️ [SPLIT] Remaining containers:`, Array.from(this.terminalContainers.keys()));
+    this.log('🗑️ [SPLIT] Terminal %s fully removed from SplitManager', id);
+    this.log(`🗑️ [SPLIT] Remaining terminals:`, Array.from(this.terminals.keys()));
+    this.log(`🗑️ [SPLIT] Remaining containers:`, Array.from(this.terminalContainers.keys()));
+  }
+
+  /**
+   * Dispose and cleanup all resources
+   */
+  public override dispose(): void {
+    this.log('🧹 [SPLIT] Disposing split manager');
+
+    // Dispose all terminals
+    for (const [id, terminal] of this.terminals) {
+      try {
+        terminal.terminal.dispose();
+      } catch (error) {
+        this.log(`❌ [SPLIT] Error disposing terminal ${id}:`, String(error));
+      }
+    }
+
+    // Clear all maps and reset state
+    this.terminals.clear();
+    this.terminalContainers.clear();
+    this.splitTerminals.clear();
+    this.isSplitMode = false;
+    this.splitDirection = null;
+
+    this.log('✅ [SPLIT] Split manager disposed');
+    
+    // Call parent dispose
+    super.dispose();
   }
 }

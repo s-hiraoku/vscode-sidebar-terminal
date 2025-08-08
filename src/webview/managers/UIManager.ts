@@ -3,12 +3,12 @@
  */
 
 import { Terminal } from 'xterm';
-import { webview as log } from '../../utils/logger';
 import { PartialTerminalSettings, WebViewFontSettings } from '../../types/shared';
 import { getWebviewTheme, WEBVIEW_THEME_CONSTANTS } from '../utils/WebviewThemeUtils';
 import { IUIManager } from '../interfaces/ManagerInterfaces';
 import { HeaderFactory, TerminalHeaderElements } from '../factories/HeaderFactory';
 import { DOMUtils } from '../utils/DOMUtils';
+import { BaseManager } from './BaseManager';
 
 export interface NotificationConfig {
   type: 'error' | 'warning' | 'info' | 'success';
@@ -18,7 +18,7 @@ export interface NotificationConfig {
   icon?: string;
 }
 
-export class UIManager implements IUIManager {
+export class UIManager extends BaseManager implements IUIManager {
   // Theme cache for performance
   private currentTheme: string | null = null;
   private themeApplied = false;
@@ -30,8 +30,13 @@ export class UIManager implements IUIManager {
   // Header elements cache for efficient CLI Agent status updates
   private headerElementsCache = new Map<string, TerminalHeaderElements>();
 
-  // Logger manager
-  // Use direct logger instead of LoggerManager to avoid circular dependency
+  constructor() {
+    super('UIManager', {
+      enableLogging: true,
+      enableValidation: true,
+      enableErrorRecovery: true
+    });
+  }
 
   /**
    * Update borders for all terminals based on active state
@@ -59,7 +64,7 @@ export class UIManager implements IUIManager {
       this.updateSingleTerminalBorder(activeContainer, true);
     }
 
-    log(`🎨 [UI] Updated borders, active terminal: ${activeTerminalId}`);
+    this.log(`Updated borders, active terminal: ${activeTerminalId}`);
   }
 
   /**
@@ -74,7 +79,7 @@ export class UIManager implements IUIManager {
         this.updateSingleTerminalBorder(element, terminalId === activeTerminalId);
       }
     });
-    log(`🎨 [UI] Updated split terminal borders, active: ${activeTerminalId}`);
+    this.log(`Updated split terminal borders, active: ${activeTerminalId}`);
   }
 
   /**
@@ -100,7 +105,7 @@ export class UIManager implements IUIManager {
       container.style.setProperty('border-style', 'solid', 'important');
     }
 
-    log(
+    this.log(
       `🎨 [UI] Updated border for terminal: ${container.dataset.terminalId}, active: ${isActive}, color: ${isActive ? WEBVIEW_THEME_CONSTANTS.ACTIVE_BORDER_COLOR : 'transparent'}`
     );
   }
@@ -128,7 +133,7 @@ export class UIManager implements IUIManager {
       }
     }
     placeholder.style.display = 'flex';
-    log('🎨 [UI] Terminal placeholder shown');
+    this.log('🎨 [UI] Terminal placeholder shown');
   }
 
   /**
@@ -138,7 +143,7 @@ export class UIManager implements IUIManager {
     const placeholder = document.getElementById('terminal-placeholder');
     if (placeholder) {
       placeholder.style.display = 'none';
-      log('🎨 [UI] Terminal placeholder hidden');
+      this.log('🎨 [UI] Terminal placeholder hidden');
     }
   }
 
@@ -153,7 +158,7 @@ export class UIManager implements IUIManager {
       terminal.options.theme = theme;
       this.currentTheme = theme.background || null;
       this.themeApplied = true;
-      log(`🎨 [UI] Applied theme to terminal: ${theme.background || 'default'}`);
+      this.log(`🎨 [UI] Applied theme to terminal: ${theme.background || 'default'}`);
     }
   }
 
@@ -165,7 +170,7 @@ export class UIManager implements IUIManager {
     terminal.options.fontSize = fontSettings.fontSize;
     terminal.options.fontFamily = fontSettings.fontFamily;
 
-    log(`🎨 [UI] Applied font settings: ${fontSettings.fontFamily}, ${fontSettings.fontSize}px`);
+    this.log(`🎨 [UI] Applied font settings: ${fontSettings.fontFamily}, ${fontSettings.fontSize}px`);
   }
 
   /**
@@ -178,13 +183,13 @@ export class UIManager implements IUIManager {
     // Apply cursor settings
     if (settings.cursorBlink !== undefined) {
       terminal.options.cursorBlink = settings.cursorBlink;
-      log(`🎨 [UI] Applied cursor blink: ${settings.cursorBlink}`);
+      this.log(`🎨 [UI] Applied cursor blink: ${settings.cursorBlink}`);
     }
 
     // Apply scrollback
     if (settings.scrollback !== undefined) {
       terminal.options.scrollback = settings.scrollback;
-      log(`🎨 [UI] Applied scrollback: ${settings.scrollback}`);
+      this.log(`🎨 [UI] Applied scrollback: ${settings.scrollback}`);
     }
 
     // Bell sound is not supported in xterm.js options
@@ -207,7 +212,7 @@ export class UIManager implements IUIManager {
       terminalContainer.appendChild(indicator);
     }
 
-    log(`🎨 [UI] Loading indicator shown: ${message}`);
+    this.log(`🎨 [UI] Loading indicator shown: ${message}`);
     return indicator;
   }
 
@@ -221,7 +226,7 @@ export class UIManager implements IUIManager {
       const indicators = document.querySelectorAll('.loading-indicator');
       indicators.forEach((el) => el.remove());
     }
-    log('🎨 [UI] Loading indicator hidden');
+    this.log('🎨 [UI] Loading indicator hidden');
   }
 
   /**
@@ -241,7 +246,7 @@ export class UIManager implements IUIManager {
       container.classList.remove('focused');
     }, 300);
 
-    log('🎨 [UI] Focus indicator added');
+    this.log('🎨 [UI] Focus indicator added');
   }
 
   /**
@@ -256,7 +261,7 @@ export class UIManager implements IUIManager {
     container.style.borderRadius = '4px';
     container.style.padding = '8px';
 
-    log('🎨 [UI] VS Code styling applied');
+    this.log('🎨 [UI] VS Code styling applied');
   }
 
   /**
@@ -272,7 +277,7 @@ export class UIManager implements IUIManager {
     // ヘッダー要素をキャッシュ（CLI Agent status更新用）
     this.headerElementsCache.set(terminalId, headerElements);
 
-    log(`🎨 [UI] Terminal header created using HeaderFactory for ${terminalId}`);
+    this.log(`🎨 [UI] Terminal header created using HeaderFactory for ${terminalId}`);
     return headerElements.container;
   }
 
@@ -289,7 +294,7 @@ export class UIManager implements IUIManager {
       const header = document.querySelector(`[data-terminal-id="${terminalId}"] .terminal-name`);
       if (header) {
         header.textContent = newName;
-        log(`🎨 [UI] Updated terminal header (fallback) for ${terminalId}: ${newName}`);
+        this.log(`🎨 [UI] Updated terminal header (fallback) for ${terminalId}: ${newName}`);
       }
     }
   }
@@ -300,7 +305,7 @@ export class UIManager implements IUIManager {
   public removeTerminalHeader(terminalId: string): void {
     if (this.headerElementsCache.has(terminalId)) {
       this.headerElementsCache.delete(terminalId);
-      log(`🧹 [UI] Removed terminal header cache for ${terminalId}`);
+      this.log(`🧹 [UI] Removed terminal header cache for ${terminalId}`);
     }
   }
 
@@ -309,7 +314,7 @@ export class UIManager implements IUIManager {
    */
   public clearHeaderCache(): void {
     this.headerElementsCache.clear();
-    log(`🧹 [UI] Cleared all header cache`);
+    this.log(`🧹 [UI] Cleared all header cache`);
   }
 
   /**
@@ -317,7 +322,7 @@ export class UIManager implements IUIManager {
    */
   public findTerminalHeaders(): HTMLElement[] {
     const headers = Array.from(document.querySelectorAll<HTMLElement>('.terminal-header'));
-    log(`🔍 [UI] Found ${headers.length} terminal headers`);
+    this.log(`🔍 [UI] Found ${headers.length} terminal headers`);
     return headers;
   }
 
@@ -330,7 +335,7 @@ export class UIManager implements IUIManager {
     const content = this.createNotificationContent(config, colors);
 
     notification.appendChild(content);
-    log(`📢 [UI] Created notification: ${config.type} - ${config.title}`);
+    this.log(`📢 [UI] Created notification: ${config.type} - ${config.title}`);
     return notification;
   }
 
@@ -343,7 +348,7 @@ export class UIManager implements IUIManager {
       style.id = 'ui-manager-animations';
       style.textContent = this.getAnimationCSS();
       document.head.appendChild(style);
-      log('🎨 [UI] CSS animations loaded');
+      this.log('🎨 [UI] CSS animations loaded');
     }
   }
 
@@ -391,7 +396,7 @@ export class UIManager implements IUIManager {
     }
 
     if (updatedCount > 0) {
-      log(
+      this.log(
         `CLI Agent status updated: ${activeTerminalName} -> ${status} (${updatedCount} terminals)`
       );
     }
@@ -405,13 +410,13 @@ export class UIManager implements IUIManager {
     status: 'connected' | 'disconnected' | 'none',
     agentType: string | null = null
   ): void {
-    log(
+    this.log(
       `🔄 [UI] Updating CLI Agent status by terminal ID: ${terminalId} -> ${status} (${agentType})`
     );
 
     const headerElements = this.headerElementsCache.get(terminalId);
     if (!headerElements) {
-      log(`⚠️ [UI] No header elements found for terminal: ${terminalId}`);
+      this.log(`⚠️ [UI] No header elements found for terminal: ${terminalId}`);
       return;
     }
 
@@ -432,7 +437,7 @@ export class UIManager implements IUIManager {
       HeaderFactory.setAiAgentToggleButtonVisibility(headerElements, true, status);
     }
 
-    log(`✅ [UI] CLI Agent status updated for terminal ${terminalId}: ${status}`);
+    this.log(`✅ [UI] CLI Agent status updated for terminal ${terminalId}: ${status}`);
   }
 
   /**
@@ -462,7 +467,7 @@ export class UIManager implements IUIManager {
    */
   public applyCustomCSS(container: HTMLElement, css: Partial<CSSStyleDeclaration>): void {
     Object.assign(container.style, css);
-    log('🎨 [UI] Custom CSS applied to terminal container');
+    this.log('🎨 [UI] Custom CSS applied to terminal container');
   }
 
   /**
@@ -480,7 +485,7 @@ export class UIManager implements IUIManager {
     });
 
     observer.observe(container);
-    log('🎨 [UI] Resize observer setup for terminal container');
+    this.log('🎨 [UI] Resize observer setup for terminal container');
     return observer;
   }
 
@@ -501,7 +506,7 @@ export class UIManager implements IUIManager {
       separator.style.height = '100%';
     }
 
-    log(`🎨 [UI] Split separator created: ${direction}`);
+    this.log(`🎨 [UI] Split separator created: ${direction}`);
     return separator;
   }
 
@@ -702,8 +707,8 @@ export class UIManager implements IUIManager {
   /**
    * Cleanup and dispose of UI resources
    */
-  public dispose(): void {
-    log('🧹 [UI] Disposing UI manager');
+  public override dispose(): void {
+    this.log('🧹 [UI] Disposing UI manager');
 
     // Reset theme cache
     this.currentTheme = null;
@@ -713,6 +718,6 @@ export class UIManager implements IUIManager {
     this.hideTerminalPlaceholder();
     this.hideLoadingIndicator();
 
-    log('✅ [UI] UI manager disposed');
+    this.log('✅ [UI] UI manager disposed');
   }
 }
