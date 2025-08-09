@@ -94,10 +94,5 @@
     "deny": []
   },
   "enableAllProjectMcpServers": true,
-  "enabledMcpjsonServers": [
-    "playwright",
-    "arxiv-mcp-server",
-    "deepwiki",
-    "context7"
-  ]
+  "enabledMcpjsonServers": ["playwright", "arxiv-mcp-server", "deepwiki", "context7"]
 }

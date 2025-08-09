@@ -133,6 +133,43 @@ export function setupTestEnvironment(): void {
         }),
       };
     }
+    if (id === 'xterm' || id === 'xterm-addon-fit') {
+      return {
+        Terminal: function() {
+          return {
+            write: () => {},
+            writeln: () => {},
+            clear: () => {},
+            resize: () => {},
+            focus: () => {},
+            blur: () => {},
+            dispose: () => {},
+            open: () => {},
+            onData: () => ({ dispose: () => {} }),
+            onResize: () => ({ dispose: () => {} }),
+            onKey: () => ({ dispose: () => {} }),
+            loadAddon: () => {},
+            options: {},
+            rows: 24,
+            cols: 80,
+            buffer: {
+              active: {
+                length: 100,
+                viewportY: 50,
+                baseY: 0,
+                getLine: () => ({ translateToString: () => '' }),
+              },
+            },
+          };
+        },
+        FitAddon: function() {
+          return {
+            fit: () => {},
+            dispose: () => {},
+          };
+        },
+      };
+    }
     // Allow actual source code to be loaded for coverage
     // eslint-disable-next-line prefer-rest-params, @typescript-eslint/no-unsafe-return
     return originalRequire.apply(this, arguments);
@@ -270,6 +307,13 @@ export function setupJSDOMEnvironment(htmlContent?: string): {
   (global as any).CustomEvent = window.CustomEvent;
   (global as any).MouseEvent = window.MouseEvent;
   (global as any).KeyboardEvent = window.KeyboardEvent;
+
+  // ResizeObserver モック
+  (global as any).ResizeObserver = class MockResizeObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
 
   return { dom, document, window };
 }

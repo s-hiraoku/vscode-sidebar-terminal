@@ -189,7 +189,7 @@ export class CliAgentStateManager implements ICliAgentStateManager {
       this._onStatusChange.fire({
         terminalId,
         status: 'none',
-        type: agentType,
+        type: null,  // 🔧 FIX: Set type to null when status is 'none' as per specification
       });
 
       log(
