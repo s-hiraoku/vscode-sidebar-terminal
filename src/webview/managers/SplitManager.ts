@@ -274,8 +274,8 @@ export class SplitManager extends BaseManager {
     this.log(
       `📐 [HEIGHT] Terminal-body height: ${availableHeight}px, Terminal count: ${actualTerminalCount}`
     );
-    this.log(`📐 [HEIGHT] Body rect:`, bodyRect);
-    this.log(`📐 [HEIGHT] Terminal containers:`, Array.from(this.terminalContainers.keys()));
+    this.log(`📐 [HEIGHT] Body rect: ${JSON.stringify(bodyRect)}`);
+    this.log(`📐 [HEIGHT] Terminal containers: ${Array.from(this.terminalContainers.keys())}`);
 
     // Calculate equal height for all terminals
     const calculatedHeight = Math.floor(availableHeight / actualTerminalCount);
@@ -479,11 +479,11 @@ export class SplitManager extends BaseManager {
     // Store reference
     this.splitTerminals.set(terminalId, splitContainer);
 
-    this.log('✅ [WEBVIEW] Terminal added to split layout:', terminalId);
+    this.log(`✅ [WEBVIEW] Terminal added to split layout: ${terminalId}`);
   }
 
   public addNewTerminalToSplit(terminalId: string, terminalName: string): void {
-    this.log('🔀 [WEBVIEW] Adding new terminal to split:', terminalId, terminalName);
+    this.log(`🔀 [WEBVIEW] Adding new terminal to split: ${terminalId} (${terminalName})`);
 
     // Check if we can split
     const layoutInfo = this.calculateSplitLayout();
@@ -495,7 +495,7 @@ export class SplitManager extends BaseManager {
     // Move the terminal container to split layout
     this.moveTerminalToSplitLayout(terminalId, terminalName);
 
-    this.log('✅ [WEBVIEW] New terminal added to split layout:', terminalId);
+    this.log(`✅ [WEBVIEW] New terminal added to split layout: ${terminalId}`);
   }
 
   private moveTerminalToSplitLayout(terminalId: string, terminalName: string): void {
@@ -550,7 +550,7 @@ export class SplitManager extends BaseManager {
   }
 
   public prepareSplitMode(direction: 'horizontal' | 'vertical'): void {
-    this.log('🔀 [WEBVIEW] Preparing split mode:', direction);
+    this.log(`🔀 [WEBVIEW] Preparing split mode: ${direction}`);
 
     // Set split mode flag and direction
     this.isSplitMode = true;
@@ -636,18 +636,13 @@ export class SplitManager extends BaseManager {
     const terminal = this.terminals.get(id);
     const container = this.terminalContainers.get(id);
 
-    this.log(
-      '🗑️ [SPLIT] Removing terminal %s, terminal: %s, container: %s',
-      id,
-      !!terminal,
-      !!container
-    );
+    this.log(`🗑️ [SPLIT] Removing terminal ${id}, terminal: ${!!terminal}, container: ${!!container}`);
 
     if (terminal) {
       // Dispose terminal
       try {
         terminal.terminal.dispose();
-        this.log('🗑️ [SPLIT] Terminal %s disposed successfully', id);
+        this.log(`🗑️ [SPLIT] Terminal ${id} disposed successfully`);
       } catch (error) {
         console.error(`Error disposing terminal ${id}:`, error);
       }
@@ -660,7 +655,7 @@ export class SplitManager extends BaseManager {
       try {
         // Remove container from DOM
         container.remove();
-        this.log('🗑️ [SPLIT] Container for terminal %s removed from DOM', id);
+        this.log(`🗑️ [SPLIT] Container for terminal ${id} removed from DOM`);
       } catch (error) {
         console.error(`Error removing container for terminal ${id}:`, error);
       }
@@ -669,9 +664,9 @@ export class SplitManager extends BaseManager {
       this.terminalContainers.delete(id);
     }
 
-    this.log('🗑️ [SPLIT] Terminal %s fully removed from SplitManager', id);
-    this.log(`🗑️ [SPLIT] Remaining terminals:`, Array.from(this.terminals.keys()));
-    this.log(`🗑️ [SPLIT] Remaining containers:`, Array.from(this.terminalContainers.keys()));
+    this.log(`🗑️ [SPLIT] Terminal ${id} fully removed from SplitManager`);
+    this.log(`🗑️ [SPLIT] Remaining terminals: ${Array.from(this.terminals.keys())}`);
+    this.log(`🗑️ [SPLIT] Remaining containers: ${Array.from(this.terminalContainers.keys())}`);
   }
 
   /**
@@ -685,7 +680,7 @@ export class SplitManager extends BaseManager {
       try {
         terminal.terminal.dispose();
       } catch (error) {
-        this.log(`❌ [SPLIT] Error disposing terminal ${id}:`, String(error));
+        this.log(`❌ [SPLIT] Error disposing terminal ${id}: ${String(error)}`, 'error');
       }
     }
 

@@ -58,7 +58,7 @@ export class InputManager extends BaseManager implements IInputManager {
 
     this.compositionStartListener = (event: CompositionEvent) => {
       this.isComposing = true;
-      this.log('🈶 [INPUT] IME composition started:', event.data || 'no data');
+      this.log(`🈶 [INPUT] IME composition started: ${event.data || 'no data'}`);
 
       // Clear any pending input events to avoid conflicts
       this.clearPendingInputEvents();
@@ -67,14 +67,14 @@ export class InputManager extends BaseManager implements IInputManager {
     this.compositionUpdateListener = (event: CompositionEvent) => {
       // Keep composition state active during updates
       this.isComposing = true;
-      this.log('🈶 [INPUT] IME composition update:', event.data || 'no data');
+      this.log(`🈶 [INPUT] IME composition update: ${event.data || 'no data'}`);
     };
 
     this.compositionEndListener = (event: CompositionEvent) => {
       // Small delay to ensure composition data is properly processed
       setTimeout(() => {
         this.isComposing = false;
-        this.log('🈶 [INPUT] IME composition ended:', event.data || 'no data');
+        this.log(`🈶 [INPUT] IME composition ended: ${event.data || 'no data'}`);
       }, 10);
     };
 
@@ -92,7 +92,7 @@ export class InputManager extends BaseManager implements IInputManager {
       if (key.includes('input') || key.includes('keydown')) {
         clearTimeout(timer);
         this.eventDebounceTimers.delete(key);
-        this.log('🧹 [INPUT] Cleared pending input event:', key);
+        this.log(`🧹 [INPUT] Cleared pending input event: ${key}`);
       }
     }
   }
@@ -372,7 +372,7 @@ export class InputManager extends BaseManager implements IInputManager {
         });
       }
     } catch (error) {
-      this.log('❌ [INPUT] Error emitting terminal interaction event:', error);
+      this.log(`❌ [INPUT] Error emitting terminal interaction event: ${error}`, 'error');
     }
   }
 

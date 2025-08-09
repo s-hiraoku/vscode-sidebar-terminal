@@ -26,7 +26,7 @@ import {
 
 describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
   let detectionService: CliAgentDetectionService;
-  let patternDetector: ICliAgentPatternDetector;
+  let _patternDetector: ICliAgentPatternDetector;
   let stateManager: ICliAgentStateManager;
 
   let sandbox: sinon.SinonSandbox;
@@ -44,7 +44,7 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
     statusChangeEvents = [];
 
     // Create fresh instances for each test
-    patternDetector = new CliAgentPatternDetector();
+    _patternDetector = new CliAgentPatternDetector();
     stateManager = new CliAgentStateManager();
 
     detectionService = new CliAgentDetectionService();

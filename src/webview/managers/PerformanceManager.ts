@@ -17,7 +17,6 @@ export class PerformanceManager extends BaseManager implements IPerformanceManag
     });
   }
 
-  protected override coordinator?: IManagerCoordinator;
   // Performance optimization: Buffer output and batch writes
   private outputBuffer: string[] = [];
   private bufferFlushTimer: number | null = null;
@@ -95,7 +94,7 @@ export class PerformanceManager extends BaseManager implements IPerformanceManag
         try {
           this.flushOutputBuffer();
         } catch (error) {
-          this.log(`❌ [PERFORMANCE] Error during buffer flush:`, error);
+          this.log(`❌ [PERFORMANCE] Error during buffer flush: ${error}`, 'error');
           // Reset the timer to prevent stuck state
           this.bufferFlushTimer = null;
           // Clear the buffer to prevent memory issues
@@ -129,7 +128,7 @@ export class PerformanceManager extends BaseManager implements IPerformanceManag
           this.currentBufferTerminal.write(bufferedData);
           this.log(`📤 [PERFORMANCE] Flushed buffer: ${bufferedData.length} chars`);
         } catch (error) {
-          this.log(`❌ [PERFORMANCE] Error during buffer flush:`, error);
+          this.log(`❌ [PERFORMANCE] Error during buffer flush: ${error}`, 'error');
         }
       } else {
         this.log(
@@ -172,7 +171,7 @@ export class PerformanceManager extends BaseManager implements IPerformanceManag
         fitAddon.fit();
         this.log(`🔧 [PERFORMANCE] Debounced resize applied: ${cols}x${rows}`);
       } catch (error) {
-        this.log(`❌ [PERFORMANCE] Error during debounced resize:`, error);
+        this.log(`❌ [PERFORMANCE] Error during debounced resize: ${error}`, 'error');
       } finally {
         // Always reset the timer to prevent stuck state
         this.resizeDebounceTimer = null;
