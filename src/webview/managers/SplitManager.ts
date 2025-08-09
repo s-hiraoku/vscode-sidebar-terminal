@@ -20,7 +20,7 @@ export class SplitManager extends BaseManager {
     super('SplitManager', {
       enableLogging: true,
       enableValidation: false,
-      enableErrorRecovery: true
+      enableErrorRecovery: true,
     });
   }
 
@@ -697,7 +697,7 @@ export class SplitManager extends BaseManager {
     this.splitDirection = null;
 
     this.log('✅ [SPLIT] Split manager disposed');
-    
+
     // Call parent dispose
     super.dispose();
   }

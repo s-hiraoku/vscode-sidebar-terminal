@@ -10,7 +10,12 @@ import { JSDOM } from 'jsdom';
 import { InputManager } from '../../../webview/managers/InputManager';
 import { MessageManager } from '../../../webview/managers/MessageManager';
 import { PerformanceManager } from '../../../webview/managers/PerformanceManager';
-import { IManagerCoordinator, IUIManager, IConfigManager, INotificationManager } from '../../../webview/interfaces/ManagerInterfaces';
+import {
+  IManagerCoordinator,
+  IUIManager,
+  IConfigManager,
+  INotificationManager,
+} from '../../../webview/interfaces/ManagerInterfaces';
 
 describe('Input Optimization Integration', () => {
   let inputManager: InputManager;

@@ -253,13 +253,13 @@ export class TerminalManager {
   public sendInput(data: string, terminalId?: string): void {
     // ✅ CRITICAL FIX: Robust terminal ID resolution with complete validation
     let resolvedTerminalId: string;
-    
+
     if (terminalId) {
       // Use provided terminal ID, but validate it exists and is active
       if (!this._terminals.has(terminalId)) {
         console.error(`🚨 [TERMINAL] Provided terminal ID does not exist: ${terminalId}`);
         console.log('🔍 [TERMINAL] Available terminals:', Array.from(this._terminals.keys()));
-        
+
         // Fallback to active terminal
         const activeId = this._activeTerminalManager.getActive();
         if (!activeId) {
@@ -279,18 +279,18 @@ export class TerminalManager {
         console.log('🔍 [TERMINAL] Available terminals:', Array.from(this._terminals.keys()));
         return;
       }
-      
+
       // Validate the active terminal still exists
       if (!this._terminals.has(activeId)) {
         console.error(`🚨 [TERMINAL] Active terminal ID ${activeId} no longer exists`);
-        
+
         // Emergency: Find first available terminal
         const availableTerminals = Array.from(this._terminals.keys());
         if (availableTerminals.length === 0) {
           console.error('🚨 [TERMINAL] No terminals available at all');
           return;
         }
-        
+
         const emergencyTerminal = availableTerminals[0];
         if (!emergencyTerminal) {
           console.error('🚨 [TERMINAL] Emergency terminal is undefined');
@@ -298,7 +298,9 @@ export class TerminalManager {
         }
         this._activeTerminalManager.setActive(emergencyTerminal);
         resolvedTerminalId = emergencyTerminal;
-        console.warn(`⚠️ [TERMINAL] Emergency fallback to first available terminal: ${resolvedTerminalId}`);
+        console.warn(
+          `⚠️ [TERMINAL] Emergency fallback to first available terminal: ${resolvedTerminalId}`
+        );
       } else {
         resolvedTerminalId = activeId;
       }
@@ -311,7 +313,9 @@ export class TerminalManager {
       return;
     }
 
-    console.log(`⌨️ [TERMINAL] Sending input to ${terminal.name} (${resolvedTerminalId}): ${data.length} chars`);
+    console.log(
+      `⌨️ [TERMINAL] Sending input to ${terminal.name} (${resolvedTerminalId}): ${data.length} chars`
+    );
 
     try {
       // CLI Agent コマンドを検出
@@ -321,7 +325,7 @@ export class TerminalManager {
       const result = this._writeToPtyWithValidation(terminal, data);
       if (!result.success) {
         console.error(`🚨 [TERMINAL] PTY write failed for ${terminal.name}: ${result.error}`);
-        
+
         // Attempt recovery with alternative PTY instance
         console.log(`🔄 [TERMINAL] Attempting PTY recovery for ${terminal.name}...`);
         const recovered = this._attemptPtyRecovery(terminal, data);
@@ -334,7 +338,10 @@ export class TerminalManager {
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error(`❌ [TERMINAL] Critical error sending input to ${terminal.name}:`, errorMessage);
+      console.error(
+        `❌ [TERMINAL] Critical error sending input to ${terminal.name}:`,
+        errorMessage
+      );
 
       // Enhanced error logging with complete terminal state
       console.error('❌ [TERMINAL] Terminal state at failure:', {
@@ -647,7 +654,9 @@ export class TerminalManager {
 
     // Validate terminal exists before buffering data
     if (!this._terminals.has(terminalId)) {
-      console.warn(`⚠️ [TERMINAL] Attempting to buffer data for non-existent terminal: ${terminalId}`);
+      console.warn(
+        `⚠️ [TERMINAL] Attempting to buffer data for non-existent terminal: ${terminalId}`
+      );
       return;
     }
 
@@ -667,7 +676,9 @@ export class TerminalManager {
     const validatedData = this._validateDataForTerminal(terminalId, data);
     buffer.push(validatedData);
 
-    console.log(`📊 [TERMINAL] Data buffered for ${terminalId}: ${data.length} chars (buffer size: ${buffer.length})`);
+    console.log(
+      `📊 [TERMINAL] Data buffered for ${terminalId}: ${data.length} chars (buffer size: ${buffer.length})`
+    );
 
     // Flush immediately if buffer is full or data is large
     if (buffer.length >= this.MAX_BUFFER_SIZE || data.length > 1000) {
@@ -687,7 +698,7 @@ export class TerminalManager {
       // Window title escape sequences might contain terminal context
       console.log(`🔍 [TERMINAL] Window title detected for ${terminalId}`);
     }
-    
+
     // Return data as-is for now, but this method provides a hook for future validation
     return data;
   }
@@ -747,12 +758,14 @@ export class TerminalManager {
       }
 
       // ✅ EMIT DATA WITH STRICT TERMINAL ID ASSOCIATION
-      console.log(`📤 [TERMINAL] Flushing data for terminal ${terminal.name} (${terminalId}): ${combinedData.length} chars`);
-      this._dataEmitter.fire({ 
+      console.log(
+        `📤 [TERMINAL] Flushing data for terminal ${terminal.name} (${terminalId}): ${combinedData.length} chars`
+      );
+      this._dataEmitter.fire({
         terminalId: terminalId, // Ensure exact ID match
         data: combinedData,
         timestamp: Date.now(), // Add timestamp for debugging
-        terminalName: terminal.name // Add terminal name for validation
+        terminalName: terminal.name, // Add terminal name for validation
       });
     }
   }
@@ -891,7 +904,7 @@ export class TerminalManager {
    */
   public getAgentType(terminalId: string): string | null {
     const agentState = this._cliAgentService.getAgentState(terminalId);
-    return agentState.type;
+    return agentState.agentType;
   }
 
   /**
@@ -1435,7 +1448,7 @@ export class RefactoredTerminalManager {
 
   public getAgentType(terminalId: string): string | null {
     const agentState = this.cliAgentService.getAgentState(terminalId);
-    return agentState.type;
+    return agentState.agentType;
   }
 
   public getConnectedAgents(): Array<{ terminalId: string; agentInfo: { type: string } }> {

@@ -1,6 +1,6 @@
 /**
  * Refactored CLI Agent Detection Service
- * 
+ *
  * This service coordinates CLI Agent detection using separated components:
  * - CliAgentPatternDetector: Pattern matching logic
  * - CliAgentStateManager: State management and transitions
@@ -8,7 +8,6 @@
  * - LRUCache: Caching for performance
  */
 
-import * as vscode from 'vscode';
 import { terminal as log } from '../utils/logger';
 import {
   ICliAgentDetectionService,
@@ -22,36 +21,53 @@ import { CliAgentStateManager } from './CliAgentStateManager';
 import { CliAgentDetectionConfig } from './CliAgentDetectionConfig';
 import { LRUCache } from '../utils/LRUCache';
 
+export { CliAgentPatternDetector } from './CliAgentPatternDetector';
+export { CliAgentStateManager } from './CliAgentStateManager';
+
 export class CliAgentDetectionService implements ICliAgentDetectionService {
   public readonly patternDetector = new CliAgentPatternDetector();
   public readonly stateManager = new CliAgentStateManager();
   public readonly configManager = new CliAgentDetectionConfig();
-  
+
   private detectionCache = new LRUCache<string, DetectionCacheEntry>(50);
 
   constructor() {
-    this.startHeartbeat();
+    // Start heartbeat is called from TerminalManager after initialization
   }
 
   detectFromInput(terminalId: string, input: string): CliAgentDetectionResult | null {
     try {
       const trimmedInput = input.trim();
-      if (!trimmedInput) return null;
+      log(
+        `🎯 [INPUT-DEBUG] Processing input in terminal ${terminalId}: "${trimmedInput}" (raw: "${input}")`
+      );
+      const currentState = this.getAgentState(terminalId);
+      log(`🎯 [INPUT-DEBUG] Current agent state: ${JSON.stringify(currentState)}`);
 
-      // Check cache first
-      const cacheKey = `input:${terminalId}:${trimmedInput}`;
-      const cachedResult = this.detectionCache.get(cacheKey);
-      if (cachedResult && Date.now() - cachedResult.timestamp < this.configManager.getConfig().cacheTtlMs) {
-        log(`🎯 [CLI-AGENT] Cache hit for input detection: "${trimmedInput}"`);
-        return cachedResult.result;
+      if (!trimmedInput) {
+        log(`❌ [INPUT-DEBUG] Empty input, skipping detection`);
+        return null;
       }
+
+      // Check cache first - TEMPORARILY DISABLED for debugging
+      const cacheKey = `input:${terminalId}:${trimmedInput}`;
+      // const cachedResult = this.detectionCache.get(cacheKey);
+      // if (cachedResult && Date.now() - cachedResult.timestamp < this.configManager.getConfig().cacheTtlMs) {
+      //   log(`🎯 [CLI-AGENT] Cache hit for input detection: "${trimmedInput}"`);
+      //   return cachedResult.result;
+      // }
+      log(
+        `🔍 [CACHE-DEBUG] Cache temporarily disabled for debugging - processing fresh: "${trimmedInput}"`
+      );
 
       let result: CliAgentDetectionResult | null = null;
 
       // Claude detection
       const claudeDetected = this.detectClaudeFromInput(trimmedInput);
       if (claudeDetected.isDetected) {
-        log(`🎯 [CLI-AGENT] Claude Code detected from input: "${trimmedInput}" in terminal ${terminalId}`);
+        log(
+          `🎯 [CLI-AGENT] Claude Code detected from input: "${trimmedInput}" in terminal ${terminalId}`
+        );
         this.stateManager.setConnectedAgent(terminalId, 'claude');
         result = {
           type: 'claude',
@@ -63,9 +79,14 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
 
       // Gemini detection
       if (!result) {
+        log(`🔍 [GEMINI-INPUT] Checking Gemini detection for: "${trimmedInput}"`);
         const geminiDetected = this.detectGeminiFromInput(trimmedInput);
+        log(`🔍 [GEMINI-INPUT] Detection result: ${JSON.stringify(geminiDetected)}`);
+
         if (geminiDetected.isDetected) {
-          log(`🎯 [CLI-AGENT] Gemini CLI detected from input: "${trimmedInput}" in terminal ${terminalId}`);
+          log(
+            `🎯 [CLI-AGENT] Gemini CLI detected from input: "${trimmedInput}" in terminal ${terminalId}`
+          );
           this.stateManager.setConnectedAgent(terminalId, 'gemini');
           result = {
             type: 'gemini',
@@ -160,11 +181,11 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
   getConnectedAgent(): { terminalId: string; type: 'claude' | 'gemini' } | null {
     const terminalId = this.stateManager.getConnectedAgentTerminalId();
     const type = this.stateManager.getConnectedAgentType();
-    
+
     if (terminalId && type) {
       return { terminalId, type };
     }
-    
+
     return null;
   }
 
@@ -172,20 +193,41 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
     return this.stateManager.getDisconnectedAgents();
   }
 
-  switchAgentConnection(terminalId: string): boolean {
+  switchAgentConnection(terminalId: string): {
+    success: boolean;
+    reason?: string;
+    newStatus: 'connected' | 'disconnected' | 'none';
+    agentType: string | null;
+  } {
     try {
       const disconnectedAgents = this.stateManager.getDisconnectedAgents();
       if (disconnectedAgents.has(terminalId)) {
+        const agentInfo = disconnectedAgents.get(terminalId)!;
         this.stateManager.promoteDisconnectedAgentToConnected(terminalId);
         log(`🔄 [CLI-AGENT] Switched connection to terminal ${terminalId}`);
-        return true;
+        return {
+          success: true,
+          newStatus: 'connected',
+          agentType: agentInfo.type,
+        };
       }
 
+      const currentState = this.getAgentState(terminalId);
       log(`⚠️ [CLI-AGENT] Cannot switch to terminal ${terminalId}: not in disconnected state`);
-      return false;
+      return {
+        success: false,
+        reason: 'Terminal is not in disconnected state',
+        newStatus: currentState.status,
+        agentType: currentState.agentType,
+      };
     } catch (error) {
       log('ERROR: CLI Agent connection switch failed:', error);
-      return false;
+      return {
+        success: false,
+        reason: 'Connection switch failed',
+        newStatus: 'none',
+        agentType: null,
+      };
     }
   }
 
@@ -203,15 +245,15 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
     this.stateManager.dispose();
   }
 
-  private startHeartbeat(): void {
+  public startHeartbeat(): void {
     // Validate connected agent state every 30 seconds
     setInterval(() => {
       this.stateManager.validateConnectedAgentState();
     }, 30000);
   }
 
-  refreshAgentState(): void {
-    this.stateManager.refreshConnectedAgentState();
+  refreshAgentState(): boolean {
+    return this.stateManager.refreshConnectedAgentState();
   }
 
   private processOutputDetection(terminalId: string, data: string): CliAgentDetectionResult | null {
@@ -243,12 +285,27 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
           continue;
         }
 
-        // 🔧 FIX: For disconnected agents, do NOT process termination detection
-        // Disconnected terminals are still running and should not be terminated from output
+        // Check for termination for disconnected agents as well
         const disconnectedAgents = this.stateManager.getDisconnectedAgents();
         if (disconnectedAgents.has(terminalId)) {
-          // Skip termination detection for disconnected agents - they're still active terminals
-          log(`🟡 [CLI-AGENT] Skipping termination detection for disconnected agent in terminal ${terminalId}`);
+          // 🔧 FIXED: Also check for termination in disconnected agents
+          log(
+            `🔍 [TERMINATION-DEBUG] Checking termination for DISCONNECTED agent in terminal ${terminalId}: "${fullyCleanLine}"`
+          );
+          const terminationResult = this.detectStrictTermination(terminalId, line);
+          log(`🔍 [TERMINATION-DEBUG] Termination result: ${JSON.stringify(terminationResult)}`);
+
+          if (terminationResult.isTerminated) {
+            log(
+              `🔻 [TERMINATION] Setting DISCONNECTED agent as terminated in terminal ${terminalId}`
+            );
+            this.stateManager.setAgentTerminated(terminalId);
+            log(
+              `🔻 [CLI-AGENT] Disconnected agent termination detected from output: "${fullyCleanLine}" in terminal ${terminalId}`
+            );
+            return null; // Termination handled, no detection result needed
+          }
+          // Skip startup detection for disconnected agents - they're already known agents
           continue;
         }
 
@@ -271,7 +328,11 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
           }
 
           // Gemini startup detection
-          if (this.patternDetector.detectGeminiStartup(fullyCleanLine)) {
+          log(`🔍 [GEMINI-OUTPUT] Checking Gemini startup detection for: "${fullyCleanLine}"`);
+          const geminiStartupDetected = this.patternDetector.detectGeminiStartup(fullyCleanLine);
+          log(`🔍 [GEMINI-OUTPUT] Detection result: ${geminiStartupDetected}`);
+
+          if (geminiStartupDetected) {
             log(
               `🚀 [CLI-AGENT] Gemini CLI startup detected from output: "${fullyCleanLine}" in terminal ${terminalId}`
             );
@@ -283,6 +344,13 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
               source: 'output',
               detectedLine: fullyCleanLine,
             };
+          } else {
+            // Debug: Log why Gemini wasn't detected
+            if (fullyCleanLine.toLowerCase().includes('gemini')) {
+              log(
+                `🔍 [GEMINI-DEBUG] Gemini keyword found but not detected as startup: "${fullyCleanLine}"`
+              );
+            }
           }
         }
       }
@@ -295,9 +363,12 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
 
   private detectStrictTermination(terminalId: string, line: string): TerminationDetectionResult {
     const cleanLine = this.patternDetector.cleanAnsiEscapeSequences(line.trim());
-    
+
+    log(`🔍 [TERMINATION-DEBUG] Checking termination for terminal ${terminalId}: "${cleanLine}"`);
+
     // Very explicit termination messages first
     if (this.hasVeryExplicitTerminationMessage(cleanLine)) {
+      log(`✅ [TERMINATION] Explicit termination message detected: "${cleanLine}"`);
       return {
         isTerminated: true,
         confidence: 1.0,
@@ -308,6 +379,7 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
 
     // Process crash indicators
     if (this.hasProcessCrashIndicator(cleanLine)) {
+      log(`✅ [TERMINATION] Process crash detected: "${cleanLine}"`);
       return {
         isTerminated: true,
         confidence: 0.95,
@@ -316,49 +388,42 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
       };
     }
 
-    // Strict shell prompt detection (more restrictive for connected agents)
-    if (this.detectStrictShellPrompt(cleanLine)) {
-      return {
-        isTerminated: true,
-        confidence: 0.9,
-        detectedLine: cleanLine,
-        reason: 'Strict shell prompt detected',
-      };
+    // 🔧 FIXED: Use the improved shell prompt detection from patternDetector
+    // This now has better filtering to avoid false positives from AI agent output
+    if (this.patternDetector.detectShellPrompt(cleanLine)) {
+      // Additional validation for connected agents to be extra sure
+      // 🔧 FIX: Only filter out agent keywords if they appear to be AI output, not directory names
+      const lowerLine = cleanLine.toLowerCase();
+      const hasAgentKeywords = lowerLine.includes('claude') || lowerLine.includes('gemini');
+      const looksLikeAIOutput =
+        hasAgentKeywords &&
+        (lowerLine.includes('assistant') ||
+          lowerLine.includes('help you') ||
+          lowerLine.includes('i am') ||
+          lowerLine.includes("i'm"));
+
+      if (cleanLine.length < 100 && !looksLikeAIOutput) {
+        log(`✅ [TERMINATION] Shell prompt detected: "${cleanLine}"`);
+        return {
+          isTerminated: true,
+          confidence: 0.9,
+          detectedLine: cleanLine,
+          reason: 'Shell prompt detected after agent exit',
+        };
+      } else {
+        log(
+          `⚠️ [TERMINATION] Shell prompt detected but filtered out due to AI output indicators: "${cleanLine}"`
+        );
+      }
     }
 
+    log(`❌ [TERMINATION] No termination detected for: "${cleanLine}"`);
     return {
       isTerminated: false,
       confidence: 0,
       detectedLine: cleanLine,
       reason: 'No strict termination detected',
     };
-  }
-
-  private detectStrictShellPrompt(cleanLine: string): boolean {
-    // Much more restrictive patterns for connected agents to prevent false positives
-    const strictPromptPatterns = [
-      // Very specific patterns that are unlikely to be CLI agent output
-      /^[\w.-]+@[\w.-]+:.*\$\s*$/,           // user@host:path$ 
-      /^[\w.-]+@[\w.-]+\s+.*\$\s*$/,         // user@host path$
-      /^➜\s+[\w.-]+\s*$/,                    // Oh My Zsh arrow
-      /^❯\s*$/,                              // Starship prompt
-      /^\$\s*$/,                             // Simple $ prompt
-      /^%\s*$/,                              // Simple % prompt (zsh)
-      /^#\s*$/,                              // Root prompt
-      /^PS\s+.*>\s*$/,                       // PowerShell
-      
-      // Conda/virtual environment prompts
-      /^\([^)]+\)\s+.*\$\s*$/,               // (env) path$
-      
-      // Very specific patterns with path-like structures
-      /^[\w.-]+:\s*~.*\$\s*$/,               // user: ~path$
-      /^[\w.-]+:\s*\/.*\$\s*$/,              // user: /path$
-      
-      // Git branch indicators (Oh My Zsh)
-      /^➜\s+[\w.-]+\s+git:\([^)]+\)\s*$/,    // ➜ dir git:(branch)
-    ];
-
-    return strictPromptPatterns.some(pattern => pattern.test(cleanLine));
   }
 
   private hasVeryExplicitTerminationMessage(cleanLine: string): boolean {
@@ -376,7 +441,11 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
       line.includes('command not found: gemini') ||
       line.includes('no such file or directory') ||
       line.includes('process finished') ||
-      line.includes('session completed')
+      line.includes('session completed') ||
+      // 🔧 FIX: Add Gemini-specific termination messages from log
+      line.includes('agent powering down') ||
+      line.includes('powering down') ||
+      (line.includes('agent') && line.includes('goodbye'))
     );
   }
 
@@ -400,43 +469,56 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
 
   private detectClaudeFromInput(input: string): { isDetected: boolean; confidence: number } {
     const line = input.toLowerCase();
-    
+
     // Very high confidence patterns
     if (line.startsWith('claude ') || line === 'claude') {
       return { isDetected: true, confidence: 1.0 };
     }
-    
+
     // High confidence patterns
     if (line.includes('claude-code') || line.includes('claude code')) {
       return { isDetected: true, confidence: 0.95 };
     }
-    
+
     // Medium confidence patterns
     if (line.includes('claude') && (line.includes('--help') || line.includes('-h'))) {
       return { isDetected: true, confidence: 0.9 };
     }
-    
+
     return { isDetected: false, confidence: 0 };
   }
 
   private detectGeminiFromInput(input: string): { isDetected: boolean; confidence: number } {
     const line = input.toLowerCase();
-    
+
     // Very high confidence patterns
     if (line.startsWith('gemini ') || line === 'gemini') {
       return { isDetected: true, confidence: 1.0 };
     }
-    
+
     // High confidence patterns
     if (line.includes('gemini code') || line.includes('gemini chat')) {
       return { isDetected: true, confidence: 0.95 };
     }
-    
+
+    // Common gemini subcommands
+    if (
+      line.startsWith('gemini ') &&
+      (line.includes('generate') ||
+        line.includes('ask') ||
+        line.includes('explain') ||
+        line.includes('create') ||
+        line.includes('analyze') ||
+        line.includes('review'))
+    ) {
+      return { isDetected: true, confidence: 0.95 };
+    }
+
     // Medium confidence patterns
     if (line.includes('gemini') && (line.includes('--help') || line.includes('-h'))) {
       return { isDetected: true, confidence: 0.9 };
     }
-    
+
     return { isDetected: false, confidence: 0 };
   }
 }

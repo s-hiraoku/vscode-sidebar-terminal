@@ -17,7 +17,7 @@ export class NotificationManager extends BaseManager implements INotificationMan
     super('NotificationManager', {
       enableLogging: true,
       enableValidation: false,
-      enableErrorRecovery: true
+      enableErrorRecovery: true,
     });
   }
 
@@ -323,7 +323,7 @@ export class NotificationManager extends BaseManager implements INotificationMan
     this.notificationCounter = 0;
 
     this.log('✅ [NOTIFICATION] Notification manager disposed');
-    
+
     // Call parent dispose
     super.dispose();
   }

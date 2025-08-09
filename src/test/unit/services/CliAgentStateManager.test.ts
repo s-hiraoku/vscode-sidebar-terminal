@@ -364,7 +364,7 @@ describe('🏗️ CLI Agent State Manager Unit Tests', () => {
       // ARRANGE: Setup multiple agents
       stateManager.setConnectedAgent('term1', 'claude');
       stateManager.setConnectedAgent('term2', 'gemini'); // term1 becomes disconnected
-      stateManager.setConnectedAgent('term3', 'claude');  // term2 becomes disconnected
+      stateManager.setConnectedAgent('term3', 'claude'); // term2 becomes disconnected
 
       expect(stateManager.getConnectedAgentTerminalId()).to.equal('term3');
       expect(stateManager.getDisconnectedAgents().size).to.equal(2);

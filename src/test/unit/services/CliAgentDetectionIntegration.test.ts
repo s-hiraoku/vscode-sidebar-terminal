@@ -62,7 +62,7 @@ describe('🌐 CLI Agent Detection Service Integration Tests', () => {
       let result = detectionService.detectFromInput('term1', 'claude\r');
       expect(result).to.not.be.null;
       if (result) {
-        expect(result.type).to.equal('claude');
+        expect(result.agentType).to.equal('claude');
         expect(result.source).to.equal('input');
       }
 
@@ -141,7 +141,7 @@ describe('🌐 CLI Agent Detection Service Integration Tests', () => {
       });
 
       expect(detectionService.getAgentState('term1').status).to.equal('connected');
-      expect(detectionService.getAgentState('term1').type).to.equal('gemini');
+      expect(detectionService.getAgentState('term1').agentType).to.equal('gemini');
 
       // PHASE 2: Model interaction
       const geminiInteraction = [
@@ -245,7 +245,7 @@ describe('🌐 CLI Agent Detection Service Integration Tests', () => {
         const state = detectionService.getAgentState(id);
         if (detectionService.getConnectedAgent()?.terminalId === id) {
           expect(state.status).to.equal('connected');
-          expect(state.type).to.equal(type);
+          expect(state.agentType).to.equal(type);
         }
       });
 
@@ -253,7 +253,7 @@ describe('🌐 CLI Agent Detection Service Integration Tests', () => {
       const connectedAgent = detectionService.getConnectedAgent();
       expect(connectedAgent).to.not.be.null;
       expect(connectedAgent!.terminalId).to.equal('term4'); // Last started
-      expect(connectedAgent!.type).to.equal('gemini');
+      expect(connectedAgent!.agentType).to.equal('gemini');
 
       // All others should be disconnected
       ['term1', 'term2', 'term3'].forEach((termId) => {
@@ -347,7 +347,7 @@ describe('🌐 CLI Agent Detection Service Integration Tests', () => {
 
       // Verify initial connected state
       expect(detectionService.getAgentState('term1').status).to.equal('connected');
-      expect(detectionService.getAgentState('term1').type).to.equal('claude');
+      expect(detectionService.getAgentState('term1').agentType).to.equal('claude');
 
       allStatusChangeEvents = []; // Clear events to focus on the bug
 
@@ -398,7 +398,7 @@ describe('🌐 CLI Agent Detection Service Integration Tests', () => {
           'connected',
           `BUG DETECTED: Agent became "${currentState.status}" after output #${index + 1}: "${output}"`
         );
-        expect(currentState.type).to.equal(
+        expect(currentState.agentType).to.equal(
           'claude',
           `BUG DETECTED: Agent type changed to "${currentState.type}" after output #${index + 1}`
         );
@@ -410,7 +410,7 @@ describe('🌐 CLI Agent Detection Service Integration Tests', () => {
         'connected',
         'CRITICAL BUG: Agent status became "none" during normal operation'
       );
-      expect(finalState.type).to.equal('claude');
+      expect(finalState.agentType).to.equal('claude');
 
       // Should have NO additional status change events during normal operation
       expect(allStatusChangeEvents).to.have.length(
@@ -469,7 +469,7 @@ describe('🌐 CLI Agent Detection Service Integration Tests', () => {
       // ASSERT: No flickering should occur
       const finalState = detectionService.getAgentState('term1');
       expect(finalState.status).to.equal('connected');
-      expect(finalState.type).to.equal('claude');
+      expect(finalState.agentType).to.equal('claude');
 
       // Critical: NO status change events should be fired
       expect(allStatusChangeEvents).to.have.length(
@@ -483,7 +483,7 @@ describe('🌐 CLI Agent Detection Service Integration Tests', () => {
       expect(connectedAgent).to.not.be.undefined;
       if (!connectedAgent) return; // Type guard
       expect(connectedAgent.terminalId).to.equal('term1');
-      expect(connectedAgent.type).to.equal('claude');
+      expect(connectedAgent.agentType).to.equal('claude');
     });
 
     it('🚨 DISCONNECTED AGENT PROMOTION BUG: Should block invalid promotions', () => {
@@ -552,7 +552,7 @@ describe('🌐 CLI Agent Detection Service Integration Tests', () => {
       // Should be detected as connected despite ANSI codes
       const state = detectionService.getAgentState('term1');
       expect(state.status).to.equal('connected');
-      expect(state.type).to.equal('claude');
+      expect(state.agentType).to.equal('claude');
 
       // Should remain stable throughout interaction
       expect(allStatusChangeEvents.length).to.equal(1); // Only the initial connected event
@@ -630,7 +630,7 @@ describe('🌐 CLI Agent Detection Service Integration Tests', () => {
       // Should be detected and remain connected
       const state = detectionService.getAgentState('term1');
       expect(state.status).to.equal('connected');
-      expect(state.type).to.equal('gemini');
+      expect(state.agentType).to.equal('gemini');
 
       // Should be stable throughout the session
       expect(allStatusChangeEvents.length).to.be.greaterThanOrEqual(1);
@@ -768,7 +768,7 @@ describe('🌐 CLI Agent Detection Service Integration Tests', () => {
       for (const [termId, agentInfo] of disconnectedAgents) {
         const state = detectionService.getAgentState(termId);
         expect(state.status).to.equal('disconnected');
-        expect(state.type).to.equal(agentInfo.type);
+        expect(state.agentType).to.equal(agentInfo.agentType);
       }
     });
   });

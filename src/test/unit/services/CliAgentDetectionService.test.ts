@@ -16,23 +16,19 @@ import { describe, it, beforeEach, afterEach } from 'mocha';
 import { expect } from 'chai';
 import * as sinon from 'sinon';
 
-import {
-  CliAgentDetectionService,
-  CliAgentPatternDetector,
-  CliAgentStateManager,
-  CliAgentDetectionConfig,
-} from '../../../services/CliAgentDetectionService';
+import { CliAgentDetectionService } from '../../../services/CliAgentDetectionService';
+import { CliAgentPatternDetector } from '../../../services/CliAgentPatternDetector';
+import { CliAgentStateManager } from '../../../services/CliAgentStateManager';
 import {
   ICliAgentPatternDetector,
   ICliAgentStateManager,
-  ICliAgentDetectionConfig,
 } from '../../../interfaces/CliAgentService';
 
 describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
   let detectionService: CliAgentDetectionService;
   let patternDetector: ICliAgentPatternDetector;
   let stateManager: ICliAgentStateManager;
-  let configManager: ICliAgentDetectionConfig;
+
   let sandbox: sinon.SinonSandbox;
 
   // Test event tracking
@@ -50,9 +46,8 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
     // Create fresh instances for each test
     patternDetector = new CliAgentPatternDetector();
     stateManager = new CliAgentStateManager();
-    configManager = new CliAgentDetectionConfig();
 
-    detectionService = new CliAgentDetectionService(patternDetector, stateManager, configManager);
+    detectionService = new CliAgentDetectionService();
 
     // Track status change events
     detectionService.onCliAgentStatusChange((event) => {
@@ -117,7 +112,7 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
         // Check state change
         const state = detectionService.getAgentState('term1');
         expect(state.status).to.equal('connected');
-        expect(state.type).to.equal('claude');
+        expect(state.agentType).to.equal('claude');
 
         // Check event was fired
         expect(statusChangeEvents).to.have.length(1);
@@ -200,7 +195,7 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
         // Check state change
         const state = detectionService.getAgentState('term1');
         expect(state.status).to.equal('connected');
-        expect(state.type).to.equal('gemini');
+        expect(state.agentType).to.equal('gemini');
 
         // Check event was fired
         expect(statusChangeEvents).to.have.length(1);
@@ -243,7 +238,7 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
       // ASSERT 1: Connected state
       state = detectionService.getAgentState('term1');
       expect(state.status).to.equal('connected');
-      expect(state.type).to.equal('claude');
+      expect(state.agentType).to.equal('claude');
       expect(statusChangeEvents).to.have.length(1);
       if (statusChangeEvents.length > 0) {
         expect(statusChangeEvents[0]?.status).to.equal('connected');
@@ -256,9 +251,9 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
       const state1 = detectionService.getAgentState('term1');
       const state2 = detectionService.getAgentState('term2');
       expect(state1.status).to.equal('disconnected');
-      expect(state1.type).to.equal('claude');
+      expect(state1.agentType).to.equal('claude');
       expect(state2.status).to.equal('connected');
-      expect(state2.type).to.equal('gemini');
+      expect(state2.agentType).to.equal('gemini');
       expect(statusChangeEvents).to.have.length(3); // connected(claude), disconnected(claude), connected(gemini)
 
       // ACT 3: Termination (disconnected → none)
@@ -268,7 +263,7 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
       const finalState1 = detectionService.getAgentState('term1');
       const finalState2 = detectionService.getAgentState('term2');
       expect(finalState1.status).to.equal('none');
-      expect(finalState1.type).to.be.null;
+      expect(finalState1.agentType).to.be.null;
       expect(finalState2.status).to.equal('connected'); // Should remain connected
       if (statusChangeEvents.length > 0) {
         expect(statusChangeEvents[statusChangeEvents.length - 1]?.status).to.equal('none');
@@ -282,7 +277,7 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
       // ASSERT 1: Connected
       let state = detectionService.getAgentState('term1');
       expect(state.status).to.equal('connected');
-      expect(state.type).to.equal('gemini');
+      expect(state.agentType).to.equal('gemini');
 
       // ACT 2: Termination via exit command
       const terminationResult = detectionService.detectTermination(
@@ -326,7 +321,7 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
       // ASSERT: Should still be connected, no flickering
       const state = detectionService.getAgentState('term1');
       expect(state.status).to.equal('connected');
-      expect(state.type).to.equal('claude');
+      expect(state.agentType).to.equal('claude');
 
       // Should only have 1 event (the initial connected event)
       expect(statusChangeEvents).to.have.length(1);
@@ -348,9 +343,9 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
       const geminiState = detectionService.getAgentState('term2');
 
       expect(claudeState.status).to.equal('disconnected');
-      expect(claudeState.type).to.equal('claude');
+      expect(claudeState.agentType).to.equal('claude');
       expect(geminiState.status).to.equal('connected');
-      expect(geminiState.type).to.equal('gemini');
+      expect(geminiState.agentType).to.equal('gemini');
 
       // Check events sequence
       expect(statusChangeEvents).to.have.length(3);
@@ -492,7 +487,7 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
       // ASSERT: State changed to none
       const finalState = detectionService.getAgentState('term1');
       expect(finalState.status).to.equal('none');
-      expect(finalState.type).to.be.null;
+      expect(finalState.agentType).to.be.null;
 
       // Check event was fired
       expect(statusChangeEvents).to.have.length(1);
@@ -541,7 +536,7 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
       // ASSERT: State should be cleaned up
       const state = detectionService.getAgentState('term1');
       expect(state.status).to.equal('none');
-      expect(state.type).to.be.null;
+      expect(state.agentType).to.be.null;
     });
 
     it('should handle concurrent agent operations', () => {
@@ -628,7 +623,7 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
   describe('⚡ Performance and Caching Tests', () => {
     it('should use debouncing to prevent excessive detection calls', () => {
       // ARRANGE: Configure short debounce time
-      configManager.updateConfig({ debounceMs: 10 });
+      // configManager.updateConfig({ debounceMs: 10 }); // TODO: Fix config management
 
       // ACT: Rapid consecutive calls
       const results = [];
@@ -643,7 +638,7 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
 
     it('should cache detection results for identical data', () => {
       // ARRANGE: Configure caching
-      configManager.updateConfig({ cacheTtlMs: 1000 });
+      // configManager.updateConfig({ cacheTtlMs: 1000 }); // TODO: Fix config management
 
       // ACT: Send identical data multiple times
       const result1 = detectionService.detectFromOutput('term1', 'some random output');
@@ -755,7 +750,7 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
         'connected',
         'BUG DETECTED: Agent status changed to "none" when it should remain "connected"'
       );
-      expect(finalState.type).to.equal('claude');
+      expect(finalState.agentType).to.equal('claude');
 
       // Should have no additional status change events
       expect(statusChangeEvents).to.have.length(

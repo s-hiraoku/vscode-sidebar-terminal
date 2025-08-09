@@ -34,7 +34,7 @@ export class UIManager extends BaseManager implements IUIManager {
     super('UIManager', {
       enableLogging: true,
       enableValidation: true,
-      enableErrorRecovery: true
+      enableErrorRecovery: true,
     });
   }
 
@@ -170,7 +170,9 @@ export class UIManager extends BaseManager implements IUIManager {
     terminal.options.fontSize = fontSettings.fontSize;
     terminal.options.fontFamily = fontSettings.fontFamily;
 
-    this.log(`🎨 [UI] Applied font settings: ${fontSettings.fontFamily}, ${fontSettings.fontSize}px`);
+    this.log(
+      `🎨 [UI] Applied font settings: ${fontSettings.fontFamily}, ${fontSettings.fontSize}px`
+    );
   }
 
   /**

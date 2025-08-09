@@ -20,45 +20,45 @@ export function createMockCoordinator(): sinon.SinonStubbedInstance<IManagerCoor
     switchToTerminal: sinon.stub(),
     resizeTerminal: sinon.stub(),
     clearTerminal: sinon.stub(),
-    
-    // Terminal data management  
+
+    // Terminal data management
     sendInputToTerminal: sinon.stub(),
     sendDataToTerminal: sinon.stub(),
     writeToTerminal: sinon.stub(),
-    
+
     // Split management
     splitTerminal: sinon.stub(),
     updateSplitLayout: sinon.stub(),
     getSplitDirection: sinon.stub().returns('horizontal'),
-    
+
     // CLI Agent management
     updateCliAgentStatus: sinon.stub(),
     toggleCliAgentConnection: sinon.stub(),
-    
+
     // UI management
     showNotification: sinon.stub(),
     hideNotification: sinon.stub(),
     updateUITheme: sinon.stub(),
     updateTerminalBorders: sinon.stub(),
     updateUIControls: sinon.stub(),
-    
+
     // Configuration
     updateSettings: sinon.stub(),
     saveConfiguration: sinon.stub(),
-    
+
     // State queries
     getActiveTerminalId: sinon.stub().returns('test-terminal'),
     getAllTerminals: sinon.stub().returns(new Map()),
     getTerminalCount: sinon.stub().returns(1),
-    
+
     // Performance
     debounceUpdate: sinon.stub(),
     scheduleUpdate: sinon.stub(),
-    
+
     // Lifecycle
     initialize: sinon.stub().resolves(),
     dispose: sinon.stub(),
-    
+
     // Additional coordinator methods
     setActiveTerminalId: sinon.stub(),
     getTerminalInstance: sinon.stub(),
@@ -85,24 +85,29 @@ export interface ManagerTestSetup<T> {
 
 export function setupManagerTest<T extends Record<string, any>>(
   ManagerClass: new () => T,
-  initializeManager: (manager: T, coordinator: sinon.SinonStubbedInstance<IManagerCoordinator>) => Promise<void> = async () => {}
+  initializeManager: (
+    manager: T,
+    coordinator: sinon.SinonStubbedInstance<IManagerCoordinator>
+  ) => Promise<void> = async () => {}
 ): ManagerTestSetup<T> {
   const sandbox = sinon.createSandbox();
   const coordinator = createMockCoordinator();
   const manager = new ManagerClass();
-  
+
   // Initialize if the manager has the method
   if ('initialize' in manager && typeof (manager as any).initialize === 'function') {
     initializeManager(manager, coordinator);
   }
-  
+
   return { manager, coordinator, sandbox };
 }
 
 /**
  * Standard cleanup for manager tests
  */
-export function cleanupManagerTest<T extends Record<string, any>>(setup: ManagerTestSetup<T>): void {
+export function cleanupManagerTest<T extends Record<string, any>>(
+  setup: ManagerTestSetup<T>
+): void {
   if ('dispose' in setup.manager && typeof (setup.manager as any).dispose === 'function') {
     (setup.manager as any).dispose();
   }
@@ -117,7 +122,7 @@ export class TestPatterns {
    * Test that manager properly initializes
    */
   static testManagerInitialization<T extends Record<string, any>>(
-    manager: T, 
+    manager: T,
     coordinator: sinon.SinonStubbedInstance<IManagerCoordinator>
   ): void {
     if ('getStatus' in manager && typeof (manager as any).getStatus === 'function') {
@@ -133,7 +138,7 @@ export class TestPatterns {
   static testManagerDisposal<T extends Record<string, any>>(manager: T): void {
     if ('dispose' in manager && typeof (manager as any).dispose === 'function') {
       (manager as any).dispose();
-      
+
       if ('getStatus' in manager && typeof (manager as any).getStatus === 'function') {
         const status = (manager as any).getStatus();
         expect(status.isDisposed).to.be.true;
@@ -173,12 +178,12 @@ export class TestPatterns {
   ): void {
     // Reset call count
     stub.resetHistory();
-    
+
     // Call operation multiple times
     for (let i = 0; i < times; i++) {
       operation();
     }
-    
+
     // Check if debouncing/caching worked
     expect(stub.callCount).to.equal(expectedCallCount);
   }
@@ -210,7 +215,9 @@ export class DOMTestUtils {
    * Cleanup DOM after tests
    */
   static cleanupDOM(): void {
-    document.querySelectorAll('[id^="terminal-"], [class*="terminal"]').forEach(el => el.remove());
+    document
+      .querySelectorAll('[id^="terminal-"], [class*="terminal"]')
+      .forEach((el) => el.remove());
   }
 
   /**
@@ -231,7 +238,7 @@ export class DOMTestUtils {
     return new MessageEvent('message', {
       data,
       origin: 'vscode-webview',
-      source: window
+      source: window,
     });
   }
 }
@@ -244,16 +251,16 @@ export class AsyncTestUtils {
    * Wait for condition to be true
    */
   static async waitFor(
-    condition: () => boolean, 
+    condition: () => boolean,
     timeout: number = 1000,
     interval: number = 10
   ): Promise<void> {
     const start = Date.now();
-    
-    while (!condition() && (Date.now() - start) < timeout) {
-      await new Promise(resolve => setTimeout(resolve, interval));
+
+    while (!condition() && Date.now() - start < timeout) {
+      await new Promise((resolve) => setTimeout(resolve, interval));
     }
-    
+
     if (!condition()) {
       throw new Error(`Condition not met within ${timeout}ms`);
     }
@@ -268,9 +275,9 @@ export class AsyncTestUtils {
   ): Promise<T> {
     return Promise.race([
       operation(),
-      new Promise<never>((_, reject) => 
+      new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error('Operation timed out')), timeout)
-      )
+      ),
     ]);
   }
 }
@@ -297,19 +304,19 @@ export class PerformanceTestUtils {
     iterations: number = 100
   ): void {
     const instances: T[] = [];
-    
+
     // Create instances
     for (let i = 0; i < iterations; i++) {
       instances.push(createInstance());
     }
-    
+
     // Dispose all instances
-    instances.forEach(instance => {
+    instances.forEach((instance) => {
       if (instance.dispose) {
         instance.dispose();
       }
     });
-    
+
     // Force garbage collection if available
     if (typeof global !== 'undefined' && global.gc) {
       global.gc();

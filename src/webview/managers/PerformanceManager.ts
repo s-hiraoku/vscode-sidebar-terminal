@@ -13,7 +13,7 @@ export class PerformanceManager extends BaseManager implements IPerformanceManag
     super('PerformanceManager', {
       enableLogging: true,
       enableValidation: false,
-      enableErrorRecovery: true
+      enableErrorRecovery: true,
     });
   }
 
@@ -269,7 +269,7 @@ export class PerformanceManager extends BaseManager implements IPerformanceManag
     this.isCliAgentMode = false;
 
     this.log('✅ [PERFORMANCE] Performance manager disposed');
-    
+
     // Call parent dispose
     super.dispose();
   }

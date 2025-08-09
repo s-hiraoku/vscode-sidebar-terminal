@@ -14,7 +14,7 @@ export class InputManager extends BaseManager implements IInputManager {
     super('InputManager', {
       enableLogging: true,
       enableValidation: true,
-      enableErrorRecovery: true
+      enableErrorRecovery: true,
     });
   }
 
@@ -428,7 +428,7 @@ export class InputManager extends BaseManager implements IInputManager {
    */
   public override dispose(): void {
     this.log('🧹 [INPUT] Disposing input manager');
-    
+
     // Call parent dispose
     super.dispose();
 

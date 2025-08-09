@@ -11,49 +11,88 @@ export class CliAgentPatternDetector implements ICliAgentPatternDetector {
   detectClaudeStartup(cleanLine: string): boolean {
     const line = cleanLine.toLowerCase();
 
-    // 🚨 FIXED: Exclude only specific non-startup messages with more precise patterns
+    // 🔧 FIXED: More specific exclusion patterns to avoid false positives
     if (
       line.includes('claude may read') || // Permission messages
       line.includes('documentation is available at') || // URL references
-      line.includes('configuration files are located') // Configuration paths
+      line.includes('configuration files are located') || // Configuration paths
+      line.includes('error:') || // Error messages
+      line.includes('warning:') || // Warning messages
+      line.includes('failed') || // Failure messages
+      line.includes('cannot') || // Cannot messages
+      line.includes('unable') || // Unable messages
+      line.includes('not found') || // Not found messages
+      (line.includes('available') && !line.includes('claude') && !line.includes('now')) // Generic availability messages
     ) {
       return false;
     }
 
-    return (
+    // Check for very specific startup patterns first
+    if (
       cleanLine.includes('Welcome to Claude Code!') ||
       cleanLine.includes('> Try "edit <filepath>') ||
       cleanLine.includes("I'm Claude") ||
       cleanLine.includes('I am Claude') ||
       cleanLine.includes('Powered by Claude') ||
       cleanLine.includes('CLI tool for Claude') ||
-      // More specific startup patterns only
-      (line.includes('claude') && (line.includes('starting') || line.includes('initializing'))) ||
-      (line.includes('claude') && line.includes('ready')) ||
-      (line.includes('anthropic') && line.includes('claude')) ||
-      (line.includes('claude code') &&
-        (line.includes('starting') || line.includes('launched') || line.includes('welcome'))) ||
-      // Model-specific patterns - only if in startup context
-      (line.includes('claude sonnet') &&
-        (line.includes('ready') || line.includes('initialized') || line.includes('starting'))) ||
-      (line.includes('claude opus') &&
-        (line.includes('ready') || line.includes('initialized') || line.includes('starting'))) ||
-      (line.includes('claude haiku') &&
-        (line.includes('ready') || line.includes('initialized') || line.includes('starting'))) ||
-      // Model-specific patterns
-      line.includes('claude-3') ||
-      line.includes('claude 3') ||
-      (line.includes('anthropic') && line.includes('assistant')) ||
-      // Generic activation patterns
-      (line.includes('claude') &&
-        (line.includes('activated') ||
-          line.includes('connected') ||
-          line.includes('ready') ||
-          line.includes('started') ||
-          line.includes('available') ||
-          line.includes('launched') ||
-          line.includes('initialized')))
-    );
+      cleanLine.includes('Claude Code is ready') ||
+      cleanLine.includes('Claude assistant initialized') ||
+      cleanLine.includes('Starting Claude Code session') ||
+      // More common actual Claude Code outputs
+      cleanLine.includes('claude --help') ||
+      cleanLine.includes('claude --version') ||
+      cleanLine.includes('Usage: claude') ||
+      (cleanLine.includes('claude') && cleanLine.includes('Available commands')) ||
+      (cleanLine.includes('claude') && cleanLine.includes('Options:'))
+    ) {
+      return true;
+    }
+
+    // Model-specific startup patterns (more restrictive)
+    if (
+      (line.includes('claude-3-sonnet') &&
+        (line.includes('ready') || line.includes('initialized'))) ||
+      (line.includes('claude-3-opus') &&
+        (line.includes('ready') || line.includes('initialized'))) ||
+      (line.includes('claude-3-haiku') &&
+        (line.includes('ready') || line.includes('initialized'))) ||
+      (line.includes('claude sonnet 4') &&
+        (line.includes('ready') || line.includes('initialized'))) ||
+      (line.includes('claude opus 4') && (line.includes('ready') || line.includes('initialized')))
+    ) {
+      return true;
+    }
+
+    // Very specific combined patterns that indicate startup
+    if (line.includes('claude')) {
+      if (
+        (line.includes('starting') && line.includes('session')) ||
+        (line.includes('initializing') && (line.includes('assistant') || line.includes('model'))) ||
+        (line.includes('connected') && line.includes('successfully')) ||
+        (line.includes('launched') && (line.includes('successfully') || line.includes('code'))) ||
+        (line.includes('ready') && (line.includes('assistant') || line.includes('help'))) ||
+        (line.includes('activated') && line.includes('mode')) ||
+        // More common interactive patterns
+        line.includes('how can i help') ||
+        line.includes('how may i help') ||
+        (line.includes('what would you like') && line.includes('help')) ||
+        line.includes('claude >') ||
+        line.includes('claude:')
+      ) {
+        return true;
+      }
+    }
+
+    // Anthropic-specific patterns
+    if (
+      line.includes('anthropic') &&
+      line.includes('claude') &&
+      (line.includes('assistant') || line.includes('model') || line.includes('ready'))
+    ) {
+      return true;
+    }
+
+    return false;
   }
 
   /**
@@ -62,161 +101,253 @@ export class CliAgentPatternDetector implements ICliAgentPatternDetector {
   detectGeminiStartup(cleanLine: string): boolean {
     const line = cleanLine.toLowerCase();
 
-    // 🚨 FIXED: Exclude only specific update notifications with more precise patterns
+    // 🔧 FIXED: More specific exclusion patterns to avoid false positives
     if (
-      line.includes('update available:') || // Update notifications with colon
+      line.includes('update available:') || // Update notifications
       (line.includes('version') && line.includes('available!')) || // Version updates
-      line.includes('new model is available') // Model availability announcements
+      line.includes('new model is available') || // Model availability
+      line.includes('error:') || // Error messages
+      line.includes('warning:') || // Warning messages
+      line.includes('failed') || // Failure messages
+      line.includes('cannot') || // Cannot messages
+      line.includes('unable') || // Unable messages
+      line.includes('not found') || // Not found messages
+      (line.includes('available') && !line.includes('gemini') && !line.includes('now')) // Generic availability
     ) {
       return false;
     }
 
+    // Check for very specific startup patterns first
+    if (
+      cleanLine.includes('Welcome to Gemini') ||
+      cleanLine.includes('Gemini CLI started') ||
+      cleanLine.includes('Google Gemini is ready') ||
+      cleanLine.includes('Gemini Code assistant') ||
+      cleanLine.includes('Starting Gemini session') ||
+      cleanLine.includes('Gemini model initialized') ||
+      // 🔧 FIX: Add patterns from actual log output
+      (cleanLine.includes('You are running Gemini CLI') && cleanLine.includes('directory')) ||
+      cleanLine.includes('Type your message or @path/to/file') ||
+      // More common actual Gemini CLI outputs
+      cleanLine.includes('gemini --help') ||
+      cleanLine.includes('gemini --version') ||
+      cleanLine.includes('Usage: gemini') ||
+      (cleanLine.includes('gemini') && cleanLine.includes('Available commands')) ||
+      (cleanLine.includes('gemini') && cleanLine.includes('Options:')) ||
+      // Interactive patterns when Gemini starts
+      (cleanLine.includes('gemini') && cleanLine.includes('how can i help')) ||
+      (cleanLine.includes('gemini') && cleanLine.includes('what would you like')) ||
+      cleanLine.includes('gemini >') ||
+      cleanLine.includes('gemini:') ||
+      // More basic command patterns
+      cleanLine.startsWith('gemini ') ||
+      cleanLine === 'gemini' || // 🔧 FIX: Support simple 'gemini' command
+      /^gemini\s+/.test(cleanLine) ||
+      // Common Gemini interactive prompts
+      (line.includes('gemini') && (line.includes('hello') || line.includes('hi there'))) ||
+      // Google AI specific patterns
+      (line.includes('google') && line.includes('gemini') && line.includes('chat'))
+    ) {
+      return true;
+    }
+
+    // Very specific combined patterns that indicate startup
     if (line.includes('gemini')) {
-      // Specific startup context indicators only
+      // Check for startup context
       if (
-        (line.includes('gemini cli') && (line.includes('starting') || line.includes('launched'))) ||
-        (line.includes('gemini') && line.includes('cli') && line.includes('ready')) ||
-        (line.includes('google') && line.includes('gemini') && line.includes('initialized')) ||
-        (line.includes('gemini') && line.includes('activated')) ||
-        (line.includes('gemini') && line.includes('connected') && line.includes('ready')) ||
-        (line.includes('gemini') && line.includes('started') && !line.includes('error')) ||
-        (line.includes('welcome') && line.includes('gemini')) ||
-        (line.includes('gemini') && line.includes('initialized')) ||
-        (line.includes('gemini') && line.includes('launching')) ||
-        (line.includes('gemini') && line.includes('loading') && !line.includes('error'))
+        (line.includes('cli') &&
+          (line.includes('starting') || line.includes('launched') || line.includes('ready'))) ||
+        (line.includes('google') && line.includes('initialized')) ||
+        (line.includes('connected') && line.includes('successfully')) ||
+        (line.includes('session') && (line.includes('started') || line.includes('ready'))) ||
+        (line.includes('welcome') && !line.includes('back')) ||
+        (line.includes('initialized') && (line.includes('model') || line.includes('assistant'))) ||
+        (line.includes('launching') && !line.includes('error')) ||
+        (line.includes('loading') && line.includes('model') && !line.includes('error'))
       ) {
         return true;
       }
     }
 
-    // Specific Gemini CLI output patterns (enhanced)
-    return (
-      // Version patterns
-      line.includes('gemini-2.5-pro') ||
-      line.includes('gemini-1.5-pro') ||
-      line.includes('gemini-pro') ||
-      line.includes('gemini flash') ||
-      // File and documentation patterns
-      line.includes('gemini.md') ||
-      line.includes('tips for getting started') ||
-      // Company/service patterns
-      line.includes('google ai') ||
-      line.includes('google generative ai') ||
-      line.includes('gemini api') ||
-      line.includes('ai studio') ||
-      line.includes('vertex ai') ||
-      // Prompt patterns
-      line.includes('gemini>') ||
-      line.includes('gemini $') ||
-      line.includes('gemini #') ||
-      line.includes('gemini:') ||
-      // Banner patterns (enhanced)
-      (line.includes('█') && line.includes('gemini')) ||
-      (line.includes('*') && line.includes('gemini') && line.includes('*')) ||
-      (line.includes('=') && line.includes('gemini') && line.includes('=')) ||
-      // Command execution confirmation
-      line.includes('gemini --help') ||
-      line.includes('gemini chat') ||
-      line.includes('gemini code') ||
-      line.includes('gemini repl') ||
-      line.includes('gemini interactive') ||
-      // Startup messages
-      line.includes('gemini cli starting') ||
-      line.includes('gemini session started') ||
-      line.includes('connecting to gemini') ||
-      line.includes('gemini model loaded') ||
-      // Authentication patterns
-      line.includes('gemini authenticated') ||
-      line.includes('gemini login successful') ||
-      // Additional model patterns
-      line.includes('using gemini') ||
-      (line.includes('model:') && line.includes('gemini')) ||
-      // Enhanced simple patterns
-      line.includes('gemini-exp') ||
-      line.includes('gemini experimental') ||
-      line.includes('gemini-thinking') ||
-      // Common startup indicators
-      (line.includes('google') && line.includes('ai') && line.includes('gemini')) ||
-      // Direct command execution patterns
-      line.startsWith('gemini ') ||
-      line.startsWith('gemini>') ||
-      line.includes('> gemini') ||
-      line.includes('$ gemini')
-    );
+    // Model-specific patterns (more restrictive)
+    if (
+      line.includes('gemini-2.5-pro') || // 🔧 FIX: Detect gemini-2.5-pro without additional context
+      line.includes('gemini-1.5-pro') || // 🔧 FIX: Detect gemini-1.5-pro without additional context
+      line.includes('gemini-pro') || // 🔧 FIX: Detect gemini-pro without additional context
+      line.includes('gemini flash') || // 🔧 FIX: Detect gemini flash without additional context
+      line.includes('gemini-exp') || // 🔧 FIX: Detect experimental models
+      (line.includes('gemini') && line.includes('context left')) // 🔧 FIX: Detect context display
+    ) {
+      return true;
+    }
+
+    // Very specific prompt patterns that indicate an active session
+    if (
+      /^gemini>\s*$/.test(cleanLine) ||
+      /^gemini\s*\$\s*$/.test(cleanLine) ||
+      /^gemini\s*#\s*$/.test(cleanLine) ||
+      /^gemini:\s*$/.test(cleanLine)
+    ) {
+      return true;
+    }
+
+    // Google AI specific patterns
+    if (
+      (line.includes('google ai') || line.includes('google generative ai')) &&
+      line.includes('gemini') &&
+      (line.includes('ready') || line.includes('initialized') || line.includes('connected'))
+    ) {
+      return true;
+    }
+
+    // 🔧 FALLBACK: More lenient patterns for edge cases
+    // These should catch cases where the above patterns miss legitimate Gemini usage
+    if (line.includes('gemini')) {
+      // Any line that starts with gemini command (very basic)
+      if (/^gemini\s/.test(line) || line.trim() === 'gemini') {
+        return true;
+      }
+
+      // Common interactive patterns that might indicate Gemini is starting
+      if (
+        line.includes('welcome') ||
+        line.includes('hello') ||
+        line.includes('ready') ||
+        line.includes('help') ||
+        line.includes('available') ||
+        line.includes('starting')
+      ) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   /**
    * Detect shell prompt return after CLI agent exits
    */
   detectShellPrompt(cleanLine: string): boolean {
+    // 🔧 FIXED: More restrictive patterns to avoid false positives from AI agent output
+
+    // Skip empty lines
+    if (!cleanLine || cleanLine.trim().length === 0) {
+      return false;
+    }
+
+    // Skip lines that are too long to be shell prompts (likely agent output)
+    if (cleanLine.length > 100) {
+      return false;
+    }
+
+    // Skip lines with certain keywords that indicate AI agent output
+    // 🔧 FIXED: Don't filter out lines just because they contain 'claude' or 'gemini'
+    // as these might be legitimate shell prompts or commands
+    const agentOutputIndicators = [
+      'assistant',
+      'response',
+      'token',
+      'output',
+      'thinking',
+      'processing',
+      'generating',
+      'analyzing',
+      'understanding',
+      'error:',
+      'warning:',
+      'info:',
+      'debug:',
+      'trace:',
+      'markdown',
+      'function',
+      'class',
+      'import',
+      'export',
+      'const',
+      'let',
+      'var',
+      'return',
+      'if',
+      'else',
+      'for',
+      'while',
+    ];
+
+    const lowerLine = cleanLine.toLowerCase();
+
+    // More sophisticated filtering: only exclude if it looks like AI output
+    if (agentOutputIndicators.some((indicator) => lowerLine.includes(indicator))) {
+      return false;
+    }
+
+    // Special handling for claude/gemini keywords - only exclude if it looks like AI output
+    if (
+      (lowerLine.includes('claude') || lowerLine.includes('gemini')) &&
+      (lowerLine.includes('thinking') ||
+        lowerLine.includes('response') ||
+        lowerLine.includes('help you') ||
+        lowerLine.includes('i am') ||
+        lowerLine.includes("i'm") ||
+        lowerLine.includes('what would you'))
+    ) {
+      return false;
+    }
+
     // Look for common shell prompt patterns that appear after CLI tools exit
     const shellPromptPatterns = [
       // Very specific patterns first
-      // Standard bash/zsh prompts with username@hostname
-      /^[\w.-]+@[\w.-]+:.*[$%]\s*$/,
-      /^[\w.-]+@[\w.-]+\s+.*[$%#>]\s*$/,
+      // Standard bash/zsh prompts with username@hostname (strict)
+      /^[\w.-]+@[\w.-]+:[~\/]?[\w\/.~-]*\$\s*$/,
+      /^[\w.-]+@[\w.-]+\s+[~\/]?[\w\/.~-]*[$%#]\s*$/,
 
-      // Oh My Zsh themes with symbols
-      /^➜\s+[\w.-]+/,
-      /^[➜▶⚡]\s+[\w.-]+/,
+      // Oh My Zsh themes with symbols (strict)
+      /^➜\s+[~\/]?[\w\/.~-]*\s*$/,
+      /^[➜▶⚡]\s+[~\/]?[\w\/.~-]*\s*$/,
 
-      // Starship prompt variations
+      // Starship prompt variations (exact)
       /^❯\s*$/,
-      /^❯\s+.*$/,
+      /^❯\s+\[.*?\].*$/, // 🔧 FIX: Handle Starship with ANSI sequences like "❯ [?2004h"
 
-      // Simple shell prompts
+      // Simple shell prompts (exact match only)
       /^[$%#>]\s*$/,
-      /^\$\s*$/,
-      /^%\s*$/,
-      /^#\s*$/,
-      /^>\s*$/,
 
-      // PowerShell patterns
-      /^PS\s+.*>/,
+      // PowerShell patterns (strict)
+      /^PS\s+[A-Z]:\\[\w\\.-]*>\s*$/,
+      /^PS>\s*$/,
 
-      // Fish shell patterns
-      /^[\w.-]+\s+[\w/~]+>\s*$/,
+      // Fish shell patterns (strict)
+      /^[\w.-]+\s+[~\/][\w\/.-]*>\s*$/,
 
-      // Box drawing character prompts (Oh-My-Zsh themes)
-      /^[╭┌]─[\w.-]+@[\w.-]+/,
+      // Python/conda environment prompts (strict)
+      /^\([\w.-]+\)\s+[~\/]?[\w\/.~-]*[$%#]\s*$/,
 
-      // Python/conda environment prompts
-      /^\([\w.-]+\)\s+.*[$%#>]\s*$/,
+      // Directory-only prompts (strict)
+      /^~\$\s*$/,
+      /^\/[\w\/.~-]*\$\s*$/,
+      /^\.\/[\w\/.~-]*\$\s*$/,
+      /^[A-Z]:\\[\w\\.-]*>\s*$/,
 
-      // More flexible patterns for various shell configurations
-      /^[\w.-]+:\s*.*[$%#>]\s*$/,
-      /^\w+\s+.*[$%#>]\s*$/,
-      /^.*@.*:\s*.*\$\s*$/,
+      // Time-based prompts (strict)
+      /^\[\d{1,2}:\d{2}(:\d{2})?\]\s*[~\/]?[\w\/.~-]*[$%#]\s*$/,
 
-      // Very broad fallback patterns (order matters - these come last)
-      /.*[$%]$/,
-      /.*#$/,
-      /.*>$/,
+      // Git-aware prompts (strict)
+      /^[\w.-]+\s+git:\([^)]+\)\s*[~\/]?[\w\/.~-]*\$\s*$/,
+
+      // 🔧 MORE FLEXIBLE patterns for basic shell prompts
+      // These are more likely to catch real shell prompts after agent exit
+      /^\w+\$\s*$/, // Simple word followed by $
+      /^\w+%\s*$/, // Simple word followed by %
+      /^\w+#\s*$/, // Simple word followed by # (root)
+      /^[\w-]+:\s*.*\$\s*$/, // hostname: path$
+      /^.*@.*:\s*.*\$\s*$/, // user@host: path$
 
       // Terminal-specific patterns that might indicate CLI tool exit
       /^Last login:/,
-      /^.*logout.*$/i,
-      /^.*session.*ended.*$/i,
-
-      // Even more generic - any line that looks like a prompt (DANGEROUS but necessary)
-      /^[^\s]+[$%#>]\s*$/,
-      /^[^\s]+\s+[^\s]+[$%#>]\s*$/,
+      /^logout$/i,
+      /^exit$/i,
+      /^Connection to .* closed\.$/,
+      /^Session terminated\.$/i,
     ];
-
-    // 🚨 CRITICAL DEBUG: Log ALL non-empty lines to understand actual terminal output
-    if (cleanLine.trim().length > 0) {
-      log(`🔍 [SHELL-PROMPT-DEBUG] Processing line: "${cleanLine}" (length: ${cleanLine.length})`);
-
-      // Show which patterns this line is being tested against
-      if (
-        cleanLine.includes('$') ||
-        cleanLine.includes('%') ||
-        cleanLine.includes('#') ||
-        cleanLine.includes('>')
-      ) {
-        log(`🔍 [SHELL-PROMPT-DEBUG] Line contains prompt symbols: $ % # >`);
-      }
-    }
 
     const matched = shellPromptPatterns.some((pattern, index) => {
       const result = pattern.test(cleanLine);
@@ -227,9 +358,7 @@ export class CliAgentPatternDetector implements ICliAgentPatternDetector {
     });
 
     if (matched) {
-      log(`✅ [SHELL-PROMPT] TERMINATION DETECTED: "${cleanLine}"`);
-    } else if (cleanLine.trim().length > 0 && cleanLine.trim().length < 200) {
-      log(`❌ [SHELL-PROMPT] NO MATCH: "${cleanLine}"`);
+      log(`✅ [SHELL-PROMPT] Shell prompt detected (potential termination): "${cleanLine}"`);
     }
 
     return matched;

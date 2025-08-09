@@ -487,10 +487,10 @@ export class MessageManager implements IMessageManager {
 
     // ✅ CRITICAL FIX: Strict validation for output message handling
     if (!data || !terminalId) {
-      console.error('🚨 [MESSAGE] Invalid output message - missing data or terminalId:', { 
-        hasData: !!data, 
+      console.error('🚨 [MESSAGE] Invalid output message - missing data or terminalId:', {
+        hasData: !!data,
         hasTerminalId: !!terminalId,
-        terminalId: terminalId
+        terminalId: terminalId,
       });
       return;
     }
@@ -504,13 +504,16 @@ export class MessageManager implements IMessageManager {
     const terminal = coordinator.getTerminalInstance(terminalId);
     if (!terminal) {
       console.error(`🚨 [MESSAGE] Output for non-existent terminal: ${terminalId}`);
-      console.log('🔍 [MESSAGE] Available terminals:', 
+      console.log(
+        '🔍 [MESSAGE] Available terminals:',
         Array.from(coordinator.getAllTerminalInstances().keys())
       );
       return;
     }
 
-    console.log(`📥 [MESSAGE] Processing output for terminal ${terminal.name} (${terminalId}): ${data.length} chars`);
+    console.log(
+      `📥 [MESSAGE] Processing output for terminal ${terminal.name} (${terminalId}): ${data.length} chars`
+    );
 
     // 🔍 OPTIMIZATION: Only log significant CLI agent patterns
     if (
@@ -531,11 +534,15 @@ export class MessageManager implements IMessageManager {
       const managers = coordinator.getManagers();
       if (managers && managers.performance) {
         managers.performance.bufferedWrite(data, terminal.terminal, terminalId);
-        console.log(`📤 [MESSAGE] Output buffered via PerformanceManager for ${terminal.name}: ${data.length} chars`);
+        console.log(
+          `📤 [MESSAGE] Output buffered via PerformanceManager for ${terminal.name}: ${data.length} chars`
+        );
       } else {
         // Fallback to direct write if performance manager is not available
         terminal.terminal.write(data);
-        console.log(`📤 [MESSAGE] Output written directly to ${terminal.name}: ${data.length} chars`);
+        console.log(
+          `📤 [MESSAGE] Output written directly to ${terminal.name}: ${data.length} chars`
+        );
       }
     } catch (error) {
       console.error(`🚨 [MESSAGE] Error writing output to terminal ${terminal.name}:`, error);
@@ -938,7 +945,7 @@ export class MessageManager implements IMessageManager {
     if (coordinator) {
       // ✅ CRITICAL FIX: Robust terminal ID resolution with validation
       let resolvedTerminalId: string;
-      
+
       if (terminalId) {
         // Use provided terminal ID, but validate it exists
         const terminalInstance = coordinator.getTerminalInstance(terminalId);
@@ -962,7 +969,7 @@ export class MessageManager implements IMessageManager {
           console.error('🚨 [MESSAGE] No active terminal ID available for input');
           return;
         }
-        
+
         // Double-check the active terminal exists
         const activeTerminal = coordinator.getTerminalInstance(activeId);
         if (!activeTerminal) {
@@ -975,7 +982,9 @@ export class MessageManager implements IMessageManager {
             return;
           }
           resolvedTerminalId = firstTerminal.id;
-          console.warn(`⚠️ [MESSAGE] Emergency fallback to first available terminal: ${resolvedTerminalId}`);
+          console.warn(
+            `⚠️ [MESSAGE] Emergency fallback to first available terminal: ${resolvedTerminalId}`
+          );
         } else {
           resolvedTerminalId = activeId;
         }
@@ -988,7 +997,9 @@ export class MessageManager implements IMessageManager {
         return;
       }
 
-      console.log(`⌨️ [MESSAGE] Sending input to terminal ${targetTerminal.name} (${resolvedTerminalId}): ${input.length} chars`);
+      console.log(
+        `⌨️ [MESSAGE] Sending input to terminal ${targetTerminal.name} (${resolvedTerminalId}): ${input.length} chars`
+      );
 
       this.queueMessage(
         {
@@ -1000,7 +1011,7 @@ export class MessageManager implements IMessageManager {
         },
         coordinator
       );
-      
+
       console.log(`⌨️ [MESSAGE] Input queued successfully for terminal: ${resolvedTerminalId}`);
     }
   }

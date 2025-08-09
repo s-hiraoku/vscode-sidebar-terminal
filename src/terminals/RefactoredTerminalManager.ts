@@ -398,7 +398,7 @@ export class RefactoredTerminalManager {
 
   public getAgentType(terminalId: string): string | null {
     const agentState = this.cliAgentService.getAgentState(terminalId);
-    return agentState.type;
+    return agentState.agentType;
   }
 
   public getConnectedAgents(): Array<{ terminalId: string; agentInfo: { type: string } }> {
