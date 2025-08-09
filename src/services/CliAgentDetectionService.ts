@@ -116,31 +116,70 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
 
   detectTermination(terminalId: string, data: string): TerminationDetectionResult {
     try {
-      // For connected agents, use strict termination detection
-      if (this.stateManager.isAgentConnected(terminalId)) {
-        return this.detectStrictTermination(terminalId, data);
+      let result: TerminationDetectionResult;
+
+      // Check if there is any agent to terminate
+      const disconnectedAgents = this.stateManager.getDisconnectedAgents();
+      const hasConnectedAgent = this.stateManager.isAgentConnected(terminalId);
+      const hasDisconnectedAgent = disconnectedAgents.has(terminalId);
+
+      if (!hasConnectedAgent && !hasDisconnectedAgent) {
+        // No agent exists to terminate
+        return {
+          isTerminated: false,
+          confidence: 0,
+          detectedLine: '',
+          reason: 'No agent exists to terminate',
+        };
       }
 
-      // For non-connected agents, use regular shell prompt detection
-      const lines = data.split(/\r?\n/);
-      for (const line of lines) {
-        const cleanLine = this.patternDetector.cleanAnsiEscapeSequences(line.trim());
-        if (cleanLine && this.patternDetector.detectShellPrompt(cleanLine)) {
-          return {
+      // For connected agents, use strict termination detection
+      if (hasConnectedAgent) {
+        result = this.detectStrictTermination(terminalId, data);
+      } else if (hasDisconnectedAgent) {
+        // For disconnected agents, use regular shell prompt detection
+        const lines = data.split(/\r?\n/);
+        let terminationDetected = false;
+        let detectedLine = '';
+
+        for (const line of lines) {
+          const cleanLine = this.patternDetector.cleanAnsiEscapeSequences(line.trim());
+          if (cleanLine && this.patternDetector.detectShellPrompt(cleanLine)) {
+            terminationDetected = true;
+            detectedLine = cleanLine;
+            break;
+          }
+        }
+
+        if (terminationDetected) {
+          result = {
             isTerminated: true,
             confidence: 0.8,
-            detectedLine: cleanLine,
+            detectedLine,
             reason: 'Shell prompt detected',
           };
+        } else {
+          result = {
+            isTerminated: false,
+            confidence: 0,
+            detectedLine: '',
+            reason: 'No termination detected',
+          };
         }
+      } else {
+        // Fallback (shouldn't reach here)
+        result = {
+          isTerminated: false,
+          confidence: 0,
+          detectedLine: '',
+          reason: 'No termination detected',
+        };
       }
 
-      return {
-        isTerminated: false,
-        confidence: 0,
-        detectedLine: '',
-        reason: 'No termination detected',
-      };
+      // Note: State management is handled in processOutputDetection automatically
+      // This method is primarily for testing/explicit termination checking
+
+      return result;
     } catch (error) {
       log('ERROR: CLI Agent termination detection failed:', error);
       return {
@@ -268,7 +307,8 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
           .replace(/[│╭╰─╯]/g, '') // Remove box characters only
           .trim();
 
-        if (!fullyCleanLine || fullyCleanLine.length < 2) continue;
+        // 🔧 FIX: Allow shell prompts like "$" or "%" (single character)
+        if (!fullyCleanLine || fullyCleanLine.length < 1) continue;
 
         // Check for termination first (for connected terminals ONLY)
         if (this.stateManager.isAgentConnected(terminalId)) {
@@ -388,11 +428,9 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
       };
     }
 
-    // 🔧 FIXED: Use the improved shell prompt detection from patternDetector
-    // This now has better filtering to avoid false positives from AI agent output
+    // 🔧 CRITICAL FIX: Enhanced shell prompt detection for Claude silent exits
+    // Claude often exits silently, so we need to be more aggressive about shell prompt detection
     if (this.patternDetector.detectShellPrompt(cleanLine)) {
-      // Additional validation for connected agents to be extra sure
-      // 🔧 FIX: Only filter out agent keywords if they appear to be AI output, not directory names
       const lowerLine = cleanLine.toLowerCase();
       const hasAgentKeywords = lowerLine.includes('claude') || lowerLine.includes('gemini');
       const looksLikeAIOutput =
@@ -402,19 +440,30 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
           lowerLine.includes('i am') ||
           lowerLine.includes("i'm"));
 
-      if (cleanLine.length < 100 && !looksLikeAIOutput) {
-        log(`✅ [TERMINATION] Shell prompt detected: "${cleanLine}"`);
+      // 🚨 CLAUDE FIX: Be more permissive with shell prompt detection for Claude
+      // Claude exits silently, so shell prompt return is the primary indicator
+      if (cleanLine.length < 200 && !looksLikeAIOutput) {
+        log(`✅ [TERMINATION] Shell prompt detected (Claude silent exit): "${cleanLine}"`);
         return {
           isTerminated: true,
-          confidence: 0.9,
+          confidence: 0.95, // Increased confidence for shell prompts
           detectedLine: cleanLine,
-          reason: 'Shell prompt detected after agent exit',
+          reason: 'Shell prompt detected after Claude silent exit',
         };
       } else {
-        log(
-          `⚠️ [TERMINATION] Shell prompt detected but filtered out due to AI output indicators: "${cleanLine}"`
-        );
+        log(`⚠️ [TERMINATION] Possible AI output detected, ignoring: "${cleanLine}"`);
       }
+    }
+
+    // 🆕 CLAUDE-SPECIFIC: Legitimate Claude session termination detection
+    if (this.detectClaudeSessionEnd(cleanLine)) {
+      log(`✅ [TERMINATION] Claude session end detected: "${cleanLine}"`);
+      return {
+        isTerminated: true,
+        confidence: 0.95,
+        detectedLine: cleanLine,
+        reason: 'Claude session termination',
+      };
     }
 
     log(`❌ [TERMINATION] No termination detected for: "${cleanLine}"`);
@@ -431,9 +480,11 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
     return (
       line.includes('session ended') ||
       line.includes('connection closed') ||
-      line.includes('goodbye') ||
-      line.includes('exiting') ||
-      line.includes('terminated') ||
+      (line.includes('goodbye') &&
+        (line.includes('claude') || line.includes('gemini') || line.includes('agent'))) || // 🔧 FIX: Context required
+      line.includes('exiting claude') || // 🔧 FIX: Be more specific to avoid "exit" false positive
+      line.includes('exiting gemini') ||
+      line.includes('session terminated') || // 🔧 FIX: Be more specific
       line.includes('disconnected from') ||
       (line.includes('claude') && line.includes('exited')) ||
       (line.includes('gemini') && line.includes('exited')) ||
@@ -464,6 +515,69 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
       line.includes('out of memory') ||
       line.includes('signal') ||
       line.includes('terminated unexpectedly')
+    );
+  }
+
+  /**
+   * 🆕 CLAUDE-SPECIFIC: Detect legitimate Claude session termination
+   * Focus on genuine session end patterns, avoiding false positives from user input
+   *
+   * Key insight: When Claude exits, the interactive prompt disappears
+   * and the shell prompt returns
+   */
+  private detectClaudeSessionEnd(cleanLine: string): boolean {
+    const line = cleanLine.toLowerCase().trim();
+
+    // 🚨 CRITICAL: Only detect genuine session termination patterns
+    // Avoid false positives from user typing "exit", numbers, etc.
+
+    // 1. Shell prompt return patterns (most reliable indicator)
+    const shellPromptPatterns = [
+      /^[a-z0-9._-]+@[a-z0-9.-]+:[~\/][^$]*\$\s*$/i, // user@host:~$ or user@host:/path$
+      /^[a-z0-9._-]+@[a-z0-9.-]+\s*\$\s*$/i, // user@host $
+      /^\$\s*$/, // Just $ (simple shell)
+      /^%\s*$/, // % (zsh)
+      /^>\s*$/, // > (some shells)
+    ];
+
+    const hasShellPrompt = shellPromptPatterns.some((pattern) => pattern.test(line));
+
+    // 2. EOF signal is user input (Ctrl+D), not detectable from output
+    // When user presses Ctrl+D, Claude exits and shell prompt appears
+
+    // 3. Explicit Claude termination messages (if any)
+    const hasExplicitTermination =
+      line.includes('session ended') ||
+      (line.includes('goodbye') && line.includes('claude')) ||
+      line.includes('claude session terminated') ||
+      line.includes('exiting claude');
+      // 🚨 IMPORTANT: Do NOT match standalone "exit" - too generic and causes false positives
+
+    // 4. Process completion with context (more restrictive)
+    const hasProcessCompletion =
+      // Only exact matches for process completion - no substring matching
+      line === '[done]' ||
+      line === '[finished]' ||
+      line === 'done' ||
+      line === 'finished' ||
+      // Process exit with code
+      /^\[process exited with code \d+\]$/.test(line) ||
+      // Exit status codes (exact match only)
+      /^exit status: \d+$/.test(line);
+
+    // 5. Claude interactive session end indicators
+    // When Claude exits, these interactive elements disappear
+    const hasSessionEndIndicator =
+      // Process exit status codes (when Claude terminates)
+      /^\[process exited with code \d+\]$/i.test(line) ||
+      // Terminal control sequence indicating session end
+      line.includes('\x1b[?2004l') || // Bracketed paste mode disabled
+      // Claude session cleanup messages
+      line.includes('cleaning up claude session') ||
+      line.includes('claude session closed');
+
+    return (
+      hasShellPrompt || hasExplicitTermination || hasProcessCompletion || hasSessionEndIndicator
     );
   }
 

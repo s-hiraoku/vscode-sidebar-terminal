@@ -14,7 +14,7 @@ describe('Terminal Startup Regression Prevention', () => {
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-    
+
     // Setup complete test environment with DOM
     const testEnv = setupCompleteTestEnvironment();
     dom = testEnv.dom;
@@ -60,7 +60,7 @@ describe('Terminal Startup Regression Prevention', () => {
         };
 
         // Simulate manager initialization
-        Object.values(mockManagers).forEach(manager => {
+        Object.values(mockManagers).forEach((manager) => {
           if ('initialize' in manager && typeof manager.initialize === 'function') {
             manager.initialize();
           }
@@ -82,7 +82,7 @@ describe('Terminal Startup Regression Prevention', () => {
 
           public log(message: string, _level: 'info' | 'warn' | 'error' = 'info'): void {
             const formattedMessage = `${this.logPrefix} ${message}`;
-            
+
             switch (_level) {
               case 'warn':
                 console.warn(`⚠️ ${formattedMessage}`);
@@ -97,15 +97,14 @@ describe('Terminal Startup Regression Prevention', () => {
         }
 
         const manager = new MockBaseManager();
-        
+
         // Test different log levels
         manager.log('Info message');
         manager.log('Warning message', 'warn');
         manager.log('Error message', 'error');
-        
+
         // Test with template string (new format)
         manager.log(`Error during operation: test error`, 'error');
-        
       }).to.not.throw();
     });
 
@@ -152,7 +151,6 @@ describe('Terminal Startup Regression Prevention', () => {
         // These should not throw with the new log format
         inputManager.setupIMEHandling();
         performanceManager.initialize();
-
       }).to.not.throw();
     });
   });
@@ -175,14 +173,14 @@ describe('Terminal Startup Regression Prevention', () => {
         // Create header and content (as in actual implementation)
         const terminalHeader = document.createElement('div');
         terminalHeader.className = 'terminal-header';
-        
+
         const terminalContent = document.createElement('div');
         terminalContent.className = 'terminal-content';
         terminalContent.style.cssText = 'flex: 1; overflow: hidden;';
-        
+
         terminalDiv.appendChild(terminalHeader);
         terminalDiv.appendChild(terminalContent);
-        
+
         // Apply styles (as in actual implementation)
         terminalDiv.style.cssText = `
           width: 100%; 
@@ -195,13 +193,12 @@ describe('Terminal Startup Regression Prevention', () => {
           min-height: 100px;
           outline: none;
         `;
-        
+
         terminalBody.appendChild(terminalDiv);
-        
+
         // Verify terminal was created correctly
         expect(terminalDiv.parentElement).to.equal(terminalBody);
         expect(terminalDiv.querySelector('.terminal-content')).to.exist;
-        
       }).to.not.throw();
     });
 
@@ -224,18 +221,17 @@ describe('Terminal Startup Regression Prevention', () => {
         // Use mocked Terminal (from TestSetup)
         const terminal = new (global as any).Terminal(terminalOptions);
         const fitAddon = new (global as any).FitAddon();
-        
+
         // Simulate terminal initialization flow
         terminal.loadAddon(fitAddon);
-        
+
         const container = document.createElement('div');
         terminal.open(container);
         fitAddon.fit();
-        
+
         // These operations should not throw
         expect(terminal).to.exist;
         expect(fitAddon).to.exist;
-        
       }).to.not.throw();
     });
 
@@ -251,15 +247,15 @@ describe('Terminal Startup Regression Prevention', () => {
           const container = document.createElement('div');
           container.className = 'terminal-content';
           terminalBody.appendChild(container);
-          
+
           terminal.open(container);
-          
+
           setTimeout(() => {
             try {
               const fitAddon = new (global as any).FitAddon();
               terminal.loadAddon(fitAddon);
               fitAddon.fit();
-              
+
               // If we reach here, async initialization worked
               expect(container.parentElement).to.equal(terminalBody);
               done();
@@ -267,7 +263,6 @@ describe('Terminal Startup Regression Prevention', () => {
               done(error);
             }
           }, 100);
-          
         } catch (error) {
           done(error);
         }
@@ -294,7 +289,7 @@ describe('Terminal Startup Regression Prevention', () => {
                 console.error('Input manager initialization failed:', error);
                 // Should not re-throw, just log
               }
-            }
+            },
           },
           performanceManager: {
             initialize() {
@@ -305,14 +300,13 @@ describe('Terminal Startup Regression Prevention', () => {
               } catch (error) {
                 console.error('Performance manager initialization failed:', error);
               }
-            }
-          }
+            },
+          },
         };
 
         // These should handle errors gracefully
         mockManagers.inputManager.setupIMEHandling();
         mockManagers.performanceManager.initialize();
-
       }).to.not.throw();
     });
 
@@ -320,14 +314,13 @@ describe('Terminal Startup Regression Prevention', () => {
       expect(() => {
         // Simulate terminal creation when container is missing
         const terminalContainer = document.getElementById('terminal-body');
-        
+
         if (!terminalContainer) {
           console.log('Terminal container not found');
           return; // Should return gracefully, not throw
         }
-        
+
         // This branch won't execute in this test, which is expected
-        
       }).to.not.throw();
     });
 
@@ -338,7 +331,7 @@ describe('Terminal Startup Regression Prevention', () => {
           vscodeApi: null as any,
           acquireVsCodeApi: (() => ({ postMessage: () => {} })) as any,
         };
-        
+
         try {
           if (typeof mockWindow.acquireVsCodeApi === 'function') {
             mockWindow.vscodeApi = mockWindow.acquireVsCodeApi();
@@ -348,10 +341,9 @@ describe('Terminal Startup Regression Prevention', () => {
         } catch (error) {
           console.log('Error acquiring VS Code API:', error);
         }
-        
+
         // Should handle missing API gracefully
         expect(mockWindow.vscodeApi).to.not.be.null;
-        
       }).to.not.throw();
     });
   });
@@ -366,7 +358,7 @@ describe('Terminal Startup Regression Prevention', () => {
         // Updated log method signature (from recent changes)
         protected log(message: string, level: 'info' | 'warn' | 'error' = 'info'): void {
           const formattedMessage = `${this.logPrefix} ${message}`;
-          
+
           switch (level) {
             case 'warn':
               console.warn(`⚠️ ${formattedMessage}`);
@@ -399,38 +391,37 @@ describe('Terminal Startup Regression Prevention', () => {
         const managers = {
           input: {
             initialized: false,
-            initialize() { 
+            initialize() {
               this.initialized = true;
               // Both old and new log patterns should work
               console.log('[INPUT] Manager initialized');
-            }
+            },
           },
           performance: {
             initialized: false,
-            initialize() { 
+            initialize() {
               this.initialized = true;
               console.log('[PERFORMANCE] Manager initialized');
-            }
+            },
           },
           ui: {
             initialized: false,
-            initialize() { 
+            initialize() {
               this.initialized = true;
               console.log('[UI] Manager initialized');
-            }
-          }
+            },
+          },
         };
 
         // Initialize all managers
-        Object.values(managers).forEach(manager => {
+        Object.values(managers).forEach((manager) => {
           manager.initialize();
         });
 
         // Verify all managers initialized successfully
-        Object.values(managers).forEach(manager => {
+        Object.values(managers).forEach((manager) => {
           expect(manager.initialized).to.be.true;
         });
-
       }).to.not.throw();
     });
   });

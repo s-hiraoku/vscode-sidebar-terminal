@@ -636,7 +636,9 @@ export class SplitManager extends BaseManager {
     const terminal = this.terminals.get(id);
     const container = this.terminalContainers.get(id);
 
-    this.log(`🗑️ [SPLIT] Removing terminal ${id}, terminal: ${!!terminal}, container: ${!!container}`);
+    this.log(
+      `🗑️ [SPLIT] Removing terminal ${id}, terminal: ${!!terminal}, container: ${!!container}`
+    );
 
     if (terminal) {
       // Dispose terminal

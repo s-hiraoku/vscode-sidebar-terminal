@@ -89,10 +89,18 @@
       "mcp__deepwiki__ask_question",
       "mcp__serena__find_referencing_symbols",
       "mcp__serena__read_memory",
-      "Bash(npx vsce:*)"
+      "Bash(npx vsce:*)",
+      "WebFetch(domain:docs.anthropic.com)",
+      "WebFetch(domain:deepwiki.com)",
+      "mcp__context7__get-library-docs"
     ],
     "deny": []
   },
   "enableAllProjectMcpServers": true,
-  "enabledMcpjsonServers": ["playwright", "arxiv-mcp-server", "deepwiki", "context7"]
+  "enabledMcpjsonServers": [
+    "playwright",
+    "arxiv-mcp-server",
+    "deepwiki",
+    "context7"
+  ]
 }

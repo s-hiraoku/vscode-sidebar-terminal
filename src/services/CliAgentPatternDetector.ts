@@ -344,7 +344,7 @@ export class CliAgentPatternDetector implements ICliAgentPatternDetector {
       // Terminal-specific patterns that might indicate CLI tool exit
       /^Last login:/,
       /^logout$/i,
-      /^exit$/i,
+      // 🔧 REMOVED: /^exit$/i - Too generic, causes false positives when user types "exit"
       /^Connection to .* closed\.$/,
       /^Session terminated\.$/i,
     ];

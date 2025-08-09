@@ -46,19 +46,34 @@ export class CliAgentStateManager implements ICliAgentStateManager {
       );
     }
 
-    // Handle previous connected agent
+    // Handle previous connected agent BEFORE setting new one
     const previousConnectedId = this._connectedAgentTerminalId;
     const previousType = this._connectedAgentType;
 
-    // Set new connected agent
+    // Set new connected agent first
     this._connectedAgentTerminalId = terminalId;
     this._connectedAgentType = type;
 
-    // Remove from disconnected if it was there (shouldn't happen due to check above, but safety measure)
+    // Remove from disconnected if it was there
     this._disconnectedAgents.delete(terminalId);
 
-    // Move previous connected agent to disconnected (only if different terminal)
+    // Emit connected event for new agent
+    this._onStatusChange.fire({
+      terminalId,
+      status: 'connected',
+      type,
+      terminalName,
+    });
+
+    log(`🎯 [STATE-MANAGER] Set terminal ${terminalId} as CONNECTED (${type})`);
+
+    // Handle previous connected agent (if exists and different terminal)
     if (previousConnectedId && previousConnectedId !== terminalId && previousType) {
+      // 🎯 NORMAL BEHAVIOR: Previous connected agent moves to disconnected
+      log(
+        `📝 [STATE-MANAGER] Moving previous CONNECTED agent ${previousType} in terminal ${previousConnectedId} to DISCONNECTED`
+      );
+
       this._disconnectedAgents.set(previousConnectedId, {
         type: previousType,
         startTime: new Date(),
@@ -72,24 +87,26 @@ export class CliAgentStateManager implements ICliAgentStateManager {
         terminalName,
       });
 
-      log(
-        `📝 [STATE-MANAGER] Moved previous CONNECTED terminal ${previousConnectedId} to DISCONNECTED tracking`
-      );
+      log(`📝 [STATE-MANAGER] Terminal ${previousConnectedId} moved to DISCONNECTED`);
     }
 
-    // Emit connected event for new agent
-    this._onStatusChange.fire({
-      terminalId,
-      status: 'connected',
-      type,
-      terminalName,
-    });
-
     log(
-      `🎯 [STATE-MANAGER] Set terminal ${terminalId} as CONNECTED (${type}). DISCONNECTED agents: ${this._disconnectedAgents.size}`
+      `✅ [STATE-MANAGER] State update complete. DISCONNECTED agents: ${this._disconnectedAgents.size}`
     );
   }
 
+  /**
+   * 🔧 Promote a DISCONNECTED agent to CONNECTED (for legitimate user actions like toggle button)
+   * This bypasses the blocking logic in setConnectedAgent for explicit user operations
+   */
+  /**
+   * 🔧 Promote a DISCONNECTED agent to CONNECTED (for legitimate user actions like toggle button)
+   * This bypasses the blocking logic in setConnectedAgent for explicit user operations
+   */
+  /**
+   * 🔧 Promote a DISCONNECTED agent to CONNECTED (for legitimate user actions like toggle button)
+   * This bypasses the blocking logic in setConnectedAgent for explicit user operations
+   */
   /**
    * 🔧 Promote a DISCONNECTED agent to CONNECTED (for legitimate user actions like toggle button)
    * This bypasses the blocking logic in setConnectedAgent for explicit user operations
@@ -105,7 +122,7 @@ export class CliAgentStateManager implements ICliAgentStateManager {
       `🎯 [STATE-MANAGER] LEGITIMATE PROMOTION: User explicitly promoted DISCONNECTED agent ${disconnectedAgent.type} in terminal ${terminalId} to CONNECTED`
     );
 
-    // Handle previous connected agent (move to disconnected)
+    // Handle previous connected agent
     const previousConnectedId = this._connectedAgentTerminalId;
     const previousType = this._connectedAgentType;
 
@@ -116,8 +133,23 @@ export class CliAgentStateManager implements ICliAgentStateManager {
     // Remove from disconnected
     this._disconnectedAgents.delete(terminalId);
 
-    // Move previous connected agent to disconnected (if exists and different)
+    // Fire status change for newly connected agent
+    this._onStatusChange.fire({
+      terminalId,
+      status: 'connected',
+      type: disconnectedAgent.type,
+      terminalName: disconnectedAgent.terminalName,
+    });
+
+    log(`🎯 [STATE-MANAGER] Terminal ${terminalId} promoted to CONNECTED`);
+
+    // Handle previous connected agent (if exists and different terminal)
     if (previousConnectedId && previousConnectedId !== terminalId && previousType) {
+      // 🎯 NORMAL BEHAVIOR: Previous connected agent moves to disconnected (same as setConnectedAgent)
+      log(
+        `📝 [PROMOTION] Moving previous CONNECTED agent ${previousType} in terminal ${previousConnectedId} to DISCONNECTED`
+      );
+
       this._disconnectedAgents.set(previousConnectedId, {
         type: previousType,
         startTime: new Date(),
@@ -130,18 +162,12 @@ export class CliAgentStateManager implements ICliAgentStateManager {
         type: previousType,
         terminalName: disconnectedAgent.terminalName,
       });
+
+      log(`📝 [PROMOTION] Terminal ${previousConnectedId} moved to DISCONNECTED`);
     }
 
-    // Fire status change for newly connected agent
-    this._onStatusChange.fire({
-      terminalId,
-      status: 'connected',
-      type: disconnectedAgent.type,
-      terminalName: disconnectedAgent.terminalName,
-    });
-
     log(
-      `✅ [STATE-MANAGER] Legitimate promotion completed: Terminal ${terminalId} (${disconnectedAgent.type}) is now CONNECTED`
+      `✅ [STATE-MANAGER] Promotion completed. DISCONNECTED agents: ${this._disconnectedAgents.size}`
     );
   }
 
@@ -189,7 +215,7 @@ export class CliAgentStateManager implements ICliAgentStateManager {
       this._onStatusChange.fire({
         terminalId,
         status: 'none',
-        type: null,  // 🔧 FIX: Set type to null when status is 'none' as per specification
+        type: null, // 🔧 FIX: Set type to null when status is 'none' as per specification
       });
 
       log(

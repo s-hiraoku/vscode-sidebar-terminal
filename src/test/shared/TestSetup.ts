@@ -88,9 +88,33 @@ export const mockVscode = {
   ViewColumn: { One: 1, Two: 2, Three: 3, Left: 1, Right: 2 },
   TreeDataProvider: sinon.stub(),
   EventEmitter: class MockEventEmitter {
-    fire = sinon.stub();
-    event = sinon.stub();
-    dispose = sinon.stub();
+    private listeners: Array<(event: any) => void> = [];
+
+    fire = (event: any) => {
+      this.listeners.forEach((listener) => {
+        try {
+          listener(event);
+        } catch (error) {
+          console.error('Error in event listener:', error);
+        }
+      });
+    };
+
+    event = (listener: (event: any) => void) => {
+      this.listeners.push(listener);
+      return {
+        dispose: () => {
+          const index = this.listeners.indexOf(listener);
+          if (index >= 0) {
+            this.listeners.splice(index, 1);
+          }
+        },
+      };
+    };
+
+    dispose = () => {
+      this.listeners.length = 0;
+    };
   },
   CancellationToken: sinon.stub(),
   Uri: {
@@ -135,7 +159,7 @@ export function setupTestEnvironment(): void {
     }
     if (id === 'xterm' || id === 'xterm-addon-fit') {
       return {
-        Terminal: function() {
+        Terminal: function () {
           return {
             write: () => {},
             writeln: () => {},
@@ -162,7 +186,7 @@ export function setupTestEnvironment(): void {
             },
           };
         },
-        FitAddon: function() {
+        FitAddon: function () {
           return {
             fit: () => {},
             dispose: () => {},
