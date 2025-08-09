@@ -17,6 +17,7 @@ export class PerformanceManager extends BaseManager implements IPerformanceManag
     });
   }
 
+  public override name = 'PerformanceManager';
   private coordinator?: IManagerCoordinator;
   // Performance optimization: Buffer output and batch writes
   private outputBuffer: string[] = [];
@@ -153,7 +154,7 @@ export class PerformanceManager extends BaseManager implements IPerformanceManag
   /**
    * Initialize the performance manager
    */
-  public initialize(coordinator: IManagerCoordinator): void {
+  public override async initialize(coordinator: IManagerCoordinator): Promise<void> {
     this.coordinator = coordinator;
     this.log('✨ [PERFORMANCE] Manager initialized');
   }
