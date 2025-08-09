@@ -88,7 +88,8 @@
       "mcp__serena__think_about_whether_you_are_done",
       "mcp__deepwiki__ask_question",
       "mcp__serena__find_referencing_symbols",
-      "mcp__serena__read_memory"
+      "mcp__serena__read_memory",
+      "Bash(npx vsce:*)"
     ],
     "deny": []
   },

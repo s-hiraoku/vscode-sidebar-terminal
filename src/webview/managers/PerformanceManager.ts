@@ -17,8 +17,7 @@ export class PerformanceManager extends BaseManager implements IPerformanceManag
     });
   }
 
-  public override name = 'PerformanceManager';
-  private coordinator?: IManagerCoordinator;
+  protected override coordinator?: IManagerCoordinator;
   // Performance optimization: Buffer output and batch writes
   private outputBuffer: string[] = [];
   private bufferFlushTimer: number | null = null;
