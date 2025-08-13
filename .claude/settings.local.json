@@ -92,7 +92,8 @@
       "Bash(npx vsce:*)",
       "WebFetch(domain:docs.anthropic.com)",
       "WebFetch(domain:deepwiki.com)",
-      "mcp__context7__get-library-docs"
+      "mcp__context7__get-library-docs",
+      "Bash(gh release list:*)"
     ],
     "deny": []
   },
