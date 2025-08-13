@@ -433,25 +433,62 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
     if (this.patternDetector.detectShellPrompt(cleanLine)) {
       const lowerLine = cleanLine.toLowerCase();
       const hasAgentKeywords = lowerLine.includes('claude') || lowerLine.includes('gemini');
+      
+      // 🚨 ENHANCED: More comprehensive AI output detection
       const looksLikeAIOutput =
         hasAgentKeywords &&
         (lowerLine.includes('assistant') ||
           lowerLine.includes('help you') ||
           lowerLine.includes('i am') ||
-          lowerLine.includes("i'm"));
+          lowerLine.includes("i'm") ||
+          lowerLine.includes('let me') ||
+          lowerLine.includes('i can') ||
+          lowerLine.includes('i will') ||
+          lowerLine.includes("i'll") ||
+          lowerLine.includes('would you like') ||
+          lowerLine.includes('how can i') ||
+          lowerLine.includes('understand') ||
+          lowerLine.includes('analyze') ||
+          lowerLine.includes('looking at') ||
+          lowerLine.includes('working on') ||
+          lowerLine.includes('thinking') ||
+          lowerLine.includes('response') ||
+          lowerLine.includes('question') ||
+          lowerLine.includes('request'));
 
-      // 🚨 CLAUDE FIX: Be more permissive with shell prompt detection for Claude
-      // Claude exits silently, so shell prompt return is the primary indicator
-      if (cleanLine.length < 200 && !looksLikeAIOutput) {
+      // 🚨 ADDITIONAL: Check for typical Claude conversational patterns
+      const hasConversationalPattern = 
+        lowerLine.includes('sure') ||
+        lowerLine.includes('certainly') ||
+        lowerLine.includes('absolutely') ||
+        lowerLine.includes('of course') ||
+        lowerLine.includes('definitely') ||
+        lowerLine.includes('exactly') ||
+        lowerLine.includes('perfect') ||
+        lowerLine.includes('great') ||
+        lowerLine.includes('excellent') ||
+        lowerLine.includes('thanks') ||
+        lowerLine.includes('thank you');
+
+      // 🚨 CLAUDE FIX: Be much more conservative with shell prompt detection
+      // Only trigger termination if we're very confident it's NOT AI output
+      if (cleanLine.length < 50 && // Much stricter length limit
+          !looksLikeAIOutput && 
+          !hasConversationalPattern &&
+          !lowerLine.includes('...') && // Thinking indicators
+          !lowerLine.includes('let') && // Common Claude phrase starts
+          !lowerLine.includes('the') && // Common article usage in Claude responses
+          !lowerLine.includes('to') &&  // Common preposition in Claude responses
+          !lowerLine.includes('for')) { // Another common preposition
         log(`✅ [TERMINATION] Shell prompt detected (Claude silent exit): "${cleanLine}"`);
         return {
           isTerminated: true,
-          confidence: 0.95, // Increased confidence for shell prompts
+          confidence: 0.85, // Reduced confidence due to increased strictness
           detectedLine: cleanLine,
           reason: 'Shell prompt detected after Claude silent exit',
         };
       } else {
-        log(`⚠️ [TERMINATION] Possible AI output detected, ignoring: "${cleanLine}"`);
+        log(`⚠️ [TERMINATION] Possible AI output or conversation detected, ignoring: "${cleanLine}"`);
       }
     }
 
