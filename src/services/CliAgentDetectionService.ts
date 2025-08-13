@@ -433,7 +433,7 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
     if (this.patternDetector.detectShellPrompt(cleanLine)) {
       const lowerLine = cleanLine.toLowerCase();
       const hasAgentKeywords = lowerLine.includes('claude') || lowerLine.includes('gemini');
-      
+
       // 🚨 ENHANCED: More comprehensive AI output detection
       const looksLikeAIOutput =
         hasAgentKeywords &&
@@ -457,7 +457,7 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
           lowerLine.includes('request'));
 
       // 🚨 ADDITIONAL: Check for typical Claude conversational patterns
-      const hasConversationalPattern = 
+      const hasConversationalPattern =
         lowerLine.includes('sure') ||
         lowerLine.includes('certainly') ||
         lowerLine.includes('absolutely') ||
@@ -472,14 +472,17 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
 
       // 🚨 CLAUDE FIX: Be much more conservative with shell prompt detection
       // Only trigger termination if we're very confident it's NOT AI output
-      if (cleanLine.length < 50 && // Much stricter length limit
-          !looksLikeAIOutput && 
-          !hasConversationalPattern &&
-          !lowerLine.includes('...') && // Thinking indicators
-          !lowerLine.includes('let') && // Common Claude phrase starts
-          !lowerLine.includes('the') && // Common article usage in Claude responses
-          !lowerLine.includes('to') &&  // Common preposition in Claude responses
-          !lowerLine.includes('for')) { // Another common preposition
+      if (
+        cleanLine.length < 50 && // Much stricter length limit
+        !looksLikeAIOutput &&
+        !hasConversationalPattern &&
+        !lowerLine.includes('...') && // Thinking indicators
+        !lowerLine.includes('let') && // Common Claude phrase starts
+        !lowerLine.includes('the') && // Common article usage in Claude responses
+        !lowerLine.includes('to') && // Common preposition in Claude responses
+        !lowerLine.includes('for')
+      ) {
+        // Another common preposition
         log(`✅ [TERMINATION] Shell prompt detected (Claude silent exit): "${cleanLine}"`);
         return {
           isTerminated: true,
@@ -488,7 +491,9 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
           reason: 'Shell prompt detected after Claude silent exit',
         };
       } else {
-        log(`⚠️ [TERMINATION] Possible AI output or conversation detected, ignoring: "${cleanLine}"`);
+        log(
+          `⚠️ [TERMINATION] Possible AI output or conversation detected, ignoring: "${cleanLine}"`
+        );
       }
     }
 
@@ -588,7 +593,7 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
       (line.includes('goodbye') && line.includes('claude')) ||
       line.includes('claude session terminated') ||
       line.includes('exiting claude');
-      // 🚨 IMPORTANT: Do NOT match standalone "exit" - too generic and causes false positives
+    // 🚨 IMPORTANT: Do NOT match standalone "exit" - too generic and causes false positives
 
     // 4. Process completion with context (more restrictive)
     const hasProcessCompletion =
