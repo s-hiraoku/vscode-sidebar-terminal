@@ -290,6 +290,7 @@ export class EnhancedTestHelper {
     return {
       id,
       name: `Terminal ${id}`,
+      number: parseInt(id.replace('terminal-', '')) || 1,
       terminal: mockTerminal,
       fitAddon: mockFitAddon,
       container: mockContainer,
