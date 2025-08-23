@@ -65,6 +65,7 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
         terminal: mockTerminal,
         fitAddon: mockFitAddon,
         name: 'Terminal 1',
+        number: 1,
         container: container,
       };
 
@@ -92,6 +93,7 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
         terminal: mockTerminal,
         fitAddon: mockFitAddon,
         name: 'Terminal 1',
+        number: 1,
         container: container,
       };
 
@@ -126,6 +128,7 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
           terminal: sinon.createStubInstance(Terminal),
           fitAddon: sinon.createStubInstance(FitAddon),
           name: `Terminal ${id}`,
+          number: parseInt(id.split('-')[1] || '1') || 1,
           container,
         };
 
@@ -160,6 +163,7 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
         terminal: mockTerminal,
         fitAddon: mockFitAddon,
         name: 'Terminal 1',
+        number: 1,
         container,
       };
 
@@ -188,6 +192,7 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
         terminal: mockTerminal,
         fitAddon: mockFitAddon,
         name: 'Terminal 1',
+        number: 1,
         container,
       };
 
@@ -278,6 +283,7 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
         terminal: mockTerminal,
         fitAddon: mockFitAddon,
         name: 'Terminal 1',
+        number: 1,
         container,
       };
 
@@ -303,6 +309,7 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
         terminal: mockTerminal,
         fitAddon: mockFitAddon,
         name: 'Terminal 1',
+        number: 1,
         container,
       };
 
@@ -333,6 +340,7 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
         terminal: mockTerminal,
         fitAddon: mockFitAddon,
         name: 'Terminal 1',
+        number: 1,
         container,
       };
 
@@ -395,6 +403,7 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
           terminal: sinon.createStubInstance(Terminal),
           fitAddon: sinon.createStubInstance(FitAddon),
           name: `Terminal ${id}`,
+          number: parseInt(id.split('-')[1] || '1') || 1,
           container,
         };
 

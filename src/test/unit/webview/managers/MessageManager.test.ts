@@ -185,7 +185,7 @@ describe('RefactoredMessageManager', () => {
       // Queue should be cleared after processing
       const stats = messageManager.getQueueStats();
       expect(stats.queueSize).to.equal(0);
-      expect(stats.highPriorityQueueSize).to.equal(0);
+      expect((stats.highPriorityQueueSize || 0)).to.equal(0);
     });
   });
 
@@ -194,7 +194,7 @@ describe('RefactoredMessageManager', () => {
       // Initially empty
       let stats = messageManager.getQueueStats();
       expect(stats.queueSize).to.equal(0);
-      expect(stats.highPriorityQueueSize).to.equal(0);
+      expect((stats.highPriorityQueueSize || 0)).to.equal(0);
       expect(stats.isProcessing).to.be.false;
       expect(stats.isLocked).to.be.false;
 
@@ -211,7 +211,7 @@ describe('RefactoredMessageManager', () => {
 
       stats = messageManager.getQueueStats();
       expect(stats.queueSize).to.equal(2); // Regular messages
-      expect(stats.highPriorityQueueSize).to.equal(2); // High-priority messages
+      expect((stats.highPriorityQueueSize || 0)).to.equal(2); // High-priority messages
     });
 
     it('should correctly identify input message types', () => {
@@ -231,7 +231,7 @@ describe('RefactoredMessageManager', () => {
 
         const stats = messageManager.getQueueStats();
         if (testCase.shouldBeHighPriority) {
-          expect(stats.highPriorityQueueSize).to.be.greaterThan(
+          expect((stats.highPriorityQueueSize || 0)).to.be.greaterThan(
             0,
             `Test case ${index}: ${JSON.stringify(testCase.message)} should be high priority`
           );
@@ -297,7 +297,7 @@ describe('RefactoredMessageManager', () => {
       messageManager.sendInput('test input', 'terminal-1', mockCoordinator);
 
       const stats = messageManager.getQueueStats();
-      expect(stats.highPriorityQueueSize).to.equal(1);
+      expect((stats.highPriorityQueueSize || 0)).to.equal(1);
       expect(stats.queueSize).to.equal(0);
     });
 
@@ -317,14 +317,14 @@ describe('RefactoredMessageManager', () => {
       (messageManager as any).queueMessage({ command: 'input' }, mockCoordinator);
 
       let stats = messageManager.getQueueStats();
-      expect(stats.queueSize + stats.highPriorityQueueSize).to.be.greaterThan(0);
+      expect(stats.queueSize + (stats.highPriorityQueueSize || 0)).to.be.greaterThan(0);
 
       // Dispose should clear everything
       messageManager.dispose();
 
       stats = messageManager.getQueueStats();
       expect(stats.queueSize).to.equal(0);
-      expect(stats.highPriorityQueueSize).to.equal(0);
+      expect((stats.highPriorityQueueSize || 0)).to.equal(0);
       expect(stats.isProcessing).to.be.false;
       expect(stats.isLocked).to.be.false;
     });
