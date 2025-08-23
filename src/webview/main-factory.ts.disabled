@@ -12,7 +12,7 @@ import {
   createEssentialManagers,
   getFormattedFactoryStatistics,
   disposeFactory,
-} from '../factories';
+} from './factories';
 import { FactoryCompatibleRefactoredTerminalWebviewManager } from './managers/FactoryCompatibleRefactoredTerminalWebviewManager';
 
 // Global state

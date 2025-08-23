@@ -92,7 +92,7 @@ class Logger {
     const logsByLevel = this.logBuffer.reduce(
       (acc, log) => {
         if (!acc[log.level]) acc[log.level] = [];
-        acc[log.level].push(log);
+        acc[log.level]!.push(log);
         return acc;
       },
       {} as Record<string, typeof this.logBuffer>

@@ -473,7 +473,7 @@ export interface WebviewMessage {
   
   // 🎯 FIX: 削除処理統一化で追加
   success?: boolean;  // 削除処理の成功/失敗
-  reason?: string;    // 失敗理由
+  // reason?: string; // 失敗理由 - 重複のためコメント化（上部のreasonを使用）
 }
 
 /**

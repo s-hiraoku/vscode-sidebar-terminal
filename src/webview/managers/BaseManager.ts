@@ -18,10 +18,26 @@ import { EventHandlerRegistry } from '../utils/EventHandlerRegistry';
 import { ResizeManager } from '../utils/ResizeManager';
 import { ThemeManager } from '../utils/ThemeManager';
 import type { IManagerCoordinator } from '../interfaces/ManagerInterfaces';
-import type {
-  IBaseManager,
-  ManagerInitializationConfig,
-} from '../../factories/interfaces/ManagerFactoryInterfaces';
+// import type {
+//   IBaseManager,
+//   ManagerInitializationConfig,
+// } from '../../factories/interfaces/ManagerFactoryInterfaces';
+
+// Temporary interface definitions
+interface IBaseManager {
+  initialize(config?: ManagerInitializationConfig): Promise<void> | void;
+  dispose(): void;
+}
+
+interface ManagerInitializationConfig {
+  coordinator?: IManagerCoordinator;
+  options?: BaseManagerOptions;
+  enableLogging?: boolean;
+  enableValidation?: boolean;
+  enableEventRegistry?: boolean;
+  enableResizeManager?: boolean;
+  enableThemeManager?: boolean;
+}
 
 export interface BaseManagerOptions {
   logPrefix?: string;

@@ -143,7 +143,7 @@ export class TerminalContainerFactory {
         header,
         body,
         closeButton,
-        splitButton: headerElements?.splitButton,
+        splitButton: headerElements?.splitButton || undefined,
         headerElements
       };
 
