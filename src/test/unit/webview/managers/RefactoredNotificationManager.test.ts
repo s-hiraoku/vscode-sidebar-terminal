@@ -361,7 +361,7 @@ describe('RefactoredNotificationManager', () => {
       const updatedHealth = notificationManager.getHealthStatus();
       const updatedMetrics = updatedHealth.performanceMetrics!;
 
-      expect(updatedMetrics.totalOperations).to.be.greaterThan(initialMetrics!.totalOperations);
+      expect((updatedMetrics as any).totalOperations || 0).to.be.greaterThan((initialMetrics as any)?.totalOperations || 0);
       expect(updatedMetrics.averageResponseTime).to.be.a('number');
     });
   });

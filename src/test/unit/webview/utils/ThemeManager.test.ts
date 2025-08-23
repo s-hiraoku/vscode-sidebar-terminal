@@ -382,7 +382,8 @@ describe('ThemeManager', () => {
         ThemeManager.initialize();
       }).to.not.throw();
       
-      document.documentElement = originalDocumentElement;
+      // Note: documentElement is read-only, cannot restore
+      // originalDocumentElement;
     });
   });
 
