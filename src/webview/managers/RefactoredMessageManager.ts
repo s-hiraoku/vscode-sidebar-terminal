@@ -674,11 +674,18 @@ export class RefactoredMessageManager implements IMessageManager {
     }
   }
 
-  public getQueueStats(): { queueSize: number; isProcessing: boolean } {
+  public getQueueStats(): { 
+    queueSize: number; 
+    isProcessing: boolean;
+    highPriorityQueueSize?: number;
+    isLocked?: boolean;
+  } {
     const stats = this.messageQueue.getQueueStats();
     return {
       queueSize: stats.total,
       isProcessing: stats.isProcessing,
+      highPriorityQueueSize: stats.highPriority || 0,
+      isLocked: false, // MessageQueue doesn't have lock concept, default to false
     };
   }
 

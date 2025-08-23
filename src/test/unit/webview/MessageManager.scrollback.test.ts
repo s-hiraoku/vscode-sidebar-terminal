@@ -96,6 +96,7 @@ describe('RefactoredMessageManager - Scrollback Extraction', () => {
     mockTerminalInstance = {
       id: 'test-terminal-1',
       name: 'Test Terminal',
+      number: 1,
       terminal: mockTerminal,
       fitAddon: {} as FitAddon,
       container: document.createElement('div'),
