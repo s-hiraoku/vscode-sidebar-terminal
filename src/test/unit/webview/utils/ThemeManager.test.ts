@@ -443,7 +443,7 @@ describe('ThemeManager', () => {
       
       // Apply initial theme
       ThemeManager.applyTheme(testElement);
-      const initialBg = testElement.style.background;
+      const _initialBg = testElement.style.background;
       
       // Simulate theme change by updating CSS variables
       const style = document.createElement('style');

@@ -16,15 +16,9 @@ import {
   IFullManagerCoordinator,
   IEnhancedBaseManager,
   ManagerDependencies,
-  ITerminalCoordinator,
-  IExtensionCommunicator,
-  ISettingsCoordinator,
-  ICliAgentCoordinator,
   TerminalInstance,
 } from '../../webview/interfaces/SegregatedManagerInterfaces';
 import { DependencyContainer, ServiceType } from '../../webview/core/DependencyContainer';
-import { Terminal } from 'xterm';
-import { FitAddon } from 'xterm-addon-fit';
 
 /**
  * Test environment configuration
@@ -53,7 +47,7 @@ export interface MockCoordinatorConfig {
 /**
  * Test manager creation options
  */
-export interface TestManagerOptions<T> {
+export interface TestManagerOptions<_T> {
   dependencies?: Partial<ManagerDependencies>;
   initializeImmediately?: boolean;
   enableValidation?: boolean;

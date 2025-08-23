@@ -6,15 +6,12 @@
  */
 
 import { webview as log } from '../utils/logger';
-import type { IManagerCoordinator } from './interfaces/ManagerInterfaces';
-import type { IBaseManager } from '../factories/interfaces/ManagerFactoryInterfaces';
 import {
   initializeFactory,
   createAllWebViewManagers,
   createEssentialManagers,
   getFormattedFactoryStatistics,
   disposeFactory,
-  ManagerType,
 } from '../factories';
 import { FactoryCompatibleRefactoredTerminalWebviewManager } from './managers/FactoryCompatibleRefactoredTerminalWebviewManager';
 

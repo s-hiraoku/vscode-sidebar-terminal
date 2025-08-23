@@ -9,8 +9,7 @@ import { JSDOM } from 'jsdom';
 import { 
   TerminalContainerFactory,
   TerminalContainerConfig,
-  TerminalHeaderConfig,
-  ContainerElements
+  TerminalHeaderConfig
 } from '../../../../webview/factories/TerminalContainerFactory';
 
 describe('TerminalContainerFactory', () => {

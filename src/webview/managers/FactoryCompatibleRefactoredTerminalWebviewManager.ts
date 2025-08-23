@@ -41,7 +41,7 @@ export class FactoryCompatibleRefactoredTerminalWebviewManager
   /**
    * Factory-compatible initialization
    */
-  public initialize(config: ManagerInitializationConfig): Promise<void> | void {
+  public initialize(_config: ManagerInitializationConfig): Promise<void> | void {
     log(`🚀 [FACTORY-COMPAT] Initializing ${this.name} with factory config`);
 
     try {

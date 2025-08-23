@@ -8,8 +8,6 @@
 import {
   message,
   terminal,
-  webview,
-  provider,
   extension,
   performance,
   ui,
@@ -20,12 +18,7 @@ import {
   lifecycle,
   error_category,
   warning_category,
-  success,
-  startup,
-  debug_category,
   agent,
-  file,
-  network,
   state,
 } from './logger';
 

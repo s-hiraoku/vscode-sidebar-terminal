@@ -99,7 +99,7 @@ describe('RefactoredNotificationManager', () => {
         'error',
       ];
 
-      types.forEach((type, index) => {
+      types.forEach((type, _index) => {
         notificationManager.showNotificationInTerminal(`Test ${type} message`, type);
 
         const notification = document.querySelector(`.enhanced-notification-${type}`);
@@ -183,7 +183,7 @@ describe('RefactoredNotificationManager', () => {
   describe('Notification Lifecycle Management', () => {
     it('should auto-remove temporary notifications', () => {
       const duration = 1000;
-      const notificationId = notificationManager.showTemporaryNotification(
+      const _notificationId = notificationManager.showTemporaryNotification(
         'Temporary message',
         duration
       );

@@ -197,7 +197,7 @@ export class TerminalContainerFactory {
   /**
    * Create the terminal body element
    */
-  private static createTerminalBody(config: TerminalContainerConfig): HTMLElement {
+  private static createTerminalBody(_config: TerminalContainerConfig): HTMLElement {
     const body = document.createElement('div');
     body.className = 'terminal-content';
     
