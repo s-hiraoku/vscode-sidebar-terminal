@@ -37,6 +37,8 @@ interface ManagerInitializationConfig {
   enableEventRegistry?: boolean;
   enableResizeManager?: boolean;
   enableThemeManager?: boolean;
+  enableErrorRecovery?: boolean;
+  managerName?: string;
 }
 
 export interface BaseManagerOptions {
@@ -222,7 +224,7 @@ export abstract class BaseManager implements IBaseManager {
       try {
         ThemeManager.initialize();
       } catch (error) {
-        this.log('Failed to initialize ThemeManager:', error);
+        this.log('Failed to initialize ThemeManager: ' + (error as Error)?.message || 'Unknown error', 'error');
       }
     }
   }
@@ -274,7 +276,7 @@ export abstract class BaseManager implements IBaseManager {
     if (this.logger) {
       this.logger.error(message, error);
     } else if (this.loggingEnabled) {
-      this.log(`ERROR: ${message}`, error);
+      this.log(`ERROR: ${message}${error ? ': ' + (error as Error)?.message || error : ''}`, 'error');
     }
   }
 
@@ -434,8 +436,8 @@ export abstract class BaseManager implements IBaseManager {
   ): T | null {
     return this.safeDOMOperation(() => {
       const parent = container || document;
-      return parent.querySelector(selector) as T;
-    }, null, `Failed to query selector: ${selector}`);
+      return parent.querySelector(selector) as T | null;
+    }, null, `Failed to query selector: ${selector}`) ?? null;
   }
 
   /**
@@ -444,11 +446,11 @@ export abstract class BaseManager implements IBaseManager {
   protected querySelectorAll<T extends HTMLElement = HTMLElement>(
     selector: string,
     container?: HTMLElement | Document
-  ): NodeListOf<T> | T[] {
+  ): NodeListOf<T> {
     return this.safeDOMOperation(() => {
       const parent = container || document;
       return parent.querySelectorAll(selector) as NodeListOf<T>;
-    }, [] as T[], `Failed to query selector all: ${selector}`) || [] as T[];
+    }, document.querySelectorAll('') as NodeListOf<T>, `Failed to query selector all: ${selector}`) || document.querySelectorAll('') as NodeListOf<T>;
   }
 
   /**
@@ -484,7 +486,7 @@ export abstract class BaseManager implements IBaseManager {
       }
       
       return element;
-    }, null, `Failed to create element: ${tagName}`);
+    }, null, `Failed to create element: ${tagName}`) as HTMLElementTagNameMap[K] | null;
   }
 
   /**
