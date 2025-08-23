@@ -43,7 +43,7 @@ export class MessageManager implements IMessageManager {
   /**
    * Handle incoming messages from the extension
    */
-  public handleMessage(message: MessageEvent, coordinator: IManagerCoordinator): void {
+  public async handleMessage(message: MessageEvent, coordinator: IManagerCoordinator): Promise<void> {
     try {
       const msg = message.data as MessageCommand;
       log(`📨 [MESSAGE] Received: ${msg.command}`);
@@ -74,7 +74,7 @@ export class MessageManager implements IMessageManager {
           break;
 
         case 'terminalCreated':
-          this.handleTerminalCreatedMessage(msg, coordinator);
+          await this.handleTerminalCreatedMessage(msg, coordinator);
           break;
 
         case 'newTerminal':
@@ -98,7 +98,7 @@ export class MessageManager implements IMessageManager {
           break;
 
         case 'sessionRestore':
-          this.handleSessionRestoreMessage(msg, coordinator);
+          await this.handleSessionRestoreMessage(msg, coordinator);
           break;
 
         case 'sessionRestoreStarted':
@@ -170,6 +170,18 @@ export class MessageManager implements IMessageManager {
 
         case 'requestPanelLocationDetection':
           this.handleRequestPanelLocationDetectionMessage(coordinator);
+          break;
+
+        case 'requestTerminalSerialization':
+          this.handleRequestTerminalSerializationMessage(msg, coordinator);
+          break;
+
+        case 'restoreTerminalSerialization':
+          this.handleRestoreTerminalSerializationMessage(msg, coordinator);
+          break;
+
+        case 'sessionRestorationData':
+          this.handleSessionRestorationDataMessage(msg, coordinator);
           break;
 
         default:
@@ -630,10 +642,10 @@ export class MessageManager implements IMessageManager {
   /**
    * Handle terminal created message from extension
    */
-  private handleTerminalCreatedMessage(
+  private async handleTerminalCreatedMessage(
     msg: MessageCommand,
     coordinator: IManagerCoordinator
-  ): void {
+  ): Promise<void> {
     const terminalId = msg.terminalId as string;
     const terminalName = msg.terminalName as string;
     const config = msg.config;
@@ -641,7 +653,7 @@ export class MessageManager implements IMessageManager {
     if (terminalId && terminalName && config) {
       log(`✅ [MESSAGE] Terminal created: ${terminalId} (${terminalName})`);
       // Create the terminal in the coordinator
-      coordinator.createTerminal(terminalId, terminalName, config);
+      await coordinator.createTerminal(terminalId, terminalName, config);
     }
   }
 
@@ -1127,7 +1139,7 @@ export class MessageManager implements IMessageManager {
   /**
    * Handle session restore message from extension
    */
-  private handleSessionRestoreMessage(msg: MessageCommand, coordinator: IManagerCoordinator): void {
+  private async handleSessionRestoreMessage(msg: MessageCommand, coordinator: IManagerCoordinator): Promise<void> {
     log('🔄 [MESSAGE] Session restore message received');
 
     const terminalId = msg.terminalId as string;
@@ -1143,7 +1155,7 @@ export class MessageManager implements IMessageManager {
 
       try {
         // Simple approach: Create terminal normally, then restore scrollback
-        coordinator.createTerminal(terminalId, terminalName, config);
+        await coordinator.createTerminal(terminalId, terminalName, config);
         log(`✅ [MESSAGE] Created terminal for session restore: ${terminalId}`);
 
         // Restore scrollback data after a brief delay
@@ -1167,7 +1179,7 @@ export class MessageManager implements IMessageManager {
       } catch (error) {
         log(`❌ [MESSAGE] Failed to restore terminal session ${terminalId}: ${String(error)}`);
         // Continue with regular terminal creation as fallback
-        coordinator.createTerminal(terminalId, terminalName, config);
+        await coordinator.createTerminal(terminalId, terminalName, config);
       }
     } else {
       log('❌ [MESSAGE] Invalid session restore data received');
@@ -1974,6 +1986,261 @@ export class MessageManager implements IMessageManager {
     }
   }
 
+  /**
+   * Handle request terminal serialization message
+   */
+  private handleRequestTerminalSerializationMessage(
+    msg: MessageCommand,
+    coordinator: IManagerCoordinator
+  ): void {
+    log('📋 [MESSAGE] Handling request terminal serialization message');
+
+    try {
+      const terminalIds = msg.terminalIds as string[] || [];
+      log(`📋 [MESSAGE] Serializing ${terminalIds.length} terminals for session save`);
+
+      const terminalManager = coordinator as {
+        persistenceManager?: { 
+          serializeTerminal: (id: string) => { content: string; html?: string } | null;
+          serializeAllTerminals: (scrollback?: number) => Map<string, { content: string; html?: string }>;
+        };
+      };
+      const persistenceManager = terminalManager.persistenceManager;
+
+      if (!persistenceManager) {
+        log('⚠️ [MESSAGE] No persistence manager available for serialization');
+        // Send empty response to prevent timeout
+        this.postMessageToExtension({
+          command: 'terminalSerializationResponse',
+          serializedData: {},
+          terminalCount: 0,
+          timestamp: Date.now(),
+        });
+        return;
+      }
+
+      // ターミナルをシリアライズ
+      const serializedData: Record<string, string> = {};
+      
+      if (terminalIds.length === 0) {
+        // 全ターミナルをシリアライズ
+        const allSerializedData = persistenceManager.serializeAllTerminals(1000);
+        for (const [terminalId, data] of allSerializedData) {
+          serializedData[terminalId] = data.content;
+          log(`📋 [MESSAGE] Serialized terminal ${terminalId}: ${data.content.length} chars`);
+        }
+      } else {
+        // 指定されたターミナルのみシリアライズ
+        for (const terminalId of terminalIds) {
+          const result = persistenceManager.serializeTerminal(terminalId, { scrollback: 1000 });
+          if (result && result.content) {
+            serializedData[terminalId] = result.content;
+            log(`📋 [MESSAGE] Serialized terminal ${terminalId}: ${result.content.length} chars`);
+          } else {
+            log(`⚠️ [MESSAGE] No content for terminal ${terminalId}, using empty serialization`);
+            serializedData[terminalId] = '';
+          }
+        }
+      }
+
+      // Extension に結果を送信
+      log(`📋 [MESSAGE] Sending serialization response to Extension with ${Object.keys(serializedData).length} terminals`);
+      this.postMessageToExtension({
+        command: 'terminalSerializationResponse',
+        serializedData,
+        terminalCount: Object.keys(serializedData).length,
+        timestamp: Date.now(),
+      });
+
+      log(`✅ [MESSAGE] Successfully serialized ${Object.keys(serializedData).length} terminals`);
+    } catch (error) {
+      log(`❌ [MESSAGE] Error serializing terminals: ${String(error)}`);
+      // Send error response to prevent timeout
+      this.postMessageToExtension({
+        command: 'terminalSerializationResponse',
+        serializedData: {},
+        terminalCount: 0,
+        error: String(error),
+        timestamp: Date.now(),
+      });
+    }
+  }
+
+  /**
+   * Handle restore terminal serialization message
+   */
+  private handleRestoreTerminalSerializationMessage(
+    msg: MessageCommand,
+    coordinator: IManagerCoordinator
+  ): void {
+    log('🔄 [MESSAGE] Handling restore terminal serialization message');
+
+    try {
+      const terminalData = msg.terminalData as Array<{
+        id: string;
+        name: string;
+        serializedContent: string;
+        isActive: boolean;
+      }> || [];
+
+      log(`🔄 [MESSAGE] Restoring ${terminalData.length} terminals from serialized content`);
+
+      const terminalManager = coordinator as {
+        persistenceManager?: { 
+          restoreTerminalContent: (id: string, content: string) => boolean;
+        };
+      };
+      const persistenceManager = terminalManager.persistenceManager;
+
+      if (!persistenceManager) {
+        log('⚠️ [MESSAGE] No persistence manager available for restoration');
+        return;
+      }
+
+      let restoredCount = 0;
+
+      // 各ターミナルのシリアライズされたコンテンツを復元
+      for (const terminal of terminalData) {
+        if (terminal.serializedContent && terminal.serializedContent.length > 0) {
+          try {
+            log(`🔄 [MESSAGE] Restoring terminal ${terminal.id} with ${terminal.serializedContent.length} chars`);
+            const restored = persistenceManager.restoreTerminalContent(
+              terminal.id, 
+              terminal.serializedContent
+            );
+            
+            if (restored) {
+              restoredCount++;
+              log(`✅ [MESSAGE] Successfully restored terminal ${terminal.id} (${terminal.name})`);
+            } else {
+              log(`⚠️ [MESSAGE] Failed to restore terminal ${terminal.id} (${terminal.name}) - restore method returned false`);
+            }
+          } catch (error) {
+            log(`❌ [MESSAGE] Error restoring terminal ${terminal.id}:`, error);
+          }
+        } else {
+          log(`⚠️ [MESSAGE] No serialized content for terminal ${terminal.id} (${terminal.name}), skipping`);
+        }
+      }
+
+      log(`✅ [MESSAGE] Terminal serialization restoration completed: ${restoredCount}/${terminalData.length} terminals restored`);
+
+      // Send completion notification to Extension
+      this.postMessageToExtension({
+        command: 'terminalSerializationRestoreComplete',
+        restoredCount,
+        totalCount: terminalData.length,
+        timestamp: Date.now(),
+      });
+    } catch (error) {
+      log(`❌ [MESSAGE] Error restoring terminal serialization: ${String(error)}`);
+      
+      // Send error notification to Extension
+      this.postMessageToExtension({
+        command: 'terminalSerializationRestoreComplete',
+        restoredCount: 0,
+        totalCount: 0,
+        error: String(error),
+        timestamp: Date.now(),
+      });
+    }
+  }
+
+  /**
+   * Handle session restoration data response from Extension (REFACTORED)
+   * 
+   * Improved for better error handling, type safety, and maintainability
+   * Follows TDD principles and defensive programming practices
+   */
+  private handleSessionRestorationDataMessage(
+    msg: MessageCommand,
+    coordinator: IManagerCoordinator
+  ): void {
+    log('🔄 [MESSAGE] Handling session restoration data message');
+
+    try {
+      const { terminalId, sessionData, success } = this._validateSessionRestorationMessage(msg);
+      
+      if (!success) {
+        return; // Error already logged in validation
+      }
+
+      log(`🔄 [MESSAGE] Received session data for terminal ${terminalId}: ${sessionData ? 'found' : 'not found'}`);
+
+      if (sessionData) {
+        this._restoreTerminalFromSessionData(terminalId, sessionData, coordinator);
+      } else {
+        this._handleNoSessionDataAvailable(terminalId);
+      }
+    } catch (error) {
+      log(`❌ [MESSAGE] Error handling session restoration data: ${String(error)}`);
+    }
+  }
+
+  /**
+   * Validate session restoration message data (REFACTORED)
+   * 
+   * Centralized validation with proper error handling and logging
+   */
+  private _validateSessionRestorationMessage(msg: MessageCommand): {
+    terminalId: string;
+    sessionData: SessionDataPayload | null;
+    success: boolean;
+  } {
+    const terminalId = msg.terminalId as string;
+    const sessionData = msg.sessionData as SessionDataPayload | null;
+
+    if (!terminalId) {
+      log('⚠️ [MESSAGE] No terminalId in session restoration data message');
+      return { terminalId: '', sessionData: null, success: false };
+    }
+
+    return { terminalId, sessionData, success: true };
+  }
+
+  /**
+   * Restore terminal from session data (REFACTORED)
+   * 
+   * Extracted for better testability and single responsibility
+   */
+  private _restoreTerminalFromSessionData(
+    terminalId: string,
+    sessionData: SessionDataPayload,
+    coordinator: IManagerCoordinator
+  ): void {
+    const terminalManager = coordinator as {
+      persistenceManager?: { 
+        restoreTerminalFromStorage: (id: string) => boolean;
+      };
+    };
+
+    const persistenceManager = terminalManager.persistenceManager;
+
+    if (!persistenceManager) {
+      log('⚠️ [MESSAGE] No persistence manager available for session restoration');
+      return;
+    }
+
+    // Try to restore from WebView storage
+    const restored = persistenceManager.restoreTerminalFromStorage(terminalId);
+    
+    if (restored) {
+      log(`✅ [MESSAGE] Successfully restored terminal ${terminalId} from WebView storage`);
+    } else {
+      log(`⚠️ [MESSAGE] No WebView storage data for terminal ${terminalId}, terminal will start fresh`);
+    }
+  }
+
+  /**
+   * Handle case when no session data is available (REFACTORED)
+   * 
+   * Clear logging and potential future extension points
+   */
+  private _handleNoSessionDataAvailable(terminalId: string): void {
+    log(`📭 [MESSAGE] No session data available for terminal ${terminalId}, terminal will start fresh`);
+    // Future enhancement: Could trigger notification to user about fresh start
+  }
+
   public dispose(): void {
     log('🧹 [MESSAGE] Disposing message manager');
 
@@ -1985,4 +2252,17 @@ export class MessageManager implements IMessageManager {
 
     log('✅ [MESSAGE] Message manager disposed');
   }
+}
+
+/**
+ * Type definition for session data payload (REFACTORED)
+ * 
+ * Better type safety and documentation
+ */
+interface SessionDataPayload {
+  id: string;
+  name: string;
+  number: number;
+  cwd: string;
+  isActive: boolean;
 }

@@ -348,8 +348,8 @@ export class StandardTerminalSessionManager {
   /**
    * VS Code標準: WebViewから履歴データを取得
    */
-  private requestScrollbackDataFromWebView(
-    _terminals: Array<{
+  private async requestScrollbackDataFromWebView(
+    terminals: Array<{
       id: string;
       name: string;
       number: number;
@@ -358,43 +358,69 @@ export class StandardTerminalSessionManager {
     }>
   ): Promise<Record<string, unknown>> {
     log(
-      `📋 [STANDARD-SESSION] Using VS Code standard approach - WebView PersistenceManager handles scrollback automatically`
+      `📋 [STANDARD-SESSION] Requesting serialized terminal data from WebView PersistenceManager`
     );
 
-    // VS Code標準: StandardTerminalPersistenceManagerが既に自動でscrollbackを保存している
-    // 複雑なメッセージパッシングは不要
-    const scrollbackData: Record<string, unknown> = {};
-
-    for (const terminal of _terminals) {
-      // VS Code標準のアプローチ: 復元用の基本的なメッセージを生成
-      const terminalScrollback = [
-        {
-          content: `# Terminal ${terminal.name} session restored at ${new Date().toLocaleString()}`,
-          type: 'output',
-          timestamp: Date.now(),
-        },
-        {
-          content: '# Previous terminal history is being restored...',
-          type: 'output',
-          timestamp: Date.now() - 1000,
-        },
-      ];
-
-      scrollbackData[terminal.id] = terminalScrollback;
-      log(`📋 [STANDARD-SESSION] Prepared scrollback restoration message for: ${terminal.name}`);
+    if (!this.sidebarProvider) {
+      log('⚠️ [STANDARD-SESSION] No sidebar provider available for scrollback request');
+      return {};
     }
 
+    try {
+      // WebViewのStandardTerminalPersistenceManagerから実際のシリアライズされたデータを取得
+      await this.sidebarProvider.sendMessageToWebview({
+        command: 'requestTerminalSerialization',
+        terminalIds: terminals.map((t) => t.id),
+        timestamp: Date.now(),
+      });
+
+      // WebViewからの応答を待機（非同期処理）
+      return new Promise((resolve) => {
+        const timeout = setTimeout(() => {
+          log('⏰ [STANDARD-SESSION] Timeout waiting for serialized data, using fallback');
+          resolve({});
+        }, 5000); // 5秒のタイムアウト
+
+        // 一時的にレスポンスハンドラーを設定
+        const originalHandler = this.handleScrollbackDataResponse;
+        this.handleScrollbackDataResponse = (data: Record<string, unknown>) => {
+          clearTimeout(timeout);
+          this.handleScrollbackDataResponse = originalHandler;
+          log(
+            `✅ [STANDARD-SESSION] Received serialized data for ${Object.keys(data).length} terminals`
+          );
+          resolve(data);
+        };
+      });
+    } catch (error) {
+      log(`❌ [STANDARD-SESSION] Error requesting scrollback data: ${String(error)}`);
+      return {};
+    }
+  }
+
+  /**
+   * WebViewからのscrollbackデータ応答を処理
+   */
+  private handleScrollbackDataResponse = (_data: Record<string, unknown>): void => {
+    // デフォルト実装（上記のPromiseで動的に上書きされる）
+    log('📋 [STANDARD-SESSION] Default scrollback response handler called');
+  };
+
+  /**
+   * WebViewからのシリアライゼーション応答を処理（外部から呼び出し可能）
+   */
+  public handleSerializationResponse(data: Record<string, unknown>): void {
     log(
-      `✅ [STANDARD-SESSION] Scrollback data prepared for ${_terminals.length} terminals (VS Code standard approach)`
+      `📋 [STANDARD-SESSION] Received serialization response with ${Object.keys(data).length} terminals`
     );
-    return Promise.resolve(scrollbackData);
+    this.handleScrollbackDataResponse(data);
   }
 
   /**
    * VS Code標準: WebViewに履歴復元要求を送信
    */
-  private requestScrollbackRestoration(
-    _terminals: Array<{
+  private async requestScrollbackRestoration(
+    terminals: Array<{
       id: string;
       name: string;
       number: number;
@@ -402,25 +428,56 @@ export class StandardTerminalSessionManager {
       isActive: boolean;
     }>
   ): Promise<void> {
-    return Promise.resolve();
-    log(
-      `🔄 [STANDARD-SESSION] VS Code standard approach - WebView StandardTerminalPersistenceManager handles restoration automatically`
-    );
+    log(`🔄 [STANDARD-SESSION] Sending terminal restoration data to WebView PersistenceManager`);
 
-    // VS Code標準: StandardTerminalPersistenceManagerが自動復元する
-    // 新しく作成されたターミナルに対して、WebViewのPersistenceManagerが
-    // 自動的にrestoreTerminalFromStorageを実行すべき
-
-    for (const terminalInfo of _terminals) {
-      log(
-        `🔄 [STANDARD-SESSION] Terminal ${terminalInfo.name} should be auto-restored by WebView PersistenceManager`
-      );
+    if (!this.sidebarProvider) {
+      log('⚠️ [STANDARD-SESSION] No sidebar provider available for restoration');
+      return;
     }
 
-    log(
-      `✅ [STANDARD-SESSION] Scrollback restoration delegated to WebView PersistenceManager (${_terminals.length} terminals)`
-    );
-    return Promise.resolve();
+    try {
+      // 保存されたセッションデータから履歴データを取得
+      const sessionData = this.context.globalState.get<{
+        terminals: Array<{
+          id: string;
+          name: string;
+          number: number;
+          cwd: string;
+          isActive: boolean;
+        }>;
+        activeTerminalId: string | null;
+        timestamp: number;
+        version: string;
+        scrollbackData?: Record<string, unknown>;
+        config?: {
+          scrollbackLines: number;
+          reviveProcess: string;
+        };
+      }>(StandardTerminalSessionManager.STORAGE_KEY);
+
+      if (!sessionData || !sessionData.scrollbackData) {
+        log('📭 [STANDARD-SESSION] No scrollback data found for restoration');
+        return;
+      }
+
+      // WebViewにターミナル復元データを送信
+      await this.sidebarProvider.sendMessageToWebview({
+        command: 'restoreTerminalSerialization',
+        terminalData: terminals.map((terminal) => ({
+          id: terminal.id,
+          name: terminal.name,
+          serializedContent: (sessionData.scrollbackData?.[terminal.id] as string) || '',
+          isActive: terminal.isActive,
+        })),
+        timestamp: Date.now(),
+      });
+
+      log(
+        `✅ [STANDARD-SESSION] Restoration data sent to WebView PersistenceManager (${terminals.length} terminals)`
+      );
+    } catch (error) {
+      log(`❌ [STANDARD-SESSION] Error sending restoration data: ${String(error)}`);
+    }
   }
 
   /**

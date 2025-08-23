@@ -11,9 +11,11 @@ import { AltClickState, TerminalInteractionEvent } from '../../types/common';
 export interface TerminalInstance {
   readonly id: string;
   readonly name: string;
+  readonly number: number; // ターミナル番号（1-5）- 番号管理に必要
   readonly terminal: Terminal;
   readonly fitAddon: FitAddon;
   readonly container: HTMLElement;
+  isActive?: boolean;
 }
 
 // Manager coordination interface
@@ -26,7 +28,7 @@ export interface IManagerCoordinator {
   getTerminalElement(terminalId: string): HTMLElement | undefined;
   postMessageToExtension(message: unknown): void;
   log(message: string, ...args: unknown[]): void;
-  createTerminal(id: string, name: string, config: PartialTerminalSettings): void;
+  createTerminal(id: string, name: string, config?: unknown, terminalNumber?: number): Promise<unknown>;
   openSettings(): void;
   applyFontSettings(fontSettings: WebViewFontSettings): void;
   closeTerminal(id?: string): void;
@@ -41,6 +43,10 @@ export interface IManagerCoordinator {
   // 新しいアーキテクチャ: 状態更新処理
   updateState?(state: unknown): void;
   handleTerminalRemovedFromExtension?(terminalId: string): void;
+  // 追加メソッド（リファクタリング用）
+  writeToTerminal?(data: string, terminalId?: string): boolean;
+  switchToTerminal?(terminalId: string): Promise<boolean>;
+  applySettings?(settings: unknown): void;
   // Claude状態管理（レガシー）
   updateClaudeStatus(
     activeTerminalName: string | null,
@@ -67,7 +73,7 @@ export interface IManagerCoordinator {
 
 // Terminal management interface
 export interface ITerminalManager {
-  createTerminal(id: string, name: string, config: PartialTerminalSettings): void;
+  createTerminal(id: string, name: string, config: PartialTerminalSettings, terminalNumber?: number): Promise<void>;
   switchToTerminal(id: string): void;
   closeTerminal(id?: string): void;
   handleTerminalRemovedFromExtension(id: string): void;
@@ -173,7 +179,7 @@ export interface IConfigManager {
 
 // Message handling interface
 export interface IMessageManager {
-  handleMessage(message: unknown, coordinator: IManagerCoordinator): void;
+  handleMessage(message: unknown, coordinator: IManagerCoordinator): Promise<void>;
   sendReadyMessage(coordinator: IManagerCoordinator): void;
   emitTerminalInteractionEvent(
     type: TerminalInteractionEvent['type'],

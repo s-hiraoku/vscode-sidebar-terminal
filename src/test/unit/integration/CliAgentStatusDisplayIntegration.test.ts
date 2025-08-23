@@ -7,14 +7,14 @@
 
 import * as sinon from 'sinon';
 import { expect } from 'chai';
-import { MessageManager } from '../../../webview/managers/MessageManager';
+import { RefactoredMessageManager } from '../../../webview/managers/RefactoredMessageManager';
 import { UIManager } from '../../../webview/managers/UIManager';
 import { HeaderFactory } from '../../../webview/factories/HeaderFactory';
 import type { IManagerCoordinator } from '../../../webview/interfaces/ManagerInterfaces';
 import type { TerminalHeaderElements } from '../../../webview/factories/HeaderFactory';
 
 describe('CLI Agent Status Display Integration', () => {
-  let messageManager: MessageManager;
+  let messageManager: RefactoredMessageManager;
   let uiManager: UIManager;
   let mockCoordinator: IManagerCoordinator;
   let sandbox: sinon.SinonSandbox;
@@ -22,7 +22,7 @@ describe('CLI Agent Status Display Integration', () => {
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-    messageManager = new MessageManager();
+    messageManager = new RefactoredMessageManager();
     uiManager = new UIManager();
 
     // Setup mock header elements for multiple terminals

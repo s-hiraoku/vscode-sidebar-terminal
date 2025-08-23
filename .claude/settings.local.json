@@ -93,7 +93,13 @@
       "WebFetch(domain:docs.anthropic.com)",
       "WebFetch(domain:deepwiki.com)",
       "mcp__context7__get-library-docs",
-      "Bash(gh release list:*)"
+      "Bash(gh release list:*)",
+      "Bash(gh auth:*)",
+      "Bash(export MCP_CONFIG_FILE=~/.config/claude-code/mcp.json)",
+      "Bash(echo:*)",
+      "Bash(mcp-server-github:*)",
+      "Bash(source:*)",
+      "Bash(cat:*)"
     ],
     "deny": []
   },
@@ -102,6 +108,7 @@
     "playwright",
     "arxiv-mcp-server",
     "deepwiki",
-    "context7"
+    "context7",
+    "github-server"
   ]
 }

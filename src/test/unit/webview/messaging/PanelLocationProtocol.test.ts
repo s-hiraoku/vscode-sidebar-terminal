@@ -7,12 +7,12 @@ import { describe, it, beforeEach, afterEach } from 'mocha';
 import { expect } from 'chai';
 import * as sinon from 'sinon';
 import { JSDOM } from 'jsdom';
-import { MessageManager } from '../../../../webview/managers/MessageManager';
+import { RefactoredMessageManager } from '../../../../webview/managers/RefactoredMessageManager';
 import { WebviewMessage } from '../../../../types/common';
 
 describe('Panel Location Communication Protocol', function () {
   let dom: JSDOM;
-  let messageManager: MessageManager;
+  let messageManager: RefactoredMessageManager;
   let mockVsCodeApi: any;
   let postMessageSpy: sinon.SinonStub;
   let mockCoordinator: any;
@@ -68,8 +68,8 @@ describe('Panel Location Communication Protocol', function () {
       createNewTerminal: sinon.stub(),
     };
 
-    // Create MessageManager instance
-    messageManager = new MessageManager();
+    // Create RefactoredMessageManager instance
+    messageManager = new RefactoredMessageManager();
   });
 
   afterEach(function () {

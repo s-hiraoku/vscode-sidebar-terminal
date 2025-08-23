@@ -149,9 +149,9 @@ suite('Webview Test Suite', () => {
       return originalCreateTerminal();
     };
 
-    provider.killTerminal = () => {
+    provider.killTerminal = async () => {
       killTerminalCalled = true;
-      originalKillTerminal();
+      await originalKillTerminal();
     };
 
     provider.splitTerminal = () => {

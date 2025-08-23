@@ -1,5 +1,5 @@
 /**
- * Focused test for MessageManager scrollback extraction functionality
+ * Focused test for RefactoredMessageManager scrollback extraction functionality
  * Tests WebView-side handling of extractScrollbackData messages and scrollbackDataCollected responses
  */
 
@@ -15,7 +15,7 @@
 import { expect } from 'chai';
 import * as sinon from 'sinon';
 import { setupCompleteTestEnvironment, cleanupTestEnvironment } from '../../shared/TestSetup';
-import { MessageManager } from '../../../webview/managers/MessageManager';
+import { RefactoredMessageManager } from '../../../webview/managers/RefactoredMessageManager';
 import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import {
@@ -23,9 +23,9 @@ import {
   TerminalInstance,
 } from '../../../webview/interfaces/ManagerInterfaces';
 
-describe('MessageManager - Scrollback Extraction', () => {
+describe('RefactoredMessageManager - Scrollback Extraction', () => {
   let sandbox: sinon.SinonSandbox;
-  let messageManager: MessageManager;
+  let messageManager: RefactoredMessageManager;
   let mockCoordinator: IManagerCoordinator;
   let mockTerminal: Terminal;
   let mockTerminalInstance: TerminalInstance;
@@ -135,8 +135,8 @@ describe('MessageManager - Scrollback Extraction', () => {
       ensureTerminalFocus: sandbox.spy(),
     };
 
-    // Create MessageManager instance
-    messageManager = new MessageManager();
+    // Create RefactoredMessageManager instance
+    messageManager = new RefactoredMessageManager();
   });
 
   afterEach(() => {

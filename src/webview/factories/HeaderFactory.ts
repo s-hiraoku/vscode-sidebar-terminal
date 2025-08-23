@@ -24,6 +24,8 @@ export interface HeaderConfig {
   terminalId: string;
   terminalName: string;
   customClasses?: string[];
+  onHeaderClick?: (terminalId: string) => void;
+  onCloseClick?: (terminalId: string) => void;
 }
 
 /**
@@ -211,6 +213,32 @@ export class HeaderFactory {
       closeButton.style.opacity = '0.7';
       closeButton.style.backgroundColor = 'transparent';
     });
+
+    // Add close button click handler
+    if (config.onCloseClick) {
+      closeButton.addEventListener('click', (event: MouseEvent) => {
+        event.stopPropagation(); // Prevent header click event
+        config.onCloseClick!(terminalId);
+        log(`🗑️ [HeaderFactory] Close button clicked for terminal: ${terminalId}`);
+      });
+    }
+
+    // Add header click handler for terminal activation
+    if (config.onHeaderClick) {
+      container.addEventListener('click', (event: MouseEvent) => {
+        // Prevent click if clicking on buttons
+        const target = event.target as HTMLElement;
+        if (target.closest('.terminal-control')) {
+          return;
+        }
+        
+        config.onHeaderClick!(terminalId);
+        log(`🎯 [HeaderFactory] Header clicked, activating terminal: ${terminalId}`);
+      });
+      
+      // Add visual feedback for clickable header
+      container.style.cursor = 'pointer';
+    }
 
     // 要素を組み立て
     DOMUtils.appendChildren(titleSection, nameSpan);

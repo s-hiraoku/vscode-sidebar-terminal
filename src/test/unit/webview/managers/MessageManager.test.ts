@@ -1,15 +1,15 @@
 /**
- * MessageManager Test Suite - Race condition and priority queue validation
+ * RefactoredMessageManager Test Suite - Race condition and priority queue validation
  */
 
 import { expect } from 'chai';
 import { describe, it, beforeEach, afterEach } from 'mocha';
 import sinon from 'sinon';
-import { MessageManager } from '../../../../webview/managers/MessageManager';
+import { RefactoredMessageManager } from '../../../../webview/managers/RefactoredMessageManager';
 import { IManagerCoordinator } from '../../../../webview/interfaces/ManagerInterfaces';
 
-describe('MessageManager', () => {
-  let messageManager: MessageManager;
+describe('RefactoredMessageManager', () => {
+  let messageManager: RefactoredMessageManager;
   let mockCoordinator: sinon.SinonStubbedInstance<IManagerCoordinator>;
   let clock: sinon.SinonFakeTimers;
 
@@ -26,7 +26,7 @@ describe('MessageManager', () => {
       getAllTerminalInstances: sinon.stub().returns(new Map()),
     } as any;
 
-    messageManager = new MessageManager();
+    messageManager = new RefactoredMessageManager();
   });
 
   afterEach(() => {
