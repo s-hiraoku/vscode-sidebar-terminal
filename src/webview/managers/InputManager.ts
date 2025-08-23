@@ -143,8 +143,8 @@ export class InputManager extends BaseManager implements IInputManager {
     };
 
     // Register Alt key handlers using EventHandlerRegistry
-    this.eventRegistry.register('alt-key-down', document, 'keydown', keydownHandler);
-    this.eventRegistry.register('alt-key-up', document, 'keyup', keyupHandler);
+    this.eventRegistry.register('alt-key-down', document, 'keydown', keydownHandler as EventListener);
+    this.eventRegistry.register('alt-key-up', document, 'keyup', keyupHandler as EventListener);
 
     this.logger.lifecycle('Alt key visual feedback', 'completed');
   }
@@ -182,7 +182,7 @@ export class InputManager extends BaseManager implements IInputManager {
     };
 
     // Register shortcut handler using EventHandlerRegistry
-    this.eventRegistry.register('keyboard-shortcuts', document, 'keydown', shortcutHandler);
+    this.eventRegistry.register('keyboard-shortcuts', document, 'keydown', shortcutHandler as EventListener);
 
     this.logger.lifecycle('Keyboard shortcuts', 'completed');
   }
