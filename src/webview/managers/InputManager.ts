@@ -13,10 +13,10 @@ import { inputLogger } from '../utils/ManagerLogger';
 
 export class InputManager extends BaseManager implements IInputManager {
   // Specialized logger for Input Manager
-  private readonly logger = inputLogger;
+  protected override readonly logger = inputLogger;
 
   // Event handler registry for centralized event management
-  private readonly eventRegistry = new EventHandlerRegistry();
+  protected override readonly eventRegistry = new EventHandlerRegistry();
 
   constructor() {
     super('InputManager', {
@@ -86,21 +86,21 @@ export class InputManager extends BaseManager implements IInputManager {
       'ime-composition-start',
       document,
       'compositionstart',
-      compositionStartHandler
+      compositionStartHandler as EventListener
     );
 
     this.eventRegistry.register(
       'ime-composition-update',
       document,
       'compositionupdate',
-      compositionUpdateHandler
+      compositionUpdateHandler as EventListener
     );
 
     this.eventRegistry.register(
       'ime-composition-end',
       document,
       'compositionend',
-      compositionEndHandler
+      compositionEndHandler as EventListener
     );
 
     this.logger.lifecycle('IME handling', 'completed');

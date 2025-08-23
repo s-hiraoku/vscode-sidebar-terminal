@@ -51,7 +51,7 @@ export abstract class GenericStateManager<T extends Record<string, unknown>> {
    */
   protected addTransitionRule(rule: StateTransitionRule<T>): void {
     this.transitionRules.push(rule);
-    log(`🔄 [${this.managerName.toUpperCase()}] Added transition rule: ${rule.from} → ${rule.to}`);
+    log(`🔄 [${this.managerName.toUpperCase()}] Added transition rule: ${String(rule.from)} → ${String(rule.to)}`);
   }
 
   /**
@@ -186,7 +186,7 @@ export abstract class GenericStateManager<T extends Record<string, unknown>> {
     }
 
     const targetHistoryEntry = history[history.length - steps];
-    const success = this.setState(id, targetHistoryEntry.state, true); // Skip validation for rollback
+    const success = this.setState(id, targetHistoryEntry!.state, true); // Skip validation for rollback
 
     if (success) {
       // Remove rolled-back history entries
