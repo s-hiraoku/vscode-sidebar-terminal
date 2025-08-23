@@ -208,6 +208,353 @@ export const CONFIG_KEYS = {
   SHELL_LINUX: 'shell.linux',
 } as const;
 
+// ===== ターミナル管理型 =====
+
+/**
+ * ターミナル情報
+ */
+export interface TerminalInfo {
+  id: string;
+  name: string;
+  isActive: boolean;
+}
+
+/**
+ * ターミナル状態管理
+ */
+export interface TerminalState {
+  terminals: TerminalInfo[];
+  activeTerminalId: string | null;
+  maxTerminals: number;
+  availableSlots: number[];
+}
+
+/**
+ * ターミナル削除結果
+ */
+export interface DeleteResult {
+  success: boolean;
+  reason?: string;
+  newState?: TerminalState;
+}
+
+/**
+ * ターミナルインスタンス
+ */
+export interface TerminalInstance {
+  id: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  pty?: any; // Using any for node-pty compatibility with both real and mock implementations (ptyProcessに移行中)
+  ptyProcess?: unknown; // 新しいpty参照名（セッション復元対応）
+  name: string;
+  number: number; // ターミナル番号（1-5）
+  cwd?: string; // 現在の作業ディレクトリ
+  isActive: boolean;
+  createdAt?: number; // 作成日時
+
+  // セッション復元関連のプロパティ
+  isSessionRestored?: boolean; // セッション復元で作成されたターミナルかどうか
+  sessionRestoreMessage?: string; // 復元メッセージ
+  sessionScrollback?: string[]; // 復元時の履歴データ
+}
+
+/**
+ * ターミナル寸法
+ */
+export interface TerminalDimensions {
+  cols: number;
+  rows: number;
+}
+
+/**
+ * ターミナルイベント
+ */
+export interface TerminalEvent {
+  terminalId: string;
+  data?: string;
+  exitCode?: number;
+  timestamp?: number;
+  terminalName?: string;
+  wasManuallyKilled?: boolean; // Indicates if the terminal was killed manually vs naturally exited
+}
+
+/**
+ * Alt+Click状態
+ */
+export interface AltClickState {
+  isVSCodeAltClickEnabled: boolean;
+  isAltKeyPressed: boolean;
+}
+
+/**
+ * ターミナル操作イベント
+ */
+export interface TerminalInteractionEvent {
+  type:
+    | 'alt-click'
+    | 'alt-click-blocked'
+    | 'output-detected'
+    | 'focus'
+    | 'switch-next'
+    | 'webview-ready'
+    | 'terminal-removed'
+    | 'font-settings-update'
+    | 'settings-update'
+    | 'new-terminal'
+    | 'resize'
+    | 'kill'
+    | 'interrupt'
+    | 'paste';
+  terminalId: string;
+  timestamp: number;
+  data?: unknown;
+}
+
+// ===== メッセージ通信型 =====
+
+/**
+ * WebView からExtension Host へのメッセージ
+ */
+export interface WebviewMessage {
+  command:
+    | 'init'
+    | 'input'
+    | 'resize'
+    | 'output'
+    | 'clear'
+    | 'exit'
+    | 'split'
+    | 'terminalCreated'
+    | 'terminalRemoved'
+    | 'settingsResponse'
+    | 'fontSettingsUpdate'
+    | 'openSettings'
+    | 'stateUpdate'
+    | 'claudeStatusUpdate'
+    | 'cliAgentStatusUpdate'
+    | 'cliAgentFullStateSync'
+    | 'killTerminal'
+    | 'deleteTerminal'
+    | 'getSettings'
+    | 'altClickSettings'
+    | 'focusTerminal'
+    | 'switchAiAgent'
+    | 'test'
+    | 'timeoutTest'
+    | 'sessionRestore'
+    | 'sessionRestoreStarted'
+    | 'sessionRestoreProgress'
+    | 'sessionRestoreCompleted'
+    | 'sessionRestoreError'
+    | 'sessionRestoreSkipped'
+    | 'sessionSaved'
+    | 'sessionSaveError'
+    | 'sessionCleared'
+    | 'terminalRestoreError'
+    | 'getScrollback'
+    | 'restoreScrollback'
+    | 'scrollbackExtracted'
+    | 'scrollbackRestored'
+    | 'scrollbackProgress'
+    | 'saveAllTerminalSessions'
+    | 'extractScrollbackData'
+    | 'performScrollbackRestore'
+    | 'scrollbackDataCollected'
+    | 'panelLocationUpdate'
+    | 'requestPanelLocationDetection'
+    | 'reportPanelLocation'
+    | 'sessionRestorationData'
+    | 'requestInitialTerminal'
+    | 'requestState'
+    | 'deleteTerminalResponse'  // 🎯 FIX: 削除処理統一化で追加
+    | 'error';
+  config?: TerminalConfig;
+  data?: string;
+  exitCode?: number;
+  terminalId?: string;
+  terminalName?: string;
+  terminalNumber?: number; // ターミナル番号（1-5）- Extension → WebView 通信用
+
+  // ターミナル情報（復元用）
+  terminalInfo?: {
+    originalId: string;
+    name: string;
+    number: number;
+    cwd: string;
+    isActive: boolean;
+  };
+  // Session management properties
+  terminalCount?: number;
+  restored?: number;
+  total?: number;
+  restoredCount?: number;
+  skippedCount?: number;
+  error?: string;
+  partialSuccess?: boolean;
+  reason?: string;
+  terminals?: TerminalInfo[];
+  activeTerminalId?: string;
+  settings?: PartialTerminalSettings; // 部分的な設定を受け取るよう修正
+  fontSettings?: WebViewFontSettings; // フォント設定を受け取る
+  state?: TerminalState; // 新しいアーキテクチャ用の状態更新
+  claudeStatus?: {
+    activeTerminalName: string | null;
+    status: 'connected' | 'disconnected' | 'none';
+    agentType: string | null;
+  }; // CLI Agent接続状態の情報
+  cliAgentStatus?: {
+    activeTerminalName: string | null;
+    status: 'connected' | 'disconnected' | 'none';
+    agentType: string | null;
+    terminalId?: string; // 🛠️ FIX: Add terminalId for reliable status updates
+  }; // CLI Agent接続状態の情報（新しい名前）
+
+  // 🔧 NEW: Full CLI Agent State Sync
+  terminalStates?: Record<
+    string,
+    {
+      status: 'connected' | 'disconnected' | 'none';
+      agentType: string | null;
+      terminalName: string;
+    }
+  >;
+  connectedAgentId?: string | null;
+  connectedAgentType?: string | null;
+  disconnectedCount?: number;
+
+  cols?: number; // リサイズ用
+  rows?: number; // リサイズ用
+  requestSource?: 'header' | 'panel'; // 削除リクエストの送信元
+  timestamp?: number; // エラー報告用
+  type?: string; // For test messages and error reporting
+  message?: string; // エラー報告用
+  context?: string; // エラー報告用
+  stack?: string; // エラー報告用
+
+  // Panel location for dynamic split direction (Issue #148)
+  location?: 'sidebar' | 'panel'; // Panel location information
+  direction?: 'horizontal' | 'vertical'; // Split direction for terminal splitting
+
+  // セッション復元関連
+  sessionRestoreMessage?: string; // 復元メッセージ
+  sessionScrollback?: string[]; // 復元する履歴データ
+  scrollbackLines?: number; // 取得する履歴行数
+  scrollbackData?: string[]; // 取得された履歴データ
+  errorType?: string; // エラータイプ (file, corruption, permission, network, unknown)
+  recoveryAction?: string; // 回復処理の説明
+  requestId?: string; // リクエストID（応答待機用）
+
+  // Scrollback復元関連
+  scrollbackContent?:
+    | Array<{
+        content: string;
+        type?: 'output' | 'input' | 'error';
+        timestamp?: number;
+      }>
+    | string[]; // 復元するscrollback内容
+
+  // WebView側のコマンド名拡張（重複削除）
+  scrollbackProgress?: {
+    terminalId: string;
+    progress: number;
+    currentLines: number;
+    totalLines: number;
+    stage: 'loading' | 'decompressing' | 'restoring';
+  }; // scrollback復元の進捗
+  maxLines?: number; // 取得する最大行数
+  useCompression?: boolean; // 圧縮を使用するか
+  cursorPosition?: {
+    x: number;
+    y: number;
+  }; // カーソル位置
+
+  // セッション関連の追加プロパティ
+  sessionData?: unknown; // セッションデータ
+  
+  // 🎯 FIX: 削除処理統一化で追加
+  success?: boolean;  // 削除処理の成功/失敗
+  reason?: string;    // 失敗理由
+}
+
+/**
+ * Extension Host からWebView へのメッセージ
+ */
+export interface VsCodeMessage {
+  command:
+    | 'ready'
+    | 'webviewReady'
+    | 'htmlScriptTest'
+    | 'timeoutTest'
+    | 'test'
+    | 'input'
+    | 'resize'
+    | 'focusTerminal'
+    | 'createTerminal'
+    | 'splitTerminal'
+    | 'clear'
+    | 'getSettings'
+    | 'updateSettings'
+    | 'terminalClosed'
+    | 'switchAiAgent'
+    | 'terminalInteraction'
+    | 'killTerminal'
+    | 'deleteTerminal'
+    | 'requestStateRestoration'
+    | 'getScrollbackData'
+    | 'extractScrollback'
+    | 'restoreScrollbackData'
+    | 'scrollbackExtracted'
+    | 'getTerminalScrollbackData'
+    | 'extractScrollbackData'
+    | 'performScrollbackRestore'
+    | 'restoreTerminalScrollback'
+    | 'scrollbackDataCollected'
+    | 'reportPanelLocation'
+    | 'terminalSerializationResponse'
+    | 'requestSessionRestorationData'
+    | 'error';
+  data?: string;
+  cols?: number;
+  rows?: number;
+  terminalId?: string;
+  terminalName?: string; // ターミナル名
+  type?: TerminalInteractionEvent['type'];
+  settings?: PartialTerminalSettings; // 部分的な設定を送信するよう修正
+  requestSource?: 'header' | 'panel'; // 新しいアーキテクチャ用の削除要求元
+  timestamp?: number; // エラー報告用
+  message?: string; // エラー報告用
+  context?: string; // エラー報告用
+  stack?: string; // エラー報告用
+
+  // ターミナル復元関連
+  terminalInfo?: {
+    originalId: string;
+    name: string;
+    number: number;
+    cwd: string;
+    isActive: boolean;
+  };
+
+  // セッション復元関連
+  scrollbackLines?: number; // 取得する履歴行数
+  scrollbackData?: string[]; // 履歴データ
+  maxLines?: number; // 取得する最大行数
+  scrollbackContent?: Array<{
+    content: string;
+    type?: 'output' | 'input' | 'error';
+    timestamp?: number;
+  }>; // 復元するscrollback内容
+  requestId?: string; // リクエストID（応答待機用）
+
+  // セッション関連の追加プロパティ
+  serializedData?: Record<string, string>; // シリアライズされたデータ
+  terminalCount?: number; // ターミナル数
+  sessionData?: unknown; // セッションデータ
+
+  // 🆕 Panel location (Issue #148)
+  location?: 'sidebar' | 'panel'; // パネル位置情報
+}
+
 // ===== 型ガード関数 =====
 
 /**

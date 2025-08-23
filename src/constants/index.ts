@@ -53,6 +53,7 @@ export const TERMINAL_CONSTANTS = {
     RESIZE: 'resize',
     EXIT: 'exit',
     SPLIT: 'split',
+    CREATE_TERMINAL: 'createTerminal',
     FOCUS_TERMINAL: 'focusTerminal',
     TERMINAL_CREATED: 'terminalCreated',
     TERMINAL_REMOVED: 'terminalRemoved',

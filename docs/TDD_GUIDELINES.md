@@ -390,7 +390,7 @@ describe('MessageManager', () => {
 
 ## 🔗 関連ドキュメント
 
-- [CLAUDE.md](CLAUDE.md) - 開発ガイドライン全般
+- [CLAUDE.md](../CLAUDE.md) - 開発ガイドライン全般
 - [RELEASE_PROCESS.md](RELEASE_PROCESS.md) - リリース手順
 - [テストディレクトリ](src/test/) - 実際のテストコード
 

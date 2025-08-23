@@ -8,14 +8,24 @@ import { PartialTerminalSettings } from '../../types/shared';
 import { IInputManager, IManagerCoordinator } from '../interfaces/ManagerInterfaces';
 import { INotificationManager } from '../interfaces/ManagerInterfaces';
 import { BaseManager } from './BaseManager';
+import { EventHandlerRegistry } from '../utils/EventHandlerRegistry';
+import { inputLogger } from '../utils/ManagerLogger';
 
 export class InputManager extends BaseManager implements IInputManager {
+  // Specialized logger for Input Manager
+  private readonly logger = inputLogger;
+
+  // Event handler registry for centralized event management
+  private readonly eventRegistry = new EventHandlerRegistry();
+
   constructor() {
     super('InputManager', {
       enableLogging: true,
       enableValidation: true,
       enableErrorRecovery: true,
     });
+
+    this.logger.lifecycle('initialization', 'starting');
   }
 
   // Alt+Click state management
@@ -34,53 +44,66 @@ export class InputManager extends BaseManager implements IInputManager {
   private eventDebounceTimers = new Map<string, number>();
   // Simple arrow key handling for agent interactions
   private agentInteractionMode = false;
-  private arrowKeyListener?: (event: KeyboardEvent) => void;
 
   /**
    * Set the notification manager for Alt+Click feedback
    */
   public setNotificationManager(notificationManager: INotificationManager): void {
     this.notificationManager = notificationManager;
+    this.logger.info('Notification manager set for Alt+Click feedback');
   }
-
-  // Event listeners for cleanup
-  private keydownListener?: (event: KeyboardEvent) => void;
-  private keyupListener?: (event: KeyboardEvent) => void;
-  private compositionStartListener?: (event: CompositionEvent) => void;
-  private compositionUpdateListener?: (event: CompositionEvent) => void;
-  private compositionEndListener?: (event: CompositionEvent) => void;
 
   /**
    * Setup IME composition handling with improved processing
    */
   public setupIMEHandling(): void {
-    this.log('⌨️ [INPUT] Setting up IME composition handling');
+    this.logger.info('Setting up IME composition handling');
 
-    this.compositionStartListener = (event: CompositionEvent) => {
+    const compositionStartHandler = (event: CompositionEvent): void => {
       this.isComposing = true;
-      this.log(`🈶 [INPUT] IME composition started: ${event.data || 'no data'}`);
+      this.logger.debug(`IME composition started: ${event.data || 'no data'}`);
 
       // Clear any pending input events to avoid conflicts
       this.clearPendingInputEvents();
     };
 
-    this.compositionUpdateListener = (event: CompositionEvent) => {
+    const compositionUpdateHandler = (event: CompositionEvent): void => {
       // Keep composition state active during updates
       this.isComposing = true;
-      this.log(`🈶 [INPUT] IME composition update: ${event.data || 'no data'}`);
+      this.logger.debug(`IME composition update: ${event.data || 'no data'}`);
     };
 
-    this.compositionEndListener = (event: CompositionEvent) => {
+    const compositionEndHandler = (event: CompositionEvent): void => {
       // Small delay to ensure composition data is properly processed
       setTimeout(() => {
         this.isComposing = false;
-        this.log(`🈶 [INPUT] IME composition ended: ${event.data || 'no data'}`);
+        this.logger.debug(`IME composition ended: ${event.data || 'no data'}`);
       }, 10);
     };
 
-    document.addEventListener('compositionstart', this.compositionStartListener);
-    document.addEventListener('compositionupdate', this.compositionUpdateListener);
-    document.addEventListener('compositionend', this.compositionEndListener);
+    // Register IME event handlers using EventHandlerRegistry
+    this.eventRegistry.register(
+      'ime-composition-start',
+      document,
+      'compositionstart',
+      compositionStartHandler
+    );
+
+    this.eventRegistry.register(
+      'ime-composition-update',
+      document,
+      'compositionupdate',
+      compositionUpdateHandler
+    );
+
+    this.eventRegistry.register(
+      'ime-composition-end',
+      document,
+      'compositionend',
+      compositionEndHandler
+    );
+
+    this.logger.lifecycle('IME handling', 'completed');
   }
 
   /**
@@ -92,7 +115,7 @@ export class InputManager extends BaseManager implements IInputManager {
       if (key.includes('input') || key.includes('keydown')) {
         clearTimeout(timer);
         this.eventDebounceTimers.delete(key);
-        this.log(`🧹 [INPUT] Cleared pending input event: ${key}`);
+        this.logger.debug(`Cleared pending input event: ${key}`);
       }
     }
   }
@@ -101,33 +124,38 @@ export class InputManager extends BaseManager implements IInputManager {
    * Setup Alt key visual feedback for terminals
    */
   public setupAltKeyVisualFeedback(): void {
-    this.log('⌨️ [INPUT] Setting up Alt key visual feedback');
+    this.logger.info('Setting up Alt key visual feedback');
 
-    this.keydownListener = (event: KeyboardEvent) => {
+    const keydownHandler = (event: KeyboardEvent): void => {
       if (event.altKey && !this.altClickState.isAltKeyPressed) {
         this.altClickState.isAltKeyPressed = true;
         this.updateTerminalCursors();
+        this.logger.debug('Alt key pressed - updating cursor styles');
       }
     };
 
-    this.keyupListener = (event: KeyboardEvent) => {
+    const keyupHandler = (event: KeyboardEvent): void => {
       if (!event.altKey && this.altClickState.isAltKeyPressed) {
         this.altClickState.isAltKeyPressed = false;
         this.updateTerminalCursors();
+        this.logger.debug('Alt key released - resetting cursor styles');
       }
     };
 
-    document.addEventListener('keydown', this.keydownListener);
-    document.addEventListener('keyup', this.keyupListener);
+    // Register Alt key handlers using EventHandlerRegistry
+    this.eventRegistry.register('alt-key-down', document, 'keydown', keydownHandler);
+    this.eventRegistry.register('alt-key-up', document, 'keyup', keyupHandler);
+
+    this.logger.lifecycle('Alt key visual feedback', 'completed');
   }
 
   /**
    * Setup keyboard shortcuts for terminal navigation
    */
   public setupKeyboardShortcuts(manager: IManagerCoordinator): void {
-    this.log('⌨️ [INPUT] Setting up keyboard shortcuts');
+    this.logger.info('Setting up keyboard shortcuts');
 
-    const shortcutListener = (event: KeyboardEvent): void => {
+    const shortcutHandler = (event: KeyboardEvent): void => {
       // Ignore if IME is composing
       if (this.isComposing) {
         return;
@@ -136,7 +164,7 @@ export class InputManager extends BaseManager implements IInputManager {
       // Ctrl+Tab: Switch to next terminal
       if (event.ctrlKey && event.key === 'Tab') {
         event.preventDefault();
-        this.log('⌨️ [INPUT] Ctrl+Tab shortcut detected');
+        this.logger.info('Ctrl+Tab shortcut detected');
         // Manager should implement terminal switching
         this.emitTerminalInteractionEvent(
           'switch-next',
@@ -148,16 +176,19 @@ export class InputManager extends BaseManager implements IInputManager {
 
       // Escape: Clear notifications
       if (event.key === 'Escape') {
-        this.log('⌨️ [INPUT] Escape key detected, clearing notifications');
+        this.logger.info('Escape key detected, clearing notifications');
         this.clearNotifications();
       }
     };
 
-    document.addEventListener('keydown', shortcutListener);
+    // Register shortcut handler using EventHandlerRegistry
+    this.eventRegistry.register('keyboard-shortcuts', document, 'keydown', shortcutHandler);
+
+    this.logger.lifecycle('Keyboard shortcuts', 'completed');
   }
 
   /**
-   * Add click handler to xterm.js terminal for focus and Alt+Click
+   * Add complete input handling to xterm.js terminal (click, keyboard, focus)
    */
   public addXtermClickHandler(
     terminal: Terminal,
@@ -165,13 +196,37 @@ export class InputManager extends BaseManager implements IInputManager {
     container: HTMLElement,
     manager: IManagerCoordinator
   ): void {
-    this.log(`⌨️ [INPUT] Adding click handler for terminal ${terminalId}`);
+    this.logger.info(`Setting up complete input handling for terminal ${terminalId}`);
+
+    // CRITICAL: Set up keyboard input handling for terminal
+    terminal.onData((data: string) => {
+      this.logger.debug(`Terminal ${terminalId} data: ${data.length} chars`);
+      manager.postMessageToExtension({
+        command: 'input',
+        terminalId: terminalId,
+        data: data,
+        timestamp: Date.now(),
+      });
+    });
+
+    // Set up focus handling
+    terminal.onFocus(() => {
+      this.logger.debug(`Terminal ${terminalId} focused`);
+      manager.setActiveTerminalId(terminalId);
+      this.emitTerminalInteractionEvent('focus', terminalId, undefined, manager);
+    });
+
+    // Set up blur handling
+    terminal.onBlur(() => {
+      this.logger.debug(`Terminal ${terminalId} blurred`);
+    });
 
     const clickHandler = (event: MouseEvent): void => {
       // Regular click: Focus terminal
       if (!event.altKey) {
-        this.log(`🖱️ [INPUT] Regular click on terminal ${terminalId}`);
+        this.logger.debug(`Regular click on terminal ${terminalId}`);
         manager.setActiveTerminalId(terminalId);
+        terminal.focus(); // Ensure terminal gets focus for keyboard input
         this.emitTerminalInteractionEvent('focus', terminalId, undefined, manager);
         return;
       }
@@ -179,8 +234,8 @@ export class InputManager extends BaseManager implements IInputManager {
       // Alt+Click handling
       if (event.altKey && this.altClickState.isVSCodeAltClickEnabled) {
         // VS Code standard Alt+Click behavior
-        this.log(
-          `⌨️ [INPUT] Alt+Click on terminal ${terminalId} at (${event.clientX}, ${event.clientY})`
+        this.logger.debug(
+          `Alt+Click on terminal ${terminalId} at (${event.clientX}, ${event.clientY})`
         );
 
         // Show visual feedback
@@ -203,8 +258,15 @@ export class InputManager extends BaseManager implements IInputManager {
       }
     };
 
-    // Add click listener to terminal container
-    container.addEventListener('click', clickHandler);
+    // Register click handler using EventHandlerRegistry
+    this.eventRegistry.register(
+      `terminal-click-${terminalId}`,
+      container,
+      'click',
+      clickHandler
+    );
+
+    this.logger.info(`Complete input handling configured for terminal ${terminalId}`);
   }
 
   /**
@@ -230,8 +292,8 @@ export class InputManager extends BaseManager implements IInputManager {
     const multiCursorModifier = settings.multiCursorModifier ?? 'alt';
 
     const isEnabled = altClickMovesCursor && multiCursorModifier === 'alt';
-    this.log(
-      `⌨️ [INPUT] VS Code Alt+Click enabled: ${isEnabled} (altClick: ${altClickMovesCursor}, modifier: ${multiCursorModifier})`
+    this.logger.debug(
+      `VS Code Alt+Click enabled: ${isEnabled} (altClick: ${altClickMovesCursor}, modifier: ${multiCursorModifier})`
     );
 
     return isEnabled;
@@ -246,7 +308,7 @@ export class InputManager extends BaseManager implements IInputManager {
 
     if (wasEnabled !== isEnabled) {
       this.altClickState.isVSCodeAltClickEnabled = isEnabled;
-      this.log(`⌨️ [INPUT] Alt+Click setting changed: ${wasEnabled} → ${isEnabled}`);
+      this.logger.info(`Alt+Click setting changed: ${wasEnabled} → ${isEnabled}`);
 
       // Update cursor styles immediately
       this.updateTerminalCursors();
@@ -278,15 +340,12 @@ export class InputManager extends BaseManager implements IInputManager {
 
     if (this.agentInteractionMode !== actualEnabled) {
       this.agentInteractionMode = actualEnabled;
-      this.log(
-        `🎯 [INPUT] Agent interaction mode: ${actualEnabled} (VS Code standard - always disabled)`
+      this.logger.info(
+        `Agent interaction mode: ${actualEnabled} (VS Code standard - always disabled)`
       );
 
       // Clean up any existing arrow key listener
-      if (this.arrowKeyListener) {
-        document.removeEventListener('keydown', this.arrowKeyListener, true);
-        this.arrowKeyListener = undefined;
-      }
+      this.eventRegistry.unregister('agent-arrow-keys');
     }
   }
 
@@ -302,9 +361,9 @@ export class InputManager extends BaseManager implements IInputManager {
    * VS Code Standard: Arrow keys should be handled by xterm.js and shell
    */
   private setupAgentArrowKeyHandler(): void {
-    this.log('⌨️ [INPUT] Setting up agent arrow key handler (VS Code standard)');
+    this.logger.info('Setting up agent arrow key handler (VS Code standard)');
 
-    this.arrowKeyListener = (event: KeyboardEvent) => {
+    const arrowKeyHandler = (event: KeyboardEvent): void => {
       // Only log when in agent interaction mode for debugging
       if (!this.agentInteractionMode || this.isComposing) {
         return;
@@ -317,8 +376,8 @@ export class InputManager extends BaseManager implements IInputManager {
         if (activeTerminal) {
           const terminalId = activeTerminal.getAttribute('data-terminal-id');
           if (terminalId) {
-            this.log(
-              `🎯 [INPUT] Arrow key ${event.key} in agent mode for terminal ${terminalId} - letting xterm.js handle`
+            this.logger.debug(
+              `Arrow key ${event.key} in agent mode for terminal ${terminalId} - letting xterm.js handle`
             );
           }
         }
@@ -329,7 +388,7 @@ export class InputManager extends BaseManager implements IInputManager {
       // This allows bash history, completion, and cursor movement to work properly
     };
 
-    document.addEventListener('keydown', this.arrowKeyListener, true);
+    this.eventRegistry.register('agent-arrow-keys', document, 'keydown', arrowKeyHandler, true);
   }
 
   /**
@@ -372,7 +431,7 @@ export class InputManager extends BaseManager implements IInputManager {
         });
       }
     } catch (error) {
-      this.log(`❌ [INPUT] Error emitting terminal interaction event: ${error}`, 'error');
+      this.logger.error(`Error emitting terminal interaction event: ${error}`);
     }
   }
 
@@ -408,14 +467,14 @@ export class InputManager extends BaseManager implements IInputManager {
         return false;
       }
       // Send interrupt signal
-      this.log(`⌨️ [INPUT] Ctrl+C interrupt for terminal ${terminalId}`);
+      this.logger.info(`Ctrl+C interrupt for terminal ${terminalId}`);
       this.emitTerminalInteractionEvent('interrupt', terminalId, undefined, manager);
       return true;
     }
 
     // Ctrl+V: Paste
     if (event.ctrlKey && event.key === 'v') {
-      this.log(`⌨️ [INPUT] Ctrl+V paste for terminal ${terminalId}`);
+      this.logger.info(`Ctrl+V paste for terminal ${terminalId}`);
       this.emitTerminalInteractionEvent('paste', terminalId, undefined, manager);
       return false; // Let browser handle paste
     }
@@ -427,30 +486,16 @@ export class InputManager extends BaseManager implements IInputManager {
    * Dispose of all event listeners and cleanup resources
    */
   public override dispose(): void {
-    this.log('🧹 [INPUT] Disposing input manager');
+    this.logger.info('Disposing input manager');
 
-    // Call parent dispose
-    super.dispose();
+    // Dispose EventHandlerRegistry - this will clean up all registered event listeners
+    this.eventRegistry.dispose();
 
-    // Remove event listeners
-    if (this.keydownListener) {
-      document.removeEventListener('keydown', this.keydownListener);
+    // Clear debounce timers
+    for (const timer of this.eventDebounceTimers.values()) {
+      clearTimeout(timer);
     }
-    if (this.keyupListener) {
-      document.removeEventListener('keyup', this.keyupListener);
-    }
-    if (this.compositionStartListener) {
-      document.removeEventListener('compositionstart', this.compositionStartListener);
-    }
-    if (this.compositionUpdateListener) {
-      document.removeEventListener('compositionupdate', this.compositionUpdateListener);
-    }
-    if (this.compositionEndListener) {
-      document.removeEventListener('compositionend', this.compositionEndListener);
-    }
-    if (this.arrowKeyListener) {
-      document.removeEventListener('keydown', this.arrowKeyListener, true);
-    }
+    this.eventDebounceTimers.clear();
 
     // Reset state
     this.altClickState = {
@@ -461,13 +506,11 @@ export class InputManager extends BaseManager implements IInputManager {
     this.agentInteractionMode = false;
 
     // Clear references
-    this.keydownListener = undefined;
-    this.keyupListener = undefined;
-    this.compositionStartListener = undefined;
-    this.compositionUpdateListener = undefined;
-    this.compositionEndListener = undefined;
-    this.arrowKeyListener = undefined;
+    this.notificationManager = null;
 
-    this.log('✅ [INPUT] Input manager disposed');
+    // Call parent dispose
+    super.dispose();
+
+    this.logger.lifecycle('InputManager', 'completed');
   }
 }

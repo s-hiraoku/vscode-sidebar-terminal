@@ -73,7 +73,7 @@ npm run package
 
 #### Debugging in VS Code
 
-For detailed debugging instructions, including how to launch the extension, check logs, and troubleshoot common issues, please refer to the [Debugging Guide (Japanese)](./DEBUG.md).
+For detailed debugging instructions, including how to launch the extension, check logs, and troubleshoot common issues, please refer to the [Debugging Guide (Japanese)](DEBUG.md).
 
 ## 📝 Pull Request Process
 
@@ -215,7 +215,7 @@ We especially welcome contributions in these areas:
 ### Project-Specific
 - [Architecture Overview](./docs/architecture.md) (if available)
 - [Testing Guide](./docs/testing.md) (if available)
-- [Release Process Guide (Japanese)](./RELEASE_PROCESS.md)
+- [Release Process Guide (Japanese)](RELEASE_PROCESS.md)
 
 ## 🤝 Code of Conduct
 

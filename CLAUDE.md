@@ -908,7 +908,7 @@ npm run pre-release:check      # リリース前総合チェック
 3. **品質ゲートクリア**: リリース前に必ず品質基準をクリア
 4. **継続的改善**: 品質メトリクスの定期的な向上
 
-**詳細なTDD運用ルール**: [TDD_GUIDELINES.md](TDD_GUIDELINES.md)を参照
+**詳細なTDD運用ルール**: [TDD_GUIDELINES.md](docs/TDD_GUIDELINES.md)を参照
 
 #### 品質保証の自動化レベル
 

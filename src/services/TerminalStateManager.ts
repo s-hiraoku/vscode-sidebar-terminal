@@ -246,6 +246,11 @@ export class TerminalStateManager implements ITerminalStateManager {
       return basicValidation;
     }
 
+    // 🎯 FIX: 最低1つのターミナルは保持する
+    if (this._currentState.terminals.length <= 1) {
+      return OperationResultHandler.failure('Must keep at least 1 terminal open');
+    }
+
     // 削除可能な状態かチェック（必要に応じて追加条件を設定）
     return OperationResultHandler.success();
   }

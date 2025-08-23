@@ -6,17 +6,17 @@ import * as assert from 'assert';
 import * as sinon from 'sinon';
 import { TerminalManager } from '../../../terminals/TerminalManager';
 import { HeaderFactory } from '../../../webview/factories/HeaderFactory';
-import { MessageManager } from '../../../webview/managers/MessageManager';
+import { RefactoredMessageManager } from '../../../webview/managers/RefactoredMessageManager';
 import { IManagerCoordinator } from '../../../webview/interfaces/ManagerInterfaces';
 
 describe('AI Agent Toggle Button (Issue #122)', () => {
   let terminalManager: TerminalManager;
-  let messageManager: MessageManager;
+  let messageManager: RefactoredMessageManager;
   let mockCoordinator: IManagerCoordinator;
 
   beforeEach(() => {
     terminalManager = new TerminalManager();
-    messageManager = new MessageManager();
+    messageManager = new RefactoredMessageManager();
 
     mockCoordinator = {
       getActiveTerminalId: sinon.stub(),

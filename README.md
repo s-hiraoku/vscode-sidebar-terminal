@@ -213,11 +213,11 @@ npm run package
 
 ### Debugging
 
-For detailed debugging instructions, including how to launch the extension, check logs, and troubleshoot common issues, please refer to the [Debugging Guide (Japanese)](./DEBUG.md).
+For detailed debugging instructions, including how to launch the extension, check logs, and troubleshoot common issues, please refer to the [Debugging Guide (Japanese)](./docs/DEBUG.md).
 
 ### Release Process
 
-For detailed instructions on how to release new versions of the extension, including automated and manual publishing steps, please refer to the [Release Process Guide (Japanese)](./RELEASE_PROCESS.md).
+For detailed instructions on how to release new versions of the extension, including automated and manual publishing steps, please refer to the [Release Process Guide (Japanese)](./docs/RELEASE_PROCESS.md).
 
 ## 🧪 Testing Strategy
 
@@ -377,7 +377,7 @@ This project is licensed under the [MIT License](LICENSE).
 
 ## 📝 Changelog
 
-See [CHANGELOG.md](CHANGELOG.md) for detailed changes.
+See [CHANGELOG.md](docs/CHANGELOG.md) for detailed changes.
 
 ### v0.1.50 (Latest)
 

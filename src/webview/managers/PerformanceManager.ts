@@ -7,14 +7,21 @@ import { FitAddon } from 'xterm-addon-fit';
 import { SPLIT_CONSTANTS } from '../constants/webview';
 import { IPerformanceManager, IManagerCoordinator } from '../interfaces/ManagerInterfaces';
 import { BaseManager } from './BaseManager';
+import { performanceLogger } from '../utils/ManagerLogger';
+import { ResizeManager } from '../utils/ResizeManager';
 
 export class PerformanceManager extends BaseManager implements IPerformanceManager {
+  // Specialized logger for Performance Manager
+  private readonly logger = performanceLogger;
+
   constructor() {
     super('PerformanceManager', {
       enableLogging: true,
       enableValidation: false,
       enableErrorRecovery: true,
     });
+
+    this.logger.lifecycle('initialization', 'starting');
   }
 
   // Performance optimization: Buffer output and batch writes
@@ -22,10 +29,6 @@ export class PerformanceManager extends BaseManager implements IPerformanceManag
   private bufferFlushTimer: number | null = null;
   private readonly BUFFER_FLUSH_INTERVAL = SPLIT_CONSTANTS.BUFFER_FLUSH_INTERVAL;
   private readonly MAX_BUFFER_SIZE = SPLIT_CONSTANTS.MAX_BUFFER_SIZE;
-
-  // Performance optimization: Debounce resize operations
-  private resizeDebounceTimer: number | null = null;
-  private readonly RESIZE_DEBOUNCE_DELAY = SPLIT_CONSTANTS.RESIZE_DEBOUNCE_DELAY;
 
   // CLI Agent mode for performance optimization
   private isCliAgentMode = false;
@@ -64,12 +67,12 @@ export class PerformanceManager extends BaseManager implements IPerformanceManag
           : isLargeOutput
             ? 'large output'
             : 'buffer full';
-      this.log(`📤 [PERFORMANCE] Immediate write: ${data.length} chars (${reason})`);
+      this.logger.info(`Immediate write: ${data.length} chars (${reason})`);
     } else {
       this.outputBuffer.push(data);
       this.scheduleBufferFlush();
-      this.log(
-        `📤 [PERFORMANCE] Buffered write: ${data.length} chars (buffer: ${this.outputBuffer.length}, CLI Agent: ${this.isCliAgentMode})`
+      this.logger.debug(
+        `Buffered write: ${data.length} chars (buffer: ${this.outputBuffer.length}, CLI Agent: ${this.isCliAgentMode})`
       );
     }
   }
@@ -94,7 +97,7 @@ export class PerformanceManager extends BaseManager implements IPerformanceManag
         try {
           this.flushOutputBuffer();
         } catch (error) {
-          this.log(`❌ [PERFORMANCE] Error during buffer flush: ${error}`, 'error');
+          this.logger.error(`Error during buffer flush: ${error}`);
           // Reset the timer to prevent stuck state
           this.bufferFlushTimer = null;
           // Clear the buffer to prevent memory issues
@@ -102,8 +105,8 @@ export class PerformanceManager extends BaseManager implements IPerformanceManag
         }
       }, flushInterval);
 
-      this.log(
-        `📊 [PERFORMANCE] Scheduled flush in ${flushInterval}ms (CLI Agent: ${this.isCliAgentMode}, buffer size: ${this.outputBuffer.length})`
+      this.logger.debug(
+        `Scheduled flush in ${flushInterval}ms (CLI Agent: ${this.isCliAgentMode}, buffer size: ${this.outputBuffer.length})`
       );
     }
   }
@@ -126,13 +129,13 @@ export class PerformanceManager extends BaseManager implements IPerformanceManag
         try {
           // xterm.js automatically preserves scroll position if user has scrolled up
           this.currentBufferTerminal.write(bufferedData);
-          this.log(`📤 [PERFORMANCE] Flushed buffer: ${bufferedData.length} chars`);
+          this.logger.debug(`Flushed buffer: ${bufferedData.length} chars`);
         } catch (error) {
-          this.log(`❌ [PERFORMANCE] Error during buffer flush: ${error}`, 'error');
+          this.logger.error(`Error during buffer flush: ${error}`);
         }
       } else {
-        this.log(
-          `⚠️ [PERFORMANCE] No terminal available for buffer flush: ${bufferedData.length} chars lost`
+        this.logger.warn(
+          `No terminal available for buffer flush: ${bufferedData.length} chars lost`
         );
       }
     }
@@ -154,31 +157,39 @@ export class PerformanceManager extends BaseManager implements IPerformanceManag
    */
   public override async initialize(coordinator: IManagerCoordinator): Promise<void> {
     this.coordinator = coordinator;
-    this.log('✨ [PERFORMANCE] Manager initialized');
+    this.logger.lifecycle('initialization', 'completed');
   }
 
   /**
-   * Debounced resize operation for performance optimization
+   * Debounced resize operation for performance optimization using ResizeManager
    */
   public debouncedResize(cols: number, rows: number, terminal: Terminal, fitAddon: FitAddon): void {
-    if (this.resizeDebounceTimer !== null) {
-      window.clearTimeout(this.resizeDebounceTimer);
-    }
+    const resizeKey = `terminal-resize-${cols}x${rows}`;
+    
+    this.logger.debug(`Scheduling debounced resize: ${cols}x${rows}`);
 
-    this.resizeDebounceTimer = window.setTimeout(() => {
-      try {
-        terminal.resize(cols, rows);
-        fitAddon.fit();
-        this.log(`🔧 [PERFORMANCE] Debounced resize applied: ${cols}x${rows}`);
-      } catch (error) {
-        this.log(`❌ [PERFORMANCE] Error during debounced resize: ${error}`, 'error');
-      } finally {
-        // Always reset the timer to prevent stuck state
-        this.resizeDebounceTimer = null;
+    ResizeManager.debounceResize(
+      resizeKey,
+      async () => {
+        try {
+          terminal.resize(cols, rows);
+          fitAddon.fit();
+          this.logger.info(`Debounced resize applied: ${cols}x${rows}`);
+        } catch (error) {
+          this.logger.error(`Error during debounced resize: ${error}`);
+          throw error; // Let ResizeManager handle the error
+        }
+      },
+      {
+        delay: SPLIT_CONSTANTS.RESIZE_DEBOUNCE_DELAY,
+        onStart: () => {
+          this.logger.debug(`Starting resize operation for ${cols}x${rows}`);
+        },
+        onComplete: () => {
+          this.logger.debug(`Completed resize operation for ${cols}x${rows}`);
+        }
       }
-    }, this.RESIZE_DEBOUNCE_DELAY);
-
-    this.log(`🔧 [PERFORMANCE] Debounced resize scheduled: ${cols}x${rows}`);
+    );
   }
 
   /**
@@ -187,7 +198,7 @@ export class PerformanceManager extends BaseManager implements IPerformanceManag
   public setCliAgentMode(isActive: boolean): void {
     if (this.isCliAgentMode !== isActive) {
       this.isCliAgentMode = isActive;
-      this.log(`⚡ [PERFORMANCE] CLI Agent mode: ${isActive ? 'ACTIVE' : 'INACTIVE'}`);
+      this.logger.info(`CLI Agent mode: ${isActive ? 'ACTIVE' : 'INACTIVE'}`);
 
       // Flush immediately when mode changes
       if (!isActive) {
@@ -221,7 +232,7 @@ export class PerformanceManager extends BaseManager implements IPerformanceManag
    * Force immediate flush of all buffers (emergency flush)
    */
   public forceFlush(): void {
-    this.log('🚨 [PERFORMANCE] Force flushing all buffers');
+    this.logger.warn('Force flushing all buffers');
     this.flushOutputBuffer();
   }
 
@@ -229,7 +240,7 @@ export class PerformanceManager extends BaseManager implements IPerformanceManag
    * Clear all buffers without writing (emergency clear)
    */
   public clearBuffers(): void {
-    this.log('🗑️ [PERFORMANCE] Clearing all buffers without writing');
+    this.logger.warn('Clearing all buffers without writing');
     this.outputBuffer = [];
     if (this.bufferFlushTimer !== null) {
       window.clearTimeout(this.bufferFlushTimer);
@@ -251,25 +262,22 @@ export class PerformanceManager extends BaseManager implements IPerformanceManag
    * Dispose of all timers and cleanup resources
    */
   public override dispose(): void {
-    this.log('🧹 [PERFORMANCE] Disposing performance manager');
+    this.logger.info('Disposing performance manager');
 
     // Flush any remaining output before disposal
     this.flushOutputBuffer();
 
-    // Clear resize timer
-    if (this.resizeDebounceTimer !== null) {
-      window.clearTimeout(this.resizeDebounceTimer);
-      this.resizeDebounceTimer = null;
-    }
-
+    // Clear any pending resize operations using ResizeManager
+    ResizeManager.clearResize('terminal-resize');
+    
     // Clear references
     this.currentBufferTerminal = null;
     this.outputBuffer = [];
     this.isCliAgentMode = false;
 
-    this.log('✅ [PERFORMANCE] Performance manager disposed');
-
     // Call parent dispose
     super.dispose();
+
+    this.logger.lifecycle('PerformanceManager', 'completed');
   }
 }

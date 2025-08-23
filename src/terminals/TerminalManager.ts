@@ -102,10 +102,54 @@ export class TerminalManager {
     log(`🔍 [TERMINAL] Config loaded: maxTerminals=${config.maxTerminals}`);
 
     log(`🔍 [TERMINAL] Current terminals count: ${this._terminals.size}`);
-    if (!this._terminalNumberManager.canCreate(this._terminals)) {
-      log('🔧 [TERMINAL] Cannot create terminal: all slots used');
-      showWarningMessage(`${ERROR_MESSAGES.MAX_TERMINALS_REACHED} (${config.maxTerminals})`);
-      return this._activeTerminalManager.getActive() || '';
+    
+    // Force debug the actual terminal state before validation
+    log('🔍 [TERMINAL] Current terminals in map:', this._terminals.size);
+    for (const [id, terminal] of this._terminals.entries()) {
+      log(`🔍 [TERMINAL] Map entry: ${id} -> ${terminal.name} (number: ${terminal.number})`);
+    }
+    
+    // 🚨 CRITICAL DEBUG: Detailed canCreate analysis
+    log('🔍 [TERMINAL] === DETAILED canCreate() ANALYSIS ===');
+    log('🔍 [TERMINAL] this._terminals.size:', this._terminals.size);
+    log('🔍 [TERMINAL] config.maxTerminals:', config.maxTerminals);
+    
+    // Call canCreate and get detailed information
+    const canCreateResult = this._terminalNumberManager.canCreate(this._terminals);
+    log('🔍 [TERMINAL] canCreate() returned:', canCreateResult);
+    
+    if (!canCreateResult) {
+      log('🚨 [TERMINAL] Cannot create terminal: all slots used');
+      log('🚨 [TERMINAL] Final canCreate check failed - investigating...');
+      
+      // Force re-check the numbers manually
+      const usedNumbers = new Set<number>();
+      log('🚨 [TERMINAL] Analyzing each terminal in map:');
+      for (const [id, terminal] of this._terminals.entries()) {
+        log(`🚨 [TERMINAL] Terminal ${id}:`, {
+          name: terminal.name,
+          number: terminal.number,
+          hasValidNumber: typeof terminal.number === 'number' && !isNaN(terminal.number)
+        });
+        
+        if (terminal.number && typeof terminal.number === 'number') {
+          usedNumbers.add(terminal.number);
+        }
+      }
+      log('🚨 [TERMINAL] Used numbers from current terminals:', Array.from(usedNumbers));
+      log('🚨 [TERMINAL] Available slots should be:', Array.from({length: config.maxTerminals}, (_, i) => i + 1).filter(n => !usedNumbers.has(n)));
+      
+      // 🚨 CRITICAL: If terminals map is empty but canCreate returns false, there's a bug
+      if (this._terminals.size === 0) {
+        log('🚨🚨🚨 [TERMINAL] CRITICAL BUG: No terminals exist but canCreate returned FALSE!');
+        log('🚨🚨🚨 [TERMINAL] This should NEVER happen - forcing creation');
+        // Don't return early - continue with creation
+      } else {
+        showWarningMessage(`${ERROR_MESSAGES.MAX_TERMINALS_REACHED} (${config.maxTerminals})`);
+        return this._activeTerminalManager.getActive() || '';
+      }
+    } else {
+      log('✅ [TERMINAL] canCreate() returned TRUE - proceeding with creation');
     }
 
     log('🔍 [TERMINAL] Finding available terminal number...');
@@ -172,13 +216,11 @@ export class TerminalManager {
       this._activeTerminalManager.setActive(terminalId);
 
       ptyProcess.onData((data: string) => {
-        // 🚨 OPTIMIZATION 7: Only log extremely large data chunks to reduce noise
-        if (data.length > 5000) {
-          log('📤 [LARGE-DATA] PTY data received:', data.length, 'chars for terminal:', terminalId);
-        }
-
-        // 🚨 OPTIMIZED: Remove immediate detection to avoid duplication
-        // Detection will only happen in _flushBuffer for efficiency
+        // 🔍 DEBUGGING: Log all PTY data to identify shell prompt issues
+        log(
+          `📤 [PTY-DATA] Terminal ${terminalId} received ${data.length} chars:`,
+          JSON.stringify(data.substring(0, 100))
+        );
 
         // Performance optimization: Batch small data chunks
         this._bufferData(terminalId, data);
@@ -215,6 +257,17 @@ export class TerminalManager {
       log(`✅ [TERMINAL] Terminal created successfully: ${terminal.name} (${terminalId})`);
 
       this._terminalCreatedEmitter.fire(terminal);
+
+      // Initialize terminal with minimal shell interaction
+      setTimeout(() => {
+        try {
+          log(`🔍 [TERMINAL] Initializing shell for: ${terminalId}`);
+          // Send only a single carriage return to trigger initial prompt
+          ptyProcess.write('\r');
+        } catch (error) {
+          log(`⚠️ [TERMINAL] Failed to initialize shell for ${terminalId}:`, error);
+        }
+      }, 300); // 300ms delay to let shell initialize
 
       // 状態更新を通知
       log('🔍 [TERMINAL] Notifying state update...');
@@ -789,8 +842,25 @@ export class TerminalManager {
    * ターミナルデータのクリーンアップのみを行う（プロセスはkillしない）
    */
   private _cleanupTerminalData(terminalId: string): void {
+    log('🧹 [TERMINAL] === CLEANUP TERMINAL DATA START ===');
     log('🧹 [TERMINAL] Cleaning up terminal data:', terminalId);
-
+    
+    // Log terminal info before deletion
+    const terminal = this._terminals.get(terminalId);
+    if (terminal) {
+      log('🧹 [TERMINAL] Deleting terminal:', {
+        id: terminalId,
+        name: terminal.name,
+        number: terminal.number,
+        exists: this._terminals.has(terminalId)
+      });
+    } else {
+      log('⚠️ [TERMINAL] Terminal not found in map for cleanup:', terminalId);
+    }
+    
+    log('🧹 [TERMINAL] Before deletion - terminals count:', this._terminals.size);
+    log('🧹 [TERMINAL] Before deletion - terminal IDs:', Array.from(this._terminals.keys()));
+    
     // Clean up data buffers for this terminal
     this._flushBuffer(terminalId);
     this._dataBuffers.delete(terminalId);
@@ -804,15 +874,30 @@ export class TerminalManager {
     this._cliAgentService.handleTerminalRemoved(terminalId);
 
     // Remove from terminals map
-    this._terminals.delete(terminalId);
+    const deletionResult = this._terminals.delete(terminalId);
+    log('🧹 [TERMINAL] Terminal deletion from map:', deletionResult ? 'SUCCESS' : 'FAILED');
+    
+    log('🧹 [TERMINAL] After deletion - terminals count:', this._terminals.size);
+    log('🧹 [TERMINAL] After deletion - terminal IDs:', Array.from(this._terminals.keys()));
 
     this._terminalRemovedEmitter.fire(terminalId);
 
     log('🧹 [TERMINAL] Terminal data cleaned up:', terminalId);
     log('🧹 [TERMINAL] Remaining terminals:', Array.from(this._terminals.keys()));
+    log('🧹 [TERMINAL] Remaining terminal numbers:', Array.from(this._terminals.values()).map(t => ({ id: t.id, number: t.number })));
+
+    // Force check if terminals map is actually empty and can create should return true
+    if (this._terminals.size === 0) {
+      log('✅ [TERMINAL] All terminals deleted - canCreate should return TRUE');
+    }
 
     // アクティブターミナルだった場合、別のターミナルをアクティブにする
     this._updateActiveTerminalAfterRemoval(terminalId);
+    
+    // Force state notification update
+    log('🧹 [TERMINAL] Notifying state update after cleanup...');
+    this._notifyStateUpdate();
+    log('🧹 [TERMINAL] === CLEANUP TERMINAL DATA END ===');
   }
 
   /**
@@ -1088,6 +1173,20 @@ export class TerminalManager {
     try {
       ptyInstance.resize(cols, rows);
       log(`📏 [TERMINAL] Terminal resized: ${terminal.name} → ${cols}x${rows}`);
+
+      // VS Code pattern: Force shell refresh after resize
+      setTimeout(() => {
+        try {
+          // Send SIGWINCH signal to shell process to trigger prompt refresh
+          if (ptyInstance.pid) {
+            log(`🔄 [TERMINAL] Sending refresh signal to process ${ptyInstance.pid}`);
+            ptyInstance.write('\x0c'); // Form feed character to refresh display
+          }
+        } catch (refreshError) {
+          log(`⚠️ [TERMINAL] Failed to refresh shell for ${terminal.name}:`, refreshError);
+        }
+      }, 50);
+
       return { success: true };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);

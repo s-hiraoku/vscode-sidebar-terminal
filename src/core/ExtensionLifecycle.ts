@@ -208,9 +208,14 @@ export class ExtensionLifecycle {
       },
       {
         command: 'secondaryTerminal.killTerminal',
-        handler: () => {
+        handler: async () => {
           log('🔧 [DEBUG] Command executed: killTerminal');
-          this.sidebarProvider?.killTerminal();
+          try {
+            await this.sidebarProvider?.killTerminal();
+            log('🔧 [DEBUG] killTerminal command completed successfully');
+          } catch (error) {
+            log('🔧 [ERROR] killTerminal command failed:', error);
+          }
         },
       },
 

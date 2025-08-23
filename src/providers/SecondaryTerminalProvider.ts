@@ -12,6 +12,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   public static readonly viewType = 'secondaryTerminal';
   private _disposables: vscode.Disposable[] = [];
   private _terminalEventDisposables: vscode.Disposable[] = [];
+  private _terminalIdMapping?: Map<string, string>; // VS Code Pattern: Map Extension terminal ID to WebView terminal ID
 
   private _view?: vscode.WebviewView;
   private _isInitialized = false; // Prevent duplicate initialization
@@ -149,18 +150,9 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   public splitTerminal(direction?: 'horizontal' | 'vertical'): void {
     // Terminal split operation
     try {
-      // Check if we can split (use configured terminal limit)
-      const terminals = this._terminalManager.getTerminals();
-      const config = getConfigManager().getExtensionTerminalConfig();
-      const maxSplitTerminals = config.maxTerminals;
-
-      // Check terminal limits
-
-      if (terminals.length >= maxSplitTerminals) {
-        log('Cannot split - maximum terminals reached:', terminals.length);
-        showError(`Cannot split terminal: Maximum of ${maxSplitTerminals} terminals reached`);
-        return;
-      }
+      // Simplified: Let TerminalManager handle the validation
+      // Remove complex pre-validation and trust the createTerminal() method
+      log('🔍 [SPLIT] Attempting terminal creation - validation delegated to TerminalManager');
 
       // First send the SPLIT command to prepare the UI
       void this._sendMessage({
@@ -200,11 +192,26 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     }
   }
 
-  public killTerminal(): void {
+  public async killTerminal(): Promise<void> {
     // Kill active terminal
 
-    // Get active terminal ID
+    // 🔍 Enhanced debugging for active terminal detection
+    log('🔍 [DEBUG] ========== KILL TERMINAL DEBUG START ==========');
+    
+    // Get active terminal ID with detailed logging
     const activeTerminalId = this._terminalManager.getActiveTerminalId();
+    log(`🔍 [DEBUG] Active terminal ID from manager: ${activeTerminalId}`);
+    
+    // Get all terminals for comparison
+    const allTerminals = this._terminalManager.getTerminals();
+    log(`🔍 [DEBUG] All terminals: ${JSON.stringify(allTerminals.map(t => ({ id: t.id, name: t.name, isActive: t.isActive })))}`);
+    
+    // Check active terminal manager state
+    const activeManager = (this._terminalManager as any)._activeTerminalManager;
+    if (activeManager) {
+      log(`🔍 [DEBUG] ActiveTerminalManager state: ${activeManager.getActive()}`);
+      log(`🔍 [DEBUG] Has active: ${activeManager.hasActive()}`);
+    }
 
     if (!activeTerminalId) {
       log('⚠️ [WARN] No active terminal to kill');
@@ -212,15 +219,18 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       return;
     }
 
-    // Delegating to killSpecificTerminal
+    log(`🎯 [DEBUG] About to kill terminal: ${activeTerminalId}`);
 
     // Use the same logic as header × button (killSpecificTerminal)
     try {
-      this.killSpecificTerminal(activeTerminalId);
+      await this.killSpecificTerminal(activeTerminalId);
+      log(`🗑️ [SUCCESS] Active terminal killed: ${activeTerminalId}`);
     } catch (error) {
       log('ERROR: Failed to kill terminal:', error);
       showError(`Failed to close terminal: ${String(error)}`);
     }
+    
+    log('🔍 [DEBUG] ========== KILL TERMINAL DEBUG END ==========');
   }
 
   private async _performKillTerminal(terminalId: string): Promise<void> {
@@ -267,16 +277,43 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     }
   }
 
-  public killSpecificTerminal(terminalId: string): void {
-    // Kill specific terminal
-
-    // Use the same logic as deleteTerminal case (same as header × button)
+  public async killSpecificTerminal(terminalId: string): Promise<void> {
+    // 🎯 UNIFIED: Use same deletion logic as deleteTerminal case (header × button)
     try {
-      // Delegating to TerminalManager
-      void this._terminalManager.deleteTerminal(terminalId, { source: 'panel' });
+      log(`🗑️ [DEBUG] Unified deletion process started for: ${terminalId} (source: panel)`);
+      
+      // Use unified deletion with proper result handling
+      const result = await this._terminalManager.deleteTerminal(terminalId, { source: 'panel' });
+      
+      if (result.success) {
+        log(`✅ [SUCCESS] Terminal deleted via unified process: ${terminalId}`);
+        // Send success response to WebView (same as deleteTerminal case)
+        await this._sendMessage({
+          command: 'deleteTerminalResponse',
+          terminalId,
+          success: true
+        });
+      } else {
+        log(`⚠️ [WARN] Terminal deletion failed: ${terminalId}, reason: ${result.reason}`);
+        // Send failure response to WebView (unified with deleteTerminal case)
+        await this._sendMessage({
+          command: 'deleteTerminalResponse',
+          terminalId,
+          success: false,
+          reason: result.reason
+        });
+        // Note: Not throwing error to allow graceful handling
+      }
     } catch (error) {
-      log('ERROR: Failed to kill specific terminal:', error);
-      showError(`Failed to close terminal: ${String(error)}`);
+      log('❌ [ERROR] Failed to delete terminal via unified process:', error);
+      // Send error response to WebView (unified with deleteTerminal case)  
+      await this._sendMessage({
+        command: 'deleteTerminalResponse',
+        terminalId,
+        success: false,
+        reason: `Delete failed: ${String(error)}`
+      });
+      // Note: Not throwing error to allow graceful handling
     }
   }
 
@@ -414,23 +451,32 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
             break;
           }
 
-          log('🎯 [DEBUG] WebView ready - initializing terminal');
+          log('🎯 [DEBUG] WebView ready - initializing terminal immediately');
           this._isInitialized = true;
 
-          // Simple delay and initialize
-          setTimeout(() => {
-            void (async () => {
-              try {
-                await this._initializeTerminal();
-                log('✅ [DEBUG] Terminal initialization completed');
-              } catch (error) {
-                log('❌ [ERROR] Terminal initialization failed:', error);
-                TerminalErrorHandler.handleTerminalCreationError(error);
-                // Reset flag on error to allow retry
-                this._isInitialized = false;
-              }
-            })();
-          }, 500);
+          // 即座に初期化して確実にExtension側ターミナルを作成
+          void (async () => {
+            try {
+              await this._initializeTerminal();
+              log('✅ [DEBUG] Terminal initialization completed immediately');
+
+              // 🔍 FIX: Avoid duplicate terminal creation
+              // Only ensure terminals if none exist, let session restore handle the rest
+              setTimeout(() => {
+                if (this._terminalManager.getTerminals().length === 0) {
+                  log('🎯 [ENSURE] No terminals exist - creating minimum set');
+                  this._ensureMultipleTerminals();
+                } else {
+                  log('🎯 [ENSURE] Terminals already exist - skipping creation');
+                }
+              }, 100);
+            } catch (error) {
+              log('❌ [ERROR] Terminal initialization failed:', error);
+              TerminalErrorHandler.handleTerminalCreationError(error);
+              // Reset flag on error to allow retry
+              this._isInitialized = false;
+            }
+          })();
           break;
         case TERMINAL_CONSTANTS.COMMANDS.INPUT:
           if (message.data) {
@@ -455,6 +501,41 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
           if (message.terminalId) {
             log('🔄 [DEBUG] Switching to terminal:', message.terminalId);
             this._terminalManager.setActiveTerminal(message.terminalId);
+          }
+          break;
+        case TERMINAL_CONSTANTS.COMMANDS.CREATE_TERMINAL:
+          if (message.terminalId && message.terminalName) {
+            log(
+              '🚀 [DEBUG] Creating terminal from WebView request:',
+              message.terminalId,
+              message.terminalName
+            );
+            try {
+              // Check if terminal already exists to avoid duplicates
+              const existingTerminal = this._terminalManager.getTerminal(message.terminalId);
+              if (!existingTerminal) {
+                // 🔍 VS Code Pattern: Create PTY and establish immediate data flow
+                const newTerminalId = this._terminalManager.createTerminal();
+                log(`✅ [VS Code Pattern] PTY terminal created: ${newTerminalId}`);
+
+                // Establish VS Code-style direct data flow: PTY → Extension → WebView
+                const terminalInstance = this._terminalManager.getTerminal(newTerminalId);
+                if (terminalInstance) {
+                  // VS Code Pattern: Map Extension terminal ID to WebView terminal ID
+                  this._terminalIdMapping = this._terminalIdMapping || new Map();
+                  this._terminalIdMapping.set(newTerminalId, message.terminalId);
+                  
+                  log(`🔗 [VS Code Pattern] Mapped Extension ID ${newTerminalId} → WebView ID ${message.terminalId}`);
+                } else {
+                  log(`❌ [VS Code Pattern] Failed to get terminal instance for ${newTerminalId}`);
+                }
+
+              } else {
+                log(`⚠️ [DEBUG] Terminal ${message.terminalId} already exists, skipping creation`);
+              }
+            } catch (error) {
+              log(`❌ [DEBUG] Failed to create PTY terminal: ${String(error)}`);
+            }
           }
           break;
         case 'splitTerminal':
@@ -494,6 +575,38 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
           log('⚙️ [DEBUG] Updating settings from webview:', message.settings);
           if (message.settings) {
             await this.updateSettings(message.settings);
+          }
+          break;
+        }
+        case 'focusTerminal': {
+          log('🎯 [DEBUG] ========== FOCUS TERMINAL COMMAND RECEIVED ==========');
+          const terminalId = message.terminalId as string;
+          
+          // 🔍 Debug: Check current state before update
+          const currentActive = this._terminalManager.getActiveTerminalId();
+          log(`🔍 [DEBUG] Current active terminal: ${currentActive}`);
+          log(`🔍 [DEBUG] Requested active terminal: ${terminalId}`);
+          
+          if (terminalId) {
+            log(`🎯 [DEBUG] Setting active terminal to: ${terminalId}`);
+            try {
+              // Extension側でアクティブターミナルを更新
+              this._terminalManager.setActiveTerminal(terminalId);
+              
+              // 🔍 Verify the update worked
+              const newActive = this._terminalManager.getActiveTerminalId();
+              log(`🔍 [DEBUG] Verified active terminal after update: ${newActive}`);
+              
+              if (newActive === terminalId) {
+                log(`✅ [DEBUG] Active terminal successfully updated to: ${terminalId}`);
+              } else {
+                log(`❌ [DEBUG] Active terminal update failed. Expected: ${terminalId}, Got: ${newActive}`);
+              }
+            } catch (error) {
+              log(`❌ [DEBUG] Error setting active terminal:`, error);
+            }
+          } else {
+            log('❌ [DEBUG] No terminal ID provided for focusTerminal');
           }
           break;
         }
@@ -538,22 +651,24 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
           log('🗑️ [DEBUG] Full message:', message);
           log('🗑️ [DEBUG] Message terminalId:', message.terminalId);
 
+          // 📋 [SPEC] Panel trash button should delete active terminal
           // Check if specific terminal ID is provided
           if (message.terminalId) {
             log(`🗑️ [DEBUG] Killing specific terminal: ${message.terminalId}`);
             try {
-              this.killSpecificTerminal(message.terminalId);
+              await this.killSpecificTerminal(message.terminalId);
               log(`🗑️ [DEBUG] killSpecificTerminal completed for: ${message.terminalId}`);
             } catch (error) {
               log(`❌ [DEBUG] Error in killSpecificTerminal:`, error);
             }
           } else {
-            log('🗑️ [DEBUG] Killing active terminal (no specific ID provided)');
+            log('🗑️ [DEBUG] Killing active terminal (no specific ID provided) - this is the panel trash button behavior');
             try {
-              this.killTerminal();
-              log('🗑️ [DEBUG] killTerminal completed');
+              // 🎯 [FIX] Call killTerminal method to delete the active terminal (blue border terminal)
+              await this.killTerminal();
+              log('🗑️ [DEBUG] killTerminal (active terminal deletion) completed');
             } catch (error) {
-              log('❌ [DEBUG] Error in killTerminal:', error);
+              log('❌ [DEBUG] Error in killTerminal (active terminal deletion):', error);
             }
           }
           break;
@@ -568,178 +683,49 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
           if (terminalId) {
             log(`🗑️ [DEBUG] Deleting terminal: ${terminalId} (source: ${requestSource})`);
             try {
-              // 新しいアーキテクチャ: 統一されたdeleteTerminalメソッドを使用
-              void this._terminalManager.deleteTerminal(terminalId, { source: requestSource });
-              log(`🗑️ [DEBUG] deleteTerminal called for: ${terminalId}`);
+              // 🎯 FIX: Wait for deletion result and handle failure
+              const result = await this._terminalManager.deleteTerminal(terminalId, { source: requestSource });
+              
+              if (result.success) {
+                log(`✅ [DEBUG] Terminal deletion succeeded: ${terminalId}`);
+                // Send success response to WebView
+                await this._sendMessage({
+                  command: 'deleteTerminalResponse',
+                  terminalId,
+                  success: true
+                });
+              } else {
+                log(`⚠️ [DEBUG] Terminal deletion failed: ${terminalId}, reason: ${result.reason}`);
+                // Send failure response to WebView
+                await this._sendMessage({
+                  command: 'deleteTerminalResponse',
+                  terminalId,
+                  success: false,
+                  reason: result.reason
+                });
+              }
             } catch (error) {
               log(`❌ [DEBUG] Error in deleteTerminal:`, error);
+              // Send error response to WebView
+              await this._sendMessage({
+                command: 'deleteTerminalResponse',
+                terminalId,
+                success: false,
+                reason: `Delete failed: ${String(error)}`
+              });
             }
           } else {
             log('❌ [DEBUG] No terminal ID provided for deleteTerminal');
           }
           break;
         }
-        case 'switchAiAgent': {
-          log('🔄 [DEBUG] ========== SWITCH AI AGENT COMMAND RECEIVED ==========');
-          log('🔄 [DEBUG] Full message:', message);
-
-          const terminalId = message.terminalId as string;
-
-          if (terminalId) {
-            log(`🔄 [DEBUG] Switching AI Agent for terminal: ${terminalId}`);
-            try {
-              const result = this._terminalManager.switchAiAgentConnection(terminalId);
-              log(`🔄 [DEBUG] AI Agent switch result:`, result);
-
-              if (result.success) {
-                log(
-                  `✅ [DEBUG] AI Agent successfully switched: ${result.newStatus} (${result.agentType})`
-                );
-                // Success notification will be handled by the status change event
-              } else {
-                log(`❌ [DEBUG] AI Agent switch failed: ${result.reason}`);
-                showError(`Failed to switch AI Agent: ${result.reason || 'Unknown error'}`);
-              }
-            } catch (error) {
-              log(`❌ [DEBUG] Error in switchAiAgent:`, error);
-              showError('Failed to switch AI Agent connection');
-            }
-          } else {
-            log('❌ [DEBUG] No terminal ID provided for switchAiAgent');
-            showError('No terminal ID provided for AI Agent switch');
-          }
+        default: {
+          log('⚠️ [DEBUG] Unknown webview message command:', message.command);
           break;
         }
-        case 'extractScrollback': {
-          log('📋 [DEBUG] Extract scrollback request received');
-          const terminalId = message.terminalId as string;
-          const maxLines = (message.maxLines as number) || 1000;
-
-          if (terminalId) {
-            // WebViewに対してScrollback取得要求を送信
-            await this._sendMessage({
-              command: 'getScrollback',
-              terminalId,
-              maxLines,
-              timestamp: Date.now(),
-            });
-          }
-          break;
-        }
-        case 'scrollbackExtracted': {
-          log('📋 [DEBUG] Scrollback data received from WebView');
-          const terminalId = message.terminalId as string;
-          const scrollbackContent = message.scrollbackContent;
-
-          // Scrollbackデータを一時的に保存（実際の実装では適切な場所に保存）
-          if (terminalId && scrollbackContent) {
-            // グローバルステートに直接保存（テスト用）
-            const scrollbackKey = `scrollback_${terminalId}`;
-            await this._extensionContext.globalState.update(scrollbackKey, scrollbackContent);
-            log(
-              `📋 [DEBUG] Scrollback data saved for terminal ${terminalId}: ${scrollbackContent?.length || 0} lines`
-            );
-          }
-          break;
-        }
-        case 'restoreScrollbackData': {
-          log('🔄 [DEBUG] Restore scrollback request received');
-          const terminalId = message.terminalId as string;
-          const scrollbackContent = message.scrollbackContent;
-
-          if (terminalId && scrollbackContent) {
-            // WebViewに対してScrollback復元要求を送信
-            await this._sendMessage({
-              command: 'restoreScrollback',
-              terminalId,
-              scrollbackContent,
-              timestamp: Date.now(),
-            });
-          }
-          break;
-        }
-        case 'terminalInteraction': {
-          log(
-            '⚡ [DEBUG] Terminal interaction received:',
-            message.type,
-            'terminalId:',
-            message.terminalId
-          );
-          // Handle terminal interaction events from webview
-          // This is informational - the webview is notifying us of user interactions
-          break;
-        }
-        case 'requestStateRestoration': {
-          log('🔄 [DEBUG] State restoration requested - DISABLED FOR DEBUGGING, no action needed');
-          break;
-        }
-        case 'getScrollbackData': {
-          log(
-            '📜 [DEBUG] Scrollback data request from webview - DISABLED FOR DEBUGGING:',
-            message.terminalId
-          );
-          // DISABLED FOR DEBUGGING - Session restoration functionality disabled
-          // if (message.terminalId) {
-          //   try {
-          //     const scrollbackLines = message.scrollbackLines || 100;
-          //     const scrollbackData = await this._terminalManager.getTerminalScrollback(
-          //       message.terminalId,
-          //       scrollbackLines
-          //     );
-
-          //     // WebViewに履歴データを送信
-          //     await this._sendMessage({
-          //       command: 'getScrollback',
-          //       terminalId: message.terminalId,
-          //       scrollbackData,
-          //     });
-
-          //     log(
-          //       `📜 [DEBUG] Sent ${scrollbackData.length} lines of scrollback data for terminal ${message.terminalId}`
-          //     );
-          //   } catch (error) {
-          //     log(
-          //       `❌ [ERROR] Failed to get scrollback data for terminal ${message.terminalId}:`,
-          //       error
-          //     );
-          //   }
-          // }
-          break;
-        }
-        // getTerminalScrollbackData case removed - using VS Code standard approach with automatic persistence
-        // scrollbackDataCollected case removed - using VS Code standard approach with automatic persistence
-        case 'restoreTerminalScrollback': {
-          log('🔄 [DEBUG] Terminal scrollback restoration requested');
-          const terminalInfo = message.terminalInfo;
-          const scrollbackContent = message.scrollbackContent;
-
-          if (terminalInfo) {
-            log(
-              `🔄 [DEBUG] Restoring scrollback for: ${terminalInfo.name} (original: ${terminalInfo.originalId})`
-            );
-            log(`🔄 [DEBUG] Scrollback content available: ${!!scrollbackContent}`);
-
-            // WebViewに履歴復元要求を送信（履歴データ付き）
-            await this._sendMessage({
-              command: 'performScrollbackRestore',
-              terminalInfo,
-              scrollbackContent,
-              timestamp: Date.now(),
-            });
-          }
-          break;
-        }
-        case 'error': {
-          log('❌ [TRACE] WEBVIEW REPORTED ERROR!');
-          log('❌ [TRACE] Error message:', message);
-          break;
-        }
-        default:
-          log('⚠️ [TRACE] Unknown/Unexpected message received:', message.command, message);
-          log('⚠️ [TRACE] This could indicate WebView is sending unexpected messages');
       }
     } catch (error) {
-      log('❌ [ERROR] Failed to handle webview message:', error);
+      log('❌ [ERROR] Error handling webview message:', error);
       TerminalErrorHandler.handleWebviewError(error);
     }
   }
@@ -754,17 +740,33 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     // Handle terminal output
     const dataDisposable = this._terminalManager.onData((event) => {
       if (event.data) {
+        // 🔍 VS Code Pattern: Map Extension terminal ID to WebView terminal ID
+        const webviewTerminalId = this._terminalIdMapping?.get(event.terminalId) || event.terminalId;
+        
         log(
-          '📤 [DEBUG] Terminal output received:',
+          '🔍 [VS Code Pattern] Terminal output received:',
           event.data.length,
-          'chars, terminalId:',
-          event.terminalId
+          'chars, Extension ID:',
+          event.terminalId,
+          '→ WebView ID:',
+          webviewTerminalId,
+          'data preview:',
+          JSON.stringify(event.data.substring(0, 50))
         );
-        void this._sendMessage({
+
+        const outputMessage = {
           command: TERMINAL_CONSTANTS.COMMANDS.OUTPUT,
           data: event.data,
-          terminalId: event.terminalId,
-        });
+          terminalId: webviewTerminalId, // Use mapped WebView terminal ID
+        };
+
+        log(
+          '📤 [VS Code Pattern] Sending OUTPUT to WebView terminal:',
+          webviewTerminalId
+        );
+        void this._sendMessage(outputMessage);
+      } else {
+        log('⚠️ [DATA-FLOW] Empty data received from terminal:', event.terminalId);
       }
     });
 
@@ -781,11 +783,12 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     const createdDisposable = this._terminalManager.onTerminalCreated((terminal) => {
       log('🆕 [DEBUG] Terminal created:', terminal.id, terminal.name);
 
-      // 基本的なターミナル作成メッセージ
+      // 基本的なターミナル作成メッセージ（番号情報を含む）
       const message: WebviewMessage = {
         command: TERMINAL_CONSTANTS.COMMANDS.TERMINAL_CREATED,
         terminalId: terminal.id,
         terminalName: terminal.name,
+        terminalNumber: terminal.number, // ターミナル番号を追加
         config: getTerminalConfig(),
       };
 
@@ -1522,15 +1525,53 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     // This mimics VS Code's behavior of creating terminals on-demand
     setTimeout(() => {
       if (this._terminalManager.getTerminals().length === 0) {
-        log('🎆 [INITIAL] Creating initial terminal (no session data)');
+        log('🎆 [INITIAL] Creating initial terminals (no session data)');
         try {
+          // Create 1 terminal by default for cleaner startup
           const terminalId = this._terminalManager.createTerminal();
+
           log(`✅ [INITIAL] Initial terminal created: ${terminalId}`);
+
+          // Set the terminal as active
+          this._terminalManager.setActiveTerminal(terminalId);
         } catch (error) {
-          log(`❌ [INITIAL] Failed to create initial terminal: ${String(error)}`);
+          log(`❌ [INITIAL] Failed to create initial terminals: ${String(error)}`);
+          // Fallback: try to create at least one terminal
+          try {
+            const terminalId = this._terminalManager.createTerminal();
+            log(`✅ [INITIAL] Fallback terminal created: ${terminalId}`);
+          } catch (fallbackError) {
+            log(`❌ [INITIAL] Fallback terminal creation also failed: ${String(fallbackError)}`);
+          }
         }
       }
     }, 100); // Very short delay to ensure WebView is ready
+  }
+
+  /**
+   * 複数ターミナルの確実な作成を保証
+   */
+  private _ensureMultipleTerminals(): void {
+    try {
+      const currentTerminals = this._terminalManager.getTerminals().length;
+      log(`🔍 [ENSURE] Current terminal count: ${currentTerminals}`);
+
+      if (currentTerminals < 1) {
+        log('🎯 [ENSURE] Creating minimum terminal (1)');
+
+        // 最低1つのターミナルを確保
+        const terminalId = this._terminalManager.createTerminal();
+        log(`✅ [ENSURE] Created terminal: ${terminalId}`);
+
+        // ターミナルをアクティブに設定
+        this._terminalManager.setActiveTerminal(terminalId);
+        log(`🎯 [ENSURE] Set terminal as active: ${terminalId}`);
+      } else {
+        log(`✅ [ENSURE] Sufficient terminals already exist: ${currentTerminals}`);
+      }
+    } catch (error) {
+      log(`❌ [ENSURE] Failed to ensure terminals: ${String(error)}`);
+    }
   }
 
   /**
@@ -1795,6 +1836,81 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   }
 
   // Removed complex message processing - simplified approach
+
+  /**
+   * Handle session restoration data request from WebView (REFACTORED)
+   *
+   * Extracted from message handler for better maintainability and testability
+   * Follows single responsibility principle and reduces code duplication
+   */
+  private async _handleSessionRestorationDataRequest(message: VsCodeMessage): Promise<void> {
+    log('🔄 [DEBUG] Session restoration data requested from WebView');
+    const terminalId = message.terminalId as string;
+
+    if (!terminalId) {
+      log('⚠️ [DEBUG] No terminalId provided for session restoration request');
+      return;
+    }
+
+    try {
+      // Get session data from StandardTerminalSessionManager
+      if (!this._standardSessionManager) {
+        log('⚠️ [DEBUG] No StandardTerminalSessionManager available for session restoration');
+        await this._sendSessionRestorationResponse(terminalId, null);
+        return;
+      }
+
+      const sessionInfo = this._standardSessionManager.getSessionInfo();
+
+      if (!sessionInfo || !sessionInfo.exists || !sessionInfo.terminals) {
+        log('📭 [DEBUG] No session info available');
+        await this._sendSessionRestorationResponse(terminalId, null);
+        return;
+      }
+
+      // Find the terminal in saved session data
+      const terminalSession = sessionInfo.terminals.find((t) => t.id === terminalId);
+
+      if (terminalSession) {
+        log(`🔄 [DEBUG] Found session data for terminal ${terminalId}`);
+        await this._sendSessionRestorationResponse(terminalId, terminalSession);
+      } else {
+        log(`📭 [DEBUG] No session data found for terminal ${terminalId}`);
+        await this._sendSessionRestorationResponse(terminalId, null);
+      }
+    } catch (error) {
+      log(
+        `❌ [ERROR] Failed to handle session restoration request for terminal ${terminalId}:`,
+        error
+      );
+      await this._sendSessionRestorationResponse(terminalId, null);
+    }
+  }
+
+  /**
+   * Send session restoration response to WebView (REFACTORED)
+   *
+   * Centralized response handling for consistent message format
+   * and error handling across all session restoration responses
+   */
+  private async _sendSessionRestorationResponse(
+    terminalId: string,
+    sessionData: unknown
+  ): Promise<void> {
+    try {
+      await this._sendMessage({
+        command: 'sessionRestorationData',
+        terminalId: terminalId,
+        sessionData: sessionData,
+        timestamp: Date.now(),
+      });
+    } catch (error) {
+      log(
+        `❌ [ERROR] Failed to send session restoration response for terminal ${terminalId}:`,
+        error
+      );
+    }
+  }
 
   /**
    * Clean up resources

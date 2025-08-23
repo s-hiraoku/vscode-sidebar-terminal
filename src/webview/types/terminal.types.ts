@@ -16,6 +16,7 @@ export type TerminalConfig = WebViewTerminalConfig;
 export interface TerminalInstance {
   readonly id: string;
   readonly name: string;
+  readonly number: number; // ターミナル番号（1-5）- 番号管理に必要
   readonly terminal: Terminal;
   readonly fitAddon: FitAddon;
   readonly container: HTMLElement;
