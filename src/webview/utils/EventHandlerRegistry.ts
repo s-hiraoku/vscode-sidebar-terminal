@@ -151,6 +151,13 @@ export class EventHandlerRegistry {
   }
 
   /**
+   * Get the count of registered listeners
+   */
+  getRegisteredCount(): number {
+    return this.listeners.size;
+  }
+
+  /**
    * Get detailed information about a specific listener
    * @param key The listener key
    */

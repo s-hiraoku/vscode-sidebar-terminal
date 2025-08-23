@@ -187,7 +187,12 @@ export interface IMessageManager {
     data: unknown,
     coordinator: IManagerCoordinator
   ): void;
-  getQueueStats(): { queueSize: number; isProcessing: boolean };
+  getQueueStats(): { 
+    queueSize: number; 
+    isProcessing: boolean;
+    highPriorityQueueSize?: number;
+    isLocked?: boolean;
+  };
   sendInput(input: string, terminalId?: string, coordinator?: IManagerCoordinator): void;
   sendResize(
     cols: number,
@@ -211,7 +216,11 @@ export interface INotificationManager {
   showTerminalCloseError(minCount: number): void;
   showAltClickFeedback(x: number, y: number): void;
   clearNotifications(): void;
-  getStats(): { activeCount: number; totalCreated: number };
+  getStats(): { 
+    activeCount: number; 
+    totalCreated: number;
+    totalOperations?: number;
+  };
   setupNotificationStyles(): void;
   dispose(): void;
 }

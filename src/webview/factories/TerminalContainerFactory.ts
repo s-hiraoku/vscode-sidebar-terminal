@@ -34,6 +34,7 @@ export interface ContainerElements {
   header?: HTMLElement;
   body: HTMLElement;
   closeButton?: HTMLElement;
+  splitButton?: HTMLElement;
   headerElements?: TerminalHeaderElements; // AI Agent status support
 }
 
@@ -142,6 +143,7 @@ export class TerminalContainerFactory {
         header,
         body,
         closeButton,
+        splitButton: headerElements?.splitButton,
         headerElements
       };
 

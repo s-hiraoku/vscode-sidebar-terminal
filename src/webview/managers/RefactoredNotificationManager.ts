@@ -101,7 +101,7 @@ export class RefactoredNotificationManager
     this.log('Notification Manager initialized successfully');
   }
 
-  protected onDispose(): void {
+  protected override onDispose(): void {
     this.log('Disposing Refactored Notification Manager...');
 
     // Clear all active notifications
@@ -113,7 +113,7 @@ export class RefactoredNotificationManager
     this.log('Notification Manager disposed successfully');
   }
 
-  protected async validateDependencies(dependencies: ManagerDependencies): Promise<void> {
+  protected override async validateDependencies(dependencies: ManagerDependencies): Promise<void> {
     // Logging coordinator is optional but recommended
     if (!dependencies.loggingCoordinator) {
       this.log('Logging coordinator not provided - using internal logging only', 'warn');

@@ -96,7 +96,7 @@ export class RefactoredMessageManager implements IMessageManager {
   /**
    * Initialize with coordinator
    */
-  public initialize(coordinator: IManagerCoordinator): void {
+  public initialize(_coordinator: IManagerCoordinator): void {
     this.coordinator = coordinator;
     this.logger.info('Initialized with coordinator');
   }
@@ -104,7 +104,7 @@ export class RefactoredMessageManager implements IMessageManager {
   /**
    * Legacy interface compatibility method
    */
-  public receiveMessage(message: unknown, coordinator: IManagerCoordinator): Promise<void> {
+  public receiveMessage(message: unknown, _coordinator: IManagerCoordinator): Promise<void> {
     // 🔍 DEBUG: Fix message handling - message is the data, not MessageEvent
     this.logger.debug('receiveMessage called', {
       messageType: typeof message,
@@ -127,7 +127,7 @@ export class RefactoredMessageManager implements IMessageManager {
    */
   public async handleMessage(
     message: MessageEvent,
-    coordinator: IManagerCoordinator
+    _coordinator: IManagerCoordinator
   ): Promise<void> {
     try {
       const msg = message.data as MessageCommand;
@@ -254,7 +254,7 @@ export class RefactoredMessageManager implements IMessageManager {
   /**
    * Handle init message from extension
    */
-  private handleInitMessage(msg: MessageCommand, coordinator: IManagerCoordinator): void {
+  private handleInitMessage(msg: MessageCommand, _coordinator: IManagerCoordinator): void {
     this.logger.info('Handling init message');
 
     try {
@@ -283,7 +283,7 @@ export class RefactoredMessageManager implements IMessageManager {
   /**
    * Handle output message from extension with robust validation
    */
-  private handleOutputMessage(msg: MessageCommand, coordinator: IManagerCoordinator): void {
+  private handleOutputMessage(msg: MessageCommand, _coordinator: IManagerCoordinator): void {
     const data = msg.data as string;
     const terminalId = msg.terminalId as string;
 
@@ -354,7 +354,7 @@ export class RefactoredMessageManager implements IMessageManager {
    */
   private handleTerminalRemovedMessage(
     msg: MessageCommand,
-    coordinator: IManagerCoordinator
+    _coordinator: IManagerCoordinator
   ): void {
     const terminalId = msg.terminalId as string;
     if (terminalId) {
@@ -368,7 +368,7 @@ export class RefactoredMessageManager implements IMessageManager {
    */
   private handleTerminalRemovedFromExtension(
     terminalId: string,
-    coordinator: IManagerCoordinator
+    _coordinator: IManagerCoordinator
   ): void {
     this.logger.info(`Handling terminal removal from extension: ${terminalId}`);
 
@@ -385,7 +385,7 @@ export class RefactoredMessageManager implements IMessageManager {
   /**
    * Handle clear terminal message from extension
    */
-  private handleClearTerminalMessage(msg: MessageCommand, coordinator: IManagerCoordinator): void {
+  private handleClearTerminalMessage(msg: MessageCommand, _coordinator: IManagerCoordinator): void {
     const terminalId = msg.terminalId as string;
     if (terminalId) {
       const terminal = coordinator.getTerminalInstance(terminalId);
@@ -401,7 +401,7 @@ export class RefactoredMessageManager implements IMessageManager {
    */
   private handleFontSettingsUpdateMessage(
     msg: MessageCommand,
-    coordinator: IManagerCoordinator
+    _coordinator: IManagerCoordinator
   ): void {
     const fontSettings = msg.fontSettings as WebViewFontSettings;
     if (fontSettings) {
@@ -416,7 +416,7 @@ export class RefactoredMessageManager implements IMessageManager {
    */
   private handleSettingsResponseMessage(
     msg: MessageCommand,
-    coordinator: IManagerCoordinator
+    _coordinator: IManagerCoordinator
   ): void {
     const settings = msg.settings;
     if (settings) {
@@ -430,7 +430,7 @@ export class RefactoredMessageManager implements IMessageManager {
    */
   private async handleTerminalCreatedMessage(
     msg: MessageCommand,
-    coordinator: IManagerCoordinator
+    _coordinator: IManagerCoordinator
   ): Promise<void> {
     const terminalId = msg.terminalId as string;
     const terminalName = msg.terminalName as string;
@@ -466,7 +466,7 @@ export class RefactoredMessageManager implements IMessageManager {
   /**
    * Handle new terminal creation message
    */
-  private handleNewTerminalMessage(msg: MessageCommand, coordinator: IManagerCoordinator): void {
+  private handleNewTerminalMessage(msg: MessageCommand, _coordinator: IManagerCoordinator): void {
     const terminalId = msg.terminalId as string;
     const terminalName = msg.terminalName as string;
     const config = msg.config;
@@ -485,7 +485,7 @@ export class RefactoredMessageManager implements IMessageManager {
   /**
    * Handle focus terminal message
    */
-  private handleFocusTerminalMessage(msg: MessageCommand, coordinator: IManagerCoordinator): void {
+  private handleFocusTerminalMessage(msg: MessageCommand, _coordinator: IManagerCoordinator): void {
     const terminalId = msg.terminalId as string;
     if (terminalId) {
       coordinator.ensureTerminalFocus(terminalId);
@@ -496,7 +496,7 @@ export class RefactoredMessageManager implements IMessageManager {
   /**
    * Handle state update message
    */
-  private handleStateUpdateMessage(msg: MessageCommand, coordinator: IManagerCoordinator): void {
+  private handleStateUpdateMessage(msg: MessageCommand, _coordinator: IManagerCoordinator): void {
     const state = msg.state;
     if (state) {
       this.logger.info('State update received');
@@ -516,7 +516,7 @@ export class RefactoredMessageManager implements IMessageManager {
    */
   private handleClaudeStatusUpdateMessage(
     msg: MessageCommand,
-    coordinator: IManagerCoordinator
+    _coordinator: IManagerCoordinator
   ): void {
     this.logger.info('CLI Agent Status Update received');
 
@@ -588,7 +588,7 @@ export class RefactoredMessageManager implements IMessageManager {
    */
   private handleCliAgentFullStateSyncMessage(
     msg: MessageCommand,
-    coordinator: IManagerCoordinator
+    _coordinator: IManagerCoordinator
   ): void {
     this.logger.info('CLI Agent Full State Sync received');
 
@@ -646,7 +646,7 @@ export class RefactoredMessageManager implements IMessageManager {
   // IMESSAGEMANAGER INTERFACE IMPLEMENTATION
   // =================================================================
 
-  public sendReadyMessage(coordinator: IManagerCoordinator): void {
+  public sendReadyMessage(_coordinator: IManagerCoordinator): void {
     void this.messageQueue.enqueue({
       command: 'ready',
       timestamp: Date.now(),
@@ -658,7 +658,7 @@ export class RefactoredMessageManager implements IMessageManager {
     type: TerminalInteractionEvent['type'],
     terminalId: string,
     data: unknown,
-    coordinator: IManagerCoordinator
+    _coordinator: IManagerCoordinator
   ): void {
     try {
       coordinator.postMessageToExtension({
@@ -779,7 +779,7 @@ export class RefactoredMessageManager implements IMessageManager {
   public sendDeleteTerminalMessage(
     terminalId: string,
     requestSource: 'header' | 'panel',
-    coordinator: IManagerCoordinator
+    _coordinator: IManagerCoordinator
   ): void {
     try {
       coordinator.postMessageToExtension({
@@ -794,7 +794,7 @@ export class RefactoredMessageManager implements IMessageManager {
     }
   }
 
-  public sendSwitchAiAgentMessage(terminalId: string, coordinator: IManagerCoordinator): void {
+  public sendSwitchAiAgentMessage(terminalId: string, _coordinator: IManagerCoordinator): void {
     try {
       coordinator.postMessageToExtension({
         command: 'switchAiAgent',
@@ -807,7 +807,7 @@ export class RefactoredMessageManager implements IMessageManager {
     }
   }
 
-  public sendKillTerminalMessage(coordinator: IManagerCoordinator): void {
+  public sendKillTerminalMessage(_coordinator: IManagerCoordinator): void {
     void this.messageQueue.enqueue({
       command: 'killTerminal',
       timestamp: Date.now(),
@@ -817,7 +817,7 @@ export class RefactoredMessageManager implements IMessageManager {
 
   public sendKillSpecificTerminalMessage(
     terminalId: string,
-    coordinator: IManagerCoordinator
+    _coordinator: IManagerCoordinator
   ): void {
     this.logger.info(`Sending kill specific terminal message for: ${terminalId}`);
 
@@ -835,14 +835,14 @@ export class RefactoredMessageManager implements IMessageManager {
     }
   }
 
-  public requestSettings(coordinator: IManagerCoordinator): void {
+  public requestSettings(_coordinator: IManagerCoordinator): void {
     void this.messageQueue.enqueue({
       command: 'getSettings',
     });
     this.logger.info('Settings requested');
   }
 
-  public updateSettings(settings: unknown, coordinator: IManagerCoordinator): void {
+  public updateSettings(settings: unknown, _coordinator: IManagerCoordinator): void {
     void this.messageQueue.enqueue({
       command: 'updateSettings',
       settings,
@@ -850,7 +850,7 @@ export class RefactoredMessageManager implements IMessageManager {
     this.logger.info('Settings update sent');
   }
 
-  public requestNewTerminal(coordinator: IManagerCoordinator): void {
+  public requestNewTerminal(_coordinator: IManagerCoordinator): void {
     void this.messageQueue.enqueue({
       command: 'createTerminal',
       timestamp: Date.now(),
@@ -872,7 +872,7 @@ export class RefactoredMessageManager implements IMessageManager {
    */
   private async handleSessionRestoreMessage(
     msg: MessageCommand,
-    coordinator: IManagerCoordinator
+    _coordinator: IManagerCoordinator
   ): Promise<void> {
     this.logger.info('Session restore message received');
 
@@ -993,7 +993,7 @@ export class RefactoredMessageManager implements IMessageManager {
   /**
    * Handle scrollback extraction request
    */
-  private handleGetScrollbackMessage(msg: MessageCommand, coordinator: IManagerCoordinator): void {
+  private handleGetScrollbackMessage(msg: MessageCommand, _coordinator: IManagerCoordinator): void {
     this.logger.info('Handling get scrollback message');
 
     const terminalId = msg.terminalId as string;
@@ -1048,7 +1048,7 @@ export class RefactoredMessageManager implements IMessageManager {
    */
   private handleRestoreScrollbackMessage(
     msg: MessageCommand,
-    coordinator: IManagerCoordinator
+    _coordinator: IManagerCoordinator
   ): void {
     this.logger.info('Handling restore scrollback message');
 
@@ -1238,7 +1238,7 @@ export class RefactoredMessageManager implements IMessageManager {
    */
   private handlePanelLocationUpdateMessage(
     msg: MessageCommand,
-    coordinator: IManagerCoordinator
+    _coordinator: IManagerCoordinator
   ): void {
     try {
       const location = msg.location || 'sidebar';
@@ -1287,7 +1287,7 @@ export class RefactoredMessageManager implements IMessageManager {
   /**
    * Handle panel location detection request from Extension
    */
-  private handleRequestPanelLocationDetectionMessage(coordinator: IManagerCoordinator): void {
+  private handleRequestPanelLocationDetectionMessage(_coordinator: IManagerCoordinator): void {
     try {
       this.logger.info('Handling panel location detection request');
 
@@ -1365,7 +1365,7 @@ export class RefactoredMessageManager implements IMessageManager {
    */
   private handleSerializeTerminalMessage(
     _msg: MessageCommand,
-    _coordinator: IManagerCoordinator
+    __coordinator: IManagerCoordinator
   ): void {
     this.logger.info('Terminal serialization requested');
     // Implementation would go here
@@ -1373,7 +1373,7 @@ export class RefactoredMessageManager implements IMessageManager {
 
   private handleRestoreSerializedContentMessage(
     _msg: MessageCommand,
-    _coordinator: IManagerCoordinator
+    __coordinator: IManagerCoordinator
   ): void {
     this.logger.info('Restore serialized content requested');
     // Implementation would go here
@@ -1381,7 +1381,7 @@ export class RefactoredMessageManager implements IMessageManager {
 
   private handleTerminalRestoreInfoMessage(
     _msg: MessageCommand,
-    _coordinator: IManagerCoordinator
+    __coordinator: IManagerCoordinator
   ): void {
     this.logger.info('Terminal restore info received');
     // Implementation would go here
@@ -1389,7 +1389,7 @@ export class RefactoredMessageManager implements IMessageManager {
 
   private handleSaveAllTerminalSessionsMessage(
     _msg: MessageCommand,
-    _coordinator: IManagerCoordinator
+    __coordinator: IManagerCoordinator
   ): void {
     this.logger.info('Save all terminal sessions requested');
     // Implementation would go here
@@ -1397,7 +1397,7 @@ export class RefactoredMessageManager implements IMessageManager {
 
   private handleRequestTerminalSerializationMessage(
     _msg: MessageCommand,
-    _coordinator: IManagerCoordinator
+    __coordinator: IManagerCoordinator
   ): void {
     this.logger.info('Request terminal serialization');
     // Implementation would go here
@@ -1405,7 +1405,7 @@ export class RefactoredMessageManager implements IMessageManager {
 
   private handleRestoreTerminalSerializationMessage(
     _msg: MessageCommand,
-    _coordinator: IManagerCoordinator
+    __coordinator: IManagerCoordinator
   ): void {
     this.logger.info('Restore terminal serialization');
     // Implementation would go here
@@ -1413,7 +1413,7 @@ export class RefactoredMessageManager implements IMessageManager {
 
   private handleSessionRestorationDataMessage(
     _msg: MessageCommand,
-    _coordinator: IManagerCoordinator
+    __coordinator: IManagerCoordinator
   ): void {
     this.logger.info('Session restoration data received');
     // Implementation would go here
@@ -1424,7 +1424,7 @@ export class RefactoredMessageManager implements IMessageManager {
    */
   private handleDeleteTerminalResponseMessage(
     msg: MessageCommand,
-    coordinator: IManagerCoordinator
+    _coordinator: IManagerCoordinator
   ): void {
     const terminalId = msg.terminalId as string;
     const success = msg.success as boolean;

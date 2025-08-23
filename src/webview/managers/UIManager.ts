@@ -34,7 +34,7 @@ export class UIManager extends BaseManager implements IUIManager {
   private headerElementsCache = new Map<string, TerminalHeaderElements>();
 
   // Event registry for proper cleanup
-  private eventRegistry: EventHandlerRegistry;
+  protected eventRegistry: EventHandlerRegistry;
 
   constructor() {
     super('UIManager', {
