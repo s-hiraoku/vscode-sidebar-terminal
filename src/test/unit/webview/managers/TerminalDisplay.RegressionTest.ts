@@ -7,13 +7,13 @@ import { describe, it, beforeEach, afterEach } from 'mocha';
 import { expect } from 'chai';
 import * as sinon from 'sinon';
 import { JSDOM } from 'jsdom';
-import { TerminalWebviewManager } from '../../../../webview/main';
+import { RefactoredTerminalWebviewManager } from '../../../../webview/managers/RefactoredTerminalWebviewManager';
 
 describe('Terminal Display - Regression Tests', function () {
   let dom: JSDOM;
   let mockVsCodeApi: any;
   let postMessageSpy: sinon.SinonSpy;
-  let terminalWebviewManager: TerminalWebviewManager;
+  let terminalWebviewManager: RefactoredTerminalWebviewManager;
 
   beforeEach(function () {
     // Set up DOM environment
@@ -79,7 +79,7 @@ describe('Terminal Display - Regression Tests', function () {
     } as any;
 
     // Create manager instance
-    terminalWebviewManager = new TerminalWebviewManager();
+    terminalWebviewManager = new RefactoredTerminalWebviewManager();
   });
 
   afterEach(function () {

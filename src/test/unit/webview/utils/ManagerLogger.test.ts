@@ -160,10 +160,10 @@ describe('ManagerLogger', () => {
       logger.info('Test info with data', testData);
       
       expect(console.log).to.have.been.calledTwice;
-      expect(console.log.firstCall).to.have.been.calledWith(
+      expect((console.log as any).firstCall).to.have.been.calledWith(
         sandbox.match(/🧪.*TestManager.*Test info with data/)
       );
-      expect(console.log.secondCall).to.have.been.calledWith(testData);
+      expect((console.log as any).secondCall).to.have.been.calledWith(testData);
     });
 
     it('should log warn messages with correct format', () => {
@@ -245,13 +245,13 @@ describe('ManagerLogger', () => {
       logger.lifecycle('cleanup', 'failed');
       
       expect(console.log).to.have.been.calledThrice;
-      expect(console.log.firstCall).to.have.been.calledWith(
+      expect((console.log as any).firstCall).to.have.been.calledWith(
         sandbox.match(/startup.*completed/)
       );
-      expect(console.log.secondCall).to.have.been.calledWith(
+      expect((console.log as any).secondCall).to.have.been.calledWith(
         sandbox.match(/shutdown.*in_progress/)
       );
-      expect(console.log.thirdCall).to.have.been.calledWith(
+      expect((console.log as any).thirdCall).to.have.been.calledWith(
         sandbox.match(/cleanup.*failed/)
       );
     });

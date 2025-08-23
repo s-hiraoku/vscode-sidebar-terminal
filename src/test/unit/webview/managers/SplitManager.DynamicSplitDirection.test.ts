@@ -257,6 +257,7 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
         terminal: mockTerminal,
         fitAddon: mockFitAddon,
         name: 'Broken Terminal',
+        number: 1,
         container: null as any, // Simulate missing container
       };
 

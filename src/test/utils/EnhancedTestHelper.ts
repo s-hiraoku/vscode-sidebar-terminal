@@ -649,11 +649,11 @@ export class EnhancedTestHelper {
   // GETTERS
   // ============================================================================
 
-  public get clock(): sinon.SinonFakeTimers | undefined {
+  public getClock(): sinon.SinonFakeTimers | undefined {
     return this.clock;
   }
 
-  public get sandbox(): sinon.SinonSandbox {
+  public getSandbox(): sinon.SinonSandbox {
     return this.sandbox;
   }
 
