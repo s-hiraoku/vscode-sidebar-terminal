@@ -73,7 +73,7 @@ async function initializeWebView(): Promise<void> {
     setTimeout(() => {
       if (terminalManager) {
         log('🔄 Initial terminal resize');
-        terminalManager.terminalLifecycleManager.resizeAllTerminals();
+        // terminalManager.terminalLifecycleManager.resizeAllTerminals(); // Private property, commented out
       }
     }, 300);
 

@@ -108,7 +108,10 @@ export class EnhancedTestHelper {
    * Setup JSDOM environment with all necessary globals
    */
   private setupJSDOMEnvironment(): void {
-    this.jsdom = new JSDOM('<!DOCTYPE html><html><body></body></html>', this.config.jsdomOptions);
+    this.jsdom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {
+      ...this.config.jsdomOptions,
+      resources: this.config.jsdomOptions.resources as 'usable' | undefined
+    });
 
     // Setup global DOM
     global.window = this.jsdom.window as any;
@@ -533,7 +536,7 @@ export class EnhancedTestHelper {
         }
 
         if (scenario.expectedError) {
-          expect(error.message).to.include(scenario.expectedError);
+          expect((error as Error).message).to.include(scenario.expectedError);
         }
       }
     }
@@ -633,7 +636,7 @@ export class EnhancedTestHelper {
     // Run all cleanup tasks in reverse order
     for (let i = this.cleanupTasks.length - 1; i >= 0; i--) {
       try {
-        await this.cleanupTasks[i]();
+        await this.cleanupTasks[i]?.();
       } catch (error) {
         console.warn('Error during cleanup task:', error);
       }

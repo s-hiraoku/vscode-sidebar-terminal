@@ -10,7 +10,7 @@ import type {
   IBaseManager,
   ManagerInitializationConfig,
   ManagerCreationConfig,
-} from '../../factories/interfaces/ManagerFactoryInterfaces';
+} from '../interfaces/ManagerInterfaces'; // Updated import path
 import { webview as log } from '../../utils/logger';
 
 /**
