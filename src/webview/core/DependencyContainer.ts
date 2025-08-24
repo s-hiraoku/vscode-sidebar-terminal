@@ -187,7 +187,7 @@ export class DependencyContainer {
         resolvedDependencies,
         registration.dependencies
       );
-      await instance.initialize(managerDeps);
+      await (instance as any).initialize(managerDeps);
     }
 
     return instance;
