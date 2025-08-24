@@ -77,7 +77,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     // 専門マネージャーの初期化
     this.webViewApiManager = new WebViewApiManager();
     this.splitManager = new SplitManager();
-    this.terminalLifecycleManager = new TerminalLifecycleManager(this.splitManager, this);
+    this.terminalLifecycleManager = new TerminalLifecycleManager(this.splitManager, this as any);
     this.cliAgentStateManager = new CliAgentStateManager();
     this.eventHandlerManager = new EventHandlerManager();
 
@@ -109,7 +109,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     this.performanceManager = new PerformanceManager();
     this.uiManager = new UIManager();
     this.inputManager = new InputManager();
-    this.messageManager = new RefactoredMessageManager(this);
+    this.messageManager = new RefactoredMessageManager(this as any);
     this.persistenceManager = new StandardTerminalPersistenceManager();
 
     // 依存関係の設定
@@ -133,7 +133,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       this.inputManager.setupIMEHandling();
 
       // キーボードショートカットの設定
-      this.inputManager.setupKeyboardShortcuts(this);
+      this.inputManager.setupKeyboardShortcuts(this as any);
 
       // Agent interaction mode を無効化（VS Code標準動作）
       this.inputManager.setAgentInteractionMode(false);
@@ -161,7 +161,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       });
 
       // 🔍 FIX: Pass event.data as the message content, not the full event
-      await this.messageManager.receiveMessage(event.data, this);
+      await this.messageManager.receiveMessage(event.data, this as any);
     });
 
     // VS Code pattern: ResizeObserver handles individual terminal container resizing
@@ -199,7 +199,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       
       // 🎯 FIX: Only focus if needed to avoid interrupting terminal output
       // This is critical for CLI agent scenarios while preserving shell prompt
-      const terminals = this.terminalLifecycleManager.getTerminals();
+      const terminals = (this.terminalLifecycleManager as any).getTerminals();
       const terminalInstance = terminals.get(terminalId);
       if (terminalInstance && terminalInstance.terminal) {
         const terminal = terminalInstance.terminal;
@@ -216,7 +216,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       }
 
       // 🎯 Extension側にアクティブターミナルの変更を通知
-      this.messageManager.postMessage({
+      (this.messageManager as any).postMessage({
         command: 'focusTerminal',
         terminalId: terminalId,
       });
@@ -254,7 +254,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     log(message, ...args);
   }
 
-  public getManagers() {
+  public getManagers(): any {
     return {
       performance: this.performanceManager,
       input: this.inputManager,
@@ -329,7 +329,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       // 3. 入力イベントハンドラーの設定
       const terminalContainer = this.terminalLifecycleManager.getTerminalElement(terminalId);
       if (terminal && terminalContainer) {
-        this.inputManager.addXtermClickHandler(terminal, terminalId, terminalContainer, this);
+        this.inputManager.addXtermClickHandler(terminal, terminalId, terminalContainer, this as any);
         log(`✅ Input handlers configured for terminal: ${terminalId}`);
       }
 
@@ -338,9 +338,9 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       this.setActiveTerminalId(terminalId);
       
       // 即座にボーダー更新を実行（UIManager経由）
-      const allContainers = this.terminalLifecycleManager.getSplitManager().getTerminalContainers();
-      if (this.managers.ui) {
-        this.managers.ui.updateTerminalBorders(terminalId, allContainers);
+      const allContainers = (this.terminalLifecycleManager as any).getSplitManager().getTerminalContainers();
+      if (this.uiManager) {
+        this.uiManager.updateTerminalBorders(terminalId, allContainers);
         console.log(`🎯 [FIX] Applied active border immediately after creation: ${terminalId}`);
       }
       
@@ -360,8 +360,8 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
         this.terminalLifecycleManager.resizeAllTerminals();
         
         // 🎯 FIX: リサイズ後もボーダーを再確認
-        if (this.managers.ui) {
-          this.managers.ui.updateTerminalBorders(terminalId, allContainers);
+        if (this.uiManager) {
+          this.uiManager.updateTerminalBorders(terminalId, allContainers);
           console.log(`🎯 [FIX] Re-confirmed active border after resize: ${terminalId}`);
         }
       }, 300);
@@ -512,7 +512,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     
     // 🎯 [FIX] Call killTerminal instead of custom deletion logic
     // This ensures the panel trash button follows the same logic as the kill command
-    this.messageManager.postMessage({
+    (this.messageManager as any).postMessage({
       command: 'killTerminal',
       terminalId: terminalId // Pass the specific ID if provided, null if active terminal should be used
     });
@@ -692,7 +692,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     
     // Show in notification system if available
     if (this.notificationManager) {
-      this.notificationManager.showWarning(message);
+      (this.notificationManager as any).showWarning(message);
     }
     
     // Update status bar if available
@@ -709,7 +709,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
   private clearTerminalLimitMessage(): void {
     // Clear notifications
     if (this.notificationManager) {
-      this.notificationManager.clearWarnings();
+      (this.notificationManager as any).clearWarnings();
     }
     
     // Clear status bar
@@ -1349,8 +1349,8 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       if (totalTerminals <= 1) {
         log(`🛡️ [SAFE-DELETE] Cannot delete last terminal: ${targetId} (total: ${totalTerminals})`);
         // Show user notification about protection
-        if (this.managers.notification && 'showWarning' in this.managers.notification) {
-          (this.managers.notification as any).showWarning('Must keep at least 1 terminal open');
+        if (this.notificationManager && 'showWarning' in this.notificationManager) {
+          (this.notificationManager as any).showWarning('Must keep at least 1 terminal open');
         }
         return false;
       }
