@@ -103,9 +103,9 @@ export interface IEnhancedBaseManager extends IEnhancedManager {}
 export interface IFullManagerCoordinator extends IManagerCoordinator {
   getExtendedCapabilities(): unknown;
   // Add methods from other coordinators for compatibility
-  createTerminal?: (id: string, name: string) => Promise<void>;
+  createTerminal: (id: string, name: string, config?: unknown, terminalNumber?: number) => Promise<unknown>;
   deleteTerminal?: (id: string) => Promise<void>;
-  switchToTerminal?: (id: string) => void;
+  switchToTerminal?: (terminalId: string) => Promise<boolean>;
   getActiveTerminal?: () => TerminalInstance | null;
   sendMessage?: (message: unknown) => void;
   onMessage?: (handler: (message: unknown) => void) => void;
@@ -116,7 +116,7 @@ export interface IFullManagerCoordinator extends IManagerCoordinator {
   updateStatus?: (terminalId: string, status: string) => void;
   saveSession?: (data: unknown) => void;
   restoreSession?: () => unknown | null;
-  log?: (level: string, message: string, ...args: unknown[]) => void;
+  log: (message: string, ...args: unknown[]) => void;
   error?: (message: string, error?: Error) => void;
   getManager?: <T>(type: string) => T | null;
   getAllManagers?: () => Map<string, unknown>;

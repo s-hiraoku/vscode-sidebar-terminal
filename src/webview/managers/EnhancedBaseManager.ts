@@ -12,6 +12,7 @@
 import { webview as log } from '../../utils/logger';
 import {
   IEnhancedBaseManager,
+  IManagerState,
   ManagerDependencies,
   ManagerHealthStatus,
   ValidationResult,
@@ -56,6 +57,11 @@ interface PerformanceMetrics {
  * Implements common patterns identified in similarity analysis
  */
 export abstract class EnhancedBaseManager implements IEnhancedBaseManager {
+  // Enhanced manager interface implementation
+  readonly state: IManagerState = {
+    isInitialized: false,
+    isDisposed: false
+  };
   // Core properties
   public readonly name: string;
   protected readonly logPrefix: string;
@@ -106,6 +112,23 @@ export abstract class EnhancedBaseManager implements IEnhancedBaseManager {
     };
 
     this.maxErrors = this.options.maxErrors;
+  }
+
+  // Required interface methods
+  getState(): IManagerState {
+    return {
+      isInitialized: this._isInitialized,
+      isDisposed: this._isDisposed,
+      lastError: this.lastError ? new Error(this.lastError) : undefined
+    };
+  }
+
+  isReady(): boolean {
+    return this._isInitialized && !this._isDisposed;
+  }
+
+  getLastError(): Error | undefined {
+    return this.lastError ? new Error(this.lastError) : undefined;
   }
 
   // ============================================================================
@@ -496,10 +519,10 @@ export abstract class EnhancedBaseManager implements IEnhancedBaseManager {
     return {
       isHealthy: this.errorCount < this.maxErrors && this._isInitialized && !this._isDisposed,
       errorCount: this.errorCount,
-      lastError: this.lastError,
-      performanceMetrics: this.options.enablePerformanceMonitoring
-        ? { ...this.performanceMetrics, memoryUsage: this.getMemoryUsage() }
-        : undefined,
+      lastError: this.lastError ? new Error(this.lastError) : undefined,
+      errors: [],
+      warnings: [],
+      lastCheck: new Date(),
     };
   }
 
