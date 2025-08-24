@@ -245,10 +245,10 @@ export class ShellIntegrationManager {
    * Add command gutter decoration
    */
   private addCommandGutter(terminalId: string, status: 'success' | 'error'): void {
-    const terminal = this.coordinator?.getTerminal(terminalId);
-    if (!terminal) return;
+    const terminalInstance = this.coordinator?.getAllTerminalInstances().get(terminalId);
+    if (!terminalInstance) return;
 
-    const container = terminal.container;
+    const container = terminalInstance.container;
     if (!container) return;
 
     // Create gutter element
@@ -272,11 +272,11 @@ export class ShellIntegrationManager {
    * Handle command link click (for re-running commands)
    */
   public handleCommandLink(terminalId: string, command: string): void {
-    const terminal = this.coordinator?.getTerminal(terminalId);
-    if (!terminal) return;
+    const terminalInstance = this.coordinator?.getAllTerminalInstances().get(terminalId);
+    if (!terminalInstance) return;
 
     // Send command to terminal
-    terminal.terminal.paste(command);
+    terminalInstance.terminal.paste(command);
   }
 
   /**
@@ -294,9 +294,9 @@ export class ShellIntegrationManager {
   public decorateTerminalOutput(terminal: Terminal, terminalId: string): void {
     // Add link provider for file paths
     terminal.registerLinkProvider({
-      provideLinks: (position, callback) => {
+      provideLinks: (line: number, callback) => {
         // Simple file path detection
-        const lineContent = terminal.buffer.active.getLine(position.y - 1)?.translateToString();
+        const lineContent = terminal.buffer.active.getLine(line - 1)?.translateToString();
         if (!lineContent) {
           callback(undefined);
           return;
@@ -304,21 +304,23 @@ export class ShellIntegrationManager {
 
         const filePathRegex = /(?:[a-zA-Z]:)?(?:\/|\\)?(?:[\w.-]+(?:\/|\\))*[\w.-]+\.\w+/g;
         const links: any[] = [];
-        let match;
+        let match: RegExpExecArray | null;
 
         while ((match = filePathRegex.exec(lineContent)) !== null) {
           links.push({
             range: {
-              start: { x: match.index + 1, y: position.y },
-              end: { x: match.index + match[0].length + 1, y: position.y }
+              start: { x: match.index + 1, y: line },
+              end: { x: match.index + match[0].length + 1, y: line }
             },
             text: match[0],
             activate: () => {
               // Send open file command to extension
-              this.coordinator?.postMessageToExtension({
-                command: 'openFile',
-                filePath: match[0],
-              });
+              if (match) {
+                this.coordinator?.postMessageToExtension({
+                  command: 'openFile',
+                  filePath: match[0],
+                });
+              }
             }
           });
         }
@@ -329,8 +331,8 @@ export class ShellIntegrationManager {
 
     // Add link provider for URLs
     terminal.registerLinkProvider({
-      provideLinks: (position, callback) => {
-        const lineContent = terminal.buffer.active.getLine(position.y - 1)?.translateToString();
+      provideLinks: (line: number, callback) => {
+        const lineContent = terminal.buffer.active.getLine(line - 1)?.translateToString();
         if (!lineContent) {
           callback(undefined);
           return;
@@ -338,17 +340,19 @@ export class ShellIntegrationManager {
 
         const urlRegex = /https?:\/\/[^\s]+/g;
         const links: any[] = [];
-        let match;
+        let match: RegExpExecArray | null;
 
         while ((match = urlRegex.exec(lineContent)) !== null) {
           links.push({
             range: {
-              start: { x: match.index + 1, y: position.y },
-              end: { x: match.index + match[0].length + 1, y: position.y }
+              start: { x: match.index + 1, y: line },
+              end: { x: match.index + match[0].length + 1, y: line }
             },
             text: match[0],
             activate: () => {
-              window.open(match[0], '_blank');
+              if (match) {
+                window.open(match[0], '_blank');
+              }
             }
           });
         }

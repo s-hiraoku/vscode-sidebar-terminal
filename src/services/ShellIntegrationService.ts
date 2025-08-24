@@ -73,8 +73,10 @@ export class ShellIntegrationService {
 
   private setupEventListeners(): void {
     // Listen to terminal data for shell integration sequences
-    this.terminalManager.onTerminalData((data: { terminalId: string; data: string }) => {
-      this.processTerminalOutput(data.terminalId, data.data);
+    this.terminalManager.onData((event) => {
+      if (event.terminalId && event.data) {
+        this.processTerminalOutput(event.terminalId, event.data);
+      }
     });
   }
 
@@ -99,7 +101,7 @@ export class ShellIntegrationService {
 
     // Check for CWD change
     const cwdMatch = data.match(/\x1b\]633;P;Cwd=([^\x07]+)\x07/);
-    if (cwdMatch) {
+    if (cwdMatch && cwdMatch[1]) {
       this.handleCwdChange(state, cwdMatch[1]);
     }
 
@@ -120,7 +122,7 @@ export class ShellIntegrationService {
   private handleCommandExecuted(state: ShellIntegrationState, data: string): void {
     // Extract command from data if available
     const commandMatch = data.match(/\x1b\]633;B;([^\x07]+)\x07/);
-    if (commandMatch) {
+    if (commandMatch && commandMatch[1]) {
       state.currentCommand = commandMatch[1];
     }
   }
@@ -128,7 +130,7 @@ export class ShellIntegrationService {
   private handleCommandFinished(state: ShellIntegrationState, data: string): void {
     // Extract exit code if available
     const exitCodeMatch = data.match(/\x1b\]633;C;(\d+)\x07/);
-    const exitCode = exitCodeMatch ? parseInt(exitCodeMatch[1], 10) : undefined;
+    const exitCode = exitCodeMatch && exitCodeMatch[1] ? parseInt(exitCodeMatch[1], 10) : undefined;
 
     // Calculate duration
     const startTime = this.commandStartTime.get(state.terminalId);
@@ -161,10 +163,12 @@ export class ShellIntegrationService {
   }
 
   private handleCwdChange(state: ShellIntegrationState, cwd: string): void {
-    state.currentCwd = cwd;
-    
-    // Send CWD update to webview
-    this.sendCwdUpdate(state.terminalId, cwd);
+    if (cwd) {
+      state.currentCwd = cwd;
+      
+      // Send CWD update to webview
+      this.sendCwdUpdate(state.terminalId, cwd);
+    }
   }
 
   private detectPromptFallback(state: ShellIntegrationState, data: string): void {
@@ -257,11 +261,11 @@ export class ShellIntegrationService {
     if (!terminal) return;
 
     // Detect shell type and inject appropriate integration
-    if (shell.includes('bash') || shell.includes('zsh')) {
+    if (shell && shell.includes('bash') || shell && shell.includes('zsh')) {
       this.injectBashZshIntegration(terminal);
-    } else if (shell.includes('fish')) {
+    } else if (shell && shell.includes('fish')) {
       this.injectFishIntegration(terminal);
-    } else if (shell.includes('powershell') || shell.includes('pwsh')) {
+    } else if (shell && (shell.includes('powershell') || shell.includes('pwsh'))) {
       this.injectPowerShellIntegration(terminal);
     }
   }

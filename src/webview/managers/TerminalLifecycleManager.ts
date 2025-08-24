@@ -422,8 +422,8 @@ export class TerminalLifecycleManager {
         isActive: false,
         // VS Code Standard Addons - keep as null if not loaded
         searchAddon,
-        webglAddon,
-        unicode11Addon,
+        webglAddon: webglAddon || undefined,
+        unicode11Addon: unicode11Addon || undefined,
       };
 
       // Register terminal
