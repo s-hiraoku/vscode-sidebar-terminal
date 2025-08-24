@@ -291,7 +291,7 @@ export class ShellIntegrationManager {
   /**
    * Add decorations to terminal output
    */
-  public decorateTerminalOutput(terminal: Terminal, terminalId: string): void {
+  public decorateTerminalOutput(terminal: Terminal, _terminalId: string): void {
     // Add link provider for file paths
     terminal.registerLinkProvider({
       provideLinks: (line: number, callback) => {
