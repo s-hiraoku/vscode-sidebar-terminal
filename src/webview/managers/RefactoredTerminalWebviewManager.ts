@@ -1495,7 +1495,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
 
   // Add state properties
   private currentTerminalState: any = null;
-  private debugMode: boolean = true; // Enable for debugging, disable in production
+  private debugMode: boolean = false; // Enable only when needed for debugging
 
   public ensureTerminalFocus(): void {
     const activeId = this.getActiveTerminalId();

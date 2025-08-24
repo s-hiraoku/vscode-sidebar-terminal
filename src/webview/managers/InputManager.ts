@@ -179,6 +179,16 @@ export class InputManager extends BaseManager implements IInputManager {
         this.logger.info('Escape key detected, clearing notifications');
         this.clearNotifications();
       }
+
+      // Ctrl+Shift+D: Toggle debug panel
+      if (event.ctrlKey && event.shiftKey && event.key === 'D') {
+        event.preventDefault();
+        this.logger.info('Ctrl+Shift+D shortcut detected, toggling debug panel');
+        // Delegate to the manager coordinator to toggle debug panel
+        if ('toggleDebugPanel' in manager && typeof manager.toggleDebugPanel === 'function') {
+          (manager as any).toggleDebugPanel();
+        }
+      }
     };
 
     // Register shortcut handler using EventHandlerRegistry
