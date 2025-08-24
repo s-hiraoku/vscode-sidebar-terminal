@@ -241,17 +241,18 @@ export class TerminalLifecycleManager {
         
         // 🔧 FIX: Handle terminal focus events for proper state sync
         // These don't interfere with terminal output
-        terminal.onFocus(() => {
-          terminalLogger.info(`🔍 Terminal gained focus: ${terminalId}`);
-          // Update active state when terminal gains focus
-          if (this.activeTerminalId !== terminalId) {
-            this.coordinator?.setActiveTerminalId(terminalId);
-          }
-        });
+        // NOTE: xterm.js doesn't have onFocus/onBlur methods, commenting out
+        // terminal.onFocus(() => {
+        //   terminalLogger.info(`🔍 Terminal gained focus: ${terminalId}`);
+        //   // Update active state when terminal gains focus
+        //   if (this.activeTerminalId !== terminalId) {
+        //     this.coordinator?.setActiveTerminalId(terminalId);
+        //   }
+        // });
         
-        terminal.onBlur(() => {
-          terminalLogger.info(`🔍 Terminal lost focus: ${terminalId}`);
-        });
+        // terminal.onBlur(() => {
+        //   terminalLogger.info(`🔍 Terminal lost focus: ${terminalId}`);
+        // });
       }, 100); // Small delay to ensure terminal is fully initialized
 
       // Make container visible
@@ -635,9 +636,12 @@ export class TerminalLifecycleManager {
   /**
    * Extract terminal number from terminal ID (e.g., "terminal-3" -> 3)
    */
-  private extractTerminalNumber(terminalId: string): number {
+  private extractTerminalNumber(terminalId: string | undefined): number {
+    if (!terminalId) {
+      return 1; // Default to 1 if terminalId is undefined
+    }
     const match = terminalId.match(/terminal-(\d+)/);
-    if (match) {
+    if (match && match[1]) {
       return parseInt(match[1], 10);
     }
     

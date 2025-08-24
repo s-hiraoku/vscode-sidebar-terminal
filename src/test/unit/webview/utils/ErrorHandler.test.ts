@@ -5,6 +5,7 @@ import { expect } from 'chai';
 import * as sinon from 'sinon';
 import { JSDOM } from 'jsdom';
 import { ErrorHandler } from '../../../../webview/utils/ErrorHandler';
+import { setupJSDOMEnvironment } from '../../../shared/TestSetup';
 
 // Mock VS Code API
 const mockVscode = {
@@ -49,13 +50,14 @@ describe('ErrorHandler', () => {
   let document: Document;
   let errorHandler: ErrorHandler;
   let consoleErrorStub: sinon.SinonStub;
+  let consoleMocks: any;
 
   beforeEach(() => {
     setupTestEnvironment();
 
     // Mock console before JSDOM creation
     consoleErrorStub = sinon.stub();
-    (global as Record<string, unknown>).console = {
+    consoleMocks = {
       log: sinon.stub(),
       warn: sinon.stub(),
       error: consoleErrorStub,
@@ -79,19 +81,14 @@ describe('ErrorHandler', () => {
       dir: sinon.stub(),
       dirxml: sinon.stub(),
     };
+    (global as Record<string, unknown>).console = consoleMocks;
 
     sandbox = sinon.createSandbox();
 
-    // Mock DOM environment
-    dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {
-      url: 'http://localhost',
-      pretendToBeVisual: true,
-      resources: 'usable',
-    });
-
-    document = dom.window.document;
-    (global as Record<string, unknown>).window = dom.window;
-    (global as Record<string, unknown>).document = document;
+    // Use proper test setup for JSDOM environment
+    const testEnv = setupJSDOMEnvironment('<!DOCTYPE html><html><body></body></html>');
+    dom = testEnv.dom;
+    document = testEnv.document;
 
     // Initialize ErrorHandler after DOM setup
     errorHandler = ErrorHandler.getInstance();
@@ -99,10 +96,16 @@ describe('ErrorHandler', () => {
 
   afterEach(() => {
     sandbox.restore();
-    dom.window.close();
+    if (dom && dom.window) {
+      dom.window.close();
+    }
 
     // Clear singleton instance for clean tests
     (ErrorHandler as any).instance = undefined;
+
+    // Clean up global references
+    delete (global as any).window;
+    delete (global as any).document;
   });
 
   describe('getInstance method', () => {

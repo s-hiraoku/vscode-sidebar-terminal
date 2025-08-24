@@ -29,7 +29,7 @@ interface IBaseManager {
   dispose(): void;
 }
 
-interface ManagerInitializationConfig {
+export interface ManagerInitializationConfig {
   coordinator?: IManagerCoordinator;
   options?: BaseManagerOptions;
   enableLogging?: boolean;

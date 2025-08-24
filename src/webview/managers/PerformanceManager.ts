@@ -5,14 +5,14 @@
 import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import { SPLIT_CONSTANTS } from '../constants/webview';
-import { IPerformanceManager, IManagerCoordinator } from '../interfaces/ManagerInterfaces';
-import { BaseManager } from './BaseManager';
+import { IManagerCoordinator } from '../interfaces/ManagerInterfaces';
+import { BaseManager, ManagerInitializationConfig } from './BaseManager';
 import { performanceLogger } from '../utils/ManagerLogger';
 import { ResizeManager } from '../utils/ResizeManager';
 
-export class PerformanceManager extends BaseManager implements IPerformanceManager {
+export class PerformanceManager extends BaseManager {
   // Specialized logger for Performance Manager
-  private readonly logger = performanceLogger;
+  protected override readonly logger = performanceLogger;
 
   constructor() {
     super('PerformanceManager', {
@@ -153,9 +153,19 @@ export class PerformanceManager extends BaseManager implements IPerformanceManag
   }
 
   /**
-   * Initialize the performance manager
+   * Initialize the performance manager (BaseManager interface)
    */
-  public override async initialize(coordinator: IManagerCoordinator): Promise<void> {
+  public override async initialize(config: ManagerInitializationConfig): Promise<void> {
+    if (config.coordinator) {
+      this.coordinator = config.coordinator;
+    }
+    this.logger.lifecycle('initialization', 'completed');
+  }
+
+  /**
+   * Initialize the performance manager (IPerformanceManager interface)
+   */
+  public initializePerformance(coordinator: IManagerCoordinator): void {
     this.coordinator = coordinator;
     this.logger.lifecycle('initialization', 'completed');
   }

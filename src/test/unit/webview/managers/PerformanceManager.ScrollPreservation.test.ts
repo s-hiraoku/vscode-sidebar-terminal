@@ -50,7 +50,7 @@ describe('PerformanceManager - Scroll Preservation', () => {
     } as unknown as IManagerCoordinator;
 
     performanceManager = new PerformanceManager();
-    performanceManager.initialize(mockCoordinator);
+    performanceManager.initialize({ coordinator: mockCoordinator });
   });
 
   afterEach(() => {

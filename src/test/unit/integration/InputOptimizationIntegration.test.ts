@@ -71,11 +71,11 @@ describe('Input Optimization Integration', () => {
     inputManager = new InputManager();
     messageManager = new RefactoredMessageManager();
     performanceManager = new PerformanceManager();
-    performanceManager.initialize(mockCoordinator);
+    performanceManager.initialize({ coordinator: mockCoordinator });
 
     // Update coordinator to include all required managers
     mockCoordinator.getManagers.returns({
-      performance: performanceManager,
+      performance: performanceManager as any,
       input: inputManager,
       ui: {} as IUIManager,
       config: {} as IConfigManager,

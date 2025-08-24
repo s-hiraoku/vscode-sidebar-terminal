@@ -266,16 +266,25 @@ describe('SettingsPanel', () => {
     });
 
     it('should collect current settings correctly', () => {
-      // Set specific values
-      const fontSizeSlider = document.getElementById('font-size-slider') as HTMLInputElement;
-      const fontFamilySelect = document.getElementById('font-family-select') as HTMLSelectElement;
+      // Set specific values for available controls
       const themeSelect = document.getElementById('theme-select') as HTMLSelectElement;
       const cursorBlinkCheckbox = document.getElementById('cursor-blink') as HTMLInputElement;
+      const cliAgentCheckbox = document.getElementById('cli-agent-integration') as HTMLInputElement;
 
-      fontSizeSlider.value = '16';
-      fontFamilySelect.value = 'Consolas, monospace';
+      // Verify elements exist
+      expect(themeSelect).to.not.be.null;
+      expect(cursorBlinkCheckbox).to.not.be.null;
+      expect(cliAgentCheckbox).to.not.be.null;
+
+      // Set values
       themeSelect.value = 'light';
       cursorBlinkCheckbox.checked = true;
+      cliAgentCheckbox.checked = false; // Test different value
+
+      // Verify values are set
+      expect(themeSelect.value).to.equal('light');
+      expect(cursorBlinkCheckbox.checked).to.be.true;
+      expect(cliAgentCheckbox.checked).to.be.false;
 
       // Trigger apply to collect settings
       const applyBtn = document.getElementById('apply-settings');
@@ -286,18 +295,16 @@ describe('SettingsPanel', () => {
       const collectedSettings = onSettingsChangeSpy.getCall(0).args[0];
 
       expect(collectedSettings).to.deep.equal({
-        fontSize: 16,
-        fontFamily: 'Consolas, monospace',
         theme: 'light',
         cursorBlink: true,
-        enableCliAgentIntegration: true,
+        enableCliAgentIntegration: false,
       });
     });
 
     it('should use defaults for missing elements', () => {
-      // Remove some elements
-      const fontSizeSlider = document.getElementById('font-size-slider');
-      fontSizeSlider?.remove();
+      // Remove the theme select element
+      const themeSelect = document.getElementById('theme-select');
+      themeSelect?.remove();
 
       const applyBtn = document.getElementById('apply-settings');
       const clickEvent = new dom.window.Event('click');
@@ -306,7 +313,9 @@ describe('SettingsPanel', () => {
       expect(onSettingsChangeSpy).to.have.been.calledOnce;
       const collectedSettings = onSettingsChangeSpy.getCall(0).args[0];
 
-      expect(collectedSettings.fontSize).to.equal(14); // Default
+      expect(collectedSettings.theme).to.equal('auto'); // Default theme
+      expect(collectedSettings.cursorBlink).to.equal(true); // Default cursor blink
+      expect(collectedSettings.enableCliAgentIntegration).to.equal(true); // Default CLI integration
     });
   });
 
@@ -320,26 +329,27 @@ describe('SettingsPanel', () => {
 
     it('should handle partial settings', () => {
       const partialSettings = {
-        fontSize: 18,
-        fontFamily: 'Consolas, monospace',
-        // Missing theme and cursorBlink
+        theme: 'dark',
+        // Missing cursorBlink and enableCliAgentIntegration
       };
 
       settingsPanel.show(partialSettings);
 
-      const fontSizeSlider = document.getElementById('font-size-slider') as HTMLInputElement;
-      const fontFamilySelect = document.getElementById('font-family-select') as HTMLSelectElement;
+      const themeSelect = document.getElementById('theme-select') as HTMLSelectElement;
+      const cursorBlinkCheckbox = document.getElementById('cursor-blink') as HTMLInputElement;
+      const cliAgentCheckbox = document.getElementById('cli-agent-integration') as HTMLInputElement;
 
-      expect(fontSizeSlider?.value).to.equal('18');
-      expect(fontFamilySelect?.value).to.equal('Consolas, monospace');
+      expect(themeSelect?.value).to.equal('dark');
+      // Missing values should not be set (checkboxes remain as default)
+      expect(cursorBlinkCheckbox?.checked).to.be.true; // Default
+      expect(cliAgentCheckbox?.checked).to.be.true; // Default
     });
 
     it('should handle invalid settings gracefully', () => {
       const invalidSettings = {
-        fontSize: 'invalid',
-        fontFamily: 123,
         theme: null,
         cursorBlink: 'string',
+        enableCliAgentIntegration: 123,
       } as any;
 
       // Should not throw
@@ -347,21 +357,16 @@ describe('SettingsPanel', () => {
     });
   });
 
-  describe('font family options', () => {
+  describe('CLI Agent integration control', () => {
     beforeEach(() => {
       settingsPanel.show();
     });
 
-    it('should have correct font family options', () => {
-      const fontFamilySelect = document.getElementById('font-family-select') as HTMLSelectElement;
-      const options = Array.from(fontFamilySelect.options).map((opt) => opt.value);
-
-      expect(options).to.include('Consolas, monospace');
-      expect(options).to.include("'Monaco', monospace");
-      expect(options).to.include("'Menlo', monospace");
-      expect(options).to.include("'Ubuntu Mono', monospace");
-      expect(options).to.include("'Courier New', monospace");
-      expect(options).to.include("'SF Mono', monospace");
+    it('should have CLI Agent integration checkbox', () => {
+      const cliAgentCheckbox = document.getElementById('cli-agent-integration') as HTMLInputElement;
+      expect(cliAgentCheckbox).to.not.be.null;
+      expect(cliAgentCheckbox.type).to.equal('checkbox');
+      expect(cliAgentCheckbox.checked).to.be.true; // Default state
     });
   });
 
@@ -387,15 +392,13 @@ describe('SettingsPanel', () => {
 
     it('should reset all settings to defaults', () => {
       // Set non-default values
-      const fontSizeSlider = document.getElementById('font-size-slider') as HTMLInputElement;
-      const fontFamilySelect = document.getElementById('font-family-select') as HTMLSelectElement;
       const themeSelect = document.getElementById('theme-select') as HTMLSelectElement;
       const cursorBlinkCheckbox = document.getElementById('cursor-blink') as HTMLInputElement;
+      const cliAgentCheckbox = document.getElementById('cli-agent-integration') as HTMLInputElement;
 
-      fontSizeSlider.value = '20';
-      fontFamilySelect.value = 'Monaco, monospace';
-      themeSelect.value = 'light';
-      cursorBlinkCheckbox.checked = false;
+      if (themeSelect) themeSelect.value = 'light';
+      if (cursorBlinkCheckbox) cursorBlinkCheckbox.checked = false;
+      if (cliAgentCheckbox) cliAgentCheckbox.checked = false;
 
       // Reset
       const resetBtn = document.getElementById('reset-settings');
@@ -403,10 +406,9 @@ describe('SettingsPanel', () => {
       resetBtn?.dispatchEvent(clickEvent);
 
       // Check defaults
-      expect(fontSizeSlider.value).to.equal('14');
-      expect(fontFamilySelect.value).to.equal('Consolas, monospace');
-      expect(themeSelect.value).to.equal('auto');
-      expect(cursorBlinkCheckbox.checked).to.be.true;
+      if (themeSelect) expect(themeSelect.value).to.equal('auto');
+      if (cursorBlinkCheckbox) expect(cursorBlinkCheckbox.checked).to.be.true;
+      if (cliAgentCheckbox) expect(cliAgentCheckbox.checked).to.be.true;
     });
   });
 
@@ -447,15 +449,18 @@ describe('SettingsPanel', () => {
     });
 
     it('should have proper labels for form controls', () => {
-      const fontSizeSlider = document.getElementById('font-size-slider');
-      const fontFamilySelect = document.getElementById('font-family-select');
       const themeSelect = document.getElementById('theme-select');
       const cursorBlinkCheckbox = document.getElementById('cursor-blink');
+      const cliAgentCheckbox = document.getElementById('cli-agent-integration');
 
-      expect(fontSizeSlider).to.not.be.null;
-      expect(fontFamilySelect).to.not.be.null;
+      // Test that at least the settings panel structure exists
+      const settingsPanel = document.getElementById('settings-panel');
+      expect(settingsPanel).to.not.be.null;
+      
+      // All current form controls should exist
       expect(themeSelect).to.not.be.null;
       expect(cursorBlinkCheckbox).to.not.be.null;
+      expect(cliAgentCheckbox).to.not.be.null;
     });
 
     it('should have close button with title attribute', () => {

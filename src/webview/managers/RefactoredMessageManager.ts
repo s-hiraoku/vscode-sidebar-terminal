@@ -646,7 +646,7 @@ export class RefactoredMessageManager implements IMessageManager {
   // IMESSAGEMANAGER INTERFACE IMPLEMENTATION
   // =================================================================
 
-  public sendReadyMessage(coordinator: IManagerCoordinator): void {
+  public sendReadyMessage(_coordinator: IManagerCoordinator): void {
     void this.messageQueue.enqueue({
       command: 'ready',
       timestamp: Date.now(),
@@ -770,13 +770,15 @@ export class RefactoredMessageManager implements IMessageManager {
   ): void {
     try {
       const targetCoordinator = coordinator || this.coordinator;
-      targetCoordinator.postMessageToExtension({
-        command: 'resize',
-        cols,
-        rows,
-        terminalId: terminalId || targetCoordinator.getActiveTerminalId(),
-        timestamp: Date.now(),
-      });
+      if (targetCoordinator) {
+        targetCoordinator.postMessageToExtension({
+          command: 'resize',
+          cols,
+          rows,
+          terminalId: terminalId || targetCoordinator.getActiveTerminalId() || '',
+          timestamp: Date.now(),
+        });
+      }
       this.logger.debug(`Resize sent to terminal: ${cols}x${rows}`);
     } catch (error) {
       this.logger.error('Error sending resize', error);
@@ -814,7 +816,7 @@ export class RefactoredMessageManager implements IMessageManager {
     }
   }
 
-  public sendKillTerminalMessage(coordinator: IManagerCoordinator): void {
+  public sendKillTerminalMessage(_coordinator: IManagerCoordinator): void {
     void this.messageQueue.enqueue({
       command: 'killTerminal',
       timestamp: Date.now(),
@@ -824,7 +826,7 @@ export class RefactoredMessageManager implements IMessageManager {
 
   public sendKillSpecificTerminalMessage(
     terminalId: string,
-    coordinator: IManagerCoordinator
+    _coordinator: IManagerCoordinator
   ): void {
     this.logger.info(`Sending kill specific terminal message for: ${terminalId}`);
 
@@ -842,14 +844,14 @@ export class RefactoredMessageManager implements IMessageManager {
     }
   }
 
-  public requestSettings(coordinator: IManagerCoordinator): void {
+  public requestSettings(_coordinator: IManagerCoordinator): void {
     void this.messageQueue.enqueue({
       command: 'getSettings',
     });
     this.logger.info('Settings requested');
   }
 
-  public updateSettings(settings: unknown, coordinator: IManagerCoordinator): void {
+  public updateSettings(settings: unknown, _coordinator: IManagerCoordinator): void {
     void this.messageQueue.enqueue({
       command: 'updateSettings',
       settings,
@@ -857,7 +859,7 @@ export class RefactoredMessageManager implements IMessageManager {
     this.logger.info('Settings update sent');
   }
 
-  public requestNewTerminal(coordinator: IManagerCoordinator): void {
+  public requestNewTerminal(_coordinator: IManagerCoordinator): void {
     void this.messageQueue.enqueue({
       command: 'createTerminal',
       timestamp: Date.now(),
@@ -1266,7 +1268,7 @@ export class RefactoredMessageManager implements IMessageManager {
 
       if (configManager) {
         try {
-          const settings = configManager.loadSettings();
+          const settings = (configManager as any).loadSettings();
           isDynamicSplitEnabled = settings.dynamicSplitDirection !== false;
         } catch (error) {
           this.logger.warn('Could not load settings, using default behavior');
@@ -1285,7 +1287,7 @@ export class RefactoredMessageManager implements IMessageManager {
       this.logger.info(`Updating split direction to: ${newSplitDirection} (location: ${location})`);
 
       // Update split direction if it has changed
-      splitManager.updateSplitDirection(newSplitDirection, location);
+      (splitManager as any).updateSplitDirection(newSplitDirection, location);
     } catch (error) {
       this.logger.error('Error handling panel location update', error);
     }
@@ -1294,7 +1296,7 @@ export class RefactoredMessageManager implements IMessageManager {
   /**
    * Handle panel location detection request from Extension
    */
-  private handleRequestPanelLocationDetectionMessage(coordinator: IManagerCoordinator): void {
+  private handleRequestPanelLocationDetectionMessage(_coordinator: IManagerCoordinator): void {
     try {
       this.logger.info('Handling panel location detection request');
 

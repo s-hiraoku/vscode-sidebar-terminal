@@ -375,7 +375,7 @@ describe('ThemeManager', () => {
     });
 
     it('should handle missing document.documentElement', () => {
-      const originalDocumentElement = document.documentElement;
+      const _originalDocumentElement = document.documentElement;
       delete (document as any).documentElement;
       
       expect(() => {

@@ -50,7 +50,7 @@ describe('PerformanceManager', () => {
     } as any;
 
     performanceManager = new PerformanceManager();
-    performanceManager.initialize(mockCoordinator);
+    performanceManager.initialize({ coordinator: mockCoordinator });
   });
 
   afterEach(() => {

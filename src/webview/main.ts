@@ -16,12 +16,13 @@ const webviewLogger = createWebViewLogger('MainWebView');
 startup('Refactored WebView script started');
 
 import 'xterm/css/xterm.css';
-import { RefactoredTerminalWebviewManager } from './managers/RefactoredTerminalWebviewManager';
+// import { RefactoredTerminalWebviewManager } from './managers/RefactoredTerminalWebviewManager';
+import { TerminalWebviewManager } from './TerminalWebviewManager';
 
 /**
  * グローバルターミナルマネージャーインスタンス
  */
-let terminalManager: RefactoredTerminalWebviewManager | null = null;
+let terminalManager: TerminalWebviewManager | null = null;
 
 /**
  * WebView初期化のメイン関数
@@ -42,7 +43,7 @@ async function initializeWebView(): Promise<void> {
     webviewLogger.domReady();
 
     // Terminal Manager を初期化
-    terminalManager = new RefactoredTerminalWebviewManager();
+    terminalManager = new TerminalWebviewManager();
 
     // 初期ターミナルコンテナを設定
     terminalManager.initializeSimpleTerminal();
@@ -254,7 +255,7 @@ if (process.env.NODE_ENV === 'development') {
   // Hot reload support (if needed in future)
   const moduleWithHot = module as any;
   if (moduleWithHot.hot) {
-    moduleWithHot.hot.accept('./managers/RefactoredTerminalWebviewManager', () => {
+    moduleWithHot.hot.accept('./TerminalWebviewManager', () => {
       lifecycle('Hot reloading terminal manager...');
       // Hot reload logic would go here
     });

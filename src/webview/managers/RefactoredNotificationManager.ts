@@ -71,7 +71,7 @@ export class RefactoredNotificationManager
   // ENHANCED BASE MANAGER IMPLEMENTATION
   // ============================================================================
 
-  protected async onInitialize(dependencies: ManagerDependencies): Promise<void> {
+  protected override async onInitialize(dependencies: ManagerDependencies): Promise<void> {
     this.log('Initializing Refactored Notification Manager...');
 
     // Extract required dependencies
@@ -466,7 +466,7 @@ export class RefactoredNotificationManager
       },
     };
 
-    return baseColors[type] || baseColors.info;
+    return baseColors[type as keyof typeof baseColors] || baseColors.info;
   }
 
   /**
@@ -480,7 +480,7 @@ export class RefactoredNotificationManager
       info: 'ℹ️',
     };
 
-    return icons[type] || icons.info;
+    return icons[type as keyof typeof icons] || icons.info;
   }
 
   /**

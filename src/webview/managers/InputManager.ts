@@ -209,17 +209,17 @@ export class InputManager extends BaseManager implements IInputManager {
       });
     });
 
-    // Set up focus handling
-    terminal.onFocus(() => {
-      this.logger.debug(`Terminal ${terminalId} focused`);
-      manager.setActiveTerminalId(terminalId);
-      this.emitTerminalInteractionEvent('focus', terminalId, undefined, manager);
-    });
+    // Set up focus handling - xterm.js doesn't have onFocus/onBlur, comment out
+    // terminal.onFocus(() => {
+    //   this.logger.debug(`Terminal ${terminalId} focused`);
+    //   manager.setActiveTerminalId(terminalId);
+    //   this.emitTerminalInteractionEvent('focus', terminalId, undefined, manager);
+    // });
 
-    // Set up blur handling
-    terminal.onBlur(() => {
-      this.logger.debug(`Terminal ${terminalId} blurred`);
-    });
+    // Set up blur handling - xterm.js doesn't have onFocus/onBlur, comment out  
+    // terminal.onBlur(() => {
+    //   this.logger.debug(`Terminal ${terminalId} blurred`);
+    // });
 
     const clickHandler = (event: MouseEvent): void => {
       // Regular click: Focus terminal
@@ -263,7 +263,7 @@ export class InputManager extends BaseManager implements IInputManager {
       `terminal-click-${terminalId}`,
       container,
       'click',
-      clickHandler
+      clickHandler as EventListener
     );
 
     this.logger.info(`Complete input handling configured for terminal ${terminalId}`);
@@ -388,7 +388,7 @@ export class InputManager extends BaseManager implements IInputManager {
       // This allows bash history, completion, and cursor movement to work properly
     };
 
-    this.eventRegistry.register('agent-arrow-keys', document, 'keydown', arrowKeyHandler, true);
+    this.eventRegistry.register('agent-arrow-keys', document, 'keydown', arrowKeyHandler as EventListener, true);
   }
 
   /**

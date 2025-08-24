@@ -361,8 +361,8 @@ export class SettingsPanel {
 
     return {
       theme: themeSelect?.value || 'auto',
-      cursorBlink: cursorBlinkCheckbox?.checked || true,
-      enableCliAgentIntegration: claudeCodeIntegrationCheckbox?.checked || true,
+      cursorBlink: cursorBlinkCheckbox?.checked ?? true,
+      enableCliAgentIntegration: claudeCodeIntegrationCheckbox?.checked ?? true,
     };
   }
 
