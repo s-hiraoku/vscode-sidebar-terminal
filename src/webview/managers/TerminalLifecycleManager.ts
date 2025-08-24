@@ -245,7 +245,6 @@ export class TerminalLifecycleManager {
         screenReaderMode: terminalConfig.screenReaderMode,
         
         // Bell Configuration - bellStyle is not supported by xterm.js ITerminalOptions
-        // bellStyle: terminalConfig.bellStyle, // Removed - not in xterm.js interface
         
         // Advanced Options
         windowOptions: terminalConfig.windowOptions,
