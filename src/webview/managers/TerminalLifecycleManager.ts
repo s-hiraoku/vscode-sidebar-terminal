@@ -468,6 +468,9 @@ export class TerminalLifecycleManager {
         this.terminalContainer = mainContainer;
       }
 
+      // Setup shell integration decorations
+      this.setupShellIntegration(terminal, terminalId);
+
       terminalLogger.info(`Terminal created successfully: ${terminalId}`);
       return terminal;
     } catch (error) {
@@ -476,6 +479,21 @@ export class TerminalLifecycleManager {
     }
   }
 
+  /**
+   * Setup shell integration decorations and link providers
+   */
+  private setupShellIntegration(terminal: Terminal, terminalId: string): void {
+    try {
+      // Get shell integration manager from coordinator
+      const manager = this.coordinator as any;
+      if (manager?.shellIntegrationManager) {
+        manager.shellIntegrationManager.decorateTerminalOutput(terminal, terminalId);
+        terminalLogger.info(`Shell integration decorations added for terminal: ${terminalId}`);
+      }
+    } catch (error) {
+      terminalLogger.warn(`Failed to setup shell integration for terminal ${terminalId}:`, error);
+    }
+  }
 
   /**
    * Perform initial terminal resize

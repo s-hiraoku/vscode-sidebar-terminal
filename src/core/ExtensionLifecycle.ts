@@ -5,6 +5,7 @@ import { StandardTerminalSessionManager } from '../sessions/StandardTerminalSess
 import { extension as log, logger, LogLevel } from '../utils/logger';
 import { FileReferenceCommand, TerminalCommand } from '../commands';
 import { CopilotIntegrationCommand } from '../commands/CopilotIntegrationCommand';
+import { ShellIntegrationService } from '../services/ShellIntegrationService';
 import { VSCODE_COMMANDS } from '../constants';
 
 /**
@@ -18,6 +19,7 @@ export class ExtensionLifecycle {
   private fileReferenceCommand: FileReferenceCommand | undefined;
   private terminalCommand: TerminalCommand | undefined;
   private copilotIntegrationCommand: CopilotIntegrationCommand | undefined;
+  private shellIntegrationService: ShellIntegrationService | undefined;
 
   // シンプルな復元管理
   private _restoreExecuted = false;
@@ -64,6 +66,11 @@ export class ExtensionLifecycle {
       this.fileReferenceCommand = new FileReferenceCommand(this.terminalManager);
       this.terminalCommand = new TerminalCommand(this.terminalManager);
       this.copilotIntegrationCommand = new CopilotIntegrationCommand();
+
+      // Initialize shell integration service
+      log('🔧 [EXTENSION] Initializing shell integration service...');
+      this.shellIntegrationService = new ShellIntegrationService(this.terminalManager);
+      log('✅ [EXTENSION] Shell integration service initialized');
 
       // Register the sidebar terminal provider
       this.sidebarProvider = new SecondaryTerminalProvider(
@@ -219,6 +226,46 @@ export class ExtensionLifecycle {
         },
       },
 
+      // ======================= Shell Integration Commands =======================
+      {
+        command: 'secondaryTerminal.updateShellStatus',
+        handler: (args: { terminalId: string; status: string }) => {
+          log('🔧 [DEBUG] Command executed: updateShellStatus');
+          this.sidebarProvider?.sendMessageToWebview({
+            command: 'updateShellStatus',
+            terminalId: args.terminalId,
+            status: args.status,
+          });
+        },
+      },
+      {
+        command: 'secondaryTerminal.updateCwd',
+        handler: (args: { terminalId: string; cwd: string }) => {
+          log('🔧 [DEBUG] Command executed: updateCwd');
+          this.sidebarProvider?.sendMessageToWebview({
+            command: 'updateCwd',
+            terminalId: args.terminalId,
+            cwd: args.cwd,
+          });
+        },
+      },
+      {
+        command: 'secondaryTerminal.getCommandHistory',
+        handler: (terminalId: string) => {
+          log('🔧 [DEBUG] Command executed: getCommandHistory');
+          if (this.shellIntegrationService) {
+            const history = this.shellIntegrationService.getCommandHistory(terminalId);
+            this.sidebarProvider?.sendMessageToWebview({
+              command: 'commandHistory',
+              terminalId,
+              history,
+            });
+            return history;
+          }
+          return [];
+        },
+      },
+
       // ======================= 設定コマンド =======================
       {
         command: 'secondaryTerminal.openSettings',
@@ -306,6 +353,12 @@ export class ExtensionLifecycle {
     this.fileReferenceCommand = undefined;
     this.terminalCommand = undefined;
     this.copilotIntegrationCommand = undefined;
+
+    // Dispose shell integration service
+    if (this.shellIntegrationService) {
+      this.shellIntegrationService.dispose();
+      this.shellIntegrationService = undefined;
+    }
 
     log('✅ [EXTENSION] Deactivation complete');
   }

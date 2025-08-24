@@ -48,6 +48,7 @@ import { WebViewApiManager } from './WebViewApiManager';
 import { TerminalLifecycleManager } from './TerminalLifecycleManager';
 import { CliAgentStateManager } from './CliAgentStateManager';
 import { EventHandlerManager } from './EventHandlerManager';
+import { ShellIntegrationManager } from './ShellIntegrationManager';
 import { setUIManager } from '../utils/NotificationUtils';
 
 /**
@@ -65,6 +66,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
   private terminalLifecycleManager: TerminalLifecycleManager;
   private cliAgentStateManager: CliAgentStateManager;
   private eventHandlerManager: EventHandlerManager;
+  private shellIntegrationManager: ShellIntegrationManager;
 
   // 既存マネージャー（段階的移行）
   public splitManager: SplitManager;
@@ -103,6 +105,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     this.terminalLifecycleManager = new TerminalLifecycleManager(this.splitManager, this);
     this.cliAgentStateManager = new CliAgentStateManager();
     this.eventHandlerManager = new EventHandlerManager();
+    this.shellIntegrationManager = new ShellIntegrationManager();
 
     // 既存マネージャーの初期化
     this.initializeExistingManagers();
@@ -139,6 +142,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     setUIManager(this.uiManager);
     this.inputManager.setNotificationManager(this.notificationManager);
     this.notificationManager.setupNotificationStyles();
+    this.shellIntegrationManager.setCoordinator(this);
 
     // 重要：入力マネージャーの完全な設定
     this.setupInputManager();

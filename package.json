@@ -445,6 +445,26 @@
           "type": "boolean",
           "default": true,
           "description": "Allow Alt key menu mnemonics on Windows and Linux platforms."
+        },
+        "secondaryTerminal.shellIntegration.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable VS Code shell integration features (command tracking, working directory detection, status indicators)."
+        },
+        "secondaryTerminal.shellIntegration.showCommandStatus": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show command status indicators in terminal headers (success/error/running)."
+        },
+        "secondaryTerminal.shellIntegration.showWorkingDirectory": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show current working directory in terminal headers."
+        },
+        "secondaryTerminal.shellIntegration.commandHistory": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable command history tracking and quick access."
         }
       }
     },
