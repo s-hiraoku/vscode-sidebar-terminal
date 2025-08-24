@@ -9,9 +9,32 @@
 
 import { Terminal } from 'xterm';
 import { webview as log } from '../../utils/logger';
-import { PartialTerminalSettings, WebViewFontSettings, TerminalConfig } from '../../types/shared';
+import { PartialTerminalSettings, WebViewFontSettings, TerminalConfig, TerminalState } from '../../types/shared';
 // Removed unused imports: TerminalInteractionEvent, WebviewMessage
-import { IManagerCoordinator, TerminalInstance } from '../interfaces/ManagerInterfaces';
+import { 
+  IManagerCoordinator, 
+  TerminalInstance,
+  IPerformanceManager,
+  IInputManager,
+  IUIManager,
+  IConfigManager,
+  IMessageManager,
+  INotificationManager
+} from '../interfaces/ManagerInterfaces';
+
+// Debug info interface
+interface DebugInfo {
+  totalCount: number;
+  maxTerminals: number;
+  availableSlots: number[];
+  activeTerminalId: string | null;
+  terminals: Array<{
+    id: string;
+    isActive: boolean;
+  }>;
+  timestamp: number;
+  operation?: string;
+}
 import { SplitManager } from './SplitManager';
 import { SettingsPanel } from '../components/SettingsPanel';
 import { NotificationManager } from './NotificationManager';
@@ -77,7 +100,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     // 専門マネージャーの初期化
     this.webViewApiManager = new WebViewApiManager();
     this.splitManager = new SplitManager();
-    this.terminalLifecycleManager = new TerminalLifecycleManager(this.splitManager, this as any);
+    this.terminalLifecycleManager = new TerminalLifecycleManager(this.splitManager, this);
     this.cliAgentStateManager = new CliAgentStateManager();
     this.eventHandlerManager = new EventHandlerManager();
 
@@ -109,7 +132,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     this.performanceManager = new PerformanceManager();
     this.uiManager = new UIManager();
     this.inputManager = new InputManager();
-    this.messageManager = new RefactoredMessageManager(this as any);
+    this.messageManager = new RefactoredMessageManager(this);
     this.persistenceManager = new StandardTerminalPersistenceManager();
 
     // 依存関係の設定
@@ -133,7 +156,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       this.inputManager.setupIMEHandling();
 
       // キーボードショートカットの設定
-      this.inputManager.setupKeyboardShortcuts(this as any);
+      this.inputManager.setupKeyboardShortcuts(this);
 
       // Agent interaction mode を無効化（VS Code標準動作）
       this.inputManager.setAgentInteractionMode(false);
@@ -161,7 +184,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       });
 
       // 🔍 FIX: Pass event.data as the message content, not the full event
-      await this.messageManager.receiveMessage(event.data, this as any);
+      await this.messageManager.receiveMessage(event.data, this);
     });
 
     // VS Code pattern: ResizeObserver handles individual terminal container resizing
@@ -199,7 +222,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       
       // 🎯 FIX: Only focus if needed to avoid interrupting terminal output
       // This is critical for CLI agent scenarios while preserving shell prompt
-      const terminals = (this.terminalLifecycleManager as any).getTerminals();
+      const terminals = this.splitManager.getTerminals();
       const terminalInstance = terminals.get(terminalId);
       if (terminalInstance && terminalInstance.terminal) {
         const terminal = terminalInstance.terminal;
@@ -216,7 +239,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       }
 
       // 🎯 Extension側にアクティブターミナルの変更を通知
-      (this.messageManager as any).postMessage({
+      this.messageManager.postMessage({
         command: 'focusTerminal',
         terminalId: terminalId,
       });
@@ -254,7 +277,14 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     log(message, ...args);
   }
 
-  public getManagers(): any {
+  public getManagers(): {
+    performance: IPerformanceManager;
+    input: IInputManager;
+    ui: IUIManager;
+    config: IConfigManager;
+    message: IMessageManager;
+    notification: INotificationManager;
+  } {
     return {
       performance: this.performanceManager,
       input: this.inputManager,
@@ -329,7 +359,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       // 3. 入力イベントハンドラーの設定
       const terminalContainer = this.terminalLifecycleManager.getTerminalElement(terminalId);
       if (terminal && terminalContainer) {
-        this.inputManager.addXtermClickHandler(terminal, terminalId, terminalContainer, this as any);
+        this.inputManager.addXtermClickHandler(terminal, terminalId, terminalContainer, this);
         log(`✅ Input handlers configured for terminal: ${terminalId}`);
       }
 
@@ -338,7 +368,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       this.setActiveTerminalId(terminalId);
       
       // 即座にボーダー更新を実行（UIManager経由）
-      const allContainers = (this.terminalLifecycleManager as any).getSplitManager().getTerminalContainers();
+      const allContainers = this.splitManager.getTerminalContainers();
       if (this.uiManager) {
         this.uiManager.updateTerminalBorders(terminalId, allContainers);
         console.log(`🎯 [FIX] Applied active border immediately after creation: ${terminalId}`);
@@ -512,7 +542,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     
     // 🎯 [FIX] Call killTerminal instead of custom deletion logic
     // This ensures the panel trash button follows the same logic as the kill command
-    (this.messageManager as any).postMessage({
+    this.messageManager.postMessage({
       command: 'killTerminal',
       terminalId: terminalId // Pass the specific ID if provided, null if active terminal should be used
     });
@@ -528,15 +558,16 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
         return;
       }
 
-      const terminalState = state as any;
-      
-      // Validate required properties
-      if (!Array.isArray(terminalState.terminals) || 
-          !Array.isArray(terminalState.availableSlots) ||
-          typeof terminalState.maxTerminals !== 'number') {
-        log('⚠️ [STATE] Invalid state structure:', terminalState);
+      // Type-safe state validation and casting
+      const stateObj = state as Record<string, unknown>;
+      if (!Array.isArray(stateObj.terminals) || 
+          !Array.isArray(stateObj.availableSlots) ||
+          typeof stateObj.maxTerminals !== 'number') {
+        log('⚠️ [STATE] Invalid state structure:', stateObj);
         return;
       }
+      
+      const terminalState = state as TerminalState;
 
       log('🔄 [STATE] Processing state update:', {
         terminals: terminalState.terminals.length,
@@ -581,7 +612,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
   /**
    * Update UI elements based on current terminal state
    */
-  private updateUIFromState(state: any): void {
+  private updateUIFromState(state: TerminalState): void {
     try {
       // Update terminal count display
       this.updateTerminalCountDisplay(state.terminals.length, state.maxTerminals);
@@ -628,7 +659,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
   /**
    * Update debug display with current state information
    */
-  private updateDebugDisplay(state: any): void {
+  private updateDebugDisplay(state: TerminalState): void {
     // Use the extended version with operation tracking
     this.updateDebugDisplayExtended(state, 'state-update');
   }
@@ -692,7 +723,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     
     // Show in notification system if available
     if (this.notificationManager) {
-      (this.notificationManager as any).showWarning(message);
+      this.notificationManager.showWarning(message);
     }
     
     // Update status bar if available
@@ -709,7 +740,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
   private clearTerminalLimitMessage(): void {
     // Clear notifications
     if (this.notificationManager) {
-      (this.notificationManager as any).clearWarnings();
+      this.notificationManager.clearWarnings();
     }
     
     // Clear status bar
@@ -723,7 +754,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
   /**
    * Display debug information
    */
-  private displayDebugInfo(info: any): void {
+  private displayDebugInfo(info: DebugInfo): void {
     let debugElement = document.getElementById('terminal-debug-info');
     if (!debugElement) {
       debugElement = document.createElement('div');
@@ -822,7 +853,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
         </div>
         <div style="margin-left: 16px; color: #e5e7eb; max-height: 120px; overflow-y: auto;">
           ${info.terminals.length > 0 ? 
-            info.terminals.map((t: any) => `
+            info.terminals.map((t) => `
               <div style="margin: 2px 0; padding: 2px 4px; background: ${t.isActive ? 'rgba(16, 185, 129, 0.1)' : 'rgba(75, 85, 99, 0.3)'}; border-radius: 3px; border-left: 2px solid ${t.isActive ? '#10b981' : '#6b7280'};">
                 <span style="color: ${t.isActive ? '#10b981' : '#9ca3af'};">${t.id}</span>
                 ${t.isActive ? '<span style="color: #fbbf24;">●</span>' : ''}
@@ -971,7 +1002,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
   /**
    * Enhanced updateDebugDisplay with operation tracking
    */
-  private updateDebugDisplayExtended(state: any, operation?: string): void {
+  private updateDebugDisplayExtended(state: TerminalState, operation?: string): void {
     if (!this.debugMode) {
       return;
     }
@@ -981,11 +1012,10 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       log(`🔍 [DEBUG] Display update triggered by: ${operation}`);
     }
 
-    const debugInfo = {
-      timestamp: new Date().toISOString(),
-      terminals: state.terminals.map((t: any) => ({ 
+    const debugInfo: DebugInfo = {
+      timestamp: Date.now(),
+      terminals: state.terminals.map((t) => ({ 
         id: t.id, 
-        name: t.name, 
         isActive: t.isActive 
       })),
       availableSlots: state.availableSlots,
@@ -1350,7 +1380,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
         log(`🛡️ [SAFE-DELETE] Cannot delete last terminal: ${targetId} (total: ${totalTerminals})`);
         // Show user notification about protection
         if (this.notificationManager && 'showWarning' in this.notificationManager) {
-          (this.notificationManager as any).showWarning('Must keep at least 1 terminal open');
+          this.notificationManager.showWarning('Must keep at least 1 terminal open');
         }
         return false;
       }
@@ -1465,7 +1495,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
 
   // Add state properties
   private currentTerminalState: any = null;
-  private debugMode: boolean = true; // Enable for debugging, disable in production
+  private debugMode: boolean = false; // Enable only when needed for debugging
 
   public ensureTerminalFocus(): void {
     const activeId = this.getActiveTerminalId();

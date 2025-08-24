@@ -87,17 +87,32 @@ TerminalWebviewManager
 
 ### デバッグ・トラブルシューティング戦略
 
+**Terminal State Debug Panel**
+
+リアルタイムでWebView状態を監視する内蔵デバッグツール：
+
+```
+Ctrl+Shift+D    # Debug panelをトグル（表示/非表示）
+```
+
+**監視項目**:
+- システム状態（READY/BUSY）
+- ターミナル管理情報（アクティブ数、スロット状況）
+- パフォーマンスメトリクス
+- 待機中操作の可視化
+
 **一般的な問題パターン**
 
-1. **通信断絶**: メッセージキューイング機能確認
-2. **メモリリーク**: dispose()パターン実装確認
-3. **パフォーマンス**: バッファリング設定確認
+1. **通信断絶**: メッセージキューイング機能確認 → Debug panelで確認
+2. **メモリリーク**: dispose()パターン実装確認 → Performance Metricsで監視
+3. **パフォーマンス**: バッファリング設定確認 → Debug panelでリアルタイム確認
 
 **デバッグツール活用**
 
-- WebView Developer Tools活用
-- Extension Host ログ監視
-- パフォーマンス プロファイリング
+- **内蔵Debug Panel**: 状態監視・トラブルシューティング
+- **WebView Developer Tools**: DOM・JavaScript デバッグ
+- **Extension Host ログ監視**: バックエンド処理確認
+- **パフォーマンス プロファイリング**: CPU・メモリ使用量分析
 
 ### テスト戦略設計
 

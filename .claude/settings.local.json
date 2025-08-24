@@ -99,7 +99,8 @@
       "Bash(echo:*)",
       "Bash(mcp-server-github:*)",
       "Bash(source:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(timeout 30s npm run test:unit:*)"
     ],
     "deny": []
   },

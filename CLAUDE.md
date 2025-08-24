@@ -717,6 +717,42 @@ code --install-extension package.vsix
 
 ## Testing and Debugging
 
+### Terminal State Debug Panel
+
+**概要**: リアルタイムでターミナル状態を監視するデバッグパネル
+
+**使用方法**:
+```
+Ctrl+Shift+D    # Debug panelをトグル（表示/非表示）
+```
+
+**表示される情報**:
+- **System Status**: システムの稼働状態（READY/BUSY）
+- **Terminal Management**: アクティブターミナル数、利用可能スロット
+- **Terminal Instances**: 各ターミナルの詳細状態
+- **Performance Metrics**: メモリ使用量、CPU使用率
+- **Pending Operations**: 待機中の操作（作成/削除）
+
+**使用例**:
+```bash
+# 問題発生時にデバッグパネルを表示
+Ctrl+Shift+D
+
+# 問題解決後にデバッグパネルを非表示
+Ctrl+Shift+D または ×ボタンクリック
+```
+
+**デバッグシナリオ**:
+- ターミナルが応答しない → System Status確認
+- ターミナル数が異常 → Terminal Management確認  
+- パフォーマンス低下 → Performance Metrics確認
+- 操作が完了しない → Pending Operations確認
+
+**追加デバッグ機能**:
+```
+Ctrl+Shift+X    # システム診断データをエクスポート
+```
+
 ### Running Tests Locally
 
 ```bash
