@@ -420,10 +420,10 @@ export class TerminalLifecycleManager {
         container: mainContainer,
         fitAddon,
         isActive: false,
-        // VS Code Standard Addons
+        // VS Code Standard Addons - keep as null if not loaded
         searchAddon,
-        webglAddon: webglAddon || undefined,
-        unicode11Addon: unicode11Addon || undefined,
+        webglAddon,
+        unicode11Addon,
       };
 
       // Register terminal
