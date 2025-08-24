@@ -132,6 +132,18 @@ _Customizing font size, theme, and other settings_
 - **GitHub Copilot Integration**: `CMD+K CMD+C` (Mac) / `Ctrl+K Ctrl+C` (Windows/Linux) - Activate Copilot Chat with file reference
 - **Alt+Click**: Cursor positioning (when enabled in VS Code settings)
 
+### 🔍 Debug & Troubleshooting
+
+- **Terminal State Debug Panel**: `Ctrl+Shift+D` - Toggle real-time terminal state monitoring panel
+- **System Diagnostics Export**: `Ctrl+Shift+X` - Export detailed system diagnostics for troubleshooting
+
+The Debug Panel provides comprehensive insights including:
+- System status (READY/BUSY state)
+- Active terminal count and available slots
+- Performance metrics and memory usage
+- Pending operations queue status
+- Individual terminal instance details
+
 ## ⚙️ Configuration
 
 Customize the extension through VS Code settings (`settings.json`):
