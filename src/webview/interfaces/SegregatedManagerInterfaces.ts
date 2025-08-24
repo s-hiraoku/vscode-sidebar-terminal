@@ -6,9 +6,7 @@
  */
 
 import { Terminal } from 'xterm';
-import { FitAddon } from 'xterm-addon-fit';
 import { PartialTerminalSettings, WebViewFontSettings } from '../../types/shared';
-import { AltClickState, TerminalInteractionEvent } from '../../types/common';
 
 // Re-export core interfaces from main manager interfaces
 export {
