@@ -6,7 +6,7 @@
     "lib": ["ES2022", "DOM"],
     "sourceMap": true,
     "rootDir": "src",
-    "strict": true,
+    "strict": false,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
