@@ -4,10 +4,13 @@
 
 import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
+import { SearchAddon } from '@xterm/addon-search';
+import { WebglAddon } from '@xterm/addon-webgl';
+import { Unicode11Addon } from '@xterm/addon-unicode11';
 import { PartialTerminalSettings, WebViewFontSettings } from '../../types/shared';
 import { AltClickState, TerminalInteractionEvent } from '../../types/common';
 
-// Core terminal data structure
+// Core terminal data structure with VS Code Standard Addons
 export interface TerminalInstance {
   readonly id: string;
   readonly name: string;
@@ -16,6 +19,10 @@ export interface TerminalInstance {
   readonly fitAddon: FitAddon;
   readonly container: HTMLElement;
   isActive?: boolean;
+  // VS Code Standard Addons
+  readonly searchAddon?: SearchAddon;
+  readonly webglAddon?: WebglAddon;
+  readonly unicode11Addon?: Unicode11Addon;
 }
 
 // Manager coordination interface

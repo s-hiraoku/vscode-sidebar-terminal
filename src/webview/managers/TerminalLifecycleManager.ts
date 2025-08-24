@@ -8,6 +8,9 @@
 import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import { WebLinksAddon } from 'xterm-addon-web-links';
+import { SearchAddon } from '@xterm/addon-search';
+import { WebglAddon } from '@xterm/addon-webgl';
+import { Unicode11Addon } from '@xterm/addon-unicode11';
 import { TerminalConfig } from '../../types/shared';
 import { TerminalInstance, IManagerCoordinator } from '../interfaces/ManagerInterfaces';
 import { SplitManager } from './SplitManager';
@@ -34,8 +37,9 @@ export class TerminalLifecycleManager {
   public fitAddon: FitAddon | null = null;
   public terminalContainer: HTMLElement | null = null;
 
-  // Terminal configuration defaults
+  // VS Code Standard Terminal Configuration
   private readonly DEFAULT_TERMINAL_CONFIG = {
+    // Basic appearance
     cursorBlink: true,
     fontFamily: 'monospace',
     fontSize: 14,
@@ -43,6 +47,62 @@ export class TerminalLifecycleManager {
       background: '#000000',
       foreground: '#ffffff',
     },
+    
+    // VS Code Standard Options - Core Features
+    altClickMovesCursor: true,
+    drawBoldTextInBrightColors: false,
+    minimumContrastRatio: 1,
+    tabStopWidth: 8,
+    macOptionIsMeta: false,
+    rightClickSelectsWord: true,
+    
+    // Scrolling and Navigation
+    fastScrollModifier: 'alt' as const,
+    fastScrollSensitivity: 5,
+    scrollSensitivity: 1,
+    scrollback: 1000,
+    scrollOnUserInput: true,
+    
+    // Word and Selection
+    wordSeparator: ' ()[]{}\'"`,;',
+    
+    // Rendering Options
+    allowTransparency: false,
+    rescaleOverlappingGlyphs: false,
+    allowProposedApi: true,
+    
+    // Cursor Configuration
+    cursorStyle: 'block' as const,
+    cursorInactiveStyle: 'outline' as const,
+    cursorWidth: 1,
+    
+    // Terminal Behavior
+    convertEol: false,
+    disableStdin: false,
+    screenReaderMode: false,
+    
+    // Bell Configuration
+    bellSound: undefined,
+    bellStyle: 'none' as const,
+    
+    // Advanced Options
+    windowOptions: {
+      restoreWin: false,
+      minimizeWin: false,
+      setWinPosition: false,
+      setWinSizePixels: false,
+      raiseWin: false,
+      lowerWin: false,
+      refreshWin: false,
+      setWinSizeChars: false,
+      maximizeWin: false,
+      fullscreenWin: false,
+    },
+    
+    // Addon Configuration
+    enableGpuAcceleration: true,
+    enableSearchAddon: true,
+    enableUnicode11: true,
   };
 
   constructor(splitManager: SplitManager, coordinator: IManagerCoordinator) {
@@ -143,15 +203,54 @@ export class TerminalLifecycleManager {
       // Merge configuration
       const terminalConfig = { ...this.DEFAULT_TERMINAL_CONFIG, ...config };
 
-      // Create xterm.js instance
+      // Create xterm.js instance with VS Code Standard Configuration
       const terminal = new Terminal({
+        // Basic appearance
         cursorBlink: terminalConfig.cursorBlink,
         fontFamily: terminalConfig.fontFamily,
         fontSize: terminalConfig.fontSize,
         cols: 80,
         rows: 24,
-        scrollback: 1000,
-        allowTransparency: false,
+        
+        // VS Code Standard Options
+        altClickMovesCursor: terminalConfig.altClickMovesCursor,
+        drawBoldTextInBrightColors: terminalConfig.drawBoldTextInBrightColors,
+        minimumContrastRatio: terminalConfig.minimumContrastRatio,
+        tabStopWidth: terminalConfig.tabStopWidth,
+        macOptionIsMeta: terminalConfig.macOptionIsMeta,
+        rightClickSelectsWord: terminalConfig.rightClickSelectsWord,
+        
+        // Scrolling and Navigation
+        fastScrollModifier: terminalConfig.fastScrollModifier,
+        fastScrollSensitivity: terminalConfig.fastScrollSensitivity,
+        scrollSensitivity: terminalConfig.scrollSensitivity,
+        scrollback: terminalConfig.scrollback,
+        scrollOnUserInput: terminalConfig.scrollOnUserInput,
+        
+        // Word and Selection
+        wordSeparator: terminalConfig.wordSeparator,
+        
+        // Rendering Options
+        allowTransparency: terminalConfig.allowTransparency,
+        rescaleOverlappingGlyphs: terminalConfig.rescaleOverlappingGlyphs,
+        allowProposedApi: terminalConfig.allowProposedApi,
+        
+        // Cursor Configuration
+        cursorStyle: terminalConfig.cursorStyle,
+        cursorInactiveStyle: terminalConfig.cursorInactiveStyle,
+        cursorWidth: terminalConfig.cursorWidth,
+        
+        // Terminal Behavior
+        convertEol: terminalConfig.convertEol,
+        disableStdin: terminalConfig.disableStdin,
+        screenReaderMode: terminalConfig.screenReaderMode,
+        
+        // Bell Configuration
+        bellSound: terminalConfig.bellSound,
+        bellStyle: terminalConfig.bellStyle,
+        
+        // Advanced Options
+        windowOptions: terminalConfig.windowOptions,
       });
 
       // Apply theme using existing getWebviewTheme
@@ -159,12 +258,39 @@ export class TerminalLifecycleManager {
       const theme = getWebviewTheme({ theme: themeValue });
       terminal.options.theme = theme;
 
-      // Add essential addons
+      // Add VS Code Standard Addons
       const fitAddon = new FitAddon();
       const webLinksAddon = new WebLinksAddon();
-
+      const searchAddon = new SearchAddon();
+      
+      // Optional high-performance addons
+      let webglAddon: WebglAddon | null = null;
+      let unicode11Addon: Unicode11Addon | null = null;
+      
+      // Load essential addons
       terminal.loadAddon(fitAddon);
       terminal.loadAddon(webLinksAddon);
+      terminal.loadAddon(searchAddon);
+      
+      // Load optional addons if supported
+      try {
+        unicode11Addon = new Unicode11Addon();
+        terminal.loadAddon(unicode11Addon);
+        terminalLogger.info(`Unicode11 addon loaded for terminal ${terminalId}`);
+      } catch (error) {
+        terminalLogger.warn(`Unicode11 addon failed to load: ${error}`);
+      }
+      
+      // GPU acceleration (conditional)
+      if (terminalConfig.enableGpuAcceleration !== false) {
+        try {
+          webglAddon = new WebglAddon();
+          terminal.loadAddon(webglAddon);
+          terminalLogger.info(`WebGL addon loaded for terminal ${terminalId}`);
+        } catch (error) {
+          terminalLogger.warn(`WebGL addon failed to load: ${error}`);
+        }
+      }
 
       // Create container using TerminalContainerFactory
       const containerConfig: TerminalContainerConfig = {
@@ -271,7 +397,7 @@ export class TerminalLifecycleManager {
       
       terminalLogger.info(`Terminal number: ${finalTerminalNumber} (${terminalNumber ? 'from Extension' : 'extracted from ID'})`);
       
-      // Create terminal instance
+      // Create terminal instance with VS Code Standard Addons
       const terminalInstance: TerminalInstance = {
         id: terminalId,
         name: terminalName,
@@ -280,6 +406,10 @@ export class TerminalLifecycleManager {
         container: mainContainer,
         fitAddon,
         isActive: false,
+        // VS Code Standard Addons
+        searchAddon,
+        webglAddon,
+        unicode11Addon,
       };
 
       // Register terminal
