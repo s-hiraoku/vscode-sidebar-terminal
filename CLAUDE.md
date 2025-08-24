@@ -351,6 +351,30 @@ npm run watch-tests
 
 **Remember**: This codebase serves as a foundation for ongoing development. Every shortcut taken now will compound into technical debt that makes future development exponentially more difficult.
 
+### 🚨 CRITICAL: NEVER DISABLE FUNCTIONALITY FOR TEST COMPLIANCE
+
+**ABSOLUTELY FORBIDDEN**: Never disable, comment out, or remove actual functionality to make tests pass.
+
+**Common Wrong Approaches (NEVER DO THIS)**:
+- Renaming implementation files to `.disabled` to bypass failing tests
+- Commenting out functional code to avoid test failures
+- Using placeholder/stub implementations instead of real functionality
+- Removing features or components to make builds pass
+
+**Correct Approaches When Tests Fail**:
+1. **Fix the implementation**: If tests reveal bugs, fix the actual code
+2. **Fix the tests**: If tests are incorrectly written, fix the test logic
+3. **Update test mocks**: If interfaces changed, update mock objects accordingly
+4. **Fix the environment**: If test setup is broken, fix the test infrastructure
+
+**Why This Matters**:
+- Disabling functionality breaks user experience completely
+- Tests are meant to catch problems, not be circumvented
+- Builds should represent working software, not artificially passing metrics
+- Technical debt from disabled features compounds exponentially
+
+**Remember**: The goal is working software with reliable tests, not passing tests with broken software.
+
 ## High-Level Architecture
 
 This is a VS Code extension that provides a terminal interface in the sidebar using a WebView. The architecture follows a clear separation between the extension host (Node.js) and the webview (browser environment).

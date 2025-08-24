@@ -822,7 +822,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
         </div>
         <div style="margin-left: 16px; color: #e5e7eb; max-height: 120px; overflow-y: auto;">
           ${info.terminals.length > 0 ? 
-            info.terminals.map((t: any, index: number) => `
+            info.terminals.map((t: any) => `
               <div style="margin: 2px 0; padding: 2px 4px; background: ${t.isActive ? 'rgba(16, 185, 129, 0.1)' : 'rgba(75, 85, 99, 0.3)'}; border-radius: 3px; border-left: 2px solid ${t.isActive ? '#10b981' : '#6b7280'};">
                 <span style="color: ${t.isActive ? '#10b981' : '#9ca3af'};">${t.id}</span>
                 ${t.isActive ? '<span style="color: #fbbf24;">●</span>' : ''}
