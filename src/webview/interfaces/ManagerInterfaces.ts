@@ -143,6 +143,13 @@ export interface IInputManager {
     manager: IManagerCoordinator
   ): boolean;
   setNotificationManager(notificationManager: INotificationManager): void;
+  // VS Code keybinding system
+  updateKeybindingSettings(settings: {
+    sendKeybindingsToShell?: boolean;
+    commandsToSkipShell?: string[];
+    allowChords?: boolean;
+    allowMnemonics?: boolean;
+  }): void;
   dispose(): void;
 }
 

@@ -232,7 +232,6 @@ export class TerminalLifecycleManager {
         
         // Rendering Options
         allowTransparency: terminalConfig.allowTransparency,
-        rescaleOverlappingGlyphs: terminalConfig.rescaleOverlappingGlyphs,
         allowProposedApi: terminalConfig.allowProposedApi,
         
         // Cursor Configuration
@@ -246,7 +245,6 @@ export class TerminalLifecycleManager {
         screenReaderMode: terminalConfig.screenReaderMode,
         
         // Bell Configuration
-        bellSound: terminalConfig.bellSound,
         bellStyle: terminalConfig.bellStyle,
         
         // Advanced Options
@@ -408,8 +406,8 @@ export class TerminalLifecycleManager {
         isActive: false,
         // VS Code Standard Addons
         searchAddon,
-        webglAddon,
-        unicode11Addon,
+        webglAddon: webglAddon || undefined,
+        unicode11Addon: unicode11Addon || undefined,
       };
 
       // Register terminal

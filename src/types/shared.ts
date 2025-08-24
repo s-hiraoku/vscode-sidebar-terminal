@@ -49,6 +49,16 @@ export interface InteractionConfig {
   readonly multiCursorModifier?: string;
 }
 
+/**
+ * キーバインディング関連設定
+ */
+export interface KeybindingConfig {
+  readonly sendKeybindingsToShell?: boolean;
+  readonly commandsToSkipShell?: string[];
+  readonly allowChords?: boolean;
+  readonly allowMnemonics?: boolean;
+}
+
 // ===== 統合型定義 =====
 
 /**
@@ -92,6 +102,11 @@ export interface PartialTerminalSettings {
   altClickMovesCursor?: boolean;
   multiCursorModifier?: string;
   enableCliAgentIntegration?: boolean;
+  // VS Code keybinding system settings
+  sendKeybindingsToShell?: boolean;
+  commandsToSkipShell?: string[];
+  allowChords?: boolean;
+  allowMnemonics?: boolean;
   shell?: string;
   shellArgs?: string[];
   cwd?: string;
@@ -296,15 +311,22 @@ export interface TerminalInteractionEvent {
     | 'output-detected'
     | 'focus'
     | 'switch-next'
+    | 'switch-previous'
     | 'webview-ready'
     | 'terminal-removed'
     | 'font-settings-update'
     | 'settings-update'
     | 'new-terminal'
+    | 'create-terminal'
+    | 'split-terminal'
+    | 'kill-terminal'
+    | 'clear-terminal'
+    | 'toggle-terminal'
     | 'resize'
     | 'kill'
     | 'interrupt'
-    | 'paste';
+    | 'paste'
+    | 'send-key';
   terminalId: string;
   timestamp: number;
   data?: unknown;

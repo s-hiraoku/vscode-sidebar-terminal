@@ -422,6 +422,29 @@
             "Force bottom panel location for split direction calculation"
           ],
           "description": "Panel location preference for dynamic split direction (Issue #148)"
+        },
+        "secondaryTerminal.sendKeybindingsToShell": {
+          "type": "boolean",
+          "default": false,
+          "description": "Controls whether keybindings are automatically sent to the shell instead of being handled by VS Code workbench."
+        },
+        "secondaryTerminal.commandsToSkipShell": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Array of command IDs that should always be handled by VS Code and not sent to the shell. Prefix with '-' to remove from default skip list (e.g., '-workbench.action.quickOpen')."
+        },
+        "secondaryTerminal.allowChords": {
+          "type": "boolean",
+          "default": true,
+          "description": "Allow multi-key chord sequences in terminal keybindings (e.g., Ctrl+K Ctrl+C)."
+        },
+        "secondaryTerminal.allowMnemonics": {
+          "type": "boolean",
+          "default": true,
+          "description": "Allow Alt key menu mnemonics on Windows and Linux platforms."
         }
       }
     },

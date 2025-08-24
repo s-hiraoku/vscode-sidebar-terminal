@@ -45,12 +45,255 @@ export class InputManager extends BaseManager implements IInputManager {
   // Simple arrow key handling for agent interactions
   private agentInteractionMode = false;
 
+  // VS Code keybinding system state
+  private sendKeybindingsToShell = false;
+  private commandsToSkipShell = new Set<string>();
+  private isInChordMode = false;
+  private allowChords = true;
+  private allowMnemonics = true;
+
+  // VS Code standard terminal commands to skip shell (DEFAULT_COMMANDS_TO_SKIP_SHELL equivalent)
+  private readonly DEFAULT_COMMANDS_TO_SKIP_SHELL = new Set([
+    'workbench.action.quickOpen',
+    'workbench.action.showCommands',
+    'workbench.action.terminal.new',
+    'workbench.action.terminal.split',
+    'workbench.action.terminal.kill',
+    'workbench.action.terminal.clear',
+    'workbench.action.terminal.scrollUp',
+    'workbench.action.terminal.scrollDown',
+    'workbench.action.terminal.scrollToTop',
+    'workbench.action.terminal.scrollToBottom',
+    'workbench.action.terminal.focusNext',
+    'workbench.action.terminal.focusPrevious',
+    'workbench.action.terminal.toggleTerminal',
+    'workbench.action.closePanel',
+    'workbench.action.maximizePanel',
+    'workbench.action.toggleDevTools',
+    'workbench.action.reloadWindow',
+    'workbench.action.zoomIn',
+    'workbench.action.zoomOut',
+    'workbench.action.zoomReset',
+  ]);
+
   /**
    * Set the notification manager for Alt+Click feedback
    */
   public setNotificationManager(notificationManager: INotificationManager): void {
     this.notificationManager = notificationManager;
     this.logger.info('Notification manager set for Alt+Click feedback');
+  }
+
+  /**
+   * Update VS Code keybinding system settings
+   */
+  public updateKeybindingSettings(settings: {
+    sendKeybindingsToShell?: boolean;
+    commandsToSkipShell?: string[];
+    allowChords?: boolean;
+    allowMnemonics?: boolean;
+  }): void {
+    if (settings.sendKeybindingsToShell !== undefined) {
+      this.sendKeybindingsToShell = settings.sendKeybindingsToShell;
+      this.logger.info(`sendKeybindingsToShell updated: ${this.sendKeybindingsToShell}`);
+    }
+
+    if (settings.commandsToSkipShell) {
+      this.commandsToSkipShell.clear();
+      
+      // Start with default commands
+      this.DEFAULT_COMMANDS_TO_SKIP_SHELL.forEach(cmd => this.commandsToSkipShell.add(cmd));
+      
+      // Process custom commands
+      for (const command of settings.commandsToSkipShell) {
+        if (command.startsWith('-')) {
+          // Remove command (override default)
+          const commandToRemove = command.substring(1);
+          this.commandsToSkipShell.delete(commandToRemove);
+          this.logger.debug(`Removed command from skip list: ${commandToRemove}`);
+        } else {
+          // Add command to skip
+          this.commandsToSkipShell.add(command);
+          this.logger.debug(`Added command to skip list: ${command}`);
+        }
+      }
+      
+      this.logger.info(`commandsToSkipShell updated: ${this.commandsToSkipShell.size} commands`);
+    }
+
+    if (settings.allowChords !== undefined) {
+      this.allowChords = settings.allowChords;
+      this.logger.info(`allowChords updated: ${this.allowChords}`);
+    }
+
+    if (settings.allowMnemonics !== undefined) {
+      this.allowMnemonics = settings.allowMnemonics;
+      this.logger.info(`allowMnemonics updated: ${this.allowMnemonics}`);
+    }
+  }
+
+  /**
+   * VS Code keybinding resolution system - determines if keybinding should be handled by VS Code or shell
+   */
+  private shouldSkipShell(event: KeyboardEvent, resolvedCommand?: string): boolean {
+    // Check for chord mode
+    if (this.isInChordMode && this.allowChords && event.key !== 'Escape') {
+      this.logger.debug('In chord mode - skipping shell');
+      return true;
+    }
+
+    // Check specific command skip list
+    if (resolvedCommand && this.commandsToSkipShell.has(resolvedCommand) && !this.sendKeybindingsToShell) {
+      this.logger.debug(`Command ${resolvedCommand} in skip list - skipping shell`);
+      return true;
+    }
+
+    // Check for mnemonics (Alt key on Windows/Linux)
+    if (this.allowMnemonics && event.altKey && (navigator.platform.includes('Win') || navigator.platform.includes('Linux'))) {
+      this.logger.debug('Alt key mnemonic detected - skipping shell');
+      return true;
+    }
+
+    // Hardcoded system keybindings
+    if (this.isSystemKeybinding(event)) {
+      this.logger.debug('System keybinding detected - skipping shell');
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Check if keybinding is a system-level keybinding that should always be handled by VS Code
+   */
+  private isSystemKeybinding(event: KeyboardEvent): boolean {
+    // Alt+F4 on Windows
+    if (navigator.platform.includes('Win') && event.altKey && event.key === 'F4') {
+      return true;
+    }
+
+    // Cmd+Q on macOS
+    if (navigator.platform.includes('Mac') && event.metaKey && event.key === 'q') {
+      return true;
+    }
+
+    // Ctrl+V without clipboard API support (for pasting)
+    if (event.ctrlKey && event.key === 'v' && !navigator.clipboard?.readText) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Resolve keyboard event to VS Code command (comprehensive version)
+   */
+  private resolveKeybinding(event: KeyboardEvent): string | null {
+    const key = event.key.toLowerCase();
+    const ctrl = event.ctrlKey;
+    const alt = event.altKey;
+    const shift = event.shiftKey;
+    const meta = event.metaKey;
+
+    // Cross-platform key handling
+    const isMac = navigator.platform.includes('Mac');
+
+    // VS Code standard terminal keybindings - comprehensive collection
+    const keybindingMap: Record<string, string> = {
+      // Terminal management - cross-platform
+      [`${isMac ? 'meta' : 'ctrl'}+shift+\``]: 'workbench.action.terminal.new',
+      [`${isMac ? 'meta' : 'ctrl'}+shift+5`]: 'workbench.action.terminal.split',
+      [`${isMac ? 'meta' : 'ctrl'}+shift+w`]: 'workbench.action.terminal.kill',
+      [`${isMac ? 'meta' : 'ctrl'}+shift+k`]: 'workbench.action.terminal.clear',
+      
+      // Navigation - cross-platform
+      [`${isMac ? 'meta' : 'ctrl'}+p`]: 'workbench.action.quickOpen',
+      [`${isMac ? 'meta' : 'ctrl'}+shift+p`]: 'workbench.action.showCommands',
+      [`${isMac ? 'meta' : 'ctrl'}+tab`]: 'workbench.action.terminal.focusNext',
+      [`${isMac ? 'meta' : 'ctrl'}+shift+tab`]: 'workbench.action.terminal.focusPrevious',
+      [`${isMac ? 'meta' : 'ctrl'}+\``]: 'workbench.action.terminal.toggleTerminal',
+      
+      // Scrolling - Windows/Linux specific
+      'ctrl+shift+pageup': 'workbench.action.terminal.scrollUp',
+      'ctrl+shift+pagedown': 'workbench.action.terminal.scrollDown',
+      'ctrl+shift+home': 'workbench.action.terminal.scrollToTop',
+      'ctrl+shift+end': 'workbench.action.terminal.scrollToBottom',
+      
+      // Scrolling - macOS specific
+      'meta+shift+pageup': 'workbench.action.terminal.scrollUp',
+      'meta+shift+pagedown': 'workbench.action.terminal.scrollDown',
+      'meta+shift+home': 'workbench.action.terminal.scrollToTop',
+      'meta+shift+end': 'workbench.action.terminal.scrollToBottom',
+      
+      // Mac scrolling alternatives
+      'ctrl+meta+arrowup': 'workbench.action.terminal.scrollToPreviousCommand',
+      'ctrl+meta+arrowdown': 'workbench.action.terminal.scrollToNextCommand',
+      
+      // Panel management
+      [`${isMac ? 'meta' : 'ctrl'}+j`]: 'workbench.action.togglePanel',
+      [`${isMac ? 'meta' : 'ctrl'}+shift+u`]: 'workbench.action.closePanel',
+      [`${isMac ? 'meta' : 'ctrl'}+shift+e`]: 'workbench.action.toggleSidebarVisibility',
+      
+      // Development tools
+      'f12': 'workbench.action.toggleDevTools',
+      [`${isMac ? 'meta' : 'ctrl'}+r`]: 'workbench.action.reloadWindow',
+      [`${isMac ? 'meta' : 'ctrl'}+shift+r`]: 'workbench.action.reloadWindowWithExtensionsDisabled',
+      
+      // Zoom
+      [`${isMac ? 'meta' : 'ctrl'}+=`]: 'workbench.action.zoomIn',
+      [`${isMac ? 'meta' : 'ctrl'}+-`]: 'workbench.action.zoomOut',
+      [`${isMac ? 'meta' : 'ctrl'}+0`]: 'workbench.action.zoomReset',
+      
+      // Copy/paste (when appropriate)
+      [`${isMac ? 'meta' : 'ctrl'}+c`]: 'workbench.action.terminal.copySelection',
+      [`${isMac ? 'meta' : 'ctrl'}+v`]: 'workbench.action.terminal.paste',
+      [`${isMac ? 'meta' : 'ctrl'}+a`]: 'workbench.action.terminal.selectAll',
+      
+      // Find
+      [`${isMac ? 'meta' : 'ctrl'}+f`]: 'workbench.action.terminal.focusFind',
+      [`${isMac ? 'meta' : 'ctrl'}+g`]: 'workbench.action.terminal.findNext',
+      [`${isMac ? 'meta' : 'ctrl'}+shift+g`]: 'workbench.action.terminal.findPrevious',
+      
+      // Terminal size
+      [`${isMac ? 'meta' : 'ctrl'}+shift+=`]: 'workbench.action.terminal.sizeToContentWidth',
+      
+      // Additional shortcuts
+      [`${isMac ? 'meta' : 'ctrl'}+shift+c`]: 'workbench.action.terminal.openNativeConsole',
+      'f1': 'workbench.action.showCommands',
+      'escape': 'workbench.action.terminal.hideFind',
+      
+      // Platform specific alternatives
+      ...(isMac ? {
+        'meta+k': 'workbench.action.terminal.clear',
+        'meta+backspace': 'workbench.action.terminal.deleteWordLeft',
+        'meta+delete': 'workbench.action.terminal.deleteWordRight',
+        'meta+arrowleft': 'workbench.action.terminal.moveToLineStart',
+        'meta+arrowright': 'workbench.action.terminal.moveToLineEnd',
+      } : {
+        'ctrl+l': 'workbench.action.terminal.clear',
+        'ctrl+backspace': 'workbench.action.terminal.deleteWordLeft',
+        'ctrl+delete': 'workbench.action.terminal.deleteWordRight',
+        'home': 'workbench.action.terminal.moveToLineStart',
+        'end': 'workbench.action.terminal.moveToLineEnd',
+      })
+    };
+
+    // Create key combination string
+    const parts = [];
+    if (ctrl && !isMac) parts.push('ctrl');
+    if (meta && isMac) parts.push('meta');
+    if (alt) parts.push('alt');
+    if (shift) parts.push('shift');
+    parts.push(key);
+
+    const keyCombo = parts.join('+');
+    const resolved = keybindingMap[keyCombo];
+    
+    if (resolved) {
+      this.logger.debug(`Resolved keybinding: ${keyCombo} → ${resolved}`);
+    }
+    
+    return resolved || null;
   }
 
   /**
@@ -150,10 +393,10 @@ export class InputManager extends BaseManager implements IInputManager {
   }
 
   /**
-   * Setup keyboard shortcuts for terminal navigation
+   * Setup keyboard shortcuts for terminal navigation with VS Code keybinding system
    */
   public setupKeyboardShortcuts(manager: IManagerCoordinator): void {
-    this.logger.info('Setting up keyboard shortcuts');
+    this.logger.info('Setting up VS Code compatible keyboard shortcuts');
 
     const shortcutHandler = (event: KeyboardEvent): void => {
       // Ignore if IME is composing
@@ -161,40 +404,426 @@ export class InputManager extends BaseManager implements IInputManager {
         return;
       }
 
-      // Ctrl+Tab: Switch to next terminal
-      if (event.ctrlKey && event.key === 'Tab') {
+      // VS Code keybinding resolution
+      const resolvedCommand = this.resolveKeybinding(event);
+      const shouldSkip = this.shouldSkipShell(event, resolvedCommand);
+
+      this.logger.debug(`Keybinding: ${event.key}, Command: ${resolvedCommand}, Skip Shell: ${shouldSkip}`);
+
+      // If should skip shell, handle as VS Code command
+      if (shouldSkip && resolvedCommand) {
         event.preventDefault();
-        this.logger.info('Ctrl+Tab shortcut detected');
-        // Manager should implement terminal switching
-        this.emitTerminalInteractionEvent(
-          'switch-next',
-          manager.getActiveTerminalId() || '',
-          undefined,
-          manager
-        );
+        event.stopPropagation();
+        this.handleVSCodeCommand(resolvedCommand, manager);
+        return;
       }
 
-      // Escape: Clear notifications
-      if (event.key === 'Escape') {
-        this.logger.info('Escape key detected, clearing notifications');
-        this.clearNotifications();
-      }
-
-      // Ctrl+Shift+D: Toggle debug panel
-      if (event.ctrlKey && event.shiftKey && event.key === 'D') {
-        event.preventDefault();
-        this.logger.info('Ctrl+Shift+D shortcut detected, toggling debug panel');
-        // Delegate to the manager coordinator to toggle debug panel
-        if ('toggleDebugPanel' in manager && typeof manager.toggleDebugPanel === 'function') {
-          (manager as any).toggleDebugPanel();
-        }
-      }
+      // Legacy shortcuts for compatibility
+      this.handleLegacyShortcuts(event, manager);
     };
 
     // Register shortcut handler using EventHandlerRegistry
     this.eventRegistry.register('keyboard-shortcuts', document, 'keydown', shortcutHandler as EventListener);
 
-    this.logger.lifecycle('Keyboard shortcuts', 'completed');
+    this.logger.lifecycle('VS Code compatible keyboard shortcuts', 'completed');
+  }
+
+  /**
+   * Handle VS Code commands resolved from keybindings
+   */
+  private handleVSCodeCommand(command: string, manager: IManagerCoordinator): void {
+    this.logger.info(`Handling VS Code command: ${command}`);
+
+    switch (command) {
+      // Terminal management
+      case 'workbench.action.terminal.new':
+        this.emitTerminalInteractionEvent('create-terminal', '', undefined, manager);
+        break;
+      case 'workbench.action.terminal.split':
+        this.emitTerminalInteractionEvent('split-terminal', manager.getActiveTerminalId() || '', undefined, manager);
+        break;
+      case 'workbench.action.terminal.kill':
+        this.emitTerminalInteractionEvent('kill-terminal', manager.getActiveTerminalId() || '', undefined, manager);
+        break;
+      case 'workbench.action.terminal.clear':
+        this.handleTerminalClear(manager);
+        break;
+
+      // Navigation
+      case 'workbench.action.terminal.focusNext':
+        this.emitTerminalInteractionEvent('switch-next', manager.getActiveTerminalId() || '', undefined, manager);
+        break;
+      case 'workbench.action.terminal.focusPrevious':
+        this.emitTerminalInteractionEvent('switch-previous', manager.getActiveTerminalId() || '', undefined, manager);
+        break;
+      case 'workbench.action.terminal.toggleTerminal':
+        this.emitTerminalInteractionEvent('toggle-terminal', '', undefined, manager);
+        break;
+
+      // Scrolling
+      case 'workbench.action.terminal.scrollUp':
+        this.scrollTerminal('up', manager);
+        break;
+      case 'workbench.action.terminal.scrollDown':
+        this.scrollTerminal('down', manager);
+        break;
+      case 'workbench.action.terminal.scrollToTop':
+        this.scrollTerminal('top', manager);
+        break;
+      case 'workbench.action.terminal.scrollToBottom':
+        this.scrollTerminal('bottom', manager);
+        break;
+      case 'workbench.action.terminal.scrollToPreviousCommand':
+        this.scrollTerminal('previousCommand', manager);
+        break;
+      case 'workbench.action.terminal.scrollToNextCommand':
+        this.scrollTerminal('nextCommand', manager);
+        break;
+
+      // Copy/Paste/Selection
+      case 'workbench.action.terminal.copySelection':
+        this.handleTerminalCopy(manager);
+        break;
+      case 'workbench.action.terminal.paste':
+        this.handleTerminalPaste(manager);
+        break;
+      case 'workbench.action.terminal.selectAll':
+        this.handleTerminalSelectAll(manager);
+        break;
+
+      // Find functionality
+      case 'workbench.action.terminal.focusFind':
+        this.handleTerminalFind(manager);
+        break;
+      case 'workbench.action.terminal.findNext':
+        this.handleTerminalFindNext(manager);
+        break;
+      case 'workbench.action.terminal.findPrevious':
+        this.handleTerminalFindPrevious(manager);
+        break;
+      case 'workbench.action.terminal.hideFind':
+        this.handleTerminalHideFind(manager);
+        break;
+
+      // Word/Line operations
+      case 'workbench.action.terminal.deleteWordLeft':
+        this.handleTerminalDeleteWordLeft(manager);
+        break;
+      case 'workbench.action.terminal.deleteWordRight':
+        this.handleTerminalDeleteWordRight(manager);
+        break;
+      case 'workbench.action.terminal.moveToLineStart':
+        this.handleTerminalMoveToLineStart(manager);
+        break;
+      case 'workbench.action.terminal.moveToLineEnd':
+        this.handleTerminalMoveToLineEnd(manager);
+        break;
+
+      // Terminal size
+      case 'workbench.action.terminal.sizeToContentWidth':
+        this.handleTerminalSizeToContent(manager);
+        break;
+
+      // Panel/UI management
+      case 'workbench.action.togglePanel':
+        this.logger.info('Panel toggle not available in webview context');
+        break;
+      case 'workbench.action.closePanel':
+        this.logger.info('Panel close not available in webview context');
+        break;
+      case 'workbench.action.toggleSidebarVisibility':
+        this.logger.info('Sidebar toggle not available in webview context');
+        break;
+
+      // Development tools
+      case 'workbench.action.toggleDevTools':
+        this.logger.info('Dev Tools toggle not available in webview context');
+        break;
+      case 'workbench.action.reloadWindow':
+        this.logger.info('Window reload not available in webview context');
+        break;
+      case 'workbench.action.reloadWindowWithExtensionsDisabled':
+        this.logger.info('Window reload with disabled extensions not available in webview context');
+        break;
+
+      // Zoom
+      case 'workbench.action.zoomIn':
+      case 'workbench.action.zoomOut':
+      case 'workbench.action.zoomReset':
+        this.logger.info(`Zoom commands (${command}) not available in webview context`);
+        break;
+
+      // Quick actions
+      case 'workbench.action.quickOpen':
+        this.logger.info('Quick Open not implemented in terminal webview');
+        break;
+      case 'workbench.action.showCommands':
+        this.logger.info('Command Palette not implemented in terminal webview');
+        break;
+
+      // Native console
+      case 'workbench.action.terminal.openNativeConsole':
+        this.logger.info('Native console not available in webview context');
+        break;
+
+      default:
+        this.logger.warn(`Unhandled VS Code command: ${command}`);
+    }
+  }
+
+  /**
+   * Handle terminal scrolling
+   */
+  private scrollTerminal(direction: 'up' | 'down' | 'top' | 'bottom' | 'previousCommand' | 'nextCommand', manager: IManagerCoordinator): void {
+    const activeTerminalId = manager.getActiveTerminalId();
+    if (!activeTerminalId) {
+      this.logger.warn('No active terminal for scrolling');
+      return;
+    }
+
+    const terminalInstance = manager.getTerminalInstance(activeTerminalId);
+    if (!terminalInstance) {
+      this.logger.warn(`Terminal instance not found: ${activeTerminalId}`);
+      return;
+    }
+
+    const terminal = terminalInstance.terminal;
+    switch (direction) {
+      case 'up':
+        terminal.scrollLines(-1);
+        break;
+      case 'down':
+        terminal.scrollLines(1);
+        break;
+      case 'top':
+        terminal.scrollToTop();
+        break;
+      case 'bottom':
+        terminal.scrollToBottom();
+        break;
+      case 'previousCommand':
+        // Scroll up by larger increments to find previous command
+        terminal.scrollLines(-5);
+        break;
+      case 'nextCommand':
+        // Scroll down by larger increments to find next command
+        terminal.scrollLines(5);
+        break;
+    }
+
+    this.logger.debug(`Scrolled terminal ${activeTerminalId} ${direction}`);
+  }
+
+  /**
+   * Handle terminal clear operation
+   */
+  private handleTerminalClear(manager: IManagerCoordinator): void {
+    const activeTerminalId = manager.getActiveTerminalId();
+    if (!activeTerminalId) {
+      this.logger.warn('No active terminal for clear operation');
+      return;
+    }
+
+    const terminalInstance = manager.getTerminalInstance(activeTerminalId);
+    if (terminalInstance) {
+      terminalInstance.terminal.clear();
+      this.logger.debug(`Cleared terminal ${activeTerminalId}`);
+    }
+  }
+
+  /**
+   * Handle terminal copy selection
+   */
+  private handleTerminalCopy(manager: IManagerCoordinator): void {
+    const activeTerminalId = manager.getActiveTerminalId();
+    if (!activeTerminalId) return;
+
+    const terminalInstance = manager.getTerminalInstance(activeTerminalId);
+    if (!terminalInstance) return;
+
+    const terminal = terminalInstance.terminal;
+    if (terminal.hasSelection()) {
+      const selection = terminal.getSelection();
+      if (selection && navigator.clipboard) {
+        navigator.clipboard.writeText(selection).then(() => {
+          this.logger.debug(`Copied selection from terminal ${activeTerminalId}`);
+        }).catch(error => {
+          this.logger.error(`Failed to copy selection: ${error}`);
+        });
+      }
+    }
+  }
+
+  /**
+   * Handle terminal paste operation
+   */
+  private handleTerminalPaste(manager: IManagerCoordinator): void {
+    const activeTerminalId = manager.getActiveTerminalId();
+    if (!activeTerminalId) return;
+
+    if (navigator.clipboard) {
+      navigator.clipboard.readText().then(text => {
+        if (text) {
+          this.emitTerminalInteractionEvent('paste', activeTerminalId, { text }, manager);
+          this.logger.debug(`Pasted text to terminal ${activeTerminalId}`);
+        }
+      }).catch(error => {
+        this.logger.error(`Failed to paste: ${error}`);
+      });
+    }
+  }
+
+  /**
+   * Handle terminal select all operation
+   */
+  private handleTerminalSelectAll(manager: IManagerCoordinator): void {
+    const activeTerminalId = manager.getActiveTerminalId();
+    if (!activeTerminalId) return;
+
+    const terminalInstance = manager.getTerminalInstance(activeTerminalId);
+    if (!terminalInstance) return;
+
+    terminalInstance.terminal.selectAll();
+    this.logger.debug(`Selected all in terminal ${activeTerminalId}`);
+  }
+
+  /**
+   * Handle terminal find operation
+   */
+  private handleTerminalFind(manager: IManagerCoordinator): void {
+    const activeTerminalId = manager.getActiveTerminalId();
+    if (!activeTerminalId) return;
+
+    const terminalInstance = manager.getTerminalInstance(activeTerminalId);
+    if (!terminalInstance || !terminalInstance.searchAddon) {
+      this.logger.warn(`Search addon not available for terminal ${activeTerminalId}`);
+      return;
+    }
+
+    // Use search addon if available
+    try {
+      // Simple find interface - could be enhanced with search UI
+      const searchTerm = prompt('Find in terminal:');
+      if (searchTerm) {
+        terminalInstance.searchAddon.findNext(searchTerm);
+        this.logger.debug(`Searching for "${searchTerm}" in terminal ${activeTerminalId}`);
+      }
+    } catch (error) {
+      this.logger.error(`Find operation failed: ${error}`);
+    }
+  }
+
+  /**
+   * Handle terminal find next
+   */
+  private handleTerminalFindNext(manager: IManagerCoordinator): void {
+    const activeTerminalId = manager.getActiveTerminalId();
+    if (!activeTerminalId) return;
+
+    const terminalInstance = manager.getTerminalInstance(activeTerminalId);
+    if (terminalInstance?.searchAddon) {
+      terminalInstance.searchAddon.findNext('', { incremental: false });
+      this.logger.debug(`Find next in terminal ${activeTerminalId}`);
+    }
+  }
+
+  /**
+   * Handle terminal find previous
+   */
+  private handleTerminalFindPrevious(manager: IManagerCoordinator): void {
+    const activeTerminalId = manager.getActiveTerminalId();
+    if (!activeTerminalId) return;
+
+    const terminalInstance = manager.getTerminalInstance(activeTerminalId);
+    if (terminalInstance?.searchAddon) {
+      terminalInstance.searchAddon.findPrevious('', { incremental: false });
+      this.logger.debug(`Find previous in terminal ${activeTerminalId}`);
+    }
+  }
+
+  /**
+   * Handle hide terminal find
+   */
+  private handleTerminalHideFind(_manager: IManagerCoordinator): void {
+    // Hide find UI - this would be enhanced with actual find UI
+    this.logger.debug('Hide terminal find requested');
+  }
+
+  /**
+   * Handle terminal word deletion operations
+   */
+  private handleTerminalDeleteWordLeft(manager: IManagerCoordinator): void {
+    const activeTerminalId = manager.getActiveTerminalId();
+    if (!activeTerminalId) return;
+
+    // Send Ctrl+W to delete word left (standard shell behavior)
+    this.emitTerminalInteractionEvent('send-key', activeTerminalId, { key: '\x17' }, manager);
+    this.logger.debug(`Delete word left in terminal ${activeTerminalId}`);
+  }
+
+  private handleTerminalDeleteWordRight(manager: IManagerCoordinator): void {
+    const activeTerminalId = manager.getActiveTerminalId();
+    if (!activeTerminalId) return;
+
+    // Send Alt+D to delete word right (standard shell behavior)
+    this.emitTerminalInteractionEvent('send-key', activeTerminalId, { key: '\x1bd' }, manager);
+    this.logger.debug(`Delete word right in terminal ${activeTerminalId}`);
+  }
+
+  /**
+   * Handle terminal line movement operations
+   */
+  private handleTerminalMoveToLineStart(manager: IManagerCoordinator): void {
+    const activeTerminalId = manager.getActiveTerminalId();
+    if (!activeTerminalId) return;
+
+    // Send Ctrl+A to move to line start (standard shell behavior)
+    this.emitTerminalInteractionEvent('send-key', activeTerminalId, { key: '\x01' }, manager);
+    this.logger.debug(`Move to line start in terminal ${activeTerminalId}`);
+  }
+
+  private handleTerminalMoveToLineEnd(manager: IManagerCoordinator): void {
+    const activeTerminalId = manager.getActiveTerminalId();
+    if (!activeTerminalId) return;
+
+    // Send Ctrl+E to move to line end (standard shell behavior)
+    this.emitTerminalInteractionEvent('send-key', activeTerminalId, { key: '\x05' }, manager);
+    this.logger.debug(`Move to line end in terminal ${activeTerminalId}`);
+  }
+
+  /**
+   * Handle terminal size to content
+   */
+  private handleTerminalSizeToContent(manager: IManagerCoordinator): void {
+    const activeTerminalId = manager.getActiveTerminalId();
+    if (!activeTerminalId) return;
+
+    const terminalInstance = manager.getTerminalInstance(activeTerminalId);
+    if (terminalInstance) {
+      // Trigger a resize using fit addon
+      terminalInstance.fitAddon.fit();
+      this.logger.debug(`Resized terminal ${activeTerminalId} to content`);
+    }
+  }
+
+  /**
+   * Handle legacy shortcuts for backward compatibility
+   */
+  private handleLegacyShortcuts(event: KeyboardEvent, manager: IManagerCoordinator): void {
+    // Escape: Clear notifications (always handle, don't send to shell)
+    if (event.key === 'Escape') {
+      this.logger.info('Escape key detected, clearing notifications');
+      this.clearNotifications();
+    }
+
+    // Ctrl+Shift+D: Toggle debug panel (always handle, don't send to shell)
+    if (event.ctrlKey && event.shiftKey && event.key === 'D') {
+      event.preventDefault();
+      this.logger.info('Ctrl+Shift+D shortcut detected, toggling debug panel');
+      if ('toggleDebugPanel' in manager && typeof manager.toggleDebugPanel === 'function') {
+        (manager as { toggleDebugPanel: () => void }).toggleDebugPanel();
+      }
+    }
   }
 
   /**
@@ -507,13 +1136,20 @@ export class InputManager extends BaseManager implements IInputManager {
     }
     this.eventDebounceTimers.clear();
 
-    // Reset state
+    // Reset Alt+Click state
     this.altClickState = {
       isVSCodeAltClickEnabled: false,
       isAltKeyPressed: false,
     };
     this.isComposing = false;
     this.agentInteractionMode = false;
+
+    // Reset VS Code keybinding system state
+    this.sendKeybindingsToShell = false;
+    this.commandsToSkipShell.clear();
+    this.isInChordMode = false;
+    this.allowChords = true;
+    this.allowMnemonics = true;
 
     // Clear references
     this.notificationManager = null;
