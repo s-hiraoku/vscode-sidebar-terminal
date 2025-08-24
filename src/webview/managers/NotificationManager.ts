@@ -93,6 +93,25 @@ export class NotificationManager extends BaseManager implements INotificationMan
   }
 
   /**
+   * Show warning notification
+   */
+  public showWarning(message: string): void {
+    this.showNotificationInTerminal(`⚠️ ${message}`, 'warning');
+  }
+
+  /**
+   * Clear warning notifications
+   */
+  public clearWarnings(): void {
+    // Clear warning-specific notifications
+    const warnings = document.querySelectorAll('.notification-warning');
+    warnings.forEach((warning) => {
+      warning.remove();
+    });
+    this.log('⚠️ [NOTIFICATION] Warning notifications cleared');
+  }
+
+  /**
    * Clear all notifications
    */
   public clearNotifications(): void {

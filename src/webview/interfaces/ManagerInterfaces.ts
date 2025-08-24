@@ -112,7 +112,8 @@ export interface IPerformanceManager {
     currentTerminal: boolean;
   };
   forceFlush(): void;
-  initialize(coordinator: IManagerCoordinator): void;
+  initialize(config: unknown): Promise<void>;
+  initializePerformance(coordinator: IManagerCoordinator): void;
   dispose(): void;
 }
 
@@ -180,6 +181,8 @@ export interface IConfigManager {
 // Message handling interface
 export interface IMessageManager {
   handleMessage(message: unknown, coordinator: IManagerCoordinator): Promise<void>;
+  postMessage(message: unknown): void;
+  receiveMessage(message: unknown, coordinator: IManagerCoordinator): Promise<void>;
   sendReadyMessage(coordinator: IManagerCoordinator): void;
   emitTerminalInteractionEvent(
     type: TerminalInteractionEvent['type'],
@@ -215,7 +218,9 @@ export interface INotificationManager {
   showTerminalKillError(message: string): void;
   showTerminalCloseError(minCount: number): void;
   showAltClickFeedback(x: number, y: number): void;
+  showWarning(message: string): void;
   clearNotifications(): void;
+  clearWarnings(): void;
   getStats(): { 
     activeCount: number; 
     totalCreated: number;
@@ -253,7 +258,7 @@ export interface IManagerEventEmitter {
 
 // Manager lifecycle interface
 export interface IManagerLifecycle {
-  initialize(coordinator: IManagerCoordinator): void;
+  initialize(config?: unknown): Promise<void> | void;
   dispose(): void;
 }
 

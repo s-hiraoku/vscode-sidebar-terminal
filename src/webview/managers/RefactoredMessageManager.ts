@@ -654,6 +654,14 @@ export class RefactoredMessageManager implements IMessageManager {
     this.logger.info('Ready message sent');
   }
 
+  /**
+   * Post message to extension (required by IMessageManager interface)
+   */
+  public postMessage(message: unknown): void {
+    void this.messageQueue.enqueue(message);
+    this.logger.debug('Message posted to queue', { message });
+  }
+
   public emitTerminalInteractionEvent(
     type: TerminalInteractionEvent['type'],
     terminalId: string,
