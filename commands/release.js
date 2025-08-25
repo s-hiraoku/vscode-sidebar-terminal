@@ -118,15 +118,15 @@ class QualityAssuredReleaseManager {
   async checkESLint() {
     const result = await this.exec('npm run lint', { silent: true });
     
-    // ESLintの出力を解析
+    // ESLintの出力を解析 - プロセス終了コードをチェック
     const output = result.output || '';
-    const errorCount = (output.match(/error/g) || []).length;
     const warningCount = (output.match(/warning/g) || []).length;
     
-    if (errorCount > 0) {
+    // ESLintのexit codeが0でない場合のみエラー
+    if (!result.success) {
       return {
         success: false,
-        message: `ESLint found ${errorCount} errors`,
+        message: `ESLint failed with exit code (${result.error})`,
         output: output,
         autoFix: true,
         fixCommand: 'npm run lint -- --fix'
