@@ -104,7 +104,8 @@
       "Bash(npm view:*)",
       "Bash(npx @vscode/vsce package:*)",
       "Bash(git rebase:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(chmod:*)"
     ],
     "deny": []
   },

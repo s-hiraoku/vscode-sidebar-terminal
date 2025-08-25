@@ -505,7 +505,13 @@
     "tdd:check-quality": "node scripts/tdd-quality-checker.js",
     "tdd:quality-gate": "node scripts/tdd-quality-gate.js",
     "tdd:comprehensive-check": "npm run test:coverage && npm run tdd:check-quality && npm run tdd:quality-gate",
-    "tdd:generate-report": "node scripts/tdd-quality-checker.js --format=markdown"
+    "tdd:generate-report": "node scripts/tdd-quality-checker.js --format=markdown",
+    "release:quality": "node commands/release.js",
+    "release:patch:safe": "node commands/release.js patch",
+    "release:minor:safe": "node commands/release.js minor", 
+    "release:major:safe": "node commands/release.js major",
+    "quality:check": "node commands/release.js --check-only",
+    "quality:fix": "node commands/release.js --fix-only"
   },
   "devDependencies": {
     "@istanbuljs/nyc-config-typescript": "^1.0.2",
