@@ -395,8 +395,10 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
           });
         } else {
           log('📭 [DEBUG] No session data found, will create initial terminal on first view');
+          log('🎬 [DEBUG] About to call _scheduleInitialTerminalCreation...');
           // VS Code standard: Don't create terminal here, let WebView handle it
           this._scheduleInitialTerminalCreation();
+          log('🎬 [DEBUG] _scheduleInitialTerminalCreation call completed');
         }
       }
 
@@ -478,6 +480,27 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
             }
           })();
           break;
+
+        case 'requestInitialTerminal':
+          log('🚨 [DEBUG] WebView requested initial terminal creation');
+          try {
+            if (this._terminalManager.getTerminals().length === 0) {
+              log('🎯 [INITIAL] Creating initial terminal as requested by WebView');
+              const terminalId = this._terminalManager.createTerminal();
+              log(`✅ [INITIAL] Initial terminal created: ${terminalId}`);
+              this._terminalManager.setActiveTerminal(terminalId);
+              
+              // Send terminal update to WebView
+              this._sendTerminalUpdate();
+            } else {
+              log(`🔍 [INITIAL] Terminals already exist (${this._terminalManager.getTerminals().length}), skipping creation`);
+            }
+          } catch (error) {
+            log(`❌ [INITIAL] Failed to create requested initial terminal: ${String(error)}`);
+            console.error('❌ [INITIAL] Error details:', error);
+          }
+          break;
+
         case TERMINAL_CONSTANTS.COMMANDS.INPUT:
           if (message.data) {
             log(
@@ -716,6 +739,55 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
             }
           } else {
             log('❌ [DEBUG] No terminal ID provided for deleteTerminal');
+          }
+          break;
+        }
+        case 'switchAiAgent': {
+          log('🔌 [DEBUG] ========== SWITCH AI AGENT COMMAND RECEIVED ==========');
+          log('🔌 [DEBUG] Full message:', message);
+
+          const terminalId = message.terminalId as string;
+          const action = message.action as string;
+
+          if (terminalId) {
+            log(`🔌 [DEBUG] Switching AI Agent for terminal: ${terminalId} (action: ${action})`);
+            try {
+              // Call TerminalManager's switchAiAgentConnection method
+              const result = this._terminalManager.switchAiAgentConnection(terminalId);
+              
+              if (result.success) {
+                log(`✅ [DEBUG] AI Agent switch succeeded: ${terminalId}, new status: ${result.newStatus}`);
+                // Send success response to WebView (optional)
+                await this._sendMessage({
+                  command: 'switchAiAgentResponse',
+                  terminalId,
+                  success: true,
+                  newStatus: result.newStatus,
+                  agentType: result.agentType
+                });
+              } else {
+                log(`⚠️ [DEBUG] AI Agent switch failed: ${terminalId}, reason: ${result.reason}`);
+                // Send failure response to WebView (optional)
+                await this._sendMessage({
+                  command: 'switchAiAgentResponse',
+                  terminalId,
+                  success: false,
+                  reason: result.reason,
+                  newStatus: result.newStatus
+                });
+              }
+            } catch (error) {
+              log('❌ [ERROR] Error switching AI Agent:', error);
+              // Send error response to WebView
+              await this._sendMessage({
+                command: 'switchAiAgentResponse',
+                terminalId,
+                success: false,
+                reason: 'Internal error occurred'
+              });
+            }
+          } else {
+            log('⚠️ [DEBUG] switchAiAgent: terminalId missing');
           }
           break;
         }
@@ -1521,29 +1593,45 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
    * VS Code standard: Schedule initial terminal creation when no session data
    */
   private _scheduleInitialTerminalCreation(): void {
+    log('🚀 [DEBUG] _scheduleInitialTerminalCreation called');
+    
     // Schedule creation for when user actually views the terminal
     // This mimics VS Code's behavior of creating terminals on-demand
     setTimeout(() => {
-      if (this._terminalManager.getTerminals().length === 0) {
+      log('⏰ [DEBUG] setTimeout callback executing for initial terminal creation');
+      const currentTerminalCount = this._terminalManager.getTerminals().length;
+      log(`📊 [DEBUG] Current terminal count: ${currentTerminalCount}`);
+      
+      if (currentTerminalCount === 0) {
         log('🎆 [INITIAL] Creating initial terminals (no session data)');
         try {
           // Create 1 terminal by default for cleaner startup
+          log('🔧 [DEBUG] Calling _terminalManager.createTerminal()...');
           const terminalId = this._terminalManager.createTerminal();
-
           log(`✅ [INITIAL] Initial terminal created: ${terminalId}`);
 
           // Set the terminal as active
+          log('🎯 [DEBUG] Setting terminal as active...');
           this._terminalManager.setActiveTerminal(terminalId);
+          log(`✅ [DEBUG] Terminal set as active: ${terminalId}`);
+          
+          // Send update to WebView
+          log('📡 [DEBUG] Sending terminal update to WebView...');
+          this._sendTerminalUpdate();
         } catch (error) {
           log(`❌ [INITIAL] Failed to create initial terminals: ${String(error)}`);
+          console.error('❌ [INITIAL] Terminal creation error details:', error);
           // Fallback: try to create at least one terminal
           try {
             const terminalId = this._terminalManager.createTerminal();
             log(`✅ [INITIAL] Fallback terminal created: ${terminalId}`);
           } catch (fallbackError) {
             log(`❌ [INITIAL] Fallback terminal creation also failed: ${String(fallbackError)}`);
+            console.error('❌ [INITIAL] Fallback error details:', fallbackError);
           }
         }
+      } else {
+        log(`🔍 [DEBUG] Terminals already exist (${currentTerminalCount}), skipping initial creation`);
       }
     }, 100); // Very short delay to ensure WebView is ready
   }
