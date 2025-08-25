@@ -26,6 +26,7 @@ export interface HeaderConfig {
   customClasses?: string[];
   onHeaderClick?: (terminalId: string) => void;
   onCloseClick?: (terminalId: string) => void;
+  onAiAgentToggleClick?: (terminalId: string) => void;
 }
 
 /**
@@ -213,6 +214,15 @@ export class HeaderFactory {
       closeButton.style.opacity = '0.7';
       closeButton.style.backgroundColor = 'transparent';
     });
+
+    // Add AI Agent toggle button click handler
+    if (config.onAiAgentToggleClick) {
+      aiAgentToggleButton.addEventListener('click', (event: MouseEvent) => {
+        event.stopPropagation(); // Prevent header click event
+        config.onAiAgentToggleClick!(terminalId);
+        log(`🔌 [HeaderFactory] AI Agent toggle button clicked for terminal: ${terminalId}`);
+      });
+    }
 
     // Add close button click handler
     if (config.onCloseClick) {

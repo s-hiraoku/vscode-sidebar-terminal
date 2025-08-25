@@ -27,6 +27,7 @@ export interface TerminalHeaderConfig {
   onHeaderClick?: (terminalId: string) => void;
   onContainerClick?: (terminalId: string) => void;
   onCloseClick?: (terminalId: string) => void;
+  onAiAgentToggleClick?: (terminalId: string) => void;
 }
 
 export interface ContainerElements {
@@ -109,6 +110,7 @@ export class TerminalContainerFactory {
           terminalName: headerConfig.customTitle || config.name,
           onHeaderClick: headerConfig.onHeaderClick,
           onCloseClick: headerConfig.onCloseClick,
+          onAiAgentToggleClick: headerConfig.onAiAgentToggleClick,
         });
         header = headerElements.container;
         closeButton = headerElements.closeButton;

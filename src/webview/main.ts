@@ -15,7 +15,7 @@ const webviewLogger = createWebViewLogger('MainWebView');
 // WebView initialization logging
 startup('Refactored WebView script started');
 
-import 'xterm/css/xterm.css';
+import '@xterm/xterm/css/xterm.css';
 import { RefactoredTerminalWebviewManager } from './managers/RefactoredTerminalWebviewManager';
 // import { TerminalWebviewManager } from './TerminalWebviewManager';
 

@@ -2,7 +2,7 @@
  * Input Manager - Handles keyboard shortcuts, IME composition, Alt+Click interactions, and mouse events
  */
 
-import { Terminal } from 'xterm';
+import { Terminal } from '@xterm/xterm';
 import { AltClickState, TerminalInteractionEvent } from '../../types/common';
 import { PartialTerminalSettings } from '../../types/shared';
 import { IInputManager, IManagerCoordinator } from '../interfaces/ManagerInterfaces';

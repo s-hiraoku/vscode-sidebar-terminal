@@ -8,8 +8,8 @@ import { expect } from 'chai';
 import * as sinon from 'sinon';
 import { JSDOM } from 'jsdom';
 import { SplitManager, TerminalInstance } from '../../../../webview/managers/SplitManager';
-import { Terminal } from 'xterm';
-import { FitAddon } from 'xterm-addon-fit';
+import { Terminal } from '@xterm/xterm';
+import { FitAddon } from '@xterm/addon-fit';
 
 describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
   let dom: JSDOM;

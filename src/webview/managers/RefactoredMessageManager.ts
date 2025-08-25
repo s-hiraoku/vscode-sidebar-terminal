@@ -16,7 +16,7 @@ import { WebViewFontSettings } from '../../types/shared';
 import {} from '../../utils/logger';
 import { messageLogger } from '../utils/ManagerLogger';
 import { MessageQueue, MessageSender } from '../utils/MessageQueue';
-import { Terminal } from 'xterm';
+import { Terminal } from '@xterm/xterm';
 import {
   showSessionRestoreStarted,
   showSessionRestoreProgress,

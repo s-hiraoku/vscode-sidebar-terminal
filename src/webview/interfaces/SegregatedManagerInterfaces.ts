@@ -5,7 +5,7 @@
  * allowing for better separation of concerns and modularity.
  */
 
-import { Terminal } from 'xterm';
+import { Terminal } from '@xterm/xterm';
 import { PartialTerminalSettings, WebViewFontSettings } from '../../types/shared';
 
 // Re-export core interfaces from main manager interfaces

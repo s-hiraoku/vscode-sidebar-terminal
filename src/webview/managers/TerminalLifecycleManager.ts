@@ -5,9 +5,9 @@
  * Responsibilities: terminal creation, deletion, switching, and state management
  */
 
-import { Terminal } from 'xterm';
-import { FitAddon } from 'xterm-addon-fit';
-import { WebLinksAddon } from 'xterm-addon-web-links';
+import { Terminal } from '@xterm/xterm';
+import { FitAddon } from '@xterm/addon-fit';
+import { WebLinksAddon } from '@xterm/addon-web-links';
 import { SearchAddon } from '@xterm/addon-search';
 import { WebglAddon } from '@xterm/addon-webgl';
 import { Unicode11Addon } from '@xterm/addon-unicode11';
@@ -320,6 +320,12 @@ export class TerminalLifecycleManager {
           } else {
             // Fallback to standard closeTerminal
             void this.coordinator?.closeTerminal(clickedTerminalId);
+          }
+        },
+        onAiAgentToggleClick: (clickedTerminalId) => {
+          terminalLogger.info(`🔌 AI Agent toggle clicked for terminal: ${clickedTerminalId}`);
+          if (this.coordinator && 'handleAiAgentToggle' in this.coordinator) {
+            (this.coordinator as any).handleAiAgentToggle(clickedTerminalId);
           }
         }
       };

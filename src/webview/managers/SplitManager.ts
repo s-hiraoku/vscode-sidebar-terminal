@@ -1,8 +1,8 @@
 /**
  * ターミナル分割管理クラス
  */
-import { Terminal } from 'xterm';
-import { FitAddon } from 'xterm-addon-fit';
+import { Terminal } from '@xterm/xterm';
+import { FitAddon } from '@xterm/addon-fit';
 import { SPLIT_CONSTANTS } from '../constants/webview';
 import { showSplitLimitWarning } from '../utils/NotificationUtils';
 import { BaseManager } from './BaseManager';
@@ -357,6 +357,12 @@ export class SplitManager extends BaseManager {
         onContainerClick: (clickedTerminalId: string) => {
           splitLogger.info(`🎯 Split terminal container clicked: ${clickedTerminalId}`);
           this.coordinator?.setActiveTerminalId(clickedTerminalId);
+        },
+        onAiAgentToggleClick: (clickedTerminalId: string) => {
+          splitLogger.info(`🔌 AI Agent toggle clicked for split terminal: ${clickedTerminalId}`);
+          if (this.coordinator && 'handleAiAgentToggle' in this.coordinator) {
+            (this.coordinator as any).handleAiAgentToggle(clickedTerminalId);
+          }
         }
       };
 

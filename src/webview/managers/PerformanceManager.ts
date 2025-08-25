@@ -2,8 +2,8 @@
  * Performance Manager - Handles output buffering, debouncing, and performance optimizations
  */
 
-import { Terminal } from 'xterm';
-import { FitAddon } from 'xterm-addon-fit';
+import { Terminal } from '@xterm/xterm';
+import { FitAddon } from '@xterm/addon-fit';
 import { SPLIT_CONSTANTS } from '../constants/webview';
 import { IManagerCoordinator } from '../interfaces/ManagerInterfaces';
 import { BaseManager, ManagerInitializationConfig } from './BaseManager';

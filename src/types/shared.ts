@@ -389,6 +389,7 @@ export interface WebviewMessage {
     | 'requestInitialTerminal'
     | 'requestState'
     | 'deleteTerminalResponse'  // 🎯 FIX: 削除処理統一化で追加
+    | 'switchAiAgentResponse'  // AIエージェント切り替えレスポンス
     | 'error';
   config?: TerminalConfig;
   data?: string;
@@ -496,6 +497,11 @@ export interface WebviewMessage {
   // 🎯 FIX: 削除処理統一化で追加
   success?: boolean;  // 削除処理の成功/失敗
   // reason?: string; // 失敗理由 - 重複のためコメント化（上部のreasonを使用）
+
+  // AIエージェント切り替え関連プロパティ
+  action?: string; // switchAiAgentコマンドのアクション
+  newStatus?: 'connected' | 'disconnected' | 'none'; // AIエージェントの新しいステータス
+  agentType?: string | null; // エージェントタイプ
 }
 
 /**
@@ -575,6 +581,9 @@ export interface VsCodeMessage {
 
   // 🆕 Panel location (Issue #148)
   location?: 'sidebar' | 'panel'; // パネル位置情報
+
+  // AIエージェント切り替え関連プロパティ
+  action?: string; // switchAiAgentコマンドのアクション
 }
 
 // ===== 型ガード関数 =====

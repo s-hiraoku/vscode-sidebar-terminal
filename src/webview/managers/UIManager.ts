@@ -2,7 +2,7 @@
  * UI Manager - Handles visual feedback, theming, borders, and terminal appearance
  */
 
-import { Terminal } from 'xterm';
+import { Terminal } from '@xterm/xterm';
 import { PartialTerminalSettings, WebViewFontSettings } from '../../types/shared';
 import { getWebviewTheme, WEBVIEW_THEME_CONSTANTS } from '../utils/WebviewThemeUtils';
 import { IUIManager } from '../interfaces/ManagerInterfaces';
@@ -321,7 +321,7 @@ export class UIManager extends BaseManager implements IUIManager {
   /**
    * Create terminal header with title and controls
    */
-  public createTerminalHeader(terminalId: string, terminalName: string): HTMLElement {
+  public createTerminalHeader(terminalId: string, terminalName: string, onAiAgentToggleClick?: (terminalId: string) => void): HTMLElement {
     // 🔍 DEBUG: Enhanced header creation logging
     console.log(`🔍 [DEBUG] Creating terminal header:`, {
       terminalId,
@@ -333,6 +333,7 @@ export class UIManager extends BaseManager implements IUIManager {
     const headerElements = HeaderFactory.createTerminalHeader({
       terminalId,
       terminalName,
+      onAiAgentToggleClick,
     });
 
     // 🔍 FIX: Ensure header visibility with explicit styling

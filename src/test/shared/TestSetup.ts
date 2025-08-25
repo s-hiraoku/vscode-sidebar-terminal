@@ -9,6 +9,14 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 
+// Initialize browser globals immediately before any imports
+if (!(global as any).self) {
+  (global as any).self = global;
+}
+if (!(global as any).window) {
+  (global as any).window = global;
+}
+
 import * as sinon from 'sinon';
 import * as chai from 'chai';
 import sinonChai from 'sinon-chai';

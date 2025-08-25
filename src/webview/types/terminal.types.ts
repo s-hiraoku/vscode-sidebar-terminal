@@ -2,8 +2,8 @@
  * Terminal-specific types for WebView components
  */
 
-import { Terminal } from 'xterm';
-import { FitAddon } from 'xterm-addon-fit';
+import { Terminal } from '@xterm/xterm';
+import { FitAddon } from '@xterm/addon-fit';
 
 // CLI Agent status types
 export type CliAgentStatusType = 'connected' | 'disconnected' | 'none';

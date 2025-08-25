@@ -7,7 +7,7 @@
  * 元のTerminalWebviewManager（2,153行）から300行以下に大幅削減
  */
 
-import { Terminal } from 'xterm';
+import { Terminal } from '@xterm/xterm';
 import { webview as log } from '../../utils/logger';
 import { PartialTerminalSettings, WebViewFontSettings, TerminalConfig, TerminalState } from '../../types/shared';
 // Removed unused imports: TerminalInteractionEvent, WebviewMessage
@@ -457,6 +457,57 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
 
   public setCliAgentDisconnected(terminalId: string): void {
     this.cliAgentStateManager.setAgentDisconnected(terminalId);
+  }
+
+  /**
+   * Handle AI Agent toggle button click
+   */
+  public handleAiAgentToggle(terminalId: string): void {
+    log(`🔌 AI Agent toggle clicked for terminal: ${terminalId}`);
+    
+    try {
+      // Get current CLI Agent state for the terminal
+      const agentState = this.cliAgentStateManager.getAgentState(terminalId);
+      
+      if (agentState && agentState.status === 'disconnected') {
+        // Send switchAiAgent command to Extension to activate the CLI Agent
+        this.postMessageToExtension({
+          command: 'switchAiAgent',
+          terminalId,
+          action: 'activate',
+          timestamp: Date.now(),
+        });
+        
+        log(`✅ Sent AI Agent activation request for terminal: ${terminalId}`);
+        
+        // Show notification to user
+        this.notificationManager.showNotificationInTerminal(
+          `Activating AI Agent for terminal ${terminalId}...`,
+          'info'
+        );
+      } else {
+        log(`⚠️ AI Agent toggle ignored - current status: ${agentState?.status || 'none'}`);
+        
+        // Show feedback to user why toggle was ignored
+        if (!agentState || agentState.status === 'none') {
+          this.notificationManager.showNotificationInTerminal(
+            'No AI Agent detected in this terminal',
+            'warning'
+          );
+        } else if (agentState.status === 'connected') {
+          this.notificationManager.showNotificationInTerminal(
+            'AI Agent is already active',
+            'info'
+          );
+        }
+      }
+    } catch (error) {
+      log(`❌ Error handling AI Agent toggle: ${error}`);
+      this.notificationManager.showNotificationInTerminal(
+        'Failed to toggle AI Agent status',
+        'error'
+      );
+    }
   }
 
   // Settings management

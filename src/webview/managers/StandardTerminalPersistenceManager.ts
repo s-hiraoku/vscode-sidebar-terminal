@@ -1,5 +1,5 @@
 import { SerializeAddon } from '@xterm/addon-serialize';
-import { Terminal } from 'xterm';
+import { Terminal } from '@xterm/xterm';
 
 /**
  * WebView側でxterm.js serialize addonを使用したVS Code標準ターミナル永続化

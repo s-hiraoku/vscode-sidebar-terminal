@@ -2,8 +2,8 @@
  * Shared interfaces for WebView manager communication and coordination
  */
 
-import { Terminal } from 'xterm';
-import { FitAddon } from 'xterm-addon-fit';
+import { Terminal } from '@xterm/xterm';
+import { FitAddon } from '@xterm/addon-fit';
 import { SearchAddon } from '@xterm/addon-search';
 import { WebglAddon } from '@xterm/addon-webgl';
 import { Unicode11Addon } from '@xterm/addon-unicode11';
@@ -163,7 +163,7 @@ export interface IUIManager {
   applyFontSettings(terminal: Terminal, fontSettings: WebViewFontSettings): void;
   applyAllVisualSettings(terminal: Terminal, settings: PartialTerminalSettings): void;
   addFocusIndicator(container: HTMLElement): void;
-  createTerminalHeader(terminalId: string, terminalName: string): HTMLElement;
+  createTerminalHeader(terminalId: string, terminalName: string, onAiAgentToggleClick?: (terminalId: string) => void): HTMLElement;
   updateTerminalHeader(terminalId: string, newName: string): void;
   updateCliAgentStatusDisplay(
     activeTerminalName: string | null,

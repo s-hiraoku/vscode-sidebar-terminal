@@ -100,7 +100,10 @@
       "Bash(mcp-server-github:*)",
       "Bash(source:*)",
       "Bash(cat:*)",
-      "Bash(timeout 30s npm run test:unit:*)"
+      "Bash(timeout 30s npm run test:unit:*)",
+      "Bash(npm view:*)",
+      "Bash(npx @vscode/vsce package:*)",
+      "Bash(git rebase:*)"
     ],
     "deny": []
   },
@@ -109,7 +112,6 @@
     "playwright",
     "arxiv-mcp-server",
     "deepwiki",
-    "context7",
-    "github-server"
+    "context7"
   ]
 }
