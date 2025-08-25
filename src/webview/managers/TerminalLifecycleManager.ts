@@ -343,30 +343,41 @@ export class TerminalLifecycleManager {
       setTimeout(() => {
         const xtermElement = terminalContentBody.querySelector('.xterm');
         if (xtermElement) {
-          // Use mousedown for immediate focus, similar to native input behavior
-          xtermElement.addEventListener('mousedown', (event: Event) => {
-            event.stopPropagation(); // Prevent double handling
-            terminalLogger.info(`🎯 Terminal area mousedown for: ${terminalId}`);
-            this.coordinator?.setActiveTerminalId(terminalId);
-            // Only focus if not already focused to avoid interrupting output
-            if (!terminal.textarea?.hasAttribute('focused')) {
-              terminal.focus();
-            }
+          // 🔧 VS CODE STANDARD: Use click event with hasSelection() check
+          // This mirrors VS Code's built-in terminal behavior exactly
+          xtermElement.addEventListener('click', (_event: Event) => {
+            // Use a small delay to allow xterm.js to process selection first
+            setTimeout(() => {
+              // Only activate terminal if no text is selected (VS Code standard behavior)
+              if (!terminal.hasSelection()) {
+                terminalLogger.info(`🎯 Terminal clicked for activation (no selection): ${terminalId}`);
+                this.coordinator?.setActiveTerminalId(terminalId);
+                
+                // Only focus if not already focused to avoid interrupting output
+                if (!terminal.textarea?.hasAttribute('focused')) {
+                  terminal.focus();
+                }
+              } else {
+                terminalLogger.debug(`🎯 Click ignored due to text selection in terminal: ${terminalId}`);
+              }
+            }, 10); // Small delay to ensure xterm.js selection state is updated
           });
           
-          // Also add to the terminal screen area for better coverage
-          const xtermScreen = terminalContentBody.querySelector('.xterm-screen');
-          if (xtermScreen) {
-            xtermScreen.addEventListener('mousedown', (event: Event) => {
-              event.stopPropagation(); // Prevent double handling
-              terminalLogger.info(`🎯 Terminal screen mousedown for: ${terminalId}`);
-              this.coordinator?.setActiveTerminalId(terminalId);
-              // Only focus if not already focused to avoid interrupting output
-              if (!terminal.textarea?.hasAttribute('focused')) {
-                terminal.focus();
+          // Store handler for cleanup
+          const clickHandler = (_event: Event) => {
+            setTimeout(() => {
+              if (!terminal.hasSelection()) {
+                this.coordinator?.setActiveTerminalId(terminalId);
+                if (!terminal.textarea?.hasAttribute('focused')) {
+                  terminal.focus();
+                }
               }
-            });
-          }
+            }, 10);
+          };
+          
+          this.eventRegistry.register(`terminal-${terminalId}-click`, xtermElement, 'click', clickHandler);
+          
+          terminalLogger.info(`✅ VS Code standard mouse handling enabled for terminal: ${terminalId}`);
         }
         
         // 🔧 FIX: Handle terminal focus events for proper state sync

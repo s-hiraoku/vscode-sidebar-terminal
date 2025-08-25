@@ -2,6 +2,37 @@
 
 This file provides guidance to CLI Agent (gemini.google.com/code) when working with code in this repository.
 
+## 🚨 CRITICAL DEVELOPMENT PRINCIPLES
+
+### ABSOLUTELY NO SHORTCUTS OR LAZY IMPLEMENTATIONS
+
+**NEVER take shortcuts that sacrifice functionality or create incomplete solutions. This leads to:**
+- Technical debt that compounds exponentially  
+- User frustration from broken features
+- More work to fix later than doing it right the first time
+- Loss of user trust and project credibility
+
+**Examples of FORBIDDEN shortcuts:**
+- Disabling functionality to "fix" a conflict instead of properly solving both requirements
+- Removing event handlers instead of implementing proper event discrimination
+- Using placeholder/stub implementations instead of complete solutions
+- Commenting out working code to avoid complexity
+
+**ALWAYS implement complete solutions that:**
+- Meet ALL specified requirements simultaneously
+- Follow industry standard patterns (e.g., VS Code standard behavior)
+- Preserve existing functionality while adding new features
+- Include proper error handling and edge case management
+- Are thoroughly tested and verified to work
+
+**When faced with conflicting requirements:**
+1. Research how industry leaders (VS Code, etc.) solve the same problem
+2. Implement their proven patterns and approaches
+3. Test thoroughly to ensure all requirements are met
+4. Never compromise on user experience or functionality
+
+**Remember: Taking shortcuts wastes more time than doing it right the first time.**
+
 ## Development Commands
 
 ### Building and Testing

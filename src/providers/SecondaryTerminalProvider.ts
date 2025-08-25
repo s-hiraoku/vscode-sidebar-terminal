@@ -491,7 +491,10 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
               this._terminalManager.setActiveTerminal(terminalId);
               
               // Send terminal update to WebView
-              this._sendTerminalUpdate();
+              void this._sendMessage({
+                command: 'stateUpdate',
+                state: this._terminalManager.getCurrentState()
+              });
             } else {
               log(`🔍 [INITIAL] Terminals already exist (${this._terminalManager.getTerminals().length}), skipping creation`);
             }
@@ -1617,7 +1620,10 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
           
           // Send update to WebView
           log('📡 [DEBUG] Sending terminal update to WebView...');
-          this._sendTerminalUpdate();
+          void this._sendMessage({
+            command: 'stateUpdate',
+            state: this._terminalManager.getCurrentState()
+          });
         } catch (error) {
           log(`❌ [INITIAL] Failed to create initial terminals: ${String(error)}`);
           console.error('❌ [INITIAL] Terminal creation error details:', error);

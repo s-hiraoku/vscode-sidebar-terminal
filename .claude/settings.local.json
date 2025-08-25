@@ -103,7 +103,8 @@
       "Bash(timeout 30s npm run test:unit:*)",
       "Bash(npm view:*)",
       "Bash(npx @vscode/vsce package:*)",
-      "Bash(git rebase:*)"
+      "Bash(git rebase:*)",
+      "WebSearch"
     ],
     "deny": []
   },

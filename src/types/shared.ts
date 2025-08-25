@@ -540,6 +540,7 @@ export interface VsCodeMessage {
     | 'reportPanelLocation'
     | 'terminalSerializationResponse'
     | 'requestSessionRestorationData'
+    | 'requestInitialTerminal'
     | 'error';
   data?: string;
   cols?: number;

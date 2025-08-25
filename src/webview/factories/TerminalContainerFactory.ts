@@ -123,18 +123,27 @@ export class TerminalContainerFactory {
       const body = this.createTerminalBody(config);
       container.appendChild(body);
 
-      // Add container click handler for terminal activation
+      // 🔧 VS CODE STANDARD: Proper click handling for both header and split terminals
       if (headerConfig.onContainerClick) {
-        container.addEventListener('click', (event: MouseEvent) => {
-          // Only activate if clicking on the container itself or terminal body, not buttons
-          const target = event.target as HTMLElement;
-          if (target.closest('.terminal-control')) {
-            return;
-          }
-          
-          headerConfig.onContainerClick!(config.id);
-          terminalLogger.info(`🎯 Container clicked, activating terminal: ${config.id}`);
-        });
+        if (header) {
+          // For terminals with headers: only activate on header clicks
+          header.addEventListener('click', (event: MouseEvent) => {
+            // Only activate if clicking on the header itself, not buttons
+            const target = event.target as HTMLElement;
+            if (target.closest('.terminal-control')) {
+              return;
+            }
+            
+            headerConfig.onContainerClick!(config.id);
+            terminalLogger.info(`🎯 Header area clicked, activating terminal: ${config.id}`);
+          });
+          terminalLogger.info(`Header click activation enabled for terminal: ${config.id}`);
+        } else {
+          // For split terminals without headers: Use VS Code standard approach
+          // The TerminalLifecycleManager will handle xterm.js hasSelection() logic
+          // This preserves the onContainerClick functionality while allowing text selection
+          terminalLogger.info(`Split terminal will use xterm hasSelection() logic: ${config.id}`);
+        }
       }
 
       // Apply container to document
