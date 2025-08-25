@@ -406,7 +406,7 @@ export class InputManager extends BaseManager implements IInputManager {
 
       // VS Code keybinding resolution
       const resolvedCommand = this.resolveKeybinding(event);
-      const shouldSkip = this.shouldSkipShell(event, resolvedCommand);
+      const shouldSkip = this.shouldSkipShell(event, resolvedCommand || undefined);
 
       this.logger.debug(`Keybinding: ${event.key}, Command: ${resolvedCommand}, Skip Shell: ${shouldSkip}`);
 

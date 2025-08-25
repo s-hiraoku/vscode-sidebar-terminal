@@ -83,7 +83,7 @@ export class TerminalLifecycleManager {
     
     // Bell Configuration
     bellSound: undefined,
-    bellStyle: 'none' as const,
+    // bellStyle: 'none' as const, // Removed - not supported by xterm.js
     
     // Advanced Options
     windowOptions: {
@@ -244,8 +244,8 @@ export class TerminalLifecycleManager {
         disableStdin: terminalConfig.disableStdin,
         screenReaderMode: terminalConfig.screenReaderMode,
         
-        // Bell Configuration
-        bellStyle: terminalConfig.bellStyle,
+        // Bell Configuration - bellStyle is not supported by xterm.js ITerminalOptions
+        // bellStyle: terminalConfig.bellStyle, // Removed - not in xterm.js interface
         
         // Advanced Options
         windowOptions: terminalConfig.windowOptions,
