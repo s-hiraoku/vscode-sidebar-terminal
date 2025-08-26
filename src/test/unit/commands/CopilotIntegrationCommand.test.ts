@@ -94,14 +94,15 @@ describe('CopilotIntegrationCommand', () => {
       expect(vscode.commands.executeCommand).to.not.have.been.called;
     });
 
-    it('should handle command execution errors gracefully', () => {
+    it('should handle command execution errors gracefully', async () => {
       // Mock command failure
       (vscode.commands.executeCommand as sinon.SinonStub).rejects(new Error('Command failed'));
 
-      copilotIntegrationCommand.handleActivateCopilot();
+      // Should handle error gracefully without throwing
+      await expect(copilotIntegrationCommand.handleActivateCopilot()).to.not.be.rejected;
 
-      // Should not throw error
-      expect(() => copilotIntegrationCommand.handleActivateCopilot()).to.not.throw();
+      // Should show error message
+      expect(vscode.window.showErrorMessage).to.have.been.called;
     });
   });
 
