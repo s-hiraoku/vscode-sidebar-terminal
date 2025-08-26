@@ -2,7 +2,7 @@
   "name": "vscode-sidebar-terminal",
   "displayName": "Secondary Terminal",
   "description": "A powerful VS Code extension that displays a fully-featured terminal in the sidebar with split support, Alt+Click cursor positioning, and multi-platform compatibility.",
-  "version": "0.1.70",
+  "version": "0.1.71",
   "publisher": "s-hiraoku",
   "engines": {
     "vscode": "^1.74.0",
@@ -508,7 +508,7 @@
     "tdd:generate-report": "node scripts/tdd-quality-checker.js --format=markdown",
     "release:quality": "node commands/release.js",
     "release:patch:safe": "node commands/release.js patch",
-    "release:minor:safe": "node commands/release.js minor", 
+    "release:minor:safe": "node commands/release.js minor",
     "release:major:safe": "node commands/release.js major",
     "quality:check": "node commands/release.js --check-only",
     "quality:fix": "node commands/release.js --fix-only"
