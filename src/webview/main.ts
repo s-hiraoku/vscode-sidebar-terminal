@@ -16,12 +16,12 @@ const webviewLogger = createWebViewLogger('MainWebView');
 startup('Refactored WebView script started');
 
 import '@xterm/xterm/css/xterm.css';
-import { TerminalWebviewManager } from './TerminalWebviewManager';
+import { RefactoredTerminalWebviewManager } from './managers/RefactoredTerminalWebviewManager';
 
 /**
  * グローバルターミナルマネージャーインスタンス
  */
-let terminalManager: TerminalWebviewManager | null = null;
+let terminalManager: RefactoredTerminalWebviewManager | null = null;
 
 /**
  * WebView初期化のメイン関数
@@ -42,7 +42,7 @@ async function initializeWebView(): Promise<void> {
     webviewLogger.domReady();
 
     // Terminal Manager を初期化
-    terminalManager = new TerminalWebviewManager();
+    terminalManager = new RefactoredTerminalWebviewManager();
 
     // 初期ターミナルコンテナを設定
     terminalManager.initializeSimpleTerminal();

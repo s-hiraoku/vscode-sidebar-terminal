@@ -8,7 +8,7 @@
  * - Command history visualization
  */
 
-import { Terminal } from 'xterm';
+import { Terminal } from '@xterm/xterm';
 import { IManagerCoordinator } from '../interfaces/ManagerInterfaces';
 import { WebviewMessage } from '../../types/shared';
 
@@ -294,7 +294,7 @@ export class ShellIntegrationManager {
   public decorateTerminalOutput(terminal: Terminal, _terminalId: string): void {
     // Add link provider for file paths
     terminal.registerLinkProvider({
-      provideLinks: (line: number, callback) => {
+      provideLinks: (line: number, callback: (links: any[] | undefined) => void) => {
         // Simple file path detection
         const lineContent = terminal.buffer.active.getLine(line - 1)?.translateToString();
         if (!lineContent) {
@@ -331,7 +331,7 @@ export class ShellIntegrationManager {
 
     // Add link provider for URLs
     terminal.registerLinkProvider({
-      provideLinks: (line: number, callback) => {
+      provideLinks: (line: number, callback: (links: any[] | undefined) => void) => {
         const lineContent = terminal.buffer.active.getLine(line - 1)?.translateToString();
         if (!lineContent) {
           callback(undefined);

@@ -69,8 +69,15 @@ export class ExtensionLifecycle {
 
       // Initialize shell integration service
       log('🔧 [EXTENSION] Initializing shell integration service...');
-      this.shellIntegrationService = new ShellIntegrationService(this.terminalManager);
-      log('✅ [EXTENSION] Shell integration service initialized');
+      try {
+        this.shellIntegrationService = new ShellIntegrationService(this.terminalManager);
+        // Set shell integration service on TerminalManager
+        this.terminalManager.setShellIntegrationService(this.shellIntegrationService);
+        log('✅ [EXTENSION] Shell integration service initialized and connected');
+      } catch (error) {
+        log('❌ [EXTENSION] Failed to initialize shell integration service:', error);
+        // Continue without shell integration
+      }
 
       // Register the sidebar terminal provider
       this.sidebarProvider = new SecondaryTerminalProvider(

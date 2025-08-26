@@ -47,37 +47,44 @@ export class ShellIntegrationService {
 
   constructor(private terminalManager: TerminalManager) {
     this.initializePatterns();
-    this.setupEventListeners();
+    // Don't setup event listeners in constructor - wait for terminal creation
   }
 
   private initializePatterns(): void {
-    // Common shell prompt patterns
-    this.promptPatterns = [
-      /^[^@]+@[^:]+:[^$#]+[$#]\s*$/,  // user@host:path$
-      /^.*\$\s*$/,                      // basic $ prompt
-      /^.*#\s*$/,                       // root # prompt
-      /^>\s*$/,                         // PowerShell
-      /^PS\s+.*>\s*$/,                  // PowerShell with path
-      /^❯\s*$/,                         // Starship/fancy prompts
-      /^➜\s*$/,                         // Oh My Zsh
-    ];
+    try {
+      // Common shell prompt patterns
+      this.promptPatterns = [
+        /^[^@]+@[^:]+:[^$#]+[$#]\s*$/,  // user@host:path$
+        /^.*\$\s*$/,                      // basic $ prompt
+        /^.*#\s*$/,                       // root # prompt
+        /^>\s*$/,                         // PowerShell
+        /^PS\s+.*>\s*$/,                  // PowerShell with path
+        /^❯\s*$/,                         // Starship/fancy prompts
+        /^➜\s*$/,                         // Oh My Zsh
+      ];
 
-    // CWD detection patterns
-    this.cwdDetectionPatterns = [
-      /^cd\s+(.+)$/,                    // cd command
-      /^pushd\s+(.+)$/,                 // pushd command
-      /^z\s+(.+)$/,                     // zoxide
-      /\x1b\]633;P;Cwd=([^\x07]+)\x07/, // VS Code OSC sequence
-    ];
+      // CWD detection patterns
+      this.cwdDetectionPatterns = [
+        /^cd\s+(.+)$/,                    // cd command
+        /^pushd\s+(.+)$/,                 // pushd command
+        /^z\s+(.+)$/,                     // zoxide
+        /\x1b\]633;P;Cwd=([^\x07]+)\x07/, // VS Code OSC sequence
+      ];
+    } catch (error) {
+      console.error('Failed to initialize shell integration patterns:', error);
+      // Initialize with empty arrays to prevent crashes
+      this.promptPatterns = [];
+      this.cwdDetectionPatterns = [];
+    }
   }
 
-  private setupEventListeners(): void {
-    // Listen to terminal data for shell integration sequences
-    this.terminalManager.onData((event) => {
-      if (event.terminalId && event.data) {
-        this.processTerminalOutput(event.terminalId, event.data);
-      }
-    });
+  /**
+   * Process terminal data directly - called by TerminalManager
+   */
+  public processTerminalData(terminalId: string, data: string): void {
+    if (terminalId && data) {
+      this.processTerminalOutput(terminalId, data);
+    }
   }
 
   /**
@@ -256,21 +263,18 @@ export class ShellIntegrationService {
    * Inject shell integration script
    * This is called when a new terminal is created
    */
-  public injectShellIntegration(terminalId: string, shell: string): void {
-    const terminal = this.terminalManager.getTerminal(terminalId);
-    if (!terminal) return;
-
+  public injectShellIntegration(terminalId: string, shell: string, ptyProcess: any): void {
     // Detect shell type and inject appropriate integration
     if (shell && shell.includes('bash') || shell && shell.includes('zsh')) {
-      this.injectBashZshIntegration(terminal);
+      this.injectBashZshIntegration(ptyProcess);
     } else if (shell && shell.includes('fish')) {
-      this.injectFishIntegration(terminal);
+      this.injectFishIntegration(ptyProcess);
     } else if (shell && (shell.includes('powershell') || shell.includes('pwsh'))) {
-      this.injectPowerShellIntegration(terminal);
+      this.injectPowerShellIntegration(ptyProcess);
     }
   }
 
-  private injectBashZshIntegration(terminal: any): void {
+  private injectBashZshIntegration(ptyProcess: any): void {
     // VS Code standard shell integration for bash/zsh
     const script = `
 # VS Code Shell Integration
@@ -296,10 +300,10 @@ elif [[ -n "$ZSH_VERSION" ]]; then
 fi
 `;
     
-    terminal.write(script + '\n');
+    ptyProcess.write(script + '\n');
   }
 
-  private injectFishIntegration(terminal: any): void {
+  private injectFishIntegration(ptyProcess: any): void {
     // VS Code standard shell integration for fish
     const script = `
 # VS Code Shell Integration for Fish
@@ -317,10 +321,10 @@ function __vsc_postexec --on-event fish_postexec
 end
 `;
     
-    terminal.write(script + '\n');
+    ptyProcess.write(script + '\n');
   }
 
-  private injectPowerShellIntegration(terminal: any): void {
+  private injectPowerShellIntegration(ptyProcess: any): void {
     // VS Code standard shell integration for PowerShell
     const script = `
 # VS Code Shell Integration for PowerShell
@@ -338,7 +342,7 @@ function Global:prompt {
 }
 `;
     
-    terminal.write(script + '\n');
+    ptyProcess.write(script + '\n');
   }
 
   /**

@@ -47,6 +47,7 @@ export class TerminalManager {
   private readonly _stateUpdateEmitter = new vscode.EventEmitter<TerminalState>();
   private readonly _terminalFocusEmitter = new vscode.EventEmitter<string>();
   private readonly _terminalNumberManager: TerminalNumberManager;
+  private _shellIntegrationService: any; // Will be set after construction
   // CLI Agent Detection Service (extracted for SRP)
   private readonly _cliAgentService: ICliAgentDetectionService;
 
@@ -222,6 +223,15 @@ export class TerminalManager {
           JSON.stringify(data.substring(0, 100))
         );
 
+        // Process shell integration sequences if service is available
+        try {
+          if (this._shellIntegrationService) {
+            this._shellIntegrationService.processTerminalData(terminalId, data);
+          }
+        } catch (error) {
+          log(`⚠️ [TERMINAL] Shell integration processing error: ${error}`);
+        }
+
         // Performance optimization: Batch small data chunks
         this._bufferData(terminalId, data);
       });
@@ -262,6 +272,17 @@ export class TerminalManager {
       setTimeout(() => {
         try {
           log(`🔍 [TERMINAL] Initializing shell for: ${terminalId}`);
+          
+          // Inject shell integration if service is available
+          try {
+            if (this._shellIntegrationService) {
+              log(`🔧 [TERMINAL] Injecting shell integration for: ${terminalId}`);
+              this._shellIntegrationService.injectShellIntegration(terminalId, shell, ptyProcess);
+            }
+          } catch (error) {
+            log(`⚠️ [TERMINAL] Shell integration injection error: ${error}`);
+          }
+          
           // Send only a single carriage return to trigger initial prompt
           ptyProcess.write('\r');
         } catch (error) {
@@ -668,6 +689,13 @@ export class TerminalManager {
     this.deleteTerminal(activeId, { force: true, source: 'command' }).catch((error) => {
       console.error('❌ [TERMINAL] Error killing terminal:', error);
     });
+  }
+
+  /**
+   * Set shell integration service after construction
+   */
+  public setShellIntegrationService(service: any): void {
+    this._shellIntegrationService = service;
   }
 
   public dispose(): void {

@@ -105,7 +105,17 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     this.terminalLifecycleManager = new TerminalLifecycleManager(this.splitManager, this);
     this.cliAgentStateManager = new CliAgentStateManager();
     this.eventHandlerManager = new EventHandlerManager();
-    this.shellIntegrationManager = new ShellIntegrationManager();
+    try {
+      this.shellIntegrationManager = new ShellIntegrationManager();
+    } catch (error) {
+      console.error('Failed to initialize ShellIntegrationManager:', error);
+      // Create minimal stub to prevent further errors
+      this.shellIntegrationManager = {
+        setCoordinator: () => {},
+        handleMessage: () => {},
+        dispose: () => {}
+      } as any;
+    }
 
     // 既存マネージャーの初期化
     this.initializeExistingManagers();
@@ -142,7 +152,11 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     setUIManager(this.uiManager);
     this.inputManager.setNotificationManager(this.notificationManager);
     this.notificationManager.setupNotificationStyles();
-    this.shellIntegrationManager.setCoordinator(this);
+    try {
+      this.shellIntegrationManager.setCoordinator(this);
+    } catch (error) {
+      console.error('Failed to set ShellIntegrationManager coordinator:', error);
+    }
 
     // 重要：入力マネージャーの完全な設定
     this.setupInputManager();
