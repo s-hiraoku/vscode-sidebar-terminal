@@ -105,7 +105,8 @@
       "Bash(npx @vscode/vsce package:*)",
       "Bash(git rebase:*)",
       "WebSearch",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(/release patch)"
     ],
     "deny": []
   },
