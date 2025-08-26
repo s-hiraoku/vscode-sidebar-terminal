@@ -107,6 +107,7 @@
       "WebSearch",
       "Bash(chmod:*)",
       "Bash(/release patch)",
+      "Bash(timeout:*)",
       "Bash(git restore:*)",
       "mcp__deepwiki__read_wiki_contents"
     ],
