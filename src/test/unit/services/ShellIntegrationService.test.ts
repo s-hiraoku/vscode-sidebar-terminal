@@ -10,7 +10,7 @@
 
 import * as assert from 'assert';
 import * as sinon from 'sinon';
-import { ShellIntegrationService, ShellCommand, ShellIntegrationState } from '../../../services/ShellIntegrationService';
+import { ShellIntegrationService } from '../../../services/ShellIntegrationService';
 import { TerminalManager } from '../../../terminals/TerminalManager';
 
 describe('ShellIntegrationService', () => {
