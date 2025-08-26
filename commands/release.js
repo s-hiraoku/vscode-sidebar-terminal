@@ -262,16 +262,19 @@ class QualityAssuredReleaseManager {
 
     // バージョンアップ
     this.log(`📦 Incrementing ${this.releaseType} version...`, 'info');
-    const versionResult = await this.exec(`npm version ${this.releaseType} --no-git-tag-version`);
+    const versionResult = await this.exec(`npm version ${this.releaseType} --no-git-tag-version`, { silent: true });
     if (!versionResult.success) {
       throw new Error('Version increment failed');
     }
 
-    const newVersion = versionResult.output.trim();
+    const newVersion = (versionResult.output || '').trim();
+    if (!newVersion) {
+      throw new Error('Failed to get new version number');
+    }
     this.log(`✅ New version: ${newVersion}`, 'success');
 
     // Git操作
-    await this.exec('git add package.json package-lock.json');
+    await this.exec('git add package.json package-lock.json', { silent: true });
     
     const commitMessage = `${newVersion}
 
@@ -279,12 +282,12 @@ class QualityAssuredReleaseManager {
 
 Co-Authored-By: Claude <noreply@anthropic.com>`;
 
-    await this.exec(`git commit -m "${commitMessage}"`);
-    await this.exec(`git tag ${newVersion} HEAD`);
+    await this.exec(`git commit -m "${commitMessage}"`, { silent: true });
+    await this.exec(`git tag ${newVersion} HEAD`, { silent: true });
 
     // プッシュ
     this.log('📤 Pushing to origin...', 'info');
-    await this.exec('git push origin for-publish --follow-tags');
+    await this.exec('git push origin for-publish --follow-tags', { silent: true });
 
     this.log(`🎉 Release ${newVersion} completed successfully!`, 'success');
     return newVersion;
