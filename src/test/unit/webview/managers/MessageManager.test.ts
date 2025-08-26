@@ -312,9 +312,9 @@ describe('RefactoredMessageManager', () => {
 
   describe('Memory Management', () => {
     it('should properly cleanup on dispose', () => {
-      // Add messages to queues
-      (messageManager as any).queueMessage({ command: 'test1' }, mockCoordinator);
-      (messageManager as any).queueMessage({ command: 'input' }, mockCoordinator);
+      // Add messages to queues  
+      messageManager.postMessage({ command: 'test1' });
+      messageManager.postMessage({ command: 'input' });
 
       let stats = messageManager.getQueueStats();
       expect(stats.queueSize + (stats.highPriorityQueueSize || 0)).to.be.greaterThan(0);
@@ -343,9 +343,8 @@ describe('RefactoredMessageManager', () => {
       for (let i = 0; i < messageCount; i++) {
         const isInput = i % 10 === 0; // Every 10th message is input
         const command = isInput ? 'input' : `regular${i}`;
-        (messageManager as any).queueMessage(
-          { command, type: isInput ? 'input' : undefined },
-          mockCoordinator
+        messageManager.postMessage(
+          { command, type: isInput ? 'input' : undefined }
         );
       }
 

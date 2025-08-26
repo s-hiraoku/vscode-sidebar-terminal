@@ -272,7 +272,9 @@ export class PerformanceManager extends BaseManager {
    * Dispose of all timers and cleanup resources
    */
   public override dispose(): void {
-    this.logger.info('Disposing performance manager');
+    if (this.logger && typeof this.logger.info === 'function') {
+      this.logger.info('Disposing performance manager');
+    }
 
     // Flush any remaining output before disposal
     this.flushOutputBuffer();
@@ -288,6 +290,9 @@ export class PerformanceManager extends BaseManager {
     // Call parent dispose
     super.dispose();
 
-    this.logger.lifecycle('PerformanceManager', 'completed');
+    // Safe lifecycle logging
+    if (this.logger && typeof this.logger.lifecycle === 'function') {
+      this.logger.lifecycle('PerformanceManager', 'completed');
+    }
   }
 }

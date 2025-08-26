@@ -428,7 +428,7 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
       terminalIds.forEach((id) => {
         const instance = splitManager.terminals.get(id);
         expect(instance).to.not.be.undefined;
-        expect(instance!.container.style.flex).to.equal('1');
+        expect(instance!.container.style.flex).to.equal('1 1 0%');
       });
     });
   });

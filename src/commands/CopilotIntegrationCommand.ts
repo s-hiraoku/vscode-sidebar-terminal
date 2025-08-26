@@ -11,14 +11,14 @@ export class CopilotIntegrationCommand {
   /**
    * GitHub Copilot Chatをアクティブ化してファイル参照を送信する
    */
-  handleActivateCopilot(): void {
+  async handleActivateCopilot(): Promise<void> {
     try {
       log('🚀 [DEBUG] handleActivateCopilot called');
 
       // GitHub Copilot統合機能が有効かチェック
       if (!this.isGitHubCopilotIntegrationEnabled()) {
         log('🔧 [DEBUG] GitHub Copilot integration is disabled by user setting');
-        void vscode.window.showInformationMessage(
+        await vscode.window.showInformationMessage(
           'GitHub Copilot integration is disabled. Enable it in Terminal Settings.'
         );
         return;
@@ -29,17 +29,17 @@ export class CopilotIntegrationCommand {
       if (!fileInfo) {
         log('⚠️ [DEBUG] No active editor found, activating Copilot without file reference');
         // ファイルが開いていなくてもCopilot Chatをアクティブ化
-        void this.activateCopilotChat();
+        await this.activateCopilotChat();
         return;
       }
 
       // GitHub Copilot Chatをアクティブ化してファイル参照を送信
-      void this.activateCopilotChatWithFileReference(fileInfo);
+      await this.activateCopilotChatWithFileReference(fileInfo);
 
       log('✅ [DEBUG] Successfully activated GitHub Copilot Chat with file reference');
     } catch (error) {
       log('❌ [ERROR] Error in handleActivateCopilot:', error);
-      void vscode.window.showErrorMessage(
+      await vscode.window.showErrorMessage(
         `Failed to activate GitHub Copilot Chat: ${String(error)}`
       );
     }
