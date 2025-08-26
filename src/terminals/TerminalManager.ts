@@ -196,6 +196,8 @@ export class TerminalManager {
           FORCE_COLOR: '1',
           TERM: 'xterm-256color',
           COLORTERM: 'truecolor',
+          // TEMPORARY: Remove PS1 override to debug input issue
+          // PS1: env.PS1 || '\\u@\\h:\\w\\$ ',
         },
         encoding: 'utf8',
       });
@@ -275,14 +277,15 @@ export class TerminalManager {
           log(`🔍 [TERMINAL] Initializing shell for: ${terminalId}`);
           
           // Inject shell integration if service is available
-          try {
-            if (this._shellIntegrationService) {
-              log(`🔧 [TERMINAL] Injecting shell integration for: ${terminalId}`);
-              this._shellIntegrationService.injectShellIntegration(terminalId, shell, ptyProcess);
-            }
-          } catch (error) {
-            log(`⚠️ [TERMINAL] Shell integration injection error: ${error}`);
-          }
+          // TEMPORARY: Disable shell integration to debug input issue
+          // try {
+          //   if (this._shellIntegrationService) {
+          //     log(`🔧 [TERMINAL] Injecting shell integration for: ${terminalId}`);
+          //     this._shellIntegrationService.injectShellIntegration(terminalId, shell, ptyProcess);
+          //   }
+          // } catch (error) {
+          //   log(`⚠️ [TERMINAL] Shell integration injection error: ${error}`);
+          // }
           
           // Send only a single carriage return to trigger initial prompt
           ptyProcess.write('\r');

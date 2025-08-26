@@ -222,8 +222,22 @@ export class UIManager extends BaseManager implements IUIManager {
     terminal.options.fontSize = fontSettings.fontSize;
     terminal.options.fontFamily = fontSettings.fontFamily;
 
+    // Apply additional VS Code standard font settings if provided
+    if (fontSettings.fontWeight !== undefined) {
+      terminal.options.fontWeight = fontSettings.fontWeight as any;
+    }
+    if (fontSettings.fontWeightBold !== undefined) {
+      terminal.options.fontWeightBold = fontSettings.fontWeightBold as any;
+    }
+    if (fontSettings.lineHeight !== undefined) {
+      terminal.options.lineHeight = fontSettings.lineHeight;
+    }
+    if (fontSettings.letterSpacing !== undefined) {
+      terminal.options.letterSpacing = fontSettings.letterSpacing;
+    }
+
     uiLogger.info(
-      `Applied font settings: ${fontSettings.fontFamily}, ${fontSettings.fontSize}px`
+      `Applied font settings: ${fontSettings.fontFamily}, ${fontSettings.fontSize}px, weight: ${fontSettings.fontWeight || 'default'}, lineHeight: ${fontSettings.lineHeight || 'default'}`
     );
   }
 

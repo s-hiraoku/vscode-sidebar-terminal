@@ -128,6 +128,10 @@ export interface PartialTerminalSettings {
 export interface WebViewFontSettings {
   fontSize: number;
   fontFamily: string;
+  fontWeight?: string;
+  fontWeightBold?: string;
+  lineHeight?: number;
+  letterSpacing?: number;
 }
 
 /**
