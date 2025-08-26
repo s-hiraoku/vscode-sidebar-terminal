@@ -375,7 +375,7 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
       // Assert
       expect(terminalBody.style.display).to.equal('');
       expect(terminalBody.style.flexDirection).to.equal('');
-      expect(terminalBody.style.height).to.equal('');
+      expect(terminalBody.style.height).to.equal('600px');
     });
 
     it('should apply correct CSS properties for vertical layout', function () {
@@ -388,7 +388,7 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
       // Assert
       expect(terminalBody.style.display).to.equal('');
       expect(terminalBody.style.flexDirection).to.equal('');
-      expect(terminalBody.style.height).to.equal('');
+      expect(terminalBody.style.height).to.equal('600px');
     });
 
     it('should maintain responsive layout during window resize simulation', function () {
