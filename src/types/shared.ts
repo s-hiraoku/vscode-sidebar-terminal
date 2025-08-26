@@ -388,6 +388,9 @@ export interface WebviewMessage {
     | 'sessionRestorationData'
     | 'requestInitialTerminal'
     | 'requestState'
+    | 'updateShellStatus'
+    | 'updateCwd'
+    | 'commandHistory'
     | 'deleteTerminalResponse'  // 🎯 FIX: 削除処理統一化で追加
     | 'switchAiAgentResponse'  // AIエージェント切り替えレスポンス
     | 'error';
@@ -397,6 +400,11 @@ export interface WebviewMessage {
   terminalId?: string;
   terminalName?: string;
   terminalNumber?: number; // ターミナル番号（1-5）- Extension → WebView 通信用
+  
+  // Shell Integration properties
+  status?: string;
+  cwd?: string;
+  history?: Array<{ command: string; exitCode?: number; duration?: number }>;
 
   // ターミナル情報（復元用）
   terminalInfo?: {

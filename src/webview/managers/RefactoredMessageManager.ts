@@ -203,6 +203,16 @@ export class RefactoredMessageManager implements IMessageManager {
         case 'sessionCleared':
           this.handleSessionClearedMessage();
           break;
+        // Shell Integration Messages
+        case 'updateShellStatus':
+          this.handleShellStatusMessage(msg, coordinator);
+          break;
+        case 'updateCwd':
+          this.handleCwdUpdateMessage(msg, coordinator);
+          break;
+        case 'commandHistory':
+          this.handleCommandHistoryMessage(msg, coordinator);
+          break;
         case 'serializeTerminal':
           this.handleSerializeTerminalMessage(msg, coordinator);
           break;
@@ -985,6 +995,57 @@ export class RefactoredMessageManager implements IMessageManager {
   private handleSessionClearedMessage(): void {
     this.logger.info('Session cleared');
     showSessionCleared();
+  }
+
+  /**
+   * Shell Integration Message Handlers
+   */
+  private handleShellStatusMessage(msg: MessageCommand, coordinator: IManagerCoordinator): void {
+    const terminalId = msg.terminalId as string;
+    const status = msg.status as string;
+    
+    if (!terminalId || !status) {
+      this.logger.warn('Invalid shell status message', { terminalId, status });
+      return;
+    }
+
+    // Forward to shell integration manager
+    const manager = coordinator as any;
+    if (manager.shellIntegrationManager) {
+      manager.shellIntegrationManager.updateShellStatus(terminalId, status);
+    }
+  }
+
+  private handleCwdUpdateMessage(msg: MessageCommand, coordinator: IManagerCoordinator): void {
+    const terminalId = msg.terminalId as string;
+    const cwd = msg.cwd as string;
+    
+    if (!terminalId || !cwd) {
+      this.logger.warn('Invalid CWD update message', { terminalId, cwd });
+      return;
+    }
+
+    // Forward to shell integration manager
+    const manager = coordinator as any;
+    if (manager.shellIntegrationManager) {
+      manager.shellIntegrationManager.updateCwd(terminalId, cwd);
+    }
+  }
+
+  private handleCommandHistoryMessage(msg: MessageCommand, coordinator: IManagerCoordinator): void {
+    const terminalId = msg.terminalId as string;
+    const history = msg.history as Array<{ command: string; exitCode?: number; duration?: number }>;
+    
+    if (!terminalId || !history) {
+      this.logger.warn('Invalid command history message', { terminalId, history });
+      return;
+    }
+
+    // Forward to shell integration manager
+    const manager = coordinator as any;
+    if (manager.shellIntegrationManager) {
+      manager.shellIntegrationManager.showCommandHistory(terminalId, history);
+    }
   }
 
   private handleSessionRestoreSkippedMessage(msg: MessageCommand): void {

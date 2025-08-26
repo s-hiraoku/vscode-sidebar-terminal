@@ -17,7 +17,6 @@ startup('Refactored WebView script started');
 
 import '@xterm/xterm/css/xterm.css';
 import { RefactoredTerminalWebviewManager } from './managers/RefactoredTerminalWebviewManager';
-// import { TerminalWebviewManager } from './TerminalWebviewManager';
 
 /**
  * グローバルターミナルマネージャーインスタンス
