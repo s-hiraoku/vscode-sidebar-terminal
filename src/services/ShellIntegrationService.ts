@@ -12,6 +12,10 @@
 import * as vscode from 'vscode';
 import { TerminalManager } from '../terminals/TerminalManager';
 
+interface PtyProcess {
+  write(data: string): void;
+}
+
 export interface ShellCommand {
   command: string;
   cwd: string;
@@ -263,7 +267,7 @@ export class ShellIntegrationService {
    * Inject shell integration script
    * This is called when a new terminal is created
    */
-  public injectShellIntegration(terminalId: string, shell: string, ptyProcess: any): void {
+  public injectShellIntegration(terminalId: string, shell: string, ptyProcess: PtyProcess): void {
     // Detect shell type and inject appropriate integration
     if (shell && shell.includes('bash') || shell && shell.includes('zsh')) {
       this.injectBashZshIntegration(ptyProcess);
@@ -274,7 +278,7 @@ export class ShellIntegrationService {
     }
   }
 
-  private injectBashZshIntegration(ptyProcess: any): void {
+  private injectBashZshIntegration(ptyProcess: PtyProcess): void {
     // VS Code standard shell integration for bash/zsh
     const script = `
 # VS Code Shell Integration
@@ -303,7 +307,7 @@ fi
     ptyProcess.write(script + '\n');
   }
 
-  private injectFishIntegration(ptyProcess: any): void {
+  private injectFishIntegration(ptyProcess: PtyProcess): void {
     // VS Code standard shell integration for fish
     const script = `
 # VS Code Shell Integration for Fish
@@ -324,7 +328,7 @@ end
     ptyProcess.write(script + '\n');
   }
 
-  private injectPowerShellIntegration(ptyProcess: any): void {
+  private injectPowerShellIntegration(ptyProcess: PtyProcess): void {
     // VS Code standard shell integration for PowerShell
     const script = `
 # VS Code Shell Integration for PowerShell

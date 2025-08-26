@@ -12,6 +12,7 @@ import {
   DeleteResult,
 } from '../types/common';
 import { TERMINAL_CONSTANTS, ERROR_MESSAGES } from '../constants';
+import { ShellIntegrationService } from '../services/ShellIntegrationService';
 import { terminal as log } from '../utils/logger';
 import {
   getTerminalConfig,
@@ -47,7 +48,7 @@ export class TerminalManager {
   private readonly _stateUpdateEmitter = new vscode.EventEmitter<TerminalState>();
   private readonly _terminalFocusEmitter = new vscode.EventEmitter<string>();
   private readonly _terminalNumberManager: TerminalNumberManager;
-  private _shellIntegrationService: any; // Will be set after construction
+  private _shellIntegrationService: ShellIntegrationService | null = null;
   // CLI Agent Detection Service (extracted for SRP)
   private readonly _cliAgentService: ICliAgentDetectionService;
 
