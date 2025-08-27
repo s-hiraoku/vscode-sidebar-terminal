@@ -147,6 +147,72 @@
         "title": "Clear Corrupted Terminal History",
         "category": "Secondary Terminal",
         "icon": "$(trash)"
+      },
+      {
+        "command": "secondaryTerminal.focusTerminal",
+        "title": "Focus Terminal",
+        "category": "Secondary Terminal"
+      },
+      {
+        "command": "secondaryTerminal.createTerminal",
+        "title": "Create New Terminal",
+        "category": "Secondary Terminal",
+        "icon": "$(add)"
+      },
+      {
+        "command": "secondaryTerminal.clearTerminal",
+        "title": "Clear Terminal",
+        "category": "Secondary Terminal",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "secondaryTerminal.scrollToPreviousCommand",
+        "title": "Scroll to Previous Command",
+        "category": "Secondary Terminal"
+      },
+      {
+        "command": "secondaryTerminal.scrollToNextCommand",
+        "title": "Scroll to Next Command",
+        "category": "Secondary Terminal"
+      },
+      {
+        "command": "secondaryTerminal.focusNextTerminal",
+        "title": "Focus Next Terminal",
+        "category": "Secondary Terminal"
+      },
+      {
+        "command": "secondaryTerminal.focusPreviousTerminal",
+        "title": "Focus Previous Terminal",
+        "category": "Secondary Terminal"
+      },
+      {
+        "command": "secondaryTerminal.selectAll",
+        "title": "Select All",
+        "category": "Secondary Terminal"
+      },
+      {
+        "command": "secondaryTerminal.copy",
+        "title": "Copy",
+        "category": "Secondary Terminal",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "secondaryTerminal.paste",
+        "title": "Paste",
+        "category": "Secondary Terminal",
+        "icon": "$(clippy)"
+      },
+      {
+        "command": "secondaryTerminal.find",
+        "title": "Find",
+        "category": "Secondary Terminal",
+        "icon": "$(search)"
+      },
+      {
+        "command": "secondaryTerminal.runRecentCommand",
+        "title": "Run Recent Command",
+        "category": "Secondary Terminal",
+        "icon": "$(history)"
       }
     ],
     "menus": {
@@ -616,6 +682,89 @@
         "command": "secondaryTerminal.activateCopilot",
         "key": "ctrl+k ctrl+c",
         "mac": "cmd+k cmd+c"
+      },
+      {
+        "command": "secondaryTerminal.focusTerminal",
+        "key": "ctrl+`",
+        "mac": "ctrl+`",
+        "when": "!terminalFocus"
+      },
+      {
+        "command": "secondaryTerminal.createTerminal",
+        "key": "ctrl+shift+`",
+        "mac": "ctrl+shift+`"
+      },
+      {
+        "command": "secondaryTerminal.splitTerminal",
+        "key": "ctrl+shift+5",
+        "mac": "cmd+\\",
+        "when": "terminalFocus && view == secondaryTerminal"
+      },
+      {
+        "command": "secondaryTerminal.killTerminal",
+        "key": "ctrl+shift+x",
+        "mac": "cmd+shift+x",
+        "when": "terminalFocus && view == secondaryTerminal"
+      },
+      {
+        "command": "secondaryTerminal.clearTerminal",
+        "key": "ctrl+k",
+        "mac": "cmd+k",
+        "when": "terminalFocus && view == secondaryTerminal"
+      },
+      {
+        "command": "secondaryTerminal.scrollToPreviousCommand",
+        "key": "ctrl+up",
+        "mac": "cmd+up",
+        "when": "terminalFocus && view == secondaryTerminal"
+      },
+      {
+        "command": "secondaryTerminal.scrollToNextCommand",
+        "key": "ctrl+down",
+        "mac": "cmd+down",
+        "when": "terminalFocus && view == secondaryTerminal"
+      },
+      {
+        "command": "secondaryTerminal.focusNextTerminal",
+        "key": "alt+right",
+        "mac": "alt+cmd+right",
+        "when": "terminalFocus && view == secondaryTerminal"
+      },
+      {
+        "command": "secondaryTerminal.focusPreviousTerminal",
+        "key": "alt+left",
+        "mac": "alt+cmd+left",
+        "when": "terminalFocus && view == secondaryTerminal"
+      },
+      {
+        "command": "secondaryTerminal.selectAll",
+        "key": "ctrl+a",
+        "mac": "cmd+a",
+        "when": "terminalFocus && view == secondaryTerminal"
+      },
+      {
+        "command": "secondaryTerminal.copy",
+        "key": "ctrl+c",
+        "mac": "cmd+c",
+        "when": "terminalFocus && terminalTextSelected && view == secondaryTerminal"
+      },
+      {
+        "command": "secondaryTerminal.paste",
+        "key": "ctrl+v",
+        "mac": "cmd+v",
+        "when": "terminalFocus && view == secondaryTerminal"
+      },
+      {
+        "command": "secondaryTerminal.find",
+        "key": "ctrl+f",
+        "mac": "cmd+f",
+        "when": "terminalFocus && view == secondaryTerminal"
+      },
+      {
+        "command": "secondaryTerminal.runRecentCommand",
+        "key": "ctrl+r",
+        "mac": "cmd+r",
+        "when": "terminalFocus && view == secondaryTerminal"
       }
     ]
   },

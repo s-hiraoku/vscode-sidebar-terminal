@@ -403,15 +403,14 @@ export class TerminalManager {
           log(`🔍 [TERMINAL] Initializing shell for: ${terminalId}`);
           
           // Inject shell integration if service is available
-          // TEMPORARY: Disable shell integration to debug input issue
-          // try {
-          //   if (this._shellIntegrationService) {
-          //     log(`🔧 [TERMINAL] Injecting shell integration for: ${terminalId}`);
-          //     this._shellIntegrationService.injectShellIntegration(terminalId, shell, ptyProcess);
-          //   }
-          // } catch (error) {
-          //   log(`⚠️ [TERMINAL] Shell integration injection error: ${error}`);
-          // }
+          try {
+            if (this._shellIntegrationService) {
+              log(`🔧 [TERMINAL] Injecting shell integration for: ${terminalId}`);
+              this._shellIntegrationService.injectShellIntegration(terminalId, profileConfig.shell, ptyProcess);
+            }
+          } catch (error) {
+            log(`⚠️ [TERMINAL] Shell integration injection error: ${error}`);
+          }
           
           // Send only a single carriage return to trigger initial prompt
           ptyProcess.write('\r');
