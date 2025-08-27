@@ -106,7 +106,8 @@
       "Bash(git rebase:*)",
       "WebSearch",
       "Bash(chmod:*)",
-      "Bash(/release patch)"
+      "Bash(/release patch)",
+      "Bash(git restore:*)"
     ],
     "deny": []
   },

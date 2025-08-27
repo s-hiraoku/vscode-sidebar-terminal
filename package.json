@@ -472,6 +472,45 @@
           "maximum": 21,
           "description": "When set, the foreground color of each cell will change to try meet the contrast ratio specified. Example values:\n- 1: Do nothing and use the standard theme colors.\n- 4.5: WCAG AA compliance (minimum).\n- 7: WCAG AAA compliance (enhanced).\n- 21: White on black or black on white."
         },
+        "secondaryTerminal.profiles.windows": {
+          "type": "object",
+          "default": {},
+          "description": "The Windows terminal profiles to present when creating a new terminal via the terminal dropdown. Set to null to exclude a profile from the list, for example: \"secondaryTerminal.profiles.windows\": { \"Command Prompt\": null }."
+        },
+        "secondaryTerminal.profiles.linux": {
+          "type": "object", 
+          "default": {},
+          "description": "The Linux terminal profiles to present when creating a new terminal via the terminal dropdown. Set to null to exclude a profile from the list, for example: \"secondaryTerminal.profiles.linux\": { \"bash\": null }."
+        },
+        "secondaryTerminal.profiles.osx": {
+          "type": "object",
+          "default": {},
+          "description": "The macOS terminal profiles to present when creating a new terminal via the terminal dropdown. Set to null to exclude a profile from the list, for example: \"secondaryTerminal.profiles.osx\": { \"bash\": null }."
+        },
+        "secondaryTerminal.defaultProfile.windows": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "description": "The default profile used on Windows. This setting will currently be ignored if either terminal.external.windowsExec or terminal.integrated.shell.windows are set."
+        },
+        "secondaryTerminal.defaultProfile.linux": {
+          "type": [
+            "string", 
+            "null"
+          ],
+          "default": null,
+          "description": "The default profile used on Linux. This setting will currently be ignored if either terminal.external.linuxExec or terminal.integrated.shell.linux are set."
+        },
+        "secondaryTerminal.defaultProfile.osx": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "description": "The default profile used on macOS. This setting will currently be ignored if either terminal.external.osxExec or terminal.integrated.shell.osx are set."
+        },
         "secondaryTerminal.restoreScrollback": {
           "type": "boolean",
           "default": true,
