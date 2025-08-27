@@ -25,7 +25,7 @@ export const TERMINAL_CONSTANTS = {
 
   // 設定キー
   CONFIG_KEYS: {
-    SIDEBAR_TERMINAL: 'sidebarTerminal',
+    SIDEBAR_TERMINAL: 'secondaryTerminal',
     TERMINAL_INTEGRATED: 'terminal.integrated',
     MAX_TERMINALS: 'maxTerminals',
     SHELL: 'shell',
@@ -53,7 +53,8 @@ export const TERMINAL_CONSTANTS = {
     RESIZE: 'resize',
     EXIT: 'exit',
     SPLIT: 'split',
-    SWITCH_TERMINAL: 'switchTerminal',
+    CREATE_TERMINAL: 'createTerminal',
+    FOCUS_TERMINAL: 'focusTerminal',
     TERMINAL_CREATED: 'terminalCreated',
     TERMINAL_REMOVED: 'terminalRemoved',
   } as const,
@@ -122,4 +123,24 @@ export const ERROR_MESSAGES = {
   TERMINAL_CREATION_FAILED: 'Failed to create terminal',
   TERMINAL_CONTAINER_NOT_FOUND: 'Terminal container not found',
   MAX_TERMINALS_REACHED: 'Maximum number of terminals reached',
+} as const;
+
+/**
+ * VS Code コマンド定数
+ */
+export const VSCODE_COMMANDS = {
+  // Copilot Chat関連
+  CHAT_OPEN: 'workbench.action.chat.open',
+  CHAT_FOCUS_FALLBACK: 'workbench.panel.chat.view.copilot.focus',
+
+  // Secondary Terminal関連
+  SECONDARY_TERMINAL_FOCUS: 'secondaryTerminal.focus',
+  SECONDARY_TERMINAL_CREATE: 'secondaryTerminal.createTerminal',
+  SECONDARY_TERMINAL_KILL: 'secondaryTerminal.killTerminal',
+  SECONDARY_TERMINAL_VIEW_FOCUS: 'secondaryTerminalView.focus',
+
+  // Workbench関連
+  SHOW_COMMANDS: 'workbench.action.showCommands',
+  WORKBENCH_OPEN_SETTINGS: 'workbench.action.openSettings',
+  WORKBENCH_RELOAD_WINDOW: 'workbench.action.reloadWindow',
 } as const;

@@ -14,14 +14,14 @@ export const WEBVIEW_TERMINAL_CONSTANTS = {
     SPLIT: 'split',
     TERMINAL_CREATED: 'terminalCreated',
     TERMINAL_REMOVED: 'terminalRemoved',
-    SWITCH_TERMINAL: 'switchTerminal',
+    FOCUS_TERMINAL: 'focusTerminal',
   },
 };
 
 export const SPLIT_CONSTANTS = {
   MAX_SPLIT_COUNT: 5,
   MIN_TERMINAL_HEIGHT: 100,
-  BUFFER_FLUSH_INTERVAL: 16, // ~60fps
-  MAX_BUFFER_SIZE: 100,
-  RESIZE_DEBOUNCE_DELAY: 150,
+  BUFFER_FLUSH_INTERVAL: 4, // Reduced from 16ms to 4ms for better input responsiveness (~250fps)
+  MAX_BUFFER_SIZE: 50, // Reduced from 100 to 50 for faster small input processing
+  RESIZE_DEBOUNCE_DELAY: 100, // Reduced from 150ms to 100ms for quicker resize response
 };

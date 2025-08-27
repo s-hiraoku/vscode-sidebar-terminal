@@ -2,25 +2,36 @@
  * Performance Manager - Handles output buffering, debouncing, and performance optimizations
  */
 
-import { Terminal } from 'xterm';
-import { FitAddon } from 'xterm-addon-fit';
-import { webview as log } from '../../utils/logger';
+import { Terminal } from '@xterm/xterm';
+import { FitAddon } from '@xterm/addon-fit';
 import { SPLIT_CONSTANTS } from '../constants/webview';
-import { IPerformanceManager } from '../interfaces/ManagerInterfaces';
+import { IManagerCoordinator } from '../interfaces/ManagerInterfaces';
+import { BaseManager, ManagerInitializationConfig } from './BaseManager';
+import { performanceLogger } from '../utils/ManagerLogger';
+import { ResizeManager } from '../utils/ResizeManager';
 
-export class PerformanceManager implements IPerformanceManager {
+export class PerformanceManager extends BaseManager {
+  // Specialized logger for Performance Manager
+  protected override readonly logger = performanceLogger;
+
+  constructor() {
+    super('PerformanceManager', {
+      enableLogging: true,
+      enableValidation: false,
+      enableErrorRecovery: true,
+    });
+
+    this.logger.lifecycle('initialization', 'starting');
+  }
+
   // Performance optimization: Buffer output and batch writes
   private outputBuffer: string[] = [];
   private bufferFlushTimer: number | null = null;
   private readonly BUFFER_FLUSH_INTERVAL = SPLIT_CONSTANTS.BUFFER_FLUSH_INTERVAL;
   private readonly MAX_BUFFER_SIZE = SPLIT_CONSTANTS.MAX_BUFFER_SIZE;
 
-  // Performance optimization: Debounce resize operations
-  private resizeDebounceTimer: number | null = null;
-  private readonly RESIZE_DEBOUNCE_DELAY = SPLIT_CONSTANTS.RESIZE_DEBOUNCE_DELAY;
-
-  // Claude Code mode for performance optimization
-  private isClaudeCodeMode = false;
+  // CLI Agent mode for performance optimization
+  private isCliAgentMode = false;
 
   // Current terminal for buffer operations
   private currentBufferTerminal: Terminal | null = null;
@@ -31,31 +42,37 @@ export class PerformanceManager implements IPerformanceManager {
   public scheduleOutputBuffer(data: string, targetTerminal: Terminal): void {
     this.currentBufferTerminal = targetTerminal;
 
-    // Enhanced buffering strategy for Claude Code compatibility
-    const isLargeOutput = data.length >= 1000;
+    // Enhanced buffering strategy for CLI Agent compatibility
+    const isLargeOutput = data.length >= 500; // Reduced from 1000 to 500 for better responsiveness
     const bufferFull = this.outputBuffer.length >= this.MAX_BUFFER_SIZE;
-    const isModerateOutput = data.length >= 100; // Medium-sized chunks
+    const isSmallInput = data.length <= 10; // New: Immediate flush for small inputs (typing)
+    const isModerateOutput = data.length >= 50; // Reduced from 100 to 50
 
-    // Immediate flush conditions (prioritized for cursor accuracy)
-    // Only flush immediately for large output (≥1000 chars) or buffer full
-    // Moderate output (≥100 chars) should only flush immediately during Claude Code mode
+    // Immediate flush conditions (prioritized for cursor accuracy and input responsiveness)
+    // Immediate flush for: large output, buffer full, small inputs (typing), or CLI Agent mode
     const shouldFlushImmediately =
-      isLargeOutput || bufferFull || (this.isClaudeCodeMode && isModerateOutput);
+      isLargeOutput || bufferFull || isSmallInput || (this.isCliAgentMode && isModerateOutput);
 
     if (shouldFlushImmediately) {
       this.flushOutputBuffer();
+
+      // xterm.js automatically preserves scroll position if user has scrolled up
+      // The terminal's internal isUserScrolling flag handles this behavior
       targetTerminal.write(data);
-      const reason = this.isClaudeCodeMode
-        ? 'Claude Code mode'
-        : isLargeOutput
-          ? 'large output'
-          : 'buffer full';
-      log(`📤 [PERFORMANCE] Immediate write: ${data.length} chars (${reason})`);
+
+      const reason = isSmallInput
+        ? 'small input (typing)'
+        : this.isCliAgentMode
+          ? 'CLI Agent mode'
+          : isLargeOutput
+            ? 'large output'
+            : 'buffer full';
+      this.logger.info(`Immediate write: ${data.length} chars (${reason})`);
     } else {
       this.outputBuffer.push(data);
       this.scheduleBufferFlush();
-      log(
-        `📤 [PERFORMANCE] Buffered write: ${data.length} chars (buffer: ${this.outputBuffer.length}, Claude Code: ${this.isClaudeCodeMode})`
+      this.logger.debug(
+        `Buffered write: ${data.length} chars (buffer: ${this.outputBuffer.length}, CLI Agent: ${this.isCliAgentMode})`
       );
     }
   }
@@ -65,23 +82,31 @@ export class PerformanceManager implements IPerformanceManager {
    */
   private scheduleBufferFlush(): void {
     if (this.bufferFlushTimer === null) {
-      // Dynamic flush interval based on Claude Code state and output frequency
-      let flushInterval = this.BUFFER_FLUSH_INTERVAL; // Default 16ms
+      // Dynamic flush interval based on CLI Agent state and output frequency
+      let flushInterval = this.BUFFER_FLUSH_INTERVAL; // Default 4ms (improved from 16ms)
 
-      if (this.isClaudeCodeMode) {
-        // Claude Code active: Use very aggressive flushing for cursor accuracy
-        flushInterval = 4; // 4ms for Claude Code output
-      } else if (this.outputBuffer.length > 5) {
-        // High-frequency output: Use shorter interval
-        flushInterval = 8; // 8ms for frequent output
+      if (this.isCliAgentMode) {
+        // CLI Agent active: Use very aggressive flushing for cursor accuracy
+        flushInterval = 2; // Reduced from 4ms to 2ms for CLI Agent output
+      } else if (this.outputBuffer.length > 3) {
+        // High-frequency output: Use shorter interval (reduced threshold from 5 to 3)
+        flushInterval = 2; // Reduced from 8ms to 2ms for frequent output
       }
 
       this.bufferFlushTimer = window.setTimeout(() => {
-        this.flushOutputBuffer();
+        try {
+          this.flushOutputBuffer();
+        } catch (error) {
+          this.logger.error(`Error during buffer flush: ${error}`);
+          // Reset the timer to prevent stuck state
+          this.bufferFlushTimer = null;
+          // Clear the buffer to prevent memory issues
+          this.outputBuffer = [];
+        }
       }, flushInterval);
 
-      log(
-        `📊 [PERFORMANCE] Scheduled flush in ${flushInterval}ms (Claude Code: ${this.isClaudeCodeMode}, buffer size: ${this.outputBuffer.length})`
+      this.logger.debug(
+        `Scheduled flush in ${flushInterval}ms (CLI Agent: ${this.isCliAgentMode}, buffer size: ${this.outputBuffer.length})`
       );
     }
   }
@@ -101,45 +126,89 @@ export class PerformanceManager implements IPerformanceManager {
 
       // Use the most recently set terminal for buffer output
       if (this.currentBufferTerminal) {
-        this.currentBufferTerminal.write(bufferedData);
-        log(`📤 [PERFORMANCE] Flushed buffer: ${bufferedData.length} chars`);
+        try {
+          // xterm.js automatically preserves scroll position if user has scrolled up
+          this.currentBufferTerminal.write(bufferedData);
+          this.logger.debug(`Flushed buffer: ${bufferedData.length} chars`);
+        } catch (error) {
+          this.logger.error(`Error during buffer flush: ${error}`);
+        }
       } else {
-        log(
-          `⚠️ [PERFORMANCE] No terminal available for buffer flush: ${bufferedData.length} chars lost`
+        this.logger.warn(
+          `No terminal available for buffer flush: ${bufferedData.length} chars lost`
         );
       }
     }
   }
 
   /**
-   * Debounced resize operation for performance optimization
+   * Buffered write with scroll preservation (main API method)
    */
-  public debouncedResize(cols: number, rows: number, terminal: Terminal, fitAddon: FitAddon): void {
-    if (this.resizeDebounceTimer !== null) {
-      window.clearTimeout(this.resizeDebounceTimer);
-    }
+  public bufferedWrite(data: string, targetTerminal: Terminal, _terminalId: string): void {
+    // Set the current terminal for buffering
+    this.currentBufferTerminal = targetTerminal;
 
-    this.resizeDebounceTimer = window.setTimeout(() => {
-      try {
-        terminal.resize(cols, rows);
-        fitAddon.fit();
-        log(`🔧 [PERFORMANCE] Debounced resize applied: ${cols}x${rows}`);
-      } catch (error) {
-        log(`❌ [PERFORMANCE] Error during debounced resize:`, error);
-      }
-      this.resizeDebounceTimer = null;
-    }, this.RESIZE_DEBOUNCE_DELAY);
-
-    log(`🔧 [PERFORMANCE] Debounced resize scheduled: ${cols}x${rows}`);
+    // Use existing optimization logic
+    this.scheduleOutputBuffer(data, targetTerminal);
   }
 
   /**
-   * Set Claude Code mode for performance optimization
+   * Initialize the performance manager (BaseManager interface)
    */
-  public setClaudeCodeMode(isActive: boolean): void {
-    if (this.isClaudeCodeMode !== isActive) {
-      this.isClaudeCodeMode = isActive;
-      log(`⚡ [PERFORMANCE] Claude Code mode: ${isActive ? 'ACTIVE' : 'INACTIVE'}`);
+  public override async initialize(config: ManagerInitializationConfig): Promise<void> {
+    if (config.coordinator) {
+      this.coordinator = config.coordinator;
+    }
+    this.logger.lifecycle('initialization', 'completed');
+  }
+
+  /**
+   * Initialize the performance manager (IPerformanceManager interface)
+   */
+  public initializePerformance(coordinator: IManagerCoordinator): void {
+    this.coordinator = coordinator;
+    this.logger.lifecycle('initialization', 'completed');
+  }
+
+  /**
+   * Debounced resize operation for performance optimization using ResizeManager
+   */
+  public debouncedResize(cols: number, rows: number, terminal: Terminal, fitAddon: FitAddon): void {
+    const resizeKey = `terminal-resize-${cols}x${rows}`;
+    
+    this.logger.debug(`Scheduling debounced resize: ${cols}x${rows}`);
+
+    ResizeManager.debounceResize(
+      resizeKey,
+      async () => {
+        try {
+          terminal.resize(cols, rows);
+          fitAddon.fit();
+          this.logger.info(`Debounced resize applied: ${cols}x${rows}`);
+        } catch (error) {
+          this.logger.error(`Error during debounced resize: ${error}`);
+          throw error; // Let ResizeManager handle the error
+        }
+      },
+      {
+        delay: SPLIT_CONSTANTS.RESIZE_DEBOUNCE_DELAY,
+        onStart: () => {
+          this.logger.debug(`Starting resize operation for ${cols}x${rows}`);
+        },
+        onComplete: () => {
+          this.logger.debug(`Completed resize operation for ${cols}x${rows}`);
+        }
+      }
+    );
+  }
+
+  /**
+   * Set CLI Agent mode for performance optimization
+   */
+  public setCliAgentMode(isActive: boolean): void {
+    if (this.isCliAgentMode !== isActive) {
+      this.isCliAgentMode = isActive;
+      this.logger.info(`CLI Agent mode: ${isActive ? 'ACTIVE' : 'INACTIVE'}`);
 
       // Flush immediately when mode changes
       if (!isActive) {
@@ -148,8 +217,8 @@ export class PerformanceManager implements IPerformanceManager {
     }
   }
 
-  public getClaudeCodeMode(): boolean {
-    return this.isClaudeCodeMode;
+  public getCliAgentMode(): boolean {
+    return this.isCliAgentMode;
   }
 
   /**
@@ -158,13 +227,13 @@ export class PerformanceManager implements IPerformanceManager {
   public getBufferStats(): {
     bufferSize: number;
     isFlushScheduled: boolean;
-    isClaudeCodeMode: boolean;
+    isCliAgentMode: boolean;
     currentTerminal: boolean;
   } {
     return {
       bufferSize: this.outputBuffer.length,
       isFlushScheduled: this.bufferFlushTimer !== null,
-      isClaudeCodeMode: this.isClaudeCodeMode,
+      isCliAgentMode: this.isCliAgentMode,
       currentTerminal: this.currentBufferTerminal !== null,
     };
   }
@@ -173,7 +242,7 @@ export class PerformanceManager implements IPerformanceManager {
    * Force immediate flush of all buffers (emergency flush)
    */
   public forceFlush(): void {
-    log('🚨 [PERFORMANCE] Force flushing all buffers');
+    this.logger.warn('Force flushing all buffers');
     this.flushOutputBuffer();
   }
 
@@ -181,7 +250,7 @@ export class PerformanceManager implements IPerformanceManager {
    * Clear all buffers without writing (emergency clear)
    */
   public clearBuffers(): void {
-    log('🗑️ [PERFORMANCE] Clearing all buffers without writing');
+    this.logger.warn('Clearing all buffers without writing');
     this.outputBuffer = [];
     if (this.bufferFlushTimer !== null) {
       window.clearTimeout(this.bufferFlushTimer);
@@ -202,23 +271,28 @@ export class PerformanceManager implements IPerformanceManager {
   /**
    * Dispose of all timers and cleanup resources
    */
-  public dispose(): void {
-    log('🧹 [PERFORMANCE] Disposing performance manager');
+  public override dispose(): void {
+    if (this.logger && typeof this.logger.info === 'function') {
+      this.logger.info('Disposing performance manager');
+    }
 
     // Flush any remaining output before disposal
     this.flushOutputBuffer();
 
-    // Clear resize timer
-    if (this.resizeDebounceTimer !== null) {
-      window.clearTimeout(this.resizeDebounceTimer);
-      this.resizeDebounceTimer = null;
-    }
-
+    // Clear any pending resize operations using ResizeManager
+    ResizeManager.clearResize('terminal-resize');
+    
     // Clear references
     this.currentBufferTerminal = null;
     this.outputBuffer = [];
-    this.isClaudeCodeMode = false;
+    this.isCliAgentMode = false;
 
-    log('✅ [PERFORMANCE] Performance manager disposed');
+    // Call parent dispose
+    super.dispose();
+
+    // Safe lifecycle logging
+    if (this.logger && typeof this.logger.lifecycle === 'function') {
+      this.logger.lifecycle('PerformanceManager', 'completed');
+    }
   }
 }

@@ -114,6 +114,11 @@ export class ConfigManager {
       fontSize: this.getFontSize(),
       fontFamily: this.getFontFamily(),
       cursorBlink: this.getConfig(section, CONFIG_KEYS.CURSOR_BLINK, true),
+      cursor: {
+        style: 'block',
+        blink: this.getConfig(section, CONFIG_KEYS.CURSOR_BLINK, true),
+      },
+      enableCliAgentIntegration: this.getConfig(section, 'enableCliAgentIntegration', true),
     };
   }
 
@@ -307,6 +312,134 @@ export class ConfigManager {
     } catch (error) {
       console.error('[ConfigManager] Error getting fontSize:', error);
       return 14;
+    }
+  }
+
+  /**
+   * VS Code標準フォント太さ設定を取得
+   * 優先順位：secondaryTerminal.fontWeight > terminal.integrated.fontWeight > default('normal')
+   */
+  public getFontWeight(): string {
+    this._ensureInitialized();
+
+    try {
+      // 1. 拡張機能専用のフォント太さ設定を確認
+      const extensionConfig = vscode.workspace.getConfiguration('secondaryTerminal');
+      const extensionFontWeight = extensionConfig.get<string>('fontWeight');
+      
+      if (extensionFontWeight && extensionFontWeight.trim()) {
+        return extensionFontWeight.trim();
+      }
+
+      // 2. ターミナル専用のフォント太さ設定を確認
+      const terminalConfig = vscode.workspace.getConfiguration('terminal.integrated');
+      const terminalFontWeight = terminalConfig.get<string>('fontWeight');
+      
+      if (terminalFontWeight && terminalFontWeight.trim()) {
+        return terminalFontWeight.trim();
+      }
+
+      // 3. デフォルトフォント太さ
+      return 'normal';
+    } catch (error) {
+      console.error('[ConfigManager] Error getting fontWeight:', error);
+      return 'normal';
+    }
+  }
+
+  /**
+   * VS Code標準フォント太字設定を取得
+   * 優先順位：secondaryTerminal.fontWeightBold > terminal.integrated.fontWeightBold > default('bold')
+   */
+  public getFontWeightBold(): string {
+    this._ensureInitialized();
+
+    try {
+      // 1. 拡張機能専用のフォント太字設定を確認
+      const extensionConfig = vscode.workspace.getConfiguration('secondaryTerminal');
+      const extensionFontWeightBold = extensionConfig.get<string>('fontWeightBold');
+      
+      if (extensionFontWeightBold && extensionFontWeightBold.trim()) {
+        return extensionFontWeightBold.trim();
+      }
+
+      // 2. ターミナル専用のフォント太字設定を確認
+      const terminalConfig = vscode.workspace.getConfiguration('terminal.integrated');
+      const terminalFontWeightBold = terminalConfig.get<string>('fontWeightBold');
+      
+      if (terminalFontWeightBold && terminalFontWeightBold.trim()) {
+        return terminalFontWeightBold.trim();
+      }
+
+      // 3. デフォルトフォント太字
+      return 'bold';
+    } catch (error) {
+      console.error('[ConfigManager] Error getting fontWeightBold:', error);
+      return 'bold';
+    }
+  }
+
+  /**
+   * VS Code標準行間隔設定を取得
+   * 優先順位：secondaryTerminal.lineHeight > terminal.integrated.lineHeight > default(1.0)
+   */
+  public getLineHeight(): number {
+    this._ensureInitialized();
+
+    try {
+      // 1. 拡張機能専用の行間隔設定を確認
+      const extensionConfig = vscode.workspace.getConfiguration('secondaryTerminal');
+      const extensionLineHeight = extensionConfig.get<number>('lineHeight');
+      
+      if (extensionLineHeight && extensionLineHeight > 0) {
+        return extensionLineHeight;
+      }
+
+      // 2. ターミナル専用の行間隔設定を確認
+      const terminalConfig = vscode.workspace.getConfiguration('terminal.integrated');
+      const terminalLineHeight = terminalConfig.get<number>('lineHeight');
+      
+      if (terminalLineHeight && terminalLineHeight > 0) {
+        return terminalLineHeight;
+      }
+
+      // 3. デフォルト行間隔
+      return 1.0;
+    } catch (error) {
+      console.error('[ConfigManager] Error getting lineHeight:', error);
+      return 1.0;
+    }
+  }
+
+  /**
+   * VS Code標準文字間隔設定を取得
+   * 優先順位：secondaryTerminal.letterSpacing > terminal.integrated.letterSpacing > default(0)
+   */
+  public getLetterSpacing(): number {
+    this._ensureInitialized();
+
+    try {
+      // 1. 拡張機能専用の文字間隔設定を確認
+      const extensionConfig = vscode.workspace.getConfiguration('secondaryTerminal');
+      const extensionLetterSpacing = extensionConfig.get<number>('letterSpacing');
+      
+      if (typeof extensionLetterSpacing === 'number') {
+        return extensionLetterSpacing;
+      }
+
+      // 2. ターミナル専用の文字間隔設定を確認
+      const terminalConfig = vscode.workspace.getConfiguration('terminal.integrated');
+      const terminalLetterSpacing = terminalConfig.get<number>('letterSpacing');
+      
+      if (typeof terminalLetterSpacing === 'number') {
+        return terminalLetterSpacing;
+      }
+
+      // 3. デフォルト文字間隔
+      return 0;
+    } catch (error) {
+      console.error('[ConfigManager] Error getting letterSpacing:', error);
+      return 0;
     }
   }
 

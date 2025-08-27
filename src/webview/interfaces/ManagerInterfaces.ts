@@ -2,18 +2,27 @@
  * Shared interfaces for WebView manager communication and coordination
  */
 
-import { Terminal } from 'xterm';
-import { FitAddon } from 'xterm-addon-fit';
+import { Terminal } from '@xterm/xterm';
+import { FitAddon } from '@xterm/addon-fit';
+import { SearchAddon } from '@xterm/addon-search';
+import { WebglAddon } from '@xterm/addon-webgl';
+import { Unicode11Addon } from '@xterm/addon-unicode11';
 import { PartialTerminalSettings, WebViewFontSettings } from '../../types/shared';
 import { AltClickState, TerminalInteractionEvent } from '../../types/common';
 
-// Core terminal data structure
+// Core terminal data structure with VS Code Standard Addons
 export interface TerminalInstance {
   readonly id: string;
   readonly name: string;
+  readonly number: number; // ターミナル番号（1-5）- 番号管理に必要
   readonly terminal: Terminal;
   readonly fitAddon: FitAddon;
   readonly container: HTMLElement;
+  isActive?: boolean;
+  // VS Code Standard Addons
+  readonly searchAddon?: SearchAddon;
+  readonly webglAddon?: WebglAddon;
+  readonly unicode11Addon?: Unicode11Addon;
 }
 
 // Manager coordination interface
@@ -23,9 +32,10 @@ export interface IManagerCoordinator {
   getTerminalInstance(terminalId: string): TerminalInstance | undefined;
   getAllTerminalInstances(): Map<string, TerminalInstance>;
   getAllTerminalContainers(): Map<string, HTMLElement>;
+  getTerminalElement(terminalId: string): HTMLElement | undefined;
   postMessageToExtension(message: unknown): void;
   log(message: string, ...args: unknown[]): void;
-  createTerminal(id: string, name: string, config: PartialTerminalSettings): void;
+  createTerminal(id: string, name: string, config?: unknown, terminalNumber?: number): Promise<unknown>;
   openSettings(): void;
   applyFontSettings(fontSettings: WebViewFontSettings): void;
   closeTerminal(id?: string): void;
@@ -40,11 +50,37 @@ export interface IManagerCoordinator {
   // 新しいアーキテクチャ: 状態更新処理
   updateState?(state: unknown): void;
   handleTerminalRemovedFromExtension?(terminalId: string): void;
+  // 追加メソッド（リファクタリング用）
+  writeToTerminal?(data: string, terminalId?: string): boolean;
+  switchToTerminal?(terminalId: string): Promise<boolean>;
+  applySettings?(settings: unknown): void;
+  // Claude状態管理（レガシー）
+  updateClaudeStatus(
+    activeTerminalName: string | null,
+    status: 'connected' | 'disconnected' | 'none',
+    agentType: string | null
+  ): void;
+  // 新しい一元管理CLI Agent状態管理
+  updateCliAgentStatus(
+    terminalId: string,
+    status: 'connected' | 'disconnected' | 'none',
+    agentType: string | null
+  ): void;
+  ensureTerminalFocus(terminalId: string): void;
+
+  // セッション復元関連
+  createTerminalFromSession?(
+    id: string,
+    name: string,
+    config: PartialTerminalSettings,
+    restoreMessage: string,
+    scrollbackData: string[]
+  ): void;
 }
 
 // Terminal management interface
 export interface ITerminalManager {
-  createTerminal(id: string, name: string, config: PartialTerminalSettings): void;
+  createTerminal(id: string, name: string, config: PartialTerminalSettings, terminalNumber?: number): Promise<void>;
   switchToTerminal(id: string): void;
   closeTerminal(id?: string): void;
   handleTerminalRemovedFromExtension(id: string): void;
@@ -55,20 +91,36 @@ export interface ITerminalManager {
   getAllTerminals(): Map<string, TerminalInstance>;
   getTerminalContainer(terminalId: string): HTMLElement | undefined;
   getAllTerminalContainers(): Map<string, HTMLElement>;
+
+  // セッション復元関連
+  createTerminalFromSession?(
+    id: string,
+    name: string,
+    config: PartialTerminalSettings,
+    restoreMessage: string,
+    scrollbackData: string[]
+  ): void;
+  getTerminalScrollback?(terminalId: string, maxLines: number): string[];
+
   dispose(): void;
 }
 
 // Performance management interface
 export interface IPerformanceManager {
   scheduleOutputBuffer(data: string, targetTerminal: Terminal): void;
+  bufferedWrite(data: string, targetTerminal: Terminal, terminalId: string): void;
   flushOutputBuffer(): void;
   debouncedResize(cols: number, rows: number, terminal: Terminal, fitAddon: FitAddon): void;
+  setCliAgentMode(isActive: boolean): void;
+  getCliAgentMode(): boolean;
   getBufferStats(): {
     bufferSize: number;
     isFlushScheduled: boolean;
     currentTerminal: boolean;
   };
   forceFlush(): void;
+  initialize(config: unknown): Promise<void>;
+  initializePerformance(coordinator: IManagerCoordinator): void;
   dispose(): void;
 }
 
@@ -91,6 +143,13 @@ export interface IInputManager {
     manager: IManagerCoordinator
   ): boolean;
   setNotificationManager(notificationManager: INotificationManager): void;
+  // VS Code keybinding system
+  updateKeybindingSettings(settings: {
+    sendKeybindingsToShell?: boolean;
+    commandsToSkipShell?: string[];
+    allowChords?: boolean;
+    allowMnemonics?: boolean;
+  }): void;
   dispose(): void;
 }
 
@@ -104,7 +163,13 @@ export interface IUIManager {
   applyFontSettings(terminal: Terminal, fontSettings: WebViewFontSettings): void;
   applyAllVisualSettings(terminal: Terminal, settings: PartialTerminalSettings): void;
   addFocusIndicator(container: HTMLElement): void;
-  createTerminalHeader(terminalId: string, terminalName: string): HTMLElement;
+  createTerminalHeader(terminalId: string, terminalName: string, onAiAgentToggleClick?: (terminalId: string) => void): HTMLElement;
+  updateTerminalHeader(terminalId: string, newName: string): void;
+  updateCliAgentStatusDisplay(
+    activeTerminalName: string | null,
+    status: 'connected' | 'disconnected' | 'none',
+    agentType: string | null
+  ): void;
   applyVSCodeStyling(container: HTMLElement): void;
   dispose(): void;
 }
@@ -129,7 +194,9 @@ export interface IConfigManager {
 
 // Message handling interface
 export interface IMessageManager {
-  handleMessage(message: unknown, coordinator: IManagerCoordinator): void;
+  handleMessage(message: unknown, coordinator: IManagerCoordinator): Promise<void>;
+  postMessage(message: unknown): void;
+  receiveMessage(message: unknown, coordinator: IManagerCoordinator): Promise<void>;
   sendReadyMessage(coordinator: IManagerCoordinator): void;
   emitTerminalInteractionEvent(
     type: TerminalInteractionEvent['type'],
@@ -137,7 +204,12 @@ export interface IMessageManager {
     data: unknown,
     coordinator: IManagerCoordinator
   ): void;
-  getQueueStats(): { queueSize: number; isProcessing: boolean };
+  getQueueStats(): { 
+    queueSize: number; 
+    isProcessing: boolean;
+    highPriorityQueueSize?: number;
+    isLocked?: boolean;
+  };
   sendInput(input: string, terminalId?: string, coordinator?: IManagerCoordinator): void;
   sendResize(
     cols: number,
@@ -160,8 +232,14 @@ export interface INotificationManager {
   showTerminalKillError(message: string): void;
   showTerminalCloseError(minCount: number): void;
   showAltClickFeedback(x: number, y: number): void;
+  showWarning(message: string): void;
   clearNotifications(): void;
-  getStats(): { activeCount: number; totalCreated: number };
+  clearWarnings(): void;
+  getStats(): { 
+    activeCount: number; 
+    totalCreated: number;
+    totalOperations?: number;
+  };
   setupNotificationStyles(): void;
   dispose(): void;
 }
@@ -194,7 +272,7 @@ export interface IManagerEventEmitter {
 
 // Manager lifecycle interface
 export interface IManagerLifecycle {
-  initialize(coordinator: IManagerCoordinator): void;
+  initialize(config?: unknown): Promise<void> | void;
   dispose(): void;
 }
 

@@ -156,34 +156,125 @@ describe('Logger', () => {
       logger.setLevel(LogLevel.DEBUG);
     });
 
-    it('should log terminal message', () => {
+    it('should log terminal message with formatted timestamp', () => {
       logger.terminal('terminal test');
 
-      expect(consoleLogStub).to.have.been.calledWith('[DEBUG]', '🔌 [TERMINAL]', 'terminal test');
+      expect(consoleLogStub).to.have.been.called;
+      const call = consoleLogStub.getCall(0);
+      expect(call.args[0]).to.match(/\[\d{2}:\d{2}:\d{2}\.\d{3}\] 🔌 \[DEBUG:TERMINAL\]/);
+      expect(call.args[1]).to.equal('terminal test');
     });
 
-    it('should log webview message', () => {
+    it('should log webview message with formatted timestamp', () => {
       logger.webview('webview test');
 
-      expect(consoleLogStub).to.have.been.calledWith('[DEBUG]', '🌐 [WEBVIEW]', 'webview test');
+      expect(consoleLogStub).to.have.been.called;
+      const call = consoleLogStub.getCall(0);
+      expect(call.args[0]).to.match(/\[\d{2}:\d{2}:\d{2}\.\d{3}\] 🌐 \[DEBUG:WEBVIEW\]/);
+      expect(call.args[1]).to.equal('webview test');
     });
 
-    it('should log provider message', () => {
+    it('should log provider message with formatted timestamp', () => {
       logger.provider('provider test');
 
-      expect(consoleLogStub).to.have.been.calledWith('[DEBUG]', '📡 [PROVIDER]', 'provider test');
+      expect(consoleLogStub).to.have.been.called;
+      const call = consoleLogStub.getCall(0);
+      expect(call.args[0]).to.match(/\[\d{2}:\d{2}:\d{2}\.\d{3}\] 📡 \[DEBUG:PROVIDER\]/);
+      expect(call.args[1]).to.equal('provider test');
     });
 
-    it('should log extension message', () => {
+    it('should log extension message with formatted timestamp', () => {
       logger.extension('extension test');
 
-      expect(consoleLogStub).to.have.been.calledWith('[DEBUG]', '🔧 [EXTENSION]', 'extension test');
+      expect(consoleLogStub).to.have.been.called;
+      const call = consoleLogStub.getCall(0);
+      expect(call.args[0]).to.match(/\[\d{2}:\d{2}:\d{2}\.\d{3}\] 🔧 \[DEBUG:EXTENSION\]/);
+      expect(call.args[1]).to.equal('extension test');
     });
 
-    it('should log performance message', () => {
+    it('should log performance message with formatted timestamp', () => {
       logger.performance('performance test');
 
-      expect(consoleLogStub).to.have.been.calledWith('[DEBUG]', '⚡ [PERF]', 'performance test');
+      expect(consoleLogStub).to.have.been.called;
+      const call = consoleLogStub.getCall(0);
+      expect(call.args[0]).to.match(/\[\d{2}:\d{2}:\d{2}\.\d{3}\] ⚡ \[DEBUG:PERF\]/);
+      expect(call.args[1]).to.equal('performance test');
+    });
+
+    // Test new categorized methods
+    it('should log message category', () => {
+      logger.message('message test');
+
+      expect(consoleLogStub).to.have.been.called;
+      const call = consoleLogStub.getCall(0);
+      expect(call.args[0]).to.match(/\[\d{2}:\d{2}:\d{2}\.\d{3}\] 📨 \[DEBUG:MESSAGE\]/);
+      expect(call.args[1]).to.equal('message test');
+    });
+
+    it('should log ui category', () => {
+      logger.ui('ui test');
+
+      expect(consoleLogStub).to.have.been.called;
+      const call = consoleLogStub.getCall(0);
+      expect(call.args[0]).to.match(/\[\d{2}:\d{2}:\d{2}\.\d{3}\] 🎨 \[DEBUG:UI\]/);
+      expect(call.args[1]).to.equal('ui test');
+    });
+
+    it('should log session category with INFO level', () => {
+      logger.setLevel(LogLevel.INFO);
+      logger.session('session test');
+
+      expect(consoleLogStub).to.have.been.called;
+      const call = consoleLogStub.getCall(0);
+      expect(call.args[0]).to.match(/\[\d{2}:\d{2}:\d{2}\.\d{3}\] 💾 \[INFO:SESSION\]/);
+      expect(call.args[1]).to.equal('session test');
+    });
+
+    it('should log agent category with INFO level', () => {
+      logger.setLevel(LogLevel.INFO);
+      logger.agent('agent test');
+
+      expect(consoleLogStub).to.have.been.called;
+      const call = consoleLogStub.getCall(0);
+      expect(call.args[0]).to.match(/\[\d{2}:\d{2}:\d{2}\.\d{3}\] 🤖 \[INFO:AGENT\]/);
+      expect(call.args[1]).to.equal('agent test');
+    });
+
+    it('should log success category with INFO level', () => {
+      logger.setLevel(LogLevel.INFO);
+      logger.success('success test');
+
+      expect(consoleLogStub).to.have.been.called;
+      const call = consoleLogStub.getCall(0);
+      expect(call.args[0]).to.match(/\[\d{2}:\d{2}:\d{2}\.\d{3}\] ✅ \[INFO:SUCCESS\]/);
+      expect(call.args[1]).to.equal('success test');
+    });
+
+    it('should not log debug category when level is INFO', () => {
+      logger.setLevel(LogLevel.INFO);
+      logger.debug_category('debug test');
+
+      expect(consoleLogStub).not.to.have.been.called;
+    });
+
+    it('should log error category with ERROR level', () => {
+      logger.setLevel(LogLevel.ERROR);
+      logger.error_category('error test');
+
+      expect(consoleErrorStub).to.have.been.called;
+      const call = consoleErrorStub.getCall(0);
+      expect(call.args[0]).to.match(/\[\d{2}:\d{2}:\d{2}\.\d{3}\] 🚨 \[ERROR:ERROR\]/);
+      expect(call.args[1]).to.equal('error test');
+    });
+
+    it('should log warning category with WARN level', () => {
+      logger.setLevel(LogLevel.WARN);
+      logger.warning_category('warning test');
+
+      expect(consoleWarnStub).to.have.been.called;
+      const call = consoleWarnStub.getCall(0);
+      expect(call.args[0]).to.match(/\[\d{2}:\d{2}:\d{2}\.\d{3}\] ⚠️ \[WARN:WARNING\]/);
+      expect(call.args[1]).to.equal('warning test');
     });
   });
 

@@ -2,18 +2,21 @@
  * Webview内でのエラー・警告・情報メッセージ表示の統一ユーティリティ
  */
 
-export type NotificationType = 'error' | 'warning' | 'info' | 'success';
+import { UIManager, NotificationConfig } from '../managers/UIManager';
 
-export interface NotificationConfig {
-  type: NotificationType;
-  title: string;
-  message: string;
-  duration?: number; // milliseconds, default 4000
-  icon?: string;
-}
+export type NotificationType = NotificationConfig['type'];
+export { NotificationConfig };
 
 const DEFAULT_DURATION = 4000;
 const activeNotifications = new Set<HTMLElement>();
+let uiManager: UIManager | null = null;
+
+/**
+ * UIManagerインスタンスを設定
+ */
+export function setUIManager(manager: UIManager): void {
+  uiManager = manager;
+}
 
 /**
  * ターミナル削除エラーの表示
@@ -52,12 +55,12 @@ export function showSplitLimitWarning(reason: string): void {
 }
 
 /**
- * Claude Code検出通知の表示
+ * CLI Agent検出通知の表示
  */
-export function showClaudeCodeDetected(): void {
+export function showCliAgentDetected(): void {
   showNotification({
     type: 'info',
-    title: 'Claude Code Detected',
+    title: 'CLI Agent Detected',
     message: 'Alt+Click temporarily disabled for optimal performance during AI interaction',
     icon: '🤖',
     duration: 6000,
@@ -65,12 +68,12 @@ export function showClaudeCodeDetected(): void {
 }
 
 /**
- * Claude Code終了通知の表示
+ * CLI Agent終了通知の表示
  */
-export function showClaudeCodeEnded(): void {
+export function showCliAgentEnded(): void {
   showNotification({
     type: 'success',
-    title: 'Claude Code Session Ended',
+    title: 'CLI Agent Session Ended',
     message: 'Alt+Click cursor positioning re-enabled',
     icon: '✅',
     duration: 3000,
@@ -107,13 +110,160 @@ export function showAltClickSettingError(): void {
 /**
  * Terminal相互作用問題の表示
  */
-export function showTerminalInteractionIssue(details: string): void {
+export function showTerminalInteractionWarning(): void {
   showNotification({
     type: 'warning',
     title: 'Terminal Interaction Issue',
-    message: details,
+    message: 'High frequency output detected - some features may be temporarily limited',
     icon: '⚡',
     duration: 5000,
+  });
+}
+
+/**
+ * セッション復元開始の通知
+ */
+export function showSessionRestoreStarted(terminalCount: number): void {
+  showNotification({
+    type: 'info',
+    title: 'Terminal Session Restore',
+    message: `Restoring ${terminalCount} terminal${terminalCount > 1 ? 's' : ''} from previous session...`,
+    icon: '🔄',
+    duration: 3000,
+  });
+}
+
+/**
+ * セッション復元進行状況の通知
+ */
+export function showSessionRestoreProgress(restored: number, total: number): void {
+  showNotification({
+    type: 'info',
+    title: 'Restoring Terminals',
+    message: `Restored ${restored}/${total} terminals`,
+    icon: '⏳',
+    duration: 2000,
+  });
+}
+
+/**
+ * セッション復元完了の通知
+ */
+export function showSessionRestoreCompleted(restoredCount: number, skippedCount: number = 0): void {
+  let message = `Successfully restored ${restoredCount} terminal${restoredCount > 1 ? 's' : ''}`;
+  if (skippedCount > 0) {
+    message += `, ${skippedCount} skipped`;
+  }
+
+  showNotification({
+    type: 'success',
+    title: 'Session Restored',
+    message,
+    icon: '✅',
+    duration: 4000,
+  });
+}
+
+/**
+ * セッション復元エラーの通知
+ */
+export function showSessionRestoreError(
+  error: string,
+  partialSuccess?: boolean,
+  errorType?: string
+): void {
+  let title = partialSuccess ? 'Partial Session Restore' : 'Session Restore Failed';
+  let icon = '❌';
+  let message = partialSuccess
+    ? `Some terminals could not be restored: ${error}`
+    : `Failed to restore session: ${error}`;
+
+  // エラータイプに応じてメッセージをカスタマイズ
+  if (errorType === 'file') {
+    title = 'Session File Missing';
+    icon = '📁';
+    message = 'Session file not found - starting with fresh terminals';
+  } else if (errorType === 'corruption') {
+    title = 'Session Data Corrupted';
+    icon = '🔧';
+    message = 'Session data was corrupted and has been cleared - starting fresh';
+  } else if (errorType === 'permission') {
+    title = 'Session Access Denied';
+    icon = '🔒';
+    message = 'Permission denied accessing session data - check file permissions';
+  }
+
+  showNotification({
+    type: errorType === 'file' || errorType === 'corruption' ? 'warning' : 'error',
+    title,
+    message,
+    icon,
+    duration: 6000,
+  });
+}
+
+/**
+ * セッション保存成功の通知
+ */
+export function showSessionSaved(terminalCount: number): void {
+  showNotification({
+    type: 'success',
+    title: 'Session Saved',
+    message: `Terminal session saved (${terminalCount} terminal${terminalCount > 1 ? 's' : ''})`,
+    icon: '💾',
+    duration: 3000,
+  });
+}
+
+/**
+ * セッション保存エラーの通知
+ */
+export function showSessionSaveError(error: string): void {
+  showNotification({
+    type: 'error',
+    title: 'Session Save Failed',
+    message: `Failed to save session: ${error}`,
+    icon: '💾❌',
+    duration: 5000,
+  });
+}
+
+/**
+ * 個別ターミナル復元エラーの通知
+ */
+export function showTerminalRestoreError(terminalName: string, error: string): void {
+  showNotification({
+    type: 'warning',
+    title: 'Terminal Restore Warning',
+    message: `Failed to restore "${terminalName}": ${error}`,
+    icon: '⚠️',
+    duration: 5000,
+  });
+}
+
+/**
+ * セッションクリア通知
+ */
+export function showSessionCleared(): void {
+  showNotification({
+    type: 'info',
+    title: 'Session Cleared',
+    message: 'Previous terminal session data has been cleared',
+    icon: '🗑️',
+    duration: 3000,
+  });
+}
+
+/**
+ * セッション復元スキップ通知
+ */
+export function showSessionRestoreSkipped(reason: string): void {
+  showNotification({
+    type: 'warning',
+    title: 'Session Restore Skipped',
+    message: reason,
+    icon: '⏭️',
+    duration: 4000,
   });
 }
 
@@ -121,7 +271,22 @@ export function showTerminalInteractionIssue(details: string): void {
  * 汎用的な通知表示
  */
 export function showNotification(config: NotificationConfig): void {
-  const notification = createNotificationElement(config);
+  if (!uiManager) {
+    console.error('UIManager not initialized for NotificationUtils');
+    return;
+  }
+
+  uiManager.ensureAnimationsLoaded();
+  const notification = uiManager.createNotificationElement(config);
+
+  // Add close button event listener
+  const closeBtn = notification.querySelector('.notification-close');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', () => {
+      removeNotification(notification);
+    });
+  }
+
   document.body.appendChild(notification);
   activeNotifications.add(notification);
 
@@ -129,72 +294,6 @@ export function showNotification(config: NotificationConfig): void {
   setTimeout(() => {
     removeNotification(notification);
   }, duration);
-}
-
-/**
- * 通知要素の作成
- */
-function createNotificationElement(config: NotificationConfig): HTMLElement {
-  const notification = document.createElement('div');
-  notification.className = 'terminal-notification';
-
-  const colors = getNotificationColors(config.type);
-
-  notification.style.cssText = `
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    background: ${colors.background};
-    border: 2px solid ${colors.border};
-    border-radius: 6px;
-    padding: 12px 16px;
-    color: ${colors.foreground};
-    font-size: 11px;
-    z-index: 10000;
-    max-width: 300px;
-    min-width: 200px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-    animation: slideInFromRight 0.3s ease-out;
-  `;
-
-  const icon = config.icon || getDefaultIcon(config.type);
-
-  notification.innerHTML = `
-    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-      <span style="font-size: 14px;">${icon}</span>
-      <strong>${config.title}</strong>
-    </div>
-    <div style="font-size: 10px; line-height: 1.4;">${config.message}</div>
-  `;
-
-  // Add close button
-  const closeBtn = document.createElement('button');
-  closeBtn.innerHTML = '✕';
-  closeBtn.style.cssText = `
-    position: absolute;
-    top: 4px;
-    right: 6px;
-    background: none;
-    border: none;
-    color: ${colors.foreground};
-    cursor: pointer;
-    font-size: 12px;
-    padding: 2px;
-    opacity: 0.7;
-  `;
-  closeBtn.addEventListener('click', () => {
-    removeNotification(notification);
-  });
-  closeBtn.addEventListener('mouseenter', () => {
-    closeBtn.style.opacity = '1';
-  });
-  closeBtn.addEventListener('mouseleave', () => {
-    closeBtn.style.opacity = '0.7';
-  });
-
-  notification.appendChild(closeBtn);
-
-  return notification;
 }
 
 /**
@@ -213,110 +312,10 @@ function removeNotification(notification: HTMLElement): void {
 }
 
 /**
- * 通知タイプに応じた色の取得
- */
-function getNotificationColors(type: NotificationType): {
-  background: string;
-  border: string;
-  foreground: string;
-} {
-  switch (type) {
-    case 'error':
-      return {
-        background: 'var(--vscode-notifications-background, #1e1e1e)',
-        border: 'var(--vscode-notificationError-border, #f44747)',
-        foreground: 'var(--vscode-notificationError-foreground, #ffffff)',
-      };
-    case 'warning':
-      return {
-        background: 'var(--vscode-notifications-background, #1e1e1e)',
-        border: 'var(--vscode-notificationWarning-border, #ffcc02)',
-        foreground: 'var(--vscode-notificationWarning-foreground, #ffffff)',
-      };
-    case 'success':
-      return {
-        background: 'var(--vscode-notifications-background, #1e1e1e)',
-        border: 'var(--vscode-notification-successIcon-foreground, #73c991)',
-        foreground: 'var(--vscode-notification-foreground, #ffffff)',
-      };
-    case 'info':
-    default:
-      return {
-        background: 'var(--vscode-notifications-background, #1e1e1e)',
-        border: 'var(--vscode-notification-infoIcon-foreground, #3794ff)',
-        foreground: 'var(--vscode-notification-foreground, #ffffff)',
-      };
-  }
-}
-
-/**
- * デフォルトアイコンの取得
- */
-function getDefaultIcon(type: NotificationType): string {
-  switch (type) {
-    case 'error':
-      return '❌';
-    case 'warning':
-      return '⚠️';
-    case 'success':
-      return '✅';
-    case 'info':
-    default:
-      return 'ℹ️';
-  }
-}
-
-/**
  * 全ての通知をクリア
  */
 export function clearAllNotifications(): void {
   activeNotifications.forEach((notification) => {
     removeNotification(notification);
   });
-}
-
-// Add CSS animations to the document
-if (typeof document !== 'undefined') {
-  const style = document.createElement('style');
-  style.textContent = `
-    @keyframes slideInFromRight {
-      from {
-        transform: translateX(100%);
-        opacity: 0;
-      }
-      to {
-        transform: translateX(0);
-        opacity: 1;
-      }
-    }
-    
-    @keyframes slideOutToRight {
-      from {
-        transform: translateX(0);
-        opacity: 1;
-      }
-      to {
-        transform: translateX(100%);
-        opacity: 0;
-      }
-    }
-    
-    @keyframes altClickFade {
-      0% { opacity: 1; transform: scale(1); }
-      100% { opacity: 0; transform: scale(3); }
-    }
-    
-    @keyframes fadeInOut {
-      0% { opacity: 0; }
-      20% { opacity: 1; }
-      80% { opacity: 1; }
-      100% { opacity: 0; }
-    }
-    
-    @keyframes notificationSlideIn {
-      from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
-      to { opacity: 1; transform: translateX(-50%) translateY(0); }
-    }
-  `;
-  document.head.appendChild(style);
 }

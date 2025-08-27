@@ -2,16 +2,50 @@
  * UI Manager - Handles visual feedback, theming, borders, and terminal appearance
  */
 
-import { Terminal } from 'xterm';
-import { webview as log } from '../../utils/logger';
+import { Terminal } from '@xterm/xterm';
 import { PartialTerminalSettings, WebViewFontSettings } from '../../types/shared';
 import { getWebviewTheme, WEBVIEW_THEME_CONSTANTS } from '../utils/WebviewThemeUtils';
 import { IUIManager } from '../interfaces/ManagerInterfaces';
+import { HeaderFactory, TerminalHeaderElements } from '../factories/HeaderFactory';
+import { DOMUtils } from '../utils/DOMUtils';
+import { BaseManager } from './BaseManager';
+import { uiLogger } from '../utils/ManagerLogger';
+import { EventHandlerRegistry } from '../utils/EventHandlerRegistry';
+import { ResizeManager } from '../utils/ResizeManager';
 
-export class UIManager implements IUIManager {
+export interface NotificationConfig {
+  type: 'error' | 'warning' | 'info' | 'success';
+  title: string;
+  message: string;
+  duration?: number;
+  icon?: string;
+}
+
+export class UIManager extends BaseManager implements IUIManager {
   // Theme cache for performance
   private currentTheme: string | null = null;
   private themeApplied = false;
+
+  // Prevent rapid successive updates that could cause duplication
+  private lastUpdateTimestamp = 0;
+  private readonly UPDATE_DEBOUNCE_MS = 100;
+
+  // Header elements cache for efficient CLI Agent status updates
+  private headerElementsCache = new Map<string, TerminalHeaderElements>();
+
+  // Event registry for proper cleanup
+  protected override eventRegistry: EventHandlerRegistry;
+
+  constructor() {
+    super('UIManager', {
+      enableLogging: true,
+      enableValidation: true,
+      enableErrorRecovery: true,
+    });
+    
+    // Initialize event registry
+    this.eventRegistry = new EventHandlerRegistry();
+  }
 
   /**
    * Update borders for all terminals based on active state
@@ -20,6 +54,10 @@ export class UIManager implements IUIManager {
     activeTerminalId: string,
     allContainers: Map<string, HTMLElement>
   ): void {
+    uiLogger.info(
+      `Updating terminal borders - Active: ${activeTerminalId}, Containers: ${allContainers.size}`
+    );
+
     // Reset terminal-body border to avoid interference
     const terminalBody = document.getElementById('terminal-body');
     if (terminalBody) {
@@ -27,6 +65,13 @@ export class UIManager implements IUIManager {
       terminalBody.style.setProperty('border-width', '0px', 'important');
       terminalBody.classList.remove('active');
     }
+
+    // Log all available containers
+    allContainers.forEach((container, terminalId) => {
+        uiLogger.debug(
+        `Container ${terminalId}: ${container.tagName}#${container.id}.${container.className}`
+      );
+    });
 
     // First, ensure all terminals are marked as inactive
     allContainers.forEach((container, _terminalId) => {
@@ -36,10 +81,13 @@ export class UIManager implements IUIManager {
     // Then, mark only the active terminal as active
     const activeContainer = allContainers.get(activeTerminalId);
     if (activeContainer) {
+      uiLogger.debug(`Setting active border for: ${activeTerminalId}`);
       this.updateSingleTerminalBorder(activeContainer, true);
+    } else {
+      uiLogger.warn(`Active container not found for: ${activeTerminalId}`);
     }
 
-    log(`🎨 [UI] Updated borders, active terminal: ${activeTerminalId}`);
+    uiLogger.info(`Updated borders, active terminal: ${activeTerminalId}`);
   }
 
   /**
@@ -54,34 +102,63 @@ export class UIManager implements IUIManager {
         this.updateSingleTerminalBorder(element, terminalId === activeTerminalId);
       }
     });
-    log(`🎨 [UI] Updated split terminal borders, active: ${activeTerminalId}`);
+    uiLogger.info(`Updated split terminal borders, active: ${activeTerminalId}`);
   }
 
   /**
    * Update border for a single terminal container
    */
   private updateSingleTerminalBorder(container: HTMLElement, isActive: boolean): void {
+    // 🔍 DEBUG: Enhanced border debugging
+    console.log(`🔍 [DEBUG] Updating border for terminal:`, {
+      terminalId: container.dataset.terminalId,
+      containerId: container.id,
+      containerClass: container.className,
+      isActive,
+      currentBorderColor: container.style.borderColor,
+      currentBorderWidth: container.style.borderWidth,
+    });
+
     if (isActive) {
       container.classList.add('active');
       container.classList.remove('inactive');
+
+      // 🎯 FIX: Apply refined border styling - thinner border as requested
+      // Use a single source of truth for active terminal borders
       container.style.setProperty(
-        'border-color',
-        WEBVIEW_THEME_CONSTANTS.ACTIVE_BORDER_COLOR,
+        'border',
+        `1px solid ${WEBVIEW_THEME_CONSTANTS.ACTIVE_BORDER_COLOR}`,
         'important'
       );
-      container.style.setProperty('border-width', '2px', 'important');
-      container.style.setProperty('border-style', 'solid', 'important');
+      container.style.setProperty('border-radius', '4px', 'important');
+      // Enhanced visibility with subtle shadow
+      container.style.setProperty(
+        'box-shadow',
+        `0 0 0 1px ${WEBVIEW_THEME_CONSTANTS.ACTIVE_BORDER_COLOR}, 0 0 8px rgba(0, 122, 204, 0.2)`,
+        'important'
+      );
+      // Ensure proper z-index for visibility
+      container.style.setProperty('z-index', '2', 'important');
+
+      console.log(`🔍 [DEBUG] Applied ACTIVE border styles`, {
+        borderColor: WEBVIEW_THEME_CONSTANTS.ACTIVE_BORDER_COLOR,
+        computedStyle: window.getComputedStyle(container).border,
+      });
     } else {
       container.classList.remove('active');
       container.classList.add('inactive');
-      // Keep same border width to prevent layout shift, but make it transparent
-      container.style.setProperty('border-color', 'transparent', 'important');
-      container.style.setProperty('border-width', '2px', 'important');
-      container.style.setProperty('border-style', 'solid', 'important');
+
+      // 🔍 FIX: Keep consistent border structure but transparent for inactive - thinner border
+      container.style.setProperty('border', '1px solid transparent', 'important');
+      container.style.setProperty('border-radius', '4px', 'important');
+      container.style.setProperty('box-shadow', 'none', 'important');
+      container.style.setProperty('z-index', '1', 'important');
+
+      console.log(`🔍 [DEBUG] Applied INACTIVE border styles`);
     }
 
-    log(
-      `🎨 [UI] Updated border for terminal: ${container.dataset.terminalId}, active: ${isActive}, color: ${isActive ? WEBVIEW_THEME_CONSTANTS.ACTIVE_BORDER_COLOR : 'transparent'}`
+    uiLogger.debug(
+      `Updated border for terminal: ${container.dataset.terminalId}, active: ${isActive}, color: ${isActive ? WEBVIEW_THEME_CONSTANTS.ACTIVE_BORDER_COLOR : 'transparent'}`
     );
   }
 
@@ -108,7 +185,7 @@ export class UIManager implements IUIManager {
       }
     }
     placeholder.style.display = 'flex';
-    log('🎨 [UI] Terminal placeholder shown');
+    uiLogger.info('Terminal placeholder shown');
   }
 
   /**
@@ -118,7 +195,7 @@ export class UIManager implements IUIManager {
     const placeholder = document.getElementById('terminal-placeholder');
     if (placeholder) {
       placeholder.style.display = 'none';
-      log('🎨 [UI] Terminal placeholder hidden');
+      uiLogger.info('Terminal placeholder hidden');
     }
   }
 
@@ -133,7 +210,7 @@ export class UIManager implements IUIManager {
       terminal.options.theme = theme;
       this.currentTheme = theme.background || null;
       this.themeApplied = true;
-      log(`🎨 [UI] Applied theme to terminal: ${theme.background || 'default'}`);
+      uiLogger.info(`Applied theme to terminal: ${theme.background || 'default'}`);
     }
   }
 
@@ -145,7 +222,23 @@ export class UIManager implements IUIManager {
     terminal.options.fontSize = fontSettings.fontSize;
     terminal.options.fontFamily = fontSettings.fontFamily;
 
-    log(`🎨 [UI] Applied font settings: ${fontSettings.fontFamily}, ${fontSettings.fontSize}px`);
+    // Apply additional VS Code standard font settings if provided
+    if (fontSettings.fontWeight !== undefined) {
+      terminal.options.fontWeight = fontSettings.fontWeight as any;
+    }
+    if (fontSettings.fontWeightBold !== undefined) {
+      terminal.options.fontWeightBold = fontSettings.fontWeightBold as any;
+    }
+    if (fontSettings.lineHeight !== undefined) {
+      terminal.options.lineHeight = fontSettings.lineHeight;
+    }
+    if (fontSettings.letterSpacing !== undefined) {
+      terminal.options.letterSpacing = fontSettings.letterSpacing;
+    }
+
+    uiLogger.info(
+      `Applied font settings: ${fontSettings.fontFamily}, ${fontSettings.fontSize}px, weight: ${fontSettings.fontWeight || 'default'}, lineHeight: ${fontSettings.lineHeight || 'default'}`
+    );
   }
 
   /**
@@ -158,13 +251,13 @@ export class UIManager implements IUIManager {
     // Apply cursor settings
     if (settings.cursorBlink !== undefined) {
       terminal.options.cursorBlink = settings.cursorBlink;
-      log(`🎨 [UI] Applied cursor blink: ${settings.cursorBlink}`);
+      uiLogger.debug(`Applied cursor blink: ${settings.cursorBlink}`);
     }
 
     // Apply scrollback
     if (settings.scrollback !== undefined) {
       terminal.options.scrollback = settings.scrollback;
-      log(`🎨 [UI] Applied scrollback: ${settings.scrollback}`);
+      uiLogger.debug(`Applied scrollback: ${settings.scrollback}`);
     }
 
     // Bell sound is not supported in xterm.js options
@@ -187,7 +280,7 @@ export class UIManager implements IUIManager {
       terminalContainer.appendChild(indicator);
     }
 
-    log(`🎨 [UI] Loading indicator shown: ${message}`);
+    uiLogger.info(`Loading indicator shown: ${message}`);
     return indicator;
   }
 
@@ -201,7 +294,7 @@ export class UIManager implements IUIManager {
       const indicators = document.querySelectorAll('.loading-indicator');
       indicators.forEach((el) => el.remove());
     }
-    log('🎨 [UI] Loading indicator hidden');
+    uiLogger.info('Loading indicator hidden');
   }
 
   /**
@@ -221,7 +314,7 @@ export class UIManager implements IUIManager {
       container.classList.remove('focused');
     }, 300);
 
-    log('🎨 [UI] Focus indicator added');
+    uiLogger.info('Focus indicator added');
   }
 
   /**
@@ -236,42 +329,244 @@ export class UIManager implements IUIManager {
     container.style.borderRadius = '4px';
     container.style.padding = '8px';
 
-    log('🎨 [UI] VS Code styling applied');
+    uiLogger.info('VS Code styling applied');
   }
 
   /**
    * Create terminal header with title and controls
    */
-  public createTerminalHeader(terminalId: string, terminalName: string): HTMLElement {
-    const header = document.createElement('div');
-    header.className = 'terminal-header';
-    header.dataset.terminalId = terminalId;
+  public createTerminalHeader(terminalId: string, terminalName: string, onAiAgentToggleClick?: (terminalId: string) => void): HTMLElement {
+    // 🔍 DEBUG: Enhanced header creation logging
+    console.log(`🔍 [DEBUG] Creating terminal header:`, {
+      terminalId,
+      terminalName,
+      timestamp: Date.now(),
+    });
 
-    header.innerHTML = `
-      <div class="terminal-title">
-        <span class="terminal-icon">⚡</span>
-        <span class="terminal-name">${terminalName}</span>
-        <span class="terminal-id">(${terminalId})</span>
-      </div>
-      <div class="terminal-controls">
-        <button class="terminal-control split-btn" title="Split Terminal">⊞</button>
-        <button class="terminal-control close-btn" title="Close Terminal">✕</button>
-      </div>
-    `;
+    // HeaderFactoryを使用してシンプルな構造を作成
+    const headerElements = HeaderFactory.createTerminalHeader({
+      terminalId,
+      terminalName,
+      onAiAgentToggleClick,
+    });
 
-    log(`🎨 [UI] Terminal header created for ${terminalId}`);
-    return header;
+    // 🔍 FIX: Ensure header visibility with explicit styling
+    const container = headerElements.container;
+    container.style.setProperty('display', 'flex', 'important');
+    container.style.setProperty('visibility', 'visible', 'important');
+    container.style.setProperty('opacity', '1', 'important');
+    container.style.setProperty('height', 'auto', 'important');
+    container.style.setProperty('min-height', '28px', 'important');
+    container.style.setProperty('z-index', '10', 'important');
+
+    // 🔍 DEBUG: Log header creation success
+    console.log(`🔍 [DEBUG] Header created successfully:`, {
+      headerId: container.id,
+      headerClass: container.className,
+      headerDisplay: container.style.display,
+      headerVisibility: container.style.visibility,
+      headerDimensions: {
+        width: container.offsetWidth,
+        height: container.offsetHeight,
+      },
+    });
+
+    // ヘッダー要素をキャッシュ（CLI Agent status更新用）
+    this.headerElementsCache.set(terminalId, headerElements);
+
+    uiLogger.info(`Terminal header created using HeaderFactory for ${terminalId}`);
+    return headerElements.container;
   }
 
   /**
    * Update terminal header title
    */
   public updateTerminalHeader(terminalId: string, newName: string): void {
-    const header = document.querySelector(`[data-terminal-id="${terminalId}"] .terminal-name`);
-    if (header) {
-      header.textContent = newName;
-      log(`🎨 [UI] Updated terminal header for ${terminalId}: ${newName}`);
+    const headerElements = this.headerElementsCache.get(terminalId);
+    if (headerElements) {
+      // HeaderFactoryを使用して名前を更新
+      HeaderFactory.updateTerminalName(headerElements, newName);
+    } else {
+      // フォールバック: 直接DOMを更新
+      const header = document.querySelector(`[data-terminal-id="${terminalId}"] .terminal-name`);
+      if (header) {
+        header.textContent = newName;
+        uiLogger.info(`Updated terminal header (fallback) for ${terminalId}: ${newName}`);
+      }
     }
+  }
+
+  /**
+   * Remove terminal header from cache when terminal is closed
+   */
+  public removeTerminalHeader(terminalId: string): void {
+    if (this.headerElementsCache.has(terminalId)) {
+      this.headerElementsCache.delete(terminalId);
+      uiLogger.debug(`Removed terminal header cache for ${terminalId}`);
+    }
+  }
+
+  /**
+   * Clear all cached header elements
+   */
+  public clearHeaderCache(): void {
+    this.headerElementsCache.clear();
+    uiLogger.debug('Cleared all header cache');
+  }
+
+  /**
+   * Find all terminal headers in the DOM (moved from DOMManager)
+   */
+  public findTerminalHeaders(): HTMLElement[] {
+    const headers = Array.from(document.querySelectorAll<HTMLElement>('.terminal-header'));
+    uiLogger.debug(`Found ${headers.length} terminal headers`);
+    return headers;
+  }
+
+  /**
+   * Create notification element with consistent styling (moved from DOMManager)
+   */
+  public createNotificationElement(config: NotificationConfig): HTMLElement {
+    const colors = this.getNotificationColors(config.type);
+    const notification = this.createNotificationContainer(colors);
+    const content = this.createNotificationContent(config, colors);
+
+    notification.appendChild(content);
+    uiLogger.info(`Created notification: ${config.type} - ${config.title}`);
+    return notification;
+  }
+
+  /**
+   * Add CSS animations to document if not already present (moved from DOMManager)
+   */
+  public ensureAnimationsLoaded(): void {
+    if (!document.querySelector('#ui-manager-animations')) {
+      const style = document.createElement('style');
+      style.id = 'ui-manager-animations';
+      style.textContent = this.getAnimationCSS();
+      document.head.appendChild(style);
+      uiLogger.debug('CSS animations loaded');
+    }
+  }
+
+  /**
+   * Update CLI Agent status display in sidebar terminal headers (optimized)
+   */
+  public updateCliAgentStatusDisplay(
+    activeTerminalName: string | null,
+    status: 'connected' | 'disconnected' | 'none',
+    agentType: string | null = null
+  ): void {
+    // Use performance measurement
+    // Performance measurement removed for simplification
+    // CLI Agentステータス更新は即座に処理する（デバウンスをスキップ）
+    // 相互排他制御により短時間で複数のステータス変更が発生するため
+
+    let updatedCount = 0;
+
+    // キャッシュされたヘッダー要素を使用（高速）
+    for (const [, headerElements] of this.headerElementsCache) {
+      const terminalName = headerElements.nameSpan.textContent?.trim();
+      const isTargetTerminal = terminalName === activeTerminalName;
+
+      if (status === 'none') {
+        // CLI Agent statusを削除 (全ターミナルから削除)
+        HeaderFactory.removeCliAgentStatus(headerElements);
+        // AI Agent切り替えボタンを非表示 (none状態)
+        HeaderFactory.setAiAgentToggleButtonVisibility(headerElements, false);
+      } else if (isTargetTerminal) {
+        // CLI Agent statusを挿入/更新 (該当ターミナルのみ)
+        HeaderFactory.insertCliAgentStatus(headerElements, status, agentType);
+        // AI Agent切り替えボタン表示制御: disconnectedのみ表示
+        if (status === 'connected') {
+          // connected状態では切り替えボタンを非表示 (すでにアクティブ)
+          HeaderFactory.setAiAgentToggleButtonVisibility(headerElements, false);
+        } else if (status === 'disconnected') {
+          // disconnected状態では切り替えボタンを表示 (切り替え可能)
+          HeaderFactory.setAiAgentToggleButtonVisibility(headerElements, true, status);
+        }
+      } else {
+        // AI Agentステータスがないターミナルではボタンを非表示にする
+        HeaderFactory.setAiAgentToggleButtonVisibility(headerElements, false);
+      }
+      updatedCount++;
+    }
+
+    if (updatedCount > 0) {
+      uiLogger.info(
+        `CLI Agent status updated: ${activeTerminalName} -> ${status} (${updatedCount} terminals)`
+      );
+    }
+  }
+
+  /**
+   * Update CLI Agent status by terminal ID (for Full State Sync)
+   */
+  public updateCliAgentStatusByTerminalId(
+    terminalId: string,
+    status: 'connected' | 'disconnected' | 'none',
+    agentType: string | null = null
+  ): void {
+    // 🔍 DEBUG: Enhanced CLI Agent status update logging
+    console.log(`🔍 [DEBUG] updateCliAgentStatusByTerminalId called:`, {
+      terminalId,
+      status,
+      agentType,
+      cacheSize: this.headerElementsCache.size,
+      cachedTerminals: Array.from(this.headerElementsCache.keys()),
+      timestamp: Date.now(),
+    });
+
+    uiLogger.info(
+      `Updating CLI Agent status by terminal ID: ${terminalId} -> ${status} (${agentType})`
+    );
+
+    const headerElements = this.headerElementsCache.get(terminalId);
+    if (!headerElements) {
+      console.error(`❌ [DEBUG] No header elements found for terminal: ${terminalId}`, {
+        availableTerminals: Array.from(this.headerElementsCache.keys()),
+        cacheSize: this.headerElementsCache.size,
+      });
+      uiLogger.warn(`No header elements found for terminal: ${terminalId}`);
+      return;
+    }
+
+    console.log(`🔍 [DEBUG] Found header elements for terminal: ${terminalId}`, {
+      hasStatusSection: !!headerElements.statusSection,
+      hasStatusSpan: !!headerElements.statusSpan,
+      hasIndicator: !!headerElements.indicator,
+    });
+
+    if (status === 'none') {
+      // CLI Agent statusを削除
+      HeaderFactory.removeCliAgentStatus(headerElements);
+      // AI Agent切り替えボタンを非表示 (none状態)
+      HeaderFactory.setAiAgentToggleButtonVisibility(headerElements, false);
+    } else if (status === 'connected') {
+      // CLI Agent statusを挿入/更新
+      HeaderFactory.insertCliAgentStatus(headerElements, status, agentType);
+      // AI Agent切り替えボタンを非表示 (connected状態では不要)
+      HeaderFactory.setAiAgentToggleButtonVisibility(headerElements, false);
+    } else if (status === 'disconnected') {
+      // CLI Agent statusを挿入/更新
+      HeaderFactory.insertCliAgentStatus(headerElements, status, agentType);
+      // AI Agent切り替えボタンを表示 (disconnected状態でのみ表示)
+      HeaderFactory.setAiAgentToggleButtonVisibility(headerElements, true, status);
+    }
+
+    uiLogger.info(`CLI Agent status updated for terminal ${terminalId}: ${status}`);
+  }
+
+  /**
+   * Check if CLI Agent update should be processed (debouncing)
+   */
+  private _shouldProcessCliAgentUpdate(): boolean {
+    const now = Date.now();
+    if (now - this.lastUpdateTimestamp < this.UPDATE_DEBOUNCE_MS) {
+      return false;
+    }
+    this.lastUpdateTimestamp = now;
+    return true;
   }
 
   /**
@@ -289,7 +584,7 @@ export class UIManager implements IUIManager {
    */
   public applyCustomCSS(container: HTMLElement, css: Partial<CSSStyleDeclaration>): void {
     Object.assign(container.style, css);
-    log('🎨 [UI] Custom CSS applied to terminal container');
+    uiLogger.info('Custom CSS applied to terminal container');
   }
 
   /**
@@ -298,17 +593,20 @@ export class UIManager implements IUIManager {
   public setupResizeObserver(
     container: HTMLElement,
     callback: (width: number, height: number) => void
-  ): ResizeObserver {
-    const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
+  ): void {
+    const key = `terminal-resize-${container.id || Date.now()}`;
+    
+    ResizeManager.observeResize(
+      key,
+      container,
+      (entry) => {
         const { width, height } = entry.contentRect;
         callback(width, height);
-      }
-    });
-
-    observer.observe(container);
-    log('🎨 [UI] Resize observer setup for terminal container');
-    return observer;
+      },
+      { delay: this.UPDATE_DEBOUNCE_MS }
+    );
+    
+    uiLogger.info(`Resize observer setup for terminal container: ${key}`);
   }
 
   /**
@@ -328,24 +626,232 @@ export class UIManager implements IUIManager {
       separator.style.height = '100%';
     }
 
-    log(`🎨 [UI] Split separator created: ${direction}`);
+    uiLogger.info(`Split separator created: ${direction}`);
     return separator;
+  }
+
+  /**
+   * Update legacy Claude status (moved from DOMManager)
+   */
+  public updateLegacyClaudeStatus(terminalId: string, isActive: boolean): void {
+    const header = document.querySelector(
+      `[data-terminal-id="${terminalId}"] .terminal-header`
+    ) as HTMLElement;
+    if (!header) return;
+
+    // HeaderFactory構造なので適切なstatusセクションを使用
+    const statusSection = header.querySelector('.terminal-status');
+    if (statusSection) {
+      statusSection.innerHTML = ''; // Clear existing status
+    }
+
+    if (isActive) {
+      const statusSpan = DOMUtils.createElement(
+        'span',
+        {
+          color: '#007ACC',
+          fontWeight: 'bold',
+          marginLeft: '10px',
+          fontSize: '11px',
+        },
+        {
+          className: 'claude-status',
+          textContent: 'CLI Agent Active',
+        }
+      );
+
+      const controlsContainer = header.querySelector('.terminal-controls');
+      if (controlsContainer) {
+        header.insertBefore(statusSpan, controlsContainer);
+      } else {
+        const closeButton = header.querySelector('.close-btn');
+        if (closeButton) {
+          header.insertBefore(statusSpan, closeButton);
+        } else {
+          header.appendChild(statusSpan);
+        }
+      }
+    }
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private createNotificationContainer(colors: any): HTMLElement {
+    return DOMUtils.createElement(
+      'div',
+      {
+        position: 'fixed',
+        top: '20px',
+        right: '20px',
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+        background: colors.background,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        border: `2px solid ${colors.border}`,
+        borderRadius: '6px',
+        padding: '12px 16px',
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+        color: colors.foreground,
+        fontSize: '11px',
+        zIndex: '10000',
+        maxWidth: '300px',
+        minWidth: '200px',
+        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)',
+        animation: 'slideInFromRight 0.3s ease-out',
+      },
+      {
+        className: 'terminal-notification',
+      }
+    );
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private createNotificationContent(config: NotificationConfig, colors: any): HTMLElement {
+    const container = document.createElement('div');
+    const icon = config.icon || this.getDefaultIcon(config.type);
+
+    container.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+        <span style="font-size: 14px;">${icon}</span>
+        <strong>${config.title}</strong>
+      </div>
+      <div style="font-size: 10px; line-height: 1.4;">${config.message}</div>
+    `;
+
+    const closeBtn = this.createNotificationCloseButton(colors);
+    container.appendChild(closeBtn);
+
+    return container;
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private createNotificationCloseButton(colors: any): HTMLButtonElement {
+    return DOMUtils.createElement(
+      'button',
+      {
+        position: 'absolute',
+        top: '4px',
+        right: '6px',
+        background: 'none',
+        border: 'none',
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+        color: colors.foreground,
+        cursor: 'pointer',
+        fontSize: '12px',
+        padding: '2px',
+        opacity: '0.7',
+        transition: 'opacity 0.2s',
+      },
+      {
+        textContent: '✕',
+        className: 'notification-close',
+      }
+    );
+  }
+
+  /**
+   * Get notification colors based on type
+   */
+  private getNotificationColors(type: string): {
+    background: string;
+    border: string;
+    foreground: string;
+  } {
+    switch (type) {
+      case 'error':
+        return {
+          background: 'var(--vscode-notifications-background, #1e1e1e)',
+          border: 'var(--vscode-notificationError-border, #f44747)',
+          foreground: 'var(--vscode-notificationError-foreground, #ffffff)',
+        };
+      case 'warning':
+        return {
+          background: 'var(--vscode-notifications-background, #1e1e1e)',
+          border: 'var(--vscode-notificationWarning-border, #ffcc02)',
+          foreground: 'var(--vscode-notificationWarning-foreground, #ffffff)',
+        };
+      case 'success':
+        return {
+          background: 'var(--vscode-notifications-background, #1e1e1e)',
+          border: 'var(--vscode-notification-successIcon-foreground, #73c991)',
+          foreground: 'var(--vscode-notification-foreground, #ffffff)',
+        };
+      case 'info':
+      default:
+        return {
+          background: 'var(--vscode-notifications-background, #1e1e1e)',
+          border: 'var(--vscode-notification-infoIcon-foreground, #3794ff)',
+          foreground: 'var(--vscode-notification-foreground, #ffffff)',
+        };
+    }
+  }
+
+  /**
+   * Get default icon for notification type
+   */
+  private getDefaultIcon(type: string): string {
+    switch (type) {
+      case 'error':
+        return '❌';
+      case 'warning':
+        return '⚠️';
+      case 'success':
+        return '✅';
+      case 'info':
+      default:
+        return 'ℹ️';
+    }
+  }
+
+  private getAnimationCSS(): string {
+    return `
+      @keyframes slideInFromRight {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+      }
+      @keyframes slideOutToRight {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+      }
+      @keyframes blink {
+        0%, 50% { opacity: 1; }
+        51%, 100% { opacity: 0.3; }
+      }
+      @keyframes fadeInOut {
+        0% { opacity: 0; }
+        20% { opacity: 1; }
+        80% { opacity: 1; }
+        100% { opacity: 0; }
+      }
+    `;
   }
 
   /**
    * Cleanup and dispose of UI resources
    */
-  public dispose(): void {
-    log('🧹 [UI] Disposing UI manager');
+  public override dispose(): void {
+    uiLogger.lifecycle('UIManager disposal', 'starting');
 
-    // Reset theme cache
-    this.currentTheme = null;
-    this.themeApplied = false;
+    try {
+      // Dispose event registry
+      this.eventRegistry.dispose();
 
-    // Remove any remaining UI elements
-    this.hideTerminalPlaceholder();
-    this.hideLoadingIndicator();
+      // Clear resize operations
+      ResizeManager.dispose();
 
-    log('✅ [UI] UI manager disposed');
+      // Reset theme cache
+      this.currentTheme = null;
+      this.themeApplied = false;
+
+      // Remove any remaining UI elements
+      this.hideTerminalPlaceholder();
+      this.hideLoadingIndicator();
+
+      // Clear header cache
+      this.clearHeaderCache();
+
+      uiLogger.lifecycle('UIManager disposal', 'completed');
+    } catch (error) {
+      uiLogger.lifecycle('UIManager disposal', 'failed', error);
+      throw error;
+    }
   }
 }

@@ -87,21 +87,21 @@ describe('Alt+Click Cursor Positioning', () => {
     });
   });
 
-  describe('Claude Code Detection Logic', () => {
-    it('should detect Claude Code output patterns', () => {
+  describe('CLI Agent Detection Logic', () => {
+    it('should detect CLI Agent output patterns', () => {
       const testOutputs = [
         'Executing command: claude-code',
         'Running npm test via claude-code',
-        'Claude Code: Processing file...',
+        'CLI Agent: Processing file...',
         '🔧 [DEBUG] TerminalManager.createTerminal called',
       ];
 
       // This would use the actual detection patterns from webview main.ts
-      const claudeCodePattern = /claude.code|🔧.*\[DEBUG\]|Claude Code:/i;
+      const claudeCodePattern = /claude.code|🔧.*\[DEBUG\]|CLI Agent:/i;
 
       testOutputs.forEach((output) => {
-        const isClaudeCode = claudeCodePattern.test(output);
-        expect(isClaudeCode).to.be.true;
+        const isCliAgentCode = claudeCodePattern.test(output);
+        expect(isCliAgentCode).to.be.true;
       });
     });
 
@@ -114,11 +114,11 @@ describe('Alt+Click Cursor Positioning', () => {
         'cat package.json',
       ];
 
-      const claudeCodePattern = /claude.code|🔧.*\[DEBUG\]|Claude Code:/i;
+      const claudeCodePattern = /claude.code|🔧.*\[DEBUG\]|CLI Agent:/i;
 
       normalOutputs.forEach((output) => {
-        const isClaudeCode = claudeCodePattern.test(output);
-        expect(isClaudeCode).to.be.false;
+        const isCliAgentCode = claudeCodePattern.test(output);
+        expect(isCliAgentCode).to.be.false;
       });
     });
 
@@ -259,15 +259,15 @@ describe('Alt+Click Cursor Positioning', () => {
   });
 
   describe('Performance Optimization', () => {
-    it('should use optimized buffering during Claude Code execution', () => {
+    it('should use optimized buffering during CLI Agent execution', () => {
       const normalFlushInterval = 16; // ms
       const claudeCodeFlushInterval = 4; // ms
 
       let currentFlushInterval = normalFlushInterval;
 
-      // Simulate Claude Code detection
-      const isClaudeCodeActive = true;
-      if (isClaudeCodeActive) {
+      // Simulate CLI Agent detection
+      const isCliAgentCodeActive = true;
+      if (isCliAgentCodeActive) {
         currentFlushInterval = claudeCodeFlushInterval;
       }
 
@@ -298,19 +298,19 @@ describe('Alt+Click Cursor Positioning', () => {
     it('should notify users when Alt+Click is temporarily disabled', () => {
       const disabledMessage = {
         type: 'warning',
-        title: '⚡ Claude Code Active',
+        title: '⚡ CLI Agent Active',
         message: 'Alt+Click temporarily disabled for optimal performance',
       };
 
       expect(disabledMessage.type).to.equal('warning');
-      expect(disabledMessage.title).to.include('Claude Code Active');
+      expect(disabledMessage.title).to.include('CLI Agent Active');
     });
 
     it('should show re-enablement notification', () => {
       const reenableMessage = {
         type: 'success',
         title: 'Alt+Click Re-enabled',
-        message: 'Claude Code session ended, Alt+Click is now available',
+        message: 'CLI Agent session ended, Alt+Click is now available',
       };
 
       expect(reenableMessage.type).to.equal('success');

@@ -9,8 +9,21 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 
+// Initialize browser globals immediately before any imports
+if (!(global as any).self) {
+  (global as any).self = global;
+}
+if (!(global as any).window) {
+  (global as any).window = global;
+}
+
 import * as sinon from 'sinon';
+import * as chai from 'chai';
+import sinonChai from 'sinon-chai';
 import { JSDOM } from 'jsdom';
+
+// Set up sinon-chai
+chai.use(sinonChai);
 
 /**
  * VS Code API のモックオブジェクト
@@ -22,7 +35,7 @@ export const mockVscode = {
       const config = {
         get: sinon.stub().callsFake((key: string, defaultValue?: unknown): unknown => {
           // Return reasonable defaults for common configuration keys
-          if (section === 'sidebarTerminal') {
+          if (section === 'secondaryTerminal') {
             const defaults: { [key: string]: unknown } = {
               shell: '/bin/bash',
               shellArgs: [],
@@ -83,15 +96,57 @@ export const mockVscode = {
   ViewColumn: { One: 1, Two: 2, Three: 3, Left: 1, Right: 2 },
   TreeDataProvider: sinon.stub(),
   EventEmitter: class MockEventEmitter {
-    fire = sinon.stub();
-    event = sinon.stub();
-    dispose = sinon.stub();
+    private listeners: Array<(event: any) => void> = [];
+
+    fire = (event: any) => {
+      this.listeners.forEach((listener) => {
+        try {
+          listener(event);
+        } catch (error) {
+          console.error('Error in event listener:', error);
+        }
+      });
+    };
+
+    event = (listener: (event: any) => void) => {
+      this.listeners.push(listener);
+      return {
+        dispose: () => {
+          const index = this.listeners.indexOf(listener);
+          if (index >= 0) {
+            this.listeners.splice(index, 1);
+          }
+        },
+      };
+    };
+
+    dispose = () => {
+      this.listeners.length = 0;
+    };
   },
   CancellationToken: sinon.stub(),
   Uri: {
-    file: sinon.stub(),
-    parse: sinon.stub(),
-    joinPath: sinon.stub(),
+    file: sinon.stub().callsFake((path: string) => ({
+      scheme: 'file',
+      path: path,
+      fsPath: path,
+      toString: () => `file://${path}`,
+      with: sinon.stub(),
+    })),
+    parse: sinon.stub().callsFake((uri: string) => ({
+      scheme: 'file',
+      path: uri.replace('file://', ''),
+      fsPath: uri.replace('file://', ''),
+      toString: () => uri,
+      with: sinon.stub(),
+    })),
+    joinPath: sinon.stub().callsFake((base: any, ...pathSegments: string[]) => ({
+      scheme: base.scheme || 'file',
+      path: `${base.path}/${pathSegments.join('/')}`,
+      fsPath: `${base.fsPath || base.path}/${pathSegments.join('/')}`,
+      toString: () => `${base.scheme || 'file'}://${base.path}/${pathSegments.join('/')}`,
+      with: sinon.stub(),
+    })),
   },
   env: {
     openExternal: sinon.stub().resolves(),
@@ -128,6 +183,43 @@ export function setupTestEnvironment(): void {
         }),
       };
     }
+    if (id === 'xterm' || id === 'xterm-addon-fit') {
+      return {
+        Terminal: function () {
+          return {
+            write: () => {},
+            writeln: () => {},
+            clear: () => {},
+            resize: () => {},
+            focus: () => {},
+            blur: () => {},
+            dispose: () => {},
+            open: () => {},
+            onData: () => ({ dispose: () => {} }),
+            onResize: () => ({ dispose: () => {} }),
+            onKey: () => ({ dispose: () => {} }),
+            loadAddon: () => {},
+            options: {},
+            rows: 24,
+            cols: 80,
+            buffer: {
+              active: {
+                length: 100,
+                viewportY: 50,
+                baseY: 0,
+                getLine: () => ({ translateToString: () => '' }),
+              },
+            },
+          };
+        },
+        FitAddon: function () {
+          return {
+            fit: () => {},
+            dispose: () => {},
+          };
+        },
+      };
+    }
     // Allow actual source code to be loaded for coverage
     // eslint-disable-next-line prefer-rest-params, @typescript-eslint/no-unsafe-return
     return originalRequire.apply(this, arguments);
@@ -136,21 +228,42 @@ export function setupTestEnvironment(): void {
   // Mock Node.js modules
   (global as any).require = sinon.stub();
   (global as any).module = { exports: {} };
+  
+  // Enhanced process polyfilling for test compatibility
+  const processPolyfill = {
+    ...process,
+    nextTick: (callback: () => void) => setImmediate(callback),
+    env: { ...process.env, NODE_ENV: 'test' },
+    platform: process.platform,
+    cwd: () => process.cwd(),
+    argv: process.argv,
+    pid: process.pid,
+    on: () => {},
+    removeListener: () => processPolyfill,
+    removeAllListeners: () => processPolyfill,
+    off: () => processPolyfill,
+  };
+
   // Processオブジェクトは上書きせず、必要なプロパティのみ安全に設定
   if (!(global as any).process) {
-    (global as any).process = {
-      ...process,
-      nextTick: (callback: () => void) => setImmediate(callback),
-      env: { ...process.env, NODE_ENV: 'test' },
-      platform: process.platform,
-      cwd: () => process.cwd(),
-      argv: process.argv,
-      pid: process.pid,
-    };
+    (global as any).process = processPolyfill;
   } else {
-    // 既存のprocessオブジェクトにnextTickが無い場合は追加
-    if (!(global as any).process.nextTick) {
-      (global as any).process.nextTick = (callback: () => void) => setImmediate(callback);
+    // 既存のprocessオブジェクトに不足しているメソッドを追加
+    const existingProcess = (global as any).process;
+    if (!existingProcess.nextTick) {
+      existingProcess.nextTick = (callback: () => void) => setImmediate(callback);
+    }
+    if (!existingProcess.on) {
+      existingProcess.on = () => {};
+    }
+    if (!existingProcess.removeListener) {
+      existingProcess.removeListener = () => existingProcess;
+    }
+    if (!existingProcess.removeAllListeners) {
+      existingProcess.removeAllListeners = () => existingProcess;
+    }
+    if (!existingProcess.off) {
+      existingProcess.off = () => existingProcess;
     }
   }
 
@@ -164,12 +277,53 @@ export function setupTestEnvironment(): void {
   (global as any).setImmediate = setImmediate;
   (global as any).clearImmediate = clearImmediate;
 
+  // Global xterm.js mocks for tests that access them directly
+  (global as any).Terminal = function () {
+    return {
+      write: () => {},
+      writeln: () => {},
+      clear: () => {},
+      resize: () => {},
+      focus: () => {},
+      blur: () => {},
+      dispose: () => {},
+      open: () => {},
+      onData: () => ({ dispose: () => {} }),
+      onResize: () => ({ dispose: () => {} }),
+      onKey: () => ({ dispose: () => {} }),
+      loadAddon: () => {},
+      options: {},
+      rows: 24,
+      cols: 80,
+      buffer: {
+        active: {
+          length: 100,
+          viewportY: 50,
+          baseY: 0,
+          getLine: () => ({ translateToString: () => '' }),
+        },
+      },
+    };
+  };
+
+  (global as any).FitAddon = function () {
+    return {
+      fit: () => {},
+      dispose: () => {},
+    };
+  };
+
   // Fix process event handler methods for Mocha compatibility
+  // Only add missing methods to the actual process object if they don't exist
   const requiredMethods = ['removeListener', 'removeAllListeners', 'off'];
   requiredMethods.forEach((method) => {
-    if (!(process as any)[method]) {
-      (process as any)[method] = function () {
-        return process;
+    if (!(process as any)[method] && typeof process[method as keyof typeof process] === 'undefined') {
+      (process as any)[method] = function (..._args: any[]) {
+        // For methods that need to be chainable
+        if (method === 'removeListener' || method === 'removeAllListeners' || method === 'off') {
+          return process;
+        }
+        return;
       };
     }
   });
@@ -225,6 +379,30 @@ export function setupJSDOMEnvironment(htmlContent?: string): {
     </html>
   `;
 
+  // Ensure process.nextTick is available globally before JSDOM creation
+  // Save the original process for JSDOM
+  const originalProcess = global.process || process;
+  
+  // Ensure process.nextTick exists for JSDOM
+  if (!process.nextTick || typeof process.nextTick !== 'function') {
+    (process as any).nextTick = (callback: () => void) => setImmediate(callback);
+  }
+  
+  // Ensure global.process exists with necessary methods for tests
+  if (!global.process) {
+    (global as any).process = {
+      ...originalProcess,
+      nextTick: (callback: () => void) => setImmediate(callback),
+      env: { ...process.env, NODE_ENV: 'test' },
+      on: () => {},
+      removeListener: () => global.process,
+      removeAllListeners: () => global.process,
+      off: () => global.process,
+    };
+  } else if (typeof global.process.nextTick !== 'function') {
+    global.process.nextTick = (callback: () => void) => setImmediate(callback);
+  }
+
   const dom = new JSDOM(defaultHtml, {
     url: 'http://localhost',
     contentType: 'text/html',
@@ -233,14 +411,21 @@ export function setupJSDOMEnvironment(htmlContent?: string): {
     beforeParse(window) {
       // Ensure process.nextTick is available for JSDOM
       (window as any).process = {
+        ...global.process,
         nextTick: (callback: () => void) => setImmediate(callback),
         env: { NODE_ENV: 'test' },
         platform: 'linux',
         cwd: () => '/test',
+        on: () => {},
+        removeListener: () => window.process,
+        removeAllListeners: () => window.process,
+        off: () => window.process,
       };
       // Add missing methods that might be needed
       (window as any).setImmediate = setImmediate;
       (window as any).clearImmediate = clearImmediate;
+      (window as any).setTimeout = setTimeout;
+      (window as any).clearTimeout = clearTimeout;
     },
   });
 
@@ -265,6 +450,13 @@ export function setupJSDOMEnvironment(htmlContent?: string): {
   (global as any).CustomEvent = window.CustomEvent;
   (global as any).MouseEvent = window.MouseEvent;
   (global as any).KeyboardEvent = window.KeyboardEvent;
+
+  // ResizeObserver モック
+  (global as any).ResizeObserver = class MockResizeObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
 
   return { dom, document, window };
 }

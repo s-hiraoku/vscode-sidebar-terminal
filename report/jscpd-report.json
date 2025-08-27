@@ -1,0 +1,3957 @@
+{
+  "statistics": {
+    "detectionDate": "2025-08-03T01:32:24.089Z",
+    "formats": {
+      "typescript": {
+        "sources": {
+          "src/test/unit/webview/utils/WebviewThemeUtils.test.ts": {
+            "lines": 92,
+            "tokens": 654,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/test/unit/webview/utils/ThemeUtils.test.ts": {
+            "lines": 68,
+            "tokens": 502,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/test/unit/webview/utils/PerformanceUtils.test.ts": {
+            "lines": 217,
+            "tokens": 1891,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/test/unit/webview/utils/ErrorHandler.test.ts": {
+            "lines": 266,
+            "tokens": 2233,
+            "sources": 1,
+            "clones": 4,
+            "duplicatedLines": 73,
+            "duplicatedTokens": 650,
+            "percentage": 27.44,
+            "percentageTokens": 29.11,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/test/unit/webview/factories/HeaderFactory.test.ts": {
+            "lines": 311,
+            "tokens": 2569,
+            "sources": 1,
+            "clones": 2,
+            "duplicatedLines": 10,
+            "duplicatedTokens": 154,
+            "percentage": 3.22,
+            "percentageTokens": 5.99,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/test/unit/webview/main.test.ts": {
+            "lines": 517,
+            "tokens": 3953,
+            "sources": 1,
+            "clones": 2,
+            "duplicatedLines": 20,
+            "duplicatedTokens": 185,
+            "percentage": 3.87,
+            "percentageTokens": 4.68,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/test/unit/webview/MessageManager.scrollback.test.ts": {
+            "lines": 460,
+            "tokens": 3964,
+            "sources": 1,
+            "clones": 8,
+            "duplicatedLines": 94,
+            "duplicatedTokens": 946,
+            "percentage": 20.43,
+            "percentageTokens": 23.86,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/test/unit/utils/logger.test.ts": {
+            "lines": 235,
+            "tokens": 1906,
+            "sources": 1,
+            "clones": 1,
+            "duplicatedLines": 36,
+            "duplicatedTokens": 340,
+            "percentage": 15.32,
+            "percentageTokens": 17.84,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/test/unit/utils/feedback.test.ts": {
+            "lines": 134,
+            "tokens": 1004,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/test/unit/utils/common.test.ts": {
+            "lines": 539,
+            "tokens": 4787,
+            "sources": 1,
+            "clones": 9,
+            "duplicatedLines": 105,
+            "duplicatedTokens": 1041,
+            "percentage": 19.48,
+            "percentageTokens": 21.75,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/test/unit/utils/NotificationUtils.test.ts": {
+            "lines": 231,
+            "tokens": 1858,
+            "sources": 1,
+            "clones": 7,
+            "duplicatedLines": 70,
+            "duplicatedTokens": 628,
+            "percentage": 30.3,
+            "percentageTokens": 33.8,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/test/unit/utils/DOMUtils.test.ts": {
+            "lines": 287,
+            "tokens": 2715,
+            "sources": 1,
+            "clones": 4,
+            "duplicatedLines": 42,
+            "duplicatedTokens": 387,
+            "percentage": 14.63,
+            "percentageTokens": 14.25,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/test/unit/terminals/FocusInducedStatusChange.test.ts": {
+            "lines": 327,
+            "tokens": 2284,
+            "sources": 1,
+            "clones": 9,
+            "duplicatedLines": 98,
+            "duplicatedTokens": 855,
+            "percentage": 29.97,
+            "percentageTokens": 37.43,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/test/unit/terminals/ErrorHandling.test.ts": {
+            "lines": 270,
+            "tokens": 2546,
+            "sources": 1,
+            "clones": 2,
+            "duplicatedLines": 10,
+            "duplicatedTokens": 136,
+            "percentage": 3.7,
+            "percentageTokens": 5.34,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/test/unit/terminals/CliAgentTerminationDetection.test.ts": {
+            "lines": 364,
+            "tokens": 2588,
+            "sources": 1,
+            "clones": 3,
+            "duplicatedLines": 30,
+            "duplicatedTokens": 275,
+            "percentage": 8.24,
+            "percentageTokens": 10.63,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/test/unit/terminals/CliAgentTerminationDebug.test.ts": {
+            "lines": 236,
+            "tokens": 1978,
+            "sources": 1,
+            "clones": 3,
+            "duplicatedLines": 64,
+            "duplicatedTokens": 447,
+            "percentage": 27.12,
+            "percentageTokens": 22.6,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/test/unit/terminals/CliAgentFalseDetectionPrevention.test.ts": {
+            "lines": 356,
+            "tokens": 2750,
+            "sources": 1,
+            "clones": 16,
+            "duplicatedLines": 170,
+            "duplicatedTokens": 1564,
+            "percentage": 47.75,
+            "percentageTokens": 56.87,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/test/unit/terminals/CliAgentDetection.test.ts": {
+            "lines": 559,
+            "tokens": 4244,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/test/unit/terminals/CliAgentAutoPromotion.test.ts": {
+            "lines": 351,
+            "tokens": 3643,
+            "sources": 1,
+            "clones": 6,
+            "duplicatedLines": 69,
+            "duplicatedTokens": 612,
+            "percentage": 19.66,
+            "percentageTokens": 16.8,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/test/unit/providers/SecondaryTerminalProvider-extended.test.ts": {
+            "lines": 577,
+            "tokens": 4702,
+            "sources": 1,
+            "clones": 4,
+            "duplicatedLines": 58,
+            "duplicatedTokens": 464,
+            "percentage": 10.05,
+            "percentageTokens": 9.87,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/test/unit/managers/SplitManager.test.ts": {
+            "lines": 574,
+            "tokens": 4980,
+            "sources": 1,
+            "clones": 16,
+            "duplicatedLines": 220,
+            "duplicatedTokens": 2002,
+            "percentage": 38.33,
+            "percentageTokens": 40.2,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/test/unit/managers/HeaderManager.test.ts": {
+            "lines": 449,
+            "tokens": 3830,
+            "sources": 1,
+            "clones": 4,
+            "duplicatedLines": 34,
+            "duplicatedTokens": 330,
+            "percentage": 7.57,
+            "percentageTokens": 8.62,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/test/unit/integration/FullStateSync.test.ts": {
+            "lines": 244,
+            "tokens": 2229,
+            "sources": 1,
+            "clones": 1,
+            "duplicatedLines": 7,
+            "duplicatedTokens": 97,
+            "percentage": 2.87,
+            "percentageTokens": 4.35,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/test/unit/features/alt-click.test.ts": {
+            "lines": 319,
+            "tokens": 2496,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/test/unit/config/ConfigManager.test.ts": {
+            "lines": 163,
+            "tokens": 1638,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/test/unit/components/SettingsPanel.test.ts": {
+            "lines": 466,
+            "tokens": 4208,
+            "sources": 1,
+            "clones": 4,
+            "duplicatedLines": 24,
+            "duplicatedTokens": 334,
+            "percentage": 5.15,
+            "percentageTokens": 7.94,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/test/unit/commands/FileReferenceCommand.test.ts": {
+            "lines": 241,
+            "tokens": 1843,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/test/unit/commands/CopilotIntegrationCommand.test.ts": {
+            "lines": 177,
+            "tokens": 1462,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/webview/utils/WebviewThemeUtils.ts": {
+            "lines": 90,
+            "tokens": 575,
+            "sources": 1,
+            "clones": 2,
+            "duplicatedLines": 34,
+            "duplicatedTokens": 229,
+            "percentage": 37.78,
+            "percentageTokens": 39.83,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/webview/utils/ThemeUtils.ts": {
+            "lines": 145,
+            "tokens": 1323,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/webview/utils/PerformanceUtils.ts": {
+            "lines": 267,
+            "tokens": 2299,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/webview/utils/NotificationUtils.ts": {
+            "lines": 320,
+            "tokens": 1924,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/webview/utils/ErrorHandler.ts": {
+            "lines": 190,
+            "tokens": 1252,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/webview/utils/DOMUtils.ts": {
+            "lines": 131,
+            "tokens": 921,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/webview/utils/BufferManager.ts": {
+            "lines": 275,
+            "tokens": 1842,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/webview/types/webview.types.ts": {
+            "lines": 51,
+            "tokens": 310,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/webview/types/terminal.types.ts": {
+            "lines": 46,
+            "tokens": 257,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/webview/types/events.types.ts": {
+            "lines": 97,
+            "tokens": 661,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/webview/managers/UIManager.ts": {
+            "lines": 666,
+            "tokens": 4354,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/webview/managers/StandardTerminalPersistenceManager.ts": {
+            "lines": 384,
+            "tokens": 2734,
+            "sources": 1,
+            "clones": 2,
+            "duplicatedLines": 20,
+            "duplicatedTokens": 214,
+            "percentage": 5.21,
+            "percentageTokens": 7.83,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/webview/managers/SplitManager.ts": {
+            "lines": 482,
+            "tokens": 3292,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/webview/managers/PerformanceManager.ts": {
+            "lines": 223,
+            "tokens": 1539,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/webview/managers/NotificationManager.ts": {
+            "lines": 318,
+            "tokens": 1695,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/webview/managers/InputManager.ts": {
+            "lines": 356,
+            "tokens": 2391,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/webview/managers/HeaderManager.ts": {
+            "lines": 387,
+            "tokens": 2442,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/webview/managers/ConfigManager.ts": {
+            "lines": 464,
+            "tokens": 3383,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/webview/interfaces/ManagerInterfaces.ts": {
+            "lines": 249,
+            "tokens": 2216,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/webview/factories/HeaderFactory.ts": {
+            "lines": 332,
+            "tokens": 2018,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/webview/core/NotificationSystem.ts": {
+            "lines": 313,
+            "tokens": 2289,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/webview/core/NotificationBridge.ts": {
+            "lines": 305,
+            "tokens": 2122,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/webview/constants/webview.ts": {
+            "lines": 26,
+            "tokens": 152,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/webview/constants/index.ts": {
+            "lines": 127,
+            "tokens": 903,
+            "sources": 1,
+            "clones": 4,
+            "duplicatedLines": 78,
+            "duplicatedTokens": 529,
+            "percentage": 61.42,
+            "percentageTokens": 58.58,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/webview/components/SettingsPanel.ts": {
+            "lines": 442,
+            "tokens": 2170,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/test/utils/TDDTestHelper.ts": {
+            "lines": 412,
+            "tokens": 2843,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/test/unit/test-setup.ts": {
+            "lines": 91,
+            "tokens": 562,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/test/unit/mocha-setup.ts": {
+            "lines": 138,
+            "tokens": 1028,
+            "sources": 1,
+            "clones": 2,
+            "duplicatedLines": 16,
+            "duplicatedTokens": 194,
+            "percentage": 11.59,
+            "percentageTokens": 18.87,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/test/suite/webview.test.ts": {
+            "lines": 269,
+            "tokens": 2449,
+            "sources": 1,
+            "clones": 8,
+            "duplicatedLines": 165,
+            "duplicatedTokens": 1744,
+            "percentage": 61.34,
+            "percentageTokens": 71.21,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/test/suite/ux-feedback.test.ts": {
+            "lines": 263,
+            "tokens": 2291,
+            "sources": 1,
+            "clones": 3,
+            "duplicatedLines": 58,
+            "duplicatedTokens": 673,
+            "percentage": 22.05,
+            "percentageTokens": 29.38,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/test/suite/terminal-manager.test.ts": {
+            "lines": 161,
+            "tokens": 1492,
+            "sources": 1,
+            "clones": 2,
+            "duplicatedLines": 53,
+            "duplicatedTokens": 579,
+            "percentage": 32.92,
+            "percentageTokens": 38.81,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/test/suite/performance.test.ts": {
+            "lines": 206,
+            "tokens": 1858,
+            "sources": 1,
+            "clones": 1,
+            "duplicatedLines": 32,
+            "duplicatedTokens": 327,
+            "percentage": 15.53,
+            "percentageTokens": 17.6,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/test/suite/integration.test.ts": {
+            "lines": 194,
+            "tokens": 1677,
+            "sources": 1,
+            "clones": 2,
+            "duplicatedLines": 50,
+            "duplicatedTokens": 547,
+            "percentage": 25.77,
+            "percentageTokens": 32.62,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/test/suite/index.ts": {
+            "lines": 110,
+            "tokens": 883,
+            "sources": 1,
+            "clones": 2,
+            "duplicatedLines": 38,
+            "duplicatedTokens": 253,
+            "percentage": 34.55,
+            "percentageTokens": 28.65,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/test/suite/functional.test.ts": {
+            "lines": 173,
+            "tokens": 1559,
+            "sources": 1,
+            "clones": 1,
+            "duplicatedLines": 8,
+            "duplicatedTokens": 87,
+            "percentage": 4.62,
+            "percentageTokens": 5.58,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/test/suite/extension.test.ts": {
+            "lines": 29,
+            "tokens": 275,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/test/suite/e2e.test.ts": {
+            "lines": 134,
+            "tokens": 1145,
+            "sources": 1,
+            "clones": 1,
+            "duplicatedLines": 8,
+            "duplicatedTokens": 87,
+            "percentage": 5.97,
+            "percentageTokens": 7.6,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/test/shared/TestSetup.ts": {
+            "lines": 352,
+            "tokens": 2843,
+            "sources": 1,
+            "clones": 3,
+            "duplicatedLines": 28,
+            "duplicatedTokens": 297,
+            "percentage": 7.95,
+            "percentageTokens": 10.45,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/test/mocks/node-pty.ts": {
+            "lines": 119,
+            "tokens": 1063,
+            "sources": 1,
+            "clones": 1,
+            "duplicatedLines": 25,
+            "duplicatedTokens": 190,
+            "percentage": 21.01,
+            "percentageTokens": 17.87,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/test/constants/TestConstants.ts": {
+            "lines": 182,
+            "tokens": 998,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/utils/logger.ts": {
+            "lines": 129,
+            "tokens": 1412,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/utils/feedback.ts": {
+            "lines": 284,
+            "tokens": 2298,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/utils/common.ts": {
+            "lines": 264,
+            "tokens": 1741,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/utils/TerminalNumberManager.ts": {
+            "lines": 88,
+            "tokens": 644,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/types/shared.ts": {
+            "lines": 226,
+            "tokens": 1143,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/types/node-pty.d.ts": {
+            "lines": 46,
+            "tokens": 415,
+            "sources": 1,
+            "clones": 1,
+            "duplicatedLines": 25,
+            "duplicatedTokens": 190,
+            "percentage": 54.35,
+            "percentageTokens": 45.78,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/types/common.ts": {
+            "lines": 306,
+            "tokens": 1842,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/test/runTest.ts": {
+            "lines": 117,
+            "tokens": 834,
+            "sources": 1,
+            "clones": 2,
+            "duplicatedLines": 38,
+            "duplicatedTokens": 253,
+            "percentage": 32.48,
+            "percentageTokens": 30.34,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/sessions/StandardTerminalSessionManager.ts": {
+            "lines": 528,
+            "tokens": 3779,
+            "sources": 1,
+            "clones": 6,
+            "duplicatedLines": 90,
+            "duplicatedTokens": 788,
+            "percentage": 17.05,
+            "percentageTokens": 20.85,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/integration/CliAgentTerminalTracker.ts": {
+            "lines": 484,
+            "tokens": 2995,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/integration/CliAgentStateService.ts": {
+            "lines": 158,
+            "tokens": 1052,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/integration/CliAgentDetectionService.ts": {
+            "lines": 83,
+            "tokens": 567,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/constants/index.ts": {
+            "lines": 144,
+            "tokens": 855,
+            "sources": 1,
+            "clones": 2,
+            "duplicatedLines": 44,
+            "duplicatedTokens": 300,
+            "percentage": 30.56,
+            "percentageTokens": 35.09,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/config/ConfigManager.ts": {
+            "lines": 356,
+            "tokens": 2430,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/commands/TerminalCommand.ts": {
+            "lines": 54,
+            "tokens": 364,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/commands/FileReferenceCommand.ts": {
+            "lines": 224,
+            "tokens": 1610,
+            "sources": 1,
+            "clones": 2,
+            "duplicatedLines": 32,
+            "duplicatedTokens": 211,
+            "percentage": 14.29,
+            "percentageTokens": 13.11,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/commands/CopilotIntegrationCommand.ts": {
+            "lines": 178,
+            "tokens": 1116,
+            "sources": 1,
+            "clones": 2,
+            "duplicatedLines": 32,
+            "duplicatedTokens": 211,
+            "percentage": 17.98,
+            "percentageTokens": 18.91,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/extension.ts": {
+            "lines": 12,
+            "tokens": 97,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          }
+        },
+        "total": {
+          "lines": 22230,
+          "tokens": 168681,
+          "sources": 86,
+          "clones": 77,
+          "duplicatedLines": 1054,
+          "duplicatedTokens": 9675,
+          "percentage": 4.74,
+          "percentageTokens": 5.74,
+          "newDuplicatedLines": 0,
+          "newClones": 0
+        }
+      },
+      "javascript": {
+        "sources": {
+          "src/test/shared/setup-exit-handler.js": {
+            "lines": 42,
+            "tokens": 304,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          }
+        },
+        "total": {
+          "lines": 42,
+          "tokens": 304,
+          "sources": 1,
+          "clones": 0,
+          "duplicatedLines": 0,
+          "duplicatedTokens": 0,
+          "percentage": 0,
+          "percentageTokens": 0,
+          "newDuplicatedLines": 0,
+          "newClones": 0
+        }
+      },
+      "markdown": {
+        "sources": {
+          "src/webview/CLAUDE.md": {
+            "lines": 132,
+            "tokens": 512,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/test/CLAUDE.md": {
+            "lines": 331,
+            "tokens": 1172,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/terminals/CLAUDE.md": {
+            "lines": 205,
+            "tokens": 651,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/sessions/CLAUDE.md": {
+            "lines": 400,
+            "tokens": 1128,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/providers/CLAUDE.md": {
+            "lines": 291,
+            "tokens": 1007,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/integration/CLAUDE.md": {
+            "lines": 191,
+            "tokens": 719,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          }
+        },
+        "total": {
+          "lines": 1550,
+          "tokens": 5189,
+          "sources": 6,
+          "clones": 0,
+          "duplicatedLines": 0,
+          "duplicatedTokens": 0,
+          "percentage": 0,
+          "percentageTokens": 0,
+          "newDuplicatedLines": 0,
+          "newClones": 0
+        }
+      }
+    },
+    "total": {
+      "lines": 23822,
+      "tokens": 174174,
+      "sources": 93,
+      "clones": 77,
+      "duplicatedLines": 1054,
+      "duplicatedTokens": 9675,
+      "percentage": 4.42,
+      "percentageTokens": 5.55,
+      "newDuplicatedLines": 0,
+      "newClones": 0
+    }
+  },
+  "duplicates": [
+    {
+      "format": "typescript",
+      "lines": 6,
+      "fragment": "expect(headerElements.statusSpan?.textContent).to.equal('AI Agent Connected');\n      expect(headerElements.statusSpan?.className).to.equal('ai-agent-status');\n      expect(headerElements.indicator?.className).to.equal('ai-agent-indicator');\n      expect(headerElements.indicator?.textContent).to.equal('●');\n\n      // Verify correct elements exist in DOM",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/webview/factories/HeaderFactory.test.ts",
+        "start": 195,
+        "end": 200,
+        "startLoc": {
+          "line": 195,
+          "column": 7,
+          "position": 1572
+        },
+        "endLoc": {
+          "line": 200,
+          "column": 40,
+          "position": 1649
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/webview/factories/HeaderFactory.test.ts",
+        "start": 60,
+        "end": 64,
+        "startLoc": {
+          "line": 60,
+          "column": 7,
+          "position": 441
+        },
+        "endLoc": {
+          "line": 64,
+          "column": 2,
+          "position": 517
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 8,
+      "fragment": "const scrollbackResponse = postMessageCalls.find((call) => {\n        const message = call.args[0];\n        return message && message.command === 'scrollbackDataCollected';\n      });\n\n      expect(scrollbackResponse).to.exist;\n      const responseMessage = scrollbackResponse?.args[0];\n      expect(responseMessage.scrollbackData",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/webview/MessageManager.scrollback.test.ts",
+        "start": 200,
+        "end": 207,
+        "startLoc": {
+          "line": 200,
+          "column": 7,
+          "position": 1719
+        },
+        "endLoc": {
+          "line": 207,
+          "column": 15,
+          "position": 1806
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/webview/MessageManager.scrollback.test.ts",
+        "start": 168,
+        "end": 175,
+        "startLoc": {
+          "line": 168,
+          "column": 7,
+          "position": 1398
+        },
+        "endLoc": {
+          "line": 175,
+          "column": 8,
+          "position": 1485
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 10,
+      "fragment": "const postMessageCalls = (\n        mockCoordinator.postMessageToExtension as sinon.SinonSpy\n      ).getCalls();\n      const scrollbackResponse = postMessageCalls.find((call) => {\n        const message = call.args[0];\n        return message && message.command === 'scrollbackDataCollected';\n      });\n\n      expect(scrollbackResponse).to.exist;\n      // The extraction should still work with default maxLines",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/webview/MessageManager.scrollback.test.ts",
+        "start": 298,
+        "end": 307,
+        "startLoc": {
+          "line": 298,
+          "column": 7,
+          "position": 2575
+        },
+        "endLoc": {
+          "line": 307,
+          "column": 58,
+          "position": 2670
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/webview/MessageManager.scrollback.test.ts",
+        "start": 197,
+        "end": 206,
+        "startLoc": {
+          "line": 197,
+          "column": 7,
+          "position": 1691
+        },
+        "endLoc": {
+          "line": 206,
+          "column": 6,
+          "position": 1786
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 19,
+      "fragment": "};\n\n      // Act\n      messageManager.handleMessage(createMessageEvent(extractScrollbackMessage), mockCoordinator);\n      await new Promise((resolve) => setTimeout(resolve, 10));\n\n      // Assert\n      const postMessageCalls = (\n        mockCoordinator.postMessageToExtension as sinon.SinonSpy\n      ).getCalls();\n      const scrollbackResponse = postMessageCalls.find((call) => {\n        const message = call.args[0];\n        return message && message.command === 'scrollbackDataCollected';\n      });\n\n      expect(scrollbackResponse).to.exist;\n      const responseMessage = scrollbackResponse?.args[0];\n\n      // Should have filtered out trailing empty lines",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/webview/MessageManager.scrollback.test.ts",
+        "start": 354,
+        "end": 372,
+        "startLoc": {
+          "line": 354,
+          "column": 7,
+          "position": 2997
+        },
+        "endLoc": {
+          "line": 372,
+          "column": 49,
+          "position": 3159
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/webview/MessageManager.scrollback.test.ts",
+        "start": 291,
+        "end": 175,
+        "startLoc": {
+          "line": 291,
+          "column": 7,
+          "position": 2525
+        },
+        "endLoc": {
+          "line": 175,
+          "column": 7,
+          "position": 1481
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 14,
+      "fragment": ",\n      };\n\n      // Act\n      messageManager.handleMessage(createMessageEvent(extractScrollbackMessage), mockCoordinator);\n      await new Promise((resolve) => setTimeout(resolve, 10));\n\n      // Assert\n      const postMessageCalls = (\n        mockCoordinator.postMessageToExtension as sinon.SinonSpy\n      ).getCalls();\n      const scrollbackResponse = postMessageCalls.find((call) => {\n        const message = call.args[0];\n        return message && message.command === 'scrollbackDataCollected' &&",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/webview/MessageManager.scrollback.test.ts",
+        "start": 390,
+        "end": 403,
+        "startLoc": {
+          "line": 390,
+          "column": 25,
+          "position": 3332
+        },
+        "endLoc": {
+          "line": 403,
+          "column": 3,
+          "position": 3461
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/webview/MessageManager.scrollback.test.ts",
+        "start": 353,
+        "end": 303,
+        "startLoc": {
+          "line": 353,
+          "column": 27,
+          "position": 2994
+        },
+        "endLoc": {
+          "line": 303,
+          "column": 2,
+          "position": 2650
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 37,
+      "fragment": ",\n      error: consoleErrorStub,\n      debug: sinon.stub(),\n      info: sinon.stub(),\n      trace: sinon.stub(),\n      assert: sinon.stub(),\n      clear: sinon.stub(),\n      count: sinon.stub(),\n      countReset: sinon.stub(),\n      group: sinon.stub(),\n      groupCollapsed: sinon.stub(),\n      groupEnd: sinon.stub(),\n      table: sinon.stub(),\n      time: sinon.stub(),\n      timeEnd: sinon.stub(),\n      timeLog: sinon.stub(),\n      timeStamp: sinon.stub(),\n      profile: sinon.stub(),\n      profileEnd: sinon.stub(),\n      dir: sinon.stub(),\n      dirxml: sinon.stub(),\n    };\n\n    sandbox = sinon.createSandbox();\n\n    // Mock DOM environment\n    dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {\n      url: 'http://localhost',\n      pretendToBeVisual: true,\n      resources: 'usable',\n    });\n\n    document = dom.window.document;\n    (global as Record<string, unknown>).window = dom.window;\n    (global as Record<string, unknown>).document = document;\n\n    // Reset logger to default state",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/utils/logger.test.ts",
+        "start": 28,
+        "end": 64,
+        "startLoc": {
+          "line": 28,
+          "column": 16,
+          "position": 227
+        },
+        "endLoc": {
+          "line": 64,
+          "column": 33,
+          "position": 567
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/webview/utils/ErrorHandler.test.ts",
+        "start": 60,
+        "end": 96,
+        "startLoc": {
+          "line": 60,
+          "column": 2,
+          "position": 484
+        },
+        "endLoc": {
+          "line": 96,
+          "column": 43,
+          "position": 824
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 11,
+      "fragment": ";\n\n    // Set up process.nextTick before JSDOM creation\n    const originalProcess = global.process;\n    (global as any).process = {\n      ...originalProcess,\n      nextTick: (callback: () => void) => setImmediate(callback),\n      env: { ...originalProcess.env, NODE_ENV: 'test' },\n    };\n\n    dom = new JSDOM(`<!DOCTYPE html><html><body></body></html>`",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/utils/common.test.ts",
+        "start": 75,
+        "end": 85,
+        "startLoc": {
+          "line": 75,
+          "column": 2,
+          "position": 519
+        },
+        "endLoc": {
+          "line": 85,
+          "column": 44,
+          "position": 615
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/webview/main.test.ts",
+        "start": 53,
+        "end": 108,
+        "startLoc": {
+          "line": 53,
+          "column": 2,
+          "position": 463
+        },
+        "endLoc": {
+          "line": 108,
+          "column": 6,
+          "position": 559
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 9,
+      "fragment": ", () => {\n      mockConfigManager.getShellForPlatform.returns('/bin/bash');\n\n      const shell = getShellForPlatform('');\n\n      expect(shell).to.equal('/bin/bash');\n      expect(mockConfigManager.getShellForPlatform).to.have.been.calledWith('');\n    });\n  }",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/utils/common.test.ts",
+        "start": 169,
+        "end": 177,
+        "startLoc": {
+          "line": 169,
+          "column": 43,
+          "position": 1305
+        },
+        "endLoc": {
+          "line": 177,
+          "column": 2,
+          "position": 1380
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/utils/common.test.ts",
+        "start": 142,
+        "end": 151,
+        "startLoc": {
+          "line": 142,
+          "column": 31,
+          "position": 1068
+        },
+        "endLoc": {
+          "line": 151,
+          "column": 3,
+          "position": 1144
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 12,
+      "fragment": "),\n        accessSync: sinon.stub(),\n        constants: { R_OK: 4, X_OK: 1 },\n      };\n      const mockRequire = sinon.stub();\n      mockRequire.withArgs('os').returns(mockOs);\n      mockRequire.withArgs('fs').returns(mockFs);\n      (global as any).require = mockRequire;\n\n      const workingDir = getWorkingDirectory();\n\n      expect(workingDir).to.equal('/current/dir'",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/utils/common.test.ts",
+        "start": 234,
+        "end": 245,
+        "startLoc": {
+          "line": 234,
+          "column": 2,
+          "position": 2028
+        },
+        "endLoc": {
+          "line": 245,
+          "column": 15,
+          "position": 2148
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/utils/common.test.ts",
+        "start": 208,
+        "end": 219,
+        "startLoc": {
+          "line": 208,
+          "column": 2,
+          "position": 1739
+        },
+        "endLoc": {
+          "line": 219,
+          "column": 13,
+          "position": 1859
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 15,
+      "fragment": "),\n      };\n      const mockFs = {\n        statSync: sinon.stub().returns({ isDirectory: () => true }),\n        accessSync: sinon.stub(),\n        constants: { R_OK: 4, X_OK: 1 },\n      };\n      const mockRequire = sinon.stub();\n      mockRequire.withArgs('os').returns(mockOs);\n      mockRequire.withArgs('fs').returns(mockFs);\n      (global as any).require = mockRequire;\n\n      const workingDir = getWorkingDirectory();\n\n      expect(workingDir).to.equal('C:\\\\Users\\\\user'",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/utils/common.test.ts",
+        "start": 257,
+        "end": 271,
+        "startLoc": {
+          "line": 257,
+          "column": 18,
+          "position": 2277
+        },
+        "endLoc": {
+          "line": 271,
+          "column": 18,
+          "position": 2438
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/utils/common.test.ts",
+        "start": 205,
+        "end": 219,
+        "startLoc": {
+          "line": 205,
+          "column": 13,
+          "position": 1698
+        },
+        "endLoc": {
+          "line": 219,
+          "column": 13,
+          "position": 1859
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 11,
+      "fragment": ");\n\n    // Set up process.nextTick before JSDOM creation\n    const originalProcess = global.process;\n    (global as any).process = {\n      ...originalProcess,\n      nextTick: (callback: () => void) => setImmediate(callback),\n      env: { ...originalProcess.env, NODE_ENV: 'test' },\n    };\n\n    // JSDOM環境をセットアップ",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/utils/NotificationUtils.test.ts",
+        "start": 40,
+        "end": 50,
+        "startLoc": {
+          "line": 40,
+          "column": 2,
+          "position": 268
+        },
+        "endLoc": {
+          "line": 50,
+          "column": 18,
+          "position": 357
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/webview/main.test.ts",
+        "start": 53,
+        "end": 63,
+        "startLoc": {
+          "line": 53,
+          "column": 2,
+          "position": 462
+        },
+        "endLoc": {
+          "line": 63,
+          "column": 4,
+          "position": 551
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 10,
+      "fragment": ",\n      };\n\n      showNotification(config);\n\n      const notifications = document.querySelectorAll('.terminal-notification');\n      expect(notifications.length).to.equal(1);\n\n      const notification = notifications[0] as HTMLElement;\n      expect(notification.textContent).to.include('No Icon'",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/utils/NotificationUtils.test.ts",
+        "start": 219,
+        "end": 228,
+        "startLoc": {
+          "line": 219,
+          "column": 19,
+          "position": 1750
+        },
+        "endLoc": {
+          "line": 228,
+          "column": 10,
+          "position": 1826
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/utils/NotificationUtils.test.ts",
+        "start": 138,
+        "end": 147,
+        "startLoc": {
+          "line": 138,
+          "column": 4,
+          "position": 1135
+        },
+        "endLoc": {
+          "line": 147,
+          "column": 13,
+          "position": 1211
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 15,
+      "fragment": ";\n\n// Mock setup for this test file\nconst setupTestEnvironment = () => {\n  // Mock globals that might be needed\n  if (typeof (global as any).vscode === 'undefined') {\n    (global as any).vscode = {\n      workspace: {\n        getConfiguration: () => ({ get: () => undefined }),\n      },\n    };\n  }\n};\n\ndescribe('DOMUtils'",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/utils/DOMUtils.test.ts",
+        "start": 12,
+        "end": 26,
+        "startLoc": {
+          "line": 12,
+          "column": 34,
+          "position": 75
+        },
+        "endLoc": {
+          "line": 26,
+          "column": 11,
+          "position": 183
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/utils/NotificationUtils.test.ts",
+        "start": 18,
+        "end": 32,
+        "startLoc": {
+          "line": 18,
+          "column": 43,
+          "position": 93
+        },
+        "endLoc": {
+          "line": 32,
+          "column": 20,
+          "position": 201
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 15,
+      "fragment": ";\n\n  beforeEach(() => {\n    // Test environment setup\n    setupTestEnvironment();\n\n    // Set up process.nextTick before JSDOM creation\n    const originalProcess = global.process;\n    (global as any).process = {\n      ...originalProcess,\n      nextTick: (callback: () => void) => setImmediate(callback),\n      env: { ...originalProcess.env, NODE_ENV: 'test' },\n    };\n\n    // セットアップ: JSDOM環境を作成",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/utils/DOMUtils.test.ts",
+        "start": 29,
+        "end": 43,
+        "startLoc": {
+          "line": 29,
+          "column": 13,
+          "position": 220
+        },
+        "endLoc": {
+          "line": 43,
+          "column": 22,
+          "position": 328
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/utils/NotificationUtils.test.ts",
+        "start": 36,
+        "end": 63,
+        "startLoc": {
+          "line": 36,
+          "column": 16,
+          "position": 249
+        },
+        "endLoc": {
+          "line": 63,
+          "column": 4,
+          "position": 551
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 8,
+      "fragment": ");\n    document = dom.window.document;\n\n    // グローバルに設定\n    (global as Record<string, unknown>).document = document;\n    (global as Record<string, unknown>).window = dom.window;\n    (global as Record<string, unknown>).HTMLElement = dom.window.HTMLElement;\n    (",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/utils/DOMUtils.test.ts",
+        "start": 44,
+        "end": 51,
+        "startLoc": {
+          "line": 44,
+          "column": 44,
+          "position": 340
+        },
+        "endLoc": {
+          "line": 51,
+          "column": 2,
+          "position": 432
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/utils/NotificationUtils.test.ts",
+        "start": 58,
+        "end": 66,
+        "startLoc": {
+          "line": 58,
+          "column": 6,
+          "position": 369
+        },
+        "endLoc": {
+          "line": 66,
+          "column": 8,
+          "position": 462
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 8,
+      "fragment": "sandbox.restore();\n    // クリーンアップ\n    delete (global as Record<string, unknown>).document;\n    delete (global as Record<string, unknown>).window;\n    delete (global as Record<string, unknown>).HTMLElement;\n  });\n\n  describe('createElement'",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/utils/DOMUtils.test.ts",
+        "start": 57,
+        "end": 64,
+        "startLoc": {
+          "line": 57,
+          "column": 5,
+          "position": 487
+        },
+        "endLoc": {
+          "line": 64,
+          "column": 16,
+          "position": 566
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/utils/NotificationUtils.test.ts",
+        "start": 72,
+        "end": 80,
+        "startLoc": {
+          "line": 72,
+          "column": 5,
+          "position": 510
+        },
+        "endLoc": {
+          "line": 80,
+          "column": 25,
+          "position": 590
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 13,
+      "fragment": "const statusChangeSpy = sinon.spy();\n      terminalManager.onCliAgentStatusChange(statusChangeSpy);\n\n      // Setup: terminal1 CONNECTED, terminal2 DISCONNECTED\n      (terminalManager as any)._connectedAgentTerminalId = terminal1;\n      (terminalManager as any)._connectedAgentType = 'claude';\n      (terminalManager as any)._disconnectedAgents.set(terminal2, {\n        terminalId: terminal2,\n        type: 'gemini',\n        disconnectedAt: Date.now(),\n      });\n\n      // Clear spy history",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/terminals/FocusInducedStatusChange.test.ts",
+        "start": 157,
+        "end": 169,
+        "startLoc": {
+          "line": 157,
+          "column": 7,
+          "position": 1060
+        },
+        "endLoc": {
+          "line": 169,
+          "column": 21,
+          "position": 1168
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/terminals/FocusInducedStatusChange.test.ts",
+        "start": 108,
+        "end": 120,
+        "startLoc": {
+          "line": 108,
+          "column": 7,
+          "position": 728
+        },
+        "endLoc": {
+          "line": 120,
+          "column": 32,
+          "position": 836
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 9,
+      "fragment": "(terminalManager as any)._connectedAgentTerminalId = terminal1;\n      (terminalManager as any)._connectedAgentType = 'claude';\n      (terminalManager as any)._disconnectedAgents.set(terminal2, {\n        terminalId: terminal2,\n        type: 'gemini',\n        disconnectedAt: Date.now(),\n      });\n\n      statusChangeSpy",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/terminals/FocusInducedStatusChange.test.ts",
+        "start": 202,
+        "end": 210,
+        "startLoc": {
+          "line": 202,
+          "column": 7,
+          "position": 1389
+        },
+        "endLoc": {
+          "line": 210,
+          "column": 16,
+          "position": 1470
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/terminals/FocusInducedStatusChange.test.ts",
+        "start": 112,
+        "end": 120,
+        "startLoc": {
+          "line": 112,
+          "column": 7,
+          "position": 755
+        },
+        "endLoc": {
+          "line": 120,
+          "column": 32,
+          "position": 836
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 11,
+      "fragment": "();\n\n      const statusChangeSpy = sinon.spy();\n      terminalManager.onCliAgentStatusChange(statusChangeSpy);\n\n      // Setup: terminal1 CONNECTED, terminal2 DISCONNECTED\n      (terminalManager as any)._connectedAgentTerminalId = terminal1;\n      (terminalManager as any)._connectedAgentType = 'claude';\n      (terminalManager as any)._disconnectedAgents.set(terminal2, {\n        terminalId: terminal2,\n        type: 'claude'",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/terminals/FocusInducedStatusChange.test.ts",
+        "start": 240,
+        "end": 250,
+        "startLoc": {
+          "line": 240,
+          "column": 15,
+          "position": 1707
+        },
+        "endLoc": {
+          "line": 250,
+          "column": 9,
+          "position": 1800
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/terminals/FocusInducedStatusChange.test.ts",
+        "start": 156,
+        "end": 116,
+        "startLoc": {
+          "line": 156,
+          "column": 14,
+          "position": 1055
+        },
+        "endLoc": {
+          "line": 116,
+          "column": 9,
+          "position": 815
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 13,
+      "fragment": ");\n\n      // Verify: terminal1 should still be CONNECTED\n      expect((terminalManager as any)._connectedAgentTerminalId).to.equal(\n        terminal1,\n        'Original CONNECTED terminal should remain CONNECTED'\n      );\n\n      // Verify: terminal2 should still be DISCONNECTED\n      expect((terminalManager as any)._disconnectedAgents.has(terminal2)).to.be.true;\n      expect((terminalManager as any)._connectedAgentTerminalId).to.not.equal(\n        terminal2,\n        'DISCONNECTED terminal should NOT be promoted to CONNECTED from old output'",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/terminals/FocusInducedStatusChange.test.ts",
+        "start": 270,
+        "end": 282,
+        "startLoc": {
+          "line": 270,
+          "column": 7,
+          "position": 1899
+        },
+        "endLoc": {
+          "line": 282,
+          "column": 76,
+          "position": 1992
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/terminals/FocusInducedStatusChange.test.ts",
+        "start": 133,
+        "end": 145,
+        "startLoc": {
+          "line": 133,
+          "column": 7,
+          "position": 891
+        },
+        "endLoc": {
+          "line": 145,
+          "column": 65,
+          "position": 984
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 6,
+      "fragment": "const connectedAgents = Array.from(stateService.getAllAgentStates().entries()).filter(\n        ([_, state]) => state.status === CliAgentStatus.CONNECTED\n      );\n      expect(connectedAgents).to.have.lengthOf(1);\n\n      stateService",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/terminals/ErrorHandling.test.ts",
+        "start": 244,
+        "end": 249,
+        "startLoc": {
+          "line": 244,
+          "column": 7,
+          "position": 2297
+        },
+        "endLoc": {
+          "line": 249,
+          "column": 13,
+          "position": 2365
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/terminals/ErrorHandling.test.ts",
+        "start": 132,
+        "end": 136,
+        "startLoc": {
+          "line": 132,
+          "column": 7,
+          "position": 1196
+        },
+        "endLoc": {
+          "line": 136,
+          "column": 7,
+          "position": 1263
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 15,
+      "fragment": ", () => {\n  let terminalManager: TerminalManager;\n  let sandbox: sinon.SinonSandbox;\n\n  beforeEach(() => {\n    sandbox = sinon.createSandbox();\n    terminalManager = new TerminalManager();\n  });\n\n  afterEach(() => {\n    terminalManager.dispose();\n    sandbox.restore();\n  });\n\n  describe('Shell Prompt Pattern Detection'",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/terminals/CliAgentTerminationDetection.test.ts",
+        "start": 6,
+        "end": 20,
+        "startLoc": {
+          "line": 6,
+          "column": 34,
+          "position": 56
+        },
+        "endLoc": {
+          "line": 20,
+          "column": 33,
+          "position": 161
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/terminals/FocusInducedStatusChange.test.ts",
+        "start": 11,
+        "end": 25,
+        "startLoc": {
+          "line": 11,
+          "column": 50,
+          "position": 46
+        },
+        "endLoc": {
+          "line": 25,
+          "column": 50,
+          "position": 151
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 9,
+      "fragment": ".forEach((command) => {\n        // Reset state for each test\n        (terminalManager as any)._connectedAgentTerminalId = terminalId;\n        (terminalManager as any)._connectedAgentType = 'claude';\n\n        // Test termination detection\n        const result = (terminalManager as any)._detectCliAgentTermination(terminalId, command);\n\n        expect(result).to.be.false",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/terminals/CliAgentTerminationDetection.test.ts",
+        "start": 176,
+        "end": 184,
+        "startLoc": {
+          "line": 176,
+          "column": 20,
+          "position": 1050
+        },
+        "endLoc": {
+          "line": 184,
+          "column": 6,
+          "position": 1135
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/terminals/CliAgentTerminationDetection.test.ts",
+        "start": 158,
+        "end": 166,
+        "startLoc": {
+          "line": 158,
+          "column": 18,
+          "position": 896
+        },
+        "endLoc": {
+          "line": 166,
+          "column": 5,
+          "position": 981
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 28,
+      "fragment": ", () => {\n  let sandbox: sinon.SinonSandbox;\n  let terminalManager: TerminalManager;\n  let dom: any;\n  let consoleMocks: any;\n\n  beforeEach(() => {\n    sandbox = sinon.createSandbox();\n\n    // Setup complete test environment\n    const testEnv = setupCompleteTestEnvironment();\n    dom = testEnv.dom;\n    consoleMocks = testEnv.consoleMocks;\n\n    // Create TerminalManager instance\n    terminalManager = new TerminalManager();\n  });\n\n  afterEach(() => {\n    if (terminalManager) {\n      terminalManager.dispose();\n    }\n    cleanupTestEnvironment(sandbox, dom);\n  });\n\n  /**\n   * Claude Code False Detection Prevention Tests\n   */",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/terminals/CliAgentFalseDetectionPrevention.test.ts",
+        "start": 15,
+        "end": 42,
+        "startLoc": {
+          "line": 15,
+          "column": 39,
+          "position": 69
+        },
+        "endLoc": {
+          "line": 42,
+          "column": 6,
+          "position": 244
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/terminals/CliAgentTerminationDebug.test.ts",
+        "start": 15,
+        "end": 40,
+        "startLoc": {
+          "line": 15,
+          "column": 30,
+          "position": 69
+        },
+        "endLoc": {
+          "line": 40,
+          "column": 9,
+          "position": 244
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 8,
+      "fragment": ".forEach((message) => {\n        (terminalManager as any)._detectCliAgentOptimized(terminalId, message);\n\n        expect((terminalManager as any)._connectedAgentTerminalId).to.be.null;\n        expect((terminalManager as any)._connectedAgentType).to.be.null;\n      });\n    });\n  }",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/terminals/CliAgentFalseDetectionPrevention.test.ts",
+        "start": 119,
+        "end": 126,
+        "startLoc": {
+          "line": 119,
+          "column": 10,
+          "position": 844
+        },
+        "endLoc": {
+          "line": 126,
+          "column": 2,
+          "position": 927
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/terminals/CliAgentFalseDetectionPrevention.test.ts",
+        "start": 68,
+        "end": 76,
+        "startLoc": {
+          "line": 68,
+          "column": 16,
+          "position": 458
+        },
+        "endLoc": {
+          "line": 76,
+          "column": 3,
+          "position": 542
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 9,
+      "fragment": ".forEach((message) => {\n        (terminalManager as any)._detectCliAgentOptimized(terminalId, message);\n\n        expect((terminalManager as any)._connectedAgentTerminalId).to.be.null;\n        expect((terminalManager as any)._connectedAgentType).to.be.null;\n      });\n    });\n\n    it('should NOT detect Gemini CLI on generic Gemini mentions'",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/terminals/CliAgentFalseDetectionPrevention.test.ts",
+        "start": 143,
+        "end": 151,
+        "startLoc": {
+          "line": 143,
+          "column": 15,
+          "position": 1011
+        },
+        "endLoc": {
+          "line": 151,
+          "column": 58,
+          "position": 1097
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/terminals/CliAgentFalseDetectionPrevention.test.ts",
+        "start": 68,
+        "end": 76,
+        "startLoc": {
+          "line": 68,
+          "column": 16,
+          "position": 458
+        },
+        "endLoc": {
+          "line": 76,
+          "column": 69,
+          "position": 544
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 12,
+      "fragment": ",\n      ];\n\n      genericMessages.forEach((message) => {\n        (terminalManager as any)._detectCliAgentOptimized(terminalId, message);\n\n        expect((terminalManager as any)._connectedAgentTerminalId).to.be.null;\n        expect((terminalManager as any)._connectedAgentType).to.be.null;\n      });\n    });\n\n    it('should CORRECTLY detect Gemini CLI on legitimate startup messages'",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/terminals/CliAgentFalseDetectionPrevention.test.ts",
+        "start": 159,
+        "end": 170,
+        "startLoc": {
+          "line": 159,
+          "column": 27,
+          "position": 1149
+        },
+        "endLoc": {
+          "line": 170,
+          "column": 68,
+          "position": 1244
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/terminals/CliAgentFalseDetectionPrevention.test.ts",
+        "start": 65,
+        "end": 76,
+        "startLoc": {
+          "line": 65,
+          "column": 45,
+          "position": 449
+        },
+        "endLoc": {
+          "line": 76,
+          "column": 69,
+          "position": 544
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 17,
+      "fragment": ",\n      ];\n\n      legitimateStartupMessages.forEach((message, index) => {\n        // Reset state for each test\n        (terminalManager as any)._connectedAgentTerminalId = null;\n        (terminalManager as any)._connectedAgentType = null;\n        (terminalManager as any)._disconnectedAgents.clear();\n\n        (terminalManager as any)._detectCliAgentOptimized(terminalId, message);\n\n        expect((terminalManager as any)._connectedAgentTerminalId).to.equal(\n          terminalId,\n          `Failed on message: \"${message}\"`\n        );\n        expect((terminalManager as any)._connectedAgentType).to.equal(\n          'gemini'",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/terminals/CliAgentFalseDetectionPrevention.test.ts",
+        "start": 180,
+        "end": 196,
+        "startLoc": {
+          "line": 180,
+          "column": 24,
+          "position": 1304
+        },
+        "endLoc": {
+          "line": 196,
+          "column": 9,
+          "position": 1452
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/terminals/CliAgentFalseDetectionPrevention.test.ts",
+        "start": 85,
+        "end": 101,
+        "startLoc": {
+          "line": 85,
+          "column": 28,
+          "position": 600
+        },
+        "endLoc": {
+          "line": 101,
+          "column": 9,
+          "position": 748
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 14,
+      "fragment": "];\n\n      edgeCases.forEach((message) => {\n        (terminalManager as any)._detectCliAgentOptimized(terminalId, message);\n\n        expect((terminalManager as any)._connectedAgentTerminalId).to.be.null;\n        expect((terminalManager as any)._connectedAgentType).to.be.null;\n      });\n    });\n  });\n\n  /**\n   * Focus Event False Detection Tests\n   */",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/terminals/CliAgentFalseDetectionPrevention.test.ts",
+        "start": 212,
+        "end": 225,
+        "startLoc": {
+          "line": 212,
+          "column": 7,
+          "position": 1542
+        },
+        "endLoc": {
+          "line": 225,
+          "column": 6,
+          "position": 1637
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/terminals/CliAgentFalseDetectionPrevention.test.ts",
+        "start": 117,
+        "end": 130,
+        "startLoc": {
+          "line": 117,
+          "column": 7,
+          "position": 838
+        },
+        "endLoc": {
+          "line": 130,
+          "column": 6,
+          "position": 933
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 6,
+      "fragment": "expect((terminalManager as any)._connectedAgentTerminalId).to.be.null;\n      expect((terminalManager as any)._connectedAgentType).to.be.null;\n      expect((terminalManager as any)._disconnectedAgents.size).to.equal(0);\n    });\n\n    it('should NOT change CLI Agent status when switching between terminals without new output'",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/terminals/CliAgentFalseDetectionPrevention.test.ts",
+        "start": 240,
+        "end": 245,
+        "startLoc": {
+          "line": 240,
+          "column": 7,
+          "position": 1754
+        },
+        "endLoc": {
+          "line": 245,
+          "column": 89,
+          "position": 1828
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/terminals/CliAgentFalseDetectionPrevention.test.ts",
+        "start": 52,
+        "end": 57,
+        "startLoc": {
+          "line": 52,
+          "column": 7,
+          "position": 323
+        },
+        "endLoc": {
+          "line": 57,
+          "column": 59,
+          "position": 397
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 6,
+      "fragment": "expect((terminalManager as any)._connectedAgentTerminalId).to.be.null;\n      expect((terminalManager as any)._connectedAgentType).to.be.null;\n      expect((terminalManager as any)._disconnectedAgents.size).to.equal(0);\n    });\n  });\n}",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/terminals/CliAgentFalseDetectionPrevention.test.ts",
+        "start": 352,
+        "end": 357,
+        "startLoc": {
+          "line": 352,
+          "column": 7,
+          "position": 2673
+        },
+        "endLoc": {
+          "line": 357,
+          "column": 2,
+          "position": 2748
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/terminals/CliAgentFalseDetectionPrevention.test.ts",
+        "start": 52,
+        "end": 316,
+        "startLoc": {
+          "line": 52,
+          "column": 7,
+          "position": 323
+        },
+        "endLoc": {
+          "line": 316,
+          "column": 6,
+          "position": 2399
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 31,
+      "fragment": ", () => {\n  let sandbox: sinon.SinonSandbox;\n  let terminalManager: TerminalManager;\n  let dom: any;\n  let consoleMocks: any;\n\n  beforeEach(() => {\n    sandbox = sinon.createSandbox();\n\n    // Setup complete test environment\n    const testEnv = setupCompleteTestEnvironment();\n    dom = testEnv.dom;\n    consoleMocks = testEnv.consoleMocks;\n\n    // Create TerminalManager instance\n    terminalManager = new TerminalManager();\n  });\n\n  afterEach(() => {\n    if (terminalManager) {\n      terminalManager.dispose();\n    }\n    cleanupTestEnvironment(sandbox, dom);\n  });\n\n  /**\n   * Specification Scenario 1: Single Terminal\n   * 1. Start Terminal 1 → Status: NONE\n   * 2. Start CLI Agent in Terminal 1 → Status: CONNECTED\n   * 3. Stop CLI Agent in Terminal 1 → Status: NONE\n   */",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/terminals/CliAgentAutoPromotion.test.ts",
+        "start": 16,
+        "end": 46,
+        "startLoc": {
+          "line": 16,
+          "column": 54,
+          "position": 69
+        },
+        "endLoc": {
+          "line": 46,
+          "column": 6,
+          "position": 244
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/terminals/CliAgentTerminationDebug.test.ts",
+        "start": 15,
+        "end": 40,
+        "startLoc": {
+          "line": 15,
+          "column": 30,
+          "position": 69
+        },
+        "endLoc": {
+          "line": 40,
+          "column": 9,
+          "position": 244
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 14,
+      "fragment": "expect((terminalManager as any)._connectedAgentTerminalId).to.be.null;\n      expect((terminalManager as any)._connectedAgentType).to.be.null;\n      expect((terminalManager as any)._disconnectedAgents.size).to.equal(0);\n    });\n  });\n\n  /**\n   * Specification Scenario 2: Multiple Terminals\n   * 1. Start Terminal 1 with CLI Agent → T1: CONNECTED\n   * 2. Start Terminal 2 with CLI Agent → T1: DISCONNECTED, T2: CONNECTED\n   * 3. Start Terminal 3 with CLI Agent → T1: DISCONNECTED, T2: DISCONNECTED, T3: CONNECTED\n   * 4. Stop CLI Agent in Terminal 3 → T1: DISCONNECTED, T2: CONNECTED, T3: NONE\n   * 5. Stop CLI Agent in Terminal 2 → T1: CONNECTED, T2: NONE, T3: NONE\n   */",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/terminals/CliAgentAutoPromotion.test.ts",
+        "start": 64,
+        "end": 77,
+        "startLoc": {
+          "line": 64,
+          "column": 7,
+          "position": 407
+        },
+        "endLoc": {
+          "line": 77,
+          "column": 6,
+          "position": 484
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/terminals/CliAgentFalseDetectionPrevention.test.ts",
+        "start": 52,
+        "end": 316,
+        "startLoc": {
+          "line": 52,
+          "column": 7,
+          "position": 323
+        },
+        "endLoc": {
+          "line": 316,
+          "column": 6,
+          "position": 2399
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 7,
+      "fragment": "(terminalManager as any)._setCurrentAgent(terminal2Id, 'gemini');\n\n      expect((terminalManager as any)._connectedAgentTerminalId).to.equal(terminal2Id);\n      expect((terminalManager as any)._connectedAgentType).to.equal('gemini');\n      expect((terminalManager as any)._disconnectedAgents.has(terminal1Id)).to.be.true;\n\n      // User terminates Gemini (Claude should automatically become CONNECTED)",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/terminals/CliAgentAutoPromotion.test.ts",
+        "start": 239,
+        "end": 245,
+        "startLoc": {
+          "line": 239,
+          "column": 7,
+          "position": 2372
+        },
+        "endLoc": {
+          "line": 245,
+          "column": 73,
+          "position": 2462
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/terminals/CliAgentAutoPromotion.test.ts",
+        "start": 92,
+        "end": 96,
+        "startLoc": {
+          "line": 92,
+          "column": 7,
+          "position": 657
+        },
+        "endLoc": {
+          "line": 96,
+          "column": 7,
+          "position": 745
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 8,
+      "fragment": "(terminalManager as any)._setAgentTerminated(terminal2Id);\n\n      expect((terminalManager as any)._connectedAgentTerminalId).to.equal(terminal1Id);\n      expect((terminalManager as any)._connectedAgentType).to.equal('claude');\n      expect((terminalManager as any)._disconnectedAgents.size).to.equal(0);\n    });\n\n    it",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/terminals/CliAgentAutoPromotion.test.ts",
+        "start": 246,
+        "end": 253,
+        "startLoc": {
+          "line": 246,
+          "column": 7,
+          "position": 2465
+        },
+        "endLoc": {
+          "line": 253,
+          "column": 3,
+          "position": 2555
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/terminals/CliAgentAutoPromotion.test.ts",
+        "start": 117,
+        "end": 122,
+        "startLoc": {
+          "line": 117,
+          "column": 7,
+          "position": 1109
+        },
+        "endLoc": {
+          "line": 122,
+          "column": 2,
+          "position": 1197
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 10,
+      "fragment": ": sinon.stub(),\n  ViewColumn: { One: 1 },\n  TreeDataProvider: sinon.stub(),\n  EventEmitter: sinon.stub(),\n  CancellationToken: sinon.stub(),\n  commands: {\n    registerCommand: sinon.stub(),\n    executeCommand: sinon.stub(),\n  },\n  extensions",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/providers/SecondaryTerminalProvider-extended.test.ts",
+        "start": 29,
+        "end": 38,
+        "startLoc": {
+          "line": 29,
+          "column": 20,
+          "position": 202
+        },
+        "endLoc": {
+          "line": 38,
+          "column": 11,
+          "position": 291
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/webview/utils/ErrorHandler.test.ts",
+        "start": 19,
+        "end": 28,
+        "startLoc": {
+          "line": 19,
+          "column": 17,
+          "position": 134
+        },
+        "endLoc": {
+          "line": 28,
+          "column": 2,
+          "position": 222
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 21,
+      "fragment": ": sinon.stub(),\n  },\n};\n\n// Setup test environment\nfunction setupTestEnvironment() {\n  // Mock VS Code module\n  (global as any).vscode = mockVscode;\n\n  // Mock Node.js modules\n  (global as any).require = sinon.stub();\n  (global as any).module = { exports: {} };\n  (global as any).process = {\n    platform: 'linux',\n    env: {\n      NODE_ENV: 'test',\n    },\n  };\n}\n\ndescribe('SecondaryTerminalProvider Extended'",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/providers/SecondaryTerminalProvider-extended.test.ts",
+        "start": 39,
+        "end": 59,
+        "startLoc": {
+          "line": 39,
+          "column": 13,
+          "position": 298
+        },
+        "endLoc": {
+          "line": 59,
+          "column": 37,
+          "position": 440
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/webview/utils/ErrorHandler.test.ts",
+        "start": 26,
+        "end": 46,
+        "startLoc": {
+          "line": 26,
+          "column": 15,
+          "position": 209
+        },
+        "endLoc": {
+          "line": 46,
+          "column": 15,
+          "position": 351
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 16,
+      "fragment": "(),\n    };\n\n    // Set up process.nextTick before JSDOM creation\n    const originalProcess = global.process;\n    (global as any).process = {\n      ...originalProcess,\n      nextTick: (callback: () => void) => setImmediate(callback),\n      env: { ...originalProcess.env, NODE_ENV: 'test' },\n    };\n\n    dom = new JSDOM(`<!DOCTYPE html><html><body></body></html>`);\n    document = dom.window.document;\n    (global as any).document = document;\n\n    // Reset webview spies",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/providers/SecondaryTerminalProvider-extended.test.ts",
+        "start": 126,
+        "end": 141,
+        "startLoc": {
+          "line": 126,
+          "column": 4,
+          "position": 1002
+        },
+        "endLoc": {
+          "line": 141,
+          "column": 23,
+          "position": 1138
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/utils/common.test.ts",
+        "start": 74,
+        "end": 88,
+        "startLoc": {
+          "line": 74,
+          "column": 5,
+          "position": 513
+        },
+        "endLoc": {
+          "line": 88,
+          "column": 2,
+          "position": 648
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 15,
+      "fragment": "(global as any).window = dom.window;\n\n    sandbox = sinon.createSandbox();\n  });\n\n  afterEach(() => {\n    if (sandbox) {\n      sandbox.restore();\n    }\n    if (dom) {\n      dom.window.close();\n    }\n  });\n\n  describe('WebView initialization'",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/providers/SecondaryTerminalProvider-extended.test.ts",
+        "start": 145,
+        "end": 159,
+        "startLoc": {
+          "line": 145,
+          "column": 5,
+          "position": 1179
+        },
+        "endLoc": {
+          "line": 159,
+          "column": 25,
+          "position": 1276
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/utils/common.test.ts",
+        "start": 88,
+        "end": 102,
+        "startLoc": {
+          "line": 88,
+          "column": 5,
+          "position": 648
+        },
+        "endLoc": {
+          "line": 102,
+          "column": 20,
+          "position": 745
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 13,
+      "fragment": "; i++) {\n        const mockTerminal = {\n          terminal: {} as any,\n          fitAddon: {} as any,\n          name: `Terminal ${i}`,\n        };\n        splitManager.setTerminal(`terminal-${i}`, mockTerminal);\n      }\n\n      const result = splitManager.calculateSplitLayout();\n\n      expect(result.canSplit).to.be.false;\n      expect(result.reason).to.include('Terminal height would be too small'",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/managers/SplitManager.test.ts",
+        "start": 138,
+        "end": 150,
+        "startLoc": {
+          "line": 138,
+          "column": 2,
+          "position": 1114
+        },
+        "endLoc": {
+          "line": 150,
+          "column": 37,
+          "position": 1232
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/managers/SplitManager.test.ts",
+        "start": 100,
+        "end": 112,
+        "startLoc": {
+          "line": 100,
+          "column": 2,
+          "position": 782
+        },
+        "endLoc": {
+          "line": 112,
+          "column": 33,
+          "position": 900
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 10,
+      "fragment": "; i++) {\n        const mockTerminal = {\n          terminal: {} as any,\n          fitAddon: {} as any,\n          name: `Terminal ${i}`,\n        };\n        splitManager.setTerminal(`terminal-${i}`, mockTerminal);\n      }\n\n      const result = splitManager.calculateTerminalHeightPercentage",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/managers/SplitManager.test.ts",
+        "start": 162,
+        "end": 171,
+        "startLoc": {
+          "line": 162,
+          "column": 2,
+          "position": 1341
+        },
+        "endLoc": {
+          "line": 171,
+          "column": 34,
+          "position": 1426
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/managers/SplitManager.test.ts",
+        "start": 100,
+        "end": 109,
+        "startLoc": {
+          "line": 100,
+          "column": 2,
+          "position": 782
+        },
+        "endLoc": {
+          "line": 109,
+          "column": 21,
+          "position": 867
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 11,
+      "fragment": "; i++) {\n        const mockTerminal = {\n          terminal: {} as any,\n          fitAddon: {} as any,\n          name: `Terminal ${i}`,\n        };\n        splitManager.setTerminal(`terminal-${i}`, mockTerminal);\n      }\n\n      const result = splitManager.calculateTerminalHeightPercentage();\n      expect(result).to.equal('25%'",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/managers/SplitManager.test.ts",
+        "start": 177,
+        "end": 187,
+        "startLoc": {
+          "line": 177,
+          "column": 2,
+          "position": 1485
+        },
+        "endLoc": {
+          "line": 187,
+          "column": 6,
+          "position": 1585
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/managers/SplitManager.test.ts",
+        "start": 100,
+        "end": 172,
+        "startLoc": {
+          "line": 100,
+          "column": 2,
+          "position": 782
+        },
+        "endLoc": {
+          "line": 172,
+          "column": 6,
+          "position": 1441
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 8,
+      "fragment": ", () => {\n      // Restore terminal-body if removed by previous test\n      if (!document.getElementById('terminal-body')) {\n        const body = document.querySelector('body');\n        if (body) {\n          const terminalBody = document.createElement('div');\n          terminalBody.id = 'terminal-body';\n          terminalBody.style.height = '500px'",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/managers/SplitManager.test.ts",
+        "start": 200,
+        "end": 207,
+        "startLoc": {
+          "line": 200,
+          "column": 69,
+          "position": 1689
+        },
+        "endLoc": {
+          "line": 207,
+          "column": 8,
+          "position": 1774
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/managers/SplitManager.test.ts",
+        "start": 115,
+        "end": 122,
+        "startLoc": {
+          "line": 115,
+          "column": 72,
+          "position": 914
+        },
+        "endLoc": {
+          "line": 122,
+          "column": 7,
+          "position": 999
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 7,
+      "fragment": "if (!document.getElementById('terminal-body')) {\n        const body = document.querySelector('body');\n        if (body) {\n          const terminalBody = document.createElement('div');\n          terminalBody.id = 'terminal-body';\n          terminalBody.style.height = '500px';\n          body",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/managers/SplitManager.test.ts",
+        "start": 202,
+        "end": 208,
+        "startLoc": {
+          "line": 202,
+          "column": 7,
+          "position": 1702
+        },
+        "endLoc": {
+          "line": 208,
+          "column": 5,
+          "position": 1778
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/managers/SplitManager.test.ts",
+        "start": 70,
+        "end": 76,
+        "startLoc": {
+          "line": 70,
+          "column": 7,
+          "position": 506
+        },
+        "endLoc": {
+          "line": 76,
+          "column": 6,
+          "position": 582
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 34,
+      "fragment": ", () => {\n      // Restore terminal-body if removed by previous test\n      if (!document.getElementById('terminal-body')) {\n        const body = document.querySelector('body');\n        if (body) {\n          const terminalBody = document.createElement('div');\n          terminalBody.id = 'terminal-body';\n          terminalBody.style.height = '500px';\n          body.appendChild(terminalBody);\n        }\n      }\n\n      // Mock clientHeight and getBoundingClientRect for terminal-body\n      const terminalBody = document.getElementById('terminal-body');\n      if (terminalBody) {\n        Object.defineProperty(terminalBody, 'clientHeight', {\n          value: 500,\n          configurable: true,\n        });\n        terminalBody.getBoundingClientRect = () =>\n          ({\n            height: 500,\n            width: 800,\n            top: 0,\n            left: 0,\n            bottom: 500,\n            right: 800,\n            x: 0,\n            y: 0,\n            toJSON: () => {},\n          }) as DOMRect;\n      }\n\n      const",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/managers/SplitManager.test.ts",
+        "start": 243,
+        "end": 276,
+        "startLoc": {
+          "line": 243,
+          "column": 50,
+          "position": 2048
+        },
+        "endLoc": {
+          "line": 276,
+          "column": 6,
+          "position": 2310
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/managers/SplitManager.test.ts",
+        "start": 115,
+        "end": 233,
+        "startLoc": {
+          "line": 115,
+          "column": 72,
+          "position": 914
+        },
+        "endLoc": {
+          "line": 233,
+          "column": 29,
+          "position": 1951
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 13,
+      "fragment": ", () => {\n      // Restore terminal-body if removed by previous test\n      if (!document.getElementById('terminal-body')) {\n        const body = document.querySelector('body');\n        if (body) {\n          const terminalBody = document.createElement('div');\n          terminalBody.id = 'terminal-body';\n          terminalBody.style.height = '500px';\n          body.appendChild(terminalBody);\n        }\n      }\n\n      // Mock clientHeight for JSDOM",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/managers/SplitManager.test.ts",
+        "start": 492,
+        "end": 504,
+        "startLoc": {
+          "line": 492,
+          "column": 45,
+          "position": 4304
+        },
+        "endLoc": {
+          "line": 504,
+          "column": 31,
+          "position": 4409
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/managers/SplitManager.test.ts",
+        "start": 115,
+        "end": 212,
+        "startLoc": {
+          "line": 115,
+          "column": 72,
+          "position": 914
+        },
+        "endLoc": {
+          "line": 212,
+          "column": 65,
+          "position": 1794
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 22,
+      "fragment": ", () => {\n      // Restore terminal-body if removed by previous test\n      if (!document.getElementById('terminal-body')) {\n        const body = document.querySelector('body');\n        if (body) {\n          const terminalBody = document.createElement('div');\n          terminalBody.id = 'terminal-body';\n          terminalBody.style.height = '500px';\n          body.appendChild(terminalBody);\n        }\n      }\n\n      // Mock clientHeight for JSDOM\n      const terminalBody = document.getElementById('terminal-body');\n      if (terminalBody) {\n        Object.defineProperty(terminalBody, 'clientHeight', {\n          value: 500,\n          configurable: true,\n        });\n      }\n\n      const moveTerminalSpy",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/managers/SplitManager.test.ts",
+        "start": 535,
+        "end": 556,
+        "startLoc": {
+          "line": 535,
+          "column": 49,
+          "position": 4656
+        },
+        "endLoc": {
+          "line": 556,
+          "column": 16,
+          "position": 4826
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/managers/SplitManager.test.ts",
+        "start": 115,
+        "end": 513,
+        "startLoc": {
+          "line": 115,
+          "column": 72,
+          "position": 914
+        },
+        "endLoc": {
+          "line": 513,
+          "column": 17,
+          "position": 4474
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 11,
+      "fragment": ", () => {\n      const icon = document.querySelector('.sample-icon') as HTMLElement;\n\n      // If no sample icon exists, check if showIcons is working\n      if (!icon) {\n        const commandSection = document.querySelector('.sample-icons');\n        expect(commandSection).to.not.be.null; // At least command section should exist\n        return; // Skip the interaction test if no icons rendered\n      }\n\n      // Set initial opacity",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/managers/HeaderManager.test.ts",
+        "start": 286,
+        "end": 296,
+        "startLoc": {
+          "line": 286,
+          "column": 39,
+          "position": 2341
+        },
+        "endLoc": {
+          "line": 296,
+          "column": 23,
+          "position": 2426
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/managers/HeaderManager.test.ts",
+        "start": 269,
+        "end": 279,
+        "startLoc": {
+          "line": 269,
+          "column": 38,
+          "position": 2197
+        },
+        "endLoc": {
+          "line": 279,
+          "column": 23,
+          "position": 2282
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 8,
+      "fragment": ", () => {\n      const commandSection = document.querySelector('.sample-icons') as HTMLElement;\n      const tooltip = document.querySelector('.help-tooltip') as HTMLElement;\n\n      expect(commandSection).to.not.be.null;\n      expect(tooltip).to.not.be.null;\n\n      // Set initial state",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/managers/HeaderManager.test.ts",
+        "start": 327,
+        "end": 334,
+        "startLoc": {
+          "line": 327,
+          "column": 36,
+          "position": 2698
+        },
+        "endLoc": {
+          "line": 334,
+          "column": 21,
+          "position": 2778
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/managers/HeaderManager.test.ts",
+        "start": 313,
+        "end": 320,
+        "startLoc": {
+          "line": 313,
+          "column": 36,
+          "position": 2559
+        },
+        "endLoc": {
+          "line": 320,
+          "column": 23,
+          "position": 2639
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 8,
+      "fragment": "(terminalManager as any)._setCurrentAgent(terminal3, 'claude');\n\n      // Verify initial state: terminal3 is CONNECTED, others are DISCONNECTED\n      expect((terminalManager as any)._connectedAgentTerminalId).to.equal(terminal3);\n      expect((terminalManager as any)._disconnectedAgents.has(terminal1)).to.be.true;\n      expect((terminalManager as any)._disconnectedAgents.has(terminal2)).to.be.true;\n\n      // Reset the spy to focus on termination events",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/integration/FullStateSync.test.ts",
+        "start": 67,
+        "end": 74,
+        "startLoc": {
+          "line": 67,
+          "column": 7,
+          "position": 492
+        },
+        "endLoc": {
+          "line": 74,
+          "column": 48,
+          "position": 589
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/terminals/CliAgentTerminationDebug.test.ts",
+        "start": 179,
+        "end": 186,
+        "startLoc": {
+          "line": 179,
+          "column": 7,
+          "position": 1426
+        },
+        "endLoc": {
+          "line": 186,
+          "column": 8,
+          "position": 1523
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 8,
+      "fragment": "const applyBtn = document.getElementById('apply-settings');\n      const clickEvent = new dom.window.Event('click');\n      applyBtn?.dispatchEvent(clickEvent);\n\n      expect(onSettingsChangeSpy).to.have.been.calledOnce;\n      const collectedSettings = onSettingsChangeSpy.getCall(0).args[0];\n\n      expect(collectedSettings.",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/components/SettingsPanel.test.ts",
+        "start": 302,
+        "end": 309,
+        "startLoc": {
+          "line": 302,
+          "column": 7,
+          "position": 2644
+        },
+        "endLoc": {
+          "line": 309,
+          "column": 2,
+          "position": 2728
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/components/SettingsPanel.test.ts",
+        "start": 281,
+        "end": 288,
+        "startLoc": {
+          "line": 281,
+          "column": 7,
+          "position": 2462
+        },
+        "endLoc": {
+          "line": 288,
+          "column": 2,
+          "position": 2546
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 6,
+      "fragment": "const fontSizeSlider = document.getElementById('font-size-slider') as HTMLInputElement;\n      const fontFamilySelect = document.getElementById('font-family-select') as HTMLSelectElement;\n      const themeSelect = document.getElementById('theme-select') as HTMLSelectElement;\n      const cursorBlinkCheckbox = document.getElementById('cursor-blink') as HTMLInputElement;\n\n      fontSizeSlider.value = '20'",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/components/SettingsPanel.test.ts",
+        "start": 390,
+        "end": 395,
+        "startLoc": {
+          "line": 390,
+          "column": 7,
+          "position": 3454
+        },
+        "endLoc": {
+          "line": 395,
+          "column": 5,
+          "position": 3537
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/components/SettingsPanel.test.ts",
+        "start": 270,
+        "end": 275,
+        "startLoc": {
+          "line": 270,
+          "column": 7,
+          "position": 2341
+        },
+        "endLoc": {
+          "line": 275,
+          "column": 5,
+          "position": 2424
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 11,
+      "fragment": "// HTMLで既に取得済みのAPIを使用\n      if (!this.vscodeApi) {\n        const windowWithApi = window as Window & {\n          vscodeApi?: {\n            postMessage: (message: unknown) => void;\n            getState: () => unknown;\n            setState: (state: unknown) => void;\n          };\n        };\n        this.vscodeApi = windowWithApi.vscodeApi || null;\n      }",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/webview/managers/StandardTerminalPersistenceManager.ts",
+        "start": 213,
+        "end": 223,
+        "startLoc": {
+          "line": 213,
+          "column": 7,
+          "position": 1525
+        },
+        "endLoc": {
+          "line": 223,
+          "column": 2,
+          "position": 1632
+        }
+      },
+      "secondFile": {
+        "name": "src/webview/managers/StandardTerminalPersistenceManager.ts",
+        "start": 89,
+        "end": 99,
+        "startLoc": {
+          "line": 89,
+          "column": 7,
+          "position": 644
+        },
+        "endLoc": {
+          "line": 99,
+          "column": 3,
+          "position": 751
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 17,
+      "fragment": ",\n    black: '#000000',\n    red: '#cd3131',\n    green: '#0dbc79',\n    yellow: '#e5e510',\n    blue: '#2472c8',\n    magenta: '#bc3fbc',\n    cyan: '#11a8cd',\n    white: '#e5e5e5',\n    brightBlack: '#666666',\n    brightRed: '#f14c4c',\n    brightGreen: '#23d18b',\n    brightYellow: '#f5f543',\n    brightBlue: '#3b8eea',\n    brightMagenta: '#d670d6',\n    brightCyan: '#29b8db',\n    brightWhite: '#ffffff'",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/webview/constants/index.ts",
+        "start": 44,
+        "end": 60,
+        "startLoc": {
+          "line": 44,
+          "column": 10,
+          "position": 293
+        },
+        "endLoc": {
+          "line": 60,
+          "column": 10,
+          "position": 404
+        }
+      },
+      "secondFile": {
+        "name": "src/webview/utils/WebviewThemeUtils.ts",
+        "start": 10,
+        "end": 26,
+        "startLoc": {
+          "line": 10,
+          "column": 10,
+          "position": 45
+        },
+        "endLoc": {
+          "line": 26,
+          "column": 10,
+          "position": 156
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 19,
+      "fragment": ",\n    black: '#000000',\n    red: '#cd3131',\n    green: '#00bc00',\n    yellow: '#949800',\n    blue: '#0451a5',\n    magenta: '#bc05bc',\n    cyan: '#0598bc',\n    white: '#555555',\n    brightBlack: '#666666',\n    brightRed: '#cd3131',\n    brightGreen: '#14ce14',\n    brightYellow: '#b5ba00',\n    brightBlue: '#0451a5',\n    brightMagenta: '#bc05bc',\n    brightCyan: '#0598bc',\n    brightWhite: '#a5a5a5',\n  },\n}",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/webview/constants/index.ts",
+        "start": 66,
+        "end": 84,
+        "startLoc": {
+          "line": 66,
+          "column": 10,
+          "position": 443
+        },
+        "endLoc": {
+          "line": 84,
+          "column": 2,
+          "position": 561
+        }
+      },
+      "secondFile": {
+        "name": "src/webview/utils/WebviewThemeUtils.ts",
+        "start": 32,
+        "end": 50,
+        "startLoc": {
+          "line": 32,
+          "column": 10,
+          "position": 195
+        },
+        "endLoc": {
+          "line": 50,
+          "column": 16,
+          "position": 314
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 9,
+      "fragment": ",\n  },\n  ExtensionContext: sinon.stub(),\n  ViewColumn: { One: 1 },\n  TreeDataProvider: sinon.stub(),\n  EventEmitter: sinon.stub(),\n  CancellationToken: sinon.stub(),\n  commands: {\n    registerCommand: sinon.stub().",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/unit/mocha-setup.ts",
+        "start": 51,
+        "end": 59,
+        "startLoc": {
+          "line": 51,
+          "column": 5,
+          "position": 320
+        },
+        "endLoc": {
+          "line": 59,
+          "column": 2,
+          "position": 399
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/webview/utils/ErrorHandler.test.ts",
+        "start": 17,
+        "end": 25,
+        "startLoc": {
+          "line": 17,
+          "column": 2,
+          "position": 126
+        },
+        "endLoc": {
+          "line": 25,
+          "column": 2,
+          "position": 205
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 12,
+      "fragment": ",\n        asWebviewUri: (uri: vscode.Uri) => uri,\n        cspSource: 'vscode-resource:',\n      },\n      onDidDispose: () => ({ dispose: () => {} }),\n      onDidChangeVisibility: () => ({ dispose: () => {} }),\n      visible: true,\n      viewType: 'secondaryTerminal',\n      show: () => {},\n    } as vscode.WebviewView;\n\n    provider",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/suite/webview.test.ts",
+        "start": 107,
+        "end": 118,
+        "startLoc": {
+          "line": 107,
+          "column": 2,
+          "position": 1084
+        },
+        "endLoc": {
+          "line": 118,
+          "column": 9,
+          "position": 1208
+        }
+      },
+      "secondFile": {
+        "name": "src/test/suite/webview.test.ts",
+        "start": 65,
+        "end": 76,
+        "startLoc": {
+          "line": 65,
+          "column": 2,
+          "position": 685
+        },
+        "endLoc": {
+          "line": 76,
+          "column": 7,
+          "position": 809
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 21,
+      "fragment": ");\n\n          return { dispose: () => {} };\n        },\n        asWebviewUri: (uri: vscode.Uri) => uri,\n        cspSource: 'vscode-resource:',\n      },\n      onDidDispose: () => ({ dispose: () => {} }),\n      onDidChangeVisibility: () => ({ dispose: () => {} }),\n      visible: true,\n      viewType: 'secondaryTerminal',\n      show: () => {},\n    } as vscode.WebviewView;\n\n    provider.resolveWebviewView(\n      mockWebviewView,\n      {} as vscode.WebviewViewResolveContext,\n      {} as vscode.CancellationToken\n    );\n\n    // At least some messages should be processed",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/suite/webview.test.ts",
+        "start": 247,
+        "end": 267,
+        "startLoc": {
+          "line": 247,
+          "column": 2,
+          "position": 2237
+        },
+        "endLoc": {
+          "line": 267,
+          "column": 46,
+          "position": 2422
+        }
+      },
+      "secondFile": {
+        "name": "src/test/suite/webview.test.ts",
+        "start": 105,
+        "end": 124,
+        "startLoc": {
+          "line": 105,
+          "column": 3,
+          "position": 1060
+        },
+        "endLoc": {
+          "line": 124,
+          "column": 29,
+          "position": 1244
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 33,
+      "fragment": ";\n  let mockContext: vscode.ExtensionContext;\n\n  setup(() => {\n    mockContext = {\n      subscriptions: [],\n      extensionPath: '',\n      extensionUri: vscode.Uri.file(''),\n      globalState: {} as vscode.Memento & { setKeysForSync(keys: readonly string[]): void },\n      workspaceState: {} as vscode.Memento,\n      asAbsolutePath: (relativePath: string) => relativePath,\n      secrets: {} as vscode.SecretStorage,\n      environmentVariableCollection: {} as vscode.EnvironmentVariableCollection,\n      storageUri: undefined,\n      storagePath: undefined,\n      globalStorageUri: vscode.Uri.file(''),\n      globalStoragePath: '',\n      logUri: vscode.Uri.file(''),\n      logPath: '',\n      extensionMode: vscode.ExtensionMode.Test,\n      extension: {} as vscode.Extension<unknown>,\n      languageModelAccessInformation: {} as vscode.LanguageModelAccessInformation,\n    } as unknown as vscode.ExtensionContext;\n\n    terminalManager = new TerminalManager();\n    provider = new SecondaryTerminalProvider(mockContext, terminalManager);\n  });\n\n  teardown(() => {\n    terminalManager.dispose();\n  });\n\n  test('Error messages should be user-friendly'",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/suite/ux-feedback.test.ts",
+        "start": 8,
+        "end": 40,
+        "startLoc": {
+          "line": 8,
+          "column": 16,
+          "position": 81
+        },
+        "endLoc": {
+          "line": 40,
+          "column": 41,
+          "position": 408
+        }
+      },
+      "secondFile": {
+        "name": "src/test/suite/webview.test.ts",
+        "start": 8,
+        "end": 40,
+        "startLoc": {
+          "line": 8,
+          "column": 26,
+          "position": 81
+        },
+        "endLoc": {
+          "line": 40,
+          "column": 41,
+          "position": 408
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 14,
+      "fragment": "setTimeout(() => callback({ command: 'ready' }), 1);\n          return { dispose: () => {} };\n        },\n        asWebviewUri: (uri: vscode.Uri) => uri,\n        cspSource: 'vscode-resource:',\n      },\n      viewType: 'secondaryTerminal',\n      onDidDispose: () => ({ dispose: () => {} }),\n      visible: true,\n      onDidChangeVisibility: () => ({ dispose: () => {} }),\n      show: () => {},\n    } as unknown as vscode.WebviewView;\n\n    provider",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/suite/ux-feedback.test.ts",
+        "start": 223,
+        "end": 236,
+        "startLoc": {
+          "line": 223,
+          "column": 11,
+          "position": 1922
+        },
+        "endLoc": {
+          "line": 236,
+          "column": 9,
+          "position": 2095
+        }
+      },
+      "secondFile": {
+        "name": "src/test/suite/ux-feedback.test.ts",
+        "start": 145,
+        "end": 158,
+        "startLoc": {
+          "line": 145,
+          "column": 11,
+          "position": 1242
+        },
+        "endLoc": {
+          "line": 158,
+          "column": 19,
+          "position": 1415
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 22,
+      "fragment": "= {\n      subscriptions: [],\n      extensionPath: '',\n      extensionUri: vscode.Uri.file(''),\n      globalState: {} as vscode.Memento & { setKeysForSync(keys: readonly string[]): void },\n      workspaceState: {} as vscode.Memento,\n      asAbsolutePath: (relativePath: string) => relativePath,\n      secrets: {} as vscode.SecretStorage,\n      environmentVariableCollection: {} as vscode.EnvironmentVariableCollection,\n      storageUri: undefined,\n      storagePath: undefined,\n      globalStorageUri: vscode.Uri.file(''),\n      globalStoragePath: '',\n      logUri: vscode.Uri.file(''),\n      logPath: '',\n      extensionMode: vscode.ExtensionMode.Test,\n      extension: {} as vscode.Extension<unknown>,\n      languageModelAccessInformation: {} as vscode.LanguageModelAccessInformation,\n    } as unknown as vscode.ExtensionContext;\n\n    terminalManager = new TerminalManager();\n  }",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/suite/terminal-manager.test.ts",
+        "start": 10,
+        "end": 31,
+        "startLoc": {
+          "line": 10,
+          "column": 2,
+          "position": 86
+        },
+        "endLoc": {
+          "line": 31,
+          "column": 2,
+          "position": 338
+        }
+      },
+      "secondFile": {
+        "name": "src/test/suite/webview.test.ts",
+        "start": 12,
+        "end": 33,
+        "startLoc": {
+          "line": 12,
+          "column": 2,
+          "position": 108
+        },
+        "endLoc": {
+          "line": 33,
+          "column": 9,
+          "position": 360
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 33,
+      "fragment": ", () => {\n  let terminalManager: TerminalManager;\n  let _mockContext: vscode.ExtensionContext;\n\n  setup(() => {\n    _mockContext = {\n      subscriptions: [],\n      extensionPath: '',\n      extensionUri: vscode.Uri.file(''),\n      globalState: {} as vscode.Memento & { setKeysForSync(keys: readonly string[]): void },\n      workspaceState: {} as vscode.Memento,\n      asAbsolutePath: (relativePath: string) => relativePath,\n      secrets: {} as vscode.SecretStorage,\n      environmentVariableCollection: {} as vscode.EnvironmentVariableCollection,\n      storageUri: undefined,\n      storagePath: undefined,\n      globalStorageUri: vscode.Uri.file(''),\n      globalStoragePath: '',\n      logUri: vscode.Uri.file(''),\n      logPath: '',\n      extensionMode: vscode.ExtensionMode.Test,\n      extension: {} as vscode.Extension<unknown>,\n      languageModelAccessInformation: {} as vscode.LanguageModelAccessInformation,\n    } as unknown as vscode.ExtensionContext;\n\n    terminalManager = new TerminalManager();\n  });\n\n  teardown(() => {\n    terminalManager.dispose();\n  });\n\n  test('Terminal creation should be fast'",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/suite/performance.test.ts",
+        "start": 5,
+        "end": 37,
+        "startLoc": {
+          "line": 5,
+          "column": 25,
+          "position": 43
+        },
+        "endLoc": {
+          "line": 37,
+          "column": 35,
+          "position": 370
+        }
+      },
+      "secondFile": {
+        "name": "src/test/suite/terminal-manager.test.ts",
+        "start": 5,
+        "end": 37,
+        "startLoc": {
+          "line": 5,
+          "column": 29,
+          "position": 43
+        },
+        "endLoc": {
+          "line": 37,
+          "column": 33,
+          "position": 370
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 35,
+      "fragment": ", () => {\n  let terminalManager: TerminalManager;\n  let provider: SecondaryTerminalProvider;\n  let mockContext: vscode.ExtensionContext;\n\n  setup(() => {\n    mockContext = {\n      subscriptions: [],\n      extensionPath: '',\n      extensionUri: vscode.Uri.file(''),\n      globalState: {} as vscode.Memento & { setKeysForSync(keys: readonly string[]): void },\n      workspaceState: {} as vscode.Memento,\n      asAbsolutePath: (relativePath: string) => relativePath,\n      secrets: {} as vscode.SecretStorage,\n      environmentVariableCollection: {} as vscode.EnvironmentVariableCollection,\n      storageUri: undefined,\n      storagePath: undefined,\n      globalStorageUri: vscode.Uri.file(''),\n      globalStoragePath: '',\n      logUri: vscode.Uri.file(''),\n      logPath: '',\n      extensionMode: vscode.ExtensionMode.Test,\n      extension: {} as vscode.Extension<unknown>,\n      languageModelAccessInformation: {} as vscode.LanguageModelAccessInformation,\n    } as unknown as vscode.ExtensionContext;\n\n    terminalManager = new TerminalManager();\n    provider = new SecondaryTerminalProvider(mockContext, terminalManager);\n  });\n\n  teardown(() => {\n    terminalManager.dispose();\n  });\n\n  test('Should integrate TerminalManager with Provider'",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/suite/integration.test.ts",
+        "start": 6,
+        "end": 40,
+        "startLoc": {
+          "line": 6,
+          "column": 25,
+          "position": 56
+        },
+        "endLoc": {
+          "line": 40,
+          "column": 49,
+          "position": 408
+        }
+      },
+      "secondFile": {
+        "name": "src/test/suite/webview.test.ts",
+        "start": 6,
+        "end": 40,
+        "startLoc": {
+          "line": 6,
+          "column": 21,
+          "position": 56
+        },
+        "endLoc": {
+          "line": 40,
+          "column": 41,
+          "position": 408
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 17,
+      "fragment": "const mockWebviewView = {\n      webview: {\n        options: {},\n        html: '',\n        postMessage: () => Promise.resolve(true),\n        onDidReceiveMessage: () => ({ dispose: () => {} }),\n        asWebviewUri: (uri: vscode.Uri) => uri,\n        cspSource: 'vscode-resource:',\n      },\n      onDidDispose: () => ({ dispose: () => {} }),\n      onDidChangeVisibility: () => ({ dispose: () => {} }),\n      visible: true,\n      viewType: 'secondaryTerminal',\n      show: () => {},\n    } as vscode.WebviewView;\n\n    // Test resolveWebviewView",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/suite/integration.test.ts",
+        "start": 170,
+        "end": 186,
+        "startLoc": {
+          "line": 170,
+          "column": 5,
+          "position": 1421
+        },
+        "endLoc": {
+          "line": 186,
+          "column": 27,
+          "position": 1616
+        }
+      },
+      "secondFile": {
+        "name": "src/test/suite/webview.test.ts",
+        "start": 60,
+        "end": 76,
+        "startLoc": {
+          "line": 60,
+          "column": 5,
+          "position": 614
+        },
+        "endLoc": {
+          "line": 76,
+          "column": 7,
+          "position": 809
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 9,
+      "fragment": ", vscode.ConfigurationTarget.Global);\n\n    // Wait for configuration to be applied\n    await new Promise((resolve) => setTimeout(resolve, 100));\n\n    // Verify change\n    const updatedConfig = vscode.workspace.getConfiguration('secondaryTerminal');\n    const newFontSize = updatedConfig.get<number>('fontSize', 14);\n    assert.strictEqual(newFontSize, 16",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/suite/e2e.test.ts",
+        "start": 84,
+        "end": 92,
+        "startLoc": {
+          "line": 84,
+          "column": 3,
+          "position": 715
+        },
+        "endLoc": {
+          "line": 92,
+          "column": 3,
+          "position": 802
+        }
+      },
+      "secondFile": {
+        "name": "src/test/suite/functional.test.ts",
+        "start": 95,
+        "end": 103,
+        "startLoc": {
+          "line": 95,
+          "column": 2,
+          "position": 916
+        },
+        "endLoc": {
+          "line": 103,
+          "column": 17,
+          "position": 1003
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 9,
+      "fragment": "{\n        spawn: () => ({\n          pid: 1234,\n          onData: () => ({ dispose: () => {} }),\n          onExit: () => ({ dispose: () => {} }),\n          write: () => {},\n          resize: () => {},\n          kill: () => {},\n          dispose",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/shared/TestSetup.ts",
+        "start": 119,
+        "end": 127,
+        "startLoc": {
+          "line": 119,
+          "column": 2,
+          "position": 1050
+        },
+        "endLoc": {
+          "line": 127,
+          "column": 8,
+          "position": 1165
+        }
+      },
+      "secondFile": {
+        "name": "src/test/unit/mocha-setup.ts",
+        "start": 74,
+        "end": 82,
+        "startLoc": {
+          "line": 74,
+          "column": 2,
+          "position": 527
+        },
+        "endLoc": {
+          "line": 82,
+          "column": 2,
+          "position": 642
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 11,
+      "fragment": "const requiredMethods = ['removeListener', 'removeAllListeners', 'off'];\n  requiredMethods.forEach((method) => {\n    if (!(process as any)[method]) {\n      (process as any)[method] = function () {\n        return process;\n      };\n    }\n  });\n}\n\n// Auto-setup when this module is imported",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/shared/TestSetup.ts",
+        "start": 337,
+        "end": 347,
+        "startLoc": {
+          "line": 337,
+          "column": 3,
+          "position": 2744
+        },
+        "endLoc": {
+          "line": 347,
+          "column": 43,
+          "position": 2835
+        }
+      },
+      "secondFile": {
+        "name": "src/test/shared/TestSetup.ts",
+        "start": 168,
+        "end": 181,
+        "startLoc": {
+          "line": 168,
+          "column": 3,
+          "position": 1554
+        },
+        "endLoc": {
+          "line": 181,
+          "column": 4,
+          "position": 1645
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 26,
+      "fragment": "}\n\n  export interface IWindowsPtyForkOptions {\n    name?: string;\n    cols?: number;\n    rows?: number;\n    cwd?: string;\n    env?: { [key: string]: string };\n    encoding?: string;\n    useConpty?: boolean;\n    conptyInheritCursor?: boolean;\n  }\n\n  export interface IUnixForkOptions {\n    name?: string;\n    cols?: number;\n    rows?: number;\n    cwd?: string;\n    env?: { [key: string]: string };\n    encoding?: string;\n    uid?: number;\n    gid?: number;\n  }\n\n  export function spawn(\n    file",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/types/node-pty.d.ts",
+        "start": 18,
+        "end": 43,
+        "startLoc": {
+          "line": 18,
+          "column": 3,
+          "position": 186
+        },
+        "endLoc": {
+          "line": 43,
+          "column": 5,
+          "position": 376
+        }
+      },
+      "secondFile": {
+        "name": "src/test/mocks/node-pty.ts",
+        "start": 82,
+        "end": 107,
+        "startLoc": {
+          "line": 82,
+          "column": 1,
+          "position": 788
+        },
+        "endLoc": {
+          "line": 107,
+          "column": 6,
+          "position": 973
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 13,
+      "fragment": "/* eslint-disable @typescript-eslint/no-var-requires */\n/* eslint-disable @typescript-eslint/no-unsafe-assignment */\n/* eslint-disable @typescript-eslint/no-unsafe-member-access */\n/* eslint-disable @typescript-eslint/no-unsafe-call */\n/* eslint-disable @typescript-eslint/no-unsafe-return */\n/* eslint-disable prefer-rest-params */\nconst Module = require('module');\nconst originalRequire = Module.prototype.require;\n\nModule.prototype.require = function (id: string) {\n  if (id === 'node-pty') {\n    try {\n      const mockPath = path.resolve(__dirname, './mocks/node-pty'",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/runTest.ts",
+        "start": 5,
+        "end": 17,
+        "startLoc": {
+          "line": 5,
+          "column": 1,
+          "position": 29
+        },
+        "endLoc": {
+          "line": 17,
+          "column": 19,
+          "position": 118
+        }
+      },
+      "secondFile": {
+        "name": "src/test/suite/index.ts",
+        "start": 6,
+        "end": 18,
+        "startLoc": {
+          "line": 6,
+          "column": 1,
+          "position": 38
+        },
+        "endLoc": {
+          "line": 18,
+          "column": 20,
+          "position": 127
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 27,
+      "fragment": ", error);\n      // Fallback to inline mock for Windows compatibility\n      return {\n        spawn: () => ({\n          pid: 1234,\n          cols: 80,\n          rows: 24,\n          handleFlowControl: false,\n          onData: () => {},\n          onExit: () => {},\n          write: () => {},\n          resize: () => {},\n          kill: () => {},\n        }),\n      };\n    }\n  }\n  return originalRequire.apply(this, arguments);\n};\n/* eslint-enable prefer-rest-params */\n/* eslint-enable @typescript-eslint/no-unsafe-return */\n/* eslint-enable @typescript-eslint/no-unsafe-call */\n/* eslint-enable @typescript-eslint/no-unsafe-member-access */\n/* eslint-enable @typescript-eslint/no-unsafe-assignment */\n/* eslint-enable @typescript-eslint/no-var-requires */\n\nasync",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/test/runTest.ts",
+        "start": 21,
+        "end": 47,
+        "startLoc": {
+          "line": 21,
+          "column": 41,
+          "position": 165
+        },
+        "endLoc": {
+          "line": 47,
+          "column": 6,
+          "position": 329
+        }
+      },
+      "secondFile": {
+        "name": "src/test/suite/index.ts",
+        "start": 22,
+        "end": 48,
+        "startLoc": {
+          "line": 22,
+          "column": 47,
+          "position": 174
+        },
+        "endLoc": {
+          "line": 48,
+          "column": 7,
+          "position": 338
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 8,
+      "fragment": "= terminals.map((terminal) => ({\n        id: terminal.id,\n        name: terminal.name,\n        number: terminal.number,\n        cwd: terminal.cwd || process.cwd(),\n        isActive: terminal.id === activeTerminalId,\n      }));\n      const",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/sessions/StandardTerminalSessionManager.ts",
+        "start": 95,
+        "end": 102,
+        "startLoc": {
+          "line": 95,
+          "column": 2,
+          "position": 700
+        },
+        "endLoc": {
+          "line": 102,
+          "column": 6,
+          "position": 779
+        }
+      },
+      "secondFile": {
+        "name": "src/sessions/StandardTerminalSessionManager.ts",
+        "start": 85,
+        "end": 93,
+        "startLoc": {
+          "line": 85,
+          "column": 2,
+          "position": 606
+        },
+        "endLoc": {
+          "line": 93,
+          "column": 21,
+          "position": 686
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 20,
+      "fragment": "const sessionData = this.context.globalState.get<{\n        terminals: Array<{\n          id: string;\n          name: string;\n          number: number;\n          cwd: string;\n          isActive: boolean;\n        }>;\n        activeTerminalId: string | null;\n        timestamp: number;\n        version: string;\n        scrollbackData?: Record<string, unknown>;\n        config?: {\n          scrollbackLines: number;\n          reviveProcess: string;\n        };\n      }>(StandardTerminalSessionManager.STORAGE_KEY);\n\n      if (!sessionData || !sessionData.terminals) {\n        log",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/sessions/StandardTerminalSessionManager.ts",
+        "start": 213,
+        "end": 232,
+        "startLoc": {
+          "line": 213,
+          "column": 7,
+          "position": 1552
+        },
+        "endLoc": {
+          "line": 232,
+          "column": 4,
+          "position": 1709
+        }
+      },
+      "secondFile": {
+        "name": "src/sessions/StandardTerminalSessionManager.ts",
+        "start": 155,
+        "end": 174,
+        "startLoc": {
+          "line": 155,
+          "column": 7,
+          "position": 1124
+        },
+        "endLoc": {
+          "line": 174,
+          "column": 7,
+          "position": 1281
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 20,
+      "fragment": "try {\n      const sessionData = this.context.globalState.get<{\n        terminals: Array<{\n          id: string;\n          name: string;\n          number: number;\n          cwd: string;\n          isActive: boolean;\n        }>;\n        activeTerminalId: string | null;\n        timestamp: number;\n        version: string;\n        scrollbackData?: Record<string, unknown>;\n        config?: {\n          scrollbackLines: number;\n          reviveProcess: string;\n        };\n      }>(StandardTerminalSessionManager.STORAGE_KEY);\n\n      if (!sessionData || !sessionData.terminals ||",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/sessions/StandardTerminalSessionManager.ts",
+        "start": 433,
+        "end": 452,
+        "startLoc": {
+          "line": 433,
+          "column": 5,
+          "position": 3044
+        },
+        "endLoc": {
+          "line": 452,
+          "column": 3,
+          "position": 3202
+        }
+      },
+      "secondFile": {
+        "name": "src/sessions/StandardTerminalSessionManager.ts",
+        "start": 154,
+        "end": 173,
+        "startLoc": {
+          "line": 154,
+          "column": 5,
+          "position": 1119
+        },
+        "endLoc": {
+          "line": 173,
+          "column": 2,
+          "position": 1276
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 22,
+      "fragment": "DARK_THEME: {\n    background: '#1e1e1e',\n    foreground: '#cccccc',\n    cursor: '#ffffff',\n    cursorAccent: '#000000',\n    black: '#000000',\n    red: '#cd3131',\n    green: '#0dbc79',\n    yellow: '#e5e510',\n    blue: '#2472c8',\n    magenta: '#bc3fbc',\n    cyan: '#11a8cd',\n    white: '#e5e5e5',\n    brightBlack: '#666666',\n    brightRed: '#f14c4c',\n    brightGreen: '#23d18b',\n    brightYellow: '#f5f543',\n    brightBlue: '#3b8eea',\n    brightMagenta: '#d670d6',\n    brightCyan: '#29b8db',\n    brightWhite: '#ffffff',\n  } as",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/constants/index.ts",
+        "start": 74,
+        "end": 95,
+        "startLoc": {
+          "line": 74,
+          "column": 3,
+          "position": 409
+        },
+        "endLoc": {
+          "line": 95,
+          "column": 3,
+          "position": 557
+        }
+      },
+      "secondFile": {
+        "name": "src/webview/constants/index.ts",
+        "start": 40,
+        "end": 61,
+        "startLoc": {
+          "line": 40,
+          "column": 3,
+          "position": 262
+        },
+        "endLoc": {
+          "line": 61,
+          "column": 2,
+          "position": 409
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 24,
+      "fragment": ",\n\n  LIGHT_THEME: {\n    background: '#ffffff',\n    foreground: '#333333',\n    cursor: '#000000',\n    cursorAccent: '#ffffff',\n    black: '#000000',\n    red: '#cd3131',\n    green: '#00bc00',\n    yellow: '#949800',\n    blue: '#0451a5',\n    magenta: '#bc05bc',\n    cyan: '#0598bc',\n    white: '#555555',\n    brightBlack: '#666666',\n    brightRed: '#cd3131',\n    brightGreen: '#14ce14',\n    brightYellow: '#b5ba00',\n    brightBlue: '#0451a5',\n    brightMagenta: '#bc05bc',\n    brightCyan: '#0598bc',\n    brightWhite: '#a5a5a5',\n  } as",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/constants/index.ts",
+        "start": 95,
+        "end": 118,
+        "startLoc": {
+          "line": 95,
+          "column": 6,
+          "position": 560
+        },
+        "endLoc": {
+          "line": 118,
+          "column": 3,
+          "position": 712
+        }
+      },
+      "secondFile": {
+        "name": "src/webview/constants/index.ts",
+        "start": 61,
+        "end": 49,
+        "startLoc": {
+          "line": 61,
+          "column": 2,
+          "position": 409
+        },
+        "endLoc": {
+          "line": 49,
+          "column": 2,
+          "position": 311
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 15,
+      "fragment": "relativePath: string;\n    selection?: {\n      startLine: number;\n      endLine: number;\n      hasSelection: boolean;\n    };\n  } | null {\n    const activeEditor = vscode.window.activeTextEditor;\n    if (!activeEditor) {\n      return null;\n    }\n\n    const fullPath = activeEditor.document.fileName;\n\n    // ワークスペースルートからの相対パスを計算",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/commands/CopilotIntegrationCommand.ts",
+        "start": 93,
+        "end": 107,
+        "startLoc": {
+          "line": 93,
+          "column": 5,
+          "position": 537
+        },
+        "endLoc": {
+          "line": 107,
+          "column": 24,
+          "position": 634
+        }
+      },
+      "secondFile": {
+        "name": "src/commands/FileReferenceCommand.ts",
+        "start": 92,
+        "end": 105,
+        "startLoc": {
+          "line": 92,
+          "column": 5,
+          "position": 625
+        },
+        "endLoc": {
+          "line": 105,
+          "column": 6,
+          "position": 721
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 19,
+      "fragment": "}\n    }\n\n    // 選択範囲の情報を取得\n    const selection = activeEditor.selection;\n    let selectionInfo = undefined;\n\n    if (!selection.isEmpty) {\n      // 選択がある場合の行番号を取得（1ベースに変換）\n      const startLine = selection.start.line + 1;\n      const endLine = selection.end.line + 1;\n\n      selectionInfo = {\n        startLine,\n        endLine,\n        hasSelection: true,\n      };\n\n      log(`🔍 [DEBUG] Selection detected for Copilot: L",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/commands/CopilotIntegrationCommand.ts",
+        "start": 118,
+        "end": 136,
+        "startLoc": {
+          "line": 118,
+          "column": 7,
+          "position": 742
+        },
+        "endLoc": {
+          "line": 136,
+          "column": 46,
+          "position": 856
+        }
+      },
+      "secondFile": {
+        "name": "src/commands/FileReferenceCommand.ts",
+        "start": 120,
+        "end": 138,
+        "startLoc": {
+          "line": 120,
+          "column": 7,
+          "position": 888
+        },
+        "endLoc": {
+          "line": 138,
+          "column": 34,
+          "position": 1002
+        }
+      }
+    }
+  ]
+}

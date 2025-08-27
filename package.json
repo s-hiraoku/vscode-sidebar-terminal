@@ -1,8 +1,8 @@
 {
   "name": "vscode-sidebar-terminal",
-  "displayName": "Sidebar Terminal",
+  "displayName": "Secondary Terminal",
   "description": "A powerful VS Code extension that displays a fully-featured terminal in the sidebar with split support, Alt+Click cursor positioning, and multi-platform compatibility.",
-  "version": "0.1.25",
+  "version": "0.1.72",
   "publisher": "s-hiraoku",
   "engines": {
     "vscode": "^1.74.0",
@@ -50,89 +50,153 @@
   "preview": false,
   "main": "./dist/extension.js",
   "activationEvents": [
-    "onView:sidebarTerminal"
+    "onView:secondaryTerminal"
   ],
   "contributes": {
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "sidebarTerminalContainer",
-          "title": "Sidebar Terminal",
+          "id": "secondaryTerminalContainer",
+          "title": "Secondary Terminal",
           "icon": "$(terminal)"
         }
       ]
     },
     "views": {
-      "sidebarTerminalContainer": [
+      "secondaryTerminalContainer": [
         {
-          "id": "sidebarTerminal",
+          "id": "secondaryTerminal",
           "name": "Terminal",
           "type": "webview",
           "icon": "$(terminal)",
-          "contextualTitle": "Sidebar Terminal"
+          "contextualTitle": "Secondary Terminal"
         }
       ]
     },
     "commands": [
       {
-        "command": "sidebarTerminal.killTerminal",
+        "command": "secondaryTerminal.killTerminal",
         "title": "Kill Terminal",
         "icon": "$(trash)"
       },
       {
-        "command": "sidebarTerminal.splitTerminal",
-        "title": "Split Terminal",
+        "command": "secondaryTerminal.splitTerminal",
+        "title": "Split Terminal Vertically",
         "icon": "$(split-vertical)"
       },
       {
-        "command": "sidebarTerminal.openSettings",
+        "command": "secondaryTerminal.splitTerminalHorizontal",
+        "title": "Split Terminal Horizontally",
+        "icon": "$(split-horizontal)"
+      },
+      {
+        "command": "secondaryTerminal.openSettings",
         "title": "Terminal Settings",
         "icon": "$(settings-gear)"
+      },
+      {
+        "command": "secondaryTerminal.sendToTerminal",
+        "title": "Send to Secondary Terminal",
+        "category": "Secondary Terminal"
+      },
+      {
+        "command": "secondaryTerminal.sendAtMention",
+        "title": "Insert File Reference (Cmd+Option+L)",
+        "category": "Secondary Terminal"
+      },
+      {
+        "command": "secondaryTerminal.testCliAgentStatus",
+        "title": "Test Claude Status Update",
+        "category": "Secondary Terminal"
+      },
+      {
+        "command": "secondaryTerminal.debugSession",
+        "title": "Debug Session State",
+        "category": "Secondary Terminal"
+      },
+      {
+        "command": "secondaryTerminal.saveSession",
+        "title": "Save Terminal Session",
+        "category": "Secondary Terminal",
+        "icon": "$(save)"
+      },
+      {
+        "command": "secondaryTerminal.restoreSession",
+        "title": "Restore Terminal Session",
+        "category": "Secondary Terminal",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "secondaryTerminal.clearSession",
+        "title": "Clear Terminal Session",
+        "category": "Secondary Terminal",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "secondaryTerminal.activateCopilot",
+        "title": "Activate GitHub Copilot Chat",
+        "category": "Secondary Terminal"
+      },
+      {
+        "command": "secondaryTerminal.testScrollback",
+        "title": "Test Scrollback Feature",
+        "category": "Secondary Terminal"
+      },
+      {
+        "command": "secondaryTerminal.clearCorruptedHistory",
+        "title": "Clear Corrupted Terminal History",
+        "category": "Secondary Terminal",
+        "icon": "$(trash)"
       }
     ],
     "menus": {
       "view/title": [
         {
-          "command": "sidebarTerminal.splitTerminal",
-          "when": "view == sidebarTerminal",
+          "command": "secondaryTerminal.splitTerminal",
+          "when": "view == secondaryTerminal && secondaryTerminal.panelLocation == sidebar",
           "group": "navigation@1"
         },
         {
-          "command": "sidebarTerminal.killTerminal",
-          "when": "view == sidebarTerminal",
+          "command": "secondaryTerminal.splitTerminalHorizontal",
+          "when": "view == secondaryTerminal && secondaryTerminal.panelLocation == panel",
+          "group": "navigation@1"
+        },
+        {
+          "command": "secondaryTerminal.killTerminal",
+          "when": "view == secondaryTerminal",
           "group": "navigation@3"
         },
         {
-          "command": "sidebarTerminal.openSettings",
-          "when": "view == sidebarTerminal",
+          "command": "secondaryTerminal.openSettings",
+          "when": "view == secondaryTerminal",
           "group": "navigation@4"
         }
       ]
     },
     "configuration": {
-      "title": "Sidebar Terminal",
+      "title": "Secondary Terminal",
       "properties": {
-        "sidebarTerminal.shell": {
+        "secondaryTerminal.shell": {
           "type": "string",
           "default": "",
           "description": "Path to shell executable. Leave empty to use system default."
         },
-        "sidebarTerminal.shellArgs": {
+        "secondaryTerminal.shellArgs": {
           "type": "array",
           "default": [],
           "description": "Arguments to pass to the shell."
         },
-        "sidebarTerminal.maxTerminals": {
+        "secondaryTerminal.maxTerminals": {
           "type": "number",
           "default": 5,
           "description": "Maximum number of terminals allowed."
         },
-        "sidebarTerminal.cursorBlink": {
+        "secondaryTerminal.cursorBlink": {
           "type": "boolean",
           "default": true,
           "description": "Enable cursor blinking in terminal."
         },
-        "sidebarTerminal.theme": {
+        "secondaryTerminal.theme": {
           "type": "string",
           "default": "auto",
           "enum": [
@@ -142,117 +206,382 @@
           ],
           "description": "Terminal theme. Auto follows VS Code theme."
         },
-        "sidebarTerminal.defaultDirectory": {
+        "secondaryTerminal.defaultDirectory": {
           "type": "string",
           "default": "",
           "description": "Default directory for new terminals. Leave empty to use workspace root."
         },
-        "sidebarTerminal.confirmBeforeKill": {
+        "secondaryTerminal.confirmBeforeKill": {
           "type": "boolean",
           "default": false,
           "description": "Show confirmation dialog before closing terminals"
         },
-        "sidebarTerminal.protectLastTerminal": {
+        "secondaryTerminal.protectLastTerminal": {
           "type": "boolean",
           "default": true,
           "description": "Prevent closing the last terminal"
         },
-        "sidebarTerminal.minTerminalCount": {
+        "secondaryTerminal.minTerminalCount": {
           "type": "number",
           "default": 1,
           "minimum": 0,
           "maximum": 5,
           "description": "Minimum number of terminals to keep open"
         },
-        "sidebarTerminal.maxSplitTerminals": {
+        "secondaryTerminal.maxSplitTerminals": {
           "type": "number",
           "default": 5,
           "minimum": 1,
           "maximum": 5,
           "description": "Maximum number of terminals to display in split view"
         },
-        "sidebarTerminal.minTerminalHeight": {
+        "secondaryTerminal.minTerminalHeight": {
           "type": "number",
           "default": 100,
           "minimum": 50,
           "maximum": 200,
           "description": "Minimum height for each terminal in split view (pixels)"
         },
-        "sidebarTerminal.enableSplitResize": {
+        "secondaryTerminal.enableSplitResize": {
           "type": "boolean",
           "default": true,
           "description": "Allow resizing split terminals by dragging splitters"
         },
-        "sidebarTerminal.statusDisplayDuration": {
+        "secondaryTerminal.statusDisplayDuration": {
           "type": "number",
           "default": 3000,
           "minimum": 1000,
           "maximum": 10000,
           "description": "Duration to display status messages (milliseconds)"
         },
-        "sidebarTerminal.autoHideStatus": {
+        "secondaryTerminal.autoHideStatus": {
           "type": "boolean",
           "default": true,
           "description": "Automatically hide status messages after specified duration"
         },
-        "sidebarTerminal.showStatusOnActivity": {
+        "secondaryTerminal.showStatusOnActivity": {
           "type": "boolean",
           "default": true,
           "description": "Show last status message when user performs actions"
         },
-        "sidebarTerminal.showWebViewHeader": {
+        "secondaryTerminal.showWebViewHeader": {
           "type": "boolean",
           "default": true,
           "description": "Show title and command icons in the webview header"
         },
-        "sidebarTerminal.webViewTitle": {
+        "secondaryTerminal.webViewTitle": {
           "type": "string",
           "default": "Terminal",
           "description": "Title to display in the webview header"
         },
-        "sidebarTerminal.showSampleIcons": {
+        "secondaryTerminal.showSampleIcons": {
           "type": "boolean",
           "default": true,
           "description": "Show sample command icons in webview header (display only)"
         },
-        "sidebarTerminal.sampleIconOpacity": {
+        "secondaryTerminal.sampleIconOpacity": {
           "type": "number",
           "default": 0.4,
           "minimum": 0.1,
           "maximum": 1,
           "description": "Opacity of sample icons (0.1 to 1.0)"
         },
-        "sidebarTerminal.headerFontSize": {
+        "secondaryTerminal.headerFontSize": {
           "type": "number",
           "default": 14,
           "minimum": 10,
           "maximum": 20,
           "description": "Font size for webview header title"
         },
-        "sidebarTerminal.headerIconSize": {
+        "secondaryTerminal.headerIconSize": {
           "type": "number",
           "default": 20,
           "minimum": 14,
           "maximum": 28,
           "description": "Size of terminal icon in webview header"
         },
-        "sidebarTerminal.sampleIconSize": {
+        "secondaryTerminal.sampleIconSize": {
           "type": "number",
           "default": 16,
           "minimum": 12,
           "maximum": 24,
           "description": "Size of sample icons in webview header"
         },
-        "sidebarTerminal.altClickMovesCursor": {
+        "secondaryTerminal.altClickMovesCursor": {
           "type": "boolean",
           "default": true,
           "description": "Controls whether Alt/Option + click will reposition the prompt cursor to underneath the mouse. This feature may not work reliably for some shells or programs."
+        },
+        "secondaryTerminal.enableAtMentionSync": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable automatic @filename mention when CLI Agent sends to standard terminal"
+        },
+        "secondaryTerminal.focusAfterAtMention": {
+          "type": "boolean",
+          "default": true,
+          "description": "Focus secondary terminal after sending @filename with CMD+OPT+L"
+        },
+        "secondaryTerminal.enableCliAgentIntegration": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable file reference shortcuts: Use Cmd+Option+L (Mac) or Alt+Ctrl+L (Linux/Windows) to insert file references"
+        },
+        "secondaryTerminal.enableGitHubCopilotIntegration": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable GitHub Copilot Chat integration: Use Cmd+K Cmd+C (Mac) or Ctrl+K Ctrl+C (Linux/Windows) to activate Copilot Chat"
+        },
+        "secondaryTerminal.enablePersistentSessions": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable terminal session persistence: Restore terminal contents and state after VS Code restart"
+        },
+        "secondaryTerminal.persistentSessionScrollback": {
+          "type": "number",
+          "default": 100,
+          "minimum": 0,
+          "maximum": 10000,
+          "description": "Number of lines to restore from terminal history (0 to disable scrollback restore)"
+        },
+        "secondaryTerminal.persistentSessionReviveProcess": {
+          "type": "string",
+          "default": "onExitAndWindowClose",
+          "enum": [
+            "never",
+            "onExit",
+            "onExitAndWindowClose"
+          ],
+          "enumDescriptions": [
+            "Never save terminal sessions",
+            "Save sessions when VS Code exits",
+            "Save sessions when VS Code exits or window closes"
+          ],
+          "description": "When to save terminal sessions for restoration"
+        },
+        "secondaryTerminal.hideOnStartup": {
+          "type": "string",
+          "default": "never",
+          "enum": [
+            "never",
+            "whenEmpty",
+            "always"
+          ],
+          "enumDescriptions": [
+            "Never hide the terminal view on startup",
+            "Hide terminal when no sessions are restored",
+            "Always hide terminal on startup"
+          ],
+          "description": "Control terminal visibility on VS Code startup"
+        },
+        "secondaryTerminal.fontFamily": {
+          "type": "string",
+          "default": "monospace",
+          "description": "Controls the font family of the terminal. This defaults to VS Code's editor.fontFamily value."
+        },
+        "secondaryTerminal.fontSize": {
+          "type": "number",
+          "default": 12,
+          "minimum": 6,
+          "maximum": 25,
+          "description": "Controls the font size in pixels of the terminal."
+        },
+        "secondaryTerminal.fontWeight": {
+          "type": "string",
+          "default": "normal",
+          "enum": [
+            "normal",
+            "bold",
+            "100",
+            "200",
+            "300",
+            "400",
+            "500",
+            "600",
+            "700",
+            "800",
+            "900"
+          ],
+          "description": "The font weight to use within the terminal for non-bold text. Accepts normal and bold keywords or numbers between 1 and 1000."
+        },
+        "secondaryTerminal.fontWeightBold": {
+          "type": "string",
+          "default": "bold",
+          "enum": [
+            "normal",
+            "bold",
+            "100",
+            "200",
+            "300",
+            "400",
+            "500",
+            "600",
+            "700",
+            "800",
+            "900"
+          ],
+          "description": "The font weight to use within the terminal for bold text. Accepts normal and bold keywords or numbers between 1 and 1000."
+        },
+        "secondaryTerminal.lineHeight": {
+          "type": "number",
+          "default": 1.0,
+          "minimum": 0.1,
+          "maximum": 5,
+          "description": "Controls the line height of the terminal, this number is multiplied by the terminal font size to get the actual line-height in pixels."
+        },
+        "secondaryTerminal.letterSpacing": {
+          "type": "number",
+          "default": 0,
+          "minimum": -5,
+          "maximum": 10,
+          "description": "Controls the letter spacing of the terminal, this is an integer value which represents the amount of additional pixels to add between characters."
+        },
+        "secondaryTerminal.scrollback": {
+          "type": "number",
+          "default": 1000,
+          "minimum": 0,
+          "maximum": 50000,
+          "description": "Controls the maximum number of lines the terminal keeps in its buffer."
+        },
+        "secondaryTerminal.cursorStyle": {
+          "type": "string",
+          "default": "block",
+          "enum": [
+            "block",
+            "underline",
+            "bar"
+          ],
+          "description": "Controls the style of terminal cursor."
+        },
+        "secondaryTerminal.cursorWidth": {
+          "type": "number",
+          "default": 1,
+          "minimum": 1,
+          "maximum": 100,
+          "description": "Controls the width of the cursor when cursorStyle is set to 'bar'."
+        },
+        "secondaryTerminal.drawBoldTextInBrightColors": {
+          "type": "boolean",
+          "default": true,
+          "description": "Controls whether bold text in the terminal will always use the \"bright\" ANSI color variant."
+        },
+        "secondaryTerminal.minimumContrastRatio": {
+          "type": "number",
+          "default": 1,
+          "minimum": 1,
+          "maximum": 21,
+          "description": "When set, the foreground color of each cell will change to try meet the contrast ratio specified. Example values:\n- 1: Do nothing and use the standard theme colors.\n- 4.5: WCAG AA compliance (minimum).\n- 7: WCAG AAA compliance (enhanced).\n- 21: White on black or black on white."
+        },
+        "secondaryTerminal.restoreScrollback": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable restoration of terminal command history and output (scrollback buffer)"
+        },
+        "secondaryTerminal.scrollbackLines": {
+          "type": "number",
+          "default": 1000,
+          "minimum": 0,
+          "maximum": 10000,
+          "description": "Maximum number of lines to restore from terminal history (0 to disable)"
+        },
+        "secondaryTerminal.scrollbackCompression": {
+          "type": "boolean",
+          "default": true,
+          "description": "Compress scrollback data to reduce storage size"
+        },
+        "secondaryTerminal.scrollbackProgressiveLoad": {
+          "type": "boolean",
+          "default": false,
+          "description": "Load scrollback data progressively for better performance with large histories"
+        },
+        "secondaryTerminal.scrollbackMaxStorageSize": {
+          "type": "number",
+          "default": 10485760,
+          "minimum": 1048576,
+          "maximum": 104857600,
+          "description": "Maximum storage size for scrollback data in bytes (1MB - 100MB)"
+        },
+        "secondaryTerminal.dynamicSplitDirection": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically adjust split direction based on panel location: horizontal splits in bottom panel, vertical splits in sidebar"
+        },
+        "secondaryTerminal.panelLocation": {
+          "type": "string",
+          "default": "auto",
+          "enum": [
+            "auto",
+            "sidebar",
+            "panel"
+          ],
+          "enumDescriptions": [
+            "Automatically detect panel location",
+            "Force sidebar location for split direction calculation",
+            "Force bottom panel location for split direction calculation"
+          ],
+          "description": "Panel location preference for dynamic split direction (Issue #148)"
+        },
+        "secondaryTerminal.sendKeybindingsToShell": {
+          "type": "boolean",
+          "default": false,
+          "description": "Controls whether keybindings are automatically sent to the shell instead of being handled by VS Code workbench."
+        },
+        "secondaryTerminal.commandsToSkipShell": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Array of command IDs that should always be handled by VS Code and not sent to the shell. Prefix with '-' to remove from default skip list (e.g., '-workbench.action.quickOpen')."
+        },
+        "secondaryTerminal.allowChords": {
+          "type": "boolean",
+          "default": true,
+          "description": "Allow multi-key chord sequences in terminal keybindings (e.g., Ctrl+K Ctrl+C)."
+        },
+        "secondaryTerminal.allowMnemonics": {
+          "type": "boolean",
+          "default": true,
+          "description": "Allow Alt key menu mnemonics on Windows and Linux platforms."
+        },
+        "secondaryTerminal.shellIntegration.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable VS Code shell integration features (command tracking, working directory detection, status indicators)."
+        },
+        "secondaryTerminal.shellIntegration.showCommandStatus": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show command status indicators in terminal headers (success/error/running)."
+        },
+        "secondaryTerminal.shellIntegration.showWorkingDirectory": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show current working directory in terminal headers."
+        },
+        "secondaryTerminal.shellIntegration.commandHistory": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable command history tracking and quick access."
         }
       }
-    }
+    },
+    "keybindings": [
+      {
+        "command": "secondaryTerminal.sendAtMention",
+        "key": "ctrl+alt+l",
+        "mac": "cmd+alt+l",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "secondaryTerminal.activateCopilot",
+        "key": "ctrl+k ctrl+c",
+        "mac": "cmd+k cmd+c"
+      }
+    ]
   },
   "scripts": {
-    "vscode:prepublish": "npm rebuild && npm run package",
+    "vscode:prepublish": "npm run package",
     "compile": "webpack",
     "watch": "webpack --watch",
     "package": "webpack --mode production --devtool hidden-source-map",
@@ -265,6 +594,9 @@
     "test:watch": "npm run watch-tests & npm run test",
     "test:unit": "nyc mocha --require ./src/test/shared/setup-exit-handler.js --require out/test/shared/TestSetup.js --timeout 30000 'out/test/unit/**/*.test.js'",
     "test:integration": "nyc mocha --require ./src/test/shared/setup-exit-handler.js --require out/test/shared/TestSetup.js --timeout 60000 'out/test/integration/**/*.test.js'",
+    "test:performance": "nyc mocha --require ./src/test/shared/setup-exit-handler.js --require out/test/shared/TestSetup.js --timeout 120000 'out/test/performance/**/*.test.js'",
+    "test:all": "npm run test:unit && npm run test:integration && npm run test:performance",
+    "test:refactored": "npm run test:integration && npm run test:performance",
     "coverage:report": "nyc report --reporter=text --reporter=html",
     "coverage:check": "nyc check-coverage --lines 70 --functions 70 --branches 60",
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
@@ -280,9 +612,24 @@
     "vsce:package:alpine-x64": "@vscode/vsce package --target alpine-x64",
     "vsce:package:alpine-arm64": "@vscode/vsce package --target alpine-arm64",
     "create-icons": "node scripts/create-icon.js",
-    "release:patch": "npm version patch && git push origin --follow-tags",
-    "release:minor": "npm version minor && git push origin --follow-tags",
-    "release:major": "npm version major && git push origin --follow-tags"
+    "pre-release:check": "npm run tdd:comprehensive-check",
+    "release:patch": "npm run pre-release:check && npm version patch && git push origin --follow-tags",
+    "release:minor": "npm run pre-release:check && npm version minor && git push origin --follow-tags",
+    "release:major": "npm run pre-release:check && npm version major && git push origin --follow-tags",
+    "tdd:red": "node scripts/tdd-test-runner.js red",
+    "tdd:green": "node scripts/tdd-test-runner.js green",
+    "tdd:refactor": "node scripts/tdd-test-runner.js refactor",
+    "tdd:cycle": "node scripts/tdd-workflow-automation.js",
+    "tdd:check-quality": "node scripts/tdd-quality-checker.js",
+    "tdd:quality-gate": "node scripts/tdd-quality-gate.js",
+    "tdd:comprehensive-check": "npm run test:coverage && npm run tdd:check-quality && npm run tdd:quality-gate",
+    "tdd:generate-report": "node scripts/tdd-quality-checker.js --format=markdown",
+    "release:quality": "node commands/release.js",
+    "release:patch:safe": "node commands/release.js patch",
+    "release:minor:safe": "node commands/release.js minor",
+    "release:major:safe": "node commands/release.js major",
+    "quality:check": "node commands/release.js --check-only",
+    "quality:fix": "node commands/release.js --fix-only"
   },
   "devDependencies": {
     "@istanbuljs/nyc-config-typescript": "^1.0.2",
@@ -299,14 +646,14 @@
     "@typescript-eslint/parser": "^6.15.0",
     "@vscode/test-electron": "^2.3.8",
     "@vscode/vsce": "^3.6.0",
-    "chai": "^4.3.10",
+    "chai": "^4.5.0",
     "css-loader": "^7.1.2",
     "eslint": "^8.56.0",
     "eslint-config-prettier": "^10.0.0",
     "eslint-plugin-prettier": "^5.1.2",
     "glob": "^11.0.0",
     "jsdom": "^26.1.0",
-    "mocha": "^10.2.0",
+    "mocha": "^10.8.2",
     "nyc": "^17.1.0",
     "prettier": "^3.1.1",
     "sinon": "^21.0.0",
@@ -322,13 +669,20 @@
     "webpack-cli": "^6.0.0"
   },
   "dependencies": {
-    "@homebridge/node-pty-prebuilt-multiarch": "^0.12.0",
-    "process": "^0.11.10",
-    "xterm": "^5.3.0",
-    "xterm-addon-fit": "^0.8.0",
-    "xterm-addon-web-links": "^0.9.0"
+    "@homebridge/node-pty-prebuilt-multiarch": "^0.13.1",
+    "@xterm/addon-fit": "^0.10.0",
+    "@xterm/addon-serialize": "^0.13.0",
+    "@xterm/addon-web-links": "^0.10.0",
+    "@xterm/addon-search": "^0.15.0",
+    "@xterm/addon-webgl": "^0.18.0",
+    "@xterm/addon-unicode11": "^0.8.0",
+    "@xterm/xterm": "^5.5.0",
+    "process": "^0.11.10"
   },
   "bundledDependencies": [
+    "@homebridge/node-pty-prebuilt-multiarch"
+  ],
+  "bundleDependencies": [
     "@homebridge/node-pty-prebuilt-multiarch"
   ]
 }

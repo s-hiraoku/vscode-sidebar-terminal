@@ -10,42 +10,50 @@ A powerful VS Code extension that displays a terminal in the sidebar for efficie
 ## 📸 Screenshots
 
 ### Main Interface
+
 ![Main Interface](./docs/images/screenshots/main-interface.png)
-*Terminal integrated into VS Code sidebar with multiple tabs and controls*
+_Terminal integrated into VS Code sidebar with multiple tabs and controls_
 
 ### Multiple Terminals
+
 ![Multiple Terminals](./docs/images/screenshots/multiple-terminals.png)
-*Manage multiple terminal sessions with easy tab switching*
+_Manage multiple terminal sessions with easy tab switching_
 
 ### Split Terminal View
+
 ![Split Terminal](./docs/images/screenshots/split-terminal.png)
-*Split terminal functionality for parallel command execution*
+_Split terminal functionality for parallel command execution_
 
 ## 🎬 Demos
 
 ### Basic Usage
+
 ![Basic Usage](./docs/images/gifs/basic-usage.gif)
-*Quick demonstration of opening terminal and running commands*
+_Quick demonstration of opening terminal and running commands_
 
 ### Terminal Management
+
 ![Terminal Management](./docs/images/gifs/terminal-management.gif)
-*Creating, switching, and managing multiple terminals*
+_Creating, switching, and managing multiple terminals_
 
 ### Settings Configuration
+
 ![Settings Demo](./docs/images/gifs/settings-demo.gif)
-*Customizing font size, theme, and other settings*
+_Customizing font size, theme, and other settings_
 
 ## 🚀 Features
 
 - **Sidebar Integration**: Terminal integrated into Primary Sidebar (left side)
 - **Multiple Terminal Management**: Run up to 5 terminals simultaneously
+- **Session Persistence**: Automatic terminal session restore after VS Code restart
 - **Full Terminal Functionality**: Complete shell execution environment powered by node-pty
+- **✅ VS Code Standard Behavior**: Arrow keys work perfectly for bash history, tab completion, and cursor movement
 - **Special Key Support**: Backspace, Ctrl+C, Ctrl+L, and other special key combinations
 - **Intuitive Controls**: Clear, New, and Split buttons for easy terminal management
 - **IME Support**: Multi-language input support including Japanese, Chinese, and Korean
-- **Highly Customizable**: Configure fonts, sizes, shell, and other preferences
-- **Cross-Platform**: Full support for Windows, macOS, and Linux
-- **Alt+Click Cursor Positioning**: VS Code-standard Alt+Click to move cursor (with Claude Code detection)
+- **CLI Agent Integration**: File reference shortcuts for Claude Code and GitHub Copilot
+- **Cross-Platform**: Full support for Windows, macOS, and Linux with native binaries
+- **Alt+Click Cursor Positioning**: VS Code-standard Alt+Click to move cursor (with CLI Agent detection)
 
 ## 📦 Installation
 
@@ -76,6 +84,7 @@ A powerful VS Code extension that displays a terminal in the sidebar for efficie
 ### Sidebar Placement
 
 #### Primary Sidebar (Left Side)
+
 - Terminal appears in the Explorer panel on the left side
 - Integrated with other sidebar views, switchable via tabs
 - Maintains context when switching between views
@@ -87,42 +96,88 @@ A powerful VS Code extension that displays a terminal in the sidebar for efficie
 - `Sidebar Terminal: Clear Terminal` - Clear the active terminal
 - `Sidebar Terminal: Kill Terminal` - Terminate the active terminal
 
+### ✅ Terminal Functionality (v0.1.43 Update)
+
+- **Arrow Key Navigation**: ↑↓ keys work perfectly for bash command history navigation
+- **Tab Completion**: Shell completion functions exactly like VS Code integrated terminal
+- **Cursor Movement**: ←→ keys provide natural text editing and cursor positioning
+- **Standard Terminal Shortcuts**: All Ctrl+C, Ctrl+L, and other shortcuts work as expected
+
 ### Alt+Click Cursor Positioning
 
 - **Standard VS Code Behavior**: Alt+Click to move cursor to mouse position
-- **Claude Code Detection**: Automatically disabled during Claude Code execution for optimal performance
 - **Visual Feedback**: Blue highlight shows cursor position with fade animation
 - **Requirements**: Both `terminal.integrated.altClickMovesCursor` and `editor.multiCursorModifier: "alt"` must be enabled
+
+### 🤖 CLI Agent Integration
+
+- **File Reference Shortcuts**: Use `Cmd+Option+L` (Mac) or `Alt+Ctrl+L` (Linux/Windows) to insert `@filename` references
+- **GitHub Copilot Integration**: Use `Cmd+K Cmd+C` (Mac) or `Ctrl+K Ctrl+C` (Windows/Linux) for `#file:filename` format
+- **Advanced Status Management**: Real-time CLI Agent state tracking with CONNECTED/DISCONNECTED/NONE status display
+- **Auto-Promotion Logic**: Seamless transition from DISCONNECTED to CONNECTED when agents terminate
+- **Reliable State Sync**: Full state synchronization system ensures accurate status display across multiple terminals
+- **Independent Operation**: Works alongside CLI Agent extensions without conflicts
+- **Configurable**: Both integrations can be independently enabled/disabled in settings
+
+### 🔄 Session Persistence
+
+- **Automatic Restore**: Terminal contents and state restored after VS Code restart
+- **Scrollback History**: Up to 1000 lines of terminal history preserved per terminal
+- **Multi-Terminal Support**: All terminals (up to 5) restored with their individual states
+- **Configurable**: Session persistence can be customized or disabled
+
+## ⌨️ Keyboard Shortcuts
+
+- **CLI Agent File Reference**: `CMD+OPT+L` (Mac) / `Ctrl+Alt+L` (Windows/Linux) - Insert `@filename` reference
+- **GitHub Copilot Integration**: `CMD+K CMD+C` (Mac) / `Ctrl+K Ctrl+C` (Windows/Linux) - Activate Copilot Chat with file reference
+- **Alt+Click**: Cursor positioning (when enabled in VS Code settings)
+
+### 🔍 Debug & Troubleshooting
+
+- **Terminal State Debug Panel**: `Ctrl+Shift+D` - Toggle real-time terminal state monitoring panel
+- **System Diagnostics Export**: `Ctrl+Shift+X` - Export detailed system diagnostics for troubleshooting
+
+The Debug Panel provides comprehensive insights including:
+- System status (READY/BUSY state)
+- Active terminal count and available slots
+- Performance metrics and memory usage
+- Pending operations queue status
+- Individual terminal instance details
 
 ## ⚙️ Configuration
 
 Customize the extension through VS Code settings (`settings.json`):
 
-```json
-{
-  "sidebarTerminal.shell": "",
-  "sidebarTerminal.shellArgs": [],
-  "sidebarTerminal.fontSize": 14,
-  "sidebarTerminal.fontFamily": "Consolas, 'Courier New', monospace",
-  "sidebarTerminal.maxTerminals": 5,
-  "sidebarTerminal.theme": "auto",
-  "sidebarTerminal.cursorBlink": true,
-  "sidebarTerminal.altClickMovesCursor": true
-}
-```
-
-### Configuration Options
-
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| `shell` | string | "" | Path to shell executable (empty for system default) |
-| `shellArgs` | array | [] | Arguments to pass to the shell |
-| `fontSize` | number | 14 | Terminal font size |
-| `fontFamily` | string | "Consolas, 'Courier New', monospace" | Terminal font family |
-| `maxTerminals` | number | 5 | Maximum number of concurrent terminals |
-| `theme` | string | "auto" | Terminal theme (auto/dark/light) |
-| `cursorBlink` | boolean | true | Enable cursor blinking |
-| `altClickMovesCursor` | boolean | true | Enable Alt+Click cursor positioning |
+| Setting                                 | Type    | Default    | Description                                                             |
+| --------------------------------------- | ------- | ---------- | ----------------------------------------------------------------------- |
+| `sidebarTerminal.shell`                 | string  | `""`       | Path to shell executable. Leave empty to use system default.            |
+| `sidebarTerminal.shellArgs`             | array   | `[]`       | Arguments to pass to the shell.                                         |
+| `sidebarTerminal.maxTerminals`          | number  | 5          | Maximum number of terminals allowed.                                    |
+| `sidebarTerminal.cursorBlink`           | boolean | `true`     | Enable cursor blinking in terminal.                                     |
+| `sidebarTerminal.theme`                 | string  | `auto`     | Terminal theme. Auto follows VS Code theme.                             |
+| `sidebarTerminal.defaultDirectory`      | string  | `""`       | Default directory for new terminals. Leave empty to use workspace root. |
+| `sidebarTerminal.confirmBeforeKill`     | boolean | `false`    | Show confirmation dialog before closing terminals                       |
+| `sidebarTerminal.protectLastTerminal`   | boolean | `true`     | Prevent closing the last terminal                                       |
+| `sidebarTerminal.minTerminalCount`      | number  | 1          | Minimum number of terminals to keep open                                |
+| `sidebarTerminal.maxSplitTerminals`     | number  | 5          | Maximum number of terminals to display in split view                    |
+| `sidebarTerminal.minTerminalHeight`     | number  | 100        | Minimum height for each terminal in split view (pixels)                 |
+| `sidebarTerminal.enableSplitResize`     | boolean | `true`     | Allow resizing split terminals by dragging splitters                    |
+| `sidebarTerminal.statusDisplayDuration` | number  | 3000       | Duration to display status messages (milliseconds)                      |
+| `sidebarTerminal.autoHideStatus`        | boolean | `true`     | Automatically hide status messages after specified duration             |
+| `sidebarTerminal.showStatusOnActivity`  | boolean | `true`     | Show last status message when user performs actions                     |
+| `sidebarTerminal.showWebViewHeader`     | boolean | `true`     | Show title and command icons in the webview header                      |
+| `sidebarTerminal.webViewTitle`          | string  | `Terminal` | Title to display in the webview header                                  |
+| `sidebarTerminal.showSampleIcons`       | boolean | `true`     | Show sample command icons in webview header (display only)              |
+| `sidebarTerminal.sampleIconOpacity`     | number  | 0.4        | Opacity of sample icons (0.1 to 1.0)                                    |
+| `sidebarTerminal.headerFontSize`        | number  | 14         | Font size for webview header title                                      |
+| `sidebarTerminal.headerIconSize`        | number  | 20         | Size of terminal icon in webview header                                 |
+| `sidebarTerminal.sampleIconSize`        | number  | 16         | Size of sample icons in webview header                                  |
+| `sidebarTerminal.altClickMovesCursor`   | boolean | `true`     | Controls whether Alt/Option + click will reposition the prompt cursor.  |
+| `sidebarTerminal.enableCliAgentIntegration` | boolean | `true`     | Enable file reference shortcuts for CLI agents like Claude Code.        |
+| `sidebarTerminal.enableGitHubCopilotIntegration` | boolean | `true`     | Enable GitHub Copilot Chat integration shortcuts.                       |
+| `sidebarTerminal.enablePersistentSessions` | boolean | `true`     | Enable terminal session persistence across VS Code restarts.             |
+| `sidebarTerminal.scrollbackLines`      | number  | 1000       | Maximum number of lines to restore from terminal history.               |
+| `sidebarTerminal.scrollbackCompression` | boolean | `true`     | Compress scrollback data to reduce storage size.                        |
 
 ## 🛠️ Development
 
@@ -170,11 +225,11 @@ npm run package
 
 ### Debugging
 
-For detailed debugging instructions, including how to launch the extension, check logs, and troubleshoot common issues, please refer to the [Debugging Guide (Japanese)](./DEBUG.md).
+For detailed debugging instructions, including how to launch the extension, check logs, and troubleshoot common issues, please refer to the [Debugging Guide (Japanese)](./docs/DEBUG.md).
 
 ### Release Process
 
-For detailed instructions on how to release new versions of the extension, including automated and manual publishing steps, please refer to the [Release Process Guide (Japanese)](./RELEASE_PROCESS.md).
+For detailed instructions on how to release new versions of the extension, including automated and manual publishing steps, please refer to the [Release Process Guide (Japanese)](./docs/RELEASE_PROCESS.md).
 
 ## 🧪 Testing Strategy
 
@@ -187,11 +242,64 @@ This extension uses comprehensive testing with modern tooling:
 - **Modern Tools**: Mocha, Chai, Sinon, JSDOM, and @testing-library
 
 Test coverage includes:
+
 - DOM manipulation utilities (22 tests)
-- Notification system (8 tests) 
+- Notification system (8 tests)
 - Alt+Click functionality (17 tests)
 - VS Code API integration
 - Cross-platform compatibility
+
+## 🧪 Test-Driven Development (TDD)
+
+This project follows **t-wada's TDD methodology** for sustainable, high-quality development:
+
+### TDD Infrastructure
+
+- **📊 Metrics Collection**: Real-time TDD compliance tracking
+- **🔄 Automated Workflows**: Red-Green-Refactor cycle automation
+- **📈 Quality Gates**: CI/CD integrated quality checks
+- **🎯 Interactive Sessions**: Guided TDD development experience
+
+### Available TDD Commands
+
+```bash
+# Interactive TDD workflow
+npm run tdd:interactive
+
+# Phase-specific commands
+npm run tdd:red      # Verify failing tests
+npm run tdd:green    # Verify passing tests
+npm run tdd:refactor # Quality check after refactoring
+
+# Quality assessment
+npm run tdd:check-quality    # Comprehensive quality analysis
+npm run tdd:quality-gate     # CI/CD quality gate check
+```
+
+### TDD Metrics Dashboard
+
+- **TDD Compliance Rate**: 80%+ target (Red-Green-Refactor adherence)
+- **Test Coverage**: 90%+ target
+- **Code Quality Score**: 8.0+/10.0 target
+- **ESLint Compliance**: ✅ **100%** (0 errors) - Production ready code quality
+- **TypeScript Safety**: ✅ **100%** - Strict mode compliance with proper type assertions
+- **Real-time tracking** with historical trend analysis
+
+### Documentation
+
+- 📖 [TDD Operations Guide](./docs/TDD-OPERATIONS-GUIDE.md) - Complete workflow and daily usage
+- 🎯 [TDD Best Practices](./docs/TDD-BEST-PRACTICES.md) - Proven patterns and techniques
+- 🚀 [CI/CD Integration](./docs/CI-CD-INTEGRATION.md) - Quality gates and automation
+
+### VS Code Integration
+
+Access TDD workflows directly through VS Code tasks:
+
+- `Ctrl+Shift+P` → "Tasks: Run Task" → "TDD: Interactive Workflow"
+- Integrated quality checks in build process
+- Real-time TDD metrics in development
+
+_This TDD infrastructure ensures maintainable, testable code while preventing technical debt accumulation._
 
 ## 🏗️ Architecture
 
@@ -212,7 +320,7 @@ src/
 ### Key Components
 
 - **TerminalManager**: Multi-terminal state management
-- **SidebarTerminalProvider**: VS Code WebView integration
+- **SecandarySidebar**: VS Code WebView integration
 - **WebView (xterm.js)**: Terminal UI rendering
 - **PTY Process**: System-level shell integration
 - **SplitManager**: Terminal split functionality
@@ -281,62 +389,22 @@ This project is licensed under the [MIT License](LICENSE).
 
 ## 📝 Changelog
 
-### v0.0.1 (Initial Release)
+See [CHANGELOG.md](docs/CHANGELOG.md) for detailed changes.
 
-#### Features
-- Initial release of Sidebar Terminal extension
-- **Core Features**: Terminal integration in VS Code Primary Sidebar, multiple terminal management (up to 5), split terminal functionality, Clear, New, and Split button controls, full shell execution environment powered by node-pty.
-- **Platform Support**: Cross-platform compatibility (Windows, macOS, Linux), IME support for multi-language input, special key handling.
-- **Advanced Features**: Alt+Click cursor positioning with VS Code standard behavior, Claude Code detection for optimal performance, visual feedback with blue cursor highlight, automatic conflict resolution for terminal output interference.
-- **Customization Options**: Configurable shell and shell arguments, font family and size customization, terminal theme support, cursor blinking controls, maximum terminal count settings.
-- **Developer Experience**: Comprehensive testing strategy with 47 test cases, modern testing tooling, multi-platform CI/CD pipeline, code coverage reporting, ESLint and Prettier integration.
+### v0.1.50 (Latest)
 
-#### Technical Implementation
-- **Architecture**: Clean separation between extension host (Node.js) and WebView (browser).
-- **Terminal Rendering**: xterm.js for high-performance terminal emulation.
-- **Process Management**: node-pty for cross-platform PTY support.
-- **State Management**: Centralized TerminalManager for multi-terminal coordination.
-- **Communication**: Event-driven architecture with proper message handling.
+- **AI Agent Status Management**: Fixed proper status transitions (connected → disconnected → none)
+- **Session Persistence**: Complete terminal session restore functionality with scrollback history
+- **CLI Agent Integration**: Enhanced file reference shortcuts for Claude Code (`@filename`) and GitHub Copilot (`#file:filename`)
+- **Cross-Platform Native Binaries**: Platform-specific builds for optimal performance
+- **Status Lifecycle**: Improved agent termination detection and UI synchronization
+- **Code Quality**: Comprehensive lint fixes and enhanced stability
 
-#### Testing & Quality Assurance
-- **Unit Tests**: 47 test cases covering core functionality (DOM manipulation, notification system, Alt+Click).
-- **Integration Tests**: VS Code extension testing with mocked APIs.
-- **Code Coverage**: Comprehensive coverage reporting with nyc (Istanbul).
-- **CI/CD**: GitHub Actions workflow for multi-platform testing.
-- **Code Quality**: ESLint, Prettier, and TypeScript strict mode.
+### v0.1.25
 
-#### Fixed Issues
-- ✅ PTY communication reliability improvements.
-- ✅ Backspace key and special character handling.
-- ✅ WebView entry point resolution (simple.ts → main.ts).
-- ✅ Clear/New/Split button functionality.
-- ✅ TypeScript and ESLint error resolution.
-- ✅ Cross-platform terminal execution environment.
-- ✅ User guidance and error handling enhancements.
-
-#### Performance Optimizations
-- **Output Buffering**: Adaptive buffering (8ms vs 16ms) for optimal performance.
-- **Claude Code Detection**: Automatic performance optimization during AI interactions.
-- **Memory Management**: Proper cleanup and disposal patterns.
-- **Resize Handling**: Debounced terminal resize operations.
-
-#### Security & Reliability
-- **Input Validation**: Comprehensive input sanitization.
-- **Error Handling**: Graceful degradation and user-friendly error messages.
-- **Resource Management**: Proper cleanup of PTY processes and WebView resources.
-- **Security Testing**: CodeQL analysis and dependency vulnerability scanning.
-
-### v0.0.2 (Future Release - Planned)
-
-#### Planned Features
-- **Enhanced Testing**: Complete Phase 2 WebView component testing (SplitManager, HeaderManager, SettingsPanel).
-- **Advanced Testing**: Phase 3 implementation (Performance testing framework, Accessibility testing with axe-core, Load testing for multiple terminals).
-- **User Experience**: Terminal session persistence, custom themes and color schemes, enhanced keyboard shortcuts, terminal history management.
-
-#### WebView Architecture Refactoring (Completed in v0.0.2)
-- Transformed monolithic `main.ts` into a modular system with 9 focused managers (Performance, ClaudeCode, Input, UI, Config, Message, Notification, TerminalCoordinator).
-- Achieved significant improvements in code organization, maintainability, and performance.
-- Implemented intelligent buffering, debounced operations, and efficient resource management.
+- **WebView Architecture Refactoring**: Modular system with focused managers
+- **Active Terminal Visualization**: Border indication for active terminal
+- **SVG Icon**: Updated extension icon for better scaling
 
 ## 🙏 Acknowledgments
 
@@ -358,3 +426,7 @@ This project uses these excellent libraries:
 **Repository**: [vscode-sidebar-terminal](https://github.com/s-hiraoku/vscode-sidebar-terminal)  
 **License**: MIT  
 **Support**: [Issues](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues)
+
+---
+
+_This README was last updated on 2025-07-30._

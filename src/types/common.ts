@@ -1,143 +1,59 @@
 /**
  * 共通の型定義とインターフェース
  *
- * NOTE: TerminalConfig と TerminalSettings は shared.ts に移行済み
- * 段階的移行のため、ここでは shared.ts からのインポートとエイリアスを提供
+ * NOTE: このファイルは後方互換性のために維持されています。
+ * 新しい型は shared.ts に統合され、ここから再エクスポートされます。
  */
 
-// 新しい型システムからのインポート
-import { PartialTerminalSettings, WebViewFontSettings, TerminalConfig } from './shared';
+// ===== 統合された型システムからの再エクスポート =====
+
+// shared.ts から全ての型をインポートして再エクスポート
+export {
+  // 基本設定型
+  BaseTerminalConfig,
+  DisplayConfig,
+  ShellConfig,
+  TerminalLimitsConfig,
+  InteractionConfig,
+  ExtensionTerminalConfig,
+  WebViewTerminalConfig,
+  PartialTerminalSettings,
+  WebViewFontSettings,
+  WebViewTerminalSettings,
+  CompleteTerminalSettings,
+  WebViewDisplayConfig,
+  CompleteExtensionConfig,
+
+  // ターミナル管理型
+  TerminalInfo,
+  TerminalState,
+  DeleteResult,
+  TerminalInstance,
+  TerminalDimensions,
+  TerminalEvent,
+  AltClickState,
+  TerminalInteractionEvent,
+
+  // メッセージ通信型
+  WebviewMessage,
+  VsCodeMessage,
+
+  // 型エイリアス
+  TerminalTheme,
+  SplitDirection,
+  CliAgentStatusType,
+  TerminalConfig,
+  TerminalSettings,
+  ExtensionConfig,
+
+  // 設定キー定数
+  CONFIG_SECTIONS,
+  CONFIG_KEYS,
+
+  // 型ガード関数
+  isBaseTerminalConfig,
+  isExtensionTerminalConfig,
+} from './shared';
 
 // IPty interface is now defined in node-pty.d.ts for @homebridge/node-pty-prebuilt-multiarch
 // Import IPty from the node-pty module when needed
-
-export interface TerminalInfo {
-  id: string;
-  name: string;
-  isActive: boolean;
-}
-
-// 新しいアーキテクチャ用の状態管理
-export interface TerminalState {
-  terminals: TerminalInfo[];
-  activeTerminalId: string | null;
-  maxTerminals: number;
-  availableSlots: number[];
-}
-
-export interface DeleteResult {
-  success: boolean;
-  reason?: string;
-  newState?: TerminalState;
-}
-
-// ===== 後方互換性のための型エイリアス =====
-// 段階的移行期間中の後方互換性を保つため、shared.ts の型をエイリアス
-
-/**
- * ターミナル設定インターフェース
- * @deprecated shared.ts の ExtensionTerminalConfig を使用してください
- */
-// TerminalConfig type alias is now centrally defined in shared.ts
-// Use: import { TerminalConfig } from './shared' when needed
-
-/**
- * ターミナル設定の詳細インターフェース
- * @deprecated shared.ts の CompleteTerminalSettings を使用してください
- */
-// TerminalSettings type alias is now centrally defined in shared.ts
-// Use: import { TerminalSettings } from './shared' when needed
-
-export interface WebviewMessage {
-  command:
-    | 'init'
-    | 'output'
-    | 'clear'
-    | 'exit'
-    | 'split'
-    | 'terminalCreated'
-    | 'terminalRemoved'
-    | 'settingsResponse'
-    | 'fontSettingsUpdate'
-    | 'openSettings'
-    | 'stateUpdate';
-  config?: TerminalConfig;
-  data?: string;
-  exitCode?: number;
-  terminalId?: string;
-  terminalName?: string;
-  terminals?: TerminalInfo[];
-  activeTerminalId?: string;
-  settings?: PartialTerminalSettings; // 部分的な設定を受け取るよう修正
-  fontSettings?: WebViewFontSettings; // フォント設定を受け取る
-  state?: TerminalState; // 新しいアーキテクチャ用の状態更新
-}
-
-export interface VsCodeMessage {
-  command:
-    | 'ready'
-    | 'input'
-    | 'resize'
-    | 'switchTerminal'
-    | 'createTerminal'
-    | 'splitTerminal'
-    | 'clear'
-    | 'getSettings'
-    | 'updateSettings'
-    | 'terminalClosed'
-    | 'terminalInteraction'
-    | 'killTerminal'
-    | 'deleteTerminal';
-  data?: string;
-  cols?: number;
-  rows?: number;
-  terminalId?: string;
-  type?: TerminalInteractionEvent['type'];
-  settings?: PartialTerminalSettings; // 部分的な設定を送信するよう修正
-  requestSource?: 'header' | 'panel'; // 新しいアーキテクチャ用の削除要求元
-}
-
-export interface TerminalInstance {
-  id: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  pty: any; // Using any for node-pty compatibility with both real and mock implementations
-  name: string;
-  isActive: boolean;
-}
-
-export interface TerminalDimensions {
-  cols: number;
-  rows: number;
-}
-
-export interface TerminalEvent {
-  terminalId: string;
-  data?: string;
-  exitCode?: number;
-}
-
-export interface AltClickState {
-  isVSCodeAltClickEnabled: boolean;
-  isAltKeyPressed: boolean;
-}
-
-export interface TerminalInteractionEvent {
-  type:
-    | 'alt-click'
-    | 'alt-click-blocked'
-    | 'output-detected'
-    | 'focus'
-    | 'switch-next'
-    | 'webview-ready'
-    | 'terminal-removed'
-    | 'font-settings-update'
-    | 'settings-update'
-    | 'new-terminal'
-    | 'resize'
-    | 'kill'
-    | 'interrupt'
-    | 'paste';
-  terminalId: string;
-  timestamp: number;
-  data?: unknown;
-}

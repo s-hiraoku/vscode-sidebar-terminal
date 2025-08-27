@@ -3,62 +3,26 @@
  */
 /* eslint-disable */
 // @ts-nocheck
-import * as sinon from 'sinon';
 import { expect, use } from 'chai';
 import sinonChai from 'sinon-chai';
 
 use(sinonChai);
-import { JSDOM } from 'jsdom';
 import { DOMUtils } from '../../../webview/utils/DOMUtils';
-
-// Mock setup for this test file
-const setupTestEnvironment = () => {
-  // Mock globals that might be needed
-  if (typeof (global as any).vscode === 'undefined') {
-    (global as any).vscode = {
-      workspace: {
-        getConfiguration: () => ({ get: () => undefined }),
-      },
-    };
-  }
-};
+import {
+  setupTestEnvironment,
+  cleanupTestEnvironment,
+  TestEnvironment,
+} from '../../utils/CommonTestSetup';
 
 describe('DOMUtils', () => {
-  let dom: JSDOM;
-  let document: Document;
-  let sandbox: sinon.SinonSandbox;
+  let testEnv: TestEnvironment;
 
   beforeEach(() => {
-    // Test environment setup
-    setupTestEnvironment();
-
-    // Set up process.nextTick before JSDOM creation
-    const originalProcess = global.process;
-    (global as any).process = {
-      ...originalProcess,
-      nextTick: (callback: () => void) => setImmediate(callback),
-      env: { ...originalProcess.env, NODE_ENV: 'test' },
-    };
-
-    // セットアップ: JSDOM環境を作成
-    dom = new JSDOM('<!DOCTYPE html><html><body></body></html>');
-    document = dom.window.document;
-
-    // グローバルに設定
-    (global as Record<string, unknown>).document = document;
-    (global as Record<string, unknown>).window = dom.window;
-    (global as Record<string, unknown>).HTMLElement = dom.window.HTMLElement;
-    (global as Record<string, unknown>).getComputedStyle = dom.window.getComputedStyle;
-
-    sandbox = sinon.createSandbox();
+    testEnv = setupTestEnvironment();
   });
 
   afterEach(() => {
-    sandbox.restore();
-    // クリーンアップ
-    delete (global as Record<string, unknown>).document;
-    delete (global as Record<string, unknown>).window;
-    delete (global as Record<string, unknown>).HTMLElement;
+    cleanupTestEnvironment(testEnv);
   });
 
   describe('createElement', () => {

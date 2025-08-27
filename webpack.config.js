@@ -10,6 +10,35 @@ const extensionConfig = {
   mode: 'none',
 
   entry: './src/extension.ts',
+  resolve: {
+    extensions: ['.ts', '.js'],
+  },
+  module: {
+    rules: [
+      {
+        test: /\.ts$/,
+        include: [
+          path.resolve(__dirname, 'src'),
+        ],
+        exclude: [
+          path.resolve(__dirname, 'src/test'),
+          /node_modules/,
+        ],
+        use: [
+          {
+            loader: 'ts-loader',
+            options: {
+              configFile: path.resolve(__dirname, 'tsconfig.production.json'),
+              transpileOnly: true,
+              compilerOptions: {
+                noEmitOnError: false,
+              },
+            },
+          },
+        ],
+      },
+    ],
+  },
   output: {
     path: path.resolve(__dirname, 'dist'),
     filename: 'extension.js',
@@ -19,22 +48,6 @@ const extensionConfig = {
     vscode: 'commonjs vscode',
     // Keep @homebridge/node-pty-prebuilt-multiarch as external since it's included in the package
     '@homebridge/node-pty-prebuilt-multiarch': 'commonjs @homebridge/node-pty-prebuilt-multiarch',
-  },
-  resolve: {
-    extensions: ['.ts', '.js'],
-  },
-  module: {
-    rules: [
-      {
-        test: /\.ts$/,
-        exclude: /node_modules/,
-        use: [
-          {
-            loader: 'ts-loader',
-          },
-        ],
-      },
-    ],
   },
   devtool: 'nosources-source-map',
   infrastructureLogging: {
@@ -48,13 +61,6 @@ const webviewConfig = {
   mode: 'none',
 
   entry: './src/webview/main.ts',
-  output: {
-    path: path.resolve(__dirname, 'dist'),
-    filename: 'webview.js',
-  },
-  optimization: {
-    minimize: false,
-  },
   resolve: {
     extensions: ['.ts', '.js'],
     fallback: {
@@ -70,12 +76,25 @@ const webviewConfig = {
     rules: [
       {
         test: /\.ts$/,
-        exclude: /node_modules/,
+        include: [
+          path.resolve(__dirname, 'src/webview'),
+          path.resolve(__dirname, 'src/types'),
+          path.resolve(__dirname, 'src/shared'),
+          path.resolve(__dirname, 'src/utils'),
+        ],
+        exclude: [
+          path.resolve(__dirname, 'src/test'),
+          /node_modules/,
+        ],
         use: [
           {
             loader: 'ts-loader',
             options: {
-              configFile: path.resolve(__dirname, 'tsconfig.json'),
+              configFile: path.resolve(__dirname, 'tsconfig.production.json'),
+              transpileOnly: true,
+              compilerOptions: {
+                noEmitOnError: false,
+              },
             },
           },
         ],
@@ -85,6 +104,13 @@ const webviewConfig = {
         use: ['style-loader', 'css-loader'],
       },
     ],
+  },
+  output: {
+    path: path.resolve(__dirname, 'dist'),
+    filename: 'webview.js',
+  },
+  optimization: {
+    minimize: false,
   },
   plugins: [
     new webpack.DefinePlugin({

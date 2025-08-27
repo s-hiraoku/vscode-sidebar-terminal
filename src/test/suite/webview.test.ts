@@ -1,11 +1,11 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import { SidebarTerminalProvider } from '../../providers/SidebarTerminalProvider';
+import { SecondaryTerminalProvider } from '../../providers/SecondaryTerminalProvider';
 import { TerminalManager } from '../../terminals/TerminalManager';
 
 suite('Webview Test Suite', () => {
   let terminalManager: TerminalManager;
-  let provider: SidebarTerminalProvider;
+  let provider: SecondaryTerminalProvider;
   let mockContext: vscode.ExtensionContext;
 
   setup(() => {
@@ -29,8 +29,8 @@ suite('Webview Test Suite', () => {
       languageModelAccessInformation: {} as vscode.LanguageModelAccessInformation,
     } as unknown as vscode.ExtensionContext;
 
-    terminalManager = new TerminalManager(mockContext);
-    provider = new SidebarTerminalProvider(mockContext, terminalManager);
+    terminalManager = new TerminalManager();
+    provider = new SecondaryTerminalProvider(mockContext, terminalManager);
   });
 
   teardown(() => {
@@ -69,7 +69,7 @@ suite('Webview Test Suite', () => {
       onDidDispose: () => ({ dispose: () => {} }),
       onDidChangeVisibility: () => ({ dispose: () => {} }),
       visible: true,
-      viewType: 'sidebarTerminal',
+      viewType: 'secondaryTerminal',
       show: () => {},
     } as vscode.WebviewView;
 
@@ -111,7 +111,7 @@ suite('Webview Test Suite', () => {
       onDidDispose: () => ({ dispose: () => {} }),
       onDidChangeVisibility: () => ({ dispose: () => {} }),
       visible: true,
-      viewType: 'sidebarTerminal',
+      viewType: 'secondaryTerminal',
       show: () => {},
     } as vscode.WebviewView;
 
@@ -149,9 +149,9 @@ suite('Webview Test Suite', () => {
       return originalCreateTerminal();
     };
 
-    provider.killTerminal = () => {
+    provider.killTerminal = async () => {
       killTerminalCalled = true;
-      originalKillTerminal();
+      await originalKillTerminal();
     };
 
     provider.splitTerminal = () => {
@@ -217,7 +217,7 @@ suite('Webview Test Suite', () => {
   });
 
   test('Should handle different message types correctly', () => {
-    const messageTypes = ['ready', 'input', 'resize', 'switchTerminal'];
+    const messageTypes = ['ready', 'input', 'resize', 'focusTerminal'];
     const processedMessages: string[] = [];
 
     const mockWebviewView = {
@@ -233,7 +233,7 @@ suite('Webview Test Suite', () => {
               data: command === 'input' ? 'test data' : undefined,
               cols: command === 'resize' ? 80 : undefined,
               rows: command === 'resize' ? 24 : undefined,
-              terminalId: ['switchTerminal', 'input', 'resize'].includes(command)
+              terminalId: ['focusTerminal', 'input', 'resize'].includes(command)
                 ? 'test-terminal'
                 : undefined,
             };
@@ -254,7 +254,7 @@ suite('Webview Test Suite', () => {
       onDidDispose: () => ({ dispose: () => {} }),
       onDidChangeVisibility: () => ({ dispose: () => {} }),
       visible: true,
-      viewType: 'sidebarTerminal',
+      viewType: 'secondaryTerminal',
       show: () => {},
     } as vscode.WebviewView;
 
