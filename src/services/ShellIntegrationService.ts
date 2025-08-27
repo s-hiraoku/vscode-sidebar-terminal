@@ -279,9 +279,9 @@ export class ShellIntegrationService {
   }
 
   private injectBashZshIntegration(ptyProcess: PtyProcess): void {
-    // VS Code standard shell integration for bash/zsh
+    // VS Code standard shell integration for bash/zsh with enhanced history support
     const script = `
-# VS Code Shell Integration
+# VS Code Shell Integration with History Support
 __vsc_prompt_cmd() {
   printf "\\033]633;A\\007"
 }
@@ -294,23 +294,61 @@ __vsc_precmd() {
   printf "\\033]633;P;Cwd=%s\\007" "$PWD"
 }
 
-# Setup hooks
+# Enhanced History Configuration
 if [[ -n "$BASH_VERSION" ]]; then
+  # Bash history settings for better terminal history
+  export HISTSIZE=1000
+  export HISTFILESIZE=2000
+  export HISTCONTROL=ignoreboth:erasedups
+  export HISTIGNORE="ls:ll:cd:pwd:bg:fg:history"
+  shopt -s histappend
+  shopt -s cmdhist
+  
+  # Ensure prompt is set if not already defined
+  if [[ -z "\$PS1" ]]; then
+    export PS1='\\[\\033[01;32m\\]\\u@\\h\\[\\033[00m\\]:\\[\\033[01;34m\\]\\w\\[\\033[00m\\]\\$ '
+  fi
+  
+  # Setup hooks - preserve existing PROMPT_COMMAND
   trap '__vsc_preexec' DEBUG
-  PROMPT_COMMAND="__vsc_precmd; $PROMPT_COMMAND"
+  if [[ -n "\$PROMPT_COMMAND" ]]; then
+    PROMPT_COMMAND="history -a; history -c; history -r; __vsc_precmd; \$PROMPT_COMMAND"
+  else
+    PROMPT_COMMAND="history -a; history -c; history -r; __vsc_precmd"
+  fi
 elif [[ -n "$ZSH_VERSION" ]]; then
+  # Zsh history settings for better terminal history
+  export HISTSIZE=1000
+  export SAVEHIST=2000
+  setopt HIST_IGNORE_ALL_DUPS
+  setopt HIST_IGNORE_SPACE
+  setopt HIST_REDUCE_BLANKS
+  setopt HIST_SAVE_NO_DUPS
+  setopt SHARE_HISTORY
+  setopt APPEND_HISTORY
+  setopt INC_APPEND_HISTORY
+  
+  # Ensure prompt is set if not already defined
+  if [[ -z "\$PS1" ]] && [[ -z "\$PROMPT" ]]; then
+    export PS1='%n@%m:%~%# '
+  fi
+  
+  # Setup hooks
   preexec_functions+=(__vsc_preexec)
   precmd_functions+=(__vsc_precmd)
 fi
+
+# Enable history expansion
+set +H 2>/dev/null || true
 `;
     
     ptyProcess.write(script + '\n');
   }
 
   private injectFishIntegration(ptyProcess: PtyProcess): void {
-    // VS Code standard shell integration for fish
+    // VS Code standard shell integration for fish with enhanced history support
     const script = `
-# VS Code Shell Integration for Fish
+# VS Code Shell Integration for Fish with History Support
 function __vsc_preexec --on-event fish_preexec
   printf "\\033]633;B;%s\\007" "$argv"
 end
@@ -323,21 +361,49 @@ end
 function __vsc_postexec --on-event fish_postexec
   printf "\\033]633;C;%s\\007" "$status"
 end
+
+# Enhanced Fish History Configuration
+set -U fish_history_max_length 1000
+set -U fish_history_save_timestamp yes
+set -U fish_history_ignore_dups yes
+set -U fish_history_ignore_space yes
+
+# Enable better history search
+function fish_user_key_bindings
+  # Arrow key history search (if not already set)
+  bind \\e'[A' history-search-backward 2>/dev/null
+  bind \\e'[B' history-search-forward 2>/dev/null
+  bind -k up history-search-backward 2>/dev/null  
+  bind -k down history-search-forward 2>/dev/null
+end
 `;
     
     ptyProcess.write(script + '\n');
   }
 
   private injectPowerShellIntegration(ptyProcess: PtyProcess): void {
-    // VS Code standard shell integration for PowerShell
+    // VS Code standard shell integration for PowerShell with enhanced history support
     const script = `
-# VS Code Shell Integration for PowerShell
+# VS Code Shell Integration for PowerShell with History Support
 function Global:__VSCode-Prompt-Start { 
   Write-Host -NoNewline "]633;A$([char]7)" 
 }
 function Global:__VSCode-Prompt-End { 
   Write-Host -NoNewline "]633;P;Cwd=$($PWD.Path)$([char]7)" 
 }
+
+# Enhanced PowerShell History Configuration
+$MaximumHistoryCount = 1000
+Set-PSReadLineOption -MaximumHistoryCount 1000
+Set-PSReadLineOption -HistoryNoDuplicates:$true
+Set-PSReadLineOption -HistorySearchCursorMovesToEnd:$true
+Set-PSReadLineOption -HistorySearchCaseSensitive:$false
+
+# Enhanced history search keybindings
+Set-PSReadLineKeyHandler -Key UpArrow -Function HistorySearchBackward
+Set-PSReadLineKeyHandler -Key DownArrow -Function HistorySearchForward
+Set-PSReadLineKeyHandler -Key Ctrl+r -Function ReverseSearchHistory
+
 $Global:__VSCodeOriginalPrompt = $function:prompt
 function Global:prompt {
   __VSCode-Prompt-Start

@@ -374,6 +374,104 @@
           ],
           "description": "Control terminal visibility on VS Code startup"
         },
+        "secondaryTerminal.fontFamily": {
+          "type": "string",
+          "default": "monospace",
+          "description": "Controls the font family of the terminal. This defaults to VS Code's editor.fontFamily value."
+        },
+        "secondaryTerminal.fontSize": {
+          "type": "number",
+          "default": 12,
+          "minimum": 6,
+          "maximum": 25,
+          "description": "Controls the font size in pixels of the terminal."
+        },
+        "secondaryTerminal.fontWeight": {
+          "type": "string",
+          "default": "normal",
+          "enum": [
+            "normal",
+            "bold",
+            "100",
+            "200",
+            "300",
+            "400",
+            "500",
+            "600",
+            "700",
+            "800",
+            "900"
+          ],
+          "description": "The font weight to use within the terminal for non-bold text. Accepts normal and bold keywords or numbers between 1 and 1000."
+        },
+        "secondaryTerminal.fontWeightBold": {
+          "type": "string",
+          "default": "bold",
+          "enum": [
+            "normal",
+            "bold",
+            "100",
+            "200",
+            "300",
+            "400",
+            "500",
+            "600",
+            "700",
+            "800",
+            "900"
+          ],
+          "description": "The font weight to use within the terminal for bold text. Accepts normal and bold keywords or numbers between 1 and 1000."
+        },
+        "secondaryTerminal.lineHeight": {
+          "type": "number",
+          "default": 1.0,
+          "minimum": 0.1,
+          "maximum": 5,
+          "description": "Controls the line height of the terminal, this number is multiplied by the terminal font size to get the actual line-height in pixels."
+        },
+        "secondaryTerminal.letterSpacing": {
+          "type": "number",
+          "default": 0,
+          "minimum": -5,
+          "maximum": 10,
+          "description": "Controls the letter spacing of the terminal, this is an integer value which represents the amount of additional pixels to add between characters."
+        },
+        "secondaryTerminal.scrollback": {
+          "type": "number",
+          "default": 1000,
+          "minimum": 0,
+          "maximum": 50000,
+          "description": "Controls the maximum number of lines the terminal keeps in its buffer."
+        },
+        "secondaryTerminal.cursorStyle": {
+          "type": "string",
+          "default": "block",
+          "enum": [
+            "block",
+            "underline",
+            "bar"
+          ],
+          "description": "Controls the style of terminal cursor."
+        },
+        "secondaryTerminal.cursorWidth": {
+          "type": "number",
+          "default": 1,
+          "minimum": 1,
+          "maximum": 100,
+          "description": "Controls the width of the cursor when cursorStyle is set to 'bar'."
+        },
+        "secondaryTerminal.drawBoldTextInBrightColors": {
+          "type": "boolean",
+          "default": true,
+          "description": "Controls whether bold text in the terminal will always use the \"bright\" ANSI color variant."
+        },
+        "secondaryTerminal.minimumContrastRatio": {
+          "type": "number",
+          "default": 1,
+          "minimum": 1,
+          "maximum": 21,
+          "description": "When set, the foreground color of each cell will change to try meet the contrast ratio specified. Example values:\n- 1: Do nothing and use the standard theme colors.\n- 4.5: WCAG AA compliance (minimum).\n- 7: WCAG AAA compliance (enhanced).\n- 21: White on black or black on white."
+        },
         "secondaryTerminal.restoreScrollback": {
           "type": "boolean",
           "default": true,

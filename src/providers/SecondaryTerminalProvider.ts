@@ -971,8 +971,16 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       if (
         event.affectsConfiguration('terminal.integrated.fontSize') ||
         event.affectsConfiguration('terminal.integrated.fontFamily') ||
+        event.affectsConfiguration('terminal.integrated.fontWeight') ||
+        event.affectsConfiguration('terminal.integrated.fontWeightBold') ||
+        event.affectsConfiguration('terminal.integrated.lineHeight') ||
+        event.affectsConfiguration('terminal.integrated.letterSpacing') ||
         event.affectsConfiguration('editor.fontSize') ||
-        event.affectsConfiguration('editor.fontFamily')
+        event.affectsConfiguration('editor.fontFamily') ||
+        event.affectsConfiguration('secondaryTerminal.fontWeight') ||
+        event.affectsConfiguration('secondaryTerminal.fontWeightBold') ||
+        event.affectsConfiguration('secondaryTerminal.lineHeight') ||
+        event.affectsConfiguration('secondaryTerminal.letterSpacing')
       ) {
         shouldUpdateFontSettings = true;
       }
@@ -1423,6 +1431,10 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     return {
       fontSize: configManager.getFontSize(),
       fontFamily: configManager.getFontFamily(),
+      fontWeight: configManager.getFontWeight(),
+      fontWeightBold: configManager.getFontWeightBold(),
+      lineHeight: configManager.getLineHeight(),
+      letterSpacing: configManager.getLetterSpacing(),
     };
   }
 

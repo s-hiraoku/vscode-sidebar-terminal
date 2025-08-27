@@ -43,6 +43,10 @@ export class TerminalLifecycleManager {
     cursorBlink: true,
     fontFamily: 'monospace',
     fontSize: 14,
+    fontWeight: 'normal',
+    fontWeightBold: 'bold',
+    lineHeight: 1.0,
+    letterSpacing: 0,
     theme: {
       background: '#000000',
       foreground: '#ffffff',
@@ -205,10 +209,14 @@ export class TerminalLifecycleManager {
 
       // Create xterm.js instance with VS Code Standard Configuration
       const terminal = new Terminal({
-        // Basic appearance
+        // Basic appearance  
         cursorBlink: terminalConfig.cursorBlink,
-        fontFamily: terminalConfig.fontFamily,
-        fontSize: terminalConfig.fontSize,
+        fontFamily: terminalConfig.fontFamily || 'monospace',
+        fontSize: terminalConfig.fontSize || 12,
+        fontWeight: (terminalConfig.fontWeight || 'normal') as any,
+        fontWeightBold: (terminalConfig.fontWeightBold || 'bold') as any, 
+        lineHeight: terminalConfig.lineHeight || 1.0,
+        letterSpacing: terminalConfig.letterSpacing || 0,
         cols: 80,
         rows: 24,
         
@@ -224,7 +232,7 @@ export class TerminalLifecycleManager {
         fastScrollModifier: terminalConfig.fastScrollModifier,
         fastScrollSensitivity: terminalConfig.fastScrollSensitivity,
         scrollSensitivity: terminalConfig.scrollSensitivity,
-        scrollback: terminalConfig.scrollback,
+        scrollback: terminalConfig.scrollback || 1000,
         scrollOnUserInput: terminalConfig.scrollOnUserInput,
         
         // Word and Selection
@@ -235,9 +243,9 @@ export class TerminalLifecycleManager {
         allowProposedApi: terminalConfig.allowProposedApi,
         
         // Cursor Configuration
-        cursorStyle: terminalConfig.cursorStyle,
+        cursorStyle: terminalConfig.cursorStyle || 'block',
         cursorInactiveStyle: terminalConfig.cursorInactiveStyle,
-        cursorWidth: terminalConfig.cursorWidth,
+        cursorWidth: terminalConfig.cursorWidth || 1,
         
         // Terminal Behavior
         convertEol: terminalConfig.convertEol,

@@ -29,6 +29,10 @@ export class ConfigManager implements IConfigManager {
   private currentFontSettings: WebViewFontSettings = {
     fontSize: 14,
     fontFamily: 'Consolas, "Courier New", monospace',
+    fontWeight: 'normal',
+    fontWeightBold: 'bold',
+    lineHeight: 1.0,
+    letterSpacing: 0,
   };
 
   // Settings validation schema
@@ -64,6 +68,10 @@ export class ConfigManager implements IConfigManager {
   private readonly FONT_DEFAULTS: Required<WebViewFontSettings> = {
     fontSize: 14,
     fontFamily: 'Consolas, "Courier New", monospace',
+    fontWeight: 'normal',
+    fontWeightBold: 'bold',
+    lineHeight: 1.0,
+    letterSpacing: 0,
   };
 
   /**

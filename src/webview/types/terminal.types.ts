@@ -206,6 +206,10 @@ export interface TerminalConfig {
   maxScrollback: number;
   fontSize: number;
   fontFamily: string;
+  fontWeight?: string;
+  fontWeightBold?: string;
+  lineHeight?: number;
+  letterSpacing?: number;
   cursorBlink: boolean;
   cursorStyle: 'block' | 'underline' | 'bar';
   theme: TerminalThemeData;
