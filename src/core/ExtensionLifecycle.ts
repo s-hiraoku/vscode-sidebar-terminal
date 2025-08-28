@@ -5,7 +5,8 @@ import { StandardTerminalSessionManager } from '../sessions/StandardTerminalSess
 import { extension as log, logger, LogLevel } from '../utils/logger';
 import { FileReferenceCommand, TerminalCommand } from '../commands';
 import { CopilotIntegrationCommand } from '../commands/CopilotIntegrationCommand';
-import { ShellIntegrationService } from '../services/ShellIntegrationService';
+import { EnhancedShellIntegrationService } from '../services/EnhancedShellIntegrationService';
+import { KeyboardShortcutService } from '../services/KeyboardShortcutService';
 import { VSCODE_COMMANDS } from '../constants';
 
 /**
@@ -19,7 +20,8 @@ export class ExtensionLifecycle {
   private fileReferenceCommand: FileReferenceCommand | undefined;
   private terminalCommand: TerminalCommand | undefined;
   private copilotIntegrationCommand: CopilotIntegrationCommand | undefined;
-  private shellIntegrationService: ShellIntegrationService | undefined;
+  private shellIntegrationService: EnhancedShellIntegrationService | undefined;
+  private keyboardShortcutService: KeyboardShortcutService | undefined;
 
   // シンプルな復元管理
   private _restoreExecuted = false;
@@ -67,15 +69,15 @@ export class ExtensionLifecycle {
       this.terminalCommand = new TerminalCommand(this.terminalManager);
       this.copilotIntegrationCommand = new CopilotIntegrationCommand();
 
-      // Initialize shell integration service
-      log('🔧 [EXTENSION] Initializing shell integration service...');
+      // Initialize enhanced shell integration service
+      log('🚀 [EXTENSION] Initializing enhanced shell integration service...');
       try {
-        this.shellIntegrationService = new ShellIntegrationService(this.terminalManager);
+        this.shellIntegrationService = new EnhancedShellIntegrationService(this.terminalManager);
         // Set shell integration service on TerminalManager
         this.terminalManager.setShellIntegrationService(this.shellIntegrationService);
-        log('✅ [EXTENSION] Shell integration service initialized and connected');
+        log('✅ [EXTENSION] Enhanced shell integration service initialized and connected');
       } catch (error) {
-        log('❌ [EXTENSION] Failed to initialize shell integration service:', error);
+        log('❌ [EXTENSION] Failed to initialize enhanced shell integration service:', error);
         // Continue without shell integration
       }
 
@@ -91,6 +93,20 @@ export class ExtensionLifecycle {
         this.standardSessionManager.setSidebarProvider(this.sidebarProvider);
         log('🔧 [EXTENSION] Sidebar provider set for StandardSessionManager');
       }
+
+      // Initialize keyboard shortcut service
+      this.keyboardShortcutService = new KeyboardShortcutService(this.terminalManager);
+      
+      // Connect keyboard service to webview provider
+      this.keyboardShortcutService.setWebviewProvider(this.sidebarProvider);
+      
+      // Connect enhanced shell integration service to webview provider
+      if (this.shellIntegrationService) {
+        this.shellIntegrationService.setWebviewProvider(this.sidebarProvider);
+        log('🔗 [EXTENSION] Enhanced shell integration connected to webview');
+      }
+      
+      log('⌨️ [EXTENSION] Keyboard shortcut service initialized');
 
       // Register all commands
       this.registerCommands(context);
@@ -341,6 +357,13 @@ export class ExtensionLifecycle {
     //   log('🔧 [EXTENSION] Disposing scrollback session manager...');
     //   this.scrollbackSessionManager = undefined;
     // }
+
+    // Dispose keyboard shortcut service
+    if (this.keyboardShortcutService) {
+      log('🔧 [EXTENSION] Disposing keyboard shortcut service...');
+      this.keyboardShortcutService.dispose();
+      this.keyboardShortcutService = undefined;
+    }
 
     // Dispose terminal manager
     if (this.terminalManager) {
