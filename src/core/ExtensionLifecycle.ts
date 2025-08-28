@@ -5,7 +5,6 @@ import { StandardTerminalSessionManager } from '../sessions/StandardTerminalSess
 import { extension as log, logger, LogLevel } from '../utils/logger';
 import { FileReferenceCommand, TerminalCommand } from '../commands';
 import { CopilotIntegrationCommand } from '../commands/CopilotIntegrationCommand';
-import { ShellIntegrationService } from '../services/ShellIntegrationService';
 import { EnhancedShellIntegrationService } from '../services/EnhancedShellIntegrationService';
 import { KeyboardShortcutService } from '../services/KeyboardShortcutService';
 import { VSCODE_COMMANDS } from '../constants';
@@ -73,7 +72,7 @@ export class ExtensionLifecycle {
       // Initialize enhanced shell integration service
       log('🚀 [EXTENSION] Initializing enhanced shell integration service...');
       try {
-        this.shellIntegrationService = new EnhancedShellIntegrationService();
+        this.shellIntegrationService = new EnhancedShellIntegrationService(this.terminalManager);
         // Set shell integration service on TerminalManager
         this.terminalManager.setShellIntegrationService(this.shellIntegrationService);
         log('✅ [EXTENSION] Enhanced shell integration service initialized and connected');
