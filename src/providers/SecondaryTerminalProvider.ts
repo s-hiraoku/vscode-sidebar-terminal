@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { TerminalManager } from '../terminals/TerminalManager';
-import { VsCodeMessage, WebviewMessage } from '../types/common';
+import { WebviewMessage } from '../types/common';
 import { TERMINAL_CONSTANTS } from '../constants';
 import { getTerminalConfig, generateNonce, normalizeTerminalInfo } from '../utils/common';
 import { showSuccess, showError, TerminalErrorHandler } from '../utils/feedback';
@@ -50,7 +50,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       // This is CRITICAL - listeners must be set before HTML is loaded
       log('🔧 [PROVIDER] Step 2: Setting up message listeners (BEFORE HTML)...');
       const messageDisposable = webviewView.webview.onDidReceiveMessage(
-        (message: any) => {
+        (message: WebviewMessage) => {
           log('📨 [PROVIDER] ✅ MESSAGE RECEIVED FROM WEBVIEW!');
           log('📨 [PROVIDER] Message command:', message.command);
           log('📨 [PROVIDER] Message data:', message);
@@ -463,7 +463,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   /**
    * Webviewメッセージを処理する
    */
-  private async _handleWebviewMessage(message: VsCodeMessage): Promise<void> {
+  private async _handleWebviewMessage(message: WebviewMessage): Promise<void> {
     log('📨 [DEBUG] Handling webview message:', message.command);
     log('📨 [DEBUG] Full message object:', JSON.stringify(message, null, 2));
 
@@ -1802,7 +1802,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       // Handle messages from the webview
       log('🎆 [TRACE] Setting up message listener...');
       webviewView.webview.onDidReceiveMessage(
-        async (message: VsCodeMessage) => {
+        async (message: WebviewMessage) => {
           log('📨 [TRACE] ===========================================');
           log('📨 [TRACE] MESSAGE RECEIVED FROM WEBVIEW!');
           log('📨 [TRACE] Message command:', message.command);
@@ -1987,7 +1987,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
    * Extracted from message handler for better maintainability and testability
    * Follows single responsibility principle and reduces code duplication
    */
-  private async _handleSessionRestorationDataRequest(message: VsCodeMessage): Promise<void> {
+  private async _handleSessionRestorationDataRequest(message: WebviewMessage): Promise<void> {
     log('🔄 [DEBUG] Session restoration data requested from WebView');
     const terminalId = message.terminalId as string;
 
