@@ -2,7 +2,7 @@
   "name": "vscode-sidebar-terminal",
   "displayName": "Secondary Terminal",
   "description": "A powerful VS Code extension that displays a fully-featured terminal in the sidebar with split support, Alt+Click cursor positioning, and multi-platform compatibility.",
-  "version": "0.1.72",
+  "version": "0.1.73",
   "publisher": "s-hiraoku",
   "engines": {
     "vscode": "^1.74.0",
@@ -491,7 +491,7 @@
         },
         "secondaryTerminal.lineHeight": {
           "type": "number",
-          "default": 1.0,
+          "default": 1,
           "minimum": 0.1,
           "maximum": 5,
           "description": "Controls the line height of the terminal, this number is multiplied by the terminal font size to get the actual line-height in pixels."
@@ -545,7 +545,7 @@
           "description": "The Windows terminal profiles to present when creating a new terminal via the terminal dropdown. Set to null to exclude a profile from the list, for example: \"secondaryTerminal.profiles.windows\": { \"Command Prompt\": null }."
         },
         "secondaryTerminal.profiles.linux": {
-          "type": "object", 
+          "type": "object",
           "default": {},
           "description": "The Linux terminal profiles to present when creating a new terminal via the terminal dropdown. Set to null to exclude a profile from the list, for example: \"secondaryTerminal.profiles.linux\": { \"bash\": null }."
         },
@@ -564,7 +564,7 @@
         },
         "secondaryTerminal.defaultProfile.linux": {
           "type": [
-            "string", 
+            "string",
             "null"
           ],
           "default": null,
