@@ -194,7 +194,8 @@ export class TerminalManager {
         id: terminalId,
         name: generateTerminalName(terminalNumber),
         number: terminalNumber,
-        ptyProcess,
+        pty: ptyProcess,        // 互換性のため
+        ptyProcess,             // 新しい参照名
         isActive: false,
         createdAt: Date.now(),
       };
