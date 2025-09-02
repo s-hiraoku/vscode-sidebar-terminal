@@ -50,7 +50,8 @@
   "preview": false,
   "main": "./dist/extension.js",
   "activationEvents": [
-    "onView:secondaryTerminal"
+    "onView:secondaryTerminal",
+    "onCommand:secondaryTerminal.focusTerminal"
   ],
   "contributes": {
     "viewsContainers": {
@@ -147,6 +148,72 @@
         "title": "Clear Corrupted Terminal History",
         "category": "Secondary Terminal",
         "icon": "$(trash)"
+      },
+      {
+        "command": "secondaryTerminal.focusTerminal",
+        "title": "Focus Terminal",
+        "category": "Secondary Terminal"
+      },
+      {
+        "command": "secondaryTerminal.createTerminal",
+        "title": "Create New Terminal",
+        "category": "Secondary Terminal",
+        "icon": "$(add)"
+      },
+      {
+        "command": "secondaryTerminal.clearTerminal",
+        "title": "Clear Terminal",
+        "category": "Secondary Terminal",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "secondaryTerminal.scrollToPreviousCommand",
+        "title": "Scroll to Previous Command",
+        "category": "Secondary Terminal"
+      },
+      {
+        "command": "secondaryTerminal.scrollToNextCommand",
+        "title": "Scroll to Next Command",
+        "category": "Secondary Terminal"
+      },
+      {
+        "command": "secondaryTerminal.focusNextTerminal",
+        "title": "Focus Next Terminal",
+        "category": "Secondary Terminal"
+      },
+      {
+        "command": "secondaryTerminal.focusPreviousTerminal",
+        "title": "Focus Previous Terminal",
+        "category": "Secondary Terminal"
+      },
+      {
+        "command": "secondaryTerminal.selectAll",
+        "title": "Select All",
+        "category": "Secondary Terminal"
+      },
+      {
+        "command": "secondaryTerminal.copy",
+        "title": "Copy",
+        "category": "Secondary Terminal",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "secondaryTerminal.paste",
+        "title": "Paste",
+        "category": "Secondary Terminal",
+        "icon": "$(clippy)"
+      },
+      {
+        "command": "secondaryTerminal.find",
+        "title": "Find",
+        "category": "Secondary Terminal",
+        "icon": "$(search)"
+      },
+      {
+        "command": "secondaryTerminal.runRecentCommand",
+        "title": "Run Recent Command",
+        "category": "Secondary Terminal",
+        "icon": "$(history)"
       }
     ],
     "menus": {
@@ -472,6 +539,45 @@
           "maximum": 21,
           "description": "When set, the foreground color of each cell will change to try meet the contrast ratio specified. Example values:\n- 1: Do nothing and use the standard theme colors.\n- 4.5: WCAG AA compliance (minimum).\n- 7: WCAG AAA compliance (enhanced).\n- 21: White on black or black on white."
         },
+        "secondaryTerminal.profiles.windows": {
+          "type": "object",
+          "default": {},
+          "description": "The Windows terminal profiles to present when creating a new terminal via the terminal dropdown. Set to null to exclude a profile from the list, for example: \"secondaryTerminal.profiles.windows\": { \"Command Prompt\": null }."
+        },
+        "secondaryTerminal.profiles.linux": {
+          "type": "object", 
+          "default": {},
+          "description": "The Linux terminal profiles to present when creating a new terminal via the terminal dropdown. Set to null to exclude a profile from the list, for example: \"secondaryTerminal.profiles.linux\": { \"bash\": null }."
+        },
+        "secondaryTerminal.profiles.osx": {
+          "type": "object",
+          "default": {},
+          "description": "The macOS terminal profiles to present when creating a new terminal via the terminal dropdown. Set to null to exclude a profile from the list, for example: \"secondaryTerminal.profiles.osx\": { \"bash\": null }."
+        },
+        "secondaryTerminal.defaultProfile.windows": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "description": "The default profile used on Windows. This setting will currently be ignored if either terminal.external.windowsExec or terminal.integrated.shell.windows are set."
+        },
+        "secondaryTerminal.defaultProfile.linux": {
+          "type": [
+            "string", 
+            "null"
+          ],
+          "default": null,
+          "description": "The default profile used on Linux. This setting will currently be ignored if either terminal.external.linuxExec or terminal.integrated.shell.linux are set."
+        },
+        "secondaryTerminal.defaultProfile.osx": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "description": "The default profile used on macOS. This setting will currently be ignored if either terminal.external.osxExec or terminal.integrated.shell.osx are set."
+        },
         "secondaryTerminal.restoreScrollback": {
           "type": "boolean",
           "default": true,
@@ -563,6 +669,78 @@
           "type": "boolean",
           "default": true,
           "description": "Enable command history tracking and quick access."
+        },
+        "secondaryTerminal.decorations.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable visual decorations for command success/error indicators (Phase 8: Advanced Terminal Features)."
+        },
+        "secondaryTerminal.decorations.showInGutter": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show command decorations in the terminal gutter area."
+        },
+        "secondaryTerminal.decorations.showInOverviewRuler": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show command decorations in the overview ruler."
+        },
+        "secondaryTerminal.decorations.successColor": {
+          "type": "string",
+          "default": "#00ff00",
+          "description": "Color for successful command decorations."
+        },
+        "secondaryTerminal.decorations.errorColor": {
+          "type": "string",
+          "default": "#ff0000",
+          "description": "Color for failed command decorations."
+        },
+        "secondaryTerminal.decorations.runningColor": {
+          "type": "string",
+          "default": "#ffff00",
+          "description": "Color for running command decorations."
+        },
+        "secondaryTerminal.links.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable automatic link detection in terminal output (Phase 8: Advanced Terminal Features)."
+        },
+        "secondaryTerminal.links.detectFileLinks": {
+          "type": "boolean",
+          "default": true,
+          "description": "Detect and highlight file paths as clickable links."
+        },
+        "secondaryTerminal.links.detectWebLinks": {
+          "type": "boolean",
+          "default": true,
+          "description": "Detect and highlight web URLs as clickable links."
+        },
+        "secondaryTerminal.links.detectEmailLinks": {
+          "type": "boolean",
+          "default": true,
+          "description": "Detect and highlight email addresses as clickable links."
+        },
+        "secondaryTerminal.links.maxLinksPerLine": {
+          "type": "number",
+          "default": 10,
+          "minimum": 1,
+          "maximum": 50,
+          "description": "Maximum number of links to detect per line for performance."
+        },
+        "secondaryTerminal.navigation.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable advanced terminal navigation features (Phase 8: Advanced Terminal Features)."
+        },
+        "secondaryTerminal.navigation.showCommandMarks": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show visual marks at command boundaries for easy navigation."
+        },
+        "secondaryTerminal.accessibility.screenReaderSupport": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable enhanced screen reader support for terminal content (Phase 8: Advanced Terminal Features)."
         }
       }
     },
@@ -577,6 +755,89 @@
         "command": "secondaryTerminal.activateCopilot",
         "key": "ctrl+k ctrl+c",
         "mac": "cmd+k cmd+c"
+      },
+      {
+        "command": "secondaryTerminal.focusTerminal",
+        "key": "ctrl+`",
+        "mac": "ctrl+`",
+        "when": "!terminalFocus"
+      },
+      {
+        "command": "secondaryTerminal.createTerminal",
+        "key": "ctrl+shift+`",
+        "mac": "ctrl+shift+`"
+      },
+      {
+        "command": "secondaryTerminal.splitTerminal",
+        "key": "ctrl+shift+5",
+        "mac": "cmd+\\",
+        "when": "terminalFocus && view == secondaryTerminal"
+      },
+      {
+        "command": "secondaryTerminal.killTerminal",
+        "key": "ctrl+shift+x",
+        "mac": "cmd+shift+x",
+        "when": "terminalFocus && view == secondaryTerminal"
+      },
+      {
+        "command": "secondaryTerminal.clearTerminal",
+        "key": "ctrl+k",
+        "mac": "cmd+k",
+        "when": "terminalFocus && view == secondaryTerminal"
+      },
+      {
+        "command": "secondaryTerminal.scrollToPreviousCommand",
+        "key": "ctrl+up",
+        "mac": "cmd+up",
+        "when": "terminalFocus && view == secondaryTerminal"
+      },
+      {
+        "command": "secondaryTerminal.scrollToNextCommand",
+        "key": "ctrl+down",
+        "mac": "cmd+down",
+        "when": "terminalFocus && view == secondaryTerminal"
+      },
+      {
+        "command": "secondaryTerminal.focusNextTerminal",
+        "key": "alt+right",
+        "mac": "alt+cmd+right",
+        "when": "terminalFocus && view == secondaryTerminal"
+      },
+      {
+        "command": "secondaryTerminal.focusPreviousTerminal",
+        "key": "alt+left",
+        "mac": "alt+cmd+left",
+        "when": "terminalFocus && view == secondaryTerminal"
+      },
+      {
+        "command": "secondaryTerminal.selectAll",
+        "key": "ctrl+a",
+        "mac": "cmd+a",
+        "when": "terminalFocus && view == secondaryTerminal"
+      },
+      {
+        "command": "secondaryTerminal.copy",
+        "key": "ctrl+c",
+        "mac": "cmd+c",
+        "when": "terminalFocus && terminalTextSelected && view == secondaryTerminal"
+      },
+      {
+        "command": "secondaryTerminal.paste",
+        "key": "ctrl+v",
+        "mac": "cmd+v",
+        "when": "terminalFocus && view == secondaryTerminal"
+      },
+      {
+        "command": "secondaryTerminal.find",
+        "key": "ctrl+f",
+        "mac": "cmd+f",
+        "when": "terminalFocus && view == secondaryTerminal"
+      },
+      {
+        "command": "secondaryTerminal.runRecentCommand",
+        "key": "ctrl+r",
+        "mac": "cmd+r",
+        "when": "terminalFocus && view == secondaryTerminal"
       }
     ]
   },
@@ -680,9 +941,6 @@
     "process": "^0.11.10"
   },
   "bundledDependencies": [
-    "@homebridge/node-pty-prebuilt-multiarch"
-  ],
-  "bundleDependencies": [
     "@homebridge/node-pty-prebuilt-multiarch"
   ]
 }

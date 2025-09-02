@@ -106,7 +106,9 @@
       "Bash(git rebase:*)",
       "WebSearch",
       "Bash(chmod:*)",
-      "Bash(/release patch)"
+      "Bash(/release patch)",
+      "Bash(git restore:*)",
+      "mcp__deepwiki__read_wiki_contents"
     ],
     "deny": []
   },

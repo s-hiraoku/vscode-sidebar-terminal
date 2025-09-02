@@ -9,6 +9,8 @@ import {
   ExtensionTerminalConfig,
   CompleteTerminalSettings,
   CompleteExtensionConfig,
+  TerminalProfile,
+  TerminalProfilesConfig,
 } from '../types/shared';
 import { TERMINAL_CONSTANTS } from '../constants';
 
@@ -463,6 +465,150 @@ export class ConfigManager {
       return false;
     }
     return this._configCache.has(key);
+  }
+
+  /**
+   * 🆕 Phase 5: ターミナルプロファイル設定を取得
+   * VS Code標準のターミナルプロファイルシステムに対応
+   */
+  public getTerminalProfilesConfig(): TerminalProfilesConfig {
+    this._ensureInitialized();
+    const section = CONFIG_SECTIONS.SIDEBAR_TERMINAL;
+
+    return {
+      profiles: {
+        windows: this.getConfig(section, CONFIG_KEYS.PROFILES_WINDOWS, {}),
+        linux: this.getConfig(section, CONFIG_KEYS.PROFILES_LINUX, {}),
+        osx: this.getConfig(section, CONFIG_KEYS.PROFILES_OSX, {}),
+      },
+      defaultProfiles: {
+        windows: this.getConfig(section, CONFIG_KEYS.DEFAULT_PROFILE_WINDOWS, null),
+        linux: this.getConfig(section, CONFIG_KEYS.DEFAULT_PROFILE_LINUX, null),
+        osx: this.getConfig(section, CONFIG_KEYS.DEFAULT_PROFILE_OSX, null),
+      },
+      autoDetection: {
+        enabled: this.getConfig(section, CONFIG_KEYS.ENABLE_PROFILE_AUTO_DETECTION, true),
+        searchPaths: [],
+        useCache: true,
+        cacheExpiration: 3600000, // 1 hour
+      },
+      inheritVSCodeProfiles: this.getConfig(section, CONFIG_KEYS.INHERIT_VSCODE_PROFILES, true),
+    };
+  }
+
+  /**
+   * 🆕 Phase 5: 現在のプラットフォーム用のターミナルプロファイル設定を取得
+   */
+  public getTerminalProfilesForCurrentPlatform(): Record<string, TerminalProfile | null> {
+    this._ensureInitialized();
+    const section = CONFIG_SECTIONS.SIDEBAR_TERMINAL;
+    
+    let profileKey: string;
+    switch (process.platform) {
+      case 'win32':
+        profileKey = CONFIG_KEYS.PROFILES_WINDOWS;
+        break;
+      case 'darwin':
+        profileKey = CONFIG_KEYS.PROFILES_OSX;
+        break;
+      default:
+        profileKey = CONFIG_KEYS.PROFILES_LINUX;
+        break;
+    }
+    
+    return this.getConfig(section, profileKey, {});
+  }
+
+  /**
+   * 🆕 Phase 5: 現在のプラットフォーム用のデフォルトプロファイルを取得
+   */
+  public getDefaultTerminalProfile(): string | null {
+    this._ensureInitialized();
+    const section = CONFIG_SECTIONS.SIDEBAR_TERMINAL;
+    
+    let defaultKey: string;
+    switch (process.platform) {
+      case 'win32':
+        defaultKey = CONFIG_KEYS.DEFAULT_PROFILE_WINDOWS;
+        break;
+      case 'darwin':
+        defaultKey = CONFIG_KEYS.DEFAULT_PROFILE_OSX;
+        break;
+      default:
+        defaultKey = CONFIG_KEYS.DEFAULT_PROFILE_LINUX;
+        break;
+    }
+    
+    return this.getConfig(section, defaultKey, null);
+  }
+
+  /**
+   * 🆕 Phase 5: VS Codeのターミナルプロファイル設定を取得
+   * VS Codeの terminal.integrated.profiles.* 設定から取得
+   */
+  public getVSCodeTerminalProfiles(): Record<string, TerminalProfile> {
+    this._ensureInitialized();
+    
+    let profileKey: string;
+    switch (process.platform) {
+      case 'win32':
+        profileKey = 'profiles.windows';
+        break;
+      case 'darwin':
+        profileKey = 'profiles.osx';
+        break;
+      default:
+        profileKey = 'profiles.linux';
+        break;
+    }
+    
+    const vscodeConfig = vscode.workspace.getConfiguration('terminal.integrated');
+    const vscodeProfiles = vscodeConfig.get<Record<string, any>>(profileKey, {});
+    
+    // VS CodeのプロファイルフォーマットをTerminalProfileに変換
+    const convertedProfiles: Record<string, TerminalProfile> = {};
+    
+    for (const [name, profile] of Object.entries(vscodeProfiles)) {
+      if (profile && typeof profile === 'object' && profile.path) {
+        convertedProfiles[name] = {
+          path: profile.path,
+          args: profile.args,
+          cwd: profile.cwd,
+          env: profile.env,
+          icon: profile.icon,
+          color: profile.color,
+          isVisible: profile.isVisible !== false, // デフォルトはtrue
+          overrideName: profile.overrideName,
+          useColor: profile.useColor,
+        };
+      }
+    }
+    
+    return convertedProfiles;
+  }
+
+  /**
+   * 🆕 Phase 5: VS Codeプロファイル継承が有効かチェック
+   */
+  public isVSCodeProfileInheritanceEnabled(): boolean {
+    this._ensureInitialized();
+    return this.getConfig(
+      CONFIG_SECTIONS.SIDEBAR_TERMINAL,
+      CONFIG_KEYS.INHERIT_VSCODE_PROFILES,
+      true
+    );
+  }
+
+  /**
+   * 🆕 Phase 5: プロファイル自動検出が有効かチェック
+   */
+  public isProfileAutoDetectionEnabled(): boolean {
+    this._ensureInitialized();
+    return this.getConfig(
+      CONFIG_SECTIONS.SIDEBAR_TERMINAL,
+      CONFIG_KEYS.ENABLE_PROFILE_AUTO_DETECTION,
+      true
+    );
   }
 
   /**

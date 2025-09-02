@@ -297,6 +297,8 @@ export class TerminalLifecycleManager {
         }
       }
 
+      // Note: Keyboard input handling (onData) is set up by InputManager.addXtermClickHandler
+
       // Create container using TerminalContainerFactory
       const containerConfig: TerminalContainerConfig = {
         id: terminalId,

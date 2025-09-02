@@ -90,6 +90,15 @@ async function initializeWebView(): Promise<void> {
       if (terminalManager) {
         log('📡 [STATE] Requesting initial state from Extension...');
         terminalManager.requestLatestState();
+        
+        // 🔧 [INPUT-FIX] Retroactively attach input handlers to any existing terminals
+        // This fixes keyboard input for terminals that existed before the handler fix
+        setTimeout(() => {
+          if (terminalManager) {
+            terminalManager.attachInputHandlersToExistingTerminals();
+            log('🔧 [INPUT-FIX] Retroactive input handler attachment completed');
+          }
+        }, 1000); // Additional delay to ensure terminals are fully initialized
       }
     }, 500); // Small delay to ensure Extension has processed webviewReady
 
@@ -131,9 +140,33 @@ async function initializeWebView(): Promise<void> {
           log('🔄 [FORCE-SYNC] System synchronization forced via keyboard shortcut');
         }
       }
+
+      // Ctrl+Shift+I: Attach input handlers (INPUT-FIX debugging)
+      if (event.ctrlKey && event.shiftKey && event.key === 'I') {
+        event.preventDefault();
+        if (terminalManager) {
+          terminalManager.attachInputHandlersToExistingTerminals();
+          log('🔧 [INPUT-FIX] Input handlers manually attached via keyboard shortcut');
+        }
+      }
+
+      // Ctrl+Shift+T: Test terminal input (TEST debugging)
+      if (event.ctrlKey && event.shiftKey && event.key === 'T') {
+        event.preventDefault();
+        if (terminalManager) {
+          log('🔧 [TEST] Sending test input to active terminal...');
+          terminalManager.postMessageToExtension({
+            command: 'input',
+            terminalId: terminalManager.getActiveTerminalId(),
+            data: 'echo "Test input working"\r',
+            timestamp: Date.now(),
+          });
+          log('🔧 [TEST] Test input sent successfully');
+        }
+      }
     });
 
-    log('🔧 [DEBUG] Debugging tools initialized - Shortcuts: Ctrl+Shift+D (debug), Ctrl+Shift+X (export), Ctrl+Shift+R (sync)');
+    log('🔧 [DEBUG] Debugging tools initialized - Shortcuts: Ctrl+Shift+D (debug), Ctrl+Shift+X (export), Ctrl+Shift+R (sync), Ctrl+Shift+I (input fix), Ctrl+Shift+T (test input)');
 
   } catch (error) {
     error_category('Failed to initialize WebView', error);
