@@ -50,7 +50,8 @@
   "preview": false,
   "main": "./dist/extension.js",
   "activationEvents": [
-    "onView:secondaryTerminal"
+    "onView:secondaryTerminal",
+    "onCommand:secondaryTerminal.focusTerminal"
   ],
   "contributes": {
     "viewsContainers": {
@@ -940,9 +941,6 @@
     "process": "^0.11.10"
   },
   "bundledDependencies": [
-    "@homebridge/node-pty-prebuilt-multiarch"
-  ],
-  "bundleDependencies": [
     "@homebridge/node-pty-prebuilt-multiarch"
   ]
 }

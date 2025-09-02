@@ -10,7 +10,7 @@ import {
   TerminalState,
   TerminalInfo,
   DeleteResult,
-} from '../types/common';
+} from '../types/shared';
 import { TERMINAL_CONSTANTS, ERROR_MESSAGES } from '../constants';
 import { ShellIntegrationService } from '../services/ShellIntegrationService';
 import { TerminalProfileService } from '../services/TerminalProfileService';
@@ -920,7 +920,10 @@ export class TerminalManager {
       // 3. プロセスの終了
       log(`🗑️ [DELETE] Killing terminal process: ${terminalId}`);
       this._terminalBeingKilled.add(terminalId);
-      terminal.pty.kill();
+      const p = (terminal.ptyProcess || terminal.pty) as { kill?: () => void } | undefined;
+      if (p && typeof p.kill === 'function') {
+        p.kill();
+      }
 
       // 4. 状態の更新は onExit ハンドラで行われる
       log(`✅ [DELETE] Delete operation completed for: ${terminalId}`);
@@ -1042,7 +1045,10 @@ export class TerminalManager {
     this._cliAgentService.dispose();
 
     for (const terminal of this._terminals.values()) {
-      terminal.pty.kill();
+      const p = (terminal.ptyProcess || terminal.pty) as { kill?: () => void } | undefined;
+      if (p && typeof p.kill === 'function') {
+        p.kill();
+      }
     }
     this._terminals.clear();
     this._dataEmitter.dispose();
@@ -1268,7 +1274,10 @@ export class TerminalManager {
     // Kill the terminal process if it's still running (safety check)
     if (terminal) {
       try {
-        terminal.pty.kill();
+        const p = (terminal.ptyProcess || terminal.pty) as { kill?: () => void } | undefined;
+        if (p && typeof p.kill === 'function') {
+          p.kill();
+        }
         log('🗑️ [TERMINAL] Process killed during removal:', terminalId);
       } catch (error) {
         console.warn('⚠️ [TERMINAL] Error killing process during removal:', error);

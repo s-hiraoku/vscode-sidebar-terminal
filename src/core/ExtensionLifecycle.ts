@@ -55,7 +55,7 @@ export class ExtensionLifecycle {
 
     try {
       // Ensure node-pty looks for release binaries
-      process.env.NODE_PSTY_DEBUG = '0';
+      process.env.NODE_PTY_DEBUG = '0';
 
       // Initialize terminal manager
       this.terminalManager = new TerminalManager();
@@ -211,9 +211,9 @@ export class ExtensionLifecycle {
         },
       },
       {
-        command: 'secondaryTerminal.focus',
+        command: 'secondaryTerminal.focusTerminal',
         handler: () => {
-          log('🔧 [DEBUG] Command executed: focus');
+          log('🔧 [DEBUG] Command executed: focusTerminal');
           void vscode.commands.executeCommand(VSCODE_COMMANDS.SECONDARY_TERMINAL_VIEW_FOCUS);
         },
       },
