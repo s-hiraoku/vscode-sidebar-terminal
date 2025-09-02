@@ -1125,16 +1125,16 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   }
 
   private _getHtmlForWebview(webview: vscode.Webview): string {
-    log('🔧 [DEBUG] Generating HTML for webview...');
-
-    const scriptUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(this._extensionContext.extensionUri, 'dist', 'webview.js')
-    );
+    let scriptUri: vscode.Uri;
+    try {
+      const webviewJsPath = vscode.Uri.joinPath(this._extensionContext.extensionUri, 'dist', 'webview.js');
+      scriptUri = webview.asWebviewUri(webviewJsPath);
+    } catch (error) {
+      log('❌ [DEBUG] Failed to create script URI:', error);
+      throw error;
+    }
 
     const nonce = generateNonce();
-
-    log('🔧 [DEBUG] Script URI:', scriptUri.toString());
-    log('🔧 [DEBUG] CSP nonce:', nonce);
 
     const html = `<!DOCTYPE html>
     <html lang="en">
@@ -1426,36 +1426,24 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
             <!-- Simple terminal container -->
         </div>
         <script nonce="${nonce}">
-            console.log('🔥 [HTML] ========== INLINE SCRIPT EXECUTING ==========');
-            console.log('🔥 [HTML] Script execution time:', new Date().toISOString());
-            console.log('🔥 [HTML] window available:', typeof window);
-            console.log('🔥 [HTML] document available:', typeof document);
-
             // Acquire VS Code API once and store it globally for webview.js to use
             try {
                 if (typeof window.acquireVsCodeApi === 'function') {
                     const vscode = window.acquireVsCodeApi();
                     window.vscodeApi = vscode;
-                    console.log('✅ [HTML] VS Code API acquired and stored');
                 } else {
-                    console.log('❌ [HTML] acquireVsCodeApi not available');
+                    console.error('acquireVsCodeApi not available');
                 }
             } catch (error) {
-                console.log('❌ [HTML] Error acquiring VS Code API:', error);
+                console.error('Error acquiring VS Code API:', error);
             }
-
-            console.log('🔥 [HTML] Inline script completed');
-            console.log('🔥 [HTML] About to load script:', '${scriptUri.toString()}');
-            console.log('🔥 [HTML] VS Code API in window.vscodeApi:', !!window.vscodeApi);
-            console.log('🔥 [HTML] VS Code API postMessage available:', typeof window.vscodeApi?.postMessage);
         </script>
         <script nonce="${nonce}" src="${scriptUri.toString()}"
-                onload="console.log('✅ [HTML] webview.js loaded successfully')"
-                onerror="console.error('❌ [HTML] webview.js failed to load', event)"></script>
+                onload="console.log('✅ webview.js loaded successfully')"
+                onerror="console.error('❌ webview.js failed to load', event)"></script>
     </body>
     </html>`;
 
-    log('✅ [DEBUG] HTML generation completed');
     return html;
   }
 

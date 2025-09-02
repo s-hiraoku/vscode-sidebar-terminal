@@ -210,13 +210,7 @@ export class ExtensionLifecycle {
           this.sidebarProvider?.splitTerminal('horizontal');
         },
       },
-      {
-        command: 'secondaryTerminal.focusTerminal',
-        handler: () => {
-          log('🔧 [DEBUG] Command executed: focusTerminal');
-          void vscode.commands.executeCommand(VSCODE_COMMANDS.SECONDARY_TERMINAL_VIEW_FOCUS);
-        },
-      },
+      // REMOVED: 'secondaryTerminal.focusTerminal' - handled by KeyboardShortcutService
 
       // ======================= ファイル参照コマンド =======================
       {
@@ -385,7 +379,7 @@ export class ExtensionLifecycle {
           }
 
           // Send test input directly to TerminalManager
-          const testCommand = 'echo "DEBUG: Direct Extension input test successful"\r';
+          const testCommand = 'echo "DEBUG: Direct Extension input test successful"\\r';
           log('🔧 [DEBUG-CMD] Sending test input:', testCommand);
           
           this.terminalManager.sendInput(testCommand, activeTerminalId);
