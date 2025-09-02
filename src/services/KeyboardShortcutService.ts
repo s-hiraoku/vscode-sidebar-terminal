@@ -161,7 +161,7 @@ export class KeyboardShortcutService {
     
     if (terminals.length === 0) return;
     
-    const terminalIds = Array.from(terminals.keys());
+    const terminalIds = terminals.map(t => t.id);
     const currentIndex = activeTerminal ? terminalIds.indexOf(activeTerminal) : -1;
     const nextIndex = (currentIndex + 1) % terminalIds.length;
     
@@ -183,7 +183,7 @@ export class KeyboardShortcutService {
     
     if (terminals.length === 0) return;
     
-    const terminalIds = Array.from(terminals.keys());
+    const terminalIds = terminals.map(t => t.id);
     const currentIndex = activeTerminal ? terminalIds.indexOf(activeTerminal) : 0;
     const prevIndex = (currentIndex - 1 + terminalIds.length) % terminalIds.length;
     

@@ -75,7 +75,15 @@ export class TerminalProfileService {
         break;
     }
     
-    return config.get<Record<string, TerminalProfile | null>>(profileKey, {});
+    const profiles = config.get<Record<string, TerminalProfile | null>>(profileKey, {});
+    // Filter out null values
+    const filteredProfiles: Record<string, TerminalProfile> = {};
+    for (const [key, profile] of Object.entries(profiles)) {
+      if (profile) {
+        filteredProfiles[key] = profile;
+      }
+    }
+    return filteredProfiles;
   }
 
   /**
@@ -176,13 +184,18 @@ export class TerminalProfileService {
     const profileNames = Object.keys(availableProfiles);
     if (profileNames.length > 0) {
       const firstProfileName = profileNames[0];
-      return {
-        profile: availableProfiles[firstProfileName],
-        profileName: firstProfileName,
-        platform: this.platform,
-        isDefault: false,
-        source: 'auto-detected',
-      };
+      if (firstProfileName) {
+        const firstProfile = availableProfiles[firstProfileName];
+        if (firstProfile) {
+          return {
+            profile: firstProfile,
+            profileName: firstProfileName,
+            platform: this.platform,
+            isDefault: false,
+            source: 'auto-detected',
+          };
+        }
+      }
     }
     
     // Ultimate fallback - create basic shell profile

@@ -668,6 +668,78 @@
           "type": "boolean",
           "default": true,
           "description": "Enable command history tracking and quick access."
+        },
+        "secondaryTerminal.decorations.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable visual decorations for command success/error indicators (Phase 8: Advanced Terminal Features)."
+        },
+        "secondaryTerminal.decorations.showInGutter": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show command decorations in the terminal gutter area."
+        },
+        "secondaryTerminal.decorations.showInOverviewRuler": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show command decorations in the overview ruler."
+        },
+        "secondaryTerminal.decorations.successColor": {
+          "type": "string",
+          "default": "#00ff00",
+          "description": "Color for successful command decorations."
+        },
+        "secondaryTerminal.decorations.errorColor": {
+          "type": "string",
+          "default": "#ff0000",
+          "description": "Color for failed command decorations."
+        },
+        "secondaryTerminal.decorations.runningColor": {
+          "type": "string",
+          "default": "#ffff00",
+          "description": "Color for running command decorations."
+        },
+        "secondaryTerminal.links.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable automatic link detection in terminal output (Phase 8: Advanced Terminal Features)."
+        },
+        "secondaryTerminal.links.detectFileLinks": {
+          "type": "boolean",
+          "default": true,
+          "description": "Detect and highlight file paths as clickable links."
+        },
+        "secondaryTerminal.links.detectWebLinks": {
+          "type": "boolean",
+          "default": true,
+          "description": "Detect and highlight web URLs as clickable links."
+        },
+        "secondaryTerminal.links.detectEmailLinks": {
+          "type": "boolean",
+          "default": true,
+          "description": "Detect and highlight email addresses as clickable links."
+        },
+        "secondaryTerminal.links.maxLinksPerLine": {
+          "type": "number",
+          "default": 10,
+          "minimum": 1,
+          "maximum": 50,
+          "description": "Maximum number of links to detect per line for performance."
+        },
+        "secondaryTerminal.navigation.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable advanced terminal navigation features (Phase 8: Advanced Terminal Features)."
+        },
+        "secondaryTerminal.navigation.showCommandMarks": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show visual marks at command boundaries for easy navigation."
+        },
+        "secondaryTerminal.accessibility.screenReaderSupport": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable enhanced screen reader support for terminal content (Phase 8: Advanced Terminal Features)."
         }
       }
     },

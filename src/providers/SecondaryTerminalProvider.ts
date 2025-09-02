@@ -29,34 +29,84 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     _context: vscode.WebviewViewResolveContext,
     _token: vscode.CancellationToken
   ): void {
-    // WebView provider initialization
+    log('🚀 [PROVIDER] === RESOLVING WEBVIEW VIEW ===');
+    log('🚀 [PROVIDER] WebView object exists:', !!webviewView);
+    log('🚀 [PROVIDER] WebView webview exists:', !!webviewView.webview);
 
     try {
+      // CRITICAL: Set view reference FIRST
       this._view = webviewView;
+      log('✅ [PROVIDER] WebView reference set');
+      
       // Reset initialization flag for new WebView (including panel moves)
       this._isInitialized = false;
+      log('✅ [PROVIDER] Initialization flag reset');
 
-      // Configure webview options
+      // STEP 1: Configure webview options FIRST (VS Code standard)
+      log('🔧 [PROVIDER] Step 1: Configuring webview options...');
       this._configureWebview(webviewView);
 
-      // Set HTML
+      // STEP 2: Set up MESSAGE LISTENERS BEFORE HTML (VS Code standard practice)
+      // This is CRITICAL - listeners must be set before HTML is loaded
+      log('🔧 [PROVIDER] Step 2: Setting up message listeners (BEFORE HTML)...');
+      const messageDisposable = webviewView.webview.onDidReceiveMessage(
+        (message: any) => {
+          log('📨 [PROVIDER] ✅ MESSAGE RECEIVED FROM WEBVIEW!');
+          log('📨 [PROVIDER] Message command:', message.command);
+          log('📨 [PROVIDER] Message data:', message);
+          log('📨 [PROVIDER] WebView visible:', webviewView.visible);
+          
+          // Handle message immediately
+          this._handleWebviewMessage(message).catch(error => {
+            log('❌ [PROVIDER] Error handling message:', error);
+          });
+        },
+        undefined,
+        this._extensionContext.subscriptions
+      );
+      
+      // Add disposable to subscriptions for cleanup
+      this._extensionContext.subscriptions.push(messageDisposable);
+      log('✅ [PROVIDER] Message listener registered and added to subscriptions');
+
+      // STEP 3: Set up visibility listener
+      log('🔧 [PROVIDER] Step 3: Setting up visibility listener...');
+      const visibilityDisposable = webviewView.onDidChangeVisibility(
+        () => {
+          if (webviewView.visible) {
+            log('👁️ [PROVIDER] WebView became visible');
+            // Trigger panel location detection when WebView becomes visible
+            setTimeout(() => {
+              this._requestPanelLocationDetection();
+            }, 500);
+          } else {
+            log('👁️ [PROVIDER] WebView became hidden');
+          }
+        },
+        undefined,
+        this._extensionContext.subscriptions
+      );
+      this._extensionContext.subscriptions.push(visibilityDisposable);
+      log('✅ [PROVIDER] Visibility listener registered');
+
+      // STEP 4: Set HTML AFTER listeners are ready (VS Code standard)
+      log('🔧 [PROVIDER] Step 4: Setting webview HTML...');
       this._setWebviewHtml(webviewView, false);
 
-      // Set up event listeners
-      this._setupWebviewEventListeners(webviewView, false);
+      // STEP 5: Set up terminal and other listeners
+      log('🔧 [PROVIDER] Step 5: Setting up terminal listeners...');
       this._setupTerminalEventListeners();
       this._setupCliAgentStatusListeners();
       this._setupConfigurationChangeListeners();
 
-      // 🆕 Set up panel location change listener
+      // STEP 6: Set up panel location change listener
+      log('🔧 [PROVIDER] Step 6: Setting up panel location listener...');
       this._setupPanelLocationChangeListener(webviewView);
 
-      // 🆕 Panel location detection is now handled via getSettings message
-      // This ensures WebView is ready before detection starts
-
-      log('WebView setup completed successfully');
+      log('✅ [PROVIDER] WebView setup completed successfully');
+      log('🚀 [PROVIDER] === WEBVIEW VIEW RESOLUTION COMPLETE ===');
     } catch (error) {
-      log('\u274c [CRITICAL] Failed to resolve WebView:', error);
+      log('❌ [CRITICAL] Failed to resolve WebView:', error);
       this._handleWebviewSetupError(webviewView, error);
     }
   }
@@ -94,7 +144,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
    * 🆕 Determine current panel location based on VS Code API inspection
    */
   private _getCurrentPanelLocation(): 'sidebar' | 'panel' {
-    const config = vscode.workspace.getConfiguration('sidebarTerminal');
+    const config = vscode.workspace.getConfiguration('secondaryTerminal');
 
     // Check if dynamic split direction feature is enabled
     const isDynamicSplitEnabled = config.get<boolean>('dynamicSplitDirection', true);
@@ -139,7 +189,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     // Also listen for configuration changes
     this._addDisposable(
       vscode.workspace.onDidChangeConfiguration((event) => {
-        if (event.affectsConfiguration('sidebarTerminal.panelLocation')) {
+        if (event.affectsConfiguration('secondaryTerminal.panelLocation')) {
           log(`📍 [PANEL-DETECTION] Panel location setting changed - requesting detection`);
           this._requestPanelLocationDetection();
         }
@@ -1892,7 +1942,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
    */
   private _getCurrentSettings(): PartialTerminalSettings {
     const config = getConfigManager().getExtensionTerminalConfig();
-    const vsCodeConfig = vscode.workspace.getConfiguration('sidebarTerminal');
+    const vsCodeConfig = vscode.workspace.getConfiguration('secondaryTerminal');
 
     return {
       shell: config.shell || '',
@@ -2053,5 +2103,32 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
    */
   private _addDisposable(disposable: vscode.Disposable): void {
     this._disposables.push(disposable);
+  }
+
+  /**
+   * Set Phase 8 services for advanced terminal features
+   */
+  public setPhase8Services(
+    decorationsService: import('../services/TerminalDecorationsService').TerminalDecorationsService,
+    linksService: import('../services/TerminalLinksService').TerminalLinksService
+  ): void {
+    // Store services for WebView communication
+    (this as any)._decorationsService = decorationsService;
+    (this as any)._linksService = linksService;
+    
+    log('🎨 [PROVIDER] Phase 8 services (Decorations & Links) connected to provider');
+    
+    // Send Phase 8 capabilities to WebView if initialized
+    if (this._view) {
+      this._sendMessage({
+        command: 'phase8ServicesReady',
+        capabilities: {
+          decorations: true,
+          links: true,
+          navigation: true,
+          accessibility: true,
+        },
+      }).catch(error => log('❌ [PROVIDER] Failed to send Phase 8 capabilities:', error));
+    }
   }
 }

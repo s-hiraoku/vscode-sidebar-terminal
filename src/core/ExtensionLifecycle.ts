@@ -7,6 +7,8 @@ import { FileReferenceCommand, TerminalCommand } from '../commands';
 import { CopilotIntegrationCommand } from '../commands/CopilotIntegrationCommand';
 import { EnhancedShellIntegrationService } from '../services/EnhancedShellIntegrationService';
 import { KeyboardShortcutService } from '../services/KeyboardShortcutService';
+import { TerminalDecorationsService } from '../services/TerminalDecorationsService';
+import { TerminalLinksService } from '../services/TerminalLinksService';
 import { VSCODE_COMMANDS } from '../constants';
 
 /**
@@ -22,6 +24,8 @@ export class ExtensionLifecycle {
   private copilotIntegrationCommand: CopilotIntegrationCommand | undefined;
   private shellIntegrationService: EnhancedShellIntegrationService | undefined;
   private keyboardShortcutService: KeyboardShortcutService | undefined;
+  private decorationsService: TerminalDecorationsService | undefined;
+  private linksService: TerminalLinksService | undefined;
 
   // シンプルな復元管理
   private _restoreExecuted = false;
@@ -105,8 +109,37 @@ export class ExtensionLifecycle {
         this.shellIntegrationService.setWebviewProvider(this.sidebarProvider);
         log('🔗 [EXTENSION] Enhanced shell integration connected to webview');
       }
-      
+
       log('⌨️ [EXTENSION] Keyboard shortcut service initialized');
+
+      // Initialize Phase 8: Terminal Decorations & Links Services
+      try {
+        // Initialize terminal decorations service
+        this.decorationsService = new TerminalDecorationsService();
+        log('🎨 [EXTENSION] Terminal decorations service initialized');
+        
+        // Initialize terminal links service
+        this.linksService = new TerminalLinksService();
+        log('🔗 [EXTENSION] Terminal links service initialized');
+        
+        // Connect Phase 8 services to webview provider
+        if (this.decorationsService && this.linksService) {
+          this.sidebarProvider.setPhase8Services(this.decorationsService, this.linksService);
+          log('🎨 [EXTENSION] Phase 8 services connected to webview provider');
+        }
+        
+        // Connect Phase 8 services to terminal manager for data processing
+        if (this.terminalManager) {
+          // Set up data processing for decorations through terminal manager
+          // Note: This will be connected via message passing in the webview
+          log('🔄 [EXTENSION] Phase 8 services ready for webview integration');
+        }
+        
+        log('✅ [EXTENSION] Phase 8 services (Decorations & Links) initialized successfully');
+      } catch (error) {
+        log('❌ [EXTENSION] Failed to initialize Phase 8 services:', error);
+        // Continue without Phase 8 features
+      }
 
       // Register all commands
       this.registerCommands(context);
@@ -328,6 +361,39 @@ export class ExtensionLifecycle {
           await this.handleTestScrollbackCommand();
         },
       },
+
+      // ======================= デバッグコマンド =======================
+      {
+        command: 'secondaryTerminal.debugInput',
+        handler: async () => {
+          log('🔧 [DEBUG-CMD] Direct input test command triggered');
+          
+          if (!this.terminalManager) {
+            log('❌ [DEBUG-CMD] TerminalManager not available');
+            void vscode.window.showErrorMessage('TerminalManager not available');
+            return;
+          }
+
+          // Get active terminal
+          const activeTerminalId = this.terminalManager.getActiveTerminalId();
+          log('🔧 [DEBUG-CMD] Active terminal ID:', activeTerminalId);
+
+          if (!activeTerminalId) {
+            log('❌ [DEBUG-CMD] No active terminal');
+            void vscode.window.showErrorMessage('No active terminal available');
+            return;
+          }
+
+          // Send test input directly to TerminalManager
+          const testCommand = 'echo "DEBUG: Direct Extension input test successful"\r';
+          log('🔧 [DEBUG-CMD] Sending test input:', testCommand);
+          
+          this.terminalManager.sendInput(testCommand, activeTerminalId);
+          log('🔧 [DEBUG-CMD] Test input sent successfully');
+          
+          void vscode.window.showInformationMessage('Debug input test sent directly to terminal');
+        },
+      },
     ];
 
     // Register all commands
@@ -363,6 +429,19 @@ export class ExtensionLifecycle {
       log('🔧 [EXTENSION] Disposing keyboard shortcut service...');
       this.keyboardShortcutService.dispose();
       this.keyboardShortcutService = undefined;
+    }
+
+    // Dispose Phase 8 services
+    if (this.decorationsService) {
+      log('🔧 [EXTENSION] Disposing terminal decorations service...');
+      this.decorationsService.dispose();
+      this.decorationsService = undefined;
+    }
+
+    if (this.linksService) {
+      log('🔧 [EXTENSION] Disposing terminal links service...');
+      this.linksService.dispose();
+      this.linksService = undefined;
     }
 
     // Dispose terminal manager

@@ -520,6 +520,7 @@ export interface WebviewMessage {
     | 'commandHistory'
     | 'deleteTerminalResponse'  // 🎯 FIX: 削除処理統一化で追加
     | 'switchAiAgentResponse'  // AIエージェント切り替えレスポンス
+    | 'phase8ServicesReady'   // Phase 8: Terminal Decorations & Links service ready notification
     | 'error';
   config?: TerminalConfig;
   data?: string;
@@ -532,6 +533,14 @@ export interface WebviewMessage {
   status?: string;
   cwd?: string;
   history?: Array<{ command: string; exitCode?: number; duration?: number }>;
+  
+  // Phase 8: Advanced Terminal Features
+  capabilities?: {
+    decorations?: boolean;
+    links?: boolean;
+    navigation?: boolean;
+    accessibility?: boolean;
+  };
 
   // ターミナル情報（復元用）
   terminalInfo?: {
