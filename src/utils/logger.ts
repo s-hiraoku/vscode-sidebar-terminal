@@ -188,7 +188,7 @@ class Logger {
   // Enhanced categorized logging methods with consistent formatting and emojis
   terminal(...args: unknown[]): void {
     if (this.level <= LogLevel.DEBUG) {
-      console.log(...this.formatMessage('DEBUG', 'TERMINAL', '🔌', ...args));
+      console.log(...this.formatMessage('DEBUG', 'TERMINAL', '✨', ...args));
     }
   }
 
