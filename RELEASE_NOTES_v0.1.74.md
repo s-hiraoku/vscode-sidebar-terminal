@@ -1,4 +1,4 @@
-# Release Notes - Version 0.1.73
+# Release Notes - Version 0.1.74
 
 **Release Date:** 2025-01-03
 **Previous Version:** 0.1.72
@@ -103,7 +103,7 @@ This release focuses on improving code quality, test infrastructure, and develop
 ### For Users
 ```bash
 # Install from VS Code Marketplace
-# The extension will automatically update to v0.1.73
+# The extension will automatically update to v0.1.74
 ```
 
 ### For Developers
@@ -142,7 +142,7 @@ This release maintains the high quality standards established in previous versio
 
 ## 🎉 Conclusion
 
-Version 0.1.73 represents a solid maintenance release focused on code quality, test infrastructure improvements, and development workflow enhancements. The extension maintains its stable functionality while providing a better foundation for future development.
+Version 0.1.74 represents a solid maintenance release focused on code quality, test infrastructure improvements, and development workflow enhancements. The extension maintains its stable functionality while providing a better foundation for future development.
 
 The development team continues to prioritize quality, maintainability, and user experience in all releases.
 
