@@ -472,22 +472,16 @@ export class UIManager extends BaseManager implements IUIManager {
       if (status === 'none') {
         // CLI Agent statusを削除 (全ターミナルから削除)
         HeaderFactory.removeCliAgentStatus(headerElements);
-        // AI Agent切り替えボタンを非表示 (none状態)
-        HeaderFactory.setAiAgentToggleButtonVisibility(headerElements, false);
+        // AI Agent切り替えボタンを常時表示 (none状態でも表示)
+        HeaderFactory.setAiAgentToggleButtonVisibility(headerElements, true);
       } else if (isTargetTerminal) {
         // CLI Agent statusを挿入/更新 (該当ターミナルのみ)
         HeaderFactory.insertCliAgentStatus(headerElements, status, agentType);
-        // AI Agent切り替えボタン表示制御: disconnectedのみ表示
-        if (status === 'connected') {
-          // connected状態では切り替えボタンを非表示 (すでにアクティブ)
-          HeaderFactory.setAiAgentToggleButtonVisibility(headerElements, false);
-        } else if (status === 'disconnected') {
-          // disconnected状態では切り替えボタンを表示 (切り替え可能)
-          HeaderFactory.setAiAgentToggleButtonVisibility(headerElements, true, status);
-        }
+        // AI Agent切り替えボタンを常時表示 (全ての状態で表示)
+        HeaderFactory.setAiAgentToggleButtonVisibility(headerElements, true, status);
       } else {
-        // AI Agentステータスがないターミナルではボタンを非表示にする
-        HeaderFactory.setAiAgentToggleButtonVisibility(headerElements, false);
+        // AI Agentステータスがないターミナルでもボタンを表示
+        HeaderFactory.setAiAgentToggleButtonVisibility(headerElements, true);
       }
       updatedCount++;
     }
@@ -540,17 +534,17 @@ export class UIManager extends BaseManager implements IUIManager {
     if (status === 'none') {
       // CLI Agent statusを削除
       HeaderFactory.removeCliAgentStatus(headerElements);
-      // AI Agent切り替えボタンを非表示 (none状態)
-      HeaderFactory.setAiAgentToggleButtonVisibility(headerElements, false);
+      // AI Agent切り替えボタンを常時表示 (none状態でも表示)
+      HeaderFactory.setAiAgentToggleButtonVisibility(headerElements, true);
     } else if (status === 'connected') {
       // CLI Agent statusを挿入/更新
       HeaderFactory.insertCliAgentStatus(headerElements, status, agentType);
-      // AI Agent切り替えボタンを非表示 (connected状態では不要)
-      HeaderFactory.setAiAgentToggleButtonVisibility(headerElements, false);
+      // AI Agent切り替えボタンを常時表示 (connected状態でも表示)
+      HeaderFactory.setAiAgentToggleButtonVisibility(headerElements, true, status);
     } else if (status === 'disconnected') {
       // CLI Agent statusを挿入/更新
       HeaderFactory.insertCliAgentStatus(headerElements, status, agentType);
-      // AI Agent切り替えボタンを表示 (disconnected状態でのみ表示)
+      // AI Agent切り替えボタンを常時表示 (disconnected状態でも表示)
       HeaderFactory.setAiAgentToggleButtonVisibility(headerElements, true, status);
     }
 

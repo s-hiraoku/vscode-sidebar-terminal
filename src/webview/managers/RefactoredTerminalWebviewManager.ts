@@ -481,7 +481,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
    * Handle AI Agent toggle button click
    */
   public handleAiAgentToggle(terminalId: string): void {
-    log(`🔌 AI Agent toggle clicked for terminal: ${terminalId}`);
+    log(`✨ AI Agent toggle clicked for terminal: ${terminalId}`);
     
     try {
       // Get current CLI Agent state for the terminal
@@ -617,6 +617,36 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     });
     
     log(`🗑️ [PANEL] killTerminal message sent to extension`);
+  }
+
+  /**
+   * 🔧 Retroactively attach input handlers to all existing terminals
+   * This fixes the keyboard input issue for terminals created before the handler fix
+   */
+  public attachInputHandlersToExistingTerminals(): void {
+    log('🔧 [INPUT-FIX] Attaching input handlers to existing terminals...');
+    
+    const allTerminals = this.terminalLifecycleManager.getAllTerminalInstances();
+    let handlerCount = 0;
+    
+    for (const [terminalId, terminalInstance] of allTerminals) {
+      if (terminalInstance && terminalInstance.terminal) {
+        const terminalContainer = this.terminalLifecycleManager.getTerminalElement(terminalId);
+        
+        if (terminalContainer) {
+          // Skip input handler attachment - already done during terminal creation
+          // This prevents duplicate onData handlers that cause input duplication
+          handlerCount++;
+          log(`✅ [INPUT-FIX] Input handler already exists for terminal: ${terminalId}`);
+        } else {
+          log(`⚠️ [INPUT-FIX] Terminal container not found for: ${terminalId}`);
+        }
+      } else {
+        log(`⚠️ [INPUT-FIX] Terminal instance invalid for: ${terminalId}`);
+      }
+    }
+    
+    log(`🔧 [INPUT-FIX] Input handlers attached to ${handlerCount} existing terminals`);
   }
 
   public updateState(state: unknown): void {

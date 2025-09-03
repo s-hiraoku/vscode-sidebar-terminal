@@ -5,8 +5,10 @@ import { StandardTerminalSessionManager } from '../sessions/StandardTerminalSess
 import { extension as log, logger, LogLevel } from '../utils/logger';
 import { FileReferenceCommand, TerminalCommand } from '../commands';
 import { CopilotIntegrationCommand } from '../commands/CopilotIntegrationCommand';
-import { ShellIntegrationService } from '../services/ShellIntegrationService';
-import { VSCODE_COMMANDS } from '../constants';
+import { EnhancedShellIntegrationService } from '../services/EnhancedShellIntegrationService';
+import { KeyboardShortcutService } from '../services/KeyboardShortcutService';
+import { TerminalDecorationsService } from '../services/TerminalDecorationsService';
+import { TerminalLinksService } from '../services/TerminalLinksService';
 
 /**
  * VS Code拡張機能のライフサイクル管理
@@ -19,7 +21,10 @@ export class ExtensionLifecycle {
   private fileReferenceCommand: FileReferenceCommand | undefined;
   private terminalCommand: TerminalCommand | undefined;
   private copilotIntegrationCommand: CopilotIntegrationCommand | undefined;
-  private shellIntegrationService: ShellIntegrationService | undefined;
+  private shellIntegrationService: EnhancedShellIntegrationService | undefined;
+  private keyboardShortcutService: KeyboardShortcutService | undefined;
+  private decorationsService: TerminalDecorationsService | undefined;
+  private linksService: TerminalLinksService | undefined;
 
   // シンプルな復元管理
   private _restoreExecuted = false;
@@ -49,7 +54,7 @@ export class ExtensionLifecycle {
 
     try {
       // Ensure node-pty looks for release binaries
-      process.env.NODE_PSTY_DEBUG = '0';
+      process.env.NODE_PTY_DEBUG = '0';
 
       // Initialize terminal manager
       this.terminalManager = new TerminalManager();
@@ -67,15 +72,15 @@ export class ExtensionLifecycle {
       this.terminalCommand = new TerminalCommand(this.terminalManager);
       this.copilotIntegrationCommand = new CopilotIntegrationCommand();
 
-      // Initialize shell integration service
-      log('🔧 [EXTENSION] Initializing shell integration service...');
+      // Initialize enhanced shell integration service
+      log('🚀 [EXTENSION] Initializing enhanced shell integration service...');
       try {
-        this.shellIntegrationService = new ShellIntegrationService(this.terminalManager);
+        this.shellIntegrationService = new EnhancedShellIntegrationService(this.terminalManager);
         // Set shell integration service on TerminalManager
         this.terminalManager.setShellIntegrationService(this.shellIntegrationService);
-        log('✅ [EXTENSION] Shell integration service initialized and connected');
+        log('✅ [EXTENSION] Enhanced shell integration service initialized and connected');
       } catch (error) {
-        log('❌ [EXTENSION] Failed to initialize shell integration service:', error);
+        log('❌ [EXTENSION] Failed to initialize enhanced shell integration service:', error);
         // Continue without shell integration
       }
 
@@ -90,6 +95,49 @@ export class ExtensionLifecycle {
       if (this.standardSessionManager) {
         this.standardSessionManager.setSidebarProvider(this.sidebarProvider);
         log('🔧 [EXTENSION] Sidebar provider set for StandardSessionManager');
+      }
+
+      // Initialize keyboard shortcut service
+      this.keyboardShortcutService = new KeyboardShortcutService(this.terminalManager);
+      
+      // Connect keyboard service to webview provider
+      this.keyboardShortcutService.setWebviewProvider(this.sidebarProvider);
+      
+      // Connect enhanced shell integration service to webview provider
+      if (this.shellIntegrationService) {
+        this.shellIntegrationService.setWebviewProvider(this.sidebarProvider);
+        log('🔗 [EXTENSION] Enhanced shell integration connected to webview');
+      }
+
+      log('⌨️ [EXTENSION] Keyboard shortcut service initialized');
+
+      // Initialize Phase 8: Terminal Decorations & Links Services
+      try {
+        // Initialize terminal decorations service
+        this.decorationsService = new TerminalDecorationsService();
+        log('🎨 [EXTENSION] Terminal decorations service initialized');
+        
+        // Initialize terminal links service
+        this.linksService = new TerminalLinksService();
+        log('🔗 [EXTENSION] Terminal links service initialized');
+        
+        // Connect Phase 8 services to webview provider
+        if (this.decorationsService && this.linksService) {
+          this.sidebarProvider.setPhase8Services(this.decorationsService, this.linksService);
+          log('🎨 [EXTENSION] Phase 8 services connected to webview provider');
+        }
+        
+        // Connect Phase 8 services to terminal manager for data processing
+        if (this.terminalManager) {
+          // Set up data processing for decorations through terminal manager
+          // Note: This will be connected via message passing in the webview
+          log('🔄 [EXTENSION] Phase 8 services ready for webview integration');
+        }
+        
+        log('✅ [EXTENSION] Phase 8 services (Decorations & Links) initialized successfully');
+      } catch (error) {
+        log('❌ [EXTENSION] Failed to initialize Phase 8 services:', error);
+        // Continue without Phase 8 features
       }
 
       // Register all commands
@@ -161,13 +209,7 @@ export class ExtensionLifecycle {
           this.sidebarProvider?.splitTerminal('horizontal');
         },
       },
-      {
-        command: 'secondaryTerminal.focus',
-        handler: () => {
-          log('🔧 [DEBUG] Command executed: focus');
-          void vscode.commands.executeCommand(VSCODE_COMMANDS.SECONDARY_TERMINAL_VIEW_FOCUS);
-        },
-      },
+      // REMOVED: 'secondaryTerminal.focusTerminal' - handled by KeyboardShortcutService
 
       // ======================= ファイル参照コマンド =======================
       {
@@ -312,6 +354,39 @@ export class ExtensionLifecycle {
           await this.handleTestScrollbackCommand();
         },
       },
+
+      // ======================= デバッグコマンド =======================
+      {
+        command: 'secondaryTerminal.debugInput',
+        handler: async () => {
+          log('🔧 [DEBUG-CMD] Direct input test command triggered');
+          
+          if (!this.terminalManager) {
+            log('❌ [DEBUG-CMD] TerminalManager not available');
+            void vscode.window.showErrorMessage('TerminalManager not available');
+            return;
+          }
+
+          // Get active terminal
+          const activeTerminalId = this.terminalManager.getActiveTerminalId();
+          log('🔧 [DEBUG-CMD] Active terminal ID:', activeTerminalId);
+
+          if (!activeTerminalId) {
+            log('❌ [DEBUG-CMD] No active terminal');
+            void vscode.window.showErrorMessage('No active terminal available');
+            return;
+          }
+
+          // Send test input directly to TerminalManager
+          const testCommand = 'echo "DEBUG: Direct Extension input test successful"\\r';
+          log('🔧 [DEBUG-CMD] Sending test input:', testCommand);
+          
+          this.terminalManager.sendInput(testCommand, activeTerminalId);
+          log('🔧 [DEBUG-CMD] Test input sent successfully');
+          
+          void vscode.window.showInformationMessage('Debug input test sent directly to terminal');
+        },
+      },
     ];
 
     // Register all commands
@@ -341,6 +416,26 @@ export class ExtensionLifecycle {
     //   log('🔧 [EXTENSION] Disposing scrollback session manager...');
     //   this.scrollbackSessionManager = undefined;
     // }
+
+    // Dispose keyboard shortcut service
+    if (this.keyboardShortcutService) {
+      log('🔧 [EXTENSION] Disposing keyboard shortcut service...');
+      this.keyboardShortcutService.dispose();
+      this.keyboardShortcutService = undefined;
+    }
+
+    // Dispose Phase 8 services
+    if (this.decorationsService) {
+      log('🔧 [EXTENSION] Disposing terminal decorations service...');
+      this.decorationsService.dispose();
+      this.decorationsService = undefined;
+    }
+
+    if (this.linksService) {
+      log('🔧 [EXTENSION] Disposing terminal links service...');
+      this.linksService.dispose();
+      this.linksService = undefined;
+    }
 
     // Dispose terminal manager
     if (this.terminalManager) {

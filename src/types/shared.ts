@@ -119,6 +119,15 @@ export interface PartialTerminalSettings {
   // 🆕 Issue #148: Dynamic split direction settings
   dynamicSplitDirection?: boolean;
   panelLocation?: 'auto' | 'sidebar' | 'panel';
+  // 🆕 Phase 5: Terminal Profiles System settings
+  profilesWindows?: Record<string, TerminalProfile | null>;
+  profilesLinux?: Record<string, TerminalProfile | null>;
+  profilesOsx?: Record<string, TerminalProfile | null>;
+  defaultProfileWindows?: string | null;
+  defaultProfileLinux?: string | null;
+  defaultProfileOsx?: string | null;
+  inheritVSCodeProfiles?: boolean;
+  enableProfileAutoDetection?: boolean;
 }
 
 /**
@@ -184,6 +193,110 @@ export type TerminalTheme = 'auto' | 'dark' | 'light';
 export type SplitDirection = 'horizontal' | 'vertical';
 export type CliAgentStatusType = 'info' | 'success' | 'error' | 'warning';
 
+// ===== Terminal Profile System Types =====
+
+/**
+ * Platform types for VS Code terminal profiles
+ */
+export type TerminalPlatform = 'windows' | 'linux' | 'osx';
+
+/**
+ * Shell profile configuration for VS Code standard compliance
+ * Based on VS Code's ITerminalProfile interface
+ */
+export interface TerminalProfile {
+  /** Path to the shell executable */
+  path: string;
+  /** Arguments to pass to the shell */
+  args?: string[];
+  /** Override the shell's default working directory */
+  cwd?: string;
+  /** Environment variables to add to the shell session */
+  env?: Record<string, string | null>;
+  /** Icon identifier for this profile */
+  icon?: string;
+  /** Color identifier for this profile */
+  color?: string;
+  /** Whether this profile should be visible in the terminal dropdown */
+  isVisible?: boolean;
+  /** Override the args when the profile is contributed by an extension */
+  overrideName?: boolean;
+  /** Whether to use color in the terminal */
+  useColor?: boolean;
+}
+
+/**
+ * Platform-specific terminal profiles collection
+ * Follows VS Code's terminal.integrated.profiles.* pattern
+ */
+export interface PlatformTerminalProfiles {
+  /** Windows terminal profiles */
+  windows: Record<string, TerminalProfile | null>;
+  /** Linux terminal profiles */
+  linux: Record<string, TerminalProfile | null>;
+  /** macOS terminal profiles */
+  osx: Record<string, TerminalProfile | null>;
+}
+
+/**
+ * Default profile settings for each platform
+ * Follows VS Code's terminal.integrated.defaultProfile.* pattern
+ */
+export interface DefaultProfileSettings {
+  /** Default Windows terminal profile */
+  windows: string | null;
+  /** Default Linux terminal profile */
+  linux: string | null;
+  /** Default macOS terminal profile */
+  osx: string | null;
+}
+
+/**
+ * Auto-detection settings for terminal profiles
+ */
+export interface ProfileAutoDetectionSettings {
+  /** Enable automatic profile detection */
+  enabled: boolean;
+  /** Paths to search for shell executables */
+  searchPaths: string[];
+  /** Cache detected profiles */
+  useCache: boolean;
+  /** Cache expiration time in milliseconds */
+  cacheExpiration: number;
+}
+
+/**
+ * Complete terminal profile system configuration
+ * Integrates all profile-related settings
+ */
+export interface TerminalProfilesConfig {
+  /** Platform-specific profile definitions */
+  profiles: PlatformTerminalProfiles;
+  /** Default profiles for each platform */
+  defaultProfiles: DefaultProfileSettings;
+  /** Auto-detection configuration */
+  autoDetection: ProfileAutoDetectionSettings;
+  /** Whether to inherit VS Code's terminal profiles */
+  inheritVSCodeProfiles: boolean;
+}
+
+/**
+ * Profile selection result
+ * Used when resolving which profile to use for new terminals
+ */
+export interface ProfileSelectionResult {
+  /** Selected profile configuration */
+  profile: TerminalProfile;
+  /** Name/key of the selected profile */
+  profileName: string;
+  /** Platform for which the profile was selected */
+  platform: TerminalPlatform;
+  /** Whether this was the default profile */
+  isDefault: boolean;
+  /** Selection source (user, default, auto-detected) */
+  source: 'user' | 'default' | 'auto-detected';
+}
+
 // ===== 後方互換性のためのエイリアス =====
 
 /**
@@ -225,6 +338,16 @@ export const CONFIG_KEYS = {
   SHELL_WINDOWS: 'shell.windows',
   SHELL_OSX: 'shell.osx',
   SHELL_LINUX: 'shell.linux',
+
+  // 🆕 Phase 5: Terminal Profile System keys
+  PROFILES_WINDOWS: 'profiles.windows',
+  PROFILES_LINUX: 'profiles.linux',
+  PROFILES_OSX: 'profiles.osx',
+  DEFAULT_PROFILE_WINDOWS: 'defaultProfile.windows',
+  DEFAULT_PROFILE_LINUX: 'defaultProfile.linux',
+  DEFAULT_PROFILE_OSX: 'defaultProfile.osx',
+  INHERIT_VSCODE_PROFILES: 'inheritVSCodeProfiles',
+  ENABLE_PROFILE_AUTO_DETECTION: 'enableProfileAutoDetection',
 } as const;
 
 // ===== ターミナル管理型 =====
@@ -397,6 +520,14 @@ export interface WebviewMessage {
     | 'commandHistory'
     | 'deleteTerminalResponse'  // 🎯 FIX: 削除処理統一化で追加
     | 'switchAiAgentResponse'  // AIエージェント切り替えレスポンス
+    | 'phase8ServicesReady'   // Phase 8: Terminal Decorations & Links service ready notification
+    | 'htmlScriptTest'        // HTML script test message
+    | 'webviewReady'          // WebView ready notification
+    | 'ready'                 // General ready notification
+    | 'createTerminal'        // Create terminal request
+    | 'splitTerminal'         // Split terminal request
+    | 'updateSettings'        // Update settings request
+    | 'terminalClosed'        // Terminal closed notification
     | 'error';
   config?: TerminalConfig;
   data?: string;
@@ -409,6 +540,14 @@ export interface WebviewMessage {
   status?: string;
   cwd?: string;
   history?: Array<{ command: string; exitCode?: number; duration?: number }>;
+  
+  // Phase 8: Advanced Terminal Features
+  capabilities?: {
+    decorations?: boolean;
+    links?: boolean;
+    navigation?: boolean;
+    accessibility?: boolean;
+  };
 
   // ターミナル情報（復元用）
   terminalInfo?: {

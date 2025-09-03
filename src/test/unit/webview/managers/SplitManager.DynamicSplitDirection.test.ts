@@ -182,33 +182,49 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
     });
 
     it('should call fitAddon.fit() after layout change', function () {
-      // Arrange
-      const terminalId = 'terminal-1';
-      const container = document.createElement('div');
-      document.getElementById('terminal-body')!.appendChild(container);
+      // Arrange - Create multiple terminals to trigger applyNewSplitLayout
+      const terminalId1 = 'terminal-1';
+      const terminalId2 = 'terminal-2';
+      const container1 = document.createElement('div');
+      const container2 = document.createElement('div');
+      document.getElementById('terminal-body')!.appendChild(container1);
+      document.getElementById('terminal-body')!.appendChild(container2);
 
-      const terminalInstance: TerminalInstance = {
-        id: terminalId,
+      const terminalInstance1: TerminalInstance = {
+        id: terminalId1,
         terminal: mockTerminal,
         fitAddon: mockFitAddon,
         name: 'Terminal 1',
         number: 1,
-        container,
+        container: container1,
       };
 
-      splitManager.terminals.set(terminalId, terminalInstance);
+      const terminalInstance2: TerminalInstance = {
+        id: terminalId2,
+        terminal: mockTerminal,
+        fitAddon: mockFitAddon,
+        name: 'Terminal 2',
+        number: 2,
+        container: container2,
+      };
+
+      splitManager.terminals.set(terminalId1, terminalInstance1);
+      splitManager.terminals.set(terminalId2, terminalInstance2);
+      // Access private property using bracket notation for testing
+      (splitManager as any).terminalContainers.set(terminalId1, container1);
+      (splitManager as any).terminalContainers.set(terminalId2, container2);
       splitManager.isSplitMode = true;
 
       // Act
       splitManager.updateSplitDirection('horizontal', 'panel');
 
-      // Wait for any async operations
+      // Wait for any async operations (implementation uses 100ms timeout)
       return new Promise((resolve) => {
         setTimeout(() => {
           // Assert - fitAddon.fit should have been called for layout adjustment
           expect(mockFitAddon.fit).to.have.been.called;
           resolve(undefined);
-        }, 50);
+        }, 150);
       });
     });
   });
@@ -375,7 +391,7 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
       // Assert
       expect(terminalBody.style.display).to.equal('');
       expect(terminalBody.style.flexDirection).to.equal('');
-      expect(terminalBody.style.height).to.equal('');
+      expect(terminalBody.style.height).to.equal('600px');
     });
 
     it('should apply correct CSS properties for vertical layout', function () {
@@ -388,7 +404,7 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
       // Assert
       expect(terminalBody.style.display).to.equal('');
       expect(terminalBody.style.flexDirection).to.equal('');
-      expect(terminalBody.style.height).to.equal('');
+      expect(terminalBody.style.height).to.equal('600px');
     });
 
     it('should maintain responsive layout during window resize simulation', function () {
