@@ -71,7 +71,39 @@ npm run release:major   # Increment major version and create release
 - Use "Developer: Reload Window" command to reload during development
 - Console logs are visible in VS Code Developer Tools (`Ctrl+Shift+I`)
 
-## Recent Critical Fixes (v0.1.55)
+## Recent Critical Fixes (v0.1.75)
+
+### ✅ AI Agent Toggle Button Always Visible with Sparkles Icon
+
+**Status**: AI Agent toggle button now always visible regardless of connection status - UI consistency improved.
+
+**Issue Fixed**: AI Agent toggle button (🔌) would disappear when AI Agent connected, making it inconsistent and potentially confusing for users.
+
+**Root Cause Identified**:
+- **Conditional visibility logic**: The `setAiAgentToggleButtonVisibility` method was hiding the button based on connection status
+- **Inconsistent UX**: Users could not see toggle option when AI Agent was connected
+- **Visual design limitation**: Plug icon (🔌) was not as visually appealing as desired
+
+**Solution Implemented**:
+- **Always visible button**: Toggle button now remains visible in all states (none, connected, disconnected)
+- **Enhanced visual design**: Changed icon from 🔌 to ✨ for better visual appeal and clarity
+- **Consistent log messaging**: Updated all log messages to use ✨ for consistency
+- **Improved UX**: Users can always see and interact with AI Agent toggle functionality
+
+**Technical Changes**:
+- `src/webview/factories/HeaderFactory.ts:155`: Changed initial display from `'none'` to `'flex'`
+- `src/webview/factories/HeaderFactory.ts:165`: Updated icon from 🔌 to ✨ with optimized filter effects
+- `src/webview/managers/UIManager.ts:476,481,484`: Modified `updateCliAgentStatusDisplay` for always visible button
+- `src/webview/managers/UIManager.ts:538,543,548`: Modified `updateCliAgentStatusForTerminal` for always visible button
+- Multiple files: Updated all log messages from 🔌 to ✨ for consistency
+
+**Result**:
+- **Always visible AI toggle**: Button remains visible regardless of AI Agent connection status
+- **Enhanced visual appeal**: Beautiful ✨ icon provides better user experience
+- **Consistent UI/UX**: No more confusing button disappearance when AI Agent connects
+- **Unified logging**: All AI Agent related logs now use ✨ consistently
+
+## Previous Critical Fixes (v0.1.55)
 
 ### ✅ AI Agent Status Stabilization Fix
 
