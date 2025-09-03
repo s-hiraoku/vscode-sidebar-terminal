@@ -190,9 +190,9 @@ describe('AI Agent Toggle Button (Issue #122)', () => {
       assert.strictEqual(result.success, true);
       assert.strictEqual(result.newStatus, 'connected'); // Status becomes connected
 
-      // 6. Button should be hidden when connected (new specification)
-      HeaderFactory.setAiAgentToggleButtonVisibility(headerElements, false, 'connected');
-      assert.strictEqual(headerElements.aiAgentToggleButton?.style.display, 'none');
+      // 6. Button should remain visible when connected (always visible specification)
+      HeaderFactory.setAiAgentToggleButtonVisibility(headerElements, true, 'connected');
+      assert.strictEqual(headerElements.aiAgentToggleButton?.style.display, 'flex');
     });
   });
 });

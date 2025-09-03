@@ -175,7 +175,7 @@ export class CliAgentStateManager {
         isDisplayingChoices: false,
       });
 
-      log(`🔌 Agent disconnected in terminal ${terminalId}`);
+      log(`✨ Agent disconnected in terminal ${terminalId}`);
     }
   }
 
