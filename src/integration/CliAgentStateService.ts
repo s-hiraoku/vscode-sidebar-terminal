@@ -13,14 +13,14 @@ export enum CliAgentStatus {
 
 export interface CliAgentState {
   terminalId: string;
-  type: 'claude' | 'gemini';
+  type: 'claude' | 'gemini' | 'codex';
   status: CliAgentStatus;
   previousStatus: CliAgentStatus;
 }
 
 export interface ActiveAgent {
   terminalId: string;
-  type: 'claude' | 'gemini';
+  type: 'claude' | 'gemini' | 'codex';
 }
 
 /**
@@ -30,14 +30,14 @@ export interface ActiveAgent {
  * - 状態変更イベントの発火
  */
 export class CliAgentStateService extends EventEmitter {
-  private agentStates = new Map<string, { type: 'claude' | 'gemini'; status: CliAgentStatus }>();
+  private agentStates = new Map<string, { type: 'claude' | 'gemini' | 'codex'; status: CliAgentStatus }>();
   private currentGloballyActive: ActiveAgent | null = null;
 
   /**
    * エージェントをアクティブ化（CONNECTED状態に変更）
    * 既存のCONNECTEDエージェントは自動的にDISCONNECTEDになる
    */
-  activateAgent(terminalId: string, type: 'claude' | 'gemini'): void {
+  activateAgent(terminalId: string, type: 'claude' | 'gemini' | 'codex'): void {
     const currentStatus = this.getStatus(terminalId);
 
     // Deactivate current globally active agent
@@ -123,7 +123,7 @@ export class CliAgentStateService extends EventEmitter {
   /**
    * 指定ターミナルのエージェントタイプを取得
    */
-  getAgentType(terminalId: string): 'claude' | 'gemini' | null {
+  getAgentType(terminalId: string): 'claude' | 'gemini' | 'codex' | null {
     return this.agentStates.get(terminalId)?.type || null;
   }
 
@@ -137,7 +137,7 @@ export class CliAgentStateService extends EventEmitter {
   /**
    * 全エージェントの状態を取得
    */
-  getAllAgentStates(): Map<string, { type: 'claude' | 'gemini'; status: CliAgentStatus }> {
+  getAllAgentStates(): Map<string, { type: 'claude' | 'gemini' | 'codex'; status: CliAgentStatus }> {
     return new Map(this.agentStates);
   }
 

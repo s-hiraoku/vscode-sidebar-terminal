@@ -9,7 +9,7 @@ import { FitAddon } from '@xterm/addon-fit';
 export type CliAgentStatusType = 'connected' | 'disconnected' | 'none';
 
 // Agent type definitions
-export type AgentType = 'claude' | 'gemini' | 'copilot' | 'codeium' | 'other' | null;
+export type AgentType = 'claude' | 'gemini' | 'codex' | 'copilot' | 'codeium' | 'other' | null;
 
 // Terminal state types
 export type TerminalState = 'active' | 'inactive' | 'starting' | 'stopping' | 'error';

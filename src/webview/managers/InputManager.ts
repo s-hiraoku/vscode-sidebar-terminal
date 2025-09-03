@@ -10,6 +10,8 @@ import { INotificationManager } from '../interfaces/ManagerInterfaces';
 import { BaseManager } from './BaseManager';
 import { EventHandlerRegistry } from '../utils/EventHandlerRegistry';
 import { inputLogger } from '../utils/ManagerLogger';
+import { IMEHandler } from './input/handlers/IMEHandler';
+import { IIMEHandler } from './input/interfaces/IInputHandlers';
 
 export class InputManager extends BaseManager implements IInputManager {
   // Specialized logger for Input Manager
@@ -25,6 +27,9 @@ export class InputManager extends BaseManager implements IInputManager {
       enableErrorRecovery: true,
     });
 
+    // Initialize IME handler
+    this.imeHandler = new IMEHandler(this.eventDebounceTimers);
+
     this.logger.lifecycle('initialization', 'starting');
   }
 
@@ -37,8 +42,8 @@ export class InputManager extends BaseManager implements IInputManager {
   // Notification manager for Alt+Click feedback
   private notificationManager: INotificationManager | null = null;
 
-  // IME composition state
-  private isComposing = false;
+  // IME Handler for composition events
+  private imeHandler: IIMEHandler;
 
   // Debounce timers for events
   private eventDebounceTimers = new Map<string, number>();
@@ -198,7 +203,7 @@ export class InputManager extends BaseManager implements IInputManager {
     // Cross-platform key handling
     const isMac = navigator.platform.includes('Mac');
 
-    // VS Code standard terminal keybindings - comprehensive collection
+    // VS Code standard terminal keybindings - comprehensive collection with scrolling
     const keybindingMap: Record<string, string> = {
       // Terminal management - cross-platform
       [`${isMac ? 'meta' : 'ctrl'}+shift+\``]: 'workbench.action.terminal.new',
@@ -213,21 +218,32 @@ export class InputManager extends BaseManager implements IInputManager {
       [`${isMac ? 'meta' : 'ctrl'}+shift+tab`]: 'workbench.action.terminal.focusPrevious',
       [`${isMac ? 'meta' : 'ctrl'}+\``]: 'workbench.action.terminal.toggleTerminal',
       
-      // Scrolling - Windows/Linux specific
-      'ctrl+shift+pageup': 'workbench.action.terminal.scrollUp',
-      'ctrl+shift+pagedown': 'workbench.action.terminal.scrollDown',
-      'ctrl+shift+home': 'workbench.action.terminal.scrollToTop',
-      'ctrl+shift+end': 'workbench.action.terminal.scrollToBottom',
+      // VS Code Standard Scrolling - Enhanced Implementation
+      // Line scrolling with Shift+PageUp/PageDown
+      'shift+pageup': 'workbench.action.terminal.scrollUp',
+      'shift+pagedown': 'workbench.action.terminal.scrollDown',
       
-      // Scrolling - macOS specific
-      'meta+shift+pageup': 'workbench.action.terminal.scrollUp',
-      'meta+shift+pagedown': 'workbench.action.terminal.scrollDown',
-      'meta+shift+home': 'workbench.action.terminal.scrollToTop',
-      'meta+shift+end': 'workbench.action.terminal.scrollToBottom',
+      // Windows/Linux specific scrolling
+      'ctrl+alt+pageup': 'workbench.action.terminal.scrollUp',
+      'ctrl+alt+pagedown': 'workbench.action.terminal.scrollDown',
+      'ctrl+shift+arrowup': 'workbench.action.terminal.scrollUp',
+      'ctrl+shift+arrowdown': 'workbench.action.terminal.scrollDown',
+      'ctrl+home': 'workbench.action.terminal.scrollToTop',
+      'ctrl+end': 'workbench.action.terminal.scrollToBottom',
+      'shift+home': 'workbench.action.terminal.scrollToTop',
+      'shift+end': 'workbench.action.terminal.scrollToBottom',
       
-      // Mac scrolling alternatives
-      'ctrl+meta+arrowup': 'workbench.action.terminal.scrollToPreviousCommand',
-      'ctrl+meta+arrowdown': 'workbench.action.terminal.scrollToNextCommand',
+      // macOS specific scrolling
+      'meta+alt+pageup': 'workbench.action.terminal.scrollUp',
+      'meta+alt+pagedown': 'workbench.action.terminal.scrollDown',
+      'meta+home': 'workbench.action.terminal.scrollToTop',
+      'meta+end': 'workbench.action.terminal.scrollToBottom',
+      
+      // Command navigation (Mac style)
+      'meta+arrowup': 'workbench.action.terminal.scrollToPreviousCommand',
+      'meta+arrowdown': 'workbench.action.terminal.scrollToNextCommand',
+      'ctrl+arrowup': 'workbench.action.terminal.scrollToPreviousCommand',
+      'ctrl+arrowdown': 'workbench.action.terminal.scrollToNextCommand',
       
       // Panel management
       [`${isMac ? 'meta' : 'ctrl'}+j`]: 'workbench.action.togglePanel',
@@ -300,67 +316,16 @@ export class InputManager extends BaseManager implements IInputManager {
    * Setup IME composition handling with improved processing
    */
   public setupIMEHandling(): void {
-    this.logger.info('Setting up IME composition handling');
-
-    const compositionStartHandler = (event: CompositionEvent): void => {
-      this.isComposing = true;
-      this.logger.debug(`IME composition started: ${event.data || 'no data'}`);
-
-      // Clear any pending input events to avoid conflicts
-      this.clearPendingInputEvents();
-    };
-
-    const compositionUpdateHandler = (event: CompositionEvent): void => {
-      // Keep composition state active during updates
-      this.isComposing = true;
-      this.logger.debug(`IME composition update: ${event.data || 'no data'}`);
-    };
-
-    const compositionEndHandler = (event: CompositionEvent): void => {
-      // Small delay to ensure composition data is properly processed
-      setTimeout(() => {
-        this.isComposing = false;
-        this.logger.debug(`IME composition ended: ${event.data || 'no data'}`);
-      }, 10);
-    };
-
-    // Register IME event handlers using EventHandlerRegistry
-    this.eventRegistry.register(
-      'ime-composition-start',
-      document,
-      'compositionstart',
-      compositionStartHandler as EventListener
-    );
-
-    this.eventRegistry.register(
-      'ime-composition-update',
-      document,
-      'compositionupdate',
-      compositionUpdateHandler as EventListener
-    );
-
-    this.eventRegistry.register(
-      'ime-composition-end',
-      document,
-      'compositionend',
-      compositionEndHandler as EventListener
-    );
-
-    this.logger.lifecycle('IME handling', 'completed');
+    // Delegate to IME handler
+    this.imeHandler.initialize();
   }
 
   /**
    * Clear any pending input events that might conflict with IME
    */
   private clearPendingInputEvents(): void {
-    // Clear any debounced events that might interfere with IME composition
-    for (const [key, timer] of this.eventDebounceTimers) {
-      if (key.includes('input') || key.includes('keydown')) {
-        clearTimeout(timer);
-        this.eventDebounceTimers.delete(key);
-        this.logger.debug(`Cleared pending input event: ${key}`);
-      }
-    }
+    // Delegate to IME handler
+    this.imeHandler.clearPendingInputEvents();
   }
 
   /**
@@ -400,7 +365,7 @@ export class InputManager extends BaseManager implements IInputManager {
 
     const shortcutHandler = (event: KeyboardEvent): void => {
       // Ignore if IME is composing
-      if (this.isComposing) {
+      if (this.imeHandler.isIMEComposing()) {
         return;
       }
 
@@ -588,26 +553,36 @@ export class InputManager extends BaseManager implements IInputManager {
     }
 
     const terminal = terminalInstance.terminal;
+    
+    // VS Code standard scrolling behavior
     switch (direction) {
       case 'up':
+        // Scroll up one line (VS Code standard)
         terminal.scrollLines(-1);
         break;
       case 'down':
+        // Scroll down one line (VS Code standard)
         terminal.scrollLines(1);
         break;
       case 'top':
+        // Scroll to the beginning of the buffer (VS Code standard)
         terminal.scrollToTop();
         break;
       case 'bottom':
+        // Scroll to the end of the buffer (VS Code standard)
         terminal.scrollToBottom();
         break;
       case 'previousCommand':
-        // Scroll up by larger increments to find previous command
-        terminal.scrollLines(-5);
+        // Scroll to previous command output (approximate)
+        // VS Code uses command detection, we use larger scroll increments
+        const terminalRows = terminal.rows || 24;
+        terminal.scrollLines(-Math.floor(terminalRows / 2));
         break;
       case 'nextCommand':
-        // Scroll down by larger increments to find next command
-        terminal.scrollLines(5);
+        // Scroll to next command output (approximate)
+        // VS Code uses command detection, we use larger scroll increments  
+        const rows = terminal.rows || 24;
+        terminal.scrollLines(Math.floor(rows / 2));
         break;
     }
 
@@ -839,6 +814,12 @@ export class InputManager extends BaseManager implements IInputManager {
 
     // CRITICAL: Set up keyboard input handling for terminal
     terminal.onData((data: string) => {
+      // Skip processing during IME composition to prevent input duplication
+      if (this.imeHandler.isIMEComposing()) {
+        this.logger.debug(`Terminal ${terminalId} skipping input during IME composition: ${data.length} chars`);
+        return;
+      }
+      
       this.logger.debug(`Terminal ${terminalId} data: ${data.length} chars`);
       manager.postMessageToExtension({
         command: 'input',
@@ -965,7 +946,7 @@ export class InputManager extends BaseManager implements IInputManager {
    * Check if IME is currently composing
    */
   public isIMEComposing(): boolean {
-    return this.isComposing;
+    return this.imeHandler.isIMEComposing();
   }
 
   /**
@@ -1004,7 +985,7 @@ export class InputManager extends BaseManager implements IInputManager {
 
     const arrowKeyHandler = (event: KeyboardEvent): void => {
       // Only log when in agent interaction mode for debugging
-      if (!this.agentInteractionMode || this.isComposing) {
+      if (!this.agentInteractionMode || this.imeHandler.isIMEComposing()) {
         return;
       }
 
@@ -1094,7 +1075,7 @@ export class InputManager extends BaseManager implements IInputManager {
     manager: IManagerCoordinator
   ): boolean {
     // Ignore if IME is composing
-    if (this.isComposing) {
+    if (this.imeHandler.isIMEComposing()) {
       return false;
     }
 
@@ -1141,8 +1122,10 @@ export class InputManager extends BaseManager implements IInputManager {
       isVSCodeAltClickEnabled: false,
       isAltKeyPressed: false,
     };
-    this.isComposing = false;
     this.agentInteractionMode = false;
+
+    // Dispose IME handler
+    this.imeHandler.dispose();
 
     // Reset VS Code keybinding system state
     this.sendKeybindingsToShell = false;

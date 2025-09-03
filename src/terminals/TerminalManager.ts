@@ -1378,7 +1378,7 @@ export class TerminalManager {
    */
   public getDisconnectedAgents(): Map<
     string,
-    { type: 'claude' | 'gemini'; startTime: Date; terminalName?: string }
+    { type: 'claude' | 'gemini' | 'codex'; startTime: Date; terminalName?: string }
   > {
     return this._cliAgentService.getDisconnectedAgents();
   }
@@ -1394,9 +1394,9 @@ export class TerminalManager {
   /**
    * Get the connected agent type
    */
-  public getConnectedAgentType(): 'claude' | 'gemini' | null {
+  public getConnectedAgentType(): 'claude' | 'gemini' | 'codex' | null {
     const connectedAgent = this._cliAgentService.getConnectedAgent();
-    return connectedAgent ? (connectedAgent.type as 'claude' | 'gemini') : null;
+    return connectedAgent ? (connectedAgent.type as 'claude' | 'gemini' | 'codex') : null;
   }
 
   /**

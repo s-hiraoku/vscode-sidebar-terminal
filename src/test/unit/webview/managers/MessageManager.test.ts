@@ -301,12 +301,12 @@ describe('RefactoredMessageManager', () => {
   describe('Input Message Methods', () => {
     it('should send input messages with high priority', () => {
       // Mock postMessageToExtension to block processing
-      let resolveMessage: () => void;
+      let _resolveMessage: () => void;
       const messagePromise = new Promise<void>(resolve => {
-        resolveMessage = resolve;
+        _resolveMessage = resolve;
       });
       
-      mockCoordinator.postMessageToExtension = sinon.stub().returns(messagePromise);
+      mockCoordinator.postMessageToExtension = sinon.stub().returns(messagePromise) as any;
 
       messageManager.sendInput('test input', 'terminal-1');
 
