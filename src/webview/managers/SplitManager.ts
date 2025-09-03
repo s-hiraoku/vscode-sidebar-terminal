@@ -359,7 +359,7 @@ export class SplitManager extends BaseManager {
           this.coordinator?.setActiveTerminalId(clickedTerminalId);
         },
         onAiAgentToggleClick: (clickedTerminalId: string) => {
-          splitLogger.info(`🔌 AI Agent toggle clicked for split terminal: ${clickedTerminalId}`);
+          splitLogger.info(`✨ AI Agent toggle clicked for split terminal: ${clickedTerminalId}`);
           if (this.coordinator && 'handleAiAgentToggle' in this.coordinator) {
             (this.coordinator as any).handleAiAgentToggle(clickedTerminalId);
           }

@@ -161,7 +161,7 @@ describe('Logger', () => {
 
       expect(consoleLogStub).to.have.been.called;
       const call = consoleLogStub.getCall(0);
-      expect(call.args[0]).to.match(/\[\d{2}:\d{2}:\d{2}\.\d{3}\] 🔌 \[DEBUG:TERMINAL\]/);
+      expect(call.args[0]).to.match(/\[\d{2}:\d{2}:\d{2}\.\d{3}\] ✨ \[DEBUG:TERMINAL\]/);
       expect(call.args[1]).to.equal('terminal test');
     });
 

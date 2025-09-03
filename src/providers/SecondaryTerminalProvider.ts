@@ -796,14 +796,14 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
           break;
         }
         case 'switchAiAgent': {
-          log('🔌 [DEBUG] ========== SWITCH AI AGENT COMMAND RECEIVED ==========');
-          log('🔌 [DEBUG] Full message:', message);
+          log('✨ [DEBUG] ========== SWITCH AI AGENT COMMAND RECEIVED ==========');
+          log('✨ [DEBUG] Full message:', message);
 
           const terminalId = message.terminalId as string;
           const action = message.action as string;
 
           if (terminalId) {
-            log(`🔌 [DEBUG] Switching AI Agent for terminal: ${terminalId} (action: ${action})`);
+            log(`✨ [DEBUG] Switching AI Agent for terminal: ${terminalId} (action: ${action})`);
             try {
               // Call TerminalManager's switchAiAgentConnection method
               const result = this._terminalManager.switchAiAgentConnection(terminalId);
