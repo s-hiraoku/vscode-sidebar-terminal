@@ -700,11 +700,30 @@ export class RefactoredMessageManager implements IMessageManager {
   } {
     const stats = this.messageQueue.getQueueStats();
     return {
-      queueSize: stats.total,
+      queueSize: stats.normal, // Return normal queue size as the main queue size
       isProcessing: stats.isProcessing,
       highPriorityQueueSize: stats.highPriority || 0,
       isLocked: false, // MessageQueue doesn't have lock concept, default to false
     };
+  }
+
+  /**
+   * Internal method for queue manipulation (used by tests)
+   */
+  public queueMessage(message: unknown, coordinator: IManagerCoordinator): void {
+    this.coordinator = coordinator;
+    void this.messageQueue.enqueue(message);
+  }
+
+  /**
+   * Process message queue manually (used by tests)
+   */
+  public async processMessageQueue(coordinator?: IManagerCoordinator): Promise<void> {
+    if (coordinator) {
+      this.coordinator = coordinator;
+    }
+    // MessageQueue processes automatically, but we can force a flush for testing
+    await this.messageQueue.flush();
   }
 
   public sendInput(input: string, terminalId?: string, coordinator?: IManagerCoordinator): void {

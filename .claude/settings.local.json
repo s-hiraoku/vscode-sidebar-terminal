@@ -109,7 +109,8 @@
       "Bash(/release patch)",
       "Bash(timeout:*)",
       "Bash(git restore:*)",
-      "mcp__deepwiki__read_wiki_contents"
+      "mcp__deepwiki__read_wiki_contents",
+      "Bash(gh run watch:*)"
     ],
     "deny": []
   },
