@@ -20,10 +20,12 @@ if (!(global as any).window) {
 import * as sinon from 'sinon';
 import * as chai from 'chai';
 import sinonChai from 'sinon-chai';
+import chaiAsPromised from 'chai-as-promised';
 import { JSDOM } from 'jsdom';
 
-// Set up sinon-chai
+// Set up chai plugins
 chai.use(sinonChai);
+chai.use(chaiAsPromised);
 
 /**
  * VS Code API のモックオブジェクト
@@ -76,7 +78,15 @@ export const mockVscode = {
     onDidChangeConfiguration: sinon.stub().returns({
       dispose: sinon.stub(),
     }),
-    workspaceFolders: [{ uri: { fsPath: '/test/workspace' } }],
+    workspaceFolders: [{ 
+      uri: { 
+        fsPath: '/test/workspace',
+        scheme: 'file',
+        path: '/test/workspace',
+        toString: () => 'file:///test/workspace',
+      },
+      name: 'test-workspace',
+    }],
     name: 'test-workspace',
   },
   window: {
@@ -87,6 +97,24 @@ export const mockVscode = {
     registerWebviewViewProvider: sinon.stub(),
     showOpenDialog: sinon.stub().resolves(),
     showSaveDialog: sinon.stub().resolves(),
+    activeTextEditor: {
+      document: {
+        uri: {
+          scheme: 'file',
+          fsPath: '/test/file.ts',
+          path: '/test/file.ts',
+          toString: () => 'file:///test/file.ts',
+        },
+        getText: sinon.stub().returns('test content'),
+        lineAt: sinon.stub().returns({ text: 'test line' }),
+        lineCount: 10,
+      },
+      selection: {
+        start: { line: 0, character: 0 },
+        end: { line: 0, character: 0 },
+        isEmpty: true,
+      },
+    },
   },
   commands: {
     registerCommand: sinon.stub(),
@@ -150,6 +178,11 @@ export const mockVscode = {
   },
   env: {
     openExternal: sinon.stub().resolves(),
+  },
+  ConfigurationTarget: {
+    Global: 1,
+    Workspace: 2,
+    WorkspaceFolder: 3,
   },
 };
 

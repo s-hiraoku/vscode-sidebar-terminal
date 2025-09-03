@@ -521,6 +521,13 @@ export interface WebviewMessage {
     | 'deleteTerminalResponse'  // 🎯 FIX: 削除処理統一化で追加
     | 'switchAiAgentResponse'  // AIエージェント切り替えレスポンス
     | 'phase8ServicesReady'   // Phase 8: Terminal Decorations & Links service ready notification
+    | 'htmlScriptTest'        // HTML script test message
+    | 'webviewReady'          // WebView ready notification
+    | 'ready'                 // General ready notification
+    | 'createTerminal'        // Create terminal request
+    | 'splitTerminal'         // Split terminal request
+    | 'updateSettings'        // Update settings request
+    | 'terminalClosed'        // Terminal closed notification
     | 'error';
   config?: TerminalConfig;
   data?: string;

@@ -9,7 +9,6 @@ import { EnhancedShellIntegrationService } from '../services/EnhancedShellIntegr
 import { KeyboardShortcutService } from '../services/KeyboardShortcutService';
 import { TerminalDecorationsService } from '../services/TerminalDecorationsService';
 import { TerminalLinksService } from '../services/TerminalLinksService';
-import { VSCODE_COMMANDS } from '../constants';
 
 /**
  * VS Code拡張機能のライフサイクル管理
