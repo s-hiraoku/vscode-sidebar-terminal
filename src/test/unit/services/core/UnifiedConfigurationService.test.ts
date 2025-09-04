@@ -42,7 +42,7 @@ describe('UnifiedConfigurationService', () => {
     });
 
     it('should register configuration watcher', () => {
-      assert.ok(vscode.workspace.onDidChangeConfiguration.called);
+      assert.ok((vscode.workspace.onDidChangeConfiguration as sinon.SinonStub).called);
     });
   });
 
@@ -386,7 +386,7 @@ describe('UnifiedConfigurationService', () => {
       assert.ok(snapshot.editor);
       assert.ok(snapshot.metadata);
       assert.ok(snapshot.metadata.timestamp);
-      assert.typeof(snapshot.metadata.cacheSize, 'number');
+      assert.strictEqual(typeof snapshot.metadata.cacheSize, 'number');
     });
   });
 
@@ -507,7 +507,7 @@ describe('UnifiedConfigurationService', () => {
 
       // Validate configuration
       const validation = service.validateConfiguration();
-      assert.typeof(validation.isValid, 'boolean');
+      assert.strictEqual(typeof validation.isValid, 'boolean');
 
       // Get snapshot
       const snapshot = service.getConfigurationSnapshot();

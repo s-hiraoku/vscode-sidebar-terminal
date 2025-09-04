@@ -1,4 +1,4 @@
-import { IManagerCoordinator } from '../../webview/interfaces/IManagerCoordinator';
+// import { IManagerCoordinator } from '../../webview/interfaces/IManagerCoordinator';
 import { terminal as log } from '../../utils/logger';
 
 /**
@@ -40,7 +40,7 @@ export class WebViewManagerRegistry {
   private readonly _initializationOrder: string[] = [];
   
   private _isInitialized = false;
-  private _coordinator?: IManagerCoordinator;
+  private _coordinator?: any; // IManagerCoordinator;
 
   constructor() {
     log('🏗️ [ManagerRegistry] WebView manager registry initialized');
@@ -183,7 +183,7 @@ export class WebViewManagerRegistry {
   /**
    * Initialize all managers in dependency order
    */
-  async initializeManagers(coordinator?: IManagerCoordinator): Promise<void> {
+  async initializeManagers(coordinator?: any): Promise<void> {
     if (this._isInitialized) {
       log('⚠️ [ManagerRegistry] Managers already initialized');
       return;
