@@ -50,22 +50,37 @@ export const mockVscode = {
               showHeader: true,
               showIcons: true,
               altClickMovesCursor: true,
+              enableCliAgentIntegration: true,
+              enableGitHubCopilotIntegration: true,
+              enablePersistentSessions: true,
+              persistentSessionScrollback: 1000,
+              persistentSessionReviveProcess: false,
             };
-            return defaults[key] !== undefined ? defaults[key] : defaultValue;
+            // Return default value if key exists in defaults, otherwise return the provided default
+            return key in defaults ? defaults[key] : defaultValue;
           }
           if (section === 'terminal.integrated') {
             const defaults: { [key: string]: unknown } = {
               shell: '/bin/bash',
               shellArgs: [],
               altClickMovesCursor: true,
+              profiles: {},
+              defaultProfile: {},
             };
-            return defaults[key] !== undefined ? defaults[key] : defaultValue;
+            return key in defaults ? defaults[key] : defaultValue;
           }
           if (section === 'editor') {
             const defaults: { [key: string]: unknown } = {
               multiCursorModifier: 'alt',
             };
-            return defaults[key] !== undefined ? defaults[key] : defaultValue;
+            return key in defaults ? defaults[key] : defaultValue;
+          }
+          if (section === 'workbench') {
+            const defaults: { [key: string]: unknown } = {
+              colorTheme: 'One Dark Pro',
+              iconTheme: 'vscode-icons',
+            };
+            return key in defaults ? defaults[key] : defaultValue;
           }
           return defaultValue;
         }),
@@ -492,6 +507,35 @@ export function setupJSDOMEnvironment(htmlContent?: string): {
   };
 
   return { dom, document, window };
+}
+
+/**
+ * テスト分離とクリーンアップのためのリセット関数
+ * テスト間で状態が持ち越されることを防ぐ
+ */
+export function resetTestEnvironment(): void {
+  // Clear all Sinon state safely
+  try {
+    sinon.reset();
+  } catch (error) {
+    // Reset may fail if nothing to reset, this is OK
+  }
+  
+  try {
+    sinon.restore();
+  } catch (error) {
+    // Restore may fail if nothing to restore, this is OK
+  }
+}
+
+/**
+ * 安全なSinon stub作成 - "already wrapped" エラーを防ぐ
+ */
+export function safeStub(obj: any, method: string): sinon.SinonStub {
+  if (obj[method] && obj[method].restore) {
+    obj[method].restore();
+  }
+  return sinon.stub(obj, method);
 }
 
 /**

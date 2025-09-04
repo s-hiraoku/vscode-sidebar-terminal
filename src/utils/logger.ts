@@ -65,6 +65,14 @@ class Logger {
     this.level = level;
   }
 
+  // Public query helpers
+  isDebugEnabled(): boolean {
+    return this.level <= LogLevel.DEBUG;
+  }
+  isInfoEnabled(): boolean {
+    return this.level <= LogLevel.INFO;
+  }
+
   private setupProductionLogging(): void {
     // In production, use buffered logging for performance
     this.flushTimer = setInterval(() => {
@@ -349,3 +357,7 @@ export const agent = (...args: unknown[]): void => logger.agent(...args);
 export const file = (...args: unknown[]): void => logger.file(...args);
 export const network = (...args: unknown[]): void => logger.network(...args);
 export const state = (...args: unknown[]): void => logger.state(...args);
+
+// Query helpers
+export const isDebugEnabled = (): boolean => logger.isDebugEnabled();
+export const isInfoEnabled = (): boolean => logger.isInfoEnabled();

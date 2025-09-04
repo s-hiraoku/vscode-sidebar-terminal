@@ -11,7 +11,7 @@ import * as vscode from 'vscode';
 // =================== Detection Result Types ===================
 
 export interface CliAgentDetectionResult {
-  type: 'claude' | 'gemini';
+  type: 'claude' | 'gemini' | 'codex';
   confidence: number;
   source: 'input' | 'output' | 'startup' | 'termination';
   detectedLine?: string;
@@ -28,11 +28,11 @@ export interface TerminationDetectionResult {
 
 export interface CliAgentState {
   status: 'connected' | 'disconnected' | 'none';
-  agentType: 'claude' | 'gemini' | null;
+  agentType: 'claude' | 'gemini' | 'codex' | null;
 }
 
 export interface DisconnectedAgentInfo {
-  type: 'claude' | 'gemini';
+  type: 'claude' | 'gemini' | 'codex';
   startTime: Date;
   terminalName?: string;
 }
@@ -210,7 +210,7 @@ export interface ICliAgentStateManager {
    * @param type Agent type
    * @param terminalName Terminal name
    */
-  setConnectedAgent(terminalId: string, type: 'claude' | 'gemini', terminalName?: string): void;
+  setConnectedAgent(terminalId: string, type: 'claude' | 'gemini' | 'codex', terminalName?: string): void;
 
   /**
    * Set a CLI agent as terminated/disconnected
@@ -238,7 +238,7 @@ export interface ICliAgentStateManager {
    * Get connected agent type
    * @returns Agent type of connected agent or null
    */
-  getConnectedAgentType(): 'claude' | 'gemini' | null;
+  getConnectedAgentType(): 'claude' | 'gemini' | 'codex' | null;
 
   /**
    * Check if a terminal has a connected CLI agent

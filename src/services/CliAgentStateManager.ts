@@ -7,7 +7,7 @@ import { terminal as log } from '../utils/logger';
  */
 export class CliAgentStateManager implements ICliAgentStateManager {
   private _connectedAgentTerminalId: string | null = null;
-  private _connectedAgentType: 'claude' | 'gemini' | null = null;
+  private _connectedAgentType: 'claude' | 'gemini' | 'codex' | null = null;
   private _disconnectedAgents = new Map<string, DisconnectedAgentInfo>();
 
   private readonly _onStatusChange = new vscode.EventEmitter<{
@@ -17,7 +17,7 @@ export class CliAgentStateManager implements ICliAgentStateManager {
     terminalName?: string;
   }>();
 
-  setConnectedAgent(terminalId: string, type: 'claude' | 'gemini', terminalName?: string): void {
+  setConnectedAgent(terminalId: string, type: 'claude' | 'gemini' | 'codex', terminalName?: string): void {
     // 🚨 FIX: Prevent unnecessary state changes for already connected agent
     if (this._connectedAgentTerminalId === terminalId && this._connectedAgentType === type) {
       log(
@@ -322,7 +322,7 @@ export class CliAgentStateManager implements ICliAgentStateManager {
     return this._connectedAgentTerminalId;
   }
 
-  getConnectedAgentType(): 'claude' | 'gemini' | null {
+  getConnectedAgentType(): 'claude' | 'gemini' | 'codex' | null {
     return this._connectedAgentType;
   }
 

@@ -18,6 +18,9 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   private _isInitialized = false; // Prevent duplicate initialization
   // Removed all state variables - using simple "fresh start" approach
 
+  // Minimal command router for incoming webview messages
+  private _messageHandlers = new Map<string, (message: WebviewMessage) => Promise<void> | void>();
+
   constructor(
     private readonly _extensionContext: vscode.ExtensionContext,
     private readonly _terminalManager: TerminalManager,
@@ -53,9 +56,20 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         (message: WebviewMessage) => {
           log('📨 [PROVIDER] ✅ MESSAGE RECEIVED FROM WEBVIEW!');
           log('📨 [PROVIDER] Message command:', message.command);
-          log('📨 [PROVIDER] Message data:', message);
+          try {
+            const { isDebugEnabled } = require('../utils/logger');
+            if (isDebugEnabled && isDebugEnabled()) {
+              log('📨 [PROVIDER] Message data:', message);
+            }
+          } catch {}
           log('📨 [PROVIDER] WebView visible:', webviewView.visible);
           
+          // Validate message before handling
+          if (!this._isValidWebviewMessage(message)) {
+            log('⚠️ [PROVIDER] Invalid WebviewMessage received, ignoring');
+            return;
+          }
+
           // Handle message immediately
           this._handleWebviewMessage(message).catch(error => {
             log('❌ [PROVIDER] Error handling message:', error);
@@ -68,6 +82,9 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       // Add disposable to subscriptions for cleanup
       this._extensionContext.subscriptions.push(messageDisposable);
       log('✅ [PROVIDER] Message listener registered and added to subscriptions');
+
+      // Initialize minimal router
+      this._initializeMessageHandlers();
 
       // STEP 3: Set up visibility listener
       log('🔧 [PROVIDER] Step 3: Setting up visibility listener...');
@@ -109,6 +126,500 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       log('❌ [CRITICAL] Failed to resolve WebView:', error);
       this._handleWebviewSetupError(webviewView, error);
     }
+  }
+
+  /**
+   * Minimal validation for incoming WebviewMessage
+   */
+  private _isValidWebviewMessage(msg: unknown): msg is WebviewMessage {
+    return !!msg && typeof msg === 'object' && typeof (msg as any).command === 'string';
+  }
+
+  /**
+   * Type guard: message has a valid terminalId
+   */
+  private _hasTerminalId(msg: WebviewMessage): msg is WebviewMessage & { terminalId: string } {
+    return typeof (msg as any).terminalId === 'string' && (msg as any).terminalId.length > 0;
+  }
+
+  /**
+   * Type guard: message has valid resize params
+   */
+  private _hasResizeParams(msg: WebviewMessage): msg is WebviewMessage & { cols: number; rows: number } {
+    const { cols, rows } = msg as any;
+    return typeof cols === 'number' && typeof rows === 'number' && cols > 0 && rows > 0;
+  }
+
+  /**
+   * Type guard: message has settings payload
+   */
+  private _hasSettings(msg: WebviewMessage): msg is WebviewMessage & { settings: PartialTerminalSettings } {
+    return !!(msg as any).settings && typeof (msg as any).settings === 'object';
+  }
+
+  /**
+   * Type guard: message has non-empty input data
+   */
+  private _hasInputData(msg: WebviewMessage): msg is WebviewMessage & { data: string } {
+    return typeof (msg as any).data === 'string' && (msg as any).data.length > 0;
+  }
+
+  /**
+   * Initialize a minimal command→handler map without behavior change
+   */
+  private _initializeMessageHandlers(): void {
+    // Handle readiness messages via a dedicated handler
+    this._messageHandlers.set('webviewReady', (message) => this._handleWebviewReady(message));
+    // Alias: support constant-based command name
+    if (TERMINAL_CONSTANTS?.COMMANDS?.READY) {
+      this._messageHandlers.set(TERMINAL_CONSTANTS.COMMANDS.READY, (message) => this._handleWebviewReady(message));
+    }
+
+    // Safe, side-effect-free query: getSettings
+    this._messageHandlers.set('getSettings', async () => {
+      await this._handleGetSettings();
+    });
+
+    // Focus a terminal
+    this._messageHandlers.set('focusTerminal', async (message) => {
+      await this._handleFocusTerminal(message);
+    });
+    if (TERMINAL_CONSTANTS?.COMMANDS?.FOCUS_TERMINAL) {
+      this._messageHandlers.set(TERMINAL_CONSTANTS.COMMANDS.FOCUS_TERMINAL, async (message) => {
+        await this._handleFocusTerminal(message);
+      });
+    }
+
+    // Split terminal (direction optional)
+    this._messageHandlers.set('splitTerminal', (message) => {
+      this._handleSplitTerminal(message);
+    });
+
+    // Create terminal (maps Extension ID to WebView ID when created)
+    this._messageHandlers.set('createTerminal', async (message) => {
+      await this._handleCreateTerminal(message);
+    });
+    if (TERMINAL_CONSTANTS?.COMMANDS?.CREATE_TERMINAL) {
+      this._messageHandlers.set(TERMINAL_CONSTANTS.COMMANDS.CREATE_TERMINAL, async (message) => {
+        await this._handleCreateTerminal(message);
+      });
+    }
+
+    // Terminal input
+    if (TERMINAL_CONSTANTS?.COMMANDS?.INPUT) {
+      this._messageHandlers.set(TERMINAL_CONSTANTS.COMMANDS.INPUT, (message) => {
+        this._handleTerminalInput(message);
+      });
+    }
+
+    // Terminal resize
+    if (TERMINAL_CONSTANTS?.COMMANDS?.RESIZE) {
+      this._messageHandlers.set(TERMINAL_CONSTANTS.COMMANDS.RESIZE, (message) => {
+        this._handleTerminalResize(message);
+      });
+    }
+
+    // Kill terminal (active or specific)
+    this._messageHandlers.set('killTerminal', async (message) => {
+      await this._handleKillTerminal(message);
+    });
+
+    // Delete terminal (specific, with response)
+    this._messageHandlers.set('deleteTerminal', async (message) => {
+      await this._handleDeleteTerminal(message);
+    });
+
+    // Update settings
+    this._messageHandlers.set('updateSettings', async (message) => {
+      await this._handleUpdateSettings(message);
+    });
+
+    // Report panel location
+    this._messageHandlers.set('reportPanelLocation', async (message) => {
+      await this._handleReportPanelLocation(message);
+    });
+
+    // Terminal closed (from WebView)
+    this._messageHandlers.set('terminalClosed', async (message) => {
+      await this._handleTerminalClosed(message);
+    });
+
+    // Request initial terminal creation (if none exists)
+    this._messageHandlers.set('requestInitialTerminal', async (message) => {
+      await this._handleRequestInitialTerminal(message);
+    });
+
+    // Debug/diagnostic messages
+    this._messageHandlers.set('htmlScriptTest', (message) => this._handleHtmlScriptTest(message));
+    this._messageHandlers.set('timeoutTest', (message) => this._handleTimeoutTest(message));
+    this._messageHandlers.set('test', (message) => this._handleDebugTest(message));
+  }
+
+  /**
+   * Extracted handler for webview readiness
+   */
+  private _handleWebviewReady(_message: WebviewMessage): void {
+    if (this._isInitialized) {
+      log('🔄 [DEBUG] WebView already initialized, skipping duplicate initialization');
+      return;
+    }
+
+    log('🎯 [DEBUG] WebView ready - initializing terminal immediately');
+    this._isInitialized = true;
+
+    void (async () => {
+      try {
+        await this._initializeTerminal();
+        log('✅ [DEBUG] Terminal initialization completed immediately');
+
+        // Avoid duplicate terminal creation; ensure minimum when none exists
+        setTimeout(() => {
+          if (this._terminalManager.getTerminals().length === 0) {
+            log('🎯 [ENSURE] No terminals exist - creating minimum set');
+            this._ensureMultipleTerminals();
+          }
+        }, 100);
+      } catch (error) {
+        log('❌ [ERROR] Failed during webviewReady handling:', error);
+      }
+    })();
+  }
+
+  /**
+   * Extracted handler for getSettings, preserves existing behavior
+   */
+  private async _handleGetSettings(): Promise<void> {
+    log('⚙️ [DEBUG] Getting settings from webview...');
+    const settings = this.getCurrentSettings();
+    const fontSettings = this.getCurrentFontSettings();
+
+    await this._sendMessage({
+      command: 'settingsResponse',
+      settings,
+    });
+
+    // Send font settings separately
+    await this._sendMessage({
+      command: 'fontSettingsUpdate',
+      fontSettings,
+    });
+
+    // Send initial panel location and request detection (Issue #148)
+    if (this._view) {
+      const panelLocation = this._getCurrentPanelLocation();
+      log(`📍 [SETTINGS] Sending initial panel location: ${panelLocation}`);
+      await this._sendMessage({
+        command: 'panelLocationUpdate',
+        location: panelLocation,
+      });
+
+      // Also request WebView to detect actual panel location
+      this._requestPanelLocationDetection();
+    }
+  }
+
+  /**
+   * Extracted handler for focusing a terminal
+   */
+  private async _handleFocusTerminal(message: WebviewMessage): Promise<void> {
+    log('🎯 [DEBUG] ========== FOCUS TERMINAL COMMAND RECEIVED (router) ==========');
+    if (!this._hasTerminalId(message)) {
+      log('❌ [DEBUG] No terminal ID provided for focusTerminal');
+      return;
+    }
+
+    try {
+      const currentActive = this._terminalManager.getActiveTerminalId();
+      log(`🔍 [DEBUG] Current active terminal: ${currentActive}`);
+      log(`🔍 [DEBUG] Requested active terminal: ${message.terminalId}`);
+      this._terminalManager.setActiveTerminal(message.terminalId);
+      const newActive = this._terminalManager.getActiveTerminalId();
+      log(`🔍 [DEBUG] Verified active terminal after update: ${newActive}`);
+
+      if (newActive === message.terminalId) {
+        log(`✅ [DEBUG] Active terminal successfully updated to: ${message.terminalId}`);
+      } else {
+        log(`❌ [DEBUG] Active terminal update failed. Expected: ${message.terminalId}, Got: ${newActive}`);
+      }
+    } catch (error) {
+      log(`❌ [DEBUG] Error setting active terminal:`, error);
+    }
+  }
+
+  /**
+   * Extracted handler for splitting a terminal
+   */
+  private _handleSplitTerminal(message: WebviewMessage): void {
+    log('🔀 [DEBUG] Splitting terminal from webview (router)...');
+    const direction = (message as any).direction as 'horizontal' | 'vertical' | undefined;
+    try {
+      // Preserve previous behavior: if no direction provided, use default
+      if (direction) {
+        this.splitTerminal(direction);
+      } else {
+        this.splitTerminal();
+      }
+    } catch (error) {
+      log('❌ [ERROR] Failed to split terminal:', error);
+      TerminalErrorHandler.handleWebviewError(error);
+    }
+  }
+
+  /**
+   * Debug: HTML inline script test
+   */
+  private _handleHtmlScriptTest(message: WebviewMessage): void {
+    log('🔥 [DEBUG] ========== HTML INLINE SCRIPT TEST MESSAGE RECEIVED ==========');
+    log('🔥 [DEBUG] HTML script communication is working!');
+    log('🔥 [DEBUG] Message content:', message);
+  }
+
+  /**
+   * Debug: HTML timeout test
+   */
+  private _handleTimeoutTest(message: WebviewMessage): void {
+    log('🔥 [DEBUG] ========== HTML TIMEOUT TEST MESSAGE RECEIVED ==========');
+    log('🔥 [DEBUG] Timeout test communication is working!');
+    log('🔥 [DEBUG] Message content:', message);
+  }
+
+  /**
+   * Debug: generic test message handler
+   */
+  private _handleDebugTest(message: WebviewMessage): void {
+    if ((message as WebviewMessage & { type?: string }).type === 'initComplete') {
+      log('🎆 [TRACE] ===============================');
+      log('🎆 [TRACE] WEBVIEW CONFIRMS INIT COMPLETE!');
+            try {
+              const { isDebugEnabled } = require('../utils/logger');
+              if (isDebugEnabled && isDebugEnabled()) {
+                log('🎆 [TRACE] Message data:', message);
+              }
+            } catch {}
+      log('🎆 [TRACE] This means WebView successfully processed INIT message');
+    } else {
+      log('🧪 [DEBUG] ========== TEST MESSAGE RECEIVED FROM WEBVIEW ==========');
+      log('🧪 [DEBUG] Test message content:', message);
+      log('🧪 [DEBUG] WebView communication is working!');
+    }
+  }
+
+  /**
+   * Extracted handler for creating a terminal from WebView request
+   * Mirrors existing behavior: create PTY and map Extension ID → WebView ID
+   */
+  private async _handleCreateTerminal(message: WebviewMessage): Promise<void> {
+    if (!message.terminalId || !message.terminalName) {
+      log('⚠️ [DEBUG] Missing terminalId or terminalName for createTerminal');
+      return;
+    }
+
+    log('🚀 [DEBUG] Creating terminal from WebView request (router):', message.terminalId, message.terminalName);
+    try {
+      // Avoid duplicates if terminal already exists on extension side
+      const existingTerminal = this._terminalManager.getTerminal(message.terminalId);
+      if (!existingTerminal) {
+        const newTerminalId = this._terminalManager.createTerminal();
+        log(`✅ [VS Code Pattern] PTY terminal created: ${newTerminalId}`);
+
+        const terminalInstance = this._terminalManager.getTerminal(newTerminalId);
+        if (terminalInstance) {
+          this._terminalIdMapping = this._terminalIdMapping || new Map();
+          this._terminalIdMapping.set(newTerminalId, message.terminalId);
+          log(`🔗 [VS Code Pattern] Mapped Extension ID ${newTerminalId} → WebView ID ${message.terminalId}`);
+        } else {
+          log(`❌ [VS Code Pattern] Failed to get terminal instance for ${newTerminalId}`);
+        }
+      } else {
+        log(`⚠️ [DEBUG] Terminal ${message.terminalId} already exists, skipping creation`);
+      }
+    } catch (error) {
+      log(`❌ [DEBUG] Failed to create PTY terminal: ${String(error)}`);
+    }
+  }
+
+  /**
+   * Extracted handler: request initial terminal creation (if none exists)
+   */
+  private async _handleRequestInitialTerminal(_message: WebviewMessage): Promise<void> {
+    log('🚨 [DEBUG] WebView requested initial terminal creation (router)');
+    try {
+      if (this._terminalManager.getTerminals().length === 0) {
+        log('🎯 [INITIAL] Creating initial terminal as requested by WebView');
+        const terminalId = this._terminalManager.createTerminal();
+        log(`✅ [INITIAL] Initial terminal created: ${terminalId}`);
+        this._terminalManager.setActiveTerminal(terminalId);
+
+        // Send terminal update to WebView
+        void this._sendMessage({
+          command: 'stateUpdate',
+          state: this._terminalManager.getCurrentState(),
+        });
+      } else {
+        log(
+          `🔍 [INITIAL] Terminals already exist (${this._terminalManager.getTerminals().length}), skipping creation`
+        );
+      }
+    } catch (error) {
+      log(`❌ [INITIAL] Failed to create requested initial terminal: ${String(error)}`);
+      console.error('❌ [INITIAL] Error details:', error);
+    }
+  }
+
+  /**
+   * Extracted handler: terminal input
+   */
+  private _handleTerminalInput(message: WebviewMessage): void {
+    if (!this._hasInputData(message)) {
+      log('⚠️ [DEBUG] Invalid input data');
+      return;
+    }
+    log('⌨️ [DEBUG] Terminal input (router):', message.data.length, 'chars');
+    this._terminalManager.sendInput(message.data, message.terminalId);
+  }
+
+  /**
+   * Extracted handler: terminal resize
+   */
+  private _handleTerminalResize(message: WebviewMessage): void {
+    if (!this._hasResizeParams(message)) {
+      log('⚠️ [DEBUG] Invalid resize parameters');
+      return;
+    }
+    log('📏 [DEBUG] Terminal resize (router):', message.cols, 'x', message.rows);
+    this._terminalManager.resize(message.cols, message.rows, message.terminalId);
+  }
+
+  /**
+   * Extracted handler for terminalClosed from WebView
+   */
+  private async _handleTerminalClosed(message: WebviewMessage): Promise<void> {
+    const termId = message.terminalId;
+    log('🗑️ [DEBUG] Terminal closed from webview (router):', termId);
+    if (!termId) {
+      log('⚠️ [DEBUG] No terminalId provided for terminalClosed');
+      return;
+    }
+
+    // Check if terminal still exists before removing
+    const terminals = this._terminalManager.getTerminals();
+    const terminalExists = terminals.some((t) => t.id === termId);
+    if (terminalExists) {
+      log('🗑️ [DEBUG] Removing terminal from extension side:', termId);
+      this._terminalManager.removeTerminal(termId);
+    } else {
+      log('🔄 [DEBUG] Terminal already removed from extension side:', termId);
+    }
+  }
+
+  /**
+   * Extracted handler for killing a terminal (active or specific)
+   */
+  private async _handleKillTerminal(message: WebviewMessage): Promise<void> {
+    log('🗑️ [DEBUG] ========== KILL TERMINAL COMMAND RECEIVED (router) ==========');
+    log('🗑️ [DEBUG] Full message:', message);
+    log('🗑️ [DEBUG] Message terminalId:', message.terminalId);
+
+    try {
+      if (message.terminalId) {
+        // Kill specific terminal
+        log(`🗑️ [DEBUG] Killing specific terminal: ${message.terminalId}`);
+        await this.killSpecificTerminal(message.terminalId);
+        log(`🗑️ [DEBUG] killSpecificTerminal completed for: ${message.terminalId}`);
+      } else {
+        // Kill active terminal (panel trash button behavior)
+        log('🗑️ [DEBUG] Killing active terminal (no specific ID provided)');
+        await this.killTerminal();
+        log('🗑️ [DEBUG] killTerminal (active terminal deletion) completed');
+      }
+    } catch (error) {
+      log('❌ [DEBUG] Error while handling killTerminal:', error);
+      TerminalErrorHandler.handleWebviewError(error);
+    }
+  }
+
+  /**
+   * Extracted handler for deleting a specific terminal (with response)
+   */
+  private async _handleDeleteTerminal(message: WebviewMessage): Promise<void> {
+    log('🗑️ [DEBUG] ========== DELETE TERMINAL COMMAND RECEIVED (router) ==========');
+    log('🗑️ [DEBUG] Full message:', message);
+    const terminalId = this._hasTerminalId(message) ? message.terminalId : undefined;
+    const requestSource = (message.requestSource as 'header' | 'panel') || 'panel';
+
+    if (!terminalId) {
+      log('❌ [DEBUG] No terminal ID provided for deleteTerminal');
+      return;
+    }
+
+    try {
+      const result = await this._terminalManager.deleteTerminal(terminalId, { source: requestSource });
+
+      if (result.success) {
+        log(`✅ [DEBUG] Terminal deletion succeeded: ${terminalId}`);
+        await this._sendMessage({
+          command: 'deleteTerminalResponse',
+          terminalId,
+          success: true,
+        });
+      } else {
+        log(`⚠️ [DEBUG] Terminal deletion failed: ${terminalId}, reason: ${result.reason}`);
+        await this._sendMessage({
+          command: 'deleteTerminalResponse',
+          terminalId,
+          success: false,
+          reason: result.reason,
+        });
+      }
+    } catch (error) {
+      log('❌ [DEBUG] Error in deleteTerminal:', error);
+      await this._sendMessage({
+        command: 'deleteTerminalResponse',
+        terminalId,
+        success: false,
+        reason: `Delete failed: ${String(error)}`,
+      });
+    }
+  }
+
+  /**
+   * Extracted handler for updating settings
+   */
+  private async _handleUpdateSettings(message: WebviewMessage): Promise<void> {
+    log('⚙️ [DEBUG] Updating settings from webview (router):', message.settings);
+    if (!message || typeof message !== 'object' || !message.settings) {
+      log('⚠️ [DEBUG] No settings provided in updateSettings message');
+      return;
+    }
+    try {
+      await this.updateSettings(message.settings);
+    } catch (error) {
+      log('❌ [ERROR] Failed to update settings:', error);
+      TerminalErrorHandler.handleWebviewError(error);
+    }
+  }
+
+  /**
+   * Extracted handler for reporting panel location
+   */
+  private async _handleReportPanelLocation(message: WebviewMessage): Promise<void> {
+    log('📍 [DEBUG] Panel location reported from WebView (router):', message.location);
+    const loc = message.location;
+    if (loc !== 'sidebar' && loc !== 'panel') {
+      log('⚠️ [DEBUG] Invalid or missing panel location');
+      return;
+    }
+
+    // Update context key for VS Code when clause
+    void vscode.commands.executeCommand('setContext', 'secondaryTerminal.panelLocation', loc);
+    log('📍 [DEBUG] Context key updated with panel location:', loc);
+
+    // Notify WebView of the panel location (keeps behavior consistent)
+    await this._sendMessage({
+      command: 'panelLocationUpdate',
+      location: loc,
+    });
+    log('📍 [DEBUG] Panel location update sent to WebView:', loc);
   }
 
   /**
@@ -465,336 +976,50 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
    */
   private async _handleWebviewMessage(message: WebviewMessage): Promise<void> {
     log('📨 [DEBUG] Handling webview message:', message.command);
-    log('📨 [DEBUG] Full message object:', JSON.stringify(message, null, 2));
+    // Avoid expensive stringify unless debug is enabled
+    try {
+      const { isDebugEnabled } = require('../utils/logger');
+      if (isDebugEnabled && isDebugEnabled()) {
+        log('📨 [DEBUG] Full message object:', JSON.stringify(message, null, 2));
+      }
+    } catch {
+      // Fallback: skip detailed payload log
+    }
 
     try {
+      // Minimal router: if a handler exists, use it and return
+      const routed = this._messageHandlers.get(message.command);
+      if (routed) {
+        await routed(message);
+        return;
+      }
+
       switch (message.command) {
-        case 'htmlScriptTest':
-          log('🔥 [DEBUG] ========== HTML INLINE SCRIPT TEST MESSAGE RECEIVED ==========');
-          log('🔥 [DEBUG] HTML script communication is working!');
-          log('🔥 [DEBUG] Message content:', message);
-          break;
+        // htmlScriptTest handled by router
+        // timeoutTest handled by router
+        // test handled by router
 
-        case 'timeoutTest':
-          log('🔥 [DEBUG] ========== HTML TIMEOUT TEST MESSAGE RECEIVED ==========');
-          log('🔥 [DEBUG] Timeout test communication is working!');
-          log('🔥 [DEBUG] Message content:', message);
-          break;
+        // webviewReady/READY handled by router
 
-        case 'test':
-          if ((message as WebviewMessage & { type?: string }).type === 'initComplete') {
-            log('🎆 [TRACE] ===============================');
-            log('🎆 [TRACE] WEBVIEW CONFIRMS INIT COMPLETE!');
-            log('🎆 [TRACE] Message data:', message);
-            log('🎆 [TRACE] This means WebView successfully processed INIT message');
-          } else {
-            log('🧪 [DEBUG] ========== TEST MESSAGE RECEIVED FROM WEBVIEW ==========');
-            log('🧪 [DEBUG] Test message content:', message);
-            log('🧪 [DEBUG] WebView communication is working!');
+        // requestInitialTerminal handled by router
 
-            // Test mode CLI Agent status updates removed to prevent duplicate status displays
-          }
-          break;
-
-        case 'webviewReady':
-        case TERMINAL_CONSTANTS.COMMANDS.READY:
-          if (this._isInitialized) {
-            log('🔄 [DEBUG] WebView already initialized, skipping duplicate initialization');
-            break;
-          }
-
-          log('🎯 [DEBUG] WebView ready - initializing terminal immediately');
-          this._isInitialized = true;
-
-          // 即座に初期化して確実にExtension側ターミナルを作成
-          void (async () => {
-            try {
-              await this._initializeTerminal();
-              log('✅ [DEBUG] Terminal initialization completed immediately');
-
-              // 🔍 FIX: Avoid duplicate terminal creation
-              // Only ensure terminals if none exist, let session restore handle the rest
-              setTimeout(() => {
-                if (this._terminalManager.getTerminals().length === 0) {
-                  log('🎯 [ENSURE] No terminals exist - creating minimum set');
-                  this._ensureMultipleTerminals();
-                } else {
-                  log('🎯 [ENSURE] Terminals already exist - skipping creation');
-                }
-              }, 100);
-            } catch (error) {
-              log('❌ [ERROR] Terminal initialization failed:', error);
-              TerminalErrorHandler.handleTerminalCreationError(error);
-              // Reset flag on error to allow retry
-              this._isInitialized = false;
-            }
-          })();
-          break;
-
-        case 'requestInitialTerminal':
-          log('🚨 [DEBUG] WebView requested initial terminal creation');
-          try {
-            if (this._terminalManager.getTerminals().length === 0) {
-              log('🎯 [INITIAL] Creating initial terminal as requested by WebView');
-              const terminalId = this._terminalManager.createTerminal();
-              log(`✅ [INITIAL] Initial terminal created: ${terminalId}`);
-              this._terminalManager.setActiveTerminal(terminalId);
-              
-              // Send terminal update to WebView
-              void this._sendMessage({
-                command: 'stateUpdate',
-                state: this._terminalManager.getCurrentState()
-              });
-            } else {
-              log(`🔍 [INITIAL] Terminals already exist (${this._terminalManager.getTerminals().length}), skipping creation`);
-            }
-          } catch (error) {
-            log(`❌ [INITIAL] Failed to create requested initial terminal: ${String(error)}`);
-            console.error('❌ [INITIAL] Error details:', error);
-          }
-          break;
-
-        case TERMINAL_CONSTANTS.COMMANDS.INPUT:
-          if (message.data) {
-            log(
-              '⌨️ [DEBUG] Terminal input:',
-              message.data.length,
-              'chars, data:',
-              JSON.stringify(message.data),
-              'terminalId:',
-              message.terminalId
-            );
-            this._terminalManager.sendInput(message.data, message.terminalId);
-          }
-          break;
-        case TERMINAL_CONSTANTS.COMMANDS.RESIZE:
-          if (message.cols && message.rows) {
-            log('📏 [DEBUG] Terminal resize:', message.cols, 'x', message.rows);
-            this._terminalManager.resize(message.cols, message.rows, message.terminalId);
-          }
-          break;
+        // input handled by router
+        // resize handled by router
         case TERMINAL_CONSTANTS.COMMANDS.FOCUS_TERMINAL:
           if (message.terminalId) {
             log('🔄 [DEBUG] Switching to terminal:', message.terminalId);
             this._terminalManager.setActiveTerminal(message.terminalId);
           }
           break;
-        case TERMINAL_CONSTANTS.COMMANDS.CREATE_TERMINAL:
-          if (message.terminalId && message.terminalName) {
-            log(
-              '🚀 [DEBUG] Creating terminal from WebView request:',
-              message.terminalId,
-              message.terminalName
-            );
-            try {
-              // Check if terminal already exists to avoid duplicates
-              const existingTerminal = this._terminalManager.getTerminal(message.terminalId);
-              if (!existingTerminal) {
-                // 🔍 VS Code Pattern: Create PTY and establish immediate data flow
-                const newTerminalId = this._terminalManager.createTerminal();
-                log(`✅ [VS Code Pattern] PTY terminal created: ${newTerminalId}`);
-
-                // Establish VS Code-style direct data flow: PTY → Extension → WebView
-                const terminalInstance = this._terminalManager.getTerminal(newTerminalId);
-                if (terminalInstance) {
-                  // VS Code Pattern: Map Extension terminal ID to WebView terminal ID
-                  this._terminalIdMapping = this._terminalIdMapping || new Map();
-                  this._terminalIdMapping.set(newTerminalId, message.terminalId);
-                  
-                  log(`🔗 [VS Code Pattern] Mapped Extension ID ${newTerminalId} → WebView ID ${message.terminalId}`);
-                } else {
-                  log(`❌ [VS Code Pattern] Failed to get terminal instance for ${newTerminalId}`);
-                }
-
-              } else {
-                log(`⚠️ [DEBUG] Terminal ${message.terminalId} already exists, skipping creation`);
-              }
-            } catch (error) {
-              log(`❌ [DEBUG] Failed to create PTY terminal: ${String(error)}`);
-            }
-          }
-          break;
-        case 'splitTerminal':
-          log('🔀 [DEBUG] Splitting terminal from webview...');
-          this.splitTerminal();
-          break;
-        case 'getSettings': {
-          log('⚙️ [DEBUG] Getting settings from webview...');
-          const settings = this.getCurrentSettings();
-          const fontSettings = this.getCurrentFontSettings();
-          await this._sendMessage({
-            command: 'settingsResponse',
-            settings,
-          });
-          // Send font settings separately
-          await this._sendMessage({
-            command: 'fontSettingsUpdate',
-            fontSettings,
-          });
-
-          // 🆕 Send initial panel location and request detection (Issue #148)
-          if (this._view) {
-            const panelLocation = this._getCurrentPanelLocation();
-            log(`📍 [SETTINGS] Sending initial panel location: ${panelLocation}`);
-            await this._sendMessage({
-              command: 'panelLocationUpdate',
-              location: panelLocation,
-            });
-
-            // Also request WebView to detect actual panel location
-            this._requestPanelLocationDetection();
-          }
-
-          break;
-        }
-        case 'updateSettings': {
-          log('⚙️ [DEBUG] Updating settings from webview:', message.settings);
-          if (message.settings) {
-            await this.updateSettings(message.settings);
-          }
-          break;
-        }
-        case 'focusTerminal': {
-          log('🎯 [DEBUG] ========== FOCUS TERMINAL COMMAND RECEIVED ==========');
-          const terminalId = message.terminalId as string;
-          
-          // 🔍 Debug: Check current state before update
-          const currentActive = this._terminalManager.getActiveTerminalId();
-          log(`🔍 [DEBUG] Current active terminal: ${currentActive}`);
-          log(`🔍 [DEBUG] Requested active terminal: ${terminalId}`);
-          
-          if (terminalId) {
-            log(`🎯 [DEBUG] Setting active terminal to: ${terminalId}`);
-            try {
-              // Extension側でアクティブターミナルを更新
-              this._terminalManager.setActiveTerminal(terminalId);
-              
-              // 🔍 Verify the update worked
-              const newActive = this._terminalManager.getActiveTerminalId();
-              log(`🔍 [DEBUG] Verified active terminal after update: ${newActive}`);
-              
-              if (newActive === terminalId) {
-                log(`✅ [DEBUG] Active terminal successfully updated to: ${terminalId}`);
-              } else {
-                log(`❌ [DEBUG] Active terminal update failed. Expected: ${terminalId}, Got: ${newActive}`);
-              }
-            } catch (error) {
-              log(`❌ [DEBUG] Error setting active terminal:`, error);
-            }
-          } else {
-            log('❌ [DEBUG] No terminal ID provided for focusTerminal');
-          }
-          break;
-        }
-        case 'reportPanelLocation': {
-          log('📍 [DEBUG] Panel location reported from WebView:', message.location);
-          if (message.location) {
-            // Update context key for VS Code when clause
-            void vscode.commands.executeCommand(
-              'setContext',
-              'secondaryTerminal.panelLocation',
-              message.location
-            );
-            log('📍 [DEBUG] Context key updated with panel location:', message.location);
-
-            // Update our understanding of the panel location and notify WebView
-            await this._sendMessage({
-              command: 'panelLocationUpdate',
-              location: message.location,
-            });
-            log('📍 [DEBUG] Panel location update sent to WebView:', message.location);
-          }
-          break;
-        }
-        case 'terminalClosed': {
-          log('🗑️ [DEBUG] Terminal closed from webview:', message.terminalId);
-          if (message.terminalId) {
-            // Check if terminal still exists before removing
-            const terminals = this._terminalManager.getTerminals();
-            const terminalExists = terminals.some((t) => t.id === message.terminalId);
-
-            if (terminalExists) {
-              log('🗑️ [DEBUG] Removing terminal from extension side:', message.terminalId);
-              this._terminalManager.removeTerminal(message.terminalId);
-            } else {
-              log('🔄 [DEBUG] Terminal already removed from extension side:', message.terminalId);
-            }
-          }
-          break;
-        }
-        case 'killTerminal': {
-          log('🗑️ [DEBUG] ========== KILL TERMINAL COMMAND RECEIVED ==========');
-          log('🗑️ [DEBUG] Full message:', message);
-          log('🗑️ [DEBUG] Message terminalId:', message.terminalId);
-
-          // 📋 [SPEC] Panel trash button should delete active terminal
-          // Check if specific terminal ID is provided
-          if (message.terminalId) {
-            log(`🗑️ [DEBUG] Killing specific terminal: ${message.terminalId}`);
-            try {
-              await this.killSpecificTerminal(message.terminalId);
-              log(`🗑️ [DEBUG] killSpecificTerminal completed for: ${message.terminalId}`);
-            } catch (error) {
-              log(`❌ [DEBUG] Error in killSpecificTerminal:`, error);
-            }
-          } else {
-            log('🗑️ [DEBUG] Killing active terminal (no specific ID provided) - this is the panel trash button behavior');
-            try {
-              // 🎯 [FIX] Call killTerminal method to delete the active terminal (blue border terminal)
-              await this.killTerminal();
-              log('🗑️ [DEBUG] killTerminal (active terminal deletion) completed');
-            } catch (error) {
-              log('❌ [DEBUG] Error in killTerminal (active terminal deletion):', error);
-            }
-          }
-          break;
-        }
-        case 'deleteTerminal': {
-          log('🗑️ [DEBUG] ========== DELETE TERMINAL COMMAND RECEIVED ==========');
-          log('🗑️ [DEBUG] Full message:', message);
-
-          const terminalId = message.terminalId as string;
-          const requestSource = (message.requestSource as 'header' | 'panel') || 'panel';
-
-          if (terminalId) {
-            log(`🗑️ [DEBUG] Deleting terminal: ${terminalId} (source: ${requestSource})`);
-            try {
-              // 🎯 FIX: Wait for deletion result and handle failure
-              const result = await this._terminalManager.deleteTerminal(terminalId, { source: requestSource });
-              
-              if (result.success) {
-                log(`✅ [DEBUG] Terminal deletion succeeded: ${terminalId}`);
-                // Send success response to WebView
-                await this._sendMessage({
-                  command: 'deleteTerminalResponse',
-                  terminalId,
-                  success: true
-                });
-              } else {
-                log(`⚠️ [DEBUG] Terminal deletion failed: ${terminalId}, reason: ${result.reason}`);
-                // Send failure response to WebView
-                await this._sendMessage({
-                  command: 'deleteTerminalResponse',
-                  terminalId,
-                  success: false,
-                  reason: result.reason
-                });
-              }
-            } catch (error) {
-              log(`❌ [DEBUG] Error in deleteTerminal:`, error);
-              // Send error response to WebView
-              await this._sendMessage({
-                command: 'deleteTerminalResponse',
-                terminalId,
-                success: false,
-                reason: `Delete failed: ${String(error)}`
-              });
-            }
-          } else {
-            log('❌ [DEBUG] No terminal ID provided for deleteTerminal');
-          }
-          break;
-        }
+        // createTerminal handled by router
+        // splitTerminal handled by router
+        // getSettings handled by router
+        // updateSettings handled by router
+        // focusTerminal handled by router
+        // reportPanelLocation handled by router
+        // terminalClosed handled by router
+        // killTerminal handled by router
+        // deleteTerminal handled by router
         case 'switchAiAgent': {
           log('✨ [DEBUG] ========== SWITCH AI AGENT COMMAND RECEIVED ==========');
           log('✨ [DEBUG] Full message:', message);
@@ -1799,21 +2024,8 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       log('🎆 [TRACE] isPanelMove:', isPanelMove);
       log('🎆 [TRACE] WebView exists:', !!webviewView.webview);
 
-      // Handle messages from the webview
-      log('🎆 [TRACE] Setting up message listener...');
-      webviewView.webview.onDidReceiveMessage(
-        async (message: WebviewMessage) => {
-          log('📨 [TRACE] ===========================================');
-          log('📨 [TRACE] MESSAGE RECEIVED FROM WEBVIEW!');
-          log('📨 [TRACE] Message command:', message.command);
-          log('📨 [TRACE] Message data:', message);
-          log('📨 [TRACE] WebView visible when received:', webviewView.visible);
-          await this._handleWebviewMessage(message);
-        },
-        null,
-        this._extensionContext.subscriptions
-      );
-      log('🎆 [TRACE] Message listener set up successfully');
+      // Message listener is set in resolveWebviewView (before HTML). Avoid duplicate listeners here.
+      log('🎆 [TRACE] Message listener already configured in resolveWebviewView');
 
       // Set up visibility change handler for panel move detection
       webviewView.onDidChangeVisibility(
@@ -2072,6 +2284,12 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
     // Clear terminal event listeners
     this._clearTerminalEventListeners();
+
+    // Clear message handlers and ID mappings
+    this._messageHandlers.clear();
+    if (this._terminalIdMapping) {
+      this._terminalIdMapping.clear();
+    }
 
     // Dispose all registered disposables
     for (const disposable of this._disposables) {

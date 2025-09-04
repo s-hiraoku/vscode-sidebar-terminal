@@ -67,7 +67,7 @@ export class TerminalContainerFactory {
       position: 'relative' as const,
       overflow: 'hidden',
       background: '#000',
-      padding: '8px',
+      padding: '0', // VS Code standard - no padding for full display area
       margin: '0',
       boxSizing: 'border-box' as const,
       flex: '1 1 auto'

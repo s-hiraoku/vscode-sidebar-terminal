@@ -287,7 +287,7 @@ if (process.env.NODE_ENV === 'development') {
   // Hot reload support (if needed in future)
   const moduleWithHot = module as any;
   if (moduleWithHot.hot) {
-    moduleWithHot.hot.accept('./TerminalWebviewManager', () => {
+    moduleWithHot.hot.accept('./managers/RefactoredTerminalWebviewManager', () => {
       lifecycle('Hot reloading terminal manager...');
       // Hot reload logic would go here
     });

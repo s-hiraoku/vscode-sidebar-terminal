@@ -228,12 +228,12 @@ export class TerminalLifecycleManager {
         macOptionIsMeta: terminalConfig.macOptionIsMeta,
         rightClickSelectsWord: terminalConfig.rightClickSelectsWord,
         
-        // Scrolling and Navigation
-        fastScrollModifier: terminalConfig.fastScrollModifier,
-        fastScrollSensitivity: terminalConfig.fastScrollSensitivity,
-        scrollSensitivity: terminalConfig.scrollSensitivity,
+        // Scrolling and Navigation - Enhanced VS Code Configuration
+        fastScrollModifier: terminalConfig.fastScrollModifier || 'alt',
+        fastScrollSensitivity: terminalConfig.fastScrollSensitivity || 5,
+        scrollSensitivity: terminalConfig.scrollSensitivity || 1,
         scrollback: terminalConfig.scrollback || 1000,
-        scrollOnUserInput: terminalConfig.scrollOnUserInput,
+        scrollOnUserInput: terminalConfig.scrollOnUserInput !== false, // Default to true
         
         // Word and Selection
         wordSeparator: terminalConfig.wordSeparator,
@@ -389,6 +389,9 @@ export class TerminalLifecycleManager {
           terminalLogger.info(`✅ VS Code standard mouse handling enabled for terminal: ${terminalId}`);
         }
         
+        // Enable VS Code standard scrollbar display
+        this.enableScrollbarDisplay(xtermElement, terminalId);
+        
         // 🔧 FIX: Handle terminal focus events for proper state sync
         // These don't interfere with terminal output
         // NOTE: xterm.js doesn't have onFocus/onBlur methods, commenting out
@@ -486,6 +489,167 @@ export class TerminalLifecycleManager {
     } catch (error) {
       terminalLogger.error(`Failed to create terminal ${terminalId}:`, error);
       return null;
+    }
+  }
+
+  /**
+   * Enable VS Code standard scrollbar display
+   */
+  /**
+   * Enable VS Code standard scrollbar display with correct viewport sizing
+   */
+  /**
+   * Enable VS Code standard scrollbar display with full viewport sizing
+   */
+  private enableScrollbarDisplay(xtermElement: Element | null, terminalId: string): void {
+    if (!xtermElement) return;
+
+    try {
+      // Find xterm viewport element (where scrollbar should appear)
+      const viewport = xtermElement.querySelector('.xterm-viewport') as HTMLElement;
+      const screen = xtermElement.querySelector('.xterm-screen') as HTMLElement;
+      
+      if (!viewport) {
+        terminalLogger.warn(`Viewport not found for terminal ${terminalId}`);
+        return;
+      }
+
+      // Apply VS Code standard viewport settings for maximum display area
+      viewport.style.overflow = 'auto';
+      viewport.style.scrollbarWidth = 'auto';  // Standard scrollbar width
+      viewport.style.position = 'absolute';
+      viewport.style.top = '0';
+      viewport.style.left = '0';
+      viewport.style.right = '0';  
+      viewport.style.bottom = '0'; 
+      
+      // Ensure screen uses full available space
+      if (screen) {
+        screen.style.position = 'relative';
+        screen.style.width = '100%';
+        screen.style.height = '100%';
+      }
+
+      // Add VS Code standard scrollbar styling with full display area optimization
+      const style = document.createElement('style');
+      style.textContent = `
+        /* VS Code Terminal - Full Display Area Implementation */
+        .terminal-container {
+          display: flex !important;
+          flex-direction: column !important;
+          width: 100% !important;
+          height: 100% !important;
+          position: relative !important;
+          padding: 0 !important;
+          margin: 0 !important;
+        }
+        
+        .terminal-content {
+          flex: 1 1 auto !important;
+          width: 100% !important;
+          height: 100% !important;
+          position: relative !important;
+          padding: 0 !important;
+          margin: 0 !important;
+          overflow: hidden !important;
+        }
+        
+        .terminal-container .xterm {
+          position: relative !important;
+          width: 100% !important;
+          height: 100% !important;
+          padding: 0 !important;
+          margin: 0 !important;
+          box-sizing: border-box !important;
+        }
+        
+        .terminal-container .xterm-viewport {
+          position: absolute !important;
+          top: 0 !important;
+          left: 0 !important;
+          right: 0 !important;
+          bottom: 0 !important;
+          overflow: auto !important;
+          z-index: 30;
+          background: transparent !important;
+        }
+        
+        .terminal-container .xterm-screen {
+          position: relative !important;
+          z-index: 31;
+          width: 100% !important;
+          min-height: 100% !important;
+          padding: 8px !important; /* VS Code standard terminal padding */
+          box-sizing: border-box !important;
+        }
+        
+        /* VS Code Standard Scrollbar Styling - 14px width as per VS Code */
+        .terminal-container .xterm-viewport::-webkit-scrollbar {
+          width: 14px;
+          height: 14px;
+        }
+        
+        .terminal-container .xterm-viewport::-webkit-scrollbar-track {
+          background: rgba(0, 0, 0, 0.1);
+          border-radius: 0px;
+        }
+        
+        .terminal-container .xterm-viewport::-webkit-scrollbar-thumb {
+          background-color: rgba(121, 121, 121, 0.4);
+          border-radius: 0px;
+          border: 3px solid transparent;
+          background-clip: content-box;
+          min-height: 20px;
+        }
+        
+        .terminal-container .xterm-viewport::-webkit-scrollbar-thumb:hover {
+          background-color: rgba(100, 100, 100, 0.7);
+        }
+        
+        .terminal-container .xterm-viewport::-webkit-scrollbar-thumb:active {
+          background-color: rgba(68, 68, 68, 0.8);
+        }
+        
+        .terminal-container .xterm-viewport::-webkit-scrollbar-corner {
+          background: transparent;
+        }
+        
+        /* Firefox scrollbar styling */
+        .terminal-container .xterm-viewport {
+          scrollbar-width: auto !important;
+          scrollbar-color: rgba(121, 121, 121, 0.4) rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Ensure text selection is visible */
+        .terminal-container .xterm .xterm-selection div {
+          position: absolute;
+          background-color: rgba(255, 255, 255, 0.3);
+          pointer-events: none;
+        }
+        
+        /* Override any existing height restrictions */
+        #terminal-body,
+        #terminal-body .terminal-container,
+        #terminal-body .terminal-content {
+          height: 100% !important;
+          max-height: none !important;
+        }
+        
+        /* Ensure cursor rendering is correct */
+        .terminal-container .xterm .xterm-cursor-layer {
+          z-index: 32;
+        }
+      `;
+      
+      // Append style if not already added
+      if (!document.head.querySelector('#terminal-scrollbar-styles')) {
+        style.id = 'terminal-scrollbar-styles';
+        document.head.appendChild(style);
+      }
+      
+      terminalLogger.info(`✅ VS Code standard full viewport and scrollbar enabled for terminal: ${terminalId}`);
+    } catch (error) {
+      terminalLogger.error(`Failed to enable scrollbar for terminal ${terminalId}:`, error);
     }
   }
 

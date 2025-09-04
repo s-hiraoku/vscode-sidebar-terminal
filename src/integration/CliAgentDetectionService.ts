@@ -4,7 +4,7 @@
  */
 
 export interface DetectionResult {
-  type: 'claude' | 'gemini';
+  type: 'claude' | 'gemini' | 'codex';
   confidence: number;
 }
 
