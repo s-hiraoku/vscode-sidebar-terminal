@@ -528,6 +528,7 @@ export interface WebviewMessage {
     | 'splitTerminal'         // Split terminal request
     | 'updateSettings'        // Update settings request
     | 'terminalClosed'        // Terminal closed notification
+    | 'customEvent'           // Custom event for extensibility
     | 'error';
   config?: TerminalConfig;
   data?: string;
@@ -647,6 +648,10 @@ export interface WebviewMessage {
   
   // 🎯 FIX: 削除処理統一化で追加
   success?: boolean;  // 削除処理の成功/失敗
+
+  // Custom event properties
+  eventType?: string;  // Custom event type for extensibility
+  eventData?: any;     // Custom event data
   // reason?: string; // 失敗理由 - 重複のためコメント化（上部のreasonを使用）
 
   // AIエージェント切り替え関連プロパティ
