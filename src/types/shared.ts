@@ -388,11 +388,15 @@ export interface TerminalInstance {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   pty?: any; // Using any for node-pty compatibility with both real and mock implementations (ptyProcessに移行中)
   ptyProcess?: unknown; // 新しいpty参照名（セッション復元対応）
+  process?: any; // For lifecycle service compatibility
   name: string;
-  number: number; // ターミナル番号（1-5）
+  number?: number; // ターミナル番号（1-5）
   cwd?: string; // 現在の作業ディレクトリ
+  shell?: string; // Shell path
+  shellArgs?: string[]; // Shell arguments
+  pid?: number; // Process ID
   isActive: boolean;
-  createdAt?: number; // 作成日時
+  createdAt?: Date; // 作成日時
 
   // セッション復元関連のプロパティ
   isSessionRestored?: boolean; // セッション復元で作成されたターミナルかどうか
