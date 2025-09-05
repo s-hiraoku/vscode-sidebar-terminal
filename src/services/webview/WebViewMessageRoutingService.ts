@@ -9,8 +9,8 @@ import { TerminalErrorHandler } from '../../utils/feedback';
  * Contains all the dependencies needed by message handlers
  */
 export interface MessageHandlerContext {
-  terminalManager: any; // TerminalManager interface
-  sendMessage: (message: any) => Promise<void>;
+  terminalManager: unknown; // TerminalManager interface
+  sendMessage: (message: unknown) => Promise<void>;
   isInitialized: boolean;
   setInitialized: (value: boolean) => void;
   initializeTerminal: () => Promise<void>;
@@ -404,7 +404,7 @@ export class TerminalManagementMessageHandler implements MessageHandler {
         log('🗑️ [DEBUG] Terminal closed from webview:', message.terminalId);
         if (message.terminalId) {
           const terminals = context.terminalManager.getTerminals();
-          const terminalExists = terminals.some((t: any) => t.id === message.terminalId);
+          const terminalExists = terminals.some((t: { id: string }) => t.id === message.terminalId);
 
           if (terminalExists) {
             log('🗑️ [DEBUG] Removing terminal from extension side:', message.terminalId);
