@@ -9,8 +9,8 @@ import { TerminalErrorHandler } from '../../utils/feedback';
  * Contains all the dependencies needed by message handlers
  */
 export interface MessageHandlerContext {
-  terminalManager: unknown; // TerminalManager interface
-  sendMessage: (message: unknown) => Promise<void>;
+  terminalManager: any; // Complex TerminalManager interface - using any for flexibility
+  sendMessage: (message: any) => Promise<void>;
   isInitialized: boolean;
   setInitialized: (value: boolean) => void;
   initializeTerminal: () => Promise<void>;

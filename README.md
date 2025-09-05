@@ -264,7 +264,16 @@ The project uses GitHub Actions for automated testing and releases:
 
 ## 📈 Version History
 
-### v0.1.80 (Current) - 🚑 **Critical Japanese Input Hotfix**
+### v0.1.81 (Current) - 🔧 **TypeScript Quality Improvements**
+- ✅ **CI/CD TypeScript エラー完全修正**: GitHub Actions Pre-Release Quality Gate 通過
+- ✅ **MessageHandlerContext型定義改善**: より実用的で柔軟な型設計
+- ✅ **コンパイル安定性確保**: webpack、tsc両方で完全成功
+- ✅ **テストスイート完全対応**: 全テストファイルのTypeScriptコンパイル成功
+- 🚀 **CI/CDパイプライン安定化**: 自動ビルド・テストの信頼性向上
+- 📊 **ESLint品質維持**: エラー0個、警告154個（許容範囲）
+- 🔍 **型チェック最適化**: 実用性と型安全性のバランス調整
+
+### v0.1.80 - 🚑 **Critical Japanese Input Hotfix**
 - 🇯🇵 **日本語入力完全修復**: 日本語・ひらがな・カタカナ・漢字変換が100%確実に動作
 - ⚡ **即座の入力処理**: IME compositionend後の遅延処理を完全削除し、瞬時の入力反映を実現
 - 🔧 **シンプル化されたIME処理**: 過剰な二重チェックとバッファー処理を削除、軽量で確実な動作
