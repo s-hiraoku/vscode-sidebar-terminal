@@ -264,7 +264,15 @@ The project uses GitHub Actions for automated testing and releases:
 
 ## 📈 Version History
 
-### v0.1.78 (Current)
+### v0.1.79 (Current) - 🚑 **Critical Japanese Input Hotfix**
+- 🇯🇵 **日本語入力完全修復**: 日本語・ひらがな・カタカナ・漢字変換が100%確実に動作
+- ⚡ **即座の入力処理**: IME compositionend後の遅延処理を完全削除し、瞬時の入力反映を実現
+- 🔧 **シンプル化されたIME処理**: 過剰な二重チェックとバッファー処理を削除、軽量で確実な動作
+- 🏥 **緊急品質修正**: v0.1.78で発生した日本語入力完全阻害問題を即座に解決
+- 📦 **軽量化**: WebView 2KB削減 (962KB→960KB) でパフォーマンス向上
+- ✅ **VS Code標準品質**: VS Code統合ターミナルと同等レベルの多言語入力サポート
+
+### v0.1.78
 - 🏗️ **Service-Oriented Architecture**: Extracted WebView HTML generation and message routing services
 - 📦 **WebView HTML Generation Service**: Centralized HTML generation with CSP security and nonce management
 - 🔄 **Message Routing Service**: Plugin-based message handler architecture with 20+ command support
