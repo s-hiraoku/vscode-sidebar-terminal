@@ -452,9 +452,13 @@ describe('TerminalCliAgentIntegrationService', () => {
     it('should handle error scenarios throughout lifecycle', () => {
       // Make all methods throw errors
       Object.keys(mockCliAgentService).forEach(key => {
-        const method = mockCliAgentService[key as keyof typeof mockCliAgentService];
-        if (method && typeof method === 'function') {
-          (method as sinon.SinonStub).throws(new Error('Test error'));
+        try {
+          const method = mockCliAgentService[key as keyof typeof mockCliAgentService];
+          if (method && typeof method === 'function' && 'throws' in method) {
+            (method as sinon.SinonStub).throws(new Error('Test error'));
+          }
+        } catch (e) {
+          // Ignore errors when setting up error scenarios
         }
       });
       

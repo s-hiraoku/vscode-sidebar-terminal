@@ -250,7 +250,7 @@ export class UnifiedConfigurationService {
       
       for (const key of commonKeys) {
         if (config.has(key)) {
-          promises.push(config.update(key, undefined, vscode.ConfigurationTarget.Workspace));
+          promises.push(Promise.resolve(config.update(key, undefined, vscode.ConfigurationTarget.Workspace)));
         }
       }
 

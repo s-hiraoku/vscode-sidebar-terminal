@@ -43,7 +43,7 @@ describe('TerminalStateManagementService', () => {
       const terminal = createMockTerminal();
       
       service.onTerminalAdded((addedTerminal) => {
-        assert.strictEqual(addedTerminal?.id, terminal.id);
+        assert.strictEqual(addedTerminal.id, terminal.id);
         done();
       });
       
@@ -386,9 +386,7 @@ describe('TerminalStateManagementService', () => {
       assert.strictEqual(selectedId, null);
       
       // Restore original method
-      if (originalSetActive) {
-        service.setActiveTerminal = originalSetActive;
-      }
+      service.setActiveTerminal = originalSetActive;
     });
   });
 

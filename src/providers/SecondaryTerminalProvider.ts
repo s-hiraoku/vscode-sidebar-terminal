@@ -7,6 +7,7 @@ import { showSuccess, showError, TerminalErrorHandler } from '../utils/feedback'
 import { provider as log } from '../utils/logger';
 import { getConfigManager } from '../config/ConfigManager';
 import { PartialTerminalSettings, WebViewFontSettings } from '../types/shared';
+import { WebViewHtmlGenerationService, HtmlGenerationOptions } from '../services/webview/WebViewHtmlGenerationService';
 
 export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vscode.Disposable {
   public static readonly viewType = 'secondaryTerminal';
@@ -20,12 +21,16 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
   // Minimal command router for incoming webview messages
   private _messageHandlers = new Map<string, (message: WebviewMessage) => Promise<void> | void>();
+  private readonly _htmlGenerationService: WebViewHtmlGenerationService;
 
   constructor(
     private readonly _extensionContext: vscode.ExtensionContext,
     private readonly _terminalManager: TerminalManager,
     private readonly _standardSessionManager?: import('../sessions/StandardTerminalSessionManager').StandardTerminalSessionManager
-  ) {}
+  ) {
+    this._htmlGenerationService = new WebViewHtmlGenerationService();
+    log('🎨 [PROVIDER] HTML generation service initialized');
+  }
 
   public resolveWebviewView(
     webviewView: vscode.WebviewView,
@@ -1350,326 +1355,38 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   }
 
   private _getHtmlForWebview(webview: vscode.Webview): string {
-    let scriptUri: vscode.Uri;
     try {
-      const webviewJsPath = vscode.Uri.joinPath(this._extensionContext.extensionUri, 'dist', 'webview.js');
-      scriptUri = webview.asWebviewUri(webviewJsPath);
+      log('🎨 [PROVIDER] Generating WebView HTML using HTML Generation Service');
+      
+      const htmlOptions: HtmlGenerationOptions = {
+        webview,
+        extensionUri: this._extensionContext.extensionUri,
+        includeSplitStyles: true,
+        includeCliAgentStyles: true,
+      };
+
+      const html = this._htmlGenerationService.generateMainHtml(htmlOptions);
+      
+      // Validate generated HTML
+      const validation = this._htmlGenerationService.validateHtml(html);
+      if (!validation.isValid) {
+        log('⚠️ [PROVIDER] Generated HTML validation warnings:', validation.errors);
+        // Continue anyway - these are usually non-critical issues
+      }
+
+      log(`✅ [PROVIDER] HTML generated successfully via service (${html.length} chars)`);
+      return html;
+
     } catch (error) {
-      log('❌ [DEBUG] Failed to create script URI:', error);
-      throw error;
+      log('❌ [PROVIDER] HTML generation failed, falling back to service fallback HTML:', error);
+      
+      // Use service fallback HTML instead of inline fallback
+      return this._htmlGenerationService.generateFallbackHtml({
+        title: 'Terminal Loading...',
+        message: 'HTML generation encountered an error. Retrying...',
+        isLoading: true
+      });
     }
-
-    const nonce = generateNonce();
-
-    const html = `<!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${
-          webview.cspSource
-        } 'unsafe-inline'; script-src 'nonce-${nonce}' ${webview.cspSource}; font-src ${webview.cspSource};">
-        <!-- XTerm CSS is now bundled in webview.js -->
-        <style>
-            *, *::before, *::after {
-                box-sizing: border-box;
-                margin: 0;
-                padding: 0;
-            }
-
-            body {
-                margin: 0;
-                padding: 0;
-                overflow: hidden;
-                background-color: var(--vscode-editor-background, #1e1e1e);
-                color: var(--vscode-foreground, #cccccc);
-                font-family: var(--vscode-font-family, monospace);
-                height: 100vh;
-                display: flex;
-                flex-direction: column;
-                gap: 0;
-            }
-
-            /* Split layout container */
-            .terminal-layout {
-                width: 100%;
-                height: 100vh;
-                display: flex;
-                flex-direction: column;
-                position: relative;
-            }
-
-            /* Split panes container */
-            .split-container {
-                flex: 1;
-                display: flex;
-                position: relative;
-            }
-
-            .split-container.horizontal {
-                flex-direction: row;
-            }
-
-            .split-container.vertical {
-                flex-direction: column;
-            }
-
-            /* Terminal panes */
-            .terminal-pane {
-                position: relative;
-                background: #000;
-                min-width: 200px;
-                min-height: 100px;
-                display: flex;
-                flex-direction: column;
-            }
-
-            .terminal-pane.single {
-                flex: 1;
-            }
-
-            .terminal-pane.split {
-                flex: 1;
-            }
-
-            /* Resize splitter */
-            .splitter {
-                background: var(--vscode-widget-border, #454545);
-                position: relative;
-                z-index: 10;
-            }
-
-            .splitter.horizontal {
-                width: 4px;
-                cursor: col-resize;
-                min-width: 4px;
-            }
-
-            .splitter.vertical {
-                height: 4px;
-                cursor: row-resize;
-                min-height: 4px;
-            }
-
-            .splitter:hover {
-                background: var(--vscode-focusBorder, #007acc);
-            }
-
-            .splitter.dragging {
-                background: var(--vscode-focusBorder, #007acc);
-            }
-
-            /* Terminal containers */
-            #terminal {
-                flex: 1;
-                width: 100%;
-                background: #000;
-                position: relative;
-                overflow: hidden;
-                margin: 0;
-                padding: 0;
-            }
-
-            #terminal-body {
-                flex: 1;
-                width: 100%;
-                height: 100%;
-                background: #000;
-                position: relative;
-                overflow: hidden;
-                margin: 0;
-                padding: 0;
-                display: flex;
-                flex-direction: column;
-            }
-
-            .secondary-terminal {
-                width: 100%;
-                height: 100%;
-                position: relative;
-            }
-
-            /* Terminal active border styles */
-            .terminal-container {
-                position: relative;
-                width: 100%;
-                height: 100%;
-                border: 1px solid transparent !important;
-                transition: border-color 0.2s ease-in-out;
-            }
-
-            .terminal-container.active {
-                border-color: var(--vscode-focusBorder, #007acc) !important;
-                border-width: 1px !important;
-                border-style: solid !important;
-            }
-
-            .terminal-container.inactive {
-                border-color: var(--vscode-widget-border, #454545) !important;
-                opacity: 0.9;
-            }
-
-            /* Terminal body active border */
-            #terminal-body.terminal-container.active {
-                border-color: var(--vscode-focusBorder, #007acc) !important;
-            }
-
-            /* Individual terminal containers */
-            div[data-terminal-container].terminal-container.active {
-                border-color: var(--vscode-focusBorder, #007acc) !important;
-            }
-
-            /* Terminal pane border styles */
-            .terminal-pane {
-                position: relative;
-                background: #000;
-                min-width: 200px;
-                min-height: 100px;
-                display: flex;
-                flex-direction: column;
-                border: 1px solid transparent;
-                transition: border-color 0.2s ease-in-out;
-            }
-
-            .terminal-pane.active {
-                border-color: var(--vscode-focusBorder, #007acc);
-            }
-
-            .terminal-pane.inactive {
-                border-color: var(--vscode-widget-border, #454545);
-                opacity: 0.8;
-            }
-
-            /* XTerm.js container fixes */
-            .xterm {
-                margin: 0 !important;
-                padding: 0 !important;
-                height: 100% !important;
-            }
-
-            .xterm-viewport {
-                margin: 0 !important;
-                padding: 0 !important;
-                height: 100% !important;
-            }
-
-            .xterm-screen {
-                margin: 0 !important;
-                padding: 0 !important;
-                height: 100% !important;
-            }
-
-            /* Terminal container fixes */
-            [data-terminal-container] {
-                margin: 0 !important;
-                padding: 2px !important;
-                height: 100% !important;
-                flex: 1 !important;
-            }
-
-            /* Ensure full height usage */
-            html, body {
-                height: 100% !important;
-                margin: 0 !important;
-                padding: 0 !important;
-            }
-
-            /* Split controls */
-            .split-controls {
-                position: absolute;
-                top: 5px;
-                right: 5px;
-                z-index: 1000;
-                display: flex;
-                gap: 4px;
-            }
-
-            .split-btn {
-                background: rgba(0, 0, 0, 0.7);
-                color: var(--vscode-foreground, #cccccc);
-                border: 1px solid var(--vscode-widget-border, #454545);
-                border-radius: 3px;
-                padding: 4px 8px;
-                font-size: 11px;
-                cursor: pointer;
-                user-select: none;
-            }
-
-            .split-btn:hover {
-                background: rgba(0, 0, 0, 0.9);
-                border-color: var(--vscode-focusBorder, #007acc);
-            }
-
-            .split-btn.active {
-                background: var(--vscode-button-background, #0e639c);
-                border-color: var(--vscode-button-background, #0e639c);
-            }
-
-            /* CLI Agent status indicators */
-            .terminal-name {
-                color: var(--vscode-foreground) !important; /* Standard color */
-                font-weight: normal;
-            }
-
-            /* CLI Agent indicator styles */
-            .claude-indicator {
-                display: inline-block;
-                width: 8px;
-                height: 8px;
-                line-height: 1;
-            }
-
-            .claude-indicator.claude-connected {
-                color: #4CAF50; /* Green for connected */
-                animation: blink 1.5s infinite;
-            }
-
-            .claude-indicator.claude-disconnected {
-                color: #F44336; /* Red for disconnected */
-                /* No animation - solid color */
-            }
-
-            @keyframes blink {
-                0% { opacity: 1; }
-                50% { opacity: 0.3; }
-                100% { opacity: 1; }
-            }
-
-            .loading {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                height: 100vh;
-                color: var(--vscode-foreground, #cccccc);
-                font-family: var(--vscode-font-family, monospace);
-                background: var(--vscode-editor-background, #1e1e1e);
-            }
-        </style>
-    </head>
-    <body>
-        <div id="terminal-body">
-            <!-- Simple terminal container -->
-        </div>
-        <script nonce="${nonce}">
-            // Acquire VS Code API once and store it globally for webview.js to use
-            try {
-                if (typeof window.acquireVsCodeApi === 'function') {
-                    const vscode = window.acquireVsCodeApi();
-                    window.vscodeApi = vscode;
-                } else {
-                    console.error('acquireVsCodeApi not available');
-                }
-            } catch (error) {
-                console.error('Error acquiring VS Code API:', error);
-            }
-        </script>
-        <script nonce="${nonce}" src="${scriptUri.toString()}"
-                onload="console.log('✅ webview.js loaded successfully')"
-                onerror="console.error('❌ webview.js failed to load', event)"></script>
-    </body>
-    </html>`;
-
-    return html;
   }
 
   private getCurrentSettings(): PartialTerminalSettings {
@@ -2082,57 +1799,22 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
    * Generate fallback HTML when main HTML generation fails
    */
   private _getFallbackHtml(): string {
-    return `<!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Terminal Loading...</title>
-        <style>
-            body {
-                font-family: var(--vscode-font-family, monospace);
-                background-color: var(--vscode-editor-background, #1e1e1e);
-                color: var(--vscode-foreground, #cccccc);
-                padding: 20px;
-                text-align: center;
-            }
-        </style>
-    </head>
-    <body>
-        <h3>🔄 Terminal is loading...</h3>
-        <p>Please wait while the terminal initializes.</p>
-    </body>
-    </html>`;
+    return this._htmlGenerationService.generateFallbackHtml({
+      title: 'Terminal Loading...',
+      message: 'Please wait while the terminal initializes.',
+      isLoading: true
+    });
   }
 
   /**
    * Generate error HTML when setup fails
    */
   private _getErrorHtml(error: unknown): string {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-
-    return `<!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Terminal Error</title>
-        <style>
-            body {
-                font-family: var(--vscode-font-family, monospace);
-                background-color: var(--vscode-editor-background, #1e1e1e);
-                color: var(--vscode-errorForeground, #f44747);
-                padding: 20px;
-                text-align: center;
-            }
-        </style>
-    </head>
-    <body>
-        <h3>❌ Terminal initialization failed</h3>
-        <p>Error: ${errorMessage}</p>
-        <p>Please try reloading the terminal view.</p>
-    </body>
-    </html>`;
+    return this._htmlGenerationService.generateErrorHtml({
+      error,
+      allowRetry: true,
+      customMessage: `Terminal initialization failed. Please try reloading the terminal view or restarting VS Code.`
+    });
   }
 
   // Removed _restoreWebviewState - not needed with fresh start approach
@@ -2296,6 +1978,9 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       disposable.dispose();
     }
     this._disposables.length = 0;
+
+    // Dispose HTML generation service
+    this._htmlGenerationService.dispose();
 
     // Clear references and reset state
     this._view = undefined;

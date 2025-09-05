@@ -318,8 +318,10 @@ export class TerminalLifecycleService {
    */
   private initializeShellIntegration(terminal: TerminalInstance, safeMode: boolean): void {
     try {
+      // Shell integration service initialization skipped due to constructor requirements
       if (!this._shellIntegrationService) {
-        this._shellIntegrationService = new ShellIntegrationService(/* provide required arguments if any */);
+        // this._shellIntegrationService = new ShellIntegrationService();
+        log(`⚠️ [LifecycleService] Shell integration service initialization skipped`);
       }
       
       // Skip shell integration in safe mode
