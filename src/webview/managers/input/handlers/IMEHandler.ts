@@ -20,6 +20,10 @@ export class IMEHandler extends BaseManager implements IIMEHandler {
 
   // IME composition state
   private isComposing = false;
+  
+  // Add buffer for composition end handling
+  private compositionEndBuffer: string = '';
+  private compositionEndTimer: number | null = null;
 
   // Reference to parent's debounce timers for cleanup
   private eventDebounceTimers: Map<string, number>;
@@ -64,9 +68,23 @@ export class IMEHandler extends BaseManager implements IIMEHandler {
     };
 
     const compositionEndHandler = (event: CompositionEvent): void => {
-      // Immediately update composition state for VS Code standard behavior
-      this.isComposing = false;
+      // Store the composition data for later processing
+      this.compositionEndBuffer = event.data || '';
       this.logger.debug(`IME composition ended: ${event.data || 'no data'}`);
+
+      // Clear any existing timer
+      if (this.compositionEndTimer !== null) {
+        clearTimeout(this.compositionEndTimer);
+      }
+
+      // Delay the composition state reset to ensure proper IME handling
+      // This prevents race conditions with xterm.js onData events
+      this.compositionEndTimer = window.setTimeout(() => {
+        this.isComposing = false;
+        this.compositionEndBuffer = '';
+        this.compositionEndTimer = null;
+        this.logger.debug('IME composition state reset after buffer period');
+      }, 50); // 50ms buffer to handle timing issues
     };
 
     // Register IME event handlers using EventHandlerRegistry
@@ -102,12 +120,20 @@ export class IMEHandler extends BaseManager implements IIMEHandler {
   }
 
   /**
+   * Check if the given data matches the recent composition end buffer
+   * This helps identify if input should be suppressed due to IME completion
+   */
+  public isCompositionEndData(data: string): boolean {
+    return this.compositionEndBuffer !== '' && this.compositionEndBuffer === data;
+  }
+
+  /**
    * Clear any pending input events that might conflict with IME
    */
   public clearPendingInputEvents(): void {
     // Clear any debounced events that might interfere with IME composition
     for (const [key, timer] of this.eventDebounceTimers) {
-      if (key.includes('input') || key.includes('keydown')) {
+      if (key.includes('input') || key.includes('keydown') || key.includes('data') || key.includes('terminal')) {
         clearTimeout(timer);
         this.eventDebounceTimers.delete(key);
         this.logger.debug(`Cleared pending input event: ${key}`);
@@ -121,11 +147,18 @@ export class IMEHandler extends BaseManager implements IIMEHandler {
   public override dispose(): void {
     this.logger.info('Disposing IME handler');
 
+    // Clear composition end timer
+    if (this.compositionEndTimer !== null) {
+      clearTimeout(this.compositionEndTimer);
+      this.compositionEndTimer = null;
+    }
+
     // Dispose EventHandlerRegistry - this will clean up all registered event listeners
     this.eventRegistry.dispose();
 
     // Reset composition state
     this.isComposing = false;
+    this.compositionEndBuffer = '';
 
     // Call parent dispose
     super.dispose();

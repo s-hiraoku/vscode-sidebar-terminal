@@ -60,6 +60,12 @@ export interface IIMEHandler extends IInputHandler {
   isIMEComposing(): boolean;
 
   /**
+   * Check if the given data matches the recent composition end buffer
+   * This helps identify if input should be suppressed due to IME completion
+   */
+  isCompositionEndData(data: string): boolean;
+
+  /**
    * Clear any pending input events that might conflict with IME
    */
   clearPendingInputEvents(): void;
