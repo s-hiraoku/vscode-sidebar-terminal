@@ -264,12 +264,13 @@ The project uses GitHub Actions for automated testing and releases:
 
 ## 📈 Version History
 
-### v0.1.82 (Current) - 🚑 **日本語入力完全修復緊急修正**
+### v0.1.84 (Current) - 🚑 **日本語入力完全修復+品質改善**
 - 🇯🇵 **日本語入力問題の完全解決**: `terminal.onData()`でのIME入力ブロックを削除
 - ✅ **VS Code標準準拠**: 統合ターミナルと同等のIME処理品質を実現
 - ✅ **IME確定文字の確実反映**: ひらがな・カタカナ・漢字変換が100%動作
 - ⚡ **xterm.js内蔵処理委任**: 安定性向上と遅延ゼロ実現
 - 🔧 **根本原因修正**: `isIMEComposing()`による不適切な入力ブロック削除
+- 📊 **ESLintエラー大幅削減**: 21個→11個（48%削減）で品質向上
 
 ### v0.1.81 - 🔧 **TypeScript Quality Improvements**
 - ✅ **CI/CD TypeScript エラー完全修正**: GitHub Actions Pre-Release Quality Gate 通過
