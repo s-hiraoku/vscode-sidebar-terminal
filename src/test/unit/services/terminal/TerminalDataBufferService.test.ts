@@ -41,10 +41,10 @@ describe('TerminalDataBufferService', () => {
     it('should buffer small data chunks', (done) => {
       let eventFired = false;
       
-      service.onData((event) => {
-        assert.strictEqual(event.terminalId, 'test1');
-        assert.strictEqual(event.data, 'hello');
-        assert.ok(event.timestamp);
+      service.onData((_event) => {
+        assert.strictEqual(_event.terminalId, 'test1');
+        assert.strictEqual(_event.data, 'hello');
+        assert.ok(_event.timestamp);
         eventFired = true;
       });
 
@@ -63,9 +63,9 @@ describe('TerminalDataBufferService', () => {
     it('should immediately flush large data chunks', (done) => {
       let eventFired = false;
       
-      service.onData((event) => {
-        assert.strictEqual(event.terminalId, 'test1');
-        assert.strictEqual(event.data?.length, 1000);
+      service.onData((_event) => {
+        assert.strictEqual(_event.terminalId, 'test1');
+        assert.strictEqual(_event.data?.length, 1000);
         eventFired = true;
         done();
       });
@@ -80,9 +80,9 @@ describe('TerminalDataBufferService', () => {
     it('should combine multiple small chunks', (done) => {
       let eventFired = false;
       
-      service.onData((event) => {
-        assert.strictEqual(event.terminalId, 'test1');
-        assert.strictEqual(event.data, 'helloworldtest');
+      service.onData((_event) => {
+        assert.strictEqual(_event.terminalId, 'test1');
+        assert.strictEqual(_event.data, 'helloworldtest');
         eventFired = true;
         done();
       });
@@ -105,9 +105,9 @@ describe('TerminalDataBufferService', () => {
       });
       let eventFired = false;
       
-      customService.onData((event) => {
-        assert.strictEqual(event.terminalId, 'test1');
-        assert.strictEqual(event.data, 'ab');
+      customService.onData((_event) => {
+        assert.strictEqual(_event.terminalId, 'test1');
+        assert.strictEqual(_event.data, 'ab');
         eventFired = true;
         done();
       });
@@ -133,7 +133,7 @@ describe('TerminalDataBufferService', () => {
     it('should flush all buffers when CLI Agent becomes active', (done) => {
       let eventCount = 0;
       
-      service.onData((event) => {
+      service.onData((_event) => {
         eventCount++;
         if (eventCount === 2) {
           done();
@@ -161,9 +161,9 @@ describe('TerminalDataBufferService', () => {
     it('should flush specific terminal buffer', (done) => {
       let eventFired = false;
       
-      service.onData((event) => {
-        assert.strictEqual(event.terminalId, 'test1');
-        assert.strictEqual(event.data, 'test');
+      service.onData((_event) => {
+        assert.strictEqual(_event.terminalId, 'test1');
+        assert.strictEqual(_event.data, 'test');
         eventFired = true;
         done();
       });
@@ -196,7 +196,7 @@ describe('TerminalDataBufferService', () => {
       let eventCount = 0;
       const expectedEvents = 3;
       
-      service.onData((event) => {
+      service.onData((_event) => {
         eventCount++;
         if (eventCount === expectedEvents) {
           done();
@@ -213,9 +213,9 @@ describe('TerminalDataBufferService', () => {
 
   describe('clearTerminalBuffer', () => {
     it('should clear specific terminal buffer', (done) => {
-      service.onData((event) => {
-        assert.strictEqual(event.terminalId, 'test1');
-        assert.strictEqual(event.data, 'test');
+      service.onData((_event) => {
+        assert.strictEqual(_event.terminalId, 'test1');
+        assert.strictEqual(_event.data, 'test');
         
         // Clear the buffer
         service.clearTerminalBuffer('test1');
@@ -255,12 +255,12 @@ describe('TerminalDataBufferService', () => {
   describe('Error Handling', () => {
     it('should handle data buffering errors gracefully', (done) => {
       // Mock console.error to capture error logs
-      const consoleStub = sandbox.stub(console, 'error');
+      const _consoleStub = sandbox.stub(console, 'error');
       let eventFired = false;
       
-      service.onData((event) => {
-        assert.strictEqual(event.terminalId, 'test1');
-        assert.strictEqual(event.data, 'test');
+      service.onData((_event) => {
+        assert.strictEqual(_event.terminalId, 'test1');
+        assert.strictEqual(_event.data, 'test');
         eventFired = true;
         done();
       });

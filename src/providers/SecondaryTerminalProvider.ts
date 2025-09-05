@@ -1031,43 +1031,61 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
           const terminalId = message.terminalId as string;
           const action = message.action as string;
+          const forceReconnect = (message as any).forceReconnect as boolean;
 
           if (terminalId) {
-            log(`📎 [DEBUG] Switching AI Agent for terminal: ${terminalId} (action: ${action})`)
+            log(`📎 [DEBUG] Switching AI Agent for terminal: ${terminalId} (action: ${action}, forceReconnect: ${forceReconnect})`);
+            
             try {
-              // Call TerminalManager's switchAiAgentConnection method
-              const result = this._terminalManager.switchAiAgentConnection(terminalId);
+              let result: any;
+              
+              // 🆕 MANUAL RESET: Handle force reconnect requests
+              if (forceReconnect) {
+                log(`🔄 [MANUAL-RESET] Force reconnecting AI Agent for terminal: ${terminalId}`);
+                const agentType = (message.agentType as 'claude' | 'gemini' | 'codex') || 'claude';
+                const success = this._terminalManager.forceReconnectAiAgent(terminalId, agentType);
+                
+                result = {
+                  success,
+                  newStatus: success ? 'connected' : 'none',
+                  agentType: success ? agentType : null,
+                  reason: success ? 'Force reconnected successfully' : 'Force reconnect failed'
+                };
+              } else {
+                // Normal switch operation
+                result = this._terminalManager.switchAiAgentConnection(terminalId);
+              }
               
               if (result.success) {
-                log(`✅ [DEBUG] AI Agent switch succeeded: ${terminalId}, new status: ${result.newStatus}`);
-                // Send success response to WebView (optional)
+                log(`✅ [DEBUG] AI Agent operation succeeded: ${terminalId}, new status: ${result.newStatus}`);
                 await this._sendMessage({
                   command: 'switchAiAgentResponse',
                   terminalId,
                   success: true,
                   newStatus: result.newStatus,
-                  agentType: result.agentType
-                });
+                  agentType: result.agentType,
+                  forceReconnect: forceReconnect
+                } as any);
               } else {
-                log(`⚠️ [DEBUG] AI Agent switch failed: ${terminalId}, reason: ${result.reason}`);
-                // Send failure response to WebView (optional)
+                log(`⚠️ [DEBUG] AI Agent operation failed: ${terminalId}, reason: ${result.reason}`);
                 await this._sendMessage({
                   command: 'switchAiAgentResponse',
                   terminalId,
                   success: false,
                   reason: result.reason,
-                  newStatus: result.newStatus
-                });
+                  newStatus: result.newStatus,
+                  forceReconnect: forceReconnect
+                } as any);
               }
             } catch (error) {
-              log('❌ [ERROR] Error switching AI Agent:', error);
-              // Send error response to WebView
+              log('❌ [ERROR] Error with AI Agent operation:', error);
               await this._sendMessage({
                 command: 'switchAiAgentResponse',
                 terminalId,
                 success: false,
-                reason: 'Internal error occurred'
-              });
+                reason: 'Internal error occurred',
+                forceReconnect: forceReconnect
+              } as any);
             }
           } else {
             log('⚠️ [DEBUG] switchAiAgent: terminalId missing');

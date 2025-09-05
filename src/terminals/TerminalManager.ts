@@ -1495,6 +1495,27 @@ export class TerminalManager {
   }
 
   /**
+   * 🆕 MANUAL RESET: Force reconnect AI Agent to recover from detection errors
+   * This is used when the user clicks the AI Agent toggle button to manually fix detection issues
+   */
+  public forceReconnectAiAgent(terminalId: string, agentType: 'claude' | 'gemini' | 'codex' = 'claude'): boolean {
+    const terminal = this._terminals.get(terminalId);
+    const terminalName = terminal ? terminal.name : undefined;
+    
+    log(`🔄 [TERMINAL-MANAGER] Force reconnecting AI Agent for terminal ${terminalId} as ${agentType}`);
+    return this._cliAgentService.forceReconnectAgent(terminalId, agentType, terminalName);
+  }
+
+  /**
+   * 🆕 MANUAL RESET: Clear AI Agent detection errors for a terminal
+   * Resets the terminal to 'none' state to allow fresh detection
+   */
+  public clearAiAgentDetectionError(terminalId: string): boolean {
+    log(`🧹 [TERMINAL-MANAGER] Clearing AI Agent detection errors for terminal ${terminalId}`);
+    return this._cliAgentService.clearDetectionError(terminalId);
+  }
+
+  /**
    * Write to PTY with validation and error handling
    */
   private _writeToPtyWithValidation(

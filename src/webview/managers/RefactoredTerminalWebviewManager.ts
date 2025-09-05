@@ -479,6 +479,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
 
   /**
    * Handle AI Agent toggle button click
+   * 🆕 MANUAL RESET: Now supports force reconnection for detection errors
    */
   public handleAiAgentToggle(terminalId: string): void {
     log(`📎 AI Agent toggle clicked for terminal: ${terminalId}`);
@@ -486,9 +487,13 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     try {
       // Get current CLI Agent state for the terminal
       const agentState = this.cliAgentStateManager.getAgentState(terminalId);
+      const currentStatus = agentState?.status || 'none';
       
-      if (agentState && agentState.status === 'disconnected') {
-        // Send switchAiAgent command to Extension to activate the CLI Agent
+      log(`📎 Current AI Agent state: ${currentStatus} for terminal: ${terminalId}`);
+      
+      // Determine action based on current state
+      if (currentStatus === 'disconnected') {
+        // Normal activation for disconnected agents
         this.postMessageToExtension({
           command: 'switchAiAgent',
           terminalId,
@@ -497,27 +502,37 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
         });
         
         log(`✅ Sent AI Agent activation request for terminal: ${terminalId}`);
+        // Removed progress notification - keep it quiet
         
-        // Show notification to user
-        this.notificationManager.showNotificationInTerminal(
-          `Activating AI Agent for terminal ${terminalId}...`,
-          'info'
-        );
-      } else {
-        log(`⚠️ AI Agent toggle ignored - current status: ${agentState?.status || 'none'}`);
+      } else if (currentStatus === 'none') {
+        // 🆕 MANUAL RESET: Force reconnect when no agent detected
+        // This helps recover from detection errors
+        this.postMessageToExtension({
+          command: 'switchAiAgent',
+          terminalId,
+          action: 'force-reconnect',
+          forceReconnect: true,
+          agentType: 'claude', // Default to Claude, could be made configurable
+          timestamp: Date.now(),
+        });
         
-        // Show feedback to user why toggle was ignored
-        if (!agentState || agentState.status === 'none') {
-          this.notificationManager.showNotificationInTerminal(
-            'No AI Agent detected in this terminal',
-            'warning'
-          );
-        } else if (agentState.status === 'connected') {
-          this.notificationManager.showNotificationInTerminal(
-            'AI Agent is already active',
-            'info'
-          );
-        }
+        log(`🔄 [MANUAL-RESET] Sent force reconnect request for terminal: ${terminalId}`);
+        // Removed progress notification - will show result only
+        
+      } else if (currentStatus === 'connected') {
+        // 🆕 MANUAL RESET: Allow force reconnect even when connected
+        // This helps when detection gets confused and agent appears connected but isn't
+        this.postMessageToExtension({
+          command: 'switchAiAgent',
+          terminalId,
+          action: 'force-reconnect',
+          forceReconnect: true,
+          agentType: agentState?.agentType || 'claude',
+          timestamp: Date.now(),
+        });
+        
+        log(`🔄 [MANUAL-RESET] Sent force reconnect request for connected terminal: ${terminalId}`);
+        // Removed progress notification - will show result only
       }
     } catch (error) {
       log(`❌ Error handling AI Agent toggle: ${error}`);

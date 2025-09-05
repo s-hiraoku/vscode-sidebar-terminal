@@ -24,6 +24,7 @@ A powerful VS Code extension that provides a fully-featured terminal in the side
 - **Gemini CLI Support**: Complete integration with `gemini code` commands
 - **Real-time Status Tracking**: Live AI agent status indicators with connection/disconnection detection
 - **Smart Toggle Controls**: One-click AI agent switching with status-aware button visibility
+- **Manual Reset Functionality**: Force reconnect AI agents when detection issues occur
 
 ### 🔧 **Developer Experience**
 - **Alt+Click Cursor Positioning**: VS Code-standard cursor positioning with intelligent CLI agent conflict detection
@@ -37,6 +38,7 @@ A powerful VS Code extension that provides a fully-featured terminal in the side
 - **Debug Panel**: Real-time system monitoring with Ctrl+Shift+D shortcut
 - **Memory Management**: Efficient resource cleanup and leak prevention
 - **Output Optimization**: Smart flushing intervals (2-16ms) based on activity patterns
+- **Subtle Notifications**: Improved visual design with reduced opacity and VS Code integration
 
 ## 🎯 Quick Start
 

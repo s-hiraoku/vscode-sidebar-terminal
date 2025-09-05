@@ -3,7 +3,6 @@
  * Provides profile-based terminal configuration similar to VS Code's integrated terminal
  */
 
-import { ShellConfig } from './shared';
 
 /**
  * Terminal profile configuration

@@ -745,6 +745,9 @@ export interface VsCodeMessage {
 
   // AIエージェント切り替え関連プロパティ
   action?: string; // switchAiAgentコマンドのアクション
+  forceReconnect?: boolean; // Manual reset functionality
+  agentType?: 'claude' | 'gemini' | 'codex'; // Agent type for force reconnect
+  isForceReconnect?: boolean; // Alternative property name for compatibility
 }
 
 // ===== 型ガード関数 =====
