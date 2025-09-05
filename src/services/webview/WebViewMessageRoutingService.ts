@@ -154,7 +154,7 @@ export class WebViewMessageRoutingService {
   /**
    * Handle unknown commands
    */
-  private async _handleUnknownCommand(message: WebviewMessage, context: MessageHandlerContext): Promise<void> {
+  private async _handleUnknownCommand(message: WebviewMessage, _context: MessageHandlerContext): Promise<void> {
     log(`❓ [MessageRouting] Unknown command received: ${message.command}`);
     
     // For debugging purposes, log full message for unknown commands
@@ -184,7 +184,7 @@ export class WebViewMessageRoutingService {
 export class DebugMessageHandler implements MessageHandler {
   readonly supportedCommands = ['htmlScriptTest', 'timeoutTest', 'test'];
 
-  async handle(command: string, message: WebviewMessage, context: MessageHandlerContext): Promise<void> {
+  async handle(command: string, message: WebviewMessage, _context: MessageHandlerContext): Promise<void> {
     switch (command) {
       case 'htmlScriptTest':
         log('🔥 [DEBUG] ========== HTML INLINE SCRIPT TEST MESSAGE RECEIVED ==========');
@@ -317,7 +317,7 @@ export class TerminalControlMessageHandler implements MessageHandler {
 export class SettingsMessageHandler implements MessageHandler {
   readonly supportedCommands = ['getSettings', 'updateSettings'];
 
-  async handle(command: string, message: WebviewMessage, context: MessageHandlerContext): Promise<void> {
+  async handle(command: string, message: WebviewMessage, _context: MessageHandlerContext): Promise<void> {
     switch (command) {
       case 'getSettings':
         log('⚙️ [DEBUG] Getting settings from webview...');

@@ -130,7 +130,7 @@ export class CommonUtilityService {
 
       // Handle maxWait option
       if (maxWait && !immediate) {
-        const maxWaitTimer = setTimeout(() => {
+        setTimeout(() => {
           if (this._debounceTimers.has(key)) {
             clearTimeout(this._debounceTimers.get(key)!);
             this._debounceTimers.delete(key);
