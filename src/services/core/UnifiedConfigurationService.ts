@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { terminal as log } from '../../utils/logger';
-import { TerminalSettings, CompleteTerminalSettings, WebViewTerminalSettings } from '../../types/shared';
+import { CompleteTerminalSettings, WebViewTerminalSettings } from '../../types/shared';
 
 /**
  * Configuration change event

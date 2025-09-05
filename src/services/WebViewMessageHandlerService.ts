@@ -101,7 +101,7 @@ class TestMessageHandler extends BaseMessageHandler {
     return this.getHandledCommands().includes(command);
   }
 
-  async handle(message: WebviewMessage, context: IMessageHandlerContext): Promise<void> {
+  async handle(message: WebviewMessage, _context: IMessageHandlerContext): Promise<void> {
     this.log('Test message received:', message.command);
     
     if (message.command === 'test' && (message as any).type === 'initComplete') {
@@ -435,11 +435,11 @@ class CliAgentHandler extends BaseMessageHandler {
 
 // Unknown message handler (default)
 class UnknownMessageHandler implements IMessageHandler {
-  canHandle(command: string): boolean {
+  canHandle(_command: string): boolean {
     return true; // Default handler accepts any command
   }
 
-  async handle(message: WebviewMessage, context: IMessageHandlerContext): Promise<void> {
+  async handle(message: WebviewMessage, _context: IMessageHandlerContext): Promise<void> {
     log(`⚠️ [UNKNOWN-HANDLER] Unknown webview message command: ${message.command}`);
   }
 }

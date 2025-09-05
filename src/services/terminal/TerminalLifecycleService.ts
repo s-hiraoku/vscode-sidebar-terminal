@@ -1,4 +1,4 @@
-import * as vscode from 'vscode';
+// import * as vscode from 'vscode'; // unused
 import * as pty from '@homebridge/node-pty-prebuilt-multiarch';
 import { TerminalInstance } from '../../types/shared';
 import { terminal as log } from '../../utils/logger';
