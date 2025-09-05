@@ -54,22 +54,40 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
 
   describe('Dynamic Split Direction', function () {
     it('should update split direction from vertical to horizontal', function () {
-      // Arrange - add a terminal to test layout change
-      const terminalId = 'terminal-1';
-      const container = document.createElement('div');
-      container.id = `terminal-container-${terminalId}`;
-      document.getElementById('terminal-body')!.appendChild(container);
+      // Arrange - add TWO terminals to test layout change (layout only applied when terminals.size > 1)
+      const terminalId1 = 'terminal-1';
+      const container1 = document.createElement('div');
+      container1.id = `terminal-container-${terminalId1}`;
+      document.getElementById('terminal-body')!.appendChild(container1);
 
-      const terminalInstance: TerminalInstance = {
-        id: terminalId,
+      const terminalInstance1: TerminalInstance = {
+        id: terminalId1,
         terminal: mockTerminal,
         fitAddon: mockFitAddon,
         name: 'Terminal 1',
         number: 1,
-        container: container,
+        container: container1,
       };
 
-      splitManager.terminals.set(terminalId, terminalInstance);
+      const terminalId2 = 'terminal-2';
+      const container2 = document.createElement('div');
+      container2.id = `terminal-container-${terminalId2}`;
+      document.getElementById('terminal-body')!.appendChild(container2);
+
+      const terminalInstance2: TerminalInstance = {
+        id: terminalId2,
+        terminal: sinon.createStubInstance(Terminal),
+        fitAddon: sinon.createStubInstance(FitAddon),
+        name: 'Terminal 2',
+        number: 2,
+        container: container2,
+      };
+
+      splitManager.terminals.set(terminalId1, terminalInstance1);
+      splitManager.terminals.set(terminalId2, terminalInstance2);
+      // Also add to terminalContainers map which is used by the layout update logic
+      (splitManager as any).terminalContainers.set(terminalId1, container1);
+      (splitManager as any).terminalContainers.set(terminalId2, container2);
       splitManager.isSplitMode = true;
 
       // Act - change from vertical to horizontal
@@ -77,27 +95,45 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
 
       // Assert - terminal body should have horizontal layout
       const terminalBody = document.getElementById('terminal-body')!;
-      expect(terminalBody.style.flexDirection).to.equal('');
-      expect(terminalBody.style.display).to.equal('flex');
+      expect(terminalBody.style.flexDirection).to.equal('row'); // horizontal = row
+      // The display property is not set by the split manager, so we shouldn't expect it
     });
 
     it('should update split direction from horizontal to vertical', function () {
-      // Arrange - start with horizontal layout
-      const terminalId = 'terminal-1';
-      const container = document.createElement('div');
-      container.id = `terminal-container-${terminalId}`;
-      document.getElementById('terminal-body')!.appendChild(container);
+      // Arrange - start with horizontal layout - need TWO terminals for layout to apply
+      const terminalId1 = 'terminal-1';
+      const container1 = document.createElement('div');
+      container1.id = `terminal-container-${terminalId1}`;
+      document.getElementById('terminal-body')!.appendChild(container1);
 
-      const terminalInstance: TerminalInstance = {
-        id: terminalId,
+      const terminalInstance1: TerminalInstance = {
+        id: terminalId1,
         terminal: mockTerminal,
         fitAddon: mockFitAddon,
         name: 'Terminal 1',
         number: 1,
-        container: container,
+        container: container1,
       };
 
-      splitManager.terminals.set(terminalId, terminalInstance);
+      const terminalId2 = 'terminal-2';
+      const container2 = document.createElement('div');
+      container2.id = `terminal-container-${terminalId2}`;
+      document.getElementById('terminal-body')!.appendChild(container2);
+
+      const terminalInstance2: TerminalInstance = {
+        id: terminalId2,
+        terminal: sinon.createStubInstance(Terminal),
+        fitAddon: sinon.createStubInstance(FitAddon),
+        name: 'Terminal 2',
+        number: 2,
+        container: container2,
+      };
+
+      splitManager.terminals.set(terminalId1, terminalInstance1);
+      splitManager.terminals.set(terminalId2, terminalInstance2);
+      // Also add to terminalContainers map which is used by the layout update logic
+      (splitManager as any).terminalContainers.set(terminalId1, container1);
+      (splitManager as any).terminalContainers.set(terminalId2, container2);
       splitManager.isSplitMode = true;
 
       // Set initial horizontal layout
@@ -108,8 +144,7 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
 
       // Assert - terminal body should have vertical layout
       const terminalBody = document.getElementById('terminal-body')!;
-      expect(terminalBody.style.flexDirection).to.equal('');
-      expect(terminalBody.style.display).to.equal('');
+      expect(terminalBody.style.flexDirection).to.equal('column'); // vertical = column
     });
 
     it('should handle layout change with multiple terminals', function () {
@@ -133,6 +168,8 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
         };
 
         splitManager.terminals.set(id, instance);
+        // Also add to terminalContainers map which is used by the layout update logic
+        (splitManager as any).terminalContainers.set(id, container);
         terminalInstances.push(instance);
       });
 
@@ -141,13 +178,14 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
       // Act - change to horizontal layout
       splitManager.updateSplitDirection('horizontal', 'panel');
 
-      // Assert - all containers should maintain flex: 1
+      // Assert - all containers should have flex: 1 set by the split manager
+      // Note: browsers may expand 'flex: 1' to 'flex: 1 1 0%' or similar
       terminalInstances.forEach((instance) => {
-        expect(instance.container.style.flex).to.equal('');
+        expect(instance.container.style.flex).to.include('1');
       });
 
       const terminalBody = document.getElementById('terminal-body')!;
-      expect(terminalBody.style.flexDirection).to.equal('');
+      expect(terminalBody.style.flexDirection).to.equal('row'); // horizontal layout
     });
 
     it('should preserve terminal state during layout transitions', function () {

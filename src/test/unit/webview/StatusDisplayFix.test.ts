@@ -74,8 +74,8 @@ describe('CLI Agent Status Display Fix', () => {
       // Assert
       expect(mockInsertStatusSpy.calledOnceWith(mockHeaderElements, 'connected', 'claude')).to.be
         .true;
-      // Connected状態では切り替えボタンは非表示 (false)
-      expect(mockSetVisibilitySpy.calledOnceWith(mockHeaderElements, false)).to.be.true;
+      // Connected状態でも切り替えボタンは表示 (always visible)
+      expect(mockSetVisibilitySpy.calledOnceWith(mockHeaderElements, true, 'connected')).to.be.true;
       expect(mockRemoveStatusSpy.called).to.be.false;
     });
 
@@ -97,7 +97,7 @@ describe('CLI Agent Status Display Fix', () => {
 
       // Assert
       expect(mockRemoveStatusSpy.calledOnceWith(mockHeaderElements)).to.be.true;
-      expect(mockSetVisibilitySpy.calledOnceWith(mockHeaderElements, false)).to.be.true;
+      expect(mockSetVisibilitySpy.calledOnceWith(mockHeaderElements, true)).to.be.true;
       expect(mockInsertStatusSpy.called).to.be.false;
     });
 
@@ -155,7 +155,7 @@ describe('CLI Agent Status Display Fix', () => {
 
       // Assert
       expect(mockRemoveStatusSpy.calledOnceWith(mockHeaderElements)).to.be.true;
-      expect(mockSetVisibilitySpy.calledOnceWith(mockHeaderElements, false)).to.be.true;
+      expect(mockSetVisibilitySpy.calledOnceWith(mockHeaderElements, true)).to.be.true;
     });
 
     it('should handle disconnected -> connected transition correctly', () => {
@@ -173,8 +173,8 @@ describe('CLI Agent Status Display Fix', () => {
       // Assert
       expect(mockInsertStatusSpy.calledOnceWith(mockHeaderElements, 'connected', 'claude')).to.be
         .true;
-      // Connected状態では切り替えボタンは非表示 (false)
-      expect(mockSetVisibilitySpy.calledOnceWith(mockHeaderElements, false)).to.be.true;
+      // Connected状態でも切り替えボタンは表示 (always visible)
+      expect(mockSetVisibilitySpy.calledOnceWith(mockHeaderElements, true, 'connected')).to.be.true;
     });
 
     it('should handle none -> connected transition correctly', () => {
@@ -186,8 +186,8 @@ describe('CLI Agent Status Display Fix', () => {
       // Assert
       expect(mockInsertStatusSpy.calledOnceWith(mockHeaderElements, 'connected', 'gemini')).to.be
         .true;
-      // Connected状態では切り替えボタンは非表示 (false)
-      expect(mockSetVisibilitySpy.calledOnceWith(mockHeaderElements, false)).to.be.true;
+      // Connected状態でも切り替えボタンは表示 (always visible)
+      expect(mockSetVisibilitySpy.calledOnceWith(mockHeaderElements, true, 'connected')).to.be.true;
       expect(mockRemoveStatusSpy.called).to.be.false;
     });
   });
@@ -219,12 +219,12 @@ describe('CLI Agent Status Display Fix', () => {
   });
 
   describe('AI Agent Toggle Button Visibility Rules', () => {
-    it('should hide toggle button for connected status', () => {
+    it('should show toggle button for connected status (always visible)', () => {
       // Act
       uiManager.updateCliAgentStatusByTerminalId('terminal-1', 'connected', 'claude');
 
       // Assert
-      expect(mockSetVisibilitySpy.calledWith(mockHeaderElements, false)).to.be.true;
+      expect(mockSetVisibilitySpy.calledWith(mockHeaderElements, true, 'connected')).to.be.true;
     });
 
     it('should show toggle button for disconnected status', () => {
@@ -235,27 +235,27 @@ describe('CLI Agent Status Display Fix', () => {
       expect(mockSetVisibilitySpy.calledWith(mockHeaderElements, true, 'disconnected')).to.be.true;
     });
 
-    it('should hide toggle button for none status', () => {
+    it('should show toggle button for none status (always visible)', () => {
       // Act
       uiManager.updateCliAgentStatusByTerminalId('terminal-1', 'none', null);
 
       // Assert
-      expect(mockSetVisibilitySpy.calledWith(mockHeaderElements, false)).to.be.true;
+      expect(mockSetVisibilitySpy.calledWith(mockHeaderElements, true)).to.be.true;
     });
 
-    it('should correctly handle connected -> disconnected -> connected transitions', () => {
-      // Initial: connected (button hidden)
+    it('should correctly handle connected -> disconnected -> connected transitions (always visible)', () => {
+      // Initial: connected (button visible)
       uiManager.updateCliAgentStatusByTerminalId('terminal-1', 'connected', 'claude');
       mockSetVisibilitySpy.resetHistory();
 
-      // Transition to disconnected (button shown)
+      // Transition to disconnected (button still visible)
       uiManager.updateCliAgentStatusByTerminalId('terminal-1', 'disconnected', 'claude');
       expect(mockSetVisibilitySpy.calledWith(mockHeaderElements, true, 'disconnected')).to.be.true;
       mockSetVisibilitySpy.resetHistory();
 
-      // Transition back to connected (button hidden)
+      // Transition back to connected (button still visible)
       uiManager.updateCliAgentStatusByTerminalId('terminal-1', 'connected', 'claude');
-      expect(mockSetVisibilitySpy.calledWith(mockHeaderElements, false)).to.be.true;
+      expect(mockSetVisibilitySpy.calledWith(mockHeaderElements, true, 'connected')).to.be.true;
     });
   });
 

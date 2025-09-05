@@ -49,8 +49,10 @@ describe('ConfigManager', () => {
 
   describe('getExtensionTerminalConfig', () => {
     it('should return terminal configuration with defaults', () => {
-      // Setup default values
-      mockWorkspaceConfiguration.get.returns(undefined);
+      // Setup default values - need to return the default value when called with default parameter
+      mockWorkspaceConfiguration.get.callsFake((key: string, defaultValue?: any) => {
+        return defaultValue; // Return the default value passed by the ConfigManager
+      });
 
       const config = configManager.getExtensionTerminalConfig();
 
@@ -77,10 +79,11 @@ describe('ConfigManager', () => {
     });
 
     it('should handle partial configuration', () => {
-      // Only some values configured
-      mockWorkspaceConfiguration.get.withArgs('maxTerminals').returns(10);
-      mockWorkspaceConfiguration.get.withArgs('shell').returns(undefined);
-      mockWorkspaceConfiguration.get.withArgs('fontSize').returns(undefined);
+      // Only some values configured with proper default handling
+      mockWorkspaceConfiguration.get.callsFake((key: string, defaultValue?: any) => {
+        if (key === 'maxTerminals') return 10;
+        return defaultValue; // Return default for undefined keys
+      });
 
       const config = configManager.getExtensionTerminalConfig();
 
@@ -94,7 +97,14 @@ describe('ConfigManager', () => {
     it('should register configuration change listener', () => {
       const callback = sandbox.stub();
       const mockDisposable = { dispose: sandbox.stub() };
-      sandbox.stub(vscode.workspace, 'onDidChangeConfiguration').returns(mockDisposable);
+      
+      // Check if already stubbed to avoid double stubbing
+      const onDidChangeStub = vscode.workspace.onDidChangeConfiguration as any;
+      if (!onDidChangeStub || !onDidChangeStub.isSinonProxy) {
+        sandbox.stub(vscode.workspace, 'onDidChangeConfiguration').returns(mockDisposable);
+      } else {
+        onDidChangeStub.returns(mockDisposable);
+      }
 
       const disposable = configManager.onConfigurationChange(callback);
 

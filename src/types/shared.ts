@@ -388,11 +388,15 @@ export interface TerminalInstance {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   pty?: any; // Using any for node-pty compatibility with both real and mock implementations (ptyProcessに移行中)
   ptyProcess?: unknown; // 新しいpty参照名（セッション復元対応）
+  process?: any; // For lifecycle service compatibility
   name: string;
-  number: number; // ターミナル番号（1-5）
+  number?: number; // ターミナル番号（1-5）
   cwd?: string; // 現在の作業ディレクトリ
+  shell?: string; // Shell path
+  shellArgs?: string[]; // Shell arguments
+  pid?: number; // Process ID
   isActive: boolean;
-  createdAt?: number; // 作成日時
+  createdAt?: Date; // 作成日時
 
   // セッション復元関連のプロパティ
   isSessionRestored?: boolean; // セッション復元で作成されたターミナルかどうか
@@ -528,6 +532,7 @@ export interface WebviewMessage {
     | 'splitTerminal'         // Split terminal request
     | 'updateSettings'        // Update settings request
     | 'terminalClosed'        // Terminal closed notification
+    | 'customEvent'           // Custom event for extensibility
     | 'error';
   config?: TerminalConfig;
   data?: string;
@@ -647,6 +652,10 @@ export interface WebviewMessage {
   
   // 🎯 FIX: 削除処理統一化で追加
   success?: boolean;  // 削除処理の成功/失敗
+
+  // Custom event properties
+  eventType?: string;  // Custom event type for extensibility
+  eventData?: any;     // Custom event data
   // reason?: string; // 失敗理由 - 重複のためコメント化（上部のreasonを使用）
 
   // AIエージェント切り替え関連プロパティ

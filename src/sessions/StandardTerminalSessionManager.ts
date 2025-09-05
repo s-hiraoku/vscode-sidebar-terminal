@@ -95,7 +95,7 @@ export class StandardTerminalSessionManager {
       const terminalInfos = terminals.map((terminal) => ({
         id: terminal.id,
         name: terminal.name,
-        number: terminal.number,
+        number: terminal.number || 1,
         cwd: terminal.cwd || process.cwd(),
         isActive: terminal.id === activeTerminalId,
       }));

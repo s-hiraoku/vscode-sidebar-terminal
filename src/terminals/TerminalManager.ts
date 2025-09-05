@@ -197,7 +197,7 @@ export class TerminalManager {
         pty: ptyProcess,        // 互換性のため
         ptyProcess,             // 新しい参照名
         isActive: false,
-        createdAt: Date.now(),
+        createdAt: new Date(),
       };
 
       // Store terminal and set it as active
@@ -357,7 +357,7 @@ export class TerminalManager {
         number: terminalNumber,
         cwd: cwd,
         isActive: true,
-        createdAt: Date.now(),
+        createdAt: new Date(),
       };
 
       // Set all other terminals as inactive
@@ -1378,7 +1378,7 @@ export class TerminalManager {
    */
   public getDisconnectedAgents(): Map<
     string,
-    { type: 'claude' | 'gemini'; startTime: Date; terminalName?: string }
+    { type: 'claude' | 'gemini' | 'codex'; startTime: Date; terminalName?: string }
   > {
     return this._cliAgentService.getDisconnectedAgents();
   }
@@ -1394,9 +1394,9 @@ export class TerminalManager {
   /**
    * Get the connected agent type
    */
-  public getConnectedAgentType(): 'claude' | 'gemini' | null {
+  public getConnectedAgentType(): 'claude' | 'gemini' | 'codex' | null {
     const connectedAgent = this._cliAgentService.getConnectedAgent();
-    return connectedAgent ? (connectedAgent.type as 'claude' | 'gemini') : null;
+    return connectedAgent ? (connectedAgent.type as 'claude' | 'gemini' | 'codex') : null;
   }
 
   /**

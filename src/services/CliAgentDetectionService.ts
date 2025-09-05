@@ -97,6 +97,26 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
         }
       }
 
+      // OpenAI Codex CLI detection
+      if (!result) {
+        log(`🔍 [CODEX-INPUT] Checking Codex CLI detection for: "${trimmedInput}"`);
+        const codexDetected = this.detectCodexFromInput(trimmedInput);
+        log(`🔍 [CODEX-INPUT] Detection result: ${JSON.stringify(codexDetected)}`);
+
+        if (codexDetected.isDetected) {
+          log(
+            `🎯 [CLI-AGENT] OpenAI Codex CLI detected from input: "${trimmedInput}" in terminal ${terminalId}`
+          );
+          this.stateManager.setConnectedAgent(terminalId, 'codex');
+          result = {
+            type: 'codex',
+            confidence: codexDetected.confidence,
+            source: 'input',
+            detectedLine: trimmedInput,
+          };
+        }
+      }
+
       // Cache the result
       this.detectionCache.set(cacheKey, {
         result,
@@ -217,18 +237,18 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
     };
   }
 
-  getConnectedAgent(): { terminalId: string; type: 'claude' | 'gemini' } | null {
+  getConnectedAgent(): { terminalId: string; type: 'claude' | 'gemini' | 'codex' } | null {
     const terminalId = this.stateManager.getConnectedAgentTerminalId();
     const type = this.stateManager.getConnectedAgentType();
 
     if (terminalId && type) {
-      return { terminalId, type };
+      return { terminalId, type: type as 'claude' | 'gemini' | 'codex' };
     }
 
     return null;
   }
 
-  getDisconnectedAgents(): Map<string, { type: 'claude' | 'gemini'; startTime: Date }> {
+  getDisconnectedAgents(): Map<string, { type: 'claude' | 'gemini' | 'codex'; startTime: Date }> {
     return this.stateManager.getDisconnectedAgents();
   }
 
@@ -391,6 +411,21 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
                 `🔍 [GEMINI-DEBUG] Gemini keyword found but not detected as startup: "${fullyCleanLine}"`
               );
             }
+          }
+
+          // OpenAI Codex startup detection
+          if (this.detectCodexFromOutput(fullyCleanLine)) {
+            log(
+              `🚀 [CLI-AGENT] OpenAI Codex startup detected from output: "${fullyCleanLine}" in terminal ${terminalId}`
+            );
+            this.stateManager.setConnectedAgent(terminalId, 'codex');
+
+            return {
+              type: 'codex',
+              confidence: 0.9,
+              source: 'output',
+              detectedLine: fullyCleanLine,
+            };
           }
         }
       }
@@ -676,5 +711,100 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
     }
 
     return { isDetected: false, confidence: 0 };
+  }
+
+  /**
+   * Detect OpenAI Codex CLI from input command
+   */
+  private detectCodexFromInput(input: string): { isDetected: boolean; confidence: number } {
+    const line = input.toLowerCase();
+
+    // Very high confidence patterns - OpenAI Codex CLI commands
+    if (line.startsWith('codex ') || line === 'codex') {
+      return { isDetected: true, confidence: 1.0 };
+    }
+
+    // High confidence patterns - specific Codex CLI usage
+    if (line.includes('@openai/codex') || line.includes('codex-cli')) {
+      return { isDetected: true, confidence: 0.95 };
+    }
+
+    // Common Codex CLI subcommands and patterns
+    if (
+      line.startsWith('codex ') &&
+      (line.includes('edit') ||
+        line.includes('create') ||
+        line.includes('fix') ||
+        line.includes('explain') ||
+        line.includes('review') ||
+        line.includes('generate') ||
+        line.includes('refactor') ||
+        line.includes('debug') ||
+        line.includes('test') ||
+        line.includes('auto'))
+    ) {
+      return { isDetected: true, confidence: 0.95 };
+    }
+
+    // Medium confidence patterns - OpenAI references
+    if (line.includes('codex') && (line.includes('--help') || line.includes('-h'))) {
+      return { isDetected: true, confidence: 0.9 };
+    }
+
+    // Lower confidence - potential Codex CLI usage patterns
+    if (line.includes('codex') && (line.includes('config') || line.includes('auth'))) {
+      return { isDetected: true, confidence: 0.85 };
+    }
+
+    return { isDetected: false, confidence: 0 };
+  }
+
+  /**
+   * Detect OpenAI Codex CLI from output patterns
+   */
+  private detectCodexFromOutput(output: string): boolean {
+    if (!output || typeof output !== 'string') {
+      return false;
+    }
+
+    const lowerOutput = output.toLowerCase();
+
+    // High confidence patterns - OpenAI Codex specific output
+    if (lowerOutput.includes('openai codex')) {
+      return true;
+    }
+
+    // OpenAI CLI tool patterns
+    if (lowerOutput.includes('openai') && lowerOutput.includes('codex')) {
+      return true;
+    }
+
+    // Codex CLI welcome messages
+    if (
+      lowerOutput.includes('codex cli') ||
+      lowerOutput.includes('codex assistant') ||
+      lowerOutput.includes('codex ai')
+    ) {
+      return true;
+    }
+
+    // OpenAI API patterns in output
+    if (
+      lowerOutput.includes('api.openai.com') ||
+      (lowerOutput.includes('openai') && lowerOutput.includes('api'))
+    ) {
+      return true;
+    }
+
+    // Model references that indicate Codex
+    if (
+      lowerOutput.includes('code-davinci') ||
+      lowerOutput.includes('text-davinci') ||
+      lowerOutput.includes('gpt-3.5-turbo-instruct')
+    ) {
+      return true;
+    }
+
+    return false;
   }
 }

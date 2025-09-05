@@ -110,6 +110,8 @@
       "Bash(timeout:*)",
       "Bash(git restore:*)",
       "mcp__deepwiki__read_wiki_contents",
+      "Bash(gh run watch:*)",
+      "Bash(git merge:*)",
       "Bash(git rm:*)"
     ],
     "deny": []

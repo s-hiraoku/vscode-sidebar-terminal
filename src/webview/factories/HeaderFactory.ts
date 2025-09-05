@@ -162,7 +162,7 @@ export class HeaderFactory {
         height: '24px',
       },
       {
-        innerHTML: '<span style="filter: brightness(1.2) saturate(1.1);">✨</span>', // AI Agentを表すキラキラアイコン
+        innerHTML: '<span style="filter: brightness(1.2) saturate(1.1);">📎</span>', // AI Agentを表すクリップアイコン
         className: 'terminal-control ai-agent-toggle-btn',
         title: 'Switch AI Agent Connection',
         'data-terminal-id': terminalId,
@@ -220,7 +220,7 @@ export class HeaderFactory {
       aiAgentToggleButton.addEventListener('click', (event: MouseEvent) => {
         event.stopPropagation(); // Prevent header click event
         config.onAiAgentToggleClick!(terminalId);
-        log(`✨ [HeaderFactory] AI Agent toggle button clicked for terminal: ${terminalId}`);
+        log(`📎 [HeaderFactory] AI Agent toggle button clicked for terminal: ${terminalId}`);
       });
     }
 
