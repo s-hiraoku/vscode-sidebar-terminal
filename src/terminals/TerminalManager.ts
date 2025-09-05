@@ -197,7 +197,7 @@ export class TerminalManager {
         pty: ptyProcess,        // 互換性のため
         ptyProcess,             // 新しい参照名
         isActive: false,
-        createdAt: Date.now(),
+        createdAt: new Date(),
       };
 
       // Store terminal and set it as active
@@ -357,7 +357,7 @@ export class TerminalManager {
         number: terminalNumber,
         cwd: cwd,
         isActive: true,
-        createdAt: Date.now(),
+        createdAt: new Date(),
       };
 
       // Set all other terminals as inactive

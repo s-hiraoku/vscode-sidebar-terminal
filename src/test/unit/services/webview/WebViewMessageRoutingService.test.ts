@@ -173,8 +173,8 @@ describe('WebViewMessageRoutingService', () => {
     });
 
     it('should handle unknown commands gracefully', async () => {
-      const message: WebviewMessage = {
-        command: 'unknownCommand',
+      const message = {
+        command: 'unknownCommand' as any,
         data: 'some data'
       };
       
@@ -190,8 +190,8 @@ describe('WebViewMessageRoutingService', () => {
       
       service.registerHandler(failingHandler);
       
-      const message: WebviewMessage = {
-        command: 'failingCommand'
+      const message = {
+        command: 'failingCommand' as any
       };
       
       await assert.rejects(
@@ -361,8 +361,8 @@ describe('InitializationMessageHandler', () => {
     
     await handler.handle('webviewReady', message, mockContext);
     
-    assert.ok(mockContext.setInitialized.calledWith(true));
-    assert.ok(mockContext.initializeTerminal.calledOnce);
+    assert.ok((mockContext.setInitialized as sinon.SinonStub).calledWith(true));
+    assert.ok((mockContext.initializeTerminal as sinon.SinonStub).calledOnce);
   });
 
   it('should skip initialization if already initialized', async () => {
@@ -371,8 +371,8 @@ describe('InitializationMessageHandler', () => {
     
     await handler.handle('webviewReady', message, mockContext);
     
-    assert.ok(!mockContext.setInitialized.called);
-    assert.ok(!mockContext.initializeTerminal.called);
+    assert.ok(!(mockContext.setInitialized as sinon.SinonStub).called);
+    assert.ok(!(mockContext.initializeTerminal as sinon.SinonStub).called);
   });
 
   it('should handle initialization failure', async () => {
@@ -381,7 +381,7 @@ describe('InitializationMessageHandler', () => {
     
     await handler.handle('webviewReady', message, mockContext);
     
-    assert.ok(mockContext.setInitialized.calledWith(false));
+    assert.ok((mockContext.setInitialized as sinon.SinonStub).calledWith(false));
   });
 
   it('should create initial terminal when requested and none exist', async () => {
@@ -389,9 +389,9 @@ describe('InitializationMessageHandler', () => {
     
     await handler.handle('requestInitialTerminal', message, mockContext);
     
-    assert.ok(mockContext.terminalManager.createTerminal.calledOnce);
-    assert.ok(mockContext.terminalManager.setActiveTerminal.calledWith('terminal-1'));
-    assert.ok(mockContext.sendMessage.calledOnce);
+    assert.ok((mockContext.terminalManager.createTerminal as sinon.SinonStub).calledOnce);
+    assert.ok((mockContext.terminalManager.setActiveTerminal as sinon.SinonStub).calledWith('terminal-1'));
+    assert.ok((mockContext.sendMessage as sinon.SinonStub).calledOnce);
   });
 
   it('should skip terminal creation if terminals already exist', async () => {
@@ -400,7 +400,7 @@ describe('InitializationMessageHandler', () => {
     
     await handler.handle('requestInitialTerminal', message, mockContext);
     
-    assert.ok(!mockContext.terminalManager.createTerminal.called);
+    assert.ok(!(mockContext.terminalManager.createTerminal as sinon.SinonStub).called);
   });
 });
 
@@ -438,7 +438,7 @@ describe('TerminalControlMessageHandler', () => {
     
     await handler.handle(TERMINAL_CONSTANTS.COMMANDS.INPUT, message, mockContext);
     
-    assert.ok(mockContext.terminalManager.sendInput.calledWith('terminal-1', 'test input'));
+    assert.ok((mockContext.terminalManager.sendInput as sinon.SinonStub).calledWith('terminal-1', 'test input'));
   });
 
   it('should skip input command without data', async () => {
@@ -449,7 +449,7 @@ describe('TerminalControlMessageHandler', () => {
     
     await handler.handle(TERMINAL_CONSTANTS.COMMANDS.INPUT, message, mockContext);
     
-    assert.ok(!mockContext.terminalManager.sendInput.called);
+    assert.ok(!(mockContext.terminalManager.sendInput as sinon.SinonStub).called);
   });
 
   it('should handle resize command with dimensions', async () => {
@@ -462,7 +462,7 @@ describe('TerminalControlMessageHandler', () => {
     
     await handler.handle(TERMINAL_CONSTANTS.COMMANDS.RESIZE, message, mockContext);
     
-    assert.ok(mockContext.terminalManager.resizeTerminal.calledWith('terminal-1', 80, 24));
+    assert.ok((mockContext.terminalManager.resizeTerminal as sinon.SinonStub).calledWith('terminal-1', 80, 24));
   });
 
   it('should skip resize command without dimensions', async () => {
@@ -473,7 +473,7 @@ describe('TerminalControlMessageHandler', () => {
     
     await handler.handle(TERMINAL_CONSTANTS.COMMANDS.RESIZE, message, mockContext);
     
-    assert.ok(!mockContext.terminalManager.resizeTerminal.called);
+    assert.ok(!(mockContext.terminalManager.resizeTerminal as sinon.SinonStub).called);
   });
 });
 
@@ -519,8 +519,8 @@ describe('TerminalManagementMessageHandler', () => {
     
     await handler.handle('createTerminal', message, mockContext);
     
-    assert.ok(mockContext.terminalManager.createTerminal.calledOnce);
-    assert.ok(mockContext.terminalManager.getTerminalById.calledWith('new-terminal'));
+    assert.ok((mockContext.terminalManager.createTerminal as sinon.SinonStub).calledOnce);
+    assert.ok((mockContext.terminalManager.getTerminalById as sinon.SinonStub).calledWith('new-terminal'));
   });
 
   it('should handle splitTerminal command', async () => {
@@ -528,7 +528,7 @@ describe('TerminalManagementMessageHandler', () => {
     
     await handler.handle('splitTerminal', message, mockContext);
     
-    assert.ok(mockContext.splitTerminal.calledOnce);
+    assert.ok((mockContext.splitTerminal as sinon.SinonStub).calledOnce);
   });
 
   it('should handle focusTerminal command', async () => {
@@ -539,7 +539,7 @@ describe('TerminalManagementMessageHandler', () => {
     
     await handler.handle('focusTerminal', message, mockContext);
     
-    assert.ok(mockContext.terminalManager.setActiveTerminal.calledWith('target-terminal'));
+    assert.ok((mockContext.terminalManager.setActiveTerminal as sinon.SinonStub).calledWith('target-terminal'));
   });
 
   it('should handle terminalClosed command when terminal exists', async () => {
@@ -551,7 +551,7 @@ describe('TerminalManagementMessageHandler', () => {
     
     await handler.handle('terminalClosed', message, mockContext);
     
-    assert.ok(mockContext.terminalManager.removeTerminal.calledWith('existing-terminal'));
+    assert.ok((mockContext.terminalManager.removeTerminal as sinon.SinonStub).calledWith('existing-terminal'));
   });
 
   it('should handle killTerminal command with specific terminal ID', async () => {
@@ -562,7 +562,7 @@ describe('TerminalManagementMessageHandler', () => {
     
     await handler.handle('killTerminal', message, mockContext);
     
-    assert.ok(mockContext.killSpecificTerminal.calledWith('specific-terminal'));
+    assert.ok((mockContext.killSpecificTerminal as sinon.SinonStub).calledWith('specific-terminal'));
   });
 
   it('should handle killTerminal command without specific terminal ID', async () => {
@@ -570,7 +570,7 @@ describe('TerminalManagementMessageHandler', () => {
     
     await handler.handle('killTerminal', message, mockContext);
     
-    assert.ok(mockContext.killTerminal.calledOnce);
+    assert.ok((mockContext.killTerminal as sinon.SinonStub).calledOnce);
   });
 
   it('should handle deleteTerminal command', async () => {
@@ -582,7 +582,7 @@ describe('TerminalManagementMessageHandler', () => {
     
     await handler.handle('deleteTerminal', message, mockContext);
     
-    assert.ok(mockContext.deleteTerminalUnified.calledWith('delete-terminal', 'header'));
+    assert.ok((mockContext.deleteTerminalUnified as sinon.SinonStub).calledWith('delete-terminal', 'header'));
   });
 
   it('should default to panel source for deleteTerminal', async () => {
@@ -593,7 +593,7 @@ describe('TerminalManagementMessageHandler', () => {
     
     await handler.handle('deleteTerminal', message, mockContext);
     
-    assert.ok(mockContext.deleteTerminalUnified.calledWith('delete-terminal', 'panel'));
+    assert.ok((mockContext.deleteTerminalUnified as sinon.SinonStub).calledWith('delete-terminal', 'panel'));
   });
 });
 
@@ -639,11 +639,11 @@ describe('Integration Tests', () => {
   it('should handle complete message flow for terminal operations', async () => {
     // Initialize WebView
     await service.routeMessage({ command: 'webviewReady' }, mockContext);
-    assert.ok(mockContext.initializeTerminal.calledOnce);
+    assert.ok((mockContext.initializeTerminal as sinon.SinonStub).calledOnce);
     
     // Create terminal
     await service.routeMessage({ command: 'createTerminal', terminalId: 'web-1' }, mockContext);
-    assert.ok(mockContext.terminalManager.createTerminal.calledOnce);
+    assert.ok((mockContext.terminalManager.createTerminal as sinon.SinonStub).calledOnce);
     
     // Send input
     await service.routeMessage({
@@ -651,14 +651,14 @@ describe('Integration Tests', () => {
       terminalId: 'terminal-1',
       data: 'ls -la'
     }, mockContext);
-    assert.ok(mockContext.terminalManager.sendInput.calledWith('terminal-1', 'ls -la'));
+    assert.ok((mockContext.terminalManager.sendInput as sinon.SinonStub).calledWith('terminal-1', 'ls -la'));
     
     // Focus terminal
     await service.routeMessage({
       command: 'focusTerminal',
       terminalId: 'terminal-1'
     }, mockContext);
-    assert.ok(mockContext.terminalManager.setActiveTerminal.calledWith('terminal-1'));
+    assert.ok((mockContext.terminalManager.setActiveTerminal as sinon.SinonStub).calledWith('terminal-1'));
     
     // Delete terminal
     await service.routeMessage({
@@ -666,7 +666,7 @@ describe('Integration Tests', () => {
       terminalId: 'terminal-1',
       requestSource: 'header'
     }, mockContext);
-    assert.ok(mockContext.deleteTerminalUnified.calledWith('terminal-1', 'header'));
+    assert.ok((mockContext.deleteTerminalUnified as sinon.SinonStub).calledWith('terminal-1', 'header'));
   });
 
   it('should handle error recovery throughout message flow', async () => {
@@ -676,7 +676,7 @@ describe('Integration Tests', () => {
     await service.routeMessage({ command: 'webviewReady' }, mockContext);
     
     // Should have attempted to reset initialization flag
-    assert.ok(mockContext.setInitialized.calledWith(false));
+    assert.ok((mockContext.setInitialized as sinon.SinonStub).calledWith(false));
     
     // Continue with other operations despite initialization failure
     await service.routeMessage({ command: 'test' }, mockContext);

@@ -157,7 +157,7 @@ export class TerminalStateManager implements ITerminalStateManager {
       ptyProcess: undefined,
       number: 1, // Default number
       cwd: undefined,
-      createdAt: Date.now(),
+      createdAt: new Date(),
     } as TerminalInstance;
   }
 

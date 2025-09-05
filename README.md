@@ -264,7 +264,16 @@ The project uses GitHub Actions for automated testing and releases:
 
 ## 📈 Version History
 
-### v0.1.77 (Current)
+### v0.1.78 (Current)
+- 🏗️ **Service-Oriented Architecture**: Extracted WebView HTML generation and message routing services
+- 📦 **WebView HTML Generation Service**: Centralized HTML generation with CSP security and nonce management
+- 🔄 **Message Routing Service**: Plugin-based message handler architecture with 20+ command support
+- 🎯 **Unified Provider Coordinator**: Reduced SecondaryTerminalProvider complexity by 33% (2,122→1,400 lines)
+- ⚡ **Enhanced Type Safety**: Fixed critical TypeScript compilation errors and improved type definitions
+- 🧪 **Comprehensive Testing**: Added 900+ lines of tests for new services with edge case coverage
+- 📚 **Documentation Updates**: Enhanced CLAUDE.md guidelines and architectural documentation
+
+### v0.1.77
 - ✨ **Enhanced AI Agent Integration**: Improved Claude Code and Gemini CLI detection
 - 🔧 **Performance Optimizations**: Dynamic buffering system for AI agent output
 - 🐛 **Critical Fixes**: Resolved terminal deletion race conditions and memory leaks

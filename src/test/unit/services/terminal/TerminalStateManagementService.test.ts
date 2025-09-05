@@ -59,7 +59,7 @@ describe('TerminalStateManagementService', () => {
       
       service.onStateUpdate((state) => {
         assert.strictEqual(state.terminals.length, 1);
-        assert.strictEqual(state.terminals[0].id, terminal.id);
+        assert.strictEqual(state.terminals[0]?.id, terminal.id);
         done();
       });
       
@@ -559,7 +559,7 @@ describe('TerminalStateManagementService', () => {
         }
         
         if (i % 3 === 0 && i > 0) {
-          service.removeTerminal(terminals[i - 1].id);
+          service.removeTerminal(terminals[i - 1]?.id || '');
         }
       }
       

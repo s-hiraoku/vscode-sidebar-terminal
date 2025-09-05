@@ -134,7 +134,7 @@ export class TerminalLifecycleManager implements ITerminalLifecycleManager {
         number: terminalNumber,
         cwd: getWorkingDirectory(),
         isActive: false,
-        createdAt: Date.now(),
+        createdAt: new Date(),
       };
 
       // イベントハンドラーを設定

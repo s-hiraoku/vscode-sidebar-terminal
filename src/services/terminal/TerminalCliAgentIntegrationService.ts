@@ -150,7 +150,24 @@ export class TerminalCliAgentIntegrationService {
     { type: 'claude' | 'gemini'; startTime: Date; terminalName?: string }
   > {
     try {
-      return this._cliAgentService.getDisconnectedAgents();
+      const allDisconnectedAgents = this._cliAgentService.getDisconnectedAgents();
+      const filteredAgents = new Map<
+        string,
+        { type: 'claude' | 'gemini'; startTime: Date; terminalName?: string }
+      >();
+      
+      // Filter out 'codex' agents to match the expected return type
+      for (const [terminalId, agentInfo] of allDisconnectedAgents) {
+        if (agentInfo.type === 'claude' || agentInfo.type === 'gemini') {
+          filteredAgents.set(terminalId, {
+            type: agentInfo.type as 'claude' | 'gemini',
+            startTime: agentInfo.startTime,
+            terminalName: agentInfo.terminalName
+          });
+        }
+      }
+      
+      return filteredAgents;
     } catch (error) {
       log(`❌ [CliAgentIntegration] Error getting disconnected agents:`, error);
       return new Map();

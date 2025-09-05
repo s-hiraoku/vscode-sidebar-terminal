@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { TerminalManager } from '../terminals/TerminalManager';
 import { WebviewMessage } from '../types/common';
 import { TERMINAL_CONSTANTS } from '../constants';
-import { getTerminalConfig, generateNonce, normalizeTerminalInfo } from '../utils/common';
+import { getTerminalConfig, normalizeTerminalInfo } from '../utils/common';
 import { showSuccess, showError, TerminalErrorHandler } from '../utils/feedback';
 import { provider as log } from '../utils/logger';
 import { getConfigManager } from '../config/ConfigManager';

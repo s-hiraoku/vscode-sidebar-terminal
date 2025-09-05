@@ -242,8 +242,8 @@ describe('TerminalCliAgentIntegrationService', () => {
       const result = service.getConnectedAgents();
       
       assert.strictEqual(result.length, 1);
-      assert.strictEqual(result[0].terminalId, 'terminal1');
-      assert.strictEqual(result[0].agentInfo.type, 'claude');
+      assert.strictEqual(result[0]?.terminalId, 'terminal1');
+      assert.strictEqual(result[0]?.agentInfo.type, 'claude');
     });
 
     it('should return empty array when no agents connected', () => {
