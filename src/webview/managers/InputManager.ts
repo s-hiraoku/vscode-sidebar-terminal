@@ -364,11 +364,8 @@ export class InputManager extends BaseManager implements IInputManager {
     this.logger.info('Setting up VS Code compatible keyboard shortcuts');
 
     const shortcutHandler = (event: KeyboardEvent): void => {
-      // Ignore if IME is composing - more thorough check
-      if (this.imeHandler.isIMEComposing()) {
-        this.logger.debug('Ignoring keyboard shortcut during IME composition');
-        return;
-      }
+      // VS Code standard: Process keyboard shortcuts normally
+      // xterm.js handles IME composition internally
 
       // VS Code keybinding resolution
       const resolvedCommand = this.resolveKeybinding(event);
@@ -815,12 +812,8 @@ export class InputManager extends BaseManager implements IInputManager {
 
     // CRITICAL: Set up keyboard input handling for terminal
     terminal.onData((data: string) => {
-      // Simple IME handling: Only skip during active composition
-      if (this.imeHandler.isIMEComposing()) {
-        this.logger.debug(`Terminal ${terminalId} skipping input during IME composition: ${data.length} chars`);
-        return;
-      }
-      
+      // VS Code standard behavior: Always process onData events
+      // IME composition is handled by xterm.js internally, no need to block here
       this.logger.debug(`Terminal ${terminalId} data: ${data.length} chars`);
       manager.postMessageToExtension({
         command: 'input',
@@ -1075,10 +1068,8 @@ export class InputManager extends BaseManager implements IInputManager {
     terminalId: string,
     manager: IManagerCoordinator
   ): boolean {
-    // Ignore if IME is composing
-    if (this.imeHandler.isIMEComposing()) {
-      return false;
-    }
+    // VS Code standard: Process special keys normally
+    // xterm.js handles IME composition
 
     // Ctrl+C: Copy (if selection exists) or interrupt
     if (event.ctrlKey && event.key === 'c') {
