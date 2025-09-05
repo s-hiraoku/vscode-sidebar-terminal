@@ -1,4 +1,4 @@
-# 🚑 Secondary Terminal v0.1.79 - Critical Japanese Input Hotfix
+# 🚑 Secondary Terminal v0.1.80 - Critical Japanese Input Hotfix
 
 **リリース日**: 2025年1月9日  
 **重要度**: 🚨 **Critical Hotfix** (緊急修正)
