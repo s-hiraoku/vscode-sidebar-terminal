@@ -332,7 +332,7 @@ export class TerminalLifecycleManager {
           }
         },
         onAiAgentToggleClick: (clickedTerminalId) => {
-          terminalLogger.info(`✨ AI Agent toggle clicked for terminal: ${clickedTerminalId}`);
+          terminalLogger.info(`📎 AI Agent toggle clicked for terminal: ${clickedTerminalId}`);
           if (this.coordinator && 'handleAiAgentToggle' in this.coordinator) {
             (this.coordinator as any).handleAiAgentToggle(clickedTerminalId);
           }

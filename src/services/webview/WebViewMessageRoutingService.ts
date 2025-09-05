@@ -506,17 +506,17 @@ export class CliAgentMessageHandler implements MessageHandler {
 
   async handle(command: string, message: WebviewMessage, context: MessageHandlerContext): Promise<void> {
     if (command === 'switchAiAgent') {
-      log('✨ [DEBUG] ========== SWITCH AI AGENT COMMAND RECEIVED ==========');
+      log('📎 [DEBUG] ========== SWITCH AI AGENT COMMAND RECEIVED ==========');
       
       const terminalId = message.terminalId as string;
-      log('✨ [DEBUG] Terminal ID:', terminalId);
-      log('✨ [DEBUG] Full message:', message);
+      log('📎 [DEBUG] Terminal ID:', terminalId);
+      log('📎 [DEBUG] Full message:', message);
 
       if (terminalId) {
         try {
           // This would need to be implemented with actual CLI agent logic
           // For now, just log the request
-          log(`✨ [DEBUG] Switching AI Agent for terminal: ${terminalId}`);
+          log(`📎 [DEBUG] Switching AI Agent for terminal: ${terminalId}`);
           
           // Send success response (placeholder)
           await context.sendMessage({

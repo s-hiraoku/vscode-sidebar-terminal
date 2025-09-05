@@ -188,7 +188,7 @@ export class CliAgentWebViewService implements ICliAgentWebViewService {
     agentType?: string;
     reason?: string;
   }> {
-    log(`✨ [CLI-AGENT-SERVICE] Switching AI Agent for terminal: ${terminalId} (action: ${action})`);
+    log(`📎 [CLI-AGENT-SERVICE] Switching AI Agent for terminal: ${terminalId} (action: ${action})`);
 
     try {
       // Call TerminalManager's switchAiAgentConnection method

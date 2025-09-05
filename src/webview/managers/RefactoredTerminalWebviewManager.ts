@@ -481,7 +481,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
    * Handle AI Agent toggle button click
    */
   public handleAiAgentToggle(terminalId: string): void {
-    log(`✨ AI Agent toggle clicked for terminal: ${terminalId}`);
+    log(`📎 AI Agent toggle clicked for terminal: ${terminalId}`);
     
     try {
       // Get current CLI Agent state for the terminal
