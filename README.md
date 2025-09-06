@@ -24,6 +24,7 @@ A powerful VS Code extension that provides a fully-featured terminal in the side
 - **Gemini CLI Support**: Complete integration with `gemini code` commands
 - **Real-time Status Tracking**: Live AI agent status indicators with connection/disconnection detection
 - **Smart Toggle Controls**: One-click AI agent switching with status-aware button visibility
+- **Manual Reset Functionality**: Force reconnect AI agents when detection issues occur
 
 ### 🔧 **Developer Experience**
 - **Alt+Click Cursor Positioning**: VS Code-standard cursor positioning with intelligent CLI agent conflict detection
@@ -37,6 +38,7 @@ A powerful VS Code extension that provides a fully-featured terminal in the side
 - **Debug Panel**: Real-time system monitoring with Ctrl+Shift+D shortcut
 - **Memory Management**: Efficient resource cleanup and leak prevention
 - **Output Optimization**: Smart flushing intervals (2-16ms) based on activity patterns
+- **Subtle Notifications**: Improved visual design with reduced opacity and VS Code integration
 
 ## 🎯 Quick Start
 
@@ -264,7 +266,26 @@ The project uses GitHub Actions for automated testing and releases:
 
 ## 📈 Version History
 
-### v0.1.84 (Current) - 🚑 **日本語入力完全修復+品質改善**
+### v0.1.87 (Current) - 🎯 **Terminal Scroll Behavior Fix**
+- 📜 **VS Code標準スクロール動作実装**: 新しい出力で自動的に最下部までスクロール
+- ⚡ **xterm.js統合**: `scrollToBottom()`メソッドによる確実な実装
+- 🎯 **ユーザビリティ向上**: 常に最新の出力が見えるように改善
+- ✅ **VS Code互換**: 統合ターミナルと完全に同じ動作を実現
+- 🔧 **シンプルな実装**: パフォーマンスへの影響なしで標準動作追加
+- 📊 **品質維持**: ESLint 0エラー、TypeScript完全コンパイル成功
+
+### v0.1.86 - 🔧 **AI Agent Toggle Enhancement**
+- 📎 **AI Agentトグル改善**: クリップボタンでconnectedエージェント移動時、前のconnectedをdisconnectedに変更
+- ⚡ **シームレスな状態遷移**: より直感的なAI Agent切り替え動作
+- 🎨 **Toaster通知の控えめ化**: 25%透明度向上とカラー調整で視覚的な邪魔を軽減
+
+### v0.1.85 - 🚑 **Critical Cleanup & Manual Reset**
+- 🗑️ **重複コード削除**: `src/integration/`フォルダ全体と未使用ファイル完全削除
+- 🔄 **手動リセット機能**: AI Agent検知エラー時の強制再接続機能追加
+- 🎯 **コードベース整理**: 実際に使用されているコードのみ保持
+- ✅ **検知精度向上**: 過剰検知への対応策実装
+
+### v0.1.84 - 🚑 **日本語入力完全修復+品質改善**
 - 🇯🇵 **日本語入力問題の完全解決**: `terminal.onData()`でのIME入力ブロックを削除
 - ✅ **VS Code標準準拠**: 統合ターミナルと同等のIME処理品質を実現
 - ✅ **IME確定文字の確実反映**: ひらがな・カタカナ・漢字変換が100%動作

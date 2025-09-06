@@ -173,6 +173,9 @@ export class RefactoredMessageManager implements IMessageManager {
         case 'sessionRestore':
           await this.handleSessionRestoreMessage(msg, coordinator);
           break;
+        case 'switchAiAgentResponse':
+          this.handleSwitchAiAgentResponseMessage(msg, coordinator);
+          break;
         case 'sessionRestoreStarted':
           this.handleSessionRestoreStartedMessage(msg);
           break;
@@ -1555,6 +1558,63 @@ export class RefactoredMessageManager implements IMessageManager {
     }
 
     this.logger.info(`Restored ${scrollbackContent.length} lines to terminal`);
+  }
+
+  /**
+   * 🆕 MANUAL RESET: Handle AI Agent toggle response from extension
+   */
+  private handleSwitchAiAgentResponseMessage(
+    msg: any,
+    coordinator: IManagerCoordinator
+  ): void {
+    const { terminalId, success, newStatus, agentType, reason, isForceReconnect } = msg;
+    
+    this.logger.info(`AI Agent operation result for terminal ${terminalId}:`, {
+      success,
+      newStatus,
+      agentType,
+      isForceReconnect,
+      reason
+    });
+
+    // Update UI and show user feedback
+    const managers = coordinator.getManagers();
+    if (!managers?.notification) {
+      this.logger.warn('NotificationManager not available for AI Agent feedback');
+      return;
+    }
+
+    if (success) {
+      // Only show subtle success notification for successful operations
+      if (isForceReconnect) {
+        const statusText = newStatus === 'connected' ? 'Connected' : 'Disconnected';
+        managers.notification.showNotificationInTerminal(
+          `📎 AI Agent ${statusText}`,
+          'success'
+        );
+      }
+      // No notification for regular switch operations - keep it quiet
+      
+      this.logger.info(`AI Agent operation succeeded:`, {
+        terminalId,
+        newStatus,
+        agentType,
+        isForceReconnect
+      });
+      
+    } else {
+      // Only show error notifications - users need to know about failures
+      managers.notification.showNotificationInTerminal(
+        `❌ AI Agent operation failed`,
+        'error'
+      );
+      
+      this.logger.error(`AI Agent operation failed:`, {
+        terminalId,
+        reason,
+        isForceReconnect
+      });
+    }
   }
 
   // =================================================================

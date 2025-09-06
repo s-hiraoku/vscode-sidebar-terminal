@@ -479,6 +479,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
 
   /**
    * Handle AI Agent toggle button click
+   * 🎯 IMPROVED: Properly switches connected agents and moves previous connected to disconnected
    */
   public handleAiAgentToggle(terminalId: string): void {
     log(`📎 AI Agent toggle clicked for terminal: ${terminalId}`);
@@ -486,9 +487,24 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     try {
       // Get current CLI Agent state for the terminal
       const agentState = this.cliAgentStateManager.getAgentState(terminalId);
+      const currentStatus = agentState?.status || 'none';
       
-      if (agentState && agentState.status === 'disconnected') {
-        // Send switchAiAgent command to Extension to activate the CLI Agent
+      log(`📎 Current AI Agent state: ${currentStatus} for terminal: ${terminalId}`);
+      
+      if (currentStatus === 'connected') {
+        // 🔄 If already connected, treat as manual reset request
+        log(`🔄 [MANUAL-RESET] Agent already connected, treating as manual reset for terminal: ${terminalId}`);
+        this.postMessageToExtension({
+          command: 'switchAiAgent',
+          terminalId,
+          action: 'force-reconnect',
+          forceReconnect: true,
+          agentType: agentState?.agentType || 'claude',
+          timestamp: Date.now(),
+        });
+      } else {
+        // 🎯 For disconnected or none state, use normal activation
+        // This will properly handle moving previous connected agent to disconnected
         this.postMessageToExtension({
           command: 'switchAiAgent',
           terminalId,
@@ -496,35 +512,19 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
           timestamp: Date.now(),
         });
         
-        log(`✅ Sent AI Agent activation request for terminal: ${terminalId}`);
-        
-        // Show notification to user
-        this.notificationManager.showNotificationInTerminal(
-          `Activating AI Agent for terminal ${terminalId}...`,
-          'info'
-        );
-      } else {
-        log(`⚠️ AI Agent toggle ignored - current status: ${agentState?.status || 'none'}`);
-        
-        // Show feedback to user why toggle was ignored
-        if (!agentState || agentState.status === 'none') {
-          this.notificationManager.showNotificationInTerminal(
-            'No AI Agent detected in this terminal',
-            'warning'
-          );
-        } else if (agentState.status === 'connected') {
-          this.notificationManager.showNotificationInTerminal(
-            'AI Agent is already active',
-            'info'
-          );
-        }
+        log(`✅ Sent AI Agent activation request for terminal: ${terminalId} (status: ${currentStatus})`);
       }
+      
     } catch (error) {
-      log(`❌ Error handling AI Agent toggle: ${error}`);
-      this.notificationManager.showNotificationInTerminal(
-        'Failed to toggle AI Agent status',
-        'error'
-      );
+      log(`❌ Error handling AI Agent toggle for terminal ${terminalId}:`, error);
+      
+      // Try fallback activation
+      this.postMessageToExtension({
+        command: 'switchAiAgent',
+        terminalId,
+        action: 'activate',
+        timestamp: Date.now(),
+      });
     }
   }
 

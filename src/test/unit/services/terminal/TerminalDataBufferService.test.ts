@@ -82,7 +82,7 @@ describe('TerminalDataBufferService', () => {
       
       service.onData((event) => {
         assert.strictEqual(event.terminalId, 'test1');
-        assert.strictEqual(event.data, 'helloworldtest');
+        assert.strictEqual(event.data, helloworldtest');
         eventFired = true;
         done();
       });
@@ -105,9 +105,9 @@ describe('TerminalDataBufferService', () => {
       });
       let eventFired = false;
       
-      customService.onData((event) => {
+      customService.onData((_event) => {
         assert.strictEqual(event.terminalId, 'test1');
-        assert.strictEqual(event.data, 'ab');
+        assert.strictEqual(event.data, ab');
         eventFired = true;
         done();
       });
@@ -163,7 +163,7 @@ describe('TerminalDataBufferService', () => {
       
       service.onData((event) => {
         assert.strictEqual(event.terminalId, 'test1');
-        assert.strictEqual(event.data, 'test');
+        assert.strictEqual(event.data, test');
         eventFired = true;
         done();
       });
@@ -215,7 +215,7 @@ describe('TerminalDataBufferService', () => {
     it('should clear specific terminal buffer', (done) => {
       service.onData((event) => {
         assert.strictEqual(event.terminalId, 'test1');
-        assert.strictEqual(event.data, 'test');
+        assert.strictEqual(event.data, test');
         
         // Clear the buffer
         service.clearTerminalBuffer('test1');
@@ -260,7 +260,7 @@ describe('TerminalDataBufferService', () => {
       
       service.onData((event) => {
         assert.strictEqual(event.terminalId, 'test1');
-        assert.strictEqual(event.data, 'test');
+        assert.strictEqual(event.data, test');
         eventFired = true;
         done();
       });

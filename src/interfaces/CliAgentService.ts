@@ -157,6 +157,22 @@ export interface ICliAgentDetectionService {
    * @returns True if agent state is valid after refresh
    */
   refreshAgentState(): boolean;
+
+  /**
+   * Force reconnect an agent to specified terminal (manual reset)
+   * @param terminalId Terminal ID to reconnect agent to
+   * @param agentType Agent type to force reconnect
+   * @param terminalName Optional terminal name
+   * @returns True if force reconnect was successful
+   */
+  forceReconnectAgent(terminalId: string, agentType?: 'claude' | 'gemini' | 'codex', terminalName?: string): boolean;
+
+  /**
+   * Clear detection errors and reset state (manual reset)
+   * @param terminalId Terminal ID to clear errors for
+   * @returns True if errors were cleared successfully
+   */
+  clearDetectionError(terminalId: string): boolean;
 }
 
 // =================== Pattern Detection Interface ===================
@@ -290,6 +306,22 @@ export interface ICliAgentStateManager {
    * @param terminalId Terminal ID of the DISCONNECTED agent to promote
    */
   promoteDisconnectedAgentToConnected(terminalId: string): void;
+
+  /**
+   * Force reconnect agent to specified terminal (manual reset)
+   * @param terminalId Terminal ID to reconnect agent to
+   * @param agentType Agent type to force reconnect
+   * @param terminalName Optional terminal name
+   * @returns True if force reconnect was successful
+   */
+  forceReconnectAgent(terminalId: string, agentType: 'claude' | 'gemini' | 'codex', terminalName?: string): boolean;
+
+  /**
+   * Clear detection errors and reset state (manual reset)
+   * @param terminalId Terminal ID to clear errors for
+   * @returns True if errors were cleared successfully
+   */
+  clearDetectionError(terminalId: string): boolean;
 }
 
 // =================== Configuration Interface ===================
