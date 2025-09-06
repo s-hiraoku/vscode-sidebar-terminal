@@ -204,16 +204,22 @@
         "icon": "$(clippy)"
       },
       {
-        "command": "secondaryTerminal.find",
-        "title": "Find",
-        "category": "Secondary Terminal",
-        "icon": "$(search)"
-      },
-      {
         "command": "secondaryTerminal.runRecentCommand",
         "title": "Run Recent Command",
         "category": "Secondary Terminal",
         "icon": "$(history)"
+      },
+      {
+        "command": "secondaryTerminal.selectProfile",
+        "title": "Select Terminal Profile",
+        "category": "Secondary Terminal",
+        "icon": "$(terminal)"
+      },
+      {
+        "command": "secondaryTerminal.manageProfiles",
+        "title": "Manage Terminal Profiles",
+        "category": "Secondary Terminal",
+        "icon": "$(gear)"
       }
     ],
     "menus": {
@@ -232,6 +238,11 @@
           "command": "secondaryTerminal.killTerminal",
           "when": "view == secondaryTerminal",
           "group": "navigation@3"
+        },
+        {
+          "command": "secondaryTerminal.selectProfile",
+          "when": "view == secondaryTerminal",
+          "group": "navigation@2"
         },
         {
           "command": "secondaryTerminal.openSettings",
@@ -828,16 +839,16 @@
         "when": "terminalFocus && view == secondaryTerminal"
       },
       {
-        "command": "secondaryTerminal.find",
-        "key": "ctrl+f",
-        "mac": "cmd+f",
-        "when": "terminalFocus && view == secondaryTerminal"
-      },
-      {
         "command": "secondaryTerminal.runRecentCommand",
         "key": "ctrl+r",
         "mac": "cmd+r",
         "when": "terminalFocus && view == secondaryTerminal"
+      },
+      {
+        "command": "secondaryTerminal.selectProfile",
+        "key": "ctrl+shift+p",
+        "mac": "cmd+shift+p",
+        "when": "view == secondaryTerminal"
       }
     ]
   },

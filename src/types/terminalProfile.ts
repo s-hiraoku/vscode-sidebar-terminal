@@ -3,7 +3,6 @@
  * Provides profile-based terminal configuration similar to VS Code's integrated terminal
  */
 
-
 /**
  * Terminal profile configuration
  * Each profile represents a specific shell configuration with its own settings
