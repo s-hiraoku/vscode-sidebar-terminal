@@ -70,7 +70,7 @@ describe('TerminalStateManagementService', () => {
       const terminal = createMockTerminal();
       
       // Mock event emitter to throw error
-      const originalFire = service.onTerminalAdded;
+      const _originalFire = service.onTerminalAdded;
       (service as any)._terminalAddedEmitter.fire = () => {
         throw new Error('Test error');
       };

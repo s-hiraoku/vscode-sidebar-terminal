@@ -213,6 +213,9 @@ export class RefactoredMessageManager implements IMessageManager {
         case 'commandHistory':
           this.handleCommandHistoryMessage(msg, coordinator);
           break;
+        case 'find':
+          this.handleFindMessage(msg, coordinator);
+          break;
         case 'serializeTerminal':
           this.handleSerializeTerminalMessage(msg, coordinator);
           break;
@@ -1064,6 +1067,234 @@ export class RefactoredMessageManager implements IMessageManager {
     const manager = coordinator as any;
     if (manager.shellIntegrationManager) {
       manager.shellIntegrationManager.showCommandHistory(terminalId, history);
+    }
+  }
+
+  private handleFindMessage(msg: MessageCommand, coordinator: IManagerCoordinator): void {
+    const action = msg.action as string;
+    
+    this.logger.info('Handling find message', { action });
+    
+    // Get the active terminal and show search interface
+    const manager = coordinator as any;
+    if (manager.terminalLifecycleManager) {
+      const activeTerminal = manager.terminalLifecycleManager.getActiveTerminal();
+      if (activeTerminal) {
+        this.showSearchInterface(activeTerminal);
+      } else {
+        this.logger.warn('No active terminal found for search');
+      }
+    }
+  }
+
+  private showSearchInterface(terminal: Terminal): void {
+    // Get or create search addon
+    const searchAddon = (terminal as any)._addonManager?._addons?.find((addon: any) => 
+      addon.addon && addon.addon.findNext
+    )?.addon;
+    
+    if (searchAddon) {
+      // Create search UI
+      this.createSearchUI(terminal, searchAddon);
+    } else {
+      this.logger.error('Search addon not found on terminal');
+    }
+  }
+
+  private createSearchUI(terminal: Terminal, searchAddon: any): void {
+    // Add CSS styles if not already added
+    this.addSearchStyles();
+    
+    // Find or create search container
+    let searchContainer = document.getElementById('terminal-search-container');
+    if (!searchContainer) {
+      searchContainer = document.createElement('div');
+      searchContainer.id = 'terminal-search-container';
+      searchContainer.className = 'terminal-search-container';
+      
+      searchContainer.innerHTML = `
+        <div class="search-box">
+          <input type="text" class="search-input" placeholder="Search..." />
+          <button class="search-btn search-next" title="Find Next">↓</button>
+          <button class="search-btn search-prev" title="Find Previous">↑</button>
+          <button class="search-btn search-close" title="Close">×</button>
+        </div>
+      `;
+      
+      // Insert search container at the top of terminal container
+      const terminalContainer = document.querySelector('.terminal-container');
+      if (terminalContainer) {
+        terminalContainer.insertBefore(searchContainer, terminalContainer.firstChild);
+      }
+      
+      // Add search functionality
+      this.setupSearchEventListeners(searchContainer, searchAddon);
+    }
+    
+    // Show search container and focus input
+    searchContainer.style.display = 'block';
+    const searchInput = searchContainer.querySelector('.search-input') as HTMLInputElement;
+    if (searchInput) {
+      searchInput.focus();
+    }
+  }
+
+  private addSearchStyles(): void {
+    if (document.getElementById('terminal-search-styles')) {
+      return; // Styles already added
+    }
+    
+    const style = document.createElement('style');
+    style.id = 'terminal-search-styles';
+    style.textContent = `
+      .terminal-search-container {
+        display: none;
+        position: absolute;
+        top: 0;
+        right: 0;
+        z-index: 1000;
+        background-color: var(--vscode-editor-background, #1e1e1e);
+        border: 1px solid var(--vscode-panel-border, #454545);
+        border-radius: 4px;
+        padding: 4px;
+        margin: 4px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      }
+      
+      .search-box {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      
+      .search-input {
+        background-color: var(--vscode-input-background, #3c3c3c);
+        border: 1px solid var(--vscode-input-border, #454545);
+        color: var(--vscode-input-foreground, #cccccc);
+        padding: 4px 8px;
+        font-size: 13px;
+        font-family: var(--vscode-editor-font-family, monospace);
+        border-radius: 2px;
+        width: 200px;
+      }
+      
+      .search-input:focus {
+        outline: none;
+        border-color: var(--vscode-focusBorder, #007acc);
+      }
+      
+      .search-btn {
+        background-color: var(--vscode-button-background, #0e639c);
+        border: none;
+        color: var(--vscode-button-foreground, #ffffff);
+        padding: 4px 8px;
+        font-size: 12px;
+        border-radius: 2px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 24px;
+        height: 24px;
+      }
+      
+      .search-btn:hover {
+        background-color: var(--vscode-button-hoverBackground, #1177bb);
+      }
+      
+      .search-btn:active {
+        background-color: var(--vscode-button-background, #0e639c);
+      }
+      
+      .search-close {
+        background-color: var(--vscode-button-secondaryBackground, #5a5d5e);
+      }
+      
+      .search-close:hover {
+        background-color: var(--vscode-button-secondaryHoverBackground, #656565);
+      }
+    `;
+    
+    document.head.appendChild(style);
+  }
+
+  private setupSearchEventListeners(container: HTMLElement, searchAddon: any): void {
+    const searchInput = container.querySelector('.search-input') as HTMLInputElement;
+    const nextBtn = container.querySelector('.search-next') as HTMLButtonElement;
+    const prevBtn = container.querySelector('.search-prev') as HTMLButtonElement;
+    const closeBtn = container.querySelector('.search-close') as HTMLButtonElement;
+    
+    if (!searchInput || !nextBtn || !prevBtn || !closeBtn) {
+      this.logger.error('Search UI elements not found');
+      return;
+    }
+    
+    // Search on input change
+    searchInput.addEventListener('input', (e) => {
+      const searchTerm = (e.target as HTMLInputElement).value;
+      if (searchTerm) {
+        searchAddon.findNext(searchTerm);
+      } else {
+        searchAddon.clearDecorations();
+      }
+    });
+    
+    // Search on Enter
+    searchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const searchTerm = searchInput.value;
+        if (searchTerm) {
+          if (e.shiftKey) {
+            searchAddon.findPrevious(searchTerm);
+          } else {
+            searchAddon.findNext(searchTerm);
+          }
+        }
+      } else if (e.key === 'Escape') {
+        this.hideSearchInterface();
+      }
+    });
+    
+    // Next button
+    nextBtn.addEventListener('click', () => {
+      const searchTerm = searchInput.value;
+      if (searchTerm) {
+        searchAddon.findNext(searchTerm);
+      }
+    });
+    
+    // Previous button
+    prevBtn.addEventListener('click', () => {
+      const searchTerm = searchInput.value;
+      if (searchTerm) {
+        searchAddon.findPrevious(searchTerm);
+      }
+    });
+    
+    // Close button
+    closeBtn.addEventListener('click', () => {
+      this.hideSearchInterface();
+    });
+  }
+
+  private hideSearchInterface(): void {
+    const searchContainer = document.getElementById('terminal-search-container');
+    if (searchContainer) {
+      searchContainer.style.display = 'none';
+      
+      // Clear any search decorations
+      const terminals = document.querySelectorAll('.xterm');
+      terminals.forEach(terminalElement => {
+        const terminal = (terminalElement as any)._terminal;
+        if (terminal) {
+          const searchAddon = (terminal as any)._addonManager?._addons?.find((addon: any) => 
+            addon.addon && addon.addon.clearDecorations
+          )?.addon;
+          if (searchAddon && searchAddon.clearDecorations) {
+            searchAddon.clearDecorations();
+          }
+        }
+      });
     }
   }
 

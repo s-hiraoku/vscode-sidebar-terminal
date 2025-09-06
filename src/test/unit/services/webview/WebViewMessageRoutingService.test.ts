@@ -7,10 +7,10 @@ import {
   DebugMessageHandler,
   InitializationMessageHandler,
   TerminalControlMessageHandler,
-  SettingsMessageHandler,
+  SettingsMessageHandler as _SettingsMessageHandler,
   TerminalManagementMessageHandler,
-  PanelLocationMessageHandler,
-  CliAgentMessageHandler
+  PanelLocationMessageHandler as _PanelLocationMessageHandler,
+  CliAgentMessageHandler as _CliAgentMessageHandler
 } from '../../../../services/webview/WebViewMessageRoutingService';
 import { WebviewMessage } from '../../../../types/common';
 import { TERMINAL_CONSTANTS } from '../../../../constants';

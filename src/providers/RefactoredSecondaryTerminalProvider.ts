@@ -36,6 +36,7 @@ export class RefactoredSecondaryTerminalProvider implements vscode.WebviewViewPr
   private readonly _settingsManager: WebViewSettingsManagerService;
   private readonly _htmlGenerator: WebViewHtmlGenerator;
   private readonly _eventHandler: TerminalEventHandlerService;
+  private _profileManager?: any; // TODO: Add proper type
   
   // Terminal ID mapping for Extension <-> WebView communication
   private _terminalIdMapping?: Map<string, string>;
@@ -252,6 +253,7 @@ export class RefactoredSecondaryTerminalProvider implements vscode.WebviewViewPr
       stateManager: this._stateManager,
       cliAgentService: this._cliAgentService,
       settingsManager: this._settingsManager,
+      profileManager: this._profileManager, // Add profile manager to context
     } as IMessageHandlerContext;
   }
 
@@ -310,6 +312,88 @@ export class RefactoredSecondaryTerminalProvider implements vscode.WebviewViewPr
       eventHandler: this._eventHandler.getDebugInfo(context),
       timestamp: new Date().toISOString(),
     };
+  }
+
+  /**
+   * Set profile manager for terminal profile functionality
+   */
+  public setProfileManager(profileManager: any): void {
+    this._profileManager = profileManager;
+    log('🎯 [PROVIDER] Profile Manager set on provider');
+  }
+
+  /**
+   * Show profile selector UI
+   */
+  public async showProfileSelector(): Promise<void> {
+    if (!this._profileManager || !this._view?.webview) {
+      return;
+    }
+
+    try {
+      const profiles = this._profileManager.getProfiles();
+      const defaultProfile = this._profileManager.getDefaultProfile();
+
+      this._view.webview.postMessage({
+        command: 'showProfileSelector',
+        profiles: profiles,
+        selectedProfileId: defaultProfile.id
+      });
+
+      log('🎯 [PROVIDER] Sent showProfileSelector message to WebView');
+    } catch (error) {
+      log('❌ [PROVIDER] Error showing profile selector:', error);
+    }
+  }
+
+  /**
+   * Create terminal with profile selection
+   */
+  public async createTerminalWithProfileSelection(): Promise<void> {
+    if (!this._profileManager || !this._view?.webview) {
+      // Fallback to regular terminal creation
+      await this._initializeTerminal();
+      return;
+    }
+
+    try {
+      const profiles = this._profileManager.getProfiles();
+      if (profiles.length === 1) {
+        // Only one profile available, use it directly
+        const result = this._profileManager.createTerminalWithProfile(profiles[0].id);
+        await this._createTerminalWithConfig(result.config);
+      } else {
+        // Show profile selector
+        await this.showProfileSelector();
+      }
+    } catch (error) {
+      log('❌ [PROVIDER] Error creating terminal with profile selection:', error);
+      // Fallback to regular terminal creation
+      await this._initializeTerminal();
+    }
+  }
+
+  /**
+   * Create terminal with specific configuration
+   */
+  private async _createTerminalWithConfig(config: any): Promise<void> {
+    try {
+      // Use existing terminal creation logic
+      const terminalCreationResult = await this._terminalManager.createTerminal();
+
+      if (this._view?.webview && terminalCreationResult) {
+        this._view.webview.postMessage({
+          command: 'terminalCreated',
+          terminalId: terminalCreationResult,
+          terminalName: config.name || 'Terminal'
+        });
+      }
+
+      log(`🎯 [PROVIDER] Created terminal with profile: ${config.name}`);
+    } catch (error) {
+      log('❌ [PROVIDER] Error creating terminal with config:', error);
+      throw error;
+    }
   }
 
   /**

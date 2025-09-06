@@ -533,7 +533,18 @@ export interface WebviewMessage {
     | 'updateSettings'        // Update settings request
     | 'terminalClosed'        // Terminal closed notification
     | 'customEvent'           // Custom event for extensibility
-    | 'error';
+    | 'error'
+    // Terminal Profile commands
+    | 'getProfiles'           // Get available terminal profiles
+    | 'profilesResponse'      // Response with available profiles
+    | 'createTerminalWithProfile' // Create terminal with specific profile
+    | 'showProfileSelector'   // Show profile selector UI
+    | 'selectProfile'         // Profile selected from UI
+    | 'createProfile'         // Create new profile
+    | 'updateProfile'         // Update existing profile
+    | 'deleteProfile'         // Delete profile
+    | 'setDefaultProfile'     // Set default profile
+    | 'find';                 // Terminal search functionality
   config?: TerminalConfig;
   data?: string;
   exitCode?: number;
@@ -662,6 +673,41 @@ export interface WebviewMessage {
   action?: string; // switchAiAgentコマンドのアクション
   newStatus?: 'connected' | 'disconnected' | 'none'; // AIエージェントの新しいステータス
   agentType?: string | null; // エージェントタイプ
+
+  // Terminal Profile properties
+  profiles?: Array<{
+    id: string;
+    name: string;
+    description?: string;
+    icon?: string;
+    path: string;
+    args?: string[];
+    env?: Record<string, string>;
+    cwd?: string;
+    color?: string;
+    isDefault?: boolean;
+    source?: 'builtin' | 'user' | 'extension';
+  }>; // Available terminal profiles
+  profileId?: string; // Selected profile ID
+  profile?: {
+    id: string;
+    name: string;
+    description?: string;
+    icon?: string;
+    path: string;
+    args?: string[];
+    env?: Record<string, string>;
+    cwd?: string;
+    color?: string;
+    isDefault?: boolean;
+    source?: 'builtin' | 'user' | 'extension';
+  }; // Profile data for create/update operations
+  profileOptions?: {
+    name?: string;
+    cwd?: string;
+    env?: Record<string, string>;
+    shellArgs?: string[];
+  }; // Profile options for terminal creation
 }
 
 /**

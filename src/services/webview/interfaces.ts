@@ -11,6 +11,7 @@ export interface IMessageHandlerContext {
   terminalManager: TerminalManager;
   webview: vscode.Webview | undefined;
   standardSessionManager?: any; // TODO: Add proper type
+  profileManager?: any; // TODO: Add proper type for TerminalProfileManager
   sendMessage: (message: WebviewMessage) => Promise<void>;
   terminalIdMapping?: Map<string, string>;
 }

@@ -1,13 +1,13 @@
 import { describe, it, beforeEach, afterEach } from 'mocha';
 import { expect } from 'chai';
 import * as sinon from 'sinon';
-import * as vscode from 'vscode';
+import * as _vscode from 'vscode';
 
 import { 
   WebViewStateManager, 
-  IWebViewStateManager 
+  IWebViewStateManager as _IWebViewStateManager 
 } from '../../../services/WebViewStateManager';
-import { WebviewMessage } from '../../../types/common';
+import { WebviewMessage as _WebviewMessage } from '../../../types/common';
 
 /**
  * Comprehensive Unit Tests for WebViewStateManager
