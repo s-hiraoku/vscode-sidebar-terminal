@@ -891,6 +891,11 @@ export class TerminalLifecycleManager {
       }
 
       terminalInstance.terminal.write(data);
+      
+      // Auto-scroll to bottom to match VS Code standard terminal behavior
+      // This ensures users always see the latest output
+      terminalInstance.terminal.scrollToBottom();
+      
       return true;
     } catch (error) {
       terminalLogger.error(`Failed to write to terminal:`, error);
