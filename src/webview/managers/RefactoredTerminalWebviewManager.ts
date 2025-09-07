@@ -148,6 +148,14 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     this.messageManager = new RefactoredMessageManager(this);
     this.persistenceManager = new StandardTerminalPersistenceManager();
 
+    // Initialize the message manager (initialize method returns void, not Promise)
+    try {
+      this.messageManager.initialize(this);
+      console.log('✅ RefactoredMessageManager initialized successfully');
+    } catch (error) {
+      console.error('Failed to initialize RefactoredMessageManager:', error);
+    }
+
     // 依存関係の設定
     setUIManager(this.uiManager);
     this.inputManager.setNotificationManager(this.notificationManager);

@@ -3,13 +3,13 @@ import { terminal as log } from '../../utils/logger';
 import { CompleteTerminalSettings, WebViewTerminalSettings } from '../../types/shared';
 
 /**
- * Configuration change event
+ * Configuration change event with proper typing
  */
 export interface ConfigurationChangeEvent {
   section: string;
   key: string;
-  oldValue: any;
-  newValue: any;
+  oldValue: unknown;
+  newValue: unknown;
   timestamp: number;
 }
 
@@ -37,7 +37,7 @@ export interface ConfigValidationResult {
  */
 export class UnifiedConfigurationService {
   private readonly _onConfigurationChanged = new vscode.EventEmitter<ConfigurationChangeEvent>();
-  private readonly _configurationCache = new Map<string, any>();
+  private readonly _configurationCache = new Map<string, unknown>();
   private _disposables: vscode.Disposable[] = [];
 
   public readonly onConfigurationChanged = this._onConfigurationChanged.event;
@@ -138,7 +138,7 @@ export class UnifiedConfigurationService {
   /**
    * Update configuration value
    */
-  async update(section: string, key: string, value: any, target?: vscode.ConfigurationTarget): Promise<void> {
+  async update(section: string, key: string, value: unknown, target?: vscode.ConfigurationTarget): Promise<void> {
     try {
       const config = vscode.workspace.getConfiguration(section);
       const oldValue = config.get(key);
@@ -270,7 +270,7 @@ export class UnifiedConfigurationService {
   /**
    * Get configuration as JSON for debugging
    */
-  getConfigurationSnapshot(): Record<string, any> {
+  getConfigurationSnapshot(): Record<string, unknown> {
     return {
       sidebarTerminal: this.getSidebarTerminalConfig(),
       terminalIntegrated: {
@@ -311,7 +311,7 @@ export class UnifiedConfigurationService {
   /**
    * Cache configuration for performance
    */
-  private _cacheConfiguration(section: string, config: any): void {
+  private _cacheConfiguration(section: string, config: unknown): void {
     const cacheKey = `${section}_full_config`;
     this._configurationCache.set(cacheKey, config);
   }

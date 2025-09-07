@@ -385,10 +385,9 @@ export interface DeleteResult {
  */
 export interface TerminalInstance {
   id: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  pty?: any; // Using any for node-pty compatibility with both real and mock implementations (ptyProcessに移行中)
-  ptyProcess?: unknown; // 新しいpty参照名（セッション復元対応）
-  process?: any; // For lifecycle service compatibility
+  pty?: import('@homebridge/node-pty-prebuilt-multiarch').IPty; // Properly typed node-pty interface
+  ptyProcess?: import('@homebridge/node-pty-prebuilt-multiarch').IPty; // 新しいpty参照名（セッション復元対応）
+  process?: NodeJS.Process; // For lifecycle service compatibility
   name: string;
   number?: number; // ターミナル番号（1-5）
   cwd?: string; // 現在の作業ディレクトリ
@@ -598,6 +597,8 @@ export interface WebviewMessage {
     agentType: string | null;
     terminalId?: string; // 🛠️ FIX: Add terminalId for reliable status updates
   }; // CLI Agent接続状態の情報（新しい名前）
+  
+  forceReconnect?: boolean; // Force reconnect flag for CLI Agent switching
 
   // 🔧 NEW: Full CLI Agent State Sync
   terminalStates?: Record<
@@ -666,7 +667,7 @@ export interface WebviewMessage {
 
   // Custom event properties
   eventType?: string;  // Custom event type for extensibility
-  eventData?: any;     // Custom event data
+  eventData?: unknown; // Custom event data
   // reason?: string; // 失敗理由 - 重複のためコメント化（上部のreasonを使用）
 
   // AIエージェント切り替え関連プロパティ

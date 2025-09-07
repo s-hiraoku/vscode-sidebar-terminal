@@ -5,9 +5,20 @@ import { TERMINAL_CONSTANTS } from '../constants';
 import { getTerminalConfig, normalizeTerminalInfo } from '../utils/common';
 import { showSuccess, showError, TerminalErrorHandler } from '../utils/feedback';
 import { provider as log } from '../utils/logger';
-import { getConfigManager } from '../config/ConfigManager';
+import { getUnifiedConfigurationService } from '../config/UnifiedConfigurationService';
 import { PartialTerminalSettings, WebViewFontSettings } from '../types/shared';
 import { WebViewHtmlGenerationService, HtmlGenerationOptions } from '../services/webview/WebViewHtmlGenerationService';
+import { 
+  isWebviewMessage, 
+  hasTerminalId, 
+  hasResizeParams, 
+  hasSettings, 
+  hasInputData,
+  hasDirection,
+  hasForceReconnect,
+  AIAgentOperationResult,
+  MessageHandler
+} from '../types/type-guards';
 
 export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vscode.Disposable {
   public static readonly viewType = 'secondaryTerminal';
@@ -20,8 +31,12 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   // Removed all state variables - using simple "fresh start" approach
 
   // Minimal command router for incoming webview messages
-  private _messageHandlers = new Map<string, (message: WebviewMessage) => Promise<void> | void>();
+  private _messageHandlers = new Map<string, MessageHandler>();
   private readonly _htmlGenerationService: WebViewHtmlGenerationService;
+  
+  // Phase 8 services (typed properly)
+  private _decorationsService?: import('../services/TerminalDecorationsService').TerminalDecorationsService;
+  private _linksService?: import('../services/TerminalLinksService').TerminalLinksService;
 
   constructor(
     private readonly _extensionContext: vscode.ExtensionContext,
@@ -137,36 +152,35 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
    * Minimal validation for incoming WebviewMessage
    */
   private _isValidWebviewMessage(msg: unknown): msg is WebviewMessage {
-    return !!msg && typeof msg === 'object' && typeof (msg as any).command === 'string';
+    return isWebviewMessage(msg);
   }
 
   /**
    * Type guard: message has a valid terminalId
    */
   private _hasTerminalId(msg: WebviewMessage): msg is WebviewMessage & { terminalId: string } {
-    return typeof (msg as any).terminalId === 'string' && (msg as any).terminalId.length > 0;
+    return hasTerminalId(msg);
   }
 
   /**
    * Type guard: message has valid resize params
    */
   private _hasResizeParams(msg: WebviewMessage): msg is WebviewMessage & { cols: number; rows: number } {
-    const { cols, rows } = msg as any;
-    return typeof cols === 'number' && typeof rows === 'number' && cols > 0 && rows > 0;
+    return hasResizeParams(msg);
   }
 
   /**
    * Type guard: message has settings payload
    */
   private _hasSettings(msg: WebviewMessage): msg is WebviewMessage & { settings: PartialTerminalSettings } {
-    return !!(msg as any).settings && typeof (msg as any).settings === 'object';
+    return hasSettings(msg);
   }
 
   /**
    * Type guard: message has non-empty input data
    */
   private _hasInputData(msg: WebviewMessage): msg is WebviewMessage & { data: string } {
-    return typeof (msg as any).data === 'string' && (msg as any).data.length > 0;
+    return hasInputData(msg);
   }
 
   /**
@@ -356,7 +370,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
    */
   private _handleSplitTerminal(message: WebviewMessage): void {
     log('🔀 [DEBUG] Splitting terminal from webview (router)...');
-    const direction = (message as any).direction as 'horizontal' | 'vertical' | undefined;
+    const direction = hasDirection(message) ? message.direction : undefined;
     try {
       // Preserve previous behavior: if no direction provided, use default
       if (direction) {
@@ -773,7 +787,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     log(`🔍 [DEBUG] All terminals: ${JSON.stringify(allTerminals.map(t => ({ id: t.id, name: t.name, isActive: t.isActive })))}`);
     
     // Check active terminal manager state
-    const activeManager = (this._terminalManager as any)._activeTerminalManager;
+    const activeManager = (this._terminalManager as unknown as { _activeTerminalManager?: { getActive(): string | null; hasActive(): boolean } })._activeTerminalManager;
     if (activeManager) {
       log(`🔍 [DEBUG] ActiveTerminalManager state: ${activeManager.getActive()}`);
       log(`🔍 [DEBUG] Has active: ${activeManager.hasActive()}`);
@@ -1031,13 +1045,13 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
           const terminalId = message.terminalId as string;
           const action = message.action as string;
-          const forceReconnect = (message as any).forceReconnect as boolean;
+          const forceReconnect = hasForceReconnect(message) ? message.forceReconnect : false;
 
           if (terminalId) {
             log(`📎 [DEBUG] Switching AI Agent for terminal: ${terminalId} (action: ${action}, forceReconnect: ${forceReconnect})`);
             
             try {
-              let result: any;
+              let result: AIAgentOperationResult;
               
               // 🆕 MANUAL RESET: Handle force reconnect requests
               if (forceReconnect) {
@@ -1065,7 +1079,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
                   newStatus: result.newStatus,
                   agentType: result.agentType,
                   forceReconnect: forceReconnect
-                } as any);
+                });
               } else {
                 log(`⚠️ [DEBUG] AI Agent operation failed: ${terminalId}, reason: ${result.reason}`);
                 await this._sendMessage({
@@ -1075,7 +1089,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
                   reason: result.reason,
                   newStatus: result.newStatus,
                   forceReconnect: forceReconnect
-                } as any);
+                });
               }
             } catch (error) {
               log('❌ [ERROR] Error with AI Agent operation:', error);
@@ -1085,7 +1099,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
                 success: false,
                 reason: 'Internal error occurred',
                 forceReconnect: forceReconnect
-              } as any);
+              });
             }
           } else {
             log('⚠️ [DEBUG] switchAiAgent: terminalId missing');
@@ -1408,10 +1422,11 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   }
 
   private getCurrentSettings(): PartialTerminalSettings {
-    const settings = getConfigManager().getCompleteTerminalSettings();
-    const altClickSettings = getConfigManager().getAltClickSettings();
+    const configService = getUnifiedConfigurationService();
+    const settings = configService.getCompleteTerminalSettings();
+    const altClickSettings = configService.getAltClickSettings();
 
-    const config = vscode.workspace.getConfiguration('secondaryTerminal');
+    // Use unified service for all configuration access
     return {
       cursorBlink: settings.cursorBlink,
       theme: settings.theme || 'auto',
@@ -1419,40 +1434,39 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       altClickMovesCursor: altClickSettings.altClickMovesCursor,
       multiCursorModifier: altClickSettings.multiCursorModifier,
       // CLI Agent Code integration settings
-      enableCliAgentIntegration: config.get<boolean>('enableCliAgentIntegration', true),
+      enableCliAgentIntegration: configService.isFeatureEnabled('cliAgentIntegration'),
+      // Dynamic split direction settings (Issue #148)
+      dynamicSplitDirection: configService.isFeatureEnabled('dynamicSplitDirection'),
+      panelLocation: configService.get('sidebarTerminal', 'panelLocation', 'auto'),
     };
   }
 
   private getCurrentFontSettings(): WebViewFontSettings {
-    const configManager = getConfigManager();
+    const configService = getUnifiedConfigurationService();
 
-    return {
-      fontSize: configManager.getFontSize(),
-      fontFamily: configManager.getFontFamily(),
-      fontWeight: configManager.getFontWeight(),
-      fontWeightBold: configManager.getFontWeightBold(),
-      lineHeight: configManager.getLineHeight(),
-      letterSpacing: configManager.getLetterSpacing(),
-    };
+    return configService.getWebViewFontSettings();
   }
 
   private async updateSettings(settings: PartialTerminalSettings): Promise<void> {
     try {
-      const config = vscode.workspace.getConfiguration('secondaryTerminal');
-      // Note: ConfigManager handles reading, but writing must still use VS Code API
+      const configService = getUnifiedConfigurationService();
+      log('⚙️ [PROVIDER] Updating settings via UnifiedConfigurationService:', settings);
 
-      // Update VS Code settings (font settings are managed by VS Code directly)
+      // Update VS Code settings using unified configuration service
       if (settings.cursorBlink !== undefined) {
-        await config.update('cursorBlink', settings.cursorBlink, vscode.ConfigurationTarget.Global);
+        await configService.update('sidebarTerminal', 'cursorBlink', settings.cursorBlink);
       }
       if (settings.theme) {
-        await config.update('theme', settings.theme, vscode.ConfigurationTarget.Global);
+        await configService.update('sidebarTerminal', 'theme', settings.theme);
       }
       if (settings.enableCliAgentIntegration !== undefined) {
-        await config.update(
-          'enableCliAgentIntegration',
-          settings.enableCliAgentIntegration,
-          vscode.ConfigurationTarget.Global
+        await configService.update('sidebarTerminal', 'enableCliAgentIntegration', settings.enableCliAgentIntegration);
+      }
+      if (settings.dynamicSplitDirection !== undefined) {
+        await configService.update('sidebarTerminal', 'dynamicSplitDirection', settings.dynamicSplitDirection);
+      }
+      if (settings.panelLocation !== undefined) {
+        await configService.update('sidebarTerminal', 'panelLocation', settings.panelLocation
         );
         log(
           '🔧 [DEBUG] CLI Agent Code integration setting updated:',
@@ -1841,15 +1855,16 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
    * Get current settings for restoration
    */
   private _getCurrentSettings(): PartialTerminalSettings {
-    const config = getConfigManager().getExtensionTerminalConfig();
-    const vsCodeConfig = vscode.workspace.getConfiguration('secondaryTerminal');
+    const configService = getUnifiedConfigurationService();
+    const config = configService.getExtensionTerminalConfig();
+    const webViewSettings = configService.getWebViewTerminalSettings();
 
     return {
       shell: config.shell || '',
       shellArgs: config.shellArgs || [],
       fontSize: config.fontSize || 14,
       fontFamily: config.fontFamily || 'monospace',
-      theme: config.theme || 'dark',
+      theme: webViewSettings.theme || 'dark',
       cursor: config.cursor || {
         style: 'block',
         blink: true,
@@ -1857,8 +1872,8 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       maxTerminals: config.maxTerminals || 5,
       enableCliAgentIntegration: config.enableCliAgentIntegration || false,
       // 🆕 Issue #148: Dynamic split direction settings
-      dynamicSplitDirection: vsCodeConfig.get<boolean>('dynamicSplitDirection', true),
-      panelLocation: vsCodeConfig.get<'auto' | 'sidebar' | 'panel'>('panelLocation', 'auto'),
+      dynamicSplitDirection: webViewSettings.dynamicSplitDirection,
+      panelLocation: webViewSettings.panelLocation || 'auto',
     };
   }
 
@@ -2022,8 +2037,8 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     linksService: import('../services/TerminalLinksService').TerminalLinksService
   ): void {
     // Store services for WebView communication
-    (this as any)._decorationsService = decorationsService;
-    (this as any)._linksService = linksService;
+    this._decorationsService = decorationsService;
+    this._linksService = linksService;
     
     log('🎨 [PROVIDER] Phase 8 services (Decorations & Links) connected to provider');
     

@@ -169,7 +169,14 @@ async function initializeWebView(): Promise<void> {
     log('🔧 [DEBUG] Debugging tools initialized - Shortcuts: Ctrl+Shift+D (debug), Ctrl+Shift+X (export), Ctrl+Shift+R (sync), Ctrl+Shift+I (input fix), Ctrl+Shift+T (test input)');
 
   } catch (error) {
-    error_category('Failed to initialize WebView', error);
+    error_category('Failed to initialize WebView', {
+      name: error instanceof Error ? error.name : 'Unknown',
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      type: typeof error,
+      constructor: error?.constructor?.name
+    });
+    console.error('🚨 Raw error object:', error);
   }
 }
 

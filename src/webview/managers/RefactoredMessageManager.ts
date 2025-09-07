@@ -27,6 +27,13 @@ import {
   showSessionCleared,
   showSessionRestoreSkipped,
 } from '../utils/NotificationUtils';
+import { 
+  isNonNullObject, 
+  hasProperty,
+  IShellIntegrationManager,
+  ITerminalLifecycleManager,
+  ITerminalWithAddons
+} from '../../types/type-guards';
 
 // Message command interface with comprehensive typing
 interface MessageCommand {
@@ -108,7 +115,7 @@ export class RefactoredMessageManager implements IMessageManager {
     // 🔍 DEBUG: Fix message handling - message is the data, not MessageEvent
     this.logger.debug('receiveMessage called', {
       messageType: typeof message,
-      command: (message as any)?.command,
+      command: isNonNullObject(message) && 'command' in message ? (message as MessageCommand).command : 'unknown',
       timestamp: Date.now(),
     });
 
@@ -1035,9 +1042,10 @@ export class RefactoredMessageManager implements IMessageManager {
     }
 
     // Forward to shell integration manager
-    const manager = coordinator as any;
-    if (manager.shellIntegrationManager) {
-      manager.shellIntegrationManager.updateShellStatus(terminalId, status);
+    if (hasProperty(coordinator, 'shellIntegrationManager', (value): value is IShellIntegrationManager => 
+      isNonNullObject(value) && 'updateShellStatus' in value
+    )) {
+      coordinator.shellIntegrationManager.updateShellStatus(terminalId, status);
     }
   }
 
@@ -1051,9 +1059,10 @@ export class RefactoredMessageManager implements IMessageManager {
     }
 
     // Forward to shell integration manager
-    const manager = coordinator as any;
-    if (manager.shellIntegrationManager) {
-      manager.shellIntegrationManager.updateCwd(terminalId, cwd);
+    if (hasProperty(coordinator, 'shellIntegrationManager', (value): value is IShellIntegrationManager => 
+      isNonNullObject(value) && 'updateCwd' in value
+    )) {
+      coordinator.shellIntegrationManager.updateCwd(terminalId, cwd);
     }
   }
 
@@ -1067,9 +1076,10 @@ export class RefactoredMessageManager implements IMessageManager {
     }
 
     // Forward to shell integration manager
-    const manager = coordinator as any;
-    if (manager.shellIntegrationManager) {
-      manager.shellIntegrationManager.showCommandHistory(terminalId, history);
+    if (hasProperty(coordinator, 'shellIntegrationManager', (value): value is IShellIntegrationManager => 
+      isNonNullObject(value) && 'showCommandHistory' in value
+    )) {
+      coordinator.shellIntegrationManager.showCommandHistory(terminalId, history);
     }
   }
 
@@ -1079,9 +1089,10 @@ export class RefactoredMessageManager implements IMessageManager {
     this.logger.info('Handling find message', { action });
     
     // Get the active terminal and show search interface
-    const manager = coordinator as any;
-    if (manager.terminalLifecycleManager) {
-      const activeTerminal = manager.terminalLifecycleManager.getActiveTerminal();
+    if (hasProperty(coordinator, 'terminalLifecycleManager', (value): value is ITerminalLifecycleManager => 
+      isNonNullObject(value) && 'getActiveTerminal' in value
+    )) {
+      const activeTerminal = coordinator.terminalLifecycleManager.getActiveTerminal();
       if (activeTerminal) {
         this.showSearchInterface(activeTerminal);
       } else {
@@ -1092,7 +1103,8 @@ export class RefactoredMessageManager implements IMessageManager {
 
   private showSearchInterface(terminal: Terminal): void {
     // Get or create search addon
-    const searchAddon = (terminal as any)._addonManager?._addons?.find((addon: any) => 
+    const terminalWithAddons = terminal as ITerminalWithAddons;
+    const searchAddon = terminalWithAddons._addonManager?._addons?.find(addon => 
       addon.addon && addon.addon.findNext
     )?.addon;
     
@@ -1104,7 +1116,7 @@ export class RefactoredMessageManager implements IMessageManager {
     }
   }
 
-  private createSearchUI(terminal: Terminal, searchAddon: any): void {
+  private createSearchUI(terminal: Terminal, searchAddon: { findNext?: () => void; clearDecorations?: () => void }): void {
     // Add CSS styles if not already added
     this.addSearchStyles();
     
@@ -1221,7 +1233,7 @@ export class RefactoredMessageManager implements IMessageManager {
     document.head.appendChild(style);
   }
 
-  private setupSearchEventListeners(container: HTMLElement, searchAddon: any): void {
+  private setupSearchEventListeners(container: HTMLElement, searchAddon: { findNext?: () => void; clearDecorations?: () => void }): void {
     const searchInput = container.querySelector('.search-input') as HTMLInputElement;
     const nextBtn = container.querySelector('.search-next') as HTMLButtonElement;
     const prevBtn = container.querySelector('.search-prev') as HTMLButtonElement;
@@ -1288,9 +1300,10 @@ export class RefactoredMessageManager implements IMessageManager {
       // Clear any search decorations
       const terminals = document.querySelectorAll('.xterm');
       terminals.forEach(terminalElement => {
-        const terminal = (terminalElement as any)._terminal;
+        const elementWithTerminal = terminalElement as HTMLElement & { _terminal?: ITerminalWithAddons };
+        const terminal = elementWithTerminal._terminal;
         if (terminal) {
-          const searchAddon = (terminal as any)._addonManager?._addons?.find((addon: any) => 
+          const searchAddon = terminal._addonManager?._addons?.find(addon => 
             addon.addon && addon.addon.clearDecorations
           )?.addon;
           if (searchAddon && searchAddon.clearDecorations) {
@@ -1564,7 +1577,7 @@ export class RefactoredMessageManager implements IMessageManager {
    * 🆕 MANUAL RESET: Handle AI Agent toggle response from extension
    */
   private handleSwitchAiAgentResponseMessage(
-    msg: any,
+    msg: MessageCommand & { success?: boolean; newStatus?: string; agentType?: string | null; reason?: string },
     coordinator: IManagerCoordinator
   ): void {
     const { terminalId, success, newStatus, agentType, reason, isForceReconnect } = msg;
@@ -1647,8 +1660,12 @@ export class RefactoredMessageManager implements IMessageManager {
 
       if (configManager) {
         try {
-          const settings = (configManager as any).loadSettings();
-          isDynamicSplitEnabled = settings.dynamicSplitDirection !== false;
+          if (hasProperty(configManager, 'loadSettings', (value): value is () => { dynamicSplitDirection?: boolean; [key: string]: unknown } => 
+            typeof value === 'function'
+          )) {
+            const settings = configManager.loadSettings();
+            isDynamicSplitEnabled = settings.dynamicSplitDirection !== false;
+          }
         } catch (error) {
           this.logger.warn('Could not load settings, using default behavior');
         }
@@ -1666,7 +1683,11 @@ export class RefactoredMessageManager implements IMessageManager {
       this.logger.info(`Updating split direction to: ${newSplitDirection} (location: ${location})`);
 
       // Update split direction if it has changed
-      (splitManager as any).updateSplitDirection(newSplitDirection, location);
+      if (hasProperty(splitManager, 'updateSplitDirection', (value): value is (direction: 'horizontal' | 'vertical', location: 'sidebar' | 'panel') => void => 
+        typeof value === 'function'
+      )) {
+        splitManager.updateSplitDirection(newSplitDirection, location);
+      }
     } catch (error) {
       this.logger.error('Error handling panel location update', error);
     }
@@ -1832,8 +1853,10 @@ export class RefactoredMessageManager implements IMessageManager {
       // Show user notification
       if (coordinator.getManagers && coordinator.getManagers().notification) {
         const notificationManager = coordinator.getManagers().notification;
-        if ('showWarning' in notificationManager && typeof notificationManager.showWarning === 'function') {
-          (notificationManager as any).showWarning(reason || 'Terminal deletion failed');
+        if (hasProperty(notificationManager, 'showWarning', (value): value is (message: string) => void => 
+          typeof value === 'function'
+        )) {
+          notificationManager.showWarning(reason || 'Terminal deletion failed');
         }
       }
     } else {
