@@ -282,6 +282,7 @@ export interface ITerminalInstanceForEvents {
   isSessionRestored?: boolean;
   sessionRestoreMessage?: string;
   sessionScrollback?: string[];
+  pid?: number;
 }
 
 /**
@@ -316,16 +317,7 @@ export interface ITerminalEventData {
   timestamp?: number;
 }
 
-/**
- * Terminal instance interface for events
- */
-export interface ITerminalInstanceForEvents {
-  id: string;
-  name: string;
-  number?: number;
-  isActive?: boolean;
-  pid?: number;
-}
+// Duplicate interface removed - using the earlier definition with consistent properties
 
 /**
  * Terminal state interface for events

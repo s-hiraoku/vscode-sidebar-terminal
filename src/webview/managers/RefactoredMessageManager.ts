@@ -1092,9 +1092,14 @@ export class RefactoredMessageManager implements IMessageManager {
     if (hasProperty(coordinator, 'terminalLifecycleManager', (value): value is ITerminalLifecycleManager => 
       isNonNullObject(value) && 'getActiveTerminal' in value
     )) {
-      const activeTerminal = coordinator.terminalLifecycleManager.getActiveTerminal();
-      if (activeTerminal) {
-        this.showSearchInterface(activeTerminal);
+      const activeTerminalId = coordinator.getActiveTerminalId();
+      if (activeTerminalId) {
+        const terminalInstance = coordinator.getAllTerminalInstances().get(activeTerminalId);
+        if (terminalInstance?.terminal) {
+          this.showSearchInterface(terminalInstance.terminal);
+        } else {
+          this.logger.warn('No terminal instance found for active terminal');
+        }
       } else {
         this.logger.warn('No active terminal found for search');
       }
@@ -1248,9 +1253,9 @@ export class RefactoredMessageManager implements IMessageManager {
     searchInput.addEventListener('input', (e) => {
       const searchTerm = (e.target as HTMLInputElement).value;
       if (searchTerm) {
-        searchAddon.findNext(searchTerm);
+        searchAddon.findNext?.();
       } else {
-        searchAddon.clearDecorations();
+        searchAddon.clearDecorations?.();
       }
     });
     
@@ -1259,10 +1264,10 @@ export class RefactoredMessageManager implements IMessageManager {
       if (e.key === 'Enter') {
         const searchTerm = searchInput.value;
         if (searchTerm) {
-          if (e.shiftKey) {
-            searchAddon.findPrevious(searchTerm);
+          if (e.shiftKey && (searchAddon as any).findPrevious) {
+            (searchAddon as any).findPrevious();
           } else {
-            searchAddon.findNext(searchTerm);
+            searchAddon.findNext?.();
           }
         }
       } else if (e.key === 'Escape') {
@@ -1274,15 +1279,15 @@ export class RefactoredMessageManager implements IMessageManager {
     nextBtn.addEventListener('click', () => {
       const searchTerm = searchInput.value;
       if (searchTerm) {
-        searchAddon.findNext(searchTerm);
+        searchAddon.findNext?.();
       }
     });
     
     // Previous button
     prevBtn.addEventListener('click', () => {
       const searchTerm = searchInput.value;
-      if (searchTerm) {
-        searchAddon.findPrevious(searchTerm);
+      if (searchTerm && (searchAddon as any).findPrevious) {
+        (searchAddon as any).findPrevious();
       }
     });
     
@@ -1642,7 +1647,7 @@ export class RefactoredMessageManager implements IMessageManager {
     coordinator: IManagerCoordinator
   ): void {
     try {
-      const location = msg.location || 'sidebar';
+      const location = (msg as any).location as 'sidebar' | 'panel' || 'sidebar';
       this.logger.info(`Panel location update: ${location}`);
 
       // Get split manager from coordinator
@@ -1805,19 +1810,126 @@ export class RefactoredMessageManager implements IMessageManager {
   }
 
   private handleRequestTerminalSerializationMessage(
-    _msg: MessageCommand,
-    _coordinator: IManagerCoordinator
+    msg: MessageCommand,
+    coordinator: IManagerCoordinator
   ): void {
     this.logger.info('Request terminal serialization');
-    // Implementation would go here
+    
+    try {
+      const terminalIds = (msg as any).terminalIds || [];
+      const serializationData: Record<string, string> = {};
+      
+      // Use existing StandardTerminalPersistenceManager for serialization
+      const persistenceManager = (coordinator as any).persistenceManager;
+      if (!persistenceManager) {
+        throw new Error('StandardTerminalPersistenceManager not available');
+      }
+      
+      // Get serialized content from each terminal via persistence manager
+      terminalIds.forEach((terminalId: string) => {
+        try {
+          // Use serializeTerminal method which returns the serialized content
+          const serializedContent = persistenceManager.serializeTerminal(terminalId);
+          if (serializedContent) {
+            serializationData[terminalId] = serializedContent;
+            this.logger.info(`Serialized terminal ${terminalId}: ${serializedContent.length} chars`);
+          } else {
+            this.logger.warn(`No serialized content for terminal ${terminalId}`);
+          }
+        } catch (terminalError) {
+          this.logger.error(`Error serializing terminal ${terminalId}:`, terminalError);
+        }
+      });
+      
+      // Send serialized data back to Extension
+      coordinator.postMessageToExtension({
+        command: 'terminalSerializationResponse',
+        serializationData: serializationData,
+        timestamp: Date.now(),
+      });
+      
+      this.logger.info(`Terminal serialization completed for ${Object.keys(serializationData).length} terminals`);
+      
+    } catch (error) {
+      this.logger.error('Error during terminal serialization:', error);
+      
+      // Send error response to Extension
+      coordinator.postMessageToExtension({
+        command: 'terminalSerializationResponse',
+        serializationData: {},
+        error: error instanceof Error ? error.message : String(error),
+        timestamp: Date.now(),
+      });
+    }
   }
 
   private handleRestoreTerminalSerializationMessage(
-    _msg: MessageCommand,
-    _coordinator: IManagerCoordinator
+    msg: MessageCommand,
+    coordinator: IManagerCoordinator
   ): void {
     this.logger.info('Restore terminal serialization');
-    // Implementation would go here
+    
+    try {
+      const terminalData = (msg as any).terminalData || [];
+      let restoredCount = 0;
+      
+      // Use existing StandardTerminalPersistenceManager for restoration
+      const persistenceManager = (coordinator as any).persistenceManager;
+      if (!persistenceManager) {
+        throw new Error('StandardTerminalPersistenceManager not available');
+      }
+      
+      // Restore serialized content to each terminal via persistence manager
+      terminalData.forEach((terminal: any) => {
+        const { id, serializedContent, isActive } = terminal;
+        
+        if (serializedContent && serializedContent.length > 0) {
+          try {
+            // Use persistence manager to restore terminal content
+            const restored = persistenceManager.restoreTerminalContent(id, serializedContent);
+            
+            if (restored) {
+              // Set as active if needed
+              if (isActive) {
+                coordinator.setActiveTerminalId(id);
+              }
+              
+              restoredCount++;
+              this.logger.info(`Restored terminal ${id}: ${serializedContent.length} chars`);
+            } else {
+              this.logger.warn(`Failed to restore terminal ${id} content`);
+            }
+            
+          } catch (restoreError) {
+            this.logger.error(`Error restoring terminal ${id}:`, restoreError);
+          }
+        } else {
+          this.logger.info(`No serialized content for terminal ${id}`);
+        }
+      });
+      
+      // Send restoration completion response
+      coordinator.postMessageToExtension({
+        command: 'terminalSerializationRestoreResponse',
+        restoredCount: restoredCount,
+        totalCount: terminalData.length,
+        timestamp: Date.now(),
+      });
+      
+      this.logger.info(`Terminal serialization restoration completed: ${restoredCount}/${terminalData.length} terminals`);
+      
+    } catch (error) {
+      this.logger.error('Error during terminal serialization restoration:', error);
+      
+      // Send error response to Extension
+      coordinator.postMessageToExtension({
+        command: 'terminalSerializationRestoreResponse',
+        restoredCount: 0,
+        totalCount: 0,
+        error: error instanceof Error ? error.message : String(error),
+        timestamp: Date.now(),
+      });
+    }
   }
 
   private handleSessionRestorationDataMessage(

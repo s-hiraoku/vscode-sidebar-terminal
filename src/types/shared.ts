@@ -543,7 +543,11 @@ export interface WebviewMessage {
     | 'updateProfile'         // Update existing profile
     | 'deleteProfile'         // Delete profile
     | 'setDefaultProfile'     // Set default profile
-    | 'find';                 // Terminal search functionality
+    | 'find'                 // Terminal search functionality
+    | 'requestTerminalSerialization'   // Request terminal serialization
+    | 'terminalSerializationResponse'  // Terminal serialization response
+    | 'restoreTerminalSerialization'   // Restore terminal serialization
+    | 'terminalSerializationRestoreResponse'; // Terminal serialization restore response
   config?: TerminalConfig;
   data?: string;
   exitCode?: number;
@@ -746,6 +750,7 @@ export interface VsCodeMessage {
     | 'scrollbackDataCollected'
     | 'reportPanelLocation'
     | 'terminalSerializationResponse'
+    | 'terminalSerializationRestoreResponse'
     | 'requestSessionRestorationData'
     | 'requestInitialTerminal'
     | 'error';

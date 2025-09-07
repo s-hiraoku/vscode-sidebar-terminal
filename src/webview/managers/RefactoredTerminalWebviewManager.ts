@@ -379,6 +379,22 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
         return null;
       }
 
+      // 🔥 CRITICAL FIX: Add terminal to persistence manager for session restoration
+      if (this.persistenceManager) {
+        this.persistenceManager.addTerminal(terminalId, terminal);
+        console.log(`💾 [PERSISTENCE] Added terminal ${terminalId} to persistence manager for session restoration`);
+        
+        // Attempt to restore previous content if available
+        const restored = this.persistenceManager.restoreTerminalFromStorage(terminalId);
+        if (restored) {
+          console.log(`🔄 [PERSISTENCE] Successfully restored previous content for terminal ${terminalId}`);
+        } else {
+          console.log(`📭 [PERSISTENCE] No previous content found for terminal ${terminalId}`);
+        }
+      } else {
+        console.warn(`⚠️ [PERSISTENCE] persistenceManager not available - terminal ${terminalId} will not be persisted`);
+      }
+
       // 2. ヘッダーはTerminalContainerFactoryで既に作成済み（重複作成を削除）
       log(`✅ Terminal header already created by TerminalContainerFactory: ${terminalId}`);
 
@@ -422,7 +438,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
         }
       }, 300);
 
-      // 5. Extensionに正規のターミナル作成をリクエスト
+      // 5. ExtensionにRegular のターミナル作成をリクエスト
       this.postMessageToExtension({
         command: 'createTerminal',
         terminalId: terminalId,
@@ -441,6 +457,15 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
   public async removeTerminal(terminalId: string): Promise<boolean> {
     // CLI Agent状態もクリーンアップ
     this.cliAgentStateManager.removeTerminalState(terminalId);
+    
+    // 🔥 CRITICAL FIX: Remove terminal from persistence manager
+    if (this.persistenceManager) {
+      this.persistenceManager.removeTerminal(terminalId);
+      console.log(`🗑️ [PERSISTENCE] Removed terminal ${terminalId} from persistence manager`);
+    } else {
+      console.warn(`⚠️ [PERSISTENCE] persistenceManager not available when removing terminal ${terminalId}`);
+    }
+    
     return await this.terminalLifecycleManager.removeTerminal(terminalId);
   }
 

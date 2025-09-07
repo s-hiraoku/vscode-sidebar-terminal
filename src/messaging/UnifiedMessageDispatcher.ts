@@ -36,6 +36,7 @@ export interface IMessageStats {
   highPriorityQueueSize: number;
   isProcessing: boolean;
   registeredHandlers: number;
+  totalHandlers: number;
   totalMessages: number;
   errorCount: number;
   averageProcessingTime: number;
