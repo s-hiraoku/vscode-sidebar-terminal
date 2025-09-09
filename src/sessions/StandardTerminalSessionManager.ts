@@ -44,7 +44,8 @@ export class StandardTerminalSessionManager {
     persistentSessionScrollback: number;
     persistentSessionReviveProcess: string;
   } {
-    const config = vscode.workspace.getConfiguration('terminal.integrated');
+    // Fixed: Use secondaryTerminal configuration namespace instead of terminal.integrated
+    const config = vscode.workspace.getConfiguration('secondaryTerminal');
     return {
       enablePersistentSessions: config.get<boolean>('enablePersistentSessions', true),
       persistentSessionScrollback: config.get<number>('persistentSessionScrollback', 100),

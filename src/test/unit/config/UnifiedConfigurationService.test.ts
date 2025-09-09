@@ -30,8 +30,9 @@ describe('UnifiedConfigurationService', () => {
       update: sandbox.stub().resolves(),
     } as any;
 
-    // Mock vscode.workspace.getConfiguration
-    sandbox.stub(vscode.workspace, 'getConfiguration').returns(mockWorkspaceConfiguration);
+    // Mock vscode.workspace.getConfiguration as a proper Sinon stub
+    const getConfigurationStub = sandbox.stub(vscode.workspace, 'getConfiguration');
+    getConfigurationStub.returns(mockWorkspaceConfiguration);
     
     // Mock vscode.workspace.onDidChangeConfiguration
     const mockDisposable = { dispose: sandbox.stub() };
@@ -66,7 +67,7 @@ describe('UnifiedConfigurationService', () => {
 
   describe('Configuration Access', () => {
     it('should get configuration values with defaults', () => {
-      mockWorkspaceConfiguration.get.withArgs('fontSize', 14).returns(16);
+      (mockWorkspaceConfiguration.get as sinon.SinonStub).withArgs('fontSize', 14).returns(16);
       
       const fontSize = service.get('terminal.integrated', 'fontSize', 14);
       
@@ -83,7 +84,7 @@ describe('UnifiedConfigurationService', () => {
     });
 
     it('should cache configuration values', () => {
-      mockWorkspaceConfiguration.get.withArgs('fontSize', 14).returns(16);
+      (mockWorkspaceConfiguration.get as sinon.SinonStub).withArgs('fontSize', 14).returns(16);
       
       // First call
       const fontSize1 = service.get('terminal.integrated', 'fontSize', 14);
@@ -96,7 +97,7 @@ describe('UnifiedConfigurationService', () => {
     });
 
     it('should clear cache and refresh values', () => {
-      mockWorkspaceConfiguration.get.withArgs('fontSize', 14).returns(16);
+      (mockWorkspaceConfiguration.get as sinon.SinonStub).withArgs('fontSize', 14).returns(16);
       
       // Get cached value
       service.get('terminal.integrated', 'fontSize', 14);
@@ -113,7 +114,7 @@ describe('UnifiedConfigurationService', () => {
 
   describe('Configuration Update', () => {
     it('should update configuration values', async () => {
-      mockWorkspaceConfiguration.get.withArgs('fontSize').returns(14);
+      (mockWorkspaceConfiguration.get as sinon.SinonStub).withArgs('fontSize').returns(14);
       
       await service.update('terminal.integrated', 'fontSize', 16);
       
@@ -126,14 +127,14 @@ describe('UnifiedConfigurationService', () => {
 
     it('should clear cache after update', async () => {
       // Cache a value first
-      mockWorkspaceConfiguration.get.withArgs('fontSize', 14).returns(14);
+      (mockWorkspaceConfiguration.get as sinon.SinonStub).withArgs('fontSize', 14).returns(14);
       service.get('terminal.integrated', 'fontSize', 14);
       
       // Update the value
       await service.update('terminal.integrated', 'fontSize', 16);
       
       // Get the value again (should call VS Code API again)
-      mockWorkspaceConfiguration.get.withArgs('fontSize', 14).returns(16);
+      (mockWorkspaceConfiguration.get as sinon.SinonStub).withArgs('fontSize', 14).returns(16);
       const newValue = service.get('terminal.integrated', 'fontSize', 14);
       
       expect(newValue).to.equal(16);
@@ -157,25 +158,32 @@ describe('UnifiedConfigurationService', () => {
   describe('Extension Terminal Configuration', () => {
     beforeEach(() => {
       // Setup default mocks for extension terminal config
-      mockWorkspaceConfiguration.get.withArgs(CONFIG_KEYS.MAX_TERMINALS, 5).returns(5);
-      mockWorkspaceConfiguration.get.withArgs(CONFIG_KEYS.SHELL, '').returns('/bin/bash');
-      mockWorkspaceConfiguration.get.withArgs(CONFIG_KEYS.SHELL_ARGS, []).returns(['-l']);
-      mockWorkspaceConfiguration.get.withArgs(CONFIG_KEYS.DEFAULT_DIRECTORY, '').returns('/home/user');
-      mockWorkspaceConfiguration.get.withArgs(CONFIG_KEYS.CURSOR_BLINK, true).returns(true);
-      mockWorkspaceConfiguration.get.withArgs('enableCliAgentIntegration', true).returns(true);
+      (mockWorkspaceConfiguration.get as sinon.SinonStub).withArgs(CONFIG_KEYS.MAX_TERMINALS, 5).returns(5);
+      (mockWorkspaceConfiguration.get as sinon.SinonStub).withArgs(CONFIG_KEYS.SHELL, '').returns('/bin/bash');
+      (mockWorkspaceConfiguration.get as sinon.SinonStub).withArgs(CONFIG_KEYS.SHELL_ARGS, []).returns(['-l']);
+      (mockWorkspaceConfiguration.get as sinon.SinonStub).withArgs(CONFIG_KEYS.DEFAULT_DIRECTORY, '').returns('/home/user');
+      (mockWorkspaceConfiguration.get as sinon.SinonStub).withArgs(CONFIG_KEYS.CURSOR_BLINK, true).returns(true);
+      (mockWorkspaceConfiguration.get as sinon.SinonStub).withArgs('enableCliAgentIntegration', true).returns(true);
       
-      // Mock font settings
-      const terminalConfig = sandbox.stub();
-      const editorConfig = sandbox.stub();
-      vscode.workspace.getConfiguration.withArgs('terminal.integrated').returns({
-        get: terminalConfig
-      } as any);
-      vscode.workspace.getConfiguration.withArgs('editor').returns({
-        get: editorConfig
-      } as any);
+      // Mock font settings with proper stub configuration
+      const terminalConfigGet = sandbox.stub();
+      const editorConfigGet = sandbox.stub();
       
-      terminalConfig.withArgs('fontSize').returns(14);
-      terminalConfig.withArgs('fontFamily').returns('monospace');
+      // Set up terminal.integrated config
+      terminalConfigGet.withArgs('fontSize').returns(14);
+      terminalConfigGet.withArgs('fontFamily').returns('monospace');
+      
+      // Set up editor config 
+      editorConfigGet.withArgs('fontSize').returns(12);
+      
+      // Configure getConfiguration stub to return appropriate configs
+      const getConfigStub = vscode.workspace.getConfiguration as sinon.SinonStub;
+      getConfigStub.withArgs('terminal.integrated').returns({
+        get: terminalConfigGet
+      } as any);
+      getConfigStub.withArgs('editor').returns({
+        get: editorConfigGet
+      } as any);
     });
 
     it('should get extension terminal configuration', () => {
@@ -198,18 +206,18 @@ describe('UnifiedConfigurationService', () => {
 
     it('should get complete terminal settings', () => {
       // Mock additional settings for complete config
-      mockWorkspaceConfiguration.get.withArgs(CONFIG_KEYS.THEME, 'auto').returns('dark');
-      mockWorkspaceConfiguration.get.withArgs(CONFIG_KEYS.CONFIRM_BEFORE_KILL, false).returns(false);
-      mockWorkspaceConfiguration.get.withArgs(CONFIG_KEYS.PROTECT_LAST_TERMINAL, true).returns(true);
-      mockWorkspaceConfiguration.get.withArgs(CONFIG_KEYS.MIN_TERMINAL_COUNT, 1).returns(1);
+      (mockWorkspaceConfiguration.get as sinon.SinonStub).withArgs(CONFIG_KEYS.THEME, 'auto').returns('dark');
+      (mockWorkspaceConfiguration.get as sinon.SinonStub).withArgs(CONFIG_KEYS.CONFIRM_BEFORE_KILL, false).returns(false);
+      (mockWorkspaceConfiguration.get as sinon.SinonStub).withArgs(CONFIG_KEYS.PROTECT_LAST_TERMINAL, true).returns(true);
+      (mockWorkspaceConfiguration.get as sinon.SinonStub).withArgs(CONFIG_KEYS.MIN_TERMINAL_COUNT, 1).returns(1);
       
       // Mock Alt+Click settings
       const terminalIntegratedConfig = sandbox.stub();
       const editorConfig = sandbox.stub();
-      vscode.workspace.getConfiguration.withArgs(CONFIG_SECTIONS.TERMINAL_INTEGRATED).returns({
+      (vscode.workspace.getConfiguration as sinon.SinonStub).withArgs(CONFIG_SECTIONS.TERMINAL_INTEGRATED).returns({
         get: terminalIntegratedConfig
       } as any);
-      vscode.workspace.getConfiguration.withArgs(CONFIG_SECTIONS.EDITOR).returns({
+      (vscode.workspace.getConfiguration as sinon.SinonStub).withArgs(CONFIG_SECTIONS.EDITOR).returns({
         get: editorConfig
       } as any);
       
@@ -232,15 +240,15 @@ describe('UnifiedConfigurationService', () => {
   describe('WebView Configuration', () => {
     it('should get WebView terminal settings', () => {
       // Mock base terminal settings
-      mockWorkspaceConfiguration.get.withArgs('scrollback', 1000).returns(2000);
-      mockWorkspaceConfiguration.get.withArgs('bellSound', false).returns(true);
-      mockWorkspaceConfiguration.get.withArgs('enableCliAgentIntegration', true).returns(true);
-      mockWorkspaceConfiguration.get.withArgs('dynamicSplitDirection', true).returns(false);
-      mockWorkspaceConfiguration.get.withArgs('panelLocation', 'auto').returns('sidebar');
+      (mockWorkspaceConfiguration.get as sinon.SinonStub).withArgs('scrollback', 1000).returns(2000);
+      (mockWorkspaceConfiguration.get as sinon.SinonStub).withArgs('bellSound', false).returns(true);
+      (mockWorkspaceConfiguration.get as sinon.SinonStub).withArgs('enableCliAgentIntegration', true).returns(true);
+      (mockWorkspaceConfiguration.get as sinon.SinonStub).withArgs('dynamicSplitDirection', true).returns(false);
+      (mockWorkspaceConfiguration.get as sinon.SinonStub).withArgs('panelLocation', 'auto').returns('sidebar');
       
       // Mock other required settings
-      mockWorkspaceConfiguration.get.withArgs(CONFIG_KEYS.MAX_TERMINALS, 5).returns(3);
-      mockWorkspaceConfiguration.get.withArgs(CONFIG_KEYS.CURSOR_BLINK, true).returns(false);
+      (mockWorkspaceConfiguration.get as sinon.SinonStub).withArgs(CONFIG_KEYS.MAX_TERMINALS, 5).returns(3);
+      (mockWorkspaceConfiguration.get as sinon.SinonStub).withArgs(CONFIG_KEYS.CURSOR_BLINK, true).returns(false);
       
       const settings = service.getWebViewTerminalSettings();
       
@@ -266,13 +274,13 @@ describe('UnifiedConfigurationService', () => {
       const editorConfig = sandbox.stub();
       const extensionConfig = sandbox.stub();
       
-      vscode.workspace.getConfiguration.withArgs('terminal.integrated').returns({
+      (vscode.workspace.getConfiguration as sinon.SinonStub).withArgs('terminal.integrated').returns({
         get: terminalConfig
       } as any);
-      vscode.workspace.getConfiguration.withArgs('editor').returns({
+      (vscode.workspace.getConfiguration as sinon.SinonStub).withArgs('editor').returns({
         get: editorConfig
       } as any);
-      vscode.workspace.getConfiguration.withArgs('secondaryTerminal').returns({
+      (vscode.workspace.getConfiguration as sinon.SinonStub).withArgs('secondaryTerminal').returns({
         get: extensionConfig
       } as any);
       
@@ -302,10 +310,10 @@ describe('UnifiedConfigurationService', () => {
       const terminalConfig = sandbox.stub();
       const editorConfig = sandbox.stub();
       
-      vscode.workspace.getConfiguration.withArgs('terminal.integrated').returns({
+      (vscode.workspace.getConfiguration as sinon.SinonStub).withArgs('terminal.integrated').returns({
         get: terminalConfig
       } as any);
-      vscode.workspace.getConfiguration.withArgs('editor').returns({
+      (vscode.workspace.getConfiguration as sinon.SinonStub).withArgs('editor').returns({
         get: editorConfig
       } as any);
       
@@ -322,10 +330,10 @@ describe('UnifiedConfigurationService', () => {
       const terminalConfig = sandbox.stub();
       const editorConfig = sandbox.stub();
       
-      vscode.workspace.getConfiguration.withArgs('terminal.integrated').returns({
+      (vscode.workspace.getConfiguration as sinon.SinonStub).withArgs('terminal.integrated').returns({
         get: terminalConfig
       } as any);
-      vscode.workspace.getConfiguration.withArgs('editor').returns({
+      (vscode.workspace.getConfiguration as sinon.SinonStub).withArgs('editor').returns({
         get: editorConfig
       } as any);
       
@@ -342,10 +350,10 @@ describe('UnifiedConfigurationService', () => {
       const terminalConfig = sandbox.stub();
       const editorConfig = sandbox.stub();
       
-      vscode.workspace.getConfiguration.withArgs('terminal.integrated').returns({
+      (vscode.workspace.getConfiguration as sinon.SinonStub).withArgs('terminal.integrated').returns({
         get: terminalConfig
       } as any);
-      vscode.workspace.getConfiguration.withArgs('editor').returns({
+      (vscode.workspace.getConfiguration as sinon.SinonStub).withArgs('editor').returns({
         get: editorConfig
       } as any);
       
@@ -362,10 +370,10 @@ describe('UnifiedConfigurationService', () => {
       const terminalConfig = sandbox.stub();
       const extensionConfig = sandbox.stub();
       
-      vscode.workspace.getConfiguration.withArgs('terminal.integrated').returns({
+      (vscode.workspace.getConfiguration as sinon.SinonStub).withArgs('terminal.integrated').returns({
         get: terminalConfig
       } as any);
-      vscode.workspace.getConfiguration.withArgs('secondaryTerminal').returns({
+      (vscode.workspace.getConfiguration as sinon.SinonStub).withArgs('secondaryTerminal').returns({
         get: extensionConfig
       } as any);
       
@@ -399,7 +407,7 @@ describe('UnifiedConfigurationService', () => {
       Object.defineProperty(process, 'platform', { value: 'win32' });
       
       const terminalIntegratedConfig = sandbox.stub();
-      vscode.workspace.getConfiguration.withArgs(CONFIG_SECTIONS.TERMINAL_INTEGRATED).returns({
+      (vscode.workspace.getConfiguration as sinon.SinonStub).withArgs(CONFIG_SECTIONS.TERMINAL_INTEGRATED).returns({
         get: terminalIntegratedConfig
       } as any);
       
@@ -416,7 +424,7 @@ describe('UnifiedConfigurationService', () => {
       Object.defineProperty(process, 'platform', { value: 'darwin' });
       
       const terminalIntegratedConfig = sandbox.stub();
-      vscode.workspace.getConfiguration.withArgs(CONFIG_SECTIONS.TERMINAL_INTEGRATED).returns({
+      (vscode.workspace.getConfiguration as sinon.SinonStub).withArgs(CONFIG_SECTIONS.TERMINAL_INTEGRATED).returns({
         get: terminalIntegratedConfig
       } as any);
       
@@ -433,7 +441,7 @@ describe('UnifiedConfigurationService', () => {
       Object.defineProperty(process, 'platform', { value: 'linux' });
       
       const terminalIntegratedConfig = sandbox.stub();
-      vscode.workspace.getConfiguration.withArgs(CONFIG_SECTIONS.TERMINAL_INTEGRATED).returns({
+      (vscode.workspace.getConfiguration as sinon.SinonStub).withArgs(CONFIG_SECTIONS.TERMINAL_INTEGRATED).returns({
         get: terminalIntegratedConfig
       } as any);
       
@@ -455,7 +463,7 @@ describe('UnifiedConfigurationService', () => {
       });
       
       const terminalIntegratedConfig = sandbox.stub();
-      vscode.workspace.getConfiguration.withArgs(CONFIG_SECTIONS.TERMINAL_INTEGRATED).returns({
+      (vscode.workspace.getConfiguration as sinon.SinonStub).withArgs(CONFIG_SECTIONS.TERMINAL_INTEGRATED).returns({
         get: terminalIntegratedConfig
       } as any);
       
@@ -474,10 +482,10 @@ describe('UnifiedConfigurationService', () => {
       const terminalIntegratedConfig = sandbox.stub();
       const editorConfig = sandbox.stub();
       
-      vscode.workspace.getConfiguration.withArgs(CONFIG_SECTIONS.TERMINAL_INTEGRATED).returns({
+      (vscode.workspace.getConfiguration as sinon.SinonStub).withArgs(CONFIG_SECTIONS.TERMINAL_INTEGRATED).returns({
         get: terminalIntegratedConfig
       } as any);
-      vscode.workspace.getConfiguration.withArgs(CONFIG_SECTIONS.EDITOR).returns({
+      (vscode.workspace.getConfiguration as sinon.SinonStub).withArgs(CONFIG_SECTIONS.EDITOR).returns({
         get: editorConfig
       } as any);
       
@@ -493,7 +501,7 @@ describe('UnifiedConfigurationService', () => {
     });
 
     it('should return defaults when configuration fails', () => {
-      vscode.workspace.getConfiguration.throws(new Error('Configuration error'));
+      (vscode.workspace.getConfiguration as sinon.SinonStub).throws(new Error('Configuration error'));
       
       const settings = service.getAltClickSettings();
       
@@ -510,13 +518,13 @@ describe('UnifiedConfigurationService', () => {
       const terminalIntegratedConfig = sandbox.stub();
       const editorConfig = sandbox.stub();
       
-      vscode.workspace.getConfiguration.withArgs(CONFIG_SECTIONS.SIDEBAR_TERMINAL).returns({
+      (vscode.workspace.getConfiguration as sinon.SinonStub).withArgs(CONFIG_SECTIONS.SIDEBAR_TERMINAL).returns({
         get: sidebarConfig
       } as any);
-      vscode.workspace.getConfiguration.withArgs(CONFIG_SECTIONS.TERMINAL_INTEGRATED).returns({
+      (vscode.workspace.getConfiguration as sinon.SinonStub).withArgs(CONFIG_SECTIONS.TERMINAL_INTEGRATED).returns({
         get: terminalIntegratedConfig
       } as any);
-      vscode.workspace.getConfiguration.withArgs(CONFIG_SECTIONS.EDITOR).returns({
+      (vscode.workspace.getConfiguration as sinon.SinonStub).withArgs(CONFIG_SECTIONS.EDITOR).returns({
         get: editorConfig
       } as any);
       
@@ -551,20 +559,20 @@ describe('UnifiedConfigurationService', () => {
 
   describe('Configuration Profiles', () => {
     it('should get terminal profiles configuration', () => {
-      mockWorkspaceConfiguration.get.withArgs(CONFIG_KEYS.PROFILES_WINDOWS, {}).returns({
+      (mockWorkspaceConfiguration.get as sinon.SinonStub).withArgs(CONFIG_KEYS.PROFILES_WINDOWS, {}).returns({
         'PowerShell': { path: 'powershell.exe' }
       });
-      mockWorkspaceConfiguration.get.withArgs(CONFIG_KEYS.PROFILES_LINUX, {}).returns({
+      (mockWorkspaceConfiguration.get as sinon.SinonStub).withArgs(CONFIG_KEYS.PROFILES_LINUX, {}).returns({
         'Bash': { path: '/bin/bash' }
       });
-      mockWorkspaceConfiguration.get.withArgs(CONFIG_KEYS.PROFILES_OSX, {}).returns({
+      (mockWorkspaceConfiguration.get as sinon.SinonStub).withArgs(CONFIG_KEYS.PROFILES_OSX, {}).returns({
         'Zsh': { path: '/bin/zsh' }
       });
-      mockWorkspaceConfiguration.get.withArgs(CONFIG_KEYS.DEFAULT_PROFILE_WINDOWS, null).returns('PowerShell');
-      mockWorkspaceConfiguration.get.withArgs(CONFIG_KEYS.DEFAULT_PROFILE_LINUX, null).returns('Bash');
-      mockWorkspaceConfiguration.get.withArgs(CONFIG_KEYS.DEFAULT_PROFILE_OSX, null).returns('Zsh');
-      mockWorkspaceConfiguration.get.withArgs(CONFIG_KEYS.ENABLE_PROFILE_AUTO_DETECTION, true).returns(false);
-      mockWorkspaceConfiguration.get.withArgs(CONFIG_KEYS.INHERIT_VSCODE_PROFILES, true).returns(true);
+      (mockWorkspaceConfiguration.get as sinon.SinonStub).withArgs(CONFIG_KEYS.DEFAULT_PROFILE_WINDOWS, null).returns('PowerShell');
+      (mockWorkspaceConfiguration.get as sinon.SinonStub).withArgs(CONFIG_KEYS.DEFAULT_PROFILE_LINUX, null).returns('Bash');
+      (mockWorkspaceConfiguration.get as sinon.SinonStub).withArgs(CONFIG_KEYS.DEFAULT_PROFILE_OSX, null).returns('Zsh');
+      (mockWorkspaceConfiguration.get as sinon.SinonStub).withArgs(CONFIG_KEYS.ENABLE_PROFILE_AUTO_DETECTION, true).returns(false);
+      (mockWorkspaceConfiguration.get as sinon.SinonStub).withArgs(CONFIG_KEYS.INHERIT_VSCODE_PROFILES, true).returns(true);
       
       const profilesConfig = service.getTerminalProfilesConfig();
       
@@ -589,7 +597,7 @@ describe('UnifiedConfigurationService', () => {
     it('should validate font size within bounds', () => {
       // Mock font size retrieval that includes validation
       const terminalConfig = sandbox.stub();
-      vscode.workspace.getConfiguration.withArgs('terminal.integrated').returns({
+      (vscode.workspace.getConfiguration as sinon.SinonStub).withArgs('terminal.integrated').returns({
         get: terminalConfig
       } as any);
       
@@ -631,7 +639,7 @@ describe('UnifiedConfigurationService', () => {
 
     it('should clear cache on VS Code configuration changes', () => {
       // Get a value to cache it
-      mockWorkspaceConfiguration.get.withArgs('fontSize', 14).returns(16);
+      (mockWorkspaceConfiguration.get as sinon.SinonStub).withArgs('fontSize', 14).returns(16);
       const initialValue = service.get('terminal.integrated', 'fontSize', 14);
       expect(initialValue).to.equal(16);
       expect(mockWorkspaceConfiguration.get).to.have.been.calledOnce;
@@ -642,11 +650,12 @@ describe('UnifiedConfigurationService', () => {
       };
       
       // Get the registered change handler
-      const onDidChangeHandler = vscode.workspace.onDidChangeConfiguration.getCall(0).args[0];
+      const onDidChangeStub = vscode.workspace.onDidChangeConfiguration as sinon.SinonStub;
+      const onDidChangeHandler = onDidChangeStub.getCall(0).args[0];
       onDidChangeHandler(changeEvent);
       
       // Getting the value again should call VS Code API (cache cleared)
-      mockWorkspaceConfiguration.get.withArgs('fontSize', 14).returns(18);
+      (mockWorkspaceConfiguration.get as sinon.SinonStub).withArgs('fontSize', 14).returns(18);
       const newValue = service.get('terminal.integrated', 'fontSize', 14);
       expect(newValue).to.equal(18);
       expect(mockWorkspaceConfiguration.get).to.have.been.calledTwice;
@@ -684,7 +693,7 @@ describe('UnifiedConfigurationService', () => {
         await service.update('terminal.integrated', 'fontSize', 16);
         expect.fail('Should have thrown an error');
       } catch (error) {
-        expect(error.message).to.include('Update failed');
+        expect((error as Error).message).to.include('Update failed');
       }
     });
   });
@@ -703,7 +712,7 @@ describe('UnifiedConfigurationService', () => {
 
     it('should clear cache on disposal', () => {
       // Cache some values
-      mockWorkspaceConfiguration.get.withArgs('fontSize', 14).returns(16);
+      (mockWorkspaceConfiguration.get as sinon.SinonStub).withArgs('fontSize', 14).returns(16);
       service.get('terminal.integrated', 'fontSize', 14);
       
       const debugInfo = service.getDebugInfo();

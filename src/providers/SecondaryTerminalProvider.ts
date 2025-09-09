@@ -8,6 +8,8 @@ import { provider as log } from '../utils/logger';
 import { getUnifiedConfigurationService } from '../config/UnifiedConfigurationService';
 import { PartialTerminalSettings, WebViewFontSettings } from '../types/shared';
 import { WebViewHtmlGenerationService, HtmlGenerationOptions } from '../services/webview/WebViewHtmlGenerationService';
+import { UnifiedTerminalPersistenceService } from '../services/UnifiedTerminalPersistenceService';
+import { PersistenceMessageHandler } from '../handlers/PersistenceMessageHandler';
 import { 
   isWebviewMessage, 
   hasTerminalId, 
@@ -37,6 +39,10 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   // Phase 8 services (typed properly)
   private _decorationsService?: import('../services/TerminalDecorationsService').TerminalDecorationsService;
   private _linksService?: import('../services/TerminalLinksService').TerminalLinksService;
+  
+  // Terminal persistence services
+  private _persistenceService?: UnifiedTerminalPersistenceService;
+  private _persistenceHandler?: PersistenceMessageHandler;
 
   constructor(
     private readonly _extensionContext: vscode.ExtensionContext,
@@ -44,7 +50,16 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     private readonly _standardSessionManager?: import('../sessions/StandardTerminalSessionManager').StandardTerminalSessionManager
   ) {
     this._htmlGenerationService = new WebViewHtmlGenerationService();
+    
+    // Initialize persistence services
+    this._persistenceService = new UnifiedTerminalPersistenceService(
+      this._extensionContext,
+      this._terminalManager
+    );
+    this._persistenceHandler = new PersistenceMessageHandler(this._persistenceService);
+    
     log('🎨 [PROVIDER] HTML generation service initialized');
+    log('💾 [PROVIDER] Terminal persistence services initialized');
   }
 
   public resolveWebviewView(
@@ -268,6 +283,25 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       await this._handleRequestInitialTerminal(message);
     });
 
+    // Terminal persistence messages
+    this._messageHandlers.set('persistenceSaveSession', async (message) => {
+      await this._handlePersistenceMessage(message);
+    });
+    this._messageHandlers.set('persistenceRestoreSession', async (message) => {
+      await this._handlePersistenceMessage(message);
+    });
+    this._messageHandlers.set('persistenceClearSession', async (message) => {
+      await this._handlePersistenceMessage(message);
+    });
+    
+    // Legacy persistence message handlers (for compatibility)
+    this._messageHandlers.set('terminalSerializationRequest', async (message) => {
+      await this._handleLegacyPersistenceMessage(message);
+    });
+    this._messageHandlers.set('terminalSerializationRestoreRequest', async (message) => {
+      await this._handleLegacyPersistenceMessage(message);
+    });
+
     // Debug/diagnostic messages
     this._messageHandlers.set('htmlScriptTest', (message) => this._handleHtmlScriptTest(message));
     this._messageHandlers.set('timeoutTest', (message) => this._handleTimeoutTest(message));
@@ -278,6 +312,8 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
    * Extracted handler for webview readiness
    */
   private _handleWebviewReady(_message: WebviewMessage): void {
+    log('🔥 [DEBUG] === _handleWebviewReady CALLED ===');
+    
     if (this._isInitialized) {
       log('🔄 [DEBUG] WebView already initialized, skipping duplicate initialization');
       return;
@@ -288,18 +324,103 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
     void (async () => {
       try {
+        log('🔍 [RESTORE-DEBUG] Starting terminal initialization process...');
         await this._initializeTerminal();
-        log('✅ [DEBUG] Terminal initialization completed immediately');
+        log('✅ [RESTORE-DEBUG] Terminal initialization completed');
 
-        // Avoid duplicate terminal creation; ensure minimum when none exists
-        setTimeout(() => {
-          if (this._terminalManager.getTerminals().length === 0) {
-            log('🎯 [ENSURE] No terminals exist - creating minimum set');
+        // Debug: Check current terminal count
+        const currentTerminalCount = this._terminalManager.getTerminals().length;
+        log(`🔍 [RESTORE-DEBUG] Current terminal count after initialization: ${currentTerminalCount}`);
+
+        // 🔧 NEW: Try to restore session first with detailed debugging
+        if (currentTerminalCount === 0) {
+          log('📦 [RESTORE-DEBUG] No existing terminals - attempting session restore...');
+          log('🔍 [RESTORE-DEBUG] Persistence handler available:', !!this._persistenceHandler);
+          log('🔍 [RESTORE-DEBUG] About to call restoreLastSession()...');
+          
+          try {
+            const startTime = Date.now();
+            log('⏱️  [RESTORE-DEBUG] Restore operation started at:', new Date(startTime).toISOString());
+            
+            const restored = await this.restoreLastSession();
+            const endTime = Date.now();
+            const duration = endTime - startTime;
+            
+            log(`⏱️  [RESTORE-DEBUG] Restore operation completed in ${duration}ms`);
+            log(`🔍 [RESTORE-DEBUG] restoreLastSession() returned: ${restored}`);
+            
+            // Check terminal count after restore
+            const postRestoreCount = this._terminalManager.getTerminals().length;
+            log(`🔍 [RESTORE-DEBUG] Terminal count after restore: ${postRestoreCount}`);
+            
+            if (restored) {
+              log('✅ [RESTORE-DEBUG] Session restored successfully');
+              
+              // Give terminals time to be created and then verify
+              setTimeout(() => {
+                const finalCount = this._terminalManager.getTerminals().length;
+                log(`🔍 [RESTORE-DEBUG] Final terminal count after 1s delay: ${finalCount}`);
+                
+                if (finalCount === 0) {
+                  log('⚠️ [RESTORE-DEBUG] No terminals found after restore - creating fallback terminals');
+                  this._ensureMultipleTerminals();
+                }
+              }, 1000);
+              
+            } else {
+              log('📝 [RESTORE-DEBUG] No session to restore - creating default terminals');
+              this._ensureMultipleTerminals();
+            }
+          } catch (error) {
+            log('❌ [RESTORE-DEBUG] Session restore failed with error:', error);
+            log('❌ [RESTORE-DEBUG] Error details:', {
+              name: error instanceof Error ? error.name : 'Unknown',
+              message: error instanceof Error ? error.message : String(error),
+              stack: error instanceof Error ? error.stack : undefined,
+            });
+            
+            // Fallback to creating new terminals
+            log('🔧 [RESTORE-DEBUG] Creating fallback terminals after restore failure');
             this._ensureMultipleTerminals();
           }
-        }, 100);
+        } else {
+          log(`ℹ️ [RESTORE-DEBUG] Terminals already exist (${currentTerminalCount}) - skipping restore`);
+          
+          // List existing terminals for debugging
+          const existingTerminals = this._terminalManager.getTerminals();
+          log('📋 [RESTORE-DEBUG] Existing terminals:', existingTerminals.map(t => ({
+            id: t.id,
+            name: t.name,
+            pid: t.pid
+          })));
+        }
+        
+        // Send additional status update to WebView
+        setTimeout(() => {
+          this._sendMessage({
+            command: 'initializationComplete',
+            terminalCount: this._terminalManager.getTerminals().length,
+            timestamp: Date.now(),
+          });
+        }, 500);
+        
       } catch (error) {
-        log('❌ [ERROR] Failed during webviewReady handling:', error);
+        log('❌ [RESTORE-DEBUG] Failed during webviewReady handling:', error);
+        log('❌ [RESTORE-DEBUG] Critical error details:', {
+          name: error instanceof Error ? error.name : 'Unknown',
+          message: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+          terminalManagerAvailable: !!this._terminalManager,
+          persistenceHandlerAvailable: !!this._persistenceHandler,
+        });
+        
+        // Emergency fallback
+        try {
+          log('🚨 [RESTORE-DEBUG] Attempting emergency terminal creation...');
+          this._ensureMultipleTerminals();
+        } catch (emergencyError) {
+          log('💥 [RESTORE-DEBUG] Emergency terminal creation failed:', emergencyError);
+        }
       }
     })();
   }
@@ -1006,6 +1127,12 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     }
 
     try {
+      // Handle scrollback data responses first (special case)
+      if (message.command === 'scrollbackDataCollected') {
+        this.handleScrollbackDataResponse(message);
+        return;
+      }
+
       // Minimal router: if a handler exists, use it and return
       const routed = this._messageHandlers.get(message.command);
       if (routed) {
@@ -1106,6 +1233,47 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
           }
           break;
         }
+        
+        case 'terminalSerializationResponse': {
+          log('📋 [PERSISTENCE] Terminal serialization response received');
+          try {
+            const serializationData = (message as any).serializationData || {};
+            const error = (message as any).error;
+            
+            if (error) {
+              log(`❌ [PERSISTENCE] Serialization error: ${error}`);
+            } else {
+              log(`✅ [PERSISTENCE] Received serialization data for ${Object.keys(serializationData).length} terminals`);
+              
+              // Forward to StandardTerminalSessionManager
+              if (this._standardSessionManager) {
+                this._standardSessionManager.handleSerializationResponse(serializationData);
+              }
+            }
+          } catch (persistenceError) {
+            log('❌ [PERSISTENCE] Error handling serialization response:', persistenceError);
+          }
+          break;
+        }
+        
+        case 'terminalSerializationRestoreResponse': {
+          log('📋 [PERSISTENCE] Terminal serialization restore response received');
+          try {
+            const restoredCount = (message as any).restoredCount || 0;
+            const totalCount = (message as any).totalCount || 0;
+            const error = (message as any).error;
+            
+            if (error) {
+              log(`❌ [PERSISTENCE] Restore error: ${error}`);
+            } else {
+              log(`✅ [PERSISTENCE] Restored ${restoredCount}/${totalCount} terminals`);
+            }
+          } catch (restoreError) {
+            log('❌ [PERSISTENCE] Error handling restore response:', restoreError);
+          }
+          break;
+        }
+        
         default: {
           log('⚠️ [DEBUG] Unknown webview message command:', message.command);
           break;
@@ -1188,6 +1356,16 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       // }
 
       void this._sendMessage(message);
+
+      // 🆕 NEW: Auto-save session after terminal creation
+      setTimeout(async () => {
+        try {
+          await this.saveCurrentSession();
+          log('💾 [PERSISTENCE] Auto-saved session after terminal creation');
+        } catch (error) {
+          log('❌ [PERSISTENCE] Failed to auto-save session:', error);
+        }
+      }, 500); // Small delay to ensure terminal is fully initialized
     });
 
     // Store disposables for cleanup
@@ -1199,6 +1377,16 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         command: TERMINAL_CONSTANTS.COMMANDS.TERMINAL_REMOVED,
         terminalId,
       });
+
+      // 🆕 NEW: Auto-save session after terminal removal
+      setTimeout(async () => {
+        try {
+          await this.saveCurrentSession();
+          log('💾 [PERSISTENCE] Auto-saved session after terminal removal');
+        } catch (error) {
+          log('❌ [PERSISTENCE] Failed to auto-save session:', error);
+        }
+      }, 500);
     });
 
     // 新しいアーキテクチャ: 状態更新イベントの処理
@@ -1984,6 +2172,355 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   }
 
   /**
+   * Handle terminal persistence messages
+   */
+  private async _handlePersistenceMessage(message: WebviewMessage): Promise<void> {
+    try {
+      if (!this._persistenceHandler) {
+        log('❌ [PERSISTENCE] Persistence handler not initialized');
+        await this._sendMessage({
+          command: `${message.command}Response`,
+          success: false,
+          error: 'Persistence handler not available',
+          messageId: message.messageId, // Include messageId even for init failures
+        });
+        return;
+      }
+
+      log(`📨 [PERSISTENCE] Handling message: ${message.command}`);
+
+      // Convert webview message to persistence message format
+      const persistenceCommand = message.command.replace('persistence', '').toLowerCase();
+      const persistenceMessage = {
+        command: persistenceCommand as 'saveSession' | 'restoreSession' | 'clearSession',
+        data: message.data,
+        terminalId: message.terminalId,
+      };
+
+      // Process the persistence request
+      const response = await this._persistenceHandler.handleMessage(persistenceMessage);
+
+      // Send response back to WebView
+      await this._sendMessage({
+        command: `${message.command}Response`,
+        success: response.success,
+        data: response.data,
+        error: response.error,
+        terminalCount: response.terminalCount,
+        messageId: message.messageId, // Include messageId for WebView response tracking
+      });
+
+    } catch (error) {
+      log(`❌ [PERSISTENCE] Message handling failed: ${error}`);
+      await this._sendMessage({
+        command: `${message.command}Response`,
+        success: false,
+        error: `Persistence operation failed: ${(error as Error).message}`,
+        messageId: message.messageId, // Include messageId for error responses too
+      });
+    }
+  }
+
+  /**
+   * Handle legacy persistence messages for backward compatibility
+   */
+  private async _handleLegacyPersistenceMessage(message: WebviewMessage): Promise<void> {
+    try {
+      log(`📨 [PERSISTENCE-LEGACY] Handling legacy message: ${message.command}`);
+
+      // Convert legacy message to new format
+      let newCommand: string;
+      switch (message.command) {
+        case 'terminalSerializationRequest':
+          newCommand = 'persistenceSaveSession';
+          break;
+        case 'terminalSerializationRestoreRequest':
+          newCommand = 'persistenceRestoreSession';
+          break;
+        default:
+          throw new Error(`Unknown legacy persistence command: ${message.command}`);
+      }
+
+      // Forward to new handler
+      await this._handlePersistenceMessage({
+        ...message,
+        command: newCommand,
+      });
+
+    } catch (error) {
+      log(`❌ [PERSISTENCE-LEGACY] Legacy message handling failed: ${error}`);
+      await this._sendMessage({
+        command: `${message.command}Response`,
+        success: false,
+        error: `Legacy persistence operation failed: ${(error as Error).message}`,
+      });
+    }
+  }
+
+  /**
+   * Trigger automatic session save
+   */
+  public async saveCurrentSession(): Promise<boolean> {
+    log('🔥 [PERSISTENCE-DEBUG] === saveCurrentSession called ===');
+    
+    try {
+      if (!this._persistenceHandler) {
+        log('❌ [PERSISTENCE] Cannot save session - handler not initialized');
+        return false;
+      }
+
+      log('🔍 [PERSISTENCE-DEBUG] Persistence handler available, getting terminals...');
+
+      // 🆕 NEW: Request scrollback data from WebView before saving
+      const terminals = this._terminalManager.getTerminals();
+      log(`🔍 [PERSISTENCE-DEBUG] Found ${terminals.length} terminals to save`);
+      
+      if (terminals.length === 0) {
+        log('⚠️ [PERSISTENCE-DEBUG] No terminals to save');
+        return false;
+      }
+
+      const terminalData = await Promise.all(
+        terminals.map(async (terminal, index) => {
+          log(`🔍 [PERSISTENCE-DEBUG] Processing terminal ${index + 1}/${terminals.length}: ${terminal.id} (${terminal.name})`);
+          
+          // Request scrollback data from WebView
+          log(`📤 [PERSISTENCE-DEBUG] About to request scrollback for terminal ${terminal.id}`);
+          const scrollbackData = await this.requestScrollbackFromWebView(terminal.id);
+          
+          log(`📦 [PERSISTENCE-DEBUG] Terminal ${terminal.id} scrollback promise resolved: ${scrollbackData.length} lines`);
+          
+          return {
+            id: terminal.id,
+            name: terminal.name,
+            scrollback: scrollbackData,
+            workingDirectory: terminal.cwd || '',
+            shellCommand: terminal.shell || '',
+            isActive: terminal.isActive || false,
+          };
+        })
+      );
+
+      log('🔍 [PERSISTENCE-DEBUG] All terminal data collected, calling persistence handler...');
+
+      const response = await this._persistenceHandler.handleMessage({
+        command: 'saveSession',
+        data: terminalData,
+      });
+
+      log(`🔍 [PERSISTENCE-DEBUG] Persistence handler response:`, response);
+
+      if (response.success) {
+        log(`✅ [PERSISTENCE] Session saved successfully: ${response.terminalCount} terminals`);
+        return true;
+      } else {
+        log(`❌ [PERSISTENCE] Session save failed: ${response.error}`);
+        return false;
+      }
+
+    } catch (error) {
+      log(`❌ [PERSISTENCE] Auto-save failed: ${error}`);
+      console.error('Persistence save error:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Request scrollback data from WebView for a specific terminal
+   */
+  /**
+   * Request scrollback data from WebView for a specific terminal
+   */
+  // Map to store pending scrollback requests
+  private pendingScrollbackRequests = new Map<string, {
+    resolve: (data: string[]) => void;
+    reject: (error: Error) => void;
+    timeout: NodeJS.Timeout;
+  }>();
+
+  private async requestScrollbackFromWebView(terminalId: string): Promise<string[]> {
+    try {
+      if (!this._view) {
+        log('⚠️ [PERSISTENCE] WebView not available for scrollback request');
+        return [];
+      }
+
+      // Create a promise to wait for the WebView response
+      return new Promise((resolve, reject) => {
+        const requestId = `scrollback-${terminalId}-${Date.now()}`;
+        
+        const timeout = setTimeout(() => {
+          this.pendingScrollbackRequests.delete(requestId);
+          log(`⏰ [PERSISTENCE] Scrollback request timeout for terminal ${terminalId}`);
+          resolve([]); // Return empty array instead of rejecting to avoid breaking persistence
+        }, 10000); // 10 second timeout
+
+        // Store the promise resolvers
+        this.pendingScrollbackRequests.set(requestId, {
+          resolve,
+          reject,
+          timeout
+        });
+
+        // Send the request to WebView
+        this._view!.webview.postMessage({
+          command: 'extractScrollbackData',
+          terminalId,
+          requestId,
+          maxLines: 1000, // Request up to 1000 lines
+        });
+
+        log(`📤 [PERSISTENCE] Requested scrollback data for terminal ${terminalId} (requestId: ${requestId})`);
+      });
+
+    } catch (error) {
+      log(`❌ [PERSISTENCE] Failed to request scrollback from WebView: ${error}`);
+      return [];
+    }
+  }
+
+  /**
+   * Handle scrollback data response from WebView
+   * This should be called from the main message handler
+   */
+  private handleScrollbackDataResponse(message: any): void {
+    if (message.command !== 'scrollbackDataCollected' || !message.requestId) {
+      return;
+    }
+
+    const requestId = message.requestId;
+    const pendingRequest = this.pendingScrollbackRequests.get(requestId);
+    
+    if (!pendingRequest) {
+      log(`⚠️ [PERSISTENCE] No pending request found for scrollback response: ${requestId}`);
+      return;
+    }
+
+    // Clean up the pending request
+    clearTimeout(pendingRequest.timeout);
+    this.pendingScrollbackRequests.delete(requestId);
+
+    if (message.error) {
+      log(`⚠️ [PERSISTENCE] Scrollback extraction error for request ${requestId}: ${message.error}`);
+      pendingRequest.resolve([]); // Return empty array instead of rejecting
+    } else {
+      const dataLength = message.scrollbackData?.length || 0;
+      log(`✅ [PERSISTENCE] Successfully received ${dataLength} lines for request ${requestId}`);
+      log(`📦 [PERSISTENCE] About to resolve promise with scrollbackData:`, message.scrollbackData ? 'present' : 'missing');
+      pendingRequest.resolve(message.scrollbackData || []);
+    }
+  }
+
+  /**
+   * Trigger automatic session restore
+   */
+  public async restoreLastSession(): Promise<boolean> {
+    log('🔥 [RESTORE-DEBUG] === restoreLastSession called ===');
+    
+    try {
+      if (!this._persistenceHandler) {
+        log('❌ [PERSISTENCE] Cannot restore session - handler not initialized');
+        return false;
+      }
+
+      log('🔍 [RESTORE-DEBUG] Persistence handler available, requesting restore...');
+
+      const response = await this._persistenceHandler.handleMessage({
+        command: 'restoreSession',
+      });
+
+      log('🔍 [RESTORE-DEBUG] Persistence handler response:', response);
+
+      if (response.success && response.data && Array.isArray(response.data)) {
+        log(`🔍 [RESTORE-DEBUG] Restore data available: ${response.data.length} terminals`);
+        log('📄 [RESTORE-DEBUG] Restore data sample:', response.data.slice(0, 1));
+        
+        // 🔧 FIX: Create actual terminal processes in Extension Host first
+        // This follows VS Code standard pattern where Extension Host manages processes
+        const restoredTerminals = [];
+        
+        for (const terminalData of response.data) {
+          try {
+            log(`🔧 [RESTORE-DEBUG] Creating terminal process for: ${terminalData.name || terminalData.id}`);
+            
+            // Create actual terminal process using TerminalManager
+            const terminalId = this._terminalManager.createTerminal();
+            const terminal = this._terminalManager.getTerminal(terminalId);
+
+            if (terminal) {
+              log(`✅ [RESTORE-DEBUG] Terminal process created: ${terminal.id}`);
+              
+              // Send terminal creation message to WebView
+              await this._sendMessage({
+                command: 'terminalCreated',
+                terminal: {
+                  id: terminal.id,
+                  name: terminal.name,
+                  cwd: terminal.cwd,
+                  isActive: terminalData.isActive || false,
+                },
+              });
+
+              // Restore scrollback data if available
+              if (terminalData.scrollback && Array.isArray(terminalData.scrollback) && terminalData.scrollback.length > 0) {
+                log(`📜 [RESTORE-DEBUG] Restoring scrollback for ${terminal.id}: ${terminalData.scrollback.length} lines`);
+                
+                // Send scrollback restoration to WebView
+                await this._sendMessage({
+                  command: 'restoreScrollback',
+                  terminalId: terminal.id,
+                  scrollback: terminalData.scrollback,
+                });
+              }
+
+              restoredTerminals.push(terminal);
+            } else {
+              log(`❌ [RESTORE-DEBUG] Failed to create terminal process for: ${terminalData.name || terminalData.id}`);
+            }
+            
+          } catch (terminalError) {
+            log(`❌ [RESTORE-DEBUG] Failed to restore terminal ${terminalData.id}:`, terminalError);
+          }
+        }
+
+        if (restoredTerminals.length > 0) {
+          log(`✅ [PERSISTENCE] Session restored successfully: ${restoredTerminals.length}/${response.data.length} terminals`);
+          
+          // Set active terminal if specified
+          const activeTerminal = response.data.find(t => t.isActive);
+          if (activeTerminal && restoredTerminals.find(t => t.id === activeTerminal.id)) {
+            await this._sendMessage({
+              command: 'setActiveTerminal',
+              terminalId: activeTerminal.id,
+            });
+          }
+
+          // Notify WebView of successful restoration completion
+          await this._sendMessage({
+            command: 'sessionRestored',
+            success: true,
+            restoredCount: restoredTerminals.length,
+            totalCount: response.data.length,
+          });
+
+          return true;
+        } else {
+          log('⚠️ [PERSISTENCE] No terminals were successfully restored');
+          return false;
+        }
+      } else {
+        log(`📦 [PERSISTENCE] No session to restore: ${response.error || 'No data'}`);
+        return false;
+      }
+
+    } catch (error) {
+      log(`❌ [PERSISTENCE] Auto-restore failed: ${error}`);
+      console.error('Persistence restore error:', error);
+      return false;
+    }
+  }
+
+  /**
    * Clean up resources
    */
   dispose(): void {
@@ -2006,6 +2543,13 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       this._terminalIdMapping.clear();
     }
 
+    // Clean up any pending scrollback requests
+    for (const [requestId, request] of this.pendingScrollbackRequests.entries()) {
+      clearTimeout(request.timeout);
+      request.resolve([]); // Resolve with empty array to avoid hanging promises
+    }
+    this.pendingScrollbackRequests.clear();
+
     // Dispose all registered disposables
     for (const disposable of this._disposables) {
       disposable.dispose();
@@ -2014,6 +2558,15 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
     // Dispose HTML generation service
     this._htmlGenerationService.dispose();
+
+    // Dispose persistence services
+    if (this._persistenceService) {
+      this._persistenceService.cleanupExpiredSessions().catch(error => 
+        log(`⚠️ [PERSISTENCE] Cleanup during dispose failed: ${error}`)
+      );
+    }
+    this._persistenceService = undefined;
+    this._persistenceHandler = undefined;
 
     // Clear references and reset state
     this._view = undefined;

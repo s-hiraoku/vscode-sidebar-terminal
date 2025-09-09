@@ -91,6 +91,13 @@ async function initializeWebView(): Promise<void> {
         log('📡 [STATE] Requesting initial state from Extension...');
         terminalManager.requestLatestState();
         
+        // 🔄 Request session restoration from Extension
+        log('🔄 [RESTORATION] Requesting session restoration from Extension...');
+        terminalManager.postMessageToExtension({
+          command: 'requestSessionRestore',
+          timestamp: Date.now(),
+        });
+        
         // 🔧 [INPUT-FIX] Retroactively attach input handlers to any existing terminals
         // This fixes keyboard input for terminals that existed before the handler fix
         setTimeout(() => {
