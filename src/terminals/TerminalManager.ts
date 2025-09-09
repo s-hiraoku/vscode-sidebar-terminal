@@ -40,6 +40,7 @@ export class TerminalManager {
   private readonly _terminalRemovedEmitter = new vscode.EventEmitter<string>();
   private readonly _stateUpdateEmitter = new vscode.EventEmitter<TerminalState>();
   private readonly _terminalFocusEmitter = new vscode.EventEmitter<string>();
+  private _outputEmitter?: vscode.EventEmitter<{ terminalId: string; data: string }>;
   private readonly _terminalNumberManager: TerminalNumberManager;
   private _shellIntegrationService: ShellIntegrationService | null = null;
   // Terminal Profile Service for VS Code standard profiles
@@ -1669,4 +1670,61 @@ export class TerminalManager {
 
   // All CLI Agent detection logic has been extracted to CliAgentDetectionService
   // for better separation of concerns and testability
+
+  // =================== ADDITIONAL METHODS FOR COMPATIBILITY ===================
+
+  /**
+   * Output event emitter for backward compatibility
+   */
+  public get onTerminalOutput(): vscode.Event<{ terminalId: string; data: string }> {
+    // Map the existing onData event to the expected format  
+    if (!this._outputEmitter) {
+      this._outputEmitter = new vscode.EventEmitter<{ terminalId: string; data: string }>();
+      this.onData((event: TerminalEvent) => {
+        this._outputEmitter!.fire({
+          terminalId: event.terminalId,
+          data: event.data || ''
+        });
+      });
+    }
+    return this._outputEmitter.event;
+  }
+
+  /**
+   * Write data to a specific terminal
+   */
+  public writeToTerminal(terminalId: string, data: string): boolean {
+    const terminal = this._terminals.get(terminalId);
+    if (!terminal) {
+      log(`❌ [TERMINAL] Cannot write to terminal ${terminalId}: not found`);
+      return false;
+    }
+
+    try {
+      const ptyInstance = terminal.ptyProcess || terminal.pty;
+      if (!ptyInstance) {
+        log(`❌ [TERMINAL] Cannot write to terminal ${terminalId}: no PTY instance`);
+        return false;
+      }
+
+      ptyInstance.write(data);
+      log(`✍️ [TERMINAL] Data written to terminal ${terminalId}: ${data.length} bytes`);
+      return true;
+    } catch (error) {
+      log(`❌ [TERMINAL] Failed to write to terminal ${terminalId}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Resize a specific terminal
+   */
+  public resizeTerminal(terminalId: string, cols: number, rows: number): boolean {
+    try {
+      this.resize(cols, rows, terminalId);
+      return true;
+    } catch {
+      return false;
+    }
+  }
 }

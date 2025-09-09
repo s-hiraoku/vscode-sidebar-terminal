@@ -46,7 +46,9 @@ export interface IManagerCoordinator {
     config: IConfigManager;
     message: IMessageManager;
     notification: INotificationManager;
+    persistence?: any; // Optional persistence manager
   };
+  getMessageManager(): IMessageManager;
   // 新しいアーキテクチャ: 状態更新処理
   updateState?(state: unknown): void;
   handleTerminalRemovedFromExtension?(terminalId: string): void;

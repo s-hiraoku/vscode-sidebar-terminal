@@ -361,3 +361,6 @@ export const state = (...args: unknown[]): void => logger.state(...args);
 // Query helpers
 export const isDebugEnabled = (): boolean => logger.isDebugEnabled();
 export const isInfoEnabled = (): boolean => logger.isInfoEnabled();
+
+// General log function (alias for info)
+export const log = (...args: unknown[]): void => logger.info(...args);

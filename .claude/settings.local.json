@@ -114,7 +114,10 @@
       "Bash(git merge:*)",
       "Bash(git rm:*)",
       "Bash(gh pr merge:*)",
-      "WebFetch(domain:xtermjs.org)"
+      "WebFetch(domain:xtermjs.org)",
+      "mcp__github-server__get_issue",
+      "mcp__github-server__add_issue_comment",
+      "mcp__github-server__create_issue"
     ],
     "deny": []
   },

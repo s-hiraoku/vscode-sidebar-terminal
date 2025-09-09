@@ -381,10 +381,9 @@ export class TerminalLifecycleManager implements ITerminalLifecycleManager {
       log(`❌ [LIFECYCLE] Terminal error: ${terminal.name} - ${String(error)}`);
       this.removeTerminal(terminal.id);
     };
-    (terminal.pty as { on: (event: string, handler: (error: Error) => void) => void }).on(
-      'error',
-      errorHandler
-    );
+    if (terminal.pty && typeof (terminal.pty as any).on === 'function') {
+      (terminal.pty as any).on('error', errorHandler);
+    }
   }
 
   /**
