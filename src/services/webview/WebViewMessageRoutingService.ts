@@ -275,6 +275,54 @@ export class InitializationMessageHandler implements MessageHandler {
           console.error('❌ [INITIAL] Error details:', error);
         }
         break;
+
+      case 'requestSessionRestore':
+        log('🔄 [RESTORATION] WebView requested session restoration');
+        try {
+          // Note: Session restoration handled via other services
+          log('🔄 [RESTORATION] Session restoration delegated to terminal manager');
+          
+          // Use existing terminal manager for session handling
+          if (context.terminalManager) {
+            log('✅ [RESTORATION] Session restoration delegated to terminal manager');
+          } else {
+            log('⚠️ [RESTORATION] UnifiedSessionManager not available, creating initial terminal instead');
+            
+            // Fallback: Create an initial terminal if none exist
+            if (context.terminalManager.getTerminals().length === 0) {
+              const terminalId = context.terminalManager.createTerminal();
+              log(`✅ [RESTORATION] Created fallback terminal: ${terminalId}`);
+              context.terminalManager.setActiveTerminal(terminalId);
+              
+              // Send terminal update to WebView
+              await context.sendMessage({
+                command: 'stateUpdate',
+                state: context.terminalManager.getCurrentState()
+              });
+            }
+          }
+        } catch (error) {
+          log(`❌ [RESTORATION] Session restoration failed: ${String(error)}`);
+          console.error('❌ [RESTORATION] Error details:', error);
+          
+          // Fallback: Create an initial terminal if none exist
+          try {
+            if (context.terminalManager.getTerminals().length === 0) {
+              const terminalId = context.terminalManager.createTerminal();
+              log(`✅ [RESTORATION] Created emergency fallback terminal: ${terminalId}`);
+              context.terminalManager.setActiveTerminal(terminalId);
+              
+              // Send terminal update to WebView
+              await context.sendMessage({
+                command: 'stateUpdate',
+                state: context.terminalManager.getCurrentState()
+              });
+            }
+          } catch (fallbackError) {
+            log(`❌ [RESTORATION] Even fallback terminal creation failed: ${String(fallbackError)}`);
+          }
+        }
+        break;
     }
   }
 }

@@ -385,8 +385,8 @@ describe('UnifiedConfigurationService', () => {
       assert.ok(snapshot.terminalIntegrated);
       assert.ok(snapshot.editor);
       assert.ok(snapshot.metadata);
-      assert.ok(snapshot.metadata.timestamp);
-      assert.strictEqual(typeof snapshot.metadata.cacheSize, 'number');
+      assert.ok((snapshot.metadata as any).timestamp);
+      assert.strictEqual(typeof (snapshot.metadata as any).cacheSize, 'number');
     });
   });
 

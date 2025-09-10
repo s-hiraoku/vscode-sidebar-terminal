@@ -94,6 +94,7 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
       '// Using Claude AI for this function',
       'Error: Claude connection failed',
       'Installing claude-cli package...',
+      'claude-3-5-sonnet-20241022', // Model identifier alone is not startup
     ];
 
     realClaudeOutputs.forEach((output, index) => {

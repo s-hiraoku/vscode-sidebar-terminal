@@ -88,12 +88,7 @@ export class KeyboardShortcutService {
       })
     );
 
-    // Search Operations
-    this._disposables.push(
-      vscode.commands.registerCommand('secondaryTerminal.find', () => {
-        this.find();
-      })
-    );
+    // Search Operations - Note: 'secondaryTerminal.find' is registered in ExtensionLifecycle.ts
 
     this._disposables.push(
       vscode.commands.registerCommand('secondaryTerminal.runRecentCommand', () => {
@@ -272,7 +267,7 @@ export class KeyboardShortcutService {
   /**
    * Open find box (VS Code standard: Ctrl+F)
    */
-  private async find(): Promise<void> {
+  public async find(): Promise<void> {
     const activeTerminal = this._terminalManager.getActiveTerminalId();
     if (!activeTerminal) return;
     

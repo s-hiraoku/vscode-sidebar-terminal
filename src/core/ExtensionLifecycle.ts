@@ -315,6 +315,15 @@ export class ExtensionLifecycle {
         },
       },
 
+      // ======================= 検索コマンド (Ctrl+F) =======================
+      {
+        command: 'secondaryTerminal.find',
+        handler: () => {
+          log('🔧 [DEBUG] Command executed: find (Ctrl+F search)');
+          this.keyboardShortcutService?.find();
+        },
+      },
+
       // ======================= 設定コマンド =======================
       {
         command: 'secondaryTerminal.openSettings',

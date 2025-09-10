@@ -185,9 +185,7 @@ export class WebViewHtmlGenerator implements IWebViewHtmlGenerator {
             <!-- Terminal container will be populated by webview.js -->
         </div>
         ${this.generateInitializationScript(nonce)}
-        <script nonce="${nonce}" src="${scriptUri.toString()}"
-                onload="console.log('✅ webview.js loaded successfully')"
-                onerror="console.error('❌ webview.js failed to load', event)"></script>
+        <script nonce="${nonce}" src="${scriptUri.toString()}" id="webview-main-script"></script>
     </body>
     </html>`;
   }
@@ -471,6 +469,19 @@ export class WebViewHtmlGenerator implements IWebViewHtmlGenerator {
             } catch (error) {
                 console.error('❌ Error acquiring VS Code API:', error);
             }
+
+            // Add script loading event handlers
+            document.addEventListener('DOMContentLoaded', function() {
+                const script = document.getElementById('webview-main-script');
+                if (script) {
+                    script.addEventListener('load', function() {
+                        console.log('✅ webview.js loaded successfully');
+                    });
+                    script.addEventListener('error', function(event) {
+                        console.error('❌ webview.js failed to load', event);
+                    });
+                }
+            });
         </script>`;
   }
 

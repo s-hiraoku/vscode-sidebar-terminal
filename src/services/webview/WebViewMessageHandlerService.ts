@@ -14,6 +14,8 @@ import { FocusTerminalHandler } from './messageHandlers/FocusTerminalHandler';
  * This service replaces the massive switch statement in SecondaryTerminalProvider
  * with a modular, testable, and extensible handler system.
  */
+import { ProfileMessageHandler } from './handlers/ProfileMessageHandler';
+
 export class WebViewMessageHandlerService {
   private readonly handlers: IMessageHandler[] = [];
 
@@ -29,7 +31,8 @@ export class WebViewMessageHandlerService {
       new WebViewReadyHandler(),
       new TerminalInputHandler(),
       new TerminalResizeHandler(),
-      new FocusTerminalHandler()
+      new FocusTerminalHandler(),
+      new ProfileMessageHandler() // Add profile handler
       // TODO: Add more handlers as we extract them:
       // new CreateTerminalHandler(),
       // new DeleteTerminalHandler(),

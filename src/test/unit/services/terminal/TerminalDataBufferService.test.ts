@@ -133,7 +133,7 @@ describe('TerminalDataBufferService', () => {
     it('should flush all buffers when CLI Agent becomes active', (done) => {
       let eventCount = 0;
       
-      service.onData((event) => {
+      service.onData((_event) => {
         eventCount++;
         if (eventCount === 2) {
           done();
@@ -196,7 +196,7 @@ describe('TerminalDataBufferService', () => {
       let eventCount = 0;
       const expectedEvents = 3;
       
-      service.onData((event) => {
+      service.onData((_event) => {
         eventCount++;
         if (eventCount === expectedEvents) {
           done();
@@ -255,7 +255,7 @@ describe('TerminalDataBufferService', () => {
   describe('Error Handling', () => {
     it('should handle data buffering errors gracefully', (done) => {
       // Mock console.error to capture error logs
-      const consoleStub = sandbox.stub(console, 'error');
+      const _consoleStub = sandbox.stub(console, 'error');
       let eventFired = false;
       
       service.onData((event) => {

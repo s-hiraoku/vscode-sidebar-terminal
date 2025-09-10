@@ -260,22 +260,47 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
   } {
     try {
       const disconnectedAgents = this.stateManager.getDisconnectedAgents();
+      const currentState = this.getAgentState(terminalId);
+      
       if (disconnectedAgents.has(terminalId)) {
+        // Promote disconnected agent to connected
         const agentInfo = disconnectedAgents.get(terminalId)!;
         this.stateManager.promoteDisconnectedAgentToConnected(terminalId);
-        log(`🔄 [CLI-AGENT] Switched connection to terminal ${terminalId}`);
+        log(`🔄 [CLI-AGENT] Switched connection to terminal ${terminalId} (from disconnected)`);
         return {
           success: true,
           newStatus: 'connected',
           agentType: agentInfo.type,
         };
+      } else if (currentState.status === 'none') {
+        // 🆕 NEW: Allow switching 'none' state terminals to connected (assume Claude by default)
+        // This allows user to manually activate any terminal as an AI agent
+        const agentType = 'claude'; // Default to Claude, could be made configurable
+        this.stateManager.setConnectedAgent(terminalId, agentType);
+        log(`🔄 [CLI-AGENT] Activated AI agent for terminal ${terminalId} (from none state)`);
+        return {
+          success: true,
+          newStatus: 'connected',
+          agentType: agentType,
+        };
+      } else if (currentState.status === 'connected') {
+        // 🎯 IMPROVED: If already connected, this is essentially a no-op success
+        // But if user clicks connected terminal, they may want to move connection to this terminal
+        // In this case, we still call setConnectedAgent to trigger the state transitions
+        const agentType = currentState.agentType || 'claude';
+        this.stateManager.setConnectedAgent(terminalId, agentType);
+        log(`🔄 [CLI-AGENT] Reaffirmed connection to terminal ${terminalId} (already connected)`);
+        return {
+          success: true,
+          newStatus: 'connected',
+          agentType: agentType,
+        };
       }
 
-      const currentState = this.getAgentState(terminalId);
-      log(`⚠️ [CLI-AGENT] Cannot switch to terminal ${terminalId}: not in disconnected state`);
+      log(`⚠️ [CLI-AGENT] Cannot switch to terminal ${terminalId}: unknown state`);
       return {
         success: false,
-        reason: 'Terminal is not in disconnected state',
+        reason: 'Unknown terminal state',
         newStatus: currentState.status,
         agentType: currentState.agentType,
       };
@@ -294,6 +319,88 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
     this.detectionCache.delete(terminalId);
     // 🔧 FIX: Use a separate method for actual terminal removal vs session termination
     this.stateManager.removeTerminalCompletely(terminalId);
+  }
+
+  /**
+   * 🆕 MANUAL RESET: Force reconnect AI Agent when user clicks toggle button
+   * This helps recover from detection errors by manually setting the agent as connected
+   */
+  forceReconnectAgent(terminalId: string, agentType: 'claude' | 'gemini' | 'codex' = 'claude', terminalName?: string): boolean {
+    log(`🔄 [MANUAL-RESET] User triggered force reconnect for terminal ${terminalId} as ${agentType}`);
+    
+    try {
+      // Clear any cached detection results for this terminal
+      const cacheKeys: string[] = [];
+      // Simple iteration over cache - compatibility with older LRU cache versions
+      try {
+        (this.detectionCache as any).forEach((_value: any, key: string) => {
+          if (key.includes(terminalId)) {
+            cacheKeys.push(key);
+          }
+        });
+      } catch (e) {
+        // Fallback: clear entire cache if iteration fails
+        this.detectionCache.clear();
+        log(`⚠️ [MANUAL-RESET] Cache iteration failed, cleared entire cache`);
+      }
+      cacheKeys.forEach(key => this.detectionCache.delete(key));
+      log(`🧹 [MANUAL-RESET] Cleared ${cacheKeys.length} cache entries for terminal ${terminalId}`);
+      
+      // Force reconnect via state manager
+      const success = this.stateManager.forceReconnectAgent(terminalId, agentType, terminalName);
+      
+      if (success) {
+        log(`✅ [MANUAL-RESET] Successfully force-reconnected ${agentType} in terminal ${terminalId}`);
+        return true;
+      } else {
+        log(`❌ [MANUAL-RESET] Failed to force-reconnect ${agentType} in terminal ${terminalId}`);
+        return false;
+      }
+    } catch (error) {
+      log('❌ [MANUAL-RESET] Error during force reconnect:', error);
+      return false;
+    }
+  }
+
+  /**
+   * 🆕 MANUAL RESET: Clear detection errors and reset terminal to clean state
+   * Use this when detection gets confused and needs a fresh start
+   */
+  clearDetectionError(terminalId: string): boolean {
+    log(`🧹 [MANUAL-RESET] User triggered detection error clear for terminal ${terminalId}`);
+    
+    try {
+      // Clear all cached results for this terminal
+      const cacheKeys: string[] = [];
+      // Simple iteration over cache - compatibility with older LRU cache versions
+      try {
+        (this.detectionCache as any).forEach((_value: any, key: string) => {
+          if (key.includes(terminalId)) {
+            cacheKeys.push(key);
+          }
+        });
+      } catch (e) {
+        // Fallback: clear entire cache if iteration fails
+        this.detectionCache.clear();
+        log(`⚠️ [MANUAL-RESET] Cache iteration failed, cleared entire cache`);
+      }
+      cacheKeys.forEach(key => this.detectionCache.delete(key));
+      log(`🧹 [MANUAL-RESET] Cleared ${cacheKeys.length} cache entries for terminal ${terminalId}`);
+      
+      // Reset state via state manager
+      const success = this.stateManager.clearDetectionError(terminalId);
+      
+      if (success) {
+        log(`✅ [MANUAL-RESET] Successfully cleared detection errors for terminal ${terminalId}`);
+        return true;
+      } else {
+        log(`⚠️ [MANUAL-RESET] No detection errors to clear for terminal ${terminalId}`);
+        return false;
+      }
+    } catch (error) {
+      log('❌ [MANUAL-RESET] Error during detection error clear:', error);
+      return false;
+    }
   }
 
   get onCliAgentStatusChange() {

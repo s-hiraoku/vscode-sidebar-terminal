@@ -385,10 +385,9 @@ export interface DeleteResult {
  */
 export interface TerminalInstance {
   id: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  pty?: any; // Using any for node-pty compatibility with both real and mock implementations (ptyProcessに移行中)
-  ptyProcess?: unknown; // 新しいpty参照名（セッション復元対応）
-  process?: any; // For lifecycle service compatibility
+  pty?: import('@homebridge/node-pty-prebuilt-multiarch').IPty; // Properly typed node-pty interface
+  ptyProcess?: import('@homebridge/node-pty-prebuilt-multiarch').IPty; // 新しいpty参照名（セッション復元対応）
+  process?: NodeJS.Process; // For lifecycle service compatibility
   name: string;
   number?: number; // ターミナル番号（1-5）
   cwd?: string; // 現在の作業ディレクトリ
@@ -533,9 +532,75 @@ export interface WebviewMessage {
     | 'updateSettings'        // Update settings request
     | 'terminalClosed'        // Terminal closed notification
     | 'customEvent'           // Custom event for extensibility
-    | 'error';
+    | 'error'
+    // Terminal Profile commands
+    | 'getProfiles'           // Get available terminal profiles
+    | 'profilesResponse'      // Response with available profiles
+    | 'createTerminalWithProfile' // Create terminal with specific profile
+    | 'showProfileSelector'   // Show profile selector UI
+    | 'selectProfile'         // Profile selected from UI
+    | 'createProfile'         // Create new profile
+    | 'updateProfile'         // Update existing profile
+    | 'deleteProfile'         // Delete profile
+    | 'setDefaultProfile'     // Set default profile
+    | 'find'                 // Terminal search functionality
+    | 'requestTerminalSerialization'   // Request terminal serialization
+    | 'terminalSerializationResponse'  // Terminal serialization response
+    | 'restoreTerminalSerialization'   // Restore terminal serialization
+    | 'terminalSerializationRestoreResponse' // Terminal serialization restore response
+    // New optimized persistence commands
+    | 'persistenceSaveSession'         // Save current session
+    | 'persistenceSaveSessionResponse' // Save session response
+    | 'persistenceRestoreSession'      // Restore last session
+    | 'persistenceRestoreSessionResponse' // Restore session response
+    | 'persistenceClearSession'        // Clear stored session
+    | 'persistenceClearSessionResponse' // Clear session response
+    | 'sessionRestored'                // Session restored notification
+    | 'sessionAutoSave'                // Auto-save trigger
+    | 'sessionAutoSaveResponse'        // Auto-save response
+    | 'errorResponse'                  // Error response
+    | 'terminalSerializationRequest'   // Terminal serialization request
+    | 'terminalSerializationRestoreRequest' // Terminal serialization restore request
+    | 'terminalRestoreInfo'            // Terminal restore info
+    | 'resizeResponse'                 // Resize operation response
+    | 'terminalRestoreInfoResponse'    // Terminal restore info response
+    | 'initResponse'                   // Init operation response
+    | 'initializationComplete'         // Initialization complete notification
+    | 'setActiveTerminal'              // Set active terminal command
+    | 'inputResponse'                  // Input operation response
+    | 'outputResponse'                 // Output operation response
+    | 'clearResponse'                  // Clear operation response
+    | 'splitResponse'                  // Split operation response
+    | 'killTerminalResponse'           // Kill terminal response
+    | 'focusTerminalResponse'          // Focus terminal response
+    | 'switchAiAgentResponseResponse'  // Switch AI agent response (double response for backwards compatibility)
+    | 'deleteTerminalResponseResponse' // Delete terminal response (double response for backwards compatibility)  
+    | 'sessionAutoSaveResponseResponse' // Session auto save response (double response for backwards compatibility)
+    | 'terminalRestoreInfoResponseResponse' // Terminal restore info response (double response for backwards compatibility)
+    | 'exitResponse'                   // Exit operation response
+    | 'terminalCreatedResponse'        // Terminal created response
+    | 'terminalRemovedResponse'        // Terminal removed response
+    | 'stateUpdateResponse'            // State update response
+    | 'getScrollbackResponse'          // Get scrollback response
+    | 'restoreScrollbackResponse'      // Restore scrollback response
+    | 'scrollbackExtractedResponse'    // Scrollback extracted response
+    | 'scrollbackRestoredResponse'     // Scrollback restored response
+    | 'scrollbackProgressResponse'     // Scrollback progress response
+    | 'saveAllTerminalSessionsResponse' // Save all terminal sessions response
+    | 'extractScrollbackDataResponse'  // Extract scrollback data response
+    | 'performScrollbackRestoreResponse' // Perform scrollback restore response
+    | 'scrollbackDataCollectedResponse' // Scrollback data collected response
+    | 'panelLocationUpdateResponse'    // Panel location update response
+    | 'requestPanelLocationDetectionResponse' // Request panel location detection response
+    | 'reportPanelLocationResponse'    // Report panel location response
+    | 'sessionRestorationDataResponse' // Session restoration data response
+    | 'requestInitialTerminalResponse' // Request initial terminal response
+    | 'requestStateResponse'           // Request state response
+    | 'updateShellStatusResponse'      // Update shell status response
+    | 'updateCwdResponse'              // Update CWD response
+    | 'commandHistoryResponse';        // Command history response
   config?: TerminalConfig;
-  data?: string;
+  data?: string | any[]; // Support both string and array data
   exitCode?: number;
   terminalId?: string;
   terminalName?: string;
@@ -587,6 +652,8 @@ export interface WebviewMessage {
     agentType: string | null;
     terminalId?: string; // 🛠️ FIX: Add terminalId for reliable status updates
   }; // CLI Agent接続状態の情報（新しい名前）
+  
+  forceReconnect?: boolean; // Force reconnect flag for CLI Agent switching
 
   // 🔧 NEW: Full CLI Agent State Sync
   terminalStates?: Record<
@@ -650,18 +717,65 @@ export interface WebviewMessage {
   // セッション関連の追加プロパティ
   sessionData?: unknown; // セッションデータ
   
+  // Persistence-related properties
+  terminalIds?: string[]; // Array of terminal IDs
+  terminalData?: any; // Terminal data for persistence
+  
   // 🎯 FIX: 削除処理統一化で追加
   success?: boolean;  // 削除処理の成功/失敗
+  
+  // Additional WebView message properties
+  terminal?: any; // Terminal object for responses
+  scrollback?: any; // Scrollback data for terminal restore
+  totalCount?: number; // Total count for terminal operations
 
   // Custom event properties
   eventType?: string;  // Custom event type for extensibility
-  eventData?: any;     // Custom event data
+  eventData?: unknown; // Custom event data
   // reason?: string; // 失敗理由 - 重複のためコメント化（上部のreasonを使用）
+
+  // Message ID for response tracking
+  messageId?: string; // Unique message identifier for request-response correlation
 
   // AIエージェント切り替え関連プロパティ
   action?: string; // switchAiAgentコマンドのアクション
   newStatus?: 'connected' | 'disconnected' | 'none'; // AIエージェントの新しいステータス
   agentType?: string | null; // エージェントタイプ
+
+  // Terminal Profile properties
+  profiles?: Array<{
+    id: string;
+    name: string;
+    description?: string;
+    icon?: string;
+    path: string;
+    args?: string[];
+    env?: Record<string, string>;
+    cwd?: string;
+    color?: string;
+    isDefault?: boolean;
+    source?: 'builtin' | 'user' | 'extension';
+  }>; // Available terminal profiles
+  profileId?: string; // Selected profile ID
+  profile?: {
+    id: string;
+    name: string;
+    description?: string;
+    icon?: string;
+    path: string;
+    args?: string[];
+    env?: Record<string, string>;
+    cwd?: string;
+    color?: string;
+    isDefault?: boolean;
+    source?: 'builtin' | 'user' | 'extension';
+  }; // Profile data for create/update operations
+  profileOptions?: {
+    name?: string;
+    cwd?: string;
+    env?: Record<string, string>;
+    shellArgs?: string[];
+  }; // Profile options for terminal creation
 }
 
 /**
@@ -699,6 +813,7 @@ export interface VsCodeMessage {
     | 'scrollbackDataCollected'
     | 'reportPanelLocation'
     | 'terminalSerializationResponse'
+    | 'terminalSerializationRestoreResponse'
     | 'requestSessionRestorationData'
     | 'requestInitialTerminal'
     | 'error';
@@ -745,6 +860,9 @@ export interface VsCodeMessage {
 
   // AIエージェント切り替え関連プロパティ
   action?: string; // switchAiAgentコマンドのアクション
+  forceReconnect?: boolean; // Manual reset functionality
+  agentType?: 'claude' | 'gemini' | 'codex'; // Agent type for force reconnect
+  isForceReconnect?: boolean; // Alternative property name for compatibility
 }
 
 // ===== 型ガード関数 =====

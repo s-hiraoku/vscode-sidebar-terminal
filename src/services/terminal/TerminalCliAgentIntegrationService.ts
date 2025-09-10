@@ -147,20 +147,20 @@ export class TerminalCliAgentIntegrationService {
    */
   getDisconnectedAgents(): Map<
     string,
-    { type: 'claude' | 'gemini'; startTime: Date; terminalName?: string }
+    { type: 'claude' | 'gemini' | 'codex'; startTime: Date; terminalName?: string }
   > {
     try {
       const allDisconnectedAgents = this._cliAgentService.getDisconnectedAgents();
       const filteredAgents = new Map<
         string,
-        { type: 'claude' | 'gemini'; startTime: Date; terminalName?: string }
+        { type: 'claude' | 'gemini' | 'codex'; startTime: Date; terminalName?: string }
       >();
       
-      // Filter out 'codex' agents to match the expected return type
+      // Include all supported agent types: Claude, Gemini, and Codex
       for (const [terminalId, agentInfo] of allDisconnectedAgents) {
-        if (agentInfo.type === 'claude' || agentInfo.type === 'gemini') {
+        if (agentInfo.type === 'claude' || agentInfo.type === 'gemini' || agentInfo.type === 'codex') {
           filteredAgents.set(terminalId, {
-            type: agentInfo.type as 'claude' | 'gemini',
+            type: agentInfo.type as 'claude' | 'gemini' | 'codex',
             startTime: agentInfo.startTime,
             terminalName: agentInfo.terminalName
           });
@@ -190,10 +190,10 @@ export class TerminalCliAgentIntegrationService {
   /**
    * Get the connected agent type
    */
-  getConnectedAgentType(): 'claude' | 'gemini' | null {
+  getConnectedAgentType(): 'claude' | 'gemini' | 'codex' | null {
     try {
       const connectedAgent = this._cliAgentService.getConnectedAgent();
-      return connectedAgent ? (connectedAgent.type as 'claude' | 'gemini') : null;
+      return connectedAgent ? (connectedAgent.type as 'claude' | 'gemini' | 'codex') : null;
     } catch (error) {
       log(`❌ [CliAgentIntegration] Error getting connected agent type:`, error);
       return null;

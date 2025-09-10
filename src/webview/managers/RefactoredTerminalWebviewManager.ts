@@ -44,6 +44,7 @@ import { UIManager } from './UIManager';
 import { InputManager } from './InputManager';
 import { RefactoredMessageManager } from './RefactoredMessageManager';
 import { StandardTerminalPersistenceManager } from './StandardTerminalPersistenceManager';
+import { OptimizedPersistenceManager } from './OptimizedPersistenceManager';
 import { WebViewApiManager } from './WebViewApiManager';
 import { TerminalLifecycleManager } from './TerminalLifecycleManager';
 import { CliAgentStateManager } from './CliAgentStateManager';
@@ -78,6 +79,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
   private inputManager!: InputManager;
   public messageManager!: RefactoredMessageManager;
   public persistenceManager!: StandardTerminalPersistenceManager;
+  public optimizedPersistenceManager!: OptimizedPersistenceManager;
 
   // 設定管理
   private currentSettings: PartialTerminalSettings = {
@@ -95,6 +97,9 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
   // 初期化状態
   private isInitialized = false;
   private isComposing = false;
+
+  // Track processed scrollback requests to prevent duplicates
+  private processedScrollbackRequests = new Set<string>();
 
   constructor() {
     log('🚀 RefactoredTerminalWebviewManager initializing...');
@@ -126,6 +131,9 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     // イベントハンドラーの設定
     this.setupEventHandlers();
 
+    // 🆕 NEW: Setup scrollback extraction message listener
+    this.setupScrollbackMessageListener();
+
     this.isInitialized = true;
     log('✅ RefactoredTerminalWebviewManager initialized');
   }
@@ -147,6 +155,26 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     this.inputManager = new InputManager();
     this.messageManager = new RefactoredMessageManager(this);
     this.persistenceManager = new StandardTerminalPersistenceManager();
+    this.optimizedPersistenceManager = new OptimizedPersistenceManager(this);
+
+    // Initialize the message manager (initialize method returns void, not Promise)
+    try {
+      this.messageManager.initialize(this);
+      console.log('✅ RefactoredMessageManager initialized successfully');
+    } catch (error) {
+      console.error('Failed to initialize RefactoredMessageManager:', error);
+    }
+
+    // Initialize optimized persistence manager
+    try {
+      this.optimizedPersistenceManager.initialize();
+      console.log('✅ OptimizedPersistenceManager initialized successfully');
+    } catch (error) {
+      console.error('Failed to initialize OptimizedPersistenceManager:', error);
+    }
+
+    // 🔄 Initialize session restoration capability
+    this.initializeSessionRestoration();
 
     // 依存関係の設定
     setUIManager(this.uiManager);
@@ -302,6 +330,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     config: IConfigManager;
     message: IMessageManager;
     notification: INotificationManager;
+    persistence: StandardTerminalPersistenceManager;
   } {
     return {
       performance: this.performanceManager,
@@ -310,7 +339,12 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       config: this.configManager,
       message: this.messageManager,
       notification: this.notificationManager,
+      persistence: this.persistenceManager,
     };
+  }
+
+  public getMessageManager(): IMessageManager {
+    return this.messageManager;
   }
 
   // Terminal management delegation
@@ -381,6 +415,26 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
         log(`✅ Input handlers configured for terminal: ${terminalId}`);
       }
 
+      // 🔧 FIX: Add terminal to persistence manager AFTER terminal is fully ready
+      // This ensures serialize addon can be properly initialized
+      setTimeout(() => {
+        if (this.persistenceManager && terminal) {
+          console.log(`🔧 [PERSISTENCE] Adding terminal ${terminalId} to persistence manager (delayed for proper initialization)`);
+          this.persistenceManager.addTerminal(terminalId, terminal);
+          console.log(`💾 [PERSISTENCE] Added terminal ${terminalId} to persistence manager for session restoration`);
+          
+          // Attempt to restore previous content if available
+          const restored = this.persistenceManager.restoreTerminalFromStorage(terminalId);
+          if (restored) {
+            console.log(`🔄 [PERSISTENCE] Successfully restored previous content for terminal ${terminalId}`);
+          } else {
+            console.log(`📭 [PERSISTENCE] No previous content found for terminal ${terminalId}`);
+          }
+        } else {
+          console.warn(`⚠️ [PERSISTENCE] persistenceManager not available - terminal ${terminalId} will not be persisted`);
+        }
+      }, 150); // Delay to ensure terminal is fully ready
+
       // 4. 🎯 FIX: 新規作成時のアクティブ設定強化
       // 確実にアクティブ状態を設定し、太い青枠を表示
       this.setActiveTerminalId(terminalId);
@@ -414,7 +468,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
         }
       }, 300);
 
-      // 5. Extensionに正規のターミナル作成をリクエスト
+      // 5. ExtensionにRegular のターミナル作成をリクエスト
       this.postMessageToExtension({
         command: 'createTerminal',
         terminalId: terminalId,
@@ -433,6 +487,15 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
   public async removeTerminal(terminalId: string): Promise<boolean> {
     // CLI Agent状態もクリーンアップ
     this.cliAgentStateManager.removeTerminalState(terminalId);
+    
+    // 🔥 CRITICAL FIX: Remove terminal from persistence manager
+    if (this.persistenceManager) {
+      this.persistenceManager.removeTerminal(terminalId);
+      console.log(`🗑️ [PERSISTENCE] Removed terminal ${terminalId} from persistence manager`);
+    } else {
+      console.warn(`⚠️ [PERSISTENCE] persistenceManager not available when removing terminal ${terminalId}`);
+    }
+    
     return await this.terminalLifecycleManager.removeTerminal(terminalId);
   }
 
@@ -463,6 +526,146 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     return this.terminalLifecycleManager.writeToTerminal(data, terminalId);
   }
 
+  /**
+   * 🆕 NEW: Extract scrollback data from a specific terminal
+   */
+  public extractScrollbackData(terminalId: string, maxLines: number = 1000): string[] {
+    console.log(`🔥 [EXTRACT-DEBUG] === extractScrollbackData called for ${terminalId} ===`);
+    
+    try {
+      const terminalInstance = this.getTerminalInstance(terminalId);
+      console.log(`🔍 [EXTRACT-DEBUG] Terminal instance found:`, !!terminalInstance);
+      
+      if (!terminalInstance || !terminalInstance.terminal) {
+        console.warn(`⚠️ [EXTRACT-DEBUG] Terminal ${terminalId} not found or no terminal`);
+        return [];
+      }
+
+      const terminal = terminalInstance.terminal;
+      console.log(`🔍 [EXTRACT-DEBUG] Terminal details:`, {
+        hasBuffer: !!terminal.buffer,
+        hasNormalBuffer: !!(terminal.buffer && terminal.buffer.normal)
+      });
+
+      // Fallback: Read from buffer directly
+      if (terminal.buffer && terminal.buffer.normal) {
+        console.log('📄 [EXTRACT-DEBUG] Using buffer fallback method');
+        try {
+          const buffer = terminal.buffer.normal;
+          const lines: string[] = [];
+          
+          console.log(`🔍 [EXTRACT-DEBUG] Buffer length: ${buffer.length}, requesting max: ${maxLines}`);
+          
+          const startIndex = Math.max(0, buffer.length - maxLines);
+          for (let i = startIndex; i < buffer.length; i++) {
+            const line = buffer.getLine(i);
+            if (line) {
+              lines.push(line.translateToString());
+            }
+          }
+
+          console.log(`📦 [EXTRACT-DEBUG] Buffer method extracted ${lines.length} lines`);
+          console.log('📄 [EXTRACT-DEBUG] First few lines:', lines.slice(0, 3));
+          return lines;
+        } catch (bufferError) {
+          console.warn('⚠️ [EXTRACT-DEBUG] Buffer extraction failed:', bufferError);
+        }
+      }
+
+      console.warn(`⚠️ [EXTRACT-DEBUG] No scrollback extraction method available for terminal ${terminalId}`);
+      return [];
+
+    } catch (error) {
+      console.error(`❌ [EXTRACT-DEBUG] Failed to extract scrollback from terminal ${terminalId}:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * 🆕 NEW: Setup scrollback extraction message listener
+   */
+  private setupScrollbackMessageListener(): void {
+    if (window.addEventListener) {
+      window.addEventListener('message', (event) => {
+        const message = event.data;
+        
+        if (message && message.command === 'extractScrollbackData') {
+          this.handleExtractScrollbackRequest(message);
+        }
+      });
+    }
+  }
+
+  /**
+   * 🆕 NEW: Handle scrollback extraction request from Extension
+   */
+  private async handleExtractScrollbackRequest(message: any): Promise<void> {
+    console.log('🔥 [SCROLLBACK-DEBUG] === handleExtractScrollbackRequest called ===', message);
+    
+    try {
+      const { terminalId, requestId, maxLines } = message;
+      
+      if (!terminalId || !requestId) {
+        console.error('❌ [SCROLLBACK-DEBUG] Missing terminalId or requestId for scrollback extraction');
+        return;
+      }
+
+      // Check if this request has already been processed
+      if (this.processedScrollbackRequests.has(requestId)) {
+        console.log(`⚠️ [SCROLLBACK-DEBUG] Request ${requestId} already processed, ignoring duplicate`);
+        return;
+      }
+
+      console.log(`🔍 [SCROLLBACK-DEBUG] Processing request for terminal: ${terminalId}, requestId: ${requestId}, maxLines: ${maxLines}`);
+
+      // Mark this request as being processed
+      this.processedScrollbackRequests.add(requestId);
+
+      // Extract the scrollback data
+      const scrollbackData = this.extractScrollbackData(terminalId, maxLines || 1000);
+      
+      console.log(`📦 [SCROLLBACK-DEBUG] Extracted ${scrollbackData.length} lines for terminal ${terminalId}`);
+      console.log('📄 [SCROLLBACK-DEBUG] Sample scrollback data:', scrollbackData.slice(0, 3));
+
+      // Send the response back to Extension
+      this.postMessageToExtension({
+        command: 'scrollbackDataCollected',
+        terminalId,
+        requestId,
+        scrollbackData,
+        timestamp: Date.now(),
+      });
+
+      console.log(`✅ [SCROLLBACK-DEBUG] Sent response to Extension for terminal ${terminalId}`);
+
+      // Clean up processed requests after a timeout to prevent memory leaks
+      setTimeout(() => {
+        this.processedScrollbackRequests.delete(requestId);
+      }, 30000); // 30 seconds timeout
+
+    } catch (error) {
+      console.error('❌ [SCROLLBACK-DEBUG] Failed to handle scrollback extraction request:', error);
+      
+      // Send error response
+      this.postMessageToExtension({
+        command: 'scrollbackDataCollected',
+        terminalId: message.terminalId,
+        requestId: message.requestId,
+        scrollbackData: [],
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: Date.now(),
+      });
+
+      // Also mark as processed to prevent retries
+      if (message.requestId) {
+        this.processedScrollbackRequests.add(message.requestId);
+        setTimeout(() => {
+          this.processedScrollbackRequests.delete(message.requestId);
+        }, 30000);
+      }
+    }
+  }
+
   // CLI Agent state management delegation
 
   public getCliAgentState(terminalId: string) {
@@ -479,6 +682,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
 
   /**
    * Handle AI Agent toggle button click
+   * 🎯 IMPROVED: Properly switches connected agents and moves previous connected to disconnected
    */
   public handleAiAgentToggle(terminalId: string): void {
     log(`📎 AI Agent toggle clicked for terminal: ${terminalId}`);
@@ -486,9 +690,24 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     try {
       // Get current CLI Agent state for the terminal
       const agentState = this.cliAgentStateManager.getAgentState(terminalId);
+      const currentStatus = agentState?.status || 'none';
       
-      if (agentState && agentState.status === 'disconnected') {
-        // Send switchAiAgent command to Extension to activate the CLI Agent
+      log(`📎 Current AI Agent state: ${currentStatus} for terminal: ${terminalId}`);
+      
+      if (currentStatus === 'connected') {
+        // 🔄 If already connected, treat as manual reset request
+        log(`🔄 [MANUAL-RESET] Agent already connected, treating as manual reset for terminal: ${terminalId}`);
+        this.postMessageToExtension({
+          command: 'switchAiAgent',
+          terminalId,
+          action: 'force-reconnect',
+          forceReconnect: true,
+          agentType: agentState?.agentType || 'claude',
+          timestamp: Date.now(),
+        });
+      } else {
+        // 🎯 For disconnected or none state, use normal activation
+        // This will properly handle moving previous connected agent to disconnected
         this.postMessageToExtension({
           command: 'switchAiAgent',
           terminalId,
@@ -496,35 +715,19 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
           timestamp: Date.now(),
         });
         
-        log(`✅ Sent AI Agent activation request for terminal: ${terminalId}`);
-        
-        // Show notification to user
-        this.notificationManager.showNotificationInTerminal(
-          `Activating AI Agent for terminal ${terminalId}...`,
-          'info'
-        );
-      } else {
-        log(`⚠️ AI Agent toggle ignored - current status: ${agentState?.status || 'none'}`);
-        
-        // Show feedback to user why toggle was ignored
-        if (!agentState || agentState.status === 'none') {
-          this.notificationManager.showNotificationInTerminal(
-            'No AI Agent detected in this terminal',
-            'warning'
-          );
-        } else if (agentState.status === 'connected') {
-          this.notificationManager.showNotificationInTerminal(
-            'AI Agent is already active',
-            'info'
-          );
-        }
+        log(`✅ Sent AI Agent activation request for terminal: ${terminalId} (status: ${currentStatus})`);
       }
+      
     } catch (error) {
-      log(`❌ Error handling AI Agent toggle: ${error}`);
-      this.notificationManager.showNotificationInTerminal(
-        'Failed to toggle AI Agent status',
-        'error'
-      );
+      log(`❌ Error handling AI Agent toggle for terminal ${terminalId}:`, error);
+      
+      // Try fallback activation
+      this.postMessageToExtension({
+        command: 'switchAiAgent',
+        terminalId,
+        action: 'activate',
+        timestamp: Date.now(),
+      });
     }
   }
 
@@ -1054,6 +1257,98 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     lastSync: new Date().toISOString(),
     systemStartTime: Date.now()
   };
+
+  /**
+   * 🔄 Initialize session restoration capability
+   */
+  private initializeSessionRestoration(): void {
+    log('🔄 [RESTORATION] Initializing session restoration capability...');
+    
+    // Set up message listener for session restore commands from Extension
+    this.setupSessionRestoreMessageListener();
+    
+    log('✅ [RESTORATION] Session restoration capability initialized');
+  }
+
+  /**
+   * 🔄 Setup message listener for session restore commands
+   */
+  private setupSessionRestoreMessageListener(): void {
+    // This will be handled by RefactoredMessageManager's handleSessionRestore method
+    // The message handler is already set up in the message manager
+    log('🔄 [RESTORATION] Session restore message listener configured');
+  }
+
+  /**
+   * 🔄 PUBLIC API: Restore terminal session from Extension data
+   */
+  public async restoreSession(sessionData: {
+    terminalId: string;
+    terminalName: string;
+    scrollbackData?: string[];
+    sessionRestoreMessage?: string;
+  }): Promise<boolean> {
+    try {
+      log(`🔄 [RESTORATION] Starting session restore for terminal: ${sessionData.terminalId}`);
+      
+      const { terminalId, terminalName, scrollbackData, sessionRestoreMessage } = sessionData;
+      
+      // 1. Create terminal if it doesn't exist
+      let terminal = this.getTerminalInstance(terminalId);
+      if (!terminal) {
+        log(`🔄 [RESTORATION] Creating terminal for restore: ${terminalId}`);
+        const xtermInstance = await this.createTerminal(terminalId, terminalName);
+        if (!xtermInstance) {
+          log(`❌ [RESTORATION] Failed to create terminal for restore: ${terminalId}`);
+          return false;
+        }
+        
+        // Wait for terminal to be fully created
+        await new Promise(resolve => setTimeout(resolve, 100));
+        terminal = this.getTerminalInstance(terminalId);
+      }
+      
+      if (!terminal?.terminal) {
+        log(`❌ [RESTORATION] Terminal instance not available for restore: ${terminalId}`);
+        return false;
+      }
+      
+      // 2. Clear existing content
+      terminal.terminal.clear();
+      
+      // 3. Restore session restore message if available
+      if (sessionRestoreMessage) {
+        terminal.terminal.writeln(sessionRestoreMessage);
+        log(`🔄 [RESTORATION] Restored session message for terminal: ${terminalId}`);
+      }
+      
+      // 4. Restore scrollback data if available
+      if (scrollbackData && scrollbackData.length > 0) {
+        log(`🔄 [RESTORATION] Restoring ${scrollbackData.length} lines of scrollback for terminal: ${terminalId}`);
+        
+        // Write each line to restore scrollback history
+        for (const line of scrollbackData) {
+          if (line.trim()) {
+            terminal.terminal.writeln(line);
+          }
+        }
+        
+        log(`✅ [RESTORATION] Scrollback restored for terminal: ${terminalId} (${scrollbackData.length} lines)`);
+      }
+      
+      // 5. Focus terminal if it's the active one
+      if (this.getActiveTerminalId() === terminalId) {
+        terminal.terminal.focus();
+      }
+      
+      log(`✅ [RESTORATION] Session restore completed for terminal: ${terminalId}`);
+      return true;
+      
+    } catch (error) {
+      log(`❌ [RESTORATION] Error during session restore:`, error);
+      return false;
+    }
+  }
 
   /**
    * Update performance counters
@@ -1706,6 +2001,10 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
 
       // 既存マネージャーのクリーンアップ
       this.messageManager.dispose();
+      this.optimizedPersistenceManager.dispose();
+
+      // Clean up scrollback request tracking
+      this.processedScrollbackRequests.clear();
 
       this.isInitialized = false;
       log('✅ RefactoredTerminalWebviewManager disposed');

@@ -182,6 +182,12 @@ export class TestSetupFactory {
       updateCliAgentStatus: sinon.stub(),
       ensureTerminalFocus: sinon.stub(),
       createTerminalFromSession: sinon.stub(),
+      getMessageManager: sinon.stub().returns({
+        postMessage: sinon.stub(),
+        handleMessage: sinon.stub(),
+        registerHandler: sinon.stub(),
+        dispose: sinon.stub(),
+      }),
     };
   }
 

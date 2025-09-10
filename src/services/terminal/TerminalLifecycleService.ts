@@ -97,7 +97,7 @@ export class TerminalLifecycleService {
         id: terminalId,
         name: terminalName,
         number: terminalNumber,
-        process: ptyProcess,
+        pty: ptyProcess,
         isActive: false,
         createdAt: new Date(),
         pid: ptyProcess.pid,
@@ -131,17 +131,15 @@ export class TerminalLifecycleService {
       log(`🗑️ [LifecycleService] Disposing terminal ${terminal.id} (${terminal.name})`);
       
       // Kill PTY process
-      if (terminal.process && !terminal.process.killed) {
-        terminal.process.kill();
+      if (terminal.pty) {
+        terminal.pty.kill();
         
         // Wait briefly for graceful shutdown
         await new Promise(resolve => setTimeout(resolve, 100));
         
-        // Force kill if still alive
-        if (!terminal.process.killed) {
-          log(`🔨 [LifecycleService] Force killing terminal process ${terminal.id}`);
-          terminal.process.kill('SIGKILL');
-        }
+        // Force kill if still alive (IPty doesn't have killed property, so we just attempt force kill)
+        log(`🔨 [LifecycleService] Force killing terminal process ${terminal.id}`);
+        terminal.pty.kill('SIGKILL');
       }
       
       // Terminal number will be released by caller
@@ -168,12 +166,12 @@ export class TerminalLifecycleService {
    */
   resizeTerminal(terminal: TerminalInstance, cols: number, rows: number): void {
     try {
-      if (!terminal.process || terminal.process.killed) {
-        log(`⚠️ [LifecycleService] Cannot resize dead terminal ${terminal.id}`);
+      if (!terminal.pty) {
+        log(`⚠️ [LifecycleService] Cannot resize terminal without PTY ${terminal.id}`);
         return;
       }
       
-      terminal.process.resize(cols, rows);
+      terminal.pty.resize(cols, rows);
       log(`📏 [LifecycleService] Resized terminal ${terminal.id} to ${cols}x${rows}`);
       
     } catch (error) {
@@ -187,12 +185,12 @@ export class TerminalLifecycleService {
    */
   sendInputToTerminal(terminal: TerminalInstance, data: string): void {
     try {
-      if (!terminal.process || terminal.process.killed) {
-        log(`⚠️ [LifecycleService] Cannot send input to dead terminal ${terminal.id}`);
+      if (!terminal.pty) {
+        log(`⚠️ [LifecycleService] Cannot send input to terminal without PTY ${terminal.id}`);
         return;
       }
       
-      terminal.process.write(data);
+      terminal.pty.write(data);
       log(`⌨️ [LifecycleService] Sent ${data.length} chars to terminal ${terminal.id}`);
       
     } catch (error) {
@@ -205,7 +203,7 @@ export class TerminalLifecycleService {
    * Check if a terminal is alive
    */
   isTerminalAlive(terminal: TerminalInstance): boolean {
-    return !!(terminal.process && !terminal.process.killed);
+    return !!(terminal.pty && terminal.pty.pid > 0);
   }
 
   /**

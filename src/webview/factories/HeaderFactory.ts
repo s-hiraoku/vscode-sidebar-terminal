@@ -363,7 +363,11 @@ export class HeaderFactory {
     const agentDisplayName = agentType
       ? agentType === 'claude'
         ? 'CLAUDE CLI'
-        : 'GEMINI CLI'
+        : agentType === 'gemini'
+        ? 'GEMINI CLI'
+        : agentType === 'codex'
+        ? 'CODEX CLI'
+        : 'CLI Agent'
       : 'CLI Agent';
 
     statusText.textContent = isConnected
