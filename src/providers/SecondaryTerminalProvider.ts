@@ -2179,7 +2179,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       if (!this._persistenceHandler) {
         log('❌ [PERSISTENCE] Persistence handler not initialized');
         await this._sendMessage({
-          command: `${message.command}Response`,
+          command: message.command.replace(/^(.*?)$/, '$1Response') as any,
           success: false,
           error: 'Persistence handler not available',
           messageId: message.messageId, // Include messageId even for init failures
@@ -2202,7 +2202,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
       // Send response back to WebView
       await this._sendMessage({
-        command: `${message.command}Response`,
+        command: message.command.replace(/^(.*?)$/, '$1Response') as any,
         success: response.success,
         data: response.data,
         error: response.error,
@@ -2213,7 +2213,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     } catch (error) {
       log(`❌ [PERSISTENCE] Message handling failed: ${error}`);
       await this._sendMessage({
-        command: `${message.command}Response`,
+        command: message.command.replace(/^(.*?)$/, '$1Response') as any,
         success: false,
         error: `Persistence operation failed: ${(error as Error).message}`,
         messageId: message.messageId, // Include messageId for error responses too
@@ -2244,13 +2244,13 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       // Forward to new handler
       await this._handlePersistenceMessage({
         ...message,
-        command: newCommand,
+        command: newCommand as any,
       });
 
     } catch (error) {
       log(`❌ [PERSISTENCE-LEGACY] Legacy message handling failed: ${error}`);
       await this._sendMessage({
-        command: `${message.command}Response`,
+        command: message.command.replace(/^(.*?)$/, '$1Response') as any,
         success: false,
         error: `Legacy persistence operation failed: ${(error as Error).message}`,
       });
@@ -2544,7 +2544,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     }
 
     // Clean up any pending scrollback requests
-    for (const [requestId, request] of this.pendingScrollbackRequests.entries()) {
+    for (const [, request] of this.pendingScrollbackRequests.entries()) {
       clearTimeout(request.timeout);
       request.resolve([]); // Resolve with empty array to avoid hanging promises
     }

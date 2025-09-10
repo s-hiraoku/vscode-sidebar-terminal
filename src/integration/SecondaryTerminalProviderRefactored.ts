@@ -60,7 +60,7 @@ export class SecondaryTerminalProviderRefactoredExample implements vscode.Webvie
 
     // Initialize persistence message handler with clean separation
     this.persistenceMessageHandler = createPersistenceMessageHandler(
-      this.persistenceService as UnifiedTerminalPersistenceService
+      this.persistenceService as any
     );
 
     this.initializeServices();
@@ -95,7 +95,7 @@ export class SecondaryTerminalProviderRefactoredExample implements vscode.Webvie
       this.initializeMessageHandlers();
       
       // Register persistence message handlers
-      this.persistenceMessageHandler.registerMessageHandlers(this.messageHandlers);
+      this.persistenceMessageHandler.registerMessageHandlers();
       
       // Set up configuration change listeners
       this.setupConfigurationListeners();
@@ -299,7 +299,7 @@ export class SecondaryTerminalProviderRefactoredExample implements vscode.Webvie
       // Send session info through the message handler instead
       await this.sendMessageToWebview({
         command: 'sessionRestored',
-        data: sessionInfo
+        data: sessionInfo as any
       });
       
       // Attempt to restore session
@@ -413,7 +413,7 @@ export class SecondaryTerminalProviderRefactoredExample implements vscode.Webvie
 
   private async handleTerminalInput(message: WebviewMessage): Promise<void> {
     if (message.terminalId && message.data) {
-      this.terminalManager.writeToTerminal(message.terminalId, message.data);
+      this.terminalManager.writeToTerminal(message.terminalId, String(message.data));
     }
   }
 

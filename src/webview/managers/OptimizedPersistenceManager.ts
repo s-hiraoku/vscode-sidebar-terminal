@@ -229,7 +229,7 @@ export class OptimizedPersistenceManager {
     this.pendingOperations.clear();
     
     // 待機中のレスポンスをクリア
-    for (const [messageId, pending] of Array.from(this.pendingResponses.entries())) {
+    for (const [, pending] of Array.from(this.pendingResponses.entries())) {
       clearTimeout(pending.timeout);
       pending.resolve({ success: false, error: 'Manager disposed' });
     }

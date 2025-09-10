@@ -44,14 +44,22 @@ export enum PersistenceErrorType {
 }
 
 export class WebViewPersistenceError extends Error {
+  public override readonly name = 'WebViewPersistenceError';
+  public readonly type: PersistenceErrorType;
+  public readonly terminalId?: string;
+  public override readonly cause?: Error;
+  
   constructor(
     message: string,
-    public readonly type: PersistenceErrorType,
-    public readonly terminalId?: string,
-    public readonly cause?: Error
+    type: PersistenceErrorType,
+    terminalId?: string,
+    cause?: Error
   ) {
     super(message);
     this.name = 'WebViewPersistenceError';
+    this.type = type;
+    this.terminalId = terminalId;
+    this.cause = cause;
   }
 }
 
@@ -360,8 +368,9 @@ export class OptimizedTerminalPersistenceManager {
         const endIndex = Math.min(startIndex + batchSize, lines.length);
         
         for (let i = startIndex; i < endIndex; i++) {
-          if (lines[i] !== undefined) {
-            registration.terminal.write(lines[i]);
+          const line = lines[i];
+          if (line !== undefined) {
+            registration.terminal.write(line);
             if (i < lines.length - 1) {
               registration.terminal.write('\r\n');
             }

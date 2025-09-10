@@ -547,6 +547,34 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
         hasNormalBuffer: !!(terminal.buffer && terminal.buffer.normal)
       });
 
+      // Extract scrollback from terminal buffer
+      try {
+        console.log('📄 [EXTRACT-DEBUG] Using terminal buffer extraction');
+        const buffer = terminal.buffer;
+        if (!buffer || !buffer.normal) {
+          console.warn(`⚠️ [EXTRACT-DEBUG] No terminal buffer available for ${terminalId}`);
+          return [];
+        }
+
+        const lines: string[] = [];
+        const bufferLength = buffer.normal.length;
+        const startLine = Math.max(0, bufferLength - maxLines);
+
+        for (let i = startLine; i < bufferLength; i++) {
+          const line = buffer.normal.getLine(i);
+          if (line) {
+            lines.push(line.translateToString());
+          }
+        }
+
+        console.log(`📦 [EXTRACT-DEBUG] Buffer extraction got ${lines.length} lines`);
+        console.log('📄 [EXTRACT-DEBUG] First few lines:', lines.slice(0, 3));
+        return lines;
+        } catch (serializeError) {
+          console.warn('⚠️ [EXTRACT-DEBUG] Serialize addon failed, falling back to buffer method:', serializeError);
+        }
+      }
+
       // Fallback: Read from buffer directly
       if (terminal.buffer && terminal.buffer.normal) {
         console.log('📄 [EXTRACT-DEBUG] Using buffer fallback method');

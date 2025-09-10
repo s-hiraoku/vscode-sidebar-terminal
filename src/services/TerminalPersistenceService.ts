@@ -20,14 +20,20 @@ import { log } from '../utils/logger';
 // Standardized error types for better error handling
 export class PersistenceError extends Error {
   public override readonly name = 'PersistenceError';
+  public readonly code: PersistenceErrorCode;
+  public readonly terminalId?: string;
+  public override readonly cause?: Error;
   
   constructor(
     message: string,
-    public readonly code: PersistenceErrorCode,
-    public readonly terminalId?: string,
-    public readonly cause?: Error
+    code: PersistenceErrorCode,
+    terminalId?: string,
+    cause?: Error
   ) {
     super(message);
+    this.code = code;
+    this.terminalId = terminalId;
+    this.cause = cause;
   }
 }
 

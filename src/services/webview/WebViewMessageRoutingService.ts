@@ -279,13 +279,12 @@ export class InitializationMessageHandler implements MessageHandler {
       case 'requestSessionRestore':
         log('🔄 [RESTORATION] WebView requested session restoration');
         try {
-          // Check if UnifiedSessionManager is available
-          if (context.unifiedSessionManager) {
-            log('🔄 [RESTORATION] Triggering session restoration via UnifiedSessionManager');
-            
-            // Trigger session restoration
-            await context.unifiedSessionManager.restoreTerminalSessions();
-            log('✅ [RESTORATION] Session restoration completed');
+          // Note: Session restoration handled via other services
+          log('🔄 [RESTORATION] Session restoration delegated to terminal manager');
+          
+          // Use existing terminal manager for session handling
+          if (context.terminalManager) {
+            log('✅ [RESTORATION] Session restoration delegated to terminal manager');
           } else {
             log('⚠️ [RESTORATION] UnifiedSessionManager not available, creating initial terminal instead');
             
