@@ -45,6 +45,7 @@ import { InputManager } from './InputManager';
 import { RefactoredMessageManager } from './RefactoredMessageManager';
 import { StandardTerminalPersistenceManager } from './StandardTerminalPersistenceManager';
 import { OptimizedPersistenceManager } from './OptimizedPersistenceManager';
+import { SimplePersistenceManager } from './SimplePersistenceManager';
 import { WebViewApiManager } from './WebViewApiManager';
 import { TerminalLifecycleManager } from './TerminalLifecycleManager';
 import { CliAgentStateManager } from './CliAgentStateManager';
@@ -80,6 +81,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
   public messageManager!: RefactoredMessageManager;
   public persistenceManager!: StandardTerminalPersistenceManager;
   public optimizedPersistenceManager!: OptimizedPersistenceManager;
+  public simplePersistenceManager!: SimplePersistenceManager;
 
   // 設定管理
   private currentSettings: PartialTerminalSettings = {
@@ -156,6 +158,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     this.messageManager = new RefactoredMessageManager(this);
     this.persistenceManager = new StandardTerminalPersistenceManager();
     this.optimizedPersistenceManager = new OptimizedPersistenceManager(this);
+    this.simplePersistenceManager = new SimplePersistenceManager(this.webViewApiManager.getVscodeApi());
 
     // Initialize the message manager (initialize method returns void, not Promise)
     try {
@@ -290,6 +293,17 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
         terminalId: terminalId,
       });
       log(`🎯 [WEBVIEW] Notified Extension of active terminal change: ${terminalId}`);
+
+      // 🆕 SIMPLE: Save session when active terminal changes
+      if (this.simplePersistenceManager) {
+        setTimeout(() => {
+          this.simplePersistenceManager.saveSession().then(success => {
+            if (success) {
+              console.log(`💾 [SIMPLE-PERSISTENCE] Session saved after active terminal change`);
+            }
+          });
+        }, 200); // Small delay to avoid frequent saves
+      }
       
       // Verify the setting worked
       const verifyActive = this.terminalLifecycleManager.getActiveTerminalId();
@@ -415,25 +429,20 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
         log(`✅ Input handlers configured for terminal: ${terminalId}`);
       }
 
-      // 🔧 FIX: Add terminal to persistence manager AFTER terminal is fully ready
-      // This ensures serialize addon can be properly initialized
+      // 🆕 SIMPLE: Save current session state after terminal creation
+      // No complex serialization - just session metadata
       setTimeout(() => {
-        if (this.persistenceManager && terminal) {
-          console.log(`🔧 [PERSISTENCE] Adding terminal ${terminalId} to persistence manager (delayed for proper initialization)`);
-          this.persistenceManager.addTerminal(terminalId, terminal);
-          console.log(`💾 [PERSISTENCE] Added terminal ${terminalId} to persistence manager for session restoration`);
-          
-          // Attempt to restore previous content if available
-          const restored = this.persistenceManager.restoreTerminalFromStorage(terminalId);
-          if (restored) {
-            console.log(`🔄 [PERSISTENCE] Successfully restored previous content for terminal ${terminalId}`);
-          } else {
-            console.log(`📭 [PERSISTENCE] No previous content found for terminal ${terminalId}`);
-          }
-        } else {
-          console.warn(`⚠️ [PERSISTENCE] persistenceManager not available - terminal ${terminalId} will not be persisted`);
+        if (this.simplePersistenceManager) {
+          console.log(`💾 [SIMPLE-PERSISTENCE] Saving session after terminal ${terminalId} creation`);
+          this.simplePersistenceManager.saveSession().then(success => {
+            if (success) {
+              console.log(`✅ [SIMPLE-PERSISTENCE] Session saved successfully`);
+            } else {
+              console.warn(`⚠️ [SIMPLE-PERSISTENCE] Failed to save session`);
+            }
+          });
         }
-      }, 150); // Delay to ensure terminal is fully ready
+      }, 100); // Minimal delay for DOM updates
 
       // 4. 🎯 FIX: 新規作成時のアクティブ設定強化
       // 確実にアクティブ状態を設定し、太い青枠を表示
@@ -488,13 +497,17 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     // CLI Agent状態もクリーンアップ
     this.cliAgentStateManager.removeTerminalState(terminalId);
     
-    // 🔥 CRITICAL FIX: Remove terminal from persistence manager
-    if (this.persistenceManager) {
-      this.persistenceManager.removeTerminal(terminalId);
-      console.log(`🗑️ [PERSISTENCE] Removed terminal ${terminalId} from persistence manager`);
-    } else {
-      console.warn(`⚠️ [PERSISTENCE] persistenceManager not available when removing terminal ${terminalId}`);
-    }
+    // 🆕 SIMPLE: Update session state after terminal removal
+    setTimeout(() => {
+      if (this.simplePersistenceManager) {
+        console.log(`💾 [SIMPLE-PERSISTENCE] Updating session after terminal ${terminalId} removal`);
+        this.simplePersistenceManager.saveSession().then(success => {
+          if (success) {
+            console.log(`✅ [SIMPLE-PERSISTENCE] Session updated after removal`);
+          }
+        });
+      }
+    }, 100); // Delay for DOM cleanup
     
     return await this.terminalLifecycleManager.removeTerminal(terminalId);
   }
@@ -1277,12 +1290,152 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
    * 🔄 Initialize session restoration capability
    */
   private initializeSessionRestoration(): void {
-    log('🔄 [RESTORATION] Initializing session restoration capability...');
+    log('🆕 [SIMPLE-RESTORATION] Initializing simple session restoration...');
     
-    // Set up message listener for session restore commands from Extension
-    this.setupSessionRestoreMessageListener();
+    // Immediately attempt to restore previous session
+    setTimeout(() => {
+      this.attemptSimpleSessionRestore();
+    }, 500); // Wait for initialization to complete
     
-    log('✅ [RESTORATION] Session restoration capability initialized');
+    log('✅ [SIMPLE-RESTORATION] Simple session restoration capability initialized');
+  }
+
+  /**
+   * 🆕 Attempt simple session restoration
+   */
+  private async attemptSimpleSessionRestore(): Promise<void> {
+    try {
+      console.log('🔄 [SIMPLE-RESTORATION] Attempting session restoration...');
+      
+      if (!this.simplePersistenceManager) {
+        console.warn('⚠️ [SIMPLE-RESTORATION] SimplePersistenceManager not available');
+        return;
+      }
+
+      // Load previous session data
+      const sessionData = await this.simplePersistenceManager.loadSession();
+      
+      if (!sessionData) {
+        // No previous session - show welcome message
+        const welcomeMessage = this.simplePersistenceManager.getWelcomeMessage();
+        this.displaySessionMessage(welcomeMessage);
+        console.log('📭 [SIMPLE-RESTORATION] No previous session found - showing welcome message');
+        return;
+      }
+
+      // Restore terminals based on session data
+      console.log(`🔄 [SIMPLE-RESTORATION] Restoring ${sessionData.terminalCount} terminals from previous session`);
+      
+      // Create terminals one by one
+      for (let i = 0; i < sessionData.terminalCount; i++) {
+        const terminalName = sessionData.terminalNames[i] || `Terminal ${i + 1}`;
+        const terminalId = `terminal-${i + 1}`;
+        
+        // Request terminal creation from Extension
+        this.postMessageToExtension({
+          command: 'createTerminal',
+          terminalId: terminalId,
+          terminalName: terminalName,
+          isSessionRestore: true,
+          timestamp: Date.now(),
+        });
+        
+        console.log(`🔄 [SIMPLE-RESTORATION] Requested recreation of terminal: ${terminalName}`);
+        
+        // Small delay between terminal creations
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+
+      // Show session restoration message
+      const sessionMessage = this.simplePersistenceManager.getSessionMessage(sessionData);
+      setTimeout(() => {
+        this.displaySessionMessage(sessionMessage);
+      }, 1000); // Delay to allow terminals to be created
+
+      // Restore active terminal if specified
+      if (sessionData.activeTerminalId) {
+        setTimeout(() => {
+          this.setActiveTerminalId(sessionData.activeTerminalId!);
+          console.log(`🎯 [SIMPLE-RESTORATION] Restored active terminal: ${sessionData.activeTerminalId}`);
+        }, 1500);
+      }
+
+      console.log('✅ [SIMPLE-RESTORATION] Session restoration completed');
+      
+    } catch (error) {
+      console.error('❌ [SIMPLE-RESTORATION] Failed to restore session:', error);
+      
+      // Show welcome message as fallback
+      if (this.simplePersistenceManager) {
+        const welcomeMessage = this.simplePersistenceManager.getWelcomeMessage();
+        this.displaySessionMessage(welcomeMessage);
+      }
+    }
+  }
+
+  /**
+   * 🆕 Display session continuation message
+   */
+  private displaySessionMessage(message: { type: string; message: string; details?: string; timestamp: number }): void {
+    try {
+      // Create a notification-style message
+      const messageElement = document.createElement('div');
+      messageElement.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: rgba(0, 212, 170, 0.95);
+        color: white;
+        padding: 12px 16px;
+        border-radius: 8px;
+        font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+        font-size: 13px;
+        font-weight: 500;
+        z-index: 10000;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        border: 1px solid rgba(0, 212, 170, 0.3);
+        max-width: 400px;
+        word-wrap: break-word;
+      `;
+
+      const mainMessage = document.createElement('div');
+      mainMessage.textContent = message.message;
+      messageElement.appendChild(mainMessage);
+
+      if (message.details) {
+        const detailsElement = document.createElement('div');
+        detailsElement.style.cssText = `
+          margin-top: 4px;
+          opacity: 0.9;
+          font-size: 11px;
+        `;
+        detailsElement.textContent = message.details;
+        messageElement.appendChild(detailsElement);
+      }
+
+      // Add to DOM
+      document.body.appendChild(messageElement);
+
+      // Auto-remove after 5 seconds
+      setTimeout(() => {
+        if (messageElement.parentNode) {
+          messageElement.style.transition = 'opacity 0.3s ease-out';
+          messageElement.style.opacity = '0';
+          setTimeout(() => {
+            if (messageElement.parentNode) {
+              messageElement.parentNode.removeChild(messageElement);
+            }
+          }, 300);
+        }
+      }, 5000);
+
+      console.log(`📢 [SESSION-MESSAGE] Displayed: ${message.message}`);
+      
+    } catch (error) {
+      console.error('❌ [SESSION-MESSAGE] Failed to display message:', error);
+      // Fallback to console log
+      console.log(`📢 [SESSION-MESSAGE] ${message.message}${message.details ? ` - ${message.details}` : ''}`);
+    }
   }
 
   /**
