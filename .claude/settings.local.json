@@ -123,7 +123,8 @@
       "Bash(git fetch:*)",
       "mcp__github-server__get_pull_request",
       "Bash(npm:*)",
-      "Bash(npx @vscode/vsce ls:*)"
+      "Bash(npx @vscode/vsce ls:*)",
+      "Bash(npx @vscode/vsce publish:*)"
     ],
     "deny": []
   },
