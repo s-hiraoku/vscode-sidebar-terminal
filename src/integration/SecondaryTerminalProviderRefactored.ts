@@ -1,9 +1,9 @@
 /**
  * Refactored SecondaryTerminalProvider Integration
- * 
+ *
  * This file demonstrates how to integrate the UnifiedTerminalPersistenceService
  * and PersistenceMessageHandler into the existing SecondaryTerminalProvider.
- * 
+ *
  * Key improvements:
  * - Clean separation of concerns between terminal management and persistence
  * - Proper dependency injection for testability
@@ -15,20 +15,20 @@
 import * as vscode from 'vscode';
 import { TerminalManager } from '../terminals/TerminalManager';
 import { WebviewMessage } from '../types/shared';
-import { 
-  UnifiedTerminalPersistenceService, 
-  ITerminalPersistenceService 
+import {
+  UnifiedTerminalPersistenceService,
+  ITerminalPersistenceService,
 } from '../services/TerminalPersistenceService';
-import { 
-  // PersistenceMessageHandler, 
+import {
+  // PersistenceMessageHandler,
   createPersistenceMessageHandler,
-  IPersistenceMessageHandler 
+  IPersistenceMessageHandler,
 } from '../handlers/PersistenceMessageHandler';
 import { log } from '../utils/logger';
 
 /**
  * Example of how to refactor SecondaryTerminalProvider to use the new architecture
- * 
+ *
  * Note: This is a demonstration class showing the integration patterns.
  * The actual SecondaryTerminalProvider should be updated following these patterns.
  */
@@ -39,7 +39,7 @@ export class SecondaryTerminalProviderRefactoredExample implements vscode.Webvie
   private readonly terminalManager: TerminalManager;
   private readonly persistenceService: ITerminalPersistenceService;
   private readonly persistenceMessageHandler: IPersistenceMessageHandler;
-  
+
   // State management
   private readonly disposables: vscode.Disposable[] = [];
   private readonly messageHandlers = new Map<string, (message: WebviewMessage) => Promise<void>>();
@@ -51,7 +51,7 @@ export class SecondaryTerminalProviderRefactoredExample implements vscode.Webvie
     terminalManager: TerminalManager
   ) {
     this.terminalManager = terminalManager;
-    
+
     // Initialize persistence service with proper dependency injection
     this.persistenceService = new UnifiedTerminalPersistenceService(
       this.context,
@@ -93,13 +93,13 @@ export class SecondaryTerminalProviderRefactoredExample implements vscode.Webvie
     try {
       // Initialize message handlers with proper separation
       this.initializeMessageHandlers();
-      
+
       // Register persistence message handlers
       this.persistenceMessageHandler.registerMessageHandlers();
-      
+
       // Set up configuration change listeners
       this.setupConfigurationListeners();
-      
+
       log('✅ [PROVIDER] Services initialized successfully');
     } catch (error) {
       log(`❌ [PROVIDER] Failed to initialize services: ${error}`);
@@ -117,21 +117,21 @@ export class SecondaryTerminalProviderRefactoredExample implements vscode.Webvie
     this.messageHandlers.set('deleteTerminal', (msg) => this.handleDeleteTerminal(msg));
     this.messageHandlers.set('focusTerminal', (msg) => this.handleFocusTerminal(msg));
     this.messageHandlers.set('killTerminal', (msg) => this.handleKillTerminal(msg));
-    
+
     // Settings and configuration
     this.messageHandlers.set('getSettings', (msg) => this.handleGetSettings(msg));
     this.messageHandlers.set('updateSettings', (msg) => this.handleUpdateSettings(msg));
-    
+
     // Terminal I/O
     this.messageHandlers.set('input', (msg) => this.handleTerminalInput(msg));
     this.messageHandlers.set('resize', (msg) => this.handleTerminalResize(msg));
-    
+
     // State management
     this.messageHandlers.set('stateUpdate', (msg) => this.handleStateUpdate(msg));
     this.messageHandlers.set('reportPanelLocation', (msg) => this.handleReportPanelLocation(msg));
-    
+
     // Note: Persistence handlers are registered separately by PersistenceMessageHandler
-    
+
     log('✅ [PROVIDER] Core message handlers initialized');
   }
 
@@ -157,7 +157,6 @@ export class SecondaryTerminalProviderRefactoredExample implements vscode.Webvie
 
       // Handle legacy or special cases
       await this.handleLegacyMessage(message);
-      
     } catch (error) {
       log(`❌ [PROVIDER] Error handling message ${message.command}: ${error}`);
       await this.sendErrorResponse(message, error);
@@ -175,9 +174,9 @@ export class SecondaryTerminalProviderRefactoredExample implements vscode.Webvie
       'terminalSerializationRestoreResponse',
       'requestSessionRestorationData',
       'sessionRestorationData',
-      'terminalRestoreInfo'
+      'terminalRestoreInfo',
     ];
-    
+
     return persistenceCommands.includes(message.command);
   }
 
@@ -209,15 +208,15 @@ export class SecondaryTerminalProviderRefactoredExample implements vscode.Webvie
     try {
       // Set up persistence service with webview communication
       (this.persistenceService as UnifiedTerminalPersistenceService).setSidebarProvider({
-        sendMessageToWebview: (message) => this.sendMessageToWebview(message)
+        sendMessageToWebview: (message) => this.sendMessageToWebview(message),
       });
 
       // Set up terminal event listeners
       this.setupTerminalEventListeners();
-      
+
       // Schedule initial terminal creation
       this.scheduleInitialSetup();
-      
+
       this.isInitialized = true;
       log('✅ [PROVIDER] Initialization completed');
     } catch (error) {
@@ -291,20 +290,20 @@ export class SecondaryTerminalProviderRefactoredExample implements vscode.Webvie
    */
   private async checkAndRestoreSession(): Promise<void> {
     const sessionInfo = this.persistenceService.getSessionInfo();
-    
+
     if (sessionInfo && sessionInfo.exists) {
       log(`🔄 [PROVIDER] Previous session found: ${sessionInfo.terminals?.length} terminals`);
-      
+
       // Send session info to webview
       // Send session info through the message handler instead
       await this.sendMessageToWebview({
         command: 'sessionRestored',
-        data: sessionInfo as any
+        data: sessionInfo as any,
       });
-      
+
       // Attempt to restore session
       const restoreResult = await this.persistenceService.restoreSession();
-      
+
       if (restoreResult.success) {
         log(`✅ [PROVIDER] Session restored: ${restoreResult.restoredCount} terminals`);
       } else {
@@ -354,7 +353,7 @@ export class SecondaryTerminalProviderRefactoredExample implements vscode.Webvie
   }
 
   // Example handler implementations (simplified for demonstration)
-  
+
   private async handleWebviewReady(_message: WebviewMessage): Promise<void> {
     log('✅ [PROVIDER] Webview ready');
     await this.sendInitialData();
@@ -482,11 +481,7 @@ export class SecondaryTerminalProviderRefactoredExample implements vscode.Webvie
       this.disposables
     );
 
-    webviewView.onDidDispose(
-      () => this.dispose(),
-      undefined,
-      this.disposables
-    );
+    webviewView.onDidDispose(() => this.dispose(), undefined, this.disposables);
   }
 
   private getHtmlForWebview(_webview: vscode.Webview): string {

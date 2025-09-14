@@ -10,27 +10,24 @@ import { IMessageHandler, IMessageHandlerContext } from '../interfaces';
 export class ProfileMessageHandler implements IMessageHandler {
   public readonly supportedCommands = [
     'getProfiles',
-    'createTerminalWithProfile', 
+    'createTerminalWithProfile',
     'selectProfile',
     'createProfile',
     'updateProfile',
     'deleteProfile',
-    'setDefaultProfile'
+    'setDefaultProfile',
   ];
 
   public canHandle(message: WebviewMessage): boolean {
     return this.supportedCommands.includes(message.command);
   }
 
-  public async handle(
-    message: WebviewMessage, 
-    context: IMessageHandlerContext
-  ): Promise<void> {
+  public async handle(message: WebviewMessage, context: IMessageHandlerContext): Promise<void> {
     await this.handleMessage(message, context);
   }
 
   public async handleMessage(
-    message: WebviewMessage, 
+    message: WebviewMessage,
     context: IMessageHandlerContext
   ): Promise<boolean> {
     const { profileManager } = context;
@@ -79,12 +76,11 @@ export class ProfileMessageHandler implements IMessageHandler {
       await sendMessage({
         command: 'profilesResponse',
         profiles: profiles,
-        profileId: defaultProfile.id
+        profileId: defaultProfile.id,
       });
 
       log(`🎯 [PROFILE-HANDLER] Sent ${profiles.length} profiles to WebView`);
       return true;
-
     } catch (error) {
       log('❌ [PROFILE-HANDLER] Error getting profiles:', error);
       await this._sendErrorResponse(context, 'Failed to get profiles', error);
@@ -105,10 +101,7 @@ export class ProfileMessageHandler implements IMessageHandler {
       }
 
       // Create terminal with profile
-      const result = profileManager.createTerminalWithProfile(
-        profileId, 
-        message.profileOptions
-      );
+      const result = profileManager.createTerminalWithProfile(profileId, message.profileOptions);
 
       // Use terminal manager to create actual terminal
       const terminalId = await terminalManager.createTerminal();
@@ -121,12 +114,11 @@ export class ProfileMessageHandler implements IMessageHandler {
         command: 'terminalCreated',
         terminalId: terminalId,
         terminalName: result.config.name || 'Terminal',
-        profile: result.profile
+        profile: result.profile,
       });
 
       log(`🎯 [PROFILE-HANDLER] Created terminal with profile: ${result.profile.name}`);
       return true;
-
     } catch (error) {
       log('❌ [PROFILE-HANDLER] Error creating terminal with profile:', error);
       await this._sendErrorResponse(context, 'Failed to create terminal with profile', error);
@@ -146,11 +138,13 @@ export class ProfileMessageHandler implements IMessageHandler {
       }
 
       // For select profile, we'll create a terminal with the selected profile
-      return this._handleCreateTerminalWithProfile({
-        ...message,
-        command: 'createTerminalWithProfile'
-      }, context);
-
+      return this._handleCreateTerminalWithProfile(
+        {
+          ...message,
+          command: 'createTerminalWithProfile',
+        },
+        context
+      );
     } catch (error) {
       log('❌ [PROFILE-HANDLER] Error selecting profile:', error);
       await this._sendErrorResponse(context, 'Failed to select profile', error);
@@ -164,7 +158,7 @@ export class ProfileMessageHandler implements IMessageHandler {
   ): Promise<boolean> {
     try {
       const { profileManager, sendMessage } = context;
-      
+
       if (!message.profile) {
         throw new Error('Profile data is required');
       }
@@ -174,12 +168,11 @@ export class ProfileMessageHandler implements IMessageHandler {
       await sendMessage({
         command: 'profilesResponse',
         profiles: profileManager.getProfiles(),
-        profileId: newProfile.id
+        profileId: newProfile.id,
       });
 
       log(`🎯 [PROFILE-HANDLER] Created new profile: ${newProfile.name}`);
       return true;
-
     } catch (error) {
       log('❌ [PROFILE-HANDLER] Error creating profile:', error);
       await this._sendErrorResponse(context, 'Failed to create profile', error);
@@ -193,7 +186,7 @@ export class ProfileMessageHandler implements IMessageHandler {
   ): Promise<boolean> {
     try {
       const { profileManager, sendMessage } = context;
-      
+
       if (!message.profileId || !message.profile) {
         throw new Error('Profile ID and data are required');
       }
@@ -203,12 +196,11 @@ export class ProfileMessageHandler implements IMessageHandler {
       await sendMessage({
         command: 'profilesResponse',
         profiles: profileManager.getProfiles(),
-        profileId: message.profileId
+        profileId: message.profileId,
       });
 
       log(`🎯 [PROFILE-HANDLER] Updated profile: ${message.profileId}`);
       return true;
-
     } catch (error) {
       log('❌ [PROFILE-HANDLER] Error updating profile:', error);
       await this._sendErrorResponse(context, 'Failed to update profile', error);
@@ -222,7 +214,7 @@ export class ProfileMessageHandler implements IMessageHandler {
   ): Promise<boolean> {
     try {
       const { profileManager, sendMessage } = context;
-      
+
       if (!message.profileId) {
         throw new Error('Profile ID is required');
       }
@@ -232,12 +224,11 @@ export class ProfileMessageHandler implements IMessageHandler {
       await sendMessage({
         command: 'profilesResponse',
         profiles: profileManager.getProfiles(),
-        profileId: profileManager.getDefaultProfile().id
+        profileId: profileManager.getDefaultProfile().id,
       });
 
       log(`🎯 [PROFILE-HANDLER] Deleted profile: ${message.profileId}`);
       return true;
-
     } catch (error) {
       log('❌ [PROFILE-HANDLER] Error deleting profile:', error);
       await this._sendErrorResponse(context, 'Failed to delete profile', error);
@@ -251,7 +242,7 @@ export class ProfileMessageHandler implements IMessageHandler {
   ): Promise<boolean> {
     try {
       const { profileManager, sendMessage } = context;
-      
+
       if (!message.profileId) {
         throw new Error('Profile ID is required');
       }
@@ -261,12 +252,11 @@ export class ProfileMessageHandler implements IMessageHandler {
       await sendMessage({
         command: 'profilesResponse',
         profiles: profileManager.getProfiles(),
-        profileId: message.profileId
+        profileId: message.profileId,
       });
 
       log(`🎯 [PROFILE-HANDLER] Set default profile: ${message.profileId}`);
       return true;
-
     } catch (error) {
       log('❌ [PROFILE-HANDLER] Error setting default profile:', error);
       await this._sendErrorResponse(context, 'Failed to set default profile', error);
@@ -284,7 +274,7 @@ export class ProfileMessageHandler implements IMessageHandler {
         command: 'error',
         message: message,
         context: 'ProfileMessageHandler',
-        stack: error?.stack || String(error)
+        stack: error?.stack || String(error),
       });
     } catch (sendError) {
       log('❌ [PROFILE-HANDLER] Failed to send error response:', sendError);

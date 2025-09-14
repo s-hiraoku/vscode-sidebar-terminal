@@ -38,7 +38,7 @@ describe('RefactoredMessageManager', () => {
         // Ignore disposal errors in tests
       }
     }
-    
+
     // Ensure all pending timers are cleared
     if (clock) {
       clock.restore();
@@ -52,13 +52,17 @@ describe('RefactoredMessageManager', () => {
       // Mock postMessageToExtension to track execution order
       mockCoordinator.postMessageToExtension = sinon.stub().callsFake((_message: any) => {
         executionOrder.push(_message.command);
-        
+
         // Check results after all messages are processed
         if (executionOrder.length >= 5) {
           try {
             // Input messages should be processed first
             expect(executionOrder.slice(0, 2)).to.deep.equal(['input', 'terminalInteraction']);
-            expect(executionOrder.slice(2)).to.include.members(['regular1', 'regular2', 'regular3']);
+            expect(executionOrder.slice(2)).to.include.members([
+              'regular1',
+              'regular2',
+              'regular3',
+            ]);
             done();
           } catch (error) {
             done(error);
@@ -198,7 +202,7 @@ describe('RefactoredMessageManager', () => {
       // Queue should be cleared after processing
       const stats = messageManager.getQueueStats();
       expect(stats.queueSize).to.equal(0);
-      expect((stats.highPriorityQueueSize || 0)).to.equal(0);
+      expect(stats.highPriorityQueueSize || 0).to.equal(0);
     });
   });
 
@@ -207,7 +211,7 @@ describe('RefactoredMessageManager', () => {
       // Initially empty
       let stats = messageManager.getQueueStats();
       expect(stats.queueSize).to.equal(0);
-      expect((stats.highPriorityQueueSize || 0)).to.equal(0);
+      expect(stats.highPriorityQueueSize || 0).to.equal(0);
       expect(stats.isProcessing).to.be.false;
       expect(stats.isLocked).to.be.false;
 
@@ -224,7 +228,7 @@ describe('RefactoredMessageManager', () => {
 
       stats = messageManager.getQueueStats();
       expect(stats.queueSize).to.equal(2); // Regular messages
-      expect((stats.highPriorityQueueSize || 0)).to.equal(2); // High-priority messages
+      expect(stats.highPriorityQueueSize || 0).to.equal(2); // High-priority messages
     });
 
     it('should correctly identify input message types', () => {
@@ -244,7 +248,7 @@ describe('RefactoredMessageManager', () => {
 
         const stats = messageManager.getQueueStats();
         if (testCase.shouldBeHighPriority) {
-          expect((stats.highPriorityQueueSize || 0)).to.be.greaterThan(
+          expect(stats.highPriorityQueueSize || 0).to.be.greaterThan(
             0,
             `Test case ${index}: ${JSON.stringify(testCase.message)} should be high priority`
           );
@@ -309,17 +313,17 @@ describe('RefactoredMessageManager', () => {
     it('should send input messages with high priority', () => {
       // Mock postMessageToExtension to block processing
       let _resolveMessage: () => void;
-      const messagePromise = new Promise<void>(resolve => {
+      const messagePromise = new Promise<void>((resolve) => {
         _resolveMessage = resolve;
       });
-      
+
       mockCoordinator.postMessageToExtension = sinon.stub().returns(messagePromise) as any;
 
       messageManager.sendInput('test input', 'terminal-1');
 
       // Check queue stats immediately after enqueueing
       const stats = messageManager.getQueueStats();
-      expect((stats.highPriorityQueueSize || 0)).to.equal(1);
+      expect(stats.highPriorityQueueSize || 0).to.equal(1);
     });
 
     it('should handle missing terminalId in sendInput', () => {
@@ -333,7 +337,7 @@ describe('RefactoredMessageManager', () => {
 
   describe('Memory Management', () => {
     it('should properly cleanup on dispose', () => {
-      // Add messages to queues  
+      // Add messages to queues
       messageManager.postMessage({ command: 'test1' });
       messageManager.postMessage({ command: 'input' });
 
@@ -345,10 +349,10 @@ describe('RefactoredMessageManager', () => {
 
       stats = messageManager.getQueueStats();
       expect(stats.queueSize).to.equal(0);
-      expect((stats.highPriorityQueueSize || 0)).to.equal(0);
+      expect(stats.highPriorityQueueSize || 0).to.equal(0);
       expect(stats.isProcessing).to.be.false;
       expect(stats.isLocked).to.be.false;
-      
+
       // Create a fresh instance for subsequent tests
       messageManager = new RefactoredMessageManager(mockCoordinator);
     });
@@ -368,9 +372,7 @@ describe('RefactoredMessageManager', () => {
       for (let i = 0; i < messageCount; i++) {
         const isInput = i % 10 === 0; // Every 10th message is input
         const command = isInput ? 'input' : `regular${i}`;
-        messageManager.postMessage(
-          { command, type: isInput ? 'input' : undefined }
-        );
+        messageManager.postMessage({ command, type: isInput ? 'input' : undefined });
       }
 
       // Allow processing to complete

@@ -6,7 +6,7 @@ import { TERMINAL_CONSTANTS } from '../../constants';
 
 /**
  * Manages terminal event handling for WebView
- * 
+ *
  * This service extracts terminal event handling logic from SecondaryTerminalProvider
  * to provide focused, testable terminal event management.
  */
@@ -29,19 +29,19 @@ export class TerminalEventHandlerService implements ITerminalEventHandler {
     try {
       // Terminal data output events
       const dataDisposable = this.setupDataEventListener(context);
-      
+
       // Terminal exit events
       const exitDisposable = this.setupExitEventListener(context);
-      
+
       // Terminal creation events
       const createdDisposable = this.setupTerminalCreatedEventListener(context);
-      
+
       // Terminal removal events
       const removedDisposable = this.setupTerminalRemovedEventListener(context);
-      
+
       // Terminal state update events
       const stateUpdateDisposable = this.setupStateUpdateEventListener(context);
-      
+
       // Terminal focus events
       const focusDisposable = this.setupTerminalFocusEventListener(context);
 
@@ -55,9 +55,10 @@ export class TerminalEventHandlerService implements ITerminalEventHandler {
         focusDisposable
       );
 
-      log(`✅ [TerminalEvents] Successfully set up ${this._eventDisposables.length} terminal event listeners`);
+      log(
+        `✅ [TerminalEvents] Successfully set up ${this._eventDisposables.length} terminal event listeners`
+      );
       return this._eventDisposables;
-
     } catch (error) {
       log('❌ [TerminalEvents] Error setting up terminal event listeners:', error);
       this.clearEventListeners();
@@ -87,8 +88,9 @@ export class TerminalEventHandlerService implements ITerminalEventHandler {
     return context.terminalManager.onData((event) => {
       if (event.data) {
         // Map Extension terminal ID to WebView terminal ID if mapping exists
-        const webviewTerminalId = context.terminalIdMapping?.get(event.terminalId) || event.terminalId;
-        
+        const webviewTerminalId =
+          context.terminalIdMapping?.get(event.terminalId) || event.terminalId;
+
         log(
           '📤 [TerminalEvents] Terminal output:',
           event.data.length,
@@ -105,7 +107,7 @@ export class TerminalEventHandlerService implements ITerminalEventHandler {
         };
 
         // Send output to WebView
-        context.sendMessage(outputMessage).catch(error => {
+        context.sendMessage(outputMessage).catch((error) => {
           log('❌ [TerminalEvents] Failed to send terminal output:', error);
         });
       } else {
@@ -119,7 +121,12 @@ export class TerminalEventHandlerService implements ITerminalEventHandler {
    */
   private setupExitEventListener(context: IMessageHandlerContext): vscode.Disposable {
     return context.terminalManager.onExit((event) => {
-      log('🚪 [TerminalEvents] Terminal exit event:', event.terminalId, 'exit code:', event.exitCode);
+      log(
+        '🚪 [TerminalEvents] Terminal exit event:',
+        event.terminalId,
+        'exit code:',
+        event.exitCode
+      );
 
       const exitMessage = {
         command: TERMINAL_CONSTANTS.COMMANDS.EXIT,
@@ -127,7 +134,7 @@ export class TerminalEventHandlerService implements ITerminalEventHandler {
         terminalId: event.terminalId,
       };
 
-      context.sendMessage(exitMessage).catch(error => {
+      context.sendMessage(exitMessage).catch((error) => {
         log('❌ [TerminalEvents] Failed to send terminal exit event:', error);
       });
     });
@@ -161,10 +168,9 @@ export class TerminalEventHandlerService implements ITerminalEventHandler {
         }
         */
 
-        context.sendMessage(message).catch(error => {
+        context.sendMessage(message).catch((error) => {
           log('❌ [TerminalEvents] Failed to send terminal created event:', error);
         });
-
       } catch (error) {
         log('❌ [TerminalEvents] Error processing terminal created event:', error);
       }
@@ -183,7 +189,7 @@ export class TerminalEventHandlerService implements ITerminalEventHandler {
         terminalId,
       };
 
-      context.sendMessage(removedMessage).catch(error => {
+      context.sendMessage(removedMessage).catch((error) => {
         log('❌ [TerminalEvents] Failed to send terminal removed event:', error);
       });
     });
@@ -202,10 +208,9 @@ export class TerminalEventHandlerService implements ITerminalEventHandler {
           state,
         };
 
-        context.sendMessage(stateMessage).catch(error => {
+        context.sendMessage(stateMessage).catch((error) => {
           log('❌ [TerminalEvents] Failed to send state update:', error);
         });
-
       } catch (error) {
         log('❌ [TerminalEvents] Error processing state update event:', error);
       }
@@ -224,7 +229,7 @@ export class TerminalEventHandlerService implements ITerminalEventHandler {
         terminalId,
       };
 
-      context.sendMessage(focusMessage).catch(error => {
+      context.sendMessage(focusMessage).catch((error) => {
         log('❌ [TerminalEvents] Failed to send focus event:', error);
       });
     });
@@ -238,11 +243,11 @@ export class TerminalEventHandlerService implements ITerminalEventHandler {
       activeListeners: this._eventDisposables.length,
       listenerTypes: [
         'data',
-        'exit', 
+        'exit',
         'terminalCreated',
         'terminalRemoved',
         'stateUpdate',
-        'terminalFocus'
+        'terminalFocus',
       ],
       timestamp: new Date().toISOString(),
     };
@@ -260,8 +265,9 @@ export class TerminalEventHandlerService implements ITerminalEventHandler {
           activeTerminalId: context.terminalManager.getActiveTerminalId(),
           terminals: context.terminalManager.getTerminals().map(normalizeTerminalInfo),
         },
-        terminalIdMapping: context.terminalIdMapping ? 
-          Array.from(context.terminalIdMapping.entries()) : [],
+        terminalIdMapping: context.terminalIdMapping
+          ? Array.from(context.terminalIdMapping.entries())
+          : [],
         timestamp: new Date().toISOString(),
       };
     } catch (error) {

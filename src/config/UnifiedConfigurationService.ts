@@ -1,13 +1,13 @@
 /**
  * Unified Configuration Service
- * 
+ *
  * Consolidates all configuration management across the extension following VS Code patterns.
  * This service replaces:
  * - src/config/ConfigManager.ts
- * - src/webview/managers/ConfigManager.ts  
+ * - src/webview/managers/ConfigManager.ts
  * - src/services/core/UnifiedConfigurationService.ts
  * - src/services/webview/WebViewSettingsManagerService.ts
- * 
+ *
  * Architecture follows VS Code's IConfigurationService pattern with:
  * - Configuration registry for type safety
  * - Hierarchical configuration targets
@@ -122,13 +122,13 @@ class ConfigurationRegistry {
 
 /**
  * Unified Configuration Service
- * 
+ *
  * Single source of truth for all extension configuration management.
  * Follows VS Code's configuration architecture patterns.
  */
 export class UnifiedConfigurationService implements Disposable {
   private static _instance: UnifiedConfigurationService | undefined;
-  
+
   // Event handling following VS Code patterns
   private readonly _onDidChangeConfiguration = new EventEmitter<ConfigurationChangeEvent>();
   public readonly onDidChangeConfiguration = this._onDidChangeConfiguration.event;
@@ -137,7 +137,7 @@ export class UnifiedConfigurationService implements Disposable {
   private readonly _registry = new ConfigurationRegistry();
   private readonly _configurationCache = new Map<string, { value: unknown; expiry: number }>();
   private readonly _disposables: vscode.Disposable[] = [];
-  
+
   // Cache configuration
   private readonly CACHE_TTL = 5000; // 5 seconds
   private _initialized = false;
@@ -186,7 +186,7 @@ export class UnifiedConfigurationService implements Disposable {
    */
   public get<T>(section: string, key: string, defaultValue: T): T {
     const fullKey = `${section}.${key}`;
-    
+
     // Check cache first
     const cached = this._configurationCache.get(fullKey);
     if (cached && Date.now() < cached.expiry) {
@@ -273,7 +273,11 @@ export class UnifiedConfigurationService implements Disposable {
     const section = CONFIG_SECTIONS.SIDEBAR_TERMINAL;
 
     return {
-      maxTerminals: this.get(section, CONFIG_KEYS.MAX_TERMINALS, TERMINAL_CONSTANTS.DEFAULT_MAX_TERMINALS),
+      maxTerminals: this.get(
+        section,
+        CONFIG_KEYS.MAX_TERMINALS,
+        TERMINAL_CONSTANTS.DEFAULT_MAX_TERMINALS
+      ),
       shell: this.get(section, CONFIG_KEYS.SHELL, ''),
       shellArgs: this.get(section, CONFIG_KEYS.SHELL_ARGS, []),
       defaultDirectory: this.get(section, CONFIG_KEYS.DEFAULT_DIRECTORY, ''),
@@ -301,11 +305,31 @@ export class UnifiedConfigurationService implements Disposable {
       fontFamily: this.getFontFamily(),
       theme: this.get(CONFIG_SECTIONS.SIDEBAR_TERMINAL, CONFIG_KEYS.THEME, 'auto'),
       cursorBlink: this.get(CONFIG_SECTIONS.SIDEBAR_TERMINAL, CONFIG_KEYS.CURSOR_BLINK, true),
-      confirmBeforeKill: this.get(CONFIG_SECTIONS.SIDEBAR_TERMINAL, CONFIG_KEYS.CONFIRM_BEFORE_KILL, false),
-      protectLastTerminal: this.get(CONFIG_SECTIONS.SIDEBAR_TERMINAL, CONFIG_KEYS.PROTECT_LAST_TERMINAL, true),
-      minTerminalCount: this.get(CONFIG_SECTIONS.SIDEBAR_TERMINAL, CONFIG_KEYS.MIN_TERMINAL_COUNT, 1),
-      altClickMovesCursor: this.get(CONFIG_SECTIONS.TERMINAL_INTEGRATED, CONFIG_KEYS.ALT_CLICK_MOVES_CURSOR, false),
-      multiCursorModifier: this.get(CONFIG_SECTIONS.EDITOR, CONFIG_KEYS.MULTI_CURSOR_MODIFIER, 'ctrlCmd'),
+      confirmBeforeKill: this.get(
+        CONFIG_SECTIONS.SIDEBAR_TERMINAL,
+        CONFIG_KEYS.CONFIRM_BEFORE_KILL,
+        false
+      ),
+      protectLastTerminal: this.get(
+        CONFIG_SECTIONS.SIDEBAR_TERMINAL,
+        CONFIG_KEYS.PROTECT_LAST_TERMINAL,
+        true
+      ),
+      minTerminalCount: this.get(
+        CONFIG_SECTIONS.SIDEBAR_TERMINAL,
+        CONFIG_KEYS.MIN_TERMINAL_COUNT,
+        1
+      ),
+      altClickMovesCursor: this.get(
+        CONFIG_SECTIONS.TERMINAL_INTEGRATED,
+        CONFIG_KEYS.ALT_CLICK_MOVES_CURSOR,
+        false
+      ),
+      multiCursorModifier: this.get(
+        CONFIG_SECTIONS.EDITOR,
+        CONFIG_KEYS.MULTI_CURSOR_MODIFIER,
+        'ctrlCmd'
+      ),
     };
   }
 
@@ -388,23 +412,15 @@ export class UnifiedConfigurationService implements Disposable {
     switch (process.platform) {
       case TERMINAL_CONSTANTS.PLATFORMS.WINDOWS:
         return (
-          this.get(section, CONFIG_KEYS.SHELL_WINDOWS, '') ||
-          process.env['COMSPEC'] ||
-          'cmd.exe'
+          this.get(section, CONFIG_KEYS.SHELL_WINDOWS, '') || process.env['COMSPEC'] || 'cmd.exe'
         );
 
       case TERMINAL_CONSTANTS.PLATFORMS.DARWIN:
-        return (
-          this.get(section, CONFIG_KEYS.SHELL_OSX, '') || 
-          process.env['SHELL'] || 
-          '/bin/zsh'
-        );
+        return this.get(section, CONFIG_KEYS.SHELL_OSX, '') || process.env['SHELL'] || '/bin/zsh';
 
       default:
         return (
-          this.get(section, CONFIG_KEYS.SHELL_LINUX, '') ||
-          process.env['SHELL'] ||
-          '/bin/bash'
+          this.get(section, CONFIG_KEYS.SHELL_LINUX, '') || process.env['SHELL'] || '/bin/bash'
         );
     }
   }
@@ -415,8 +431,16 @@ export class UnifiedConfigurationService implements Disposable {
   public getAltClickSettings(): { altClickMovesCursor: boolean; multiCursorModifier: string } {
     this.initialize();
     return {
-      altClickMovesCursor: this.get(CONFIG_SECTIONS.TERMINAL_INTEGRATED, CONFIG_KEYS.ALT_CLICK_MOVES_CURSOR, false),
-      multiCursorModifier: this.get(CONFIG_SECTIONS.EDITOR, CONFIG_KEYS.MULTI_CURSOR_MODIFIER, 'ctrlCmd'),
+      altClickMovesCursor: this.get(
+        CONFIG_SECTIONS.TERMINAL_INTEGRATED,
+        CONFIG_KEYS.ALT_CLICK_MOVES_CURSOR,
+        false
+      ),
+      multiCursorModifier: this.get(
+        CONFIG_SECTIONS.EDITOR,
+        CONFIG_KEYS.MULTI_CURSOR_MODIFIER,
+        'ctrlCmd'
+      ),
     };
   }
 
@@ -620,8 +644,10 @@ export class UnifiedConfigurationService implements Disposable {
       case 'githubCopilotIntegration':
         return this.get(CONFIG_SECTIONS.SIDEBAR_TERMINAL, 'enableGitHubCopilotIntegration', true);
       case 'altClickMovesCursor':
-        return this.get(CONFIG_SECTIONS.TERMINAL_INTEGRATED, 'altClickMovesCursor', true) &&
-               this.get(CONFIG_SECTIONS.EDITOR, 'multiCursorModifier', 'alt') === 'alt';
+        return (
+          this.get(CONFIG_SECTIONS.TERMINAL_INTEGRATED, 'altClickMovesCursor', true) &&
+          this.get(CONFIG_SECTIONS.EDITOR, 'multiCursorModifier', 'alt') === 'alt'
+        );
       case 'dynamicSplitDirection':
         return this.get(CONFIG_SECTIONS.SIDEBAR_TERMINAL, 'dynamicSplitDirection', true);
       default:
@@ -721,7 +747,7 @@ export class UnifiedConfigurationService implements Disposable {
                 if (key) {
                   return changedKeys.includes(`${section}.${key}`);
                 }
-                return changedKeys.some(k => k.startsWith(section));
+                return changedKeys.some((k) => k.startsWith(section));
               },
               source: ConfigurationTarget.USER,
               changedKeys,

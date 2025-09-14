@@ -1,6 +1,6 @@
 /**
  * System Message Handler
- * 
+ *
  * Handles critical system messages including initialization,
  * settings, and state updates.
  */
@@ -12,12 +12,10 @@ import { BaseMessageHandler } from './BaseMessageHandler';
 
 export class SystemMessageHandler extends BaseMessageHandler {
   constructor() {
-    super([
-      'init',
-      'fontSettingsUpdate',
-      'settingsResponse',
-      'stateUpdate'
-    ], MessagePriority.CRITICAL);
+    super(
+      ['init', 'fontSettingsUpdate', 'settingsResponse', 'stateUpdate'],
+      MessagePriority.CRITICAL
+    );
   }
 
   async handle(message: WebviewMessage, context: IMessageHandlerContext): Promise<void> {
@@ -48,14 +46,17 @@ export class SystemMessageHandler extends BaseMessageHandler {
   /**
    * Handle init message from extension
    */
-  private async handleInitMessage(message: WebviewMessage, context: IMessageHandlerContext): Promise<void> {
+  private async handleInitMessage(
+    message: WebviewMessage,
+    context: IMessageHandlerContext
+  ): Promise<void> {
     context.logger.info('Handling init message');
 
     try {
       // Request current settings
       await context.postMessage({
         command: 'getSettings',
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
 
       // Emit ready event
@@ -78,7 +79,10 @@ export class SystemMessageHandler extends BaseMessageHandler {
   /**
    * Handle font settings update from extension
    */
-  private async handleFontSettingsUpdate(message: WebviewMessage, context: IMessageHandlerContext): Promise<void> {
+  private async handleFontSettingsUpdate(
+    message: WebviewMessage,
+    context: IMessageHandlerContext
+  ): Promise<void> {
     const fontSettings = message.fontSettings as WebViewFontSettings;
     if (fontSettings) {
       context.logger.info('Font settings update received', fontSettings);
@@ -90,7 +94,10 @@ export class SystemMessageHandler extends BaseMessageHandler {
   /**
    * Handle settings response from extension
    */
-  private async handleSettingsResponse(message: WebviewMessage, context: IMessageHandlerContext): Promise<void> {
+  private async handleSettingsResponse(
+    message: WebviewMessage,
+    context: IMessageHandlerContext
+  ): Promise<void> {
     const settings = message.settings;
     if (settings) {
       context.logger.info('Settings response received');
@@ -101,12 +108,18 @@ export class SystemMessageHandler extends BaseMessageHandler {
   /**
    * Handle state update message
    */
-  private async handleStateUpdate(message: WebviewMessage, context: IMessageHandlerContext): Promise<void> {
+  private async handleStateUpdate(
+    message: WebviewMessage,
+    context: IMessageHandlerContext
+  ): Promise<void> {
     const state = message.state;
     if (state) {
       context.logger.info('State update received');
 
-      if ('updateState' in context.coordinator && typeof context.coordinator.updateState === 'function') {
+      if (
+        'updateState' in context.coordinator &&
+        typeof context.coordinator.updateState === 'function'
+      ) {
         context.coordinator.updateState(state);
       } else {
         context.logger.warn('updateState method not found on coordinator');

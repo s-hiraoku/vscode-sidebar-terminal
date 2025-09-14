@@ -1,6 +1,6 @@
 /**
  * EventHandlerRegistry Utility
- * 
+ *
  * Centralized event listener management to eliminate code duplication
  * across InputManager, TerminalLifecycleManager, and other managers
  */
@@ -61,11 +61,11 @@ export class EventHandlerRegistry {
         type,
         listener,
         options,
-        registeredAt: Date.now()
+        registeredAt: Date.now(),
       };
 
       this.listeners.set(key, registeredListener);
-      
+
       log(`📡 EventRegistry: Registered ${key} (${type} on ${this.getElementName(element)})`);
     } catch (error) {
       log(`❌ EventRegistry: Failed to register ${key}:`, error);
@@ -78,13 +78,7 @@ export class EventHandlerRegistry {
    */
   registerMultiple(configs: Array<EventListenerConfig & { key: string }>): void {
     for (const config of configs) {
-      this.register(
-        config.key,
-        config.element,
-        config.type,
-        config.listener,
-        config.options
-      );
+      this.register(config.key, config.element, config.type, config.listener, config.options);
     }
   }
 
@@ -99,14 +93,10 @@ export class EventHandlerRegistry {
     }
 
     try {
-      listener.element.removeEventListener(
-        listener.type,
-        listener.listener,
-        listener.options
-      );
+      listener.element.removeEventListener(listener.type, listener.listener, listener.options);
 
       this.listeners.delete(key);
-      
+
       log(`🧹 EventRegistry: Unregistered ${key} (${listener.type})`);
       return true;
     } catch (error) {
@@ -120,9 +110,7 @@ export class EventHandlerRegistry {
    * @param pattern RegExp pattern to match keys
    */
   unregisterByPattern(pattern: RegExp): number {
-    const keysToRemove = Array.from(this.listeners.keys()).filter(key => 
-      pattern.test(key)
-    );
+    const keysToRemove = Array.from(this.listeners.keys()).filter((key) => pattern.test(key));
 
     let removed = 0;
     for (const key of keysToRemove) {
@@ -176,17 +164,15 @@ export class EventHandlerRegistry {
     newestRegistration: number | null;
   } {
     const listeners = Array.from(this.listeners.values());
-    
+
     return {
       totalListeners: listeners.length,
-      eventTypes: [...new Set(listeners.map(l => l.type))],
-      elements: [...new Set(listeners.map(l => this.getElementName(l.element)))],
-      oldestRegistration: listeners.length > 0 
-        ? Math.min(...listeners.map(l => l.registeredAt))
-        : null,
-      newestRegistration: listeners.length > 0
-        ? Math.max(...listeners.map(l => l.registeredAt))
-        : null
+      eventTypes: [...new Set(listeners.map((l) => l.type))],
+      elements: [...new Set(listeners.map((l) => this.getElementName(l.element)))],
+      oldestRegistration:
+        listeners.length > 0 ? Math.min(...listeners.map((l) => l.registeredAt)) : null,
+      newestRegistration:
+        listeners.length > 0 ? Math.max(...listeners.map((l) => l.registeredAt)) : null,
     };
   }
 
@@ -252,9 +238,9 @@ export class ScopedEventRegistry {
   }
 
   registerMultiple(configs: Array<EventListenerConfig & { key: string }>): void {
-    const prefixedConfigs = configs.map(config => ({
+    const prefixedConfigs = configs.map((config) => ({
       ...config,
-      key: `${this.prefix}:${config.key}`
+      key: `${this.prefix}:${config.key}`,
     }));
     this.registry.registerMultiple(prefixedConfigs);
   }
@@ -272,9 +258,10 @@ export class ScopedEventRegistry {
   }
 
   getRegisteredKeys(): string[] {
-    return this.registry.getRegisteredKeys()
-      .filter(key => key.startsWith(`${this.prefix}:`))
-      .map(key => key.substring(this.prefix.length + 1));
+    return this.registry
+      .getRegisteredKeys()
+      .filter((key) => key.startsWith(`${this.prefix}:`))
+      .map((key) => key.substring(this.prefix.length + 1));
   }
 }
 

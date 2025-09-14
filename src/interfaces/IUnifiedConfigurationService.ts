@@ -1,6 +1,6 @@
 /**
  * Interface definitions for the Unified Configuration Service
- * 
+ *
  * These interfaces define the contract for configuration management
  * following VS Code's established patterns and ensure type safety
  * across the entire configuration system.
@@ -273,7 +273,10 @@ export interface IConfigurationEventHandler {
   /**
    * Handle Alt+Click settings change
    */
-  onAltClickSettingsChanged(settings: { altClickMovesCursor: boolean; multiCursorModifier: string }): void;
+  onAltClickSettingsChanged(settings: {
+    altClickMovesCursor: boolean;
+    multiCursorModifier: string;
+  }): void;
 
   /**
    * Handle feature enablement change

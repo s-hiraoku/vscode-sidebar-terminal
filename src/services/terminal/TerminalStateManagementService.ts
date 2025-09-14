@@ -7,7 +7,7 @@ import { ActiveTerminalManager } from '../../utils/common';
 
 /**
  * Service responsible for terminal state management
- * 
+ *
  * This service extracts state management logic from TerminalManager to improve:
  * - Single Responsibility: Focus only on terminal state tracking
  * - Testability: Isolated state management logic
@@ -18,15 +18,15 @@ export class TerminalStateManagementService {
   private readonly _terminals = new Map<string, TerminalInstance>();
   private readonly _activeTerminalManager: ActiveTerminalManager;
   private readonly _terminalNumberManager: TerminalNumberManager;
-  
+
   // Event emitters for state changes
   private readonly _stateUpdateEmitter = new vscode.EventEmitter<TerminalState>();
   private readonly _terminalRemovedEmitter = new vscode.EventEmitter<string>();
   private readonly _terminalAddedEmitter = new vscode.EventEmitter<TerminalInstance>();
-  
+
   // Track terminals being killed to prevent race conditions
   private readonly _terminalBeingKilled = new Set<string>();
-  
+
   public readonly onStateUpdate = this._stateUpdateEmitter.event;
   public readonly onTerminalRemoved = this._terminalRemovedEmitter.event;
   public readonly onTerminalAdded = this._terminalAddedEmitter.event;
@@ -35,7 +35,7 @@ export class TerminalStateManagementService {
     const config = getTerminalConfig();
     this._activeTerminalManager = new ActiveTerminalManager();
     this._terminalNumberManager = new TerminalNumberManager(config.maxTerminals);
-    
+
     log('📊 [StateManager] Terminal state management service initialized');
   }
 
@@ -46,11 +46,10 @@ export class TerminalStateManagementService {
     try {
       this._terminals.set(terminal.id, terminal);
       log(`➕ [StateManager] Terminal added to state: ${terminal.id} (${terminal.name})`);
-      
+
       // Emit events
       this._terminalAddedEmitter.fire(terminal);
       this._notifyStateUpdate();
-      
     } catch (error) {
       log(`❌ [StateManager] Error adding terminal to state:`, error);
       throw error;
@@ -70,10 +69,12 @@ export class TerminalStateManagementService {
 
       this._terminals.delete(terminalId);
       this._terminalBeingKilled.delete(terminalId); // Clean up killing tracker
-      
+
       // Terminal number release handled externally
       if (terminal.number) {
-        log(`🔢 [StateManager] Terminal number ${terminal.number} marked for release for ${terminalId}`);
+        log(
+          `🔢 [StateManager] Terminal number ${terminal.number} marked for release for ${terminalId}`
+        );
       }
 
       // Clear active terminal if this was the active one
@@ -83,11 +84,10 @@ export class TerminalStateManagementService {
       }
 
       log(`🗑️ [StateManager] Terminal removed from state: ${terminalId}`);
-      
+
       // Emit events
       this._terminalRemovedEmitter.fire(terminalId);
       this._notifyStateUpdate();
-      
     } catch (error) {
       log(`❌ [StateManager] Error removing terminal from state:`, error);
       throw error;
@@ -164,16 +164,15 @@ export class TerminalStateManagementService {
 
       // Deactivate all terminals
       this._deactivateAllTerminals();
-      
+
       // Set new active terminal
       terminal.isActive = true;
       this._activeTerminalManager.setActive(terminalId);
-      
+
       log(`✅ [StateManager] Set active terminal: ${terminalId} (${terminal.name})`);
       this._notifyStateUpdate();
-      
+
       return true;
-      
     } catch (error) {
       log(`❌ [StateManager] Error setting active terminal:`, error);
       return false;
@@ -187,10 +186,9 @@ export class TerminalStateManagementService {
     try {
       this._deactivateAllTerminals();
       this._activeTerminalManager.clearActive();
-      
+
       log(`🔄 [StateManager] Active terminal cleared`);
       this._notifyStateUpdate();
-      
     } catch (error) {
       log(`❌ [StateManager] Error clearing active terminal:`, error);
     }
@@ -252,10 +250,9 @@ export class TerminalStateManagementService {
       };
 
       return state;
-      
     } catch (error) {
       log(`❌ [StateManager] Error getting current state:`, error);
-      
+
       // Return safe fallback state
       return {
         terminals: [],
@@ -304,7 +301,6 @@ export class TerminalStateManagementService {
       }
 
       return null;
-      
     } catch (error) {
       log(`❌ [StateManager] Error selecting next active terminal:`, error);
       return null;
@@ -326,7 +322,6 @@ export class TerminalStateManagementService {
       }
 
       return { canDelete: true };
-      
     } catch (error) {
       log(`❌ [StateManager] Error validating deletion:`, error);
       return { canDelete: false, reason: `Validation failed: ${String(error)}` };
@@ -360,19 +355,18 @@ export class TerminalStateManagementService {
    */
   dispose(): void {
     log('🧹 [StateManager] Disposing terminal state management service');
-    
+
     try {
       // Clear all state
       this._terminals.clear();
       this._terminalBeingKilled.clear();
-      
+
       // Dispose event emitters
       this._stateUpdateEmitter.dispose();
       this._terminalRemovedEmitter.dispose();
       this._terminalAddedEmitter.dispose();
-      
+
       log('✅ [StateManager] Terminal state management service disposed');
-      
     } catch (error) {
       log('❌ [StateManager] Error disposing terminal state management service:', error);
     }

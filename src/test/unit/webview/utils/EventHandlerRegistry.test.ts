@@ -17,7 +17,7 @@ describe('EventHandlerRegistry', () => {
 
   beforeEach(() => {
     sandbox = createSandbox();
-    
+
     // Create DOM environment
     dom = new JSDOM(`
       <!DOCTYPE html>
@@ -28,7 +28,7 @@ describe('EventHandlerRegistry', () => {
         </body>
       </html>
     `);
-    
+
     global.window = dom.window as any;
     global.document = dom.window.document;
     global.Element = dom.window.Element;
@@ -37,10 +37,10 @@ describe('EventHandlerRegistry', () => {
     global.Event = dom.window.Event;
     global.MouseEvent = dom.window.MouseEvent;
     global.KeyboardEvent = dom.window.KeyboardEvent;
-    
+
     testElement = document.getElementById('test-element')!;
     testButton = document.getElementById('test-button')! as HTMLButtonElement;
-    
+
     registry = new EventHandlerRegistry();
   });
 
@@ -52,7 +52,7 @@ describe('EventHandlerRegistry', () => {
   describe('register', () => {
     it('should register event listener successfully', () => {
       const handler = sandbox.stub();
-      
+
       expect(() => {
         registry.register('test-click', testElement, 'click', handler);
       }).to.not.throw();
@@ -61,7 +61,7 @@ describe('EventHandlerRegistry', () => {
     it('should register event listener with options', () => {
       const handler = sandbox.stub();
       const options = { once: true, passive: true };
-      
+
       expect(() => {
         registry.register('test-click', testElement, 'click', handler, options);
       }).to.not.throw();
@@ -70,35 +70,35 @@ describe('EventHandlerRegistry', () => {
     it('should register multiple different events', () => {
       const clickHandler = sandbox.stub();
       const keyHandler = sandbox.stub();
-      
+
       registry.register('click-handler', testElement, 'click', clickHandler);
       registry.register('key-handler', testElement, 'keydown', keyHandler);
-      
+
       expect(registry.getRegisteredCount()).to.equal(2);
     });
 
     it('should handle registering same key twice (should replace)', () => {
       const handler1 = sandbox.stub();
       const handler2 = sandbox.stub();
-      
+
       registry.register('same-key', testElement, 'click', handler1);
       registry.register('same-key', testElement, 'click', handler2);
-      
+
       expect(registry.getRegisteredCount()).to.equal(1);
     });
 
     it('should handle different elements with same key', () => {
       const handler = sandbox.stub();
-      
+
       registry.register('multi-element', testElement, 'click', handler);
       registry.register('multi-element-2', testButton, 'click', handler);
-      
+
       expect(registry.getRegisteredCount()).to.equal(2);
     });
 
     it('should handle boolean options', () => {
       const handler = sandbox.stub();
-      
+
       expect(() => {
         registry.register('bool-options', testElement, 'click', handler, true);
       }).to.not.throw();
@@ -108,10 +108,10 @@ describe('EventHandlerRegistry', () => {
   describe('unregister', () => {
     it('should unregister existing event listener', () => {
       const handler = sandbox.stub();
-      
+
       registry.register('test-click', testElement, 'click', handler);
       expect(registry.getRegisteredCount()).to.equal(1);
-      
+
       const result = registry.unregister('test-click');
       expect(result).to.be.true;
       expect(registry.getRegisteredCount()).to.equal(0);
@@ -124,10 +124,10 @@ describe('EventHandlerRegistry', () => {
 
     it('should handle unregistering after element is removed', () => {
       const handler = sandbox.stub();
-      
+
       registry.register('test-click', testElement, 'click', handler);
       testElement.remove();
-      
+
       const result = registry.unregister('test-click');
       expect(result).to.be.true;
     });
@@ -135,13 +135,13 @@ describe('EventHandlerRegistry', () => {
     it('should unregister multiple events independently', () => {
       const handler1 = sandbox.stub();
       const handler2 = sandbox.stub();
-      
+
       registry.register('handler-1', testElement, 'click', handler1);
       registry.register('handler-2', testElement, 'keydown', handler2);
-      
+
       expect(registry.unregister('handler-1')).to.be.true;
       expect(registry.getRegisteredCount()).to.equal(1);
-      
+
       expect(registry.unregister('handler-2')).to.be.true;
       expect(registry.getRegisteredCount()).to.equal(0);
     });
@@ -150,7 +150,7 @@ describe('EventHandlerRegistry', () => {
   describe('isRegistered', () => {
     it('should return true for registered keys', () => {
       const handler = sandbox.stub();
-      
+
       registry.register('test-key', testElement, 'click', handler);
       expect(registry.isRegistered('test-key')).to.be.true;
     });
@@ -161,10 +161,10 @@ describe('EventHandlerRegistry', () => {
 
     it('should return false after unregistering', () => {
       const handler = sandbox.stub();
-      
+
       registry.register('test-key', testElement, 'click', handler);
       registry.unregister('test-key');
-      
+
       expect(registry.isRegistered('test-key')).to.be.false;
     });
   });
@@ -176,13 +176,13 @@ describe('EventHandlerRegistry', () => {
 
     it('should return correct count after registrations', () => {
       const handler = sandbox.stub();
-      
+
       registry.register('key1', testElement, 'click', handler);
       expect(registry.getRegisteredCount()).to.equal(1);
-      
+
       registry.register('key2', testButton, 'mouseenter', handler);
       expect(registry.getRegisteredCount()).to.equal(2);
-      
+
       registry.unregister('key1');
       expect(registry.getRegisteredCount()).to.equal(1);
     });
@@ -195,10 +195,10 @@ describe('EventHandlerRegistry', () => {
 
     it('should return all registered keys', () => {
       const handler = sandbox.stub();
-      
+
       registry.register('click-handler', testElement, 'click', handler);
       registry.register('mouse-handler', testButton, 'mouseenter', handler);
-      
+
       const keys = registry.getRegisteredKeys();
       expect(keys).to.include('click-handler');
       expect(keys).to.include('mouse-handler');
@@ -209,15 +209,15 @@ describe('EventHandlerRegistry', () => {
   describe('dispose', () => {
     it('should unregister all event listeners', () => {
       const handler = sandbox.stub();
-      
+
       registry.register('key1', testElement, 'click', handler);
       registry.register('key2', testButton, 'mouseenter', handler);
       registry.register('key3', testElement, 'keydown', handler);
-      
+
       expect(registry.getRegisteredCount()).to.equal(3);
-      
+
       registry.dispose();
-      
+
       expect(registry.getRegisteredCount()).to.equal(0);
       expect(registry.getRegisteredKeys()).to.deep.equal([]);
     });
@@ -230,25 +230,25 @@ describe('EventHandlerRegistry', () => {
 
     it('should handle multiple dispose calls', () => {
       const handler = sandbox.stub();
-      
+
       registry.register('test-key', testElement, 'click', handler);
-      
+
       registry.dispose();
       registry.dispose(); // Second call should not throw
-      
+
       expect(registry.getRegisteredCount()).to.equal(0);
     });
 
     it('should prevent operations after disposal', () => {
       const handler = sandbox.stub();
-      
+
       registry.dispose();
-      
+
       // Operations after disposal should be handled gracefully
       expect(() => {
         registry.register('post-dispose', testElement, 'click', handler);
       }).to.not.throw();
-      
+
       expect(registry.getRegisteredCount()).to.equal(0);
     });
   });
@@ -256,17 +256,17 @@ describe('EventHandlerRegistry', () => {
   describe('event firing simulation', () => {
     it('should handle event firing after registration', () => {
       const handler = sandbox.stub();
-      
+
       registry.register('click-test', testElement, 'click', handler);
-      
+
       // Simulate click event
       const clickEvent = new dom.window.MouseEvent('click', {
         bubbles: true,
-        cancelable: true
+        cancelable: true,
       });
-      
+
       testElement.dispatchEvent(clickEvent);
-      
+
       // Note: We can't easily test if the handler was actually called
       // because JSDOM's event simulation doesn't work exactly like browser
       // But we can test that the registration doesn't break event handling
@@ -279,7 +279,7 @@ describe('EventHandlerRegistry', () => {
   describe('error handling', () => {
     it('should handle invalid element gracefully', () => {
       const handler = sandbox.stub();
-      
+
       expect(() => {
         registry.register('invalid', null as any, 'click', handler);
       }).to.not.throw();
@@ -287,7 +287,7 @@ describe('EventHandlerRegistry', () => {
 
     it('should handle invalid event type gracefully', () => {
       const handler = sandbox.stub();
-      
+
       expect(() => {
         registry.register('invalid-event', testElement, '' as any, handler);
       }).to.not.throw();
@@ -303,7 +303,7 @@ describe('EventHandlerRegistry', () => {
       const faultyHandler = () => {
         throw new Error('Handler error');
       };
-      
+
       expect(() => {
         registry.register('faulty', testElement, 'click', faultyHandler);
       }).to.not.throw();
@@ -313,14 +313,14 @@ describe('EventHandlerRegistry', () => {
   describe('memory management', () => {
     it('should not leak memory with many registrations', () => {
       const handler = sandbox.stub();
-      
+
       // Register many handlers
       for (let i = 0; i < 100; i++) {
         registry.register(`handler-${i}`, testElement, 'click', handler);
       }
-      
+
       expect(registry.getRegisteredCount()).to.equal(100);
-      
+
       // Dispose should clean them all up
       registry.dispose();
       expect(registry.getRegisteredCount()).to.equal(0);
@@ -328,12 +328,12 @@ describe('EventHandlerRegistry', () => {
 
     it('should handle registration and unregistration cycles', () => {
       const handler = sandbox.stub();
-      
+
       // Cycle many times
       for (let i = 0; i < 10; i++) {
         registry.register('cycle-key', testElement, 'click', handler);
         expect(registry.getRegisteredCount()).to.equal(1);
-        
+
         registry.unregister('cycle-key');
         expect(registry.getRegisteredCount()).to.equal(0);
       }

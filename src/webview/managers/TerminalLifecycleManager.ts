@@ -19,7 +19,11 @@ import { SplitManager } from './SplitManager';
 import { ResizeManager } from '../utils/ResizeManager';
 import { EventHandlerRegistry } from '../utils/EventHandlerRegistry';
 import { terminalLogger } from '../utils/ManagerLogger';
-import { TerminalContainerFactory, TerminalContainerConfig, TerminalHeaderConfig } from '../factories/TerminalContainerFactory';
+import {
+  TerminalContainerFactory,
+  TerminalContainerConfig,
+  TerminalHeaderConfig,
+} from '../factories/TerminalContainerFactory';
 import { getWebviewTheme } from '../utils/WebviewThemeUtils';
 import { ThemeManager } from '../utils/ThemeManager';
 
@@ -33,7 +37,7 @@ export class TerminalLifecycleManager {
   private splitManager: SplitManager;
   private coordinator: IManagerCoordinator;
   private eventRegistry: EventHandlerRegistry;
-  
+
   public activeTerminalId: string | null = null;
   public terminal: Terminal | null = null;
   public fitAddon: FitAddon | null = null;
@@ -53,7 +57,7 @@ export class TerminalLifecycleManager {
       background: '#000000',
       foreground: '#ffffff',
     },
-    
+
     // VS Code Standard Options - Core Features
     altClickMovesCursor: true,
     drawBoldTextInBrightColors: false,
@@ -61,36 +65,36 @@ export class TerminalLifecycleManager {
     tabStopWidth: 8,
     macOptionIsMeta: false,
     rightClickSelectsWord: true,
-    
+
     // Scrolling and Navigation
     fastScrollModifier: 'alt' as const,
     fastScrollSensitivity: 5,
     scrollSensitivity: 1,
     scrollback: 1000,
     scrollOnUserInput: true,
-    
+
     // Word and Selection
     wordSeparator: ' ()[]{}\'"`,;',
-    
+
     // Rendering Options
     allowTransparency: false,
     rescaleOverlappingGlyphs: false,
     allowProposedApi: true,
-    
+
     // Cursor Configuration
     cursorStyle: 'block' as const,
     cursorInactiveStyle: 'outline' as const,
     cursorWidth: 1,
-    
+
     // Terminal Behavior
     convertEol: false,
     disableStdin: false,
     screenReaderMode: false,
-    
+
     // Bell Configuration
     bellSound: undefined,
     // bellStyle: 'none' as const, // Removed - not supported by xterm.js
-    
+
     // Advanced Options
     windowOptions: {
       restoreWin: false,
@@ -104,7 +108,7 @@ export class TerminalLifecycleManager {
       maximizeWin: false,
       fullscreenWin: false,
     },
-    
+
     // Addon Configuration
     enableGpuAcceleration: true,
     enableSearchAddon: true,
@@ -115,14 +119,14 @@ export class TerminalLifecycleManager {
     this.splitManager = splitManager;
     this.coordinator = coordinator;
     this.eventRegistry = new EventHandlerRegistry();
-    
+
     // Initialize ThemeManager for color support
     try {
       ThemeManager.initialize();
     } catch (error) {
       terminalLogger.warn('Failed to initialize ThemeManager:', error);
     }
-    
+
     terminalLogger.info('TerminalLifecycleManager initialized');
   }
 
@@ -139,7 +143,7 @@ export class TerminalLifecycleManager {
   public setActiveTerminalId(terminalId: string | null): void {
     this.activeTerminalId = terminalId;
     terminalLogger.info(`Active terminal set to: ${terminalId}`);
-    
+
     // 🎯 FIX: Only focus if terminal is not already focused
     // Avoid interrupting terminal output or initialization
     if (terminalId) {
@@ -200,17 +204,19 @@ export class TerminalLifecycleManager {
     const performanceMonitor = PerformanceMonitor.getInstance();
     const maxRetries = 2;
     let currentRetry = 0;
-    
+
     const attemptCreation = async (): Promise<Terminal | null> => {
       try {
         performanceMonitor.startTimer(`terminal-creation-attempt-${terminalId}-${currentRetry}`);
-        terminalLogger.info(`Creating terminal: ${terminalId} (${terminalName}) - attempt ${currentRetry + 1}/${maxRetries + 1}`);
+        terminalLogger.info(
+          `Creating terminal: ${terminalId} (${terminalName}) - attempt ${currentRetry + 1}/${maxRetries + 1}`
+        );
 
         // 🚀 PHASE 3: Enhanced DOM readiness check with recovery
         const terminalBody = document.getElementById('terminal-body');
         if (!terminalBody) {
           terminalLogger.error('Main terminal container not found');
-          
+
           // 🚀 PHASE 3: Recovery - Try to create terminal-body if missing
           const mainDiv = document.querySelector('#terminal-view') || document.body;
           if (mainDiv) {
@@ -232,17 +238,17 @@ export class TerminalLifecycleManager {
         try {
           // Create xterm.js instance with VS Code Standard Configuration
           terminal = new Terminal({
-            // Basic appearance  
+            // Basic appearance
             cursorBlink: terminalConfig.cursorBlink,
             fontFamily: terminalConfig.fontFamily || 'monospace',
             fontSize: terminalConfig.fontSize || 12,
             fontWeight: (terminalConfig.fontWeight || 'normal') as any,
-            fontWeightBold: (terminalConfig.fontWeightBold || 'bold') as any, 
+            fontWeightBold: (terminalConfig.fontWeightBold || 'bold') as any,
             lineHeight: terminalConfig.lineHeight || 1.0,
             letterSpacing: terminalConfig.letterSpacing || 0,
             cols: 80,
             rows: 24,
-            
+
             // VS Code Standard Options
             altClickMovesCursor: terminalConfig.altClickMovesCursor,
             drawBoldTextInBrightColors: terminalConfig.drawBoldTextInBrightColors,
@@ -250,40 +256,39 @@ export class TerminalLifecycleManager {
             tabStopWidth: terminalConfig.tabStopWidth,
             macOptionIsMeta: terminalConfig.macOptionIsMeta,
             rightClickSelectsWord: terminalConfig.rightClickSelectsWord,
-            
+
             // Scrolling and Navigation - Enhanced VS Code Configuration
             fastScrollModifier: terminalConfig.fastScrollModifier || 'alt',
             fastScrollSensitivity: terminalConfig.fastScrollSensitivity || 5,
             scrollSensitivity: terminalConfig.scrollSensitivity || 1,
             scrollback: terminalConfig.scrollback || 1000,
             scrollOnUserInput: terminalConfig.scrollOnUserInput !== false, // Default to true
-            
+
             // Word and Selection
             wordSeparator: terminalConfig.wordSeparator,
-            
+
             // Rendering Options
             allowTransparency: terminalConfig.allowTransparency,
             allowProposedApi: terminalConfig.allowProposedApi,
-            
+
             // Cursor Configuration
             cursorStyle: terminalConfig.cursorStyle || 'block',
             cursorInactiveStyle: terminalConfig.cursorInactiveStyle,
             cursorWidth: terminalConfig.cursorWidth || 1,
-            
+
             // Terminal Behavior
             convertEol: terminalConfig.convertEol,
             disableStdin: terminalConfig.disableStdin,
             screenReaderMode: terminalConfig.screenReaderMode,
-            
+
             // Advanced Options
             windowOptions: terminalConfig.windowOptions,
           });
-          
+
           // 🚀 PHASE 3: Validate terminal instance
           if (!terminal || typeof terminal.open !== 'function') {
             throw new Error('Invalid terminal instance created');
           }
-          
         } catch (error) {
           terminalLogger.error(`Failed to create Terminal instance: ${error}`);
           throw new Error(`Terminal instantiation failed: ${error}`);
@@ -291,7 +296,8 @@ export class TerminalLifecycleManager {
 
         // Apply theme using existing getWebviewTheme
         try {
-          const themeValue = typeof terminalConfig.theme === 'string' ? terminalConfig.theme : undefined;
+          const themeValue =
+            typeof terminalConfig.theme === 'string' ? terminalConfig.theme : undefined;
           const theme = getWebviewTheme({ theme: themeValue });
           terminal.options.theme = theme;
         } catch (error) {
@@ -302,11 +308,11 @@ export class TerminalLifecycleManager {
         const fitAddon = new FitAddon();
         const webLinksAddon = new WebLinksAddon();
         const searchAddon = new SearchAddon();
-        
+
         // Optional high-performance addons
         let webglAddon: WebglAddon | null = null;
         let unicode11Addon: Unicode11Addon | null = null;
-        
+
         // Load essential addons with error handling
         try {
           terminal.loadAddon(fitAddon);
@@ -317,7 +323,7 @@ export class TerminalLifecycleManager {
           terminalLogger.error(`❌ Failed to load essential addons: ${error}`);
           throw error; // Essential addons are critical
         }
-        
+
         // Load optional addons with graceful degradation
         if (terminalConfig.enableUnicode11 !== false) {
           try {
@@ -328,7 +334,7 @@ export class TerminalLifecycleManager {
             terminalLogger.warn(`⚠️ Unicode11 addon failed to load (non-critical): ${error}`);
           }
         }
-        
+
         // GPU acceleration (conditional with fallback)
         if (terminalConfig.enableGpuAcceleration !== false) {
           try {
@@ -346,13 +352,13 @@ export class TerminalLifecycleManager {
           name: terminalName,
           className: 'terminal-container',
           isSplit: false,
-          isActive: false
+          isActive: false,
         };
 
         const headerConfig: TerminalHeaderConfig = {
           showHeader: true,
           showCloseButton: true,
-          showSplitButton: false,  // Split button disabled as requested
+          showSplitButton: false, // Split button disabled as requested
           customTitle: terminalName,
           onHeaderClick: (clickedTerminalId) => {
             terminalLogger.info(`🎯 Header clicked for terminal: ${clickedTerminalId}`);
@@ -364,7 +370,9 @@ export class TerminalLifecycleManager {
           },
           onCloseClick: (clickedTerminalId) => {
             // 仕様: ヘッダーのクローズボタンはそのヘッダーのターミナルを削除する
-            terminalLogger.info(`🗑️ Header close button clicked, using safe deletion: ${clickedTerminalId}`);
+            terminalLogger.info(
+              `🗑️ Header close button clicked, using safe deletion: ${clickedTerminalId}`
+            );
             if (this.coordinator && 'deleteTerminalSafely' in this.coordinator) {
               void (this.coordinator as any).deleteTerminalSafely(clickedTerminalId);
             } else {
@@ -377,13 +385,16 @@ export class TerminalLifecycleManager {
             if (this.coordinator && 'handleAiAgentToggle' in this.coordinator) {
               (this.coordinator as any).handleAiAgentToggle(clickedTerminalId);
             }
-          }
+          },
         };
 
         // 🚀 PHASE 3: Enhanced container creation with validation
         let containerElements;
         try {
-          containerElements = TerminalContainerFactory.createContainer(containerConfig, headerConfig);
+          containerElements = TerminalContainerFactory.createContainer(
+            containerConfig,
+            headerConfig
+          );
           if (!containerElements || !containerElements.container || !containerElements.body) {
             throw new Error('Invalid container elements created');
           }
@@ -391,20 +402,20 @@ export class TerminalLifecycleManager {
           terminalLogger.error(`Container creation failed: ${error}`);
           throw error;
         }
-        
+
         const mainContainer = containerElements.container; // Use the main container
         const terminalContentBody = containerElements.body; // Terminal goes in the body
 
         // 🚀 PHASE 3: Enhanced terminal opening with validation
         try {
           terminal.open(terminalContentBody);
-          
+
           // Validate terminal opened successfully
           const xtermElement = terminalContentBody.querySelector('.xterm');
           if (!xtermElement) {
             throw new Error('Terminal did not render properly - no .xterm element found');
           }
-          
+
           terminalLogger.info(`✅ Terminal opened successfully in container: ${terminalId}`);
         } catch (error) {
           terminalLogger.error(`Terminal opening failed: ${error}`);
@@ -424,28 +435,38 @@ export class TerminalLifecycleManager {
               setTimeout(() => {
                 // Only activate terminal if no text is selected (VS Code standard behavior)
                 if (!terminal.hasSelection()) {
-                  terminalLogger.info(`🎯 Terminal clicked for activation (no selection): ${terminalId}`);
+                  terminalLogger.info(
+                    `🎯 Terminal clicked for activation (no selection): ${terminalId}`
+                  );
                   this.coordinator?.setActiveTerminalId(terminalId);
-                  
+
                   // Only focus if not already focused to avoid interrupting output
                   if (!terminal.textarea?.hasAttribute('focused')) {
                     terminal.focus();
                   }
                 } else {
-                  terminalLogger.debug(`🎯 Click ignored due to text selection in terminal: ${terminalId}`);
+                  terminalLogger.debug(
+                    `🎯 Click ignored due to text selection in terminal: ${terminalId}`
+                  );
                 }
               }, 5); // Optimized delay
             };
-            
+
             xtermElement.addEventListener('click', clickHandler);
-            this.eventRegistry.register(`terminal-${terminalId}-click`, xtermElement, 'click', clickHandler);
-            
-            terminalLogger.info(`✅ VS Code standard mouse handling enabled for terminal: ${terminalId}`);
+            this.eventRegistry.register(
+              `terminal-${terminalId}-click`,
+              xtermElement,
+              'click',
+              clickHandler
+            );
+
+            terminalLogger.info(
+              `✅ VS Code standard mouse handling enabled for terminal: ${terminalId}`
+            );
           }
-          
+
           // Enable VS Code standard scrollbar display
           this.enableScrollbarDisplay(xtermElement, terminalId);
-          
         }, 50); // Optimized delay
 
         // Make container visible
@@ -461,9 +482,11 @@ export class TerminalLifecycleManager {
 
         // Use provided terminal number or extract from ID (terminal-X format)
         const finalTerminalNumber = terminalNumber || this.extractTerminalNumber(terminalId);
-        
-        terminalLogger.info(`Terminal number: ${finalTerminalNumber} (${terminalNumber ? 'from Extension' : 'extracted from ID'})`);
-        
+
+        terminalLogger.info(
+          `Terminal number: ${finalTerminalNumber} (${terminalNumber ? 'from Extension' : 'extracted from ID'})`
+        );
+
         // Create terminal instance with VS Code Standard Addons
         const terminalInstance: TerminalInstance = {
           id: terminalId,
@@ -488,18 +511,29 @@ export class TerminalLifecycleManager {
           const uiManager = this.coordinator?.getManagers()?.ui;
           if (uiManager && 'headerElementsCache' in uiManager) {
             // Add header elements to UIManager cache for AI Agent status updates
-            (uiManager as any).headerElementsCache.set(terminalId, containerElements.headerElements);
-            terminalLogger.info(`✅ Header elements registered with UIManager for AI Agent support: ${terminalId}`);
+            (uiManager as any).headerElementsCache.set(
+              terminalId,
+              containerElements.headerElements
+            );
+            terminalLogger.info(
+              `✅ Header elements registered with UIManager for AI Agent support: ${terminalId}`
+            );
           }
         }
 
         // 🔍 DEBUG: Verify DOM structure and visibility
         const mainTerminalBody = document.getElementById('terminal-body');
         if (mainTerminalBody) {
-          terminalLogger.info(`✅ terminal-body exists, children count: ${mainTerminalBody.children.length}`);
-          terminalLogger.info(`✅ container added to DOM, display: ${mainContainer.style.display}, visibility: ${mainContainer.style.visibility}`);
-          terminalLogger.info(`✅ container dimensions: ${mainContainer.offsetWidth}x${mainContainer.offsetHeight}`);
-          
+          terminalLogger.info(
+            `✅ terminal-body exists, children count: ${mainTerminalBody.children.length}`
+          );
+          terminalLogger.info(
+            `✅ container added to DOM, display: ${mainContainer.style.display}, visibility: ${mainContainer.style.visibility}`
+          );
+          terminalLogger.info(
+            `✅ container dimensions: ${mainContainer.offsetWidth}x${mainContainer.offsetHeight}`
+          );
+
           // Verify container is actually in DOM
           if (mainTerminalBody.contains(mainContainer)) {
             terminalLogger.info(`✅ container is properly attached to terminal-body`);
@@ -524,37 +558,45 @@ export class TerminalLifecycleManager {
         // Setup shell integration decorations
         this.setupShellIntegration(terminal, terminalId);
 
-        const creationTime = performanceMonitor.endTimer(`terminal-creation-attempt-${terminalId}-${currentRetry}`);
-        terminalLogger.info(`✅ Terminal created successfully: ${terminalId} (${creationTime?.toFixed(2)}ms)`);
+        const creationTime = performanceMonitor.endTimer(
+          `terminal-creation-attempt-${terminalId}-${currentRetry}`
+        );
+        terminalLogger.info(
+          `✅ Terminal created successfully: ${terminalId} (${creationTime?.toFixed(2)}ms)`
+        );
         return terminal;
-        
       } catch (error) {
         performanceMonitor.endTimer(`terminal-creation-attempt-${terminalId}-${currentRetry}`);
-        terminalLogger.error(`❌ Terminal creation attempt ${currentRetry + 1} failed for ${terminalId}:`, error);
-        
+        terminalLogger.error(
+          `❌ Terminal creation attempt ${currentRetry + 1} failed for ${terminalId}:`,
+          error
+        );
+
         // 🚀 PHASE 3: Enhanced error recovery logic
         if (currentRetry < maxRetries) {
           currentRetry++;
-          terminalLogger.info(`🔄 Retrying terminal creation: ${terminalId} (attempt ${currentRetry + 1}/${maxRetries + 1})`);
-          
+          terminalLogger.info(
+            `🔄 Retrying terminal creation: ${terminalId} (attempt ${currentRetry + 1}/${maxRetries + 1})`
+          );
+
           // Clean up any partial state before retry
           const existingContainer = document.querySelector(`[data-terminal-id="${terminalId}"]`);
           if (existingContainer) {
             existingContainer.remove();
             terminalLogger.info(`🧹 Cleaned up partial container before retry: ${terminalId}`);
           }
-          
+
           // Brief delay before retry
-          await new Promise(resolve => setTimeout(resolve, 100));
+          await new Promise((resolve) => setTimeout(resolve, 100));
           return attemptCreation();
         }
-        
+
         // All retries exhausted
         terminalLogger.error(`❌ All retry attempts exhausted for terminal ${terminalId}`);
         throw error;
       }
     };
-    
+
     return attemptCreation();
   }
 
@@ -574,7 +616,7 @@ export class TerminalLifecycleManager {
       // Find xterm viewport element (where scrollbar should appear)
       const viewport = xtermElement.querySelector('.xterm-viewport') as HTMLElement;
       const screen = xtermElement.querySelector('.xterm-screen') as HTMLElement;
-      
+
       if (!viewport) {
         terminalLogger.warn(`Viewport not found for terminal ${terminalId}`);
         return;
@@ -582,13 +624,13 @@ export class TerminalLifecycleManager {
 
       // Apply VS Code standard viewport settings for maximum display area
       viewport.style.overflow = 'auto';
-      viewport.style.scrollbarWidth = 'auto';  // Standard scrollbar width
+      viewport.style.scrollbarWidth = 'auto'; // Standard scrollbar width
       viewport.style.position = 'absolute';
       viewport.style.top = '0';
       viewport.style.left = '0';
-      viewport.style.right = '0';  
-      viewport.style.bottom = '0'; 
-      
+      viewport.style.right = '0';
+      viewport.style.bottom = '0';
+
       // Ensure screen uses full available space
       if (screen) {
         screen.style.position = 'relative';
@@ -706,14 +748,16 @@ export class TerminalLifecycleManager {
           z-index: 32;
         }
       `;
-      
+
       // Append style if not already added
       if (!document.head.querySelector('#terminal-scrollbar-styles')) {
         style.id = 'terminal-scrollbar-styles';
         document.head.appendChild(style);
       }
-      
-      terminalLogger.info(`✅ VS Code standard full viewport and scrollbar enabled for terminal: ${terminalId}`);
+
+      terminalLogger.info(
+        `✅ VS Code standard full viewport and scrollbar enabled for terminal: ${terminalId}`
+      );
     } catch (error) {
       terminalLogger.error(`Failed to enable scrollbar for terminal ${terminalId}:`, error);
     }
@@ -751,7 +795,9 @@ export class TerminalLifecycleManager {
         // Use FitAddon for initial sizing - it's most reliable
         fitAddon.fit();
 
-        terminalLogger.debug(`Terminal initial size: ${terminalId} (${terminal.cols}x${terminal.rows})`);
+        terminalLogger.debug(
+          `Terminal initial size: ${terminalId} (${terminal.cols}x${terminal.rows})`
+        );
 
         // Focus the terminal
         terminal.focus();
@@ -821,7 +867,9 @@ export class TerminalLifecycleManager {
         rows: terminal.rows,
       });
 
-      terminalLogger.debug(`Sent resize notification: ${terminalId} (${terminal.cols}x${terminal.rows})`);
+      terminalLogger.debug(
+        `Sent resize notification: ${terminalId} (${terminal.cols}x${terminal.rows})`
+      );
     } catch (error) {
       terminalLogger.error(`Failed to notify extension of resize for ${terminalId}:`, error);
     }
@@ -957,11 +1005,11 @@ export class TerminalLifecycleManager {
       }
 
       terminalInstance.terminal.write(data);
-      
+
       // Auto-scroll to bottom to match VS Code standard terminal behavior
       // This ensures users always see the latest output
       terminalInstance.terminal.scrollToBottom();
-      
+
       return true;
     } catch (error) {
       terminalLogger.error(`Failed to write to terminal:`, error);
@@ -984,10 +1032,10 @@ export class TerminalLifecycleManager {
 
       // Apply basic theming
       // Note: Simplified approach without complex theme management
-      
+
       // Get theme colors using ThemeManager
       const themeColors = ThemeManager.getThemeColors();
-      
+
       container.style.cssText = `
         display: flex;
         flex-direction: column;
@@ -1051,7 +1099,7 @@ export class TerminalLifecycleManager {
     if (match && match[1]) {
       return parseInt(match[1], 10);
     }
-    
+
     // Fallback: find available number
     const existingNumbers = new Set<number>();
     const terminals = this.splitManager.getTerminals();
@@ -1060,15 +1108,17 @@ export class TerminalLifecycleManager {
         existingNumbers.add(terminal.number);
       }
     });
-    
+
     // Find first available number (1-5)
     for (let i = 1; i <= 5; i++) {
       if (!existingNumbers.has(i)) {
         return i;
       }
     }
-    
-    terminalLogger.warn(`Could not extract terminal number from ID: ${terminalId}, defaulting to 1`);
+
+    terminalLogger.warn(
+      `Could not extract terminal number from ID: ${terminalId}, defaulting to 1`
+    );
     return 1;
   }
 

@@ -32,7 +32,7 @@ export interface MessageHandler {
 
 /**
  * Service responsible for routing and handling WebView messages
- * 
+ *
  * This service extracts message routing logic from SecondaryTerminalProvider to improve:
  * - Single Responsibility: Focus only on message routing and delegation
  * - Testability: Isolated message handling logic with clear interfaces
@@ -79,14 +79,14 @@ export class WebViewMessageRoutingService {
    */
   async routeMessage(message: WebviewMessage, context: MessageHandlerContext): Promise<void> {
     log('📨 [MessageRouting] Routing webview message:', message.command);
-    
+
     if (this._isDebugCommand(message.command)) {
       log('🐛 [MessageRouting] Debug message details:', JSON.stringify(message, null, 2));
     }
 
     try {
       const handler = this._handlers.get(message.command);
-      
+
       if (handler) {
         log(`🎯 [MessageRouting] Found handler for command: ${message.command}`);
         await handler.handle(message.command, message, context);
@@ -95,7 +95,6 @@ export class WebViewMessageRoutingService {
         log(`⚠️ [MessageRouting] No handler found for command: ${message.command}`);
         await this._handleUnknownCommand(message, context);
       }
-
     } catch (error) {
       log(`❌ [MessageRouting] Error handling command ${message.command}:`, error);
       TerminalErrorHandler.handleWebviewError(error);
@@ -154,12 +153,15 @@ export class WebViewMessageRoutingService {
   /**
    * Handle unknown commands
    */
-  private async _handleUnknownCommand(message: WebviewMessage, _context: MessageHandlerContext): Promise<void> {
+  private async _handleUnknownCommand(
+    message: WebviewMessage,
+    _context: MessageHandlerContext
+  ): Promise<void> {
     log(`❓ [MessageRouting] Unknown command received: ${message.command}`);
-    
+
     // For debugging purposes, log full message for unknown commands
     log('📋 [MessageRouting] Unknown message details:', JSON.stringify(message, null, 2));
-    
+
     // Could potentially send an error response back to WebView
     // For now, just log it as this is typically not critical
   }
@@ -169,11 +171,11 @@ export class WebViewMessageRoutingService {
    */
   dispose(): void {
     log('🧹 [MessageRouting] Disposing message routing service');
-    
+
     // Clear all handlers
     this._handlers.clear();
     this._debugHandlers.clear();
-    
+
     log('✅ [MessageRouting] Message routing service disposed');
   }
 }
@@ -184,7 +186,11 @@ export class WebViewMessageRoutingService {
 export class DebugMessageHandler implements MessageHandler {
   readonly supportedCommands = ['htmlScriptTest', 'timeoutTest', 'test'];
 
-  async handle(command: string, message: WebviewMessage, _context: MessageHandlerContext): Promise<void> {
+  async handle(
+    command: string,
+    message: WebviewMessage,
+    _context: MessageHandlerContext
+  ): Promise<void> {
     switch (command) {
       case 'htmlScriptTest':
         log('🔥 [DEBUG] ========== HTML INLINE SCRIPT TEST MESSAGE RECEIVED ==========');
@@ -218,9 +224,17 @@ export class DebugMessageHandler implements MessageHandler {
  * Handler for initialization messages
  */
 export class InitializationMessageHandler implements MessageHandler {
-  readonly supportedCommands = ['webviewReady', TERMINAL_CONSTANTS.COMMANDS.READY, 'requestInitialTerminal'];
+  readonly supportedCommands = [
+    'webviewReady',
+    TERMINAL_CONSTANTS.COMMANDS.READY,
+    'requestInitialTerminal',
+  ];
 
-  async handle(command: string, message: WebviewMessage, context: MessageHandlerContext): Promise<void> {
+  async handle(
+    command: string,
+    message: WebviewMessage,
+    context: MessageHandlerContext
+  ): Promise<void> {
     switch (command) {
       case 'webviewReady':
       case TERMINAL_CONSTANTS.COMMANDS.READY:
@@ -261,14 +275,16 @@ export class InitializationMessageHandler implements MessageHandler {
             const terminalId = context.terminalManager.createTerminal();
             log(`✅ [INITIAL] Initial terminal created: ${terminalId}`);
             context.terminalManager.setActiveTerminal(terminalId);
-            
+
             // Send terminal update to WebView
             await context.sendMessage({
               command: 'stateUpdate',
-              state: context.terminalManager.getCurrentState()
+              state: context.terminalManager.getCurrentState(),
             });
           } else {
-            log(`🔍 [INITIAL] Terminals already exist (${context.terminalManager.getTerminals().length}), skipping creation`);
+            log(
+              `🔍 [INITIAL] Terminals already exist (${context.terminalManager.getTerminals().length}), skipping creation`
+            );
           }
         } catch (error) {
           log(`❌ [INITIAL] Failed to create requested initial terminal: ${String(error)}`);
@@ -281,38 +297,40 @@ export class InitializationMessageHandler implements MessageHandler {
         try {
           // Note: Session restoration handled via other services
           log('🔄 [RESTORATION] Session restoration delegated to terminal manager');
-          
+
           // Fallback: Create an initial terminal if none exist
           if (context.terminalManager.getTerminals().length === 0) {
             const terminalId = context.terminalManager.createTerminal();
             log(`✅ [RESTORATION] Created fallback terminal: ${terminalId}`);
             context.terminalManager.setActiveTerminal(terminalId);
-            
+
             // Send terminal update to WebView
             await context.sendMessage({
               command: 'stateUpdate',
-              state: context.terminalManager.getCurrentState()
+              state: context.terminalManager.getCurrentState(),
             });
           }
         } catch (error) {
           log(`❌ [RESTORATION] Session restoration failed: ${String(error)}`);
           console.error('❌ [RESTORATION] Error details:', error);
-          
+
           // Fallback: Create an initial terminal if none exist
           try {
             if (context.terminalManager.getTerminals().length === 0) {
               const terminalId = context.terminalManager.createTerminal();
               log(`✅ [RESTORATION] Created emergency fallback terminal: ${terminalId}`);
               context.terminalManager.setActiveTerminal(terminalId);
-              
+
               // Send terminal update to WebView
               await context.sendMessage({
                 command: 'stateUpdate',
-                state: context.terminalManager.getCurrentState()
+                state: context.terminalManager.getCurrentState(),
               });
             }
           } catch (fallbackError) {
-            log(`❌ [RESTORATION] Even fallback terminal creation failed: ${String(fallbackError)}`);
+            log(
+              `❌ [RESTORATION] Even fallback terminal creation failed: ${String(fallbackError)}`
+            );
           }
         }
         break;
@@ -324,9 +342,16 @@ export class InitializationMessageHandler implements MessageHandler {
  * Handler for terminal control messages (input, resize, etc.)
  */
 export class TerminalControlMessageHandler implements MessageHandler {
-  readonly supportedCommands = [TERMINAL_CONSTANTS.COMMANDS.INPUT, TERMINAL_CONSTANTS.COMMANDS.RESIZE];
+  readonly supportedCommands = [
+    TERMINAL_CONSTANTS.COMMANDS.INPUT,
+    TERMINAL_CONSTANTS.COMMANDS.RESIZE,
+  ];
 
-  async handle(command: string, message: WebviewMessage, context: MessageHandlerContext): Promise<void> {
+  async handle(
+    command: string,
+    message: WebviewMessage,
+    context: MessageHandlerContext
+  ): Promise<void> {
     switch (command) {
       case TERMINAL_CONSTANTS.COMMANDS.INPUT:
         if (message.data) {
@@ -344,7 +369,9 @@ export class TerminalControlMessageHandler implements MessageHandler {
 
       case TERMINAL_CONSTANTS.COMMANDS.RESIZE:
         if (message.cols && message.rows) {
-          log(`📏 [DEBUG] Terminal resize: ${message.cols}x${message.rows}, terminalId: ${message.terminalId}`);
+          log(
+            `📏 [DEBUG] Terminal resize: ${message.cols}x${message.rows}, terminalId: ${message.terminalId}`
+          );
           context.terminalManager.resizeTerminal(message.terminalId, message.cols, message.rows);
         }
         break;
@@ -358,7 +385,11 @@ export class TerminalControlMessageHandler implements MessageHandler {
 export class SettingsMessageHandler implements MessageHandler {
   readonly supportedCommands = ['getSettings', 'updateSettings'];
 
-  async handle(command: string, message: WebviewMessage, _context: MessageHandlerContext): Promise<void> {
+  async handle(
+    command: string,
+    message: WebviewMessage,
+    _context: MessageHandlerContext
+  ): Promise<void> {
     switch (command) {
       case 'getSettings':
         log('⚙️ [DEBUG] Getting settings from webview...');
@@ -371,7 +402,7 @@ export class SettingsMessageHandler implements MessageHandler {
         log('⚙️ [DEBUG] Updating settings from webview:', message.settings);
         if (message.settings) {
           // This would need to be implemented with actual settings logic
-          // For now, delegate back to the provider  
+          // For now, delegate back to the provider
           // TODO: Extract settings logic into a dedicated service
         }
         break;
@@ -383,9 +414,20 @@ export class SettingsMessageHandler implements MessageHandler {
  * Handler for terminal management messages (create, delete, focus, etc.)
  */
 export class TerminalManagementMessageHandler implements MessageHandler {
-  readonly supportedCommands = ['createTerminal', 'splitTerminal', 'focusTerminal', 'terminalClosed', 'killTerminal', 'deleteTerminal'];
+  readonly supportedCommands = [
+    'createTerminal',
+    'splitTerminal',
+    'focusTerminal',
+    'terminalClosed',
+    'killTerminal',
+    'deleteTerminal',
+  ];
 
-  async handle(command: string, message: WebviewMessage, context: MessageHandlerContext): Promise<void> {
+  async handle(
+    command: string,
+    message: WebviewMessage,
+    context: MessageHandlerContext
+  ): Promise<void> {
     switch (command) {
       case 'createTerminal':
         log('🆕 [DEBUG] Creating new terminal from webview...');
@@ -393,11 +435,13 @@ export class TerminalManagementMessageHandler implements MessageHandler {
           const newTerminalId = context.terminalManager.createTerminal();
           if (newTerminalId) {
             log(`✅ [DEBUG] Terminal created from webview: ${newTerminalId}`);
-            
+
             const terminalInstance = context.terminalManager.getTerminalById(newTerminalId);
             if (terminalInstance) {
               // VS Code Pattern: Map Extension terminal ID to WebView terminal ID
-              log(`🔗 [VS Code Pattern] Mapped Extension ID ${newTerminalId} → WebView ID ${message.terminalId}`);
+              log(
+                `🔗 [VS Code Pattern] Mapped Extension ID ${newTerminalId} → WebView ID ${message.terminalId}`
+              );
             }
           } else {
             log(`❌ [DEBUG] Terminal ${message.terminalId} already exists, skipping creation`);
@@ -415,23 +459,25 @@ export class TerminalManagementMessageHandler implements MessageHandler {
       case 'focusTerminal':
         log('🎯 [DEBUG] ========== FOCUS TERMINAL COMMAND RECEIVED ==========');
         const terminalId = message.terminalId as string;
-        
+
         const currentActive = context.terminalManager.getActiveTerminalId();
         log(`🔍 [DEBUG] Current active terminal: ${currentActive}`);
         log(`🔍 [DEBUG] Requested active terminal: ${terminalId}`);
-        
+
         if (terminalId) {
           log(`🎯 [DEBUG] Setting active terminal to: ${terminalId}`);
           try {
             context.terminalManager.setActiveTerminal(terminalId);
-            
+
             const newActive = context.terminalManager.getActiveTerminalId();
             log(`🔍 [DEBUG] Verified active terminal after update: ${newActive}`);
-            
+
             if (newActive === terminalId) {
               log(`✅ [DEBUG] Active terminal successfully updated to: ${terminalId}`);
             } else {
-              log(`❌ [DEBUG] Active terminal update failed. Expected: ${terminalId}, Got: ${newActive}`);
+              log(
+                `❌ [DEBUG] Active terminal update failed. Expected: ${terminalId}, Got: ${newActive}`
+              );
             }
           } catch (error) {
             log(`❌ [DEBUG] Error setting active terminal:`, error);
@@ -470,7 +516,9 @@ export class TerminalManagementMessageHandler implements MessageHandler {
             log(`❌ [DEBUG] Error in killSpecificTerminal:`, error);
           }
         } else {
-          log('🗑️ [DEBUG] Killing active terminal (no specific ID provided) - this is the panel trash button behavior');
+          log(
+            '🗑️ [DEBUG] Killing active terminal (no specific ID provided) - this is the panel trash button behavior'
+          );
           try {
             await context.killTerminal();
             log('🗑️ [DEBUG] killTerminal (active terminal deletion) completed');
@@ -493,13 +541,13 @@ export class TerminalManagementMessageHandler implements MessageHandler {
             await context.deleteTerminalUnified(deleteTerminalId, requestSource);
           } catch (error) {
             log(`❌ [DEBUG] Error in deleteTerminal:`, error);
-            
+
             // Send error response to WebView
             await context.sendMessage({
               command: 'deleteTerminalResponse',
               terminalId: deleteTerminalId,
               success: false,
-              reason: `Delete failed: ${String(error)}`
+              reason: `Delete failed: ${String(error)}`,
             });
           }
         } else {
@@ -516,7 +564,11 @@ export class TerminalManagementMessageHandler implements MessageHandler {
 export class PanelLocationMessageHandler implements MessageHandler {
   readonly supportedCommands = ['reportPanelLocation'];
 
-  async handle(command: string, message: WebviewMessage, context: MessageHandlerContext): Promise<void> {
+  async handle(
+    command: string,
+    message: WebviewMessage,
+    context: MessageHandlerContext
+  ): Promise<void> {
     if (command === 'reportPanelLocation') {
       log('📍 [DEBUG] Panel location reported from WebView:', message.location);
       if (message.location) {
@@ -545,10 +597,14 @@ export class PanelLocationMessageHandler implements MessageHandler {
 export class CliAgentMessageHandler implements MessageHandler {
   readonly supportedCommands = ['switchAiAgent'];
 
-  async handle(command: string, message: WebviewMessage, context: MessageHandlerContext): Promise<void> {
+  async handle(
+    command: string,
+    message: WebviewMessage,
+    context: MessageHandlerContext
+  ): Promise<void> {
     if (command === 'switchAiAgent') {
       log('📎 [DEBUG] ========== SWITCH AI AGENT COMMAND RECEIVED ==========');
-      
+
       const terminalId = message.terminalId as string;
       log('📎 [DEBUG] Terminal ID:', terminalId);
       log('📎 [DEBUG] Full message:', message);
@@ -558,24 +614,24 @@ export class CliAgentMessageHandler implements MessageHandler {
           // This would need to be implemented with actual CLI agent logic
           // For now, just log the request
           log(`📎 [DEBUG] Switching AI Agent for terminal: ${terminalId}`);
-          
+
           // Send success response (placeholder)
           await context.sendMessage({
             command: 'switchAiAgentResponse',
             terminalId,
             success: true,
             newStatus: 'connected',
-            agentType: 'claude'
+            agentType: 'claude',
           });
         } catch (error) {
           log('❌ [ERROR] Error switching AI Agent:', error);
-          
+
           // Send error response to WebView
           await context.sendMessage({
             command: 'switchAiAgentResponse',
             terminalId,
             success: false,
-            reason: `Switch failed: ${String(error)}`
+            reason: `Switch failed: ${String(error)}`,
           });
         }
       }

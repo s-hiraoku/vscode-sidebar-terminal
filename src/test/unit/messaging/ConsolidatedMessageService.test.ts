@@ -1,6 +1,6 @@
 /**
  * ConsolidatedMessageService Test Suite
- * 
+ *
  * Tests the unified message handling system that consolidates:
  * - WebViewMessageHandlerService (Command pattern)
  * - RefactoredMessageManager (Queue-based processing)
@@ -26,10 +26,10 @@ describe('ConsolidatedMessageService', () => {
     // Create comprehensive mock coordinator
     mockCoordinator = {
       postMessageToExtension: sinon.stub().resolves(),
-      getTerminalInstance: sinon.stub().callsFake((id: string) => ({ 
-        id, 
+      getTerminalInstance: sinon.stub().callsFake((id: string) => ({
+        id,
         name: `Terminal ${id}`,
-        terminal: { write: sinon.stub(), clear: sinon.stub() }
+        terminal: { write: sinon.stub(), clear: sinon.stub() },
       })),
       createTerminal: sinon.stub().resolves(true),
       setActiveTerminalId: sinon.stub(),
@@ -40,7 +40,7 @@ describe('ConsolidatedMessageService', () => {
       applyFontSettings: sinon.stub(),
       getManagers: sinon.stub().returns({
         performance: { bufferedWrite: sinon.stub() },
-        notification: { showNotificationInTerminal: sinon.stub() }
+        notification: { showNotificationInTerminal: sinon.stub() },
       }),
       updateState: sinon.stub(),
       handleTerminalRemovedFromExtension: sinon.stub(),
@@ -60,7 +60,7 @@ describe('ConsolidatedMessageService', () => {
         // Ignore disposal errors in tests
       }
     }
-    
+
     if (clock) {
       clock.restore();
     }
@@ -73,12 +73,12 @@ describe('ConsolidatedMessageService', () => {
 
     it('should provide comprehensive statistics', () => {
       const stats = messageService.getDetailedStats();
-      
+
       expect(stats).to.have.property('dispatcher');
       expect(stats).to.have.property('supportedCommands');
       expect(stats).to.have.property('isReady');
       expect(stats).to.have.property('initialized');
-      
+
       expect(stats.supportedCommands).to.be.an('array');
       expect(stats.supportedCommands.length).to.be.greaterThan(0);
     });
@@ -86,22 +86,22 @@ describe('ConsolidatedMessageService', () => {
     it('should support all critical message types', () => {
       const stats = messageService.getDetailedStats();
       const commands = stats.supportedCommands;
-      
+
       // System messages
       expect(commands).to.include('init');
       expect(commands).to.include('settingsResponse');
       expect(commands).to.include('fontSettingsUpdate');
       expect(commands).to.include('stateUpdate');
-      
+
       // Terminal lifecycle
       expect(commands).to.include('terminalCreated');
       expect(commands).to.include('terminalRemoved');
       expect(commands).to.include('focusTerminal');
       expect(commands).to.include('clear');
-      
+
       // Terminal output
       expect(commands).to.include('output');
-      
+
       // CLI Agent
       expect(commands).to.include('cliAgentStatusUpdate');
       expect(commands).to.include('cliAgentFullStateSync');
@@ -112,7 +112,7 @@ describe('ConsolidatedMessageService', () => {
     it('should process init messages correctly', async () => {
       const initMessage: WebviewMessage = {
         command: 'init',
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
 
       await messageService.receiveMessage(initMessage, mockCoordinator);
@@ -126,7 +126,7 @@ describe('ConsolidatedMessageService', () => {
         command: 'output',
         data: 'Hello World',
         terminalId: 'terminal-1',
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
 
       await messageService.receiveMessage(outputMessage, mockCoordinator);
@@ -141,25 +141,27 @@ describe('ConsolidatedMessageService', () => {
         terminalId: 'new-terminal',
         terminalName: 'New Terminal',
         terminalNumber: 2,
-        config: { 
+        config: {
           shell: '/bin/bash',
           shellArgs: [],
           fontSize: 14,
           fontFamily: 'monospace',
           cursorBlink: true,
-          maxTerminals: 5
+          maxTerminals: 5,
         },
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
 
       await messageService.receiveMessage(createMessage, mockCoordinator);
 
-      expect(mockCoordinator.createTerminal.calledWith(
-        'new-terminal', 
-        'New Terminal', 
-        { shell: '/bin/bash' }, 
-        2
-      )).to.be.true;
+      expect(
+        mockCoordinator.createTerminal.calledWith(
+          'new-terminal',
+          'New Terminal',
+          { shell: '/bin/bash' },
+          2
+        )
+      ).to.be.true;
     });
 
     it('should process CLI Agent status updates', async () => {
@@ -169,30 +171,27 @@ describe('ConsolidatedMessageService', () => {
           status: 'connected',
           activeTerminalName: 'Terminal 1',
           agentType: 'claude',
-          terminalId: 'terminal-1'
+          terminalId: 'terminal-1',
         },
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
 
       await messageService.receiveMessage(statusMessage, mockCoordinator);
 
-      expect(mockCoordinator.updateCliAgentStatus.calledWith(
-        'terminal-1',
-        'connected',
-        'claude'
-      )).to.be.true;
+      expect(mockCoordinator.updateCliAgentStatus.calledWith('terminal-1', 'connected', 'claude'))
+        .to.be.true;
     });
 
     it('should handle invalid messages gracefully', async () => {
       const invalidMessage = {
         // Missing command property
         data: 'invalid',
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
 
       // Should not throw
       await messageService.receiveMessage(invalidMessage as any, mockCoordinator);
-      
+
       // Should not have processed the message
       expect(mockCoordinator.postMessageToExtension.callCount).to.equal(0);
     });
@@ -226,40 +225,35 @@ describe('ConsolidatedMessageService', () => {
     it('should implement IMessageManager interface correctly', () => {
       // Test sendInput
       messageService.sendInput('test input', 'terminal-1', mockCoordinator);
-      
+
       // Test sendResize
       messageService.sendResize(80, 24, 'terminal-1', mockCoordinator);
-      
+
       // Test requestSettings
       messageService.requestSettings(mockCoordinator);
-      
+
       // Test sendReadyMessage
       messageService.sendReadyMessage(mockCoordinator);
-      
+
       // Should complete without errors
       expect(true).to.be.true;
     });
 
     it('should provide queue statistics', () => {
       const stats = messageService.getQueueStats();
-      
+
       expect(stats).to.have.property('queueSize');
       expect(stats).to.have.property('isProcessing');
       expect(stats).to.have.property('highPriorityQueueSize');
       expect(stats).to.have.property('isLocked');
-      
+
       expect(stats.queueSize).to.be.a('number');
       expect(stats.isProcessing).to.be.a('boolean');
       expect(stats.isLocked).to.equal(false); // Unified dispatcher doesn't use locking
     });
 
     it('should emit terminal interaction events', () => {
-      messageService.emitTerminalInteractionEvent(
-        'webview-ready',
-        '',
-        undefined,
-        mockCoordinator
-      );
+      messageService.emitTerminalInteractionEvent('webview-ready', '', undefined, mockCoordinator);
 
       // Should complete without errors
       expect(true).to.be.true;
@@ -270,12 +264,12 @@ describe('ConsolidatedMessageService', () => {
     it('should handle coordinator errors gracefully', async () => {
       // Make coordinator methods throw errors
       mockCoordinator.getTerminalInstance.throws(new Error('Terminal not found'));
-      
+
       const outputMessage: WebviewMessage = {
         command: 'output',
         data: 'test',
         terminalId: 'invalid-terminal',
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
 
       // Should not throw
@@ -289,7 +283,7 @@ describe('ConsolidatedMessageService', () => {
         command: 'output',
         data: 'test',
         terminalId: '', // Invalid terminal ID
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
 
       await messageService.receiveMessage(errorMessage, mockCoordinator);
@@ -297,7 +291,7 @@ describe('ConsolidatedMessageService', () => {
       // Should still be able to process valid messages
       const validMessage: WebviewMessage = {
         command: 'init',
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
 
       await messageService.receiveMessage(validMessage, mockCoordinator);
@@ -313,12 +307,12 @@ describe('ConsolidatedMessageService', () => {
 
     it('should clear queues on demand', () => {
       messageService.postMessage({ command: 'test', data: 'queued' });
-      
+
       let stats = messageService.getQueueStats();
       const queueSizeBefore = stats.queueSize;
-      
+
       messageService.clearQueue();
-      
+
       stats = messageService.getQueueStats();
       expect(stats.queueSize).to.be.lessThanOrEqual(queueSizeBefore);
     });

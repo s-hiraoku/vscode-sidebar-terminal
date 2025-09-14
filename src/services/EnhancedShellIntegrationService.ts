@@ -1,6 +1,6 @@
 /**
  * Enhanced Shell Integration Service - VS Code標準シェル統合機能の完全実装
- * 
+ *
  * VS Code標準のシェル統合機能を完全に実装:
  * - Command tracking with status indicators
  * - Working directory detection and display
@@ -39,7 +39,7 @@ export class EnhancedShellIntegrationService extends ShellIntegrationService {
     terminalId: string;
     commands: EnhancedShellCommand[];
   }>();
-  
+
   private _terminalStatuses = new Map<string, TerminalStatusInfo>();
   private _globalCommandHistory: EnhancedShellCommand[] = [];
   private _webviewProvider: SecondaryTerminalProvider | null = null;
@@ -47,7 +47,8 @@ export class EnhancedShellIntegrationService extends ShellIntegrationService {
   public readonly onStatusUpdate = this._statusEmitter.event;
   public readonly onCommandHistoryUpdate = this._commandHistoryEmitter.event;
 
-  constructor(terminalManager: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+  constructor(terminalManager: any) {
+    // eslint-disable-line @typescript-eslint/no-explicit-any
     super(terminalManager);
     this.setupAdvancedPatterns();
   }
@@ -66,23 +67,23 @@ export class EnhancedShellIntegrationService extends ShellIntegrationService {
    */
   public initializeTerminal(terminalId: string, terminalName?: string): void {
     // Base class doesn't have initializeTerminal, so we handle initialization ourselves
-    
+
     const status: TerminalStatusInfo = {
       terminalId,
       currentCwd: process.cwd(),
       commandStatus: 'idle',
-      commandCount: 0
+      commandCount: 0,
     };
-    
+
     this._terminalStatuses.set(terminalId, status);
     this._statusEmitter.fire(status);
-    
+
     // Send initial status to webview
     this.sendToWebview('shellIntegrationStatus', {
       terminalId,
-      status
+      status,
     });
-    
+
     log(`🔧 [ENHANCED-SHELL] Terminal ${terminalId} (${terminalName}) initialized`);
   }
 
@@ -91,7 +92,7 @@ export class EnhancedShellIntegrationService extends ShellIntegrationService {
    */
   public override processTerminalData(terminalId: string, data: string): void {
     super.processTerminalData(terminalId, data);
-    
+
     const status = this._terminalStatuses.get(terminalId);
     if (!status) return;
 
@@ -112,7 +113,7 @@ export class EnhancedShellIntegrationService extends ShellIntegrationService {
    */
   public override getCommandHistory(terminalId: string): EnhancedShellCommand[] {
     const terminalName = this.getTerminalName(terminalId);
-    return this._globalCommandHistory.filter(cmd => cmd.terminalName === terminalName);
+    return this._globalCommandHistory.filter((cmd) => cmd.terminalName === terminalName);
   }
 
   /**
@@ -129,26 +130,28 @@ export class EnhancedShellIntegrationService extends ShellIntegrationService {
     if (terminalId) {
       const terminalName = this.getTerminalName(terminalId);
       this._globalCommandHistory = this._globalCommandHistory.filter(
-        cmd => cmd.terminalName !== terminalName
+        (cmd) => cmd.terminalName !== terminalName
       );
-      
+
       this._commandHistoryEmitter.fire({
         terminalId,
-        commands: []
+        commands: [],
       });
     } else {
       this._globalCommandHistory.length = 0;
-      
+
       // Emit empty history for all terminals
       for (const [id] of this._terminalStatuses) {
         this._commandHistoryEmitter.fire({
           terminalId: id,
-          commands: []
+          commands: [],
         });
       }
     }
-    
-    log(`🧹 [ENHANCED-SHELL] Command history cleared ${terminalId ? `for ${terminalId}` : 'globally'}`);
+
+    log(
+      `🧹 [ENHANCED-SHELL] Command history cleared ${terminalId ? `for ${terminalId}` : 'globally'}`
+    );
   }
 
   /**
@@ -157,27 +160,27 @@ export class EnhancedShellIntegrationService extends ShellIntegrationService {
   public async executeRecentCommand(terminalId: string): Promise<string | null> {
     const history = this.getCommandHistory(terminalId);
     if (history.length === 0) return null;
-    
+
     const recentCommands = history
       .slice(-10)
       .reverse()
-      .map(cmd => ({
+      .map((cmd) => ({
         label: cmd.command,
         description: `${cmd.cwd} • ${cmd.status === 'success' ? '✅' : '❌'} ${cmd.exitCode}`,
-        detail: new Date(cmd.timestamp).toLocaleString()
+        detail: new Date(cmd.timestamp).toLocaleString(),
       }));
-    
+
     const selected = await vscode.window.showQuickPick(recentCommands, {
       placeHolder: 'Select a recent command to execute',
       matchOnDescription: true,
-      matchOnDetail: true
+      matchOnDetail: true,
     });
-    
+
     if (selected) {
       log(`🔄 [ENHANCED-SHELL] Executing recent command: ${selected.label}`);
       return selected.label;
     }
-    
+
     return null;
   }
 
@@ -187,14 +190,14 @@ export class EnhancedShellIntegrationService extends ShellIntegrationService {
   public navigateToCommand(terminalId: string, direction: 'previous' | 'next'): void {
     const history = this.getCommandHistory(terminalId);
     if (history.length === 0) return;
-    
+
     // This would integrate with xterm.js to actually scroll to the command
     this.sendToWebview('navigateToCommand', {
       terminalId,
       direction,
-      commands: history
+      commands: history,
     });
-    
+
     log(`🧭 [ENHANCED-SHELL] Navigate ${direction} command in ${terminalId}`);
   }
 
@@ -210,7 +213,11 @@ export class EnhancedShellIntegrationService extends ShellIntegrationService {
    * Send message to webview
    */
   private sendToWebview(command: string, data: Record<string, unknown>): void {
-    if (this._webviewProvider && 'sendMessage' in this._webviewProvider && typeof this._webviewProvider.sendMessage === 'function') {
+    if (
+      this._webviewProvider &&
+      'sendMessage' in this._webviewProvider &&
+      typeof this._webviewProvider.sendMessage === 'function'
+    ) {
       this._webviewProvider.sendMessage({ command, ...data });
     }
   }
@@ -228,15 +235,15 @@ export class EnhancedShellIntegrationService extends ShellIntegrationService {
    */
   public removeTerminal(terminalId: string): void {
     super.disposeTerminal(terminalId);
-    
+
     this._terminalStatuses.delete(terminalId);
-    
+
     // Clear terminal-specific command history
     const terminalName = this.getTerminalName(terminalId);
     this._globalCommandHistory = this._globalCommandHistory.filter(
-      cmd => cmd.terminalName !== terminalName
+      (cmd) => cmd.terminalName !== terminalName
     );
-    
+
     log(`🧹 [ENHANCED-SHELL] Terminal ${terminalId} removed from enhanced shell integration`);
   }
 
@@ -245,12 +252,12 @@ export class EnhancedShellIntegrationService extends ShellIntegrationService {
    */
   public override dispose(): void {
     super.dispose();
-    
+
     this._statusEmitter.dispose();
     this._commandHistoryEmitter.dispose();
     this._terminalStatuses.clear();
     this._globalCommandHistory.length = 0;
-    
+
     log('🧹 [ENHANCED-SHELL] Enhanced shell integration service disposed');
   }
 }

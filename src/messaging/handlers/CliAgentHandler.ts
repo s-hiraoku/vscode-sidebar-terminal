@@ -1,6 +1,6 @@
 /**
  * CLI Agent Handler
- * 
+ *
  * Handles CLI Agent (Claude, Gemini) status updates and management.
  */
 
@@ -10,11 +10,10 @@ import { BaseMessageHandler } from './BaseMessageHandler';
 
 export class CliAgentHandler extends BaseMessageHandler {
   constructor() {
-    super([
-      'cliAgentStatusUpdate',
-      'cliAgentFullStateSync',
-      'switchAiAgentResponse'
-    ], MessagePriority.HIGH);
+    super(
+      ['cliAgentStatusUpdate', 'cliAgentFullStateSync', 'switchAiAgentResponse'],
+      MessagePriority.HIGH
+    );
   }
 
   async handle(message: WebviewMessage, context: IMessageHandlerContext): Promise<void> {
@@ -42,7 +41,10 @@ export class CliAgentHandler extends BaseMessageHandler {
   /**
    * Handle CLI Agent status update message from extension
    */
-  private async handleCliAgentStatusUpdate(message: WebviewMessage, context: IMessageHandlerContext): Promise<void> {
+  private async handleCliAgentStatusUpdate(
+    message: WebviewMessage,
+    context: IMessageHandlerContext
+  ): Promise<void> {
     context.logger.info('CLI Agent Status Update received');
 
     const cliAgentStatus = message.cliAgentStatus;
@@ -99,7 +101,10 @@ export class CliAgentHandler extends BaseMessageHandler {
   /**
    * Handle full CLI Agent state sync message from extension
    */
-  private async handleCliAgentFullStateSync(message: WebviewMessage, context: IMessageHandlerContext): Promise<void> {
+  private async handleCliAgentFullStateSync(
+    message: WebviewMessage,
+    context: IMessageHandlerContext
+  ): Promise<void> {
     context.logger.info('CLI Agent Full State Sync received');
 
     const terminalStates = message.terminalStates;
@@ -125,7 +130,7 @@ export class CliAgentHandler extends BaseMessageHandler {
             status: 'connected' | 'disconnected' | 'none';
             agentType: string | null;
           };
-          
+
           context.logger.debug(`Updating terminal ${terminalId}`, typedStateInfo);
 
           try {
@@ -155,16 +160,19 @@ export class CliAgentHandler extends BaseMessageHandler {
   /**
    * Handle AI Agent toggle response from extension
    */
-  private async handleSwitchAiAgentResponse(message: WebviewMessage, context: IMessageHandlerContext): Promise<void> {
+  private async handleSwitchAiAgentResponse(
+    message: WebviewMessage,
+    context: IMessageHandlerContext
+  ): Promise<void> {
     const responseData = message as any;
     const { terminalId, success, newStatus, agentType, reason, isForceReconnect } = responseData;
-    
+
     context.logger.info(`AI Agent operation result for terminal ${terminalId}:`, {
       success,
       newStatus,
       agentType,
       isForceReconnect,
-      reason
+      reason,
     });
 
     // Update UI and show user feedback
@@ -178,31 +186,24 @@ export class CliAgentHandler extends BaseMessageHandler {
       // Only show subtle success notification for successful operations
       if (isForceReconnect) {
         const statusText = newStatus === 'connected' ? 'Connected' : 'Disconnected';
-        managers.notification.showNotificationInTerminal(
-          `📎 AI Agent ${statusText}`,
-          'success'
-        );
+        managers.notification.showNotificationInTerminal(`📎 AI Agent ${statusText}`, 'success');
       }
       // No notification for regular switch operations - keep it quiet
-      
+
       context.logger.info(`AI Agent operation succeeded:`, {
         terminalId,
         newStatus,
         agentType,
-        isForceReconnect
+        isForceReconnect,
       });
-      
     } else {
       // Only show error notifications - users need to know about failures
-      managers.notification.showNotificationInTerminal(
-        `❌ AI Agent operation failed`,
-        'error'
-      );
-      
+      managers.notification.showNotificationInTerminal(`❌ AI Agent operation failed`, 'error');
+
       context.logger.error(`AI Agent operation failed:`, {
         terminalId,
         reason,
-        isForceReconnect
+        isForceReconnect,
       });
     }
   }
@@ -221,7 +222,10 @@ export class CliAgentHandler extends BaseMessageHandler {
       case 'terminated':
         return 'none';
       default:
-        this.logActivity(undefined as any, `Unknown legacy status: ${legacyStatus}, defaulting to 'none'`);
+        this.logActivity(
+          undefined as any,
+          `Unknown legacy status: ${legacyStatus}, defaulting to 'none'`
+        );
         return 'none';
     }
   }

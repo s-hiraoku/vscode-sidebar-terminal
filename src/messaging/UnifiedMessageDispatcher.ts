@@ -1,11 +1,11 @@
 /**
  * Unified Message Dispatcher
- * 
+ *
  * Consolidates the three different message handling patterns:
  * - WebViewMessageHandlerService (Command pattern)
  * - RefactoredMessageManager (Queue-based switching)
  * - WebViewMessageRouter (Publisher-subscriber pattern)
- * 
+ *
  * This provides a single, unified interface that preserves all functionality
  * while eliminating duplication across the 394 message handling occurrences.
  */
@@ -52,16 +52,16 @@ export interface IDispatchResult {
 
 // Priority levels for message handling
 export enum MessagePriority {
-  CRITICAL = 100,  // System messages, errors
-  HIGH = 75,       // Input, resize operations  
-  NORMAL = 50,     // Output, status updates
-  LOW = 25,        // Notifications, logging
-  BACKGROUND = 0   // Analytics, cleanup
+  CRITICAL = 100, // System messages, errors
+  HIGH = 75, // Input, resize operations
+  NORMAL = 50, // Output, status updates
+  LOW = 25, // Notifications, logging
+  BACKGROUND = 0, // Analytics, cleanup
 }
 
 /**
  * Unified Message Dispatcher
- * 
+ *
  * Combines all message handling patterns into a single, efficient system:
  * - Command pattern handler registry
  * - Priority queue processing
@@ -75,22 +75,22 @@ export class UnifiedMessageDispatcher implements IManagerLifecycle {
   private messageQueue!: MessageQueue;
   private coordinator?: IManagerCoordinator;
   private disposed = false;
-  
+
   // Performance monitoring
   private totalMessages = 0;
   private errorCount = 0;
   private processingTimes: number[] = [];
-  
+
   // VS Code API for WebView communication
   private vscodeApi?: any;
 
   constructor(coordinator?: IManagerCoordinator) {
     this.logger.info('UnifiedMessageDispatcher initializing');
-    
+
     this.coordinator = coordinator;
     this.setupVsCodeApi();
     this.initializeMessageQueue();
-    
+
     this.logger.info('UnifiedMessageDispatcher initialized');
   }
 
@@ -118,7 +118,7 @@ export class UnifiedMessageDispatcher implements IManagerLifecycle {
       maxRetries: 3,
       processingDelay: 1,
       maxQueueSize: 2000, // Increased for high-throughput scenarios
-      enablePriority: true
+      enablePriority: true,
     });
 
     this.logger.info('Message queue initialized with priority support');
@@ -168,7 +168,7 @@ export class UnifiedMessageDispatcher implements IManagerLifecycle {
     if (this.disposed) return;
 
     this.logger.info('Disposing UnifiedMessageDispatcher');
-    
+
     this.disposed = true;
     this.messageQueue.dispose();
     this.handlers.clear();
@@ -192,7 +192,7 @@ export class UnifiedMessageDispatcher implements IManagerLifecycle {
 
     const commands = handler.getSupportedCommands();
     const priority = handler.getPriority();
-    
+
     for (const command of commands) {
       if (!this.handlers.has(command)) {
         this.handlers.set(command, []);
@@ -200,12 +200,14 @@ export class UnifiedMessageDispatcher implements IManagerLifecycle {
 
       const commandHandlers = this.handlers.get(command)!;
       commandHandlers.push(handler);
-      
+
       // Sort by priority (higher priority first)
       commandHandlers.sort((a, b) => b.getPriority() - a.getPriority());
     }
 
-    this.logger.info(`Registered handler for commands: [${commands.join(', ')}] with priority ${priority}`);
+    this.logger.info(
+      `Registered handler for commands: [${commands.join(', ')}] with priority ${priority}`
+    );
   }
 
   /**
@@ -213,7 +215,7 @@ export class UnifiedMessageDispatcher implements IManagerLifecycle {
    */
   unregisterHandler(handler: IUnifiedMessageHandler): void {
     const commands = handler.getSupportedCommands();
-    
+
     for (const command of commands) {
       const commandHandlers = this.handlers.get(command);
       if (commandHandlers) {
@@ -221,7 +223,7 @@ export class UnifiedMessageDispatcher implements IManagerLifecycle {
         if (index !== -1) {
           commandHandlers.splice(index, 1);
         }
-        
+
         if (commandHandlers.length === 0) {
           this.handlers.delete(command);
         }
@@ -253,7 +255,7 @@ export class UnifiedMessageDispatcher implements IManagerLifecycle {
       return {
         success: false,
         processingTime: 0,
-        error: 'Dispatcher not ready'
+        error: 'Dispatcher not ready',
       };
     }
 
@@ -267,7 +269,7 @@ export class UnifiedMessageDispatcher implements IManagerLifecycle {
         return {
           success: false,
           processingTime: Date.now() - startTime,
-          error: 'Invalid message format'
+          error: 'Invalid message format',
         };
       }
 
@@ -275,15 +277,15 @@ export class UnifiedMessageDispatcher implements IManagerLifecycle {
       const context: IMessageHandlerContext = {
         coordinator: this.coordinator,
         postMessage: this.sendToExtension.bind(this),
-        logger: this.logger
+        logger: this.logger,
       };
 
       // Find and execute handler
       const result = await this.dispatchToHandler(message, context);
-      
+
       const processingTime = Date.now() - startTime;
       this.processingTimes.push(processingTime);
-      
+
       // Keep only last 1000 processing times for average calculation
       if (this.processingTimes.length > 1000) {
         this.processingTimes = this.processingTimes.slice(-1000);
@@ -293,19 +295,18 @@ export class UnifiedMessageDispatcher implements IManagerLifecycle {
         success: result.success,
         handledBy: result.handledBy,
         processingTime,
-        error: result.error
+        error: result.error,
       };
-
     } catch (error) {
       this.errorCount++;
       const processingTime = Date.now() - startTime;
-      
+
       this.logger.error(`Error processing message ${message.command}:`, error);
-      
+
       return {
         success: false,
         processingTime,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       };
     }
   }
@@ -314,16 +315,15 @@ export class UnifiedMessageDispatcher implements IManagerLifecycle {
    * Dispatch message to appropriate handler
    */
   private async dispatchToHandler(
-    message: WebviewMessage, 
+    message: WebviewMessage,
     context: IMessageHandlerContext
   ): Promise<{ success: boolean; handledBy?: string; error?: string }> {
-    
     const handlers = this.handlers.get(message.command);
     if (!handlers || handlers.length === 0) {
       this.logger.warn(`No handler registered for command: ${message.command}`);
       return {
         success: false,
-        error: `No handler found for command: ${message.command}`
+        error: `No handler found for command: ${message.command}`,
       };
     }
 
@@ -333,13 +333,16 @@ export class UnifiedMessageDispatcher implements IManagerLifecycle {
         try {
           await handler.handle(message, context);
           this.logger.debug(`Message ${message.command} handled by ${handler.constructor.name}`);
-          
+
           return {
             success: true,
-            handledBy: handler.constructor.name
+            handledBy: handler.constructor.name,
           };
         } catch (error) {
-          this.logger.error(`Handler ${handler.constructor.name} failed for ${message.command}:`, error);
+          this.logger.error(
+            `Handler ${handler.constructor.name} failed for ${message.command}:`,
+            error
+          );
           // Continue to next handler
           continue;
         }
@@ -348,7 +351,7 @@ export class UnifiedMessageDispatcher implements IManagerLifecycle {
 
     return {
       success: false,
-      error: `No handler could process command: ${message.command}`
+      error: `No handler could process command: ${message.command}`,
     };
   }
 
@@ -371,7 +374,10 @@ export class UnifiedMessageDispatcher implements IManagerLifecycle {
   /**
    * Send message with priority support
    */
-  async sendMessage(message: unknown, priority: MessagePriority = MessagePriority.NORMAL): Promise<void> {
+  async sendMessage(
+    message: unknown,
+    priority: MessagePriority = MessagePriority.NORMAL
+  ): Promise<void> {
     const priorityLevel = this.mapPriorityToQueueLevel(priority);
     await this.messageQueue.enqueue(message, priorityLevel);
   }
@@ -390,7 +396,7 @@ export class UnifiedMessageDispatcher implements IManagerLifecycle {
       type,
       terminalId,
       data,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
 
     await this.sendMessage(message, priority);
@@ -400,8 +406,8 @@ export class UnifiedMessageDispatcher implements IManagerLifecycle {
    * Send input to terminal
    */
   async sendInput(
-    input: string, 
-    terminalId?: string, 
+    input: string,
+    terminalId?: string,
     priority: MessagePriority = MessagePriority.HIGH
   ): Promise<void> {
     if (!this.coordinator) {
@@ -417,7 +423,7 @@ export class UnifiedMessageDispatcher implements IManagerLifecycle {
       command: 'input',
       data: input,
       terminalId: targetTerminalId,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
 
     await this.sendMessage(message, priority);
@@ -427,8 +433,8 @@ export class UnifiedMessageDispatcher implements IManagerLifecycle {
    * Send resize command
    */
   async sendResize(
-    cols: number, 
-    rows: number, 
+    cols: number,
+    rows: number,
     terminalId?: string,
     priority: MessagePriority = MessagePriority.HIGH
   ): Promise<void> {
@@ -441,7 +447,7 @@ export class UnifiedMessageDispatcher implements IManagerLifecycle {
       cols,
       rows,
       terminalId: terminalId || this.coordinator.getActiveTerminalId() || '',
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
 
     await this.sendMessage(message, priority);
@@ -453,7 +459,7 @@ export class UnifiedMessageDispatcher implements IManagerLifecycle {
   async requestSettings(priority: MessagePriority = MessagePriority.NORMAL): Promise<void> {
     const message = {
       command: 'getSettings',
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
 
     await this.sendMessage(message, priority);
@@ -463,13 +469,13 @@ export class UnifiedMessageDispatcher implements IManagerLifecycle {
    * Update settings
    */
   async updateSettings(
-    settings: unknown, 
+    settings: unknown,
     priority: MessagePriority = MessagePriority.NORMAL
   ): Promise<void> {
     const message = {
       command: 'updateSettings',
       settings,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
 
     await this.sendMessage(message, priority);
@@ -481,7 +487,7 @@ export class UnifiedMessageDispatcher implements IManagerLifecycle {
   async requestNewTerminal(priority: MessagePriority = MessagePriority.HIGH): Promise<void> {
     const message = {
       command: 'createTerminal',
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
 
     await this.sendMessage(message, priority);
@@ -499,7 +505,7 @@ export class UnifiedMessageDispatcher implements IManagerLifecycle {
       command: 'deleteTerminal',
       terminalId,
       requestSource,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
 
     await this.sendMessage(message, priority);
@@ -521,9 +527,10 @@ export class UnifiedMessageDispatcher implements IManagerLifecycle {
    */
   getStats(): IMessageStats {
     const queueStats = this.messageQueue.getQueueStats();
-    const averageTime = this.processingTimes.length > 0 
-      ? this.processingTimes.reduce((sum, time) => sum + time, 0) / this.processingTimes.length
-      : 0;
+    const averageTime =
+      this.processingTimes.length > 0
+        ? this.processingTimes.reduce((sum, time) => sum + time, 0) / this.processingTimes.length
+        : 0;
 
     let totalHandlers = 0;
     for (const handlers of this.handlers.values()) {
@@ -538,7 +545,7 @@ export class UnifiedMessageDispatcher implements IManagerLifecycle {
       totalHandlers,
       totalMessages: this.totalMessages,
       errorCount: this.errorCount,
-      averageProcessingTime: Math.round(averageTime * 100) / 100
+      averageProcessingTime: Math.round(averageTime * 100) / 100,
     };
   }
 

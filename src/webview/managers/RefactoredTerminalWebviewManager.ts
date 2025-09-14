@@ -9,17 +9,22 @@
 
 import { Terminal } from '@xterm/xterm';
 import { webview as log } from '../../utils/logger';
-import { PartialTerminalSettings, WebViewFontSettings, TerminalConfig, TerminalState } from '../../types/shared';
+import {
+  PartialTerminalSettings,
+  WebViewFontSettings,
+  TerminalConfig,
+  TerminalState,
+} from '../../types/shared';
 // Removed unused imports: TerminalInteractionEvent, WebviewMessage
-import { 
-  IManagerCoordinator, 
+import {
+  IManagerCoordinator,
   TerminalInstance,
   IPerformanceManager,
   IInputManager,
   IUIManager,
   IConfigManager,
   IMessageManager,
-  INotificationManager
+  INotificationManager,
 } from '../interfaces/ManagerInterfaces';
 
 // Debug info interface
@@ -119,7 +124,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       this.shellIntegrationManager = {
         setCoordinator: () => {},
         handleMessage: () => {},
-        dispose: () => {}
+        dispose: () => {},
       } as any;
     }
 
@@ -147,19 +152,19 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
 
     // Settings Panel Manager
     this.settingsPanel = new SettingsPanel();
-    
+
     // Notification Manager
     this.notificationManager = new NotificationManager();
-    
+
     // Performance Manager
     this.performanceManager = new PerformanceManager();
-    
+
     // UI Manager
     this.uiManager = new UIManager();
-    
+
     // Input Manager - 重要：入力機能のために必須
     this.inputManager = new InputManager();
-    
+
     // Config Manager
     this.configManager = new ConfigManager();
 
@@ -241,7 +246,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     log(`🔍 [WEBVIEW] ========== SET ACTIVE TERMINAL DEBUG ==========`);
     log(`🔍 [WEBVIEW] Previous active: ${this.terminalLifecycleManager.getActiveTerminalId()}`);
     log(`🔍 [WEBVIEW] New active: ${terminalId}`);
-    
+
     this.terminalLifecycleManager.setActiveTerminalId(terminalId);
 
     // アクティブターミナルが変更されたらUI境界を更新
@@ -250,7 +255,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
         terminalId,
         this.terminalLifecycleManager.getAllTerminalContainers()
       );
-      
+
       // 🎯 FIX: Only focus if needed to avoid interrupting terminal output
       // This is critical for CLI agent scenarios while preserving shell prompt
       const terminals = this.splitManager.getTerminals();
@@ -279,19 +284,19 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       // 🆕 SIMPLE: Save session when active terminal changes
       if (this.simplePersistenceManager) {
         setTimeout(() => {
-          this.simplePersistenceManager.saveSession().then(success => {
+          this.simplePersistenceManager.saveSession().then((success) => {
             if (success) {
               console.log(`💾 [SIMPLE-PERSISTENCE] Session saved after active terminal change`);
             }
           });
         }, 200); // Small delay to avoid frequent saves
       }
-      
+
       // Verify the setting worked
       const verifyActive = this.terminalLifecycleManager.getActiveTerminalId();
       log(`🔍 [WEBVIEW] Verified active terminal: ${verifyActive}`);
     }
-    
+
     log(`🔍 [WEBVIEW] ========== SET ACTIVE TERMINAL DEBUG END ==========`);
   }
 
@@ -364,20 +369,26 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       if (this.currentTerminalState) {
         const canCreate = this.canCreateTerminal();
         const availableSlots = this.currentTerminalState.availableSlots;
-        
-        log(`🎯 [STATE] Terminal creation check: canCreate=${canCreate}, availableSlots=[${availableSlots.join(',')}]`);
-        
+
+        log(
+          `🎯 [STATE] Terminal creation check: canCreate=${canCreate}, availableSlots=[${availableSlots.join(',')}]`
+        );
+
         if (!canCreate) {
           const currentCount = this.currentTerminalState.terminals.length;
           const maxCount = this.currentTerminalState.maxTerminals;
-          log(`❌ [STATE] Terminal creation blocked: ${currentCount}/${maxCount} terminals, no available slots`);
+          log(
+            `❌ [STATE] Terminal creation blocked: ${currentCount}/${maxCount} terminals, no available slots`
+          );
           this.showTerminalLimitMessage(currentCount, maxCount);
           return null;
         }
-        
+
         // Validate terminal number against available slots
         if (terminalNumber && !availableSlots.includes(terminalNumber)) {
-          log(`⚠️ [STATE] Terminal number ${terminalNumber} not in available slots [${availableSlots.join(',')}]`);
+          log(
+            `⚠️ [STATE] Terminal number ${terminalNumber} not in available slots [${availableSlots.join(',')}]`
+          );
           // Request fresh state and retry if numbers don't match
           this.requestLatestState();
         }
@@ -415,8 +426,10 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       // No complex serialization - just session metadata
       setTimeout(() => {
         if (this.simplePersistenceManager) {
-          console.log(`💾 [SIMPLE-PERSISTENCE] Saving session after terminal ${terminalId} creation`);
-          this.simplePersistenceManager.saveSession().then(success => {
+          console.log(
+            `💾 [SIMPLE-PERSISTENCE] Saving session after terminal ${terminalId} creation`
+          );
+          this.simplePersistenceManager.saveSession().then((success) => {
             if (success) {
               console.log(`✅ [SIMPLE-PERSISTENCE] Session saved successfully`);
             } else {
@@ -429,14 +442,14 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       // 4. 🎯 FIX: 新規作成時のアクティブ設定強化
       // 確実にアクティブ状態を設定し、太い青枠を表示
       this.setActiveTerminalId(terminalId);
-      
+
       // 即座にボーダー更新を実行（UIManager経由）
       const allContainers = this.splitManager.getTerminalContainers();
       if (this.uiManager) {
         this.uiManager.updateTerminalBorders(terminalId, allContainers);
         console.log(`🎯 [FIX] Applied active border immediately after creation: ${terminalId}`);
       }
-      
+
       // ターミナルフォーカスも確実に設定
       if (terminal && terminal.textarea) {
         setTimeout(() => {
@@ -451,7 +464,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       setTimeout(() => {
         console.log(`🔍 [DEBUG] Delayed resize (150ms) for: ${terminalId}`);
         this.terminalLifecycleManager.resizeAllTerminals();
-        
+
         // 🎯 FIX: リサイズ後もボーダーを再確認
         if (this.uiManager) {
           this.uiManager.updateTerminalBorders(terminalId, allContainers);
@@ -478,19 +491,21 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
   public async removeTerminal(terminalId: string): Promise<boolean> {
     // CLI Agent状態もクリーンアップ
     this.cliAgentStateManager.removeTerminalState(terminalId);
-    
+
     // 🆕 SIMPLE: Update session state after terminal removal
     setTimeout(() => {
       if (this.simplePersistenceManager) {
-        console.log(`💾 [SIMPLE-PERSISTENCE] Updating session after terminal ${terminalId} removal`);
-        this.simplePersistenceManager.saveSession().then(success => {
+        console.log(
+          `💾 [SIMPLE-PERSISTENCE] Updating session after terminal ${terminalId} removal`
+        );
+        this.simplePersistenceManager.saveSession().then((success) => {
           if (success) {
             console.log(`✅ [SIMPLE-PERSISTENCE] Session updated after removal`);
           }
         });
       }
     }, 100); // Delay for DOM cleanup
-    
+
     return await this.terminalLifecycleManager.removeTerminal(terminalId);
   }
 
@@ -526,11 +541,11 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
    */
   public extractScrollbackData(terminalId: string, maxLines: number = 1000): string[] {
     console.log(`🔥 [EXTRACT-DEBUG] === extractScrollbackData called for ${terminalId} ===`);
-    
+
     try {
       const terminalInstance = this.getTerminalInstance(terminalId);
       console.log(`🔍 [EXTRACT-DEBUG] Terminal instance found:`, !!terminalInstance);
-      
+
       if (!terminalInstance || !terminalInstance.terminal) {
         console.warn(`⚠️ [EXTRACT-DEBUG] Terminal ${terminalId} not found or no terminal`);
         return [];
@@ -539,7 +554,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       const terminal = terminalInstance.terminal;
       console.log(`🔍 [EXTRACT-DEBUG] Terminal details:`, {
         hasBuffer: !!terminal.buffer,
-        hasNormalBuffer: !!(terminal.buffer && terminal.buffer.normal)
+        hasNormalBuffer: !!(terminal.buffer && terminal.buffer.normal),
       });
 
       // Use buffer method for scrollback extraction
@@ -548,9 +563,11 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
         try {
           const buffer = terminal.buffer.normal;
           const lines: string[] = [];
-          
-          console.log(`🔍 [EXTRACT-DEBUG] Buffer length: ${buffer.length}, requesting max: ${maxLines}`);
-          
+
+          console.log(
+            `🔍 [EXTRACT-DEBUG] Buffer length: ${buffer.length}, requesting max: ${maxLines}`
+          );
+
           const startIndex = Math.max(0, buffer.length - maxLines);
           for (let i = startIndex; i < buffer.length; i++) {
             const line = buffer.getLine(i);
@@ -567,11 +584,15 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
         }
       }
 
-      console.warn(`⚠️ [EXTRACT-DEBUG] No scrollback extraction method available for terminal ${terminalId}`);
+      console.warn(
+        `⚠️ [EXTRACT-DEBUG] No scrollback extraction method available for terminal ${terminalId}`
+      );
       return [];
-
     } catch (error) {
-      console.error(`❌ [EXTRACT-DEBUG] Failed to extract scrollback from terminal ${terminalId}:`, error);
+      console.error(
+        `❌ [EXTRACT-DEBUG] Failed to extract scrollback from terminal ${terminalId}:`,
+        error
+      );
       return [];
     }
   }
@@ -583,7 +604,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     if (window.addEventListener) {
       window.addEventListener('message', (event) => {
         const message = event.data;
-        
+
         if (message && message.command === 'extractScrollbackData') {
           this.handleExtractScrollbackRequest(message);
         }
@@ -596,30 +617,38 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
    */
   private async handleExtractScrollbackRequest(message: any): Promise<void> {
     console.log('🔥 [SCROLLBACK-DEBUG] === handleExtractScrollbackRequest called ===', message);
-    
+
     try {
       const { terminalId, requestId, maxLines } = message;
-      
+
       if (!terminalId || !requestId) {
-        console.error('❌ [SCROLLBACK-DEBUG] Missing terminalId or requestId for scrollback extraction');
+        console.error(
+          '❌ [SCROLLBACK-DEBUG] Missing terminalId or requestId for scrollback extraction'
+        );
         return;
       }
 
       // Check if this request has already been processed
       if (this.processedScrollbackRequests.has(requestId)) {
-        console.log(`⚠️ [SCROLLBACK-DEBUG] Request ${requestId} already processed, ignoring duplicate`);
+        console.log(
+          `⚠️ [SCROLLBACK-DEBUG] Request ${requestId} already processed, ignoring duplicate`
+        );
         return;
       }
 
-      console.log(`🔍 [SCROLLBACK-DEBUG] Processing request for terminal: ${terminalId}, requestId: ${requestId}, maxLines: ${maxLines}`);
+      console.log(
+        `🔍 [SCROLLBACK-DEBUG] Processing request for terminal: ${terminalId}, requestId: ${requestId}, maxLines: ${maxLines}`
+      );
 
       // Mark this request as being processed
       this.processedScrollbackRequests.add(requestId);
 
       // Extract the scrollback data
       const scrollbackData = this.extractScrollbackData(terminalId, maxLines || 1000);
-      
-      console.log(`📦 [SCROLLBACK-DEBUG] Extracted ${scrollbackData.length} lines for terminal ${terminalId}`);
+
+      console.log(
+        `📦 [SCROLLBACK-DEBUG] Extracted ${scrollbackData.length} lines for terminal ${terminalId}`
+      );
       console.log('📄 [SCROLLBACK-DEBUG] Sample scrollback data:', scrollbackData.slice(0, 3));
 
       // Send the response back to Extension
@@ -637,10 +666,9 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       setTimeout(() => {
         this.processedScrollbackRequests.delete(requestId);
       }, 30000); // 30 seconds timeout
-
     } catch (error) {
       console.error('❌ [SCROLLBACK-DEBUG] Failed to handle scrollback extraction request:', error);
-      
+
       // Send error response
       this.postMessageToExtension({
         command: 'scrollbackDataCollected',
@@ -681,17 +709,19 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
    */
   public handleAiAgentToggle(terminalId: string): void {
     log(`📎 AI Agent toggle clicked for terminal: ${terminalId}`);
-    
+
     try {
       // Get current CLI Agent state for the terminal
       const agentState = this.cliAgentStateManager.getAgentState(terminalId);
       const currentStatus = agentState?.status || 'none';
-      
+
       log(`📎 Current AI Agent state: ${currentStatus} for terminal: ${terminalId}`);
-      
+
       if (currentStatus === 'connected') {
         // 🔄 If already connected, treat as manual reset request
-        log(`🔄 [MANUAL-RESET] Agent already connected, treating as manual reset for terminal: ${terminalId}`);
+        log(
+          `🔄 [MANUAL-RESET] Agent already connected, treating as manual reset for terminal: ${terminalId}`
+        );
         this.postMessageToExtension({
           command: 'switchAiAgent',
           terminalId,
@@ -709,13 +739,14 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
           action: 'activate',
           timestamp: Date.now(),
         });
-        
-        log(`✅ Sent AI Agent activation request for terminal: ${terminalId} (status: ${currentStatus})`);
+
+        log(
+          `✅ Sent AI Agent activation request for terminal: ${terminalId} (status: ${currentStatus})`
+        );
       }
-      
     } catch (error) {
       log(`❌ Error handling AI Agent toggle for terminal ${terminalId}:`, error);
-      
+
       // Try fallback activation
       this.postMessageToExtension({
         command: 'switchAiAgent',
@@ -797,7 +828,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
   public closeTerminal(terminalId?: string): void {
     // 📋 [SPEC] Panel trash button should call killTerminal to delete active terminal
     log(`🗑️ [PANEL] Panel trash button clicked - delegating to killTerminal`);
-    
+
     // If specific terminalId provided, use it; otherwise killTerminal will use active terminal
     if (terminalId) {
       log(`🗑️ [PANEL] Specific terminal ID provided: ${terminalId}`);
@@ -806,14 +837,14 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     } else {
       log(`🗑️ [PANEL] No specific terminal ID - killTerminal will delete active terminal`);
     }
-    
+
     // 🎯 [FIX] Call killTerminal instead of custom deletion logic
     // This ensures the panel trash button follows the same logic as the kill command
     this.messageManager.postMessage({
       command: 'killTerminal',
-      terminalId: terminalId // Pass the specific ID if provided, null if active terminal should be used
+      terminalId: terminalId, // Pass the specific ID if provided, null if active terminal should be used
     });
-    
+
     log(`🗑️ [PANEL] killTerminal message sent to extension`);
   }
 
@@ -823,14 +854,14 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
    */
   public attachInputHandlersToExistingTerminals(): void {
     log('🔧 [INPUT-FIX] Attaching input handlers to existing terminals...');
-    
+
     const allTerminals = this.terminalLifecycleManager.getAllTerminalInstances();
     let handlerCount = 0;
-    
+
     for (const [terminalId, terminalInstance] of allTerminals) {
       if (terminalInstance && terminalInstance.terminal) {
         const terminalContainer = this.terminalLifecycleManager.getTerminalElement(terminalId);
-        
+
         if (terminalContainer) {
           // Skip input handler attachment - already done during terminal creation
           // This prevents duplicate onData handlers that cause input duplication
@@ -843,7 +874,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
         log(`⚠️ [INPUT-FIX] Terminal instance invalid for: ${terminalId}`);
       }
     }
-    
+
     log(`🔧 [INPUT-FIX] Input handlers attached to ${handlerCount} existing terminals`);
   }
 
@@ -857,20 +888,22 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
 
       // Type-safe state validation and casting
       const stateObj = state as Record<string, unknown>;
-      if (!Array.isArray(stateObj.terminals) || 
-          !Array.isArray(stateObj.availableSlots) ||
-          typeof stateObj.maxTerminals !== 'number') {
+      if (
+        !Array.isArray(stateObj.terminals) ||
+        !Array.isArray(stateObj.availableSlots) ||
+        typeof stateObj.maxTerminals !== 'number'
+      ) {
         log('⚠️ [STATE] Invalid state structure:', stateObj);
         return;
       }
-      
+
       const terminalState = state as TerminalState;
 
       log('🔄 [STATE] Processing state update:', {
         terminals: terminalState.terminals.length,
         availableSlots: terminalState.availableSlots,
         maxTerminals: terminalState.maxTerminals,
-        activeTerminalId: terminalState.activeTerminalId
+        activeTerminalId: terminalState.activeTerminalId,
       });
 
       // 🎯 [SYNC] Handle deletion synchronization FIRST
@@ -881,7 +914,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
         terminals: terminalState.terminals,
         activeTerminalId: terminalState.activeTerminalId,
         maxTerminals: terminalState.maxTerminals,
-        availableSlots: terminalState.availableSlots
+        availableSlots: terminalState.availableSlots,
       };
 
       // 2. Update UI state immediately
@@ -895,12 +928,13 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
 
       // 5. 🔄 [QUEUE] Process any pending creation requests
       if (this.pendingCreationRequests.length > 0) {
-        log(`🔄 [QUEUE] State updated, processing ${this.pendingCreationRequests.length} pending requests`);
+        log(
+          `🔄 [QUEUE] State updated, processing ${this.pendingCreationRequests.length} pending requests`
+        );
         setTimeout(() => this.processPendingCreationRequests(), 50);
       }
 
       log('✅ [STATE] State update completed successfully');
-      
     } catch (error) {
       log('❌ [STATE] Error processing state update:', error);
     }
@@ -913,16 +947,18 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     try {
       // Update terminal count display
       this.updateTerminalCountDisplay(state.terminals.length, state.maxTerminals);
-      
-      // Update available slots display  
+
+      // Update available slots display
       this.updateAvailableSlotsDisplay(state.availableSlots);
-      
+
       // Update active terminal highlighting
       if (state.activeTerminalId) {
         this.highlightActiveTerminal(state.activeTerminalId);
       }
-      
-      log(`🎨 [UI] UI updated: ${state.terminals.length}/${state.maxTerminals} terminals, slots: [${state.availableSlots.join(',')}]`);
+
+      log(
+        `🎨 [UI] UI updated: ${state.terminals.length}/${state.maxTerminals} terminals, slots: [${state.availableSlots.join(',')}]`
+      );
     } catch (error) {
       log('❌ [UI] Error updating UI from state:', error);
     }
@@ -950,7 +986,9 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       this.clearTerminalLimitMessage();
     }
 
-    log(`🎯 [CREATION] Terminal creation ${canCreate ? 'ENABLED' : 'DISABLED'} (${currentCount}/${maxCount})`);
+    log(
+      `🎯 [CREATION] Terminal creation ${canCreate ? 'ENABLED' : 'DISABLED'} (${currentCount}/${maxCount})`
+    );
   }
 
   /**
@@ -967,19 +1005,20 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
   private updateTerminalCountDisplay(current: number, max: number): void {
     // Update any terminal count UI elements
     const countElements = document.querySelectorAll('[data-terminal-count]');
-    countElements.forEach(element => {
+    countElements.forEach((element) => {
       element.textContent = `${current}/${max}`;
     });
   }
 
   /**
-   * Display available slots information  
+   * Display available slots information
    */
   private updateAvailableSlotsDisplay(slots: number[]): void {
     // Update available slots UI elements
     const slotElements = document.querySelectorAll('[data-available-slots]');
-    slotElements.forEach(element => {
-      element.textContent = slots.length > 0 ? `Available: ${slots.join(', ')}` : 'No slots available';
+    slotElements.forEach((element) => {
+      element.textContent =
+        slots.length > 0 ? `Available: ${slots.join(', ')}` : 'No slots available';
     });
   }
 
@@ -988,7 +1027,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
    */
   private highlightActiveTerminal(terminalId: string): void {
     // Remove previous active highlighting
-    document.querySelectorAll('.terminal-container.active').forEach(el => {
+    document.querySelectorAll('.terminal-container.active').forEach((el) => {
       el.classList.remove('active');
     });
 
@@ -1004,7 +1043,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
    */
   private setCreateButtonEnabled(enabled: boolean): void {
     const createButtons = document.querySelectorAll('[data-action="create-terminal"]');
-    createButtons.forEach(button => {
+    createButtons.forEach((button) => {
       if (button instanceof HTMLButtonElement) {
         button.disabled = !enabled;
         button.title = enabled ? 'Create new terminal' : 'Maximum terminals reached';
@@ -1017,15 +1056,15 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
    */
   private showTerminalLimitMessage(current: number, max: number): void {
     const message = `Terminal limit reached (${current}/${max}). Delete a terminal to create new ones.`;
-    
+
     // Show in notification system if available
     if (this.notificationManager) {
       this.notificationManager.showWarning(message);
     }
-    
+
     // Update status bar if available
     const statusElements = document.querySelectorAll('[data-terminal-status]');
-    statusElements.forEach(element => {
+    statusElements.forEach((element) => {
       element.textContent = message;
       element.className = 'terminal-status warning';
     });
@@ -1039,10 +1078,10 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     if (this.notificationManager) {
       this.notificationManager.clearWarnings();
     }
-    
+
     // Clear status bar
     const statusElements = document.querySelectorAll('[data-terminal-status]');
-    statusElements.forEach(element => {
+    statusElements.forEach((element) => {
       element.textContent = '';
       element.className = 'terminal-status';
     });
@@ -1104,7 +1143,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     // Get current system status
     const systemStatus = this.getSystemStatus();
     const ready = systemStatus.ready;
-    
+
     // Color coding based on system state
     const statusColor = ready ? '#10b981' : '#ef4444'; // Green or Red
     const warningColor = '#f59e0b'; // Amber
@@ -1123,12 +1162,16 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
         <div style="color: ${statusColor}; font-weight: bold; margin-bottom: 4px;">
           ${ready ? '✅' : '⚠️'} System Status: ${ready ? 'READY' : 'BUSY'}
         </div>
-        ${!ready ? `
+        ${
+          !ready
+            ? `
           <div style="color: ${warningColor}; font-size: 10px; margin-left: 16px;">
             ${systemStatus.pendingOperations.deletions.length > 0 ? `🗑️ Deletions: ${systemStatus.pendingOperations.deletions.length}` : ''}
             ${systemStatus.pendingOperations.creations > 0 ? `📥 Queued: ${systemStatus.pendingOperations.creations}` : ''}
           </div>
-        ` : ''}
+        `
+            : ''
+        }
       </div>
 
       <!-- Terminal Count & Slots -->
@@ -1149,42 +1192,60 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
           🖥️ Terminal Instances
         </div>
         <div style="margin-left: 16px; color: #e5e7eb; max-height: 120px; overflow-y: auto;">
-          ${info.terminals.length > 0 ? 
-            info.terminals.map((t) => `
+          ${
+            info.terminals.length > 0
+              ? info.terminals
+                  .map(
+                    (t) => `
               <div style="margin: 2px 0; padding: 2px 4px; background: ${t.isActive ? 'rgba(16, 185, 129, 0.1)' : 'rgba(75, 85, 99, 0.3)'}; border-radius: 3px; border-left: 2px solid ${t.isActive ? '#10b981' : '#6b7280'};">
                 <span style="color: ${t.isActive ? '#10b981' : '#9ca3af'};">${t.id}</span>
                 ${t.isActive ? '<span style="color: #fbbf24;">●</span>' : ''}
               </div>
-            `).join('') : 
-            '<div style="color: #6b7280; font-style: italic;">No terminals</div>'
+            `
+                  )
+                  .join('')
+              : '<div style="color: #6b7280; font-style: italic;">No terminals</div>'
           }
         </div>
       </div>
 
       <!-- Pending Operations -->
-      ${systemStatus.pendingOperations.deletions.length > 0 || systemStatus.pendingOperations.creations > 0 ? `
+      ${
+        systemStatus.pendingOperations.deletions.length > 0 ||
+        systemStatus.pendingOperations.creations > 0
+          ? `
         <div style="margin-bottom: 12px;">
           <div style="color: ${warningColor}; font-weight: bold; margin-bottom: 4px;">
             ⏳ Pending Operations
           </div>
           <div style="margin-left: 16px; color: #e5e7eb;">
-            ${systemStatus.pendingOperations.deletions.length > 0 ? `
+            ${
+              systemStatus.pendingOperations.deletions.length > 0
+                ? `
               <div style="margin: 2px 0;">
                 <span style="color: #ef4444;">🗑️ Deletions (${systemStatus.pendingOperations.deletions.length}):</span>
                 <div style="margin-left: 16px; font-size: 10px; color: #fca5a5;">
-                  ${systemStatus.pendingOperations.deletions.map(id => `• ${id}`).join('<br>')}
+                  ${systemStatus.pendingOperations.deletions.map((id) => `• ${id}`).join('<br>')}
                 </div>
               </div>
-            ` : ''}
-            ${systemStatus.pendingOperations.creations > 0 ? `
+            `
+                : ''
+            }
+            ${
+              systemStatus.pendingOperations.creations > 0
+                ? `
               <div style="margin: 2px 0;">
                 <span style="color: #f59e0b;">📥 Creations:</span>
                 <span style="color: #fbbf24; font-weight: bold;">${systemStatus.pendingOperations.creations} queued</span>
               </div>
-            ` : ''}
+            `
+                : ''
+            }
           </div>
         </div>
-      ` : ''}
+      `
+          : ''
+      }
 
       <!-- Number Recycling Status -->
       <div style="margin-bottom: 12px;">
@@ -1193,13 +1254,15 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
         </div>
         <div style="margin-left: 16px; color: #e5e7eb;">
           <div style="display: flex; gap: 8px; margin-bottom: 4px;">
-            ${[1, 2, 3, 4, 5].map(num => {
-              const isUsed = info.terminals.some((t: any) => t.id === `terminal-${num}`);
-              const isAvailable = info.availableSlots.includes(num);
-              const color = isUsed ? '#ef4444' : (isAvailable ? '#10b981' : '#6b7280');
-              const symbol = isUsed ? '●' : (isAvailable ? '○' : '◌');
-              return `<span style="color: ${color}; font-weight: bold; width: 20px; text-align: center;">${num}${symbol}</span>`;
-            }).join('')}
+            ${[1, 2, 3, 4, 5]
+              .map((num) => {
+                const isUsed = info.terminals.some((t: any) => t.id === `terminal-${num}`);
+                const isAvailable = info.availableSlots.includes(num);
+                const color = isUsed ? '#ef4444' : isAvailable ? '#10b981' : '#6b7280';
+                const symbol = isUsed ? '●' : isAvailable ? '○' : '◌';
+                return `<span style="color: ${color}; font-weight: bold; width: 20px; text-align: center;">${num}${symbol}</span>`;
+              })
+              .join('')}
           </div>
           <div style="font-size: 10px; color: #9ca3af;">
             <span style="color: #ef4444;">● Used</span> | 
@@ -1250,7 +1313,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
   private debugCounters = {
     stateUpdates: 0,
     lastSync: new Date().toISOString(),
-    systemStartTime: Date.now()
+    systemStartTime: Date.now(),
   };
 
   /**
@@ -1258,12 +1321,12 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
    */
   private initializeSessionRestoration(): void {
     log('🆕 [SIMPLE-RESTORATION] Initializing simple session restoration...');
-    
+
     // Immediately attempt to restore previous session
     setTimeout(() => {
       this.attemptSimpleSessionRestore();
     }, 500); // Wait for initialization to complete
-    
+
     log('✅ [SIMPLE-RESTORATION] Simple session restoration capability initialized');
   }
 
@@ -1273,7 +1336,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
   private async attemptSimpleSessionRestore(): Promise<void> {
     try {
       console.log('🔄 [SIMPLE-RESTORATION] Attempting session restoration...');
-      
+
       if (!this.simplePersistenceManager) {
         console.warn('⚠️ [SIMPLE-RESTORATION] SimplePersistenceManager not available');
         return;
@@ -1281,7 +1344,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
 
       // Load previous session data
       const sessionData = await this.simplePersistenceManager.loadSession();
-      
+
       if (!sessionData) {
         // No previous session - show welcome message
         const welcomeMessage = this.simplePersistenceManager.getWelcomeMessage();
@@ -1291,13 +1354,15 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       }
 
       // Restore terminals based on session data
-      console.log(`🔄 [SIMPLE-RESTORATION] Restoring ${sessionData.terminalCount} terminals from previous session`);
-      
+      console.log(
+        `🔄 [SIMPLE-RESTORATION] Restoring ${sessionData.terminalCount} terminals from previous session`
+      );
+
       // Create terminals one by one
       for (let i = 0; i < sessionData.terminalCount; i++) {
         const terminalName = sessionData.terminalNames[i] || `Terminal ${i + 1}`;
         const terminalId = `terminal-${i + 1}`;
-        
+
         // Request terminal creation from Extension
         this.postMessageToExtension({
           command: 'createTerminal',
@@ -1306,11 +1371,11 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
           isSessionRestore: true,
           timestamp: Date.now(),
         });
-        
+
         console.log(`🔄 [SIMPLE-RESTORATION] Requested recreation of terminal: ${terminalName}`);
-        
+
         // Small delay between terminal creations
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
       }
 
       // Show session restoration message
@@ -1323,15 +1388,16 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       if (sessionData.activeTerminalId) {
         setTimeout(() => {
           this.setActiveTerminalId(sessionData.activeTerminalId!);
-          console.log(`🎯 [SIMPLE-RESTORATION] Restored active terminal: ${sessionData.activeTerminalId}`);
+          console.log(
+            `🎯 [SIMPLE-RESTORATION] Restored active terminal: ${sessionData.activeTerminalId}`
+          );
         }, 1500);
       }
 
       console.log('✅ [SIMPLE-RESTORATION] Session restoration completed');
-      
     } catch (error) {
       console.error('❌ [SIMPLE-RESTORATION] Failed to restore session:', error);
-      
+
       // Show welcome message as fallback
       if (this.simplePersistenceManager) {
         const welcomeMessage = this.simplePersistenceManager.getWelcomeMessage();
@@ -1343,7 +1409,12 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
   /**
    * 🆕 Display session continuation message
    */
-  private displaySessionMessage(message: { type: string; message: string; details?: string; timestamp: number }): void {
+  private displaySessionMessage(message: {
+    type: string;
+    message: string;
+    details?: string;
+    timestamp: number;
+  }): void {
     try {
       // Create a notification-style message
       const messageElement = document.createElement('div');
@@ -1397,11 +1468,12 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       }, 5000);
 
       console.log(`📢 [SESSION-MESSAGE] Displayed: ${message.message}`);
-      
     } catch (error) {
       console.error('❌ [SESSION-MESSAGE] Failed to display message:', error);
       // Fallback to console log
-      console.log(`📢 [SESSION-MESSAGE] ${message.message}${message.details ? ` - ${message.details}` : ''}`);
+      console.log(
+        `📢 [SESSION-MESSAGE] ${message.message}${message.details ? ` - ${message.details}` : ''}`
+      );
     }
   }
 
@@ -1425,9 +1497,9 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
   }): Promise<boolean> {
     try {
       log(`🔄 [RESTORATION] Starting session restore for terminal: ${sessionData.terminalId}`);
-      
+
       const { terminalId, terminalName, scrollbackData, sessionRestoreMessage } = sessionData;
-      
+
       // 1. Create terminal if it doesn't exist
       let terminal = this.getTerminalInstance(terminalId);
       if (!terminal) {
@@ -1437,48 +1509,51 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
           log(`❌ [RESTORATION] Failed to create terminal for restore: ${terminalId}`);
           return false;
         }
-        
+
         // Wait for terminal to be fully created
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
         terminal = this.getTerminalInstance(terminalId);
       }
-      
+
       if (!terminal?.terminal) {
         log(`❌ [RESTORATION] Terminal instance not available for restore: ${terminalId}`);
         return false;
       }
-      
+
       // 2. Clear existing content
       terminal.terminal.clear();
-      
+
       // 3. Restore session restore message if available
       if (sessionRestoreMessage) {
         terminal.terminal.writeln(sessionRestoreMessage);
         log(`🔄 [RESTORATION] Restored session message for terminal: ${terminalId}`);
       }
-      
+
       // 4. Restore scrollback data if available
       if (scrollbackData && scrollbackData.length > 0) {
-        log(`🔄 [RESTORATION] Restoring ${scrollbackData.length} lines of scrollback for terminal: ${terminalId}`);
-        
+        log(
+          `🔄 [RESTORATION] Restoring ${scrollbackData.length} lines of scrollback for terminal: ${terminalId}`
+        );
+
         // Write each line to restore scrollback history
         for (const line of scrollbackData) {
           if (line.trim()) {
             terminal.terminal.writeln(line);
           }
         }
-        
-        log(`✅ [RESTORATION] Scrollback restored for terminal: ${terminalId} (${scrollbackData.length} lines)`);
+
+        log(
+          `✅ [RESTORATION] Scrollback restored for terminal: ${terminalId} (${scrollbackData.length} lines)`
+        );
       }
-      
+
       // 5. Focus terminal if it's the active one
       if (this.getActiveTerminalId() === terminalId) {
         terminal.terminal.focus();
       }
-      
+
       log(`✅ [RESTORATION] Session restore completed for terminal: ${terminalId}`);
       return true;
-      
     } catch (error) {
       log(`❌ [RESTORATION] Error during session restore:`, error);
       return false;
@@ -1543,15 +1618,15 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
 
     const debugInfo: DebugInfo = {
       timestamp: Date.now(),
-      terminals: state.terminals.map((t) => ({ 
-        id: t.id, 
-        isActive: t.isActive 
+      terminals: state.terminals.map((t) => ({
+        id: t.id,
+        isActive: t.isActive,
       })),
       availableSlots: state.availableSlots,
       activeTerminalId: state.activeTerminalId,
       totalCount: state.terminals.length,
       maxTerminals: state.maxTerminals,
-      operation: operation || 'state-update'
+      operation: operation || 'state-update',
     };
 
     this.displayDebugInfo(debugInfo);
@@ -1562,7 +1637,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
    */
   public toggleDebugPanel(): void {
     this.debugMode = !this.debugMode;
-    
+
     if (this.debugMode) {
       log('🔍 [DEBUG] Debug panel enabled');
       // Show current state immediately
@@ -1591,19 +1666,19 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       performanceCounters: this.debugCounters,
       configuration: {
         debugMode: this.debugMode,
-        maxTerminals: this.currentTerminalState?.maxTerminals || 'unknown'
+        maxTerminals: this.currentTerminalState?.maxTerminals || 'unknown',
       },
       extensionCommunication: {
         lastStateRequest: 'tracked in logs',
-        messageQueueStatus: 'see WebView console'
+        messageQueueStatus: 'see WebView console',
       },
       troubleshootingInfo: {
         userAgent: navigator.userAgent,
         platform: navigator.platform,
         language: navigator.language,
         cookieEnabled: navigator.cookieEnabled,
-        onLine: navigator.onLine
-      }
+        onLine: navigator.onLine,
+      },
     };
 
     console.log('🔧 [DIAGNOSTICS] System diagnostics exported:', diagnostics);
@@ -1615,10 +1690,10 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
    */
   public requestLatestState(): void {
     log('📡 [STATE] Requesting latest state from Extension...');
-    
+
     this.postMessageToExtension({
       command: 'requestState',
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
   }
 
@@ -1637,7 +1712,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       log('⚠️ [STATE] No cached state available for creation check');
       return false;
     }
-    
+
     return this.currentTerminalState.availableSlots.length > 0;
   }
 
@@ -1648,7 +1723,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     if (!this.currentTerminalState || this.currentTerminalState.availableSlots.length === 0) {
       return null;
     }
-    
+
     return Math.min(...this.currentTerminalState.availableSlots);
   }
 
@@ -1663,12 +1738,12 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
    */
   private trackTerminalDeletion(terminalId: string): void {
     this.deletionTracker.add(terminalId);
-    
+
     // Set timeout to automatically clear tracking
     const timeout = setTimeout(() => {
       this.clearTerminalDeletionTracking(terminalId);
     }, 5000); // 5 second timeout
-    
+
     this.deletionTimeouts.set(terminalId, timeout);
     log(`🎯 [TRACK] Started tracking deletion for terminal: ${terminalId}`);
   }
@@ -1685,13 +1760,13 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
    */
   private clearTerminalDeletionTracking(terminalId: string): void {
     this.deletionTracker.delete(terminalId);
-    
+
     const timeout = this.deletionTimeouts.get(terminalId);
     if (timeout) {
       clearTimeout(timeout);
       this.deletionTimeouts.delete(terminalId);
     }
-    
+
     log(`🎯 [TRACK] Cleared deletion tracking for terminal: ${terminalId}`);
   }
 
@@ -1701,15 +1776,15 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
   private handleStateUpdateWithDeletionSync(state: any): void {
     // Check if any tracked deletions have been processed
     const trackedDeletions = Array.from(this.deletionTracker);
-    
+
     for (const deletedTerminalId of trackedDeletions) {
       // Check if the deleted terminal is no longer in the state
       const stillExists = state.terminals.some((t: any) => t.id === deletedTerminalId);
-      
+
       if (!stillExists) {
         log(`✅ [SYNC] Deletion confirmed for terminal: ${deletedTerminalId}`);
         this.clearTerminalDeletionTracking(deletedTerminalId);
-        
+
         // Trigger any pending creation operations
         this.processPendingCreationRequests();
       } else {
@@ -1739,15 +1814,15 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
         name: terminalName,
         timestamp: Date.now(),
         resolve,
-        reject
+        reject,
       };
-      
+
       this.pendingCreationRequests.push(request);
       log(`📥 [QUEUE] Queued terminal creation: ${terminalId} (${terminalName})`);
-      
+
       // Set timeout for request
       setTimeout(() => {
-        const index = this.pendingCreationRequests.findIndex(r => r.id === terminalId);
+        const index = this.pendingCreationRequests.findIndex((r) => r.id === terminalId);
         if (index !== -1) {
           this.pendingCreationRequests.splice(index, 1);
           reject(new Error('Terminal creation request timed out'));
@@ -1765,7 +1840,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     }
 
     log(`🔄 [QUEUE] Processing ${this.pendingCreationRequests.length} pending creation requests`);
-    
+
     // Process oldest request first
     const request = this.pendingCreationRequests.shift();
     if (!request) {
@@ -1776,22 +1851,22 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     const canCreate = this.canCreateTerminal();
     if (canCreate) {
       log(`✅ [QUEUE] Processing terminal creation: ${request.id}`);
-      
+
       // Send creation request to Extension
       this.postMessageToExtension({
         command: 'createTerminal',
         terminalId: request.id,
         terminalName: request.name,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
-      
+
       request.resolve(true);
     } else {
       log(`❌ [QUEUE] Cannot create terminal yet, re-queueing: ${request.id}`);
-      
+
       // Re-queue the request
       this.pendingCreationRequests.unshift(request);
-      
+
       // Request fresh state and try again later
       this.requestLatestState();
       setTimeout(() => this.processPendingCreationRequests(), 500);
@@ -1804,21 +1879,23 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
   public async createTerminalSafely(terminalName?: string): Promise<boolean> {
     try {
       log('🛡️ [SAFE-CREATE] Starting safe terminal creation...');
-      
+
       // 1. Request latest state to ensure we have current information
       this.requestLatestState();
-      
+
       // 2. Wait a moment for state to update
-      await new Promise(resolve => setTimeout(resolve, 200));
-      
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
       // 3. Check if creation is possible
       if (!this.canCreateTerminal()) {
         const currentState = this.currentTerminalState;
         if (currentState) {
           const currentCount = currentState.terminals.length;
           const maxCount = currentState.maxTerminals;
-          log(`❌ [SAFE-CREATE] Cannot create terminal: ${currentCount}/${maxCount}, slots: [${currentState.availableSlots.join(',')}]`);
-          
+          log(
+            `❌ [SAFE-CREATE] Cannot create terminal: ${currentCount}/${maxCount}, slots: [${currentState.availableSlots.join(',')}]`
+          );
+
           // Show user-friendly message
           this.showTerminalLimitMessage(currentCount, maxCount);
           return false;
@@ -1827,22 +1904,24 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
           return false;
         }
       }
-      
+
       // 4. Check if any deletions are in progress
       if (this.deletionTracker.size > 0) {
         const trackedDeletions = Array.from(this.deletionTracker);
-        log(`⏳ [SAFE-CREATE] Deletions in progress: [${trackedDeletions.join(',')}], queueing creation...`);
-        
+        log(
+          `⏳ [SAFE-CREATE] Deletions in progress: [${trackedDeletions.join(',')}], queueing creation...`
+        );
+
         // Generate terminal ID
         const nextNumber = this.getNextAvailableNumber();
         if (!nextNumber) {
           log('❌ [SAFE-CREATE] No available number for queued creation');
           return false;
         }
-        
+
         const terminalId = `terminal-${nextNumber}`;
         const finalTerminalName = terminalName || `Terminal ${nextNumber}`;
-        
+
         // Queue the creation request
         try {
           const result = await this.queueTerminalCreation(terminalId, finalTerminalName);
@@ -1853,30 +1932,29 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
           return false;
         }
       }
-      
+
       // 5. Direct creation - no deletions in progress
       const nextNumber = this.getNextAvailableNumber();
       if (!nextNumber) {
         log('❌ [SAFE-CREATE] No available number for direct creation');
         return false;
       }
-      
+
       const terminalId = `terminal-${nextNumber}`;
       const finalTerminalName = terminalName || `Terminal ${nextNumber}`;
-      
+
       log(`🚀 [SAFE-CREATE] Creating terminal directly: ${terminalId} (${finalTerminalName})`);
-      
+
       // Send creation request to Extension
       this.postMessageToExtension({
         command: 'createTerminal',
         terminalId,
         terminalName: finalTerminalName,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
-      
+
       log(`✅ [SAFE-CREATE] Creation request sent: ${terminalId}`);
       return true;
-      
     } catch (error) {
       log('❌ [SAFE-CREATE] Error in safe terminal creation:', error);
       return false;
@@ -1893,16 +1971,16 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
         log('❌ [SAFE-DELETE] No terminal to delete');
         return false;
       }
-      
+
       log(`🛡️ [SAFE-DELETE] Starting safe deletion: ${targetId}`);
-      
+
       // 1. Check if terminal exists
       const terminalInstance = this.getTerminalInstance(targetId);
       if (!terminalInstance) {
         log(`❌ [SAFE-DELETE] Terminal not found: ${targetId}`);
         return false;
       }
-      
+
       // 🎯 FIX: Check terminal count BEFORE deletion to protect the last one
       const totalTerminals = this.terminalLifecycleManager.getTerminalStats().totalTerminals;
       if (totalTerminals <= 1) {
@@ -1913,34 +1991,35 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
         }
         return false;
       }
-      
+
       // 2. Check if deletion is already in progress
       if (this.isTerminalDeletionTracked(targetId)) {
         log(`⏳ [SAFE-DELETE] Deletion already in progress: ${targetId}`);
         return false;
       }
-      
+
       // 3. Send deletion request to Extension
-      log(`🗑️ [SAFE-DELETE] Sending deletion request: ${targetId} (${totalTerminals} -> ${totalTerminals - 1})`);
-      
+      log(
+        `🗑️ [SAFE-DELETE] Sending deletion request: ${targetId} (${totalTerminals} -> ${totalTerminals - 1})`
+      );
+
       // Track the deletion
       this.trackTerminalDeletion(targetId);
-      
+
       // Send delete message to Extension
       this.postMessageToExtension({
         command: 'deleteTerminal',
         terminalId: targetId,
         requestSource: 'header', // Set correct source for header X button
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
-      
+
       // 🎯 FIX: Wait for Extension response before removing from WebView
       // Remove the immediate removal - let Extension handle validation and notify back
       // this.removeTerminal(targetId);  // ← This was causing the issue
-      
+
       log(`✅ [SAFE-DELETE] Deletion request sent, awaiting Extension response: ${targetId}`);
       return true;
-      
     } catch (error) {
       log('❌ [SAFE-DELETE] Error in safe terminal deletion:', error);
       return false;
@@ -1954,11 +2033,13 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     const hasCachedState = !!this.currentTerminalState;
     const noPendingDeletions = this.deletionTracker.size === 0;
     const noPendingCreations = this.pendingCreationRequests.length === 0;
-    
+
     const isReady = hasCachedState && noPendingDeletions && noPendingCreations;
-    
-    log(`🔍 [SYSTEM] System ready check: state=${hasCachedState}, deletions=${noPendingDeletions}, creations=${noPendingCreations} => ${isReady}`);
-    
+
+    log(
+      `🔍 [SYSTEM] System ready check: state=${hasCachedState}, deletions=${noPendingDeletions}, creations=${noPendingCreations} => ${isReady}`
+    );
+
     return isReady;
   }
 
@@ -1967,21 +2048,21 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
    */
   public forceSynchronization(): void {
     log('🔄 [FORCE-SYNC] Forcing system synchronization...');
-    
+
     // Clear all pending operations
     this.deletionTracker.clear();
-    this.deletionTimeouts.forEach(timeout => clearTimeout(timeout));
+    this.deletionTimeouts.forEach((timeout) => clearTimeout(timeout));
     this.deletionTimeouts.clear();
-    
+
     // Reject all pending creation requests
-    this.pendingCreationRequests.forEach(request => {
+    this.pendingCreationRequests.forEach((request) => {
       request.reject(new Error('System synchronization forced'));
     });
     this.pendingCreationRequests.length = 0;
-    
+
     // Request fresh state
     this.requestLatestState();
-    
+
     log('✅ [FORCE-SYNC] System synchronization completed');
   }
 
@@ -2017,8 +2098,8 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       state: this.currentTerminalState,
       pendingOperations: {
         deletions: Array.from(this.deletionTracker),
-        creations: this.pendingCreationRequests.length
-      }
+        creations: this.pendingCreationRequests.length,
+      },
     };
   }
 

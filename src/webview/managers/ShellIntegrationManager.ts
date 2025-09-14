@@ -1,6 +1,6 @@
 /**
  * Shell Integration Manager for WebView
- * 
+ *
  * Handles shell integration features in the webview:
  * - Command status indicators
  * - Working directory display
@@ -29,10 +29,10 @@ export class ShellIntegrationManager {
 
   // VS Code standard colors
   private readonly STATUS_COLORS = {
-    ready: '#007acc',      // VS Code blue
-    executing: '#f9c74f',  // Yellow for running
-    success: '#73c991',    // Green for success
-    error: '#f85149',      // Red for error
+    ready: '#007acc', // VS Code blue
+    executing: '#f9c74f', // Yellow for running
+    success: '#73c991', // Green for success
+    error: '#f85149', // Red for error
   };
 
   constructor() {
@@ -126,7 +126,10 @@ export class ShellIntegrationManager {
   /**
    * Update shell status from extension
    */
-  public updateShellStatus(terminalId: string, status: 'ready' | 'executing' | 'success' | 'error'): void {
+  public updateShellStatus(
+    terminalId: string,
+    status: 'ready' | 'executing' | 'success' | 'error'
+  ): void {
     let shellStatus = this.statusMap.get(terminalId);
     if (!shellStatus) {
       shellStatus = {
@@ -138,7 +141,7 @@ export class ShellIntegrationManager {
 
     shellStatus.status = status;
     this.updateStatusIndicator(terminalId, status);
-    
+
     // Add command gutter decoration for success/error
     if (status === 'success' || status === 'error') {
       this.addCommandGutter(terminalId, status);
@@ -165,7 +168,10 @@ export class ShellIntegrationManager {
   /**
    * Update status indicator in terminal header
    */
-  private updateStatusIndicator(terminalId: string, status: 'ready' | 'executing' | 'success' | 'error'): void {
+  private updateStatusIndicator(
+    terminalId: string,
+    status: 'ready' | 'executing' | 'success' | 'error'
+  ): void {
     // Find or create status indicator
     let indicator = this.statusIndicators.get(terminalId);
     if (!indicator) {
@@ -174,7 +180,7 @@ export class ShellIntegrationManager {
 
       indicator = document.createElement('span');
       indicator.className = 'shell-status-indicator';
-      
+
       // Insert at the beginning of header
       const title = header.querySelector('.terminal-title');
       if (title) {
@@ -182,13 +188,13 @@ export class ShellIntegrationManager {
       } else {
         header.appendChild(indicator);
       }
-      
+
       this.statusIndicators.set(terminalId, indicator);
     }
 
     // Update indicator class
     indicator.className = `shell-status-indicator ${status}`;
-    
+
     // Add tooltip
     switch (status) {
       case 'ready':
@@ -218,7 +224,7 @@ export class ShellIntegrationManager {
 
       cwdDisplay = document.createElement('span');
       cwdDisplay.className = 'shell-cwd-display';
-      
+
       // Find a good place to insert
       const title = header.querySelector('.terminal-title');
       if (title && title.nextSibling) {
@@ -226,7 +232,7 @@ export class ShellIntegrationManager {
       } else {
         header.appendChild(cwdDisplay);
       }
-      
+
       this.cwdDisplays.set(terminalId, cwdDisplay);
     }
 
@@ -236,7 +242,7 @@ export class ShellIntegrationManager {
     if (home && cwd.startsWith(home)) {
       displayCwd = '~' + cwd.slice(home.length);
     }
-    
+
     cwdDisplay.textContent = displayCwd;
     cwdDisplay.title = cwd; // Full path in tooltip
   }
@@ -254,12 +260,12 @@ export class ShellIntegrationManager {
     // Create gutter element
     const gutter = document.createElement('div');
     gutter.className = `command-status-gutter ${status}`;
-    
+
     // Add to terminal body
     const terminalBody = container.querySelector('.terminal-body');
     if (terminalBody) {
       terminalBody.appendChild(gutter);
-      
+
       // Fade out after 3 seconds
       setTimeout(() => {
         gutter.style.opacity = '0';
@@ -282,7 +288,10 @@ export class ShellIntegrationManager {
   /**
    * Create command palette for history
    */
-  public showCommandHistory(terminalId: string, history: Array<{ command: string; exitCode?: number; duration?: number }>): void {
+  public showCommandHistory(
+    terminalId: string,
+    history: Array<{ command: string; exitCode?: number; duration?: number }>
+  ): void {
     // This would integrate with VS Code's QuickPick API
     // For now, we'll just log it
     console.log('Command history for terminal', terminalId, history);
@@ -310,7 +319,7 @@ export class ShellIntegrationManager {
           links.push({
             range: {
               start: { x: match.index + 1, y: line },
-              end: { x: match.index + match[0].length + 1, y: line }
+              end: { x: match.index + match[0].length + 1, y: line },
             },
             text: match[0],
             activate: () => {
@@ -321,12 +330,12 @@ export class ShellIntegrationManager {
                   filePath: match[0],
                 });
               }
-            }
+            },
           });
         }
 
         callback(links);
-      }
+      },
     });
 
     // Add link provider for URLs
@@ -346,19 +355,19 @@ export class ShellIntegrationManager {
           links.push({
             range: {
               start: { x: match.index + 1, y: line },
-              end: { x: match.index + match[0].length + 1, y: line }
+              end: { x: match.index + match[0].length + 1, y: line },
             },
             text: match[0],
             activate: () => {
               if (match) {
                 window.open(match[0], '_blank');
               }
-            }
+            },
           });
         }
 
         callback(links);
-      }
+      },
     });
   }
 
@@ -372,13 +381,13 @@ export class ShellIntegrationManager {
           this.updateShellStatus(message.terminalId as string, message.status as any);
         }
         break;
-        
+
       case 'updateCwd':
         if ('terminalId' in message && 'cwd' in message) {
           this.updateCwd(message.terminalId as string, message.cwd as string);
         }
         break;
-        
+
       case 'commandHistory':
         if ('terminalId' in message && 'history' in message) {
           this.showCommandHistory(message.terminalId as string, message.history as any);
@@ -392,13 +401,13 @@ export class ShellIntegrationManager {
    */
   public disposeTerminal(terminalId: string): void {
     this.statusMap.delete(terminalId);
-    
+
     const indicator = this.statusIndicators.get(terminalId);
     if (indicator) {
       indicator.remove();
       this.statusIndicators.delete(terminalId);
     }
-    
+
     const cwdDisplay = this.cwdDisplays.get(terminalId);
     if (cwdDisplay) {
       cwdDisplay.remove();
@@ -408,9 +417,9 @@ export class ShellIntegrationManager {
 
   public dispose(): void {
     this.statusMap.clear();
-    this.statusIndicators.forEach(indicator => indicator.remove());
+    this.statusIndicators.forEach((indicator) => indicator.remove());
     this.statusIndicators.clear();
-    this.cwdDisplays.forEach(display => display.remove());
+    this.cwdDisplays.forEach((display) => display.remove());
     this.cwdDisplays.clear();
   }
 }

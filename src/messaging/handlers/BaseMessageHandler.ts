@@ -1,12 +1,16 @@
 /**
  * Base Message Handler
- * 
+ *
  * Abstract base class for all unified message handlers.
  * Provides common functionality and enforces consistent patterns.
  */
 
 import { WebviewMessage } from '../../types/common';
-import { IUnifiedMessageHandler, IMessageHandlerContext, MessagePriority } from '../UnifiedMessageDispatcher';
+import {
+  IUnifiedMessageHandler,
+  IMessageHandlerContext,
+  MessagePriority,
+} from '../UnifiedMessageDispatcher';
 
 /**
  * Abstract base class for unified message handlers
@@ -69,7 +73,10 @@ export abstract class BaseMessageHandler implements IUnifiedMessageHandler {
    */
   protected handleError(context: IMessageHandlerContext, command: string, error: unknown): never {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    context.logger.error(`[${this.constructor.name}] Error handling ${command}: ${errorMessage}`, error);
+    context.logger.error(
+      `[${this.constructor.name}] Error handling ${command}: ${errorMessage}`,
+      error
+    );
     throw new Error(`Handler ${this.constructor.name} failed: ${errorMessage}`);
   }
 }

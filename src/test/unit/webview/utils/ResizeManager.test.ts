@@ -15,16 +15,16 @@ describe('ResizeManager', () => {
 
   beforeEach(() => {
     sandbox = createSandbox();
-    
+
     // Create DOM environment
     dom = new JSDOM('<!DOCTYPE html><html><body><div id="test-element"></div></body></html>');
     global.window = dom.window as any;
     global.document = dom.window.document;
     global.Element = dom.window.Element;
     global.HTMLElement = dom.window.HTMLElement;
-    
+
     testElement = document.getElementById('test-element')!;
-    
+
     // Mock ResizeObserver
     global.ResizeObserver = class MockResizeObserver {
       constructor(private callback: ResizeObserverCallback) {}
@@ -65,9 +65,9 @@ describe('ResizeManager', () => {
         callCount++;
       };
 
-      ResizeManager.debounceResize('test-key', callback, { 
-        delay: 100, 
-        immediate: true 
+      ResizeManager.debounceResize('test-key', callback, {
+        delay: 100,
+        immediate: true,
       });
 
       // Should call immediately
@@ -77,13 +77,13 @@ describe('ResizeManager', () => {
     it('should handle async callbacks', async () => {
       let resolved = false;
       const asyncCallback = async () => {
-        await new Promise(resolve => setTimeout(resolve, 10));
+        await new Promise((resolve) => setTimeout(resolve, 10));
         resolved = true;
       };
 
       ResizeManager.debounceResize('test-key', asyncCallback, { delay: 50 });
 
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
       expect(resolved).to.be.true;
     });
 
@@ -91,8 +91,12 @@ describe('ResizeManager', () => {
       let callback1Count = 0;
       let callback2Count = 0;
 
-      const callback1 = () => { callback1Count++; };
-      const callback2 = () => { callback2Count++; };
+      const callback1 = () => {
+        callback1Count++;
+      };
+      const callback2 = () => {
+        callback2Count++;
+      };
 
       ResizeManager.debounceResize('key1', callback1, { delay: 50 });
       ResizeManager.debounceResize('key2', callback2, { delay: 50 });
@@ -121,7 +125,7 @@ describe('ResizeManager', () => {
   describe('observeResize', () => {
     it('should create ResizeObserver and observe element', () => {
       const callback = sandbox.stub();
-      
+
       ResizeManager.observeResize('test-key', testElement, callback);
 
       // Should have created observer (internal, can't directly test)
@@ -135,10 +139,20 @@ describe('ResizeManager', () => {
       const callback = sandbox.stub();
       const mockEntry = {
         target: testElement,
-        contentRect: { width: 100, height: 200, top: 0, left: 0, bottom: 200, right: 100, x: 0, y: 0, toJSON: () => ({}) },
+        contentRect: {
+          width: 100,
+          height: 200,
+          top: 0,
+          left: 0,
+          bottom: 200,
+          right: 100,
+          x: 0,
+          y: 0,
+          toJSON: () => ({}),
+        },
         borderBoxSize: [],
         contentBoxSize: [],
-        devicePixelContentBoxSize: []
+        devicePixelContentBoxSize: [],
       } as ResizeObserverEntry;
 
       ResizeManager.observeResize('test-key', testElement, callback);
@@ -188,7 +202,7 @@ describe('ResizeManager', () => {
       };
 
       ResizeManager.debounceResize('test-key', callback, { delay: 50 });
-      
+
       // Clear before callback executes
       setTimeout(() => {
         ResizeManager.clearResize('test-key');
@@ -211,9 +225,9 @@ describe('ResizeManager', () => {
   describe('unobserveResize', () => {
     it('should unobserve element for specific key', () => {
       const callback = sandbox.stub();
-      
+
       ResizeManager.observeResize('test-key', testElement, callback);
-      
+
       expect(() => {
         ResizeManager.unobserveResize('test-key');
       }).to.not.throw();

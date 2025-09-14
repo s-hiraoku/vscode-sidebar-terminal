@@ -261,7 +261,7 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
     try {
       const disconnectedAgents = this.stateManager.getDisconnectedAgents();
       const currentState = this.getAgentState(terminalId);
-      
+
       if (disconnectedAgents.has(terminalId)) {
         // Promote disconnected agent to connected
         const agentInfo = disconnectedAgents.get(terminalId)!;
@@ -325,9 +325,15 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
    * 🆕 MANUAL RESET: Force reconnect AI Agent when user clicks toggle button
    * This helps recover from detection errors by manually setting the agent as connected
    */
-  forceReconnectAgent(terminalId: string, agentType: 'claude' | 'gemini' | 'codex' = 'claude', terminalName?: string): boolean {
-    log(`🔄 [MANUAL-RESET] User triggered force reconnect for terminal ${terminalId} as ${agentType}`);
-    
+  forceReconnectAgent(
+    terminalId: string,
+    agentType: 'claude' | 'gemini' | 'codex' = 'claude',
+    terminalName?: string
+  ): boolean {
+    log(
+      `🔄 [MANUAL-RESET] User triggered force reconnect for terminal ${terminalId} as ${agentType}`
+    );
+
     try {
       // Clear any cached detection results for this terminal
       const cacheKeys: string[] = [];
@@ -343,14 +349,16 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
         this.detectionCache.clear();
         log(`⚠️ [MANUAL-RESET] Cache iteration failed, cleared entire cache`);
       }
-      cacheKeys.forEach(key => this.detectionCache.delete(key));
+      cacheKeys.forEach((key) => this.detectionCache.delete(key));
       log(`🧹 [MANUAL-RESET] Cleared ${cacheKeys.length} cache entries for terminal ${terminalId}`);
-      
+
       // Force reconnect via state manager
       const success = this.stateManager.forceReconnectAgent(terminalId, agentType, terminalName);
-      
+
       if (success) {
-        log(`✅ [MANUAL-RESET] Successfully force-reconnected ${agentType} in terminal ${terminalId}`);
+        log(
+          `✅ [MANUAL-RESET] Successfully force-reconnected ${agentType} in terminal ${terminalId}`
+        );
         return true;
       } else {
         log(`❌ [MANUAL-RESET] Failed to force-reconnect ${agentType} in terminal ${terminalId}`);
@@ -368,7 +376,7 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
    */
   clearDetectionError(terminalId: string): boolean {
     log(`🧹 [MANUAL-RESET] User triggered detection error clear for terminal ${terminalId}`);
-    
+
     try {
       // Clear all cached results for this terminal
       const cacheKeys: string[] = [];
@@ -384,12 +392,12 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
         this.detectionCache.clear();
         log(`⚠️ [MANUAL-RESET] Cache iteration failed, cleared entire cache`);
       }
-      cacheKeys.forEach(key => this.detectionCache.delete(key));
+      cacheKeys.forEach((key) => this.detectionCache.delete(key));
       log(`🧹 [MANUAL-RESET] Cleared ${cacheKeys.length} cache entries for terminal ${terminalId}`);
-      
+
       // Reset state via state manager
       const success = this.stateManager.clearDetectionError(terminalId);
-      
+
       if (success) {
         log(`✅ [MANUAL-RESET] Successfully cleared detection errors for terminal ${terminalId}`);
         return true;
@@ -574,7 +582,7 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
     // Only detect termination if we have VERY clear shell prompt patterns
     if (this.patternDetector.detectShellPrompt(cleanLine)) {
       const lowerLine = cleanLine.toLowerCase();
-      
+
       // 🚨 EXTENSIVE AI OUTPUT DETECTION: Greatly expanded to reduce false positives
       const looksLikeAIOutput =
         lowerLine.includes('claude') ||
@@ -624,7 +632,7 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
         lowerLine.includes('...') || // Thinking indicators
         lowerLine.includes('let') || // Common Claude phrase starts
         lowerLine.includes('the') || // Common articles
-        lowerLine.includes('to') ||  // Common prepositions
+        lowerLine.includes('to') || // Common prepositions
         lowerLine.includes('for') ||
         lowerLine.includes('and') ||
         lowerLine.includes('or') ||
@@ -635,33 +643,33 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
         lowerLine.includes('what') ||
         lowerLine.includes('why') ||
         lowerLine.includes('how') ||
-        cleanLine.includes('(') ||   // Likely explanation or code
+        cleanLine.includes('(') || // Likely explanation or code
         cleanLine.includes(')') ||
         cleanLine.includes('[') ||
         cleanLine.includes(']') ||
         cleanLine.includes('{') ||
         cleanLine.includes('}') ||
-        /\d/.test(cleanLine) ||      // Contains numbers (often in AI responses)
-        cleanLine.includes(':') ||   // Colons often in explanations
-        cleanLine.includes('=') ||   // Code or assignments
-        cleanLine.length > 20;       // Longer lines are more likely AI output
+        /\d/.test(cleanLine) || // Contains numbers (often in AI responses)
+        cleanLine.includes(':') || // Colons often in explanations
+        cleanLine.includes('=') || // Code or assignments
+        cleanLine.length > 20; // Longer lines are more likely AI output
 
       // 🚨 ULTRA-CONSERVATIVE: Only detect shell prompt if it's EXTREMELY clear
       // Must be very short, contain NO common words, and match exact shell patterns
       const isVeryObviousShellPrompt =
-        cleanLine.length <= 15 &&    // Much shorter limit
+        cleanLine.length <= 15 && // Much shorter limit
         !looksLikeAIOutput &&
-        (cleanLine.match(/^[a-z0-9._-]+@[a-z0-9.-]+:[~\/][^$]*\$\s*$/i) ||  // user@host:~$
-         cleanLine.match(/^[a-z0-9._-]+@[a-z0-9.-]+\s*\$\s*$/i) ||          // user@host $
-         cleanLine.match(/^\$\s*$/) ||                                       // Just $
-         cleanLine.match(/^%\s*$/) ||                                        // % (zsh)
-         cleanLine.match(/^>\s*$/));                                         // > (some shells)
+        (cleanLine.match(/^[a-z0-9._-]+@[a-z0-9.-]+:[~\/][^$]*\$\s*$/i) || // user@host:~$
+          cleanLine.match(/^[a-z0-9._-]+@[a-z0-9.-]+\s*\$\s*$/i) || // user@host $
+          cleanLine.match(/^\$\s*$/) || // Just $
+          cleanLine.match(/^%\s*$/) || // % (zsh)
+          cleanLine.match(/^>\s*$/)); // > (some shells)
 
       if (isVeryObviousShellPrompt) {
         log(`✅ [TERMINATION] Very obvious shell prompt detected: "${cleanLine}"`);
         return {
           isTerminated: true,
-          confidence: 0.75,  // Reduced confidence to be more conservative
+          confidence: 0.75, // Reduced confidence to be more conservative
           detectedLine: cleanLine,
           reason: 'Very obvious shell prompt detected',
         };
@@ -675,7 +683,7 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
       log(`✅ [TERMINATION] Claude session end detected: "${cleanLine}"`);
       return {
         isTerminated: true,
-        confidence: 0.90,  // Slightly reduced
+        confidence: 0.9, // Slightly reduced
         detectedLine: cleanLine,
         reason: 'Claude session termination',
       };
@@ -692,10 +700,10 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
 
   private hasVeryExplicitTerminationMessage(cleanLine: string): boolean {
     const line = cleanLine.toLowerCase().trim();
-    
+
     // 🚨 ULTRA-STRICT: Only match VERY specific termination messages
     // Greatly reduced to prevent false positives
-    
+
     return (
       // Exact session termination messages only
       line === 'session ended' ||
@@ -703,7 +711,6 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
       line === 'session terminated' ||
       line === 'session completed' ||
       line === 'process finished' ||
-      
       // Agent-specific exact termination messages
       line === 'goodbye claude' ||
       line === 'goodbye gemini' ||
@@ -713,16 +720,13 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
       line === 'gemini exited' ||
       line === 'claude session ended' ||
       line === 'gemini session ended' ||
-      
       // Command not found (exact matches only)
       line === 'command not found: claude' ||
       line === 'command not found: gemini' ||
       line.includes('no such file or directory') ||
-      
       // Process termination patterns (exact matches)
       line.includes('[process exited') ||
       line.includes('process terminated') ||
-      
       // Agent powering down (exact context required)
       (line.includes('agent') && line.includes('powering down')) ||
       (line.includes('agent') && line === 'goodbye')
@@ -763,56 +767,58 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
     // 1. Only exact shell prompt patterns with very strict matching
     const shellPromptPatterns = [
       /^[a-z0-9._-]+@[a-z0-9.-]+:[~\/][^$]*\$\s*$/i, // user@host:~$ or user@host:/path$
-      /^[a-z0-9._-]+@[a-z0-9.-]+\s*\$\s*$/i,         // user@host $
-      /^\$\s*$/,                                       // Just $ (simple shell)
-      /^%\s*$/,                                        // % (zsh)
-      /^>\s*$/,                                        // > (some shells)
+      /^[a-z0-9._-]+@[a-z0-9.-]+\s*\$\s*$/i, // user@host $
+      /^\$\s*$/, // Just $ (simple shell)
+      /^%\s*$/, // % (zsh)
+      /^>\s*$/, // > (some shells)
     ];
 
     // 🚨 STRICT CHECK: Line must be very short and match exact patterns
-    const isExactShellPrompt = line.length <= 20 && 
-                               shellPromptPatterns.some((pattern) => pattern.test(line)) &&
-                               !line.includes('claude') &&    // Don't match if contains "claude"
-                               !line.includes('gemini') &&    // Don't match if contains "gemini"
-                               !line.includes('help') &&      // Don't match common AI words
-                               !line.includes('i') &&         // Don't match personal pronouns
-                               !line.includes('you') &&
-                               !line.includes('the') &&       // Don't match articles
-                               !line.includes('to') &&        // Don't match prepositions
-                               !/\d/.test(line) &&           // Don't match if contains numbers
-                               !line.includes(':') &&        // Don't match colons (often in AI responses)
-                               !line.includes('(') &&        // Don't match parentheses
-                               !line.includes(')');
+    const isExactShellPrompt =
+      line.length <= 20 &&
+      shellPromptPatterns.some((pattern) => pattern.test(line)) &&
+      !line.includes('claude') && // Don't match if contains "claude"
+      !line.includes('gemini') && // Don't match if contains "gemini"
+      !line.includes('help') && // Don't match common AI words
+      !line.includes('i') && // Don't match personal pronouns
+      !line.includes('you') &&
+      !line.includes('the') && // Don't match articles
+      !line.includes('to') && // Don't match prepositions
+      !/\d/.test(line) && // Don't match if contains numbers
+      !line.includes(':') && // Don't match colons (often in AI responses)
+      !line.includes('(') && // Don't match parentheses
+      !line.includes(')');
 
     // 2. Only VERY explicit Claude termination messages
     const hasExplicitTermination =
-      line === 'session ended' ||                    // Exact match only
-      line === 'goodbye claude' ||                   // Exact match only
-      line === 'claude session terminated' ||       // Exact match only
-      line === 'exiting claude' ||                  // Exact match only
-      line === 'claude exited' ||                   // Exact match only
-      line === 'connection closed';                 // Exact match only
+      line === 'session ended' || // Exact match only
+      line === 'goodbye claude' || // Exact match only
+      line === 'claude session terminated' || // Exact match only
+      line === 'exiting claude' || // Exact match only
+      line === 'claude exited' || // Exact match only
+      line === 'connection closed'; // Exact match only
     // 🚨 REMOVED: Generic "exit" matching to prevent false positives
 
     // 3. Process completion with EXACT context only
     const hasProcessCompletion =
-      line === '[done]' ||                          // Exact match
-      line === '[finished]' ||                     // Exact match
-      line === 'done' ||                           // Exact match only if standalone
-      line === 'finished' ||                      // Exact match only if standalone
+      line === '[done]' || // Exact match
+      line === '[finished]' || // Exact match
+      line === 'done' || // Exact match only if standalone
+      line === 'finished' || // Exact match only if standalone
       /^\[process exited with code \d+\]$/.test(line); // Exact pattern match
 
     // 4. VERY specific Claude session end indicators only
     const hasSessionEndIndicator =
-      /^\[process exited with code \d+\]$/i.test(line) ||  // Process exit status
-      line.includes('cleaning up claude session') ||        // Specific Claude cleanup
-      line.includes('claude session closed');               // Specific Claude session end
+      /^\[process exited with code \d+\]$/i.test(line) || // Process exit status
+      line.includes('cleaning up claude session') || // Specific Claude cleanup
+      line.includes('claude session closed'); // Specific Claude session end
 
     // 🚨 CONSERVATIVE LOGIC: Only trigger on very clear indicators
-    const shouldTerminate = hasExplicitTermination || 
-                           hasProcessCompletion ||
-                           hasSessionEndIndicator ||
-                           (isExactShellPrompt && line.length <= 10); // Very short shell prompts only
+    const shouldTerminate =
+      hasExplicitTermination ||
+      hasProcessCompletion ||
+      hasSessionEndIndicator ||
+      (isExactShellPrompt && line.length <= 10); // Very short shell prompts only
 
     return shouldTerminate;
   }

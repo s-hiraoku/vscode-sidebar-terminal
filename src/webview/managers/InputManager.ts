@@ -105,10 +105,10 @@ export class InputManager extends BaseManager implements IInputManager {
 
     if (settings.commandsToSkipShell) {
       this.commandsToSkipShell.clear();
-      
+
       // Start with default commands
-      this.DEFAULT_COMMANDS_TO_SKIP_SHELL.forEach(cmd => this.commandsToSkipShell.add(cmd));
-      
+      this.DEFAULT_COMMANDS_TO_SKIP_SHELL.forEach((cmd) => this.commandsToSkipShell.add(cmd));
+
       // Process custom commands
       for (const command of settings.commandsToSkipShell) {
         if (command.startsWith('-')) {
@@ -122,7 +122,7 @@ export class InputManager extends BaseManager implements IInputManager {
           this.logger.debug(`Added command to skip list: ${command}`);
         }
       }
-      
+
       this.logger.info(`commandsToSkipShell updated: ${this.commandsToSkipShell.size} commands`);
     }
 
@@ -148,13 +148,21 @@ export class InputManager extends BaseManager implements IInputManager {
     }
 
     // Check specific command skip list
-    if (resolvedCommand && this.commandsToSkipShell.has(resolvedCommand) && !this.sendKeybindingsToShell) {
+    if (
+      resolvedCommand &&
+      this.commandsToSkipShell.has(resolvedCommand) &&
+      !this.sendKeybindingsToShell
+    ) {
       this.logger.debug(`Command ${resolvedCommand} in skip list - skipping shell`);
       return true;
     }
 
     // Check for mnemonics (Alt key on Windows/Linux)
-    if (this.allowMnemonics && event.altKey && (navigator.platform.includes('Win') || navigator.platform.includes('Linux'))) {
+    if (
+      this.allowMnemonics &&
+      event.altKey &&
+      (navigator.platform.includes('Win') || navigator.platform.includes('Linux'))
+    ) {
       this.logger.debug('Alt key mnemonic detected - skipping shell');
       return true;
     }
@@ -210,19 +218,19 @@ export class InputManager extends BaseManager implements IInputManager {
       [`${isMac ? 'meta' : 'ctrl'}+shift+5`]: 'workbench.action.terminal.split',
       [`${isMac ? 'meta' : 'ctrl'}+shift+w`]: 'workbench.action.terminal.kill',
       [`${isMac ? 'meta' : 'ctrl'}+shift+k`]: 'workbench.action.terminal.clear',
-      
+
       // Navigation - cross-platform
       [`${isMac ? 'meta' : 'ctrl'}+p`]: 'workbench.action.quickOpen',
       [`${isMac ? 'meta' : 'ctrl'}+shift+p`]: 'workbench.action.showCommands',
       [`${isMac ? 'meta' : 'ctrl'}+tab`]: 'workbench.action.terminal.focusNext',
       [`${isMac ? 'meta' : 'ctrl'}+shift+tab`]: 'workbench.action.terminal.focusPrevious',
       [`${isMac ? 'meta' : 'ctrl'}+\``]: 'workbench.action.terminal.toggleTerminal',
-      
+
       // VS Code Standard Scrolling - Enhanced Implementation
       // Line scrolling with Shift+PageUp/PageDown
       'shift+pageup': 'workbench.action.terminal.scrollUp',
       'shift+pagedown': 'workbench.action.terminal.scrollDown',
-      
+
       // Windows/Linux specific scrolling
       'ctrl+alt+pageup': 'workbench.action.terminal.scrollUp',
       'ctrl+alt+pagedown': 'workbench.action.terminal.scrollDown',
@@ -232,66 +240,68 @@ export class InputManager extends BaseManager implements IInputManager {
       'ctrl+end': 'workbench.action.terminal.scrollToBottom',
       'shift+home': 'workbench.action.terminal.scrollToTop',
       'shift+end': 'workbench.action.terminal.scrollToBottom',
-      
+
       // macOS specific scrolling
       'meta+alt+pageup': 'workbench.action.terminal.scrollUp',
       'meta+alt+pagedown': 'workbench.action.terminal.scrollDown',
       'meta+home': 'workbench.action.terminal.scrollToTop',
       'meta+end': 'workbench.action.terminal.scrollToBottom',
-      
+
       // Command navigation (Mac style)
       'meta+arrowup': 'workbench.action.terminal.scrollToPreviousCommand',
       'meta+arrowdown': 'workbench.action.terminal.scrollToNextCommand',
       'ctrl+arrowup': 'workbench.action.terminal.scrollToPreviousCommand',
       'ctrl+arrowdown': 'workbench.action.terminal.scrollToNextCommand',
-      
+
       // Panel management
       [`${isMac ? 'meta' : 'ctrl'}+j`]: 'workbench.action.togglePanel',
       [`${isMac ? 'meta' : 'ctrl'}+shift+u`]: 'workbench.action.closePanel',
       [`${isMac ? 'meta' : 'ctrl'}+shift+e`]: 'workbench.action.toggleSidebarVisibility',
-      
+
       // Development tools
-      'f12': 'workbench.action.toggleDevTools',
+      f12: 'workbench.action.toggleDevTools',
       [`${isMac ? 'meta' : 'ctrl'}+r`]: 'workbench.action.reloadWindow',
       [`${isMac ? 'meta' : 'ctrl'}+shift+r`]: 'workbench.action.reloadWindowWithExtensionsDisabled',
-      
+
       // Zoom
       [`${isMac ? 'meta' : 'ctrl'}+=`]: 'workbench.action.zoomIn',
       [`${isMac ? 'meta' : 'ctrl'}+-`]: 'workbench.action.zoomOut',
       [`${isMac ? 'meta' : 'ctrl'}+0`]: 'workbench.action.zoomReset',
-      
+
       // Copy/paste (when appropriate)
       [`${isMac ? 'meta' : 'ctrl'}+c`]: 'workbench.action.terminal.copySelection',
       [`${isMac ? 'meta' : 'ctrl'}+v`]: 'workbench.action.terminal.paste',
       [`${isMac ? 'meta' : 'ctrl'}+a`]: 'workbench.action.terminal.selectAll',
-      
+
       // Find
       [`${isMac ? 'meta' : 'ctrl'}+f`]: 'workbench.action.terminal.focusFind',
       [`${isMac ? 'meta' : 'ctrl'}+g`]: 'workbench.action.terminal.findNext',
       [`${isMac ? 'meta' : 'ctrl'}+shift+g`]: 'workbench.action.terminal.findPrevious',
-      
+
       // Terminal size
       [`${isMac ? 'meta' : 'ctrl'}+shift+=`]: 'workbench.action.terminal.sizeToContentWidth',
-      
+
       // Additional shortcuts
       [`${isMac ? 'meta' : 'ctrl'}+shift+c`]: 'workbench.action.terminal.openNativeConsole',
-      'f1': 'workbench.action.showCommands',
-      'escape': 'workbench.action.terminal.hideFind',
-      
+      f1: 'workbench.action.showCommands',
+      escape: 'workbench.action.terminal.hideFind',
+
       // Platform specific alternatives
-      ...(isMac ? {
-        'meta+k': 'workbench.action.terminal.clear',
-        'meta+backspace': 'workbench.action.terminal.deleteWordLeft',
-        'meta+delete': 'workbench.action.terminal.deleteWordRight',
-        'meta+arrowleft': 'workbench.action.terminal.moveToLineStart',
-        'meta+arrowright': 'workbench.action.terminal.moveToLineEnd',
-      } : {
-        'ctrl+l': 'workbench.action.terminal.clear',
-        'ctrl+backspace': 'workbench.action.terminal.deleteWordLeft',
-        'ctrl+delete': 'workbench.action.terminal.deleteWordRight',
-        'home': 'workbench.action.terminal.moveToLineStart',
-        'end': 'workbench.action.terminal.moveToLineEnd',
-      })
+      ...(isMac
+        ? {
+            'meta+k': 'workbench.action.terminal.clear',
+            'meta+backspace': 'workbench.action.terminal.deleteWordLeft',
+            'meta+delete': 'workbench.action.terminal.deleteWordRight',
+            'meta+arrowleft': 'workbench.action.terminal.moveToLineStart',
+            'meta+arrowright': 'workbench.action.terminal.moveToLineEnd',
+          }
+        : {
+            'ctrl+l': 'workbench.action.terminal.clear',
+            'ctrl+backspace': 'workbench.action.terminal.deleteWordLeft',
+            'ctrl+delete': 'workbench.action.terminal.deleteWordRight',
+            home: 'workbench.action.terminal.moveToLineStart',
+            end: 'workbench.action.terminal.moveToLineEnd',
+          }),
     };
 
     // Create key combination string
@@ -304,11 +314,11 @@ export class InputManager extends BaseManager implements IInputManager {
 
     const keyCombo = parts.join('+');
     const resolved = keybindingMap[keyCombo];
-    
+
     if (resolved) {
       this.logger.debug(`Resolved keybinding: ${keyCombo} → ${resolved}`);
     }
-    
+
     return resolved || null;
   }
 
@@ -351,7 +361,12 @@ export class InputManager extends BaseManager implements IInputManager {
     };
 
     // Register Alt key handlers using EventHandlerRegistry
-    this.eventRegistry.register('alt-key-down', document, 'keydown', keydownHandler as EventListener);
+    this.eventRegistry.register(
+      'alt-key-down',
+      document,
+      'keydown',
+      keydownHandler as EventListener
+    );
     this.eventRegistry.register('alt-key-up', document, 'keyup', keyupHandler as EventListener);
 
     this.logger.lifecycle('Alt key visual feedback', 'completed');
@@ -371,7 +386,9 @@ export class InputManager extends BaseManager implements IInputManager {
       const resolvedCommand = this.resolveKeybinding(event);
       const shouldSkip = this.shouldSkipShell(event, resolvedCommand || undefined);
 
-      this.logger.debug(`Keybinding: ${event.key}, Command: ${resolvedCommand}, Skip Shell: ${shouldSkip}`);
+      this.logger.debug(
+        `Keybinding: ${event.key}, Command: ${resolvedCommand}, Skip Shell: ${shouldSkip}`
+      );
 
       // If should skip shell, handle as VS Code command
       if (shouldSkip && resolvedCommand) {
@@ -386,7 +403,12 @@ export class InputManager extends BaseManager implements IInputManager {
     };
 
     // Register shortcut handler using EventHandlerRegistry
-    this.eventRegistry.register('keyboard-shortcuts', document, 'keydown', shortcutHandler as EventListener);
+    this.eventRegistry.register(
+      'keyboard-shortcuts',
+      document,
+      'keydown',
+      shortcutHandler as EventListener
+    );
 
     this.logger.lifecycle('VS Code compatible keyboard shortcuts', 'completed');
   }
@@ -403,10 +425,20 @@ export class InputManager extends BaseManager implements IInputManager {
         this.emitTerminalInteractionEvent('create-terminal', '', undefined, manager);
         break;
       case 'workbench.action.terminal.split':
-        this.emitTerminalInteractionEvent('split-terminal', manager.getActiveTerminalId() || '', undefined, manager);
+        this.emitTerminalInteractionEvent(
+          'split-terminal',
+          manager.getActiveTerminalId() || '',
+          undefined,
+          manager
+        );
         break;
       case 'workbench.action.terminal.kill':
-        this.emitTerminalInteractionEvent('kill-terminal', manager.getActiveTerminalId() || '', undefined, manager);
+        this.emitTerminalInteractionEvent(
+          'kill-terminal',
+          manager.getActiveTerminalId() || '',
+          undefined,
+          manager
+        );
         break;
       case 'workbench.action.terminal.clear':
         this.handleTerminalClear(manager);
@@ -414,10 +446,20 @@ export class InputManager extends BaseManager implements IInputManager {
 
       // Navigation
       case 'workbench.action.terminal.focusNext':
-        this.emitTerminalInteractionEvent('switch-next', manager.getActiveTerminalId() || '', undefined, manager);
+        this.emitTerminalInteractionEvent(
+          'switch-next',
+          manager.getActiveTerminalId() || '',
+          undefined,
+          manager
+        );
         break;
       case 'workbench.action.terminal.focusPrevious':
-        this.emitTerminalInteractionEvent('switch-previous', manager.getActiveTerminalId() || '', undefined, manager);
+        this.emitTerminalInteractionEvent(
+          'switch-previous',
+          manager.getActiveTerminalId() || '',
+          undefined,
+          manager
+        );
         break;
       case 'workbench.action.terminal.toggleTerminal':
         this.emitTerminalInteractionEvent('toggle-terminal', '', undefined, manager);
@@ -537,7 +579,10 @@ export class InputManager extends BaseManager implements IInputManager {
   /**
    * Handle terminal scrolling
    */
-  private scrollTerminal(direction: 'up' | 'down' | 'top' | 'bottom' | 'previousCommand' | 'nextCommand', manager: IManagerCoordinator): void {
+  private scrollTerminal(
+    direction: 'up' | 'down' | 'top' | 'bottom' | 'previousCommand' | 'nextCommand',
+    manager: IManagerCoordinator
+  ): void {
     const activeTerminalId = manager.getActiveTerminalId();
     if (!activeTerminalId) {
       this.logger.warn('No active terminal for scrolling');
@@ -551,7 +596,7 @@ export class InputManager extends BaseManager implements IInputManager {
     }
 
     const terminal = terminalInstance.terminal;
-    
+
     // VS Code standard scrolling behavior
     switch (direction) {
       case 'up':
@@ -578,7 +623,7 @@ export class InputManager extends BaseManager implements IInputManager {
         break;
       case 'nextCommand':
         // Scroll to next command output (approximate)
-        // VS Code uses command detection, we use larger scroll increments  
+        // VS Code uses command detection, we use larger scroll increments
         const rows = terminal.rows || 24;
         terminal.scrollLines(Math.floor(rows / 2));
         break;
@@ -618,11 +663,14 @@ export class InputManager extends BaseManager implements IInputManager {
     if (terminal.hasSelection()) {
       const selection = terminal.getSelection();
       if (selection && navigator.clipboard) {
-        navigator.clipboard.writeText(selection).then(() => {
-          this.logger.debug(`Copied selection from terminal ${activeTerminalId}`);
-        }).catch(error => {
-          this.logger.error(`Failed to copy selection: ${error}`);
-        });
+        navigator.clipboard
+          .writeText(selection)
+          .then(() => {
+            this.logger.debug(`Copied selection from terminal ${activeTerminalId}`);
+          })
+          .catch((error) => {
+            this.logger.error(`Failed to copy selection: ${error}`);
+          });
       }
     }
   }
@@ -635,14 +683,17 @@ export class InputManager extends BaseManager implements IInputManager {
     if (!activeTerminalId) return;
 
     if (navigator.clipboard) {
-      navigator.clipboard.readText().then(text => {
-        if (text) {
-          this.emitTerminalInteractionEvent('paste', activeTerminalId, { text }, manager);
-          this.logger.debug(`Pasted text to terminal ${activeTerminalId}`);
-        }
-      }).catch(error => {
-        this.logger.error(`Failed to paste: ${error}`);
-      });
+      navigator.clipboard
+        .readText()
+        .then((text) => {
+          if (text) {
+            this.emitTerminalInteractionEvent('paste', activeTerminalId, { text }, manager);
+            this.logger.debug(`Pasted text to terminal ${activeTerminalId}`);
+          }
+        })
+        .catch((error) => {
+          this.logger.error(`Failed to paste: ${error}`);
+        });
     }
   }
 
@@ -830,7 +881,7 @@ export class InputManager extends BaseManager implements IInputManager {
     //   this.emitTerminalInteractionEvent('focus', terminalId, undefined, manager);
     // });
 
-    // Set up blur handling - xterm.js doesn't have onFocus/onBlur, comment out  
+    // Set up blur handling - xterm.js doesn't have onFocus/onBlur, comment out
     // terminal.onBlur(() => {
     //   this.logger.debug(`Terminal ${terminalId} blurred`);
     // });
@@ -1002,7 +1053,13 @@ export class InputManager extends BaseManager implements IInputManager {
       // This allows bash history, completion, and cursor movement to work properly
     };
 
-    this.eventRegistry.register('agent-arrow-keys', document, 'keydown', arrowKeyHandler as EventListener, true);
+    this.eventRegistry.register(
+      'agent-arrow-keys',
+      document,
+      'keydown',
+      arrowKeyHandler as EventListener,
+      true
+    );
   }
 
   /**

@@ -51,7 +51,9 @@ export abstract class GenericStateManager<T extends Record<string, unknown>> {
    */
   protected addTransitionRule(rule: StateTransitionRule<T>): void {
     this.transitionRules.push(rule);
-    log(`🔄 [${this.managerName.toUpperCase()}] Added transition rule: ${String(rule.from)} → ${String(rule.to)}`);
+    log(
+      `🔄 [${this.managerName.toUpperCase()}] Added transition rule: ${String(rule.from)} → ${String(rule.to)}`
+    );
   }
 
   /**

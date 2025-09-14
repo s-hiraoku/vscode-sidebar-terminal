@@ -5,7 +5,7 @@ import { TerminalErrorHandler } from '../utils/feedback';
 
 /**
  * Centralized WebView Message Handler Service
- * 
+ *
  * Extracted from SecondaryTerminalProvider to improve:
  * - Single Responsibility Principle compliance
  * - Testability through dependency injection
@@ -62,10 +62,10 @@ export class WebViewMessageHandlerService {
 
   public async handleMessage(message: WebviewMessage): Promise<void> {
     log('📨 [MESSAGE-HANDLER] Processing message:', message.command);
-    
+
     try {
       const handler = this.handlers.get(message.command) || this.defaultHandler;
-      
+
       if (handler.canHandle(message.command)) {
         await handler.handle(message, this.context);
         log(`✅ [MESSAGE-HANDLER] Message handled successfully: ${message.command}`);
@@ -103,11 +103,11 @@ class TestMessageHandler extends BaseMessageHandler {
 
   async handle(message: WebviewMessage, _context: IMessageHandlerContext): Promise<void> {
     this.log('Test message received:', message.command);
-    
+
     if (message.command === 'test' && (message as any).type === 'initComplete') {
       this.log('🎆 WebView confirms initialization complete!');
     }
-    
+
     // Test messages don't require further processing
   }
 }
@@ -124,10 +124,10 @@ class WebViewReadyHandler extends BaseMessageHandler {
 
   async handle(message: WebviewMessage, context: IMessageHandlerContext): Promise<void> {
     this.log('WebView ready - initializing terminal');
-    
+
     // Delegate to WebView state manager for initialization
     await context.webViewStateManager.initializeWebView();
-    
+
     // Ensure terminals exist
     if (context.terminalManager.getTerminals().length === 0) {
       await context.webViewStateManager.ensureMinimumTerminals();
@@ -215,7 +215,7 @@ class CreateTerminalHandler extends BaseMessageHandler {
     }
 
     this.log(`Creating terminal: ${message.terminalId} (${message.terminalName})`);
-    
+
     // Check if terminal already exists
     const existingTerminal = context.terminalManager.getTerminal(message.terminalId);
     if (existingTerminal) {
@@ -273,13 +273,13 @@ class DeleteTerminalHandler extends BaseMessageHandler {
   ): Promise<void> {
     try {
       const result = await context.terminalManager.deleteTerminal(terminalId, { source });
-      
+
       // Send response to WebView
       await context.sendMessage({
         command: 'deleteTerminalResponse',
         terminalId,
         success: result.success,
-        reason: result.reason
+        reason: result.reason,
       });
 
       if (result.success) {
@@ -289,13 +289,13 @@ class DeleteTerminalHandler extends BaseMessageHandler {
       }
     } catch (error) {
       this.log(`Error deleting terminal ${terminalId}:`, error);
-      
+
       // Send error response
       await context.sendMessage({
         command: 'deleteTerminalResponse',
         terminalId,
         success: false,
-        reason: `Delete failed: ${String(error)}`
+        reason: `Delete failed: ${String(error)}`,
       });
     }
   }
@@ -321,31 +321,34 @@ class SettingsHandler extends BaseMessageHandler {
 
   private async handleGetSettings(context: IMessageHandlerContext): Promise<void> {
     this.log('Getting settings from webview');
-    
+
     const settings = await context.settingsManager.getCurrentSettings();
     const fontSettings = await context.settingsManager.getCurrentFontSettings();
-    
+
     await context.sendMessage({
       command: 'settingsResponse',
-      settings
+      settings,
     });
 
     await context.sendMessage({
       command: 'fontSettingsUpdate',
-      fontSettings
+      fontSettings,
     });
 
     // Send initial panel location
     const panelLocation = await context.settingsManager.getCurrentPanelLocation();
     await context.sendMessage({
       command: 'panelLocationUpdate',
-      location: panelLocation
+      location: panelLocation,
     });
   }
 
-  private async handleUpdateSettings(message: WebviewMessage, context: IMessageHandlerContext): Promise<void> {
+  private async handleUpdateSettings(
+    message: WebviewMessage,
+    context: IMessageHandlerContext
+  ): Promise<void> {
     this.log('Updating settings from webview:', message.settings);
-    
+
     if (message.settings) {
       await context.settingsManager.updateSettings(message.settings);
     }
@@ -364,7 +367,7 @@ class PanelLocationHandler extends BaseMessageHandler {
 
   async handle(message: WebviewMessage, context: IMessageHandlerContext): Promise<void> {
     this.log('Panel location reported from WebView:', message.location);
-    
+
     if (message.location) {
       // Update VS Code context key
       await vscode.commands.executeCommand(
@@ -376,7 +379,7 @@ class PanelLocationHandler extends BaseMessageHandler {
       // Notify WebView of the updated location
       await context.sendMessage({
         command: 'panelLocationUpdate',
-        location: message.location
+        location: message.location,
       });
     }
   }
@@ -405,14 +408,14 @@ class CliAgentHandler extends BaseMessageHandler {
 
     try {
       const result = context.terminalManager.switchAiAgentConnection(terminalId);
-      
+
       await context.sendMessage({
         command: 'switchAiAgentResponse',
         terminalId,
         success: result.success,
         newStatus: result.newStatus,
         agentType: result.agentType,
-        reason: result.reason
+        reason: result.reason,
       });
 
       if (result.success) {
@@ -422,12 +425,12 @@ class CliAgentHandler extends BaseMessageHandler {
       }
     } catch (error) {
       this.log('Error switching AI Agent:', error);
-      
+
       await context.sendMessage({
         command: 'switchAiAgentResponse',
         terminalId,
         success: false,
-        reason: 'Internal error occurred'
+        reason: 'Internal error occurred',
       });
     }
   }

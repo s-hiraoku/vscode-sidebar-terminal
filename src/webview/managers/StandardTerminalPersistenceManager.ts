@@ -26,14 +26,18 @@ export class StandardTerminalPersistenceManager {
     try {
       // 🔧 FIX: Check if terminal is ready before adding addon
       if (!terminal || !terminal.textarea) {
-        console.warn(`⚠️ [WEBVIEW-PERSISTENCE] Terminal ${terminalId} not ready for addon - scheduling retry`);
-        
+        console.warn(
+          `⚠️ [WEBVIEW-PERSISTENCE] Terminal ${terminalId} not ready for addon - scheduling retry`
+        );
+
         // Retry after a short delay when terminal is ready
         setTimeout(() => {
           if (terminal && terminal.textarea) {
             this.addTerminal(terminalId, terminal);
           } else {
-            console.error(`❌ [WEBVIEW-PERSISTENCE] Terminal ${terminalId} still not ready after retry`);
+            console.error(
+              `❌ [WEBVIEW-PERSISTENCE] Terminal ${terminalId} still not ready after retry`
+            );
           }
         }, 100);
         return;
@@ -49,12 +53,11 @@ export class StandardTerminalPersistenceManager {
       this.setupAutoSave(terminalId, terminal);
 
       console.log(`✅ [WEBVIEW-PERSISTENCE] Serialize addon loaded for terminal ${terminalId}`);
-      
+
       // 🔧 FIX: Verify addon is working by testing serialization
       setTimeout(() => {
         this.verifyAddonInitialization(terminalId);
       }, 50);
-      
     } catch (error) {
       console.error(
         `❌ [WEBVIEW-PERSISTENCE] Failed to load serialize addon for terminal ${terminalId}:`,
@@ -67,37 +70,55 @@ export class StandardTerminalPersistenceManager {
    * 🔧 FIX: Verify that the serialize addon was properly initialized
    */
   private verifyAddonInitialization(terminalId: string): void {
-    console.log(`🔍 [WEBVIEW-PERSISTENCE] Verifying addon initialization for terminal ${terminalId}`);
-    
+    console.log(
+      `🔍 [WEBVIEW-PERSISTENCE] Verifying addon initialization for terminal ${terminalId}`
+    );
+
     const serializeAddon = this.serializeAddons.get(terminalId);
     const terminal = this.terminals.get(terminalId);
-    
+
     if (!serializeAddon) {
-      console.error(`❌ [WEBVIEW-PERSISTENCE] No serialize addon found for terminal ${terminalId} during verification`);
+      console.error(
+        `❌ [WEBVIEW-PERSISTENCE] No serialize addon found for terminal ${terminalId} during verification`
+      );
       return;
     }
-    
+
     if (!terminal) {
-      console.error(`❌ [WEBVIEW-PERSISTENCE] No terminal instance found for ${terminalId} during verification`);
+      console.error(
+        `❌ [WEBVIEW-PERSISTENCE] No terminal instance found for ${terminalId} during verification`
+      );
       return;
     }
-    
+
     try {
       // Test serialization to ensure addon is working
       const testSerialization = serializeAddon.serialize({ scrollback: 10 });
-      console.log(`✅ [WEBVIEW-PERSISTENCE] Addon verification successful for terminal ${terminalId}: ${testSerialization.length} chars`);
+      console.log(
+        `✅ [WEBVIEW-PERSISTENCE] Addon verification successful for terminal ${terminalId}: ${testSerialization.length} chars`
+      );
     } catch (error) {
-      console.error(`❌ [WEBVIEW-PERSISTENCE] Addon verification failed for terminal ${terminalId}:`, error);
-      
+      console.error(
+        `❌ [WEBVIEW-PERSISTENCE] Addon verification failed for terminal ${terminalId}:`,
+        error
+      );
+
       // Try to re-initialize the addon
       try {
-        console.log(`🔧 [WEBVIEW-PERSISTENCE] Attempting to re-initialize addon for terminal ${terminalId}`);
+        console.log(
+          `🔧 [WEBVIEW-PERSISTENCE] Attempting to re-initialize addon for terminal ${terminalId}`
+        );
         const newSerializeAddon = new SerializeAddon();
         terminal.loadAddon(newSerializeAddon);
         this.serializeAddons.set(terminalId, newSerializeAddon);
-        console.log(`✅ [WEBVIEW-PERSISTENCE] Successfully re-initialized addon for terminal ${terminalId}`);
+        console.log(
+          `✅ [WEBVIEW-PERSISTENCE] Successfully re-initialized addon for terminal ${terminalId}`
+        );
       } catch (retryError) {
-        console.error(`❌ [WEBVIEW-PERSISTENCE] Failed to re-initialize addon for terminal ${terminalId}:`, retryError);
+        console.error(
+          `❌ [WEBVIEW-PERSISTENCE] Failed to re-initialize addon for terminal ${terminalId}:`,
+          retryError
+        );
       }
     }
   }
@@ -448,7 +469,9 @@ export class StandardTerminalPersistenceManager {
       // Restore session restore message if available
       if (sessionRestoreMessage) {
         terminal.writeln(sessionRestoreMessage);
-        console.log(`🔄 [WEBVIEW-PERSISTENCE] Restored session message for terminal: ${terminalId}`);
+        console.log(
+          `🔄 [WEBVIEW-PERSISTENCE] Restored session message for terminal: ${terminalId}`
+        );
       }
 
       // Restore scrollback data if available
@@ -475,7 +498,10 @@ export class StandardTerminalPersistenceManager {
       console.log(`✅ [WEBVIEW-PERSISTENCE] Session restore completed for terminal: ${terminalId}`);
       return true;
     } catch (error) {
-      console.error(`❌ [WEBVIEW-PERSISTENCE] Error during session restore for ${terminalId}:`, error);
+      console.error(
+        `❌ [WEBVIEW-PERSISTENCE] Error during session restore for ${terminalId}:`,
+        error
+      );
       return false;
     }
   }
@@ -484,8 +510,10 @@ export class StandardTerminalPersistenceManager {
    * Request Extension to send scrollback data for restoration
    */
   public requestScrollbackFromExtension(terminalId: string): void {
-    console.log(`📡 [WEBVIEW-PERSISTENCE] Requesting scrollback from Extension for terminal: ${terminalId}`);
-    
+    console.log(
+      `📡 [WEBVIEW-PERSISTENCE] Requesting scrollback from Extension for terminal: ${terminalId}`
+    );
+
     if (!this.vscodeApi) {
       const windowWithApi = window as Window & {
         vscodeApi?: {
@@ -503,7 +531,9 @@ export class StandardTerminalPersistenceManager {
         terminalId,
         timestamp: Date.now(),
       });
-      console.log(`📡 [WEBVIEW-PERSISTENCE] Scrollback request sent to Extension for terminal: ${terminalId}`);
+      console.log(
+        `📡 [WEBVIEW-PERSISTENCE] Scrollback request sent to Extension for terminal: ${terminalId}`
+      );
     } else {
       console.warn(`⚠️ [WEBVIEW-PERSISTENCE] No VS Code API available for scrollback request`);
     }

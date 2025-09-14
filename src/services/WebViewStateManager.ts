@@ -7,7 +7,7 @@ import { TERMINAL_CONSTANTS } from '../constants';
 
 /**
  * WebView State Manager Service
- * 
+ *
  * Extracted from SecondaryTerminalProvider to handle:
  * - WebView initialization state
  * - Terminal state synchronization
@@ -90,7 +90,7 @@ export class WebViewStateManager implements IWebViewStateManager {
         if (this.sendMessage) {
           await this.sendMessage({
             command: 'stateUpdate',
-            state: this.terminalManager.getCurrentState()
+            state: this.terminalManager.getCurrentState(),
           });
         }
       } else {
@@ -105,7 +105,7 @@ export class WebViewStateManager implements IWebViewStateManager {
   public async handleVisibilityChange(visible: boolean): Promise<void> {
     if (visible) {
       log('👁️ [STATE-MANAGER] WebView became visible');
-      
+
       // Trigger panel location detection when WebView becomes visible
       setTimeout(() => {
         this.requestPanelLocationDetection();
@@ -143,7 +143,7 @@ export class WebViewStateManager implements IWebViewStateManager {
       });
     } catch (error) {
       log('⚠️ [STATE-MANAGER] Error requesting panel location detection:', error);
-      
+
       // Fallback to sidebar assumption
       if (this.sendMessage) {
         void this.sendMessage({
@@ -195,7 +195,7 @@ export class WebViewStateManager implements IWebViewStateManager {
         // to ensure WebView recreates them (panel move scenario)
         for (const terminal of existingTerminals) {
           log('📤 [STATE-MANAGER] Sending terminalCreated for existing terminal:', terminal.id);
-          
+
           if (this.sendMessage) {
             await this.sendMessage({
               command: TERMINAL_CONSTANTS.COMMANDS.TERMINAL_CREATED,
@@ -206,13 +206,15 @@ export class WebViewStateManager implements IWebViewStateManager {
           }
         }
       } else {
-        log('📝 [STATE-MANAGER] No existing terminals - will handle via session restore or user action');
+        log(
+          '📝 [STATE-MANAGER] No existing terminals - will handle via session restore or user action'
+        );
         terminalId = undefined;
       }
 
       // Send INIT message with all terminal info
       const initMessage = await this.getInitializationMessage();
-      
+
       if (this.sendMessage) {
         await this.sendMessage(initMessage);
       }
@@ -304,19 +306,21 @@ export class WebViewStateManager implements IWebViewStateManager {
 
   private _scheduleInitialTerminalCreation(): void {
     log('🚀 [STATE-MANAGER] Scheduling initial terminal creation');
-    
+
     // Schedule creation for when user actually views the terminal
     // This mimics VS Code's behavior of creating terminals on-demand
     setTimeout(() => {
       log('⏰ [STATE-MANAGER] Executing initial terminal creation');
       const currentTerminalCount = this.terminalManager.getTerminals().length;
       log(`📊 [STATE-MANAGER] Current terminal count: ${currentTerminalCount}`);
-      
+
       if (currentTerminalCount === 0) {
         log('🎆 [STATE-MANAGER] Creating initial terminals (no session data)');
         void this.ensureMinimumTerminals();
       } else {
-        log(`🔍 [STATE-MANAGER] Terminals already exist (${currentTerminalCount}), skipping initial creation`);
+        log(
+          `🔍 [STATE-MANAGER] Terminals already exist (${currentTerminalCount}), skipping initial creation`
+        );
       }
     }, 100); // Very short delay to ensure WebView is ready
   }
@@ -336,12 +340,12 @@ export class WebViewStateManager implements IWebViewStateManager {
 
   public dispose(): void {
     log('🔧 [STATE-MANAGER] Disposing WebView state manager...');
-    
+
     // Reset state
     this._isInitialized = false;
     this._terminalIdMapping?.clear();
     this._terminalIdMapping = undefined;
-    
+
     log('✅ [STATE-MANAGER] WebView state manager disposed');
   }
 }

@@ -16,44 +16,44 @@ export type OSType = 'windows' | 'macos' | 'linux';
 export interface ITerminalProfile {
   /** Unique profile identifier */
   id: string;
-  
+
   /** Display name for the profile */
   name: string;
-  
+
   /** Profile description */
   description?: string;
-  
+
   /** Profile icon (VS Code icon name) */
   icon?: string;
-  
+
   /** Shell executable path */
   path: string;
-  
+
   /** Shell arguments */
   args?: string[];
-  
+
   /** Environment variables for this profile */
   env?: Record<string, string>;
-  
+
   /** Working directory override */
   cwd?: string;
-  
+
   /** Color theme override for this profile */
   color?: string;
-  
+
   /** Operating systems this profile is compatible with */
   overrides?: {
     windows?: Partial<ITerminalProfile>;
     osx?: Partial<ITerminalProfile>;
     linux?: Partial<ITerminalProfile>;
   };
-  
+
   /** Whether this is the default profile */
   isDefault?: boolean;
-  
+
   /** Whether this profile is hidden from UI */
   hidden?: boolean;
-  
+
   /** Profile source (built-in, user, extension) */
   source?: 'builtin' | 'user' | 'extension';
 }
@@ -64,16 +64,16 @@ export interface ITerminalProfile {
 export interface ITerminalProfileOptions {
   /** Profile to use for terminal creation */
   profile?: ITerminalProfile;
-  
+
   /** Override profile name */
   name?: string;
-  
+
   /** Override working directory */
   cwd?: string;
-  
+
   /** Override environment variables */
   env?: Record<string, string>;
-  
+
   /** Additional shell arguments */
   shellArgs?: string[];
 }
@@ -108,31 +108,31 @@ export interface IPlatformShells {
 export interface ITerminalProfileManager {
   /** Get all available profiles */
   getProfiles(): ITerminalProfile[];
-  
+
   /** Get profile by ID */
   getProfile(id: string): ITerminalProfile | undefined;
-  
+
   /** Get default profile for current platform */
   getDefaultProfile(): ITerminalProfile;
-  
+
   /** Create a new profile */
   createProfile(profile: Omit<ITerminalProfile, 'id'>): ITerminalProfile;
-  
+
   /** Update existing profile */
   updateProfile(id: string, updates: Partial<ITerminalProfile>): void;
-  
+
   /** Delete profile */
   deleteProfile(id: string): void;
-  
+
   /** Set default profile */
   setDefaultProfile(id: string): void;
-  
+
   /** Get platform-specific profiles */
   getPlatformProfiles(): any;
-  
+
   /** Refresh profiles from system */
   refreshProfiles(): Promise<void>;
-  
+
   /** Validate profile configuration */
   validateProfile(profile: ITerminalProfile): string[];
 }
@@ -143,13 +143,13 @@ export interface ITerminalProfileManager {
 export interface IProfileSelectionState {
   /** Currently selected profile */
   selectedProfileId?: string;
-  
+
   /** Available profiles for selection */
   availableProfiles: ITerminalProfile[];
-  
+
   /** Whether profile selector is visible */
   isVisible: boolean;
-  
+
   /** Filter text for profile search */
   filterText?: string;
 }
@@ -162,7 +162,7 @@ export enum TerminalProfileEventType {
   ProfileRemoved = 'profileRemoved',
   ProfileUpdated = 'profileUpdated',
   DefaultProfileChanged = 'defaultProfileChanged',
-  ProfilesRefreshed = 'profilesRefreshed'
+  ProfilesRefreshed = 'profilesRefreshed',
 }
 
 /**

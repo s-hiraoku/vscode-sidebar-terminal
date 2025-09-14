@@ -1,6 +1,6 @@
 /**
  * Session Handler
- * 
+ *
  * Handles session management messages including restoration,
  * scrollback management, and session persistence.
  */
@@ -23,21 +23,24 @@ import {
 
 export class SessionHandler extends BaseMessageHandler {
   constructor() {
-    super([
-      'sessionRestore',
-      'sessionRestoreStarted',
-      'sessionRestoreProgress', 
-      'sessionRestoreCompleted',
-      'sessionRestoreError',
-      'sessionSaved',
-      'sessionSaveError',
-      'sessionCleared',
-      'sessionRestoreSkipped',
-      'getScrollback',
-      'restoreScrollback',
-      'scrollbackProgress',
-      'terminalRestoreError'
-    ], MessagePriority.HIGH);
+    super(
+      [
+        'sessionRestore',
+        'sessionRestoreStarted',
+        'sessionRestoreProgress',
+        'sessionRestoreCompleted',
+        'sessionRestoreError',
+        'sessionSaved',
+        'sessionSaveError',
+        'sessionCleared',
+        'sessionRestoreSkipped',
+        'getScrollback',
+        'restoreScrollback',
+        'scrollbackProgress',
+        'terminalRestoreError',
+      ],
+      MessagePriority.HIGH
+    );
   }
 
   async handle(message: WebviewMessage, context: IMessageHandlerContext): Promise<void> {
@@ -95,7 +98,10 @@ export class SessionHandler extends BaseMessageHandler {
   /**
    * Handle session restore message from extension
    */
-  private async handleSessionRestore(message: WebviewMessage, context: IMessageHandlerContext): Promise<void> {
+  private async handleSessionRestore(
+    message: WebviewMessage,
+    context: IMessageHandlerContext
+  ): Promise<void> {
     context.logger.info('Session restore message received');
 
     const terminalId = message.terminalId as string;
@@ -143,20 +149,29 @@ export class SessionHandler extends BaseMessageHandler {
   /**
    * Session restore notification handlers
    */
-  private async handleSessionRestoreStarted(message: WebviewMessage, context: IMessageHandlerContext): Promise<void> {
+  private async handleSessionRestoreStarted(
+    message: WebviewMessage,
+    context: IMessageHandlerContext
+  ): Promise<void> {
     const terminalCount = (message.terminalCount as number) || 0;
     context.logger.info(`Session restore started for ${terminalCount} terminals`);
     showSessionRestoreStarted(terminalCount);
   }
 
-  private async handleSessionRestoreProgress(message: WebviewMessage, context: IMessageHandlerContext): Promise<void> {
+  private async handleSessionRestoreProgress(
+    message: WebviewMessage,
+    context: IMessageHandlerContext
+  ): Promise<void> {
     const restored = (message.restored as number) || 0;
     const total = (message.total as number) || 0;
     context.logger.info(`Session restore progress: ${restored}/${total}`);
     showSessionRestoreProgress(restored, total);
   }
 
-  private async handleSessionRestoreCompleted(message: WebviewMessage, context: IMessageHandlerContext): Promise<void> {
+  private async handleSessionRestoreCompleted(
+    message: WebviewMessage,
+    context: IMessageHandlerContext
+  ): Promise<void> {
     const restoredCount = (message.restoredCount as number) || 0;
     const skippedCount = (message.skippedCount as number) || 0;
     context.logger.info(
@@ -165,7 +180,10 @@ export class SessionHandler extends BaseMessageHandler {
     showSessionRestoreCompleted(restoredCount, skippedCount);
   }
 
-  private async handleSessionRestoreError(message: WebviewMessage, context: IMessageHandlerContext): Promise<void> {
+  private async handleSessionRestoreError(
+    message: WebviewMessage,
+    context: IMessageHandlerContext
+  ): Promise<void> {
     const error = (message.error as string) || 'Unknown error';
     const partialSuccess = (message.partialSuccess as boolean) || false;
     const errorType = (message.errorType as string) || undefined;
@@ -175,30 +193,45 @@ export class SessionHandler extends BaseMessageHandler {
     showSessionRestoreError(error, partialSuccess, errorType);
   }
 
-  private async handleSessionSaved(message: WebviewMessage, context: IMessageHandlerContext): Promise<void> {
+  private async handleSessionSaved(
+    message: WebviewMessage,
+    context: IMessageHandlerContext
+  ): Promise<void> {
     const terminalCount = (message.terminalCount as number) || 0;
     context.logger.info(`Session saved with ${terminalCount} terminals`);
     showSessionSaved(terminalCount);
   }
 
-  private async handleSessionSaveError(message: WebviewMessage, context: IMessageHandlerContext): Promise<void> {
+  private async handleSessionSaveError(
+    message: WebviewMessage,
+    context: IMessageHandlerContext
+  ): Promise<void> {
     const error = (message.error as string) || 'Unknown error';
     context.logger.error(`Session save error: ${error}`);
     showSessionSaveError(error);
   }
 
-  private async handleSessionCleared(message: WebviewMessage, context: IMessageHandlerContext): Promise<void> {
+  private async handleSessionCleared(
+    message: WebviewMessage,
+    context: IMessageHandlerContext
+  ): Promise<void> {
     context.logger.info('Session cleared');
     showSessionCleared();
   }
 
-  private async handleSessionRestoreSkipped(message: WebviewMessage, context: IMessageHandlerContext): Promise<void> {
+  private async handleSessionRestoreSkipped(
+    message: WebviewMessage,
+    context: IMessageHandlerContext
+  ): Promise<void> {
     const reason = (message.reason as string) || 'Unknown reason';
     context.logger.info(`Session restore skipped: ${reason}`);
     showSessionRestoreSkipped(reason);
   }
 
-  private async handleTerminalRestoreError(message: WebviewMessage, context: IMessageHandlerContext): Promise<void> {
+  private async handleTerminalRestoreError(
+    message: WebviewMessage,
+    context: IMessageHandlerContext
+  ): Promise<void> {
     const terminalName = (message.terminalName as string) || 'Unknown terminal';
     const error = (message.error as string) || 'Unknown error';
     context.logger.warn(`Terminal restore error: ${terminalName} - ${error}`);
@@ -217,7 +250,10 @@ export class SessionHandler extends BaseMessageHandler {
   /**
    * Handle scrollback extraction request
    */
-  private async handleGetScrollback(message: WebviewMessage, context: IMessageHandlerContext): Promise<void> {
+  private async handleGetScrollback(
+    message: WebviewMessage,
+    context: IMessageHandlerContext
+  ): Promise<void> {
     context.logger.info('Handling get scrollback message');
 
     const terminalId = message.terminalId as string;
@@ -270,7 +306,10 @@ export class SessionHandler extends BaseMessageHandler {
   /**
    * Handle scrollback restoration request
    */
-  private async handleRestoreScrollback(message: WebviewMessage, context: IMessageHandlerContext): Promise<void> {
+  private async handleRestoreScrollback(
+    message: WebviewMessage,
+    context: IMessageHandlerContext
+  ): Promise<void> {
     context.logger.info('Handling restore scrollback message');
 
     const terminalId = message.terminalId as string;
@@ -323,7 +362,10 @@ export class SessionHandler extends BaseMessageHandler {
   /**
    * Handle scrollback progress updates
    */
-  private async handleScrollbackProgress(message: WebviewMessage, context: IMessageHandlerContext): Promise<void> {
+  private async handleScrollbackProgress(
+    message: WebviewMessage,
+    context: IMessageHandlerContext
+  ): Promise<void> {
     context.logger.info('Handling scrollback progress message');
 
     const progressInfo = message.scrollbackProgress as {
@@ -352,7 +394,10 @@ export class SessionHandler extends BaseMessageHandler {
     terminal: any,
     maxLines: number
   ): Array<{ content: string; type?: 'output' | 'input' | 'error'; timestamp?: number }> {
-    this.logActivity(undefined as any, `Extracting scrollback from xterm terminal (max ${maxLines} lines)`);
+    this.logActivity(
+      undefined as any,
+      `Extracting scrollback from xterm terminal (max ${maxLines} lines)`
+    );
 
     if (!terminal) {
       throw new Error('Terminal instance not provided');
@@ -371,7 +416,8 @@ export class SessionHandler extends BaseMessageHandler {
       const viewportY = buffer.viewportY;
       const baseY = buffer.baseY;
 
-      this.logActivity(undefined as any,
+      this.logActivity(
+        undefined as any,
         `Buffer info: length=${bufferLength}, viewportY=${viewportY}, baseY=${baseY}`
       );
 
@@ -379,7 +425,8 @@ export class SessionHandler extends BaseMessageHandler {
       const startLine = Math.max(0, bufferLength - maxLines);
       const endLine = bufferLength;
 
-      this.logActivity(undefined as any,
+      this.logActivity(
+        undefined as any,
         `Extracting lines ${startLine} to ${endLine} (${endLine - startLine} lines)`
       );
 
@@ -414,7 +461,8 @@ export class SessionHandler extends BaseMessageHandler {
         }
       }
 
-      this.logActivity(undefined as any,
+      this.logActivity(
+        undefined as any,
         `Successfully extracted ${scrollbackLines.length} lines from terminal buffer`
       );
     } catch (error) {

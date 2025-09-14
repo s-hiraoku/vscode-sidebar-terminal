@@ -1,4 +1,7 @@
-import { UnifiedTerminalPersistenceService, PersistenceError } from '../services/UnifiedTerminalPersistenceService';
+import {
+  UnifiedTerminalPersistenceService,
+  PersistenceError,
+} from '../services/UnifiedTerminalPersistenceService';
 import { extension as log } from '../utils/logger';
 
 /**
@@ -40,9 +43,7 @@ export function createPersistenceMessageHandler(
 }
 
 export class PersistenceMessageHandler {
-  constructor(
-    private readonly persistenceService: UnifiedTerminalPersistenceService
-  ) {
+  constructor(private readonly persistenceService: UnifiedTerminalPersistenceService) {
     log('🔧 [MSG-HANDLER] PersistenceMessageHandler initialized');
   }
 
@@ -56,24 +57,24 @@ export class PersistenceMessageHandler {
       switch (message.command) {
         case 'saveSession':
           return await this.handleSaveSession(message.data);
-          
+
         case 'restoreSession':
           return await this.handleRestoreSession();
-          
+
         case 'clearSession':
           return await this.handleClearSession();
-          
+
         default:
           return {
             success: false,
-            error: `Unknown persistence command: ${message.command}`
+            error: `Unknown persistence command: ${message.command}`,
           };
       }
     } catch (error) {
       log(`❌ [MSG-HANDLER] Message handling failed: ${error}`);
       return {
         success: false,
-        error: `Message handling failed: ${(error as Error).message}`
+        error: `Message handling failed: ${(error as Error).message}`,
       };
     }
   }
@@ -86,7 +87,7 @@ export class PersistenceMessageHandler {
       if (!terminalData || !Array.isArray(terminalData)) {
         return {
           success: false,
-          error: 'Invalid terminal data for save operation'
+          error: 'Invalid terminal data for save operation',
         };
       }
 
@@ -96,18 +97,18 @@ export class PersistenceMessageHandler {
       return {
         success: true,
         terminalCount: terminalData.length,
-        data: 'Session saved successfully'
+        data: 'Session saved successfully',
       };
-
     } catch (error) {
-      const errorMsg = error instanceof PersistenceError 
-        ? error.message 
-        : `Save operation failed: ${(error as Error).message}`;
+      const errorMsg =
+        error instanceof PersistenceError
+          ? error.message
+          : `Save operation failed: ${(error as Error).message}`;
 
       log(`❌ [MSG-HANDLER] Save failed: ${errorMsg}`);
       return {
         success: false,
-        error: errorMsg
+        error: errorMsg,
       };
     }
   }
@@ -125,7 +126,7 @@ export class PersistenceMessageHandler {
           success: true,
           terminalCount: 0,
           data: [],
-          error: 'No session found to restore'
+          error: 'No session found to restore',
         };
       }
 
@@ -133,18 +134,18 @@ export class PersistenceMessageHandler {
       return {
         success: true,
         terminalCount: restoredTerminals.length,
-        data: restoredTerminals
+        data: restoredTerminals,
       };
-
     } catch (error) {
-      const errorMsg = error instanceof PersistenceError 
-        ? error.message 
-        : `Restore operation failed: ${(error as Error).message}`;
+      const errorMsg =
+        error instanceof PersistenceError
+          ? error.message
+          : `Restore operation failed: ${(error as Error).message}`;
 
       log(`❌ [MSG-HANDLER] Restore failed: ${errorMsg}`);
       return {
         success: false,
-        error: errorMsg
+        error: errorMsg,
       };
     }
   }
@@ -159,15 +160,14 @@ export class PersistenceMessageHandler {
       log('✅ [MSG-HANDLER] Session cleared successfully');
       return {
         success: true,
-        data: 'Session cleared successfully'
+        data: 'Session cleared successfully',
       };
-
     } catch (error) {
       const errorMsg = `Clear operation failed: ${(error as Error).message}`;
       log(`❌ [MSG-HANDLER] Clear failed: ${errorMsg}`);
       return {
         success: false,
-        error: errorMsg
+        error: errorMsg,
       };
     }
   }
@@ -180,7 +180,7 @@ export class PersistenceMessageHandler {
       command: `persistence${command.charAt(0).toUpperCase() + command.slice(1)}Response`,
       data,
       success,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
   }
 

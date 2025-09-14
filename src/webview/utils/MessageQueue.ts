@@ -1,6 +1,6 @@
 /**
  * MessageQueue Utility
- * 
+ *
  * Extracted from RefactoredMessageManager to provide centralized
  * message queuing with priority handling and race condition protection
  */
@@ -46,7 +46,7 @@ export class MessageQueue {
       maxRetries: config.maxRetries ?? 3,
       processingDelay: config.processingDelay ?? 1,
       maxQueueSize: config.maxQueueSize ?? 1000,
-      enablePriority: config.enablePriority ?? true
+      enablePriority: config.enablePriority ?? true,
     };
 
     messageLogger.debug('MessageQueue initialized', this.config);
@@ -66,27 +66,30 @@ export class MessageQueue {
       }
 
       const detectedPriority = priority || this.detectMessagePriority(message);
-      
+
       const queuedMessage: QueuedMessage = {
         id: this.generateMessageId(),
         data: message,
         priority: detectedPriority,
         timestamp: Date.now(),
         retryCount: 0,
-        maxRetries: this.config.maxRetries
+        maxRetries: this.config.maxRetries,
       };
 
       if (detectedPriority === 'high') {
         this.highPriorityQueue.push(queuedMessage);
-        messageLogger.debug(`⚡ High priority message queued: ${queuedMessage.id} (hp queue: ${this.highPriorityQueue.length})`);
+        messageLogger.debug(
+          `⚡ High priority message queued: ${queuedMessage.id} (hp queue: ${this.highPriorityQueue.length})`
+        );
       } else {
         this.normalQueue.push(queuedMessage);
-        messageLogger.debug(`📤 Normal message queued: ${queuedMessage.id} (normal queue: ${this.normalQueue.length})`);
+        messageLogger.debug(
+          `📤 Normal message queued: ${queuedMessage.id} (normal queue: ${this.normalQueue.length})`
+        );
       }
 
       // Start processing if not already running
       void this.processQueue();
-
     } catch (error) {
       messageLogger.error('Failed to enqueue message:', error);
     }
@@ -115,14 +118,18 @@ export class MessageQueue {
       while (this.highPriorityQueue.length > 0) {
         const message = this.highPriorityQueue.shift()!;
         const success = await this.sendMessage(message);
-        
+
         if (!success) {
           if (message.retryCount < message.maxRetries) {
             message.retryCount++;
             this.highPriorityQueue.unshift(message);
-            messageLogger.warn(`Retrying high priority message ${message.id} (attempt ${message.retryCount})`);
+            messageLogger.warn(
+              `Retrying high priority message ${message.id} (attempt ${message.retryCount})`
+            );
           } else {
-            messageLogger.error(`High priority message ${message.id} failed after ${message.maxRetries} attempts`);
+            messageLogger.error(
+              `High priority message ${message.id} failed after ${message.maxRetries} attempts`
+            );
           }
           break;
         }
@@ -133,20 +140,24 @@ export class MessageQueue {
       while (this.normalQueue.length > 0) {
         const message = this.normalQueue.shift()!;
         const success = await this.sendMessage(message);
-        
+
         if (!success) {
           if (message.retryCount < message.maxRetries) {
             message.retryCount++;
             this.normalQueue.unshift(message);
-            messageLogger.warn(`Retrying normal message ${message.id} (attempt ${message.retryCount})`);
+            messageLogger.warn(
+              `Retrying normal message ${message.id} (attempt ${message.retryCount})`
+            );
           } else {
-            messageLogger.error(`Normal message ${message.id} failed after ${message.maxRetries} attempts`);
+            messageLogger.error(
+              `Normal message ${message.id} failed after ${message.maxRetries} attempts`
+            );
           }
           break;
         }
-        
+
         processed++;
-        
+
         // Add small delay between normal messages to prevent overwhelming
         if (this.config.processingDelay > 0) {
           await this.delay(this.config.processingDelay);
@@ -157,7 +168,6 @@ export class MessageQueue {
         const duration = Date.now() - startTime;
         messageLogger.performance('Queue processing', duration, { processed });
       }
-
     } finally {
       this.isProcessing = false;
       this.queueLock = false;
@@ -170,10 +180,10 @@ export class MessageQueue {
   private async sendMessage(queuedMessage: QueuedMessage): Promise<boolean> {
     try {
       await this.sender(queuedMessage.data);
-      
+
       const age = Date.now() - queuedMessage.timestamp;
       messageLogger.debug(`✅ Message sent: ${queuedMessage.id} (age: ${age}ms)`);
-      
+
       return true;
     } catch (error) {
       messageLogger.error(`Failed to send message ${queuedMessage.id}:`, error);
@@ -196,11 +206,11 @@ export class MessageQueue {
       // High priority message types (user input, interactions)
       const highPriorityTypes = [
         'input',
-        'terminalInteraction', 
+        'terminalInteraction',
         'keydown',
         'paste',
         'interrupt',
-        'kill'
+        'kill',
       ];
 
       return highPriorityTypes.includes(messageType) ? 'high' : 'normal';
@@ -220,7 +230,7 @@ export class MessageQueue {
    * Utility delay function
    */
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**
@@ -228,7 +238,7 @@ export class MessageQueue {
    */
   private clearOldestMessages(count: number): void {
     let cleared = 0;
-    
+
     // Clear from normal queue first
     while (cleared < count && this.normalQueue.length > 0) {
       const removed = this.normalQueue.shift();
@@ -237,7 +247,7 @@ export class MessageQueue {
         cleared++;
       }
     }
-    
+
     // Clear from high priority if needed (less aggressive)
     while (cleared < count && this.highPriorityQueue.length > 10) {
       const removed = this.highPriorityQueue.shift();
@@ -246,7 +256,7 @@ export class MessageQueue {
         cleared++;
       }
     }
-    
+
     if (cleared > 0) {
       messageLogger.info(`Cleared ${cleared} old messages from queue`);
     }
@@ -267,7 +277,7 @@ export class MessageQueue {
       highPriority: this.highPriorityQueue.length,
       normal: this.normalQueue.length,
       total: this.getTotalQueueSize(),
-      isProcessing: this.isProcessing
+      isProcessing: this.isProcessing,
     };
   }
 
@@ -283,11 +293,11 @@ export class MessageQueue {
    */
   async flush(): Promise<void> {
     messageLogger.info('Flushing message queues...');
-    
+
     // Temporarily disable processing delay for fast flush
     const originalDelay = this.config.processingDelay;
     this.config.processingDelay = 0;
-    
+
     try {
       await this.processQueue();
     } finally {
@@ -300,10 +310,10 @@ export class MessageQueue {
    */
   clear(): void {
     const totalCleared = this.getTotalQueueSize();
-    
+
     this.highPriorityQueue = [];
     this.normalQueue = [];
-    
+
     messageLogger.info(`Cleared ${totalCleared} messages from queues`);
   }
 
@@ -323,7 +333,7 @@ export class MessageQueue {
   } {
     return {
       highPriority: [...this.highPriorityQueue],
-      normal: [...this.normalQueue]
+      normal: [...this.normalQueue],
     };
   }
 
@@ -342,7 +352,7 @@ export class MessageQueue {
     this.clear();
     this.queueLock = false;
     this.isProcessing = false;
-    
+
     messageLogger.lifecycle('MessageQueue', 'completed');
   }
 }

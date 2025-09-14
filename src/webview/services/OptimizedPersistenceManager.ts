@@ -1,9 +1,9 @@
 /**
  * Optimized Terminal Persistence Manager for WebView
- * 
+ *
  * This service replaces the StandardTerminalPersistenceManager with improved
  * performance, error handling, and resource management.
- * 
+ *
  * Key improvements:
  * - Lazy loading for large terminal histories
  * - Compression support for storage optimization
@@ -40,12 +40,12 @@ export enum PersistenceErrorType {
   STORAGE_FULL = 'STORAGE_FULL',
   TERMINAL_NOT_FOUND = 'TERMINAL_NOT_FOUND',
   ADDON_NOT_AVAILABLE = 'ADDON_NOT_AVAILABLE',
-  COMPRESSION_FAILED = 'COMPRESSION_FAILED'
+  COMPRESSION_FAILED = 'COMPRESSION_FAILED',
 }
 
 export class WebViewPersistenceError extends Error {
   public override readonly name = 'WebViewPersistenceError';
-  
+
   constructor(
     override message: string,
     public readonly type: PersistenceErrorType,
@@ -100,7 +100,7 @@ export class OptimizedTerminalPersistenceManager {
     compressionRatio: 1.0,
     lastSaveTime: 0,
     autoSaveCount: 0,
-    errorCount: 0
+    errorCount: 0,
   };
   private disposed = false;
 
@@ -125,7 +125,7 @@ export class OptimizedTerminalPersistenceManager {
           } catch {
             return undefined;
           }
-        }
+        },
       };
     }
   })();
@@ -140,8 +140,8 @@ export class OptimizedTerminalPersistenceManager {
    * Registers a terminal with its serialize addon for persistence
    */
   public addTerminal(
-    terminalId: string, 
-    terminal: Terminal, 
+    terminalId: string,
+    terminal: Terminal,
     serializeAddon: SerializeAddon,
     options: { autoSave?: boolean } = {}
   ): void {
@@ -163,13 +163,15 @@ export class OptimizedTerminalPersistenceManager {
       terminal,
       serializeAddon,
       lastAccessed: Date.now(),
-      autoSaveEnabled: options.autoSave ?? true
+      autoSaveEnabled: options.autoSave ?? true,
     };
 
     this.terminals.set(terminalId, registration);
     this.stats.terminalCount = this.terminals.size;
 
-    log(`✅ [WEBVIEW-PERSISTENCE] Terminal registered: ${terminalId} (total: ${this.terminals.size})`);
+    log(
+      `✅ [WEBVIEW-PERSISTENCE] Terminal registered: ${terminalId} (total: ${this.terminals.size})`
+    );
   }
 
   /**
@@ -183,7 +185,7 @@ export class OptimizedTerminalPersistenceManager {
     const removed = this.terminals.delete(terminalId);
     if (removed) {
       this.stats.terminalCount = this.terminals.size;
-      
+
       // Clean up storage
       try {
         this.removeFromStorage(terminalId);
@@ -191,7 +193,9 @@ export class OptimizedTerminalPersistenceManager {
         log(`⚠️ [WEBVIEW-PERSISTENCE] Failed to clean up storage for ${terminalId}: ${error}`);
       }
 
-      log(`🗑️ [WEBVIEW-PERSISTENCE] Terminal removed: ${terminalId} (remaining: ${this.terminals.size})`);
+      log(
+        `🗑️ [WEBVIEW-PERSISTENCE] Terminal removed: ${terminalId} (remaining: ${this.terminals.size})`
+      );
     }
     return removed;
   }
@@ -227,7 +231,7 @@ export class OptimizedTerminalPersistenceManager {
       };
 
       const content = registration.serializeAddon.serialize(serializeOptions);
-      
+
       let html: string | undefined;
       if (includeHtml) {
         try {
@@ -242,12 +246,13 @@ export class OptimizedTerminalPersistenceManager {
       }
 
       // Apply compression if needed
-      const finalContent = shouldCompress && content.length > COMPRESSION_THRESHOLD
-        ? this.compressContent(content)
-        : content;
+      const finalContent =
+        shouldCompress && content.length > COMPRESSION_THRESHOLD
+          ? this.compressContent(content)
+          : content;
 
       const compressed = finalContent !== content;
-      
+
       const serializedData: TerminalSerializedData = {
         content: finalContent,
         html,
@@ -256,16 +261,17 @@ export class OptimizedTerminalPersistenceManager {
           size: content.length,
           compressed,
           timestamp: Date.now(),
-          version: STORAGE_VERSION
-        }
+          version: STORAGE_VERSION,
+        },
       };
 
       // Update statistics
       this.updateCompressionStats(content.length, finalContent.length);
 
-      log(`✅ [WEBVIEW-PERSISTENCE] Terminal serialized: ${terminalId} (${content.length} -> ${finalContent.length} chars, compressed: ${compressed})`);
+      log(
+        `✅ [WEBVIEW-PERSISTENCE] Terminal serialized: ${terminalId} (${content.length} -> ${finalContent.length} chars, compressed: ${compressed})`
+      );
       return serializedData;
-
     } catch (error) {
       this.stats.errorCount++;
       const persistenceError = new WebViewPersistenceError(
@@ -310,7 +316,9 @@ export class OptimizedTerminalPersistenceManager {
       log(`⚠️ [WEBVIEW-PERSISTENCE] Serialization completed with ${errors.length} errors`);
     }
 
-    log(`✅ [WEBVIEW-PERSISTENCE] Serialized ${serializedData.size}/${this.terminals.size} terminals`);
+    log(
+      `✅ [WEBVIEW-PERSISTENCE] Serialized ${serializedData.size}/${this.terminals.size} terminals`
+    );
     return serializedData;
   }
 
@@ -329,13 +337,13 @@ export class OptimizedTerminalPersistenceManager {
 
     try {
       let content: string;
-      
+
       if (typeof serializedData === 'string') {
         // Legacy format
         content = serializedData;
       } else {
         // New format with metadata
-        content = serializedData.metadata?.compressed 
+        content = serializedData.metadata?.compressed
           ? this.decompressContent(serializedData.content)
           : serializedData.content;
 
@@ -360,7 +368,7 @@ export class OptimizedTerminalPersistenceManager {
 
       const writeBatch = (startIndex: number) => {
         const endIndex = Math.min(startIndex + batchSize, lines.length);
-        
+
         for (let i = startIndex; i < endIndex; i++) {
           const line = lines[i];
           if (line !== undefined) {
@@ -381,7 +389,6 @@ export class OptimizedTerminalPersistenceManager {
 
       writeBatch(0);
       return true;
-
     } catch (error) {
       this.stats.errorCount++;
       const persistenceError = new WebViewPersistenceError(
@@ -412,12 +419,12 @@ export class OptimizedTerminalPersistenceManager {
       const storageData = {
         version: STORAGE_VERSION,
         timestamp: Date.now(),
-        data: serializedData
+        data: serializedData,
       };
 
       this.vscodeApi.setState({
         ...this.vscodeApi.getState(),
-        [storageKey]: storageData
+        [storageKey]: storageData,
       });
 
       this.stats.lastSaveTime = Date.now();
@@ -425,7 +432,6 @@ export class OptimizedTerminalPersistenceManager {
 
       log(`💾 [WEBVIEW-PERSISTENCE] Terminal saved to storage: ${terminalId}`);
       return true;
-
     } catch (error) {
       this.stats.errorCount++;
       log(`❌ [WEBVIEW-PERSISTENCE] Failed to save terminal ${terminalId}: ${error}`);
@@ -454,7 +460,6 @@ export class OptimizedTerminalPersistenceManager {
 
       log(`📂 [WEBVIEW-PERSISTENCE] Terminal loaded from storage: ${terminalId}`);
       return storageData.data;
-
     } catch (error) {
       this.stats.errorCount++;
       log(`❌ [WEBVIEW-PERSISTENCE] Failed to load terminal ${terminalId}: ${error}`);

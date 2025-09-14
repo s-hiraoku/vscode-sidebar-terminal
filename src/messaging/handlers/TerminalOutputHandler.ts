@@ -1,6 +1,6 @@
 /**
  * Terminal Output Handler
- * 
+ *
  * Handles terminal output messages with performance optimizations
  * for CLI Agent and standard terminal operations.
  */
@@ -16,10 +16,10 @@ export class TerminalOutputHandler extends BaseMessageHandler {
 
   async handle(message: WebviewMessage, context: IMessageHandlerContext): Promise<void> {
     this.logActivity(context, `Processing output message`);
-    
+
     try {
       this.validateMessage(message, ['data', 'terminalId']);
-      
+
       const data = message.data as string;
       const terminalId = message.terminalId as string;
 
@@ -42,7 +42,7 @@ export class TerminalOutputHandler extends BaseMessageHandler {
       const terminal = context.coordinator.getTerminalInstance(terminalId);
       if (!terminal) {
         context.logger.error(`Output for non-existent terminal: ${terminalId}`, {
-          availableTerminals: Array.from(context.coordinator.getAllTerminalInstances().keys())
+          availableTerminals: Array.from(context.coordinator.getAllTerminalInstances().keys()),
         });
         return;
       }
@@ -84,9 +84,12 @@ export class TerminalOutputHandler extends BaseMessageHandler {
           );
         }
       } catch (error) {
-        this.handleError(context, message.command, `Error writing output to terminal ${terminal.name}: ${error}`);
+        this.handleError(
+          context,
+          message.command,
+          `Error writing output to terminal ${terminal.name}: ${error}`
+        );
       }
-
     } catch (error) {
       this.handleError(context, message.command, error);
     }

@@ -1,16 +1,20 @@
 /**
  * Consolidated Message Service
- * 
+ *
  * This service replaces and consolidates the functionality of:
  * - WebViewMessageHandlerService (Command pattern)
- * - RefactoredMessageManager (Queue-based message handling)  
+ * - RefactoredMessageManager (Queue-based message handling)
  * - WebViewMessageRouter (Router pattern)
- * 
+ *
  * Provides a single, unified message handling system that eliminates
  * the 394 duplicate message handling occurrences across 56 files.
  */
 
-import { IMessageManager, IManagerCoordinator, IManagerLifecycle } from '../webview/interfaces/ManagerInterfaces';
+import {
+  IMessageManager,
+  IManagerCoordinator,
+  IManagerLifecycle,
+} from '../webview/interfaces/ManagerInterfaces';
 import { WebviewMessage, TerminalInteractionEvent } from '../types/common';
 import { UnifiedMessageDispatcher, MessagePriority } from './UnifiedMessageDispatcher';
 import { messageLogger } from '../webview/utils/ManagerLogger';
@@ -24,7 +28,7 @@ import { SessionHandler } from './handlers/SessionHandler';
 
 /**
  * Consolidated Message Service
- * 
+ *
  * Single service that handles all message processing with:
  * - Unified handler registry (replaces WebViewMessageHandlerService)
  * - Priority queue processing (replaces RefactoredMessageManager)
@@ -39,10 +43,10 @@ export class ConsolidatedMessageService implements IMessageManager, IManagerLife
 
   constructor(coordinator?: IManagerCoordinator) {
     this.logger.info('ConsolidatedMessageService initializing');
-    
+
     this.coordinator = coordinator;
     this.dispatcher = new UnifiedMessageDispatcher(coordinator);
-    
+
     this.initializeHandlers();
     this.logger.info('ConsolidatedMessageService created');
   }
@@ -58,7 +62,9 @@ export class ConsolidatedMessageService implements IMessageManager, IManagerLife
     this.dispatcher.registerHandler(new CliAgentHandler());
     this.dispatcher.registerHandler(new SessionHandler());
 
-    this.logger.info(`📨 [ConsolidatedMessageService] Registered ${this.dispatcher.getSupportedCommands().length} command handlers`);
+    this.logger.info(
+      `📨 [ConsolidatedMessageService] Registered ${this.dispatcher.getSupportedCommands().length} command handlers`
+    );
   }
 
   // =================================================================
@@ -77,17 +83,17 @@ export class ConsolidatedMessageService implements IMessageManager, IManagerLife
 
     await this.dispatcher.initialize(this.coordinator);
     this.initialized = true;
-    
+
     this.logger.info('ConsolidatedMessageService fully initialized');
   }
 
   dispose(): void {
     this.logger.info('Disposing ConsolidatedMessageService');
-    
+
     this.dispatcher.dispose();
     this.coordinator = undefined;
     this.initialized = false;
-    
+
     this.logger.info('ConsolidatedMessageService disposed');
   }
 
@@ -113,11 +119,13 @@ export class ConsolidatedMessageService implements IMessageManager, IManagerLife
     // Convert to WebviewMessage format and process
     const webviewMessage = this.normalizeMessage(message);
     const result = await this.dispatcher.processMessage(webviewMessage);
-    
+
     if (!result.success) {
       this.logger.error(`Message processing failed: ${result.error}`);
     } else {
-      this.logger.debug(`Message processed successfully by ${result.handledBy} in ${result.processingTime}ms`);
+      this.logger.debug(
+        `Message processed successfully by ${result.handledBy} in ${result.processingTime}ms`
+      );
     }
   }
 
@@ -136,10 +144,13 @@ export class ConsolidatedMessageService implements IMessageManager, IManagerLife
    * Send ready message to extension
    */
   public sendReadyMessage(_coordinator: IManagerCoordinator): void {
-    this.dispatcher.sendMessage({
-      command: 'ready',
-      timestamp: Date.now(),
-    }, MessagePriority.HIGH);
+    this.dispatcher.sendMessage(
+      {
+        command: 'ready',
+        timestamp: Date.now(),
+      },
+      MessagePriority.HIGH
+    );
     this.logger.info('Ready message sent');
   }
 
@@ -165,21 +176,16 @@ export class ConsolidatedMessageService implements IMessageManager, IManagerLife
       this.coordinator = coordinator;
     }
 
-    this.dispatcher.sendTerminalInteractionEvent(
-      type,
-      terminalId,
-      data,
-      MessagePriority.NORMAL
-    );
-    
+    this.dispatcher.sendTerminalInteractionEvent(type, terminalId, data, MessagePriority.NORMAL);
+
     this.logger.debug(`Terminal interaction event sent: ${type} for ${terminalId}`);
   }
 
   /**
    * Get message queue statistics
    */
-  public getQueueStats(): { 
-    queueSize: number; 
+  public getQueueStats(): {
+    queueSize: number;
     isProcessing: boolean;
     highPriorityQueueSize?: number;
     isLocked?: boolean;
@@ -189,7 +195,7 @@ export class ConsolidatedMessageService implements IMessageManager, IManagerLife
       queueSize: stats.queueSize,
       isProcessing: stats.isProcessing,
       highPriorityQueueSize: stats.highPriorityQueueSize,
-      isLocked: false // Unified dispatcher doesn't use locking
+      isLocked: false, // Unified dispatcher doesn't use locking
     };
   }
 
@@ -252,12 +258,15 @@ export class ConsolidatedMessageService implements IMessageManager, IManagerLife
       this.coordinator = coordinator;
     }
 
-    this.dispatcher.sendMessage({
-      command: 'switchAiAgent',
-      terminalId,
-      timestamp: Date.now(),
-    }, MessagePriority.HIGH);
-    
+    this.dispatcher.sendMessage(
+      {
+        command: 'switchAiAgent',
+        terminalId,
+        timestamp: Date.now(),
+      },
+      MessagePriority.HIGH
+    );
+
     this.logger.info(`Switch AI agent message sent for terminal: ${terminalId}`);
   }
 
@@ -265,11 +274,14 @@ export class ConsolidatedMessageService implements IMessageManager, IManagerLife
    * Send kill terminal message
    */
   public sendKillTerminalMessage(_coordinator: IManagerCoordinator): void {
-    this.dispatcher.sendMessage({
-      command: 'killTerminal',
-      timestamp: Date.now(),
-    }, MessagePriority.HIGH);
-    
+    this.dispatcher.sendMessage(
+      {
+        command: 'killTerminal',
+        timestamp: Date.now(),
+      },
+      MessagePriority.HIGH
+    );
+
     this.logger.info('Kill terminal message sent');
   }
 
@@ -280,12 +292,15 @@ export class ConsolidatedMessageService implements IMessageManager, IManagerLife
     terminalId: string,
     _coordinator: IManagerCoordinator
   ): void {
-    this.dispatcher.sendMessage({
-      command: 'killTerminal',
-      terminalId,
-      timestamp: Date.now(),
-    }, MessagePriority.HIGH);
-    
+    this.dispatcher.sendMessage(
+      {
+        command: 'killTerminal',
+        terminalId,
+        timestamp: Date.now(),
+      },
+      MessagePriority.HIGH
+    );
+
     this.logger.info(`Kill specific terminal message sent for: ${terminalId}`);
   }
 
@@ -354,7 +369,7 @@ export class ConsolidatedMessageService implements IMessageManager, IManagerLife
     }
 
     const msg = message as any;
-    
+
     // Handle MessageEvent wrapper
     if (msg.data && typeof msg.data === 'object') {
       return msg.data as WebviewMessage;
@@ -381,7 +396,7 @@ export class ConsolidatedMessageService implements IMessageManager, IManagerLife
       dispatcher: this.dispatcher.getStats(),
       supportedCommands: this.dispatcher.getSupportedCommands(),
       isReady: this.dispatcher.isReady(),
-      initialized: this.initialized
+      initialized: this.initialized,
     };
   }
 

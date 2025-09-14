@@ -1,6 +1,6 @@
 /**
  * WebView Resource Manager
- * 
+ *
  * Manages resources for WebView components including CSS, assets, and external resources.
  */
 
@@ -49,48 +49,64 @@ export class WebViewResourceManager implements IWebViewResourceManager {
    * Load a CSS resource
    */
   async loadCSS(id: string, url: string, options?: ResourceLoadOptions): Promise<WebViewResource> {
-    return this.loadResource({
-      id,
-      type: 'css',
-      url,
-      loaded: false
-    }, options);
+    return this.loadResource(
+      {
+        id,
+        type: 'css',
+        url,
+        loaded: false,
+      },
+      options
+    );
   }
 
   /**
    * Load a JavaScript resource
    */
   async loadJS(id: string, url: string, options?: ResourceLoadOptions): Promise<WebViewResource> {
-    return this.loadResource({
-      id,
-      type: 'js',
-      url,
-      loaded: false
-    }, options);
+    return this.loadResource(
+      {
+        id,
+        type: 'js',
+        url,
+        loaded: false,
+      },
+      options
+    );
   }
 
   /**
    * Load an image resource
    */
-  async loadImage(id: string, url: string, options?: ResourceLoadOptions): Promise<WebViewResource> {
-    return this.loadResource({
-      id,
-      type: 'image',
-      url,
-      loaded: false
-    }, options);
+  async loadImage(
+    id: string,
+    url: string,
+    options?: ResourceLoadOptions
+  ): Promise<WebViewResource> {
+    return this.loadResource(
+      {
+        id,
+        type: 'image',
+        url,
+        loaded: false,
+      },
+      options
+    );
   }
 
   /**
    * Load a font resource
    */
   async loadFont(id: string, url: string, options?: ResourceLoadOptions): Promise<WebViewResource> {
-    return this.loadResource({
-      id,
-      type: 'font',
-      url,
-      loaded: false
-    }, options);
+    return this.loadResource(
+      {
+        id,
+        type: 'font',
+        url,
+        loaded: false,
+      },
+      options
+    );
   }
 
   /**
@@ -167,7 +183,7 @@ export class WebViewResourceManager implements IWebViewResourceManager {
           throw error;
         }
         // Wait before retrying
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise((resolve) => setTimeout(resolve, 1000));
       }
     }
 
@@ -277,7 +293,7 @@ export class WebViewResourceManager implements IWebViewResourceManager {
 
     try {
       const response = await fetch(resource.url, {
-        signal: controller.signal
+        signal: controller.signal,
       });
 
       if (!response.ok) {
@@ -321,10 +337,10 @@ export class WebViewResourceManager implements IWebViewResourceManager {
       // Remove from DOM if applicable
       if (resource.type === 'css') {
         const links = document.querySelectorAll(`link[href="${resource.url}"]`);
-        links.forEach(link => link.remove());
+        links.forEach((link) => link.remove());
       } else if (resource.type === 'js') {
         const scripts = document.querySelectorAll(`script[src="${resource.url}"]`);
-        scripts.forEach(script => script.remove());
+        scripts.forEach((script) => script.remove());
       }
 
       this.resources.delete(id);

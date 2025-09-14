@@ -32,7 +32,10 @@ export interface LinkDetectionSettings {
 export class TerminalLinksService {
   private readonly _links = new Map<string, TerminalLink[]>();
   private readonly _linkProviders: vscode.TerminalLinkProvider[] = [];
-  private readonly _linkEmitter = new vscode.EventEmitter<{ terminalId: string; links: TerminalLink[] }>();
+  private readonly _linkEmitter = new vscode.EventEmitter<{
+    terminalId: string;
+    links: TerminalLink[];
+  }>();
   private _settings: LinkDetectionSettings;
   private _workspaceRoot: string;
 
@@ -41,11 +44,13 @@ export class TerminalLinksService {
   constructor() {
     this._settings = this.loadSettings();
     this._workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '';
-    
+
     // Monitor configuration changes
-    vscode.workspace.onDidChangeConfiguration(e => {
-      if (e.affectsConfiguration('secondaryTerminal.links') ||
-          e.affectsConfiguration('terminal.integrated.allowedLinkSchemes')) {
+    vscode.workspace.onDidChangeConfiguration((e) => {
+      if (
+        e.affectsConfiguration('secondaryTerminal.links') ||
+        e.affectsConfiguration('terminal.integrated.allowedLinkSchemes')
+      ) {
         this._settings = this.loadSettings();
         log('🔗 [LINKS] Settings updated:', this._settings);
       }
@@ -57,14 +62,19 @@ export class TerminalLinksService {
    */
   private loadSettings(): LinkDetectionSettings {
     const config = vscode.workspace.getConfiguration();
-    
+
     // Use VS Code standard allowed schemes setting
     const allowedSchemes = config.get<string[]>('terminal.integrated.allowedLinkSchemes', [
-      'http', 'https', 'file', 'mailto', 'vscode', 'vscode-insiders'
+      'http',
+      'https',
+      'file',
+      'mailto',
+      'vscode',
+      'vscode-insiders',
     ]);
-    
+
     const sidebarConfig = config.get<any>('secondaryTerminal.links', {});
-    
+
     return {
       enabled: sidebarConfig.enabled ?? true,
       allowedSchemes: sidebarConfig.allowedSchemes ?? allowedSchemes,
@@ -81,7 +91,7 @@ export class TerminalLinksService {
   public registerLinkProvider(provider: vscode.TerminalLinkProvider): vscode.Disposable {
     this._linkProviders.push(provider);
     log('🔗 [LINKS] Registered custom link provider');
-    
+
     return {
       dispose: () => {
         const index = this._linkProviders.indexOf(provider);
@@ -89,29 +99,33 @@ export class TerminalLinksService {
           this._linkProviders.splice(index, 1);
           log('🔗 [LINKS] Disposed custom link provider');
         }
-      }
+      },
     };
   }
 
   /**
    * Detect links in terminal line text
    */
-  public async detectLinks(terminalId: string, line: number, text: string): Promise<TerminalLink[]> {
+  public async detectLinks(
+    terminalId: string,
+    line: number,
+    text: string
+  ): Promise<TerminalLink[]> {
     if (!this._settings.enabled || !text.trim()) {
       return [];
     }
 
     const links: TerminalLink[] = [];
-    
+
     // Built-in link detection
     if (this._settings.detectWebLinks) {
       links.push(...this.detectWebLinks(terminalId, line, text));
     }
-    
+
     if (this._settings.detectFileLinks) {
-      links.push(...await this.detectFileLinks(terminalId, line, text));
+      links.push(...(await this.detectFileLinks(terminalId, line, text)));
     }
-    
+
     if (this._settings.detectEmailLinks) {
       links.push(...this.detectEmailLinks(terminalId, line, text));
     }
@@ -124,19 +138,21 @@ export class TerminalLinksService {
             { line: text, terminal: undefined as any } as any, // Mock context
             undefined as any // Mock token
           );
-          
+
           if (customLinks) {
-            links.push(...customLinks.map((link, index) => ({
-              id: `${terminalId}-${line}-custom-${index}`,
-              terminalId,
-              text: text.substring(link.startIndex, link.startIndex + link.length),
-              startIndex: link.startIndex,
-              endIndex: link.startIndex + link.length,
-              line,
-              type: 'custom' as const,
-              activationData: link,
-              tooltip: link.tooltip,
-            })));
+            links.push(
+              ...customLinks.map((link, index) => ({
+                id: `${terminalId}-${line}-custom-${index}`,
+                terminalId,
+                text: text.substring(link.startIndex, link.startIndex + link.length),
+                startIndex: link.startIndex,
+                endIndex: link.startIndex + link.length,
+                line,
+                type: 'custom' as const,
+                activationData: link,
+                tooltip: link.tooltip,
+              }))
+            );
           }
         }
       } catch (error) {
@@ -146,14 +162,14 @@ export class TerminalLinksService {
 
     // Limit links per line for performance
     const limitedLinks = links.slice(0, this._settings.maxLinksPerLine);
-    
+
     if (limitedLinks.length > 0) {
       const terminalLinks = this._links.get(terminalId) || [];
       // Remove existing links for this line
-      const filteredLinks = terminalLinks.filter(l => l.line !== line);
+      const filteredLinks = terminalLinks.filter((l) => l.line !== line);
       filteredLinks.push(...limitedLinks);
       this._links.set(terminalId, filteredLinks);
-      
+
       this._linkEmitter.fire({
         terminalId,
         links: [...filteredLinks],
@@ -174,7 +190,7 @@ export class TerminalLinksService {
     while ((match = urlRegex.exec(text)) !== null) {
       const url = match[0];
       const scheme = new URL(url).protocol.slice(0, -1);
-      
+
       if (this._settings.allowedSchemes.includes(scheme)) {
         links.push({
           id: `${terminalId}-${line}-url-${match.index}`,
@@ -195,7 +211,11 @@ export class TerminalLinksService {
   /**
    * Detect file and folder paths in text
    */
-  private async detectFileLinks(terminalId: string, line: number, text: string): Promise<TerminalLink[]> {
+  private async detectFileLinks(
+    terminalId: string,
+    line: number,
+    text: string
+  ): Promise<TerminalLink[]> {
     // Match various file path patterns
     const filePatterns = [
       // Absolute paths
@@ -214,15 +234,15 @@ export class TerminalLinksService {
       while ((match = pattern.exec(text)) !== null) {
         const filePath = match[1];
         if (!filePath) continue;
-        
-        const resolvedPath = path.isAbsolute(filePath) 
-          ? filePath 
+
+        const resolvedPath = path.isAbsolute(filePath)
+          ? filePath
           : path.resolve(this._workspaceRoot, filePath);
 
         try {
           const stat = await fs.promises.stat(resolvedPath);
           const isDirectory = stat.isDirectory();
-          
+
           links.push({
             id: `${terminalId}-${line}-file-${match.index}`,
             terminalId,
@@ -253,7 +273,7 @@ export class TerminalLinksService {
 
     while ((match = emailRegex.exec(text)) !== null) {
       const email = match[0];
-      
+
       if (this._settings.allowedSchemes.includes('mailto')) {
         links.push({
           id: `${terminalId}-${line}-email-${match.index}`,
@@ -277,11 +297,11 @@ export class TerminalLinksService {
   public async activateLink(link: TerminalLink): Promise<boolean> {
     try {
       log(`🔗 [LINKS] Activating link: ${link.text} (${link.type})`);
-      
+
       switch (link.type) {
         case 'url':
           return await vscode.env.openExternal(vscode.Uri.parse(link.text));
-          
+
         case 'file':
           if (link.activationData?.path) {
             const document = await vscode.workspace.openTextDocument(link.activationData.path);
@@ -289,7 +309,7 @@ export class TerminalLinksService {
             return true;
           }
           break;
-          
+
         case 'folder':
           if (link.activationData?.path) {
             const uri = vscode.Uri.file(link.activationData.path);
@@ -297,10 +317,10 @@ export class TerminalLinksService {
             return true;
           }
           break;
-          
+
         case 'email':
           return await vscode.env.openExternal(vscode.Uri.parse(`mailto:${link.text}`));
-          
+
         case 'custom':
           if (link.activationData && this._linkProviders.length > 0) {
             // Find the provider that created this link and handle it
@@ -317,7 +337,7 @@ export class TerminalLinksService {
           }
           break;
       }
-      
+
       return false;
     } catch (error) {
       log(`❌ [LINKS] Link activation failed: ${error}`);

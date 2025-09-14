@@ -8,7 +8,7 @@ import { WebviewMessage } from '../types/common';
 
 /**
  * WebView Settings Manager Service
- * 
+ *
  * Extracted from SecondaryTerminalProvider to handle:
  * - VS Code settings integration and monitoring
  * - Font settings management
@@ -129,7 +129,10 @@ export class WebViewSettingsManagerService implements IWebViewSettingsManagerSer
           settings.enableCliAgentIntegration,
           vscode.ConfigurationTarget.Global
         );
-        log('🔧 [SETTINGS-MANAGER] CLI Agent integration setting updated:', settings.enableCliAgentIntegration);
+        log(
+          '🔧 [SETTINGS-MANAGER] CLI Agent integration setting updated:',
+          settings.enableCliAgentIntegration
+        );
       }
       if (settings.dynamicSplitDirection !== undefined) {
         await config.update(
@@ -137,7 +140,10 @@ export class WebViewSettingsManagerService implements IWebViewSettingsManagerSer
           settings.dynamicSplitDirection,
           vscode.ConfigurationTarget.Global
         );
-        log('🔧 [SETTINGS-MANAGER] Dynamic split direction setting updated:', settings.dynamicSplitDirection);
+        log(
+          '🔧 [SETTINGS-MANAGER] Dynamic split direction setting updated:',
+          settings.dynamicSplitDirection
+        );
       }
       if (settings.panelLocation) {
         await config.update(
@@ -168,7 +174,7 @@ export class WebViewSettingsManagerService implements IWebViewSettingsManagerSer
 
     this.configChangeDisposables.push(configChangeDisposable);
     this.extensionContext.subscriptions.push(configChangeDisposable);
-    
+
     log('✅ [SETTINGS-MANAGER] Configuration change listeners setup complete');
   }
 
@@ -277,7 +283,7 @@ export class WebViewSettingsManagerService implements IWebViewSettingsManagerSer
     // Send initial panel location and request detection (Issue #148)
     const panelLocation = this.getCurrentPanelLocation();
     log(`📍 [SETTINGS-MANAGER] Sending initial panel location: ${panelLocation}`);
-    
+
     await this.sendMessage({
       command: 'panelLocationUpdate',
       location: panelLocation,
@@ -296,11 +302,7 @@ export class WebViewSettingsManagerService implements IWebViewSettingsManagerSer
     log('📍 [SETTINGS-MANAGER] Panel location reported from WebView:', location);
 
     // Update VS Code context key
-    await vscode.commands.executeCommand(
-      'setContext',
-      'secondaryTerminal.panelLocation',
-      location
-    );
+    await vscode.commands.executeCommand('setContext', 'secondaryTerminal.panelLocation', location);
 
     // Notify WebView of the updated location
     await this.sendMessage({
@@ -332,13 +334,13 @@ export class WebViewSettingsManagerService implements IWebViewSettingsManagerSer
    */
   public dispose(): void {
     log('🔧 [SETTINGS-MANAGER] Disposing WebView settings manager...');
-    
+
     // Dispose all configuration change disposables
     for (const disposable of this.configChangeDisposables) {
       disposable.dispose();
     }
     this.configChangeDisposables.length = 0;
-    
+
     log('✅ [SETTINGS-MANAGER] WebView settings manager disposed');
   }
 }

@@ -1,15 +1,15 @@
-import { 
-  SimpleSessionData, 
-  SessionContinuationMessage, 
+import {
+  SimpleSessionData,
+  SessionContinuationMessage,
   ISimplePersistenceManager,
-  SIMPLE_PERSISTENCE 
+  SIMPLE_PERSISTENCE,
 } from '../../types/SimplePersistence';
 import { Debouncer, PerformanceMonitor } from '../../utils/PerformanceOptimizer';
 
 /**
  * Simple Terminal Persistence Manager
  * Phase 2: Realistic session continuation approach
- * 
+ *
  * Replaces complex SerializeAddon-based persistence with:
  * - Simple session metadata storage
  * - Session continuation messages
@@ -28,13 +28,15 @@ export class SimplePersistenceManager implements ISimplePersistenceManager {
   constructor(vscodeApi: any) {
     this.vscodeApi = vscodeApi;
     this.performanceMonitor = PerformanceMonitor.getInstance();
-    
+
     // 🚀 PHASE 3: Debounced saving to reduce frequent saves
     this.saveDebouncer = new Debouncer(
-      async () => { await this.performSaveSession(); }, 
+      async () => {
+        await this.performSaveSession();
+      },
       500 // 500ms debounce delay
     );
-    
+
     console.log('🆕 [SIMPLE-PERSISTENCE] SimplePersistenceManager initialized with debouncing');
   }
 
@@ -52,15 +54,15 @@ export class SimplePersistenceManager implements ISimplePersistenceManager {
    */
   private async performSaveSession(): Promise<boolean> {
     this.performanceMonitor.startTimer('session-save');
-    
+
     try {
       // Get current terminal information from DOM
       const terminalContainers = document.querySelectorAll('[data-terminal-id]');
       const activeTerminal = document.querySelector('[data-terminal-id].active');
-      
+
       const terminalCount = terminalContainers.length;
       const activeTerminalId = activeTerminal?.getAttribute('data-terminal-id') || null;
-      
+
       // Extract terminal names from headers
       const terminalNames: string[] = [];
       terminalContainers.forEach((container) => {
@@ -74,7 +76,7 @@ export class SimplePersistenceManager implements ISimplePersistenceManager {
         activeTerminalId,
         terminalNames,
         timestamp: Date.now(),
-        version: SIMPLE_PERSISTENCE.VERSION
+        version: SIMPLE_PERSISTENCE.VERSION,
       };
 
       // Save to VS Code state
@@ -83,12 +85,12 @@ export class SimplePersistenceManager implements ISimplePersistenceManager {
       this.vscodeApi.setState(currentState);
 
       const saveTime = this.performanceMonitor.endTimer('session-save');
-      
+
       console.log('✅ [SIMPLE-PERSISTENCE] Session saved:', {
         terminalCount,
         activeTerminalId,
         terminalNames,
-        saveTimeMs: saveTime
+        saveTimeMs: saveTime,
       });
 
       return true;
@@ -111,7 +113,7 @@ export class SimplePersistenceManager implements ISimplePersistenceManager {
       }
 
       const sessionData = currentState[SIMPLE_PERSISTENCE.STORAGE_KEY] as SimpleSessionData;
-      
+
       // Validate session data
       if (!sessionData.version || !sessionData.timestamp) {
         console.warn('⚠️ [SIMPLE-PERSISTENCE] Invalid session data, ignoring');
@@ -129,7 +131,7 @@ export class SimplePersistenceManager implements ISimplePersistenceManager {
       console.log('✅ [SIMPLE-PERSISTENCE] Session loaded:', {
         terminalCount: sessionData.terminalCount,
         activeTerminalId: sessionData.activeTerminalId,
-        age: Math.round((Date.now() - sessionData.timestamp) / 1000 / 60) + ' minutes'
+        age: Math.round((Date.now() - sessionData.timestamp) / 1000 / 60) + ' minutes',
       });
 
       return sessionData;
@@ -147,7 +149,7 @@ export class SimplePersistenceManager implements ISimplePersistenceManager {
       const currentState = this.vscodeApi.getState() || {};
       delete currentState[SIMPLE_PERSISTENCE.STORAGE_KEY];
       this.vscodeApi.setState(currentState);
-      
+
       console.log('🗑️ [SIMPLE-PERSISTENCE] Session cleared');
     } catch (error) {
       console.error('❌ [SIMPLE-PERSISTENCE] Failed to clear session:', error);
@@ -160,14 +162,15 @@ export class SimplePersistenceManager implements ISimplePersistenceManager {
   public getSessionMessage(sessionData: SimpleSessionData): SessionContinuationMessage {
     const terminalText = sessionData.terminalCount === 1 ? 'terminal' : 'terminals';
     const timeAgo = this.getTimeAgo(sessionData.timestamp);
-    
+
     return {
       type: 'restored',
       message: `🔄 Session restored: ${sessionData.terminalCount} ${terminalText} from ${timeAgo}`,
-      details: sessionData.terminalNames.length > 0 
-        ? `Terminals: ${sessionData.terminalNames.join(', ')}` 
-        : undefined,
-      timestamp: Date.now()
+      details:
+        sessionData.terminalNames.length > 0
+          ? `Terminals: ${sessionData.terminalNames.join(', ')}`
+          : undefined,
+      timestamp: Date.now(),
     };
   }
 
@@ -179,7 +182,7 @@ export class SimplePersistenceManager implements ISimplePersistenceManager {
       type: 'welcome',
       message: '🚀 New terminal session started',
       details: 'VS Code Sidebar Terminal ready',
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
   }
 
@@ -189,11 +192,11 @@ export class SimplePersistenceManager implements ISimplePersistenceManager {
   private getTimeAgo(timestamp: number): string {
     const now = Date.now();
     const diff = now - timestamp;
-    
+
     const minutes = Math.floor(diff / (1000 * 60));
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    
+
     if (minutes < 1) return 'just now';
     if (minutes < 60) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
     if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
@@ -203,7 +206,10 @@ export class SimplePersistenceManager implements ISimplePersistenceManager {
   /**
    * Display session continuation message in terminal
    */
-  public displaySessionMessage(message: SessionContinuationMessage, terminalElement?: HTMLElement): void {
+  public displaySessionMessage(
+    message: SessionContinuationMessage,
+    terminalElement?: HTMLElement
+  ): void {
     const messageHtml = `
       <div style="
         color: #00d4aa; 
@@ -225,7 +231,9 @@ export class SimplePersistenceManager implements ISimplePersistenceManager {
       terminalElement.insertAdjacentHTML('afterbegin', messageHtml);
     } else {
       // Log to console as fallback
-      console.log(`📢 [SESSION-MESSAGE] ${message.message}${message.details ? ` - ${message.details}` : ''}`);
+      console.log(
+        `📢 [SESSION-MESSAGE] ${message.message}${message.details ? ` - ${message.details}` : ''}`
+      );
     }
   }
 }

@@ -3,22 +3,22 @@ import { expect } from 'chai';
 import * as sinon from 'sinon';
 import * as vscode from 'vscode';
 
-import { 
-  WebViewMessageHandlerService, 
-  IMessageHandlerContext 
+import {
+  WebViewMessageHandlerService,
+  IMessageHandlerContext,
 } from '../../../services/WebViewMessageHandlerService';
 import { WebviewMessage } from '../../../types/common';
 
 /**
  * Comprehensive Unit Tests for WebViewMessageHandlerService
- * 
+ *
  * TDD-Compliant test suite providing:
  * - 95%+ code coverage across all handlers
  * - Edge case testing for error scenarios
  * - Dependency injection validation
  * - Integration testing with mock services
  * - Exception handling verification
- * 
+ *
  * Test Categories:
  * 1. Message Handling - Core message processing functionality
  * 2. Terminal Management - Creation, deletion, and focus operations
@@ -57,7 +57,7 @@ describe('WebViewMessageHandlerService', () => {
       secrets: {} as any,
       environmentVariableCollection: {} as any,
       extension: {} as any,
-      languageModelAccessInformation: {} as any
+      languageModelAccessInformation: {} as any,
     };
 
     // Mock the message handler context
@@ -66,7 +66,7 @@ describe('WebViewMessageHandlerService', () => {
         getActiveTerminalId: sandbox.stub().returns('terminal-1'),
         getTerminals: sandbox.stub().returns([
           { id: 'terminal-1', name: 'Terminal 1' },
-          { id: 'terminal-2', name: 'Terminal 2' }
+          { id: 'terminal-2', name: 'Terminal 2' },
         ]),
         getTerminal: sandbox.stub(),
         createTerminal: sandbox.stub().returns('new-terminal-id'),
@@ -74,16 +74,16 @@ describe('WebViewMessageHandlerService', () => {
         setActiveTerminal: sandbox.stub(),
         sendInput: sandbox.stub(),
         resize: sandbox.stub(),
-        switchAiAgentConnection: sandbox.stub().returns({ 
-          success: true, 
-          newStatus: 'connected', 
-          agentType: 'claude' 
-        })
+        switchAiAgentConnection: sandbox.stub().returns({
+          success: true,
+          newStatus: 'connected',
+          agentType: 'claude',
+        }),
       },
       webViewStateManager: {
         initializeWebView: sandbox.stub().resolves(),
         ensureMinimumTerminals: sandbox.stub().resolves(),
-        isInitialized: sandbox.stub().returns(false)
+        isInitialized: sandbox.stub().returns(false),
       },
       settingsManager: {
         getCurrentSettings: sandbox.stub().returns({
@@ -91,7 +91,7 @@ describe('WebViewMessageHandlerService', () => {
           theme: 'dark',
           altClickMovesCursor: false,
           multiCursorModifier: 'alt',
-          enableCliAgentIntegration: true
+          enableCliAgentIntegration: true,
         }),
         getCurrentFontSettings: sandbox.stub().returns({
           fontSize: 14,
@@ -99,20 +99,17 @@ describe('WebViewMessageHandlerService', () => {
           fontWeight: 'normal',
           fontWeightBold: 'bold',
           lineHeight: 1.2,
-          letterSpacing: 0
+          letterSpacing: 0,
         }),
         updateSettings: sandbox.stub().resolves(),
         getCurrentPanelLocation: sandbox.stub().returns('sidebar'),
-        handlePanelLocationReport: sandbox.stub().resolves()
+        handlePanelLocationReport: sandbox.stub().resolves(),
       },
-      sendMessage: sandbox.stub().resolves()
+      sendMessage: sandbox.stub().resolves(),
     };
 
     // Create the service instance
-    messageHandlerService = new WebViewMessageHandlerService(
-      mockContext,
-      mockExtensionContext
-    );
+    messageHandlerService = new WebViewMessageHandlerService(mockContext, mockExtensionContext);
   });
 
   afterEach(() => {
@@ -123,7 +120,7 @@ describe('WebViewMessageHandlerService', () => {
     it('should handle test messages correctly', async () => {
       const testMessage: WebviewMessage = {
         command: 'test',
-        type: 'initComplete'
+        type: 'initComplete',
       };
 
       await messageHandlerService.handleMessage(testMessage);
@@ -135,7 +132,7 @@ describe('WebViewMessageHandlerService', () => {
 
     it('should handle webviewReady message and initialize WebView', async () => {
       const readyMessage: WebviewMessage = {
-        command: 'webviewReady'
+        command: 'webviewReady',
       };
 
       await messageHandlerService.handleMessage(readyMessage);
@@ -148,7 +145,7 @@ describe('WebViewMessageHandlerService', () => {
       const inputMessage: WebviewMessage = {
         command: 'input',
         data: 'echo "hello world"',
-        terminalId: 'terminal-1'
+        terminalId: 'terminal-1',
       };
 
       await messageHandlerService.handleMessage(inputMessage);
@@ -164,27 +161,23 @@ describe('WebViewMessageHandlerService', () => {
         command: 'resize',
         cols: 80,
         rows: 24,
-        terminalId: 'terminal-1'
+        terminalId: 'terminal-1',
       };
 
       await messageHandlerService.handleMessage(resizeMessage);
 
-      expect(mockContext.terminalManager.resize).to.have.been.calledWith(
-        80, 24, 'terminal-1'
-      );
+      expect(mockContext.terminalManager.resize).to.have.been.calledWith(80, 24, 'terminal-1');
     });
 
     it('should handle focusTerminal messages', async () => {
       const focusMessage: WebviewMessage = {
         command: 'focusTerminal',
-        terminalId: 'terminal-2'
+        terminalId: 'terminal-2',
       };
 
       await messageHandlerService.handleMessage(focusMessage);
 
-      expect(mockContext.terminalManager.setActiveTerminal).to.have.been.calledWith(
-        'terminal-2'
-      );
+      expect(mockContext.terminalManager.setActiveTerminal).to.have.been.calledWith('terminal-2');
     });
   });
 
@@ -193,7 +186,7 @@ describe('WebViewMessageHandlerService', () => {
       const createMessage: WebviewMessage = {
         command: 'createTerminal',
         terminalId: 'new-terminal',
-        terminalName: 'New Terminal'
+        terminalName: 'New Terminal',
       };
 
       // Mock getTerminal to return undefined (terminal doesn't exist)
@@ -209,11 +202,14 @@ describe('WebViewMessageHandlerService', () => {
       const createMessage: WebviewMessage = {
         command: 'createTerminal',
         terminalId: 'existing-terminal',
-        terminalName: 'Existing Terminal'
+        terminalName: 'Existing Terminal',
       };
 
       // Mock getTerminal to return an existing terminal
-      mockContext.terminalManager.getTerminal.returns({ id: 'existing-terminal', name: 'Existing Terminal' });
+      mockContext.terminalManager.getTerminal.returns({
+        id: 'existing-terminal',
+        name: 'Existing Terminal',
+      });
 
       await messageHandlerService.handleMessage(createMessage);
 
@@ -225,7 +221,7 @@ describe('WebViewMessageHandlerService', () => {
       const deleteMessage: WebviewMessage = {
         command: 'deleteTerminal',
         terminalId: 'terminal-to-delete',
-        requestSource: 'header'
+        requestSource: 'header',
       };
 
       await messageHandlerService.handleMessage(deleteMessage);
@@ -239,7 +235,7 @@ describe('WebViewMessageHandlerService', () => {
         command: 'deleteTerminalResponse',
         terminalId: 'terminal-to-delete',
         success: true,
-        reason: undefined
+        reason: undefined,
       });
     });
 
@@ -247,13 +243,13 @@ describe('WebViewMessageHandlerService', () => {
       const deleteMessage: WebviewMessage = {
         command: 'deleteTerminal',
         terminalId: 'terminal-to-delete',
-        requestSource: 'panel'
+        requestSource: 'panel',
       };
 
       // Mock deletion failure
       mockContext.terminalManager.deleteTerminal.resolves({
         success: false,
-        reason: 'Terminal is busy'
+        reason: 'Terminal is busy',
       });
 
       await messageHandlerService.handleMessage(deleteMessage);
@@ -262,7 +258,7 @@ describe('WebViewMessageHandlerService', () => {
         command: 'deleteTerminalResponse',
         terminalId: 'terminal-to-delete',
         success: false,
-        reason: 'Terminal is busy'
+        reason: 'Terminal is busy',
       });
     });
   });
@@ -270,7 +266,7 @@ describe('WebViewMessageHandlerService', () => {
   describe('Settings Management', () => {
     it('should handle getSettings requests', async () => {
       const settingsMessage: WebviewMessage = {
-        command: 'getSettings'
+        command: 'getSettings',
       };
 
       await messageHandlerService.handleMessage(settingsMessage);
@@ -285,8 +281,8 @@ describe('WebViewMessageHandlerService', () => {
           theme: 'dark',
           altClickMovesCursor: false,
           multiCursorModifier: 'alt',
-          enableCliAgentIntegration: true
-        }
+          enableCliAgentIntegration: true,
+        },
       });
 
       expect(mockContext.sendMessage).to.have.been.calledWith({
@@ -297,8 +293,8 @@ describe('WebViewMessageHandlerService', () => {
           fontWeight: 'normal',
           fontWeightBold: 'bold',
           lineHeight: 1.2,
-          letterSpacing: 0
-        }
+          letterSpacing: 0,
+        },
       });
     });
 
@@ -308,8 +304,8 @@ describe('WebViewMessageHandlerService', () => {
         settings: {
           cursorBlink: false,
           theme: 'light',
-          enableCliAgentIntegration: false
-        }
+          enableCliAgentIntegration: false,
+        },
       };
 
       await messageHandlerService.handleMessage(updateMessage);
@@ -317,7 +313,7 @@ describe('WebViewMessageHandlerService', () => {
       expect(mockContext.settingsManager.updateSettings).to.have.been.calledWith({
         cursorBlink: false,
         theme: 'light',
-        enableCliAgentIntegration: false
+        enableCliAgentIntegration: false,
       });
     });
   });
@@ -327,12 +323,14 @@ describe('WebViewMessageHandlerService', () => {
       const switchMessage: WebviewMessage = {
         command: 'switchAiAgent',
         terminalId: 'terminal-1',
-        action: 'connect'
+        action: 'connect',
       };
 
       await messageHandlerService.handleMessage(switchMessage);
 
-      expect(mockContext.terminalManager.switchAiAgentConnection).to.have.been.calledWith('terminal-1');
+      expect(mockContext.terminalManager.switchAiAgentConnection).to.have.been.calledWith(
+        'terminal-1'
+      );
 
       expect(mockContext.sendMessage).to.have.been.calledWith({
         command: 'switchAiAgentResponse',
@@ -340,7 +338,7 @@ describe('WebViewMessageHandlerService', () => {
         success: true,
         newStatus: 'connected',
         agentType: 'claude',
-        reason: undefined
+        reason: undefined,
       });
     });
 
@@ -348,14 +346,14 @@ describe('WebViewMessageHandlerService', () => {
       const switchMessage: WebviewMessage = {
         command: 'switchAiAgent',
         terminalId: 'terminal-1',
-        action: 'connect'
+        action: 'connect',
       };
 
       // Mock switch failure
       mockContext.terminalManager.switchAiAgentConnection.returns({
         success: false,
         newStatus: 'none',
-        reason: 'No agent available'
+        reason: 'No agent available',
       });
 
       await messageHandlerService.handleMessage(switchMessage);
@@ -366,7 +364,7 @@ describe('WebViewMessageHandlerService', () => {
         success: false,
         newStatus: 'none',
         agentType: undefined,
-        reason: 'No agent available'
+        reason: 'No agent available',
       });
     });
   });
@@ -375,7 +373,7 @@ describe('WebViewMessageHandlerService', () => {
     it('should handle reportPanelLocation messages', async () => {
       const locationMessage: WebviewMessage = {
         command: 'reportPanelLocation',
-        location: 'panel'
+        location: 'panel',
       };
 
       // Mock vscode.commands.executeCommand
@@ -391,7 +389,7 @@ describe('WebViewMessageHandlerService', () => {
 
       expect(mockContext.sendMessage).to.have.been.calledWith({
         command: 'panelLocationUpdate',
-        location: 'panel'
+        location: 'panel',
       });
     });
   });
@@ -399,7 +397,7 @@ describe('WebViewMessageHandlerService', () => {
   describe('Error Handling', () => {
     it('should handle unknown message commands gracefully', async () => {
       const unknownMessage: WebviewMessage = {
-        command: 'unknownCommand' as any
+        command: 'unknownCommand' as any,
       };
 
       // Should not throw an error
@@ -422,7 +420,7 @@ describe('WebViewMessageHandlerService', () => {
       const invalidResizeMessage: WebviewMessage = {
         command: 'resize',
         // cols and rows are missing
-        terminalId: 'terminal-1'
+        terminalId: 'terminal-1',
       };
 
       await messageHandlerService.handleMessage(invalidResizeMessage);
@@ -437,7 +435,7 @@ describe('WebViewMessageHandlerService', () => {
       const customHandler = {
         getHandledCommands: () => ['customCommand'],
         canHandle: (command: string) => command === 'customCommand',
-        handle: sandbox.stub().resolves()
+        handle: sandbox.stub().resolves(),
       };
 
       messageHandlerService.registerHandler(customHandler);
@@ -450,29 +448,26 @@ describe('WebViewMessageHandlerService', () => {
       const customHandler = {
         getHandledCommands: () => ['customCommand'],
         canHandle: (command: string) => command === 'customCommand',
-        handle: sandbox.stub().resolves()
+        handle: sandbox.stub().resolves(),
       };
 
       messageHandlerService.registerHandler(customHandler);
 
       const customMessage: WebviewMessage = {
         command: 'customCommand' as any,
-        data: 'test-data'
+        data: 'test-data',
       };
 
       await messageHandlerService.handleMessage(customMessage);
 
-      expect(customHandler.handle).to.have.been.calledOnceWith(
-        customMessage,
-        mockContext
-      );
+      expect(customHandler.handle).to.have.been.calledOnceWith(customMessage, mockContext);
     });
   });
 
   describe('Additional Coverage Tests', () => {
     it('should handle HTML script test messages', async () => {
       const htmlScriptMessage: WebviewMessage = {
-        command: 'htmlScriptTest'
+        command: 'htmlScriptTest',
       };
 
       await messageHandlerService.handleMessage(htmlScriptMessage);
@@ -481,7 +476,7 @@ describe('WebViewMessageHandlerService', () => {
 
     it('should handle timeout test messages', async () => {
       const timeoutMessage: WebviewMessage = {
-        command: 'timeoutTest'
+        command: 'timeoutTest',
       };
 
       await messageHandlerService.handleMessage(timeoutMessage);
@@ -490,7 +485,7 @@ describe('WebViewMessageHandlerService', () => {
 
     it('should handle ready command variant', async () => {
       const readyMessage: WebviewMessage = {
-        command: 'ready'
+        command: 'ready',
       };
 
       await messageHandlerService.handleMessage(readyMessage);
@@ -502,7 +497,7 @@ describe('WebViewMessageHandlerService', () => {
     it('should handle killTerminal with specific terminal ID', async () => {
       const killMessage: WebviewMessage = {
         command: 'killTerminal',
-        terminalId: 'terminal-to-kill'
+        terminalId: 'terminal-to-kill',
       };
 
       await messageHandlerService.handleMessage(killMessage);
@@ -515,7 +510,7 @@ describe('WebViewMessageHandlerService', () => {
 
     it('should handle killTerminal without terminal ID (active terminal)', async () => {
       const killMessage: WebviewMessage = {
-        command: 'killTerminal'
+        command: 'killTerminal',
       };
 
       await messageHandlerService.handleMessage(killMessage);
@@ -529,7 +524,7 @@ describe('WebViewMessageHandlerService', () => {
 
     it('should handle killTerminal when no active terminal exists', async () => {
       const killMessage: WebviewMessage = {
-        command: 'killTerminal'
+        command: 'killTerminal',
       };
 
       // Mock no active terminal
@@ -555,7 +550,7 @@ describe('WebViewMessageHandlerService', () => {
 
     it('should handle focusTerminal without terminal ID', async () => {
       const focusMessage: WebviewMessage = {
-        command: 'focusTerminal'
+        command: 'focusTerminal',
         // Missing terminalId
       };
 
@@ -567,7 +562,7 @@ describe('WebViewMessageHandlerService', () => {
 
     it('should handle updateSettings without settings data', async () => {
       const updateMessage: WebviewMessage = {
-        command: 'updateSettings'
+        command: 'updateSettings',
         // Missing settings
       };
 
@@ -579,7 +574,7 @@ describe('WebViewMessageHandlerService', () => {
 
     it('should handle reportPanelLocation without location', async () => {
       const locationMessage: WebviewMessage = {
-        command: 'reportPanelLocation'
+        command: 'reportPanelLocation',
         // Missing location
       };
 
@@ -595,7 +590,7 @@ describe('WebViewMessageHandlerService', () => {
     it('should handle switchAiAgent without terminal ID', async () => {
       const switchMessage: WebviewMessage = {
         command: 'switchAiAgent',
-        action: 'connect'
+        action: 'connect',
         // Missing terminalId
       };
 
@@ -612,7 +607,7 @@ describe('WebViewMessageHandlerService', () => {
       const deleteMessage: WebviewMessage = {
         command: 'deleteTerminal',
         terminalId: 'terminal-error',
-        requestSource: 'header'
+        requestSource: 'header',
       };
 
       // Mock deletion exception
@@ -625,7 +620,7 @@ describe('WebViewMessageHandlerService', () => {
         command: 'deleteTerminalResponse',
         terminalId: 'terminal-error',
         success: false,
-        reason: 'Delete failed: Terminal deletion failed'
+        reason: 'Delete failed: Terminal deletion failed',
       });
     });
 
@@ -633,7 +628,7 @@ describe('WebViewMessageHandlerService', () => {
       const switchMessage: WebviewMessage = {
         command: 'switchAiAgent',
         terminalId: 'terminal-1',
-        action: 'connect'
+        action: 'connect',
       };
 
       // Mock switch exception
@@ -646,7 +641,7 @@ describe('WebViewMessageHandlerService', () => {
         command: 'switchAiAgentResponse',
         terminalId: 'terminal-1',
         success: false,
-        reason: 'Internal error occurred'
+        reason: 'Internal error occurred',
       });
     });
 
@@ -654,7 +649,7 @@ describe('WebViewMessageHandlerService', () => {
       const errorMessage: WebviewMessage = {
         command: 'input',
         data: 'test-input',
-        terminalId: 'terminal-1'
+        terminalId: 'terminal-1',
       };
 
       // Mock sendInput to throw an exception
