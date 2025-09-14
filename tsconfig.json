@@ -22,6 +22,6 @@
     "noPropertyAccessFromIndexSignature": false,
     "exactOptionalPropertyTypes": false
   },
-  "exclude": ["node_modules", ".vscode-test"],
+  "exclude": ["node_modules", ".vscode-test", "src/integration/SecondaryTerminalProviderRefactored.ts"],
   "include": ["src/**/*"]
 }

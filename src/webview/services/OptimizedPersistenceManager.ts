@@ -45,21 +45,15 @@ export enum PersistenceErrorType {
 
 export class WebViewPersistenceError extends Error {
   public override readonly name = 'WebViewPersistenceError';
-  public readonly type: PersistenceErrorType;
-  public readonly terminalId?: string;
-  public override readonly cause?: Error;
   
   constructor(
-    message: string,
-    type: PersistenceErrorType,
-    terminalId?: string,
-    cause?: Error
+    override message: string,
+    public readonly type: PersistenceErrorType,
+    public readonly terminalId?: string,
+    public override readonly cause?: Error
   ) {
     super(message);
     this.name = 'WebViewPersistenceError';
-    this.type = type;
-    this.terminalId = terminalId;
-    this.cause = cause;
   }
 }
 

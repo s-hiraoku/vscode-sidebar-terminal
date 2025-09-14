@@ -570,36 +570,33 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
       };
     }
 
-    // 🔧 CRITICAL FIX: Enhanced shell prompt detection for Claude silent exits
-    // Claude often exits silently, so we need to be more aggressive about shell prompt detection
+    // 🚨 REDUCED SENSITIVITY: Much more conservative shell prompt detection
+    // Only detect termination if we have VERY clear shell prompt patterns
     if (this.patternDetector.detectShellPrompt(cleanLine)) {
       const lowerLine = cleanLine.toLowerCase();
-      const hasAgentKeywords = lowerLine.includes('claude') || lowerLine.includes('gemini');
-
-      // 🚨 ENHANCED: More comprehensive AI output detection
+      
+      // 🚨 EXTENSIVE AI OUTPUT DETECTION: Greatly expanded to reduce false positives
       const looksLikeAIOutput =
-        hasAgentKeywords &&
-        (lowerLine.includes('assistant') ||
-          lowerLine.includes('help you') ||
-          lowerLine.includes('i am') ||
-          lowerLine.includes("i'm") ||
-          lowerLine.includes('let me') ||
-          lowerLine.includes('i can') ||
-          lowerLine.includes('i will') ||
-          lowerLine.includes("i'll") ||
-          lowerLine.includes('would you like') ||
-          lowerLine.includes('how can i') ||
-          lowerLine.includes('understand') ||
-          lowerLine.includes('analyze') ||
-          lowerLine.includes('looking at') ||
-          lowerLine.includes('working on') ||
-          lowerLine.includes('thinking') ||
-          lowerLine.includes('response') ||
-          lowerLine.includes('question') ||
-          lowerLine.includes('request'));
-
-      // 🚨 ADDITIONAL: Check for typical Claude conversational patterns
-      const hasConversationalPattern =
+        lowerLine.includes('claude') ||
+        lowerLine.includes('gemini') ||
+        lowerLine.includes('assistant') ||
+        lowerLine.includes('help') ||
+        lowerLine.includes('i am') ||
+        lowerLine.includes("i'm") ||
+        lowerLine.includes('let me') ||
+        lowerLine.includes('i can') ||
+        lowerLine.includes('i will') ||
+        lowerLine.includes("i'll") ||
+        lowerLine.includes('would you') ||
+        lowerLine.includes('how can') ||
+        lowerLine.includes('understand') ||
+        lowerLine.includes('analyze') ||
+        lowerLine.includes('looking') ||
+        lowerLine.includes('working') ||
+        lowerLine.includes('thinking') ||
+        lowerLine.includes('response') ||
+        lowerLine.includes('question') ||
+        lowerLine.includes('request') ||
         lowerLine.includes('sure') ||
         lowerLine.includes('certainly') ||
         lowerLine.includes('absolutely') ||
@@ -610,41 +607,75 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
         lowerLine.includes('great') ||
         lowerLine.includes('excellent') ||
         lowerLine.includes('thanks') ||
-        lowerLine.includes('thank you');
+        lowerLine.includes('thank') ||
+        lowerLine.includes('please') ||
+        lowerLine.includes('here') ||
+        lowerLine.includes('this') ||
+        lowerLine.includes('that') ||
+        lowerLine.includes('with') ||
+        lowerLine.includes('from') ||
+        lowerLine.includes('will') ||
+        lowerLine.includes('can') ||
+        lowerLine.includes('would') ||
+        lowerLine.includes('could') ||
+        lowerLine.includes('should') ||
+        lowerLine.includes('might') ||
+        lowerLine.includes('may') ||
+        lowerLine.includes('...') || // Thinking indicators
+        lowerLine.includes('let') || // Common Claude phrase starts
+        lowerLine.includes('the') || // Common articles
+        lowerLine.includes('to') ||  // Common prepositions
+        lowerLine.includes('for') ||
+        lowerLine.includes('and') ||
+        lowerLine.includes('or') ||
+        lowerLine.includes('but') ||
+        lowerLine.includes('if') ||
+        lowerLine.includes('when') ||
+        lowerLine.includes('where') ||
+        lowerLine.includes('what') ||
+        lowerLine.includes('why') ||
+        lowerLine.includes('how') ||
+        cleanLine.includes('(') ||   // Likely explanation or code
+        cleanLine.includes(')') ||
+        cleanLine.includes('[') ||
+        cleanLine.includes(']') ||
+        cleanLine.includes('{') ||
+        cleanLine.includes('}') ||
+        /\d/.test(cleanLine) ||      // Contains numbers (often in AI responses)
+        cleanLine.includes(':') ||   // Colons often in explanations
+        cleanLine.includes('=') ||   // Code or assignments
+        cleanLine.length > 20;       // Longer lines are more likely AI output
 
-      // 🚨 CLAUDE FIX: Be much more conservative with shell prompt detection
-      // Only trigger termination if we're very confident it's NOT AI output
-      if (
-        cleanLine.length < 50 && // Much stricter length limit
+      // 🚨 ULTRA-CONSERVATIVE: Only detect shell prompt if it's EXTREMELY clear
+      // Must be very short, contain NO common words, and match exact shell patterns
+      const isVeryObviousShellPrompt =
+        cleanLine.length <= 15 &&    // Much shorter limit
         !looksLikeAIOutput &&
-        !hasConversationalPattern &&
-        !lowerLine.includes('...') && // Thinking indicators
-        !lowerLine.includes('let') && // Common Claude phrase starts
-        !lowerLine.includes('the') && // Common article usage in Claude responses
-        !lowerLine.includes('to') && // Common preposition in Claude responses
-        !lowerLine.includes('for')
-      ) {
-        // Another common preposition
-        log(`✅ [TERMINATION] Shell prompt detected (Claude silent exit): "${cleanLine}"`);
+        (cleanLine.match(/^[a-z0-9._-]+@[a-z0-9.-]+:[~\/][^$]*\$\s*$/i) ||  // user@host:~$
+         cleanLine.match(/^[a-z0-9._-]+@[a-z0-9.-]+\s*\$\s*$/i) ||          // user@host $
+         cleanLine.match(/^\$\s*$/) ||                                       // Just $
+         cleanLine.match(/^%\s*$/) ||                                        // % (zsh)
+         cleanLine.match(/^>\s*$/));                                         // > (some shells)
+
+      if (isVeryObviousShellPrompt) {
+        log(`✅ [TERMINATION] Very obvious shell prompt detected: "${cleanLine}"`);
         return {
           isTerminated: true,
-          confidence: 0.85, // Reduced confidence due to increased strictness
+          confidence: 0.75,  // Reduced confidence to be more conservative
           detectedLine: cleanLine,
-          reason: 'Shell prompt detected after Claude silent exit',
+          reason: 'Very obvious shell prompt detected',
         };
       } else {
-        log(
-          `⚠️ [TERMINATION] Possible AI output or conversation detected, ignoring: "${cleanLine}"`
-        );
+        log(`⚠️ [TERMINATION] Possible AI output detected, ignoring shell prompt: "${cleanLine}"`);
       }
     }
 
-    // 🆕 CLAUDE-SPECIFIC: Legitimate Claude session termination detection
+    // 🆕 CLAUDE-SPECIFIC: Only use if we have very clear Claude session termination
     if (this.detectClaudeSessionEnd(cleanLine)) {
       log(`✅ [TERMINATION] Claude session end detected: "${cleanLine}"`);
       return {
         isTerminated: true,
-        confidence: 0.95,
+        confidence: 0.90,  // Slightly reduced
         detectedLine: cleanLine,
         reason: 'Claude session termination',
       };
@@ -660,27 +691,41 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
   }
 
   private hasVeryExplicitTerminationMessage(cleanLine: string): boolean {
-    const line = cleanLine.toLowerCase();
+    const line = cleanLine.toLowerCase().trim();
+    
+    // 🚨 ULTRA-STRICT: Only match VERY specific termination messages
+    // Greatly reduced to prevent false positives
+    
     return (
-      line.includes('session ended') ||
-      line.includes('connection closed') ||
-      (line.includes('goodbye') &&
-        (line.includes('claude') || line.includes('gemini') || line.includes('agent'))) || // 🔧 FIX: Context required
-      line.includes('exiting claude') || // 🔧 FIX: Be more specific to avoid "exit" false positive
-      line.includes('exiting gemini') ||
-      line.includes('session terminated') || // 🔧 FIX: Be more specific
-      line.includes('disconnected from') ||
-      (line.includes('claude') && line.includes('exited')) ||
-      (line.includes('gemini') && line.includes('exited')) ||
-      line.includes('command not found: claude') ||
-      line.includes('command not found: gemini') ||
+      // Exact session termination messages only
+      line === 'session ended' ||
+      line === 'connection closed' ||
+      line === 'session terminated' ||
+      line === 'session completed' ||
+      line === 'process finished' ||
+      
+      // Agent-specific exact termination messages
+      line === 'goodbye claude' ||
+      line === 'goodbye gemini' ||
+      line === 'exiting claude' ||
+      line === 'exiting gemini' ||
+      line === 'claude exited' ||
+      line === 'gemini exited' ||
+      line === 'claude session ended' ||
+      line === 'gemini session ended' ||
+      
+      // Command not found (exact matches only)
+      line === 'command not found: claude' ||
+      line === 'command not found: gemini' ||
       line.includes('no such file or directory') ||
-      line.includes('process finished') ||
-      line.includes('session completed') ||
-      // 🔧 FIX: Add Gemini-specific termination messages from log
-      line.includes('agent powering down') ||
-      line.includes('powering down') ||
-      (line.includes('agent') && line.includes('goodbye'))
+      
+      // Process termination patterns (exact matches)
+      line.includes('[process exited') ||
+      line.includes('process terminated') ||
+      
+      // Agent powering down (exact context required)
+      (line.includes('agent') && line.includes('powering down')) ||
+      (line.includes('agent') && line === 'goodbye')
     );
   }
 
@@ -712,57 +757,64 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
   private detectClaudeSessionEnd(cleanLine: string): boolean {
     const line = cleanLine.toLowerCase().trim();
 
-    // 🚨 CRITICAL: Only detect genuine session termination patterns
-    // Avoid false positives from user typing "exit", numbers, etc.
+    // 🚨 ULTRA-CONSERVATIVE: Only detect VERY explicit Claude termination
+    // Significantly reduced false positive detection
 
-    // 1. Shell prompt return patterns (most reliable indicator)
+    // 1. Only exact shell prompt patterns with very strict matching
     const shellPromptPatterns = [
       /^[a-z0-9._-]+@[a-z0-9.-]+:[~\/][^$]*\$\s*$/i, // user@host:~$ or user@host:/path$
-      /^[a-z0-9._-]+@[a-z0-9.-]+\s*\$\s*$/i, // user@host $
-      /^\$\s*$/, // Just $ (simple shell)
-      /^%\s*$/, // % (zsh)
-      /^>\s*$/, // > (some shells)
+      /^[a-z0-9._-]+@[a-z0-9.-]+\s*\$\s*$/i,         // user@host $
+      /^\$\s*$/,                                       // Just $ (simple shell)
+      /^%\s*$/,                                        // % (zsh)
+      /^>\s*$/,                                        // > (some shells)
     ];
 
-    const hasShellPrompt = shellPromptPatterns.some((pattern) => pattern.test(line));
+    // 🚨 STRICT CHECK: Line must be very short and match exact patterns
+    const isExactShellPrompt = line.length <= 20 && 
+                               shellPromptPatterns.some((pattern) => pattern.test(line)) &&
+                               !line.includes('claude') &&    // Don't match if contains "claude"
+                               !line.includes('gemini') &&    // Don't match if contains "gemini"
+                               !line.includes('help') &&      // Don't match common AI words
+                               !line.includes('i') &&         // Don't match personal pronouns
+                               !line.includes('you') &&
+                               !line.includes('the') &&       // Don't match articles
+                               !line.includes('to') &&        // Don't match prepositions
+                               !/\d/.test(line) &&           // Don't match if contains numbers
+                               !line.includes(':') &&        // Don't match colons (often in AI responses)
+                               !line.includes('(') &&        // Don't match parentheses
+                               !line.includes(')');
 
-    // 2. EOF signal is user input (Ctrl+D), not detectable from output
-    // When user presses Ctrl+D, Claude exits and shell prompt appears
-
-    // 3. Explicit Claude termination messages (if any)
+    // 2. Only VERY explicit Claude termination messages
     const hasExplicitTermination =
-      line.includes('session ended') ||
-      (line.includes('goodbye') && line.includes('claude')) ||
-      line.includes('claude session terminated') ||
-      line.includes('exiting claude');
-    // 🚨 IMPORTANT: Do NOT match standalone "exit" - too generic and causes false positives
+      line === 'session ended' ||                    // Exact match only
+      line === 'goodbye claude' ||                   // Exact match only
+      line === 'claude session terminated' ||       // Exact match only
+      line === 'exiting claude' ||                  // Exact match only
+      line === 'claude exited' ||                   // Exact match only
+      line === 'connection closed';                 // Exact match only
+    // 🚨 REMOVED: Generic "exit" matching to prevent false positives
 
-    // 4. Process completion with context (more restrictive)
+    // 3. Process completion with EXACT context only
     const hasProcessCompletion =
-      // Only exact matches for process completion - no substring matching
-      line === '[done]' ||
-      line === '[finished]' ||
-      line === 'done' ||
-      line === 'finished' ||
-      // Process exit with code
-      /^\[process exited with code \d+\]$/.test(line) ||
-      // Exit status codes (exact match only)
-      /^exit status: \d+$/.test(line);
+      line === '[done]' ||                          // Exact match
+      line === '[finished]' ||                     // Exact match
+      line === 'done' ||                           // Exact match only if standalone
+      line === 'finished' ||                      // Exact match only if standalone
+      /^\[process exited with code \d+\]$/.test(line); // Exact pattern match
 
-    // 5. Claude interactive session end indicators
-    // When Claude exits, these interactive elements disappear
+    // 4. VERY specific Claude session end indicators only
     const hasSessionEndIndicator =
-      // Process exit status codes (when Claude terminates)
-      /^\[process exited with code \d+\]$/i.test(line) ||
-      // Terminal control sequence indicating session end
-      line.includes('\x1b[?2004l') || // Bracketed paste mode disabled
-      // Claude session cleanup messages
-      line.includes('cleaning up claude session') ||
-      line.includes('claude session closed');
+      /^\[process exited with code \d+\]$/i.test(line) ||  // Process exit status
+      line.includes('cleaning up claude session') ||        // Specific Claude cleanup
+      line.includes('claude session closed');               // Specific Claude session end
 
-    return (
-      hasShellPrompt || hasExplicitTermination || hasProcessCompletion || hasSessionEndIndicator
-    );
+    // 🚨 CONSERVATIVE LOGIC: Only trigger on very clear indicators
+    const shouldTerminate = hasExplicitTermination || 
+                           hasProcessCompletion ||
+                           hasSessionEndIndicator ||
+                           (isExactShellPrompt && line.length <= 10); // Very short shell prompts only
+
+    return shouldTerminate;
   }
 
   private detectClaudeFromInput(input: string): { isDetected: boolean; confidence: number } {
