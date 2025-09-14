@@ -23,14 +23,14 @@ export interface ManagerLifecycleEvent {
 
 /**
  * WebView Manager Registry
- * 
+ *
  * Centralized registry for managing all WebView managers with:
  * - Dynamic registration and discovery
- * - Dependency management and resolution  
+ * - Dependency management and resolution
  * - Lifecycle management and coordination
  * - Performance monitoring and optimization
  * - Error isolation and recovery
- * 
+ *
  * This service addresses the proliferation of WebView managers by providing
  * a unified registration and coordination system.
  */
@@ -38,7 +38,7 @@ export class WebViewManagerRegistry {
   private readonly _managers = new Map<string, ManagerRegistration>();
   private readonly _dependencyGraph = new Map<string, Set<string>>();
   private readonly _initializationOrder: string[] = [];
-  
+
   private _isInitialized = false;
   private _coordinator?: any; // IManagerCoordinator;
 
@@ -75,8 +75,9 @@ export class WebViewManagerRegistry {
       this._managers.set(name, registration);
       this._updateDependencyGraph(name, registration.dependencies);
 
-      log(`✅ [ManagerRegistry] Registered manager: ${name} (priority: ${registration.priority}, dependencies: [${registration.dependencies.join(', ')}])`);
-
+      log(
+        `✅ [ManagerRegistry] Registered manager: ${name} (priority: ${registration.priority}, dependencies: [${registration.dependencies.join(', ')}])`
+      );
     } catch (error) {
       log(`❌ [ManagerRegistry] Failed to register manager ${name}:`, error);
       throw error;
@@ -94,11 +95,13 @@ export class WebViewManagerRegistry {
       }
 
       const registration = this._managers.get(name)!;
-      
+
       // Check if other managers depend on this one
       const dependents = this._findDependents(name);
       if (dependents.length > 0) {
-        log(`⚠️ [ManagerRegistry] Cannot unregister ${name} - still has dependents: [${dependents.join(', ')}]`);
+        log(
+          `⚠️ [ManagerRegistry] Cannot unregister ${name} - still has dependents: [${dependents.join(', ')}]`
+        );
         throw new Error(`Cannot unregister ${name}: dependencies exist`);
       }
 
@@ -114,7 +117,7 @@ export class WebViewManagerRegistry {
 
       this._managers.delete(name);
       this._dependencyGraph.delete(name);
-      
+
       // Remove from initialization order
       const index = this._initializationOrder.indexOf(name);
       if (index !== -1) {
@@ -122,7 +125,6 @@ export class WebViewManagerRegistry {
       }
 
       log(`✅ [ManagerRegistry] Unregistered manager: ${name}`);
-
     } catch (error) {
       log(`❌ [ManagerRegistry] Failed to unregister manager ${name}:`, error);
       throw error;
@@ -171,9 +173,8 @@ export class WebViewManagerRegistry {
       }
 
       registration.isEnabled = enabled;
-      
-      log(`🔄 [ManagerRegistry] Manager ${name} ${enabled ? 'enabled' : 'disabled'}`);
 
+      log(`🔄 [ManagerRegistry] Manager ${name} ${enabled ? 'enabled' : 'disabled'}`);
     } catch (error) {
       log(`❌ [ManagerRegistry] Failed to set manager ${name} enabled state:`, error);
       throw error;
@@ -191,12 +192,14 @@ export class WebViewManagerRegistry {
 
     try {
       this._coordinator = coordinator;
-      
+
       // Resolve initialization order based on dependencies
       const initOrder = this._resolveInitializationOrder();
       this._initializationOrder.push(...initOrder);
 
-      log(`🚀 [ManagerRegistry] Initializing ${initOrder.length} managers in dependency order: [${initOrder.join(' → ')}]`);
+      log(
+        `🚀 [ManagerRegistry] Initializing ${initOrder.length} managers in dependency order: [${initOrder.join(' → ')}]`
+      );
 
       // Initialize managers in order
       for (const managerName of initOrder) {
@@ -205,7 +208,6 @@ export class WebViewManagerRegistry {
 
       this._isInitialized = true;
       log('✅ [ManagerRegistry] All managers initialized successfully');
-
     } catch (error) {
       log('❌ [ManagerRegistry] Failed to initialize managers:', error);
       throw error;
@@ -221,11 +223,14 @@ export class WebViewManagerRegistry {
     try {
       // Dispose in reverse order of initialization
       const disposeOrder = [...this._initializationOrder].reverse();
-      
+
       for (const managerName of disposeOrder) {
         try {
           const registration = this._managers.get(managerName);
-          if (registration?.instance && typeof (registration.instance as any).dispose === 'function') {
+          if (
+            registration?.instance &&
+            typeof (registration.instance as any).dispose === 'function'
+          ) {
             (registration.instance as any).dispose();
             log(`🧹 [ManagerRegistry] Disposed manager: ${managerName}`);
           }
@@ -238,12 +243,11 @@ export class WebViewManagerRegistry {
       this._managers.clear();
       this._dependencyGraph.clear();
       this._initializationOrder.length = 0;
-      
+
       this._isInitialized = false;
       this._coordinator = undefined;
 
       log('✅ [ManagerRegistry] Manager registry disposed');
-
     } catch (error) {
       log('❌ [ManagerRegistry] Error disposing manager registry:', error);
     }
@@ -260,7 +264,7 @@ export class WebViewManagerRegistry {
     dependencyGraph: Record<string, string[]>;
     isInitialized: boolean;
   } {
-    const enabled = Array.from(this._managers.values()).filter(r => r.isEnabled).length;
+    const enabled = Array.from(this._managers.values()).filter((r) => r.isEnabled).length;
     const disabled = this._managers.size - enabled;
 
     const dependencyGraph: Record<string, string[]> = {};
@@ -296,7 +300,9 @@ export class WebViewManagerRegistry {
       // Check for circular dependencies
       const cycles = this._detectCircularDependencies();
       if (cycles.length > 0) {
-        errors.push(`Circular dependencies detected: ${cycles.map(cycle => cycle.join(' → ')).join(', ')}`);
+        errors.push(
+          `Circular dependencies detected: ${cycles.map((cycle) => cycle.join(' → ')).join(', ')}`
+        );
       }
 
       // Check for missing dependencies
@@ -314,8 +320,9 @@ export class WebViewManagerRegistry {
         warnings.push(`Unreachable managers (no dependency path): [${unreachable.join(', ')}]`);
       }
 
-      log(`✅ [ManagerRegistry] Registry validation: ${errors.length} errors, ${warnings.length} warnings`);
-
+      log(
+        `✅ [ManagerRegistry] Registry validation: ${errors.length} errors, ${warnings.length} warnings`
+      );
     } catch (error) {
       errors.push(`Registry validation failed: ${error}`);
     }
@@ -351,12 +358,12 @@ export class WebViewManagerRegistry {
       }
 
       visiting.add(name);
-      
+
       const dependencies = this._dependencyGraph.get(name) || new Set();
       for (const dep of dependencies) {
         visit(dep);
       }
-      
+
       visiting.delete(name);
       visited.add(name);
       order.push(name);
@@ -387,7 +394,7 @@ export class WebViewManagerRegistry {
       }
 
       const manager = registration.instance;
-      
+
       // Call initialize method if available
       if (manager && typeof (manager as any).initialize === 'function') {
         await (manager as any).initialize(this._coordinator);
@@ -398,7 +405,6 @@ export class WebViewManagerRegistry {
       if (manager && typeof (manager as any).setCoordinator === 'function') {
         (manager as any).setCoordinator(this._coordinator);
       }
-
     } catch (error) {
       log(`❌ [ManagerRegistry] Failed to initialize manager ${name}:`, error);
       throw new Error(`Manager initialization failed: ${name} - ${error}`);
@@ -410,13 +416,13 @@ export class WebViewManagerRegistry {
    */
   private _findDependents(target: string): string[] {
     const dependents: string[] = [];
-    
+
     for (const [name, deps] of this._dependencyGraph) {
       if (deps.has(target)) {
         dependents.push(name);
       }
     }
-    
+
     return dependents;
   }
 
@@ -444,12 +450,12 @@ export class WebViewManagerRegistry {
 
       visiting.add(name);
       path.push(name);
-      
+
       const dependencies = this._dependencyGraph.get(name) || new Set();
       for (const dep of dependencies) {
         visit(dep);
       }
-      
+
       path.pop();
       visiting.delete(name);
       visited.add(name);
@@ -469,13 +475,12 @@ export class WebViewManagerRegistry {
    */
   private _findUnreachableManagers(): string[] {
     const reachable = new Set<string>();
-    
+
     // Find root managers (no dependencies)
-    const rootManagers = Array.from(this._managers.keys())
-      .filter(name => {
-        const deps = this._dependencyGraph.get(name);
-        return !deps || deps.size === 0;
-      });
+    const rootManagers = Array.from(this._managers.keys()).filter((name) => {
+      const deps = this._dependencyGraph.get(name);
+      return !deps || deps.size === 0;
+    });
 
     // Mark all reachable managers via DFS
     const markReachable = (name: string): void => {
@@ -483,7 +488,7 @@ export class WebViewManagerRegistry {
         return;
       }
       reachable.add(name);
-      
+
       // Mark all dependents as reachable
       for (const dependent of this._findDependents(name)) {
         markReachable(dependent);
@@ -495,8 +500,7 @@ export class WebViewManagerRegistry {
     }
 
     // Find unreachable managers
-    const unreachable = Array.from(this._managers.keys())
-      .filter(name => !reachable.has(name));
+    const unreachable = Array.from(this._managers.keys()).filter((name) => !reachable.has(name));
 
     return unreachable;
   }

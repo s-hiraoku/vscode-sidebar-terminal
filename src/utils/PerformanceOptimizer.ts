@@ -50,7 +50,7 @@ export class DOMBatcher {
 
   public add(operation: () => void): void {
     this.operations.push(operation);
-    
+
     if (!this.scheduled) {
       this.scheduled = true;
       requestAnimationFrame(() => {
@@ -65,7 +65,7 @@ export class DOMBatcher {
     this.scheduled = false;
 
     // Execute all operations in a single frame
-    operations.forEach(operation => {
+    operations.forEach((operation) => {
       try {
         operation();
       } catch (error) {
@@ -107,7 +107,7 @@ export class PerformanceMonitor {
 
     const duration = performance.now() - metric.start;
     metric.duration = duration;
-    
+
     console.log(`⏱️ [PERFORMANCE] ${name}: ${duration.toFixed(2)}ms`);
     return duration;
   }
@@ -141,7 +141,7 @@ export class MemoryMonitor {
       return {
         used: Math.round(memory.usedJSHeapSize / 1024 / 1024), // MB
         total: Math.round(memory.totalJSHeapSize / 1024 / 1024), // MB
-        percentage: Math.round((memory.usedJSHeapSize / memory.totalJSHeapSize) * 100)
+        percentage: Math.round((memory.usedJSHeapSize / memory.totalJSHeapSize) * 100),
       };
     }
     return null;
@@ -150,7 +150,9 @@ export class MemoryMonitor {
   public static logMemoryUsage(context: string): void {
     const usage = this.getMemoryUsage();
     if (usage) {
-      console.log(`🧠 [MEMORY] ${context}: ${usage.used}MB/${usage.total}MB (${usage.percentage}%)`);
+      console.log(
+        `🧠 [MEMORY] ${context}: ${usage.used}MB/${usage.total}MB (${usage.percentage}%)`
+      );
     }
   }
 }

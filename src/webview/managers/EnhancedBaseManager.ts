@@ -60,7 +60,7 @@ export abstract class EnhancedBaseManager implements IEnhancedBaseManager {
   // Enhanced manager interface implementation
   readonly state: IManagerState = {
     isInitialized: false,
-    isDisposed: false
+    isDisposed: false,
   };
   // Core properties
   public readonly name: string;
@@ -119,7 +119,7 @@ export abstract class EnhancedBaseManager implements IEnhancedBaseManager {
     return {
       isInitialized: this._isInitialized,
       isDisposed: this._isDisposed,
-      lastError: this.lastError ? new Error(this.lastError) : undefined
+      lastError: this.lastError ? new Error(this.lastError) : undefined,
     };
   }
 

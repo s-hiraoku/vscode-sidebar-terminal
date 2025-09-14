@@ -1,17 +1,20 @@
 /**
  * Configuration Migration Utility
- * 
+ *
  * Handles migration from multiple configuration services to UnifiedConfigurationService:
  * - src/config/ConfigManager.ts → UnifiedConfigurationService
- * - src/webview/managers/ConfigManager.ts → UnifiedConfigurationService  
+ * - src/webview/managers/ConfigManager.ts → UnifiedConfigurationService
  * - src/services/core/UnifiedConfigurationService.ts → New UnifiedConfigurationService
  * - src/services/webview/WebViewSettingsManagerService.ts → UnifiedConfigurationService
- * 
+ *
  * This utility ensures smooth transition without data loss and validates migration success.
  */
 
 import * as vscode from 'vscode';
-import { UnifiedConfigurationService, getUnifiedConfigurationService } from './UnifiedConfigurationService';
+import {
+  UnifiedConfigurationService,
+  getUnifiedConfigurationService,
+} from './UnifiedConfigurationService';
 import { CONFIG_SECTIONS } from '../types/shared';
 import { terminal as log } from '../utils/logger';
 
@@ -66,11 +69,11 @@ const MIGRATION_KEYS = {
   'terminal.integrated.fontWeightBold': 'bold',
   'terminal.integrated.lineHeight': 1.0,
   'terminal.integrated.letterSpacing': 0,
-  
+
   // Terminal settings
   'terminal.integrated.altClickMovesCursor': false,
   'editor.multiCursorModifier': 'alt',
-  
+
   // Extension settings
   'sidebarTerminal.maxTerminals': 5,
   'sidebarTerminal.shell': '',
@@ -88,14 +91,14 @@ const MIGRATION_KEYS = {
 
 /**
  * Configuration Migrator
- * 
+ *
  * Handles migration from legacy configuration services to the unified service.
  * Provides backup, validation, and rollback capabilities.
  */
 export class ConfigurationMigrator {
   private readonly _unifiedService: UnifiedConfigurationService;
   private readonly _extensionContext: vscode.ExtensionContext;
-  
+
   constructor(extensionContext: vscode.ExtensionContext) {
     this._unifiedService = getUnifiedConfigurationService();
     this._extensionContext = extensionContext;
@@ -106,7 +109,7 @@ export class ConfigurationMigrator {
    */
   async migrateAll(): Promise<MigrationResult> {
     log('🔄 [ConfigMigrator] Starting complete configuration migration');
-    
+
     const result: MigrationResult = {
       success: false,
       migratedKeys: [],
@@ -136,11 +139,11 @@ export class ConfigurationMigrator {
       migrationResults.forEach((migrationResult, index) => {
         const serviceNames = [
           'ExtensionConfigManager',
-          'WebViewConfigManager', 
+          'WebViewConfigManager',
           'OldUnifiedService',
-          'WebViewSettingsManager'
+          'WebViewSettingsManager',
         ];
-        
+
         if (migrationResult.status === 'fulfilled') {
           if (migrationResult.value.migratedKeys) {
             result.migratedKeys.push(...migrationResult.value.migratedKeys);
@@ -151,24 +154,31 @@ export class ConfigurationMigrator {
           log(`✅ [ConfigMigrator] ${serviceNames[index]} migration completed`);
         } else {
           result.errors.push(`${serviceNames[index]} migration failed: ${migrationResult.reason}`);
-          log(`❌ [ConfigMigrator] ${serviceNames[index]} migration failed:`, migrationResult.reason);
+          log(
+            `❌ [ConfigMigrator] ${serviceNames[index]} migration failed:`,
+            migrationResult.reason
+          );
         }
       });
 
       // Step 4: Validate migration
       const validation = await this._validateMigration();
       if (!validation.isValid) {
-        result.warnings.push(`Migration validation found issues: ${validation.missingKeys.length} missing keys, ${validation.incorrectValues.length} incorrect values`);
+        result.warnings.push(
+          `Migration validation found issues: ${validation.missingKeys.length} missing keys, ${validation.incorrectValues.length} incorrect values`
+        );
       }
 
       // Step 5: Initialize unified service
       this._unifiedService.initialize();
 
       result.success = result.errors.length === 0;
-      
+
       if (result.success) {
-        log(`✅ [ConfigMigrator] Migration completed successfully. ${result.migratedKeys.length} keys migrated`);
-        
+        log(
+          `✅ [ConfigMigrator] Migration completed successfully. ${result.migratedKeys.length} keys migrated`
+        );
+
         // Mark migration as completed
         await this._extensionContext.globalState.update('configurationMigrationCompleted', {
           timestamp: new Date().toISOString(),
@@ -180,7 +190,6 @@ export class ConfigurationMigrator {
       }
 
       return result;
-      
     } catch (error) {
       result.errors.push(`Migration failed: ${error}`);
       log('❌ [ConfigMigrator] Migration failed:', error);
@@ -192,7 +201,9 @@ export class ConfigurationMigrator {
    * Check if migration has already been completed
    */
   async isMigrationCompleted(): Promise<boolean> {
-    const migrationInfo = await this._extensionContext.globalState.get('configurationMigrationCompleted');
+    const migrationInfo = await this._extensionContext.globalState.get(
+      'configurationMigrationCompleted'
+    );
     return !!migrationInfo;
   }
 
@@ -201,7 +212,7 @@ export class ConfigurationMigrator {
    */
   async validateCurrentConfiguration(): Promise<MigrationValidation> {
     log('🔍 [ConfigMigrator] Validating current configuration');
-    
+
     const validation: MigrationValidation = {
       isValid: true,
       missingKeys: [],
@@ -217,7 +228,7 @@ export class ConfigurationMigrator {
           continue; // Skip malformed keys
         }
         const actualValue = this._unifiedService.get(section, configKey, defaultValue);
-        
+
         // For this validation, we mainly check that values are accessible
         // Actual value validation depends on user preferences
         if (actualValue === undefined || actualValue === null) {
@@ -231,7 +242,7 @@ export class ConfigurationMigrator {
         const terminalConfig = this._unifiedService.getExtensionTerminalConfig();
         const fontSettings = this._unifiedService.getWebViewFontSettings();
         const altClickSettings = this._unifiedService.getAltClickSettings();
-        
+
         if (!terminalConfig || !fontSettings || !altClickSettings) {
           validation.isValid = false;
           validation.incorrectValues.push({
@@ -248,7 +259,6 @@ export class ConfigurationMigrator {
           actual: `error: ${error}`,
         });
       }
-
     } catch (error) {
       validation.isValid = false;
       validation.incorrectValues.push({
@@ -272,10 +282,12 @@ export class ConfigurationMigrator {
    */
   async rollbackMigration(): Promise<boolean> {
     log('↩️ [ConfigMigrator] Rolling back configuration migration');
-    
+
     try {
-      const backup = await this._extensionContext.globalState.get('configurationBackup') as LegacyConfigurationBackup | undefined;
-      
+      const backup = (await this._extensionContext.globalState.get('configurationBackup')) as
+        | LegacyConfigurationBackup
+        | undefined;
+
       if (!backup) {
         log('❌ [ConfigMigrator] No backup found for rollback');
         return false;
@@ -288,11 +300,9 @@ export class ConfigurationMigrator {
           if (!section || !configKey) {
             continue; // Skip malformed keys
           }
-          await vscode.workspace.getConfiguration(section).update(
-            configKey,
-            value,
-            vscode.ConfigurationTarget.Global
-          );
+          await vscode.workspace
+            .getConfiguration(section)
+            .update(configKey, value, vscode.ConfigurationTarget.Global);
         } catch (error) {
           log(`⚠️ [ConfigMigrator] Failed to restore ${key}:`, error);
         }
@@ -303,7 +313,6 @@ export class ConfigurationMigrator {
 
       log('✅ [ConfigMigrator] Configuration rollback completed');
       return true;
-      
     } catch (error) {
       log('❌ [ConfigMigrator] Rollback failed:', error);
       return false;
@@ -316,7 +325,7 @@ export class ConfigurationMigrator {
   private async _createConfigurationBackup(): Promise<LegacyConfigurationBackup | null> {
     try {
       const configurations: Record<string, unknown> = {};
-      
+
       // Backup current configuration values
       for (const key of Object.keys(MIGRATION_KEYS)) {
         try {
@@ -347,9 +356,8 @@ export class ConfigurationMigrator {
 
       // Store backup in extension global state
       await this._extensionContext.globalState.update('configurationBackup', backup);
-      
+
       return backup;
-      
     } catch (error) {
       log('❌ [ConfigMigrator] Failed to create configuration backup:', error);
       return null;
@@ -368,11 +376,11 @@ export class ConfigurationMigrator {
     try {
       // The extension ConfigManager was primarily a wrapper around VS Code settings
       // Migration mainly involves ensuring unified service can access the same settings
-      
+
       // Verify access to key extension settings
       const keySettings = [
         'sidebarTerminal.maxTerminals',
-        'sidebarTerminal.shell', 
+        'sidebarTerminal.shell',
         'sidebarTerminal.theme',
         'sidebarTerminal.cursorBlink',
         'sidebarTerminal.enableCliAgentIntegration',
@@ -383,7 +391,11 @@ export class ConfigurationMigrator {
         if (!section || !configKey) {
           continue; // Skip malformed keys
         }
-        const value = this._unifiedService.get(section, configKey, MIGRATION_KEYS[key as keyof typeof MIGRATION_KEYS]);
+        const value = this._unifiedService.get(
+          section,
+          configKey,
+          MIGRATION_KEYS[key as keyof typeof MIGRATION_KEYS]
+        );
         if (value !== undefined) {
           result.migratedKeys!.push(key);
         } else {
@@ -391,7 +403,7 @@ export class ConfigurationMigrator {
         }
       }
 
-      // Test font hierarchy functionality  
+      // Test font hierarchy functionality
       try {
         const fontSize = this._unifiedService.getFontSize();
         const fontFamily = this._unifiedService.getFontFamily();
@@ -401,7 +413,6 @@ export class ConfigurationMigrator {
       } catch (error) {
         result.warnings!.push(`Font hierarchy migration issue: ${error}`);
       }
-
     } catch (error) {
       throw new Error(`ExtensionConfigManager migration failed: ${error}`);
     }
@@ -421,10 +432,10 @@ export class ConfigurationMigrator {
     try {
       // WebView ConfigManager used VS Code state for persistence
       // Check if we can access WebView-specific settings
-      
+
       const webViewSettings = [
         'scrollback',
-        'bellSound', 
+        'bellSound',
         'dynamicSplitDirection',
         'panelLocation',
         'sendKeybindingsToShell',
@@ -434,7 +445,11 @@ export class ConfigurationMigrator {
 
       for (const setting of webViewSettings) {
         try {
-          const value = this._unifiedService.get(CONFIG_SECTIONS.SIDEBAR_TERMINAL, setting, undefined);
+          const value = this._unifiedService.get(
+            CONFIG_SECTIONS.SIDEBAR_TERMINAL,
+            setting,
+            undefined
+          );
           if (value !== undefined) {
             result.migratedKeys!.push(`webview.${setting}`);
           }
@@ -447,14 +462,13 @@ export class ConfigurationMigrator {
       try {
         const webViewTerminalSettings = this._unifiedService.getWebViewTerminalSettings();
         const webViewFontSettings = this._unifiedService.getWebViewFontSettings();
-        
+
         if (webViewTerminalSettings && webViewFontSettings) {
           result.migratedKeys!.push('webview-methods');
         }
       } catch (error) {
         result.warnings!.push(`WebView methods migration issue: ${error}`);
       }
-
     } catch (error) {
       throw new Error(`WebViewConfigManager migration failed: ${error}`);
     }
@@ -474,11 +488,11 @@ export class ConfigurationMigrator {
     try {
       // Old UnifiedConfigurationService had similar functionality
       // Main migration is ensuring event handling and caching work correctly
-      
+
       // Test configuration access
       const testConfigs = [
         ['terminal.integrated', 'fontSize'],
-        ['terminal.integrated', 'fontFamily'], 
+        ['terminal.integrated', 'fontFamily'],
         ['editor', 'multiCursorModifier'],
         ['sidebarTerminal', 'maxTerminals'],
       ];
@@ -493,7 +507,9 @@ export class ConfigurationMigrator {
             result.migratedKeys!.push(`${section}.${key}`);
           }
         } catch (error) {
-          result.warnings!.push(`Old unified service config ${section}.${key} migration issue: ${error}`);
+          result.warnings!.push(
+            `Old unified service config ${section}.${key} migration issue: ${error}`
+          );
         }
       }
 
@@ -507,7 +523,6 @@ export class ConfigurationMigrator {
           result.warnings!.push(`Feature ${feature} migration issue: ${error}`);
         }
       }
-
     } catch (error) {
       throw new Error(`OldUnifiedService migration failed: ${error}`);
     }
@@ -527,7 +542,7 @@ export class ConfigurationMigrator {
     try {
       // WebViewSettingsManagerService handled settings updates and event listening
       // Migrate by ensuring the unified service can handle the same functionality
-      
+
       // Test Alt+Click settings (key functionality from WebViewSettingsManager)
       try {
         const altClickSettings = this._unifiedService.getAltClickSettings();
@@ -544,7 +559,7 @@ export class ConfigurationMigrator {
         const disposable = this._unifiedService.onDidChangeConfiguration(() => {
           eventReceived = true;
         });
-        
+
         // Trigger a small change to test event handling
         setTimeout(() => {
           if (eventReceived) {
@@ -554,7 +569,6 @@ export class ConfigurationMigrator {
           }
           disposable.dispose();
         }, 100);
-        
       } catch (error) {
         result.warnings!.push(`Configuration event migration issue: ${error}`);
       }
@@ -568,7 +582,6 @@ export class ConfigurationMigrator {
       } catch (error) {
         result.warnings!.push(`Complete configuration migration issue: ${error}`);
       }
-
     } catch (error) {
       throw new Error(`WebViewSettingsManager migration failed: ${error}`);
     }

@@ -35,7 +35,10 @@ export interface PersistenceSessionData {
 }
 
 export class PersistenceError extends Error {
-  constructor(message: string, public override readonly cause?: Error) {
+  constructor(
+    message: string,
+    public override readonly cause?: Error
+  ) {
     super(message);
     this.name = 'PersistenceError';
   }
@@ -90,7 +93,10 @@ export class UnifiedTerminalPersistenceService {
       log(`📦 [PERSISTENCE] Session saved: ${terminals.length} terminals`);
     } catch (error) {
       log(`❌ [PERSISTENCE] Session save failed: ${error}`);
-      throw new PersistenceError(`Failed to save session: ${(error as Error).message}`, error as Error);
+      throw new PersistenceError(
+        `Failed to save session: ${(error as Error).message}`,
+        error as Error
+      );
     }
   }
 
@@ -120,12 +126,16 @@ export class UnifiedTerminalPersistenceService {
         await this.restoreActiveTerminal(sessionData.activeTerminalId, restoredTerminals);
       }
 
-      log(`📦 [PERSISTENCE] Session restored: ${restoredTerminals.length}/${sessionData.terminals.length} terminals`);
+      log(
+        `📦 [PERSISTENCE] Session restored: ${restoredTerminals.length}/${sessionData.terminals.length} terminals`
+      );
       return restoredTerminals;
-
     } catch (error) {
       log(`❌ [PERSISTENCE] Session restore failed: ${error}`);
-      throw new PersistenceError(`Failed to restore session: ${(error as Error).message}`, error as Error);
+      throw new PersistenceError(
+        `Failed to restore session: ${(error as Error).message}`,
+        error as Error
+      );
     }
   }
 
@@ -184,7 +194,7 @@ export class UnifiedTerminalPersistenceService {
 
     for (let i = 0; i < terminals.length; i += MAX_CONCURRENT) {
       const batch = terminals.slice(i, i + MAX_CONCURRENT);
-      const batchPromises = batch.map(terminal => this.restoreTerminal(terminal));
+      const batchPromises = batch.map((terminal) => this.restoreTerminal(terminal));
 
       const batchResults = await Promise.allSettled(batchPromises);
 
@@ -192,7 +202,9 @@ export class UnifiedTerminalPersistenceService {
         if (result.status === 'fulfilled') {
           results.push(result.value);
         } else {
-          log(`⚠️ [PERSISTENCE] Terminal ${batch[index]?.id || 'unknown'} restore failed: ${result.reason}`);
+          log(
+            `⚠️ [PERSISTENCE] Terminal ${batch[index]?.id || 'unknown'} restore failed: ${result.reason}`
+          );
         }
       });
 
@@ -202,7 +214,7 @@ export class UnifiedTerminalPersistenceService {
       }
     }
 
-    return results.filter(terminal => terminal !== null);
+    return results.filter((terminal) => terminal !== null);
   }
 
   /**
@@ -231,7 +243,6 @@ export class UnifiedTerminalPersistenceService {
         isActive: data.isActive,
         cliAgentType: data.cliAgentType,
       };
-
     } catch (error) {
       log(`❌ [PERSISTENCE] Terminal ${data.id} restore failed: ${error}`);
       return null;
@@ -265,16 +276,13 @@ export class UnifiedTerminalPersistenceService {
   /**
    * CLI Agent環境復元
    */
-  private async restoreCliAgentEnvironment(terminalId: string, agentType: 'claude' | 'gemini'): Promise<void> {
+  private async restoreCliAgentEnvironment(
+    terminalId: string,
+    agentType: 'claude' | 'gemini'
+  ): Promise<void> {
     const commands = {
-      claude: [
-        'echo "✨ Claude Code session restored"',
-        'echo "Previous session data available"'
-      ],
-      gemini: [
-        'echo "✨ Gemini Code session restored"', 
-        'echo "Ready for new commands"'
-      ]
+      claude: ['echo "✨ Claude Code session restored"', 'echo "Previous session data available"'],
+      gemini: ['echo "✨ Gemini Code session restored"', 'echo "Ready for new commands"'],
     };
 
     for (const command of commands[agentType]) {
@@ -287,7 +295,7 @@ export class UnifiedTerminalPersistenceService {
    * アクティブターミナル復元
    */
   private async restoreActiveTerminal(activeId: number, terminals: any[]): Promise<void> {
-    const activeTerminal = terminals.find(t => t.id === activeId);
+    const activeTerminal = terminals.find((t) => t.id === activeId);
     if (activeTerminal) {
       // アクティブターミナル設定
       await this.terminalManager.setActiveTerminal(activeTerminal.id);
@@ -299,13 +307,13 @@ export class UnifiedTerminalPersistenceService {
    * ヘルパーメソッド
    */
   private getActiveTerminalId(terminals: any[]): number {
-    const activeTerminal = terminals.find(t => t.isActive);
-    return activeTerminal ? activeTerminal.id : (terminals[0]?.id || 1);
+    const activeTerminal = terminals.find((t) => t.isActive);
+    return activeTerminal ? activeTerminal.id : terminals[0]?.id || 1;
   }
 
   private detectCliAgentSessions(terminals: any[]): Array<'claude' | 'gemini'> {
     return terminals
-      .map(t => this.detectCliAgentType(t.scrollback || []))
+      .map((t) => this.detectCliAgentType(t.scrollback || []))
       .filter((type): type is 'claude' | 'gemini' => type !== undefined);
   }
 
@@ -326,7 +334,7 @@ export class UnifiedTerminalPersistenceService {
   private truncateScrollback(scrollback: string[]): string[] {
     return scrollback
       .slice(-UnifiedTerminalPersistenceService.MAX_SCROLLBACK_LINES)
-      .filter(line => line.trim().length > 0);
+      .filter((line) => line.trim().length > 0);
   }
 
   private compressSessionData(data: PersistenceSessionData): string {
@@ -356,20 +364,18 @@ export class UnifiedTerminalPersistenceService {
       data.version &&
       data.timestamp &&
       Array.isArray(data.terminals) &&
-      data.terminals.every(t => 
-        typeof t.id === 'number' &&
-        typeof t.name === 'string' &&
-        Array.isArray(t.scrollback)
+      data.terminals.every(
+        (t) => typeof t.id === 'number' && typeof t.name === 'string' && Array.isArray(t.scrollback)
       )
     );
   }
 
   private isSessionExpired(sessionData: PersistenceSessionData): boolean {
     const expiry = UnifiedTerminalPersistenceService.MAX_SESSION_AGE_DAYS * 24 * 60 * 60 * 1000;
-    return (Date.now() - sessionData.timestamp) > expiry;
+    return Date.now() - sessionData.timestamp > expiry;
   }
 
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }

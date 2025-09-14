@@ -15,7 +15,7 @@ import {
   // IPlatformShells,
   OSType,
   TerminalProfileEventType,
-  ITerminalProfileEvent
+  ITerminalProfileEvent,
 } from '../types/profiles';
 import { provider as log } from '../utils/logger';
 
@@ -48,8 +48,9 @@ export class TerminalProfileManager extends EventEmitter implements ITerminalPro
 
       // Set default profile if not already set
       if (!this._defaultProfileId) {
-        const builtInProfiles = Array.from(this._profiles.values())
-          .filter(p => p.source === 'builtin');
+        const builtInProfiles = Array.from(this._profiles.values()).filter(
+          (p) => p.source === 'builtin'
+        );
         if (builtInProfiles.length > 0) {
           this._defaultProfileId = builtInProfiles[0]?.id;
         }
@@ -58,7 +59,6 @@ export class TerminalProfileManager extends EventEmitter implements ITerminalPro
       this._initialized = true;
       this.emit('initialized');
       log(`🎯 [PROFILES] Profile Manager initialized with ${this._profiles.size} profiles`);
-
     } catch (error) {
       log(`❌ [PROFILES] Failed to initialize Profile Manager: ${error}`);
       throw error;
@@ -70,7 +70,7 @@ export class TerminalProfileManager extends EventEmitter implements ITerminalPro
    */
   public getProfiles(): ITerminalProfile[] {
     return Array.from(this._profiles.values())
-      .filter(profile => !profile.hidden)
+      .filter((profile) => !profile.hidden)
       .sort((a, b) => {
         // Default profile first, then alphabetical
         if (a.id === this._defaultProfileId) return -1;
@@ -115,7 +115,7 @@ export class TerminalProfileManager extends EventEmitter implements ITerminalPro
     const newProfile: ITerminalProfile = {
       ...profile,
       id,
-      source: profile.source || 'user'
+      source: profile.source || 'user',
     };
 
     // Validate the profile
@@ -133,7 +133,7 @@ export class TerminalProfileManager extends EventEmitter implements ITerminalPro
 
     this._emitEvent({
       type: TerminalProfileEventType.ProfileAdded,
-      profile: newProfile
+      profile: newProfile,
     });
 
     log(`🎯 [PROFILES] Created new profile: ${newProfile.name} (${id})`);
@@ -168,7 +168,7 @@ export class TerminalProfileManager extends EventEmitter implements ITerminalPro
     this._emitEvent({
       type: TerminalProfileEventType.ProfileUpdated,
       profile: updatedProfile,
-      previousProfile
+      previousProfile,
     });
 
     log(`🎯 [PROFILES] Updated profile: ${updatedProfile.name} (${id})`);
@@ -201,7 +201,7 @@ export class TerminalProfileManager extends EventEmitter implements ITerminalPro
     this._emitEvent({
       type: TerminalProfileEventType.ProfileRemoved,
       profileId: id,
-      profile
+      profile,
     });
 
     log(`🎯 [PROFILES] Deleted profile: ${profile.name} (${id})`);
@@ -225,7 +225,7 @@ export class TerminalProfileManager extends EventEmitter implements ITerminalPro
     this._emitEvent({
       type: TerminalProfileEventType.DefaultProfileChanged,
       profile,
-      profileId: previousDefaultId
+      profileId: previousDefaultId,
     });
 
     log(`🎯 [PROFILES] Set default profile: ${profile.name} (${id})`);
@@ -249,7 +249,7 @@ export class TerminalProfileManager extends EventEmitter implements ITerminalPro
     await this._loadUserProfiles();
 
     this._emitEvent({
-      type: TerminalProfileEventType.ProfilesRefreshed
+      type: TerminalProfileEventType.ProfilesRefreshed,
     });
 
     log('🎯 [PROFILES] Profiles refreshed from system');
@@ -300,11 +300,11 @@ export class TerminalProfileManager extends EventEmitter implements ITerminalPro
    * Create terminal with specific profile
    */
   public createTerminalWithProfile(
-    profileId: string, 
+    profileId: string,
     options?: ITerminalProfileOptions
   ): { profile: ITerminalProfile; config: any } {
     const profile = this.getProfile(profileId) || this.getDefaultProfile();
-    
+
     // Apply platform-specific overrides
     const platformProfile = this._applyPlatformOverrides(profile);
 
@@ -313,7 +313,7 @@ export class TerminalProfileManager extends EventEmitter implements ITerminalPro
       ...platformProfile,
       ...(options?.name && { name: options.name }),
       ...(options?.cwd && { cwd: options.cwd }),
-      ...(options?.env && { env: { ...platformProfile.env, ...options.env } })
+      ...(options?.env && { env: { ...platformProfile.env, ...options.env } }),
     };
 
     // Create terminal configuration
@@ -324,7 +324,7 @@ export class TerminalProfileManager extends EventEmitter implements ITerminalPro
       env: finalProfile.env,
       cwd: finalProfile.cwd,
       color: finalProfile.color,
-      icon: finalProfile.icon
+      icon: finalProfile.icon,
     };
 
     log(`🎯 [PROFILES] Creating terminal with profile: ${finalProfile.name}`);
@@ -336,15 +336,18 @@ export class TerminalProfileManager extends EventEmitter implements ITerminalPro
   private _detectPlatform(): OSType {
     const platform = os.platform();
     switch (platform) {
-      case 'win32': return 'windows';
-      case 'darwin': return 'macos';
-      default: return 'linux';
+      case 'win32':
+        return 'windows';
+      case 'darwin':
+        return 'macos';
+      default:
+        return 'linux';
     }
   }
 
   private _addBuiltInProfiles(): void {
     const profiles = this._getBuiltInProfilesForPlatform();
-    
+
     for (const profile of profiles) {
       this._profiles.set(profile.id, profile);
     }
@@ -363,7 +366,7 @@ export class TerminalProfileManager extends EventEmitter implements ITerminalPro
             path: 'C:\\Windows\\System32\\cmd.exe',
             icon: 'terminal-cmd',
             source: 'builtin',
-            isDefault: true
+            isDefault: true,
           },
           {
             id: 'builtin-powershell',
@@ -371,8 +374,8 @@ export class TerminalProfileManager extends EventEmitter implements ITerminalPro
             description: 'Windows PowerShell',
             path: 'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe',
             icon: 'terminal-powershell',
-            source: 'builtin'
-          }
+            source: 'builtin',
+          },
         ];
 
       case 'macos':
@@ -384,7 +387,7 @@ export class TerminalProfileManager extends EventEmitter implements ITerminalPro
             path: '/bin/zsh',
             icon: 'terminal',
             source: 'builtin',
-            isDefault: true
+            isDefault: true,
           },
           {
             id: 'builtin-bash',
@@ -392,8 +395,8 @@ export class TerminalProfileManager extends EventEmitter implements ITerminalPro
             description: 'Bash shell',
             path: '/bin/bash',
             icon: 'terminal-bash',
-            source: 'builtin'
-          }
+            source: 'builtin',
+          },
         ];
 
       case 'linux':
@@ -405,7 +408,7 @@ export class TerminalProfileManager extends EventEmitter implements ITerminalPro
             path: '/bin/bash',
             icon: 'terminal-bash',
             source: 'builtin',
-            isDefault: true
+            isDefault: true,
           },
           {
             id: 'builtin-sh',
@@ -413,8 +416,8 @@ export class TerminalProfileManager extends EventEmitter implements ITerminalPro
             description: 'Bourne shell',
             path: '/bin/sh',
             icon: 'terminal',
-            source: 'builtin'
-          }
+            source: 'builtin',
+          },
         ];
 
       default:
@@ -439,7 +442,6 @@ export class TerminalProfileManager extends EventEmitter implements ITerminalPro
       }
 
       log(`🎯 [PROFILES] Loaded ${userProfiles.length} user profiles from settings`);
-
     } catch (error) {
       log(`⚠️ [PROFILES] Error loading user profiles: ${error}`);
     }
@@ -447,14 +449,14 @@ export class TerminalProfileManager extends EventEmitter implements ITerminalPro
 
   private _saveUserProfiles(): void {
     try {
-      const userProfiles = Array.from(this._profiles.values())
-        .filter(profile => profile.source === 'user');
+      const userProfiles = Array.from(this._profiles.values()).filter(
+        (profile) => profile.source === 'user'
+      );
 
       const config = vscode.workspace.getConfiguration('sidebarTerminal');
       config.update('profiles', userProfiles, vscode.ConfigurationTarget.Global);
 
       log(`🎯 [PROFILES] Saved ${userProfiles.length} user profiles to settings`);
-
     } catch (error) {
       log(`❌ [PROFILES] Error saving user profiles: ${error}`);
     }
@@ -468,7 +470,6 @@ export class TerminalProfileManager extends EventEmitter implements ITerminalPro
       }
 
       log('🎯 [PROFILES] Saved user settings');
-
     } catch (error) {
       log(`❌ [PROFILES] Error saving user settings: ${error}`);
     }
@@ -502,7 +503,7 @@ export class TerminalProfileManager extends EventEmitter implements ITerminalPro
 
     return {
       ...profile,
-      ...override
+      ...override,
     };
   }
 
@@ -513,7 +514,7 @@ export class TerminalProfileManager extends EventEmitter implements ITerminalPro
       description: 'Emergency fallback shell',
       path: process.env.SHELL || '/bin/sh',
       source: 'builtin',
-      icon: 'terminal'
+      icon: 'terminal',
     };
 
     log('⚠️ [PROFILES] Created emergency profile');

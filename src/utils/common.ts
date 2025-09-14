@@ -97,7 +97,12 @@ export function getWorkingDirectory(): string {
 
   // Check active editor for file directory
   const activeEditor = vscode.window.activeTextEditor;
-  if (activeEditor && activeEditor.document && activeEditor.document.uri && activeEditor.document.uri.scheme === 'file') {
+  if (
+    activeEditor &&
+    activeEditor.document &&
+    activeEditor.document.uri &&
+    activeEditor.document.uri.scheme === 'file'
+  ) {
     const activeFileDir = path.dirname(activeEditor.document.uri.fsPath);
     console.log('📁 [WORKDIR] Candidate active file directory:', activeFileDir);
 

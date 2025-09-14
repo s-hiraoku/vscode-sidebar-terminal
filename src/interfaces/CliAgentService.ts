@@ -165,7 +165,11 @@ export interface ICliAgentDetectionService {
    * @param terminalName Optional terminal name
    * @returns True if force reconnect was successful
    */
-  forceReconnectAgent(terminalId: string, agentType?: 'claude' | 'gemini' | 'codex', terminalName?: string): boolean;
+  forceReconnectAgent(
+    terminalId: string,
+    agentType?: 'claude' | 'gemini' | 'codex',
+    terminalName?: string
+  ): boolean;
 
   /**
    * Clear detection errors and reset state (manual reset)
@@ -226,7 +230,11 @@ export interface ICliAgentStateManager {
    * @param type Agent type
    * @param terminalName Terminal name
    */
-  setConnectedAgent(terminalId: string, type: 'claude' | 'gemini' | 'codex', terminalName?: string): void;
+  setConnectedAgent(
+    terminalId: string,
+    type: 'claude' | 'gemini' | 'codex',
+    terminalName?: string
+  ): void;
 
   /**
    * Set a CLI agent as terminated/disconnected
@@ -314,7 +322,11 @@ export interface ICliAgentStateManager {
    * @param terminalName Optional terminal name
    * @returns True if force reconnect was successful
    */
-  forceReconnectAgent(terminalId: string, agentType: 'claude' | 'gemini' | 'codex', terminalName?: string): boolean;
+  forceReconnectAgent(
+    terminalId: string,
+    agentType: 'claude' | 'gemini' | 'codex',
+    terminalName?: string
+  ): boolean;
 
   /**
    * Clear detection errors and reset state (manual reset)

@@ -1,12 +1,18 @@
 /**
  * Type Guards and Type Safety Utilities
- * 
+ *
  * This module provides type guards and utility functions to replace `any` types
  * with proper type checking throughout the codebase.
  */
 
 import * as vscode from 'vscode';
-import { WebviewMessage, VsCodeMessage, TerminalInstance, PartialTerminalSettings, TerminalState } from './shared';
+import {
+  WebviewMessage,
+  VsCodeMessage,
+  TerminalInstance,
+  PartialTerminalSettings,
+  TerminalState,
+} from './shared';
 
 // ===== Type Guard Functions =====
 
@@ -42,24 +48,21 @@ export function hasTerminalId(msg: WebviewMessage): msg is WebviewMessage & { te
 /**
  * Type guard for WebviewMessage with resize parameters
  */
-export function hasResizeParams(msg: WebviewMessage): msg is WebviewMessage & { cols: number; rows: number } {
+export function hasResizeParams(
+  msg: WebviewMessage
+): msg is WebviewMessage & { cols: number; rows: number } {
   return (
-    typeof msg.cols === 'number' &&
-    typeof msg.rows === 'number' &&
-    msg.cols > 0 &&
-    msg.rows > 0
+    typeof msg.cols === 'number' && typeof msg.rows === 'number' && msg.cols > 0 && msg.rows > 0
   );
 }
 
 /**
  * Type guard for WebviewMessage with settings
  */
-export function hasSettings(msg: WebviewMessage): msg is WebviewMessage & { settings: PartialTerminalSettings } {
-  return (
-    msg.settings !== undefined &&
-    typeof msg.settings === 'object' &&
-    msg.settings !== null
-  );
+export function hasSettings(
+  msg: WebviewMessage
+): msg is WebviewMessage & { settings: PartialTerminalSettings } {
+  return msg.settings !== undefined && typeof msg.settings === 'object' && msg.settings !== null;
 }
 
 /**
@@ -92,20 +95,22 @@ export type VSCodeEventHandler<T = unknown> = (event: T) => void | Promise<void>
 /**
  * Configuration value types
  */
-export type ConfigurationValue = 
-  | string 
-  | number 
-  | boolean 
-  | string[] 
-  | number[] 
-  | Record<string, unknown> 
-  | null 
+export type ConfigurationValue =
+  | string
+  | number
+  | boolean
+  | string[]
+  | number[]
+  | Record<string, unknown>
+  | null
   | undefined;
 
 /**
  * Message handler function type
  */
-export type MessageHandler<T extends WebviewMessage = WebviewMessage> = (message: T) => Promise<void> | void;
+export type MessageHandler<T extends WebviewMessage = WebviewMessage> = (
+  message: T
+) => Promise<void> | void;
 
 /**
  * Node-pty compatible process type
@@ -130,14 +135,14 @@ export function isNonNullObject(value: unknown): value is Record<string, unknown
  * Checks if value is a string array
  */
 export function isStringArray(value: unknown): value is string[] {
-  return Array.isArray(value) && value.every(item => typeof item === 'string');
+  return Array.isArray(value) && value.every((item) => typeof item === 'string');
 }
 
 /**
  * Checks if value is a number array
  */
 export function isNumberArray(value: unknown): value is number[] {
-  return Array.isArray(value) && value.every(item => typeof item === 'number');
+  return Array.isArray(value) && value.every((item) => typeof item === 'number');
 }
 
 /**
@@ -159,11 +164,7 @@ export function hasProperty<K extends string, V>(
   key: K,
   typeCheck: (value: unknown) => value is V
 ): obj is Record<K, V> {
-  return (
-    isNonNullObject(obj) &&
-    key in obj &&
-    typeCheck((obj as Record<K, unknown>)[key])
-  );
+  return isNonNullObject(obj) && key in obj && typeCheck((obj as Record<K, unknown>)[key]);
 }
 
 /**
@@ -176,7 +177,9 @@ export function isSplitDirection(value: unknown): value is 'horizontal' | 'verti
 /**
  * Type guard for WebviewMessage with direction
  */
-export function hasDirection(msg: WebviewMessage): msg is WebviewMessage & { direction: 'horizontal' | 'vertical' } {
+export function hasDirection(
+  msg: WebviewMessage
+): msg is WebviewMessage & { direction: 'horizontal' | 'vertical' } {
   return hasProperty(msg, 'direction', isSplitDirection);
 }
 
@@ -190,7 +193,9 @@ export function isBoolean(value: unknown): value is boolean {
 /**
  * Type guard for WebviewMessage with force reconnect
  */
-export function hasForceReconnect(msg: WebviewMessage): msg is WebviewMessage & { forceReconnect: boolean } {
+export function hasForceReconnect(
+  msg: WebviewMessage
+): msg is WebviewMessage & { forceReconnect: boolean } {
   return hasProperty(msg, 'forceReconnect', isBoolean);
 }
 
@@ -212,7 +217,10 @@ export interface AIAgentOperationResult {
 export interface IShellIntegrationManager {
   updateShellStatus(terminalId: string, status: string): void;
   updateCwd(terminalId: string, cwd: string): void;
-  showCommandHistory(terminalId: string, history: Array<{ command: string; exitCode?: number; duration?: number }>): void;
+  showCommandHistory(
+    terminalId: string,
+    history: Array<{ command: string; exitCode?: number; duration?: number }>
+  ): void;
 }
 
 /**

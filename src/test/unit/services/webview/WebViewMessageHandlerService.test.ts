@@ -12,7 +12,7 @@ describe('WebViewMessageHandlerService', () => {
   beforeEach(() => {
     sandbox = sinon.createSandbox();
     service = new WebViewMessageHandlerService();
-    
+
     // Create mock context with proper types
     mockContext = {
       extensionContext: {} as any,
@@ -69,7 +69,10 @@ describe('WebViewMessageHandlerService', () => {
       const result = await service.handleMessage(message, mockContext);
 
       expect(result).to.be.true;
-      expect(mockContext.terminalManager.sendInput).to.have.been.calledWith('echo "hello"', 'terminal-1');
+      expect(mockContext.terminalManager.sendInput).to.have.been.calledWith(
+        'echo "hello"',
+        'terminal-1'
+      );
     });
 
     it('should handle valid terminal resize message', async () => {
@@ -128,7 +131,9 @@ describe('WebViewMessageHandlerService', () => {
 
     it('should handle handler errors gracefully', async () => {
       // Make terminalManager.sendInput throw an error
-      (mockContext.terminalManager.sendInput as sinon.SinonStub).throws(new Error('Terminal error'));
+      (mockContext.terminalManager.sendInput as sinon.SinonStub).throws(
+        new Error('Terminal error')
+      );
 
       const message: WebviewMessage = {
         command: 'input',
@@ -210,7 +215,7 @@ describe('WebViewMessageHandlerService', () => {
   describe('getSupportedCommands', () => {
     it('should return array of supported commands', () => {
       const commands = service.getSupportedCommands();
-      
+
       expect(commands).to.be.an('array');
       expect(commands.length).to.be.greaterThan(0);
       expect(commands).to.include('webviewReady');
@@ -219,7 +224,7 @@ describe('WebViewMessageHandlerService', () => {
     it('should not have duplicate commands', () => {
       const commands = service.getSupportedCommands();
       const uniqueCommands = [...new Set(commands)];
-      
+
       expect(commands.length).to.equal(uniqueCommands.length);
     });
   });
@@ -227,7 +232,7 @@ describe('WebViewMessageHandlerService', () => {
   describe('getHandlerCount', () => {
     it('should return correct number of handlers', () => {
       const count = service.getHandlerCount();
-      
+
       expect(count).to.be.a('number');
       expect(count).to.be.greaterThan(0);
     });
@@ -263,15 +268,15 @@ describe('WebViewMessageHandlerService', () => {
       }
 
       const startTime = Date.now();
-      
+
       const results = await Promise.all(
-        messages.map(msg => service.handleMessage(msg, mockContext))
+        messages.map((msg) => service.handleMessage(msg, mockContext))
       );
 
       const endTime = Date.now();
       const duration = endTime - startTime;
 
-      expect(results.every(r => r === true)).to.be.true;
+      expect(results.every((r) => r === true)).to.be.true;
       expect(duration).to.be.lessThan(1000); // Should handle 100 messages in less than 1 second
     });
   });

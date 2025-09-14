@@ -1,6 +1,6 @@
 /**
  * VS Code Shell Integration Service
- * 
+ *
  * Implements VS Code standard shell integration features:
  * - Command tracking and history
  * - Working directory detection
@@ -38,7 +38,7 @@ export class ShellIntegrationService {
   private cwdDetectionPatterns: RegExp[] = [];
   private promptPatterns: RegExp[] = [];
   private commandStartTime = new Map<string, number>();
-  
+
   // VS Code standard shell integration sequences
   private readonly OSC_SEQUENCES = {
     COMMAND_START: '\x1b]633;A\x07',
@@ -58,20 +58,20 @@ export class ShellIntegrationService {
     try {
       // Common shell prompt patterns
       this.promptPatterns = [
-        /^[^@]+@[^:]+:[^$#]+[$#]\s*$/,  // user@host:path$
-        /^.*\$\s*$/,                      // basic $ prompt
-        /^.*#\s*$/,                       // root # prompt
-        /^>\s*$/,                         // PowerShell
-        /^PS\s+.*>\s*$/,                  // PowerShell with path
-        /^❯\s*$/,                         // Starship/fancy prompts
-        /^➜\s*$/,                         // Oh My Zsh
+        /^[^@]+@[^:]+:[^$#]+[$#]\s*$/, // user@host:path$
+        /^.*\$\s*$/, // basic $ prompt
+        /^.*#\s*$/, // root # prompt
+        /^>\s*$/, // PowerShell
+        /^PS\s+.*>\s*$/, // PowerShell with path
+        /^❯\s*$/, // Starship/fancy prompts
+        /^➜\s*$/, // Oh My Zsh
       ];
 
       // CWD detection patterns
       this.cwdDetectionPatterns = [
-        /^cd\s+(.+)$/,                    // cd command
-        /^pushd\s+(.+)$/,                 // pushd command
-        /^z\s+(.+)$/,                     // zoxide
+        /^cd\s+(.+)$/, // cd command
+        /^pushd\s+(.+)$/, // pushd command
+        /^z\s+(.+)$/, // zoxide
         /\x1b\]633;P;Cwd=([^\x07]+)\x07/, // VS Code OSC sequence
       ];
     } catch (error) {
@@ -101,11 +101,11 @@ export class ShellIntegrationService {
     if (data.includes(this.OSC_SEQUENCES.COMMAND_START)) {
       this.handleCommandStart(state);
     }
-    
+
     if (data.includes(this.OSC_SEQUENCES.COMMAND_EXECUTED)) {
       this.handleCommandExecuted(state, data);
     }
-    
+
     if (data.includes(this.OSC_SEQUENCES.COMMAND_FINISHED)) {
       this.handleCommandFinished(state, data);
     }
@@ -125,7 +125,7 @@ export class ShellIntegrationService {
   private handleCommandStart(state: ShellIntegrationState): void {
     state.isExecuting = true;
     this.commandStartTime.set(state.terminalId, Date.now());
-    
+
     // Send status update to webview
     this.sendStatusUpdate(state.terminalId, 'executing');
   }
@@ -156,9 +156,9 @@ export class ShellIntegrationService {
         duration,
         timestamp: Date.now(),
       };
-      
+
       state.commandHistory.push(command);
-      
+
       // Limit history size
       if (state.commandHistory.length > 100) {
         state.commandHistory.shift();
@@ -168,7 +168,7 @@ export class ShellIntegrationService {
     state.isExecuting = false;
     state.currentCommand = undefined;
     this.commandStartTime.delete(state.terminalId);
-    
+
     // Send status update
     this.sendStatusUpdate(state.terminalId, exitCode === 0 ? 'success' : 'error');
   }
@@ -176,7 +176,7 @@ export class ShellIntegrationService {
   private handleCwdChange(state: ShellIntegrationState, cwd: string): void {
     if (cwd) {
       state.currentCwd = cwd;
-      
+
       // Send CWD update to webview
       this.sendCwdUpdate(state.terminalId, cwd);
     }
@@ -187,7 +187,7 @@ export class ShellIntegrationService {
     for (const pattern of this.promptPatterns) {
       if (pattern.test(data)) {
         state.lastPrompt = data;
-        
+
         if (state.isExecuting) {
           // Command likely finished
           state.isExecuting = false;
@@ -222,7 +222,10 @@ export class ShellIntegrationService {
   /**
    * Send status update to webview
    */
-  private sendStatusUpdate(terminalId: string, status: 'ready' | 'executing' | 'success' | 'error'): void {
+  private sendStatusUpdate(
+    terminalId: string,
+    status: 'ready' | 'executing' | 'success' | 'error'
+  ): void {
     vscode.commands.executeCommand('secondaryTerminal.updateShellStatus', {
       terminalId,
       status,
@@ -269,7 +272,7 @@ export class ShellIntegrationService {
    */
   public injectShellIntegration(terminalId: string, shell: string, ptyProcess: PtyProcess): void {
     // Detect shell type and inject appropriate integration
-    if (shell && shell.includes('bash') || shell && shell.includes('zsh')) {
+    if ((shell && shell.includes('bash')) || (shell && shell.includes('zsh'))) {
       this.injectBashZshIntegration(ptyProcess);
     } else if (shell && shell.includes('fish')) {
       this.injectFishIntegration(ptyProcess);
@@ -341,7 +344,7 @@ fi
 # Enable history expansion
 set +H 2>/dev/null || true
 `;
-    
+
     ptyProcess.write(script + '\n');
   }
 
@@ -377,7 +380,7 @@ function fish_user_key_bindings
   bind -k down history-search-forward 2>/dev/null
 end
 `;
-    
+
     ptyProcess.write(script + '\n');
   }
 
@@ -411,7 +414,7 @@ function Global:prompt {
   __VSCode-Prompt-End
 }
 `;
-    
+
     ptyProcess.write(script + '\n');
   }
 

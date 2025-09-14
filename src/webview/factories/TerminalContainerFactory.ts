@@ -1,6 +1,6 @@
 /**
  * TerminalContainerFactory
- * 
+ *
  * Centralized terminal container creation and styling to eliminate
  * code duplication across TerminalLifecycleManager and SplitManager
  */
@@ -58,7 +58,7 @@ export class TerminalContainerFactory {
       // border: '2px solid transparent',  // REMOVED - UIManager will handle borders
       borderRadius: '4px',
       boxSizing: 'border-box' as const,
-      flex: '1 1 auto'
+      flex: '1 1 auto',
     },
     body: {
       display: 'block',
@@ -70,18 +70,18 @@ export class TerminalContainerFactory {
       padding: '0', // VS Code standard - no padding for full display area
       margin: '0',
       boxSizing: 'border-box' as const,
-      flex: '1 1 auto'
+      flex: '1 1 auto',
     },
     split: {
       height: 'auto',
       minHeight: '150px',
-      border: '1px solid #444'
+      border: '1px solid #444',
     },
     active: {
       borderColor: '#007ACC',
-      boxShadow: '0 0 8px rgba(0, 122, 204, 0.3)'
-    }
-  }
+      boxShadow: '0 0 8px rgba(0, 122, 204, 0.3)',
+    },
+  };
 
   /**
    * Create a complete terminal container with optional header
@@ -97,12 +97,12 @@ export class TerminalContainerFactory {
     try {
       // Create main container
       const container = this.createMainContainer(config);
-      
+
       // Create header if requested
       let header: HTMLElement | undefined;
       let closeButton: HTMLElement | undefined;
       let headerElements: TerminalHeaderElements | undefined;
-      
+
       if (headerConfig.showHeader) {
         // Use HeaderFactory to create AI Agent-compatible headers
         headerElements = HeaderFactory.createTerminalHeader({
@@ -115,7 +115,7 @@ export class TerminalContainerFactory {
         header = headerElements.container;
         closeButton = headerElements.closeButton;
         container.appendChild(header);
-        
+
         terminalLogger.info(`AI Agent-compatible header created for ${config.id}`);
       }
 
@@ -133,7 +133,7 @@ export class TerminalContainerFactory {
             if (target.closest('.terminal-control')) {
               return;
             }
-            
+
             headerConfig.onContainerClick!(config.id);
             terminalLogger.info(`🎯 Header area clicked, activating terminal: ${config.id}`);
           });
@@ -155,12 +155,11 @@ export class TerminalContainerFactory {
         body,
         closeButton,
         splitButton: headerElements?.splitButton || undefined,
-        headerElements
+        headerElements,
       };
 
       terminalLogger.info(`Container created successfully: ${config.id}`);
       return elements;
-
     } catch (error) {
       terminalLogger.error(`Failed to create container ${config.id}:`, error);
       throw error;
@@ -172,7 +171,7 @@ export class TerminalContainerFactory {
    */
   private static createMainContainer(config: TerminalContainerConfig): HTMLElement {
     const container = document.createElement('div');
-    
+
     // Set basic attributes
     container.className = config.className || 'terminal-container';
     container.setAttribute('data-terminal-id', config.id);
@@ -184,7 +183,7 @@ export class TerminalContainerFactory {
     // Apply split-specific styles
     if (config.isSplit) {
       this.applyStyles(container, this.DEFAULT_STYLES.split);
-      
+
       if (config.height) {
         container.style.height = `${config.height}px`;
       }
@@ -213,7 +212,7 @@ export class TerminalContainerFactory {
   private static createTerminalBody(_config: TerminalContainerConfig): HTMLElement {
     const body = document.createElement('div');
     body.className = 'terminal-content';
-    
+
     // Apply base body styles
     this.applyStyles(body, this.DEFAULT_STYLES.body);
 
@@ -256,14 +255,17 @@ export class TerminalContainerFactory {
   /**
    * Apply custom theme to container
    */
-  static applyTheme(container: HTMLElement, theme: {
-    background?: string;
-    borderColor?: string;
-    activeBorderColor?: string;
-  }): void {
+  static applyTheme(
+    container: HTMLElement,
+    theme: {
+      background?: string;
+      borderColor?: string;
+      activeBorderColor?: string;
+    }
+  ): void {
     if (theme.background) {
       container.style.background = theme.background;
-      
+
       // Also update body background
       const body = container.querySelector('.terminal-content') as HTMLElement;
       if (body) {
@@ -299,10 +301,7 @@ export class TerminalContainerFactory {
   /**
    * Utility method to apply styles to an element
    */
-  private static applyStyles(
-    element: HTMLElement, 
-    styles: Partial<CSSStyleDeclaration>
-  ): void {
+  private static applyStyles(element: HTMLElement, styles: Partial<CSSStyleDeclaration>): void {
     Object.assign(element.style, styles);
   }
 
@@ -314,7 +313,7 @@ export class TerminalContainerFactory {
     container.className = 'terminal-container-simple';
     container.setAttribute('data-terminal-id', id);
     container.setAttribute('data-terminal-name', name);
-    
+
     this.applyStyles(container, {
       display: 'flex',
       flexDirection: 'column',
@@ -322,7 +321,7 @@ export class TerminalContainerFactory {
       width: '100%',
       height: '100%',
       overflow: 'hidden',
-      padding: '8px'
+      padding: '8px',
     });
 
     return container;
@@ -334,11 +333,11 @@ export class TerminalContainerFactory {
   static destroyContainer(container: HTMLElement): void {
     try {
       const terminalId = container.getAttribute('data-terminal-id');
-      
+
       if (container.parentNode) {
         container.parentNode.removeChild(container);
       }
-      
+
       terminalLogger.info(`Container destroyed: ${terminalId}`);
     } catch (error) {
       terminalLogger.error('Failed to destroy container:', error);

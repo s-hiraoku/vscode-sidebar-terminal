@@ -328,7 +328,7 @@ export class ConfigManager {
       // 1. 拡張機能専用のフォント太さ設定を確認
       const extensionConfig = vscode.workspace.getConfiguration('secondaryTerminal');
       const extensionFontWeight = extensionConfig.get<string>('fontWeight');
-      
+
       if (extensionFontWeight && extensionFontWeight.trim()) {
         return extensionFontWeight.trim();
       }
@@ -336,7 +336,7 @@ export class ConfigManager {
       // 2. ターミナル専用のフォント太さ設定を確認
       const terminalConfig = vscode.workspace.getConfiguration('terminal.integrated');
       const terminalFontWeight = terminalConfig.get<string>('fontWeight');
-      
+
       if (terminalFontWeight && terminalFontWeight.trim()) {
         return terminalFontWeight.trim();
       }
@@ -360,7 +360,7 @@ export class ConfigManager {
       // 1. 拡張機能専用のフォント太字設定を確認
       const extensionConfig = vscode.workspace.getConfiguration('secondaryTerminal');
       const extensionFontWeightBold = extensionConfig.get<string>('fontWeightBold');
-      
+
       if (extensionFontWeightBold && extensionFontWeightBold.trim()) {
         return extensionFontWeightBold.trim();
       }
@@ -368,7 +368,7 @@ export class ConfigManager {
       // 2. ターミナル専用のフォント太字設定を確認
       const terminalConfig = vscode.workspace.getConfiguration('terminal.integrated');
       const terminalFontWeightBold = terminalConfig.get<string>('fontWeightBold');
-      
+
       if (terminalFontWeightBold && terminalFontWeightBold.trim()) {
         return terminalFontWeightBold.trim();
       }
@@ -392,7 +392,7 @@ export class ConfigManager {
       // 1. 拡張機能専用の行間隔設定を確認
       const extensionConfig = vscode.workspace.getConfiguration('secondaryTerminal');
       const extensionLineHeight = extensionConfig.get<number>('lineHeight');
-      
+
       if (extensionLineHeight && extensionLineHeight > 0) {
         return extensionLineHeight;
       }
@@ -400,7 +400,7 @@ export class ConfigManager {
       // 2. ターミナル専用の行間隔設定を確認
       const terminalConfig = vscode.workspace.getConfiguration('terminal.integrated');
       const terminalLineHeight = terminalConfig.get<number>('lineHeight');
-      
+
       if (terminalLineHeight && terminalLineHeight > 0) {
         return terminalLineHeight;
       }
@@ -424,7 +424,7 @@ export class ConfigManager {
       // 1. 拡張機能専用の文字間隔設定を確認
       const extensionConfig = vscode.workspace.getConfiguration('secondaryTerminal');
       const extensionLetterSpacing = extensionConfig.get<number>('letterSpacing');
-      
+
       if (typeof extensionLetterSpacing === 'number') {
         return extensionLetterSpacing;
       }
@@ -432,7 +432,7 @@ export class ConfigManager {
       // 2. ターミナル専用の文字間隔設定を確認
       const terminalConfig = vscode.workspace.getConfiguration('terminal.integrated');
       const terminalLetterSpacing = terminalConfig.get<number>('letterSpacing');
-      
+
       if (typeof terminalLetterSpacing === 'number') {
         return terminalLetterSpacing;
       }
@@ -502,7 +502,7 @@ export class ConfigManager {
   public getTerminalProfilesForCurrentPlatform(): Record<string, TerminalProfile | null> {
     this._ensureInitialized();
     const section = CONFIG_SECTIONS.SIDEBAR_TERMINAL;
-    
+
     let profileKey: string;
     switch (process.platform) {
       case 'win32':
@@ -515,7 +515,7 @@ export class ConfigManager {
         profileKey = CONFIG_KEYS.PROFILES_LINUX;
         break;
     }
-    
+
     return this.getConfig(section, profileKey, {});
   }
 
@@ -525,7 +525,7 @@ export class ConfigManager {
   public getDefaultTerminalProfile(): string | null {
     this._ensureInitialized();
     const section = CONFIG_SECTIONS.SIDEBAR_TERMINAL;
-    
+
     let defaultKey: string;
     switch (process.platform) {
       case 'win32':
@@ -538,7 +538,7 @@ export class ConfigManager {
         defaultKey = CONFIG_KEYS.DEFAULT_PROFILE_LINUX;
         break;
     }
-    
+
     return this.getConfig(section, defaultKey, null);
   }
 
@@ -548,7 +548,7 @@ export class ConfigManager {
    */
   public getVSCodeTerminalProfiles(): Record<string, TerminalProfile> {
     this._ensureInitialized();
-    
+
     let profileKey: string;
     switch (process.platform) {
       case 'win32':
@@ -561,13 +561,13 @@ export class ConfigManager {
         profileKey = 'profiles.linux';
         break;
     }
-    
+
     const vscodeConfig = vscode.workspace.getConfiguration('terminal.integrated');
     const vscodeProfiles = vscodeConfig.get<Record<string, any>>(profileKey, {});
-    
+
     // VS CodeのプロファイルフォーマットをTerminalProfileに変換
     const convertedProfiles: Record<string, TerminalProfile> = {};
-    
+
     for (const [name, profile] of Object.entries(vscodeProfiles)) {
       if (profile && typeof profile === 'object' && profile.path) {
         convertedProfiles[name] = {
@@ -583,7 +583,7 @@ export class ConfigManager {
         };
       }
     }
-    
+
     return convertedProfiles;
   }
 

@@ -4,7 +4,7 @@
 
 export const WEBVIEW_THEME_CONSTANTS = {
   DARK_THEME: {
-    background: '#0c0c0c',  // 🎯 FIX: VS Code標準ターミナル背景色に変更
+    background: '#0c0c0c', // 🎯 FIX: VS Code標準ターミナル背景色に変更
     foreground: '#cccccc',
     cursor: '#cccccc',
     selection: '#264f78',
@@ -26,7 +26,7 @@ export const WEBVIEW_THEME_CONSTANTS = {
     brightWhite: '#e5e5e5',
   },
   LIGHT_THEME: {
-    background: '#f8f8f8',  // 🎯 FIX: VS Code標準ライトターミナル背景色に変更
+    background: '#f8f8f8', // 🎯 FIX: VS Code標準ライトターミナル背景色に変更
     foreground: '#333333',
     cursor: '#333333',
     selection: '#add6ff',

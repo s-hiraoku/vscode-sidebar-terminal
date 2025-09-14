@@ -93,15 +93,17 @@ export const mockVscode = {
     onDidChangeConfiguration: sinon.stub().returns({
       dispose: sinon.stub(),
     }),
-    workspaceFolders: [{ 
-      uri: { 
-        fsPath: '/test/workspace',
-        scheme: 'file',
-        path: '/test/workspace',
-        toString: () => 'file:///test/workspace',
+    workspaceFolders: [
+      {
+        uri: {
+          fsPath: '/test/workspace',
+          scheme: 'file',
+          path: '/test/workspace',
+          toString: () => 'file:///test/workspace',
+        },
+        name: 'test-workspace',
       },
-      name: 'test-workspace',
-    }],
+    ],
     name: 'test-workspace',
   },
   window: {
@@ -276,7 +278,7 @@ export function setupTestEnvironment(): void {
   // Mock Node.js modules
   (global as any).require = sinon.stub();
   (global as any).module = { exports: {} };
-  
+
   // Enhanced process polyfilling for test compatibility
   const processPolyfill = {
     ...process,
@@ -365,7 +367,10 @@ export function setupTestEnvironment(): void {
   // Only add missing methods to the actual process object if they don't exist
   const requiredMethods = ['removeListener', 'removeAllListeners', 'off'];
   requiredMethods.forEach((method) => {
-    if (!(process as any)[method] && typeof process[method as keyof typeof process] === 'undefined') {
+    if (
+      !(process as any)[method] &&
+      typeof process[method as keyof typeof process] === 'undefined'
+    ) {
       (process as any)[method] = function (..._args: any[]) {
         // For methods that need to be chainable
         if (method === 'removeListener' || method === 'removeAllListeners' || method === 'off') {
@@ -430,12 +435,12 @@ export function setupJSDOMEnvironment(htmlContent?: string): {
   // Ensure process.nextTick is available globally before JSDOM creation
   // Save the original process for JSDOM
   const originalProcess = global.process || process;
-  
+
   // Ensure process.nextTick exists for JSDOM
   if (!process.nextTick || typeof process.nextTick !== 'function') {
     (process as any).nextTick = (callback: () => void) => setImmediate(callback);
   }
-  
+
   // Ensure global.process exists with necessary methods for tests
   if (!global.process) {
     (global as any).process = {
@@ -520,7 +525,7 @@ export function resetTestEnvironment(): void {
   } catch (error) {
     // Reset may fail if nothing to reset, this is OK
   }
-  
+
   try {
     sinon.restore();
   } catch (error) {

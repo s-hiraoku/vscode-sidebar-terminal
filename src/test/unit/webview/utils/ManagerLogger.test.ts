@@ -13,22 +13,22 @@ describe.skip('ManagerLogger', () => {
 
   beforeEach(() => {
     sandbox = createSandbox();
-    
+
     // Mock console methods
     originalConsole = {
       log: console.log,
       warn: console.warn,
       error: console.error,
       info: console.info,
-      debug: console.debug
+      debug: console.debug,
     };
-    
+
     console.log = sandbox.stub();
     console.warn = sandbox.stub();
     console.error = sandbox.stub();
     console.info = sandbox.stub();
     console.debug = sandbox.stub();
-    
+
     try {
       // Try to import ManagerLogger with mock handling
       const managerLoggerModule = require('../../../../webview/utils/ManagerLogger');
@@ -42,7 +42,7 @@ describe.skip('ManagerLogger', () => {
 
   afterEach(() => {
     sandbox.restore();
-    
+
     // Restore console
     console.log = originalConsole.log;
     console.warn = originalConsole.warn;
@@ -52,14 +52,14 @@ describe.skip('ManagerLogger', () => {
   });
 
   describe('createLogger', () => {
-    it('should create logger with default emoji', function() {
+    it('should create logger with default emoji', function () {
       if (!ManagerLogger) {
         this.skip();
         return;
       }
-      
+
       const logger = ManagerLogger.createLogger('TestManager');
-      
+
       expect(logger).to.not.be.null;
       expect(logger).to.have.property('info');
       expect(logger).to.have.property('warn');
@@ -70,30 +70,30 @@ describe.skip('ManagerLogger', () => {
 
     it('should create logger with custom emoji', () => {
       const logger = ManagerLogger.createLogger('TestManager', '🔧');
-      
+
       expect(logger).to.not.be.null;
-      
+
       // Test that the emoji is used in logging
       logger.info('Test message');
-      
+
       // Should have been called (exact format tested in specific log tests)
       expect(console.log).to.have.been.called;
     });
 
     it('should handle empty manager name', () => {
       const logger = ManagerLogger.createLogger('');
-      
+
       expect(logger).to.not.be.null;
-      
+
       logger.info('Test message');
       expect(console.log).to.have.been.called;
     });
 
     it('should handle special characters in manager name', () => {
       const logger = ManagerLogger.createLogger('Test-Manager_123');
-      
+
       expect(logger).to.not.be.null;
-      
+
       logger.info('Test message');
       expect(console.log).to.have.been.called;
     });
@@ -102,50 +102,50 @@ describe.skip('ManagerLogger', () => {
   describe('pre-configured loggers', () => {
     it('should provide inputLogger', () => {
       const { inputLogger } = require('../../../../webview/utils/ManagerLogger');
-      
+
       expect(inputLogger).to.not.be.null;
       expect(inputLogger).to.have.property('info');
-      
+
       inputLogger.info('Input test');
       expect(console.log).to.have.been.called;
     });
 
     it('should provide splitLogger', () => {
       const { splitLogger } = require('../../../../webview/utils/ManagerLogger');
-      
+
       expect(splitLogger).to.not.be.null;
       expect(splitLogger).to.have.property('info');
-      
+
       splitLogger.info('Split test');
       expect(console.log).to.have.been.called;
     });
 
     it('should provide terminalLogger', () => {
       const { terminalLogger } = require('../../../../webview/utils/ManagerLogger');
-      
+
       expect(terminalLogger).to.not.be.null;
       expect(terminalLogger).to.have.property('info');
-      
+
       terminalLogger.info('Terminal test');
       expect(console.log).to.have.been.called;
     });
 
     it('should provide messageLogger', () => {
       const { messageLogger } = require('../../../../webview/utils/ManagerLogger');
-      
+
       expect(messageLogger).to.not.be.null;
       expect(messageLogger).to.have.property('info');
-      
+
       messageLogger.info('Message test');
       expect(console.log).to.have.been.called;
     });
 
     it('should provide uiLogger', () => {
       const { uiLogger } = require('../../../../webview/utils/ManagerLogger');
-      
+
       expect(uiLogger).to.not.be.null;
       expect(uiLogger).to.have.property('info');
-      
+
       uiLogger.info('UI test');
       expect(console.log).to.have.been.called;
     });
@@ -160,7 +160,7 @@ describe.skip('ManagerLogger', () => {
 
     it('should log info messages with correct format', () => {
       logger.info('Test info message');
-      
+
       expect(console.log).to.have.been.calledWith(
         sandbox.match(/🧪.*TestManager.*Test info message/)
       );
@@ -169,7 +169,7 @@ describe.skip('ManagerLogger', () => {
     it('should log info messages with data', () => {
       const testData = { key: 'value', number: 42 };
       logger.info('Test info with data', testData);
-      
+
       expect(console.log).to.have.been.calledTwice;
       expect((console.log as any).firstCall).to.have.been.calledWith(
         sandbox.match(/🧪.*TestManager.*Test info with data/)
@@ -179,7 +179,7 @@ describe.skip('ManagerLogger', () => {
 
     it('should log warn messages with correct format', () => {
       logger.warn('Test warning message');
-      
+
       expect(console.warn).to.have.been.calledWith(
         sandbox.match(/⚠️.*🧪.*TestManager.*Test warning message/)
       );
@@ -188,7 +188,7 @@ describe.skip('ManagerLogger', () => {
     it('should log warn messages with data', () => {
       const warningData = { warning: true };
       logger.warn('Test warning with data', warningData);
-      
+
       expect(console.warn).to.have.been.calledOnce;
       expect(console.warn).to.have.been.calledWith(
         sandbox.match(/⚠️.*🧪.*TestManager.*Test warning with data/),
@@ -198,7 +198,7 @@ describe.skip('ManagerLogger', () => {
 
     it('should log error messages with correct format', () => {
       logger.error('Test error message');
-      
+
       expect(console.error).to.have.been.calledWith(
         sandbox.match(/❌.*🧪.*TestManager.*Test error message/)
       );
@@ -207,7 +207,7 @@ describe.skip('ManagerLogger', () => {
     it('should log error messages with error objects', () => {
       const testError = new Error('Test error');
       logger.error('Test error with object', testError);
-      
+
       expect(console.error).to.have.been.calledOnce;
       expect(console.error).to.have.been.calledWith(
         sandbox.match(/❌.*🧪.*TestManager.*Test error with object/),
@@ -217,7 +217,7 @@ describe.skip('ManagerLogger', () => {
 
     it('should log debug messages with correct format', () => {
       logger.debug('Test debug message');
-      
+
       expect(console.debug).to.have.been.calledWith(
         sandbox.match(/🔍.*🧪.*TestManager.*Test debug message/)
       );
@@ -226,7 +226,7 @@ describe.skip('ManagerLogger', () => {
     it('should log debug messages with data', () => {
       const debugData = { debug: true, values: [1, 2, 3] };
       logger.debug('Test debug with data', debugData);
-      
+
       expect(console.debug).to.have.been.calledOnce;
       expect(console.debug).to.have.been.calledWith(
         sandbox.match(/🔍.*🧪.*TestManager.*Test debug with data/),
@@ -244,7 +244,7 @@ describe.skip('ManagerLogger', () => {
 
     it('should log lifecycle events with correct format', () => {
       logger.lifecycle('initialization', 'starting');
-      
+
       expect(console.log).to.have.been.calledWith(
         sandbox.match(/♻️.*LifecycleManager.*initialization.*starting/)
       );
@@ -254,7 +254,7 @@ describe.skip('ManagerLogger', () => {
       logger.lifecycle('startup', 'completed');
       logger.lifecycle('shutdown', 'in_progress');
       logger.lifecycle('cleanup', 'failed');
-      
+
       expect(console.log).to.have.been.calledThrice;
       expect((console.log as any).firstCall).to.have.been.calledWith(
         sandbox.match(/startup.*completed/)
@@ -271,7 +271,7 @@ describe.skip('ManagerLogger', () => {
       expect(() => {
         logger.lifecycle('', '');
       }).to.not.throw();
-      
+
       expect(console.log).to.have.been.called;
     });
   });
@@ -290,7 +290,7 @@ describe.skip('ManagerLogger', () => {
         logger.error(null);
         logger.debug(undefined);
       }).to.not.throw();
-      
+
       expect(console.log).to.have.been.called;
       expect(console.warn).to.have.been.called;
       expect(console.error).to.have.been.called;
@@ -300,31 +300,31 @@ describe.skip('ManagerLogger', () => {
     it('should handle circular reference objects', () => {
       const circularObj: any = { name: 'test' };
       circularObj.self = circularObj;
-      
+
       expect(() => {
         logger.info('Circular object test', circularObj);
       }).to.not.throw();
-      
+
       expect(console.log).to.have.been.called;
     });
 
     it('should handle very long messages', () => {
       const longMessage = 'A'.repeat(10000);
-      
+
       expect(() => {
         logger.info(longMessage);
       }).to.not.throw();
-      
+
       expect(console.log).to.have.been.called;
     });
 
     it('should handle special characters in messages', () => {
       const specialMessage = 'Test\n\t\r\x00\uD83D\uDE00特殊字符';
-      
+
       expect(() => {
         logger.info(specialMessage);
       }).to.not.throw();
-      
+
       expect(console.log).to.have.been.called;
     });
   });
@@ -332,13 +332,13 @@ describe.skip('ManagerLogger', () => {
   describe('performance', () => {
     it('should handle rapid logging calls', () => {
       const logger = ManagerLogger.createLogger('PerfTestManager', '⚡');
-      
+
       expect(() => {
         for (let i = 0; i < 1000; i++) {
           logger.info(`Message ${i}`);
         }
       }).to.not.throw();
-      
+
       expect(console.log).to.have.callCount(1000);
     });
 
@@ -349,15 +349,15 @@ describe.skip('ManagerLogger', () => {
         nested: {
           deep: {
             value: 'test',
-            moreData: new Array(100).fill('data')
-          }
-        }
+            moreData: new Array(100).fill('data'),
+          },
+        },
       };
-      
+
       expect(() => {
         logger.info('Large data test', largeData);
       }).to.not.throw();
-      
+
       expect(console.log).to.have.been.called;
     });
   });
@@ -365,9 +365,9 @@ describe.skip('ManagerLogger', () => {
   describe('integration with webview logger', () => {
     it('should use webview logger for actual output', () => {
       const logger = ManagerLogger.createLogger('WebviewTestManager', '🌐');
-      
+
       logger.info('Integration test');
-      
+
       // Should call console.log (which is mocked)
       expect(console.log).to.have.been.called;
     });

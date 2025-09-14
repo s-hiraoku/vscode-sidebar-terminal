@@ -278,7 +278,9 @@ export class SplitManager extends BaseManager {
       `Terminal-body height: ${availableHeight}px, Terminal count: ${actualTerminalCount}`
     );
     this.splitManagerLogger.debug(`Body rect: ${JSON.stringify(bodyRect)}`);
-    this.splitManagerLogger.debug(`Terminal containers: ${Array.from(this.terminalContainers.keys())}`);
+    this.splitManagerLogger.debug(
+      `Terminal containers: ${Array.from(this.terminalContainers.keys())}`
+    );
 
     // Calculate equal height for all terminals
     const calculatedHeight = Math.floor(availableHeight / actualTerminalCount);
@@ -346,8 +348,8 @@ export class SplitManager extends BaseManager {
         customStyles: {
           borderBottom: '1px solid var(--vscode-widget-border, #454545)',
           flexShrink: '0',
-          transition: 'border-color 0.2s ease-in-out'
-        }
+          transition: 'border-color 0.2s ease-in-out',
+        },
       };
 
       const headerConfig = {
@@ -363,7 +365,7 @@ export class SplitManager extends BaseManager {
           if (this.coordinator && 'handleAiAgentToggle' in this.coordinator) {
             (this.coordinator as any).handleAiAgentToggle(clickedTerminalId);
           }
-        }
+        },
       };
 
       const elements = TerminalContainerFactory.createContainer(containerConfig, headerConfig);
@@ -378,7 +380,9 @@ export class SplitManager extends BaseManager {
         if (uiManager && 'headerElementsCache' in uiManager) {
           // Add header elements to UIManager cache for AI Agent status updates
           (uiManager as any).headerElementsCache.set(id, elements.headerElements);
-          splitLogger.info(`✅ Split terminal header elements registered with UIManager for AI Agent support: ${id}`);
+          splitLogger.info(
+            `✅ Split terminal header elements registered with UIManager for AI Agent support: ${id}`
+          );
         }
       }
 
@@ -390,23 +394,24 @@ export class SplitManager extends BaseManager {
         background: #000;
         overflow: hidden;
       `;
-      
+
       // Replace the container body with our terminal area
       elements.body.innerHTML = '';
       elements.body.appendChild(terminalArea);
 
       this.splitManagerLogger.info(`Created container for ${name}: ${height}px total`);
       return elements.container;
-
     } catch (error) {
-      this.splitManagerLogger.error(`Failed to create split terminal container for ${id}: ${error}`);
-      
+      this.splitManagerLogger.error(
+        `Failed to create split terminal container for ${id}: ${error}`
+      );
+
       // Fallback to original implementation
       const container = document.createElement('div');
       container.id = `split-terminal-${id}`;
       container.className = 'split-terminal-container terminal-container';
       container.setAttribute('data-terminal-id', id);
-      
+
       container.style.cssText = `
         height: ${height}px;
         background: #000;
@@ -723,7 +728,9 @@ export class SplitManager extends BaseManager {
 
     this.splitManagerLogger.info(`Terminal ${id} fully removed from SplitManager`);
     this.splitManagerLogger.debug(`Remaining terminals: ${Array.from(this.terminals.keys())}`);
-    this.splitManagerLogger.debug(`Remaining containers: ${Array.from(this.terminalContainers.keys())}`);
+    this.splitManagerLogger.debug(
+      `Remaining containers: ${Array.from(this.terminalContainers.keys())}`
+    );
   }
 
   /**

@@ -72,7 +72,6 @@ export class OptimizedPersistenceManager {
 
       this.isInitialized = true;
       log('✅ [PERSISTENCE-WEBVIEW] Initialization complete');
-
     } catch (error) {
       log(`❌ [PERSISTENCE-WEBVIEW] Initialization failed: ${error}`);
       throw error;
@@ -119,7 +118,6 @@ export class OptimizedPersistenceManager {
         log(`❌ [PERSISTENCE-WEBVIEW] Save failed: ${response.error}`);
         return false;
       }
-
     } catch (error) {
       log(`❌ [PERSISTENCE-WEBVIEW] Save operation failed: ${error}`);
       return false;
@@ -165,7 +163,6 @@ export class OptimizedPersistenceManager {
         log(`📦 [PERSISTENCE-WEBVIEW] No session to restore: ${response.error || 'No data'}`);
         return false;
       }
-
     } catch (error) {
       log(`❌ [PERSISTENCE-WEBVIEW] Restore operation failed: ${error}`);
       return false;
@@ -182,7 +179,7 @@ export class OptimizedPersistenceManager {
       log('🗑️ [PERSISTENCE-WEBVIEW] Clearing session...');
 
       const response = await this.sendPersistenceMessage('clearSession');
-      
+
       if (response.success) {
         this.resetStats();
         log('✅ [PERSISTENCE-WEBVIEW] Session cleared successfully');
@@ -191,7 +188,6 @@ export class OptimizedPersistenceManager {
         log(`❌ [PERSISTENCE-WEBVIEW] Clear failed: ${response.error}`);
         return false;
       }
-
     } catch (error) {
       log(`❌ [PERSISTENCE-WEBVIEW] Clear operation failed: ${error}`);
       return false;
@@ -210,7 +206,7 @@ export class OptimizedPersistenceManager {
    */
   updateSettings(newSettings: Partial<PersistenceSettings>): void {
     this.settings = { ...this.settings, ...newSettings };
-    
+
     // 自動保存設定の更新
     if (this.settings.enableAutoSave) {
       this.startAutoSave();
@@ -227,7 +223,7 @@ export class OptimizedPersistenceManager {
   dispose(): void {
     this.stopAutoSave();
     this.pendingOperations.clear();
-    
+
     // 待機中のレスポンスをクリア
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     for (const [_messageId, pending] of Array.from(this.pendingResponses.entries())) {
@@ -235,7 +231,7 @@ export class OptimizedPersistenceManager {
       pending.resolve({ success: false, error: 'Manager disposed' });
     }
     this.pendingResponses.clear();
-    
+
     this.isInitialized = false;
     log('🧹 [PERSISTENCE-WEBVIEW] OptimizedPersistenceManager disposed');
   }
@@ -254,7 +250,7 @@ export class OptimizedPersistenceManager {
         return [];
       }
 
-      return Array.from(terminals.values()).map(terminal => ({
+      return Array.from(terminals.values()).map((terminal) => ({
         id: terminal.id,
         name: terminal.name,
         scrollback: this.extractScrollback(terminal),
@@ -262,7 +258,6 @@ export class OptimizedPersistenceManager {
         shellCommand: '', // Will be determined by shell integration
         isActive: terminal.id === this.coordinator.getActiveTerminalId(),
       }));
-
     } catch (error) {
       log(`❌ [PERSISTENCE-WEBVIEW] Failed to collect terminal data: ${error}`);
       return [];
@@ -290,7 +285,7 @@ export class OptimizedPersistenceManager {
       if (xtermInstance.buffer && xtermInstance.buffer.active) {
         const buffer = xtermInstance.buffer.active;
         const lines: string[] = [];
-        
+
         for (let i = 0; i < Math.min(buffer.length, this.settings.maxScrollbackLines); i++) {
           const line = buffer.getLine(i);
           if (line) {
@@ -302,7 +297,6 @@ export class OptimizedPersistenceManager {
       }
 
       return [];
-
     } catch (error) {
       log(`⚠️ [PERSISTENCE-WEBVIEW] Failed to extract scrollback: ${error}`);
       return [];
@@ -317,7 +311,7 @@ export class OptimizedPersistenceManager {
       return terminals;
     }
 
-    return terminals.map(terminal => ({
+    return terminals.map((terminal) => ({
       ...terminal,
       scrollback: terminal.scrollback.filter((line: string) => line.trim().length > 0),
     }));
@@ -328,15 +322,15 @@ export class OptimizedPersistenceManager {
    */
   private async lazyRestoreTerminals(terminalData: any[]): Promise<void> {
     const BATCH_SIZE = 2;
-    
+
     for (let i = 0; i < terminalData.length; i += BATCH_SIZE) {
       const batch = terminalData.slice(i, i + BATCH_SIZE);
-      
+
       for (const terminal of batch) {
         await this.restoreTerminalInstance(terminal);
         await this.delay(50); // UI応答性維持
       }
-      
+
       if (i + BATCH_SIZE < terminalData.length) {
         await this.delay(100); // バッチ間遅延
       }
@@ -347,10 +341,8 @@ export class OptimizedPersistenceManager {
    * 即座復元
    */
   private async immediateRestoreTerminals(terminalData: any[]): Promise<void> {
-    const restorePromises = terminalData.map(terminal => 
-      this.restoreTerminalInstance(terminal)
-    );
-    
+    const restorePromises = terminalData.map((terminal) => this.restoreTerminalInstance(terminal));
+
     await Promise.all(restorePromises);
   }
 
@@ -366,7 +358,7 @@ export class OptimizedPersistenceManager {
           id: terminal.id,
           name: terminal.name,
           workingDirectory: terminal.workingDirectory,
-        }
+        },
       });
 
       // スクロールバック復元
@@ -374,16 +366,18 @@ export class OptimizedPersistenceManager {
         await this.coordinator.getMessageManager().postMessage({
           command: 'restoreScrollback',
           terminalId: terminal.id,
-          data: terminal.scrollback
+          data: terminal.scrollback,
         });
       }
-
     } catch (error) {
       log(`⚠️ [PERSISTENCE-WEBVIEW] Failed to restore terminal ${terminal.id}: ${error}`);
     }
   }
 
-  private pendingResponses = new Map<string, { resolve: (value: any) => void; timeout: NodeJS.Timeout }>();
+  private pendingResponses = new Map<
+    string,
+    { resolve: (value: any) => void; timeout: NodeJS.Timeout }
+  >();
 
   /**
    * Extension側との通信 - 実際のレスポンスを待機
@@ -391,7 +385,7 @@ export class OptimizedPersistenceManager {
   private async sendPersistenceMessage(command: string, data?: any): Promise<any> {
     return new Promise((resolve) => {
       const messageId = `${command}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      
+
       // タイムアウト設定
       const timeout = setTimeout(() => {
         this.pendingResponses.delete(messageId);
@@ -405,7 +399,7 @@ export class OptimizedPersistenceManager {
       this.coordinator.getMessageManager().postMessage({
         command: `persistence${command.charAt(0).toUpperCase() + command.slice(1)}`,
         data,
-        messageId
+        messageId,
       });
 
       log(`📤 [PERSISTENCE-WEBVIEW] Sent message: ${command} (ID: ${messageId})`);
@@ -432,11 +426,11 @@ export class OptimizedPersistenceManager {
    */
   private startAutoSave(): void {
     this.stopAutoSave();
-    
+
     if (this.settings.autoSaveIntervalMinutes > 0) {
       const interval = this.settings.autoSaveIntervalMinutes * 60 * 1000;
       this.autoSaveTimer = setInterval(() => {
-        this.saveSession().catch(error => 
+        this.saveSession().catch((error) =>
           log(`❌ [PERSISTENCE-WEBVIEW] Auto-save failed: ${error}`)
         );
       }, interval);
@@ -479,9 +473,10 @@ export class OptimizedPersistenceManager {
   private calculateCompressionRatio(data: any[]): number {
     try {
       const original = JSON.stringify(data);
-      const compressed = this.settings.compressionEnabled ? 
-        JSON.stringify(data).replace(/\s+/g, ' ') : original;
-      
+      const compressed = this.settings.compressionEnabled
+        ? JSON.stringify(data).replace(/\s+/g, ' ')
+        : original;
+
       return original.length > 0 ? compressed.length / original.length : 1;
     } catch {
       return 1;
@@ -505,6 +500,6 @@ export class OptimizedPersistenceManager {
   }
 
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }

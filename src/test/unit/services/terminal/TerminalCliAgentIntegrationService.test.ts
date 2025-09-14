@@ -10,7 +10,7 @@ describe('TerminalCliAgentIntegrationService', () => {
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-    
+
     // Create mock CLI Agent service
     mockCliAgentService = {
       startHeartbeat: sandbox.stub(),
@@ -28,7 +28,7 @@ describe('TerminalCliAgentIntegrationService', () => {
       forceReconnectAgent: sandbox.stub(),
       clearDetectionError: sandbox.stub(),
     };
-    
+
     service = new TerminalCliAgentIntegrationService(mockCliAgentService);
   });
 
@@ -52,7 +52,7 @@ describe('TerminalCliAgentIntegrationService', () => {
   describe('startHeartbeat', () => {
     it('should start CLI Agent heartbeat', () => {
       service.startHeartbeat();
-      
+
       assert.ok(mockCliAgentService.startHeartbeat.calledOnce);
     });
   });
@@ -60,34 +60,34 @@ describe('TerminalCliAgentIntegrationService', () => {
   describe('isCliAgentConnected', () => {
     it('should return true when agent is connected', () => {
       mockCliAgentService.getAgentState.returns({ status: 'connected', agentType: 'claude' });
-      
+
       const result = service.isCliAgentConnected('terminal1');
-      
+
       assert.strictEqual(result, true);
       assert.ok(mockCliAgentService.getAgentState.calledWith('terminal1'));
     });
 
     it('should return false when agent is disconnected', () => {
       mockCliAgentService.getAgentState.returns({ status: 'disconnected', agentType: 'claude' });
-      
+
       const result = service.isCliAgentConnected('terminal1');
-      
+
       assert.strictEqual(result, false);
     });
 
     it('should return false when agent is none', () => {
       mockCliAgentService.getAgentState.returns({ status: 'none', agentType: null });
-      
+
       const result = service.isCliAgentConnected('terminal1');
-      
+
       assert.strictEqual(result, false);
     });
 
     it('should handle errors gracefully', () => {
       mockCliAgentService.getAgentState.throws(new Error('Test error'));
-      
+
       const result = service.isCliAgentConnected('terminal1');
-      
+
       assert.strictEqual(result, false);
     });
   });
@@ -95,33 +95,33 @@ describe('TerminalCliAgentIntegrationService', () => {
   describe('isCliAgentRunning', () => {
     it('should return true when agent is connected', () => {
       mockCliAgentService.getAgentState.returns({ status: 'connected', agentType: 'claude' });
-      
+
       const result = service.isCliAgentRunning('terminal1');
-      
+
       assert.strictEqual(result, true);
     });
 
     it('should return true when agent is disconnected but running', () => {
       mockCliAgentService.getAgentState.returns({ status: 'disconnected', agentType: 'claude' });
-      
+
       const result = service.isCliAgentRunning('terminal1');
-      
+
       assert.strictEqual(result, true);
     });
 
     it('should return false when agent is none', () => {
       mockCliAgentService.getAgentState.returns({ status: 'none', agentType: null });
-      
+
       const result = service.isCliAgentRunning('terminal1');
-      
+
       assert.strictEqual(result, false);
     });
 
     it('should handle errors gracefully', () => {
       mockCliAgentService.getAgentState.throws(new Error('Test error'));
-      
+
       const result = service.isCliAgentRunning('terminal1');
-      
+
       assert.strictEqual(result, false);
     });
   });
@@ -130,25 +130,25 @@ describe('TerminalCliAgentIntegrationService', () => {
     it('should return active agent info', () => {
       const agentInfo = { terminalId: 'terminal1', type: 'claude' };
       mockCliAgentService.getConnectedAgent.returns(agentInfo);
-      
+
       const result = service.getCurrentGloballyActiveAgent();
-      
+
       assert.deepStrictEqual(result, agentInfo);
     });
 
     it('should return null when no agent is connected', () => {
       mockCliAgentService.getConnectedAgent.returns(null);
-      
+
       const result = service.getCurrentGloballyActiveAgent();
-      
+
       assert.strictEqual(result, null);
     });
 
     it('should handle errors gracefully', () => {
       mockCliAgentService.getConnectedAgent.throws(new Error('Test error'));
-      
+
       const result = service.getCurrentGloballyActiveAgent();
-      
+
       assert.strictEqual(result, null);
     });
   });
@@ -156,26 +156,26 @@ describe('TerminalCliAgentIntegrationService', () => {
   describe('refreshCliAgentState', () => {
     it('should refresh CLI Agent state successfully', () => {
       mockCliAgentService.refreshAgentState.returns(true);
-      
+
       const result = service.refreshCliAgentState();
-      
+
       assert.strictEqual(result, true);
       assert.ok(mockCliAgentService.refreshAgentState.calledOnce);
     });
 
     it('should handle refresh failure', () => {
       mockCliAgentService.refreshAgentState.returns(false);
-      
+
       const result = service.refreshCliAgentState();
-      
+
       assert.strictEqual(result, false);
     });
 
     it('should handle errors gracefully', () => {
       mockCliAgentService.refreshAgentState.throws(new Error('Test error'));
-      
+
       const result = service.refreshCliAgentState();
-      
+
       assert.strictEqual(result, false);
     });
   });
@@ -183,13 +183,13 @@ describe('TerminalCliAgentIntegrationService', () => {
   describe('handleTerminalOutputForCliAgent', () => {
     it('should detect from output', () => {
       service.handleTerminalOutputForCliAgent('terminal1', 'output data');
-      
+
       assert.ok(mockCliAgentService.detectFromOutput.calledWith('terminal1', 'output data'));
     });
 
     it('should handle detection errors gracefully', () => {
       mockCliAgentService.detectFromOutput.throws(new Error('Detection error'));
-      
+
       // Should not throw
       service.handleTerminalOutputForCliAgent('terminal1', 'output data');
     });
@@ -198,13 +198,13 @@ describe('TerminalCliAgentIntegrationService', () => {
   describe('handleTerminalInputForCliAgent', () => {
     it('should detect from input', () => {
       service.handleTerminalInputForCliAgent('terminal1', 'input data');
-      
+
       assert.ok(mockCliAgentService.detectFromInput.calledWith('terminal1', 'input data'));
     });
 
     it('should handle detection errors gracefully', () => {
       mockCliAgentService.detectFromInput.throws(new Error('Detection error'));
-      
+
       // Should not throw
       service.handleTerminalInputForCliAgent('terminal1', 'input data');
     });
@@ -213,25 +213,25 @@ describe('TerminalCliAgentIntegrationService', () => {
   describe('getAgentType', () => {
     it('should return agent type', () => {
       mockCliAgentService.getAgentState.returns({ status: 'connected', agentType: 'claude' });
-      
+
       const result = service.getAgentType('terminal1');
-      
+
       assert.strictEqual(result, 'claude');
     });
 
     it('should return null when no agent', () => {
       mockCliAgentService.getAgentState.returns({ status: 'none', agentType: null });
-      
+
       const result = service.getAgentType('terminal1');
-      
+
       assert.strictEqual(result, null);
     });
 
     it('should handle errors gracefully', () => {
       mockCliAgentService.getAgentState.throws(new Error('Test error'));
-      
+
       const result = service.getAgentType('terminal1');
-      
+
       assert.strictEqual(result, null);
     });
   });
@@ -240,9 +240,9 @@ describe('TerminalCliAgentIntegrationService', () => {
     it('should return connected agents', () => {
       const connectedAgent = { terminalId: 'terminal1', type: 'claude' };
       mockCliAgentService.getConnectedAgent.returns(connectedAgent);
-      
+
       const result = service.getConnectedAgents();
-      
+
       assert.strictEqual(result.length, 1);
       assert.strictEqual(result[0]?.terminalId, 'terminal1');
       assert.strictEqual(result[0]?.agentInfo.type, 'claude');
@@ -250,17 +250,17 @@ describe('TerminalCliAgentIntegrationService', () => {
 
     it('should return empty array when no agents connected', () => {
       mockCliAgentService.getConnectedAgent.returns(null);
-      
+
       const result = service.getConnectedAgents();
-      
+
       assert.strictEqual(result.length, 0);
     });
 
     it('should handle errors gracefully', () => {
       mockCliAgentService.getConnectedAgent.throws(new Error('Test error'));
-      
+
       const result = service.getConnectedAgents();
-      
+
       assert.strictEqual(result.length, 0);
     });
   });
@@ -268,29 +268,32 @@ describe('TerminalCliAgentIntegrationService', () => {
   describe('getDisconnectedAgents', () => {
     it('should return disconnected agents map', () => {
       const disconnectedMap = new Map([
-        ['terminal1', { type: 'claude' as const, startTime: new Date(), terminalName: 'Terminal 1' }]
+        [
+          'terminal1',
+          { type: 'claude' as const, startTime: new Date(), terminalName: 'Terminal 1' },
+        ],
       ]);
       mockCliAgentService.getDisconnectedAgents.returns(disconnectedMap);
-      
+
       const result = service.getDisconnectedAgents();
-      
+
       assert.strictEqual(result.size, 1);
       assert.ok(result.has('terminal1'));
     });
 
     it('should return empty map when no disconnected agents', () => {
       mockCliAgentService.getDisconnectedAgents.returns(new Map());
-      
+
       const result = service.getDisconnectedAgents();
-      
+
       assert.strictEqual(result.size, 0);
     });
 
     it('should handle errors gracefully', () => {
       mockCliAgentService.getDisconnectedAgents.throws(new Error('Test error'));
-      
+
       const result = service.getDisconnectedAgents();
-      
+
       assert.strictEqual(result.size, 0);
     });
   });
@@ -299,25 +302,25 @@ describe('TerminalCliAgentIntegrationService', () => {
     it('should return connected agent terminal ID', () => {
       const connectedAgent = { terminalId: 'terminal1', type: 'claude' };
       mockCliAgentService.getConnectedAgent.returns(connectedAgent);
-      
+
       const result = service.getConnectedAgentTerminalId();
-      
+
       assert.strictEqual(result, 'terminal1');
     });
 
     it('should return null when no agent connected', () => {
       mockCliAgentService.getConnectedAgent.returns(null);
-      
+
       const result = service.getConnectedAgentTerminalId();
-      
+
       assert.strictEqual(result, null);
     });
 
     it('should handle errors gracefully', () => {
       mockCliAgentService.getConnectedAgent.throws(new Error('Test error'));
-      
+
       const result = service.getConnectedAgentTerminalId();
-      
+
       assert.strictEqual(result, null);
     });
   });
@@ -326,25 +329,25 @@ describe('TerminalCliAgentIntegrationService', () => {
     it('should return connected agent type', () => {
       const connectedAgent = { terminalId: 'terminal1', type: 'gemini' };
       mockCliAgentService.getConnectedAgent.returns(connectedAgent);
-      
+
       const result = service.getConnectedAgentType();
-      
+
       assert.strictEqual(result, 'gemini');
     });
 
     it('should return null when no agent connected', () => {
       mockCliAgentService.getConnectedAgent.returns(null);
-      
+
       const result = service.getConnectedAgentType();
-      
+
       assert.strictEqual(result, null);
     });
 
     it('should handle errors gracefully', () => {
       mockCliAgentService.getConnectedAgent.throws(new Error('Test error'));
-      
+
       const result = service.getConnectedAgentType();
-      
+
       assert.strictEqual(result, null);
     });
   });
@@ -352,13 +355,13 @@ describe('TerminalCliAgentIntegrationService', () => {
   describe('handleTerminalRemoved', () => {
     it('should handle terminal removal', () => {
       service.handleTerminalRemoved('terminal1');
-      
+
       assert.ok(mockCliAgentService.handleTerminalRemoved.calledWith('terminal1'));
     });
 
     it('should handle errors gracefully', () => {
       mockCliAgentService.handleTerminalRemoved.throws(new Error('Test error'));
-      
+
       // Should not throw
       service.handleTerminalRemoved('terminal1');
     });
@@ -369,12 +372,12 @@ describe('TerminalCliAgentIntegrationService', () => {
       const switchResult = {
         success: true,
         newStatus: 'connected' as const,
-        agentType: 'claude' as const
+        agentType: 'claude' as const,
       };
       mockCliAgentService.switchAgentConnection.returns(switchResult);
-      
+
       const result = service.switchAiAgentConnection('terminal1');
-      
+
       assert.deepStrictEqual(result, switchResult);
       assert.ok(mockCliAgentService.switchAgentConnection.calledWith('terminal1'));
     });
@@ -384,20 +387,20 @@ describe('TerminalCliAgentIntegrationService', () => {
         success: false,
         reason: 'Test failure',
         newStatus: 'none' as const,
-        agentType: null
+        agentType: null,
       };
       mockCliAgentService.switchAgentConnection.returns(switchResult);
-      
+
       const result = service.switchAiAgentConnection('terminal1');
-      
+
       assert.deepStrictEqual(result, switchResult);
     });
 
     it('should handle errors gracefully', () => {
       mockCliAgentService.switchAgentConnection.throws(new Error('Switch error'));
-      
+
       const result = service.switchAiAgentConnection('terminal1');
-      
+
       assert.strictEqual(result.success, false);
       assert.ok(result.reason?.includes('Switch failed'));
       assert.strictEqual(result.newStatus, 'none');
@@ -408,13 +411,13 @@ describe('TerminalCliAgentIntegrationService', () => {
   describe('dispose', () => {
     it('should dispose CLI Agent service', () => {
       service.dispose();
-      
+
       assert.ok(mockCliAgentService.dispose.calledOnce);
     });
 
     it('should handle disposal errors gracefully', () => {
       mockCliAgentService.dispose.throws(new Error('Dispose error'));
-      
+
       // Should not throw
       service.dispose();
     });
@@ -423,7 +426,7 @@ describe('TerminalCliAgentIntegrationService', () => {
   describe('Event Emitter Integration', () => {
     it('should expose onCliAgentStatusChange event', () => {
       const eventEmitter = service.onCliAgentStatusChange;
-      
+
       assert.strictEqual(eventEmitter, mockCliAgentService.onCliAgentStatusChange);
     });
   });
@@ -433,19 +436,19 @@ describe('TerminalCliAgentIntegrationService', () => {
       // Start heartbeat
       service.startHeartbeat();
       assert.ok(mockCliAgentService.startHeartbeat.calledOnce);
-      
+
       // Detect from input
       service.handleTerminalInputForCliAgent('terminal1', 'claude-code "test"');
       assert.ok(mockCliAgentService.detectFromInput.called);
-      
+
       // Check connection status
       mockCliAgentService.getAgentState.returns({ status: 'connected', agentType: 'claude' });
       assert.strictEqual(service.isCliAgentConnected('terminal1'), true);
-      
+
       // Handle terminal removal
       service.handleTerminalRemoved('terminal1');
       assert.ok(mockCliAgentService.handleTerminalRemoved.calledWith('terminal1'));
-      
+
       // Dispose
       service.dispose();
       assert.ok(mockCliAgentService.dispose.calledOnce);
@@ -453,7 +456,7 @@ describe('TerminalCliAgentIntegrationService', () => {
 
     it('should handle error scenarios throughout lifecycle', () => {
       // Make all methods throw errors
-      Object.keys(mockCliAgentService).forEach(key => {
+      Object.keys(mockCliAgentService).forEach((key) => {
         try {
           const method = mockCliAgentService[key as keyof typeof mockCliAgentService];
           if (method && typeof method === 'function' && 'throws' in method) {
@@ -463,7 +466,7 @@ describe('TerminalCliAgentIntegrationService', () => {
           // Ignore errors when setting up error scenarios
         }
       });
-      
+
       // All operations should handle errors gracefully
       service.startHeartbeat();
       assert.strictEqual(service.isCliAgentConnected('terminal1'), false);
@@ -478,10 +481,10 @@ describe('TerminalCliAgentIntegrationService', () => {
       assert.strictEqual(service.getConnectedAgentTerminalId(), null);
       assert.strictEqual(service.getConnectedAgentType(), null);
       service.handleTerminalRemoved('terminal1');
-      
+
       const switchResult = service.switchAiAgentConnection('terminal1');
       assert.strictEqual(switchResult.success, false);
-      
+
       service.dispose();
     });
   });

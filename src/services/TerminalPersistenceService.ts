@@ -1,9 +1,9 @@
 /**
  * Unified Terminal Persistence Service
- * 
+ *
  * Replaces the dual persistence managers (StandardTerminalSessionManager and StandardTerminalPersistenceManager)
  * with a single, cohesive service that handles all terminal persistence operations.
- * 
+ *
  * Key improvements:
  * - Single responsibility for all persistence operations
  * - Proper separation of concerns between Extension and WebView sides
@@ -20,7 +20,7 @@ import { log } from '../utils/logger';
 // Standardized error types for better error handling
 export class PersistenceError extends Error {
   public override readonly name = 'PersistenceError';
-  
+
   constructor(
     override message: string,
     public readonly code: PersistenceErrorCode,
@@ -38,7 +38,7 @@ export enum PersistenceErrorCode {
   WEBVIEW_COMMUNICATION_FAILED = 'WEBVIEW_COMMUNICATION_FAILED',
   SESSION_EXPIRED = 'SESSION_EXPIRED',
   TERMINAL_NOT_FOUND = 'TERMINAL_NOT_FOUND',
-  INVALID_DATA_FORMAT = 'INVALID_DATA_FORMAT'
+  INVALID_DATA_FORMAT = 'INVALID_DATA_FORMAT',
 }
 
 // Unified persistence interfaces
@@ -111,11 +111,13 @@ export interface TerminalRestoreData {
 
 /**
  * Unified Terminal Persistence Service Implementation
- * 
+ *
  * This service consolidates all persistence operations and provides a clean,
  * type-safe interface for terminal session management.
  */
-export class UnifiedTerminalPersistenceService implements ITerminalPersistenceService, IPersistenceMessageHandler {
+export class UnifiedTerminalPersistenceService
+  implements ITerminalPersistenceService, IPersistenceMessageHandler
+{
   private static readonly STORAGE_KEY = 'unified-terminal-session-v1';
   private static readonly SESSION_VERSION = '1.0.0';
   private static readonly MAX_SESSION_AGE_DAYS = 7;
@@ -135,7 +137,9 @@ export class UnifiedTerminalPersistenceService implements ITerminalPersistenceSe
   /**
    * Sets the sidebar provider for WebView communication
    */
-  public setSidebarProvider(provider: { sendMessageToWebview: (message: WebviewMessage) => Promise<void> }): void {
+  public setSidebarProvider(provider: {
+    sendMessageToWebview: (message: WebviewMessage) => Promise<void>;
+  }): void {
     this.sidebarProvider = provider;
     log('🔧 [PERSISTENCE] Sidebar provider configured');
   }
@@ -176,7 +180,7 @@ export class UnifiedTerminalPersistenceService implements ITerminalPersistenceSe
 
       // Request serialization data from WebView
       const serializationData = await this.requestSerializationFromWebView(
-        basicTerminals.map(t => t.id)
+        basicTerminals.map((t) => t.id)
       );
 
       // Create optimized session data
@@ -203,15 +207,16 @@ export class UnifiedTerminalPersistenceService implements ITerminalPersistenceSe
         terminalCount: basicTerminals.length,
       };
     } catch (error) {
-      const persistenceError = error instanceof PersistenceError 
-        ? error 
-        : new PersistenceError(
-            `Failed to save session: ${error}`,
-            PersistenceErrorCode.STORAGE_ACCESS_FAILED,
-            undefined,
-            error instanceof Error ? error : undefined
-          );
-      
+      const persistenceError =
+        error instanceof PersistenceError
+          ? error
+          : new PersistenceError(
+              `Failed to save session: ${error}`,
+              PersistenceErrorCode.STORAGE_ACCESS_FAILED,
+              undefined,
+              error instanceof Error ? error : undefined
+            );
+
       log(`❌ [PERSISTENCE] Save failed: ${persistenceError.message}`);
       return {
         success: false,
@@ -304,14 +309,15 @@ export class UnifiedTerminalPersistenceService implements ITerminalPersistenceSe
         skippedCount: sessionData.terminals.length - restoredCount,
       };
     } catch (error) {
-      const persistenceError = error instanceof PersistenceError
-        ? error
-        : new PersistenceError(
-            `Failed to restore session: ${error}`,
-            PersistenceErrorCode.DESERIALIZATION_FAILED,
-            undefined,
-            error instanceof Error ? error : undefined
-          );
+      const persistenceError =
+        error instanceof PersistenceError
+          ? error
+          : new PersistenceError(
+              `Failed to restore session: ${error}`,
+              PersistenceErrorCode.DESERIALIZATION_FAILED,
+              undefined,
+              error instanceof Error ? error : undefined
+            );
 
       log(`❌ [PERSISTENCE] Restore failed: ${persistenceError.message}`);
       return {
@@ -416,10 +422,12 @@ export class UnifiedTerminalPersistenceService implements ITerminalPersistenceSe
 
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
-        reject(new PersistenceError(
-          'Serialization request timeout',
-          PersistenceErrorCode.WEBVIEW_COMMUNICATION_FAILED
-        ));
+        reject(
+          new PersistenceError(
+            'Serialization request timeout',
+            PersistenceErrorCode.WEBVIEW_COMMUNICATION_FAILED
+          )
+        );
       }, 10000); // 10 second timeout
 
       // Set up temporary response handler
@@ -440,20 +448,25 @@ export class UnifiedTerminalPersistenceService implements ITerminalPersistenceSe
         command: 'requestTerminalSerialization',
         terminalIds,
         timestamp: Date.now(),
-      }).then(() => {
-        // Wait for response
-        return this.pendingSerializationPromise!;
-      }).then(resolve).catch((error) => {
-        clearTimeout(timeout);
-        reject(error);
-      });
+      })
+        .then(() => {
+          // Wait for response
+          return this.pendingSerializationPromise!;
+        })
+        .then(resolve)
+        .catch((error) => {
+          clearTimeout(timeout);
+          reject(error);
+        });
     });
   }
 
   /**
    * Handles restoration requests to WebView
    */
-  public async handleRestorationRequest(terminalData: TerminalRestoreData[]): Promise<RestoreResult> {
+  public async handleRestorationRequest(
+    terminalData: TerminalRestoreData[]
+  ): Promise<RestoreResult> {
     if (!this.sidebarProvider) {
       throw new PersistenceError(
         'No sidebar provider available',
@@ -571,7 +584,9 @@ export class UnifiedTerminalPersistenceService implements ITerminalPersistenceSe
         if (deleteResult.success) {
           log(`✅ [PERSISTENCE] Cleaned up terminal: ${terminal.id}`);
         } else {
-          log(`⚠️ [PERSISTENCE] Failed to clean up terminal ${terminal.id}: ${deleteResult.reason}`);
+          log(
+            `⚠️ [PERSISTENCE] Failed to clean up terminal ${terminal.id}: ${deleteResult.reason}`
+          );
         }
       } catch (error) {
         log(`❌ [PERSISTENCE] Error cleaning up terminal ${terminal.id}: ${error}`);
@@ -620,7 +635,8 @@ export class UnifiedTerminalPersistenceService implements ITerminalPersistenceSe
           metadata: {
             lines: (terminalData.content.match(/\n/g) || []).length,
             size: terminalData.content.length,
-            compressed: terminalData.content.length > UnifiedTerminalPersistenceService.COMPRESSION_THRESHOLD,
+            compressed:
+              terminalData.content.length > UnifiedTerminalPersistenceService.COMPRESSION_THRESHOLD,
           },
         };
       }

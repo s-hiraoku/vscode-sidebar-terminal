@@ -35,7 +35,12 @@ export interface IManagerCoordinator {
   getTerminalElement(terminalId: string): HTMLElement | undefined;
   postMessageToExtension(message: unknown): void;
   log(message: string, ...args: unknown[]): void;
-  createTerminal(id: string, name: string, config?: unknown, terminalNumber?: number): Promise<unknown>;
+  createTerminal(
+    id: string,
+    name: string,
+    config?: unknown,
+    terminalNumber?: number
+  ): Promise<unknown>;
   openSettings(): void;
   applyFontSettings(fontSettings: WebViewFontSettings): void;
   closeTerminal(id?: string): void;
@@ -83,7 +88,12 @@ export interface IManagerCoordinator {
 
 // Terminal management interface
 export interface ITerminalManager {
-  createTerminal(id: string, name: string, config: PartialTerminalSettings, terminalNumber?: number): Promise<void>;
+  createTerminal(
+    id: string,
+    name: string,
+    config: PartialTerminalSettings,
+    terminalNumber?: number
+  ): Promise<void>;
   switchToTerminal(id: string): void;
   closeTerminal(id?: string): void;
   handleTerminalRemovedFromExtension(id: string): void;
@@ -166,7 +176,11 @@ export interface IUIManager {
   applyFontSettings(terminal: Terminal, fontSettings: WebViewFontSettings): void;
   applyAllVisualSettings(terminal: Terminal, settings: PartialTerminalSettings): void;
   addFocusIndicator(container: HTMLElement): void;
-  createTerminalHeader(terminalId: string, terminalName: string, onAiAgentToggleClick?: (terminalId: string) => void): HTMLElement;
+  createTerminalHeader(
+    terminalId: string,
+    terminalName: string,
+    onAiAgentToggleClick?: (terminalId: string) => void
+  ): HTMLElement;
   updateTerminalHeader(terminalId: string, newName: string): void;
   updateCliAgentStatusDisplay(
     activeTerminalName: string | null,
@@ -207,8 +221,8 @@ export interface IMessageManager {
     data: unknown,
     coordinator: IManagerCoordinator
   ): void;
-  getQueueStats(): { 
-    queueSize: number; 
+  getQueueStats(): {
+    queueSize: number;
     isProcessing: boolean;
     highPriorityQueueSize?: number;
     isLocked?: boolean;
@@ -238,8 +252,8 @@ export interface INotificationManager {
   showWarning(message: string): void;
   clearNotifications(): void;
   clearWarnings(): void;
-  getStats(): { 
-    activeCount: number; 
+  getStats(): {
+    activeCount: number;
     totalCreated: number;
     totalOperations?: number;
   };

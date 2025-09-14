@@ -33,7 +33,7 @@ export interface ErrorHtmlOptions {
 
 /**
  * Service responsible for generating WebView HTML content
- * 
+ *
  * This service extracts HTML generation logic from SecondaryTerminalProvider to improve:
  * - Single Responsibility: Focus only on HTML generation and CSP management
  * - Testability: Isolated HTML generation logic with configurable options
@@ -42,7 +42,6 @@ export interface ErrorHtmlOptions {
  * - Maintainability: All HTML/CSS logic in one place for easy updates
  */
 export class WebViewHtmlGenerationService {
-  
   /**
    * Generate the main WebView HTML content
    */
@@ -51,25 +50,25 @@ export class WebViewHtmlGenerationService {
       log('🎨 [HtmlGeneration] Generating main WebView HTML');
 
       const { webview, extensionUri } = options;
-      
+
       // Generate script URI
       const scriptUri = this._generateScriptUri(webview, extensionUri);
-      
+
       // Generate nonce for CSP
       const nonce = generateNonce();
-      
+
       // Generate CSP header
       const csp = this._generateCSPHeader(webview, nonce);
-      
+
       // Generate styles
       const styles = this._generateMainStyles(options);
-      
+
       // Generate body content
       const bodyContent = this._generateBodyContent();
-      
+
       // Generate inline scripts
       const inlineScripts = this._generateInlineScripts(nonce);
-      
+
       // Generate main script tags
       const scriptTags = this._generateScriptTags(nonce, scriptUri);
 
@@ -93,7 +92,6 @@ export class WebViewHtmlGenerationService {
 
       log(`✅ [HtmlGeneration] Main HTML generated successfully (${html.length} chars)`);
       return html;
-
     } catch (error) {
       log('❌ [HtmlGeneration] Failed to generate main HTML:', error);
       throw new Error(`HTML generation failed: ${String(error)}`);
@@ -107,7 +105,7 @@ export class WebViewHtmlGenerationService {
     const {
       title = 'Terminal Loading...',
       message = 'Please wait while the terminal initializes.',
-      isLoading = true
+      isLoading = true,
     } = options;
 
     const loadingIndicator = isLoading ? '🔄' : '⚠️';
@@ -136,11 +134,7 @@ export class WebViewHtmlGenerationService {
    * Generate error HTML for critical failures
    */
   generateErrorHtml(options: ErrorHtmlOptions): string {
-    const {
-      error,
-      allowRetry = false,
-      customMessage
-    } = options;
+    const { error, allowRetry = false, customMessage } = options;
 
     const errorMessage = error instanceof Error ? error.message : String(error);
     const displayMessage = customMessage || `Terminal initialization failed: ${errorMessage}`;
@@ -197,7 +191,7 @@ export class WebViewHtmlGenerationService {
 
     return {
       isValid: errors.length === 0,
-      errors
+      errors,
     };
   }
 

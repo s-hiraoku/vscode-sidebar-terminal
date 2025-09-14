@@ -7,7 +7,7 @@ import { showSuccess, showError } from '../../utils/feedback';
 
 /**
  * Manages all WebView settings functionality
- * 
+ *
  * This service extracts settings management logic from SecondaryTerminalProvider
  * to provide a focused, testable settings management system.
  */
@@ -41,7 +41,7 @@ export class WebViewSettingsManagerService implements IWebViewSettingsManager {
       };
     } catch (error) {
       log('❌ [SettingsManager] Error getting current settings:', error);
-      
+
       // Return sensible defaults
       return {
         cursorBlink: true,
@@ -72,7 +72,7 @@ export class WebViewSettingsManagerService implements IWebViewSettingsManager {
       };
     } catch (error) {
       log('❌ [SettingsManager] Error getting font settings:', error);
-      
+
       // Return sensible defaults
       return {
         fontSize: 14,
@@ -140,7 +140,10 @@ export class WebViewSettingsManagerService implements IWebViewSettingsManager {
           settings.enableCliAgentIntegration,
           vscode.ConfigurationTarget.Global
         );
-        log('✅ [SettingsManager] Updated CLI Agent integration:', settings.enableCliAgentIntegration);
+        log(
+          '✅ [SettingsManager] Updated CLI Agent integration:',
+          settings.enableCliAgentIntegration
+        );
       }
 
       if (settings.dynamicSplitDirection !== undefined) {
@@ -149,7 +152,10 @@ export class WebViewSettingsManagerService implements IWebViewSettingsManager {
           settings.dynamicSplitDirection,
           vscode.ConfigurationTarget.Global
         );
-        log('✅ [SettingsManager] Updated dynamic split direction:', settings.dynamicSplitDirection);
+        log(
+          '✅ [SettingsManager] Updated dynamic split direction:',
+          settings.dynamicSplitDirection
+        );
       }
 
       if (settings.panelLocation !== undefined) {
@@ -163,7 +169,6 @@ export class WebViewSettingsManagerService implements IWebViewSettingsManager {
 
       log('✅ [SettingsManager] All settings updated successfully');
       showSuccess('Settings updated successfully');
-
     } catch (error) {
       log('❌ [SettingsManager] Failed to update settings:', error);
       showError(`Failed to update settings: ${String(error)}`);
@@ -232,23 +237,27 @@ export class WebViewSettingsManagerService implements IWebViewSettingsManager {
       if (shouldUpdateSettings) {
         log('⚙️ [SettingsManager] Sending settings update to WebView');
         const settings = this.getCurrentSettings();
-        context.sendMessage({
-          command: 'settingsResponse',
-          settings,
-        }).catch(error => {
-          log('❌ [SettingsManager] Failed to send settings update:', error);
-        });
+        context
+          .sendMessage({
+            command: 'settingsResponse',
+            settings,
+          })
+          .catch((error) => {
+            log('❌ [SettingsManager] Failed to send settings update:', error);
+          });
       }
 
       if (shouldUpdateFontSettings) {
         log('🎨 [SettingsManager] Sending font settings update to WebView');
         const fontSettings = this.getCurrentFontSettings();
-        context.sendMessage({
-          command: 'fontSettingsUpdate',
-          fontSettings,
-        }).catch(error => {
-          log('❌ [SettingsManager] Failed to send font settings update:', error);
-        });
+        context
+          .sendMessage({
+            command: 'fontSettingsUpdate',
+            fontSettings,
+          })
+          .catch((error) => {
+            log('❌ [SettingsManager] Failed to send font settings update:', error);
+          });
       }
 
       // Handle panel location setting changes (Issue #148)
@@ -266,7 +275,7 @@ export class WebViewSettingsManagerService implements IWebViewSettingsManager {
 
     // Add to extension context subscriptions
     context.extensionContext.subscriptions.push(this._configChangeListener);
-    
+
     log('✅ [SettingsManager] Configuration change listeners setup complete');
     return this._configChangeListener;
   }
@@ -320,7 +329,6 @@ export class WebViewSettingsManagerService implements IWebViewSettingsManager {
       }
 
       log('✅ [SettingsManager] All settings sent to WebView successfully');
-
     } catch (error) {
       log('❌ [SettingsManager] Error sending settings to WebView:', error);
       throw error;

@@ -128,7 +128,7 @@ describe('PerformanceManager', () => {
         performanceManager.scheduleOutputBuffer('b'.repeat(15), mockTerminal as any); // Medium size - will be buffered
         // Don't tick clock - we want these to accumulate in buffer
       }
-      
+
       // At this point buffer should have 50 items and no writes yet
       expect(mockTerminal.write.called).to.be.false;
 
@@ -259,7 +259,7 @@ describe('PerformanceManager', () => {
       // Buffer multiple outputs (use medium size that gets buffered, not small inputs)
       const output1 = 'a'.repeat(25); // Medium size - will be buffered
       const output2 = 'b'.repeat(25); // Medium size - will be buffered
-      
+
       performanceManager.scheduleOutputBuffer(output1, mockTerminal as any);
       performanceManager.scheduleOutputBuffer(output2, mockTerminal as any);
 

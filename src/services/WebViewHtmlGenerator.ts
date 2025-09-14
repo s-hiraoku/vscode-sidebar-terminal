@@ -4,7 +4,7 @@ import { provider as log } from '../utils/logger';
 
 /**
  * WebView HTML Generator Service
- * 
+ *
  * Extracted from SecondaryTerminalProvider to handle:
  * - HTML template generation for WebView
  * - CSS styling and theming
@@ -83,7 +83,11 @@ export class WebViewHtmlGenerator implements IWebViewHtmlGenerator {
 
   private getScriptUri(webview: vscode.Webview): vscode.Uri {
     try {
-      const webviewJsPath = vscode.Uri.joinPath(this.extensionContext.extensionUri, 'dist', 'webview.js');
+      const webviewJsPath = vscode.Uri.joinPath(
+        this.extensionContext.extensionUri,
+        'dist',
+        'webview.js'
+      );
       return webview.asWebviewUri(webviewJsPath);
     } catch (error) {
       log('❌ [HTML-GENERATOR] Failed to create script URI:', error);
@@ -118,7 +122,7 @@ export class WebViewHtmlGenerator implements IWebViewHtmlGenerator {
       "default-src 'none'",
       `style-src ${cspSource} 'unsafe-inline'`,
       `script-src 'nonce-${nonce}' ${cspSource}`,
-      `font-src ${cspSource}`
+      `font-src ${cspSource}`,
     ].join('; ');
   }
 
@@ -479,11 +483,11 @@ export class WebViewHtmlGenerator implements IWebViewHtmlGenerator {
 
   private escapeHtml(unsafe: string): string {
     return unsafe
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
   }
 
   /**
@@ -491,7 +495,7 @@ export class WebViewHtmlGenerator implements IWebViewHtmlGenerator {
    */
   public generateDevelopmentHtml(webview: vscode.Webview): string {
     const baseHtml = this.generateHtml(webview);
-    
+
     // Add development-specific scripts and styles
     const developmentExtensions = `
       <script nonce="${generateNonce()}">
@@ -535,7 +539,7 @@ export class WebViewHtmlGenerator implements IWebViewHtmlGenerator {
    */
   public generateThemedHtml(webview: vscode.Webview, theme: 'light' | 'dark' | 'auto'): string {
     const baseHtml = this.generateHtml(webview);
-    
+
     let themeStyles = '';
     if (theme === 'light') {
       themeStyles = this.generateLightThemeOverrides();

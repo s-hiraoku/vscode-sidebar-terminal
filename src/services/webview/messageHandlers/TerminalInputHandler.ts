@@ -8,9 +8,7 @@ import { TERMINAL_CONSTANTS } from '../../../constants';
  * Handles terminal input messages from WebView
  */
 export class TerminalInputHandler extends BaseMessageHandler {
-  protected readonly supportedCommands = [
-    TERMINAL_CONSTANTS?.COMMANDS?.INPUT || 'input'
-  ];
+  protected readonly supportedCommands = [TERMINAL_CONSTANTS?.COMMANDS?.INPUT || 'input'];
 
   async handle(message: WebviewMessage, context: IMessageHandlerContext): Promise<void> {
     this.logMessageHandling(message, 'TerminalInput');
@@ -21,14 +19,15 @@ export class TerminalInputHandler extends BaseMessageHandler {
         return;
       }
 
-      log(`⌨️ [TerminalInput] Sending input: ${message.data.length} chars to terminal: ${message.terminalId || 'active'}`);
+      log(
+        `⌨️ [TerminalInput] Sending input: ${message.data.length} chars to terminal: ${message.terminalId || 'active'}`
+      );
 
       // Send input to terminal manager
       context.terminalManager.sendInput(message.data, message.terminalId);
 
       // Log successful input handling
       log(`✅ [TerminalInput] Successfully sent input to terminal`);
-
     } catch (error) {
       await this.handleError(error, message, 'TerminalInput');
     }

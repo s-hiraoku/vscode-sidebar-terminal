@@ -121,7 +121,9 @@
       "Bash(gh pr diff:*)",
       "Bash(gh pr checkout:*)",
       "Bash(git fetch:*)",
-      "mcp__github-server__get_pull_request"
+      "mcp__github-server__get_pull_request",
+      "Bash(npm:*)",
+      "Bash(npx @vscode/vsce ls:*)"
     ],
     "deny": []
   },

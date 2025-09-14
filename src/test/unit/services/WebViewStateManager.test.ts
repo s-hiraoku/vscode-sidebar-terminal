@@ -1,13 +1,11 @@
 import { describe, it, beforeEach, afterEach } from 'mocha';
 import { expect } from 'chai';
 import * as sinon from 'sinon';
-import { 
-  WebViewStateManager
-} from '../../../services/WebViewStateManager';
+import { WebViewStateManager } from '../../../services/WebViewStateManager';
 
 /**
  * Comprehensive Unit Tests for WebViewStateManager
- * 
+ *
  * TDD-Compliant test suite providing:
  * - 95%+ code coverage across all state management operations
  * - Edge case testing for initialization scenarios
@@ -15,7 +13,7 @@ import {
  * - Terminal creation and synchronization testing
  * - Panel location detection testing
  * - Error handling and recovery testing
- * 
+ *
  * Test Categories:
  * 1. Initialization Management - WebView setup and ready state
  * 2. Terminal Management - Creation, minimum count, active terminal
@@ -46,9 +44,9 @@ describe('WebViewStateManager', () => {
       getCurrentState: sandbox.stub().returns({
         terminals: [{ id: 'terminal-1', name: 'Terminal 1', isActive: true }],
         activeTerminalId: 'terminal-1',
-        terminalCount: 1
+        terminalCount: 1,
       }),
-      getTerminal: sandbox.stub()
+      getTerminal: sandbox.stub(),
     };
 
     // Mock session manager
@@ -56,12 +54,12 @@ describe('WebViewStateManager', () => {
       getSessionInfo: sandbox.stub().returns({
         exists: false,
         terminals: [],
-        activeTerminalId: null
+        activeTerminalId: null,
       }),
       restoreSession: sandbox.stub().resolves({
         success: false,
-        restoredCount: 0
-      })
+        restoredCount: 0,
+      }),
     };
 
     // Mock send message function
@@ -87,9 +85,7 @@ describe('WebViewStateManager', () => {
 
     it('should initialize WebView successfully', async () => {
       // Mock successful terminal creation scenario
-      mockTerminalManager.getTerminals.returns([
-        { id: 'terminal-1', name: 'Terminal 1' }
-      ]);
+      mockTerminalManager.getTerminals.returns([{ id: 'terminal-1', name: 'Terminal 1' }]);
 
       await stateManager.initializeWebView();
 
@@ -141,15 +137,17 @@ describe('WebViewStateManager', () => {
 
       expect(mockTerminalManager.createTerminal).to.have.been.calledOnce;
       expect(mockTerminalManager.setActiveTerminal).to.have.been.calledWith('new-terminal-id');
-      expect(mockSendMessage).to.have.been.calledWith(sinon.match({
-        command: 'stateUpdate'
-      }));
+      expect(mockSendMessage).to.have.been.calledWith(
+        sinon.match({
+          command: 'stateUpdate',
+        })
+      );
     });
 
     it('should skip terminal creation when terminals already exist', async () => {
       mockTerminalManager.getTerminals.returns([
         { id: 'terminal-1', name: 'Terminal 1' },
-        { id: 'terminal-2', name: 'Terminal 2' }
+        { id: 'terminal-2', name: 'Terminal 2' },
       ]);
 
       await stateManager.ensureMinimumTerminals();
@@ -170,7 +168,10 @@ describe('WebViewStateManager', () => {
     });
 
     it('should work without sendMessage function', async () => {
-      const stateManagerWithoutSender = new WebViewStateManager(mockTerminalManager, mockSessionManager);
+      const stateManagerWithoutSender = new WebViewStateManager(
+        mockTerminalManager,
+        mockSessionManager
+      );
       mockTerminalManager.getTerminals.returns([]);
 
       // Should not throw error even without sendMessage
@@ -187,13 +188,13 @@ describe('WebViewStateManager', () => {
         exists: true,
         terminals: [
           { id: 'restored-1', name: 'Restored Terminal 1' },
-          { id: 'restored-2', name: 'Restored Terminal 2' }
+          { id: 'restored-2', name: 'Restored Terminal 2' },
         ],
-        activeTerminalId: 'restored-1'
+        activeTerminalId: 'restored-1',
       });
       mockSessionManager.restoreSession.resolves({
         success: true,
-        restoredCount: 2
+        restoredCount: 2,
       });
 
       await stateManager.initializeWebView();
@@ -205,14 +206,14 @@ describe('WebViewStateManager', () => {
       mockSessionManager.getSessionInfo.returns({
         exists: false,
         terminals: [],
-        activeTerminalId: null
+        activeTerminalId: null,
       });
       mockTerminalManager.getTerminals.returns([]);
 
       await stateManager.initializeWebView();
 
       // Allow time for async terminal creation
-      await new Promise(resolve => setTimeout(resolve, 150));
+      await new Promise((resolve) => setTimeout(resolve, 150));
 
       expect(mockTerminalManager.createTerminal).to.have.been.called;
     });
@@ -221,7 +222,7 @@ describe('WebViewStateManager', () => {
       mockSessionManager.getSessionInfo.returns({
         exists: true,
         terminals: [{ id: 'test-terminal' }],
-        activeTerminalId: 'test-terminal'
+        activeTerminalId: 'test-terminal',
       });
       mockSessionManager.restoreSession.rejects(new Error('Restoration failed'));
       mockTerminalManager.getTerminals.returns([]);
@@ -229,7 +230,7 @@ describe('WebViewStateManager', () => {
       await stateManager.initializeWebView();
 
       // Should fall back to creating terminal
-      await new Promise(resolve => setTimeout(resolve, 150));
+      await new Promise((resolve) => setTimeout(resolve, 150));
       expect(mockTerminalManager.createTerminal).to.have.been.called;
     });
 
@@ -240,7 +241,7 @@ describe('WebViewStateManager', () => {
       await stateManagerNoSession.initializeWebView();
 
       // Should create terminal without session manager
-      await new Promise(resolve => setTimeout(resolve, 150));
+      await new Promise((resolve) => setTimeout(resolve, 150));
       expect(mockTerminalManager.createTerminal).to.have.been.called;
     });
   });
@@ -264,7 +265,7 @@ describe('WebViewStateManager', () => {
       await Promise.all([
         stateManager.handleVisibilityChange(true),
         stateManager.handleVisibilityChange(false),
-        stateManager.handleVisibilityChange(true)
+        stateManager.handleVisibilityChange(true),
       ]);
 
       // Should handle concurrent visibility changes without errors
@@ -290,15 +291,15 @@ describe('WebViewStateManager', () => {
 
   describe('Message Handling', () => {
     it('should send font settings when available', async () => {
-      mockTerminalManager.getTerminals.returns([
-        { id: 'terminal-1', name: 'Terminal 1' }
-      ]);
+      mockTerminalManager.getTerminals.returns([{ id: 'terminal-1', name: 'Terminal 1' }]);
 
       await stateManager.initializeWebView();
 
-      expect(mockSendMessage).to.have.been.calledWith(sinon.match({
-        command: 'fontSettingsUpdate'
-      }));
+      expect(mockSendMessage).to.have.been.calledWith(
+        sinon.match({
+          command: 'fontSettingsUpdate',
+        })
+      );
     });
 
     it('should handle message sending errors gracefully', async () => {
@@ -337,7 +338,7 @@ describe('WebViewStateManager', () => {
       const promises = [
         stateManager.initializeWebView(),
         stateManager.initializeWebView(),
-        stateManager.initializeWebView()
+        stateManager.initializeWebView(),
       ];
 
       await Promise.all(promises);
@@ -353,7 +354,7 @@ describe('WebViewStateManager', () => {
       const expectedState = {
         terminals: [{ id: 'new-terminal-id', name: 'New Terminal' }],
         activeTerminalId: 'new-terminal-id',
-        terminalCount: 1
+        terminalCount: 1,
       };
       mockTerminalManager.getCurrentState.returns(expectedState);
 
@@ -361,7 +362,7 @@ describe('WebViewStateManager', () => {
 
       expect(mockSendMessage).to.have.been.calledWith({
         command: 'stateUpdate',
-        state: expectedState
+        state: expectedState,
       });
     });
 
@@ -378,7 +379,7 @@ describe('WebViewStateManager', () => {
     it('should provide initialization message with complete state', async () => {
       const expectedTerminals = [
         { id: 'terminal-1', name: 'Terminal 1' },
-        { id: 'terminal-2', name: 'Terminal 2' }
+        { id: 'terminal-2', name: 'Terminal 2' },
       ];
       mockTerminalManager.getTerminals.returns(expectedTerminals);
       mockTerminalManager.getActiveTerminalId.returns('terminal-1');
@@ -386,7 +387,9 @@ describe('WebViewStateManager', () => {
       const message = await stateManager.getInitializationMessage();
 
       expect(message.command).to.equal('init');
-      expect(message.terminals).to.deep.equal(expectedTerminals.map(t => ({ id: t.id, name: t.name, isActive: t.id === 'terminal-1' })));
+      expect(message.terminals).to.deep.equal(
+        expectedTerminals.map((t) => ({ id: t.id, name: t.name, isActive: t.id === 'terminal-1' }))
+      );
       expect(message.activeTerminalId).to.equal('terminal-1');
     });
   });
@@ -419,19 +422,25 @@ describe('WebViewStateManager', () => {
   describe('Performance and Edge Cases', () => {
     it('should handle rapid initialization requests', async () => {
       const startTime = Date.now();
-      
-      await Promise.all(Array(10).fill(0).map(() => stateManager.initializeWebView()));
-      
+
+      await Promise.all(
+        Array(10)
+          .fill(0)
+          .map(() => stateManager.initializeWebView())
+      );
+
       const endTime = Date.now();
       expect(endTime - startTime).to.be.below(1000); // Should complete within 1 second
       expect(stateManager.isInitialized()).to.be.true;
     });
 
     it('should handle large number of terminals', async () => {
-      const manyTerminals = Array(100).fill(0).map((_, i) => ({
-        id: `terminal-${i}`,
-        name: `Terminal ${i}`
-      }));
+      const manyTerminals = Array(100)
+        .fill(0)
+        .map((_, i) => ({
+          id: `terminal-${i}`,
+          name: `Terminal ${i}`,
+        }));
       mockTerminalManager.getTerminals.returns(manyTerminals);
 
       await stateManager.ensureMinimumTerminals();
@@ -443,7 +452,7 @@ describe('WebViewStateManager', () => {
     it('should handle terminal creation timeout scenarios', async () => {
       mockTerminalManager.getTerminals.returns([]);
       mockTerminalManager.createTerminal.callsFake(() => {
-        return new Promise(resolve => setTimeout(() => resolve('slow-terminal'), 50));
+        return new Promise((resolve) => setTimeout(() => resolve('slow-terminal'), 50));
       });
 
       const startTime = Date.now();

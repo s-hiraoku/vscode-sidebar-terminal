@@ -27,18 +27,23 @@ export interface DecorationSettings {
 
 export class TerminalDecorationsService {
   private readonly _decorations = new Map<string, CommandDecoration[]>();
-  private readonly _decorationEmitter = new vscode.EventEmitter<{ terminalId: string; decorations: CommandDecoration[] }>();
+  private readonly _decorationEmitter = new vscode.EventEmitter<{
+    terminalId: string;
+    decorations: CommandDecoration[];
+  }>();
   private _settings: DecorationSettings;
 
   public readonly onDecorationsChanged = this._decorationEmitter.event;
 
   constructor() {
     this._settings = this.loadSettings();
-    
+
     // Monitor configuration changes
-    vscode.workspace.onDidChangeConfiguration(e => {
-      if (e.affectsConfiguration('secondaryTerminal.decorations') ||
-          e.affectsConfiguration('terminal.integrated.shellIntegration.decorationsEnabled')) {
+    vscode.workspace.onDidChangeConfiguration((e) => {
+      if (
+        e.affectsConfiguration('secondaryTerminal.decorations') ||
+        e.affectsConfiguration('terminal.integrated.shellIntegration.decorationsEnabled')
+      ) {
         this._settings = this.loadSettings();
         log('🎨 [DECORATIONS] Settings updated:', this._settings);
       }
@@ -50,11 +55,14 @@ export class TerminalDecorationsService {
    */
   private loadSettings(): DecorationSettings {
     const config = vscode.workspace.getConfiguration();
-    
+
     // Check VS Code standard setting first
-    const vscodeDecorations = config.get<boolean>('terminal.integrated.shellIntegration.decorationsEnabled', true);
+    const vscodeDecorations = config.get<boolean>(
+      'terminal.integrated.shellIntegration.decorationsEnabled',
+      true
+    );
     const sidebarConfig = config.get<any>('secondaryTerminal.decorations', {});
-    
+
     return {
       enabled: sidebarConfig.enabled ?? vscodeDecorations,
       showInGutter: sidebarConfig.showInGutter ?? true,
@@ -80,16 +88,18 @@ export class TerminalDecorationsService {
 
     const terminalDecorations = this._decorations.get(decoration.terminalId) || [];
     terminalDecorations.push(fullDecoration);
-    
+
     // Keep only last 100 decorations per terminal for performance
     if (terminalDecorations.length > 100) {
       terminalDecorations.splice(0, terminalDecorations.length - 100);
     }
-    
+
     this._decorations.set(decoration.terminalId, terminalDecorations);
-    
-    log(`🎨 [DECORATIONS] Added ${decoration.status} decoration for terminal ${decoration.terminalId}: ${decoration.command || 'unknown'}`);
-    
+
+    log(
+      `🎨 [DECORATIONS] Added ${decoration.status} decoration for terminal ${decoration.terminalId}: ${decoration.command || 'unknown'}`
+    );
+
     this._decorationEmitter.fire({
       terminalId: decoration.terminalId,
       decorations: [...terminalDecorations],
@@ -103,13 +113,13 @@ export class TerminalDecorationsService {
     const decorations = this._decorations.get(terminalId);
     if (!decorations) return;
 
-    const decoration = decorations.find(d => d.commandId === commandId && d.status === 'running');
+    const decoration = decorations.find((d) => d.commandId === commandId && d.status === 'running');
     if (decoration) {
       decoration.status = exitCode === 0 ? 'success' : 'error';
       decoration.exitCode = exitCode;
-      
+
       log(`🎨 [DECORATIONS] Completed command ${commandId} with exit code ${exitCode}`);
-      
+
       this._decorationEmitter.fire({
         terminalId,
         decorations: [...decorations],
@@ -158,7 +168,7 @@ export class TerminalDecorationsService {
     if (commandStartMatch) {
       const command = commandStartMatch[1] || 'unknown';
       const commandId = `${terminalId}-${Date.now()}`;
-      
+
       this.addDecoration({
         terminalId,
         commandId,
@@ -173,13 +183,13 @@ export class TerminalDecorationsService {
     const commandEndMatch = data.match(commandEndPattern);
     if (commandEndMatch) {
       const exitCode = parseInt(commandEndMatch[1] || '0', 10);
-      
+
       // Find the most recent running command for this terminal
       const decorations = this._decorations.get(terminalId) || [];
       const runningDecoration = decorations
-        .filter(d => d.status === 'running')
+        .filter((d) => d.status === 'running')
         .sort((a, b) => b.timestamp - a.timestamp)[0];
-        
+
       if (runningDecoration) {
         this.completeCommand(terminalId, runningDecoration.commandId, exitCode);
       }

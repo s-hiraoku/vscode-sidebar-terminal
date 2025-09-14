@@ -92,7 +92,7 @@ describe('PerformanceUtils', () => {
       // Mock window.setTimeout for throttle function
       (global as any).window = {
         setTimeout: sinon.stub().callsFake((fn, delay) => setTimeout(fn, delay)),
-        clearTimeout: sinon.stub().callsFake(clearTimeout)
+        clearTimeout: sinon.stub().callsFake(clearTimeout),
       };
     });
 
@@ -101,10 +101,10 @@ describe('PerformanceUtils', () => {
       const throttledFn = PerformanceUtils.throttle(mockFn, 100);
 
       expect(throttledFn).to.be.a('function');
-      
+
       // Call immediately - should execute right away
       throttledFn('test1');
-      
+
       // At minimum, verify function was created successfully
       expect(mockFn).to.have.been.called;
     });
@@ -120,7 +120,7 @@ describe('PerformanceUtils', () => {
       // Rapid subsequent calls within throttle period
       throttledFn('second');
       throttledFn('third');
-      
+
       // Should still only have been called once immediately
       expect(mockFn).to.have.been.calledOnce;
     });
@@ -134,7 +134,7 @@ describe('PerformanceUtils', () => {
 
       // Advance timers to trigger the setTimeout fallback
       clock.tick(1);
-      
+
       expect(callback).to.have.been.called;
     });
 
@@ -144,7 +144,7 @@ describe('PerformanceUtils', () => {
       PerformanceUtils.requestIdleCallback(callback, 100);
 
       clock.tick(1);
-      
+
       expect(callback).to.have.been.called;
     });
   });
@@ -190,13 +190,13 @@ describe('PerformanceUtils', () => {
     it('should handle missing performance.memory', () => {
       // Save original performance
       const originalPerf = (global as any).performance;
-      
+
       // Set performance without memory property
       (global as any).performance = {};
 
       const usage = PerformanceUtils.getMemoryUsage();
       expect(usage).to.be.null;
-      
+
       // Restore original performance
       (global as any).performance = originalPerf;
     });
@@ -206,7 +206,7 @@ describe('PerformanceUtils', () => {
     it('should clone simple objects', () => {
       const original = { name: 'test', value: 42 };
       const cloned = PerformanceUtils.deepClone(original);
-      
+
       expect(cloned).to.not.equal(original);
       expect(cloned).to.deep.equal(original);
     });
@@ -214,7 +214,7 @@ describe('PerformanceUtils', () => {
     it('should clone arrays', () => {
       const original = [1, 2, { nested: 'value' }];
       const cloned = PerformanceUtils.deepClone(original);
-      
+
       expect(cloned).to.not.equal(original);
       expect(cloned).to.deep.equal(original);
       expect(cloned[2]).to.not.equal(original[2]);

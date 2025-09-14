@@ -24,7 +24,7 @@ export class ProfileSelector {
    * Show the profile selector
    */
   public show(
-    profiles: ITerminalProfile[], 
+    profiles: ITerminalProfile[],
     selectedProfileId?: string,
     onProfileSelected?: (profileId: string) => void,
     onClosed?: () => void
@@ -33,7 +33,7 @@ export class ProfileSelector {
     this._selectedProfileId = selectedProfileId;
     this._onProfileSelected = onProfileSelected;
     this._onClosed = onClosed;
-    
+
     this._updateProfileList();
     this._container.style.display = 'block';
     this._isVisible = true;
@@ -54,7 +54,7 @@ export class ProfileSelector {
     this._container.style.display = 'none';
     this._isVisible = false;
     this._filterText = '';
-    
+
     // Clear filter input
     const filterInput = this._container.querySelector('.profile-filter') as HTMLInputElement;
     if (filterInput) {
@@ -156,9 +156,10 @@ export class ProfileSelector {
     if (!profileList) return;
 
     // Filter profiles based on search text
-    const filteredProfiles = this._profiles.filter(profile => 
-      profile.name.toLowerCase().includes(this._filterText.toLowerCase()) ||
-      (profile.description?.toLowerCase().includes(this._filterText.toLowerCase()) ?? false)
+    const filteredProfiles = this._profiles.filter(
+      (profile) =>
+        profile.name.toLowerCase().includes(this._filterText.toLowerCase()) ||
+        (profile.description?.toLowerCase().includes(this._filterText.toLowerCase()) ?? false)
     );
 
     // Clear existing items
@@ -169,7 +170,7 @@ export class ProfileSelector {
       const listItem = document.createElement('li');
       listItem.className = 'profile-item';
       listItem.dataset.profileId = profile.id;
-      
+
       if (profile.id === this._selectedProfileId) {
         listItem.classList.add('selected');
       }
@@ -226,7 +227,9 @@ export class ProfileSelector {
     this._selectedProfileId = profileId;
 
     // Enable confirm button
-    const confirmBtn = this._container.querySelector('.profile-selector-confirm') as HTMLButtonElement;
+    const confirmBtn = this._container.querySelector(
+      '.profile-selector-confirm'
+    ) as HTMLButtonElement;
     if (confirmBtn) {
       confirmBtn.disabled = false;
     }
@@ -264,10 +267,12 @@ export class ProfileSelector {
   }
 
   private _navigateList(direction: 1 | -1): void {
-    const profileItems = Array.from(this._container.querySelectorAll('.profile-item:not(.profile-no-results)')) as HTMLElement[];
+    const profileItems = Array.from(
+      this._container.querySelectorAll('.profile-item:not(.profile-no-results)')
+    ) as HTMLElement[];
     if (profileItems.length === 0) return;
 
-    const currentIndex = profileItems.findIndex(item => item.classList.contains('selected'));
+    const currentIndex = profileItems.findIndex((item) => item.classList.contains('selected'));
     let newIndex = currentIndex + direction;
 
     // Wrap around
@@ -280,7 +285,7 @@ export class ProfileSelector {
     const newItem = profileItems[newIndex];
     if (newItem?.dataset.profileId) {
       this._selectProfile(newItem.dataset.profileId);
-      
+
       // Scroll into view
       newItem.scrollIntoView({ block: 'nearest' });
     }
@@ -292,8 +297,8 @@ export class ProfileSelector {
       'terminal-cmd': '⚫',
       'terminal-powershell': '🔷',
       'terminal-bash': '🟢',
-      'terminal': '▶️',
-      'terminal-pwsh': '💙'
+      terminal: '▶️',
+      'terminal-pwsh': '💙',
     };
 
     return iconMap[profile.icon || 'terminal'] || '▶️';

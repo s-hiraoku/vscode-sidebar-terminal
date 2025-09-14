@@ -4,7 +4,7 @@ import { CliAgentDetectionService } from '../../services/CliAgentDetectionServic
 
 /**
  * Service responsible for CLI Agent integration with terminals
- * 
+ *
  * This service extracts CLI Agent functionality from TerminalManager to improve:
  * - Single Responsibility: Focus only on CLI Agent integration
  * - Testability: Isolated CLI Agent logic
@@ -16,7 +16,7 @@ export class TerminalCliAgentIntegrationService {
 
   constructor(cliAgentService?: ICliAgentDetectionService) {
     this._cliAgentService = cliAgentService || new CliAgentDetectionService();
-    
+
     log('🤖 [CliAgentIntegration] CLI Agent integration service initialized');
   }
 
@@ -155,18 +155,22 @@ export class TerminalCliAgentIntegrationService {
         string,
         { type: 'claude' | 'gemini' | 'codex'; startTime: Date; terminalName?: string }
       >();
-      
+
       // Include all supported agent types: Claude, Gemini, and Codex
       for (const [terminalId, agentInfo] of allDisconnectedAgents) {
-        if (agentInfo.type === 'claude' || agentInfo.type === 'gemini' || agentInfo.type === 'codex') {
+        if (
+          agentInfo.type === 'claude' ||
+          agentInfo.type === 'gemini' ||
+          agentInfo.type === 'codex'
+        ) {
           filteredAgents.set(terminalId, {
             type: agentInfo.type as 'claude' | 'gemini' | 'codex',
             startTime: agentInfo.startTime,
-            terminalName: agentInfo.terminalName
+            terminalName: agentInfo.terminalName,
           });
         }
       }
-      
+
       return filteredAgents;
     } catch (error) {
       log(`❌ [CliAgentIntegration] Error getting disconnected agents:`, error);
@@ -224,7 +228,10 @@ export class TerminalCliAgentIntegrationService {
   } {
     try {
       const result = this._cliAgentService.switchAgentConnection(terminalId);
-      log(`🔄 [CliAgentIntegration] AI Agent connection switched for terminal ${terminalId}:`, result);
+      log(
+        `🔄 [CliAgentIntegration] AI Agent connection switched for terminal ${terminalId}:`,
+        result
+      );
       return result;
     } catch (error) {
       log(`❌ [CliAgentIntegration] Error switching AI Agent connection:`, error);

@@ -3,7 +3,7 @@
  * Provides shared logging, lifecycle management, and common utilities
  * Enhanced with validation, error handling, and message processing patterns
  * Implements IBaseManager interface for factory pattern compatibility
- * 
+ *
  * Updated to support new utility classes:
  * - ManagerLogger for standardized logging
  * - EventHandlerRegistry for event management
@@ -193,7 +193,7 @@ export abstract class BaseManager implements IBaseManager {
     this._isInitialized = false;
     this.coordinator = undefined;
     this.errorCount = 0;
-    
+
     // Clear utility references
     this.logger = undefined;
     this.resizeManagerKey = undefined;
@@ -224,7 +224,10 @@ export abstract class BaseManager implements IBaseManager {
       try {
         ThemeManager.initialize();
       } catch (error) {
-        this.log('Failed to initialize ThemeManager: ' + (error as Error)?.message || 'Unknown error', 'error');
+        this.log(
+          'Failed to initialize ThemeManager: ' + (error as Error)?.message || 'Unknown error',
+          'error'
+        );
       }
     }
   }
@@ -276,7 +279,10 @@ export abstract class BaseManager implements IBaseManager {
     if (this.logger) {
       this.logger.error(message, error);
     } else if (this.loggingEnabled) {
-      this.log(`ERROR: ${message}${error ? ': ' + (error as Error)?.message || error : ''}`, 'error');
+      this.log(
+        `ERROR: ${message}${error ? ': ' + (error as Error)?.message || error : ''}`,
+        'error'
+      );
     }
   }
 
@@ -362,7 +368,10 @@ export abstract class BaseManager implements IBaseManager {
   /**
    * Apply theme using ThemeManager if available
    */
-  protected applyTheme(element: HTMLElement, theme?: { background?: string; borderColor?: string }): void {
+  protected applyTheme(
+    element: HTMLElement,
+    theme?: { background?: string; borderColor?: string }
+  ): void {
     try {
       if (theme) {
         if (theme.background) {
@@ -391,7 +400,7 @@ export abstract class BaseManager implements IBaseManager {
       return {
         background: '#1e1e1e',
         foreground: '#d4d4d4',
-        border: '#454545'
+        border: '#454545',
       };
     }
   }
@@ -415,7 +424,7 @@ export abstract class BaseManager implements IBaseManager {
     delay: number = 100
   ): () => void {
     const debouncedOp = this.debounce(operation, delay);
-    
+
     // Store timer reference for cleanup
     return () => {
       this.clearTimer(key);
@@ -434,10 +443,16 @@ export abstract class BaseManager implements IBaseManager {
     selector: string,
     container?: HTMLElement | Document
   ): T | null {
-    return this.safeDOMOperation(() => {
-      const parent = container || document;
-      return parent.querySelector(selector) as T | null;
-    }, null, `Failed to query selector: ${selector}`) ?? null;
+    return (
+      this.safeDOMOperation(
+        () => {
+          const parent = container || document;
+          return parent.querySelector(selector) as T | null;
+        },
+        null,
+        `Failed to query selector: ${selector}`
+      ) ?? null
+    );
   }
 
   /**
@@ -447,10 +462,16 @@ export abstract class BaseManager implements IBaseManager {
     selector: string,
     container?: HTMLElement | Document
   ): NodeListOf<T> {
-    return this.safeDOMOperation(() => {
-      const parent = container || document;
-      return parent.querySelectorAll(selector) as NodeListOf<T>;
-    }, document.querySelectorAll('') as NodeListOf<T>, `Failed to query selector all: ${selector}`) || document.querySelectorAll('') as NodeListOf<T>;
+    return (
+      this.safeDOMOperation(
+        () => {
+          const parent = container || document;
+          return parent.querySelectorAll(selector) as NodeListOf<T>;
+        },
+        document.querySelectorAll('') as NodeListOf<T>,
+        `Failed to query selector all: ${selector}`
+      ) || (document.querySelectorAll('') as NodeListOf<T>)
+    );
   }
 
   /**
@@ -466,27 +487,31 @@ export abstract class BaseManager implements IBaseManager {
       styles?: Partial<CSSStyleDeclaration>;
     }
   ): HTMLElementTagNameMap[K] | null {
-    return this.safeDOMOperation(() => {
-      const element = document.createElement(tagName);
-      
-      if (options) {
-        if (options.className) element.className = options.className;
-        if (options.id) element.id = options.id;
-        if (options.textContent) element.textContent = options.textContent;
-        
-        if (options.attributes) {
-          Object.entries(options.attributes).forEach(([key, value]) => {
-            element.setAttribute(key, value);
-          });
+    return this.safeDOMOperation(
+      () => {
+        const element = document.createElement(tagName);
+
+        if (options) {
+          if (options.className) element.className = options.className;
+          if (options.id) element.id = options.id;
+          if (options.textContent) element.textContent = options.textContent;
+
+          if (options.attributes) {
+            Object.entries(options.attributes).forEach(([key, value]) => {
+              element.setAttribute(key, value);
+            });
+          }
+
+          if (options.styles) {
+            Object.assign(element.style, options.styles);
+          }
         }
-        
-        if (options.styles) {
-          Object.assign(element.style, options.styles);
-        }
-      }
-      
-      return element;
-    }, null, `Failed to create element: ${tagName}`) as HTMLElementTagNameMap[K] | null;
+
+        return element;
+      },
+      null,
+      `Failed to create element: ${tagName}`
+    ) as HTMLElementTagNameMap[K] | null;
   }
 
   /**
@@ -500,12 +525,12 @@ export abstract class BaseManager implements IBaseManager {
       this.logWarn('Element validation failed: element is null');
       return false;
     }
-    
+
     if (expectedTag && element.tagName.toLowerCase() !== expectedTag.toLowerCase()) {
       this.logWarn(`Element validation failed: expected ${expectedTag}, got ${element.tagName}`);
       return false;
     }
-    
+
     return true;
   }
 

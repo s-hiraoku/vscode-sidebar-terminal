@@ -175,7 +175,7 @@ export class PerformanceManager extends BaseManager {
    */
   public debouncedResize(cols: number, rows: number, terminal: Terminal, fitAddon: FitAddon): void {
     const resizeKey = `terminal-resize-${cols}x${rows}`;
-    
+
     this.logger.debug(`Scheduling debounced resize: ${cols}x${rows}`);
 
     ResizeManager.debounceResize(
@@ -197,7 +197,7 @@ export class PerformanceManager extends BaseManager {
         },
         onComplete: () => {
           this.logger.debug(`Completed resize operation for ${cols}x${rows}`);
-        }
+        },
       }
     );
   }
@@ -281,7 +281,7 @@ export class PerformanceManager extends BaseManager {
 
     // Clear any pending resize operations using ResizeManager
     ResizeManager.clearResize('terminal-resize');
-    
+
     // Clear references
     this.currentBufferTerminal = null;
     this.outputBuffer = [];

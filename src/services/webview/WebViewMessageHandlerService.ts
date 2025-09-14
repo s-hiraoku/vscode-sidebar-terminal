@@ -10,7 +10,7 @@ import { FocusTerminalHandler } from './messageHandlers/FocusTerminalHandler';
 
 /**
  * Service that manages all WebView message handling using the Command pattern
- * 
+ *
  * This service replaces the massive switch statement in SecondaryTerminalProvider
  * with a modular, testable, and extensible handler system.
  */
@@ -61,7 +61,7 @@ export class WebViewMessageHandlerService {
 
     // Find handler for this message
     const handler = this.findHandler(message);
-    
+
     if (!handler) {
       log(`⚠️ [MessageHandler] No handler found for command: ${message.command}`);
       return false;
@@ -74,7 +74,7 @@ export class WebViewMessageHandlerService {
       return true;
     } catch (error) {
       log(`❌ [MessageHandler] Error processing ${message.command}:`, error);
-      
+
       // Import and use error handler
       try {
         const { TerminalErrorHandler } = await import('../../utils/feedback');
@@ -82,7 +82,7 @@ export class WebViewMessageHandlerService {
       } catch (importError) {
         console.error('Failed to import TerminalErrorHandler:', importError);
       }
-      
+
       return false;
     }
   }
@@ -91,7 +91,7 @@ export class WebViewMessageHandlerService {
    * Find the appropriate handler for a message
    */
   private findHandler(message: WebviewMessage): IMessageHandler | undefined {
-    return this.handlers.find(handler => handler.canHandle(message));
+    return this.handlers.find((handler) => handler.canHandle(message));
   }
 
   /**
@@ -99,8 +99,8 @@ export class WebViewMessageHandlerService {
    */
   private isValidMessage(message: unknown): message is WebviewMessage {
     return !!(
-      message && 
-      typeof message === 'object' && 
+      message &&
+      typeof message === 'object' &&
       typeof (message as any).command === 'string' &&
       (message as any).command.length > 0
     );
@@ -111,7 +111,7 @@ export class WebViewMessageHandlerService {
    */
   getSupportedCommands(): string[] {
     const commands: string[] = [];
-    
+
     for (const handler of this.handlers) {
       // Access protected property through type assertion
       const supportedCommands = (handler as any).supportedCommands;
@@ -119,7 +119,7 @@ export class WebViewMessageHandlerService {
         commands.push(...supportedCommands);
       }
     }
-    
+
     return [...new Set(commands)]; // Remove duplicates
   }
 

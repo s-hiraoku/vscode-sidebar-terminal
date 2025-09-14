@@ -43,16 +43,17 @@ export class TerminalProfileService {
    */
   public async getAvailableProfiles(): Promise<Record<string, TerminalProfile>> {
     const profiles = this.getConfiguredProfiles();
-    
+
     // If inherit VS Code profiles is enabled, merge with VS Code's profiles
-    const inheritVSCode = vscode.workspace.getConfiguration(CONFIG_SECTIONS.SIDEBAR_TERMINAL)
+    const inheritVSCode = vscode.workspace
+      .getConfiguration(CONFIG_SECTIONS.SIDEBAR_TERMINAL)
       .get<boolean>(CONFIG_KEYS.INHERIT_VSCODE_PROFILES, true);
-      
+
     if (inheritVSCode) {
       const vscodeProfiles = await this.getVSCodeProfiles();
       return { ...vscodeProfiles, ...profiles };
     }
-    
+
     return profiles;
   }
 
@@ -61,7 +62,7 @@ export class TerminalProfileService {
    */
   private getConfiguredProfiles(): Record<string, TerminalProfile> {
     const config = vscode.workspace.getConfiguration(CONFIG_SECTIONS.SIDEBAR_TERMINAL);
-    
+
     let profileKey: string;
     switch (this.platform) {
       case 'windows':
@@ -74,7 +75,7 @@ export class TerminalProfileService {
         profileKey = CONFIG_KEYS.PROFILES_OSX;
         break;
     }
-    
+
     const profiles = config.get<Record<string, TerminalProfile | null>>(profileKey, {});
     // Filter out null values
     const filteredProfiles: Record<string, TerminalProfile> = {};
@@ -91,7 +92,7 @@ export class TerminalProfileService {
    */
   private async getVSCodeProfiles(): Promise<Record<string, TerminalProfile>> {
     const config = vscode.workspace.getConfiguration('terminal.integrated');
-    
+
     let profileKey: string;
     switch (this.platform) {
       case 'windows':
@@ -104,12 +105,12 @@ export class TerminalProfileService {
         profileKey = 'profiles.osx';
         break;
     }
-    
+
     const vscodeProfiles = config.get<Record<string, any>>(profileKey, {});
-    
+
     // Convert VS Code profile format to our format
     const convertedProfiles: Record<string, TerminalProfile> = {};
-    
+
     for (const [name, profile] of Object.entries(vscodeProfiles)) {
       if (profile && typeof profile === 'object' && profile.path) {
         convertedProfiles[name] = {
@@ -125,7 +126,7 @@ export class TerminalProfileService {
         };
       }
     }
-    
+
     return convertedProfiles;
   }
 
@@ -134,7 +135,7 @@ export class TerminalProfileService {
    */
   public getDefaultProfile(): string | null {
     const config = vscode.workspace.getConfiguration(CONFIG_SECTIONS.SIDEBAR_TERMINAL);
-    
+
     let defaultKey: string;
     switch (this.platform) {
       case 'windows':
@@ -147,7 +148,7 @@ export class TerminalProfileService {
         defaultKey = CONFIG_KEYS.DEFAULT_PROFILE_OSX;
         break;
     }
-    
+
     return config.get<string | null>(defaultKey, null);
   }
 
@@ -156,7 +157,7 @@ export class TerminalProfileService {
    */
   public async resolveProfile(requestedProfile?: string): Promise<ProfileSelectionResult> {
     const availableProfiles = await this.getAvailableProfiles();
-    
+
     // If specific profile requested, try to use it
     if (requestedProfile && availableProfiles[requestedProfile]) {
       return {
@@ -167,7 +168,7 @@ export class TerminalProfileService {
         source: 'user',
       };
     }
-    
+
     // Try to use default profile
     const defaultProfileName = this.getDefaultProfile();
     if (defaultProfileName && availableProfiles[defaultProfileName]) {
@@ -179,7 +180,7 @@ export class TerminalProfileService {
         source: 'default',
       };
     }
-    
+
     // Fallback to first available profile
     const profileNames = Object.keys(availableProfiles);
     if (profileNames.length > 0) {
@@ -197,7 +198,7 @@ export class TerminalProfileService {
         }
       }
     }
-    
+
     // Ultimate fallback - create basic shell profile
     return this.createFallbackProfile();
   }
@@ -208,7 +209,7 @@ export class TerminalProfileService {
   private createFallbackProfile(): ProfileSelectionResult {
     let shellPath: string;
     let shellArgs: string[] = [];
-    
+
     switch (this.platform) {
       case 'windows':
         shellPath = process.env.COMSPEC || 'cmd.exe';
@@ -220,7 +221,7 @@ export class TerminalProfileService {
         shellPath = process.env.SHELL || '/bin/bash';
         break;
     }
-    
+
     return {
       profile: {
         path: shellPath,
@@ -238,9 +239,9 @@ export class TerminalProfileService {
    */
   public async autoDetectProfiles(): Promise<Record<string, TerminalProfile>> {
     const detectedProfiles: Record<string, TerminalProfile> = {};
-    
+
     const shellCandidates = this.getShellCandidates();
-    
+
     for (const candidate of shellCandidates) {
       const shellExists = await this.checkShellExists(candidate.path);
       if (shellExists) {
@@ -252,7 +253,7 @@ export class TerminalProfileService {
         };
       }
     }
-    
+
     return detectedProfiles;
   }
 
@@ -271,10 +272,14 @@ export class TerminalProfileService {
           { name: 'Command Prompt', path: 'cmd.exe', icon: 'terminal-cmd' },
           { name: 'PowerShell', path: 'powershell.exe', icon: 'terminal-powershell' },
           { name: 'PowerShell Core', path: 'pwsh.exe', icon: 'terminal-powershell' },
-          { name: 'Git Bash', path: 'C:\\Program Files\\Git\\bin\\bash.exe', icon: 'terminal-bash' },
+          {
+            name: 'Git Bash',
+            path: 'C:\\Program Files\\Git\\bin\\bash.exe',
+            icon: 'terminal-bash',
+          },
           { name: 'Windows Subsystem for Linux', path: 'wsl.exe', icon: 'terminal-ubuntu' },
         ];
-      
+
       case 'osx':
         return [
           { name: 'zsh', path: '/bin/zsh', icon: 'terminal-bash' },
@@ -282,7 +287,7 @@ export class TerminalProfileService {
           { name: 'fish', path: '/usr/local/bin/fish', icon: 'terminal-bash' },
           { name: 'tcsh', path: '/bin/tcsh', icon: 'terminal-bash' },
         ];
-      
+
       default: // linux
         return [
           { name: 'bash', path: '/bin/bash', icon: 'terminal-bash' },
@@ -311,7 +316,7 @@ export class TerminalProfileService {
    */
   public async getProfilesConfig(): Promise<TerminalProfilesConfig> {
     const config = vscode.workspace.getConfiguration(CONFIG_SECTIONS.SIDEBAR_TERMINAL);
-    
+
     return {
       profiles: {
         windows: config.get(CONFIG_KEYS.PROFILES_WINDOWS, {}),
@@ -342,7 +347,7 @@ export class TerminalProfileService {
     profile: TerminalProfile | null
   ): Promise<void> {
     const config = vscode.workspace.getConfiguration(CONFIG_SECTIONS.SIDEBAR_TERMINAL);
-    
+
     let profileKey: string;
     switch (platform) {
       case 'windows':
@@ -355,22 +360,25 @@ export class TerminalProfileService {
         profileKey = CONFIG_KEYS.PROFILES_OSX;
         break;
     }
-    
+
     const currentProfiles = config.get<Record<string, TerminalProfile | null>>(profileKey, {});
     const updatedProfiles = {
       ...currentProfiles,
       [profileName]: profile,
     };
-    
+
     await config.update(profileKey, updatedProfiles, vscode.ConfigurationTarget.Global);
   }
 
   /**
    * Set default profile for platform
    */
-  public async setDefaultProfile(platform: TerminalPlatform, profileName: string | null): Promise<void> {
+  public async setDefaultProfile(
+    platform: TerminalPlatform,
+    profileName: string | null
+  ): Promise<void> {
     const config = vscode.workspace.getConfiguration(CONFIG_SECTIONS.SIDEBAR_TERMINAL);
-    
+
     let defaultKey: string;
     switch (platform) {
       case 'windows':
@@ -383,7 +391,7 @@ export class TerminalProfileService {
         defaultKey = CONFIG_KEYS.DEFAULT_PROFILE_OSX;
         break;
     }
-    
+
     await config.update(defaultKey, profileName, vscode.ConfigurationTarget.Global);
   }
 }

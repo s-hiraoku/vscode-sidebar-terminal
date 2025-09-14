@@ -10,7 +10,7 @@ import { TERMINAL_CONSTANTS } from '../../../constants';
 export class FocusTerminalHandler extends BaseMessageHandler {
   protected readonly supportedCommands = [
     'focusTerminal',
-    TERMINAL_CONSTANTS?.COMMANDS?.FOCUS_TERMINAL || 'focusTerminal'
+    TERMINAL_CONSTANTS?.COMMANDS?.FOCUS_TERMINAL || 'focusTerminal',
   ];
 
   async handle(message: WebviewMessage, context: IMessageHandlerContext): Promise<void> {
@@ -33,13 +33,14 @@ export class FocusTerminalHandler extends BaseMessageHandler {
 
       // Verify the change was successful
       const newActive = context.terminalManager.getActiveTerminalId();
-      
+
       if (newActive === message.terminalId) {
         log(`✅ [FocusTerminal] Successfully focused terminal: ${message.terminalId}`);
       } else {
-        log(`❌ [FocusTerminal] Failed to focus terminal. Expected: ${message.terminalId}, Got: ${newActive}`);
+        log(
+          `❌ [FocusTerminal] Failed to focus terminal. Expected: ${message.terminalId}, Got: ${newActive}`
+        );
       }
-
     } catch (error) {
       await this.handleError(error, message, 'FocusTerminal');
     }
