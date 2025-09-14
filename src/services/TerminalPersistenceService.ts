@@ -25,7 +25,7 @@ export class PersistenceError extends Error {
     override message: string,
     public readonly code: PersistenceErrorCode,
     public readonly terminalId?: string,
-    public readonly cause?: Error
+    public override readonly cause?: Error
   ) {
     super(message);
   }

@@ -46,13 +46,11 @@ import { RefactoredMessageManager } from './RefactoredMessageManager';
 import { StandardTerminalPersistenceManager } from './StandardTerminalPersistenceManager';
 import { OptimizedTerminalPersistenceManager } from '../services/OptimizedPersistenceManager';
 import { SimplePersistenceManager } from './SimplePersistenceManager';
-import { PerformanceMonitor, DOMBatcher } from '../../utils/PerformanceOptimizer';
 import { WebViewApiManager } from './WebViewApiManager';
 import { TerminalLifecycleManager } from './TerminalLifecycleManager';
 import { CliAgentStateManager } from './CliAgentStateManager';
 import { EventHandlerManager } from './EventHandlerManager';
 import { ShellIntegrationManager } from './ShellIntegrationManager';
-import { setUIManager } from '../utils/NotificationUtils';
 
 /**
  * リファクタリングされたTerminalWebviewManager

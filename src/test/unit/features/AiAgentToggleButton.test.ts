@@ -38,6 +38,7 @@ describe('AI Agent Toggle Button (Issue #122)', () => {
       updateCliAgentStatus: sinon.stub(),
       ensureTerminalFocus: sinon.stub(),
       createTerminalFromSession: sinon.stub(),
+      getMessageManager: sinon.stub().returns(messageManager),
     };
   });
 

@@ -2261,7 +2261,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       // Forward to new handler
       await this._handlePersistenceMessage({
         ...message,
-        command: newCommand,
+        command: newCommand as any,
       });
 
     } catch (error) {
@@ -2567,7 +2567,8 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     }
 
     // Clean up any pending scrollback requests
-    for (const [requestId, request] of this.pendingScrollbackRequests.entries()) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    for (const [_requestId, request] of this.pendingScrollbackRequests.entries()) {
       clearTimeout(request.timeout);
       request.resolve([]); // Resolve with empty array to avoid hanging promises
     }

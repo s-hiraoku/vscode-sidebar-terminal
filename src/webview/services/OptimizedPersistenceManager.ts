@@ -48,7 +48,7 @@ export class WebViewPersistenceError extends Error {
     override message: string,
     public readonly type: PersistenceErrorType,
     public readonly terminalId?: string,
-    public readonly cause?: Error
+    public override readonly cause?: Error
   ) {
     super(message);
     this.name = 'WebViewPersistenceError';
@@ -360,8 +360,9 @@ export class OptimizedTerminalPersistenceManager {
         const endIndex = Math.min(startIndex + batchSize, lines.length);
         
         for (let i = startIndex; i < endIndex; i++) {
-          if (lines[i] !== undefined) {
-            registration.terminal.write(lines[i]);
+          const line = lines[i];
+          if (line !== undefined) {
+            registration.terminal.write(line);
             if (i < lines.length - 1) {
               registration.terminal.write('\r\n');
             }
