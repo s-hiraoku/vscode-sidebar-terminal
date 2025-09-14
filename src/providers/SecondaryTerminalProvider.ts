@@ -2178,11 +2178,17 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     try {
       if (!this._persistenceHandler) {
         log('❌ [PERSISTENCE] Persistence handler not initialized');
+        
+        // Determine proper response command
+        const responseCommand = message.command.endsWith('Response') 
+          ? message.command 
+          : `${message.command}Response`;
+          
         await this._sendMessage({
-          command: `${message.command}Response`,
+          command: responseCommand as any,
           success: false,
           error: 'Persistence handler not available',
-          messageId: message.messageId, // Include messageId even for init failures
+          messageId: message.messageId,
         });
         return;
       }
@@ -2200,23 +2206,34 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       // Process the persistence request
       const response = await this._persistenceHandler.handleMessage(persistenceMessage);
 
+      // Determine proper response command
+      const responseCommand = message.command.endsWith('Response') 
+        ? message.command 
+        : `${message.command}Response`;
+
       // Send response back to WebView
       await this._sendMessage({
-        command: `${message.command}Response`,
+        command: responseCommand as any,
         success: response.success,
         data: response.data,
         error: response.error,
         terminalCount: response.terminalCount,
-        messageId: message.messageId, // Include messageId for WebView response tracking
+        messageId: message.messageId,
       });
 
     } catch (error) {
       log(`❌ [PERSISTENCE] Message handling failed: ${error}`);
+      
+      // Determine proper response command
+      const responseCommand = message.command.endsWith('Response') 
+        ? message.command 
+        : `${message.command}Response`;
+        
       await this._sendMessage({
-        command: `${message.command}Response`,
+        command: responseCommand as any,
         success: false,
         error: `Persistence operation failed: ${(error as Error).message}`,
-        messageId: message.messageId, // Include messageId for error responses too
+        messageId: message.messageId,
       });
     }
   }
@@ -2249,8 +2266,14 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
     } catch (error) {
       log(`❌ [PERSISTENCE-LEGACY] Legacy message handling failed: ${error}`);
+      
+      // Determine proper response command
+      const responseCommand = message.command.endsWith('Response') 
+        ? message.command 
+        : `${message.command}Response`;
+        
       await this._sendMessage({
-        command: `${message.command}Response`,
+        command: responseCommand as any,
         success: false,
         error: `Legacy persistence operation failed: ${(error as Error).message}`,
       });

@@ -279,28 +279,19 @@ export class InitializationMessageHandler implements MessageHandler {
       case 'requestSessionRestore':
         log('🔄 [RESTORATION] WebView requested session restoration');
         try {
-          // Check if UnifiedSessionManager is available
-          if (context.unifiedSessionManager) {
-            log('🔄 [RESTORATION] Triggering session restoration via UnifiedSessionManager');
+          log('🔄 [RESTORATION] Creating initial terminal for session restore fallback');
+          
+          // Fallback: Create an initial terminal if none exist
+          if (context.terminalManager.getTerminals().length === 0) {
+            const terminalId = context.terminalManager.createTerminal();
+            log(`✅ [RESTORATION] Created fallback terminal: ${terminalId}`);
+            context.terminalManager.setActiveTerminal(terminalId);
             
-            // Trigger session restoration
-            await context.unifiedSessionManager.restoreTerminalSessions();
-            log('✅ [RESTORATION] Session restoration completed');
-          } else {
-            log('⚠️ [RESTORATION] UnifiedSessionManager not available, creating initial terminal instead');
-            
-            // Fallback: Create an initial terminal if none exist
-            if (context.terminalManager.getTerminals().length === 0) {
-              const terminalId = context.terminalManager.createTerminal();
-              log(`✅ [RESTORATION] Created fallback terminal: ${terminalId}`);
-              context.terminalManager.setActiveTerminal(terminalId);
-              
-              // Send terminal update to WebView
-              await context.sendMessage({
-                command: 'stateUpdate',
-                state: context.terminalManager.getCurrentState()
-              });
-            }
+            // Send terminal update to WebView
+            await context.sendMessage({
+              command: 'stateUpdate',
+              state: context.terminalManager.getCurrentState()
+            });
           }
         } catch (error) {
           log(`❌ [RESTORATION] Session restoration failed: ${String(error)}`);

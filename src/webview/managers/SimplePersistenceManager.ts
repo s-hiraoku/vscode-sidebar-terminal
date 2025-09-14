@@ -4,6 +4,7 @@ import {
   ISimplePersistenceManager,
   SIMPLE_PERSISTENCE 
 } from '../../types/SimplePersistence';
+import { Debouncer, PerformanceMonitor } from '../../utils/PerformanceOptimizer';
 
 /**
  * Simple Terminal Persistence Manager
@@ -21,15 +22,37 @@ export class SimplePersistenceManager implements ISimplePersistenceManager {
     postMessage(message: any): void;
   };
 
+  private saveDebouncer: Debouncer;
+  private performanceMonitor: PerformanceMonitor;
+
   constructor(vscodeApi: any) {
     this.vscodeApi = vscodeApi;
-    console.log('🆕 [SIMPLE-PERSISTENCE] SimplePersistenceManager initialized');
+    this.performanceMonitor = PerformanceMonitor.getInstance();
+    
+    // 🚀 PHASE 3: Debounced saving to reduce frequent saves
+    this.saveDebouncer = new Debouncer(
+      async () => { await this.performSaveSession(); }, 
+      500 // 500ms debounce delay
+    );
+    
+    console.log('🆕 [SIMPLE-PERSISTENCE] SimplePersistenceManager initialized with debouncing');
   }
 
   /**
-   * Save current session state (simplified)
+   * 🚀 PHASE 3: Debounced save session (public interface)
    */
   public async saveSession(): Promise<boolean> {
+    // Use debouncer to reduce frequent saves
+    this.saveDebouncer.execute();
+    return true; // Assume success for debounced operation
+  }
+
+  /**
+   * Internal method that performs the actual save operation
+   */
+  private async performSaveSession(): Promise<boolean> {
+    this.performanceMonitor.startTimer('session-save');
+    
     try {
       // Get current terminal information from DOM
       const terminalContainers = document.querySelectorAll('[data-terminal-id]');
@@ -41,7 +64,6 @@ export class SimplePersistenceManager implements ISimplePersistenceManager {
       // Extract terminal names from headers
       const terminalNames: string[] = [];
       terminalContainers.forEach((container) => {
-        const terminalId = container.getAttribute('data-terminal-id');
         const nameElement = container.querySelector('.terminal-name, .header-title');
         const name = nameElement?.textContent || `Terminal ${terminalNames.length + 1}`;
         terminalNames.push(name);
@@ -60,14 +82,18 @@ export class SimplePersistenceManager implements ISimplePersistenceManager {
       currentState[SIMPLE_PERSISTENCE.STORAGE_KEY] = sessionData;
       this.vscodeApi.setState(currentState);
 
+      const saveTime = this.performanceMonitor.endTimer('session-save');
+      
       console.log('✅ [SIMPLE-PERSISTENCE] Session saved:', {
         terminalCount,
         activeTerminalId,
-        terminalNames
+        terminalNames,
+        saveTimeMs: saveTime
       });
 
       return true;
     } catch (error) {
+      this.performanceMonitor.endTimer('session-save');
       console.error('❌ [SIMPLE-PERSISTENCE] Failed to save session:', error);
       return false;
     }

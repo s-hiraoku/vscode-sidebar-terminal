@@ -27,6 +27,8 @@ import { ThemeManager } from '../utils/ThemeManager';
  * Simplified terminal lifecycle management using centralized utilities
  * Focus on reliable terminal display and resize handling
  */
+import { PerformanceMonitor } from '../../utils/PerformanceOptimizer';
+
 export class TerminalLifecycleManager {
   private splitManager: SplitManager;
   private coordinator: IManagerCoordinator;
@@ -194,302 +196,366 @@ export class TerminalLifecycleManager {
     config?: TerminalConfig,
     terminalNumber?: number // Optional terminal number from Extension
   ): Promise<Terminal | null> {
-    try {
-      terminalLogger.info(`Creating terminal: ${terminalId} (${terminalName})`);
-
-      // Check DOM readiness
-      const terminalBody = document.getElementById('terminal-body');
-      if (!terminalBody) {
-        terminalLogger.error('Main terminal container not found');
-        return null;
-      }
-
-      // Merge configuration
-      const terminalConfig = { ...this.DEFAULT_TERMINAL_CONFIG, ...config };
-
-      // Create xterm.js instance with VS Code Standard Configuration
-      const terminal = new Terminal({
-        // Basic appearance  
-        cursorBlink: terminalConfig.cursorBlink,
-        fontFamily: terminalConfig.fontFamily || 'monospace',
-        fontSize: terminalConfig.fontSize || 12,
-        fontWeight: (terminalConfig.fontWeight || 'normal') as any,
-        fontWeightBold: (terminalConfig.fontWeightBold || 'bold') as any, 
-        lineHeight: terminalConfig.lineHeight || 1.0,
-        letterSpacing: terminalConfig.letterSpacing || 0,
-        cols: 80,
-        rows: 24,
-        
-        // VS Code Standard Options
-        altClickMovesCursor: terminalConfig.altClickMovesCursor,
-        drawBoldTextInBrightColors: terminalConfig.drawBoldTextInBrightColors,
-        minimumContrastRatio: terminalConfig.minimumContrastRatio,
-        tabStopWidth: terminalConfig.tabStopWidth,
-        macOptionIsMeta: terminalConfig.macOptionIsMeta,
-        rightClickSelectsWord: terminalConfig.rightClickSelectsWord,
-        
-        // Scrolling and Navigation - Enhanced VS Code Configuration
-        fastScrollModifier: terminalConfig.fastScrollModifier || 'alt',
-        fastScrollSensitivity: terminalConfig.fastScrollSensitivity || 5,
-        scrollSensitivity: terminalConfig.scrollSensitivity || 1,
-        scrollback: terminalConfig.scrollback || 1000,
-        scrollOnUserInput: terminalConfig.scrollOnUserInput !== false, // Default to true
-        
-        // Word and Selection
-        wordSeparator: terminalConfig.wordSeparator,
-        
-        // Rendering Options
-        allowTransparency: terminalConfig.allowTransparency,
-        allowProposedApi: terminalConfig.allowProposedApi,
-        
-        // Cursor Configuration
-        cursorStyle: terminalConfig.cursorStyle || 'block',
-        cursorInactiveStyle: terminalConfig.cursorInactiveStyle,
-        cursorWidth: terminalConfig.cursorWidth || 1,
-        
-        // Terminal Behavior
-        convertEol: terminalConfig.convertEol,
-        disableStdin: terminalConfig.disableStdin,
-        screenReaderMode: terminalConfig.screenReaderMode,
-        
-        // Bell Configuration - bellStyle is not supported by xterm.js ITerminalOptions
-        
-        // Advanced Options
-        windowOptions: terminalConfig.windowOptions,
-      });
-
-      // Apply theme using existing getWebviewTheme
-      const themeValue = typeof terminalConfig.theme === 'string' ? terminalConfig.theme : undefined;
-      const theme = getWebviewTheme({ theme: themeValue });
-      terminal.options.theme = theme;
-
-      // Add VS Code Standard Addons
-      const fitAddon = new FitAddon();
-      const webLinksAddon = new WebLinksAddon();
-      const searchAddon = new SearchAddon();
-      
-      // Optional high-performance addons
-      let webglAddon: WebglAddon | null = null;
-      let unicode11Addon: Unicode11Addon | null = null;
-      
-      // Load essential addons
-      terminal.loadAddon(fitAddon);
-      terminal.loadAddon(webLinksAddon);
-      terminal.loadAddon(searchAddon);
-      
-      // Load optional addons if supported
+    // 🚀 PHASE 3: Enhanced error handling with recovery
+    const performanceMonitor = PerformanceMonitor.getInstance();
+    const maxRetries = 2;
+    let currentRetry = 0;
+    
+    const attemptCreation = async (): Promise<Terminal | null> => {
       try {
-        unicode11Addon = new Unicode11Addon();
-        terminal.loadAddon(unicode11Addon);
-        terminalLogger.info(`Unicode11 addon loaded for terminal ${terminalId}`);
-      } catch (error) {
-        terminalLogger.warn(`Unicode11 addon failed to load: ${error}`);
-      }
-      
-      // GPU acceleration (conditional)
-      if (terminalConfig.enableGpuAcceleration !== false) {
-        try {
-          webglAddon = new WebglAddon();
-          terminal.loadAddon(webglAddon);
-          terminalLogger.info(`WebGL addon loaded for terminal ${terminalId}`);
-        } catch (error) {
-          terminalLogger.warn(`WebGL addon failed to load: ${error}`);
-        }
-      }
+        performanceMonitor.startTimer(`terminal-creation-attempt-${terminalId}-${currentRetry}`);
+        terminalLogger.info(`Creating terminal: ${terminalId} (${terminalName}) - attempt ${currentRetry + 1}/${maxRetries + 1}`);
 
-      // Note: Keyboard input handling (onData) is set up by InputManager.addXtermClickHandler
-
-      // Create container using TerminalContainerFactory
-      const containerConfig: TerminalContainerConfig = {
-        id: terminalId,
-        name: terminalName,
-        className: 'terminal-container',
-        isSplit: false,
-        isActive: false
-      };
-
-      const headerConfig: TerminalHeaderConfig = {
-        showHeader: true,
-        showCloseButton: true,
-        showSplitButton: false,  // Split button disabled as requested
-        customTitle: terminalName,
-        onHeaderClick: (clickedTerminalId) => {
-          terminalLogger.info(`🎯 Header clicked for terminal: ${clickedTerminalId}`);
-          this.coordinator?.setActiveTerminalId(clickedTerminalId);
-        },
-        onContainerClick: (clickedTerminalId) => {
-          terminalLogger.info(`🎯 Container clicked for terminal: ${clickedTerminalId}`);
-          this.coordinator?.setActiveTerminalId(clickedTerminalId);
-        },
-        onCloseClick: (clickedTerminalId) => {
-          // 仕様: ヘッダーのクローズボタンはそのヘッダーのターミナルを削除する
-          terminalLogger.info(`🗑️ Header close button clicked, using safe deletion: ${clickedTerminalId}`);
-          if (this.coordinator && 'deleteTerminalSafely' in this.coordinator) {
-            void (this.coordinator as any).deleteTerminalSafely(clickedTerminalId);
+        // 🚀 PHASE 3: Enhanced DOM readiness check with recovery
+        const terminalBody = document.getElementById('terminal-body');
+        if (!terminalBody) {
+          terminalLogger.error('Main terminal container not found');
+          
+          // 🚀 PHASE 3: Recovery - Try to create terminal-body if missing
+          const mainDiv = document.querySelector('#terminal-view') || document.body;
+          if (mainDiv) {
+            const newTerminalBody = document.createElement('div');
+            newTerminalBody.id = 'terminal-body';
+            newTerminalBody.className = 'terminal-body';
+            mainDiv.appendChild(newTerminalBody);
+            terminalLogger.info('🔄 Created missing terminal-body element');
           } else {
-            // Fallback to standard closeTerminal
-            void this.coordinator?.closeTerminal(clickedTerminalId);
-          }
-        },
-        onAiAgentToggleClick: (clickedTerminalId) => {
-          terminalLogger.info(`📎 AI Agent toggle clicked for terminal: ${clickedTerminalId}`);
-          if (this.coordinator && 'handleAiAgentToggle' in this.coordinator) {
-            (this.coordinator as any).handleAiAgentToggle(clickedTerminalId);
+            throw new Error('Cannot create terminal-body: parent element not found');
           }
         }
-      };
 
-      const containerElements = TerminalContainerFactory.createContainer(containerConfig, headerConfig);
-      const mainContainer = containerElements.container; // Use the main container
-      const terminalContentBody = containerElements.body; // Terminal goes in the body
+        // Merge configuration
+        const terminalConfig = { ...this.DEFAULT_TERMINAL_CONFIG, ...config };
 
-      // Open terminal in the body element (this is where xterm.js will render)
-      terminal.open(terminalContentBody);
-
-      // 🎯 FIX: Add click handler directly to xterm.js terminal element
-      // This ensures clicking anywhere in the terminal area activates it
-      // Delay event handler setup to avoid interfering with terminal initialization
-      setTimeout(() => {
-        const xtermElement = terminalContentBody.querySelector('.xterm');
-        if (xtermElement) {
-          // 🔧 VS CODE STANDARD: Use click event with hasSelection() check
-          // This mirrors VS Code's built-in terminal behavior exactly
-          xtermElement.addEventListener('click', (_event: Event) => {
-            // Use a small delay to allow xterm.js to process selection first
-            setTimeout(() => {
-              // Only activate terminal if no text is selected (VS Code standard behavior)
-              if (!terminal.hasSelection()) {
-                terminalLogger.info(`🎯 Terminal clicked for activation (no selection): ${terminalId}`);
-                this.coordinator?.setActiveTerminalId(terminalId);
-                
-                // Only focus if not already focused to avoid interrupting output
-                if (!terminal.textarea?.hasAttribute('focused')) {
-                  terminal.focus();
-                }
-              } else {
-                terminalLogger.debug(`🎯 Click ignored due to text selection in terminal: ${terminalId}`);
-              }
-            }, 10); // Small delay to ensure xterm.js selection state is updated
+        // 🚀 PHASE 3: Enhanced xterm.js creation with validation
+        let terminal: Terminal;
+        try {
+          // Create xterm.js instance with VS Code Standard Configuration
+          terminal = new Terminal({
+            // Basic appearance  
+            cursorBlink: terminalConfig.cursorBlink,
+            fontFamily: terminalConfig.fontFamily || 'monospace',
+            fontSize: terminalConfig.fontSize || 12,
+            fontWeight: (terminalConfig.fontWeight || 'normal') as any,
+            fontWeightBold: (terminalConfig.fontWeightBold || 'bold') as any, 
+            lineHeight: terminalConfig.lineHeight || 1.0,
+            letterSpacing: terminalConfig.letterSpacing || 0,
+            cols: 80,
+            rows: 24,
+            
+            // VS Code Standard Options
+            altClickMovesCursor: terminalConfig.altClickMovesCursor,
+            drawBoldTextInBrightColors: terminalConfig.drawBoldTextInBrightColors,
+            minimumContrastRatio: terminalConfig.minimumContrastRatio,
+            tabStopWidth: terminalConfig.tabStopWidth,
+            macOptionIsMeta: terminalConfig.macOptionIsMeta,
+            rightClickSelectsWord: terminalConfig.rightClickSelectsWord,
+            
+            // Scrolling and Navigation - Enhanced VS Code Configuration
+            fastScrollModifier: terminalConfig.fastScrollModifier || 'alt',
+            fastScrollSensitivity: terminalConfig.fastScrollSensitivity || 5,
+            scrollSensitivity: terminalConfig.scrollSensitivity || 1,
+            scrollback: terminalConfig.scrollback || 1000,
+            scrollOnUserInput: terminalConfig.scrollOnUserInput !== false, // Default to true
+            
+            // Word and Selection
+            wordSeparator: terminalConfig.wordSeparator,
+            
+            // Rendering Options
+            allowTransparency: terminalConfig.allowTransparency,
+            allowProposedApi: terminalConfig.allowProposedApi,
+            
+            // Cursor Configuration
+            cursorStyle: terminalConfig.cursorStyle || 'block',
+            cursorInactiveStyle: terminalConfig.cursorInactiveStyle,
+            cursorWidth: terminalConfig.cursorWidth || 1,
+            
+            // Terminal Behavior
+            convertEol: terminalConfig.convertEol,
+            disableStdin: terminalConfig.disableStdin,
+            screenReaderMode: terminalConfig.screenReaderMode,
+            
+            // Advanced Options
+            windowOptions: terminalConfig.windowOptions,
           });
           
-          // Store handler for cleanup
-          const clickHandler = (_event: Event) => {
-            setTimeout(() => {
-              if (!terminal.hasSelection()) {
-                this.coordinator?.setActiveTerminalId(terminalId);
-                if (!terminal.textarea?.hasAttribute('focused')) {
-                  terminal.focus();
+          // 🚀 PHASE 3: Validate terminal instance
+          if (!terminal || typeof terminal.open !== 'function') {
+            throw new Error('Invalid terminal instance created');
+          }
+          
+        } catch (error) {
+          terminalLogger.error(`Failed to create Terminal instance: ${error}`);
+          throw new Error(`Terminal instantiation failed: ${error}`);
+        }
+
+        // Apply theme using existing getWebviewTheme
+        try {
+          const themeValue = typeof terminalConfig.theme === 'string' ? terminalConfig.theme : undefined;
+          const theme = getWebviewTheme({ theme: themeValue });
+          terminal.options.theme = theme;
+        } catch (error) {
+          terminalLogger.warn(`Failed to apply theme, using defaults: ${error}`);
+        }
+
+        // 🚀 PHASE 3: Enhanced addon loading with error recovery
+        const fitAddon = new FitAddon();
+        const webLinksAddon = new WebLinksAddon();
+        const searchAddon = new SearchAddon();
+        
+        // Optional high-performance addons
+        let webglAddon: WebglAddon | null = null;
+        let unicode11Addon: Unicode11Addon | null = null;
+        
+        // Load essential addons with error handling
+        try {
+          terminal.loadAddon(fitAddon);
+          terminal.loadAddon(webLinksAddon);
+          terminal.loadAddon(searchAddon);
+          terminalLogger.info(`✅ Essential addons loaded for terminal ${terminalId}`);
+        } catch (error) {
+          terminalLogger.error(`❌ Failed to load essential addons: ${error}`);
+          throw error; // Essential addons are critical
+        }
+        
+        // Load optional addons with graceful degradation
+        if (terminalConfig.enableUnicode11 !== false) {
+          try {
+            unicode11Addon = new Unicode11Addon();
+            terminal.loadAddon(unicode11Addon);
+            terminalLogger.info(`✅ Unicode11 addon loaded for terminal ${terminalId}`);
+          } catch (error) {
+            terminalLogger.warn(`⚠️ Unicode11 addon failed to load (non-critical): ${error}`);
+          }
+        }
+        
+        // GPU acceleration (conditional with fallback)
+        if (terminalConfig.enableGpuAcceleration !== false) {
+          try {
+            webglAddon = new WebglAddon();
+            terminal.loadAddon(webglAddon);
+            terminalLogger.info(`✅ WebGL addon loaded for terminal ${terminalId}`);
+          } catch (error) {
+            terminalLogger.warn(`⚠️ WebGL addon failed to load (fallback to canvas): ${error}`);
+          }
+        }
+
+        // Create container using TerminalContainerFactory
+        const containerConfig: TerminalContainerConfig = {
+          id: terminalId,
+          name: terminalName,
+          className: 'terminal-container',
+          isSplit: false,
+          isActive: false
+        };
+
+        const headerConfig: TerminalHeaderConfig = {
+          showHeader: true,
+          showCloseButton: true,
+          showSplitButton: false,  // Split button disabled as requested
+          customTitle: terminalName,
+          onHeaderClick: (clickedTerminalId) => {
+            terminalLogger.info(`🎯 Header clicked for terminal: ${clickedTerminalId}`);
+            this.coordinator?.setActiveTerminalId(clickedTerminalId);
+          },
+          onContainerClick: (clickedTerminalId) => {
+            terminalLogger.info(`🎯 Container clicked for terminal: ${clickedTerminalId}`);
+            this.coordinator?.setActiveTerminalId(clickedTerminalId);
+          },
+          onCloseClick: (clickedTerminalId) => {
+            // 仕様: ヘッダーのクローズボタンはそのヘッダーのターミナルを削除する
+            terminalLogger.info(`🗑️ Header close button clicked, using safe deletion: ${clickedTerminalId}`);
+            if (this.coordinator && 'deleteTerminalSafely' in this.coordinator) {
+              void (this.coordinator as any).deleteTerminalSafely(clickedTerminalId);
+            } else {
+              // Fallback to standard closeTerminal
+              void this.coordinator?.closeTerminal(clickedTerminalId);
+            }
+          },
+          onAiAgentToggleClick: (clickedTerminalId) => {
+            terminalLogger.info(`📎 AI Agent toggle clicked for terminal: ${clickedTerminalId}`);
+            if (this.coordinator && 'handleAiAgentToggle' in this.coordinator) {
+              (this.coordinator as any).handleAiAgentToggle(clickedTerminalId);
+            }
+          }
+        };
+
+        // 🚀 PHASE 3: Enhanced container creation with validation
+        let containerElements;
+        try {
+          containerElements = TerminalContainerFactory.createContainer(containerConfig, headerConfig);
+          if (!containerElements || !containerElements.container || !containerElements.body) {
+            throw new Error('Invalid container elements created');
+          }
+        } catch (error) {
+          terminalLogger.error(`Container creation failed: ${error}`);
+          throw error;
+        }
+        
+        const mainContainer = containerElements.container; // Use the main container
+        const terminalContentBody = containerElements.body; // Terminal goes in the body
+
+        // 🚀 PHASE 3: Enhanced terminal opening with validation
+        try {
+          terminal.open(terminalContentBody);
+          
+          // Validate terminal opened successfully
+          const xtermElement = terminalContentBody.querySelector('.xterm');
+          if (!xtermElement) {
+            throw new Error('Terminal did not render properly - no .xterm element found');
+          }
+          
+          terminalLogger.info(`✅ Terminal opened successfully in container: ${terminalId}`);
+        } catch (error) {
+          terminalLogger.error(`Terminal opening failed: ${error}`);
+          throw error;
+        }
+
+        // 🎯 FIX: Add click handler directly to xterm.js terminal element
+        // This ensures clicking anywhere in the terminal area activates it
+        // 🚀 PHASE 3: Optimized timing - reduced from 100ms to 50ms
+        setTimeout(() => {
+          const xtermElement = terminalContentBody.querySelector('.xterm');
+          if (xtermElement) {
+            // 🔧 VS CODE STANDARD: Use click event with hasSelection() check
+            // This mirrors VS Code's built-in terminal behavior exactly
+            const clickHandler = (_event: Event) => {
+              // 🚀 PHASE 3: Optimized timing - reduced from 10ms to 5ms
+              setTimeout(() => {
+                // Only activate terminal if no text is selected (VS Code standard behavior)
+                if (!terminal.hasSelection()) {
+                  terminalLogger.info(`🎯 Terminal clicked for activation (no selection): ${terminalId}`);
+                  this.coordinator?.setActiveTerminalId(terminalId);
+                  
+                  // Only focus if not already focused to avoid interrupting output
+                  if (!terminal.textarea?.hasAttribute('focused')) {
+                    terminal.focus();
+                  }
+                } else {
+                  terminalLogger.debug(`🎯 Click ignored due to text selection in terminal: ${terminalId}`);
                 }
-              }
-            }, 10);
-          };
+              }, 5); // Optimized delay
+            };
+            
+            xtermElement.addEventListener('click', clickHandler);
+            this.eventRegistry.register(`terminal-${terminalId}-click`, xtermElement, 'click', clickHandler);
+            
+            terminalLogger.info(`✅ VS Code standard mouse handling enabled for terminal: ${terminalId}`);
+          }
           
-          this.eventRegistry.register(`terminal-${terminalId}-click`, xtermElement, 'click', clickHandler);
+          // Enable VS Code standard scrollbar display
+          this.enableScrollbarDisplay(xtermElement, terminalId);
           
-          terminalLogger.info(`✅ VS Code standard mouse handling enabled for terminal: ${terminalId}`);
+        }, 50); // Optimized delay
+
+        // Make container visible
+        mainContainer.style.display = 'flex';
+        mainContainer.style.visibility = 'visible';
+
+        // 🚀 PHASE 3: Optimized initial resize timing
+        ResizeManager.debounceResize(
+          `initial-${terminalId}`,
+          () => this.performInitialResize(terminal, fitAddon, mainContainer, terminalId),
+          { delay: 50 } // Reduced from 100ms to 50ms
+        );
+
+        // Use provided terminal number or extract from ID (terminal-X format)
+        const finalTerminalNumber = terminalNumber || this.extractTerminalNumber(terminalId);
+        
+        terminalLogger.info(`Terminal number: ${finalTerminalNumber} (${terminalNumber ? 'from Extension' : 'extracted from ID'})`);
+        
+        // Create terminal instance with VS Code Standard Addons
+        const terminalInstance: TerminalInstance = {
+          id: terminalId,
+          name: terminalName,
+          number: finalTerminalNumber,
+          terminal,
+          container: mainContainer,
+          fitAddon,
+          isActive: false,
+          // VS Code Standard Addons - keep as null if not loaded
+          searchAddon,
+          webglAddon: webglAddon || undefined,
+          unicode11Addon: unicode11Addon || undefined,
+        };
+
+        // Register terminal
+        this.splitManager.getTerminals().set(terminalId, terminalInstance);
+        this.splitManager.getTerminalContainers().set(terminalId, mainContainer);
+
+        // 🔧 AI Agent Support: Register header elements with UIManager for status updates
+        if (containerElements.headerElements) {
+          const uiManager = this.coordinator?.getManagers()?.ui;
+          if (uiManager && 'headerElementsCache' in uiManager) {
+            // Add header elements to UIManager cache for AI Agent status updates
+            (uiManager as any).headerElementsCache.set(terminalId, containerElements.headerElements);
+            terminalLogger.info(`✅ Header elements registered with UIManager for AI Agent support: ${terminalId}`);
+          }
         }
-        
-        // Enable VS Code standard scrollbar display
-        this.enableScrollbarDisplay(xtermElement, terminalId);
-        
-        // 🔧 FIX: Handle terminal focus events for proper state sync
-        // These don't interfere with terminal output
-        // NOTE: xterm.js doesn't have onFocus/onBlur methods, commenting out
-        // terminal.onFocus(() => {
-        //   terminalLogger.info(`🔍 Terminal gained focus: ${terminalId}`);
-        //   // Update active state when terminal gains focus
-        //   if (this.activeTerminalId !== terminalId) {
-        //     this.coordinator?.setActiveTerminalId(terminalId);
-        //   }
-        // });
-        
-        // terminal.onBlur(() => {
-        //   terminalLogger.info(`🔍 Terminal lost focus: ${terminalId}`);
-        // });
-      }, 100); // Small delay to ensure terminal is fully initialized
 
-      // Make container visible
-      mainContainer.style.display = 'flex';
-      mainContainer.style.visibility = 'visible';
-
-      // Initial resize with ResizeManager
-      ResizeManager.debounceResize(
-        `initial-${terminalId}`,
-        () => this.performInitialResize(terminal, fitAddon, mainContainer, terminalId),
-        { delay: 100 }
-      );
-
-      // Use provided terminal number or extract from ID (terminal-X format)
-      const finalTerminalNumber = terminalNumber || this.extractTerminalNumber(terminalId);
-      
-      terminalLogger.info(`Terminal number: ${finalTerminalNumber} (${terminalNumber ? 'from Extension' : 'extracted from ID'})`);
-      
-      // Create terminal instance with VS Code Standard Addons
-      const terminalInstance: TerminalInstance = {
-        id: terminalId,
-        name: terminalName,
-        number: finalTerminalNumber,
-        terminal,
-        container: mainContainer,
-        fitAddon,
-        isActive: false,
-        // VS Code Standard Addons - keep as null if not loaded
-        searchAddon,
-        webglAddon: webglAddon || undefined,
-        unicode11Addon: unicode11Addon || undefined,
-      };
-
-      // Register terminal
-      this.splitManager.getTerminals().set(terminalId, terminalInstance);
-      this.splitManager.getTerminalContainers().set(terminalId, mainContainer);
-
-      // 🔧 AI Agent Support: Register header elements with UIManager for status updates
-      if (containerElements.headerElements) {
-        const uiManager = this.coordinator?.getManagers()?.ui;
-        if (uiManager && 'headerElementsCache' in uiManager) {
-          // Add header elements to UIManager cache for AI Agent status updates
-          (uiManager as any).headerElementsCache.set(terminalId, containerElements.headerElements);
-          terminalLogger.info(`✅ Header elements registered with UIManager for AI Agent support: ${terminalId}`);
-        }
-      }
-
-      // 🔍 DEBUG: Verify DOM structure and visibility
-      const mainTerminalBody = document.getElementById('terminal-body');
-      if (mainTerminalBody) {
-        terminalLogger.info(`✅ terminal-body exists, children count: ${mainTerminalBody.children.length}`);
-        terminalLogger.info(`✅ container added to DOM, display: ${mainContainer.style.display}, visibility: ${mainContainer.style.visibility}`);
-        terminalLogger.info(`✅ container dimensions: ${mainContainer.offsetWidth}x${mainContainer.offsetHeight}`);
-        
-        // Verify container is actually in DOM
-        if (mainTerminalBody.contains(mainContainer)) {
-          terminalLogger.info(`✅ container is properly attached to terminal-body`);
+        // 🔍 DEBUG: Verify DOM structure and visibility
+        const mainTerminalBody = document.getElementById('terminal-body');
+        if (mainTerminalBody) {
+          terminalLogger.info(`✅ terminal-body exists, children count: ${mainTerminalBody.children.length}`);
+          terminalLogger.info(`✅ container added to DOM, display: ${mainContainer.style.display}, visibility: ${mainContainer.style.visibility}`);
+          terminalLogger.info(`✅ container dimensions: ${mainContainer.offsetWidth}x${mainContainer.offsetHeight}`);
+          
+          // Verify container is actually in DOM
+          if (mainTerminalBody.contains(mainContainer)) {
+            terminalLogger.info(`✅ container is properly attached to terminal-body`);
+          } else {
+            terminalLogger.error(`❌ container is NOT in terminal-body DOM tree`);
+          }
         } else {
-          terminalLogger.error(`❌ container is NOT in terminal-body DOM tree`);
+          terminalLogger.error(`❌ terminal-body element not found in DOM`);
         }
-      } else {
-        terminalLogger.error(`❌ terminal-body element not found in DOM`);
+
+        // Setup resize observer using ResizeManager
+        this.setupResizeObserver(terminalId, terminalInstance);
+
+        // Set as active if first terminal
+        if (!this.activeTerminalId) {
+          this.setActiveTerminalId(terminalId);
+          this.terminal = terminal;
+          this.fitAddon = fitAddon;
+          this.terminalContainer = mainContainer;
+        }
+
+        // Setup shell integration decorations
+        this.setupShellIntegration(terminal, terminalId);
+
+        const creationTime = performanceMonitor.endTimer(`terminal-creation-attempt-${terminalId}-${currentRetry}`);
+        terminalLogger.info(`✅ Terminal created successfully: ${terminalId} (${creationTime?.toFixed(2)}ms)`);
+        return terminal;
+        
+      } catch (error) {
+        performanceMonitor.endTimer(`terminal-creation-attempt-${terminalId}-${currentRetry}`);
+        terminalLogger.error(`❌ Terminal creation attempt ${currentRetry + 1} failed for ${terminalId}:`, error);
+        
+        // 🚀 PHASE 3: Enhanced error recovery logic
+        if (currentRetry < maxRetries) {
+          currentRetry++;
+          terminalLogger.info(`🔄 Retrying terminal creation: ${terminalId} (attempt ${currentRetry + 1}/${maxRetries + 1})`);
+          
+          // Clean up any partial state before retry
+          const existingContainer = document.querySelector(`[data-terminal-id="${terminalId}"]`);
+          if (existingContainer) {
+            existingContainer.remove();
+            terminalLogger.info(`🧹 Cleaned up partial container before retry: ${terminalId}`);
+          }
+          
+          // Brief delay before retry
+          await new Promise(resolve => setTimeout(resolve, 100));
+          return attemptCreation();
+        }
+        
+        // All retries exhausted
+        terminalLogger.error(`❌ All retry attempts exhausted for terminal ${terminalId}`);
+        throw error;
       }
-
-      // Setup resize observer using ResizeManager
-      this.setupResizeObserver(terminalId, terminalInstance);
-
-      // Set as active if first terminal
-      if (!this.activeTerminalId) {
-        this.setActiveTerminalId(terminalId);
-        this.terminal = terminal;
-        this.fitAddon = fitAddon;
-        this.terminalContainer = mainContainer;
-      }
-
-      // Setup shell integration decorations
-      this.setupShellIntegration(terminal, terminalId);
-
-      terminalLogger.info(`Terminal created successfully: ${terminalId}`);
-      return terminal;
-    } catch (error) {
-      terminalLogger.error(`Failed to create terminal ${terminalId}:`, error);
-      return null;
-    }
+    };
+    
+    return attemptCreation();
   }
 
   /**

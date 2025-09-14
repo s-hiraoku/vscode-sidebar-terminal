@@ -22,7 +22,7 @@ export class PersistenceError extends Error {
   public override readonly name = 'PersistenceError';
   
   constructor(
-    message: string,
+    override message: string,
     public readonly code: PersistenceErrorCode,
     public readonly terminalId?: string,
     public readonly cause?: Error

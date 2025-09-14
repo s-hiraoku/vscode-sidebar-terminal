@@ -44,8 +44,9 @@ import { UIManager } from './UIManager';
 import { InputManager } from './InputManager';
 import { RefactoredMessageManager } from './RefactoredMessageManager';
 import { StandardTerminalPersistenceManager } from './StandardTerminalPersistenceManager';
-import { OptimizedPersistenceManager } from './OptimizedPersistenceManager';
+import { OptimizedTerminalPersistenceManager } from '../services/OptimizedPersistenceManager';
 import { SimplePersistenceManager } from './SimplePersistenceManager';
+import { PerformanceMonitor, DOMBatcher } from '../../utils/PerformanceOptimizer';
 import { WebViewApiManager } from './WebViewApiManager';
 import { TerminalLifecycleManager } from './TerminalLifecycleManager';
 import { CliAgentStateManager } from './CliAgentStateManager';
@@ -79,8 +80,8 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
   private uiManager!: UIManager;
   private inputManager!: InputManager;
   public messageManager!: RefactoredMessageManager;
-  public persistenceManager!: StandardTerminalPersistenceManager;
-  public optimizedPersistenceManager!: OptimizedPersistenceManager;
+  public persistenceManager: any;
+  public optimizedPersistenceManager!: OptimizedTerminalPersistenceManager;
   public simplePersistenceManager!: SimplePersistenceManager;
 
   // 設定管理
@@ -144,53 +145,36 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
    * 既存マネージャーの初期化（段階的移行のため）
    */
   private initializeExistingManagers(): void {
-    this.settingsPanel = new SettingsPanel({
-      onSettingsChange: (settings) => {
-        this.applySettings(settings);
-      },
-    });
+    log('🔧 Initializing existing managers...');
 
+    // Settings Panel Manager
+    this.settingsPanel = new SettingsPanel();
+    
+    // Notification Manager
     this.notificationManager = new NotificationManager();
-    this.configManager = new ConfigManager();
+    
+    // Performance Manager
     this.performanceManager = new PerformanceManager();
+    
+    // UI Manager
     this.uiManager = new UIManager();
+    
+    // Input Manager - 重要：入力機能のために必須
     this.inputManager = new InputManager();
-    this.messageManager = new RefactoredMessageManager(this);
-    this.persistenceManager = new StandardTerminalPersistenceManager();
-    this.optimizedPersistenceManager = new OptimizedPersistenceManager(this);
-    this.simplePersistenceManager = new SimplePersistenceManager(this.webViewApiManager.getVscodeApi());
+    
+    // Config Manager
+    this.configManager = new ConfigManager();
 
-    // Initialize the message manager (initialize method returns void, not Promise)
-    try {
-      this.messageManager.initialize(this);
-      console.log('✅ RefactoredMessageManager initialized successfully');
-    } catch (error) {
-      console.error('Failed to initialize RefactoredMessageManager:', error);
-    }
+    // 🚀 PHASE 3: Initialize persistence managers with proper API access
+    this.simplePersistenceManager = new SimplePersistenceManager(this.webViewApiManager.getApi());
+    this.optimizedPersistenceManager = new OptimizedTerminalPersistenceManager();
 
-    // Initialize optimized persistence manager
-    try {
-      this.optimizedPersistenceManager.initialize();
-      console.log('✅ OptimizedPersistenceManager initialized successfully');
-    } catch (error) {
-      console.error('Failed to initialize OptimizedPersistenceManager:', error);
-    }
+    // Message Manager は後で初期化
+    this.messageManager = new RefactoredMessageManager();
+    this.persistenceManager = this.simplePersistenceManager;
 
-    // 🔄 Initialize session restoration capability
-    this.initializeSessionRestoration();
-
-    // 依存関係の設定
-    setUIManager(this.uiManager);
-    this.inputManager.setNotificationManager(this.notificationManager);
-    this.notificationManager.setupNotificationStyles();
-    try {
-      this.shellIntegrationManager.setCoordinator(this);
-    } catch (error) {
-      console.error('Failed to set ShellIntegrationManager coordinator:', error);
-    }
-
-    // 重要：入力マネージャーの完全な設定
-    this.setupInputManager();
+    // Input Manager setup will be handled in setupInputManager()
+    log('✅ Existing managers initialized');
   }
 
   /**
@@ -460,14 +444,14 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
         setTimeout(() => {
           terminal.focus();
           console.log(`🎯 [FIX] Focused new terminal: ${terminalId}`);
-        }, 50);
+        }, 25);
       }
 
       // 🔍 SAFE: Single delayed resize for reliability
       console.log(`🔍 [DEBUG] Scheduling delayed resize for: ${terminalId}`);
 
       setTimeout(() => {
-        console.log(`🔍 [DEBUG] Delayed resize (300ms) for: ${terminalId}`);
+        console.log(`🔍 [DEBUG] Delayed resize (150ms) for: ${terminalId}`);
         this.terminalLifecycleManager.resizeAllTerminals();
         
         // 🎯 FIX: リサイズ後もボーダーを再確認
@@ -475,7 +459,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
           this.uiManager.updateTerminalBorders(terminalId, allContainers);
           console.log(`🎯 [FIX] Re-confirmed active border after resize: ${terminalId}`);
         }
-      }, 300);
+      }, 150);
 
       // 5. ExtensionにRegular のターミナル作成をリクエスト
       this.postMessageToExtension({
@@ -556,28 +540,13 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
 
       const terminal = terminalInstance.terminal;
       console.log(`🔍 [EXTRACT-DEBUG] Terminal details:`, {
-        hasSerialize: typeof terminal.serialize === 'function',
         hasBuffer: !!terminal.buffer,
         hasNormalBuffer: !!(terminal.buffer && terminal.buffer.normal)
       });
 
-      // Try xterm.js serialize addon first (if available)
-      if (typeof terminal.serialize === 'function') {
-        console.log('📄 [EXTRACT-DEBUG] Using xterm.js serialize addon');
-        try {
-          const serialized = terminal.serialize();
-          const lines = serialized.split('\n').slice(-maxLines);
-          console.log(`📦 [EXTRACT-DEBUG] Serialize addon extracted ${lines.length} lines`);
-          console.log('📄 [EXTRACT-DEBUG] First few lines:', lines.slice(0, 3));
-          return lines;
-        } catch (serializeError) {
-          console.warn('⚠️ [EXTRACT-DEBUG] Serialize addon failed, falling back to buffer method:', serializeError);
-        }
-      }
-
-      // Fallback: Read from buffer directly
+      // Use buffer method for scrollback extraction
       if (terminal.buffer && terminal.buffer.normal) {
-        console.log('📄 [EXTRACT-DEBUG] Using buffer fallback method');
+        console.log('📄 [EXTRACT-DEBUG] Using buffer method for scrollback extraction');
         try {
           const buffer = terminal.buffer.normal;
           const lines: string[] = [];

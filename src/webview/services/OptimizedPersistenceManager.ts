@@ -45,7 +45,7 @@ export enum PersistenceErrorType {
 
 export class WebViewPersistenceError extends Error {
   constructor(
-    message: string,
+    override message: string,
     public readonly type: PersistenceErrorType,
     public readonly terminalId?: string,
     public readonly cause?: Error
