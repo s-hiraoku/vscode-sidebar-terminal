@@ -324,6 +324,16 @@ export class TerminalLifecycleManager {
           throw error; // Essential addons are critical
         }
 
+        // Initialize shell integration after essential addons
+        if (this.coordinator?.shellIntegrationManager) {
+          try {
+            this.coordinator.shellIntegrationManager.initializeTerminalShellIntegration(terminal, terminalId);
+            terminalLogger.info(`🐚 Shell integration initialized for terminal ${terminalId}`);
+          } catch (error) {
+            terminalLogger.warn(`⚠️ Shell integration failed to initialize (non-critical): ${error}`);
+          }
+        }
+
         // Load optional addons with graceful degradation
         if (terminalConfig.enableUnicode11 !== false) {
           try {
