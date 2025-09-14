@@ -7,7 +7,7 @@
  * - Current working directory detection
  */
 
-import { ITerminalAddon, Terminal } from 'xterm';
+import { ITerminalAddon, Terminal } from '@xterm/xterm';
 
 export interface ICommandDetection {
   command: string;

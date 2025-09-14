@@ -124,7 +124,9 @@ export class TerminalTabManager implements TerminalTabEvents {
     
     // Reorder the tab order array
     const [movedTabId] = this.tabOrder.splice(fromIndex, 1);
-    this.tabOrder.splice(toIndex, 0, movedTabId);
+    if (movedTabId) {
+      this.tabOrder.splice(toIndex, 0, movedTabId);
+    }
     
     // Rebuild the tab UI in new order
     this.rebuildTabsInOrder();
@@ -178,7 +180,9 @@ export class TerminalTabManager implements TerminalTabEvents {
     const wasActive = this.getActiveTabId() === terminalId;
     if (wasActive && this.tabs.size > 0) {
       const nextTab = this.tabOrder[0] || Array.from(this.tabs.keys())[0];
-      this.setActiveTab(nextTab);
+      if (nextTab) {
+        this.setActiveTab(nextTab);
+      }
     }
     
     this.updateTabVisibility();
