@@ -7,7 +7,7 @@
  * - Terminal/task association management
  */
 
-import { Terminal } from '@xterm/xterm';
+// import { Terminal } from '@xterm/xterm'; // Removed: not used in current implementation
 import { IManagerCoordinator } from '../interfaces/ManagerInterfaces';
 
 export interface TaskDefinition {
@@ -182,7 +182,7 @@ export class TaskIntegrationManager {
     return sharedTerminalId;
   }
 
-  private async getOrCreateDedicatedTerminal(task: TaskDefinition, taskId: string): Promise<string> {
+  private async getOrCreateDedicatedTerminal(task: TaskDefinition, _taskId: string): Promise<string> {
     const dedicatedKey = task.group || task.type || 'default';
     const dedicatedTerminalId = `dedicated-${dedicatedKey}`;
     
@@ -320,15 +320,19 @@ export class TaskIntegrationManager {
 
   private getSeverityFromMatch(match: RegExpMatchArray, pattern: any): 'error' | 'warning' | 'info' {
     if (pattern.severity && match[pattern.severity]) {
-      const severity = match[pattern.severity].toLowerCase();
-      if (severity.includes('error')) return 'error';
-      if (severity.includes('warn')) return 'warning';
+      const severityGroup = match[pattern.severity];
+      if (severityGroup) {
+        const severity = severityGroup.toLowerCase();
+        if (severity.includes('error')) return 'error';
+        if (severity.includes('warn')) return 'warning';
+      }
     }
     return 'error'; // Default to error
   }
 
   private getMessageFromMatch(match: RegExpMatchArray, pattern: any): string {
-    return pattern.message && match[pattern.message] ? match[pattern.message] : match[0];
+    const messageGroup = pattern.message && match[pattern.message];
+    return messageGroup || match[0] || '';
   }
 
   private getFileFromMatch(match: RegExpMatchArray, pattern: any): string | undefined {
@@ -336,11 +340,13 @@ export class TaskIntegrationManager {
   }
 
   private getLineFromMatch(match: RegExpMatchArray, pattern: any): number | undefined {
-    return pattern.line && match[pattern.line] ? parseInt(match[pattern.line], 10) : undefined;
+    const lineGroup = pattern.line && match[pattern.line];
+    return lineGroup ? parseInt(lineGroup, 10) : undefined;
   }
 
   private getColumnFromMatch(match: RegExpMatchArray, pattern: any): number | undefined {
-    return pattern.column && match[pattern.column] ? parseInt(match[pattern.column], 10) : undefined;
+    const columnGroup = pattern.column && match[pattern.column];
+    return columnGroup ? parseInt(columnGroup, 10) : undefined;
   }
 
   /**

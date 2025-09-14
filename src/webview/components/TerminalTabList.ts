@@ -30,8 +30,8 @@ export interface TerminalTabEvents {
  */
 export class TerminalTabList {
   private container: HTMLElement;
-  private tabsContainer: HTMLElement;
-  private addButton: HTMLElement;
+  private tabsContainer!: HTMLElement;
+  private addButton!: HTMLElement;
   private tabs: Map<string, TerminalTab> = new Map();
   private events: TerminalTabEvents;
   private draggedTab: string | null = null;
@@ -265,7 +265,10 @@ export class TerminalTabList {
     const newIndex = currentIndex + direction;
     
     if (newIndex >= 0 && newIndex < tabIds.length) {
-      this.events.onTabClick(tabIds[newIndex]);
+      const tabId = tabIds[newIndex];
+      if (tabId) {
+        this.events.onTabClick(tabId);
+      }
     }
   }
 
@@ -532,7 +535,9 @@ export class TerminalTabList {
           menuItem.style.background = 'transparent';
         });
         menuItem.addEventListener('click', () => {
-          item.action();
+          if (item.action) {
+            item.action();
+          }
           document.body.removeChild(menu);
         });
       }
