@@ -279,7 +279,8 @@ export class InitializationMessageHandler implements MessageHandler {
       case 'requestSessionRestore':
         log('🔄 [RESTORATION] WebView requested session restoration');
         try {
-          log('🔄 [RESTORATION] Creating initial terminal for session restore fallback');
+          // Note: Session restoration handled via other services
+          log('🔄 [RESTORATION] Session restoration delegated to terminal manager');
           
           // Fallback: Create an initial terminal if none exist
           if (context.terminalManager.getTerminals().length === 0) {

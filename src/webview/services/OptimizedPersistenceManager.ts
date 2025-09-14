@@ -44,6 +44,8 @@ export enum PersistenceErrorType {
 }
 
 export class WebViewPersistenceError extends Error {
+  public override readonly name = 'WebViewPersistenceError';
+  
   constructor(
     override message: string,
     public readonly type: PersistenceErrorType,

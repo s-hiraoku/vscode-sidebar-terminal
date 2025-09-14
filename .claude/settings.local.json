@@ -120,7 +120,8 @@
       "mcp__github-server__create_issue",
       "Bash(gh pr diff:*)",
       "Bash(gh pr checkout:*)",
-      "Bash(git fetch:*)"
+      "Bash(git fetch:*)",
+      "mcp__github-server__get_pull_request"
     ],
     "deny": []
   },
