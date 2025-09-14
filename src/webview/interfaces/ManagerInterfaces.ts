@@ -39,6 +39,7 @@ export interface IManagerCoordinator {
   openSettings(): void;
   applyFontSettings(fontSettings: WebViewFontSettings): void;
   closeTerminal(id?: string): void;
+  shellIntegrationManager?: any; // Shell integration manager
   getManagers(): {
     performance: IPerformanceManager;
     input: IInputManager;
