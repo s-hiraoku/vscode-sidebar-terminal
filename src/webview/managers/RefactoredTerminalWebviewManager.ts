@@ -72,7 +72,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
   private terminalLifecycleManager: TerminalLifecycleManager;
   private cliAgentStateManager: CliAgentStateManager;
   private eventHandlerManager: EventHandlerManager;
-  private shellIntegrationManager: ShellIntegrationManager;
+  public shellIntegrationManager: ShellIntegrationManager;
 
   // 既存マネージャー（段階的移行）
   public splitManager: SplitManager;
