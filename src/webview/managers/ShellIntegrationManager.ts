@@ -1,6 +1,6 @@
 /**
  * Shell Integration Manager for WebView
- * 
+ *
  * Enhanced shell integration features:
  * - OSC 633 sequence processing (VS Code compatible)
  * - Command detection and exit code indication
@@ -13,7 +13,11 @@
 import { Terminal } from '@xterm/xterm';
 import { IManagerCoordinator } from '../interfaces/ManagerInterfaces';
 import { WebviewMessage } from '../../types/shared';
-import { ShellIntegrationAddon, ICommandDetection, IShellIntegrationEvents } from '../addons/ShellIntegrationAddon';
+import {
+  ShellIntegrationAddon,
+  ICommandDetection,
+  IShellIntegrationEvents,
+} from '../addons/ShellIntegrationAddon';
 
 export interface ShellStatus {
   terminalId: string;
@@ -56,15 +60,15 @@ export class ShellIntegrationManager implements IShellIntegrationEvents {
       // Create and load shell integration addon
       const addon = new ShellIntegrationAddon(this);
       terminal.loadAddon(addon);
-      
+
       this.shellAddons.set(terminalId, addon);
-      
+
       // Initialize status
       this.statusMap.set(terminalId, {
         terminalId,
-        status: 'ready'
+        status: 'ready',
       });
-      
+
       console.log(`🐚 Shell Integration initialized for terminal: ${terminalId}`);
       this.updateStatusIndicator(terminalId, 'ready');
     } catch (error) {
@@ -81,13 +85,13 @@ export class ShellIntegrationManager implements IShellIntegrationEvents {
     if (!terminalId) return;
 
     console.log(`🚀 Command started in terminal ${terminalId}: ${command.command}`);
-    
+
     // Update status
     this.updateShellStatus(terminalId, 'executing');
-    
+
     // Track start time for duration calculation
     this.commandStartTimes.set(terminalId, command.timestamp);
-    
+
     // Update status with command info
     const status = this.statusMap.get(terminalId);
     if (status) {
@@ -100,29 +104,31 @@ export class ShellIntegrationManager implements IShellIntegrationEvents {
     const terminalId = this.findTerminalIdForCommand(command);
     if (!terminalId) return;
 
-    console.log(`✅ Command finished in terminal ${terminalId}: "${command.command}" (exit code: ${exitCode})`);
-    
+    console.log(
+      `✅ Command finished in terminal ${terminalId}: "${command.command}" (exit code: ${exitCode})`
+    );
+
     // Calculate duration
     const startTime = this.commandStartTimes.get(terminalId);
     const duration = startTime ? Date.now() - startTime : undefined;
     this.commandStartTimes.delete(terminalId);
-    
+
     // Update status
     const status = exitCode === 0 ? 'success' : 'error';
     this.updateShellStatus(terminalId, status);
-    
+
     // Update status info
     const statusInfo = this.statusMap.get(terminalId);
     if (statusInfo) {
       statusInfo.lastExitCode = exitCode;
       statusInfo.lastDuration = duration;
     }
-    
+
     // Show exit code indicator for errors
     if (exitCode !== 0) {
       this.showExitCodeNotification(terminalId, exitCode, command.command);
     }
-    
+
     // Auto-return to ready state after 2 seconds
     setTimeout(() => {
       this.updateShellStatus(terminalId, 'ready');
@@ -153,7 +159,7 @@ export class ShellIntegrationManager implements IShellIntegrationEvents {
         return terminalId;
       }
     }
-    
+
     // Fallback: use first terminal if we can't match
     const firstTerminalId = Array.from(this.statusMap.keys())[0];
     return firstTerminalId;
@@ -165,12 +171,12 @@ export class ShellIntegrationManager implements IShellIntegrationEvents {
   private showExitCodeNotification(terminalId: string, exitCode: number, command: string): void {
     // This would integrate with NotificationManager in a full implementation
     console.warn(`Command failed in terminal ${terminalId}: "${command}" (exit code: ${exitCode})`);
-    
+
     // Show visual indicator
     this.coordinator?.postMessageToExtension({
       command: 'showNotification',
       message: `Command failed: "${command}" (exit code: ${exitCode})`,
-      type: 'warning'
+      type: 'warning',
     });
   }
 
@@ -533,7 +539,7 @@ export class ShellIntegrationManager implements IShellIntegrationEvents {
   public disposeTerminal(terminalId: string): void {
     this.statusMap.delete(terminalId);
     this.commandStartTimes.delete(terminalId);
-    
+
     const indicator = this.statusIndicators.get(terminalId);
     if (indicator) {
       indicator.remove();
@@ -545,7 +551,7 @@ export class ShellIntegrationManager implements IShellIntegrationEvents {
       cwdDisplay.remove();
       this.cwdDisplays.delete(terminalId);
     }
-    
+
     // Dispose shell integration addon
     const addon = this.shellAddons.get(terminalId);
     if (addon) {
@@ -561,20 +567,22 @@ export class ShellIntegrationManager implements IShellIntegrationEvents {
     this.statusIndicators.clear();
     this.cwdDisplays.forEach((display) => display.remove());
     this.cwdDisplays.clear();
-    this.shellAddons.forEach(addon => addon.dispose());
+    this.shellAddons.forEach((addon) => addon.dispose());
     this.shellAddons.clear();
   }
 
   /**
    * Get shell integration state for a terminal
    */
-  public getShellIntegrationState(terminalId: string): {
-    isActive: boolean;
-    currentCommand?: ICommandDetection;
-    commandHistory: ICommandDetection[];
-    currentCwd: string;
-    lastExitCode?: number;
-  } | undefined {
+  public getShellIntegrationState(terminalId: string):
+    | {
+        isActive: boolean;
+        currentCommand?: ICommandDetection;
+        commandHistory: ICommandDetection[];
+        currentCwd: string;
+        lastExitCode?: number;
+      }
+    | undefined {
     const addon = this.shellAddons.get(terminalId);
     if (!addon) return undefined;
 
@@ -583,7 +591,7 @@ export class ShellIntegrationManager implements IShellIntegrationEvents {
       currentCommand: addon.getCurrentCommand(),
       commandHistory: addon.getCommandHistory(),
       currentCwd: addon.getCurrentCwd(),
-      lastExitCode: this.statusMap.get(terminalId)?.lastExitCode
+      lastExitCode: this.statusMap.get(terminalId)?.lastExitCode,
     };
   }
 

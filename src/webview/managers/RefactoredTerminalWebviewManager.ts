@@ -25,6 +25,8 @@ import {
   IConfigManager,
   IMessageManager,
   INotificationManager,
+  IFindInTerminalManager,
+  IProfileManager,
 } from '../interfaces/ManagerInterfaces';
 
 // Debug info interface
@@ -56,6 +58,8 @@ import { TerminalLifecycleManager } from './TerminalLifecycleManager';
 import { CliAgentStateManager } from './CliAgentStateManager';
 import { EventHandlerManager } from './EventHandlerManager';
 import { ShellIntegrationManager } from './ShellIntegrationManager';
+import { FindInTerminalManager } from './FindInTerminalManager';
+import { ProfileManager } from './ProfileManager';
 
 /**
  * リファクタリングされたTerminalWebviewManager
@@ -73,6 +77,8 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
   private cliAgentStateManager: CliAgentStateManager;
   private eventHandlerManager: EventHandlerManager;
   public shellIntegrationManager: ShellIntegrationManager;
+  public findInTerminalManager: FindInTerminalManager;
+  public profileManager: ProfileManager;
 
   // 既存マネージャー（段階的移行）
   public splitManager: SplitManager;
@@ -116,6 +122,8 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     this.terminalLifecycleManager = new TerminalLifecycleManager(this.splitManager, this);
     this.cliAgentStateManager = new CliAgentStateManager();
     this.eventHandlerManager = new EventHandlerManager();
+    this.findInTerminalManager = new FindInTerminalManager();
+    this.profileManager = new ProfileManager();
     try {
       this.shellIntegrationManager = new ShellIntegrationManager();
     } catch (error) {
@@ -175,6 +183,22 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     // Message Manager は後で初期化
     this.messageManager = new RefactoredMessageManager();
     this.persistenceManager = this.simplePersistenceManager;
+
+    // Set up coordinator relationships for specialized managers
+    this.findInTerminalManager.setCoordinator(this);
+    this.profileManager.setCoordinator(this);
+    this.shellIntegrationManager.setCoordinator &&
+      this.shellIntegrationManager.setCoordinator(this);
+
+    // Initialize ProfileManager asynchronously
+    setTimeout(async () => {
+      try {
+        await this.profileManager.initialize();
+        console.log('🎯 ProfileManager async initialization completed');
+      } catch (error) {
+        console.error('❌ ProfileManager initialization failed:', error);
+      }
+    }, 100);
 
     // Input Manager setup will be handled in setupInputManager()
     log('✅ Existing managers initialized');
@@ -331,6 +355,8 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     config: IConfigManager;
     message: IMessageManager;
     notification: INotificationManager;
+    findInTerminal?: IFindInTerminalManager;
+    profile?: IProfileManager;
     persistence: StandardTerminalPersistenceManager;
   } {
     return {
@@ -340,6 +366,8 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       config: this.configManager,
       message: this.messageManager,
       notification: this.notificationManager,
+      findInTerminal: this.findInTerminalManager,
+      profile: this.profileManager,
       persistence: this.persistenceManager,
     };
   }
@@ -2214,6 +2242,8 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       this.cliAgentStateManager.dispose();
       this.terminalLifecycleManager.dispose();
       this.webViewApiManager.dispose();
+      this.findInTerminalManager.dispose();
+      this.profileManager.dispose();
 
       // 既存マネージャーのクリーンアップ
       this.messageManager.dispose();
