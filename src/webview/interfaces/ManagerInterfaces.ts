@@ -9,6 +9,7 @@ import { WebglAddon } from '@xterm/addon-webgl';
 import { Unicode11Addon } from '@xterm/addon-unicode11';
 import { PartialTerminalSettings, WebViewFontSettings } from '../../types/shared';
 import { AltClickState, TerminalInteractionEvent } from '../../types/common';
+import { ITerminalProfile } from '../../types/profiles';
 
 // Core terminal data structure with VS Code Standard Addons
 export interface TerminalInstance {
@@ -45,6 +46,8 @@ export interface IManagerCoordinator {
   applyFontSettings(fontSettings: WebViewFontSettings): void;
   closeTerminal(id?: string): void;
   shellIntegrationManager?: any; // Shell integration manager
+  findInTerminalManager?: IFindInTerminalManager; // Find in Terminal manager
+  profileManager?: IProfileManager; // Profile manager
   getManagers(): {
     performance: IPerformanceManager;
     input: IInputManager;
@@ -52,6 +55,8 @@ export interface IManagerCoordinator {
     config: IConfigManager;
     message: IMessageManager;
     notification: INotificationManager;
+    findInTerminal?: IFindInTerminalManager;
+    profile?: IProfileManager;
     persistence?: any; // Optional persistence manager
   };
   getMessageManager(): IMessageManager;
@@ -261,6 +266,45 @@ export interface INotificationManager {
   dispose(): void;
 }
 
+// Find in Terminal management interface
+export interface IFindInTerminalManager {
+  showSearch(): void;
+  hideSearch(): void;
+  findNext(): void;
+  findPrevious(): void;
+  getSearchState(): {
+    isVisible: boolean;
+    searchTerm: string;
+    options: {
+      caseSensitive: boolean;
+      wholeWord: boolean;
+      regex: boolean;
+      backwards: boolean;
+    };
+    matches: { current: number; total: number };
+  };
+  dispose(): void;
+}
+
+// Profile management interface
+export interface IProfileManager {
+  showProfileSelector(onProfileSelected?: (profileId: string) => void): void;
+  hideProfileSelector(): void;
+  getAvailableProfiles(): Promise<ITerminalProfile[]>;
+  getProfile(profileId: string): ITerminalProfile | undefined;
+  getDefaultProfile(): ITerminalProfile | undefined;
+  setDefaultProfile(profileId: string): Promise<void>;
+  refreshProfiles(): Promise<void>;
+  createTerminalWithProfile(profileId: string, name?: string): Promise<void>;
+  createTerminalWithDefaultProfile(name?: string): Promise<void>;
+  switchToProfileByIndex(index: number): Promise<void>;
+  updateProfiles(profiles: ITerminalProfile[], defaultProfileId?: string): void;
+  handleMessage(message: any): void;
+  isProfileSelectorVisible(): boolean;
+  getSelectedProfileId(): string | undefined;
+  dispose(): void;
+}
+
 // Split management support interface (extends existing SplitManager)
 export interface ISplitManagerSupport {
   prepareSplitMode(direction: 'horizontal' | 'vertical'): void;
@@ -278,6 +322,7 @@ export interface IManagerFactory {
   createConfigManager(): IConfigManager;
   createMessageManager(): IMessageManager;
   createNotificationManager(): INotificationManager;
+  createProfileManager(): IProfileManager;
 }
 
 // Event emitter interface for manager communication

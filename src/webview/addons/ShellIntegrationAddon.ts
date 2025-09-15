@@ -42,17 +42,17 @@ export class ShellIntegrationAddon implements ITerminalAddon {
 
   public activate(terminal: Terminal): void {
     this.terminal = terminal;
-    
+
     // Register OSC handler for shell integration sequences
     const oscHandler = terminal.parser.registerOscHandler(633, (data: string) => {
       return this.handleOSC633(data);
     });
-    
+
     this.disposables.push(() => oscHandler.dispose());
   }
 
   public dispose(): void {
-    this.disposables.forEach(dispose => dispose());
+    this.disposables.forEach((dispose) => dispose());
     this.disposables = [];
     this.terminal = undefined;
     this.currentCommand = undefined;
@@ -71,7 +71,7 @@ export class ShellIntegrationAddon implements ITerminalAddon {
         case 'A': // Prompt start
           this.handlePromptStart();
           break;
-        case 'B': // Command start  
+        case 'B': // Command start
           this.handleCommandStart();
           break;
         case 'C': // Command executed
@@ -108,19 +108,19 @@ export class ShellIntegrationAddon implements ITerminalAddon {
       // Command finished without explicit exit code
       this.handleCommandFinished(0);
     }
-    
+
     this.events?.onPromptStart();
   }
 
   /**
-   * Handle command start (OSC 633;B) 
+   * Handle command start (OSC 633;B)
    */
   private handleCommandStart(): void {
     this.currentCommand = {
       command: '',
       cwd: this.currentCwd,
       timestamp: Date.now(),
-      isRunning: false
+      isRunning: false,
     };
   }
 
@@ -141,15 +141,15 @@ export class ShellIntegrationAddon implements ITerminalAddon {
     if (this.currentCommand) {
       this.currentCommand.exitCode = exitCode;
       this.currentCommand.isRunning = false;
-      
+
       // Add to history
       this.commandHistory.push({ ...this.currentCommand });
-      
+
       // Keep only last 100 commands
       if (this.commandHistory.length > 100) {
         this.commandHistory.shift();
       }
-      
+
       this.events?.onCommandEnd(this.currentCommand, exitCode);
       this.currentCommand = undefined;
     }
@@ -170,7 +170,7 @@ export class ShellIntegrationAddon implements ITerminalAddon {
   private handleProperty(parts: string[]): void {
     for (const part of parts) {
       const [key, value] = part.split('=', 2);
-      
+
       switch (key) {
         case 'Cwd':
           if (value && value !== this.currentCwd) {

@@ -263,7 +263,7 @@ export class TerminalTabList {
 
     const currentIndex = tabIds.indexOf(activeTab.id);
     const newIndex = currentIndex + direction;
-    
+
     if (newIndex >= 0 && newIndex < tabIds.length) {
       const tabId = tabIds[newIndex];
       if (tabId) {
@@ -311,7 +311,7 @@ export class TerminalTabList {
   }
 
   public getActiveTab(): TerminalTab | undefined {
-    return Array.from(this.tabs.values()).find(tab => tab.isActive);
+    return Array.from(this.tabs.values()).find((tab) => tab.isActive);
   }
 
   public getAllTabs(): TerminalTab[] {
@@ -423,11 +423,11 @@ export class TerminalTabList {
   private showDropIndicator(tabElement: HTMLElement, position: 'before' | 'after'): void {
     const rect = tabElement.getBoundingClientRect();
     const containerRect = this.tabsContainer.getBoundingClientRect();
-    
+
     this.dropIndicator.style.left = `${position === 'before' ? rect.left - containerRect.left - 1 : rect.right - containerRect.left - 1}px`;
     this.dropIndicator.style.top = '0';
     this.dropIndicator.classList.add('visible');
-    
+
     if (!this.dropIndicator.parentElement) {
       this.tabsContainer.appendChild(this.dropIndicator);
     }
@@ -441,7 +441,7 @@ export class TerminalTabList {
     const tab = this.tabs.get(tabId);
     const tabElement = this.container.querySelector(`[data-tab-id="${tabId}"]`);
     const labelElement = tabElement?.querySelector('.terminal-tab-label');
-    
+
     if (!tab || !labelElement) return;
 
     const input = document.createElement('input');
@@ -507,13 +507,14 @@ export class TerminalTabList {
       { label: '---' },
       { label: 'Close', action: () => this.events.onTabClose(tab.id), disabled: !tab.isClosable },
       { label: 'Close Others', action: () => console.log('Close others') },
-      { label: 'Close All', action: () => console.log('Close all') }
+      { label: 'Close All', action: () => console.log('Close all') },
     ];
 
-    menuItems.forEach(item => {
+    menuItems.forEach((item) => {
       if (item.label === '---') {
         const separator = document.createElement('div');
-        separator.style.cssText = 'height: 1px; background: var(--vscode-menu-separatorBackground); margin: 4px 0;';
+        separator.style.cssText =
+          'height: 1px; background: var(--vscode-menu-separatorBackground); margin: 4px 0;';
         menu.appendChild(separator);
         return;
       }
@@ -554,7 +555,7 @@ export class TerminalTabList {
         document.removeEventListener('click', closeMenu);
       }
     };
-    
+
     setTimeout(() => document.addEventListener('click', closeMenu), 0);
   }
 
