@@ -63,9 +63,10 @@ export class TerminalTabManager implements TerminalTabEvents {
     this.tabContainer = document.createElement('div');
     this.tabContainer.id = 'terminal-tabs-container';
     this.tabContainer.className = 'terminal-tabs-root';
-    
+
     // Insert before terminal content
-    const terminalContent = terminalContainer.querySelector('.terminal-content') || terminalContainer.firstChild;
+    const terminalContent =
+      terminalContainer.querySelector('.terminal-content') || terminalContainer.firstChild;
     if (terminalContent) {
       terminalContainer.insertBefore(this.tabContainer, terminalContent);
     } else {
@@ -80,61 +81,61 @@ export class TerminalTabManager implements TerminalTabEvents {
    */
   public onTabClick = (tabId: string): void => {
     console.log(`🗂️ Tab clicked: ${tabId}`);
-    
+
     // Switch to the clicked terminal
     if (this.coordinator) {
       this.coordinator.setActiveTerminalId(tabId);
     }
-    
+
     this.setActiveTab(tabId);
   };
 
   public onTabClose = (tabId: string): void => {
     console.log(`🗂️ Tab close requested: ${tabId}`);
-    
+
     // Close the terminal via coordinator
     if (this.coordinator) {
       this.coordinator.closeTerminal(tabId);
     }
-    
+
     this.removeTab(tabId);
   };
 
   public onTabRename = (tabId: string, newName: string): void => {
     console.log(`🗂️ Tab rename: ${tabId} -> ${newName}`);
-    
+
     const tab = this.tabs.get(tabId);
     if (tab) {
       tab.name = newName;
       this.updateTab(tabId, { name: newName });
-      
+
       // Notify coordinator about name change
       this.coordinator?.postMessageToExtension({
         command: 'renameTerminal',
         terminalId: tabId,
-        newName: newName
+        newName: newName,
       });
     }
   };
 
   public onTabReorder = (fromIndex: number, toIndex: number): void => {
     console.log(`🗂️ Tab reorder: ${fromIndex} -> ${toIndex}`);
-    
+
     if (fromIndex === toIndex) return;
-    
+
     // Reorder the tab order array
     const [movedTabId] = this.tabOrder.splice(fromIndex, 1);
     if (movedTabId) {
       this.tabOrder.splice(toIndex, 0, movedTabId);
     }
-    
+
     // Rebuild the tab UI in new order
     this.rebuildTabsInOrder();
   };
 
   public onNewTab = (): void => {
     console.log('🗂️ New tab requested');
-    
+
     if (this.coordinator) {
       // Generate new terminal ID
       const newTerminalId = this.generateTerminalId();
@@ -157,11 +158,11 @@ export class TerminalTabManager implements TerminalTabEvents {
 
     this.tabs.set(terminalId, tab);
     this.tabOrder.push(terminalId);
-    
+
     if (this.tabList) {
       this.tabList.addTab(tab);
     }
-    
+
     this.updateTabVisibility();
     console.log(`🗂️ Tab added: ${terminalId} (${name})`);
   }
@@ -170,12 +171,12 @@ export class TerminalTabManager implements TerminalTabEvents {
     if (!this.tabs.has(terminalId)) return;
 
     this.tabs.delete(terminalId);
-    this.tabOrder = this.tabOrder.filter(id => id !== terminalId);
-    
+    this.tabOrder = this.tabOrder.filter((id) => id !== terminalId);
+
     if (this.tabList) {
       this.tabList.removeTab(terminalId);
     }
-    
+
     // If this was the active tab, activate another one
     const wasActive = this.getActiveTabId() === terminalId;
     if (wasActive && this.tabs.size > 0) {
@@ -184,7 +185,7 @@ export class TerminalTabManager implements TerminalTabEvents {
         this.setActiveTab(nextTab);
       }
     }
-    
+
     this.updateTabVisibility();
     console.log(`🗂️ Tab removed: ${terminalId}`);
   }
@@ -194,7 +195,7 @@ export class TerminalTabManager implements TerminalTabEvents {
     if (!tab) return;
 
     Object.assign(tab, updates);
-    
+
     if (this.tabList) {
       this.tabList.updateTab(terminalId, updates);
     }
@@ -207,25 +208,25 @@ export class TerminalTabManager implements TerminalTabEvents {
     this.tabs.forEach((tab, id) => {
       tab.isActive = id === terminalId;
     });
-    
+
     if (this.tabList) {
       this.tabList.setActiveTab(terminalId);
     }
-    
+
     console.log(`🗂️ Active tab set: ${terminalId}`);
   }
 
   public getActiveTabId(): string | null {
-    const activeTab = Array.from(this.tabs.values()).find(tab => tab.isActive);
+    const activeTab = Array.from(this.tabs.values()).find((tab) => tab.isActive);
     return activeTab?.id || null;
   }
 
   public getActiveTab(): TerminalTab | undefined {
-    return Array.from(this.tabs.values()).find(tab => tab.isActive);
+    return Array.from(this.tabs.values()).find((tab) => tab.isActive);
   }
 
   public getAllTabs(): TerminalTab[] {
-    return this.tabOrder.map(id => this.tabs.get(id)!).filter(Boolean);
+    return this.tabOrder.map((id) => this.tabs.get(id)!).filter(Boolean);
   }
 
   public getTabCount(): number {
@@ -248,10 +249,9 @@ export class TerminalTabManager implements TerminalTabEvents {
   private updateTabVisibility(): void {
     if (!this.tabContainer) return;
 
-    const shouldShow = this.isEnabled && 
-      (this.tabs.size > 1 || !this.hideWhenSingleTab) &&
-      this.tabs.size > 0;
-    
+    const shouldShow =
+      this.isEnabled && (this.tabs.size > 1 || !this.hideWhenSingleTab) && this.tabs.size > 0;
+
     this.tabContainer.style.display = shouldShow ? 'block' : 'none';
   }
 
@@ -263,7 +263,7 @@ export class TerminalTabManager implements TerminalTabEvents {
       this.tabList!.removeTab(tabId);
     });
 
-    this.tabOrder.forEach(tabId => {
+    this.tabOrder.forEach((tabId) => {
       const tab = this.tabs.get(tabId);
       if (tab) {
         this.tabList!.addTab(tab);
@@ -282,7 +282,7 @@ export class TerminalTabManager implements TerminalTabEvents {
    */
   public handleTerminalCreated(terminalId: string, name: string, terminal: Terminal): void {
     this.addTab(terminalId, name, terminal);
-    
+
     // Make the new tab active
     setTimeout(() => {
       this.setActiveTab(terminalId);
@@ -308,33 +308,33 @@ export class TerminalTabManager implements TerminalTabEvents {
     return {
       tabs: this.getAllTabs(),
       activeTabId: this.getActiveTabId(),
-      tabsVisible: this.isEnabled && (this.tabs.size > 1 || !this.hideWhenSingleTab)
+      tabsVisible: this.isEnabled && (this.tabs.size > 1 || !this.hideWhenSingleTab),
     };
   }
 
   public restoreState(state: TerminalTabState): void {
     // This would be called during session restoration
     console.log('🗂️ Restoring tab state:', state);
-    
+
     // Clear current tabs
     this.tabs.clear();
     this.tabOrder = [];
-    
+
     // Restore tabs
-    state.tabs.forEach(tab => {
+    state.tabs.forEach((tab) => {
       this.tabs.set(tab.id, { ...tab });
       this.tabOrder.push(tab.id);
-      
+
       if (this.tabList) {
         this.tabList.addTab(tab);
       }
     });
-    
+
     // Set active tab
     if (state.activeTabId) {
       this.setActiveTab(state.activeTabId);
     }
-    
+
     this.updateTabVisibility();
   }
 
@@ -346,15 +346,15 @@ export class TerminalTabManager implements TerminalTabEvents {
       this.tabList.dispose();
       this.tabList = null;
     }
-    
+
     if (this.tabContainer && this.tabContainer.parentNode) {
       this.tabContainer.parentNode.removeChild(this.tabContainer);
     }
-    
+
     this.tabs.clear();
     this.tabOrder = [];
     this.coordinator = null;
-    
+
     console.log('🗂️ Terminal Tab Manager disposed');
   }
 }

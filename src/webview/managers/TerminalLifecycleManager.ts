@@ -327,10 +327,15 @@ export class TerminalLifecycleManager {
         // Initialize shell integration after essential addons
         if (this.coordinator?.shellIntegrationManager) {
           try {
-            this.coordinator.shellIntegrationManager.initializeTerminalShellIntegration(terminal, terminalId);
+            this.coordinator.shellIntegrationManager.initializeTerminalShellIntegration(
+              terminal,
+              terminalId
+            );
             terminalLogger.info(`🐚 Shell integration initialized for terminal ${terminalId}`);
           } catch (error) {
-            terminalLogger.warn(`⚠️ Shell integration failed to initialize (non-critical): ${error}`);
+            terminalLogger.warn(
+              `⚠️ Shell integration failed to initialize (non-critical): ${error}`
+            );
           }
         }
 

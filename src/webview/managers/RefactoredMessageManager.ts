@@ -285,6 +285,13 @@ export class RefactoredMessageManager implements IMessageManager {
         case 'persistenceClearSessionResponse':
           this.handlePersistenceClearSessionResponseMessage(msg, coordinator);
           break;
+        // Profile management messages
+        case 'profilesUpdated':
+          this.handleProfilesUpdatedMessage(msg, coordinator);
+          break;
+        case 'defaultProfileChanged':
+          this.handleDefaultProfileChangedMessage(msg, coordinator);
+          break;
         default:
           this.logger.warn(`Unknown command: ${msg.command}`);
       }
@@ -2357,6 +2364,50 @@ export class RefactoredMessageManager implements IMessageManager {
   /**
    * Resource cleanup and disposal
    */
+  /**
+   * Handle profiles updated message from extension
+   */
+  private handleProfilesUpdatedMessage(msg: any, coordinator: IManagerCoordinator): void {
+    this.logger.debug('Processing profilesUpdated message');
+
+    try {
+      const { profiles, defaultProfileId } = msg;
+
+      if (coordinator.profileManager) {
+        coordinator.profileManager.updateProfiles(profiles, defaultProfileId);
+        this.logger.info(`Updated ${profiles?.length || 0} terminal profiles`);
+      } else {
+        this.logger.warn('ProfileManager not available for profiles update');
+      }
+    } catch (error) {
+      this.logger.error('Failed to handle profiles updated message:', error);
+    }
+  }
+
+  /**
+   * Handle default profile changed message from extension
+   */
+  private handleDefaultProfileChangedMessage(msg: any, coordinator: IManagerCoordinator): void {
+    this.logger.debug('Processing defaultProfileChanged message');
+
+    try {
+      const { profileId } = msg;
+
+      if (coordinator.profileManager) {
+        // Update via ProfileManager's message handler
+        coordinator.profileManager.handleMessage({
+          command: 'defaultProfileChanged',
+          profileId: profileId,
+        });
+        this.logger.info(`Default profile changed to: ${profileId}`);
+      } else {
+        this.logger.warn('ProfileManager not available for default profile change');
+      }
+    } catch (error) {
+      this.logger.error('Failed to handle default profile changed message:', error);
+    }
+  }
+
   public dispose(): void {
     this.logger.info('Disposing RefactoredMessageManager');
 
