@@ -230,7 +230,7 @@ export class StandardTerminalSessionManager {
       }>(StandardTerminalSessionManager.STORAGE_KEY);
 
       if (!sessionData || !sessionData.terminals) {
-        log('📭 [STANDARD-SESSION] No session data found');
+        log('📁 [STANDARD-SESSION] No session data found');
         return { success: true, restoredCount: 0, skippedCount: 0 };
       }
 
@@ -288,17 +288,28 @@ export class StandardTerminalSessionManager {
         log('✅ [STANDARD-SESSION] Terminal deletion wait completed');
       }
 
-      // ターミナル復元
-      let restoredCount = 0;
+      // 🎯 IMPROVED: Create all terminals first, then restore content
+      const terminalCreationResults: Array<{
+        originalInfo: any;
+        terminalId: string | null;
+        success: boolean;
+      }> = [];
+      
       let activeTerminalSet = false;
 
+      // Step 1: Create all terminals
       for (const terminalInfo of sessionData.terminals) {
         try {
-          log(`🔄 [STANDARD-SESSION] Restoring terminal: ${terminalInfo.name}`);
+          log(`🔄 [STANDARD-SESSION] Creating terminal: ${terminalInfo.name}`);
 
           const terminalId = this.terminalManager.createTerminal();
           if (!terminalId) {
             log(`❌ [STANDARD-SESSION] Failed to create terminal for ${terminalInfo.name}`);
+            terminalCreationResults.push({
+              originalInfo: terminalInfo,
+              terminalId: null,
+              success: false,
+            });
             continue;
           }
 
@@ -309,22 +320,46 @@ export class StandardTerminalSessionManager {
             log(`🎯 [STANDARD-SESSION] Set active terminal: ${terminalId}`);
           }
 
-          // WebView側でserialize addonによる状態復元を行う
-          // Extension側では基本的なターミナル作成のみ実行
+          terminalCreationResults.push({
+            originalInfo: terminalInfo,
+            terminalId: terminalId,
+            success: true,
+          });
 
-          restoredCount++;
-          log(`✅ [STANDARD-SESSION] Restored terminal: ${terminalInfo.name} (${terminalId})`);
+          log(`✅ [STANDARD-SESSION] Created terminal: ${terminalInfo.name} (${terminalId})`);
         } catch (error) {
           log(
-            `❌ [STANDARD-SESSION] Failed to restore terminal ${terminalInfo.name}: ${String(error)}`
+            `❌ [STANDARD-SESSION] Failed to create terminal ${terminalInfo.name}: ${String(error)}`
           );
+          terminalCreationResults.push({
+            originalInfo: terminalInfo,
+            terminalId: null,
+            success: false,
+          });
         }
       }
 
-      // VS Code標準: 復元後に履歴データを復元
-      if (restoredCount > 0) {
+      const successfulCreations = terminalCreationResults.filter(r => r.success);
+      const restoredCount = successfulCreations.length;
+
+      // Step 2: 🎯 IMPROVED: Wait a moment for terminals to fully initialize, then restore content
+      if (restoredCount > 0 && sessionData.scrollbackData) {
+        log('⏳ [STANDARD-SESSION] Waiting for terminal initialization before content restoration...');
+        await new Promise((resolve) => setTimeout(resolve, 800)); // Wait for terminal setup
+
         log('🔄 [STANDARD-SESSION] Requesting scrollback restoration from WebView...');
-        await this.requestScrollbackRestoration(sessionData.terminals);
+        
+        // Create terminal data mapping with new IDs
+        const terminalRestoreData = successfulCreations.map(result => ({
+          id: result.terminalId!,
+          name: result.originalInfo.name,
+          number: result.originalInfo.number,
+          cwd: result.originalInfo.cwd,
+          isActive: result.originalInfo.isActive,
+          serializedContent: (sessionData.scrollbackData?.[result.originalInfo.id] as string) || '',
+        }));
+
+        await this.requestScrollbackRestoration(terminalRestoreData);
       }
 
       log(
@@ -368,30 +403,38 @@ export class StandardTerminalSessionManager {
     }
 
     try {
-      // WebViewのStandardTerminalPersistenceManagerから実際のシリアライズされたデータを取得
-      await this.sidebarProvider.sendMessageToWebview({
-        command: 'requestTerminalSerialization',
-        terminalIds: terminals.map((t) => t.id),
-        timestamp: Date.now(),
-      });
-
-      // WebViewからの応答を待機（非同期処理）
-      return new Promise((resolve) => {
+      // 🎯 IMPROVED: Use Promise-based approach with proper timeout handling
+      const requestId = `scrollback-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      
+      return new Promise<Record<string, unknown>>((resolve) => {
         const timeout = setTimeout(() => {
           log('⏰ [STANDARD-SESSION] Timeout waiting for serialized data, using fallback');
           resolve({});
-        }, 5000); // 5秒のタイムアウト
+        }, 3000); // 3秒のタイムアウト（短縮）
 
-        // 一時的にレスポンスハンドラーを設定
-        const originalHandler = this.handleScrollbackDataResponse;
-        this.handleScrollbackDataResponse = (data: Record<string, unknown>) => {
+        // 🎯 FIXED: Create a dedicated response handler to avoid conflicts
+        const responseHandler = (data: Record<string, unknown>) => {
           clearTimeout(timeout);
-          this.handleScrollbackDataResponse = originalHandler;
           log(
             `✅ [STANDARD-SESSION] Received serialized data for ${Object.keys(data).length} terminals`
           );
           resolve(data);
         };
+
+        // 🎯 IMPROVED: Store response handler for cleanup
+        (this as any)._pendingScrollbackRequest = {
+          requestId,
+          handler: responseHandler,
+          timestamp: Date.now(),
+        };
+
+        // WebView のStandardTerminalPersistenceManager から実際のシリアライズされたデータを取得
+        this.sidebarProvider!.sendMessageToWebview({
+          command: 'requestTerminalSerialization',
+          terminalIds: terminals.map((t) => t.id),
+          requestId: requestId,
+          timestamp: Date.now(),
+        });
       });
     } catch (error) {
       log(`❌ [STANDARD-SESSION] Error requesting scrollback data: ${String(error)}`);
@@ -414,7 +457,17 @@ export class StandardTerminalSessionManager {
     log(
       `📋 [STANDARD-SESSION] Received serialization response with ${Object.keys(data).length} terminals`
     );
-    this.handleScrollbackDataResponse(data);
+    
+    // 🎯 IMPROVED: Handle pending request properly
+    const pendingRequest = (this as any)._pendingScrollbackRequest;
+    if (pendingRequest && pendingRequest.handler) {
+      pendingRequest.handler(data);
+      // Clean up pending request
+      delete (this as any)._pendingScrollbackRequest;
+    } else {
+      // Fallback to original handler
+      this.handleScrollbackDataResponse(data);
+    }
   }
 
   /**
@@ -427,6 +480,7 @@ export class StandardTerminalSessionManager {
       number: number;
       cwd: string;
       isActive: boolean;
+      serializedContent?: string;
     }>
   ): Promise<void> {
     log(`🔄 [STANDARD-SESSION] Sending terminal restoration data to WebView PersistenceManager`);
@@ -437,44 +491,28 @@ export class StandardTerminalSessionManager {
     }
 
     try {
-      // 保存されたセッションデータから履歴データを取得
-      const sessionData = this.context.globalState.get<{
-        terminals: Array<{
-          id: string;
-          name: string;
-          number: number;
-          cwd: string;
-          isActive: boolean;
-        }>;
-        activeTerminalId: string | null;
-        timestamp: number;
-        version: string;
-        scrollbackData?: Record<string, unknown>;
-        config?: {
-          scrollbackLines: number;
-          reviveProcess: string;
-        };
-      }>(StandardTerminalSessionManager.STORAGE_KEY);
+      // 🎯 IMPROVED: Use the passed terminal data directly with serialized content
+      const terminalRestoreData = terminals.map(terminal => ({
+        id: terminal.id,
+        name: terminal.name,
+        serializedContent: terminal.serializedContent || '',
+        isActive: terminal.isActive,
+      })).filter(data => data.serializedContent.length > 0); // Only restore terminals with content
 
-      if (!sessionData || !sessionData.scrollbackData) {
-        log('📭 [STANDARD-SESSION] No scrollback data found for restoration');
+      if (terminalRestoreData.length === 0) {
+        log('📁 [STANDARD-SESSION] No terminals with serialized content to restore');
         return;
       }
 
       // WebViewにターミナル復元データを送信
       await this.sidebarProvider.sendMessageToWebview({
         command: 'restoreTerminalSerialization',
-        terminalData: terminals.map((terminal) => ({
-          id: terminal.id,
-          name: terminal.name,
-          serializedContent: (sessionData.scrollbackData?.[terminal.id] as string) || '',
-          isActive: terminal.isActive,
-        })),
+        terminalData: terminalRestoreData,
         timestamp: Date.now(),
       });
 
       log(
-        `✅ [STANDARD-SESSION] Restoration data sent to WebView PersistenceManager (${terminals.length} terminals)`
+        `✅ [STANDARD-SESSION] Restoration data sent to WebView PersistenceManager (${terminalRestoreData.length} terminals with content)`
       );
     } catch (error) {
       log(`❌ [STANDARD-SESSION] Error sending restoration data: ${String(error)}`);
