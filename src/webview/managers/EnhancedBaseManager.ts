@@ -1,626 +1,430 @@
 /**
- * Enhanced Base Manager - Consolidates common patterns found across all managers
- *
- * This enhanced base class addresses the code duplication identified in the analysis:
- * - Standardized initialization and lifecycle management
- * - Common debouncing and throttling patterns
- * - Unified error handling and recovery mechanisms
- * - Consistent event listener management
- * - Performance monitoring and health tracking
+ * 強化された基底マネージャークラス
+ * - 一貫した命名規則とエラーハンドリング
+ * - 型安全性とパフォーマンス最適化
+ * - 包括的なテスト可能性
  */
 
-import { webview as log } from '../../utils/logger';
-import {
-  IEnhancedBaseManager,
-  IManagerState,
-  ManagerDependencies,
-  ManagerHealthStatus,
-  ValidationResult,
-} from '../interfaces/SegregatedManagerInterfaces';
+import { LoggerFunction } from '../utils/TypedMessageHandling';
 
-/**
- * Enhanced base manager options
- */
-export interface EnhancedManagerOptions {
-  logPrefix?: string;
-  enableLogging?: boolean;
-  enableValidation?: boolean;
-  enableErrorRecovery?: boolean;
-  enablePerformanceMonitoring?: boolean;
-  maxErrors?: number;
-  healthCheckInterval?: number;
+// =============================================================================
+// インターフェースと型定義 - 明確で理解しやすい命名
+// =============================================================================
+
+export interface ManagerInitializationOptions {
+  readonly enableLogging: boolean;
+  readonly enablePerformanceTracking: boolean;
+  readonly enableErrorRecovery: boolean;
+  readonly initializationTimeoutMs: number;
+  readonly customLogger?: LoggerFunction;
 }
 
-/**
- * Event listener registration for automatic cleanup
- */
-interface ManagedEventListener {
-  element: EventTarget;
-  event: string;
-  listener: EventListener;
-  options?: boolean | AddEventListenerOptions;
+export interface ManagerPerformanceMetrics {
+  readonly initializationTimeMs: number;
+  readonly operationCount: number;
+  readonly averageOperationTimeMs: number;
+  readonly errorCount: number;
+  readonly lastOperationTimestamp: number;
 }
 
-/**
- * Performance metrics tracking
- */
-interface PerformanceMetrics {
-  operationsPerSecond: number;
-  averageResponseTime: number;
-  memoryUsage: number;
-  lastOperationTime: number;
-  totalOperations: number;
+export interface ManagerHealthStatus {
+  readonly managerName: string;
+  readonly isHealthy: boolean;
+  readonly isInitialized: boolean;
+  readonly isDisposed: boolean;
+  readonly upTimeMs: number;
+  readonly performanceMetrics: ManagerPerformanceMetrics;
+  readonly lastError?: Error;
 }
 
-/**
- * Enhanced abstract base class for all webview managers
- * Implements common patterns identified in similarity analysis
- */
-export abstract class EnhancedBaseManager implements IEnhancedBaseManager {
-  // Enhanced manager interface implementation
-  readonly state: IManagerState = {
-    isInitialized: false,
-    isDisposed: false,
-  };
-  // Core properties
-  public readonly name: string;
-  protected readonly logPrefix: string;
-  protected readonly options: Required<EnhancedManagerOptions>;
+export interface ResourceCleanupResult {
+  readonly success: boolean;
+  readonly cleanedResourceCount: number;
+  readonly errors: string[];
+  readonly cleanupTimeMs: number;
+}
 
-  // Lifecycle state
-  protected _isInitialized = false;
-  protected _isDisposed = false;
-  protected dependencies: ManagerDependencies = {};
+// =============================================================================
+// ErrorHandlingUtility - 一元化されたエラー処理
+// =============================================================================
 
-  // Error tracking and recovery
-  protected errorCount = 0;
-  protected lastError?: string;
-  protected readonly maxErrors: number;
+export class ManagerErrorHandler {
+  private errorCount = 0;
+  private lastError?: Error;
 
-  // Timer management (consolidated pattern from multiple managers)
-  protected timers = new Map<string, number>();
-  protected debounceTimers = new Map<string, number>();
+  constructor(
+    private readonly managerName: string,
+    private readonly logger: LoggerFunction,
+    private readonly enableRecovery: boolean = true
+  ) {}
 
-  // Event listener management (extracted from InputManager, UIManager patterns)
-  protected eventListeners = new Map<string, ManagedEventListener>();
+  public async executeWithErrorHandling<TResult>(
+    operation: () => Promise<TResult>,
+    operationName: string,
+    fallbackValue?: TResult
+  ): Promise<TResult | null> {
+    const startTime = performance.now();
 
-  // Performance monitoring
-  protected performanceMetrics: PerformanceMetrics = {
-    operationsPerSecond: 0,
-    averageResponseTime: 0,
-    memoryUsage: 0,
-    lastOperationTime: 0,
-    totalOperations: 0,
-  };
+    try {
+      const result = await operation();
+      const executionTime = performance.now() - startTime;
 
-  // Health monitoring
-  protected healthCheckTimer?: number;
+      this.logger(`✅ ${operationName} completed successfully (${executionTime.toFixed(2)}ms)`);
+      return result;
 
-  constructor(managerName: string, options: EnhancedManagerOptions = {}) {
-    this.name = managerName;
-    this.logPrefix = options.logPrefix || `[${managerName}]`;
+    } catch (error) {
+      this.errorCount++;
+      const processedError = error instanceof Error ? error : new Error(String(error));
+      this.lastError = processedError;
 
-    // Apply defaults to all options
-    this.options = {
-      enableLogging: options.enableLogging ?? true,
-      enableValidation: options.enableValidation ?? true,
-      enableErrorRecovery: options.enableErrorRecovery ?? true,
-      enablePerformanceMonitoring: options.enablePerformanceMonitoring ?? false,
-      maxErrors: options.maxErrors ?? 10,
-      healthCheckInterval: options.healthCheckInterval ?? 30000, // 30 seconds
-      logPrefix: this.logPrefix,
-    };
+      const executionTime = performance.now() - startTime;
+      this.logger(
+        `❌ ${operationName} failed after ${executionTime.toFixed(2)}ms:`,
+        processedError.message
+      );
 
-    this.maxErrors = this.options.maxErrors;
+      if (this.enableRecovery && fallbackValue !== undefined) {
+        this.logger(`🔄 Using fallback value for ${operationName}`);
+        return fallbackValue;
+      }
+
+      return null;
+    }
   }
 
-  // Required interface methods
-  getState(): IManagerState {
+  public getErrorCount(): number {
+    return this.errorCount;
+  }
+
+  public getLastError(): Error | undefined {
+    return this.lastError;
+  }
+
+  public resetErrorCount(): void {
+    this.errorCount = 0;
+    this.lastError = undefined;
+  }
+}
+
+// =============================================================================
+// PerformanceTracker - パフォーマンス監視
+// =============================================================================
+
+export class ManagerPerformanceTracker {
+  private operationCount = 0;
+  private totalOperationTime = 0;
+  private lastOperationTimestamp = 0;
+  private initializationTime = 0;
+
+  public recordInitialization(timeMs: number): void {
+    this.initializationTime = timeMs;
+  }
+
+  public recordOperation(operationTimeMs: number): void {
+    this.operationCount++;
+    this.totalOperationTime += operationTimeMs;
+    this.lastOperationTimestamp = Date.now();
+  }
+
+  public getMetrics(): ManagerPerformanceMetrics {
     return {
-      isInitialized: this._isInitialized,
-      isDisposed: this._isDisposed,
-      lastError: this.lastError ? new Error(this.lastError) : undefined,
+      initializationTimeMs: this.initializationTime,
+      operationCount: this.operationCount,
+      averageOperationTimeMs: this.operationCount > 0
+        ? this.totalOperationTime / this.operationCount
+        : 0,
+      errorCount: 0, // Will be provided by ErrorHandler
+      lastOperationTimestamp: this.lastOperationTimestamp
     };
   }
 
-  isReady(): boolean {
-    return this._isInitialized && !this._isDisposed;
+  public reset(): void {
+    this.operationCount = 0;
+    this.totalOperationTime = 0;
+    this.lastOperationTimestamp = 0;
+  }
+}
+
+// =============================================================================
+// ResourceManager - リソース管理の抽象化
+// =============================================================================
+
+export abstract class ResourceManager {
+  private readonly resources = new Set<() => void>();
+
+  protected registerResourceCleanup(cleanupFunction: () => void): void {
+    this.resources.add(cleanupFunction);
   }
 
-  getLastError(): Error | undefined {
-    return this.lastError ? new Error(this.lastError) : undefined;
+  protected unregisterResourceCleanup(cleanupFunction: () => void): void {
+    this.resources.delete(cleanupFunction);
   }
 
-  // ============================================================================
-  // CORE LIFECYCLE METHODS
-  // ============================================================================
+  public cleanupAllResources(): ResourceCleanupResult {
+    const startTime = performance.now();
+    const errors: string[] = [];
+    let cleanedResourceCount = 0;
 
-  public get isInitialized(): boolean {
-    return this._isInitialized;
+    for (const cleanup of this.resources) {
+      try {
+        cleanup();
+        cleanedResourceCount++;
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        errors.push(`Resource cleanup failed: ${errorMessage}`);
+      }
+    }
+
+    this.resources.clear();
+
+    return {
+      success: errors.length === 0,
+      cleanedResourceCount,
+      errors,
+      cleanupTimeMs: performance.now() - startTime
+    };
+  }
+}
+
+// =============================================================================
+// EnhancedBaseManager - 強化された基底クラス
+// =============================================================================
+
+export abstract class EnhancedBaseManager extends ResourceManager {
+  private isInitialized = false;
+  private isDisposed = false;
+  private initializationStartTime = 0;
+  private readonly logger: LoggerFunction;
+  private readonly errorHandler: ManagerErrorHandler;
+  private readonly performanceTracker: ManagerPerformanceTracker;
+
+  constructor(
+    protected readonly managerName: string,
+    private readonly options: ManagerInitializationOptions = {
+      enableLogging: true,
+      enablePerformanceTracking: true,
+      enableErrorRecovery: true,
+      initializationTimeoutMs: 5000
+    }
+  ) {
+    super();
+
+    this.logger = options.customLogger ?? this.createDefaultLogger();
+    this.errorHandler = new ManagerErrorHandler(
+      managerName,
+      this.logger,
+      options.enableErrorRecovery
+    );
+    this.performanceTracker = new ManagerPerformanceTracker();
+
+    this.logger(`🏗️ Manager instance created: ${managerName}`);
   }
 
-  public async initialize(dependencies: ManagerDependencies): Promise<void> {
-    if (this._isInitialized) {
-      this.log('Manager already initialized', 'warn');
+  // =============================================================================
+  // 抽象メソッド - 子クラスで実装必須
+  // =============================================================================
+
+  protected abstract doInitializeManager(): Promise<void> | void;
+  protected abstract doDisposeManager(): Promise<void> | void;
+
+  // =============================================================================
+  // 公開メソッド - 標準化されたライフサイクル管理
+  // =============================================================================
+
+  public async initializeManager(): Promise<void> {
+    if (this.isInitialized) {
+      this.logger('⚠️ Manager already initialized, skipping');
       return;
     }
 
-    if (this._isDisposed) {
-      throw new Error(`${this.logPrefix} Cannot initialize disposed manager`);
+    if (this.isDisposed) {
+      throw new Error(`Cannot initialize disposed manager: ${this.managerName}`);
     }
 
+    this.initializationStartTime = performance.now();
+
     try {
-      this.log('Initializing manager...');
+      this.logger(`🚀 Initializing manager: ${this.managerName}`);
 
-      // Store dependencies
-      this.dependencies = { ...dependencies };
+      // タイムアウト付きの初期化
+      await this.executeWithTimeout(
+        () => this.doInitializeManager(),
+        this.options.initializationTimeoutMs,
+        `${this.managerName} initialization`
+      );
 
-      // Validate dependencies if validation is enabled
-      if (this.options.enableValidation) {
-        await this.validateDependencies(dependencies);
-      }
+      const initTime = performance.now() - this.initializationStartTime;
+      this.performanceTracker.recordInitialization(initTime);
 
-      // Call derived class initialization
-      await this.onInitialize(dependencies);
+      this.isInitialized = true;
+      this.logger(`✅ Manager initialized successfully: ${this.managerName} (${initTime.toFixed(2)}ms)`);
 
-      // Setup health monitoring if enabled
-      if (this.options.enablePerformanceMonitoring) {
-        this.startHealthMonitoring();
-      }
-
-      this._isInitialized = true;
-      this.log('Manager initialized successfully');
     } catch (error) {
-      this.handleError(error, 'Initialization failed');
+      const initTime = performance.now() - this.initializationStartTime;
+      this.logger(`❌ Manager initialization failed: ${this.managerName} (${initTime.toFixed(2)}ms)`);
       throw error;
     }
   }
 
-  public dispose(): void {
-    if (this._isDisposed) {
+  public async disposeManager(): Promise<void> {
+    if (this.isDisposed) {
+      this.logger('⚠️ Manager already disposed, skipping');
       return;
     }
 
-    this.log('Disposing manager...');
-
     try {
-      // Stop health monitoring
-      this.stopHealthMonitoring();
+      this.logger(`🧹 Disposing manager: ${this.managerName}`);
 
-      // Call derived class cleanup
-      this.onDispose();
+      // カスタムクリーンアップ実行
+      await this.doDisposeManager();
 
-      // Clear all timers
-      this.clearAllTimers();
-      this.clearAllDebounceTimers();
+      // リソースクリーンアップ
+      const cleanupResult = this.cleanupAllResources();
 
-      // Remove all event listeners
-      this.removeAllEventListeners();
+      if (!cleanupResult.success) {
+        this.logger('⚠️ Some resources failed to cleanup:', cleanupResult.errors);
+      }
 
-      // Reset state
-      this._isInitialized = false;
-      this._isDisposed = true;
-      this.dependencies = {};
-      this.errorCount = 0;
+      this.isInitialized = false;
+      this.isDisposed = true;
 
-      this.log('Manager disposed successfully');
+      this.logger(
+        `✅ Manager disposed successfully: ${this.managerName} ` +
+        `(${cleanupResult.cleanedResourceCount} resources cleaned)`
+      );
+
     } catch (error) {
-      this.handleError(error, 'Disposal failed');
+      this.logger(`❌ Manager disposal failed: ${this.managerName}`, error);
+      throw error;
     }
   }
 
-  // ============================================================================
-  // ABSTRACT METHODS FOR DERIVED CLASSES
-  // ============================================================================
+  public getHealthStatus(): ManagerHealthStatus {
+    const metrics = this.performanceTracker.getMetrics();
 
-  /**
-   * Override in derived classes for specific initialization logic
-   */
-  protected async onInitialize(_dependencies: ManagerDependencies): Promise<void> {
-    // Default implementation - no specific initialization
-  }
-
-  /**
-   * Override in derived classes for specific cleanup logic
-   */
-  protected onDispose(): void {
-    // Default implementation - no specific cleanup
-  }
-
-  /**
-   * Override in derived classes to validate required dependencies
-   */
-  protected async validateDependencies(_dependencies: ManagerDependencies): Promise<void> {
-    // Default implementation - no validation
-  }
-
-  // ============================================================================
-  // COMMON UTILITY METHODS (extracted from multiple managers)
-  // ============================================================================
-
-  /**
-   * Protected logging method with consistent formatting
-   */
-  protected log(message: string, level: 'info' | 'warn' | 'error' = 'info'): void {
-    if (!this.options.enableLogging) return;
-
-    const formattedMessage = `${this.logPrefix} ${message}`;
-
-    switch (level) {
-      case 'warn':
-        log(`⚠️ ${formattedMessage}`);
-        break;
-      case 'error':
-        log(`❌ ${formattedMessage}`);
-        break;
-      default:
-        log(formattedMessage);
-    }
-  }
-
-  /**
-   * Enhanced debounce utility with automatic cleanup
-   * Consolidated pattern from InputManager, UIManager, PerformanceManager
-   */
-  protected debounce<T extends (...args: any[]) => any>(
-    func: T,
-    delay: number,
-    key?: string
-  ): (...args: Parameters<T>) => void {
-    const debounceKey = key || `debounce_${func.name}_${Math.random()}`;
-
-    return (...args: Parameters<T>) => {
-      // Clear existing timer
-      this.clearDebounceTimer(debounceKey);
-
-      // Set new timer
-      const timerId = window.setTimeout(() => {
-        this.measurePerformance(() => {
-          func.apply(this, args);
-        }, `debounced_${func.name}`);
-        this.debounceTimers.delete(debounceKey);
-      }, delay);
-
-      this.debounceTimers.set(debounceKey, timerId);
+    return {
+      managerName: this.managerName,
+      isHealthy: this.isInitialized && !this.isDisposed && this.errorHandler.getErrorCount() < 10,
+      isInitialized: this.isInitialized,
+      isDisposed: this.isDisposed,
+      upTimeMs: this.isInitialized ? Date.now() - this.initializationStartTime : 0,
+      performanceMetrics: {
+        ...metrics,
+        errorCount: this.errorHandler.getErrorCount()
+      },
+      lastError: this.errorHandler.getLastError()
     };
   }
 
-  /**
-   * Throttle utility for high-frequency operations
-   * Pattern found in PerformanceManager
-   */
-  protected throttle<T extends (...args: any[]) => any>(
-    func: T,
-    limit: number,
-    _key?: string
-  ): (...args: Parameters<T>) => void {
-    let inThrottle = false;
+  // =============================================================================
+  // 保護されたヘルパーメソッド - 子クラスで利用可能
+  // =============================================================================
 
-    return (...args: Parameters<T>) => {
-      if (!inThrottle) {
-        inThrottle = true;
-        this.measurePerformance(() => {
-          func.apply(this, args);
-        }, `throttled_${func.name}`);
-
-        setTimeout(() => {
-          inThrottle = false;
-        }, limit);
-      }
-    };
-  }
-
-  /**
-   * Managed event listener registration with automatic cleanup
-   * Pattern extracted from InputManager
-   */
-  protected addEventListenerManaged(
-    element: EventTarget,
-    event: string,
-    listener: EventListener,
-    options?: boolean | AddEventListenerOptions,
-    key?: string
-  ): string {
-    const listenerKey = key || `${event}_${Date.now()}_${Math.random()}`;
-
-    element.addEventListener(event, listener, options);
-
-    this.eventListeners.set(listenerKey, {
-      element,
-      event,
-      listener,
-      options,
-    });
-
-    return listenerKey;
-  }
-
-  /**
-   * Remove specific managed event listener
-   */
-  protected removeEventListenerManaged(key: string): void {
-    const managed = this.eventListeners.get(key);
-    if (managed) {
-      managed.element.removeEventListener(managed.event, managed.listener, managed.options);
-      this.eventListeners.delete(key);
-    }
-  }
-
-  /**
-   * Remove all managed event listeners
-   */
-  protected removeAllEventListeners(): void {
-    for (const [, managed] of this.eventListeners) {
-      managed.element.removeEventListener(managed.event, managed.listener, managed.options);
-    }
-    this.eventListeners.clear();
-  }
-
-  /**
-   * Timer management utilities (consolidated from multiple managers)
-   */
-  protected setTimer(key: string, callback: () => void, delay: number): void {
-    this.clearTimer(key);
-    const timerId = window.setTimeout(callback, delay);
-    this.timers.set(key, timerId);
-  }
-
-  protected clearTimer(key: string): void {
-    const timerId = this.timers.get(key);
-    if (timerId !== undefined) {
-      window.clearTimeout(timerId);
-      this.timers.delete(key);
-    }
-  }
-
-  protected clearAllTimers(): void {
-    for (const timerId of this.timers.values()) {
-      window.clearTimeout(timerId);
-    }
-    this.timers.clear();
-  }
-
-  protected clearDebounceTimer(key: string): void {
-    const timerId = this.debounceTimers.get(key);
-    if (timerId !== undefined) {
-      window.clearTimeout(timerId);
-      this.debounceTimers.delete(key);
-    }
-  }
-
-  protected clearAllDebounceTimers(): void {
-    for (const timerId of this.debounceTimers.values()) {
-      window.clearTimeout(timerId);
-    }
-    this.debounceTimers.clear();
-  }
-
-  // ============================================================================
-  // ERROR HANDLING AND RECOVERY (enhanced pattern from BaseManager)
-  // ============================================================================
-
-  /**
-   * Enhanced error handling with recovery mechanisms
-   */
-  protected handleError(error: unknown, context?: string): void {
-    this.errorCount++;
-    this.lastError = String(error);
-
-    const message = context ? `${context}: ${String(error)}` : String(error);
-    this.log(message, 'error');
-
-    // Error recovery if enabled and threshold exceeded
-    if (this.options.enableErrorRecovery && this.errorCount > this.maxErrors) {
-      this.log(`Maximum error count (${this.maxErrors}) exceeded, disposing manager`, 'error');
-      this.dispose();
-    }
-  }
-
-  /**
-   * Safe operation wrapper with error handling
-   */
-  protected async safeExecute<T>(
-    operation: () => T | Promise<T>,
-    fallback?: T,
-    context?: string
-  ): Promise<T | undefined> {
-    try {
-      return await this.measurePerformance(async () => {
-        return await operation();
-      }, context || 'safe_operation');
-    } catch (error) {
-      this.handleError(error, context);
-      return fallback;
-    }
-  }
-
-  /**
-   * Validation wrapper for operations
-   */
-  protected validateAndExecute<T>(
-    operation: () => T,
-    validations: Array<() => ValidationResult> = [],
-    context?: string
-  ): T {
-    this.checkNotDisposed();
-
-    if (this.options.enableValidation && validations.length > 0) {
-      const errors: string[] = [];
-      for (const validation of validations) {
-        const result = validation();
-        if (!result.isValid && result.errors) {
-          errors.push(...result.errors);
-        }
-      }
-
-      if (errors.length > 0) {
-        const message = `Validation failed: ${errors.join('; ')}`;
-        this.log(message, 'error');
-        throw new Error(message);
-      }
-    }
-
-    return this.measurePerformance(operation, context || 'validated_operation');
-  }
-
-  // ============================================================================
-  // PERFORMANCE MONITORING
-  // ============================================================================
-
-  /**
-   * Measure performance of operations
-   */
-  protected measurePerformance<T>(operation: () => T, operationName?: string): T {
-    if (!this.options.enablePerformanceMonitoring) {
-      return operation();
-    }
+  protected async executeOperationSafely<TResult>(
+    operation: () => Promise<TResult>,
+    operationName: string,
+    fallbackValue?: TResult
+  ): Promise<TResult | null> {
+    this.ensureManagerReady();
 
     const startTime = performance.now();
-    const result = operation();
-    const endTime = performance.now();
-    const duration = endTime - startTime;
+    const result = await this.errorHandler.executeWithErrorHandling(
+      operation,
+      operationName,
+      fallbackValue
+    );
 
-    this.updatePerformanceMetrics(duration);
-
-    if (operationName && duration > 10) {
-      // Log slow operations
-      this.log(`Operation ${operationName} took ${duration.toFixed(2)}ms`);
+    if (this.options.enablePerformanceTracking) {
+      this.performanceTracker.recordOperation(performance.now() - startTime);
     }
 
     return result;
   }
 
-  /**
-   * Update performance metrics
-   */
-  protected updatePerformanceMetrics(operationDuration: number): void {
-    this.performanceMetrics.totalOperations++;
-    this.performanceMetrics.lastOperationTime = operationDuration;
+  protected ensureManagerReady(): void {
+    if (!this.isInitialized) {
+      throw new Error(`Manager not initialized: ${this.managerName}`);
+    }
 
-    // Update rolling average
-    const alpha = 0.1; // Smoothing factor
-    this.performanceMetrics.averageResponseTime =
-      alpha * operationDuration + (1 - alpha) * this.performanceMetrics.averageResponseTime;
-
-    // Calculate operations per second (sliding window)
-    const windowSize = 5000; // 5 seconds
-    this.performanceMetrics.operationsPerSecond =
-      this.performanceMetrics.totalOperations / (windowSize / 1000);
+    if (this.isDisposed) {
+      throw new Error(`Manager is disposed: ${this.managerName}`);
+    }
   }
 
-  // ============================================================================
-  // HEALTH MONITORING
-  // ============================================================================
+  protected logInfo(message: string, ...args: unknown[]): void {
+    this.logger(`ℹ️ ${message}`, ...args);
+  }
 
-  /**
-   * Get manager health status
-   */
-  public getHealthStatus(): ManagerHealthStatus {
-    return {
-      isHealthy: this.errorCount < this.maxErrors && this._isInitialized && !this._isDisposed,
-      errorCount: this.errorCount,
-      lastError: this.lastError ? new Error(this.lastError) : undefined,
-      errors: [],
-      warnings: [],
-      lastCheck: new Date(),
+  protected logWarning(message: string, ...args: unknown[]): void {
+    this.logger(`⚠️ ${message}`, ...args);
+  }
+
+  protected logError(message: string, ...args: unknown[]): void {
+    this.logger(`❌ ${message}`, ...args);
+  }
+
+  protected logDebug(message: string, ...args: unknown[]): void {
+    if (this.options.enableLogging) {
+      this.logger(`🐛 ${message}`, ...args);
+    }
+  }
+
+  // =============================================================================
+  // プライベートヘルパーメソッド
+  // =============================================================================
+
+  private createDefaultLogger(): LoggerFunction {
+    const prefix = `[${this.managerName.toUpperCase()}]`;
+    return (message: string, ...args: unknown[]) => {
+      if (this.options.enableLogging) {
+        console.log(prefix, message, ...args);
+      }
     };
   }
 
-  /**
-   * Start health monitoring
-   */
-  protected startHealthMonitoring(): void {
-    if (this.healthCheckTimer) {
-      return;
-    }
-
-    this.healthCheckTimer = window.setInterval(() => {
-      const health = this.getHealthStatus();
-      if (!health.isHealthy) {
-        this.log(`Health check failed: ${health.lastError || 'Unknown error'}`, 'warn');
-      }
-    }, this.options.healthCheckInterval);
-  }
-
-  /**
-   * Stop health monitoring
-   */
-  protected stopHealthMonitoring(): void {
-    if (this.healthCheckTimer) {
-      window.clearInterval(this.healthCheckTimer);
-      this.healthCheckTimer = undefined;
-    }
-  }
-
-  /**
-   * Get estimated memory usage (rough approximation)
-   */
-  protected getMemoryUsage(): number {
-    // Rough estimation based on manager state
-    return (
-      this.timers.size * 50 +
-      this.debounceTimers.size * 50 +
-      this.eventListeners.size * 100 +
-      Object.keys(this.dependencies).length * 25
-    );
-  }
-
-  // ============================================================================
-  // UTILITY METHODS
-  // ============================================================================
-
-  /**
-   * Check if manager is disposed and throw if it is
-   */
-  protected checkNotDisposed(): void {
-    if (this._isDisposed) {
-      throw new Error(`${this.logPrefix} Manager has been disposed`);
-    }
-  }
-
-  /**
-   * Get dependency with type safety
-   */
-  protected getDependency<T>(key: keyof ManagerDependencies): T | undefined {
-    return this.dependencies[key] as T | undefined;
-  }
-
-  /**
-   * Require dependency (throws if not available)
-   */
-  protected requireDependency<T>(key: keyof ManagerDependencies, errorMessage?: string): T {
-    const dependency = this.getDependency<T>(key);
-    if (!dependency) {
-      const message = errorMessage || `Required dependency '${String(key)}' not available`;
-      throw new Error(`${this.logPrefix} ${message}`);
-    }
-    return dependency;
-  }
-
-  /**
-   * Create a managed promise that respects disposal
-   */
-  protected createManagedPromise<T>(
-    executor: (resolve: (value: T) => void, reject: (reason?: any) => void) => void
+  private async executeWithTimeout<T>(
+    operation: () => Promise<T> | T,
+    timeoutMs: number,
+    operationName: string
   ): Promise<T> {
-    return new Promise((resolve, reject) => {
-      if (this._isDisposed) {
-        reject(new Error(`${this.logPrefix} Manager is disposed`));
-        return;
-      }
+    return new Promise<T>((resolve, reject) => {
+      const timeoutId = setTimeout(() => {
+        reject(new Error(`${operationName} timed out after ${timeoutMs}ms`));
+      }, timeoutMs);
 
-      executor(
-        (value) => {
-          if (!this._isDisposed) {
-            resolve(value);
-          }
-        },
-        (reason) => {
-          if (!this._isDisposed) {
-            reject(reason);
-          }
-        }
-      );
+      Promise.resolve(operation())
+        .then(result => {
+          clearTimeout(timeoutId);
+          resolve(result);
+        })
+        .catch(error => {
+          clearTimeout(timeoutId);
+          reject(error);
+        });
     });
+  }
+}
+
+// =============================================================================
+// ManagerFactory - 標準化されたマネージャー作成
+// =============================================================================
+
+export class ManagerFactory {
+  public static createManager<T extends EnhancedBaseManager>(
+    ManagerClass: new (...args: unknown[]) => T,
+    options: ManagerInitializationOptions,
+    ...constructorArgs: unknown[]
+  ): T {
+    return new ManagerClass(...constructorArgs, options);
+  }
+
+  public static async createAndInitializeManager<T extends EnhancedBaseManager>(
+    ManagerClass: new (...args: unknown[]) => T,
+    options: ManagerInitializationOptions,
+    ...constructorArgs: unknown[]
+  ): Promise<T> {
+    const manager = this.createManager(ManagerClass, options, ...constructorArgs);
+    await manager.initializeManager();
+    return manager;
   }
 }
