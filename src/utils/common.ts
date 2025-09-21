@@ -229,3 +229,45 @@ export function safeStringify(obj: unknown): string {
     return String(obj);
   }
 }
+
+// =============================================================================
+// RESTORED FUNCTIONS - Required by existing code
+// =============================================================================
+
+/**
+ * Get terminal configuration (restored from refactoring)
+ */
+export function getTerminalConfig(): TerminalConfig {
+  const configService = getUnifiedConfigurationService();
+  return configService.getExtensionTerminalConfig();
+}
+
+/**
+ * Get shell for platform (restored from refactoring)
+ */
+export function getShellForPlatform(): string {
+  const platform = os.platform();
+
+  switch (platform) {
+    case 'win32':
+      return process.env.COMSPEC || 'cmd.exe';
+    case 'darwin':
+      return process.env.SHELL || '/bin/zsh';
+    default: // linux, etc.
+      return process.env.SHELL || '/bin/bash';
+  }
+}
+
+/**
+ * Show error message (restored from refactoring)
+ */
+export function showErrorMessage(message: string, ...items: string[]): Thenable<string | undefined> {
+  return vscode.window.showErrorMessage(message, ...items);
+}
+
+/**
+ * Show warning message (restored from refactoring)
+ */
+export function showWarningMessage(message: string, ...items: string[]): Thenable<string | undefined> {
+  return vscode.window.showWarningMessage(message, ...items);
+}
