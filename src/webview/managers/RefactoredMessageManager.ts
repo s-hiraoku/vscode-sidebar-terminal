@@ -13,20 +13,9 @@
 import { IMessageManager, IManagerCoordinator } from '../interfaces/ManagerInterfaces';
 import { TerminalInteractionEvent } from '../../types/common';
 import { WebViewFontSettings } from '../../types/shared';
-import {} from '../../utils/logger';
 import { messageLogger } from '../utils/ManagerLogger';
 import { MessageQueue, MessageSender } from '../utils/MessageQueue';
 import { Terminal } from '@xterm/xterm';
-import {
-  showSessionRestoreStarted,
-  showSessionRestoreProgress,
-  showSessionRestoreCompleted,
-  showSessionRestoreError,
-  showSessionSaved,
-  showSessionSaveError,
-  showSessionCleared,
-  showSessionRestoreSkipped,
-} from '../utils/NotificationUtils';
 import {
   isNonNullObject,
   hasProperty,
@@ -34,28 +23,9 @@ import {
   ITerminalLifecycleManager,
   ITerminalWithAddons,
 } from '../../types/type-guards';
-
-// Message command interface with comprehensive typing
-interface MessageCommand {
-  command: string;
-  cliAgentStatus?: {
-    activeTerminalName: string | null;
-    status: 'connected' | 'disconnected' | 'none';
-    agentType: string | null;
-    terminalId?: string;
-  };
-  [key: string]: unknown;
-}
-
-// Session data payload interface (used in session restoration)
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-interface SessionDataPayload {
-  id: string;
-  name: string;
-  number: number;
-  cwd: string;
-  isActive: boolean;
-}
+import { SessionMessageController } from './controllers/SessionMessageController';
+import { CliAgentMessageController } from './controllers/CliAgentMessageController';
+import { MessageCommand } from './messageTypes';
 
 /**
  * Consolidated Message Manager
@@ -73,6 +43,14 @@ export class RefactoredMessageManager implements IMessageManager {
   // MessageQueue utility for centralized queue management
   private messageQueue: MessageQueue;
   private coordinator?: IManagerCoordinator;
+  private cachedTerminalRestoreInfo: {
+    terminals: Array<Record<string, unknown>>;
+    activeTerminalId: string | null;
+    config?: unknown;
+    timestamp: number;
+  } | null = null;
+  private readonly sessionController: SessionMessageController;
+  private readonly cliAgentController: CliAgentMessageController;
 
   constructor(coordinator?: IManagerCoordinator) {
     this.logger.lifecycle('initialization', 'starting');
@@ -95,6 +73,14 @@ export class RefactoredMessageManager implements IMessageManager {
       processingDelay: 1,
       maxQueueSize: 1000,
       enablePriority: true,
+    });
+
+    this.sessionController = new SessionMessageController({
+      logger: this.logger,
+    });
+
+    this.cliAgentController = new CliAgentMessageController({
+      logger: this.logger,
     });
 
     this.logger.lifecycle('initialization', 'completed');
@@ -175,28 +161,28 @@ export class RefactoredMessageManager implements IMessageManager {
           this.handleStateUpdateMessage(msg, coordinator);
           break;
         case 'cliAgentStatusUpdate':
-          this.handleClaudeStatusUpdateMessage(msg, coordinator);
+          this.cliAgentController.handleStatusUpdateMessage(msg, coordinator);
           break;
         case 'cliAgentFullStateSync':
-          this.handleCliAgentFullStateSyncMessage(msg, coordinator);
+          this.cliAgentController.handleFullStateSyncMessage(msg, coordinator);
           break;
         case 'sessionRestore':
-          await this.handleSessionRestoreMessage(msg, coordinator);
+          await this.sessionController.handleSessionRestoreMessage(msg, coordinator);
           break;
         case 'switchAiAgentResponse':
-          this.handleSwitchAiAgentResponseMessage(msg, coordinator);
+          this.cliAgentController.handleSwitchResponseMessage(msg, coordinator);
           break;
         case 'sessionRestoreStarted':
-          this.handleSessionRestoreStartedMessage(msg);
+          this.sessionController.handleSessionRestoreStartedMessage(msg);
           break;
         case 'sessionRestoreProgress':
-          this.handleSessionRestoreProgressMessage(msg);
+          this.sessionController.handleSessionRestoreProgressMessage(msg);
           break;
         case 'sessionRestoreCompleted':
-          this.handleSessionRestoreCompletedMessage(msg);
+          this.sessionController.handleSessionRestoreCompletedMessage(msg);
           break;
         case 'sessionRestoreError':
-          this.handleSessionRestoreErrorMessage(msg);
+          this.sessionController.handleSessionRestoreErrorMessage(msg);
           break;
         case 'getScrollback':
           this.handleGetScrollbackMessage(msg, coordinator);
@@ -208,16 +194,16 @@ export class RefactoredMessageManager implements IMessageManager {
           this.handleScrollbackProgressMessage(msg);
           break;
         case 'sessionSaved':
-          this.handleSessionSavedMessage(msg);
+          this.sessionController.handleSessionSavedMessage(msg);
           break;
         case 'sessionSaveError':
-          this.handleSessionSaveErrorMessage(msg);
+          this.sessionController.handleSessionSaveErrorMessage(msg);
           break;
         case 'sessionCleared':
-          this.handleSessionClearedMessage();
+          this.sessionController.handleSessionClearedMessage();
           break;
         case 'sessionRestored':
-          this.handleSessionRestoredMessage(msg);
+          this.sessionController.handleSessionRestoredMessage(msg);
           break;
         case 'setActiveTerminal':
           this.handleSetActiveTerminalMessage(msg, coordinator);
@@ -252,10 +238,10 @@ export class RefactoredMessageManager implements IMessageManager {
           this.handleSaveAllTerminalSessionsMessage(msg, coordinator);
           break;
         case 'sessionRestoreSkipped':
-          this.handleSessionRestoreSkippedMessage(msg);
+          this.sessionController.handleSessionRestoreSkippedMessage(msg);
           break;
         case 'terminalRestoreError':
-          void this.handleTerminalRestoreErrorMessage(msg);
+          void this.sessionController.handleTerminalRestoreErrorMessage(msg);
           break;
         case 'panelLocationUpdate':
           this.handlePanelLocationUpdateMessage(msg, coordinator);
@@ -576,134 +562,12 @@ export class RefactoredMessageManager implements IMessageManager {
   /**
    * Handle Claude status update message from extension
    */
-  private handleClaudeStatusUpdateMessage(
-    msg: MessageCommand,
-    coordinator: IManagerCoordinator
-  ): void {
-    this.logger.info('CLI Agent Status Update received');
-
-    const cliAgentStatus = msg.cliAgentStatus;
-    if (cliAgentStatus) {
-      this.logger.info(
-        `Processing status update: ${cliAgentStatus.status} for ${cliAgentStatus.activeTerminalName} (ID: ${cliAgentStatus.terminalId})`
-      );
-
-      try {
-        // Use terminalId directly if available, fallback to extracting from name
-        let terminalId: string;
-
-        if (cliAgentStatus.terminalId) {
-          terminalId = cliAgentStatus.terminalId;
-          this.logger.debug(`Using provided terminalId: ${terminalId}`);
-        } else if (cliAgentStatus.activeTerminalName) {
-          terminalId = cliAgentStatus.activeTerminalName.replace('Terminal ', '') || '1';
-          this.logger.debug(`Extracted terminalId from name: ${terminalId}`);
-        } else {
-          const allTerminals = coordinator.getAllTerminalInstances();
-          const connectedTerminal = Array.from(allTerminals.keys())[0];
-          terminalId = connectedTerminal || '1';
-          this.logger.warn(`Using fallback terminalId: ${terminalId}`);
-        }
-
-        // Map legacy status to new status format
-        const mappedStatus = this.mapLegacyStatus(cliAgentStatus.status);
-
-        // Call the centralized status management method
-        coordinator.updateCliAgentStatus(
-          terminalId,
-          mappedStatus,
-          cliAgentStatus.agentType || null
-        );
-
-        this.logger.info(
-          `CLI Agent status updated successfully: ${mappedStatus} for terminal ${terminalId}`
-        );
-      } catch (error) {
-        this.logger.error('Error updating CLI Agent status', error);
-      }
-    } else {
-      this.logger.warn('No CLI Agent status data in message');
-    }
-  }
-
   /**
    * Map legacy status values to new status format
    */
-  private mapLegacyStatus(legacyStatus: string): 'connected' | 'disconnected' | 'none' {
-    switch (legacyStatus.toLowerCase()) {
-      case 'connected':
-        return 'connected';
-      case 'disconnected':
-        return 'disconnected';
-      case 'none':
-      case 'inactive':
-      case 'terminated':
-        return 'none';
-      default:
-        this.logger.warn(`Unknown legacy status: ${legacyStatus}, defaulting to 'none'`);
-        return 'none';
-    }
-  }
-
   /**
    * Handle full CLI Agent state sync message from extension
    */
-  private handleCliAgentFullStateSyncMessage(
-    msg: MessageCommand,
-    coordinator: IManagerCoordinator
-  ): void {
-    this.logger.info('CLI Agent Full State Sync received');
-
-    const terminalStates = msg.terminalStates;
-    const connectedAgentId = msg.connectedAgentId;
-    const connectedAgentType = msg.connectedAgentType;
-    const disconnectedCount = msg.disconnectedCount;
-
-    this.logger.debug('Full state sync data', {
-      terminalStates,
-      connectedAgentId,
-      connectedAgentType,
-      disconnectedCount,
-    });
-
-    if (terminalStates) {
-      this.logger.info(
-        `Processing full state sync: CONNECTED=${String(connectedAgentId)} (${String(connectedAgentType)}), DISCONNECTED=${String(disconnectedCount)}`
-      );
-
-      try {
-        for (const [terminalId, stateInfo] of Object.entries(terminalStates)) {
-          const typedStateInfo = stateInfo as {
-            status: 'connected' | 'disconnected' | 'none';
-            agentType: string | null;
-          };
-
-          this.logger.debug(`Updating terminal ${terminalId}`, typedStateInfo);
-
-          try {
-            coordinator.updateCliAgentStatus(
-              terminalId,
-              typedStateInfo.status,
-              typedStateInfo.agentType
-            );
-
-            this.logger.debug(
-              `Applied state: Terminal ${terminalId} -> ${typedStateInfo.status} (${typedStateInfo.agentType})`
-            );
-          } catch (error) {
-            this.logger.error(`Error updating terminal ${terminalId}`, error);
-          }
-        }
-
-        this.logger.info('Full CLI Agent state sync completed successfully');
-      } catch (error) {
-        this.logger.error('Error during full state sync', error);
-      }
-    } else {
-      this.logger.warn('No terminal states data in full state sync message');
-    }
-  }
-
   // =================================================================
   // IMESSAGEMANAGER INTERFACE IMPLEMENTATION
   // =================================================================
@@ -714,6 +578,13 @@ export class RefactoredMessageManager implements IMessageManager {
       timestamp: Date.now(),
     });
     this.logger.info('Ready message sent');
+  }
+
+  public handleCliAgentFullStateSyncMessage(
+    msg: MessageCommand,
+    coordinator: IManagerCoordinator
+  ): void {
+    this.cliAgentController.handleFullStateSyncMessage(msg, coordinator);
   }
 
   /**
@@ -966,151 +837,9 @@ export class RefactoredMessageManager implements IMessageManager {
   /**
    * Handle session restore message from extension
    */
-  private async handleSessionRestoreMessage(
-    msg: MessageCommand,
-    coordinator: IManagerCoordinator
-  ): Promise<void> {
-    this.logger.info('Session restore message received');
-
-    const terminalId = msg.terminalId as string;
-    const terminalName = msg.terminalName as string;
-    const config = msg.config;
-    const sessionRestoreMessage = msg.sessionRestoreMessage as string;
-    const sessionScrollback = msg.sessionScrollback as string[];
-
-    if (terminalId && terminalName) {
-      this.logger.info(`Restoring terminal session: ${terminalId} (${terminalName})`);
-
-      try {
-        // 🔄 Use the new restoreSession method from RefactoredTerminalWebviewManager
-        if ('restoreSession' in coordinator && typeof coordinator.restoreSession === 'function') {
-          const success = await coordinator.restoreSession({
-            terminalId,
-            terminalName,
-            scrollbackData: sessionScrollback,
-            sessionRestoreMessage,
-          });
-
-          if (success) {
-            this.logger.info(`✅ Successfully restored terminal session: ${terminalId}`);
-          } else {
-            this.logger.warn(`⚠️ Session restore failed, creating regular terminal: ${terminalId}`);
-            // Fallback to regular terminal creation
-            await coordinator.createTerminal(terminalId, terminalName, config);
-          }
-        } else {
-          this.logger.warn('restoreSession method not found, using legacy method');
-
-          // Legacy fallback: Create terminal normally, then restore scrollback
-          await coordinator.createTerminal(terminalId, terminalName, config);
-          this.logger.info(`Created terminal for session restore: ${terminalId}`);
-
-          // Restore scrollback data after a brief delay
-          if (sessionRestoreMessage || (sessionScrollback && sessionScrollback.length > 0)) {
-            setTimeout(() => {
-              if (
-                'restoreTerminalScrollback' in coordinator &&
-                typeof coordinator.restoreTerminalScrollback === 'function'
-              ) {
-                coordinator.restoreTerminalScrollback(
-                  terminalId,
-                  sessionRestoreMessage || '',
-                  sessionScrollback || []
-                );
-                this.logger.info(`Restored scrollback for terminal: ${terminalId}`);
-              } else {
-                this.logger.warn('restoreTerminalScrollback method not found');
-              }
-            }, 100);
-          }
-        }
-      } catch (error) {
-        this.logger.error(`Failed to restore terminal session ${terminalId}: ${String(error)}`);
-        // Continue with regular terminal creation as fallback
-        try {
-          await coordinator.createTerminal(terminalId, terminalName, config);
-          this.logger.info(`Created fallback terminal: ${terminalId}`);
-        } catch (fallbackError) {
-          this.logger.error(`Failed to create fallback terminal: ${String(fallbackError)}`);
-        }
-      }
-    } else {
-      this.logger.error('Invalid session restore data received', { terminalId, terminalName });
-    }
-  }
-
   /**
    * Session restore notification handlers
    */
-  private handleSessionRestoreStartedMessage(msg: MessageCommand): void {
-    const terminalCount = (msg.terminalCount as number) || 0;
-    this.logger.info(`Session restore started for ${terminalCount} terminals`);
-    showSessionRestoreStarted(terminalCount);
-  }
-
-  private handleSessionRestoreProgressMessage(msg: MessageCommand): void {
-    const restored = (msg.restored as number) || 0;
-    const total = (msg.total as number) || 0;
-    this.logger.info(`Session restore progress: ${restored}/${total}`);
-    showSessionRestoreProgress(restored, total);
-  }
-
-  private handleSessionRestoreCompletedMessage(msg: MessageCommand): void {
-    const restoredCount = (msg.restoredCount as number) || 0;
-    const skippedCount = (msg.skippedCount as number) || 0;
-    this.logger.info(
-      `Session restore completed: ${restoredCount} restored, ${skippedCount} skipped`
-    );
-    showSessionRestoreCompleted(restoredCount, skippedCount);
-  }
-
-  private handleSessionRestoreErrorMessage(msg: MessageCommand): void {
-    const error = (msg.error as string) || 'Unknown error';
-    const partialSuccess = (msg.partialSuccess as boolean) || false;
-    const errorType = (msg.errorType as string) || undefined;
-    this.logger.error(
-      `Session restore error: ${error} (partial: ${partialSuccess}, type: ${errorType})`
-    );
-    showSessionRestoreError(error, partialSuccess, errorType);
-  }
-
-  private handleSessionSavedMessage(msg: MessageCommand): void {
-    const terminalCount = (msg.terminalCount as number) || 0;
-    this.logger.info(`Session saved with ${terminalCount} terminals`);
-    showSessionSaved(terminalCount);
-  }
-
-  private handleSessionSaveErrorMessage(msg: MessageCommand): void {
-    const error = (msg.error as string) || 'Unknown error';
-    this.logger.error(`Session save error: ${error}`);
-    showSessionSaveError(error);
-  }
-
-  private handleSessionClearedMessage(): void {
-    this.logger.info('Session cleared');
-    showSessionCleared();
-  }
-
-  private handleSessionRestoredMessage(msg: MessageCommand): void {
-    const success = msg.success as boolean;
-    const restoredCount = (msg.restoredCount as number) || 0;
-    const totalCount = (msg.totalCount as number) || 0;
-
-    this.logger.info(
-      `🔥 [RESTORE-DEBUG] Session restoration completed: success=${success}, restored=${restoredCount}/${totalCount}`
-    );
-
-    if (success) {
-      this.logger.info(
-        `✅ [RESTORE-DEBUG] Session restoration successful: ${restoredCount} terminals restored out of ${totalCount}`
-      );
-    } else {
-      this.logger.warn(
-        `⚠️ [RESTORE-DEBUG] Session restoration partially failed: only ${restoredCount} out of ${totalCount} terminals restored`
-      );
-    }
-  }
-
   private handleSetActiveTerminalMessage(
     msg: MessageCommand,
     coordinator: IManagerCoordinator
@@ -1449,22 +1178,6 @@ export class RefactoredMessageManager implements IMessageManager {
     }
   }
 
-  private handleSessionRestoreSkippedMessage(msg: MessageCommand): void {
-    const reason = (msg.reason as string) || 'Unknown reason';
-    this.logger.info(`Session restore skipped: ${reason}`);
-    showSessionRestoreSkipped(reason);
-  }
-
-  private async handleTerminalRestoreErrorMessage(msg: MessageCommand): Promise<void> {
-    const terminalName = (msg.terminalName as string) || 'Unknown terminal';
-    const error = (msg.error as string) || 'Unknown error';
-    this.logger.warn(`Terminal restore error: ${terminalName} - ${error}`);
-
-    // Import the function here to avoid circular dependencies
-    const { showTerminalRestoreError } = await import('../utils/NotificationUtils');
-    showTerminalRestoreError(terminalName, error);
-  }
-
   // =================================================================
   // SCROLLBACK MANAGEMENT HANDLERS - Complete scrollback functionality
   // =================================================================
@@ -1750,58 +1463,6 @@ export class RefactoredMessageManager implements IMessageManager {
   /**
    * 🆕 MANUAL RESET: Handle AI Agent toggle response from extension
    */
-  private handleSwitchAiAgentResponseMessage(
-    msg: MessageCommand & {
-      success?: boolean;
-      newStatus?: string;
-      agentType?: string | null;
-      reason?: string;
-    },
-    coordinator: IManagerCoordinator
-  ): void {
-    const { terminalId, success, newStatus, agentType, reason, isForceReconnect } = msg;
-
-    this.logger.info(`AI Agent operation result for terminal ${terminalId}:`, {
-      success,
-      newStatus,
-      agentType,
-      isForceReconnect,
-      reason,
-    });
-
-    // Update UI and show user feedback
-    const managers = coordinator.getManagers();
-    if (!managers?.notification) {
-      this.logger.warn('NotificationManager not available for AI Agent feedback');
-      return;
-    }
-
-    if (success) {
-      // Only show subtle success notification for successful operations
-      if (isForceReconnect) {
-        const statusText = newStatus === 'connected' ? 'Connected' : 'Disconnected';
-        managers.notification.showNotificationInTerminal(`📎 AI Agent ${statusText}`, 'success');
-      }
-      // No notification for regular switch operations - keep it quiet
-
-      this.logger.info(`AI Agent operation succeeded:`, {
-        terminalId,
-        newStatus,
-        agentType,
-        isForceReconnect,
-      });
-    } else {
-      // Only show error notifications - users need to know about failures
-      managers.notification.showNotificationInTerminal(`❌ AI Agent operation failed`, 'error');
-
-      this.logger.error(`AI Agent operation failed:`, {
-        terminalId,
-        reason,
-        isForceReconnect,
-      });
-    }
-  }
-
   // =================================================================
   // ADDITIONAL HANDLERS - Complete remaining functionality
   // =================================================================
@@ -1959,35 +1620,239 @@ export class RefactoredMessageManager implements IMessageManager {
    * Handle serialization and restoration stub handlers
    */
   private handleSerializeTerminalMessage(
-    _msg: MessageCommand,
-    _coordinator: IManagerCoordinator
+    msg: MessageCommand,
+    coordinator: IManagerCoordinator
   ): void {
-    this.logger.info('Terminal serialization requested');
-    // Implementation would go here
+    this.logger.info('Terminal serialization requested (single terminal)');
+
+    const terminalIds: string[] = [];
+
+    if (typeof msg.terminalId === 'string' && msg.terminalId.trim().length > 0) {
+      terminalIds.push(msg.terminalId);
+    }
+
+    const additionalIds = (msg as any).terminalIds;
+    if (Array.isArray(additionalIds)) {
+      additionalIds
+        .filter((id): id is string => typeof id === 'string' && id.trim().length > 0)
+        .forEach((id) => terminalIds.push(id));
+    }
+
+    if (terminalIds.length === 0) {
+      this.logger.warn('No terminalId provided for serialization request');
+      coordinator.postMessageToExtension({
+        command: 'terminalSerializationResponse',
+        serializationData: {},
+        error: 'missing-terminal-id',
+        terminalId: msg.terminalId,
+        requestId: (msg as any).requestId,
+        messageId: (msg as any).messageId,
+        timestamp: Date.now(),
+      });
+      return;
+    }
+
+    this.handleRequestTerminalSerializationMessage(
+      {
+        ...msg,
+        terminalIds,
+      },
+      coordinator
+    );
   }
 
   private handleRestoreSerializedContentMessage(
-    _msg: MessageCommand,
-    _coordinator: IManagerCoordinator
+    msg: MessageCommand,
+    coordinator: IManagerCoordinator
   ): void {
     this.logger.info('Restore serialized content requested');
-    // Implementation would go here
+
+    const terminalId = typeof msg.terminalId === 'string' ? msg.terminalId : undefined;
+    const serializedContent = (msg as any).serializedContent as string | undefined;
+    const scrollbackData = Array.isArray((msg as any).scrollbackData)
+      ? ((msg as any).scrollbackData as unknown[]).filter(
+          (line): line is string => typeof line === 'string'
+        )
+      : undefined;
+    const sessionRestoreMessage =
+      typeof (msg as any).sessionRestoreMessage === 'string'
+        ? ((msg as any).sessionRestoreMessage as string)
+        : typeof (msg as any).resumeMessage === 'string'
+        ? ((msg as any).resumeMessage as string)
+        : undefined;
+    const isActive = Boolean((msg as any).isActive);
+    const requestId = (msg as any).requestId;
+    const messageId = (msg as any).messageId;
+
+    if (!terminalId) {
+      this.logger.error('Restore serialized content request missing terminalId');
+      coordinator.postMessageToExtension({
+        command: 'terminalSerializationRestoreResponse',
+        restoredCount: 0,
+        totalCount: 0,
+        error: 'missing-terminal-id',
+        requestId,
+        messageId,
+        timestamp: Date.now(),
+      });
+      return;
+    }
+
+    const persistenceManager = (coordinator as any).persistenceManager;
+    const restoreSessionFn =
+      'restoreSession' in coordinator && typeof (coordinator as any).restoreSession === 'function'
+        ? ((coordinator as any).restoreSession as (payload: {
+            terminalId: string;
+            terminalName: string;
+            scrollbackData?: string[];
+            sessionRestoreMessage?: string;
+          }) => Promise<boolean>)
+        : undefined;
+
+    void (async () => {
+      let restored = false;
+      let errorMessage: string | undefined;
+
+      try {
+        if (persistenceManager && typeof serializedContent === 'string' && serializedContent.length > 0) {
+          restored = Boolean(persistenceManager.restoreTerminalContent(terminalId, serializedContent));
+        }
+
+        if (!restored && scrollbackData && scrollbackData.length > 0 && restoreSessionFn) {
+          restored = await restoreSessionFn({
+            terminalId,
+            terminalName:
+              typeof msg.terminalName === 'string' ? (msg.terminalName as string) : `Terminal ${terminalId}`,
+            scrollbackData,
+            sessionRestoreMessage,
+          });
+        }
+
+        if (restored && isActive) {
+          coordinator.setActiveTerminalId(terminalId);
+        }
+      } catch (error) {
+        errorMessage = error instanceof Error ? error.message : String(error);
+        this.logger.error(`Failed to restore serialized content for ${terminalId}:`, error);
+      } finally {
+        coordinator.postMessageToExtension({
+          command: 'terminalSerializationRestoreResponse',
+          restoredCount: restored ? 1 : 0,
+          totalCount: 1,
+          success: restored,
+          error: errorMessage,
+          terminalId,
+          requestId,
+          messageId,
+          timestamp: Date.now(),
+        });
+      }
+    })();
   }
 
   private handleTerminalRestoreInfoMessage(
-    _msg: MessageCommand,
-    _coordinator: IManagerCoordinator
+    msg: MessageCommand,
+    coordinator: IManagerCoordinator
   ): void {
     this.logger.info('Terminal restore info received');
-    // Implementation would go here
+
+    const terminals = Array.isArray((msg as any).terminals)
+      ? ((msg as any).terminals as Array<Record<string, unknown>>)
+      : [];
+    const activeTerminalId =
+      typeof (msg as any).activeTerminalId === 'string' ? ((msg as any).activeTerminalId as string) : null;
+    const config = (msg as any).config;
+
+    this.cachedTerminalRestoreInfo = {
+      terminals,
+      activeTerminalId,
+      config,
+      timestamp: Date.now(),
+    };
+
+    this.logger.debug('Cached terminal restore metadata', {
+      terminalCount: terminals.length,
+      activeTerminalId,
+    });
+
+    try {
+      const notificationManager = coordinator.getManagers()?.notification;
+      if (notificationManager && terminals.length > 0) {
+        notificationManager.showNotificationInTerminal(
+          `💾 Session data available for ${terminals.length} terminal${terminals.length === 1 ? '' : 's'}`,
+          'info'
+        );
+      }
+    } catch (notificationError) {
+      this.logger.warn('Failed to show terminal restore notification', notificationError);
+    }
   }
 
   private handleSaveAllTerminalSessionsMessage(
-    _msg: MessageCommand,
-    _coordinator: IManagerCoordinator
+    msg: MessageCommand,
+    coordinator: IManagerCoordinator
   ): void {
     this.logger.info('Save all terminal sessions requested');
-    // Implementation would go here
+
+    const persistenceManager = (coordinator as any).persistenceManager;
+    const requestId = (msg as any).requestId;
+    const messageId = (msg as any).messageId;
+
+    if (!persistenceManager) {
+      this.logger.error('StandardTerminalPersistenceManager not available for save request');
+      coordinator.postMessageToExtension({
+        command: 'saveAllTerminalSessionsResponse',
+        success: false,
+        error: 'persistence-manager-unavailable',
+        requestId,
+        messageId,
+        timestamp: Date.now(),
+      });
+      return;
+    }
+
+    try {
+      const terminalIds: string[] = typeof persistenceManager.getAvailableTerminals === 'function'
+        ? persistenceManager.getAvailableTerminals()
+        : [];
+
+      terminalIds.forEach((terminalId) => {
+        try {
+          persistenceManager.saveTerminalContent(terminalId);
+        } catch (saveError) {
+          this.logger.error(`Failed to save session for terminal ${terminalId}:`, saveError);
+        }
+      });
+
+      coordinator.postMessageToExtension({
+        command: 'saveAllTerminalSessionsResponse',
+        success: true,
+        savedTerminals: terminalIds.length,
+        requestId,
+        messageId,
+        timestamp: Date.now(),
+      });
+
+      const notificationManager = coordinator.getManagers()?.notification;
+      if (notificationManager) {
+        notificationManager.showNotificationInTerminal(
+          terminalIds.length > 0
+            ? `✅ Saved ${terminalIds.length} terminal session${terminalIds.length === 1 ? '' : 's'}`
+            : 'ℹ️ No terminals available to save',
+          terminalIds.length > 0 ? 'success' : 'info'
+        );
+      }
+    } catch (error) {
+      this.logger.error('Failed to save terminal sessions', error);
+      coordinator.postMessageToExtension({
+        command: 'saveAllTerminalSessionsResponse',
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+        requestId,
+        messageId,
+        timestamp: Date.now(),
+      });
+    }
   }
 
   private handleRequestTerminalSerializationMessage(
@@ -1997,8 +1862,13 @@ export class RefactoredMessageManager implements IMessageManager {
     this.logger.info('Request terminal serialization');
 
     try {
-      const terminalIds = (msg as any).terminalIds || [];
+      const terminalIds = Array.isArray((msg as any).terminalIds)
+        ? ((msg as any).terminalIds as string[])
+        : [];
+      const scrollbackLines = (msg as any).scrollbackLines;
       const serializationData: Record<string, string> = {};
+      const requestId = (msg as any).requestId;
+      const messageId = (msg as any).messageId;
 
       // Use existing StandardTerminalPersistenceManager for serialization
       const persistenceManager = (coordinator as any).persistenceManager;
@@ -2006,12 +1876,28 @@ export class RefactoredMessageManager implements IMessageManager {
         throw new Error('StandardTerminalPersistenceManager not available');
       }
 
+      if (terminalIds.length === 0) {
+        coordinator.postMessageToExtension({
+          command: 'terminalSerializationResponse',
+          serializationData: {},
+          error: 'no-terminal-ids',
+          requestId,
+          messageId,
+          timestamp: Date.now(),
+        });
+        return;
+      }
+
       // Get serialized content from each terminal via persistence manager
       terminalIds.forEach((terminalId: string) => {
         try {
           // Use serializeTerminal method which returns the serialized content
-          const serializedContent = persistenceManager.serializeTerminal(terminalId);
-          if (serializedContent) {
+          const serialized = persistenceManager.serializeTerminal(terminalId, {
+            scrollback: typeof scrollbackLines === 'number' ? scrollbackLines : undefined,
+          });
+          const serializedContent = serialized?.content ?? '';
+
+          if (serializedContent.length > 0) {
             serializationData[terminalId] = serializedContent;
             this.logger.info(
               `Serialized terminal ${terminalId}: ${serializedContent.length} chars`
@@ -2028,6 +1914,8 @@ export class RefactoredMessageManager implements IMessageManager {
       coordinator.postMessageToExtension({
         command: 'terminalSerializationResponse',
         serializationData: serializationData,
+        requestId,
+        messageId,
         timestamp: Date.now(),
       });
 
@@ -2042,6 +1930,8 @@ export class RefactoredMessageManager implements IMessageManager {
         command: 'terminalSerializationResponse',
         serializationData: {},
         error: error instanceof Error ? error.message : String(error),
+        requestId: (msg as any).requestId,
+        messageId: (msg as any).messageId,
         timestamp: Date.now(),
       });
     }
@@ -2096,6 +1986,8 @@ export class RefactoredMessageManager implements IMessageManager {
         command: 'terminalSerializationRestoreResponse',
         restoredCount: restoredCount,
         totalCount: terminalData.length,
+        requestId: (msg as any).requestId,
+        messageId: (msg as any).messageId,
         timestamp: Date.now(),
       });
 
@@ -2111,17 +2003,196 @@ export class RefactoredMessageManager implements IMessageManager {
         restoredCount: 0,
         totalCount: 0,
         error: error instanceof Error ? error.message : String(error),
+        requestId: (msg as any).requestId,
+        messageId: (msg as any).messageId,
         timestamp: Date.now(),
       });
     }
   }
 
   private handleSessionRestorationDataMessage(
-    _msg: MessageCommand,
-    _coordinator: IManagerCoordinator
+    msg: MessageCommand,
+    coordinator: IManagerCoordinator
   ): void {
     this.logger.info('Session restoration data received');
-    // Implementation would go here
+
+    const terminalId = typeof msg.terminalId === 'string' ? msg.terminalId : undefined;
+    const sessionData = (msg as any).sessionData;
+    const requestId = (msg as any).requestId;
+    const messageId = (msg as any).messageId;
+
+    if (!terminalId) {
+      this.logger.error('Session restoration data missing terminalId');
+      coordinator.postMessageToExtension({
+        command: 'sessionRestorationDataResponse',
+        success: false,
+        error: 'missing-terminal-id',
+        requestId,
+        messageId,
+        timestamp: Date.now(),
+      });
+      return;
+    }
+
+    let restorationPayload: unknown = sessionData;
+
+    if (!restorationPayload && this.cachedTerminalRestoreInfo) {
+      const fallback = this.cachedTerminalRestoreInfo.terminals.find((terminal) => {
+        return isNonNullObject(terminal) && terminal.id === terminalId;
+      });
+
+      if (fallback) {
+        this.logger.debug('Using cached terminal restore info as fallback payload');
+        restorationPayload = fallback;
+      }
+    }
+
+    if (!restorationPayload) {
+      this.logger.warn(`No session data provided for terminal ${terminalId}`);
+      coordinator.postMessageToExtension({
+        command: 'sessionRestorationDataResponse',
+        success: false,
+        error: 'no-session-data',
+        terminalId,
+        requestId,
+        messageId,
+        timestamp: Date.now(),
+      });
+      return;
+    }
+
+    const normalizedPayload = this.normalizeSessionRestorationPayload(terminalId, restorationPayload);
+
+    if (!normalizedPayload) {
+      this.logger.warn('Unable to normalize session restoration payload', sessionData);
+      coordinator.postMessageToExtension({
+        command: 'sessionRestorationDataResponse',
+        success: false,
+        error: 'invalid-session-data',
+        terminalId,
+        requestId,
+        messageId,
+        timestamp: Date.now(),
+      });
+      return;
+    }
+
+    const persistenceManager = (coordinator as any).persistenceManager;
+    const restoreSessionFn =
+      'restoreSession' in coordinator && typeof (coordinator as any).restoreSession === 'function'
+        ? ((coordinator as any).restoreSession as (payload: {
+            terminalId: string;
+            terminalName: string;
+            scrollbackData?: string[];
+            sessionRestoreMessage?: string;
+          }) => Promise<boolean>)
+        : undefined;
+
+    void (async () => {
+      let success = false;
+      let errorMessage: string | undefined;
+
+      try {
+        if (
+          persistenceManager &&
+          typeof normalizedPayload.serializedContent === 'string' &&
+          normalizedPayload.serializedContent.length > 0
+        ) {
+          success = Boolean(
+            persistenceManager.restoreTerminalContent(terminalId, normalizedPayload.serializedContent)
+          );
+        }
+
+        if (!success && restoreSessionFn) {
+          success = await restoreSessionFn({
+            terminalId,
+            terminalName: normalizedPayload.terminalName,
+            scrollbackData: normalizedPayload.scrollbackData,
+            sessionRestoreMessage: normalizedPayload.sessionRestoreMessage,
+          });
+        }
+
+        if (success && normalizedPayload.isActive) {
+          coordinator.setActiveTerminalId(terminalId);
+        }
+      } catch (error) {
+        errorMessage = error instanceof Error ? error.message : String(error);
+        this.logger.error('Failed to apply session restoration payload', error);
+      } finally {
+        coordinator.postMessageToExtension({
+          command: 'sessionRestorationDataResponse',
+          success,
+          restored: success ? 1 : 0,
+          terminalId,
+          error: errorMessage,
+          requestId,
+          messageId,
+          timestamp: Date.now(),
+        });
+      }
+    })();
+  }
+
+  private normalizeSessionRestorationPayload(
+    terminalId: string,
+    sessionData: unknown
+  ): {
+    terminalId: string;
+    terminalName: string;
+    serializedContent?: string;
+    scrollbackData?: string[];
+    sessionRestoreMessage?: string;
+    isActive?: boolean;
+  } | null {
+    if (!isNonNullObject(sessionData)) {
+      return null;
+    }
+
+    const terminalNameCandidate =
+      typeof sessionData.name === 'string' && sessionData.name.trim().length > 0
+        ? sessionData.name
+        : typeof (sessionData as { terminalName?: unknown }).terminalName === 'string'
+        ? ((sessionData as { terminalName: string }).terminalName)
+        : undefined;
+
+    const serializedContent =
+      typeof (sessionData as { serializedContent?: unknown }).serializedContent === 'string'
+        ? ((sessionData as { serializedContent: string }).serializedContent)
+        : undefined;
+
+    let scrollbackData: string[] | undefined;
+    const potentialScrollback = (sessionData as { scrollbackData?: unknown }).scrollbackData;
+    if (Array.isArray(potentialScrollback)) {
+      scrollbackData = potentialScrollback.filter((line): line is string => typeof line === 'string');
+    }
+
+    if (!scrollbackData || scrollbackData.length === 0) {
+      const legacyScrollback = (sessionData as { scrollback?: unknown }).scrollback;
+      if (Array.isArray(legacyScrollback)) {
+        scrollbackData = legacyScrollback.filter((line): line is string => typeof line === 'string');
+      }
+    }
+
+    const sessionRestoreMessage =
+      typeof (sessionData as { sessionRestoreMessage?: unknown }).sessionRestoreMessage === 'string'
+        ? ((sessionData as { sessionRestoreMessage: string }).sessionRestoreMessage)
+        : typeof (sessionData as { resumeMessage?: unknown }).resumeMessage === 'string'
+        ? ((sessionData as { resumeMessage: string }).resumeMessage)
+        : undefined;
+
+    const isActive =
+      typeof (sessionData as { isActive?: unknown }).isActive === 'boolean'
+        ? ((sessionData as { isActive: boolean }).isActive)
+        : undefined;
+
+    return {
+      terminalId,
+      terminalName: terminalNameCandidate || `Terminal ${terminalId}`,
+      serializedContent,
+      scrollbackData,
+      sessionRestoreMessage,
+      isActive,
+    };
   }
 
   /**
@@ -2362,52 +2433,40 @@ export class RefactoredMessageManager implements IMessageManager {
   }
 
   /**
+   * Handle profiles updated message
+   */
+  private handleProfilesUpdatedMessage(
+    msg: MessageCommand,
+    coordinator: IManagerCoordinator
+  ): void {
+    this.logger.info('Profiles updated');
+
+    // Forward to ProfileManager if it exists
+    const managers = coordinator.getManagers();
+    if (managers.profile) {
+      managers.profile.handleMessage(msg);
+    }
+  }
+
+  /**
+   * Handle default profile changed message
+   */
+  private handleDefaultProfileChangedMessage(
+    msg: MessageCommand,
+    coordinator: IManagerCoordinator
+  ): void {
+    this.logger.info('Default profile changed');
+
+    // Forward to ProfileManager if it exists
+    const managers = coordinator.getManagers();
+    if (managers.profile) {
+      managers.profile.handleMessage(msg);
+    }
+  }
+
+  /**
    * Resource cleanup and disposal
    */
-  /**
-   * Handle profiles updated message from extension
-   */
-  private handleProfilesUpdatedMessage(msg: any, coordinator: IManagerCoordinator): void {
-    this.logger.debug('Processing profilesUpdated message');
-
-    try {
-      const { profiles, defaultProfileId } = msg;
-
-      if (coordinator.profileManager) {
-        coordinator.profileManager.updateProfiles(profiles, defaultProfileId);
-        this.logger.info(`Updated ${profiles?.length || 0} terminal profiles`);
-      } else {
-        this.logger.warn('ProfileManager not available for profiles update');
-      }
-    } catch (error) {
-      this.logger.error('Failed to handle profiles updated message:', error);
-    }
-  }
-
-  /**
-   * Handle default profile changed message from extension
-   */
-  private handleDefaultProfileChangedMessage(msg: any, coordinator: IManagerCoordinator): void {
-    this.logger.debug('Processing defaultProfileChanged message');
-
-    try {
-      const { profileId } = msg;
-
-      if (coordinator.profileManager) {
-        // Update via ProfileManager's message handler
-        coordinator.profileManager.handleMessage({
-          command: 'defaultProfileChanged',
-          profileId: profileId,
-        });
-        this.logger.info(`Default profile changed to: ${profileId}`);
-      } else {
-        this.logger.warn('ProfileManager not available for default profile change');
-      }
-    } catch (error) {
-      this.logger.error('Failed to handle default profile changed message:', error);
-    }
-  }
-
   public dispose(): void {
     this.logger.info('Disposing RefactoredMessageManager');
 

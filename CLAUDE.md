@@ -62,14 +62,24 @@ npm run format         # Prettier formatting
 
 ### Extension Host (Node.js)
 - **TerminalManager** (`src/terminals/TerminalManager.ts`): Core terminal lifecycle using node-pty
-- **SecandarySidebar** (`src/providers/SecandarySidebar.ts`): WebView provider and message bridge
-- **UnifiedSessionManager** (`src/sessions/UnifiedSessionManager.ts`): Terminal session persistence
+- **SecondaryTerminalProvider** (`src/providers/SecondaryTerminalProvider.ts`): WebView provider and message bridge
+- **StandardTerminalSessionManager** (`src/sessions/StandardTerminalSessionManager.ts`): Terminal session persistence with scrollback
 - **Commands**: File reference (@filename), Copilot integration (#file:) in `src/commands/`
+- **Services**: CLI agent detection, buffering, state management in `src/services/`
 
 ### WebView (Browser)
-- **TerminalWebviewManager** (`src/webview/main.ts`): Central coordinator
-- **Manager Architecture**: MessageManager, InputManager, UIManager, PerformanceManager, SplitManager, ConfigManager, NotificationManager
-- **xterm.js**: Terminal emulation with VS Code theme integration
+- **RefactoredTerminalWebviewManager** (`src/webview/managers/RefactoredTerminalWebviewManager.ts`): Central coordinator
+- **Manager Architecture**: Specialized managers implementing `IManagerCoordinator` pattern:
+  - **TerminalLifecycleManager**: Terminal creation, deletion, lifecycle
+  - **RefactoredMessageManager**: Extension ↔ WebView communication
+  - **InputManager**: IME, Alt+Click, keyboard shortcuts 
+  - **UIManager**: Themes, borders, visual feedback
+  - **PerformanceManager**: Output buffering, CLI agent optimization
+  - **SplitManager**: Multi-terminal layout management
+  - **NotificationManager**: User feedback and toasts
+  - **CliAgentStateManager**: AI agent status tracking
+  - **StandardTerminalPersistenceManager**: Session serialization
+- **xterm.js**: Terminal emulation with VS Code theme integration and standard addons
 
 ### Communication Flow
 ```
@@ -80,7 +90,7 @@ User Input → VS Code Commands → Extension Host → WebView Messages → xter
 
 ## Key Features & Integration Points
 
-**Terminal Session Restoration**: Automatic save/restore of up to 5 terminals with complete scrollback history via VS Code ExtensionContext.globalState
+**Terminal Session Restoration**: Automatic save/restore of up to 5 terminals with complete scrollback history via VS Code ExtensionContext.globalState using xterm.js serialization
 
 **CLI Agent Integration**: 
 - Claude Code, Gemini CLI, GitHub Copilot support
@@ -123,22 +133,24 @@ User Input → VS Code Commands → Extension Host → WebView Messages → xter
 **Key Implementation Files:**
 - `src/extension.ts`: Entry point, command registration
 - `src/terminals/TerminalManager.ts`: node-pty process management, terminal lifecycle
-- `src/providers/SecandarySidebar.ts`: WebView provider, Extension ↔ WebView bridge
-- `src/webview/main.ts`: WebView coordinator, xterm.js integration
+- `src/providers/SecondaryTerminalProvider.ts`: WebView provider, Extension ↔ WebView bridge
+- `src/webview/main.ts`: WebView entry point and initialization
+- `src/webview/managers/RefactoredTerminalWebviewManager.ts`: Main WebView coordinator
 - `src/services/CliAgentDetectionService.ts`: AI agent pattern detection and status
-- `src/sessions/UnifiedSessionManager.ts`: Session persistence via VS Code globalState
+- `src/sessions/StandardTerminalSessionManager.ts`: Session persistence with scrollback via VS Code globalState
 
-**Message Protocol**: Extension ↔ WebView via `postMessage` with commands: `init`, `output`, `input`, `resize`, `clear`, `killTerminal`, `deleteTerminal`, `stateUpdate`
+**Message Protocol**: Extension ↔ WebView via `postMessage` with commands: `init`, `output`, `input`, `resize`, `clear`, `killTerminal`, `deleteTerminal`, `stateUpdate`, `sessionRestore`, `extractScrollbackData`
 
 **Webpack Build**: Dual configuration builds `dist/extension.js` (Node.js) and `dist/webview.js` (browser) with CSS bundling
 
 ## Debugging
 
 **Debug Panel**: `Ctrl+Shift+D` - Real-time monitoring of:
-- System Status (READY/BUSY)
-- Terminal instances and active terminal tracking
-- Performance metrics and buffer statistics  
-- Pending operations queue
+- System Status (READY/BUSY) with pending operations tracking
+- Terminal instances, active terminal, and number recycling (1-5)
+- Performance metrics, buffer statistics, and CLI agent detection
+- State synchronization and deletion/creation queues
+- Quick actions: Force Sync, Refresh State, Export Diagnostics
 
 **Common Issues:**
 - WebView debugging: `Ctrl+Shift+I` (VS Code Developer Tools)
@@ -171,9 +183,10 @@ npm run test:coverage    # Generate coverage reports
 ## Current Implementation Status
 
 **✅ Production-Ready Features:**
-- Terminal Session Restoration: 97% test success rate
-- AI Agent Integration: Claude Code, Gemini CLI, GitHub Copilot
-- VS Code Standards: Alt+Click, terminal shortcuts, theme integration
-- Cross-Platform: Native binaries for all major platforms
+- Terminal Session Restoration: Scrollback serialization with 97% test success rate
+- AI Agent Integration: Claude Code, Gemini CLI, GitHub Copilot with real-time status tracking
+- VS Code Standards: Alt+Click, terminal shortcuts, theme integration, keybinding system
+- WebView Manager Architecture: Refactored coordinator pattern with specialized managers
+- Cross-Platform: Native binaries for all major platforms (Windows, macOS, Linux, Alpine)
 
-**Architecture Maturity**: Service-oriented with manager-based WebView architecture, comprehensive error handling, and automated quality gates
+**Architecture Maturity**: Service-oriented with manager-based WebView architecture, comprehensive error handling, automated quality gates, and extensive debugging tools

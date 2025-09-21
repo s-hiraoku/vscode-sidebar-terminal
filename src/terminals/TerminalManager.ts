@@ -878,14 +878,6 @@ export class TerminalManager {
     return { canRemove: validation.canDelete, reason: validation.reason };
   }
 
-  /**
-   * 安全なターミナル削除（削除前の検証付き、後方互換性のため維持）
-   * @deprecated Use deleteTerminal() instead
-   */
-  public safeRemoveTerminal(terminalId: string): boolean {
-    const result = this.deleteTerminal(terminalId, { source: 'panel' });
-    return result.then((r) => r.success).catch(() => false) as unknown as boolean;
-  }
 
   /**
    * 統一されたターミナル削除メソッド

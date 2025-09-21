@@ -17,6 +17,10 @@ describe('RefactoredMessageManager', () => {
     clock = sinon.useFakeTimers();
 
     // Create mock coordinator
+    const notificationStub = {
+      showNotificationInTerminal: sinon.stub(),
+    };
+
     mockCoordinator = {
       postMessageToExtension: sinon.stub().resolves(),
       getTerminalInstance: sinon.stub().callsFake((id: string) => ({ id, name: `Terminal ${id}` })),
@@ -24,7 +28,17 @@ describe('RefactoredMessageManager', () => {
       setActiveTerminalId: sinon.stub(),
       getActiveTerminalId: sinon.stub().returns('terminal-1'),
       getAllTerminalInstances: sinon.stub().returns(new Map()),
+      getManagers: sinon.stub().returns({
+        notification: notificationStub,
+      }),
     } as any;
+
+    (mockCoordinator as any).persistenceManager = {
+      serializeTerminal: sinon.stub().returns({ content: 'serialized-content' }),
+      restoreTerminalContent: sinon.stub().returns(true),
+      getAvailableTerminals: sinon.stub().returns(['terminal-1', 'terminal-2']),
+      saveTerminalContent: sinon.stub(),
+    };
 
     messageManager = new RefactoredMessageManager(mockCoordinator);
   });
@@ -386,6 +400,142 @@ describe('RefactoredMessageManager', () => {
       const inputMessages = processedMessages.filter((cmd) => cmd === 'input');
       const expectedInputCount = Math.floor(messageCount / 10);
       expect(inputMessages.length).to.equal(expectedInputCount);
+    });
+  });
+
+  describe('Persistence Handlers', () => {
+    it('serializes a single terminal via serializeTerminal command', async () => {
+      const serializeStub = (mockCoordinator as any).persistenceManager
+        .serializeTerminal as sinon.SinonStub;
+      serializeStub
+        .withArgs('terminal-99', sinon.match.object)
+        .returns({ content: 'terminal-99-content' });
+
+      const initialCalls = mockCoordinator.postMessageToExtension.callCount;
+
+      await messageManager.receiveMessage(
+        {
+          command: 'serializeTerminal',
+          terminalId: 'terminal-99',
+        },
+        mockCoordinator
+      );
+
+      const responseCall = mockCoordinator.postMessageToExtension.getCall(initialCalls);
+      expect(responseCall).to.not.be.undefined;
+      const payload = responseCall.args[0] as any;
+      expect(payload.command).to.equal('terminalSerializationResponse');
+      expect(payload.serializationData).to.deep.equal({ 'terminal-99': 'terminal-99-content' });
+    });
+
+    it('saves all terminal sessions and acknowledges success', async () => {
+      const persistenceManager = (mockCoordinator as any).persistenceManager;
+      persistenceManager.getAvailableTerminals.returns(['terminal-1', 'terminal-2']);
+      const saveStub = persistenceManager.saveTerminalContent as sinon.SinonStub;
+
+      const initialCalls = mockCoordinator.postMessageToExtension.callCount;
+
+      await messageManager.receiveMessage(
+        {
+          command: 'saveAllTerminalSessions',
+        },
+        mockCoordinator
+      );
+
+      expect(saveStub.callCount).to.equal(2);
+      expect(saveStub.firstCall.args[0]).to.equal('terminal-1');
+      expect(saveStub.secondCall.args[0]).to.equal('terminal-2');
+
+      const responseCall = mockCoordinator.postMessageToExtension.getCall(initialCalls);
+      const payload = responseCall.args[0] as any;
+      expect(payload.command).to.equal('saveAllTerminalSessionsResponse');
+      expect(payload.success).to.be.true;
+      expect(payload.savedTerminals).to.equal(2);
+    });
+
+    it('restores serialized content using persistence manager', async () => {
+      const restoreStub = (mockCoordinator as any).persistenceManager
+        .restoreTerminalContent as sinon.SinonStub;
+      restoreStub.withArgs('terminal-55', 'serialized-payload').returns(true);
+
+      const initialCalls = mockCoordinator.postMessageToExtension.callCount;
+
+      await messageManager.receiveMessage(
+        {
+          command: 'restoreSerializedContent',
+          terminalId: 'terminal-55',
+          serializedContent: 'serialized-payload',
+        },
+        mockCoordinator
+      );
+
+      await Promise.resolve();
+
+      expect(restoreStub.calledWith('terminal-55', 'serialized-payload')).to.be.true;
+      const responseCall = mockCoordinator.postMessageToExtension.getCall(initialCalls);
+      const payload = responseCall.args[0] as any;
+      expect(payload.command).to.equal('terminalSerializationRestoreResponse');
+      expect(payload.success).to.be.true;
+    });
+
+    it('falls back to coordinator.restoreSession when serialized content absent', async () => {
+      const persistenceManager = (mockCoordinator as any).persistenceManager;
+      (mockCoordinator as any).restoreSession = sinon.stub().resolves(true);
+      persistenceManager.restoreTerminalContent.returns(false);
+
+      const initialCalls = mockCoordinator.postMessageToExtension.callCount;
+
+      await messageManager.receiveMessage(
+        {
+          command: 'restoreSerializedContent',
+          terminalId: 'terminal-70',
+          scrollbackData: ['line-a', 'line-b'],
+          sessionRestoreMessage: 'Restored session',
+          isActive: true,
+        },
+        mockCoordinator
+      );
+
+      await Promise.resolve();
+
+      expect((mockCoordinator as any).restoreSession.calledOnce).to.be.true;
+      expect(mockCoordinator.setActiveTerminalId.calledWith('terminal-70')).to.be.true;
+
+      const responseCall = mockCoordinator.postMessageToExtension.getCall(initialCalls);
+      const payload = responseCall.args[0] as any;
+      expect(payload.command).to.equal('terminalSerializationRestoreResponse');
+      expect(payload.success).to.be.true;
+    });
+
+    it('processes sessionRestorationData payload and responds with success', async () => {
+      (mockCoordinator as any).restoreSession = sinon.stub().resolves(true);
+
+      const initialCalls = mockCoordinator.postMessageToExtension.callCount;
+
+      await messageManager.receiveMessage(
+        {
+          command: 'sessionRestorationData',
+          terminalId: 'terminal-77',
+          sessionData: {
+            name: 'Workspace Shell',
+            scrollbackData: ['npm run build', 'done'],
+            sessionRestoreMessage: 'Restored previous session',
+            isActive: true,
+          },
+        },
+        mockCoordinator
+      );
+
+      await Promise.resolve();
+
+      expect((mockCoordinator as any).restoreSession.calledOnce).to.be.true;
+      expect(mockCoordinator.setActiveTerminalId.calledWith('terminal-77')).to.be.true;
+
+      const responseCall = mockCoordinator.postMessageToExtension.getCall(initialCalls);
+      const payload = responseCall.args[0] as any;
+      expect(payload.command).to.equal('sessionRestorationDataResponse');
+      expect(payload.success).to.be.true;
+      expect(payload.terminalId).to.equal('terminal-77');
     });
   });
 });

@@ -1,13 +1,6 @@
 import type { CliAgentStatusType } from './terminal.types';
-import { CompleteExtensionConfig } from '../../types/shared';
 
 export type { CliAgentStatusType };
-
-/**
- * WebView拡張設定
- * @deprecated shared.ts の CompleteExtensionConfig を使用してください
- */
-export type ExtensionConfig = CompleteExtensionConfig;
 
 export interface StatusOptions {
   type: CliAgentStatusType;
