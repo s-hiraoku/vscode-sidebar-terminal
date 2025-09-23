@@ -338,6 +338,7 @@ export class TerminalLifecycleManager {
             );
           }
         }
+
         // Load optional addons with graceful degradation
         if (terminalConfig.enableUnicode11 !== false) {
           try {

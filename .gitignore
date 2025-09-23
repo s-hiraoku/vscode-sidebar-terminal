@@ -17,3 +17,6 @@ yarn-error.log*
 .serena/cache/
 .serena/memories/
 .serena/logs/
+
+# Claude Code関連ファイル
+.claude/settings.local.json

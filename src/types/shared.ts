@@ -364,6 +364,37 @@ export interface TerminalInfo {
 /**
  * ターミナル状態管理
  */
+/**
+ * Terminal process states based on VS Code's implementation
+ * Improves process lifecycle tracking and error handling
+ */
+export enum ProcessState {
+  /** Process has not yet been initialized */
+  Uninitialized = 0,
+  /** Process is currently starting up */
+  Launching = 1,
+  /** Process is executing normally */
+  Running = 2,
+  /** Process terminated prematurely during launch */
+  KilledDuringLaunch = 3,
+  /** Process was explicitly terminated by the user */
+  KilledByUser = 4,
+  /** Process terminated on its own */
+  KilledByProcess = 5
+}
+
+/**
+ * Terminal interaction state for persistent processes
+ */
+export enum InteractionState {
+  /** No interaction */
+  None = 0,
+  /** Replay only mode */
+  ReplayOnly = 1,
+  /** Session interaction mode */
+  Session = 2
+}
+
 export interface TerminalState {
   terminals: TerminalInfo[];
   activeTerminalId: string | null;
@@ -396,6 +427,12 @@ export interface TerminalInstance {
   pid?: number; // Process ID
   isActive: boolean;
   createdAt?: Date; // 作成日時
+
+  // プロセス状態管理（VS Code準拠）
+  processState?: ProcessState; // プロセスの現在の状態
+  interactionState?: InteractionState; // インタラクション状態
+  persistentProcessId?: string; // 永続プロセスID
+  shouldPersist?: boolean; // プロセスを永続化するかどうか
 
   // セッション復元関連のプロパティ
   isSessionRestored?: boolean; // セッション復元で作成されたターミナルかどうか

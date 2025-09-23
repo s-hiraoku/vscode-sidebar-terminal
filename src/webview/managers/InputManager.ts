@@ -9,16 +9,13 @@ import { IInputManager, IManagerCoordinator } from '../interfaces/ManagerInterfa
 import { INotificationManager } from '../interfaces/ManagerInterfaces';
 import { BaseManager } from './BaseManager';
 import { EventHandlerRegistry } from '../utils/EventHandlerRegistry';
-import { inputLogger } from '../utils/ManagerLogger';
+// import { inputLogger } from '../utils/ManagerLogger';
 import { IMEHandler } from './input/handlers/IMEHandler';
 import { IIMEHandler } from './input/interfaces/IInputHandlers';
 
 export class InputManager extends BaseManager implements IInputManager {
-  // Specialized logger for Input Manager
-  protected override readonly logger = inputLogger;
-
   // Event handler registry for centralized event management
-  protected override readonly eventRegistry = new EventHandlerRegistry();
+  protected readonly eventRegistry = new EventHandlerRegistry();
 
   constructor() {
     super('InputManager', {
@@ -27,10 +24,12 @@ export class InputManager extends BaseManager implements IInputManager {
       enableErrorRecovery: true,
     });
 
+    // Logger is automatically provided by BaseManager
+
     // Initialize IME handler
     this.imeHandler = new IMEHandler(this.eventDebounceTimers);
 
-    this.logger.lifecycle('initialization', 'starting');
+    this.logger('initialization', 'starting');
   }
 
   // Alt+Click state management
@@ -86,7 +85,7 @@ export class InputManager extends BaseManager implements IInputManager {
    */
   public setNotificationManager(notificationManager: INotificationManager): void {
     this.notificationManager = notificationManager;
-    this.logger.info('Notification manager set for Alt+Click feedback');
+    this.logger('Notification manager set for Alt+Click feedback');
   }
 
   /**
@@ -100,7 +99,7 @@ export class InputManager extends BaseManager implements IInputManager {
   }): void {
     if (settings.sendKeybindingsToShell !== undefined) {
       this.sendKeybindingsToShell = settings.sendKeybindingsToShell;
-      this.logger.info(`sendKeybindingsToShell updated: ${this.sendKeybindingsToShell}`);
+      this.logger(`sendKeybindingsToShell updated: ${this.sendKeybindingsToShell}`);
     }
 
     if (settings.commandsToSkipShell) {
@@ -115,25 +114,25 @@ export class InputManager extends BaseManager implements IInputManager {
           // Remove command (override default)
           const commandToRemove = command.substring(1);
           this.commandsToSkipShell.delete(commandToRemove);
-          this.logger.debug(`Removed command from skip list: ${commandToRemove}`);
+          this.logger(`Removed command from skip list: ${commandToRemove}`);
         } else {
           // Add command to skip
           this.commandsToSkipShell.add(command);
-          this.logger.debug(`Added command to skip list: ${command}`);
+          this.logger(`Added command to skip list: ${command}`);
         }
       }
 
-      this.logger.info(`commandsToSkipShell updated: ${this.commandsToSkipShell.size} commands`);
+      this.logger(`commandsToSkipShell updated: ${this.commandsToSkipShell.size} commands`);
     }
 
     if (settings.allowChords !== undefined) {
       this.allowChords = settings.allowChords;
-      this.logger.info(`allowChords updated: ${this.allowChords}`);
+      this.logger(`allowChords updated: ${this.allowChords}`);
     }
 
     if (settings.allowMnemonics !== undefined) {
       this.allowMnemonics = settings.allowMnemonics;
-      this.logger.info(`allowMnemonics updated: ${this.allowMnemonics}`);
+      this.logger(`allowMnemonics updated: ${this.allowMnemonics}`);
     }
   }
 
@@ -143,7 +142,7 @@ export class InputManager extends BaseManager implements IInputManager {
   private shouldSkipShell(event: KeyboardEvent, resolvedCommand?: string): boolean {
     // Check for chord mode
     if (this.isInChordMode && this.allowChords && event.key !== 'Escape') {
-      this.logger.debug('In chord mode - skipping shell');
+      this.logger('In chord mode - skipping shell');
       return true;
     }
 
@@ -153,7 +152,7 @@ export class InputManager extends BaseManager implements IInputManager {
       this.commandsToSkipShell.has(resolvedCommand) &&
       !this.sendKeybindingsToShell
     ) {
-      this.logger.debug(`Command ${resolvedCommand} in skip list - skipping shell`);
+      this.logger(`Command ${resolvedCommand} in skip list - skipping shell`);
       return true;
     }
 
@@ -163,13 +162,13 @@ export class InputManager extends BaseManager implements IInputManager {
       event.altKey &&
       (navigator.platform.includes('Win') || navigator.platform.includes('Linux'))
     ) {
-      this.logger.debug('Alt key mnemonic detected - skipping shell');
+      this.logger('Alt key mnemonic detected - skipping shell');
       return true;
     }
 
     // Hardcoded system keybindings
     if (this.isSystemKeybinding(event)) {
-      this.logger.debug('System keybinding detected - skipping shell');
+      this.logger('System keybinding detected - skipping shell');
       return true;
     }
 
@@ -316,7 +315,7 @@ export class InputManager extends BaseManager implements IInputManager {
     const resolved = keybindingMap[keyCombo];
 
     if (resolved) {
-      this.logger.debug(`Resolved keybinding: ${keyCombo} → ${resolved}`);
+      this.logger(`Resolved keybinding: ${keyCombo} → ${resolved}`);
     }
 
     return resolved || null;
@@ -342,13 +341,13 @@ export class InputManager extends BaseManager implements IInputManager {
    * Setup Alt key visual feedback for terminals
    */
   public setupAltKeyVisualFeedback(): void {
-    this.logger.info('Setting up Alt key visual feedback');
+    this.logger('Setting up Alt key visual feedback');
 
     const keydownHandler = (event: KeyboardEvent): void => {
       if (event.altKey && !this.altClickState.isAltKeyPressed) {
         this.altClickState.isAltKeyPressed = true;
         this.updateTerminalCursors();
-        this.logger.debug('Alt key pressed - updating cursor styles');
+        this.logger('Alt key pressed - updating cursor styles');
       }
     };
 
@@ -356,7 +355,7 @@ export class InputManager extends BaseManager implements IInputManager {
       if (!event.altKey && this.altClickState.isAltKeyPressed) {
         this.altClickState.isAltKeyPressed = false;
         this.updateTerminalCursors();
-        this.logger.debug('Alt key released - resetting cursor styles');
+        this.logger('Alt key released - resetting cursor styles');
       }
     };
 
@@ -369,14 +368,14 @@ export class InputManager extends BaseManager implements IInputManager {
     );
     this.eventRegistry.register('alt-key-up', document, 'keyup', keyupHandler as EventListener);
 
-    this.logger.lifecycle('Alt key visual feedback', 'completed');
+    this.logger('Alt key visual feedback', 'completed');
   }
 
   /**
    * Setup keyboard shortcuts for terminal navigation with VS Code keybinding system
    */
   public setupKeyboardShortcuts(manager: IManagerCoordinator): void {
-    this.logger.info('Setting up VS Code compatible keyboard shortcuts');
+    this.logger('Setting up VS Code compatible keyboard shortcuts');
 
     const shortcutHandler = (event: KeyboardEvent): void => {
       // VS Code standard: Process keyboard shortcuts normally
@@ -386,7 +385,7 @@ export class InputManager extends BaseManager implements IInputManager {
       const resolvedCommand = this.resolveKeybinding(event);
       const shouldSkip = this.shouldSkipShell(event, resolvedCommand || undefined);
 
-      this.logger.debug(
+      this.logger(
         `Keybinding: ${event.key}, Command: ${resolvedCommand}, Skip Shell: ${shouldSkip}`
       );
 
@@ -410,14 +409,14 @@ export class InputManager extends BaseManager implements IInputManager {
       shortcutHandler as EventListener
     );
 
-    this.logger.lifecycle('VS Code compatible keyboard shortcuts', 'completed');
+    this.logger('VS Code compatible keyboard shortcuts', 'completed');
   }
 
   /**
    * Handle VS Code commands resolved from keybindings
    */
   private handleVSCodeCommand(command: string, manager: IManagerCoordinator): void {
-    this.logger.info(`Handling VS Code command: ${command}`);
+    this.logger(`Handling VS Code command: ${command}`);
 
     switch (command) {
       // Terminal management
@@ -531,48 +530,48 @@ export class InputManager extends BaseManager implements IInputManager {
 
       // Panel/UI management
       case 'workbench.action.togglePanel':
-        this.logger.info('Panel toggle not available in webview context');
+        this.logger('Panel toggle not available in webview context');
         break;
       case 'workbench.action.closePanel':
-        this.logger.info('Panel close not available in webview context');
+        this.logger('Panel close not available in webview context');
         break;
       case 'workbench.action.toggleSidebarVisibility':
-        this.logger.info('Sidebar toggle not available in webview context');
+        this.logger('Sidebar toggle not available in webview context');
         break;
 
       // Development tools
       case 'workbench.action.toggleDevTools':
-        this.logger.info('Dev Tools toggle not available in webview context');
+        this.logger('Dev Tools toggle not available in webview context');
         break;
       case 'workbench.action.reloadWindow':
-        this.logger.info('Window reload not available in webview context');
+        this.logger('Window reload not available in webview context');
         break;
       case 'workbench.action.reloadWindowWithExtensionsDisabled':
-        this.logger.info('Window reload with disabled extensions not available in webview context');
+        this.logger('Window reload with disabled extensions not available in webview context');
         break;
 
       // Zoom
       case 'workbench.action.zoomIn':
       case 'workbench.action.zoomOut':
       case 'workbench.action.zoomReset':
-        this.logger.info(`Zoom commands (${command}) not available in webview context`);
+        this.logger(`Zoom commands (${command}) not available in webview context`);
         break;
 
       // Quick actions
       case 'workbench.action.quickOpen':
-        this.logger.info('Quick Open not implemented in terminal webview');
+        this.logger('Quick Open not implemented in terminal webview');
         break;
       case 'workbench.action.showCommands':
-        this.logger.info('Command Palette not implemented in terminal webview');
+        this.logger('Command Palette not implemented in terminal webview');
         break;
 
       // Native console
       case 'workbench.action.terminal.openNativeConsole':
-        this.logger.info('Native console not available in webview context');
+        this.logger('Native console not available in webview context');
         break;
 
       default:
-        this.logger.warn(`Unhandled VS Code command: ${command}`);
+        this.logger(`Unhandled VS Code command: ${command}`);
     }
   }
 
@@ -585,13 +584,13 @@ export class InputManager extends BaseManager implements IInputManager {
   ): void {
     const activeTerminalId = manager.getActiveTerminalId();
     if (!activeTerminalId) {
-      this.logger.warn('No active terminal for scrolling');
+      this.logger('No active terminal for scrolling');
       return;
     }
 
     const terminalInstance = manager.getTerminalInstance(activeTerminalId);
     if (!terminalInstance) {
-      this.logger.warn(`Terminal instance not found: ${activeTerminalId}`);
+      this.logger(`Terminal instance not found: ${activeTerminalId}`);
       return;
     }
 
@@ -629,7 +628,7 @@ export class InputManager extends BaseManager implements IInputManager {
         break;
     }
 
-    this.logger.debug(`Scrolled terminal ${activeTerminalId} ${direction}`);
+    this.logger(`Scrolled terminal ${activeTerminalId} ${direction}`);
   }
 
   /**
@@ -638,14 +637,14 @@ export class InputManager extends BaseManager implements IInputManager {
   private handleTerminalClear(manager: IManagerCoordinator): void {
     const activeTerminalId = manager.getActiveTerminalId();
     if (!activeTerminalId) {
-      this.logger.warn('No active terminal for clear operation');
+      this.logger('No active terminal for clear operation');
       return;
     }
 
     const terminalInstance = manager.getTerminalInstance(activeTerminalId);
     if (terminalInstance) {
       terminalInstance.terminal.clear();
-      this.logger.debug(`Cleared terminal ${activeTerminalId}`);
+      this.logger(`Cleared terminal ${activeTerminalId}`);
     }
   }
 
@@ -666,10 +665,10 @@ export class InputManager extends BaseManager implements IInputManager {
         navigator.clipboard
           .writeText(selection)
           .then(() => {
-            this.logger.debug(`Copied selection from terminal ${activeTerminalId}`);
+            this.logger(`Copied selection from terminal ${activeTerminalId}`);
           })
           .catch((error) => {
-            this.logger.error(`Failed to copy selection: ${error}`);
+            this.logger(`Failed to copy selection: ${error}`);
           });
       }
     }
@@ -688,11 +687,11 @@ export class InputManager extends BaseManager implements IInputManager {
         .then((text) => {
           if (text) {
             this.emitTerminalInteractionEvent('paste', activeTerminalId, { text }, manager);
-            this.logger.debug(`Pasted text to terminal ${activeTerminalId}`);
+            this.logger(`Pasted text to terminal ${activeTerminalId}`);
           }
         })
         .catch((error) => {
-          this.logger.error(`Failed to paste: ${error}`);
+          this.logger(`Failed to paste: ${error}`);
         });
     }
   }
@@ -708,7 +707,7 @@ export class InputManager extends BaseManager implements IInputManager {
     if (!terminalInstance) return;
 
     terminalInstance.terminal.selectAll();
-    this.logger.debug(`Selected all in terminal ${activeTerminalId}`);
+    this.logger(`Selected all in terminal ${activeTerminalId}`);
   }
 
   /**
@@ -720,7 +719,7 @@ export class InputManager extends BaseManager implements IInputManager {
 
     const terminalInstance = manager.getTerminalInstance(activeTerminalId);
     if (!terminalInstance || !terminalInstance.searchAddon) {
-      this.logger.warn(`Search addon not available for terminal ${activeTerminalId}`);
+      this.logger(`Search addon not available for terminal ${activeTerminalId}`);
       return;
     }
 
@@ -730,10 +729,10 @@ export class InputManager extends BaseManager implements IInputManager {
       const searchTerm = prompt('Find in terminal:');
       if (searchTerm) {
         terminalInstance.searchAddon.findNext(searchTerm);
-        this.logger.debug(`Searching for "${searchTerm}" in terminal ${activeTerminalId}`);
+        this.logger(`Searching for "${searchTerm}" in terminal ${activeTerminalId}`);
       }
     } catch (error) {
-      this.logger.error(`Find operation failed: ${error}`);
+      this.logger(`Find operation failed: ${error}`);
     }
   }
 
@@ -747,7 +746,7 @@ export class InputManager extends BaseManager implements IInputManager {
     const terminalInstance = manager.getTerminalInstance(activeTerminalId);
     if (terminalInstance?.searchAddon) {
       terminalInstance.searchAddon.findNext('', { incremental: false });
-      this.logger.debug(`Find next in terminal ${activeTerminalId}`);
+      this.logger(`Find next in terminal ${activeTerminalId}`);
     }
   }
 
@@ -761,7 +760,7 @@ export class InputManager extends BaseManager implements IInputManager {
     const terminalInstance = manager.getTerminalInstance(activeTerminalId);
     if (terminalInstance?.searchAddon) {
       terminalInstance.searchAddon.findPrevious('', { incremental: false });
-      this.logger.debug(`Find previous in terminal ${activeTerminalId}`);
+      this.logger(`Find previous in terminal ${activeTerminalId}`);
     }
   }
 
@@ -770,7 +769,7 @@ export class InputManager extends BaseManager implements IInputManager {
    */
   private handleTerminalHideFind(_manager: IManagerCoordinator): void {
     // Hide find UI - this would be enhanced with actual find UI
-    this.logger.debug('Hide terminal find requested');
+    this.logger('Hide terminal find requested');
   }
 
   /**
@@ -782,7 +781,7 @@ export class InputManager extends BaseManager implements IInputManager {
 
     // Send Ctrl+W to delete word left (standard shell behavior)
     this.emitTerminalInteractionEvent('send-key', activeTerminalId, { key: '\x17' }, manager);
-    this.logger.debug(`Delete word left in terminal ${activeTerminalId}`);
+    this.logger(`Delete word left in terminal ${activeTerminalId}`);
   }
 
   private handleTerminalDeleteWordRight(manager: IManagerCoordinator): void {
@@ -791,7 +790,7 @@ export class InputManager extends BaseManager implements IInputManager {
 
     // Send Alt+D to delete word right (standard shell behavior)
     this.emitTerminalInteractionEvent('send-key', activeTerminalId, { key: '\x1bd' }, manager);
-    this.logger.debug(`Delete word right in terminal ${activeTerminalId}`);
+    this.logger(`Delete word right in terminal ${activeTerminalId}`);
   }
 
   /**
@@ -803,7 +802,7 @@ export class InputManager extends BaseManager implements IInputManager {
 
     // Send Ctrl+A to move to line start (standard shell behavior)
     this.emitTerminalInteractionEvent('send-key', activeTerminalId, { key: '\x01' }, manager);
-    this.logger.debug(`Move to line start in terminal ${activeTerminalId}`);
+    this.logger(`Move to line start in terminal ${activeTerminalId}`);
   }
 
   private handleTerminalMoveToLineEnd(manager: IManagerCoordinator): void {
@@ -812,7 +811,7 @@ export class InputManager extends BaseManager implements IInputManager {
 
     // Send Ctrl+E to move to line end (standard shell behavior)
     this.emitTerminalInteractionEvent('send-key', activeTerminalId, { key: '\x05' }, manager);
-    this.logger.debug(`Move to line end in terminal ${activeTerminalId}`);
+    this.logger(`Move to line end in terminal ${activeTerminalId}`);
   }
 
   /**
@@ -826,7 +825,7 @@ export class InputManager extends BaseManager implements IInputManager {
     if (terminalInstance) {
       // Trigger a resize using fit addon
       terminalInstance.fitAddon.fit();
-      this.logger.debug(`Resized terminal ${activeTerminalId} to content`);
+      this.logger(`Resized terminal ${activeTerminalId} to content`);
     }
   }
 
@@ -836,14 +835,14 @@ export class InputManager extends BaseManager implements IInputManager {
   private handleLegacyShortcuts(event: KeyboardEvent, manager: IManagerCoordinator): void {
     // Escape: Clear notifications (always handle, don't send to shell)
     if (event.key === 'Escape') {
-      this.logger.info('Escape key detected, clearing notifications');
+      this.logger('Escape key detected, clearing notifications');
       this.clearNotifications();
     }
 
     // Ctrl+Shift+D: Toggle debug panel (always handle, don't send to shell)
     if (event.ctrlKey && event.shiftKey && event.key === 'D') {
       event.preventDefault();
-      this.logger.info('Ctrl+Shift+D shortcut detected, toggling debug panel');
+      this.logger('Ctrl+Shift+D shortcut detected, toggling debug panel');
       if ('toggleDebugPanel' in manager && typeof manager.toggleDebugPanel === 'function') {
         (manager as { toggleDebugPanel: () => void }).toggleDebugPanel();
       }
@@ -853,6 +852,7 @@ export class InputManager extends BaseManager implements IInputManager {
     if (event.ctrlKey && event.shiftKey && event.key === 'P') {
       event.preventDefault();
       this.logger.info('Ctrl+Shift+P shortcut detected, showing profile selector');
+>>>>>>> refs/remotes/origin/for-publish
       if (manager.profileManager) {
         manager.profileManager.showProfileSelector();
       }
@@ -893,13 +893,13 @@ export class InputManager extends BaseManager implements IInputManager {
     container: HTMLElement,
     manager: IManagerCoordinator
   ): void {
-    this.logger.info(`Setting up complete input handling for terminal ${terminalId}`);
+    this.logger(`Setting up complete input handling for terminal ${terminalId}`);
 
     // CRITICAL: Set up keyboard input handling for terminal
     terminal.onData((data: string) => {
       // VS Code standard behavior: Always process onData events
       // IME composition is handled by xterm.js internally, no need to block here
-      this.logger.debug(`Terminal ${terminalId} data: ${data.length} chars`);
+      this.logger(`Terminal ${terminalId} data: ${data.length} chars`);
       manager.postMessageToExtension({
         command: 'input',
         terminalId: terminalId,
@@ -910,20 +910,20 @@ export class InputManager extends BaseManager implements IInputManager {
 
     // Set up focus handling - xterm.js doesn't have onFocus/onBlur, comment out
     // terminal.onFocus(() => {
-    //   this.logger.debug(`Terminal ${terminalId} focused`);
+    //   this.logger(`Terminal ${terminalId} focused`);
     //   manager.setActiveTerminalId(terminalId);
     //   this.emitTerminalInteractionEvent('focus', terminalId, undefined, manager);
     // });
 
     // Set up blur handling - xterm.js doesn't have onFocus/onBlur, comment out
     // terminal.onBlur(() => {
-    //   this.logger.debug(`Terminal ${terminalId} blurred`);
+    //   this.logger(`Terminal ${terminalId} blurred`);
     // });
 
     const clickHandler = (event: MouseEvent): void => {
       // Regular click: Focus terminal
       if (!event.altKey) {
-        this.logger.debug(`Regular click on terminal ${terminalId}`);
+        this.logger(`Regular click on terminal ${terminalId}`);
         manager.setActiveTerminalId(terminalId);
         terminal.focus(); // Ensure terminal gets focus for keyboard input
         this.emitTerminalInteractionEvent('focus', terminalId, undefined, manager);
@@ -933,7 +933,7 @@ export class InputManager extends BaseManager implements IInputManager {
       // Alt+Click handling
       if (event.altKey && this.altClickState.isVSCodeAltClickEnabled) {
         // VS Code standard Alt+Click behavior
-        this.logger.debug(
+        this.logger(
           `Alt+Click on terminal ${terminalId} at (${event.clientX}, ${event.clientY})`
         );
 
@@ -965,7 +965,7 @@ export class InputManager extends BaseManager implements IInputManager {
       clickHandler as EventListener
     );
 
-    this.logger.info(`Complete input handling configured for terminal ${terminalId}`);
+    this.logger(`Complete input handling configured for terminal ${terminalId}`);
   }
 
   /**
@@ -991,7 +991,7 @@ export class InputManager extends BaseManager implements IInputManager {
     const multiCursorModifier = settings.multiCursorModifier ?? 'alt';
 
     const isEnabled = altClickMovesCursor && multiCursorModifier === 'alt';
-    this.logger.debug(
+    this.logger(
       `VS Code Alt+Click enabled: ${isEnabled} (altClick: ${altClickMovesCursor}, modifier: ${multiCursorModifier})`
     );
 
@@ -1007,7 +1007,7 @@ export class InputManager extends BaseManager implements IInputManager {
 
     if (wasEnabled !== isEnabled) {
       this.altClickState.isVSCodeAltClickEnabled = isEnabled;
-      this.logger.info(`Alt+Click setting changed: ${wasEnabled} → ${isEnabled}`);
+      this.logger(`Alt+Click setting changed: ${wasEnabled} → ${isEnabled}`);
 
       // Update cursor styles immediately
       this.updateTerminalCursors();
@@ -1039,7 +1039,7 @@ export class InputManager extends BaseManager implements IInputManager {
 
     if (this.agentInteractionMode !== actualEnabled) {
       this.agentInteractionMode = actualEnabled;
-      this.logger.info(
+      this.logger(
         `Agent interaction mode: ${actualEnabled} (VS Code standard - always disabled)`
       );
 
@@ -1056,11 +1056,37 @@ export class InputManager extends BaseManager implements IInputManager {
   }
 
   /**
+   * Setup global keyboard listener for shortcuts and commands
+   */
+  private setupGlobalKeyboardListener(): void {
+    this.logger('Setting up global keyboard listener');
+
+    const globalKeyHandler = (event: KeyboardEvent): void => {
+      // Handle keyboard shortcuts and commands here
+      // This will be populated with global shortcut handling logic
+      if (event.ctrlKey && event.shiftKey && event.key === 'D') {
+        // Debug panel toggle handled elsewhere
+        return;
+      }
+
+      // Additional global shortcuts can be added here
+    };
+
+    this.eventRegistry.register(
+      'global-keyboard',
+      document,
+      'keydown',
+      globalKeyHandler as EventListener,
+      true
+    );
+  }
+
+  /**
    * Setup simplified arrow key handler for agent interactions
    * VS Code Standard: Arrow keys should be handled by xterm.js and shell
    */
   private setupAgentArrowKeyHandler(): void {
-    this.logger.info('Setting up agent arrow key handler (VS Code standard)');
+    this.logger('Setting up agent arrow key handler (VS Code standard)');
 
     const arrowKeyHandler = (event: KeyboardEvent): void => {
       // Only log when in agent interaction mode for debugging
@@ -1075,7 +1101,7 @@ export class InputManager extends BaseManager implements IInputManager {
         if (activeTerminal) {
           const terminalId = activeTerminal.getAttribute('data-terminal-id');
           if (terminalId) {
-            this.logger.debug(
+            this.logger(
               `Arrow key ${event.key} in agent mode for terminal ${terminalId} - letting xterm.js handle`
             );
           }
@@ -1136,7 +1162,7 @@ export class InputManager extends BaseManager implements IInputManager {
         });
       }
     } catch (error) {
-      this.logger.error(`Error emitting terminal interaction event: ${error}`);
+      this.logger(`Error emitting terminal interaction event: ${error}`);
     }
   }
 
@@ -1170,14 +1196,14 @@ export class InputManager extends BaseManager implements IInputManager {
         return false;
       }
       // Send interrupt signal
-      this.logger.info(`Ctrl+C interrupt for terminal ${terminalId}`);
+      this.logger(`Ctrl+C interrupt for terminal ${terminalId}`);
       this.emitTerminalInteractionEvent('interrupt', terminalId, undefined, manager);
       return true;
     }
 
     // Ctrl+V: Paste
     if (event.ctrlKey && event.key === 'v') {
-      this.logger.info(`Ctrl+V paste for terminal ${terminalId}`);
+      this.logger(`Ctrl+V paste for terminal ${terminalId}`);
       this.emitTerminalInteractionEvent('paste', terminalId, undefined, manager);
       return false; // Let browser handle paste
     }
@@ -1186,10 +1212,25 @@ export class InputManager extends BaseManager implements IInputManager {
   }
 
   /**
-   * Dispose of all event listeners and cleanup resources
+   * Initialize the InputManager (BaseManager abstract method implementation)
    */
-  public override dispose(): void {
-    this.logger.info('Disposing input manager');
+  protected doInitialize(): void {
+    this.logger('initialization', 'starting');
+
+    // Set up keyboard event listener for global shortcuts
+    this.setupGlobalKeyboardListener();
+
+    // Set up agent arrow key handler (VS Code standard)
+    this.setupAgentArrowKeyHandler();
+
+    this.logger('initialization', 'completed');
+  }
+
+  /**
+   * Dispose InputManager resources (BaseManager abstract method implementation)
+   */
+  protected doDispose(): void {
+    this.logger('disposal', 'starting');
 
     // Dispose EventHandlerRegistry - this will clean up all registered event listeners
     this.eventRegistry.dispose();
@@ -1220,9 +1261,18 @@ export class InputManager extends BaseManager implements IInputManager {
     // Clear references
     this.notificationManager = null;
 
-    // Call parent dispose
+    this.logger('disposal', 'completed');
+  }
+
+  /**
+   * Dispose of all event listeners and cleanup resources
+   */
+  public override dispose(): void {
+    this.logger('Disposing input manager');
+
+    // Call parent dispose which will call doDispose()
     super.dispose();
 
-    this.logger.lifecycle('InputManager', 'completed');
+    this.logger('InputManager', 'completed');
   }
 }

@@ -11,21 +11,6 @@ import { TerminalInfo } from '../types/common';
 import { TerminalConfig } from '../types/shared';
 import { getUnifiedConfigurationService } from '../config/UnifiedConfigurationService';
 
-/**
- * 設定を取得して正規化する
- * @deprecated Use getUnifiedConfigurationService().getExtensionTerminalConfig() instead
- */
-export function getTerminalConfig(): TerminalConfig {
-  return getUnifiedConfigurationService().getExtensionTerminalConfig();
-}
-
-/**
- * プラットフォームに応じたシェルを取得
- * @deprecated Use getUnifiedConfigurationService().getShellForPlatform() instead
- */
-export function getShellForPlatform(customShell: string): string {
-  return getUnifiedConfigurationService().getShellForPlatform(customShell);
-}
 
 /**
  * ディレクトリが存在し、アクセス可能かを検証
@@ -134,30 +119,6 @@ export function generateTerminalId(): string {
   return `terminal-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 }
 
-/**
- * エラーメッセージを表示
- * @deprecated Use showError from ../utils/feedback instead
- */
-export function showErrorMessage(message: string, error?: unknown): void {
-  // Import dynamically to avoid circular dependency
-  // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-unsafe-assignment
-  const { showError } = require('./feedback');
-  const errorMessage = error ? `${message}: ${String(error)}` : message;
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-  showError(errorMessage);
-}
-
-/**
- * 警告メッセージを表示
- * @deprecated Use showWarning from ../utils/feedback instead
- */
-export function showWarningMessage(message: string): void {
-  // Import dynamically to avoid circular dependency
-  // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-unsafe-assignment
-  const { showWarning } = require('./feedback');
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-  showWarning(message);
-}
 
 /**
  * ターミナル情報を正規化
@@ -267,4 +228,46 @@ export function safeStringify(obj: unknown): string {
   } catch {
     return String(obj);
   }
+}
+
+// =============================================================================
+// RESTORED FUNCTIONS - Required by existing code
+// =============================================================================
+
+/**
+ * Get terminal configuration (restored from refactoring)
+ */
+export function getTerminalConfig(): TerminalConfig {
+  const configService = getUnifiedConfigurationService();
+  return configService.getExtensionTerminalConfig();
+}
+
+/**
+ * Get shell for platform (restored from refactoring)
+ */
+export function getShellForPlatform(): string {
+  const platform = os.platform();
+
+  switch (platform) {
+    case 'win32':
+      return process.env.COMSPEC || 'cmd.exe';
+    case 'darwin':
+      return process.env.SHELL || '/bin/zsh';
+    default: // linux, etc.
+      return process.env.SHELL || '/bin/bash';
+  }
+}
+
+/**
+ * Show error message (restored from refactoring)
+ */
+export function showErrorMessage(message: string, ...items: string[]): Thenable<string | undefined> {
+  return vscode.window.showErrorMessage(message, ...items);
+}
+
+/**
+ * Show warning message (restored from refactoring)
+ */
+export function showWarningMessage(message: string, ...items: string[]): Thenable<string | undefined> {
+  return vscode.window.showWarningMessage(message, ...items);
 }

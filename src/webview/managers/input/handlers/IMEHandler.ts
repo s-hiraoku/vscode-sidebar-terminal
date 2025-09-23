@@ -6,17 +6,13 @@
 import { IIMEHandler } from '../interfaces/IInputHandlers';
 import { BaseManager } from '../../BaseManager';
 import { EventHandlerRegistry } from '../../../utils/EventHandlerRegistry';
-import { ManagerLogger } from '../../../utils/ManagerLogger';
 
 /**
  * IME Handler for managing composition events
  */
 export class IMEHandler extends BaseManager implements IIMEHandler {
-  // Specialized logger for IME Handler
-  protected override readonly logger = new ManagerLogger('IMEHandler', '🎯');
-
   // Event handler registry for centralized event management
-  protected override readonly eventRegistry = new EventHandlerRegistry();
+  protected readonly eventRegistry = new EventHandlerRegistry();
 
   // IME composition state
   private isComposing = false;
@@ -32,26 +28,48 @@ export class IMEHandler extends BaseManager implements IIMEHandler {
     });
 
     this.eventDebounceTimers = eventDebounceTimers;
-    this.logger.lifecycle('initialization', 'starting');
+
+    // Logger is automatically provided by BaseManager
+
+    this.logger('initialization', 'starting');
   }
 
   /**
-   * Initialize the IME handler
+   * Initialize the IME handler (BaseManager abstract method implementation)
    */
-  public override initialize(): void {
+  protected doInitialize(): void {
     this.setupIMEHandling();
-    this.logger.lifecycle('IMEHandler', 'completed');
+    this.logger('IMEHandler', 'completed');
+  }
+
+  /**
+   * Dispose IME handler resources (BaseManager abstract method implementation)
+   */
+  protected doDispose(): void {
+    this.logger('disposal', 'starting');
+
+    // EventHandlerRegistry dispose will be called by parent
+    this.isComposing = false;
+
+    this.logger('disposal', 'completed');
+  }
+
+  /**
+   * Initialize the IME handler (legacy method kept for compatibility)
+   */
+  public override async initialize(): Promise<void> {
+    await super.initialize();
   }
 
   /**
    * Setup IME composition handling with improved processing
    */
   public setupIMEHandling(): void {
-    this.logger.info('Setting up IME composition handling');
+    this.logger('Setting up IME composition handling');
 
     const compositionStartHandler = (event: CompositionEvent): void => {
       this.isComposing = true;
-      this.logger.debug(`IME composition started: ${event.data || 'no data'}`);
+      this.logger(`IME composition started: ${event.data || 'no data'}`);
 
       // Clear any pending input events to avoid conflicts
       this.clearPendingInputEvents();
@@ -60,13 +78,13 @@ export class IMEHandler extends BaseManager implements IIMEHandler {
     const compositionUpdateHandler = (event: CompositionEvent): void => {
       // Keep composition state active during updates
       this.isComposing = true;
-      this.logger.debug(`IME composition update: ${event.data || 'no data'}`);
+      this.logger(`IME composition update: ${event.data || 'no data'}`);
     };
 
     const compositionEndHandler = (event: CompositionEvent): void => {
       // Immediately reset composition state - NO DELAY
       this.isComposing = false;
-      this.logger.debug(`IME composition ended immediately: ${event.data || 'no data'}`);
+      this.logger(`IME composition ended immediately: ${event.data || 'no data'}`);
     };
 
     // Register IME event handlers using EventHandlerRegistry
@@ -91,7 +109,7 @@ export class IMEHandler extends BaseManager implements IIMEHandler {
       compositionEndHandler as EventListener
     );
 
-    this.logger.lifecycle('IME handling', 'completed');
+    this.logger('IME handling', 'completed');
   }
 
   /**
@@ -110,7 +128,7 @@ export class IMEHandler extends BaseManager implements IIMEHandler {
       if (key.includes('input') || key.includes('keydown')) {
         clearTimeout(timer);
         this.eventDebounceTimers.delete(key);
-        this.logger.debug(`Cleared pending input event: ${key}`);
+        this.logger(`Cleared pending input event: ${key}`);
       }
     }
   }
@@ -119,7 +137,7 @@ export class IMEHandler extends BaseManager implements IIMEHandler {
    * Dispose of all event listeners and cleanup resources
    */
   public override dispose(): void {
-    this.logger.info('Disposing IME handler');
+    this.logger('Disposing IME handler');
 
     // Dispose EventHandlerRegistry - this will clean up all registered event listeners
     this.eventRegistry.dispose();
@@ -130,6 +148,6 @@ export class IMEHandler extends BaseManager implements IIMEHandler {
     // Call parent dispose
     super.dispose();
 
-    this.logger.lifecycle('IMEHandler', 'completed');
+    this.logger('IMEHandler', 'completed');
   }
 }

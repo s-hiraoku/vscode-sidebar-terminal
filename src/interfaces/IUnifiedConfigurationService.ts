@@ -181,39 +181,6 @@ export interface IUnifiedConfigurationService extends vscode.Disposable {
 }
 
 /**
- * Legacy configuration manager interface
- * Maintained for backward compatibility during migration
- * @deprecated Use IUnifiedConfigurationService instead
- */
-export interface IConfigurationManager {
-  getExtensionTerminalConfig(): ExtensionTerminalConfig;
-  getCompleteTerminalSettings(): CompleteTerminalSettings;
-  getCompleteExtensionConfig(): CompleteExtensionConfig;
-  getShellForPlatform(customShell?: string): string;
-  getAltClickSettings(): { altClickMovesCursor: boolean; multiCursorModifier: string };
-  getFontFamily(): string;
-  getFontSize(): number;
-  clearCache(): void;
-}
-
-/**
- * WebView configuration manager interface
- * For WebView-specific configuration needs
- * @deprecated Use IUnifiedConfigurationService instead
- */
-export interface IWebViewConfigurationManager {
-  getCurrentSettings(): any;
-  getCurrentFontSettings(): WebViewFontSettings;
-  loadSettings(): any;
-  saveSettings(settings: any): void;
-  applySettings(settings: any, terminals: Map<string, any>): void;
-  applyFontSettings(fontSettings: WebViewFontSettings, terminals: Map<string, any>): void;
-  updateAltClickSetting(terminals: Map<string, any>, settings: any): void;
-  resetToDefaults(): any;
-  dispose(): void;
-}
-
-/**
  * Configuration service factory interface
  * For dependency injection and testing
  */
