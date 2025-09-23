@@ -34,7 +34,12 @@
     "vs code standard",
     "process state",
     "error handling",
-    "ai agent detection"
+    "ai agent detection",
+    "claude code",
+    "github copilot",
+    "gemini cli",
+    "state management",
+    "deepwiki mcp"
   ],
   "icon": "resources/icon.png",
   "galleryBanner": {
