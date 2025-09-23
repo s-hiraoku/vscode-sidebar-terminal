@@ -74,17 +74,22 @@ describe('Session Persistence Integration - TDD Suite', () => {
 
     // Initialize managers
     persistenceManager = new StandardTerminalPersistenceManager();
-    lifecycleManager = new TerminalLifecycleManager();
-    messageManager = new RefactoredMessageManager();
-
-    // Mock coordinator
+    // Need to create a mock SplitManager first
+    const mockSplitManager = {
+      addTerminalToSplit: sandbox.stub(),
+      getIsSplitMode: sandbox.stub().returns(false)
+    };
     const mockCoordinator = {
       getManager: sandbox.stub(),
       isReady: sandbox.stub().returns(true),
-      dispose: sandbox.stub(),
-      initialize: sandbox.stub(),
-      logger: sandbox.stub()
+      dispose: sandbox.stub()
     };
+    lifecycleManager = new TerminalLifecycleManager(mockSplitManager as any, mockCoordinator as any);
+    messageManager = new RefactoredMessageManager();
+
+    // Update mock coordinator
+    mockCoordinator.initialize = sandbox.stub();
+    mockCoordinator.logger = sandbox.stub();
 
     mockCoordinator.getManager.withArgs('StandardTerminalPersistenceManager').returns(persistenceManager);
     mockCoordinator.getManager.withArgs('TerminalLifecycleManager').returns(lifecycleManager);

@@ -137,9 +137,12 @@ describe('UIController Service', () => {
       expect(tabsContainer?.children.length).to.equal(3);
 
       const tabs = tabsContainer?.querySelectorAll('.terminal-tab');
-      expect(tabs?.[0].getAttribute('data-terminal-id')).to.equal('terminal-1');
-      expect(tabs?.[1].getAttribute('data-terminal-id')).to.equal('terminal-2');
-      expect(tabs?.[2].getAttribute('data-terminal-id')).to.equal('terminal-3');
+      expect(tabs).to.exist;
+      if (tabs) {
+        expect(tabs[0]?.getAttribute('data-terminal-id')).to.equal('terminal-1');
+        expect(tabs[1]?.getAttribute('data-terminal-id')).to.equal('terminal-2');
+        expect(tabs[2]?.getAttribute('data-terminal-id')).to.equal('terminal-3');
+      }
     });
 
     it('should show active terminal correctly', () => {

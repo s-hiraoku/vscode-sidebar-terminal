@@ -169,8 +169,9 @@ describe('TerminalCoordinator Service', () => {
         await coordinator.createTerminal();
         expect.fail('Should have thrown error for terminal limit');
       } catch (error) {
-        expect(error.message).to.include('maximum');
-        expect(error.message).to.include('3 terminals');
+        expect(error).to.be.instanceof(Error);
+        expect((error as Error).message).to.include('maximum');
+        expect((error as Error).message).to.include('3 terminals');
       }
     });
 
@@ -317,7 +318,8 @@ describe('TerminalCoordinator Service', () => {
         await coordinator.switchToTerminal('non-existent');
         expect.fail('Should have thrown error');
       } catch (error) {
-        expect(error.message).to.include('not found');
+        expect(error).to.be.instanceof(Error);
+        expect((error as Error).message).to.include('not found');
       }
     });
   });

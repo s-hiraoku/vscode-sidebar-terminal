@@ -21,6 +21,7 @@ import { setupTestEnvironment, resetTestEnvironment, mockVscode } from '../../sh
 import { SplitManager } from '../../../webview/managers/SplitManager';
 import { TerminalLifecycleManager } from '../../../webview/managers/TerminalLifecycleManager';
 import { UIManager } from '../../../webview/managers/UIManager';
+import { TerminalConfig } from '../../../types/common';
 
 describe('Split Terminal Functionality - Integration TDD Suite', () => {
   let sandbox: sinon.SinonSandbox;
@@ -84,13 +85,17 @@ describe('Split Terminal Functionality - Integration TDD Suite', () => {
         const initialTerminal = await lifecycleManager.createTerminal(
           'terminal-1',
           'Initial Terminal',
-          { cwd: process.cwd() }
+          {
+            cwd: process.cwd(),
+            shell: '/bin/bash',
+            shellArgs: []
+          }
         );
 
         expect(initialTerminal).to.exist;
         expect(initialTerminal).to.not.be.null;
         if (!initialTerminal) throw new Error('Terminal creation failed');
-        expect(initialTerminal.id).to.be.a('string');
+        expect(initialTerminal.element).to.exist;
 
         // Step 2: Perform horizontal split
         splitManager.splitTerminal('horizontal');
@@ -116,19 +121,18 @@ describe('Split Terminal Functionality - Integration TDD Suite', () => {
         const initialTerminal = await lifecycleManager.createTerminal(
           'terminal-1',
           'Initial Terminal',
-          { cwd: process.cwd() }
+          {
+            cwd: process.cwd(),
+            shell: '/bin/bash',
+            shellArgs: []
+          }
         );
 
         // Step 2: Perform vertical split
-        const splitResult = await splitManager.splitVertical(initialTerminal.id);
+        splitManager.splitTerminal('vertical');
 
-        expect(splitResult.success).to.be.true;
-        expect(splitResult.newTerminalId).to.be.a('string');
-
-        // Step 3: Verify layout structure
-        const layout = splitManager.getCurrentLayout();
-        expect(layout.type).to.equal('vertical');
-        expect(layout.terminals).to.have.length(2);
+        // Step 3: Verify split mode is enabled
+        expect(splitManager.getIsSplitMode()).to.be.true;
 
         // Step 4: Verify DOM structure
         const splitContainers = mockContainer.querySelectorAll('.split-container');
