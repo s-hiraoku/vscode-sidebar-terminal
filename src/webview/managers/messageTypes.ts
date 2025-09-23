@@ -37,19 +37,20 @@ export enum MessageType {
   TERMINAL_CREATED = 'terminalCreated',
   DELETE_TERMINAL = 'deleteTerminal',
   REQUEST_STATE = 'requestState',
-  STATE_UPDATE = 'stateUpdate'
+  STATE_UPDATE = 'stateUpdate',
+  PING = 'ping'
 }
 
 export interface ExtensionMessage {
-  command: string;
-  type?: MessageType | string;
+  command?: string;
+  type: MessageType | string;
   data?: MessagePayload;
   timestamp?: number;
 }
 
 export interface WebviewMessage {
   type: MessageType;
-  command: string;
+  command?: string;
   data?: MessagePayload;
   payload?: MessagePayload;
 }

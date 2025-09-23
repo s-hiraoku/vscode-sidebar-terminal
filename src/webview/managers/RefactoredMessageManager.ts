@@ -2573,6 +2573,7 @@ export class RefactoredMessageManager implements IMessageManager {
     // Clear message handlers
     this.messageHandlers = [];
     this.errorHandlers = [];
+    this.connectionLostHandlers = [];
 
     // Dispose MessageQueue - this will clean up all queued messages and processing
     this.messageQueue.dispose();
@@ -2581,6 +2582,44 @@ export class RefactoredMessageManager implements IMessageManager {
     this.coordinator = undefined;
 
     this.logger.lifecycle('RefactoredMessageManager', 'completed');
+  }
+
+  private connectionLostHandlers: Array<() => void> = [];
+
+  /**
+   * Add connection lost handler (for test compatibility)
+   */
+  public onConnectionLost(handler: () => void): void {
+    this.connectionLostHandlers.push(handler);
+  }
+
+  /**
+   * Handle connection restored (for test compatibility)
+   */
+  public onConnectionRestored(): void {
+    this.logger.info('Connection restored, flushing queued messages');
+    // Flush the message queue when connection is restored
+    void this.messageQueue.flush();
+  }
+
+  /**
+   * Handle raw message (for test compatibility)
+   */
+  public async handleRawMessage(rawMessage: string): Promise<void> {
+    try {
+      const message = JSON.parse(rawMessage);
+      await this.handleExtensionMessage(message);
+    } catch (error) {
+      const parseError = new Error(`Invalid JSON message: ${error instanceof Error ? error.message : String(error)}`);
+      this.errorHandlers.forEach(handler => {
+        try {
+          handler(parseError);
+        } catch (err) {
+          this.logger.error('Error in error handler:', err);
+        }
+      });
+      throw parseError;
+    }
   }
 }
 
