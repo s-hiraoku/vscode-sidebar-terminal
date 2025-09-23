@@ -78,12 +78,13 @@ export class MessageRouter {
     const startTime = performance.now();
     const messageId = `msg-${++this.messageCounter}`;
 
-    const context: MessageContext<TData> = {
-      command,
-      data: data as TData,
-      timestamp: Date.now(),
-      id: messageId
-    };
+    // Message context for logging (not currently used in handler)
+    // const context: MessageContext<TData> = {
+    //   command,
+    //   data: data as TData,
+    //   timestamp: Date.now(),
+    //   id: messageId
+    // };
 
     this.log(`Routing message: ${command} (${messageId})`);
 

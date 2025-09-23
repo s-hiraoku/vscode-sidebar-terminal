@@ -11,7 +11,6 @@ import {
   TerminalInfo,
   DeleteResult,
   ProcessState,
-  InteractionState,
 } from '../types/shared';
 import { TERMINAL_CONSTANTS, ERROR_MESSAGES } from '../constants';
 import { ShellIntegrationService } from '../services/ShellIntegrationService';
@@ -126,7 +125,7 @@ export class TerminalManager {
       // Fallback to existing configuration system
       const config = getTerminalConfig();
       return {
-        shell: getShellForPlatform(config.shell),
+        shell: getShellForPlatform(),
         shellArgs: config.shellArgs || [],
       };
     }
@@ -300,7 +299,7 @@ export class TerminalManager {
     const terminalId = generateTerminalId();
     log(`🔍 [TERMINAL] Generated terminal ID: ${terminalId}`);
 
-    const shell = getShellForPlatform(config.shell);
+    const shell = getShellForPlatform();
     const shellArgs = config.shellArgs;
     const cwd = getWorkingDirectory();
 
@@ -421,7 +420,7 @@ export class TerminalManager {
       log(
         `❌ [TERMINAL] Error creating terminal: ${error instanceof Error ? error.message : String(error)}`
       );
-      showErrorMessage(ERROR_MESSAGES.TERMINAL_CREATION_FAILED, error);
+      showErrorMessage(ERROR_MESSAGES.TERMINAL_CREATION_FAILED, error instanceof Error ? error.message : String(error));
       throw error;
     }
   }
@@ -794,7 +793,7 @@ export class TerminalManager {
         cwd: terminal.cwd,
       });
 
-      showErrorMessage(`Terminal input failed for ${terminal.name}: ${errorMessage}`, error);
+      showErrorMessage(`Terminal input failed for ${terminal.name}: ${errorMessage}`, error instanceof Error ? error.message : String(error));
     }
   }
 
@@ -1022,7 +1021,7 @@ export class TerminalManager {
   private _handleProcessStateActions(
     terminal: TerminalInstance,
     newState: ProcessState,
-    previousState?: ProcessState
+    _previousState?: ProcessState
   ): void {
     switch (newState) {
       case ProcessState.Launching:

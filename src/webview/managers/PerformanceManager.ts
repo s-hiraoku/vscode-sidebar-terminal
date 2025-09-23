@@ -7,7 +7,7 @@ import { FitAddon } from '@xterm/addon-fit';
 import { SPLIT_CONSTANTS } from '../constants/webview';
 import { IManagerCoordinator } from '../interfaces/ManagerInterfaces';
 import { BaseManager } from './BaseManager';
-import { performanceLogger } from '../utils/ManagerLogger';
+// import { performanceLogger } from '../utils/ManagerLogger';
 import { ResizeManager } from '../utils/ResizeManager';
 
 export class PerformanceManager extends BaseManager {

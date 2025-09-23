@@ -9,7 +9,7 @@ import { IInputManager, IManagerCoordinator } from '../interfaces/ManagerInterfa
 import { INotificationManager } from '../interfaces/ManagerInterfaces';
 import { BaseManager } from './BaseManager';
 import { EventHandlerRegistry } from '../utils/EventHandlerRegistry';
-import { inputLogger } from '../utils/ManagerLogger';
+// import { inputLogger } from '../utils/ManagerLogger';
 import { IMEHandler } from './input/handlers/IMEHandler';
 import { IIMEHandler } from './input/interfaces/IInputHandlers';
 

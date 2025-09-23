@@ -1,10 +1,7 @@
 import type { TerminalInteractionEvent } from '../../types/common';
 import {
   MessagePayload,
-  TerminalMessageData,
-  SessionMessageData,
-  ConfigurationMessageData,
-  StatusMessageData
+  TerminalMessageData
 } from '../utils/TypedMessageHandling';
 
 export interface MessageCommand {
@@ -60,8 +57,18 @@ export interface SystemMessage {
 // Re-exports for migration
 export {
   MessagePayload,
-  TerminalMessageData,
-  SessionMessageData,
-  ConfigurationMessageData,
-  StatusMessageData
+  TerminalMessageData
 } from '../utils/TypedMessageHandling';
+
+// Define interfaces that were previously imported but unused
+export interface SessionMessageData {
+  [key: string]: unknown;
+}
+
+export interface ConfigurationMessageData {
+  [key: string]: unknown;
+}
+
+export interface StatusMessageData {
+  [key: string]: unknown;
+}
