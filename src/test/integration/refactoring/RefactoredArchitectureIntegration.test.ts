@@ -71,7 +71,7 @@ describe('Refactored Architecture Integration Tests', () => {
     });
 
     // Mock xterm.js Terminal
-    global.Terminal = sandbox.stub().returns({
+    (global as any).Terminal = sandbox.stub().returns({
       open: sandbox.stub(),
       write: sandbox.stub(),
       resize: sandbox.stub(),
@@ -83,18 +83,18 @@ describe('Refactored Architecture Integration Tests', () => {
     });
 
     // Mock FitAddon
-    global.FitAddon = sandbox.stub().returns({
+    (global as any).FitAddon = sandbox.stub().returns({
       fit: sandbox.stub(),
       propose: sandbox.stub()
     });
 
     // Mock DOM APIs
-    global.URL = {
+    (global as any).URL = {
       createObjectURL: sandbox.stub().returns('blob:url'),
       revokeObjectURL: sandbox.stub()
     } as any;
 
-    global.Blob = sandbox.stub() as any;
+    (global as any).Blob = sandbox.stub() as any;
   }
 
   describe('Full System Initialization', () => {
@@ -169,7 +169,9 @@ describe('Refactored Architecture Integration Tests', () => {
         call.args[0].command === 'terminalCreated'
       );
       expect(createdCall).to.exist;
-      expect(createdCall.args[0].data.terminalId).to.equal(terminalId);
+      if (createdCall) {
+        expect(createdCall.args[0].data.terminalId).to.equal(terminalId);
+      }
     });
 
     it('should handle terminal switching integration', async () => {
@@ -358,8 +360,8 @@ describe('Refactored Architecture Integration Tests', () => {
 
     it('should recover from terminal creation failures', async () => {
       // Mock terminal constructor to fail
-      const originalTerminal = global.Terminal;
-      global.Terminal = sandbox.stub().throws(new Error('Terminal creation failed'));
+      const originalTerminal = (global as any).Terminal;
+      (global as any).Terminal = sandbox.stub().throws(new Error('Terminal creation failed'));
 
       try {
         await coordinator.createTerminal();
@@ -369,7 +371,7 @@ describe('Refactored Architecture Integration Tests', () => {
       }
 
       // Restore and verify system still works
-      global.Terminal = originalTerminal;
+      (global as any).Terminal = originalTerminal;
 
       const terminalId = await coordinator.createTerminal();
       expect(terminalId).to.be.a('string');

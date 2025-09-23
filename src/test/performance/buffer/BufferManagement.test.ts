@@ -91,9 +91,11 @@ describe('Buffer Management Performance - TDD Suite', () => {
         // Setup performance monitoring
         const performanceMetrics: BufferMetrics[] = [];
 
-        performanceManager.onBufferUpdate((metrics: BufferMetrics) => {
-          performanceMetrics.push(metrics);
-        });
+        // Use available buffer stats instead of event listener
+        setInterval(() => {
+          const stats = performanceManager.getBufferStats();
+          performanceMetrics.push(stats as BufferMetrics);
+        }, 100);
 
         startTime = performance.now();
 

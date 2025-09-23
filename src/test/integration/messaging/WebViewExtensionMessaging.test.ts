@@ -187,8 +187,9 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
         };
 
         let creationConfirmed = false;
-        messageManager.onMessage((message) => {
-          if (message.type === MessageType.TERMINAL_CREATED) {
+        messageManager.onMessage((message: unknown) => {
+          const msg = message as ExtensionMessage;
+          if (msg.type === MessageType.TERMINAL_CREATED) {
             creationConfirmed = true;
           }
         });
@@ -252,8 +253,9 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
         };
 
         let stateReceived = false;
-        messageManager.onMessage((message) => {
-          if (message.type === MessageType.STATE_UPDATE) {
+        messageManager.onMessage((message: unknown) => {
+          const msg = message as ExtensionMessage;
+          if (msg.type === MessageType.STATE_UPDATE) {
             stateReceived = true;
           }
         });
@@ -280,8 +282,8 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
         };
 
         let validationError: Error | null = null;
-        messageManager.onError((error) => {
-          validationError = error;
+        messageManager.onError((error: unknown) => {
+          validationError = error as Error;
         });
 
         try {
@@ -307,8 +309,8 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
         };
 
         let fieldValidationError: Error | null = null;
-        messageManager.onError((error) => {
-          fieldValidationError = error;
+        messageManager.onError((error: unknown) => {
+          fieldValidationError = error as Error;
         });
 
         try {
@@ -327,8 +329,8 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
         const malformedMessage = '{"type": "TERMINAL_OUTPUT", "data": {';
 
         let parseError: Error | null = null;
-        messageManager.onError((error) => {
-          parseError = error;
+        messageManager.onError((error: unknown) => {
+          parseError = error as Error;
         });
 
         try {
@@ -355,8 +357,8 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
         };
 
         let sizeError: Error | null = null;
-        messageManager.onError((error) => {
-          sizeError = error;
+        messageManager.onError((error: unknown) => {
+          sizeError = error as Error;
         });
 
         try {
@@ -393,8 +395,8 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
         };
 
         let communicationError: Error | null = null;
-        messageManager.onError((error) => {
-          communicationError = error;
+        messageManager.onError((error: unknown) => {
+          communicationError = error as Error;
         });
 
         // Should not throw, but should report error
