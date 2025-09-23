@@ -157,11 +157,11 @@ describe('Split Terminal Functionality - Integration TDD Suite', () => {
 
         // Step 3: Split top terminal vertically
         const verticalSplit1 = await splitManager.splitVertical(terminal1.id);
-        const terminal3Id = verticalSplit1.newTerminalId;
+        const _terminal3Id = verticalSplit1.newTerminalId;
 
         // Step 4: Split bottom terminal vertically
         const verticalSplit2 = await splitManager.splitVertical(terminal2Id);
-        const terminal4Id = verticalSplit2.newTerminalId;
+        const _terminal4Id = verticalSplit2.newTerminalId;
 
         // Step 5: Verify complex layout
         const layout = splitManager.getCurrentLayout();
@@ -279,7 +279,7 @@ describe('Split Terminal Functionality - Integration TDD Suite', () => {
         // RED: Layout should adapt to panel resize events
 
         const terminal1 = await lifecycleManager.createTerminal({ name: 'Terminal 1' });
-        const splitResult = await splitManager.splitVertical(terminal1.id);
+        const _splitResult = await splitManager.splitVertical(terminal1.id);
 
         // Verify initial vertical layout
         let layout = splitManager.getCurrentLayout();
@@ -423,7 +423,7 @@ describe('Split Terminal Functionality - Integration TDD Suite', () => {
 
         const terminal1 = await lifecycleManager.createTerminal({ name: 'State Test 1' });
         const splitResult = await splitManager.splitHorizontal(terminal1.id);
-        const terminal2Id = splitResult.newTerminalId;
+        const _terminal2Id = splitResult.newTerminalId;
 
         // Verify initial state
         let layout = splitManager.getCurrentLayout();
@@ -486,7 +486,7 @@ describe('Split Terminal Functionality - Integration TDD Suite', () => {
         const terminal2Id = splitResult1.newTerminalId;
 
         const splitResult2 = await splitManager.splitVertical(terminal1.id);
-        const terminal3Id = splitResult2.newTerminalId;
+        const _terminal3Id = splitResult2.newTerminalId;
 
         // Verify 3-terminal grid layout
         let layout = splitManager.getCurrentLayout();
@@ -570,9 +570,9 @@ describe('Split Terminal Functionality - Integration TDD Suite', () => {
         // RED: Split dividers should be draggable for resizing
 
         const terminal1 = await lifecycleManager.createTerminal({ name: 'Drag Test 1' });
-        const splitResult = await splitManager.splitVertical(terminal1.id);
+        const _splitResult = await splitManager.splitVertical(terminal1.id);
 
-        const layout = splitManager.getCurrentLayout();
+        const _layout = splitManager.getCurrentLayout();
 
         // Find the split divider element
         const divider = mockContainer.querySelector('.split-divider') as HTMLElement;

@@ -532,8 +532,8 @@ describe('Memory Leak Prevention - TDD Suite', () => {
         // Simulate memory pressure scenario
         const memoryPressurePromise = simulateMemoryPressure(managers);
 
-        let memoryPressureDetected = false;
-        let cleanupTriggered = false;
+        let _memoryPressureDetected = false;
+        let _cleanupTriggered = false;
 
         // Monitor for memory pressure response
         const originalMemoryUsage = process.memoryUsage().heapUsed;
@@ -750,7 +750,7 @@ describe('Memory Leak Prevention - TDD Suite', () => {
 
     while (Date.now() - startTime < duration) {
       // Simulate various terminal operations
-      const terminalId = `session-terminal-${operationCycle % 3}`;
+      const _terminalId = `session-terminal-${operationCycle % 3}`;
 
       // Create terminal if needed
       if (operationCycle % 100 === 0) {

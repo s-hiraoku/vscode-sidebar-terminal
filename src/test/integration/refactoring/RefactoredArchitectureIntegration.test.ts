@@ -6,9 +6,9 @@
 import { describe, it, expect, beforeEach, afterEach } from 'mocha';
 import * as sinon from 'sinon';
 import { RefactoredWebviewCoordinator } from '../../../webview/RefactoredWebviewCoordinator';
-import { TerminalCoordinatorFactory } from '../../../webview/services/TerminalCoordinator';
-import { UIControllerFactory } from '../../../webview/services/UIController';
-import { MessageRouterFactory } from '../../../services/MessageRouter';
+import { TerminalCoordinatorFactory as _TerminalCoordinatorFactory } from '../../../webview/services/TerminalCoordinator';
+import { UIControllerFactory as _UIControllerFactory } from '../../../webview/services/UIController';
+import { MessageRouterFactory as _MessageRouterFactory } from '../../../services/MessageRouter';
 
 describe('Refactored Architecture Integration Tests', () => {
   let sandbox: sinon.SinonSandbox;
@@ -173,7 +173,7 @@ describe('Refactored Architecture Integration Tests', () => {
 
     it('should handle terminal switching integration', async () => {
       const terminalId1 = await coordinator.createTerminal();
-      const terminalId2 = await coordinator.createTerminal();
+      const _terminalId2 = await coordinator.createTerminal();
 
       await coordinator.switchToTerminal(terminalId1);
 
@@ -303,7 +303,7 @@ describe('Refactored Architecture Integration Tests', () => {
 
     it('should handle UI-initiated terminal switching', async () => {
       const terminalId1 = await coordinator.createTerminal();
-      const terminalId2 = await coordinator.createTerminal();
+      const _terminalId2 = await coordinator.createTerminal();
 
       // Simulate UI tab click
       const switchEvent = new CustomEvent('terminal-switch-requested', {
@@ -534,8 +534,8 @@ describe('Refactored Architecture Integration Tests', () => {
 
     it('should handle graceful system shutdown', async () => {
       // Setup system with active terminals
-      const terminalId1 = await coordinator.createTerminal();
-      const terminalId2 = await coordinator.createTerminal();
+      const _terminalId1 = await coordinator.createTerminal();
+      const _terminalId2 = await coordinator.createTerminal();
 
       // Show some UI elements
       const uiController = (coordinator as any).uiController;
@@ -574,7 +574,7 @@ describe('Refactored Architecture Integration Tests', () => {
       expect(debugInfo).to.have.property('activeHandlers');
 
       // Each service should maintain its own state
-      const terminalId = await coordinator.createTerminal();
+      const _terminalId = await coordinator.createTerminal();
       expect(debugInfo.terminalCount).to.equal(0); // Original object unchanged
 
       const newDebugInfo = coordinator.getDebugInfo();

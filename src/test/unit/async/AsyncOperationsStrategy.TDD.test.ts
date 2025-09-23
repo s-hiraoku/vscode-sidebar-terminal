@@ -14,7 +14,7 @@
  * - Resource cleanup and memory management
  */
 
-import * as assert from 'assert';
+import * as assert as _assert from 'assert';
 import * as sinon from 'sinon';
 import { expect } from 'chai';
 
@@ -49,7 +49,7 @@ describe('Async Operations Strategy - TDD Implementation', () => {
 
       // This interface defines the contract but will fail until implemented
       const communicator: AsyncWebViewCommunicator = {
-        sendMessageWithTimeout: async (message: any, timeoutMs: number) => {
+        sendMessageWithTimeout: async (_message: any, _timeoutMs: number) => {
           // Initially return failure to establish RED phase
           return { success: false, error: 'Not implemented' };
         }
@@ -198,7 +198,7 @@ describe('Async Operations Strategy - TDD Implementation', () => {
 
         cleanup(): void {
           // Clean up all pending requests
-          for (const [requestId, pending] of this.pendingRequests.entries()) {
+          for (const [_requestId, pending] of this.pendingRequests.entries()) {
             clearTimeout(pending.timeoutId);
             pending.reject(new Error('Communicator disposed'));
           }

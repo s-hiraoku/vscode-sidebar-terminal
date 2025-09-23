@@ -17,7 +17,7 @@
 
 import { expect } from 'chai';
 import * as sinon from 'sinon';
-import { setupTestEnvironment, resetTestEnvironment, mockVscode } from '../../shared/TestSetup';
+import { setupTestEnvironment, resetTestEnvironment, mockVscode as _mockVscode } from '../../shared/TestSetup';
 import { StandardTerminalPersistenceManager } from '../../../webview/managers/StandardTerminalPersistenceManager';
 import { TerminalLifecycleManager } from '../../../webview/managers/TerminalLifecycleManager';
 import { RefactoredMessageManager } from '../../../webview/managers/RefactoredMessageManager';
@@ -108,7 +108,7 @@ describe('Session Persistence Integration - TDD Suite', () => {
 
         // Step 1: Create terminal with scrollback history
         const terminalId = generateTerminalId();
-        const terminalInfo = normalizeTerminalInfo({
+        const _terminalInfo = normalizeTerminalInfo({
           id: terminalId,
           name: 'Serialization Test Terminal',
           isActive: true
@@ -220,7 +220,7 @@ describe('Session Persistence Integration - TDD Suite', () => {
         // RED: Large scrollback should be serialized without performance issues
 
         const terminalId = generateTerminalId();
-        const terminalInfo = normalizeTerminalInfo({
+        const _terminalInfo = normalizeTerminalInfo({
           id: terminalId,
           name: 'Large Scrollback Terminal',
           isActive: true

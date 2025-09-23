@@ -525,7 +525,7 @@ describe('Refactored Architecture Performance Tests', () => {
 
       // Performance should recover
       const normalStartTime = performance.now();
-      const terminalId = await coordinator.createTerminal();
+      const _terminalId = await coordinator.createTerminal();
       const normalDuration = performance.now() - normalStartTime;
 
       expect(normalDuration).to.be.lessThan(50); // Should return to normal performance

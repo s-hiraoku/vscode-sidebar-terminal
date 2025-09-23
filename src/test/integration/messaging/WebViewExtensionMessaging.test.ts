@@ -17,21 +17,21 @@
 
 import { expect } from 'chai';
 import * as sinon from 'sinon';
-import { setupTestEnvironment, resetTestEnvironment, mockVscode } from '../../shared/TestSetup';
+import { setupTestEnvironment, resetTestEnvironment, mockVscode as _mockVscode } from '../../shared/TestSetup';
 import { RefactoredMessageManager } from '../../../webview/managers/RefactoredMessageManager';
 import {
   MessageType,
   ExtensionMessage,
   WebviewMessage,
-  TerminalMessage,
-  SystemMessage
+  TerminalMessage as _TerminalMessage,
+  SystemMessage as _SystemMessage
 } from '../../../webview/managers/messageTypes';
 
 describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
   let sandbox: sinon.SinonSandbox;
   let messageManager: RefactoredMessageManager;
   let mockWebviewApi: any;
-  let mockExtensionContext: any;
+  let _mockExtensionContext: any;
 
   beforeEach(() => {
     setupTestEnvironment();
@@ -45,7 +45,7 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
     };
 
     // Mock Extension Context
-    mockExtensionContext = {
+    _mockExtensionContext = {
       subscriptions: [],
       workspaceState: {
         get: sandbox.stub(),
@@ -59,9 +59,9 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
 
     // Setup global vscode mock with webview panel
     (global as any).vscode = {
-      ...mockVscode,
+      ..._mockVscode,
       window: {
-        ...mockVscode.window,
+        ..._mockVscode.window,
         createWebviewPanel: sandbox.stub().returns({
           webview: mockWebviewApi,
           dispose: sandbox.stub(),
