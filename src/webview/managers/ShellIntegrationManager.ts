@@ -563,7 +563,7 @@ export class ShellIntegrationManager implements IShellIntegrationEvents {
   public dispose(): void {
     this.statusMap.clear();
     this.commandStartTimes.clear();
-    this.statusIndicators.forEach(indicator => indicator.remove());
+    this.statusIndicators.forEach((indicator) => indicator.remove());
     this.statusIndicators.clear();
     this.cwdDisplays.forEach((display) => display.remove());
     this.cwdDisplays.clear();

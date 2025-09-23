@@ -106,6 +106,23 @@ All critical quality gates satisfied:
 
 ---
 
+## Version 0.1.91 - Quality Consolidation & Agent Controls
+
+### 🎯 Release Highlights
+
+- Added manual recovery tools for Claude/Gemini/Codex sessions so the sidebar toggle can force a reconnect or clear a bad detection state without restarting VS Code (`src/services/CliAgentDetectionService.ts:320-378`, `src/webview/managers/RefactoredTerminalWebviewManager.ts:735-776`).
+- Hardened CLI agent pattern detection with expanded real-world prompts and stricter false-positive guards for Claude, Gemini, and Codex CLIs (`src/services/CliAgentPatternDetector.ts:12-333`).
+- Brought webview diagnostics to parity with the integrated terminal through dedicated shortcuts (Ctrl+Shift+D/X/R/I) for debug view toggling, log export, resync, and input fixes (`src/webview/main.ts:98-154`, `src/webview/managers/InputManager.ts:934-1025`).
+- Unified terminal configuration now keeps Alt+Click cursor moves and session limits in sync across host and webview layers, ensuring consistent multi-terminal behaviour (`src/services/TerminalStateManager.ts:64-306`, `src/webview/managers/ConfigManager.ts:24-267`).
+- Documentation refreshed with CLAUDE integration guides and refactoring summaries to match the current architecture (`docs/CLAUDE.md`, `docs/WEBVIEW_REFACTORING_SUMMARY.md`).
+
+### 🛠 Developer Notes
+
+- Manual reset messages reuse the existing `switchAiAgent` channel, so no additional API surface is required on the extension host (`src/webview/managers/RefactoredTerminalWebviewManager.ts:742-776`).
+- Release date: September 14, 2024. Compatible with VS Code ^1.74.0 / Node.js ≥18, matching the `package.json` engine settings (`package.json:7-10`).
+
+---
+
 ## Version 0.1.88 - Critical Startup Fix & System Stabilization
 
 ## 🚨 Critical Fixes

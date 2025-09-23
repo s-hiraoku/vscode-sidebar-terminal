@@ -851,7 +851,8 @@ export class InputManager extends BaseManager implements IInputManager {
     // Ctrl+Shift+P: Show profile selector (VS Code style)
     if (event.ctrlKey && event.shiftKey && event.key === 'P') {
       event.preventDefault();
-      this.logger('Ctrl+Shift+P shortcut detected, showing profile selector');
+      this.logger.info('Ctrl+Shift+P shortcut detected, showing profile selector');
+>>>>>>> refs/remotes/origin/for-publish
       if (manager.profileManager) {
         manager.profileManager.showProfileSelector();
       }
@@ -860,10 +861,10 @@ export class InputManager extends BaseManager implements IInputManager {
     // Ctrl+Alt+T: Create terminal with default profile (VS Code compatible)
     if (event.ctrlKey && event.altKey && event.key === 't') {
       event.preventDefault();
-      this.logger('Ctrl+Alt+T shortcut detected, creating terminal with default profile');
+      this.logger.info('Ctrl+Alt+T shortcut detected, creating terminal with default profile');
       if (manager.profileManager) {
         manager.profileManager.createTerminalWithDefaultProfile().catch((error: any) => {
-          this.logger('Failed to create terminal with default profile:', error);
+          this.logger.error('Failed to create terminal with default profile:', error);
         });
       }
     }
@@ -872,12 +873,12 @@ export class InputManager extends BaseManager implements IInputManager {
     if (event.ctrlKey && event.shiftKey && /^[1-5]$/.test(event.key)) {
       event.preventDefault();
       const profileIndex = parseInt(event.key) - 1;
-      this.logger(
+      this.logger.info(
         `Ctrl+Shift+${event.key} shortcut detected, switching to profile index ${profileIndex}`
       );
       if (manager.profileManager) {
         manager.profileManager.switchToProfileByIndex(profileIndex).catch((error: any) => {
-          this.logger(`Failed to switch to profile index ${profileIndex}:`, error);
+          this.logger.error(`Failed to switch to profile index ${profileIndex}:`, error);
         });
       }
     }
