@@ -5,26 +5,31 @@
 [![Rating](https://img.shields.io/visual-studio-marketplace/r/s-hiraoku.vscode-sidebar-terminal)](https://marketplace.visualstudio.com/items?itemName=s-hiraoku.vscode-sidebar-terminal)
 [![License](https://img.shields.io/github/license/s-hiraoku/vscode-sidebar-terminal)](https://github.com/s-hiraoku/vscode-sidebar-terminal/blob/main/LICENSE)
 
-A powerful VS Code extension that provides a fully-featured terminal in the sidebar with advanced AI agent integration, split terminal support, and comprehensive session management.
+A powerful VS Code extension that provides a fully-featured terminal in the sidebar with VS Code standard compliance, advanced AI agent integration, split terminal support, and comprehensive session management. Built following VS Code's terminal implementation patterns for maximum compatibility and reliability.
 
 ![Secondary Terminal Demo](resources/demo.gif)
 
 ## ✨ Key Features
 
 ### 🚀 **Advanced Terminal Management**
+- **VS Code Standard Compliance**: Terminal processing follows VS Code's standard implementation patterns
+- **Process State Management**: VS Code-compliant state tracking (Uninitialized, Launching, Running, etc.)
 - **Sidebar Integration**: Dedicated terminal panel in the VS Code activity bar
 - **Multiple Terminals**: Support for up to 5 concurrent terminal instances
 - **Smart Session Persistence**: Automatically saves and restores terminal sessions across VS Code restarts
 - **Terminal Recycling**: Efficient terminal number management (1-5) with automatic reuse
+- **Enhanced Error Handling**: Robust error recovery mechanisms following VS Code standards
 - **Cross-Platform Support**: Works seamlessly on Windows, macOS, and Linux
 
 ### 🤖 **AI Agent Integration**
+- **Enhanced Detection Engine**: Improved CLI agent detection with advanced pattern recognition
 - **Claude Code Support**: Full integration with `claude-code` commands and session restoration
 - **GitHub Copilot Integration**: File reference shortcuts with `#file:` format (CMD+K CMD+C)
 - **Gemini CLI Support**: Complete integration with `gemini code` commands
 - **Real-time Status Tracking**: Live AI agent status indicators with connection/disconnection detection
 - **Smart Toggle Controls**: One-click AI agent switching with status-aware button visibility
 - **Manual Reset Functionality**: Force reconnect AI agents when detection issues occur
+- **Timeout-based Detection**: Intelligent timeout handling for reliable state management
 
 ### 🔧 **Developer Experience**
 - **Alt+Click Cursor Positioning**: VS Code-standard cursor positioning with intelligent CLI agent conflict detection
