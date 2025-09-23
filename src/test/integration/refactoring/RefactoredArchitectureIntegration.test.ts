@@ -3,7 +3,8 @@
  * Tests the complete service coordination and real-world scenarios
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'mocha';
+import { describe, it, beforeEach, afterEach } from 'mocha';
+import { expect } from 'chai';
 import * as sinon from 'sinon';
 import { RefactoredWebviewCoordinator } from '../../../webview/RefactoredWebviewCoordinator';
 import { TerminalCoordinatorFactory as _TerminalCoordinatorFactory } from '../../../webview/services/TerminalCoordinator';

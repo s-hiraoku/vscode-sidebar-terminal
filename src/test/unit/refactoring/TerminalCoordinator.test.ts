@@ -2,7 +2,8 @@
  * Comprehensive test suite for TerminalCoordinator service
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'mocha';
+import { describe, it, beforeEach, afterEach } from 'mocha';
+import { expect } from 'chai';
 import * as sinon from 'sinon';
 import { TerminalCoordinator, TerminalCoordinatorFactory } from '../../../webview/services/TerminalCoordinator';
 import { TerminalCoordinatorConfig } from '../../../webview/services/ITerminalCoordinator';

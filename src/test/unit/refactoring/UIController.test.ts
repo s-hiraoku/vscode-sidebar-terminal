@@ -2,7 +2,8 @@
  * Comprehensive test suite for UIController service
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'mocha';
+import { describe, it, beforeEach, afterEach } from 'mocha';
+import { expect } from 'chai';
 import * as sinon from 'sinon';
 import { UIController, UIControllerFactory } from '../../../webview/services/UIController';
 import { UIControllerConfig } from '../../../webview/services/IUIController';

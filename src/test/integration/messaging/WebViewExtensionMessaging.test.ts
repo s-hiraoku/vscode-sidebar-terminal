@@ -102,8 +102,8 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
 
         // Step 2: WebView should receive and process the message
         let receivedMessage: ExtensionMessage | null = null;
-        messageManager.onMessage((message) => {
-          receivedMessage = message;
+        messageManager.onMessage((message: unknown) => {
+          receivedMessage = message as ExtensionMessage;
         });
 
         // Step 3: Simulate Extension sending message

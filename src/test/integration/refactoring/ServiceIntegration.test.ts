@@ -3,7 +3,8 @@
  * Validates that services work together correctly
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'mocha';
+import { describe, it, beforeEach, afterEach } from 'mocha';
+import { expect } from 'chai';
 import * as sinon from 'sinon';
 import { RefactoredWebviewCoordinator } from '../../../webview/RefactoredWebviewCoordinator';
 
