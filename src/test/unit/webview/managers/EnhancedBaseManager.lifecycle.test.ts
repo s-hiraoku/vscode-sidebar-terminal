@@ -25,7 +25,7 @@ import {
   ManagerHealthStatus,
   ManagerPerformanceMetrics,
   ResourceCleanupResult
-} from '../../../../webview/managers/EnhancedBaseManager';
+} from '../../../../webview/managers/BaseManager';
 import { LoggerFunction } from '../../../../webview/utils/TypedMessageHandling';
 import { setupTestEnvironment, resetTestEnvironment } from '../../../shared/TestSetup';
 

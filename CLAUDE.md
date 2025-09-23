@@ -14,6 +14,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Disabling functionality to "fix" conflicts
 - Using placeholder implementations
 - Commenting out working code
+- **ABSOLUTELY NEVER skip or disable tests in any way**
+- **NEVER modify GitHub Actions workflows to ignore test failures**
+- **NEVER move test files to disable them temporarily**
+
+## 🚨 CRITICAL TEST REQUIREMENTS
+
+**TESTS ARE SACRED - NEVER SKIP OR DISABLE:**
+- ALL tests must compile without TypeScript errors
+- ALL tests must run and pass successfully
+- Test compilation errors MUST be fixed, not ignored
+- GitHub Actions workflows MUST NOT be modified to skip tests
+- Test files MUST NOT be moved or renamed to disable them
+- ANY test issues must be resolved by fixing the actual code, not bypassing tests
 
 ## Development Commands
 

@@ -82,8 +82,8 @@ jobs:
       - name: Run lint
         run: npm run lint
 
-      - name: Compile tests (ignore errors for v0.1.92)
-        run: npm run compile-tests || echo "Test compilation has errors but main code compiles successfully"
+      - name: Compile tests
+        run: npm run compile-tests
 
       - name: Setup xvfb (Linux)
         if: runner.os == 'Linux'

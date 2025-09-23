@@ -434,10 +434,12 @@ describe('MessageRouter Service', () => {
 
       const results = await Promise.all(promises);
 
-      expect(results[0].success).to.be.true;
-      expect(results[1].success).to.be.true;
-      expect(results[0].data).to.equal('result-1');
-      expect(results[1].data).to.equal('result-2');
+      expect(results[0]).to.exist;
+      expect(results[1]).to.exist;
+      expect(results[0]?.success).to.be.true;
+      expect(results[1]?.success).to.be.true;
+      expect(results[0]?.data).to.equal('result-1');
+      expect(results[1]?.data).to.equal('result-2');
     });
 
     it('should reset active count on handler errors', async () => {
