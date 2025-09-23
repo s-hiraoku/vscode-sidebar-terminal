@@ -35,6 +35,9 @@ export interface TerminalCoordinatorEvents {
  * Manages terminal instances without UI concerns
  */
 export interface ITerminalCoordinator {
+  // Initialization
+  initialize(): Promise<void>;
+
   // Terminal lifecycle management
   createTerminal(options?: TerminalCreationOptions): Promise<string>;
   removeTerminal(terminalId: string): Promise<boolean>;

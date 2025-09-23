@@ -2465,10 +2465,114 @@ export class RefactoredMessageManager implements IMessageManager {
   }
 
   /**
+   * Test compatibility methods
+   */
+  private messageHandlers: Array<(message: unknown) => void> = [];
+  private errorHandlers: Array<(error: unknown) => void> = [];
+
+  /**
+   * Add message handler (for test compatibility)
+   */
+  public onMessage(handler: (message: unknown) => void): void {
+    this.messageHandlers.push(handler);
+  }
+
+  /**
+   * Add error handler (for test compatibility)
+   */
+  public onError(handler: (error: unknown) => void): void {
+    this.errorHandlers.push(handler);
+  }
+
+  /**
+   * Handle extension message (for test compatibility)
+   */
+  public async handleExtensionMessage(message: unknown): Promise<void> {
+    if (!this.coordinator) {
+      const error = new Error('Coordinator not available');
+      this.errorHandlers.forEach(handler => {
+        try {
+          handler(error);
+        } catch (err) {
+          this.logger.error('Error in error handler:', err);
+        }
+      });
+      throw error;
+    }
+
+    try {
+      // Trigger message handlers
+      this.messageHandlers.forEach(handler => {
+        try {
+          handler(message);
+        } catch (error) {
+          this.logger.error('Error in message handler:', error);
+          this.errorHandlers.forEach(errorHandler => {
+            try {
+              errorHandler(error);
+            } catch (err) {
+              this.logger.error('Error in error handler:', err);
+            }
+          });
+        }
+      });
+
+      // Process the message using the existing logic
+      await this.receiveMessage(message, this.coordinator);
+    } catch (error) {
+      this.errorHandlers.forEach(handler => {
+        try {
+          handler(error);
+        } catch (err) {
+          this.logger.error('Error in error handler:', err);
+        }
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Send message to extension (for test compatibility)
+   */
+  public async sendToExtension(message: unknown): Promise<void> {
+    if (!this.coordinator) {
+      throw new Error('Coordinator not available');
+    }
+
+    this.coordinator.postMessageToExtension(message);
+  }
+
+  /**
+   * Send message to extension with retry (for test compatibility)
+   */
+  public async sendToExtensionWithRetry(message: unknown, options?: { maxRetries?: number }): Promise<void> {
+    const maxRetries = options?.maxRetries ?? 3;
+    let attempt = 0;
+
+    while (attempt < maxRetries) {
+      try {
+        await this.sendToExtension(message);
+        return;
+      } catch (error) {
+        attempt++;
+        if (attempt >= maxRetries) {
+          throw error;
+        }
+        // Wait before retry
+        await new Promise(resolve => setTimeout(resolve, 100 * attempt));
+      }
+    }
+  }
+
+  /**
    * Resource cleanup and disposal
    */
   public dispose(): void {
     this.logger.info('Disposing RefactoredMessageManager');
+
+    // Clear message handlers
+    this.messageHandlers = [];
+    this.errorHandlers = [];
 
     // Dispose MessageQueue - this will clean up all queued messages and processing
     this.messageQueue.dispose();

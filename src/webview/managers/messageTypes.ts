@@ -29,11 +29,20 @@ export enum MessageType {
   SESSION = 'session',
   CONFIG = 'config',
   STATUS = 'status',
-  SYSTEM = 'system'
+  SYSTEM = 'system',
+  // Legacy message types for backward compatibility
+  TERMINAL_OUTPUT = 'terminalOutput',
+  TERMINAL_INPUT = 'terminalInput',
+  CREATE_TERMINAL = 'createTerminal',
+  TERMINAL_CREATED = 'terminalCreated',
+  DELETE_TERMINAL = 'deleteTerminal',
+  REQUEST_STATE = 'requestState',
+  STATE_UPDATE = 'stateUpdate'
 }
 
 export interface ExtensionMessage {
   command: string;
+  type?: MessageType | string;
   data?: MessagePayload;
   timestamp?: number;
 }
@@ -41,6 +50,7 @@ export interface ExtensionMessage {
 export interface WebviewMessage {
   type: MessageType;
   command: string;
+  data?: MessagePayload;
   payload?: MessagePayload;
 }
 

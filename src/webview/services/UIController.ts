@@ -30,6 +30,14 @@ export class UIController extends BaseManager implements IUIController {
     this.config = config;
   }
 
+  /**
+   * Public initialize method to satisfy interface
+   */
+  public override async initialize(): Promise<void> {
+    // Call the base manager initialization
+    this.doInitialize();
+  }
+
   protected doInitialize(): void {
     this.initializeUIElements();
     this.setupEventHandlers();

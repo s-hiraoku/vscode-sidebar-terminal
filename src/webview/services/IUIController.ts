@@ -43,6 +43,9 @@ export interface NotificationOptions {
  * UI Controller handles all visual aspects of the terminal interface
  */
 export interface IUIController {
+  // Initialization
+  initialize(): Promise<void>;
+
   // UI State Management
   updateTerminalTabs(terminalInfos: Array<{ id: string; number: number; isActive: boolean }>): void;
   updateActiveTerminalIndicator(terminalId: string | undefined): void;

@@ -42,6 +42,14 @@ export class TerminalCoordinator extends BaseManager implements ITerminalCoordin
     this.initializeEventListeners();
   }
 
+  /**
+   * Public initialize method to satisfy interface
+   */
+  public override async initialize(): Promise<void> {
+    // Call the base manager initialization
+    this.doInitialize();
+  }
+
   protected doInitialize(): void {
     this.logger('Terminal coordinator initialized');
   }
