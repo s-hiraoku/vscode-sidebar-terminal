@@ -5,6 +5,20 @@ All notable changes to the "Secondary Terminal" extension will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.92] - 2025-01-24
+
+### Added
+- **CodeRabbit Integration**: Added custom slash command for Claude Code to run CodeRabbit CLI reviews
+  - Smart mode selection: defaults to `--prompt-only` for AI agent integration
+  - Support for `--plain` mode for detailed human-readable feedback
+  - Flexible argument passing for custom CodeRabbit CLI flags
+  - Located in `.claude/commands/coderabbit.md` for seamless Claude Code integration
+
+### Fixed
+- **Input Manager**: Resolved merge conflict and logger inconsistencies in keyboard shortcut handling
+  - Fixed logger function calls from `.info()` and `.error()` methods to simple function calls
+  - Removed merge conflict markers that were preventing compilation
+
 ## [0.1.91] - 2025-01-24
 
 ### Added
