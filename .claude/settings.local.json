@@ -124,7 +124,8 @@
       "mcp__github-server__get_pull_request",
       "Bash(npm:*)",
       "Bash(npx @vscode/vsce ls:*)",
-      "mcp__serena__insert_before_symbol"
+      "mcp__serena__insert_before_symbol",
+      "mcp__github-server__get_pull_request_review_comments"
     ],
     "deny": []
   },
