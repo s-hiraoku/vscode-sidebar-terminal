@@ -34,7 +34,7 @@ export class UIManager extends BaseManager implements IUIManager {
   private headerElementsCache = new Map<string, TerminalHeaderElements>();
 
   // Event registry for proper cleanup
-  protected override eventRegistry: EventHandlerRegistry;
+  protected eventRegistry: EventHandlerRegistry;
 
   constructor() {
     super('UIManager', {
@@ -45,6 +45,27 @@ export class UIManager extends BaseManager implements IUIManager {
 
     // Initialize event registry
     this.eventRegistry = new EventHandlerRegistry();
+  }
+
+  /**
+   * Initialize the UIManager (BaseManager abstract method implementation)
+   */
+  protected doInitialize(): void {
+    this.logger('🚀 UIManager initialized');
+  }
+
+  /**
+   * Dispose UIManager resources (BaseManager abstract method implementation)
+   */
+  protected doDispose(): void {
+    this.logger('🧹 Disposing UIManager resources');
+
+    // Clear caches
+    this.currentTheme = null;
+    this.themeApplied = false;
+    this.headerElementsCache.clear();
+
+    this.logger('✅ UIManager resources disposed');
   }
 
   /**

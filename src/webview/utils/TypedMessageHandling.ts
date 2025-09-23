@@ -59,7 +59,7 @@ export type MessagePayload =
 
 export type TypedMessageHandler<T extends MessagePayload = MessagePayload> = (
   data: T
-) => Promise<MessageProcessingResult> | MessageProcessingResult;
+) => Promise<void> | void;
 
 export interface TypedMessageRegistration<T extends MessagePayload = MessagePayload> {
   readonly command: string;
@@ -136,10 +136,10 @@ export class TypedMessageRouter {
   public registerHandler<T extends MessagePayload>(
     registration: TypedMessageRegistration<T>
   ): void {
-    this.handlers.set(registration.command, registration.handler);
+    this.handlers.set(registration.command, registration.handler as TypedMessageHandler<MessagePayload>);
 
     if (registration.validator) {
-      this.validators.set(registration.command, registration.validator);
+      this.validators.set(registration.command, registration.validator as MessageDataValidator<MessagePayload>);
     }
 
     this.logger(`✅ Registered handler for command: "${registration.command}"`);

@@ -244,7 +244,7 @@ export class TerminalLifecycleService {
       }
 
       // Fallback to platform default
-      const defaultShell = getShellForPlatform(process.platform);
+      const defaultShell = getShellForPlatform();
       log(`📋 [LifecycleService] Using default shell: ${defaultShell}`);
 
       return {

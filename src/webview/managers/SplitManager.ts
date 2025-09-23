@@ -27,6 +27,34 @@ export class SplitManager extends BaseManager {
     this.splitManagerLogger.lifecycle('initialization', 'starting');
   }
 
+  /**
+   * Initialize the SplitManager (BaseManager abstract method implementation)
+   */
+  protected doInitialize(): void {
+    this.splitManagerLogger.lifecycle('initialization', 'completed');
+  }
+
+  /**
+   * Dispose SplitManager resources (BaseManager abstract method implementation)
+   */
+  protected doDispose(): void {
+    this.splitManagerLogger.lifecycle('disposal', 'starting');
+
+    // Clear all terminals and containers
+    this.terminals.clear();
+    this.terminalContainers.clear();
+    this.splitTerminals.clear();
+
+    // Reset split state
+    this.isSplitMode = false;
+    this.splitDirection = null;
+
+    this.splitManagerLogger.lifecycle('disposal', 'completed');
+  }
+
+  // Internal coordinator reference
+  private coordinator: any = null;
+
   // Split functionality
   public isSplitMode = false;
   private splitDirection: 'horizontal' | 'vertical' | null = null;

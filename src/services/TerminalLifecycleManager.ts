@@ -327,7 +327,7 @@ export class TerminalLifecycleManager implements ITerminalLifecycleManager {
    */
   private createPtyProcess(config: Record<string, unknown>): unknown {
     const terminalConfig = getTerminalConfig();
-    const shell = getShellForPlatform(terminalConfig.shell);
+    const shell = terminalConfig.shell || getShellForPlatform();
     const cwd = getWorkingDirectory();
 
     const configEnv = config.env as Record<string, string> | undefined;

@@ -70,7 +70,7 @@ describe('TypedMessageHandling - 型安全なメッセージシステム', () =>
       });
 
       it('should handle null and undefined input gracefully', () => {
-        const validator = new MessageDataValidator(['field'], mockLogger);
+        const validator = new MessageDataValidator<Record<string, unknown>>(['field'], mockLogger);
 
         expect(validator.validate(null).isValid).to.be.false;
         expect(validator.validate(undefined).isValid).to.be.false;
@@ -573,7 +573,7 @@ describe('TypeScript Type Safety Verification', () => {
         // TypeScript should enforce that data has terminalId property
         const terminalId: string = data.terminalId;
         expect(terminalId).to.be.a('string');
-        return { success: true, command: MESSAGE_COMMANDS.TERMINAL_CREATE, processingTimeMs: 0 };
+        // Handlers should not return anything (void)
       }
     });
 

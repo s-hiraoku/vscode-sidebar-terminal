@@ -1,25 +1,35 @@
 /**
  * メッセージハンドリングユーティリティ
  * Extension ↔ WebView間の85%重複を削減
+ * TypedMessageHandling.tsとの移行ブリッジ（廃止予定）
  */
 
-export type MessageHandler<T = any> = (data: T) => Promise<void> | void;
+import {
+  TypedMessageHandler,
+  MessagePayload,
+  LoggerFunction,
+  VSCodeWebviewAPI,
+  MESSAGE_COMMANDS
+} from './TypedMessageHandling';
 
-export interface MessageRegistration {
+export type MessageHandler<T extends MessagePayload = MessagePayload> = TypedMessageHandler<T>;
+
+export interface MessageRegistration<T extends MessagePayload = MessagePayload> {
   command: string;
-  handler: MessageHandler;
+  handler: MessageHandler<T>;
   description?: string;
 }
 
 /**
- * メッセージハンドラー登録パターンの統一クラス
+ * メッセージハンドラー登録パターンの統一クラス（廃止予定）
+ * 新規実装ではTypedMessageRouterを使用してください
  */
 export class MessageRouter {
   private handlers = new Map<string, MessageHandler>();
-  private logger: (message: string, ...args: any[]) => void;
+  private logger: LoggerFunction;
 
   constructor(private componentName: string) {
-    this.logger = (message: string, ...args: any[]) => {
+    this.logger = (message: string, ...args: unknown[]) => {
       console.log(`[${this.componentName.toUpperCase()}-ROUTER]`, message, ...args);
     };
   }
@@ -43,7 +53,7 @@ export class MessageRouter {
   /**
    * メッセージをルーティング
    */
-  public async route(command: string, data: any): Promise<boolean> {
+  public async route(command: string, data: MessagePayload): Promise<boolean> {
     const handler = this.handlers.get(command);
     if (!handler) {
       this.logger(`❌ No handler found for command: ${command}`);
@@ -100,16 +110,17 @@ export function createWebViewMessageListener(
 }
 
 /**
- * WebView → Extension メッセージ送信ヘルパー
+ * WebView → Extension メッセージ送信ヘルパー（廃止予定）
+ * 新規実装ではTypedMessageSenderを使用してください
  */
 export class MessageSender {
-  private logger: (message: string, ...args: any[]) => void;
+  private logger: LoggerFunction;
 
   constructor(
-    private vscode: any,
+    private vscode: VSCodeWebviewAPI,
     private componentName: string
   ) {
-    this.logger = (message: string, ...args: any[]) => {
+    this.logger = (message: string, ...args: unknown[]) => {
       console.log(`[${this.componentName.toUpperCase()}-SENDER]`, message, ...args);
     };
   }
@@ -117,7 +128,7 @@ export class MessageSender {
   /**
    * コマンドメッセージを送信
    */
-  public send(command: string, data: any = {}): void {
+  public send(command: string, data: MessagePayload = {}): void {
     try {
       const message = { command, ...data };
       this.vscode.postMessage(message);
@@ -130,7 +141,7 @@ export class MessageSender {
   /**
    * 複数メッセージを順次送信
    */
-  public sendSequential(messages: Array<{ command: string; data?: any }>): void {
+  public sendSequential(messages: Array<{ command: string; data?: MessagePayload }>): void {
     messages.forEach(({ command, data }) => {
       this.send(command, data);
     });
@@ -142,7 +153,7 @@ export class MessageSender {
   public sendIf(
     condition: boolean | (() => boolean),
     command: string,
-    data: any = {}
+    data: MessagePayload = {}
   ): void {
     const shouldSend = typeof condition === 'function' ? condition() : condition;
     if (shouldSend) {
@@ -152,38 +163,40 @@ export class MessageSender {
 }
 
 /**
- * 共通メッセージパターンの定数
+ * 共通メッセージパターンの定数（廃止予定）
+ * 新規実装ではMESSAGE_COMMANDSを使用してください
  */
 export const COMMON_COMMANDS = {
   // ターミナル操作
-  CREATE_TERMINAL: 'createTerminal',
-  DELETE_TERMINAL: 'deleteTerminal',
-  SET_ACTIVE_TERMINAL: 'setActiveTerminal',
+  CREATE_TERMINAL: MESSAGE_COMMANDS.TERMINAL_CREATE,
+  DELETE_TERMINAL: MESSAGE_COMMANDS.TERMINAL_DELETE,
+  SET_ACTIVE_TERMINAL: MESSAGE_COMMANDS.TERMINAL_SET_ACTIVE,
 
   // 出力・入力
-  OUTPUT: 'output',
-  INPUT: 'input',
-  CLEAR: 'clear',
+  OUTPUT: MESSAGE_COMMANDS.TERMINAL_OUTPUT,
+  INPUT: MESSAGE_COMMANDS.TERMINAL_INPUT,
+  CLEAR: MESSAGE_COMMANDS.TERMINAL_CLEAR,
 
   // 状態管理
-  INIT: 'init',
-  RESIZE: 'resize',
-  STATE_UPDATE: 'stateUpdate',
+  INIT: MESSAGE_COMMANDS.STATE_INIT,
+  RESIZE: MESSAGE_COMMANDS.TERMINAL_RESIZE,
+  STATE_UPDATE: MESSAGE_COMMANDS.STATE_UPDATE,
 
   // セッション管理
-  SESSION_RESTORE: 'sessionRestore',
-  EXTRACT_SCROLLBACK: 'extractScrollbackData',
+  SESSION_RESTORE: MESSAGE_COMMANDS.SESSION_RESTORE,
+  EXTRACT_SCROLLBACK: MESSAGE_COMMANDS.SESSION_EXTRACT_SCROLLBACK,
 
   // 設定・テーマ
-  THEME_UPDATE: 'themeUpdate',
-  CONFIG_UPDATE: 'configUpdate',
+  THEME_UPDATE: MESSAGE_COMMANDS.THEME_UPDATE,
+  CONFIG_UPDATE: MESSAGE_COMMANDS.CONFIG_UPDATE,
 } as const;
 
 /**
- * メッセージデータの型安全なバリデーター
+ * メッセージデータの型安全なバリデーター（廃止予定）
+ * 新規実装ではMessageDataValidatorを使用してください
  */
 export class MessageValidator {
-  private static logger = (message: string, ...args: any[]) => {
+  private static logger: LoggerFunction = (message: string, ...args: unknown[]) => {
     console.log('[MESSAGE-VALIDATOR]', message, ...args);
   };
 
@@ -191,7 +204,7 @@ export class MessageValidator {
    * 必須フィールドをチェック
    */
   public static validateRequired(
-    data: any,
+    data: Record<string, unknown>,
     requiredFields: string[]
   ): { isValid: boolean; missingFields: string[] } {
     const missingFields = requiredFields.filter(field => !(field in data));
@@ -207,7 +220,7 @@ export class MessageValidator {
   /**
    * ターミナルIDの形式チェック
    */
-  public static validateTerminalId(terminalId: any): boolean {
+  public static validateTerminalId(terminalId: unknown): boolean {
     const isValid = typeof terminalId === 'string' && terminalId.length > 0;
     if (!isValid) {
       this.logger(`❌ Invalid terminal ID:`, terminalId);
@@ -219,7 +232,7 @@ export class MessageValidator {
    * 数値範囲チェック
    */
   public static validateRange(
-    value: any,
+    value: unknown,
     min: number,
     max: number
   ): boolean {
