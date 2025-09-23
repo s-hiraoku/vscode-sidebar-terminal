@@ -14,7 +14,7 @@
  * - Resource cleanup and memory management
  */
 
-import * as assert as _assert from 'assert';
+import * as _assert from 'assert';
 import * as sinon from 'sinon';
 import { expect } from 'chai';
 
