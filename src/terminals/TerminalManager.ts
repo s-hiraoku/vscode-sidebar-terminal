@@ -10,6 +10,8 @@ import {
   TerminalState,
   TerminalInfo,
   DeleteResult,
+  ProcessState,
+  InteractionState,
 } from '../types/shared';
 import { TERMINAL_CONSTANTS, ERROR_MESSAGES } from '../constants';
 import { ShellIntegrationService } from '../services/ShellIntegrationService';
@@ -990,6 +992,118 @@ export class TerminalManager {
   }
 
   /**
+   * Notify process state changes for better lifecycle tracking
+   * Based on VS Code's process state management patterns
+   */
+  private _notifyProcessStateChange(terminal: TerminalInstance, newState: ProcessState): void {
+    const previousState = terminal.processState;
+
+    log(
+      `🔄 [PROCESS-STATE] Terminal ${terminal.id} state change:`,
+      `${previousState !== undefined ? ProcessState[previousState] : 'undefined'} → ${ProcessState[newState]}`
+    );
+
+    // Fire process state change event for monitoring and debugging
+    this._stateUpdateEmitter.fire({
+      type: 'processStateChange',
+      terminalId: terminal.id,
+      previousState,
+      newState,
+      timestamp: Date.now()
+    } as any);
+
+    // Handle state-specific actions
+    this._handleProcessStateActions(terminal, newState, previousState);
+  }
+
+  /**
+   * Handle actions based on process state changes
+   */
+  private _handleProcessStateActions(
+    terminal: TerminalInstance,
+    newState: ProcessState,
+    previousState?: ProcessState
+  ): void {
+    switch (newState) {
+      case ProcessState.Launching:
+        // Setup launch timeout monitoring
+        this._setupLaunchTimeout(terminal);
+        break;
+
+      case ProcessState.Running:
+        // Clear any launch timeouts
+        this._clearLaunchTimeout(terminal);
+        break;
+
+      case ProcessState.KilledDuringLaunch:
+        log(`⚠️ [PROCESS] Terminal ${terminal.id} killed during launch - potential configuration issue`);
+        this._handleLaunchFailure(terminal);
+        break;
+
+      case ProcessState.KilledByUser:
+        log(`ℹ️ [PROCESS] Terminal ${terminal.id} killed by user request`);
+        break;
+
+      case ProcessState.KilledByProcess:
+        log(`⚠️ [PROCESS] Terminal ${terminal.id} process terminated unexpectedly`);
+        this._attemptProcessRecovery(terminal);
+        break;
+    }
+  }
+
+  /**
+   * Setup launch timeout monitoring
+   */
+  private _setupLaunchTimeout(terminal: TerminalInstance): void {
+    const timeoutMs = 10000; // 10 seconds timeout
+
+    setTimeout(() => {
+      if (terminal.processState === ProcessState.Launching) {
+        log(`⏰ [PROCESS] Terminal ${terminal.id} launch timeout - marking as failed`);
+        terminal.processState = ProcessState.KilledDuringLaunch;
+        this._notifyProcessStateChange(terminal, ProcessState.KilledDuringLaunch);
+      }
+    }, timeoutMs);
+  }
+
+  /**
+   * Clear launch timeout (if any)
+   */
+  private _clearLaunchTimeout(terminal: TerminalInstance): void {
+    // Implementation would clear any active timeout for this terminal
+    // For now, just log the successful launch
+    log(`✅ [PROCESS] Terminal ${terminal.id} launched successfully`);
+  }
+
+  /**
+   * Handle launch failure with recovery options
+   */
+  private _handleLaunchFailure(terminal: TerminalInstance): void {
+    log(`🚨 [RECOVERY] Terminal ${terminal.id} failed to launch, attempting recovery...`);
+
+    // For now, log the failure. In a full implementation, this could:
+    // 1. Try alternative shell configurations
+    // 2. Suggest profile changes to the user
+    // 3. Provide diagnostic information
+    showWarningMessage(
+      `Terminal ${terminal.name} failed to launch. Check your shell configuration.`
+    );
+  }
+
+  /**
+   * Attempt process recovery for unexpected terminations
+   */
+  private _attemptProcessRecovery(terminal: TerminalInstance): void {
+    if (terminal.shouldPersist && terminal.persistentProcessId) {
+      log(`🔄 [RECOVERY] Attempting recovery for persistent terminal ${terminal.id}`);
+      // Implementation would attempt to reconnect to persistent process
+      // For now, just log the recovery attempt
+    } else {
+      log(`ℹ️ [RECOVERY] Terminal ${terminal.id} terminated normally (no recovery needed)`);
+    }
+  }
+
+  /**
    * 安全なターミナルキル（削除前の検証付き、後方互換性のため維持）
    * 常にアクティブターミナルをkillする
    * @deprecated Use deleteTerminal() with active terminal ID
@@ -1426,8 +1540,18 @@ export class TerminalManager {
   private _setupTerminalEvents(terminal: TerminalInstance): void {
     const { id: terminalId, ptyProcess } = terminal;
 
+    // Initialize process state
+    terminal.processState = ProcessState.Launching;
+    this._notifyProcessStateChange(terminal, ProcessState.Launching);
+
     // Set up data event handler with CLI agent detection and shell integration
     (ptyProcess as any).onData((data: string) => {
+      // Update process state to running on first data
+      if (terminal.processState === ProcessState.Launching) {
+        terminal.processState = ProcessState.Running;
+        this._notifyProcessStateChange(terminal, ProcessState.Running);
+      }
+
       // 🔍 DEBUGGING: Log all PTY data to identify shell prompt issues
       log(
         `📤 [PTY-DATA] Terminal ${terminalId} received ${data.length} chars:`,
@@ -1451,11 +1575,25 @@ export class TerminalManager {
     (ptyProcess as any).onExit((event: number | { exitCode: number; signal?: number }) => {
       const exitCode = typeof event === 'number' ? event : event.exitCode;
       const signal = typeof event === 'object' ? event.signal : undefined;
+
+      // Update process state based on exit conditions
+      if (terminal.processState === ProcessState.Launching) {
+        terminal.processState = ProcessState.KilledDuringLaunch;
+      } else if (this._terminalBeingKilled.has(terminalId)) {
+        terminal.processState = ProcessState.KilledByUser;
+      } else {
+        terminal.processState = ProcessState.KilledByProcess;
+      }
+
+      this._notifyProcessStateChange(terminal, terminal.processState);
+
       log(
         '🚪 [DEBUG] PTY process exited:',
         exitCode,
         'signal:',
         signal,
+        'state:',
+        ProcessState[terminal.processState],
         'for terminal:',
         terminalId
       );
