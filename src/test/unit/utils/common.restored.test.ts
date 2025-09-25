@@ -261,7 +261,7 @@ describe('Restored Common Functions - TDD Suite', () => {
 
       // Simulate configuration error scenario
       if (!config || !config.shell) {
-        const errorResult = await showErrorMessage(
+        await showErrorMessage(
           'Terminal configuration is invalid',
           'Retry',
           'Cancel'

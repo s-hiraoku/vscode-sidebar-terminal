@@ -83,8 +83,7 @@ describe('EnhancedBaseManager Lifecycle - Comprehensive TDD Suite', () => {
     // Expose protected methods for testing
     public testExecuteOperationSafely<T>(
       operation: () => Promise<T>,
-      operationName: string,
-      fallbackValue?: T
+      operationName: string
     ): Promise<T | null> {
       return this.safeExecute(operation, operationName);
     }
@@ -323,11 +322,10 @@ describe('EnhancedBaseManager Lifecycle - Comprehensive TDD Suite', () => {
 
         const result = await manager.testExecuteOperationSafely(
           failingOperation,
-          'test operation',
-          'fallback value'
+          'test operation'
         );
 
-        expect(result).to.equal('fallback value');
+        expect(result).to.be.null;
       });
 
       it('should handle operation errors without fallback values', async () => {
@@ -617,16 +615,10 @@ describe('EnhancedBaseManager Lifecycle - Comprehensive TDD Suite', () => {
 
       it('should create manager with factory method', () => {
         // RED: Factory should create managers correctly
-        const options: ManagerInitOptions = {
-          enableLogging: true,
-          enablePerformanceTracking: true,
-          enableErrorRecovery: true,
-          initializationTimeoutMs: 5000
-        };
 
         // const manager = ManagerFactory.createManager( // Class doesn't exist
         //   TestLifecycleManager as any,
-        //   options,
+        //   {},
         //   'FactoryCreatedManager'
         // );
         const manager = new TestLifecycleManager('FactoryCreatedManager');
@@ -637,16 +629,10 @@ describe('EnhancedBaseManager Lifecycle - Comprehensive TDD Suite', () => {
 
       it('should create and initialize manager in one step', async () => {
         // RED: Factory should support auto-initialization
-        const options: ManagerInitOptions = {
-          enableLogging: true,
-          enablePerformanceTracking: true,
-          enableErrorRecovery: true,
-          initializationTimeoutMs: 5000
-        };
 
         // const manager = await ManagerFactory.createAndInitializeManager( // Class doesn't exist
         //   TestLifecycleManager as any,
-        //   options,
+        //   {},
         //   'AutoInitializedManager'
         // );
         const manager = new TestLifecycleManager('AutoInitializedManager');

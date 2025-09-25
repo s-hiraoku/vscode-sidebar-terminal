@@ -574,7 +574,7 @@ export class CodeQualityManager {
     }
 
     const metrics = this.calculateOverallMetrics(fileReports, allIssues);
-    const suggestions = this.generateSuggestions(metrics, allIssues);
+    const suggestions = this.generateSuggestions(metrics);
 
     const report: QualityReport = {
       timestamp: Date.now(),
@@ -689,8 +689,7 @@ export class CodeQualityManager {
    * 改善提案生成
    */
   private generateSuggestions(
-    metrics: QualityMetrics,
-    issues: QualityIssue[]
+    metrics: QualityMetrics
   ): QualitySuggestion[] {
     const suggestions: QualitySuggestion[] = [];
 

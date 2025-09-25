@@ -40,7 +40,7 @@ describe('Terminal History Management - Regression Tests', () => {
         ]),
         deletionInProgress: new Set(),
 
-        async deleteTerminal(terminalId: string, options: { force?: boolean } = {}) {
+        async deleteTerminal(terminalId: string) {
           // FIXED: Add deletion state tracking to prevent concurrent operations
           if (this.deletionInProgress.has(terminalId)) {
             return {

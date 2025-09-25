@@ -173,7 +173,7 @@ export class RefactoredWebviewCoordinator {
         return await this.terminalCoordinator.createTerminal(options);
       },
 
-      deleteTerminal: async (terminalId: string, force: boolean) => {
+      deleteTerminal: async (terminalId: string) => {
         return await this.terminalCoordinator.removeTerminal(terminalId);
       },
 
@@ -193,7 +193,7 @@ export class RefactoredWebviewCoordinator {
         return this.terminalCoordinator.getActiveTerminalId();
       },
 
-      getWorkingDirectory: async (terminalId: string) => {
+      getWorkingDirectory: async () => {
         // This would need to be implemented based on actual requirements
         return process.cwd();
       }
@@ -260,7 +260,6 @@ export class RefactoredWebviewCoordinator {
    */
   private updateUIState(): void {
     const terminalInfos = this.terminalCoordinator.getAllTerminalInfos();
-    const activeTerminalId = this.terminalCoordinator.getActiveTerminalId();
     const terminalCount = this.terminalCoordinator.getTerminalCount();
     const availableSlots = this.terminalCoordinator.getAvailableSlots();
 

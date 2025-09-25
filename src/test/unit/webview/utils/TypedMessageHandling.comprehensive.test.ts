@@ -21,14 +21,8 @@ import {
   TypedMessageSender,
   createTypedMessageEventListener,
   TerminalMessageData,
-  SessionMessageData,
-  ConfigurationMessageData,
-  StatusMessageData,
-  MessagePayload,
   TypedMessageHandler,
   TypedMessageRegistration,
-  ValidatedData,
-  MessageProcessingResult,
   MESSAGE_COMMANDS,
   LoggerFunction
 } from '../../../../webview/utils/TypedMessageHandling';

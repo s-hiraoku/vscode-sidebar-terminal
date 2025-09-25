@@ -581,7 +581,7 @@ export class PerformanceLogger {
 /**
  * メソッドログデコレーター
  */
-export function LogMethod(level: LogLevel = LogLevel.DEBUG) {
+export function LogMethod() {
   return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
     const originalMethod = descriptor.value;
     const className = target.constructor.name;
