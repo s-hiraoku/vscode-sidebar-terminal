@@ -296,21 +296,35 @@ export class RefactoredWebviewCoordinator {
   /**
    * Handle incoming messages from extension
    */
-  public async handleExtensionMessage(command: string, data: any): Promise<void> {
-    if (this.messageRouter.hasHandler(command)) {
-      const result = await this.messageRouter.routeMessage(command, data);
+  public async handleExtensionMessage(command: string, data: any): Promise<any> {
+    try {
+      if (this.messageRouter.hasHandler(command)) {
+        const result = await this.messageRouter.routeMessage(command, data);
 
-      if (!result.success) {
-        console.error(`Message handling failed for ${command}:`, result.error);
+        if (!result.success) {
+          console.error(`Message handling failed for ${command}:`, result.error);
 
-        this.uiController.showNotification({
-          type: 'error',
-          message: `Operation failed: ${result.error}`,
-          duration: 5000
-        });
+          this.uiController.showNotification({
+            type: 'error',
+            message: `Operation failed: ${result.error}`,
+            duration: 5000
+          });
+        }
+
+        return result;
+      } else {
+        console.warn(`No handler for command: ${command}`);
+        return {
+          success: false,
+          error: `No handler for command: ${command}`
+        };
       }
-    } else {
-      console.warn(`No handler for command: ${command}`);
+    } catch (error) {
+      console.error(`Unexpected error handling message ${command}:`, error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
     }
   }
 
@@ -360,6 +374,7 @@ export class RefactoredWebviewCoordinator {
       activeTerminalId: this.terminalCoordinator.getActiveTerminalId(),
       registeredCommands: this.messageRouter.getRegisteredCommands(),
       activeHandlers: this.messageRouter.getActiveHandlerCount(),
+      systemStatus: this.isInitialized ? 'READY' : 'INITIALIZING',
       isInitialized: this.isInitialized
     };
   }

@@ -58,7 +58,7 @@ describe('Service Integration Tests', () => {
       createTextNode: sandbox.stub().returns({ textContent: '' })
     } as unknown as Document;
 
-    global.window = {
+    (global as any).window = {
       setTimeout: global.setTimeout,
       clearTimeout: global.clearTimeout,
       setInterval: global.setInterval,
@@ -71,7 +71,7 @@ describe('Service Integration Tests', () => {
     } as unknown as Window;
 
     // Mock xterm.js Terminal and FitAddon
-    global.Terminal = sandbox.stub().returns({
+    (global as any).Terminal = sandbox.stub().returns({
       open: sandbox.stub(),
       write: sandbox.stub(),
       resize: sandbox.stub(),
@@ -84,7 +84,7 @@ describe('Service Integration Tests', () => {
       rows: 24
     });
 
-    global.FitAddon = sandbox.stub().returns({
+    (global as any).FitAddon = sandbox.stub().returns({
       fit: sandbox.stub(),
       propose: sandbox.stub().returns({ cols: 80, rows: 24 })
     });

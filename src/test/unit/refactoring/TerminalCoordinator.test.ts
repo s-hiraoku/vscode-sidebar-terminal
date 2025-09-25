@@ -248,7 +248,7 @@ describe('TerminalCoordinator Service', () => {
 
     it('should allow creating new terminals after removal', async () => {
       // Fill to capacity
-      const terminalId3 = await coordinator.createTerminal();
+      await coordinator.createTerminal();
       expect(coordinator.canCreateTerminal()).to.be.false;
 
       // Remove one
@@ -410,8 +410,8 @@ describe('TerminalCoordinator Service', () => {
       const allInfos = coordinator.getAllTerminalInfos();
 
       expect(allInfos).to.have.length(2);
-      expect(allInfos[0].id).to.equal(terminalId1);
-      expect(allInfos[1].id).to.equal(terminalId2);
+      expect(allInfos[0]?.id).to.equal(terminalId1);
+      expect(allInfos[1]?.id).to.equal(terminalId2);
     });
 
     it('should provide accurate state queries', () => {
@@ -464,7 +464,7 @@ describe('TerminalCoordinator Service', () => {
       expect(goodListener.called).to.be.true;
     });
 
-    it('should support multiple event types', () => {
+    it('should support multiple event types', async () => {
       const createdListener = sandbox.spy();
       const removedListener = sandbox.spy();
       const activatedListener = sandbox.spy();
@@ -479,7 +479,7 @@ describe('TerminalCoordinator Service', () => {
       expect(activatedListener.called).to.be.true;
 
       // Remove terminal (should trigger removed)
-      coordinator.removeTerminal(terminalId);
+      coordinator.removeTerminal(await terminalId);
       expect(removedListener.called).to.be.true;
     });
   });
@@ -488,8 +488,8 @@ describe('TerminalCoordinator Service', () => {
     it('should dispose cleanly', async () => {
       await coordinator.initialize();
 
-      const terminalId1 = await coordinator.createTerminal();
-      const terminalId2 = await coordinator.createTerminal();
+      await coordinator.createTerminal();
+      await coordinator.createTerminal();
 
       expect(coordinator.getTerminalCount()).to.equal(2);
 
@@ -520,17 +520,17 @@ describe('TerminalCoordinator Service', () => {
 
     it('should handle terminal creation failures gracefully', async () => {
       // Mock Terminal constructor to throw
-      const originalTerminal = global.Terminal;
-      global.Terminal = sandbox.stub().throws(new Error('Terminal creation failed'));
+      const originalTerminal = (global as any).Terminal;
+      (global as any).Terminal = sandbox.stub().throws(new Error('Terminal creation failed'));
 
       try {
         await coordinator.createTerminal();
         expect.fail('Should have propagated error');
       } catch (error) {
-        expect(error.message).to.include('Terminal creation failed');
+        expect((error as Error).message).to.include('Terminal creation failed');
         expect(coordinator.getTerminalCount()).to.equal(0);
       } finally {
-        global.Terminal = originalTerminal;
+        (global as any).Terminal = originalTerminal;
       }
     });
 

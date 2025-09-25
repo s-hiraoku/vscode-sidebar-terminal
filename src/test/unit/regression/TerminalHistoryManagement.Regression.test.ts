@@ -13,7 +13,6 @@
  * 3. Prevent similar regressions
  */
 
-import * as assert from 'assert';
 import * as sinon from 'sinon';
 import { expect } from 'chai';
 

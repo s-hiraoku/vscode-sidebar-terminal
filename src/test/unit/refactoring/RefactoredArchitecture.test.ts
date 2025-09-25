@@ -51,7 +51,7 @@ describe('Refactored Architecture', () => {
       expect(coordinator.getActiveTerminalId()).to.equal(terminalId);
 
       // Create another terminal
-      const terminalId2 = await coordinator.createTerminal();
+      await coordinator.createTerminal();
       expect(coordinator.getTerminalCount()).to.equal(2);
 
       // Remove a terminal
@@ -80,7 +80,7 @@ describe('Refactored Architecture', () => {
         await coordinator.createTerminal();
         expect.fail('Should have thrown error for terminal limit');
       } catch (error) {
-        expect(error.message).to.include('maximum');
+        expect((error as Error).message).to.include('maximum');
       }
     });
 
@@ -311,7 +311,7 @@ describe('Refactored Architecture', () => {
         handler.handle({ terminalId: 'test' } as any); // Missing 'input' field
         expect.fail('Should have thrown validation error');
       } catch (error) {
-        expect(error.message).to.include('Required field');
+        expect((error as Error).message).to.include('Required field');
       }
     });
   });
@@ -366,7 +366,7 @@ describe('Refactored Architecture', () => {
       await coordinator.initialize();
 
       const terminalId1 = await coordinator.createTerminal();
-      const terminalId2 = await coordinator.createTerminal();
+      await coordinator.createTerminal();
 
       await coordinator.switchToTerminal(terminalId1);
 
@@ -389,7 +389,7 @@ describe('Refactored Architecture', () => {
         await coordinator.createTerminal();
         expect.fail('Should have thrown error for terminal limit');
       } catch (error) {
-        expect(error.message).to.include('limit reached');
+        expect((error as Error).message).to.include('limit reached');
       }
     });
   });

@@ -7,9 +7,6 @@ import { describe, it, beforeEach, afterEach } from 'mocha';
 import { expect } from 'chai';
 import * as sinon from 'sinon';
 import { RefactoredWebviewCoordinator } from '../../../webview/RefactoredWebviewCoordinator';
-import { TerminalCoordinatorFactory as _TerminalCoordinatorFactory } from '../../../webview/services/TerminalCoordinator';
-import { UIControllerFactory as _UIControllerFactory } from '../../../webview/services/UIController';
-import { MessageRouterFactory as _MessageRouterFactory } from '../../../services/MessageRouter';
 
 describe('Refactored Architecture Integration Tests', () => {
   let sandbox: sinon.SinonSandbox;
@@ -77,8 +74,8 @@ describe('Refactored Architecture Integration Tests', () => {
       resize: sandbox.stub(),
       dispose: sandbox.stub(),
       focus: sandbox.stub(),
-      onData: sandbox.stub(),
-      onResize: sandbox.stub(),
+      onData: sandbox.stub().returns(sandbox.stub()),
+      onResize: sandbox.stub().returns(sandbox.stub()),
       loadAddon: sandbox.stub()
     });
 
@@ -95,6 +92,18 @@ describe('Refactored Architecture Integration Tests', () => {
     } as any;
 
     (global as any).Blob = sandbox.stub() as any;
+
+    // Mock Node.js process object for webview components that need it
+    if (typeof process === 'undefined') {
+      (global as any).process = {
+        cwd: sandbox.stub().returns('/test'),
+        env: {
+          NODE_ENV: 'test',
+          HOME: '/home/test',
+          USERPROFILE: 'C:\\Users\\test'
+        }
+      };
+    }
   }
 
   describe('Full System Initialization', () => {
@@ -229,7 +238,7 @@ describe('Refactored Architecture Integration Tests', () => {
         await coordinator.createTerminal();
         expect.fail('Should have thrown error');
       } catch (error) {
-        expect(error.message).to.include('limit reached');
+        expect((error as any).message).to.include('limit reached');
       }
 
       // Verify notification was shown
@@ -367,7 +376,7 @@ describe('Refactored Architecture Integration Tests', () => {
         await coordinator.createTerminal();
         expect.fail('Should have thrown error');
       } catch (error) {
-        expect(error.message).to.include('Terminal creation failed');
+        expect((error as any).message).to.include('Terminal creation failed');
       }
 
       // Restore and verify system still works

@@ -378,7 +378,13 @@ describe('UIController Service', () => {
         terminalCount: 3,
         availableSlots: 2,
         uptime: '5 minutes',
-        performanceMetrics: {},
+        performanceMetrics: {
+          memoryUsage: 50,
+          cpuUsage: 25,
+          renderFrames: 60,
+          averageResponseTime: 10,
+          bufferSize: 1024
+        },
         pendingOperations: ['create-terminal', 'delete-terminal']
       };
 
@@ -401,7 +407,13 @@ describe('UIController Service', () => {
         terminalCount: 0,
         availableSlots: 5,
         uptime: '0 seconds',
-        performanceMetrics: {},
+        performanceMetrics: {
+          memoryUsage: 30,
+          cpuUsage: 15,
+          renderFrames: 60,
+          averageResponseTime: 8,
+          bufferSize: 512
+        },
         pendingOperations: []
       };
 
@@ -417,7 +429,7 @@ describe('UIController Service', () => {
       const clickSpy = sandbox.spy();
 
       // Mock the created anchor element
-      createElementSpy.withArgs('a').returns({
+      (createElementSpy.withArgs('a') as any).returns({
         href: '',
         download: '',
         click: clickSpy
@@ -515,7 +527,7 @@ describe('UIController Service', () => {
 
       const actions = document.querySelectorAll('.notification-action');
       expect(actions.length).to.equal(2);
-      expect(actions[0].textContent).to.equal('Action 1');
+      expect(actions[0]?.textContent).to.equal('Action 1');
 
       (actions[0] as HTMLElement).click();
       expect(actionSpy.called).to.be.true;
@@ -658,11 +670,11 @@ describe('UIController Service', () => {
     });
 
     it('should resize terminal containers', () => {
-      const container1 = document.createElement('div');
+      const container1 = document.createElement('div') as any;
       container1.className = 'terminal-container';
       container1._terminal = { resize: sandbox.spy() };
 
-      const container2 = document.createElement('div');
+      const container2 = document.createElement('div') as any;
       container2.className = 'terminal-container';
       container2._terminal = { resize: sandbox.spy() };
 
@@ -703,7 +715,7 @@ describe('UIController Service', () => {
 
       const loadingOverlays = document.querySelectorAll('.loading-overlay');
       expect(loadingOverlays.length).to.equal(1);
-      expect(loadingOverlays[0].textContent).to.include('Loading 2...');
+      expect(loadingOverlays[0]?.textContent).to.include('Loading 2...');
     });
   });
 

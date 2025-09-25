@@ -25,7 +25,7 @@ describe('Refactored Architecture Performance Tests', () => {
     `;
 
     // Mock heavy DOM operations
-    global.Terminal = sandbox.stub().returns({
+    (global as any).Terminal = sandbox.stub().returns({
       open: sandbox.stub(),
       write: sandbox.stub(),
       resize: sandbox.stub(),
@@ -36,7 +36,7 @@ describe('Refactored Architecture Performance Tests', () => {
       loadAddon: sandbox.stub()
     });
 
-    global.FitAddon = sandbox.stub().returns({
+    (global as any).FitAddon = sandbox.stub().returns({
       fit: sandbox.stub(),
       propose: sandbox.stub()
     });
@@ -140,10 +140,12 @@ describe('Refactored Architecture Performance Tests', () => {
 
       for (let i = 0; i < 20; i++) {
         const targetId = terminalIds[i % terminalIds.length];
-        const startTime = performance.now();
-        await coordinator.switchToTerminal(targetId);
-        const duration = performance.now() - startTime;
-        switchTimes.push(duration);
+        if (targetId) {
+          const startTime = performance.now();
+          await coordinator.switchToTerminal(targetId);
+          const duration = performance.now() - startTime;
+          switchTimes.push(duration);
+        }
       }
 
       const averageTime = switchTimes.reduce((a, b) => a + b) / switchTimes.length;

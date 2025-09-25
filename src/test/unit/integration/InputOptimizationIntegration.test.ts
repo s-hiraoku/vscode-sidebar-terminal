@@ -71,7 +71,7 @@ describe('Input Optimization Integration', () => {
     inputManager = new InputManager();
     messageManager = new RefactoredMessageManager();
     performanceManager = new PerformanceManager();
-    performanceManager.initialize({ coordinator: mockCoordinator });
+    performanceManager.initialize();
 
     // Update coordinator to include all required managers
     mockCoordinator.getManagers.returns({

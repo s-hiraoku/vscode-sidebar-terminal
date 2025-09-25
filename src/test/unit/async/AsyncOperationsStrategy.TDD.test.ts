@@ -392,7 +392,7 @@ describe('Async Operations Strategy - TDD Implementation', () => {
           }
         }
 
-        private async restoreTerminal(terminalData: any): Promise<boolean> {
+        private async restoreTerminal(_terminalData: any): Promise<boolean> {
           // Simulate terminal restoration with possible failure
           await new Promise(resolve => setTimeout(resolve, 100));
           return Math.random() > 0.3; // 70% success rate
@@ -697,13 +697,13 @@ describe('Async Operations Strategy - TDD Implementation', () => {
 
       // Should have some failures and circuit should eventually open
       const failedResults = results.filter(r => !r.success);
-      const circuitOpenResults = results.filter(r => r.circuitOpen);
+      const _circuitOpenResults = results.filter(r => r.circuitOpen);
 
       expect(failedResults.length).to.be.greaterThan(0);
 
       // Test circuit recovery
       circuitBreakerService.reset();
-      const recoveryResult = await circuitBreakerService.performOperation();
+      const _recoveryResult = await circuitBreakerService.performOperation();
 
       // After reset, circuit should allow operations again
       expect(circuitBreakerService.getCircuitState().state).to.equal('CLOSED');

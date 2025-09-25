@@ -14,7 +14,6 @@
  * - Memory and resource management
  */
 
-import * as assert from 'assert';
 import * as sinon from 'sinon';
 import { expect } from 'chai';
 import { StandardTerminalSessionManager } from '../../../sessions/StandardTerminalSessionManager';

@@ -38,7 +38,10 @@ export enum MessageType {
   DELETE_TERMINAL = 'deleteTerminal',
   REQUEST_STATE = 'requestState',
   STATE_UPDATE = 'stateUpdate',
-  PING = 'ping'
+  PING = 'ping',
+  // Version negotiation message types (for tests)
+  VERSION_ANNOUNCEMENT = 'versionAnnouncement',
+  VERSION_NEGOTIATION = 'versionNegotiation'
 }
 
 export interface ExtensionMessage {
@@ -71,15 +74,3 @@ export {
   TerminalMessageData
 } from '../utils/TypedMessageHandling';
 
-// Define interfaces that were previously imported but unused
-export interface SessionMessageData {
-  [key: string]: unknown;
-}
-
-export interface ConfigurationMessageData {
-  [key: string]: unknown;
-}
-
-export interface StatusMessageData {
-  [key: string]: unknown;
-}

@@ -168,7 +168,7 @@ describe('Restored Common Functions - TDD Suite', () => {
       const message = 'Test error message';
       const items = ['OK', 'Cancel'];
 
-      const result = await showErrorMessage(message, ...items);
+      await showErrorMessage(message, ...items);
 
       expect(mockVscode.window.showErrorMessage).to.have.been.calledWith(message, ...items);
     });
@@ -208,7 +208,7 @@ describe('Restored Common Functions - TDD Suite', () => {
       const message = 'Test warning message';
       const items = ['Proceed', 'Cancel'];
 
-      const result = await showWarningMessage(message, ...items);
+      await showWarningMessage(message, ...items);
 
       expect(mockVscode.window.showWarningMessage).to.have.been.calledWith(message, ...items);
     });

@@ -14,7 +14,7 @@
  * - Error recovery scenarios
  */
 
-import * as assert from 'assert';
+import * as _assert from 'assert';
 import * as sinon from 'sinon';
 import { expect } from 'chai';
 
@@ -23,17 +23,17 @@ import '../../shared/TestSetup';
 
 describe('SecondaryTerminalProvider - Message Handling TDD Suite', () => {
   let sandbox: sinon.SinonSandbox;
-  let mockWebview: any;
-  let mockContext: any;
+  let _mockWebview: any;
+  let _mockContext: any;
   let mockTerminalManager: any;
   let mockSessionManager: any;
-  let provider: any; // Will be loaded dynamically to avoid import issues
+  let _provider: any; // Will be loaded dynamically to avoid import issues
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
 
     // Mock WebView
-    mockWebview = {
+    _mockWebview = {
       postMessage: sandbox.stub().resolves(),
       onDidReceiveMessage: sandbox.stub(),
       html: '',
@@ -44,7 +44,7 @@ describe('SecondaryTerminalProvider - Message Handling TDD Suite', () => {
     };
 
     // Mock VS Code context
-    mockContext = {
+    _mockContext = {
       extensionUri: { fsPath: '/mock/extension/path' },
       globalState: {
         get: sandbox.stub(),
@@ -171,7 +171,7 @@ describe('SecondaryTerminalProvider - Message Handling TDD Suite', () => {
         timestamp: Date.now(),
       };
 
-      const expectedResponse = {
+      const _expectedResponse = {
         command: 'sessionRestorationData',
         requestId: 'restore-123',
         terminalData: {
