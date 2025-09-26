@@ -5,6 +5,34 @@ All notable changes to the "Secondary Terminal" extension will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.94] - 2025-01-26
+
+### Added
+- **Comprehensive AI Agent Integration Guide**: Added detailed documentation for Claude Code, Gemini CLI, GitHub Copilot, and CodeRabbit CLI integration
+  - Step-by-step getting started guide with concrete examples
+  - Advanced multi-agent workflow documentation
+  - Troubleshooting section for common AI agent issues
+  - Pro tips for maximizing AI agent productivity
+- **CLI Coding Agent Era Positioning**: Enhanced marketing positioning to emphasize value for modern AI-assisted development
+- **Zenn Blog Article Integration**: Added references to comprehensive Japanese blog article for detailed usage examples
+
+### Improved
+- **Documentation Quality**: Completely revamped README.md with modern AI agent workflow focus
+  - Added "Why Secondary Terminal?" section explaining value proposition
+  - Enhanced file reference system documentation
+  - Improved keyboard shortcuts explanation with AI agent context
+- **Development Transparency**: Added clear development status notices to set appropriate user expectations
+  - Active development notice with bug acknowledgment
+  - Known limitations section for better user understanding
+  - Enhanced support section with clearer issue reporting guidance
+- **Marketplace Presence**: Updated package.json description and keywords for better discoverability
+  - Added TypeScript, production-ready, CodeRabbit CLI, slash command, code review keywords
+  - Enhanced description emphasizing AI agent integration capabilities
+
+### Changed
+- **License**: Updated copyright year to 2024-2025
+- **Contributing References**: Fixed non-existent CONTRIBUTING.md references to point to GitHub Issues
+
 ## [0.1.93] - 2025-01-26
 
 ### Fixed
