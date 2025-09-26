@@ -177,6 +177,15 @@ export interface ICliAgentDetectionService {
    * @returns True if errors were cleared successfully
    */
   clearDetectionError(terminalId: string): boolean;
+
+  /**
+   * 🔄 BACKWARD COMPATIBILITY: Set agent connected (delegates to state manager)
+   * This method maintains compatibility with existing tests and legacy code
+   * @param terminalId Terminal ID to set as connected
+   * @param type Agent type
+   * @param terminalName Optional terminal name
+   */
+  setAgentConnected(terminalId: string, type: 'claude' | 'gemini' | 'codex', terminalName?: string): void;
 }
 
 // =================== Pattern Detection Interface ===================

@@ -2,11 +2,13 @@
  * IME Handler - Manages Input Method Editor composition events
  * Based on VS Code's TextAreaInput pattern for accurate IME handling
  * Handles Japanese, Chinese, Korean and other complex input methods
+ * Now extends BaseInputHandler for improved architecture
  */
 
 import { IIMEHandler } from '../interfaces/IInputHandlers';
-import { BaseManager } from '../../BaseManager';
-import { EventHandlerRegistry } from '../../../utils/EventHandlerRegistry';
+import { BaseInputHandler } from './BaseInputHandler';
+import { InputStateManager, IMECompositionState } from '../services/InputStateManager';
+import { InputEventService } from '../services/InputEventService';
 
 /**
  * Composition context for tracking IME state
@@ -21,12 +23,9 @@ interface CompositionContext {
 
 /**
  * IME Handler for managing composition events
- * Implements VS Code standard TextAreaInput pattern
+ * Implements VS Code standard TextAreaInput pattern with new architecture
  */
-export class IMEHandler extends BaseManager implements IIMEHandler {
-  // Event handler registry for centralized event management
-  protected readonly eventRegistry = new EventHandlerRegistry();
-
+export class IMEHandler extends BaseInputHandler implements IIMEHandler {
   // IME composition state - VS Code standard pattern
   private compositionContext: CompositionContext | null = null;
 
@@ -36,50 +35,35 @@ export class IMEHandler extends BaseManager implements IIMEHandler {
   // Hidden textarea reference for IME positioning (VS Code pattern)
   private hiddenTextarea: HTMLTextAreaElement | null = null;
 
-  // Reference to parent's debounce timers for cleanup
-  private eventDebounceTimers: Map<string, number>;
+  // State manager for unified state management
+  private stateManager: InputStateManager;
 
-  constructor(eventDebounceTimers: Map<string, number>) {
-    super('IMEHandler', {
-      enableLogging: true,
-      enableValidation: true,
-      enableErrorRecovery: true,
+  // Event service for centralized event handling
+  private eventService: InputEventService;
+
+  constructor(
+    eventDebounceTimers: Map<string, number>,
+    stateManager: InputStateManager,
+    eventService: InputEventService
+  ) {
+    super('IMEHandler', eventDebounceTimers, {
+      enableDebouncing: false, // IME events should not be debounced
+      enableStateTracking: true,
+      enableEventPrevention: false
     });
 
-    this.eventDebounceTimers = eventDebounceTimers;
-
-    // Logger is automatically provided by BaseManager
+    this.stateManager = stateManager;
+    this.eventService = eventService;
 
     this.logger('initialization', 'starting');
   }
 
   /**
-   * Initialize the IME handler (BaseManager abstract method implementation)
+   * Initialize the IME handler (BaseInputHandler abstract method implementation)
    */
-  protected doInitialize(): void {
+  protected override doInitialize(): void {
     this.setupIMEHandling();
     this.logger('IMEHandler', 'completed');
-  }
-
-  /**
-   * Dispose IME handler resources (BaseManager abstract method implementation)
-   */
-  protected doDispose(): void {
-    this.logger('disposal', 'starting');
-
-    // Clear composition context
-    this.compositionContext = null;
-    this.lastCompositionEvent = null;
-
-    // Remove hidden textarea
-    if (this.hiddenTextarea) {
-      document.body.removeChild(this.hiddenTextarea);
-      this.hiddenTextarea = null;
-    }
-
-    // EventHandlerRegistry dispose will be called by parent
-
-    this.logger('disposal', 'completed');
   }
 
   /**
@@ -98,138 +82,203 @@ export class IMEHandler extends BaseManager implements IIMEHandler {
     // Create hidden textarea for proper IME positioning (VS Code pattern)
     this.createHiddenTextarea();
 
-    const compositionStartHandler = (event: CompositionEvent): void => {
-      this.logger(`IME composition started: ${event.data || 'no data'}`);
-
-      // Create composition context (VS Code CompositionContext pattern)
-      this.compositionContext = {
-        data: event.data || '',
-        isActive: true,
-        startOffset: 0,
-        endOffset: 0
-      };
-
-      this.lastCompositionEvent = 'start';
-
-      // Clear any pending input events to avoid conflicts
-      this.clearPendingInputEvents();
-
-      // Position hidden textarea for accurate IME positioning
-      this.positionHiddenTextarea();
-    };
-
-    const compositionUpdateHandler = (event: CompositionEvent): void => {
-      this.logger(`IME composition update: ${event.data || 'no data'}`);
-
-      // Update composition context with new data
-      if (this.compositionContext) {
-        this.compositionContext.data = event.data || '';
-        this.compositionContext.isActive = true;
-      } else {
-        // Handle case where update comes without start (Android/some IMEs)
-        this.compositionContext = {
-          data: event.data || '',
-          isActive: true,
-          startOffset: 0,
-          endOffset: 0
-        };
-      }
-
-      this.lastCompositionEvent = 'update';
-    };
-
-    const compositionEndHandler = (event: CompositionEvent): void => {
-      this.logger(`IME composition ended: ${event.data || 'no data'}`);
-
-      // Update final composition data
-      if (this.compositionContext) {
-        this.compositionContext.data = event.data || '';
-        this.compositionContext.isActive = false;
-      }
-
-      this.lastCompositionEvent = 'end';
-
-      // Clear composition context after a brief delay to handle input events
-      // VS Code pattern: Allow input events to process before clearing
-      setTimeout(() => {
-        this.compositionContext = null;
-        this.lastCompositionEvent = null;
-        this.hideHiddenTextarea();
-      }, 0);
-    };
-
-    // Handle input events during composition (VS Code pattern)
-    const inputHandler = (event: InputEvent): void => {
-      // Only process input events during active composition
-      if (this.compositionContext?.isActive) {
-        this.logger(`Input during composition: ${event.data || 'no data'}, isComposing: ${event.isComposing}`);
-
-        // Update composition context with input data if available
-        if (event.data && this.compositionContext) {
-          this.compositionContext.data = event.data;
-        }
-      }
-    };
-
-    // Handle beforeinput events (VS Code pattern for better composition tracking)
-    const beforeInputHandler = (event: InputEvent): void => {
-      if (this.compositionContext?.isActive) {
-        this.logger(`Before input during composition: ${event.data || 'no data'}, isComposing: ${event.isComposing}`);
-      }
-    };
-
-    // Register IME event handlers using EventHandlerRegistry (VS Code pattern)
-    this.eventRegistry.register(
+    // Register composition events using the centralized event service
+    this.eventService.registerEventHandler(
       'ime-composition-start',
       document,
       'compositionstart',
-      compositionStartHandler as EventListener
+      this.handleCompositionStart.bind(this),
+      { preventDefault: false, stopPropagation: false }
     );
 
-    this.eventRegistry.register(
+    this.eventService.registerEventHandler(
       'ime-composition-update',
       document,
       'compositionupdate',
-      compositionUpdateHandler as EventListener
+      this.handleCompositionUpdate.bind(this),
+      { preventDefault: false, stopPropagation: false }
     );
 
-    this.eventRegistry.register(
+    this.eventService.registerEventHandler(
       'ime-composition-end',
       document,
       'compositionend',
-      compositionEndHandler as EventListener
+      this.handleCompositionEnd.bind(this),
+      { preventDefault: false, stopPropagation: false }
     );
 
     // Register input event handlers for composition tracking (VS Code pattern)
-    this.eventRegistry.register(
+    this.eventService.registerEventHandler(
       'ime-input',
       document,
       'input',
-      inputHandler as EventListener
+      this.handleInput.bind(this),
+      { preventDefault: false, stopPropagation: false }
     );
 
-    this.eventRegistry.register(
+    this.eventService.registerEventHandler(
       'ime-beforeinput',
       document,
       'beforeinput',
-      beforeInputHandler as EventListener
+      this.handleBeforeInput.bind(this),
+      { preventDefault: false, stopPropagation: false }
     );
 
     this.logger('IME handling', 'completed');
   }
 
   /**
+   * Handle composition start event
+   */
+  private handleCompositionStart(event: Event): void {
+    const compositionEvent = event as CompositionEvent;
+    this.logger(`IME composition started: ${compositionEvent.data || 'no data'}`);
+
+    // Create composition context (VS Code CompositionContext pattern)
+    this.compositionContext = {
+      data: compositionEvent.data || '',
+      isActive: true,
+      startOffset: 0,
+      endOffset: 0
+    };
+
+    this.lastCompositionEvent = 'start';
+
+    // Update state manager
+    this.stateManager.updateIMEState({
+      isActive: true,
+      data: compositionEvent.data || '',
+      startOffset: 0,
+      endOffset: 0,
+      lastEvent: 'start',
+      timestamp: Date.now()
+    });
+
+    // Clear any pending input events to avoid conflicts
+    this.clearPendingInputEvents();
+
+    // Position hidden textarea for accurate IME positioning
+    this.positionHiddenTextarea();
+  }
+
+  /**
+   * Handle composition update event
+   */
+  private handleCompositionUpdate(event: Event): void {
+    const compositionEvent = event as CompositionEvent;
+    this.logger(`IME composition update: ${compositionEvent.data || 'no data'}`);
+
+    // Update composition context with new data
+    if (this.compositionContext) {
+      this.compositionContext.data = compositionEvent.data || '';
+      this.compositionContext.isActive = true;
+    } else {
+      // Handle case where update comes without start (Android/some IMEs)
+      this.compositionContext = {
+        data: compositionEvent.data || '',
+        isActive: true,
+        startOffset: 0,
+        endOffset: 0
+      };
+    }
+
+    this.lastCompositionEvent = 'update';
+
+    // Update state manager
+    this.stateManager.updateIMEState({
+      isActive: true,
+      data: compositionEvent.data || '',
+      lastEvent: 'update',
+      timestamp: Date.now()
+    });
+  }
+
+  /**
+   * Handle composition end event
+   */
+  private handleCompositionEnd(event: Event): void {
+    const compositionEvent = event as CompositionEvent;
+    this.logger(`IME composition ended: ${compositionEvent.data || 'no data'}`);
+
+    // Update final composition data
+    if (this.compositionContext) {
+      this.compositionContext.data = compositionEvent.data || '';
+      this.compositionContext.isActive = false;
+    }
+
+    this.lastCompositionEvent = 'end';
+
+    // Update state manager
+    this.stateManager.updateIMEState({
+      isActive: false,
+      data: compositionEvent.data || '',
+      lastEvent: 'end',
+      timestamp: Date.now()
+    });
+
+    // Clear composition context after a brief delay to handle input events
+    // VS Code pattern: Allow input events to process before clearing
+    setTimeout(() => {
+      this.compositionContext = null;
+      this.lastCompositionEvent = null;
+      this.hideHiddenTextarea();
+
+      // Final state reset
+      this.stateManager.updateIMEState({
+        isActive: false,
+        data: '',
+        lastEvent: null,
+        timestamp: Date.now()
+      });
+    }, 0);
+  }
+
+  /**
+   * Handle input events during composition (VS Code pattern)
+   */
+  private handleInput(event: Event): void {
+    const inputEvent = event as InputEvent;
+
+    // Only process input events during active composition
+    if (this.compositionContext?.isActive) {
+      this.logger(`Input during composition: ${inputEvent.data || 'no data'}, isComposing: ${inputEvent.isComposing}`);
+
+      // Update composition context with input data if available
+      if (inputEvent.data && this.compositionContext) {
+        this.compositionContext.data = inputEvent.data;
+
+        // Update state manager
+        this.stateManager.updateIMEState({
+          data: inputEvent.data,
+          timestamp: Date.now()
+        });
+      }
+    }
+  }
+
+  /**
+   * Handle beforeinput events (VS Code pattern for better composition tracking)
+   */
+  private handleBeforeInput(event: Event): void {
+    const inputEvent = event as InputEvent;
+
+    if (this.compositionContext?.isActive) {
+      this.logger(`Before input during composition: ${inputEvent.data || 'no data'}, isComposing: ${inputEvent.isComposing}`);
+    }
+  }
+
+  /**
    * Check if IME is currently composing (VS Code standard pattern)
    */
   public isIMEComposing(): boolean {
-    return this.compositionContext?.isActive === true;
+    return this.stateManager.getStateSection('ime').isActive;
   }
 
   /**
    * Get current composition data
    */
   public getCompositionData(): string | null {
-    return this.compositionContext?.data || null;
+    return this.stateManager.getStateSection('ime').data || null;
   }
 
   /**
@@ -308,15 +357,12 @@ export class IMEHandler extends BaseManager implements IIMEHandler {
   }
 
   /**
-   * Dispose of all event listeners and cleanup resources
+   * Dispose IME handler resources (BaseInputHandler abstract method implementation)
    */
-  public override dispose(): void {
-    this.logger('Disposing IME handler');
+  protected override doDispose(): void {
+    this.logger('disposal', 'starting');
 
-    // Dispose EventHandlerRegistry - this will clean up all registered event listeners
-    this.eventRegistry.dispose();
-
-    // Clear composition state
+    // Clear composition context
     this.compositionContext = null;
     this.lastCompositionEvent = null;
 
@@ -330,7 +376,31 @@ export class IMEHandler extends BaseManager implements IIMEHandler {
       this.hiddenTextarea = null;
     }
 
+    // Reset IME state in state manager
+    this.stateManager.resetStateSection('ime');
+
+    // Unregister all events from event service
+    if (this.eventService) {
+      this.eventService.unregisterEventHandler('ime-composition-start');
+      this.eventService.unregisterEventHandler('ime-composition-update');
+      this.eventService.unregisterEventHandler('ime-composition-end');
+      this.eventService.unregisterEventHandler('ime-input');
+      this.eventService.unregisterEventHandler('ime-beforeinput');
+    }
+
     // Call parent dispose
+    super.doDispose();
+
+    this.logger('disposal', 'completed');
+  }
+
+  /**
+   * Dispose of all event listeners and cleanup resources
+   */
+  public override dispose(): void {
+    this.logger('Disposing IME handler');
+
+    // Call parent dispose which will call doDispose()
     super.dispose();
 
     this.logger('IMEHandler', 'completed');

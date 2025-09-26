@@ -12,10 +12,16 @@ import { EventHandlerRegistry } from '../utils/EventHandlerRegistry';
 // import { inputLogger } from '../utils/ManagerLogger';
 import { IMEHandler } from './input/handlers/IMEHandler';
 import { IIMEHandler } from './input/interfaces/IInputHandlers';
+import { InputStateManager } from './input/services/InputStateManager';
+import { InputEventService } from './input/services/InputEventService';
 
 export class InputManager extends BaseManager implements IInputManager {
   // Event handler registry for centralized event management
   protected readonly eventRegistry = new EventHandlerRegistry();
+
+  // New architecture services
+  private stateManager: InputStateManager;
+  private eventService: InputEventService;
 
   constructor() {
     super('InputManager', {
@@ -24,10 +30,16 @@ export class InputManager extends BaseManager implements IInputManager {
       enableErrorRecovery: true,
     });
 
-    // Logger is automatically provided by BaseManager
+    // Initialize new architecture services
+    this.stateManager = new InputStateManager((message: string) => this.logger(message));
+    this.eventService = new InputEventService((message: string) => this.logger(message));
 
-    // Initialize IME handler
-    this.imeHandler = new IMEHandler(this.eventDebounceTimers);
+    // Initialize IME handler with new architecture
+    this.imeHandler = new IMEHandler(
+      this.eventDebounceTimers,
+      this.stateManager,
+      this.eventService
+    );
 
     this.logger('initialization', 'starting');
   }
@@ -1020,12 +1032,21 @@ export class InputManager extends BaseManager implements IInputManager {
   /**
    * Update Alt+Click settings and state
    */
+  /**
+   * Update Alt+Click settings and state using unified state management
+   */
   public updateAltClickSettings(settings: PartialTerminalSettings): void {
     const wasEnabled = this.altClickState.isVSCodeAltClickEnabled;
     const isEnabled = this.isVSCodeAltClickEnabled(settings);
 
     if (wasEnabled !== isEnabled) {
       this.altClickState.isVSCodeAltClickEnabled = isEnabled;
+      
+      // Update unified state manager
+      this.stateManager.updateAltClickState({
+        isVSCodeAltClickEnabled: isEnabled
+      });
+
       this.logger(`Alt+Click setting changed: ${wasEnabled} → ${isEnabled}`);
 
       // Update cursor styles immediately
@@ -1043,8 +1064,11 @@ export class InputManager extends BaseManager implements IInputManager {
   /**
    * Check if IME is currently composing
    */
+  /**
+   * Check if IME is currently composing using unified state management
+   */
   public isIMEComposing(): boolean {
-    return this.imeHandler.isIMEComposing();
+    return this.stateManager.getStateSection('ime').isActive;
   }
 
   /**
@@ -1264,6 +1288,9 @@ export class InputManager extends BaseManager implements IInputManager {
   /**
    * Dispose InputManager resources (BaseManager abstract method implementation)
    */
+  /**
+   * Dispose InputManager resources (BaseManager abstract method implementation)
+   */
   protected doDispose(): void {
     this.logger('disposal', 'starting');
 
@@ -1285,6 +1312,15 @@ export class InputManager extends BaseManager implements IInputManager {
 
     // Dispose IME handler
     this.imeHandler.dispose();
+
+    // Dispose new architecture services
+    if (this.eventService) {
+      this.eventService.dispose();
+    }
+
+    if (this.stateManager) {
+      this.stateManager.dispose();
+    }
 
     // Reset VS Code keybinding system state
     this.sendKeybindingsToShell = false;
