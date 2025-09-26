@@ -11,7 +11,7 @@ import {
   DeleteResult,
   ProcessState,
 } from '../types/shared';
-import { TERMINAL_CONSTANTS, ERROR_MESSAGES } from '../constants';
+import { ERROR_MESSAGES } from '../constants';
 import { ShellIntegrationService } from '../services/ShellIntegrationService';
 import { TerminalProfileService } from '../services/TerminalProfileService';
 import { terminal as log } from '../utils/logger';

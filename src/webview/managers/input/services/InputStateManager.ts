@@ -449,7 +449,7 @@ export class InputStateManager {
    * Get state change history
    */
   public getStateHistory(limit = 10): typeof this.stateHistory {
-    return this.stateHistory.slice(-limit);
+    return JSON.parse(JSON.stringify(this.stateHistory.slice(-limit))); // Deep clone history
   }
 
   /**

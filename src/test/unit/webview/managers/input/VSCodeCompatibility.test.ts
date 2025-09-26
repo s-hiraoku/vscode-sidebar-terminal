@@ -11,12 +11,12 @@ import sinon from 'sinon';
 import { JSDOM } from 'jsdom';
 import {
   InputEventService,
-  EventHandlerConfig
+  EventHandlerConfig as _EventHandlerConfig
 } from '../../../../../webview/managers/input/services/InputEventService';
 import {
   InputStateManager,
-  AltClickState,
-  KeyboardState
+  AltClickState as _AltClickState,
+  KeyboardState as _KeyboardState
 } from '../../../../../webview/managers/input/services/InputStateManager';
 
 // Mock VS Code settings that affect terminal behavior
@@ -544,7 +544,7 @@ describe('VS Code Compatibility Pattern TDD Test Suite', () => {
           'terminal.integrated.commandsToSkipShell': ['ctrl+c', 'ctrl+d']
         });
 
-        const shellCallback = sinon.stub();
+        const _shellCallback = sinon.stub();
         const vscodeCallback = sinon.stub();
 
         vscodeIntegration.registerKeybindingCallback('ctrl+l', vscodeCallback);
@@ -756,7 +756,7 @@ describe('VS Code Compatibility Pattern TDD Test Suite', () => {
           { key: 'Tab', ctrlKey: true, expectFocusChange: true } // Should change tab/terminal
         ];
 
-        focusEvents.forEach(({ key, ctrlKey = false, expectFocusChange }) => {
+        focusEvents.forEach(({ key, ctrlKey = false, expectFocusChange: _expectFocusChange }) => {
           const keyEvent = new jsdom.window.KeyboardEvent('keydown', {
             key,
             ctrlKey,

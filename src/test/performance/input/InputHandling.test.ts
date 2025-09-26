@@ -9,8 +9,8 @@ import { expect } from 'chai';
 import { describe, it, beforeEach, afterEach } from 'mocha';
 import sinon from 'sinon';
 import { JSDOM } from 'jsdom';
-import { BaseInputHandler, InputHandlerConfig } from '../../../webview/managers/input/handlers/BaseInputHandler';
-import { InputEventService, EventHandlerConfig } from '../../../webview/managers/input/services/InputEventService';
+import { BaseInputHandler, InputHandlerConfig as _InputHandlerConfig } from '../../../webview/managers/input/handlers/BaseInputHandler';
+import { InputEventService, EventHandlerConfig as _EventHandlerConfig } from '../../../webview/managers/input/services/InputEventService';
 import { InputStateManager } from '../../../webview/managers/input/services/InputStateManager';
 
 // Performance benchmark thresholds (configurable based on requirements)

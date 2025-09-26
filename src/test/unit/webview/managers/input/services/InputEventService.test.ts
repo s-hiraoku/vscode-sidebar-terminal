@@ -11,7 +11,7 @@ import { JSDOM } from 'jsdom';
 import {
   InputEventService,
   EventHandlerConfig,
-  EventMetrics
+  EventMetrics as _EventMetrics
 } from '../../../../../../webview/managers/input/services/InputEventService';
 
 describe('InputEventService TDD Test Suite', () => {

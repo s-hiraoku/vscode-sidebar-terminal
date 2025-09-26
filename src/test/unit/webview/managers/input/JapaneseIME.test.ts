@@ -11,11 +11,11 @@ import sinon from 'sinon';
 import { JSDOM } from 'jsdom';
 import {
   InputEventService,
-  EventHandlerConfig
+  EventHandlerConfig as _EventHandlerConfig
 } from '../../../../../webview/managers/input/services/InputEventService';
 import {
   InputStateManager,
-  IMECompositionState
+  IMECompositionState as _IMECompositionState
 } from '../../../../../webview/managers/input/services/InputStateManager';
 
 // Japanese IME test data representing real input scenarios
@@ -267,11 +267,11 @@ describe('Japanese IME Input Handling TDD Test Suite', () => {
       });
 
       it('should track composition progress through hiragana input', () => {
-        const testData = JAPANESE_IME_TEST_DATA.konnichiwa;
+        const _testData = JAPANESE_IME_TEST_DATA.konnichiwa;
         const stateChanges: any[] = [];
 
         // Arrange: Track IME state changes
-        stateManager.addStateListener('ime', (newState, previousState) => {
+        stateManager.addStateListener('ime', (newState, _previousState) => {
           stateChanges.push({
             data: newState.data,
             isActive: newState.isActive,
@@ -391,7 +391,7 @@ describe('Japanese IME Input Handling TDD Test Suite', () => {
         }));
 
         // Simulate candidate selection (multiple updates)
-        testData.candidates.forEach((candidate, index) => {
+        testData.candidates.forEach((candidate, _index) => {
           clock.tick(100); // Time between candidate changes
           inputElement.dispatchEvent(new (global as any).CompositionEvent('compositionupdate', {
             data: candidate
@@ -780,7 +780,7 @@ describe('Japanese IME Input Handling TDD Test Suite', () => {
           'ありが', 'ありがと', 'ありがとうご', 'ありがとうございま', 'ありがとうございます'
         ];
 
-        rapidSequence.forEach((stage, index) => {
+        rapidSequence.forEach((stage, _index) => {
           inputElement.dispatchEvent(new (global as any).CompositionEvent('compositionupdate', {
             data: stage
           }));
@@ -898,7 +898,7 @@ describe('Japanese IME Input Handling TDD Test Suite', () => {
           '（', '）', '・', '〜', '：', '；', '※', '§'
         ];
 
-        specialCharacters.forEach((char, index) => {
+        specialCharacters.forEach((char, _index) => {
           inputElement.dispatchEvent(new (global as any).CompositionEvent('compositionstart', {
             data: char
           }));

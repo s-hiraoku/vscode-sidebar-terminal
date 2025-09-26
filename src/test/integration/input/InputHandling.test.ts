@@ -114,7 +114,7 @@ class IntegratedInputHandler extends BaseInputHandler {
     }
   }
 
-  private handleInput(event: Event): void {
+  private handleInput(_event: Event): void {
     // Only process input if not in IME composition
     if (!this.stateManager.getStateSection('ime').isActive) {
       // Process regular input
@@ -218,11 +218,12 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
 
     (global as any).window = window as unknown as Window & typeof globalThis;
     (global as any).document = window.document;
-    (global as any).Event = window.Event;
-    (global as any).KeyboardEvent = window.KeyboardEvent;
-    (global as any).MouseEvent = window.MouseEvent;
-    (global as any).CompositionEvent = window.CompositionEvent;
-    (global as any).performance = window.performance;
+    (global as any).Event = (window as any).Event;
+    (global as any).KeyboardEvent = (window as any).KeyboardEvent;
+    (global as any).MouseEvent = (window as any).MouseEvent;
+    (global as any).CompositionEvent = (window as any).CompositionEvent;
+    // Use Date.now() instead of performance.now() to avoid recursion
+    (global as any).performance = { now: () => Date.now() };
 
     return () => {
       (global as any).window = snapshot.window;
@@ -252,7 +253,7 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
       resources: 'usable'
     });
 
-    restoreGlobals = installDomGlobals(dom.window);
+    restoreGlobals = installDomGlobals(dom.window as any);
 
     // Setup terminal element
     terminalElement = dom.window.document.getElementById('terminal')!;
@@ -287,7 +288,7 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
     describe('Event Service and State Manager Coordination', () => {
       it('should coordinate keyboard event processing with state management', () => {
         // Act: Trigger keyboard event
-        const keyEvent = new jsdom.window.KeyboardEvent('keydown', {
+        const keyEvent = new dom.window.KeyboardEvent('keydown', {
           key: 'Enter',
           ctrlKey: true,
           altKey: false,
@@ -318,7 +319,7 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
 
         // Act: Trigger rapid input events
         for (let i = 0; i < 5; i++) {
-          const inputEvent = new jsdom.window.Event('input');
+          const inputEvent = new dom.window.Event('input');
           terminalElement.dispatchEvent(inputEvent);
         }
 
@@ -343,18 +344,18 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
 
       it('should handle concurrent event processing and state updates', () => {
         // Act: Trigger multiple event types simultaneously
-        const keydownEvent = new jsdom.window.KeyboardEvent('keydown', {
+        const keydownEvent = new dom.window.KeyboardEvent('keydown', {
           key: 'k',
           ctrlKey: true
         });
 
-        const clickEvent = new jsdom.window.MouseEvent('click', {
+        const clickEvent = new dom.window.MouseEvent('click', {
           clientX: 100,
           clientY: 200,
           altKey: true
         });
 
-        const compositionEvent = new jsdom.window.CompositionEvent('compositionstart', {
+        const compositionEvent = new dom.window.CompositionEvent('compositionstart', {
           data: 'test'
         });
 
@@ -410,12 +411,12 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
         const stateChanges: any[] = [];
         const stateManager = integratedHandler.getStateManager();
 
-        stateManager.addStateListener('*', (newState, previousState, stateKey) => {
+        stateManager.addStateListener('*', (newState, _previousState, stateKey) => {
           stateChanges.push({ stateKey, timestamp: Date.now() });
         });
 
         // Act: Trigger keyboard event that should update state
-        const keyEvent = new jsdom.window.KeyboardEvent('keydown', {
+        const keyEvent = new dom.window.KeyboardEvent('keydown', {
           key: 'k',
           ctrlKey: true
         });
@@ -435,7 +436,7 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
 
         // Act: Rapid sequence of Alt key events
         for (let i = 0; i < 10; i++) {
-          const keyEvent = new jsdom.window.KeyboardEvent('keydown', {
+          const keyEvent = new dom.window.KeyboardEvent('keydown', {
             key: 'a',
             altKey: i % 2 === 0 // Alternate Alt key state
           });
@@ -462,7 +463,7 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
         const eventService = integratedHandler.getEventService();
 
         // Act: Start IME composition
-        const compositionStart = new jsdom.window.CompositionEvent('compositionstart', {
+        const compositionStart = new dom.window.CompositionEvent('compositionstart', {
           data: 'k'
         });
         terminalElement.dispatchEvent(compositionStart);
@@ -473,10 +474,10 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
         expect(imeState.lastEvent).to.equal('start');
 
         // Act: Composition update events
-        const compositionUpdate1 = new jsdom.window.CompositionEvent('compositionupdate', {
+        const compositionUpdate1 = new dom.window.CompositionEvent('compositionupdate', {
           data: 'ko'
         });
-        const compositionUpdate2 = new jsdom.window.CompositionEvent('compositionupdate', {
+        const compositionUpdate2 = new dom.window.CompositionEvent('compositionupdate', {
           data: 'kon'
         });
 
@@ -484,11 +485,11 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
         terminalElement.dispatchEvent(compositionUpdate2);
 
         // Act: Input events during composition (should be ignored)
-        const inputEvent = new jsdom.window.Event('input');
+        const inputEvent = new dom.window.Event('input');
         terminalElement.dispatchEvent(inputEvent);
 
         // Act: Complete composition
-        const compositionEnd = new jsdom.window.CompositionEvent('compositionend', {
+        const compositionEnd = new dom.window.CompositionEvent('compositionend', {
           data: 'こん'
         });
         terminalElement.dispatchEvent(compositionEnd);
@@ -514,7 +515,7 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
         const stateManager = integratedHandler.getStateManager();
 
         // Act: Start and immediately cancel IME composition
-        const compositionStart = new jsdom.window.CompositionEvent('compositionstart', {
+        const compositionStart = new dom.window.CompositionEvent('compositionstart', {
           data: 'test'
         });
         terminalElement.dispatchEvent(compositionStart);
@@ -522,7 +523,7 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
         expect(stateManager.getStateSection('ime').isActive).to.be.true;
 
         // Act: Cancel composition (empty data)
-        const compositionEnd = new jsdom.window.CompositionEvent('compositionend', {
+        const compositionEnd = new dom.window.CompositionEvent('compositionend', {
           data: ''
         });
         terminalElement.dispatchEvent(compositionEnd);
@@ -544,7 +545,7 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
         });
 
         // Act: Alt+Click sequence
-        const altKeyDown = new jsdom.window.KeyboardEvent('keydown', {
+        const altKeyDown = new dom.window.KeyboardEvent('keydown', {
           key: 'Alt',
           altKey: true
         });
@@ -554,7 +555,7 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
         expect(stateManager.getStateSection('altClick').isAltKeyPressed).to.be.true;
 
         // Act: Click while Alt is pressed
-        const altClick = new jsdom.window.MouseEvent('click', {
+        const altClick = new dom.window.MouseEvent('click', {
           clientX: 150,
           clientY: 250,
           altKey: true
@@ -567,7 +568,7 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
         expect(altClickState.clickCount).to.equal(1);
 
         // Act: Release Alt key
-        const altKeyUp = new jsdom.window.KeyboardEvent('keyup', {
+        const altKeyUp = new dom.window.KeyboardEvent('keyup', {
           key: 'Alt',
           altKey: false
         });
@@ -589,7 +590,7 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
         });
 
         // Act: Alt+Click
-        const altClick = new jsdom.window.MouseEvent('click', {
+        const altClick = new dom.window.MouseEvent('click', {
           clientX: 100,
           clientY: 200,
           altKey: true
@@ -608,7 +609,7 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
         const stateManager = integratedHandler.getStateManager();
 
         // Act: Trigger Ctrl+K to enter chord mode
-        const ctrlK = new jsdom.window.KeyboardEvent('keydown', {
+        const ctrlK = new dom.window.KeyboardEvent('keydown', {
           key: 'k',
           ctrlKey: true
         });
@@ -624,7 +625,7 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
         expect(stateManager.hasCriticalStateActive()).to.be.true;
 
         // Act: Follow with second key to complete chord
-        const secondKey = new jsdom.window.KeyboardEvent('keydown', {
+        const secondKey = new dom.window.KeyboardEvent('keydown', {
           key: 'c',
           ctrlKey: false
         });
@@ -651,13 +652,13 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
         });
 
         // Act: Enter and exit chord mode
-        const ctrlK = new jsdom.window.KeyboardEvent('keydown', {
+        const ctrlK = new dom.window.KeyboardEvent('keydown', {
           key: 'k',
           ctrlKey: true
         });
         terminalElement.dispatchEvent(ctrlK);
 
-        const escKey = new jsdom.window.KeyboardEvent('keydown', {
+        const escKey = new dom.window.KeyboardEvent('keydown', {
           key: 'Escape'
         });
         terminalElement.dispatchEvent(escKey);
@@ -678,13 +679,13 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
         const stateManager = integratedHandler.getStateManager();
 
         // Act: Start IME composition
-        const compositionStart = new jsdom.window.CompositionEvent('compositionstart', {
+        const compositionStart = new dom.window.CompositionEvent('compositionstart', {
           data: 'test'
         });
         terminalElement.dispatchEvent(compositionStart);
 
         // Act: Try keyboard shortcut during IME composition
-        const ctrlC = new jsdom.window.KeyboardEvent('keydown', {
+        const ctrlC = new dom.window.KeyboardEvent('keydown', {
           key: 'c',
           ctrlKey: true
         });
@@ -703,17 +704,17 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
       });
 
       it('should prioritize IME composition over regular input processing', () => {
-        const stateManager = integratedHandler.getStateManager();
+        const _stateManager = integratedHandler.getStateManager();
 
         // Act: Start IME composition
-        const compositionStart = new jsdom.window.CompositionEvent('compositionstart', {
+        const compositionStart = new dom.window.CompositionEvent('compositionstart', {
           data: 'composing'
         });
         terminalElement.dispatchEvent(compositionStart);
 
         // Act: Try to send input events during composition
         for (let i = 0; i < 3; i++) {
-          const inputEvent = new jsdom.window.Event('input');
+          const inputEvent = new dom.window.Event('input');
           terminalElement.dispatchEvent(inputEvent);
         }
 
@@ -743,7 +744,7 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
         const stateManager = integratedHandler.getStateManager();
 
         // Act: Trigger event that will cause error
-        const keyEvent = new jsdom.window.KeyboardEvent('keydown', {
+        const keyEvent = new dom.window.KeyboardEvent('keydown', {
           key: 'a'
         });
 
@@ -786,7 +787,7 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
 
         // Assert: Services should remain functional despite validation errors
         expect(() => {
-          const keyEvent = new jsdom.window.KeyboardEvent('keydown', {
+          const keyEvent = new dom.window.KeyboardEvent('keydown', {
             key: 'b'
           });
           terminalElement.dispatchEvent(keyEvent);
@@ -812,7 +813,7 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
         // Act: Generate high-frequency events
         const startTime = Date.now();
         for (let i = 0; i < 1000; i++) {
-          const keyEvent = new jsdom.window.KeyboardEvent('keydown', {
+          const keyEvent = new dom.window.KeyboardEvent('keydown', {
             key: String.fromCharCode(65 + (i % 26)) // A-Z
           });
           terminalElement.dispatchEvent(keyEvent);
@@ -870,7 +871,7 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
         const stateManager = integratedHandler.getStateManager();
 
         // Arrange: Generate some activity
-        const keyEvent = new jsdom.window.KeyboardEvent('keydown', { key: 'test' });
+        const keyEvent = new dom.window.KeyboardEvent('keydown', { key: 'test' });
         terminalElement.dispatchEvent(keyEvent);
 
         stateManager.updateIMEState({ isActive: true });
@@ -898,7 +899,7 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
 
       it('should handle disposal during active event processing', () => {
         // Arrange: Start processing that would normally continue
-        const inputEvent = new jsdom.window.Event('input');
+        const inputEvent = new dom.window.Event('input');
         terminalElement.dispatchEvent(inputEvent);
 
         // Act: Dispose during debounce period
@@ -930,7 +931,7 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
         integratedHandler.dispose();
 
         // Act: Try to trigger events and state changes
-        terminalElement.dispatchEvent(new jsdom.window.Event('click'));
+        terminalElement.dispatchEvent(new dom.window.Event('click'));
         stateManager.updateIMEState({ isActive: true });
 
         // Assert: Disposed handlers should not execute

@@ -13,7 +13,7 @@ import {
   AltClickState,
   KeyboardState,
   AgentInteractionState,
-  InputState,
+  InputState as _InputState,
   StateChangeListener
 } from '../../../../../../webview/managers/input/services/InputStateManager';
 

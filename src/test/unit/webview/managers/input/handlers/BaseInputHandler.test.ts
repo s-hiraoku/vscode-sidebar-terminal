@@ -9,7 +9,7 @@ import { describe, it, beforeEach, afterEach } from 'mocha';
 import sinon from 'sinon';
 import { JSDOM } from 'jsdom';
 import { BaseInputHandler, InputHandlerConfig } from '../../../../../../webview/managers/input/handlers/BaseInputHandler';
-import { EventHandlerRegistry } from '../../../../../../webview/utils/EventHandlerRegistry';
+import { EventHandlerRegistry as _EventHandlerRegistry } from '../../../../../../webview/utils/EventHandlerRegistry';
 
 // Test implementation of BaseInputHandler for testing abstract methods
 class TestInputHandler extends BaseInputHandler {
