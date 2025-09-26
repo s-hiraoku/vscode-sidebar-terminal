@@ -5,6 +5,28 @@ All notable changes to the "Secondary Terminal" extension will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.95] - 2025-01-26
+
+### Added
+- **Documentation Organization**: Organized 25+ documentation files into structured docs directory with categorized subdirectories
+  - `/docs/architecture/` - Technical architecture and refactoring documentation
+  - `/docs/development/` - Development process and improvement documentation
+  - `/docs/guides/` - User guides and implementation documentation
+  - `/docs/releases/` - Release notes and release process documentation
+  - `/docs/testing/` - Testing documentation and guides
+- **Enhanced Documentation Navigation**: Created comprehensive docs/README.md with directory structure and quick links
+- **Codex CLI Support**: Added support for Codex CLI AI agent integration
+- **Dependency Updates**: Updated @xterm/addon-web-links from v0.10.0 to v0.11.0 for improved link handling
+
+### Improved
+- **Project Structure**: Cleaned up root directory by moving documentation files to organized subdirectories
+- **Developer Experience**: Improved project navigation with cleaner root directory and structured documentation
+- **Documentation Maintenance**: Better organization for easier documentation updates and maintenance
+
+### Changed
+- **Documentation Structure**: Moved all supplementary .md files from root to `/docs/` with logical categorization
+- **Root Directory**: Kept only essential files (README.md, CHANGELOG.md, package.json, etc.) in project root
+
 ## [0.1.94] - 2025-01-26
 
 ### Added

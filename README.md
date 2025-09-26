@@ -5,7 +5,7 @@
 [![Rating](https://img.shields.io/visual-studio-marketplace/r/s-hiraoku.vscode-sidebar-terminal)](https://marketplace.visualstudio.com/items?itemName=s-hiraoku.vscode-sidebar-terminal)
 [![License](https://img.shields.io/github/license/s-hiraoku/vscode-sidebar-terminal)](https://github.com/s-hiraoku/vscode-sidebar-terminal/blob/main/LICENSE)
 
-**The Essential Tool for the CLI Coding Agent Era** - A production-ready terminal extension designed for developers who need more than VS Code's standard terminal. Manage up to 5 terminals across sidebar and panel with exceptional compatibility for Claude Code, Gemini CLI, and GitHub Copilot. Features complete TypeScript compliance with ProcessState/InteractionState management for maximum reliability.
+**The Essential Tool for the CLI Coding Agent Era** - A production-ready terminal extension designed for developers who need more than VS Code's standard terminal. Manage up to 5 terminals across sidebar and panel with exceptional compatibility for Claude Code, Codex CLI, Gemini CLI, and GitHub Copilot. Features complete TypeScript compliance with ProcessState/InteractionState management for maximum reliability.
 
 > ⚠️ **Active Development Notice**: This extension is under active development with new features being added continuously. Please expect some bugs and incomplete functionality as we work to improve the experience.
 
@@ -27,6 +27,7 @@
 ### 🤖 **AI Agent Integration**
 - **Enhanced Detection Engine**: Improved CLI agent detection with advanced pattern recognition
 - **Claude Code Support**: Full integration with `claude-code` commands and session restoration
+- **Codex CLI Support**: Complete integration with `codex` commands and AI-powered development assistance
 - **CodeRabbit CLI Integration**: Custom slash command support for AI code reviews with smart mode selection
 - **GitHub Copilot Integration**: File reference shortcuts with `#file:` format (CMD+K CMD+C)
 - **Gemini CLI Support**: Complete integration with `gemini code` commands
@@ -120,6 +121,9 @@ Choose your preferred AI agent and launch it in Secondary Terminal:
 # Claude Code (Anthropic)
 claude-code "help me with this React component"
 
+# Codex CLI (OpenAI)
+codex "generate unit tests for this function"
+
 # Gemini CLI (Google)
 gemini code "optimize this Python function"
 
@@ -149,6 +153,13 @@ Press `CMD+Option+L` (Mac) or `Ctrl+Alt+L` (Win/Linux) while editing a file to i
 - **Status Tracking**: Shows when Copilot Chat is active
 - **Best For**: Code completion, quick fixes, inline suggestions
 
+#### Codex CLI (OpenAI)
+- **Launch Command**: `codex "your development task"`
+- **AI-Powered Assistance**: Advanced code generation and completion capabilities
+- **Multi-Language Support**: Supports multiple programming languages and frameworks
+- **Session Management**: Complete command history and context preservation
+- **Best For**: Code generation, refactoring, documentation, unit test creation
+
 #### CodeRabbit CLI
 - **Slash Command**: `/coderabbit` (when using Claude Code)
 - **Mode Selection**:
@@ -172,8 +183,11 @@ Press `CMD+Option+L` (Mac) or `Ctrl+Alt+L` (Win/Linux) while editing a file to i
    # Terminal 1: Claude Code for architecture
    claude-code "help design this system"
 
-   # Terminal 2: Gemini for implementation
-   gemini code "implement the user service"
+   # Terminal 2: Codex for implementation
+   codex "implement the user service with TypeScript"
+
+   # Terminal 3: Gemini for optimization
+   gemini code "optimize the user service performance"
    ```
 
 2. **Share files efficiently** using CMD+Option+L to send the same file to all connected agents
@@ -376,7 +390,15 @@ The project uses GitHub Actions for automated testing and releases:
 
 ## 📈 Version History
 
-### v0.1.94 (Current) - 📚 **Comprehensive AI Agent Documentation & Enhanced UX**
+### v0.1.95 (Current) - 📁 **Documentation Organization & Codex CLI Support**
+- 📁 **Documentation Structure**: Organized 25+ documentation files into categorized `/docs/` directory structure
+- 📖 **Enhanced Navigation**: Created comprehensive docs/README.md with structured directory navigation
+- 🤖 **Codex CLI Integration**: Added support for OpenAI Codex CLI with complete AI agent functionality
+- 📦 **Dependency Updates**: Updated @xterm/addon-web-links to v0.11.0 for improved link handling
+- 🗂️ **Project Organization**: Cleaned root directory structure for better maintainability
+- 🚀 **Developer Experience**: Improved project navigation with organized documentation structure
+
+### v0.1.94 - 📚 **Comprehensive AI Agent Documentation & Enhanced UX**
 - 📖 **Complete AI Agent Guide**: Added comprehensive documentation for Claude Code, Gemini CLI, GitHub Copilot, and CodeRabbit CLI integration
 - 🎯 **CLI Agent Era Positioning**: Enhanced value proposition for modern AI-assisted development workflows
 - 🔧 **Multi-Agent Workflows**: Detailed documentation for advanced multi-agent usage patterns and best practices
