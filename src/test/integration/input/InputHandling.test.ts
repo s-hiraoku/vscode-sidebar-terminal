@@ -9,9 +9,8 @@ import { describe, it, beforeEach, afterEach } from 'mocha';
 import sinon from 'sinon';
 import { JSDOM } from 'jsdom';
 import { BaseInputHandler, InputHandlerConfig } from '../../../webview/managers/input/handlers/BaseInputHandler';
-import { InputEventService, EventHandlerConfig } from '../../../webview/managers/input/services/InputEventService';
+import { InputEventService } from '../../../webview/managers/input/services/InputEventService';
 import { InputStateManager } from '../../../webview/managers/input/services/InputStateManager';
-import { IMEHandler } from '../../../webview/managers/input/handlers/IMEHandler';
 
 // Test implementation that combines all input handling services
 class IntegratedInputHandler extends BaseInputHandler {
@@ -182,18 +181,63 @@ class IntegratedInputHandler extends BaseInputHandler {
     this.stateManager.dispose();
     super.doDispose();
   }
+
+  public attachLogger(logger: (message: string) => void): void {
+    (this as unknown as { logger: (message: string) => void }).logger = logger;
+  }
 }
 
 describe('Input Handling Architecture Integration TDD Test Suite', () => {
-  let jsdom: JSDOM;
+  interface DomEnvironmentSnapshot {
+    window?: typeof globalThis.window;
+    document?: typeof globalThis.document;
+    Event?: typeof globalThis.Event;
+    KeyboardEvent?: typeof globalThis.KeyboardEvent;
+    MouseEvent?: typeof globalThis.MouseEvent;
+    CompositionEvent?: typeof globalThis.CompositionEvent;
+    performance?: typeof globalThis.performance;
+  }
+
+  let dom: JSDOM;
+  let restoreGlobals: (() => void) | undefined;
   let clock: sinon.SinonFakeTimers;
   let terminalElement: Element;
   let integratedHandler: IntegratedInputHandler;
   let logMessages: string[];
 
+  const installDomGlobals = (window: Window): (() => void) => {
+    const snapshot: DomEnvironmentSnapshot = {
+      window: (global as any).window,
+      document: (global as any).document,
+      Event: (global as any).Event,
+      KeyboardEvent: (global as any).KeyboardEvent,
+      MouseEvent: (global as any).MouseEvent,
+      CompositionEvent: (global as any).CompositionEvent,
+      performance: (global as any).performance,
+    };
+
+    (global as any).window = window as unknown as Window & typeof globalThis;
+    (global as any).document = window.document;
+    (global as any).Event = window.Event;
+    (global as any).KeyboardEvent = window.KeyboardEvent;
+    (global as any).MouseEvent = window.MouseEvent;
+    (global as any).CompositionEvent = window.CompositionEvent;
+    (global as any).performance = window.performance;
+
+    return () => {
+      (global as any).window = snapshot.window;
+      (global as any).document = snapshot.document;
+      (global as any).Event = snapshot.Event;
+      (global as any).KeyboardEvent = snapshot.KeyboardEvent;
+      (global as any).MouseEvent = snapshot.MouseEvent;
+      (global as any).CompositionEvent = snapshot.CompositionEvent;
+      (global as any).performance = snapshot.performance;
+    };
+  };
+
   beforeEach(() => {
     // Arrange: Setup comprehensive DOM environment
-    jsdom = new JSDOM(`
+    dom = new JSDOM(`
       <!DOCTYPE html>
       <html>
         <body>
@@ -208,30 +252,20 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
       resources: 'usable'
     });
 
-    // Setup global environment
-    global.window = jsdom.window as any;
-    global.document = jsdom.window.document;
-    global.Event = jsdom.window.Event;
-    global.KeyboardEvent = jsdom.window.KeyboardEvent;
-    global.MouseEvent = jsdom.window.MouseEvent;
-    global.CompositionEvent = jsdom.window.CompositionEvent;
-    global.performance = {
-      now: sinon.stub().returns(Date.now())
-    } as any;
+    restoreGlobals = installDomGlobals(dom.window);
 
     // Setup terminal element
-    terminalElement = document.getElementById('terminal')!;
+    terminalElement = dom.window.document.getElementById('terminal')!;
 
     // Setup fake timers
     clock = sinon.useFakeTimers();
 
     // Create integrated handler
     logMessages = [];
-    const mockLogger = (message: string) => { logMessages.push(message); };
     integratedHandler = new IntegratedInputHandler(terminalElement);
-
-    // Override logger for testing
-    (integratedHandler as any).logger = mockLogger;
+    integratedHandler.attachLogger((message) => {
+      logMessages.push(message);
+    });
 
     // Initialize the handler
     integratedHandler.initialize();
@@ -241,7 +275,12 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
     // Cleanup
     clock.restore();
     integratedHandler.dispose();
-    jsdom.window.close();
+    dom.window.close();
+    if (restoreGlobals) {
+      restoreGlobals();
+      restoreGlobals = undefined;
+    }
+    sinon.restore();
   });
 
   describe('TDD Red Phase: Service Integration and Coordination', () => {

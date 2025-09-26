@@ -295,7 +295,7 @@ export class InputEventService {
    * Clear all debounce timers
    */
   public clearAllDebounceTimers(): void {
-    for (const [key, timer] of this.debounceTimers) {
+    for (const [, timer] of this.debounceTimers) {
       clearTimeout(timer);
     }
     this.debounceTimers.clear();

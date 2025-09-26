@@ -5,7 +5,6 @@
  * detection capabilities for various CLI agents (Claude, Gemini, Codex).
  */
 
-import { terminal as log } from '../utils/logger';
 import { CliAgentPatternDetector } from './CliAgentPatternDetector';
 
 export interface AgentDetectionResult {

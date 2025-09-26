@@ -14,6 +14,7 @@ import {
 import { UnifiedTerminalPersistenceService } from '../services/UnifiedTerminalPersistenceService';
 import { PersistenceMessageHandler } from '../handlers/PersistenceMessageHandler';
 import { TerminalInitializationCoordinator } from './TerminalInitializationCoordinator';
+import { SecondaryTerminalMessageRouter } from './SecondaryTerminalMessageRouter';
 import {
   isWebviewMessage,
   hasTerminalId,
@@ -37,7 +38,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   // Removed all state variables - using simple "fresh start" approach
 
   // Minimal command router for incoming webview messages
-  private _messageHandlers = new Map<string, MessageHandler>();
+  private readonly _messageRouter: SecondaryTerminalMessageRouter;
   private readonly _htmlGenerationService: WebViewHtmlGenerationService;
 
   // Phase 8 services (typed properly)
@@ -62,6 +63,8 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       this._terminalManager
     );
     this._persistenceHandler = new PersistenceMessageHandler(this._persistenceService);
+
+    this._messageRouter = new SecondaryTerminalMessageRouter();
 
     log('🎨 [PROVIDER] HTML generation service initialized');
     log('💾 [PROVIDER] Terminal persistence services initialized');
@@ -310,11 +313,9 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       ['test', (message) => this._handleDebugTest(message)],
     ];
 
-    this._messageHandlers.clear();
+    this._messageRouter.reset();
     for (const [command, handler] of entries) {
-      if (command) {
-        this._messageHandlers.set(command, handler);
-      }
+      this._messageRouter.register(command, handler);
     }
   }
 
@@ -1042,9 +1043,8 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       }
 
       // Minimal router: if a handler exists, use it and return
-      const routed = this._messageHandlers.get(message.command);
-      if (routed) {
-        await routed(message);
+      const dispatched = await this._messageRouter.dispatch(message);
+      if (dispatched) {
         return;
       }
 
@@ -2493,7 +2493,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     this._clearTerminalEventListeners();
 
     // Clear message handlers and ID mappings
-    this._messageHandlers.clear();
+    this._messageRouter.clear();
     if (this._terminalIdMapping) {
       this._terminalIdMapping.clear();
     }

@@ -7,7 +7,7 @@
 
 import { IIMEHandler } from '../interfaces/IInputHandlers';
 import { BaseInputHandler } from './BaseInputHandler';
-import { InputStateManager, IMECompositionState } from '../services/InputStateManager';
+import { InputStateManager } from '../services/InputStateManager';
 import { InputEventService } from '../services/InputEventService';
 
 /**
