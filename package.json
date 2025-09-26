@@ -2,7 +2,7 @@
   "name": "vscode-sidebar-terminal",
   "displayName": "Secondary Terminal",
   "description": "A powerful VS Code extension that displays a fully-featured terminal in the sidebar with VS Code standard compliance, enhanced AI agent detection, split support, Alt+Click cursor positioning, and multi-platform compatibility.",
-  "version": "0.1.92",
+  "version": "0.1.93",
   "publisher": "s-hiraoku",
   "engines": {
     "vscode": "^1.74.0",
