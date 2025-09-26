@@ -21,7 +21,7 @@ import { StandardTerminalSessionManager } from '../../../sessions/StandardTermin
 // Test setup shared utilities
 import '../../shared/TestSetup';
 
-describe('StandardTerminalSessionManager - TDD Complete Suite', () => {
+describe('StandardTerminalSessionManager', () => {
   let sandbox: sinon.SinonSandbox;
   let mockContext: any;
   let mockTerminalManager: any;

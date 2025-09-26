@@ -27,6 +27,7 @@ describe('TerminalCliAgentIntegrationService', () => {
       detectTermination: sandbox.stub(),
       forceReconnectAgent: sandbox.stub(),
       clearDetectionError: sandbox.stub(),
+      setAgentConnected: sandbox.stub(),
     };
 
     service = new TerminalCliAgentIntegrationService(mockCliAgentService);

@@ -21,7 +21,7 @@ import { expect } from 'chai';
 // Test setup
 import '../../shared/TestSetup';
 
-describe('Async Operations Strategy - TDD Implementation', () => {
+describe('Async Operations', () => {
   let sandbox: sinon.SinonSandbox;
   let clock: sinon.SinonFakeTimers;
 
