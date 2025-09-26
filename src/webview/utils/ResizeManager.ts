@@ -1,6 +1,6 @@
 /**
  * ResizeManager Utility
- * 
+ *
  * Centralized debounced resize logic to eliminate code duplication
  * across TerminalLifecycleManager, PerformanceManager, and SplitManager
  */
@@ -33,17 +33,8 @@ export class ResizeManager {
    * @param callback The resize function to execute
    * @param options Resize configuration options
    */
-  static debounceResize(
-    key: string,
-    callback: ResizeCallback,
-    options: ResizeOptions = {}
-  ): void {
-    const { 
-      delay = this.DEFAULT_DELAY, 
-      immediate = false, 
-      onStart, 
-      onComplete 
-    } = options;
+  static debounceResize(key: string, callback: ResizeCallback, options: ResizeOptions = {}): void {
+    const { delay = this.DEFAULT_DELAY, immediate = false, onStart, onComplete } = options;
 
     // Clear existing timer for this key
     this.clearResize(key);
@@ -88,7 +79,7 @@ export class ResizeManager {
       }
 
       await callback();
-      
+
       if (onComplete) {
         onComplete();
       }
@@ -131,17 +122,13 @@ export class ResizeManager {
     try {
       const observer = new ResizeObserver((entries) => {
         for (const entry of entries) {
-          this.debounceResize(
-            `observer-${key}`,
-            () => callback(entry),
-            options
-          );
+          this.debounceResize(`observer-${key}`, () => callback(entry), options);
         }
       });
 
       observer.observe(element);
       this.observers.set(key, observer);
-      
+
       log(`👁️ ResizeManager: Observer setup for ${key}`);
     } catch (error) {
       log(`❌ ResizeManager: Failed to setup observer for ${key}:`, error);
@@ -189,7 +176,7 @@ export class ResizeManager {
   static flushAll(): void {
     const pendingKeys = this.getPendingKeys();
     log(`🚀 ResizeManager: Flushing ${pendingKeys.length} pending operations`);
-    
+
     for (const key of pendingKeys) {
       const timer = this.timers.get(key);
       if (timer) {
@@ -232,7 +219,7 @@ export class ResizeManager {
       pendingTimers: this.timers.size,
       activeObservers: this.observers.size,
       pendingKeys: this.getPendingKeys(),
-      observerKeys: this.getObserverKeys()
+      observerKeys: this.getObserverKeys(),
     };
   }
 }

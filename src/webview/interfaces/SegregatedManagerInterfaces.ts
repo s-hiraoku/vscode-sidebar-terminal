@@ -1,6 +1,6 @@
 /**
  * Segregated Manager Interfaces for WebView Components
- * 
+ *
  * This file provides segregated interfaces for different manager types,
  * allowing for better separation of concerns and modularity.
  */
@@ -23,7 +23,7 @@ export {
   IManagerFactory,
   IManagerEventEmitter,
   IManagerLifecycle,
-  IWebViewManager
+  IWebViewManager,
 } from './ManagerInterfaces';
 
 // Import required types for interfaces
@@ -101,7 +101,12 @@ export interface IEnhancedBaseManager extends IEnhancedManager {}
 export interface IFullManagerCoordinator extends IManagerCoordinator {
   getExtendedCapabilities(): unknown;
   // Add methods from other coordinators for compatibility
-  createTerminal: (id: string, name: string, config?: unknown, terminalNumber?: number) => Promise<unknown>;
+  createTerminal: (
+    id: string,
+    name: string,
+    config?: unknown,
+    terminalNumber?: number
+  ) => Promise<unknown>;
   deleteTerminal?: (id: string) => Promise<void>;
   switchToTerminal?: (terminalId: string) => Promise<boolean>;
   getActiveTerminal?: () => TerminalInstance | null;

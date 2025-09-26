@@ -1,12 +1,12 @@
 /**
  * WebView Message Router
- * 
+ *
  * Routes messages between WebView and Extension Host
  */
 
 import { IManagerLifecycle } from '../webview/interfaces/ManagerInterfaces';
 
-export type MessageType = 
+export type MessageType =
   | 'init'
   | 'output'
   | 'input'
@@ -44,7 +44,12 @@ export interface IWebViewMessageRouter extends IManagerLifecycle {
   unregisterHandler(type: MessageType, handler: MessageHandler): void;
   sendToExtension(type: MessageType, data?: unknown, id?: string): void;
   broadcast(type: MessageType, data?: unknown): Promise<void>;
-  getStats(): { queueSize: number; isProcessing: boolean; registeredRoutes: number; totalRoutes: number };
+  getStats(): {
+    queueSize: number;
+    isProcessing: boolean;
+    registeredRoutes: number;
+    totalRoutes: number;
+  };
   clearQueue(): void;
   isReady(): boolean;
 }
@@ -84,7 +89,7 @@ export class WebViewMessageRouter implements IWebViewMessageRouter {
           this.handleIncomingMessage({
             ...event.data,
             timestamp: event.data.timestamp || Date.now(),
-            source: 'extension'
+            source: 'extension',
           });
         }
       });
@@ -100,14 +105,14 @@ export class WebViewMessageRouter implements IWebViewMessageRouter {
     }
 
     const route: MessageRoute = { type, handler, priority };
-    
+
     if (!this.routes.has(type)) {
       this.routes.set(type, []);
     }
 
     const routes = this.routes.get(type)!;
     routes.push(route);
-    
+
     // Sort by priority (higher priority first)
     routes.sort((a, b) => b.priority - a.priority);
   }
@@ -118,11 +123,11 @@ export class WebViewMessageRouter implements IWebViewMessageRouter {
   unregisterHandler(type: MessageType, handler: MessageHandler): void {
     const routes = this.routes.get(type);
     if (routes) {
-      const index = routes.findIndex(route => route.handler === handler);
+      const index = routes.findIndex((route) => route.handler === handler);
       if (index !== -1) {
         routes.splice(index, 1);
       }
-      
+
       if (routes.length === 0) {
         this.routes.delete(type);
       }
@@ -143,7 +148,7 @@ export class WebViewMessageRouter implements IWebViewMessageRouter {
       id,
       data,
       timestamp: Date.now(),
-      source: 'webview'
+      source: 'webview',
     };
 
     try {
@@ -213,7 +218,7 @@ export class WebViewMessageRouter implements IWebViewMessageRouter {
       type,
       data,
       timestamp: Date.now(),
-      source: 'webview'
+      source: 'webview',
     };
 
     await this.routeMessage(message);
@@ -237,7 +242,7 @@ export class WebViewMessageRouter implements IWebViewMessageRouter {
       queueSize: this.messageQueue.length,
       isProcessing: this.isProcessing,
       registeredRoutes: this.routes.size,
-      totalRoutes
+      totalRoutes,
     };
   }
 

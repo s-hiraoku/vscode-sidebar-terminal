@@ -43,7 +43,7 @@ export class NotificationManager extends BaseManager implements INotificationMan
     });
 
     this.addNotificationToTerminal(notification);
-    this.log(`📢 [NOTIFICATION] Showed ${type} notification: ${message}`);
+    this.logger(`📢 [NOTIFICATION] Showed ${type} notification: ${message}`);
   }
 
   /**
@@ -89,7 +89,7 @@ export class NotificationManager extends BaseManager implements INotificationMan
       feedback.remove();
     }, 600);
 
-    this.log(`⌨️ [NOTIFICATION] Alt+Click feedback shown at (${x}, ${y})`);
+    this.logger(`⌨️ [NOTIFICATION] Alt+Click feedback shown at (${x}, ${y})`);
   }
 
   /**
@@ -108,7 +108,7 @@ export class NotificationManager extends BaseManager implements INotificationMan
     warnings.forEach((warning) => {
       warning.remove();
     });
-    this.log('⚠️ [NOTIFICATION] Warning notifications cleared');
+    this.logger('⚠️ [NOTIFICATION] Warning notifications cleared');
   }
 
   /**
@@ -125,7 +125,7 @@ export class NotificationManager extends BaseManager implements INotificationMan
       notification.remove();
     });
 
-    this.log('🧹 [NOTIFICATION] All notifications cleared');
+    this.logger('🧹 [NOTIFICATION] All notifications cleared');
   }
 
   /**
@@ -139,22 +139,24 @@ export class NotificationManager extends BaseManager implements INotificationMan
     notification.className = `notification notification-${options.type || 'info'}`;
     notification.textContent = message;
 
-    // Apply styling
+    // Apply subtle styling - more integrated with VS Code
     notification.style.cssText = `
       position: absolute;
       ${options.position === 'top' ? 'top: 10px' : options.position === 'bottom' ? 'bottom: 10px' : 'top: 50%'};
       left: 50%;
       transform: translateX(-50%) ${options.position === 'center' ? 'translateY(-50%)' : ''};
       background: ${this.getNotificationBackground(options.type || 'info')};
-      color: white;
-      padding: 8px 16px;
-      border-radius: 4px;
-      font-size: 14px;
+      color: rgba(255, 255, 255, 0.95);
+      padding: 6px 12px;
+      border-radius: 3px;
+      font-size: 12px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       z-index: 9999;
-      max-width: 80%;
+      max-width: 70%;
       text-align: center;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-      animation: notificationSlideIn 0.3s ease-out;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+      opacity: 0.75;
+      animation: subtleSlideIn 0.2s ease-out;
     `;
 
     // Auto-remove if not persistent
@@ -173,14 +175,14 @@ export class NotificationManager extends BaseManager implements INotificationMan
   private getNotificationBackground(type: string): string {
     switch (type) {
       case 'success':
-        return '#28a745';
+        return 'rgba(40, 167, 69, 0.7)';
       case 'warning':
-        return '#ffc107';
+        return 'rgba(255, 193, 7, 0.7)';
       case 'error':
-        return '#dc3545';
+        return 'rgba(220, 53, 69, 0.7)';
       case 'info':
       default:
-        return '#007bff';
+        return 'rgba(0, 123, 255, 0.7)';
     }
   }
 
@@ -212,12 +214,12 @@ export class NotificationManager extends BaseManager implements INotificationMan
    * Remove notification element with animation
    */
   private removeNotificationElement(notification: HTMLElement): void {
-    notification.style.animation = 'notificationSlideOut 0.3s ease-in forwards';
+    notification.style.animation = 'subtleSlideOut 0.2s ease-in forwards';
     setTimeout(() => {
       if (notification.parentNode) {
         notification.parentNode.removeChild(notification);
       }
-    }, 300);
+    }, 200);
   }
 
   /**
@@ -249,7 +251,7 @@ export class NotificationManager extends BaseManager implements INotificationMan
     this.activeNotifications.set(id, notification);
     this.addNotificationToTerminal(notification);
 
-    this.log(`⏳ [NOTIFICATION] Loading notification shown: ${message}`);
+    this.logger(`⏳ [NOTIFICATION] Loading notification shown: ${message}`);
     return id;
   }
 
@@ -258,7 +260,7 @@ export class NotificationManager extends BaseManager implements INotificationMan
    */
   public hideLoading(id: string): void {
     this.removeNotification(id);
-    this.log(`✅ [NOTIFICATION] Loading notification hidden: ${id}`);
+    this.logger(`✅ [NOTIFICATION] Loading notification hidden: ${id}`);
   }
 
   /**
@@ -278,7 +280,7 @@ export class NotificationManager extends BaseManager implements INotificationMan
     notification.classList.add('toast-notification');
     this.addNotificationToTerminal(notification);
 
-    this.log(`🍞 [NOTIFICATION] Toast shown: ${message} (${type})`);
+    this.logger(`🍞 [NOTIFICATION] Toast shown: ${message} (${type})`);
   }
 
   /**
@@ -287,6 +289,16 @@ export class NotificationManager extends BaseManager implements INotificationMan
   public setupNotificationStyles(): void {
     const style = document.createElement('style');
     style.textContent = `
+      @keyframes subtleSlideIn {
+        from { opacity: 0; transform: translateX(-50%) translateY(-5px); }
+        to { opacity: 0.85; transform: translateX(-50%) translateY(0); }
+      }
+      
+      @keyframes subtleSlideOut {
+        from { opacity: 0.85; transform: translateX(-50%) translateY(0); }
+        to { opacity: 0; transform: translateX(-50%) translateY(-5px); }
+      }
+      
       @keyframes notificationSlideIn {
         from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
         to { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -316,7 +328,7 @@ export class NotificationManager extends BaseManager implements INotificationMan
     `;
 
     document.head.appendChild(style);
-    this.log('🎨 [NOTIFICATION] Notification styles setup');
+    this.logger('🎨 [NOTIFICATION] Notification styles setup');
   }
 
   /**
@@ -330,10 +342,17 @@ export class NotificationManager extends BaseManager implements INotificationMan
   }
 
   /**
-   * Dispose and cleanup
+   * Initialize the NotificationManager (BaseManager abstract method implementation)
    */
-  public override dispose(): void {
-    this.log('🧹 [NOTIFICATION] Disposing notification manager');
+  protected doInitialize(): void {
+    this.logger('🚀 NotificationManager initialized');
+  }
+
+  /**
+   * Dispose NotificationManager resources (BaseManager abstract method implementation)
+   */
+  protected doDispose(): void {
+    this.logger('🧹 Disposing NotificationManager resources');
 
     // Clear all notifications
     this.clearNotifications();
@@ -341,9 +360,18 @@ export class NotificationManager extends BaseManager implements INotificationMan
     // Reset counters
     this.notificationCounter = 0;
 
-    this.log('✅ [NOTIFICATION] Notification manager disposed');
+    this.logger('✅ NotificationManager resources disposed');
+  }
 
-    // Call parent dispose
+  /**
+   * Dispose and cleanup
+   */
+  public override dispose(): void {
+    this.logger('🧹 [NOTIFICATION] Disposing notification manager');
+
+    // Call parent dispose which will call doDispose()
     super.dispose();
+
+    this.logger('✅ [NOTIFICATION] Notification manager disposed');
   }
 }

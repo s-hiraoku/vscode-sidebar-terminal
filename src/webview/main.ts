@@ -55,13 +55,13 @@ async function initializeWebView(): Promise<void> {
     setTimeout(() => {
       if (terminalManager && terminalManager.getAllTerminalInstances().size === 0) {
         lifecycle('⚠️ No terminals received from Extension - requesting initial terminal creation');
-        
+
         // Request Extension to create a terminal with PTY backing
         terminalManager.postMessageToExtension({
           command: 'requestInitialTerminal',
           timestamp: Date.now(),
         });
-        
+
         log('📤 Requested initial terminal creation from Extension');
       }
     }, 2000); // Reduced to 2 seconds for faster response
@@ -90,7 +90,14 @@ async function initializeWebView(): Promise<void> {
       if (terminalManager) {
         log('📡 [STATE] Requesting initial state from Extension...');
         terminalManager.requestLatestState();
-        
+
+        // 🔄 Request session restoration from Extension
+        log('🔄 [RESTORATION] Requesting session restoration from Extension...');
+        terminalManager.postMessageToExtension({
+          command: 'requestSessionRestore',
+          timestamp: Date.now(),
+        });
+
         // 🔧 [INPUT-FIX] Retroactively attach input handlers to any existing terminals
         // This fixes keyboard input for terminals that existed before the handler fix
         setTimeout(() => {
@@ -115,19 +122,20 @@ async function initializeWebView(): Promise<void> {
           log('🔍 [DEBUG] Debug panel toggled via keyboard shortcut');
         }
       }
-      
+
       // Ctrl+Shift+X: Export system diagnostics
       if (event.ctrlKey && event.shiftKey && event.key === 'X') {
         event.preventDefault();
         if (terminalManager) {
           const diagnostics = terminalManager.exportSystemDiagnostics();
           log('🔧 [DIAGNOSTICS] System diagnostics exported via keyboard shortcut');
-          
+
           // Copy to clipboard if possible
           if (navigator.clipboard) {
-            navigator.clipboard.writeText(JSON.stringify(diagnostics, null, 2))
+            navigator.clipboard
+              .writeText(JSON.stringify(diagnostics, null, 2))
               .then(() => log('📋 [CLIPBOARD] Diagnostics copied to clipboard'))
-              .catch(err => log('❌ [CLIPBOARD] Failed to copy diagnostics:', err));
+              .catch((err) => log('❌ [CLIPBOARD] Failed to copy diagnostics:', err));
           }
         }
       }
@@ -166,10 +174,18 @@ async function initializeWebView(): Promise<void> {
       }
     });
 
-    log('🔧 [DEBUG] Debugging tools initialized - Shortcuts: Ctrl+Shift+D (debug), Ctrl+Shift+X (export), Ctrl+Shift+R (sync), Ctrl+Shift+I (input fix), Ctrl+Shift+T (test input)');
-
+    log(
+      '🔧 [DEBUG] Debugging tools initialized - Shortcuts: Ctrl+Shift+D (debug), Ctrl+Shift+X (export), Ctrl+Shift+R (sync), Ctrl+Shift+I (input fix), Ctrl+Shift+T (test input)'
+    );
   } catch (error) {
-    error_category('Failed to initialize WebView', error);
+    error_category('Failed to initialize WebView', {
+      name: error instanceof Error ? error.name : 'Unknown',
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      type: typeof error,
+      constructor: error?.constructor?.name,
+    });
+    console.error('🚨 Raw error object:', error);
   }
 }
 

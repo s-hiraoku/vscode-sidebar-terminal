@@ -30,14 +30,20 @@ export abstract class BaseMessageHandler implements IMessageHandler {
   /**
    * Validate message has terminal ID
    */
-  protected hasTerminalId(message: WebviewMessage): message is WebviewMessage & { terminalId: string } {
-    return typeof (message as any).terminalId === 'string' && (message as any).terminalId.length > 0;
+  protected hasTerminalId(
+    message: WebviewMessage
+  ): message is WebviewMessage & { terminalId: string } {
+    return (
+      typeof (message as any).terminalId === 'string' && (message as any).terminalId.length > 0
+    );
   }
 
   /**
    * Validate message has resize parameters
    */
-  protected hasResizeParams(message: WebviewMessage): message is WebviewMessage & { cols: number; rows: number } {
+  protected hasResizeParams(
+    message: WebviewMessage
+  ): message is WebviewMessage & { cols: number; rows: number } {
     const { cols, rows } = message as any;
     return typeof cols === 'number' && typeof rows === 'number' && cols > 0 && rows > 0;
   }
@@ -59,9 +65,13 @@ export abstract class BaseMessageHandler implements IMessageHandler {
   /**
    * Handle errors in message processing
    */
-  protected async handleError(error: unknown, message: WebviewMessage, handlerName: string): Promise<void> {
+  protected async handleError(
+    error: unknown,
+    message: WebviewMessage,
+    handlerName: string
+  ): Promise<void> {
     log(`❌ [${handlerName}] Error handling message ${message.command}:`, error);
-    
+
     // Import error handler dynamically to avoid circular dependencies
     try {
       const { TerminalErrorHandler } = await import('../../../utils/feedback');

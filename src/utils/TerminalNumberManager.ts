@@ -17,14 +17,14 @@ export class TerminalNumberManager {
   private getUsedNumbers(terminals: Map<string, TerminalInstance>): Set<number> {
     const usedNumbers = new Set<number>();
     console.log('🔍 [TERMINAL-NUMBER-MANAGER] Analyzing terminals:', terminals.size);
-    
+
     for (const [id, terminal] of terminals.entries()) {
       console.log(`🔍 [TERMINAL-NUMBER-MANAGER] Terminal ${id}:`, {
         name: terminal.name,
         number: terminal.number,
-        hasNumber: typeof terminal.number === 'number'
+        hasNumber: typeof terminal.number === 'number',
       });
-      
+
       // Use terminal.number property directly if available, fallback to name parsing
       if (terminal.number && typeof terminal.number === 'number') {
         usedNumbers.add(terminal.number);
@@ -37,11 +37,13 @@ export class TerminalNumberManager {
           usedNumbers.add(numberFromName);
           console.log(`⚠️ [TERMINAL-NUMBER-MANAGER] Added number from name: ${numberFromName}`);
         } else {
-          console.warn(`⚠️ [TERMINAL-NUMBER-MANAGER] No number found for terminal: ${terminal.name}`);
+          console.warn(
+            `⚠️ [TERMINAL-NUMBER-MANAGER] No number found for terminal: ${terminal.name}`
+          );
         }
       }
     }
-    
+
     console.log('🔍 [TERMINAL-NUMBER-MANAGER] Final used numbers:', Array.from(usedNumbers));
     return usedNumbers;
   }
@@ -65,8 +67,13 @@ export class TerminalNumberManager {
    */
   canCreate(terminals: Map<string, TerminalInstance>): boolean {
     const usedNumbers = this.getUsedNumbers(terminals);
-    console.log('🔍 [TERMINAL-NUMBER-MANAGER] Used numbers:', Array.from(usedNumbers), 'Max terminals:', this.maxTerminals);
-    
+    console.log(
+      '🔍 [TERMINAL-NUMBER-MANAGER] Used numbers:',
+      Array.from(usedNumbers),
+      'Max terminals:',
+      this.maxTerminals
+    );
+
     // 空きスロットがあるかチェック
     for (let i = 1; i <= this.maxTerminals; i++) {
       if (!usedNumbers.has(i)) {

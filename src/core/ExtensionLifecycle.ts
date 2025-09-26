@@ -99,10 +99,10 @@ export class ExtensionLifecycle {
 
       // Initialize keyboard shortcut service
       this.keyboardShortcutService = new KeyboardShortcutService(this.terminalManager);
-      
+
       // Connect keyboard service to webview provider
       this.keyboardShortcutService.setWebviewProvider(this.sidebarProvider);
-      
+
       // Connect enhanced shell integration service to webview provider
       if (this.shellIntegrationService) {
         this.shellIntegrationService.setWebviewProvider(this.sidebarProvider);
@@ -116,24 +116,24 @@ export class ExtensionLifecycle {
         // Initialize terminal decorations service
         this.decorationsService = new TerminalDecorationsService();
         log('🎨 [EXTENSION] Terminal decorations service initialized');
-        
+
         // Initialize terminal links service
         this.linksService = new TerminalLinksService();
         log('🔗 [EXTENSION] Terminal links service initialized');
-        
+
         // Connect Phase 8 services to webview provider
         if (this.decorationsService && this.linksService) {
           this.sidebarProvider.setPhase8Services(this.decorationsService, this.linksService);
           log('🎨 [EXTENSION] Phase 8 services connected to webview provider');
         }
-        
+
         // Connect Phase 8 services to terminal manager for data processing
         if (this.terminalManager) {
           // Set up data processing for decorations through terminal manager
           // Note: This will be connected via message passing in the webview
           log('🔄 [EXTENSION] Phase 8 services ready for webview integration');
         }
-        
+
         log('✅ [EXTENSION] Phase 8 services (Decorations & Links) initialized successfully');
       } catch (error) {
         log('❌ [EXTENSION] Failed to initialize Phase 8 services:', error);
@@ -315,6 +315,15 @@ export class ExtensionLifecycle {
         },
       },
 
+      // ======================= 検索コマンド (Ctrl+F) =======================
+      {
+        command: 'secondaryTerminal.find',
+        handler: () => {
+          log('🔧 [DEBUG] Command executed: find (Ctrl+F search)');
+          this.keyboardShortcutService?.find();
+        },
+      },
+
       // ======================= 設定コマンド =======================
       {
         command: 'secondaryTerminal.openSettings',
@@ -360,7 +369,7 @@ export class ExtensionLifecycle {
         command: 'secondaryTerminal.debugInput',
         handler: async () => {
           log('🔧 [DEBUG-CMD] Direct input test command triggered');
-          
+
           if (!this.terminalManager) {
             log('❌ [DEBUG-CMD] TerminalManager not available');
             void vscode.window.showErrorMessage('TerminalManager not available');
@@ -380,10 +389,10 @@ export class ExtensionLifecycle {
           // Send test input directly to TerminalManager
           const testCommand = 'echo "DEBUG: Direct Extension input test successful"\\r';
           log('🔧 [DEBUG-CMD] Sending test input:', testCommand);
-          
+
           this.terminalManager.sendInput(testCommand, activeTerminalId);
           log('🔧 [DEBUG-CMD] Test input sent successfully');
-          
+
           void vscode.window.showInformationMessage('Debug input test sent directly to terminal');
         },
       },

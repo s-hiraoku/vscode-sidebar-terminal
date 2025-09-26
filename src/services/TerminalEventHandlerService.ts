@@ -3,10 +3,16 @@ import { WebviewMessage } from '../types/common';
 import { getTerminalConfig } from '../utils/common';
 import { TERMINAL_CONSTANTS } from '../constants';
 import { provider as log } from '../utils/logger';
+import {
+  ITerminalManagerForEvents,
+  ITerminalEventData,
+  ITerminalInstanceForEvents,
+  ITerminalStateForEvents,
+} from '../types/type-guards';
 
 /**
  * Terminal Event Handler Service
- * 
+ *
  * Extracted from SecondaryTerminalProvider to handle:
  * - Terminal data output events
  * - Terminal creation and removal events
@@ -27,7 +33,7 @@ export class TerminalEventHandlerService implements ITerminalEventHandlerService
   private terminalIdMapping?: Map<string, string>;
 
   constructor(
-    private terminalManager: any, // TODO: Replace with proper interface
+    private terminalManager: ITerminalManagerForEvents,
     private sendMessage: (message: WebviewMessage) => Promise<void>,
     private extensionContext: vscode.ExtensionContext
   ) {}
@@ -55,19 +61,21 @@ export class TerminalEventHandlerService implements ITerminalEventHandlerService
 
   public clearTerminalEventListeners(): void {
     log('🧹 [EVENT-HANDLER] Clearing terminal event listeners...');
-    
+
     this.terminalEventDisposables.forEach((disposable) => {
       disposable.dispose();
     });
     this.terminalEventDisposables = [];
-    
+
     log('✅ [EVENT-HANDLER] Terminal event listeners cleared');
   }
 
   private setupDataEventListener(): void {
     // Handle terminal output
-    const dataDisposable = this.terminalManager.onData((event: any) => {
-      this.handleTerminalDataEvent(event);
+    const dataDisposable = this.terminalManager.onData((event: ITerminalEventData) => {
+      if (event.data !== undefined) {
+        this.handleTerminalDataEvent({ terminalId: event.terminalId, data: event.data });
+      }
     });
 
     this.terminalEventDisposables.push(dataDisposable);
@@ -76,8 +84,10 @@ export class TerminalEventHandlerService implements ITerminalEventHandlerService
 
   private setupExitEventListener(): void {
     // Handle terminal exit
-    const exitDisposable = this.terminalManager.onExit((event: any) => {
-      this.handleTerminalExitEvent(event);
+    const exitDisposable = this.terminalManager.onExit((event: ITerminalEventData) => {
+      if (event.exitCode !== undefined) {
+        this.handleTerminalExitEvent({ terminalId: event.terminalId, exitCode: event.exitCode });
+      }
     });
 
     this.terminalEventDisposables.push(exitDisposable);
@@ -86,9 +96,11 @@ export class TerminalEventHandlerService implements ITerminalEventHandlerService
 
   private setupCreatedEventListener(): void {
     // Handle terminal creation
-    const createdDisposable = this.terminalManager.onTerminalCreated((terminal: any) => {
-      this.handleTerminalCreatedEvent(terminal);
-    });
+    const createdDisposable = this.terminalManager.onTerminalCreated(
+      (terminal: ITerminalInstanceForEvents) => {
+        this.handleTerminalCreatedEvent(terminal);
+      }
+    );
 
     this.terminalEventDisposables.push(createdDisposable);
     log('✅ [EVENT-HANDLER] Created event listener setup complete');
@@ -106,9 +118,11 @@ export class TerminalEventHandlerService implements ITerminalEventHandlerService
 
   private setupStateUpdateEventListener(): void {
     // Handle terminal state updates
-    const stateUpdateDisposable = this.terminalManager.onStateUpdate((state: any) => {
-      this.handleTerminalStateUpdateEvent(state);
-    });
+    const stateUpdateDisposable = this.terminalManager.onStateUpdate(
+      (state: ITerminalStateForEvents) => {
+        this.handleTerminalStateUpdateEvent(state);
+      }
+    );
 
     this.terminalEventDisposables.push(stateUpdateDisposable);
     log('✅ [EVENT-HANDLER] State update event listener setup complete');
@@ -116,9 +130,11 @@ export class TerminalEventHandlerService implements ITerminalEventHandlerService
 
   private setupFocusEventListener(): void {
     // Handle terminal focus events
-    const focusDisposable = this.terminalManager.onTerminalFocus((terminalId: string) => {
-      this.handleTerminalFocusEvent(terminalId);
-    });
+    const focusDisposable = this.terminalManager.onTerminalFocus(
+      (terminal: ITerminalInstanceForEvents) => {
+        this.handleTerminalFocusEvent(terminal.id);
+      }
+    );
 
     this.terminalEventDisposables.push(focusDisposable);
     log('✅ [EVENT-HANDLER] Focus event listener setup complete');
@@ -133,7 +149,7 @@ export class TerminalEventHandlerService implements ITerminalEventHandlerService
     try {
       // Map Extension terminal ID to WebView terminal ID if mapping exists
       const webviewTerminalId = this.terminalIdMapping?.get(event.terminalId) || event.terminalId;
-      
+
       log(
         '🔍 [EVENT-HANDLER] Terminal output received:',
         event.data.length,
@@ -160,7 +176,12 @@ export class TerminalEventHandlerService implements ITerminalEventHandlerService
 
   private handleTerminalExitEvent(event: { terminalId: string; exitCode: number }): void {
     try {
-      log('💀 [EVENT-HANDLER] Terminal exit event:', event.terminalId, 'exit code:', event.exitCode);
+      log(
+        '💀 [EVENT-HANDLER] Terminal exit event:',
+        event.terminalId,
+        'exit code:',
+        event.exitCode
+      );
 
       void this.sendMessage({
         command: TERMINAL_CONSTANTS.COMMANDS.EXIT,
@@ -172,7 +193,7 @@ export class TerminalEventHandlerService implements ITerminalEventHandlerService
     }
   }
 
-  private handleTerminalCreatedEvent(terminal: any): void {
+  private handleTerminalCreatedEvent(terminal: ITerminalInstanceForEvents): void {
     try {
       log('🆕 [EVENT-HANDLER] Terminal created:', terminal.id, terminal.name);
 
@@ -221,13 +242,13 @@ export class TerminalEventHandlerService implements ITerminalEventHandlerService
     }
   }
 
-  private handleTerminalStateUpdateEvent(state: any): void {
+  private handleTerminalStateUpdateEvent(state: ITerminalStateForEvents): void {
     try {
       log('🔄 [EVENT-HANDLER] Terminal state update:', Object.keys(state || {}));
 
       void this.sendMessage({
         command: 'stateUpdate',
-        state,
+        state: state as any, // Cast for compatibility with WebviewMessage
       });
 
       log('✅ [EVENT-HANDLER] State update message sent');
@@ -291,7 +312,7 @@ export class TerminalEventHandlerService implements ITerminalEventHandlerService
   /**
    * Handle custom terminal events (for future extensibility)
    */
-  public handleCustomEvent(eventType: string, eventData: any): void {
+  public handleCustomEvent(eventType: string, eventData: unknown): void {
     try {
       log(`🔥 [EVENT-HANDLER] Custom event received: ${eventType}`, eventData);
 
@@ -336,7 +357,9 @@ export class TerminalEventHandlerService implements ITerminalEventHandlerService
     }
 
     if (this.terminalEventDisposables.length < 6) {
-      issues.push(`Expected 6 event listeners, but only ${this.terminalEventDisposables.length} are active`);
+      issues.push(
+        `Expected 6 event listeners, but only ${this.terminalEventDisposables.length} are active`
+      );
     }
 
     return {
@@ -350,14 +373,14 @@ export class TerminalEventHandlerService implements ITerminalEventHandlerService
    */
   public dispose(): void {
     log('🔧 [EVENT-HANDLER] Disposing terminal event handler service...');
-    
+
     // Clear all event listeners
     this.clearTerminalEventListeners();
-    
+
     // Clean up terminal ID mapping
     this.terminalIdMapping?.clear();
     this.terminalIdMapping = undefined;
-    
+
     log('✅ [EVENT-HANDLER] Terminal event handler service disposed');
   }
 }

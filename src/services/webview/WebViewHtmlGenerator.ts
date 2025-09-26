@@ -5,7 +5,7 @@ import { generateNonce } from '../../utils/common';
 
 /**
  * Generates HTML content for the WebView
- * 
+ *
  * This service extracts HTML generation logic from SecondaryTerminalProvider
  * to provide focused, testable HTML generation with proper security policies.
  */
@@ -25,17 +25,20 @@ export class WebViewHtmlGenerator implements IWebViewHtmlGenerator {
       log('🎨 [HtmlGenerator] Generating main WebView HTML');
 
       // Create script URI
-      const webviewJsPath = vscode.Uri.joinPath(this.extensionContext.extensionUri, 'dist', 'webview.js');
+      const webviewJsPath = vscode.Uri.joinPath(
+        this.extensionContext.extensionUri,
+        'dist',
+        'webview.js'
+      );
       const scriptUri = webview.asWebviewUri(webviewJsPath);
 
       // Generate nonce for security
       const nonce = generateNonce();
 
       const html = this.buildMainHtmlTemplate(webview, scriptUri, nonce);
-      
+
       log(`✅ [HtmlGenerator] Main HTML generated successfully (${html.length} characters)`);
       return html;
-
     } catch (error) {
       log('❌ [HtmlGenerator] Error generating main HTML:', error);
       throw error;
@@ -168,7 +171,11 @@ export class WebViewHtmlGenerator implements IWebViewHtmlGenerator {
   /**
    * Build the main HTML template with all necessary components
    */
-  private buildMainHtmlTemplate(webview: vscode.Webview, scriptUri: vscode.Uri, nonce: string): string {
+  private buildMainHtmlTemplate(
+    webview: vscode.Webview,
+    scriptUri: vscode.Uri,
+    nonce: string
+  ): string {
     return `<!DOCTYPE html>
     <html lang="en">
     <head>
@@ -185,9 +192,7 @@ export class WebViewHtmlGenerator implements IWebViewHtmlGenerator {
             <!-- Terminal container will be populated by webview.js -->
         </div>
         ${this.generateInitializationScript(nonce)}
-        <script nonce="${nonce}" src="${scriptUri.toString()}"
-                onload="console.log('✅ webview.js loaded successfully')"
-                onerror="console.error('❌ webview.js failed to load', event)"></script>
+        <script nonce="${nonce}" src="${scriptUri.toString()}" id="webview-main-script"></script>
     </body>
     </html>`;
   }
@@ -471,6 +476,19 @@ export class WebViewHtmlGenerator implements IWebViewHtmlGenerator {
             } catch (error) {
                 console.error('❌ Error acquiring VS Code API:', error);
             }
+
+            // Add script loading event handlers
+            document.addEventListener('DOMContentLoaded', function() {
+                const script = document.getElementById('webview-main-script');
+                if (script) {
+                    script.addEventListener('load', function() {
+                        console.log('✅ webview.js loaded successfully');
+                    });
+                    script.addEventListener('error', function(event) {
+                        console.error('❌ webview.js failed to load', event);
+                    });
+                }
+            });
         </script>`;
   }
 
@@ -489,7 +507,11 @@ export class WebViewHtmlGenerator implements IWebViewHtmlGenerator {
   getDebugInfo(): object {
     return {
       extensionUri: this.extensionContext.extensionUri.toString(),
-      webviewDistPath: vscode.Uri.joinPath(this.extensionContext.extensionUri, 'dist', 'webview.js').toString(),
+      webviewDistPath: vscode.Uri.joinPath(
+        this.extensionContext.extensionUri,
+        'dist',
+        'webview.js'
+      ).toString(),
       timestamp: new Date().toISOString(),
     };
   }

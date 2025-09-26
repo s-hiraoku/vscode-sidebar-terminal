@@ -34,7 +34,7 @@ export class UIManager extends BaseManager implements IUIManager {
   private headerElementsCache = new Map<string, TerminalHeaderElements>();
 
   // Event registry for proper cleanup
-  protected override eventRegistry: EventHandlerRegistry;
+  protected eventRegistry: EventHandlerRegistry;
 
   constructor() {
     super('UIManager', {
@@ -42,9 +42,30 @@ export class UIManager extends BaseManager implements IUIManager {
       enableValidation: true,
       enableErrorRecovery: true,
     });
-    
+
     // Initialize event registry
     this.eventRegistry = new EventHandlerRegistry();
+  }
+
+  /**
+   * Initialize the UIManager (BaseManager abstract method implementation)
+   */
+  protected doInitialize(): void {
+    this.logger('🚀 UIManager initialized');
+  }
+
+  /**
+   * Dispose UIManager resources (BaseManager abstract method implementation)
+   */
+  protected doDispose(): void {
+    this.logger('🧹 Disposing UIManager resources');
+
+    // Clear caches
+    this.currentTheme = null;
+    this.themeApplied = false;
+    this.headerElementsCache.clear();
+
+    this.logger('✅ UIManager resources disposed');
   }
 
   /**
@@ -68,7 +89,7 @@ export class UIManager extends BaseManager implements IUIManager {
 
     // Log all available containers
     allContainers.forEach((container, terminalId) => {
-        uiLogger.debug(
+      uiLogger.debug(
         `Container ${terminalId}: ${container.tagName}#${container.id}.${container.className}`
       );
     });
@@ -335,7 +356,11 @@ export class UIManager extends BaseManager implements IUIManager {
   /**
    * Create terminal header with title and controls
    */
-  public createTerminalHeader(terminalId: string, terminalName: string, onAiAgentToggleClick?: (terminalId: string) => void): HTMLElement {
+  public createTerminalHeader(
+    terminalId: string,
+    terminalName: string,
+    onAiAgentToggleClick?: (terminalId: string) => void
+  ): HTMLElement {
     // 🔍 DEBUG: Enhanced header creation logging
     console.log(`🔍 [DEBUG] Creating terminal header:`, {
       terminalId,
@@ -589,7 +614,7 @@ export class UIManager extends BaseManager implements IUIManager {
     callback: (width: number, height: number) => void
   ): void {
     const key = `terminal-resize-${container.id || Date.now()}`;
-    
+
     ResizeManager.observeResize(
       key,
       container,
@@ -599,7 +624,7 @@ export class UIManager extends BaseManager implements IUIManager {
       },
       { delay: this.UPDATE_DEBOUNCE_MS }
     );
-    
+
     uiLogger.info(`Resize observer setup for terminal container: ${key}`);
   }
 

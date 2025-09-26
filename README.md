@@ -5,40 +5,60 @@
 [![Rating](https://img.shields.io/visual-studio-marketplace/r/s-hiraoku.vscode-sidebar-terminal)](https://marketplace.visualstudio.com/items?itemName=s-hiraoku.vscode-sidebar-terminal)
 [![License](https://img.shields.io/github/license/s-hiraoku/vscode-sidebar-terminal)](https://github.com/s-hiraoku/vscode-sidebar-terminal/blob/main/LICENSE)
 
-A powerful VS Code extension that provides a fully-featured terminal in the sidebar with advanced AI agent integration, split terminal support, and comprehensive session management.
+**The Essential Tool for the CLI Coding Agent Era** - A production-ready terminal extension designed for developers who need more than VS Code's standard terminal. Manage up to 5 terminals across sidebar and panel with exceptional compatibility for Claude Code, Gemini CLI, and GitHub Copilot. Features complete TypeScript compliance with ProcessState/InteractionState management for maximum reliability.
+
+> ⚠️ **Active Development Notice**: This extension is under active development with new features being added continuously. Please expect some bugs and incomplete functionality as we work to improve the experience.
 
 ![Secondary Terminal Demo](resources/demo.gif)
 
 ## ✨ Key Features
 
 ### 🚀 **Advanced Terminal Management**
+- **VS Code Standard Compliance**: Complete ProcessState enum implementation (Uninitialized, Launching, Running, KilledDuringLaunch, KilledByUser, KilledByProcess)
+- **InteractionState Tracking**: Advanced state management with None, ReplayOnly, and Session states
+- **Production-Ready Architecture**: Zero TypeScript compilation errors with 562 KiB extension and 1.05 MiB webview builds
 - **Sidebar Integration**: Dedicated terminal panel in the VS Code activity bar
 - **Multiple Terminals**: Support for up to 5 concurrent terminal instances
 - **Smart Session Persistence**: Automatically saves and restores terminal sessions across VS Code restarts
 - **Terminal Recycling**: Efficient terminal number management (1-5) with automatic reuse
+- **Enhanced Error Handling**: Robust error recovery mechanisms following VS Code standards
 - **Cross-Platform Support**: Works seamlessly on Windows, macOS, and Linux
 
 ### 🤖 **AI Agent Integration**
+- **Enhanced Detection Engine**: Improved CLI agent detection with advanced pattern recognition
 - **Claude Code Support**: Full integration with `claude-code` commands and session restoration
+- **CodeRabbit CLI Integration**: Custom slash command support for AI code reviews with smart mode selection
 - **GitHub Copilot Integration**: File reference shortcuts with `#file:` format (CMD+K CMD+C)
 - **Gemini CLI Support**: Complete integration with `gemini code` commands
 - **Real-time Status Tracking**: Live AI agent status indicators with connection/disconnection detection
 - **Smart Toggle Controls**: One-click AI agent switching with status-aware button visibility
+- **Manual Reset Functionality**: Force reconnect AI agents when detection issues occur
+- **Timeout-based Detection**: Intelligent timeout handling for reliable state management
 
 ### 🔧 **Developer Experience**
 - **Alt+Click Cursor Positioning**: VS Code-standard cursor positioning with intelligent CLI agent conflict detection
-- **File Reference Shortcuts**: Quick file sharing with AI agents using @filename format (CMD+Option+L)
+- **Smart File Reference System**: Instantly share code with AI agents using CMD+Option+L - automatically targets "AI Agent Connected" terminals
+- **Multi-Agent Workflow**: Seamlessly work with multiple AI agents across different terminals simultaneously
 - **IME Support**: Full Japanese and multi-language input method support
-- **Split Terminal Views**: Vertical and horizontal terminal splitting
+- **Split Terminal Views**: Vertical and horizontal terminal splitting optimized for AI agent workflows
 - **Command Palette Integration**: Full VS Code command palette support
 
 ### 📊 **Performance & Monitoring**
+- **Production-Grade Quality**: Zero TypeScript compilation errors with comprehensive ESLint compliance (0 errors, 333 acceptable warnings)
+- **Optimized Build Process**: 562 KiB extension + 1.05 MiB webview builds with stable performance
 - **Adaptive Performance**: Dynamic buffering optimization for AI agent output (250fps during active sessions)
 - **Debug Panel**: Real-time system monitoring with Ctrl+Shift+D shortcut
 - **Memory Management**: Efficient resource cleanup and leak prevention
 - **Output Optimization**: Smart flushing intervals (2-16ms) based on activity patterns
+- **Subtle Notifications**: Improved visual design with reduced opacity and VS Code integration
 
 ## 🎯 Quick Start
+
+### Why Secondary Terminal?
+
+> *"With CLI coding agents becoming widespread these days, isn't VS Code's standard terminal alone sometimes insufficient?"*
+
+Optimized for modern developers who need to use multiple AI agents simultaneously and efficiently send file references. Perfect for the era where AI-powered coding assistants are essential development tools.
 
 ### Installation
 
@@ -51,12 +71,15 @@ A powerful VS Code extension that provides a fully-featured terminal in the side
 1. Click the terminal icon in the activity bar or use `Ctrl+Shift+P` → "Focus Terminal"
 2. The extension automatically creates an initial terminal with your default shell
 3. Start using AI agents by running `claude-code "your command"` or `gemini code "your task"`
+4. Look for "AI Agent Connected" status indicator to confirm agent connection
+
+> 📖 **Want more details?** Check out our [comprehensive blog article](https://zenn.dev/hiraoku/articles/0de654620028a0) for detailed usage examples and advanced workflows.
 
 ## 🔑 Keyboard Shortcuts
 
 | Shortcut | Action | Description |
 |----------|--------|-------------|
-| `CMD+Option+L` (Mac)<br>`Ctrl+Alt+L` (Win/Linux) | **File Reference** | Send current file to active AI agents with @filename format |
+| `CMD+Option+L` (Mac)<br>`Ctrl+Alt+L` (Win/Linux) | **File Reference** | Send current file to "AI Agent Connected" terminals with @filename format - essential for efficient AI agent workflows |
 | `CMD+K CMD+C` (Mac)<br>`Ctrl+K Ctrl+C` (Win/Linux) | **Copilot Integration** | Activate GitHub Copilot Chat with #file: reference |
 | `Alt+Click` | **Cursor Positioning** | Position terminal cursor (VS Code standard behavior) |
 | `Ctrl+Shift+D` | **Debug Panel** | Toggle real-time system monitoring panel |
@@ -86,30 +109,119 @@ User Input → VS Code Commands → Extension Host → WebView Messages → xter
 
 ## 🤖 AI Agent Integration
 
-### Supported AI Agents
+Secondary Terminal is specifically designed to work seamlessly with modern CLI coding agents. Here's how to get the most out of each supported agent:
 
-#### Claude Code
-- **Command Format**: `claude-code "your task description"`
-- **Session Restoration**: Complete command history preservation
-- **File References**: Direct file sharing with @filename syntax
-- **Status Tracking**: Real-time connection/disconnection monitoring
+### 🎯 Getting Started with AI Agents
+
+#### Step 1: Launch Your AI Agent
+Choose your preferred AI agent and launch it in Secondary Terminal:
+
+```bash
+# Claude Code (Anthropic)
+claude-code "help me with this React component"
+
+# Gemini CLI (Google)
+gemini code "optimize this Python function"
+
+# For GitHub Copilot - use the keyboard shortcut
+# CMD+K CMD+C (Mac) or Ctrl+K Ctrl+C (Win/Linux)
+```
+
+#### Step 2: Look for Connection Status
+Watch for the **"AI Agent Connected"** indicator in the terminal header - this shows which terminals are actively connected to AI agents.
+
+#### Step 3: Use File References
+Press `CMD+Option+L` (Mac) or `Ctrl+Alt+L` (Win/Linux) while editing a file to instantly share it with connected AI agents using the `@filename` format.
+
+### 🔧 Supported AI Agents
+
+#### Claude Code (Anthropic)
+- **Launch Command**: `claude-code "your task description"`
+- **File Sharing**: Automatic `@filename` references via CMD+Option+L
+- **Session Persistence**: Complete command history and context restoration across VS Code restarts
+- **Status Detection**: Real-time connection/disconnection monitoring
+- **Best For**: Complex reasoning tasks, code refactoring, architectural decisions
 
 #### GitHub Copilot
-- **Integration**: Seamless chat activation with file context
-- **File References**: #file: format for immediate context sharing
-- **Keyboard Shortcut**: CMD+K CMD+C for instant activation
+- **Activation**: `CMD+K CMD+C` (Mac) or `Ctrl+K Ctrl+C` (Win/Linux)
+- **File Context**: Automatically includes current file with `#file:` reference
+- **Integration**: Seamless VS Code native chat experience
+- **Status Tracking**: Shows when Copilot Chat is active
+- **Best For**: Code completion, quick fixes, inline suggestions
 
-#### Gemini CLI
-- **Command Format**: `gemini code "your development task"`
-- **Full Integration**: Complete lifecycle management and session restoration
-- **Smart Detection**: Automatic startup and termination detection
+#### CodeRabbit CLI
+- **Slash Command**: `/coderabbit` (when using Claude Code)
+- **Mode Selection**:
+  - `--prompt-only`: Optimized for AI agent integration
+  - `--plain`: Detailed human-readable feedback
+- **Custom Flags**: Full support for CodeRabbit CLI arguments
+- **Best For**: Code reviews, quality analysis, security audits
 
-### AI Agent Features
+#### Gemini CLI (Google)
+- **Launch Command**: `gemini code "your development task"`
+- **Session Management**: Complete lifecycle tracking and restoration
+- **Auto-Detection**: Intelligent startup and termination recognition
+- **File References**: Full `@filename` support
+- **Best For**: Code generation, debugging, performance optimization
 
-- **Intelligent Status Management**: Automatic detection of agent startup, activity, and termination
-- **Multi-Agent Support**: Handle multiple AI agents across different terminals
-- **Performance Optimization**: 250fps output processing during active AI sessions
-- **Conflict Resolution**: Smart Alt+Click disabling during AI agent activity
+### 🚀 Advanced AI Workflows
+
+#### Multi-Agent Workflow
+1. **Launch multiple agents** in different terminals:
+   ```bash
+   # Terminal 1: Claude Code for architecture
+   claude-code "help design this system"
+
+   # Terminal 2: Gemini for implementation
+   gemini code "implement the user service"
+   ```
+
+2. **Share files efficiently** using CMD+Option+L to send the same file to all connected agents
+
+3. **Switch between contexts** using terminal tabs while maintaining separate conversations
+
+#### File Reference System
+- **Automatic Detection**: Extension automatically detects "AI Agent Connected" terminals
+- **Smart Targeting**: CMD+Option+L sends files only to connected AI agents
+- **Format Consistency**: Uses standardized `@filename` format across all agents
+- **Context Preservation**: Maintains file references across terminal sessions
+
+### 🎛️ AI Agent Configuration
+
+#### Detection Settings
+```json
+{
+  "secondaryTerminal.enableCliAgentIntegration": true,
+  "secondaryTerminal.enableGitHubCopilotIntegration": true,
+  "secondaryTerminal.focusAfterAtMention": true
+}
+```
+
+#### Performance Tuning for AI Agents
+- **High-Speed Output**: 250fps processing during active AI sessions
+- **Smart Buffering**: Adaptive buffering based on agent activity
+- **Memory Optimization**: Efficient cleanup of agent sessions
+
+### 🔍 Troubleshooting AI Agents
+
+#### Agent Not Detected?
+1. Check the terminal header for "AI Agent Connected" status
+2. Verify the agent is properly installed and accessible
+3. Use the debug panel (Ctrl+Shift+D) for detection logs
+4. Try the manual reset functionality if needed
+
+#### File References Not Working?
+1. Ensure `secondaryTerminal.enableCliAgentIntegration` is enabled
+2. Verify you're using CMD+Option+L (not Ctrl+Alt+L on Mac)
+3. Check that at least one terminal shows "AI Agent Connected"
+4. Try refreshing the terminal connection
+
+### 💡 Pro Tips
+
+- **Use Split Terminals**: Keep multiple AI agents visible simultaneously
+- **Session Persistence**: Your AI conversations are automatically restored after VS Code restarts
+- **Keyboard Efficiency**: Master CMD+Option+L for instant file sharing
+- **Debug Panel**: Use Ctrl+Shift+D to monitor AI agent status in real-time
 
 ## ⚡ Performance Optimizations
 
@@ -264,7 +376,26 @@ The project uses GitHub Actions for automated testing and releases:
 
 ## 📈 Version History
 
-### v0.1.84 (Current) - 🚑 **日本語入力完全修復+品質改善**
+### v0.1.94 (Current) - 📚 **Comprehensive AI Agent Documentation & Enhanced UX**
+- 📖 **Complete AI Agent Guide**: Added comprehensive documentation for Claude Code, Gemini CLI, GitHub Copilot, and CodeRabbit CLI integration
+- 🎯 **CLI Agent Era Positioning**: Enhanced value proposition for modern AI-assisted development workflows
+- 🔧 **Multi-Agent Workflows**: Detailed documentation for advanced multi-agent usage patterns and best practices
+- 🚀 **Development Transparency**: Clear development status communication with bug acknowledgment and user expectations
+- 📝 **Documentation Excellence**: Completely revamped README.md with step-by-step guides and troubleshooting
+- 🌐 **Zenn Blog Integration**: Added references to comprehensive Japanese blog article for detailed usage examples
+
+### v0.1.86 - 🔧 **AI Agent Toggle Enhancement**
+- 📎 **AI Agentトグル改善**: クリップボタンでconnectedエージェント移動時、前のconnectedをdisconnectedに変更
+- ⚡ **シームレスな状態遷移**: より直感的なAI Agent切り替え動作
+- 🎨 **Toaster通知の控えめ化**: 25%透明度向上とカラー調整で視覚的な邪魔を軽減
+
+### v0.1.85 - 🚑 **Critical Cleanup & Manual Reset**
+- 🗑️ **重複コード削除**: `src/integration/`フォルダ全体と未使用ファイル完全削除
+- 🔄 **手動リセット機能**: AI Agent検知エラー時の強制再接続機能追加
+- 🎯 **コードベース整理**: 実際に使用されているコードのみ保持
+- ✅ **検知精度向上**: 過剰検知への対応策実装
+
+### v0.1.84 - 🚑 **日本語入力完全修復+品質改善**
 - 🇯🇵 **日本語入力問題の完全解決**: `terminal.onData()`でのIME入力ブロックを削除
 - ✅ **VS Code標準準拠**: 統合ターミナルと同等のIME処理品質を実現
 - ✅ **IME確定文字の確実反映**: ひらがな・カタカナ・漢字変換が100%動作
@@ -319,7 +450,7 @@ The project uses GitHub Actions for automated testing and releases:
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
+We welcome contributions! Please see our [GitHub Issues](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues) to get started.
 
 ### Development Setup
 
@@ -340,11 +471,22 @@ We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙋 Support
+## 🙋 Support & Contributing
 
-- **Issues**: [GitHub Issues](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues)
+> 🚧 **Development Status**: This extension is actively being developed with frequent updates. New features are continuously being added, and there may be some bugs or incomplete functionality. We appreciate your patience and feedback!
+
+### Get Help & Report Issues
+
+- **Issues**: [GitHub Issues](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues) - Report bugs or request features
 - **Discussions**: [GitHub Discussions](https://github.com/s-hiraoku/vscode-sidebar-terminal/discussions)
 - **Marketplace**: [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=s-hiraoku.vscode-sidebar-terminal)
+- **Blog Article**: [Detailed Introduction (Japanese)](https://zenn.dev/hiraoku/articles/0de654620028a0) - Comprehensive guide to features and use cases
+
+### Known Limitations
+
+- Some features may be incomplete or have rough edges
+- New releases are frequent as we continuously add functionality
+- Documentation is being updated regularly to keep pace with development
 
 ---
 

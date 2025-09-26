@@ -13,7 +13,7 @@ interface BufferConfig {
 
 /**
  * Service responsible for buffering and batching terminal data output
- * 
+ *
  * This service extracts data buffering logic from TerminalManager to improve:
  * - Performance through intelligent batching
  * - Responsiveness during CLI Agent operations
@@ -24,12 +24,12 @@ export class TerminalDataBufferService {
   private readonly _dataEmitter = new vscode.EventEmitter<TerminalEvent>();
   private readonly _dataBuffers = new Map<string, string[]>();
   private readonly _dataFlushTimers = new Map<string, NodeJS.Timeout>();
-  
+
   private readonly _config: Required<BufferConfig>;
-  
+
   // CLI Agent detection for adaptive buffering
   private _isCliAgentActive = false;
-  
+
   public readonly onData = this._dataEmitter.event;
 
   constructor(config: BufferConfig = {}) {
@@ -55,7 +55,9 @@ export class TerminalDataBufferService {
       const buffer = this._dataBuffers.get(terminalId)!;
       buffer.push(data);
 
-      log(`📦 [DataBuffer] Buffered ${data.length} chars for terminal ${terminalId} (buffer: ${buffer.length}/${this._config.maxBufferSize})`);
+      log(
+        `📦 [DataBuffer] Buffered ${data.length} chars for terminal ${terminalId} (buffer: ${buffer.length}/${this._config.maxBufferSize})`
+      );
 
       // Immediate flush for large data chunks or full buffers
       if (data.length >= 1000 || buffer.length >= this._config.maxBufferSize) {
@@ -67,7 +69,6 @@ export class TerminalDataBufferService {
       if (!this._dataFlushTimers.has(terminalId)) {
         this.scheduleFlush(terminalId);
       }
-
     } catch (error) {
       log('❌ [DataBuffer] Error buffering data:', error);
       // Fallback: emit data immediately
@@ -81,8 +82,10 @@ export class TerminalDataBufferService {
   setCliAgentActive(isActive: boolean): void {
     if (this._isCliAgentActive !== isActive) {
       this._isCliAgentActive = isActive;
-      log(`🤖 [DataBuffer] CLI Agent mode: ${isActive ? 'ACTIVE' : 'INACTIVE'} (flush interval: ${this.getCurrentFlushInterval()}ms)`);
-      
+      log(
+        `🤖 [DataBuffer] CLI Agent mode: ${isActive ? 'ACTIVE' : 'INACTIVE'} (flush interval: ${this.getCurrentFlushInterval()}ms)`
+      );
+
       // If CLI Agent becomes active, flush all pending buffers immediately for responsiveness
       if (isActive) {
         this.flushAllBuffers();
@@ -106,7 +109,7 @@ export class TerminalDataBufferService {
       if (buffer && buffer.length > 0) {
         const combinedData = buffer.join('');
         buffer.length = 0; // Clear buffer efficiently
-        
+
         log(`🚰 [DataBuffer] Flushing ${combinedData.length} chars for terminal ${terminalId}`);
         this.emitData(terminalId, combinedData);
       }
@@ -120,7 +123,7 @@ export class TerminalDataBufferService {
    */
   flushAllBuffers(): void {
     log('🚰 [DataBuffer] Flushing all buffers');
-    
+
     try {
       for (const terminalId of this._dataBuffers.keys()) {
         this.flushBuffer(terminalId);
@@ -137,10 +140,10 @@ export class TerminalDataBufferService {
     try {
       // Flush any pending data before clearing
       this.flushBuffer(terminalId);
-      
+
       // Remove buffer and timer
       this._dataBuffers.delete(terminalId);
-      
+
       const timer = this._dataFlushTimers.get(terminalId);
       if (timer) {
         clearTimeout(timer);
@@ -148,7 +151,6 @@ export class TerminalDataBufferService {
       }
 
       log(`🧹 [DataBuffer] Cleared buffer for terminal ${terminalId}`);
-      
     } catch (error) {
       log('❌ [DataBuffer] Error clearing terminal buffer:', error);
     }
@@ -164,8 +166,10 @@ export class TerminalDataBufferService {
     isCliAgentActive: boolean;
     flushInterval: number;
   } {
-    const totalBufferedChars = Array.from(this._dataBuffers.values())
-      .reduce((total, buffer) => total + buffer.reduce((sum, data) => sum + data.length, 0), 0);
+    const totalBufferedChars = Array.from(this._dataBuffers.values()).reduce(
+      (total, buffer) => total + buffer.reduce((sum, data) => sum + data.length, 0),
+      0
+    );
 
     return {
       activeBuffers: this._dataBuffers.size,
@@ -181,7 +185,7 @@ export class TerminalDataBufferService {
    */
   private scheduleFlush(terminalId: string): void {
     const flushInterval = this.getCurrentFlushInterval();
-    
+
     const timer = setTimeout(() => {
       this._dataFlushTimers.delete(terminalId);
       this.flushBuffer(terminalId);
@@ -194,9 +198,7 @@ export class TerminalDataBufferService {
    * Get current flush interval based on CLI Agent activity
    */
   private getCurrentFlushInterval(): number {
-    return this._isCliAgentActive ? 
-      this._config.cliAgentFlushInterval : 
-      this._config.flushInterval;
+    return this._isCliAgentActive ? this._config.cliAgentFlushInterval : this._config.flushInterval;
   }
 
   /**
@@ -215,22 +217,21 @@ export class TerminalDataBufferService {
    */
   dispose(): void {
     log('🧹 [DataBuffer] Disposing data buffer service');
-    
+
     try {
       // Clear all timers
       for (const timer of this._dataFlushTimers.values()) {
         clearTimeout(timer);
       }
       this._dataFlushTimers.clear();
-      
+
       // Clear all buffers
       this._dataBuffers.clear();
-      
+
       // Dispose event emitter
       this._dataEmitter.dispose();
-      
+
       log('✅ [DataBuffer] Data buffer service disposed');
-      
     } catch (error) {
       log('❌ [DataBuffer] Error disposing data buffer service:', error);
     }

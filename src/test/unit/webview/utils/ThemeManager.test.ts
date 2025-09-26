@@ -15,7 +15,7 @@ describe('ThemeManager', () => {
 
   beforeEach(() => {
     sandbox = createSandbox();
-    
+
     // Create DOM environment with CSS custom properties
     dom = new JSDOM(`
       <!DOCTYPE html>
@@ -43,13 +43,13 @@ describe('ThemeManager', () => {
         </body>
       </html>
     `);
-    
+
     global.window = dom.window as any;
     global.document = dom.window.document;
     global.Element = dom.window.Element;
     global.HTMLElement = dom.window.HTMLElement;
     global.getComputedStyle = dom.window.getComputedStyle;
-    
+
     testElement = document.getElementById('test-element')!;
   });
 
@@ -72,7 +72,7 @@ describe('ThemeManager', () => {
 
     it('should handle multiple initialization calls', () => {
       ThemeManager.initialize();
-      
+
       expect(() => {
         ThemeManager.initialize();
       }).to.not.throw();
@@ -81,11 +81,11 @@ describe('ThemeManager', () => {
     it('should handle initialization with missing document', () => {
       const originalDocument = global.document;
       delete (global as any).document;
-      
+
       expect(() => {
         ThemeManager.initialize();
       }).to.not.throw();
-      
+
       global.document = originalDocument;
     });
   });
@@ -97,7 +97,7 @@ describe('ThemeManager', () => {
 
     it('should return theme colors object', () => {
       const colors = ThemeManager.getThemeColors();
-      
+
       expect(colors).to.be.an('object');
       expect(colors).to.have.property('background');
       expect(colors).to.have.property('foreground');
@@ -109,10 +109,10 @@ describe('ThemeManager', () => {
       const plainDom = new JSDOM('<!DOCTYPE html><html><body></body></html>');
       global.document = plainDom.window.document;
       global.getComputedStyle = plainDom.window.getComputedStyle;
-      
+
       ThemeManager.initialize();
       const colors = ThemeManager.getThemeColors();
-      
+
       expect(colors.background).to.be.a('string');
       expect(colors.foreground).to.be.a('string');
       expect(colors.border).to.be.a('string');
@@ -120,9 +120,9 @@ describe('ThemeManager', () => {
 
     it('should handle missing getComputedStyle gracefully', () => {
       delete (global as any).getComputedStyle;
-      
+
       const colors = ThemeManager.getThemeColors();
-      
+
       expect(colors).to.be.an('object');
       expect(colors.background).to.be.a('string');
     });
@@ -135,7 +135,7 @@ describe('ThemeManager', () => {
 
     it('should apply theme to element', () => {
       ThemeManager.applyTheme(testElement);
-      
+
       // Should have applied background and color
       expect(testElement.style.background).to.not.be.empty;
       expect(testElement.style.color).to.not.be.empty;
@@ -145,11 +145,11 @@ describe('ThemeManager', () => {
       const customTheme = {
         background: '#ff0000',
         foreground: '#00ff00',
-        border: '#0000ff'
+        border: '#0000ff',
       };
-      
+
       ThemeManager.applyTheme(testElement, customTheme);
-      
+
       expect(testElement.style.background).to.equal('rgb(255, 0, 0)');
       expect(testElement.style.color).to.equal('rgb(0, 255, 0)');
       expect(testElement.style.borderColor).to.equal('rgb(0, 0, 255)');
@@ -157,14 +157,14 @@ describe('ThemeManager', () => {
 
     it('should handle partial custom theme', () => {
       const partialTheme = {
-        background: '#333333'
+        background: '#333333',
         // foreground and border not specified
       };
-      
+
       expect(() => {
         ThemeManager.applyTheme(testElement, partialTheme);
       }).to.not.throw();
-      
+
       expect(testElement.style.background).to.equal('rgb(51, 51, 51)');
     });
 
@@ -188,26 +188,26 @@ describe('ThemeManager', () => {
 
     it('should return CSS custom property value', () => {
       const backgroundColor = ThemeManager.getVSCodeColor('--vscode-editor-background');
-      
+
       expect(backgroundColor).to.be.a('string');
       expect(backgroundColor).to.not.be.empty;
     });
 
     it('should return fallback for non-existent property', () => {
       const color = ThemeManager.getVSCodeColor('--non-existent-property', '#fallback');
-      
+
       expect(color).to.equal('#fallback');
     });
 
     it('should handle missing fallback', () => {
       const color = ThemeManager.getVSCodeColor('--non-existent-property');
-      
+
       expect(color).to.be.a('string');
     });
 
     it('should handle empty property name', () => {
       const color = ThemeManager.getVSCodeColor('', '#default');
-      
+
       expect(color).to.equal('#default');
     });
   });
@@ -219,7 +219,7 @@ describe('ThemeManager', () => {
 
     it('should create terminal theme object', () => {
       const theme = ThemeManager.createTerminalTheme();
-      
+
       expect(theme).to.be.an('object');
       expect(theme).to.have.property('background');
       expect(theme).to.have.property('foreground');
@@ -230,11 +230,11 @@ describe('ThemeManager', () => {
     it('should create theme with custom overrides', () => {
       const overrides = {
         background: '#custom-bg',
-        cursor: '#custom-cursor'
+        cursor: '#custom-cursor',
       };
-      
+
       const theme = ThemeManager.createTerminalTheme(overrides);
-      
+
       expect(theme.background).to.equal('#custom-bg');
       expect(theme.cursor).to.equal('#custom-cursor');
       expect(theme.foreground).to.not.equal('#custom-bg'); // Should use default
@@ -256,9 +256,9 @@ describe('ThemeManager', () => {
     it('should update element theme with selector', () => {
       ThemeManager.updateElementTheme('#test-element', {
         background: '#updated-bg',
-        color: '#updated-fg'
+        color: '#updated-fg',
       });
-      
+
       expect(testElement.style.background).to.equal('');
       expect(testElement.style.color).to.equal('');
     });
@@ -268,11 +268,11 @@ describe('ThemeManager', () => {
       const element2 = document.createElement('div');
       element2.className = 'test-class';
       document.body.appendChild(element2);
-      
+
       ThemeManager.updateElementTheme('.test-class', {
-        background: '#multi-bg'
+        background: '#multi-bg',
       });
-      
+
       expect(testElement.style.background).to.equal('');
       expect(element2.style.background).to.equal('');
     });
@@ -280,7 +280,7 @@ describe('ThemeManager', () => {
     it('should handle non-existent selector gracefully', () => {
       expect(() => {
         ThemeManager.updateElementTheme('.non-existent', {
-          background: '#nothing'
+          background: '#nothing',
         });
       }).to.not.throw();
     });
@@ -299,14 +299,14 @@ describe('ThemeManager', () => {
 
     it('should return object with VS Code variables', () => {
       const variables = ThemeManager.getThemeVariables();
-      
+
       expect(variables).to.be.an('object');
       expect(Object.keys(variables).length).to.be.greaterThan(0);
     });
 
     it('should include common VS Code variables', () => {
       const variables = ThemeManager.getThemeVariables();
-      
+
       expect(variables).to.have.property('--vscode-editor-background');
       expect(variables).to.have.property('--vscode-editor-foreground');
     });
@@ -316,10 +316,10 @@ describe('ThemeManager', () => {
       const cleanDom = new JSDOM('<!DOCTYPE html><html><body></body></html>');
       global.document = cleanDom.window.document;
       global.getComputedStyle = cleanDom.window.getComputedStyle;
-      
+
       ThemeManager.initialize();
       const variables = ThemeManager.getThemeVariables();
-      
+
       expect(variables).to.be.an('object');
     });
   });
@@ -327,7 +327,7 @@ describe('ThemeManager', () => {
   describe('dispose', () => {
     it('should dispose without errors', () => {
       ThemeManager.initialize();
-      
+
       expect(() => {
         ThemeManager.dispose();
       }).to.not.throw();
@@ -336,7 +336,7 @@ describe('ThemeManager', () => {
     it('should handle multiple dispose calls', () => {
       ThemeManager.initialize();
       ThemeManager.dispose();
-      
+
       expect(() => {
         ThemeManager.dispose();
       }).to.not.throw();
@@ -354,7 +354,7 @@ describe('ThemeManager', () => {
       global.getComputedStyle = (() => {
         throw new Error('getComputedStyle error');
       }) as any;
-      
+
       expect(() => {
         ThemeManager.initialize();
         ThemeManager.getThemeColors();
@@ -364,12 +364,12 @@ describe('ThemeManager', () => {
     it('should handle invalid CSS values', () => {
       // Mock getComputedStyle to return invalid values
       global.getComputedStyle = (() => ({
-        getPropertyValue: () => ''
+        getPropertyValue: () => '',
       })) as any;
-      
+
       ThemeManager.initialize();
       const colors = ThemeManager.getThemeColors();
-      
+
       expect(colors).to.be.an('object');
       expect(colors.background).to.be.a('string');
     });
@@ -377,11 +377,11 @@ describe('ThemeManager', () => {
     it('should handle missing document.documentElement', () => {
       const _originalDocumentElement = document.documentElement;
       delete (document as any).documentElement;
-      
+
       expect(() => {
         ThemeManager.initialize();
       }).to.not.throw();
-      
+
       // Note: documentElement is read-only, cannot restore
       // originalDocumentElement;
     });
@@ -390,26 +390,26 @@ describe('ThemeManager', () => {
   describe('performance', () => {
     it('should handle many theme applications efficiently', () => {
       ThemeManager.initialize();
-      
+
       const startTime = Date.now();
-      
+
       for (let i = 0; i < 100; i++) {
         ThemeManager.applyTheme(testElement);
       }
-      
+
       const endTime = Date.now();
       const duration = endTime - startTime;
-      
+
       // Should complete in reasonable time (less than 1 second)
       expect(duration).to.be.lessThan(1000);
     });
 
     it('should cache theme colors for efficiency', () => {
       ThemeManager.initialize();
-      
+
       const colors1 = ThemeManager.getThemeColors();
       const colors2 = ThemeManager.getThemeColors();
-      
+
       // Should return consistent values (testing caching behavior)
       expect(colors1.background).to.equal(colors2.background);
       expect(colors1.foreground).to.equal(colors2.foreground);
@@ -429,23 +429,23 @@ describe('ThemeManager', () => {
         }
       `;
       document.head.appendChild(style);
-      
+
       ThemeManager.initialize();
-      
+
       const colors = ThemeManager.getThemeColors();
       ThemeManager.applyTheme(testElement);
-      
+
       expect(colors.background).to.not.be.empty;
       expect(testElement.style.background).to.not.be.empty;
     });
 
     it('should handle theme changes dynamically', () => {
       ThemeManager.initialize();
-      
+
       // Apply initial theme
       ThemeManager.applyTheme(testElement);
       const _initialBg = testElement.style.background;
-      
+
       // Simulate theme change by updating CSS variables
       const style = document.createElement('style');
       style.textContent = `
@@ -454,11 +454,11 @@ describe('ThemeManager', () => {
         }
       `;
       document.head.appendChild(style);
-      
+
       // Re-initialize and apply
       ThemeManager.initialize();
       ThemeManager.applyTheme(testElement);
-      
+
       // Background might change (depends on implementation)
       expect(testElement.style.background).to.be.a('string');
     });

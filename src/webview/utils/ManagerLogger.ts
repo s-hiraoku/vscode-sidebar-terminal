@@ -1,6 +1,6 @@
 /**
  * ManagerLogger Utility
- * 
+ *
  * Standardized logging across all managers to eliminate duplicate logging patterns
  * and provide consistent log formatting with manager identification
  */
@@ -35,7 +35,7 @@ export class ManagerLogger {
   private static globalConfig: LogConfig = {
     enableTimestamp: false,
     enableLevel: true,
-    maxMessageLength: 500
+    maxMessageLength: 500,
   };
 
   private managerName: string;
@@ -55,8 +55,8 @@ export class ManagerLogger {
    * @param config Optional logging configuration
    */
   static createLogger(
-    managerName: string, 
-    emoji: string = '📋', 
+    managerName: string,
+    emoji: string = '📋',
     config: LogConfig = {}
   ): ManagerLogger {
     return new ManagerLogger(managerName, emoji, config);
@@ -127,8 +127,8 @@ export class ManagerLogger {
   lifecycle(event: string, status: 'starting' | 'completed' | 'failed', data?: unknown): void {
     const statusEmoji = {
       starting: '🔄',
-      completed: '✅', 
-      failed: '❌'
+      completed: '✅',
+      failed: '❌',
     }[status];
 
     this.info(`${statusEmoji} ${event} ${status}`, data);
@@ -140,13 +140,14 @@ export class ManagerLogger {
   private log(level: LogLevel, message: string, data?: unknown): void {
     try {
       // Truncate message if too long
-      const truncatedMessage = this.config.maxMessageLength && message.length > this.config.maxMessageLength
-        ? `${message.substring(0, this.config.maxMessageLength)}...`
-        : message;
+      const truncatedMessage =
+        this.config.maxMessageLength && message.length > this.config.maxMessageLength
+          ? `${message.substring(0, this.config.maxMessageLength)}...`
+          : message;
 
       // Build formatted message
       const parts: string[] = [];
-      
+
       // Add timestamp if enabled
       if (this.config.enableTimestamp) {
         parts.push(`[${new Date().toISOString()}]`);
@@ -159,7 +160,7 @@ export class ManagerLogger {
 
       // Add emoji and manager name
       parts.push(`${this.emoji} [${this.managerName}]`);
-      
+
       // Add the message
       parts.push(truncatedMessage);
 
@@ -175,7 +176,6 @@ export class ManagerLogger {
 
       // Store in history
       this.addToHistory(level, truncatedMessage, data);
-
     } catch (error) {
       // Fallback to base logger if formatting fails
       baseLog(`❌ ManagerLogger error for ${this.managerName}: ${message}`);
@@ -192,7 +192,7 @@ export class ManagerLogger {
       level,
       manager: this.managerName,
       message,
-      data
+      data,
     };
 
     ManagerLogger.logHistory.push(entry);
@@ -209,7 +209,7 @@ export class ManagerLogger {
    */
   getRecentLogs(count: number = 10): LogEntry[] {
     return ManagerLogger.logHistory
-      .filter(entry => entry.manager === this.managerName)
+      .filter((entry) => entry.manager === this.managerName)
       .slice(-count);
   }
 
@@ -218,11 +218,9 @@ export class ManagerLogger {
    * @param since Timestamp to filter from
    */
   getLogsSince(since: number): LogEntry[] {
-    return ManagerLogger.logHistory
-      .filter(entry => 
-        entry.manager === this.managerName && 
-        entry.timestamp >= since
-      );
+    return ManagerLogger.logHistory.filter(
+      (entry) => entry.manager === this.managerName && entry.timestamp >= since
+    );
   }
 
   // Static methods for global log management
@@ -244,11 +242,11 @@ export class ManagerLogger {
     let logs = ManagerLogger.logHistory;
 
     if (managerFilter) {
-      logs = logs.filter(entry => entry.manager === managerFilter);
+      logs = logs.filter((entry) => entry.manager === managerFilter);
     }
 
     if (levelFilter) {
-      logs = logs.filter(entry => entry.level === levelFilter);
+      logs = logs.filter((entry) => entry.level === levelFilter);
     }
 
     return logs;
@@ -284,7 +282,7 @@ export class ManagerLogger {
       info: 0,
       warn: 0,
       error: 0,
-      debug: 0
+      debug: 0,
     };
 
     for (const entry of ManagerLogger.logHistory) {
@@ -296,12 +294,12 @@ export class ManagerLogger {
       totalEntries: ManagerLogger.logHistory.length,
       managerCounts,
       levelCounts,
-      oldestEntry: ManagerLogger.logHistory.length > 0 
-        ? ManagerLogger.logHistory[0]?.timestamp || null
-        : null,
-      newestEntry: ManagerLogger.logHistory.length > 0
-        ? ManagerLogger.logHistory[ManagerLogger.logHistory.length - 1]?.timestamp || null
-        : null
+      oldestEntry:
+        ManagerLogger.logHistory.length > 0 ? ManagerLogger.logHistory[0]?.timestamp || null : null,
+      newestEntry:
+        ManagerLogger.logHistory.length > 0
+          ? ManagerLogger.logHistory[ManagerLogger.logHistory.length - 1]?.timestamp || null
+          : null,
     };
   }
 }

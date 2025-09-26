@@ -17,7 +17,11 @@ export class CliAgentStateManager implements ICliAgentStateManager {
     terminalName?: string;
   }>();
 
-  setConnectedAgent(terminalId: string, type: 'claude' | 'gemini' | 'codex', terminalName?: string): void {
+  setConnectedAgent(
+    terminalId: string,
+    type: 'claude' | 'gemini' | 'codex',
+    terminalName?: string
+  ): void {
     // 🚨 FIX: Prevent unnecessary state changes for already connected agent
     if (this._connectedAgentTerminalId === terminalId && this._connectedAgentType === type) {
       log(
@@ -334,6 +338,96 @@ export class CliAgentStateManager implements ICliAgentStateManager {
     this._connectedAgentTerminalId = null;
     this._connectedAgentType = null;
     this._disconnectedAgents.clear();
+  }
+
+  /**
+   * 🆕 MANUAL RESET: Force reconnect an AI Agent in a specific terminal
+   * This is used when user manually clicks the AI Agent toggle to fix detection errors
+   */
+  forceReconnectAgent(
+    terminalId: string,
+    agentType: 'claude' | 'gemini' | 'codex',
+    terminalName?: string
+  ): boolean {
+    log(`🔄 [MANUAL-RESET] Force reconnecting ${agentType} agent in terminal ${terminalId}`);
+
+    // Clear any existing state for this terminal
+    const wasConnected = this._connectedAgentTerminalId === terminalId;
+    const wasDisconnected = this._disconnectedAgents.has(terminalId);
+
+    if (wasConnected) {
+      log(`🔄 [MANUAL-RESET] Terminal ${terminalId} was CONNECTED, clearing connected state`);
+      this._connectedAgentTerminalId = null;
+      this._connectedAgentType = null;
+    }
+
+    if (wasDisconnected) {
+      log(
+        `🔄 [MANUAL-RESET] Terminal ${terminalId} was DISCONNECTED, removing from disconnected list`
+      );
+      this._disconnectedAgents.delete(terminalId);
+    }
+
+    // If this was the connected terminal or we're forcing a new connection, set as connected
+    this._connectedAgentTerminalId = terminalId;
+    this._connectedAgentType = agentType;
+
+    // Fire status change to 'connected'
+    this._onStatusChange.fire({
+      terminalId,
+      status: 'connected',
+      type: agentType,
+      terminalName,
+    });
+
+    log(
+      `🚀 [MANUAL-RESET] Successfully force-reconnected ${agentType} agent in terminal ${terminalId}`
+    );
+    return true;
+  }
+
+  /**
+   * 🆕 MANUAL RESET: Clear detection error for a terminal
+   * Sets terminal state to 'none' to allow fresh detection
+   */
+  clearDetectionError(terminalId: string): boolean {
+    log(`🧹 [MANUAL-RESET] Clearing detection error for terminal ${terminalId}`);
+
+    let hadState = false;
+    let previousType: string | null = null;
+
+    // Clear connected state if this terminal was connected
+    if (this._connectedAgentTerminalId === terminalId) {
+      previousType = this._connectedAgentType;
+      this._connectedAgentTerminalId = null;
+      this._connectedAgentType = null;
+      hadState = true;
+      log(`🧹 [MANUAL-RESET] Cleared CONNECTED state for terminal ${terminalId}`);
+    }
+
+    // Clear disconnected state if this terminal was disconnected
+    if (this._disconnectedAgents.has(terminalId)) {
+      const agentInfo = this._disconnectedAgents.get(terminalId)!;
+      previousType = agentInfo.type;
+      this._disconnectedAgents.delete(terminalId);
+      hadState = true;
+      log(`🧹 [MANUAL-RESET] Cleared DISCONNECTED state for terminal ${terminalId}`);
+    }
+
+    // Fire status change to 'none' to reset UI
+    if (hadState) {
+      this._onStatusChange.fire({
+        terminalId,
+        status: 'none',
+        type: null,
+      });
+
+      log(`✅ [MANUAL-RESET] Reset terminal ${terminalId} to 'none' state (was: ${previousType})`);
+      return true;
+    } else {
+      log(`⚠️ [MANUAL-RESET] No state to clear for terminal ${terminalId}`);
+      return false;
+    }
   }
 
   getDisconnectedAgents(): Map<string, DisconnectedAgentInfo> {

@@ -1,7 +1,10 @@
 import * as assert from 'assert';
 import * as sinon from 'sinon';
 import * as vscode from 'vscode';
-import { UnifiedConfigurationService, ConfigurationChangeEvent } from '../../../../services/core/UnifiedConfigurationService';
+import {
+  UnifiedConfigurationService,
+  ConfigurationChangeEvent,
+} from '../../../../services/core/UnifiedConfigurationService';
 
 describe('UnifiedConfigurationService', () => {
   let service: UnifiedConfigurationService;
@@ -11,7 +14,7 @@ describe('UnifiedConfigurationService', () => {
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-    
+
     // Create mock workspace configuration
     mockWorkspaceConfig = {
       get: sandbox.stub(),
@@ -22,10 +25,10 @@ describe('UnifiedConfigurationService', () => {
 
     // Mock vscode.workspace.getConfiguration
     mockWorkspace = sandbox.stub(vscode.workspace, 'getConfiguration').returns(mockWorkspaceConfig);
-    
+
     // Mock onDidChangeConfiguration
     sandbox.stub(vscode.workspace, 'onDidChangeConfiguration').returns({
-      dispose: sandbox.stub()
+      dispose: sandbox.stub(),
     } as any);
 
     service = new UnifiedConfigurationService();
@@ -50,7 +53,9 @@ describe('UnifiedConfigurationService', () => {
     it('should return complete terminal settings with defaults', () => {
       // Setup default returns
       mockWorkspaceConfig.get.withArgs('fontSize', 14).returns(14);
-      mockWorkspaceConfig.get.withArgs('fontFamily', 'Consolas, monospace').returns('Consolas, monospace');
+      mockWorkspaceConfig.get
+        .withArgs('fontFamily', 'Consolas, monospace')
+        .returns('Consolas, monospace');
       mockWorkspaceConfig.get.withArgs('theme', 'auto').returns('auto');
       mockWorkspaceConfig.get.withArgs('cursorBlink', true).returns(true);
       mockWorkspaceConfig.get.withArgs('maxTerminals', 5).returns(5);
@@ -60,10 +65,10 @@ describe('UnifiedConfigurationService', () => {
 
       // Mock integrated terminal and editor configs
       mockWorkspace.withArgs('terminal.integrated').returns({
-        get: sandbox.stub().withArgs('altClickMovesCursor', true).returns(true)
+        get: sandbox.stub().withArgs('altClickMovesCursor', true).returns(true),
       } as any);
       mockWorkspace.withArgs('editor').returns({
-        get: sandbox.stub().withArgs('multiCursorModifier', 'alt').returns('alt')
+        get: sandbox.stub().withArgs('multiCursorModifier', 'alt').returns('alt'),
       } as any);
 
       const config = service.getSidebarTerminalConfig();
@@ -82,7 +87,9 @@ describe('UnifiedConfigurationService', () => {
 
     it('should handle custom configuration values', () => {
       mockWorkspaceConfig.get.withArgs('fontSize', 14).returns(16);
-      mockWorkspaceConfig.get.withArgs('fontFamily', 'Consolas, monospace').returns('Source Code Pro');
+      mockWorkspaceConfig.get
+        .withArgs('fontFamily', 'Consolas, monospace')
+        .returns('Source Code Pro');
       mockWorkspaceConfig.get.withArgs('maxTerminals', 5).returns(10);
 
       const config = service.getSidebarTerminalConfig();
@@ -113,10 +120,10 @@ describe('UnifiedConfigurationService', () => {
 
       // Mock other sections
       mockWorkspace.withArgs('terminal.integrated').returns({
-        get: sandbox.stub().returns(true)
+        get: sandbox.stub().returns(true),
       } as any);
       mockWorkspace.withArgs('editor').returns({
-        get: sandbox.stub().returns('alt')
+        get: sandbox.stub().returns('alt'),
       } as any);
 
       const settings = service.getWebViewTerminalSettings();
@@ -227,12 +234,12 @@ describe('UnifiedConfigurationService', () => {
     it('should check Alt+Click feature (requires both settings)', () => {
       // Mock terminal integrated section
       mockWorkspace.withArgs('terminal.integrated').returns({
-        get: sandbox.stub().withArgs('altClickMovesCursor', true).returns(true)
+        get: sandbox.stub().withArgs('altClickMovesCursor', true).returns(true),
       } as any);
-      
+
       // Mock editor section
       mockWorkspace.withArgs('editor').returns({
-        get: sandbox.stub().withArgs('multiCursorModifier', 'alt').returns('alt')
+        get: sandbox.stub().withArgs('multiCursorModifier', 'alt').returns('alt'),
       } as any);
 
       const result = service.isFeatureEnabled('altClickMovesCursor');
@@ -242,11 +249,11 @@ describe('UnifiedConfigurationService', () => {
 
     it('should return false for Alt+Click when multiCursorModifier is not alt', () => {
       mockWorkspace.withArgs('terminal.integrated').returns({
-        get: sandbox.stub().withArgs('altClickMovesCursor', true).returns(true)
+        get: sandbox.stub().withArgs('altClickMovesCursor', true).returns(true),
       } as any);
-      
+
       mockWorkspace.withArgs('editor').returns({
-        get: sandbox.stub().withArgs('multiCursorModifier', 'alt').returns('ctrlCmd')
+        get: sandbox.stub().withArgs('multiCursorModifier', 'alt').returns('ctrlCmd'),
       } as any);
 
       const result = service.isFeatureEnabled('altClickMovesCursor');
@@ -279,10 +286,10 @@ describe('UnifiedConfigurationService', () => {
 
       // Mock other sections for getSidebarTerminalConfig
       mockWorkspace.withArgs('terminal.integrated').returns({
-        get: sandbox.stub().returns(true)
+        get: sandbox.stub().returns(true),
       } as any);
       mockWorkspace.withArgs('editor').returns({
-        get: sandbox.stub().returns('alt')
+        get: sandbox.stub().returns('alt'),
       } as any);
 
       const result = service.validateConfiguration();
@@ -296,16 +303,16 @@ describe('UnifiedConfigurationService', () => {
 
       // Mock other sections
       mockWorkspace.withArgs('terminal.integrated').returns({
-        get: sandbox.stub().returns(true)
+        get: sandbox.stub().returns(true),
       } as any);
       mockWorkspace.withArgs('editor').returns({
-        get: sandbox.stub().returns('alt')
+        get: sandbox.stub().returns('alt'),
       } as any);
 
       const result = service.validateConfiguration();
 
       assert.strictEqual(result.isValid, false);
-      assert.ok(result.errors.some(error => error.includes('fontSize')));
+      assert.ok(result.errors.some((error) => error.includes('fontSize')));
     });
 
     it('should detect invalid shell configuration', () => {
@@ -313,16 +320,16 @@ describe('UnifiedConfigurationService', () => {
 
       // Mock other sections
       mockWorkspace.withArgs('terminal.integrated').returns({
-        get: sandbox.stub().returns(true)
+        get: sandbox.stub().returns(true),
       } as any);
       mockWorkspace.withArgs('editor').returns({
-        get: sandbox.stub().returns('alt')
+        get: sandbox.stub().returns('alt'),
       } as any);
 
       const result = service.validateConfiguration();
 
       assert.strictEqual(result.isValid, false);
-      assert.ok(result.errors.some(error => error.includes('shell')));
+      assert.ok(result.errors.some((error) => error.includes('shell')));
     });
 
     it('should provide warnings for suboptimal settings', () => {
@@ -330,15 +337,15 @@ describe('UnifiedConfigurationService', () => {
 
       // Mock other sections
       mockWorkspace.withArgs('terminal.integrated').returns({
-        get: sandbox.stub().returns(true)
+        get: sandbox.stub().returns(true),
       } as any);
       mockWorkspace.withArgs('editor').returns({
-        get: sandbox.stub().returns('alt')
+        get: sandbox.stub().returns('alt'),
       } as any);
 
       const result = service.validateConfiguration();
 
-      assert.ok(result.warnings.some(warning => warning.includes('maxTerminals')));
+      assert.ok(result.warnings.some((warning) => warning.includes('maxTerminals')));
     });
   });
 
@@ -371,12 +378,12 @@ describe('UnifiedConfigurationService', () => {
     it('should return complete configuration snapshot', () => {
       // Mock all necessary configurations
       mockWorkspaceConfig.get.returns((key: string, defaultValue: any) => defaultValue);
-      
+
       mockWorkspace.withArgs('terminal.integrated').returns({
-        get: sandbox.stub().returns(undefined)
+        get: sandbox.stub().returns(undefined),
       } as any);
       mockWorkspace.withArgs('editor').returns({
-        get: sandbox.stub().returns('alt')
+        get: sandbox.stub().returns('alt'),
       } as any);
 
       const snapshot = service.getConfigurationSnapshot();
@@ -385,8 +392,8 @@ describe('UnifiedConfigurationService', () => {
       assert.ok(snapshot.terminalIntegrated);
       assert.ok(snapshot.editor);
       assert.ok(snapshot.metadata);
-      assert.ok(snapshot.metadata.timestamp);
-      assert.strictEqual(typeof snapshot.metadata.cacheSize, 'number');
+      assert.ok((snapshot.metadata as any).timestamp);
+      assert.strictEqual(typeof (snapshot.metadata as any).cacheSize, 'number');
     });
   });
 
@@ -458,7 +465,7 @@ describe('UnifiedConfigurationService', () => {
       const result = service.validateConfiguration();
 
       assert.strictEqual(result.isValid, false);
-      assert.ok(result.errors.some(error => error.includes('Configuration validation failed')));
+      assert.ok(result.errors.some((error) => error.includes('Configuration validation failed')));
     });
   });
 
@@ -471,9 +478,9 @@ describe('UnifiedConfigurationService', () => {
     it('should dispose event emitter and clear cache', () => {
       // Add some cache entries
       service.get('testSection', 'testKey', 'default');
-      
+
       service.dispose();
-      
+
       // After dispose, should be cleaned up
       // This is hard to test directly, but we verify no errors occur
     });
@@ -482,7 +489,7 @@ describe('UnifiedConfigurationService', () => {
   describe('Integration Tests', () => {
     it('should handle complete configuration lifecycle', async () => {
       let changeEventFired = false;
-      
+
       // Setup configuration
       mockWorkspaceConfig.get.withArgs('testKey', 'default').returns('initialValue');
       mockWorkspaceConfig.update.resolves();

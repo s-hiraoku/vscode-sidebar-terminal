@@ -9,6 +9,7 @@ import { WebglAddon } from '@xterm/addon-webgl';
 import { Unicode11Addon } from '@xterm/addon-unicode11';
 import { PartialTerminalSettings, WebViewFontSettings } from '../../types/shared';
 import { AltClickState, TerminalInteractionEvent } from '../../types/common';
+import { ITerminalProfile } from '../../types/profiles';
 
 // Core terminal data structure with VS Code Standard Addons
 export interface TerminalInstance {
@@ -35,10 +36,18 @@ export interface IManagerCoordinator {
   getTerminalElement(terminalId: string): HTMLElement | undefined;
   postMessageToExtension(message: unknown): void;
   log(message: string, ...args: unknown[]): void;
-  createTerminal(id: string, name: string, config?: unknown, terminalNumber?: number): Promise<unknown>;
+  createTerminal(
+    id: string,
+    name: string,
+    config?: unknown,
+    terminalNumber?: number
+  ): Promise<unknown>;
   openSettings(): void;
   applyFontSettings(fontSettings: WebViewFontSettings): void;
   closeTerminal(id?: string): void;
+  shellIntegrationManager?: any; // Shell integration manager
+  findInTerminalManager?: IFindInTerminalManager; // Find in Terminal manager
+  profileManager?: IProfileManager; // Profile manager
   getManagers(): {
     performance: IPerformanceManager;
     input: IInputManager;
@@ -46,7 +55,11 @@ export interface IManagerCoordinator {
     config: IConfigManager;
     message: IMessageManager;
     notification: INotificationManager;
+    findInTerminal?: IFindInTerminalManager;
+    profile?: IProfileManager;
+    persistence?: any; // Optional persistence manager
   };
+  getMessageManager(): IMessageManager;
   // 新しいアーキテクチャ: 状態更新処理
   updateState?(state: unknown): void;
   handleTerminalRemovedFromExtension?(terminalId: string): void;
@@ -80,7 +93,12 @@ export interface IManagerCoordinator {
 
 // Terminal management interface
 export interface ITerminalManager {
-  createTerminal(id: string, name: string, config: PartialTerminalSettings, terminalNumber?: number): Promise<void>;
+  createTerminal(
+    id: string,
+    name: string,
+    config: PartialTerminalSettings,
+    terminalNumber?: number
+  ): Promise<void>;
   switchToTerminal(id: string): void;
   closeTerminal(id?: string): void;
   handleTerminalRemovedFromExtension(id: string): void;
@@ -163,7 +181,11 @@ export interface IUIManager {
   applyFontSettings(terminal: Terminal, fontSettings: WebViewFontSettings): void;
   applyAllVisualSettings(terminal: Terminal, settings: PartialTerminalSettings): void;
   addFocusIndicator(container: HTMLElement): void;
-  createTerminalHeader(terminalId: string, terminalName: string, onAiAgentToggleClick?: (terminalId: string) => void): HTMLElement;
+  createTerminalHeader(
+    terminalId: string,
+    terminalName: string,
+    onAiAgentToggleClick?: (terminalId: string) => void
+  ): HTMLElement;
   updateTerminalHeader(terminalId: string, newName: string): void;
   updateCliAgentStatusDisplay(
     activeTerminalName: string | null,
@@ -204,8 +226,8 @@ export interface IMessageManager {
     data: unknown,
     coordinator: IManagerCoordinator
   ): void;
-  getQueueStats(): { 
-    queueSize: number; 
+  getQueueStats(): {
+    queueSize: number;
     isProcessing: boolean;
     highPriorityQueueSize?: number;
     isLocked?: boolean;
@@ -235,12 +257,51 @@ export interface INotificationManager {
   showWarning(message: string): void;
   clearNotifications(): void;
   clearWarnings(): void;
-  getStats(): { 
-    activeCount: number; 
+  getStats(): {
+    activeCount: number;
     totalCreated: number;
     totalOperations?: number;
   };
   setupNotificationStyles(): void;
+  dispose(): void;
+}
+
+// Find in Terminal management interface
+export interface IFindInTerminalManager {
+  showSearch(): void;
+  hideSearch(): void;
+  findNext(): void;
+  findPrevious(): void;
+  getSearchState(): {
+    isVisible: boolean;
+    searchTerm: string;
+    options: {
+      caseSensitive: boolean;
+      wholeWord: boolean;
+      regex: boolean;
+      backwards: boolean;
+    };
+    matches: { current: number; total: number };
+  };
+  dispose(): void;
+}
+
+// Profile management interface
+export interface IProfileManager {
+  showProfileSelector(onProfileSelected?: (profileId: string) => void): void;
+  hideProfileSelector(): void;
+  getAvailableProfiles(): Promise<ITerminalProfile[]>;
+  getProfile(profileId: string): ITerminalProfile | undefined;
+  getDefaultProfile(): ITerminalProfile | undefined;
+  setDefaultProfile(profileId: string): Promise<void>;
+  refreshProfiles(): Promise<void>;
+  createTerminalWithProfile(profileId: string, name?: string): Promise<void>;
+  createTerminalWithDefaultProfile(name?: string): Promise<void>;
+  switchToProfileByIndex(index: number): Promise<void>;
+  updateProfiles(profiles: ITerminalProfile[], defaultProfileId?: string): void;
+  handleMessage(message: any): void;
+  isProfileSelectorVisible(): boolean;
+  getSelectedProfileId(): string | undefined;
   dispose(): void;
 }
 
@@ -261,6 +322,7 @@ export interface IManagerFactory {
   createConfigManager(): IConfigManager;
   createMessageManager(): IMessageManager;
   createNotificationManager(): INotificationManager;
+  createProfileManager(): IProfileManager;
 }
 
 // Event emitter interface for manager communication

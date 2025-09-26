@@ -31,15 +31,15 @@ export interface DebounceConfig {
 
 /**
  * Common Utility Service
- * 
+ *
  * Extracts common patterns used throughout the codebase:
  * - Async operations with retry logic
- * - Debouncing and throttling utilities  
+ * - Debouncing and throttling utilities
  * - Validation and error handling patterns
  * - Resource cleanup and lifecycle management
  * - Performance monitoring utilities
  * - Type-safe event handling patterns
- * 
+ *
  * This service reduces code duplication by centralizing frequently
  * used utility functions across terminal services, WebView managers,
  * and configuration management.
@@ -47,7 +47,7 @@ export interface DebounceConfig {
 export class CommonUtilityService {
   private readonly _debounceTimers = new Map<string, NodeJS.Timeout>();
   private readonly _throttleLastExecution = new Map<string, number>();
-  
+
   constructor() {
     log('🛠️ [CommonUtility] Common utility service initialized');
   }
@@ -55,16 +55,8 @@ export class CommonUtilityService {
   /**
    * Execute operation with retry logic
    */
-  async withRetry<T>(
-    operation: () => Promise<T>,
-    config: Partial<RetryConfig> = {}
-  ): Promise<T> {
-    const {
-      maxAttempts = 3,
-      delayMs = 1000,
-      exponentialBackoff = true,
-      onRetry
-    } = config;
+  async withRetry<T>(operation: () => Promise<T>, config: Partial<RetryConfig> = {}): Promise<T> {
+    const { maxAttempts = 3, delayMs = 1000, exponentialBackoff = true, onRetry } = config;
 
     let lastError: Error;
 
@@ -77,14 +69,17 @@ export class CommonUtilityService {
         return result;
       } catch (error) {
         lastError = error as Error;
-        
+
         if (attempt === maxAttempts) {
           log(`❌ [CommonUtility] Operation failed after ${maxAttempts} attempts:`, lastError);
           break;
         }
 
         const delay = exponentialBackoff ? delayMs * Math.pow(2, attempt - 1) : delayMs;
-        log(`⚠️ [CommonUtility] Attempt ${attempt}/${maxAttempts} failed, retrying in ${delay}ms:`, lastError.message);
+        log(
+          `⚠️ [CommonUtility] Attempt ${attempt}/${maxAttempts} failed, retrying in ${delay}ms:`,
+          lastError.message
+        );
 
         if (onRetry) {
           onRetry(attempt, lastError);
@@ -106,7 +101,7 @@ export class CommonUtilityService {
     config: DebounceConfig
   ): (...args: Parameters<T>) => void {
     const { delayMs, immediate = false, maxWait } = config;
-    
+
     return (...args: Parameters<T>) => {
       const existingTimer = this._debounceTimers.get(key);
       const callNow = immediate && !existingTimer;
@@ -173,7 +168,7 @@ export class CommonUtilityService {
     } catch (error) {
       const err = error as Error;
       log(`❌ [CommonUtility] Safe execution failed${context ? ` in ${context}` : ''}:`, err);
-      
+
       if (errorHandler) {
         try {
           return errorHandler(err);
@@ -181,7 +176,7 @@ export class CommonUtilityService {
           log(`❌ [CommonUtility] Error handler also failed:`, handlerError);
         }
       }
-      
+
       return undefined;
     }
   }
@@ -204,7 +199,7 @@ export class CommonUtilityService {
     for (const rule of rules) {
       try {
         const result = rule.validator(data);
-        
+
         if (result === false) {
           const message = `Validation failed: ${rule.name}`;
           if (rule.level === 'error') {
@@ -226,9 +221,11 @@ export class CommonUtilityService {
     }
 
     const isValid = errors.length === 0;
-    
+
     if (context && (errors.length > 0 || warnings.length > 0)) {
-      log(`🔍 [CommonUtility] Validation result for ${context}: ${errors.length} errors, ${warnings.length} warnings`);
+      log(
+        `🔍 [CommonUtility] Validation result for ${context}: ${errors.length} errors, ${warnings.length} warnings`
+      );
     }
 
     return {
@@ -260,7 +257,7 @@ export class CommonUtilityService {
     try {
       await Promise.race([
         Promise.all(cleanupPromises),
-        this.timeout(timeoutMs, `Resource cleanup timed out after ${timeoutMs}ms`)
+        this.timeout(timeoutMs, `Resource cleanup timed out after ${timeoutMs}ms`),
       ]);
       log(`✅ [CommonUtility] All ${resources.length} resources cleaned up successfully`);
     } catch (error) {
@@ -283,27 +280,27 @@ export class CommonUtilityService {
    * Promise-based delay utility
    */
   delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**
    * Create a cancelable promise
    */
-  createCancelablePromise<T>(
-    promise: Promise<T>
-  ): { promise: Promise<T>; cancel: () => void } {
+  createCancelablePromise<T>(promise: Promise<T>): { promise: Promise<T>; cancel: () => void } {
     let isCanceled = false;
-    
+
     const cancelablePromise = new Promise<T>((resolve, reject) => {
       promise.then(
-        value => isCanceled ? reject(new Error('Operation canceled')) : resolve(value),
-        error => isCanceled ? reject(new Error('Operation canceled')) : reject(error)
+        (value) => (isCanceled ? reject(new Error('Operation canceled')) : resolve(value)),
+        (error) => (isCanceled ? reject(new Error('Operation canceled')) : reject(error))
       );
     });
 
     return {
       promise: cancelablePromise,
-      cancel: () => { isCanceled = true; }
+      cancel: () => {
+        isCanceled = true;
+      },
     };
   }
 
@@ -315,15 +312,15 @@ export class CommonUtilityService {
     label?: string
   ): Promise<{ result: T; duration: number }> {
     const startTime = performance.now();
-    
+
     try {
       const result = await operation();
       const duration = performance.now() - startTime;
-      
+
       if (label) {
         log(`⏱️ [CommonUtility] ${label} completed in ${duration.toFixed(2)}ms`);
       }
-      
+
       return { result, duration };
     } catch (error) {
       const duration = performance.now() - startTime;
@@ -347,7 +344,7 @@ export class CommonUtilityService {
     }
 
     if (obj instanceof Array) {
-      return obj.map(item => this.deepClone(item)) as T;
+      return obj.map((item) => this.deepClone(item)) as T;
     }
 
     if (typeof obj === 'object') {
@@ -386,18 +383,18 @@ export class CommonUtilityService {
   /**
    * Group array items by a key function
    */
-  groupBy<T, K extends string | number>(
-    array: T[],
-    keyFn: (item: T) => K
-  ): Record<K, T[]> {
-    return array.reduce((groups, item) => {
-      const key = keyFn(item);
-      if (!groups[key]) {
-        groups[key] = [];
-      }
-      groups[key].push(item);
-      return groups;
-    }, {} as Record<K, T[]>);
+  groupBy<T, K extends string | number>(array: T[], keyFn: (item: T) => K): Record<K, T[]> {
+    return array.reduce(
+      (groups, item) => {
+        const key = keyFn(item);
+        if (!groups[key]) {
+          groups[key] = [];
+        }
+        groups[key].push(item);
+        return groups;
+      },
+      {} as Record<K, T[]>
+    );
   }
 
   /**
@@ -409,7 +406,7 @@ export class CommonUtilityService {
     }
     this._debounceTimers.clear();
     this._throttleLastExecution.clear();
-    
+
     log('🧹 [CommonUtility] All timers cleared');
   }
 
@@ -431,7 +428,7 @@ export class CommonUtilityService {
    */
   dispose(): void {
     log('🧹 [CommonUtility] Disposing common utility service');
-    
+
     try {
       this.clearAllTimers();
       log('✅ [CommonUtility] Common utility service disposed');

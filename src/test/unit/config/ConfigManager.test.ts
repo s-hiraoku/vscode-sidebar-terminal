@@ -97,7 +97,7 @@ describe('ConfigManager', () => {
     it('should register configuration change listener', () => {
       const callback = sandbox.stub();
       const mockDisposable = { dispose: sandbox.stub() };
-      
+
       // Check if already stubbed to avoid double stubbing
       const onDidChangeStub = vscode.workspace.onDidChangeConfiguration as any;
       if (!onDidChangeStub || !onDidChangeStub.isSinonProxy) {

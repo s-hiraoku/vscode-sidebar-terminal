@@ -152,7 +152,7 @@ export interface TerminalFontData {
 }
 
 // Terminal event types
-export type TerminalEventType = 
+export type TerminalEventType =
   | 'created'
   | 'destroyed'
   | 'activated'
@@ -174,7 +174,7 @@ export interface TerminalEvent {
 }
 
 // Terminal interaction event types
-export type TerminalInteractionType = 
+export type TerminalInteractionType =
   | 'click'
   | 'double-click'
   | 'right-click'

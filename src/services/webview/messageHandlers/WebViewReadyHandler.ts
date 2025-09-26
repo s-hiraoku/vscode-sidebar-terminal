@@ -10,7 +10,7 @@ import { TERMINAL_CONSTANTS } from '../../../constants';
 export class WebViewReadyHandler extends BaseMessageHandler {
   protected readonly supportedCommands = [
     'webviewReady',
-    TERMINAL_CONSTANTS?.COMMANDS?.READY || 'ready'
+    TERMINAL_CONSTANTS?.COMMANDS?.READY || 'ready',
   ];
 
   async handle(message: WebviewMessage, context: IMessageHandlerContext): Promise<void> {
@@ -25,7 +25,7 @@ export class WebViewReadyHandler extends BaseMessageHandler {
       }
 
       log('🎯 [WebViewReady] Initializing WebView immediately');
-      
+
       if (stateManager) {
         stateManager.setInitialized(true);
       }
@@ -38,7 +38,6 @@ export class WebViewReadyHandler extends BaseMessageHandler {
       setTimeout(() => {
         this.ensureMinimumTerminals(context);
       }, 100);
-
     } catch (error) {
       await this.handleError(error, message, 'WebViewReady');
     }

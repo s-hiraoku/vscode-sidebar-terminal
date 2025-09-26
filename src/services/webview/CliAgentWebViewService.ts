@@ -4,7 +4,7 @@ import { provider as log } from '../../utils/logger';
 
 /**
  * Manages CLI Agent functionality in WebView context
- * 
+ *
  * This service extracts all CLI Agent related logic from SecondaryTerminalProvider
  * including status synchronization and event handling.
  */
@@ -34,9 +34,11 @@ export class CliAgentWebViewService implements ICliAgentWebViewService {
         },
       };
 
-      log(`🤖 [CliAgent] Sending status update: ${status} (${agentType}) for terminal: ${activeTerminalName}`);
-      
-      context.sendMessage(message).catch(error => {
+      log(
+        `🤖 [CliAgent] Sending status update: ${status} (${agentType}) for terminal: ${activeTerminalName}`
+      );
+
+      context.sendMessage(message).catch((error) => {
         log('❌ [CliAgent] Failed to send status update:', error);
       });
     } catch (error) {
@@ -46,13 +48,13 @@ export class CliAgentWebViewService implements ICliAgentWebViewService {
 
   /**
    * Send full CLI Agent state synchronization to WebView
-   * 
+   *
    * This resolves the DISCONNECTED terminals state retention problem
    * by sending complete state information for all terminals.
    */
   sendFullStateSync(context: IMessageHandlerContext): void {
     log('🚀 [CliAgent] Starting full state synchronization');
-    
+
     try {
       const connectedAgentId = context.terminalManager.getConnectedAgentTerminalId();
       const connectedAgentType = context.terminalManager.getConnectedAgentType();
@@ -64,7 +66,13 @@ export class CliAgentWebViewService implements ICliAgentWebViewService {
       });
 
       // Build complete terminal states map
-      const terminalStates: { [terminalId: string]: { status: 'connected' | 'disconnected' | 'none'; agentType: string | null; terminalName: string } } = {};
+      const terminalStates: {
+        [terminalId: string]: {
+          status: 'connected' | 'disconnected' | 'none';
+          agentType: string | null;
+          terminalName: string;
+        };
+      } = {};
 
       // Get all terminals
       const allTerminals = context.terminalManager.getTerminals();
@@ -108,12 +116,14 @@ export class CliAgentWebViewService implements ICliAgentWebViewService {
 
       log('📤 [CliAgent] Sending full state sync:', message);
 
-      context.sendMessage(message).then(() => {
-        log('✅ [CliAgent] Full state sync sent successfully');
-      }).catch(error => {
-        log('❌ [CliAgent] Failed to send full state sync:', error);
-      });
-
+      context
+        .sendMessage(message)
+        .then(() => {
+          log('✅ [CliAgent] Full state sync sent successfully');
+        })
+        .catch((error) => {
+          log('❌ [CliAgent] Failed to send full state sync:', error);
+        });
     } catch (error) {
       log('❌ [CliAgent] Error during full state sync:', error);
     }
@@ -144,13 +154,12 @@ export class CliAgentWebViewService implements ICliAgentWebViewService {
       });
 
       this._statusListeners.push(statusDisposable);
-      
+
       // Add to extension context subscriptions for cleanup
       context.extensionContext.subscriptions.push(statusDisposable);
-      
+
       log('✅ [CliAgent] Status listeners setup complete');
       return this._statusListeners;
-
     } catch (error) {
       log('❌ [CliAgent] Error setting up listeners:', error);
       return [];
@@ -188,36 +197,36 @@ export class CliAgentWebViewService implements ICliAgentWebViewService {
 
       if (result.success) {
         log(`✅ [CliAgent] Switch succeeded: ${terminalId}, new status: ${result.newStatus}`);
-        
+
         // Send success response to WebView
         await context.sendMessage({
           command: 'switchAiAgentResponse',
           terminalId,
           success: true,
           newStatus: result.newStatus,
-          agentType: result.agentType
+          agentType: result.agentType,
         });
       } else {
         log(`⚠️ [CliAgent] Switch failed: ${terminalId}, reason: ${result.reason}`);
-        
+
         // Send failure response to WebView
         await context.sendMessage({
           command: 'switchAiAgentResponse',
           terminalId,
           success: false,
           reason: result.reason,
-          newStatus: result.newStatus
+          newStatus: result.newStatus,
         });
       }
     } catch (error) {
       log('❌ [CliAgent] Error switching AI Agent:', error);
-      
+
       // Send error response to WebView
       await context.sendMessage({
         command: 'switchAiAgentResponse',
         terminalId,
         success: false,
-        reason: 'Internal error occurred'
+        reason: 'Internal error occurred',
       });
     }
   }

@@ -32,6 +32,14 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
   private detectionCache = new LRUCache<string, DetectionCacheEntry>(50);
 
   constructor() {
+    // Initialize detection cache with configuration - store as cache entries
+    const timestamp = Date.now();
+    this.detectionCache.set('terminationGracePeriod', { result: null, timestamp }); // 1 second grace period
+    this.detectionCache.set('aiActivityTimeout', { result: null, timestamp }); // 30 seconds timeout
+    this.detectionCache.set('claudeActivityTimeout', { result: null, timestamp }); // 20 seconds for Claude specific
+    this.detectionCache.set('maxShellPromptLength', { result: null, timestamp }); // Maximum shell prompt length
+    this.detectionCache.set('relaxedModeEnabled', { result: null, timestamp }); // Enable relaxed detection mode
+
     // Start heartbeat is called from TerminalManager after initialization
   }
 
@@ -153,41 +161,58 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
         };
       }
 
-      // For connected agents, use strict termination detection
-      if (hasConnectedAgent) {
-        result = this.detectStrictTermination(terminalId, data);
-      } else if (hasDisconnectedAgent) {
-        // For disconnected agents, use regular shell prompt detection
-        const lines = data.split(/\r?\n/);
-        let terminationDetected = false;
-        let detectedLine = '';
+      // 🎯 UNIFIED APPROACH: Use relaxed detection for both connected and disconnected agents
+      const lines = data.split(/\r?\n/);
+      let terminationDetected = false;
+      let detectedLine = '';
+      let maxConfidence = 0;
+      let reason = '';
 
-        for (const line of lines) {
-          const cleanLine = this.patternDetector.cleanAnsiEscapeSequences(line.trim());
-          if (cleanLine && this.patternDetector.detectShellPrompt(cleanLine)) {
-            terminationDetected = true;
-            detectedLine = cleanLine;
-            break;
+      for (const line of lines) {
+        const cleanLine = this.patternDetector.cleanAnsiEscapeSequences(line.trim());
+        if (!cleanLine) continue;
+
+        // 🔄 USE RELAXED DETECTION: Apply the same lenient logic for all cases
+        const detectionResult = this.detectStrictTermination(terminalId, cleanLine);
+        
+        if (detectionResult.isTerminated && detectionResult.confidence > maxConfidence) {
+          terminationDetected = true;
+          detectedLine = detectionResult.detectedLine || '';
+          maxConfidence = detectionResult.confidence;
+          reason = detectionResult.reason;
+        }
+        
+        // 🆕 ADDITIONAL PATTERNS: Add even more lenient fallback patterns
+        if (!terminationDetected) {
+          // Very simple shell prompt detection as last resort
+          if (this.patternDetector.detectShellPrompt(cleanLine)) {
+            const isSimplePrompt = 
+              cleanLine.length <= 20 &&
+              !cleanLine.toLowerCase().includes('claude') &&
+              !cleanLine.toLowerCase().includes('gemini') &&
+              !cleanLine.toLowerCase().includes('help') &&
+              !cleanLine.toLowerCase().includes('how') &&
+              !cleanLine.toLowerCase().includes('what') &&
+              (cleanLine.includes('$') || cleanLine.includes('%') || cleanLine.includes('>'));
+            
+            if (isSimplePrompt) {
+              terminationDetected = true;
+              detectedLine = cleanLine;
+              maxConfidence = 0.4; // Low confidence fallback
+              reason = 'Simple shell prompt fallback';
+            }
           }
         }
+      }
 
-        if (terminationDetected) {
-          result = {
-            isTerminated: true,
-            confidence: 0.8,
-            detectedLine,
-            reason: 'Shell prompt detected',
-          };
-        } else {
-          result = {
-            isTerminated: false,
-            confidence: 0,
-            detectedLine: '',
-            reason: 'No termination detected',
-          };
-        }
+      if (terminationDetected) {
+        result = {
+          isTerminated: true,
+          confidence: maxConfidence,
+          detectedLine,
+          reason,
+        };
       } else {
-        // Fallback (shouldn't reach here)
         result = {
           isTerminated: false,
           confidence: 0,
@@ -260,22 +285,47 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
   } {
     try {
       const disconnectedAgents = this.stateManager.getDisconnectedAgents();
+      const currentState = this.getAgentState(terminalId);
+
       if (disconnectedAgents.has(terminalId)) {
+        // Promote disconnected agent to connected
         const agentInfo = disconnectedAgents.get(terminalId)!;
         this.stateManager.promoteDisconnectedAgentToConnected(terminalId);
-        log(`🔄 [CLI-AGENT] Switched connection to terminal ${terminalId}`);
+        log(`🔄 [CLI-AGENT] Switched connection to terminal ${terminalId} (from disconnected)`);
         return {
           success: true,
           newStatus: 'connected',
           agentType: agentInfo.type,
         };
+      } else if (currentState.status === 'none') {
+        // 🆕 NEW: Allow switching 'none' state terminals to connected (assume Claude by default)
+        // This allows user to manually activate any terminal as an AI agent
+        const agentType = 'claude'; // Default to Claude, could be made configurable
+        this.stateManager.setConnectedAgent(terminalId, agentType);
+        log(`🔄 [CLI-AGENT] Activated AI agent for terminal ${terminalId} (from none state)`);
+        return {
+          success: true,
+          newStatus: 'connected',
+          agentType: agentType,
+        };
+      } else if (currentState.status === 'connected') {
+        // 🎯 IMPROVED: If already connected, this is essentially a no-op success
+        // But if user clicks connected terminal, they may want to move connection to this terminal
+        // In this case, we still call setConnectedAgent to trigger the state transitions
+        const agentType = currentState.agentType || 'claude';
+        this.stateManager.setConnectedAgent(terminalId, agentType);
+        log(`🔄 [CLI-AGENT] Reaffirmed connection to terminal ${terminalId} (already connected)`);
+        return {
+          success: true,
+          newStatus: 'connected',
+          agentType: agentType,
+        };
       }
 
-      const currentState = this.getAgentState(terminalId);
-      log(`⚠️ [CLI-AGENT] Cannot switch to terminal ${terminalId}: not in disconnected state`);
+      log(`⚠️ [CLI-AGENT] Cannot switch to terminal ${terminalId}: unknown state`);
       return {
         success: false,
-        reason: 'Terminal is not in disconnected state',
+        reason: 'Unknown terminal state',
         newStatus: currentState.status,
         agentType: currentState.agentType,
       };
@@ -294,6 +344,96 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
     this.detectionCache.delete(terminalId);
     // 🔧 FIX: Use a separate method for actual terminal removal vs session termination
     this.stateManager.removeTerminalCompletely(terminalId);
+  }
+
+  /**
+   * 🆕 MANUAL RESET: Force reconnect AI Agent when user clicks toggle button
+   * This helps recover from detection errors by manually setting the agent as connected
+   */
+  forceReconnectAgent(
+    terminalId: string,
+    agentType: 'claude' | 'gemini' | 'codex' = 'claude',
+    terminalName?: string
+  ): boolean {
+    log(
+      `🔄 [MANUAL-RESET] User triggered force reconnect for terminal ${terminalId} as ${agentType}`
+    );
+
+    try {
+      // Clear any cached detection results for this terminal
+      const cacheKeys: string[] = [];
+      // Simple iteration over cache - compatibility with older LRU cache versions
+      try {
+        (this.detectionCache as any).forEach((_value: any, key: string) => {
+          if (key.includes(terminalId)) {
+            cacheKeys.push(key);
+          }
+        });
+      } catch (e) {
+        // Fallback: clear entire cache if iteration fails
+        this.detectionCache.clear();
+        log(`⚠️ [MANUAL-RESET] Cache iteration failed, cleared entire cache`);
+      }
+      cacheKeys.forEach((key) => this.detectionCache.delete(key));
+      log(`🧹 [MANUAL-RESET] Cleared ${cacheKeys.length} cache entries for terminal ${terminalId}`);
+
+      // Force reconnect via state manager
+      const success = this.stateManager.forceReconnectAgent(terminalId, agentType, terminalName);
+
+      if (success) {
+        log(
+          `✅ [MANUAL-RESET] Successfully force-reconnected ${agentType} in terminal ${terminalId}`
+        );
+        return true;
+      } else {
+        log(`❌ [MANUAL-RESET] Failed to force-reconnect ${agentType} in terminal ${terminalId}`);
+        return false;
+      }
+    } catch (error) {
+      log('❌ [MANUAL-RESET] Error during force reconnect:', error);
+      return false;
+    }
+  }
+
+  /**
+   * 🆕 MANUAL RESET: Clear detection errors and reset terminal to clean state
+   * Use this when detection gets confused and needs a fresh start
+   */
+  clearDetectionError(terminalId: string): boolean {
+    log(`🧹 [MANUAL-RESET] User triggered detection error clear for terminal ${terminalId}`);
+
+    try {
+      // Clear all cached results for this terminal
+      const cacheKeys: string[] = [];
+      // Simple iteration over cache - compatibility with older LRU cache versions
+      try {
+        (this.detectionCache as any).forEach((_value: any, key: string) => {
+          if (key.includes(terminalId)) {
+            cacheKeys.push(key);
+          }
+        });
+      } catch (e) {
+        // Fallback: clear entire cache if iteration fails
+        this.detectionCache.clear();
+        log(`⚠️ [MANUAL-RESET] Cache iteration failed, cleared entire cache`);
+      }
+      cacheKeys.forEach((key) => this.detectionCache.delete(key));
+      log(`🧹 [MANUAL-RESET] Cleared ${cacheKeys.length} cache entries for terminal ${terminalId}`);
+
+      // Reset state via state manager
+      const success = this.stateManager.clearDetectionError(terminalId);
+
+      if (success) {
+        log(`✅ [MANUAL-RESET] Successfully cleared detection errors for terminal ${terminalId}`);
+        return true;
+      } else {
+        log(`⚠️ [MANUAL-RESET] No detection errors to clear for terminal ${terminalId}`);
+        return false;
+      }
+    } catch (error) {
+      log('❌ [MANUAL-RESET] Error during detection error clear:', error);
+      return false;
+    }
   }
 
   get onCliAgentStatusChange() {
@@ -324,21 +464,45 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
 
         const cleanLine = this.patternDetector.cleanAnsiEscapeSequences(trimmed);
         const fullyCleanLine = cleanLine
-          .replace(/[│╭╰─╯]/g, '') // Remove box characters only
+          .replace(/[\u2502\u256d\u2570\u2500\u256f]/g, '') // Remove box characters only
           .trim();
 
         // 🔧 FIX: Allow shell prompts like "$" or "%" (single character)
         if (!fullyCleanLine || fullyCleanLine.length < 1) continue;
 
+        // 🆕 UPDATE AI ACTIVITY TIMESTAMP: Track when we see AI-like output
+        const lowerLine = fullyCleanLine.toLowerCase();
+        const looksLikeAIActivity =
+          lowerLine.includes('claude') ||
+          lowerLine.includes('gemini') ||
+          lowerLine.includes('assistant') ||
+          lowerLine.includes('thinking') ||
+          lowerLine.includes('analyzing') ||
+          lowerLine.includes('working') ||
+          lowerLine.includes('i am') ||
+          lowerLine.includes("i'm") ||
+          lowerLine.includes('let me') ||
+          lowerLine.includes('i can') ||
+          lowerLine.includes('i will') ||
+          fullyCleanLine.length > 50; // Long outputs likely from AI
+
+        if (looksLikeAIActivity) {
+          this.detectionCache.set(`${terminalId}_lastAIOutput`, { result: null, timestamp: Date.now() });
+        }
+
         // Check for termination first (for connected terminals ONLY)
         if (this.stateManager.isAgentConnected(terminalId)) {
-          // 🔧 FIX: Use more strict termination detection for connected agents
+          // 🔧 FIX: Use more relaxed termination detection for connected agents
           const terminationResult = this.detectStrictTermination(terminalId, line);
           if (terminationResult.isTerminated) {
-            this.stateManager.setAgentTerminated(terminalId);
-            log(
-              `🔻 [CLI-AGENT] Connected agent termination detected from output: "${fullyCleanLine}" in terminal ${terminalId}`
-            );
+            // 🆕 GRACE PERIOD: Add small delay before marking as terminated to avoid rapid state changes
+            setTimeout(() => {
+              this.stateManager.setAgentTerminated(terminalId);
+              log(
+                `🔻 [CLI-AGENT] Connected agent termination detected from output: "${fullyCleanLine}" in terminal ${terminalId}`
+              );
+            }, 1000); // 1 second grace period
+            
             return null; // Termination handled, no detection result needed
           }
           // 🚨 IMPORTANT: Skip ALL further detection for connected agents to prevent state churn
@@ -348,7 +512,7 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
         // Check for termination for disconnected agents as well
         const disconnectedAgents = this.stateManager.getDisconnectedAgents();
         if (disconnectedAgents.has(terminalId)) {
-          // 🔧 FIXED: Also check for termination in disconnected agents
+          // 🔧 IMPROVED: More lenient termination checking for disconnected agents
           log(
             `🔍 [TERMINATION-DEBUG] Checking termination for DISCONNECTED agent in terminal ${terminalId}: "${fullyCleanLine}"`
           );
@@ -359,10 +523,14 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
             log(
               `🔻 [TERMINATION] Setting DISCONNECTED agent as terminated in terminal ${terminalId}`
             );
-            this.stateManager.setAgentTerminated(terminalId);
-            log(
-              `🔻 [CLI-AGENT] Disconnected agent termination detected from output: "${fullyCleanLine}" in terminal ${terminalId}`
-            );
+            // 🆕 GRACE PERIOD: Also add delay for disconnected agents
+            setTimeout(() => {
+              this.stateManager.setAgentTerminated(terminalId);
+              log(
+                `🔻 [CLI-AGENT] Disconnected agent termination detected from output: "${fullyCleanLine}" in terminal ${terminalId}`
+              );
+            }, 1500); // Slightly longer for disconnected agents
+            
             return null; // Termination handled, no detection result needed
           }
           // Skip startup detection for disconnected agents - they're already known agents
@@ -378,6 +546,8 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
               `🚀 [CLI-AGENT] Claude Code startup detected from output: "${fullyCleanLine}" in terminal ${terminalId}`
             );
             this.stateManager.setConnectedAgent(terminalId, 'claude');
+            // 🆕 RESET TIMER: Clear any existing termination timer
+            this.detectionCache.set(`${terminalId}_lastAIOutput`, { result: null, timestamp: Date.now() });
 
             return {
               type: 'claude',
@@ -397,6 +567,8 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
               `🚀 [CLI-AGENT] Gemini CLI startup detected from output: "${fullyCleanLine}" in terminal ${terminalId}`
             );
             this.stateManager.setConnectedAgent(terminalId, 'gemini');
+            // 🆕 RESET TIMER: Clear any existing termination timer
+            this.detectionCache.set(`${terminalId}_lastAIOutput`, { result: null, timestamp: Date.now() });
 
             return {
               type: 'gemini',
@@ -419,6 +591,8 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
               `🚀 [CLI-AGENT] OpenAI Codex startup detected from output: "${fullyCleanLine}" in terminal ${terminalId}`
             );
             this.stateManager.setConnectedAgent(terminalId, 'codex');
+            // 🆕 RESET TIMER: Clear any existing termination timer
+            this.detectionCache.set(`${terminalId}_lastAIOutput`, { result: null, timestamp: Date.now() });
 
             return {
               type: 'codex',
@@ -441,7 +615,7 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
 
     log(`🔍 [TERMINATION-DEBUG] Checking termination for terminal ${terminalId}: "${cleanLine}"`);
 
-    // Very explicit termination messages first
+    // Very explicit termination messages first (unchanged - keep these strong)
     if (this.hasVeryExplicitTerminationMessage(cleanLine)) {
       log(`✅ [TERMINATION] Explicit termination message detected: "${cleanLine}"`);
       return {
@@ -452,7 +626,7 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
       };
     }
 
-    // Process crash indicators
+    // Process crash indicators (unchanged - keep these strong)
     if (this.hasProcessCrashIndicator(cleanLine)) {
       log(`✅ [TERMINATION] Process crash detected: "${cleanLine}"`);
       return {
@@ -463,84 +637,102 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
       };
     }
 
-    // 🔧 CRITICAL FIX: Enhanced shell prompt detection for Claude silent exits
-    // Claude often exits silently, so we need to be more aggressive about shell prompt detection
+    // 🎯 RELAXED DETECTION: Much more lenient shell prompt detection
     if (this.patternDetector.detectShellPrompt(cleanLine)) {
       const lowerLine = cleanLine.toLowerCase();
-      const hasAgentKeywords = lowerLine.includes('claude') || lowerLine.includes('gemini');
 
-      // 🚨 ENHANCED: More comprehensive AI output detection
+      // 🔄 REDUCED AI OUTPUT DETECTION: Only check for very obvious AI patterns
       const looksLikeAIOutput =
-        hasAgentKeywords &&
-        (lowerLine.includes('assistant') ||
-          lowerLine.includes('help you') ||
-          lowerLine.includes('i am') ||
-          lowerLine.includes("i'm") ||
-          lowerLine.includes('let me') ||
-          lowerLine.includes('i can') ||
-          lowerLine.includes('i will') ||
-          lowerLine.includes("i'll") ||
-          lowerLine.includes('would you like') ||
-          lowerLine.includes('how can i') ||
-          lowerLine.includes('understand') ||
-          lowerLine.includes('analyze') ||
-          lowerLine.includes('looking at') ||
-          lowerLine.includes('working on') ||
-          lowerLine.includes('thinking') ||
-          lowerLine.includes('response') ||
-          lowerLine.includes('question') ||
-          lowerLine.includes('request'));
+        lowerLine.includes('claude code') ||
+        lowerLine.includes('gemini cli') ||
+        lowerLine.includes('github copilot') ||
+        lowerLine.includes('assistant:') ||
+        lowerLine.includes('i am claude') ||
+        lowerLine.includes('i am gemini') ||
+        lowerLine.includes("i'm an ai") ||
+        lowerLine.includes("i'm claude") ||
+        lowerLine.includes("i'm gemini") ||
+        lowerLine.includes('let me help') ||
+        lowerLine.includes('i can help') ||
+        lowerLine.includes('how can i help') ||
+        lowerLine.includes('certainly! i') ||
+        lowerLine.includes('sure! i') ||
+        lowerLine.includes('of course! i') ||
+        lowerLine.includes('thinking...') ||
+        lowerLine.includes('analyzing...') ||
+        lowerLine.includes('working on') ||
+        // Remove most common words to reduce false positives
+        cleanLine.includes('```') || // Code blocks
+        cleanLine.includes('---') || // Markdown separators
+        (cleanLine.includes('(') && cleanLine.includes(')') && cleanLine.length > 25) || // Complex expressions
+        (cleanLine.includes('[') && cleanLine.includes(']') && cleanLine.length > 25) ||
+        /^[A-Z][a-z]+:/.test(cleanLine) || // Likely explanatory text like "Error:" "Note:" etc
+        (cleanLine.length > 40 && /[.!?]/.test(cleanLine)); // Long sentences
 
-      // 🚨 ADDITIONAL: Check for typical Claude conversational patterns
-      const hasConversationalPattern =
-        lowerLine.includes('sure') ||
-        lowerLine.includes('certainly') ||
-        lowerLine.includes('absolutely') ||
-        lowerLine.includes('of course') ||
-        lowerLine.includes('definitely') ||
-        lowerLine.includes('exactly') ||
-        lowerLine.includes('perfect') ||
-        lowerLine.includes('great') ||
-        lowerLine.includes('excellent') ||
-        lowerLine.includes('thanks') ||
-        lowerLine.includes('thank you');
-
-      // 🚨 CLAUDE FIX: Be much more conservative with shell prompt detection
-      // Only trigger termination if we're very confident it's NOT AI output
-      if (
-        cleanLine.length < 50 && // Much stricter length limit
+      // 🎯 MUCH MORE LENIENT: Detect termination more easily
+      const isProbablyShellPrompt =
+        cleanLine.length <= 50 && // Increased length limit significantly
         !looksLikeAIOutput &&
-        !hasConversationalPattern &&
-        !lowerLine.includes('...') && // Thinking indicators
-        !lowerLine.includes('let') && // Common Claude phrase starts
-        !lowerLine.includes('the') && // Common article usage in Claude responses
-        !lowerLine.includes('to') && // Common preposition in Claude responses
-        !lowerLine.includes('for')
-      ) {
-        // Another common preposition
-        log(`✅ [TERMINATION] Shell prompt detected (Claude silent exit): "${cleanLine}"`);
+        (cleanLine.match(/^[a-z0-9._-]+@[a-z0-9.-]+:[~\/][^$]*\$\s*$/i) || // user@host:~$
+          cleanLine.match(/^[a-z0-9._-]+@[a-z0-9.-]+\s*\$\s*$/i) || // user@host $
+          cleanLine.match(/^[a-z0-9._-]+:\s*\$\s*$/i) || // hostname: $
+          cleanLine.match(/^\$\s*$/) || // Just $
+          cleanLine.match(/^%\s*$/) || // % (zsh)
+          cleanLine.match(/^>\s*$/) || // > (some shells)
+          cleanLine.match(/^PS\d+>\s*$/i) || // PowerShell
+          cleanLine.match(/^C:\\.*>\s*$/i) || // Windows Command Prompt
+          cleanLine.match(/^[a-z0-9._-]+\s*\$\s*$/i) || // Simple hostname $
+          cleanLine.match(/^.*\s+\$\s*$/i) || // Any prompt ending with $
+          cleanLine.match(/^.*\s+%\s*$/i) || // Any prompt ending with %
+          // 🆕 MORE PATTERNS: Add additional common prompt patterns
+          cleanLine.match(/^\s*[►▶]\s*$/i) || // Arrow prompts
+          cleanLine.match(/^\s*[>]\s*$/i) || // Simple >
+          cleanLine.match(/^In\s*\[\d+\]:\s*$/i) || // Jupyter/IPython style
+          cleanLine.match(/^Out\s*\[\d+\]:\s*$/i) ||
+          (cleanLine.length <= 10 && cleanLine.match(/[#$%>]+\s*$/)) // Short prompts
+        );
+
+      if (isProbablyShellPrompt) {
+        log(`✅ [TERMINATION] Shell prompt detected (relaxed): "${cleanLine}"`);
         return {
           isTerminated: true,
-          confidence: 0.85, // Reduced confidence due to increased strictness
+          confidence: 0.6, // Reduced confidence but more lenient
           detectedLine: cleanLine,
-          reason: 'Shell prompt detected after Claude silent exit',
+          reason: 'Shell prompt detected (relaxed mode)',
         };
       } else {
-        log(
-          `⚠️ [TERMINATION] Possible AI output or conversation detected, ignoring: "${cleanLine}"`
-        );
+        log(`⚠️ [TERMINATION] Possible AI output detected, ignoring: "${cleanLine}"`);
       }
     }
 
-    // 🆕 CLAUDE-SPECIFIC: Legitimate Claude session termination detection
+    // 🔄 KEEP: Claude-specific detection but make it more lenient
     if (this.detectClaudeSessionEnd(cleanLine)) {
       log(`✅ [TERMINATION] Claude session end detected: "${cleanLine}"`);
       return {
         isTerminated: true,
-        confidence: 0.95,
+        confidence: 0.7, // Reduced from 0.9
         detectedLine: cleanLine,
         reason: 'Claude session termination',
       };
+    }
+
+    // 🆕 ADDITIONAL LENIENT PATTERNS: Add timeout-based detection
+    // If we haven't seen AI output for a while, be more lenient
+    const lastAIOutputEntry = this.detectionCache.get(`${terminalId}_lastAIOutput`);
+    const timeSinceLastAIOutput = Date.now() - (lastAIOutputEntry?.timestamp || 0);
+    if (timeSinceLastAIOutput > 30000) { // 30 seconds
+      // After 30 seconds of no AI output, be much more lenient about shell prompts
+      if (cleanLine.length <= 30 && 
+          (cleanLine.includes('$') || cleanLine.includes('%') || cleanLine.includes('>')) &&
+          !cleanLine.includes('claude') && !cleanLine.includes('gemini')) {
+        log(`✅ [TERMINATION] Timeout-based shell prompt detected: "${cleanLine}"`);
+        return {
+          isTerminated: true,
+          confidence: 0.5, // Low confidence but still detect
+          detectedLine: cleanLine,
+          reason: 'Timeout-based shell prompt detection',
+        };
+      }
     }
 
     log(`❌ [TERMINATION] No termination detected for: "${cleanLine}"`);
@@ -548,32 +740,42 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
       isTerminated: false,
       confidence: 0,
       detectedLine: cleanLine,
-      reason: 'No strict termination detected',
+      reason: 'No termination detected',
     };
   }
 
   private hasVeryExplicitTerminationMessage(cleanLine: string): boolean {
-    const line = cleanLine.toLowerCase();
+    const line = cleanLine.toLowerCase().trim();
+
+    // 🚨 ULTRA-STRICT: Only match VERY specific termination messages
+    // Greatly reduced to prevent false positives
+
     return (
-      line.includes('session ended') ||
-      line.includes('connection closed') ||
-      (line.includes('goodbye') &&
-        (line.includes('claude') || line.includes('gemini') || line.includes('agent'))) || // 🔧 FIX: Context required
-      line.includes('exiting claude') || // 🔧 FIX: Be more specific to avoid "exit" false positive
-      line.includes('exiting gemini') ||
-      line.includes('session terminated') || // 🔧 FIX: Be more specific
-      line.includes('disconnected from') ||
-      (line.includes('claude') && line.includes('exited')) ||
-      (line.includes('gemini') && line.includes('exited')) ||
-      line.includes('command not found: claude') ||
-      line.includes('command not found: gemini') ||
+      // Exact session termination messages only
+      line === 'session ended' ||
+      line === 'connection closed' ||
+      line === 'session terminated' ||
+      line === 'session completed' ||
+      line === 'process finished' ||
+      // Agent-specific exact termination messages
+      line === 'goodbye claude' ||
+      line === 'goodbye gemini' ||
+      line === 'exiting claude' ||
+      line === 'exiting gemini' ||
+      line === 'claude exited' ||
+      line === 'gemini exited' ||
+      line === 'claude session ended' ||
+      line === 'gemini session ended' ||
+      // Command not found (exact matches only)
+      line === 'command not found: claude' ||
+      line === 'command not found: gemini' ||
       line.includes('no such file or directory') ||
-      line.includes('process finished') ||
-      line.includes('session completed') ||
-      // 🔧 FIX: Add Gemini-specific termination messages from log
-      line.includes('agent powering down') ||
-      line.includes('powering down') ||
-      (line.includes('agent') && line.includes('goodbye'))
+      // Process termination patterns (exact matches)
+      line.includes('[process exited') ||
+      line.includes('process terminated') ||
+      // Agent powering down (exact context required)
+      (line.includes('agent') && line.includes('powering down')) ||
+      (line.includes('agent') && line === 'goodbye')
     );
   }
 
@@ -605,57 +807,108 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
   private detectClaudeSessionEnd(cleanLine: string): boolean {
     const line = cleanLine.toLowerCase().trim();
 
-    // 🚨 CRITICAL: Only detect genuine session termination patterns
-    // Avoid false positives from user typing "exit", numbers, etc.
+    // 🎯 RELAXED DETECTION: More lenient Claude termination patterns
 
-    // 1. Shell prompt return patterns (most reliable indicator)
+    // 1. Expanded shell prompt patterns (more permissive)
     const shellPromptPatterns = [
       /^[a-z0-9._-]+@[a-z0-9.-]+:[~\/][^$]*\$\s*$/i, // user@host:~$ or user@host:/path$
       /^[a-z0-9._-]+@[a-z0-9.-]+\s*\$\s*$/i, // user@host $
+      /^[a-z0-9._-]+:\s*\$\s*$/i, // hostname: $
       /^\$\s*$/, // Just $ (simple shell)
       /^%\s*$/, // % (zsh)
       /^>\s*$/, // > (some shells)
+      /^PS\d+>\s*$/i, // PowerShell
+      /^C:\\.*>\s*$/i, // Windows Command Prompt
+      /^[a-z0-9._-]+\s*\$\s*$/i, // Simple hostname $
+      /^.*\s+\$\s*$/i, // Any prompt ending with $
+      /^.*\s+%\s*$/i, // Any prompt ending with %
     ];
 
-    const hasShellPrompt = shellPromptPatterns.some((pattern) => pattern.test(line));
+    // 🔄 LESS STRICT: Allow more patterns that could be shell prompts
+    const isLikelyShellPrompt =
+      line.length <= 40 && // Increased from 20 to 40
+      shellPromptPatterns.some((pattern) => pattern.test(line)) &&
+      !line.includes('claude code') && // Only exclude very specific Claude patterns
+      !line.includes('gemini cli') &&
+      !line.includes('github copilot') &&
+      !line.includes('how can i help') &&
+      !line.includes('let me help') &&
+      !line.includes('i am claude') &&
+      !line.includes("i'm claude") &&
+      !line.includes('thinking...') &&
+      !line.includes('analyzing...') &&
+      // Remove many restrictive filters to be more lenient
+      !line.includes('```'); // Only exclude obvious code blocks
 
-    // 2. EOF signal is user input (Ctrl+D), not detectable from output
-    // When user presses Ctrl+D, Claude exits and shell prompt appears
-
-    // 3. Explicit Claude termination messages (if any)
+    // 2. Keep explicit termination messages (but add more patterns)
     const hasExplicitTermination =
-      line.includes('session ended') ||
-      (line.includes('goodbye') && line.includes('claude')) ||
-      line.includes('claude session terminated') ||
-      line.includes('exiting claude');
-    // 🚨 IMPORTANT: Do NOT match standalone "exit" - too generic and causes false positives
+      line === 'session ended' ||
+      line === 'goodbye claude' ||
+      line === 'claude session terminated' ||
+      line === 'exiting claude' ||
+      line === 'claude exited' ||
+      line === 'connection closed' ||
+      line === 'exit' || // 🆕 Add back simple "exit"
+      line === 'quit' || // 🆕 Add "quit"
+      line === 'goodbye' || // 🆕 Add "goodbye"
+      line === 'bye' || // 🆕 Add "bye"
+      line.includes('session terminated') || // 🆕 More flexible
+      line.includes('connection closed') || // 🆕 More flexible
+      line.includes('process exited'); // 🆕 More flexible
 
-    // 4. Process completion with context (more restrictive)
+    // 3. Process completion (more permissive)
     const hasProcessCompletion =
-      // Only exact matches for process completion - no substring matching
       line === '[done]' ||
       line === '[finished]' ||
       line === 'done' ||
       line === 'finished' ||
-      // Process exit with code
+      line === 'complete' || // 🆕 Add "complete"
+      line === 'completed' || // 🆕 Add "completed"
       /^\[process exited with code \d+\]$/.test(line) ||
-      // Exit status codes (exact match only)
-      /^exit status: \d+$/.test(line);
+      /^process exited with code \d+$/.test(line) || // 🆕 Without brackets
+      /^exited with code \d+$/.test(line); // 🆕 Shorter version
 
-    // 5. Claude interactive session end indicators
-    // When Claude exits, these interactive elements disappear
+    // 4. More flexible session end indicators
     const hasSessionEndIndicator =
-      // Process exit status codes (when Claude terminates)
-      /^\[process exited with code \d+\]$/i.test(line) ||
-      // Terminal control sequence indicating session end
-      line.includes('\x1b[?2004l') || // Bracketed paste mode disabled
-      // Claude session cleanup messages
-      line.includes('cleaning up claude session') ||
-      line.includes('claude session closed');
+      /process exited with code \d+/i.test(line) || // More flexible matching
+      line.includes('cleaning up') || // 🆕 More general cleanup
+      line.includes('session closed') || // 🆕 More general session end
+      line.includes('terminating') || // 🆕 Termination process
+      line.includes('shutting down') || // 🆕 Shutdown process
+      line.includes('disconnected'); // 🆕 Disconnection
 
-    return (
-      hasShellPrompt || hasExplicitTermination || hasProcessCompletion || hasSessionEndIndicator
-    );
+    // 5. 🆕 TIME-BASED RELAXATION: If enough time has passed, be more lenient
+    const isTimeBasedRelaxed = (() => {
+      // If we haven't seen obvious AI activity in a while, allow simpler patterns
+      const now = Date.now();
+      const lastAIActivityEntry = this.detectionCache.get('lastClaudeActivity');
+      const timeSinceActivity = now - (lastAIActivityEntry?.timestamp || 0);
+      
+      // After 20 seconds of no obvious Claude activity, be more lenient
+      if (timeSinceActivity > 20000) {
+        return line.length <= 30 && 
+               (line.includes('$') || line.includes('%') || line.includes('>')) &&
+               !line.includes('claude code') &&
+               !line.includes('gemini cli');
+      }
+      return false;
+    })();
+
+    // 🎯 MORE PERMISSIVE LOGIC: Multiple ways to detect termination
+    const shouldTerminate =
+      hasExplicitTermination ||
+      hasProcessCompletion ||
+      hasSessionEndIndicator ||
+      isLikelyShellPrompt ||
+      isTimeBasedRelaxed; // 🆕 Add time-based relaxation
+
+    // 🆕 UPDATE ACTIVITY TRACKING: Track when we see Claude-like activity
+    if (line.includes('claude') || line.includes('thinking') || line.includes('analyzing') || 
+        line.includes('let me') || line.includes('i can') || line.includes('i will')) {
+      this.detectionCache.set('lastClaudeActivity', { result: null, timestamp: Date.now() });
+    }
+
+    return shouldTerminate;
   }
 
   private detectClaudeFromInput(input: string): { isDetected: boolean; confidence: number } {

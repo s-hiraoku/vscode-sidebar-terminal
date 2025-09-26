@@ -327,7 +327,7 @@ export class TerminalLifecycleManager implements ITerminalLifecycleManager {
    */
   private createPtyProcess(config: Record<string, unknown>): unknown {
     const terminalConfig = getTerminalConfig();
-    const shell = getShellForPlatform(terminalConfig.shell);
+    const shell = terminalConfig.shell || getShellForPlatform();
     const cwd = getWorkingDirectory();
 
     const configEnv = config.env as Record<string, string> | undefined;
@@ -381,10 +381,9 @@ export class TerminalLifecycleManager implements ITerminalLifecycleManager {
       log(`❌ [LIFECYCLE] Terminal error: ${terminal.name} - ${String(error)}`);
       this.removeTerminal(terminal.id);
     };
-    (terminal.pty as { on: (event: string, handler: (error: Error) => void) => void }).on(
-      'error',
-      errorHandler
-    );
+    if (terminal.pty && typeof (terminal.pty as any).on === 'function') {
+      (terminal.pty as any).on('error', errorHandler);
+    }
   }
 
   /**

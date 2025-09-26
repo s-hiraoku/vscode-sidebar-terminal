@@ -17,6 +17,10 @@ describe('RefactoredMessageManager', () => {
     clock = sinon.useFakeTimers();
 
     // Create mock coordinator
+    const notificationStub = {
+      showNotificationInTerminal: sinon.stub(),
+    };
+
     mockCoordinator = {
       postMessageToExtension: sinon.stub().resolves(),
       getTerminalInstance: sinon.stub().callsFake((id: string) => ({ id, name: `Terminal ${id}` })),
@@ -24,13 +28,23 @@ describe('RefactoredMessageManager', () => {
       setActiveTerminalId: sinon.stub(),
       getActiveTerminalId: sinon.stub().returns('terminal-1'),
       getAllTerminalInstances: sinon.stub().returns(new Map()),
+      getManagers: sinon.stub().returns({
+        notification: notificationStub,
+      }),
     } as any;
+
+    (mockCoordinator as any).persistenceManager = {
+      serializeTerminal: sinon.stub().returns({ content: 'serialized-content' }),
+      restoreTerminalContent: sinon.stub().returns(true),
+      getAvailableTerminals: sinon.stub().returns(['terminal-1', 'terminal-2']),
+      saveTerminalContent: sinon.stub(),
+    };
 
     messageManager = new RefactoredMessageManager(mockCoordinator);
   });
 
   afterEach(() => {
-    clock.restore();
+    // Stop any pending operations before cleanup
     if (messageManager && typeof messageManager.dispose === 'function') {
       try {
         messageManager.dispose();
@@ -38,40 +52,51 @@ describe('RefactoredMessageManager', () => {
         // Ignore disposal errors in tests
       }
     }
+
+    // Ensure all pending timers are cleared
+    if (clock) {
+      clock.restore();
+    }
   });
 
   describe('Priority Queue System', () => {
-    it('should prioritize input messages over regular messages', async () => {
+    it('should prioritize input messages over regular messages', (done) => {
       const executionOrder: string[] = [];
 
       // Mock postMessageToExtension to track execution order
-      mockCoordinator.postMessageToExtension = sinon.stub().callsFake(async (_message: any) => {
+      mockCoordinator.postMessageToExtension = sinon.stub().callsFake((_message: any) => {
         executionOrder.push(_message.command);
-        // Simulate small delay
-        await new Promise((resolve) => setTimeout(resolve, 1));
+
+        // Check results after all messages are processed
+        if (executionOrder.length >= 5) {
+          try {
+            // Input messages should be processed first
+            expect(executionOrder.slice(0, 2)).to.deep.equal(['input', 'terminalInteraction']);
+            expect(executionOrder.slice(2)).to.include.members([
+              'regular1',
+              'regular2',
+              'regular3',
+            ]);
+            done();
+          } catch (error) {
+            done(error);
+          }
+        }
       }) as any;
 
       // Queue regular messages first
-      (messageManager as any).queueMessage({ command: 'regular1' }, mockCoordinator);
-      (messageManager as any).queueMessage({ command: 'regular2' }, mockCoordinator);
+      (messageManager as any).messageQueue.enqueue({ command: 'regular1' }, 'normal');
+      (messageManager as any).messageQueue.enqueue({ command: 'regular2' }, 'normal');
 
       // Queue input messages (should be prioritized)
-      (messageManager as any).queueMessage({ command: 'input', type: 'input' }, mockCoordinator);
-      (messageManager as any).queueMessage(
-        { command: 'terminalInteraction', type: 'keydown' },
-        mockCoordinator
-      );
+      (messageManager as any).messageQueue.enqueue({ command: 'input' }, 'high');
+      (messageManager as any).messageQueue.enqueue({ command: 'terminalInteraction' }, 'high');
 
       // Queue more regular messages
-      (messageManager as any).queueMessage({ command: 'regular3' }, mockCoordinator);
+      (messageManager as any).messageQueue.enqueue({ command: 'regular3' }, 'normal');
 
-      // Wait for processing
+      // Advance timers to trigger processing
       clock.tick(100);
-      await clock.runAllAsync();
-
-      // Input messages should be processed first
-      expect(executionOrder.slice(0, 2)).to.deep.equal(['input', 'terminalInteraction']);
-      expect(executionOrder.slice(2)).to.include.members(['regular1', 'regular2', 'regular3']);
     });
 
     it('should process high-priority messages without delay', async () => {
@@ -191,7 +216,7 @@ describe('RefactoredMessageManager', () => {
       // Queue should be cleared after processing
       const stats = messageManager.getQueueStats();
       expect(stats.queueSize).to.equal(0);
-      expect((stats.highPriorityQueueSize || 0)).to.equal(0);
+      expect(stats.highPriorityQueueSize || 0).to.equal(0);
     });
   });
 
@@ -200,7 +225,7 @@ describe('RefactoredMessageManager', () => {
       // Initially empty
       let stats = messageManager.getQueueStats();
       expect(stats.queueSize).to.equal(0);
-      expect((stats.highPriorityQueueSize || 0)).to.equal(0);
+      expect(stats.highPriorityQueueSize || 0).to.equal(0);
       expect(stats.isProcessing).to.be.false;
       expect(stats.isLocked).to.be.false;
 
@@ -217,7 +242,7 @@ describe('RefactoredMessageManager', () => {
 
       stats = messageManager.getQueueStats();
       expect(stats.queueSize).to.equal(2); // Regular messages
-      expect((stats.highPriorityQueueSize || 0)).to.equal(2); // High-priority messages
+      expect(stats.highPriorityQueueSize || 0).to.equal(2); // High-priority messages
     });
 
     it('should correctly identify input message types', () => {
@@ -237,7 +262,7 @@ describe('RefactoredMessageManager', () => {
 
         const stats = messageManager.getQueueStats();
         if (testCase.shouldBeHighPriority) {
-          expect((stats.highPriorityQueueSize || 0)).to.be.greaterThan(
+          expect(stats.highPriorityQueueSize || 0).to.be.greaterThan(
             0,
             `Test case ${index}: ${JSON.stringify(testCase.message)} should be high priority`
           );
@@ -302,17 +327,17 @@ describe('RefactoredMessageManager', () => {
     it('should send input messages with high priority', () => {
       // Mock postMessageToExtension to block processing
       let _resolveMessage: () => void;
-      const messagePromise = new Promise<void>(resolve => {
+      const messagePromise = new Promise<void>((resolve) => {
         _resolveMessage = resolve;
       });
-      
+
       mockCoordinator.postMessageToExtension = sinon.stub().returns(messagePromise) as any;
 
       messageManager.sendInput('test input', 'terminal-1');
 
       // Check queue stats immediately after enqueueing
       const stats = messageManager.getQueueStats();
-      expect((stats.highPriorityQueueSize || 0)).to.equal(1);
+      expect(stats.highPriorityQueueSize || 0).to.equal(1);
     });
 
     it('should handle missing terminalId in sendInput', () => {
@@ -326,7 +351,7 @@ describe('RefactoredMessageManager', () => {
 
   describe('Memory Management', () => {
     it('should properly cleanup on dispose', () => {
-      // Add messages to queues  
+      // Add messages to queues
       messageManager.postMessage({ command: 'test1' });
       messageManager.postMessage({ command: 'input' });
 
@@ -338,10 +363,10 @@ describe('RefactoredMessageManager', () => {
 
       stats = messageManager.getQueueStats();
       expect(stats.queueSize).to.equal(0);
-      expect((stats.highPriorityQueueSize || 0)).to.equal(0);
+      expect(stats.highPriorityQueueSize || 0).to.equal(0);
       expect(stats.isProcessing).to.be.false;
       expect(stats.isLocked).to.be.false;
-      
+
       // Create a fresh instance for subsequent tests
       messageManager = new RefactoredMessageManager(mockCoordinator);
     });
@@ -361,9 +386,7 @@ describe('RefactoredMessageManager', () => {
       for (let i = 0; i < messageCount; i++) {
         const isInput = i % 10 === 0; // Every 10th message is input
         const command = isInput ? 'input' : `regular${i}`;
-        messageManager.postMessage(
-          { command, type: isInput ? 'input' : undefined }
-        );
+        messageManager.postMessage({ command, type: isInput ? 'input' : undefined });
       }
 
       // Allow processing to complete
@@ -377,6 +400,142 @@ describe('RefactoredMessageManager', () => {
       const inputMessages = processedMessages.filter((cmd) => cmd === 'input');
       const expectedInputCount = Math.floor(messageCount / 10);
       expect(inputMessages.length).to.equal(expectedInputCount);
+    });
+  });
+
+  describe('Persistence Handlers', () => {
+    it('serializes a single terminal via serializeTerminal command', async () => {
+      const serializeStub = (mockCoordinator as any).persistenceManager
+        .serializeTerminal as sinon.SinonStub;
+      serializeStub
+        .withArgs('terminal-99', sinon.match.object)
+        .returns({ content: 'terminal-99-content' });
+
+      const initialCalls = mockCoordinator.postMessageToExtension.callCount;
+
+      await messageManager.receiveMessage(
+        {
+          command: 'serializeTerminal',
+          terminalId: 'terminal-99',
+        },
+        mockCoordinator
+      );
+
+      const responseCall = mockCoordinator.postMessageToExtension.getCall(initialCalls);
+      expect(responseCall).to.not.be.undefined;
+      const payload = responseCall.args[0] as any;
+      expect(payload.command).to.equal('terminalSerializationResponse');
+      expect(payload.serializationData).to.deep.equal({ 'terminal-99': 'terminal-99-content' });
+    });
+
+    it('saves all terminal sessions and acknowledges success', async () => {
+      const persistenceManager = (mockCoordinator as any).persistenceManager;
+      persistenceManager.getAvailableTerminals.returns(['terminal-1', 'terminal-2']);
+      const saveStub = persistenceManager.saveTerminalContent as sinon.SinonStub;
+
+      const initialCalls = mockCoordinator.postMessageToExtension.callCount;
+
+      await messageManager.receiveMessage(
+        {
+          command: 'saveAllTerminalSessions',
+        },
+        mockCoordinator
+      );
+
+      expect(saveStub.callCount).to.equal(2);
+      expect(saveStub.firstCall.args[0]).to.equal('terminal-1');
+      expect(saveStub.secondCall.args[0]).to.equal('terminal-2');
+
+      const responseCall = mockCoordinator.postMessageToExtension.getCall(initialCalls);
+      const payload = responseCall.args[0] as any;
+      expect(payload.command).to.equal('saveAllTerminalSessionsResponse');
+      expect(payload.success).to.be.true;
+      expect(payload.savedTerminals).to.equal(2);
+    });
+
+    it('restores serialized content using persistence manager', async () => {
+      const restoreStub = (mockCoordinator as any).persistenceManager
+        .restoreTerminalContent as sinon.SinonStub;
+      restoreStub.withArgs('terminal-55', 'serialized-payload').returns(true);
+
+      const initialCalls = mockCoordinator.postMessageToExtension.callCount;
+
+      await messageManager.receiveMessage(
+        {
+          command: 'restoreSerializedContent',
+          terminalId: 'terminal-55',
+          serializedContent: 'serialized-payload',
+        },
+        mockCoordinator
+      );
+
+      await Promise.resolve();
+
+      expect(restoreStub.calledWith('terminal-55', 'serialized-payload')).to.be.true;
+      const responseCall = mockCoordinator.postMessageToExtension.getCall(initialCalls);
+      const payload = responseCall.args[0] as any;
+      expect(payload.command).to.equal('terminalSerializationRestoreResponse');
+      expect(payload.success).to.be.true;
+    });
+
+    it('falls back to coordinator.restoreSession when serialized content absent', async () => {
+      const persistenceManager = (mockCoordinator as any).persistenceManager;
+      (mockCoordinator as any).restoreSession = sinon.stub().resolves(true);
+      persistenceManager.restoreTerminalContent.returns(false);
+
+      const initialCalls = mockCoordinator.postMessageToExtension.callCount;
+
+      await messageManager.receiveMessage(
+        {
+          command: 'restoreSerializedContent',
+          terminalId: 'terminal-70',
+          scrollbackData: ['line-a', 'line-b'],
+          sessionRestoreMessage: 'Restored session',
+          isActive: true,
+        },
+        mockCoordinator
+      );
+
+      await Promise.resolve();
+
+      expect((mockCoordinator as any).restoreSession.calledOnce).to.be.true;
+      expect(mockCoordinator.setActiveTerminalId.calledWith('terminal-70')).to.be.true;
+
+      const responseCall = mockCoordinator.postMessageToExtension.getCall(initialCalls);
+      const payload = responseCall.args[0] as any;
+      expect(payload.command).to.equal('terminalSerializationRestoreResponse');
+      expect(payload.success).to.be.true;
+    });
+
+    it('processes sessionRestorationData payload and responds with success', async () => {
+      (mockCoordinator as any).restoreSession = sinon.stub().resolves(true);
+
+      const initialCalls = mockCoordinator.postMessageToExtension.callCount;
+
+      await messageManager.receiveMessage(
+        {
+          command: 'sessionRestorationData',
+          terminalId: 'terminal-77',
+          sessionData: {
+            name: 'Workspace Shell',
+            scrollbackData: ['npm run build', 'done'],
+            sessionRestoreMessage: 'Restored previous session',
+            isActive: true,
+          },
+        },
+        mockCoordinator
+      );
+
+      await Promise.resolve();
+
+      expect((mockCoordinator as any).restoreSession.calledOnce).to.be.true;
+      expect(mockCoordinator.setActiveTerminalId.calledWith('terminal-77')).to.be.true;
+
+      const responseCall = mockCoordinator.postMessageToExtension.getCall(initialCalls);
+      const payload = responseCall.args[0] as any;
+      expect(payload.command).to.equal('sessionRestorationDataResponse');
+      expect(payload.success).to.be.true;
+      expect(payload.terminalId).to.equal('terminal-77');
     });
   });
 });

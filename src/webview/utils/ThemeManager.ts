@@ -47,7 +47,7 @@ export class ThemeManager {
   private static themeColors: ThemeColors = {
     background: '#1e1e1e',
     foreground: '#d4d4d4',
-    border: '#454545'
+    border: '#454545',
   };
 
   /**
@@ -82,10 +82,7 @@ export class ThemeManager {
   /**
    * Apply theme to an element
    */
-  public static applyTheme(
-    element: HTMLElement,
-    customTheme?: Partial<ThemeColors>
-  ): void {
+  public static applyTheme(element: HTMLElement, customTheme?: Partial<ThemeColors>): void {
     if (!element) {
       return;
     }
@@ -150,7 +147,7 @@ export class ThemeManager {
       brightBlue: '#3b8eea',
       brightMagenta: '#d670d6',
       brightCyan: '#29b8db',
-      brightWhite: '#e5e5e5'
+      brightWhite: '#e5e5e5',
     };
 
     return { ...defaultTheme, ...overrides };
@@ -159,13 +156,10 @@ export class ThemeManager {
   /**
    * Update element theme by selector
    */
-  public static updateElementTheme(
-    selector: string,
-    styles: Partial<CSSStyleDeclaration>
-  ): void {
+  public static updateElementTheme(selector: string, styles: Partial<CSSStyleDeclaration>): void {
     try {
       const elements = document.querySelectorAll<HTMLElement>(selector);
-      elements.forEach(element => {
+      elements.forEach((element) => {
         Object.assign(element.style, styles);
       });
     } catch (error) {
@@ -202,10 +196,10 @@ export class ThemeManager {
         '--vscode-terminal-foreground',
         '--vscode-terminal-background',
         '--vscode-terminalCursor-foreground',
-        '--vscode-terminal-selectionBackground'
+        '--vscode-terminal-selectionBackground',
       ];
 
-      vsCodeProperties.forEach(property => {
+      vsCodeProperties.forEach((property) => {
         const value = computedStyle.getPropertyValue(property).trim();
         if (value) {
           variables[property] = value;
@@ -225,7 +219,7 @@ export class ThemeManager {
     this.themeColors = {
       background: this.getVSCodeColor('--vscode-editor-background', '#1e1e1e'),
       foreground: this.getVSCodeColor('--vscode-editor-foreground', '#d4d4d4'),
-      border: this.getVSCodeColor('--vscode-widget-border', '#454545')
+      border: this.getVSCodeColor('--vscode-widget-border', '#454545'),
     };
   }
 
@@ -237,7 +231,7 @@ export class ThemeManager {
     this.themeColors = {
       background: '#1e1e1e',
       foreground: '#d4d4d4',
-      border: '#454545'
+      border: '#454545',
     };
   }
 }

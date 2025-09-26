@@ -71,7 +71,7 @@ describe('Input Optimization Integration', () => {
     inputManager = new InputManager();
     messageManager = new RefactoredMessageManager();
     performanceManager = new PerformanceManager();
-    performanceManager.initialize({ coordinator: mockCoordinator });
+    performanceManager.initialize();
 
     // Update coordinator to include all required managers
     mockCoordinator.getManagers.returns({
@@ -396,7 +396,9 @@ describe('Input Optimization Integration', () => {
       const _performanceStats = performanceManager.getBufferStats();
 
       // Should have pending operations
-      expect(messageStats.queueSize + (messageStats.highPriorityQueueSize || 0)).to.be.greaterThan(0);
+      expect(messageStats.queueSize + (messageStats.highPriorityQueueSize || 0)).to.be.greaterThan(
+        0
+      );
 
       // Dispose all managers
       inputManager.dispose();

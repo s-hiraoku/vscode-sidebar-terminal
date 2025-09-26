@@ -6,10 +6,10 @@
 import { expect } from 'chai';
 import { SinonSandbox, createSandbox } from 'sinon';
 import { JSDOM } from 'jsdom';
-import { 
+import {
   TerminalContainerFactory,
   TerminalContainerConfig,
-  TerminalHeaderConfig
+  TerminalHeaderConfig,
 } from '../../../../webview/factories/TerminalContainerFactory';
 
 describe('TerminalContainerFactory', () => {
@@ -18,7 +18,7 @@ describe('TerminalContainerFactory', () => {
 
   beforeEach(() => {
     sandbox = createSandbox();
-    
+
     // Create DOM environment with main container
     dom = new JSDOM(`
       <!DOCTYPE html>
@@ -28,7 +28,7 @@ describe('TerminalContainerFactory', () => {
         </body>
       </html>
     `);
-    
+
     global.window = dom.window as any;
     global.document = dom.window.document;
     global.Element = dom.window.Element;
@@ -45,7 +45,7 @@ describe('TerminalContainerFactory', () => {
     it('should create basic container with minimal config', () => {
       const config: TerminalContainerConfig = {
         id: 'test-terminal-1',
-        name: 'Test Terminal'
+        name: 'Test Terminal',
       };
 
       const elements = TerminalContainerFactory.createContainer(config);
@@ -62,7 +62,7 @@ describe('TerminalContainerFactory', () => {
       const config: TerminalContainerConfig = {
         id: 'test-terminal-2',
         name: 'Test Terminal',
-        className: 'custom-terminal-container active'
+        className: 'custom-terminal-container active',
       };
 
       const elements = TerminalContainerFactory.createContainer(config);
@@ -73,13 +73,13 @@ describe('TerminalContainerFactory', () => {
     it('should create container with header when requested', () => {
       const config: TerminalContainerConfig = {
         id: 'test-terminal-3',
-        name: 'Test Terminal with Header'
+        name: 'Test Terminal with Header',
       };
 
       const headerConfig: TerminalHeaderConfig = {
         showHeader: true,
         showCloseButton: true,
-        showSplitButton: true
+        showSplitButton: true,
       };
 
       const elements = TerminalContainerFactory.createContainer(config, headerConfig);
@@ -92,7 +92,7 @@ describe('TerminalContainerFactory', () => {
     it('should set correct data attributes', () => {
       const config: TerminalContainerConfig = {
         id: 'data-test-terminal',
-        name: 'Data Test Terminal'
+        name: 'Data Test Terminal',
       };
 
       const elements = TerminalContainerFactory.createContainer(config);
@@ -106,7 +106,7 @@ describe('TerminalContainerFactory', () => {
         id: 'split-terminal',
         name: 'Split Terminal',
         isSplit: true,
-        height: 250
+        height: 250,
       };
 
       const elements = TerminalContainerFactory.createContainer(config);
@@ -120,7 +120,7 @@ describe('TerminalContainerFactory', () => {
       const config: TerminalContainerConfig = {
         id: 'active-terminal',
         name: 'Active Terminal',
-        isActive: true
+        isActive: true,
       };
 
       const elements = TerminalContainerFactory.createContainer(config);
@@ -136,8 +136,8 @@ describe('TerminalContainerFactory', () => {
         customStyles: {
           backgroundColor: 'rgb(255, 0, 0)',
           border: '3px solid blue',
-          opacity: '0.8'
-        }
+          opacity: '0.8',
+        },
       };
 
       const elements = TerminalContainerFactory.createContainer(config);
@@ -152,7 +152,7 @@ describe('TerminalContainerFactory', () => {
         id: 'sized-terminal',
         name: 'Sized Terminal',
         width: 800,
-        height: 400
+        height: 400,
       };
 
       const elements = TerminalContainerFactory.createContainer(config);
@@ -168,12 +168,12 @@ describe('TerminalContainerFactory', () => {
     it('should create header with custom title', () => {
       const config: TerminalContainerConfig = {
         id: 'header-test',
-        name: 'Original Name'
+        name: 'Original Name',
       };
 
       const headerConfig: TerminalHeaderConfig = {
         showHeader: true,
-        customTitle: 'Custom Header Title'
+        customTitle: 'Custom Header Title',
       };
 
       const elements = TerminalContainerFactory.createContainer(config, headerConfig);
@@ -185,11 +185,11 @@ describe('TerminalContainerFactory', () => {
     it('should use terminal name when no custom title provided', () => {
       const config: TerminalContainerConfig = {
         id: 'default-title-test',
-        name: 'Default Title Terminal'
+        name: 'Default Title Terminal',
       };
 
       const headerConfig: TerminalHeaderConfig = {
-        showHeader: true
+        showHeader: true,
       };
 
       const elements = TerminalContainerFactory.createContainer(config, headerConfig);
@@ -201,14 +201,14 @@ describe('TerminalContainerFactory', () => {
     it('should create only requested buttons', () => {
       const config: TerminalContainerConfig = {
         id: 'button-test',
-        name: 'Button Test'
+        name: 'Button Test',
       };
 
       // Test only close button
       const headerConfig1: TerminalHeaderConfig = {
         showHeader: true,
         showCloseButton: true,
-        showSplitButton: false
+        showSplitButton: false,
       };
 
       const elements1 = TerminalContainerFactory.createContainer(config, headerConfig1);
@@ -219,7 +219,7 @@ describe('TerminalContainerFactory', () => {
       const headerConfig2: TerminalHeaderConfig = {
         showHeader: true,
         showCloseButton: false,
-        showSplitButton: true
+        showSplitButton: true,
       };
 
       const elements2 = TerminalContainerFactory.createContainer(config, headerConfig2);
@@ -230,29 +230,29 @@ describe('TerminalContainerFactory', () => {
     it('should create header buttons with hover effects', () => {
       const config: TerminalContainerConfig = {
         id: 'hover-test',
-        name: 'Hover Test'
+        name: 'Hover Test',
       };
 
       const headerConfig: TerminalHeaderConfig = {
         showHeader: true,
-        showCloseButton: true
+        showCloseButton: true,
       };
 
       const elements = TerminalContainerFactory.createContainer(config, headerConfig);
 
       const button = elements.closeButton!;
-      
+
       // Simulate mouseenter
       const mouseEnterEvent = new dom.window.MouseEvent('mouseenter', { bubbles: true });
       button.dispatchEvent(mouseEnterEvent);
-      
+
       // Should have hover styles applied
       expect(button.style.background).to.not.equal('transparent');
-      
+
       // Simulate mouseleave
       const mouseLeaveEvent = new dom.window.MouseEvent('mouseleave', { bubbles: true });
       button.dispatchEvent(mouseLeaveEvent);
-      
+
       // Should revert to original styles
       expect(button.style.background).to.equal('transparent');
     });
@@ -264,7 +264,7 @@ describe('TerminalContainerFactory', () => {
     beforeEach(() => {
       const config: TerminalContainerConfig = {
         id: 'utility-test',
-        name: 'Utility Test'
+        name: 'Utility Test',
       };
       const elements = TerminalContainerFactory.createContainer(config);
       container = elements.container;
@@ -272,19 +272,19 @@ describe('TerminalContainerFactory', () => {
 
     it('should set active state correctly', () => {
       TerminalContainerFactory.setActiveState(container, true);
-      
+
       expect(container.hasAttribute('data-active')).to.be.true;
       expect(container.style.borderColor).to.not.equal('transparent');
-      
+
       TerminalContainerFactory.setActiveState(container, false);
-      
+
       expect(container.hasAttribute('data-active')).to.be.false;
       expect(container.style.borderColor).to.equal('transparent');
     });
 
     it('should configure split mode correctly', () => {
       TerminalContainerFactory.configureSplitMode(container, 300);
-      
+
       expect(container.style.height).to.equal('300px');
       expect(container.hasAttribute('data-split')).to.be.true;
     });
@@ -292,10 +292,10 @@ describe('TerminalContainerFactory', () => {
     it('should remove from split mode correctly', () => {
       // First configure as split
       TerminalContainerFactory.configureSplitMode(container, 300);
-      
+
       // Then remove from split
       TerminalContainerFactory.removeFromSplitMode(container);
-      
+
       expect(container.style.height).to.equal('100%');
       expect(container.hasAttribute('data-split')).to.be.false;
     });
@@ -304,37 +304,40 @@ describe('TerminalContainerFactory', () => {
       const theme = {
         background: '#1a1a1a',
         borderColor: '#ff0000',
-        activeBorderColor: '#00ff00'
+        activeBorderColor: '#00ff00',
       };
 
       TerminalContainerFactory.applyTheme(container, theme);
-      
+
       expect(container.style.background).to.equal('#1a1a1a');
       expect(container.style.borderColor).to.equal('#ff0000');
-      
+
       // Set as active and apply theme again
       TerminalContainerFactory.setActiveState(container, true);
       TerminalContainerFactory.applyTheme(container, theme);
-      
+
       expect(container.style.borderColor).to.equal('#00ff00');
     });
 
     it('should destroy container correctly', () => {
       const parent = document.getElementById('terminal-main-container')!;
       parent.appendChild(container);
-      
+
       expect(parent.contains(container)).to.be.true;
-      
+
       TerminalContainerFactory.destroyContainer(container);
-      
+
       expect(parent.contains(container)).to.be.false;
     });
   });
 
   describe('createSimpleContainer', () => {
     it('should create lightweight container', () => {
-      const container = TerminalContainerFactory.createSimpleContainer('simple-1', 'Simple Container');
-      
+      const container = TerminalContainerFactory.createSimpleContainer(
+        'simple-1',
+        'Simple Container'
+      );
+
       expect(container).to.be.instanceOf(dom.window.HTMLElement);
       expect(container.className).to.equal('terminal-container-simple');
       expect(container.getAttribute('data-terminal-id')).to.equal('simple-1');
@@ -342,8 +345,11 @@ describe('TerminalContainerFactory', () => {
     });
 
     it('should have basic styles applied', () => {
-      const container = TerminalContainerFactory.createSimpleContainer('simple-2', 'Simple Container 2');
-      
+      const container = TerminalContainerFactory.createSimpleContainer(
+        'simple-2',
+        'Simple Container 2'
+      );
+
       expect(container.style.display).to.equal('flex');
       expect(container.style.flexDirection).to.equal('column');
       expect(container.style.background).to.equal('#000');
@@ -360,7 +366,7 @@ describe('TerminalContainerFactory', () => {
 
       const config: TerminalContainerConfig = {
         id: 'error-test',
-        name: 'Error Test'
+        name: 'Error Test',
       };
 
       // Should append to body instead
@@ -372,7 +378,7 @@ describe('TerminalContainerFactory', () => {
     it('should handle invalid config gracefully', () => {
       const invalidConfig = {
         id: '',
-        name: ''
+        name: '',
       } as TerminalContainerConfig;
 
       expect(() => {
@@ -384,7 +390,7 @@ describe('TerminalContainerFactory', () => {
       const config: TerminalContainerConfig = {
         id: 'null-styles-test',
         name: 'Null Styles Test',
-        customStyles: undefined
+        customStyles: undefined,
       };
 
       expect(() => {
@@ -394,7 +400,7 @@ describe('TerminalContainerFactory', () => {
 
     it('should handle destroying non-existent container', () => {
       const orphanContainer = document.createElement('div');
-      
+
       expect(() => {
         TerminalContainerFactory.destroyContainer(orphanContainer);
       }).to.not.throw();
@@ -405,24 +411,24 @@ describe('TerminalContainerFactory', () => {
     it('should append container to main container by default', () => {
       const config: TerminalContainerConfig = {
         id: 'dom-test',
-        name: 'DOM Test'
+        name: 'DOM Test',
       };
 
       const elements = TerminalContainerFactory.createContainer(config);
       const mainContainer = document.getElementById('terminal-main-container')!;
-      
+
       expect(mainContainer.contains(elements.container)).to.be.true;
     });
 
     it('should create proper DOM hierarchy', () => {
       const config: TerminalContainerConfig = {
         id: 'hierarchy-test',
-        name: 'Hierarchy Test'
+        name: 'Hierarchy Test',
       };
 
       const headerConfig: TerminalHeaderConfig = {
         showHeader: true,
-        showCloseButton: true
+        showCloseButton: true,
       };
 
       const elements = TerminalContainerFactory.createContainer(config, headerConfig);
@@ -431,7 +437,7 @@ describe('TerminalContainerFactory', () => {
       expect(elements.container.contains(elements.header!)).to.be.true;
       expect(elements.container.contains(elements.body)).to.be.true;
       expect(elements.header!.contains(elements.closeButton!)).to.be.true;
-      
+
       // Check order: header should come before body
       const children = Array.from(elements.container.children);
       const headerIndex = children.indexOf(elements.header!);

@@ -88,12 +88,7 @@ export class KeyboardShortcutService {
       })
     );
 
-    // Search Operations
-    this._disposables.push(
-      vscode.commands.registerCommand('secondaryTerminal.find', () => {
-        this.find();
-      })
-    );
+    // Search Operations - Note: 'secondaryTerminal.find' is registered in ExtensionLifecycle.ts
 
     this._disposables.push(
       vscode.commands.registerCommand('secondaryTerminal.runRecentCommand', () => {
@@ -109,14 +104,14 @@ export class KeyboardShortcutService {
     try {
       // Focus the secondary terminal view
       await vscode.commands.executeCommand('secondaryTerminal.focus');
-      
+
       // Get the active terminal and focus it
       const activeTerminal = this._terminalManager.getActiveTerminalId();
       if (activeTerminal) {
         // Send focus event to webview
         this.sendWebviewCommand('focus', { terminalId: activeTerminal });
       }
-      
+
       log('🎯 [KEYBOARD] Terminal focused');
     } catch (error) {
       log(`❌ [KEYBOARD] Failed to focus terminal: ${error}`);
@@ -130,7 +125,7 @@ export class KeyboardShortcutService {
     try {
       // Check if we can use profile-based creation
       const defaultProfile = this._terminalManager.getDefaultProfile();
-      
+
       let terminalId: string;
       if (defaultProfile && 'createTerminalWithProfile' in this._terminalManager) {
         // Use profile-based creation if available
@@ -139,7 +134,7 @@ export class KeyboardShortcutService {
         // Fallback to standard creation
         terminalId = this._terminalManager.createTerminal();
       }
-      
+
       if (terminalId) {
         log(`✅ [KEYBOARD] Created new terminal: ${terminalId}`);
         this._terminalManager.setActiveTerminal(terminalId);
@@ -158,17 +153,17 @@ export class KeyboardShortcutService {
   private focusNextTerminal(): void {
     const terminals = this._terminalManager.getTerminals();
     const activeTerminal = this._terminalManager.getActiveTerminalId();
-    
+
     if (terminals.length === 0) return;
-    
-    const terminalIds = terminals.map(t => t.id);
+
+    const terminalIds = terminals.map((t) => t.id);
     const currentIndex = activeTerminal ? terminalIds.indexOf(activeTerminal) : -1;
     const nextIndex = (currentIndex + 1) % terminalIds.length;
-    
+
     const nextTerminalId = terminalIds[nextIndex];
     if (nextTerminalId) {
       this._terminalManager.setActiveTerminal(nextTerminalId);
-      
+
       this.sendWebviewCommand('focusTerminal', { terminalId: nextTerminalId });
       log(`🎯 [KEYBOARD] Focused next terminal: ${nextTerminalId}`);
     }
@@ -180,17 +175,17 @@ export class KeyboardShortcutService {
   private focusPreviousTerminal(): void {
     const terminals = this._terminalManager.getTerminals();
     const activeTerminal = this._terminalManager.getActiveTerminalId();
-    
+
     if (terminals.length === 0) return;
-    
-    const terminalIds = terminals.map(t => t.id);
+
+    const terminalIds = terminals.map((t) => t.id);
     const currentIndex = activeTerminal ? terminalIds.indexOf(activeTerminal) : 0;
     const prevIndex = (currentIndex - 1 + terminalIds.length) % terminalIds.length;
-    
+
     const prevTerminalId = terminalIds[prevIndex];
     if (prevTerminalId) {
       this._terminalManager.setActiveTerminal(prevTerminalId);
-      
+
       this.sendWebviewCommand('focusTerminal', { terminalId: prevTerminalId });
       log(`🎯 [KEYBOARD] Focused previous terminal: ${prevTerminalId}`);
     }
@@ -202,7 +197,7 @@ export class KeyboardShortcutService {
   private clearTerminal(): void {
     const activeTerminal = this._terminalManager.getActiveTerminalId();
     if (!activeTerminal) return;
-    
+
     this.sendWebviewCommand('clearTerminal', { terminalId: activeTerminal });
     log(`🧹 [KEYBOARD] Cleared terminal: ${activeTerminal}`);
   }
@@ -213,7 +208,7 @@ export class KeyboardShortcutService {
   private scrollToPreviousCommand(): void {
     const activeTerminal = this._terminalManager.getActiveTerminalId();
     if (!activeTerminal) return;
-    
+
     this.sendWebviewCommand('scrollToPreviousCommand', { terminalId: activeTerminal });
     log(`⬆️ [KEYBOARD] Scrolled to previous command: ${activeTerminal}`);
   }
@@ -224,7 +219,7 @@ export class KeyboardShortcutService {
   private scrollToNextCommand(): void {
     const activeTerminal = this._terminalManager.getActiveTerminalId();
     if (!activeTerminal) return;
-    
+
     this.sendWebviewCommand('scrollToNextCommand', { terminalId: activeTerminal });
     log(`⬇️ [KEYBOARD] Scrolled to next command: ${activeTerminal}`);
   }
@@ -235,7 +230,7 @@ export class KeyboardShortcutService {
   private selectAll(): void {
     const activeTerminal = this._terminalManager.getActiveTerminalId();
     if (!activeTerminal) return;
-    
+
     this.sendWebviewCommand('selectAll', { terminalId: activeTerminal });
     log(`📋 [KEYBOARD] Selected all text: ${activeTerminal}`);
   }
@@ -246,7 +241,7 @@ export class KeyboardShortcutService {
   private copy(): void {
     const activeTerminal = this._terminalManager.getActiveTerminalId();
     if (!activeTerminal) return;
-    
+
     this.sendWebviewCommand('copy', { terminalId: activeTerminal });
     log(`📋 [KEYBOARD] Copied text: ${activeTerminal}`);
   }
@@ -257,7 +252,7 @@ export class KeyboardShortcutService {
   private async paste(): Promise<void> {
     const activeTerminal = this._terminalManager.getActiveTerminalId();
     if (!activeTerminal) return;
-    
+
     try {
       const clipboardText = await vscode.env.clipboard.readText();
       if (clipboardText && activeTerminal) {
@@ -272,19 +267,19 @@ export class KeyboardShortcutService {
   /**
    * Open find box (VS Code standard: Ctrl+F)
    */
-  private async find(): Promise<void> {
+  public async find(): Promise<void> {
     const activeTerminal = this._terminalManager.getActiveTerminalId();
     if (!activeTerminal) return;
-    
+
     const searchTerm = await vscode.window.showInputBox({
       placeHolder: 'Search in terminal...',
-      prompt: 'Enter text to search'
+      prompt: 'Enter text to search',
     });
-    
+
     if (searchTerm) {
-      this.sendWebviewCommand('find', { 
+      this.sendWebviewCommand('find', {
         terminalId: activeTerminal,
-        searchTerm 
+        searchTerm,
       });
       log(`🔍 [KEYBOARD] Searching for: ${searchTerm}`);
     }
@@ -296,19 +291,19 @@ export class KeyboardShortcutService {
   private async runRecentCommand(): Promise<void> {
     const activeTerminal = this._terminalManager.getActiveTerminalId();
     if (!activeTerminal) return;
-    
+
     // Show quick pick with command history
     const recentCommands = this.getRecentCommands();
-    
+
     if (recentCommands.length === 0) {
       vscode.window.showInformationMessage('No command history available');
       return;
     }
-    
+
     const selected = await vscode.window.showQuickPick(recentCommands, {
-      placeHolder: 'Select a recent command to run'
+      placeHolder: 'Select a recent command to run',
     });
-    
+
     if (selected && activeTerminal) {
       this._terminalManager.sendInput(activeTerminal, selected + '\n');
       log(`🔄 [KEYBOARD] Running recent command: ${selected}`);
@@ -341,7 +336,11 @@ export class KeyboardShortcutService {
    * Send command to webview
    */
   private sendWebviewCommand(command: string, data: Record<string, unknown>): void {
-    if (this._webviewProvider && 'sendMessage' in this._webviewProvider && typeof this._webviewProvider.sendMessage === 'function') {
+    if (
+      this._webviewProvider &&
+      'sendMessage' in this._webviewProvider &&
+      typeof this._webviewProvider.sendMessage === 'function'
+    ) {
       this._webviewProvider.sendMessage({ command, ...data });
       log(`📨 [KEYBOARD] Sent to webview: ${command}`, data);
     } else {
@@ -353,7 +352,7 @@ export class KeyboardShortcutService {
    * Set the webview provider for sending commands
    */
   private _webviewProvider: SecondaryTerminalProvider | null = null;
-  
+
   public setWebviewProvider(provider: SecondaryTerminalProvider): void {
     this._webviewProvider = provider;
     log('🔗 [KEYBOARD] Webview provider connected');
@@ -363,7 +362,7 @@ export class KeyboardShortcutService {
    * Dispose of resources
    */
   public dispose(): void {
-    this._disposables.forEach(d => d.dispose());
+    this._disposables.forEach((d) => d.dispose());
     this._disposables.length = 0;
     this._searchBox?.dispose();
     log('🧹 [KEYBOARD] Service disposed');

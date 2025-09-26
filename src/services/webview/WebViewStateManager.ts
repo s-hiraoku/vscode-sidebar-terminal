@@ -6,7 +6,7 @@ import { getConfigManager } from '../../config/ConfigManager';
 
 /**
  * Manages WebView state, initialization, and panel location detection
- * 
+ *
  * This service extracts state management logic from SecondaryTerminalProvider
  * to improve testability and separation of concerns.
  */
@@ -30,7 +30,7 @@ export class WebViewStateManager implements IWebViewStateManager {
   setInitialized(value: boolean): void {
     const previousState = this._isInitialized;
     this._isInitialized = value;
-    
+
     if (previousState !== value) {
       log(`🔧 [StateManager] Initialization state changed: ${previousState} → ${value}`);
     }
@@ -135,7 +135,7 @@ export class WebViewStateManager implements IWebViewStateManager {
   getPanelLocation(): 'sidebar' | 'panel' {
     try {
       const config = vscode.workspace.getConfiguration('secondaryTerminal');
-      
+
       // Check if dynamic split direction feature is enabled
       const isDynamicSplitEnabled = config.get<boolean>('dynamicSplitDirection', true);
       if (!isDynamicSplitEnabled) {
@@ -168,26 +168,30 @@ export class WebViewStateManager implements IWebViewStateManager {
       log('📍 [StateManager] Requesting panel location detection from WebView');
 
       // Send a message to WebView to analyze its dimensions and report back
-      context.sendMessage({
-        command: 'requestPanelLocationDetection',
-      }).catch(error => {
-        log('⚠️ [StateManager] Error sending panel location detection request:', error);
-        
-        // Fallback to sidebar assumption
-        context.sendMessage({
-          command: 'panelLocationUpdate',
-          location: 'sidebar',
-        }).catch(fallbackError => {
-          log('❌ [StateManager] Fallback panel location update failed:', fallbackError);
-        });
+      context
+        .sendMessage({
+          command: 'requestPanelLocationDetection',
+        })
+        .catch((error) => {
+          log('⚠️ [StateManager] Error sending panel location detection request:', error);
 
-        // Set fallback context key
-        void vscode.commands.executeCommand(
-          'setContext',
-          'secondaryTerminal.panelLocation',
-          'sidebar'
-        );
-      });
+          // Fallback to sidebar assumption
+          context
+            .sendMessage({
+              command: 'panelLocationUpdate',
+              location: 'sidebar',
+            })
+            .catch((fallbackError) => {
+              log('❌ [StateManager] Fallback panel location update failed:', fallbackError);
+            });
+
+          // Set fallback context key
+          void vscode.commands.executeCommand(
+            'setContext',
+            'secondaryTerminal.panelLocation',
+            'sidebar'
+          );
+        });
     } catch (error) {
       log('⚠️ [StateManager] Error requesting panel location detection:', error);
     }
