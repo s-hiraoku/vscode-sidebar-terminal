@@ -378,15 +378,27 @@ export class InputManager extends BaseManager implements IInputManager {
     this.logger('Setting up VS Code compatible keyboard shortcuts');
 
     const shortcutHandler = (event: KeyboardEvent): void => {
-      // VS Code standard: Process keyboard shortcuts normally
-      // xterm.js handles IME composition internally
+      // VS Code standard: Check IME composition before processing shortcuts
+      if (this.imeHandler.isIMEComposing()) {
+        this.logger(`Keyboard shortcut blocked during IME composition: ${event.key}`);
+        // During IME composition, don't process keyboard shortcuts
+        // Let the IME system handle all key events
+        return;
+      }
+
+      // Check for KEY_IN_COMPOSITION (VS Code standard)
+      if (event.keyCode === 229) { // KeyCode.KEY_IN_COMPOSITION
+        this.logger('KEY_IN_COMPOSITION detected - stopping propagation');
+        event.stopPropagation();
+        return;
+      }
 
       // VS Code keybinding resolution
       const resolvedCommand = this.resolveKeybinding(event);
       const shouldSkip = this.shouldSkipShell(event, resolvedCommand || undefined);
 
       this.logger(
-        `Keybinding: ${event.key}, Command: ${resolvedCommand}, Skip Shell: ${shouldSkip}`
+        `Keybinding: ${event.key}, Command: ${resolvedCommand}, Skip Shell: ${shouldSkip}, IME: ${this.imeHandler.isIMEComposing()}`
       );
 
       // If should skip shell, handle as VS Code command
@@ -885,6 +897,7 @@ export class InputManager extends BaseManager implements IInputManager {
 
   /**
    * Add complete input handling to xterm.js terminal (click, keyboard, focus)
+   * Enhanced with VS Code standard IME handling pattern
    */
   public addXtermClickHandler(
     terminal: Terminal,
@@ -892,13 +905,20 @@ export class InputManager extends BaseManager implements IInputManager {
     container: HTMLElement,
     manager: IManagerCoordinator
   ): void {
-    this.logger(`Setting up complete input handling for terminal ${terminalId}`);
+    this.logger(`Setting up VS Code standard input handling for terminal ${terminalId}`);
 
-    // CRITICAL: Set up keyboard input handling for terminal
+    // CRITICAL: Set up keyboard input handling with IME awareness
     terminal.onData((data: string) => {
-      // VS Code standard behavior: Always process onData events
-      // IME composition is handled by xterm.js internally, no need to block here
-      this.logger(`Terminal ${terminalId} data: ${data.length} chars`);
+      // VS Code standard: Check IME composition state before processing
+      if (this.imeHandler.isIMEComposing()) {
+        this.logger(`Terminal ${terminalId} data during IME composition - allowing xterm.js to handle`);
+        // Let xterm.js handle IME composition internally
+        // But still send to extension for proper processing
+      } else {
+        this.logger(`Terminal ${terminalId} normal data: ${data.length} chars`);
+      }
+
+      // Always send data to extension (VS Code standard behavior)
       manager.postMessageToExtension({
         command: 'input',
         terminalId: terminalId,
@@ -1088,8 +1108,14 @@ export class InputManager extends BaseManager implements IInputManager {
     this.logger('Setting up agent arrow key handler (VS Code standard)');
 
     const arrowKeyHandler = (event: KeyboardEvent): void => {
+      // VS Code standard: Always respect IME composition state
+      if (this.imeHandler.isIMEComposing()) {
+        this.logger(`Arrow key ${event.key} during IME composition - letting IME handle`);
+        return; // Let IME system handle all keys during composition
+      }
+
       // Only log when in agent interaction mode for debugging
-      if (!this.agentInteractionMode || this.imeHandler.isIMEComposing()) {
+      if (!this.agentInteractionMode) {
         return;
       }
 
@@ -1177,15 +1203,25 @@ export class InputManager extends BaseManager implements IInputManager {
   }
 
   /**
-   * Handle special key combinations for terminal operations
+   * Handle special key combinations for terminal operations with IME awareness
    */
   public handleSpecialKeys(
     event: KeyboardEvent,
     terminalId: string,
     manager: IManagerCoordinator
   ): boolean {
-    // VS Code standard: Process special keys normally
-    // xterm.js handles IME composition
+    // VS Code standard: Check IME composition state first
+    if (this.imeHandler.isIMEComposing()) {
+      this.logger(`Special key ${event.key} blocked during IME composition`);
+      return false; // Let IME handle all keys during composition
+    }
+
+    // Check for KEY_IN_COMPOSITION (VS Code standard)
+    if (event.keyCode === 229) { // KeyCode.KEY_IN_COMPOSITION
+      this.logger('KEY_IN_COMPOSITION in special keys - blocking');
+      event.stopPropagation();
+      return true;
+    }
 
     // Ctrl+C: Copy (if selection exists) or interrupt
     if (event.ctrlKey && event.key === 'c') {
