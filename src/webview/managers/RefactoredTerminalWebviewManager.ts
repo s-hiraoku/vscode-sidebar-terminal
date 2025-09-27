@@ -494,7 +494,8 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       log(`✅ Terminal header already created by TerminalContainerFactory: ${terminalId}`);
 
       // 3. 入力イベントハンドラーの設定
-      const terminalContainer = this.terminalLifecycleManager.getTerminalElement(terminalId);
+      // Get terminal container for potential future use
+      // const terminalContainer = this.terminalLifecycleManager.getTerminalElement(terminalId);
       if (this.terminalTabManager) {
         this.terminalTabManager.addTab(terminalId, terminalName, terminal);
         this.terminalTabManager.setActiveTab(terminalId);

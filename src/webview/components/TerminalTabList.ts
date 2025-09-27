@@ -451,7 +451,7 @@ export class TerminalTabList {
     input.select();
   }
 
-  private showContextMenu(e: MouseEvent, tab: TerminalTab): void {
+  private showContextMenu(e: MouseEvent, _tab: TerminalTab): void {
     // This would integrate with VS Code's context menu system
     // For now, we'll create a simple context menu
     const menu = document.createElement('div');
