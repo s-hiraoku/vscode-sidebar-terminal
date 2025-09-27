@@ -20,12 +20,20 @@ if (!(global as any).window) {
 import * as sinon from 'sinon';
 import * as chai from 'chai';
 import sinonChai from 'sinon-chai';
-import chaiAsPromised from 'chai-as-promised';
 import { JSDOM } from 'jsdom';
 
 // Set up chai plugins
 chai.use(sinonChai);
-chai.use(chaiAsPromised);
+
+// Async setup for chai-as-promised ES module
+let chaiAsPromisedSetup = false;
+async function setupChaiAsPromised() {
+  if (!chaiAsPromisedSetup) {
+    const chaiAsPromised = await import('chai-as-promised');
+    chai.use(chaiAsPromised.default);
+    chaiAsPromisedSetup = true;
+  }
+}
 
 /**
  * VS Code API のモックオブジェクト
@@ -207,7 +215,9 @@ export const mockVscode = {
  * 基本的なテスト環境セットアップ
  * グローバルなモックとNode.js環境のセットアップを行う
  */
-export function setupTestEnvironment(): void {
+export async function setupTestEnvironment(): Promise<void> {
+  // Setup chai-as-promised first
+  await setupChaiAsPromised();
   // Mock VS Code module
   (global as any).vscode = mockVscode;
 
@@ -618,8 +628,41 @@ if (process) {
   });
 }
 
-// Auto-setup when this module is imported
-setupTestEnvironment();
+// Sync version for backwards compatibility (without chai-as-promised)
+export function setupTestEnvironmentSync(): void {
+  // Mock VS Code module
+  (global as any).vscode = mockVscode;
+
+  // Override module loading for vscode and node-pty
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const Module = require('module');
+  const originalRequire = Module.prototype.require;
+
+  Module.prototype.require = function (id: string) {
+    if (id === 'vscode') {
+      return mockVscode;
+    }
+    if (id === '@homebridge/node-pty-prebuilt-multiarch') {
+      return {
+        spawn: () => ({
+          write: () => {},
+          resize: () => {},
+          kill: () => {},
+          dispose: () => {},
+        }),
+      };
+    }
+    // Continue with other mocks...
+    return originalRequire.apply(this, arguments);
+  };
+
+  // Set up DOM environment
+  setupJSDOMEnvironment();
+  setupConsoleMocks();
+}
+
+// Auto-setup when this module is imported (sync version for compatibility)
+setupTestEnvironmentSync();
 
 /**
  * TypeScript型定義の拡張
