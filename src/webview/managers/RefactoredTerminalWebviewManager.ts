@@ -93,7 +93,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
   private uiManager!: UIManager;
   private inputManager!: InputManager;
   public messageManager!: RefactoredMessageManager;
-  public persistenceManager: any;
+  public persistenceManager: OptimizedTerminalPersistenceManager | SimplePersistenceManager | null = null;
   public optimizedPersistenceManager!: OptimizedTerminalPersistenceManager;
   public simplePersistenceManager!: SimplePersistenceManager;
 
