@@ -98,14 +98,6 @@ async function initializeWebView(): Promise<void> {
           timestamp: Date.now(),
         });
 
-        // 🔧 [INPUT-FIX] Retroactively attach input handlers to any existing terminals
-        // This fixes keyboard input for terminals that existed before the handler fix
-        setTimeout(() => {
-          if (terminalManager) {
-            terminalManager.attachInputHandlersToExistingTerminals();
-            log('🔧 [INPUT-FIX] Retroactive input handler attachment completed');
-          }
-        }, 1000); // Additional delay to ensure terminals are fully initialized
       }
     }, 500); // Small delay to ensure Extension has processed webviewReady
 
@@ -149,14 +141,6 @@ async function initializeWebView(): Promise<void> {
         }
       }
 
-      // Ctrl+Shift+I: Attach input handlers (INPUT-FIX debugging)
-      if (event.ctrlKey && event.shiftKey && event.key === 'I') {
-        event.preventDefault();
-        if (terminalManager) {
-          terminalManager.attachInputHandlersToExistingTerminals();
-          log('🔧 [INPUT-FIX] Input handlers manually attached via keyboard shortcut');
-        }
-      }
 
       // Ctrl+Shift+T: Test terminal input (TEST debugging)
       if (event.ctrlKey && event.shiftKey && event.key === 'T') {
@@ -175,7 +159,7 @@ async function initializeWebView(): Promise<void> {
     });
 
     log(
-      '🔧 [DEBUG] Debugging tools initialized - Shortcuts: Ctrl+Shift+D (debug), Ctrl+Shift+X (export), Ctrl+Shift+R (sync), Ctrl+Shift+I (input fix), Ctrl+Shift+T (test input)'
+      '🔧 [DEBUG] Debugging tools initialized - Shortcuts: Ctrl+Shift+D (debug), Ctrl+Shift+X (export), Ctrl+Shift+R (sync), Ctrl+Shift+T (test input)'
     );
   } catch (error) {
     error_category('Failed to initialize WebView', {

@@ -242,11 +242,6 @@ export class TerminalCoordinator extends BaseManager implements ITerminalCoordin
   }
 
   private setupTerminalEventHandlers(terminal: Terminal, terminalId: string): void {
-    // Output handler
-    terminal.onData((data: string) => {
-      this.emitEvent('onTerminalOutput', terminalId, data);
-    });
-
     // Resize handler
     terminal.onResize((dimensions) => {
       this.emitEvent('onTerminalResize', terminalId, dimensions.cols, dimensions.rows);

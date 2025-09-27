@@ -562,6 +562,19 @@ export class TerminalLifecycleManager {
         // Setup resize observer using ResizeManager
         this.setupResizeObserver(terminalId, terminalInstance);
 
+        // Setup input handling via InputManager
+        if (this.coordinator?.inputManager) {
+          this.coordinator.inputManager.addXtermClickHandler(
+            terminal,
+            terminalId,
+            mainContainer,
+            this.coordinator
+          );
+          terminalLogger.info(`✅ Input handling setup for terminal: ${terminalId}`);
+        } else {
+          terminalLogger.error(`❌ InputManager not available for terminal: ${terminalId}`);
+        }
+
         // Set as active if first terminal
         if (!this.activeTerminalId) {
           this.setActiveTerminalId(terminalId);

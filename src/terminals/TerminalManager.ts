@@ -1601,7 +1601,7 @@ export class TerminalManager {
         }
       }, 500);
 
-      return { success: true }; // Return success to avoid error display while waiting
+      return { success: false, error: 'PTY not ready, input queued for retry' };
     }
 
     if (typeof ptyInstance.write !== 'function') {
