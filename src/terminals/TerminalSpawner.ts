@@ -51,8 +51,8 @@ export class TerminalSpawner {
       PS1: baseEnv.PS1 || '$ ',
       FORCE_COLOR: '1',
       // Ensure shell reads initialization files
-      BASH_ENV: baseEnv.BASH_ENV,
-      ENV: baseEnv.ENV,
+      ...(baseEnv.BASH_ENV && { BASH_ENV: baseEnv.BASH_ENV }),
+      ...(baseEnv.ENV && { ENV: baseEnv.ENV }),
     };
   }
 }
