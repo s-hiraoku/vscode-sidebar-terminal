@@ -57,6 +57,7 @@ export interface IManagerCoordinator {
   shellIntegrationManager?: any; // Shell integration manager
   findInTerminalManager?: IFindInTerminalManager; // Find in Terminal manager
   profileManager?: IProfileManager; // Profile manager
+  inputManager?: IInputManager; // Input management for terminal events
   getManagers(): {
     performance: IPerformanceManager;
     input: IInputManager;
