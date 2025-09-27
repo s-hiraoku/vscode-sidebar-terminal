@@ -17,12 +17,54 @@ describe('Refactored Architecture Performance Tests', () => {
   beforeEach(() => {
     sandbox = sinon.createSandbox();
 
-    // Setup minimal DOM for performance testing
-    document.body.innerHTML = `
-      <div id="terminal-area"></div>
-      <div id="terminal-tabs-container"></div>
-      <div id="notification-container"></div>
-    `;
+    // Setup minimal DOM for performance testing - check if document exists
+    if (typeof document !== 'undefined') {
+      document.body.innerHTML = `
+        <div id="terminal-area"></div>
+        <div id="terminal-tabs-container"></div>
+        <div id="notification-container"></div>
+      `;
+    } else {
+      // Mock document object for Node.js environment
+      (global as any).document = {
+        body: {
+          innerHTML: '',
+        },
+        getElementById: sandbox.stub().returns({
+          appendChild: sandbox.stub(),
+          removeChild: sandbox.stub(),
+          innerHTML: '',
+          addEventListener: sandbox.stub(),
+          removeEventListener: sandbox.stub(),
+          click: sandbox.stub(),
+          focus: sandbox.stub(),
+          style: {},
+          classList: {
+            add: sandbox.stub(),
+            remove: sandbox.stub(),
+            toggle: sandbox.stub(),
+            contains: sandbox.stub().returns(false),
+          },
+        }),
+        createElement: sandbox.stub().returns({
+          appendChild: sandbox.stub(),
+          setAttribute: sandbox.stub(),
+          addEventListener: sandbox.stub(),
+          removeEventListener: sandbox.stub(),
+          click: sandbox.stub(),
+          focus: sandbox.stub(),
+          style: {},
+          classList: {
+            add: sandbox.stub(),
+            remove: sandbox.stub(),
+            toggle: sandbox.stub(),
+            contains: sandbox.stub().returns(false),
+          },
+          innerHTML: '',
+          textContent: '',
+        }),
+      };
+    }
 
     // Mock heavy DOM operations
     (global as any).Terminal = sandbox.stub().returns({
@@ -41,13 +83,35 @@ describe('Refactored Architecture Performance Tests', () => {
       propose: sandbox.stub()
     });
 
-    (window as any).acquireVsCodeApi = () => ({
-      postMessage: sandbox.stub()
-    });
+    // Mock window object if not available
+    if (typeof window === 'undefined') {
+      (global as any).window = {
+        acquireVsCodeApi: () => ({
+          postMessage: sandbox.stub()
+        }),
+        addEventListener: sandbox.stub(),
+        removeEventListener: sandbox.stub(),
+      };
+    } else {
+      (window as any).acquireVsCodeApi = () => ({
+        postMessage: sandbox.stub()
+      });
+    }
   });
 
   afterEach(() => {
-    document.body.innerHTML = '';
+    if (typeof document !== 'undefined') {
+      document.body.innerHTML = '';
+    }
+
+    // Clean up global mocks
+    if ((global as any).document && typeof document === 'undefined') {
+      delete (global as any).document;
+    }
+    if ((global as any).window && typeof window === 'undefined') {
+      delete (global as any).window;
+    }
+
     sandbox.restore();
   });
 

@@ -42,7 +42,7 @@ interface LeakDetectionResult {
   recommendations: string[];
 }
 
-describe('Memory Leak Prevention - TDD Suite', () => {
+describe('Memory Leak Prevention', () => {
   let sandbox: sinon.SinonSandbox;
   let webviewManager: RefactoredTerminalWebviewManager;
 

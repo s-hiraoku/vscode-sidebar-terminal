@@ -121,6 +121,7 @@ export class ConfigManager {
         blink: this.getConfig(section, CONFIG_KEYS.CURSOR_BLINK, true),
       },
       enableCliAgentIntegration: this.getConfig(section, 'enableCliAgentIntegration', true),
+      highlightActiveBorder: this.getConfig(section, 'highlightActiveBorder', true),
     };
   }
 
@@ -162,6 +163,7 @@ export class ConfigManager {
         CONFIG_KEYS.MULTI_CURSOR_MODIFIER,
         'ctrlCmd'
       ),
+      highlightActiveBorder: this.getConfig(CONFIG_SECTIONS.SIDEBAR_TERMINAL, 'highlightActiveBorder', true),
     };
   }
 
@@ -179,7 +181,7 @@ export class ConfigManager {
       cursorBlink: baseConfig.cursorBlink,
       maxTerminals: baseConfig.maxTerminals,
       minTerminalHeight: this.getConfig(section, 'minTerminalHeight', 200),
-      autoHideStatus: this.getConfig(section, 'autoHideStatus', true),
+      autoHideStatus: this.getConfig(section, 'autoHideStatus', false),
       statusDisplayDuration: this.getConfig(section, 'statusDisplayDuration', 3000),
       showWebViewHeader: this.getConfig(section, 'showWebViewHeader', true),
       webViewTitle: this.getConfig(section, 'webViewTitle', 'Terminal'),

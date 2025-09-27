@@ -21,7 +21,8 @@ import { expect } from 'chai';
 // Test setup
 import '../../shared/TestSetup';
 
-describe('SecondaryTerminalProvider - Message Handling TDD Suite', () => {
+describe('SecondaryTerminalProvider', () => {
+  describe('Message Handling', () => {
   let sandbox: sinon.SinonSandbox;
   let _mockWebview: any;
   let _mockContext: any;
@@ -738,4 +739,5 @@ describe('SecondaryTerminalProvider - Message Handling TDD Suite', () => {
       expect(lastMessage.message.command).to.equal('test-149');
     });
   });
-});
+  }); // End Message Handling
+}); // End SecondaryTerminalProvider

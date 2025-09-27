@@ -289,6 +289,7 @@ export class UnifiedConfigurationService implements Disposable {
         blink: this.get(section, CONFIG_KEYS.CURSOR_BLINK, true),
       },
       enableCliAgentIntegration: this.get(section, 'enableCliAgentIntegration', true),
+      highlightActiveBorder: this.get(section, 'highlightActiveBorder', true),
     };
   }
 
@@ -330,6 +331,7 @@ export class UnifiedConfigurationService implements Disposable {
         CONFIG_KEYS.MULTI_CURSOR_MODIFIER,
         'ctrlCmd'
       ),
+      highlightActiveBorder: this.get(CONFIG_SECTIONS.SIDEBAR_TERMINAL, 'highlightActiveBorder', true),
     };
   }
 
@@ -386,7 +388,7 @@ export class UnifiedConfigurationService implements Disposable {
       cursorBlink: baseConfig.cursorBlink,
       maxTerminals: baseConfig.maxTerminals,
       minTerminalHeight: this.get(section, 'minTerminalHeight', 200),
-      autoHideStatus: this.get(section, 'autoHideStatus', true),
+      autoHideStatus: this.get(section, 'autoHideStatus', false),
       statusDisplayDuration: this.get(section, 'statusDisplayDuration', 3000),
       showWebViewHeader: this.get(section, 'showWebViewHeader', true),
       webViewTitle: this.get(section, 'webViewTitle', 'Terminal'),
@@ -650,6 +652,8 @@ export class UnifiedConfigurationService implements Disposable {
         );
       case 'dynamicSplitDirection':
         return this.get(CONFIG_SECTIONS.SIDEBAR_TERMINAL, 'dynamicSplitDirection', true);
+      case 'highlightActiveBorder':
+        return this.get(CONFIG_SECTIONS.SIDEBAR_TERMINAL, 'highlightActiveBorder', true);
       default:
         log(`⚠️ [UnifiedConfig] Unknown feature: ${featureName}`);
         return false;

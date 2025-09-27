@@ -23,6 +23,7 @@ export class ConfigManager implements IConfigManager {
     bellSound: false,
     altClickMovesCursor: false,
     multiCursorModifier: 'alt',
+    highlightActiveBorder: true,
   };
 
   // Current font settings cache
@@ -53,6 +54,7 @@ export class ConfigManager implements IConfigManager {
     inheritVSCodeProfiles: true,
     enableProfileAutoDetection: true,
     scrollback: 1000,
+    highlightActiveBorder: true,
     bellSound: false,
     altClickMovesCursor: false,
     multiCursorModifier: 'alt',
@@ -334,6 +336,10 @@ export class ConfigManager implements IConfigManager {
       typeof settings.enableCliAgentIntegration === 'boolean'
         ? settings.enableCliAgentIntegration
         : this.DEFAULTS.enableCliAgentIntegration;
+    normalized.highlightActiveBorder =
+      typeof settings.highlightActiveBorder === 'boolean'
+        ? settings.highlightActiveBorder
+        : this.DEFAULTS.highlightActiveBorder;
 
     // Shell validation
     if (typeof settings.shell === 'string') {

@@ -109,6 +109,9 @@ describe('ConfigurationService', () => {
       (ConfigurationService as any).instance = undefined;
       configService = ConfigurationService.getInstance();
 
+      // Trigger configuration listener registration by calling a method that uses it
+      configService.getSecondaryTerminalConfig();
+
       // Add some cached values
       configService.getCachedValue('test', 'key', 'default');
 

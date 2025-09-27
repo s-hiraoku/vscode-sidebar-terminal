@@ -3,7 +3,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 import * as vscode from 'vscode';
-import * as pty from '@homebridge/node-pty-prebuilt-multiarch';
 import {
   TerminalInstance,
   TerminalEvent,
@@ -12,7 +11,7 @@ import {
   DeleteResult,
   ProcessState,
 } from '../types/shared';
-import { TERMINAL_CONSTANTS, ERROR_MESSAGES } from '../constants';
+import { ERROR_MESSAGES } from '../constants';
 import { ShellIntegrationService } from '../services/ShellIntegrationService';
 import { TerminalProfileService } from '../services/TerminalProfileService';
 import { terminal as log } from '../utils/logger';
@@ -30,6 +29,10 @@ import {
 import { TerminalNumberManager } from '../utils/TerminalNumberManager';
 import { CliAgentDetectionService } from '../services/CliAgentDetectionService';
 import { ICliAgentDetectionService } from '../interfaces/CliAgentService';
+import { TerminalSpawner } from './TerminalSpawner';
+import type { IDisposable } from '@homebridge/node-pty-prebuilt-multiarch';
+
+const ENABLE_TERMINAL_DEBUG_LOGS = process.env.SECONDARY_TERMINAL_DEBUG_LOGS === 'true';
 // Removed unused service imports - these were for the RefactoredTerminalManager which was removed
 
 export class TerminalManager {
@@ -48,6 +51,8 @@ export class TerminalManager {
   private readonly _profileService: TerminalProfileService;
   // CLI Agent Detection Service (extracted for SRP)
   private readonly _cliAgentService: ICliAgentDetectionService;
+  private readonly _terminalSpawner: TerminalSpawner;
+  private readonly _debugLoggingEnabled = ENABLE_TERMINAL_DEBUG_LOGS;
 
   // 操作の順序保証のためのキュー
   private operationQueue: Promise<void> = Promise.resolve();
@@ -60,6 +65,7 @@ export class TerminalManager {
   private readonly _dataFlushTimers = new Map<string, NodeJS.Timeout>();
   private readonly DATA_FLUSH_INTERVAL = 8; // ~125fps for improved responsiveness
   private readonly MAX_BUFFER_SIZE = 50;
+  private readonly _initialPromptGuards = new Map<string, { dispose: () => void }>();
 
   // CLI Agent detection moved to service - cache removed from TerminalManager
 
@@ -69,6 +75,12 @@ export class TerminalManager {
   public readonly onTerminalRemoved = this._terminalRemovedEmitter.event;
   public readonly onStateUpdate = this._stateUpdateEmitter.event;
   public readonly onTerminalFocus = this._terminalFocusEmitter.event;
+
+  private debugLog(...args: unknown[]): void {
+    if (this._debugLoggingEnabled) {
+      console.log(...args);
+    }
+  }
 
   constructor(cliAgentService?: ICliAgentDetectionService) {
     // Initialize terminal number manager with max terminals config
@@ -83,6 +95,8 @@ export class TerminalManager {
 
     // 🚨 FIX: Start heartbeat mechanism for state validation
     this._cliAgentService.startHeartbeat();
+
+    this._terminalSpawner = new TerminalSpawner();
   }
 
   /**
@@ -178,18 +192,12 @@ export class TerminalManager {
         ...(profileConfig.env && profileConfig.env),
       } as { [key: string]: string };
 
-      const ptyProcess = pty.spawn(profileConfig.shell, profileConfig.shellArgs, {
-        name: 'xterm-256color',
-        cols: TERMINAL_CONSTANTS.DEFAULT_COLS,
-        rows: TERMINAL_CONSTANTS.DEFAULT_ROWS,
+      const { ptyProcess } = this._terminalSpawner.spawnTerminal({
+        terminalId,
+        shell: profileConfig.shell,
+        shellArgs: profileConfig.shellArgs || [],
         cwd,
-        env: {
-          ...env,
-          // Ensure proper UTF-8 encoding for Japanese characters
-          LANG: env.LANG || 'en_US.UTF-8',
-          LC_ALL: env.LC_ALL || 'en_US.UTF-8',
-          LC_CTYPE: env.LC_CTYPE || 'en_US.UTF-8',
-        },
+        env,
       });
 
       // Get terminal number from manager
@@ -220,6 +228,10 @@ export class TerminalManager {
       log(`✅ [TERMINAL] Terminal created successfully: ${terminalId} (${terminal.name})`);
       this._terminalCreatedEmitter.fire(terminal);
       this._notifyStateUpdate();
+
+      // 🎯 TIMING FIX: Shell initialization moved to _handleTerminalInitializationComplete
+      // This ensures WebView terminal is fully ready before shell initialization
+      // this.initializeShellForTerminal(terminalId, ptyProcess, false);
 
       return terminalId;
     } catch (error) {
@@ -337,33 +349,13 @@ export class TerminalManager {
         }
       });
 
-      // 🛡️ SYNCHRONOUS PTY CREATION: Create PTY immediately for proper shell initialization
-      log('🔧 [TERMINAL] Creating PTY process synchronously...');
-
-      // Try to create PTY process with node-pty directly (synchronous)
-      let ptyProcess: any;
-
-      // 🚨 SIMPLE PTY CREATION: Back to basics for reliability
-      log('🔧 [TERMINAL] Creating PTY with minimal, reliable configuration...');
-
-      try {
-        // Create PTY with login shell for proper initialization
-        ptyProcess = pty.spawn(shell, ['-l'], {
-          name: 'xterm-256color',
-          cols: TERMINAL_CONSTANTS.DEFAULT_COLS,
-          rows: TERMINAL_CONSTANTS.DEFAULT_ROWS,
-          cwd,
-          env: {
-            ...process.env,
-            PWD: cwd,
-            TERM: 'xterm-256color',
-          },
-        });
-        log(`✅ [TERMINAL] PTY created successfully - PID: ${ptyProcess.pid}`);
-      } catch (error) {
-        log(`❌ [TERMINAL] PTY creation failed: ${error}`);
-        throw error;
-      }
+      const { ptyProcess } = this._terminalSpawner.spawnTerminal({
+        terminalId,
+        shell,
+        shellArgs: shellArgs || [],
+        cwd,
+        env,
+      });
 
       // Create terminal with actual PTY from the start
       const terminal: TerminalInstance = {
@@ -409,6 +401,9 @@ export class TerminalManager {
 
       log(`✅ [TERMINAL] Terminal created successfully: ${terminal.name} (${terminalId})`);
 
+      // 🎯 TIMING FIX: Shell initialization moved to _handleTerminalInitializationComplete
+      // this.initializeShellForTerminal(terminalId, ptyProcess, false);
+
       // 状態更新を通知
       log('🔍 [TERMINAL] Notifying state update...');
       this._notifyStateUpdate();
@@ -426,191 +421,9 @@ export class TerminalManager {
   }
 
   /**
-   * 🚨 ESP-IDF WORKAROUND: Create terminal with safe mode fallback
-   * If initial shell creation fails due to RC initialization errors,
-   * automatically falls back to safe mode (--noprofile --norc)
-   */
-  private async createTerminalWithSafeModeSupport(
-    terminalId: string,
-    shell: string,
-    shellArgs: string[],
-    cwd: string,
-    env: { [key: string]: string },
-    terminalNumber: number,
-    retryAttempt: number = 0
-  ): Promise<{ ptyProcess: any; safeMode: boolean }> {
-    const MAX_RETRY_ATTEMPTS = 1;
-    const isSafeModeAttempt = retryAttempt > 0;
-
-    log(
-      `🔧 [SAFE-MODE] Creating terminal attempt ${retryAttempt + 1}/${MAX_RETRY_ATTEMPTS + 1}, safe mode: ${isSafeModeAttempt}`
-    );
-
-    // Determine shell and args for this attempt
-    let effectiveShell = shell;
-    let effectiveArgs = [...shellArgs];
-
-    if (isSafeModeAttempt) {
-      log(`🛡️ [SAFE-MODE] Activating safe mode for ${shell}`);
-
-      // Apply safe mode arguments based on shell type
-      if (shell.includes('zsh')) {
-        effectiveArgs = ['-f']; // Skip .zshrc
-        log(`🛡️ [SAFE-MODE] Using zsh -f (skip .zshrc)`);
-      } else if (shell.includes('bash')) {
-        effectiveArgs = ['--noprofile', '--norc']; // Skip .bash_profile and .bashrc
-        log(`🛡️ [SAFE-MODE] Using bash --noprofile --norc`);
-      } else {
-        // For other shells, try minimal flags
-        effectiveArgs = ['-i']; // Interactive only
-        log(`🛡️ [SAFE-MODE] Using ${shell} -i (interactive only)`);
-      }
-    }
-
-    return new Promise<{ ptyProcess: any; safeMode: boolean }>((resolve, reject) => {
-      let healthCheckTimeout: NodeJS.Timeout;
-      let healthCheckPassed = false;
-      const HEALTH_CHECK_TIMEOUT_MS = isSafeModeAttempt ? 2000 : 3000; // Shorter timeout for retry
-
-      try {
-        log(
-          `🚨 [PTY-SPAWN] Spawning PTY with shell: ${effectiveShell}, args: ${JSON.stringify(effectiveArgs)}`
-        );
-
-        const ptyProcess = pty.spawn(effectiveShell, effectiveArgs, {
-          name: 'xterm-256color',
-          cols: TERMINAL_CONSTANTS.DEFAULT_COLS,
-          rows: TERMINAL_CONSTANTS.DEFAULT_ROWS,
-          cwd,
-          env: {
-            ...env,
-            // Safe mode specific environment
-            ...(isSafeModeAttempt && {
-              NONINTERACTIVE: '1',
-              ESP_IDF_SKIP_INIT: '1', // Skip ESP-IDF initialization if supported
-            }),
-            // Ensure proper UTF-8 encoding
-            LANG: env.LANG || 'en_US.UTF-8',
-            LC_ALL: env.LC_ALL || 'en_US.UTF-8',
-            LC_CTYPE: env.LC_CTYPE || 'en_US.UTF-8',
-            FORCE_COLOR: '1',
-            TERM: 'xterm-256color',
-            COLORTERM: 'truecolor',
-          },
-        });
-
-        log(`🚨 [PTY-SPAWN] PTY spawned - PID: ${ptyProcess.pid}, type: ${typeof ptyProcess}`);
-
-        // Set up health check
-        const startHealthCheck = () => {
-          healthCheckTimeout = setTimeout(() => {
-            if (!healthCheckPassed) {
-              log(
-                `🚨 [SAFE-MODE] Health check TIMEOUT after ${HEALTH_CHECK_TIMEOUT_MS}ms (attempt ${retryAttempt + 1})`
-              );
-
-              if (retryAttempt < MAX_RETRY_ATTEMPTS) {
-                log(`🔄 [SAFE-MODE] Will retry with safe mode parameters`);
-                ptyProcess.kill();
-                reject(new Error('HealthCheckTimeout'));
-              } else {
-                log(`❌ [SAFE-MODE] Max retry attempts reached, giving up`);
-                ptyProcess.kill();
-                reject(new Error('MaxRetryAttemptsReached'));
-              }
-            }
-          }, HEALTH_CHECK_TIMEOUT_MS);
-        };
-
-        // Health check data handler
-        const healthCheckDataHandler = (data: string) => {
-          if (!healthCheckPassed) {
-            healthCheckPassed = true;
-            clearTimeout(healthCheckTimeout);
-            log(
-              `✅ [SAFE-MODE] Health check PASSED on attempt ${retryAttempt + 1} (${data.length} chars received)`
-            );
-
-            // Remove temporary health check handler
-            try {
-              (ptyProcess as any).removeListener?.('data', healthCheckDataHandler) ||
-                (ptyProcess as any).off?.('data', healthCheckDataHandler);
-            } catch (error) {
-              log(`⚠️ [PTY-CLEANUP] Failed to remove health check handler: ${error}`);
-            }
-
-            // Resolve with success
-            resolve({ ptyProcess, safeMode: isSafeModeAttempt });
-          }
-        };
-
-        // Attach health check handler
-        ptyProcess.on('data', healthCheckDataHandler);
-
-        // Handle PTY exit during health check
-        ptyProcess.onExit((event: number | { exitCode: number; signal?: number }) => {
-          const exitCode = typeof event === 'number' ? event : event.exitCode;
-          clearTimeout(healthCheckTimeout);
-
-          if (!healthCheckPassed) {
-            log(
-              `🚪 [SAFE-MODE] PTY exited during health check - attempt ${retryAttempt + 1}, exit code: ${exitCode}`
-            );
-
-            if (retryAttempt < MAX_RETRY_ATTEMPTS) {
-              reject(new Error('PTYExitedDuringHealthCheck'));
-            } else {
-              reject(new Error('PTYExitedMaxRetries'));
-            }
-          }
-        });
-
-        // Start health check and send test command
-        setTimeout(() => {
-          startHealthCheck();
-
-          try {
-            // Send simple health check command
-            ptyProcess.write('printf "__TERMINAL_READY__\\n"\\r');
-            log(`🧪 [SAFE-MODE] Health check command sent (attempt ${retryAttempt + 1})`);
-          } catch (writeError) {
-            log(`❌ [SAFE-MODE] Failed to send health check command: ${writeError}`);
-            clearTimeout(healthCheckTimeout);
-            reject(writeError);
-          }
-        }, 500);
-      } catch (spawnError) {
-        log(`❌ [SAFE-MODE] PTY spawn failed on attempt ${retryAttempt + 1}: ${spawnError}`);
-        reject(spawnError);
-      }
-    }).catch(async (error) => {
-      // Handle retry logic
-      if (
-        retryAttempt < MAX_RETRY_ATTEMPTS &&
-        (error.message === 'HealthCheckTimeout' || error.message === 'PTYExitedDuringHealthCheck')
-      ) {
-        log(`🔄 [SAFE-MODE] Retrying with safe mode fallback...`);
-        await new Promise((resolve) => setTimeout(resolve, 100)); // Brief delay
-
-        return this.createTerminalWithSafeModeSupport(
-          terminalId,
-          shell,
-          shellArgs,
-          cwd,
-          env,
-          terminalNumber,
-          retryAttempt + 1
-        );
-      }
-
-      throw error;
-    });
-  }
-
-  /**
    * Initialize shell for a terminal after PTY creation
    */
-  private initializeShellForTerminal(terminalId: string, ptyProcess: any, safeMode: boolean): void {
+  public initializeShellForTerminal(terminalId: string, ptyProcess: any, safeMode: boolean): void {
     try {
       log(`🔍 [TERMINAL] Post-creation initialization for: ${terminalId} (Safe Mode: ${safeMode})`);
 
@@ -631,32 +444,8 @@ export class TerminalManager {
         log(`⚠️ [TERMINAL] Shell integration injection error: ${error}`);
       }
 
-      // Send a final carriage return to prompt for command line
-      if (ptyProcess && typeof ptyProcess.write === 'function') {
-        try {
-          // Multiple prompt triggers to ensure shell displays properly
-          setTimeout(() => {
-            ptyProcess.write('\\r');
-            log(`✅ [TERMINAL] First prompt request sent for: ${terminalId}`);
-          }, 100);
-
-          // Additional prompt trigger for ESP-IDF environments
-          setTimeout(() => {
-            ptyProcess.write('\\r');
-            log(`✅ [TERMINAL] Second prompt request sent for: ${terminalId}`);
-          }, 500);
-
-          // Final fallback prompt
-          if (safeMode) {
-            setTimeout(() => {
-              ptyProcess.write('echo "Terminal ready"\\r');
-              log(`🛡️ [TERMINAL] Safe mode confirmation sent for: ${terminalId}`);
-            }, 1000);
-          }
-        } catch (writeError) {
-          log(`❌ [TERMINAL] Error sending prompt requests: ${writeError}`);
-        }
-      }
+      // Kick off deterministic prompt readiness guard
+      this._ensureInitialPrompt(terminalId, ptyProcess);
     } catch (error) {
       log(`⚠️ [TERMINAL] Post-creation initialization error for ${terminalId}:`, error);
     }
@@ -687,7 +476,7 @@ export class TerminalManager {
       // Use provided terminal ID, but validate it exists and is active
       if (!this._terminals.has(terminalId)) {
         console.error(`🚨 [TERMINAL] Provided terminal ID does not exist: ${terminalId}`);
-        console.log('🔍 [TERMINAL] Available terminals:', Array.from(this._terminals.keys()));
+        this.debugLog('🔍 [TERMINAL] Available terminals:', Array.from(this._terminals.keys()));
 
         // Fallback to active terminal
         const activeId = this._activeTerminalManager.getActive();
@@ -705,7 +494,7 @@ export class TerminalManager {
       const activeId = this._activeTerminalManager.getActive();
       if (!activeId) {
         console.error('🚨 [TERMINAL] No active terminal ID available');
-        console.log('🔍 [TERMINAL] Available terminals:', Array.from(this._terminals.keys()));
+        this.debugLog('🔍 [TERMINAL] Available terminals:', Array.from(this._terminals.keys()));
         return;
       }
 
@@ -742,7 +531,7 @@ export class TerminalManager {
       return;
     }
 
-    console.log(
+    this.debugLog(
       `⌨️ [TERMINAL] Sending input to ${terminal.name} (${resolvedTerminalId}): ${data.length} chars`
     );
 
@@ -756,14 +545,14 @@ export class TerminalManager {
         console.error(`🚨 [TERMINAL] PTY write failed for ${terminal.name}: ${result.error}`);
 
         // Attempt recovery with alternative PTY instance
-        console.log(`🔄 [TERMINAL] Attempting PTY recovery for ${terminal.name}...`);
+        this.debugLog(`🔄 [TERMINAL] Attempting PTY recovery for ${terminal.name}...`);
         const recovered = this._attemptPtyRecovery(terminal, data);
         if (!recovered) {
           throw new Error(result.error || 'PTY write failed and recovery unsuccessful');
         }
-        console.log(`✅ [TERMINAL] PTY recovery successful for ${terminal.name}`);
+        this.debugLog(`✅ [TERMINAL] PTY recovery successful for ${terminal.name}`);
       } else {
-        console.log(`✅ [TERMINAL] Input sent successfully to ${terminal.name}`);
+        this.debugLog(`✅ [TERMINAL] Input sent successfully to ${terminal.name}`);
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -1208,7 +997,7 @@ export class TerminalManager {
 
     if (!this._dataBuffers.has(terminalId)) {
       this._dataBuffers.set(terminalId, []);
-      console.log(`📊 [TERMINAL] Created new data buffer for terminal: ${terminalId}`);
+      this.debugLog(`📊 [TERMINAL] Created new data buffer for terminal: ${terminalId}`);
     }
 
     const buffer = this._dataBuffers.get(terminalId);
@@ -1220,9 +1009,10 @@ export class TerminalManager {
 
     // ✅ CRITICAL: Add terminal ID validation to each data chunk
     const validatedData = this._validateDataForTerminal(terminalId, data);
-    buffer.push(validatedData);
+    const normalizedData = this._normalizeControlSequences(validatedData);
+    buffer.push(normalizedData);
 
-    console.log(
+    this.debugLog(
       `📊 [TERMINAL] Data buffered for ${terminalId}: ${data.length} chars (buffer size: ${buffer.length})`
     );
 
@@ -1242,7 +1032,7 @@ export class TerminalManager {
     // Basic validation - could be enhanced with more sophisticated checks
     if (data.includes('\x1b]0;') && !data.includes(terminalId)) {
       // Window title escape sequences might contain terminal context
-      console.log(`🔍 [TERMINAL] Window title detected for ${terminalId}`);
+      this.debugLog(`🔍 [TERMINAL] Window title detected for ${terminalId}`);
     }
 
     // Return data as-is for now, but this method provides a hook for future validation
@@ -1304,7 +1094,7 @@ export class TerminalManager {
       }
 
       // ✅ EMIT DATA WITH STRICT TERMINAL ID ASSOCIATION
-      console.log(
+      this.debugLog(
         `📤 [TERMINAL] Flushing data for terminal ${terminal.name} (${terminalId}): ${combinedData.length} chars`
       );
       this._dataEmitter.fire({
@@ -1354,6 +1144,9 @@ export class TerminalManager {
     log('🧹 [TERMINAL] Before deletion - terminals count:', this._terminals.size);
     log('🧹 [TERMINAL] Before deletion - terminal IDs:', Array.from(this._terminals.keys()));
 
+    // Stop any pending prompt readiness guard for this terminal
+    this._cleanupInitialPromptGuard(terminalId);
+
     // Clean up data buffers for this terminal
     this._flushBuffer(terminalId);
     this._dataBuffers.delete(terminalId);
@@ -1394,6 +1187,111 @@ export class TerminalManager {
     log('🧹 [TERMINAL] Notifying state update after cleanup...');
     this._notifyStateUpdate();
     log('🧹 [TERMINAL] === CLEANUP TERMINAL DATA END ===');
+  }
+
+  private _ensureInitialPrompt(terminalId: string, ptyProcess: any): void {
+    this._cleanupInitialPromptGuard(terminalId);
+
+    if (!ptyProcess || typeof ptyProcess.write !== 'function') {
+      log(`⚠️ [TERMINAL] Unable to ensure prompt for ${terminalId} - invalid PTY process`);
+      return;
+    }
+
+    const PROMPT_TIMEOUT_MS = 1200;
+    let promptSeen = false;
+    let timer: NodeJS.Timeout | undefined;
+    let dataDisposable: IDisposable | undefined;
+
+    const guard = {
+      disposed: false,
+      dispose: () => {
+        if (guard.disposed) {
+          return;
+        }
+        guard.disposed = true;
+        if (timer) {
+          clearTimeout(timer);
+          timer = undefined;
+        }
+        if (dataDisposable && typeof dataDisposable.dispose === 'function') {
+          dataDisposable.dispose();
+        }
+        if (this._initialPromptGuards.get(terminalId) === guard) {
+          this._initialPromptGuards.delete(terminalId);
+        }
+      },
+    };
+
+    try {
+      if (ptyProcess.onData) {
+        dataDisposable = ptyProcess.onData((chunk: string) => {
+          if (promptSeen) {
+            return;
+          }
+
+          if (this._hasVisibleOutput(chunk)) {
+            promptSeen = true;
+            log(`✅ [TERMINAL] Initial output detected for ${terminalId}`);
+            guard.dispose();
+          }
+        });
+      }
+    } catch (listenerError) {
+      log(`⚠️ [TERMINAL] Failed to attach prompt listener for ${terminalId}:`, listenerError);
+    }
+
+    timer = setTimeout(() => {
+      if (!promptSeen) {
+        log(
+          `⚠️ [TERMINAL] Initial prompt not detected for ${terminalId} within ${PROMPT_TIMEOUT_MS}ms - sending newline`
+        );
+        try {
+          ptyProcess.write('\r');
+        } catch (writeError) {
+          log(`❌ [TERMINAL] Failed to send newline fallback for ${terminalId}:`, writeError);
+        }
+      }
+      guard.dispose();
+    }, PROMPT_TIMEOUT_MS);
+
+    this._initialPromptGuards.set(terminalId, guard);
+  }
+
+  private _cleanupInitialPromptGuard(terminalId: string): void {
+    const guard = this._initialPromptGuards.get(terminalId);
+    if (guard) {
+      guard.dispose();
+    }
+  }
+
+  private _hasVisibleOutput(data: string): boolean {
+    if (!data) {
+      return false;
+    }
+
+    if (data.includes(']633;')) {
+      return true;
+    }
+
+    const cleaned = data
+      .replace(/\x1b\[[0-9;?]*[A-Za-z]/g, '')
+      .replace(/\x1b\][^\x07]*\x07/g, '')
+      .replace(/\x1b[P^_].*?\x1b\\/g, '')
+      .replace(/\u0007/g, '')
+      .replace(/[\r\n]/g, '')
+      .trim();
+
+    return cleaned.length > 0;
+  }
+
+  private _normalizeControlSequences(data: string): string {
+    if (!data || data.indexOf('\f') === -1) {
+      return data;
+    }
+
+    const CLEAR_SEQUENCE = '\u001b[2J\u001b[H';
+
+    return data.replace(/\f+/g, CLEAR_SEQUENCE);
   }
 
   /**
@@ -1748,7 +1646,7 @@ export class TerminalManager {
           }
 
           ptyInstance.write(data);
-          console.log('✅ [RECOVERY] PTY write recovered using alternative instance');
+          this.debugLog('✅ [RECOVERY] PTY write recovered using alternative instance');
 
           // Update the terminal to use the working instance
           if (ptyInstance === terminal.pty) {

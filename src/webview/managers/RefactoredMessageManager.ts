@@ -148,6 +148,19 @@ export class RefactoredMessageManager implements IMessageManager {
         case 'settingsResponse':
           this.handleSettingsResponseMessage(msg, coordinator);
           break;
+        case 'openSettings':
+          coordinator.openSettings();
+          break;
+        case 'showProfileSelector': {
+          const managers = coordinator.getManagers ? coordinator.getManagers() : ({} as any);
+          const profileManager = managers.profile || (coordinator as any).profileManager;
+          if (profileManager && typeof profileManager.showProfileSelector === 'function') {
+            profileManager.showProfileSelector();
+          } else {
+            this.logger.warn('Profile manager not available to show selector');
+          }
+          break;
+        }
         case 'terminalCreated':
           await this.handleTerminalCreatedMessage(msg, coordinator);
           break;
@@ -458,6 +471,9 @@ export class RefactoredMessageManager implements IMessageManager {
     const settings = msg.settings;
     if (settings) {
       this.logger.info('Settings response received');
+      if (typeof coordinator.applySettings === 'function') {
+        coordinator.applySettings(settings);
+      }
       this.emitTerminalInteractionEvent('settings-update', '', settings, coordinator);
     }
   }

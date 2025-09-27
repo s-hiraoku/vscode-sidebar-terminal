@@ -1,8 +1,8 @@
 {
   "name": "vscode-sidebar-terminal",
   "displayName": "Secondary Terminal",
-  "description": "Production-ready VS Code extension with TypeScript-compliant terminal in sidebar, ProcessState/InteractionState management, AI agent integration (Claude Code, CodeRabbit CLI, GitHub Copilot, Gemini), and comprehensive session management.",
-  "version": "0.1.94",
+  "description": "Production-ready VS Code extension with TypeScript-compliant terminal in sidebar, ProcessState/InteractionState management, AI agent integration (Claude Code, Codex CLI, CodeRabbit CLI, GitHub Copilot, Gemini), and comprehensive session management.",
+  "version": "0.1.100",
   "publisher": "s-hiraoku",
   "engines": {
     "vscode": "^1.74.0",
@@ -39,6 +39,7 @@
     "error handling",
     "ai agent detection",
     "claude code",
+    "codex cli",
     "coderabbit cli",
     "github copilot",
     "gemini cli",
@@ -726,6 +727,11 @@
           "default": "#ffff00",
           "description": "Color for running command decorations."
         },
+        "secondaryTerminal.highlightActiveBorder": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show a blue border around the focused sidebar terminal."
+        },
         "secondaryTerminal.links.enabled": {
           "type": "boolean",
           "default": true,
@@ -899,7 +905,7 @@
     "vsce:package:alpine-x64": "@vscode/vsce package --target alpine-x64",
     "vsce:package:alpine-arm64": "@vscode/vsce package --target alpine-arm64",
     "create-icons": "node scripts/create-icon.js",
-    "pre-release:check": "npm run tdd:comprehensive-check",
+    "pre-release:check": "npm run tdd:comprehensive-check && node scripts/pre-release-hook.js",
     "release:patch": "npm run pre-release:check && npm version patch && git push origin --follow-tags",
     "release:minor": "npm run pre-release:check && npm version minor && git push origin --follow-tags",
     "release:major": "npm run pre-release:check && npm version major && git push origin --follow-tags",
@@ -915,6 +921,16 @@
     "release:patch:safe": "node commands/release.js patch",
     "release:minor:safe": "node commands/release.js minor",
     "release:major:safe": "node commands/release.js major",
+    "rollback:emergency": "node scripts/rollback-release.js emergency",
+    "rollback:to": "node scripts/rollback-release.js to",
+    "rollback:list": "node scripts/rollback-release.js list",
+    "rollback:plan": "node scripts/rollback-release.js plan",
+    "rollback:backup": "node scripts/rollback-release.js backup",
+    "rollback:emergency:publish": "node scripts/automated-rollback-publisher.js emergency",
+    "rollback:hotfix": "node scripts/automated-rollback-publisher.js hotfix",
+    "rollback:verify": "node scripts/automated-rollback-publisher.js verify",
+    "monitor:check": "node scripts/marketplace-monitor.js check",
+    "monitor:continuous": "node scripts/marketplace-monitor.js continuous",
     "quality:check": "node commands/release.js --check-only",
     "quality:fix": "node commands/release.js --fix-only"
   },

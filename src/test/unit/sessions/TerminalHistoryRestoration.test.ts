@@ -11,7 +11,7 @@
 import * as assert from 'assert';
 import * as sinon from 'sinon';
 
-describe('Terminal History Restoration - TDD Suite', () => {
+describe('Terminal History Restoration', () => {
   let sandbox: sinon.SinonSandbox;
   let mockContext: any;
   let mockVSCodeApi: any;

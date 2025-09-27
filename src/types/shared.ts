@@ -47,6 +47,7 @@ export interface InteractionConfig {
   readonly confirmBeforeKill?: boolean;
   readonly altClickMovesCursor?: boolean;
   readonly multiCursorModifier?: string;
+  readonly highlightActiveBorder?: boolean;
 }
 
 /**
@@ -77,6 +78,7 @@ export interface ExtensionTerminalConfig
     blink?: boolean;
   };
   readonly enableCliAgentIntegration?: boolean;
+  readonly highlightActiveBorder?: boolean;
 }
 
 /**
@@ -102,6 +104,7 @@ export interface PartialTerminalSettings {
   altClickMovesCursor?: boolean;
   multiCursorModifier?: string;
   enableCliAgentIntegration?: boolean;
+  highlightActiveBorder?: boolean;
   // VS Code keybinding system settings
   sendKeybindingsToShell?: boolean;
   commandsToSkipShell?: string[];
@@ -348,6 +351,7 @@ export const CONFIG_KEYS = {
   DEFAULT_PROFILE_OSX: 'defaultProfile.osx',
   INHERIT_VSCODE_PROFILES: 'inheritVSCodeProfiles',
   ENABLE_PROFILE_AUTO_DETECTION: 'enableProfileAutoDetection',
+  HIGHLIGHT_ACTIVE_BORDER: 'highlightActiveBorder',
 } as const;
 
 // ===== ターミナル管理型 =====

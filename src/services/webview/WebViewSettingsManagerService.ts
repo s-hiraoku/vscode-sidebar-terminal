@@ -35,6 +35,7 @@ export class WebViewSettingsManagerService implements IWebViewSettingsManager {
         multiCursorModifier: altClickSettings.multiCursorModifier,
         // CLI Agent integration settings
         enableCliAgentIntegration: config.get<boolean>('enableCliAgentIntegration', true),
+        highlightActiveBorder: config.get<boolean>('highlightActiveBorder', true),
         // Dynamic split direction settings (Issue #148)
         dynamicSplitDirection: config.get<boolean>('dynamicSplitDirection', true),
         panelLocation: config.get<'auto' | 'sidebar' | 'panel'>('panelLocation', 'auto'),
@@ -49,6 +50,7 @@ export class WebViewSettingsManagerService implements IWebViewSettingsManager {
         altClickMovesCursor: false,
         multiCursorModifier: 'alt',
         enableCliAgentIntegration: true,
+        highlightActiveBorder: true,
         dynamicSplitDirection: true,
         panelLocation: 'auto',
       };
@@ -146,6 +148,15 @@ export class WebViewSettingsManagerService implements IWebViewSettingsManager {
         );
       }
 
+      if (settings.highlightActiveBorder !== undefined) {
+        await config.update(
+          'highlightActiveBorder',
+          settings.highlightActiveBorder,
+          vscode.ConfigurationTarget.Global
+        );
+        log('✅ [SettingsManager] Updated active border highlight:', settings.highlightActiveBorder);
+      }
+
       if (settings.dynamicSplitDirection !== undefined) {
         await config.update(
           'dynamicSplitDirection',
@@ -198,7 +209,8 @@ export class WebViewSettingsManagerService implements IWebViewSettingsManager {
         event.affectsConfiguration('secondaryTerminal.altClickMovesCursor') ||
         event.affectsConfiguration('secondaryTerminal.theme') ||
         event.affectsConfiguration('secondaryTerminal.cursorBlink') ||
-        event.affectsConfiguration('secondaryTerminal.enableCliAgentIntegration')
+        event.affectsConfiguration('secondaryTerminal.enableCliAgentIntegration') ||
+        event.affectsConfiguration('secondaryTerminal.highlightActiveBorder')
       ) {
         shouldUpdateSettings = true;
         log('⚙️ [SettingsManager] General settings change detected');

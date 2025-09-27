@@ -27,6 +27,7 @@ import {
   INotificationManager,
   IFindInTerminalManager,
   IProfileManager,
+  ITerminalTabManager,
 } from '../interfaces/ManagerInterfaces';
 
 // Debug info interface
@@ -50,11 +51,11 @@ import { PerformanceManager } from './PerformanceManager';
 import { UIManager } from './UIManager';
 import { InputManager } from './InputManager';
 import { RefactoredMessageManager } from './RefactoredMessageManager';
-import { StandardTerminalPersistenceManager } from './StandardTerminalPersistenceManager';
 import { OptimizedTerminalPersistenceManager } from '../services/OptimizedPersistenceManager';
 import { SimplePersistenceManager } from './SimplePersistenceManager';
 import { WebViewApiManager } from './WebViewApiManager';
 import { TerminalLifecycleManager } from './TerminalLifecycleManager';
+import { TerminalTabManager } from './TerminalTabManager';
 import { CliAgentStateManager } from './CliAgentStateManager';
 import { EventHandlerManager } from './EventHandlerManager';
 import { ShellIntegrationManager } from './ShellIntegrationManager';
@@ -80,6 +81,8 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
   public findInTerminalManager: FindInTerminalManager;
   public profileManager: ProfileManager;
 
+  public terminalTabManager!: TerminalTabManager;
+
   // 既存マネージャー（段階的移行）
   public splitManager: SplitManager;
   private settingsPanel!: SettingsPanel;
@@ -89,7 +92,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
   private uiManager!: UIManager;
   private inputManager!: InputManager;
   public messageManager!: RefactoredMessageManager;
-  public persistenceManager: any;
+  public persistenceManager: OptimizedTerminalPersistenceManager | SimplePersistenceManager | null = null;
   public optimizedPersistenceManager!: OptimizedTerminalPersistenceManager;
   public simplePersistenceManager!: SimplePersistenceManager;
 
@@ -99,6 +102,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     cursorBlink: true,
     altClickMovesCursor: true,
     multiCursorModifier: 'alt',
+    highlightActiveBorder: true,
   };
 
   private currentFontSettings: WebViewFontSettings = {
@@ -159,7 +163,35 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     log('🔧 Initializing existing managers...');
 
     // Settings Panel Manager
-    this.settingsPanel = new SettingsPanel();
+    this.settingsPanel = new SettingsPanel({
+      onSettingsChange: (settings) => {
+        try {
+          const mergedSettings = { ...this.currentSettings, ...settings };
+          this.applySettings(settings);
+
+          if (this.configManager) {
+            this.configManager.applySettings(
+              mergedSettings,
+              this.terminalLifecycleManager.getAllTerminalInstances()
+            );
+            this.currentSettings = this.configManager.getCurrentSettings();
+          }
+
+          this.messageManager.updateSettings(mergedSettings, this);
+
+          this.saveSettings();
+        } catch (error) {
+          log('❌ [SETTINGS] Error applying settings from panel:', error);
+        }
+      },
+      onClose: () => {
+        try {
+          this.ensureTerminalFocus();
+        } catch (error) {
+          log('❌ [SETTINGS] Error restoring focus after closing settings:', error);
+        }
+      },
+    });
 
     // Notification Manager
     this.notificationManager = new NotificationManager();
@@ -169,6 +201,11 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
 
     // UI Manager
     this.uiManager = new UIManager();
+    this.uiManager.setHighlightActiveBorder(this.currentSettings.highlightActiveBorder ?? true);
+
+    // Terminal Tab Manager
+    this.terminalTabManager = new TerminalTabManager();
+    this.terminalTabManager.setCoordinator(this);
 
     // Input Manager - 重要：入力機能のために必須
     this.inputManager = new InputManager();
@@ -201,6 +238,8 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     }, 100);
 
     // Input Manager setup will be handled in setupInputManager()
+    this.terminalTabManager.initialize();
+
     log('✅ Existing managers initialized');
   }
 
@@ -247,6 +286,11 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       await this.messageManager.receiveMessage(event.data, this);
     });
 
+    // Local UI events
+    document.addEventListener('settings-open-requested' as keyof DocumentEventMap, () => {
+      this.openSettings();
+    });
+
     // VS Code pattern: ResizeObserver handles individual terminal container resizing
     // Window resize events are no longer needed as ResizeObserver provides more precise detection
     log('🔍 Using ResizeObserver pattern instead of window resize events');
@@ -272,6 +316,10 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     log(`🔍 [WEBVIEW] New active: ${terminalId}`);
 
     this.terminalLifecycleManager.setActiveTerminalId(terminalId);
+
+    if (this.terminalTabManager && terminalId) {
+      this.terminalTabManager.setActiveTab(terminalId);
+    }
 
     // アクティブターミナルが変更されたらUI境界を更新
     if (terminalId) {
@@ -357,7 +405,8 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     notification: INotificationManager;
     findInTerminal?: IFindInTerminalManager;
     profile?: IProfileManager;
-    persistence: StandardTerminalPersistenceManager;
+    tabs?: ITerminalTabManager;
+    persistence: OptimizedTerminalPersistenceManager | SimplePersistenceManager | null;
   } {
     return {
       performance: this.performanceManager,
@@ -368,6 +417,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       notification: this.notificationManager,
       findInTerminal: this.findInTerminalManager,
       profile: this.profileManager,
+      tabs: this.terminalTabManager,
       persistence: this.persistenceManager,
     };
   }
@@ -444,10 +494,11 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       log(`✅ Terminal header already created by TerminalContainerFactory: ${terminalId}`);
 
       // 3. 入力イベントハンドラーの設定
-      const terminalContainer = this.terminalLifecycleManager.getTerminalElement(terminalId);
-      if (terminal && terminalContainer) {
-        this.inputManager.addXtermClickHandler(terminal, terminalId, terminalContainer, this);
-        log(`✅ Input handlers configured for terminal: ${terminalId}`);
+      // Get terminal container for potential future use
+      // const terminalContainer = this.terminalLifecycleManager.getTerminalElement(terminalId);
+      if (this.terminalTabManager) {
+        this.terminalTabManager.addTab(terminalId, terminalName, terminal);
+        this.terminalTabManager.setActiveTab(terminalId);
       }
 
       // 🆕 SIMPLE: Save current session state after terminal creation
@@ -534,7 +585,11 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       }
     }, 100); // Delay for DOM cleanup
 
-    return await this.terminalLifecycleManager.removeTerminal(terminalId);
+    const removed = await this.terminalLifecycleManager.removeTerminal(terminalId);
+    if (removed && this.terminalTabManager) {
+      this.terminalTabManager.removeTab(terminalId);
+    }
+    return removed;
   }
 
   public async switchToTerminal(terminalId: string): Promise<boolean> {
@@ -789,7 +844,29 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
 
   public applySettings(settings: PartialTerminalSettings): void {
     try {
-      this.currentSettings = { ...this.currentSettings, ...settings };
+      const highlightActiveBorder =
+        settings.highlightActiveBorder !== undefined
+          ? settings.highlightActiveBorder
+          : this.currentSettings.highlightActiveBorder ?? true;
+
+      this.currentSettings = {
+        ...this.currentSettings,
+        ...settings,
+        highlightActiveBorder,
+      };
+
+      this.uiManager.setHighlightActiveBorder(highlightActiveBorder);
+
+      const activeId = this.getActiveTerminalId();
+      if (activeId) {
+        const containers = this.terminalLifecycleManager.getAllTerminalContainers();
+        if (containers.size > 0) {
+          this.uiManager.updateTerminalBorders(activeId, containers);
+        } else {
+          this.uiManager.updateSplitTerminalBorders(activeId);
+        }
+      }
+
       log('⚙️ Settings applied:', settings);
     } catch (error) {
       log('❌ Error applying settings:', error);
@@ -984,6 +1061,17 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
         this.highlightActiveTerminal(state.activeTerminalId);
       }
 
+      if (this.terminalTabManager) {
+        this.terminalTabManager.syncTabs(
+          state.terminals.map((terminal) => ({
+            id: terminal.id,
+            name: terminal.name,
+            isActive: terminal.isActive,
+            isClosable: state.terminals.length > 1,
+          }))
+        );
+      }
+
       log(
         `🎨 [UI] UI updated: ${state.terminals.length}/${state.maxTerminals} terminals, slots: [${state.availableSlots.join(',')}]`
       );
@@ -1064,6 +1152,8 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     if (activeContainer) {
       activeContainer.classList.add('active');
     }
+
+    this.uiManager.updateSplitTerminalBorders(terminalId);
   }
 
   /**
@@ -2204,8 +2294,20 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
   }
 
   public openSettings(): void {
-    // 設定パネルを開く実装
-    log('⚙️ Opening settings panel');
+    try {
+      if (!this.settingsPanel) {
+        log('⚙️ Settings panel not initialized');
+        return;
+      }
+
+      const baseSettings = this.configManager?.getCurrentSettings?.() ?? this.currentSettings;
+      const panelSettings = { ...baseSettings, ...this.currentSettings };
+
+      this.settingsPanel.show(panelSettings);
+      log('⚙️ Opening settings panel');
+    } catch (error) {
+      log('❌ Error opening settings panel:', error);
+    }
   }
 
   // Statistics and diagnostics
@@ -2244,6 +2346,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       this.webViewApiManager.dispose();
       this.findInTerminalManager.dispose();
       this.profileManager.dispose();
+      this.terminalTabManager.dispose();
 
       // 既存マネージャーのクリーンアップ
       this.messageManager.dispose();

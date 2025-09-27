@@ -5,6 +5,124 @@ All notable changes to the "Secondary Terminal" extension will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.101] - 2025-09-27
+
+### Added
+- **Always-Visible AI Agent Status**: Disabled auto-hide functionality for AI Agent status display
+  - AI Agent status remains visible permanently once detected
+  - Status no longer disappears when agent terminates
+  - Consistent status visibility for Claude Code, Gemini CLI, and other AI tools
+- **Simplified Terminal Tab Interface**: Removed close buttons and editing capabilities from terminal tabs
+  - Terminal tabs no longer display close (×) buttons for cleaner interface
+  - Disabled double-click tab name editing to prevent accidental modifications
+  - Streamlined context menu with only essential actions (Duplicate, Move to New Window)
+
+### Fixed
+- **TypeScript Compilation**: Resolved remaining compilation errors for production stability
+  - Fixed ConfigManager interface compatibility issues
+  - Corrected event listener type safety in RefactoredTerminalWebviewManager
+  - Added null-safety checks in TerminalTabManager
+  - Eliminated unsafe method references and undefined property access
+
+### Improved
+- **Code Quality**: Enhanced type safety by removing `any` type usage where possible
+  - Replaced `any` type with proper TypeScript type assertions
+  - Added null-safe operations with optional chaining
+  - Improved event handling with proper type casting
+- **User Experience**: Based on user review feedback (2025-09-27) addressing UX polish issues
+  - Cleaner terminal tab interface without cluttered close buttons
+  - Consistent AI agent status visibility for better workflow continuity
+  - Reduced accidental tab modifications through simplified interaction model
+
+### Changed
+- **AI Agent Detection**: Modified termination detection to preserve status visibility
+  - Commented out `setAgentTerminated()` calls in CliAgentDetectionService
+  - Changed default `autoHideStatus` configuration from `true` to `false`
+  - AI agent status now persists across agent restart cycles
+- **Terminal Tab Management**: Simplified tab interaction model
+  - Removed close button functionality from tab components
+  - Disabled rename functionality in tab context menus
+  - Maintained essential navigation and management features
+
+### Technical Details
+- **Configuration Changes**: Updated default values in ConfigManager and UnifiedConfigurationService
+- **State Management**: Preserved AI agent state persistence while disabling auto-termination
+- **Component Updates**: Modified TerminalTabList component for simplified UI
+- **Type Safety**: Enhanced null checking and optional chaining throughout codebase
+
+## [0.1.100] - 2025-01-27
+
+### Added
+- **Emergency Rollback System**: Comprehensive automated rollback infrastructure for critical release issues
+  - Emergency rollback with one-command execution
+  - Automated backup and restoration of previous versions
+  - VS Code Marketplace monitoring and automated response
+  - Rollback verification and health checks
+- **Release Automation**: Enhanced release management with quality gates and safety checks
+  - Automated version management scripts
+  - Pre-release quality validation
+  - Multi-platform VSIX packaging support
+  - Continuous marketplace monitoring
+
+### Fixed
+- **Test Suite Stability**: Major improvements to test reliability and CI/CD pipeline stability
+  - ✅ **Async Operations Tests**: Fixed all 10 async operation tests that were previously failing
+  - ✅ **Concurrent Terminal Creation**: Resolved timeout issues in concurrent resource management tests
+  - ✅ **CLI Agent Detection**: Fixed debouncing and caching test reliability
+  - ✅ **Circuit Breaker Pattern**: Corrected failure simulation for deterministic test results
+  - ✅ **Session Restoration**: Enhanced interruption recovery test stability
+  - ✅ **WebView Communication**: Improved timeout handling in communication tests
+- **Performance Tests**: Enhanced DOM mocking for Node.js test environment compatibility
+  - Added proper event listener mocking for DOM elements
+  - Improved browser environment simulation for performance tests
+  - Fixed `document is not defined` errors in test suite
+
+### Improved
+- **Test Determinism**: Replaced random-based test logic with deterministic patterns
+  - Removed fake timer dependencies that caused infinite loops
+  - Implemented predictable success/failure patterns for testing
+  - Enhanced test reliability across different environments
+- **Development Workflow**: Streamlined release process with automated quality checks
+  - Pre-release validation with comprehensive test coverage
+  - Automated lint and type checking integration
+  - Enhanced CI/CD pipeline stability
+- **Performance Optimization**: Continued improvements from previous releases
+  - CPU usage optimization (87% reduction in buffer flush frequency)
+  - Enhanced terminal prompt initialization
+  - Improved resource management and cleanup
+
+### Changed
+- **Test Architecture**: Moved from timer-based to Promise-based async testing
+  - Eliminated `clock.tick()` dependencies in favor of natural Promise resolution
+  - Simplified test setup and teardown processes
+  - Improved test execution speed and reliability
+- **Release Process**: Enhanced version management and deployment automation
+  - Automated backup creation before releases
+  - Rollback planning and verification workflows
+  - Quality gate enforcement for all releases
+
+## [0.1.95] - 2025-01-26
+
+### Added
+- **Documentation Organization**: Organized 25+ documentation files into structured docs directory with categorized subdirectories
+  - `/docs/architecture/` - Technical architecture and refactoring documentation
+  - `/docs/development/` - Development process and improvement documentation
+  - `/docs/guides/` - User guides and implementation documentation
+  - `/docs/releases/` - Release notes and release process documentation
+  - `/docs/testing/` - Testing documentation and guides
+- **Enhanced Documentation Navigation**: Created comprehensive docs/README.md with directory structure and quick links
+- **Codex CLI Support**: Added support for Codex CLI AI agent integration
+- **Dependency Updates**: Updated @xterm/addon-web-links from v0.10.0 to v0.11.0 for improved link handling
+
+### Improved
+- **Project Structure**: Cleaned up root directory by moving documentation files to organized subdirectories
+- **Developer Experience**: Improved project navigation with cleaner root directory and structured documentation
+- **Documentation Maintenance**: Better organization for easier documentation updates and maintenance
+
+### Changed
+- **Documentation Structure**: Moved all supplementary .md files from root to `/docs/` with logical categorization
+- **Root Directory**: Kept only essential files (README.md, CHANGELOG.md, package.json, etc.) in project root
+
 ## [0.1.94] - 2025-01-26
 
 ### Added

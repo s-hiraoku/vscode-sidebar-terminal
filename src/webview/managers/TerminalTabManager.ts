@@ -10,6 +10,13 @@ import { Terminal } from '@xterm/xterm';
 import { IManagerCoordinator } from '../interfaces/ManagerInterfaces';
 import { TerminalTabList, TerminalTab, TerminalTabEvents } from '../components/TerminalTabList';
 
+interface TabSyncInfo {
+  id: string;
+  name: string;
+  isActive: boolean;
+  isClosable?: boolean;
+}
+
 export interface TerminalTabState {
   tabs: TerminalTab[];
   activeTabId: string | null;
@@ -28,10 +35,9 @@ export class TerminalTabManager implements TerminalTabEvents {
   private tabOrder: string[] = [];
   private isEnabled: boolean = true;
   private hideWhenSingleTab: boolean = true;
+  private isInitialized = false;
 
-  constructor() {
-    this.setupTabContainer();
-  }
+  constructor() {}
 
   public setCoordinator(coordinator: IManagerCoordinator): void {
     this.coordinator = coordinator;
@@ -41,39 +47,57 @@ export class TerminalTabManager implements TerminalTabEvents {
    * Initialize tab system
    */
   public initialize(): void {
-    if (!this.tabContainer) {
-      console.error('Tab container not found');
+    this.ensureInitialized();
+  }
+
+  private ensureInitialized(): void {
+    if (this.isInitialized) {
       return;
     }
 
-    this.tabList = new TerminalTabList(this.tabContainer, this);
+    this.setupTabContainer();
+
+    if (!this.tabContainer) {
+      console.warn('TerminalTabManager: Tab container not yet available');
+      return;
+    }
+
+    if (!this.tabList) {
+      this.tabList = new TerminalTabList(this.tabContainer, this);
+    }
+
+    this.isInitialized = true;
     this.updateTabVisibility();
-    console.log('🗂️ Terminal Tab Manager initialized');
+    console.log('[Tabs] Terminal Tab Manager initialized');
   }
 
   private setupTabContainer(): void {
-    // Find or create tab container in the main terminal area
-    const terminalContainer = document.querySelector('.terminal-container');
-    if (!terminalContainer) {
-      console.warn('Terminal container not found, tabs will be created later');
+    const existing = document.getElementById('terminal-tabs-container');
+    if (existing) {
+      this.tabContainer = existing;
+      if (existing.parentElement?.id !== 'terminal-body') {
+        const terminalBody = document.getElementById('terminal-body');
+        if (terminalBody) {
+          terminalBody.insertBefore(existing, terminalBody.firstChild);
+        }
+      }
+      existing.classList.add('terminal-tabs-root');
       return;
     }
 
-    // Create tab container at the top of terminal area
-    this.tabContainer = document.createElement('div');
-    this.tabContainer.id = 'terminal-tabs-container';
-    this.tabContainer.className = 'terminal-tabs-root';
-
-    // Insert before terminal content
-    const terminalContent =
-      terminalContainer.querySelector('.terminal-content') || terminalContainer.firstChild;
-    if (terminalContent) {
-      terminalContainer.insertBefore(this.tabContainer, terminalContent);
-    } else {
-      terminalContainer.appendChild(this.tabContainer);
+    const terminalBody = document.getElementById('terminal-body');
+    if (!terminalBody) {
+      console.warn('TerminalTabManager: terminal-body not found, tabs will be created later');
+      return;
     }
 
-    console.log('🗂️ Tab container created');
+    const container = document.createElement('div');
+    container.id = 'terminal-tabs-container';
+    container.className = 'terminal-tabs-root';
+    terminalBody.insertBefore(container, terminalBody.firstChild);
+
+    this.tabContainer = container;
+    console.log('[Tabs] Tab container created');
   }
 
   /**
@@ -97,8 +121,6 @@ export class TerminalTabManager implements TerminalTabEvents {
     if (this.coordinator) {
       this.coordinator.closeTerminal(tabId);
     }
-
-    this.removeTab(tabId);
   };
 
   public onTabRename = (tabId: string, newName: string): void => {
@@ -147,6 +169,10 @@ export class TerminalTabManager implements TerminalTabEvents {
    * Tab management methods
    */
   public addTab(terminalId: string, name: string, terminal?: Terminal): void {
+    this.ensureInitialized();
+    if (!this.tabList) {
+      return;
+    }
     const tab: TerminalTab = {
       id: terminalId,
       name: name,
@@ -170,12 +196,15 @@ export class TerminalTabManager implements TerminalTabEvents {
   public removeTab(terminalId: string): void {
     if (!this.tabs.has(terminalId)) return;
 
+    this.ensureInitialized();
+    if (!this.tabList) {
+      return;
+    }
+
     this.tabs.delete(terminalId);
     this.tabOrder = this.tabOrder.filter((id) => id !== terminalId);
 
-    if (this.tabList) {
-      this.tabList.removeTab(terminalId);
-    }
+    this.tabList.removeTab(terminalId);
 
     // If this was the active tab, activate another one
     const wasActive = this.getActiveTabId() === terminalId;
@@ -244,6 +273,66 @@ export class TerminalTabManager implements TerminalTabEvents {
   public setHideWhenSingleTab(hide: boolean): void {
     this.hideWhenSingleTab = hide;
     this.updateTabVisibility();
+  }
+
+  public syncTabs(tabInfos: TabSyncInfo[]): void {
+    if (tabInfos.length === 0 && this.tabs.size === 0) {
+      return;
+    }
+
+    this.ensureInitialized();
+    if (!this.tabList) {
+      return;
+    }
+
+    const incomingIds = new Set(tabInfos.map((tab) => tab.id));
+
+    // Remove tabs that no longer exist
+    Array.from(this.tabs.keys()).forEach((tabId) => {
+      if (!incomingIds.has(tabId)) {
+        this.removeTab(tabId);
+      }
+    });
+
+    // Add or update tabs
+    tabInfos.forEach((info) => {
+      const existing = this.tabs.get(info.id);
+      if (!existing) {
+        const tab: TerminalTab = {
+          id: info.id,
+          name: info.name,
+          isActive: info.isActive,
+          isClosable: info.isClosable ?? true,
+          icon: 'terminal',
+          terminal: undefined,
+        };
+        this.tabs.set(info.id, tab);
+        this.tabOrder.push(info.id);
+        this.tabList?.addTab(tab);
+      } else {
+        const updates: Partial<TerminalTab> = {};
+        if (existing.name !== info.name) {
+          updates.name = info.name;
+        }
+        if (existing.isActive !== info.isActive) {
+          updates.isActive = info.isActive;
+        }
+        Object.assign(existing, updates);
+        if (Object.keys(updates).length > 0) {
+          this.tabList?.updateTab(info.id, updates);
+        }
+      }
+    });
+
+    // this.updateTabOrder(tabInfos.map((info) => info.id)); // Method not found
+    this.updateTabVisibility();
+
+    const activeTab = tabInfos.find((tab) => tab.isActive);
+    if (activeTab) {
+      this.setActiveTab(activeTab.id);
+    } else if (this.tabOrder.length > 0) {
+      this.setActiveTab(this.tabOrder[0]!);
+    }
   }
 
   private updateTabVisibility(): void {

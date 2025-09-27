@@ -25,7 +25,7 @@ export interface PersistenceStats {
 export class OptimizedPersistenceManager {
   private readonly DEFAULT_SETTINGS: PersistenceSettings = {
     enableAutoSave: true,
-    autoSaveIntervalMinutes: 5,
+    autoSaveIntervalMinutes: 10, // Increased from 5 to 10 minutes for CPU performance optimization
     maxScrollbackLines: 1000,
     compressionEnabled: true,
     enableLazyLoading: true,
