@@ -218,7 +218,9 @@ export class TerminalManager {
       this._terminalCreatedEmitter.fire(terminal);
       this._notifyStateUpdate();
 
-      this.initializeShellForTerminal(terminalId, ptyProcess, false);
+      // 🎯 TIMING FIX: Shell initialization moved to _handleTerminalInitializationComplete
+      // This ensures WebView terminal is fully ready before shell initialization
+      // this.initializeShellForTerminal(terminalId, ptyProcess, false);
 
       return terminalId;
     } catch (error) {
@@ -388,7 +390,8 @@ export class TerminalManager {
 
       log(`✅ [TERMINAL] Terminal created successfully: ${terminal.name} (${terminalId})`);
 
-      this.initializeShellForTerminal(terminalId, ptyProcess, false);
+      // 🎯 TIMING FIX: Shell initialization moved to _handleTerminalInitializationComplete
+      // this.initializeShellForTerminal(terminalId, ptyProcess, false);
 
       // 状態更新を通知
       log('🔍 [TERMINAL] Notifying state update...');
@@ -409,7 +412,7 @@ export class TerminalManager {
   /**
    * Initialize shell for a terminal after PTY creation
    */
-  private initializeShellForTerminal(terminalId: string, ptyProcess: any, safeMode: boolean): void {
+  public initializeShellForTerminal(terminalId: string, ptyProcess: any, safeMode: boolean): void {
     try {
       log(`🔍 [TERMINAL] Post-creation initialization for: ${terminalId} (Safe Mode: ${safeMode})`);
 

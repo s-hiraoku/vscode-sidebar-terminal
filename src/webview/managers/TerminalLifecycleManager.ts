@@ -579,6 +579,20 @@ export class TerminalLifecycleManager {
         terminalLogger.info(
           `✅ Terminal created successfully: ${terminalId} (${creationTime?.toFixed(2)}ms)`
         );
+
+        // 🎯 CRITICAL FIX: Notify Extension that WebView terminal initialization is complete
+        // This ensures shell initialization starts only after xterm is fully ready
+        setTimeout(() => {
+          if (this.coordinator && 'postMessageToExtension' in this.coordinator) {
+            (this.coordinator as any).postMessageToExtension({
+              command: 'terminalInitializationComplete',
+              terminalId: terminalId,
+              timestamp: Date.now(),
+            });
+            terminalLogger.info(`📡 Terminal initialization completion notified to Extension: ${terminalId}`);
+          }
+        }, 50); // Small delay to ensure all rendering is complete
+
         return terminal;
       } catch (error) {
         performanceMonitor.endTimer(`terminal-creation-attempt-${terminalId}-${currentRetry}`);

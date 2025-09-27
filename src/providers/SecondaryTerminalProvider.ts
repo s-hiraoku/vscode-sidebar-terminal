@@ -293,6 +293,9 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       ['requestInitialTerminal', async (message) => {
         await this._handleRequestInitialTerminal(message);
       }],
+      ['terminalInitializationComplete', async (message) => {
+        await this._handleTerminalInitializationComplete(message);
+      }],
       ['persistenceSaveSession', async (message) => {
         await this._handlePersistenceMessage(message);
       }],
@@ -530,6 +533,37 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     } catch (error) {
       log(`❌ [INITIAL] Failed to create requested initial terminal: ${String(error)}`);
       console.error('❌ [INITIAL] Error details:', error);
+    }
+  }
+
+  /**
+   * 🎯 CRITICAL FIX: Handle terminal initialization completion from WebView
+   * Starts shell initialization only after WebView terminal is fully ready
+   */
+  private async _handleTerminalInitializationComplete(message: WebviewMessage): Promise<void> {
+    const terminalId = message.terminalId as string;
+    log(`🎯 [INITIALIZATION] WebView terminal initialization complete: ${terminalId}`);
+
+    if (!terminalId) {
+      log('❌ [INITIALIZATION] No terminalId provided for initialization completion');
+      return;
+    }
+
+    try {
+      // Get terminal instance to access PTY process
+      const terminal = this._terminalManager.getTerminal(terminalId);
+      if (!terminal || !terminal.ptyProcess) {
+        log(`❌ [INITIALIZATION] Terminal or PTY process not found: ${terminalId}`);
+        return;
+      }
+
+      log(`✅ [INITIALIZATION] Starting shell initialization for: ${terminalId}`);
+
+      // Call TerminalManager's shell initialization with proper timing
+      this._terminalManager.initializeShellForTerminal(terminalId, terminal.ptyProcess, false);
+      log(`🐚 [INITIALIZATION] Shell initialization initiated for: ${terminalId}`);
+    } catch (error) {
+      log(`❌ [INITIALIZATION] Failed to initialize shell for terminal ${terminalId}:`, error);
     }
   }
 
