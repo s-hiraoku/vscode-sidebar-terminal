@@ -23,6 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Corrected event listener type safety in RefactoredTerminalWebviewManager
   - Added null-safety checks in TerminalTabManager
   - Eliminated unsafe method references and undefined property access
+- **Security**: Fixed CodeQL High severity alert for incomplete URL substring sanitization
+  - Replaced vulnerable `includes()` checks with regex patterns using word boundaries
+  - Prevents URL injection attacks in CLI agent detection patterns
+  - Addresses CWE-20 (Improper Input Validation) vulnerability
 
 ### Improved
 - **Code Quality**: Enhanced type safety by removing `any` type usage where possible
