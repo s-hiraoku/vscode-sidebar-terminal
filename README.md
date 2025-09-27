@@ -482,12 +482,59 @@ We welcome contributions! Please see our [GitHub Issues](https://github.com/s-hi
 4. Ensure all quality gates pass: `npm run pre-release:check`
 5. Submit a pull request with detailed description
 
+### Emergency Rollback Procedures
+
+If you encounter critical issues with a release, we provide automated rollback capabilities:
+
+#### 🚨 **Emergency Rollback (Fully Automated)**
+```bash
+# Complete automatic rollback + marketplace publishing
+npm run rollback:emergency:publish
+
+# Local rollback only (requires manual publishing)
+npm run rollback:emergency
+```
+
+#### 🔧 **Targeted Rollback**
+```bash
+# List available versions for rollback
+npm run rollback:list
+
+# Rollback to specific version
+npm run rollback:to 0.1.95
+
+# Pre-publish safety verification
+npm run rollback:verify
+```
+
+#### 📊 **Release Monitoring**
+```bash
+# Single monitoring check
+npm run monitor:check
+
+# Continuous monitoring (30min intervals)
+npm run monitor:continuous
+```
+
+#### 🔥 **Hotfix Release**
+```bash
+# Automated hotfix workflow
+npm run rollback:hotfix
+```
+
+**📚 Complete Rollback Documentation:**
+- [🚨 Quick Reference Guide](docs/ROLLBACK_QUICK_REFERENCE.md) - 1-minute emergency response
+- [📋 Emergency Rollback Guide](docs/EMERGENCY_ROLLBACK.md) - Detailed step-by-step procedures
+- [🤖 Automated Rollback System](docs/AUTOMATED_ROLLBACK_SYSTEM.md) - Full automation capabilities
+- [⚡ Claude Code Guide](CLAUDE.md) - Complete development & troubleshooting guide
+
 ### Code Standards
 
 - **TypeScript**: Strict typing with comprehensive interfaces
 - **Testing**: TDD approach with comprehensive test coverage
 - **Documentation**: Clear inline comments and updated guides
 - **Performance**: Memory-efficient implementations with proper cleanup
+- **Release Safety**: Automated rollback system for production stability
 
 ## 📝 License
 

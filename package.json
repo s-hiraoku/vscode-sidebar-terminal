@@ -924,6 +924,8 @@
     "rollback:emergency:publish": "node scripts/automated-rollback-publisher.js emergency",
     "rollback:hotfix": "node scripts/automated-rollback-publisher.js hotfix",
     "rollback:verify": "node scripts/automated-rollback-publisher.js verify",
+    "monitor:check": "node scripts/marketplace-monitor.js check",
+    "monitor:continuous": "node scripts/marketplace-monitor.js continuous",
     "quality:check": "node commands/release.js --check-only",
     "quality:fix": "node commands/release.js --fix-only"
   },

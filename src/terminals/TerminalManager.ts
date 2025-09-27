@@ -1000,7 +1000,8 @@ export class TerminalManager {
 
     // ✅ CRITICAL: Add terminal ID validation to each data chunk
     const validatedData = this._validateDataForTerminal(terminalId, data);
-    buffer.push(validatedData);
+    const normalizedData = this._normalizeControlSequences(validatedData);
+    buffer.push(normalizedData);
 
     console.log(
       `📊 [TERMINAL] Data buffered for ${terminalId}: ${data.length} chars (buffer size: ${buffer.length})`
@@ -1272,6 +1273,16 @@ export class TerminalManager {
       .trim();
 
     return cleaned.length > 0;
+  }
+
+  private _normalizeControlSequences(data: string): string {
+    if (!data || data.indexOf('\f') === -1) {
+      return data;
+    }
+
+    const CLEAR_SEQUENCE = '\u001b[2J\u001b[H';
+
+    return data.replace(/\f+/g, CLEAR_SEQUENCE);
   }
 
   /**
