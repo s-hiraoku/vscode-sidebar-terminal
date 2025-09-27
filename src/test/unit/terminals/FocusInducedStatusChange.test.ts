@@ -22,6 +22,11 @@ describe('Focus-Induced CLI Agent Status Change Bug Tests', () => {
   beforeEach(() => {
     sandbox = sinon.createSandbox();
     terminalManager = new TerminalManager();
+
+    // Initialize required properties that may be undefined
+    (terminalManager as any)._disconnectedAgents = new Map();
+    (terminalManager as any)._connectedAgentTerminalId = null;
+    (terminalManager as any)._connectedAgentType = null;
   });
 
   afterEach(() => {

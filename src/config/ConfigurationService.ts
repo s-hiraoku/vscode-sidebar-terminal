@@ -172,6 +172,7 @@ export class ConfigurationService {
         'enableGitHubCopilotIntegration',
         true
       ),
+      highlightActiveBorder: this.getCachedValue('secondaryTerminal', 'highlightActiveBorder', true),
     };
   }
 

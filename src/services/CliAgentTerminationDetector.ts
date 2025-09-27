@@ -99,10 +99,11 @@ export class CliAgentTerminationDetector {
       const lowerLine = cleanLine.toLowerCase();
 
       // 🔄 REDUCED AI OUTPUT DETECTION: Only check for very obvious AI patterns
+      // Use precise patterns to prevent substring attacks while avoiding URL false positives
       const looksLikeAIOutput =
-        lowerLine.includes('claude code') ||
-        lowerLine.includes('gemini cli') ||
-        lowerLine.includes('github copilot') ||
+        /(^|\s)claude code(\s|$)/i.test(cleanLine) ||
+        /(^|\s)gemini cli(\s|$)/i.test(cleanLine) ||
+        /(^|\s)github copilot(\s|$)/i.test(cleanLine) ||
         lowerLine.includes('assistant:') ||
         lowerLine.includes('i am claude') ||
         lowerLine.includes('i am gemini') ||
@@ -336,9 +337,9 @@ export class CliAgentTerminationDetector {
     const isLikelyShellPrompt =
       line.length <= 40 && // Increased from 20 to 40
       shellPromptPatterns.some((pattern) => pattern.test(line)) &&
-      !line.includes('claude code') && // Only exclude very specific Claude patterns
-      !line.includes('gemini cli') &&
-      !line.includes('github copilot') &&
+      !/(^|\s)claude code(\s|$)/i.test(line) && // Only exclude very specific Claude patterns - prevent URL attacks
+      !/(^|\s)gemini cli(\s|$)/i.test(line) &&
+      !/(^|\s)github copilot(\s|$)/i.test(line) &&
       !line.includes('how can i help') &&
       !line.includes('let me help') &&
       !line.includes('i am claude') &&

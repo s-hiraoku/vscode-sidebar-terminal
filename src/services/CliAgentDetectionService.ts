@@ -489,7 +489,7 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
               );
 
               // 🔧 IMMEDIATE TERMINATION: No delay for validated termination
-              this.stateManager.setAgentTerminated(terminalId);
+              // this.stateManager.setAgentTerminated(terminalId); // Disabled: Keep status always visible
               return null;
             } else {
               log(
@@ -524,12 +524,12 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
                 `🔻 [TERMINATION] Setting DISCONNECTED agent as terminated in terminal ${terminalId}`
               );
               // 🆕 GRACE PERIOD: Small delay for disconnected agents to avoid race conditions
-              setTimeout(() => {
-                this.stateManager.setAgentTerminated(terminalId);
-                log(
-                  `🔻 [CLI-AGENT] Disconnected agent termination validated and processed: "${fullyCleanLine}" in terminal ${terminalId}`
-                );
-              }, 500); // Shorter grace period
+              // setTimeout(() => {
+              //   this.stateManager.setAgentTerminated(terminalId); // Disabled: Keep status always visible
+              //   log(
+              //     `🔻 [CLI-AGENT] Disconnected agent termination validated and processed: "${fullyCleanLine}" in terminal ${terminalId}`
+              //   );
+              // }, 500); // Shorter grace period
             }
 
             return null; // Termination handled, no detection result needed

@@ -856,6 +856,19 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     }
   }
 
+  public selectProfile(): void {
+    log('🎯 [DEBUG] Opening profile selector...');
+    try {
+      void this._sendMessage({
+        command: 'showProfileSelector',
+      });
+      log('✅ [DEBUG] Profile selector command sent');
+    } catch (error) {
+      log('❌ [ERROR] Failed to open profile selector:', error);
+      TerminalErrorHandler.handleWebviewError(error);
+    }
+  }
+
   public async killTerminal(): Promise<void> {
     // Kill active terminal
 
@@ -1570,6 +1583,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       multiCursorModifier: altClickSettings.multiCursorModifier,
       // CLI Agent Code integration settings
       enableCliAgentIntegration: configService.isFeatureEnabled('cliAgentIntegration'),
+      highlightActiveBorder: configService.get('sidebarTerminal', 'highlightActiveBorder', true),
       // Dynamic split direction settings (Issue #148)
       dynamicSplitDirection: configService.isFeatureEnabled('dynamicSplitDirection'),
       panelLocation: configService.get('sidebarTerminal', 'panelLocation', 'auto'),
@@ -1601,6 +1615,13 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
           settings.enableCliAgentIntegration
         );
       }
+      if (settings.highlightActiveBorder !== undefined) {
+        await configService.update(
+          'sidebarTerminal',
+          'highlightActiveBorder',
+          settings.highlightActiveBorder
+        );
+      }
       if (settings.dynamicSplitDirection !== undefined) {
         await configService.update(
           'sidebarTerminal',
@@ -1610,10 +1631,6 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       }
       if (settings.panelLocation !== undefined) {
         await configService.update('sidebarTerminal', 'panelLocation', settings.panelLocation);
-        log(
-          '🔧 [DEBUG] CLI Agent Code integration setting updated:',
-          settings.enableCliAgentIntegration
-        );
       }
       // Note: Font settings are read directly from VS Code's terminal/editor settings
 

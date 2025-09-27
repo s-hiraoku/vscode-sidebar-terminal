@@ -11,6 +11,15 @@ import { PartialTerminalSettings, WebViewFontSettings } from '../../types/shared
 import { AltClickState, TerminalInteractionEvent } from '../../types/common';
 import { ITerminalProfile } from '../../types/profiles';
 
+export interface ITerminalTabManager {
+  initialize(): void;
+  addTab(terminalId: string, name: string, terminal?: Terminal): void;
+  removeTab(terminalId: string): void;
+  setActiveTab(terminalId: string): void;
+  syncTabs(tabInfos: Array<{ id: string; name: string; isActive: boolean; isClosable?: boolean }>): void;
+  dispose(): void;
+}
+
 // Core terminal data structure with VS Code Standard Addons
 export interface TerminalInstance {
   readonly id: string;
@@ -57,6 +66,7 @@ export interface IManagerCoordinator {
     notification: INotificationManager;
     findInTerminal?: IFindInTerminalManager;
     profile?: IProfileManager;
+    tabs?: ITerminalTabManager;
     persistence?: any; // Optional persistence manager
   };
   getMessageManager(): IMessageManager;

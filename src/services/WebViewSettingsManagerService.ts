@@ -49,6 +49,7 @@ export class WebViewSettingsManagerService implements IWebViewSettingsManagerSer
       multiCursorModifier: altClickSettings.multiCursorModifier,
       // CLI Agent integration settings
       enableCliAgentIntegration: config.get<boolean>('enableCliAgentIntegration', true),
+      highlightActiveBorder: config.get<boolean>('highlightActiveBorder', true),
       // Dynamic split direction settings (Issue #148)
       dynamicSplitDirection: config.get<boolean>('dynamicSplitDirection', true),
       panelLocation: config.get<'auto' | 'sidebar' | 'panel'>('panelLocation', 'auto'),
@@ -226,7 +227,8 @@ export class WebViewSettingsManagerService implements IWebViewSettingsManagerSer
       event.affectsConfiguration('secondaryTerminal.altClickMovesCursor') ||
       event.affectsConfiguration('secondaryTerminal.theme') ||
       event.affectsConfiguration('secondaryTerminal.cursorBlink') ||
-      event.affectsConfiguration('secondaryTerminal.enableCliAgentIntegration')
+      event.affectsConfiguration('secondaryTerminal.enableCliAgentIntegration') ||
+      event.affectsConfiguration('secondaryTerminal.highlightActiveBorder')
     );
   }
 

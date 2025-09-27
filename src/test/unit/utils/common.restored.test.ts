@@ -25,15 +25,25 @@ import { setupTestEnvironment, resetTestEnvironment, mockVscode } from '../../sh
 
 describe('Restored Common Functions - TDD Suite', () => {
   let sandbox: sinon.SinonSandbox;
+  let originalPlatform: string;
+  let originalEnv: NodeJS.ProcessEnv;
 
   beforeEach(() => {
     setupTestEnvironment();
     sandbox = sinon.createSandbox();
+
+    // Save original values for restoration
+    originalPlatform = process.platform;
+    originalEnv = { ...process.env };
   });
 
   afterEach(() => {
     resetTestEnvironment();
     sandbox.restore();
+
+    // Restore original values
+    Object.defineProperty(process, 'platform', { value: originalPlatform });
+    process.env = originalEnv;
   });
 
   describe('getTerminalConfig - Terminal Configuration Retrieval', () => {
@@ -90,7 +100,7 @@ describe('Restored Common Functions - TDD Suite', () => {
 
     it('should return Windows shell for win32 platform', () => {
       // RED: Test Windows shell detection
-      Object.defineProperty(process, 'platform', { value: 'win32' });
+      Object.defineProperty(process, 'platform', { value: 'win32', configurable: true });
       process.env.COMSPEC = 'C:\\Windows\\System32\\cmd.exe';
 
       const shell = getShellForPlatform();
@@ -100,7 +110,7 @@ describe('Restored Common Functions - TDD Suite', () => {
 
     it('should fallback to cmd.exe on Windows when COMSPEC is not set', () => {
       // RED: Test Windows fallback
-      Object.defineProperty(process, 'platform', { value: 'win32' });
+      Object.defineProperty(process, 'platform', { value: 'win32', configurable: true });
       delete process.env.COMSPEC;
 
       const shell = getShellForPlatform();
@@ -140,7 +150,7 @@ describe('Restored Common Functions - TDD Suite', () => {
 
     it('should fallback to bash on Linux when SHELL is not set', () => {
       // RED: Test Linux fallback
-      Object.defineProperty(process, 'platform', { value: 'linux' });
+      Object.defineProperty(process, 'platform', { value: 'linux', configurable: true });
       delete process.env.SHELL;
 
       const shell = getShellForPlatform();

@@ -5,6 +5,51 @@ All notable changes to the "Secondary Terminal" extension will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.101] - 2025-09-27
+
+### Added
+- **Always-Visible AI Agent Status**: Disabled auto-hide functionality for AI Agent status display
+  - AI Agent status remains visible permanently once detected
+  - Status no longer disappears when agent terminates
+  - Consistent status visibility for Claude Code, Gemini CLI, and other AI tools
+- **Simplified Terminal Tab Interface**: Removed close buttons and editing capabilities from terminal tabs
+  - Terminal tabs no longer display close (×) buttons for cleaner interface
+  - Disabled double-click tab name editing to prevent accidental modifications
+  - Streamlined context menu with only essential actions (Duplicate, Move to New Window)
+
+### Fixed
+- **TypeScript Compilation**: Resolved remaining compilation errors for production stability
+  - Fixed ConfigManager interface compatibility issues
+  - Corrected event listener type safety in RefactoredTerminalWebviewManager
+  - Added null-safety checks in TerminalTabManager
+  - Eliminated unsafe method references and undefined property access
+
+### Improved
+- **Code Quality**: Enhanced type safety by removing `any` type usage where possible
+  - Replaced `any` type with proper TypeScript type assertions
+  - Added null-safe operations with optional chaining
+  - Improved event handling with proper type casting
+- **User Experience**: Based on user review feedback (2025-09-27) addressing UX polish issues
+  - Cleaner terminal tab interface without cluttered close buttons
+  - Consistent AI agent status visibility for better workflow continuity
+  - Reduced accidental tab modifications through simplified interaction model
+
+### Changed
+- **AI Agent Detection**: Modified termination detection to preserve status visibility
+  - Commented out `setAgentTerminated()` calls in CliAgentDetectionService
+  - Changed default `autoHideStatus` configuration from `true` to `false`
+  - AI agent status now persists across agent restart cycles
+- **Terminal Tab Management**: Simplified tab interaction model
+  - Removed close button functionality from tab components
+  - Disabled rename functionality in tab context menus
+  - Maintained essential navigation and management features
+
+### Technical Details
+- **Configuration Changes**: Updated default values in ConfigManager and UnifiedConfigurationService
+- **State Management**: Preserved AI agent state persistence while disabling auto-termination
+- **Component Updates**: Modified TerminalTabList component for simplified UI
+- **Type Safety**: Enhanced null checking and optional chaining throughout codebase
+
 ## [0.1.100] - 2025-01-27
 
 ### Added

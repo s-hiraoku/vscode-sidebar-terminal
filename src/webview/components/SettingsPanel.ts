@@ -135,8 +135,7 @@ export class SettingsPanel {
       </div>
 
       <div style="display: grid; gap: 16px;">
-        ${this.createThemeControl()}
-        ${this.createCursorBlinkControl()}
+        ${this.createActiveBorderControl()}
         ${this.createClaudeCodeIntegrationControl()}
       </div>
 
@@ -164,41 +163,10 @@ export class SettingsPanel {
 
     return content;
   }
-
   /**
-   * テーマコントロールを作成
+   * アクティブターミナルの枠表示設定を作成
    */
-  private createThemeControl(): string {
-    return `
-      <div>
-        <label style="
-          color: var(--vscode-foreground, #cccccc);
-          font-size: 13px;
-          font-weight: 500;
-          display: block;
-          margin-bottom: 6px;
-        ">Theme</label>
-        <select id="theme-select" style="
-          background: var(--vscode-input-background, #3c3c3c);
-          color: var(--vscode-input-foreground, #cccccc);
-          border: 1px solid var(--vscode-input-border, #454545);
-          padding: 6px 8px;
-          border-radius: 3px;
-          width: 100%;
-          font-size: 13px;
-        ">
-          <option value="auto">Auto (Follow VS Code)</option>
-          <option value="dark">Dark</option>
-          <option value="light">Light</option>
-        </select>
-      </div>
-    `;
-  }
-
-  /**
-   * カーソル点滅コントロールを作成
-   */
-  private createCursorBlinkControl(): string {
+  private createActiveBorderControl(): string {
     return `
       <div>
         <label style="
@@ -206,21 +174,32 @@ export class SettingsPanel {
           font-size: 13px;
           font-weight: 500;
           display: flex;
-          align-items: center;
+          align-items: flex-start;
           gap: 8px;
           cursor: pointer;
         ">
           <input
             type="checkbox"
-            id="cursor-blink"
+            id="highlight-active-border"
             checked
             style="
               width: 16px;
               height: 16px;
               cursor: pointer;
+              margin-top: 2px;
             "
           />
-          Enable Cursor Blinking
+          <div>
+            <div>Show Active Terminal Highlight</div>
+            <div style="
+              font-size: 11px;
+              color: var(--vscode-descriptionForeground, #999999);
+              margin-top: 4px;
+              line-height: 1.4;
+            ">
+              Toggle the blue border that appears around the focused sidebar terminal.
+            </div>
+          </div>
         </label>
       </div>
     `;
@@ -332,9 +311,8 @@ export class SettingsPanel {
   private resetSettings(): void {
     try {
       const defaultSettings: PartialTerminalSettings = {
-        theme: 'auto',
-        cursorBlink: true,
         enableCliAgentIntegration: true,
+        highlightActiveBorder: true,
       };
 
       this.populateSettings(defaultSettings);
@@ -351,17 +329,15 @@ export class SettingsPanel {
       throw new Error('Settings panel not available');
     }
 
-    const themeSelect = this.panelElement.querySelector('#theme-select') as HTMLSelectElement;
-    const cursorBlinkCheckbox = this.panelElement.querySelector(
-      '#cursor-blink'
+    const highlightBorderCheckbox = this.panelElement.querySelector(
+      '#highlight-active-border'
     ) as HTMLInputElement;
     const claudeCodeIntegrationCheckbox = this.panelElement.querySelector(
       '#cli-agent-integration'
     ) as HTMLInputElement;
 
     return {
-      theme: themeSelect?.value || 'auto',
-      cursorBlink: cursorBlinkCheckbox?.checked ?? true,
+      highlightActiveBorder: highlightBorderCheckbox?.checked ?? true,
       enableCliAgentIntegration: claudeCodeIntegrationCheckbox?.checked ?? true,
     };
   }
@@ -373,20 +349,18 @@ export class SettingsPanel {
     if (!settings || !this.panelElement) return;
 
     try {
-      const themeSelect = this.panelElement.querySelector('#theme-select') as HTMLSelectElement;
-      const cursorBlinkCheckbox = this.panelElement.querySelector(
-        '#cursor-blink'
+      const highlightBorderCheckbox = this.panelElement.querySelector(
+        '#highlight-active-border'
       ) as HTMLInputElement;
       const claudeCodeIntegrationCheckbox = this.panelElement.querySelector(
         '#cli-agent-integration'
       ) as HTMLInputElement;
 
-      if (themeSelect && settings.theme) {
-        themeSelect.value = settings.theme;
-      }
-
-      if (cursorBlinkCheckbox && settings.cursorBlink !== undefined) {
-        cursorBlinkCheckbox.checked = settings.cursorBlink;
+      if (highlightBorderCheckbox) {
+        highlightBorderCheckbox.checked =
+          settings.highlightActiveBorder !== undefined
+            ? settings.highlightActiveBorder
+            : true;
       }
 
       if (claudeCodeIntegrationCheckbox && settings.enableCliAgentIntegration !== undefined) {
