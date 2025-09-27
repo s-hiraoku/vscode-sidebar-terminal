@@ -28,8 +28,8 @@ declare function acquireVsCodeApi(): {
 const STORAGE_KEY_PREFIX = 'vscode-terminal-session-';
 const STORAGE_VERSION = '2.0.0';
 const COMPRESSION_THRESHOLD = 2000; // Characters before compression
-const AUTO_SAVE_INTERVAL = 30000; // 30 seconds
-const CLEANUP_INTERVAL = 300000; // 5 minutes
+const AUTO_SAVE_INTERVAL = 120000; // 2 minutes (optimized for CPU performance)
+const CLEANUP_INTERVAL = 600000; // 10 minutes (optimized for CPU performance)
 const MAX_TERMINALS = 10;
 const DEFAULT_SCROLLBACK = 1000;
 

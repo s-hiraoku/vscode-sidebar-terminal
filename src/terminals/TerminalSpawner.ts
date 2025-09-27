@@ -47,6 +47,12 @@ export class TerminalSpawner {
       LC_CTYPE: baseEnv.LC_CTYPE || 'en_US.UTF-8',
       TERM: baseEnv.TERM || 'xterm-256color',
       COLORTERM: baseEnv.COLORTERM || 'truecolor',
+      // Force interactive shell behavior and prompt display
+      PS1: baseEnv.PS1 || '$ ',
+      FORCE_COLOR: '1',
+      // Ensure shell reads initialization files
+      BASH_ENV: baseEnv.BASH_ENV,
+      ENV: baseEnv.ENV,
     };
   }
 }

@@ -584,7 +584,7 @@ export class ExtensionLifecycle {
     // ターミナル変更時の保存を設定（定期保存として - バックアップ用）
     const saveOnTerminalChange = setInterval(() => {
       void this.saveSessionPeriodically();
-    }, 30000); // 30秒ごとに保存
+    }, 300000); // 5分ごとに保存（CPU負荷軽減のため30秒から変更）
 
     context.subscriptions.push({
       dispose: () => clearInterval(saveOnTerminalChange),

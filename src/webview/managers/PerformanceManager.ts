@@ -82,14 +82,14 @@ export class PerformanceManager extends BaseManager {
   private scheduleBufferFlush(): void {
     if (this.bufferFlushTimer === null) {
       // Dynamic flush interval based on CLI Agent state and output frequency
-      let flushInterval = this.BUFFER_FLUSH_INTERVAL; // Default 4ms (improved from 16ms)
+      let flushInterval = this.BUFFER_FLUSH_INTERVAL; // Default 16ms (optimized for performance)
 
       if (this.isCliAgentMode) {
-        // CLI Agent active: Use very aggressive flushing for cursor accuracy
-        flushInterval = 2; // Reduced from 4ms to 2ms for CLI Agent output
+        // CLI Agent active: Use optimized flushing for cursor accuracy while maintaining performance
+        flushInterval = Math.max(8, this.BUFFER_FLUSH_INTERVAL / 2); // Optimized: 8ms for CLI Agent output
       } else if (this.outputBuffer.length > 3) {
-        // High-frequency output: Use shorter interval (reduced threshold from 5 to 3)
-        flushInterval = 2; // Reduced from 8ms to 2ms for frequent output
+        // High-frequency output: Use shorter interval while avoiding CPU overload
+        flushInterval = Math.max(12, this.BUFFER_FLUSH_INTERVAL * 0.75); // Optimized: 12ms for frequent output
       }
 
       this.bufferFlushTimer = window.setTimeout(() => {

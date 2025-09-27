@@ -435,23 +435,36 @@ export class TerminalManager {
         try {
           // Multiple prompt triggers to ensure shell displays properly
           setTimeout(() => {
-            ptyProcess.write('\\r');
+            ptyProcess.write('\r');
             log(`✅ [TERMINAL] First prompt request sent for: ${terminalId}`);
           }, 100);
 
           // Additional prompt trigger for ESP-IDF environments
           setTimeout(() => {
-            ptyProcess.write('\\r');
+            ptyProcess.write('\r');
             log(`✅ [TERMINAL] Second prompt request sent for: ${terminalId}`);
           }, 500);
 
           // Final fallback prompt
           if (safeMode) {
             setTimeout(() => {
-              ptyProcess.write('echo "Terminal ready"\\r');
+              ptyProcess.write('echo "Terminal ready"\r');
               log(`🛡️ [TERMINAL] Safe mode confirmation sent for: ${terminalId}`);
             }, 1000);
           }
+
+          // Additional macOS shell initialization
+          setTimeout(() => {
+            // Force shell prompt display for macOS environments
+            ptyProcess.write('\n');
+            log(`🍎 [TERMINAL] macOS shell initialization sent for: ${terminalId}`);
+          }, 800);
+
+          // Final prompt request for stubborn shells
+          setTimeout(() => {
+            ptyProcess.write('PS1="$ "; export PS1\r');
+            log(`💪 [TERMINAL] PS1 prompt enforcement sent for: ${terminalId}`);
+          }, 1200);
         } catch (writeError) {
           log(`❌ [TERMINAL] Error sending prompt requests: ${writeError}`);
         }
