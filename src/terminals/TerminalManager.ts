@@ -433,43 +433,24 @@ export class TerminalManager {
         log(`⚠️ [TERMINAL] Shell integration injection error: ${error}`);
       }
 
-      // Send a final carriage return to prompt for command line
+      // Send delayed clean prompt setup after shell is ready
       if (ptyProcess && typeof ptyProcess.write === 'function') {
         try {
-          // Multiple prompt triggers to ensure shell displays properly
+          // Wait for shell to be fully ready, then clean setup
           setTimeout(() => {
-            ptyProcess.write('\r');
-            log(`✅ [TERMINAL] First prompt request sent for: ${terminalId}`);
-          }, 100);
-
-          // Additional prompt trigger for ESP-IDF environments
-          setTimeout(() => {
-            ptyProcess.write('\r');
-            log(`✅ [TERMINAL] Second prompt request sent for: ${terminalId}`);
-          }, 500);
-
-          // Final fallback prompt
-          if (safeMode) {
-            setTimeout(() => {
-              ptyProcess.write('echo "Terminal ready"\r');
-              log(`🛡️ [TERMINAL] Safe mode confirmation sent for: ${terminalId}`);
-            }, 1000);
-          }
-
-          // Additional macOS shell initialization
-          setTimeout(() => {
-            // Force shell prompt display for macOS environments
-            ptyProcess.write('\n');
-            log(`🍎 [TERMINAL] macOS shell initialization sent for: ${terminalId}`);
-          }, 800);
-
-          // Final prompt request for stubborn shells
-          setTimeout(() => {
-            ptyProcess.write('PS1="$ "; export PS1\r');
-            log(`💪 [TERMINAL] PS1 prompt enforcement sent for: ${terminalId}`);
-          }, 1200);
+            try {
+              // Clear screen and setup clean prompt
+              ptyProcess.write('\x1b[2J\x1b[H'); // Clear entire screen
+              ptyProcess.write('PS1="$ "; export PS1\r'); // Set simple prompt
+              ptyProcess.write('clear\r'); // Clear terminal cleanly
+              ptyProcess.write('\r'); // Trigger fresh prompt
+              log(`✅ [TERMINAL] Clean prompt setup sent for: ${terminalId}`);
+            } catch (delayedError) {
+              log(`❌ [TERMINAL] Delayed setup error: ${delayedError}`);
+            }
+          }, 1000); // Wait 1 second for shell to be ready
         } catch (writeError) {
-          log(`❌ [TERMINAL] Error sending prompt requests: ${writeError}`);
+          log(`❌ [TERMINAL] Error setting up delayed prompt: ${writeError}`);
         }
       }
     } catch (error) {

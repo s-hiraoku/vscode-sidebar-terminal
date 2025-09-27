@@ -17,12 +17,31 @@ describe('Refactored Architecture Performance Tests', () => {
   beforeEach(() => {
     sandbox = sinon.createSandbox();
 
-    // Setup minimal DOM for performance testing
-    document.body.innerHTML = `
-      <div id="terminal-area"></div>
-      <div id="terminal-tabs-container"></div>
-      <div id="notification-container"></div>
-    `;
+    // Setup minimal DOM for performance testing - check if document exists
+    if (typeof document !== 'undefined') {
+      document.body.innerHTML = `
+        <div id="terminal-area"></div>
+        <div id="terminal-tabs-container"></div>
+        <div id="notification-container"></div>
+      `;
+    } else {
+      // Mock document object for Node.js environment
+      (global as any).document = {
+        body: {
+          innerHTML: '',
+        },
+        getElementById: sandbox.stub().returns({
+          appendChild: sandbox.stub(),
+          removeChild: sandbox.stub(),
+          innerHTML: '',
+        }),
+        createElement: sandbox.stub().returns({
+          appendChild: sandbox.stub(),
+          setAttribute: sandbox.stub(),
+          style: {},
+        }),
+      };
+    }
 
     // Mock heavy DOM operations
     (global as any).Terminal = sandbox.stub().returns({
@@ -47,7 +66,15 @@ describe('Refactored Architecture Performance Tests', () => {
   });
 
   afterEach(() => {
-    document.body.innerHTML = '';
+    if (typeof document !== 'undefined') {
+      document.body.innerHTML = '';
+    }
+
+    // Clean up global mocks
+    if ((global as any).document && typeof document === 'undefined') {
+      delete (global as any).document;
+    }
+
     sandbox.restore();
   });
 
