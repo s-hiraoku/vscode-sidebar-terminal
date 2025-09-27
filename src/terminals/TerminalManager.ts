@@ -31,6 +31,8 @@ import { CliAgentDetectionService } from '../services/CliAgentDetectionService';
 import { ICliAgentDetectionService } from '../interfaces/CliAgentService';
 import { TerminalSpawner } from './TerminalSpawner';
 import type { IDisposable } from '@homebridge/node-pty-prebuilt-multiarch';
+
+const ENABLE_TERMINAL_DEBUG_LOGS = process.env.SECONDARY_TERMINAL_DEBUG_LOGS === 'true';
 // Removed unused service imports - these were for the RefactoredTerminalManager which was removed
 
 export class TerminalManager {
@@ -50,6 +52,7 @@ export class TerminalManager {
   // CLI Agent Detection Service (extracted for SRP)
   private readonly _cliAgentService: ICliAgentDetectionService;
   private readonly _terminalSpawner: TerminalSpawner;
+  private readonly _debugLoggingEnabled = ENABLE_TERMINAL_DEBUG_LOGS;
 
   // 操作の順序保証のためのキュー
   private operationQueue: Promise<void> = Promise.resolve();
@@ -72,6 +75,12 @@ export class TerminalManager {
   public readonly onTerminalRemoved = this._terminalRemovedEmitter.event;
   public readonly onStateUpdate = this._stateUpdateEmitter.event;
   public readonly onTerminalFocus = this._terminalFocusEmitter.event;
+
+  private debugLog(...args: unknown[]): void {
+    if (this._debugLoggingEnabled) {
+      console.log(...args);
+    }
+  }
 
   constructor(cliAgentService?: ICliAgentDetectionService) {
     // Initialize terminal number manager with max terminals config
@@ -467,7 +476,7 @@ export class TerminalManager {
       // Use provided terminal ID, but validate it exists and is active
       if (!this._terminals.has(terminalId)) {
         console.error(`🚨 [TERMINAL] Provided terminal ID does not exist: ${terminalId}`);
-        console.log('🔍 [TERMINAL] Available terminals:', Array.from(this._terminals.keys()));
+        this.debugLog('🔍 [TERMINAL] Available terminals:', Array.from(this._terminals.keys()));
 
         // Fallback to active terminal
         const activeId = this._activeTerminalManager.getActive();
@@ -485,7 +494,7 @@ export class TerminalManager {
       const activeId = this._activeTerminalManager.getActive();
       if (!activeId) {
         console.error('🚨 [TERMINAL] No active terminal ID available');
-        console.log('🔍 [TERMINAL] Available terminals:', Array.from(this._terminals.keys()));
+        this.debugLog('🔍 [TERMINAL] Available terminals:', Array.from(this._terminals.keys()));
         return;
       }
 
@@ -522,7 +531,7 @@ export class TerminalManager {
       return;
     }
 
-    console.log(
+    this.debugLog(
       `⌨️ [TERMINAL] Sending input to ${terminal.name} (${resolvedTerminalId}): ${data.length} chars`
     );
 
@@ -536,14 +545,14 @@ export class TerminalManager {
         console.error(`🚨 [TERMINAL] PTY write failed for ${terminal.name}: ${result.error}`);
 
         // Attempt recovery with alternative PTY instance
-        console.log(`🔄 [TERMINAL] Attempting PTY recovery for ${terminal.name}...`);
+        this.debugLog(`🔄 [TERMINAL] Attempting PTY recovery for ${terminal.name}...`);
         const recovered = this._attemptPtyRecovery(terminal, data);
         if (!recovered) {
           throw new Error(result.error || 'PTY write failed and recovery unsuccessful');
         }
-        console.log(`✅ [TERMINAL] PTY recovery successful for ${terminal.name}`);
+        this.debugLog(`✅ [TERMINAL] PTY recovery successful for ${terminal.name}`);
       } else {
-        console.log(`✅ [TERMINAL] Input sent successfully to ${terminal.name}`);
+        this.debugLog(`✅ [TERMINAL] Input sent successfully to ${terminal.name}`);
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -988,7 +997,7 @@ export class TerminalManager {
 
     if (!this._dataBuffers.has(terminalId)) {
       this._dataBuffers.set(terminalId, []);
-      console.log(`📊 [TERMINAL] Created new data buffer for terminal: ${terminalId}`);
+      this.debugLog(`📊 [TERMINAL] Created new data buffer for terminal: ${terminalId}`);
     }
 
     const buffer = this._dataBuffers.get(terminalId);
@@ -1003,7 +1012,7 @@ export class TerminalManager {
     const normalizedData = this._normalizeControlSequences(validatedData);
     buffer.push(normalizedData);
 
-    console.log(
+    this.debugLog(
       `📊 [TERMINAL] Data buffered for ${terminalId}: ${data.length} chars (buffer size: ${buffer.length})`
     );
 
@@ -1023,7 +1032,7 @@ export class TerminalManager {
     // Basic validation - could be enhanced with more sophisticated checks
     if (data.includes('\x1b]0;') && !data.includes(terminalId)) {
       // Window title escape sequences might contain terminal context
-      console.log(`🔍 [TERMINAL] Window title detected for ${terminalId}`);
+      this.debugLog(`🔍 [TERMINAL] Window title detected for ${terminalId}`);
     }
 
     // Return data as-is for now, but this method provides a hook for future validation
@@ -1085,7 +1094,7 @@ export class TerminalManager {
       }
 
       // ✅ EMIT DATA WITH STRICT TERMINAL ID ASSOCIATION
-      console.log(
+      this.debugLog(
         `📤 [TERMINAL] Flushing data for terminal ${terminal.name} (${terminalId}): ${combinedData.length} chars`
       );
       this._dataEmitter.fire({
@@ -1637,7 +1646,7 @@ export class TerminalManager {
           }
 
           ptyInstance.write(data);
-          console.log('✅ [RECOVERY] PTY write recovered using alternative instance');
+          this.debugLog('✅ [RECOVERY] PTY write recovered using alternative instance');
 
           // Update the terminal to use the working instance
           if (ptyInstance === terminal.pty) {

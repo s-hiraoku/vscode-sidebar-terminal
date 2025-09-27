@@ -10,17 +10,27 @@ import { BaseManager } from './BaseManager';
 // import { performanceLogger } from '../utils/ManagerLogger';
 import { ResizeManager } from '../utils/ResizeManager';
 
+const ENABLE_WEBVIEW_DEBUG_LOGS = Boolean(
+  typeof globalThis !== 'undefined' &&
+    (((globalThis as Record<string, unknown>).SECONDARY_TERMINAL_DEBUG_LOGS as boolean | undefined) === true ||
+      (typeof localStorage !== 'undefined' &&
+        localStorage.getItem('SECONDARY_TERMINAL_DEBUG_LOGS') === 'true'))
+);
+
 export class PerformanceManager extends BaseManager {
   constructor() {
     super('PerformanceManager', {
-      enableLogging: true,
+      enableLogging: ENABLE_WEBVIEW_DEBUG_LOGS,
       enableValidation: false,
       enableErrorRecovery: true,
+      customLogger: ENABLE_WEBVIEW_DEBUG_LOGS ? undefined : () => {}
     });
 
     // Logger is automatically provided by BaseManager
 
-    this.logger('initialization', 'starting');
+    if (this.debugLoggingEnabled) {
+      this.logger('initialization', 'starting');
+    }
   }
 
   // Performance optimization: Buffer output and batch writes
@@ -28,6 +38,7 @@ export class PerformanceManager extends BaseManager {
   private bufferFlushTimer: number | null = null;
   private readonly BUFFER_FLUSH_INTERVAL = SPLIT_CONSTANTS.BUFFER_FLUSH_INTERVAL;
   private readonly MAX_BUFFER_SIZE = SPLIT_CONSTANTS.MAX_BUFFER_SIZE;
+  private readonly debugLoggingEnabled = ENABLE_WEBVIEW_DEBUG_LOGS;
 
   // CLI Agent mode for performance optimization
   private isCliAgentMode = false;
@@ -41,11 +52,15 @@ export class PerformanceManager extends BaseManager {
   public scheduleOutputBuffer(data: string, targetTerminal: Terminal): void {
     this.currentBufferTerminal = targetTerminal;
 
+    const normalizedData = data.indexOf('\f') === -1
+      ? data
+      : data.replace(/\f+/g, '\u001b[2J\u001b[H');
+
     // Enhanced buffering strategy for CLI Agent compatibility
-    const isLargeOutput = data.length >= 500; // Reduced from 1000 to 500 for better responsiveness
+    const isLargeOutput = normalizedData.length >= 500; // Reduced from 1000 to 500 for better responsiveness
     const bufferFull = this.outputBuffer.length >= this.MAX_BUFFER_SIZE;
-    const isSmallInput = data.length <= 10; // New: Immediate flush for small inputs (typing)
-    const isModerateOutput = data.length >= 50; // Reduced from 100 to 50
+    const isSmallInput = normalizedData.length <= 10; // New: Immediate flush for small inputs (typing)
+    const isModerateOutput = normalizedData.length >= 50; // Reduced from 100 to 50
 
     // Immediate flush conditions (prioritized for cursor accuracy and input responsiveness)
     // Immediate flush for: large output, buffer full, small inputs (typing), or CLI Agent mode
@@ -57,22 +72,26 @@ export class PerformanceManager extends BaseManager {
 
       // xterm.js automatically preserves scroll position if user has scrolled up
       // The terminal's internal isUserScrolling flag handles this behavior
-      targetTerminal.write(data);
+      targetTerminal.write(normalizedData);
 
-      const reason = isSmallInput
-        ? 'small input (typing)'
-        : this.isCliAgentMode
-          ? 'CLI Agent mode'
-          : isLargeOutput
-            ? 'large output'
-            : 'buffer full';
-      this.logger(`Immediate write: ${data.length} chars (${reason})`);
+      if (this.debugLoggingEnabled) {
+        const reason = isSmallInput
+          ? 'small input (typing)'
+          : this.isCliAgentMode
+            ? 'CLI Agent mode'
+            : isLargeOutput
+              ? 'large output'
+              : 'buffer full';
+        this.logger(`Immediate write: ${normalizedData.length} chars (${reason})`);
+      }
     } else {
-      this.outputBuffer.push(data);
+      this.outputBuffer.push(normalizedData);
       this.scheduleBufferFlush();
-      this.logger(
-        `Buffered write: ${data.length} chars (buffer: ${this.outputBuffer.length}, CLI Agent: ${this.isCliAgentMode})`
-      );
+      if (this.debugLoggingEnabled) {
+        this.logger(
+          `Buffered write: ${normalizedData.length} chars (buffer: ${this.outputBuffer.length}, CLI Agent: ${this.isCliAgentMode})`
+        );
+      }
     }
   }
 
@@ -96,7 +115,11 @@ export class PerformanceManager extends BaseManager {
         try {
           this.flushOutputBuffer();
         } catch (error) {
-          this.logger(`Error during buffer flush: ${error}`);
+          if (this.debugLoggingEnabled) {
+            this.logger(`Error during buffer flush: ${error}`);
+          } else {
+            console.error('[PerformanceManager] Error during buffer flush:', error);
+          }
           // Reset the timer to prevent stuck state
           this.bufferFlushTimer = null;
           // Clear the buffer to prevent memory issues
@@ -104,9 +127,11 @@ export class PerformanceManager extends BaseManager {
         }
       }, flushInterval);
 
-      this.logger(
-        `Scheduled flush in ${flushInterval}ms (CLI Agent: ${this.isCliAgentMode}, buffer size: ${this.outputBuffer.length})`
-      );
+      if (this.debugLoggingEnabled) {
+        this.logger(
+          `Scheduled flush in ${flushInterval}ms (CLI Agent: ${this.isCliAgentMode}, buffer size: ${this.outputBuffer.length})`
+        );
+      }
     }
   }
 
@@ -128,14 +153,22 @@ export class PerformanceManager extends BaseManager {
         try {
           // xterm.js automatically preserves scroll position if user has scrolled up
           this.currentBufferTerminal.write(bufferedData);
-          this.logger(`Flushed buffer: ${bufferedData.length} chars`);
+          if (this.debugLoggingEnabled) {
+            this.logger(`Flushed buffer: ${bufferedData.length} chars`);
+          }
         } catch (error) {
-          this.logger(`Error during buffer flush: ${error}`);
+          if (this.debugLoggingEnabled) {
+            this.logger(`Error during buffer flush: ${error}`);
+          } else {
+            console.error('[PerformanceManager] Error during buffer flush:', error);
+          }
         }
       } else {
-        this.logger(
-          `No terminal available for buffer flush: ${bufferedData.length} chars lost`
-        );
+        if (this.debugLoggingEnabled) {
+          this.logger(
+            `No terminal available for buffer flush: ${bufferedData.length} chars lost`
+          );
+        }
       }
     }
   }
@@ -158,14 +191,18 @@ export class PerformanceManager extends BaseManager {
    * Initialize the PerformanceManager (BaseManager abstract method implementation)
    */
   protected doInitialize(): void {
-    this.logger('initialization', 'completed');
+    if (this.debugLoggingEnabled) {
+      this.logger('initialization', 'completed');
+    }
   }
 
   /**
    * Dispose PerformanceManager resources (BaseManager abstract method implementation)
    */
   protected doDispose(): void {
-    this.logger('disposal', 'starting');
+    if (this.debugLoggingEnabled) {
+      this.logger('disposal', 'starting');
+    }
 
     // Clear any pending buffer flush
     if (this.bufferFlushTimer) {
@@ -178,7 +215,9 @@ export class PerformanceManager extends BaseManager {
     this.currentBufferTerminal = null;
     this.coordinator = null;
 
-    this.logger('disposal', 'completed');
+    if (this.debugLoggingEnabled) {
+      this.logger('disposal', 'completed');
+    }
   }
 
   /**
@@ -186,7 +225,9 @@ export class PerformanceManager extends BaseManager {
    */
   public initializePerformance(coordinator: IManagerCoordinator): void {
     this.coordinator = coordinator;
-    this.logger('initialization', 'completed');
+    if (this.debugLoggingEnabled) {
+      this.logger('initialization', 'completed');
+    }
   }
 
   /**
@@ -195,7 +236,9 @@ export class PerformanceManager extends BaseManager {
   public debouncedResize(cols: number, rows: number, terminal: Terminal, fitAddon: FitAddon): void {
     const resizeKey = `terminal-resize-${cols}x${rows}`;
 
-    this.logger(`Scheduling debounced resize: ${cols}x${rows}`);
+    if (this.debugLoggingEnabled) {
+      this.logger(`Scheduling debounced resize: ${cols}x${rows}`);
+    }
 
     ResizeManager.debounceResize(
       resizeKey,
@@ -203,19 +246,29 @@ export class PerformanceManager extends BaseManager {
         try {
           terminal.resize(cols, rows);
           fitAddon.fit();
-          this.logger(`Debounced resize applied: ${cols}x${rows}`);
+          if (this.debugLoggingEnabled) {
+            this.logger(`Debounced resize applied: ${cols}x${rows}`);
+          }
         } catch (error) {
-          this.logger(`Error during debounced resize: ${error}`);
+          if (this.debugLoggingEnabled) {
+            this.logger(`Error during debounced resize: ${error}`);
+          } else {
+            console.error('[PerformanceManager] Error during debounced resize:', error);
+          }
           throw error; // Let ResizeManager handle the error
         }
       },
       {
         delay: SPLIT_CONSTANTS.RESIZE_DEBOUNCE_DELAY,
         onStart: () => {
-          this.logger(`Starting resize operation for ${cols}x${rows}`);
+          if (this.debugLoggingEnabled) {
+            this.logger(`Starting resize operation for ${cols}x${rows}`);
+          }
         },
         onComplete: () => {
-          this.logger(`Completed resize operation for ${cols}x${rows}`);
+          if (this.debugLoggingEnabled) {
+            this.logger(`Completed resize operation for ${cols}x${rows}`);
+          }
         },
       }
     );
@@ -227,7 +280,9 @@ export class PerformanceManager extends BaseManager {
   public setCliAgentMode(isActive: boolean): void {
     if (this.isCliAgentMode !== isActive) {
       this.isCliAgentMode = isActive;
-      this.logger(`CLI Agent mode: ${isActive ? 'ACTIVE' : 'INACTIVE'}`);
+      if (this.debugLoggingEnabled) {
+        this.logger(`CLI Agent mode: ${isActive ? 'ACTIVE' : 'INACTIVE'}`);
+      }
 
       // Flush immediately when mode changes
       if (!isActive) {
@@ -261,7 +316,9 @@ export class PerformanceManager extends BaseManager {
    * Force immediate flush of all buffers (emergency flush)
    */
   public forceFlush(): void {
-    this.logger('Force flushing all buffers');
+    if (this.debugLoggingEnabled) {
+      this.logger('Force flushing all buffers');
+    }
     this.flushOutputBuffer();
   }
 
@@ -269,7 +326,9 @@ export class PerformanceManager extends BaseManager {
    * Clear all buffers without writing (emergency clear)
    */
   public clearBuffers(): void {
-    this.logger('Clearing all buffers without writing');
+    if (this.debugLoggingEnabled) {
+      this.logger('Clearing all buffers without writing');
+    }
     this.outputBuffer = [];
     if (this.bufferFlushTimer !== null) {
       window.clearTimeout(this.bufferFlushTimer);
@@ -291,7 +350,7 @@ export class PerformanceManager extends BaseManager {
    * Dispose of all timers and cleanup resources
    */
   public override dispose(): void {
-    if (this.logger && typeof this.logger === 'function') {
+    if (this.debugLoggingEnabled) {
       this.logger('Disposing performance manager');
     }
 
@@ -310,7 +369,7 @@ export class PerformanceManager extends BaseManager {
     super.dispose();
 
     // Safe lifecycle logging
-    if (this.logger && typeof this.logger === 'function') {
+    if (this.debugLoggingEnabled) {
       this.logger('PerformanceManager', 'completed');
     }
   }
