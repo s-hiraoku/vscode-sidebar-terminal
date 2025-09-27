@@ -51,7 +51,6 @@ import { PerformanceManager } from './PerformanceManager';
 import { UIManager } from './UIManager';
 import { InputManager } from './InputManager';
 import { RefactoredMessageManager } from './RefactoredMessageManager';
-import { StandardTerminalPersistenceManager } from './StandardTerminalPersistenceManager';
 import { OptimizedTerminalPersistenceManager } from '../services/OptimizedPersistenceManager';
 import { SimplePersistenceManager } from './SimplePersistenceManager';
 import { WebViewApiManager } from './WebViewApiManager';
@@ -407,7 +406,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     findInTerminal?: IFindInTerminalManager;
     profile?: IProfileManager;
     tabs?: ITerminalTabManager;
-    persistence: StandardTerminalPersistenceManager;
+    persistence: OptimizedTerminalPersistenceManager | SimplePersistenceManager | null;
   } {
     return {
       performance: this.performanceManager,
