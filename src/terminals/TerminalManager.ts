@@ -30,6 +30,7 @@ import { TerminalNumberManager } from '../utils/TerminalNumberManager';
 import { CliAgentDetectionService } from '../services/CliAgentDetectionService';
 import { ICliAgentDetectionService } from '../interfaces/CliAgentService';
 import { TerminalSpawner } from './TerminalSpawner';
+import type { IDisposable } from '@homebridge/node-pty-prebuilt-multiarch';
 // Removed unused service imports - these were for the RefactoredTerminalManager which was removed
 
 export class TerminalManager {
@@ -61,6 +62,7 @@ export class TerminalManager {
   private readonly _dataFlushTimers = new Map<string, NodeJS.Timeout>();
   private readonly DATA_FLUSH_INTERVAL = 8; // ~125fps for improved responsiveness
   private readonly MAX_BUFFER_SIZE = 50;
+  private readonly _initialPromptGuards = new Map<string, { dispose: () => void }>();
 
   // CLI Agent detection moved to service - cache removed from TerminalManager
 
@@ -433,26 +435,8 @@ export class TerminalManager {
         log(`⚠️ [TERMINAL] Shell integration injection error: ${error}`);
       }
 
-      // Send delayed clean prompt setup after shell is ready
-      if (ptyProcess && typeof ptyProcess.write === 'function') {
-        try {
-          // Wait for shell to be fully ready, then clean setup
-          setTimeout(() => {
-            try {
-              // Clear screen and setup clean prompt
-              ptyProcess.write('\x1b[2J\x1b[H'); // Clear entire screen
-              ptyProcess.write('PS1="$ "; export PS1\r'); // Set simple prompt
-              ptyProcess.write('clear\r'); // Clear terminal cleanly
-              ptyProcess.write('\r'); // Trigger fresh prompt
-              log(`✅ [TERMINAL] Clean prompt setup sent for: ${terminalId}`);
-            } catch (delayedError) {
-              log(`❌ [TERMINAL] Delayed setup error: ${delayedError}`);
-            }
-          }, 1000); // Wait 1 second for shell to be ready
-        } catch (writeError) {
-          log(`❌ [TERMINAL] Error setting up delayed prompt: ${writeError}`);
-        }
-      }
+      // Kick off deterministic prompt readiness guard
+      this._ensureInitialPrompt(terminalId, ptyProcess);
     } catch (error) {
       log(`⚠️ [TERMINAL] Post-creation initialization error for ${terminalId}:`, error);
     }
@@ -1150,6 +1134,9 @@ export class TerminalManager {
     log('🧹 [TERMINAL] Before deletion - terminals count:', this._terminals.size);
     log('🧹 [TERMINAL] Before deletion - terminal IDs:', Array.from(this._terminals.keys()));
 
+    // Stop any pending prompt readiness guard for this terminal
+    this._cleanupInitialPromptGuard(terminalId);
+
     // Clean up data buffers for this terminal
     this._flushBuffer(terminalId);
     this._dataBuffers.delete(terminalId);
@@ -1190,6 +1177,101 @@ export class TerminalManager {
     log('🧹 [TERMINAL] Notifying state update after cleanup...');
     this._notifyStateUpdate();
     log('🧹 [TERMINAL] === CLEANUP TERMINAL DATA END ===');
+  }
+
+  private _ensureInitialPrompt(terminalId: string, ptyProcess: any): void {
+    this._cleanupInitialPromptGuard(terminalId);
+
+    if (!ptyProcess || typeof ptyProcess.write !== 'function') {
+      log(`⚠️ [TERMINAL] Unable to ensure prompt for ${terminalId} - invalid PTY process`);
+      return;
+    }
+
+    const PROMPT_TIMEOUT_MS = 1200;
+    let promptSeen = false;
+    let timer: NodeJS.Timeout | undefined;
+    let dataDisposable: IDisposable | undefined;
+
+    const guard = {
+      disposed: false,
+      dispose: () => {
+        if (guard.disposed) {
+          return;
+        }
+        guard.disposed = true;
+        if (timer) {
+          clearTimeout(timer);
+          timer = undefined;
+        }
+        if (dataDisposable && typeof dataDisposable.dispose === 'function') {
+          dataDisposable.dispose();
+        }
+        if (this._initialPromptGuards.get(terminalId) === guard) {
+          this._initialPromptGuards.delete(terminalId);
+        }
+      },
+    };
+
+    try {
+      if (ptyProcess.onData) {
+        dataDisposable = ptyProcess.onData((chunk: string) => {
+          if (promptSeen) {
+            return;
+          }
+
+          if (this._hasVisibleOutput(chunk)) {
+            promptSeen = true;
+            log(`✅ [TERMINAL] Initial output detected for ${terminalId}`);
+            guard.dispose();
+          }
+        });
+      }
+    } catch (listenerError) {
+      log(`⚠️ [TERMINAL] Failed to attach prompt listener for ${terminalId}:`, listenerError);
+    }
+
+    timer = setTimeout(() => {
+      if (!promptSeen) {
+        log(
+          `⚠️ [TERMINAL] Initial prompt not detected for ${terminalId} within ${PROMPT_TIMEOUT_MS}ms - sending newline`
+        );
+        try {
+          ptyProcess.write('\r');
+        } catch (writeError) {
+          log(`❌ [TERMINAL] Failed to send newline fallback for ${terminalId}:`, writeError);
+        }
+      }
+      guard.dispose();
+    }, PROMPT_TIMEOUT_MS);
+
+    this._initialPromptGuards.set(terminalId, guard);
+  }
+
+  private _cleanupInitialPromptGuard(terminalId: string): void {
+    const guard = this._initialPromptGuards.get(terminalId);
+    if (guard) {
+      guard.dispose();
+    }
+  }
+
+  private _hasVisibleOutput(data: string): boolean {
+    if (!data) {
+      return false;
+    }
+
+    if (data.includes(']633;')) {
+      return true;
+    }
+
+    const cleaned = data
+      .replace(/\x1b\[[0-9;?]*[A-Za-z]/g, '')
+      .replace(/\x1b\][^\x07]*\x07/g, '')
+      .replace(/\x1b[P^_].*?\x1b\\/g, '')
+      .replace(/\u0007/g, '')
+      .replace(/[\r\n]/g, '')
+      .trim();
+
+    return cleaned.length > 0;
   }
 
   /**

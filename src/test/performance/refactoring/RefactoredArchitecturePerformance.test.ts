@@ -34,11 +34,34 @@ describe('Refactored Architecture Performance Tests', () => {
           appendChild: sandbox.stub(),
           removeChild: sandbox.stub(),
           innerHTML: '',
+          addEventListener: sandbox.stub(),
+          removeEventListener: sandbox.stub(),
+          click: sandbox.stub(),
+          focus: sandbox.stub(),
+          style: {},
+          classList: {
+            add: sandbox.stub(),
+            remove: sandbox.stub(),
+            toggle: sandbox.stub(),
+            contains: sandbox.stub().returns(false),
+          },
         }),
         createElement: sandbox.stub().returns({
           appendChild: sandbox.stub(),
           setAttribute: sandbox.stub(),
+          addEventListener: sandbox.stub(),
+          removeEventListener: sandbox.stub(),
+          click: sandbox.stub(),
+          focus: sandbox.stub(),
           style: {},
+          classList: {
+            add: sandbox.stub(),
+            remove: sandbox.stub(),
+            toggle: sandbox.stub(),
+            contains: sandbox.stub().returns(false),
+          },
+          innerHTML: '',
+          textContent: '',
         }),
       };
     }
@@ -60,9 +83,20 @@ describe('Refactored Architecture Performance Tests', () => {
       propose: sandbox.stub()
     });
 
-    (window as any).acquireVsCodeApi = () => ({
-      postMessage: sandbox.stub()
-    });
+    // Mock window object if not available
+    if (typeof window === 'undefined') {
+      (global as any).window = {
+        acquireVsCodeApi: () => ({
+          postMessage: sandbox.stub()
+        }),
+        addEventListener: sandbox.stub(),
+        removeEventListener: sandbox.stub(),
+      };
+    } else {
+      (window as any).acquireVsCodeApi = () => ({
+        postMessage: sandbox.stub()
+      });
+    }
   });
 
   afterEach(() => {
@@ -73,6 +107,9 @@ describe('Refactored Architecture Performance Tests', () => {
     // Clean up global mocks
     if ((global as any).document && typeof document === 'undefined') {
       delete (global as any).document;
+    }
+    if ((global as any).window && typeof window === 'undefined') {
+      delete (global as any).window;
     }
 
     sandbox.restore();
