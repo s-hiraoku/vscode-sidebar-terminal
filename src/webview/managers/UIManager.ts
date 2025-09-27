@@ -32,6 +32,7 @@ export class UIManager extends BaseManager implements IUIManager {
 
   // Header elements cache for efficient CLI Agent status updates
   private headerElementsCache = new Map<string, TerminalHeaderElements>();
+  private highlightActiveBorderEnabled = true;
 
   // Event registry for proper cleanup
   protected eventRegistry: EventHandlerRegistry;
@@ -126,6 +127,11 @@ export class UIManager extends BaseManager implements IUIManager {
     uiLogger.info(`Updated split terminal borders, active: ${activeTerminalId}`);
   }
 
+  public setHighlightActiveBorder(enabled: boolean): void {
+    this.highlightActiveBorderEnabled = enabled;
+    uiLogger.info(`Active border highlight ${enabled ? 'enabled' : 'disabled'}`);
+  }
+
   /**
    * Update border for a single terminal container
    */
@@ -144,27 +150,36 @@ export class UIManager extends BaseManager implements IUIManager {
       container.classList.add('active');
       container.classList.remove('inactive');
 
-      // 🎯 FIX: Apply refined border styling - thinner border as requested
-      // Use a single source of truth for active terminal borders
-      container.style.setProperty(
-        'border',
-        `1px solid ${WEBVIEW_THEME_CONSTANTS.ACTIVE_BORDER_COLOR}`,
-        'important'
-      );
-      container.style.setProperty('border-radius', '4px', 'important');
-      // Enhanced visibility with subtle shadow
-      container.style.setProperty(
-        'box-shadow',
-        `0 0 0 1px ${WEBVIEW_THEME_CONSTANTS.ACTIVE_BORDER_COLOR}, 0 0 8px rgba(0, 122, 204, 0.2)`,
-        'important'
-      );
-      // Ensure proper z-index for visibility
-      container.style.setProperty('z-index', '2', 'important');
+      if (this.highlightActiveBorderEnabled) {
+        // 🎯 FIX: Apply refined border styling - thinner border as requested
+        // Use a single source of truth for active terminal borders
+        container.style.setProperty(
+          'border',
+          `1px solid ${WEBVIEW_THEME_CONSTANTS.ACTIVE_BORDER_COLOR}`,
+          'important'
+        );
+        container.style.setProperty('border-radius', '4px', 'important');
+        // Enhanced visibility with subtle shadow
+        container.style.setProperty(
+          'box-shadow',
+          `0 0 0 1px ${WEBVIEW_THEME_CONSTANTS.ACTIVE_BORDER_COLOR}, 0 0 8px rgba(0, 122, 204, 0.2)`,
+          'important'
+        );
+        // Ensure proper z-index for visibility
+        container.style.setProperty('z-index', '2', 'important');
 
-      console.log(`🔍 [DEBUG] Applied ACTIVE border styles`, {
-        borderColor: WEBVIEW_THEME_CONSTANTS.ACTIVE_BORDER_COLOR,
-        computedStyle: window.getComputedStyle(container).border,
-      });
+        console.log(`🔍 [DEBUG] Applied ACTIVE border styles`, {
+          borderColor: WEBVIEW_THEME_CONSTANTS.ACTIVE_BORDER_COLOR,
+          computedStyle: window.getComputedStyle(container).border,
+        });
+      } else {
+        container.style.setProperty('border', '1px solid transparent', 'important');
+        container.style.setProperty('border-radius', '4px', 'important');
+        container.style.setProperty('box-shadow', 'none', 'important');
+        container.style.setProperty('z-index', '1', 'important');
+
+        console.log('🔍 [DEBUG] Active border highlight disabled; applied transparent border');
+      }
     } else {
       container.classList.remove('active');
       container.classList.add('inactive');

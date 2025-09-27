@@ -162,27 +162,7 @@ export class TerminalTabList {
       }
 
       .terminal-tab-close {
-        width: 16px;
-        height: 16px;
-        margin-left: 6px;
-        border: none;
-        background: transparent;
-        color: inherit;
-        cursor: pointer;
-        border-radius: 2px;
-        flex-shrink: 0;
-        opacity: 0;
-        transition: opacity 0.1s ease;
-      }
-
-      .terminal-tab:hover .terminal-tab-close,
-      .terminal-tab.active .terminal-tab-close {
-        opacity: 0.8;
-      }
-
-      .terminal-tab-close:hover {
-        background: var(--vscode-toolbar-hoverBackground);
-        opacity: 1;
+        display: none;
       }
 
       .terminal-tab-actions {
@@ -337,7 +317,6 @@ export class TerminalTabList {
       ${tab.icon ? `<span class="terminal-tab-icon codicon codicon-${tab.icon}"></span>` : ''}
       <span class="terminal-tab-label" title="${tab.name}">${tab.name}</span>
       ${tab.isDirty ? '<span class="terminal-tab-dirty-indicator"></span>' : ''}
-      ${tab.isClosable ? '<button class="terminal-tab-close codicon codicon-close" title="Close"></button>' : ''}
     `;
 
     if (tab.color) {
@@ -352,20 +331,9 @@ export class TerminalTabList {
       this.events.onTabClick(tab.id);
     });
 
-    // Close button
-    const closeButton = tabElement.querySelector('.terminal-tab-close');
-    if (closeButton) {
-      closeButton.addEventListener('click', (e) => {
-        e.stopPropagation();
-        this.events.onTabClose(tab.id);
-      });
-    }
+    // Close button (removed)
 
-    // Double-click to rename
-    tabElement.addEventListener('dblclick', (e) => {
-      e.preventDefault();
-      this.startRename(tab.id);
-    });
+    // Double-click to rename (disabled)
 
     // Drag and drop
     this.setupDragAndDrop(tabElement, tab);
@@ -501,13 +469,8 @@ export class TerminalTabList {
     `;
 
     const menuItems = [
-      { label: 'Rename', action: () => this.startRename(tab.id) },
       { label: 'Duplicate', action: () => console.log('Duplicate tab') },
       { label: 'Move to New Window', action: () => console.log('Move to new window') },
-      { label: '---' },
-      { label: 'Close', action: () => this.events.onTabClose(tab.id), disabled: !tab.isClosable },
-      { label: 'Close Others', action: () => console.log('Close others') },
-      { label: 'Close All', action: () => console.log('Close all') },
     ];
 
     menuItems.forEach((item) => {
@@ -524,24 +487,22 @@ export class TerminalTabList {
       menuItem.textContent = item.label;
       menuItem.style.cssText = `
         padding: 6px 12px;
-        cursor: ${item.disabled ? 'default' : 'pointer'};
-        color: ${item.disabled ? 'var(--vscode-disabledForeground)' : 'var(--vscode-menu-foreground)'};
+        cursor: pointer;
+        color: var(--vscode-menu-foreground);
       `;
 
-      if (!item.disabled) {
-        menuItem.addEventListener('mouseenter', () => {
-          menuItem.style.background = 'var(--vscode-menu-selectionBackground)';
-        });
-        menuItem.addEventListener('mouseleave', () => {
-          menuItem.style.background = 'transparent';
-        });
-        menuItem.addEventListener('click', () => {
-          if (item.action) {
-            item.action();
-          }
-          document.body.removeChild(menu);
-        });
-      }
+      menuItem.addEventListener('mouseenter', () => {
+        menuItem.style.background = 'var(--vscode-menu-selectionBackground)';
+      });
+      menuItem.addEventListener('mouseleave', () => {
+        menuItem.style.background = 'transparent';
+      });
+      menuItem.addEventListener('click', () => {
+        if (item.action) {
+          item.action();
+        }
+        document.body.removeChild(menu);
+      });
 
       menu.appendChild(menuItem);
     });

@@ -324,6 +324,14 @@ export class ExtensionLifecycle {
         },
       },
 
+      {
+        command: 'secondaryTerminal.selectProfile',
+        handler: () => {
+          log('🔧 [DEBUG] Command executed: selectProfile');
+          this.sidebarProvider?.selectProfile();
+        },
+      },
+
       // ======================= 設定コマンド =======================
       {
         command: 'secondaryTerminal.openSettings',

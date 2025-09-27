@@ -7,7 +7,8 @@
         "-y",
         "@playwright/mcp@latest"
       ],
-      "env": {}
+      "env": {},
+      "disabled": true
     },
     "arxiv-mcp-server": {
       "type": "stdio",
@@ -15,7 +16,10 @@
       "args": [
         "arxiv-mcp-server"
       ],
-      "env": {}
+      "env": {
+        "UV_CACHE_DIR": "/Volumes/SSD/development/workspace/vscode-sidebar-terminal/for-publish/temp_out/uv-cache"
+      },
+      "disabled": true
     },
     "deepwiki": {
       "type": "stdio",
@@ -23,7 +27,10 @@
       "args": [
         "deepwiki-mcp"
       ],
-      "env": {}
+      "env": {
+        "UV_CACHE_DIR": "/Volumes/SSD/development/workspace/vscode-sidebar-terminal/for-publish/temp_out/uv-cache"
+      },
+      "disabled": true
     },
     "context7": {
       "type": "stdio",
@@ -31,7 +38,22 @@
       "args": [
         "context7-mcp-server"
       ],
-      "env": {}
+      "env": {
+        "UV_CACHE_DIR": "/Volumes/SSD/development/workspace/vscode-sidebar-terminal/for-publish/temp_out/uv-cache"
+      },
+      "disabled": true
+    },
+    "brave-search": {
+      "disabled": true
+    },
+    "chrome-devtools": {
+      "disabled": true
+    },
+    "firecrawl": {
+      "disabled": true
+    },
+    "memory": {
+      "disabled": true
     }
   }
 }

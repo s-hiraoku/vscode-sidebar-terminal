@@ -31,6 +31,7 @@
 - **CodeRabbit CLI Integration**: Custom slash command support for AI code reviews with smart mode selection
 - **GitHub Copilot Integration**: File reference shortcuts with `#file:` format (CMD+K CMD+C)
 - **Gemini CLI Support**: Complete integration with `gemini code` commands
+- **Always-Visible Status**: AI agent status remains permanently visible once detected (v0.1.101+)
 - **Real-time Status Tracking**: Live AI agent status indicators with connection/disconnection detection
 - **Smart Toggle Controls**: One-click AI agent switching with status-aware button visibility
 - **Manual Reset Functionality**: Force reconnect AI agents when detection issues occur
@@ -40,6 +41,7 @@
 - **Alt+Click Cursor Positioning**: VS Code-standard cursor positioning with intelligent CLI agent conflict detection
 - **Smart File Reference System**: Instantly share code with AI agents using CMD+Option+L - automatically targets "AI Agent Connected" terminals
 - **Multi-Agent Workflow**: Seamlessly work with multiple AI agents across different terminals simultaneously
+- **Simplified Tab Interface**: Clean terminal tabs without close buttons for streamlined workflow (v0.1.101+)
 - **IME Support**: Full Japanese and multi-language input method support
 - **Split Terminal Views**: Vertical and horizontal terminal splitting optimized for AI agent workflows
 - **Command Palette Integration**: Full VS Code command palette support

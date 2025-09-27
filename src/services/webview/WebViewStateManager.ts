@@ -53,6 +53,7 @@ export class WebViewStateManager implements IWebViewStateManager {
         multiCursorModifier: altClickSettings.multiCursorModifier,
         // CLI Agent integration settings
         enableCliAgentIntegration: config.get<boolean>('enableCliAgentIntegration', true),
+        highlightActiveBorder: config.get<boolean>('highlightActiveBorder', true),
         // Dynamic split direction settings (Issue #148)
         dynamicSplitDirection: config.get<boolean>('dynamicSplitDirection', true),
         panelLocation: config.get<'auto' | 'sidebar' | 'panel'>('panelLocation', 'auto'),
@@ -65,6 +66,7 @@ export class WebViewStateManager implements IWebViewStateManager {
         altClickMovesCursor: false,
         multiCursorModifier: 'alt',
         enableCliAgentIntegration: true,
+        highlightActiveBorder: true,
         dynamicSplitDirection: true,
         panelLocation: 'auto',
       };
