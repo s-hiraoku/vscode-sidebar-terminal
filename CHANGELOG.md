@@ -5,6 +5,17 @@ All notable changes to the "Secondary Terminal" extension will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.102] - 2025-09-29
+
+### Improved
+- **Terminal Tab UI**: Made tabs more compact and visually lighter
+  - Reduced tab height from 32px to 24px for a slimmer profile
+  - Decreased padding and margins for more efficient space usage
+  - Removed font weight (bold) for cleaner, lighter text appearance
+  - Centered text both horizontally and vertically within tabs
+  - Reduced icon and font sizes for better proportions
+  - Overall more streamlined and space-efficient tab interface
+
 ## [0.1.101] - 2025-09-27
 
 ### Added
