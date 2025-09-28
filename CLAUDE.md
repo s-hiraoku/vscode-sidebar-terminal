@@ -23,6 +23,26 @@ npm run pre-release:check   # Comprehensive pre-release validation
 ```
 
 ### Release Management
+
+#### Automated GitHub Actions Release (RECOMMENDED)
+```bash
+# 1. Update version and commit changes
+npm version patch --no-git-tag-version  # or minor/major
+# Update CHANGELOG.md with release notes
+git add -A && git commit -m "v{version}: Release description"
+
+# 2. Create and push git tag to trigger automated release
+git tag v{version}           # e.g., v0.1.103
+git push origin v{version}   # Triggers GitHub Actions workflow
+
+# This automatically:
+# - Runs TDD quality gate and pre-release checks
+# - Builds packages for 9 platforms (Windows/macOS/Linux variants)
+# - Creates GitHub Release with auto-generated notes
+# - Publishes to VS Code Marketplace with all platform variants
+```
+
+#### Manual Release (Fallback)
 ```bash
 # Safe releases (with automatic backup and quality checks)
 npm run release:patch:safe   # 0.0.x version bump
@@ -179,8 +199,44 @@ permissions:
 ### Workflow Dependencies
 - **CI**: Main test pipeline (may timeout on Ubuntu)
 - **TDD Quality Check**: Validates TDD compliance
-- **Build Platform-Specific**: Creates platform packages
+- **Build Platform-Specific**: Creates platform packages and automated releases
 - **CodeQL**: Security scanning (check regex patterns)
+
+### GitHub Actions Release Workflow
+The automated release system (`build-platform-packages.yml`) provides:
+
+#### Triggered by Git Tags
+- **Trigger**: Push git tag `v*` (e.g., `v0.1.103`)
+- **Branches**: Runs on `main` and `for-publish` branches
+
+#### Release Pipeline
+1. **Pre-Release Quality Gate**:
+   - TDD compliance check with comprehensive test suite
+   - Blocks release if quality standards not met
+   - Generates TDD compliance report for release
+
+2. **Multi-Platform Build Matrix**:
+   - **Windows**: win32-x64, win32-arm64
+   - **macOS**: darwin-x64, darwin-arm64
+   - **Linux**: linux-x64, linux-arm64, linux-armhf
+   - **Alpine**: alpine-x64, alpine-arm64
+
+3. **Automated Release Creation**:
+   - Creates GitHub Release with auto-generated notes
+   - Uploads all platform-specific VSIX files
+   - Marks pre-releases automatically for version tags containing `-`
+
+4. **VS Code Marketplace Publishing**:
+   - Publishes all platform variants to Marketplace
+   - Uses `VSCE_PAT` secret for authentication
+   - Ensures users get optimized binaries for their platform
+
+#### Required Secrets
+- `VSCE_PAT`: Personal Access Token for VS Code Marketplace publishing
+
+#### Monitoring
+- View workflow status: https://github.com/s-hiraoku/vscode-sidebar-terminal/actions
+- Release dashboard: https://github.com/s-hiraoku/vscode-sidebar-terminal/releases
 
 ## Debugging Tips
 
