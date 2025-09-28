@@ -80,8 +80,8 @@ export class TerminalTabList {
         flex-direction: column;
         background: var(--vscode-tab-inactiveBackground);
         border-bottom: 1px solid var(--vscode-tab-border);
-        height: 32px;
-        min-height: 32px;
+        height: 24px;
+        min-height: 24px;
         overflow: hidden;
       }
 
@@ -107,10 +107,11 @@ export class TerminalTabList {
       .terminal-tab {
         display: flex;
         align-items: center;
-        padding: 0 12px;
-        min-width: 120px;
-        max-width: 240px;
-        height: 32px;
+        justify-content: center;
+        padding: 0 8px;
+        min-width: 100px;
+        max-width: 200px;
+        height: 24px;
         background: var(--vscode-tab-inactiveBackground);
         color: var(--vscode-tab-inactiveForeground);
         border-right: 1px solid var(--vscode-tab-border);
@@ -118,6 +119,7 @@ export class TerminalTabList {
         user-select: none;
         position: relative;
         transition: background-color 0.1s ease;
+        font-weight: normal;
       }
 
       .terminal-tab:hover {
@@ -128,7 +130,7 @@ export class TerminalTabList {
       .terminal-tab.active {
         background: var(--vscode-tab-activeBackground);
         color: var(--vscode-tab-activeForeground);
-        border-bottom: 2px solid var(--vscode-tab-activeBorder, var(--vscode-focusBorder));
+        border-bottom: 1px solid var(--vscode-tab-activeBorder, var(--vscode-focusBorder));
       }
 
       .terminal-tab.dragging {
@@ -138,10 +140,13 @@ export class TerminalTabList {
       }
 
       .terminal-tab-icon {
-        width: 16px;
-        height: 16px;
-        margin-right: 6px;
+        width: 14px;
+        height: 14px;
+        margin-right: 4px;
         flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
 
       .terminal-tab-label {
@@ -149,15 +154,18 @@ export class TerminalTabList {
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-        font-size: 13px;
+        font-size: 12px;
+        font-weight: normal;
+        text-align: center;
+        line-height: 24px;
       }
 
       .terminal-tab-dirty-indicator {
-        width: 8px;
-        height: 8px;
+        width: 6px;
+        height: 6px;
         border-radius: 50%;
         background: var(--vscode-gitDecoration-modifiedResourceForeground);
-        margin-left: 6px;
+        margin-left: 4px;
         flex-shrink: 0;
       }
 
@@ -168,13 +176,13 @@ export class TerminalTabList {
       .terminal-tab-actions {
         display: flex;
         align-items: center;
-        padding: 0 4px;
+        padding: 0 2px;
         border-left: 1px solid var(--vscode-tab-border);
       }
 
       .terminal-tab-add {
-        width: 24px;
-        height: 24px;
+        width: 20px;
+        height: 20px;
         border: none;
         background: transparent;
         color: var(--vscode-tab-inactiveForeground);
