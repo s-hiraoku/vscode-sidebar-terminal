@@ -38,6 +38,8 @@
 - **Timeout-based Detection**: Intelligent timeout handling for reliable state management
 
 ### 🔧 **Developer Experience**
+- **Version Information Display**: Built-in version display in Terminal Settings with "About" section and command palette support (v0.1.105+)
+- **Streamlined UI**: Compact "SC" panel title for cleaner activity bar (v0.1.105+)
 - **Alt+Click Cursor Positioning**: VS Code-standard cursor positioning with intelligent CLI agent conflict detection
 - **Smart File Reference System**: Instantly share code with AI agents using CMD+Option+L - automatically targets "AI Agent Connected" terminals
 - **Multi-Agent Workflow**: Seamlessly work with multiple AI agents across different terminals simultaneously
@@ -87,6 +89,19 @@ Optimized for modern developers who need to use multiple AI agents simultaneousl
 | `Alt+Click` | **Cursor Positioning** | Position terminal cursor (VS Code standard behavior) |
 | `Ctrl+Shift+D` | **Debug Panel** | Toggle real-time system monitoring panel |
 | `Ctrl+Shift+X` | **Export Diagnostics** | Export system diagnostics to clipboard |
+
+## 🎮 Command Palette Commands
+
+Access these commands via `Ctrl+Shift+P` (Windows/Linux) or `Cmd+Shift+P` (Mac):
+
+| Command | Description |
+|---------|-------------|
+| `Secondary Terminal: Show Version` | Display extension version information |
+| `Secondary Terminal: Focus Terminal` | Focus on the terminal panel |
+| `Secondary Terminal: Split Terminal` | Split terminal vertically |
+| `Secondary Terminal: Split Terminal Horizontal` | Split terminal horizontally |
+| `Secondary Terminal: Clear Corrupted History` | Clear corrupted terminal session history |
+| `Secondary Terminal: Manage Terminal Profiles` | Open terminal profile manager |
 
 ## 🏗️ Architecture Overview
 
@@ -403,7 +418,20 @@ The project uses GitHub Actions for automated testing and releases:
 
 ## 📈 Version History
 
-### v0.1.95 (Current) - 📁 **Documentation Organization & Codex CLI Support**
+### v0.1.105 (Current) - 🏷️ **Version Information Display & UI Refinements**
+- 🏷️ **Version Display**: Added version information display in Terminal Settings with "About" section
+- 🎯 **Command Palette**: Added "Show Version" command for quick version checking
+- 📦 **VersionUtils Class**: Created utility class to dynamically retrieve version from package.json
+- 🎨 **Compact UI**: Changed activity bar title from "Secondary Terminal" to "SC" for cleaner interface
+- 🔧 **Type Safety**: Fixed TypeScript compilation errors for production-ready builds
+
+### v0.1.104 - 🤖 **GitHub Copilot CLI Support & Enhanced AI Detection**
+- 🆕 **GitHub Copilot CLI**: Added full support for GitHub Copilot CLI integration
+- 🎯 **Simplified Detection**: Streamlined AI agent detection patterns for better reliability
+- 🔄 **Reconnection Fix**: Fixed disconnected AI agent reconnection issues
+- 📈 **Detection Accuracy**: Improved pattern matching across all AI agents
+
+### v0.1.95 - 📁 **Documentation Organization & Codex CLI Support**
 - 📁 **Documentation Structure**: Organized 25+ documentation files into categorized `/docs/` directory structure
 - 📖 **Enhanced Navigation**: Created comprehensive docs/README.md with structured directory navigation
 - 🤖 **Codex CLI Integration**: Added support for OpenAI Codex CLI with complete AI agent functionality
