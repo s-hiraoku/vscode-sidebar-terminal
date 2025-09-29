@@ -175,8 +175,9 @@ Press `CMD+Option+L` (Mac) or `Ctrl+Alt+L` (Win/Linux) while editing a file to i
 
 #### Gemini CLI (Google)
 - **Launch Command**: `gemini code "your development task"`
+- **ASCII Art Detection**: Recognizes unique GEMINI startup graphics and visual indicators
 - **Session Management**: Complete lifecycle tracking and restoration
-- **Auto-Detection**: Intelligent startup and termination recognition
+- **Auto-Detection**: Intelligent startup and termination recognition with visual pattern matching
 - **File References**: Full `@filename` support
 - **Best For**: Code generation, debugging, performance optimization
 
@@ -348,6 +349,10 @@ The project maintains strict quality standards:
 
 1. **Terminal Management**: Creation, deletion, switching, and lifecycle
 2. **AI Agent Integration**: Detection, status tracking, and command processing
+   - Strategy pattern for agent-specific detection logic
+   - Simplified detection patterns to reduce false positives
+   - ASCII art recognition for unique agent startup graphics
+   - Standardized activity detection across all supported agents
 3. **Session Persistence**: Save/restore functionality across restarts
 4. **Performance**: Buffering, flushing, and memory management
 5. **UI Components**: Header management, status displays, and user interactions

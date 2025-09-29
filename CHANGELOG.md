@@ -18,7 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Simplified AI Agent Detection**: Streamlined detection patterns for better reliability
   - Claude Code now detected simply by "Welcome to Claude Code!" message
   - OpenAI Codex detected by "OpenAI Codex" message
+  - GitHub Copilot CLI detected by "Welcome to GitHub Copilot CLI" message
+  - Gemini CLI now supports ASCII art detection for unique startup graphics
   - Removed complex pattern matching for cleaner, more maintainable code
+  - Standardized activity detection across all agents to reduce false positives
   - Improved detection accuracy and reduced false positives
 
 ### Fixed
