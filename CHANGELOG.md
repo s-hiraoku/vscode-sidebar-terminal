@@ -5,6 +5,28 @@ All notable changes to the "Secondary Terminal" extension will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **GitHub Copilot CLI Support**: Added detection for GitHub Copilot CLI
+  - Detects "Welcome to GitHub Copilot CLI" startup message
+  - Supports `copilot` and `gh copilot` command detection
+  - Full integration with status indicators and state management
+  - Compatible with connected/disconnected state transitions
+
+### Changed
+- **Simplified AI Agent Detection**: Streamlined detection patterns for better reliability
+  - Claude Code now detected simply by "Welcome to Claude Code!" message
+  - OpenAI Codex detected by "OpenAI Codex" message
+  - Removed complex pattern matching for cleaner, more maintainable code
+  - Improved detection accuracy and reduced false positives
+
+### Fixed
+- **Disconnected Agent Reconnection**: Fixed issue where disconnected AI agents couldn't be re-detected
+  - Removed skip logic that prevented startup detection for disconnected agents
+  - Disconnected agents can now properly transition back to connected state on restart
+  - Improved state management for seamless agent reconnection
+
 ## [0.1.103] - 2025-09-29
 
 ### Fixed

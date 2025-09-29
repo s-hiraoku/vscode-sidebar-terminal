@@ -1409,7 +1409,7 @@ export class TerminalManager {
    */
   public getDisconnectedAgents(): Map<
     string,
-    { type: 'claude' | 'gemini' | 'codex'; startTime: Date; terminalName?: string }
+    { type: 'claude' | 'gemini' | 'codex' | 'copilot'; startTime: Date; terminalName?: string }
   > {
     return this._cliAgentService.getDisconnectedAgents();
   }

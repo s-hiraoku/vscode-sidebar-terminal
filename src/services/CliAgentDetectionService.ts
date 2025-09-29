@@ -216,18 +216,18 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
     };
   }
 
-  getConnectedAgent(): { terminalId: string; type: 'claude' | 'gemini' | 'codex' } | null {
+  getConnectedAgent(): { terminalId: string; type: 'claude' | 'gemini' | 'codex' | 'copilot' } | null {
     const terminalId = this.stateManager.getConnectedAgentTerminalId();
     const type = this.stateManager.getConnectedAgentType();
 
     if (terminalId && type) {
-      return { terminalId, type: type as 'claude' | 'gemini' | 'codex' };
+      return { terminalId, type: type as 'claude' | 'gemini' | 'codex' | 'copilot' };
     }
 
     return null;
   }
 
-  getDisconnectedAgents(): Map<string, { type: 'claude' | 'gemini' | 'codex'; startTime: Date }> {
+  getDisconnectedAgents(): Map<string, { type: 'claude' | 'gemini' | 'codex' | 'copilot'; startTime: Date }> {
     return this.stateManager.getDisconnectedAgents();
   }
 
@@ -274,7 +274,7 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
    */
   forceReconnectAgent(
     terminalId: string,
-    agentType: 'claude' | 'gemini' | 'codex' = 'claude',
+    agentType: 'claude' | 'gemini' | 'codex' | 'copilot' = 'claude',
     terminalName?: string
   ): boolean {
     log(
@@ -353,7 +353,7 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
    * 🔄 BACKWARD COMPATIBILITY: Set agent connected (delegates to state manager)
    * This method maintains compatibility with existing tests
    */
-  setAgentConnected(terminalId: string, type: 'claude' | 'gemini' | 'codex', terminalName?: string): void {
+  setAgentConnected(terminalId: string, type: 'claude' | 'gemini' | 'codex' | 'copilot', terminalName?: string): void {
     this.stateManager.setConnectedAgent(terminalId, type, terminalName);
   }
 
@@ -520,12 +520,12 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
 
             return null; // Termination handled, no detection result needed
           }
-          // Skip startup detection for disconnected agents - they're already known agents
-          continue;
+          // 🔧 FIX: Allow startup detection for disconnected agents to detect re-connection
+          // Do NOT skip startup detection here - disconnected agents can restart
         }
 
-        // Check for startup patterns (only for non-connected and non-disconnected agents)
-        // Already filtered out disconnected agents above, so we can proceed directly
+        // Check for startup patterns (for non-connected agents and disconnected agents that may restart)
+        // Connected agents are already filtered out above to prevent state churn
         {
           // 🔧 REFACTORED: Use extracted output detection services
           // Claude startup detection

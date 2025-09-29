@@ -95,7 +95,7 @@ Optimized for modern developers who need to use multiple AI agents simultaneousl
 #### Extension Host (Node.js)
 - **TerminalManager**: Manages PTY processes, terminal lifecycle, and AI agent detection
 - **RefactoredSecondaryTerminalProvider**: WebView provider with comprehensive message handling
-- **AI Agent Services**: Dedicated services for Claude, Gemini, and Copilot integration
+- **AI Agent Services**: Dedicated services for Claude, Gemini, Codex, and GitHub Copilot CLI integration
 - **Session Management**: Persistent terminal state across VS Code sessions
 
 #### WebView (Browser Environment)
@@ -126,6 +126,9 @@ claude-code "help me with this React component"
 # Codex CLI (OpenAI)
 codex "generate unit tests for this function"
 
+# GitHub Copilot CLI
+copilot "explain this error message"
+
 # Gemini CLI (Google)
 gemini code "optimize this Python function"
 
@@ -148,12 +151,12 @@ Press `CMD+Option+L` (Mac) or `Ctrl+Alt+L` (Win/Linux) while editing a file to i
 - **Status Detection**: Real-time connection/disconnection monitoring
 - **Best For**: Complex reasoning tasks, code refactoring, architectural decisions
 
-#### GitHub Copilot
-- **Activation**: `CMD+K CMD+C` (Mac) or `Ctrl+K Ctrl+C` (Win/Linux)
-- **File Context**: Automatically includes current file with `#file:` reference
-- **Integration**: Seamless VS Code native chat experience
-- **Status Tracking**: Shows when Copilot Chat is active
-- **Best For**: Code completion, quick fixes, inline suggestions
+#### GitHub Copilot CLI
+- **Launch Command**: `copilot` or `gh copilot`
+- **Auto-Detection**: Detects "Welcome to GitHub Copilot CLI" message
+- **Session Management**: Full lifecycle tracking with connected/disconnected states
+- **File References**: Supports `@filename` context sharing
+- **Best For**: AI-powered CLI assistance, command suggestions, code explanations
 
 #### Codex CLI (OpenAI)
 - **Launch Command**: `codex "your development task"`
@@ -185,10 +188,13 @@ Press `CMD+Option+L` (Mac) or `Ctrl+Alt+L` (Win/Linux) while editing a file to i
    # Terminal 1: Claude Code for architecture
    claude-code "help design this system"
 
-   # Terminal 2: Codex for implementation
-   codex "implement the user service with TypeScript"
+   # Terminal 2: GitHub Copilot CLI for implementation
+   copilot "implement the user service with TypeScript"
 
-   # Terminal 3: Gemini for optimization
+   # Terminal 3: Codex for testing
+   codex "create comprehensive unit tests"
+
+   # Terminal 4: Gemini for optimization
    gemini code "optimize the user service performance"
    ```
 
