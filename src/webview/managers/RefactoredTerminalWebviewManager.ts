@@ -92,9 +92,13 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
   private uiManager!: UIManager;
   public inputManager!: InputManager;
   public messageManager!: RefactoredMessageManager;
-  public persistenceManager: OptimizedTerminalPersistenceManager | SimplePersistenceManager | null = null;
+  public persistenceManager: OptimizedTerminalPersistenceManager | SimplePersistenceManager | null =
+    null;
   public optimizedPersistenceManager!: OptimizedTerminalPersistenceManager;
   public simplePersistenceManager!: SimplePersistenceManager;
+
+  // バージョン情報
+  private versionInfo: string = 'v0.1.0';
 
   // 設定管理
   private currentSettings: PartialTerminalSettings = {
@@ -847,7 +851,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       const highlightActiveBorder =
         settings.highlightActiveBorder !== undefined
           ? settings.highlightActiveBorder
-          : this.currentSettings.highlightActiveBorder ?? true;
+          : (this.currentSettings.highlightActiveBorder ?? true);
 
       this.currentSettings = {
         ...this.currentSettings,
@@ -952,7 +956,6 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
 
     log(`🗑️ [PANEL] killTerminal message sent to extension`);
   }
-
 
   public updateState(state: unknown): void {
     try {
@@ -1240,7 +1243,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
 
     debugElement.innerHTML = `
       <button style="position: absolute; top: 8px; right: 8px; background: none; border: none; color: #fff; font-size: 16px; cursor: pointer; padding: 0; width: 20px; height: 20px;" onclick="this.parentElement.remove(); window.terminalManager && (window.terminalManager.debugMode = false);">×</button>
-      
+
       <div style="margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #444;">
         <div style="color: #fbbf24; font-weight: bold; font-size: 12px;">🔍 Terminal State Debug Panel</div>
         <div style="color: #94a3b8; font-size: 10px; margin-top: 2px;">Last Update: ${new Date().toLocaleTimeString()}</div>
@@ -1354,8 +1357,8 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
               .join('')}
           </div>
           <div style="font-size: 10px; color: #9ca3af;">
-            <span style="color: #ef4444;">● Used</span> | 
-            <span style="color: #10b981;">○ Available</span> | 
+            <span style="color: #ef4444;">● Used</span> |
+            <span style="color: #10b981;">○ Available</span> |
             <span style="color: #6b7280;">◌ Unavailable</span>
           </div>
         </div>
@@ -1377,15 +1380,15 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       <div style="margin-top: 12px; padding-top: 8px; border-top: 1px solid #444;">
         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
           <button onclick="window.terminalManager?.forceSynchronization()" style="
-            background: #ef4444; color: white; border: none; padding: 4px 8px; 
+            background: #ef4444; color: white; border: none; padding: 4px 8px;
             border-radius: 4px; font-size: 10px; cursor: pointer; font-weight: bold;
           ">🔄 Force Sync</button>
           <button onclick="window.terminalManager?.requestLatestState()" style="
-            background: #3b82f6; color: white; border: none; padding: 4px 8px; 
+            background: #3b82f6; color: white; border: none; padding: 4px 8px;
             border-radius: 4px; font-size: 10px; cursor: pointer; font-weight: bold;
           ">📡 Refresh State</button>
           <button onclick="console.log('Terminal System Status:', window.terminalManager?.getSystemStatus())" style="
-            background: #6b7280; color: white; border: none; padding: 4px 8px; 
+            background: #6b7280; color: white; border: none; padding: 4px 8px;
             border-radius: 4px; font-size: 10px; cursor: pointer; font-weight: bold;
           ">📋 Log Status</button>
         </div>
@@ -2264,6 +2267,16 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     log(`✅ [REFACTORED] CLI Agent status updated for terminal: ${terminalId}`);
   }
 
+  /**
+   * バージョン情報を設定
+   */
+  public setVersionInfo(version: string): void {
+    this.versionInfo = version;
+    if (this.settingsPanel) {
+      this.settingsPanel.setVersionInfo(version);
+    }
+  }
+
   public openSettings(): void {
     try {
       if (!this.settingsPanel) {
@@ -2274,6 +2287,8 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       const baseSettings = this.configManager?.getCurrentSettings?.() ?? this.currentSettings;
       const panelSettings = { ...baseSettings, ...this.currentSettings };
 
+      // バージョン情報を設定
+      this.settingsPanel.setVersionInfo(this.versionInfo);
       this.settingsPanel.show(panelSettings);
       log('⚙️ Opening settings panel');
     } catch (error) {

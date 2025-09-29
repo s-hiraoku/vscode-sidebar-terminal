@@ -10,6 +10,7 @@ export class SettingsPanel {
   private isVisible = false;
   private onSettingsChange?: (settings: PartialTerminalSettings) => void;
   private onClose?: () => void;
+  private versionInfo = 'v0.1.104';
 
   /**
    * コンストラクタ
@@ -20,6 +21,13 @@ export class SettingsPanel {
   }) {
     this.onSettingsChange = options?.onSettingsChange;
     this.onClose = options?.onClose;
+  }
+
+  /**
+   * バージョン情報を設定
+   */
+  public setVersionInfo(version: string): void {
+    this.versionInfo = version;
   }
 
   /**
@@ -137,6 +145,7 @@ export class SettingsPanel {
       <div style="display: grid; gap: 16px;">
         ${this.createActiveBorderControl()}
         ${this.createClaudeCodeIntegrationControl()}
+        ${this.createVersionInfoSection()}
       </div>
 
       <div style="display: flex; gap: 12px; margin-top: 24px; justify-content: flex-end;">
@@ -201,6 +210,50 @@ export class SettingsPanel {
             </div>
           </div>
         </label>
+      </div>
+    `;
+  }
+
+  /**
+   * バージョン情報セクションを作成
+   */
+  private createVersionInfoSection(): string {
+
+    return `
+      <div style="border-top: 1px solid var(--vscode-widget-border, #454545); padding-top: 16px;">
+        <h3 style="
+          color: var(--vscode-foreground, #cccccc);
+          font-size: 14px;
+          font-weight: 600;
+          margin: 0 0 12px 0;
+        ">About</h3>
+        <div style="
+          color: var(--vscode-foreground, #cccccc);
+          font-size: 13px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 8px 0;
+        ">
+          <div style="
+            background: var(--vscode-badge-background, #4d4d4d);
+            color: var(--vscode-badge-foreground, #ffffff);
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 500;
+          ">
+            Secondary Terminal ${this.versionInfo}
+          </div>
+        </div>
+        <div style="
+          font-size: 11px;
+          color: var(--vscode-descriptionForeground, #999999);
+          line-height: 1.4;
+        ">
+          Production-ready VS Code extension with TypeScript-compliant terminal in sidebar,
+          AI agent integration, and comprehensive session management.
+        </div>
       </div>
     `;
   }

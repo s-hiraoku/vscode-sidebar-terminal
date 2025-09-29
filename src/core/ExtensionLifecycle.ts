@@ -9,6 +9,7 @@ import { EnhancedShellIntegrationService } from '../services/EnhancedShellIntegr
 import { KeyboardShortcutService } from '../services/KeyboardShortcutService';
 import { TerminalDecorationsService } from '../services/TerminalDecorationsService';
 import { TerminalLinksService } from '../services/TerminalLinksService';
+import { VersionUtils } from '../utils/VersionUtils';
 
 /**
  * VS Code拡張機能のライフサイクル管理
@@ -402,6 +403,16 @@ export class ExtensionLifecycle {
           log('🔧 [DEBUG-CMD] Test input sent successfully');
 
           void vscode.window.showInformationMessage('Debug input test sent directly to terminal');
+        },
+      },
+
+      // ======================= バージョン情報コマンド =======================
+      {
+        command: 'secondaryTerminal.showVersion',
+        handler: () => {
+          log('🔧 [DEBUG] Command executed: showVersion');
+          const versionInfo = VersionUtils.getExtensionDisplayInfo();
+          void vscode.window.showInformationMessage(versionInfo);
         },
       },
     ];

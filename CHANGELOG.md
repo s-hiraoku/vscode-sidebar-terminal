@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.105] - 2025-09-30
+
+### Added
+- **Version Information Display**: Added version information functionality
+  - Created VersionUtils class to retrieve version from package.json
+  - Added version display in Terminal Settings panel with "About" section
+  - Added "Show Version" command to command palette
+  - Version information automatically sent from Extension to WebView on initialization
+
+### Changed
+- **Panel Title Updated**: Changed activity bar title from "Secondary Terminal" to "SC" for cleaner UI
+
+### Fixed
+- Fixed TypeScript compilation errors in VersionUtils and IManagerCoordinator interface
+
 ## [0.1.104] - 2025-09-30
 
 ### Added

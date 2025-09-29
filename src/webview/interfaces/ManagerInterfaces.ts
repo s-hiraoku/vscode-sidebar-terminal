@@ -52,6 +52,7 @@ export interface IManagerCoordinator {
     terminalNumber?: number
   ): Promise<unknown>;
   openSettings(): void;
+  setVersionInfo(version: string): void;
   applyFontSettings(fontSettings: WebViewFontSettings): void;
   closeTerminal(id?: string): void;
   shellIntegrationManager?: any; // Shell integration manager

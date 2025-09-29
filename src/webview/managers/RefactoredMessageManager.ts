@@ -151,6 +151,9 @@ export class RefactoredMessageManager implements IMessageManager {
         case 'openSettings':
           coordinator.openSettings();
           break;
+        case 'versionInfo':
+          this.handleVersionInfoMessage(msg, coordinator);
+          break;
         case 'showProfileSelector': {
           const managers = coordinator.getManagers ? coordinator.getManagers() : ({} as any);
           const profileManager = managers.profile || (coordinator as any).profileManager;
@@ -524,6 +527,17 @@ export class RefactoredMessageManager implements IMessageManager {
         hasTerminalNumber: !!terminalNumber, // Check terminal number presence
         hasConfig: !!config,
       });
+    }
+  }
+
+  /**
+   * Handle version info message from Extension
+   */
+  private handleVersionInfoMessage(msg: MessageCommand, coordinator: IManagerCoordinator): void {
+    const version = msg.version;
+    if (version && typeof coordinator.setVersionInfo === 'function') {
+      coordinator.setVersionInfo(version);
+      this.logger.info(`Version info received: ${version}`);
     }
   }
 

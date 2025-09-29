@@ -608,6 +608,7 @@ export interface WebviewMessage {
     | 'initResponse' // Init operation response
     | 'initializationComplete' // Initialization complete notification
     | 'setActiveTerminal' // Set active terminal command
+    | 'versionInfo' // Version information from Extension to WebView
     | 'inputResponse' // Input operation response
     | 'outputResponse' // Output operation response
     | 'clearResponse' // Clear operation response
@@ -817,6 +818,7 @@ export interface WebviewMessage {
     env?: Record<string, string>;
     shellArgs?: string[];
   }; // Profile options for terminal creation
+  version?: string; // Extension version information
 }
 
 /**

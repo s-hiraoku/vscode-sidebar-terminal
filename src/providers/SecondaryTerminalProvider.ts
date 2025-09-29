@@ -336,7 +336,31 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     log('🎯 [TERMINAL-INIT] WebView ready - initializing terminal with coordinated restoration');
     this._isInitialized = true;
 
+    // Send version information to WebView
+    this._sendVersionInfo();
+
     void this._initializationCoordinator.initialize();
+  }
+
+  /**
+   * Send version information to WebView
+   */
+  private _sendVersionInfo(): void {
+    try {
+      const extension = vscode.extensions.getExtension('s-hiraoku.vscode-sidebar-terminal');
+      const version = extension?.packageJSON?.version || 'unknown';
+      const formattedVersion = version === 'unknown' ? version : `v${version}`;
+
+      if (this._view) {
+        void this._view.webview.postMessage({
+          command: 'versionInfo',
+          version: formattedVersion,
+        });
+        log(`📤 [VERSION] Sent version info to WebView: ${formattedVersion}`);
+      }
+    } catch (error) {
+      log('❌ [VERSION] Error sending version info:', error);
+    }
   }
 
   /**
