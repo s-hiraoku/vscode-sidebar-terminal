@@ -152,45 +152,42 @@ export class CliAgentInputOutputDetector {
       return false;
     }
 
-    const lowerOutput = output.toLowerCase();
+    return this.patternDetector.detectCodexStartup(output);
+  }
 
-    // High confidence patterns - OpenAI Codex specific output
-    if (lowerOutput.includes('openai codex')) {
-      return true;
+  /**
+   * Detect GitHub Copilot CLI from input command
+   */
+  detectCopilotFromInput(input: string): AgentDetectionResult {
+    const line = input.toLowerCase();
+
+    // Very high confidence patterns
+    if (line.startsWith('copilot ') || line === 'copilot' || line.startsWith('gh copilot ')) {
+      return { isDetected: true, confidence: 1.0 };
     }
 
-    // OpenAI CLI tool patterns
-    if (lowerOutput.includes('openai') && lowerOutput.includes('codex')) {
-      return true;
+    // High confidence patterns
+    if (line.includes('github copilot') || line.includes('copilot cli')) {
+      return { isDetected: true, confidence: 0.95 };
     }
 
-    // Codex CLI welcome messages
-    if (
-      lowerOutput.includes('codex cli') ||
-      lowerOutput.includes('codex assistant') ||
-      lowerOutput.includes('codex ai')
-    ) {
-      return true;
+    // Medium confidence patterns
+    if (line.includes('copilot') && (line.includes('--help') || line.includes('-h'))) {
+      return { isDetected: true, confidence: 0.9 };
     }
 
-    // OpenAI API patterns in output
-    if (
-      lowerOutput.includes('api.openai.com') ||
-      (lowerOutput.includes('openai') && lowerOutput.includes('api'))
-    ) {
-      return true;
+    return { isDetected: false, confidence: 0 };
+  }
+
+  /**
+   * Detect GitHub Copilot CLI from output patterns
+   */
+  detectCopilotFromOutput(output: string): boolean {
+    if (!output || typeof output !== 'string') {
+      return false;
     }
 
-    // Model references that indicate Codex
-    if (
-      lowerOutput.includes('code-davinci') ||
-      lowerOutput.includes('text-davinci') ||
-      lowerOutput.includes('gpt-3.5-turbo-instruct')
-    ) {
-      return true;
-    }
-
-    return false;
+    return this.patternDetector.detectCopilotStartup(output);
   }
 
   /**
@@ -205,6 +202,8 @@ export class CliAgentInputOutputDetector {
     return (
       lowerLine.includes('claude') ||
       lowerLine.includes('gemini') ||
+      lowerLine.includes('codex') ||
+      lowerLine.includes('copilot') ||
       lowerLine.includes('assistant') ||
       lowerLine.includes('thinking') ||
       lowerLine.includes('analyzing') ||

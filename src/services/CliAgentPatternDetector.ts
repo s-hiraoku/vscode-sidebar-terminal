@@ -9,89 +9,10 @@ export class CliAgentPatternDetector implements ICliAgentPatternDetector {
    * Detect Claude Code startup patterns
    */
   detectClaudeStartup(cleanLine: string): boolean {
-    const line = cleanLine.toLowerCase();
-
-    // 🔧 FIXED: More specific exclusion patterns to avoid false positives
-    if (
-      line.includes('claude may read') || // Permission messages
-      line.includes('documentation is available at') || // URL references
-      line.includes('configuration files are located') || // Configuration paths
-      line.includes('error:') || // Error messages
-      line.includes('warning:') || // Warning messages
-      line.includes('failed') || // Failure messages
-      line.includes('cannot') || // Cannot messages
-      line.includes('unable') || // Unable messages
-      line.includes('not found') || // Not found messages
-      (line.includes('available') && !line.includes('claude') && !line.includes('now')) // Generic availability messages
-    ) {
-      return false;
-    }
-
-    // Check for very specific startup patterns first
-    if (
-      cleanLine.includes('Welcome to Claude Code!') ||
-      cleanLine.includes('> Try "edit <filepath>') ||
-      cleanLine.includes("I'm Claude") ||
-      cleanLine.includes('I am Claude') ||
-      cleanLine.includes('Powered by Claude') ||
-      cleanLine.includes('CLI tool for Claude') ||
-      cleanLine.includes('Claude Code is ready') ||
-      cleanLine.includes('Claude assistant initialized') ||
-      cleanLine.includes('Starting Claude Code session') ||
-      // More common actual Claude Code outputs
-      cleanLine.includes('claude --help') ||
-      cleanLine.includes('claude --version') ||
-      cleanLine.includes('Usage: claude') ||
-      (cleanLine.includes('claude') && cleanLine.includes('Available commands')) ||
-      (cleanLine.includes('claude') && cleanLine.includes('Options:'))
-    ) {
+    // Simple and direct detection for Claude Code
+    if (cleanLine.includes('Welcome to Claude Code!')) {
       return true;
     }
-
-    // Model-specific startup patterns (more restrictive)
-    if (
-      (line.includes('claude-3-sonnet') &&
-        (line.includes('ready') || line.includes('initialized'))) ||
-      (line.includes('claude-3-opus') &&
-        (line.includes('ready') || line.includes('initialized'))) ||
-      (line.includes('claude-3-haiku') &&
-        (line.includes('ready') || line.includes('initialized'))) ||
-      (line.includes('claude sonnet 4') &&
-        (line.includes('ready') || line.includes('initialized'))) ||
-      (line.includes('claude opus 4') && (line.includes('ready') || line.includes('initialized')))
-    ) {
-      return true;
-    }
-
-    // Very specific combined patterns that indicate startup
-    if (line.includes('claude')) {
-      if (
-        (line.includes('starting') && line.includes('session')) ||
-        (line.includes('initializing') && (line.includes('assistant') || line.includes('model'))) ||
-        (line.includes('connected') && line.includes('successfully')) ||
-        (line.includes('launched') && (line.includes('successfully') || line.includes('code'))) ||
-        (line.includes('ready') && (line.includes('assistant') || line.includes('help'))) ||
-        (line.includes('activated') && line.includes('mode')) ||
-        // More common interactive patterns
-        line.includes('how can i help') ||
-        line.includes('how may i help') ||
-        (line.includes('what would you like') && line.includes('help')) ||
-        line.includes('claude >') ||
-        line.includes('claude:')
-      ) {
-        return true;
-      }
-    }
-
-    // Anthropic-specific patterns
-    if (
-      line.includes('anthropic') &&
-      line.includes('claude') &&
-      (line.includes('assistant') || line.includes('model') || line.includes('ready'))
-    ) {
-      return true;
-    }
-
     return false;
   }
 
@@ -228,123 +149,21 @@ export class CliAgentPatternDetector implements ICliAgentPatternDetector {
    * Detect Codex CLI startup patterns
    */
   detectCodexStartup(cleanLine: string): boolean {
-    const line = cleanLine.toLowerCase();
-
-    // 🔧 FIXED: Specific exclusion patterns to avoid false positives
-    if (
-      line.includes('error:') || // Error messages
-      line.includes('warning:') || // Warning messages
-      line.includes('failed') || // Failure messages
-      line.includes('cannot') || // Cannot messages
-      line.includes('unable') || // Unable messages
-      line.includes('not found') || // Not found messages
-      line.includes('deprecated') || // Deprecated messages
-      (line.includes('available') && !line.includes('codex') && !line.includes('now')) // Generic availability messages
-    ) {
-      return false;
-    }
-
-    // Check for very specific startup patterns first
-    if (
-      cleanLine.includes('Welcome to Codex') ||
-      cleanLine.includes('Codex CLI started') ||
-      cleanLine.includes('OpenAI Codex is ready') ||
-      cleanLine.includes('Codex assistant') ||
-      cleanLine.includes('Starting Codex session') ||
-      cleanLine.includes('Codex initialized') ||
-      // Common actual Codex CLI outputs
-      cleanLine.includes('codex --help') ||
-      cleanLine.includes('codex --version') ||
-      cleanLine.includes('Usage: codex') ||
-      (cleanLine.includes('codex') && cleanLine.includes('Available commands')) ||
-      (cleanLine.includes('codex') && cleanLine.includes('Options:')) ||
-      // Interactive patterns when Codex starts
-      (cleanLine.includes('codex') && cleanLine.includes('how can i help')) ||
-      (cleanLine.includes('codex') && cleanLine.includes('what would you like')) ||
-      cleanLine.includes('codex >') ||
-      cleanLine.includes('codex:') ||
-      // More basic command patterns
-      cleanLine.startsWith('codex ') ||
-      cleanLine === 'codex' || // Support simple 'codex' command
-      /^codex\s+/.test(cleanLine) ||
-      // Common Codex interactive prompts
-      (line.includes('codex') && (line.includes('hello') || line.includes('hi there'))) ||
-      // OpenAI specific patterns
-      (line.includes('openai') && line.includes('codex') && line.includes('cli'))
-    ) {
+    // Simple and direct detection for OpenAI Codex
+    if (cleanLine.includes('OpenAI Codex')) {
       return true;
     }
+    return false;
+  }
 
-    // Very specific combined patterns that indicate startup
-    if (line.includes('codex')) {
-      // Check for startup context
-      if (
-        (line.includes('cli') &&
-          (line.includes('starting') || line.includes('launched') || line.includes('ready'))) ||
-        (line.includes('openai') && line.includes('initialized')) ||
-        (line.includes('connected') && line.includes('successfully')) ||
-        (line.includes('session') && (line.includes('started') || line.includes('ready'))) ||
-        (line.includes('welcome') && !line.includes('back')) ||
-        (line.includes('initialized') && (line.includes('model') || line.includes('assistant'))) ||
-        (line.includes('launching') && !line.includes('error')) ||
-        (line.includes('loading') && line.includes('model') && !line.includes('error'))
-      ) {
-        return true;
-      }
-    }
-
-    // Model-specific patterns (Codex models)
-    if (
-      line.includes('code-davinci') ||
-      line.includes('code-cushman') ||
-      line.includes('codex-davinci') ||
-      line.includes('codex-cushman') ||
-      (line.includes('openai') && line.includes('codex')) ||
-      (line.includes('codex') && line.includes('model'))
-    ) {
+  /**
+   * Detect GitHub Copilot CLI startup patterns
+   */
+  detectCopilotStartup(cleanLine: string): boolean {
+    // Simple and direct detection for GitHub Copilot CLI
+    if (cleanLine.includes('Welcome to GitHub Copilot CLI')) {
       return true;
     }
-
-    // Very specific prompt patterns that indicate an active session
-    if (
-      /^codex>\s*$/.test(cleanLine) ||
-      /^codex\s*\$\s*$/.test(cleanLine) ||
-      /^codex\s*#\s*$/.test(cleanLine) ||
-      /^codex:\s*$/.test(cleanLine)
-    ) {
-      return true;
-    }
-
-    // OpenAI specific patterns
-    if (
-      (line.includes('openai') || line.includes('openai codex')) &&
-      line.includes('codex') &&
-      (line.includes('ready') || line.includes('initialized') || line.includes('connected'))
-    ) {
-      return true;
-    }
-
-    // 🔧 FALLBACK: More lenient patterns for edge cases
-    // These should catch cases where the above patterns miss legitimate Codex usage
-    if (line.includes('codex')) {
-      // Any line that starts with codex command (very basic)
-      if (/^codex\s/.test(line) || line.trim() === 'codex') {
-        return true;
-      }
-
-      // Common interactive patterns that might indicate Codex is starting
-      if (
-        line.includes('welcome') ||
-        line.includes('hello') ||
-        line.includes('ready') ||
-        line.includes('help') ||
-        line.includes('available') ||
-        line.includes('starting')
-      ) {
-        return true;
-      }
-    }
-
     return false;
   }
 

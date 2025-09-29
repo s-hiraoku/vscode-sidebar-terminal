@@ -414,6 +414,24 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
       };
     }
 
+    // GitHub Copilot CLI detection
+    log(`🔍 [COPILOT-INPUT] Checking GitHub Copilot CLI detection for: "${trimmedInput}"`);
+    const copilotDetected = this.inputOutputDetector.detectCopilotFromInput(trimmedInput);
+    log(`🔍 [COPILOT-INPUT] Detection result: ${JSON.stringify(copilotDetected)}`);
+
+    if (copilotDetected.isDetected) {
+      log(
+        `🎯 [CLI-AGENT] GitHub Copilot CLI detected from input: "${trimmedInput}" in terminal ${terminalId}`
+      );
+      this.stateManager.setConnectedAgent(terminalId, 'copilot');
+      return {
+        type: 'copilot',
+        confidence: copilotDetected.confidence,
+        source: 'input',
+        detectedLine: trimmedInput,
+      };
+    }
+
     return null;
   }
 
@@ -566,6 +584,23 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
 
             return {
               type: 'codex',
+              confidence: 0.9,
+              source: 'output',
+              detectedLine: fullyCleanLine,
+            };
+          }
+
+          // GitHub Copilot CLI startup detection
+          if (this.inputOutputDetector.detectCopilotFromOutput(fullyCleanLine)) {
+            log(
+              `🚀 [CLI-AGENT] GitHub Copilot CLI startup detected from output: "${fullyCleanLine}" in terminal ${terminalId}`
+            );
+            this.stateManager.setConnectedAgent(terminalId, 'copilot');
+            // 🆕 RESET TIMER: Clear any existing termination timer
+            this.detectionCache.set(`${terminalId}_lastAIOutput`, { result: null, timestamp: Date.now() });
+
+            return {
+              type: 'copilot',
               confidence: 0.9,
               source: 'output',
               detectedLine: fullyCleanLine,
