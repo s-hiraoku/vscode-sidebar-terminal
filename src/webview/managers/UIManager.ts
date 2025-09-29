@@ -541,51 +541,26 @@ export class UIManager extends BaseManager implements IUIManager {
     status: 'connected' | 'disconnected' | 'none',
     agentType: string | null = null
   ): void {
-    // 🔍 DEBUG: Enhanced CLI Agent status update logging
-    console.log(`🔍 [DEBUG] updateCliAgentStatusByTerminalId called:`, {
-      terminalId,
-      status,
-      agentType,
-      cacheSize: this.headerElementsCache.size,
-      cachedTerminals: Array.from(this.headerElementsCache.keys()),
-      timestamp: Date.now(),
-    });
+    uiLogger.info(`Updating CLI Agent status: ${terminalId} -> ${status} (${agentType})`);
 
-    uiLogger.info(
-      `Updating CLI Agent status by terminal ID: ${terminalId} -> ${status} (${agentType})`
-    );
-
+    // シンプルにステータス更新のみ実行 - 複雑な判定は省略
     const headerElements = this.headerElementsCache.get(terminalId);
     if (!headerElements) {
-      console.error(`❌ [DEBUG] No header elements found for terminal: ${terminalId}`, {
-        availableTerminals: Array.from(this.headerElementsCache.keys()),
-        cacheSize: this.headerElementsCache.size,
-      });
       uiLogger.warn(`No header elements found for terminal: ${terminalId}`);
       return;
     }
 
-    console.log(`🔍 [DEBUG] Found header elements for terminal: ${terminalId}`, {
-      hasStatusSection: !!headerElements.statusSection,
-      hasStatusSpan: !!headerElements.statusSpan,
-      hasIndicator: !!headerElements.indicator,
-    });
-
-    if (status === 'none') {
-      // CLI Agent statusを削除
-      HeaderFactory.removeCliAgentStatus(headerElements);
-      // AI Agent切り替えボタンを常時表示 (none状態でも表示)
-      HeaderFactory.setAiAgentToggleButtonVisibility(headerElements, true);
-    } else if (status === 'connected') {
-      // CLI Agent statusを挿入/更新
-      HeaderFactory.insertCliAgentStatus(headerElements, status, agentType);
-      // AI Agent切り替えボタンを常時表示 (connected状態でも表示)
-      HeaderFactory.setAiAgentToggleButtonVisibility(headerElements, true, status);
+    // ステータスに応じてシンプルに更新
+    if (status === 'connected') {
+      HeaderFactory.insertCliAgentStatus(headerElements, 'connected', agentType);
+      HeaderFactory.setAiAgentToggleButtonVisibility(headerElements, true, 'connected');
     } else if (status === 'disconnected') {
-      // CLI Agent statusを挿入/更新
-      HeaderFactory.insertCliAgentStatus(headerElements, status, agentType);
-      // AI Agent切り替えボタンを常時表示 (disconnected状態でも表示)
-      HeaderFactory.setAiAgentToggleButtonVisibility(headerElements, true, status);
+      HeaderFactory.insertCliAgentStatus(headerElements, 'disconnected', agentType);
+      HeaderFactory.setAiAgentToggleButtonVisibility(headerElements, true, 'disconnected');
+    } else {
+      // none状態
+      HeaderFactory.removeCliAgentStatus(headerElements);
+      HeaderFactory.setAiAgentToggleButtonVisibility(headerElements, true);
     }
 
     uiLogger.info(`CLI Agent status updated for terminal ${terminalId}: ${status}`);

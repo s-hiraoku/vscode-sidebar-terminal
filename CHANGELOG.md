@@ -5,6 +5,16 @@ All notable changes to the "Secondary Terminal" extension will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.103] - 2025-09-29
+
+### Fixed
+- **Agent Status Button Reliability**: Simplified and improved AI Agent status toggle functionality
+  - Removed complex status detection logic that caused intermittent connection failures
+  - Agent Status button now consistently shows "Connected" status when pressed
+  - Eliminated header elements cache inconsistency issues
+  - Streamlined Extension ↔ WebView communication for agent status updates
+  - Fixed race conditions between UI updates and status synchronization
+
 ## [0.1.102] - 2025-09-29
 
 ### Improved
