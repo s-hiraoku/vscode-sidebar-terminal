@@ -144,10 +144,10 @@ export class GeminiDetectionStrategy implements AgentDetectionStrategy {
 
       // Check if we have the specific indentation pattern
       if (
-        /^\s*███\s+/.test(line1) &&           // Starts with minimal spaces + ███
-        /^\s*░░░███\s+/.test(line2) &&        // Starts with minimal spaces + ░░░███
-        /^\s{2,}░░░███\s+/.test(line3) &&     // Starts with 2+ spaces + ░░░███
-        /^\s{4,}░░░███\s+/.test(line4)        // Starts with 4+ spaces + ░░░███
+        line1 && /^\s*███\s+/.test(line1) &&           // Starts with minimal spaces + ███
+        line2 && /^\s*░░░███\s+/.test(line2) &&        // Starts with minimal spaces + ░░░███
+        line3 && /^\s{2,}░░░███\s+/.test(line3) &&     // Starts with 2+ spaces + ░░░███
+        line4 && /^\s{4,}░░░███\s+/.test(line4)        // Starts with 4+ spaces + ░░░███
       ) {
         hasIndentationPattern = true;
         break;
