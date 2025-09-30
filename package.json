@@ -74,7 +74,7 @@
       "activitybar": [
         {
           "id": "secondaryTerminalContainer",
-          "title": "SC",
+          "title": "ST",
           "icon": "$(terminal)"
         }
       ]
@@ -86,7 +86,7 @@
           "name": "Terminal",
           "type": "webview",
           "icon": "$(terminal)",
-          "contextualTitle": "SC"
+          "contextualTitle": "ST"
         }
       ]
     },

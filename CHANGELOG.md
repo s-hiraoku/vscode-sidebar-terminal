@@ -25,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Version information automatically sent from Extension to WebView on initialization
 
 ### Changed
-- **Panel Title Updated**: Changed activity bar title from "Secondary Terminal" to "SC" for cleaner UI
+- **Panel Title Updated**: Changed activity bar title from "Secondary Terminal" to "ST" for cleaner UI
 
 ### Fixed
 - Fixed TypeScript compilation errors in VersionUtils and IManagerCoordinator interface

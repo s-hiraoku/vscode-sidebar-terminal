@@ -39,7 +39,7 @@
 
 ### 🔧 **Developer Experience**
 - **Version Information Display**: Built-in version display in Terminal Settings with "About" section and command palette support (v0.1.105+)
-- **Streamlined UI**: Compact "SC" panel title for cleaner activity bar (v0.1.105+)
+- **Streamlined UI**: Compact "ST" panel title for cleaner activity bar (v0.1.105+)
 - **Alt+Click Cursor Positioning**: VS Code-standard cursor positioning with intelligent CLI agent conflict detection
 - **Smart File Reference System**: Instantly share code with AI agents using CMD+Option+L - automatically targets "AI Agent Connected" terminals
 - **Multi-Agent Workflow**: Seamlessly work with multiple AI agents across different terminals simultaneously
@@ -428,7 +428,7 @@ The project uses GitHub Actions for automated testing and releases:
 - 🏷️ **Version Display**: Added version information display in Terminal Settings with "About" section
 - 🎯 **Command Palette**: Added "Show Version" command for quick version checking
 - 📦 **VersionUtils Class**: Created utility class to dynamically retrieve version from package.json
-- 🎨 **Compact UI**: Changed activity bar title from "Secondary Terminal" to "SC" for cleaner interface
+- 🎨 **Compact UI**: Changed activity bar title from "Secondary Terminal" to "ST" for cleaner interface
 - 🔧 **Type Safety**: Fixed TypeScript compilation errors for production-ready builds
 
 ### v0.1.104 - 🤖 **GitHub Copilot CLI Support & Enhanced AI Detection**
