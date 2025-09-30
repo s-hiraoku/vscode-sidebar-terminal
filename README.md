@@ -418,7 +418,13 @@ The project uses GitHub Actions for automated testing and releases:
 
 ## 📈 Version History
 
-### v0.1.105 (Current) - 🏷️ **Version Information Display & UI Refinements**
+### v0.1.106 (Current) - 🔧 **Build System Fix**
+- 🔧 **TypeScript Compilation**: Fixed build errors in GitHub Actions multi-platform workflow
+- ✅ **Test Mock Updates**: Added missing `setVersionInfo` method to test coordinators
+- 🛠️ **Type Safety**: Enhanced type guards for version parameter handling
+- 📦 **CI/CD Stability**: Resolved multi-platform packaging workflow failures
+
+### v0.1.105 - 🏷️ **Version Information Display & UI Refinements**
 - 🏷️ **Version Display**: Added version information display in Terminal Settings with "About" section
 - 🎯 **Command Palette**: Added "Show Version" command for quick version checking
 - 📦 **VersionUtils Class**: Created utility class to dynamically retrieve version from package.json

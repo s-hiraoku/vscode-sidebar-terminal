@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.106] - 2025-09-30
+
+### Fixed
+- **Build System**: Fixed TypeScript compilation errors in GitHub Actions
+  - Added type guard for version parameter in RefactoredMessageManager
+  - Added missing `setVersionInfo` method to test mock coordinators
+  - Resolved build failures in multi-platform packaging workflow
+
 ## [0.1.105] - 2025-09-30
 
 ### Added
