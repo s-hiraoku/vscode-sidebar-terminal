@@ -24,22 +24,43 @@ npm run pre-release:check   # Comprehensive pre-release validation
 
 ### Release Management
 
-#### Automated GitHub Actions Release (RECOMMENDED)
+#### Automated GitHub Actions Release (RECOMMENDED - New Safe Procedure)
 ```bash
-# 1. Update version and commit changes
+# Step 1: Update version and commit changes (WITHOUT tag)
 npm version patch --no-git-tag-version  # or minor/major
-# Update CHANGELOG.md with release notes
+# Update CHANGELOG.md and README.md with release notes
 git add -A && git commit -m "v{version}: Release description"
+git push
 
-# 2. Create and push git tag to trigger automated release
-git tag v{version}           # e.g., v0.1.103
-git push origin v{version}   # Triggers GitHub Actions workflow
+# Step 2: Wait for CI to pass
+# Check GitHub Actions: https://github.com/s-hiraoku/vscode-sidebar-terminal/actions
+# Verify all platform builds succeed
+
+# Step 3: Create and push git tag ONLY after CI success
+git tag v{version}           # e.g., v0.1.107
+git push origin v{version}   # Triggers automated release workflow
 
 # This automatically:
 # - Runs TDD quality gate and pre-release checks
 # - Builds packages for 9 platforms (Windows/macOS/Linux variants)
 # - Creates GitHub Release with auto-generated notes
 # - Publishes to VS Code Marketplace with all platform variants
+
+# Benefits of this approach:
+# ✅ Prevents wasting version numbers on failed builds
+# ✅ No need to delete tags and re-release
+# ✅ Clean git history without tag pollution
+# ✅ CI failures can be fixed without version confusion
+```
+
+#### Legacy Release Procedure (Deprecated)
+```bash
+# Old method: Tag immediately (NOT RECOMMENDED)
+# This was problematic because CI failures required tag deletion
+npm version patch --no-git-tag-version
+git add -A && git commit -m "v{version}: Release description"
+git tag v{version} && git push origin v{version} && git push
+# ❌ Problem: If CI fails, must delete tag and increment version
 ```
 
 #### Manual Release (Fallback)
