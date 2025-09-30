@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.107] - 2025-09-30
+
+### Fixed
+- **UI Correction**: Fixed panel title abbreviation from "SC" to "ST" (Secondary Terminal)
+  - Updated activity bar title and contextual title in package.json
+  - Corrected documentation references in CHANGELOG.md and README.md
+  - ST is a more intuitive abbreviation for Secondary Terminal
+
 ## [0.1.106] - 2025-09-30
 
 ### Fixed

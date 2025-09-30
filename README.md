@@ -418,7 +418,12 @@ The project uses GitHub Actions for automated testing and releases:
 
 ## 📈 Version History
 
-### v0.1.106 (Current) - 🔧 **Build System Fix**
+### v0.1.107 (Current) - 🎨 **UI Correction**
+- 🎨 **Panel Title Fix**: Corrected activity bar abbreviation from "SC" to "ST" (Secondary Terminal)
+- 📝 **Documentation Updates**: Fixed all references in package.json, CHANGELOG.md, and README.md
+- ✨ **Improved Clarity**: ST is more intuitive and recognizable as Secondary Terminal
+
+### v0.1.106 - 🔧 **Build System Fix**
 - 🔧 **TypeScript Compilation**: Fixed build errors in GitHub Actions multi-platform workflow
 - ✅ **Test Mock Updates**: Added missing `setVersionInfo` method to test coordinators
 - 🛠️ **Type Safety**: Enhanced type guards for version parameter handling
