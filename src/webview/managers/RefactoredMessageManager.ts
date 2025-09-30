@@ -535,7 +535,7 @@ export class RefactoredMessageManager implements IMessageManager {
    */
   private handleVersionInfoMessage(msg: MessageCommand, coordinator: IManagerCoordinator): void {
     const version = msg.version;
-    if (version && typeof coordinator.setVersionInfo === 'function') {
+    if (version && typeof version === 'string' && typeof coordinator.setVersionInfo === 'function') {
       coordinator.setVersionInfo(version);
       this.logger.info(`Version info received: ${version}`);
     }

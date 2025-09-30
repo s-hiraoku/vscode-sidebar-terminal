@@ -165,6 +165,7 @@ export class TestSetupFactory {
       log: options.enableLogging !== false ? sinon.stub() : sinon.stub(),
       createTerminal: sinon.stub().returns('terminal-new'),
       openSettings: sinon.stub(),
+      setVersionInfo: sinon.stub(),
       applyFontSettings: sinon.stub(),
       closeTerminal: sinon.stub(),
       getManagers: sinon.stub().returns({

@@ -29,6 +29,7 @@ describe('AI Agent Toggle Button (Issue #122)', () => {
       log: sinon.stub(),
       createTerminal: sinon.stub(),
       openSettings: sinon.stub(),
+      setVersionInfo: sinon.stub(),
       applyFontSettings: sinon.stub(),
       closeTerminal: sinon.stub(),
       getManagers: sinon.stub(),
