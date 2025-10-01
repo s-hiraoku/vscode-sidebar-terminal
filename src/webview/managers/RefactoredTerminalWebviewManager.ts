@@ -28,6 +28,8 @@ import {
   IFindInTerminalManager,
   IProfileManager,
   ITerminalTabManager,
+  ITerminalContainerManager,
+  IDisplayModeManager,
 } from '../interfaces/ManagerInterfaces';
 
 // Debug info interface

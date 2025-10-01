@@ -146,7 +146,7 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
    */
   public getContainer(terminalId: string): HTMLElement | null {
     // キャッシュから取得を試みる
-    let container = this.containerCache.get(terminalId);
+    let container: HTMLElement | undefined | null = this.containerCache.get(terminalId);
 
     if (container) {
       // DOMに存在するか確認
@@ -168,7 +168,7 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
       this.log(`Container found and cached: ${terminalId}`);
     }
 
-    return container;
+    return container ?? null;
   }
 
   /**

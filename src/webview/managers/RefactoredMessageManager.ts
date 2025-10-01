@@ -91,7 +91,7 @@ export class RefactoredMessageManager implements IMessageManager {
    */
   public setCoordinator(coordinator: IManagerCoordinator): void {
     this.coordinator = coordinator;
-    this.logger.lifecycle('coordinator', 'set');
+    this.logger.lifecycle('coordinator', 'completed');
   }
 
   /**
