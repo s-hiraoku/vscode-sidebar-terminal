@@ -392,16 +392,16 @@ describe('Profile Selector Integration', () => {
       const profileItems = document.querySelectorAll('.profile-item');
 
       // Rapid clicks on different profiles
-      (profileItems[0] as HTMLElement).click();
-      expect(profileItems[0].classList.contains('selected')).to.be.true;
+      (profileItems[0]! as HTMLElement).click();
+      expect(profileItems[0]!.classList.contains('selected')).to.be.true;
 
-      (profileItems[1] as HTMLElement).click();
-      expect(profileItems[0].classList.contains('selected')).to.be.false;
-      expect(profileItems[1].classList.contains('selected')).to.be.true;
+      (profileItems[1]! as HTMLElement).click();
+      expect(profileItems[0]!.classList.contains('selected')).to.be.false;
+      expect(profileItems[1]!.classList.contains('selected')).to.be.true;
 
-      (profileItems[0] as HTMLElement).click();
-      expect(profileItems[1].classList.contains('selected')).to.be.false;
-      expect(profileItems[0].classList.contains('selected')).to.be.true;
+      (profileItems[0]! as HTMLElement).click();
+      expect(profileItems[1]!.classList.contains('selected')).to.be.false;
+      expect(profileItems[0]!.classList.contains('selected')).to.be.true;
     });
   });
 
@@ -425,7 +425,7 @@ describe('Profile Selector Integration', () => {
 
       const visibleProfiles = document.querySelectorAll('.profile-item');
       expect(visibleProfiles).to.have.length(1);
-      expect(visibleProfiles[0].textContent).to.include('Zsh');
+      expect(visibleProfiles[0]!.textContent).to.include('Zsh');
     });
   });
 

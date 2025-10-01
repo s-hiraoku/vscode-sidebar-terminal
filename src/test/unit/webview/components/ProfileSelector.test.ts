@@ -273,7 +273,7 @@ describe('ProfileSelector Component', () => {
 
       const visibleProfiles = container.querySelectorAll('.profile-item');
       expect(visibleProfiles).to.have.length(1);
-      expect(visibleProfiles[0].textContent).to.include('Bash');
+      expect(visibleProfiles[0]!.textContent).to.include('Bash');
     });
 
     it('should filter profiles by description', () => {
@@ -285,7 +285,7 @@ describe('ProfileSelector Component', () => {
 
       const visibleProfiles = container.querySelectorAll('.profile-item');
       expect(visibleProfiles).to.have.length(1);
-      expect(visibleProfiles[0].textContent).to.include('Zsh');
+      expect(visibleProfiles[0]!.textContent).to.include('Zsh');
     });
 
     it('should be case-insensitive', () => {
@@ -297,7 +297,7 @@ describe('ProfileSelector Component', () => {
 
       const visibleProfiles = container.querySelectorAll('.profile-item');
       expect(visibleProfiles).to.have.length(1);
-      expect(visibleProfiles[0].textContent).to.include('PowerShell');
+      expect(visibleProfiles[0]!.textContent).to.include('PowerShell');
     });
 
     it('should show "no results" message when no profiles match', () => {
@@ -490,7 +490,7 @@ describe('ProfileSelector Component', () => {
 
       const profileItems = container.querySelectorAll('.profile-item');
       expect(profileItems).to.have.length(1);
-      expect(profileItems[0].textContent).to.include('Command Prompt');
+      expect(profileItems[0]!.textContent).to.include('Command Prompt');
     });
 
     it('should not update when hidden', () => {

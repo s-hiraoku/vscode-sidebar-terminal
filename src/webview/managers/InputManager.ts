@@ -19,6 +19,9 @@ export class InputManager extends BaseManager implements IInputManager {
   // Event handler registry for centralized event management
   protected readonly eventRegistry = new EventHandlerRegistry();
 
+  // Coordinator for accessing other managers
+  private coordinator: IManagerCoordinator | null = null;
+
   // New architecture services
   private stateManager: InputStateManager;
   private eventService: InputEventService;
@@ -42,6 +45,13 @@ export class InputManager extends BaseManager implements IInputManager {
     );
 
     this.logger('initialization', 'starting');
+  }
+
+  /**
+   * Set coordinator for accessing other managers
+   */
+  public setCoordinator(coordinator: IManagerCoordinator): void {
+    this.coordinator = coordinator;
   }
 
   // Alt+Click state management
