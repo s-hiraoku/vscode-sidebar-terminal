@@ -167,10 +167,10 @@ describe('Profile Selector Integration', () => {
       await new Promise((resolve) => setTimeout(resolve, 10));
 
       // Verify terminal creation
-      expect(mockCoordinator.createTerminal.calledOnce).to.be.true;
+      expect((mockCoordinator.createTerminal as sinon.SinonStub).calledOnce).to.be.true;
 
-      const [, , options] = mockCoordinator.createTerminal.firstCall.args;
-      expect(options.profileId).to.equal('zsh');
+      const [, , options] = (mockCoordinator.createTerminal as sinon.SinonStub).firstCall.args;
+      expect((options as any).profileId).to.equal('zsh');
     });
 
     it('should close selector on Escape', async () => {
@@ -232,7 +232,7 @@ describe('Profile Selector Integration', () => {
       // Wait for async operations
       await new Promise((resolve) => setTimeout(resolve, 10));
 
-      expect(mockCoordinator.createTerminal.calledOnce).to.be.true;
+      expect((mockCoordinator.createTerminal as sinon.SinonStub).calledOnce).to.be.true;
     });
   });
 
@@ -241,10 +241,11 @@ describe('Profile Selector Integration', () => {
       await profileManager.initialize();
       await profileManager.refreshProfiles();
 
-      expect(mockCoordinator.postMessageToExtension.calledOnce).to.be.true;
+      expect((mockCoordinator.postMessageToExtension as sinon.SinonStub).calledOnce).to.be.true;
 
-      const message = mockCoordinator.postMessageToExtension.firstCall.args[0];
-      expect(message.command).to.equal('getTerminalProfiles');
+      const message = (mockCoordinator.postMessageToExtension as sinon.SinonStub).firstCall
+        .args[0];
+      expect((message as any).command).to.equal('getTerminalProfiles');
     });
 
     it('should receive and update profiles from extension', () => {
@@ -277,24 +278,27 @@ describe('Profile Selector Integration', () => {
     it('should send terminal creation message to extension', async () => {
       await profileManager.createTerminalWithProfile('bash');
 
-      expect(mockCoordinator.createTerminal.calledOnce).to.be.true;
+      expect((mockCoordinator.createTerminal as sinon.SinonStub).calledOnce).to.be.true;
 
-      const [terminalId, terminalName, options] = mockCoordinator.createTerminal.firstCall.args;
+      const [terminalId, terminalName, options] = (
+        mockCoordinator.createTerminal as sinon.SinonStub
+      ).firstCall.args;
 
       expect(terminalId).to.be.a('string');
-      expect(terminalName).to.include('Bash');
-      expect(options.profileId).to.equal('bash');
-      expect(options.shell).to.equal('/bin/bash');
+      expect((terminalName as string)).to.include('Bash');
+      expect((options as any).profileId).to.equal('bash');
+      expect((options as any).shell).to.equal('/bin/bash');
     });
 
     it('should update default profile via extension', async () => {
       await profileManager.setDefaultProfile('zsh');
 
-      expect(mockCoordinator.postMessageToExtension.calledOnce).to.be.true;
+      expect((mockCoordinator.postMessageToExtension as sinon.SinonStub).calledOnce).to.be.true;
 
-      const message = mockCoordinator.postMessageToExtension.firstCall.args[0];
-      expect(message.command).to.equal('setDefaultProfile');
-      expect(message.profileId).to.equal('zsh');
+      const message = (mockCoordinator.postMessageToExtension as sinon.SinonStub).firstCall
+        .args[0];
+      expect((message as any).command).to.equal('setDefaultProfile');
+      expect((message as any).profileId).to.equal('zsh');
     });
   });
 
@@ -314,14 +318,19 @@ describe('Profile Selector Integration', () => {
       });
       document.dispatchEvent(openEvent);
 
-      const notificationManager = mockCoordinator.getManagers().notification;
-      expect(notificationManager.showWarning.calledOnce).to.be.true;
-      expect(notificationManager.showWarning.calledWith('No terminal profiles available')).to.be
-        .true;
+      const notificationManager = mockCoordinator.getManagers().notification as any;
+      expect((notificationManager.showWarning as sinon.SinonStub).calledOnce).to.be.true;
+      expect(
+        (notificationManager.showWarning as sinon.SinonStub).calledWith(
+          'No terminal profiles available'
+        )
+      ).to.be.true;
     });
 
     it('should handle terminal creation failure gracefully', async () => {
-      mockCoordinator.createTerminal.rejects(new Error('Failed to create terminal'));
+      (mockCoordinator.createTerminal as sinon.SinonStub).rejects(
+        new Error('Failed to create terminal')
+      );
 
       try {
         await profileManager.createTerminalWithProfile('bash');
@@ -330,8 +339,8 @@ describe('Profile Selector Integration', () => {
         expect(error.message).to.include('Failed to create terminal');
       }
 
-      const notificationManager = mockCoordinator.getManagers().notification;
-      expect(notificationManager.showWarning.called).to.be.true;
+      const notificationManager = mockCoordinator.getManagers().notification as any;
+      expect((notificationManager.showWarning as sinon.SinonStub).called).to.be.true;
     });
   });
 
