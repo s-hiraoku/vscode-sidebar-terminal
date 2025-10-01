@@ -7,6 +7,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.108] - 2025-10-01
+
+### Added
+- **Tab Close Button**: Added hover-visible white × button for closing terminals
+  - Hover-only display to maintain clean interface when not needed
+  - White color for high visibility against dark backgrounds
+  - Smooth transitions and proper button styling
+  - Last tab protection with warning notification prevents accidental closure
+- **Global Event Delegation**: Implemented efficient event handling architecture
+  - Prevents duplicate event listeners and memory leaks
+  - Centralized click handling for tabs and close buttons
+  - Improved performance through event bubbling pattern
+  - Better maintainability and debugging capabilities
+
+### Changed
+- **Enhanced Claude Code Detection**: Updated pattern to match new startup message format
+  - Changed from `/claude-code/i` to `/Claude\s+Code/` (case-sensitive with space)
+  - Removed unnecessary hyphenated pattern variants
+  - Improved detection accuracy for "Claude Code" CLI agent
+  - Applied to both WebView (CliAgentStateManager) and Extension (ClaudeDetectionStrategy)
+- **Tab Layout Stability**: Improved hover behavior to prevent layout shift
+  - Changed from `display: none/flex` to `color: transparent/white`
+  - Close button always occupies space but is invisible until hover
+  - Prevents tab size changes during hover interactions
+  - Maintains consistent tab spacing across all states
+
+### Fixed
+- **MessageManager Coordinator**: Added missing `setCoordinator()` method to RefactoredMessageManager
+  - Resolves "this.messageManager.setCoordinator is not a function" error
+  - Enables proper dependency injection pattern
+  - Fixes coordinator availability for message sending
+- **Event Handler Duplication**: Prevented duplicate event listeners on tab updates
+  - Replaced per-element handlers with global delegation
+  - Simplified `attachTabEvents()` to handle only drag-and-drop
+  - Eliminated memory leaks from repeated handler registration
+
+### Improved
+- **User Experience**: Enhanced terminal management workflow
+  - Clean hover-only close button appearance
+  - Protected last terminal from accidental closure
+  - Stable tab layout during mouse interactions
+  - Consistent AI agent status detection
+- **Code Quality**: Improved event handling architecture
+  - More maintainable event delegation pattern
+  - Reduced complexity in tab update logic
+  - Better separation of concerns for event handling
+
 ## [0.1.107] - 2025-09-30
 
 ### Fixed

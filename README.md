@@ -26,7 +26,7 @@
 
 ### 🤖 **AI Agent Integration**
 - **Enhanced Detection Engine**: Improved CLI agent detection with advanced pattern recognition
-- **Claude Code Support**: Full integration with `claude-code` commands and session restoration
+- **Claude Code Support**: Full integration with `claude-code` commands and session restoration (detects "Claude Code" startup message)
 - **Codex CLI Support**: Complete integration with `codex` commands and AI-powered development assistance
 - **CodeRabbit CLI Integration**: Custom slash command support for AI code reviews with smart mode selection
 - **GitHub Copilot Integration**: File reference shortcuts with `#file:` format (CMD+K CMD+C)
@@ -43,7 +43,7 @@
 - **Alt+Click Cursor Positioning**: VS Code-standard cursor positioning with intelligent CLI agent conflict detection
 - **Smart File Reference System**: Instantly share code with AI agents using CMD+Option+L - automatically targets "AI Agent Connected" terminals
 - **Multi-Agent Workflow**: Seamlessly work with multiple AI agents across different terminals simultaneously
-- **Simplified Tab Interface**: Clean terminal tabs without close buttons for streamlined workflow (v0.1.101+)
+- **Tab Close Button**: Hover-visible white × button for closing terminals, with last tab protection (v0.1.108+)
 - **IME Support**: Full Japanese and multi-language input method support
 - **Split Terminal Views**: Vertical and horizontal terminal splitting optimized for AI agent workflows
 - **Command Palette Integration**: Full VS Code command palette support
@@ -418,7 +418,15 @@ The project uses GitHub Actions for automated testing and releases:
 
 ## 📈 Version History
 
-### v0.1.107 (Current) - 🎨 **UI Correction**
+### v0.1.108 (Current) - ✨ **Tab Close Button & AI Detection Enhancement**
+- ✨ **Tab Close Button**: Added hover-visible white × button for closing terminals with smart last-tab protection
+- 🎨 **Stable Tab Layout**: Tab size remains constant during hover, preventing layout shift
+- 🤖 **Enhanced Claude Code Detection**: Updated detection pattern to match new "Claude Code" startup message format
+- 🔧 **Event Delegation**: Improved event handling architecture to prevent duplicate listeners and memory leaks
+- 🛡️ **Last Tab Protection**: Prevents accidental closure of the last terminal with warning notification
+- 🎯 **Global Event Handling**: Implemented efficient event delegation pattern for better performance
+
+### v0.1.107 - 🎨 **UI Correction**
 - 🎨 **Panel Title Fix**: Corrected activity bar abbreviation from "SC" to "ST" (Secondary Terminal)
 - 📝 **Documentation Updates**: Fixed all references in package.json, CHANGELOG.md, and README.md
 - ✨ **Improved Clarity**: ST is more intuitive and recognizable as Secondary Terminal
