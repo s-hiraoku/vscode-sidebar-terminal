@@ -2,12 +2,14 @@ import { SAMPLE_ICONS, UI_CONSTANTS } from '../constants';
 import { DOMUtils } from '../utils/DOMUtils';
 import { ErrorHandler } from '../utils/ErrorHandler';
 import type { HeaderConfig, SampleIcon } from '../types/webview.types';
+import { IManagerCoordinator } from '../interfaces/ManagerInterfaces';
 
 /**
  * WebViewヘッダーの管理を担当するクラス
  */
 export class HeaderManager {
   private headerElement: HTMLElement | null = null;
+  private coordinator: IManagerCoordinator | null = null;
   private config: HeaderConfig = {
     showHeader: true,
     title: 'Terminal',
@@ -15,6 +17,13 @@ export class HeaderManager {
     iconSize: UI_CONSTANTS.SIZES.SAMPLE_ICON_SIZE,
     fontSize: UI_CONSTANTS.SIZES.TITLE_FONT_SIZE,
   };
+
+  /**
+   * コーディネーターを設定
+   */
+  public setCoordinator(coordinator: IManagerCoordinator): void {
+    this.coordinator = coordinator;
+  }
 
   /**
    * ヘッダー設定を更新
@@ -233,11 +242,73 @@ export class HeaderManager {
     );
 
     if (this.config.showIcons) {
+      // 🆕 Add split mode button first
+      this.addSplitModeButton(commandSection);
+
+      // Existing sample icons
       this.addSampleIcons(commandSection);
       this.addHelpTooltip(commandSection);
     }
 
     return commandSection;
+  }
+
+  /**
+   * 🆕 分割モード切り替えボタンを追加
+   */
+  private addSplitModeButton(container: HTMLElement): void {
+    const splitButton = DOMUtils.createElement(
+      'button',
+      {
+        background: 'transparent',
+        border: 'none',
+        color: 'var(--vscode-foreground)',
+        cursor: 'pointer',
+        padding: '4px 8px',
+        borderRadius: '4px',
+        fontSize: '16px',
+        transition: 'background-color 0.2s ease, color 0.2s ease',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minWidth: `${UI_CONSTANTS.SIZES.ICON_BUTTON_SIZE}px`,
+        height: `${UI_CONSTANTS.SIZES.ICON_BUTTON_SIZE}px`,
+      },
+      {
+        innerHTML: '⊞', // Unicode split icon
+        title: 'Toggle Split View',
+        className: 'split-mode-toggle-button',
+      }
+    );
+
+    // Click handler
+    DOMUtils.addEventListenerSafe(splitButton, 'click', () => {
+      const displayManager = this.coordinator?.getDisplayModeManager?.();
+      if (displayManager) {
+        displayManager.toggleSplitMode();
+
+        // Update button visual feedback
+        const currentMode = displayManager.getCurrentMode();
+        splitButton.classList.toggle('active', currentMode === 'split');
+
+        console.log(`🆕 [HEADER] Split mode toggled: ${currentMode}`);
+      }
+    });
+
+    // Hover effect
+    DOMUtils.addEventListenerSafe(splitButton, 'mouseenter', () => {
+      splitButton.style.background = 'var(--vscode-toolbar-hoverBackground)';
+    });
+
+    DOMUtils.addEventListenerSafe(splitButton, 'mouseleave', () => {
+      const displayManager = this.coordinator?.getDisplayModeManager?.();
+      const isActive = displayManager?.getCurrentMode() === 'split';
+      splitButton.style.background = isActive
+        ? 'var(--vscode-button-background)'
+        : 'transparent';
+    });
+
+    container.appendChild(splitButton);
   }
 
   /**
@@ -376,11 +447,29 @@ export class HeaderManager {
   }
 
   /**
+   * 🆕 分割ボタンの状態を更新（外部から呼び出し可能）
+   */
+  public updateSplitButtonState(isSplitMode: boolean): void {
+    const button = this.headerElement?.querySelector('.split-mode-toggle-button');
+    if (button) {
+      button.classList.toggle('active', isSplitMode);
+
+      // Update background color
+      if (isSplitMode) {
+        (button as HTMLElement).style.background = 'var(--vscode-button-background)';
+      } else {
+        (button as HTMLElement).style.background = 'transparent';
+      }
+    }
+  }
+
+  /**
    * クリーンアップ
    */
   public dispose(): void {
     try {
       this.removeExistingHeader();
+      this.coordinator = null;
     } catch (error) {
       ErrorHandler.getInstance().handleGenericError(error as Error, 'HeaderManager.dispose');
     }

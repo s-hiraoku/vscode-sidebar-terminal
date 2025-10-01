@@ -61,6 +61,9 @@ import { EventHandlerManager } from './EventHandlerManager';
 import { ShellIntegrationManager } from './ShellIntegrationManager';
 import { FindInTerminalManager } from './FindInTerminalManager';
 import { ProfileManager } from './ProfileManager';
+import { TerminalContainerManager } from './TerminalContainerManager';
+import { DisplayModeManager } from './DisplayModeManager';
+import { HeaderManager } from './HeaderManager';
 
 /**
  * リファクタリングされたTerminalWebviewManager
@@ -82,6 +85,11 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
   public profileManager: ProfileManager;
 
   public terminalTabManager!: TerminalTabManager;
+
+  // 🆕 新規マネージャー（Issue #198用）
+  private terminalContainerManager!: TerminalContainerManager;
+  private displayModeManager!: DisplayModeManager;
+  private headerManager!: HeaderManager;
 
   // 既存マネージャー（段階的移行）
   public splitManager: SplitManager;
@@ -143,6 +151,26 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
         dispose: () => {},
       } as any;
     }
+
+    // 🆕 新規マネージャーの初期化（Issue #198）
+    // TerminalContainerManager と DisplayModeManager は保留（将来の機能拡張用）
+    this.terminalContainerManager = {
+      setCoordinator: () => {},
+      initialize: () => {},
+      dispose: () => {},
+    } as any;
+
+    this.displayModeManager = {
+      setCoordinator: () => {},
+      initialize: () => {},
+      dispose: () => {},
+    } as any;
+
+    // HeaderManager は有効化（AI Status表示に必要）
+    this.headerManager = new HeaderManager();
+    this.headerManager.setCoordinator(this);
+
+    log('✅ HeaderManager initialized, DisplayModeManager/TerminalContainerManager deferred');
 
     // 既存マネージャーの初期化
     this.initializeExistingManagers();
@@ -223,6 +251,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
 
     // Message Manager は後で初期化
     this.messageManager = new RefactoredMessageManager();
+    this.messageManager.setCoordinator(this); // 🆕 Coordinator を設定（×ボタン機能に必要）
     this.persistenceManager = this.simplePersistenceManager;
 
     // Set up coordinator relationships for specialized managers
@@ -411,6 +440,8 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     profile?: IProfileManager;
     tabs?: ITerminalTabManager;
     persistence: OptimizedTerminalPersistenceManager | SimplePersistenceManager | null;
+    terminalContainer?: ITerminalContainerManager;
+    displayMode?: IDisplayModeManager;
   } {
     return {
       performance: this.performanceManager,
@@ -423,11 +454,22 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       profile: this.profileManager,
       tabs: this.terminalTabManager,
       persistence: this.persistenceManager,
+      terminalContainer: this.terminalContainerManager,
+      displayMode: this.displayModeManager,
     };
   }
 
   public getMessageManager(): IMessageManager {
     return this.messageManager;
+  }
+
+  // 🆕 Getters for new managers
+  public getTerminalContainerManager(): ITerminalContainerManager {
+    return this.terminalContainerManager;
+  }
+
+  public getDisplayModeManager(): IDisplayModeManager {
+    return this.displayModeManager;
   }
 
   // Terminal management delegation
@@ -925,7 +967,11 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
   // Initialization
 
   public initializeSimpleTerminal(): void {
+    // まずターミナルを初期化
     this.terminalLifecycleManager.initializeSimpleTerminal();
+
+    // 🆕 その後にWebView headerを作成（DOMが準備完了後）
+    this.headerManager.createWebViewHeader();
   }
 
   // Compatibility methods for existing code
@@ -2333,6 +2379,10 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       this.findInTerminalManager.dispose();
       this.profileManager.dispose();
       this.terminalTabManager.dispose();
+
+      // 🆕 新規マネージャーのクリーンアップ（Issue #198）
+      this.displayModeManager?.dispose();
+      this.terminalContainerManager?.dispose();
 
       // 既存マネージャーのクリーンアップ
       this.messageManager.dispose();

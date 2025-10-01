@@ -7,13 +7,14 @@ import { SPLIT_CONSTANTS } from '../constants/webview';
 import { showSplitLimitWarning } from '../utils/NotificationUtils';
 import { BaseManager } from './BaseManager';
 import { TerminalInstance } from '../interfaces/ManagerInterfaces';
+import { ISplitLayoutController } from '../interfaces/ISplitLayoutController';
 
 // Re-export TerminalInstance for tests
 export { TerminalInstance };
 import { splitLogger } from '../utils/ManagerLogger';
 import { TerminalContainerFactory } from '../factories/TerminalContainerFactory';
 
-export class SplitManager extends BaseManager {
+export class SplitManager extends BaseManager implements ISplitLayoutController {
   // Specialized logger for Split Manager
   private readonly splitManagerLogger = splitLogger;
 
@@ -647,6 +648,57 @@ export class SplitManager extends BaseManager {
     }
 
     this.splitManagerLogger.info('Split mode prepared, waiting for new terminal');
+  }
+
+  /**
+   * 🆕 Exit split mode and return all terminals to normal layout
+   * ISplitLayoutController implementation
+   */
+  public exitSplitMode(): void {
+    this.splitManagerLogger.info('Exiting split mode');
+
+    // Disable split mode
+    this.isSplitMode = false;
+    this.splitDirection = null;
+
+    // Get terminal body
+    const terminalBody = document.getElementById('terminal-body');
+    if (!terminalBody) {
+      this.splitManagerLogger.error('Terminal body not found');
+      return;
+    }
+
+    // Reset terminal body layout to normal
+    terminalBody.style.cssText = `
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      overflow: hidden;
+    `;
+
+    // Reset all terminal containers to normal layout
+    this.terminalContainers.forEach((container, terminalId) => {
+      // Remove split-specific styles
+      container.style.cssText = '';
+      container.style.width = '100%';
+      container.style.height = '100%';
+      container.style.flex = '';
+      container.style.minHeight = '';
+      container.style.minWidth = '';
+      container.style.borderBottom = '';
+
+      this.splitManagerLogger.debug(`Reset container ${terminalId} to normal layout`);
+    });
+
+    // Clear split terminals map
+    this.splitTerminals.clear();
+
+    // Refit all terminals after layout change
+    setTimeout(() => {
+      this.refitAllTerminals();
+    }, 100);
+
+    this.splitManagerLogger.info('Split mode exited successfully');
   }
 
   public splitTerminal(direction: 'horizontal' | 'vertical'): void {

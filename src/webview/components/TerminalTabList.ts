@@ -70,6 +70,7 @@ export class TerminalTabList {
 
     this.setupStyles();
     this.setupKeyboardNavigation();
+    this.setupGlobalEventDelegation(); // 🆕 Global event delegation
   }
 
   private setupStyles(): void {
@@ -107,11 +108,12 @@ export class TerminalTabList {
       .terminal-tab {
         display: flex;
         align-items: center;
-        justify-content: center;
+        justify-content: flex-start;
         padding: 0 8px;
         min-width: 100px;
         max-width: 200px;
         height: 24px;
+        gap: 4px;
         background: var(--vscode-tab-inactiveBackground);
         color: var(--vscode-tab-inactiveForeground);
         border-right: 1px solid var(--vscode-tab-border);
@@ -156,8 +158,9 @@ export class TerminalTabList {
         white-space: nowrap;
         font-size: 12px;
         font-weight: normal;
-        text-align: center;
+        text-align: left;
         line-height: 24px;
+        min-width: 0;
       }
 
       .terminal-tab-dirty-indicator {
@@ -170,7 +173,32 @@ export class TerminalTabList {
       }
 
       .terminal-tab-close {
-        display: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 16px;
+        height: 16px;
+        margin-left: 4px;
+        padding: 0;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        border-radius: 2px;
+        flex-shrink: 0;
+        transition: background-color 0.1s ease;
+        color: transparent !important;
+        font-size: 16px !important;
+        font-weight: normal !important;
+        line-height: 16px !important;
+        text-align: center;
+      }
+
+      .terminal-tab-close:hover {
+        background: var(--vscode-toolbar-hoverBackground);
+      }
+
+      .terminal-tab:hover .terminal-tab-close {
+        color: #ffffff !important;
       }
 
       .terminal-tab-actions {
@@ -244,6 +272,61 @@ export class TerminalTabList {
     });
   }
 
+  /**
+   * 🆕 Setup global event delegation for all tab events
+   * This prevents duplicate listeners when updateTabElement is called
+   */
+  private setupGlobalEventDelegation(): void {
+    // Delegate click events for tabs and close buttons
+    this.tabsContainer.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      console.log('🗂️ Tab container clicked:', target.className);
+
+      // Handle close button click
+      const closeButton = target.closest('.terminal-tab-close');
+      if (closeButton) {
+        e.stopPropagation();
+        e.preventDefault();
+        const tabElement = closeButton.closest('.terminal-tab');
+        if (tabElement) {
+          const tabId = tabElement.getAttribute('data-tab-id');
+          if (tabId) {
+            console.log('🗂️ Close button clicked for tab:', tabId);
+            this.events.onTabClose(tabId);
+          }
+        }
+        return;
+      }
+
+      // Handle tab click
+      const tabElement = target.closest('.terminal-tab');
+      if (tabElement) {
+        e.preventDefault();
+        const tabId = tabElement.getAttribute('data-tab-id');
+        if (tabId) {
+          console.log('🗂️ Tab clicked:', tabId);
+          this.events.onTabClick(tabId);
+        }
+      }
+    });
+
+    // Delegate context menu
+    this.tabsContainer.addEventListener('contextmenu', (e) => {
+      const target = e.target as HTMLElement;
+      const tabElement = target.closest('.terminal-tab');
+      if (tabElement) {
+        e.preventDefault();
+        const tabId = tabElement.getAttribute('data-tab-id');
+        if (tabId) {
+          const tab = this.tabs.get(tabId);
+          if (tab) {
+            this.showContextMenu(e as MouseEvent, tab);
+          }
+        }
+      }
+    });
+  }
+
   private navigateTabs(direction: number): void {
     const tabIds = Array.from(this.tabs.keys());
     const activeTab = this.getActiveTab();
@@ -284,6 +367,9 @@ export class TerminalTabList {
     const tabElement = this.container.querySelector(`[data-tab-id="${tabId}"]`) as HTMLElement;
     if (tabElement) {
       this.updateTabElement(tabElement, tab);
+      // No need to re-attach click/context menu events - they're handled by global delegation
+      // Only drag-and-drop needs to be re-attached since it's specific to each element
+      this.setupDragAndDrop(tabElement, tab);
     }
   }
 
@@ -325,6 +411,9 @@ export class TerminalTabList {
       ${tab.icon ? `<span class="terminal-tab-icon codicon codicon-${tab.icon}"></span>` : ''}
       <span class="terminal-tab-label" title="${tab.name}">${tab.name}</span>
       ${tab.isDirty ? '<span class="terminal-tab-dirty-indicator"></span>' : ''}
+      ${tab.isClosable ? `
+        <button class="terminal-tab-close" title="Close Terminal" aria-label="Close" type="button">×</button>
+      ` : ''}
     `;
 
     if (tab.color) {
@@ -333,24 +422,9 @@ export class TerminalTabList {
   }
 
   private attachTabEvents(tabElement: HTMLElement, tab: TerminalTab): void {
-    // Click to activate
-    tabElement.addEventListener('click', (e) => {
-      e.preventDefault();
-      this.events.onTabClick(tab.id);
-    });
-
-    // Close button (removed)
-
-    // Double-click to rename (disabled)
-
-    // Drag and drop
+    // Click and context menu are now handled by global event delegation
+    // Only drag and drop needs element-specific handlers
     this.setupDragAndDrop(tabElement, tab);
-
-    // Context menu
-    tabElement.addEventListener('contextmenu', (e) => {
-      e.preventDefault();
-      this.showContextMenu(e, tab);
-    });
   }
 
   private setupDragAndDrop(tabElement: HTMLElement, tab: TerminalTab): void {

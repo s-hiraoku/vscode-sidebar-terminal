@@ -1,0 +1,177 @@
+/**
+ * Display Modes CSS
+ * ターミナル表示モード（normal/fullscreen/split）のスタイル定義
+ */
+
+/* ========================================
+   Terminal Container Display Modes
+   ======================================== */
+
+.terminal-container.normal-mode {
+  display: block;
+  width: 100%;
+  height: auto;
+  position: relative;
+}
+
+.terminal-container.fullscreen-mode {
+  display: block !important;
+  width: 100%;
+  height: 100%;
+  z-index: 10;
+  position: relative;
+}
+
+.terminal-container.hidden-mode {
+  display: none !important;
+}
+
+.terminal-container.split-mode {
+  /* SplitManager が動的にスタイルを制御するため、
+     基本的なスタイルのみ定義 */
+  display: flex;
+  flex-direction: column;
+}
+
+/* ========================================
+   Split Mode Toggle Button
+   ======================================== */
+
+.split-mode-toggle-button {
+  background: transparent;
+  border: none;
+  color: var(--vscode-foreground);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 16px;
+  transition: background-color 0.2s ease, color 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.split-mode-toggle-button:hover {
+  background: var(--vscode-toolbar-hoverBackground);
+}
+
+.split-mode-toggle-button.active {
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+}
+
+.split-mode-toggle-button:focus {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: 2px;
+}
+
+/* ========================================
+   Tab Close Button Enhancements
+   ======================================== */
+
+/* 閉じるボタンのアニメーション */
+.terminal-tab-close {
+  transition: opacity 0.15s ease, background-color 0.15s ease, transform 0.1s ease;
+}
+
+.terminal-tab-close:hover {
+  transform: scale(1.1);
+}
+
+.terminal-tab-close:active {
+  transform: scale(0.95);
+}
+
+/* アクセシビリティ: フォーカス時の視覚フィードバック */
+.terminal-tab-close:focus {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: 1px;
+}
+
+/* ========================================
+   Fullscreen Mode Animations
+   ======================================== */
+
+.terminal-container.fullscreen-mode {
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+.terminal-container.hidden-mode {
+  animation: fadeOut 0.15s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* ========================================
+   Responsive Adjustments
+   ======================================== */
+
+@media (max-width: 600px) {
+  /* 小さい画面では分割ボタンのサイズを調整 */
+  .split-mode-toggle-button {
+    padding: 3px 6px;
+    font-size: 14px;
+  }
+}
+
+/* ========================================
+   Dark/Light Theme Support
+   ======================================== */
+
+/*
+   VSCodeのテーマ変数を使用しているため、
+   テーマ切り替えに自動対応
+*/
+
+/* ========================================
+   Accessibility Enhancements
+   ======================================== */
+
+/* ハイコントラストモード対応 */
+@media (prefers-contrast: high) {
+  .split-mode-toggle-button.active {
+    border: 2px solid var(--vscode-contrastActiveBorder, var(--vscode-focusBorder));
+  }
+
+  .terminal-tab-close:hover {
+    border: 1px solid var(--vscode-contrastActiveBorder, var(--vscode-focusBorder));
+  }
+}
+
+/* モーション削減設定対応 */
+@media (prefers-reduced-motion: reduce) {
+  .terminal-container.fullscreen-mode,
+  .terminal-container.hidden-mode,
+  .terminal-tab-close {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* ========================================
+   Debug Utilities (Development Only)
+   ======================================== */
+
+/* デバッグ用のクラス（本番環境では不使用） */
+.terminal-container.debug-mode-highlight {
+  outline: 2px dashed var(--vscode-editorError-foreground);
+  outline-offset: -2px;
+}

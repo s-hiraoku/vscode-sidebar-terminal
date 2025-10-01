@@ -112,10 +112,32 @@ export class TerminalTabManager implements TerminalTabEvents {
     }
 
     this.setActiveTab(tabId);
+
+    // 🆕 Enter fullscreen mode for the clicked terminal
+    const displayManager = this.coordinator?.getDisplayModeManager?.();
+    if (displayManager) {
+      displayManager.showTerminalFullscreen(tabId);
+      console.log(`🗂️ Terminal ${tabId} entered fullscreen mode`);
+    }
   };
 
   public onTabClose = (tabId: string): void => {
     console.log(`🗂️ Tab close requested: ${tabId}`);
+
+    // 🆕 Protect the last tab from being closed
+    if (this.tabs.size <= 1) {
+      console.warn('⚠️ Cannot close the last terminal tab');
+
+      // Show notification to user
+      if (this.coordinator) {
+        const managers = this.coordinator.getManagers();
+        if (managers.notification) {
+          managers.notification.showWarning('Cannot close the last terminal');
+        }
+      }
+
+      return;
+    }
 
     // Close the terminal via coordinator
     if (this.coordinator) {

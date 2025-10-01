@@ -87,6 +87,14 @@ export class RefactoredMessageManager implements IMessageManager {
   }
 
   /**
+   * Set coordinator after construction (for dependency injection)
+   */
+  public setCoordinator(coordinator: IManagerCoordinator): void {
+    this.coordinator = coordinator;
+    this.logger.lifecycle('coordinator', 'set');
+  }
+
+  /**
    * Initialize with coordinator
    */
   public initialize(coordinator: IManagerCoordinator): void {

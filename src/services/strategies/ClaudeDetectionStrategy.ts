@@ -32,8 +32,8 @@ export class ClaudeDetectionStrategy implements AgentDetectionStrategy {
       return false;
     }
 
-    // Simple and direct detection - only 'Welcome to Claude Code!'
-    return output.includes('Welcome to Claude Code!');
+    // Detection for Claude Code startup message
+    return /Claude\s+Code/.test(output);
   }
 
   isAgentActivity(output: string): boolean {

@@ -70,8 +70,12 @@ export interface IManagerCoordinator {
     profile?: IProfileManager;
     tabs?: ITerminalTabManager;
     persistence?: any; // Optional persistence manager
+    terminalContainer?: ITerminalContainerManager; // Terminal container manager
+    displayMode?: IDisplayModeManager; // Display mode manager
   };
   getMessageManager(): IMessageManager;
+  getTerminalContainerManager?(): ITerminalContainerManager;
+  getDisplayModeManager?(): IDisplayModeManager;
   // 新しいアーキテクチャ: 状態更新処理
   updateState?(state: unknown): void;
   handleTerminalRemovedFromExtension?(terminalId: string): void;
@@ -257,6 +261,34 @@ export interface IMessageManager {
     requestSource: 'header' | 'panel',
     coordinator: IManagerCoordinator
   ): void;
+  dispose(): void;
+}
+
+// Terminal Container management interface
+export interface ITerminalContainerManager {
+  setCoordinator(coordinator: IManagerCoordinator): void;
+  initialize(): void;
+  setContainerVisibility(terminalId: string, visible: boolean): void;
+  setContainerMode(terminalId: string, mode: 'normal' | 'fullscreen' | 'split'): void;
+  getContainer(terminalId: string): HTMLElement | null;
+  getAllContainers(): Map<string, HTMLElement>;
+  registerContainer(terminalId: string, container: HTMLElement): void;
+  unregisterContainer(terminalId: string): void;
+  dispose(): void;
+}
+
+// Display Mode management interface
+export interface IDisplayModeManager {
+  setCoordinator(coordinator: IManagerCoordinator): void;
+  initialize(): void;
+  setDisplayMode(mode: 'normal' | 'fullscreen' | 'split'): void;
+  toggleSplitMode(): void;
+  showTerminalFullscreen(terminalId: string): void;
+  showAllTerminalsSplit(): void;
+  hideAllTerminalsExcept(terminalId: string): void;
+  showAllTerminals(): void;
+  getCurrentMode(): 'normal' | 'fullscreen' | 'split';
+  isTerminalVisible(terminalId: string): boolean;
   dispose(): void;
 }
 
