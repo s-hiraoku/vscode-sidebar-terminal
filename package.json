@@ -2,7 +2,7 @@
   "name": "vscode-sidebar-terminal",
   "displayName": "Secondary Terminal",
   "description": "Production-ready VS Code extension with TypeScript-compliant terminal in sidebar, ProcessState/InteractionState management, AI agent integration (Claude Code, Codex CLI, CodeRabbit CLI, GitHub Copilot, Gemini), and comprehensive session management.",
-  "version": "0.1.108",
+  "version": "0.1.109",
   "publisher": "s-hiraoku",
   "engines": {
     "vscode": "^1.74.0",
