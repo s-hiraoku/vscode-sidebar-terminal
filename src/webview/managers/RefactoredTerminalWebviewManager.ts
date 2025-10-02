@@ -154,8 +154,11 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       } as any;
     }
 
-    // 🆕 新規マネージャーの初期化（Issue #198）
-    // TerminalContainerManager と DisplayModeManager は保留（将来の機能拡張用）
+    // HeaderManager（AI Status表示に必要）
+    this.headerManager = new HeaderManager();
+    this.headerManager.setCoordinator(this);
+
+    // DisplayModeManager と TerminalContainerManager はダミー実装
     this.terminalContainerManager = {
       setCoordinator: () => {},
       initialize: () => {},
@@ -168,11 +171,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       dispose: () => {},
     } as any;
 
-    // HeaderManager は有効化（AI Status表示に必要）
-    this.headerManager = new HeaderManager();
-    this.headerManager.setCoordinator(this);
-
-    log('✅ HeaderManager initialized, DisplayModeManager/TerminalContainerManager deferred');
+    log('✅ All managers initialized');
 
     // 既存マネージャーの初期化
     this.initializeExistingManagers();
@@ -275,7 +274,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     // Input Manager setup will be handled in setupInputManager()
     this.terminalTabManager.initialize();
 
-    log('✅ Existing managers initialized');
+    log('✅ All managers initialized');
   }
 
   /**

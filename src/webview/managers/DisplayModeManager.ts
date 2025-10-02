@@ -350,20 +350,17 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
   }
 
   /**
-   * ログ出力のヘルパー
+   * ログ出力のヘルパー（BaseManagerのloggerを使用）
    */
   private log(message: string, level: 'info' | 'warn' | 'error' = 'info'): void {
-    const prefix = '[DisplayModeManager]';
+    // BaseManagerのloggerを活用
+    this.logger(message);
 
-    switch (level) {
-      case 'warn':
-        console.warn(`${prefix} ${message}`);
-        break;
-      case 'error':
-        console.error(`${prefix} ${message}`);
-        break;
-      default:
-        console.log(`${prefix} ${message}`);
+    // エラーレベルの場合は追加でconsole.errorに出力
+    if (level === 'error') {
+      console.error(`[DisplayModeManager] ${message}`);
+    } else if (level === 'warn') {
+      console.warn(`[DisplayModeManager] ${message}`);
     }
   }
 

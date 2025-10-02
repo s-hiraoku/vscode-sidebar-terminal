@@ -107,11 +107,14 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
     }
 
     if (visible) {
+      // 表示: hidden-modeクラスを削除し、displayをリセット
       container.classList.remove('hidden-mode');
       container.style.display = '';
       this.log(`Container visible: ${terminalId}`);
     } else {
+      // 非表示: hidden-modeクラスを追加し、displayをnoneに
       container.classList.add('hidden-mode');
+      container.style.display = 'none';
       this.log(`Container hidden: ${terminalId}`);
     }
   }
@@ -261,20 +264,17 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
   }
 
   /**
-   * ログ出力のヘルパー
+   * ログ出力のヘルパー（BaseManagerのloggerを使用）
    */
   private log(message: string, level: 'info' | 'warn' | 'error' = 'info'): void {
-    const prefix = '[TerminalContainerManager]';
+    // BaseManagerのloggerを活用
+    this.logger(message);
 
-    switch (level) {
-      case 'warn':
-        console.warn(`${prefix} ${message}`);
-        break;
-      case 'error':
-        console.error(`${prefix} ${message}`);
-        break;
-      default:
-        console.log(`${prefix} ${message}`);
+    // エラーレベルの場合は追加でconsole.errorに出力
+    if (level === 'error') {
+      console.error(`[TerminalContainerManager] ${message}`);
+    } else if (level === 'warn') {
+      console.warn(`[TerminalContainerManager] ${message}`);
     }
   }
 

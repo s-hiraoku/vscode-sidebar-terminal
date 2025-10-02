@@ -230,6 +230,12 @@ export class TerminalLifecycleManager {
           }
         }
 
+        // 🐛 FIX: Clear initial placeholder content when creating first terminal
+        if (terminalBody && this.splitManager.getTerminals().size === 0) {
+          terminalLogger.info('🧹 Clearing initial terminal-body placeholder content');
+          terminalBody.innerHTML = '';
+        }
+
         // Merge configuration
         const terminalConfig = { ...this.DEFAULT_TERMINAL_CONFIG, ...config };
 

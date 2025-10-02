@@ -112,13 +112,6 @@ export class TerminalTabManager implements TerminalTabEvents {
     }
 
     this.setActiveTab(tabId);
-
-    // 🆕 Enter fullscreen mode for the clicked terminal
-    const displayManager = this.coordinator?.getDisplayModeManager?.();
-    if (displayManager) {
-      displayManager.showTerminalFullscreen(tabId);
-      console.log(`🗂️ Terminal ${tabId} entered fullscreen mode`);
-    }
   };
 
   public onTabClose = (tabId: string): void => {
