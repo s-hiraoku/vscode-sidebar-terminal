@@ -44,6 +44,7 @@
 - **Smart File Reference System**: Instantly share code with AI agents using CMD+Option+L - automatically targets "AI Agent Connected" terminals
 - **Multi-Agent Workflow**: Seamlessly work with multiple AI agents across different terminals simultaneously
 - **Tab Close Button**: Hover-visible white × button for closing terminals, with last tab protection (v0.1.108+)
+- **Stable Tab Visibility**: Terminal tabs remain visible throughout all operations (v0.1.109+)
 - **IME Support**: Full Japanese and multi-language input method support
 - **Split Terminal Views**: Vertical and horizontal terminal splitting optimized for AI agent workflows
 - **Command Palette Integration**: Full VS Code command palette support
@@ -418,7 +419,12 @@ The project uses GitHub Actions for automated testing and releases:
 
 ## 📈 Version History
 
-### v0.1.108 (Current) - ✨ **Tab Close Button & AI Detection Enhancement**
+### v0.1.109 (Current) - 🐛 **Terminal Tabs Visibility Fix**
+- 🐛 **Terminal Tabs Fix**: Fixed tabs disappearing after terminal creation (regression from v0.1.108)
+- 🔧 **Container Preservation**: Tabs container now preserved when clearing placeholder content
+- ✅ **Initialization Stability**: Ensured proper WebView initialization sequence
+
+### v0.1.108 - ✨ **Tab Close Button & AI Detection Enhancement**
 - ✨ **Tab Close Button**: Added hover-visible white × button for closing terminals with smart last-tab protection
 - 🎨 **Stable Tab Layout**: Tab size remains constant during hover, preventing layout shift
 - 🤖 **Enhanced Claude Code Detection**: Updated detection pattern to match new "Claude Code" startup message format

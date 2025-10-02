@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.109] - 2025-10-03
+
+### Fixed
+- **Terminal Tabs Visibility**: Fixed tabs disappearing after terminal creation
+  - Preserved `#terminal-tabs-container` element when clearing placeholder content
+  - Prevents accidental removal of tabs container during first terminal initialization
+  - Resolved regression from commit efd40e6 (Issue #198 postponement)
+
+### Technical Details
+- Modified `TerminalLifecycleManager.ts:233-242` to save and restore tabs container
+- Ensures terminal tabs remain visible regardless of terminal count
+- Maintains proper WebView initialization sequence
+
 ## [0.1.108] - 2025-10-01
 
 ### Added
