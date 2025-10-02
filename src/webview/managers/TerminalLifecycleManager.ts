@@ -231,9 +231,14 @@ export class TerminalLifecycleManager {
         }
 
         // 🐛 FIX: Clear initial placeholder content when creating first terminal
+        // Preserve terminal-tabs-container while clearing other placeholder elements
         if (terminalBody && this.splitManager.getTerminals().size === 0) {
           terminalLogger.info('🧹 Clearing initial terminal-body placeholder content');
+          const tabsContainer = terminalBody.querySelector('#terminal-tabs-container');
           terminalBody.innerHTML = '';
+          if (tabsContainer) {
+            terminalBody.appendChild(tabsContainer);
+          }
         }
 
         // Merge configuration
