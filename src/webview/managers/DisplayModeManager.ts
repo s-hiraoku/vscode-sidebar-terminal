@@ -98,6 +98,7 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
     this.fullscreenTerminalId = null;
 
     this.log('DisplayModeManager initialized successfully');
+    this.notifyModeChanged('normal');
   }
 
   /**
@@ -116,6 +117,9 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
     this.updateDisplay();
 
     this.log(`Display mode set: ${mode}`);
+
+    this.refreshSplitToggleState();
+    this.notifyModeChanged(mode);
   }
 
   /**
@@ -141,19 +145,34 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
   public showTerminalFullscreen(terminalId: string): void {
     this.log(`Showing terminal fullscreen: ${terminalId}`);
 
-    // フルスクリーンモードに設定
+    const containerManager = this.coordinator?.getTerminalContainerManager?.();
+    if (!containerManager) {
+      this.log('TerminalContainerManager not available', 'error');
+      return;
+    }
+
+    this.previousMode = this.currentMode;
+
+    const splitManager = this.getSplitManager();
+    if (splitManager?.isSplitMode) {
+      this.log('Ensuring split mode is exited before entering fullscreen');
+      splitManager.exitSplitMode();
+    }
+
+    const displayState = {
+      mode: 'fullscreen' as const,
+      activeTerminalId: terminalId,
+      orderedTerminalIds: containerManager.getContainerOrder(),
+    };
+
+    containerManager.applyDisplayState(displayState);
+
     this.currentMode = 'fullscreen';
     this.fullscreenTerminalId = terminalId;
 
-    // 他のターミナルを非表示
-    this.hideAllTerminalsExcept(terminalId);
-
-    // フルスクリーンターミナルのモードを設定
-    const containerManager = this.coordinator?.getTerminalContainerManager?.();
-    if (containerManager) {
-      containerManager.setContainerMode(terminalId, 'fullscreen');
-      containerManager.setContainerVisibility(terminalId, true);
-    }
+    this.syncVisibilityFromSnapshot();
+    this.refreshSplitToggleState();
+    this.notifyModeChanged('fullscreen');
 
     this.log(`Terminal ${terminalId} is now in fullscreen mode`);
   }
@@ -176,72 +195,70 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
 
     // 分割モードを準備
     splitManager.prepareSplitMode(direction);
-
-    // すべてのターミナルを表示
-    this.showAllTerminals();
-
-    // すべてのコンテナを分割モードに設定
     const containerManager = this.coordinator?.getTerminalContainerManager?.();
-    if (containerManager) {
-      const containers = containerManager.getAllContainers();
-      containers.forEach((_, terminalId) => {
-        containerManager.setContainerMode(terminalId, 'split');
-        containerManager.setContainerVisibility(terminalId, true);
-      });
+    if (!containerManager) {
+      this.log('TerminalContainerManager not available', 'error');
+      return;
     }
 
+    const displayState = {
+      mode: 'split' as const,
+      activeTerminalId: this.fullscreenTerminalId,
+      orderedTerminalIds: containerManager.getContainerOrder(),
+      splitDirection: direction,
+    };
+
+    containerManager.applyDisplayState(displayState);
+
+    this.currentMode = 'split';
+    this.previousMode = 'split';
+    this.fullscreenTerminalId = null;
+
+    this.syncVisibilityFromSnapshot();
+    this.refreshSplitToggleState();
+
     this.log('All terminals are now in split view');
+    this.notifyModeChanged('split');
   }
 
   /**
    * 指定ターミナル以外を非表示
    */
   public hideAllTerminalsExcept(terminalId: string): void {
-    this.log(`Hiding all terminals except: ${terminalId}`);
-
     const containerManager = this.coordinator?.getTerminalContainerManager?.();
     if (!containerManager) {
       this.log('TerminalContainerManager not available', 'error');
       return;
     }
 
-    const containers = containerManager.getAllContainers();
+    const displayState = {
+      mode: 'fullscreen' as const,
+      activeTerminalId: terminalId,
+      orderedTerminalIds: containerManager.getContainerOrder(),
+    };
 
-    containers.forEach((_, id) => {
-      if (id === terminalId) {
-        // 表示
-        containerManager.setContainerVisibility(id, true);
-        this.terminalVisibility.set(id, true);
-      } else {
-        // 非表示
-        containerManager.setContainerVisibility(id, false);
-        this.terminalVisibility.set(id, false);
-      }
-    });
-
-    this.log(`Hidden ${containers.size - 1} terminals`);
+    containerManager.applyDisplayState(displayState);
+    this.syncVisibilityFromSnapshot();
   }
 
   /**
    * すべてのターミナルを表示
    */
   public showAllTerminals(): void {
-    this.log('Showing all terminals');
-
     const containerManager = this.coordinator?.getTerminalContainerManager?.();
     if (!containerManager) {
       this.log('TerminalContainerManager not available', 'error');
       return;
     }
 
-    const containers = containerManager.getAllContainers();
+    const displayState = {
+      mode: 'normal' as const,
+      activeTerminalId: null,
+      orderedTerminalIds: containerManager.getContainerOrder(),
+    };
 
-    containers.forEach((_, terminalId) => {
-      containerManager.setContainerVisibility(terminalId, true);
-      this.terminalVisibility.set(terminalId, true);
-    });
-
-    this.log(`Showing ${containers.size} terminals`);
+    containerManager.applyDisplayState(displayState);
+    this.syncVisibilityFromSnapshot();
   }
 
   /**
@@ -289,18 +306,12 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
     // すべてのターミナルを表示
     this.showAllTerminals();
 
-    // すべてのコンテナを通常モードに設定
-    const containerManager = this.coordinator?.getTerminalContainerManager?.();
-    if (containerManager) {
-      const containers = containerManager.getAllContainers();
-      containers.forEach((_, terminalId) => {
-        containerManager.setContainerMode(terminalId, 'normal');
-      });
-    }
-
     this.fullscreenTerminalId = null;
 
     this.log('Normal mode applied');
+
+    this.refreshSplitToggleState();
+    this.notifyModeChanged('normal');
   }
 
   /**
@@ -379,5 +390,46 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
     this.coordinator = null;
 
     this.log('DisplayModeManager disposed successfully');
+  }
+
+  /**
+   * Split toggle buttonの状態を同期
+   */
+  private refreshSplitToggleState(): void {
+    try {
+      const headerManager = this.coordinator?.getManagers()?.header;
+      headerManager?.updateSplitButtonState(this.currentMode === 'split');
+    } catch (error) {
+      this.log(`⚠️ [DISPLAY] Failed to sync split button state: ${error}`, 'warn');
+    }
+
+    const button = document.querySelector('.split-mode-toggle-button');
+    if (button instanceof HTMLElement) {
+      const isSplit = this.currentMode === 'split';
+      button.classList.toggle('active', isSplit);
+      button.style.background = isSplit
+        ? 'var(--vscode-button-background)'
+        : 'transparent';
+    }
+  }
+
+  private syncVisibilityFromSnapshot(): void {
+    const containerManager = this.coordinator?.getTerminalContainerManager?.();
+    if (!containerManager) {
+      return;
+    }
+
+    const snapshot = containerManager.getDisplaySnapshot();
+    const visibleSet = new Set(snapshot.visibleTerminals);
+
+    this.terminalVisibility.clear();
+    containerManager.getAllContainers().forEach((_, terminalId) => {
+      this.terminalVisibility.set(terminalId, visibleSet.has(terminalId));
+    });
+  }
+
+  private notifyModeChanged(mode: DisplayMode): void {
+    const tabs = this.coordinator?.getManagers()?.tabs;
+    tabs?.updateModeIndicator(mode);
   }
 }

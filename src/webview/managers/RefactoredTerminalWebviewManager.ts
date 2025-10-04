@@ -30,6 +30,7 @@ import {
   ITerminalTabManager,
   ITerminalContainerManager,
   IDisplayModeManager,
+  IHeaderManager,
 } from '../interfaces/ManagerInterfaces';
 
 // Debug info interface
@@ -137,6 +138,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     // 専門マネージャーの初期化
     this.webViewApiManager = new WebViewApiManager();
     this.splitManager = new SplitManager();
+    this.splitManager.setCoordinator(this);
     this.terminalLifecycleManager = new TerminalLifecycleManager(this.splitManager, this);
     this.cliAgentStateManager = new CliAgentStateManager();
     this.eventHandlerManager = new EventHandlerManager();
@@ -158,18 +160,12 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     this.headerManager = new HeaderManager();
     this.headerManager.setCoordinator(this);
 
-    // DisplayModeManager と TerminalContainerManager はダミー実装
-    this.terminalContainerManager = {
-      setCoordinator: () => {},
-      initialize: () => {},
-      dispose: () => {},
-    } as any;
+    // 🆕 DisplayModeManager と TerminalContainerManager の実体化（Issue #198）
+    this.terminalContainerManager = new TerminalContainerManager();
+    this.terminalContainerManager.setCoordinator(this);
 
-    this.displayModeManager = {
-      setCoordinator: () => {},
-      initialize: () => {},
-      dispose: () => {},
-    } as any;
+    this.displayModeManager = new DisplayModeManager();
+    this.displayModeManager.setCoordinator(this);
 
     log('✅ All managers initialized');
 
@@ -273,6 +269,10 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
 
     // Input Manager setup will be handled in setupInputManager()
     this.terminalTabManager.initialize();
+
+    // 🆕 Initialize DisplayModeManager and TerminalContainerManager (Issue #198)
+    this.displayModeManager.initialize();
+    this.terminalContainerManager.initialize();
 
     log('✅ All managers initialized');
   }
@@ -443,6 +443,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     persistence: OptimizedTerminalPersistenceManager | SimplePersistenceManager | null;
     terminalContainer?: ITerminalContainerManager;
     displayMode?: IDisplayModeManager;
+    header?: IHeaderManager;
   } {
     return {
       performance: this.performanceManager,
@@ -457,6 +458,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       persistence: this.persistenceManager,
       terminalContainer: this.terminalContainerManager,
       displayMode: this.displayModeManager,
+      header: this.headerManager,
     };
   }
 
@@ -985,23 +987,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     // 📋 [SPEC] Panel trash button should call killTerminal to delete active terminal
     log(`🗑️ [PANEL] Panel trash button clicked - delegating to killTerminal`);
 
-    // If specific terminalId provided, use it; otherwise killTerminal will use active terminal
-    if (terminalId) {
-      log(`🗑️ [PANEL] Specific terminal ID provided: ${terminalId}`);
-      // For specific terminal ID, we still delegate to killTerminal for consistency
-      // The extension will handle the deletion properly
-    } else {
-      log(`🗑️ [PANEL] No specific terminal ID - killTerminal will delete active terminal`);
-    }
-
-    // 🎯 [FIX] Call killTerminal instead of custom deletion logic
-    // This ensures the panel trash button follows the same logic as the kill command
-    this.messageManager.postMessage({
-      command: 'killTerminal',
-      terminalId: terminalId, // Pass the specific ID if provided, null if active terminal should be used
-    });
-
-    log(`🗑️ [PANEL] killTerminal message sent to extension`);
+    void this.deleteTerminalSafely(terminalId);
   }
 
   public updateState(state: unknown): void {
@@ -2121,7 +2107,8 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       }
 
       // 🎯 FIX: Check terminal count BEFORE deletion to protect the last one
-      const totalTerminals = this.terminalLifecycleManager.getTerminalStats().totalTerminals;
+      const terminalStats = this.terminalLifecycleManager.getTerminalStats();
+      const totalTerminals = terminalStats.totalTerminals;
       if (totalTerminals <= 1) {
         log(`🛡️ [SAFE-DELETE] Cannot delete last terminal: ${targetId} (total: ${totalTerminals})`);
         // Show user notification about protection
@@ -2130,6 +2117,8 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
         }
         return false;
       }
+
+      this.prepareDisplayForTerminalDeletion(targetId, terminalStats);
 
       // 2. Check if deletion is already in progress
       if (this.isTerminalDeletionTracked(targetId)) {
@@ -2162,6 +2151,33 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     } catch (error) {
       log('❌ [SAFE-DELETE] Error in safe terminal deletion:', error);
       return false;
+    }
+  }
+
+  private prepareDisplayForTerminalDeletion(
+    targetTerminalId: string,
+    stats: { totalTerminals: number; activeTerminalId: string | null; terminalIds: string[] }
+  ): void {
+    try {
+      if (!this.displayModeManager) {
+        return;
+      }
+
+      const currentMode = this.displayModeManager.getCurrentMode();
+      const moreThanOneTerminal = stats.totalTerminals > 1;
+
+      if (!moreThanOneTerminal) {
+        return;
+      }
+
+      if (currentMode === 'fullscreen') {
+        log(
+          `🖥️ [SAFE-DELETE] Exiting fullscreen before deleting ${targetTerminalId}, switching to split mode`
+        );
+        this.displayModeManager.setDisplayMode('split');
+      }
+    } catch (error) {
+      log('⚠️ [SAFE-DELETE] Failed to prepare display for deletion:', error);
     }
   }
 

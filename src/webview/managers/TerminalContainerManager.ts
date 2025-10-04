@@ -16,7 +16,12 @@
  */
 
 import { BaseManager } from './BaseManager';
-import { IManagerCoordinator, ITerminalContainerManager } from '../interfaces/ManagerInterfaces';
+import {
+  IManagerCoordinator,
+  ITerminalContainerManager,
+  TerminalDisplayState,
+  TerminalDisplaySnapshot,
+} from '../interfaces/ManagerInterfaces';
 
 /**
  * TerminalContainerManager
@@ -31,6 +36,20 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
 
   // 現在の表示モードを追跡
   private containerModes = new Map<string, 'normal' | 'fullscreen' | 'split'>();
+
+  // Splitレイアウト用アーティファクト
+  private splitWrapperCache = new Map<string, HTMLElement>();
+  private splitResizers = new Set<HTMLElement>();
+
+  // フルスクリーン時に退避させるためのストレージ
+  private hiddenContainerStorage: HTMLElement | null = null;
+
+  // 現在の表示状態
+  private currentDisplayState: TerminalDisplayState = {
+    mode: 'normal',
+    activeTerminalId: null,
+    orderedTerminalIds: [],
+  };
 
   constructor() {
     super('TerminalContainerManager', {
@@ -93,29 +112,187 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
   public unregisterContainer(terminalId: string): void {
     this.containerCache.delete(terminalId);
     this.containerModes.delete(terminalId);
+    this.unregisterSplitWrapper(terminalId);
     this.log(`Unregistered container: ${terminalId}`);
+  }
+
+  /**
+   * Splitレイアウト用のラッパーを登録
+   */
+  public registerSplitWrapper(terminalId: string, wrapper: HTMLElement): void {
+    if (!wrapper) {
+      return;
+    }
+
+    wrapper.classList.add('split-terminal-container');
+    wrapper.setAttribute('data-terminal-wrapper-id', terminalId);
+    this.splitWrapperCache.set(terminalId, wrapper);
+    this.log(`Registered split wrapper: ${terminalId}`);
+  }
+
+  /**
+   * Splitラッパーの登録解除
+   */
+  public unregisterSplitWrapper(terminalId: string): void {
+    const wrapper = this.splitWrapperCache.get(terminalId);
+    if (wrapper) {
+      wrapper.remove();
+      this.splitWrapperCache.delete(terminalId);
+    }
+  }
+
+  /**
+   * Splitレイアウト用のリサイズハンドルを登録
+   */
+  public registerSplitResizer(resizer: HTMLElement): void {
+    if (!resizer) {
+      return;
+    }
+
+    resizer.classList.add('split-resizer');
+    this.splitResizers.add(resizer);
   }
 
   /**
    * コンテナの表示/非表示を設定
    */
   public setContainerVisibility(terminalId: string, visible: boolean): void {
+    this.log(`🔍 [VISIBILITY] setContainerVisibility called: ${terminalId}, visible: ${visible}`);
+
     const container = this.getContainer(terminalId);
     if (!container) {
-      this.log(`Container not found: ${terminalId}`, 'warn');
+      this.log(`❌ [VISIBILITY] Container not found: ${terminalId}`, 'warn');
       return;
     }
 
+    this.log(`✅ [VISIBILITY] Container found for ${terminalId}, current display: ${container.style.display}, classes: ${container.className}`);
+
     if (visible) {
-      // 表示: hidden-modeクラスを削除し、displayをリセット
+      // 表示: hidden-modeクラスを削除し、displayを明示的に設定
       container.classList.remove('hidden-mode');
-      container.style.display = '';
-      this.log(`Container visible: ${terminalId}`);
+      // flexまたはblockを明示的に設定（デフォルトはflex）
+      container.style.display = 'flex';
+      this.log(`✅ [VISIBILITY] Container visible: ${terminalId}, new display: ${container.style.display}, classes: ${container.className}`);
     } else {
       // 非表示: hidden-modeクラスを追加し、displayをnoneに
       container.classList.add('hidden-mode');
       container.style.display = 'none';
-      this.log(`Container hidden: ${terminalId}`);
+      this.log(`🔒 [VISIBILITY] Container hidden: ${terminalId}, new display: ${container.style.display}, classes: ${container.className}`);
+    }
+  }
+
+  /**
+   * 表示状態を適用
+   */
+  public applyDisplayState(state: TerminalDisplayState): void {
+    const terminalBody = this.getTerminalBody();
+    if (!terminalBody) {
+      this.log('Terminal body not found, cannot apply display state', 'error');
+      return;
+    }
+
+    this.refreshSplitArtifacts();
+
+    const orderedIds = this.resolveOrderedIds(state.orderedTerminalIds);
+
+    if (state.mode === 'split') {
+      this.clearSplitArtifacts();
+      this.activateSplitLayout(terminalBody, orderedIds, state.splitDirection ?? 'vertical');
+    } else {
+      this.clearSplitArtifacts();
+    }
+
+    const containerMap = this.getAllContainers();
+
+    containerMap.forEach((container, terminalId) => {
+      switch (state.mode) {
+        case 'fullscreen': {
+          const isActive = state.activeTerminalId === terminalId;
+          this.setContainerMode(terminalId, isActive ? 'fullscreen' : 'normal');
+          this.setContainerVisibility(terminalId, isActive);
+          container.classList.toggle('terminal-container--fullscreen', isActive);
+          container.classList.remove('terminal-container--split');
+          if (isActive) {
+            this.ensureContainerInBody(container, terminalBody);
+            container.style.flex = '1 1 auto';
+            container.style.width = '100%';
+            container.style.height = '100%';
+          } else {
+            container.style.removeProperty('flex');
+            container.style.removeProperty('height');
+          }
+          break;
+        }
+        case 'split': {
+          const isVisible = orderedIds.includes(terminalId);
+          this.setContainerMode(terminalId, 'split');
+          this.setContainerVisibility(terminalId, isVisible);
+          container.classList.toggle('terminal-container--split', isVisible);
+          container.classList.remove('terminal-container--fullscreen');
+          if (isVisible) {
+            container.style.display = 'flex';
+            container.style.flex = '1 1 auto';
+            container.style.width = '100%';
+          }
+          break;
+        }
+        default: {
+          this.setContainerMode(terminalId, 'normal');
+          this.setContainerVisibility(terminalId, true);
+          container.classList.remove('terminal-container--split', 'terminal-container--fullscreen');
+          this.ensureContainerInBody(container, terminalBody);
+          container.style.removeProperty('flex');
+          container.style.removeProperty('height');
+        }
+      }
+    });
+
+    this.currentDisplayState = {
+      mode: state.mode,
+      activeTerminalId: state.activeTerminalId,
+      orderedTerminalIds: orderedIds,
+      splitDirection: state.splitDirection,
+    };
+
+    this.log(`Display state applied: ${state.mode}${state.activeTerminalId ? ` (active ${state.activeTerminalId})` : ''}`);
+
+    if (state.mode === 'fullscreen') {
+      this.enforceFullscreenState(state.activeTerminalId, terminalBody);
+    } else if (state.mode === 'normal') {
+      this.normalizeTerminalBody(terminalBody);
+    }
+  }
+
+  /**
+   * Splitアーティファクトを全て除去
+   */
+  public clearSplitArtifacts(): void {
+    const terminalBody = this.getTerminalBody();
+    const targetBody = terminalBody ?? document.getElementById('terminal-body');
+
+    this.splitResizers.forEach((resizer) => {
+      resizer.remove();
+    });
+    this.splitResizers.clear();
+
+    this.splitWrapperCache.forEach((wrapper, terminalId) => {
+      const container = this.containerCache.get(terminalId);
+      if (container) {
+        const area = this.getWrapperArea(wrapper, terminalId);
+        if (area && area.contains(container)) {
+          targetBody?.appendChild(container);
+        }
+      }
+      wrapper.remove();
+    });
+    this.splitWrapperCache.clear();
+
+    if (targetBody) {
+      targetBody.style.display = 'flex';
+      targetBody.style.flexDirection = 'column';
+      targetBody.style.height = '100%';
+      targetBody.style.overflow = 'hidden';
+      this.normalizeTerminalBody(targetBody);
     }
   }
 
@@ -178,11 +355,16 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
    * DOMからコンテナを検索
    */
   private findContainerInDOM(terminalId: string): HTMLElement | null {
+    this.log(`🔍 [DOM-SEARCH] Searching for container: ${terminalId}`);
+
     // data-terminal-id 属性で検索
     const selector = `.terminal-container[data-terminal-id="${terminalId}"]`;
+    this.log(`🔍 [DOM-SEARCH] Using selector: ${selector}`);
+
     const container = document.querySelector(selector);
 
     if (container instanceof HTMLElement) {
+      this.log(`✅ [DOM-SEARCH] Found container via data-terminal-id: ${terminalId}`);
       return container;
     }
 
@@ -193,16 +375,21 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
       `#primary-terminal`, // 特殊ケース
     ];
 
+    this.log(`🔍 [DOM-SEARCH] Trying fallback selectors: ${idSelectors.join(', ')}`);
+
     for (const idSelector of idSelectors) {
       const element = document.querySelector(idSelector);
       if (element instanceof HTMLElement) {
         const dataId = element.getAttribute('data-terminal-id');
+        this.log(`🔍 [DOM-SEARCH] Found element ${idSelector}, data-terminal-id: ${dataId}`);
         if (dataId === terminalId) {
+          this.log(`✅ [DOM-SEARCH] Found container via ID selector: ${terminalId}`);
           return element;
         }
       }
     }
 
+    this.log(`❌ [DOM-SEARCH] Container not found in DOM: ${terminalId}`);
     return null;
   }
 
@@ -252,15 +439,42 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
     cachedContainers: number;
     modes: Record<string, string>;
   } {
-    const modes: Record<string, string> = {};
-    this.containerModes.forEach((mode, terminalId) => {
-      modes[terminalId] = mode;
+    const snapshot = this.getDisplaySnapshot();
+    return {
+      cachedContainers: snapshot.registeredContainers,
+      modes: Object.fromEntries(this.containerModes.entries()),
+    };
+  }
+
+  /**
+   * 表示スナップショットを取得
+   */
+  public getDisplaySnapshot(): TerminalDisplaySnapshot {
+    const visibleTerminals: string[] = [];
+    this.containerCache.forEach((container, terminalId) => {
+      if (this.isElementVisible(container)) {
+        visibleTerminals.push(terminalId);
+      }
     });
 
+    const knownNodes = this.containerCache.size + this.splitWrapperCache.size;
+    const domNodes = document.querySelectorAll('.terminal-container').length;
+
     return {
-      cachedContainers: this.containerCache.size,
-      modes,
+      mode: this.currentDisplayState.mode,
+      activeTerminalId: this.currentDisplayState.activeTerminalId,
+      visibleTerminals,
+      registeredContainers: this.containerCache.size,
+      registeredWrappers: this.splitWrapperCache.size,
+      orphanNodeCount: Math.max(domNodes - knownNodes, 0),
     };
+  }
+
+  /**
+   * 登録順にターミナルIDを取得
+   */
+  public getContainerOrder(): string[] {
+    return Array.from(this.containerCache.keys());
   }
 
   /**
@@ -290,9 +504,203 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
     // キャッシュをクリア
     this.containerCache.clear();
     this.containerModes.clear();
+    this.splitWrapperCache.clear();
+    this.splitResizers.clear();
 
     this.coordinator = null;
 
     this.log('TerminalContainerManager disposed successfully');
+  }
+
+  private getTerminalBody(): HTMLElement | null {
+    return document.getElementById('terminal-body');
+  }
+
+  private ensureContainerInBody(container: HTMLElement, terminalBody: HTMLElement): void {
+    if (container.parentElement !== terminalBody) {
+      terminalBody.appendChild(container);
+    }
+  }
+
+  private refreshSplitArtifacts(): void {
+    const wrappers = document.querySelectorAll<HTMLElement>('[data-terminal-wrapper-id]');
+    wrappers.forEach((wrapper) => {
+      const terminalId = wrapper.getAttribute('data-terminal-wrapper-id');
+      if (terminalId) {
+        this.splitWrapperCache.set(terminalId, wrapper);
+      }
+    });
+
+    const resizers = document.querySelectorAll<HTMLElement>('.split-resizer');
+    if (resizers.length > 0) {
+      this.splitResizers.clear();
+      resizers.forEach((resizer) => this.splitResizers.add(resizer));
+    }
+  }
+
+  private resolveOrderedIds(candidate?: string[]): string[] {
+    if (candidate && candidate.length > 0) {
+      return candidate;
+    }
+    return this.getContainerOrder();
+  }
+
+  private activateSplitLayout(
+    terminalBody: HTMLElement,
+    orderedTerminalIds: string[],
+    splitDirection: 'vertical' | 'horizontal'
+  ): void {
+    terminalBody.style.display = 'flex';
+    terminalBody.style.flexDirection = splitDirection === 'horizontal' ? 'row' : 'column';
+    terminalBody.style.height = '100%';
+    terminalBody.style.overflow = 'hidden';
+
+    orderedTerminalIds.forEach((terminalId, index) => {
+      const container = this.getContainer(terminalId);
+      if (!container) {
+        return;
+      }
+
+      const wrapper = this.createSplitWrapper(terminalId);
+      const area = this.getWrapperArea(wrapper, terminalId, true);
+      if (area) {
+        area.appendChild(container);
+      }
+
+      container.classList.remove('terminal-container--fullscreen', 'hidden-mode');
+      container.classList.add('terminal-container--split');
+      container.style.display = 'flex';
+      container.style.flex = '1 1 auto';
+      container.style.width = '100%';
+
+      terminalBody.appendChild(wrapper);
+      this.splitWrapperCache.set(terminalId, wrapper);
+
+      if (index < orderedTerminalIds.length - 1) {
+        const resizer = this.createSplitResizer(splitDirection);
+        terminalBody.appendChild(resizer);
+        this.splitResizers.add(resizer);
+      }
+    });
+  }
+
+  private createSplitWrapper(terminalId: string): HTMLElement {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'terminal-split-wrapper';
+    wrapper.setAttribute('data-terminal-wrapper-id', terminalId);
+    wrapper.style.display = 'flex';
+    wrapper.style.flexDirection = 'column';
+    wrapper.style.flex = '1 1 auto';
+    this.getWrapperArea(wrapper, terminalId, true);
+    return wrapper;
+  }
+
+  private createSplitResizer(direction: 'vertical' | 'horizontal'): HTMLElement {
+    const resizer = document.createElement('div');
+    resizer.className = 'split-resizer';
+    if (direction === 'horizontal') {
+      resizer.style.width = '4px';
+      resizer.style.cursor = 'col-resize';
+    } else {
+      resizer.style.height = '4px';
+      resizer.style.cursor = 'row-resize';
+    }
+    resizer.style.background = 'var(--vscode-widget-border, #454545)';
+    resizer.style.flexShrink = '0';
+    return resizer;
+  }
+
+  private isElementVisible(element: HTMLElement): boolean {
+    if (!element) {
+      return false;
+    }
+    return element.style.display !== 'none' && !element.classList.contains('hidden-mode');
+  }
+
+  private getWrapperArea(wrapper: HTMLElement, terminalId: string, createIfMissing = false): HTMLElement | null {
+    let area = wrapper.querySelector<HTMLElement>(`[data-terminal-area-id="${terminalId}"]`);
+    if (!area && createIfMissing) {
+      area = document.createElement('div');
+      area.setAttribute('data-terminal-area-id', terminalId);
+      area.style.flex = '1 1 auto';
+      area.style.display = 'flex';
+      area.style.flexDirection = 'column';
+      wrapper.appendChild(area);
+    }
+    return area ?? null;
+  }
+
+  private enforceFullscreenState(activeTerminalId: string | null, terminalBody: HTMLElement): void {
+    const containers = terminalBody.querySelectorAll<HTMLElement>('.terminal-container');
+    const hiddenStorage = this.getHiddenStorage(terminalBody, true);
+
+    containers.forEach((container) => {
+      const containerId = container.getAttribute('data-terminal-id');
+      const isActive = containerId !== null && containerId === activeTerminalId;
+
+      if (isActive) {
+        container.style.display = 'flex';
+        container.style.width = '100%';
+        container.style.height = '100%';
+        container.classList.remove('hidden-mode');
+        container.classList.add('terminal-container--fullscreen');
+        terminalBody.appendChild(container);
+      } else {
+        container.style.display = 'none';
+        container.classList.add('hidden-mode');
+        container.classList.remove('terminal-container--fullscreen', 'terminal-container--split');
+        if (hiddenStorage && container.parentElement !== hiddenStorage) {
+          hiddenStorage.appendChild(container);
+        }
+      }
+    });
+
+    terminalBody.querySelectorAll<HTMLElement>('[data-terminal-wrapper-id]').forEach((wrapper) => {
+      wrapper.remove();
+    });
+
+    terminalBody.querySelectorAll<HTMLElement>('.split-resizer').forEach((resizer) => {
+      resizer.remove();
+    });
+  }
+
+  private normalizeTerminalBody(terminalBody: HTMLElement): void {
+    const storage = this.getHiddenStorage(terminalBody, false);
+    if (storage) {
+      this.containerCache.forEach((container) => {
+        if (container.parentElement === storage) {
+          terminalBody.appendChild(container);
+        }
+      });
+      storage.innerHTML = '';
+    }
+
+    this.containerCache.forEach((container) => {
+      container.classList.remove('terminal-container--fullscreen');
+      container.style.removeProperty('height');
+      container.style.removeProperty('width');
+      if (container.classList.contains('hidden-mode')) {
+        container.style.display = 'none';
+      } else {
+        container.style.removeProperty('display');
+      }
+    });
+  }
+
+  private getHiddenStorage(terminalBody: HTMLElement, createIfMissing: boolean): HTMLElement | null {
+    if (this.hiddenContainerStorage && document.contains(this.hiddenContainerStorage)) {
+      return this.hiddenContainerStorage;
+    }
+
+    if (!createIfMissing) {
+      return null;
+    }
+
+    const storage = document.createElement('div');
+    storage.id = 'terminal-hidden-storage';
+    storage.style.display = 'none';
+    terminalBody.appendChild(storage);
+    this.hiddenContainerStorage = storage;
+    return storage;
   }
 }

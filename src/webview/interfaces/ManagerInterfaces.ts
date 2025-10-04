@@ -17,6 +17,7 @@ export interface ITerminalTabManager {
   removeTab(terminalId: string): void;
   setActiveTab(terminalId: string): void;
   syncTabs(tabInfos: Array<{ id: string; name: string; isActive: boolean; isClosable?: boolean }>): void;
+  updateModeIndicator(mode: 'normal' | 'fullscreen' | 'split'): void;
   dispose(): void;
 }
 
@@ -33,6 +34,29 @@ export interface TerminalInstance {
   readonly searchAddon?: SearchAddon;
   readonly webglAddon?: WebglAddon;
   readonly unicode11Addon?: Unicode11Addon;
+}
+
+export type TerminalDisplayMode = 'normal' | 'fullscreen' | 'split';
+
+export interface TerminalDisplayState {
+  mode: TerminalDisplayMode;
+  activeTerminalId: string | null;
+  orderedTerminalIds?: string[];
+  splitDirection?: 'vertical' | 'horizontal';
+}
+
+export interface TerminalDisplaySnapshot {
+  mode: TerminalDisplayMode;
+  activeTerminalId: string | null;
+  visibleTerminals: string[];
+  registeredContainers: number;
+  registeredWrappers: number;
+  orphanNodeCount: number;
+}
+
+// Header management interface (subset used by other managers)
+export interface IHeaderManager {
+  updateSplitButtonState(isSplitMode: boolean): void;
 }
 
 // Manager coordination interface
@@ -72,6 +96,7 @@ export interface IManagerCoordinator {
     persistence?: any; // Optional persistence manager
     terminalContainer?: ITerminalContainerManager; // Terminal container manager
     displayMode?: IDisplayModeManager; // Display mode manager
+    header?: IHeaderManager; // Header manager for UI sync
   };
   getMessageManager(): IMessageManager;
   getTerminalContainerManager?(): ITerminalContainerManager;
@@ -274,6 +299,13 @@ export interface ITerminalContainerManager {
   getAllContainers(): Map<string, HTMLElement>;
   registerContainer(terminalId: string, container: HTMLElement): void;
   unregisterContainer(terminalId: string): void;
+  registerSplitWrapper(terminalId: string, wrapper: HTMLElement): void;
+  unregisterSplitWrapper(terminalId: string): void;
+  registerSplitResizer(resizer: HTMLElement): void;
+  clearSplitArtifacts(): void;
+  applyDisplayState(state: TerminalDisplayState): void;
+  getContainerOrder(): string[];
+  getDisplaySnapshot(): TerminalDisplaySnapshot;
   dispose(): void;
 }
 

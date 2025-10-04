@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.110] - 2025-10-04
+
+### Added
+- **Tab Click Fullscreen Display** (Issue #198): Clicking terminal tabs now shows terminals in fullscreen mode
+  - Click any tab to display that terminal in fullscreen, hiding others
+  - Click the active tab again to toggle split view (show all terminals)
+  - Smart mode transitions: normal → fullscreen → split → normal
+  - Seamless integration with existing split mode functionality
+
+### Changed
+- **Display Mode Management**: Introduced unified DisplayModeManager for terminal display states
+  - Centralized control of normal, fullscreen, and split display modes
+  - State-based rendering through TerminalContainerManager
+  - Automatic mode indicator updates in tab UI
+  - Proper cleanup and mode restoration on dispose
+- **Terminal Container Architecture**: Implemented state-based display system
+  - `applyDisplayState()` method for consistent display state transitions
+  - Split wrapper management for dynamic layout changes
+  - Hidden container storage for non-visible terminals
+  - CSS class-based styling (`terminal-container--fullscreen`, `terminal-container--split`)
+
+### Fixed
+- **Test Infrastructure**: Resolved xterm.js Canvas API dependency issues
+  - Added comprehensive HTMLCanvasElement.getContext mock
+  - Created xterm-mock.js for all xterm addon mocking
+  - Module.prototype.require interception for dynamic mock injection
+  - Test execution no longer blocked by Canvas API errors
+
+### Technical Details
+- Modified `TerminalTabManager.ts:108-134` to add fullscreen toggle on tab click
+- Created `DisplayModeManager.ts` for centralized display mode control
+- Enhanced `TerminalContainerManager.ts` with state-based display management
+- Updated `RefactoredTerminalWebviewManager.ts` to replace dummy manager implementations
+- Created `src/test/shared/xterm-mock.js` for Canvas API mocking
+- Added 3 new test files with 200+ test cases for Issue #198 functionality
+
 ## [0.1.109] - 2025-10-03
 
 ### Fixed

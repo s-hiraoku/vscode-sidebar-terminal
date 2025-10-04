@@ -311,6 +311,8 @@ export class WebViewHtmlGenerator implements IWebViewHtmlGenerator {
                 overflow: hidden;
                 margin: 0;
                 padding: 0;
+                display: flex;
+                flex-direction: column;
             }
 
             #terminal-body {
@@ -336,7 +338,10 @@ export class WebViewHtmlGenerator implements IWebViewHtmlGenerator {
             .terminal-container {
                 position: relative;
                 width: 100%;
-                height: 100%;
+                height: auto;
+                flex: 0 0 auto;
+                display: flex;
+                flex-direction: column;
                 border: 1px solid transparent !important;
                 transition: border-color 0.2s ease-in-out;
             }
@@ -454,6 +459,129 @@ export class WebViewHtmlGenerator implements IWebViewHtmlGenerator {
                 color: var(--vscode-foreground, #cccccc);
                 font-family: var(--vscode-font-family, monospace);
                 background: var(--vscode-editor-background, #1e1e1e);
+            }
+
+            /* ========================================
+               Display Modes (Issue #198)
+               ======================================== */
+
+            /* Terminal Container Display Modes */
+            .terminal-container.normal-mode {
+                display: block;
+                width: 100%;
+                height: auto;
+                position: relative;
+            }
+
+            .terminal-container.fullscreen-mode {
+                display: flex !important;
+                flex-direction: column;
+                width: 100%;
+                height: 100% !important;
+                flex: 1 1 auto !important;
+                min-height: 0;
+                z-index: 10;
+                position: relative;
+                animation: fadeIn 0.2s ease-in-out;
+            }
+
+            .terminal-container.hidden-mode {
+                display: none !important;
+                animation: fadeOut 0.15s ease-in-out;
+            }
+
+            .terminal-container.split-mode {
+                display: flex;
+                flex-direction: column;
+            }
+
+            /* Split Mode Toggle Button */
+            .split-mode-toggle-button {
+                background: transparent;
+                border: none;
+                color: var(--vscode-foreground);
+                cursor: pointer;
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 16px;
+                transition: background-color 0.2s ease, color 0.2s ease;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .split-mode-toggle-button:hover {
+                background: var(--vscode-toolbar-hoverBackground);
+            }
+
+            .split-mode-toggle-button.active {
+                background: var(--vscode-button-background);
+                color: var(--vscode-button-foreground);
+            }
+
+            .split-mode-toggle-button:focus {
+                outline: 1px solid var(--vscode-focusBorder);
+                outline-offset: 2px;
+            }
+
+            /* Display Mode Animations */
+            @keyframes fadeIn {
+                from {
+                    opacity: 0;
+                    transform: scale(0.98);
+                }
+                to {
+                    opacity: 1;
+                    transform: scale(1);
+                }
+            }
+
+            @keyframes fadeOut {
+                from {
+                    opacity: 1;
+                }
+                to {
+                    opacity: 0;
+                }
+            }
+
+            /* Tab Close Button Enhancements */
+            .terminal-tab-close {
+                transition: opacity 0.15s ease, background-color 0.15s ease, transform 0.1s ease;
+            }
+
+            .terminal-tab-close:hover {
+                transform: scale(1.1);
+            }
+
+            .terminal-tab-close:active {
+                transform: scale(0.95);
+            }
+
+            .terminal-tab-close:focus {
+                outline: 1px solid var(--vscode-focusBorder);
+                outline-offset: 1px;
+            }
+
+            /* Accessibility: Reduced Motion */
+            @media (prefers-reduced-motion: reduce) {
+                .terminal-container.fullscreen-mode,
+                .terminal-container.hidden-mode,
+                .terminal-tab-close {
+                    animation: none;
+                    transition: none;
+                }
+            }
+
+            /* High Contrast Mode Support */
+            @media (prefers-contrast: high) {
+                .split-mode-toggle-button.active {
+                    border: 2px solid var(--vscode-contrastActiveBorder, var(--vscode-focusBorder));
+                }
+
+                .terminal-tab-close:hover {
+                    border: 1px solid var(--vscode-contrastActiveBorder, var(--vscode-focusBorder));
+                }
             }
         </style>`;
   }

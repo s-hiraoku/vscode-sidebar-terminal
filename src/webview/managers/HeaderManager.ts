@@ -2,12 +2,12 @@ import { SAMPLE_ICONS, UI_CONSTANTS } from '../constants';
 import { DOMUtils } from '../utils/DOMUtils';
 import { ErrorHandler } from '../utils/ErrorHandler';
 import type { HeaderConfig, SampleIcon } from '../types/webview.types';
-import { IManagerCoordinator } from '../interfaces/ManagerInterfaces';
+import { IHeaderManager, IManagerCoordinator } from '../interfaces/ManagerInterfaces';
 
 /**
  * WebViewヘッダーの管理を担当するクラス
  */
-export class HeaderManager {
+export class HeaderManager implements IHeaderManager {
   private headerElement: HTMLElement | null = null;
   private coordinator: IManagerCoordinator | null = null;
   private config: HeaderConfig = {

@@ -32,10 +32,13 @@ export class TerminalTabList {
   private container: HTMLElement;
   private tabsContainer!: HTMLElement;
   private addButton!: HTMLElement;
+  private modeIndicatorContainer!: HTMLElement;
+  private modeIndicatorSymbol!: HTMLElement;
   private tabs: Map<string, TerminalTab> = new Map();
   private events: TerminalTabEvents;
   private draggedTab: string | null = null;
   private dropIndicator: HTMLElement;
+  private currentMode: 'normal' | 'fullscreen' | 'split' = 'normal';
 
   constructor(container: HTMLElement, events: TerminalTabEvents) {
     this.container = container;
@@ -48,6 +51,9 @@ export class TerminalTabList {
     this.container.className = 'terminal-tabs-container';
     this.container.innerHTML = `
       <div class="terminal-tabs-list" role="tablist">
+        <div class="terminal-mode-indicator" role="status" aria-live="polite" data-mode="normal" aria-label="Single terminal layout">
+          <span class="terminal-mode-indicator-symbol" aria-hidden="true"></span>
+        </div>
         <div class="terminal-tabs-scroll">
           <div class="terminal-tabs-wrapper">
             <!-- Tabs will be inserted here -->
@@ -60,8 +66,9 @@ export class TerminalTabList {
         </div>
       </div>
     `;
-
     this.tabsContainer = this.container.querySelector('.terminal-tabs-wrapper')!;
+    this.modeIndicatorContainer = this.container.querySelector('.terminal-mode-indicator')!;
+    this.modeIndicatorSymbol = this.container.querySelector('.terminal-mode-indicator-symbol')!;
     this.addButton = this.container.querySelector('.terminal-tab-add')!;
 
     this.addButton.addEventListener('click', () => {
@@ -90,6 +97,56 @@ export class TerminalTabList {
         display: flex;
         flex: 1;
         align-items: stretch;
+      }
+
+      .terminal-mode-indicator {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 4px;
+        border-right: 1px solid var(--vscode-tab-border);
+        color: var(--vscode-tab-activeForeground, var(--vscode-foreground));
+        min-width: 28px;
+      }
+
+      .terminal-mode-indicator-symbol {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 16px;
+        height: 12px;
+      }
+
+      .terminal-mode-indicator-symbol::before {
+        content: '';
+        display: block;
+        width: 100%;
+        height: 100%;
+        border-radius: 2px;
+        transition: background 0.15s ease, border-color 0.15s ease;
+      }
+
+      .terminal-mode-indicator[data-mode='normal'] .terminal-mode-indicator-symbol::before {
+        background: currentColor;
+      }
+
+      .terminal-mode-indicator[data-mode='fullscreen'] .terminal-mode-indicator-symbol::before {
+        border: 1px solid currentColor;
+        background: transparent;
+      }
+
+      .terminal-mode-indicator[data-mode='split'] .terminal-mode-indicator-symbol::before {
+        border: 1px solid currentColor;
+        background:
+          linear-gradient(
+            to bottom,
+            currentColor 0%,
+            currentColor 45%,
+            transparent 45%,
+            transparent 55%,
+            currentColor 55%,
+            currentColor 100%
+          );
       }
 
       .terminal-tabs-scroll {
@@ -485,6 +542,30 @@ export class TerminalTabList {
 
   private hideDropIndicator(): void {
     this.dropIndicator.classList.remove('visible');
+  }
+
+  public setModeIndicator(mode: 'normal' | 'fullscreen' | 'split'): void {
+    this.currentMode = mode;
+    if (!this.modeIndicatorContainer || !this.modeIndicatorSymbol) {
+      return;
+    }
+
+    const config: Record<'normal' | 'fullscreen' | 'split', { label: string }> = {
+      normal: {
+        label: 'Single terminal layout',
+      },
+      fullscreen: {
+        label: 'Fullscreen layout',
+      },
+      split: {
+        label: 'Split layout',
+      },
+    };
+
+    const { label } = config[mode];
+    this.modeIndicatorContainer.setAttribute('aria-label', label);
+    this.modeIndicatorContainer.setAttribute('title', label);
+    this.modeIndicatorContainer.setAttribute('data-mode', mode);
   }
 
   private startRename(tabId: string): void {

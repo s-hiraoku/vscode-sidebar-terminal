@@ -532,6 +532,15 @@ export class TerminalLifecycleManager {
         this.splitManager.getTerminals().set(terminalId, terminalInstance);
         this.splitManager.getTerminalContainers().set(terminalId, mainContainer);
 
+        // 🆕 NEW (Issue #198): Register container with TerminalContainerManager
+        const containerManager = this.coordinator?.getTerminalContainerManager?.();
+        if (containerManager) {
+          containerManager.registerContainer(terminalId, mainContainer);
+          terminalLogger.info(
+            `✅ Container registered with TerminalContainerManager: ${terminalId}`
+          );
+        }
+
         // 🔧 AI Agent Support: Register header elements with UIManager for status updates
         if (containerElements.headerElements) {
           const uiManager = this.coordinator?.getManagers()?.ui;
@@ -957,6 +966,15 @@ export class TerminalLifecycleManager {
       // Remove from maps
       this.splitManager.getTerminals().delete(terminalId);
       this.splitManager.getTerminalContainers().delete(terminalId);
+
+      // 🆕 NEW (Issue #198): Unregister container from TerminalContainerManager
+      const containerManager = this.coordinator?.getTerminalContainerManager?.();
+      if (containerManager) {
+        containerManager.unregisterContainer(terminalId);
+        terminalLogger.info(
+          `✅ Container unregistered from TerminalContainerManager: ${terminalId}`
+        );
+      }
 
       // Handle active terminal change
       if (this.activeTerminalId === terminalId) {

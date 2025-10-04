@@ -17,6 +17,57 @@ if (!(global as any).window) {
   (global as any).window = global;
 }
 
+// Mock HTMLCanvasElement.getContext BEFORE any xterm.js imports
+if (typeof (global as any).HTMLCanvasElement === 'undefined') {
+  (global as any).HTMLCanvasElement = class MockHTMLCanvasElement {
+    getContext(contextType: string): any {
+      if (contextType === '2d') {
+        return {
+          fillStyle: '',
+          strokeStyle: '',
+          lineWidth: 1,
+          fillRect: () => {},
+          strokeRect: () => {},
+          clearRect: () => {},
+          beginPath: () => {},
+          closePath: () => {},
+          moveTo: () => {},
+          lineTo: () => {},
+          arc: () => {},
+          fill: () => {},
+          stroke: () => {},
+          fillText: () => {},
+          strokeText: () => {},
+          measureText: () => ({ width: 0 }),
+          save: () => {},
+          restore: () => {},
+          scale: () => {},
+          rotate: () => {},
+          translate: () => {},
+          transform: () => {},
+          setTransform: () => {},
+          createLinearGradient: () => ({ addColorStop: () => {} }),
+          createRadialGradient: () => ({ addColorStop: () => {} }),
+          createPattern: () => null,
+          getImageData: () => ({ data: new Uint8ClampedArray(), width: 0, height: 0 }),
+          putImageData: () => {},
+          drawImage: () => {},
+          canvas: this,
+        };
+      }
+      return null;
+    }
+
+    get width() { return 300; }
+    set width(_value: number) {}
+    get height() { return 150; }
+    set height(_value: number) {}
+    toDataURL() { return 'data:,'; }
+    toBlob() {}
+    getBoundingClientRect() { return { width: 300, height: 150, x: 0, y: 0, top: 0, left: 0, right: 300, bottom: 150 } as any; }
+  };
+}
+
 import * as sinon from 'sinon';
 import * as chai from 'chai';
 import sinonChai from 'sinon-chai';
@@ -243,7 +294,8 @@ export async function setupTestEnvironment(): Promise<void> {
         }),
       };
     }
-    if (id === 'xterm' || id === 'xterm-addon-fit') {
+    // すべてのxterm関連モジュールをモック
+    if (id === 'xterm' || id === '@xterm/xterm' || id.startsWith('xterm') || id.startsWith('@xterm/')) {
       return {
         Terminal: function () {
           return {
@@ -520,6 +572,60 @@ export function setupJSDOMEnvironment(htmlContent?: string): {
     unobserve() {}
     disconnect() {}
   };
+
+  // HTMLCanvasElement.getContext モック (xterm.jsのCanvas依存関係対応)
+  if (window.HTMLCanvasElement && !window.HTMLCanvasElement.prototype.getContext) {
+    window.HTMLCanvasElement.prototype.getContext = function (contextType: string): any {
+      if (contextType === '2d') {
+        return {
+          fillStyle: '',
+          strokeStyle: '',
+          lineWidth: 1,
+          fillRect: () => {},
+          strokeRect: () => {},
+          clearRect: () => {},
+          beginPath: () => {},
+          closePath: () => {},
+          moveTo: () => {},
+          lineTo: () => {},
+          arc: () => {},
+          fill: () => {},
+          stroke: () => {},
+          fillText: () => {},
+          strokeText: () => {},
+          measureText: () => ({ width: 0 }),
+          save: () => {},
+          restore: () => {},
+          scale: () => {},
+          rotate: () => {},
+          translate: () => {},
+          transform: () => {},
+          setTransform: () => {},
+          createLinearGradient: () => ({
+            addColorStop: () => {},
+          }),
+          createRadialGradient: () => ({
+            addColorStop: () => {},
+          }),
+          createPattern: () => null,
+          getImageData: () => ({
+            data: new Uint8ClampedArray(),
+            width: 0,
+            height: 0,
+          }),
+          putImageData: () => {},
+          drawImage: () => {},
+          canvas: this,
+        };
+      }
+      return null;
+    };
+  }
+
+  // グローバルにもHTMLCanvasElementモックを設定
+  if (!(global as any).HTMLCanvasElement) {
+    (global as any).HTMLCanvasElement = window.HTMLCanvasElement;
+  }
 
   return { dom, document, window };
 }

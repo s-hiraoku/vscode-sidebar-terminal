@@ -36,6 +36,7 @@ export class TerminalTabManager implements TerminalTabEvents {
   private isEnabled: boolean = true;
   private hideWhenSingleTab: boolean = true;
   private isInitialized = false;
+  private currentDisplayMode: 'normal' | 'fullscreen' | 'split' = 'normal';
 
   constructor() {}
 
@@ -64,6 +65,7 @@ export class TerminalTabManager implements TerminalTabEvents {
 
     if (!this.tabList) {
       this.tabList = new TerminalTabList(this.tabContainer, this);
+      this.tabList.setModeIndicator(this.currentDisplayMode);
     }
 
     this.isInitialized = true;
@@ -108,7 +110,24 @@ export class TerminalTabManager implements TerminalTabEvents {
 
     // Switch to the clicked terminal
     if (this.coordinator) {
+      const wasActive = this.tabs.get(tabId)?.isActive ?? false;
+      const tabCount = this.tabs.size;
+
       this.coordinator.setActiveTerminalId(tabId);
+
+      // 🆕 NEW (Issue #198): フルスクリーン表示に切り替え
+      const displayManager = this.coordinator.getDisplayModeManager?.();
+      if (displayManager) {
+        const currentMode = displayManager.getCurrentMode();
+
+        if (currentMode === 'fullscreen' && wasActive && tabCount > 1) {
+          console.log('🔀 [TAB-CLICK] Active tab clicked in fullscreen - toggling split view');
+          displayManager.toggleSplitMode();
+        } else {
+          console.log(`🔍 [TAB-CLICK] Switching to fullscreen mode for: ${tabId}`);
+          displayManager.showTerminalFullscreen(tabId);
+        }
+      }
     }
 
     this.setActiveTab(tabId);
@@ -134,7 +153,16 @@ export class TerminalTabManager implements TerminalTabEvents {
 
     // Close the terminal via coordinator
     if (this.coordinator) {
-      this.coordinator.closeTerminal(tabId);
+      const displayManager = this.coordinator.getDisplayModeManager?.();
+      if (displayManager && displayManager.getCurrentMode() === 'fullscreen') {
+        displayManager.setDisplayMode('split');
+      }
+
+      if ('deleteTerminalSafely' in this.coordinator) {
+        (this.coordinator as any).deleteTerminalSafely(tabId);
+      } else {
+        this.coordinator.closeTerminal(tabId);
+      }
     }
   };
 
@@ -271,6 +299,12 @@ export class TerminalTabManager implements TerminalTabEvents {
 
   public getAllTabs(): TerminalTab[] {
     return this.tabOrder.map((id) => this.tabs.get(id)!).filter(Boolean);
+  }
+
+  public updateModeIndicator(mode: 'normal' | 'fullscreen' | 'split'): void {
+    this.currentDisplayMode = mode;
+    this.ensureInitialized();
+    this.tabList?.setModeIndicator(mode);
   }
 
   public getTabCount(): number {

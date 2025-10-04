@@ -40,6 +40,8 @@
 ### 🔧 **Developer Experience**
 - **Version Information Display**: Built-in version display in Terminal Settings with "About" section and command palette support (v0.1.105+)
 - **Streamlined UI**: Compact "ST" panel title for cleaner activity bar (v0.1.105+)
+- **Tab Click Fullscreen**: Click any tab to show that terminal in fullscreen, hiding others - click active tab again to toggle split view (v0.1.110+)
+- **Smart Display Modes**: Seamless transitions between normal, fullscreen, and split views with automatic mode indicators (v0.1.110+)
 - **Alt+Click Cursor Positioning**: VS Code-standard cursor positioning with intelligent CLI agent conflict detection
 - **Smart File Reference System**: Instantly share code with AI agents using CMD+Option+L - automatically targets "AI Agent Connected" terminals
 - **Multi-Agent Workflow**: Seamlessly work with multiple AI agents across different terminals simultaneously
@@ -257,6 +259,9 @@ Press `CMD+Option+L` (Mac) or `Ctrl+Alt+L` (Win/Linux) while editing a file to i
 
 ### 💡 Pro Tips
 
+- **Tab Click Fullscreen** (v0.1.110+): Click any terminal tab to focus on that terminal fullscreen - perfect for focusing on specific AI agent conversations
+- **Toggle Split View**: Click the active tab again to switch between fullscreen and split view showing all terminals
+- **Smart Display Modes**: The extension automatically manages display transitions (normal → fullscreen → split) based on your tab interactions
 - **Use Split Terminals**: Keep multiple AI agents visible simultaneously
 - **Session Persistence**: Your AI conversations are automatically restored after VS Code restarts
 - **Keyboard Efficiency**: Master CMD+Option+L for instant file sharing
