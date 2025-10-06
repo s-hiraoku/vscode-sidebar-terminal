@@ -2,48 +2,27 @@
  * Claude Code Detection Strategy
  *
  * Implements agent-specific detection logic for Claude Code CLI.
- * Handles input command detection and output pattern recognition.
+ * Extends BaseDetectionStrategy to inherit common validation logic.
  */
 
-import { AgentDetectionStrategy, AgentDetectionResult } from './AgentDetectionStrategy';
+import { BaseDetectionStrategy } from './BaseDetectionStrategy';
 
-export class ClaudeDetectionStrategy implements AgentDetectionStrategy {
+export class ClaudeDetectionStrategy extends BaseDetectionStrategy {
   readonly agentType = 'claude' as const;
 
-  detectFromInput(input: string): AgentDetectionResult {
-    const line = input.toLowerCase();
-
-    // Simple detection - basic claude commands
-    if (line.startsWith('claude ') || line === 'claude') {
-      return {
-        isDetected: true,
-        confidence: 1.0,
-        detectedLine: input,
-      };
-    }
-
-    return { isDetected: false, confidence: 0 };
+  protected getCommandPrefixes(): string[] {
+    return ['claude ', 'claude'];
   }
 
-  detectFromOutput(output: string): boolean {
-    if (!output || typeof output !== 'string') {
-      return false;
-    }
-
-    // Detection for Claude Code startup message
-    return /Claude\s+Code/.test(output);
+  protected getStartupPatterns(): string[] {
+    return []; // Using regex instead
   }
 
-  isAgentActivity(output: string): boolean {
-    if (!output || typeof output !== 'string') {
-      return false;
-    }
+  protected override getStartupRegexPatterns(): RegExp[] {
+    return [/Claude\s+Code/];
+  }
 
-    const lowerLine = output.toLowerCase();
-    return (
-      lowerLine.includes('claude') ||
-      lowerLine.includes('anthropic') ||
-      output.length > 50
-    );
+  protected getActivityKeywords(): string[] {
+    return ['claude', 'anthropic'];
   }
 }

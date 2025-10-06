@@ -566,24 +566,27 @@ export class ConfigManager {
     }
 
     const vscodeConfig = vscode.workspace.getConfiguration('terminal.integrated');
-    const vscodeProfiles = vscodeConfig.get<Record<string, any>>(profileKey, {});
+    const vscodeProfiles = vscodeConfig.get<Record<string, unknown>>(profileKey, {});
 
     // VS CodeのプロファイルフォーマットをTerminalProfileに変換
     const convertedProfiles: Record<string, TerminalProfile> = {};
 
     for (const [name, profile] of Object.entries(vscodeProfiles)) {
-      if (profile && typeof profile === 'object' && profile.path) {
-        convertedProfiles[name] = {
-          path: profile.path,
-          args: profile.args,
-          cwd: profile.cwd,
-          env: profile.env,
-          icon: profile.icon,
-          color: profile.color,
-          isVisible: profile.isVisible !== false, // デフォルトはtrue
-          overrideName: profile.overrideName,
-          useColor: profile.useColor,
-        };
+      if (profile && typeof profile === 'object') {
+        const prof = profile as Record<string, unknown>;
+        if (prof.path) {
+          convertedProfiles[name] = {
+            path: prof.path as string,
+            args: prof.args as string[] | undefined,
+            cwd: prof.cwd as string | undefined,
+            env: prof.env as Record<string, string> | undefined,
+            icon: prof.icon as string | undefined,
+            color: prof.color as string | undefined,
+            isVisible: prof.isVisible !== false, // デフォルトはtrue
+            overrideName: prof.overrideName as boolean | undefined,
+            useColor: prof.useColor as boolean | undefined,
+          };
+        }
       }
     }
 

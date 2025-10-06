@@ -3,14 +3,33 @@
  *
  * Implements agent-specific detection logic for Google Gemini CLI.
  * Handles input command detection and output pattern recognition.
+ *
+ * Note: This strategy has complex custom logic for ASCII art detection,
+ * so it only partially inherits from BaseDetectionStrategy.
  */
 
-import { AgentDetectionStrategy, AgentDetectionResult } from './AgentDetectionStrategy';
+import { BaseDetectionStrategy } from './BaseDetectionStrategy';
+import { AgentDetectionResult } from './AgentDetectionStrategy';
 
-export class GeminiDetectionStrategy implements AgentDetectionStrategy {
+export class GeminiDetectionStrategy extends BaseDetectionStrategy {
   readonly agentType = 'gemini' as const;
 
-  detectFromInput(input: string): AgentDetectionResult {
+  protected getCommandPrefixes(): string[] {
+    return ['gemini ', 'gemini'];
+  }
+
+  protected getStartupPatterns(): string[] {
+    return []; // Using custom ASCII art detection
+  }
+
+  protected getActivityKeywords(): string[] {
+    return ['gemini', 'bard', 'google ai'];
+  }
+
+  /**
+   * Override with Gemini-specific detection logic
+   */
+  public override detectFromInput(input: string): AgentDetectionResult {
     const line = input.toLowerCase();
 
     // Very high confidence patterns
@@ -52,8 +71,11 @@ export class GeminiDetectionStrategy implements AgentDetectionStrategy {
     return { isDetected: false, confidence: 0 };
   }
 
-  detectFromOutput(output: string): boolean {
-    if (!output || typeof output !== 'string') {
+  /**
+   * Override with custom ASCII art detection
+   */
+  public override detectFromOutput(output: string): boolean {
+    if (!this.validateOutput(output)) {
       return false;
     }
 
@@ -61,8 +83,11 @@ export class GeminiDetectionStrategy implements AgentDetectionStrategy {
     return this.detectGeminiAsciiArt(output);
   }
 
-  isAgentActivity(output: string): boolean {
-    if (!output || typeof output !== 'string') {
+  /**
+   * Override to include Gemini-specific patterns
+   */
+  public override isAgentActivity(output: string): boolean {
+    if (!this.validateOutput(output)) {
       return false;
     }
 
@@ -71,7 +96,8 @@ export class GeminiDetectionStrategy implements AgentDetectionStrategy {
       lowerLine.includes('gemini') ||
       lowerLine.includes('bard') ||
       lowerLine.includes('google ai') ||
-      this.containsGeminiPatterns(output)
+      this.containsGeminiPatterns(output) ||
+      output.length > 50
     );
   }
 
