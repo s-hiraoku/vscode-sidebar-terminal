@@ -296,6 +296,9 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       ['openTerminalLink', async (message) => {
         await this._handleOpenTerminalLink(message);
       }],
+      ['reorderTerminals', async (message) => {
+        await this._handleReorderTerminals(message);
+      }],
       ['requestInitialTerminal', async (message) => {
         await this._handleRequestInitialTerminal(message);
       }],
@@ -388,6 +391,24 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       log('❌ [PROVIDER] Failed to open file link:', error);
       const errorMessage = error instanceof Error ? error.message : String(error);
       showError(`Failed to open file from terminal link. ${errorMessage}`);
+    }
+  }
+
+  private async _handleReorderTerminals(message: WebviewMessage): Promise<void> {
+    const order = Array.isArray(message.order)
+      ? (message.order.filter((id): id is string => typeof id === 'string' && id.length > 0))
+      : [];
+
+    if (order.length === 0) {
+      log('🔁 [PROVIDER] Reorder request missing valid order array');
+      return;
+    }
+
+    try {
+      log('🔁 [PROVIDER] Applying terminal reorder:', order);
+      this._terminalManager.reorderTerminals(order);
+    } catch (error) {
+      log('❌ [PROVIDER] Failed to reorder terminals:', error);
     }
   }
 

@@ -20,7 +20,7 @@ export interface TerminalTabEvents {
   onTabClick: (tabId: string) => void;
   onTabClose: (tabId: string) => void;
   onTabRename: (tabId: string, newName: string) => void;
-  onTabReorder: (fromIndex: number, toIndex: number) => void;
+  onTabReorder: (fromIndex: number, toIndex: number, nextOrder: string[]) => void;
   onNewTab: () => void;
 }
 
@@ -38,6 +38,7 @@ export class TerminalTabList {
   private events: TerminalTabEvents;
   private draggedTab: string | null = null;
   private dropIndicator: HTMLElement;
+  private dropTargetInfo: { id: string; position: 'before' | 'after' } | null = null;
   private currentMode: 'normal' | 'fullscreen' | 'split' = 'normal';
 
   constructor(container: HTMLElement, events: TerminalTabEvents) {
@@ -143,6 +144,7 @@ export class TerminalTabList {
         display: flex;
         align-items: stretch;
         min-height: 100%;
+        position: relative;
       }
 
       .terminal-tab {
@@ -471,6 +473,7 @@ export class TerminalTabList {
     tabElement.addEventListener('dragstart', (e) => {
       this.draggedTab = tab.id;
       tabElement.classList.add('dragging');
+      this.dropTargetInfo = null;
       if (e.dataTransfer) {
         e.dataTransfer.effectAllowed = 'move';
         e.dataTransfer.setData('text/terminal-tab-id', tab.id);
@@ -480,6 +483,7 @@ export class TerminalTabList {
     tabElement.addEventListener('dragend', () => {
       tabElement.classList.remove('dragging');
       this.draggedTab = null;
+      this.dropTargetInfo = null;
       this.hideDropIndicator();
     });
 
@@ -490,16 +494,39 @@ export class TerminalTabList {
         const midpoint = rect.left + rect.width / 2;
         const insertPosition = e.clientX < midpoint ? 'before' : 'after';
         this.showDropIndicator(tabElement, insertPosition);
+        this.dropTargetInfo = { id: tab.id, position: insertPosition };
       }
     });
 
     tabElement.addEventListener('drop', (e) => {
       e.preventDefault();
       if (this.draggedTab && this.draggedTab !== tab.id) {
-        const fromIndex = Array.from(this.tabs.keys()).indexOf(this.draggedTab);
-        const toIndex = Array.from(this.tabs.keys()).indexOf(tab.id);
-        this.events.onTabReorder(fromIndex, toIndex);
+        const currentOrder = Array.from(this.tabs.keys());
+        const fromIndex = currentOrder.indexOf(this.draggedTab);
+
+        if (fromIndex !== -1) {
+          const workingOrder = currentOrder.filter((id) => id !== this.draggedTab);
+          const dropInfo =
+            this.dropTargetInfo && this.dropTargetInfo.id === tab.id
+              ? this.dropTargetInfo
+              : { id: tab.id, position: 'before' as const };
+
+          let targetIndex = workingOrder.indexOf(dropInfo.id);
+
+          if (targetIndex === -1) {
+            workingOrder.push(this.draggedTab);
+          } else {
+            if (dropInfo.position === 'after') {
+              targetIndex += 1;
+            }
+            workingOrder.splice(targetIndex, 0, this.draggedTab);
+          }
+
+          const toIndex = workingOrder.indexOf(this.draggedTab);
+          this.events.onTabReorder(fromIndex, toIndex, workingOrder);
+        }
       }
+      this.dropTargetInfo = null;
       this.hideDropIndicator();
     });
   }

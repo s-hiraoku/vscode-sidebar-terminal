@@ -625,6 +625,36 @@ export class TerminalManager {
     return Array.from(this._terminals.values());
   }
 
+  public reorderTerminals(order: string[]): void {
+    if (!Array.isArray(order) || order.length === 0) {
+      return;
+    }
+
+    const existingEntries = Array.from(this._terminals.entries());
+    const existingMap = new Map(existingEntries);
+
+    const normalizedOrder = order.filter((id) => existingMap.has(id));
+    const remaining = existingEntries
+      .map(([id]) => id)
+      .filter((id) => !normalizedOrder.includes(id));
+    const finalOrder = [...normalizedOrder, ...remaining];
+
+    if (finalOrder.length === 0) {
+      return;
+    }
+
+    this._terminals.clear();
+
+    for (const id of finalOrder) {
+      const terminal = existingMap.get(id);
+      if (terminal) {
+        this._terminals.set(id, terminal);
+      }
+    }
+
+    this._notifyStateUpdate();
+  }
+
   /**
    * Get a specific terminal by ID
    */

@@ -183,19 +183,40 @@ export class TerminalTabManager implements TerminalTabEvents {
     }
   };
 
-  public onTabReorder = (fromIndex: number, toIndex: number): void => {
-    console.log(`🗂️ Tab reorder: ${fromIndex} -> ${toIndex}`);
+  public onTabReorder = (fromIndex: number, toIndex: number, nextOrder: string[]): void => {
+    console.log(`🗂️ Tab reorder: ${fromIndex} -> ${toIndex}`, nextOrder);
 
-    if (fromIndex === toIndex) return;
-
-    // Reorder the tab order array
-    const [movedTabId] = this.tabOrder.splice(fromIndex, 1);
-    if (movedTabId) {
-      this.tabOrder.splice(toIndex, 0, movedTabId);
+    if (!Array.isArray(nextOrder) || nextOrder.length === 0) {
+      return;
     }
+
+    const normalizedOrder = nextOrder.filter((id) => this.tabs.has(id));
+    const remaining = this.tabOrder.filter((id) => !normalizedOrder.includes(id));
+    const finalOrder = [...normalizedOrder, ...remaining];
+
+    if (finalOrder.length === 0) {
+      return;
+    }
+
+    if (
+      finalOrder.length === this.tabOrder.length &&
+      finalOrder.every((id, index) => this.tabOrder[index] === id)
+    ) {
+      return;
+    }
+
+    this.tabOrder = finalOrder;
 
     // Rebuild the tab UI in new order
     this.rebuildTabsInOrder();
+
+    // Notify extension host so state updates preserve the new order
+    if (this.coordinator && typeof this.coordinator.postMessageToExtension === 'function') {
+      this.coordinator.postMessageToExtension({
+        command: 'reorderTerminals',
+        order: [...this.tabOrder],
+      });
+    }
   };
 
   public onNewTab = (): void => {

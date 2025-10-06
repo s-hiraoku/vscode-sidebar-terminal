@@ -523,6 +523,7 @@ export interface WebviewMessage {
     | 'fontSettingsUpdate'
     | 'openSettings'
     | 'openTerminalLink'
+    | 'reorderTerminals'
     | 'stateUpdate'
     | 'claudeStatusUpdate'
     | 'cliAgentStatusUpdate'
@@ -718,6 +719,7 @@ export interface WebviewMessage {
   filePath?: string;
   lineNumber?: number;
   columnNumber?: number;
+  order?: string[];
   requestSource?: 'header' | 'panel'; // 削除リクエストの送信元
   timestamp?: number; // エラー報告用
   type?: string; // For test messages and error reporting
