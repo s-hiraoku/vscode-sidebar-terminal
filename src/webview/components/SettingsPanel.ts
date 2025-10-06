@@ -1,6 +1,7 @@
 import { DOMUtils } from '../utils/DOMUtils';
 import { ErrorHandler } from '../utils/ErrorHandler';
 import type { PartialTerminalSettings } from '../../types/shared';
+import { webview as log } from '../../utils/logger';
 
 /**
  * 設定パネルコンポーネント
@@ -34,24 +35,24 @@ export class SettingsPanel {
    * 設定パネルを表示
    */
   public show(currentSettings?: PartialTerminalSettings): void {
-    console.log('⚙️ [SETTINGS] Starting to show settings panel, isVisible:', this.isVisible);
+    log('⚙️ [SETTINGS] Starting to show settings panel, isVisible:', this.isVisible);
     try {
       if (this.isVisible) {
-        console.log('⚙️ [SETTINGS] Panel already visible, hiding first');
+        log('⚙️ [SETTINGS] Panel already visible, hiding first');
         this.hide();
         return;
       }
 
-      console.log('⚙️ [SETTINGS] Creating panel...');
+      log('⚙️ [SETTINGS] Creating panel...');
       this.createPanel();
-      console.log('⚙️ [SETTINGS] Populating settings...');
+      log('⚙️ [SETTINGS] Populating settings...');
       this.populateSettings(currentSettings);
-      console.log('⚙️ [SETTINGS] Setting up event listeners...');
+      log('⚙️ [SETTINGS] Setting up event listeners...');
       this.setupEventListeners();
-      console.log('⚙️ [SETTINGS] Showing panel...');
+      log('⚙️ [SETTINGS] Showing panel...');
       this.showPanel();
 
-      console.log('⚙️ [SETTINGS] Settings panel opened successfully');
+      log('⚙️ [SETTINGS] Settings panel opened successfully');
     } catch (error) {
       console.error('❌ [SETTINGS] Error in show():', error);
       ErrorHandler.getInstance().handleGenericError(error as Error, 'SettingsPanel.show');
@@ -70,7 +71,7 @@ export class SettingsPanel {
       this.isVisible = false;
       this.onClose?.();
 
-      console.log('⚙️ [SETTINGS] Settings panel closed');
+      log('⚙️ [SETTINGS] Settings panel closed');
     } catch (error) {
       ErrorHandler.getInstance().handleGenericError(error as Error, 'SettingsPanel.hide');
     }
@@ -432,10 +433,10 @@ export class SettingsPanel {
    */
   private showPanel(): void {
     if (this.panelElement) {
-      console.log('⚙️ [SETTINGS] Adding panel to document.body...');
+      log('⚙️ [SETTINGS] Adding panel to document.body...');
       document.body.appendChild(this.panelElement);
       this.isVisible = true;
-      console.log('⚙️ [SETTINGS] Panel added, isVisible set to true');
+      log('⚙️ [SETTINGS] Panel added, isVisible set to true');
 
       // Ensure panel is visible immediately for debugging
       this.panelElement.style.zIndex = '10000';
@@ -453,7 +454,7 @@ export class SettingsPanel {
         if (this.panelElement) {
           this.panelElement.style.transition = 'opacity 0.2s ease';
           this.panelElement.style.opacity = '1';
-          console.log('⚙️ [SETTINGS] Animation applied, panel should be visible');
+          log('⚙️ [SETTINGS] Animation applied, panel should be visible');
         }
       });
     } else {

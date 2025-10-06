@@ -9,7 +9,6 @@
 
 // import { Terminal } from '@xterm/xterm'; // Removed: not used in current implementation
 import { IManagerCoordinator } from '../interfaces/ManagerInterfaces';
-import { webview as log } from '../../utils/logger';
 
 export interface TaskDefinition {
   type: string;
@@ -90,7 +89,7 @@ export class TaskIntegrationManager {
 
   public setCoordinator(coordinator: IManagerCoordinator): void {
     this.coordinator = coordinator;
-    log('🎯 Task Integration Manager initialized');
+    console.log('🎯 Task Integration Manager initialized');
   }
 
   /**
@@ -118,7 +117,7 @@ export class TaskIntegrationManager {
     // Start problem monitoring
     this.startProblemMonitoring(execution);
 
-    log(`🎯 Task started: ${task.label} (${taskId})`);
+    console.log(`🎯 Task started: ${task.label} (${taskId})`);
     return execution;
   }
 
@@ -325,7 +324,7 @@ export class TaskIntegrationManager {
           // Enhanced error display with source linking
           this.displayEnhancedError(problem, execution.terminalId, execution);
 
-          log(`🎯 Problem detected: ${problem.severity} - ${problem.message}`);
+          console.warn(`🎯 Problem detected: ${problem.severity} - ${problem.message}`);
         }
       });
     });
@@ -483,7 +482,7 @@ export class TaskIntegrationManager {
    */
   private openSourceFile(problem: TaskProblem): void {
     if (!problem.file || !this.coordinator) {
-      log('Cannot open source file: missing file information');
+      console.warn('Cannot open source file: missing file information');
       return;
     }
 
@@ -496,7 +495,7 @@ export class TaskIntegrationManager {
       preview: true, // Open in preview mode
     });
 
-    log(`🔗 Opening source file: ${problem.file}${problem.line ? `:${problem.line}` : ''}`);
+    console.log(`🔗 Opening source file: ${problem.file}${problem.line ? `:${problem.line}` : ''}`);
   }
 
   /**
@@ -692,7 +691,7 @@ export class TaskIntegrationManager {
     this.taskTerminals.delete(terminalId);
 
     const duration = execution.endTime - execution.startTime;
-    log(
+    console.log(
       `🎯 Task ${execution.status}: ${execution.task.label} (${duration}ms, exit code: ${exitCode})`
     );
 
@@ -761,7 +760,7 @@ export class TaskIntegrationManager {
     this.activeTasks.delete(taskId);
     this.taskTerminals.delete(execution.terminalId);
 
-    log(`🎯 Task cancelled: ${execution.task.label}`);
+    console.log(`🎯 Task cancelled: ${execution.task.label}`);
   }
 
   /**
@@ -981,6 +980,6 @@ export class TaskIntegrationManager {
     this.taskHistory = [];
     this.coordinator = null;
 
-    log('🎯 Task Integration Manager disposed');
+    console.log('🎯 Task Integration Manager disposed');
   }
 }

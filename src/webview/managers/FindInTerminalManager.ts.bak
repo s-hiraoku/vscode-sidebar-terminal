@@ -8,7 +8,6 @@
  */
 
 import { IManagerCoordinator, IFindInTerminalManager } from '../interfaces/ManagerInterfaces';
-import { webview as log } from '../../utils/logger';
 
 export interface FindOptions {
   caseSensitive: boolean;
@@ -263,7 +262,7 @@ export class FindInTerminalManager implements IFindInTerminalManager {
   public showSearch(): void {
     const activeTerminalId = this.coordinator?.getActiveTerminalId();
     if (!activeTerminalId) {
-      log('No active terminal for search');
+      console.warn('No active terminal for search');
       return;
     }
 
@@ -289,7 +288,7 @@ export class FindInTerminalManager implements IFindInTerminalManager {
       this.searchInput?.select();
     }, 10);
 
-    log(`🔍 Search panel opened for terminal: ${activeTerminalId}`);
+    console.log(`🔍 Search panel opened for terminal: ${activeTerminalId}`);
   }
 
   /**
@@ -309,7 +308,7 @@ export class FindInTerminalManager implements IFindInTerminalManager {
       this.searchPanel.parentNode.removeChild(this.searchPanel);
     }
 
-    log('🔍 Search panel closed');
+    console.log('🔍 Search panel closed');
   }
 
   /**
@@ -447,7 +446,7 @@ export class FindInTerminalManager implements IFindInTerminalManager {
 
     const terminalInstance = this.coordinator.getTerminalInstance(this.currentTerminalId);
     if (!terminalInstance?.searchAddon) {
-      log('Search addon not available for terminal:', this.currentTerminalId);
+      console.warn('Search addon not available for terminal:', this.currentTerminalId);
       return;
     }
 
@@ -475,7 +474,7 @@ export class FindInTerminalManager implements IFindInTerminalManager {
 
       this.updateMatchCounter();
     } catch (error) {
-      log('Search failed:', error);
+      console.error('Search failed:', error);
       this.searchInput?.classList.add('no-matches');
       this.updateMatchCounter();
     }
@@ -603,6 +602,6 @@ export class FindInTerminalManager implements IFindInTerminalManager {
     this.coordinator = null;
     this.currentTerminalId = null;
 
-    log('🔍 Find in Terminal Manager disposed');
+    console.log('🔍 Find in Terminal Manager disposed');
   }
 }

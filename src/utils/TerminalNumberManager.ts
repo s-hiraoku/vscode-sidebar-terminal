@@ -1,4 +1,5 @@
 import { TerminalInstance } from '../types/common';
+import { log } from './logger';
 
 /**
  * ターミナル番号管理を担当するヘルパークラス
@@ -16,10 +17,10 @@ export class TerminalNumberManager {
    */
   private getUsedNumbers(terminals: Map<string, TerminalInstance>): Set<number> {
     const usedNumbers = new Set<number>();
-    console.log('🔍 [TERMINAL-NUMBER-MANAGER] Analyzing terminals:', terminals.size);
+    log('🔍 [TERMINAL-NUMBER-MANAGER] Analyzing terminals:', terminals.size);
 
     for (const [id, terminal] of terminals.entries()) {
-      console.log(`🔍 [TERMINAL-NUMBER-MANAGER] Terminal ${id}:`, {
+      log(`🔍 [TERMINAL-NUMBER-MANAGER] Terminal ${id}:`, {
         name: terminal.name,
         number: terminal.number,
         hasNumber: typeof terminal.number === 'number',
@@ -28,14 +29,14 @@ export class TerminalNumberManager {
       // Use terminal.number property directly if available, fallback to name parsing
       if (terminal.number && typeof terminal.number === 'number') {
         usedNumbers.add(terminal.number);
-        console.log(`✅ [TERMINAL-NUMBER-MANAGER] Added number from property: ${terminal.number}`);
+        log(`✅ [TERMINAL-NUMBER-MANAGER] Added number from property: ${terminal.number}`);
       } else {
         // Fallback: extract from terminal name for backward compatibility
         const match = terminal.name.match(/Terminal (\d+)/);
         if (match && match[1]) {
           const numberFromName = parseInt(match[1], 10);
           usedNumbers.add(numberFromName);
-          console.log(`⚠️ [TERMINAL-NUMBER-MANAGER] Added number from name: ${numberFromName}`);
+          log(`⚠️ [TERMINAL-NUMBER-MANAGER] Added number from name: ${numberFromName}`);
         } else {
           console.warn(
             `⚠️ [TERMINAL-NUMBER-MANAGER] No number found for terminal: ${terminal.name}`
@@ -44,7 +45,7 @@ export class TerminalNumberManager {
       }
     }
 
-    console.log('🔍 [TERMINAL-NUMBER-MANAGER] Final used numbers:', Array.from(usedNumbers));
+    log('🔍 [TERMINAL-NUMBER-MANAGER] Final used numbers:', Array.from(usedNumbers));
     return usedNumbers;
   }
 
@@ -67,7 +68,7 @@ export class TerminalNumberManager {
    */
   canCreate(terminals: Map<string, TerminalInstance>): boolean {
     const usedNumbers = this.getUsedNumbers(terminals);
-    console.log(
+    log(
       '🔍 [TERMINAL-NUMBER-MANAGER] Used numbers:',
       Array.from(usedNumbers),
       'Max terminals:',
@@ -77,11 +78,11 @@ export class TerminalNumberManager {
     // 空きスロットがあるかチェック
     for (let i = 1; i <= this.maxTerminals; i++) {
       if (!usedNumbers.has(i)) {
-        console.log(`✅ [TERMINAL-NUMBER-MANAGER] Available slot found: ${i}`);
+        log(`✅ [TERMINAL-NUMBER-MANAGER] Available slot found: ${i}`);
         return true;
       }
     }
-    console.log('❌ [TERMINAL-NUMBER-MANAGER] No available slots found');
+    log('❌ [TERMINAL-NUMBER-MANAGER] No available slots found');
     return false;
   }
 

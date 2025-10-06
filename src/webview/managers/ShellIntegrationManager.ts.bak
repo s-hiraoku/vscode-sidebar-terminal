@@ -13,7 +13,6 @@
 import { Terminal } from '@xterm/xterm';
 import { IManagerCoordinator } from '../interfaces/ManagerInterfaces';
 import { WebviewMessage } from '../../types/shared';
-import { webview as log } from '../../utils/logger';
 import {
   ShellIntegrationAddon,
   ICommandDetection,
@@ -70,10 +69,10 @@ export class ShellIntegrationManager implements IShellIntegrationEvents {
         status: 'ready',
       });
 
-      log(`🐚 Shell Integration initialized for terminal: ${terminalId}`);
+      console.log(`🐚 Shell Integration initialized for terminal: ${terminalId}`);
       this.updateStatusIndicator(terminalId, 'ready');
     } catch (error) {
-      log(`Failed to initialize shell integration for terminal ${terminalId}:`, error);
+      console.error(`Failed to initialize shell integration for terminal ${terminalId}:`, error);
     }
   }
 
@@ -85,7 +84,7 @@ export class ShellIntegrationManager implements IShellIntegrationEvents {
     const terminalId = this.findTerminalIdForCommand(command);
     if (!terminalId) return;
 
-    log(`🚀 Command started in terminal ${terminalId}: ${command.command}`);
+    console.log(`🚀 Command started in terminal ${terminalId}: ${command.command}`);
 
     // Update status
     this.updateShellStatus(terminalId, 'executing');
@@ -105,7 +104,7 @@ export class ShellIntegrationManager implements IShellIntegrationEvents {
     const terminalId = this.findTerminalIdForCommand(command);
     if (!terminalId) return;
 
-    log(
+    console.log(
       `✅ Command finished in terminal ${terminalId}: "${command.command}" (exit code: ${exitCode})`
     );
 
@@ -145,7 +144,7 @@ export class ShellIntegrationManager implements IShellIntegrationEvents {
   };
 
   public onPromptStart = (): void => {
-    log('💡 Shell prompt started');
+    console.log('💡 Shell prompt started');
     // Could update UI to show prompt state
   };
 
@@ -171,7 +170,7 @@ export class ShellIntegrationManager implements IShellIntegrationEvents {
    */
   private showExitCodeNotification(terminalId: string, exitCode: number, command: string): void {
     // This would integrate with NotificationManager in a full implementation
-    log(`Command failed in terminal ${terminalId}: "${command}" (exit code: ${exitCode})`);
+    console.warn(`Command failed in terminal ${terminalId}: "${command}" (exit code: ${exitCode})`);
 
     // Show visual indicator
     this.coordinator?.postMessageToExtension({
@@ -432,7 +431,7 @@ export class ShellIntegrationManager implements IShellIntegrationEvents {
   ): void {
     // This would integrate with VS Code's QuickPick API
     // For now, we'll just log it
-    log('Command history for terminal', terminalId, history);
+    console.log('Command history for terminal', terminalId, history);
   }
 
   /**

@@ -78,7 +78,7 @@ export class TerminalManager {
 
   private debugLog(...args: unknown[]): void {
     if (this._debugLoggingEnabled) {
-      console.log(...args);
+      log(...args);
     }
   }
 
@@ -457,7 +457,7 @@ export class TerminalManager {
   public focusTerminal(terminalId: string): void {
     const terminal = this._terminals.get(terminalId);
     if (!terminal) {
-      console.warn('⚠️ [WARN] Terminal not found for focus:', terminalId);
+      log('⚠️ [WARN] Terminal not found for focus:', terminalId);
       return;
     }
 
@@ -474,17 +474,17 @@ export class TerminalManager {
     if (terminalId) {
       // Use provided terminal ID, but validate it exists and is active
       if (!this._terminals.has(terminalId)) {
-        console.error(`🚨 [TERMINAL] Provided terminal ID does not exist: ${terminalId}`);
+        log(`🚨 [TERMINAL] Provided terminal ID does not exist: ${terminalId}`);
         this.debugLog('🔍 [TERMINAL] Available terminals:', Array.from(this._terminals.keys()));
 
         // Fallback to active terminal
         const activeId = this._activeTerminalManager.getActive();
         if (!activeId) {
-          console.error('🚨 [TERMINAL] No active terminal available as fallback');
+          log('🚨 [TERMINAL] No active terminal available as fallback');
           return;
         }
         resolvedTerminalId = activeId;
-        console.warn(`⚠️ [TERMINAL] Using active terminal as fallback: ${resolvedTerminalId}`);
+        log(`⚠️ [TERMINAL] Using active terminal as fallback: ${resolvedTerminalId}`);
       } else {
         resolvedTerminalId = terminalId;
       }
@@ -492,30 +492,30 @@ export class TerminalManager {
       // Get currently active terminal
       const activeId = this._activeTerminalManager.getActive();
       if (!activeId) {
-        console.error('🚨 [TERMINAL] No active terminal ID available');
+        log('🚨 [TERMINAL] No active terminal ID available');
         this.debugLog('🔍 [TERMINAL] Available terminals:', Array.from(this._terminals.keys()));
         return;
       }
 
       // Validate the active terminal still exists
       if (!this._terminals.has(activeId)) {
-        console.error(`🚨 [TERMINAL] Active terminal ID ${activeId} no longer exists`);
+        log(`🚨 [TERMINAL] Active terminal ID ${activeId} no longer exists`);
 
         // Emergency: Find first available terminal
         const availableTerminals = Array.from(this._terminals.keys());
         if (availableTerminals.length === 0) {
-          console.error('🚨 [TERMINAL] No terminals available at all');
+          log('🚨 [TERMINAL] No terminals available at all');
           return;
         }
 
         const emergencyTerminal = availableTerminals[0];
         if (!emergencyTerminal) {
-          console.error('🚨 [TERMINAL] Emergency terminal is undefined');
+          log('🚨 [TERMINAL] Emergency terminal is undefined');
           return;
         }
         this._activeTerminalManager.setActive(emergencyTerminal);
         resolvedTerminalId = emergencyTerminal;
-        console.warn(
+        log(
           `⚠️ [TERMINAL] Emergency fallback to first available terminal: ${resolvedTerminalId}`
         );
       } else {
@@ -526,7 +526,7 @@ export class TerminalManager {
     // ✅ FINAL VALIDATION: Ensure terminal exists and get instance
     const terminal = this._terminals.get(resolvedTerminalId);
     if (!terminal) {
-      console.error(`🚨 [TERMINAL] Terminal resolution failed for ID: ${resolvedTerminalId}`);
+      log(`🚨 [TERMINAL] Terminal resolution failed for ID: ${resolvedTerminalId}`);
       return;
     }
 
@@ -541,7 +541,7 @@ export class TerminalManager {
       // ✅ ENHANCED: Robust PTY writing with comprehensive validation
       const result = this._writeToPtyWithValidation(terminal, data);
       if (!result.success) {
-        console.error(`🚨 [TERMINAL] PTY write failed for ${terminal.name}: ${result.error}`);
+        log(`🚨 [TERMINAL] PTY write failed for ${terminal.name}: ${result.error}`);
 
         // Attempt recovery with alternative PTY instance
         this.debugLog(`🔄 [TERMINAL] Attempting PTY recovery for ${terminal.name}...`);
@@ -555,13 +555,13 @@ export class TerminalManager {
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error(
+      log(
         `❌ [TERMINAL] Critical error sending input to ${terminal.name}:`,
         errorMessage
       );
 
       // Enhanced error logging with complete terminal state
-      console.error('❌ [TERMINAL] Terminal state at failure:', {
+      log('❌ [TERMINAL] Terminal state at failure:', {
         id: terminal.id,
         name: terminal.name,
         number: terminal.number,
@@ -588,13 +588,13 @@ export class TerminalManager {
   public resize(cols: number, rows: number, terminalId?: string): void {
     const id = terminalId || this._activeTerminalManager.getActive();
     if (!id) {
-      console.warn('⚠️ [WARN] No terminal ID provided and no active terminal for resize');
+      log('⚠️ [WARN] No terminal ID provided and no active terminal for resize');
       return;
     }
 
     const terminal = this._terminals.get(id);
     if (!terminal) {
-      console.warn('⚠️ [WARN] Terminal not found for resize:', id);
+      log('⚠️ [WARN] Terminal not found for resize:', id);
       return;
     }
 
@@ -606,8 +606,8 @@ export class TerminalManager {
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error('❌ [ERROR] Failed to resize terminal:', errorMessage);
-      console.error('❌ [ERROR] Resize parameters:', { cols, rows, terminalId: id });
+      log('❌ [ERROR] Failed to resize terminal:', errorMessage);
+      log('❌ [ERROR] Resize parameters:', { cols, rows, terminalId: id });
     }
   }
 
@@ -938,7 +938,7 @@ export class TerminalManager {
     const activeId = this._activeTerminalManager.getActive();
     if (!activeId) {
       const message = 'No active terminal to kill';
-      console.warn('⚠️ [WARN]', message);
+      log('⚠️ [WARN]', message);
       showWarningMessage(message);
       return false;
     }
@@ -960,7 +960,7 @@ export class TerminalManager {
     // According to the spec: always kill the ACTIVE terminal, ignore provided ID
     const activeId = this._activeTerminalManager.getActive();
     if (!activeId) {
-      console.warn('⚠️ [WARN] No active terminal to kill');
+      log('⚠️ [WARN] No active terminal to kill');
       showWarningMessage('No active terminal to kill');
       return;
     }
@@ -976,7 +976,7 @@ export class TerminalManager {
 
     // Use unified delete method with force option
     this.deleteTerminal(activeId, { force: true, source: 'command' }).catch((error) => {
-      console.error('❌ [TERMINAL] Error killing terminal:', error);
+      log('❌ [TERMINAL] Error killing terminal:', error);
     });
   }
 
@@ -1021,13 +1021,13 @@ export class TerminalManager {
   private _bufferData(terminalId: string, data: string): void {
     // ✅ CRITICAL FIX: Strict terminal ID validation to prevent cross-terminal contamination
     if (!terminalId || typeof terminalId !== 'string') {
-      console.error('🚨 [TERMINAL] Invalid terminalId for data buffering:', terminalId);
+      log('🚨 [TERMINAL] Invalid terminalId for data buffering:', terminalId);
       return;
     }
 
     // Validate terminal exists before buffering data
     if (!this._terminals.has(terminalId)) {
-      console.warn(
+      log(
         `⚠️ [TERMINAL] Attempting to buffer data for non-existent terminal: ${terminalId}`
       );
       return;
@@ -1040,7 +1040,7 @@ export class TerminalManager {
 
     const buffer = this._dataBuffers.get(terminalId);
     if (!buffer) {
-      console.error('🚨 [TERMINAL] Buffer creation failed for terminal:', terminalId);
+      log('🚨 [TERMINAL] Buffer creation failed for terminal:', terminalId);
       this._dataBuffers.set(terminalId, []);
       return;
     }
@@ -1089,13 +1089,13 @@ export class TerminalManager {
   private _flushBuffer(terminalId: string): void {
     // ✅ CRITICAL FIX: Strict terminal ID validation before flushing
     if (!terminalId || typeof terminalId !== 'string') {
-      console.error('🚨 [TERMINAL] Invalid terminalId for buffer flushing:', terminalId);
+      log('🚨 [TERMINAL] Invalid terminalId for buffer flushing:', terminalId);
       return;
     }
 
     // Double-check terminal still exists
     if (!this._terminals.has(terminalId)) {
-      console.warn(`⚠️ [TERMINAL] Cannot flush buffer for removed terminal: ${terminalId}`);
+      log(`⚠️ [TERMINAL] Cannot flush buffer for removed terminal: ${terminalId}`);
       // Clean up orphaned buffer and timer
       this._dataBuffers.delete(terminalId);
       const timer = this._dataFlushTimers.get(terminalId);
@@ -1120,7 +1120,7 @@ export class TerminalManager {
       // ✅ CRITICAL: Additional validation before emitting data
       const terminal = this._terminals.get(terminalId);
       if (!terminal) {
-        console.error(`🚨 [TERMINAL] Terminal disappeared during flush: ${terminalId}`);
+        log(`🚨 [TERMINAL] Terminal disappeared during flush: ${terminalId}`);
         return;
       }
 
@@ -1128,7 +1128,7 @@ export class TerminalManager {
       try {
         this._cliAgentService.detectFromOutput(terminalId, combinedData);
       } catch (error) {
-        console.warn(`⚠️ [TERMINAL] CLI Agent detection failed for ${terminalId}:`, error);
+        log(`⚠️ [TERMINAL] CLI Agent detection failed for ${terminalId}:`, error);
       }
 
       // ✅ EMIT DATA WITH STRICT TERMINAL ID ASSOCIATION
@@ -1350,7 +1350,7 @@ export class TerminalManager {
         }
         log('🗑️ [TERMINAL] Process killed during removal:', terminalId);
       } catch (error) {
-        console.warn('⚠️ [TERMINAL] Error killing process during removal:', error);
+        log('⚠️ [TERMINAL] Error killing process during removal:', error);
       }
     }
 
@@ -1670,7 +1670,7 @@ export class TerminalManager {
    * Attempt to recover from PTY write failure
    */
   private _attemptPtyRecovery(terminal: TerminalInstance, data: string): boolean {
-    console.warn('⚠️ [RECOVERY] Attempting PTY recovery for terminal:', terminal.id);
+    log('⚠️ [RECOVERY] Attempting PTY recovery for terminal:', terminal.id);
 
     // Try alternative PTY instance if available
     const alternatives = [terminal.ptyProcess, terminal.pty].filter(Boolean);
@@ -1693,7 +1693,7 @@ export class TerminalManager {
 
           return true;
         } catch (recoveryError) {
-          console.warn('⚠️ [RECOVERY] Alternative PTY instance also failed:', recoveryError);
+          log('⚠️ [RECOVERY] Alternative PTY instance also failed:', recoveryError);
         }
       }
     }

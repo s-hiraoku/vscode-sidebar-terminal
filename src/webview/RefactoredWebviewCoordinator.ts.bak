@@ -6,7 +6,6 @@
 import { ITerminalCoordinator, TerminalCoordinatorFactory } from './services/TerminalCoordinator';
 import { IUIController, UIControllerFactory } from './services/UIController';
 import { MessageRouter, MessageRouterFactory } from '../services/MessageRouter';
-import { webview as log } from '../utils/logger';
 import {
   TerminalMessageHandlerFactory,
   TerminalMessageHandlerDependencies
@@ -51,10 +50,10 @@ export class RefactoredWebviewCoordinator {
       this.updateUIState();
 
       this.isInitialized = true;
-      log('RefactoredWebviewCoordinator initialized successfully');
+      console.log('RefactoredWebviewCoordinator initialized successfully');
 
     } catch (error) {
-      log('Failed to initialize RefactoredWebviewCoordinator:', error);
+      console.error('Failed to initialize RefactoredWebviewCoordinator:', error);
       throw error;
     }
   }
@@ -153,7 +152,7 @@ export class RefactoredWebviewCoordinator {
           });
 
         } catch (error) {
-          log(`Message handling error for command ${command}:`, error);
+          console.error(`Message handling error for command ${command}:`, error);
 
           this.postMessageToExtension('messageResponse', {
             originalCommand: command,
@@ -302,7 +301,7 @@ export class RefactoredWebviewCoordinator {
         const result = await this.messageRouter.routeMessage(command, data);
 
         if (!result.success) {
-          log(`Message handling failed for ${command}:`, result.error);
+          console.error(`Message handling failed for ${command}:`, result.error);
 
           this.uiController.showNotification({
             type: 'error',
@@ -313,14 +312,14 @@ export class RefactoredWebviewCoordinator {
 
         return result;
       } else {
-        log(`No handler for command: ${command}`);
+        console.warn(`No handler for command: ${command}`);
         return {
           success: false,
           error: `No handler for command: ${command}`
         };
       }
     } catch (error) {
-      log(`Unexpected error handling message ${command}:`, error);
+      console.error(`Unexpected error handling message ${command}:`, error);
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error)
@@ -388,7 +387,7 @@ export class RefactoredWebviewCoordinator {
       this.uiController.dispose();
       this.messageRouter.dispose();
       this.isInitialized = false;
-      log('RefactoredWebviewCoordinator disposed');
+      console.log('RefactoredWebviewCoordinator disposed');
     }
   }
 }

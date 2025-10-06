@@ -9,6 +9,7 @@
 import { Terminal } from '@xterm/xterm';
 import { IManagerCoordinator } from '../interfaces/ManagerInterfaces';
 import { TerminalTabList, TerminalTab, TerminalTabEvents } from '../components/TerminalTabList';
+import { webview as log } from '../../utils/logger';
 
 interface TabSyncInfo {
   id: string;
@@ -70,7 +71,7 @@ export class TerminalTabManager implements TerminalTabEvents {
 
     this.isInitialized = true;
     this.updateTabVisibility();
-    console.log('[Tabs] Terminal Tab Manager initialized');
+    log('[Tabs] Terminal Tab Manager initialized');
   }
 
   private setupTabContainer(): void {
@@ -99,14 +100,14 @@ export class TerminalTabManager implements TerminalTabEvents {
     terminalBody.insertBefore(container, terminalBody.firstChild);
 
     this.tabContainer = container;
-    console.log('[Tabs] Tab container created');
+    log('[Tabs] Tab container created');
   }
 
   /**
    * TerminalTabEvents implementation
    */
   public onTabClick = (tabId: string): void => {
-    console.log(`🗂️ Tab clicked: ${tabId}`);
+    log(`🗂️ Tab clicked: ${tabId}`);
 
     // Switch to the clicked terminal
     if (this.coordinator) {
@@ -121,10 +122,10 @@ export class TerminalTabManager implements TerminalTabEvents {
         const currentMode = displayManager.getCurrentMode();
 
         if (currentMode === 'fullscreen' && wasActive && tabCount > 1) {
-          console.log('🔀 [TAB-CLICK] Active tab clicked in fullscreen - toggling split view');
+          log('🔀 [TAB-CLICK] Active tab clicked in fullscreen - toggling split view');
           displayManager.toggleSplitMode();
         } else {
-          console.log(`🔍 [TAB-CLICK] Switching to fullscreen mode for: ${tabId}`);
+          log(`🔍 [TAB-CLICK] Switching to fullscreen mode for: ${tabId}`);
           displayManager.showTerminalFullscreen(tabId);
         }
       }
@@ -134,7 +135,7 @@ export class TerminalTabManager implements TerminalTabEvents {
   };
 
   public onTabClose = (tabId: string): void => {
-    console.log(`🗂️ Tab close requested: ${tabId}`);
+    log(`🗂️ Tab close requested: ${tabId}`);
 
     // 🆕 Protect the last tab from being closed
     if (this.tabs.size <= 1) {
@@ -167,7 +168,7 @@ export class TerminalTabManager implements TerminalTabEvents {
   };
 
   public onTabRename = (tabId: string, newName: string): void => {
-    console.log(`🗂️ Tab rename: ${tabId} -> ${newName}`);
+    log(`🗂️ Tab rename: ${tabId} -> ${newName}`);
 
     const tab = this.tabs.get(tabId);
     if (tab) {
@@ -184,7 +185,7 @@ export class TerminalTabManager implements TerminalTabEvents {
   };
 
   public onTabReorder = (fromIndex: number, toIndex: number, nextOrder: string[]): void => {
-    console.log(`🗂️ Tab reorder: ${fromIndex} -> ${toIndex}`, nextOrder);
+    log(`🗂️ Tab reorder: ${fromIndex} -> ${toIndex}`, nextOrder);
 
     if (!Array.isArray(nextOrder) || nextOrder.length === 0) {
       return;
@@ -220,7 +221,7 @@ export class TerminalTabManager implements TerminalTabEvents {
   };
 
   public onNewTab = (): void => {
-    console.log('🗂️ New tab requested');
+    log('🗂️ New tab requested');
 
     if (this.coordinator) {
       // Generate new terminal ID
@@ -254,7 +255,7 @@ export class TerminalTabManager implements TerminalTabEvents {
     }
 
     this.updateTabVisibility();
-    console.log(`🗂️ Tab added: ${terminalId} (${name})`);
+    log(`🗂️ Tab added: ${terminalId} (${name})`);
   }
 
   public removeTab(terminalId: string): void {
@@ -280,7 +281,7 @@ export class TerminalTabManager implements TerminalTabEvents {
     }
 
     this.updateTabVisibility();
-    console.log(`🗂️ Tab removed: ${terminalId}`);
+    log(`🗂️ Tab removed: ${terminalId}`);
   }
 
   public updateTab(terminalId: string, updates: Partial<TerminalTab>): void {
@@ -306,7 +307,7 @@ export class TerminalTabManager implements TerminalTabEvents {
       this.tabList.setActiveTab(terminalId);
     }
 
-    console.log(`🗂️ Active tab set: ${terminalId}`);
+    log(`🗂️ Active tab set: ${terminalId}`);
   }
 
   public getActiveTabId(): string | null {
@@ -473,7 +474,7 @@ export class TerminalTabManager implements TerminalTabEvents {
 
   public restoreState(state: TerminalTabState): void {
     // This would be called during session restoration
-    console.log('🗂️ Restoring tab state:', state);
+    log('🗂️ Restoring tab state:', state);
 
     // Clear current tabs
     this.tabs.clear();
@@ -514,6 +515,6 @@ export class TerminalTabManager implements TerminalTabEvents {
     this.tabOrder = [];
     this.coordinator = null;
 
-    console.log('🗂️ Terminal Tab Manager disposed');
+    log('🗂️ Terminal Tab Manager disposed');
   }
 }

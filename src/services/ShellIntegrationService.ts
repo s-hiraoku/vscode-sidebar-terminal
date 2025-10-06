@@ -11,6 +11,7 @@
 
 import * as vscode from 'vscode';
 import { TerminalManager } from '../terminals/TerminalManager';
+import { service as log } from '../utils/logger';
 
 interface PtyProcess {
   write(data: string): void;
@@ -75,7 +76,7 @@ export class ShellIntegrationService {
         /\x1b\]633;P;Cwd=([^\x07]+)\x07/, // VS Code OSC sequence
       ];
     } catch (error) {
-      console.error('Failed to initialize shell integration patterns:', error);
+      log('Failed to initialize shell integration patterns:', error);
       // Initialize with empty arrays to prevent crashes
       this.promptPatterns = [];
       this.cwdDetectionPatterns = [];
@@ -180,7 +181,7 @@ export class ShellIntegrationService {
       try {
         this.terminalManager.updateTerminalCwd(state.terminalId, cwd);
       } catch (error) {
-        console.error('Failed to update terminal cwd:', error);
+        log('Failed to update terminal cwd:', error);
       }
 
       // Send CWD update to webview

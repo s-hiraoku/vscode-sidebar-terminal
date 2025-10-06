@@ -261,7 +261,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     setTimeout(async () => {
       try {
         await this.profileManager.initialize();
-        console.log('🎯 ProfileManager async initialization completed');
+        log('🎯 ProfileManager async initialization completed');
       } catch (error) {
         console.error('❌ ProfileManager initialization failed:', error);
       }
@@ -307,7 +307,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     // メッセージイベント
     this.eventHandlerManager.setMessageEventHandler(async (event) => {
       // 🔍 DEBUG: Track message reception at the highest level
-      console.log(`🔍 [DEBUG] WebView received message event:`, {
+      log(`🔍 [DEBUG] WebView received message event:`, {
         type: event.type,
         origin: event.origin,
         hasData: !!event.data,
@@ -392,7 +392,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
         setTimeout(() => {
           this.simplePersistenceManager.saveSession().then((success) => {
             if (success) {
-              console.log(`💾 [SIMPLE-PERSISTENCE] Session saved after active terminal change`);
+              log(`💾 [SIMPLE-PERSISTENCE] Session saved after active terminal change`);
             }
           });
         }, 200); // Small delay to avoid frequent saves
@@ -484,7 +484,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     terminalNumber?: number // Optional terminal number from Extension
   ): Promise<Terminal | null> {
     try {
-      console.log(`🔍 [DEBUG] RefactoredTerminalWebviewManager.createTerminal called:`, {
+      log(`🔍 [DEBUG] RefactoredTerminalWebviewManager.createTerminal called:`, {
         terminalId,
         terminalName,
         terminalNumber, // Log the terminal number
@@ -554,12 +554,12 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       // No complex serialization - just session metadata
       setTimeout(() => {
         if (this.simplePersistenceManager) {
-          console.log(
+          log(
             `💾 [SIMPLE-PERSISTENCE] Saving session after terminal ${terminalId} creation`
           );
           this.simplePersistenceManager.saveSession().then((success) => {
             if (success) {
-              console.log(`✅ [SIMPLE-PERSISTENCE] Session saved successfully`);
+              log(`✅ [SIMPLE-PERSISTENCE] Session saved successfully`);
             } else {
               console.warn(`⚠️ [SIMPLE-PERSISTENCE] Failed to save session`);
             }
@@ -575,28 +575,28 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       const allContainers = this.splitManager.getTerminalContainers();
       if (this.uiManager) {
         this.uiManager.updateTerminalBorders(terminalId, allContainers);
-        console.log(`🎯 [FIX] Applied active border immediately after creation: ${terminalId}`);
+        log(`🎯 [FIX] Applied active border immediately after creation: ${terminalId}`);
       }
 
       // ターミナルフォーカスも確実に設定
       if (terminal && terminal.textarea) {
         setTimeout(() => {
           terminal.focus();
-          console.log(`🎯 [FIX] Focused new terminal: ${terminalId}`);
+          log(`🎯 [FIX] Focused new terminal: ${terminalId}`);
         }, 25);
       }
 
       // 🔍 SAFE: Single delayed resize for reliability
-      console.log(`🔍 [DEBUG] Scheduling delayed resize for: ${terminalId}`);
+      log(`🔍 [DEBUG] Scheduling delayed resize for: ${terminalId}`);
 
       setTimeout(() => {
-        console.log(`🔍 [DEBUG] Delayed resize (150ms) for: ${terminalId}`);
+        log(`🔍 [DEBUG] Delayed resize (150ms) for: ${terminalId}`);
         this.terminalLifecycleManager.resizeAllTerminals();
 
         // 🎯 FIX: リサイズ後もボーダーを再確認
         if (this.uiManager) {
           this.uiManager.updateTerminalBorders(terminalId, allContainers);
-          console.log(`🎯 [FIX] Re-confirmed active border after resize: ${terminalId}`);
+          log(`🎯 [FIX] Re-confirmed active border after resize: ${terminalId}`);
         }
       }, 150);
 
@@ -623,12 +623,12 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     // 🆕 SIMPLE: Update session state after terminal removal
     setTimeout(() => {
       if (this.simplePersistenceManager) {
-        console.log(
+        log(
           `💾 [SIMPLE-PERSISTENCE] Updating session after terminal ${terminalId} removal`
         );
         this.simplePersistenceManager.saveSession().then((success) => {
           if (success) {
-            console.log(`✅ [SIMPLE-PERSISTENCE] Session updated after removal`);
+            log(`✅ [SIMPLE-PERSISTENCE] Session updated after removal`);
           }
         });
       }
@@ -672,11 +672,11 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
    * 🆕 NEW: Extract scrollback data from a specific terminal
    */
   public extractScrollbackData(terminalId: string, maxLines: number = 1000): string[] {
-    console.log(`🔥 [EXTRACT-DEBUG] === extractScrollbackData called for ${terminalId} ===`);
+    log(`🔥 [EXTRACT-DEBUG] === extractScrollbackData called for ${terminalId} ===`);
 
     try {
       const terminalInstance = this.getTerminalInstance(terminalId);
-      console.log(`🔍 [EXTRACT-DEBUG] Terminal instance found:`, !!terminalInstance);
+      log(`🔍 [EXTRACT-DEBUG] Terminal instance found:`, !!terminalInstance);
 
       if (!terminalInstance || !terminalInstance.terminal) {
         console.warn(`⚠️ [EXTRACT-DEBUG] Terminal ${terminalId} not found or no terminal`);
@@ -684,19 +684,19 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       }
 
       const terminal = terminalInstance.terminal;
-      console.log(`🔍 [EXTRACT-DEBUG] Terminal details:`, {
+      log(`🔍 [EXTRACT-DEBUG] Terminal details:`, {
         hasBuffer: !!terminal.buffer,
         hasNormalBuffer: !!(terminal.buffer && terminal.buffer.normal),
       });
 
       // Use buffer method for scrollback extraction
       if (terminal.buffer && terminal.buffer.normal) {
-        console.log('📄 [EXTRACT-DEBUG] Using buffer method for scrollback extraction');
+        log('📄 [EXTRACT-DEBUG] Using buffer method for scrollback extraction');
         try {
           const buffer = terminal.buffer.normal;
           const lines: string[] = [];
 
-          console.log(
+          log(
             `🔍 [EXTRACT-DEBUG] Buffer length: ${buffer.length}, requesting max: ${maxLines}`
           );
 
@@ -708,8 +708,8 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
             }
           }
 
-          console.log(`📦 [EXTRACT-DEBUG] Buffer method extracted ${lines.length} lines`);
-          console.log('📄 [EXTRACT-DEBUG] First few lines:', lines.slice(0, 3));
+          log(`📦 [EXTRACT-DEBUG] Buffer method extracted ${lines.length} lines`);
+          log('📄 [EXTRACT-DEBUG] First few lines:', lines.slice(0, 3));
           return lines;
         } catch (bufferError) {
           console.warn('⚠️ [EXTRACT-DEBUG] Buffer extraction failed:', bufferError);
@@ -748,7 +748,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
    * 🆕 NEW: Handle scrollback extraction request from Extension
    */
   private async handleExtractScrollbackRequest(message: any): Promise<void> {
-    console.log('🔥 [SCROLLBACK-DEBUG] === handleExtractScrollbackRequest called ===', message);
+    log('🔥 [SCROLLBACK-DEBUG] === handleExtractScrollbackRequest called ===', message);
 
     try {
       const { terminalId, requestId, maxLines } = message;
@@ -762,13 +762,13 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
 
       // Check if this request has already been processed
       if (this.processedScrollbackRequests.has(requestId)) {
-        console.log(
+        log(
           `⚠️ [SCROLLBACK-DEBUG] Request ${requestId} already processed, ignoring duplicate`
         );
         return;
       }
 
-      console.log(
+      log(
         `🔍 [SCROLLBACK-DEBUG] Processing request for terminal: ${terminalId}, requestId: ${requestId}, maxLines: ${maxLines}`
       );
 
@@ -778,10 +778,10 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       // Extract the scrollback data
       const scrollbackData = this.extractScrollbackData(terminalId, maxLines || 1000);
 
-      console.log(
+      log(
         `📦 [SCROLLBACK-DEBUG] Extracted ${scrollbackData.length} lines for terminal ${terminalId}`
       );
-      console.log('📄 [SCROLLBACK-DEBUG] Sample scrollback data:', scrollbackData.slice(0, 3));
+      log('📄 [SCROLLBACK-DEBUG] Sample scrollback data:', scrollbackData.slice(0, 3));
 
       // Send the response back to Extension
       this.postMessageToExtension({
@@ -792,7 +792,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
         timestamp: Date.now(),
       });
 
-      console.log(`✅ [SCROLLBACK-DEBUG] Sent response to Extension for terminal ${terminalId}`);
+      log(`✅ [SCROLLBACK-DEBUG] Sent response to Extension for terminal ${terminalId}`);
 
       // Clean up processed requests after a timeout to prevent memory leaks
       setTimeout(() => {
@@ -1460,7 +1460,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
    */
   private async attemptSimpleSessionRestore(): Promise<void> {
     try {
-      console.log('🔄 [SIMPLE-RESTORATION] Attempting session restoration...');
+      log('🔄 [SIMPLE-RESTORATION] Attempting session restoration...');
 
       if (!this.simplePersistenceManager) {
         console.warn('⚠️ [SIMPLE-RESTORATION] SimplePersistenceManager not available');
@@ -1474,12 +1474,12 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
         // No previous session - show welcome message
         const welcomeMessage = this.simplePersistenceManager.getWelcomeMessage();
         this.displaySessionMessage(welcomeMessage);
-        console.log('📭 [SIMPLE-RESTORATION] No previous session found - showing welcome message');
+        log('📭 [SIMPLE-RESTORATION] No previous session found - showing welcome message');
         return;
       }
 
       // Restore terminals based on session data
-      console.log(
+      log(
         `🔄 [SIMPLE-RESTORATION] Restoring ${sessionData.terminalCount} terminals from previous session`
       );
 
@@ -1497,7 +1497,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
           timestamp: Date.now(),
         });
 
-        console.log(`🔄 [SIMPLE-RESTORATION] Requested recreation of terminal: ${terminalName}`);
+        log(`🔄 [SIMPLE-RESTORATION] Requested recreation of terminal: ${terminalName}`);
 
         // Small delay between terminal creations
         await new Promise((resolve) => setTimeout(resolve, 100));
@@ -1513,13 +1513,13 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       if (sessionData.activeTerminalId) {
         setTimeout(() => {
           this.setActiveTerminalId(sessionData.activeTerminalId!);
-          console.log(
+          log(
             `🎯 [SIMPLE-RESTORATION] Restored active terminal: ${sessionData.activeTerminalId}`
           );
         }, 1500);
       }
 
-      console.log('✅ [SIMPLE-RESTORATION] Session restoration completed');
+      log('✅ [SIMPLE-RESTORATION] Session restoration completed');
     } catch (error) {
       console.error('❌ [SIMPLE-RESTORATION] Failed to restore session:', error);
 
@@ -1592,11 +1592,11 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
         }
       }, 5000);
 
-      console.log(`📢 [SESSION-MESSAGE] Displayed: ${message.message}`);
+      log(`📢 [SESSION-MESSAGE] Displayed: ${message.message}`);
     } catch (error) {
       console.error('❌ [SESSION-MESSAGE] Failed to display message:', error);
       // Fallback to console log
-      console.log(
+      log(
         `📢 [SESSION-MESSAGE] ${message.message}${message.details ? ` - ${message.details}` : ''}`
       );
     }
@@ -1806,7 +1806,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       },
     };
 
-    console.log('🔧 [DIAGNOSTICS] System diagnostics exported:', diagnostics);
+    log('🔧 [DIAGNOSTICS] System diagnostics exported:', diagnostics);
     return diagnostics;
   }
 

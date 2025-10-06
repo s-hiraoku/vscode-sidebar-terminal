@@ -12,7 +12,6 @@ import { BaseManager } from './BaseManager';
 import { uiLogger } from '../utils/ManagerLogger';
 import { EventHandlerRegistry } from '../utils/EventHandlerRegistry';
 import { ResizeManager } from '../utils/ResizeManager';
-import { webview as log } from '../../utils/logger';
 
 export interface NotificationConfig {
   type: 'error' | 'warning' | 'info' | 'success';
@@ -138,7 +137,7 @@ export class UIManager extends BaseManager implements IUIManager {
    */
   private updateSingleTerminalBorder(container: HTMLElement, isActive: boolean): void {
     // 🔍 DEBUG: Enhanced border debugging
-    log(`🔍 [DEBUG] Updating border for terminal:`, {
+    console.log(`🔍 [DEBUG] Updating border for terminal:`, {
       terminalId: container.dataset.terminalId,
       containerId: container.id,
       containerClass: container.className,
@@ -169,7 +168,7 @@ export class UIManager extends BaseManager implements IUIManager {
         // Ensure proper z-index for visibility
         container.style.setProperty('z-index', '2', 'important');
 
-        log(`🔍 [DEBUG] Applied ACTIVE border styles`, {
+        console.log(`🔍 [DEBUG] Applied ACTIVE border styles`, {
           borderColor: WEBVIEW_THEME_CONSTANTS.ACTIVE_BORDER_COLOR,
           computedStyle: window.getComputedStyle(container).border,
         });
@@ -179,7 +178,7 @@ export class UIManager extends BaseManager implements IUIManager {
         container.style.setProperty('box-shadow', 'none', 'important');
         container.style.setProperty('z-index', '1', 'important');
 
-        log('🔍 [DEBUG] Active border highlight disabled; applied transparent border');
+        console.log('🔍 [DEBUG] Active border highlight disabled; applied transparent border');
       }
     } else {
       container.classList.remove('active');
@@ -191,7 +190,7 @@ export class UIManager extends BaseManager implements IUIManager {
       container.style.setProperty('box-shadow', 'none', 'important');
       container.style.setProperty('z-index', '1', 'important');
 
-      log(`🔍 [DEBUG] Applied INACTIVE border styles`);
+      console.log(`🔍 [DEBUG] Applied INACTIVE border styles`);
     }
 
     uiLogger.debug(
@@ -378,7 +377,7 @@ export class UIManager extends BaseManager implements IUIManager {
     onAiAgentToggleClick?: (terminalId: string) => void
   ): HTMLElement {
     // 🔍 DEBUG: Enhanced header creation logging
-    log(`🔍 [DEBUG] Creating terminal header:`, {
+    console.log(`🔍 [DEBUG] Creating terminal header:`, {
       terminalId,
       terminalName,
       timestamp: Date.now(),
@@ -401,7 +400,7 @@ export class UIManager extends BaseManager implements IUIManager {
     container.style.setProperty('z-index', '10', 'important');
 
     // 🔍 DEBUG: Log header creation success
-    log(`🔍 [DEBUG] Header created successfully:`, {
+    console.log(`🔍 [DEBUG] Header created successfully:`, {
       headerId: container.id,
       headerClass: container.className,
       headerDisplay: container.style.display,

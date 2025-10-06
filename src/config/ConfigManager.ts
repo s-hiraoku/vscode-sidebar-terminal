@@ -13,6 +13,7 @@ import {
   TerminalProfilesConfig,
 } from '../types/shared';
 import { TERMINAL_CONSTANTS } from '../constants';
+import { config as log } from '../utils/logger';
 
 /**
  * VS Code設定アクセスを統合管理するクラス
@@ -60,7 +61,7 @@ export class ConfigManager {
       }
     } catch (error) {
       // テスト環境やモック環境では無視
-      console.warn('ConfigManager: VS Code workspace API not available:', error);
+      log('ConfigManager: VS Code workspace API not available:', error);
     }
 
     this._initialized = true;
@@ -277,7 +278,7 @@ export class ConfigManager {
       // Debug log removed for production
       return 'monospace';
     } catch (error) {
-      console.error('[ConfigManager] Error getting fontFamily:', error);
+      log('[ConfigManager] Error getting fontFamily:', error);
       return 'monospace';
     }
   }
@@ -314,7 +315,7 @@ export class ConfigManager {
       // Debug log removed for production
       return 14;
     } catch (error) {
-      console.error('[ConfigManager] Error getting fontSize:', error);
+      log('[ConfigManager] Error getting fontSize:', error);
       return 14;
     }
   }
@@ -346,7 +347,7 @@ export class ConfigManager {
       // 3. デフォルトフォント太さ
       return 'normal';
     } catch (error) {
-      console.error('[ConfigManager] Error getting fontWeight:', error);
+      log('[ConfigManager] Error getting fontWeight:', error);
       return 'normal';
     }
   }
@@ -378,7 +379,7 @@ export class ConfigManager {
       // 3. デフォルトフォント太字
       return 'bold';
     } catch (error) {
-      console.error('[ConfigManager] Error getting fontWeightBold:', error);
+      log('[ConfigManager] Error getting fontWeightBold:', error);
       return 'bold';
     }
   }
@@ -410,7 +411,7 @@ export class ConfigManager {
       // 3. デフォルト行間隔
       return 1.0;
     } catch (error) {
-      console.error('[ConfigManager] Error getting lineHeight:', error);
+      log('[ConfigManager] Error getting lineHeight:', error);
       return 1.0;
     }
   }
@@ -442,7 +443,7 @@ export class ConfigManager {
       // 3. デフォルト文字間隔
       return 0;
     } catch (error) {
-      console.error('[ConfigManager] Error getting letterSpacing:', error);
+      log('[ConfigManager] Error getting letterSpacing:', error);
       return 0;
     }
   }

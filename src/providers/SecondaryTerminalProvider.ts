@@ -707,7 +707,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       }
     } catch (error) {
       log(`❌ [INITIAL] Failed to create requested initial terminal: ${String(error)}`);
-      console.error('❌ [INITIAL] Error details:', error);
+      log('❌ [INITIAL] Error details:', error);
     }
   }
 
@@ -1562,14 +1562,14 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
    * Set up CLI Agent status change listeners
    */
   private _setupCliAgentStatusListeners(): void {
-    console.log('🎯 [PROVIDER] Setting up CLI Agent status listeners');
+    log('🎯 [PROVIDER] Setting up CLI Agent status listeners');
     // CLI Agent状態変更を監視 - Full State Sync方式で完全同期
     const claudeStatusDisposable = this._terminalManager.onCliAgentStatusChange((event) => {
       try {
-        console.log('📡 [PROVIDER] Received CLI Agent status change:', event);
+        log('📡 [PROVIDER] Received CLI Agent status change:', event);
 
         // Full State Sync: 全ターミナルの状態を完全同期
-        console.log('🔄 [PROVIDER] Triggering full CLI Agent state sync');
+        log('🔄 [PROVIDER] Triggering full CLI Agent state sync');
         this.sendFullCliAgentStateSync();
       } catch (error) {
         log('❌ [ERROR] CLI Agent status change processing failed:', error);
@@ -1579,7 +1579,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
     // disposablesに追加
     this._extensionContext.subscriptions.push(claudeStatusDisposable);
-    console.log('✅ [PROVIDER] CLI Agent status listeners setup complete');
+    log('✅ [PROVIDER] CLI Agent status listeners setup complete');
   }
 
   /**
@@ -1838,7 +1838,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         },
       };
 
-      console.log('[DEBUG] Sending message to WebView:', message);
+      log('[DEBUG] Sending message to WebView:', message);
       void this._sendMessage(message);
     } catch (error) {
       // エラーがあっても継続
@@ -1850,13 +1850,13 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
    * DISCONNECTED terminals状態保持問題の解決策
    */
   public sendFullCliAgentStateSync(): void {
-    console.log('🚀 [PROVIDER] sendFullCliAgentStateSync() called');
+    log('🚀 [PROVIDER] sendFullCliAgentStateSync() called');
     try {
       const connectedAgentId = this._terminalManager.getConnectedAgentTerminalId();
       const connectedAgentType = this._terminalManager.getConnectedAgentType();
       const disconnectedAgents = this._terminalManager.getDisconnectedAgents();
 
-      console.log('🔍 [PROVIDER] Current CLI Agent state:', {
+      log('🔍 [PROVIDER] Current CLI Agent state:', {
         connected: { id: connectedAgentId, type: connectedAgentType },
         disconnected: Array.from(disconnectedAgents.entries()),
       });
@@ -1903,13 +1903,13 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         terminalStates: terminalStates,
       };
 
-      console.log('📤 [PROVIDER] Sending full CLI Agent state sync:', message);
+      log('📤 [PROVIDER] Sending full CLI Agent state sync:', message);
 
       if (this._view) {
         void this._view.webview.postMessage(message);
-        console.log('✅ [PROVIDER] Full CLI Agent state sync sent successfully');
+        log('✅ [PROVIDER] Full CLI Agent state sync sent successfully');
       } else {
-        console.warn('⚠️ [PROVIDER] WebView not available for full state sync');
+        log('⚠️ [PROVIDER] WebView not available for full state sync');
       }
     } catch (error) {
       log('❌ [ERROR] Failed to send full CLI Agent state sync:', error);
@@ -1955,14 +1955,14 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
           });
         } catch (error) {
           log(`❌ [INITIAL] Failed to create initial terminals: ${String(error)}`);
-          console.error('❌ [INITIAL] Terminal creation error details:', error);
+          log('❌ [INITIAL] Terminal creation error details:', error);
           // Fallback: try to create at least one terminal
           try {
             const terminalId = this._terminalManager.createTerminal();
             log(`✅ [INITIAL] Fallback terminal created: ${terminalId}`);
           } catch (fallbackError) {
             log(`❌ [INITIAL] Fallback terminal creation also failed: ${String(fallbackError)}`);
-            console.error('❌ [INITIAL] Fallback error details:', fallbackError);
+            log('❌ [INITIAL] Fallback error details:', fallbackError);
           }
         }
       } else {
@@ -2463,7 +2463,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       }
     } catch (error) {
       log(`❌ [PERSISTENCE] Auto-save failed: ${error}`);
-      console.error('Persistence save error:', error);
+      log('Persistence save error:', error);
       return false;
     }
   }
@@ -2696,7 +2696,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       }
     } catch (error) {
       log(`❌ [PERSISTENCE] Auto-restore failed: ${error}`);
-      console.error('Persistence restore error:', error);
+      log('Persistence restore error:', error);
       return false;
     }
   }
