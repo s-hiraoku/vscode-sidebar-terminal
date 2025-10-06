@@ -109,26 +109,9 @@ export class TerminalTabManager implements TerminalTabEvents {
   public onTabClick = (tabId: string): void => {
     log(`🗂️ Tab clicked: ${tabId}`);
 
-    // Switch to the clicked terminal
+    // Switch to the clicked terminal without changing display mode
     if (this.coordinator) {
-      const wasActive = this.tabs.get(tabId)?.isActive ?? false;
-      const tabCount = this.tabs.size;
-
       this.coordinator.setActiveTerminalId(tabId);
-
-      // 🆕 NEW (Issue #198): フルスクリーン表示に切り替え
-      const displayManager = this.coordinator.getDisplayModeManager?.();
-      if (displayManager) {
-        const currentMode = displayManager.getCurrentMode();
-
-        if (currentMode === 'fullscreen' && wasActive && tabCount > 1) {
-          log('🔀 [TAB-CLICK] Active tab clicked in fullscreen - toggling split view');
-          displayManager.toggleSplitMode();
-        } else {
-          log(`🔍 [TAB-CLICK] Switching to fullscreen mode for: ${tabId}`);
-          displayManager.showTerminalFullscreen(tabId);
-        }
-      }
     }
 
     this.setActiveTab(tabId);
@@ -227,6 +210,26 @@ export class TerminalTabManager implements TerminalTabEvents {
       // Generate new terminal ID
       const newTerminalId = this.generateTerminalId();
       this.coordinator.createTerminal(newTerminalId, `Terminal ${this.tabs.size + 1}`);
+    }
+  };
+
+  public onModeToggle = (): void => {
+    log('🖥️ Mode toggle requested');
+
+    if (this.coordinator) {
+      const displayManager = this.coordinator.getDisplayModeManager?.();
+      if (displayManager) {
+        const currentMode = displayManager.getCurrentMode();
+        const activeTabId = this.getActiveTabId();
+
+        if (currentMode === 'fullscreen' && this.tabs.size > 1) {
+          log('🔀 Fullscreen -> Split mode');
+          displayManager.toggleSplitMode();
+        } else if (activeTabId) {
+          log(`🔍 Switching to fullscreen mode for: ${activeTabId}`);
+          displayManager.showTerminalFullscreen(activeTabId);
+        }
+      }
     }
   };
 

@@ -23,6 +23,7 @@ export interface TerminalTabEvents {
   onTabRename: (tabId: string, newName: string) => void;
   onTabReorder: (fromIndex: number, toIndex: number, nextOrder: string[]) => void;
   onNewTab: () => void;
+  onModeToggle?: () => void;
 }
 
 /**
@@ -77,12 +78,11 @@ export class TerminalTabList {
       this.events.onNewTab();
     });
 
-    // 🆕 Mode indicator click -> toggle display mode using existing tab click logic
+    // 🆕 Mode indicator click -> toggle display mode
     this.modeIndicatorContainer.addEventListener('click', () => {
-      const activeTab = this.getActiveTab();
-      if (activeTab) {
-        log('🖥️ Mode indicator clicked - triggering tab click logic');
-        this.events.onTabClick(activeTab.id);
+      log('🖥️ Mode indicator clicked - toggling display mode');
+      if (this.events.onModeToggle) {
+        this.events.onModeToggle();
       }
     });
 
@@ -130,8 +130,10 @@ export class TerminalTabList {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        font-size: 14px;
+        font-size: 16px;
         line-height: 1;
+        font-family: monospace;
+        font-weight: bold;
       }
 
       .terminal-tabs-scroll {
@@ -561,29 +563,29 @@ export class TerminalTabList {
       return;
     }
 
-    const config: Record<'normal' | 'fullscreen' | 'split', { label: string; emoji: string }> = {
+    const config: Record<'normal' | 'fullscreen' | 'split', { label: string; symbol: string }> = {
       normal: {
-        label: 'Single terminal layout',
-        emoji: '',
+        label: 'Single terminal layout - Click to maximize',
+        symbol: '⊞',
       },
       fullscreen: {
-        label: 'Fullscreen layout',
-        emoji: '🖥️',
+        label: 'Fullscreen layout - Click to split',
+        symbol: '⊡',
       },
       split: {
         label: 'Split layout',
-        emoji: '▦',
+        symbol: '⊞',
       },
     };
 
-    const { label, emoji } = config[mode];
+    const { label, symbol } = config[mode];
     this.modeIndicatorContainer.setAttribute('aria-label', label);
     this.modeIndicatorContainer.setAttribute('title', label);
     this.modeIndicatorContainer.setAttribute('data-mode', mode);
-    this.modeIndicatorSymbol.textContent = emoji;
+    this.modeIndicatorSymbol.textContent = symbol;
 
-    // Hide indicator when in normal mode
-    this.modeIndicatorContainer.style.display = mode === 'normal' ? 'none' : 'flex';
+    // Always show the mode indicator
+    this.modeIndicatorContainer.style.display = 'flex';
   }
 
   private startRename(tabId: string): void {
