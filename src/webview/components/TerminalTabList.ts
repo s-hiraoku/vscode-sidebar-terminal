@@ -75,6 +75,15 @@ export class TerminalTabList {
       this.events.onNewTab();
     });
 
+    // 🆕 Mode indicator click -> toggle display mode using existing tab click logic
+    this.modeIndicatorContainer.addEventListener('click', () => {
+      const activeTab = this.getActiveTab();
+      if (activeTab) {
+        console.log('🖥️ Mode indicator clicked - triggering tab click logic');
+        this.events.onTabClick(activeTab.id);
+      }
+    });
+
     this.setupStyles();
     this.setupKeyboardNavigation();
     this.setupGlobalEventDelegation(); // 🆕 Global event delegation
@@ -107,46 +116,20 @@ export class TerminalTabList {
         border-right: 1px solid var(--vscode-tab-border);
         color: var(--vscode-tab-activeForeground, var(--vscode-foreground));
         min-width: 28px;
+        cursor: pointer;
+        transition: background-color 0.1s ease;
+      }
+
+      .terminal-mode-indicator:hover {
+        background: var(--vscode-toolbar-hoverBackground);
       }
 
       .terminal-mode-indicator-symbol {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 16px;
-        height: 12px;
-      }
-
-      .terminal-mode-indicator-symbol::before {
-        content: '';
-        display: block;
-        width: 100%;
-        height: 100%;
-        border-radius: 2px;
-        transition: background 0.15s ease, border-color 0.15s ease;
-      }
-
-      .terminal-mode-indicator[data-mode='normal'] .terminal-mode-indicator-symbol::before {
-        background: currentColor;
-      }
-
-      .terminal-mode-indicator[data-mode='fullscreen'] .terminal-mode-indicator-symbol::before {
-        border: 1px solid currentColor;
-        background: transparent;
-      }
-
-      .terminal-mode-indicator[data-mode='split'] .terminal-mode-indicator-symbol::before {
-        border: 1px solid currentColor;
-        background:
-          linear-gradient(
-            to bottom,
-            currentColor 0%,
-            currentColor 45%,
-            transparent 45%,
-            transparent 55%,
-            currentColor 55%,
-            currentColor 100%
-          );
+        font-size: 14px;
+        line-height: 1;
       }
 
       .terminal-tabs-scroll {
@@ -550,22 +533,29 @@ export class TerminalTabList {
       return;
     }
 
-    const config: Record<'normal' | 'fullscreen' | 'split', { label: string }> = {
+    const config: Record<'normal' | 'fullscreen' | 'split', { label: string; emoji: string }> = {
       normal: {
         label: 'Single terminal layout',
+        emoji: '',
       },
       fullscreen: {
         label: 'Fullscreen layout',
+        emoji: '🖥️',
       },
       split: {
         label: 'Split layout',
+        emoji: '▦',
       },
     };
 
-    const { label } = config[mode];
+    const { label, emoji } = config[mode];
     this.modeIndicatorContainer.setAttribute('aria-label', label);
     this.modeIndicatorContainer.setAttribute('title', label);
     this.modeIndicatorContainer.setAttribute('data-mode', mode);
+    this.modeIndicatorSymbol.textContent = emoji;
+
+    // Hide indicator when in normal mode
+    this.modeIndicatorContainer.style.display = mode === 'normal' ? 'none' : 'flex';
   }
 
   private startRename(tabId: string): void {
