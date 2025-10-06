@@ -1,4 +1,4 @@
-import { BaseMessageHandler } from './BaseMessageHandler';
+import { BaseMessageHandler } from '../../../messaging/handlers/BaseMessageHandler';
 import { IMessageHandlerContext } from '../interfaces';
 import { WebviewMessage } from '../../../types/common';
 import { provider as log } from '../../../utils/logger';
