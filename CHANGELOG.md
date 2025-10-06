@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.114] - 2025-10-06
+
+### Fixed
+- **Terminal Input Echo**: Resolved lingering prompt characters by isolating output buffers per terminal, preventing concurrent AI output from being written into the active prompt.
+
 ## [0.1.113] - 2025-10-06
 
 ### Fixed
