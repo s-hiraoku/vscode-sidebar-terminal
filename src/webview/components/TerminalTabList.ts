@@ -182,7 +182,6 @@ export class TerminalTabList {
 
       .terminal-tab.dragging {
         opacity: 0.5;
-        transform: rotate(5deg);
         z-index: 1000;
       }
 
