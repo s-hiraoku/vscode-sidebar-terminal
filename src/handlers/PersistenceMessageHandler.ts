@@ -10,13 +10,13 @@ import { extension as log } from '../utils/logger';
  */
 export interface PersistenceMessage {
   command: 'saveSession' | 'restoreSession' | 'clearSession';
-  data?: any;
+  data?: unknown;
   terminalId?: string; // Changed from number to string to match WebviewMessage
 }
 
 export interface PersistenceResponse {
   success: boolean;
-  data?: any;
+  data?: unknown;
   error?: string;
   terminalCount?: number;
 }
@@ -24,13 +24,20 @@ export interface PersistenceResponse {
 /**
  * PersistenceMessageHandler interface for dependency injection
  */
+export interface WebViewMessage {
+  command: string;
+  data: unknown;
+  success: boolean;
+  timestamp: number;
+}
+
 export interface IPersistenceMessageHandler {
   handleMessage(message: PersistenceMessage): Promise<PersistenceResponse>;
-  createWebViewMessage(command: string, data: any, success?: boolean): any;
-  createErrorResponse(command: string, error: string): any;
-  createSuccessResponse(command: string, data: any): any;
+  createWebViewMessage(command: string, data: unknown, success?: boolean): WebViewMessage;
+  createErrorResponse(command: string, error: string): WebViewMessage;
+  createSuccessResponse(command: string, data: unknown): WebViewMessage;
   registerMessageHandlers(): void;
-  handlePersistenceMessage(message: any): Promise<any>;
+  handlePersistenceMessage(message: unknown): Promise<PersistenceResponse>;
 }
 
 /**
@@ -82,7 +89,7 @@ export class PersistenceMessageHandler {
   /**
    * セッション保存処理
    */
-  private async handleSaveSession(terminalData: any): Promise<PersistenceResponse> {
+  private async handleSaveSession(terminalData: unknown): Promise<PersistenceResponse> {
     try {
       if (!terminalData || !Array.isArray(terminalData)) {
         return {
@@ -175,7 +182,7 @@ export class PersistenceMessageHandler {
   /**
    * WebView向けメッセージ作成ヘルパー
    */
-  createWebViewMessage(command: string, data: any, success: boolean = true): any {
+  createWebViewMessage(command: string, data: unknown, success: boolean = true): WebViewMessage {
     return {
       command: `persistence${command.charAt(0).toUpperCase() + command.slice(1)}Response`,
       data,
@@ -187,14 +194,14 @@ export class PersistenceMessageHandler {
   /**
    * エラーレスポンス作成ヘルパー
    */
-  createErrorResponse(command: string, error: string): any {
+  createErrorResponse(command: string, error: string): WebViewMessage {
     return this.createWebViewMessage(command, { error }, false);
   }
 
   /**
    * 成功レスポンス作成ヘルパー
    */
-  createSuccessResponse(command: string, data: any): any {
+  createSuccessResponse(command: string, data: unknown): WebViewMessage {
     return this.createWebViewMessage(command, data, true);
   }
 
@@ -209,7 +216,7 @@ export class PersistenceMessageHandler {
   /**
    * 永続化メッセージ処理（compatibility method）
    */
-  async handlePersistenceMessage(message: any): Promise<any> {
+  async handlePersistenceMessage(message: unknown): Promise<PersistenceResponse> {
     // Delegate to handleMessage for compatibility
     return await this.handleMessage(message as PersistenceMessage);
   }

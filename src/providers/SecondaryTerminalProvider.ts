@@ -2334,7 +2334,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       await this._sendMessage({
         command: responseCommand as any,
         success: response.success,
-        data: response.data,
+        data: response.data as string | any[] | undefined,
         error: response.error,
         terminalCount: response.terminalCount,
         messageId: message.messageId,
