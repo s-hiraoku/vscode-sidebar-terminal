@@ -50,16 +50,6 @@ export interface InteractionConfig {
   readonly highlightActiveBorder?: boolean;
 }
 
-/**
- * キーバインディング関連設定
- */
-export interface KeybindingConfig {
-  readonly sendKeybindingsToShell?: boolean;
-  readonly commandsToSkipShell?: string[];
-  readonly allowChords?: boolean;
-  readonly allowMnemonics?: boolean;
-}
-
 // ===== 統合型定義 =====
 
 /**
@@ -79,14 +69,6 @@ export interface ExtensionTerminalConfig
   };
   readonly enableCliAgentIntegration?: boolean;
   readonly highlightActiveBorder?: boolean;
-}
-
-/**
- * WebView で使用するターミナル設定
- * xterm.js 固有の設定を含む
- */
-export interface WebViewTerminalConfig extends DisplayConfig, ShellConfig {
-  readonly theme: TerminalTheme; // WebView では必須
 }
 
 /**
@@ -193,8 +175,6 @@ export interface CompleteExtensionConfig extends WebViewDisplayConfig, TerminalL
 // ===== 型エイリアス =====
 
 export type TerminalTheme = 'auto' | 'dark' | 'light';
-export type SplitDirection = 'horizontal' | 'vertical';
-export type CliAgentStatusType = 'info' | 'success' | 'error' | 'warning';
 
 // ===== Terminal Profile System Types =====
 
@@ -307,8 +287,6 @@ export interface ProfileSelectionResult {
  * 段階的移行で使用
  */
 export type TerminalConfig = ExtensionTerminalConfig;
-export type TerminalSettings = CompleteTerminalSettings;
-export type ExtensionConfig = CompleteExtensionConfig;
 
 // ===== 設定キー定数 =====
 
@@ -442,14 +420,6 @@ export interface TerminalInstance {
   isSessionRestored?: boolean; // セッション復元で作成されたターミナルかどうか
   sessionRestoreMessage?: string; // 復元メッセージ
   sessionScrollback?: string[]; // 復元時の履歴データ
-}
-
-/**
- * ターミナル寸法
- */
-export interface TerminalDimensions {
-  cols: number;
-  rows: number;
 }
 
 /**
@@ -925,14 +895,3 @@ export function isBaseTerminalConfig(obj: unknown): obj is BaseTerminalConfig {
   return typeof obj === 'object' && obj !== null;
 }
 
-/**
- * ExtensionTerminalConfig の型ガード
- */
-export function isExtensionTerminalConfig(obj: unknown): obj is ExtensionTerminalConfig {
-  return (
-    isBaseTerminalConfig(obj) &&
-    typeof (obj as ExtensionTerminalConfig).shell === 'string' &&
-    Array.isArray((obj as ExtensionTerminalConfig).shellArgs) &&
-    typeof (obj as ExtensionTerminalConfig).maxTerminals === 'number'
-  );
-}

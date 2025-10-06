@@ -7,5 +7,9 @@
   "recursive": true,
   "reporter": "spec",
   "ui": "bdd",
-  "spec": ["out/test/unit/**/*.test.js"]
+  "spec": ["out/test/unit/**/*.test.js"],
+  "parallel": true,
+  "jobs": 4,
+  "bail": false,
+  "exit": true
 }
