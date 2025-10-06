@@ -406,7 +406,14 @@ export class TerminalTabManager implements TerminalTabEvents {
       }
     });
 
-    // this.updateTabOrder(tabInfos.map((info) => info.id)); // Method not found
+    // Sync tab order from Extension state
+    const newTabOrder = tabInfos.map((info) => info.id);
+    if (newTabOrder.length > 0 && !this.arraysEqual(this.tabOrder, newTabOrder)) {
+      this.tabOrder = newTabOrder;
+      this.rebuildTabsInOrder();
+      log('🔄 [TABS] Tab order synced from Extension state:', newTabOrder);
+    }
+
     this.updateTabVisibility();
 
     const activeTab = tabInfos.find((tab) => tab.isActive);
@@ -446,6 +453,14 @@ export class TerminalTabManager implements TerminalTabEvents {
     const timestamp = Date.now();
     const random = Math.random().toString(36).substring(2, 8);
     return `terminal-${timestamp}-${random}`;
+  }
+
+  /**
+   * Helper to compare two arrays for equality
+   */
+  private arraysEqual(a: string[], b: string[]): boolean {
+    if (a.length !== b.length) return false;
+    return a.every((val, index) => val === b[index]);
   }
 
   /**

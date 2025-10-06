@@ -154,7 +154,7 @@ export class WebViewStateManager implements IWebViewStateManager {
       command: TERMINAL_CONSTANTS.COMMANDS.INIT,
       config,
       terminals,
-      activeTerminalId,
+      activeTerminalId: activeTerminalId ?? undefined,
     };
   }
 
@@ -170,6 +170,7 @@ export class WebViewStateManager implements IWebViewStateManager {
       // Send a message to WebView to analyze its dimensions and report back
       void this.sendMessage({
         command: 'requestPanelLocationDetection',
+        location: undefined,
       });
     } catch (error) {
       log('⚠️ [STATE-MANAGER] Error requesting panel location detection:', error);

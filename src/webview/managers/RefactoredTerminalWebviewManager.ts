@@ -1057,6 +1057,13 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
    */
   private updateUIFromState(state: TerminalState): void {
     try {
+      // Sync terminal order with Extension state
+      const terminalOrder = state.terminals.map(t => t.id);
+      if (terminalOrder.length > 0 && this.terminalContainerManager) {
+        this.terminalContainerManager.reorderContainers(terminalOrder);
+        log(`🔄 [STATE] Synced terminal container order:`, terminalOrder);
+      }
+
       // Update terminal count display
       this.updateTerminalCountDisplay(state.terminals.length, state.maxTerminals);
 

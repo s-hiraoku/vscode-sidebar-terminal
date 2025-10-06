@@ -20,7 +20,6 @@ import {
   isNonNullObject,
   hasProperty,
   IShellIntegrationManager,
-  ITerminalLifecycleManager,
   ITerminalWithAddons,
 } from '../../types/type-guards';
 import { SessionMessageController } from './controllers/SessionMessageController';
@@ -977,7 +976,7 @@ export class RefactoredMessageManager implements IMessageManager {
       hasProperty(
         coordinator,
         'terminalLifecycleManager',
-        (value): value is ITerminalLifecycleManager =>
+        (value): value is Record<string, unknown> =>
           isNonNullObject(value) && 'getActiveTerminal' in value
       )
     ) {
