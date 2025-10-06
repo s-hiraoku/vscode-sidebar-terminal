@@ -71,7 +71,7 @@ export const ThemeUtils = {
       detectedTheme === 'dark' ? THEME_CONSTANTS.DARK_THEME : THEME_CONSTANTS.LIGHT_THEME;
 
     log('🎨 [THEME] Applied theme colors:', colors);
-    return colors;
+    return colors as unknown as ThemeColors;
   },
 
   /**

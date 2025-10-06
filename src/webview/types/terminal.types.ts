@@ -4,6 +4,7 @@
 
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
+import { TerminalThemeData } from './theme.types';
 
 // CLI Agent status types
 export type CliAgentStatusType = 'connected' | 'disconnected' | 'none';
@@ -31,7 +32,7 @@ export interface TerminalSession {
  * Terminal theme data
  * @deprecated Use TerminalTheme from theme.types.ts
  */
-export type { TerminalThemeData } from './theme.types';
+export type { TerminalThemeData, TerminalTheme } from './theme.types';
 
 // Terminal event types
 export type TerminalEventType =
