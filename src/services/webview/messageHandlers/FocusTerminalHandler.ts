@@ -8,12 +8,12 @@ import { TERMINAL_CONSTANTS } from '../../../constants';
  * Handles terminal focus messages from WebView
  */
 export class FocusTerminalHandler extends BaseMessageHandler {
-  protected readonly supportedCommands = [
+  protected override readonly supportedCommands = [
     'focusTerminal',
     TERMINAL_CONSTANTS?.COMMANDS?.FOCUS_TERMINAL || 'focusTerminal',
   ];
 
-  async handle(message: WebviewMessage, context: IMessageHandlerContext): Promise<void> {
+  override async handle(message: WebviewMessage, context: IMessageHandlerContext): Promise<void> {
     this.logMessageHandling(message, 'FocusTerminal');
 
     try {
@@ -42,7 +42,7 @@ export class FocusTerminalHandler extends BaseMessageHandler {
         );
       }
     } catch (error) {
-      await this.handleError(error, message, 'FocusTerminal');
+      await this.handleErrorAsync(error, message, 'FocusTerminal');
     }
   }
 }

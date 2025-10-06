@@ -126,7 +126,11 @@ export abstract class BaseMessageHandler implements IUnifiedMessageHandler, IMes
    * Log handler activity
    */
   protected logActivity(context: IMessageHandlerContext, message: string, data?: unknown): void {
-    context.logger.debug(`[${this.constructor.name}] ${message}`, data);
+    if ('logger' in context && context.logger) {
+      context.logger.debug(`[${this.constructor.name}] ${message}`, data);
+    } else {
+      log(`[${this.constructor.name}] ${message}`, data);
+    }
   }
 
   /**
@@ -145,10 +149,14 @@ export abstract class BaseMessageHandler implements IUnifiedMessageHandler, IMes
    */
   protected handleError(context: IMessageHandlerContext, command: string, error: unknown): never {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    context.logger.error(
-      `[${this.constructor.name}] Error handling ${command}: ${errorMessage}`,
-      error
-    );
+    if ('logger' in context && context.logger) {
+      context.logger.error(
+        `[${this.constructor.name}] Error handling ${command}: ${errorMessage}`,
+        error
+      );
+    } else {
+      log(`❌ [${this.constructor.name}] Error handling ${command}: ${errorMessage}`, error);
+    }
     throw new Error(`Handler ${this.constructor.name} failed: ${errorMessage}`);
   }
 

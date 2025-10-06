@@ -104,6 +104,11 @@ export const UI_CONSTANTS = {
     FADE_DURATION: 200,
     SLIDE_DURATION: 250,
   },
+  OPACITY: {
+    SAMPLE_ICON: 0.4,
+    DISABLED: 0.6,
+    HOVER: 0.8,
+  },
 } as const;
 
 export const SAMPLE_ICONS = [

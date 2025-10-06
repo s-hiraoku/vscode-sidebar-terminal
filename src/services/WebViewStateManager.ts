@@ -15,6 +15,36 @@ import { TERMINAL_CONSTANTS } from '../constants';
  * - WebView visibility and lifecycle
  */
 
+/**
+ * Terminal Manager interface for WebView state management
+ */
+export interface ITerminalManagerForState {
+  getTerminals(): any[];
+  getActiveTerminalId(): string | null;
+  createTerminal(): string;
+  setActiveTerminal(terminalId: string): void;
+  getCurrentState(): any;
+}
+
+/**
+ * Session Manager interface for state restoration
+ */
+export interface ISessionManagerForState {
+  getSessionInfo(): {
+    exists: boolean;
+    terminals?: Array<{
+      id: string;
+      name: string;
+      number: number;
+      cwd: string;
+      isActive: boolean;
+    }>;
+    timestamp?: number;
+    version?: string;
+  } | null;
+  restoreSession(force: boolean): Promise<{ success: boolean; restoredCount?: number; message?: string; terminals?: any[] }>;
+}
+
 export interface IWebViewStateManager {
   isInitialized(): boolean;
   initializeWebView(): Promise<void>;
@@ -30,8 +60,8 @@ export class WebViewStateManager implements IWebViewStateManager {
   private _terminalIdMapping?: Map<string, string>;
 
   constructor(
-    private terminalManager: any, // TODO: Replace with proper interface
-    private standardSessionManager?: any, // TODO: Replace with proper interface
+    private terminalManager: ITerminalManagerForState,
+    private standardSessionManager?: ISessionManagerForState,
     private sendMessage?: (message: WebviewMessage) => Promise<void>
   ) {}
 
@@ -325,9 +355,11 @@ export class WebViewStateManager implements IWebViewStateManager {
     }, 100); // Very short delay to ensure WebView is ready
   }
 
-  // TODO: Move this to SettingsManager when created
+  /**
+   * Get current font settings from VS Code configuration
+   * Note: Consider moving to a dedicated SettingsManager in future refactoring
+   */
   private getCurrentFontSettings(): any {
-    // Placeholder - this should be moved to SettingsManager
     return {
       fontSize: 14,
       fontFamily: 'monospace',

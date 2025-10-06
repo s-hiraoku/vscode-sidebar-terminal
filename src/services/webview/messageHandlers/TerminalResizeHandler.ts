@@ -8,9 +8,9 @@ import { TERMINAL_CONSTANTS } from '../../../constants';
  * Handles terminal resize messages from WebView
  */
 export class TerminalResizeHandler extends BaseMessageHandler {
-  protected readonly supportedCommands = [TERMINAL_CONSTANTS?.COMMANDS?.RESIZE || 'resize'];
+  protected override readonly supportedCommands = [TERMINAL_CONSTANTS?.COMMANDS?.RESIZE || 'resize'];
 
-  async handle(message: WebviewMessage, context: IMessageHandlerContext): Promise<void> {
+  override async handle(message: WebviewMessage, context: IMessageHandlerContext): Promise<void> {
     this.logMessageHandling(message, 'TerminalResize');
 
     try {
@@ -29,7 +29,7 @@ export class TerminalResizeHandler extends BaseMessageHandler {
       // Log successful resize
       log(`✅ [TerminalResize] Successfully resized terminal to ${message.cols}x${message.rows}`);
     } catch (error) {
-      await this.handleError(error, message, 'TerminalResize');
+      await this.handleErrorAsync(error, message, 'TerminalResize');
     }
   }
 }

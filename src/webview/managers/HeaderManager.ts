@@ -316,10 +316,8 @@ export class HeaderManager implements IHeaderManager {
    * サンプルアイコンを追加
    */
   private addSampleIcons(container: HTMLElement): void {
-    const sampleIconOpacity = 0.4; // TODO: Get from configuration
-
     SAMPLE_ICONS.forEach((sample) => {
-      const iconElement = this.createSampleIcon(sample, sampleIconOpacity);
+      const iconElement = this.createSampleIcon(sample, UI_CONSTANTS.OPACITY.SAMPLE_ICON);
       container.appendChild(iconElement);
     });
   }
