@@ -151,14 +151,15 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
         if (!terminationDetected) {
           // Very simple shell prompt detection as last resort
           if (this.patternDetector.detectShellPrompt(cleanLine)) {
+            const lowerLine = cleanLine.toLowerCase();
             const isSimplePrompt =
               cleanLine.length <= 20 &&
-              !cleanLine.toLowerCase().includes('claude') &&
-              !cleanLine.toLowerCase().includes('gemini') &&
-              !cleanLine.toLowerCase().includes('help') &&
-              !cleanLine.toLowerCase().includes('how') &&
-              !cleanLine.toLowerCase().includes('what') &&
-              (cleanLine.includes('$') || cleanLine.includes('%') || cleanLine.includes('>'));
+              !/(^|\s)claude(\s|$)/i.test(lowerLine) &&
+              !/(^|\s)gemini(\s|$)/i.test(lowerLine) &&
+              !/(^|\s)help(\s|$)/i.test(lowerLine) &&
+              !/(^|\s)how(\s|$)/i.test(lowerLine) &&
+              !/(^|\s)what(\s|$)/i.test(lowerLine) &&
+              /[\$%>]/.test(cleanLine);
 
             if (isSimplePrompt) {
               terminationDetected = true;
