@@ -522,6 +522,7 @@ export interface WebviewMessage {
     | 'settingsResponse'
     | 'fontSettingsUpdate'
     | 'openSettings'
+    | 'openTerminalLink'
     | 'stateUpdate'
     | 'claudeStatusUpdate'
     | 'cliAgentStatusUpdate'
@@ -712,6 +713,11 @@ export interface WebviewMessage {
 
   cols?: number; // リサイズ用
   rows?: number; // リサイズ用
+  linkType?: 'file' | 'url';
+  url?: string;
+  filePath?: string;
+  lineNumber?: number;
+  columnNumber?: number;
   requestSource?: 'header' | 'panel'; // 削除リクエストの送信元
   timestamp?: number; // エラー報告用
   type?: string; // For test messages and error reporting

@@ -44,6 +44,7 @@
 - **Smart Display Modes**: Seamless transitions between normal, fullscreen, and split views with automatic mode indicators (v0.1.110+)
 - **Alt+Click Cursor Positioning**: VS Code-standard cursor positioning with intelligent CLI agent conflict detection
 - **Smart File Reference System**: Instantly share code with AI agents using CMD+Option+L - automatically targets "AI Agent Connected" terminals
+- **VS Code Link Parity**: Click any file path emitted in the terminal (e.g. `src/app.ts:42:7`) to open the file at the exact line/column inside VS Code, matching the built-in terminal experience
 - **Multi-Agent Workflow**: Seamlessly work with multiple AI agents across different terminals simultaneously
 - **Tab Close Button**: Hover-visible white × button for closing terminals, with last tab protection (v0.1.108+)
 - **Stable Tab Visibility**: Terminal tabs remain visible throughout all operations (v0.1.109+)

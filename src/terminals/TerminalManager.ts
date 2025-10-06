@@ -212,6 +212,7 @@ export class TerminalManager {
         number: terminalNumber,
         pty: ptyProcess, // 互換性のため
         ptyProcess, // 新しい参照名
+        cwd,
         isActive: false,
         createdAt: new Date(),
       };
@@ -638,6 +639,15 @@ export class TerminalManager {
       terminal.isActive = true;
       this._activeTerminalManager.setActive(terminalId);
     }
+  }
+
+  public updateTerminalCwd(terminalId: string, cwd: string): void {
+    const terminal = this._terminals.get(terminalId);
+    if (!terminal) {
+      return;
+    }
+
+    terminal.cwd = cwd;
   }
 
   public removeTerminal(terminalId: string): void {

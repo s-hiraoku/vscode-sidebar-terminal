@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Terminal Link Parity**: Sidebar terminal now mirrors VS Code's integrated terminal behavior for link handling; clicking paths like `src/module.ts:12:5` opens the corresponding file and positions the cursor at the specified line and column inside the editor.
+
 ## [0.1.110] - 2025-10-04
 
 ### Added

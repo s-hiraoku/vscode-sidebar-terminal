@@ -391,7 +391,7 @@ describe('TerminalContainerManager - Display State Management (Issue #198)', fun
       containerManager.setContainerMode('1', 'normal');
 
       // Assert - container should have normal mode class
-      const container = document.getElementById('terminal-container-1')!;
+      const _container = document.getElementById('terminal-container-1')!;
       // Implementation may add specific classes
     });
 
@@ -400,7 +400,7 @@ describe('TerminalContainerManager - Display State Management (Issue #198)', fun
       containerManager.setContainerMode('1', 'fullscreen');
 
       // Assert - fullscreen mode should be applied
-      const container = document.getElementById('terminal-container-1')!;
+      const _container = document.getElementById('terminal-container-1')!;
       // Container should have fullscreen styling
     });
 
@@ -409,7 +409,7 @@ describe('TerminalContainerManager - Display State Management (Issue #198)', fun
       containerManager.setContainerMode('1', 'split');
 
       // Assert - split mode should be applied
-      const container = document.getElementById('terminal-container-1')!;
+      const _container = document.getElementById('terminal-container-1')!;
       // Container should have split styling
     });
   });

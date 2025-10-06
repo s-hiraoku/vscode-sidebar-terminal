@@ -1,4 +1,7 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
+import * as os from 'os';
+import { promises as fsPromises } from 'fs';
 import { TerminalManager } from '../terminals/TerminalManager';
 import { WebviewMessage } from '../types/common';
 import { TERMINAL_CONSTANTS } from '../constants';
@@ -290,6 +293,9 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       ['terminalClosed', async (message) => {
         await this._handleTerminalClosed(message);
       }],
+      ['openTerminalLink', async (message) => {
+        await this._handleOpenTerminalLink(message);
+      }],
       ['requestInitialTerminal', async (message) => {
         await this._handleRequestInitialTerminal(message);
       }],
@@ -320,6 +326,130 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     for (const [command, handler] of entries) {
       this._messageRouter.register(command, handler);
     }
+  }
+
+  private async _handleOpenTerminalLink(message: WebviewMessage): Promise<void> {
+    const linkType = message.linkType;
+    if (!linkType) {
+      log('🔗 [PROVIDER] Link message missing linkType');
+      return;
+    }
+
+    if (linkType === 'url') {
+      const targetUrl = message.url;
+      if (!targetUrl) {
+        log('🔗 [PROVIDER] URL link missing url field');
+        return;
+      }
+
+      try {
+        log(`🔗 [PROVIDER] Opening URL from terminal: ${targetUrl}`);
+        await vscode.env.openExternal(vscode.Uri.parse(targetUrl));
+      } catch (error) {
+        log('❌ [PROVIDER] Failed to open URL link:', error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        showError(`Failed to open link in browser. ${errorMessage}`);
+      }
+      return;
+    }
+
+    const filePath = message.filePath;
+    if (!filePath) {
+      log('🔗 [PROVIDER] File link missing filePath');
+      return;
+    }
+
+    const resolvedUri = await this._resolveFileLink(filePath, message.terminalId);
+    if (!resolvedUri) {
+      showError(`Unable to locate file from terminal link. Path: ${filePath}`);
+      return;
+    }
+
+    try {
+      const document = await vscode.workspace.openTextDocument(resolvedUri);
+      const editor = await vscode.window.showTextDocument(document, { preview: true });
+
+      if (typeof message.lineNumber === 'number' && !Number.isNaN(message.lineNumber)) {
+        const line = Math.max(0, message.lineNumber - 1);
+        const columnValue =
+          typeof message.columnNumber === 'number' && !Number.isNaN(message.columnNumber)
+            ? Math.max(0, message.columnNumber - 1)
+            : 0;
+        const position = new vscode.Position(line, columnValue);
+        editor.selection = new vscode.Selection(position, position);
+        editor.revealRange(
+          new vscode.Range(position, position),
+          vscode.TextEditorRevealType.InCenter
+        );
+      }
+
+      log(`🔗 [PROVIDER] Opened file link: ${resolvedUri.fsPath}`);
+    } catch (error) {
+      log('❌ [PROVIDER] Failed to open file link:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      showError(`Failed to open file from terminal link. ${errorMessage}`);
+    }
+  }
+
+  private async _resolveFileLink(filePath: string, terminalId?: string): Promise<vscode.Uri | null> {
+    const candidates = this._buildPathCandidates(filePath, terminalId);
+
+    for (const candidate of candidates) {
+      try {
+        const stat = await fsPromises.stat(candidate);
+        if (stat.isFile()) {
+          return vscode.Uri.file(candidate);
+        }
+      } catch (error) {
+        // Ignore missing candidates
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+          log('⚠️ [PROVIDER] Error while checking file candidate:', error);
+        }
+      }
+    }
+
+    return null;
+  }
+
+  private _buildPathCandidates(filePath: string, terminalId?: string): string[] {
+    const normalizedInput = this._normalizeLinkPath(filePath);
+    const candidates = new Set<string>();
+
+    if (path.isAbsolute(normalizedInput)) {
+      candidates.add(normalizedInput);
+    } else {
+      if (terminalId) {
+        const terminal = this._terminalManager.getTerminal(terminalId);
+        if (terminal?.cwd) {
+          candidates.add(path.resolve(terminal.cwd, normalizedInput));
+        }
+      }
+
+      const workspaceFolders = vscode.workspace.workspaceFolders || [];
+      for (const folder of workspaceFolders) {
+        candidates.add(path.resolve(folder.uri.fsPath, normalizedInput));
+      }
+
+      candidates.add(path.resolve(process.cwd(), normalizedInput));
+    }
+
+    return Array.from(candidates);
+  }
+
+  private _normalizeLinkPath(input: string): string {
+    let normalized = input.trim();
+    if (!normalized) {
+      return normalized;
+    }
+
+    if (normalized.startsWith('~')) {
+      normalized = path.join(os.homedir(), normalized.slice(1));
+    }
+
+    // Convert Windows-style separators to native separators for cross-platform compatibility
+    normalized = normalized.replace(/\\/g, path.sep);
+
+    return normalized;
   }
 
   /**

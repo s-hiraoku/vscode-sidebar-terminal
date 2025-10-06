@@ -11,7 +11,6 @@ import { DisplayModeManager } from '../../../webview/managers/DisplayModeManager
 import { TerminalContainerManager } from '../../../webview/managers/TerminalContainerManager';
 import { TerminalTabManager } from '../../../webview/managers/TerminalTabManager';
 import { SplitManager } from '../../../webview/managers/SplitManager';
-import { IManagerCoordinator } from '../../../webview/interfaces/ManagerInterfaces';
 
 describe('Tab Click Fullscreen Integration (Issue #198)', function () {
   let dom: JSDOM;

@@ -177,6 +177,12 @@ export class ShellIntegrationService {
     if (cwd) {
       state.currentCwd = cwd;
 
+      try {
+        this.terminalManager.updateTerminalCwd(state.terminalId, cwd);
+      } catch (error) {
+        console.error('Failed to update terminal cwd:', error);
+      }
+
       // Send CWD update to webview
       this.sendCwdUpdate(state.terminalId, cwd);
     }
