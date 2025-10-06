@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.112] - 2025-10-06
+
+### Improved
+- **Display Mode Indicator**: Enhanced terminal tab mode indicator with emoji icons
+  - 🖥️ Fullscreen mode indicator (single terminal view)
+  - ▦ Split mode indicator (multiple terminals visible)
+  - Click mode indicator emoji to toggle between fullscreen and split view
+  - Indicator hidden in normal mode (single terminal without fullscreen)
+  - Hover effect for better visual feedback
+  - Reuses existing tab click logic for seamless integration
+
 ## [0.1.111] - 2025-10-06
 
 ### Added
@@ -17,15 +28,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - URL links open in external browser
   - Intelligent path resolution across workspace, cwd, and absolute paths
   - Link text sanitization with boundary detection
-
-### Improved
-- **Display Mode Indicator**: Enhanced terminal tab mode indicator with emoji icons
-  - 🖥️ Fullscreen mode indicator (single terminal view)
-  - ▦ Split mode indicator (multiple terminals visible)
-  - Click mode indicator emoji to toggle between fullscreen and split view
-  - Indicator hidden in normal mode (single terminal without fullscreen)
-  - Hover effect for better visual feedback
-  - Reuses existing tab click logic for seamless integration
 
 ## [0.1.110] - 2025-10-04
 

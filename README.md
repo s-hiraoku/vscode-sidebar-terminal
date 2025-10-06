@@ -41,7 +41,7 @@
 - **Version Information Display**: Built-in version display in Terminal Settings with "About" section and command palette support (v0.1.105+)
 - **Streamlined UI**: Compact "ST" panel title for cleaner activity bar (v0.1.105+)
 - **Tab Click Fullscreen**: Click any tab to show that terminal in fullscreen, hiding others - click active tab again to toggle split view (v0.1.110+)
-- **Smart Display Modes**: Seamless transitions between normal, fullscreen, and split views with emoji mode indicators (🖥️ fullscreen, ▦ split) - click emoji to toggle (v0.1.111+)
+- **Smart Display Modes**: Seamless transitions between normal, fullscreen, and split views with emoji mode indicators (🖥️ fullscreen, ▦ split) - click emoji to toggle (v0.1.112+)
 - **Alt+Click Cursor Positioning**: VS Code-standard cursor positioning with intelligent CLI agent conflict detection
 - **Smart File Reference System**: Instantly share code with AI agents using CMD+Option+L - automatically targets "AI Agent Connected" terminals
 - **VS Code Link Parity**: Click any file path emitted in the terminal (e.g. `src/app.ts:42:7`) to open the file at the exact line/column inside VS Code, matching the built-in terminal experience (v0.1.111+)
