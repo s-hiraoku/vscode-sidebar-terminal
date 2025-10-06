@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.116] - 2025-10-06
+
+### Performance
+- **Test Execution Speed**: Optimized test execution with Mocha parallel processing
+  - Enabled parallel execution with 4 concurrent jobs (up to 75% faster on multi-core systems)
+  - Added `--exit` flag to prevent hanging test processes
+  - Reduced CI timeout from 300s to 180s with proper job-level timeouts
+  - New `test:fast` script for rapid local testing (8 parallel jobs, no coverage)
+  - Better resource utilization in CI/CD pipelines
+
+### Fixed
+- **Build Issues**: Removed obsolete test files causing build failures
+  - Deleted WebViewMessageHandlerService and WebViewMessageRoutingService test files
+  - Cleaned up unused type imports in type-guards.ts
+- **Test Stability**: Improved test reliability with proper process cleanup
+
 ## [0.1.115] - 2025-10-06
 
 ### Changed

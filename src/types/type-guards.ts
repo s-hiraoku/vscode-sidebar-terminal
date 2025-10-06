@@ -5,13 +5,9 @@
  * with proper type checking throughout the codebase.
  */
 
-import * as vscode from 'vscode';
 import {
   WebviewMessage,
-  VsCodeMessage,
-  TerminalInstance,
   PartialTerminalSettings,
-  TerminalState,
 } from './shared';
 
 // ===== Type Guard Functions =====
