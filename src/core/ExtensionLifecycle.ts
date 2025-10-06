@@ -439,12 +439,6 @@ export class ExtensionLifecycle {
       this.standardSessionManager = undefined;
     }
 
-    // Dispose scrollback session manager - Temporarily disabled
-    // if (this.scrollbackSessionManager) {
-    //   log('🔧 [EXTENSION] Disposing scrollback session manager...');
-    //   this.scrollbackSessionManager = undefined;
-    // }
-
     // Dispose keyboard shortcut service
     if (this.keyboardShortcutService) {
       log('🔧 [EXTENSION] Disposing keyboard shortcut service...');
@@ -702,90 +696,6 @@ export class ExtensionLifecycle {
 
     // Note: UnifiedSessionManager doesn't implement EventEmitter pattern
     // Session restore events would be handled differently
-    // This event listener setup is disabled since UnifiedSessionManager doesn't emit events
-
-    // Session restore events (disabled - UnifiedSessionManager doesn't use events)
-    // this.unifiedSessionManager.on('sessionRestoreStarted', (data: { terminalCount: number }) => {
-    //   this.sidebarProvider?.sendSessionMessage({
-    //     command: 'sessionRestoreStarted',
-    //     terminalCount: data.terminalCount,
-    //   });
-    // });
-
-    // this.unifiedSessionManager.on('sessionRestoreProgress', (data: { restored: number; total: number }) => {
-    //   this.sidebarProvider?.sendSessionMessage({
-    //     command: 'sessionRestoreProgress',
-    //     restored: data.restored,
-    //     total: data.total,
-    //   });
-    // });
-
-    // this.unifiedSessionManager.on(
-    //   'sessionRestoreCompleted',
-    //   (data: { restoredCount: number; skippedCount: number }) => {
-    //     this.sidebarProvider?.sendSessionMessage({
-    //       command: 'sessionRestoreCompleted',
-    //       restoredCount: data.restoredCount,
-    //       skippedCount: data.skippedCount,
-    //     });
-    //   }
-    // );
-
-    // this.unifiedSessionManager.on(
-    //   'sessionRestoreError',
-    //   (data: { error: string; partialSuccess: boolean; errorType?: string; recoveryAction?: string }) => {
-    //     this.sidebarProvider?.sendSessionMessage({
-    //       command: 'sessionRestoreError',
-    //       error: data.error,
-    //       partialSuccess: data.partialSuccess,
-    //       errorType: data.errorType,
-    //       recoveryAction: data.recoveryAction,
-    //     });
-    //   }
-    // );
-
-    // this.unifiedSessionManager.on(
-    //   'terminalRestoreError',
-    //   (data: { terminalId: string; terminalName: string; error: string; errorType: string }) => {
-    //     this.sidebarProvider?.sendSessionMessage({
-    //       command: 'terminalRestoreError',
-    //       terminalId: data.terminalId,
-    //       terminalName: data.terminalName,
-    //       error: data.error,
-    //       errorType: data.errorType,
-    //     });
-    //   }
-    // );
-
-    // this.unifiedSessionManager.on('sessionRestoreSkipped', (data: { reason: string }) => {
-    //   this.sidebarProvider?.sendSessionMessage({
-    //     command: 'sessionRestoreSkipped',
-    //     reason: data.reason,
-    //   });
-    // });
-
-    // Session save events (disabled - UnifiedSessionManager doesn't use events)
-    // this.unifiedSessionManager.on('sessionSaved', (data: { terminalCount: number }) => {
-    //   this.sidebarProvider?.sendSessionMessage({
-    //     command: 'sessionSaved',
-    //     terminalCount: data.terminalCount,
-    //   });
-    // });
-
-    // this.unifiedSessionManager.on('sessionSaveError', (data: { error: string }) => {
-    //   this.sidebarProvider?.sendSessionMessage({
-    //     command: 'sessionSaveError',
-    //     error: data.error,
-    //   });
-    // });
-
-    // Session clear events (disabled - UnifiedSessionManager doesn't use events)
-    // this.unifiedSessionManager.on('sessionCleared', () => {
-    //   this.sidebarProvider?.sendSessionMessage({
-    //     command: 'sessionCleared',
-    //   });
-    // });
-
     log('✅ [SESSION] Session event listeners configured');
   }
 
@@ -1183,47 +1093,6 @@ export class ExtensionLifecycle {
     await vscode.window.showInformationMessage(
       'Scrollback test temporarily disabled - using SimpleSessionManager approach instead'
     );
-    return;
-
-    // if (!this.scrollbackSessionManager) {
-    //   await vscode.window.showErrorMessage('Scrollback manager not available');
-    //   return;
-    // }
-
-    // try {
-    //   // 現在のセッション情報を取得
-    //   const sessionInfo = await this.scrollbackSessionManager.getScrollbackSessionInfo();
-    //
-    //   if (sessionInfo.exists) {
-    //     await vscode.window.showInformationMessage(
-    //       `Scrollback session exists: ${sessionInfo.terminalCount} terminals, ${sessionInfo.totalLines} lines, ${sessionInfo.dataSize} bytes`
-    //     );
-    //   } else {
-    //     await vscode.window.showInformationMessage('No scrollback session data found');
-    //   }
-    //
-    //   // テスト用にモックScrollbackを抽出
-    //   const terminals = this.terminalManager?.getTerminals() || [];
-    //   if (terminals.length > 0) {
-    //     const terminal = terminals[0];
-    //     if (terminal) {
-    //       const scrollback = await this.scrollbackSessionManager.extractScrollbackFromTerminal(terminal.id);
-    //
-    //       if (scrollback) {
-    //         log(`🧪 [SCROLLBACK_TEST] Extracted ${scrollback.lines.length} lines from terminal ${terminal.id}`);
-    //         await vscode.window.showInformationMessage(
-    //           `Extracted ${scrollback.lines.length} lines from terminal "${terminal.name}"`
-    //         );
-    //       }
-    //     }
-    //   }
-    //
-    // } catch (error) {
-    //   log(`❌ [SCROLLBACK_TEST] Test failed: ${error instanceof Error ? error.message : String(error)}`);
-    //   await vscode.window.showErrorMessage(
-    //     `Scrollback test failed: ${error instanceof Error ? error.message : String(error)}`
-    //   );
-    // }
   }
 
   /**

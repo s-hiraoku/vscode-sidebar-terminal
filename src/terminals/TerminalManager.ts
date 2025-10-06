@@ -232,7 +232,6 @@ export class TerminalManager {
 
       // 🎯 TIMING FIX: Shell initialization moved to _handleTerminalInitializationComplete
       // This ensures WebView terminal is fully ready before shell initialization
-      // this.initializeShellForTerminal(terminalId, ptyProcess, false);
 
       return terminalId;
     } catch (error) {
@@ -403,7 +402,6 @@ export class TerminalManager {
       log(`✅ [TERMINAL] Terminal created successfully: ${terminal.name} (${terminalId})`);
 
       // 🎯 TIMING FIX: Shell initialization moved to _handleTerminalInitializationComplete
-      // this.initializeShellForTerminal(terminalId, ptyProcess, false);
 
       // 状態更新を通知
       log('🔍 [TERMINAL] Notifying state update...');

@@ -150,7 +150,6 @@ export class TerminalLifecycleService {
 
       // Clean up shell integration (method not available in current implementation)
       if (this._shellIntegrationService) {
-        // this._shellIntegrationService.detachTerminal(terminal.id);
         log(`🧹 [LifecycleService] Shell integration cleanup skipped for terminal ${terminal.id}`);
       }
 
