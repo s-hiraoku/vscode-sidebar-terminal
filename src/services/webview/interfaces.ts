@@ -19,6 +19,10 @@ export interface IProfileManager {
   getProfiles(): any[];
   getDefaultProfile(): any;
   createProfile(profile: any): any;
+  createTerminalWithProfile(profileId: string, options?: any): any;
+  updateProfile(profileId: string, profile: any): void;
+  deleteProfile(profileId: string): void;
+  setDefaultProfile(profileId: string): void;
 }
 
 /**

@@ -70,6 +70,11 @@ export class ProfileMessageHandler implements IMessageHandler {
   ): Promise<boolean> {
     try {
       const { profileManager, sendMessage } = context;
+
+      if (!profileManager) {
+        throw new Error('Profile Manager not available');
+      }
+
       const profiles = profileManager.getProfiles();
       const defaultProfile = profileManager.getDefaultProfile();
 
@@ -94,6 +99,11 @@ export class ProfileMessageHandler implements IMessageHandler {
   ): Promise<boolean> {
     try {
       const { profileManager, terminalManager, sendMessage } = context;
+
+      if (!profileManager) {
+        throw new Error('Profile Manager not available');
+      }
+
       const profileId = message.profileId;
 
       if (!profileId) {
@@ -159,6 +169,10 @@ export class ProfileMessageHandler implements IMessageHandler {
     try {
       const { profileManager, sendMessage } = context;
 
+      if (!profileManager) {
+        throw new Error('Profile Manager not available');
+      }
+
       if (!message.profile) {
         throw new Error('Profile data is required');
       }
@@ -186,6 +200,10 @@ export class ProfileMessageHandler implements IMessageHandler {
   ): Promise<boolean> {
     try {
       const { profileManager, sendMessage } = context;
+
+      if (!profileManager) {
+        throw new Error('Profile Manager not available');
+      }
 
       if (!message.profileId || !message.profile) {
         throw new Error('Profile ID and data are required');
@@ -215,6 +233,10 @@ export class ProfileMessageHandler implements IMessageHandler {
     try {
       const { profileManager, sendMessage } = context;
 
+      if (!profileManager) {
+        throw new Error('Profile Manager not available');
+      }
+
       if (!message.profileId) {
         throw new Error('Profile ID is required');
       }
@@ -242,6 +264,10 @@ export class ProfileMessageHandler implements IMessageHandler {
   ): Promise<boolean> {
     try {
       const { profileManager, sendMessage } = context;
+
+      if (!profileManager) {
+        throw new Error('Profile Manager not available');
+      }
 
       if (!message.profileId) {
         throw new Error('Profile ID is required');
