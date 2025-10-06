@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.113] - 2025-10-06
+
 ### Fixed
 - **Terminal Tab Drag & Drop**: Dragging terminals now persists the new ordering by syncing with the extension host, restoring VS Code-style reordering behavior.
 
