@@ -4,6 +4,7 @@
  */
 
 import { Terminal } from '@xterm/xterm';
+import { webview as log } from '../../utils/logger';
 
 export interface TerminalTab {
   id: string;
@@ -80,7 +81,7 @@ export class TerminalTabList {
     this.modeIndicatorContainer.addEventListener('click', () => {
       const activeTab = this.getActiveTab();
       if (activeTab) {
-        console.log('🖥️ Mode indicator clicked - triggering tab click logic');
+        log('🖥️ Mode indicator clicked - triggering tab click logic');
         this.events.onTabClick(activeTab.id);
       }
     });
@@ -322,7 +323,7 @@ export class TerminalTabList {
     // Delegate click events for tabs and close buttons
     this.tabsContainer.addEventListener('click', (e) => {
       const target = e.target as HTMLElement;
-      console.log('🗂️ Tab container clicked:', target.className);
+      log('🗂️ Tab container clicked:', target.className);
 
       // Handle close button click
       const closeButton = target.closest('.terminal-tab-close');
@@ -333,7 +334,7 @@ export class TerminalTabList {
         if (tabElement) {
           const tabId = tabElement.getAttribute('data-tab-id');
           if (tabId) {
-            console.log('🗂️ Close button clicked for tab:', tabId);
+            log('🗂️ Close button clicked for tab:', tabId);
             this.events.onTabClose(tabId);
           }
         }
@@ -346,7 +347,7 @@ export class TerminalTabList {
         e.preventDefault();
         const tabId = tabElement.getAttribute('data-tab-id');
         if (tabId) {
-          console.log('🗂️ Tab clicked:', tabId);
+          log('🗂️ Tab clicked:', tabId);
           this.events.onTabClick(tabId);
         }
       }
@@ -649,8 +650,8 @@ export class TerminalTabList {
     `;
 
     const menuItems = [
-      { label: 'Duplicate', action: () => console.log('Duplicate tab') },
-      { label: 'Move to New Window', action: () => console.log('Move to new window') },
+      { label: 'Duplicate', action: () => log('Duplicate tab') },
+      { label: 'Move to New Window', action: () => log('Move to new window') },
     ];
 
     menuItems.forEach((item) => {

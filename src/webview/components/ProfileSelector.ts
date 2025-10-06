@@ -4,6 +4,7 @@
  */
 
 import { ITerminalProfile } from '../../types/profiles';
+import { webview as log } from '../../utils/logger';
 
 export class ProfileSelector {
   private _container: HTMLElement;
@@ -44,7 +45,7 @@ export class ProfileSelector {
       filterInput.focus();
     }
 
-    console.log('🎯 [PROFILE-UI] Profile selector shown with', profiles.length, 'profiles');
+    log('🎯 [PROFILE-UI] Profile selector shown with', profiles.length, 'profiles');
   }
 
   /**
@@ -65,7 +66,7 @@ export class ProfileSelector {
       this._onClosed();
     }
 
-    console.log('🎯 [PROFILE-UI] Profile selector hidden');
+    log('🎯 [PROFILE-UI] Profile selector hidden');
   }
 
   /**
@@ -212,7 +213,7 @@ export class ProfileSelector {
       profileList.appendChild(noResults);
     }
 
-    console.log(`🎯 [PROFILE-UI] Updated profile list: ${filteredProfiles.length} profiles`);
+    log(`🎯 [PROFILE-UI] Updated profile list: ${filteredProfiles.length} profiles`);
   }
 
   private _selectProfile(profileId: string): void {
@@ -234,7 +235,7 @@ export class ProfileSelector {
       confirmBtn.disabled = false;
     }
 
-    console.log('🎯 [PROFILE-UI] Selected profile:', profileId);
+    log('🎯 [PROFILE-UI] Selected profile:', profileId);
   }
 
   private _confirmSelection(): void {

@@ -4,6 +4,8 @@
  * TypedMessageHandling.tsとの移行ブリッジ（廃止予定）
  */
 
+import { webview as log } from '../../utils/logger';
+
 import {
   TypedMessageHandler,
   MessagePayload,
@@ -30,7 +32,7 @@ export class MessageRouter {
 
   constructor(private componentName: string) {
     this.logger = (message: string, ...args: unknown[]) => {
-      console.log(`[${this.componentName.toUpperCase()}-ROUTER]`, message, ...args);
+      log(`[${this.componentName.toUpperCase()}-ROUTER]`, message, ...args);
     };
   }
 
@@ -121,7 +123,7 @@ export class MessageSender {
     private componentName: string
   ) {
     this.logger = (message: string, ...args: unknown[]) => {
-      console.log(`[${this.componentName.toUpperCase()}-SENDER]`, message, ...args);
+      log(`[${this.componentName.toUpperCase()}-SENDER]`, message, ...args);
     };
   }
 
@@ -197,7 +199,7 @@ export const COMMON_COMMANDS = {
  */
 export class MessageValidator {
   private static logger: LoggerFunction = (message: string, ...args: unknown[]) => {
-    console.log('[MESSAGE-VALIDATOR]', message, ...args);
+    log('[MESSAGE-VALIDATOR]', message, ...args);
   };
 
   /**

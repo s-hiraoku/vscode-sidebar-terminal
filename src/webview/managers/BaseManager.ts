@@ -8,6 +8,7 @@
  */
 
 import { LoggerFunction } from '../utils/TypedMessageHandling';
+import { webview as log } from '../../utils/logger';
 
 // =============================================================================
 // インターフェースと型定義 - 統合された設定オプション
@@ -312,7 +313,7 @@ export abstract class BaseManager extends ResourceManager {
   protected createLogger(): (message: string, ...args: unknown[]) => void {
     const prefix = `[${this.managerName.toUpperCase()}]`;
     return (message: string, ...args: unknown[]) => {
-      console.log(prefix, message, ...args);
+      log(prefix, message, ...args);
     };
   }
 
@@ -322,7 +323,7 @@ export abstract class BaseManager extends ResourceManager {
   private createDefaultLogger(): LoggerFunction {
     const prefix = `[${this.managerName.toUpperCase()}]`;
     return (message: string, ...args: unknown[]) => {
-      console.log(prefix, message, ...args);
+      log(prefix, message, ...args);
     };
   }
 

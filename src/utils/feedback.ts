@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { VSCODE_COMMANDS } from '../constants';
+import { log } from './logger';
 
 /**
  * Enhanced user feedback and error handling utilities
@@ -43,7 +44,7 @@ export class FeedbackManager {
     // Log to console
     if (logToConsole) {
       const prefix = this.getLogPrefix(type);
-      console.log(`${prefix} ${message}`);
+      log(`${prefix} ${message}`);
     }
 
     // Show notification

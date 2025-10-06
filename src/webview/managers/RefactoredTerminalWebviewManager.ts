@@ -1420,7 +1420,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
             background: #3b82f6; color: white; border: none; padding: 4px 8px;
             border-radius: 4px; font-size: 10px; cursor: pointer; font-weight: bold;
           ">📡 Refresh State</button>
-          <button onclick="console.log('Terminal System Status:', window.terminalManager?.getSystemStatus())" style="
+          <button onclick="log('Terminal System Status:', window.terminalManager?.getSystemStatus())" style="
             background: #6b7280; color: white; border: none; padding: 4px 8px;
             border-radius: 4px; font-size: 10px; cursor: pointer; font-weight: bold;
           ">📋 Log Status</button>

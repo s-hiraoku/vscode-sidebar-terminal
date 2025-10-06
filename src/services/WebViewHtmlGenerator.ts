@@ -111,7 +111,7 @@ export class WebViewHtmlGenerator implements IWebViewHtmlGenerator {
         </div>
         ${this.generateInitializationScript(nonce)}
         <script nonce="${nonce}" src="${scriptUri.toString()}"
-                onload="console.log('✅ webview.js loaded successfully')"
+                onload="log('✅ webview.js loaded successfully')"
                 onerror="console.error('❌ webview.js failed to load', event)"></script>
     </body>
     </html>`;
@@ -471,7 +471,7 @@ export class WebViewHtmlGenerator implements IWebViewHtmlGenerator {
             if (typeof window.acquireVsCodeApi === 'function') {
                 const vscode = window.acquireVsCodeApi();
                 window.vscodeApi = vscode;
-                console.log('✅ [HTML-GENERATOR] VS Code API acquired successfully');
+                log('✅ [HTML-GENERATOR] VS Code API acquired successfully');
             } else {
                 console.error('❌ [HTML-GENERATOR] acquireVsCodeApi not available');
             }
@@ -500,7 +500,7 @@ export class WebViewHtmlGenerator implements IWebViewHtmlGenerator {
     const developmentExtensions = `
       <script nonce="${generateNonce()}">
         // Development mode enhancements
-        console.log('🔧 [DEV] Development mode HTML loaded');
+        log('🔧 [DEV] Development mode HTML loaded');
         window.isDevelopmentMode = true;
         
         // Enhanced error reporting in development

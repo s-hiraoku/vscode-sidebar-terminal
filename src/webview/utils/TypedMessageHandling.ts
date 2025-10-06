@@ -4,6 +4,8 @@
  * - 一貫した命名規則とエラーハンドリング
  */
 
+import { webview as log } from '../../utils/logger';
+
 // =============================================================================
 // 型定義 - 明確で一貫した命名規則
 // =============================================================================
@@ -203,7 +205,7 @@ export class TypedMessageRouter {
   private createDefaultLogger(): LoggerFunction {
     const prefix = `[${this.componentName.toUpperCase()}-ROUTER]`;
     return (message: string, ...args: unknown[]) => {
-      console.log(prefix, message, ...args);
+      log(prefix, message, ...args);
     };
   }
 
@@ -321,7 +323,7 @@ export class TypedMessageSender {
   private createDefaultLogger(): LoggerFunction {
     const prefix = `[${this.componentName.toUpperCase()}-SENDER]`;
     return (message: string, ...args: unknown[]) => {
-      console.log(prefix, message, ...args);
+      log(prefix, message, ...args);
     };
   }
 }

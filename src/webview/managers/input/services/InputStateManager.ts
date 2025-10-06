@@ -4,6 +4,8 @@
  * Centralizes IME, Alt+Click, keyboard, and agent interaction states
  */
 
+import { webview as log } from '../../../../utils/logger';
+
 /**
  * IME composition state (VS Code standard pattern)
  */
@@ -108,7 +110,7 @@ export class InputStateManager {
   // Logger function
   private logger: (message: string) => void;
 
-  constructor(logger: (message: string) => void = console.log) {
+  constructor(logger: (message: string) => void = log) {
     this.logger = logger;
 
     // Initialize default state

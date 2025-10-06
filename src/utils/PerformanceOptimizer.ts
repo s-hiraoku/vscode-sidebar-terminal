@@ -3,6 +3,8 @@
  * Phase 3: System performance improvements
  */
 
+import { log } from './logger';
+
 /**
  * Debounce function for reducing frequent function calls
  */
@@ -108,7 +110,7 @@ export class PerformanceMonitor {
     const duration = performance.now() - metric.start;
     metric.duration = duration;
 
-    console.log(`⏱️ [PERFORMANCE] ${name}: ${duration.toFixed(2)}ms`);
+    log(`⏱️ [PERFORMANCE] ${name}: ${duration.toFixed(2)}ms`);
     return duration;
   }
 
@@ -150,7 +152,7 @@ export class MemoryMonitor {
   public static logMemoryUsage(context: string): void {
     const usage = this.getMemoryUsage();
     if (usage) {
-      console.log(
+      log(
         `🧠 [MEMORY] ${context}: ${usage.used}MB/${usage.total}MB (${usage.percentage}%)`
       );
     }

@@ -4,6 +4,7 @@
  */
 
 import * as vscode from 'vscode';
+import { log } from './logger';
 
 // =============================================================================
 // エラー分類と型定義
@@ -179,7 +180,7 @@ export class ErrorHandlingManager {
       const report = this.handleError(error, context);
 
       if (report.recoverable && fallback !== undefined) {
-        console.log(`🔄 Recovering with fallback value for ${context.operation}`);
+        log(`🔄 Recovering with fallback value for ${context.operation}`);
         return fallback;
       }
 

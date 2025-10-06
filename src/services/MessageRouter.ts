@@ -3,6 +3,8 @@
  * Simplifies message handling extracted from SecondaryTerminalProvider
  */
 
+import { log } from '../utils/logger';
+
 export interface MessageHandler<TData = unknown, TResponse = unknown> {
   handle(data: TData): Promise<TResponse> | TResponse;
 }
@@ -238,7 +240,7 @@ export class MessageRouter {
    */
   private log(message: string): void {
     if (this.config.enableLogging) {
-      console.log(`[MessageRouter] ${message}`);
+      log(`[MessageRouter] ${message}`);
     }
   }
 
@@ -285,7 +287,7 @@ export abstract class BaseMessageHandler<TData = any, TResponse = any> implement
   public abstract handle(data: TData): Promise<TResponse> | TResponse;
 
   protected log(message: string): void {
-    console.log(`[${this.handlerName}] ${message}`);
+    log(`[${this.handlerName}] ${message}`);
   }
 
   protected validateRequired(data: any, fields: string[]): void {

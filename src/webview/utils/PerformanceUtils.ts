@@ -2,6 +2,8 @@
  * パフォーマンス最適化のためのユーティリティクラス
  */
 
+import { webview as log } from '../../utils/logger';
+
 // 型定義
 interface MemoryInfo {
   usedJSHeapSize: number;
@@ -109,7 +111,7 @@ export namespace PerformanceUtils {
     const result = fn();
     const endTime = performance.now();
 
-    console.log(`⚡ [PERFORMANCE] ${label}: ${(endTime - startTime).toFixed(2)}ms`);
+    log(`⚡ [PERFORMANCE] ${label}: ${(endTime - startTime).toFixed(2)}ms`);
     return result;
   }
 
@@ -124,7 +126,7 @@ export namespace PerformanceUtils {
     const result = await fn();
     const endTime = performance.now();
 
-    console.log(`⚡ [PERFORMANCE] ${label}: ${(endTime - startTime).toFixed(2)}ms`);
+    log(`⚡ [PERFORMANCE] ${label}: ${(endTime - startTime).toFixed(2)}ms`);
     return result;
   }
 
@@ -150,7 +152,7 @@ export namespace PerformanceUtils {
   export function logMemoryUsage(label: string): void {
     const memory = getMemoryUsage();
     if (memory) {
-      console.log(`🧠 [MEMORY] ${label}:`, {
+      log(`🧠 [MEMORY] ${label}:`, {
         used: `${((memory.usedJSHeapSize ?? 0) / 1024 / 1024).toFixed(2)}MB`,
         total: `${((memory.totalJSHeapSize ?? 0) / 1024 / 1024).toFixed(2)}MB`,
         limit: `${((memory.jsHeapSizeLimit ?? 0) / 1024 / 1024).toFixed(2)}MB`,

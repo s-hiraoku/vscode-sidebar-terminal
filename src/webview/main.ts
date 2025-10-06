@@ -78,12 +78,12 @@ async function initializeWebView(): Promise<void> {
     }, 300);
 
     // 初期化完了メッセージをExtensionに送信
-    console.log('🔍 [DEBUG] Sending webviewReady message to Extension');
+    log('🔍 [DEBUG] Sending webviewReady message to Extension');
     terminalManager.postMessageToExtension({
       command: 'webviewReady',
       timestamp: Date.now(),
     });
-    console.log('🔍 [DEBUG] webviewReady message sent successfully');
+    log('🔍 [DEBUG] webviewReady message sent successfully');
 
     // 📡 Request current state from Extension for proper synchronization
     setTimeout(() => {

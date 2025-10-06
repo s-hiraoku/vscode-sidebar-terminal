@@ -3,6 +3,7 @@ import { DOMUtils } from '../utils/DOMUtils';
 import { ErrorHandler } from '../utils/ErrorHandler';
 import type { HeaderConfig, SampleIcon } from '../types/webview.types';
 import { IHeaderManager, IManagerCoordinator } from '../interfaces/ManagerInterfaces';
+import { webview as log } from '../../utils/logger';
 
 /**
  * WebViewヘッダーの管理を担当するクラス
@@ -41,10 +42,10 @@ export class HeaderManager implements IHeaderManager {
    */
   public createWebViewHeader(): void {
     try {
-      console.log('🎯 [HEADER] Creating WebView header');
+      log('🎯 [HEADER] Creating WebView header');
 
       if (!this.config.showHeader) {
-        console.log('🎯 [HEADER] WebView header disabled by configuration');
+        log('🎯 [HEADER] WebView header disabled by configuration');
         return;
       }
 
@@ -54,7 +55,7 @@ export class HeaderManager implements IHeaderManager {
       this.insertHeaderIntoDOM();
       this.updateTerminalCountBadge();
 
-      console.log('✅ [HEADER] WebView header created successfully');
+      log('✅ [HEADER] WebView header created successfully');
     } catch (error) {
       ErrorHandler.getInstance().handleGenericError(
         error as Error,
@@ -88,7 +89,7 @@ export class HeaderManager implements IHeaderManager {
 
       badge.style.background = backgroundColor;
 
-      console.log(`🎯 [HEADER] Terminal count badge updated: ${terminalCount}`);
+      log(`🎯 [HEADER] Terminal count badge updated: ${terminalCount}`);
     } catch (error) {
       ErrorHandler.getInstance().handleGenericError(
         error as Error,
@@ -291,7 +292,7 @@ export class HeaderManager implements IHeaderManager {
         const currentMode = displayManager.getCurrentMode();
         splitButton.classList.toggle('active', currentMode === 'split');
 
-        console.log(`🆕 [HEADER] Split mode toggled: ${currentMode}`);
+        log(`🆕 [HEADER] Split mode toggled: ${currentMode}`);
       }
     });
 

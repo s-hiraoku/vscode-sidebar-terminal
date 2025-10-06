@@ -1,5 +1,6 @@
 import { SerializeAddon } from '@xterm/addon-serialize';
 import { Terminal } from '@xterm/xterm';
+import { webview as log } from '../../utils/logger';
 
 /**
  * WebView側でxterm.js serialize addonを使用したVS Code標準ターミナル永続化
@@ -21,7 +22,7 @@ export class StandardTerminalPersistenceManager {
    * ターミナルにserialize addonを追加
    */
   public addTerminal(terminalId: string, terminal: Terminal): void {
-    console.log(`🔧 [WEBVIEW-PERSISTENCE] Adding serialize addon to terminal ${terminalId}`);
+    log(`🔧 [WEBVIEW-PERSISTENCE] Adding serialize addon to terminal ${terminalId}`);
 
     try {
       // 🔧 FIX: Check if terminal is ready before adding addon
@@ -52,7 +53,7 @@ export class StandardTerminalPersistenceManager {
       // ターミナル内容が変更されたときに自動保存
       this.setupAutoSave(terminalId, terminal);
 
-      console.log(`✅ [WEBVIEW-PERSISTENCE] Serialize addon loaded for terminal ${terminalId}`);
+      log(`✅ [WEBVIEW-PERSISTENCE] Serialize addon loaded for terminal ${terminalId}`);
 
       // 🔧 FIX: Verify addon is working by testing serialization
       setTimeout(() => {
@@ -70,7 +71,7 @@ export class StandardTerminalPersistenceManager {
    * 🔧 FIX: Verify that the serialize addon was properly initialized
    */
   private verifyAddonInitialization(terminalId: string): void {
-    console.log(
+    log(
       `🔍 [WEBVIEW-PERSISTENCE] Verifying addon initialization for terminal ${terminalId}`
     );
 
@@ -94,7 +95,7 @@ export class StandardTerminalPersistenceManager {
     try {
       // Test serialization to ensure addon is working
       const testSerialization = serializeAddon.serialize({ scrollback: 10 });
-      console.log(
+      log(
         `✅ [WEBVIEW-PERSISTENCE] Addon verification successful for terminal ${terminalId}: ${testSerialization.length} chars`
       );
     } catch (error) {
@@ -105,13 +106,13 @@ export class StandardTerminalPersistenceManager {
 
       // Try to re-initialize the addon
       try {
-        console.log(
+        log(
           `🔧 [WEBVIEW-PERSISTENCE] Attempting to re-initialize addon for terminal ${terminalId}`
         );
         const newSerializeAddon = new SerializeAddon();
         terminal.loadAddon(newSerializeAddon);
         this.serializeAddons.set(terminalId, newSerializeAddon);
-        console.log(
+        log(
           `✅ [WEBVIEW-PERSISTENCE] Successfully re-initialized addon for terminal ${terminalId}`
         );
       } catch (retryError) {
@@ -144,7 +145,7 @@ export class StandardTerminalPersistenceManager {
     terminal.onData(saveContent);
     terminal.onLineFeed(saveContent);
 
-    console.log(`🔧 [WEBVIEW-PERSISTENCE] Auto-save enabled for terminal ${terminalId}`);
+    log(`🔧 [WEBVIEW-PERSISTENCE] Auto-save enabled for terminal ${terminalId}`);
   }
 
   /**
@@ -189,7 +190,7 @@ export class StandardTerminalPersistenceManager {
           ...(currentState || {}),
           [storageKey]: storageData,
         });
-        console.log(
+        log(
           `💾 [WEBVIEW-PERSISTENCE] Saved terminal ${terminalId} content (${serializedData.content.length} chars)`
         );
       } else {
@@ -204,7 +205,7 @@ export class StandardTerminalPersistenceManager {
    * ターミナルを削除
    */
   public removeTerminal(terminalId: string): void {
-    console.log(
+    log(
       `🗑️ [WEBVIEW-PERSISTENCE] Removing terminal ${terminalId} from persistence manager`
     );
 
@@ -235,7 +236,7 @@ export class StandardTerminalPersistenceManager {
       excludeAltBuffer?: boolean;
     }
   ): { content: string; html?: string } | null {
-    console.log(`📋 [WEBVIEW-PERSISTENCE] Serializing terminal ${terminalId}`);
+    log(`📋 [WEBVIEW-PERSISTENCE] Serializing terminal ${terminalId}`);
 
     const serializeAddon = this.serializeAddons.get(terminalId);
     if (!serializeAddon) {
@@ -268,7 +269,7 @@ export class StandardTerminalPersistenceManager {
         );
       }
 
-      console.log(
+      log(
         `✅ [WEBVIEW-PERSISTENCE] Terminal ${terminalId} serialized: ${serializedContent.length} chars`
       );
 
@@ -286,7 +287,7 @@ export class StandardTerminalPersistenceManager {
    * 保存されたコンテンツからターミナルを復元
    */
   public restoreTerminalFromStorage(terminalId: string): boolean {
-    console.log(
+    log(
       `🔄 [WEBVIEW-PERSISTENCE] Attempting to restore terminal ${terminalId} from storage`
     );
 
@@ -320,7 +321,7 @@ export class StandardTerminalPersistenceManager {
         | undefined;
 
       if (!storageData || !storageData.content) {
-        console.log(`📭 [WEBVIEW-PERSISTENCE] No saved content found for terminal ${terminalId}`);
+        log(`📭 [WEBVIEW-PERSISTENCE] No saved content found for terminal ${terminalId}`);
         return false;
       }
 
@@ -328,7 +329,7 @@ export class StandardTerminalPersistenceManager {
       const ageMs = Date.now() - storageData.timestamp;
       const ageDays = ageMs / (1000 * 60 * 60 * 24);
       if (ageDays > 7) {
-        console.log(
+        log(
           `⏰ [WEBVIEW-PERSISTENCE] Saved content too old for terminal ${terminalId}: ${ageDays.toFixed(1)} days`
         );
         return false;
@@ -348,7 +349,7 @@ export class StandardTerminalPersistenceManager {
    * VS Code標準: xterm serialize addonを使ってターミナル状態を完全復元
    */
   public restoreTerminalContent(terminalId: string, serializedContent: string): boolean {
-    console.log(
+    log(
       `🔄 [WEBVIEW-PERSISTENCE] Restoring terminal state using serialize addon for ${terminalId}`
     );
 
@@ -377,7 +378,7 @@ export class StandardTerminalPersistenceManager {
       // VS Code標準: ANSI escape sequencesを含む完全な状態復元
       terminal.write(serializedContent);
 
-      console.log(
+      log(
         `✅ [WEBVIEW-PERSISTENCE] Terminal state restored for ${terminalId}: ${serializedContent.length} chars`
       );
       return true;
@@ -396,7 +397,7 @@ export class StandardTerminalPersistenceManager {
   public serializeAllTerminals(
     scrollback: number = 1000
   ): Map<string, { content: string; html?: string }> {
-    console.log(
+    log(
       `📋 [WEBVIEW-PERSISTENCE] Serializing all terminals (${this.terminals.size} terminals)`
     );
 
@@ -409,7 +410,7 @@ export class StandardTerminalPersistenceManager {
       }
     }
 
-    console.log(`✅ [WEBVIEW-PERSISTENCE] Serialized ${serializedData.size} terminals`);
+    log(`✅ [WEBVIEW-PERSISTENCE] Serialized ${serializedData.size} terminals`);
     return serializedData;
   }
 
@@ -450,7 +451,7 @@ export class StandardTerminalPersistenceManager {
     scrollbackData?: string[];
     sessionRestoreMessage?: string;
   }): Promise<boolean> {
-    console.log(
+    log(
       `🔄 [WEBVIEW-PERSISTENCE] Restoring session for terminal ${sessionData.terminalId}`
     );
 
@@ -469,14 +470,14 @@ export class StandardTerminalPersistenceManager {
       // Restore session restore message if available
       if (sessionRestoreMessage) {
         terminal.writeln(sessionRestoreMessage);
-        console.log(
+        log(
           `🔄 [WEBVIEW-PERSISTENCE] Restored session message for terminal: ${terminalId}`
         );
       }
 
       // Restore scrollback data if available
       if (scrollbackData && scrollbackData.length > 0) {
-        console.log(
+        log(
           `🔄 [WEBVIEW-PERSISTENCE] Restoring ${scrollbackData.length} lines of scrollback for terminal: ${terminalId}`
         );
 
@@ -487,7 +488,7 @@ export class StandardTerminalPersistenceManager {
           }
         }
 
-        console.log(
+        log(
           `✅ [WEBVIEW-PERSISTENCE] Scrollback restored for terminal: ${terminalId} (${scrollbackData.length} lines)`
         );
       }
@@ -495,7 +496,7 @@ export class StandardTerminalPersistenceManager {
       // Save the restored content to persistence
       this.saveTerminalContent(terminalId);
 
-      console.log(`✅ [WEBVIEW-PERSISTENCE] Session restore completed for terminal: ${terminalId}`);
+      log(`✅ [WEBVIEW-PERSISTENCE] Session restore completed for terminal: ${terminalId}`);
       return true;
     } catch (error) {
       console.error(
@@ -510,7 +511,7 @@ export class StandardTerminalPersistenceManager {
    * Request Extension to send scrollback data for restoration
    */
   public requestScrollbackFromExtension(terminalId: string): void {
-    console.log(
+    log(
       `📡 [WEBVIEW-PERSISTENCE] Requesting scrollback from Extension for terminal: ${terminalId}`
     );
 
@@ -531,7 +532,7 @@ export class StandardTerminalPersistenceManager {
         terminalId,
         timestamp: Date.now(),
       });
-      console.log(
+      log(
         `📡 [WEBVIEW-PERSISTENCE] Scrollback request sent to Extension for terminal: ${terminalId}`
       );
     } else {
@@ -543,7 +544,7 @@ export class StandardTerminalPersistenceManager {
    * クリーンアップ
    */
   public dispose(): void {
-    console.log(
+    log(
       `🧹 [WEBVIEW-PERSISTENCE] Disposing persistence manager (${this.serializeAddons.size} addons)`
     );
 
@@ -558,6 +559,6 @@ export class StandardTerminalPersistenceManager {
     this.serializeAddons.clear();
     this.terminals.clear();
 
-    console.log(`✅ [WEBVIEW-PERSISTENCE] Persistence manager disposed`);
+    log(`✅ [WEBVIEW-PERSISTENCE] Persistence manager disposed`);
   }
 }

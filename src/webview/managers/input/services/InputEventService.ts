@@ -5,6 +5,7 @@
  */
 
 import { EventHandlerRegistry } from '../../../utils/EventHandlerRegistry';
+import { webview as log } from '../../../../utils/logger';
 
 /**
  * Event handler configuration
@@ -76,7 +77,7 @@ export class InputEventService {
   // Logger function (injected)
   private logger: (message: string) => void;
 
-  constructor(logger: (message: string) => void = console.log) {
+  constructor(logger: (message: string) => void = log) {
     this.logger = logger;
     this.logger('InputEventService initialized');
   }

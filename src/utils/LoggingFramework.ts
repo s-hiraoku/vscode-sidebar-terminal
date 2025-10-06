@@ -6,6 +6,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
+import { log } from './logger';
 
 // =============================================================================
 // ログレベルと型定義
@@ -391,7 +392,7 @@ export class IntegratedLogger extends BaseLogger {
         console.debug(formattedMessage);
         break;
       case LogLevel.INFO:
-        console.log(formattedMessage);
+        log(formattedMessage);
         break;
       case LogLevel.WARN:
         console.warn(formattedMessage);
