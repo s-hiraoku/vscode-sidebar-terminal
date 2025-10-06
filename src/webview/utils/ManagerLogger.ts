@@ -171,7 +171,7 @@ export class ManagerLogger {
 
       // Log data if provided
       if (data !== undefined) {
-        log(`🔍 [${this.managerName}] Data:`, data);
+        baseLog(`🔍 [${this.managerName}] Data:`, data);
       }
 
       // Store in history

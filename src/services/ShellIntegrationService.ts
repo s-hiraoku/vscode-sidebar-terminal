@@ -11,7 +11,7 @@
 
 import * as vscode from 'vscode';
 import { TerminalManager } from '../terminals/TerminalManager';
-import { service as log } from '../utils/logger';
+import { terminal as log } from '../utils/logger';
 
 interface PtyProcess {
   write(data: string): void;

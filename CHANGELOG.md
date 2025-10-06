@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.115] - 2025-10-06
+
+### Changed
+- **Tab Click Behavior**: Terminal tabs now switch terminals without changing display mode
+  - Clicking a tab only switches to that terminal
+  - Mode indicator icon click toggles between fullscreen and split modes
+  - Clearer separation between tab switching and mode changing
+
+### Improved
+- **Mode Indicator**: Always visible Unicode symbol-based mode indicator
+  - `⊞` (Single terminal layout) - Click to maximize
+  - `⊡` (Fullscreen layout) - Click to split
+  - More reliable display across all platforms without font dependencies
+  - Clearer tooltip text indicating click action
+
+### Fixed
+- **Tab Drag & Drop UI**: Removed distracting rotation effect during tab dragging
+- **Terminal Reordering**: Tab drag & drop now correctly reorders terminal containers in DOM
+  - Visual tab order matches actual terminal display order
+  - Synchronized with backend terminal order管理
+- **Logger Error**: Fixed `log is not defined` error in ManagerLogger
+
 ## [0.1.114] - 2025-10-06
 
 ### Fixed
