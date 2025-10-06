@@ -6,11 +6,9 @@
  */
 
 import { AgentDetectionStrategy, AgentDetectionResult } from './AgentDetectionStrategy';
-import { CliAgentPatternDetector } from '../CliAgentPatternDetector';
 
 export class GeminiDetectionStrategy implements AgentDetectionStrategy {
   readonly agentType = 'gemini' as const;
-  private patternDetector = new CliAgentPatternDetector();
 
   detectFromInput(input: string): AgentDetectionResult {
     const line = input.toLowerCase();

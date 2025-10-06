@@ -6,11 +6,9 @@
  */
 
 import { AgentDetectionStrategy, AgentDetectionResult } from './AgentDetectionStrategy';
-import { CliAgentPatternDetector } from '../CliAgentPatternDetector';
 
 export class CopilotDetectionStrategy implements AgentDetectionStrategy {
   readonly agentType = 'copilot' as const;
-  private patternDetector = new CliAgentPatternDetector();
 
   detectFromInput(input: string): AgentDetectionResult {
     const line = input.toLowerCase();

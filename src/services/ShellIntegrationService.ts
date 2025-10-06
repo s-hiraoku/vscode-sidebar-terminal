@@ -276,7 +276,7 @@ export class ShellIntegrationService {
    * Inject shell integration script
    * This is called when a new terminal is created
    */
-  public injectShellIntegration(terminalId: string, shell: string, ptyProcess: PtyProcess): void {
+  public injectShellIntegration(_terminalId: string, shell: string, ptyProcess: PtyProcess): void {
     // Detect shell type and inject appropriate integration
     if ((shell && shell.includes('bash')) || (shell && shell.includes('zsh'))) {
       this.injectBashZshIntegration(ptyProcess);

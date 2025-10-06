@@ -122,7 +122,7 @@ class WebViewReadyHandler extends BaseMessageHandler {
     return this.getHandledCommands().includes(command);
   }
 
-  async handle(message: WebviewMessage, context: IMessageHandlerContext): Promise<void> {
+  async handle(_message: WebviewMessage, context: IMessageHandlerContext): Promise<void> {
     this.log('WebView ready - initializing terminal');
 
     // Delegate to WebView state manager for initialization

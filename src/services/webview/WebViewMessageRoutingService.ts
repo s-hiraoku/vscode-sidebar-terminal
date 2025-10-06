@@ -232,7 +232,7 @@ export class InitializationMessageHandler implements MessageHandler {
 
   async handle(
     command: string,
-    message: WebviewMessage,
+    _message: WebviewMessage,
     context: MessageHandlerContext
   ): Promise<void> {
     switch (command) {

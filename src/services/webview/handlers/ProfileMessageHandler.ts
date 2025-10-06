@@ -65,7 +65,7 @@ export class ProfileMessageHandler implements IMessageHandler {
   }
 
   private async _handleGetProfiles(
-    message: WebviewMessage,
+    _message: WebviewMessage,
     context: IMessageHandlerContext
   ): Promise<boolean> {
     try {

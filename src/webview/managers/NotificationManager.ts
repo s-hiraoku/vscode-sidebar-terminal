@@ -115,7 +115,7 @@ export class NotificationManager extends BaseManager implements INotificationMan
    * Clear all notifications
    */
   public clearNotifications(): void {
-    this.activeNotifications.forEach((notification, id) => {
+    this.activeNotifications.forEach((_notification, id) => {
       this.removeNotification(id);
     });
 

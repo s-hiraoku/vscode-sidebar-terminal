@@ -212,7 +212,7 @@ export class SessionHandler extends BaseMessageHandler {
   }
 
   private async handleSessionCleared(
-    message: WebviewMessage,
+    _message: WebviewMessage,
     context: IMessageHandlerContext
   ): Promise<void> {
     context.logger.info('Session cleared');

@@ -343,7 +343,7 @@ export class ConfigurationService {
   private clearSectionCache(section: string): void {
     const keysToDelete: string[] = [];
 
-    this.configCache.forEach((value, key) => {
+    this.configCache.forEach((_value, key) => {
       if (key.startsWith(`${section}.`)) {
         keysToDelete.push(key);
       }
