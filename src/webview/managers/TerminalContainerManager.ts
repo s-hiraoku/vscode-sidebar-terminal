@@ -433,6 +433,46 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
   }
 
   /**
+   * コンテナのDOM順序を変更
+   */
+  public reorderContainers(order: string[]): void {
+    if (!Array.isArray(order) || order.length === 0) {
+      this.log('Invalid order array provided', 'warn');
+      return;
+    }
+
+    // 親コンテナを取得
+    const parentContainer = document.getElementById('terminal-body');
+    if (!parentContainer) {
+      this.log('Parent container #terminal-body not found', 'error');
+      return;
+    }
+
+    // 順序に従ってコンテナを並べ替え
+    const reorderedContainers: HTMLElement[] = [];
+
+    for (const terminalId of order) {
+      const container = this.containerCache.get(terminalId);
+      if (container && container.parentElement === parentContainer) {
+        reorderedContainers.push(container);
+      }
+    }
+
+    // 既存のコンテナを一時的に退避
+    const fragment = document.createDocumentFragment();
+
+    // 新しい順序でフラグメントに追加
+    for (const container of reorderedContainers) {
+      fragment.appendChild(container);
+    }
+
+    // フラグメントを親に追加（既存の要素は自動的に削除される）
+    parentContainer.appendChild(fragment);
+
+    this.log(`Reordered ${reorderedContainers.length} containers`, 'info');
+  }
+
+  /**
    * デバッグ情報を取得
    */
   public getDebugInfo(): {

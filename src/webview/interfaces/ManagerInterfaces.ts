@@ -306,6 +306,7 @@ export interface ITerminalContainerManager {
   applyDisplayState(state: TerminalDisplayState): void;
   getContainerOrder(): string[];
   getDisplaySnapshot(): TerminalDisplaySnapshot;
+  reorderContainers(order: string[]): void;
   dispose(): void;
 }
 

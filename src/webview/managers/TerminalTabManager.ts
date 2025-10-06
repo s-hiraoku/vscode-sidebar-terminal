@@ -194,6 +194,14 @@ export class TerminalTabManager implements TerminalTabEvents {
     // Rebuild the tab UI in new order
     this.rebuildTabsInOrder();
 
+    // Reorder terminal containers in the DOM
+    if (this.coordinator) {
+      const managers = this.coordinator.getManagers();
+      if (managers.terminalContainer) {
+        managers.terminalContainer.reorderContainers(this.tabOrder);
+      }
+    }
+
     // Notify extension host so state updates preserve the new order
     if (this.coordinator && typeof this.coordinator.postMessageToExtension === 'function') {
       this.coordinator.postMessageToExtension({
