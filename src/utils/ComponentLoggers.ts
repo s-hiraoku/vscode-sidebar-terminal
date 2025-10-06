@@ -292,21 +292,5 @@ export class AgentLogger {
 }
 
 // Factory functions for creating specialized loggers
-export const createTerminalLogger = (terminalId?: string, terminalName?: string): TerminalLogger =>
-  new TerminalLogger(terminalId, terminalName);
-
-export const createMessageLogger = (context?: string): MessageLogger => new MessageLogger(context);
-
 export const createWebViewLogger = (managerId: string): WebViewLogger =>
   new WebViewLogger(managerId);
-
-export const createExtensionLogger = (providerId: string): ExtensionLogger =>
-  new ExtensionLogger(providerId);
-
-export const createSessionLogger = (sessionType?: string): SessionLogger =>
-  new SessionLogger(sessionType);
-
-export const createPerformanceLogger = (component: string): PerformanceLogger =>
-  new PerformanceLogger(component);
-
-export const createAgentLogger = (agentType?: string): AgentLogger => new AgentLogger(agentType);

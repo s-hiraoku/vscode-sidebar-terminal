@@ -7,52 +7,18 @@
 
 // ===== 統合された型システムからの再エクスポート =====
 
-// shared.ts から全ての型をインポートして再エクスポート
+// shared.ts から使用されている型のみ再エクスポート
 export {
-  // 基本設定型
-  BaseTerminalConfig,
-  DisplayConfig,
-  ShellConfig,
-  TerminalLimitsConfig,
-  InteractionConfig,
-  ExtensionTerminalConfig,
-  WebViewTerminalConfig,
-  PartialTerminalSettings,
-  WebViewFontSettings,
-  WebViewTerminalSettings,
-  CompleteTerminalSettings,
-  WebViewDisplayConfig,
-  CompleteExtensionConfig,
-
-  // ターミナル管理型
+  // ターミナル管理型（使用中）
   TerminalInfo,
-  TerminalState,
-  DeleteResult,
   TerminalInstance,
-  TerminalDimensions,
-  TerminalEvent,
   AltClickState,
   TerminalInteractionEvent,
+  PartialTerminalSettings,
 
-  // メッセージ通信型
+  // メッセージ通信型（使用中）
   WebviewMessage,
   VsCodeMessage,
-
-  // 型エイリアス
-  TerminalTheme,
-  SplitDirection,
-  CliAgentStatusType,
-  TerminalConfig,
-  TerminalSettings,
-  ExtensionConfig,
-
-  // 設定キー定数
-  CONFIG_SECTIONS,
-  CONFIG_KEYS,
-
-  // 型ガード関数
-  isBaseTerminalConfig,
-  isExtensionTerminalConfig,
 } from './shared';
 
 // IPty interface is now defined in node-pty.d.ts for @homebridge/node-pty-prebuilt-multiarch
