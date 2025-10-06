@@ -3,40 +3,7 @@
  * Centralized theme and styling management with VS Code integration
  */
 
-/**
- * Theme colors interface
- */
-export interface ThemeColors {
-  background: string;
-  foreground: string;
-  border: string;
-}
-
-/**
- * Terminal theme configuration
- */
-export interface TerminalTheme {
-  background: string;
-  foreground: string;
-  cursor: string;
-  selection: string;
-  black: string;
-  red: string;
-  green: string;
-  yellow: string;
-  blue: string;
-  magenta: string;
-  cyan: string;
-  white: string;
-  brightBlack: string;
-  brightRed: string;
-  brightGreen: string;
-  brightYellow: string;
-  brightBlue: string;
-  brightMagenta: string;
-  brightCyan: string;
-  brightWhite: string;
-}
+import { ThemeColors, TerminalTheme, DARK_THEME } from '../types/theme.types';
 
 /**
  * Centralized theme manager for VS Code integration
@@ -127,27 +94,13 @@ export class ThemeManager {
   public static createTerminalTheme(overrides?: Partial<TerminalTheme>): TerminalTheme {
     const colors = this.getThemeColors();
 
+    // Use DARK_THEME as base and override with VS Code colors
     const defaultTheme: TerminalTheme = {
+      ...DARK_THEME,
       background: colors.background,
       foreground: colors.foreground,
-      cursor: this.getVSCodeColor('--vscode-terminalCursor-foreground', '#ffffff'),
-      selection: this.getVSCodeColor('--vscode-terminal-selectionBackground', '#264f78'),
-      black: '#000000',
-      red: '#cd3131',
-      green: '#0dbc79',
-      yellow: '#e5e510',
-      blue: '#2472c8',
-      magenta: '#bc3fbc',
-      cyan: '#11a8cd',
-      white: '#e5e5e5',
-      brightBlack: '#666666',
-      brightRed: '#f14c4c',
-      brightGreen: '#23d18b',
-      brightYellow: '#f5f543',
-      brightBlue: '#3b8eea',
-      brightMagenta: '#d670d6',
-      brightCyan: '#29b8db',
-      brightWhite: '#e5e5e5',
+      cursor: this.getVSCodeColor('--vscode-terminalCursor-foreground', DARK_THEME.cursor),
+      selection: this.getVSCodeColor('--vscode-terminal-selectionBackground', DARK_THEME.selection),
     };
 
     return { ...defaultTheme, ...overrides };

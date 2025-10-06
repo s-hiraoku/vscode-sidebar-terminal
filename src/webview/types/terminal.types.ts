@@ -27,29 +27,11 @@ export interface TerminalSession {
 }
 
 // Terminal theme data
-export interface TerminalThemeData {
-  foreground: string;
-  background: string;
-  cursor: string;
-  cursorAccent: string;
-  selection: string;
-  black: string;
-  red: string;
-  green: string;
-  yellow: string;
-  blue: string;
-  magenta: string;
-  cyan: string;
-  white: string;
-  brightBlack: string;
-  brightRed: string;
-  brightGreen: string;
-  brightYellow: string;
-  brightBlue: string;
-  brightMagenta: string;
-  brightCyan: string;
-  brightWhite: string;
-}
+/**
+ * Terminal theme data
+ * @deprecated Use TerminalTheme from theme.types.ts
+ */
+export type { TerminalThemeData } from './theme.types';
 
 // Terminal event types
 export type TerminalEventType =

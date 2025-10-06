@@ -29,20 +29,11 @@ export interface ITerminalManagerForState {
 /**
  * Session Manager interface for state restoration
  */
+import { SessionInfo, SessionRestoreResult } from '../shared/session.types';
+
 export interface ISessionManagerForState {
-  getSessionInfo(): {
-    exists: boolean;
-    terminals?: Array<{
-      id: string;
-      name: string;
-      number: number;
-      cwd: string;
-      isActive: boolean;
-    }>;
-    timestamp?: number;
-    version?: string;
-  } | null;
-  restoreSession(force: boolean): Promise<{ success: boolean; restoredCount?: number; message?: string; terminals?: any[] }>;
+  getSessionInfo(): SessionInfo | null;
+  restoreSession(force: boolean): Promise<SessionRestoreResult>;
 }
 
 export interface IWebViewStateManager {
