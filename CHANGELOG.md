@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.117] - 2025-10-07
+
+### Fixed
+- **TypeScript Compilation**: Resolved all TypeScript compilation errors in CI/CD build
+  - Fixed `Property 'logger' does not exist on IMessageHandlerContext` with type guards in BaseMessageHandler
+  - Added `override` modifiers to message handler classes (FocusTerminalHandler, TerminalInputHandler, TerminalResizeHandler, WebViewReadyHandler)
+  - Updated ISessionManagerForState interface to match StandardTerminalSessionManager implementation
+  - Removed non-existent ITerminalLifecycleManager import reference
+  - Fixed property reference from terminalContainer to terminalContainerManager
+  - Converted activeTerminalId null to undefined for type compatibility
+- **ProfileMessageHandler**: Added missing methods to IProfileManager interface
+  - Added createTerminalWithProfile, updateProfile, deleteProfile, setDefaultProfile methods
+  - Added comprehensive null checks for profileManager in all handler methods
+
+### Security
+- **CLI Agent Detection**: Fixed URL substring sanitization security issue flagged by CodeQL
+  - Replaced insecure `.includes()` substring checks with regex patterns using word boundaries
+  - Enhanced pattern matching with `/(^|\s)claude(\s|$)/i` and similar patterns for agent detection
+  - Improved security compliance in CliAgentDetectionService
+
 ## [0.1.116] - 2025-10-06
 
 ### Performance
