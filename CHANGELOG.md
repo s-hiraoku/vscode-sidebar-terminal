@@ -7,8 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.111] - 2025-10-06
+
 ### Added
-- **Terminal Link Parity**: Sidebar terminal now mirrors VS Code's integrated terminal behavior for link handling; clicking paths like `src/module.ts:12:5` opens the corresponding file and positions the cursor at the specified line and column inside the editor.
+- **Terminal Link Parity**: Sidebar terminal now mirrors VS Code's integrated terminal behavior for link handling
+  - Click file paths (e.g., `src/module.ts:12:5`) to open files and jump to specific line/column
+  - Support for absolute and relative file paths
+  - 40+ file extensions supported (TypeScript, JavaScript, Python, Go, Rust, etc.)
+  - URL links open in external browser
+  - Intelligent path resolution across workspace, cwd, and absolute paths
+  - Link text sanitization with boundary detection
 
 ## [0.1.110] - 2025-10-04
 
