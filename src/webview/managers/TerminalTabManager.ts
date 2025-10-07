@@ -10,6 +10,7 @@ import { Terminal } from '@xterm/xterm';
 import { IManagerCoordinator } from '../interfaces/ManagerInterfaces';
 import { TerminalTabList, TerminalTab, TerminalTabEvents } from '../components/TerminalTabList';
 import { webview as log } from '../../utils/logger';
+import { arraysEqual } from '../../utils/arrayUtils';
 
 interface TabSyncInfo {
   id: string;
@@ -109,9 +110,15 @@ export class TerminalTabManager implements TerminalTabEvents {
   public onTabClick = (tabId: string): void => {
     log(`🗂️ Tab clicked: ${tabId}`);
 
-    // Switch to the clicked terminal without changing display mode
+    // Switch to the clicked terminal
     if (this.coordinator) {
       this.coordinator.setActiveTerminalId(tabId);
+
+      // If in fullscreen mode, switch the fullscreen terminal
+      const displayManager = this.coordinator.getDisplayModeManager?.();
+      if (displayManager && displayManager.getCurrentMode() === 'fullscreen') {
+        displayManager.showTerminalFullscreen(tabId);
+      }
     }
 
     this.setActiveTab(tabId);
@@ -408,7 +415,7 @@ export class TerminalTabManager implements TerminalTabEvents {
 
     // Sync tab order from Extension state
     const newTabOrder = tabInfos.map((info) => info.id);
-    if (newTabOrder.length > 0 && !this.arraysEqual(this.tabOrder, newTabOrder)) {
+    if (newTabOrder.length > 0 && !arraysEqual(this.tabOrder, newTabOrder)) {
       this.tabOrder = newTabOrder;
       this.rebuildTabsInOrder();
       log('🔄 [TABS] Tab order synced from Extension state:', newTabOrder);
@@ -455,13 +462,7 @@ export class TerminalTabManager implements TerminalTabEvents {
     return `terminal-${timestamp}-${random}`;
   }
 
-  /**
-   * Helper to compare two arrays for equality
-   */
-  private arraysEqual(a: string[], b: string[]): boolean {
-    if (a.length !== b.length) return false;
-    return a.every((val, index) => val === b[index]);
-  }
+  // arraysEqual removed - using shared utility from utils/arrayUtils.ts
 
   /**
    * Integration with terminal events
