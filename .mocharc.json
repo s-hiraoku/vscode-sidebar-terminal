@@ -8,8 +8,7 @@
   "reporter": "spec",
   "ui": "bdd",
   "spec": ["out/test/unit/**/*.test.js"],
-  "parallel": true,
-  "jobs": 4,
+  "parallel": false,
   "bail": false,
   "exit": true
 }

@@ -73,7 +73,8 @@ export interface IManagerCoordinator {
     id: string,
     name: string,
     config?: unknown,
-    terminalNumber?: number
+    terminalNumber?: number,
+    requestSource?: 'webview' | 'extension'
   ): Promise<unknown>;
   openSettings(): void;
   setVersionInfo(version: string): void;

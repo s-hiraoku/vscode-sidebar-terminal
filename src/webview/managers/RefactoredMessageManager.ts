@@ -512,7 +512,8 @@ export class RefactoredMessageManager implements IMessageManager {
         terminalId,
         terminalName,
         config,
-        terminalNumber
+        terminalNumber,
+        'extension'
       );
 
       this.logger.info(`🔍 Terminal creation result: ${result ? 'SUCCESS' : 'FAILED'}`);

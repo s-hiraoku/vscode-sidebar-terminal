@@ -590,47 +590,86 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
     orderedTerminalIds: string[],
     splitDirection: 'vertical' | 'horizontal'
   ): void {
+    const terminalCount = orderedTerminalIds.length;
+
+    if (terminalCount === 0) {
+      this.log('No terminals to display in split mode', 'warn');
+      return;
+    }
+
+    this.log(`Activating split layout: ${terminalCount} terminals, direction: ${splitDirection}`);
+
+    // Setup terminal body flex container
     terminalBody.style.display = 'flex';
     terminalBody.style.flexDirection = splitDirection === 'horizontal' ? 'row' : 'column';
     terminalBody.style.height = '100%';
+    terminalBody.style.width = '100%';
     terminalBody.style.overflow = 'hidden';
 
     orderedTerminalIds.forEach((terminalId, index) => {
       const container = this.getContainer(terminalId);
       if (!container) {
+        this.log(`Container not found for terminal: ${terminalId}`, 'error');
         return;
       }
 
-      const wrapper = this.createSplitWrapper(terminalId);
+      // Create wrapper with equal flex distribution
+      const wrapper = this.createSplitWrapper(terminalId, splitDirection, terminalCount);
       const area = this.getWrapperArea(wrapper, terminalId, true);
       if (area) {
         area.appendChild(container);
       }
 
+      // Setup container styles for split mode
       container.classList.remove('terminal-container--fullscreen', 'hidden-mode');
       container.classList.add('terminal-container--split');
       container.style.display = 'flex';
       container.style.flex = '1 1 auto';
       container.style.width = '100%';
+      container.style.height = '100%';
+      container.style.minHeight = '0';
 
       terminalBody.appendChild(wrapper);
       this.splitWrapperCache.set(terminalId, wrapper);
 
+      // Add resizer between terminals (not after the last one)
       if (index < orderedTerminalIds.length - 1) {
         const resizer = this.createSplitResizer(splitDirection);
         terminalBody.appendChild(resizer);
         this.splitResizers.add(resizer);
       }
     });
+
+    this.log(`Split layout activated: ${orderedTerminalIds.length} wrappers, ${this.splitResizers.size} resizers`);
   }
 
-  private createSplitWrapper(terminalId: string): HTMLElement {
+  private createSplitWrapper(
+    terminalId: string,
+    splitDirection: 'vertical' | 'horizontal',
+    _terminalCount: number
+  ): HTMLElement {
     const wrapper = document.createElement('div');
     wrapper.className = 'terminal-split-wrapper';
     wrapper.setAttribute('data-terminal-wrapper-id', terminalId);
+
+    // Wrapper contains terminal content
     wrapper.style.display = 'flex';
     wrapper.style.flexDirection = 'column';
-    wrapper.style.flex = '1 1 auto';
+    wrapper.style.position = 'relative';
+    wrapper.style.overflow = 'hidden';
+
+    // Equal flex distribution - let flexbox handle the math
+    // flex: 1 1 0 means: grow equally, shrink equally, base size 0
+    wrapper.style.flex = '1 1 0';
+
+    if (splitDirection === 'vertical') {
+      wrapper.style.width = '100%';
+      wrapper.style.minHeight = '0'; // Allow shrinking below content size
+    } else {
+      wrapper.style.height = '100%';
+      wrapper.style.minWidth = '0'; // Allow shrinking below content size
+    }
+
     this.getWrapperArea(wrapper, terminalId, true);
     return wrapper;
   }

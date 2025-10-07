@@ -1,0 +1,14 @@
+{
+  "version": "0.1.117",
+  "releaseDate": "2025-10-07T23:18:03.567Z",
+  "preReleaseChecks": {
+    "backupCreated": true,
+    "rollbackPlanGenerated": true,
+    "gitTagged": true
+  },
+  "rollbackInstructions": {
+    "emergency": "npm run rollback:emergency",
+    "specific": "npm run rollback:to 0.1.117",
+    "listVersions": "npm run rollback:list"
+  }
+}

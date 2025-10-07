@@ -66,7 +66,7 @@ export class SessionMessageController {
         this.logger.warn(`⚠️ Session restore failed, creating regular terminal: ${terminalId}`);
       }
 
-      await coordinator.createTerminal(terminalId, terminalName, config);
+      await coordinator.createTerminal(terminalId, terminalName, config, undefined, 'extension');
       this.logger.info(`Created terminal for session restore: ${terminalId}`);
 
       if (sessionRestoreMessage || (sessionScrollback && sessionScrollback.length > 0)) {
@@ -97,7 +97,7 @@ export class SessionMessageController {
     } catch (error) {
       this.logger.error(`Failed to restore terminal session ${terminalId}: ${String(error)}`);
       try {
-        await coordinator.createTerminal(terminalId, terminalName, config);
+        await coordinator.createTerminal(terminalId, terminalName, config, undefined, 'extension');
         this.logger.info(`Created fallback terminal: ${terminalId}`);
       } catch (fallbackError) {
         this.logger.error(`Failed to create fallback terminal: ${String(fallbackError)}`);

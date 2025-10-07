@@ -78,7 +78,8 @@ export class TerminalLifecycleHandler extends BaseMessageHandler {
         terminalId,
         terminalName,
         config,
-        terminalNumber
+        terminalNumber,
+        'extension'
       );
 
       context.logger.info(`🔍 Terminal creation result: ${result ? 'SUCCESS' : 'FAILED'}`);

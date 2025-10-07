@@ -115,10 +115,7 @@ export class TerminalTabManager implements TerminalTabEvents {
       this.coordinator.setActiveTerminalId(tabId);
 
       // If in fullscreen mode, switch the fullscreen terminal
-      const displayManager = this.coordinator.getDisplayModeManager?.();
-      if (displayManager && displayManager.getCurrentMode() === 'fullscreen') {
-        displayManager.showTerminalFullscreen(tabId);
-      }
+      this.handleFullscreenModeSwitch(tabId);
     }
 
     this.setActiveTab(tabId);
@@ -127,34 +124,18 @@ export class TerminalTabManager implements TerminalTabEvents {
   public onTabClose = (tabId: string): void => {
     log(`🗂️ Tab close requested: ${tabId}`);
 
-    // 🆕 Protect the last tab from being closed
+    // Protect the last tab from being closed
     if (this.tabs.size <= 1) {
       console.warn('⚠️ Cannot close the last terminal tab');
-
-      // Show notification to user
-      if (this.coordinator) {
-        const managers = this.coordinator.getManagers();
-        if (managers.notification) {
-          managers.notification.showWarning('Cannot close the last terminal');
-        }
-      }
-
+      this.showNotification('Cannot close the last terminal');
       return;
     }
 
-    // Close the terminal via coordinator
-    if (this.coordinator) {
-      const displayManager = this.coordinator.getDisplayModeManager?.();
-      if (displayManager && displayManager.getCurrentMode() === 'fullscreen') {
-        displayManager.setDisplayMode('split');
-      }
+    // Handle display mode transition before closing
+    this.handleDisplayModeAfterClose(tabId);
 
-      if ('deleteTerminalSafely' in this.coordinator) {
-        (this.coordinator as any).deleteTerminalSafely(tabId);
-      } else {
-        this.coordinator.closeTerminal(tabId);
-      }
-    }
+    // Close the terminal via coordinator
+    this.closeTerminalSafely(tabId);
   };
 
   public onTabRename = (tabId: string, newName: string): void => {
@@ -207,6 +188,9 @@ export class TerminalTabManager implements TerminalTabEvents {
       if (managers.terminalContainer) {
         managers.terminalContainer.reorderContainers(this.tabOrder);
       }
+
+      // Refresh split mode layout if active
+      this.refreshSplitModeIfActive();
     }
 
     // Notify extension host so state updates preserve the new order
@@ -221,10 +205,37 @@ export class TerminalTabManager implements TerminalTabEvents {
   public onNewTab = (): void => {
     log('🗂️ New tab requested');
 
-    if (this.coordinator) {
-      // Generate new terminal ID
-      const newTerminalId = this.generateTerminalId();
-      this.coordinator.createTerminal(newTerminalId, `Terminal ${this.tabs.size + 1}`);
+    if (!this.coordinator) {
+      return;
+    }
+
+    const currentMode = this.getCurrentMode();
+    const currentTerminalCount = this.tabs.size;
+    const newTerminalId = this.generateTerminalId();
+    const terminalName = `Terminal ${currentTerminalCount + 1}`;
+
+    log(`📊 Current state: mode=${currentMode}, terminals=${currentTerminalCount}`);
+
+    // If in fullscreen mode with 1+ terminals, switch to split mode first
+    if (currentMode === 'fullscreen' && currentTerminalCount > 0) {
+      log(`🔀 Fullscreen → Split: Showing ${currentTerminalCount} existing terminals first`);
+
+      const displayManager = this.getDisplayManager();
+      if (displayManager) {
+        // Step 1: Show all existing terminals in split mode
+        displayManager.showAllTerminalsSplit();
+
+        // Step 2: Wait for layout to complete, then add new terminal
+        // Increased delay to ensure split layout is fully applied
+        setTimeout(() => {
+          log(`➕ Adding new terminal (${currentTerminalCount + 1}/${currentTerminalCount + 1}): ${newTerminalId}`);
+          this.coordinator!.createTerminal(newTerminalId, terminalName);
+        }, 250);
+      }
+    } else {
+      // Normal or split mode: directly create terminal
+      log(`➕ Adding new terminal directly: ${newTerminalId}`);
+      this.coordinator.createTerminal(newTerminalId, terminalName);
     }
   };
 
@@ -256,6 +267,28 @@ export class TerminalTabManager implements TerminalTabEvents {
     if (!this.tabList) {
       return;
     }
+
+    if (this.tabs.has(terminalId)) {
+      const existing = this.tabs.get(terminalId)!;
+      const updates: Partial<TerminalTab> = {};
+
+      if (existing.name !== name) {
+        updates.name = name;
+      }
+
+      if (terminal && existing.terminal !== terminal) {
+        updates.terminal = terminal;
+      }
+
+      if (Object.keys(updates).length > 0) {
+        Object.assign(existing, updates);
+        this.tabList.updateTab(terminalId, updates);
+      }
+
+      log(`🗂️ Duplicate tab add ignored: ${terminalId}`);
+      return;
+    }
+
     const tab: TerminalTab = {
       id: terminalId,
       name: name,
@@ -462,17 +495,173 @@ export class TerminalTabManager implements TerminalTabEvents {
     return `terminal-${timestamp}-${random}`;
   }
 
+  /**
+   * Helper: Get DisplayModeManager instance
+   */
+  private getDisplayManager() {
+    return this.coordinator?.getDisplayModeManager?.();
+  }
+
+  /**
+   * Helper: Get current display mode
+   */
+  private getCurrentMode(): 'normal' | 'fullscreen' | 'split' | null {
+    return this.getDisplayManager()?.getCurrentMode() ?? null;
+  }
+
+  /**
+   * Helper: Switch fullscreen to specific terminal
+   */
+  private handleFullscreenModeSwitch(terminalId: string): void {
+    const displayManager = this.getDisplayManager();
+    if (displayManager && displayManager.getCurrentMode() === 'fullscreen') {
+      displayManager.showTerminalFullscreen(terminalId);
+    }
+  }
+
+  /**
+   * Helper: Handle display mode transition after closing a terminal
+   */
+  private handleDisplayModeAfterClose(tabId: string): void {
+    const displayManager = this.getDisplayManager();
+    const currentMode = this.getCurrentMode();
+    const remainingCount = this.tabs.size - 1;
+
+    if (!displayManager) {
+      return;
+    }
+
+    if (currentMode === 'fullscreen') {
+      this.handleFullscreenModeAfterClose(tabId, remainingCount, displayManager);
+    } else if (currentMode === 'split') {
+      this.handleSplitModeAfterClose(remainingCount, displayManager);
+    }
+  }
+
+  /**
+   * Helper: Handle fullscreen mode after closing terminal
+   */
+  private handleFullscreenModeAfterClose(
+    closedTabId: string,
+    remainingCount: number,
+    displayManager: ReturnType<NonNullable<IManagerCoordinator['getDisplayModeManager']>>
+  ): void {
+    if (!displayManager) {
+      return;
+    }
+
+    if (remainingCount === 1) {
+      // Keep fullscreen with remaining terminal
+      const remainingTerminalId = Array.from(this.tabs.keys()).find(id => id !== closedTabId);
+      if (remainingTerminalId) {
+        setTimeout(() => displayManager.showTerminalFullscreen(remainingTerminalId), 50);
+      } else {
+        displayManager.setDisplayMode('normal');
+      }
+    } else {
+      // Multiple terminals remain, switch to split
+      displayManager.setDisplayMode('split');
+    }
+  }
+
+  /**
+   * Helper: Handle split mode after closing terminal
+   */
+  private handleSplitModeAfterClose(
+    remainingCount: number,
+    displayManager: ReturnType<NonNullable<IManagerCoordinator['getDisplayModeManager']>>
+  ): void {
+    if (!displayManager) {
+      return;
+    }
+
+    if (remainingCount === 1) {
+      setTimeout(() => displayManager.setDisplayMode('normal'), 50);
+    } else {
+      setTimeout(() => displayManager.showAllTerminalsSplit(), 50);
+    }
+  }
+
+  /**
+   * Helper: Close terminal safely
+   */
+  private closeTerminalSafely(tabId: string): void {
+    if (!this.coordinator) {
+      return;
+    }
+
+    if ('deleteTerminalSafely' in this.coordinator) {
+      (this.coordinator as any).deleteTerminalSafely(tabId);
+    } else {
+      this.coordinator.closeTerminal(tabId);
+    }
+  }
+
+  /**
+   * Helper: Show notification to user
+   */
+  private showNotification(message: string): void {
+    if (this.coordinator) {
+      const managers = this.coordinator.getManagers();
+      if (managers.notification) {
+        managers.notification.showWarning(message);
+      }
+    }
+  }
+
+  /**
+   * Helper: Check if should switch to split mode (when in fullscreen)
+   */
+  private shouldSwitchToSplitMode(): boolean {
+    return this.getCurrentMode() === 'fullscreen';
+  }
+
+  /**
+   * Helper: Switch to split mode and execute callback
+   */
+  private switchToSplitModeAndExecute(callback: () => void, delay: number = 250): void {
+    const displayManager = this.getDisplayManager();
+    if (displayManager) {
+      log('🔀 Switching to split mode...');
+      // Show all terminals in split mode (not just set the mode)
+      displayManager.showAllTerminalsSplit();
+      log(`⏱️ Waiting ${delay}ms for layout to complete...`);
+      setTimeout(callback, delay);
+    }
+  }
+
+  /**
+   * Helper: Refresh split mode layout if currently active
+   */
+  private refreshSplitModeIfActive(): void {
+    const displayManager = this.getDisplayManager();
+    if (displayManager && displayManager.getCurrentMode() === 'split') {
+      setTimeout(() => displayManager.showAllTerminalsSplit(), 50);
+    }
+  }
+
   // arraysEqual removed - using shared utility from utils/arrayUtils.ts
 
   /**
    * Integration with terminal events
    */
   public handleTerminalCreated(terminalId: string, name: string, terminal: Terminal): void {
+    const previousCount = this.tabs.size;
     this.addTab(terminalId, name, terminal);
+    const newCount = this.tabs.size;
 
-    // Make the new tab active
+    log(`🎯 Terminal created: ${terminalId}, terminals: ${previousCount} → ${newCount}`);
+
+    // Make the new tab active and refresh split mode if needed
     setTimeout(() => {
       this.setActiveTab(terminalId);
+
+      // If in split mode, refresh layout to include new terminal
+      const currentMode = this.getCurrentMode();
+      if (currentMode === 'split') {
+        log(`🔄 Refreshing split layout with ${newCount} terminals`);
+        this.refreshSplitModeIfActive();
+      }
     }, 100);
   }
 

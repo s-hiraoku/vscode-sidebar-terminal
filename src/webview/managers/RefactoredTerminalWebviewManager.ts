@@ -9,6 +9,7 @@
 
 import { Terminal } from '@xterm/xterm';
 import { webview as log } from '../../utils/logger';
+import { SPLIT_CONSTANTS } from '../constants/webview';
 import {
   PartialTerminalSettings,
   WebViewFontSettings,
@@ -110,6 +111,10 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
 
   // バージョン情報
   private versionInfo: string = 'v0.1.0';
+
+  // Split mode transition coordination
+  private pendingSplitTransition: Promise<void> | null = null;
+  private pendingTerminalCreations = new Set<string>();
 
   // 設定管理
   private currentSettings: PartialTerminalSettings = {
@@ -481,7 +486,8 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     terminalId: string,
     terminalName: string,
     config?: TerminalConfig,
-    terminalNumber?: number // Optional terminal number from Extension
+    terminalNumber?: number, // Optional terminal number from Extension
+    requestSource: 'webview' | 'extension' = 'webview'
   ): Promise<Terminal | null> {
     try {
       log(`🔍 [DEBUG] RefactoredTerminalWebviewManager.createTerminal called:`, {
@@ -492,31 +498,46 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
         timestamp: Date.now(),
       });
 
-      // 🎯 [STATE] Check terminal creation availability before proceeding
-      if (this.currentTerminalState) {
-        const canCreate = this.canCreateTerminal();
-        const availableSlots = this.currentTerminalState.availableSlots;
+      if (this.pendingTerminalCreations.has(terminalId)) {
+        log(
+          `⏳ [DEBUG] Terminal ${terminalId} creation already pending (source: ${requestSource}), skipping duplicate request`
+        );
+        return this.getTerminalInstance(terminalId)?.terminal ?? null;
+      }
 
+      const existingInstance = this.getTerminalInstance(terminalId);
+      if (existingInstance) {
+        log(
+          `🔁 [DEBUG] Terminal ${terminalId} already exists, reusing existing instance (source: ${requestSource})`
+        );
+        this.terminalTabManager?.setActiveTab(terminalId);
+        return existingInstance.terminal ?? null;
+      }
+
+      await this.ensureSplitModeBeforeTerminalCreation();
+
+      const canCreate = this.canCreateTerminal();
+      if (!canCreate && requestSource !== 'extension') {
+        const localCount = this.splitManager?.getTerminals()?.size ?? 0;
+        const maxCount =
+          this.currentTerminalState?.maxTerminals ?? SPLIT_CONSTANTS.MAX_TERMINALS ?? 5;
+        log(
+          `❌ [STATE] Terminal creation blocked (local count=${localCount}, max=${maxCount})`
+        );
+        this.showTerminalLimitMessage(localCount, maxCount);
+        return null;
+      }
+
+      if (this.currentTerminalState) {
+        const availableSlots = this.currentTerminalState.availableSlots;
         log(
           `🎯 [STATE] Terminal creation check: canCreate=${canCreate}, availableSlots=[${availableSlots.join(',')}]`
         );
 
-        if (!canCreate) {
-          const currentCount = this.currentTerminalState.terminals.length;
-          const maxCount = this.currentTerminalState.maxTerminals;
-          log(
-            `❌ [STATE] Terminal creation blocked: ${currentCount}/${maxCount} terminals, no available slots`
-          );
-          this.showTerminalLimitMessage(currentCount, maxCount);
-          return null;
-        }
-
-        // Validate terminal number against available slots
         if (terminalNumber && !availableSlots.includes(terminalNumber)) {
           log(
             `⚠️ [STATE] Terminal number ${terminalNumber} not in available slots [${availableSlots.join(',')}]`
           );
-          // Request fresh state and retry if numbers don't match
           this.requestLatestState();
         }
       } else {
@@ -525,6 +546,8 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       }
 
       log(`🚀 Creating terminal with header: ${terminalId} (${terminalName}) #${terminalNumber}`);
+
+      this.pendingTerminalCreations.add(terminalId);
 
       // 1. ターミナルインスタンスを作成
       const terminal = await this.terminalLifecycleManager.createTerminal(
@@ -601,19 +624,89 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       }, 150);
 
       // 5. ExtensionにRegular のターミナル作成をリクエスト
-      this.postMessageToExtension({
-        command: 'createTerminal',
-        terminalId: terminalId,
-        terminalName: terminalName,
-        timestamp: Date.now(),
-      });
+      if (requestSource === 'webview') {
+        this.postMessageToExtension({
+          command: 'createTerminal',
+          terminalId: terminalId,
+          terminalName: terminalName,
+          timestamp: Date.now(),
+        });
+      }
 
       log(`✅ Terminal creation completed: ${terminalId}`);
+
+      const isSplitMode = this.displayModeManager?.getCurrentMode?.() === 'split';
+      if (isSplitMode) {
+        setTimeout(() => {
+          try {
+            this.displayModeManager?.showAllTerminalsSplit();
+            log(`🔄 [SPLIT] Refreshed split layout after creating ${terminalId}`);
+          } catch (layoutError) {
+            log(`⚠️ [SPLIT] Failed to refresh split layout: ${layoutError}`);
+          }
+        }, 50);
+      }
+
       return terminal;
     } catch (error) {
       log(`❌ Error creating terminal ${terminalId}:`, error);
       return null;
+    } finally {
+      this.pendingTerminalCreations.delete(terminalId);
     }
+  }
+
+  private async ensureSplitModeBeforeTerminalCreation(): Promise<void> {
+    const displayManager = this.displayModeManager;
+    const splitManager = this.splitManager;
+
+    if (!displayManager || !splitManager?.getTerminals) {
+      return;
+    }
+
+    const currentMode = displayManager.getCurrentMode?.() ?? 'normal';
+    if (currentMode !== 'fullscreen') {
+      return;
+    }
+
+    let existingCount = 0;
+    try {
+      const terminals = splitManager.getTerminals();
+      existingCount = terminals instanceof Map ? terminals.size : 0;
+    } catch (error) {
+      log('⚠️ [SPLIT] Failed to inspect existing terminals before creation:', error);
+      existingCount = 0;
+    }
+
+    if (existingCount === 0) {
+      return;
+    }
+
+    if (this.pendingSplitTransition) {
+      await this.pendingSplitTransition;
+      return;
+    }
+
+    this.pendingSplitTransition = (async () => {
+      try {
+        log(
+          `🖥️ [SPLIT] Fullscreen detected with ${existingCount} terminals. Switching to split mode before creating new terminal.`
+        );
+
+        try {
+          displayManager.showAllTerminalsSplit();
+        } catch (error) {
+          log('⚠️ [SPLIT] Failed to trigger split mode before creation:', error);
+          return;
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      } finally {
+        this.pendingSplitTransition = null;
+      }
+    })();
+
+    await this.pendingSplitTransition;
   }
 
   public async removeTerminal(terminalId: string): Promise<boolean> {
@@ -1840,12 +1933,22 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
    * Check if terminal creation is currently allowed
    */
   public canCreateTerminal(): boolean {
+    const maxTerminals =
+      this.currentTerminalState?.maxTerminals ?? SPLIT_CONSTANTS.MAX_TERMINALS ?? 5;
+
+    const localCount = this.splitManager?.getTerminals()?.size ?? 0;
+    const pending = this.pendingTerminalCreations.size;
+
     if (!this.currentTerminalState) {
-      log('⚠️ [STATE] No cached state available for creation check');
-      return false;
+      log('⚠️ [STATE] No cached state available for creation check, using local count');
+      return localCount + pending < maxTerminals;
     }
 
-    return this.currentTerminalState.availableSlots.length > 0;
+    if (this.currentTerminalState.availableSlots.length > 0) {
+      return true;
+    }
+
+    return localCount + pending < maxTerminals;
   }
 
   /**

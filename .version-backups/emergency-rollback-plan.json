@@ -1,0 +1,16 @@
+{
+  "currentVersion": "0.1.117",
+  "rollbackProcedure": [
+    "1. 🛑 Stop any active development",
+    "2. 🔄 Run rollback script",
+    "3. 🧪 Test rolled-back version",
+    "4. 📦 Publish emergency fix if needed",
+    "5. 📝 Create incident report",
+    "6. 🔧 Fix issue in development branch"
+  ],
+  "emergencyContacts": [
+    "Extension Marketplace Support",
+    "Development Team Lead"
+  ],
+  "rollbackCommand": "npm run rollback:emergency"
+}
