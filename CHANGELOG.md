@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.118] - 2025-10-08
+
+### Refactoring
+- **Code Quality Improvement**: Comprehensive refactoring to eliminate code duplication (~215 lines reduced)
+  - 🎨 **Theme Management Unification** (~50 lines): Created unified theme type definitions in `src/webview/types/theme.types.ts`
+  - 🔧 **Constants Sharing** (~40 lines): Shared constants between Extension and WebView in `src/shared/constants.ts`
+  - 💾 **Session Management Types** (~60 lines): Unified session data structures in `src/shared/session.types.ts`
+  - 🤖 **CLI Agent Detection Base Class** (~30 lines): Created `BaseDetectionStrategy` using Template Method pattern
+  - 🛠️ **Error Handling Consolidation** (~25 lines): Extracted common operation result handling in `OperationResultHandler`
+  - 📦 **Array Utilities** (~10 lines): Generic array comparison utilities in `src/utils/arrayUtils.ts`
+  - **New Shared Files**: 5 new files created for better code organization
+  - **Files Modified**: 15 files updated to use shared utilities
+  - **Commits**: 3 systematic refactoring commits (b648165, dccf05a, a101745)
+
+### Improved
+- **Code Maintainability**: Enhanced type safety and reduced technical debt
+  - DRY principle enforcement across codebase
+  - TypeScript Generics for type-safe utilities
+  - Dependency Injection patterns applied
+  - Better separation of concerns
+- **Test Infrastructure**: Improved test reliability
+  - Disabled Mocha parallel execution for Node.js v24 compatibility
+  - Fixed ESLint unused variable errors
+  - Added comprehensive test coverage for split mode
+
+### Fixed
+- **Terminal Tab Management**: Enhanced tab behavior with improved mode handling
+  - Fixed tab reordering synchronization with terminal display order
+  - Improved split mode layout refresh after tab operations
+  - Better fullscreen mode transitions when closing tabs
+
 ## [0.1.117] - 2025-10-07
 
 ### Refactoring
