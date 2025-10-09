@@ -202,14 +202,14 @@ export class ExtensionLifecycle {
       {
         command: 'secondaryTerminal.splitTerminal',
         handler: () => {
-          log('🔧 [DEBUG] Command executed: splitTerminal (vertical)');
-          this.sidebarProvider?.splitTerminal('vertical');
+          log('🔧 [DEBUG] Command executed: splitTerminal (auto-detect direction based on panel location)');
+          this.sidebarProvider?.splitTerminal(); // Let splitTerminal() auto-detect direction
         },
       },
       {
         command: 'secondaryTerminal.splitTerminalHorizontal',
         handler: () => {
-          log('🔧 [DEBUG] Command executed: splitTerminalHorizontal');
+          log('🔧 [DEBUG] Command executed: splitTerminalHorizontal (force horizontal)');
           this.sidebarProvider?.splitTerminal('horizontal');
         },
       },

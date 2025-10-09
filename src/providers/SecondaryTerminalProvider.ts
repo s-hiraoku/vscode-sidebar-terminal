@@ -640,6 +640,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     const direction = hasDirection(message) ? message.direction : undefined;
     try {
       // Preserve previous behavior: if no direction provided, use default
+      // Panel location detection is now handled inside splitTerminal()
       if (direction) {
         this.splitTerminal(direction);
       } else {
@@ -941,7 +942,9 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
    * @param message - WebView message containing location information
    */
   private async _handleReportPanelLocation(message: WebviewMessage): Promise<void> {
+    log('📍 [DEBUG] ==================== PANEL LOCATION REPORT ====================');
     log('📍 [DEBUG] Panel location reported from WebView (router):', message.location);
+    log('📍 [DEBUG] Previous cached location:', this._cachedPanelLocation);
 
     const loc = message.location;
 
@@ -953,7 +956,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
     // Cache the panel location for split direction determination
     this._cachedPanelLocation = loc;
-    log('📍 [DEBUG] Cached panel location updated:', loc);
+    log('📍 [DEBUG] ✅ Cached panel location UPDATED:', loc);
 
     // Update context key for VS Code when clause (used in package.json menus)
     const { PANEL_LOCATION } = SecondaryTerminalProvider.CONTEXT_KEYS;
@@ -966,6 +969,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       location: loc,
     });
     log('📍 [DEBUG] Panel location update confirmed to WebView:', loc);
+    log('📍 [DEBUG] ===============================================================');
   }
 
   /**
@@ -1100,10 +1104,43 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
    */
   public splitTerminal(direction?: SplitDirection): void {
     try {
-      log('🔍 [SPLIT] Attempting terminal creation - validation delegated to TerminalManager');
+      log('🔍 [SPLIT] ==================== SPLIT TERMINAL START ====================');
+      log(`🔍 [SPLIT] Current cached panel location: ${this._cachedPanelLocation}`);
+      log(`🔍 [SPLIT] Direction parameter: ${direction ?? 'auto-detect'}`);
+
+      // If direction is not explicitly provided, request fresh panel location detection
+      if (!direction) {
+        log('🔍 [SPLIT] No explicit direction - requesting panel location detection...');
+        this._requestPanelLocationDetection();
+
+        // Wait for panel location detection to complete before proceeding
+        setTimeout(() => {
+          log('🔍 [SPLIT] Panel location detection completed, proceeding with split...');
+          this._performSplit(direction);
+        }, 150); // Increased from 100ms to 150ms for reliability
+      } else {
+        // Direction explicitly provided, proceed immediately
+        log('🔍 [SPLIT] Explicit direction provided, proceeding immediately...');
+        this._performSplit(direction);
+      }
+    } catch (error) {
+      log('❌ [ERROR] Failed to split terminal:', error);
+      TerminalErrorHandler.handleWebviewError(error);
+    }
+  }
+
+  /**
+   * Internal method to perform the actual split operation
+   */
+  private _performSplit(direction?: SplitDirection): void {
+    try {
+      log('🔍 [SPLIT] Performing split operation...');
+      log(`🔍 [SPLIT] Current cached panel location: ${this._cachedPanelLocation}`);
 
       // Determine split direction based on panel location if not explicitly provided
       const splitDirection: SplitDirection = direction ?? this._determineSplitDirection();
+
+      log(`🔍 [SPLIT] ✅ Final split direction: ${splitDirection}`);
 
       // Send the SPLIT command to prepare the UI
       void this._sendMessage({
@@ -1115,7 +1152,8 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       setImmediate(() => {
         try {
           const terminalId = this._terminalManager.createTerminal();
-          log('Split terminal created:', terminalId);
+          log('✅ Split terminal created:', terminalId);
+          log('🔍 [SPLIT] ==================== SPLIT TERMINAL END ====================');
 
           // The terminal creation event will send TERMINAL_CREATED to webview automatically
         } catch (error) {
@@ -1124,8 +1162,8 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         }
       });
     } catch (error) {
-      log('❌ [ERROR] Failed to split terminal:', error);
-      TerminalErrorHandler.handleWebviewError(error);
+      log('❌ [ERROR] Failed to perform split:', error);
+      throw error;
     }
   }
 

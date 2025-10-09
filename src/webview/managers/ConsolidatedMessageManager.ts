@@ -272,6 +272,9 @@ export class ConsolidatedMessageManager implements IMessageManager {
         case 'requestPanelLocationDetection':
           this.handleRequestPanelLocationDetectionMessage(coordinator);
           break;
+        case 'split':
+          this.handleSplitMessage(msg, coordinator);
+          break;
         case 'requestTerminalSerialization':
           this.handleRequestTerminalSerializationMessage(msg, coordinator);
           break;
@@ -1583,12 +1586,13 @@ export class ConsolidatedMessageManager implements IMessageManager {
    */
   private handleRequestPanelLocationDetectionMessage(_coordinator: IManagerCoordinator): void {
     try {
-      this.logger.info('Handling panel location detection request');
+      this.logger.info('📍 [WEBVIEW] ==================== PANEL LOCATION DETECTION ====================');
+      this.logger.info('📍 [WEBVIEW] Handling panel location detection request');
 
       // Analyze WebView dimensions to determine likely panel location
       const detectedLocation = this.analyzeWebViewDimensions();
 
-      this.logger.info(`Dimension analysis result: ${detectedLocation}`);
+      this.logger.info(`📍 [WEBVIEW] ✅ Dimension analysis result: ${detectedLocation}`);
 
       // Report back to Extension
       void this.messageQueue.enqueue({
@@ -1596,6 +1600,9 @@ export class ConsolidatedMessageManager implements IMessageManager {
         location: detectedLocation,
         timestamp: Date.now(),
       });
+
+      this.logger.info('📍 [WEBVIEW] Sent reportPanelLocation message to Extension');
+      this.logger.info('📍 [WEBVIEW] ==================================================================');
     } catch (error) {
       this.logger.error('Error in panel location detection', error);
       // Fallback to sidebar
@@ -1604,6 +1611,38 @@ export class ConsolidatedMessageManager implements IMessageManager {
         location: 'sidebar',
         timestamp: Date.now(),
       });
+    }
+  }
+
+  /**
+   * Handle split command from Extension
+   * This sets the split direction before terminal creation
+   */
+  private handleSplitMessage(msg: MessageCommand, coordinator: IManagerCoordinator): void {
+    try {
+      const direction = (msg as any).direction as 'horizontal' | 'vertical' | undefined;
+      this.logger.info(`🔀 [WEBVIEW] ==================== SPLIT COMMAND ====================`);
+      this.logger.info(`🔀 [WEBVIEW] Received split command with direction: ${direction || 'auto'}`);
+
+      // Get split manager from coordinator
+      const splitManager = (coordinator as any).getSplitManager?.();
+      if (!splitManager) {
+        this.logger.warn('⚠️ [WEBVIEW] SplitManager not available on coordinator');
+        return;
+      }
+
+      // Call splitTerminal with the direction
+      if (direction) {
+        this.logger.info(`🔀 [WEBVIEW] Calling splitTerminal with direction: ${direction}`);
+        splitManager.splitTerminal(direction);
+      } else {
+        this.logger.info(`🔀 [WEBVIEW] Calling splitTerminal with default direction`);
+        splitManager.splitTerminal('vertical'); // Default
+      }
+
+      this.logger.info(`🔀 [WEBVIEW] ===========================================================`);
+    } catch (error) {
+      this.logger.error('Error handling split message', error);
     }
   }
 
@@ -1645,7 +1684,7 @@ export class ConsolidatedMessageManager implements IMessageManager {
       const width = container.clientWidth;
       const height = container.clientHeight;
 
-      this.logger.debug(`Container dimensions: ${width}x${height}`);
+      this.logger.info(`📐 [DIMENSIONS] Container: ${width}px × ${height}px`);
 
       if (width === 0 || height === 0) {
         this.logger.warn('Invalid dimensions, defaulting to sidebar');
@@ -1654,17 +1693,18 @@ export class ConsolidatedMessageManager implements IMessageManager {
 
       // Calculate aspect ratio (width/height)
       const aspectRatio = width / height;
+      const threshold = ConsolidatedMessageManager.PANEL_ASPECT_RATIO_THRESHOLD;
 
-      this.logger.debug(`Aspect ratio: ${aspectRatio.toFixed(2)} (width: ${width}, height: ${height})`);
+      this.logger.info(`📐 [DIMENSIONS] Aspect ratio: ${aspectRatio.toFixed(3)} (threshold: ${threshold})`);
 
       // Apply heuristic: Compare aspect ratio against threshold
       // Sidebar: narrow and tall (aspect ratio < threshold)
       // Bottom Panel: wide and short (aspect ratio > threshold)
-      if (aspectRatio > ConsolidatedMessageManager.PANEL_ASPECT_RATIO_THRESHOLD) {
-        this.logger.info(`Wide layout detected (ratio: ${aspectRatio.toFixed(2)} > ${ConsolidatedMessageManager.PANEL_ASPECT_RATIO_THRESHOLD}) → Bottom Panel`);
+      if (aspectRatio > threshold) {
+        this.logger.info(`📐 [DIMENSIONS] ✅ Wide layout (${aspectRatio.toFixed(3)} > ${threshold}) → BOTTOM PANEL`);
         return 'panel';
       } else {
-        this.logger.info(`Tall/Square layout detected (ratio: ${aspectRatio.toFixed(2)} ≤ ${ConsolidatedMessageManager.PANEL_ASPECT_RATIO_THRESHOLD}) → Sidebar`);
+        this.logger.info(`📐 [DIMENSIONS] ✅ Tall/Square layout (${aspectRatio.toFixed(3)} ≤ ${threshold}) → SIDEBAR`);
         return 'sidebar';
       }
     } catch (error) {
