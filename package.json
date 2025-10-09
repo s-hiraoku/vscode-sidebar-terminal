@@ -246,13 +246,8 @@
     "menus": {
       "view/title": [
         {
-          "command": "secondaryTerminal.splitTerminalHorizontal",
-          "when": "view == secondaryTerminal && secondaryTerminal.panelLocation == sidebar",
-          "group": "navigation@1"
-        },
-        {
           "command": "secondaryTerminal.splitTerminal",
-          "when": "view == secondaryTerminal && secondaryTerminal.panelLocation == panel",
+          "when": "view == secondaryTerminal",
           "group": "navigation@1"
         },
         {

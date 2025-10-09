@@ -1011,16 +1011,21 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
    * @returns Optimal split direction for current layout
    */
   private _determineSplitDirection(): SplitDirection {
+    log('🔀 [SPLIT] ==================== DETERMINE SPLIT DIRECTION ====================');
+    log(`🔀 [SPLIT] _cachedPanelLocation value: ${this._cachedPanelLocation}`);
+
     const panelLocation = this._getCurrentPanelLocation();
+    log(`🔀 [SPLIT] getCurrentPanelLocation() returned: ${panelLocation}`);
 
     // Map panel location to split direction
     // Sidebar (tall/narrow) → vertical split → column layout (terminals stacked)
     // Panel (wide/short) → horizontal split → row layout (terminals side by side)
     const splitDirection: SplitDirection = panelLocation === 'panel' ? 'horizontal' : 'vertical';
 
-    log(
-      `🔀 [SPLIT] Auto-determined direction based on panel location (${panelLocation}): ${splitDirection}`
-    );
+    log(`🔀 [SPLIT] Mapping logic: ${panelLocation} === 'panel' ? 'horizontal' : 'vertical'`);
+    log(`🔀 [SPLIT] ✅ Result: ${splitDirection}`);
+    log(`🔀 [SPLIT] Expected behavior: ${panelLocation === 'panel' ? '横並び (side by side)' : '縦並び (stacked)'}`);
+    log('🔀 [SPLIT] ====================================================================');
 
     return splitDirection;
   }
@@ -1036,28 +1041,34 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
    * @returns Current panel location ('sidebar' or 'panel')
    */
   private _getCurrentPanelLocation(): PanelLocation {
+    log('📍 [PANEL-DETECTION] ==================== GET CURRENT PANEL LOCATION ====================');
+
     const config = vscode.workspace.getConfiguration('secondaryTerminal');
     const { DYNAMIC_SPLIT_DIRECTION, PANEL_LOCATION } = SecondaryTerminalProvider.CONFIG_KEYS;
 
     // Check if dynamic split direction feature is enabled
     const isDynamicSplitEnabled = config.get<boolean>(DYNAMIC_SPLIT_DIRECTION, true);
+    log(`📍 [PANEL-DETECTION] Dynamic split direction enabled: ${isDynamicSplitEnabled}`);
+
     if (!isDynamicSplitEnabled) {
-      log('📍 [PANEL-DETECTION] Dynamic split direction is disabled, defaulting to sidebar');
+      log('📍 [PANEL-DETECTION] ❌ Dynamic split direction is DISABLED, defaulting to sidebar');
+      log('📍 [PANEL-DETECTION] ==========================================================================');
       return 'sidebar';
     }
 
     // Get manual panel location setting
     const manualPanelLocation = config.get<'sidebar' | 'panel' | 'auto'>(PANEL_LOCATION, 'auto');
+    log(`📍 [PANEL-DETECTION] Manual panel location setting: ${manualPanelLocation}`);
 
     if (manualPanelLocation !== 'auto') {
-      log(`📍 [PANEL-DETECTION] Using manual panel location: ${manualPanelLocation}`);
+      log(`📍 [PANEL-DETECTION] ✅ Using MANUAL panel location: ${manualPanelLocation}`);
+      log('📍 [PANEL-DETECTION] ==========================================================================');
       return manualPanelLocation as PanelLocation;
     }
 
     // For auto-detection, use cached value from WebView
-    log(
-      `📍 [PANEL-DETECTION] Auto mode - using cached panel location: ${this._cachedPanelLocation}`
-    );
+    log(`📍 [PANEL-DETECTION] AUTO mode - using cached value: ${this._cachedPanelLocation}`);
+    log('📍 [PANEL-DETECTION] ==========================================================================');
     return this._cachedPanelLocation;
   }
 

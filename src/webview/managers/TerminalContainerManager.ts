@@ -597,14 +597,27 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
       return;
     }
 
-    this.log(`Activating split layout: ${terminalCount} terminals, direction: ${splitDirection}`);
+    this.log('🎨 [LAYOUT] ==================== ACTIVATING SPLIT LAYOUT ====================');
+    this.log(`🎨 [LAYOUT] Terminal count: ${terminalCount}`);
+    this.log(`🎨 [LAYOUT] Split direction: ${splitDirection}`);
+
+    const flexDirection = splitDirection === 'horizontal' ? 'row' : 'column';
+    this.log(`🎨 [LAYOUT] CSS flexDirection will be set to: ${flexDirection}`);
+    this.log(`🎨 [LAYOUT] Explanation: ${splitDirection} → ${flexDirection} → ${flexDirection === 'row' ? '横並び (side by side)' : '縦並び (stacked)'}`);
 
     // Setup terminal body flex container
     terminalBody.style.display = 'flex';
-    terminalBody.style.flexDirection = splitDirection === 'horizontal' ? 'row' : 'column';
+    terminalBody.style.flexDirection = flexDirection;
     terminalBody.style.height = '100%';
     terminalBody.style.width = '100%';
     terminalBody.style.overflow = 'hidden';
+
+    this.log(`🎨 [LAYOUT] ✅ Terminal body flexDirection applied: ${terminalBody.style.flexDirection}`);
+
+    // Get actual computed style to verify
+    const computedStyle = window.getComputedStyle(terminalBody);
+    this.log(`🎨 [LAYOUT] Computed flexDirection: ${computedStyle.flexDirection}`);
+    this.log('🎨 [LAYOUT] =================================================================');
 
     orderedTerminalIds.forEach((terminalId, index) => {
       const container = this.getContainer(terminalId);

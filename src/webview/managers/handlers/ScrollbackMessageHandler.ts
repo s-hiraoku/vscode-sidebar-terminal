@@ -1,0 +1,440 @@
+/**
+ * Scrollback Message Handler
+ *
+ * Handles scrollback extraction, restoration, and progress tracking
+ */
+
+import { IMessageHandler } from './IMessageHandler';
+import { IManagerCoordinator } from '../../interfaces/ManagerInterfaces';
+import { MessageCommand } from '../messageTypes';
+import { MessageQueue } from '../../utils/MessageQueue';
+import { ManagerLogger } from '../../utils/ManagerLogger';
+import { Terminal } from '@xterm/xterm';
+
+/**
+ * Scrollback line format
+ */
+export interface ScrollbackLine {
+  content: string;
+  type?: 'output' | 'input' | 'error';
+  timestamp?: number;
+}
+
+/**
+ * Scrollback Message Handler
+ *
+ * Responsibilities:
+ * - Extract scrollback data from xterm.js terminals
+ * - Restore scrollback content to terminals
+ * - Handle scrollback progress updates
+ * - Manage scrollback data normalization
+ */
+export class ScrollbackMessageHandler implements IMessageHandler {
+  constructor(
+    private readonly messageQueue: MessageQueue,
+    private readonly logger: ManagerLogger
+  ) {}
+
+  /**
+   * Handle scrollback related messages
+   */
+  public async handleMessage(
+    msg: MessageCommand,
+    coordinator: IManagerCoordinator
+  ): Promise<void> {
+    const command = (msg as { command?: string }).command;
+
+    switch (command) {
+      case 'getScrollback':
+        this.handleGetScrollback(msg, coordinator);
+        break;
+      case 'restoreScrollback':
+        this.handleRestoreScrollback(msg, coordinator);
+        break;
+      case 'scrollbackProgress':
+        this.handleScrollbackProgress(msg);
+        break;
+      case 'extractScrollbackData':
+        await this.handleExtractScrollbackData(msg, coordinator);
+        break;
+      default:
+        this.logger.warn(`Unknown scrollback command: ${command}`);
+    }
+  }
+
+  /**
+   * Get supported command types
+   */
+  public getSupportedCommands(): string[] {
+    return ['getScrollback', 'restoreScrollback', 'scrollbackProgress', 'extractScrollbackData'];
+  }
+
+  /**
+   * Handle get scrollback request
+   */
+  private handleGetScrollback(msg: MessageCommand, coordinator: IManagerCoordinator): void {
+    this.logger.info('Handling get scrollback message');
+
+    const terminalId = msg.terminalId as string;
+    const maxLines = (msg.maxLines as number) || 1000;
+
+    if (!terminalId) {
+      this.logger.error('No terminal ID provided for scrollback extraction');
+      return;
+    }
+
+    // Get terminal instance
+    const terminalInstance = coordinator.getTerminalInstance(terminalId);
+    if (!terminalInstance) {
+      this.logger.error(`Terminal instance not found for ID: ${terminalId}`);
+      return;
+    }
+
+    try {
+      // Extract scrollback from xterm.js
+      const scrollbackContent = this.extractScrollbackFromXterm(
+        terminalInstance.terminal,
+        maxLines
+      );
+
+      // Send scrollback data back to extension
+      void this.messageQueue.enqueue({
+        command: 'scrollbackExtracted',
+        terminalId,
+        scrollbackContent,
+        timestamp: Date.now(),
+      });
+
+      this.logger.info(
+        `Scrollback extracted for terminal ${terminalId}: ${scrollbackContent.length} lines`
+      );
+    } catch (error) {
+      this.logger.error(
+        `Error extracting scrollback: ${error instanceof Error ? error.message : String(error)}`
+      );
+
+      void this.messageQueue.enqueue({
+        command: 'error',
+        error: `Failed to extract scrollback: ${error instanceof Error ? error.message : String(error)}`,
+        terminalId,
+        timestamp: Date.now(),
+      });
+    }
+  }
+
+  /**
+   * Handle scrollback restoration request
+   */
+  private handleRestoreScrollback(
+    msg: MessageCommand,
+    coordinator: IManagerCoordinator
+  ): void {
+    this.logger.info('Handling restore scrollback message');
+
+    const terminalId = msg.terminalId as string;
+    // Handle both old and new message formats
+    const scrollbackContent = (msg.scrollback || msg.scrollbackContent) as
+      | string[]
+      | ScrollbackLine[];
+
+    if (!terminalId || !scrollbackContent) {
+      this.logger.error('Invalid scrollback restore request', {
+        terminalId,
+        hasScrollback: !!scrollbackContent,
+      });
+      return;
+    }
+
+    try {
+      // Get terminal instance
+      const terminalInstance = coordinator.getTerminalInstance(terminalId);
+      if (!terminalInstance) {
+        throw new Error(`Terminal instance not found for ID: ${terminalId}`);
+      }
+
+      // Normalize scrollback data
+      const normalizedScrollback = this.normalizeScrollbackData(scrollbackContent);
+
+      this.logger.info(
+        `🔧 [RESTORE-DEBUG] Restoring ${normalizedScrollback.length} lines to terminal ${terminalId}`
+      );
+
+      // Restore scrollback to the terminal
+      this.restoreScrollbackToXterm(terminalInstance.terminal, normalizedScrollback);
+
+      // Send confirmation back to extension
+      void this.messageQueue.enqueue({
+        command: 'scrollbackRestored',
+        terminalId,
+        restoredLines: normalizedScrollback.length,
+        timestamp: Date.now(),
+      });
+
+      this.logger.info(
+        `✅ [RESTORE-DEBUG] Scrollback restored for terminal ${terminalId}: ${normalizedScrollback.length} lines`
+      );
+    } catch (error) {
+      this.logger.error(
+        `❌ [RESTORE-DEBUG] Error restoring scrollback: ${error instanceof Error ? error.message : String(error)}`
+      );
+
+      void this.messageQueue.enqueue({
+        command: 'error',
+        error: `Failed to restore scrollback: ${error instanceof Error ? error.message : String(error)}`,
+        terminalId,
+        timestamp: Date.now(),
+      });
+    }
+  }
+
+  /**
+   * Handle scrollback progress updates
+   */
+  private handleScrollbackProgress(msg: MessageCommand): void {
+    this.logger.info('Handling scrollback progress message');
+
+    const progressInfo = msg.scrollbackProgress as {
+      terminalId: string;
+      progress: number;
+      currentLines: number;
+      totalLines: number;
+      stage: 'loading' | 'decompressing' | 'restoring';
+    };
+
+    if (!progressInfo) {
+      this.logger.error('No progress information provided');
+      return;
+    }
+
+    // Show progress notification
+    this.logger.info(
+      `Scrollback progress: ${progressInfo.progress}% (${progressInfo.currentLines}/${progressInfo.totalLines})`
+    );
+  }
+
+  /**
+   * Handle extract scrollback data request
+   */
+  private async handleExtractScrollbackData(
+    msg: MessageCommand,
+    coordinator: IManagerCoordinator
+  ): Promise<void> {
+    try {
+      const terminalId = msg.terminalId as string;
+      const requestId = msg.requestId as string;
+      const maxLines = msg.maxLines as number;
+
+      if (!terminalId || !requestId) {
+        this.logger.error('Missing terminalId or requestId for scrollback extraction');
+        return;
+      }
+
+      this.logger.debug(`📦 Extracting scrollback data for terminal ${terminalId}`);
+
+      // Get the terminal instance
+      const terminalInstance = coordinator.getTerminalInstance(terminalId);
+      if (!terminalInstance) {
+        this.logger.error(`Terminal ${terminalId} not found for scrollback extraction`);
+
+        // Send empty response
+        coordinator.postMessageToExtension({
+          command: 'scrollbackDataCollected',
+          terminalId,
+          requestId,
+          scrollbackData: [],
+        });
+        return;
+      }
+
+      // Extract scrollback data
+      const scrollbackData = this.extractScrollbackFromTerminal(terminalInstance, maxLines || 1000);
+
+      this.logger.debug(`📦 Extracted ${scrollbackData.length} lines for terminal ${terminalId}`);
+
+      // Send the scrollback data back to Extension
+      coordinator.postMessageToExtension({
+        command: 'scrollbackDataCollected',
+        terminalId,
+        requestId,
+        scrollbackData,
+      });
+    } catch (error) {
+      this.logger.error('Failed to extract scrollback data', error);
+
+      // Send error response
+      coordinator.postMessageToExtension({
+        command: 'scrollbackDataCollected',
+        terminalId: msg.terminalId,
+        requestId: msg.requestId,
+        scrollbackData: [],
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  /**
+   * Extract scrollback content from xterm terminal (improved version)
+   */
+  private extractScrollbackFromXterm(terminal: Terminal, maxLines: number): ScrollbackLine[] {
+    this.logger.debug(`Extracting scrollback from xterm terminal (max ${maxLines} lines)`);
+
+    if (!terminal) {
+      throw new Error('Terminal instance not provided');
+    }
+
+    const scrollbackLines: ScrollbackLine[] = [];
+
+    try {
+      // Get active buffer from xterm.js
+      const buffer = terminal.buffer.active;
+      const bufferLength = buffer.length;
+      const viewportY = buffer.viewportY;
+      const baseY = buffer.baseY;
+
+      this.logger.debug(
+        `Buffer info: length=${bufferLength}, viewportY=${viewportY}, baseY=${baseY}`
+      );
+
+      // Calculate range to extract (include scrollback + viewport)
+      const startLine = Math.max(0, bufferLength - maxLines);
+      const endLine = bufferLength;
+
+      this.logger.debug(
+        `Extracting lines ${startLine} to ${endLine} (${endLine - startLine} lines)`
+      );
+
+      for (let i = startLine; i < endLine; i++) {
+        try {
+          const line = buffer.getLine(i);
+          if (line) {
+            const content = line.translateToString(true); // trim whitespace
+
+            // Include non-empty lines and preserve some empty lines for structure
+            if (content.trim() || scrollbackLines.length > 0) {
+              scrollbackLines.push({
+                content: content,
+                type: 'output',
+                timestamp: Date.now(),
+              });
+            }
+          }
+        } catch (lineError) {
+          this.logger.warn(`Error extracting line ${i}: ${String(lineError)}`);
+          continue;
+        }
+      }
+
+      // Remove trailing empty lines
+      while (scrollbackLines.length > 0) {
+        const lastLine = scrollbackLines[scrollbackLines.length - 1];
+        if (!lastLine || !lastLine.content.trim()) {
+          scrollbackLines.pop();
+        } else {
+          break;
+        }
+      }
+
+      this.logger.info(
+        `Successfully extracted ${scrollbackLines.length} lines from terminal buffer`
+      );
+    } catch (error) {
+      this.logger.error(`Error accessing terminal buffer: ${String(error)}`);
+      throw error;
+    }
+
+    return scrollbackLines;
+  }
+
+  /**
+   * Restore scrollback content to xterm terminal
+   */
+  private restoreScrollbackToXterm(terminal: Terminal, scrollbackContent: ScrollbackLine[]): void {
+    this.logger.info(`Restoring ${scrollbackContent.length} lines to terminal`);
+
+    if (!terminal) {
+      throw new Error('Terminal instance not provided');
+    }
+
+    // Write each line to the terminal
+    for (const line of scrollbackContent) {
+      terminal.writeln(line.content);
+    }
+
+    this.logger.info(`Restored ${scrollbackContent.length} lines to terminal`);
+  }
+
+  /**
+   * Extract scrollback data from terminal instance
+   */
+  private extractScrollbackFromTerminal(terminal: any, maxLines: number): string[] {
+    try {
+      if (!terminal || !terminal.terminal) {
+        return [];
+      }
+
+      const xtermInstance = terminal.terminal;
+
+      // Try xterm.js serialize addon first (if available)
+      if (xtermInstance.serialize) {
+        const serialized = xtermInstance.serialize();
+        return serialized.split('\n').slice(-maxLines);
+      }
+
+      // Fallback: Read from buffer directly
+      if (xtermInstance.buffer && xtermInstance.buffer.active) {
+        const buffer = xtermInstance.buffer.active;
+        const lines: string[] = [];
+
+        const startLine = Math.max(0, buffer.length - maxLines);
+        for (let i = startLine; i < buffer.length; i++) {
+          const line = buffer.getLine(i);
+          if (line) {
+            lines.push(line.translateToString());
+          }
+        }
+
+        return lines;
+      }
+
+      return [];
+    } catch (error) {
+      this.logger.error('Failed to extract scrollback from terminal', error);
+      return [];
+    }
+  }
+
+  /**
+   * Normalize scrollback data to consistent format
+   */
+  private normalizeScrollbackData(
+    scrollbackContent: string[] | ScrollbackLine[]
+  ): ScrollbackLine[] {
+    if (!Array.isArray(scrollbackContent) || scrollbackContent.length === 0) {
+      this.logger.warn('Empty scrollback content');
+      return [];
+    }
+
+    // Check if it's string array
+    if (typeof scrollbackContent[0] === 'string') {
+      // Convert string array to object array
+      return (scrollbackContent as string[]).map((line) => ({
+        content: line,
+        type: 'output' as const,
+      }));
+    }
+
+    // Already in object format, ensure type is properly typed
+    return (scrollbackContent as ScrollbackLine[]).map((item) => ({
+      content: item.content,
+      type: item.type === 'input' || item.type === 'error' ? item.type : ('output' as const),
+      timestamp: item.timestamp,
+    }));
+  }
+
+  /**
+   * Clean up resources
+   */
+  public dispose(): void {
+    // No resources to clean up
+  }
+}
