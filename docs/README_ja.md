@@ -154,7 +154,7 @@ VS Codeの設定（`settings.json`）で拡張機能をカスタマイズしま�
 | `sidebarTerminal.enableCliAgentIntegration` | boolean | `true` | Claude CodeなどのCLIエージェントのファイル参照ショートカットを有効にします。 |
 | `sidebarTerminal.enableGitHubCopilotIntegration` | boolean | `true` | GitHub Copilot Chat統合ショートカットを有効にします。 |
 | `sidebarTerminal.enablePersistentSessions` | boolean | `true` | VS Codeの再起動をまたいでターミナルセッションの永続化を有効にします。 |
-| `sidebarTerminal.scrollbackLines` | number | 1000 | ターミナル履歴から復元する最大行数。 |
+| `sidebarTerminal.scrollbackLines` | number | 2000 | ターミナル履歴から復元する最大行数。 |
 | `sidebarTerminal.scrollbackCompression` | boolean | `true` | ストレージサイズを削減するためにスクロールバックデータを圧縮します。 |
 
 ## 🛠️ 開発

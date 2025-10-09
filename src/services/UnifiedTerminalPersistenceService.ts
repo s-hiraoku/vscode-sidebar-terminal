@@ -48,7 +48,7 @@ export class UnifiedTerminalPersistenceService {
   private static readonly SESSION_KEY = 'unified-terminal-sessions-v1';
   private static readonly SESSION_VERSION = '1.0.0';
   private static readonly MAX_SESSION_AGE_DAYS = 7;
-  private static readonly MAX_SCROLLBACK_LINES = 1000;
+  private static readonly MAX_SCROLLBACK_LINES = 2000;
   private static readonly MAX_CONCURRENT_RESTORES = 3;
 
   constructor(

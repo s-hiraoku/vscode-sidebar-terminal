@@ -21,6 +21,9 @@ describe('SecondaryTerminalProvider - Dynamic Split Direction (Issue #148)', fun
   let postMessageStub: sinon.SinonStub;
 
   beforeEach(function () {
+    // Restore any previous stubs first
+    sinon.restore();
+
     // Create mocks
     mockTerminalManager = sinon.createStubInstance(TerminalManager);
     mockContext = {
@@ -59,8 +62,10 @@ describe('SecondaryTerminalProvider - Dynamic Split Direction (Issue #148)', fun
   });
 
   afterEach(function () {
+    if (provider) {
+      provider.dispose();
+    }
     sinon.restore();
-    provider.dispose();
   });
 
   describe('Panel Location Detection', function () {
@@ -168,21 +173,103 @@ describe('SecondaryTerminalProvider - Dynamic Split Direction (Issue #148)', fun
       );
     });
 
-    it('should default to vertical split when no direction specified', function () {
+    it('should auto-determine horizontal split when in sidebar and no direction specified', function () {
       // Arrange
       mockTerminalManager.getTerminals.returns([]);
       mockTerminalManager.createTerminal.returns('terminal-1');
 
+      // Recreate provider with sidebar configuration
+      provider.dispose();
+      const configStub = sinon.stub(vscode.workspace, 'getConfiguration');
+      configStub.returns({
+        get: sinon.stub().callsFake((key: string) => {
+          if (key === 'dynamicSplitDirection') return true;
+          if (key === 'panelLocation') return 'sidebar';
+          return undefined;
+        }),
+      } as any);
+
+      provider = new SecondaryTerminalProvider(mockContext, mockTerminalManager);
+      provider.resolveWebviewView(mockWebviewView, {} as any, {} as any);
+
       // Act
       provider.splitTerminal();
 
-      // Assert
+      // Assert - should auto-determine horizontal for sidebar
+      expect(postMessageStub).to.have.been.calledWith(
+        sinon.match({
+          command: 'split',
+          direction: 'horizontal',
+        })
+      );
+
+      configStub.restore();
+    });
+
+    it('should auto-determine vertical split when in panel and no direction specified', function () {
+      // Arrange
+      mockTerminalManager.getTerminals.returns([]);
+      mockTerminalManager.createTerminal.returns('terminal-1');
+
+      // Recreate provider with panel configuration
+      provider.dispose();
+      const configStub = sinon.stub(vscode.workspace, 'getConfiguration');
+      configStub.returns({
+        get: sinon.stub().callsFake((key: string) => {
+          if (key === 'dynamicSplitDirection') return true;
+          if (key === 'panelLocation') return 'panel';
+          return undefined;
+        }),
+      } as any);
+
+      provider = new SecondaryTerminalProvider(mockContext, mockTerminalManager);
+      provider.resolveWebviewView(mockWebviewView, {} as any, {} as any);
+
+      // Act
+      provider.splitTerminal();
+
+      // Assert - should auto-determine vertical for panel
       expect(postMessageStub).to.have.been.calledWith(
         sinon.match({
           command: 'split',
           direction: 'vertical',
         })
       );
+
+      configStub.restore();
+    });
+
+    it('should use horizontal split when dynamicSplitDirection is disabled', function () {
+      // Arrange
+      mockTerminalManager.getTerminals.returns([]);
+      mockTerminalManager.createTerminal.returns('terminal-1');
+
+      // Recreate provider with dynamic split disabled
+      provider.dispose();
+      const configStub = sinon.stub(vscode.workspace, 'getConfiguration');
+      configStub.returns({
+        get: sinon.stub().callsFake((key: string) => {
+          if (key === 'dynamicSplitDirection') return false;
+          if (key === 'panelLocation') return 'auto';
+          return undefined;
+        }),
+      } as any);
+
+      provider = new SecondaryTerminalProvider(mockContext, mockTerminalManager);
+      provider.resolveWebviewView(mockWebviewView, {} as any, {} as any);
+
+      // Act
+      provider.splitTerminal();
+
+      // Assert - should default to horizontal when dynamic split is disabled
+      expect(postMessageStub).to.have.been.calledWith(
+        sinon.match({
+          command: 'split',
+          direction: 'horizontal',
+        })
+      );
+
+      configStub.restore();
     });
   });
 

@@ -76,7 +76,10 @@ export class ExtensionLifecycle {
       // Initialize enhanced shell integration service
       log('🚀 [EXTENSION] Initializing enhanced shell integration service...');
       try {
-        this.shellIntegrationService = new EnhancedShellIntegrationService(this.terminalManager);
+        this.shellIntegrationService = new EnhancedShellIntegrationService(
+          this.terminalManager,
+          context
+        );
         // Set shell integration service on TerminalManager
         this.terminalManager.setShellIntegrationService(this.shellIntegrationService);
         log('✅ [EXTENSION] Enhanced shell integration service initialized and connected');

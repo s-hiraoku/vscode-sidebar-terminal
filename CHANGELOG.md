@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Improved
+- **Session Persistence Enhancement**: Expanded persistent session scrollback from 200 to 1000 lines (5x increase)
+  - Better context preservation across VS Code restarts
+  - Improved AI Agent workflow continuity
+  - Enhanced debugging capabilities with longer history
+- **Storage Capacity**: Increased scrollback storage limit from 10MB to 20MB (2x increase)
+  - Supports larger session data without truncation
+  - Better handling of long-running terminal sessions
+- **Scrollback Buffer**: Expanded maximum scrollback from 50,000 to 100,000 lines (2x increase)
+  - Accommodates longer terminal output history
+  - Improved support for extensive logging and debugging scenarios
+- **Display Buffer**: Increased default scrollback from 1,000 to 2,000 lines (2x increase)
+  - More visible history without manual configuration
+  - Better out-of-box experience for typical workflows
+
 ## [0.1.118] - 2025-10-08
 
 ### Refactoring

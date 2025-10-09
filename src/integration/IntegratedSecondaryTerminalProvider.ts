@@ -1,5 +1,5 @@
 /**
- * Refactored SecondaryTerminalProvider Integration
+ * Integrated SecondaryTerminalProvider
  *
  * This file demonstrates how to integrate the UnifiedTerminalPersistenceService
  * and PersistenceMessageHandler into the existing SecondaryTerminalProvider.
@@ -27,12 +27,12 @@ import {
 import { log } from '../utils/logger';
 
 /**
- * Example of how to refactor SecondaryTerminalProvider to use the new architecture
+ * Example of integrated SecondaryTerminalProvider using the new architecture
  *
  * Note: This is a demonstration class showing the integration patterns.
  * The actual SecondaryTerminalProvider should be updated following these patterns.
  */
-export class SecondaryTerminalProviderRefactoredExample implements vscode.WebviewViewProvider {
+export class IntegratedSecondaryTerminalProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = 'secondaryTerminal';
 
   // Core services

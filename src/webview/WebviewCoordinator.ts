@@ -1,5 +1,5 @@
 /**
- * Refactored Webview Coordinator
+ * Webview Coordinator
  * Demonstrates the simplified architecture using extracted services
  */
 
@@ -14,9 +14,9 @@ import {
 
 /**
  * Simplified webview coordinator using service architecture
- * Replaces the complex RefactoredTerminalWebviewManager
+ * Replaces the complex terminal webview manager
  */
-export class RefactoredWebviewCoordinator {
+export class WebviewCoordinator {
   private readonly terminalCoordinator: ITerminalCoordinator;
   private readonly uiController: IUIController;
   private readonly messageRouter: MessageRouter;
@@ -34,7 +34,7 @@ export class RefactoredWebviewCoordinator {
    */
   public async initialize(): Promise<void> {
     if (this.isInitialized) {
-      throw new Error('RefactoredWebviewCoordinator is already initialized');
+      throw new Error('WebviewCoordinator is already initialized');
     }
 
     try {
@@ -51,10 +51,10 @@ export class RefactoredWebviewCoordinator {
       this.updateUIState();
 
       this.isInitialized = true;
-      log('RefactoredWebviewCoordinator initialized successfully');
+      log('WebviewCoordinator initialized successfully');
 
     } catch (error) {
-      log('Failed to initialize RefactoredWebviewCoordinator:', error);
+      log('Failed to initialize WebviewCoordinator:', error);
       throw error;
     }
   }
@@ -388,7 +388,7 @@ export class RefactoredWebviewCoordinator {
       this.uiController.dispose();
       this.messageRouter.dispose();
       this.isInitialized = false;
-      log('RefactoredWebviewCoordinator disposed');
+      log('WebviewCoordinator disposed');
     }
   }
 }

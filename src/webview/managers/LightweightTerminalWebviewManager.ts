@@ -1,5 +1,5 @@
 /**
- * Refactored Terminal WebView Manager
+ * Lightweight Terminal WebView Manager
  *
  * 責務分離による軽量化されたWebViewマネージャー
  * 協調パターンを使用して各専門マネージャーを統合
@@ -54,7 +54,7 @@ import { ConfigManager } from './ConfigManager';
 import { PerformanceManager } from './PerformanceManager';
 import { UIManager } from './UIManager';
 import { InputManager } from './InputManager';
-import { RefactoredMessageManager } from './RefactoredMessageManager';
+import { ConsolidatedMessageManager } from './ConsolidatedMessageManager';
 import { OptimizedTerminalPersistenceManager } from '../services/OptimizedPersistenceManager';
 import { SimplePersistenceManager } from './SimplePersistenceManager';
 import { WebViewApiManager } from './WebViewApiManager';
@@ -70,7 +70,7 @@ import { DisplayModeManager } from './DisplayModeManager';
 import { HeaderManager } from './HeaderManager';
 
 /**
- * リファクタリングされたTerminalWebviewManager
+ * 軽量化されたTerminalWebviewManager
  *
  * 主な改善点：
  * - 責務分離による専門マネージャー協調
@@ -78,7 +78,7 @@ import { HeaderManager } from './HeaderManager';
  * - 協調パターンによる疎結合設計
  * - 拡張性とメンテナンス性の向上
  */
-export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
+export class LightweightTerminalWebviewManager implements IManagerCoordinator {
   // 専門マネージャーの協調
   private webViewApiManager: WebViewApiManager;
   private terminalLifecycleManager: TerminalLifecycleManager;
@@ -252,7 +252,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     this.optimizedPersistenceManager = new OptimizedTerminalPersistenceManager();
 
     // Message Manager は後で初期化
-    this.messageManager = new RefactoredMessageManager();
+    this.messageManager = new ConsolidatedMessageManager();
     this.messageManager.setCoordinator(this); // 🆕 Coordinator を設定（×ボタン機能に必要）
     this.persistenceManager = this.simplePersistenceManager;
 

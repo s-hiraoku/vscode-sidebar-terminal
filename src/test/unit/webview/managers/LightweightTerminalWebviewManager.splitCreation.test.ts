@@ -2,13 +2,13 @@ import { describe, it, afterEach } from 'mocha';
 import { expect } from 'chai';
 import sinon, { SinonFakeTimers, SinonSpy } from 'sinon';
 import { Terminal } from '@xterm/xterm';
-import { RefactoredTerminalWebviewManager } from '../../../../webview/managers/RefactoredTerminalWebviewManager';
+import { LightweightTerminalWebviewManager } from '../../../../webview/managers/LightweightTerminalWebviewManager';
 import { TerminalLifecycleManager } from '../../../../webview/managers/TerminalLifecycleManager';
 import { SplitManager } from '../../../../webview/managers/SplitManager';
 import { IUIManager, ITerminalTabManager } from '../../../../webview/interfaces/ManagerInterfaces';
 
-describe('RefactoredTerminalWebviewManager ensureSplitModeBeforeTerminalCreation', () => {
-  let manager: RefactoredTerminalWebviewManager;
+describe('LightweightTerminalWebviewManager ensureSplitModeBeforeTerminalCreation', () => {
+  let manager: LightweightTerminalWebviewManager;
   let showAllTerminalsSplit: SinonSpy;
   let clock: SinonFakeTimers | undefined;
 
@@ -17,8 +17,8 @@ describe('RefactoredTerminalWebviewManager ensureSplitModeBeforeTerminalCreation
     existingTerminals: number
   ): void => {
     manager = Object.create(
-      RefactoredTerminalWebviewManager.prototype
-    ) as RefactoredTerminalWebviewManager;
+      LightweightTerminalWebviewManager.prototype
+    ) as LightweightTerminalWebviewManager;
 
     const terminals = new Map<string, unknown>();
     for (let i = 0; i < existingTerminals; i++) {

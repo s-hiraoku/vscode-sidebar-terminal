@@ -4,7 +4,7 @@
  * 統合されたメッセージマネージャー - 最高のアーキテクチャと完全な機能性を組み合わせ
  *
  * 主な特徴:
- * - ハンドラーベースのクリーンアーキテクチャ（RefactoredMessageManagerから）
+ * - ハンドラーベースのクリーンアーキテクチャ
  * - 完全なメッセージ処理機能（元のMessageManagerから）
  * - 責務分離と拡張性を兼ね備えた設計
  * - プライオリティキューとエラーハンドリング
@@ -35,7 +35,7 @@ import { MessageCommand } from './messageTypes';
  * - 拡張性とメンテナンス性を両立
  * - プライオリティキューとロバストなエラーハンドリング
  */
-export class RefactoredMessageManager implements IMessageManager {
+export class ConsolidatedMessageManager implements IMessageManager {
   // Specialized logger for Message Manager
   private readonly logger = messageLogger;
 
@@ -1608,7 +1608,30 @@ export class RefactoredMessageManager implements IMessageManager {
   }
 
   /**
+   * Panel Location Detection Constants
+   *
+   * These constants are used to determine whether the webview is displayed in the sidebar
+   * or in the bottom panel based on aspect ratio heuristics.
+   *
+   * PANEL_ASPECT_RATIO_THRESHOLD: The aspect ratio (width/height) threshold used to distinguish
+   * between sidebar and panel layouts. A value of 1.2 was chosen based on empirical testing:
+   * - Sidebar layouts are typically narrow and tall (aspect ratio < 1.2)
+   * - Bottom panel layouts are typically wide and short (aspect ratio > 1.2)
+   * - The threshold of 1.2 provides a comfortable buffer above 1.0 to account for
+   *   edge cases where the sidebar might be slightly wider than tall
+   *
+   * This threshold balances accuracy with tolerance for various window configurations.
+   */
+  private static readonly PANEL_ASPECT_RATIO_THRESHOLD = 1.2;
+
+  /**
    * Analyze WebView dimensions to determine panel location
+   *
+   * This method uses aspect ratio heuristics to detect whether the webview is displayed
+   * in the sidebar (narrow and tall) or bottom panel (wide and short). The detection
+   * is based on the container's width/height ratio compared to PANEL_ASPECT_RATIO_THRESHOLD.
+   *
+   * @returns 'sidebar' if the layout appears to be in the sidebar, 'panel' if in bottom panel
    */
   private analyzeWebViewDimensions(): 'sidebar' | 'panel' {
     try {
@@ -1632,18 +1655,16 @@ export class RefactoredMessageManager implements IMessageManager {
       // Calculate aspect ratio (width/height)
       const aspectRatio = width / height;
 
-      this.logger.debug(`Aspect ratio: ${aspectRatio.toFixed(2)}`);
+      this.logger.debug(`Aspect ratio: ${aspectRatio.toFixed(2)} (width: ${width}, height: ${height})`);
 
-      // Heuristic: Sidebar usually narrow and tall, Bottom panel usually wide and short
-      if (aspectRatio > 2.0) {
-        this.logger.info('Wide layout detected → Bottom Panel');
+      // Apply heuristic: Compare aspect ratio against threshold
+      // Sidebar: narrow and tall (aspect ratio < threshold)
+      // Bottom Panel: wide and short (aspect ratio > threshold)
+      if (aspectRatio > ConsolidatedMessageManager.PANEL_ASPECT_RATIO_THRESHOLD) {
+        this.logger.info(`Wide layout detected (ratio: ${aspectRatio.toFixed(2)} > ${ConsolidatedMessageManager.PANEL_ASPECT_RATIO_THRESHOLD}) → Bottom Panel`);
         return 'panel';
-      } else if (aspectRatio < 1.5) {
-        this.logger.info('Tall layout detected → Sidebar');
-        return 'sidebar';
       } else {
-        // Ambiguous, default to sidebar
-        this.logger.info('Ambiguous aspect ratio, defaulting to sidebar');
+        this.logger.info(`Tall/Square layout detected (ratio: ${aspectRatio.toFixed(2)} ≤ ${ConsolidatedMessageManager.PANEL_ASPECT_RATIO_THRESHOLD}) → Sidebar`);
         return 'sidebar';
       }
     } catch (error) {

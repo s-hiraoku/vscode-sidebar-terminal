@@ -246,12 +246,12 @@
     "menus": {
       "view/title": [
         {
-          "command": "secondaryTerminal.splitTerminal",
+          "command": "secondaryTerminal.splitTerminalHorizontal",
           "when": "view == secondaryTerminal && secondaryTerminal.panelLocation == sidebar",
           "group": "navigation@1"
         },
         {
-          "command": "secondaryTerminal.splitTerminalHorizontal",
+          "command": "secondaryTerminal.splitTerminal",
           "when": "view == secondaryTerminal && secondaryTerminal.panelLocation == panel",
           "group": "navigation@1"
         },
@@ -421,6 +421,11 @@
           "default": true,
           "description": "Focus secondary terminal after sending @filename with CMD+OPT+L"
         },
+        "secondaryTerminal.enableShellIntegration": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable shell integration for command tracking, history, and working directory detection. Requires terminal restart to take effect."
+        },
         "secondaryTerminal.enableCliAgentIntegration": {
           "type": "boolean",
           "default": true,
@@ -438,7 +443,7 @@
         },
         "secondaryTerminal.persistentSessionScrollback": {
           "type": "number",
-          "default": 100,
+          "default": 1000,
           "minimum": 0,
           "maximum": 10000,
           "description": "Number of lines to restore from terminal history (0 to disable scrollback restore)"
@@ -537,9 +542,9 @@
         },
         "secondaryTerminal.scrollback": {
           "type": "number",
-          "default": 1000,
+          "default": 2000,
           "minimum": 0,
-          "maximum": 50000,
+          "maximum": 100000,
           "description": "Controls the maximum number of lines the terminal keeps in its buffer."
         },
         "secondaryTerminal.cursorStyle": {
@@ -617,7 +622,7 @@
         },
         "secondaryTerminal.scrollbackLines": {
           "type": "number",
-          "default": 1000,
+          "default": 2000,
           "minimum": 0,
           "maximum": 10000,
           "description": "Maximum number of lines to restore from terminal history (0 to disable)"
@@ -634,7 +639,7 @@
         },
         "secondaryTerminal.scrollbackMaxStorageSize": {
           "type": "number",
-          "default": 10485760,
+          "default": 20971520,
           "minimum": 1048576,
           "maximum": 104857600,
           "description": "Maximum storage size for scrollback data in bytes (1MB - 100MB)"

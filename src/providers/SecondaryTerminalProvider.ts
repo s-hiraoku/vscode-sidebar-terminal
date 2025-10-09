@@ -30,8 +30,53 @@ import {
   MessageHandler,
 } from '../types/type-guards';
 
+/**
+ * Panel location type for WebView placement
+ * - 'sidebar': WebView is displayed in the sidebar (narrow and tall)
+ * - 'panel': WebView is displayed in the bottom panel (wide and short)
+ */
+type PanelLocation = 'sidebar' | 'panel';
+
+/**
+ * Split direction type for terminal layout
+ * - 'horizontal': Terminals are stacked vertically (top/bottom)
+ * - 'vertical': Terminals are arranged side by side (left/right)
+ */
+type SplitDirection = 'horizontal' | 'vertical';
+
+/**
+ * Type guard to check if a value is a valid PanelLocation
+ */
+function isPanelLocation(value: unknown): value is PanelLocation {
+  return value === 'sidebar' || value === 'panel';
+}
+
+/**
+ * Type guard to check if a value is a valid SplitDirection
+ */
+function isSplitDirection(value: unknown): value is SplitDirection {
+  return value === 'horizontal' || value === 'vertical';
+}
+
 export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vscode.Disposable {
   public static readonly viewType = 'secondaryTerminal';
+
+  /**
+   * Configuration keys for secondary terminal settings
+   */
+  private static readonly CONFIG_KEYS = {
+    DYNAMIC_SPLIT_DIRECTION: 'dynamicSplitDirection',
+    PANEL_LOCATION: 'panelLocation',
+    ENABLE_SHELL_INTEGRATION: 'enableShellIntegration',
+  } as const;
+
+  /**
+   * VS Code context keys for when clauses
+   */
+  private static readonly CONTEXT_KEYS = {
+    PANEL_LOCATION: 'secondaryTerminal.panelLocation',
+  } as const;
+
   private _disposables: vscode.Disposable[] = [];
   private _terminalEventDisposables: vscode.Disposable[] = [];
   private _terminalIdMapping?: Map<string, string>; // VS Code Pattern: Map Extension terminal ID to WebView terminal ID
@@ -39,6 +84,16 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   private _view?: vscode.WebviewView;
   private _isInitialized = false; // Prevent duplicate initialization
   // Removed all state variables - using simple "fresh start" approach
+
+  /**
+   * Cached panel location reported by WebView
+   *
+   * This cache stores the most recent panel location detected by the WebView's
+   * dimension analysis. It is used to determine the optimal split direction:
+   * - 'sidebar': Narrow/tall layout → horizontal split (stacked vertically)
+   * - 'panel': Wide/short layout → vertical split (side by side)
+   */
+  private _cachedPanelLocation: PanelLocation = 'sidebar';
 
   // Minimal command router for incoming webview messages
   private readonly _messageRouter: SecondaryTerminalMessageRouter;
@@ -878,26 +933,39 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   }
 
   /**
-   * Extracted handler for reporting panel location
+   * Handle panel location report from WebView
+   *
+   * This handler receives panel location information from the WebView's dimension
+   * analysis and updates both the cached location and VS Code context key.
+   *
+   * @param message - WebView message containing location information
    */
   private async _handleReportPanelLocation(message: WebviewMessage): Promise<void> {
     log('📍 [DEBUG] Panel location reported from WebView (router):', message.location);
+
     const loc = message.location;
-    if (loc !== 'sidebar' && loc !== 'panel') {
-      log('⚠️ [DEBUG] Invalid or missing panel location');
+
+    // Validate panel location using type guard
+    if (!isPanelLocation(loc)) {
+      log('⚠️ [DEBUG] Invalid or missing panel location:', loc);
       return;
     }
 
-    // Update context key for VS Code when clause
-    void vscode.commands.executeCommand('setContext', 'secondaryTerminal.panelLocation', loc);
+    // Cache the panel location for split direction determination
+    this._cachedPanelLocation = loc;
+    log('📍 [DEBUG] Cached panel location updated:', loc);
+
+    // Update context key for VS Code when clause (used in package.json menus)
+    const { PANEL_LOCATION } = SecondaryTerminalProvider.CONTEXT_KEYS;
+    void vscode.commands.executeCommand('setContext', PANEL_LOCATION, loc);
     log('📍 [DEBUG] Context key updated with panel location:', loc);
 
-    // Notify WebView of the panel location (keeps behavior consistent)
+    // Notify WebView of the confirmed panel location (keeps behavior consistent)
     await this._sendMessage({
       command: 'panelLocationUpdate',
       location: loc,
     });
-    log('📍 [DEBUG] Panel location update sent to WebView:', loc);
+    log('📍 [DEBUG] Panel location update confirmed to WebView:', loc);
   }
 
   /**
@@ -930,30 +998,63 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   }
 
   /**
-   * 🆕 Determine current panel location based on VS Code API inspection
+   * Determine split direction based on current panel location
+   *
+   * Calculates the optimal split direction based on the available space:
+   * - Sidebar (tall/narrow): vertical split → column layout → terminals stacked
+   * - Bottom Panel (wide/short): horizontal split → row layout → terminals side by side
+   *
+   * @returns Optimal split direction for current layout
    */
-  private _getCurrentPanelLocation(): 'sidebar' | 'panel' {
+  private _determineSplitDirection(): SplitDirection {
+    const panelLocation = this._getCurrentPanelLocation();
+
+    // Map panel location to split direction
+    // Sidebar (tall/narrow) → vertical split → column layout (terminals stacked)
+    // Panel (wide/short) → horizontal split → row layout (terminals side by side)
+    const splitDirection: SplitDirection = panelLocation === 'panel' ? 'horizontal' : 'vertical';
+
+    log(
+      `🔀 [SPLIT] Auto-determined direction based on panel location (${panelLocation}): ${splitDirection}`
+    );
+
+    return splitDirection;
+  }
+
+  /**
+   * Determine current panel location for split direction calculation
+   *
+   * This method determines the current panel location by checking:
+   * 1. If dynamic split direction is disabled → return 'sidebar'
+   * 2. If manual location is set → return manual value
+   * 3. Otherwise → return cached location from WebView detection
+   *
+   * @returns Current panel location ('sidebar' or 'panel')
+   */
+  private _getCurrentPanelLocation(): PanelLocation {
     const config = vscode.workspace.getConfiguration('secondaryTerminal');
+    const { DYNAMIC_SPLIT_DIRECTION, PANEL_LOCATION } = SecondaryTerminalProvider.CONFIG_KEYS;
 
     // Check if dynamic split direction feature is enabled
-    const isDynamicSplitEnabled = config.get<boolean>('dynamicSplitDirection', true);
+    const isDynamicSplitEnabled = config.get<boolean>(DYNAMIC_SPLIT_DIRECTION, true);
     if (!isDynamicSplitEnabled) {
       log('📍 [PANEL-DETECTION] Dynamic split direction is disabled, defaulting to sidebar');
       return 'sidebar';
     }
 
     // Get manual panel location setting
-    const manualPanelLocation = config.get<'sidebar' | 'panel' | 'auto'>('panelLocation', 'auto');
+    const manualPanelLocation = config.get<'sidebar' | 'panel' | 'auto'>(PANEL_LOCATION, 'auto');
 
     if (manualPanelLocation !== 'auto') {
       log(`📍 [PANEL-DETECTION] Using manual panel location: ${manualPanelLocation}`);
-      return manualPanelLocation;
+      return manualPanelLocation as PanelLocation;
     }
 
-    // 🔧 For auto-detection, default to sidebar
-    // Actual detection will be done asynchronously via WebView
-    log('📍 [PANEL-DETECTION] Auto mode - defaulting to sidebar, will detect via WebView');
-    return 'sidebar';
+    // For auto-detection, use cached value from WebView
+    log(
+      `📍 [PANEL-DETECTION] Auto mode - using cached panel location: ${this._cachedPanelLocation}`
+    );
+    return this._cachedPanelLocation;
   }
 
   /**
@@ -986,17 +1087,28 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     );
   }
 
-  public splitTerminal(direction?: 'horizontal' | 'vertical'): void {
-    // Terminal split operation
+  /**
+   * Split terminal with automatic direction detection
+   *
+   * Creates a new terminal and splits the view. The split direction can be:
+   * - Explicitly specified via the direction parameter
+   * - Auto-determined based on panel location:
+   *   - Sidebar (tall): horizontal split (stacked vertically)
+   *   - Panel (wide): vertical split (side by side)
+   *
+   * @param direction - Optional split direction ('horizontal' or 'vertical')
+   */
+  public splitTerminal(direction?: SplitDirection): void {
     try {
-      // Simplified: Let TerminalManager handle the validation
-      // Remove complex pre-validation and trust the createTerminal() method
       log('🔍 [SPLIT] Attempting terminal creation - validation delegated to TerminalManager');
 
-      // First send the SPLIT command to prepare the UI
+      // Determine split direction based on panel location if not explicitly provided
+      const splitDirection: SplitDirection = direction ?? this._determineSplitDirection();
+
+      // Send the SPLIT command to prepare the UI
       void this._sendMessage({
         command: TERMINAL_CONSTANTS.COMMANDS.SPLIT,
-        direction: direction || 'vertical', // Default to vertical if not specified
+        direction: splitDirection,
       });
 
       // SPINNER FIX: Defer terminal creation for split operations too

@@ -347,12 +347,13 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
   }
 
   public splitTerminal(direction: 'horizontal' | 'vertical'): void {
-    if (direction === 'vertical') {
-      this.addTerminalToMultiSplit();
-    } else {
-      // Keep horizontal split as the old 2-pane split for now
-      this.splitManagerLogger.info('Horizontal split not implemented in this version');
-    }
+    this.splitManagerLogger.info(`Splitting terminal with direction: ${direction}`);
+
+    // Set split direction for layout calculation
+    this.splitDirection = direction;
+
+    // Add terminal to multi-split layout (works for both directions)
+    this.addTerminalToMultiSplit();
   }
 
   private addTerminalToMultiSplit(): void {

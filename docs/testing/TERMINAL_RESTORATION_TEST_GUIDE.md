@@ -226,8 +226,8 @@ Expected WebView logs:
 **Debug Steps**:
 1. **Check Scrollback Settings**:
    ```json
-   "secondaryTerminal.persistentSessionScrollback": 100,
-   "secondaryTerminal.scrollbackLines": 1000
+   "secondaryTerminal.persistentSessionScrollback": 1000,
+   "secondaryTerminal.scrollbackLines": 2000
    ```
 
 2. **Monitor Buffer Extraction**:

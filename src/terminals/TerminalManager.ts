@@ -426,21 +426,22 @@ export class TerminalManager {
     try {
       log(`🔍 [TERMINAL] Post-creation initialization for: ${terminalId} (Safe Mode: ${safeMode})`);
 
-      // Inject shell integration if service is available
-      try {
-        if (this._shellIntegrationService && !safeMode) {
-          // Skip shell integration in safe mode to avoid conflicts
-          log(`🔧 [TERMINAL] Injecting shell integration for: ${terminalId}`);
-          const terminal = this._terminals.get(terminalId);
-          if (terminal) {
-            const shellPath = (terminal.ptyProcess as any)?.spawnfile || '/bin/bash';
-            this._shellIntegrationService.injectShellIntegration(terminalId, shellPath, ptyProcess);
-          }
-        } else if (safeMode) {
-          log(`🛡️ [TERMINAL] Skipping shell integration in safe mode for: ${terminalId}`);
+      // Inject shell integration if service is available (async)
+      if (this._shellIntegrationService && !safeMode) {
+        // Skip shell integration in safe mode to avoid conflicts
+        log(`🔧 [TERMINAL] Injecting shell integration for: ${terminalId}`);
+        const terminal = this._terminals.get(terminalId);
+        if (terminal) {
+          const shellPath = (terminal.ptyProcess as any)?.spawnfile || '/bin/bash';
+          // Fire and forget - permission prompt will handle async flow
+          void this._shellIntegrationService
+            .injectShellIntegration(terminalId, shellPath, ptyProcess)
+            .catch((error) => {
+              log(`⚠️ [TERMINAL] Shell integration injection error: ${error}`);
+            });
         }
-      } catch (error) {
-        log(`⚠️ [TERMINAL] Shell integration injection error: ${error}`);
+      } else if (safeMode) {
+        log(`🛡️ [TERMINAL] Skipping shell integration in safe mode for: ${terminalId}`);
       }
 
       // Kick off deterministic prompt readiness guard

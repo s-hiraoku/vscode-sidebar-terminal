@@ -152,7 +152,9 @@ if (/(^|\s)github copilot(\s|$)/i.test(text)) { }
 BUFFER_FLUSH_INTERVAL = 16;  // 60fps for normal output
 CLI_AGENT_FLUSH_INTERVAL = 4; // 250fps for AI agents
 SESSION_SAVE_INTERVAL = 300000; // 5 minutes
-MAX_SCROLLBACK = 1000; // Lines to persist
+MAX_SCROLLBACK = 2000; // Lines to persist
+PERSISTENT_SESSION_SCROLLBACK = 1000; // Lines to save in session
+MAX_STORAGE_SIZE = 20MB; // Maximum storage for scrollback
 ```
 
 ## Testing Strategy

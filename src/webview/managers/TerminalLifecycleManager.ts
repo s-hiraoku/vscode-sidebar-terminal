@@ -117,7 +117,7 @@ export class TerminalLifecycleManager {
     fastScrollModifier: 'alt' as const,
     fastScrollSensitivity: 5,
     scrollSensitivity: 1,
-    scrollback: 1000,
+    scrollback: 2000,
     scrollOnUserInput: true,
 
     // Word and Selection
