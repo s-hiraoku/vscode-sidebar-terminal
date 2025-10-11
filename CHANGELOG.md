@@ -22,6 +22,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - More visible history without manual configuration
   - Better out-of-box experience for typical workflows
 
+## [0.1.119] - 2025-10-11
+
+### Fixed
+- **Split Layout Consistency**: New terminals created while split mode is active now join the existing layout instead of opening in fullscreen.
+
+### Changed
+- **Type Safety**: Hardened the shell-integration bridge and diagnostics typing to eliminate remaining `any` usage and keep eslint clean.
+
 ## [0.1.118] - 2025-10-08
 
 ### Refactoring

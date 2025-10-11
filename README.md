@@ -52,6 +52,7 @@
 - **Stable Tab Visibility**: Terminal tabs remain visible throughout all operations (v0.1.109+)
 - **IME Support**: Full Japanese and multi-language input method support
 - **Split Terminal Views**: Vertical and horizontal terminal splitting optimized for AI agent workflows
+- **Split Layout Stability**: New terminals created in split mode now stay aligned with the existing layout without jumping to fullscreen (v0.1.119)
 - **Command Palette Integration**: Full VS Code command palette support
 
 ### 📊 **Performance & Monitoring**
