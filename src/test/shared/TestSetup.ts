@@ -347,7 +347,7 @@ export async function setupTestEnvironment(): Promise<void> {
     nextTick: (callback: () => void) => setImmediate(callback),
     env: { ...process.env, NODE_ENV: 'test' },
     platform: process.platform,
-    cwd: () => process.cwd(),
+    cwd: process.cwd ? (() => process.cwd()) : (() => '/test'),
     argv: process.argv,
     pid: process.pid,
     on: () => {},
@@ -376,6 +376,9 @@ export async function setupTestEnvironment(): Promise<void> {
     }
     if (!existingProcess.off) {
       existingProcess.off = () => existingProcess;
+    }
+    if (!existingProcess.cwd) {
+      existingProcess.cwd = () => '/test';
     }
   }
 
@@ -783,6 +786,11 @@ export function setupTestEnvironmentSync(): void {
   // Set up DOM environment
   // setupJSDOMEnvironment(); // Temporarily disabled - tests don't need DOM yet
   setupConsoleMocks(); // Re-enabled with pass-through implementation
+
+  // Ensure process.cwd exists
+  if (!process.cwd || typeof process.cwd !== 'function') {
+    (process as any).cwd = () => '/test';
+  }
 }
 
 // Auto-setup when this module is imported (sync version for compatibility)
