@@ -18,6 +18,14 @@ startup('Refactored WebView script started');
 import '@xterm/xterm/css/xterm.css';
 import { LightweightTerminalWebviewManager } from './managers/LightweightTerminalWebviewManager';
 
+declare global {
+  interface Window {
+    terminalManager?: LightweightTerminalWebviewManager;
+    debugLog?: typeof log;
+    getManagerStats?: () => ReturnType<LightweightTerminalWebviewManager['getManagerStats']> | null;
+  }
+}
+
 /**
  * グローバルターミナルマネージャーインスタンス
  */
@@ -102,7 +110,19 @@ async function initializeWebView(): Promise<void> {
     }, 500); // Small delay to ensure Extension has processed webviewReady
 
     // 🔍 [DEBUG] Expose terminal manager globally for debugging
-    (window as any).terminalManager = terminalManager;
+    window.terminalManager = terminalManager;
+
+    // 📍 Setup panel location monitoring (after terminalManager initialization)
+    // Small delay to ensure terminalManager is fully ready
+    setTimeout(() => {
+      log('🔧 [DEBUG] Setting up panel location monitoring...');
+      try {
+        setupPanelLocationMonitoring();
+        log('🔧 [DEBUG] Panel location monitoring setup completed');
+      } catch (error) {
+        error_category('🔧 [DEBUG] Failed to setup panel location monitoring:', error);
+      }
+    }, 500);
 
     // 🔧 [DEBUG] Setup debugging keyboard shortcuts
     document.addEventListener('keydown', (event) => {
@@ -221,6 +241,117 @@ function setupPerformanceMonitoring(): void {
 }
 
 /**
+ * パネル位置監視の設定
+ * WebView全体のリサイズを監視して、パネル位置の変更を検出
+ */
+function setupPanelLocationMonitoring(): void {
+  try {
+    log('📍 [PANEL-MONITOR] Setting up panel location monitoring...');
+    log(`📍 [PANEL-MONITOR] terminalManager exists: ${!!terminalManager}`);
+    log(`📍 [PANEL-MONITOR] document.body exists: ${!!document.body}`);
+
+    let previousAspectRatio: number | null = null;
+    let isInitialized = false;
+    let resizeCount = 0;
+    const ASPECT_RATIO_THRESHOLD = 1.2;
+
+    // ResizeObserverでdocument.bodyのサイズ変更を監視
+    const resizeObserver = new ResizeObserver((entries) => {
+      resizeCount++;
+      log(`📍 [PANEL-MONITOR] ResizeObserver fired! (count: ${resizeCount})`);
+
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        log(`📍 [PANEL-MONITOR] Dimensions: ${width}px × ${height}px`);
+
+        if (width === 0 || height === 0) {
+          log(`📍 [PANEL-MONITOR] Skipping: invalid dimensions`);
+          continue;
+        }
+
+        const aspectRatio = width / height;
+        log(`📍 [PANEL-MONITOR] Aspect ratio: ${aspectRatio.toFixed(3)}`);
+
+        const isPanelLocation = aspectRatio > ASPECT_RATIO_THRESHOLD;
+        const detectedLocation = isPanelLocation ? 'panel' : 'sidebar';
+
+        // 初回測定: 現在の位置を報告（この情報がExtensionのベースラインになる）
+        if (!isInitialized) {
+          previousAspectRatio = aspectRatio;
+          isInitialized = true;
+          log(`📍 [PANEL-MONITOR] Initial measurement: ${aspectRatio.toFixed(3)} (${detectedLocation})`);
+
+          // 🔧 FIX: 初回測定時も位置を報告してExtensionに初期状態を知らせる
+          // これにより、次回の移動時に正しく変更を検出できる
+          if (terminalManager) {
+            log(`📍 [PANEL-MONITOR] Sending initial location to Extension: ${detectedLocation}`);
+            terminalManager.postMessageToExtension({
+              command: 'reportPanelLocation',
+              location: detectedLocation,
+              timestamp: Date.now(),
+            });
+            log(`📍 [PANEL-MONITOR] ✅ Initial location reported: ${detectedLocation}`);
+
+            // 🆕 WebView側のSplitManagerも直接更新（モードボタンが即座に押される場合に備えて）
+            const splitManager = terminalManager.getSplitManager?.();
+            if (splitManager) {
+              splitManager.setPanelLocation(detectedLocation);
+              log(`📍 [PANEL-MONITOR] ✅ SplitManager panel location updated: ${detectedLocation}`);
+            }
+          }
+          continue;
+        }
+
+        // アスペクト比が閾値をまたいで変わった場合のみ報告
+        // これにより、パネル位置の実質的な変更のみを検出
+        if (previousAspectRatio !== null) {
+          const wasPanelLocation = previousAspectRatio > ASPECT_RATIO_THRESHOLD;
+
+          log(`📍 [PANEL-MONITOR] Was panel: ${wasPanelLocation}, Is panel: ${isPanelLocation}`);
+
+          if (wasPanelLocation !== isPanelLocation) {
+            log(`📍 [PANEL-MONITOR] 🚨 DETECTED PANEL LOCATION CHANGE! Aspect ratio: ${previousAspectRatio.toFixed(3)} → ${aspectRatio.toFixed(3)}`);
+            log(`📍 [PANEL-MONITOR] Location changed: ${wasPanelLocation ? 'panel' : 'sidebar'} → ${detectedLocation}`);
+
+            // パネル位置が変わったことをExtensionに報告
+            if (terminalManager) {
+              log(`📍 [PANEL-MONITOR] Sending message to Extension: ${detectedLocation}`);
+              terminalManager.postMessageToExtension({
+                command: 'reportPanelLocation',
+                location: detectedLocation,
+                timestamp: Date.now(),
+              });
+              log(`📍 [PANEL-MONITOR] ✅ Reported new location: ${detectedLocation}`);
+
+              // 🆕 Keep SplitManager's internal state in sync with the current location
+              const splitManager = terminalManager.getSplitManager?.();
+              if (splitManager) {
+                splitManager.setPanelLocation(detectedLocation);
+                log(`📍 [PANEL-MONITOR] ✅ SplitManager panel location updated: ${detectedLocation}`);
+              }
+            } else {
+              log(`📍 [PANEL-MONITOR] ⚠️ terminalManager is null, cannot send message`);
+            }
+          } else {
+            log(`📍 [PANEL-MONITOR] No location change detected (still ${detectedLocation})`);
+          }
+        }
+
+        previousAspectRatio = aspectRatio;
+      }
+    });
+
+    // document.bodyを監視
+    log(`📍 [PANEL-MONITOR] Starting to observe document.body...`);
+    resizeObserver.observe(document.body);
+
+    log('📍 [PANEL-MONITOR] ✅ Panel location monitoring started successfully');
+  } catch (error) {
+    error_category('📍 [PANEL-MONITOR] ❌ Failed to setup panel location monitoring:', error);
+  }
+}
+
+/**
  * DOM準備完了時の初期化
  */
 function onDOMContentLoaded(): void {
@@ -266,8 +397,8 @@ window.addEventListener('unload', onPageUnload);
 
 // Export for debugging and testing
 if (typeof window !== 'undefined') {
-  (window as any).terminalManager = terminalManager;
-  (window as any).debugLog = log;
+  window.terminalManager = terminalManager || undefined;
+  window.debugLog = log;
 }
 
 success('Refactored WebView main script initialized');
@@ -280,12 +411,14 @@ if (process.env.NODE_ENV === 'development') {
   log('Development mode enabled');
 
   // Expose debug utilities
-  (window as any).getManagerStats = () => {
+  window.getManagerStats = () => {
     return terminalManager?.getManagerStats() || null;
   };
 
   // Hot reload support (if needed in future)
-  const moduleWithHot = module as any;
+  const moduleWithHot = module as typeof module & {
+    hot?: { accept: (path: string, callback: () => void) => void };
+  };
   if (moduleWithHot.hot) {
     moduleWithHot.hot.accept('./managers/RefactoredTerminalWebviewManager', () => {
       lifecycle('Hot reloading terminal manager...');

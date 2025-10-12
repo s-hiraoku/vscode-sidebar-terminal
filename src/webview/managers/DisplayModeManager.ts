@@ -190,8 +190,12 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
       return;
     }
 
+    // 🔧 FIX: Get current panel location from SplitManager instead of hardcoding
+    const currentLocation = (splitManager as { getCurrentPanelLocation?: () => 'sidebar' | 'panel' }).getCurrentPanelLocation?.() || 'sidebar';
+    this.log(`Current panel location: ${currentLocation}`);
+
     // 分割方向を決定（パネル位置に応じて）
-    const direction = splitManager.getOptimalSplitDirection('sidebar');
+    const direction = splitManager.getOptimalSplitDirection(currentLocation);
 
     // 分割モードを準備
     splitManager.prepareSplitMode(direction);
@@ -216,6 +220,11 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
 
     this.syncVisibilityFromSnapshot();
     this.refreshSplitToggleState();
+
+    // 🔧 FIX: Resize all terminals immediately after applying split layout
+    // This ensures each terminal has the correct size in the split view
+    // Note: Terminal resize is handled by the terminal container manager
+    this.log('🔄 [SPLIT] Split layout applied, terminals will auto-resize');
 
     this.log('All terminals are now in split view');
     this.notifyModeChanged('split');

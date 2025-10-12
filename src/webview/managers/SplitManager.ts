@@ -61,6 +61,9 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
   public isSplitMode = false;
   private splitDirection: 'horizontal' | 'vertical' | null = null;
 
+  // 🆕 Current panel location (for optimal split direction)
+  private currentPanelLocation: 'sidebar' | 'panel' = 'sidebar';
+
   // Multiple terminal management
   public terminals = new Map<string, TerminalInstance>();
   private terminalContainers = new Map<string, HTMLElement>();
@@ -135,6 +138,9 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
     this.splitManagerLogger.info(
       `Updating split direction: ${this.splitDirection} -> ${direction} (location: ${location})`
     );
+
+    // 🆕 Update current panel location
+    this.setPanelLocation(location);
 
     // Check if direction actually changed
     if (this.splitDirection === direction) {
@@ -349,6 +355,9 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
   public splitTerminal(direction: 'horizontal' | 'vertical'): void {
     this.splitManagerLogger.info(`Splitting terminal with direction: ${direction}`);
 
+    // Ensure internal state reflects that split mode is now active
+    this.isSplitMode = true;
+
     // Set split direction for layout calculation
     this.splitDirection = direction;
 
@@ -418,6 +427,21 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
     } else {
       return 'vertical'; // Sidebar or unknown - vertical split
     }
+  }
+
+  /**
+   * 🆕 Set current panel location
+   */
+  public setPanelLocation(location: 'sidebar' | 'panel'): void {
+    this.splitManagerLogger.info(`📍 [SPLIT] Panel location updated: ${this.currentPanelLocation} → ${location}`);
+    this.currentPanelLocation = location;
+  }
+
+  /**
+   * 🆕 Get current panel location
+   */
+  public getCurrentPanelLocation(): 'sidebar' | 'panel' {
+    return this.currentPanelLocation;
   }
 
   // Setters

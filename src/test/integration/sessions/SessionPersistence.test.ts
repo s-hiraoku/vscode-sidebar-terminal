@@ -20,7 +20,7 @@ import * as sinon from 'sinon';
 import { setupTestEnvironment, resetTestEnvironment, mockVscode as _mockVscode } from '../../shared/TestSetup';
 import { StandardTerminalPersistenceManager } from '../../../webview/managers/StandardTerminalPersistenceManager';
 import { TerminalLifecycleManager } from '../../../webview/managers/TerminalLifecycleManager';
-import { RefactoredMessageManager } from '../../../webview/managers/RefactoredMessageManager';
+import { ConsolidatedMessageManager } from '../../../webview/managers/ConsolidatedMessageManager';
 import {
   generateTerminalId,
   normalizeTerminalInfo
@@ -40,7 +40,7 @@ describe('Session Persistence Integration - TDD Suite', () => {
   let sandbox: sinon.SinonSandbox;
   let persistenceManager: StandardTerminalPersistenceManager;
   let lifecycleManager: TerminalLifecycleManager;
-  let messageManager: RefactoredMessageManager;
+  let messageManager: ConsolidatedMessageManager;
   let mockExtensionContext: any;
   let mockGlobalState: Map<string, any>;
 
@@ -85,7 +85,7 @@ describe('Session Persistence Integration - TDD Suite', () => {
       dispose: sandbox.stub()
     };
     lifecycleManager = new TerminalLifecycleManager(mockSplitManager as any, mockCoordinator as any);
-    messageManager = new RefactoredMessageManager();
+    messageManager = new ConsolidatedMessageManager();
 
     // Update mock coordinator
     (mockCoordinator as any).initialize = sandbox.stub();
@@ -93,7 +93,7 @@ describe('Session Persistence Integration - TDD Suite', () => {
 
     mockCoordinator.getManager.withArgs('StandardTerminalPersistenceManager').returns(persistenceManager);
     mockCoordinator.getManager.withArgs('TerminalLifecycleManager').returns(lifecycleManager);
-    mockCoordinator.getManager.withArgs('RefactoredMessageManager').returns(messageManager);
+    mockCoordinator.getManager.withArgs('ConsolidatedMessageManager').returns(messageManager);
   });
 
   afterEach(() => {

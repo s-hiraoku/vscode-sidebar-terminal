@@ -280,7 +280,9 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
       if (container) {
         const area = this.getWrapperArea(wrapper, terminalId);
         if (area && area.contains(container)) {
-          targetBody?.appendChild(container);
+          // 🔧 FIX: Append to terminals-wrapper instead of terminal-body
+          const terminalsWrapper = document.getElementById('terminals-wrapper') || targetBody;
+          terminalsWrapper?.appendChild(container);
         }
       }
       wrapper.remove();
@@ -288,10 +290,18 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
     this.splitWrapperCache.clear();
 
     if (targetBody) {
+      // 🔧 FIX: terminal-body flexDirection is ALWAYS column
       targetBody.style.display = 'flex';
       targetBody.style.flexDirection = 'column';
       targetBody.style.height = '100%';
       targetBody.style.overflow = 'hidden';
+
+      // 🆕 Reset terminals-wrapper flexDirection to column
+      const terminalsWrapper = document.getElementById('terminals-wrapper');
+      if (terminalsWrapper) {
+        terminalsWrapper.style.flexDirection = 'column';
+      }
+
       this.normalizeTerminalBody(targetBody);
     }
   }
@@ -557,8 +567,10 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
   }
 
   private ensureContainerInBody(container: HTMLElement, terminalBody: HTMLElement): void {
-    if (container.parentElement !== terminalBody) {
-      terminalBody.appendChild(container);
+    // 🔧 FIX: Append to terminals-wrapper instead of terminal-body
+    const terminalsWrapper = document.getElementById('terminals-wrapper') || terminalBody;
+    if (container.parentElement !== terminalsWrapper) {
+      terminalsWrapper.appendChild(container);
     }
   }
 
@@ -605,19 +617,60 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
     this.log(`🎨 [LAYOUT] CSS flexDirection will be set to: ${flexDirection}`);
     this.log(`🎨 [LAYOUT] Explanation: ${splitDirection} → ${flexDirection} → ${flexDirection === 'row' ? '横並び (side by side)' : '縦並び (stacked)'}`);
 
-    // Setup terminal body flex container
+    // 🔧 FIX: terminal-body flex-direction is ALWAYS column (for tab bar positioning)
+    // We change terminals-wrapper flex-direction instead
     terminalBody.style.display = 'flex';
-    terminalBody.style.flexDirection = flexDirection;
+    terminalBody.style.flexDirection = 'column';
     terminalBody.style.height = '100%';
     terminalBody.style.width = '100%';
     terminalBody.style.overflow = 'hidden';
+    terminalBody.style.padding = '0';
+    terminalBody.style.margin = '0';
 
-    this.log(`🎨 [LAYOUT] ✅ Terminal body flexDirection applied: ${terminalBody.style.flexDirection}`);
+    this.log(`🎨 [LAYOUT] ✅ Terminal body flexDirection fixed to: column (tab bar on top)`);
+
+    // 🆕 Get or create terminals-wrapper and apply layout direction
+    let terminalsWrapper = document.getElementById('terminals-wrapper');
+    if (!terminalsWrapper) {
+      this.log('⚠️ [LAYOUT] terminals-wrapper not found, creating it');
+      terminalsWrapper = document.createElement('div');
+      terminalsWrapper.id = 'terminals-wrapper';
+      terminalsWrapper.style.cssText = `
+        display: flex;
+        flex: 1;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        padding: 4px;
+        gap: 4px;
+        box-sizing: border-box;
+      `;
+
+      // Move existing terminals into wrapper
+      const existingTerminals = Array.from(terminalBody.querySelectorAll('[data-terminal-container]'));
+      terminalBody.appendChild(terminalsWrapper);
+      existingTerminals.forEach((terminal) => {
+        terminalsWrapper!.appendChild(terminal);
+      });
+    }
+
+    // Apply flex-direction to terminals-wrapper
+    terminalsWrapper.style.flexDirection = flexDirection;
+    this.log(`🎨 [LAYOUT] ✅ terminals-wrapper flexDirection applied: ${terminalsWrapper.style.flexDirection}`);
 
     // Get actual computed style to verify
-    const computedStyle = window.getComputedStyle(terminalBody);
+    const computedStyle = window.getComputedStyle(terminalsWrapper);
     this.log(`🎨 [LAYOUT] Computed flexDirection: ${computedStyle.flexDirection}`);
     this.log('🎨 [LAYOUT] =================================================================');
+
+    // 🔧 FIX: Before creating wrappers, ensure all containers are in terminals-wrapper
+    orderedTerminalIds.forEach((terminalId) => {
+      const container = this.getContainer(terminalId);
+      if (container && container.parentElement !== terminalsWrapper) {
+        this.log(`🔧 [SPLIT-FIX] Moving ${terminalId} container to terminals-wrapper before split layout`);
+        terminalsWrapper!.appendChild(container);
+      }
+    });
 
     orderedTerminalIds.forEach((terminalId, index) => {
       const container = this.getContainer(terminalId);
@@ -625,6 +678,9 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
         this.log(`Container not found for terminal: ${terminalId}`, 'error');
         return;
       }
+
+      this.log(`🎨 [SPLIT-LAYOUT] Processing terminal ${index + 1}/${terminalCount}: ${terminalId}`);
+      this.log(`🎨 [SPLIT-LAYOUT]   Container size before: ${container.offsetWidth}x${container.offsetHeight}`);
 
       // Create wrapper with equal flex distribution
       const wrapper = this.createSplitWrapper(terminalId, splitDirection, terminalCount);
@@ -642,13 +698,17 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
       container.style.height = '100%';
       container.style.minHeight = '0';
 
-      terminalBody.appendChild(wrapper);
+      // 🔧 FIX: Append wrapper to terminals-wrapper instead of terminal-body
+      terminalsWrapper!.appendChild(wrapper);
       this.splitWrapperCache.set(terminalId, wrapper);
+
+      this.log(`🎨 [SPLIT-LAYOUT]   Wrapper appended to DOM`);
 
       // Add resizer between terminals (not after the last one)
       if (index < orderedTerminalIds.length - 1) {
         const resizer = this.createSplitResizer(splitDirection);
-        terminalBody.appendChild(resizer);
+        // 🔧 FIX: Append resizer to terminals-wrapper instead of terminal-body
+        terminalsWrapper!.appendChild(resizer);
         this.splitResizers.add(resizer);
       }
     });
@@ -736,7 +796,9 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
         container.style.height = '100%';
         container.classList.remove('hidden-mode');
         container.classList.add('terminal-container--fullscreen');
-        terminalBody.appendChild(container);
+        // 🔧 FIX: Append to terminals-wrapper instead of terminal-body
+        const terminalsWrapper = document.getElementById('terminals-wrapper') || terminalBody;
+        terminalsWrapper.appendChild(container);
       } else {
         container.style.display = 'none';
         container.classList.add('hidden-mode');
@@ -761,7 +823,9 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
     if (storage) {
       this.containerCache.forEach((container) => {
         if (container.parentElement === storage) {
-          terminalBody.appendChild(container);
+          // 🔧 FIX: Append to terminals-wrapper instead of terminal-body
+          const terminalsWrapper = document.getElementById('terminals-wrapper') || terminalBody;
+          terminalsWrapper.appendChild(container);
         }
       });
       storage.innerHTML = '';

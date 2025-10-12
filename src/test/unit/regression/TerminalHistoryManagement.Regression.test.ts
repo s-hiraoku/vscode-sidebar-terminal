@@ -391,7 +391,7 @@ describe('Terminal History Management - Regression Tests', () => {
         log(message: string): void;
       }
 
-      class RefactoredMessageManager {
+      class ConsolidatedMessageManager {
         private coordinator: IManagerCoordinator;
         private messageQueue: any[] = [];
         private isReady: boolean = false;
@@ -447,7 +447,7 @@ describe('Terminal History Management - Regression Tests', () => {
         log: sandbox.stub(),
       };
 
-      const messageManager = new RefactoredMessageManager(mockCoordinator);
+      const messageManager = new ConsolidatedMessageManager(mockCoordinator);
 
       // Queue messages when not ready
       messageManager.postMessage({ command: 'test1' });

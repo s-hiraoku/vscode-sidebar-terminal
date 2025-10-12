@@ -32,6 +32,7 @@ import {
   ITerminalContainerManager,
   IDisplayModeManager,
   IHeaderManager,
+  IShellIntegrationBridge,
 } from '../interfaces/ManagerInterfaces';
 
 // Debug info interface
@@ -47,6 +48,61 @@ interface DebugInfo {
   timestamp: number;
   operation?: string;
 }
+
+interface ScrollbackRequestMessage {
+  command: 'extractScrollbackData';
+  terminalId?: string;
+  requestId?: string;
+  maxLines?: number;
+}
+
+interface SystemStatusSnapshot {
+  ready: boolean;
+  state: TerminalState | null;
+  pendingOperations: {
+    deletions: string[];
+    creations: number;
+  };
+}
+
+interface DebugCounters {
+  stateUpdates: number;
+  lastSync: string;
+  systemStartTime: number;
+}
+
+interface SystemDiagnostics {
+  timestamp: string;
+  systemStatus: SystemStatusSnapshot;
+  performanceCounters: DebugCounters;
+  configuration: {
+    debugMode: boolean;
+    maxTerminals: number | 'unknown';
+  };
+  extensionCommunication: {
+    lastStateRequest: string;
+    messageQueueStatus: string;
+  };
+  troubleshootingInfo: {
+    userAgent: string;
+    platform: string;
+    language: string;
+    cookieEnabled: boolean;
+    onLine: boolean;
+  };
+}
+
+const NOOP_SHELL_INTEGRATION_MANAGER: IShellIntegrationBridge = {
+  setCoordinator: () => {},
+  handleMessage: () => {},
+  dispose: () => {},
+  initializeTerminalShellIntegration: () => {},
+  decorateTerminalOutput: () => {},
+  updateShellStatus: () => {},
+  updateCwd: () => {},
+  updateWorkingDirectory: () => {},
+  showCommandHistory: () => {},
+};
 import { SplitManager } from './SplitManager';
 import { SettingsPanel } from '../components/SettingsPanel';
 import { NotificationManager } from './NotificationManager';
@@ -84,7 +140,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
   private terminalLifecycleManager: TerminalLifecycleManager;
   private cliAgentStateManager: CliAgentStateManager;
   private eventHandlerManager: EventHandlerManager;
-  public shellIntegrationManager: ShellIntegrationManager;
+  public shellIntegrationManager: IShellIntegrationBridge;
   public findInTerminalManager: FindInTerminalManager;
   public profileManager: ProfileManager;
 
@@ -103,7 +159,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
   private performanceManager!: PerformanceManager;
   private uiManager!: UIManager;
   public inputManager!: InputManager;
-  public messageManager!: RefactoredMessageManager;
+  public messageManager!: ConsolidatedMessageManager;
   public persistenceManager: OptimizedTerminalPersistenceManager | SimplePersistenceManager | null =
     null;
   public optimizedPersistenceManager!: OptimizedTerminalPersistenceManager;
@@ -153,12 +209,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       this.shellIntegrationManager = new ShellIntegrationManager();
     } catch (error) {
       console.error('Failed to initialize ShellIntegrationManager:', error);
-      // Create minimal stub to prevent further errors
-      this.shellIntegrationManager = {
-        setCoordinator: () => {},
-        handleMessage: () => {},
-        dispose: () => {},
-      } as any;
+      this.shellIntegrationManager = NOOP_SHELL_INTEGRATION_MANAGER;
     }
 
     // HeaderManager（AI Status表示に必要）
@@ -211,7 +262,8 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
             this.currentSettings = this.configManager.getCurrentSettings();
           }
 
-          this.messageManager.updateSettings(mergedSettings, this);
+          // Settings are already applied to terminals via configManager
+          // messageManager does not need to update settings
 
           this.saveSettings();
         } catch (error) {
@@ -259,8 +311,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     // Set up coordinator relationships for specialized managers
     this.findInTerminalManager.setCoordinator(this);
     this.profileManager.setCoordinator(this);
-    this.shellIntegrationManager.setCoordinator &&
-      this.shellIntegrationManager.setCoordinator(this);
+    this.shellIntegrationManager.setCoordinator(this);
 
     // Initialize ProfileManager asynchronously
     setTimeout(async () => {
@@ -480,6 +531,10 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     return this.displayModeManager;
   }
 
+  public getSplitManager(): SplitManager {
+    return this.splitManager;
+  }
+
   // Terminal management delegation
 
   public async createTerminal(
@@ -609,20 +664,6 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
         }, 25);
       }
 
-      // 🔍 SAFE: Single delayed resize for reliability
-      log(`🔍 [DEBUG] Scheduling delayed resize for: ${terminalId}`);
-
-      setTimeout(() => {
-        log(`🔍 [DEBUG] Delayed resize (150ms) for: ${terminalId}`);
-        this.terminalLifecycleManager.resizeAllTerminals();
-
-        // 🎯 FIX: リサイズ後もボーダーを再確認
-        if (this.uiManager) {
-          this.uiManager.updateTerminalBorders(terminalId, allContainers);
-          log(`🎯 [FIX] Re-confirmed active border after resize: ${terminalId}`);
-        }
-      }, 150);
-
       // 5. ExtensionにRegular のターミナル作成をリクエスト
       if (requestSource === 'webview') {
         this.postMessageToExtension({
@@ -635,17 +676,52 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
       log(`✅ Terminal creation completed: ${terminalId}`);
 
-      const isSplitMode = this.displayModeManager?.getCurrentMode?.() === 'split';
-      if (isSplitMode) {
-        setTimeout(() => {
+      // 🔧 FIX: Capture current mode before async operations
+      const currentMode = this.displayModeManager?.getCurrentMode?.() ?? 'normal';
+      const splitManager = this.splitManager;
+      const splitManagerActive =
+        typeof splitManager?.getIsSplitMode === 'function' && splitManager.getIsSplitMode();
+      const shouldMaintainSplitLayout = currentMode === 'split' || splitManagerActive;
+
+      log(
+        `🔍 [SPLIT-DEBUG] Current mode: ${currentMode}, displayModeSplit: ${currentMode === 'split'}, splitManagerActive: ${splitManagerActive}, shouldMaintainSplitLayout: ${shouldMaintainSplitLayout}`
+      );
+
+      // 🔧 FIX: Immediately refresh split layout if split mode is active via display manager or split manager
+      // This prevents the terminal from showing in fullscreen mode temporarily
+      if (shouldMaintainSplitLayout) {
+        try {
+          log(`🔄 [SPLIT] Immediately refreshing split layout after creating ${terminalId}`);
+          this.displayModeManager?.showAllTerminalsSplit();
+          log(`🔄 [SPLIT] ✅ Split layout refreshed successfully`);
+        } catch (layoutError) {
+          log(`⚠️ [SPLIT] Failed to refresh split layout immediately: ${layoutError}`);
+        }
+      }
+
+      // 🔍 SAFE: Single delayed resize for reliability
+      log(`🔍 [DEBUG] Scheduling delayed resize for: ${terminalId}`);
+
+      setTimeout(() => {
+        log(`🔍 [DEBUG] Delayed resize (150ms) for: ${terminalId}`);
+        this.terminalLifecycleManager.resizeAllTerminals();
+
+        // 🎯 FIX: リサイズ後もボーダーを再確認
+        if (this.uiManager) {
+          this.uiManager.updateTerminalBorders(terminalId, allContainers);
+          log(`🎯 [FIX] Re-confirmed active border after resize: ${terminalId}`);
+        }
+
+        // 🔧 FIX: Refresh split layout again after resize (保険)
+        if (shouldMaintainSplitLayout) {
           try {
             this.displayModeManager?.showAllTerminalsSplit();
-            log(`🔄 [SPLIT] Refreshed split layout after creating ${terminalId}`);
+            log(`🔄 [SPLIT] Refreshed split layout after resize`);
           } catch (layoutError) {
-            log(`⚠️ [SPLIT] Failed to refresh split layout: ${layoutError}`);
+            log(`⚠️ [SPLIT] Failed to refresh split layout after resize: ${layoutError}`);
           }
-        }, 50);
-      }
+        }
+      }, 150);
 
       return terminal;
     } catch (error) {
@@ -665,9 +741,6 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     }
 
     const currentMode = displayManager.getCurrentMode?.() ?? 'normal';
-    if (currentMode !== 'fullscreen') {
-      return;
-    }
 
     let existingCount = 0;
     try {
@@ -682,31 +755,42 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       return;
     }
 
-    if (this.pendingSplitTransition) {
-      await this.pendingSplitTransition;
-      return;
-    }
-
-    this.pendingSplitTransition = (async () => {
-      try {
-        log(
-          `🖥️ [SPLIT] Fullscreen detected with ${existingCount} terminals. Switching to split mode before creating new terminal.`
-        );
-
-        try {
-          displayManager.showAllTerminalsSplit();
-        } catch (error) {
-          log('⚠️ [SPLIT] Failed to trigger split mode before creation:', error);
-          return;
-        }
-
-        await new Promise((resolve) => setTimeout(resolve, 250));
-      } finally {
-        this.pendingSplitTransition = null;
+    // 🔧 FIX: Handle both fullscreen and split modes
+    // When adding a new terminal, preserve the current mode
+    if (currentMode === 'fullscreen') {
+      // Fullscreen mode with existing terminals → switch to split
+      if (this.pendingSplitTransition) {
+        await this.pendingSplitTransition;
+        return;
       }
-    })();
 
-    await this.pendingSplitTransition;
+      this.pendingSplitTransition = (async () => {
+        try {
+          log(
+            `🖥️ [SPLIT] Fullscreen detected with ${existingCount} terminals. Switching to split mode before creating new terminal.`
+          );
+
+          try {
+            displayManager.showAllTerminalsSplit();
+          } catch (error) {
+            log('⚠️ [SPLIT] Failed to trigger split mode before creation:', error);
+            return;
+          }
+
+          await new Promise((resolve) => setTimeout(resolve, 250));
+        } finally {
+          this.pendingSplitTransition = null;
+        }
+      })();
+
+      await this.pendingSplitTransition;
+    } else if (currentMode === 'split') {
+      // 🆕 Already in split mode → ensure new terminal is added to split layout
+      log(`🖥️ [SPLIT] Split mode detected. New terminal will be added to split layout.`);
+
+      // Refresh split layout after new terminal is created (handled after terminal creation)
+      // No need to do anything here - the split mode will be maintained
+    }
   }
 
   public async removeTerminal(terminalId: string): Promise<boolean> {
@@ -840,7 +924,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
   /**
    * 🆕 NEW: Handle scrollback extraction request from Extension
    */
-  private async handleExtractScrollbackRequest(message: any): Promise<void> {
+  private async handleExtractScrollbackRequest(message: ScrollbackRequestMessage): Promise<void> {
     log('🔥 [SCROLLBACK-DEBUG] === handleExtractScrollbackRequest called ===', message);
 
     try {
@@ -907,8 +991,9 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       // Also mark as processed to prevent retries
       if (message.requestId) {
         this.processedScrollbackRequests.add(message.requestId);
+        const requestId = message.requestId;
         setTimeout(() => {
-          this.processedScrollbackRequests.delete(message.requestId);
+          this.processedScrollbackRequests.delete(requestId);
         }, 30000);
       }
     }
@@ -1481,7 +1566,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
           <div style="display: flex; gap: 8px; margin-bottom: 4px;">
             ${[1, 2, 3, 4, 5]
               .map((num) => {
-                const isUsed = info.terminals.some((t: any) => t.id === `terminal-${num}`);
+                const isUsed = info.terminals.some((t) => t.id === `terminal-${num}`);
                 const isAvailable = info.availableSlots.includes(num);
                 const color = isUsed ? '#ef4444' : isAvailable ? '#10b981' : '#6b7280';
                 const symbol = isUsed ? '●' : isAvailable ? '○' : '◌';
@@ -1535,7 +1620,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
   /**
    * Performance tracking for debug panel
    */
-  private debugCounters = {
+  private debugCounters: DebugCounters = {
     stateUpdates: 0,
     lastSync: new Date().toISOString(),
     systemStartTime: Date.now(),
@@ -1706,7 +1791,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
    * 🔄 Setup message listener for session restore commands
    */
   private setupSessionRestoreMessageListener(): void {
-    // This will be handled by RefactoredMessageManager's handleSessionRestore method
+    // This will be handled by ConsolidatedMessageManager's handleSessionRestore method
     // The message handler is already set up in the message manager
     log('🔄 [RESTORATION] Session restore message listener configured');
   }
@@ -1884,8 +1969,8 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
   /**
    * Export system diagnostics for troubleshooting
    */
-  public exportSystemDiagnostics(): any {
-    const diagnostics = {
+  public exportSystemDiagnostics(): SystemDiagnostics {
+    const diagnostics: SystemDiagnostics = {
       timestamp: new Date().toISOString(),
       systemStatus: this.getSystemStatus(),
       performanceCounters: this.debugCounters,
@@ -1925,7 +2010,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
   /**
    * Get current cached state
    */
-  public getCurrentCachedState(): any {
+  public getCurrentCachedState(): TerminalState | null {
     return this.currentTerminalState;
   }
 
@@ -2008,13 +2093,13 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
   /**
    * Enhanced state update with deletion synchronization
    */
-  private handleStateUpdateWithDeletionSync(state: any): void {
+  private handleStateUpdateWithDeletionSync(state: TerminalState): void {
     // Check if any tracked deletions have been processed
     const trackedDeletions = Array.from(this.deletionTracker);
 
     for (const deletedTerminalId of trackedDeletions) {
       // Check if the deleted terminal is no longer in the state
-      const stillExists = state.terminals.some((t: any) => t.id === deletedTerminalId);
+      const stillExists = state.terminals.some((terminal) => terminal.id === deletedTerminalId);
 
       if (!stillExists) {
         log(`✅ [SYNC] Deletion confirmed for terminal: ${deletedTerminalId}`);
@@ -2350,14 +2435,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
   /**
    * Public API: Get system status for external monitoring
    */
-  public getSystemStatus(): {
-    ready: boolean;
-    state: any;
-    pendingOperations: {
-      deletions: string[];
-      creations: number;
-    };
-  } {
+  public getSystemStatus(): SystemStatusSnapshot {
     return {
       ready: this.isSystemReady(),
       state: this.currentTerminalState,
@@ -2369,7 +2447,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
   }
 
   // Add state properties
-  private currentTerminalState: any = null;
+  private currentTerminalState: TerminalState | null = null;
   private debugMode: boolean = false; // Enable only when needed for debugging
 
   public ensureTerminalFocus(): void {

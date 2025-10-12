@@ -587,6 +587,24 @@ export class TerminalTabList {
     this.modeIndicatorContainer.style.display = 'flex';
   }
 
+  /**
+   * Set the flex direction of the tab container
+   * @param direction - 'row' for horizontal (side by side), 'column' for vertical (top)
+   */
+  public setFlexDirection(direction: 'row' | 'column'): void {
+    if (!this.container) {
+      log('⚠️ [TAB-LIST] Cannot set flex direction: container not initialized');
+      return;
+    }
+
+    log(`📐 [TAB-LIST] Setting tab container flex-direction to: ${direction} (${direction === 'row' ? 'horizontal tabs' : 'vertical tabs'})`);
+    this.container.style.flexDirection = direction;
+
+    // Verify the change was applied
+    const computedStyle = window.getComputedStyle(this.container);
+    log(`📐 [TAB-LIST] ✅ Verified flex-direction: ${computedStyle.flexDirection}`);
+  }
+
   private startRename(tabId: string): void {
     const tab = this.tabs.get(tabId);
     const tabElement = this.container.querySelector(`[data-tab-id="${tabId}"]`);

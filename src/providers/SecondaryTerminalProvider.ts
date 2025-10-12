@@ -51,12 +51,6 @@ function isPanelLocation(value: unknown): value is PanelLocation {
   return value === 'sidebar' || value === 'panel';
 }
 
-/**
- * Type guard to check if a value is a valid SplitDirection
- */
-function isSplitDirection(value: unknown): value is SplitDirection {
-  return value === 'horizontal' || value === 'vertical';
-}
 
 export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vscode.Disposable {
   public static readonly viewType = 'secondaryTerminal';
@@ -954,6 +948,9 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       return;
     }
 
+    // Store previous location for change detection
+    const previousLocation = this._cachedPanelLocation;
+
     // Cache the panel location for split direction determination
     this._cachedPanelLocation = loc;
     log('📍 [DEBUG] ✅ Cached panel location UPDATED:', loc);
@@ -969,6 +966,28 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       location: loc,
     });
     log('📍 [DEBUG] Panel location update confirmed to WebView:', loc);
+
+    // 🆕 Auto-relayout existing terminals when panel location changes
+    const terminalCount = this._terminalManager.getTerminals().length;
+    log(`🔄 [RELAYOUT] Terminal count: ${terminalCount}`);
+    log(`🔄 [RELAYOUT] Location changed: ${previousLocation} → ${loc}`);
+
+    if (previousLocation && previousLocation !== loc && terminalCount >= 2) {
+      log('🔄 [RELAYOUT] Panel location changed with 2+ terminals, triggering auto-relayout...');
+
+      const splitDirection = this._determineSplitDirection();
+      log(`🔄 [RELAYOUT] New split direction: ${splitDirection}`);
+
+      await this._sendMessage({
+        command: 'relayoutTerminals',
+        direction: splitDirection,
+      });
+
+      log('🔄 [RELAYOUT] ✅ Relayout command sent to WebView');
+    } else {
+      log('🔄 [RELAYOUT] No relayout needed (location unchanged or <2 terminals)');
+    }
+
     log('📍 [DEBUG] ===============================================================');
   }
 

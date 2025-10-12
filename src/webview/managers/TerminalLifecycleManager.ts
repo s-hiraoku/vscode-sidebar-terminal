@@ -6,7 +6,7 @@
  */
 
 import { Terminal } from '@xterm/xterm';
-import type { IDisposable, ILink } from '@xterm/xterm';
+import type { IDisposable, ILink, ITerminalOptions } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { SearchAddon } from '@xterm/addon-search';
@@ -25,6 +25,7 @@ import {
   TerminalContainerConfig,
   TerminalHeaderConfig,
 } from '../factories/TerminalContainerFactory';
+import { TerminalHeaderElements } from '../factories/HeaderFactory';
 import { getWebviewTheme } from '../utils/WebviewThemeUtils';
 import { ThemeManager } from '../utils/ThemeManager';
 
@@ -33,6 +34,20 @@ import { ThemeManager } from '../utils/ThemeManager';
  * Focus on reliable terminal display and resize handling
  */
 import { PerformanceMonitor } from '../../utils/PerformanceOptimizer';
+
+const hasHeaderElementsCache = (
+  manager: unknown
+): manager is { headerElementsCache: Map<string, TerminalHeaderElements> } => {
+  if (
+    typeof manager === 'object' &&
+    manager !== null &&
+    'headerElementsCache' in manager
+  ) {
+    const cache = (manager as { headerElementsCache?: unknown }).headerElementsCache;
+    return cache instanceof Map;
+  }
+  return false;
+};
 
 export class TerminalLifecycleManager {
   private splitManager: SplitManager;
@@ -300,8 +315,8 @@ export class TerminalLifecycleManager {
             cursorBlink: terminalConfig.cursorBlink,
             fontFamily: terminalConfig.fontFamily || 'monospace',
             fontSize: terminalConfig.fontSize || 12,
-            fontWeight: (terminalConfig.fontWeight || 'normal') as any,
-            fontWeightBold: (terminalConfig.fontWeightBold || 'bold') as any,
+            fontWeight: (terminalConfig.fontWeight ?? 'normal') as ITerminalOptions['fontWeight'],
+            fontWeightBold: (terminalConfig.fontWeightBold ?? 'bold') as ITerminalOptions['fontWeight'],
             lineHeight: terminalConfig.lineHeight || 1.0,
             letterSpacing: terminalConfig.letterSpacing || 0,
             cols: 80,
@@ -453,18 +468,15 @@ export class TerminalLifecycleManager {
             terminalLogger.info(
               `🗑️ Header close button clicked, using safe deletion: ${clickedTerminalId}`
             );
-            if (this.coordinator && 'deleteTerminalSafely' in this.coordinator) {
-              void (this.coordinator as any).deleteTerminalSafely(clickedTerminalId);
-            } else {
-              // Fallback to standard closeTerminal
-              void this.coordinator?.closeTerminal(clickedTerminalId);
-            }
+          if (this.coordinator.deleteTerminalSafely) {
+            void this.coordinator.deleteTerminalSafely(clickedTerminalId);
+          } else {
+            this.coordinator.closeTerminal(clickedTerminalId);
+          }
           },
           onAiAgentToggleClick: (clickedTerminalId) => {
             terminalLogger.info(`📎 AI Agent toggle clicked for terminal: ${clickedTerminalId}`);
-            if (this.coordinator && 'handleAiAgentToggle' in this.coordinator) {
-              (this.coordinator as any).handleAiAgentToggle(clickedTerminalId);
-            }
+          this.coordinator.handleAiAgentToggle?.(clickedTerminalId);
           },
         };
 
@@ -598,15 +610,18 @@ export class TerminalLifecycleManager {
           );
         }
 
+        // 🆕 Ensure split layouts are refreshed when new terminals are created during split mode
+        if (this.splitManager.getIsSplitMode()) {
+          this.splitManager.addNewTerminalToSplit(terminalId, terminalName);
+          const displayManager = this.coordinator.getDisplayModeManager?.();
+          displayManager?.showAllTerminalsSplit();
+        }
+
         // 🔧 AI Agent Support: Register header elements with UIManager for status updates
         if (containerElements.headerElements) {
-          const uiManager = this.coordinator?.getManagers()?.ui;
-          if (uiManager && 'headerElementsCache' in uiManager) {
-            // Add header elements to UIManager cache for AI Agent status updates
-            (uiManager as any).headerElementsCache.set(
-              terminalId,
-              containerElements.headerElements
-            );
+          const uiManager = this.coordinator.getManagers().ui;
+          if (hasHeaderElementsCache(uiManager)) {
+            uiManager.headerElementsCache.set(terminalId, containerElements.headerElements);
             terminalLogger.info(
               `✅ Header elements registered with UIManager for AI Agent support: ${terminalId}`
             );
@@ -673,14 +688,14 @@ export class TerminalLifecycleManager {
         // 🎯 CRITICAL FIX: Notify Extension that WebView terminal initialization is complete
         // This ensures shell initialization starts only after xterm is fully ready
         setTimeout(() => {
-          if (this.coordinator && 'postMessageToExtension' in this.coordinator) {
-            (this.coordinator as any).postMessageToExtension({
-              command: 'terminalInitializationComplete',
-              terminalId: terminalId,
-              timestamp: Date.now(),
-            });
-            terminalLogger.info(`📡 Terminal initialization completion notified to Extension: ${terminalId}`);
-          }
+          this.coordinator.postMessageToExtension({
+            command: 'terminalInitializationComplete',
+            terminalId: terminalId,
+            timestamp: Date.now(),
+          });
+          terminalLogger.info(
+            `📡 Terminal initialization completion notified to Extension: ${terminalId}`
+          );
         }, 50); // Small delay to ensure all rendering is complete
 
         return terminal;
@@ -887,10 +902,9 @@ export class TerminalLifecycleManager {
    */
   private setupShellIntegration(terminal: Terminal, terminalId: string): void {
     try {
-      // Get shell integration manager from coordinator
-      const manager = this.coordinator as any;
-      if (manager?.shellIntegrationManager) {
-        manager.shellIntegrationManager.decorateTerminalOutput(terminal, terminalId);
+      const shellManager = this.coordinator.shellIntegrationManager;
+      if (shellManager) {
+        shellManager.decorateTerminalOutput(terminal, terminalId);
         terminalLogger.info(`Shell integration decorations added for terminal: ${terminalId}`);
       }
     } catch (error) {
@@ -1400,22 +1414,53 @@ export class TerminalLifecycleManager {
       // Get theme colors using ThemeManager
       const themeColors = ThemeManager.getThemeColors();
 
+      // 🔧 FIX: terminal-body flex-direction is ALWAYS column
+      // This ensures tab bar stays on top when in bottom panel
       container.style.cssText = `
         display: flex;
-        flex-direction: column;
+        flex-direction: column !important;
         background: ${themeColors.background};
         width: 100%;
         height: 100%;
         min-height: 200px;
         overflow: hidden;
         margin: 0;
-        padding: 4px;
-        gap: 4px;
+        padding: 0;
         box-sizing: border-box;
         position: relative;
       `;
 
       container.className = 'terminal-body-container';
+
+      // 🆕 Create terminals-wrapper container for terminal layout control
+      // This container's flex-direction will change based on panel location
+      let terminalsWrapper = document.getElementById('terminals-wrapper');
+      if (!terminalsWrapper) {
+        terminalLogger.info('Creating terminals-wrapper container');
+        terminalsWrapper = document.createElement('div');
+        terminalsWrapper.id = 'terminals-wrapper';
+        terminalsWrapper.style.cssText = `
+          display: flex;
+          flex-direction: column;
+          flex: 1;
+          width: 100%;
+          height: 100%;
+          overflow: hidden;
+          padding: 4px;
+          gap: 4px;
+          box-sizing: border-box;
+        `;
+
+        // Move existing terminal containers into terminals-wrapper
+        const existingTerminals = Array.from(container.querySelectorAll('[data-terminal-container]'));
+        container.appendChild(terminalsWrapper);
+        existingTerminals.forEach((terminal) => {
+          terminalsWrapper!.appendChild(terminal);
+        });
+
+        terminalLogger.info('✅ terminals-wrapper container created and existing terminals moved');
+      }
+
       terminalLogger.info('Terminal body container initialized');
     } catch (error) {
       terminalLogger.error('Failed to initialize terminal body container:', error);

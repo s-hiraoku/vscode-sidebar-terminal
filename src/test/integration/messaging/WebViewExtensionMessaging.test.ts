@@ -18,7 +18,7 @@
 import { expect } from 'chai';
 import * as sinon from 'sinon';
 import { setupTestEnvironment, resetTestEnvironment, mockVscode as _mockVscode } from '../../shared/TestSetup';
-import { RefactoredMessageManager } from '../../../webview/managers/RefactoredMessageManager';
+import { ConsolidatedMessageManager } from '../../../webview/managers/ConsolidatedMessageManager';
 import {
   MessageType,
   ExtensionMessage,
@@ -30,7 +30,7 @@ import {
 
 describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
   let sandbox: sinon.SinonSandbox;
-  let messageManager: RefactoredMessageManager;
+  let messageManager: ConsolidatedMessageManager;
   let mockWebviewApi: any;
   let _mockExtensionContext: any;
 
@@ -72,7 +72,7 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
       }
     };
 
-    messageManager = new RefactoredMessageManager();
+    messageManager = new ConsolidatedMessageManager();
   });
 
   afterEach(() => {

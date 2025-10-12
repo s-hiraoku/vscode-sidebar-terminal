@@ -534,6 +534,7 @@ export interface WebviewMessage {
     | 'updateShellStatus'
     | 'updateCwd'
     | 'commandHistory'
+    | 'relayoutTerminals' // Terminal relayout command
     | 'deleteTerminalResponse' // 🎯 FIX: 削除処理統一化で追加
     | 'switchAiAgentResponse' // AIエージェント切り替えレスポンス
     | 'phase8ServicesReady' // Phase 8: Terminal Decorations & Links service ready notification

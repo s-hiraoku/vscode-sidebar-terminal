@@ -3,7 +3,7 @@
  *
  * Tests the unified message handling system that consolidates:
  * - WebViewMessageHandlerService (Command pattern)
- * - RefactoredMessageManager (Queue-based processing)
+ * - ConsolidatedMessageManager (Queue-based processing)
  * - WebViewMessageRouter (Publisher-subscriber pattern)
  */
 

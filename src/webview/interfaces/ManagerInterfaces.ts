@@ -10,6 +10,7 @@ import { Unicode11Addon } from '@xterm/addon-unicode11';
 import { PartialTerminalSettings, WebViewFontSettings } from '../../types/shared';
 import { AltClickState, TerminalInteractionEvent } from '../../types/common';
 import { ITerminalProfile } from '../../types/profiles';
+import type { IShellIntegrationManager } from '../../types/type-guards';
 
 export interface ITerminalTabManager {
   initialize(): void;
@@ -60,6 +61,15 @@ export interface IHeaderManager {
 }
 
 // Manager coordination interface
+export interface IShellIntegrationBridge extends IShellIntegrationManager {
+  setCoordinator(coordinator: IManagerCoordinator): void;
+  handleMessage(message: unknown): void;
+  dispose(): void;
+  initializeTerminalShellIntegration(terminal: Terminal, terminalId: string): void;
+  decorateTerminalOutput(terminal: Terminal, terminalId: string): void;
+  updateWorkingDirectory?(terminalId: string, cwd: string): void;
+}
+
 export interface IManagerCoordinator {
   getActiveTerminalId(): string | null;
   setActiveTerminalId(terminalId: string): void;
@@ -80,7 +90,7 @@ export interface IManagerCoordinator {
   setVersionInfo(version: string): void;
   applyFontSettings(fontSettings: WebViewFontSettings): void;
   closeTerminal(id?: string): void;
-  shellIntegrationManager?: any; // Shell integration manager
+  shellIntegrationManager?: IShellIntegrationBridge;
   findInTerminalManager?: IFindInTerminalManager; // Find in Terminal manager
   profileManager?: IProfileManager; // Profile manager
   inputManager?: IInputManager; // Input management for terminal events
@@ -102,6 +112,8 @@ export interface IManagerCoordinator {
   getMessageManager(): IMessageManager;
   getTerminalContainerManager?(): ITerminalContainerManager;
   getDisplayModeManager?(): IDisplayModeManager;
+  deleteTerminalSafely?(terminalId: string): Promise<boolean>;
+  handleAiAgentToggle?(terminalId: string): void;
   // 新しいアーキテクチャ: 状態更新処理
   updateState?(state: unknown): void;
   handleTerminalRemovedFromExtension?(terminalId: string): void;

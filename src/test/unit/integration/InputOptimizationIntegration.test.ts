@@ -1,6 +1,6 @@
 /**
  * Input Optimization Integration Test Suite
- * Tests the complete input flow from InputManager through RefactoredMessageManager to PerformanceManager
+ * Tests the complete input flow from InputManager through ConsolidatedMessageManager to PerformanceManager
  */
 
 import { expect } from 'chai';
@@ -8,7 +8,7 @@ import { describe, it, beforeEach, afterEach } from 'mocha';
 import sinon from 'sinon';
 import { JSDOM } from 'jsdom';
 import { InputManager } from '../../../webview/managers/InputManager';
-import { RefactoredMessageManager } from '../../../webview/managers/RefactoredMessageManager';
+import { ConsolidatedMessageManager } from '../../../webview/managers/ConsolidatedMessageManager';
 import { PerformanceManager } from '../../../webview/managers/PerformanceManager';
 import {
   IManagerCoordinator,
@@ -19,7 +19,7 @@ import {
 
 describe('Input Optimization Integration', () => {
   let inputManager: InputManager;
-  let messageManager: RefactoredMessageManager;
+  let messageManager: ConsolidatedMessageManager;
   let performanceManager: PerformanceManager;
   let mockCoordinator: sinon.SinonStubbedInstance<IManagerCoordinator>;
   let mockTerminal: any;
@@ -69,7 +69,7 @@ describe('Input Optimization Integration', () => {
 
     // Initialize managers
     inputManager = new InputManager();
-    messageManager = new RefactoredMessageManager();
+    messageManager = new ConsolidatedMessageManager();
     performanceManager = new PerformanceManager();
     performanceManager.initialize();
 

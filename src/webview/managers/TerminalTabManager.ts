@@ -380,6 +380,15 @@ export class TerminalTabManager implements TerminalTabEvents {
     this.tabList?.setModeIndicator(mode);
   }
 
+  /**
+   * Set the flex direction of the tab list container
+   * @param direction - 'row' for horizontal tabs, 'column' for vertical tabs
+   */
+  public setTabListFlexDirection(direction: 'row' | 'column'): void {
+    this.ensureInitialized();
+    this.tabList?.setFlexDirection(direction);
+  }
+
   public getTabCount(): number {
     return this.tabs.size;
   }

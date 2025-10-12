@@ -1,7 +1,7 @@
 /**
  * MessageQueue Utility
  *
- * Extracted from RefactoredMessageManager to provide centralized
+ * Extracted from ConsolidatedMessageManager to provide centralized
  * message queuing with priority handling and race condition protection
  */
 
