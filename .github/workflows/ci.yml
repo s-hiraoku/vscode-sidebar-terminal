@@ -97,7 +97,10 @@ jobs:
           echo "🧪 Running unit tests on Linux..."
           # List test files to confirm they exist
           echo "Test files found:"
-          ls -la out/test/unit/**/*.test.js | wc -l
+          find out/test/unit -name "*.test.js" | head -10
+          # Run a single test file first for debugging
+          echo "Testing single file:"
+          ./node_modules/.bin/mocha --require ./src/test/shared/xterm-mock.js --require ./src/test/shared/setup-exit-handler.js --require out/test/shared/TestSetup.js --timeout 30000 --reporter spec out/test/unit/commands/FileReferenceCommand.test.js || echo "Single file test exit code: $?"
           # Run tests with npm script (includes coverage)
           npm run test:unit
         env:

@@ -890,7 +890,7 @@
     "test": "npm run test:unit",
     "test:coverage": "nyc --reporter=text --reporter=html --reporter=lcov npm run test",
     "test:watch": "npm run watch-tests & npm run test",
-    "test:unit": "nyc mocha --require ./src/test/shared/xterm-mock.js --require ./src/test/shared/setup-exit-handler.js --require out/test/shared/TestSetup.js --timeout 30000 --exit 'out/test/unit/**/*.test.js'",
+    "test:unit": "nyc mocha --require ./src/test/shared/xterm-mock.js --require ./src/test/shared/setup-exit-handler.js --require out/test/shared/TestSetup.js --timeout 30000 --exit out/test/unit/**/*.test.js",
     "test:integration": "nyc mocha --require ./src/test/shared/setup-exit-handler.js --require out/test/shared/TestSetup.js --timeout 60000 --exit 'out/test/integration/**/*.test.js'",
     "test:performance": "nyc mocha --require ./src/test/shared/setup-exit-handler.js --require out/test/shared/TestSetup.js --timeout 120000 --exit 'out/test/performance/**/*.test.js'",
     "test:all": "npm run test:unit && npm run test:integration && npm run test:performance",
