@@ -21,27 +21,34 @@ export interface TestEnvironment {
 
 /**
  * Standard VS Code API mock setup
+ * IMPORTANT: Always reset vscode mock to avoid conflicts with global TestSetup stubs
  */
 export const setupVSCodeMock = (): void => {
-  if (typeof (global as any).vscode === 'undefined') {
-    (global as any).vscode = {
-      workspace: {
-        getConfiguration: () => ({ get: () => undefined }),
-      },
-    };
-  }
+  // Delete existing vscode mock to avoid "already stubbed" errors
+  delete (global as any).vscode;
+
+  // Create fresh mock
+  (global as any).vscode = {
+    workspace: {
+      getConfiguration: () => ({ get: () => undefined }),
+    },
+  };
 };
 
 /**
  * Standard process mock setup for test environment
+ * IMPORTANT: Don't overwrite process completely to preserve EventEmitter methods
  */
 export const setupProcessMock = (): void => {
   const originalProcess = global.process;
-  (global as any).process = {
-    ...originalProcess,
-    nextTick: (callback: () => void) => setImmediate(callback),
-    env: { ...originalProcess.env, NODE_ENV: 'test' },
-  };
+
+  // Don't overwrite process - just modify properties to avoid breaking EventEmitter methods
+  if (!originalProcess.nextTick || typeof originalProcess.nextTick !== 'function') {
+    (originalProcess as any).nextTick = (callback: () => void) => setImmediate(callback);
+  }
+  if (!originalProcess.env.NODE_ENV) {
+    originalProcess.env.NODE_ENV = 'test';
+  }
 };
 
 /**
