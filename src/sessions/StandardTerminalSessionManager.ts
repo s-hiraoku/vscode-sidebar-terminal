@@ -394,7 +394,7 @@ export class StandardTerminalSessionManager {
     }>
   ): Promise<Record<string, unknown>> {
     log(
-      `📋 [STANDARD-SESSION] Requesting serialized terminal data from WebView PersistenceManager`
+      `📋 [STANDARD-SESSION] Requesting scrollback data from WebView via extractScrollbackData`
     );
 
     if (!this.sidebarProvider) {
@@ -403,51 +403,127 @@ export class StandardTerminalSessionManager {
     }
 
     try {
-      // 🎯 IMPROVED: Use Promise-based approach with proper timeout handling
-      const requestId = `scrollback-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      
-      return new Promise<Record<string, unknown>>((resolve) => {
-        const timeout = setTimeout(() => {
-          log('⏰ [STANDARD-SESSION] Timeout waiting for serialized data, using fallback');
-          resolve({});
-        }, 3000); // 3秒のタイムアウト（短縮）
+      // 🎯 FIX: Use extractScrollbackData command like SecondaryTerminalProvider does
+      const scrollbackDataMap: Record<string, string[]> = {};
 
-        // 🎯 FIXED: Create a dedicated response handler to avoid conflicts
-        const responseHandler = (data: Record<string, unknown>) => {
-          clearTimeout(timeout);
-          log(
-            `✅ [STANDARD-SESSION] Received serialized data for ${Object.keys(data).length} terminals`
-          );
-          resolve(data);
-        };
+      // Request scrollback data for each terminal
+      await Promise.all(
+        terminals.map(async (terminal) => {
+          try {
+            const requestId = `scrollback-${terminal.id}-${Date.now()}`;
 
-        // 🎯 IMPROVED: Store response handler for cleanup
-        (this as any)._pendingScrollbackRequest = {
-          requestId,
-          handler: responseHandler,
-          timestamp: Date.now(),
-        };
+            const scrollbackData = await new Promise<string[]>((resolve) => {
+              const timeout = setTimeout(() => {
+                log(`⏰ [STANDARD-SESSION] Timeout for terminal ${terminal.id}, using empty scrollback`);
+                resolve([]);
+              }, 10000); // 10 second timeout per terminal
 
-        // WebView のStandardTerminalPersistenceManager から実際のシリアライズされたデータを取得
-        this.sidebarProvider!.sendMessageToWebview({
-          command: 'requestTerminalSerialization',
-          terminalIds: terminals.map((t) => t.id),
-          requestId: requestId,
-          timestamp: Date.now(),
-        });
-      });
+              // Store pending request
+              if (!(this as any)._pendingScrollbackRequests) {
+                (this as any)._pendingScrollbackRequests = new Map();
+              }
+
+              (this as any)._pendingScrollbackRequests.set(requestId, {
+                resolve,
+                timeout,
+                terminalId: terminal.id,
+              });
+
+              // Send extractScrollbackData command to WebView
+              this.sidebarProvider!.sendMessageToWebview({
+                command: 'extractScrollbackData',
+                terminalId: terminal.id,
+                requestId,
+                maxLines: 1000,
+                timestamp: Date.now(),
+              });
+            });
+
+            if (scrollbackData && scrollbackData.length > 0) {
+              scrollbackDataMap[terminal.id] = scrollbackData;
+              log(`✅ [STANDARD-SESSION] Received ${scrollbackData.length} lines for terminal ${terminal.id}`);
+            }
+          } catch (error) {
+            log(`❌ [STANDARD-SESSION] Failed to get scrollback for terminal ${terminal.id}:`, error);
+          }
+        })
+      );
+
+      log(`✅ [STANDARD-SESSION] Collected scrollback data for ${Object.keys(scrollbackDataMap).length}/${terminals.length} terminals`);
+      return scrollbackDataMap;
     } catch (error) {
-      log(`❌ [STANDARD-SESSION] Error requesting scrollback data: ${String(error)}`);
+      log(`❌ [STANDARD-SESSION] Failed to request scrollback data:`, error);
       return {};
     }
   }
 
   /**
-   * WebViewからのscrollbackデータ応答を処理
+   * Handle scrollback data response from WebView
    */
-  private handleScrollbackDataResponse = (_data: Record<string, unknown>): void => {
+  public handleScrollbackDataResponse(message: {
+    command: string;
+    requestId?: string;
+    terminalId?: string;
+    scrollbackData?: string[];
+    error?: string;
+  }): void {
+    if (!message.requestId) {
+      return;
+    }
+
+    const pendingRequests = (this as any)._pendingScrollbackRequests as Map<string, any> | undefined;
+    if (!pendingRequests) {
+      return;
+    }
+
+    const pendingRequest = pendingRequests.get(message.requestId);
+    if (!pendingRequest) {
+      log(`⚠️ [STANDARD-SESSION] No pending request found for ${message.requestId}`);
+      return;
+    }
+
+    // Clear timeout and resolve promise
+    clearTimeout(pendingRequest.timeout);
+    pendingRequests.delete(message.requestId);
+
+    if (message.error) {
+      log(`⚠️ [STANDARD-SESSION] Scrollback extraction error for terminal ${message.terminalId}: ${message.error}`);
+      pendingRequest.resolve([]);
+    } else {
+      log(`✅ [STANDARD-SESSION] Scrollback data received for terminal ${message.terminalId}: ${message.scrollbackData?.length || 0} lines`);
+      pendingRequest.resolve(message.scrollbackData || []);
+    }
+  }
+
+  private _oldRequestSerializationMethod_DEPRECATED(): void {
+    // 🎯 OLD METHOD - DEPRECATED
+    // This method used requestTerminalSerialization command which requires
+    // StandardTerminalPersistenceManager in WebView, but WebView uses SimplePersistenceManager
+    // which doesn't have serializeTerminal() method.
+    //
+    // NEW METHOD: Use extractScrollbackData command via ScrollbackMessageHandler
+    // which works with the existing WebView infrastructure.
+
+    if (!this.sidebarProvider) {
+      return;
+    }
+
+    const requestId = `scrollback-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    this.sidebarProvider.sendMessageToWebview({
+      command: 'requestTerminalSerialization',
+      terminalIds: [],
+      requestId,
+      timestamp: Date.now(),
+    });
+  }
+
+  /**
+   * WebViewからのscrollbackデータ応答を処理（旧実装・非推奨）
+   */
+  private _legacyScrollbackResponseHandler = (_data: Record<string, unknown>): void => {
     // デフォルト実装（上記のPromiseで動的に上書きされる）
-    log('📋 [STANDARD-SESSION] Default scrollback response handler called');
+    log('📋 [STANDARD-SESSION] Legacy scrollback response handler called');
   };
 
   /**
@@ -457,7 +533,7 @@ export class StandardTerminalSessionManager {
     log(
       `📋 [STANDARD-SESSION] Received serialization response with ${Object.keys(data).length} terminals`
     );
-    
+
     // 🎯 IMPROVED: Handle pending request properly
     const pendingRequest = (this as any)._pendingScrollbackRequest;
     if (pendingRequest && pendingRequest.handler) {
@@ -465,8 +541,8 @@ export class StandardTerminalSessionManager {
       // Clean up pending request
       delete (this as any)._pendingScrollbackRequest;
     } else {
-      // Fallback to original handler
-      this.handleScrollbackDataResponse(data);
+      // Fallback to legacy handler
+      this._legacyScrollbackResponseHandler(data);
     }
   }
 

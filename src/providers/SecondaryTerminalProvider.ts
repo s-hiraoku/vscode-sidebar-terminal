@@ -30,6 +30,13 @@ import {
   MessageHandler,
 } from '../types/type-guards';
 
+// New refactored services
+import { PanelLocationService } from './services/PanelLocationService';
+import { TerminalLinkResolver } from './services/TerminalLinkResolver';
+import { WebViewCommunicationService } from './services/WebViewCommunicationService';
+import { TerminalEventCoordinator } from './services/TerminalEventCoordinator';
+import { ScrollbackCoordinator } from './services/ScrollbackCoordinator';
+
 /**
  * Panel location type for WebView placement
  * - 'sidebar': WebView is displayed in the sidebar (narrow and tall)
@@ -79,15 +86,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   private _isInitialized = false; // Prevent duplicate initialization
   // Removed all state variables - using simple "fresh start" approach
 
-  /**
-   * Cached panel location reported by WebView
-   *
-   * This cache stores the most recent panel location detected by the WebView's
-   * dimension analysis. It is used to determine the optimal split direction:
-   * - 'sidebar': Narrow/tall layout → horizontal split (stacked vertically)
-   * - 'panel': Wide/short layout → vertical split (side by side)
-   */
-  private _cachedPanelLocation: PanelLocation = 'sidebar';
+  // Panel location now managed by PanelLocationService
 
   // Minimal command router for incoming webview messages
   private readonly _messageRouter: SecondaryTerminalMessageRouter;
@@ -102,12 +101,33 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   private _persistenceHandler?: PersistenceMessageHandler;
   private readonly _initializationCoordinator: TerminalInitializationCoordinator;
 
+  // New refactored services
+  private readonly _panelLocationService: PanelLocationService;
+  private readonly _linkResolver: TerminalLinkResolver;
+  private readonly _communicationService: WebViewCommunicationService;
+  private _eventCoordinator?: TerminalEventCoordinator;
+  private readonly _scrollbackCoordinator: ScrollbackCoordinator;
+
   constructor(
     private readonly _extensionContext: vscode.ExtensionContext,
     private readonly _terminalManager: TerminalManager,
     private readonly _standardSessionManager?: import('../sessions/StandardTerminalSessionManager').StandardTerminalSessionManager
   ) {
     this._htmlGenerationService = new WebViewHtmlGenerationService();
+
+    // Initialize new refactored services
+    this._communicationService = new WebViewCommunicationService();
+    this._panelLocationService = new PanelLocationService(
+      this._communicationService.sendMessage.bind(this._communicationService)
+    );
+    this._linkResolver = new TerminalLinkResolver(
+      (terminalId: string) => this._terminalManager.getTerminal(terminalId)
+    );
+    this._scrollbackCoordinator = new ScrollbackCoordinator(
+      this._communicationService.sendMessage.bind(this._communicationService)
+    );
+
+    log('🎨 [PROVIDER] New refactored services initialized');
 
     // Initialize persistence services
     this._persistenceService = new UnifiedTerminalPersistenceService(
@@ -165,6 +185,21 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     // CRITICAL: Set view reference first
     this._view = webviewView;
     log('✅ [PROVIDER] WebView reference set');
+
+    // Set view in communication service
+    this._communicationService.setView(webviewView);
+    log('✅ [PROVIDER] Communication service view set');
+
+    // Initialize event coordinator with new view
+    this._eventCoordinator = new TerminalEventCoordinator(
+      this._terminalManager,
+      this._communicationService.sendMessage.bind(this._communicationService),
+      () => this.saveCurrentSession(),
+      () => this.sendFullCliAgentStateSync(),
+      this._terminalIdMapping
+    );
+    this._eventCoordinator.initialize();
+    log('✅ [PROVIDER] Event coordinator initialized');
 
     // Reset initialization flag for new WebView (including panel moves)
     this._isInitialized = false;
@@ -381,66 +416,8 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   }
 
   private async _handleOpenTerminalLink(message: WebviewMessage): Promise<void> {
-    const linkType = message.linkType;
-    if (!linkType) {
-      log('🔗 [PROVIDER] Link message missing linkType');
-      return;
-    }
-
-    if (linkType === 'url') {
-      const targetUrl = message.url;
-      if (!targetUrl) {
-        log('🔗 [PROVIDER] URL link missing url field');
-        return;
-      }
-
-      try {
-        log(`🔗 [PROVIDER] Opening URL from terminal: ${targetUrl}`);
-        await vscode.env.openExternal(vscode.Uri.parse(targetUrl));
-      } catch (error) {
-        log('❌ [PROVIDER] Failed to open URL link:', error);
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        showError(`Failed to open link in browser. ${errorMessage}`);
-      }
-      return;
-    }
-
-    const filePath = message.filePath;
-    if (!filePath) {
-      log('🔗 [PROVIDER] File link missing filePath');
-      return;
-    }
-
-    const resolvedUri = await this._resolveFileLink(filePath, message.terminalId);
-    if (!resolvedUri) {
-      showError(`Unable to locate file from terminal link. Path: ${filePath}`);
-      return;
-    }
-
-    try {
-      const document = await vscode.workspace.openTextDocument(resolvedUri);
-      const editor = await vscode.window.showTextDocument(document, { preview: true });
-
-      if (typeof message.lineNumber === 'number' && !Number.isNaN(message.lineNumber)) {
-        const line = Math.max(0, message.lineNumber - 1);
-        const columnValue =
-          typeof message.columnNumber === 'number' && !Number.isNaN(message.columnNumber)
-            ? Math.max(0, message.columnNumber - 1)
-            : 0;
-        const position = new vscode.Position(line, columnValue);
-        editor.selection = new vscode.Selection(position, position);
-        editor.revealRange(
-          new vscode.Range(position, position),
-          vscode.TextEditorRevealType.InCenter
-        );
-      }
-
-      log(`🔗 [PROVIDER] Opened file link: ${resolvedUri.fsPath}`);
-    } catch (error) {
-      log('❌ [PROVIDER] Failed to open file link:', error);
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      showError(`Failed to open file from terminal link. ${errorMessage}`);
-    }
+    // Delegate to TerminalLinkResolver service
+    await this._linkResolver.handleOpenTerminalLink(message);
   }
 
   private async _handleReorderTerminals(message: WebviewMessage): Promise<void> {
@@ -461,66 +438,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     }
   }
 
-  private async _resolveFileLink(filePath: string, terminalId?: string): Promise<vscode.Uri | null> {
-    const candidates = this._buildPathCandidates(filePath, terminalId);
-
-    for (const candidate of candidates) {
-      try {
-        const stat = await fsPromises.stat(candidate);
-        if (stat.isFile()) {
-          return vscode.Uri.file(candidate);
-        }
-      } catch (error) {
-        // Ignore missing candidates
-        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-          log('⚠️ [PROVIDER] Error while checking file candidate:', error);
-        }
-      }
-    }
-
-    return null;
-  }
-
-  private _buildPathCandidates(filePath: string, terminalId?: string): string[] {
-    const normalizedInput = this._normalizeLinkPath(filePath);
-    const candidates = new Set<string>();
-
-    if (path.isAbsolute(normalizedInput)) {
-      candidates.add(normalizedInput);
-    } else {
-      if (terminalId) {
-        const terminal = this._terminalManager.getTerminal(terminalId);
-        if (terminal?.cwd) {
-          candidates.add(path.resolve(terminal.cwd, normalizedInput));
-        }
-      }
-
-      const workspaceFolders = vscode.workspace.workspaceFolders || [];
-      for (const folder of workspaceFolders) {
-        candidates.add(path.resolve(folder.uri.fsPath, normalizedInput));
-      }
-
-      candidates.add(path.resolve(process.cwd(), normalizedInput));
-    }
-
-    return Array.from(candidates);
-  }
-
-  private _normalizeLinkPath(input: string): string {
-    let normalized = input.trim();
-    if (!normalized) {
-      return normalized;
-    }
-
-    if (normalized.startsWith('~')) {
-      normalized = path.join(os.homedir(), normalized.slice(1));
-    }
-
-    // Convert Windows-style separators to native separators for cross-platform compatibility
-    normalized = normalized.replace(/\\/g, path.sep);
-
-    return normalized;
-  }
+  // File link resolution methods moved to TerminalLinkResolver service
 
   /**
    * Extracted handler for webview readiness
@@ -546,21 +464,8 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
    * Send version information to WebView
    */
   private _sendVersionInfo(): void {
-    try {
-      const extension = vscode.extensions.getExtension('s-hiraoku.vscode-sidebar-terminal');
-      const version = extension?.packageJSON?.version || 'unknown';
-      const formattedVersion = version === 'unknown' ? version : `v${version}`;
-
-      if (this._view) {
-        void this._view.webview.postMessage({
-          command: 'versionInfo',
-          version: formattedVersion,
-        });
-        log(`📤 [VERSION] Sent version info to WebView: ${formattedVersion}`);
-      }
-    } catch (error) {
-      log('❌ [VERSION] Error sending version info:', error);
-    }
+    // Delegate to WebViewCommunicationService
+    void this._communicationService.sendVersionInfo();
   }
 
   /**
@@ -936,59 +841,27 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
    * @param message - WebView message containing location information
    */
   private async _handleReportPanelLocation(message: WebviewMessage): Promise<void> {
-    log('📍 [DEBUG] ==================== PANEL LOCATION REPORT ====================');
-    log('📍 [DEBUG] Panel location reported from WebView (router):', message.location);
-    log('📍 [DEBUG] Previous cached location:', this._cachedPanelLocation);
+    // Delegate to PanelLocationService with relayout callback
+    await this._panelLocationService.handlePanelLocationReport(
+      message.location,
+      async (previousLocation, newLocation) => {
+        // Auto-relayout callback
+        const terminalCount = this._terminalManager.getTerminals().length;
+        if (terminalCount >= 2) {
+          log('🔄 [RELAYOUT] Panel location changed with 2+ terminals, triggering auto-relayout...');
 
-    const loc = message.location;
+          const splitDirection = this._panelLocationService.determineSplitDirection();
+          log(`🔄 [RELAYOUT] New split direction: ${splitDirection}`);
 
-    // Validate panel location using type guard
-    if (!isPanelLocation(loc)) {
-      log('⚠️ [DEBUG] Invalid or missing panel location:', loc);
-      return;
-    }
+          await this._communicationService.sendMessage({
+            command: 'relayoutTerminals',
+            direction: splitDirection,
+          });
 
-    // Store previous location for change detection
-    const previousLocation = this._cachedPanelLocation;
-
-    // Cache the panel location for split direction determination
-    this._cachedPanelLocation = loc;
-    log('📍 [DEBUG] ✅ Cached panel location UPDATED:', loc);
-
-    // Update context key for VS Code when clause (used in package.json menus)
-    const { PANEL_LOCATION } = SecondaryTerminalProvider.CONTEXT_KEYS;
-    void vscode.commands.executeCommand('setContext', PANEL_LOCATION, loc);
-    log('📍 [DEBUG] Context key updated with panel location:', loc);
-
-    // Notify WebView of the confirmed panel location (keeps behavior consistent)
-    await this._sendMessage({
-      command: 'panelLocationUpdate',
-      location: loc,
-    });
-    log('📍 [DEBUG] Panel location update confirmed to WebView:', loc);
-
-    // 🆕 Auto-relayout existing terminals when panel location changes
-    const terminalCount = this._terminalManager.getTerminals().length;
-    log(`🔄 [RELAYOUT] Terminal count: ${terminalCount}`);
-    log(`🔄 [RELAYOUT] Location changed: ${previousLocation} → ${loc}`);
-
-    if (previousLocation && previousLocation !== loc && terminalCount >= 2) {
-      log('🔄 [RELAYOUT] Panel location changed with 2+ terminals, triggering auto-relayout...');
-
-      const splitDirection = this._determineSplitDirection();
-      log(`🔄 [RELAYOUT] New split direction: ${splitDirection}`);
-
-      await this._sendMessage({
-        command: 'relayoutTerminals',
-        direction: splitDirection,
-      });
-
-      log('🔄 [RELAYOUT] ✅ Relayout command sent to WebView');
-    } else {
-      log('🔄 [RELAYOUT] No relayout needed (location unchanged or <2 terminals)');
-    }
-
-    log('📍 [DEBUG] ===============================================================');
+          log('🔄 [RELAYOUT] ✅ Relayout command sent to WebView');
+        }
+      }
+    );
   }
 
   /**
@@ -996,121 +869,34 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
    * Issue #148: Dynamic split direction based on panel location
    */
   private _requestPanelLocationDetection(): void {
-    try {
-      log('📍 [PANEL-DETECTION] Requesting panel location detection from WebView');
-
-      // Send a message to WebView to analyze its dimensions and report back
-      this._sendMessage({
-        command: 'requestPanelLocationDetection',
-      });
-    } catch (error) {
-      log('⚠️ [PANEL-DETECTION] Error requesting panel location detection:', error);
-      // Fallback to sidebar assumption
-      this._sendMessage({
-        command: 'panelLocationUpdate',
-        location: 'sidebar',
-      });
-
-      // Set fallback context key
-      void vscode.commands.executeCommand(
-        'setContext',
-        'secondaryTerminal.panelLocation',
-        'sidebar'
-      );
-    }
+    // Delegate to PanelLocationService
+    void this._panelLocationService.requestPanelLocationDetection();
   }
 
   /**
    * Determine split direction based on current panel location
-   *
-   * Calculates the optimal split direction based on the available space:
-   * - Sidebar (tall/narrow): vertical split → column layout → terminals stacked
-   * - Bottom Panel (wide/short): horizontal split → row layout → terminals side by side
-   *
-   * @returns Optimal split direction for current layout
    */
   private _determineSplitDirection(): SplitDirection {
-    log('🔀 [SPLIT] ==================== DETERMINE SPLIT DIRECTION ====================');
-    log(`🔀 [SPLIT] _cachedPanelLocation value: ${this._cachedPanelLocation}`);
-
-    const panelLocation = this._getCurrentPanelLocation();
-    log(`🔀 [SPLIT] getCurrentPanelLocation() returned: ${panelLocation}`);
-
-    // Map panel location to split direction
-    // Sidebar (tall/narrow) → vertical split → column layout (terminals stacked)
-    // Panel (wide/short) → horizontal split → row layout (terminals side by side)
-    const splitDirection: SplitDirection = panelLocation === 'panel' ? 'horizontal' : 'vertical';
-
-    log(`🔀 [SPLIT] Mapping logic: ${panelLocation} === 'panel' ? 'horizontal' : 'vertical'`);
-    log(`🔀 [SPLIT] ✅ Result: ${splitDirection}`);
-    log(`🔀 [SPLIT] Expected behavior: ${panelLocation === 'panel' ? '横並び (side by side)' : '縦並び (stacked)'}`);
-    log('🔀 [SPLIT] ====================================================================');
-
-    return splitDirection;
+    // Delegate to PanelLocationService
+    return this._panelLocationService.determineSplitDirection();
   }
 
   /**
    * Determine current panel location for split direction calculation
-   *
-   * This method determines the current panel location by checking:
-   * 1. If dynamic split direction is disabled → return 'sidebar'
-   * 2. If manual location is set → return manual value
-   * 3. Otherwise → return cached location from WebView detection
-   *
-   * @returns Current panel location ('sidebar' or 'panel')
    */
   private _getCurrentPanelLocation(): PanelLocation {
-    log('📍 [PANEL-DETECTION] ==================== GET CURRENT PANEL LOCATION ====================');
-
-    const config = vscode.workspace.getConfiguration('secondaryTerminal');
-    const { DYNAMIC_SPLIT_DIRECTION, PANEL_LOCATION } = SecondaryTerminalProvider.CONFIG_KEYS;
-
-    // Check if dynamic split direction feature is enabled
-    const isDynamicSplitEnabled = config.get<boolean>(DYNAMIC_SPLIT_DIRECTION, true);
-    log(`📍 [PANEL-DETECTION] Dynamic split direction enabled: ${isDynamicSplitEnabled}`);
-
-    if (!isDynamicSplitEnabled) {
-      log('📍 [PANEL-DETECTION] ❌ Dynamic split direction is DISABLED, defaulting to sidebar');
-      log('📍 [PANEL-DETECTION] ==========================================================================');
-      return 'sidebar';
-    }
-
-    // Get manual panel location setting
-    const manualPanelLocation = config.get<'sidebar' | 'panel' | 'auto'>(PANEL_LOCATION, 'auto');
-    log(`📍 [PANEL-DETECTION] Manual panel location setting: ${manualPanelLocation}`);
-
-    if (manualPanelLocation !== 'auto') {
-      log(`📍 [PANEL-DETECTION] ✅ Using MANUAL panel location: ${manualPanelLocation}`);
-      log('📍 [PANEL-DETECTION] ==========================================================================');
-      return manualPanelLocation as PanelLocation;
-    }
-
-    // For auto-detection, use cached value from WebView
-    log(`📍 [PANEL-DETECTION] AUTO mode - using cached value: ${this._cachedPanelLocation}`);
-    log('📍 [PANEL-DETECTION] ==========================================================================');
-    return this._cachedPanelLocation;
+    // Delegate to PanelLocationService
+    return this._panelLocationService.getCurrentPanelLocation();
   }
 
   /**
    * 🆕 Set up listener for panel location changes (e.g., drag and drop)
    */
   private _setupPanelLocationChangeListener(webviewView: vscode.WebviewView): void {
-    // VS Code doesn't provide direct panel location change events
-    // We'll use view state changes as a proxy for potential location changes
+    // Initialize PanelLocationService with webview
+    void this._panelLocationService.initialize(webviewView);
 
-    if (webviewView.onDidChangeVisibility) {
-      this._addDisposable(
-        webviewView.onDidChangeVisibility(() => {
-          // When visibility changes, re-detect panel location
-          setTimeout(() => {
-            log('📍 [PANEL-DETECTION] Panel location change detected - requesting detection');
-            this._requestPanelLocationDetection();
-          }, 100); // Small delay to ensure layout is settled
-        })
-      );
-    }
-
-    // Also listen for configuration changes
+    // Also listen for configuration changes (additional logic)
     this._addDisposable(
       vscode.workspace.onDidChangeConfiguration((event) => {
         if (event.affectsConfiguration('secondaryTerminal.panelLocation')) {
@@ -1440,7 +1226,14 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     try {
       // Handle scrollback data responses first (special case)
       if (message.command === 'scrollbackDataCollected') {
-        this.handleScrollbackDataResponse(message);
+        // Delegate to ScrollbackCoordinator
+        this._scrollbackCoordinator.handleScrollbackDataResponse(message);
+
+        // Also forward to StandardTerminalSessionManager for session persistence
+        if (this._standardSessionManager) {
+          this._standardSessionManager.handleScrollbackDataResponse(message);
+        }
+
         return;
       }
 
@@ -1607,6 +1400,12 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
    * ターミナルイベントリスナーを設定する
    */
   private _setupTerminalEventListeners(): void {
+    // DEPRECATED: Now handled by TerminalEventCoordinator
+    // This method is kept for compatibility but does nothing
+    log('⚠️ [PROVIDER] _setupTerminalEventListeners called but delegated to TerminalEventCoordinator');
+    return;
+
+    // OLD CODE BELOW (kept for reference, not executed)
     // Clear existing listeners to prevent duplicates during panel moves
     this._clearTerminalEventListeners();
 
@@ -1850,44 +1649,16 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
    * Public method for StandardTerminalSessionManager to send messages
    */
   public async sendMessageToWebview(message: WebviewMessage): Promise<void> {
-    log(`📤 [PROVIDER] Public sendMessageToWebview called: ${message.command}`);
-    await this._sendMessage(message);
+    // Delegate to WebViewCommunicationService
+    await this._communicationService.sendMessageToWebview(message);
   }
 
   /**
    * Webviewにメッセージを送信する
    */
   private async _sendMessage(message: WebviewMessage): Promise<void> {
-    // Simple direct sending - no state management needed with fresh start approach
-    if (!this._view) {
-      log('⚠️ [WARN] No webview available to send message');
-      return;
-    }
-
-    await this._sendMessageDirect(message);
-  }
-
-  private async _sendMessageDirect(message: WebviewMessage): Promise<void> {
-    if (!this._view) {
-      log('⚠️ [WARN] No webview available to send message');
-      return;
-    }
-
-    try {
-      await this._view.webview.postMessage(message);
-      log(`📤 [DEBUG] Sent message: ${message.command}`);
-    } catch (error) {
-      if (
-        error instanceof Error &&
-        (error.message.includes('disposed') || error.message.includes('Webview is disposed'))
-      ) {
-        log('⚠️ [WARN] Webview disposed during message send');
-        return;
-      }
-
-      log('❌ [ERROR] Failed to send message to webview:', error);
-      TerminalErrorHandler.handleWebviewError(error);
-    }
+    // Delegate to WebViewCommunicationService
+    await this._communicationService.sendMessage(message);
   }
 
   private _getHtmlForWebview(webview: vscode.Webview): string {
@@ -2895,22 +2666,19 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       });
     }
 
-    // Clear terminal event listeners
-    this._clearTerminalEventListeners();
+    // Dispose new refactored services
+    this._scrollbackCoordinator.dispose();
+    this._panelLocationService.dispose();
+    if (this._eventCoordinator) {
+      this._eventCoordinator.dispose();
+    }
+    // Note: WebViewCommunicationService and TerminalLinkResolver don't require disposal
 
     // Clear message handlers and ID mappings
     this._messageRouter.clear();
     if (this._terminalIdMapping) {
       this._terminalIdMapping.clear();
     }
-
-    // Clean up any pending scrollback requests
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    for (const [_requestId, request] of this.pendingScrollbackRequests.entries()) {
-      clearTimeout(request.timeout);
-      request.resolve([]); // Resolve with empty array to avoid hanging promises
-    }
-    this.pendingScrollbackRequests.clear();
 
     // Dispose all registered disposables
     for (const disposable of this._disposables) {
