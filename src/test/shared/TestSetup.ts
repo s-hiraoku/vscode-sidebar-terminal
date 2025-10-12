@@ -353,7 +353,10 @@ export async function setupTestEnvironment(): Promise<void> {
     cwd: savedCwd || (() => '/test'),
     argv: process.argv,
     pid: process.pid,
-    on: () => {},
+    on: process.on ? process.on.bind(process) : () => {},
+    emit: process.emit ? process.emit.bind(process) : () => false,
+    listeners: process.listeners ? process.listeners.bind(process) : () => [],
+    listenerCount: process.listenerCount ? process.listenerCount.bind(process) : () => 0,
     removeListener: () => processPolyfill,
     removeAllListeners: () => processPolyfill,
     off: () => processPolyfill,
@@ -368,8 +371,17 @@ export async function setupTestEnvironment(): Promise<void> {
     if (!existingProcess.nextTick) {
       existingProcess.nextTick = (callback: () => void) => setImmediate(callback);
     }
-    if (!existingProcess.on) {
-      existingProcess.on = () => {};
+    if (!existingProcess.on || typeof existingProcess.on !== 'function') {
+      existingProcess.on = process.on ? process.on.bind(process) : () => {};
+    }
+    if (!existingProcess.emit || typeof existingProcess.emit !== 'function') {
+      existingProcess.emit = process.emit ? process.emit.bind(process) : () => false;
+    }
+    if (!existingProcess.listeners || typeof existingProcess.listeners !== 'function') {
+      existingProcess.listeners = process.listeners ? process.listeners.bind(process) : () => [];
+    }
+    if (!existingProcess.listenerCount || typeof existingProcess.listenerCount !== 'function') {
+      existingProcess.listenerCount = process.listenerCount ? process.listenerCount.bind(process) : () => 0;
     }
     if (!existingProcess.removeListener) {
       existingProcess.removeListener = () => existingProcess;

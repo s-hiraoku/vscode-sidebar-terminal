@@ -83,6 +83,23 @@ ensureProcessMethod('listenerCount', function (eventName) {
   return 0;
 });
 
+// Ensure process.emit exists (required by signal-exit in nyc)
+// Save reference to original emit before any modifications
+const EventEmitter = require('events');
+const originalEmit = process.emit && typeof process.emit === 'function'
+  ? process.emit.bind(process)
+  : EventEmitter.prototype.emit.bind(process);
+
+ensureProcessMethod('emit', function (eventName, ...args) {
+  try {
+    return originalEmit.call(this, eventName, ...args);
+  } catch (e) {
+    // If emit fails, log but don't crash
+    console.warn(`process.emit failed for event ${eventName}:`, e.message);
+    return false;
+  }
+});
+
 // Directly patch Mocha's Runner class to handle missing listenerCount
 // Wait for next tick to ensure Mocha is loaded
 setImmediate(() => {
