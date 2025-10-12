@@ -94,10 +94,10 @@ jobs:
       - name: Run unit tests with coverage (Linux)
         if: runner.os == 'Linux'
         run: |
-          echo "🧪 Running unit tests on Linux with parallel execution..."
+          echo "🧪 Running unit tests on Linux..."
           # Run tests and capture result, ignore Mocha cleanup exit code 7
           set +e  # Disable exit on error temporarily
-          xvfb-run -a ./node_modules/.bin/mocha --require out/test/shared/TestSetup.js --timeout 30000 --parallel --jobs 4 --exit 'out/test/unit/**/*.test.js' --reporter spec
+          xvfb-run -a ./node_modules/.bin/mocha --require ./src/test/shared/xterm-mock.js --require ./src/test/shared/setup-exit-handler.js --require out/test/shared/TestSetup.js --timeout 30000 --exit 'out/test/unit/**/*.test.js' --reporter spec
           TEST_EXIT_CODE=$?
           set -e  # Re-enable exit on error
 
