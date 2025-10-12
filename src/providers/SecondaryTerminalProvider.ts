@@ -250,10 +250,9 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
   private _registerCoreListeners(): void {
     // STEP 5: Set up terminal and other listeners
-    log('🔧 [PROVIDER] Step 5: Setting up terminal listeners...');
-    this._setupTerminalEventListeners();
-    this._setupCliAgentStatusListeners();
-    this._setupConfigurationChangeListeners();
+    // Note: Terminal event listeners are now handled by TerminalEventCoordinator
+    // which is initialized in _resetForNewView()
+    log('🔧 [PROVIDER] Step 5: Core listeners already set up by TerminalEventCoordinator');
   }
 
   /**
