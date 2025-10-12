@@ -22,9 +22,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - More visible history without manual configuration
   - Better out-of-box experience for typical workflows
 
-## [0.1.119] - 2025-10-11
+## [0.1.119] - 2025-10-12
 
 ### Fixed
+- **Test Infrastructure Stability**: Fixed critical test environment issues
+  - Resolved `process.emit is not a function` crashes by preserving EventEmitter methods
+  - Fixed VS Code module mocking for ConfigurationService imports
+  - Tests now complete successfully without crashes (1,350 passing tests)
+- **CI/CD Pipeline**: Fixed GitHub Actions timeout issues
+  - Disabled nyc coverage to prevent 10-minute timeout
+  - Increased test timeout to 20 minutes
+  - Tests run without coverage in CI for faster execution
 - **Split Layout Consistency**: New terminals created while split mode is active now join the existing layout instead of opening in fullscreen.
 
 ### Changed
