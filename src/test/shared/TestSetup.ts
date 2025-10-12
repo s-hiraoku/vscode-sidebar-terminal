@@ -342,12 +342,15 @@ export async function setupTestEnvironment(): Promise<void> {
   (global as any).module = { exports: {} };
 
   // Enhanced process polyfilling for test compatibility
+  // Save process.cwd reference NOW before it might get replaced
+  const savedCwd = process.cwd && typeof process.cwd === 'function' ? process.cwd.bind(process) : null;
+
   const processPolyfill = {
     ...process,
     nextTick: (callback: () => void) => setImmediate(callback),
     env: { ...process.env, NODE_ENV: 'test' },
     platform: process.platform,
-    cwd: process.cwd ? (() => process.cwd()) : (() => '/test'),
+    cwd: savedCwd || (() => '/test'),
     argv: process.argv,
     pid: process.pid,
     on: () => {},
@@ -787,9 +790,21 @@ export function setupTestEnvironmentSync(): void {
   // setupJSDOMEnvironment(); // Temporarily disabled - tests don't need DOM yet
   setupConsoleMocks(); // Re-enabled with pass-through implementation
 
-  // Ensure process.cwd exists
+  // Ensure process.cwd exists and is callable
+  // Note: setup-exit-handler.js should have already wrapped process.cwd,
+  // but we double-check here in case it wasn't loaded first
   if (!process.cwd || typeof process.cwd !== 'function') {
-    (process as any).cwd = () => '/test';
+    const fallbackCwd = () => '/test';
+    try {
+      Object.defineProperty(process, 'cwd', {
+        value: fallbackCwd,
+        writable: true,
+        configurable: true,
+        enumerable: false
+      });
+    } catch (e) {
+      (process as any).cwd = fallbackCwd;
+    }
   }
 }
 

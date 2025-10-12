@@ -22,6 +22,36 @@ const ensureProcessMethod = (name, impl) => {
   }
 };
 
+// Ensure process.cwd exists and works (critical for many tests)
+// Save reference to original cwd before any modifications
+const originalCwd = process.cwd && typeof process.cwd === 'function' ? process.cwd.bind(process) : null;
+
+// Always wrap process.cwd to ensure it never throws
+const safeCwd = function () {
+  // Try original cwd first
+  if (originalCwd) {
+    try {
+      return originalCwd();
+    } catch (e) {
+      // Original cwd failed, fall through to default
+    }
+  }
+  return '/test';
+};
+
+// Force replace process.cwd with safe version
+try {
+  Object.defineProperty(process, 'cwd', {
+    value: safeCwd,
+    writable: true,
+    configurable: true,
+    enumerable: false
+  });
+} catch (e) {
+  // Fallback to direct assignment
+  process.cwd = safeCwd;
+}
+
 ensureProcessMethod('removeListener', function (...args) {
   return this.off ? this.off(...args) : this;
 });
