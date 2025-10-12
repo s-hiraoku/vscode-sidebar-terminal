@@ -4,29 +4,91 @@
  */
 
 // Add missing event handler methods to process for Mocha compatibility
-if (!process.removeListener) {
-  process.removeListener = function (...args) {
-    return this.off ? this.off(...args) : this;
-  };
-}
+// Use Object.defineProperty to make these more resistant to being overwritten
 
-if (!process.removeAllListeners) {
-  process.removeAllListeners = function (event) {
-    if (event && this.listeners) {
-      const listeners = this.listeners(event);
-      listeners.forEach((listener) => {
-        this.removeListener(event, listener);
+const ensureProcessMethod = (name, impl) => {
+  if (!process[name] || typeof process[name] !== 'function') {
+    try {
+      Object.defineProperty(process, name, {
+        value: impl,
+        writable: true,
+        configurable: true,
+        enumerable: false
       });
+    } catch (e) {
+      // Fallback to direct assignment
+      process[name] = impl;
     }
-    return this;
-  };
-}
+  }
+};
 
-if (!process.off) {
-  process.off = function (...args) {
-    return this.removeListener ? this.removeListener(...args) : this;
-  };
-}
+ensureProcessMethod('removeListener', function (...args) {
+  return this.off ? this.off(...args) : this;
+});
+
+ensureProcessMethod('removeAllListeners', function (event) {
+  if (event && this.listeners) {
+    const listeners = this.listeners(event);
+    listeners.forEach((listener) => {
+      this.removeListener(event, listener);
+    });
+  }
+  return this;
+});
+
+ensureProcessMethod('off', function (...args) {
+  return this.removeListener ? this.removeListener(...args) : this;
+});
+
+ensureProcessMethod('listenerCount', function (eventName) {
+  // If the native implementation exists in EventEmitter.prototype, use it
+  if (this.listeners && typeof this.listeners === 'function') {
+    try {
+      const listeners = this.listeners(eventName);
+      return Array.isArray(listeners) ? listeners.length : 0;
+    } catch (e) {
+      return 0;
+    }
+  }
+  return 0;
+});
+
+// Directly patch Mocha's Runner class to handle missing listenerCount
+// Wait for next tick to ensure Mocha is loaded
+setImmediate(() => {
+  try {
+    // Try to get the Runner class directly
+    const Runner = require('mocha/lib/runner.js');
+
+    if (Runner && Runner.prototype._addEventListener) {
+      const original_addEventListener = Runner.prototype._addEventListener;
+
+      Runner.prototype._addEventListener = function(target, eventName, listener) {
+        // Ensure listenerCount exists on the target before calling original method
+        if (target && (!target.listenerCount || typeof target.listenerCount !== 'function')) {
+          // Use simple assignment instead of defineProperty to avoid breaking process
+          target.listenerCount = function(evtName) {
+            if (this.listeners && typeof this.listeners === 'function') {
+              try {
+                const listeners = this.listeners(evtName);
+                return Array.isArray(listeners) ? listeners.length : 0;
+              } catch (e) {
+                return 0;
+              }
+            }
+            return 0;
+          };
+        }
+
+        return original_addEventListener.call(this, target, eventName, listener);
+      };
+
+      console.log('✅ Patched Mocha Runner._addEventListener to handle missing listenerCount');
+    }
+  } catch (e) {
+    console.warn('⚠️  Failed to patch Mocha Runner:', e.message);
+  }
+});
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {
