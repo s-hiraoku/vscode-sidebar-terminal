@@ -272,9 +272,23 @@ export async function setupTestEnvironment(): Promise<void> {
   // Mock VS Code module
   (global as any).vscode = mockVscode;
 
-  // Override module loading for vscode and node-pty
+  // CRITICAL: Register vscode mock in require.cache so that `import * as vscode from 'vscode'` returns the mock
+  // This fixes ConfigurationService and other modules that import vscode directly
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const Module = require('module');
+  try {
+    const vscodeModulePath = require.resolve('vscode', { paths: [process.cwd()] });
+    require.cache[vscodeModulePath] = {
+      id: vscodeModulePath,
+      filename: vscodeModulePath,
+      loaded: true,
+      exports: mockVscode,
+    } as NodeModule;
+  } catch (e) {
+    // vscode module not found in require.resolve, will be handled by Module.prototype.require override
+  }
+
+  // Override module loading for vscode and node-pty
   const originalRequire = Module.prototype.require;
 
   Module.prototype.require = function (id: string) {
@@ -790,9 +804,23 @@ export function setupTestEnvironmentSync(): void {
   // Mock VS Code module
   (global as any).vscode = mockVscode;
 
-  // Override module loading for vscode and node-pty
+  // CRITICAL: Register vscode mock in require.cache so that `import * as vscode from 'vscode'` returns the mock
+  // This fixes ConfigurationService and other modules that import vscode directly
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const Module = require('module');
+  try {
+    const vscodeModulePath = require.resolve('vscode', { paths: [process.cwd()] });
+    require.cache[vscodeModulePath] = {
+      id: vscodeModulePath,
+      filename: vscodeModulePath,
+      loaded: true,
+      exports: mockVscode,
+    } as NodeModule;
+  } catch (e) {
+    // vscode module not found in require.resolve, will be handled by Module.prototype.require override
+  }
+
+  // Override module loading for vscode and node-pty
   const originalRequire = Module.prototype.require;
 
   Module.prototype.require = function (id: string) {

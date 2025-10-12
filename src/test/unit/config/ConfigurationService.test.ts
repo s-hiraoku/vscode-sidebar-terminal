@@ -28,6 +28,9 @@ describe('ConfigurationService', () => {
   let configChangeEvent: sinon.SinonStub;
 
   beforeEach(() => {
+    // CRITICAL: Reset singleton FIRST before setting up test environment
+    (ConfigurationService as any).instance = undefined;
+
     testEnv = setupTestEnvironment();
 
     // Mock VS Code workspace and configuration
@@ -41,8 +44,8 @@ describe('ConfigurationService', () => {
       onDidChangeConfiguration: testEnv.sandbox.stub(),
     };
 
-    // Setup global vscode mock
-    (global as any).vscode = {
+    // Setup global vscode mock AND register it in require.cache
+    const vscodeModule = {
       workspace: mockVSCodeWorkspace,
       ConfigurationTarget: {
         Global: 1,
@@ -50,6 +53,21 @@ describe('ConfigurationService', () => {
         WorkspaceFolder: 3,
       },
     };
+    (global as any).vscode = vscodeModule;
+
+    // CRITICAL: Update require.cache so ConfigurationService imports this mock
+    const Module = require('module');
+    try {
+      const vscodeModulePath = require.resolve('vscode', { paths: [process.cwd()] });
+      require.cache[vscodeModulePath] = {
+        id: vscodeModulePath,
+        filename: vscodeModulePath,
+        loaded: true,
+        exports: vscodeModule,
+      } as NodeModule;
+    } catch (e) {
+      // vscode module path not found, Module.prototype.require will handle it
+    }
 
     // Mock logger
     const loggerModule = require('../../../utils/logger');
@@ -61,7 +79,7 @@ describe('ConfigurationService', () => {
       dispose: testEnv.sandbox.stub(),
     });
 
-    // Create fresh instance for each test
+    // Create fresh instance for each test (AFTER mocks are set up)
     configService = ConfigurationService.getInstance();
   });
 
