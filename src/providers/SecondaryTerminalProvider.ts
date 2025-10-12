@@ -1,7 +1,4 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
-import * as os from 'os';
-import { promises as fsPromises } from 'fs';
 import { TerminalManager } from '../terminals/TerminalManager';
 import { WebviewMessage } from '../types/common';
 import { TERMINAL_CONSTANTS } from '../constants';
@@ -31,32 +28,15 @@ import {
 } from '../types/type-guards';
 
 // New refactored services
-import { PanelLocationService } from './services/PanelLocationService';
+import {
+  PanelLocationService,
+  PanelLocation,
+  SplitDirection,
+} from './services/PanelLocationService';
 import { TerminalLinkResolver } from './services/TerminalLinkResolver';
 import { WebViewCommunicationService } from './services/WebViewCommunicationService';
 import { TerminalEventCoordinator } from './services/TerminalEventCoordinator';
 import { ScrollbackCoordinator } from './services/ScrollbackCoordinator';
-
-/**
- * Panel location type for WebView placement
- * - 'sidebar': WebView is displayed in the sidebar (narrow and tall)
- * - 'panel': WebView is displayed in the bottom panel (wide and short)
- */
-type PanelLocation = 'sidebar' | 'panel';
-
-/**
- * Split direction type for terminal layout
- * - 'horizontal': Terminals are stacked vertically (top/bottom)
- * - 'vertical': Terminals are arranged side by side (left/right)
- */
-type SplitDirection = 'horizontal' | 'vertical';
-
-/**
- * Type guard to check if a value is a valid PanelLocation
- */
-function isPanelLocation(value: unknown): value is PanelLocation {
-  return value === 'sidebar' || value === 'panel';
-}
 
 
 export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vscode.Disposable {
@@ -79,7 +59,6 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   } as const;
 
   private _disposables: vscode.Disposable[] = [];
-  private _terminalEventDisposables: vscode.Disposable[] = [];
   private _terminalIdMapping?: Map<string, string>; // VS Code Pattern: Map Extension terminal ID to WebView terminal ID
 
   private _view?: vscode.WebviewView;
@@ -951,7 +930,8 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   private _performSplit(direction?: SplitDirection): void {
     try {
       log('🔍 [SPLIT] Performing split operation...');
-      log(`🔍 [SPLIT] Current cached panel location: ${this._cachedPanelLocation}`);
+      const currentLocation = this._panelLocationService.getCachedPanelLocation();
+      log(`🔍 [SPLIT] Current cached panel location: ${currentLocation}`);
 
       // Determine split direction based on panel location if not explicitly provided
       const splitDirection: SplitDirection = direction ?? this._determineSplitDirection();
@@ -1399,246 +1379,8 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   /**
    * ターミナルイベントリスナーを設定する
    */
-  private _setupTerminalEventListeners(): void {
-    // DEPRECATED: Now handled by TerminalEventCoordinator
-    // This method is kept for compatibility but does nothing
-    log('⚠️ [PROVIDER] _setupTerminalEventListeners called but delegated to TerminalEventCoordinator');
-    return;
-
-    // OLD CODE BELOW (kept for reference, not executed)
-    // Clear existing listeners to prevent duplicates during panel moves
-    this._clearTerminalEventListeners();
-
-    // Handle terminal output
-    const dataDisposable = this._terminalManager.onData((event) => {
-      if (event.data) {
-        // 🔍 VS Code Pattern: Map Extension terminal ID to WebView terminal ID
-        const webviewTerminalId =
-          this._terminalIdMapping?.get(event.terminalId) || event.terminalId;
-
-        log(
-          '🔍 [VS Code Pattern] Terminal output received:',
-          event.data.length,
-          'chars, Extension ID:',
-          event.terminalId,
-          '→ WebView ID:',
-          webviewTerminalId,
-          'data preview:',
-          JSON.stringify(event.data.substring(0, 50))
-        );
-
-        const outputMessage = {
-          command: TERMINAL_CONSTANTS.COMMANDS.OUTPUT,
-          data: event.data,
-          terminalId: webviewTerminalId, // Use mapped WebView terminal ID
-        };
-
-        log('📤 [VS Code Pattern] Sending OUTPUT to WebView terminal:', webviewTerminalId);
-        void this._sendMessage(outputMessage);
-      } else {
-        log('⚠️ [DATA-FLOW] Empty data received from terminal:', event.terminalId);
-      }
-    });
-
-    // Handle terminal exit
-    const exitDisposable = this._terminalManager.onExit((event) => {
-      void this._sendMessage({
-        command: TERMINAL_CONSTANTS.COMMANDS.EXIT,
-        exitCode: event.exitCode,
-        terminalId: event.terminalId,
-      });
-    });
-
-    // Handle terminal creation
-    const createdDisposable = this._terminalManager.onTerminalCreated((terminal) => {
-      log('🆕 [DEBUG] Terminal created:', terminal.id, terminal.name);
-
-      // 基本的なターミナル作成メッセージ（番号情報を含む）
-      const message: WebviewMessage = {
-        command: TERMINAL_CONSTANTS.COMMANDS.TERMINAL_CREATED,
-        terminalId: terminal.id,
-        terminalName: terminal.name,
-        terminalNumber: terminal.number, // ターミナル番号を追加
-        config: getTerminalConfig(),
-      };
-
-      // セッション復元されたターミナルの場合、追加データを送信 - DISABLED FOR DEBUGGING
-      // if ((terminal as any).isSessionRestored) {
-      //   log('🔄 [DEBUG] Terminal is session restored, sending session data');
-      //   message.command = 'sessionRestore';
-      //   message.sessionRestoreMessage = (terminal as any).sessionRestoreMessage;
-      //   message.sessionScrollback = (terminal as any).sessionScrollback || [];
-      // }
-
-      void this._sendMessage(message);
-
-      // 🆕 NEW: Auto-save session after terminal creation
-      setTimeout(async () => {
-        try {
-          await this.saveCurrentSession();
-          log('💾 [PERSISTENCE] Auto-saved session after terminal creation');
-        } catch (error) {
-          log('❌ [PERSISTENCE] Failed to auto-save session:', error);
-        }
-      }, 500); // Small delay to ensure terminal is fully initialized
-    });
-
-    // Store disposables for cleanup
-    this._terminalEventDisposables.push(dataDisposable, exitDisposable, createdDisposable);
-
-    // Handle terminal removal
-    const removedDisposable = this._terminalManager.onTerminalRemoved((terminalId) => {
-      void this._sendMessage({
-        command: TERMINAL_CONSTANTS.COMMANDS.TERMINAL_REMOVED,
-        terminalId,
-      });
-
-      // 🆕 NEW: Auto-save session after terminal removal
-      setTimeout(async () => {
-        try {
-          await this.saveCurrentSession();
-          log('💾 [PERSISTENCE] Auto-saved session after terminal removal');
-        } catch (error) {
-          log('❌ [PERSISTENCE] Failed to auto-save session:', error);
-        }
-      }, 500);
-    });
-
-    // 新しいアーキテクチャ: 状態更新イベントの処理
-    const stateUpdateDisposable = this._terminalManager.onStateUpdate((state) => {
-      void this._sendMessage({
-        command: 'stateUpdate',
-        state,
-      });
-    });
-
-    // ターミナルフォーカスイベント処理
-    const focusDisposable = this._terminalManager.onTerminalFocus((terminalId) => {
-      void this._sendMessage({
-        command: 'focusTerminal',
-        terminalId,
-      });
-    });
-
-    // Add remaining disposables
-    this._terminalEventDisposables.push(removedDisposable, stateUpdateDisposable, focusDisposable);
-
-    // Note: CLI Agent status change events are handled by _setupCliAgentStatusListeners()
-  }
-
-  /**
-   * Clear terminal event listeners to prevent duplicates
-   */
-  private _clearTerminalEventListeners(): void {
-    this._terminalEventDisposables.forEach((disposable) => {
-      disposable.dispose();
-    });
-    this._terminalEventDisposables = [];
-    log('🧹 [DEBUG] Terminal event listeners cleared');
-  }
-
-  /**
-   * Set up CLI Agent status change listeners
-   */
-  private _setupCliAgentStatusListeners(): void {
-    log('🎯 [PROVIDER] Setting up CLI Agent status listeners');
-    // CLI Agent状態変更を監視 - Full State Sync方式で完全同期
-    const claudeStatusDisposable = this._terminalManager.onCliAgentStatusChange((event) => {
-      try {
-        log('📡 [PROVIDER] Received CLI Agent status change:', event);
-
-        // Full State Sync: 全ターミナルの状態を完全同期
-        log('🔄 [PROVIDER] Triggering full CLI Agent state sync');
-        this.sendFullCliAgentStateSync();
-      } catch (error) {
-        log('❌ [ERROR] CLI Agent status change processing failed:', error);
-        // エラーがあっても継続
-      }
-    });
-
-    // disposablesに追加
-    this._extensionContext.subscriptions.push(claudeStatusDisposable);
-    log('✅ [PROVIDER] CLI Agent status listeners setup complete');
-  }
-
-  /**
-   * Set up configuration change listeners for VS Code standard settings
-   */
-  private _setupConfigurationChangeListeners(): void {
-    // Monitor VS Code settings changes
-    const configChangeDisposable = vscode.workspace.onDidChangeConfiguration((event) => {
-      let shouldUpdateSettings = false;
-      let shouldUpdateFontSettings = false;
-      let shouldUpdatePanelLocation = false;
-
-      // Check for general settings changes
-      if (
-        event.affectsConfiguration('editor.multiCursorModifier') ||
-        event.affectsConfiguration('terminal.integrated.altClickMovesCursor') ||
-        event.affectsConfiguration('secondaryTerminal.altClickMovesCursor') ||
-        event.affectsConfiguration('secondaryTerminal.theme') ||
-        event.affectsConfiguration('secondaryTerminal.cursorBlink')
-      ) {
-        shouldUpdateSettings = true;
-      }
-
-      // Check for font settings changes
-      if (
-        event.affectsConfiguration('terminal.integrated.fontSize') ||
-        event.affectsConfiguration('terminal.integrated.fontFamily') ||
-        event.affectsConfiguration('terminal.integrated.fontWeight') ||
-        event.affectsConfiguration('terminal.integrated.fontWeightBold') ||
-        event.affectsConfiguration('terminal.integrated.lineHeight') ||
-        event.affectsConfiguration('terminal.integrated.letterSpacing') ||
-        event.affectsConfiguration('editor.fontSize') ||
-        event.affectsConfiguration('editor.fontFamily') ||
-        event.affectsConfiguration('secondaryTerminal.fontWeight') ||
-        event.affectsConfiguration('secondaryTerminal.fontWeightBold') ||
-        event.affectsConfiguration('secondaryTerminal.lineHeight') ||
-        event.affectsConfiguration('secondaryTerminal.letterSpacing')
-      ) {
-        shouldUpdateFontSettings = true;
-      }
-
-      // 🆕 Check for dynamic split direction settings changes (Issue #148)
-      if (
-        event.affectsConfiguration('secondaryTerminal.dynamicSplitDirection') ||
-        event.affectsConfiguration('secondaryTerminal.panelLocation')
-      ) {
-        shouldUpdateSettings = true;
-        shouldUpdatePanelLocation = true;
-      }
-
-      if (shouldUpdateSettings) {
-        log('⚙️ [DEBUG] VS Code settings changed, updating webview...');
-        const settings = this.getCurrentSettings();
-        void this._sendMessage({
-          command: 'settingsResponse',
-          settings,
-        });
-      }
-
-      if (shouldUpdateFontSettings) {
-        log('🎨 [DEBUG] VS Code font settings changed, updating webview...');
-        const fontSettings = this.getCurrentFontSettings();
-        void this._sendMessage({
-          command: 'fontSettingsUpdate',
-          fontSettings,
-        });
-      }
-
-      // 🆕 Handle panel location setting changes (Issue #148)
-      if (shouldUpdatePanelLocation) {
-        log('📍 [DEBUG] Panel location settings changed, re-detecting and updating...');
-        setTimeout(() => {
-          this._requestPanelLocationDetection();
-        }, 100); // Small delay to ensure settings are applied
-      }
-    });
-
-    // Add to disposables
-    this._extensionContext.subscriptions.push(configChangeDisposable);
-  }
+  // Event listeners now handled by TerminalEventCoordinator
+  // These methods are removed to avoid duplication
 
   /**
    * Handle WebView ready state
@@ -2377,9 +2119,12 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
             `🔍 [PERSISTENCE-DEBUG] Processing terminal ${index + 1}/${terminals.length}: ${terminal.id} (${terminal.name})`
           );
 
-          // Request scrollback data from WebView
+          // Request scrollback data from WebView via ScrollbackCoordinator
           log(`📤 [PERSISTENCE-DEBUG] About to request scrollback for terminal ${terminal.id}`);
-          const scrollbackData = await this.requestScrollbackFromWebView(terminal.id);
+          const scrollbackData = await this._scrollbackCoordinator.requestScrollbackData(
+            terminal.id,
+            1000
+          );
 
           log(
             `📦 [PERSISTENCE-DEBUG] Terminal ${terminal.id} scrollback promise resolved: ${scrollbackData.length} lines`
@@ -2419,100 +2164,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     }
   }
 
-  /**
-   * Request scrollback data from WebView for a specific terminal
-   */
-  /**
-   * Request scrollback data from WebView for a specific terminal
-   */
-  // Map to store pending scrollback requests
-  private pendingScrollbackRequests = new Map<
-    string,
-    {
-      resolve: (data: string[]) => void;
-      reject: (error: Error) => void;
-      timeout: NodeJS.Timeout;
-    }
-  >();
-
-  private async requestScrollbackFromWebView(terminalId: string): Promise<string[]> {
-    try {
-      if (!this._view) {
-        log('⚠️ [PERSISTENCE] WebView not available for scrollback request');
-        return [];
-      }
-
-      // Create a promise to wait for the WebView response
-      return new Promise((resolve, reject) => {
-        const requestId = `scrollback-${terminalId}-${Date.now()}`;
-
-        const timeout = setTimeout(() => {
-          this.pendingScrollbackRequests.delete(requestId);
-          log(`⏰ [PERSISTENCE] Scrollback request timeout for terminal ${terminalId}`);
-          resolve([]); // Return empty array instead of rejecting to avoid breaking persistence
-        }, 10000); // 10 second timeout
-
-        // Store the promise resolvers
-        this.pendingScrollbackRequests.set(requestId, {
-          resolve,
-          reject,
-          timeout,
-        });
-
-        // Send the request to WebView
-        this._view!.webview.postMessage({
-          command: 'extractScrollbackData',
-          terminalId,
-          requestId,
-          maxLines: 1000, // Request up to 1000 lines
-        });
-
-        log(
-          `📤 [PERSISTENCE] Requested scrollback data for terminal ${terminalId} (requestId: ${requestId})`
-        );
-      });
-    } catch (error) {
-      log(`❌ [PERSISTENCE] Failed to request scrollback from WebView: ${error}`);
-      return [];
-    }
-  }
-
-  /**
-   * Handle scrollback data response from WebView
-   * This should be called from the main message handler
-   */
-  private handleScrollbackDataResponse(message: any): void {
-    if (message.command !== 'scrollbackDataCollected' || !message.requestId) {
-      return;
-    }
-
-    const requestId = message.requestId;
-    const pendingRequest = this.pendingScrollbackRequests.get(requestId);
-
-    if (!pendingRequest) {
-      log(`⚠️ [PERSISTENCE] No pending request found for scrollback response: ${requestId}`);
-      return;
-    }
-
-    // Clean up the pending request
-    clearTimeout(pendingRequest.timeout);
-    this.pendingScrollbackRequests.delete(requestId);
-
-    if (message.error) {
-      log(
-        `⚠️ [PERSISTENCE] Scrollback extraction error for request ${requestId}: ${message.error}`
-      );
-      pendingRequest.resolve([]); // Return empty array instead of rejecting
-    } else {
-      const dataLength = message.scrollbackData?.length || 0;
-      log(`✅ [PERSISTENCE] Successfully received ${dataLength} lines for request ${requestId}`);
-      log(
-        `📦 [PERSISTENCE] About to resolve promise with scrollbackData:`,
-        message.scrollbackData ? 'present' : 'missing'
-      );
-      pendingRequest.resolve(message.scrollbackData || []);
-    }
-  }
+  // Scrollback request handling moved to ScrollbackCoordinator
 
   /**
    * Trigger automatic session restore
