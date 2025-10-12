@@ -342,7 +342,21 @@ export async function setupTestEnvironment(): Promise<void> {
   (global as any).module = { exports: {} };
 
   // Enhanced process polyfilling for test compatibility
-  // Save process.cwd reference NOW before it might get replaced
+  // Save original process methods NOW before they might get replaced
+  // CRITICAL: Save actual Node.js EventEmitter methods to prevent "process.emit is not a function" errors
+  const EventEmitter = require('events');
+  const originalProcessEmit = process.emit && typeof process.emit === 'function'
+    ? process.emit.bind(process)
+    : EventEmitter.prototype.emit.bind(process);
+  const originalProcessOn = process.on && typeof process.on === 'function'
+    ? process.on.bind(process)
+    : EventEmitter.prototype.on.bind(process);
+  const originalProcessListeners = process.listeners && typeof process.listeners === 'function'
+    ? process.listeners.bind(process)
+    : EventEmitter.prototype.listeners.bind(process);
+  const originalProcessListenerCount = process.listenerCount && typeof process.listenerCount === 'function'
+    ? process.listenerCount.bind(process)
+    : (() => 0);
   const savedCwd = process.cwd && typeof process.cwd === 'function' ? process.cwd.bind(process) : null;
 
   const processPolyfill = {
@@ -353,10 +367,10 @@ export async function setupTestEnvironment(): Promise<void> {
     cwd: savedCwd || (() => '/test'),
     argv: process.argv,
     pid: process.pid,
-    on: process.on ? process.on.bind(process) : () => {},
-    emit: process.emit ? process.emit.bind(process) : () => false,
-    listeners: process.listeners ? process.listeners.bind(process) : () => [],
-    listenerCount: process.listenerCount ? process.listenerCount.bind(process) : () => 0,
+    on: originalProcessOn,
+    emit: originalProcessEmit,
+    listeners: originalProcessListeners,
+    listenerCount: originalProcessListenerCount,
     removeListener: () => processPolyfill,
     removeAllListeners: () => processPolyfill,
     off: () => processPolyfill,
@@ -367,21 +381,22 @@ export async function setupTestEnvironment(): Promise<void> {
     (global as any).process = processPolyfill;
   } else {
     // 既存のprocessオブジェクトに不足しているメソッドを追加
+    // Use saved original functions to ensure they work correctly
     const existingProcess = (global as any).process;
     if (!existingProcess.nextTick) {
       existingProcess.nextTick = (callback: () => void) => setImmediate(callback);
     }
     if (!existingProcess.on || typeof existingProcess.on !== 'function') {
-      existingProcess.on = process.on ? process.on.bind(process) : () => {};
+      existingProcess.on = originalProcessOn;
     }
     if (!existingProcess.emit || typeof existingProcess.emit !== 'function') {
-      existingProcess.emit = process.emit ? process.emit.bind(process) : () => false;
+      existingProcess.emit = originalProcessEmit;
     }
     if (!existingProcess.listeners || typeof existingProcess.listeners !== 'function') {
-      existingProcess.listeners = process.listeners ? process.listeners.bind(process) : () => [];
+      existingProcess.listeners = originalProcessListeners;
     }
     if (!existingProcess.listenerCount || typeof existingProcess.listenerCount !== 'function') {
-      existingProcess.listenerCount = process.listenerCount ? process.listenerCount.bind(process) : () => 0;
+      existingProcess.listenerCount = originalProcessListenerCount;
     }
     if (!existingProcess.removeListener) {
       existingProcess.removeListener = () => existingProcess;
@@ -393,7 +408,7 @@ export async function setupTestEnvironment(): Promise<void> {
       existingProcess.off = () => existingProcess;
     }
     if (!existingProcess.cwd) {
-      existingProcess.cwd = () => '/test';
+      existingProcess.cwd = savedCwd || (() => '/test');
     }
   }
 
