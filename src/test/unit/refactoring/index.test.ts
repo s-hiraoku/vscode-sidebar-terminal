@@ -7,11 +7,11 @@
 import './TerminalCoordinator.test';
 import './UIController.test';
 import './MessageRouter.test';
-import './RefactoredArchitecture.test';
+// import './RefactoredArchitecture.test'; // TODO: Create this test file
 
 // Import integration and performance tests
-import '../../integration/refactoring/RefactoredArchitectureIntegration.test';
-import '../../performance/refactoring/RefactoredArchitecturePerformance.test';
+// import '../../integration/refactoring/RefactoredArchitectureIntegration.test'; // TODO: Create this test file
+// import '../../performance/refactoring/RefactoredArchitecturePerformance.test'; // TODO: Create this test file
 
 /**
  * This file serves as the entry point for all refactoring tests.

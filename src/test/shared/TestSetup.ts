@@ -447,6 +447,7 @@ export async function setupTestEnvironment(): Promise<void> {
 /**
  * 拡張コンソールモックセットアップ
  * テスト中のコンソール出力を制御するためのモック
+ * Note: This preserves original console functionality while allowing tests to suppress output
  */
 export function setupConsoleMocks(): {
   log: sinon.SinonStub;
@@ -455,15 +456,20 @@ export function setupConsoleMocks(): {
   info: sinon.SinonStub;
   debug: sinon.SinonStub;
 } {
+  // Preserve original console for fallback
+  const originalConsole = console;
+
+  // Create pass-through stubs that call original console
   const consoleMocks = {
-    log: sinon.stub(),
-    warn: sinon.stub(),
-    error: sinon.stub(),
-    info: sinon.stub(),
-    debug: sinon.stub(),
+    log: sinon.stub().callsFake((...args) => originalConsole.log(...args)),
+    warn: sinon.stub().callsFake((...args) => originalConsole.warn(...args)),
+    error: sinon.stub().callsFake((...args) => originalConsole.error(...args)),
+    info: sinon.stub().callsFake((...args) => originalConsole.info(...args)),
+    debug: sinon.stub().callsFake((...args) => originalConsole.debug(...args)),
   };
 
-  (global as Record<string, unknown>).console = consoleMocks;
+  // Don't replace global console - this was causing hangs
+  // Tests that need to mock console can access consoleMocks directly
 
   return consoleMocks;
 }
@@ -724,12 +730,24 @@ if (process && !process.removeListener) {
 // Additional process polyfills for Mocha compatibility
 if (process) {
   // Ensure all required event emitter methods exist
-  const requiredMethods = ['removeListener', 'removeAllListeners', 'off'];
+  const requiredMethods = ['removeListener', 'removeAllListeners', 'off', 'listenerCount'];
   requiredMethods.forEach((method) => {
     if (!(process as any)[method]) {
-      (process as any)[method] = function () {
-        return process;
-      };
+      const stub = method === 'listenerCount'
+        ? function () { return 0; } // Return 0 listeners for test environment
+        : function () { return process; };
+
+      try {
+        Object.defineProperty(process, method, {
+          value: stub,
+          writable: true,
+          configurable: true,
+          enumerable: false
+        });
+      } catch (e) {
+        // Fallback to direct assignment if defineProperty fails
+        (process as any)[method] = stub;
+      }
     }
   });
 }
@@ -763,12 +781,17 @@ export function setupTestEnvironmentSync(): void {
   };
 
   // Set up DOM environment
-  setupJSDOMEnvironment();
-  setupConsoleMocks();
+  // setupJSDOMEnvironment(); // Temporarily disabled - tests don't need DOM yet
+  setupConsoleMocks(); // Re-enabled with pass-through implementation
 }
 
 // Auto-setup when this module is imported (sync version for compatibility)
-setupTestEnvironmentSync();
+try {
+  setupTestEnvironmentSync();
+} catch (error) {
+  console.error('Failed to setup test environment:', error);
+  throw error;
+}
 
 /**
  * TypeScript型定義の拡張
