@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { TerminalManager } from '../terminals/TerminalManager';
 import { extension as log } from '../utils/logger';
+import { safeProcessCwd } from '../utils/common';
 
 /**
  * VS Code標準に準拠したターミナルセッション管理
@@ -87,7 +88,7 @@ export class StandardTerminalSessionManager {
         id: terminal.id,
         name: terminal.name,
         number: terminal.number,
-        cwd: terminal.cwd || process.cwd(),
+        cwd: terminal.cwd || safeProcessCwd(),
         isActive: terminal.id === activeTerminalId,
       }));
 
@@ -97,7 +98,7 @@ export class StandardTerminalSessionManager {
         id: terminal.id,
         name: terminal.name,
         number: terminal.number || 1,
-        cwd: terminal.cwd || process.cwd(),
+        cwd: terminal.cwd || safeProcessCwd(),
         isActive: terminal.id === activeTerminalId,
       }));
       const scrollbackData = await this.requestScrollbackDataFromWebView(terminalInfos);

@@ -12,6 +12,17 @@ import { TerminalConfig } from '../types/shared';
 import { getUnifiedConfigurationService } from '../config/UnifiedConfigurationService';
 import { log } from './logger';
 
+/**
+ * Safe process.cwd() that works in test environments
+ * Returns current working directory or fallback value
+ */
+export function safeProcessCwd(fallback: string = '/'): string {
+  try {
+    return process.cwd && typeof process.cwd === 'function' ? process.cwd() : fallback;
+  } catch (e) {
+    return fallback;
+  }
+}
 
 /**
  * ディレクトリが存在し、アクセス可能かを検証
@@ -108,7 +119,7 @@ export function getWorkingDirectory(): string {
   }
 
   // Last resort - current process directory
-  const processDir = process.cwd();
+  const processDir = safeProcessCwd();
   log('📁 [WORKDIR] Last resort - process cwd:', processDir);
   return processDir;
 }

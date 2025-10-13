@@ -12,6 +12,7 @@
 import * as vscode from 'vscode';
 import { TerminalManager } from '../terminals/TerminalManager';
 import { terminal as log } from '../utils/logger';
+import { safeProcessCwd } from '../utils/common';
 
 interface PtyProcess {
   write(data: string): void;
@@ -246,7 +247,7 @@ export class ShellIntegrationService {
     if (!this.states.has(terminalId)) {
       this.states.set(terminalId, {
         terminalId,
-        currentCwd: process.cwd(),
+        currentCwd: safeProcessCwd(),
         commandHistory: [],
         isExecuting: false,
       });
@@ -290,7 +291,7 @@ export class ShellIntegrationService {
    */
   public getCurrentCwd(terminalId: string): string {
     const state = this.states.get(terminalId);
-    return state ? state.currentCwd : process.cwd();
+    return state ? state.currentCwd : safeProcessCwd();
   }
 
   /**

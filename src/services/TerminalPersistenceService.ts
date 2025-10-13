@@ -16,6 +16,7 @@ import * as vscode from 'vscode';
 import { TerminalManager } from '../terminals/TerminalManager';
 import { WebviewMessage, TerminalInfo } from '../types/shared';
 import { log } from '../utils/logger';
+import { safeProcessCwd } from '../utils/common';
 
 // Standardized error types for better error handling
 export class PersistenceError extends Error {
@@ -174,7 +175,7 @@ export class UnifiedTerminalPersistenceService
         id: terminal.id,
         name: terminal.name,
         number: terminal.number,
-        cwd: terminal.cwd || process.cwd(),
+        cwd: terminal.cwd || safeProcessCwd(),
         isActive: terminal.id === activeTerminalId,
       }));
 

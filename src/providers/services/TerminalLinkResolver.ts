@@ -12,6 +12,7 @@ import { promises as fsPromises } from 'fs';
 import { provider as log } from '../../utils/logger';
 import { showError } from '../../utils/feedback';
 import { WebviewMessage } from '../../types/common';
+import { safeProcessCwd } from '../../utils/common';
 
 /**
  * Terminal information interface for CWD resolution
@@ -181,7 +182,7 @@ export class TerminalLinkResolver {
       }
 
       // Try process CWD
-      candidates.add(path.resolve(process.cwd(), normalizedInput));
+      candidates.add(path.resolve(safeProcessCwd(), normalizedInput));
     }
 
     const candidateArray = Array.from(candidates);

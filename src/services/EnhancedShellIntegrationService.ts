@@ -13,6 +13,7 @@ import * as vscode from 'vscode';
 import { ShellIntegrationService } from './ShellIntegrationService';
 import { SecondaryTerminalProvider } from '../providers/SecondaryTerminalProvider';
 import { terminal as log } from '../utils/logger';
+import { safeProcessCwd } from '../utils/common';
 
 export interface EnhancedShellCommand {
   command: string;
@@ -70,7 +71,7 @@ export class EnhancedShellIntegrationService extends ShellIntegrationService {
 
     const status: TerminalStatusInfo = {
       terminalId,
-      currentCwd: process.cwd(),
+      currentCwd: safeProcessCwd(),
       commandStatus: 'idle',
       commandCount: 0,
     };

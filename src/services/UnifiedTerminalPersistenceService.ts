@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { TerminalManager } from '../terminals/TerminalManager';
 import { extension as log } from '../utils/logger';
+import { safeProcessCwd } from '../utils/common';
 
 /**
  * 統一ターミナル永続化サービス
@@ -169,7 +170,7 @@ export class UnifiedTerminalPersistenceService {
           id: terminal.id || 0,
           name: terminal.name || `Terminal ${terminal.id}`,
           scrollback: this.truncateScrollback(terminal.scrollback || []),
-          workingDirectory: terminal.workingDirectory || process.cwd(),
+          workingDirectory: terminal.workingDirectory || safeProcessCwd(),
           shellCommand: terminal.shellCommand || '',
           isActive: terminal.isActive || false,
           cliAgentType: this.detectCliAgentType(terminal.scrollback || []),

@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { TerminalManager } from '../terminals/TerminalManager';
 import { WebviewMessage } from '../types/common';
 import { TERMINAL_CONSTANTS } from '../constants';
-import { getTerminalConfig, normalizeTerminalInfo } from '../utils/common';
+import { getTerminalConfig, normalizeTerminalInfo, safeProcessCwd } from '../utils/common';
 import { showSuccess, showError, TerminalErrorHandler } from '../utils/feedback';
 import { provider as log } from '../utils/logger';
 import { getUnifiedConfigurationService } from '../config/UnifiedConfigurationService';
@@ -2236,7 +2236,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
               terminal: {
                 id: mapping.newId,
                 name: mapping.terminalData.name || `Terminal ${mapping.newId}`,
-                cwd: mapping.terminalData.cwd || process.cwd(),
+                cwd: mapping.terminalData.cwd || safeProcessCwd(),
                 isActive: mapping.terminalData.isActive || false,
               },
             });

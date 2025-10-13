@@ -17,6 +17,7 @@ import {
   setupTestEnvironment,
   cleanupTestEnvironment,
   TestEnvironment,
+  safeStub,
 } from '../../utils/CommonTestSetup';
 
 describe('ConfigurationService', () => {
@@ -69,9 +70,9 @@ describe('ConfigurationService', () => {
       // vscode module path not found, Module.prototype.require will handle it
     }
 
-    // Mock logger
+    // Mock logger using safe stub to prevent "already stubbed" errors
     const loggerModule = require('../../../utils/logger');
-    logSpy = testEnv.sandbox.stub(loggerModule, 'extension');
+    logSpy = safeStub(testEnv.sandbox, loggerModule, 'extension');
 
     // Create configuration change event stub
     configChangeEvent = testEnv.sandbox.stub();

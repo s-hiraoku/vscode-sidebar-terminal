@@ -297,6 +297,23 @@ export const createMockCliAgentDetectionService = (
 };
 
 /**
+ * Safe stub creation that handles already-stubbed objects
+ * Prevents "Attempted to wrap X which is already stubbed" errors
+ */
+export const safeStub = (
+  sandbox: sinon.SinonSandbox,
+  obj: any,
+  method: string
+): sinon.SinonStub => {
+  // If already stubbed, restore it first
+  if (obj[method] && typeof obj[method].restore === 'function') {
+    obj[method].restore();
+  }
+
+  return sandbox.stub(obj, method);
+};
+
+/**
  * Setup mock terminal manager for CLI Agent tests
  */
 export const setupMockTerminalManagerForCliAgent = (

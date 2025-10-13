@@ -14,6 +14,7 @@ import {
 } from './ITerminalCoordinator';
 import { BaseManager } from '../managers/BaseManager';
 import { SPLIT_CONSTANTS } from '../constants/webview';
+import { safeProcessCwd } from '../../utils/common';
 
 interface InternalTerminalInfo extends TerminalInfo {
   container: HTMLElement;
@@ -345,7 +346,7 @@ export class TerminalCoordinatorFactory {
     const defaultConfig: TerminalCoordinatorConfig = {
       maxTerminals: SPLIT_CONSTANTS.MAX_TERMINALS || 5,
       defaultShell: '/bin/bash',
-      workingDirectory: process.cwd(),
+      workingDirectory: safeProcessCwd(),
       enablePerformanceOptimization: true,
       bufferSize: 1000,
       debugMode: false,

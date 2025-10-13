@@ -3,6 +3,8 @@
  * Common session data structures used across the codebase
  */
 
+import { safeProcessCwd } from '../utils/common';
+
 /**
  * Terminal session data interface
  */
@@ -90,7 +92,7 @@ export class SessionDataTransformer {
       id: terminal.id || '',
       name: terminal.name || 'Terminal',
       number: terminal.number || 1,
-      cwd: terminal.cwd || process.cwd(),
+      cwd: terminal.cwd || safeProcessCwd(),
       isActive: terminal.isActive || false,
       scrollback: terminal.scrollback || [],
       shellCommand: terminal.shellCommand || '',

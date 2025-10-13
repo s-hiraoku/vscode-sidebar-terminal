@@ -21,6 +21,7 @@ import {
   setupTestEnvironment,
   cleanupTestEnvironment,
   TestEnvironment,
+  safeStub,
 } from '../../utils/CommonTestSetup';
 
 describe('OperationResultHandler', () => {
@@ -38,9 +39,9 @@ describe('OperationResultHandler', () => {
       showWarning: testEnv.sandbox.stub(),
     };
 
-    // Mock logger
+    // Mock logger using safe stub to prevent "already stubbed" errors
     const loggerModule = require('../../../utils/logger');
-    logSpy = testEnv.sandbox.stub(loggerModule, 'extension');
+    logSpy = safeStub(testEnv.sandbox, loggerModule, 'extension');
   });
 
   afterEach(() => {

@@ -11,6 +11,7 @@ import {
   TerminalMessageHandlerFactory,
   TerminalMessageHandlerDependencies
 } from '../services/handlers/TerminalMessageHandlers';
+import { safeProcessCwd } from '../utils/common';
 
 /**
  * Simplified webview coordinator using service architecture
@@ -196,7 +197,7 @@ export class WebviewCoordinator {
 
       getWorkingDirectory: async () => {
         // This would need to be implemented based on actual requirements
-        return process.cwd();
+        return safeProcessCwd();
       }
     };
   }

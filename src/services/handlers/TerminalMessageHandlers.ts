@@ -4,6 +4,7 @@
  */
 
 import { BaseMessageHandler } from '../MessageRouter';
+import { safeProcessCwd } from '../../utils/common';
 
 // Terminal operation data types
 export interface CreateTerminalData {
@@ -277,7 +278,7 @@ export class SplitTerminalHandler extends BaseMessageHandler<{ direction?: 'hori
       this.log(`Could not get working directory: ${error}`);
     }
 
-    return process.cwd(); // Fallback to process working directory
+    return safeProcessCwd(); // Fallback to process working directory
   }
 }
 
