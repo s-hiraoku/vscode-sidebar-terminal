@@ -5,7 +5,7 @@ All notable changes to the "Secondary Terminal" extension will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.1.120] - 2025-10-14
 
 ### Refactoring
 - **Major Architecture Improvement**: Extracted SecondaryTerminalProvider into 5 specialized services (801 lines reduced, 26.9%)
