@@ -231,14 +231,10 @@ export class TerminalEventCoordinator implements vscode.Disposable {
         shouldUpdateFontSettings = true;
       }
 
-      // Send configuration update messages to WebView
+      // Configuration updates are handled by specific message handlers
+      // (settingsResponse and fontSettingsUpdate) in SecondaryTerminalProvider
       if (shouldUpdateSettings || shouldUpdateFontSettings) {
-        log('⚙️ [EVENT-COORDINATOR] Configuration changed, notifying WebView');
-        void this._sendMessage({
-          command: 'configurationChanged',
-          affectsSettings: shouldUpdateSettings,
-          affectsFontSettings: shouldUpdateFontSettings,
-        });
+        log('⚙️ [EVENT-COORDINATOR] Configuration changed (settings:', shouldUpdateSettings, ', fonts:', shouldUpdateFontSettings, ')');
       }
     });
 

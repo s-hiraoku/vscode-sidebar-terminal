@@ -97,7 +97,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     // Initialize new refactored services
     this._communicationService = new WebViewCommunicationService();
     this._panelLocationService = new PanelLocationService(
-      this._communicationService.sendMessage.bind(this._communicationService)
+      (message: unknown) => this._communicationService.sendMessage(message as WebviewMessage)
     );
     this._linkResolver = new TerminalLinkResolver(
       (terminalId: string) => this._terminalManager.getTerminal(terminalId)
@@ -173,7 +173,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     this._eventCoordinator = new TerminalEventCoordinator(
       this._terminalManager,
       this._communicationService.sendMessage.bind(this._communicationService),
-      () => this.saveCurrentSession(),
+      async () => { await this.saveCurrentSession(); },
       () => this.sendFullCliAgentStateSync(),
       this._terminalIdMapping
     );
@@ -822,7 +822,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     // Delegate to PanelLocationService with relayout callback
     await this._panelLocationService.handlePanelLocationReport(
       message.location,
-      async (previousLocation, newLocation) => {
+      async (_previousLocation, _newLocation) => {
         // Auto-relayout callback
         const terminalCount = this._terminalManager.getTerminals().length;
         if (terminalCount >= 2) {
@@ -899,7 +899,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   public splitTerminal(direction?: SplitDirection): void {
     try {
       log('🔍 [SPLIT] ==================== SPLIT TERMINAL START ====================');
-      log(`🔍 [SPLIT] Current cached panel location: ${this._cachedPanelLocation}`);
+      log(`🔍 [SPLIT] Current cached panel location: ${this._panelLocationService.getCurrentPanelLocation()}`);
       log(`🔍 [SPLIT] Direction parameter: ${direction ?? 'auto-detect'}`);
 
       // If direction is not explicitly provided, request fresh panel location detection
