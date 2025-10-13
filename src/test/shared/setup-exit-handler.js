@@ -3,6 +3,9 @@
  * This fixes the exit code 7 issue by properly handling process cleanup
  */
 
+// Require EventEmitter once at the top for all process method polyfills
+const EventEmitter = require('events');
+
 // Add missing event handler methods to process for Mocha compatibility
 // Use Object.defineProperty to make these more resistant to being overwritten
 
@@ -52,22 +55,41 @@ try {
   process.cwd = safeCwd;
 }
 
+// Save original EventEmitter methods for removeListener
+const originalRemoveListener = process.removeListener && typeof process.removeListener === 'function'
+  ? process.removeListener.bind(process)
+  : EventEmitter.prototype.removeListener.bind(process);
+
 ensureProcessMethod('removeListener', function (...args) {
-  return this.off ? this.off(...args) : this;
+  try {
+    return originalRemoveListener.call(this, ...args);
+  } catch (e) {
+    console.warn('process.removeListener failed:', e.message);
+    return this;
+  }
 });
 
 ensureProcessMethod('removeAllListeners', function (event) {
   if (event && this.listeners) {
     const listeners = this.listeners(event);
     listeners.forEach((listener) => {
-      this.removeListener(event, listener);
+      try {
+        originalRemoveListener.call(this, event, listener);
+      } catch (e) {
+        // Ignore errors during cleanup
+      }
     });
   }
   return this;
 });
 
 ensureProcessMethod('off', function (...args) {
-  return this.removeListener ? this.removeListener(...args) : this;
+  try {
+    return originalRemoveListener.call(this, ...args);
+  } catch (e) {
+    console.warn('process.off failed:', e.message);
+    return this;
+  }
 });
 
 ensureProcessMethod('listenerCount', function (eventName) {
@@ -85,7 +107,6 @@ ensureProcessMethod('listenerCount', function (eventName) {
 
 // Ensure process.emit exists (required by signal-exit in nyc)
 // Save reference to original emit before any modifications
-const EventEmitter = require('events');
 const originalEmit = process.emit && typeof process.emit === 'function'
   ? process.emit.bind(process)
   : EventEmitter.prototype.emit.bind(process);
