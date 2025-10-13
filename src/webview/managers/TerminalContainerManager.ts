@@ -451,12 +451,20 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
       return;
     }
 
-    // 親コンテナを取得
-    const parentContainer = document.getElementById('terminal-body');
+    // 🔧 FIX: Use terminals-wrapper as parent container (containers are now children of terminals-wrapper)
+    let parentContainer = document.getElementById('terminals-wrapper');
     if (!parentContainer) {
-      this.log('Parent container #terminal-body not found', 'error');
+      // Fallback to terminal-body for backward compatibility
+      parentContainer = document.getElementById('terminal-body');
+      this.log('terminals-wrapper not found, falling back to terminal-body', 'warn');
+    }
+
+    if (!parentContainer) {
+      this.log('Neither terminals-wrapper nor terminal-body found', 'error');
       return;
     }
+
+    this.log(`🔁 [REORDER] Reordering ${order.length} terminals in parent: ${parentContainer.id}`);
 
     // 順序に従ってコンテナを並べ替え
     const reorderedContainers: HTMLElement[] = [];
@@ -465,7 +473,15 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
       const container = this.containerCache.get(terminalId);
       if (container && container.parentElement === parentContainer) {
         reorderedContainers.push(container);
+        this.log(`🔁 [REORDER]   Found container for terminal: ${terminalId}`);
+      } else {
+        this.log(`🔁 [REORDER]   ⚠️ Container not found or wrong parent: ${terminalId}`, 'warn');
       }
+    }
+
+    if (reorderedContainers.length === 0) {
+      this.log('🔁 [REORDER] No containers to reorder', 'warn');
+      return;
     }
 
     // 既存のコンテナを一時的に退避
@@ -479,7 +495,7 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
     // フラグメントを親に追加（既存の要素は自動的に削除される）
     parentContainer.appendChild(fragment);
 
-    this.log(`Reordered ${reorderedContainers.length} containers`, 'info');
+    this.log(`🔁 [REORDER] ✅ Successfully reordered ${reorderedContainers.length} containers`);
   }
 
   /**

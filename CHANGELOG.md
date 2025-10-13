@@ -21,6 +21,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Benefits**: Improved maintainability, testability, and reusability
 
 ### Fixed
+- **Terminal Tab Drag & Drop Reordering**: Fixed terminal order not updating when dragging tabs
+  - Root cause: `reorderContainers()` was looking for containers in `#terminal-body` but recent refactoring moved them to `#terminals-wrapper`
+  - Solution: Updated `TerminalContainerManager.reorderContainers()` to use `#terminals-wrapper` as parent container with fallback to `#terminal-body` for backward compatibility
+  - Added comprehensive debug logging for reorder operations
+  - Drag & drop tab reordering now properly updates both visual tab order and actual terminal display order
 - **Terminal Session Persistence (Issue #188)**: Fixed session restoration not working after VS Code restart
   - Root cause: StandardTerminalSessionManager was using `requestTerminalSerialization` command which required non-existent `StandardTerminalPersistenceManager.serializeTerminal()` method in WebView
   - Solution: Changed to use `extractScrollbackData` command (via ScrollbackMessageHandler) which works with existing SimplePersistenceManager
