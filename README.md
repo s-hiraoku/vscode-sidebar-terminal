@@ -19,7 +19,7 @@
 - **Production-Ready Architecture**: Zero TypeScript compilation errors with 562 KiB extension and 1.05 MiB webview builds
 - **Sidebar Integration**: Dedicated terminal panel in the VS Code activity bar
 - **Multiple Terminals**: Support for up to 5 concurrent terminal instances
-- **Smart Session Persistence**: Automatically saves and restores terminal sessions across VS Code restarts
+- **Smart Session Persistence**: Automatically saves and restores terminal sessions across VS Code restarts with up to 1,000 lines of scrollback per terminal (Issue #188 fixed in latest release)
 - **Terminal Recycling**: Efficient terminal number management (1-5) with automatic reuse
 - **Enhanced Error Handling**: Robust error recovery mechanisms following VS Code standards
 - **Cross-Platform Support**: Works seamlessly on Windows, macOS, and Linux
@@ -57,7 +57,8 @@
 
 ### 📊 **Performance & Monitoring**
 - **Production-Grade Quality**: Zero TypeScript compilation errors with comprehensive ESLint compliance (0 errors, 281 acceptable warnings)
-- **Optimized Build Process**: 571 KiB extension + 1.18 MiB webview builds with stable performance
+- **Optimized Build Process**: 608 KiB extension + 1.22 MiB webview builds with stable performance
+- **Improved Code Architecture**: Major refactoring reduced provider code by 26.9% (801 lines) through service extraction, resulting in better maintainability and 24 KiB bundle size reduction
 - **Fast Test Execution**: Parallel test processing (4-8 jobs) with up to 75% speed improvement on multi-core systems (v0.1.116+)
 - **Adaptive Performance**: Dynamic buffering optimization for AI agent output (250fps during active sessions)
 - **Debug Panel**: Real-time system monitoring with Ctrl+Shift+D shortcut

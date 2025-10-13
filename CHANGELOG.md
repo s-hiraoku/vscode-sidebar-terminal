@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Refactoring
+- **Major Architecture Improvement**: Extracted SecondaryTerminalProvider into 5 specialized services (801 lines reduced, 26.9%)
+  - 🏗️ **PanelLocationService** (288 lines): Panel location detection, split direction determination, and VS Code context key management
+  - 🔗 **TerminalLinkResolver** (216 lines): URL and file link resolution with multiple path candidate building
+  - 📡 **WebViewCommunicationService** (171 lines): WebView message sending with disposed WebView error handling
+  - 🎯 **TerminalEventCoordinator** (264 lines): Terminal event listeners (data, exit, creation, removal, focus) and CLI Agent status monitoring
+  - 📋 **ScrollbackCoordinator** (183 lines): Scrollback data collection with timeout management for session restoration
+  - **Code Reduction**: SecondaryTerminalProvider reduced from 2,979 to 2,393 lines
+  - **Bundle Size**: Extension bundle reduced by 24 KiB (618 KiB → 608 KiB)
+  - **Phase 1**: 438 lines removed + 1,122 lines of new services created
+  - **Phase 2**: Additional 363 lines removed through deduplication
+  - **Benefits**: Improved maintainability, testability, and reusability
+
+### Fixed
+- **Terminal Session Persistence (Issue #188)**: Fixed session restoration not working after VS Code restart
+  - Root cause: StandardTerminalSessionManager was using `requestTerminalSerialization` command which required non-existent `StandardTerminalPersistenceManager.serializeTerminal()` method in WebView
+  - Solution: Changed to use `extractScrollbackData` command (via ScrollbackMessageHandler) which works with existing SimplePersistenceManager
+  - Added `handleScrollbackDataResponse()` method for Promise-based response handling in StandardTerminalSessionManager
+  - Added message forwarding in SecondaryTerminalProvider to route responses
+  - Terminal scrollback and content now properly persists and restores across VS Code restarts
+- **Terminal Initialization Error**: Fixed "this._setupTerminalEventListeners is not a function" error
+  - Removed calls to deleted event listener setup methods that were moved to TerminalEventCoordinator
+  - Fixed `_registerCoreListeners()` to properly delegate to new service architecture
+
 ### Improved
 - **Session Persistence Enhancement**: Expanded persistent session scrollback from 200 to 1000 lines (5x increase)
   - Better context preservation across VS Code restarts
@@ -21,6 +45,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Display Buffer**: Increased default scrollback from 1,000 to 2,000 lines (2x increase)
   - More visible history without manual configuration
   - Better out-of-box experience for typical workflows
+- **Code Quality**: Eliminated 801 lines of duplicate code through systematic service extraction
+  - Zero duplication between Provider and Services
+  - All removed code properly encapsulated in independent services
+  - Each service implements proper dispose patterns for resource cleanup
 
 ## [0.1.119] - 2025-10-12
 
