@@ -1358,6 +1358,10 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
             } else {
               log(`✅ [PERSISTENCE] Restored ${restoredCount}/${totalCount} terminals`);
             }
+
+            if (this._standardSessionManager) {
+              this._standardSessionManager.handleSerializationRestoreResponse(message as unknown as Record<string, unknown>);
+            }
           } catch (restoreError) {
             log('❌ [PERSISTENCE] Error handling restore response:', restoreError);
           }

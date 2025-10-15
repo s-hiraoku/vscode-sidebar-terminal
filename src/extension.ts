@@ -8,6 +8,6 @@ export function activate(context: vscode.ExtensionContext): Promise<void> {
   return lifecycle.activate(context);
 }
 
-export function deactivate(): void {
-  lifecycle.deactivate();
+export async function deactivate(): Promise<void> {
+  await lifecycle.deactivate();
 }

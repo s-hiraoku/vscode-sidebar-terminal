@@ -19,7 +19,9 @@
 - **Production-Ready Architecture**: Zero TypeScript compilation errors with 562 KiB extension and 1.05 MiB webview builds
 - **Sidebar Integration**: Dedicated terminal panel in the VS Code activity bar
 - **Multiple Terminals**: Support for up to 5 concurrent terminal instances
-- **Smart Session Persistence**: Automatically saves and restores terminal sessions across VS Code restarts with up to 1,000 lines of scrollback per terminal (Issue #188 fixed in latest release)
+- **Smart Session Persistence**: Automatically saves and restores terminal sessions across VS Code restarts with up to 1,000 lines of scrollback per terminal
+  - **Issue #188**: Fixed session restoration not working (v0.1.120)
+  - **Issue #201**: Fixed scrollback restoration after window reload with Promise-based response handling and fallback mechanism
 - **Terminal Recycling**: Efficient terminal number management (1-5) with automatic reuse
 - **Enhanced Error Handling**: Robust error recovery mechanisms following VS Code standards
 - **Cross-Platform Support**: Works seamlessly on Windows, macOS, and Linux

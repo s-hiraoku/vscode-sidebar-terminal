@@ -5,6 +5,24 @@ All notable changes to the "Secondary Terminal" extension will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **Terminal Session Scrollback Restoration (Issue #201)**: Fixed scrollback not being restored after VS Code window reload
+  - Root cause: WebView never registered terminals with `OptimizedTerminalPersistenceManager`, causing `restoreTerminalContent` to fail silently
+  - Solution: Implemented Promise-based response handling with timeout for serialization restoration
+  - Added `handleSerializationRestoreResponse()` method to process WebView restoration responses
+  - Added `restoreScrollbackFallback()` method for fallback restoration when serialization fails
+  - Enhanced `requestScrollbackRestoration()` to wait for WebView response with 8-second timeout
+  - Improved scrollback data type handling (supports both string and array formats)
+  - Terminal scrollback now properly restores across VS Code window reloads
+
+### Improved
+- **Extension Lifecycle**: Made deactivation process fully asynchronous for reliable session saving
+  - Changed `deactivate()` function to async/await pattern
+  - Ensured session save completes before extension shutdown
+  - Improved session save reliability during VS Code exit
+
 ## [0.1.120] - 2025-10-14
 
 ### Refactoring

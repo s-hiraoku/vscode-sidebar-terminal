@@ -24,6 +24,17 @@ export class StandardTerminalSessionManager {
     }
   ) {}
 
+  private pendingRestoreResponse?: {
+    expectedCount: number;
+    resolve: (result: {
+      restoredCount: number;
+      totalCount: number;
+      error?: string;
+      timedOut?: boolean;
+    }) => void;
+    timeout: ReturnType<typeof setTimeout>;
+  };
+
   /**
    * SidebarProviderを設定
    */
@@ -341,7 +352,7 @@ export class StandardTerminalSessionManager {
       }
 
       const successfulCreations = terminalCreationResults.filter(r => r.success);
-      const restoredCount = successfulCreations.length;
+      let restoredCount = successfulCreations.length;
 
       // Step 2: 🎯 IMPROVED: Wait a moment for terminals to fully initialize, then restore content
       if (restoredCount > 0 && sessionData.scrollbackData) {
@@ -351,23 +362,62 @@ export class StandardTerminalSessionManager {
         log('🔄 [STANDARD-SESSION] Requesting scrollback restoration from WebView...');
         
         // Create terminal data mapping with new IDs
-        const terminalRestoreData = successfulCreations.map(result => ({
-          id: result.terminalId!,
-          name: result.originalInfo.name,
-          number: result.originalInfo.number,
-          cwd: result.originalInfo.cwd,
-          isActive: result.originalInfo.isActive,
-          serializedContent: (sessionData.scrollbackData?.[result.originalInfo.id] as string) || '',
-        }));
+        const terminalRestoreData = successfulCreations.map(result => {
+          const rawScrollback = sessionData.scrollbackData?.[result.originalInfo.id];
+          let serializedContent = '';
 
-        await this.requestScrollbackRestoration(terminalRestoreData);
+          if (typeof rawScrollback === 'string') {
+            serializedContent = rawScrollback;
+          } else if (Array.isArray(rawScrollback)) {
+            serializedContent = rawScrollback.filter((line): line is string => typeof line === 'string').join('\n');
+          }
+
+          return {
+            id: result.terminalId!,
+            name: result.originalInfo.name,
+            number: result.originalInfo.number,
+            cwd: result.originalInfo.cwd,
+            isActive: result.originalInfo.isActive,
+            serializedContent,
+          };
+        });
+
+        const restoreResult = await this.requestScrollbackRestoration(terminalRestoreData);
+
+        if (restoreResult) {
+          restoredCount = restoreResult.restoredCount;
+        }
+
+        if (!restoreResult || restoreResult.restoredCount < terminalRestoreData.length) {
+          log(
+            `⚠️ [STANDARD-SESSION] Serialization restore incomplete (${restoreResult?.restoredCount ?? 0}/${terminalRestoreData.length}) - attempting scrollback fallback`
+          );
+
+          const fallbackRestored = await this.restoreScrollbackFallback(
+            successfulCreations,
+            sessionData.scrollbackData || {}
+          );
+
+          if (fallbackRestored > 0) {
+            log(
+              `✅ [STANDARD-SESSION] Fallback scrollback restore succeeded for ${fallbackRestored} terminals`
+            );
+            restoredCount = fallbackRestored;
+          } else {
+            log('❌ [STANDARD-SESSION] Fallback scrollback restore failed');
+            restoredCount = restoreResult?.restoredCount ?? 0;
+          }
+        }
+      } else if (restoredCount > 0) {
+        log('⚠️ [STANDARD-SESSION] No scrollback data available for restored terminals');
+        restoredCount = 0;
       }
 
       log(
         `✅ [STANDARD-SESSION] VS Code standard session restore completed: ${restoredCount} terminals`
       );
       return {
-        success: true,
+        success: restoredCount > 0,
         restoredCount,
         skippedCount: sessionData.terminals.length - restoredCount,
       };
@@ -559,12 +609,17 @@ export class StandardTerminalSessionManager {
       isActive: boolean;
       serializedContent?: string;
     }>
-  ): Promise<void> {
+  ): Promise<{
+    restoredCount: number;
+    totalCount: number;
+    error?: string;
+    timedOut?: boolean;
+  } | null> {
     log(`🔄 [STANDARD-SESSION] Sending terminal restoration data to WebView PersistenceManager`);
 
     if (!this.sidebarProvider) {
       log('⚠️ [STANDARD-SESSION] No sidebar provider available for restoration');
-      return;
+      return null;
     }
 
     try {
@@ -576,24 +631,157 @@ export class StandardTerminalSessionManager {
         isActive: terminal.isActive,
       })).filter(data => data.serializedContent.length > 0); // Only restore terminals with content
 
-      if (terminalRestoreData.length === 0) {
+      const expectedCount = terminalRestoreData.length;
+
+      if (expectedCount === 0) {
         log('📁 [STANDARD-SESSION] No terminals with serialized content to restore');
-        return;
+        return {
+          restoredCount: 0,
+          totalCount: 0,
+        };
       }
 
-      // WebViewにターミナル復元データを送信
-      await this.sidebarProvider.sendMessageToWebview({
-        command: 'restoreTerminalSerialization',
-        terminalData: terminalRestoreData,
-        timestamp: Date.now(),
-      });
+      return await new Promise((resolve) => {
+        let pendingEntry!: {
+          expectedCount: number;
+          resolve: (result: {
+            restoredCount: number;
+            totalCount: number;
+            error?: string;
+            timedOut?: boolean;
+          }) => void;
+          timeout: ReturnType<typeof setTimeout>;
+        };
 
-      log(
-        `✅ [STANDARD-SESSION] Restoration data sent to WebView PersistenceManager (${terminalRestoreData.length} terminals with content)`
-      );
+        const timeout = setTimeout(() => {
+          if (this.pendingRestoreResponse === pendingEntry) {
+            this.pendingRestoreResponse = undefined;
+          }
+          resolve({
+            restoredCount: 0,
+            totalCount: expectedCount,
+            error: 'timeout',
+            timedOut: true,
+          });
+        }, 8000);
+
+        pendingEntry = {
+          expectedCount,
+          timeout,
+          resolve: (result) => {
+            clearTimeout(timeout);
+            if (this.pendingRestoreResponse === pendingEntry) {
+              this.pendingRestoreResponse = undefined;
+            }
+            resolve(result);
+          },
+        };
+
+        this.pendingRestoreResponse = pendingEntry;
+
+        void this.sidebarProvider!
+          .sendMessageToWebview({
+            command: 'restoreTerminalSerialization',
+            terminalData: terminalRestoreData,
+            timestamp: Date.now(),
+          })
+          .then(() => {
+            log(
+              `✅ [STANDARD-SESSION] Restoration data sent to WebView PersistenceManager (${expectedCount} terminals with content)`
+            );
+          })
+          .catch((error) => {
+            log(`❌ [STANDARD-SESSION] Error sending restoration data: ${String(error)}`);
+            pendingEntry.resolve({
+              restoredCount: 0,
+              totalCount: expectedCount,
+              error: String(error),
+            });
+          });
+      });
     } catch (error) {
       log(`❌ [STANDARD-SESSION] Error sending restoration data: ${String(error)}`);
+      return {
+        restoredCount: 0,
+        totalCount: terminals.length,
+        error: String(error),
+      };
     }
+  }
+
+  public handleSerializationRestoreResponse(message: Record<string, unknown>): void {
+    log('📋 [STANDARD-SESSION] Received serialization restore response from WebView');
+
+    const pending = this.pendingRestoreResponse;
+    if (!pending) {
+      log('⚠️ [STANDARD-SESSION] No pending restore request to resolve');
+      return;
+    }
+
+    const restoredCount = typeof message.restoredCount === 'number' ? message.restoredCount : 0;
+    const totalCount = typeof message.totalCount === 'number' ? message.totalCount : pending.expectedCount;
+    const error = typeof message.error === 'string' ? message.error : undefined;
+
+    pending.resolve({
+      restoredCount,
+      totalCount,
+      error,
+    });
+  }
+
+  private async restoreScrollbackFallback(
+    terminalCreationResults: Array<{
+      originalInfo: any;
+      terminalId: string | null;
+      success: boolean;
+    }>,
+    scrollbackData: Record<string, unknown>
+  ): Promise<number> {
+    if (!this.sidebarProvider) {
+      log('⚠️ [STANDARD-SESSION] Cannot perform fallback restoration without sidebar provider');
+      return 0;
+    }
+
+    let restored = 0;
+
+    for (const result of terminalCreationResults) {
+      if (!result.success || !result.terminalId) {
+        continue;
+      }
+
+      const originalId = result.originalInfo?.id;
+      if (!originalId) {
+        continue;
+      }
+
+      const lines = scrollbackData?.[originalId];
+      if (!Array.isArray(lines) || lines.length === 0) {
+        log(`⚠️ [STANDARD-SESSION] No fallback scrollback data for terminal ${originalId}`);
+        continue;
+      }
+
+      const sanitizedLines = (lines as unknown[]).filter((line): line is string => typeof line === 'string');
+
+      if (sanitizedLines.length === 0) {
+        continue;
+      }
+
+      try {
+        await this.sidebarProvider.sendMessageToWebview({
+          command: 'restoreScrollback',
+          terminalId: result.terminalId,
+          scrollback: sanitizedLines,
+          timestamp: Date.now(),
+        });
+        restored++;
+      } catch (error) {
+        log(
+          `❌ [STANDARD-SESSION] Failed to send fallback scrollback for ${result.terminalId}: ${String(error)}`
+        );
+      }
+    }
+
+    return restored;
   }
 
   /**

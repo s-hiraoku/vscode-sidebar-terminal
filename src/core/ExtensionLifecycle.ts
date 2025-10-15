@@ -430,11 +430,11 @@ export class ExtensionLifecycle {
   /**
    * 拡張機能の停止処理
    */
-  deactivate(): void {
+  async deactivate(): Promise<void> {
     log('🔧 [EXTENSION] Starting deactivation...');
 
     // シンプルセッション保存処理
-    this.saveSimpleSessionOnExit();
+    await this.saveSimpleSessionOnExit();
 
     // Dispose standard session manager
     if (this.standardSessionManager) {
@@ -883,30 +883,23 @@ export class ExtensionLifecycle {
   /**
    * 終了時の統合セッション保存処理
    */
-  private saveSimpleSessionOnExit(): void {
+  private async saveSimpleSessionOnExit(): Promise<void> {
+    if (!this.standardSessionManager) {
+      log('⚠️ [STANDARD_SESSION] Session manager not available, skipping save on exit');
+      return;
+    }
+
+    log('💾 [STANDARD_SESSION] Saving session on exit...');
+
     try {
-      if (!this.standardSessionManager) {
-        log('⚠️ [STANDARD_SESSION] Session manager not available, skipping save on exit');
-        return;
+      const result = await this.standardSessionManager.saveCurrentSession();
+      if (result.success) {
+        log(`✅ [STANDARD_SESSION] Session saved on exit: ${result.terminalCount} terminals`);
+      } else {
+        log(`❌ [STANDARD_SESSION] Failed to save session on exit: ${result.error}`);
       }
-
-      log('💾 [STANDARD_SESSION] Saving session on exit...');
-
-      // 同期的に保存処理を実行
-      this.standardSessionManager
-        .saveCurrentSession()
-        .then((result) => {
-          if (result.success) {
-            log(`✅ [STANDARD_SESSION] Session saved on exit: ${result.terminalCount} terminals`);
-          } else {
-            log(`❌ [STANDARD_SESSION] Failed to save session on exit: ${result.error}`);
-          }
-        })
-        .catch((error) => {
-          log(`❌ [STANDARD_SESSION] Exception during session save on exit: ${String(error)}`);
-        });
     } catch (error) {
-      log(`❌ [STANDARD_SESSION] Error during saveSimpleSessionOnExit: ${String(error)}`);
+      log(`❌ [STANDARD_SESSION] Exception during session save on exit: ${String(error)}`);
     }
   }
 
