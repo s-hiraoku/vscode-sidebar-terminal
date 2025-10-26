@@ -151,10 +151,16 @@ setImmediate(() => {
         return original_addEventListener.call(this, target, eventName, listener);
       };
 
-      console.log('✅ Patched Mocha Runner._addEventListener to handle missing listenerCount');
+      // Suppress log in test environment
+      if (process.env.NODE_ENV !== 'test') {
+        console.log('✅ Patched Mocha Runner._addEventListener to handle missing listenerCount');
+      }
     }
   } catch (e) {
-    console.warn('⚠️  Failed to patch Mocha Runner:', e.message);
+    // Suppress warning in test environment
+    if (process.env.NODE_ENV !== 'test') {
+      console.warn('⚠️  Failed to patch Mocha Runner:', e.message);
+    }
   }
 });
 

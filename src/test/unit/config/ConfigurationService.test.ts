@@ -70,9 +70,8 @@ describe('ConfigurationService', () => {
       // vscode module path not found, Module.prototype.require will handle it
     }
 
-    // Mock logger using safe stub to prevent "already stubbed" errors
-    const loggerModule = require('../../../utils/logger');
-    logSpy = safeStub(testEnv.sandbox, loggerModule, 'extension');
+    // Logger will use console.log in test environment, no need to mock
+    logSpy = testEnv.sandbox.stub(console, 'log');
 
     // Create configuration change event stub
     configChangeEvent = testEnv.sandbox.stub();
