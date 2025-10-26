@@ -111,8 +111,9 @@ import { PerformanceManager } from './PerformanceManager';
 import { UIManager } from './UIManager';
 import { InputManager } from './InputManager';
 import { ConsolidatedMessageManager } from './ConsolidatedMessageManager';
-import { OptimizedTerminalPersistenceManager } from '../services/OptimizedPersistenceManager';
-import { SimplePersistenceManager } from './SimplePersistenceManager';
+// DEPRECATED: WebView-side persistence removed - now handled Extension-side via PersistenceOrchestrator
+// import { OptimizedTerminalPersistenceManager } from '../services/OptimizedPersistenceManager';
+// import { SimplePersistenceManager } from './SimplePersistenceManager';
 import { WebViewApiManager } from './WebViewApiManager';
 import { TerminalLifecycleManager } from './TerminalLifecycleManager';
 import { TerminalTabManager } from './TerminalTabManager';
@@ -160,10 +161,10 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
   private uiManager!: UIManager;
   public inputManager!: InputManager;
   public messageManager!: ConsolidatedMessageManager;
-  public persistenceManager: OptimizedTerminalPersistenceManager | SimplePersistenceManager | null =
-    null;
-  public optimizedPersistenceManager!: OptimizedTerminalPersistenceManager;
-  public simplePersistenceManager!: SimplePersistenceManager;
+  // DEPRECATED: WebView-side persistence removed - now handled Extension-side via PersistenceOrchestrator
+  // public persistenceManager: OptimizedTerminalPersistenceManager | SimplePersistenceManager | null = null;
+  // public optimizedPersistenceManager!: OptimizedTerminalPersistenceManager;
+  // public simplePersistenceManager!: SimplePersistenceManager;
 
   // バージョン情報
   private versionInfo: string = 'v0.1.0';
@@ -299,14 +300,15 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     // Config Manager
     this.configManager = new ConfigManager();
 
+    // DEPRECATED: WebView-side persistence removed - now handled Extension-side via PersistenceOrchestrator
     // 🚀 PHASE 3: Initialize persistence managers with proper API access
-    this.simplePersistenceManager = new SimplePersistenceManager(this.webViewApiManager.getApi());
-    this.optimizedPersistenceManager = new OptimizedTerminalPersistenceManager();
+    // this.simplePersistenceManager = new SimplePersistenceManager(this.webViewApiManager.getApi());
+    // this.optimizedPersistenceManager = new OptimizedTerminalPersistenceManager();
 
     // Message Manager は後で初期化
     this.messageManager = new ConsolidatedMessageManager();
     this.messageManager.setCoordinator(this); // 🆕 Coordinator を設定（×ボタン機能に必要）
-    this.persistenceManager = this.simplePersistenceManager;
+    // this.persistenceManager = this.simplePersistenceManager;
 
     // Set up coordinator relationships for specialized managers
     this.findInTerminalManager.setCoordinator(this);
@@ -443,16 +445,17 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       });
       log(`🎯 [WEBVIEW] Notified Extension of active terminal change: ${terminalId}`);
 
+      // DEPRECATED: WebView-side persistence removed - Extension handles this via PersistenceOrchestrator
       // 🆕 SIMPLE: Save session when active terminal changes
-      if (this.simplePersistenceManager) {
-        setTimeout(() => {
-          this.simplePersistenceManager.saveSession().then((success) => {
-            if (success) {
-              log(`💾 [SIMPLE-PERSISTENCE] Session saved after active terminal change`);
-            }
-          });
-        }, 200); // Small delay to avoid frequent saves
-      }
+      // if (this.simplePersistenceManager) {
+      //   setTimeout(() => {
+      //     this.simplePersistenceManager.saveSession().then((success) => {
+      //       if (success) {
+      //         log(`💾 [SIMPLE-PERSISTENCE] Session saved after active terminal change`);
+      //       }
+      //     });
+      //   }, 200); // Small delay to avoid frequent saves
+      // }
 
       // Verify the setting worked
       const verifyActive = this.terminalLifecycleManager.getActiveTerminalId();
@@ -511,7 +514,8 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       findInTerminal: this.findInTerminalManager,
       profile: this.profileManager,
       tabs: this.terminalTabManager,
-      persistence: this.persistenceManager,
+      // DEPRECATED: WebView-side persistence removed
+      // persistence: this.persistenceManager,
       terminalContainer: this.terminalContainerManager,
       displayMode: this.displayModeManager,
       header: this.headerManager,
@@ -628,22 +632,23 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
         this.terminalTabManager.setActiveTab(terminalId);
       }
 
+      // DEPRECATED: WebView-side persistence removed - Extension handles this via PersistenceOrchestrator
       // 🆕 SIMPLE: Save current session state after terminal creation
       // No complex serialization - just session metadata
-      setTimeout(() => {
-        if (this.simplePersistenceManager) {
-          log(
-            `💾 [SIMPLE-PERSISTENCE] Saving session after terminal ${terminalId} creation`
-          );
-          this.simplePersistenceManager.saveSession().then((success) => {
-            if (success) {
-              log(`✅ [SIMPLE-PERSISTENCE] Session saved successfully`);
-            } else {
-              console.warn(`⚠️ [SIMPLE-PERSISTENCE] Failed to save session`);
-            }
-          });
-        }
-      }, 100); // Minimal delay for DOM updates
+      // setTimeout(() => {
+      //   if (this.simplePersistenceManager) {
+      //     log(
+      //       `💾 [SIMPLE-PERSISTENCE] Saving session after terminal ${terminalId} creation`
+      //     );
+      //     this.simplePersistenceManager.saveSession().then((success) => {
+      //       if (success) {
+      //         log(`✅ [SIMPLE-PERSISTENCE] Session saved successfully`);
+      //       } else {
+      //         console.warn(`⚠️ [SIMPLE-PERSISTENCE] Failed to save session`);
+      //       }
+      //     });
+      //   }
+      // }, 100); // Minimal delay for DOM updates
 
       // 4. 🎯 FIX: 新規作成時のアクティブ設定強化
       // 確実にアクティブ状態を設定し、太い青枠を表示
@@ -797,19 +802,20 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     // CLI Agent状態もクリーンアップ
     this.cliAgentStateManager.removeTerminalState(terminalId);
 
+    // DEPRECATED: WebView-side persistence removed - Extension handles this via PersistenceOrchestrator
     // 🆕 SIMPLE: Update session state after terminal removal
-    setTimeout(() => {
-      if (this.simplePersistenceManager) {
-        log(
-          `💾 [SIMPLE-PERSISTENCE] Updating session after terminal ${terminalId} removal`
-        );
-        this.simplePersistenceManager.saveSession().then((success) => {
-          if (success) {
-            log(`✅ [SIMPLE-PERSISTENCE] Session updated after removal`);
-          }
-        });
-      }
-    }, 100); // Delay for DOM cleanup
+    // setTimeout(() => {
+    //   if (this.simplePersistenceManager) {
+    //     log(
+    //       `💾 [SIMPLE-PERSISTENCE] Updating session after terminal ${terminalId} removal`
+    //     );
+    //     this.simplePersistenceManager.saveSession().then((success) => {
+    //       if (success) {
+    //         log(`✅ [SIMPLE-PERSISTENCE] Session updated after removal`);
+    //       }
+    //     });
+    //   }
+    // }, 100); // Delay for DOM cleanup
 
     const removed = await this.terminalLifecycleManager.removeTerminal(terminalId);
     if (removed && this.terminalTabManager) {
@@ -1642,11 +1648,15 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
   /**
    * 🆕 Attempt simple session restoration
+   * DEPRECATED: WebView-side persistence removed - Extension handles this via PersistenceOrchestrator
    */
   private async attemptSimpleSessionRestore(): Promise<void> {
     try {
       log('🔄 [SIMPLE-RESTORATION] Attempting session restoration...');
+      log('⚠️ [SIMPLE-RESTORATION] WebView-side persistence deprecated - Extension handles restoration');
+      return; // Early return - Extension handles restoration now
 
+      /* DEPRECATED CODE - kept for reference
       if (!this.simplePersistenceManager) {
         console.warn('⚠️ [SIMPLE-RESTORATION] SimplePersistenceManager not available');
         return;
@@ -1705,14 +1715,17 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       }
 
       log('✅ [SIMPLE-RESTORATION] Session restoration completed');
+      */
     } catch (error) {
       console.error('❌ [SIMPLE-RESTORATION] Failed to restore session:', error);
 
+      /* DEPRECATED CODE - kept for reference
       // Show welcome message as fallback
       if (this.simplePersistenceManager) {
         const welcomeMessage = this.simplePersistenceManager.getWelcomeMessage();
         this.displaySessionMessage(welcomeMessage);
       }
+      */
     }
   }
 
@@ -2591,7 +2604,8 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
       // 既存マネージャーのクリーンアップ
       this.messageManager.dispose();
-      this.optimizedPersistenceManager.dispose();
+      // DEPRECATED: WebView-side persistence removed
+      // this.optimizedPersistenceManager.dispose();
 
       // Clean up scrollback request tracking
       this.processedScrollbackRequests.clear();
