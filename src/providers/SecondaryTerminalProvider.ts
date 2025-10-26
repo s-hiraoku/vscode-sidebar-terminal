@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { TerminalManager } from '../terminals/TerminalManager';
 import { WebviewMessage } from '../types/common';
 import { TERMINAL_CONSTANTS } from '../constants';
-import { getTerminalConfig, normalizeTerminalInfo, safeProcessCwd } from '../utils/common';
+import { getTerminalConfig, normalizeTerminalInfo } from '../utils/common';
 import { showSuccess, showError, TerminalErrorHandler } from '../utils/feedback';
 import { provider as log } from '../utils/logger';
 import { getUnifiedConfigurationService } from '../config/UnifiedConfigurationService';
@@ -11,8 +11,6 @@ import {
   WebViewHtmlGenerationService,
   HtmlGenerationOptions,
 } from '../services/webview/WebViewHtmlGenerationService';
-import { UnifiedTerminalPersistenceService } from '../services/UnifiedTerminalPersistenceService';
-import { PersistenceMessageHandler } from '../handlers/PersistenceMessageHandler';
 import { TerminalInitializationCoordinator } from './TerminalInitializationCoordinator';
 import { SecondaryTerminalMessageRouter } from './SecondaryTerminalMessageRouter';
 import {
@@ -28,15 +26,15 @@ import {
 } from '../types/type-guards';
 
 // New refactored services
-import {
-  PanelLocationService,
-  PanelLocation,
-  SplitDirection,
-} from './services/PanelLocationService';
+import { PanelLocation, SplitDirection } from './services/PanelLocationService';
 import { TerminalLinkResolver } from './services/TerminalLinkResolver';
 import { WebViewCommunicationService } from './services/WebViewCommunicationService';
 import { TerminalEventCoordinator } from './services/TerminalEventCoordinator';
 import { ScrollbackCoordinator } from './services/ScrollbackCoordinator';
+import { MessageBridge } from './secondaryTerminal/MessageBridge';
+import { PanelLocationController } from './secondaryTerminal/PanelLocationController';
+import { PersistenceOrchestrator } from './secondaryTerminal/PersistenceOrchestrator';
+import { ViewBootstrapper } from './secondaryTerminal/ViewBootstrapper';
 
 
 export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vscode.Disposable {
@@ -76,16 +74,17 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   private _linksService?: import('../services/TerminalLinksService').TerminalLinksService;
 
   // Terminal persistence services
-  private _persistenceService?: UnifiedTerminalPersistenceService;
-  private _persistenceHandler?: PersistenceMessageHandler;
   private readonly _initializationCoordinator: TerminalInitializationCoordinator;
 
   // New refactored services
-  private readonly _panelLocationService: PanelLocationService;
   private readonly _linkResolver: TerminalLinkResolver;
   private readonly _communicationService: WebViewCommunicationService;
   private _eventCoordinator?: TerminalEventCoordinator;
   private readonly _scrollbackCoordinator: ScrollbackCoordinator;
+  private readonly _messageBridge: MessageBridge;
+  private readonly _panelLocationController: PanelLocationController;
+  private readonly _persistenceOrchestrator: PersistenceOrchestrator;
+  private readonly _viewBootstrapper: ViewBootstrapper;
 
   constructor(
     private readonly _extensionContext: vscode.ExtensionContext,
@@ -96,29 +95,34 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
     // Initialize new refactored services
     this._communicationService = new WebViewCommunicationService();
-    this._panelLocationService = new PanelLocationService(
-      (message: unknown) => this._communicationService.sendMessage(message as WebviewMessage)
-    );
     this._linkResolver = new TerminalLinkResolver(
       (terminalId: string) => this._terminalManager.getTerminal(terminalId)
     );
     this._scrollbackCoordinator = new ScrollbackCoordinator(
       this._communicationService.sendMessage.bind(this._communicationService)
     );
-
-    log('🎨 [PROVIDER] New refactored services initialized');
-
-    // Initialize persistence services
-    this._persistenceService = new UnifiedTerminalPersistenceService(
-      this._extensionContext,
-      this._terminalManager
+    this._messageBridge = new MessageBridge(this._extensionContext);
+    this._panelLocationController = new PanelLocationController({
+      extensionContext: this._extensionContext,
+      terminalManager: this._terminalManager,
+      sendMessage: (message: WebviewMessage) => this._communicationService.sendMessage(message),
+    });
+    this._persistenceOrchestrator = new PersistenceOrchestrator({
+      extensionContext: this._extensionContext,
+      terminalManager: this._terminalManager,
+      scrollbackCoordinator: this._scrollbackCoordinator,
+      sendMessage: (message: WebviewMessage) => this._communicationService.sendMessage(message),
+    });
+    this._viewBootstrapper = new ViewBootstrapper(
+      this._messageBridge,
+      this._panelLocationController
     );
-    this._persistenceHandler = new PersistenceMessageHandler(this._persistenceService);
+
+    log('🎨 [PROVIDER] New services initialized');
 
     this._messageRouter = new SecondaryTerminalMessageRouter();
 
     log('🎨 [PROVIDER] HTML generation service initialized');
-    log('💾 [PROVIDER] Terminal persistence services initialized');
 
     this._initializationCoordinator = new TerminalInitializationCoordinator(
       this._terminalManager,
@@ -132,25 +136,26 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     );
   }
 
-  public resolveWebviewView(
+  public async resolveWebviewView(
     webviewView: vscode.WebviewView,
     _context: vscode.WebviewViewResolveContext,
     _token: vscode.CancellationToken
-  ): void {
+  ): Promise<void> {
     log('🚀 [PROVIDER] === RESOLVING WEBVIEW VIEW ===');
     log('🚀 [PROVIDER] WebView object exists:', !!webviewView);
     log('🚀 [PROVIDER] WebView webview exists:', !!webviewView.webview);
 
     try {
       this._resetForNewView(webviewView);
-      log('🔧 [PROVIDER] Step 1: Configuring webview options...');
-      this._configureWebview(webviewView);
-      this._registerWebviewMessageListener(webviewView);
-      this._initializeMessageHandlers();
-      this._registerVisibilityListener(webviewView);
-      this._initializeWebviewContent(webviewView);
-      this._registerCoreListeners();
-      this._setupPanelLocationChangeListener(webviewView);
+      await this._viewBootstrapper.bootstrap(webviewView, {
+        handleMessage: (message) => this._handleWebviewMessage(message),
+        validateMessage: (message): message is WebviewMessage =>
+          this._isValidWebviewMessage(message),
+        configureWebview: (view) => this._configureWebview(view),
+        initializeMessageHandlers: () => this._initializeMessageHandlers(),
+        initializeWebviewContent: (view) => this._initializeWebviewContent(view),
+        registerCoreListeners: () => this._registerCoreListeners(),
+      });
 
       log('✅ [PROVIDER] WebView setup completed successfully');
       log('🚀 [PROVIDER] === WEBVIEW VIEW RESOLUTION COMPLETE ===');
@@ -183,63 +188,6 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     // Reset initialization flag for new WebView (including panel moves)
     this._isInitialized = false;
     log('✅ [PROVIDER] Initialization flag reset');
-  }
-
-  private _registerWebviewMessageListener(webviewView: vscode.WebviewView): void {
-    // STEP 2: Set up MESSAGE LISTENERS BEFORE HTML (VS Code standard practice)
-    // This is CRITICAL - listeners must be set before HTML is loaded
-    log('🔧 [PROVIDER] Step 2: Setting up message listeners (BEFORE HTML)...');
-    const disposable = webviewView.webview.onDidReceiveMessage(
-      (message: WebviewMessage) => {
-        log('📨 [PROVIDER] ✅ MESSAGE RECEIVED FROM WEBVIEW!');
-        log('📨 [PROVIDER] Message command:', message.command);
-        try {
-          const { isDebugEnabled } = require('../utils/logger');
-          if (isDebugEnabled && isDebugEnabled()) {
-            log('📨 [PROVIDER] Message data:', message);
-          }
-        } catch {}
-        log('📨 [PROVIDER] WebView visible:', webviewView.visible);
-
-        // Validate message before handling
-        if (!this._isValidWebviewMessage(message)) {
-          log('⚠️ [PROVIDER] Invalid WebviewMessage received, ignoring');
-          return;
-        }
-
-        // Handle message immediately
-        this._handleWebviewMessage(message).catch((error) => {
-          log('❌ [PROVIDER] Error handling message:', error);
-        });
-      },
-      undefined,
-      this._extensionContext.subscriptions
-    );
-
-    this._extensionContext.subscriptions.push(disposable);
-    log('✅ [PROVIDER] Message listener registered and added to subscriptions');
-  }
-
-  private _registerVisibilityListener(webviewView: vscode.WebviewView): void {
-    // STEP 3: Set up visibility listener
-    log('🔧 [PROVIDER] Step 3: Setting up visibility listener...');
-    const disposable = webviewView.onDidChangeVisibility(
-      () => {
-        if (webviewView.visible) {
-          log('👁️ [PROVIDER] WebView became visible');
-          // Trigger panel location detection when WebView becomes visible
-          setTimeout(() => {
-            this._requestPanelLocationDetection();
-          }, 500);
-        } else {
-          log('👁️ [PROVIDER] WebView became hidden');
-        }
-      },
-      undefined,
-      this._extensionContext.subscriptions
-    );
-    this._extensionContext.subscriptions.push(disposable);
-    log('✅ [PROVIDER] Visibility listener registered');
   }
 
   private _initializeWebviewContent(webviewView: vscode.WebviewView): void {
@@ -467,7 +415,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
     // Send initial panel location and request detection (Issue #148)
     if (this._view) {
-      const panelLocation = this._getCurrentPanelLocation();
+      const panelLocation = this._panelLocationController.getCurrentPanelLocation();
       log(`📍 [SETTINGS] Sending initial panel location: ${panelLocation}`);
       await this._sendMessage({
         command: 'panelLocationUpdate',
@@ -475,7 +423,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       });
 
       // Also request WebView to detect actual panel location
-      this._requestPanelLocationDetection();
+      this._panelLocationController.requestPanelLocationDetection();
     }
   }
 
@@ -819,70 +767,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
    * @param message - WebView message containing location information
    */
   private async _handleReportPanelLocation(message: WebviewMessage): Promise<void> {
-    // Delegate to PanelLocationService with relayout callback
-    await this._panelLocationService.handlePanelLocationReport(
-      message.location,
-      async (_previousLocation, _newLocation) => {
-        // Auto-relayout callback
-        const terminalCount = this._terminalManager.getTerminals().length;
-        if (terminalCount >= 2) {
-          log('🔄 [RELAYOUT] Panel location changed with 2+ terminals, triggering auto-relayout...');
-
-          const splitDirection = this._panelLocationService.determineSplitDirection();
-          log(`🔄 [RELAYOUT] New split direction: ${splitDirection}`);
-
-          await this._communicationService.sendMessage({
-            command: 'relayoutTerminals',
-            direction: splitDirection,
-          });
-
-          log('🔄 [RELAYOUT] ✅ Relayout command sent to WebView');
-        }
-      }
-    );
-  }
-
-  /**
-   * 🆕 Request panel location detection from WebView
-   * Issue #148: Dynamic split direction based on panel location
-   */
-  private _requestPanelLocationDetection(): void {
-    // Delegate to PanelLocationService
-    void this._panelLocationService.requestPanelLocationDetection();
-  }
-
-  /**
-   * Determine split direction based on current panel location
-   */
-  private _determineSplitDirection(): SplitDirection {
-    // Delegate to PanelLocationService
-    return this._panelLocationService.determineSplitDirection();
-  }
-
-  /**
-   * Determine current panel location for split direction calculation
-   */
-  private _getCurrentPanelLocation(): PanelLocation {
-    // Delegate to PanelLocationService
-    return this._panelLocationService.getCurrentPanelLocation();
-  }
-
-  /**
-   * 🆕 Set up listener for panel location changes (e.g., drag and drop)
-   */
-  private _setupPanelLocationChangeListener(webviewView: vscode.WebviewView): void {
-    // Initialize PanelLocationService with webview
-    void this._panelLocationService.initialize(webviewView);
-
-    // Also listen for configuration changes (additional logic)
-    this._addDisposable(
-      vscode.workspace.onDidChangeConfiguration((event) => {
-        if (event.affectsConfiguration('secondaryTerminal.panelLocation')) {
-          log(`📍 [PANEL-DETECTION] Panel location setting changed - requesting detection`);
-          this._requestPanelLocationDetection();
-        }
-      })
-    );
+    await this._panelLocationController.handleReportPanelLocation(message);
   }
 
   /**
@@ -899,13 +784,15 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   public splitTerminal(direction?: SplitDirection): void {
     try {
       log('🔍 [SPLIT] ==================== SPLIT TERMINAL START ====================');
-      log(`🔍 [SPLIT] Current cached panel location: ${this._panelLocationService.getCurrentPanelLocation()}`);
+      log(
+        `🔍 [SPLIT] Current cached panel location: ${this._panelLocationController.getCurrentPanelLocation()}`
+      );
       log(`🔍 [SPLIT] Direction parameter: ${direction ?? 'auto-detect'}`);
 
       // If direction is not explicitly provided, request fresh panel location detection
       if (!direction) {
         log('🔍 [SPLIT] No explicit direction - requesting panel location detection...');
-        this._requestPanelLocationDetection();
+        this._panelLocationController.requestPanelLocationDetection();
 
         // Wait for panel location detection to complete before proceeding
         setTimeout(() => {
@@ -929,11 +816,12 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   private _performSplit(direction?: SplitDirection): void {
     try {
       log('🔍 [SPLIT] Performing split operation...');
-      const currentLocation = this._panelLocationService.getCachedPanelLocation();
+      const currentLocation = this._panelLocationController.getCachedPanelLocation();
       log(`🔍 [SPLIT] Current cached panel location: ${currentLocation}`);
 
       // Determine split direction based on panel location if not explicitly provided
-      const splitDirection: SplitDirection = direction ?? this._determineSplitDirection();
+      const splitDirection: SplitDirection =
+        direction ?? this._panelLocationController.determineSplitDirection();
 
       log(`🔍 [SPLIT] ✅ Final split direction: ${splitDirection}`);
 
@@ -1789,7 +1677,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
             // This handles cases where the panel was moved while hidden
             setTimeout(() => {
               log('📍 [DEBUG] Requesting panel location detection after visibility change');
-              this._requestPanelLocationDetection();
+              this._panelLocationController.requestPanelLocationDetection();
             }, 500); // Small delay to ensure WebView is fully loaded
           } else {
             log('👁️ [DEBUG] WebView became hidden');
@@ -1990,181 +1878,27 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
    * Handle terminal persistence messages
    */
   private async _handlePersistenceMessage(message: WebviewMessage): Promise<void> {
-    try {
-      if (!this._persistenceHandler) {
-        log('❌ [PERSISTENCE] Persistence handler not initialized');
-
-        // Determine proper response command
-        const responseCommand = message.command.endsWith('Response')
-          ? message.command
-          : `${message.command}Response`;
-
-        await this._sendMessage({
-          command: responseCommand as any,
-          success: false,
-          error: 'Persistence handler not available',
-          messageId: message.messageId,
-        });
-        return;
-      }
-
-      log(`📨 [PERSISTENCE] Handling message: ${message.command}`);
-
-      // Convert webview message to persistence message format
-      const persistenceCommand = message.command.replace('persistence', '').toLowerCase();
-      const persistenceMessage = {
-        command: persistenceCommand as 'saveSession' | 'restoreSession' | 'clearSession',
-        data: message.data,
-        terminalId: message.terminalId,
-      };
-
-      // Process the persistence request
-      const response = await this._persistenceHandler.handleMessage(persistenceMessage);
-
-      // Determine proper response command
-      const responseCommand = message.command.endsWith('Response')
-        ? message.command
-        : `${message.command}Response`;
-
-      // Send response back to WebView
-      await this._sendMessage({
-        command: responseCommand as any,
-        success: response.success,
-        data: response.data as string | any[] | undefined,
-        error: response.error,
-        terminalCount: response.terminalCount,
-        messageId: message.messageId,
-      });
-    } catch (error) {
-      log(`❌ [PERSISTENCE] Message handling failed: ${error}`);
-
-      // Determine proper response command
-      const responseCommand = message.command.endsWith('Response')
-        ? message.command
-        : `${message.command}Response`;
-
-      await this._sendMessage({
-        command: responseCommand as any,
-        success: false,
-        error: `Persistence operation failed: ${(error as Error).message}`,
-        messageId: message.messageId,
-      });
-    }
+    await this._persistenceOrchestrator.handlePersistenceMessage(
+      message,
+      this._sendMessage.bind(this)
+    );
   }
 
   /**
    * Handle legacy persistence messages for backward compatibility
    */
   private async _handleLegacyPersistenceMessage(message: WebviewMessage): Promise<void> {
-    try {
-      log(`📨 [PERSISTENCE-LEGACY] Handling legacy message: ${message.command}`);
-
-      // Convert legacy message to new format
-      let newCommand: string;
-      switch (message.command) {
-        case 'terminalSerializationRequest':
-          newCommand = 'persistenceSaveSession';
-          break;
-        case 'terminalSerializationRestoreRequest':
-          newCommand = 'persistenceRestoreSession';
-          break;
-        default:
-          throw new Error(`Unknown legacy persistence command: ${message.command}`);
-      }
-
-      // Forward to new handler
-      await this._handlePersistenceMessage({
-        ...message,
-        command: newCommand as any,
-      });
-    } catch (error) {
-      log(`❌ [PERSISTENCE-LEGACY] Legacy message handling failed: ${error}`);
-
-      // Determine proper response command
-      const responseCommand = message.command.endsWith('Response')
-        ? message.command
-        : `${message.command}Response`;
-
-      await this._sendMessage({
-        command: responseCommand as any,
-        success: false,
-        error: `Legacy persistence operation failed: ${(error as Error).message}`,
-      });
-    }
+    await this._persistenceOrchestrator.handleLegacyPersistenceMessage(
+      message,
+      this._sendMessage.bind(this)
+    );
   }
 
   /**
    * Trigger automatic session save
    */
   public async saveCurrentSession(): Promise<boolean> {
-    log('🔥 [PERSISTENCE-DEBUG] === saveCurrentSession called ===');
-
-    try {
-      if (!this._persistenceHandler) {
-        log('❌ [PERSISTENCE] Cannot save session - handler not initialized');
-        return false;
-      }
-
-      log('🔍 [PERSISTENCE-DEBUG] Persistence handler available, getting terminals...');
-
-      // 🆕 NEW: Request scrollback data from WebView before saving
-      const terminals = this._terminalManager.getTerminals();
-      log(`🔍 [PERSISTENCE-DEBUG] Found ${terminals.length} terminals to save`);
-
-      if (terminals.length === 0) {
-        log('⚠️ [PERSISTENCE-DEBUG] No terminals to save');
-        return false;
-      }
-
-      const terminalData = await Promise.all(
-        terminals.map(async (terminal, index) => {
-          log(
-            `🔍 [PERSISTENCE-DEBUG] Processing terminal ${index + 1}/${terminals.length}: ${terminal.id} (${terminal.name})`
-          );
-
-          // Request scrollback data from WebView via ScrollbackCoordinator
-          log(`📤 [PERSISTENCE-DEBUG] About to request scrollback for terminal ${terminal.id}`);
-          const scrollbackData = await this._scrollbackCoordinator.requestScrollbackData(
-            terminal.id,
-            1000
-          );
-
-          log(
-            `📦 [PERSISTENCE-DEBUG] Terminal ${terminal.id} scrollback promise resolved: ${scrollbackData.length} lines`
-          );
-
-          return {
-            id: terminal.id,
-            name: terminal.name,
-            scrollback: scrollbackData,
-            workingDirectory: terminal.cwd || '',
-            shellCommand: terminal.shell || '',
-            isActive: terminal.isActive || false,
-          };
-        })
-      );
-
-      log('🔍 [PERSISTENCE-DEBUG] All terminal data collected, calling persistence handler...');
-
-      const response = await this._persistenceHandler.handleMessage({
-        command: 'saveSession',
-        data: terminalData,
-      });
-
-      log(`🔍 [PERSISTENCE-DEBUG] Persistence handler response:`, response);
-
-      if (response.success) {
-        log(`✅ [PERSISTENCE] Session saved successfully: ${response.terminalCount} terminals`);
-        return true;
-      } else {
-        log(`❌ [PERSISTENCE] Session save failed: ${response.error}`);
-        return false;
-      }
-    } catch (error) {
-      log(`❌ [PERSISTENCE] Auto-save failed: ${error}`);
-      log('Persistence save error:', error);
-      return false;
-    }
+    return this._persistenceOrchestrator.saveCurrentSession();
   }
 
   // Scrollback request handling moved to ScrollbackCoordinator
@@ -2173,138 +1907,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
    * Trigger automatic session restore
    */
   public async restoreLastSession(): Promise<boolean> {
-    log('🔥 [RESTORE-DEBUG] === restoreLastSession called ===');
-
-    try {
-      if (!this._persistenceHandler) {
-        log('❌ [PERSISTENCE] Cannot restore session - handler not initialized');
-        return false;
-      }
-
-      log('🔍 [RESTORE-DEBUG] Persistence handler available, requesting restore...');
-
-      const response = await this._persistenceHandler.handleMessage({
-        command: 'restoreSession',
-      });
-
-      log('🔍 [RESTORE-DEBUG] Persistence handler response:', response);
-
-      if (response.success && response.data && Array.isArray(response.data)) {
-        log(`🔍 [RESTORE-DEBUG] Restore data available: ${response.data.length} terminals`);
-        log('📄 [RESTORE-DEBUG] Restore data sample:', response.data.slice(0, 1));
-
-        // 🎯 IMPROVED: Create terminal processes and coordinate with WebView properly
-        const restoredTerminals = [];
-        const terminalMappings: Array<{
-          oldId: string;
-          newId: string;
-          terminalData: any;
-        }> = [];
-
-        for (const terminalData of response.data) {
-          try {
-            log(
-              `🔧 [RESTORE-DEBUG] Creating terminal process for: ${terminalData.name || terminalData.id}`
-            );
-
-            // Create actual terminal process using TerminalManager
-            const newTerminalId = this._terminalManager.createTerminal();
-            const terminal = this._terminalManager.getTerminal(newTerminalId);
-
-            if (terminal) {
-              log(`✅ [RESTORE-DEBUG] Terminal process created: ${terminal.id}`);
-
-              // Store mapping for WebView coordination
-              terminalMappings.push({
-                oldId: terminalData.id,
-                newId: terminal.id,
-                terminalData: terminalData,
-              });
-
-              restoredTerminals.push(terminal);
-            } else {
-              log(
-                `❌ [RESTORE-DEBUG] Failed to create terminal process for: ${terminalData.name || terminalData.id}`
-              );
-            }
-          } catch (terminalError) {
-            log(`❌ [RESTORE-DEBUG] Failed to restore terminal ${terminalData.id}:`, terminalError);
-          }
-        }
-
-        if (restoredTerminals.length > 0) {
-          // 🎯 IMPROVED: Send terminal creation notifications to WebView first
-          for (const mapping of terminalMappings) {
-            await this._sendMessage({
-              command: 'terminalCreated',
-              terminal: {
-                id: mapping.newId,
-                name: mapping.terminalData.name || `Terminal ${mapping.newId}`,
-                cwd: mapping.terminalData.cwd || safeProcessCwd(),
-                isActive: mapping.terminalData.isActive || false,
-              },
-            });
-          }
-
-          // Wait for WebView to process terminal creation
-          await new Promise(resolve => setTimeout(resolve, 200));
-
-          // 🎯 IMPROVED: Then restore content with proper ID mapping
-          for (const mapping of terminalMappings) {
-            if (
-              mapping.terminalData.scrollback &&
-              Array.isArray(mapping.terminalData.scrollback) &&
-              mapping.terminalData.scrollback.length > 0
-            ) {
-              log(
-                `📜 [RESTORE-DEBUG] Restoring scrollback for ${mapping.newId}: ${mapping.terminalData.scrollback.length} lines`
-              );
-
-              // Send scrollback restoration to WebView with NEW terminal ID
-              await this._sendMessage({
-                command: 'restoreScrollback',
-                terminalId: mapping.newId, // Use NEW terminal ID
-                scrollback: mapping.terminalData.scrollback,
-              });
-            }
-          }
-
-          log(
-            `✅ [PERSISTENCE] Session restored successfully: ${restoredTerminals.length}/${response.data.length} terminals`
-          );
-
-          // Set active terminal if specified
-          const activeMapping = terminalMappings.find((m) => m.terminalData.isActive);
-          if (activeMapping) {
-            this._terminalManager.setActiveTerminal(activeMapping.newId);
-            await this._sendMessage({
-              command: 'setActiveTerminal',
-              terminalId: activeMapping.newId, // Use NEW terminal ID
-            });
-          }
-
-          // Notify WebView of successful restoration completion
-          await this._sendMessage({
-            command: 'sessionRestored',
-            success: true,
-            restoredCount: restoredTerminals.length,
-            totalCount: response.data.length,
-          });
-
-          return true;
-        } else {
-          log('⚠️ [PERSISTENCE] No terminals were successfully restored');
-          return false;
-        }
-      } else {
-        log(`📦 [PERSISTENCE] No session to restore: ${response.error || 'No data'}`);
-        return false;
-      }
-    } catch (error) {
-      log(`❌ [PERSISTENCE] Auto-restore failed: ${error}`);
-      log('Persistence restore error:', error);
-      return false;
-    }
+    return this._persistenceOrchestrator.restoreLastSession();
   }
 
   /**
@@ -2323,7 +1926,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
     // Dispose new refactored services
     this._scrollbackCoordinator.dispose();
-    this._panelLocationService.dispose();
+    this._panelLocationController.dispose();
     if (this._eventCoordinator) {
       this._eventCoordinator.dispose();
     }
@@ -2345,13 +1948,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     this._htmlGenerationService.dispose();
 
     // Dispose persistence services
-    if (this._persistenceService) {
-      this._persistenceService
-        .cleanupExpiredSessions()
-        .catch((error) => log(`⚠️ [PERSISTENCE] Cleanup during dispose failed: ${error}`));
-    }
-    this._persistenceService = undefined;
-    this._persistenceHandler = undefined;
+    this._persistenceOrchestrator.dispose();
 
     // Clear references and reset state
     this._view = undefined;

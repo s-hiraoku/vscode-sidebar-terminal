@@ -1,7 +1,7 @@
 import {
-  UnifiedTerminalPersistenceService,
+  ConsolidatedTerminalPersistenceService,
   PersistenceError,
-} from '../services/UnifiedTerminalPersistenceService';
+} from '../services/ConsolidatedTerminalPersistenceService';
 import { extension as log } from '../utils/logger';
 
 /**
@@ -44,13 +44,13 @@ export interface IPersistenceMessageHandler {
  * Factory function to create PersistenceMessageHandler instance
  */
 export function createPersistenceMessageHandler(
-  persistenceService: UnifiedTerminalPersistenceService
+  persistenceService: ConsolidatedTerminalPersistenceService
 ): IPersistenceMessageHandler {
   return new PersistenceMessageHandler(persistenceService);
 }
 
 export class PersistenceMessageHandler {
-  constructor(private readonly persistenceService: UnifiedTerminalPersistenceService) {
+  constructor(private readonly persistenceService: ConsolidatedTerminalPersistenceService) {
     log('🔧 [MSG-HANDLER] PersistenceMessageHandler initialized');
   }
 

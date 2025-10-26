@@ -16,9 +16,9 @@ import * as vscode from 'vscode';
 import { TerminalManager } from '../terminals/TerminalManager';
 import { WebviewMessage } from '../types/shared';
 import {
-  UnifiedTerminalPersistenceService,
+  ConsolidatedTerminalPersistenceService,
   ITerminalPersistenceService,
-} from '../services/TerminalPersistenceService';
+} from '../services/ConsolidatedTerminalPersistenceService';
 import {
   // PersistenceMessageHandler,
   createPersistenceMessageHandler,
@@ -53,14 +53,14 @@ export class IntegratedSecondaryTerminalProvider implements vscode.WebviewViewPr
     this.terminalManager = terminalManager;
 
     // Initialize persistence service with proper dependency injection
-    this.persistenceService = new UnifiedTerminalPersistenceService(
+    this.persistenceService = new ConsolidatedTerminalPersistenceService(
       this.context,
       this.terminalManager
     );
 
     // Initialize persistence message handler with clean separation
     this.persistenceMessageHandler = createPersistenceMessageHandler(
-      this.persistenceService as unknown as import('../services/UnifiedTerminalPersistenceService').UnifiedTerminalPersistenceService
+      this.persistenceService as unknown as import('../services/ConsolidatedTerminalPersistenceService').ConsolidatedTerminalPersistenceService
     );
 
     this.initializeServices();

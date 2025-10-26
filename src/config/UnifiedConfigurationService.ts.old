@@ -1,20 +1,18 @@
 /**
- * Unified Configuration Service - Consolidated Edition
+ * Unified Configuration Service
  *
- * This service consolidates ALL configuration management across the extension.
- * It replaces 4 separate ConfigManager implementations:
+ * Consolidates all configuration management across the extension following VS Code patterns.
+ * This service replaces:
  * - src/config/ConfigManager.ts
  * - src/webview/managers/ConfigManager.ts
- * - src/config/UnifiedConfigurationService.ts (old)
  * - src/services/core/UnifiedConfigurationService.ts
+ * - src/services/webview/WebViewSettingsManagerService.ts
  *
  * Architecture follows VS Code's IConfigurationService pattern with:
  * - Configuration registry for type safety
  * - Hierarchical configuration targets
  * - Event-driven change notifications
  * - Centralized caching and validation
- * - WebView state persistence
- * - Import/Export capabilities
  */
 
 import * as vscode from 'vscode';
@@ -28,8 +26,6 @@ import {
   WebViewFontSettings,
   WebViewTerminalSettings,
   TerminalProfilesConfig,
-  TerminalProfile,
-  PartialTerminalSettings,
 } from '../types/shared';
 import { TERMINAL_CONSTANTS } from '../constants';
 import { terminal as log } from '../utils/logger';
@@ -55,15 +51,6 @@ export interface ConfigurationChangeEvent {
   readonly source: ConfigurationTarget;
   readonly changedKeys: string[];
   readonly timestamp: number;
-}
-
-/**
- * Configuration validation result
- */
-export interface ConfigValidationResult {
-  isValid: boolean;
-  errors: string[];
-  warnings: string[];
 }
 
 /**
@@ -137,7 +124,7 @@ class ConfigurationRegistry {
  * Unified Configuration Service
  *
  * Single source of truth for all extension configuration management.
- * Consolidates 4 previous implementations into one cohesive service.
+ * Follows VS Code's configuration architecture patterns.
  */
 export class UnifiedConfigurationService implements Disposable {
   private static _instance: UnifiedConfigurationService | undefined;
@@ -154,19 +141,6 @@ export class UnifiedConfigurationService implements Disposable {
   // Cache configuration
   private readonly CACHE_TTL = 5000; // 5 seconds
   private _initialized = false;
-
-  // WebView state persistence (from webview/managers/ConfigManager.ts)
-  private _currentSettings: PartialTerminalSettings = {
-    fontSize: 14,
-    fontFamily: 'Consolas, "Courier New", monospace',
-    theme: 'dark',
-    cursorBlink: true,
-    scrollback: 1000,
-    bellSound: false,
-    altClickMovesCursor: false,
-    multiCursorModifier: 'alt',
-    highlightActiveBorder: true,
-  };
 
   /**
    * Get singleton instance following VS Code patterns
@@ -206,10 +180,6 @@ export class UnifiedConfigurationService implements Disposable {
       log('❌ [UnifiedConfig] Error during initialization:', error);
     }
   }
-
-  // ============================================================
-  // CORE CONFIGURATION ACCESS (from all 4 managers)
-  // ============================================================
 
   /**
    * Get configuration value with type safety and caching
@@ -295,10 +265,6 @@ export class UnifiedConfigurationService implements Disposable {
     }
   }
 
-  // ============================================================
-  // EXTENSION CONFIGURATION (from src/config/ConfigManager.ts)
-  // ============================================================
-
   /**
    * Get extension terminal configuration (replaces ConfigManager.getExtensionTerminalConfig)
    */
@@ -369,10 +335,6 @@ export class UnifiedConfigurationService implements Disposable {
     };
   }
 
-  // ============================================================
-  // WEBVIEW CONFIGURATION (merged from webview/managers/ConfigManager.ts)
-  // ============================================================
-
   /**
    * Get WebView terminal settings (consolidates WebView config logic)
    */
@@ -438,13 +400,54 @@ export class UnifiedConfigurationService implements Disposable {
     };
   }
 
-  // ============================================================
-  // FONT HIERARCHY (from src/config/ConfigManager.ts)
-  // ============================================================
+  /**
+   * Get platform-specific shell configuration
+   */
+  public getShellForPlatform(customShell?: string): string {
+    this.initialize();
+    if (customShell) {
+      return customShell;
+    }
+
+    const section = CONFIG_SECTIONS.TERMINAL_INTEGRATED;
+
+    switch (process.platform) {
+      case TERMINAL_CONSTANTS.PLATFORMS.WINDOWS:
+        return (
+          this.get(section, CONFIG_KEYS.SHELL_WINDOWS, '') || process.env['COMSPEC'] || 'cmd.exe'
+        );
+
+      case TERMINAL_CONSTANTS.PLATFORMS.DARWIN:
+        return this.get(section, CONFIG_KEYS.SHELL_OSX, '') || process.env['SHELL'] || '/bin/zsh';
+
+      default:
+        return (
+          this.get(section, CONFIG_KEYS.SHELL_LINUX, '') || process.env['SHELL'] || '/bin/bash'
+        );
+    }
+  }
+
+  /**
+   * Get Alt+Click settings (VS Code standard)
+   */
+  public getAltClickSettings(): { altClickMovesCursor: boolean; multiCursorModifier: string } {
+    this.initialize();
+    return {
+      altClickMovesCursor: this.get(
+        CONFIG_SECTIONS.TERMINAL_INTEGRATED,
+        CONFIG_KEYS.ALT_CLICK_MOVES_CURSOR,
+        false
+      ),
+      multiCursorModifier: this.get(
+        CONFIG_SECTIONS.EDITOR,
+        CONFIG_KEYS.MULTI_CURSOR_MODIFIER,
+        'ctrlCmd'
+      ),
+    };
+  }
 
   /**
    * Get font family with VS Code hierarchy
-   * Priority: terminal.integrated → editor → system default
    */
   public getFontFamily(): string {
     this.initialize();
@@ -472,7 +475,6 @@ export class UnifiedConfigurationService implements Disposable {
 
   /**
    * Get font size with VS Code hierarchy
-   * Priority: terminal.integrated → editor → default(14)
    */
   public getFontSize(): number {
     this.initialize();
@@ -606,56 +608,6 @@ export class UnifiedConfigurationService implements Disposable {
     }
   }
 
-  // ============================================================
-  // PLATFORM & FEATURES
-  // ============================================================
-
-  /**
-   * Get platform-specific shell configuration
-   */
-  public getShellForPlatform(customShell?: string): string {
-    this.initialize();
-    if (customShell) {
-      return customShell;
-    }
-
-    const section = CONFIG_SECTIONS.TERMINAL_INTEGRATED;
-
-    switch (process.platform) {
-      case TERMINAL_CONSTANTS.PLATFORMS.WINDOWS:
-        return (
-          this.get(section, CONFIG_KEYS.SHELL_WINDOWS, '') || process.env['COMSPEC'] || 'cmd.exe'
-        );
-
-      case TERMINAL_CONSTANTS.PLATFORMS.DARWIN:
-        return this.get(section, CONFIG_KEYS.SHELL_OSX, '') || process.env['SHELL'] || '/bin/zsh';
-
-      default:
-        return (
-          this.get(section, CONFIG_KEYS.SHELL_LINUX, '') || process.env['SHELL'] || '/bin/bash'
-        );
-    }
-  }
-
-  /**
-   * Get Alt+Click settings (VS Code standard)
-   */
-  public getAltClickSettings(): { altClickMovesCursor: boolean; multiCursorModifier: string } {
-    this.initialize();
-    return {
-      altClickMovesCursor: this.get(
-        CONFIG_SECTIONS.TERMINAL_INTEGRATED,
-        CONFIG_KEYS.ALT_CLICK_MOVES_CURSOR,
-        false
-      ),
-      multiCursorModifier: this.get(
-        CONFIG_SECTIONS.EDITOR,
-        CONFIG_KEYS.MULTI_CURSOR_MODIFIER,
-        'ctrlCmd'
-      ),
-    };
-  }
-
   /**
    * Get terminal profiles configuration
    */
@@ -685,53 +637,6 @@ export class UnifiedConfigurationService implements Disposable {
   }
 
   /**
-   * Get VS Code terminal profiles (for compatibility)
-   */
-  public getVSCodeTerminalProfiles(): Record<string, TerminalProfile> {
-    this.initialize();
-
-    let profileKey: string;
-    switch (process.platform) {
-      case 'win32':
-        profileKey = 'profiles.windows';
-        break;
-      case 'darwin':
-        profileKey = 'profiles.osx';
-        break;
-      default:
-        profileKey = 'profiles.linux';
-        break;
-    }
-
-    const vscodeConfig = vscode.workspace.getConfiguration('terminal.integrated');
-    const vscodeProfiles = vscodeConfig.get<Record<string, unknown>>(profileKey, {});
-
-    // VS CodeのプロファイルフォーマットをTerminalProfileに変換
-    const convertedProfiles: Record<string, TerminalProfile> = {};
-
-    for (const [name, profile] of Object.entries(vscodeProfiles)) {
-      if (profile && typeof profile === 'object') {
-        const prof = profile as Record<string, unknown>;
-        if (prof.path) {
-          convertedProfiles[name] = {
-            path: prof.path as string,
-            args: prof.args as string[] | undefined,
-            cwd: prof.cwd as string | undefined,
-            env: prof.env as Record<string, string> | undefined,
-            icon: prof.icon as string | undefined,
-            color: prof.color as string | undefined,
-            isVisible: prof.isVisible !== false,
-            overrideName: prof.overrideName as boolean | undefined,
-            useColor: prof.useColor as boolean | undefined,
-          };
-        }
-      }
-    }
-
-    return convertedProfiles;
-  }
-
-  /**
    * Check if a feature is enabled
    */
   public isFeatureEnabled(featureName: string): boolean {
@@ -749,195 +654,11 @@ export class UnifiedConfigurationService implements Disposable {
         return this.get(CONFIG_SECTIONS.SIDEBAR_TERMINAL, 'dynamicSplitDirection', true);
       case 'highlightActiveBorder':
         return this.get(CONFIG_SECTIONS.SIDEBAR_TERMINAL, 'highlightActiveBorder', true);
-      case 'vsCodeProfileInheritance':
-        return this.get(CONFIG_SECTIONS.SIDEBAR_TERMINAL, CONFIG_KEYS.INHERIT_VSCODE_PROFILES, true);
-      case 'profileAutoDetection':
-        return this.get(CONFIG_SECTIONS.SIDEBAR_TERMINAL, CONFIG_KEYS.ENABLE_PROFILE_AUTO_DETECTION, true);
       default:
         log(`⚠️ [UnifiedConfig] Unknown feature: ${featureName}`);
         return false;
     }
   }
-
-  // ============================================================
-  // VALIDATION & DEBUG (from services/core/UnifiedConfigurationService.ts)
-  // ============================================================
-
-  /**
-   * Validate configuration
-   */
-  public validateConfiguration(): ConfigValidationResult {
-    const errors: string[] = [];
-    const warnings: string[] = [];
-
-    try {
-      const config = this.getCompleteTerminalSettings();
-
-      // Validate font size
-      if (config.fontSize < 8 || config.fontSize > 72) {
-        errors.push('fontSize must be between 8 and 72');
-      }
-
-      // Validate max terminals
-      if (config.maxTerminals < 1 || config.maxTerminals > 10) {
-        warnings.push('maxTerminals should be between 1 and 10 for optimal performance');
-      }
-
-      // Validate shell configuration
-      if (config.shell && typeof config.shell !== 'string') {
-        errors.push('shell must be a string path');
-      }
-
-      if (config.shellArgs && !Array.isArray(config.shellArgs)) {
-        errors.push('shellArgs must be an array');
-      }
-
-      log(
-        `⚙️ [UnifiedConfig] Configuration validation: ${errors.length} errors, ${warnings.length} warnings`
-      );
-    } catch (error) {
-      errors.push(`Configuration validation failed: ${error}`);
-    }
-
-    return {
-      isValid: errors.length === 0,
-      errors,
-      warnings,
-    };
-  }
-
-  /**
-   * Get configuration snapshot for debugging
-   */
-  public getConfigurationSnapshot(): Record<string, unknown> {
-    return {
-      sidebarTerminal: this.getExtensionTerminalConfig(),
-      terminalIntegrated: {
-        altClickMovesCursor: this.get(CONFIG_SECTIONS.TERMINAL_INTEGRATED, 'altClickMovesCursor', false),
-        shell: this.getShellForPlatform(),
-      },
-      editor: {
-        multiCursorModifier: this.get(CONFIG_SECTIONS.EDITOR, 'multiCursorModifier', 'alt'),
-      },
-      font: this.getWebViewFontSettings(),
-      metadata: {
-        timestamp: new Date().toISOString(),
-        cacheSize: this._configurationCache.size,
-        initialized: this._initialized,
-      },
-    };
-  }
-
-  /**
-   * Reset configuration to defaults
-   */
-  public async resetToDefaults(section?: string): Promise<void> {
-    try {
-      const targetSection = section || CONFIG_SECTIONS.SIDEBAR_TERMINAL;
-      const config = vscode.workspace.getConfiguration(targetSection);
-
-      // Reset common keys
-      const commonKeys = [
-        'fontSize',
-        'fontFamily',
-        'theme',
-        'maxTerminals',
-        'shell',
-        'shellArgs',
-        'cursorBlink',
-        'enableCliAgentIntegration',
-      ];
-
-      const promises: Array<Thenable<void>> = [];
-      for (const key of commonKeys) {
-        if (config.has(key)) {
-          promises.push(config.update(key, undefined, vscode.ConfigurationTarget.Workspace));
-        }
-      }
-
-      await Promise.all(promises);
-
-      // Clear cache
-      this.clearCache();
-
-      log(`⚙️ [UnifiedConfig] Reset configuration for section: ${targetSection}`);
-    } catch (error) {
-      log(`❌ [UnifiedConfig] Failed to reset configuration:`, error);
-      throw error;
-    }
-  }
-
-  // ============================================================
-  // WEBVIEW STATE PERSISTENCE (from webview/managers/ConfigManager.ts)
-  // ============================================================
-
-  /**
-   * Get current settings (for WebView compatibility)
-   */
-  public getCurrentSettings(): PartialTerminalSettings {
-    return { ...this._currentSettings };
-  }
-
-  /**
-   * Export current settings for backup
-   */
-  public exportSettings(): string {
-    const webViewSettings = this.getWebViewTerminalSettings();
-    const fontSettings = this.getWebViewFontSettings();
-
-    return JSON.stringify(
-      {
-        settings: webViewSettings,
-        fontSettings,
-        timestamp: new Date().toISOString(),
-        version: '2.0',
-      },
-      null,
-      2
-    );
-  }
-
-  /**
-   * Import settings from backup
-   */
-  public async importSettings(jsonData: string): Promise<PartialTerminalSettings> {
-    try {
-      const data = JSON.parse(jsonData) as {
-        settings?: PartialTerminalSettings;
-        version?: string;
-      };
-
-      if (!data.settings) {
-        throw new Error('Invalid settings format: missing settings object');
-      }
-
-      // Apply imported settings to VS Code configuration
-      const section = CONFIG_SECTIONS.SIDEBAR_TERMINAL;
-      const promises: Promise<void>[] = [];
-
-      if (data.settings.fontSize !== undefined) {
-        promises.push(this.update(section, 'fontSize', data.settings.fontSize));
-      }
-      if (data.settings.fontFamily !== undefined) {
-        promises.push(this.update(section, 'fontFamily', data.settings.fontFamily));
-      }
-      if (data.settings.theme !== undefined) {
-        promises.push(this.update(section, 'theme', data.settings.theme));
-      }
-
-      await Promise.all(promises);
-
-      log('⚙️ [UnifiedConfig] Settings imported from backup');
-      return data.settings;
-    } catch (error) {
-      log('❌ [UnifiedConfig] Error importing settings:', error);
-      throw error;
-    }
-  }
-
-  // ============================================================
-  // CACHE MANAGEMENT
-  // ============================================================
 
   /**
    * Clear configuration cache
@@ -948,27 +669,17 @@ export class UnifiedConfigurationService implements Disposable {
   }
 
   /**
-   * Get cache information for debugging
+   * Get debug information
    */
-  public getCacheInfo(): { size: number; keys: string[] } {
+  public getDebugInfo(): Record<string, unknown> {
     return {
-      size: this._configurationCache.size,
-      keys: Array.from(this._configurationCache.keys()),
+      initialized: this._initialized,
+      cacheSize: this._configurationCache.size,
+      registeredSchemas: 'ConfigurationRegistry', // Can't access private property
+      disposables: this._disposables.length,
+      timestamp: new Date().toISOString(),
     };
   }
-
-  /**
-   * Register configuration change listener (legacy compatibility)
-   */
-  public onConfigurationChange(
-    callback: (event: vscode.ConfigurationChangeEvent) => void
-  ): vscode.Disposable {
-    return vscode.workspace.onDidChangeConfiguration(callback);
-  }
-
-  // ============================================================
-  // PRIVATE METHODS
-  // ============================================================
 
   /**
    * Register configuration schemas for validation
@@ -1002,16 +713,7 @@ export class UnifiedConfigurationService implements Disposable {
       enum: ['light', 'dark', 'auto'],
     });
 
-    // Boolean settings
-    this._registry.register(`${CONFIG_SECTIONS.SIDEBAR_TERMINAL}.enableCliAgentIntegration`, {
-      type: 'boolean',
-      default: true,
-    });
-
-    this._registry.register(`${CONFIG_SECTIONS.SIDEBAR_TERMINAL}.highlightActiveBorder`, {
-      type: 'boolean',
-      default: true,
-    });
+    // Add more schemas as needed...
   }
 
   /**
@@ -1083,23 +785,6 @@ export class UnifiedConfigurationService implements Disposable {
     }
   }
 
-  // ============================================================
-  // DISPOSE
-  // ============================================================
-
-  /**
-   * Get debug information
-   */
-  public getDebugInfo(): Record<string, unknown> {
-    return {
-      initialized: this._initialized,
-      cacheSize: this._configurationCache.size,
-      registeredSchemas: 'ConfigurationRegistry',
-      disposables: this._disposables.length,
-      timestamp: new Date().toISOString(),
-    };
-  }
-
   /**
    * Dispose of all resources
    */
@@ -1129,10 +814,6 @@ export class UnifiedConfigurationService implements Disposable {
   }
 }
 
-// ============================================================
-// EXPORT FUNCTIONS
-// ============================================================
-
 /**
  * Get the singleton instance of UnifiedConfigurationService
  * This replaces all previous config manager imports
@@ -1142,7 +823,7 @@ export function getUnifiedConfigurationService(): UnifiedConfigurationService {
 }
 
 /**
- * Legacy compatibility helper (replaces ConfigManager)
+ * Legacy compatibility helper (to be removed after migration)
  * @deprecated Use getUnifiedConfigurationService() instead
  */
 export function getConfigManager(): UnifiedConfigurationService {

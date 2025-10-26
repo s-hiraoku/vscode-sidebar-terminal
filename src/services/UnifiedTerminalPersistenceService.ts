@@ -5,6 +5,18 @@ import { safeProcessCwd } from '../utils/common';
 
 /**
  * 統一ターミナル永続化サービス
+ *
+ * @deprecated この実装は ConsolidatedTerminalPersistenceService.ts に統合されました
+ * 次を使用してください: import { ConsolidatedTerminalPersistenceService } from './ConsolidatedTerminalPersistenceService';
+ *
+ * 統合版には以下の機能が含まれます:
+ * - この実装の全機能
+ * - CLI Agent 検出 (Claude Code, Gemini)
+ * - バッチ処理と並行復元 (MAX_CONCURRENT_RESTORES = 3)
+ * - WebView 永続化マネージャー統合
+ * - OptimizedPersistenceManager のパフォーマンス最適化
+ * - SimplePersistenceManager のシンプルなセッション管理
+ *
  * Extension側でターミナルセッションの保存・復元を一元管理
  */
 export interface TerminalSessionData {

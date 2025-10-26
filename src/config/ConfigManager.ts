@@ -631,6 +631,13 @@ export class ConfigManager {
 /**
  * ConfigManager のシングルトンインスタンスを取得するヘルパー関数
  * 他モジュールからのアクセス用（遅延初期化）
+ *
+ * @deprecated This ConfigManager is deprecated. Use UnifiedConfigurationService instead.
+ * Import from: import { getUnifiedConfigurationService } from './UnifiedConfigurationService';
+ *
+ * Migration guide:
+ * - ConfigManager.getInstance() → getUnifiedConfigurationService()
+ * - All methods are compatible with the same API
  */
 export function getConfigManager(): ConfigManager {
   return ConfigManager.getInstance();

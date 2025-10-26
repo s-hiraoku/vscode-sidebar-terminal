@@ -10,37 +10,28 @@
 
 import { expect } from 'chai';
 import * as sinon from 'sinon';
-import * as vscode from 'vscode';
 import {
   UnifiedConfigurationService,
   getUnifiedConfigurationService,
   ConfigurationTarget as _ConfigurationTarget,
 } from '../../../config/UnifiedConfigurationService';
 import { CONFIG_SECTIONS, CONFIG_KEYS } from '../../../types/shared';
+import { VSCodeMockFactory } from '../../fixtures/vscode-mocks';
 
 describe('UnifiedConfigurationService', () => {
   let service: UnifiedConfigurationService;
   let sandbox: sinon.SinonSandbox;
-  let mockWorkspaceConfiguration: sinon.SinonStubbedInstance<vscode.WorkspaceConfiguration>;
+  let vscode: ReturnType<typeof VSCodeMockFactory.setupGlobalMock>;
 
   beforeEach(() => {
+    // Reset singleton instance
+    (UnifiedConfigurationService as any)._instance = undefined;
+
+    // Create sandbox
     sandbox = sinon.createSandbox();
 
-    // Create mock workspace configuration
-    mockWorkspaceConfiguration = {
-      get: sandbox.stub(),
-      has: sandbox.stub(),
-      inspect: sandbox.stub(),
-      update: sandbox.stub().resolves(),
-    } as any;
-
-    // Mock vscode.workspace.getConfiguration as a proper Sinon stub
-    const getConfigurationStub = sandbox.stub(vscode.workspace, 'getConfiguration');
-    getConfigurationStub.returns(mockWorkspaceConfiguration);
-
-    // Mock vscode.workspace.onDidChangeConfiguration
-    const mockDisposable = { dispose: sandbox.stub() };
-    sandbox.stub(vscode.workspace, 'onDidChangeConfiguration').returns(mockDisposable);
+    // Setup VS Code mocks using factory
+    vscode = VSCodeMockFactory.setupGlobalMock(sandbox);
 
     // Get fresh instance
     service = getUnifiedConfigurationService();
@@ -48,7 +39,11 @@ describe('UnifiedConfigurationService', () => {
   });
 
   afterEach(() => {
-    service.dispose();
+    if (service) {
+      service.dispose();
+    }
+    // Reset singleton instance
+    (UnifiedConfigurationService as any)._instance = undefined;
     sandbox.restore();
   });
 
@@ -71,16 +66,16 @@ describe('UnifiedConfigurationService', () => {
 
   describe('Configuration Access', () => {
     it('should get configuration values with defaults', () => {
-      (mockWorkspaceConfiguration.get as sinon.SinonStub).withArgs('fontSize', 14).returns(16);
+      (vscode.configuration.get as sinon.SinonStub).withArgs('fontSize', 14).returns(16);
 
       const fontSize = service.get('terminal.integrated', 'fontSize', 14);
 
       expect(fontSize).to.equal(16);
-      expect(mockWorkspaceConfiguration.get).to.have.been.calledWith('fontSize', 14);
+      expect(vscode.configuration.get).to.have.been.calledWith('fontSize', 14);
     });
 
     it('should return default value when configuration fails', () => {
-      mockWorkspaceConfiguration.get.throws(new Error('Configuration error'));
+      vscode.configuration.get.throws(new Error('Configuration error'));
 
       const fontSize = service.get('terminal.integrated', 'fontSize', 14);
 
@@ -88,7 +83,7 @@ describe('UnifiedConfigurationService', () => {
     });
 
     it('should cache configuration values', () => {
-      (mockWorkspaceConfiguration.get as sinon.SinonStub).withArgs('fontSize', 14).returns(16);
+      (vscode.configuration.get as sinon.SinonStub).withArgs('fontSize', 14).returns(16);
 
       // First call
       const fontSize1 = service.get('terminal.integrated', 'fontSize', 14);
@@ -97,11 +92,11 @@ describe('UnifiedConfigurationService', () => {
 
       expect(fontSize1).to.equal(16);
       expect(fontSize2).to.equal(16);
-      expect(mockWorkspaceConfiguration.get).to.have.been.calledOnce;
+      expect(vscode.configuration.get).to.have.been.calledOnce;
     });
 
     it('should clear cache and refresh values', () => {
-      (mockWorkspaceConfiguration.get as sinon.SinonStub).withArgs('fontSize', 14).returns(16);
+      (vscode.configuration.get as sinon.SinonStub).withArgs('fontSize', 14).returns(16);
 
       // Get cached value
       service.get('terminal.integrated', 'fontSize', 14);
@@ -112,17 +107,17 @@ describe('UnifiedConfigurationService', () => {
       // Should call VS Code API again
       service.get('terminal.integrated', 'fontSize', 14);
 
-      expect(mockWorkspaceConfiguration.get).to.have.been.calledTwice;
+      expect(vscode.configuration.get).to.have.been.calledTwice;
     });
   });
 
   describe('Configuration Update', () => {
     it('should update configuration values', async () => {
-      (mockWorkspaceConfiguration.get as sinon.SinonStub).withArgs('fontSize').returns(14);
+      (vscode.configuration.get as sinon.SinonStub).withArgs('fontSize').returns(14);
 
       await service.update('terminal.integrated', 'fontSize', 16);
 
-      expect(mockWorkspaceConfiguration.update).to.have.been.calledWith(
+      expect(vscode.configuration.update).to.have.been.calledWith(
         'fontSize',
         16,
         vscode.ConfigurationTarget.Global
@@ -131,18 +126,18 @@ describe('UnifiedConfigurationService', () => {
 
     it('should clear cache after update', async () => {
       // Cache a value first
-      (mockWorkspaceConfiguration.get as sinon.SinonStub).withArgs('fontSize', 14).returns(14);
+      (vscode.configuration.get as sinon.SinonStub).withArgs('fontSize', 14).returns(14);
       service.get('terminal.integrated', 'fontSize', 14);
 
       // Update the value
       await service.update('terminal.integrated', 'fontSize', 16);
 
       // Get the value again (should call VS Code API again)
-      (mockWorkspaceConfiguration.get as sinon.SinonStub).withArgs('fontSize', 14).returns(16);
+      (vscode.configuration.get as sinon.SinonStub).withArgs('fontSize', 14).returns(16);
       const newValue = service.get('terminal.integrated', 'fontSize', 14);
 
       expect(newValue).to.equal(16);
-      expect(mockWorkspaceConfiguration.get).to.have.been.calledTwice;
+      expect(vscode.configuration.get).to.have.been.calledTwice;
     });
 
     it('should fire configuration change event', async () => {
@@ -162,22 +157,22 @@ describe('UnifiedConfigurationService', () => {
   describe('Extension Terminal Configuration', () => {
     beforeEach(() => {
       // Setup default mocks for extension terminal config
-      (mockWorkspaceConfiguration.get as sinon.SinonStub)
+      (vscode.configuration.get as sinon.SinonStub)
         .withArgs(CONFIG_KEYS.MAX_TERMINALS, 5)
         .returns(5);
-      (mockWorkspaceConfiguration.get as sinon.SinonStub)
+      (vscode.configuration.get as sinon.SinonStub)
         .withArgs(CONFIG_KEYS.SHELL, '')
         .returns('/bin/bash');
-      (mockWorkspaceConfiguration.get as sinon.SinonStub)
+      (vscode.configuration.get as sinon.SinonStub)
         .withArgs(CONFIG_KEYS.SHELL_ARGS, [])
         .returns(['-l']);
-      (mockWorkspaceConfiguration.get as sinon.SinonStub)
+      (vscode.configuration.get as sinon.SinonStub)
         .withArgs(CONFIG_KEYS.DEFAULT_DIRECTORY, '')
         .returns('/home/user');
-      (mockWorkspaceConfiguration.get as sinon.SinonStub)
+      (vscode.configuration.get as sinon.SinonStub)
         .withArgs(CONFIG_KEYS.CURSOR_BLINK, true)
         .returns(true);
-      (mockWorkspaceConfiguration.get as sinon.SinonStub)
+      (vscode.configuration.get as sinon.SinonStub)
         .withArgs('enableCliAgentIntegration', true)
         .returns(true);
 
@@ -222,16 +217,16 @@ describe('UnifiedConfigurationService', () => {
 
     it('should get complete terminal settings', () => {
       // Mock additional settings for complete config
-      (mockWorkspaceConfiguration.get as sinon.SinonStub)
+      (vscode.configuration.get as sinon.SinonStub)
         .withArgs(CONFIG_KEYS.THEME, 'auto')
         .returns('dark');
-      (mockWorkspaceConfiguration.get as sinon.SinonStub)
+      (vscode.configuration.get as sinon.SinonStub)
         .withArgs(CONFIG_KEYS.CONFIRM_BEFORE_KILL, false)
         .returns(false);
-      (mockWorkspaceConfiguration.get as sinon.SinonStub)
+      (vscode.configuration.get as sinon.SinonStub)
         .withArgs(CONFIG_KEYS.PROTECT_LAST_TERMINAL, true)
         .returns(true);
-      (mockWorkspaceConfiguration.get as sinon.SinonStub)
+      (vscode.configuration.get as sinon.SinonStub)
         .withArgs(CONFIG_KEYS.MIN_TERMINAL_COUNT, 1)
         .returns(1);
 
@@ -268,27 +263,27 @@ describe('UnifiedConfigurationService', () => {
   describe('WebView Configuration', () => {
     it('should get WebView terminal settings', () => {
       // Mock base terminal settings
-      (mockWorkspaceConfiguration.get as sinon.SinonStub)
+      (vscode.configuration.get as sinon.SinonStub)
         .withArgs('scrollback', 1000)
         .returns(2000);
-      (mockWorkspaceConfiguration.get as sinon.SinonStub)
+      (vscode.configuration.get as sinon.SinonStub)
         .withArgs('bellSound', false)
         .returns(true);
-      (mockWorkspaceConfiguration.get as sinon.SinonStub)
+      (vscode.configuration.get as sinon.SinonStub)
         .withArgs('enableCliAgentIntegration', true)
         .returns(true);
-      (mockWorkspaceConfiguration.get as sinon.SinonStub)
+      (vscode.configuration.get as sinon.SinonStub)
         .withArgs('dynamicSplitDirection', true)
         .returns(false);
-      (mockWorkspaceConfiguration.get as sinon.SinonStub)
+      (vscode.configuration.get as sinon.SinonStub)
         .withArgs('panelLocation', 'auto')
         .returns('sidebar');
 
       // Mock other required settings
-      (mockWorkspaceConfiguration.get as sinon.SinonStub)
+      (vscode.configuration.get as sinon.SinonStub)
         .withArgs(CONFIG_KEYS.MAX_TERMINALS, 5)
         .returns(3);
-      (mockWorkspaceConfiguration.get as sinon.SinonStub)
+      (vscode.configuration.get as sinon.SinonStub)
         .withArgs(CONFIG_KEYS.CURSOR_BLINK, true)
         .returns(false);
 
@@ -631,34 +626,34 @@ describe('UnifiedConfigurationService', () => {
 
   describe('Configuration Profiles', () => {
     it('should get terminal profiles configuration', () => {
-      (mockWorkspaceConfiguration.get as sinon.SinonStub)
+      (vscode.configuration.get as sinon.SinonStub)
         .withArgs(CONFIG_KEYS.PROFILES_WINDOWS, {})
         .returns({
           PowerShell: { path: 'powershell.exe' },
         });
-      (mockWorkspaceConfiguration.get as sinon.SinonStub)
+      (vscode.configuration.get as sinon.SinonStub)
         .withArgs(CONFIG_KEYS.PROFILES_LINUX, {})
         .returns({
           Bash: { path: '/bin/bash' },
         });
-      (mockWorkspaceConfiguration.get as sinon.SinonStub)
+      (vscode.configuration.get as sinon.SinonStub)
         .withArgs(CONFIG_KEYS.PROFILES_OSX, {})
         .returns({
           Zsh: { path: '/bin/zsh' },
         });
-      (mockWorkspaceConfiguration.get as sinon.SinonStub)
+      (vscode.configuration.get as sinon.SinonStub)
         .withArgs(CONFIG_KEYS.DEFAULT_PROFILE_WINDOWS, null)
         .returns('PowerShell');
-      (mockWorkspaceConfiguration.get as sinon.SinonStub)
+      (vscode.configuration.get as sinon.SinonStub)
         .withArgs(CONFIG_KEYS.DEFAULT_PROFILE_LINUX, null)
         .returns('Bash');
-      (mockWorkspaceConfiguration.get as sinon.SinonStub)
+      (vscode.configuration.get as sinon.SinonStub)
         .withArgs(CONFIG_KEYS.DEFAULT_PROFILE_OSX, null)
         .returns('Zsh');
-      (mockWorkspaceConfiguration.get as sinon.SinonStub)
+      (vscode.configuration.get as sinon.SinonStub)
         .withArgs(CONFIG_KEYS.ENABLE_PROFILE_AUTO_DETECTION, true)
         .returns(false);
-      (mockWorkspaceConfiguration.get as sinon.SinonStub)
+      (vscode.configuration.get as sinon.SinonStub)
         .withArgs(CONFIG_KEYS.INHERIT_VSCODE_PROFILES, true)
         .returns(true);
 
@@ -729,10 +724,10 @@ describe('UnifiedConfigurationService', () => {
 
     it('should clear cache on VS Code configuration changes', () => {
       // Get a value to cache it
-      (mockWorkspaceConfiguration.get as sinon.SinonStub).withArgs('fontSize', 14).returns(16);
+      (vscode.configuration.get as sinon.SinonStub).withArgs('fontSize', 14).returns(16);
       const initialValue = service.get('terminal.integrated', 'fontSize', 14);
       expect(initialValue).to.equal(16);
-      expect(mockWorkspaceConfiguration.get).to.have.been.calledOnce;
+      expect(vscode.configuration.get).to.have.been.calledOnce;
 
       // Simulate VS Code configuration change event
       const changeEvent = {
@@ -745,10 +740,10 @@ describe('UnifiedConfigurationService', () => {
       onDidChangeHandler(changeEvent);
 
       // Getting the value again should call VS Code API (cache cleared)
-      (mockWorkspaceConfiguration.get as sinon.SinonStub).withArgs('fontSize', 14).returns(18);
+      (vscode.configuration.get as sinon.SinonStub).withArgs('fontSize', 14).returns(18);
       const newValue = service.get('terminal.integrated', 'fontSize', 14);
       expect(newValue).to.equal(18);
-      expect(mockWorkspaceConfiguration.get).to.have.been.calledTwice;
+      expect(vscode.configuration.get).to.have.been.calledTwice;
     });
   });
 
@@ -769,7 +764,7 @@ describe('UnifiedConfigurationService', () => {
     });
 
     it('should handle configuration read errors gracefully', () => {
-      mockWorkspaceConfiguration.get.throws(new Error('Configuration read error'));
+      vscode.configuration.get.throws(new Error('Configuration read error'));
 
       // Should return default value instead of throwing
       const fontSize = service.get('terminal.integrated', 'fontSize', 14);
@@ -777,7 +772,7 @@ describe('UnifiedConfigurationService', () => {
     });
 
     it('should handle configuration update errors', async () => {
-      mockWorkspaceConfiguration.update.rejects(new Error('Update failed'));
+      vscode.configuration.update.rejects(new Error('Update failed'));
 
       try {
         await service.update('terminal.integrated', 'fontSize', 16);
@@ -802,7 +797,7 @@ describe('UnifiedConfigurationService', () => {
 
     it('should clear cache on disposal', () => {
       // Cache some values
-      (mockWorkspaceConfiguration.get as sinon.SinonStub).withArgs('fontSize', 14).returns(16);
+      (vscode.configuration.get as sinon.SinonStub).withArgs('fontSize', 14).returns(16);
       service.get('terminal.integrated', 'fontSize', 14);
 
       const debugInfo = service.getDebugInfo();

@@ -1,6 +1,19 @@
 /**
  * Unified Terminal Persistence Service
  *
+ * @deprecated This implementation has been consolidated into ConsolidatedTerminalPersistenceService.ts
+ * Please use: import { ConsolidatedTerminalPersistenceService } from './ConsolidatedTerminalPersistenceService';
+ *
+ * The consolidated version includes:
+ * - All features from this implementation
+ * - CLI Agent detection (Claude Code, Gemini)
+ * - Batch processing with concurrent restores (MAX_CONCURRENT_RESTORES = 3)
+ * - WebView persistence manager integration
+ * - Performance optimizations from OptimizedPersistenceManager
+ * - Simple session management from SimplePersistenceManager
+ *
+ * Total consolidation: 5 files (2,523 lines) → 1 file (~900 lines) - 64% reduction
+ *
  * Replaces the dual persistence managers (StandardTerminalSessionManager and StandardTerminalPersistenceManager)
  * with a single, cohesive service that handles all terminal persistence operations.
  *

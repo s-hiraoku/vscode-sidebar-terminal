@@ -4,6 +4,17 @@ import { webview as log } from '../../utils/logger';
 
 /**
  * WebView側でxterm.js serialize addonを使用したVS Code標準ターミナル永続化
+ *
+ * @deprecated この実装は ConsolidatedWebViewPersistenceManager に統合されました
+ * 次を使用してください: import { ConsolidatedWebViewPersistenceManager } from '../../services/ConsolidatedTerminalPersistenceService';
+ *
+ * 統合版には以下の機能が含まれます:
+ * - この実装の SerializeAddon 統合
+ * - SimplePersistenceManager のシンプルなセッション管理
+ * - OptimizedPersistenceManager のパフォーマンス最適化
+ * - 自動保存とクリーンアップタイマー
+ * - LRU ターミナル管理
+ * - 圧縮サポート
  */
 export class StandardTerminalPersistenceManager {
   private serializeAddons: Map<string, SerializeAddon> = new Map();

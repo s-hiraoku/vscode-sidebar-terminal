@@ -1,6 +1,17 @@
 /**
  * Optimized Terminal Persistence Manager for WebView
  *
+ * @deprecated この実装は ConsolidatedWebViewPersistenceManager に統合されました
+ * 次を使用してください: import { ConsolidatedWebViewPersistenceManager } from '../../services/ConsolidatedTerminalPersistenceService';
+ *
+ * 統合版には以下の機能が含まれます:
+ * - この実装のパフォーマンス最適化
+ * - StandardTerminalPersistenceManager の SerializeAddon 統合
+ * - SimplePersistenceManager のシンプルなセッション管理
+ * - 自動保存とクリーンアップタイマー
+ * - LRU ターミナル管理
+ * - 圧縮サポート
+ *
  * This service replaces the StandardTerminalPersistenceManager with improved
  * performance, error handling, and resource management.
  *

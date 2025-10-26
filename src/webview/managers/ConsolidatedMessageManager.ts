@@ -17,6 +17,7 @@ import { isNonNullObject } from '../../types/type-guards';
 import { SessionMessageController } from './controllers/SessionMessageController';
 import { CliAgentMessageController } from './controllers/CliAgentMessageController';
 import { MessageCommand } from './messageTypes';
+import { WebviewCoordinator } from '../coordinators/WebviewCoordinator';
 
 // Message Handlers
 import { PanelLocationHandler } from './handlers/PanelLocationHandler';
@@ -52,6 +53,7 @@ export class ConsolidatedMessageManager implements IMessageManager {
   } | null = null;
   private readonly sessionController: SessionMessageController;
   private readonly cliAgentController: CliAgentMessageController;
+  private readonly webviewCoordinator: WebviewCoordinator;
 
   // Message Handlers
   private readonly panelLocationHandler: PanelLocationHandler;
@@ -103,6 +105,22 @@ export class ConsolidatedMessageManager implements IMessageManager {
     this.settingsHandler = new SettingsAndConfigMessageHandler(this.logger);
     this.shellIntegrationHandler = new ShellIntegrationMessageHandler(this.logger);
     this.profileHandler = new ProfileMessageHandler(this.logger);
+
+    this.webviewCoordinator = new WebviewCoordinator(
+      {
+        lifecycleHandler: this.lifecycleHandler,
+        settingsHandler: this.settingsHandler,
+        shellIntegrationHandler: this.shellIntegrationHandler,
+        serializationHandler: this.serializationHandler,
+        scrollbackHandler: this.scrollbackHandler,
+        panelLocationHandler: this.panelLocationHandler,
+        splitHandler: this.splitHandler,
+        profileHandler: this.profileHandler,
+        sessionController: this.sessionController,
+        cliAgentController: this.cliAgentController,
+      },
+      this.logger
+    );
 
     this.logger.lifecycle('initialization', 'completed');
   }
@@ -158,123 +176,7 @@ export class ConsolidatedMessageManager implements IMessageManager {
       const msg = message.data as MessageCommand;
       this.logger.debug(`Message received: ${msg.command}`);
 
-      switch (msg.command) {
-        // Terminal Lifecycle Messages
-        case 'init':
-        case 'output':
-        case 'terminalCreated':
-        case 'newTerminal':
-        case 'focusTerminal':
-        case 'setActiveTerminal':
-        case 'deleteTerminalResponse':
-        case 'terminalRemoved':
-        case 'clear':
-          this.lifecycleHandler.handleMessage(msg, coordinator);
-          break;
-
-        // Settings and Configuration Messages
-        case 'fontSettingsUpdate':
-        case 'settingsResponse':
-        case 'openSettings':
-        case 'versionInfo':
-        case 'stateUpdate':
-          this.settingsHandler.handleMessage(msg, coordinator);
-          break;
-        case 'cliAgentStatusUpdate':
-          this.cliAgentController.handleStatusUpdateMessage(msg, coordinator);
-          break;
-        case 'cliAgentFullStateSync':
-          this.cliAgentController.handleFullStateSyncMessage(msg, coordinator);
-          break;
-        case 'sessionRestore':
-          await this.sessionController.handleSessionRestoreMessage(msg, coordinator);
-          break;
-        case 'switchAiAgentResponse':
-          this.cliAgentController.handleSwitchResponseMessage(msg, coordinator);
-          break;
-        case 'sessionRestoreStarted':
-          this.sessionController.handleSessionRestoreStartedMessage(msg);
-          break;
-        case 'sessionRestoreProgress':
-          this.sessionController.handleSessionRestoreProgressMessage(msg);
-          break;
-        case 'sessionRestoreCompleted':
-          this.sessionController.handleSessionRestoreCompletedMessage(msg);
-          break;
-        case 'sessionRestoreError':
-          this.sessionController.handleSessionRestoreErrorMessage(msg);
-          break;
-
-        // Scrollback Messages
-        case 'getScrollback':
-        case 'restoreScrollback':
-        case 'scrollbackProgress':
-        case 'extractScrollbackData':
-          this.scrollbackHandler.handleMessage(msg, coordinator);
-          break;
-        case 'sessionSaved':
-          this.sessionController.handleSessionSavedMessage(msg);
-          break;
-        case 'sessionSaveError':
-          this.sessionController.handleSessionSaveErrorMessage(msg);
-          break;
-        case 'sessionCleared':
-          this.sessionController.handleSessionClearedMessage();
-          break;
-        case 'sessionRestored':
-          this.sessionController.handleSessionRestoredMessage(msg);
-          break;
-
-        // Shell Integration Messages
-        case 'shellStatus':
-        case 'cwdUpdate':
-        case 'commandHistory':
-        case 'find':
-          this.shellIntegrationHandler.handleMessage(msg, coordinator);
-          break;
-
-        // Terminal Serialization Messages
-        case 'serializeTerminal':
-        case 'restoreSerializedContent':
-        case 'terminalRestoreInfo':
-        case 'saveAllTerminalSessions':
-        case 'requestTerminalSerialization':
-        case 'restoreTerminalSerialization':
-        case 'sessionRestorationData':
-        case 'persistenceSaveSessionResponse':
-        case 'persistenceRestoreSessionResponse':
-        case 'persistenceClearSessionResponse':
-          this.serializationHandler.handleMessage(msg, coordinator);
-          break;
-        case 'sessionRestoreSkipped':
-          this.sessionController.handleSessionRestoreSkippedMessage(msg);
-          break;
-        case 'terminalRestoreError':
-          void this.sessionController.handleTerminalRestoreErrorMessage(msg);
-          break;
-
-        // Panel Location Messages
-        case 'panelLocationUpdate':
-        case 'requestPanelLocationDetection':
-          this.panelLocationHandler.handleMessage(msg, coordinator);
-          break;
-
-        // Split and Layout Messages
-        case 'split':
-        case 'relayoutTerminals':
-          this.logger.info(`🔄 [MESSAGE-MANAGER] Routing ${msg.command} to SplitHandler`);
-          this.splitHandler.handleMessage(msg, coordinator);
-          break;
-
-        // Profile Management Messages
-        case 'showProfileSelector':
-        case 'profilesUpdated':
-        case 'defaultProfileChanged':
-          this.profileHandler.handleMessage(msg, coordinator);
-          break;
-        default:
-          this.logger.warn(`Unknown command: ${msg.command}`);
-      }
+      await this.webviewCoordinator.dispatch(msg, coordinator);
     } catch (error) {
       this.logger.error('Error handling message', error);
     }

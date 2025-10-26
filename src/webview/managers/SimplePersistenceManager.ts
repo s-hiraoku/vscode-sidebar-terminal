@@ -9,6 +9,18 @@ import { webview as log } from '../../utils/logger';
 
 /**
  * Simple Terminal Persistence Manager
+ *
+ * @deprecated この実装は ConsolidatedWebViewPersistenceManager に統合されました
+ * 次を使用してください: import { ConsolidatedWebViewPersistenceManager } from '../../services/ConsolidatedTerminalPersistenceService';
+ *
+ * 統合版には以下の機能が含まれます:
+ * - この実装のシンプルなセッション管理
+ * - StandardTerminalPersistenceManager の SerializeAddon 統合
+ * - OptimizedPersistenceManager のパフォーマンス最適化
+ * - 自動保存とクリーンアップタイマー
+ * - LRU ターミナル管理
+ * - 圧縮サポート
+ *
  * Phase 2: Realistic session continuation approach
  *
  * Replaces complex SerializeAddon-based persistence with:

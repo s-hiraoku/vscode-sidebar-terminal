@@ -1,5 +1,13 @@
 /**
  * Config Manager - Handles settings management, persistence, and configuration updates
+ *
+ * @deprecated This WebView ConfigManager is being replaced by UnifiedConfigurationService.
+ * Please migrate to: import { getUnifiedConfigurationService } from '../../config/UnifiedConfigurationService';
+ *
+ * Migration notes:
+ * - WebView-side configuration should now use UnifiedConfigurationService
+ * - State persistence methods (loadSettings/saveSettings) are available in UnifiedConfigurationService
+ * - All font settings methods are preserved with the same API
  */
 
 import { webview as log } from '../../utils/logger';
