@@ -16,7 +16,7 @@
 
 ## 4. Terminal Core Refactor
 - [x] Extract `TerminalRegistry`, `TerminalLifecycleService`, and `TerminalEventHub` from `TerminalManager`; update consumers accordingly.
-- [ ] Replace the implicit `operationQueue` with a command pipeline (e.g., `TerminalCommandQueue`) and add tests covering concurrent create/delete scenarios.
+- [x] Replace the implicit `operationQueue` with a command pipeline (e.g., `TerminalCommandQueue`) and add tests covering concurrent create/delete scenarios.
 - [ ] Verify CLI agent detection + profile sync integrations still function via updated adapters.
 
 ## 5. Persistence & Messaging Alignment
