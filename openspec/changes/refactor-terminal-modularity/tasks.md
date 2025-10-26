@@ -10,12 +10,12 @@
 - [x] Move panel location, scrollback, and message wiring tests to the new modules.
 
 ## 3. Webview Coordinator Layer
-- [ ] Introduce `WebviewCoordinator` (or similar) that composes existing managers; migrate lifecycle, diagnostics, and message dispatching from `LightweightTerminalWebviewManager` into smaller feature controllers.
-- [ ] Convert ad-hoc message handling into a typed command map with unit tests that enforce handler registration.
-- [ ] Ensure persistence, profile, and shell integration bridges plug into the coordinator via explicit interfaces.
+- [x] Introduce `WebviewCoordinator` (or similar) that composes existing managers; migrate lifecycle, diagnostics, and message dispatching from `LightweightTerminalWebviewManager` into smaller feature controllers.
+- [x] Convert ad-hoc message handling into a typed command map with unit tests that enforce handler registration.
+- [x] Ensure persistence, profile, and shell integration bridges plug into the coordinator via explicit interfaces.
 
 ## 4. Terminal Core Refactor
-- [ ] Extract `TerminalRegistry`, `TerminalLifecycleService`, and `TerminalEventHub` from `TerminalManager`; update consumers accordingly.
+- [x] Extract `TerminalRegistry`, `TerminalLifecycleService`, and `TerminalEventHub` from `TerminalManager`; update consumers accordingly.
 - [ ] Replace the implicit `operationQueue` with a command pipeline (e.g., `TerminalCommandQueue`) and add tests covering concurrent create/delete scenarios.
 - [ ] Verify CLI agent detection + profile sync integrations still function via updated adapters.
 
