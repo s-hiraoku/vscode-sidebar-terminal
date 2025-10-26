@@ -8,6 +8,8 @@
 export { BaseTest } from './BaseTest';
 export { ConfigurationTest } from './ConfigurationTest';
 export { AsyncTest } from './AsyncTest';
+export { WebViewTest } from './WebViewTest';
+export { TerminalTest } from './TerminalTest';
 
 // Helper utilities
 export * from './test-helpers';
