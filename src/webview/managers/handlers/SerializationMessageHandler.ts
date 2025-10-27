@@ -424,24 +424,29 @@ export class SerializationMessageHandler implements IMessageHandler {
     msg: MessageCommand,
     coordinator: IManagerCoordinator
   ): void {
-    this.logger.info('Restore terminal serialization');
+    this.logger.info('[RESTORE-DEBUG] === Restore terminal serialization START ===');
 
     try {
       const terminalData = (msg as any).terminalData || [];
+      this.logger.info(`[RESTORE-DEBUG] Received ${terminalData.length} terminals to restore`);
       let restoredCount = 0;
 
       // Restore serialized content to each terminal
-      terminalData.forEach((terminal: any) => {
+      terminalData.forEach((terminal: any, index: number) => {
         const { id, serializedContent, isActive } = terminal;
+        this.logger.info(`[RESTORE-DEBUG] Processing terminal ${index + 1}/${terminalData.length}: ${id}`);
+        this.logger.info(`[RESTORE-DEBUG] Has serializedContent: ${!!(serializedContent && serializedContent.length > 0)}, length: ${serializedContent?.length || 0}`);
 
         if (serializedContent && serializedContent.length > 0) {
           try {
             // Get terminal instance
+            this.logger.info(`[RESTORE-DEBUG] Getting terminal instance for ${id}...`);
             const terminalInstance = coordinator.getTerminalInstance(id);
             if (!terminalInstance) {
-              this.logger.warn(`Terminal ${id} not found for restoration`);
+              this.logger.warn(`❌ [RESTORE-DEBUG] Terminal ${id} not found for restoration`);
               return;
             }
+            this.logger.info(`✅ [RESTORE-DEBUG] Terminal instance found for ${id}`);
 
             // Convert serialized string to ScrollbackLine array
             const scrollbackLines = serializedContent.split('\n').map((line: string) => ({
@@ -449,24 +454,28 @@ export class SerializationMessageHandler implements IMessageHandler {
               type: 'output' as const,
               timestamp: Date.now(),
             }));
+            this.logger.info(`[RESTORE-DEBUG] Created ${scrollbackLines.length} scrollback lines for terminal ${id}`);
 
             // Restore scrollback with ANSI colors preserved
+            this.logger.info(`[RESTORE-DEBUG] Writing ${scrollbackLines.length} lines to terminal ${id}...`);
             scrollbackLines.forEach((line: any) => {
               terminalInstance.terminal.writeln(line.content);
             });
+            this.logger.info(`✅ [RESTORE-DEBUG] Finished writing to terminal ${id}`);
 
             // Set as active if needed
             if (isActive) {
               coordinator.setActiveTerminalId(id);
+              this.logger.info(`🎯 [RESTORE-DEBUG] Set terminal ${id} as active`);
             }
 
             restoredCount++;
-            this.logger.info(`✅ Restored terminal ${id}: ${scrollbackLines.length} lines with ANSI colors`);
+            this.logger.info(`✅ [RESTORE-DEBUG] Restored terminal ${id}: ${scrollbackLines.length} lines with ANSI colors`);
           } catch (restoreError) {
-            this.logger.error(`Error restoring terminal ${id}:`, restoreError);
+            this.logger.error(`❌ [RESTORE-DEBUG] Error restoring terminal ${id}:`, restoreError);
           }
         } else {
-          this.logger.info(`No serialized content for terminal ${id}`);
+          this.logger.info(`⚠️ [RESTORE-DEBUG] No serialized content for terminal ${id}`);
         }
       });
 

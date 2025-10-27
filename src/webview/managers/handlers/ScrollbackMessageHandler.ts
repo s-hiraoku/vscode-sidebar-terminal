@@ -233,12 +233,12 @@ export class ScrollbackMessageHandler implements IMessageHandler {
         return;
       }
 
-      this.logger.debug(`📦 Extracting scrollback data for terminal ${terminalId}`);
+      this.logger.info(`📦 [SAVE-DEBUG] Extracting scrollback data for terminal ${terminalId}, requestId: ${requestId}`);
 
       // Get the terminal instance
       const terminalInstance = coordinator.getTerminalInstance(terminalId);
       if (!terminalInstance) {
-        this.logger.error(`Terminal ${terminalId} not found for scrollback extraction`);
+        this.logger.error(`❌ [SAVE-DEBUG] Terminal ${terminalId} not found for scrollback extraction`);
 
         // Send empty response
         coordinator.postMessageToExtension({
@@ -250,10 +250,14 @@ export class ScrollbackMessageHandler implements IMessageHandler {
         return;
       }
 
+      this.logger.info(`✅ [SAVE-DEBUG] Terminal instance found for ${terminalId}`);
+      this.logger.info(`🔍 [SAVE-DEBUG] Has serializeAddon: ${!!terminalInstance.serializeAddon}`);
+      this.logger.info(`🔍 [SAVE-DEBUG] Has terminal: ${!!terminalInstance.terminal}`);
+
       // Extract scrollback data
       const scrollbackData = this.extractScrollbackFromTerminal(terminalInstance, maxLines || 1000);
 
-      this.logger.debug(`📦 Extracted ${scrollbackData.length} lines for terminal ${terminalId}`);
+      this.logger.info(`📦 [SAVE-DEBUG] Extracted ${scrollbackData.length} lines for terminal ${terminalId}`);
 
       // Send the scrollback data back to Extension
       coordinator.postMessageToExtension({
@@ -304,7 +308,7 @@ export class ScrollbackMessageHandler implements IMessageHandler {
         for (let i = startIndex; i < lines.length; i++) {
           const content = lines[i];
           // Include non-empty lines and preserve some empty lines for structure
-          if (content.trim() || scrollbackLines.length > 0) {
+          if (content && (content.trim() || scrollbackLines.length > 0)) {
             scrollbackLines.push({
               content: content, // Includes ANSI escape codes for colors
               type: 'output',
