@@ -18,3 +18,9 @@
 - [ ] Extend unit tests to cover profile resolution service and fallback scenarios.
 - [ ] Add integration test verifying new sessions adopt mocked VS Code profiles across platforms.
 - [ ] Ensure README and changelog entries describe feature and rollout notes.
+
+**Status**: ⏸️ **NOT STARTED** - Planned for Future Release
+- This feature is planned but not yet implemented
+- Current terminal spawning uses bundled shell configuration
+- Implementation would require VS Code Terminal Profile API integration
+- Priority: Medium (after current refactoring work is complete)
