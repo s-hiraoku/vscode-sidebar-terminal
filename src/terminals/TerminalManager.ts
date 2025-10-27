@@ -33,6 +33,7 @@ import { TerminalSpawner } from './TerminalSpawner';
 import { TerminalRegistry } from './core/TerminalRegistry';
 import { TerminalEventHub } from './core/TerminalEventHub';
 import { TerminalLifecycleService } from './core/TerminalLifecycleService';
+import { ScrollbackService } from '../services/scrollback/ScrollbackService';
 import type { IDisposable } from '@homebridge/node-pty-prebuilt-multiarch';
 
 const ENABLE_TERMINAL_DEBUG_LOGS = process.env.SECONDARY_TERMINAL_DEBUG_LOGS === 'true';
@@ -51,6 +52,8 @@ export class TerminalManager {
   // CLI Agent Detection Service (extracted for SRP)
   private readonly _cliAgentService: ICliAgentDetectionService;
   private readonly _terminalSpawner: TerminalSpawner;
+  // VS Code-style scrollback service for recording with time/size limits
+  private readonly _scrollbackService: ScrollbackService;
   private readonly _debugLoggingEnabled = ENABLE_TERMINAL_DEBUG_LOGS;
 
   // Performance optimization: Data batching for high-frequency output
@@ -95,6 +98,11 @@ export class TerminalManager {
     this._cliAgentService.startHeartbeat();
 
     this._terminalSpawner = new TerminalSpawner();
+
+    // Initialize ScrollbackService with VS Code-compatible defaults
+    this._scrollbackService = new ScrollbackService({
+      persistentSessionScrollback: config.persistentSessionScrollback,
+    });
   }
 
   /**
@@ -218,6 +226,9 @@ export class TerminalManager {
       // Store terminal and set it as active
       this._terminals.set(terminalId, terminal);
       this._registry.setActiveTerminal(terminalId);
+
+      // Start scrollback recording with VS Code-compatible time/size limits
+      this._scrollbackService.startRecording(terminalId);
 
       // CLI Agent detection will be handled by the service automatically
 
@@ -371,6 +382,9 @@ export class TerminalManager {
       this._deactivateAllTerminals();
       this._terminals.set(terminalId, terminal);
       this._registry.setActiveTerminal(terminalId);
+
+      // Start scrollback recording with VS Code-compatible time/size limits
+      this._scrollbackService.startRecording(terminalId);
 
       // PTY data handler - clean, no duplicates
       ptyProcess.onData((data: string) => {
@@ -978,6 +992,30 @@ export class TerminalManager {
     this._shellIntegrationService = service;
   }
 
+  /**
+   * Get scrollback data for a terminal (VS Code pattern)
+   *
+   * @param terminalId Terminal ID
+   * @param options Serialization options (scrollback lines, etc)
+   * @returns Serialized scrollback data or null
+   */
+  public getScrollbackData(
+    terminalId: string,
+    options?: { scrollback?: number }
+  ): string | null {
+    return this._scrollbackService.getSerializedData(terminalId, options);
+  }
+
+  /**
+   * Get scrollback statistics for a terminal
+   *
+   * @param terminalId Terminal ID
+   * @returns Scrollback statistics or null
+   */
+  public getScrollbackStats(terminalId: string) {
+    return this._scrollbackService.getScrollbackStats(terminalId);
+  }
+
   public dispose(): void {
     // Clean up data buffers and timers
     this._flushAllBuffers();
@@ -992,6 +1030,9 @@ export class TerminalManager {
 
     // Dispose CLI Agent detection service
     this._cliAgentService.dispose();
+
+    // Dispose scrollback service
+    this._scrollbackService.dispose();
 
     for (const terminal of this._terminals.values()) {
       const p = (terminal.ptyProcess || terminal.pty) as { kill?: () => void } | undefined;
@@ -1036,6 +1077,9 @@ export class TerminalManager {
     const validatedData = this._validateDataForTerminal(terminalId, data);
     const normalizedData = this._normalizeControlSequences(validatedData);
     buffer.push(normalizedData);
+
+    // Record data to scrollback service with VS Code time/size limits
+    this._scrollbackService.recordData(terminalId, normalizedData);
 
     this.debugLog(
       `📊 [TERMINAL] Data buffered for ${terminalId}: ${data.length} chars (buffer size: ${buffer.length})`
@@ -1183,6 +1227,9 @@ export class TerminalManager {
 
     // CLI Agent cleanup handled by service
     this._cliAgentService.handleTerminalRemoved(terminalId);
+
+    // Clear scrollback recording for this terminal
+    this._scrollbackService.clearScrollback(terminalId);
 
     // Remove from terminals map
     const deletionResult = this._terminals.delete(terminalId);
