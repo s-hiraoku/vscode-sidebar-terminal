@@ -18,6 +18,6 @@
 - No regressions in terminal creation, split handling, persistence restore, or AI agent detection across Windows/macOS/Linux test runs (`npm run test:all`).
 
 ## Rollout Plan
-- Land refactor behind a compile-time feature flag (`SECONDARY_TERMINAL_REFACTORED=1`) so we can keep the old orchestrators for a release if needed.
+- Remove legacy orchestrators and ship the refactor without feature flags once parity is confirmed.
 - Migrate provider, webview, and terminal subsystems sequentially (provider → webview → terminal core) to keep PRs reviewable and bisectable.
 - After telemetry + manual validation show parity, remove the flag and delete the old glue code.

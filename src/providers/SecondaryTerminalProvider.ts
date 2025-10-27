@@ -22,11 +22,10 @@ import {
   hasDirection,
   hasForceReconnect,
   AIAgentOperationResult,
-  MessageHandler,
 } from '../types/type-guards';
 
 // New refactored services
-import { PanelLocation, SplitDirection } from './services/PanelLocationService';
+import { SplitDirection } from './services/PanelLocationService';
 import { TerminalLinkResolver } from './services/TerminalLinkResolver';
 import { WebViewCommunicationService } from './services/WebViewCommunicationService';
 import { TerminalEventCoordinator } from './services/TerminalEventCoordinator';

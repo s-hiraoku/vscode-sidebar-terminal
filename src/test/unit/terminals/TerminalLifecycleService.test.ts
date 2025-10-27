@@ -1,5 +1,4 @@
 import { expect } from 'chai';
-import * as sinon from 'sinon';
 
 import '../../shared/TestSetup';
 import { TerminalLifecycleService } from '../../../terminals/core/TerminalLifecycleService';

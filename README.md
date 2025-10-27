@@ -119,21 +119,32 @@ Access these commands via `Ctrl+Shift+P` (Windows/Linux) or `Cmd+Shift+P` (Mac):
 ### Core Components
 
 #### Extension Host (Node.js)
-- **TerminalManager**: Manages PTY processes, terminal lifecycle, and AI agent detection
-- **RefactoredSecondaryTerminalProvider**: WebView provider with comprehensive message handling
+- **SecondaryTerminalProvider**: Modular provider with 4 specialized components:
+  - `ViewBootstrapper`: VS Code WebView lifecycle management
+  - `MessageBridge`: Extension ↔ WebView message routing
+  - `PanelLocationController`: Dynamic panel position detection
+  - `PersistenceOrchestrator`: Unified session persistence orchestration
+- **TerminalManager**: Refactored into 4 core services:
+  - `TerminalRegistry`: ID management and state tracking
+  - `TerminalLifecycleService`: Terminal spawn/kill/focus operations
+  - `TerminalEventHub`: Centralized event management
+  - `TerminalCommandQueue`: Async operation pipeline
+- **ConsolidatedTerminalPersistenceService**: Unified persistence layer (replacing 5 previous implementations)
 - **AI Agent Services**: Dedicated services for Claude, Gemini, Codex, and GitHub Copilot CLI integration
-- **Session Management**: Persistent terminal state across VS Code sessions
 
 #### WebView (Browser Environment)
-- **RefactoredTerminalWebviewManager**: Central coordinator for all WebView operations
+- **WebviewCoordinator**: Typed command map with 20+ message handlers
+- **LightweightTerminalWebviewManager**: Central coordinator for all WebView operations
 - **Manager Ecosystem**: Specialized managers for Input, UI, Performance, Notifications, Splitting, and Configuration
-- **xterm.js Integration**: Full-featured terminal emulation with custom enhancements
+- **xterm.js Integration**: Full-featured terminal emulation with SerializeAddon for persistence
 
 ### Communication Flow
 ```
 User Input → VS Code Commands → Extension Host → WebView Messages → xterm.js
                     ↕                      ↕                   ↕
-              TerminalManager ←→ node-pty processes ←→ Shell/AI Agents
+         TerminalLifecycle ←→ node-pty processes ←→ Shell/AI Agents
+                    ↕
+    PersistenceOrchestrator → ConsolidatedPersistenceService
 ```
 
 ## 🤖 AI Agent Integration

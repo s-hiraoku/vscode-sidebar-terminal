@@ -546,29 +546,6 @@ export class StandardTerminalSessionManager {
     }
   }
 
-  private _oldRequestSerializationMethod_DEPRECATED(): void {
-    // 🎯 OLD METHOD - DEPRECATED
-    // This method used requestTerminalSerialization command which requires
-    // StandardTerminalPersistenceManager in WebView, but WebView uses SimplePersistenceManager
-    // which doesn't have serializeTerminal() method.
-    //
-    // NEW METHOD: Use extractScrollbackData command via ScrollbackMessageHandler
-    // which works with the existing WebView infrastructure.
-
-    if (!this.sidebarProvider) {
-      return;
-    }
-
-    const requestId = `scrollback-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-    this.sidebarProvider.sendMessageToWebview({
-      command: 'requestTerminalSerialization',
-      terminalIds: [],
-      requestId,
-      timestamp: Date.now(),
-    });
-  }
-
   /**
    * WebViewからのscrollbackデータ応答を処理（旧実装・非推奨）
    */

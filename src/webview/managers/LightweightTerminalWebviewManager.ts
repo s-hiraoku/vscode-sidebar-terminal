@@ -111,8 +111,6 @@ import { PerformanceManager } from './PerformanceManager';
 import { UIManager } from './UIManager';
 import { InputManager } from './InputManager';
 import { ConsolidatedMessageManager } from './ConsolidatedMessageManager';
-import { SimplePersistenceManager } from './SimplePersistenceManager';
-import { StandardTerminalPersistenceManager } from './StandardTerminalPersistenceManager';
 import { WebViewApiManager } from './WebViewApiManager';
 import { TerminalLifecycleManager } from './TerminalLifecycleManager';
 import { TerminalTabManager } from './TerminalTabManager';
@@ -488,7 +486,6 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     findInTerminal?: IFindInTerminalManager;
     profile?: IProfileManager;
     tabs?: ITerminalTabManager;
-    persistence: StandardTerminalPersistenceManager | SimplePersistenceManager | null;
     terminalContainer?: ITerminalContainerManager;
     displayMode?: IDisplayModeManager;
     header?: IHeaderManager;
@@ -503,7 +500,6 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       findInTerminal: this.findInTerminalManager,
       profile: this.profileManager,
       tabs: this.terminalTabManager,
-      persistence: null,
       terminalContainer: this.terminalContainerManager,
       displayMode: this.displayModeManager,
       header: this.headerManager,
@@ -1643,77 +1639,8 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       log('🔄 [SIMPLE-RESTORATION] Attempting session restoration...');
       log('⚠️ [SIMPLE-RESTORATION] WebView-side persistence deprecated - Extension handles restoration');
       return; // Early return - Extension handles restoration now
-
-      /* DEPRECATED CODE - kept for reference
-      if (!this.simplePersistenceManager) {
-        console.warn('⚠️ [SIMPLE-RESTORATION] SimplePersistenceManager not available');
-        return;
-      }
-
-      // Load previous session data
-      const sessionData = await this.simplePersistenceManager.loadSession();
-
-      if (!sessionData) {
-        // No previous session - show welcome message
-        const welcomeMessage = this.simplePersistenceManager.getWelcomeMessage();
-        this.displaySessionMessage(welcomeMessage);
-        log('📭 [SIMPLE-RESTORATION] No previous session found - showing welcome message');
-        return;
-      }
-
-      // Restore terminals based on session data
-      log(
-        `🔄 [SIMPLE-RESTORATION] Restoring ${sessionData.terminalCount} terminals from previous session`
-      );
-
-      // Create terminals one by one
-      for (let i = 0; i < sessionData.terminalCount; i++) {
-        const terminalName = sessionData.terminalNames[i] || `Terminal ${i + 1}`;
-        const terminalId = `terminal-${i + 1}`;
-
-        // Request terminal creation from Extension
-        this.postMessageToExtension({
-          command: 'createTerminal',
-          terminalId: terminalId,
-          terminalName: terminalName,
-          isSessionRestore: true,
-          timestamp: Date.now(),
-        });
-
-        log(`🔄 [SIMPLE-RESTORATION] Requested recreation of terminal: ${terminalName}`);
-
-        // Small delay between terminal creations
-        await new Promise((resolve) => setTimeout(resolve, 100));
-      }
-
-      // Show session restoration message
-      const sessionMessage = this.simplePersistenceManager.getSessionMessage(sessionData);
-      setTimeout(() => {
-        this.displaySessionMessage(sessionMessage);
-      }, 1000); // Delay to allow terminals to be created
-
-      // Restore active terminal if specified
-      if (sessionData.activeTerminalId) {
-        setTimeout(() => {
-          this.setActiveTerminalId(sessionData.activeTerminalId!);
-          log(
-            `🎯 [SIMPLE-RESTORATION] Restored active terminal: ${sessionData.activeTerminalId}`
-          );
-        }, 1500);
-      }
-
-      log('✅ [SIMPLE-RESTORATION] Session restoration completed');
-      */
     } catch (error) {
       console.error('❌ [SIMPLE-RESTORATION] Failed to restore session:', error);
-
-      /* DEPRECATED CODE - kept for reference
-      // Show welcome message as fallback
-      if (this.simplePersistenceManager) {
-        const welcomeMessage = this.simplePersistenceManager.getWelcomeMessage();
-        this.displaySessionMessage(welcomeMessage);
-      }
-      */
     }
   }
 

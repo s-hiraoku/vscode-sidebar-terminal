@@ -5,7 +5,6 @@ import { TerminalPersistencePort } from '../../services/persistence/TerminalPers
 import {
   PersistenceMessageHandler,
   PersistenceMessage,
-  PersistenceResponse,
 } from '../../handlers/PersistenceMessageHandler';
 import { WebviewMessage } from '../../types/common';
 import { TerminalManager } from '../../terminals/TerminalManager';

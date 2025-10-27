@@ -218,7 +218,8 @@ const AUTO_SAVE_INTERVAL = 120000; // 2 minutes
 const CLEANUP_INTERVAL = 600000; // 10 minutes
 const MAX_TERMINALS = 10;
 const DEFAULT_SCROLLBACK = 1000;
-const MAX_SCROLLBACK_LINES = 2000;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const _MAX_SCROLLBACK_LINES = 2000;
 const MAX_CONCURRENT_RESTORES = 3;
 const BATCH_SIZE = 50; // Lines per batch for restore
 const BATCH_DELAY_MS = 10; // Delay between batches

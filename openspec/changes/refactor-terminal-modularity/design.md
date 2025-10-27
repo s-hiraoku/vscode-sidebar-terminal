@@ -99,5 +99,5 @@ These interfaces become the “ports” referenced in the proposal tasks. Concre
 1. **Discovery artifacts** (this document) satisfy Tasks 1.1 and 1.2. The rest of the tasks will move code gradually so we always keep a working provider/webview/terminal pipeline.
 2. Provider segmentation can be achieved without changing terminal APIs by wrapping existing services. Once the bridge exists, `SecondaryTerminalProvider` shrinks to ~200–300 LOC.
 3. Webview coordinator can initially delegate to current managers; once message routing is centralized we can prune legacy `handle*` branches.
-4. Terminal core refactor will introduce `commandQueue.ts` and adapter classes while keeping the existing `TerminalManager` exported symbol for compatibility (flip via feature flag `SECONDARY_TERMINAL_REFACTORED`).
+4. Terminal core refactor introduces the new command queue and adapter classes; the legacy implementation has been removed and no feature flag is required.
 5. Persistence + messaging alignment happen after new interfaces settle so we can delete duplicated guards (PanelLocationService vs provider context updates, etc.).

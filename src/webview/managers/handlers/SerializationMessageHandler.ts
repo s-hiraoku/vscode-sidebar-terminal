@@ -252,7 +252,7 @@ export class SerializationMessageHandler implements IMessageHandler {
     const messageId = (msg as any).messageId;
 
     if (!persistenceManager) {
-      this.logger.error('StandardTerminalPersistenceManager not available for save request');
+      this.logger.error('Persistence manager not available for save request');
       coordinator.postMessageToExtension({
         command: 'saveAllTerminalSessionsResponse',
         success: false,
@@ -327,10 +327,10 @@ export class SerializationMessageHandler implements IMessageHandler {
       const requestId = (msg as any).requestId;
       const messageId = (msg as any).messageId;
 
-      // Use existing StandardTerminalPersistenceManager for serialization
+      // Use existing persistence manager for serialization
       const persistenceManager = (coordinator as any).persistenceManager;
       if (!persistenceManager) {
-        throw new Error('StandardTerminalPersistenceManager not available');
+        throw new Error('Persistence manager not available');
       }
 
       if (terminalIds.length === 0) {
@@ -407,10 +407,10 @@ export class SerializationMessageHandler implements IMessageHandler {
       const terminalData = (msg as any).terminalData || [];
       let restoredCount = 0;
 
-      // Use existing StandardTerminalPersistenceManager for restoration
+      // Use existing persistence manager for restoration
       const persistenceManager = (coordinator as any).persistenceManager;
       if (!persistenceManager) {
-        throw new Error('StandardTerminalPersistenceManager not available');
+        throw new Error('Persistence manager not available');
       }
 
       // Restore serialized content to each terminal via persistence manager
