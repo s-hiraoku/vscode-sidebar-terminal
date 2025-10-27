@@ -5,15 +5,15 @@ import type * as vscode from 'vscode';
 import '../../../shared/TestSetup';
 import { PersistenceOrchestrator } from '../../../../providers/secondaryTerminal/PersistenceOrchestrator';
 import { WebviewMessage } from '../../../../types/common';
-import { ConsolidatedTerminalPersistenceService } from '../../../../services/ConsolidatedTerminalPersistenceService';
 import { PersistenceMessageHandler } from '../../../../handlers/PersistenceMessageHandler';
+import { TerminalPersistencePort } from '../../../../services/persistence/TerminalPersistencePort';
 
 describe('PersistenceOrchestrator', () => {
   let sandbox: sinon.SinonSandbox;
   let extensionContext: vscode.ExtensionContext;
   let sendMessage: sinon.SinonStub;
   let handler: sinon.SinonStubbedInstance<PersistenceMessageHandler>;
-  let service: sinon.SinonStubbedInstance<ConsolidatedTerminalPersistenceService>;
+  let service: TerminalPersistencePort;
   let terminalManager: {
     getTerminals: sinon.SinonStub;
     createTerminal: sinon.SinonStub;
@@ -44,10 +44,13 @@ describe('PersistenceOrchestrator', () => {
 
     handler = sandbox.createStubInstance(PersistenceMessageHandler);
     handler.handleMessage.resolves({ success: true, data: [] });
-    service = sandbox.createStubInstance(ConsolidatedTerminalPersistenceService as any);
-    service.saveCurrentSession.resolves({ success: true, terminalCount: 1 } as any);
-    service.restoreSession.resolves({ success: true, restoredCount: 1, skippedCount: 0 } as any);
-    service.cleanupExpiredSessions.resolves();
+    service = {
+      saveCurrentSession: sandbox.stub().resolves({ success: true, terminalCount: 1 } as any),
+      restoreSession: sandbox.stub().resolves({ success: true, restoredCount: 1, skippedCount: 0 } as any),
+      clearSession: sandbox.stub().resolves(),
+      cleanupExpiredSessions: sandbox.stub().resolves(),
+      dispose: sandbox.stub(),
+    } as TerminalPersistencePort;
 
     orchestrator = new PersistenceOrchestrator({
       extensionContext,
@@ -98,20 +101,20 @@ describe('PersistenceOrchestrator', () => {
   it('cleans up persistence service on dispose', async () => {
     orchestrator.dispose();
 
-    expect(service.cleanupExpiredSessions.calledOnce).to.be.true;
+    expect((service.cleanupExpiredSessions as sinon.SinonStub).calledOnce).to.be.true;
   });
 
   it('saves current session via persistence service', async () => {
     const result = await orchestrator.saveCurrentSession();
 
     expect(result).to.be.true;
-    expect(service.saveCurrentSession.calledOnce).to.be.true;
+    expect((service.saveCurrentSession as sinon.SinonStub).calledOnce).to.be.true;
   });
 
   it('restores sessions using persistence service', async () => {
     const result = await orchestrator.restoreLastSession();
 
     expect(result).to.be.true;
-    expect(service.restoreSession.calledOnce).to.be.true;
+    expect((service.restoreSession as sinon.SinonStub).calledOnce).to.be.true;
   });
 });

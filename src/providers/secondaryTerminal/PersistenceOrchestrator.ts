@@ -1,8 +1,7 @@
 import * as vscode from 'vscode';
 import { provider as log } from '../../utils/logger';
-import {
-  ConsolidatedTerminalPersistenceService,
-} from '../../services/ConsolidatedTerminalPersistenceService';
+import { ConsolidatedTerminalPersistenceService } from '../../services/ConsolidatedTerminalPersistenceService';
+import { TerminalPersistencePort } from '../../services/persistence/TerminalPersistencePort';
 import {
   PersistenceMessageHandler,
   PersistenceMessage,
@@ -17,25 +16,25 @@ export interface PersistenceOrchestratorOptions {
   extensionContext: vscode.ExtensionContext;
   terminalManager: TerminalManager;
   sendMessage: SendMessageFn;
-  handlerFactory?: (service: ConsolidatedTerminalPersistenceService) => PersistenceMessageHandler;
+  handlerFactory?: (service: TerminalPersistencePort) => PersistenceMessageHandler;
   serviceFactory?: (
     context: vscode.ExtensionContext,
     terminalManager: TerminalManager
-  ) => ConsolidatedTerminalPersistenceService;
+  ) => TerminalPersistencePort;
   logger?: typeof log;
 }
 
 const defaultServiceFactory = (
   context: vscode.ExtensionContext,
   terminalManager: TerminalManager
-): ConsolidatedTerminalPersistenceService => new ConsolidatedTerminalPersistenceService(context, terminalManager);
+): TerminalPersistencePort => new ConsolidatedTerminalPersistenceService(context, terminalManager);
 
 const defaultHandlerFactory = (
-  service: ConsolidatedTerminalPersistenceService
+  service: TerminalPersistencePort
 ): PersistenceMessageHandler => new PersistenceMessageHandler(service);
 
 export class PersistenceOrchestrator implements vscode.Disposable {
-  private readonly persistenceService: ConsolidatedTerminalPersistenceService;
+  private readonly persistenceService: TerminalPersistencePort;
   private readonly handler: PersistenceMessageHandler;
   private readonly logger: typeof log;
   private readonly sendMessageImpl: SendMessageFn;

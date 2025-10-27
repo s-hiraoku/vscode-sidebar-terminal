@@ -26,6 +26,7 @@ import * as vscode from 'vscode';
 import type { Terminal } from '@xterm/xterm';
 import type { SerializeAddon } from '@xterm/addon-serialize';
 import { TerminalManager } from '../terminals/TerminalManager';
+import { TerminalPersistencePort } from './persistence/TerminalPersistencePort';
 import { WebviewMessage, TerminalInfo } from '../types/shared';
 import { extension as log } from '../utils/logger';
 import { safeProcessCwd } from '../utils/common';
@@ -236,7 +237,7 @@ const BATCH_DELAY_MS = 10; // Delay between batches
  * - WebView communication for serialization
  */
 export class ConsolidatedTerminalPersistenceService
-  implements ITerminalPersistenceService, IPersistenceMessageHandler
+  implements ITerminalPersistenceService, IPersistenceMessageHandler, TerminalPersistencePort
 {
   private sidebarProvider?: {
     sendMessageToWebview: (message: WebviewMessage) => Promise<void>;
