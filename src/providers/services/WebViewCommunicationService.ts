@@ -20,12 +20,25 @@ import { WebviewMessage } from '../../types/common';
  */
 export class WebViewCommunicationService {
   private _view?: vscode.WebviewView;
+  private _isReady = false;
+  private _pendingMessages: WebviewMessage[] = [];
+  private static readonly MAX_QUEUE_SIZE = 100;
 
   /**
    * Set the WebView view
    */
   public setView(view: vscode.WebviewView | undefined): void {
     this._view = view;
+
+    if (!view) {
+      log('⚠️ [COMMUNICATION] Webview cleared - resetting ready state and queue');
+      this._isReady = false;
+      this._pendingMessages = [];
+      return;
+    }
+
+    this._isReady = false;
+    log('✅ [COMMUNICATION] Webview reference set - awaiting ready signal');
   }
 
   /**
@@ -56,8 +69,8 @@ export class WebViewCommunicationService {
    * Send message to WebView (internal method)
    */
   public async sendMessage(message: WebviewMessage): Promise<void> {
-    if (!this._view) {
-      log('⚠️ [COMMUNICATION] No webview available to send message');
+    if (!this._view || !this._isReady) {
+      this._enqueueMessage(message);
       return;
     }
 
@@ -100,13 +113,11 @@ export class WebViewCommunicationService {
       const version = extension?.packageJSON?.version || 'unknown';
       const formattedVersion = version === 'unknown' ? version : `v${version}`;
 
-      if (this._view) {
-        await this._view.webview.postMessage({
-          command: 'versionInfo',
-          version: formattedVersion,
-        });
-        log(`📤 [COMMUNICATION] Sent version info to WebView: ${formattedVersion}`);
-      }
+      await this.sendMessage({
+        command: 'versionInfo',
+        version: formattedVersion,
+      });
+      log(`📤 [COMMUNICATION] Sent version info to WebView: ${formattedVersion}`);
     } catch (error) {
       log('❌ [COMMUNICATION] Error sending version info:', error);
     }
@@ -116,21 +127,12 @@ export class WebViewCommunicationService {
    * Send settings to WebView
    */
   public async sendSettings(settings: unknown, fontSettings?: unknown): Promise<void> {
-    if (!this._view) {
-      log('⚠️ [COMMUNICATION] Cannot send settings - no view available');
-      return;
-    }
-
-    try {
-      await this._view.webview.postMessage({
-        command: 'updateSettings',
-        settings,
-        fontSettings,
-      });
-      log('📤 [COMMUNICATION] Settings sent to WebView');
-    } catch (error) {
-      log('❌ [COMMUNICATION] Failed to send settings to WebView:', error);
-    }
+    await this.sendMessage({
+      command: 'updateSettings',
+      settings,
+      fontSettings,
+    });
+    log('📤 [COMMUNICATION] Settings sent to WebView');
   }
 
   /**
@@ -167,5 +169,54 @@ export class WebViewCommunicationService {
    */
   public clearView(): void {
     this._view = undefined;
+    this._isReady = false;
+    this._pendingMessages = [];
+  }
+
+  /**
+   * Mark the current webview as ready and flush any queued messages
+   */
+  public async markWebviewReady(): Promise<void> {
+    if (!this._view) {
+      log('⚠️ [COMMUNICATION] Cannot mark webview ready - no view set');
+      return;
+    }
+
+    if (this._isReady) {
+      return;
+    }
+
+    this._isReady = true;
+    log(`✅ [COMMUNICATION] Webview marked ready - flushing ${this._pendingMessages.length} queued messages`);
+    await this._flushPendingMessages();
+  }
+
+  private _enqueueMessage(message: WebviewMessage): void {
+    if (this._pendingMessages.length >= WebViewCommunicationService.MAX_QUEUE_SIZE) {
+      const dropped = this._pendingMessages.shift();
+      log(
+        `⚠️ [COMMUNICATION] Message queue full. Dropping oldest message: ${
+          dropped?.command ?? 'unknown'
+        }`
+      );
+    }
+
+    this._pendingMessages.push(message);
+    log(
+      `⏳ [COMMUNICATION] Queued message: ${message.command} (pending: ${this._pendingMessages.length})`
+    );
+  }
+
+  private async _flushPendingMessages(): Promise<void> {
+    if (!this._view || !this._isReady || this._pendingMessages.length === 0) {
+      return;
+    }
+
+    const queuedMessages = [...this._pendingMessages];
+    this._pendingMessages = [];
+
+    for (const queuedMessage of queuedMessages) {
+      await this._sendMessageDirect(queuedMessage);
+    }
   }
 }

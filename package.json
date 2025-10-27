@@ -778,6 +778,105 @@
           "type": "boolean",
           "default": true,
           "description": "Enable enhanced screen reader support for terminal content (Phase 8: Advanced Terminal Features)."
+        },
+        "secondaryTerminal.architecture.enableDI": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable dependency injection container for service management (experimental)."
+        },
+        "secondaryTerminal.architecture.enablePlugins": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable plugin system for extensibility (experimental)."
+        },
+        "secondaryTerminal.architecture.performanceProfile": {
+          "type": "string",
+          "default": "balanced",
+          "enum": [
+            "fast",
+            "balanced",
+            "efficient"
+          ],
+          "enumDescriptions": [
+            "Optimize for speed (higher resource usage)",
+            "Balance between speed and resource usage",
+            "Optimize for resource efficiency (may be slower)"
+          ],
+          "description": "Performance optimization profile."
+        },
+        "secondaryTerminal.plugins.agents.claude.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable Claude Code agent detection plugin."
+        },
+        "secondaryTerminal.plugins.agents.claude.threshold": {
+          "type": "number",
+          "default": 0.8,
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Detection confidence threshold for Claude Code (0.0 to 1.0)."
+        },
+        "secondaryTerminal.plugins.agents.copilot.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable GitHub Copilot CLI agent detection plugin."
+        },
+        "secondaryTerminal.plugins.agents.copilot.threshold": {
+          "type": "number",
+          "default": 0.7,
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Detection confidence threshold for GitHub Copilot (0.0 to 1.0)."
+        },
+        "secondaryTerminal.plugins.agents.codex.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable Codex CLI agent detection plugin."
+        },
+        "secondaryTerminal.plugins.agents.codex.threshold": {
+          "type": "number",
+          "default": 0.7,
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Detection confidence threshold for Codex CLI (0.0 to 1.0)."
+        },
+        "secondaryTerminal.plugins.agents.gemini.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable Gemini CLI agent detection plugin."
+        },
+        "secondaryTerminal.plugins.agents.gemini.threshold": {
+          "type": "number",
+          "default": 0.7,
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Detection confidence threshold for Gemini CLI (0.0 to 1.0)."
+        },
+        "secondaryTerminal.performance.bufferFlushInterval": {
+          "type": "number",
+          "default": 16,
+          "minimum": 1,
+          "maximum": 100,
+          "description": "Buffer flush interval for normal terminal output in milliseconds (~60fps at 16ms)."
+        },
+        "secondaryTerminal.performance.cliAgentFlushInterval": {
+          "type": "number",
+          "default": 4,
+          "minimum": 1,
+          "maximum": 50,
+          "description": "Buffer flush interval when CLI agent is active in milliseconds (~250fps at 4ms)."
+        },
+        "secondaryTerminal.performance.maxBufferSize": {
+          "type": "number",
+          "default": 50,
+          "minimum": 10,
+          "maximum": 1000,
+          "description": "Maximum number of data chunks to buffer before forcing a flush."
+        },
+        "secondaryTerminal.performance.enableAdaptiveBuffering": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable adaptive buffering that adjusts flush intervals based on output patterns."
         }
       }
     },

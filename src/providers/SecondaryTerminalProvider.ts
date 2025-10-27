@@ -333,6 +333,9 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     log('🎯 [TERMINAL-INIT] WebView ready - initializing terminal with coordinated restoration');
     this._isInitialized = true;
 
+    // Flush any queued messages now that the WebView is ready to receive them
+    void this._communicationService.markWebviewReady();
+
     // Send version information to WebView
     this._sendVersionInfo();
 
