@@ -1163,9 +1163,11 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
                 `✅ [PERSISTENCE] Received serialization data for ${Object.keys(serializationData).length} terminals`
               );
 
-              // Forward to StandardTerminalSessionManager
-              if (this._standardSessionManager) {
-                this._standardSessionManager.handleSerializationResponse(serializationData);
+              // 🔧 FIX: Forward to PersistenceOrchestrator → ConsolidatedTerminalPersistenceService
+              if (this._persistenceOrchestrator) {
+                this._persistenceOrchestrator.handleSerializationResponse(serializationData);
+              } else {
+                log('⚠️ [PERSISTENCE] PersistenceOrchestrator not available');
               }
             }
           } catch (persistenceError) {

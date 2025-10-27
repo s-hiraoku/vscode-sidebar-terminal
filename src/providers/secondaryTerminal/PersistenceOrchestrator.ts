@@ -176,6 +176,19 @@ export class PersistenceOrchestrator implements vscode.Disposable {
     }
   }
 
+  public handleSerializationResponse(serializationData: Record<string, any>): void {
+    this.logger(`📋 [PERSISTENCE-ORCH] Routing serialization response to persistence service`);
+
+    if ('handleSerializationResponseMessage' in this.persistenceService) {
+      (this.persistenceService as ConsolidatedTerminalPersistenceService).handleSerializationResponseMessage(
+        serializationData
+      );
+      this.logger(`✅ [PERSISTENCE-ORCH] Serialization response forwarded successfully`);
+    } else {
+      this.logger(`⚠️ [PERSISTENCE-ORCH] Persistence service does not support handleSerializationResponseMessage`);
+    }
+  }
+
   public dispose(): void {
     try {
       void this.persistenceService.cleanupExpiredSessions();

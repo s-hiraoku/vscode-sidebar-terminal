@@ -29,6 +29,7 @@ export class ExtensionLifecycle {
 
   // シンプルな復元管理
   private _restoreExecuted = false;
+  private _isRestoring = false; // Flag to suppress auto-save during session restore
 
   /**
    * 拡張機能の起動処理
@@ -529,24 +530,31 @@ export class ExtensionLifecycle {
       try {
         if (this.standardSessionManager && this.terminalManager) {
           log('🔄 [SESSION] Executing VS Code standard session restore...');
-          const result = await this.standardSessionManager.restoreSession();
 
-          if (result.success && result.restoredCount && result.restoredCount > 0) {
-            log(
-              `✅ [SESSION] VS Code standard session restored: ${result.restoredCount} terminals`
-            );
+          // 🔧 FIX: Set flag to suppress auto-save during restoration
+          this._isRestoring = true;
+          try {
+            const result = await this.standardSessionManager.restoreSession();
 
-            // 復元完了後の初期化処理
-            // Session restore finalization disabled for debugging
+            if (result.success && result.restoredCount && result.restoredCount > 0) {
+              log(
+                `✅ [SESSION] VS Code standard session restored: ${result.restoredCount} terminals`
+              );
 
-            // ユーザーに通知（オプション）
-            void vscode.window.showInformationMessage(
-              `Terminal session restored (VS Code standard): ${result.restoredCount} terminals`
-            );
-          } else {
-            log('📭 [SESSION] No session data found - creating initial terminal');
-            // Create initial terminal when no session data exists
-            this.createInitialTerminal();
+              // 復元完了後の初期化処理
+              // Session restore finalization disabled for debugging
+
+              // ユーザーに通知（オプション）
+              void vscode.window.showInformationMessage(
+                `Terminal session restored (VS Code standard): ${result.restoredCount} terminals`
+              );
+            } else {
+              log('📭 [SESSION] No session data found - creating initial terminal');
+              // Create initial terminal when no session data exists
+              this.createInitialTerminal();
+            }
+          } finally {
+            this._isRestoring = false;
           }
         } else {
           log('⚠️ [SESSION] Session manager not available - creating initial terminal');
@@ -638,6 +646,12 @@ export class ExtensionLifecycle {
   private async saveSessionImmediately(trigger: string): Promise<void> {
     try {
       if (!this.standardSessionManager || !this.terminalManager) {
+        return;
+      }
+
+      // 🔧 FIX: Skip auto-save during session restoration to prevent race condition
+      if (this._isRestoring) {
+        log(`⏸️ [EXTENSION] Skipping immediate save during restoration (trigger: ${trigger})`);
         return;
       }
 
@@ -737,8 +751,12 @@ export class ExtensionLifecycle {
     }
 
     try {
-      const result = await this.standardSessionManager.restoreSession();
-      if (result.success) {
+      // 🔧 FIX: Set flag to suppress auto-save during restoration
+      this._isRestoring = true;
+      try {
+        const result = await this.standardSessionManager.restoreSession();
+
+        if (result.success) {
         if (result.restoredCount && result.restoredCount > 0) {
           await vscode.window.showInformationMessage(
             `Terminal session restored successfully: ${result.restoredCount} terminal${result.restoredCount > 1 ? 's' : ''} restored${result.skippedCount && result.skippedCount > 0 ? `, ${result.skippedCount} skipped` : ''}`
@@ -750,6 +768,9 @@ export class ExtensionLifecycle {
         await vscode.window.showErrorMessage(
           `Failed to restore session: ${result.error || 'Unknown error'}`
         );
+      }
+      } finally {
+        this._isRestoring = false;
       }
     } catch (error) {
       await vscode.window.showErrorMessage(`Failed to restore session: ${String(error)}`);
@@ -844,8 +865,13 @@ export class ExtensionLifecycle {
 
     try {
       log('🔄 [RESTORE-DEBUG] Calling standardSessionManager.restoreSession()...');
-      const result = await this.standardSessionManager.restoreSession();
-      log(`📊 [RESTORE-DEBUG] Restore result: success=${result.success}, restoredCount=${result.restoredCount}, skippedCount=${result.skippedCount}, error=${result.error}`);
+
+      // 🔧 FIX: Set flag to suppress auto-save during restoration
+      this._isRestoring = true;
+      try {
+        const result = await this.standardSessionManager.restoreSession();
+
+        log(`📊 [RESTORE-DEBUG] Restore result: success=${result.success}, restoredCount=${result.restoredCount}, skippedCount=${result.skippedCount}, error=${result.error}`);
 
       if (result.success) {
         if (result.restoredCount && result.restoredCount > 0) {
@@ -866,6 +892,9 @@ export class ExtensionLifecycle {
         await vscode.window.showErrorMessage(
           `Failed to restore session: ${result.error || 'Unknown error'}`
         );
+      }
+      } finally {
+        this._isRestoring = false;
       }
     } catch (error) {
       log(`❌ [RESTORE-DEBUG] Exception during restore: ${error instanceof Error ? error.message : String(error)}`);
@@ -948,15 +977,21 @@ export class ExtensionLifecycle {
         return;
       }
 
-      const result = await this.standardSessionManager.restoreSession();
+      // 🔧 FIX: Set flag to suppress auto-save during restoration
+      this._isRestoring = true;
+      try {
+        const result = await this.standardSessionManager.restoreSession();
 
-      if (result.success && result.restoredCount && result.restoredCount > 0) {
+        if (result.success && result.restoredCount && result.restoredCount > 0) {
         log(`✅ [EXTENSION] Restored ${result.restoredCount} terminals`);
         void vscode.window.showInformationMessage(
           `Terminal session restored: ${result.restoredCount} terminal${result.restoredCount > 1 ? 's' : ''}`
         );
       } else {
         log('📭 [EXTENSION] No terminals to restore');
+      }
+      } finally {
+        this._isRestoring = false;
       }
     } catch (error) {
       log(`❌ [EXTENSION] Restore error: ${String(error)}`);
@@ -984,9 +1019,14 @@ export class ExtensionLifecycle {
       }
 
       log('🔍 [SESSION] About to call standardSessionManager.restoreSession()');
-      // セッション復元を実行
-      const result = await this.standardSessionManager.restoreSession();
-      log(`🔍 [SESSION] restoreSession() completed with result: ${JSON.stringify(result)}`);
+
+      // 🔧 FIX: Set flag to suppress auto-save during restoration
+      this._isRestoring = true;
+      try {
+        // セッション復元を実行
+        const result = await this.standardSessionManager.restoreSession();
+
+        log(`🔍 [SESSION] restoreSession() completed with result: ${JSON.stringify(result)}`);
 
       if (result.success && result.restoredCount && result.restoredCount > 0) {
         log(`✅ [SESSION] Restored ${result.restoredCount} terminals`);
@@ -1002,6 +1042,9 @@ export class ExtensionLifecycle {
       } else {
         log(`❌ [SESSION] Restore failed: ${result.error}`);
         this.createInitialTerminal();
+      }
+      } finally {
+        this._isRestoring = false;
       }
     } catch (error) {
       log(

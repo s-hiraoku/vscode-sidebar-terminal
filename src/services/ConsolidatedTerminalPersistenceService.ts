@@ -399,6 +399,11 @@ export class ConsolidatedTerminalPersistenceService
       // Restore serialized content
       if (restoredTerminals.length > 0 && sessionData.serializationData) {
         await this.sendRestorationToWebView(sessionData.terminals, sessionData.serializationData);
+
+        // 🔧 FIX: Wait for WebView to finish processing terminalCreated messages
+        // This prevents race condition where save is triggered before WebView creates terminals
+        log(`⏳ [PERSISTENCE] Waiting for WebView to complete terminal creation (${restoredTerminals.length} terminals)...`);
+        await this.delay(500 * restoredTerminals.length); // 500ms per terminal
       }
 
       // Restore CLI Agent environments
