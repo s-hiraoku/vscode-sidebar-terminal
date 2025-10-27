@@ -10,12 +10,19 @@ import { KeyboardShortcutService } from '../services/KeyboardShortcutService';
 import { TerminalDecorationsService } from '../services/TerminalDecorationsService';
 import { TerminalLinksService } from '../services/TerminalLinksService';
 import { VersionUtils } from '../utils/VersionUtils';
+import { DIContainer } from './DIContainer';
+import { EventBus } from './EventBus';
+import { registerPhase2Services } from './ServiceRegistration';
 
 /**
  * VS Code拡張機能のライフサイクル管理
  * 初期化、コマンド登録、クリーンアップを担当
  */
 export class ExtensionLifecycle {
+  // Phase 2: DI Container and Event Bus
+  private container: DIContainer | undefined;
+  private eventBus: EventBus | undefined;
+
   private terminalManager: TerminalManager | undefined;
   private sidebarProvider: SecondaryTerminalProvider | undefined;
   private standardSessionManager: StandardTerminalSessionManager | undefined;
@@ -55,6 +62,11 @@ export class ExtensionLifecycle {
     log('Extension path:', context.extensionPath);
 
     try {
+      // Phase 2 Week 3: Bootstrap DI Container
+      log('🚀 [EXTENSION] === PHASE 2: DI CONTAINER BOOTSTRAP ===');
+      this.container = this.bootstrapDIContainer(context);
+      log('✅ [EXTENSION] DI container initialized');
+
       // Ensure node-pty looks for release binaries
       process.env.NODE_PTY_DEBUG = '0';
 
@@ -488,6 +500,20 @@ export class ExtensionLifecycle {
       this.shellIntegrationService = undefined;
     }
 
+    // Phase 2 Week 3: Dispose DI Container
+    if (this.container) {
+      log('🔧 [EXTENSION] Disposing DI container...');
+      this.container.dispose();
+      this.container = undefined;
+    }
+
+    // Dispose EventBus
+    if (this.eventBus) {
+      log('🔧 [EXTENSION] Disposing EventBus...');
+      this.eventBus.dispose();
+      this.eventBus = undefined;
+    }
+
     log('✅ [EXTENSION] Deactivation complete');
   }
 
@@ -510,6 +536,46 @@ export class ExtensionLifecycle {
    */
   getStandardSessionManager(): StandardTerminalSessionManager | undefined {
     return this.standardSessionManager;
+  }
+
+  /**
+   * Bootstrap DI Container (Phase 2 Week 3)
+   *
+   * Initializes the dependency injection container and registers all services.
+   * This enables better testability, modularity, and prepares for plugin integration.
+   */
+  private bootstrapDIContainer(context: vscode.ExtensionContext): DIContainer {
+    log('🔧 [DI] Bootstrapping DI container...');
+
+    const container = new DIContainer();
+    const eventBus = new EventBus();
+
+    // Register core infrastructure
+    log('🔧 [DI] Registering EventBus...');
+    this.eventBus = eventBus;
+
+    // Register Phase 2 services (BufferManagementService, TerminalStateService)
+    log('🔧 [DI] Registering Phase 2 services...');
+    registerPhase2Services(container, eventBus);
+
+    log('✅ [DI] DI container bootstrapped successfully');
+    log(`📊 [DI] Registered services: ${container.getServiceCount()}`);
+
+    return container;
+  }
+
+  /**
+   * Get DI container (for testing)
+   */
+  getContainer(): DIContainer | undefined {
+    return this.container;
+  }
+
+  /**
+   * Get EventBus (for testing)
+   */
+  getEventBus(): EventBus | undefined {
+    return this.eventBus;
   }
 
   // ==================== セッション管理関連のメソッド - DISABLED FOR DEBUGGING ====================

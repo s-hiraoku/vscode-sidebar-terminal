@@ -177,7 +177,10 @@ export class SerializationMessageHandler implements IMessageHandler {
 
       try {
         // VS Code-style ScrollbackService only (SerializeAddon no longer used)
+        this.logger.info(`📋 [DEBUG] Restore request for ${terminalId}: scrollbackData=${scrollbackData ? `${scrollbackData.length} lines` : 'undefined'}, restoreSessionFn=${restoreSessionFn ? 'available' : 'null'}`);
+
         if (scrollbackData && scrollbackData.length > 0 && restoreSessionFn) {
+          this.logger.info(`📋 [DEBUG] Calling restoreSession for ${terminalId} with ${scrollbackData.length} lines`);
           restored = await restoreSessionFn({
             terminalId,
             terminalName:
@@ -185,6 +188,9 @@ export class SerializationMessageHandler implements IMessageHandler {
             scrollbackData,
             sessionRestoreMessage,
           });
+          this.logger.info(`📋 [DEBUG] restoreSession result for ${terminalId}: ${restored}`);
+        } else {
+          this.logger.warn(`📋 [DEBUG] Skipping restore for ${terminalId}: scrollbackData=${scrollbackData ? scrollbackData.length : 'null'}, restoreSessionFn=${restoreSessionFn ? 'yes' : 'no'}`);
         }
 
         if (restored && isActive) {

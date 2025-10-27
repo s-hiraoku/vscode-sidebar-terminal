@@ -296,8 +296,12 @@ export class ConsolidatedTerminalPersistenceService
           scrollback: config.persistentSessionScrollback,
         });
 
+        log(`📋 [DEBUG] Terminal ${terminal.id} scrollback data: ${scrollbackData ? `${scrollbackData.length} chars` : 'null'}`);
+
         // Convert scrollback string to array format
         const scrollback = scrollbackData ? scrollbackData.split('\n').filter(line => line.length > 0) : undefined;
+
+        log(`📋 [DEBUG] Terminal ${terminal.id} scrollback array: ${scrollback ? `${scrollback.length} lines` : 'undefined'}`);
 
         return {
           id: terminal.id,
@@ -400,6 +404,11 @@ export class ConsolidatedTerminalPersistenceService
 
       // Restore scrollback content (VS Code-style ScrollbackService)
       if (restoredTerminals.length > 0) {
+        log(`📋 [DEBUG] About to restore scrollback for ${sessionData.terminals.length} terminals`);
+        sessionData.terminals.forEach((t, index) => {
+          log(`📋 [DEBUG] Terminal[${index}] ${t.id}: scrollback=${t.scrollback ? `${t.scrollback.length} lines` : 'undefined'}`);
+        });
+
         await this.sendRestorationToWebView(sessionData.terminals);
 
         // 🔧 FIX: Wait for WebView to finish processing terminalCreated messages
@@ -601,7 +610,7 @@ export class ConsolidatedTerminalPersistenceService
     }
 
     try {
-      await this.sidebarProvider.sendMessageToWebview({
+      const messageData = {
         command: 'restoreTerminalSerialization',
         terminalData: terminalData.map((terminal) => ({
           id: terminal.id,
@@ -610,7 +619,14 @@ export class ConsolidatedTerminalPersistenceService
           scrollback: terminal.scrollback, // VS Code-style ScrollbackService only (no SerializeAddon)
         })),
         timestamp: Date.now(),
+      };
+
+      log(`📋 [DEBUG] Sending message to WebView: command=${messageData.command}, terminals=${messageData.terminalData.length}`);
+      messageData.terminalData.forEach((t, index) => {
+        log(`📋 [DEBUG] Message data[${index}]: id=${t.id}, scrollback=${t.scrollback ? `${t.scrollback.length} lines` : 'undefined'}`);
       });
+
+      await this.sidebarProvider.sendMessageToWebview(messageData);
 
       log(`✅ [PERSISTENCE] Restoration request sent: ${terminalData.length} terminals`);
       return {
@@ -827,6 +843,11 @@ export class ConsolidatedTerminalPersistenceService
       scrollback: terminal.scrollback, // VS Code-style ScrollbackService only
       metadata: undefined,
     }));
+
+    log(`📋 [DEBUG] Sending ${terminalData.length} terminals to WebView for restoration`);
+    terminalData.forEach((t, index) => {
+      log(`📋 [DEBUG] Restore data[${index}]: id=${t.id}, scrollback=${t.scrollback ? `${t.scrollback.length} lines` : 'undefined'}`);
+    });
 
     await this.handleRestorationRequest(terminalData);
   }
