@@ -43,6 +43,7 @@ describe('TerminalLifecycleMessageHandler', () => {
       updateClaudeStatus: () => {},
       updateCliAgentStatus: () => {},
       ensureTerminalFocus: () => {},
+      getSerializeAddon: () => undefined,
       getManagers: () => ({
         performance: {
           scheduleOutputBuffer: () => {},

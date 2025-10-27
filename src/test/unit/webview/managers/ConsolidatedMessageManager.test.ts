@@ -34,6 +34,7 @@ class ConsolidatedMessageManagerTest extends WebViewTest {
       updateClaudeStatus: () => {},
       updateCliAgentStatus: () => {},
       ensureTerminalFocus: () => {},
+      getSerializeAddon: () => undefined,
       getManagers: () => ({
         performance: {} as any,
         input: {} as any,
