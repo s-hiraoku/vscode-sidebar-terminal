@@ -407,32 +407,38 @@ export class SerializationMessageHandler implements IMessageHandler {
       const terminalData = (msg as any).terminalData || [];
       let restoredCount = 0;
 
-      // Use existing StandardTerminalPersistenceManager for restoration
-      const persistenceManager = (coordinator as any).persistenceManager;
-      if (!persistenceManager) {
-        throw new Error('StandardTerminalPersistenceManager not available');
-      }
-
-      // Restore serialized content to each terminal via persistence manager
+      // Restore serialized content to each terminal
       terminalData.forEach((terminal: any) => {
         const { id, serializedContent, isActive } = terminal;
 
         if (serializedContent && serializedContent.length > 0) {
           try {
-            // Use persistence manager to restore terminal content
-            const restored = persistenceManager.restoreTerminalContent(id, serializedContent);
-
-            if (restored) {
-              // Set as active if needed
-              if (isActive) {
-                coordinator.setActiveTerminalId(id);
-              }
-
-              restoredCount++;
-              this.logger.info(`Restored terminal ${id}: ${serializedContent.length} chars`);
-            } else {
-              this.logger.warn(`Failed to restore terminal ${id} content`);
+            // Get terminal instance
+            const terminalInstance = coordinator.getTerminalInstance(id);
+            if (!terminalInstance) {
+              this.logger.warn(`Terminal ${id} not found for restoration`);
+              return;
             }
+
+            // Convert serialized string to ScrollbackLine array
+            const scrollbackLines = serializedContent.split('\n').map((line: string) => ({
+              content: line,
+              type: 'output' as const,
+              timestamp: Date.now(),
+            }));
+
+            // Restore scrollback with ANSI colors preserved
+            scrollbackLines.forEach((line: any) => {
+              terminalInstance.terminal.writeln(line.content);
+            });
+
+            // Set as active if needed
+            if (isActive) {
+              coordinator.setActiveTerminalId(id);
+            }
+
+            restoredCount++;
+            this.logger.info(`✅ Restored terminal ${id}: ${scrollbackLines.length} lines with ANSI colors`);
           } catch (restoreError) {
             this.logger.error(`Error restoring terminal ${id}:`, restoreError);
           }
@@ -452,7 +458,7 @@ export class SerializationMessageHandler implements IMessageHandler {
       });
 
       this.logger.info(
-        `Terminal serialization restoration completed: ${restoredCount}/${terminalData.length} terminals`
+        `✅ Terminal serialization restoration completed: ${restoredCount}/${terminalData.length} terminals`
       );
     } catch (error) {
       this.logger.error('Error during terminal serialization restoration:', error);
