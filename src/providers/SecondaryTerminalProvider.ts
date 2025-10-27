@@ -12,7 +12,7 @@ import {
   HtmlGenerationOptions,
 } from '../services/webview/WebViewHtmlGenerationService';
 import { TerminalInitializationCoordinator } from './TerminalInitializationCoordinator';
-import { SecondaryTerminalMessageRouter } from './SecondaryTerminalMessageRouter';
+import { SecondaryTerminalMessageRouter, MessageHandlerMap } from './SecondaryTerminalMessageRouter';
 import {
   isWebviewMessage,
   hasTerminalId,
@@ -245,22 +245,14 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
    * Initialize a minimal command→handler map without behavior change
    */
   private _initializeMessageHandlers(): void {
-    const handlerMap: Record<string, MessageHandler> = {
+    const handlerMap: MessageHandlerMap = {
       webviewReady: (message) => this._handleWebviewReady(message),
-      [TERMINAL_CONSTANTS?.COMMANDS?.READY ?? 'ready']: (message) =>
-        this._handleWebviewReady(message),
       getSettings: async () => this._handleGetSettings(),
       focusTerminal: async (message) => this._handleFocusTerminal(message),
-      [TERMINAL_CONSTANTS?.COMMANDS?.FOCUS_TERMINAL ?? 'focusTerminal']: async (message) =>
-        this._handleFocusTerminal(message),
       splitTerminal: (message) => this._handleSplitTerminal(message),
       createTerminal: async (message) => this._handleCreateTerminal(message),
-      [TERMINAL_CONSTANTS?.COMMANDS?.CREATE_TERMINAL ?? 'createTerminal']: async (message) =>
-        this._handleCreateTerminal(message),
-      [TERMINAL_CONSTANTS?.COMMANDS?.INPUT ?? 'input']: (message) =>
-        this._handleTerminalInput(message),
-      [TERMINAL_CONSTANTS?.COMMANDS?.RESIZE ?? 'resize']: (message) =>
-        this._handleTerminalResize(message),
+      input: (message) => this._handleTerminalInput(message),
+      resize: (message) => this._handleTerminalResize(message),
       killTerminal: async (message) => this._handleKillTerminal(message),
       deleteTerminal: async (message) => this._handleDeleteTerminal(message),
       updateSettings: async (message) => this._handleUpdateSettings(message),
@@ -284,6 +276,20 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       timeoutTest: (message) => this._handleTimeoutTest(message),
       test: (message) => this._handleDebugTest(message),
     };
+
+    const registerAlias = (alias: string | undefined, key: string): void => {
+      const baseHandler = handlerMap[key];
+      if (!alias || handlerMap[alias] || !baseHandler) {
+        return;
+      }
+      handlerMap[alias] = baseHandler;
+    };
+
+    registerAlias(TERMINAL_CONSTANTS?.COMMANDS?.READY, 'webviewReady');
+    registerAlias(TERMINAL_CONSTANTS?.COMMANDS?.FOCUS_TERMINAL, 'focusTerminal');
+    registerAlias(TERMINAL_CONSTANTS?.COMMANDS?.CREATE_TERMINAL, 'createTerminal');
+    registerAlias(TERMINAL_CONSTANTS?.COMMANDS?.INPUT, 'input');
+    registerAlias(TERMINAL_CONSTANTS?.COMMANDS?.RESIZE, 'resize');
 
     this._messageRouter.reset();
     this._messageRouter.registerAll(handlerMap);

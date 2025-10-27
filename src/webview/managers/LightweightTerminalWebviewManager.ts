@@ -111,6 +111,8 @@ import { PerformanceManager } from './PerformanceManager';
 import { UIManager } from './UIManager';
 import { InputManager } from './InputManager';
 import { ConsolidatedMessageManager } from './ConsolidatedMessageManager';
+import { SimplePersistenceManager } from './SimplePersistenceManager';
+import { StandardTerminalPersistenceManager } from './StandardTerminalPersistenceManager';
 import { WebViewApiManager } from './WebViewApiManager';
 import { TerminalLifecycleManager } from './TerminalLifecycleManager';
 import { TerminalTabManager } from './TerminalTabManager';
