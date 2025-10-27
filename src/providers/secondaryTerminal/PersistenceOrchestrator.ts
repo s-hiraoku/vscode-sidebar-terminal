@@ -46,6 +46,14 @@ export class PersistenceOrchestrator implements vscode.Disposable {
     );
     this.handler = (options.handlerFactory || defaultHandlerFactory)(this.persistenceService);
     this.sendMessageImpl = options.sendMessage;
+
+    // 🔧 FIX: Set sidebar provider on ConsolidatedTerminalPersistenceService
+    if ('setSidebarProvider' in this.persistenceService) {
+      (this.persistenceService as ConsolidatedTerminalPersistenceService).setSidebarProvider({
+        sendMessageToWebview: options.sendMessage,
+      });
+      this.logger('✅ [PERSISTENCE-ORCH] Sidebar provider configured for persistence service');
+    }
   }
 
   public hasHandler(): boolean {

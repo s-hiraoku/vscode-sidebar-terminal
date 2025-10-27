@@ -788,19 +788,27 @@ export class ExtensionLifecycle {
    * 統合セッション保存コマンドハンドラー
    */
   private async handleSimpleSaveSessionCommand(): Promise<void> {
+    log('🔍 [SAVE-DEBUG] === SAVE SESSION COMMAND TRIGGERED ===');
+
     if (!this.standardSessionManager) {
+      log('❌ [SAVE-DEBUG] Standard session manager not available');
       await vscode.window.showErrorMessage('Standard session manager not available');
       return;
     }
 
+    log('✅ [SAVE-DEBUG] Standard session manager available');
+
     try {
       // Scrollback抽出処理（復元機能を完全動作させるため）
-      log('📋 [SIMPLE_SESSION] Starting scrollback extraction...');
+      log('📋 [SAVE-DEBUG] Starting scrollback extraction...');
       await this.extractScrollbackFromAllTerminals();
-      log('✅ [SIMPLE_SESSION] Scrollback extraction completed');
+      log('✅ [SAVE-DEBUG] Scrollback extraction completed');
 
       // 通常のセッション保存を実行
+      log('💾 [SAVE-DEBUG] Calling standardSessionManager.saveCurrentSession()...');
       const result = await this.standardSessionManager.saveCurrentSession();
+      log(`📊 [SAVE-DEBUG] Save result: success=${result.success}, count=${result.terminalCount}, error=${result.error}`);
+
       if (result.success) {
         await vscode.window.showInformationMessage(
           `Terminal session saved successfully (${result.terminalCount} terminal${result.terminalCount !== 1 ? 's' : ''})`
@@ -811,45 +819,62 @@ export class ExtensionLifecycle {
         );
       }
     } catch (error) {
+      log(`❌ [SAVE-DEBUG] Exception during save: ${error instanceof Error ? error.message : String(error)}`);
       await vscode.window.showErrorMessage(
         `Failed to save session: ${error instanceof Error ? error.message : String(error)}`
       );
     }
+
+    log('🔍 [SAVE-DEBUG] === SAVE SESSION COMMAND FINISHED ===');
   }
 
   /**
    * 統合セッション復元コマンドハンドラー
    */
   private async handleSimpleRestoreSessionCommand(): Promise<void> {
+    log('🔍 [RESTORE-DEBUG] === RESTORE SESSION COMMAND TRIGGERED ===');
+
     if (!this.standardSessionManager) {
+      log('❌ [RESTORE-DEBUG] Standard session manager not available');
       await vscode.window.showErrorMessage('Standard session manager not available');
       return;
     }
 
+    log('✅ [RESTORE-DEBUG] Standard session manager available');
+
     try {
+      log('🔄 [RESTORE-DEBUG] Calling standardSessionManager.restoreSession()...');
       const result = await this.standardSessionManager.restoreSession();
+      log(`📊 [RESTORE-DEBUG] Restore result: success=${result.success}, restoredCount=${result.restoredCount}, skippedCount=${result.skippedCount}, error=${result.error}`);
 
       if (result.success) {
         if (result.restoredCount && result.restoredCount > 0) {
           // Scrollbackデータも復元
+          log('📋 [RESTORE-DEBUG] Restoring scrollback for all terminals...');
           await this.restoreScrollbackForAllTerminals();
+          log('✅ [RESTORE-DEBUG] Scrollback restoration completed');
 
           await vscode.window.showInformationMessage(
             `Terminal session restored: ${result.restoredCount} terminal${result.restoredCount > 1 ? 's' : ''} restored${result.skippedCount && result.skippedCount > 0 ? `, ${result.skippedCount} skipped` : ''}`
           );
         } else {
+          log('📭 [RESTORE-DEBUG] No terminals to restore');
           await vscode.window.showInformationMessage('No previous session data found to restore');
         }
       } else {
+        log(`❌ [RESTORE-DEBUG] Restore failed: ${result.error}`);
         await vscode.window.showErrorMessage(
           `Failed to restore session: ${result.error || 'Unknown error'}`
         );
       }
     } catch (error) {
+      log(`❌ [RESTORE-DEBUG] Exception during restore: ${error instanceof Error ? error.message : String(error)}`);
       await vscode.window.showErrorMessage(
         `Failed to restore session: ${error instanceof Error ? error.message : String(error)}`
       );
     }
+
+    log('🔍 [RESTORE-DEBUG] === RESTORE SESSION COMMAND FINISHED ===');
   }
 
   /**
