@@ -324,6 +324,13 @@ class Logger {
       console.log(...this.formatMessage('DEBUG', 'STATE', '🔄', ...args));
     }
   }
+
+  // Scrollback management
+  scrollback(...args: unknown[]): void {
+    if (this.level <= LogLevel.DEBUG) {
+      console.log(...this.formatMessage('DEBUG', 'SCROLLBACK', '📋', ...args));
+    }
+  }
 }
 
 // Export singleton instance
@@ -357,6 +364,7 @@ export const agent = (...args: unknown[]): void => logger.agent(...args);
 export const file = (...args: unknown[]): void => logger.file(...args);
 export const network = (...args: unknown[]): void => logger.network(...args);
 export const state = (...args: unknown[]): void => logger.state(...args);
+export const scrollback = (...args: unknown[]): void => logger.scrollback(...args);
 
 // Query helpers
 export const isDebugEnabled = (): boolean => logger.isDebugEnabled();
