@@ -245,99 +245,48 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
    * Initialize a minimal command→handler map without behavior change
    */
   private _initializeMessageHandlers(): void {
-    const entries: Array<[string | undefined, MessageHandler]> = [
-      ['webviewReady', (message) => this._handleWebviewReady(message)],
-      [
-        TERMINAL_CONSTANTS?.COMMANDS?.READY,
-        (message) => this._handleWebviewReady(message),
-      ],
-      ['getSettings', async () => {
-        await this._handleGetSettings();
-      }],
-      ['focusTerminal', async (message) => {
-        await this._handleFocusTerminal(message);
-      }],
-      [
-        TERMINAL_CONSTANTS?.COMMANDS?.FOCUS_TERMINAL,
-        async (message) => {
-          await this._handleFocusTerminal(message);
-        },
-      ],
-      ['splitTerminal', (message) => {
-        this._handleSplitTerminal(message);
-      }],
-      ['createTerminal', async (message) => {
-        await this._handleCreateTerminal(message);
-      }],
-      [
-        TERMINAL_CONSTANTS?.COMMANDS?.CREATE_TERMINAL,
-        async (message) => {
-          await this._handleCreateTerminal(message);
-        },
-      ],
-      [
-        TERMINAL_CONSTANTS?.COMMANDS?.INPUT,
-        (message) => {
-          this._handleTerminalInput(message);
-        },
-      ],
-      [
-        TERMINAL_CONSTANTS?.COMMANDS?.RESIZE,
-        (message) => {
-          this._handleTerminalResize(message);
-        },
-      ],
-      ['killTerminal', async (message) => {
-        await this._handleKillTerminal(message);
-      }],
-      ['deleteTerminal', async (message) => {
-        await this._handleDeleteTerminal(message);
-      }],
-      ['updateSettings', async (message) => {
-        await this._handleUpdateSettings(message);
-      }],
-      ['reportPanelLocation', async (message) => {
-        await this._handleReportPanelLocation(message);
-      }],
-      ['terminalClosed', async (message) => {
-        await this._handleTerminalClosed(message);
-      }],
-      ['openTerminalLink', async (message) => {
-        await this._handleOpenTerminalLink(message);
-      }],
-      ['reorderTerminals', async (message) => {
-        await this._handleReorderTerminals(message);
-      }],
-      ['requestInitialTerminal', async (message) => {
-        await this._handleRequestInitialTerminal(message);
-      }],
-      ['terminalInitializationComplete', async (message) => {
-        await this._handleTerminalInitializationComplete(message);
-      }],
-      ['persistenceSaveSession', async (message) => {
-        await this._handlePersistenceMessage(message);
-      }],
-      ['persistenceRestoreSession', async (message) => {
-        await this._handlePersistenceMessage(message);
-      }],
-      ['persistenceClearSession', async (message) => {
-        await this._handlePersistenceMessage(message);
-      }],
-      ['terminalSerializationRequest', async (message) => {
-        await this._handleLegacyPersistenceMessage(message);
-      }],
-      ['terminalSerializationRestoreRequest', async (message) => {
-        await this._handleLegacyPersistenceMessage(message);
-      }],
-      ['htmlScriptTest', (message) => this._handleHtmlScriptTest(message)],
-      ['timeoutTest', (message) => this._handleTimeoutTest(message)],
-      ['test', (message) => this._handleDebugTest(message)],
-    ];
+    const handlerMap: Record<string, MessageHandler> = {
+      webviewReady: (message) => this._handleWebviewReady(message),
+      [TERMINAL_CONSTANTS?.COMMANDS?.READY ?? 'ready']: (message) =>
+        this._handleWebviewReady(message),
+      getSettings: async () => this._handleGetSettings(),
+      focusTerminal: async (message) => this._handleFocusTerminal(message),
+      [TERMINAL_CONSTANTS?.COMMANDS?.FOCUS_TERMINAL ?? 'focusTerminal']: async (message) =>
+        this._handleFocusTerminal(message),
+      splitTerminal: (message) => this._handleSplitTerminal(message),
+      createTerminal: async (message) => this._handleCreateTerminal(message),
+      [TERMINAL_CONSTANTS?.COMMANDS?.CREATE_TERMINAL ?? 'createTerminal']: async (message) =>
+        this._handleCreateTerminal(message),
+      [TERMINAL_CONSTANTS?.COMMANDS?.INPUT ?? 'input']: (message) =>
+        this._handleTerminalInput(message),
+      [TERMINAL_CONSTANTS?.COMMANDS?.RESIZE ?? 'resize']: (message) =>
+        this._handleTerminalResize(message),
+      killTerminal: async (message) => this._handleKillTerminal(message),
+      deleteTerminal: async (message) => this._handleDeleteTerminal(message),
+      updateSettings: async (message) => this._handleUpdateSettings(message),
+      reportPanelLocation: async (message) => this._handleReportPanelLocation(message),
+      terminalClosed: async (message) => this._handleTerminalClosed(message),
+      openTerminalLink: async (message) => this._handleOpenTerminalLink(message),
+      reorderTerminals: async (message) => this._handleReorderTerminals(message),
+      requestInitialTerminal: async (message) => this._handleRequestInitialTerminal(message),
+      terminalInitializationComplete: async (message) =>
+        this._handleTerminalInitializationComplete(message),
+      persistenceSaveSession: async (message) => this._handlePersistenceMessage(message),
+      persistenceRestoreSession: async (message) => this._handlePersistenceMessage(message),
+      persistenceClearSession: async (message) => this._handlePersistenceMessage(message),
+      terminalSerializationRequest: async (message) =>
+        this._handleLegacyPersistenceMessage(message),
+      terminalSerializationRestoreRequest: async (message) =>
+        this._handleLegacyPersistenceMessage(message),
+      scrollbackDataCollected: async (message) =>
+        this._handleScrollbackDataCollected(message),
+      htmlScriptTest: (message) => this._handleHtmlScriptTest(message),
+      timeoutTest: (message) => this._handleTimeoutTest(message),
+      test: (message) => this._handleDebugTest(message),
+    };
 
     this._messageRouter.reset();
-    for (const [command, handler] of entries) {
-      this._messageRouter.register(command, handler);
-    }
+    this._messageRouter.registerAll(handlerMap);
   }
 
   private async _handleOpenTerminalLink(message: WebviewMessage): Promise<void> {
@@ -1090,19 +1039,6 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     }
 
     try {
-      // Handle scrollback data responses first (special case)
-      if (message.command === 'scrollbackDataCollected') {
-        // Delegate to ScrollbackCoordinator
-        this._scrollbackCoordinator.handleScrollbackDataResponse(message);
-
-        // Also forward to StandardTerminalSessionManager for session persistence
-        if (this._standardSessionManager) {
-          this._standardSessionManager.handleScrollbackDataResponse(message);
-        }
-
-        return;
-      }
-
       // Minimal router: if a handler exists, use it and return
       const dispatched = await this._messageRouter.dispatch(message);
       if (dispatched) {
@@ -1263,6 +1199,14 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     } catch (error) {
       log('❌ [ERROR] Error handling webview message:', error);
       TerminalErrorHandler.handleWebviewError(error);
+    }
+  }
+
+  private async _handleScrollbackDataCollected(message: WebviewMessage): Promise<void> {
+    this._scrollbackCoordinator.handleScrollbackDataResponse(message);
+
+    if (this._standardSessionManager) {
+      this._standardSessionManager.handleScrollbackDataResponse(message);
     }
   }
 
