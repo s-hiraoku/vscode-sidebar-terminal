@@ -7,6 +7,7 @@ import { FitAddon } from '@xterm/addon-fit';
 import { SearchAddon } from '@xterm/addon-search';
 import { WebglAddon } from '@xterm/addon-webgl';
 import { Unicode11Addon } from '@xterm/addon-unicode11';
+import { SerializeAddon } from '@xterm/addon-serialize';
 import { PartialTerminalSettings, WebViewFontSettings } from '../../types/shared';
 import { AltClickState, TerminalInteractionEvent } from '../../types/common';
 import { ITerminalProfile } from '../../types/profiles';
@@ -35,6 +36,7 @@ export interface TerminalInstance {
   readonly searchAddon?: SearchAddon;
   readonly webglAddon?: WebglAddon;
   readonly unicode11Addon?: Unicode11Addon;
+  readonly serializeAddon?: SerializeAddon; // For scrollback with color preservation
 }
 
 export type TerminalDisplayMode = 'normal' | 'fullscreen' | 'split';
@@ -74,6 +76,7 @@ export interface IManagerCoordinator {
   getActiveTerminalId(): string | null;
   setActiveTerminalId(terminalId: string): void;
   getTerminalInstance(terminalId: string): TerminalInstance | undefined;
+  getSerializeAddon(terminalId: string): SerializeAddon | undefined;
   getAllTerminalInstances(): Map<string, TerminalInstance>;
   getAllTerminalContainers(): Map<string, HTMLElement>;
   getTerminalElement(terminalId: string): HTMLElement | undefined;

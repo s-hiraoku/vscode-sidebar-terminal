@@ -320,7 +320,8 @@ export class ConsolidatedTerminalPersistenceService
         },
       };
 
-      await this.context.globalState.update(`${STORAGE_KEY_PREFIX}main`, sessionData);
+      // Use workspaceState for per-workspace session isolation (multi-window support)
+      await this.context.workspaceState.update(`${STORAGE_KEY_PREFIX}main`, sessionData);
 
       log(`✅ [PERSISTENCE] Session saved: ${terminalData.length} terminals, ${cliAgentSessions.length} CLI agents`);
       return {
@@ -438,7 +439,8 @@ export class ConsolidatedTerminalPersistenceService
    */
   public getSessionInfo(): SessionInfo | null {
     try {
-      const sessionData = this.context.globalState.get<any>(`${STORAGE_KEY_PREFIX}main`);
+      // Use workspaceState for per-workspace session isolation (multi-window support)
+      const sessionData = this.context.workspaceState.get<any>(`${STORAGE_KEY_PREFIX}main`);
 
       if (!sessionData || !sessionData.terminals) {
         return { exists: false };
@@ -467,7 +469,8 @@ export class ConsolidatedTerminalPersistenceService
    */
   public async clearSession(): Promise<void> {
     try {
-      await this.context.globalState.update(`${STORAGE_KEY_PREFIX}main`, undefined);
+      // Use workspaceState for per-workspace session isolation (multi-window support)
+      await this.context.workspaceState.update(`${STORAGE_KEY_PREFIX}main`, undefined);
       log('🗑️ [PERSISTENCE] Session data cleared');
     } catch (error) {
       throw new PersistenceError(
@@ -672,7 +675,8 @@ export class ConsolidatedTerminalPersistenceService
   };
 
   private async getStoredSessionData(): Promise<any> {
-    return this.context.globalState.get(`${STORAGE_KEY_PREFIX}main`);
+    // Use workspaceState for per-workspace session isolation (multi-window support)
+    return this.context.workspaceState.get(`${STORAGE_KEY_PREFIX}main`);
   }
 
   private getPersistenceConfig() {

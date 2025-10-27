@@ -456,6 +456,11 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     return this.terminalLifecycleManager.getTerminalInstance(terminalId);
   }
 
+  public getSerializeAddon(terminalId: string): import('@xterm/addon-serialize').SerializeAddon | undefined {
+    const instance = this.terminalLifecycleManager.getTerminalInstance(terminalId);
+    return instance?.serializeAddon;
+  }
+
   public getAllTerminalInstances(): Map<string, TerminalInstance> {
     return this.terminalLifecycleManager.getAllTerminalInstances();
   }
