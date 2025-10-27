@@ -111,8 +111,6 @@ import { PerformanceManager } from './PerformanceManager';
 import { UIManager } from './UIManager';
 import { InputManager } from './InputManager';
 import { ConsolidatedMessageManager } from './ConsolidatedMessageManager';
-import { SimplePersistenceManager } from './SimplePersistenceManager';
-import { StandardTerminalPersistenceManager } from './StandardTerminalPersistenceManager';
 import { WebViewApiManager } from './WebViewApiManager';
 import { TerminalLifecycleManager } from './TerminalLifecycleManager';
 import { TerminalTabManager } from './TerminalTabManager';
@@ -160,9 +158,6 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
   private uiManager!: UIManager;
   public inputManager!: InputManager;
   public messageManager!: ConsolidatedMessageManager;
-  // DEPRECATED: WebView-side persistence removed - now handled Extension-side via PersistenceOrchestrator
-  // public persistenceManager: StandardTerminalPersistenceManager | SimplePersistenceManager | null = null;
-  // public simplePersistenceManager!: SimplePersistenceManager;
 
   // バージョン情報
   private versionInfo: string = 'v0.1.0';
@@ -298,15 +293,9 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     // Config Manager
     this.configManager = new ConfigManager();
 
-    // DEPRECATED: WebView-side persistence removed - now handled Extension-side via PersistenceOrchestrator
-    // 🚀 PHASE 3: Initialize persistence managers with proper API access
-    // this.simplePersistenceManager = new SimplePersistenceManager(this.webViewApiManager.getApi());
-    // this.optimizedPersistenceManager = new OptimizedTerminalPersistenceManager();
-
     // Message Manager は後で初期化
     this.messageManager = new ConsolidatedMessageManager();
     this.messageManager.setCoordinator(this); // 🆕 Coordinator を設定（×ボタン機能に必要）
-    // this.persistenceManager = this.simplePersistenceManager;
 
     // Set up coordinator relationships for specialized managers
     this.findInTerminalManager.setCoordinator(this);
