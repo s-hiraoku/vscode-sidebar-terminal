@@ -176,11 +176,8 @@ export class SerializationMessageHandler implements IMessageHandler {
       let errorMessage: string | undefined;
 
       try {
-        if (persistenceManager && typeof serializedContent === 'string' && serializedContent.length > 0) {
-          restored = Boolean(persistenceManager.restoreTerminalContent(terminalId, serializedContent));
-        }
-
-        if (!restored && scrollbackData && scrollbackData.length > 0 && restoreSessionFn) {
+        // VS Code-style ScrollbackService only (SerializeAddon no longer used)
+        if (scrollbackData && scrollbackData.length > 0 && restoreSessionFn) {
           restored = await restoreSessionFn({
             terminalId,
             terminalName:

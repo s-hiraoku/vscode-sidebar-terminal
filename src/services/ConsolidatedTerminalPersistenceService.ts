@@ -310,22 +310,12 @@ export class ConsolidatedTerminalPersistenceService
         };
       });
 
-      // Request serialization data from WebView
-      const serializationData = await this.requestSerializationFromWebView(
-        terminalData.map((t) => t.id)
-      );
-
-      // Detect CLI Agent sessions
-      const cliAgentSessions = this.detectCliAgentSessionsFromData(serializationData);
-
-      // Create session data
+      // Create session data (using ScrollbackService only, VS Code-compatible)
       const sessionData = {
         version: SESSION_VERSION,
         timestamp: Date.now(),
         activeTerminalId: activeTerminalId || null,
         terminals: terminalData,
-        serializationData: this.optimizeSerializationData(serializationData),
-        cliAgentSessions,
         config: {
           scrollbackLines: config.persistentSessionScrollback,
           reviveProcess: config.persistentSessionReviveProcess,
@@ -335,7 +325,7 @@ export class ConsolidatedTerminalPersistenceService
       // Use workspaceState for per-workspace session isolation (multi-window support)
       await this.context.workspaceState.update(`${STORAGE_KEY_PREFIX}main`, sessionData);
 
-      log(`✅ [PERSISTENCE] Session saved: ${terminalData.length} terminals, ${cliAgentSessions.length} CLI agents`);
+      log(`✅ [PERSISTENCE] Session saved: ${terminalData.length} terminals (ScrollbackService)`);
       return {
         success: true,
         terminalCount: terminalData.length,
@@ -408,9 +398,9 @@ export class ConsolidatedTerminalPersistenceService
       // Restore terminals using batch processing
       const restoredTerminals = await this.bulkTerminalRestore(sessionData.terminals);
 
-      // Restore serialized content
-      if (restoredTerminals.length > 0 && sessionData.serializationData) {
-        await this.sendRestorationToWebView(sessionData.terminals, sessionData.serializationData);
+      // Restore scrollback content (VS Code-style ScrollbackService)
+      if (restoredTerminals.length > 0) {
+        await this.sendRestorationToWebView(sessionData.terminals);
 
         // 🔧 FIX: Wait for WebView to finish processing terminalCreated messages
         // This prevents race condition where save is triggered before WebView creates terminals
@@ -418,8 +408,8 @@ export class ConsolidatedTerminalPersistenceService
         await this.delay(500 * restoredTerminals.length); // 500ms per terminal
       }
 
-      // Restore CLI Agent environments
-      if (sessionData.cliAgentSessions && sessionData.cliAgentSessions.length > 0) {
+      // Note: CLI Agent sessions no longer tracked via SerializeAddon
+      if (false && sessionData.cliAgentSessions && sessionData.cliAgentSessions.length > 0) {
         log(`🔄 [PERSISTENCE] Restoring ${sessionData.cliAgentSessions.length} CLI Agent sessions`);
         // CLI Agent environment restoration is handled by restoreCliAgentEnvironment
       }
@@ -616,9 +606,8 @@ export class ConsolidatedTerminalPersistenceService
         terminalData: terminalData.map((terminal) => ({
           id: terminal.id,
           name: terminal.name,
-          serializedContent: this.decompressContent(terminal.serializedContent, terminal.metadata),
           isActive: terminal.isActive,
-          scrollback: terminal.scrollback, // Extension-side scrollback from ScrollbackService
+          scrollback: terminal.scrollback, // VS Code-style ScrollbackService only (no SerializeAddon)
         })),
         timestamp: Date.now(),
       });
@@ -829,14 +818,14 @@ export class ConsolidatedTerminalPersistenceService
     return this.handleSerializationRequest(terminalIds);
   }
 
-  private async sendRestorationToWebView(terminals: TerminalSessionData[], serializationData: any): Promise<void> {
+  private async sendRestorationToWebView(terminals: TerminalSessionData[]): Promise<void> {
     const terminalData: TerminalRestoreData[] = terminals.map((terminal) => ({
       id: terminal.id,
       name: terminal.name,
-      serializedContent: serializationData[terminal.id]?.content || '',
+      serializedContent: '', // No longer using SerializeAddon
       isActive: terminal.isActive,
-      scrollback: terminal.scrollback, // Include Extension-side scrollback from ScrollbackService
-      metadata: serializationData[terminal.id]?.metadata,
+      scrollback: terminal.scrollback, // VS Code-style ScrollbackService only
+      metadata: undefined,
     }));
 
     await this.handleRestorationRequest(terminalData);

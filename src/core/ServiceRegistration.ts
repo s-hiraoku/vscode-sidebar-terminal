@@ -10,6 +10,8 @@ import { ServiceLifetime } from './DIContainer';
 import type { EventBus } from './EventBus';
 import { BufferManagementService } from '../services/buffer/BufferManagementService';
 import { IBufferManagementService } from '../services/buffer/IBufferManagementService';
+import { TerminalStateService } from '../services/state/TerminalStateService';
+import { ITerminalStateService } from '../services/state/ITerminalStateService';
 
 /**
  * Register Phase 2 services in the DI container
@@ -31,8 +33,14 @@ export function registerPhase2Services(
     ServiceLifetime.Singleton
   );
 
+  // Register TerminalStateService (Phase 2 Week 2)
+  container.register(
+    ITerminalStateService,
+    () => new TerminalStateService(eventBus),
+    ServiceLifetime.Singleton
+  );
+
   // Future Phase 2 services will be registered here:
-  // - TerminalStateService (Week 2)
   // - Additional services as needed
 }
 
@@ -53,5 +61,17 @@ export class ServiceFactory {
     eventBus: EventBus
   ): BufferManagementService {
     return new BufferManagementService(eventBus);
+  }
+
+  /**
+   * Create a TerminalStateService instance
+   *
+   * @param eventBus EventBus instance for event publishing
+   * @returns TerminalStateService instance
+   */
+  static createTerminalStateService(
+    eventBus: EventBus
+  ): TerminalStateService {
+    return new TerminalStateService(eventBus);
   }
 }
