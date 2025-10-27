@@ -150,6 +150,7 @@ export interface TerminalRestoreData {
   name: string;
   serializedContent: string;
   isActive: boolean;
+  scrollback?: string[]; // Extension-side scrollback from ScrollbackService
   metadata?: {
     originalSize: number;
     compressed: boolean;
@@ -288,15 +289,26 @@ export class ConsolidatedTerminalPersistenceService
         return { success: true, terminalCount: 0 };
       }
 
-      // Prepare terminal session data
-      const terminalData: TerminalSessionData[] = terminals.map((terminal) => ({
-        id: terminal.id,
-        name: terminal.name,
-        number: terminal.number ?? 1,
-        cwd: terminal.cwd || safeProcessCwd(),
-        isActive: terminal.id === activeTerminalId,
-        lastActivity: Date.now(),
-      }));
+      // Prepare terminal session data with scrollback from ScrollbackService
+      const terminalData: TerminalSessionData[] = terminals.map((terminal) => {
+        // Get scrollback data from ScrollbackService (Extension-side PTY recording)
+        const scrollbackData = this.terminalManager.getScrollbackData(terminal.id, {
+          scrollback: config.persistentSessionScrollback,
+        });
+
+        // Convert scrollback string to array format
+        const scrollback = scrollbackData ? scrollbackData.split('\n').filter(line => line.length > 0) : undefined;
+
+        return {
+          id: terminal.id,
+          name: terminal.name,
+          number: terminal.number ?? 1,
+          cwd: terminal.cwd || safeProcessCwd(),
+          isActive: terminal.id === activeTerminalId,
+          scrollback, // VS Code-style scrollback from ScrollbackService
+          lastActivity: Date.now(),
+        };
+      });
 
       // Request serialization data from WebView
       const serializationData = await this.requestSerializationFromWebView(
@@ -606,6 +618,7 @@ export class ConsolidatedTerminalPersistenceService
           name: terminal.name,
           serializedContent: this.decompressContent(terminal.serializedContent, terminal.metadata),
           isActive: terminal.isActive,
+          scrollback: terminal.scrollback, // Extension-side scrollback from ScrollbackService
         })),
         timestamp: Date.now(),
       });
@@ -822,6 +835,7 @@ export class ConsolidatedTerminalPersistenceService
       name: terminal.name,
       serializedContent: serializationData[terminal.id]?.content || '',
       isActive: terminal.isActive,
+      scrollback: terminal.scrollback, // Include Extension-side scrollback from ScrollbackService
       metadata: serializationData[terminal.id]?.metadata,
     }));
 
