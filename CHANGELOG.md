@@ -5,6 +5,42 @@ All notable changes to the "Secondary Terminal" extension will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Multi-Window Session Isolation**: Implemented workspace-based session storage for proper multi-window support
+  - Each VS Code window now maintains independent terminal sessions
+  - Sessions are isolated by workspace using `workspaceState` instead of `globalState`
+  - Prevents session conflicts when multiple VS Code windows are open
+  - Improved reliability for developers working with multiple projects simultaneously
+
+### Fixed
+- **Terminal Session Save/Restore**: Complete overhaul of terminal session save/restore system
+  - Fixed session restoration failures in multi-window scenarios
+  - Implemented proper workspace isolation for session data
+  - Sessions now correctly restore in the workspace where they were created
+  - Resolved race conditions in session save/restore operations
+- **ANSI Color Preservation**: Terminal scrollback now preserves ANSI color codes
+  - Color formatting maintained across session restoration
+  - Improved visual consistency for terminal output history
+  - Better preservation of syntax-highlighted output from CLI tools
+- **Code Quality**: Fixed ESLint errors by removing unused imports and variables
+  - Removed unused `MessageHandler`, `PanelLocation`, `PersistenceResponse`, `sinon` imports
+  - Added proper naming convention for unused constants (`_MAX_SCROLLBACK_LINES`)
+  - Clean compilation with 0 errors, 235 warnings (type-safety related)
+
+### Refactoring
+- **Terminal Modularity (Phase 6)**: Completed terminal architecture refactoring
+  - Extracted terminal core services for better separation of concerns
+  - Implemented `TerminalPersistencePort` interface for clean persistence layer
+  - Added router map pattern for message handling
+  - Improved testability and maintainability of terminal subsystem
+- **Test Infrastructure**: Comprehensive test infrastructure improvements
+  - Migrated tests to base class patterns (WebViewTest, ConfigurationTest)
+  - Added test infrastructure metrics script for quality monitoring
+  - Enhanced test coverage for terminal core services
+  - 1,339 passing tests with improved reliability
+
 ## [0.1.121] - 2025-01-15
 
 ### Fixed
