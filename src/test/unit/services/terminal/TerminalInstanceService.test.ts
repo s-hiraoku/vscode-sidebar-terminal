@@ -1,13 +1,13 @@
 import * as assert from 'assert';
 import { BaseTest } from '../../../utils';
-import { TerminalLifecycleService } from '../../../../services/terminal/TerminalLifecycleService';
+import { TerminalInstanceService } from '../../../../services/terminal/TerminalInstanceService';
 
-class TerminalLifecycleServiceTest extends BaseTest {
-  public service!: TerminalLifecycleService;
+class TerminalInstanceServiceTest extends BaseTest {
+  public service!: TerminalInstanceService;
 
   protected override setup(): void {
     super.setup();
-    this.service = new TerminalLifecycleService();
+    this.service = new TerminalInstanceService();
   }
 
   protected override teardown(): void {
@@ -18,8 +18,8 @@ class TerminalLifecycleServiceTest extends BaseTest {
   }
 }
 
-describe('TerminalLifecycleService', () => {
-  const test = new TerminalLifecycleServiceTest();
+describe('TerminalInstanceService', () => {
+  const test = new TerminalInstanceServiceTest();
 
   beforeEach(() => test.beforeEach());
   afterEach(() => test.afterEach());

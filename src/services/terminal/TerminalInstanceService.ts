@@ -26,16 +26,23 @@ interface TerminalCreationOptions {
 }
 
 /**
- * Service responsible for terminal lifecycle management
+ * Terminal Instance Service
  *
- * This service extracts terminal creation, initialization, and disposal logic
- * from TerminalManager to improve:
- * - Single Responsibility: Focus only on terminal lifecycle
- * - Testability: Isolated terminal creation logic
- * - Reusability: Can be used by other components
- * - Maintainability: Cleaner separation of concerns
+ * VS Code pattern: ITerminalInstanceService implementation
+ * Responsible for creating and disposing terminal instances.
+ *
+ * Based on VS Code's ITerminalInstanceService - separates instance creation
+ * from service orchestration (TerminalManager/ITerminalService).
+ *
+ * Responsibilities:
+ * - Terminal instance creation (PTY spawning)
+ * - Instance initialization (shell integration)
+ * - Instance disposal (process cleanup)
+ * - Terminal profile resolution
+ *
+ * @see src/terminals/interfaces/ITerminalService.ts
  */
-export class TerminalLifecycleService {
+export class TerminalInstanceService {
   private readonly _terminalNumberManager: TerminalNumberManager;
   private readonly _profileService: TerminalProfileService;
   private _shellIntegrationService: ShellIntegrationService | null = null;
@@ -48,7 +55,7 @@ export class TerminalLifecycleService {
     this._terminalNumberManager = new TerminalNumberManager(config.maxTerminals);
     this._profileService = new TerminalProfileService();
 
-    log('🔄 [LifecycleService] Terminal lifecycle service initialized');
+    log('🔄 [InstanceService] Terminal instance service initialized');
   }
 
   /**
@@ -64,7 +71,7 @@ export class TerminalLifecycleService {
       }
 
       this._terminalsBeingCreated.add(terminalId);
-      log(`🚀 [LifecycleService] Creating terminal ${terminalId} with options:`, options);
+      log(`🚀 [InstanceService] Creating terminal ${terminalId} with options:`, options);
 
       // Get terminal number from manager
       const terminals = new Map<string, TerminalInstance>(); // Empty for first terminal
@@ -84,7 +91,7 @@ export class TerminalLifecycleService {
       const terminalName = options.terminalName || generateTerminalName(terminalNumber);
 
       log(
-        `🔧 [LifecycleService] Terminal config: shell=${shell}, args=[${shellArgs.join(', ')}], cwd=${cwd}`
+        `🔧 [InstanceService] Terminal config: shell=${shell}, args=[${shellArgs.join(', ')}], cwd=${cwd}`
       );
 
       // Create PTY process
@@ -112,12 +119,12 @@ export class TerminalLifecycleService {
       // Initialize shell integration if available
       this.initializeShellIntegration(terminal, options.safeMode || false);
 
-      log(`✅ [LifecycleService] Terminal created successfully: ${terminalId} (${terminalName})`);
+      log(`✅ [InstanceService] Terminal created successfully: ${terminalId} (${terminalName})`);
       return terminal;
     } catch (error) {
       // No need to release number as allocation failed
 
-      log(`❌ [LifecycleService] Failed to create terminal ${terminalId}:`, error);
+      log(`❌ [InstanceService] Failed to create terminal ${terminalId}:`, error);
       throw error;
     } finally {
       this._terminalsBeingCreated.delete(terminalId);
@@ -129,7 +136,7 @@ export class TerminalLifecycleService {
    */
   async disposeTerminal(terminal: TerminalInstance): Promise<void> {
     try {
-      log(`🗑️ [LifecycleService] Disposing terminal ${terminal.id} (${terminal.name})`);
+      log(`🗑️ [InstanceService] Disposing terminal ${terminal.id} (${terminal.name})`);
 
       // Kill PTY process
       if (terminal.pty) {
@@ -139,23 +146,23 @@ export class TerminalLifecycleService {
         await new Promise((resolve) => setTimeout(resolve, 100));
 
         // Force kill if still alive (IPty doesn't have killed property, so we just attempt force kill)
-        log(`🔨 [LifecycleService] Force killing terminal process ${terminal.id}`);
+        log(`🔨 [InstanceService] Force killing terminal process ${terminal.id}`);
         terminal.pty.kill('SIGKILL');
       }
 
       // Terminal number will be released by caller
       if (terminal.number) {
-        log(`🔢 [LifecycleService] Terminal number ${terminal.number} will be released by caller`);
+        log(`🔢 [InstanceService] Terminal number ${terminal.number} will be released by caller`);
       }
 
       // Clean up shell integration (method not available in current implementation)
       if (this._shellIntegrationService) {
-        log(`🧹 [LifecycleService] Shell integration cleanup skipped for terminal ${terminal.id}`);
+        log(`🧹 [InstanceService] Shell integration cleanup skipped for terminal ${terminal.id}`);
       }
 
-      log(`✅ [LifecycleService] Terminal ${terminal.id} disposed successfully`);
+      log(`✅ [InstanceService] Terminal ${terminal.id} disposed successfully`);
     } catch (error) {
-      log(`❌ [LifecycleService] Error disposing terminal ${terminal.id}:`, error);
+      log(`❌ [InstanceService] Error disposing terminal ${terminal.id}:`, error);
       throw error;
     }
   }
@@ -166,14 +173,14 @@ export class TerminalLifecycleService {
   resizeTerminal(terminal: TerminalInstance, cols: number, rows: number): void {
     try {
       if (!terminal.pty) {
-        log(`⚠️ [LifecycleService] Cannot resize terminal without PTY ${terminal.id}`);
+        log(`⚠️ [InstanceService] Cannot resize terminal without PTY ${terminal.id}`);
         return;
       }
 
       terminal.pty.resize(cols, rows);
-      log(`📏 [LifecycleService] Resized terminal ${terminal.id} to ${cols}x${rows}`);
+      log(`📏 [InstanceService] Resized terminal ${terminal.id} to ${cols}x${rows}`);
     } catch (error) {
-      log(`❌ [LifecycleService] Error resizing terminal ${terminal.id}:`, error);
+      log(`❌ [InstanceService] Error resizing terminal ${terminal.id}:`, error);
       throw error;
     }
   }
@@ -184,14 +191,14 @@ export class TerminalLifecycleService {
   sendInputToTerminal(terminal: TerminalInstance, data: string): void {
     try {
       if (!terminal.pty) {
-        log(`⚠️ [LifecycleService] Cannot send input to terminal without PTY ${terminal.id}`);
+        log(`⚠️ [InstanceService] Cannot send input to terminal without PTY ${terminal.id}`);
         return;
       }
 
       terminal.pty.write(data);
-      log(`⌨️ [LifecycleService] Sent ${data.length} chars to terminal ${terminal.id}`);
+      log(`⌨️ [InstanceService] Sent ${data.length} chars to terminal ${terminal.id}`);
     } catch (error) {
-      log(`❌ [LifecycleService] Error sending input to terminal ${terminal.id}:`, error);
+      log(`❌ [InstanceService] Error sending input to terminal ${terminal.id}:`, error);
       throw error;
     }
   }
@@ -235,16 +242,16 @@ export class TerminalLifecycleService {
           // const profile = await this._profileService.getProfile(requestedProfile);
           // Profile service method not available, using default
           log(
-            `⚠️ [LifecycleService] Profile service not available, using default for: ${requestedProfile}`
+            `⚠️ [InstanceService] Profile service not available, using default for: ${requestedProfile}`
           );
         } catch (error) {
-          log(`⚠️ [LifecycleService] Error getting profile ${requestedProfile}:`, error);
+          log(`⚠️ [InstanceService] Error getting profile ${requestedProfile}:`, error);
         }
       }
 
       // Fallback to platform default
       const defaultShell = getShellForPlatform();
-      log(`📋 [LifecycleService] Using default shell: ${defaultShell}`);
+      log(`📋 [InstanceService] Using default shell: ${defaultShell}`);
 
       return {
         shell: defaultShell,
@@ -252,7 +259,7 @@ export class TerminalLifecycleService {
         description: 'Default Shell',
       };
     } catch (error) {
-      log(`❌ [LifecycleService] Error resolving terminal profile:`, error);
+      log(`❌ [InstanceService] Error resolving terminal profile:`, error);
 
       // Final fallback
       return {
@@ -291,7 +298,7 @@ export class TerminalLifecycleService {
         },
       };
 
-      log(`🔧 [LifecycleService] Creating PTY process: ${shell} ${args.join(' ')}`);
+      log(`🔧 [InstanceService] Creating PTY process: ${shell} ${args.join(' ')}`);
 
       const ptyProcess = pty.spawn(shell, args, ptyOptions);
 
@@ -300,10 +307,10 @@ export class TerminalLifecycleService {
         throw new Error(`Failed to spawn PTY process for shell: ${shell}`);
       }
 
-      log(`✅ [LifecycleService] PTY process created with PID: ${ptyProcess.pid}`);
+      log(`✅ [InstanceService] PTY process created with PID: ${ptyProcess.pid}`);
       return ptyProcess;
     } catch (error) {
-      log(`❌ [LifecycleService] Failed to create PTY process:`, error);
+      log(`❌ [InstanceService] Failed to create PTY process:`, error);
       throw new Error(`Terminal creation failed: ${String(error)}`);
     }
   }
@@ -316,23 +323,23 @@ export class TerminalLifecycleService {
       // Shell integration service initialization skipped due to constructor requirements
       if (!this._shellIntegrationService) {
         // this._shellIntegrationService = new ShellIntegrationService();
-        log(`⚠️ [LifecycleService] Shell integration service initialization skipped`);
+        log(`⚠️ [InstanceService] Shell integration service initialization skipped`);
       }
 
       // Skip shell integration in safe mode
       if (safeMode) {
         log(
-          `⚠️ [LifecycleService] Skipping shell integration for safe mode terminal ${terminal.id}`
+          `⚠️ [InstanceService] Skipping shell integration for safe mode terminal ${terminal.id}`
         );
         return;
       }
 
       // this._shellIntegrationService.attachToTerminal(terminal);
       // Method not available in current implementation
-      log(`🔗 [LifecycleService] Shell integration attachment skipped for terminal ${terminal.id}`);
+      log(`🔗 [InstanceService] Shell integration attachment skipped for terminal ${terminal.id}`);
     } catch (error) {
       log(
-        `⚠️ [LifecycleService] Failed to initialize shell integration for terminal ${terminal.id}:`,
+        `⚠️ [InstanceService] Failed to initialize shell integration for terminal ${terminal.id}:`,
         error
       );
       // Non-fatal: continue without shell integration
@@ -343,7 +350,7 @@ export class TerminalLifecycleService {
    * Dispose of all resources
    */
   dispose(): void {
-    log('🧹 [LifecycleService] Disposing terminal lifecycle service');
+    log('🧹 [InstanceService] Disposing terminal lifecycle service');
 
     try {
       // Clear creation tracking
@@ -355,9 +362,9 @@ export class TerminalLifecycleService {
         this._shellIntegrationService = null;
       }
 
-      log('✅ [LifecycleService] Terminal lifecycle service disposed');
+      log('✅ [InstanceService] Terminal lifecycle service disposed');
     } catch (error) {
-      log('❌ [LifecycleService] Error disposing terminal lifecycle service:', error);
+      log('❌ [InstanceService] Error disposing terminal lifecycle service:', error);
     }
   }
 }

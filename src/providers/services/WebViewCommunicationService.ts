@@ -96,6 +96,8 @@ export class WebViewCommunicationService {
         (error.message.includes('disposed') || error.message.includes('Webview is disposed'))
       ) {
         log('⚠️ [COMMUNICATION] Webview disposed during message send');
+        this._isReady = false;
+        this._enqueueMessage(message);
         return;
       }
 
@@ -117,7 +119,12 @@ export class WebViewCommunicationService {
         command: 'versionInfo',
         version: formattedVersion,
       });
-      log(`📤 [COMMUNICATION] Sent version info to WebView: ${formattedVersion}`);
+
+      if (this._isDeliveryReady()) {
+        log(`📤 [COMMUNICATION] Sent version info to WebView: ${formattedVersion}`);
+      } else {
+        log(`⏳ [COMMUNICATION] Queued version info for WebView: ${formattedVersion}`);
+      }
     } catch (error) {
       log('❌ [COMMUNICATION] Error sending version info:', error);
     }
@@ -132,7 +139,12 @@ export class WebViewCommunicationService {
       settings,
       fontSettings,
     });
-    log('📤 [COMMUNICATION] Settings sent to WebView');
+
+    if (this._isDeliveryReady()) {
+      log('📤 [COMMUNICATION] Settings sent to WebView');
+    } else {
+      log('⏳ [COMMUNICATION] Settings queued for WebView delivery');
+    }
   }
 
   /**
@@ -144,7 +156,14 @@ export class WebViewCommunicationService {
         command: 'initializationComplete',
         terminalCount,
       });
-      log(`📤 [COMMUNICATION] Sent initialization complete (${terminalCount} terminals)`);
+
+      if (this._isDeliveryReady()) {
+        log(`📤 [COMMUNICATION] Sent initialization complete (${terminalCount} terminals)`);
+      } else {
+        log(
+          `⏳ [COMMUNICATION] Queued initialization complete (${terminalCount} terminals) until webview ready`
+        );
+      }
     } catch (error) {
       log('❌ [COMMUNICATION] Failed to send initialization complete:', error);
     }
@@ -158,7 +177,12 @@ export class WebViewCommunicationService {
       await this.sendMessage({
         command: 'requestPanelLocationDetection',
       });
-      log('📤 [COMMUNICATION] Requested panel location detection from WebView');
+
+      if (this._isDeliveryReady()) {
+        log('📤 [COMMUNICATION] Requested panel location detection from WebView');
+      } else {
+        log('⏳ [COMMUNICATION] Queued panel location detection request until webview ready');
+      }
     } catch (error) {
       log('❌ [COMMUNICATION] Failed to request panel location detection:', error);
     }
@@ -218,5 +242,9 @@ export class WebViewCommunicationService {
     for (const queuedMessage of queuedMessages) {
       await this._sendMessageDirect(queuedMessage);
     }
+  }
+
+  private _isDeliveryReady(): boolean {
+    return !!this._view && this._isReady;
   }
 }
