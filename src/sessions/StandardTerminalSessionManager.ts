@@ -127,7 +127,8 @@ export class StandardTerminalSessionManager {
         scrollbackData: scrollbackData || {},
       };
 
-      await this.context.globalState.update(
+      // Use workspaceState for per-workspace session isolation (multi-window support)
+      await this.context.workspaceState.update(
         StandardTerminalSessionManager.STORAGE_KEY,
         sessionData
       );
@@ -165,7 +166,8 @@ export class StandardTerminalSessionManager {
     version?: string;
   } | null {
     try {
-      const sessionData = this.context.globalState.get<{
+      // Use workspaceState for per-workspace session isolation (multi-window support)
+      const sessionData = this.context.workspaceState.get<{
         terminals: Array<{
           id: string;
           name: string;
@@ -223,7 +225,8 @@ export class StandardTerminalSessionManager {
         return { success: true, restoredCount: 0, skippedCount: 0 };
       }
 
-      const sessionData = this.context.globalState.get<{
+      // Use workspaceState for per-workspace session isolation (multi-window support)
+      const sessionData = this.context.workspaceState.get<{
         terminals: Array<{
           id: string;
           name: string;
@@ -794,7 +797,8 @@ export class StandardTerminalSessionManager {
     }
 
     try {
-      const sessionData = this.context.globalState.get<{
+      // Use workspaceState for per-workspace session isolation (multi-window support)
+      const sessionData = this.context.workspaceState.get<{
         terminals: Array<{
           id: string;
           name: string;
@@ -839,7 +843,8 @@ export class StandardTerminalSessionManager {
    */
   public async clearSession(): Promise<void> {
     try {
-      await this.context.globalState.update(StandardTerminalSessionManager.STORAGE_KEY, undefined);
+      // Use workspaceState for per-workspace session isolation (multi-window support)
+      await this.context.workspaceState.update(StandardTerminalSessionManager.STORAGE_KEY, undefined);
       log('🗑️ [STANDARD-SESSION] Session data cleared');
     } catch (error) {
       log(`❌ [STANDARD-SESSION] Failed to clear session: ${String(error)}`);
