@@ -130,10 +130,21 @@ export class DIContainer implements vscode.Disposable {
     }
 
     // Try to resolve from current container
-    const registration = this._services.get(token.id) as ServiceRegistration<T> | undefined;
+    let registration = this._services.get(token.id) as ServiceRegistration<T> | undefined;
 
-    // If not found in current container, try parent container
+    // If not found in current container, check parent
     if (!registration && this._parentContainer) {
+      // Get registration from parent
+      const parentRegistration = this._parentContainer._services.get(
+        token.id
+      ) as ServiceRegistration<T> | undefined;
+
+      // For scoped services, handle them in the current scope (not delegate to parent)
+      if (parentRegistration?.lifetime === ServiceLifetime.Scoped) {
+        return this._resolveScoped(token.id, parentRegistration);
+      }
+
+      // For other lifetimes, delegate to parent
       return this._parentContainer.resolve(token);
     }
 
@@ -285,15 +296,11 @@ export class DIContainer implements vscode.Disposable {
 
   private _resolveScoped<T>(id: string, registration: ServiceRegistration<T>): T {
     // Scoped services are singletons within a scope
-    // If this is a root container, treat as singleton
-    if (!this._parentContainer) {
-      return this._resolveSingleton(id, registration);
-    }
-
-    // For scoped containers, create instance if not exists
+    // Check if instance already exists in this scope's cache
     let instance = this._singletons.get(id) as T | undefined;
 
     if (!instance) {
+      // Create new instance for this scope
       this._resolutionStack.push(id);
       try {
         instance = registration.factory(this);

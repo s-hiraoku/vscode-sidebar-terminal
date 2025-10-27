@@ -9,6 +9,7 @@ import * as vscode from 'vscode';
 import { provider as log } from '../../utils/logger';
 import { TerminalErrorHandler } from '../../utils/feedback';
 import { WebviewMessage } from '../../types/common';
+import type { PartialTerminalSettings, WebViewFontSettings } from '../../types/shared';
 
 /**
  * WebView Communication Service
@@ -133,7 +134,10 @@ export class WebViewCommunicationService {
   /**
    * Send settings to WebView
    */
-  public async sendSettings(settings: unknown, fontSettings?: unknown): Promise<void> {
+  public async sendSettings(
+    settings: PartialTerminalSettings,
+    fontSettings?: WebViewFontSettings
+  ): Promise<void> {
     await this.sendMessage({
       command: 'updateSettings',
       settings,
