@@ -322,16 +322,10 @@ export class SerializationMessageHandler implements IMessageHandler {
       const terminalIds = Array.isArray((msg as any).terminalIds)
         ? ((msg as any).terminalIds as string[])
         : [];
-      const scrollbackLines = (msg as any).scrollbackLines;
+      const scrollbackLines = (msg as any).scrollbackLines || 1000;
       const serializationData: Record<string, string> = {};
       const requestId = (msg as any).requestId;
       const messageId = (msg as any).messageId;
-
-      // Use existing persistence manager for serialization
-      const persistenceManager = (coordinator as any).persistenceManager;
-      if (!persistenceManager) {
-        throw new Error('Persistence manager not available');
-      }
 
       if (terminalIds.length === 0) {
         coordinator.postMessageToExtension({
@@ -345,19 +339,48 @@ export class SerializationMessageHandler implements IMessageHandler {
         return;
       }
 
-      // Get serialized content from each terminal via persistence manager
+      // Extract serialized content from each terminal using SerializeAddon
       terminalIds.forEach((terminalId: string) => {
         try {
-          // Use serializeTerminal method which returns the serialized content
-          const serialized = persistenceManager.serializeTerminal(terminalId, {
-            scrollback: typeof scrollbackLines === 'number' ? scrollbackLines : undefined,
-          });
-          const serializedContent = serialized?.content ?? '';
+          // Get terminal instance
+          const terminalInstance = coordinator.getTerminalInstance(terminalId);
+          if (!terminalInstance) {
+            this.logger.warn(`Terminal ${terminalId} not found for serialization`);
+            return;
+          }
+
+          // Get SerializeAddon for color-preserving serialization
+          const serializeAddon = coordinator.getSerializeAddon(terminalId);
+
+          let serializedContent = '';
+
+          if (serializeAddon) {
+            // Use SerializeAddon for color preservation
+            this.logger.info(`✅ Using SerializeAddon for terminal ${terminalId} serialization`);
+            const fullContent = serializeAddon.serialize();
+            const lines = fullContent.split('\n');
+            const startIndex = Math.max(0, lines.length - scrollbackLines);
+            serializedContent = lines.slice(startIndex).join('\n');
+          } else {
+            // Fallback: Extract plain text from buffer
+            this.logger.warn(`⚠️ SerializeAddon not available for terminal ${terminalId}, using plain text`);
+            const buffer = terminalInstance.terminal.buffer.active;
+            const lines: string[] = [];
+            const startLine = Math.max(0, buffer.length - scrollbackLines);
+
+            for (let i = startLine; i < buffer.length; i++) {
+              const line = buffer.getLine(i);
+              if (line) {
+                lines.push(line.translateToString());
+              }
+            }
+            serializedContent = lines.join('\n');
+          }
 
           if (serializedContent.length > 0) {
             serializationData[terminalId] = serializedContent;
             this.logger.info(
-              `Serialized terminal ${terminalId}: ${serializedContent.length} chars`
+              `✅ Serialized terminal ${terminalId}: ${serializedContent.length} chars (${serializedContent.split('\n').length} lines)`
             );
           } else {
             this.logger.warn(`No serialized content for terminal ${terminalId}`);
@@ -377,7 +400,7 @@ export class SerializationMessageHandler implements IMessageHandler {
       });
 
       this.logger.info(
-        `Terminal serialization completed for ${Object.keys(serializationData).length} terminals`
+        `✅ Terminal serialization completed for ${Object.keys(serializationData).length}/${terminalIds.length} terminals`
       );
     } catch (error) {
       this.logger.error('Error during terminal serialization:', error);
