@@ -111,9 +111,8 @@ import { PerformanceManager } from './PerformanceManager';
 import { UIManager } from './UIManager';
 import { InputManager } from './InputManager';
 import { ConsolidatedMessageManager } from './ConsolidatedMessageManager';
-// DEPRECATED: WebView-side persistence removed - now handled Extension-side via PersistenceOrchestrator
-// import { OptimizedTerminalPersistenceManager } from '../services/OptimizedPersistenceManager';
-// import { SimplePersistenceManager } from './SimplePersistenceManager';
+import { SimplePersistenceManager } from './SimplePersistenceManager';
+import { StandardTerminalPersistenceManager } from './StandardTerminalPersistenceManager';
 import { WebViewApiManager } from './WebViewApiManager';
 import { TerminalLifecycleManager } from './TerminalLifecycleManager';
 import { TerminalTabManager } from './TerminalTabManager';
@@ -162,8 +161,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
   public inputManager!: InputManager;
   public messageManager!: ConsolidatedMessageManager;
   // DEPRECATED: WebView-side persistence removed - now handled Extension-side via PersistenceOrchestrator
-  // public persistenceManager: OptimizedTerminalPersistenceManager | SimplePersistenceManager | null = null;
-  // public optimizedPersistenceManager!: OptimizedTerminalPersistenceManager;
+  // public persistenceManager: StandardTerminalPersistenceManager | SimplePersistenceManager | null = null;
   // public simplePersistenceManager!: SimplePersistenceManager;
 
   // バージョン情報
@@ -499,7 +497,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     findInTerminal?: IFindInTerminalManager;
     profile?: IProfileManager;
     tabs?: ITerminalTabManager;
-    persistence: OptimizedTerminalPersistenceManager | SimplePersistenceManager | null;
+    persistence: StandardTerminalPersistenceManager | SimplePersistenceManager | null;
     terminalContainer?: ITerminalContainerManager;
     displayMode?: IDisplayModeManager;
     header?: IHeaderManager;
@@ -514,8 +512,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       findInTerminal: this.findInTerminalManager,
       profile: this.profileManager,
       tabs: this.terminalTabManager,
-      // DEPRECATED: WebView-side persistence removed
-      // persistence: this.persistenceManager,
+      persistence: null,
       terminalContainer: this.terminalContainerManager,
       displayMode: this.displayModeManager,
       header: this.headerManager,

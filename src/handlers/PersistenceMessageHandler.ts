@@ -98,13 +98,13 @@ export class PersistenceMessageHandler {
         };
       }
 
-      await this.persistenceService.saveSession(terminalData);
+      const result = await this.persistenceService.saveCurrentSession();
 
-      log(`✅ [MSG-HANDLER] Session saved successfully: ${terminalData.length} terminals`);
+      log(`✅ [MSG-HANDLER] Session saved successfully via persistence service`);
       return {
-        success: true,
-        terminalCount: terminalData.length,
-        data: 'Session saved successfully',
+        success: result.success,
+        terminalCount: result.terminalCount,
+        data: result,
       };
     } catch (error) {
       const errorMsg =
@@ -125,23 +125,25 @@ export class PersistenceMessageHandler {
    */
   private async handleRestoreSession(): Promise<PersistenceResponse> {
     try {
-      const restoredTerminals = await this.persistenceService.restoreSession();
+      const result = await this.persistenceService.restoreSession(true);
 
-      if (restoredTerminals.length === 0) {
-        log('📦 [MSG-HANDLER] No session to restore');
+      if (!result.success) {
+        log(`📦 [MSG-HANDLER] Restoration failed: ${result.error?.message ?? 'unknown error'}`);
         return {
-          success: true,
-          terminalCount: 0,
-          data: [],
-          error: 'No session found to restore',
+          success: false,
+          error: result.error?.message ?? 'Restore operation failed',
         };
       }
 
-      log(`✅ [MSG-HANDLER] Session restored successfully: ${restoredTerminals.length} terminals`);
+      log(
+        `✅ [MSG-HANDLER] Session restored successfully: ${result.restoredCount}/${
+          (result.restoredCount || 0) + (result.skippedCount || 0)
+        } terminals`
+      );
       return {
         success: true,
-        terminalCount: restoredTerminals.length,
-        data: restoredTerminals,
+        terminalCount: result.restoredCount,
+        data: result,
       };
     } catch (error) {
       const errorMsg =
@@ -162,7 +164,7 @@ export class PersistenceMessageHandler {
    */
   private async handleClearSession(): Promise<PersistenceResponse> {
     try {
-      await this.persistenceService.cleanupExpiredSessions();
+      await this.persistenceService.clearSession();
 
       log('✅ [MSG-HANDLER] Session cleared successfully');
       return {

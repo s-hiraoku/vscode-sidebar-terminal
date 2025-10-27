@@ -14,14 +14,12 @@ describe('PersistenceOrchestrator', () => {
   let sendMessage: sinon.SinonStub;
   let handler: sinon.SinonStubbedInstance<PersistenceMessageHandler>;
   let service: sinon.SinonStubbedInstance<ConsolidatedTerminalPersistenceService>;
-  let scrollbackCoordinator: { requestScrollbackData: sinon.SinonStub };
   let terminalManager: {
     getTerminals: sinon.SinonStub;
     createTerminal: sinon.SinonStub;
     getTerminal: sinon.SinonStub;
     setActiveTerminal: sinon.SinonStub;
   };
-  let delayStub: sinon.SinonStub;
   let orchestrator: PersistenceOrchestrator;
   let terminalStore: Map<string, any>;
 
@@ -31,9 +29,6 @@ describe('PersistenceOrchestrator', () => {
       subscriptions: [],
     } as unknown as vscode.ExtensionContext;
     sendMessage = sandbox.stub().resolves();
-    scrollbackCoordinator = {
-      requestScrollbackData: sandbox.stub().resolves([]),
-    };
     terminalStore = new Map();
     terminalManager = {
       getTerminals: sandbox.stub().returns([]),
@@ -46,21 +41,20 @@ describe('PersistenceOrchestrator', () => {
       getTerminal: sandbox.stub().callsFake((id: string) => terminalStore.get(id)),
       setActiveTerminal: sandbox.stub(),
     };
-    delayStub = sandbox.stub().resolves();
 
     handler = sandbox.createStubInstance(PersistenceMessageHandler);
     handler.handleMessage.resolves({ success: true, data: [] });
-    service = sandbox.createStubInstance(UnifiedTerminalPersistenceService);
+    service = sandbox.createStubInstance(ConsolidatedTerminalPersistenceService as any);
+    service.saveCurrentSession.resolves({ success: true, terminalCount: 1 } as any);
+    service.restoreSession.resolves({ success: true, restoredCount: 1, skippedCount: 0 } as any);
     service.cleanupExpiredSessions.resolves();
 
     orchestrator = new PersistenceOrchestrator({
       extensionContext,
       terminalManager: terminalManager as any,
-      scrollbackCoordinator: scrollbackCoordinator as any,
       sendMessage: sendMessage as any,
       handlerFactory: () => handler,
       serviceFactory: () => service,
-      delay: delayStub,
       logger: sandbox.stub(),
     });
   });
@@ -107,40 +101,17 @@ describe('PersistenceOrchestrator', () => {
     expect(service.cleanupExpiredSessions.calledOnce).to.be.true;
   });
 
-  it('saves current session with scrollback data', async () => {
-    terminalManager.getTerminals.returns([
-      { id: 't1', name: 'One', cwd: '/tmp', shell: '/bin/bash', isActive: true },
-    ]);
-    scrollbackCoordinator.requestScrollbackData.resolves(['line1']);
-    handler.handleMessage.resolves({ success: true, terminalCount: 1 });
-
+  it('saves current session via persistence service', async () => {
     const result = await orchestrator.saveCurrentSession();
 
     expect(result).to.be.true;
-    expect(handler.handleMessage.calledWithMatch({ command: 'saveSession' })).to.be.true;
+    expect(service.saveCurrentSession.calledOnce).to.be.true;
   });
 
-  it('restores sessions and notifies the webview', async () => {
-    handler.handleMessage.resolves({
-      success: true,
-      data: [
-        {
-          id: 'old-1',
-          name: 'Restored 1',
-          scrollback: ['line'],
-          cwd: '/tmp',
-          isActive: true,
-        },
-      ],
-    });
-
+  it('restores sessions using persistence service', async () => {
     const result = await orchestrator.restoreLastSession();
 
     expect(result).to.be.true;
-    expect(terminalManager.createTerminal.called).to.be.true;
-    expect(sendMessage.calledWithMatch({ command: 'terminalCreated' })).to.be.true;
-    expect(sendMessage.calledWithMatch({ command: 'restoreScrollback' })).to.be.true;
-    expect(sendMessage.calledWithMatch({ command: 'sessionRestored', success: true })).to.be.true;
-    expect(delayStub.called).to.be.true;
+    expect(service.restoreSession.calledOnce).to.be.true;
   });
 });

@@ -477,6 +477,23 @@ export class ConsolidatedTerminalPersistenceService
     }
   }
 
+  public async cleanupExpiredSessions(): Promise<void> {
+    try {
+      const sessionData = await this.getStoredSessionData();
+      if (sessionData && this.isSessionExpired(sessionData)) {
+        await this.clearSession();
+        log('🧹 [PERSISTENCE] Expired session cleaned up');
+      }
+    } catch (error) {
+      throw new PersistenceError(
+        `Failed to cleanup sessions: ${error}`,
+        PersistenceErrorCode.STORAGE_ACCESS_FAILED,
+        undefined,
+        error instanceof Error ? error : undefined
+      );
+    }
+  }
+
   /**
    * Gets session statistics
    */

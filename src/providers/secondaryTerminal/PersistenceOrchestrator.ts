@@ -10,22 +10,18 @@ import {
 } from '../../handlers/PersistenceMessageHandler';
 import { WebviewMessage } from '../../types/common';
 import { TerminalManager } from '../../terminals/TerminalManager';
-import { ScrollbackCoordinator } from '../services/ScrollbackCoordinator';
-import { safeProcessCwd } from '../../utils/common';
 
 export type SendMessageFn = (message: WebviewMessage) => Promise<void>;
 
 export interface PersistenceOrchestratorOptions {
   extensionContext: vscode.ExtensionContext;
   terminalManager: TerminalManager;
-  scrollbackCoordinator: ScrollbackCoordinator;
   sendMessage: SendMessageFn;
   handlerFactory?: (service: ConsolidatedTerminalPersistenceService) => PersistenceMessageHandler;
   serviceFactory?: (
     context: vscode.ExtensionContext,
     terminalManager: TerminalManager
   ) => ConsolidatedTerminalPersistenceService;
-  delay?: (ms: number) => Promise<void>;
   logger?: typeof log;
 }
 
@@ -42,9 +38,7 @@ export class PersistenceOrchestrator implements vscode.Disposable {
   private readonly persistenceService: ConsolidatedTerminalPersistenceService;
   private readonly handler: PersistenceMessageHandler;
   private readonly logger: typeof log;
-  private readonly scrollbackCoordinator: ScrollbackCoordinator;
   private readonly sendMessageImpl: SendMessageFn;
-  private readonly delay: (ms: number) => Promise<void>;
 
   constructor(private readonly options: PersistenceOrchestratorOptions) {
     this.logger = options.logger ?? log;
@@ -53,9 +47,7 @@ export class PersistenceOrchestrator implements vscode.Disposable {
       options.terminalManager
     );
     this.handler = (options.handlerFactory || defaultHandlerFactory)(this.persistenceService);
-    this.scrollbackCoordinator = options.scrollbackCoordinator;
     this.sendMessageImpl = options.sendMessage;
-    this.delay = options.delay ?? ((ms: number) => new Promise((resolve) => setTimeout(resolve, ms)));
   }
 
   public hasHandler(): boolean {
@@ -144,48 +136,13 @@ export class PersistenceOrchestrator implements vscode.Disposable {
     this.logger('🔥 [PERSISTENCE-DEBUG] === saveCurrentSession called ===');
 
     try {
-      const terminals = this.options.terminalManager.getTerminals();
-      this.logger(`🔍 [PERSISTENCE-DEBUG] Found ${terminals.length} terminals to save`);
-
-      if (terminals.length === 0) {
-        this.logger('⚠️ [PERSISTENCE-DEBUG] No terminals to save');
-        return false;
+      const result = await this.persistenceService.saveCurrentSession();
+      if (result.success) {
+        this.logger(`✅ [PERSISTENCE] Session saved successfully: ${result.terminalCount} terminals`);
+      } else {
+        this.logger('❌ [PERSISTENCE] Session save failed via persistence service');
       }
-
-      const terminalData = await Promise.all(
-        terminals.map(async (terminal, index) => {
-          this.logger(
-            `🔍 [PERSISTENCE-DEBUG] Processing terminal ${index + 1}/${terminals.length}: ${terminal.id} (${terminal.name})`
-          );
-
-          const scrollbackData = await this.scrollbackCoordinator.requestScrollbackData(
-            terminal.id,
-            1000
-          );
-
-          return {
-            id: terminal.id,
-            name: terminal.name,
-            scrollback: scrollbackData,
-            workingDirectory: terminal.cwd || '',
-            shellCommand: terminal.shell || '',
-            isActive: terminal.isActive || false,
-          };
-        })
-      );
-
-      const response = await this.handler.handleMessage({
-        command: 'saveSession',
-        data: terminalData,
-      });
-
-      if (response.success) {
-        this.logger(`✅ [PERSISTENCE] Session saved successfully: ${response.terminalCount} terminals`);
-        return true;
-      }
-
-      this.logger(`❌ [PERSISTENCE] Session save failed: ${response.error}`);
-      return false;
+      return result.success;
     } catch (error) {
       this.logger(`❌ [PERSISTENCE] Auto-save failed: ${error}`);
       return false;
@@ -196,100 +153,17 @@ export class PersistenceOrchestrator implements vscode.Disposable {
     this.logger('🔥 [RESTORE-DEBUG] === restoreLastSession called ===');
 
     try {
-      const response = await this.handler.handleMessage({
-        command: 'restoreSession',
-      });
+      const result = await this.persistenceService.restoreSession(true);
 
-      if (!response.success || !response.data || !Array.isArray(response.data)) {
-        this.logger(`📦 [PERSISTENCE] No session to restore: ${response.error || 'No data'}`);
-        return false;
+      if (result.success) {
+        this.logger(
+          `✅ [PERSISTENCE] Session restored successfully: ${result.restoredCount}/${result.restoredCount + result.skippedCount} terminals`
+        );
+      } else {
+        this.logger(`📦 [PERSISTENCE] Restore failed: ${result.error?.message ?? 'unknown error'}`);
       }
 
-      const restoredTerminals = [] as Array<{ id: string }>;
-      const terminalMappings: Array<{
-        oldId: string;
-        newId: string;
-        terminalData: any;
-      }> = [];
-
-      for (const terminalData of response.data) {
-        try {
-          this.logger(
-            `🔧 [RESTORE-DEBUG] Creating terminal process for: ${terminalData.name || terminalData.id}`
-          );
-
-          const newTerminalId = this.options.terminalManager.createTerminal();
-          const terminal = this.options.terminalManager.getTerminal(newTerminalId);
-
-          if (terminal) {
-            terminalMappings.push({
-              oldId: terminalData.id,
-              newId: terminal.id,
-              terminalData,
-            });
-            restoredTerminals.push(terminal);
-          }
-        } catch (terminalError) {
-          this.logger(
-            `❌ [RESTORE-DEBUG] Failed to restore terminal ${terminalData.id}: ${terminalError}`
-          );
-        }
-      }
-
-      if (restoredTerminals.length === 0) {
-        this.logger('⚠️ [PERSISTENCE] No terminals were successfully restored');
-        return false;
-      }
-
-      for (const mapping of terminalMappings) {
-        await this.sendMessageImpl({
-          command: 'terminalCreated',
-          terminal: {
-            id: mapping.newId,
-            name: mapping.terminalData.name || `Terminal ${mapping.newId}`,
-            cwd: mapping.terminalData.cwd || safeProcessCwd(),
-            isActive: mapping.terminalData.isActive || false,
-          },
-        });
-      }
-
-      await this.delay(200);
-
-      for (const mapping of terminalMappings) {
-        if (
-          mapping.terminalData.scrollback &&
-          Array.isArray(mapping.terminalData.scrollback) &&
-          mapping.terminalData.scrollback.length > 0
-        ) {
-          await this.sendMessageImpl({
-            command: 'restoreScrollback',
-            terminalId: mapping.newId,
-            scrollback: mapping.terminalData.scrollback,
-          });
-        }
-      }
-
-      const activeMapping = terminalMappings.find((m) => m.terminalData.isActive);
-      if (activeMapping) {
-        this.options.terminalManager.setActiveTerminal(activeMapping.newId);
-        await this.sendMessageImpl({
-          command: 'setActiveTerminal',
-          terminalId: activeMapping.newId,
-        });
-      }
-
-      await this.sendMessageImpl({
-        command: 'sessionRestored',
-        success: true,
-        restoredCount: restoredTerminals.length,
-        totalCount: response.data.length,
-      });
-
-      this.logger(
-        `✅ [PERSISTENCE] Session restored successfully: ${restoredTerminals.length}/${response.data.length} terminals`
-      );
-
-      return true;
+      return result.success && (result.restoredCount ?? 0) > 0;
     } catch (error) {
       this.logger(`❌ [PERSISTENCE] Auto-restore failed: ${error}`);
       return false;
@@ -302,5 +176,6 @@ export class PersistenceOrchestrator implements vscode.Disposable {
     } catch (error) {
       this.logger('⚠️ [PERSISTENCE] Failed to cleanup persistence service during dispose:', error);
     }
+    this.persistenceService.dispose();
   }
 }

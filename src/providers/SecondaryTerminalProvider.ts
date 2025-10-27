@@ -110,7 +110,6 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     this._persistenceOrchestrator = new PersistenceOrchestrator({
       extensionContext: this._extensionContext,
       terminalManager: this._terminalManager,
-      scrollbackCoordinator: this._scrollbackCoordinator,
       sendMessage: (message: WebviewMessage) => this._communicationService.sendMessage(message),
     });
     this._viewBootstrapper = new ViewBootstrapper(

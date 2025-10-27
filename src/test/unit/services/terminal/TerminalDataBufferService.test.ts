@@ -1,24 +1,32 @@
 import * as assert from 'assert';
-import * as sinon from 'sinon';
+import { BaseTest } from '../../../utils';
 import { TerminalDataBufferService } from '../../../../services/terminal/TerminalDataBufferService';
 
+class TerminalDataBufferServiceTest extends BaseTest {
+  public service!: TerminalDataBufferService;
+
+  protected override setup(): void {
+    super.setup();
+    this.service = new TerminalDataBufferService();
+  }
+
+  protected override teardown(): void {
+    if (this.service) {
+      this.service.dispose();
+    }
+    super.teardown();
+  }
+}
+
 describe('TerminalDataBufferService', () => {
-  let service: TerminalDataBufferService;
-  let sandbox: sinon.SinonSandbox;
+  const test = new TerminalDataBufferServiceTest();
 
-  beforeEach(() => {
-    sandbox = sinon.createSandbox();
-    service = new TerminalDataBufferService();
-  });
-
-  afterEach(() => {
-    service.dispose();
-    sandbox.restore();
-  });
+  beforeEach(() => test.beforeEach());
+  afterEach(() => test.afterEach());
 
   describe('Constructor', () => {
     it('should initialize with default config', () => {
-      const stats = service.getBufferStats();
+      const stats = test.service.getBufferStats();
       assert.strictEqual(stats.flushInterval, 16);
       assert.strictEqual(stats.isCliAgentActive, false);
     });
@@ -41,14 +49,14 @@ describe('TerminalDataBufferService', () => {
     it('should buffer small data chunks', (done) => {
       let eventFired = false;
 
-      service.onData((event) => {
+      test.service.onData((event) => {
         assert.strictEqual(event.terminalId, 'test1');
         assert.strictEqual(event.data, 'hello');
         assert.ok(event.timestamp);
         eventFired = true;
       });
 
-      service.bufferData('test1', 'hello');
+      test.service.bufferData('test1', 'hello');
 
       // Should not fire immediately for small data
       assert.strictEqual(eventFired, false);
@@ -63,7 +71,7 @@ describe('TerminalDataBufferService', () => {
     it('should immediately flush large data chunks', (done) => {
       let eventFired = false;
 
-      service.onData((event) => {
+      test.service.onData((event) => {
         assert.strictEqual(event.terminalId, 'test1');
         assert.strictEqual(event.data?.length, 1000);
         eventFired = true;
@@ -71,7 +79,7 @@ describe('TerminalDataBufferService', () => {
       });
 
       // Large data should flush immediately
-      service.bufferData('test1', 'x'.repeat(1000));
+      test.service.bufferData('test1', 'x'.repeat(1000));
 
       // Should fire immediately
       assert.strictEqual(eventFired, true);
@@ -80,22 +88,22 @@ describe('TerminalDataBufferService', () => {
     it('should combine multiple small chunks', (done) => {
       let eventFired = false;
 
-      service.onData((event) => {
+      test.service.onData((event) => {
         assert.strictEqual(event.terminalId, 'test1');
         assert.strictEqual(event.data, 'helloworldtest');
         eventFired = true;
         done();
       });
 
-      service.bufferData('test1', 'hello');
-      service.bufferData('test1', 'world');
-      service.bufferData('test1', 'test');
+      test.service.bufferData('test1', 'hello');
+      test.service.bufferData('test1', 'world');
+      test.service.bufferData('test1', 'test');
 
       // Should not fire immediately
       assert.strictEqual(eventFired, false);
 
       // Force flush
-      service.flushBuffer('test1');
+      test.service.flushBuffer('test1');
     });
 
     it('should handle buffer overflow', (done) => {
@@ -123,9 +131,9 @@ describe('TerminalDataBufferService', () => {
 
   describe('CLI Agent Integration', () => {
     it('should switch to faster flush interval for CLI Agent', () => {
-      service.setCliAgentActive(true);
+      test.service.setCliAgentActive(true);
 
-      const stats = service.getBufferStats();
+      const stats = test.service.getBufferStats();
       assert.strictEqual(stats.flushInterval, 4);
       assert.strictEqual(stats.isCliAgentActive, true);
     });
@@ -133,7 +141,7 @@ describe('TerminalDataBufferService', () => {
     it('should flush all buffers when CLI Agent becomes active', (done) => {
       let eventCount = 0;
 
-      service.onData((_event) => {
+      test.service.onData((_event) => {
         eventCount++;
         if (eventCount === 2) {
           done();
@@ -141,19 +149,19 @@ describe('TerminalDataBufferService', () => {
       });
 
       // Buffer data for two terminals
-      service.bufferData('test1', 'data1');
-      service.bufferData('test2', 'data2');
+      test.service.bufferData('test1', 'data1');
+      test.service.bufferData('test2', 'data2');
 
       // Activate CLI Agent - should flush all buffers
-      service.setCliAgentActive(true);
+      test.service.setCliAgentActive(true);
     });
 
     it('should return to normal flush interval when CLI Agent deactivated', () => {
-      service.setCliAgentActive(true);
-      assert.strictEqual(service.getBufferStats().flushInterval, 4);
+      test.service.setCliAgentActive(true);
+      assert.strictEqual(test.service.getBufferStats().flushInterval, 4);
 
-      service.setCliAgentActive(false);
-      assert.strictEqual(service.getBufferStats().flushInterval, 16);
+      test.service.setCliAgentActive(false);
+      assert.strictEqual(test.service.getBufferStats().flushInterval, 16);
     });
   });
 
@@ -161,33 +169,33 @@ describe('TerminalDataBufferService', () => {
     it('should flush specific terminal buffer', (done) => {
       let eventFired = false;
 
-      service.onData((event) => {
+      test.service.onData((event) => {
         assert.strictEqual(event.terminalId, 'test1');
         assert.strictEqual(event.data, 'test');
         eventFired = true;
         done();
       });
 
-      service.bufferData('test1', 'test');
-      service.flushBuffer('test1');
+      test.service.bufferData('test1', 'test');
+      test.service.flushBuffer('test1');
 
       assert.strictEqual(eventFired, true);
     });
 
     it('should handle flush of empty buffer', () => {
       // Should not throw error
-      service.flushBuffer('non-existent');
+      test.service.flushBuffer('non-existent');
     });
 
     it('should clear buffer after flush', (done) => {
-      service.onData(() => {
-        const stats = service.getBufferStats();
+      test.service.onData(() => {
+        const stats = test.service.getBufferStats();
         assert.strictEqual(stats.totalBufferedChars, 0);
         done();
       });
 
-      service.bufferData('test1', 'test');
-      service.flushBuffer('test1');
+      test.service.bufferData('test1', 'test');
+      test.service.flushBuffer('test1');
     });
   });
 
@@ -196,46 +204,46 @@ describe('TerminalDataBufferService', () => {
       let eventCount = 0;
       const expectedEvents = 3;
 
-      service.onData((_event) => {
+      test.service.onData((_event) => {
         eventCount++;
         if (eventCount === expectedEvents) {
           done();
         }
       });
 
-      service.bufferData('test1', 'data1');
-      service.bufferData('test2', 'data2');
-      service.bufferData('test3', 'data3');
+      test.service.bufferData('test1', 'data1');
+      test.service.bufferData('test2', 'data2');
+      test.service.bufferData('test3', 'data3');
 
-      service.flushAllBuffers();
+      test.service.flushAllBuffers();
     });
   });
 
   describe('clearTerminalBuffer', () => {
     it('should clear specific terminal buffer', (done) => {
-      service.onData((event) => {
+      test.service.onData((event) => {
         assert.strictEqual(event.terminalId, 'test1');
         assert.strictEqual(event.data, 'test');
 
         // Clear the buffer
-        service.clearTerminalBuffer('test1');
+        test.service.clearTerminalBuffer('test1');
 
-        const stats = service.getBufferStats();
+        const stats = test.service.getBufferStats();
         assert.strictEqual(stats.activeBuffers, 0);
         done();
       });
 
-      service.bufferData('test1', 'test');
-      service.clearTerminalBuffer('test1');
+      test.service.bufferData('test1', 'test');
+      test.service.clearTerminalBuffer('test1');
     });
   });
 
   describe('getBufferStats', () => {
     it('should return accurate buffer statistics', () => {
-      service.bufferData('test1', 'hello');
-      service.bufferData('test2', 'world');
+      test.service.bufferData('test1', 'hello');
+      test.service.bufferData('test2', 'world');
 
-      const stats = service.getBufferStats();
+      const stats = test.service.getBufferStats();
       assert.strictEqual(stats.activeBuffers, 2);
       assert.strictEqual(stats.totalBufferedChars, 10); // 'hello' + 'world'
       assert.strictEqual(stats.pendingFlushes, 2);
@@ -244,9 +252,9 @@ describe('TerminalDataBufferService', () => {
     });
 
     it('should update statistics when CLI Agent active', () => {
-      service.setCliAgentActive(true);
+      test.service.setCliAgentActive(true);
 
-      const stats = service.getBufferStats();
+      const stats = test.service.getBufferStats();
       assert.strictEqual(stats.isCliAgentActive, true);
       assert.strictEqual(stats.flushInterval, 4);
     });
@@ -255,10 +263,10 @@ describe('TerminalDataBufferService', () => {
   describe('Error Handling', () => {
     it('should handle data buffering errors gracefully', (done) => {
       // Mock console.error to capture error logs
-      const _consoleStub = sandbox.stub(console, 'error');
+      const _consoleStub = test.sandbox.stub(console, 'error');
       let eventFired = false;
 
-      service.onData((event) => {
+      test.service.onData((event) => {
         assert.strictEqual(event.terminalId, 'test1');
         assert.strictEqual(event.data, 'test');
         eventFired = true;
@@ -266,26 +274,26 @@ describe('TerminalDataBufferService', () => {
       });
 
       // This should trigger error handling but still emit data
-      service.bufferData('test1', 'test');
+      test.service.bufferData('test1', 'test');
 
       // Should still work despite any internal errors
       assert.strictEqual(eventFired, false); // Not immediate
-      service.flushBuffer('test1');
+      test.service.flushBuffer('test1');
     });
   });
 
   describe('dispose', () => {
     it('should clean up all resources', () => {
-      service.bufferData('test1', 'data');
-      service.bufferData('test2', 'data');
+      test.service.bufferData('test1', 'data');
+      test.service.bufferData('test2', 'data');
 
-      let stats = service.getBufferStats();
+      let stats = test.service.getBufferStats();
       assert.ok(stats.activeBuffers > 0);
 
-      service.dispose();
+      test.service.dispose();
 
       // After dispose, should be clean
-      stats = service.getBufferStats();
+      stats = test.service.getBufferStats();
       assert.strictEqual(stats.activeBuffers, 0);
       assert.strictEqual(stats.pendingFlushes, 0);
     });
@@ -296,7 +304,7 @@ describe('TerminalDataBufferService', () => {
       let eventCount = 0;
       const startTime = Date.now();
 
-      service.onData(() => {
+      test.service.onData(() => {
         eventCount++;
         if (eventCount === 10) {
           const duration = Date.now() - startTime;
@@ -307,16 +315,16 @@ describe('TerminalDataBufferService', () => {
 
       // Send data rapidly
       for (let i = 0; i < 10; i++) {
-        service.bufferData(`test${i}`, `data${i}`);
-        service.flushBuffer(`test${i}`);
+        test.service.bufferData(`test${i}`, `data${i}`);
+        test.service.flushBuffer(`test${i}`);
       }
     });
 
     it('should maintain performance with CLI Agent mode', (done) => {
-      service.setCliAgentActive(true);
+      test.service.setCliAgentActive(true);
       let eventCount = 0;
 
-      service.onData(() => {
+      test.service.onData(() => {
         eventCount++;
         if (eventCount === 5) {
           done();
@@ -325,8 +333,8 @@ describe('TerminalDataBufferService', () => {
 
       // Rapid data in CLI Agent mode
       for (let i = 0; i < 5; i++) {
-        service.bufferData('agent-test', `fast-data-${i}`);
-        service.flushBuffer('agent-test');
+        test.service.bufferData('agent-test', `fast-data-${i}`);
+        test.service.flushBuffer('agent-test');
       }
     });
   });
