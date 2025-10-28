@@ -65,12 +65,6 @@ export class TerminalManager {
   private readonly _stateService?: ITerminalStateService;
   private readonly _eventBus?: EventBus;
 
-  // Performance optimization: Data batching for high-frequency output
-  // TODO: Migrate to BufferManagementService (Phase 2)
-  private readonly _dataBuffers = new Map<string, string[]>();
-  private readonly _dataFlushTimers = new Map<string, NodeJS.Timeout>();
-  private readonly DATA_FLUSH_INTERVAL = 8; // ~125fps for improved responsiveness
-  private readonly MAX_BUFFER_SIZE = 50;
   private readonly _initialPromptGuards = new Map<string, { dispose: () => void }>();
 
   // CLI Agent detection moved to service - cache removed from TerminalManager
@@ -1119,14 +1113,6 @@ export class TerminalManager {
   }
 
   public dispose(): void {
-    // Clean up data buffers and timers
-    this._flushAllBuffers();
-    for (const timer of this._dataFlushTimers.values()) {
-      clearTimeout(timer);
-    }
-    this._dataBuffers.clear();
-    this._dataFlushTimers.clear();
-
     // Clear kill tracking
     this._lifecycleService.clear();
 
@@ -1176,43 +1162,22 @@ export class TerminalManager {
     // Record data to scrollback service with VS Code time/size limits
     this._scrollbackService.recordData(terminalId, normalizedData);
 
-    // Phase 2: Use BufferManagementService if available
-    if (this._bufferService) {
-      const terminalNumber = this._registry.getTerminalNumber(terminalId);
-      if (terminalNumber !== undefined) {
-        this._bufferService.write(terminalNumber, normalizedData);
-        this.debugLog(
-          `📊 [TERMINAL] Data buffered via BufferService for ${terminalId}: ${data.length} chars`
-        );
-        return;
-      }
-    }
-
-    // Legacy buffer handling (fallback when DI service not available)
-    if (!this._dataBuffers.has(terminalId)) {
-      this._dataBuffers.set(terminalId, []);
-      this.debugLog(`📊 [TERMINAL] Created new data buffer for terminal: ${terminalId}`);
-    }
-
-    const buffer = this._dataBuffers.get(terminalId);
-    if (!buffer) {
-      log('🚨 [TERMINAL] Buffer creation failed for terminal:', terminalId);
-      this._dataBuffers.set(terminalId, []);
+    // Phase 2: Use BufferManagementService (required)
+    if (!this._bufferService) {
+      log('🚨 [TERMINAL] BufferManagementService not available - data will not be buffered!');
       return;
     }
 
-    buffer.push(normalizedData);
-
-    this.debugLog(
-      `📊 [TERMINAL] Data buffered for ${terminalId}: ${data.length} chars (buffer size: ${buffer.length})`
-    );
-
-    // Flush immediately if buffer is full or data is large
-    if (buffer.length >= this.MAX_BUFFER_SIZE || data.length > 1000) {
-      this._flushBuffer(terminalId);
-    } else {
-      this._scheduleFlush(terminalId);
+    const terminalNumber = this._registry.getTerminalNumber(terminalId);
+    if (terminalNumber === undefined) {
+      log('🚨 [TERMINAL] Terminal number not found for buffering:', terminalId);
+      return;
     }
+
+    this._bufferService.write(terminalNumber, normalizedData);
+    this.debugLog(
+      `📊 [TERMINAL] Data buffered via BufferService for ${terminalId}: ${data.length} chars`
+    );
   }
 
   /**
@@ -1230,80 +1195,6 @@ export class TerminalManager {
     return data;
   }
 
-  private _scheduleFlush(terminalId: string): void {
-    if (!this._dataFlushTimers.has(terminalId)) {
-      const timer = setTimeout(() => {
-        this._flushBuffer(terminalId);
-      }, this.DATA_FLUSH_INTERVAL);
-      this._dataFlushTimers.set(terminalId, timer);
-    }
-  }
-
-  private _flushBuffer(terminalId: string): void {
-    // ✅ CRITICAL FIX: Strict terminal ID validation before flushing
-    if (!terminalId || typeof terminalId !== 'string') {
-      log('🚨 [TERMINAL] Invalid terminalId for buffer flushing:', terminalId);
-      return;
-    }
-
-    // Double-check terminal still exists
-    if (!this._terminals.has(terminalId)) {
-      log(`⚠️ [TERMINAL] Cannot flush buffer for removed terminal: ${terminalId}`);
-      // Clean up orphaned buffer and timer
-      this._dataBuffers.delete(terminalId);
-      const timer = this._dataFlushTimers.get(terminalId);
-      if (timer) {
-        clearTimeout(timer);
-        this._dataFlushTimers.delete(terminalId);
-      }
-      return;
-    }
-
-    const timer = this._dataFlushTimers.get(terminalId);
-    if (timer) {
-      clearTimeout(timer);
-      this._dataFlushTimers.delete(terminalId);
-    }
-
-    const buffer = this._dataBuffers.get(terminalId);
-    if (buffer && buffer.length > 0) {
-      const combinedData = buffer.join('');
-      buffer.length = 0; // Clear buffer
-
-      // ✅ CRITICAL: Additional validation before emitting data
-      const terminal = this._terminals.get(terminalId);
-      if (!terminal) {
-        log(`🚨 [TERMINAL] Terminal disappeared during flush: ${terminalId}`);
-        return;
-      }
-
-      // Send to CLI Agent detection service with validation
-      try {
-        this._cliAgentService.detectFromOutput(terminalId, combinedData);
-      } catch (error) {
-        log(`⚠️ [TERMINAL] CLI Agent detection failed for ${terminalId}:`, error);
-      }
-
-      // ✅ EMIT DATA WITH STRICT TERMINAL ID ASSOCIATION
-      this.debugLog(
-        `📤 [TERMINAL] Flushing data for terminal ${terminal.name} (${terminalId}): ${combinedData.length} chars`
-      );
-      const payload = {
-        terminalId: terminalId, // Ensure exact ID match
-        data: combinedData,
-        timestamp: Date.now(), // Add timestamp for debugging
-        terminalName: terminal.name, // Add terminal name for validation
-      } as TerminalEvent;
-      this._eventHub.fireData(payload);
-      this._eventHub.fireOutput({ terminalId, data: combinedData });
-    }
-  }
-
-  private _flushAllBuffers(): void {
-    for (const terminalId of this._dataBuffers.keys()) {
-      this._flushBuffer(terminalId);
-    }
-  }
 
   /**
    * 全てのターミナルを非アクティブにする
@@ -1337,15 +1228,6 @@ export class TerminalManager {
 
     // Stop any pending prompt readiness guard for this terminal
     this._cleanupInitialPromptGuard(terminalId);
-
-    // Clean up data buffers for this terminal
-    this._flushBuffer(terminalId);
-    this._dataBuffers.delete(terminalId);
-    const timer = this._dataFlushTimers.get(terminalId);
-    if (timer) {
-      clearTimeout(timer);
-      this._dataFlushTimers.delete(terminalId);
-    }
 
     // CLI Agent cleanup handled by service
     this._cliAgentService.handleTerminalRemoved(terminalId);
