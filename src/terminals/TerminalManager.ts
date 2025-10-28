@@ -279,6 +279,25 @@ export class TerminalManager {
         this.debugLog(`📊 [TERMINAL] Buffer initialized for terminal ${terminalNumber}`);
       }
 
+      // Phase 2: Register terminal in TerminalStateService
+      if (this._stateService) {
+        this._stateService.registerTerminal(terminalId, {
+          id: terminalId,
+          name: terminal.name,
+          number: terminalNumber,
+          cwd,
+          shell: profileConfig.shell,
+          shellArgs: profileConfig.shellArgs,
+          pid: ptyProcess.pid,
+          isActive: false,
+          createdAt: terminal.createdAt,
+          lastActiveAt: terminal.createdAt,
+        });
+        // Set as active terminal in state service
+        this._stateService.setActiveTerminal(terminalId);
+        this.debugLog(`📊 [TERMINAL] State registered and activated for terminal ${terminalId}`);
+      }
+
       // Start scrollback recording with VS Code-compatible time/size limits
       this._scrollbackService.startRecording(terminalId);
 
@@ -439,6 +458,25 @@ export class TerminalManager {
       if (this._bufferService && terminalNumber) {
         this._bufferService.initializeBuffer(terminalNumber);
         this.debugLog(`📊 [TERMINAL] Buffer initialized for terminal ${terminalNumber}`);
+      }
+
+      // Phase 2: Register terminal in TerminalStateService
+      if (this._stateService) {
+        this._stateService.registerTerminal(terminalId, {
+          id: terminalId,
+          name: terminal.name,
+          number: terminalNumber,
+          cwd,
+          shell,
+          shellArgs,
+          pid: ptyProcess.pid,
+          isActive: true,
+          createdAt: terminal.createdAt,
+          lastActiveAt: terminal.createdAt,
+        });
+        // Set as active terminal in state service
+        this._stateService.setActiveTerminal(terminalId);
+        this.debugLog(`📊 [TERMINAL] State registered and activated for terminal ${terminalId}`);
       }
 
       // Start scrollback recording with VS Code-compatible time/size limits
@@ -737,6 +775,12 @@ export class TerminalManager {
       this._deactivateAllTerminals();
       terminal.isActive = true;
       this._registry.setActiveTerminal(terminalId);
+
+      // Phase 2: Update active terminal in TerminalStateService
+      if (this._stateService) {
+        this._stateService.setActiveTerminal(terminalId);
+        this.debugLog(`📊 [TERMINAL] Active terminal updated in StateService: ${terminalId}`);
+      }
     }
   }
 
@@ -1318,6 +1362,12 @@ export class TerminalManager {
       }
     }
 
+    // Phase 2: Unregister terminal from TerminalStateService
+    if (this._stateService) {
+      this._stateService.unregisterTerminal(terminalId);
+      this.debugLog(`📊 [TERMINAL] State unregistered for terminal ${terminalId}`);
+    }
+
     // Remove from terminals map
     const deletionResult = this._terminals.delete(terminalId);
     log('🧹 [TERMINAL] Terminal deletion from map:', deletionResult ? 'SUCCESS' : 'FAILED');
@@ -1665,6 +1715,12 @@ export class TerminalManager {
           this._bufferService.disposeBuffer(terminalNumber);
           this.debugLog(`📊 [TERMINAL] Buffer disposed for terminal ${terminalNumber}`);
         }
+      }
+
+      // Phase 2: Unregister terminal from TerminalStateService
+      if (this._stateService) {
+        this._stateService.unregisterTerminal(terminalId);
+        this.debugLog(`📊 [TERMINAL] State unregistered for terminal ${terminalId}`);
       }
 
       // Clean up terminal and notify listeners
