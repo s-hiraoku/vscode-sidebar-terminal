@@ -35,6 +35,8 @@ import { TerminalEventHub } from './core/TerminalEventHub';
 import { TerminalLifecycleService } from './core/TerminalLifecycleService';
 import { ScrollbackService } from '../services/scrollback/ScrollbackService';
 import type { IDisposable } from '@homebridge/node-pty-prebuilt-multiarch';
+import type { IBufferManagementService } from '../services/buffer/IBufferManagementService';
+import type { ITerminalStateService } from '../services/state/ITerminalStateService';
 
 const ENABLE_TERMINAL_DEBUG_LOGS = process.env.SECONDARY_TERMINAL_DEBUG_LOGS === 'true';
 // Removed unused service imports - these were for the RefactoredTerminalManager which was removed
@@ -56,7 +58,12 @@ export class TerminalManager {
   private readonly _scrollbackService: ScrollbackService;
   private readonly _debugLoggingEnabled = ENABLE_TERMINAL_DEBUG_LOGS;
 
+  // Phase 2: DI Services (optional for backward compatibility)
+  private readonly _bufferService?: IBufferManagementService;
+  private readonly _stateService?: ITerminalStateService;
+
   // Performance optimization: Data batching for high-frequency output
+  // TODO: Migrate to BufferManagementService (Phase 2)
   private readonly _dataBuffers = new Map<string, string[]>();
   private readonly _dataFlushTimers = new Map<string, NodeJS.Timeout>();
   private readonly DATA_FLUSH_INTERVAL = 8; // ~125fps for improved responsiveness
@@ -78,7 +85,11 @@ export class TerminalManager {
     }
   }
 
-  constructor(cliAgentService?: ICliAgentDetectionService) {
+  constructor(
+    cliAgentService?: ICliAgentDetectionService,
+    bufferService?: IBufferManagementService,
+    stateService?: ITerminalStateService
+  ) {
     // Initialize terminal number manager with max terminals config
     const config = getTerminalConfig();
     this._terminalNumberManager = new TerminalNumberManager(config.maxTerminals);
@@ -103,6 +114,17 @@ export class TerminalManager {
     this._scrollbackService = new ScrollbackService({
       persistentSessionScrollback: config.persistentSessionScrollback,
     });
+
+    // Phase 2: Initialize DI services
+    this._bufferService = bufferService;
+    this._stateService = stateService;
+
+    if (this._bufferService) {
+      log('✅ [TERMINAL] Using BufferManagementService from DI');
+    }
+    if (this._stateService) {
+      log('✅ [TERMINAL] Using TerminalStateService from DI');
+    }
   }
 
   /**

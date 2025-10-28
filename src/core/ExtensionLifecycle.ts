@@ -13,6 +13,8 @@ import { VersionUtils } from '../utils/VersionUtils';
 import { DIContainer } from './DIContainer';
 import { EventBus } from './EventBus';
 import { registerPhase2Services } from './ServiceRegistration';
+import { IBufferManagementService } from '../services/buffer/IBufferManagementService';
+import { ITerminalStateService } from '../services/state/ITerminalStateService';
 
 /**
  * VS Code拡張機能のライフサイクル管理
@@ -70,8 +72,14 @@ export class ExtensionLifecycle {
       // Ensure node-pty looks for release binaries
       process.env.NODE_PTY_DEBUG = '0';
 
-      // Initialize terminal manager
-      this.terminalManager = new TerminalManager();
+      // Resolve Phase 2 services from DI container
+      const bufferService = this.container.resolve<IBufferManagementService>(IBufferManagementService);
+      const stateService = this.container.resolve<ITerminalStateService>(ITerminalStateService);
+
+      // Initialize terminal manager with DI services
+      log('🔧 [EXTENSION] Initializing TerminalManager with DI services...');
+      this.terminalManager = new TerminalManager(undefined, bufferService, stateService);
+      log('✅ [EXTENSION] TerminalManager initialized with Phase 2 services');
 
       // Initialize standard terminal session manager
       log('🔧 [EXTENSION] Initializing VS Code standard session manager...');
@@ -559,7 +567,7 @@ export class ExtensionLifecycle {
     registerPhase2Services(container, eventBus);
 
     log('✅ [DI] DI container bootstrapped successfully');
-    log(`📊 [DI] Registered services: ${container.getServiceCount()}`);
+    log(`📊 [DI] Registered services: ${container.serviceCount}`);
 
     return container;
   }
@@ -674,7 +682,7 @@ export class ExtensionLifecycle {
     // ターミナル変更時の保存を設定（定期保存として - バックアップ用）
     const saveOnTerminalChange = setInterval(() => {
       void this.saveSessionPeriodically();
-    }, 300000); // 5分ごとに保存（CPU負荷軽減のため30秒から変更）
+    }, 30000); // 30秒ごとに保存（開発・デバッグ用に短縮）
 
     context.subscriptions.push({
       dispose: () => clearInterval(saveOnTerminalChange),
