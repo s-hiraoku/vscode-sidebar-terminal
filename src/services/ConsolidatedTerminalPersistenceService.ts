@@ -296,12 +296,19 @@ export class ConsolidatedTerminalPersistenceService
           scrollback: config.persistentSessionScrollback,
         });
 
-        log(`📋 [DEBUG] Terminal ${terminal.id} scrollback data: ${scrollbackData ? `${scrollbackData.length} chars` : 'null'}`);
+        log(`📋 [SAVE-DEBUG] Terminal ${terminal.id} scrollback data: ${scrollbackData ? `${scrollbackData.length} chars` : 'null'}`);
+        if (scrollbackData) {
+          log(`📋 [SAVE-DEBUG] First 300 chars: ${scrollbackData.substring(0, 300)}`);
+        }
 
         // Convert scrollback string to array format
         const scrollback = scrollbackData ? scrollbackData.split('\n').filter(line => line.length > 0) : undefined;
 
-        log(`📋 [DEBUG] Terminal ${terminal.id} scrollback array: ${scrollback ? `${scrollback.length} lines` : 'undefined'}`);
+        log(`📋 [SAVE-DEBUG] Terminal ${terminal.id} scrollback array: ${scrollback ? `${scrollback.length} lines` : 'undefined'}`);
+        if (scrollback && scrollback.length > 0) {
+          log(`📋 [SAVE-DEBUG] First 3 lines:`, scrollback.slice(0, 3));
+          log(`📋 [SAVE-DEBUG] Line lengths:`, scrollback.map(l => l.length));
+        }
 
         return {
           id: terminal.id,
@@ -844,9 +851,12 @@ export class ConsolidatedTerminalPersistenceService
       metadata: undefined,
     }));
 
-    log(`📋 [DEBUG] Sending ${terminalData.length} terminals to WebView for restoration`);
+    log(`📋 [RESTORE-DEBUG] Sending ${terminalData.length} terminals to WebView for restoration`);
     terminalData.forEach((t, index) => {
-      log(`📋 [DEBUG] Restore data[${index}]: id=${t.id}, scrollback=${t.scrollback ? `${t.scrollback.length} lines` : 'undefined'}`);
+      log(`📋 [RESTORE-DEBUG] Restore data[${index}]: id=${t.id}, scrollback=${t.scrollback ? `${t.scrollback.length} lines` : 'undefined'}`);
+      if (t.scrollback && t.scrollback.length > 0) {
+        log(`📋 [RESTORE-DEBUG] Terminal ${t.id} first 3 scrollback lines:`, t.scrollback.slice(0, 3));
+      }
     });
 
     await this.handleRestorationRequest(terminalData);

@@ -1,101 +1,82 @@
 /**
  * Base Plugin Interface
  *
- * Defines the contract for all plugins in the system.
- * Plugins can extend functionality without modifying core code.
+ * All plugins must implement this interface to participate in the plugin lifecycle.
  */
 
-import * as vscode from 'vscode';
-import type { EventBus } from '../EventBus';
+export interface PluginMetadata {
+  /** Unique plugin identifier */
+  id: string;
+  /** Human-readable plugin name */
+  name: string;
+  /** Plugin version */
+  version: string;
+  /** Plugin description */
+  description: string;
+  /** Plugin author */
+  author?: string;
+  /** Plugin dependencies (other plugin IDs) */
+  dependencies?: string[];
+}
 
-/**
- * Plugin context provided to plugins during activation
- */
-export interface IPluginContext {
-  /** Event bus for cross-component communication */
-  readonly eventBus: EventBus;
-
-  /** Extension context for VS Code API access */
-  readonly extensionContext: vscode.ExtensionContext;
-
-  /** Logger for plugin-specific logging */
-  readonly logger: IPluginLogger;
-
-  /** Configuration accessor */
-  readonly config: IPluginConfig;
+export interface PluginConfiguration {
+  /** Whether the plugin is enabled */
+  enabled: boolean;
+  /** Plugin-specific configuration */
+  [key: string]: unknown;
 }
 
 /**
- * Plugin-specific logger interface
+ * Plugin lifecycle states
  */
-export interface IPluginLogger {
-  debug(message: string, ...args: unknown[]): void;
-  info(message: string, ...args: unknown[]): void;
-  warn(message: string, ...args: unknown[]): void;
-  error(message: string, ...args: unknown[]): void;
-}
-
-/**
- * Plugin configuration accessor
- */
-export interface IPluginConfig {
-  /**
-   * Get configuration value for this plugin
-   * @param key Configuration key (relative to plugin namespace)
-   * @param defaultValue Default value if not configured
-   */
-  get<T>(key: string, defaultValue?: T): T | undefined;
-
-  /**
-   * Check if a configuration key exists
-   * @param key Configuration key
-   */
-  has(key: string): boolean;
+export enum PluginState {
+  /** Plugin is registered but not activated */
+  Registered = 'registered',
+  /** Plugin is active and running */
+  Active = 'active',
+  /** Plugin encountered an error */
+  Error = 'error',
+  /** Plugin is deactivated */
+  Deactivated = 'deactivated',
 }
 
 /**
  * Base plugin interface
  */
-export interface IPlugin extends vscode.Disposable {
-  /** Unique plugin identifier (kebab-case recommended) */
-  readonly id: string;
+export interface IPlugin {
+  /** Plugin metadata */
+  readonly metadata: PluginMetadata;
 
-  /** Human-readable plugin name */
-  readonly name: string;
-
-  /** Semantic version string */
-  readonly version: string;
-
-  /** Optional plugin description */
-  readonly description?: string;
+  /** Current plugin state */
+  readonly state: PluginState;
 
   /**
-   * Called when the plugin is activated
-   * @param context Plugin context with access to services
+   * Activate the plugin
+   * Called when the plugin should start its functionality
+   *
+   * @returns Promise that resolves when activation is complete
    */
-  activate(context: IPluginContext): Promise<void> | void;
+  activate(): Promise<void>;
 
   /**
-   * Called when the plugin is deactivated
-   * Cleanup resources here
+   * Deactivate the plugin
+   * Called when the plugin should stop its functionality
+   *
+   * @returns Promise that resolves when deactivation is complete
    */
-  deactivate(): Promise<void> | void;
+  deactivate(): Promise<void>;
 
   /**
+   * Configure the plugin
    * Called when plugin configuration changes
-   * @param config New configuration values
+   *
+   * @param config Plugin configuration
    */
-  configure(config: Record<string, unknown>): void;
-}
+  configure(config: PluginConfiguration): void;
 
-/**
- * Plugin metadata for discovery and management
- */
-export interface IPluginMetadata {
-  id: string;
-  name: string;
-  version: string;
-  description?: string;
-  enabled: boolean;
-  activatedAt?: Date;
+  /**
+   * Dispose plugin resources
+   * Called when the plugin is being removed
+   */
+  dispose(): void;
 }

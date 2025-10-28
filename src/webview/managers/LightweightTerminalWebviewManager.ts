@@ -1777,16 +1777,26 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
         log(
           `🔄 [RESTORATION] Restoring ${scrollbackData.length} lines of scrollback for terminal: ${terminalId}`
         );
+        log(`🔍 [RESTORATION-DEBUG] scrollbackData type: ${typeof scrollbackData}, isArray: ${Array.isArray(scrollbackData)}`);
+        log(`🔍 [RESTORATION-DEBUG] First 3 items:`, scrollbackData.slice(0, 3));
 
         // Write each line to restore scrollback history
-        for (const line of scrollbackData) {
-          if (line.trim()) {
+        let writtenCount = 0;
+        for (let i = 0; i < scrollbackData.length; i++) {
+          const line = scrollbackData[i];
+          log(`🔍 [RESTORATION-DEBUG] Line ${i}: type=${typeof line}, length=${line?.length}, trimmed=${!!line?.trim()}, content="${line}"`);
+
+          if (line && line.trim()) {
             terminal.terminal.writeln(line);
+            writtenCount++;
+            log(`✅ [RESTORATION-DEBUG] Written line ${i}: "${line}"`);
+          } else {
+            log(`⚠️ [RESTORATION-DEBUG] Skipped line ${i}: empty or whitespace`);
           }
         }
 
         log(
-          `✅ [RESTORATION] Scrollback restored for terminal: ${terminalId} (${scrollbackData.length} lines)`
+          `✅ [RESTORATION] Scrollback restored for terminal: ${terminalId} (${writtenCount}/${scrollbackData.length} lines written)`
         );
       }
 

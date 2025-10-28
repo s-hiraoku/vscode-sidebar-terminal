@@ -1,114 +1,75 @@
 /**
  * AI Agent Plugin Interface
  *
- * Specialized plugin interface for AI agent detection and management.
- * Extends the base IPlugin with agent-specific capabilities.
+ * Specialized plugin interface for AI agent detection and coordination.
  */
 
 import type { IPlugin } from './IPlugin';
+import type { EventBus } from '../EventBus';
 
 /**
- * AI agent detection result
+ * Agent detection result
  */
 export interface AgentDetectionResult {
-  /** Agent identifier (e.g., 'claude', 'copilot') */
-  agentId: string;
-
-  /** Detection confidence (0.0 to 1.0) */
+  /** Whether an agent was detected */
+  detected: boolean;
+  /** Agent type (e.g., 'claude', 'copilot', 'gemini') */
+  agentType: string | null;
+  /** Confidence score (0-1) */
   confidence: number;
-
-  /** Detected agent version (if available) */
-  version?: string;
-
   /** Additional metadata */
   metadata?: Record<string, unknown>;
 }
 
 /**
- * Agent state
+ * Agent plugin configuration
  */
-export enum AgentState {
-  /** Agent not detected */
-  Disconnected = 'disconnected',
-
-  /** Agent detected and ready */
-  Connected = 'connected',
-
-  /** Agent actively processing */
-  Active = 'active',
-
-  /** Agent encountered an error */
-  Error = 'error',
-}
-
-/**
- * Status indicator for WebView display
- */
-export interface StatusIndicator {
-  /** Display text */
-  text: string;
-
-  /** CSS color for indicator */
-  color: string;
-
-  /** Tooltip text */
-  tooltip?: string;
-
-  /** Icon class or emoji */
-  icon?: string;
+export interface AgentPluginConfig {
+  /** Whether the plugin is enabled */
+  enabled: boolean;
+  /** Detection patterns (regex patterns as strings) */
+  patterns?: string[];
+  /** Minimum confidence threshold (0-1) */
+  confidenceThreshold?: number;
+  /** Detection debounce time in milliseconds */
+  debounceMs?: number;
 }
 
 /**
  * AI Agent Plugin Interface
+ *
+ * Plugins implementing this interface can detect and coordinate with AI CLI agents.
  */
 export interface IAgentPlugin extends IPlugin {
   /**
    * Detect AI agent from terminal output
    *
-   * @param output Terminal output text
-   * @returns Detection result or null if no agent detected
+   * @param terminalId Terminal ID
+   * @param output Terminal output data
+   * @returns Detection result
    */
-  detectAgent(output: string): AgentDetectionResult | null;
+  detect(terminalId: string, output: string): AgentDetectionResult;
 
   /**
-   * Get status indicator for current agent state
+   * Handle agent activation
+   * Called when the agent is detected and confirmed active
    *
-   * @param state Current agent state
-   * @returns Status indicator for display
+   * @param terminalId Terminal ID
    */
-  getStatusIndicator(state: AgentState): StatusIndicator;
+  onAgentActivated(terminalId: string): void;
 
   /**
-   * Determine if output processing should be accelerated
+   * Handle agent deactivation
+   * Called when the agent is no longer detected
    *
-   * @param state Current agent state
-   * @returns True if buffer flushing should be accelerated
+   * @param terminalId Terminal ID
    */
-  shouldAccelerate(state: AgentState): boolean;
+  onAgentDeactivated(terminalId: string): void;
 
   /**
-   * Get agent-specific configuration
-   * @returns Agent configuration object
+   * Get agent type identifier
+   *
+   * @returns Agent type string (e.g., 'claude', 'copilot')
    */
-  getAgentConfig(): AgentConfig;
-}
-
-/**
- * Agent configuration
- */
-export interface AgentConfig {
-  /** Whether agent detection is enabled */
-  enabled: boolean;
-
-  /** Detection pattern (regex string) */
-  detectionPattern?: string;
-
-  /** Detection confidence threshold (0.0 to 1.0) */
-  threshold: number;
-
-  /** Buffer flush interval when agent is active (milliseconds) */
-  flushInterval?: number;
-
-  /** Custom properties */
-  [key: string]: unknown;
+  getAgentType(): string;
 }

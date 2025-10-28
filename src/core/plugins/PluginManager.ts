@@ -2,139 +2,177 @@
  * Plugin Manager
  *
  * Manages plugin lifecycle, registration, and coordination.
- * Provides plugin discovery, activation, and configuration management.
  */
 
-import * as vscode from 'vscode';
-import type { IPlugin, IPluginContext, IPluginMetadata } from './IPlugin';
 import type { EventBus } from '../EventBus';
+import type { IPlugin, PluginConfiguration, PluginState } from './IPlugin';
+import type { IAgentPlugin } from './IAgentPlugin';
+import { terminal as log } from '../../utils/logger';
 
 /**
- * Plugin activation timeout in milliseconds
+ * Plugin registration options
  */
-const PLUGIN_ACTIVATION_TIMEOUT = 5000;
-
-/**
- * Plugin deactivation timeout in milliseconds
- */
-const PLUGIN_DEACTIVATION_TIMEOUT = 5000;
-
-/**
- * Plugin registration entry
- */
-interface PluginEntry {
-  plugin: IPlugin;
-  metadata: IPluginMetadata;
-  context?: IPluginContext;
+export interface PluginRegistrationOptions {
+  /** Whether to activate the plugin immediately */
+  activateImmediately?: boolean;
+  /** Initial plugin configuration */
+  config?: PluginConfiguration;
 }
 
 /**
- * Plugin Manager implementation
+ * Plugin Manager
+ *
+ * Central registry and lifecycle manager for all plugins.
  */
-export class PluginManager implements vscode.Disposable {
-  private readonly _plugins = new Map<string, PluginEntry>();
-  private readonly _activatedPlugins = new Set<string>();
+export class PluginManager {
+  private readonly _plugins = new Map<string, IPlugin>();
+  private readonly _agentPlugins = new Map<string, IAgentPlugin>();
   private _isDisposed = false;
 
-  constructor(
-    private readonly _eventBus: EventBus,
-    private readonly _extensionContext: vscode.ExtensionContext
-  ) {}
+  constructor(private readonly _eventBus: EventBus) {}
 
   /**
    * Register a plugin
    *
-   * @param plugin Plugin instance to register
-   * @throws Error if plugin with same ID is already registered
-   *
-   * @example
-   * ```typescript
-   * const plugin = new ClaudePlugin();
-   * pluginManager.registerPlugin(plugin);
-   * ```
+   * @param plugin Plugin instance
+   * @param options Registration options
    */
-  registerPlugin(plugin: IPlugin): void {
+  async registerPlugin(
+    plugin: IPlugin,
+    options: PluginRegistrationOptions = {}
+  ): Promise<void> {
     this._ensureNotDisposed();
 
-    if (this._plugins.has(plugin.id)) {
-      throw new Error(`Plugin already registered: ${plugin.id}`);
-    }
+    const { id } = plugin.metadata;
 
-    const metadata: IPluginMetadata = {
-      id: plugin.id,
-      name: plugin.name,
-      version: plugin.version,
-      description: plugin.description,
-      enabled: true,
-    };
-
-    this._plugins.set(plugin.id, { plugin, metadata });
-  }
-
-  /**
-   * Unregister a plugin
-   *
-   * @param pluginId Plugin ID to unregister
-   */
-  async unregisterPlugin(pluginId: string): Promise<void> {
-    this._ensureNotDisposed();
-
-    const entry = this._plugins.get(pluginId);
-    if (!entry) {
+    if (this._plugins.has(id)) {
+      log(`⚠️ [PLUGIN] Plugin already registered: ${id}`);
       return;
     }
 
-    // Deactivate if activated
-    if (this._activatedPlugins.has(pluginId)) {
-      await this.deactivatePlugin(pluginId);
+    log(`📦 [PLUGIN] Registering plugin: ${id} (${plugin.metadata.name})`);
+    this._plugins.set(id, plugin);
+
+    // Check if it's an agent plugin
+    if (this._isAgentPlugin(plugin)) {
+      this._agentPlugins.set(id, plugin as IAgentPlugin);
+      log(`🤖 [PLUGIN] Registered as agent plugin: ${id}`);
     }
 
-    // Dispose plugin
-    try {
-      entry.plugin.dispose();
-    } catch (error) {
-      console.error(`Error disposing plugin ${pluginId}:`, error);
+    // Configure plugin if config provided
+    if (options.config) {
+      plugin.configure(options.config);
     }
 
-    this._plugins.delete(pluginId);
+    // Activate immediately if requested
+    if (options.activateImmediately && options.config?.enabled !== false) {
+      await this.activatePlugin(id);
+    }
   }
 
   /**
-   * Get a plugin by ID
+   * Activate a plugin
+   *
+   * @param pluginId Plugin ID
+   */
+  async activatePlugin(pluginId: string): Promise<void> {
+    this._ensureNotDisposed();
+
+    const plugin = this._plugins.get(pluginId);
+    if (!plugin) {
+      log(`⚠️ [PLUGIN] Plugin not found: ${pluginId}`);
+      return;
+    }
+
+    if (plugin.state === 'active') {
+      log(`ℹ️ [PLUGIN] Plugin already active: ${pluginId}`);
+      return;
+    }
+
+    try {
+      log(`▶️ [PLUGIN] Activating plugin: ${pluginId}`);
+      await plugin.activate();
+      log(`✅ [PLUGIN] Plugin activated: ${pluginId}`);
+    } catch (error) {
+      log(`❌ [PLUGIN] Failed to activate plugin ${pluginId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Deactivate a plugin
+   *
+   * @param pluginId Plugin ID
+   */
+  async deactivatePlugin(pluginId: string): Promise<void> {
+    this._ensureNotDisposed();
+
+    const plugin = this._plugins.get(pluginId);
+    if (!plugin) {
+      log(`⚠️ [PLUGIN] Plugin not found: ${pluginId}`);
+      return;
+    }
+
+    if (plugin.state !== 'active') {
+      log(`ℹ️ [PLUGIN] Plugin not active: ${pluginId}`);
+      return;
+    }
+
+    try {
+      log(`⏸️ [PLUGIN] Deactivating plugin: ${pluginId}`);
+      await plugin.deactivate();
+      log(`✅ [PLUGIN] Plugin deactivated: ${pluginId}`);
+    } catch (error) {
+      log(`❌ [PLUGIN] Failed to deactivate plugin ${pluginId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Configure a plugin
+   *
+   * @param pluginId Plugin ID
+   * @param config Plugin configuration
+   */
+  configurePlugin(pluginId: string, config: PluginConfiguration): void {
+    this._ensureNotDisposed();
+
+    const plugin = this._plugins.get(pluginId);
+    if (!plugin) {
+      log(`⚠️ [PLUGIN] Plugin not found: ${pluginId}`);
+      return;
+    }
+
+    log(`⚙️ [PLUGIN] Configuring plugin: ${pluginId}`);
+    plugin.configure(config);
+  }
+
+  /**
+   * Get all registered agent plugins
+   *
+   * @returns Array of agent plugins
+   */
+  getAgentPlugins(): IAgentPlugin[] {
+    return Array.from(this._agentPlugins.values());
+  }
+
+  /**
+   * Get active agent plugins
+   *
+   * @returns Array of active agent plugins
+   */
+  getActiveAgentPlugins(): IAgentPlugin[] {
+    return this.getAgentPlugins().filter((plugin) => plugin.state === 'active');
+  }
+
+  /**
+   * Get plugin by ID
    *
    * @param pluginId Plugin ID
    * @returns Plugin instance or undefined
    */
-  getPlugin<T extends IPlugin = IPlugin>(pluginId: string): T | undefined {
-    const entry = this._plugins.get(pluginId);
-    return entry?.plugin as T | undefined;
-  }
-
-  /**
-   * Get plugins by type (interface check)
-   *
-   * @param predicate Type predicate function
-   * @returns Array of matching plugins
-   *
-   * @example
-   * ```typescript
-   * const agentPlugins = pluginManager.getPluginsByType(
-   *   (p): p is IAgentPlugin => 'detectAgent' in p
-   * );
-   * ```
-   */
-  getPluginsByType<T extends IPlugin>(
-    predicate: (plugin: IPlugin) => plugin is T
-  ): T[] {
-    this._ensureNotDisposed();
-
-    const result: T[] = [];
-    for (const entry of this._plugins.values()) {
-      if (predicate(entry.plugin)) {
-        result.push(entry.plugin as T);
-      }
-    }
-    return result;
+  getPlugin(pluginId: string): IPlugin | undefined {
+    return this._plugins.get(pluginId);
   }
 
   /**
@@ -143,271 +181,68 @@ export class PluginManager implements vscode.Disposable {
    * @returns Array of all plugins
    */
   getAllPlugins(): IPlugin[] {
-    return Array.from(this._plugins.values()).map((entry) => entry.plugin);
+    return Array.from(this._plugins.values());
   }
 
   /**
-   * Get plugin metadata
+   * Check if a plugin is registered
    *
    * @param pluginId Plugin ID
-   * @returns Plugin metadata or undefined
+   * @returns True if registered
    */
-  getPluginMetadata(pluginId: string): IPluginMetadata | undefined {
-    const entry = this._plugins.get(pluginId);
-    return entry ? { ...entry.metadata } : undefined;
+  hasPlugin(pluginId: string): boolean {
+    return this._plugins.has(pluginId);
   }
 
   /**
-   * Get all plugin metadata
-   */
-  getAllPluginMetadata(): IPluginMetadata[] {
-    return Array.from(this._plugins.values()).map((entry) => ({ ...entry.metadata }));
-  }
-
-  /**
-   * Activate a specific plugin
-   *
-   * @param pluginId Plugin ID to activate
-   */
-  async activatePlugin(pluginId: string): Promise<void> {
-    this._ensureNotDisposed();
-
-    const entry = this._plugins.get(pluginId);
-    if (!entry) {
-      throw new Error(`Plugin not found: ${pluginId}`);
-    }
-
-    if (this._activatedPlugins.has(pluginId)) {
-      return; // Already activated
-    }
-
-    // Create plugin context
-    const context = this._createPluginContext(entry.plugin);
-    entry.context = context;
-
-    try {
-      // Activate with timeout
-      await this._withTimeout(
-        entry.plugin.activate(context),
-        PLUGIN_ACTIVATION_TIMEOUT,
-        `Plugin activation timeout: ${pluginId}`
-      );
-
-      this._activatedPlugins.add(pluginId);
-      entry.metadata.activatedAt = new Date();
-      entry.metadata.enabled = true;
-    } catch (error) {
-      console.error(`Error activating plugin ${pluginId}:`, error);
-      throw error;
-    }
-  }
-
-  /**
-   * Deactivate a specific plugin
-   *
-   * @param pluginId Plugin ID to deactivate
-   */
-  async deactivatePlugin(pluginId: string): Promise<void> {
-    this._ensureNotDisposed();
-
-    const entry = this._plugins.get(pluginId);
-    if (!entry) {
-      return;
-    }
-
-    if (!this._activatedPlugins.has(pluginId)) {
-      return; // Not activated
-    }
-
-    try {
-      // Deactivate with timeout
-      await this._withTimeout(
-        entry.plugin.deactivate(),
-        PLUGIN_DEACTIVATION_TIMEOUT,
-        `Plugin deactivation timeout: ${pluginId}`
-      );
-
-      this._activatedPlugins.delete(pluginId);
-      entry.metadata.activatedAt = undefined;
-      entry.metadata.enabled = false;
-    } catch (error) {
-      console.error(`Error deactivating plugin ${pluginId}:`, error);
-      // Continue even if deactivation fails
-    }
-  }
-
-  /**
-   * Activate all registered plugins
-   */
-  async activateAll(): Promise<void> {
-    this._ensureNotDisposed();
-
-    const pluginIds = Array.from(this._plugins.keys());
-    for (const pluginId of pluginIds) {
-      try {
-        await this.activatePlugin(pluginId);
-      } catch (error) {
-        console.error(`Failed to activate plugin ${pluginId}:`, error);
-        // Continue with other plugins
-      }
-    }
-  }
-
-  /**
-   * Deactivate all activated plugins (in reverse activation order)
-   */
-  async deactivateAll(): Promise<void> {
-    this._ensureNotDisposed();
-
-    const pluginIds = Array.from(this._activatedPlugins).reverse();
-    for (const pluginId of pluginIds) {
-      try {
-        await this.deactivatePlugin(pluginId);
-      } catch (error) {
-        console.error(`Failed to deactivate plugin ${pluginId}:`, error);
-        // Continue with other plugins
-      }
-    }
-  }
-
-  /**
-   * Configure a plugin
-   *
-   * @param pluginId Plugin ID
-   * @param config Configuration object
-   */
-  configurePlugin(pluginId: string, config: Record<string, unknown>): void {
-    this._ensureNotDisposed();
-
-    const entry = this._plugins.get(pluginId);
-    if (!entry) {
-      throw new Error(`Plugin not found: ${pluginId}`);
-    }
-
-    try {
-      entry.plugin.configure(config);
-    } catch (error) {
-      console.error(`Error configuring plugin ${pluginId}:`, error);
-      throw error;
-    }
-  }
-
-  /**
-   * Check if a plugin is activated
-   *
-   * @param pluginId Plugin ID
-   * @returns True if activated
-   */
-  isActivated(pluginId: string): boolean {
-    return this._activatedPlugins.has(pluginId);
-  }
-
-  /**
-   * Get number of registered plugins
-   */
-  get pluginCount(): number {
-    return this._plugins.size;
-  }
-
-  /**
-   * Get number of activated plugins
-   */
-  get activatedCount(): number {
-    return this._activatedPlugins.size;
-  }
-
-  /**
-   * Dispose plugin manager and all plugins
+   * Dispose all plugins and cleanup
    */
   dispose(): void {
     if (this._isDisposed) {
       return;
     }
 
-    // Deactivate all plugins synchronously (best effort)
-    const pluginIds = Array.from(this._activatedPlugins).reverse();
-    for (const pluginId of pluginIds) {
-      const entry = this._plugins.get(pluginId);
-      if (entry) {
-        try {
-          const result = entry.plugin.deactivate();
-          // If it's a promise, we can't wait for it in sync dispose
-          if (result && typeof (result as Promise<void>).catch === 'function') {
-            (result as Promise<void>).catch((error) => {
-              console.error(`Error deactivating plugin ${pluginId}:`, error);
-            });
-          }
-        } catch (error) {
-          console.error(`Error deactivating plugin ${pluginId}:`, error);
-        }
-      }
-    }
+    log('🧹 [PLUGIN] Disposing PluginManager...');
 
-    // Dispose all plugins
-    for (const entry of this._plugins.values()) {
+    // Deactivate and dispose all plugins
+    for (const [id, plugin] of this._plugins) {
       try {
-        entry.plugin.dispose();
+        if (plugin.state === 'active') {
+          plugin.deactivate().catch((error) => {
+            log(`⚠️ [PLUGIN] Error deactivating plugin ${id}:`, error);
+          });
+        }
+        plugin.dispose();
       } catch (error) {
-        console.error(`Error disposing plugin ${entry.plugin.id}:`, error);
+        log(`⚠️ [PLUGIN] Error disposing plugin ${id}:`, error);
       }
     }
 
     this._plugins.clear();
-    this._activatedPlugins.clear();
+    this._agentPlugins.clear();
     this._isDisposed = true;
+
+    log('✅ [PLUGIN] PluginManager disposed');
   }
 
-  private _createPluginContext(plugin: IPlugin): IPluginContext {
-    return {
-      eventBus: this._eventBus,
-      extensionContext: this._extensionContext,
-      logger: {
-        debug: (message: string, ...args: unknown[]) =>
-          console.debug(`[${plugin.id}]`, message, ...args),
-        info: (message: string, ...args: unknown[]) =>
-          console.info(`[${plugin.id}]`, message, ...args),
-        warn: (message: string, ...args: unknown[]) =>
-          console.warn(`[${plugin.id}]`, message, ...args),
-        error: (message: string, ...args: unknown[]) =>
-          console.error(`[${plugin.id}]`, message, ...args),
-      },
-      config: {
-        get: <T>(key: string, defaultValue?: T): T | undefined => {
-          const fullKey = `sidebarTerminal.plugins.${plugin.id}.${key}`;
-          const config = vscode.workspace.getConfiguration();
-          if (defaultValue !== undefined) {
-            return config.get<T>(fullKey, defaultValue);
-          }
-          return config.get<T>(fullKey);
-        },
-        has: (key: string): boolean => {
-          const fullKey = `sidebarTerminal.plugins.${plugin.id}.${key}`;
-          return vscode.workspace.getConfiguration().has(fullKey);
-        },
-      },
-    };
+  /**
+   * Check if an object implements IAgentPlugin
+   */
+  private _isAgentPlugin(plugin: IPlugin): plugin is IAgentPlugin {
+    return (
+      'detect' in plugin &&
+      'onAgentActivated' in plugin &&
+      'onAgentDeactivated' in plugin &&
+      'getAgentType' in plugin
+    );
   }
 
-  private async _withTimeout<T>(
-    promise: Promise<T> | T | void,
-    timeoutMs: number,
-    errorMessage: string
-  ): Promise<T | void> {
-    if (!promise || typeof (promise as Promise<T>).then !== 'function') {
-      return promise;
-    }
-
-    return Promise.race([
-      promise,
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error(errorMessage)), timeoutMs)
-      ),
-    ]);
-  }
-
+  /**
+   * Ensure manager is not disposed
+   */
   private _ensureNotDisposed(): void {
     if (this._isDisposed) {
-      throw new Error('Cannot use disposed PluginManager');
+      throw new Error('PluginManager has been disposed');
     }
   }
 }
