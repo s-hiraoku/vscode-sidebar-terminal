@@ -76,9 +76,9 @@ export class ExtensionLifecycle {
       const bufferService = this.container.resolve<IBufferManagementService>(IBufferManagementService);
       const stateService = this.container.resolve<ITerminalStateService>(ITerminalStateService);
 
-      // Initialize terminal manager with DI services
+      // Initialize terminal manager with DI services and EventBus
       log('🔧 [EXTENSION] Initializing TerminalManager with DI services...');
-      this.terminalManager = new TerminalManager(undefined, bufferService, stateService);
+      this.terminalManager = new TerminalManager(undefined, bufferService, stateService, this.eventBus);
       log('✅ [EXTENSION] TerminalManager initialized with Phase 2 services');
 
       // Initialize standard terminal session manager

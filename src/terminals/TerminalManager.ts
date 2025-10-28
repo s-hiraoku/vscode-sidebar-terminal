@@ -37,6 +37,8 @@ import { ScrollbackService } from '../services/scrollback/ScrollbackService';
 import type { IDisposable } from '@homebridge/node-pty-prebuilt-multiarch';
 import type { IBufferManagementService } from '../services/buffer/IBufferManagementService';
 import type { ITerminalStateService } from '../services/state/ITerminalStateService';
+import { BufferFlushedEvent } from '../services/buffer/BufferManagementService';
+import type { EventBus } from '../core/EventBus';
 
 const ENABLE_TERMINAL_DEBUG_LOGS = process.env.SECONDARY_TERMINAL_DEBUG_LOGS === 'true';
 // Removed unused service imports - these were for the RefactoredTerminalManager which was removed
@@ -61,6 +63,7 @@ export class TerminalManager {
   // Phase 2: DI Services (optional for backward compatibility)
   private readonly _bufferService?: IBufferManagementService;
   private readonly _stateService?: ITerminalStateService;
+  private readonly _eventBus?: EventBus;
 
   // Performance optimization: Data batching for high-frequency output
   // TODO: Migrate to BufferManagementService (Phase 2)
@@ -88,7 +91,8 @@ export class TerminalManager {
   constructor(
     cliAgentService?: ICliAgentDetectionService,
     bufferService?: IBufferManagementService,
-    stateService?: ITerminalStateService
+    stateService?: ITerminalStateService,
+    eventBus?: EventBus
   ) {
     // Initialize terminal number manager with max terminals config
     const config = getTerminalConfig();
@@ -118,12 +122,32 @@ export class TerminalManager {
     // Phase 2: Initialize DI services
     this._bufferService = bufferService;
     this._stateService = stateService;
+    this._eventBus = eventBus;
 
     if (this._bufferService) {
       log('✅ [TERMINAL] Using BufferManagementService from DI');
     }
     if (this._stateService) {
       log('✅ [TERMINAL] Using TerminalStateService from DI');
+    }
+
+    // Subscribe to buffer flush events
+    if (this._eventBus && this._bufferService) {
+      this._eventBus.subscribe(BufferFlushedEvent, (event) => {
+        // Convert terminal number back to ID string
+        const terminal = Array.from(this._terminals.values()).find(
+          (t) => this._registry.getTerminalNumber(t.id) === event.terminalId
+        );
+
+        if (terminal) {
+          // Emit data through existing event hub
+          this._eventHub.emitData(terminal.id, event.data);
+          this.debugLog(
+            `📤 [TERMINAL] Flushed ${event.size} chars from BufferService for terminal ${terminal.id}`
+          );
+        }
+      });
+      log('✅ [TERMINAL] Subscribed to BufferFlushedEvent');
     }
   }
 
@@ -248,6 +272,12 @@ export class TerminalManager {
       // Store terminal and set it as active
       this._terminals.set(terminalId, terminal);
       this._registry.setActiveTerminal(terminalId);
+
+      // Phase 2: Initialize buffer in BufferManagementService
+      if (this._bufferService && terminalNumber) {
+        this._bufferService.initializeBuffer(terminalNumber);
+        this.debugLog(`📊 [TERMINAL] Buffer initialized for terminal ${terminalNumber}`);
+      }
 
       // Start scrollback recording with VS Code-compatible time/size limits
       this._scrollbackService.startRecording(terminalId);
@@ -404,6 +434,12 @@ export class TerminalManager {
       this._deactivateAllTerminals();
       this._terminals.set(terminalId, terminal);
       this._registry.setActiveTerminal(terminalId);
+
+      // Phase 2: Initialize buffer in BufferManagementService
+      if (this._bufferService && terminalNumber) {
+        this._bufferService.initializeBuffer(terminalNumber);
+        this.debugLog(`📊 [TERMINAL] Buffer initialized for terminal ${terminalNumber}`);
+      }
 
       // Start scrollback recording with VS Code-compatible time/size limits
       this._scrollbackService.startRecording(terminalId);
@@ -1056,6 +1092,12 @@ export class TerminalManager {
     // Dispose scrollback service
     this._scrollbackService.dispose();
 
+    // Phase 2: Dispose buffer service
+    if (this._bufferService) {
+      this._bufferService.dispose();
+      log('📊 [TERMINAL] BufferManagementService disposed');
+    }
+
     for (const terminal of this._terminals.values()) {
       const p = (terminal.ptyProcess || terminal.pty) as { kill?: () => void } | undefined;
       if (p && typeof p.kill === 'function') {
@@ -1083,6 +1125,26 @@ export class TerminalManager {
       return;
     }
 
+    // ✅ CRITICAL: Add terminal ID validation to each data chunk
+    const validatedData = this._validateDataForTerminal(terminalId, data);
+    const normalizedData = this._normalizeControlSequences(validatedData);
+
+    // Record data to scrollback service with VS Code time/size limits
+    this._scrollbackService.recordData(terminalId, normalizedData);
+
+    // Phase 2: Use BufferManagementService if available
+    if (this._bufferService) {
+      const terminalNumber = this._registry.getTerminalNumber(terminalId);
+      if (terminalNumber !== undefined) {
+        this._bufferService.write(terminalNumber, normalizedData);
+        this.debugLog(
+          `📊 [TERMINAL] Data buffered via BufferService for ${terminalId}: ${data.length} chars`
+        );
+        return;
+      }
+    }
+
+    // Legacy buffer handling (fallback when DI service not available)
     if (!this._dataBuffers.has(terminalId)) {
       this._dataBuffers.set(terminalId, []);
       this.debugLog(`📊 [TERMINAL] Created new data buffer for terminal: ${terminalId}`);
@@ -1095,13 +1157,7 @@ export class TerminalManager {
       return;
     }
 
-    // ✅ CRITICAL: Add terminal ID validation to each data chunk
-    const validatedData = this._validateDataForTerminal(terminalId, data);
-    const normalizedData = this._normalizeControlSequences(validatedData);
     buffer.push(normalizedData);
-
-    // Record data to scrollback service with VS Code time/size limits
-    this._scrollbackService.recordData(terminalId, normalizedData);
 
     this.debugLog(
       `📊 [TERMINAL] Data buffered for ${terminalId}: ${data.length} chars (buffer size: ${buffer.length})`
@@ -1252,6 +1308,15 @@ export class TerminalManager {
 
     // Clear scrollback recording for this terminal
     this._scrollbackService.clearScrollback(terminalId);
+
+    // Phase 2: Dispose buffer in BufferManagementService
+    if (this._bufferService) {
+      const terminalNumber = this._registry.getTerminalNumber(terminalId);
+      if (terminalNumber !== undefined) {
+        this._bufferService.disposeBuffer(terminalNumber);
+        this.debugLog(`📊 [TERMINAL] Buffer disposed for terminal ${terminalNumber}`);
+      }
+    }
 
     // Remove from terminals map
     const deletionResult = this._terminals.delete(terminalId);
@@ -1592,6 +1657,15 @@ export class TerminalManager {
       // 🛡️ プロセス終了イベント（CLI Agent終了検出を含む）
       // Handle CLI agent termination on process exit
       this._cliAgentService.handleTerminalRemoved(terminalId);
+
+      // Phase 2: Dispose buffer in BufferManagementService
+      if (this._bufferService) {
+        const terminalNumber = this._registry.getTerminalNumber(terminalId);
+        if (terminalNumber !== undefined) {
+          this._bufferService.disposeBuffer(terminalNumber);
+          this.debugLog(`📊 [TERMINAL] Buffer disposed for terminal ${terminalNumber}`);
+        }
+      }
 
       // Clean up terminal and notify listeners
       this._terminals.delete(terminalId);
