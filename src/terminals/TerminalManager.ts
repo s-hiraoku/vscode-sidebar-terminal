@@ -66,6 +66,9 @@ export class TerminalManager {
   private readonly _stateService?: ITerminalStateService;
   private readonly _eventBus?: EventBus;
 
+  // Phase 3: Plugin System
+  private readonly _pluginManager?: PluginManager;
+
   private readonly _initialPromptGuards = new Map<string, { dispose: () => void }>();
 
   // CLI Agent detection moved to service - cache removed from TerminalManager
@@ -87,7 +90,8 @@ export class TerminalManager {
     cliAgentService?: ICliAgentDetectionService,
     bufferService?: IBufferManagementService,
     stateService?: ITerminalStateService,
-    eventBus?: EventBus
+    eventBus?: EventBus,
+    pluginManager?: PluginManager
   ) {
     // Initialize terminal number manager with max terminals config
     const config = getTerminalConfig();
@@ -124,6 +128,13 @@ export class TerminalManager {
     }
     if (this._stateService) {
       log('✅ [TERMINAL] Using TerminalStateService from DI');
+    }
+
+    // Phase 3: Initialize Plugin System
+    this._pluginManager = pluginManager;
+    if (this._pluginManager) {
+      log('✅ [TERMINAL] Using PluginManager from Phase 3');
+      log(`📦 [TERMINAL] Active agent plugins: ${this._pluginManager.getActiveAgentPlugins().length}`);
     }
 
     // Subscribe to buffer flush events
@@ -1470,7 +1481,44 @@ export class TerminalManager {
    * Handle terminal output for CLI Agent detection (public API)
    */
   public handleTerminalOutputForCliAgent(terminalId: string, data: string): void {
+    // Legacy detection (Phase 2)
     this._cliAgentService.detectFromOutput(terminalId, data);
+
+    // Phase 3: Plugin-based detection
+    if (this._pluginManager) {
+      this._detectWithPlugins(terminalId, data);
+    }
+  }
+
+  /**
+   * Phase 3: Detect CLI agents using plugin system
+   */
+  private _detectWithPlugins(terminalId: string, output: string): void {
+    if (!this._pluginManager) {
+      return;
+    }
+
+    const agentPlugins = this._pluginManager.getActiveAgentPlugins();
+    for (const plugin of agentPlugins) {
+      const result = plugin.detect(terminalId, output);
+      if (result.detected && result.agentType) {
+        log(`🤖 [PLUGIN] Agent detected: ${result.agentType} (confidence: ${result.confidence.toFixed(2)})`);
+
+        // Call plugin lifecycle hook
+        plugin.onAgentActivated(terminalId);
+
+        // Emit state update for UI (TODO: integrate with existing state system)
+        this._eventHub.emitStateUpdate(terminalId, {
+          isActive: true,
+          agentType: result.agentType,
+          confidence: result.confidence,
+          metadata: result.metadata,
+        });
+
+        // Only report the first matching agent to avoid conflicts
+        break;
+      }
+    }
   }
 
   /**
