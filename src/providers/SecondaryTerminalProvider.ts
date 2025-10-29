@@ -575,10 +575,11 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       log(`✅ [INITIALIZATION] Terminal and PTY process found for: ${terminalId}`);
       log(`✅ [INITIALIZATION] Starting shell initialization for: ${terminalId}`);
 
-      // Call TerminalManager's shell initialization with proper timing (safe mode enabled to avoid shell integration issues)
-      // Note: _ensureInitialPrompt still runs and will force prompt display if needed
-      this._terminalManager.initializeShellForTerminal(terminalId, terminal.ptyProcess, true);
-      log(`🐚 [INITIALIZATION] Shell initialization initiated for: ${terminalId}`);
+      // 🔧 FIX: Enable shell integration (safe mode = false) to ensure prompt display
+      // Shell integration provides proper prompt detection and command tracking
+      // _ensureInitialPrompt will still run as a fallback mechanism
+      this._terminalManager.initializeShellForTerminal(terminalId, terminal.ptyProcess, false);
+      log(`🐚 [INITIALIZATION] Shell initialization initiated for: ${terminalId} (shell integration enabled)`);
       log(`🎯 [INITIALIZATION] ========== INITIALIZATION COMPLETE HANDLER END ==========`);
     } catch (error) {
       log(`❌ [INITIALIZATION] Failed to initialize shell for terminal ${terminalId}:`, error);
