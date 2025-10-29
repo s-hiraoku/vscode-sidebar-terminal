@@ -5,7 +5,6 @@
  */
 
 import type { IPlugin } from './IPlugin';
-import type { EventBus } from '../EventBus';
 
 /**
  * Agent detection result

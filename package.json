@@ -877,6 +877,59 @@
           "type": "boolean",
           "default": true,
           "description": "Enable adaptive buffering that adjusts flush intervals based on output patterns."
+        },
+        "secondaryTerminal.plugins.enablePluginSystem": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable the plugin system for AI agent detection. Requires reload to take effect."
+        },
+        "secondaryTerminal.plugins.claude.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable Claude Code CLI agent detection plugin."
+        },
+        "secondaryTerminal.plugins.claude.confidenceThreshold": {
+          "type": "number",
+          "default": 0.7,
+          "minimum": 0.1,
+          "maximum": 1.0,
+          "description": "Confidence threshold for Claude agent detection (0.1 to 1.0). Lower values are more sensitive."
+        },
+        "secondaryTerminal.plugins.copilot.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable GitHub Copilot CLI agent detection plugin."
+        },
+        "secondaryTerminal.plugins.copilot.confidenceThreshold": {
+          "type": "number",
+          "default": 0.7,
+          "minimum": 0.1,
+          "maximum": 1.0,
+          "description": "Confidence threshold for Copilot agent detection (0.1 to 1.0). Lower values are more sensitive."
+        },
+        "secondaryTerminal.plugins.gemini.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable Google Gemini CLI agent detection plugin."
+        },
+        "secondaryTerminal.plugins.gemini.confidenceThreshold": {
+          "type": "number",
+          "default": 0.7,
+          "minimum": 0.1,
+          "maximum": 1.0,
+          "description": "Confidence threshold for Gemini agent detection (0.1 to 1.0). Lower values are more sensitive."
+        },
+        "secondaryTerminal.plugins.codex.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable OpenAI Codex CLI agent detection plugin."
+        },
+        "secondaryTerminal.plugins.codex.confidenceThreshold": {
+          "type": "number",
+          "default": 0.7,
+          "minimum": 0.1,
+          "maximum": 1.0,
+          "description": "Confidence threshold for Codex agent detection (0.1 to 1.0). Lower values are more sensitive."
         }
       }
     },

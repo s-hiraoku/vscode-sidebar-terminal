@@ -28,6 +28,7 @@ export class ExtensionLifecycle {
 
   // Phase 3: Plugin System
   private pluginManager: PluginManager | undefined;
+  private pluginConfigService: import('./plugins/PluginConfigurationService').PluginConfigurationService | undefined;
 
   private terminalManager: TerminalManager | undefined;
   private sidebarProvider: SecondaryTerminalProvider | undefined;
@@ -75,8 +76,11 @@ export class ExtensionLifecycle {
 
       // Phase 3: Bootstrap Plugin System
       log('🚀 [EXTENSION] === PHASE 3: PLUGIN SYSTEM BOOTSTRAP ===');
-      this.pluginManager = await registerPhase3Plugins(this.container, this.eventBus!);
+      const { pluginManager, configService } = await registerPhase3Plugins(this.container, this.eventBus!);
+      this.pluginManager = pluginManager;
+      this.pluginConfigService = configService;
       log('✅ [EXTENSION] PluginManager initialized with agent plugins');
+      log('✅ [EXTENSION] PluginConfigurationService initialized with hot-reload');
       log(`📦 [EXTENSION] Registered plugins: ${this.pluginManager.getAllPlugins().length}`);
       log(`🤖 [EXTENSION] Active agent plugins: ${this.pluginManager.getActiveAgentPlugins().length}`);
 
@@ -500,6 +504,13 @@ export class ExtensionLifecycle {
       this.linksService = undefined;
     }
 
+    // Phase 3: Dispose Plugin Configuration Service
+    if (this.pluginConfigService) {
+      log('🔧 [EXTENSION] Disposing PluginConfigurationService...');
+      this.pluginConfigService.dispose();
+      this.pluginConfigService = undefined;
+    }
+
     // Phase 3: Dispose Plugin Manager
     if (this.pluginManager) {
       log('🔧 [EXTENSION] Disposing PluginManager...');
@@ -576,7 +587,7 @@ export class ExtensionLifecycle {
    * Initializes the dependency injection container and registers all services.
    * This enables better testability, modularity, and prepares for plugin integration.
    */
-  private bootstrapDIContainer(context: vscode.ExtensionContext): DIContainer {
+  private bootstrapDIContainer(_context: vscode.ExtensionContext): DIContainer {
     log('🔧 [DI] Bootstrapping DI container...');
 
     const container = new DIContainer();

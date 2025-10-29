@@ -5,7 +5,7 @@
  */
 
 import type { EventBus } from '../EventBus';
-import type { IPlugin, PluginConfiguration, PluginState } from './IPlugin';
+import type { IPlugin, PluginConfiguration } from './IPlugin';
 import type { IAgentPlugin } from './IAgentPlugin';
 import { terminal as log } from '../../utils/logger';
 

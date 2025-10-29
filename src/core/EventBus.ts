@@ -23,6 +23,7 @@ import * as vscode from 'vscode';
 /**
  * Event type identifier with associated data type
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export class EventType<T> {
   constructor(public readonly name: string) {}
 }

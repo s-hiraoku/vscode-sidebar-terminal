@@ -13,6 +13,7 @@ import { IBufferManagementService } from '../services/buffer/IBufferManagementSe
 import { TerminalStateService } from '../services/state/TerminalStateService';
 import { ITerminalStateService } from '../services/state/ITerminalStateService';
 import { PluginManager } from './plugins/PluginManager';
+import { PluginConfigurationService } from './plugins/PluginConfigurationService';
 import { ClaudePlugin } from '../plugins/agents/ClaudePlugin';
 import { CopilotPlugin } from '../plugins/agents/CopilotPlugin';
 import { GeminiPlugin } from '../plugins/agents/GeminiPlugin';
@@ -57,42 +58,47 @@ export function registerPhase2Services(
  *
  * @param container DI container instance
  * @param eventBus Shared EventBus instance
+ * @returns PluginManager and PluginConfigurationService instances
  */
 export async function registerPhase3Plugins(
   container: DIContainer,
   eventBus: EventBus
-): Promise<PluginManager> {
+): Promise<{ pluginManager: PluginManager; configService: PluginConfigurationService }> {
   // Create PluginManager instance
   const pluginManager = new PluginManager(eventBus);
 
-  // Register agent plugins
+  // Register agent plugins (without immediate activation)
   const claudePlugin = new ClaudePlugin();
   const copilotPlugin = new CopilotPlugin();
   const geminiPlugin = new GeminiPlugin();
   const codexPlugin = new CodexPlugin();
 
-  // Register and activate plugins
+  // Register plugins - activation will be handled by PluginConfigurationService
   await pluginManager.registerPlugin(claudePlugin, {
-    activateImmediately: true,
+    activateImmediately: false,
     config: { enabled: true },
   });
 
   await pluginManager.registerPlugin(copilotPlugin, {
-    activateImmediately: true,
+    activateImmediately: false,
     config: { enabled: true },
   });
 
   await pluginManager.registerPlugin(geminiPlugin, {
-    activateImmediately: true,
+    activateImmediately: false,
     config: { enabled: true },
   });
 
   await pluginManager.registerPlugin(codexPlugin, {
-    activateImmediately: true,
+    activateImmediately: false,
     config: { enabled: true },
   });
 
-  return pluginManager;
+  // Create and initialize PluginConfigurationService
+  const configService = new PluginConfigurationService(pluginManager);
+  configService.initialize();
+
+  return { pluginManager, configService };
 }
 
 /**
