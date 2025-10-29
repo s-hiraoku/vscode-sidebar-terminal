@@ -1,7 +1,6 @@
 import * as assert from 'assert';
 import { BaseTest } from '../../../utils';
 import { ScrollbackService } from '../../../../services/scrollback/ScrollbackService';
-import { IScrollbackConfig } from '../../../../services/scrollback/IScrollbackService';
 
 class ScrollbackServiceTest extends BaseTest {
   public service!: ScrollbackService;

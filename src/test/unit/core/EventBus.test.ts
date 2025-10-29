@@ -8,9 +8,7 @@ import { expect } from 'chai';
 import {
   EventBus,
   createEventType,
-  EventType,
   Event,
-  EventHandler,
 } from '../../../core/EventBus';
 
 describe('EventBus', () => {
@@ -208,7 +206,7 @@ describe('EventBus', () => {
       const TestEvent = createEventType<{ value: number }>('test');
       let completed = false;
 
-      eventBus.subscribe(TestEvent, async (event) => {
+      eventBus.subscribe(TestEvent, async (_event) => {
         await new Promise((resolve) => setTimeout(resolve, 10));
         completed = true;
       });
