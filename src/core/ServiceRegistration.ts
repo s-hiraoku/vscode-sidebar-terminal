@@ -64,41 +64,51 @@ export async function registerPhase3Plugins(
   container: DIContainer,
   eventBus: EventBus
 ): Promise<{ pluginManager: PluginManager; configService: PluginConfigurationService }> {
-  // Create PluginManager instance
-  const pluginManager = new PluginManager(eventBus);
+  try {
+    // Create PluginManager instance
+    const pluginManager = new PluginManager(eventBus);
 
-  // Register agent plugins (without immediate activation)
-  const claudePlugin = new ClaudePlugin();
-  const copilotPlugin = new CopilotPlugin();
-  const geminiPlugin = new GeminiPlugin();
-  const codexPlugin = new CodexPlugin();
+    // Register agent plugins (without immediate activation)
+    const claudePlugin = new ClaudePlugin();
+    const copilotPlugin = new CopilotPlugin();
+    const geminiPlugin = new GeminiPlugin();
+    const codexPlugin = new CodexPlugin();
 
-  // Register plugins - activation will be handled by PluginConfigurationService
-  await pluginManager.registerPlugin(claudePlugin, {
-    activateImmediately: false,
-    config: { enabled: true },
-  });
+    // Register plugins - activation will be handled by PluginConfigurationService
+    await pluginManager.registerPlugin(claudePlugin, {
+      activateImmediately: false,
+      config: { enabled: true },
+    });
 
-  await pluginManager.registerPlugin(copilotPlugin, {
-    activateImmediately: false,
-    config: { enabled: true },
-  });
+    await pluginManager.registerPlugin(copilotPlugin, {
+      activateImmediately: false,
+      config: { enabled: true },
+    });
 
-  await pluginManager.registerPlugin(geminiPlugin, {
-    activateImmediately: false,
-    config: { enabled: true },
-  });
+    await pluginManager.registerPlugin(geminiPlugin, {
+      activateImmediately: false,
+      config: { enabled: true },
+    });
 
-  await pluginManager.registerPlugin(codexPlugin, {
-    activateImmediately: false,
-    config: { enabled: true },
-  });
+    await pluginManager.registerPlugin(codexPlugin, {
+      activateImmediately: false,
+      config: { enabled: true },
+    });
 
-  // Create and initialize PluginConfigurationService
-  const configService = new PluginConfigurationService(pluginManager);
-  configService.initialize();
+    // Create and initialize PluginConfigurationService
+    const configService = new PluginConfigurationService(pluginManager);
+    configService.initialize();
 
-  return { pluginManager, configService };
+    return { pluginManager, configService };
+  } catch (error) {
+    // 🔧 FIX: Log detailed error information for plugin registration failures
+    console.error('[PLUGIN-REGISTRATION] Failed to register Phase 3 plugins:', error);
+    console.error('[PLUGIN-REGISTRATION] Error details:', {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    throw error;
+  }
 }
 
 /**

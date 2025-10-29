@@ -48,7 +48,7 @@ export class ExtensionLifecycle {
   /**
    * 拡張機能の起動処理
    */
-  activate(context: vscode.ExtensionContext): Promise<void> {
+  async activate(context: vscode.ExtensionContext): Promise<void> {
     log('🚀 [EXTENSION] === ACTIVATION START ===');
 
     // Configure logger based on extension mode
@@ -76,7 +76,15 @@ export class ExtensionLifecycle {
 
       // Phase 3: Bootstrap Plugin System
       log('🚀 [EXTENSION] === PHASE 3: PLUGIN SYSTEM BOOTSTRAP ===');
-      const { pluginManager, configService } = await registerPhase3Plugins(this.container, this.eventBus!);
+
+      // 🔧 FIX: Verify EventBus is initialized before using it
+      if (!this.eventBus) {
+        log('❌ [EXTENSION] CRITICAL: EventBus not initialized before Phase 3');
+        throw new Error('EventBus must be initialized before registering Phase 3 plugins');
+      }
+      log('✅ [EXTENSION] EventBus confirmed initialized');
+
+      const { pluginManager, configService } = await registerPhase3Plugins(this.container, this.eventBus);
       this.pluginManager = pluginManager;
       this.pluginConfigService = configService;
       log('✅ [EXTENSION] PluginManager initialized with agent plugins');
