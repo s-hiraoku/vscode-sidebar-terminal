@@ -12,6 +12,11 @@ import { BufferManagementService } from '../services/buffer/BufferManagementServ
 import { IBufferManagementService } from '../services/buffer/IBufferManagementService';
 import { TerminalStateService } from '../services/state/TerminalStateService';
 import { ITerminalStateService } from '../services/state/ITerminalStateService';
+import { PluginManager } from './plugins/PluginManager';
+import { ClaudePlugin } from '../plugins/agents/ClaudePlugin';
+import { CopilotPlugin } from '../plugins/agents/CopilotPlugin';
+import { GeminiPlugin } from '../plugins/agents/GeminiPlugin';
+import { CodexPlugin } from '../plugins/agents/CodexPlugin';
 
 /**
  * Register Phase 2 services in the DI container
@@ -42,6 +47,52 @@ export function registerPhase2Services(
 
   // Future Phase 2 services will be registered here:
   // - Additional services as needed
+}
+
+/**
+ * Register Phase 3 plugins in the DI container
+ *
+ * This function registers the PluginManager and all agent plugins.
+ * It will be called from ExtensionLifecycle.activate() in Phase 3.
+ *
+ * @param container DI container instance
+ * @param eventBus Shared EventBus instance
+ */
+export async function registerPhase3Plugins(
+  container: DIContainer,
+  eventBus: EventBus
+): Promise<PluginManager> {
+  // Create PluginManager instance
+  const pluginManager = new PluginManager(eventBus);
+
+  // Register agent plugins
+  const claudePlugin = new ClaudePlugin();
+  const copilotPlugin = new CopilotPlugin();
+  const geminiPlugin = new GeminiPlugin();
+  const codexPlugin = new CodexPlugin();
+
+  // Register and activate plugins
+  await pluginManager.registerPlugin(claudePlugin, {
+    activateImmediately: true,
+    config: { enabled: true },
+  });
+
+  await pluginManager.registerPlugin(copilotPlugin, {
+    activateImmediately: true,
+    config: { enabled: true },
+  });
+
+  await pluginManager.registerPlugin(geminiPlugin, {
+    activateImmediately: true,
+    config: { enabled: true },
+  });
+
+  await pluginManager.registerPlugin(codexPlugin, {
+    activateImmediately: true,
+    config: { enabled: true },
+  });
+
+  return pluginManager;
 }
 
 /**
