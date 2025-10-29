@@ -12,9 +12,10 @@ import { TerminalLinksService } from '../services/TerminalLinksService';
 import { VersionUtils } from '../utils/VersionUtils';
 import { DIContainer } from './DIContainer';
 import { EventBus } from './EventBus';
-import { registerPhase2Services } from './ServiceRegistration';
+import { registerPhase2Services, registerPhase3Plugins } from './ServiceRegistration';
 import { IBufferManagementService } from '../services/buffer/IBufferManagementService';
 import { ITerminalStateService } from '../services/state/ITerminalStateService';
+import { PluginManager } from './plugins/PluginManager';
 
 /**
  * VS Code拡張機能のライフサイクル管理
@@ -24,6 +25,9 @@ export class ExtensionLifecycle {
   // Phase 2: DI Container and Event Bus
   private container: DIContainer | undefined;
   private eventBus: EventBus | undefined;
+
+  // Phase 3: Plugin System
+  private pluginManager: PluginManager | undefined;
 
   private terminalManager: TerminalManager | undefined;
   private sidebarProvider: SecondaryTerminalProvider | undefined;
@@ -69,6 +73,13 @@ export class ExtensionLifecycle {
       this.container = this.bootstrapDIContainer(context);
       log('✅ [EXTENSION] DI container initialized');
 
+      // Phase 3: Bootstrap Plugin System
+      log('🚀 [EXTENSION] === PHASE 3: PLUGIN SYSTEM BOOTSTRAP ===');
+      this.pluginManager = await registerPhase3Plugins(this.container, this.eventBus!);
+      log('✅ [EXTENSION] PluginManager initialized with agent plugins');
+      log(`📦 [EXTENSION] Registered plugins: ${this.pluginManager.getAllPlugins().length}`);
+      log(`🤖 [EXTENSION] Active agent plugins: ${this.pluginManager.getActiveAgentPlugins().length}`);
+
       // Ensure node-pty looks for release binaries
       process.env.NODE_PTY_DEBUG = '0';
 
@@ -76,10 +87,16 @@ export class ExtensionLifecycle {
       const bufferService = this.container.resolve<IBufferManagementService>(IBufferManagementService);
       const stateService = this.container.resolve<ITerminalStateService>(ITerminalStateService);
 
-      // Initialize terminal manager with DI services and EventBus
-      log('🔧 [EXTENSION] Initializing TerminalManager with DI services...');
-      this.terminalManager = new TerminalManager(undefined, bufferService, stateService, this.eventBus);
-      log('✅ [EXTENSION] TerminalManager initialized with Phase 2 services');
+      // Initialize terminal manager with DI services, EventBus, and PluginManager
+      log('🔧 [EXTENSION] Initializing TerminalManager with DI services and PluginManager...');
+      this.terminalManager = new TerminalManager(
+        undefined,
+        bufferService,
+        stateService,
+        this.eventBus,
+        this.pluginManager
+      );
+      log('✅ [EXTENSION] TerminalManager initialized with Phase 2 services and Phase 3 plugins');
 
       // Initialize standard terminal session manager
       log('🔧 [EXTENSION] Initializing VS Code standard session manager...');
@@ -481,6 +498,13 @@ export class ExtensionLifecycle {
       log('🔧 [EXTENSION] Disposing terminal links service...');
       this.linksService.dispose();
       this.linksService = undefined;
+    }
+
+    // Phase 3: Dispose Plugin Manager
+    if (this.pluginManager) {
+      log('🔧 [EXTENSION] Disposing PluginManager...');
+      this.pluginManager.dispose();
+      this.pluginManager = undefined;
     }
 
     // Dispose terminal manager

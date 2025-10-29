@@ -39,6 +39,7 @@ import type { IBufferManagementService } from '../services/buffer/IBufferManagem
 import type { ITerminalStateService } from '../services/state/ITerminalStateService';
 import { BufferFlushedEvent } from '../services/buffer/BufferManagementService';
 import type { EventBus } from '../core/EventBus';
+import type { PluginManager } from '../core/plugins/PluginManager';
 
 const ENABLE_TERMINAL_DEBUG_LOGS = process.env.SECONDARY_TERMINAL_DEBUG_LOGS === 'true';
 // Removed unused service imports - these were for the RefactoredTerminalManager which was removed
