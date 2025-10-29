@@ -130,7 +130,6 @@ export class SerializationMessageHandler implements IMessageHandler {
     this.logger.info('Restore serialized content requested');
 
     const terminalId = typeof msg.terminalId === 'string' ? msg.terminalId : undefined;
-    const serializedContent = (msg as any).serializedContent as string | undefined;
     const scrollbackData = Array.isArray((msg as any).scrollbackData)
       ? ((msg as any).scrollbackData as unknown[]).filter(
           (line): line is string => typeof line === 'string'
@@ -160,7 +159,6 @@ export class SerializationMessageHandler implements IMessageHandler {
       return;
     }
 
-    const persistenceManager = (coordinator as any).persistenceManager;
     const restoreSessionFn =
       'restoreSession' in coordinator && typeof (coordinator as any).restoreSession === 'function'
         ? ((coordinator as any).restoreSession as (payload: {
