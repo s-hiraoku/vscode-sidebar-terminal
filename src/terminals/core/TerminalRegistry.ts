@@ -80,4 +80,9 @@ export class TerminalRegistry {
   public clearActive(): void {
     this.activeManager.clearActive();
   }
+
+  public getTerminalNumber(terminalId: string): number | undefined {
+    const terminal = this.terminals.get(terminalId);
+    return terminal?.number;
+  }
 }
