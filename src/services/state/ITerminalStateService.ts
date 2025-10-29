@@ -5,11 +5,9 @@
  * Responsible for tracking terminal registration, process states, and active terminal management.
  */
 
-import type { EventBus } from '../../core/EventBus';
 import type {
   ProcessState,
   InteractionState,
-  TerminalInstance,
 } from '../../types/shared';
 
 /**

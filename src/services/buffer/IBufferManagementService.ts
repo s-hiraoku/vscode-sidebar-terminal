@@ -5,8 +5,6 @@
  * Provides adaptive buffering based on CLI agent detection and output patterns.
  */
 
-import type { EventBus } from '../../core/EventBus';
-
 /**
  * Buffer configuration for a terminal
  */

@@ -5,7 +5,6 @@
 import * as vscode from 'vscode';
 import {
   TerminalInstance,
-  TerminalEvent,
   TerminalState,
   TerminalInfo,
   DeleteResult,
