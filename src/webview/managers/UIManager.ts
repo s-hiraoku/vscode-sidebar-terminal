@@ -38,6 +38,9 @@ export class UIManager extends BaseManager implements IUIManager {
   // Event registry for proper cleanup
   protected eventRegistry: EventHandlerRegistry;
 
+  // Theme change observer
+  private themeObserver: MutationObserver | null = null;
+
   constructor() {
     super('UIManager', {
       enableLogging: true,
@@ -54,6 +57,53 @@ export class UIManager extends BaseManager implements IUIManager {
    */
   protected doInitialize(): void {
     this.logger('🚀 UIManager initialized');
+    this.setupThemeChangeListener();
+  }
+
+  /**
+   * Set up theme change listener using MutationObserver
+   */
+  private setupThemeChangeListener(): void {
+    if (typeof window === 'undefined' || !document.body) {
+      this.logger('⚠️ Cannot set up theme listener: window or document.body not available');
+      return;
+    }
+
+    // Create MutationObserver to watch for VS Code theme changes
+    this.themeObserver = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+          this.logger('🎨 VS Code theme change detected, updating terminal themes...');
+          this.handleThemeChange();
+          break;
+        }
+      }
+    });
+
+    // Start observing the body element for class changes
+    this.themeObserver.observe(document.body, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
+
+    this.logger('✅ Theme change listener set up successfully');
+  }
+
+  /**
+   * Handle theme change event
+   */
+  private handleThemeChange(): void {
+    // Invalidate theme cache
+    this.currentTheme = null;
+    this.themeApplied = false;
+
+    // Notify coordinator to refresh all terminal themes
+    if (this.coordinator) {
+      this.coordinator.postMessageToExtension({
+        command: 'themeChanged',
+        timestamp: Date.now(),
+      });
+    }
   }
 
   /**
@@ -61,6 +111,13 @@ export class UIManager extends BaseManager implements IUIManager {
    */
   protected doDispose(): void {
     this.logger('🧹 Disposing UIManager resources');
+
+    // Disconnect theme observer
+    if (this.themeObserver) {
+      this.themeObserver.disconnect();
+      this.themeObserver = null;
+      this.logger('✅ Theme observer disconnected');
+    }
 
     // Clear caches
     this.currentTheme = null;
