@@ -17,6 +17,10 @@ export interface BaseTerminalConfig {}
 export interface DisplayConfig extends BaseTerminalConfig {
   readonly fontSize: number;
   readonly fontFamily: string;
+  readonly fontWeight?: string;
+  readonly fontWeightBold?: string;
+  readonly lineHeight?: number;
+  readonly letterSpacing?: number;
   readonly theme?: string;
   readonly cursorBlink: boolean;
 }
@@ -80,6 +84,10 @@ export interface ExtensionTerminalConfig
 export interface PartialTerminalSettings {
   fontSize?: number;
   fontFamily?: string;
+  fontWeight?: string;
+  fontWeightBold?: string;
+  lineHeight?: number;
+  letterSpacing?: number;
   theme?: string;
   cursorBlink?: boolean;
   scrollback?: number;

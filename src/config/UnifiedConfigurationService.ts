@@ -317,6 +317,10 @@ export class UnifiedConfigurationService implements Disposable {
       defaultDirectory: this.get(section, CONFIG_KEYS.DEFAULT_DIRECTORY, ''),
       fontSize: this.getFontSize(),
       fontFamily: this.getFontFamily(),
+      fontWeight: this.getFontWeight(),
+      fontWeightBold: this.getFontWeightBold(),
+      lineHeight: this.getLineHeight(),
+      letterSpacing: this.getLetterSpacing(),
       cursorBlink: this.get(section, CONFIG_KEYS.CURSOR_BLINK, true),
       cursor: {
         style: 'block',

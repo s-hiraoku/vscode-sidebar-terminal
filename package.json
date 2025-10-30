@@ -290,6 +290,68 @@
           "default": true,
           "description": "Enable cursor blinking in terminal."
         },
+        "secondaryTerminal.fontSize": {
+          "type": "number",
+          "default": 14,
+          "minimum": 6,
+          "maximum": 30,
+          "description": "Font size in pixels for terminal text."
+        },
+        "secondaryTerminal.fontFamily": {
+          "type": "string",
+          "default": "monospace",
+          "description": "Font family for terminal text. Uses monospace if not specified."
+        },
+        "secondaryTerminal.fontWeight": {
+          "type": "string",
+          "default": "normal",
+          "enum": [
+            "normal",
+            "bold",
+            "100",
+            "200",
+            "300",
+            "400",
+            "500",
+            "600",
+            "700",
+            "800",
+            "900"
+          ],
+          "description": "Font weight for terminal text."
+        },
+        "secondaryTerminal.fontWeightBold": {
+          "type": "string",
+          "default": "bold",
+          "enum": [
+            "normal",
+            "bold",
+            "100",
+            "200",
+            "300",
+            "400",
+            "500",
+            "600",
+            "700",
+            "800",
+            "900"
+          ],
+          "description": "Font weight for bold terminal text."
+        },
+        "secondaryTerminal.lineHeight": {
+          "type": "number",
+          "default": 1.0,
+          "minimum": 0.8,
+          "maximum": 2.0,
+          "description": "Line height multiplier for terminal text."
+        },
+        "secondaryTerminal.letterSpacing": {
+          "type": "number",
+          "default": 0,
+          "minimum": -5,
+          "maximum": 10,
+          "description": "Letter spacing in pixels for terminal text."
+        },
         "secondaryTerminal.theme": {
           "type": "string",
           "default": "auto",
