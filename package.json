@@ -2,7 +2,7 @@
   "name": "vscode-sidebar-terminal",
   "displayName": "Secondary Terminal",
   "description": "Production-ready VS Code extension with TypeScript-compliant terminal in sidebar, ProcessState/InteractionState management, and comprehensive session management.",
-  "version": "0.1.122",
+  "version": "0.1.123",
   "publisher": "s-hiraoku",
   "engines": {
     "vscode": "^1.74.0",
@@ -812,8 +812,8 @@
         "secondaryTerminal.plugins.agents.claude.threshold": {
           "type": "number",
           "default": 0.8,
-          "minimum": 0.0,
-          "maximum": 1.0,
+          "minimum": 0,
+          "maximum": 1,
           "description": "Detection confidence threshold for Claude Code (0.0 to 1.0)."
         },
         "secondaryTerminal.plugins.agents.copilot.enabled": {
@@ -824,8 +824,8 @@
         "secondaryTerminal.plugins.agents.copilot.threshold": {
           "type": "number",
           "default": 0.7,
-          "minimum": 0.0,
-          "maximum": 1.0,
+          "minimum": 0,
+          "maximum": 1,
           "description": "Detection confidence threshold for GitHub Copilot (0.0 to 1.0)."
         },
         "secondaryTerminal.plugins.agents.codex.enabled": {
@@ -836,8 +836,8 @@
         "secondaryTerminal.plugins.agents.codex.threshold": {
           "type": "number",
           "default": 0.7,
-          "minimum": 0.0,
-          "maximum": 1.0,
+          "minimum": 0,
+          "maximum": 1,
           "description": "Detection confidence threshold for Codex CLI (0.0 to 1.0)."
         },
         "secondaryTerminal.plugins.agents.gemini.enabled": {
@@ -848,8 +848,8 @@
         "secondaryTerminal.plugins.agents.gemini.threshold": {
           "type": "number",
           "default": 0.7,
-          "minimum": 0.0,
-          "maximum": 1.0,
+          "minimum": 0,
+          "maximum": 1,
           "description": "Detection confidence threshold for Gemini CLI (0.0 to 1.0)."
         },
         "secondaryTerminal.performance.bufferFlushInterval": {
@@ -892,7 +892,7 @@
           "type": "number",
           "default": 0.7,
           "minimum": 0.1,
-          "maximum": 1.0,
+          "maximum": 1,
           "description": "Confidence threshold for Claude agent detection (0.1 to 1.0). Lower values are more sensitive."
         },
         "secondaryTerminal.plugins.copilot.enabled": {
@@ -904,7 +904,7 @@
           "type": "number",
           "default": 0.7,
           "minimum": 0.1,
-          "maximum": 1.0,
+          "maximum": 1,
           "description": "Confidence threshold for Copilot agent detection (0.1 to 1.0). Lower values are more sensitive."
         },
         "secondaryTerminal.plugins.gemini.enabled": {
@@ -916,7 +916,7 @@
           "type": "number",
           "default": 0.7,
           "minimum": 0.1,
-          "maximum": 1.0,
+          "maximum": 1,
           "description": "Confidence threshold for Gemini agent detection (0.1 to 1.0). Lower values are more sensitive."
         },
         "secondaryTerminal.plugins.codex.enabled": {
@@ -928,7 +928,7 @@
           "type": "number",
           "default": 0.7,
           "minimum": 0.1,
-          "maximum": 1.0,
+          "maximum": 1,
           "description": "Confidence threshold for Codex agent detection (0.1 to 1.0). Lower values are more sensitive."
         }
       }
