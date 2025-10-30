@@ -487,20 +487,9 @@ export class TerminalManager {
       // Start scrollback recording with VS Code-compatible time/size limits
       this._scrollbackService.startRecording(terminalId);
 
-      // PTY data handler - clean, no duplicates
-      ptyProcess.onData((data: string) => {
-        this._bufferData(terminalId, data);
-      });
-
-      // Simple PTY exit handler
-      ptyProcess.onExit((event: number | { exitCode: number; signal?: number }) => {
-        const exitCode = typeof event === 'number' ? event : event.exitCode;
-        log('🚪 [PTY-EXIT] Terminal exited:', terminalId, 'ExitCode:', exitCode);
-
-        this._cliAgentService.handleTerminalRemoved(terminalId);
-        this._eventHub.fireExit({ terminalId, exitCode });
-        this._removeTerminal(terminalId);
-      });
+      // Set up terminal event handlers (PTY data, exit, etc.)
+      // This replaces the duplicate onData handler that was causing double character display
+      this._setupTerminalEvents(terminal);
 
       // Fire terminal created event
       this._eventHub.fireTerminalCreated(terminal);
