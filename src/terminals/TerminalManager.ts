@@ -141,14 +141,14 @@ export class TerminalManager {
       this._eventBus.subscribe(BufferFlushedEvent, (event) => {
         // Convert terminal number back to ID string
         const terminal = Array.from(this._terminals.values()).find(
-          (t) => this._registry.getTerminalNumber(t.id) === event.terminalId
+          (t) => this._registry.getTerminalNumber(t.id) === event.data.terminalId
         );
 
         if (terminal) {
           // Emit data through existing event hub
-          this._eventHub.emitData(terminal.id, event.data);
+          this._eventHub.fireOutput({ terminalId: terminal.id, data: event.data.data });
           this.debugLog(
-            `📤 [TERMINAL] Flushed ${event.size} chars from BufferService for terminal ${terminal.id}`
+            `📤 [TERMINAL] Flushed ${event.data.size} chars from BufferService for terminal ${terminal.id}`
           );
         }
       });
@@ -1299,7 +1299,8 @@ export class TerminalManager {
       return;
     }
 
-    const PROMPT_TIMEOUT_MS = 1200;
+    // 🔧 FIX: Reduce timeout to 500ms for faster prompt display
+    const PROMPT_TIMEOUT_MS = 500;
     let promptSeen = false;
     let timer: NodeJS.Timeout | undefined;
     let dataDisposable: IDisposable | undefined;
@@ -1345,10 +1346,20 @@ export class TerminalManager {
     timer = setTimeout(() => {
       if (!promptSeen) {
         log(
-          `⚠️ [TERMINAL] Initial prompt not detected for ${terminalId} within ${PROMPT_TIMEOUT_MS}ms - sending newline`
+          `⚠️ [TERMINAL] Initial prompt not detected for ${terminalId} within ${PROMPT_TIMEOUT_MS}ms - forcing prompt display`
         );
         try {
+          // 🔧 FIX: Send multiple newlines to ensure prompt is displayed
+          // This is more reliable than sending a single newline
           ptyProcess.write('\r');
+          setTimeout(() => {
+            try {
+              ptyProcess.write('\r');
+              log(`✅ [TERMINAL] Sent additional newline to force prompt for ${terminalId}`);
+            } catch (e) {
+              log(`⚠️ [TERMINAL] Failed to send second newline: ${e}`);
+            }
+          }, 100);
         } catch (writeError) {
           log(`❌ [TERMINAL] Failed to send newline fallback for ${terminalId}:`, writeError);
         }
@@ -1506,13 +1517,11 @@ export class TerminalManager {
         // Call plugin lifecycle hook
         plugin.onAgentActivated(terminalId);
 
-        // Emit state update for UI (TODO: integrate with existing state system)
-        this._eventHub.emitStateUpdate(terminalId, {
-          isActive: true,
-          agentType: result.agentType,
-          confidence: result.confidence,
-          metadata: result.metadata,
-        });
+        // TODO: Emit state update for UI (integrate with existing state system)
+        // Note: fireStateUpdate expects TerminalState type with terminals, activeTerminalId, etc.
+        // The current agent detection state needs to be integrated with the terminal state system
+        // For now, agent state is managed through plugin lifecycle hooks
+        log(`🔔 [PLUGIN] Agent state update: terminal=${terminalId}, agent=${result.agentType}, confidence=${result.confidence.toFixed(2)}`);
 
         // Only report the first matching agent to avoid conflicts
         break;

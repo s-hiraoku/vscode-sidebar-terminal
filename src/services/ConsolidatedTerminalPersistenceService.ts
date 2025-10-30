@@ -412,7 +412,7 @@ export class ConsolidatedTerminalPersistenceService
       // Restore scrollback content (VS Code-style ScrollbackService)
       if (restoredTerminals.length > 0) {
         log(`📋 [DEBUG] About to restore scrollback for ${sessionData.terminals.length} terminals`);
-        sessionData.terminals.forEach((t, index) => {
+        sessionData.terminals.forEach((t: TerminalSessionData, index: number) => {
           log(`📋 [DEBUG] Terminal[${index}] ${t.id}: scrollback=${t.scrollback ? `${t.scrollback.length} lines` : 'undefined'}`);
         });
 
@@ -618,7 +618,7 @@ export class ConsolidatedTerminalPersistenceService
 
     try {
       const messageData = {
-        command: 'restoreTerminalSerialization',
+        command: 'restoreTerminalSerialization' as const,
         terminalData: terminalData.map((terminal) => ({
           id: terminal.id,
           name: terminal.name,
@@ -629,7 +629,7 @@ export class ConsolidatedTerminalPersistenceService
       };
 
       log(`📋 [DEBUG] Sending message to WebView: command=${messageData.command}, terminals=${messageData.terminalData.length}`);
-      messageData.terminalData.forEach((t, index) => {
+      messageData.terminalData.forEach((t: { id: string; name: string; isActive: boolean; scrollback?: string[] }, index: number) => {
         log(`📋 [DEBUG] Message data[${index}]: id=${t.id}, scrollback=${t.scrollback ? `${t.scrollback.length} lines` : 'undefined'}`);
       });
 

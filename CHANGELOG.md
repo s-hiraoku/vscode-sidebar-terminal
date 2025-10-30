@@ -13,8 +13,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Sessions are isolated by workspace using `workspaceState` instead of `globalState`
   - Prevents session conflicts when multiple VS Code windows are open
   - Improved reliability for developers working with multiple projects simultaneously
+- **Terminal Message Handler System**: Introduced specialized message handlers for terminal operations
+  - Implemented `TerminalMessageHandlers.ts` with 9 typed handlers (Create, Delete, Input, Resize, Focus, etc.)
+  - Uses dependency injection pattern for better testability and maintainability
+  - Includes `TerminalMessageHandlerFactory` for centralized handler registration
+  - Supports async operations with Promise-based responses
+- **WebView HTML Generation Service**: Extracted HTML generation logic into dedicated service
+  - `WebViewHtmlGenerationService` provides centralized HTML/CSS generation
+  - Supports main content, fallback, and error page generation with validation
+  - Enhanced Content Security Policy (CSP) management with nonce generation
+  - Includes specialized styles for split layouts and CLI agent status indicators
+  - Better separation of concerns from `SecondaryTerminalProvider`
 
 ### Fixed
+- **TypeScript Compilation Errors**: Fixed all TypeScript compilation errors for successful build
+  - **ConsolidatedTerminalPersistenceService.ts**: Added explicit type annotations for forEach callback parameters
+  - **ShellIntegrationService.ts**: Fixed `extensionMode` property access using `context.extensionMode` instead of `getExtension().extensionMode`
+  - **TerminalManager.ts**: Fixed BufferFlushedEvent property access (`event.data.terminalId`, `event.data.data`, `event.data.size`)
+  - **TerminalManager.ts**: Replaced `emitData()` with correct `fireOutput()` method for TerminalEventHub
+  - **TerminalManager.ts**: Removed invalid `emitStateUpdate()` call and replaced with TODO comment for future state integration
+  - Clean TypeScript compilation with 0 errors
 - **Terminal Session Save/Restore**: Complete overhaul of terminal session save/restore system
   - Fixed session restoration failures in multi-window scenarios
   - Implemented proper workspace isolation for session data
