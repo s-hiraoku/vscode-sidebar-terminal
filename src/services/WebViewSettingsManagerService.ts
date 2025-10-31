@@ -242,8 +242,6 @@ export class WebViewSettingsManagerService implements IWebViewSettingsManagerSer
       event.affectsConfiguration('terminal.integrated.letterSpacing') ||
       event.affectsConfiguration('editor.fontSize') ||
       event.affectsConfiguration('editor.fontFamily') ||
-      event.affectsConfiguration('secondaryTerminal.fontSize') ||
-      event.affectsConfiguration('secondaryTerminal.fontFamily') ||
       event.affectsConfiguration('secondaryTerminal.fontWeight') ||
       event.affectsConfiguration('secondaryTerminal.fontWeightBold') ||
       event.affectsConfiguration('secondaryTerminal.lineHeight') ||

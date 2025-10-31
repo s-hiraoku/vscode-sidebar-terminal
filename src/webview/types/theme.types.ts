@@ -110,62 +110,17 @@ export const THEME_UI_COLORS = {
 } as const;
 
 /**
- * Get CSS variable value from VS Code
- */
-function getCSSVariable(name: string, fallback: string): string {
-  if (typeof window === 'undefined' || !document.documentElement) {
-    return fallback;
-  }
-
-  const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-  return value || fallback;
-}
-
-/**
- * Get terminal theme from VS Code CSS variables
- * This dynamically reads the current VS Code theme colors
- */
-export function getVSCodeThemeColors(): TerminalTheme {
-  return {
-    background: getCSSVariable('--vscode-terminal-background', '#1e1e1e'),
-    foreground: getCSSVariable('--vscode-terminal-foreground', '#cccccc'),
-    cursor: getCSSVariable('--vscode-terminalCursor-foreground', '#cccccc'),
-    cursorAccent: getCSSVariable('--vscode-terminalCursor-background', '#000000'),
-    selection: getCSSVariable('--vscode-terminal-selectionBackground', '#264f78'),
-    black: getCSSVariable('--vscode-terminal-ansiBlack', '#000000'),
-    red: getCSSVariable('--vscode-terminal-ansiRed', '#cd3131'),
-    green: getCSSVariable('--vscode-terminal-ansiGreen', '#0dbc79'),
-    yellow: getCSSVariable('--vscode-terminal-ansiYellow', '#e5e510'),
-    blue: getCSSVariable('--vscode-terminal-ansiBlue', '#2472c8'),
-    magenta: getCSSVariable('--vscode-terminal-ansiMagenta', '#bc3fbc'),
-    cyan: getCSSVariable('--vscode-terminal-ansiCyan', '#11a8cd'),
-    white: getCSSVariable('--vscode-terminal-ansiWhite', '#e5e5e5'),
-    brightBlack: getCSSVariable('--vscode-terminal-ansiBrightBlack', '#666666'),
-    brightRed: getCSSVariable('--vscode-terminal-ansiBrightRed', '#f14c4c'),
-    brightGreen: getCSSVariable('--vscode-terminal-ansiBrightGreen', '#23d18b'),
-    brightYellow: getCSSVariable('--vscode-terminal-ansiBrightYellow', '#f5f543'),
-    brightBlue: getCSSVariable('--vscode-terminal-ansiBrightBlue', '#3b8eea'),
-    brightMagenta: getCSSVariable('--vscode-terminal-ansiBrightMagenta', '#d670d6'),
-    brightCyan: getCSSVariable('--vscode-terminal-ansiBrightCyan', '#29b8db'),
-    brightWhite: getCSSVariable('--vscode-terminal-ansiBrightWhite', '#e5e5e5'),
-  };
-}
-
-/**
  * Get terminal theme based on VS Code theme detection
  */
 export function detectVSCodeTheme(settings?: { theme?: string }): TerminalTheme {
-  // Settings-based theme selection with fallback to static themes
+  // Settings-based theme selection
   if (settings?.theme === 'light') {
     return LIGHT_THEME;
   } else if (settings?.theme === 'dark') {
     return DARK_THEME;
-  } else if (settings?.theme === 'auto' || !settings?.theme) {
-    // Auto mode: Use dynamic VS Code theme colors
-    return getVSCodeThemeColors();
   }
 
-  // VS Code body class detection (fallback)
+  // VS Code body class detection
   const body = document.body;
   const classList = body.classList;
 
@@ -173,6 +128,6 @@ export function detectVSCodeTheme(settings?: { theme?: string }): TerminalTheme 
     return LIGHT_THEME;
   }
 
-  // Default to dynamic theme
-  return getVSCodeThemeColors();
+  // Default to dark theme
+  return DARK_THEME;
 }

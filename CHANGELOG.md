@@ -5,7 +5,19 @@ All notable changes to the "Secondary Terminal" extension will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.123] - 2025-10-30
+## [0.1.124] - 2025-10-31
+
+### Fixed
+- **Terminal Prompt Display**: Reverted v0.1.123 changes to restore terminal prompt functionality
+  - v0.1.123 introduced PTY onData handler changes that prevented terminal prompts from displaying
+  - Users were unable to input commands due to missing prompt
+  - This version reverts all v0.1.123 changes and restores v0.1.122 functionality
+
+### Notes
+- This is a revert release to restore stability
+- v0.1.123 changes will be re-evaluated and reintroduced in future releases after thorough testing
+
+## [0.1.122] - 2025-10-27
 
 ### Added
 - **Multi-Window Session Isolation**: Implemented workspace-based session storage for proper multi-window support

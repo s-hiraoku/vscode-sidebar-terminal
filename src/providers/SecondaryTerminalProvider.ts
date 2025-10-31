@@ -271,7 +271,6 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         this._handleLegacyPersistenceMessage(message),
       scrollbackDataCollected: async (message) =>
         this._handleScrollbackDataCollected(message),
-      themeChanged: async (message) => this._handleThemeChanged(message),
       htmlScriptTest: (message) => this._handleHtmlScriptTest(message),
       timeoutTest: (message) => this._handleTimeoutTest(message),
       test: (message) => this._handleDebugTest(message),
@@ -1226,25 +1225,6 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     if (this._standardSessionManager) {
       this._standardSessionManager.handleScrollbackDataResponse(message);
     }
-  }
-
-  /**
-   * Handle theme change notification from WebView
-   */
-  private async _handleThemeChanged(_message: WebviewMessage): Promise<void> {
-    log('🎨 [PROVIDER] Theme change detected, refreshing settings');
-
-    // Get current settings
-    const settings = this._settingsManager.getCurrentSettings();
-
-    // Send updated settings to WebView to refresh all terminal themes
-    await this._communicationService.sendMessageToWebview({
-      command: 'settingsResponse',
-      settings,
-      timestamp: Date.now(),
-    });
-
-    log('✅ [PROVIDER] Theme settings refreshed');
   }
 
   /**
