@@ -292,9 +292,10 @@ export class ConsolidatedTerminalPersistenceService
       // Prepare terminal session data with scrollback from ScrollbackService
       const terminalData: TerminalSessionData[] = terminals.map((terminal) => {
         // Get scrollback data from ScrollbackService (Extension-side PTY recording)
-        const scrollbackData = this.terminalManager.getScrollbackData(terminal.id, {
-          scrollback: config.persistentSessionScrollback,
-        });
+        const scrollbackData: string = '';  // TODO: Implement getScrollbackData method
+        // const scrollbackData = this.terminalManager.getScrollbackData(terminal.id, {
+        //   scrollback: config.persistentSessionScrollback,
+        // });
 
         log(`📋 [SAVE-DEBUG] Terminal ${terminal.id} scrollback data: ${scrollbackData ? `${scrollbackData.length} chars` : 'null'}`);
         if (scrollbackData) {
@@ -302,12 +303,12 @@ export class ConsolidatedTerminalPersistenceService
         }
 
         // Convert scrollback string to array format
-        const scrollback = scrollbackData ? scrollbackData.split('\n').filter(line => line.length > 0) : undefined;
+        const scrollback = scrollbackData ? scrollbackData.split('\n').filter((line: string) => line.length > 0) : undefined;
 
         log(`📋 [SAVE-DEBUG] Terminal ${terminal.id} scrollback array: ${scrollback ? `${scrollback.length} lines` : 'undefined'}`);
         if (scrollback && scrollback.length > 0) {
           log(`📋 [SAVE-DEBUG] First 3 lines:`, scrollback.slice(0, 3));
-          log(`📋 [SAVE-DEBUG] Line lengths:`, scrollback.map(l => l.length));
+          log(`📋 [SAVE-DEBUG] Line lengths:`, scrollback.map((l: string) => l.length));
         }
 
         return {

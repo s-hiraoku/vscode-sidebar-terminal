@@ -30,7 +30,7 @@ const defaultServiceFactory = (
 
 const defaultHandlerFactory = (
   service: TerminalPersistencePort
-): PersistenceMessageHandler => new PersistenceMessageHandler(service);
+): PersistenceMessageHandler => new PersistenceMessageHandler(service as any);
 
 export class PersistenceOrchestrator implements vscode.Disposable {
   private readonly persistenceService: TerminalPersistencePort;
