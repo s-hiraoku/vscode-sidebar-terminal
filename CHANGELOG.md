@@ -5,6 +5,35 @@ All notable changes to the "Secondary Terminal" extension will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.127] - 2025-10-31
+
+### Added
+- **ANSI Color Preservation**: Terminal scrollback now preserves ANSI color codes
+  - Color formatting maintained across session restoration
+  - Improved visual consistency for terminal output history
+  - Better preservation of syntax-highlighted output from CLI tools
+
+- **Multi-Window Session Isolation**: Implemented workspace-based session storage
+  - Each VS Code window now maintains independent terminal sessions
+  - Sessions are isolated by workspace using `workspaceState` instead of `globalState`
+  - Prevents session conflicts when multiple VS Code windows are open
+  - Improved reliability for developers working with multiple projects simultaneously
+
+### Fixed
+- **IME Cursor Behavior**: Match VS Code standard IME cursor behavior
+- **Terminal Spawner**: Harden terminal spawner fallbacks for better reliability
+- **Session Save/Restore**: Complete overhaul of terminal session save/restore system
+  - Fixed session restoration failures in multi-window scenarios
+  - Implemented proper workspace isolation for session data
+  - Sessions now correctly restore in the workspace where they were created
+  - Resolved race conditions in session save/restore operations
+- **TypeScript Compilation**: Resolve TypeScript compilation errors in CI/CD build
+
+### Technical Details
+- Based on v0.1.121 stable foundation
+- Excludes problematic PTY onData handler changes from v0.1.123
+- Cherry-picked only verified safe improvements from v0.1.122
+
 ## [0.1.126] - 2025-10-31
 
 ### Fixed
