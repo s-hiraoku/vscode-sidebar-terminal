@@ -127,8 +127,7 @@ export class StandardTerminalSessionManager {
         scrollbackData: scrollbackData || {},
       };
 
-      // Use workspaceState for per-workspace session isolation (multi-window support)
-      await this.context.workspaceState.update(
+      await this.context.globalState.update(
         StandardTerminalSessionManager.STORAGE_KEY,
         sessionData
       );
@@ -166,8 +165,7 @@ export class StandardTerminalSessionManager {
     version?: string;
   } | null {
     try {
-      // Use workspaceState for per-workspace session isolation (multi-window support)
-      const sessionData = this.context.workspaceState.get<{
+      const sessionData = this.context.globalState.get<{
         terminals: Array<{
           id: string;
           name: string;
@@ -225,8 +223,7 @@ export class StandardTerminalSessionManager {
         return { success: true, restoredCount: 0, skippedCount: 0 };
       }
 
-      // Use workspaceState for per-workspace session isolation (multi-window support)
-      const sessionData = this.context.workspaceState.get<{
+      const sessionData = this.context.globalState.get<{
         terminals: Array<{
           id: string;
           name: string;
@@ -549,6 +546,29 @@ export class StandardTerminalSessionManager {
     }
   }
 
+  private _oldRequestSerializationMethod_DEPRECATED(): void {
+    // 🎯 OLD METHOD - DEPRECATED
+    // This method used requestTerminalSerialization command which requires
+    // StandardTerminalPersistenceManager in WebView, but WebView uses SimplePersistenceManager
+    // which doesn't have serializeTerminal() method.
+    //
+    // NEW METHOD: Use extractScrollbackData command via ScrollbackMessageHandler
+    // which works with the existing WebView infrastructure.
+
+    if (!this.sidebarProvider) {
+      return;
+    }
+
+    const requestId = `scrollback-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    this.sidebarProvider.sendMessageToWebview({
+      command: 'requestTerminalSerialization',
+      terminalIds: [],
+      requestId,
+      timestamp: Date.now(),
+    });
+  }
+
   /**
    * WebViewからのscrollbackデータ応答を処理（旧実装・非推奨）
    */
@@ -774,8 +794,7 @@ export class StandardTerminalSessionManager {
     }
 
     try {
-      // Use workspaceState for per-workspace session isolation (multi-window support)
-      const sessionData = this.context.workspaceState.get<{
+      const sessionData = this.context.globalState.get<{
         terminals: Array<{
           id: string;
           name: string;
@@ -820,8 +839,7 @@ export class StandardTerminalSessionManager {
    */
   public async clearSession(): Promise<void> {
     try {
-      // Use workspaceState for per-workspace session isolation (multi-window support)
-      await this.context.workspaceState.update(StandardTerminalSessionManager.STORAGE_KEY, undefined);
+      await this.context.globalState.update(StandardTerminalSessionManager.STORAGE_KEY, undefined);
       log('🗑️ [STANDARD-SESSION] Session data cleared');
     } catch (error) {
       log(`❌ [STANDARD-SESSION] Failed to clear session: ${String(error)}`);

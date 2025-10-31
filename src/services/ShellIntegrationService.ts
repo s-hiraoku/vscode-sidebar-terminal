@@ -320,44 +320,27 @@ export class ShellIntegrationService {
       return;
     }
 
-    // 🔧 FIX: Auto-grant permission in development mode for faster testing
-    const isDevelopmentMode = this.context && vscode.ExtensionMode.Development === this.context.extensionMode;
-
     // Check if user has granted permission for shell integration
     if (this.shellIntegrationPermissionGranted === undefined) {
-      // Development mode: auto-grant permission
-      if (isDevelopmentMode) {
-        log('🔧 [DEV] Auto-granting shell integration permission in development mode');
-        this.shellIntegrationPermissionGranted = true;
-      } else {
-        // First time in production - ask for permission
-        const granted = await this.requestShellIntegrationPermission();
-        if (!granted) {
-          log('Shell integration permission denied by user');
-          return;
-        }
+      // First time - ask for permission
+      const granted = await this.requestShellIntegrationPermission();
+      if (!granted) {
+        log('Shell integration permission denied by user');
+        return;
       }
     } else if (this.shellIntegrationPermissionGranted === false) {
       // User previously denied permission
-      log('Shell integration permission was previously denied');
       return;
     }
 
     // Permission granted - inject shell integration
-    log(`🐚 [SHELL-INTEGRATION] Injecting shell integration for ${shell}`);
-
     // Detect shell type and inject appropriate integration
     if ((shell && shell.includes('bash')) || (shell && shell.includes('zsh'))) {
       this.injectBashZshIntegration(ptyProcess);
-      log(`✅ [SHELL-INTEGRATION] Bash/Zsh integration injected`);
     } else if (shell && shell.includes('fish')) {
       this.injectFishIntegration(ptyProcess);
-      log(`✅ [SHELL-INTEGRATION] Fish integration injected`);
     } else if (shell && (shell.includes('powershell') || shell.includes('pwsh'))) {
       this.injectPowerShellIntegration(ptyProcess);
-      log(`✅ [SHELL-INTEGRATION] PowerShell integration injected`);
-    } else {
-      log(`⚠️ [SHELL-INTEGRATION] Unknown shell type: ${shell}, skipping integration`);
     }
   }
 

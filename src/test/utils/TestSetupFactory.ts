@@ -183,7 +183,6 @@ export class TestSetupFactory {
       updateCliAgentStatus: sinon.stub(),
       ensureTerminalFocus: sinon.stub(),
       createTerminalFromSession: sinon.stub(),
-      getSerializeAddon: sinon.stub().returns(undefined),
       getMessageManager: sinon.stub().returns({
         postMessage: sinon.stub(),
         handleMessage: sinon.stub(),

@@ -182,7 +182,4 @@ Module.prototype.require = function (id) {
   return originalRequire.apply(this, arguments);
 };
 
-// Suppress log in test environment
-if (process.env.NODE_ENV !== 'test') {
-  console.log('✅ xterm.js mock loaded successfully');
-}
+console.log('✅ xterm.js mock loaded successfully');

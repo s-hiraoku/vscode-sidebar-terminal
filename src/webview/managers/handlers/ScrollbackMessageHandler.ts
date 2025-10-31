@@ -91,13 +91,9 @@ export class ScrollbackMessageHandler implements IMessageHandler {
     }
 
     try {
-      // Get SerializeAddon for color preservation
-      const serializeAddon = coordinator.getSerializeAddon(terminalId);
-
       // Extract scrollback from xterm.js
       const scrollbackContent = this.extractScrollbackFromXterm(
         terminalInstance.terminal,
-        serializeAddon,
         maxLines
       );
 
@@ -233,12 +229,12 @@ export class ScrollbackMessageHandler implements IMessageHandler {
         return;
       }
 
-      this.logger.info(`📦 [SAVE-DEBUG] Extracting scrollback data for terminal ${terminalId}, requestId: ${requestId}`);
+      this.logger.debug(`📦 Extracting scrollback data for terminal ${terminalId}`);
 
       // Get the terminal instance
       const terminalInstance = coordinator.getTerminalInstance(terminalId);
       if (!terminalInstance) {
-        this.logger.error(`❌ [SAVE-DEBUG] Terminal ${terminalId} not found for scrollback extraction`);
+        this.logger.error(`Terminal ${terminalId} not found for scrollback extraction`);
 
         // Send empty response
         coordinator.postMessageToExtension({
@@ -250,14 +246,10 @@ export class ScrollbackMessageHandler implements IMessageHandler {
         return;
       }
 
-      this.logger.info(`✅ [SAVE-DEBUG] Terminal instance found for ${terminalId}`);
-      this.logger.info(`🔍 [SAVE-DEBUG] Has serializeAddon: ${!!terminalInstance.serializeAddon}`);
-      this.logger.info(`🔍 [SAVE-DEBUG] Has terminal: ${!!terminalInstance.terminal}`);
-
       // Extract scrollback data
       const scrollbackData = this.extractScrollbackFromTerminal(terminalInstance, maxLines || 1000);
 
-      this.logger.info(`📦 [SAVE-DEBUG] Extracted ${scrollbackData.length} lines for terminal ${terminalId}`);
+      this.logger.debug(`📦 Extracted ${scrollbackData.length} lines for terminal ${terminalId}`);
 
       // Send the scrollback data back to Extension
       coordinator.postMessageToExtension({
@@ -281,13 +273,9 @@ export class ScrollbackMessageHandler implements IMessageHandler {
   }
 
   /**
-   * Extract scrollback content from xterm terminal (improved version with color preservation)
+   * Extract scrollback content from xterm terminal (improved version)
    */
-  private extractScrollbackFromXterm(
-    terminal: Terminal,
-    serializeAddon: import('@xterm/addon-serialize').SerializeAddon | undefined,
-    maxLines: number
-  ): ScrollbackLine[] {
+  private extractScrollbackFromXterm(terminal: Terminal, maxLines: number): ScrollbackLine[] {
     this.logger.debug(`Extracting scrollback from xterm terminal (max ${maxLines} lines)`);
 
     if (!terminal) {
@@ -297,45 +285,7 @@ export class ScrollbackMessageHandler implements IMessageHandler {
     const scrollbackLines: ScrollbackLine[] = [];
 
     try {
-      // 🎨 Use SerializeAddon if available (preserves ANSI color codes)
-      if (serializeAddon) {
-        this.logger.info('✅ Using SerializeAddon for color-preserving scrollback extraction');
-
-        const serialized = serializeAddon.serialize();
-        const lines = serialized.split('\n');
-        const startIndex = Math.max(0, lines.length - maxLines);
-
-        for (let i = startIndex; i < lines.length; i++) {
-          const content = lines[i];
-          // Include non-empty lines and preserve some empty lines for structure
-          if (content && (content.trim() || scrollbackLines.length > 0)) {
-            scrollbackLines.push({
-              content: content, // Includes ANSI escape codes for colors
-              type: 'output',
-              timestamp: Date.now(),
-            });
-          }
-        }
-
-        // Remove trailing empty lines
-        while (scrollbackLines.length > 0) {
-          const lastLine = scrollbackLines[scrollbackLines.length - 1];
-          if (!lastLine || !lastLine.content.trim()) {
-            scrollbackLines.pop();
-          } else {
-            break;
-          }
-        }
-
-        this.logger.info(
-          `✅ Extracted ${scrollbackLines.length} lines with ANSI colors using SerializeAddon`
-        );
-        return scrollbackLines;
-      }
-
-      // Fallback: Extract plain text (colors will be lost)
-      this.logger.warn('⚠️ SerializeAddon not available - extracting plain text (colors will be lost)');
-
+      // Get active buffer from xterm.js
       const buffer = terminal.buffer.active;
       const bufferLength = buffer.length;
       const viewportY = buffer.viewportY;
@@ -385,7 +335,7 @@ export class ScrollbackMessageHandler implements IMessageHandler {
       }
 
       this.logger.info(
-        `Successfully extracted ${scrollbackLines.length} lines from terminal buffer (plain text)`
+        `Successfully extracted ${scrollbackLines.length} lines from terminal buffer`
       );
     } catch (error) {
       this.logger.error(`Error accessing terminal buffer: ${String(error)}`);
@@ -424,20 +374,13 @@ export class ScrollbackMessageHandler implements IMessageHandler {
 
       const xtermInstance = terminal.terminal;
 
-      // 🎨 Try SerializeAddon first (if available) - preserves ANSI color codes
-      if (terminal.serializeAddon) {
-        this.logger.info('✅ Using SerializeAddon for color-preserving scrollback extraction');
-        const serialized = terminal.serializeAddon.serialize();
-        const lines = serialized.split('\n').slice(-maxLines);
-        this.logger.info(
-          `✅ Extracted ${lines.length} lines with ANSI colors using SerializeAddon`
-        );
-        return lines;
+      // Try xterm.js serialize addon first (if available)
+      if (xtermInstance.serialize) {
+        const serialized = xtermInstance.serialize();
+        return serialized.split('\n').slice(-maxLines);
       }
 
-      // Fallback: Read from buffer directly (plain text - colors will be lost)
-      this.logger.warn('⚠️ SerializeAddon not available - extracting plain text (colors will be lost)');
-
+      // Fallback: Read from buffer directly
       if (xtermInstance.buffer && xtermInstance.buffer.active) {
         const buffer = xtermInstance.buffer.active;
         const lines: string[] = [];
@@ -450,9 +393,6 @@ export class ScrollbackMessageHandler implements IMessageHandler {
           }
         }
 
-        this.logger.info(
-          `Extracted ${lines.length} lines from terminal buffer (plain text)`
-        );
         return lines;
       }
 

@@ -9,7 +9,6 @@ import * as vscode from 'vscode';
 import { provider as log } from '../../utils/logger';
 import { TerminalErrorHandler } from '../../utils/feedback';
 import { WebviewMessage } from '../../types/common';
-import type { PartialTerminalSettings, WebViewFontSettings } from '../../types/shared';
 
 /**
  * WebView Communication Service
@@ -21,25 +20,12 @@ import type { PartialTerminalSettings, WebViewFontSettings } from '../../types/s
  */
 export class WebViewCommunicationService {
   private _view?: vscode.WebviewView;
-  private _isReady = false;
-  private _pendingMessages: WebviewMessage[] = [];
-  private static readonly MAX_QUEUE_SIZE = 100;
 
   /**
    * Set the WebView view
    */
   public setView(view: vscode.WebviewView | undefined): void {
     this._view = view;
-
-    if (!view) {
-      log('⚠️ [COMMUNICATION] Webview cleared - resetting ready state and queue');
-      this._isReady = false;
-      this._pendingMessages = [];
-      return;
-    }
-
-    this._isReady = false;
-    log('✅ [COMMUNICATION] Webview reference set - awaiting ready signal');
   }
 
   /**
@@ -70,8 +56,8 @@ export class WebViewCommunicationService {
    * Send message to WebView (internal method)
    */
   public async sendMessage(message: WebviewMessage): Promise<void> {
-    if (!this._view || !this._isReady) {
-      this._enqueueMessage(message);
+    if (!this._view) {
+      log('⚠️ [COMMUNICATION] No webview available to send message');
       return;
     }
 
@@ -97,8 +83,6 @@ export class WebViewCommunicationService {
         (error.message.includes('disposed') || error.message.includes('Webview is disposed'))
       ) {
         log('⚠️ [COMMUNICATION] Webview disposed during message send');
-        this._isReady = false;
-        this._enqueueMessage(message);
         return;
       }
 
@@ -116,15 +100,12 @@ export class WebViewCommunicationService {
       const version = extension?.packageJSON?.version || 'unknown';
       const formattedVersion = version === 'unknown' ? version : `v${version}`;
 
-      await this.sendMessage({
-        command: 'versionInfo',
-        version: formattedVersion,
-      });
-
-      if (this._isDeliveryReady()) {
+      if (this._view) {
+        await this._view.webview.postMessage({
+          command: 'versionInfo',
+          version: formattedVersion,
+        });
         log(`📤 [COMMUNICATION] Sent version info to WebView: ${formattedVersion}`);
-      } else {
-        log(`⏳ [COMMUNICATION] Queued version info for WebView: ${formattedVersion}`);
       }
     } catch (error) {
       log('❌ [COMMUNICATION] Error sending version info:', error);
@@ -134,20 +115,21 @@ export class WebViewCommunicationService {
   /**
    * Send settings to WebView
    */
-  public async sendSettings(
-    settings: PartialTerminalSettings,
-    fontSettings?: WebViewFontSettings
-  ): Promise<void> {
-    await this.sendMessage({
-      command: 'updateSettings',
-      settings,
-      fontSettings,
-    });
+  public async sendSettings(settings: unknown, fontSettings?: unknown): Promise<void> {
+    if (!this._view) {
+      log('⚠️ [COMMUNICATION] Cannot send settings - no view available');
+      return;
+    }
 
-    if (this._isDeliveryReady()) {
+    try {
+      await this._view.webview.postMessage({
+        command: 'updateSettings',
+        settings,
+        fontSettings,
+      });
       log('📤 [COMMUNICATION] Settings sent to WebView');
-    } else {
-      log('⏳ [COMMUNICATION] Settings queued for WebView delivery');
+    } catch (error) {
+      log('❌ [COMMUNICATION] Failed to send settings to WebView:', error);
     }
   }
 
@@ -160,14 +142,7 @@ export class WebViewCommunicationService {
         command: 'initializationComplete',
         terminalCount,
       });
-
-      if (this._isDeliveryReady()) {
-        log(`📤 [COMMUNICATION] Sent initialization complete (${terminalCount} terminals)`);
-      } else {
-        log(
-          `⏳ [COMMUNICATION] Queued initialization complete (${terminalCount} terminals) until webview ready`
-        );
-      }
+      log(`📤 [COMMUNICATION] Sent initialization complete (${terminalCount} terminals)`);
     } catch (error) {
       log('❌ [COMMUNICATION] Failed to send initialization complete:', error);
     }
@@ -181,12 +156,7 @@ export class WebViewCommunicationService {
       await this.sendMessage({
         command: 'requestPanelLocationDetection',
       });
-
-      if (this._isDeliveryReady()) {
-        log('📤 [COMMUNICATION] Requested panel location detection from WebView');
-      } else {
-        log('⏳ [COMMUNICATION] Queued panel location detection request until webview ready');
-      }
+      log('📤 [COMMUNICATION] Requested panel location detection from WebView');
     } catch (error) {
       log('❌ [COMMUNICATION] Failed to request panel location detection:', error);
     }
@@ -197,58 +167,5 @@ export class WebViewCommunicationService {
    */
   public clearView(): void {
     this._view = undefined;
-    this._isReady = false;
-    this._pendingMessages = [];
-  }
-
-  /**
-   * Mark the current webview as ready and flush any queued messages
-   */
-  public async markWebviewReady(): Promise<void> {
-    if (!this._view) {
-      log('⚠️ [COMMUNICATION] Cannot mark webview ready - no view set');
-      return;
-    }
-
-    if (this._isReady) {
-      return;
-    }
-
-    this._isReady = true;
-    log(`✅ [COMMUNICATION] Webview marked ready - flushing ${this._pendingMessages.length} queued messages`);
-    await this._flushPendingMessages();
-  }
-
-  private _enqueueMessage(message: WebviewMessage): void {
-    if (this._pendingMessages.length >= WebViewCommunicationService.MAX_QUEUE_SIZE) {
-      const dropped = this._pendingMessages.shift();
-      log(
-        `⚠️ [COMMUNICATION] Message queue full. Dropping oldest message: ${
-          dropped?.command ?? 'unknown'
-        }`
-      );
-    }
-
-    this._pendingMessages.push(message);
-    log(
-      `⏳ [COMMUNICATION] Queued message: ${message.command} (pending: ${this._pendingMessages.length})`
-    );
-  }
-
-  private async _flushPendingMessages(): Promise<void> {
-    if (!this._view || !this._isReady || this._pendingMessages.length === 0) {
-      return;
-    }
-
-    const queuedMessages = [...this._pendingMessages];
-    this._pendingMessages = [];
-
-    for (const queuedMessage of queuedMessages) {
-      await this._sendMessageDirect(queuedMessage);
-    }
-  }
-
-  private _isDeliveryReady(): boolean {
-    return !!this._view && this._isReady;
   }
 }

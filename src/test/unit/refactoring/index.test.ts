@@ -49,12 +49,9 @@ import './MessageRouter.test';
  * - Error scenario coverage
  */
 
-// Suppress logs in test environment
-if (process.env.NODE_ENV !== 'test') {
-  console.log('✅ Refactored Architecture Test Suite Loaded');
-  console.log('📊 Test Coverage: Unit + Integration + Performance');
-  console.log('🎯 Target Coverage: 95%+');
-  console.log('⚡ Performance Benchmarks: Included');
-  console.log('🔄 Memory Leak Tests: Included');
-  console.log('🚀 Service Architecture: Validated');
-}
+console.log('✅ Refactored Architecture Test Suite Loaded');
+console.log('📊 Test Coverage: Unit + Integration + Performance');
+console.log('🎯 Target Coverage: 95%+');
+console.log('⚡ Performance Benchmarks: Included');
+console.log('🔄 Memory Leak Tests: Included');
+console.log('🚀 Service Architecture: Validated');

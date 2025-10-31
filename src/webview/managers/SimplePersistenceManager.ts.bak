@@ -5,7 +5,6 @@ import {
   SIMPLE_PERSISTENCE,
 } from '../../types/SimplePersistence';
 import { Debouncer, PerformanceMonitor } from '../../utils/PerformanceOptimizer';
-import { webview as log } from '../../utils/logger';
 
 /**
  * Simple Terminal Persistence Manager
@@ -38,7 +37,7 @@ export class SimplePersistenceManager implements ISimplePersistenceManager {
       500 // 500ms debounce delay
     );
 
-    log('🆕 [SIMPLE-PERSISTENCE] SimplePersistenceManager initialized with debouncing');
+    console.log('🆕 [SIMPLE-PERSISTENCE] SimplePersistenceManager initialized with debouncing');
   }
 
   /**
@@ -87,7 +86,7 @@ export class SimplePersistenceManager implements ISimplePersistenceManager {
 
       const saveTime = this.performanceMonitor.endTimer('session-save');
 
-      log('✅ [SIMPLE-PERSISTENCE] Session saved:', {
+      console.log('✅ [SIMPLE-PERSISTENCE] Session saved:', {
         terminalCount,
         activeTerminalId,
         terminalNames,
@@ -97,7 +96,7 @@ export class SimplePersistenceManager implements ISimplePersistenceManager {
       return true;
     } catch (error) {
       this.performanceMonitor.endTimer('session-save');
-      log('❌ [SIMPLE-PERSISTENCE] Failed to save session:', error);
+      console.error('❌ [SIMPLE-PERSISTENCE] Failed to save session:', error);
       return false;
     }
   }
@@ -109,7 +108,7 @@ export class SimplePersistenceManager implements ISimplePersistenceManager {
     try {
       const currentState = this.vscodeApi.getState();
       if (!currentState || !currentState[SIMPLE_PERSISTENCE.STORAGE_KEY]) {
-        log('📭 [SIMPLE-PERSISTENCE] No previous session found');
+        console.log('📭 [SIMPLE-PERSISTENCE] No previous session found');
         return null;
       }
 
@@ -117,19 +116,19 @@ export class SimplePersistenceManager implements ISimplePersistenceManager {
 
       // Validate session data
       if (!sessionData.version || !sessionData.timestamp) {
-        log('⚠️ [SIMPLE-PERSISTENCE] Invalid session data, ignoring');
+        console.warn('⚠️ [SIMPLE-PERSISTENCE] Invalid session data, ignoring');
         return null;
       }
 
       // Check if session is not too old (optional: 7 days)
       const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days
       if (Date.now() - sessionData.timestamp > maxAge) {
-        log('🗓️ [SIMPLE-PERSISTENCE] Session too old, ignoring');
+        console.log('🗓️ [SIMPLE-PERSISTENCE] Session too old, ignoring');
         await this.clearSession();
         return null;
       }
 
-      log('✅ [SIMPLE-PERSISTENCE] Session loaded:', {
+      console.log('✅ [SIMPLE-PERSISTENCE] Session loaded:', {
         terminalCount: sessionData.terminalCount,
         activeTerminalId: sessionData.activeTerminalId,
         age: Math.round((Date.now() - sessionData.timestamp) / 1000 / 60) + ' minutes',
@@ -137,7 +136,7 @@ export class SimplePersistenceManager implements ISimplePersistenceManager {
 
       return sessionData;
     } catch (error) {
-      log('❌ [SIMPLE-PERSISTENCE] Failed to load session:', error);
+      console.error('❌ [SIMPLE-PERSISTENCE] Failed to load session:', error);
       return null;
     }
   }
@@ -151,9 +150,9 @@ export class SimplePersistenceManager implements ISimplePersistenceManager {
       delete currentState[SIMPLE_PERSISTENCE.STORAGE_KEY];
       this.vscodeApi.setState(currentState);
 
-      log('🗑️ [SIMPLE-PERSISTENCE] Session cleared');
+      console.log('🗑️ [SIMPLE-PERSISTENCE] Session cleared');
     } catch (error) {
-      log('❌ [SIMPLE-PERSISTENCE] Failed to clear session:', error);
+      console.error('❌ [SIMPLE-PERSISTENCE] Failed to clear session:', error);
     }
   }
 
@@ -232,7 +231,7 @@ export class SimplePersistenceManager implements ISimplePersistenceManager {
       terminalElement.insertAdjacentHTML('afterbegin', messageHtml);
     } else {
       // Log to console as fallback
-      log(
+      console.log(
         `📢 [SESSION-MESSAGE] ${message.message}${message.details ? ` - ${message.details}` : ''}`
       );
     }

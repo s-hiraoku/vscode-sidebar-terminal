@@ -15,22 +15,22 @@
  */
 
 import * as _assert from 'assert';
+import * as sinon from 'sinon';
 import { expect } from 'chai';
-import { AsyncTest } from '../../utils/AsyncTest';
 
-/**
- * Test class for async operations
- * Extends AsyncTest to leverage async testing utilities
- */
-class AsyncOperationsTest extends AsyncTest {
-  // No additional setup needed for basic async tests
-}
+// Test setup
+import '../../shared/TestSetup';
 
 describe('Async Operations', () => {
-  const test = new AsyncOperationsTest();
+  let sandbox: sinon.SinonSandbox;
 
-  beforeEach(() => test.beforeEach());
-  afterEach(() => test.afterEach());
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
 
   describe('RED Phase: Async Operation Requirements Definition', () => {
     it('should define WebView communication timeout behavior', async () => {
@@ -205,7 +205,7 @@ describe('Async Operations', () => {
 
       // Test implementation
       const mockWebview = {
-        postMessage: test.sandbox.stub().resolves(),
+        postMessage: sandbox.stub().resolves(),
       };
 
       const communicator = new AsyncWebViewCommunicator(mockWebview);
@@ -563,7 +563,7 @@ describe('Async Operations', () => {
       const resourceManager = new ResourceManagedAsyncOperation();
 
       // Test successful operation
-      const cleanupSpy1 = test.sandbox.spy();
+      const cleanupSpy1 = sandbox.spy();
       const successOperation = async () => 'success-result';
 
       const result1 = await resourceManager.performOperationWithCleanup(
@@ -577,7 +577,7 @@ describe('Async Operations', () => {
       expect(cleanupSpy1).to.have.been.calledOnce;
 
       // Test failed operation
-      const cleanupSpy2 = test.sandbox.spy();
+      const cleanupSpy2 = sandbox.spy();
       const failOperation = async () => {
         throw new Error('Operation failed');
       };
@@ -799,8 +799,8 @@ describe('Async Operations', () => {
 
       // Mock dependencies
       const mockSessionManager = {
-        saveCurrentSession: test.sandbox.stub().resolves({ success: true, terminalCount: 1 }),
-        restoreSession: test.sandbox.stub().resolves({
+        saveCurrentSession: sandbox.stub().resolves({ success: true, terminalCount: 1 }),
+        restoreSession: sandbox.stub().resolves({
           success: true,
           restoredCount: 1,
           restoredTerminals: [{ id: 'restored-1', name: 'Restored Terminal' }],
@@ -808,7 +808,7 @@ describe('Async Operations', () => {
       };
 
       const mockWebviewCommunicator = {
-        sendMessageWithTimeout: test.sandbox.stub().resolves({ success: true, data: {} }),
+        sendMessageWithTimeout: sandbox.stub().resolves({ success: true, data: {} }),
       };
 
       const coordinator = new TerminalLifecycleCoordinator(

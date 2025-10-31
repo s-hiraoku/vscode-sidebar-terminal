@@ -5,71 +5,17 @@ All notable changes to the "Secondary Terminal" extension will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.124] - 2025-10-31
+## [0.1.125] - 2025-10-31
 
 ### Fixed
-- **Terminal Prompt Display**: Reverted v0.1.123 changes to restore terminal prompt functionality
-  - v0.1.123 introduced PTY onData handler changes that prevented terminal prompts from displaying
+- **Terminal Prompt Display**: Rollback to v0.1.121 stable version to restore terminal functionality
+  - v0.1.122, v0.1.123, and v0.1.124 introduced issues that prevented terminal prompts from displaying
   - Users were unable to input commands due to missing prompt
-  - This version reverts all v0.1.123 changes and restores v0.1.122 functionality
+  - This version restores all functionality from v0.1.121 which is confirmed to work correctly
 
 ### Notes
-- This is a revert release to restore stability
-- v0.1.123 changes will be re-evaluated and reintroduced in future releases after thorough testing
-
-## [0.1.122] - 2025-10-27
-
-### Added
-- **Multi-Window Session Isolation**: Implemented workspace-based session storage for proper multi-window support
-  - Each VS Code window now maintains independent terminal sessions
-  - Sessions are isolated by workspace using `workspaceState` instead of `globalState`
-  - Prevents session conflicts when multiple VS Code windows are open
-  - Improved reliability for developers working with multiple projects simultaneously
-- **Terminal Message Handler System**: Introduced specialized message handlers for terminal operations
-  - Implemented `TerminalMessageHandlers.ts` with 9 typed handlers (Create, Delete, Input, Resize, Focus, etc.)
-  - Uses dependency injection pattern for better testability and maintainability
-  - Includes `TerminalMessageHandlerFactory` for centralized handler registration
-  - Supports async operations with Promise-based responses
-- **WebView HTML Generation Service**: Extracted HTML generation logic into dedicated service
-  - `WebViewHtmlGenerationService` provides centralized HTML/CSS generation
-  - Supports main content, fallback, and error page generation with validation
-  - Enhanced Content Security Policy (CSP) management with nonce generation
-  - Includes specialized styles for split layouts and CLI agent status indicators
-  - Better separation of concerns from `SecondaryTerminalProvider`
-
-### Fixed
-- **TypeScript Compilation Errors**: Fixed all TypeScript compilation errors for successful build
-  - **ConsolidatedTerminalPersistenceService.ts**: Added explicit type annotations for forEach callback parameters
-  - **ShellIntegrationService.ts**: Fixed `extensionMode` property access using `context.extensionMode` instead of `getExtension().extensionMode`
-  - **TerminalManager.ts**: Fixed BufferFlushedEvent property access (`event.data.terminalId`, `event.data.data`, `event.data.size`)
-  - **TerminalManager.ts**: Replaced `emitData()` with correct `fireOutput()` method for TerminalEventHub
-  - **TerminalManager.ts**: Removed invalid `emitStateUpdate()` call and replaced with TODO comment for future state integration
-  - Clean TypeScript compilation with 0 errors
-- **Terminal Session Save/Restore**: Complete overhaul of terminal session save/restore system
-  - Fixed session restoration failures in multi-window scenarios
-  - Implemented proper workspace isolation for session data
-  - Sessions now correctly restore in the workspace where they were created
-  - Resolved race conditions in session save/restore operations
-- **ANSI Color Preservation**: Terminal scrollback now preserves ANSI color codes
-  - Color formatting maintained across session restoration
-  - Improved visual consistency for terminal output history
-  - Better preservation of syntax-highlighted output from CLI tools
-- **Code Quality**: Fixed ESLint errors by removing unused imports and variables
-  - Removed unused `MessageHandler`, `PanelLocation`, `PersistenceResponse`, `sinon` imports
-  - Added proper naming convention for unused constants (`_MAX_SCROLLBACK_LINES`)
-  - Clean compilation with 0 errors, 235 warnings (type-safety related)
-
-### Refactoring
-- **Terminal Modularity (Phase 6)**: Completed terminal architecture refactoring
-  - Extracted terminal core services for better separation of concerns
-  - Implemented `TerminalPersistencePort` interface for clean persistence layer
-  - Added router map pattern for message handling
-  - Improved testability and maintainability of terminal subsystem
-- **Test Infrastructure**: Comprehensive test infrastructure improvements
-  - Migrated tests to base class patterns (WebViewTest, ConfigurationTest)
-  - Added test infrastructure metrics script for quality monitoring
-  - Enhanced test coverage for terminal core services
-  - 1,339 passing tests with improved reliability
+- This is a rollback release to restore stability
+- Changes from v0.1.122-v0.1.124 will be re-evaluated and reintroduced in future releases after thorough testing
 
 ## [0.1.121] - 2025-01-15
 

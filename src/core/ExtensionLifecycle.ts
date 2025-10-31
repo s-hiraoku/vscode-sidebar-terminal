@@ -10,26 +10,12 @@ import { KeyboardShortcutService } from '../services/KeyboardShortcutService';
 import { TerminalDecorationsService } from '../services/TerminalDecorationsService';
 import { TerminalLinksService } from '../services/TerminalLinksService';
 import { VersionUtils } from '../utils/VersionUtils';
-import { DIContainer } from './DIContainer';
-import { EventBus } from './EventBus';
-import { registerPhase2Services, registerPhase3Plugins } from './ServiceRegistration';
-import { IBufferManagementService } from '../services/buffer/IBufferManagementService';
-import { ITerminalStateService } from '../services/state/ITerminalStateService';
-import { PluginManager } from './plugins/PluginManager';
 
 /**
  * VS Code拡張機能のライフサイクル管理
  * 初期化、コマンド登録、クリーンアップを担当
  */
 export class ExtensionLifecycle {
-  // Phase 2: DI Container and Event Bus
-  private container: DIContainer | undefined;
-  private eventBus: EventBus | undefined;
-
-  // Phase 3: Plugin System
-  private pluginManager: PluginManager | undefined;
-  private pluginConfigService: import('./plugins/PluginConfigurationService').PluginConfigurationService | undefined;
-
   private terminalManager: TerminalManager | undefined;
   private sidebarProvider: SecondaryTerminalProvider | undefined;
   private standardSessionManager: StandardTerminalSessionManager | undefined;
@@ -43,12 +29,11 @@ export class ExtensionLifecycle {
 
   // シンプルな復元管理
   private _restoreExecuted = false;
-  private _isRestoring = false; // Flag to suppress auto-save during session restore
 
   /**
    * 拡張機能の起動処理
    */
-  async activate(context: vscode.ExtensionContext): Promise<void> {
+  activate(context: vscode.ExtensionContext): Promise<void> {
     log('🚀 [EXTENSION] === ACTIVATION START ===');
 
     // Configure logger based on extension mode
@@ -69,46 +54,11 @@ export class ExtensionLifecycle {
     log('Extension path:', context.extensionPath);
 
     try {
-      // Phase 2 Week 3: Bootstrap DI Container
-      log('🚀 [EXTENSION] === PHASE 2: DI CONTAINER BOOTSTRAP ===');
-      this.container = this.bootstrapDIContainer(context);
-      log('✅ [EXTENSION] DI container initialized');
-
-      // Phase 3: Bootstrap Plugin System
-      log('🚀 [EXTENSION] === PHASE 3: PLUGIN SYSTEM BOOTSTRAP ===');
-
-      // 🔧 FIX: Verify EventBus is initialized before using it
-      if (!this.eventBus) {
-        log('❌ [EXTENSION] CRITICAL: EventBus not initialized before Phase 3');
-        throw new Error('EventBus must be initialized before registering Phase 3 plugins');
-      }
-      log('✅ [EXTENSION] EventBus confirmed initialized');
-
-      const { pluginManager, configService } = await registerPhase3Plugins(this.container, this.eventBus);
-      this.pluginManager = pluginManager;
-      this.pluginConfigService = configService;
-      log('✅ [EXTENSION] PluginManager initialized with agent plugins');
-      log('✅ [EXTENSION] PluginConfigurationService initialized with hot-reload');
-      log(`📦 [EXTENSION] Registered plugins: ${this.pluginManager.getAllPlugins().length}`);
-      log(`🤖 [EXTENSION] Active agent plugins: ${this.pluginManager.getActiveAgentPlugins().length}`);
-
       // Ensure node-pty looks for release binaries
       process.env.NODE_PTY_DEBUG = '0';
 
-      // Resolve Phase 2 services from DI container
-      const bufferService = this.container.resolve<IBufferManagementService>(IBufferManagementService);
-      const stateService = this.container.resolve<ITerminalStateService>(ITerminalStateService);
-
-      // Initialize terminal manager with DI services, EventBus, and PluginManager
-      log('🔧 [EXTENSION] Initializing TerminalManager with DI services and PluginManager...');
-      this.terminalManager = new TerminalManager(
-        undefined,
-        bufferService,
-        stateService,
-        this.eventBus,
-        this.pluginManager
-      );
-      log('✅ [EXTENSION] TerminalManager initialized with Phase 2 services and Phase 3 plugins');
+      // Initialize terminal manager
+      this.terminalManager = new TerminalManager();
 
       // Initialize standard terminal session manager
       log('🔧 [EXTENSION] Initializing VS Code standard session manager...');
@@ -512,20 +462,6 @@ export class ExtensionLifecycle {
       this.linksService = undefined;
     }
 
-    // Phase 3: Dispose Plugin Configuration Service
-    if (this.pluginConfigService) {
-      log('🔧 [EXTENSION] Disposing PluginConfigurationService...');
-      this.pluginConfigService.dispose();
-      this.pluginConfigService = undefined;
-    }
-
-    // Phase 3: Dispose Plugin Manager
-    if (this.pluginManager) {
-      log('🔧 [EXTENSION] Disposing PluginManager...');
-      this.pluginManager.dispose();
-      this.pluginManager = undefined;
-    }
-
     // Dispose terminal manager
     if (this.terminalManager) {
       log('🔧 [EXTENSION] Disposing terminal manager...');
@@ -549,20 +485,6 @@ export class ExtensionLifecycle {
     if (this.shellIntegrationService) {
       this.shellIntegrationService.dispose();
       this.shellIntegrationService = undefined;
-    }
-
-    // Phase 2 Week 3: Dispose DI Container
-    if (this.container) {
-      log('🔧 [EXTENSION] Disposing DI container...');
-      this.container.dispose();
-      this.container = undefined;
-    }
-
-    // Dispose EventBus
-    if (this.eventBus) {
-      log('🔧 [EXTENSION] Disposing EventBus...');
-      this.eventBus.dispose();
-      this.eventBus = undefined;
     }
 
     log('✅ [EXTENSION] Deactivation complete');
@@ -589,46 +511,6 @@ export class ExtensionLifecycle {
     return this.standardSessionManager;
   }
 
-  /**
-   * Bootstrap DI Container (Phase 2 Week 3)
-   *
-   * Initializes the dependency injection container and registers all services.
-   * This enables better testability, modularity, and prepares for plugin integration.
-   */
-  private bootstrapDIContainer(_context: vscode.ExtensionContext): DIContainer {
-    log('🔧 [DI] Bootstrapping DI container...');
-
-    const container = new DIContainer();
-    const eventBus = new EventBus();
-
-    // Register core infrastructure
-    log('🔧 [DI] Registering EventBus...');
-    this.eventBus = eventBus;
-
-    // Register Phase 2 services (BufferManagementService, TerminalStateService)
-    log('🔧 [DI] Registering Phase 2 services...');
-    registerPhase2Services(container, eventBus);
-
-    log('✅ [DI] DI container bootstrapped successfully');
-    log(`📊 [DI] Registered services: ${container.serviceCount}`);
-
-    return container;
-  }
-
-  /**
-   * Get DI container (for testing)
-   */
-  getContainer(): DIContainer | undefined {
-    return this.container;
-  }
-
-  /**
-   * Get EventBus (for testing)
-   */
-  getEventBus(): EventBus | undefined {
-    return this.eventBus;
-  }
-
   // ==================== セッション管理関連のメソッド - DISABLED FOR DEBUGGING ====================
 
   /**
@@ -647,31 +529,24 @@ export class ExtensionLifecycle {
       try {
         if (this.standardSessionManager && this.terminalManager) {
           log('🔄 [SESSION] Executing VS Code standard session restore...');
+          const result = await this.standardSessionManager.restoreSession();
 
-          // 🔧 FIX: Set flag to suppress auto-save during restoration
-          this._isRestoring = true;
-          try {
-            const result = await this.standardSessionManager.restoreSession();
+          if (result.success && result.restoredCount && result.restoredCount > 0) {
+            log(
+              `✅ [SESSION] VS Code standard session restored: ${result.restoredCount} terminals`
+            );
 
-            if (result.success && result.restoredCount && result.restoredCount > 0) {
-              log(
-                `✅ [SESSION] VS Code standard session restored: ${result.restoredCount} terminals`
-              );
+            // 復元完了後の初期化処理
+            // Session restore finalization disabled for debugging
 
-              // 復元完了後の初期化処理
-              // Session restore finalization disabled for debugging
-
-              // ユーザーに通知（オプション）
-              void vscode.window.showInformationMessage(
-                `Terminal session restored (VS Code standard): ${result.restoredCount} terminals`
-              );
-            } else {
-              log('📭 [SESSION] No session data found - creating initial terminal');
-              // Create initial terminal when no session data exists
-              this.createInitialTerminal();
-            }
-          } finally {
-            this._isRestoring = false;
+            // ユーザーに通知（オプション）
+            void vscode.window.showInformationMessage(
+              `Terminal session restored (VS Code standard): ${result.restoredCount} terminals`
+            );
+          } else {
+            log('📭 [SESSION] No session data found - creating initial terminal');
+            // Create initial terminal when no session data exists
+            this.createInitialTerminal();
           }
         } else {
           log('⚠️ [SESSION] Session manager not available - creating initial terminal');
@@ -725,7 +600,7 @@ export class ExtensionLifecycle {
     // ターミナル変更時の保存を設定（定期保存として - バックアップ用）
     const saveOnTerminalChange = setInterval(() => {
       void this.saveSessionPeriodically();
-    }, 30000); // 30秒ごとに保存（開発・デバッグ用に短縮）
+    }, 300000); // 5分ごとに保存（CPU負荷軽減のため30秒から変更）
 
     context.subscriptions.push({
       dispose: () => clearInterval(saveOnTerminalChange),
@@ -763,12 +638,6 @@ export class ExtensionLifecycle {
   private async saveSessionImmediately(trigger: string): Promise<void> {
     try {
       if (!this.standardSessionManager || !this.terminalManager) {
-        return;
-      }
-
-      // 🔧 FIX: Skip auto-save during session restoration to prevent race condition
-      if (this._isRestoring) {
-        log(`⏸️ [EXTENSION] Skipping immediate save during restoration (trigger: ${trigger})`);
         return;
       }
 
@@ -868,12 +737,8 @@ export class ExtensionLifecycle {
     }
 
     try {
-      // 🔧 FIX: Set flag to suppress auto-save during restoration
-      this._isRestoring = true;
-      try {
-        const result = await this.standardSessionManager.restoreSession();
-
-        if (result.success) {
+      const result = await this.standardSessionManager.restoreSession();
+      if (result.success) {
         if (result.restoredCount && result.restoredCount > 0) {
           await vscode.window.showInformationMessage(
             `Terminal session restored successfully: ${result.restoredCount} terminal${result.restoredCount > 1 ? 's' : ''} restored${result.skippedCount && result.skippedCount > 0 ? `, ${result.skippedCount} skipped` : ''}`
@@ -885,9 +750,6 @@ export class ExtensionLifecycle {
         await vscode.window.showErrorMessage(
           `Failed to restore session: ${result.error || 'Unknown error'}`
         );
-      }
-      } finally {
-        this._isRestoring = false;
       }
     } catch (error) {
       await vscode.window.showErrorMessage(`Failed to restore session: ${String(error)}`);
@@ -926,27 +788,19 @@ export class ExtensionLifecycle {
    * 統合セッション保存コマンドハンドラー
    */
   private async handleSimpleSaveSessionCommand(): Promise<void> {
-    log('🔍 [SAVE-DEBUG] === SAVE SESSION COMMAND TRIGGERED ===');
-
     if (!this.standardSessionManager) {
-      log('❌ [SAVE-DEBUG] Standard session manager not available');
       await vscode.window.showErrorMessage('Standard session manager not available');
       return;
     }
 
-    log('✅ [SAVE-DEBUG] Standard session manager available');
-
     try {
       // Scrollback抽出処理（復元機能を完全動作させるため）
-      log('📋 [SAVE-DEBUG] Starting scrollback extraction...');
+      log('📋 [SIMPLE_SESSION] Starting scrollback extraction...');
       await this.extractScrollbackFromAllTerminals();
-      log('✅ [SAVE-DEBUG] Scrollback extraction completed');
+      log('✅ [SIMPLE_SESSION] Scrollback extraction completed');
 
       // 通常のセッション保存を実行
-      log('💾 [SAVE-DEBUG] Calling standardSessionManager.saveCurrentSession()...');
       const result = await this.standardSessionManager.saveCurrentSession();
-      log(`📊 [SAVE-DEBUG] Save result: success=${result.success}, count=${result.terminalCount}, error=${result.error}`);
-
       if (result.success) {
         await vscode.window.showInformationMessage(
           `Terminal session saved successfully (${result.terminalCount} terminal${result.terminalCount !== 1 ? 's' : ''})`
@@ -957,70 +811,45 @@ export class ExtensionLifecycle {
         );
       }
     } catch (error) {
-      log(`❌ [SAVE-DEBUG] Exception during save: ${error instanceof Error ? error.message : String(error)}`);
       await vscode.window.showErrorMessage(
         `Failed to save session: ${error instanceof Error ? error.message : String(error)}`
       );
     }
-
-    log('🔍 [SAVE-DEBUG] === SAVE SESSION COMMAND FINISHED ===');
   }
 
   /**
    * 統合セッション復元コマンドハンドラー
    */
   private async handleSimpleRestoreSessionCommand(): Promise<void> {
-    log('🔍 [RESTORE-DEBUG] === RESTORE SESSION COMMAND TRIGGERED ===');
-
     if (!this.standardSessionManager) {
-      log('❌ [RESTORE-DEBUG] Standard session manager not available');
       await vscode.window.showErrorMessage('Standard session manager not available');
       return;
     }
 
-    log('✅ [RESTORE-DEBUG] Standard session manager available');
-
     try {
-      log('🔄 [RESTORE-DEBUG] Calling standardSessionManager.restoreSession()...');
-
-      // 🔧 FIX: Set flag to suppress auto-save during restoration
-      this._isRestoring = true;
-      try {
-        const result = await this.standardSessionManager.restoreSession();
-
-        log(`📊 [RESTORE-DEBUG] Restore result: success=${result.success}, restoredCount=${result.restoredCount}, skippedCount=${result.skippedCount}, error=${result.error}`);
+      const result = await this.standardSessionManager.restoreSession();
 
       if (result.success) {
         if (result.restoredCount && result.restoredCount > 0) {
           // Scrollbackデータも復元
-          log('📋 [RESTORE-DEBUG] Restoring scrollback for all terminals...');
           await this.restoreScrollbackForAllTerminals();
-          log('✅ [RESTORE-DEBUG] Scrollback restoration completed');
 
           await vscode.window.showInformationMessage(
             `Terminal session restored: ${result.restoredCount} terminal${result.restoredCount > 1 ? 's' : ''} restored${result.skippedCount && result.skippedCount > 0 ? `, ${result.skippedCount} skipped` : ''}`
           );
         } else {
-          log('📭 [RESTORE-DEBUG] No terminals to restore');
           await vscode.window.showInformationMessage('No previous session data found to restore');
         }
       } else {
-        log(`❌ [RESTORE-DEBUG] Restore failed: ${result.error}`);
         await vscode.window.showErrorMessage(
           `Failed to restore session: ${result.error || 'Unknown error'}`
         );
       }
-      } finally {
-        this._isRestoring = false;
-      }
     } catch (error) {
-      log(`❌ [RESTORE-DEBUG] Exception during restore: ${error instanceof Error ? error.message : String(error)}`);
       await vscode.window.showErrorMessage(
         `Failed to restore session: ${error instanceof Error ? error.message : String(error)}`
       );
     }
-
-    log('🔍 [RESTORE-DEBUG] === RESTORE SESSION COMMAND FINISHED ===');
   }
 
   /**
@@ -1094,21 +923,15 @@ export class ExtensionLifecycle {
         return;
       }
 
-      // 🔧 FIX: Set flag to suppress auto-save during restoration
-      this._isRestoring = true;
-      try {
-        const result = await this.standardSessionManager.restoreSession();
+      const result = await this.standardSessionManager.restoreSession();
 
-        if (result.success && result.restoredCount && result.restoredCount > 0) {
+      if (result.success && result.restoredCount && result.restoredCount > 0) {
         log(`✅ [EXTENSION] Restored ${result.restoredCount} terminals`);
         void vscode.window.showInformationMessage(
           `Terminal session restored: ${result.restoredCount} terminal${result.restoredCount > 1 ? 's' : ''}`
         );
       } else {
         log('📭 [EXTENSION] No terminals to restore');
-      }
-      } finally {
-        this._isRestoring = false;
       }
     } catch (error) {
       log(`❌ [EXTENSION] Restore error: ${String(error)}`);
@@ -1136,14 +959,9 @@ export class ExtensionLifecycle {
       }
 
       log('🔍 [SESSION] About to call standardSessionManager.restoreSession()');
-
-      // 🔧 FIX: Set flag to suppress auto-save during restoration
-      this._isRestoring = true;
-      try {
-        // セッション復元を実行
-        const result = await this.standardSessionManager.restoreSession();
-
-        log(`🔍 [SESSION] restoreSession() completed with result: ${JSON.stringify(result)}`);
+      // セッション復元を実行
+      const result = await this.standardSessionManager.restoreSession();
+      log(`🔍 [SESSION] restoreSession() completed with result: ${JSON.stringify(result)}`);
 
       if (result.success && result.restoredCount && result.restoredCount > 0) {
         log(`✅ [SESSION] Restored ${result.restoredCount} terminals`);
@@ -1159,9 +977,6 @@ export class ExtensionLifecycle {
       } else {
         log(`❌ [SESSION] Restore failed: ${result.error}`);
         this.createInitialTerminal();
-      }
-      } finally {
-        this._isRestoring = false;
       }
     } catch (error) {
       log(

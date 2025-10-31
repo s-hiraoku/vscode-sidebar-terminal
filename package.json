@@ -2,7 +2,7 @@
   "name": "vscode-sidebar-terminal",
   "displayName": "Secondary Terminal",
   "description": "Production-ready VS Code extension with TypeScript-compliant terminal in sidebar, ProcessState/InteractionState management, and comprehensive session management.",
-  "version": "0.1.124",
+  "version": "0.1.125",
   "publisher": "s-hiraoku",
   "engines": {
     "vscode": "^1.74.0",
@@ -778,158 +778,6 @@
           "type": "boolean",
           "default": true,
           "description": "Enable enhanced screen reader support for terminal content (Phase 8: Advanced Terminal Features)."
-        },
-        "secondaryTerminal.architecture.enableDI": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable dependency injection container for service management (experimental)."
-        },
-        "secondaryTerminal.architecture.enablePlugins": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable plugin system for extensibility (experimental)."
-        },
-        "secondaryTerminal.architecture.performanceProfile": {
-          "type": "string",
-          "default": "balanced",
-          "enum": [
-            "fast",
-            "balanced",
-            "efficient"
-          ],
-          "enumDescriptions": [
-            "Optimize for speed (higher resource usage)",
-            "Balance between speed and resource usage",
-            "Optimize for resource efficiency (may be slower)"
-          ],
-          "description": "Performance optimization profile."
-        },
-        "secondaryTerminal.plugins.agents.claude.enabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable Claude Code agent detection plugin."
-        },
-        "secondaryTerminal.plugins.agents.claude.threshold": {
-          "type": "number",
-          "default": 0.8,
-          "minimum": 0,
-          "maximum": 1,
-          "description": "Detection confidence threshold for Claude Code (0.0 to 1.0)."
-        },
-        "secondaryTerminal.plugins.agents.copilot.enabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable GitHub Copilot CLI agent detection plugin."
-        },
-        "secondaryTerminal.plugins.agents.copilot.threshold": {
-          "type": "number",
-          "default": 0.7,
-          "minimum": 0,
-          "maximum": 1,
-          "description": "Detection confidence threshold for GitHub Copilot (0.0 to 1.0)."
-        },
-        "secondaryTerminal.plugins.agents.codex.enabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable Codex CLI agent detection plugin."
-        },
-        "secondaryTerminal.plugins.agents.codex.threshold": {
-          "type": "number",
-          "default": 0.7,
-          "minimum": 0,
-          "maximum": 1,
-          "description": "Detection confidence threshold for Codex CLI (0.0 to 1.0)."
-        },
-        "secondaryTerminal.plugins.agents.gemini.enabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable Gemini CLI agent detection plugin."
-        },
-        "secondaryTerminal.plugins.agents.gemini.threshold": {
-          "type": "number",
-          "default": 0.7,
-          "minimum": 0,
-          "maximum": 1,
-          "description": "Detection confidence threshold for Gemini CLI (0.0 to 1.0)."
-        },
-        "secondaryTerminal.performance.bufferFlushInterval": {
-          "type": "number",
-          "default": 16,
-          "minimum": 1,
-          "maximum": 100,
-          "description": "Buffer flush interval for normal terminal output in milliseconds (~60fps at 16ms)."
-        },
-        "secondaryTerminal.performance.cliAgentFlushInterval": {
-          "type": "number",
-          "default": 4,
-          "minimum": 1,
-          "maximum": 50,
-          "description": "Buffer flush interval when CLI agent is active in milliseconds (~250fps at 4ms)."
-        },
-        "secondaryTerminal.performance.maxBufferSize": {
-          "type": "number",
-          "default": 50,
-          "minimum": 10,
-          "maximum": 1000,
-          "description": "Maximum number of data chunks to buffer before forcing a flush."
-        },
-        "secondaryTerminal.performance.enableAdaptiveBuffering": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable adaptive buffering that adjusts flush intervals based on output patterns."
-        },
-        "secondaryTerminal.plugins.enablePluginSystem": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable the plugin system for AI agent detection. Requires reload to take effect."
-        },
-        "secondaryTerminal.plugins.claude.enabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable Claude Code CLI agent detection plugin."
-        },
-        "secondaryTerminal.plugins.claude.confidenceThreshold": {
-          "type": "number",
-          "default": 0.7,
-          "minimum": 0.1,
-          "maximum": 1,
-          "description": "Confidence threshold for Claude agent detection (0.1 to 1.0). Lower values are more sensitive."
-        },
-        "secondaryTerminal.plugins.copilot.enabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable GitHub Copilot CLI agent detection plugin."
-        },
-        "secondaryTerminal.plugins.copilot.confidenceThreshold": {
-          "type": "number",
-          "default": 0.7,
-          "minimum": 0.1,
-          "maximum": 1,
-          "description": "Confidence threshold for Copilot agent detection (0.1 to 1.0). Lower values are more sensitive."
-        },
-        "secondaryTerminal.plugins.gemini.enabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable Google Gemini CLI agent detection plugin."
-        },
-        "secondaryTerminal.plugins.gemini.confidenceThreshold": {
-          "type": "number",
-          "default": 0.7,
-          "minimum": 0.1,
-          "maximum": 1,
-          "description": "Confidence threshold for Gemini agent detection (0.1 to 1.0). Lower values are more sensitive."
-        },
-        "secondaryTerminal.plugins.codex.enabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable OpenAI Codex CLI agent detection plugin."
-        },
-        "secondaryTerminal.plugins.codex.confidenceThreshold": {
-          "type": "number",
-          "default": 0.7,
-          "minimum": 0.1,
-          "maximum": 1,
-          "description": "Confidence threshold for Codex agent detection (0.1 to 1.0). Lower values are more sensitive."
         }
       }
     },
@@ -1042,11 +890,11 @@
     "test": "npm run test:unit",
     "test:coverage": "nyc --reporter=text --reporter=html --reporter=lcov npm run test",
     "test:watch": "npm run watch-tests & npm run test",
-    "test:unit": "NODE_ENV=test nyc mocha",
+    "test:unit": "nyc mocha",
     "test:integration": "nyc mocha --require ./src/test/shared/setup-exit-handler.js --require out/test/shared/TestSetup.js --timeout 60000 --exit 'out/test/integration/**/*.test.js'",
     "test:performance": "nyc mocha --require ./src/test/shared/setup-exit-handler.js --require out/test/shared/TestSetup.js --timeout 120000 --exit 'out/test/performance/**/*.test.js'",
     "test:all": "npm run test:unit && npm run test:integration && npm run test:performance",
-    "test:fast": "NODE_ENV=test mocha --require ./src/test/shared/xterm-mock.js --require ./src/test/shared/setup-exit-handler.js --require out/test/shared/TestSetup.js --timeout 10000 --exit 'out/test/unit/**/*.test.js'",
+    "test:fast": "mocha --require ./src/test/shared/xterm-mock.js --require ./src/test/shared/setup-exit-handler.js --require out/test/shared/TestSetup.js --timeout 10000 --exit 'out/test/unit/**/*.test.js'",
     "test:refactored": "npm run test:integration && npm run test:performance",
     "coverage:report": "nyc report --reporter=text --reporter=html",
     "coverage:check": "nyc check-coverage --lines 70 --functions 70 --branches 60",

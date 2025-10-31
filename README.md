@@ -16,18 +16,12 @@
 ### 🚀 **Advanced Terminal Management**
 - **VS Code Standard Compliance**: Complete ProcessState enum implementation (Uninitialized, Launching, Running, KilledDuringLaunch, KilledByUser, KilledByProcess)
 - **InteractionState Tracking**: Advanced state management with None, ReplayOnly, and Session states
-- **Production-Ready Architecture**: Zero TypeScript compilation errors with 750 KiB extension and 1.23 MiB webview builds
+- **Production-Ready Architecture**: Zero TypeScript compilation errors with 562 KiB extension and 1.05 MiB webview builds
 - **Sidebar Integration**: Dedicated terminal panel in the VS Code activity bar
 - **Multiple Terminals**: Support for up to 5 concurrent terminal instances
-- **Multi-Window Session Isolation**: Workspace-based session storage for proper multi-window support
-  - Each VS Code window maintains independent terminal sessions
-  - Sessions isolated by workspace using `workspaceState`
-  - No session conflicts when multiple VS Code windows are open
-  - Perfect for developers working with multiple projects simultaneously
 - **Smart Session Persistence**: Automatically saves and restores terminal sessions across VS Code restarts with up to 1,000 lines of scrollback per terminal
   - **Issue #188**: Fixed session restoration not working (v0.1.120)
   - **Issue #201**: Fixed scrollback restoration after window reload with Promise-based response handling and fallback mechanism
-  - **ANSI Color Preservation**: Terminal scrollback preserves color formatting across session restoration
 - **Terminal Recycling**: Efficient terminal number management (1-5) with automatic reuse
 - **Enhanced Error Handling**: Robust error recovery mechanisms following VS Code standards
 - **Cross-Platform Support**: Works seamlessly on Windows, macOS, and Linux
@@ -64,8 +58,8 @@
 - **Command Palette Integration**: Full VS Code command palette support
 
 ### 📊 **Performance & Monitoring**
-- **Production-Grade Quality**: Zero TypeScript compilation errors with comprehensive ESLint compliance (0 errors, 235 acceptable warnings)
-- **Optimized Build Process**: 750 KiB extension + 1.23 MiB webview builds with stable performance
+- **Production-Grade Quality**: Zero TypeScript compilation errors with comprehensive ESLint compliance (0 errors, 281 acceptable warnings)
+- **Optimized Build Process**: 608 KiB extension + 1.22 MiB webview builds with stable performance
 - **Improved Code Architecture**: Major refactoring reduced provider code by 26.9% (801 lines) through service extraction, resulting in better maintainability and 24 KiB bundle size reduction
 - **Fast Test Execution**: Parallel test processing (4-8 jobs) with up to 75% speed improvement on multi-core systems (v0.1.116+)
 - **Adaptive Performance**: Dynamic buffering optimization for AI agent output (250fps during active sessions)
@@ -125,40 +119,21 @@ Access these commands via `Ctrl+Shift+P` (Windows/Linux) or `Cmd+Shift+P` (Mac):
 ### Core Components
 
 #### Extension Host (Node.js)
-- **SecondaryTerminalProvider**: Modular provider with 4 specialized components:
-  - `ViewBootstrapper`: VS Code WebView lifecycle management
-  - `MessageBridge`: Extension ↔ WebView message routing
-  - `PanelLocationController`: Dynamic panel position detection
-  - `PersistenceOrchestrator`: Unified session persistence orchestration
-- **TerminalManager**: Refactored into 4 core services:
-  - `TerminalRegistry`: ID management and state tracking
-  - `TerminalLifecycleService`: Terminal spawn/kill/focus operations
-  - `TerminalEventHub`: Centralized event management
-  - `TerminalCommandQueue`: Async operation pipeline
-- **Message Handler System**: Type-safe message routing with dependency injection
-  - `TerminalMessageHandlers`: 9 specialized handlers for terminal operations
-  - `BaseMessageHandler`: Abstract base class with validation and logging
-  - `TerminalMessageHandlerFactory`: Centralized handler registration
-- **WebView HTML Generation**: Dedicated service for HTML content generation
-  - `WebViewHtmlGenerationService`: Main/fallback/error page generation
-  - Enhanced CSP management with nonce-based security
-  - Split layout and CLI agent styling support
-- **ConsolidatedTerminalPersistenceService**: Unified persistence layer (replacing 5 previous implementations)
+- **TerminalManager**: Manages PTY processes, terminal lifecycle, and AI agent detection
+- **RefactoredSecondaryTerminalProvider**: WebView provider with comprehensive message handling
 - **AI Agent Services**: Dedicated services for Claude, Gemini, Codex, and GitHub Copilot CLI integration
+- **Session Management**: Persistent terminal state across VS Code sessions
 
 #### WebView (Browser Environment)
-- **WebviewCoordinator**: Typed command map with 20+ message handlers
-- **LightweightTerminalWebviewManager**: Central coordinator for all WebView operations
+- **RefactoredTerminalWebviewManager**: Central coordinator for all WebView operations
 - **Manager Ecosystem**: Specialized managers for Input, UI, Performance, Notifications, Splitting, and Configuration
-- **xterm.js Integration**: Full-featured terminal emulation with SerializeAddon for persistence
+- **xterm.js Integration**: Full-featured terminal emulation with custom enhancements
 
 ### Communication Flow
 ```
 User Input → VS Code Commands → Extension Host → WebView Messages → xterm.js
                     ↕                      ↕                   ↕
-         TerminalLifecycle ←→ node-pty processes ←→ Shell/AI Agents
-                    ↕
-    PersistenceOrchestrator → ConsolidatedPersistenceService
+              TerminalManager ←→ node-pty processes ←→ Shell/AI Agents
 ```
 
 ## 🤖 AI Agent Integration

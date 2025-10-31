@@ -12,7 +12,6 @@ import { WebLinksAddon } from '@xterm/addon-web-links';
 import { SearchAddon } from '@xterm/addon-search';
 import { WebglAddon } from '@xterm/addon-webgl';
 import { Unicode11Addon } from '@xterm/addon-unicode11';
-import { SerializeAddon } from '@xterm/addon-serialize';
 import { TerminalConfig } from '../../types/shared';
 import { TerminalInstance, IManagerCoordinator } from '../interfaces/ManagerInterfaces';
 import { SplitManager } from './SplitManager';
@@ -389,7 +388,6 @@ export class TerminalLifecycleManager {
           this.openUrlFromTerminal(uri, terminalId);
         });
         const searchAddon = new SearchAddon();
-        const serializeAddon = new SerializeAddon(); // For scrollback with color preservation
 
         // Optional high-performance addons
         let webglAddon: WebglAddon | null = null;
@@ -400,7 +398,6 @@ export class TerminalLifecycleManager {
           terminal.loadAddon(fitAddon);
           terminal.loadAddon(webLinksAddon);
           terminal.loadAddon(searchAddon);
-          terminal.loadAddon(serializeAddon); // Load SerializeAddon for persistence
           terminalLogger.info(`✅ Essential addons loaded for terminal ${terminalId}`);
         } catch (error) {
           terminalLogger.error(`❌ Failed to load essential addons: ${error}`);
@@ -598,7 +595,6 @@ export class TerminalLifecycleManager {
           searchAddon,
           webglAddon: webglAddon || undefined,
           unicode11Addon: unicode11Addon || undefined,
-          serializeAddon, // For scrollback with color preservation
         };
 
         // Register terminal

@@ -25,16 +25,6 @@ export interface ConfigValidationResult {
 /**
  * Unified Configuration Service
  *
- * @deprecated This implementation has been consolidated into src/config/UnifiedConfigurationService.ts
- * Please use: import { getUnifiedConfigurationService } from '../../config/UnifiedConfigurationService';
- *
- * The consolidated version includes:
- * - All features from this implementation
- * - WebView state persistence
- * - Font hierarchy management
- * - Import/Export capabilities
- * - Enhanced validation
- *
  * Centralizes all VS Code configuration management across the extension.
  * Provides type-safe configuration access, validation, and change notifications.
  *

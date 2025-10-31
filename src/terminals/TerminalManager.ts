@@ -5,6 +5,7 @@
 import * as vscode from 'vscode';
 import {
   TerminalInstance,
+  TerminalEvent,
   TerminalState,
   TerminalInfo,
   DeleteResult,
@@ -29,16 +30,7 @@ import { TerminalNumberManager } from '../utils/TerminalNumberManager';
 import { CliAgentDetectionService } from '../services/CliAgentDetectionService';
 import { ICliAgentDetectionService } from '../interfaces/CliAgentService';
 import { TerminalSpawner } from './TerminalSpawner';
-import { TerminalRegistry } from './core/TerminalRegistry';
-import { TerminalEventHub } from './core/TerminalEventHub';
-import { TerminalLifecycleService } from './core/TerminalLifecycleService';
-import { ScrollbackService } from '../services/scrollback/ScrollbackService';
 import type { IDisposable } from '@homebridge/node-pty-prebuilt-multiarch';
-import type { IBufferManagementService } from '../services/buffer/IBufferManagementService';
-import type { ITerminalStateService } from '../services/state/ITerminalStateService';
-import { BufferFlushedEvent } from '../services/buffer/BufferManagementService';
-import type { EventBus } from '../core/EventBus';
-import type { PluginManager } from '../core/plugins/PluginManager';
 
 const ENABLE_TERMINAL_DEBUG_LOGS = process.env.SECONDARY_TERMINAL_DEBUG_LOGS === 'true';
 // Removed unused service imports - these were for the RefactoredTerminalManager which was removed
@@ -46,38 +38,43 @@ const ENABLE_TERMINAL_DEBUG_LOGS = process.env.SECONDARY_TERMINAL_DEBUG_LOGS ===
 export class TerminalManager {
   private readonly _terminals = new Map<string, TerminalInstance>();
   private readonly _activeTerminalManager = new ActiveTerminalManager();
+  private readonly _dataEmitter = new vscode.EventEmitter<TerminalEvent>();
+  private readonly _exitEmitter = new vscode.EventEmitter<TerminalEvent>();
+  private readonly _terminalCreatedEmitter = new vscode.EventEmitter<TerminalInstance>();
+  private readonly _terminalRemovedEmitter = new vscode.EventEmitter<string>();
+  private readonly _stateUpdateEmitter = new vscode.EventEmitter<TerminalState>();
+  private readonly _terminalFocusEmitter = new vscode.EventEmitter<string>();
+  private _outputEmitter?: vscode.EventEmitter<{ terminalId: string; data: string }>;
   private readonly _terminalNumberManager: TerminalNumberManager;
-  private readonly _registry: TerminalRegistry;
-  private readonly _eventHub = new TerminalEventHub();
-  private readonly _lifecycleService = new TerminalLifecycleService();
   private _shellIntegrationService: ShellIntegrationService | null = null;
   // Terminal Profile Service for VS Code standard profiles
   private readonly _profileService: TerminalProfileService;
   // CLI Agent Detection Service (extracted for SRP)
   private readonly _cliAgentService: ICliAgentDetectionService;
   private readonly _terminalSpawner: TerminalSpawner;
-  // VS Code-style scrollback service for recording with time/size limits
-  private readonly _scrollbackService: ScrollbackService;
   private readonly _debugLoggingEnabled = ENABLE_TERMINAL_DEBUG_LOGS;
 
-  // Phase 2: DI Services (optional for backward compatibility)
-  private readonly _bufferService?: IBufferManagementService;
-  private readonly _stateService?: ITerminalStateService;
-  private readonly _eventBus?: EventBus;
+  // 操作の順序保証のためのキュー
+  private operationQueue: Promise<void> = Promise.resolve();
 
-  // Phase 3: Plugin System
-  private readonly _pluginManager?: PluginManager;
+  // Track terminals being killed to prevent infinite loops
+  private readonly _terminalBeingKilled = new Set<string>();
 
+  // Performance optimization: Data batching for high-frequency output
+  private readonly _dataBuffers = new Map<string, string[]>();
+  private readonly _dataFlushTimers = new Map<string, NodeJS.Timeout>();
+  private readonly DATA_FLUSH_INTERVAL = 8; // ~125fps for improved responsiveness
+  private readonly MAX_BUFFER_SIZE = 50;
   private readonly _initialPromptGuards = new Map<string, { dispose: () => void }>();
 
   // CLI Agent detection moved to service - cache removed from TerminalManager
 
-  public readonly onData = this._eventHub.onData;
-  public readonly onExit = this._eventHub.onExit;
-  public readonly onTerminalCreated = this._eventHub.onTerminalCreated;
-  public readonly onTerminalRemoved = this._eventHub.onTerminalRemoved;
-  public readonly onStateUpdate = this._eventHub.onStateUpdate;
-  public readonly onTerminalFocus = this._eventHub.onTerminalFocus;
+  public readonly onData = this._dataEmitter.event;
+  public readonly onExit = this._exitEmitter.event;
+  public readonly onTerminalCreated = this._terminalCreatedEmitter.event;
+  public readonly onTerminalRemoved = this._terminalRemovedEmitter.event;
+  public readonly onStateUpdate = this._stateUpdateEmitter.event;
+  public readonly onTerminalFocus = this._terminalFocusEmitter.event;
 
   private debugLog(...args: unknown[]): void {
     if (this._debugLoggingEnabled) {
@@ -85,21 +82,10 @@ export class TerminalManager {
     }
   }
 
-  constructor(
-    cliAgentService?: ICliAgentDetectionService,
-    bufferService?: IBufferManagementService,
-    stateService?: ITerminalStateService,
-    eventBus?: EventBus,
-    pluginManager?: PluginManager
-  ) {
+  constructor(cliAgentService?: ICliAgentDetectionService) {
     // Initialize terminal number manager with max terminals config
     const config = getTerminalConfig();
     this._terminalNumberManager = new TerminalNumberManager(config.maxTerminals);
-    this._registry = new TerminalRegistry(
-      this._terminals,
-      this._activeTerminalManager,
-      this._terminalNumberManager
-    );
 
     // Initialize Terminal Profile Service
     this._profileService = new TerminalProfileService();
@@ -111,49 +97,6 @@ export class TerminalManager {
     this._cliAgentService.startHeartbeat();
 
     this._terminalSpawner = new TerminalSpawner();
-
-    // Initialize ScrollbackService with VS Code-compatible defaults
-    this._scrollbackService = new ScrollbackService({
-      persistentSessionScrollback: config.persistentSessionScrollback,
-    });
-
-    // Phase 2: Initialize DI services
-    this._bufferService = bufferService;
-    this._stateService = stateService;
-    this._eventBus = eventBus;
-
-    if (this._bufferService) {
-      log('✅ [TERMINAL] Using BufferManagementService from DI');
-    }
-    if (this._stateService) {
-      log('✅ [TERMINAL] Using TerminalStateService from DI');
-    }
-
-    // Phase 3: Initialize Plugin System
-    this._pluginManager = pluginManager;
-    if (this._pluginManager) {
-      log('✅ [TERMINAL] Using PluginManager from Phase 3');
-      log(`📦 [TERMINAL] Active agent plugins: ${this._pluginManager.getActiveAgentPlugins().length}`);
-    }
-
-    // Subscribe to buffer flush events
-    if (this._eventBus && this._bufferService) {
-      this._eventBus.subscribe(BufferFlushedEvent, (event) => {
-        // Convert terminal number back to ID string
-        const terminal = Array.from(this._terminals.values()).find(
-          (t) => this._registry.getTerminalNumber(t.id) === event.data.terminalId
-        );
-
-        if (terminal) {
-          // Emit data through existing event hub
-          this._eventHub.fireOutput({ terminalId: terminal.id, data: event.data.data });
-          this.debugLog(
-            `📤 [TERMINAL] Flushed ${event.data.size} chars from BufferService for terminal ${terminal.id}`
-          );
-        }
-      });
-      log('✅ [TERMINAL] Subscribed to BufferFlushedEvent');
-    }
   }
 
   /**
@@ -214,7 +157,7 @@ export class TerminalManager {
     log(`🔍 [TERMINAL] Config loaded: maxTerminals=${config.maxTerminals}`);
 
     // Check if we can create new terminal
-    const canCreateResult = this._registry.canCreate();
+    const canCreateResult = this._terminalNumberManager.canCreate(this._terminals);
     log('🔍 [TERMINAL] canCreate() returned:', canCreateResult);
 
     if (!canCreateResult) {
@@ -258,7 +201,7 @@ export class TerminalManager {
       });
 
       // Get terminal number from manager
-      const terminalNumber = this._registry.findAvailableNumber();
+      const terminalNumber = this._terminalNumberManager.findAvailableNumber(this._terminals);
       if (!terminalNumber) {
         throw new Error('Unable to assign terminal number');
       }
@@ -276,35 +219,7 @@ export class TerminalManager {
 
       // Store terminal and set it as active
       this._terminals.set(terminalId, terminal);
-      this._registry.setActiveTerminal(terminalId);
-
-      // Phase 2: Initialize buffer in BufferManagementService
-      if (this._bufferService && terminalNumber) {
-        this._bufferService.initializeBuffer(terminalNumber);
-        this.debugLog(`📊 [TERMINAL] Buffer initialized for terminal ${terminalNumber}`);
-      }
-
-      // Phase 2: Register terminal in TerminalStateService
-      if (this._stateService) {
-        this._stateService.registerTerminal(terminalId, {
-          id: terminalId,
-          name: terminal.name,
-          number: terminalNumber,
-          cwd,
-          shell: profileConfig.shell,
-          shellArgs: profileConfig.shellArgs,
-          pid: ptyProcess.pid,
-          isActive: false,
-          createdAt: terminal.createdAt,
-          lastActiveAt: terminal.createdAt,
-        });
-        // Set as active terminal in state service
-        this._stateService.setActiveTerminal(terminalId);
-        this.debugLog(`📊 [TERMINAL] State registered and activated for terminal ${terminalId}`);
-      }
-
-      // Start scrollback recording with VS Code-compatible time/size limits
-      this._scrollbackService.startRecording(terminalId);
+      this._activeTerminalManager.setActive(terminalId);
 
       // CLI Agent detection will be handled by the service automatically
 
@@ -312,7 +227,7 @@ export class TerminalManager {
       this._setupTerminalEvents(terminal);
 
       log(`✅ [TERMINAL] Terminal created successfully: ${terminalId} (${terminal.name})`);
-      this._eventHub.fireTerminalCreated(terminal);
+      this._terminalCreatedEmitter.fire(terminal);
       this._notifyStateUpdate();
 
       // 🎯 TIMING FIX: Shell initialization moved to _handleTerminalInitializationComplete
@@ -346,7 +261,7 @@ export class TerminalManager {
     log('🔍 [TERMINAL] config.maxTerminals:', config.maxTerminals);
 
     // Call canCreate and get detailed information
-    const canCreateResult = this._registry.canCreate();
+    const canCreateResult = this._terminalNumberManager.canCreate(this._terminals);
     log('🔍 [TERMINAL] canCreate() returned:', canCreateResult);
 
     if (!canCreateResult) {
@@ -382,14 +297,14 @@ export class TerminalManager {
         // Don't return early - continue with creation
       } else {
         showWarningMessage(`${ERROR_MESSAGES.MAX_TERMINALS_REACHED} (${config.maxTerminals})`);
-        return this._registry.getActiveTerminalId() || '';
+        return this._activeTerminalManager.getActive() || '';
       }
     } else {
       log('✅ [TERMINAL] canCreate() returned TRUE - proceeding with creation');
     }
 
     log('🔍 [TERMINAL] Finding available terminal number...');
-    const terminalNumber = this._registry.findAvailableNumber();
+    const terminalNumber = this._terminalNumberManager.findAvailableNumber(this._terminals);
     log(`🔍 [TERMINAL] Found available terminal number: ${terminalNumber}`);
 
     log('🔍 [TERMINAL] Generating terminal ID...');
@@ -457,35 +372,7 @@ export class TerminalManager {
       // Set all other terminals as inactive
       this._deactivateAllTerminals();
       this._terminals.set(terminalId, terminal);
-      this._registry.setActiveTerminal(terminalId);
-
-      // Phase 2: Initialize buffer in BufferManagementService
-      if (this._bufferService && terminalNumber) {
-        this._bufferService.initializeBuffer(terminalNumber);
-        this.debugLog(`📊 [TERMINAL] Buffer initialized for terminal ${terminalNumber}`);
-      }
-
-      // Phase 2: Register terminal in TerminalStateService
-      if (this._stateService) {
-        this._stateService.registerTerminal(terminalId, {
-          id: terminalId,
-          name: terminal.name,
-          number: terminalNumber,
-          cwd,
-          shell,
-          shellArgs,
-          pid: ptyProcess.pid,
-          isActive: true,
-          createdAt: terminal.createdAt,
-          lastActiveAt: terminal.createdAt,
-        });
-        // Set as active terminal in state service
-        this._stateService.setActiveTerminal(terminalId);
-        this.debugLog(`📊 [TERMINAL] State registered and activated for terminal ${terminalId}`);
-      }
-
-      // Start scrollback recording with VS Code-compatible time/size limits
-      this._scrollbackService.startRecording(terminalId);
+      this._activeTerminalManager.setActive(terminalId);
 
       // PTY data handler - clean, no duplicates
       ptyProcess.onData((data: string) => {
@@ -498,12 +385,12 @@ export class TerminalManager {
         log('🚪 [PTY-EXIT] Terminal exited:', terminalId, 'ExitCode:', exitCode);
 
         this._cliAgentService.handleTerminalRemoved(terminalId);
-        this._eventHub.fireExit({ terminalId, exitCode });
+        this._exitEmitter.fire({ terminalId, exitCode });
         this._removeTerminal(terminalId);
       });
 
       // Fire terminal created event
-      this._eventHub.fireTerminalCreated(terminal);
+      this._terminalCreatedEmitter.fire(terminal);
 
       // Verify PTY write capability without sending test commands
       if (ptyProcess && typeof ptyProcess.write === 'function') {
@@ -577,7 +464,7 @@ export class TerminalManager {
 
     // 🚨 CRITICAL: フォーカス変更はCLI Agent状態に影響しない（仕様書準拠）
     // Only fire focus event, do not change CLI Agent status
-    this._eventHub.fireTerminalFocus(terminalId);
+    this._terminalFocusEmitter.fire(terminalId);
     log(`🎯 [TERMINAL] Focused: ${terminal.name} (NO status change - spec compliant)`);
   }
 
@@ -592,7 +479,7 @@ export class TerminalManager {
         this.debugLog('🔍 [TERMINAL] Available terminals:', Array.from(this._terminals.keys()));
 
         // Fallback to active terminal
-    const activeId = this._registry.getActiveTerminalId();
+        const activeId = this._activeTerminalManager.getActive();
         if (!activeId) {
           log('🚨 [TERMINAL] No active terminal available as fallback');
           return;
@@ -604,7 +491,7 @@ export class TerminalManager {
       }
     } else {
       // Get currently active terminal
-    const activeId = this._registry.getActiveTerminalId();
+      const activeId = this._activeTerminalManager.getActive();
       if (!activeId) {
         log('🚨 [TERMINAL] No active terminal ID available');
         this.debugLog('🔍 [TERMINAL] Available terminals:', Array.from(this._terminals.keys()));
@@ -627,7 +514,7 @@ export class TerminalManager {
           log('🚨 [TERMINAL] Emergency terminal is undefined');
           return;
         }
-        this._registry.setActiveTerminal(emergencyTerminal);
+        this._activeTerminalManager.setActive(emergencyTerminal);
         resolvedTerminalId = emergencyTerminal;
         log(
           `⚠️ [TERMINAL] Emergency fallback to first available terminal: ${resolvedTerminalId}`
@@ -700,7 +587,7 @@ export class TerminalManager {
   }
 
   public resize(cols: number, rows: number, terminalId?: string): void {
-    const id = terminalId || this._registry.getActiveTerminalId();
+    const id = terminalId || this._activeTerminalManager.getActive();
     if (!id) {
       log('⚠️ [WARN] No terminal ID provided and no active terminal for resize');
       return;
@@ -726,11 +613,11 @@ export class TerminalManager {
   }
 
   public hasActiveTerminal(): boolean {
-    return this._registry.hasActiveTerminal();
+    return this._activeTerminalManager.hasActive();
   }
 
   public getActiveTerminalId(): string | undefined {
-    return this._registry.getActiveTerminalId();
+    return this._activeTerminalManager.getActive();
   }
 
   public getTerminals(): TerminalInstance[] {
@@ -779,13 +666,7 @@ export class TerminalManager {
     if (terminal) {
       this._deactivateAllTerminals();
       terminal.isActive = true;
-      this._registry.setActiveTerminal(terminalId);
-
-      // Phase 2: Update active terminal in TerminalStateService
-      if (this._stateService) {
-        this._stateService.setActiveTerminal(terminalId);
-        this.debugLog(`📊 [TERMINAL] Active terminal updated in StateService: ${terminalId}`);
-      }
+      this._activeTerminalManager.setActive(terminalId);
     }
   }
 
@@ -838,9 +719,17 @@ export class TerminalManager {
       source?: 'header' | 'panel' | 'command';
     } = {}
   ): Promise<DeleteResult> {
-    return this._lifecycleService.enqueue(async () =>
-      this.performDeleteOperation(terminalId, options)
-    );
+    // 操作をキューに追加してレースコンディションを防ぐ
+    return new Promise<DeleteResult>((resolve, reject) => {
+      this.operationQueue = this.operationQueue.then(() => {
+        try {
+          const result = this.performDeleteOperation(terminalId, options);
+          resolve(result);
+        } catch (error) {
+          reject(error);
+        }
+      });
+    });
   }
 
   /**
@@ -877,7 +766,7 @@ export class TerminalManager {
     try {
       // 3. プロセスの終了
       log(`🗑️ [DELETE] Killing terminal process: ${terminalId}`);
-      this._lifecycleService.markBeingKilled(terminalId);
+      this._terminalBeingKilled.add(terminalId);
       const p = (terminal.ptyProcess || terminal.pty) as { kill?: () => void } | undefined;
       if (p && typeof p.kill === 'function') {
         p.kill();
@@ -890,7 +779,7 @@ export class TerminalManager {
       return { success: true, newState: this.getCurrentState() };
     } catch (error) {
       log(`❌ [DELETE] Error during delete operation:`, error);
-      this._lifecycleService.unmarkBeingKilled(terminalId);
+      this._terminalBeingKilled.delete(terminalId);
       return { success: false, reason: `Delete failed: ${String(error)}` };
     }
   }
@@ -907,7 +796,7 @@ export class TerminalManager {
 
     return {
       terminals,
-      activeTerminalId: this._registry.getActiveTerminalId() || null,
+      activeTerminalId: this._activeTerminalManager.getActive() || null,
       maxTerminals: getTerminalConfig().maxTerminals,
       availableSlots: this._getAvailableSlots(),
     };
@@ -917,7 +806,7 @@ export class TerminalManager {
    * 利用可能なスロットを取得
    */
   private _getAvailableSlots(): number[] {
-    return this._registry.getAvailableSlots();
+    return this._terminalNumberManager.getAvailableSlots(this._terminals);
   }
 
   /**
@@ -925,7 +814,7 @@ export class TerminalManager {
    */
   private _notifyStateUpdate(): void {
     const state = this.getCurrentState();
-    this._eventHub.fireStateUpdate(state);
+    this._stateUpdateEmitter.fire(state);
     log(`📡 [STATE] State update notification sent:`, state);
   }
 
@@ -942,7 +831,7 @@ export class TerminalManager {
     );
 
     // Fire process state change event for monitoring and debugging
-    this._eventHub.fireStateUpdate({
+    this._stateUpdateEmitter.fire({
       type: 'processStateChange',
       terminalId: terminal.id,
       previousState,
@@ -1047,7 +936,7 @@ export class TerminalManager {
    * @deprecated Use deleteTerminal() with active terminal ID
    */
   public safeKillTerminal(terminalId?: string): boolean {
-    const activeId = this._registry.getActiveTerminalId();
+    const activeId = this._activeTerminalManager.getActive();
     if (!activeId) {
       const message = 'No active terminal to kill';
       log('⚠️ [WARN]', message);
@@ -1070,7 +959,7 @@ export class TerminalManager {
 
   public killTerminal(terminalId?: string): void {
     // According to the spec: always kill the ACTIVE terminal, ignore provided ID
-    const activeId = this._registry.getActiveTerminalId();
+    const activeId = this._activeTerminalManager.getActive();
     if (!activeId) {
       log('⚠️ [WARN] No active terminal to kill');
       showWarningMessage('No active terminal to kill');
@@ -1099,45 +988,20 @@ export class TerminalManager {
     this._shellIntegrationService = service;
   }
 
-  /**
-   * Get scrollback data for a terminal (VS Code pattern)
-   *
-   * @param terminalId Terminal ID
-   * @param options Serialization options (scrollback lines, etc)
-   * @returns Serialized scrollback data or null
-   */
-  public getScrollbackData(
-    terminalId: string,
-    options?: { scrollback?: number }
-  ): string | null {
-    return this._scrollbackService.getSerializedData(terminalId, options);
-  }
-
-  /**
-   * Get scrollback statistics for a terminal
-   *
-   * @param terminalId Terminal ID
-   * @returns Scrollback statistics or null
-   */
-  public getScrollbackStats(terminalId: string) {
-    return this._scrollbackService.getScrollbackStats(terminalId);
-  }
-
   public dispose(): void {
+    // Clean up data buffers and timers
+    this._flushAllBuffers();
+    for (const timer of this._dataFlushTimers.values()) {
+      clearTimeout(timer);
+    }
+    this._dataBuffers.clear();
+    this._dataFlushTimers.clear();
+
     // Clear kill tracking
-    this._lifecycleService.clear();
+    this._terminalBeingKilled.clear();
 
     // Dispose CLI Agent detection service
     this._cliAgentService.dispose();
-
-    // Dispose scrollback service
-    this._scrollbackService.dispose();
-
-    // Phase 2: Dispose buffer service
-    if (this._bufferService) {
-      this._bufferService.dispose();
-      log('📊 [TERMINAL] BufferManagementService disposed');
-    }
 
     for (const terminal of this._terminals.values()) {
       const p = (terminal.ptyProcess || terminal.pty) as { kill?: () => void } | undefined;
@@ -1146,8 +1010,12 @@ export class TerminalManager {
       }
     }
     this._terminals.clear();
-    this._lifecycleService.clear();
-    this._eventHub.dispose();
+    this._dataEmitter.dispose();
+    this._exitEmitter.dispose();
+    this._terminalCreatedEmitter.dispose();
+    this._terminalRemovedEmitter.dispose();
+    this._stateUpdateEmitter.dispose();
+    this._terminalFocusEmitter.dispose();
   }
 
   // Performance optimization: Buffer data to reduce event frequency
@@ -1166,29 +1034,33 @@ export class TerminalManager {
       return;
     }
 
+    if (!this._dataBuffers.has(terminalId)) {
+      this._dataBuffers.set(terminalId, []);
+      this.debugLog(`📊 [TERMINAL] Created new data buffer for terminal: ${terminalId}`);
+    }
+
+    const buffer = this._dataBuffers.get(terminalId);
+    if (!buffer) {
+      log('🚨 [TERMINAL] Buffer creation failed for terminal:', terminalId);
+      this._dataBuffers.set(terminalId, []);
+      return;
+    }
+
     // ✅ CRITICAL: Add terminal ID validation to each data chunk
     const validatedData = this._validateDataForTerminal(terminalId, data);
     const normalizedData = this._normalizeControlSequences(validatedData);
+    buffer.push(normalizedData);
 
-    // Record data to scrollback service with VS Code time/size limits
-    this._scrollbackService.recordData(terminalId, normalizedData);
-
-    // Phase 2: Use BufferManagementService (required)
-    if (!this._bufferService) {
-      log('🚨 [TERMINAL] BufferManagementService not available - data will not be buffered!');
-      return;
-    }
-
-    const terminalNumber = this._registry.getTerminalNumber(terminalId);
-    if (terminalNumber === undefined) {
-      log('🚨 [TERMINAL] Terminal number not found for buffering:', terminalId);
-      return;
-    }
-
-    this._bufferService.write(terminalNumber, normalizedData);
     this.debugLog(
-      `📊 [TERMINAL] Data buffered via BufferService for ${terminalId}: ${data.length} chars`
+      `📊 [TERMINAL] Data buffered for ${terminalId}: ${data.length} chars (buffer size: ${buffer.length})`
     );
+
+    // Flush immediately if buffer is full or data is large
+    if (buffer.length >= this.MAX_BUFFER_SIZE || data.length > 1000) {
+      this._flushBuffer(terminalId);
+    } else {
+      this._scheduleFlush(terminalId);
+    }
   }
 
   /**
@@ -1206,12 +1078,86 @@ export class TerminalManager {
     return data;
   }
 
+  private _scheduleFlush(terminalId: string): void {
+    if (!this._dataFlushTimers.has(terminalId)) {
+      const timer = setTimeout(() => {
+        this._flushBuffer(terminalId);
+      }, this.DATA_FLUSH_INTERVAL);
+      this._dataFlushTimers.set(terminalId, timer);
+    }
+  }
+
+  private _flushBuffer(terminalId: string): void {
+    // ✅ CRITICAL FIX: Strict terminal ID validation before flushing
+    if (!terminalId || typeof terminalId !== 'string') {
+      log('🚨 [TERMINAL] Invalid terminalId for buffer flushing:', terminalId);
+      return;
+    }
+
+    // Double-check terminal still exists
+    if (!this._terminals.has(terminalId)) {
+      log(`⚠️ [TERMINAL] Cannot flush buffer for removed terminal: ${terminalId}`);
+      // Clean up orphaned buffer and timer
+      this._dataBuffers.delete(terminalId);
+      const timer = this._dataFlushTimers.get(terminalId);
+      if (timer) {
+        clearTimeout(timer);
+        this._dataFlushTimers.delete(terminalId);
+      }
+      return;
+    }
+
+    const timer = this._dataFlushTimers.get(terminalId);
+    if (timer) {
+      clearTimeout(timer);
+      this._dataFlushTimers.delete(terminalId);
+    }
+
+    const buffer = this._dataBuffers.get(terminalId);
+    if (buffer && buffer.length > 0) {
+      const combinedData = buffer.join('');
+      buffer.length = 0; // Clear buffer
+
+      // ✅ CRITICAL: Additional validation before emitting data
+      const terminal = this._terminals.get(terminalId);
+      if (!terminal) {
+        log(`🚨 [TERMINAL] Terminal disappeared during flush: ${terminalId}`);
+        return;
+      }
+
+      // Send to CLI Agent detection service with validation
+      try {
+        this._cliAgentService.detectFromOutput(terminalId, combinedData);
+      } catch (error) {
+        log(`⚠️ [TERMINAL] CLI Agent detection failed for ${terminalId}:`, error);
+      }
+
+      // ✅ EMIT DATA WITH STRICT TERMINAL ID ASSOCIATION
+      this.debugLog(
+        `📤 [TERMINAL] Flushing data for terminal ${terminal.name} (${terminalId}): ${combinedData.length} chars`
+      );
+      this._dataEmitter.fire({
+        terminalId: terminalId, // Ensure exact ID match
+        data: combinedData,
+        timestamp: Date.now(), // Add timestamp for debugging
+        terminalName: terminal.name, // Add terminal name for validation
+      });
+    }
+  }
+
+  private _flushAllBuffers(): void {
+    for (const terminalId of this._dataBuffers.keys()) {
+      this._flushBuffer(terminalId);
+    }
+  }
 
   /**
    * 全てのターミナルを非アクティブにする
    */
   private _deactivateAllTerminals(): void {
-    this._registry.deactivateAll();
+    for (const term of this._terminals.values()) {
+      term.isActive = false;
+    }
   }
 
   /**
@@ -1240,26 +1186,17 @@ export class TerminalManager {
     // Stop any pending prompt readiness guard for this terminal
     this._cleanupInitialPromptGuard(terminalId);
 
+    // Clean up data buffers for this terminal
+    this._flushBuffer(terminalId);
+    this._dataBuffers.delete(terminalId);
+    const timer = this._dataFlushTimers.get(terminalId);
+    if (timer) {
+      clearTimeout(timer);
+      this._dataFlushTimers.delete(terminalId);
+    }
+
     // CLI Agent cleanup handled by service
     this._cliAgentService.handleTerminalRemoved(terminalId);
-
-    // Clear scrollback recording for this terminal
-    this._scrollbackService.clearScrollback(terminalId);
-
-    // Phase 2: Dispose buffer in BufferManagementService
-    if (this._bufferService) {
-      const terminalNumber = this._registry.getTerminalNumber(terminalId);
-      if (terminalNumber !== undefined) {
-        this._bufferService.disposeBuffer(terminalNumber);
-        this.debugLog(`📊 [TERMINAL] Buffer disposed for terminal ${terminalNumber}`);
-      }
-    }
-
-    // Phase 2: Unregister terminal from TerminalStateService
-    if (this._stateService) {
-      this._stateService.unregisterTerminal(terminalId);
-      this.debugLog(`📊 [TERMINAL] State unregistered for terminal ${terminalId}`);
-    }
 
     // Remove from terminals map
     const deletionResult = this._terminals.delete(terminalId);
@@ -1268,7 +1205,7 @@ export class TerminalManager {
     log('🧹 [TERMINAL] After deletion - terminals count:', this._terminals.size);
     log('🧹 [TERMINAL] After deletion - terminal IDs:', Array.from(this._terminals.keys()));
 
-    this._eventHub.fireTerminalRemoved(terminalId);
+    this._terminalRemovedEmitter.fire(terminalId);
 
     log('🧹 [TERMINAL] Terminal data cleaned up:', terminalId);
     log('🧹 [TERMINAL] Remaining terminals:', Array.from(this._terminals.keys()));
@@ -1299,8 +1236,7 @@ export class TerminalManager {
       return;
     }
 
-    // 🔧 FIX: Reduce timeout to 500ms for faster prompt display
-    const PROMPT_TIMEOUT_MS = 500;
+    const PROMPT_TIMEOUT_MS = 1200;
     let promptSeen = false;
     let timer: NodeJS.Timeout | undefined;
     let dataDisposable: IDisposable | undefined;
@@ -1346,20 +1282,10 @@ export class TerminalManager {
     timer = setTimeout(() => {
       if (!promptSeen) {
         log(
-          `⚠️ [TERMINAL] Initial prompt not detected for ${terminalId} within ${PROMPT_TIMEOUT_MS}ms - forcing prompt display`
+          `⚠️ [TERMINAL] Initial prompt not detected for ${terminalId} within ${PROMPT_TIMEOUT_MS}ms - sending newline`
         );
         try {
-          // 🔧 FIX: Send multiple newlines to ensure prompt is displayed
-          // This is more reliable than sending a single newline
           ptyProcess.write('\r');
-          setTimeout(() => {
-            try {
-              ptyProcess.write('\r');
-              log(`✅ [TERMINAL] Sent additional newline to force prompt for ${terminalId}`);
-            } catch (e) {
-              log(`⚠️ [TERMINAL] Failed to send second newline: ${e}`);
-            }
-          }, 100);
         } catch (writeError) {
           log(`❌ [TERMINAL] Failed to send newline fallback for ${terminalId}:`, writeError);
         }
@@ -1437,14 +1363,14 @@ export class TerminalManager {
    * ターミナル削除後のアクティブターミナル更新処理
    */
   private _updateActiveTerminalAfterRemoval(terminalId: string): void {
-    if (this._registry.isActive(terminalId)) {
+    if (this._activeTerminalManager.isActive(terminalId)) {
       const remaining = getFirstValue(this._terminals);
       if (remaining) {
-        this._registry.setActiveTerminal(remaining.id);
+        this._activeTerminalManager.setActive(remaining.id);
         remaining.isActive = true;
         log('🔄 [TERMINAL] Set new active terminal:', remaining.id);
       } else {
-        this._registry.clearActive();
+        this._activeTerminalManager.clearActive();
         log('🔄 [TERMINAL] No remaining terminals, cleared active');
       }
     }
@@ -1491,42 +1417,7 @@ export class TerminalManager {
    * Handle terminal output for CLI Agent detection (public API)
    */
   public handleTerminalOutputForCliAgent(terminalId: string, data: string): void {
-    // Legacy detection (Phase 2)
     this._cliAgentService.detectFromOutput(terminalId, data);
-
-    // Phase 3: Plugin-based detection
-    if (this._pluginManager) {
-      this._detectWithPlugins(terminalId, data);
-    }
-  }
-
-  /**
-   * Phase 3: Detect CLI agents using plugin system
-   */
-  private _detectWithPlugins(terminalId: string, output: string): void {
-    if (!this._pluginManager) {
-      return;
-    }
-
-    const agentPlugins = this._pluginManager.getActiveAgentPlugins();
-    for (const plugin of agentPlugins) {
-      const result = plugin.detect(terminalId, output);
-      if (result.detected && result.agentType) {
-        log(`🤖 [PLUGIN] Agent detected: ${result.agentType} (confidence: ${result.confidence.toFixed(2)})`);
-
-        // Call plugin lifecycle hook
-        plugin.onAgentActivated(terminalId);
-
-        // TODO: Emit state update for UI (integrate with existing state system)
-        // Note: fireStateUpdate expects TerminalState type with terminals, activeTerminalId, etc.
-        // The current agent detection state needs to be integrated with the terminal state system
-        // For now, agent state is managed through plugin lifecycle hooks
-        log(`🔔 [PLUGIN] Agent state update: terminal=${terminalId}, agent=${result.agentType}, confidence=${result.confidence.toFixed(2)}`);
-
-        // Only report the first matching agent to avoid conflicts
-        break;
-      }
-    }
   }
 
   /**
@@ -1624,7 +1515,7 @@ export class TerminalManager {
       // Update process state based on exit conditions
       if (terminal.processState === ProcessState.Launching) {
         terminal.processState = ProcessState.KilledDuringLaunch;
-      } else if (this._lifecycleService.isBeingKilled(terminalId)) {
+      } else if (this._terminalBeingKilled.has(terminalId)) {
         terminal.processState = ProcessState.KilledByUser;
       } else {
         terminal.processState = ProcessState.KilledByProcess;
@@ -1647,25 +1538,10 @@ export class TerminalManager {
       // Handle CLI agent termination on process exit
       this._cliAgentService.handleTerminalRemoved(terminalId);
 
-      // Phase 2: Dispose buffer in BufferManagementService
-      if (this._bufferService) {
-        const terminalNumber = this._registry.getTerminalNumber(terminalId);
-        if (terminalNumber !== undefined) {
-          this._bufferService.disposeBuffer(terminalNumber);
-          this.debugLog(`📊 [TERMINAL] Buffer disposed for terminal ${terminalNumber}`);
-        }
-      }
-
-      // Phase 2: Unregister terminal from TerminalStateService
-      if (this._stateService) {
-        this._stateService.unregisterTerminal(terminalId);
-        this.debugLog(`📊 [TERMINAL] State unregistered for terminal ${terminalId}`);
-      }
-
       // Clean up terminal and notify listeners
       this._terminals.delete(terminalId);
-      this._eventHub.fireTerminalRemoved(terminalId);
-      this._eventHub.fireExit({ terminalId, exitCode });
+      this._terminalRemovedEmitter.fire(terminalId);
+      this._exitEmitter.fire({ terminalId, exitCode });
       this._notifyStateUpdate();
 
       log(`🗑️ [TERMINAL] Terminal ${terminalId} cleaned up after exit`);
@@ -1901,7 +1777,17 @@ export class TerminalManager {
    * Output event emitter for backward compatibility
    */
   public get onTerminalOutput(): vscode.Event<{ terminalId: string; data: string }> {
-    return this._eventHub.onOutput;
+    // Map the existing onData event to the expected format
+    if (!this._outputEmitter) {
+      this._outputEmitter = new vscode.EventEmitter<{ terminalId: string; data: string }>();
+      this.onData((event: TerminalEvent) => {
+        this._outputEmitter!.fire({
+          terminalId: event.terminalId,
+          data: event.data || '',
+        });
+      });
+    }
+    return this._outputEmitter.event;
   }
 
   /**

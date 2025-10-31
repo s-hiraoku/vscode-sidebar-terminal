@@ -130,6 +130,7 @@ export class SerializationMessageHandler implements IMessageHandler {
     this.logger.info('Restore serialized content requested');
 
     const terminalId = typeof msg.terminalId === 'string' ? msg.terminalId : undefined;
+    const serializedContent = (msg as any).serializedContent as string | undefined;
     const scrollbackData = Array.isArray((msg as any).scrollbackData)
       ? ((msg as any).scrollbackData as unknown[]).filter(
           (line): line is string => typeof line === 'string'
@@ -159,6 +160,7 @@ export class SerializationMessageHandler implements IMessageHandler {
       return;
     }
 
+    const persistenceManager = (coordinator as any).persistenceManager;
     const restoreSessionFn =
       'restoreSession' in coordinator && typeof (coordinator as any).restoreSession === 'function'
         ? ((coordinator as any).restoreSession as (payload: {
@@ -174,11 +176,11 @@ export class SerializationMessageHandler implements IMessageHandler {
       let errorMessage: string | undefined;
 
       try {
-        // VS Code-style ScrollbackService only (SerializeAddon no longer used)
-        this.logger.info(`📋 [DEBUG] Restore request for ${terminalId}: scrollbackData=${scrollbackData ? `${scrollbackData.length} lines` : 'undefined'}, restoreSessionFn=${restoreSessionFn ? 'available' : 'null'}`);
+        if (persistenceManager && typeof serializedContent === 'string' && serializedContent.length > 0) {
+          restored = Boolean(persistenceManager.restoreTerminalContent(terminalId, serializedContent));
+        }
 
-        if (scrollbackData && scrollbackData.length > 0 && restoreSessionFn) {
-          this.logger.info(`📋 [DEBUG] Calling restoreSession for ${terminalId} with ${scrollbackData.length} lines`);
+        if (!restored && scrollbackData && scrollbackData.length > 0 && restoreSessionFn) {
           restored = await restoreSessionFn({
             terminalId,
             terminalName:
@@ -186,9 +188,6 @@ export class SerializationMessageHandler implements IMessageHandler {
             scrollbackData,
             sessionRestoreMessage,
           });
-          this.logger.info(`📋 [DEBUG] restoreSession result for ${terminalId}: ${restored}`);
-        } else {
-          this.logger.warn(`📋 [DEBUG] Skipping restore for ${terminalId}: scrollbackData=${scrollbackData ? scrollbackData.length : 'null'}, restoreSessionFn=${restoreSessionFn ? 'yes' : 'no'}`);
         }
 
         if (restored && isActive) {
@@ -253,7 +252,7 @@ export class SerializationMessageHandler implements IMessageHandler {
     const messageId = (msg as any).messageId;
 
     if (!persistenceManager) {
-      this.logger.error('Persistence manager not available for save request');
+      this.logger.error('StandardTerminalPersistenceManager not available for save request');
       coordinator.postMessageToExtension({
         command: 'saveAllTerminalSessionsResponse',
         success: false,
@@ -323,10 +322,16 @@ export class SerializationMessageHandler implements IMessageHandler {
       const terminalIds = Array.isArray((msg as any).terminalIds)
         ? ((msg as any).terminalIds as string[])
         : [];
-      const scrollbackLines = (msg as any).scrollbackLines || 1000;
+      const scrollbackLines = (msg as any).scrollbackLines;
       const serializationData: Record<string, string> = {};
       const requestId = (msg as any).requestId;
       const messageId = (msg as any).messageId;
+
+      // Use existing StandardTerminalPersistenceManager for serialization
+      const persistenceManager = (coordinator as any).persistenceManager;
+      if (!persistenceManager) {
+        throw new Error('StandardTerminalPersistenceManager not available');
+      }
 
       if (terminalIds.length === 0) {
         coordinator.postMessageToExtension({
@@ -340,48 +345,19 @@ export class SerializationMessageHandler implements IMessageHandler {
         return;
       }
 
-      // Extract serialized content from each terminal using SerializeAddon
+      // Get serialized content from each terminal via persistence manager
       terminalIds.forEach((terminalId: string) => {
         try {
-          // Get terminal instance
-          const terminalInstance = coordinator.getTerminalInstance(terminalId);
-          if (!terminalInstance) {
-            this.logger.warn(`Terminal ${terminalId} not found for serialization`);
-            return;
-          }
-
-          // Get SerializeAddon for color-preserving serialization
-          const serializeAddon = coordinator.getSerializeAddon(terminalId);
-
-          let serializedContent = '';
-
-          if (serializeAddon) {
-            // Use SerializeAddon for color preservation
-            this.logger.info(`✅ Using SerializeAddon for terminal ${terminalId} serialization`);
-            const fullContent = serializeAddon.serialize();
-            const lines = fullContent.split('\n');
-            const startIndex = Math.max(0, lines.length - scrollbackLines);
-            serializedContent = lines.slice(startIndex).join('\n');
-          } else {
-            // Fallback: Extract plain text from buffer
-            this.logger.warn(`⚠️ SerializeAddon not available for terminal ${terminalId}, using plain text`);
-            const buffer = terminalInstance.terminal.buffer.active;
-            const lines: string[] = [];
-            const startLine = Math.max(0, buffer.length - scrollbackLines);
-
-            for (let i = startLine; i < buffer.length; i++) {
-              const line = buffer.getLine(i);
-              if (line) {
-                lines.push(line.translateToString());
-              }
-            }
-            serializedContent = lines.join('\n');
-          }
+          // Use serializeTerminal method which returns the serialized content
+          const serialized = persistenceManager.serializeTerminal(terminalId, {
+            scrollback: typeof scrollbackLines === 'number' ? scrollbackLines : undefined,
+          });
+          const serializedContent = serialized?.content ?? '';
 
           if (serializedContent.length > 0) {
             serializationData[terminalId] = serializedContent;
             this.logger.info(
-              `✅ Serialized terminal ${terminalId}: ${serializedContent.length} chars (${serializedContent.split('\n').length} lines)`
+              `Serialized terminal ${terminalId}: ${serializedContent.length} chars`
             );
           } else {
             this.logger.warn(`No serialized content for terminal ${terminalId}`);
@@ -401,7 +377,7 @@ export class SerializationMessageHandler implements IMessageHandler {
       });
 
       this.logger.info(
-        `✅ Terminal serialization completed for ${Object.keys(serializationData).length}/${terminalIds.length} terminals`
+        `Terminal serialization completed for ${Object.keys(serializationData).length} terminals`
       );
     } catch (error) {
       this.logger.error('Error during terminal serialization:', error);
@@ -425,58 +401,43 @@ export class SerializationMessageHandler implements IMessageHandler {
     msg: MessageCommand,
     coordinator: IManagerCoordinator
   ): void {
-    this.logger.info('[RESTORE-DEBUG] === Restore terminal serialization START ===');
+    this.logger.info('Restore terminal serialization');
 
     try {
       const terminalData = (msg as any).terminalData || [];
-      this.logger.info(`[RESTORE-DEBUG] Received ${terminalData.length} terminals to restore`);
       let restoredCount = 0;
 
-      // Restore serialized content to each terminal
-      terminalData.forEach((terminal: any, index: number) => {
+      // Use existing StandardTerminalPersistenceManager for restoration
+      const persistenceManager = (coordinator as any).persistenceManager;
+      if (!persistenceManager) {
+        throw new Error('StandardTerminalPersistenceManager not available');
+      }
+
+      // Restore serialized content to each terminal via persistence manager
+      terminalData.forEach((terminal: any) => {
         const { id, serializedContent, isActive } = terminal;
-        this.logger.info(`[RESTORE-DEBUG] Processing terminal ${index + 1}/${terminalData.length}: ${id}`);
-        this.logger.info(`[RESTORE-DEBUG] Has serializedContent: ${!!(serializedContent && serializedContent.length > 0)}, length: ${serializedContent?.length || 0}`);
 
         if (serializedContent && serializedContent.length > 0) {
           try {
-            // Get terminal instance
-            this.logger.info(`[RESTORE-DEBUG] Getting terminal instance for ${id}...`);
-            const terminalInstance = coordinator.getTerminalInstance(id);
-            if (!terminalInstance) {
-              this.logger.warn(`❌ [RESTORE-DEBUG] Terminal ${id} not found for restoration`);
-              return;
+            // Use persistence manager to restore terminal content
+            const restored = persistenceManager.restoreTerminalContent(id, serializedContent);
+
+            if (restored) {
+              // Set as active if needed
+              if (isActive) {
+                coordinator.setActiveTerminalId(id);
+              }
+
+              restoredCount++;
+              this.logger.info(`Restored terminal ${id}: ${serializedContent.length} chars`);
+            } else {
+              this.logger.warn(`Failed to restore terminal ${id} content`);
             }
-            this.logger.info(`✅ [RESTORE-DEBUG] Terminal instance found for ${id}`);
-
-            // Convert serialized string to ScrollbackLine array
-            const scrollbackLines = serializedContent.split('\n').map((line: string) => ({
-              content: line,
-              type: 'output' as const,
-              timestamp: Date.now(),
-            }));
-            this.logger.info(`[RESTORE-DEBUG] Created ${scrollbackLines.length} scrollback lines for terminal ${id}`);
-
-            // Restore scrollback with ANSI colors preserved
-            this.logger.info(`[RESTORE-DEBUG] Writing ${scrollbackLines.length} lines to terminal ${id}...`);
-            scrollbackLines.forEach((line: any) => {
-              terminalInstance.terminal.writeln(line.content);
-            });
-            this.logger.info(`✅ [RESTORE-DEBUG] Finished writing to terminal ${id}`);
-
-            // Set as active if needed
-            if (isActive) {
-              coordinator.setActiveTerminalId(id);
-              this.logger.info(`🎯 [RESTORE-DEBUG] Set terminal ${id} as active`);
-            }
-
-            restoredCount++;
-            this.logger.info(`✅ [RESTORE-DEBUG] Restored terminal ${id}: ${scrollbackLines.length} lines with ANSI colors`);
           } catch (restoreError) {
-            this.logger.error(`❌ [RESTORE-DEBUG] Error restoring terminal ${id}:`, restoreError);
+            this.logger.error(`Error restoring terminal ${id}:`, restoreError);
           }
         } else {
-          this.logger.info(`⚠️ [RESTORE-DEBUG] No serialized content for terminal ${id}`);
+          this.logger.info(`No serialized content for terminal ${id}`);
         }
       });
 
@@ -491,7 +452,7 @@ export class SerializationMessageHandler implements IMessageHandler {
       });
 
       this.logger.info(
-        `✅ Terminal serialization restoration completed: ${restoredCount}/${terminalData.length} terminals`
+        `Terminal serialization restoration completed: ${restoredCount}/${terminalData.length} terminals`
       );
     } catch (error) {
       this.logger.error('Error during terminal serialization restoration:', error);

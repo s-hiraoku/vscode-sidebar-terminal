@@ -118,7 +118,7 @@ export class TerminalInputHandler extends BaseMessageHandler<TerminalInputData, 
     this.validateRequired(data, ['terminalId', 'input']);
 
     try {
-      this.dependencies.terminalManager.sendInput(data.input, data.terminalId);
+      this.dependencies.terminalManager.sendInput(data.terminalId, data.input);
       return { success: true };
 
     } catch (error) {

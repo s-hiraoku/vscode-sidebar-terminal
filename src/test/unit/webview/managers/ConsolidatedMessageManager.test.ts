@@ -4,20 +4,18 @@
  * Tests for the main message routing and handling manager
  */
 
-import { expect, WebViewTest } from '../../../utils';
+import { expect } from 'chai';
 import { ConsolidatedMessageManager } from '../../../../webview/managers/ConsolidatedMessageManager';
 import { IManagerCoordinator } from '../../../../webview/interfaces/ManagerInterfaces';
 import { MessageCommand } from '../../../../webview/managers/messageTypes';
 
-class ConsolidatedMessageManagerTest extends WebViewTest {
-  public messageManager!: ConsolidatedMessageManager;
-  public mockCoordinator!: IManagerCoordinator;
+describe('ConsolidatedMessageManager', () => {
+  let messageManager: ConsolidatedMessageManager;
+  let mockCoordinator: IManagerCoordinator;
 
-  protected override setup(): void {
-    super.setup();
-
+  beforeEach(() => {
     // Create minimal mock coordinator
-    this.mockCoordinator = {
+    mockCoordinator = {
       getActiveTerminalId: () => 'terminal-1',
       setActiveTerminalId: () => {},
       getTerminalInstance: () => undefined,
@@ -34,7 +32,6 @@ class ConsolidatedMessageManagerTest extends WebViewTest {
       updateClaudeStatus: () => {},
       updateCliAgentStatus: () => {},
       ensureTerminalFocus: () => {},
-      getSerializeAddon: () => undefined,
       getManagers: () => ({
         performance: {} as any,
         input: {} as any,
@@ -43,40 +40,30 @@ class ConsolidatedMessageManagerTest extends WebViewTest {
         message: {} as any,
         notification: {} as any,
       }),
-      getMessageManager: () => this.messageManager,
+      getMessageManager: () => messageManager,
     } as IManagerCoordinator;
 
-    this.messageManager = new ConsolidatedMessageManager(this.mockCoordinator);
-  }
+    messageManager = new ConsolidatedMessageManager(mockCoordinator);
+  });
 
-  protected override teardown(): void {
-    if (this.messageManager) {
-      this.messageManager.dispose();
-    }
-    super.teardown();
-  }
-}
-
-describe('ConsolidatedMessageManager', () => {
-  const test = new ConsolidatedMessageManagerTest();
-
-  beforeEach(() => test.beforeEach());
-  afterEach(() => test.afterEach());
+  afterEach(() => {
+    messageManager.dispose();
+  });
 
   describe('Initialization', () => {
     it('should initialize successfully', () => {
-      expect(test.messageManager).to.exist;
+      expect(messageManager).to.exist;
     });
 
     it('should accept coordinator in constructor', () => {
-      const manager = new ConsolidatedMessageManager(test.mockCoordinator);
+      const manager = new ConsolidatedMessageManager(mockCoordinator);
       expect(manager).to.exist;
       manager.dispose();
     });
 
     it('should allow setting coordinator after construction', () => {
       const manager = new ConsolidatedMessageManager();
-      manager.setCoordinator(test.mockCoordinator);
+      manager.setCoordinator(mockCoordinator);
       expect(manager).to.exist;
       manager.dispose();
     });
@@ -89,7 +76,7 @@ describe('ConsolidatedMessageManager', () => {
         terminals: [],
       };
 
-      await test.messageManager.receiveMessage(message, test.mockCoordinator);
+      await messageManager.receiveMessage(message, mockCoordinator);
       // No error should be thrown
     });
 
@@ -100,7 +87,7 @@ describe('ConsolidatedMessageManager', () => {
         data: 'test output',
       };
 
-      await test.messageManager.receiveMessage(message, test.mockCoordinator);
+      await messageManager.receiveMessage(message, mockCoordinator);
       // No error should be thrown
     });
 
@@ -111,7 +98,7 @@ describe('ConsolidatedMessageManager', () => {
         name: 'Test Terminal',
       };
 
-      await test.messageManager.receiveMessage(message, test.mockCoordinator);
+      await messageManager.receiveMessage(message, mockCoordinator);
       // No error should be thrown
     });
 
@@ -124,7 +111,7 @@ describe('ConsolidatedMessageManager', () => {
         },
       };
 
-      await test.messageManager.receiveMessage(message, test.mockCoordinator);
+      await messageManager.receiveMessage(message, mockCoordinator);
       // No error should be thrown
     });
 
@@ -134,7 +121,7 @@ describe('ConsolidatedMessageManager', () => {
         direction: 'horizontal',
       };
 
-      await test.messageManager.receiveMessage(message, test.mockCoordinator);
+      await messageManager.receiveMessage(message, mockCoordinator);
       // No error should be thrown
     });
 
@@ -145,7 +132,7 @@ describe('ConsolidatedMessageManager', () => {
         status: 'ready',
       };
 
-      await test.messageManager.receiveMessage(message, test.mockCoordinator);
+      await messageManager.receiveMessage(message, mockCoordinator);
       // No error should be thrown
     });
 
@@ -154,7 +141,7 @@ describe('ConsolidatedMessageManager', () => {
         command: 'unknownCommand' as any,
       };
 
-      await test.messageManager.receiveMessage(message, test.mockCoordinator);
+      await messageManager.receiveMessage(message, mockCoordinator);
       // Should not throw error
     });
   });
@@ -162,55 +149,55 @@ describe('ConsolidatedMessageManager', () => {
   describe('IMessageManager Interface', () => {
     it('should implement postMessage', () => {
       const message = { command: 'test' };
-      test.messageManager.postMessage(message);
+      messageManager.postMessage(message);
 
-      const stats = test.messageManager.getQueueStats();
+      const stats = messageManager.getQueueStats();
       expect(stats.queueSize).to.be.greaterThan(0);
     });
 
     it('should implement sendReadyMessage', () => {
-      test.messageManager.sendReadyMessage(test.mockCoordinator);
+      messageManager.sendReadyMessage(mockCoordinator);
 
-      const stats = test.messageManager.getQueueStats();
+      const stats = messageManager.getQueueStats();
       expect(stats.queueSize).to.be.greaterThan(0);
     });
 
     it('should implement emitTerminalInteractionEvent', () => {
-      test.messageManager.emitTerminalInteractionEvent(
+      messageManager.emitTerminalInteractionEvent(
         'focus',
         'terminal-1',
         { text: 'test' },
-        test.mockCoordinator
+        mockCoordinator
       );
 
-      const stats = test.messageManager.getQueueStats();
+      const stats = messageManager.getQueueStats();
       expect(stats.queueSize).to.be.greaterThan(0);
     });
 
     it('should implement getQueueStats', () => {
-      const stats = test.messageManager.getQueueStats();
+      const stats = messageManager.getQueueStats();
       expect(stats).to.have.property('queueSize');
       expect(stats).to.have.property('isProcessing');
     });
 
     it('should implement sendInput', () => {
-      test.messageManager.sendInput('test input', 'terminal-1');
+      messageManager.sendInput('test input', 'terminal-1');
 
-      const stats = test.messageManager.getQueueStats();
+      const stats = messageManager.getQueueStats();
       expect(stats.queueSize).to.be.greaterThan(0);
     });
 
     it('should implement sendResize', () => {
-      test.messageManager.sendResize(80, 24, 'terminal-1');
+      messageManager.sendResize(80, 24, 'terminal-1');
 
-      const stats = test.messageManager.getQueueStats();
+      const stats = messageManager.getQueueStats();
       expect(stats.queueSize).to.be.greaterThan(0);
     });
 
     it('should implement sendDeleteTerminalMessage', () => {
-      test.messageManager.sendDeleteTerminalMessage('terminal-1', 'header', test.mockCoordinator);
+      messageManager.sendDeleteTerminalMessage('terminal-1', 'header', mockCoordinator);
 
-      const stats = test.messageManager.getQueueStats();
+      const stats = messageManager.getQueueStats();
       expect(stats.queueSize).to.be.greaterThan(0);
     });
   });
@@ -218,19 +205,19 @@ describe('ConsolidatedMessageManager', () => {
   describe('Test Compatibility Methods', () => {
     it('should support onMessage handler registration', () => {
       const messages: unknown[] = [];
-      test.messageManager.onMessage((msg) => {
+      messageManager.onMessage((msg) => {
         messages.push(msg);
       });
 
       const testMessage = { command: 'test' };
-      test.messageManager.handleExtensionMessage(testMessage);
+      messageManager.handleExtensionMessage(testMessage);
 
       expect(messages).to.have.lengthOf(1);
       expect(messages[0]).to.deep.equal(testMessage);
     });
 
     it('should support onError handler registration', (done) => {
-      test.messageManager.onError((error) => {
+      messageManager.onError((error) => {
         expect(error).to.exist;
         done();
       });
@@ -249,51 +236,51 @@ describe('ConsolidatedMessageManager', () => {
 
     it('should support sendToExtension', async () => {
       let sent = false;
-      test.mockCoordinator.postMessageToExtension = () => {
+      mockCoordinator.postMessageToExtension = () => {
         sent = true;
       };
 
-      await test.messageManager.sendToExtension({ command: 'test' });
+      await messageManager.sendToExtension({ command: 'test' });
       expect(sent).to.be.true;
     });
 
     it('should support sendToExtensionWithRetry', async () => {
       let attempts = 0;
-      test.mockCoordinator.postMessageToExtension = () => {
+      mockCoordinator.postMessageToExtension = () => {
         attempts++;
       };
 
-      await test.messageManager.sendToExtensionWithRetry({ command: 'test' });
+      await messageManager.sendToExtensionWithRetry({ command: 'test' });
       expect(attempts).to.equal(1);
     });
 
     it('should retry on failure with sendToExtensionWithRetry', async () => {
       let attempts = 0;
-      test.mockCoordinator.postMessageToExtension = () => {
+      mockCoordinator.postMessageToExtension = () => {
         attempts++;
         if (attempts < 2) {
           throw new Error('Temporary failure');
         }
       };
 
-      await test.messageManager.sendToExtensionWithRetry({ command: 'test' }, { maxRetries: 3 });
+      await messageManager.sendToExtensionWithRetry({ command: 'test' }, { maxRetries: 3 });
       expect(attempts).to.equal(2);
     });
 
     it('should support onConnectionRestored', () => {
       // Queue some messages
-      test.messageManager.postMessage({ command: 'test1' });
-      test.messageManager.postMessage({ command: 'test2' });
+      messageManager.postMessage({ command: 'test1' });
+      messageManager.postMessage({ command: 'test2' });
 
       // Trigger connection restored
-      test.messageManager.onConnectionRestored();
+      messageManager.onConnectionRestored();
 
       // Should not throw error
     });
 
     it('should support handleRawMessage', async () => {
       const rawMessage = JSON.stringify({ command: 'test' });
-      await test.messageManager.handleRawMessage(rawMessage);
+      await messageManager.handleRawMessage(rawMessage);
       // Should not throw error
     });
 
@@ -301,7 +288,7 @@ describe('ConsolidatedMessageManager', () => {
       const rawMessage = 'invalid json {';
 
       try {
-        await test.messageManager.handleRawMessage(rawMessage);
+        await messageManager.handleRawMessage(rawMessage);
         expect.fail('Should have thrown error');
       } catch (error) {
         expect(error).to.exist;
@@ -316,7 +303,7 @@ describe('ConsolidatedMessageManager', () => {
         sessions: [],
       };
 
-      await test.messageManager.receiveMessage(message, test.mockCoordinator);
+      await messageManager.receiveMessage(message, mockCoordinator);
       // No error should be thrown
     });
 
@@ -325,7 +312,7 @@ describe('ConsolidatedMessageManager', () => {
         command: 'sessionRestoreStarted',
       };
 
-      await test.messageManager.receiveMessage(message, test.mockCoordinator);
+      await messageManager.receiveMessage(message, mockCoordinator);
       // No error should be thrown
     });
 
@@ -334,7 +321,7 @@ describe('ConsolidatedMessageManager', () => {
         command: 'sessionRestoreCompleted',
       };
 
-      await test.messageManager.receiveMessage(message, test.mockCoordinator);
+      await messageManager.receiveMessage(message, mockCoordinator);
       // No error should be thrown
     });
 
@@ -344,7 +331,7 @@ describe('ConsolidatedMessageManager', () => {
         error: 'Test error',
       };
 
-      await test.messageManager.receiveMessage(message, test.mockCoordinator);
+      await messageManager.receiveMessage(message, mockCoordinator);
       // No error should be thrown
     });
   });
@@ -358,7 +345,7 @@ describe('ConsolidatedMessageManager', () => {
         agentType: 'claude-code',
       };
 
-      await test.messageManager.receiveMessage(message, test.mockCoordinator);
+      await messageManager.receiveMessage(message, mockCoordinator);
       // No error should be thrown
     });
 
@@ -368,7 +355,7 @@ describe('ConsolidatedMessageManager', () => {
         states: {},
       };
 
-      await test.messageManager.receiveMessage(message, test.mockCoordinator);
+      await messageManager.receiveMessage(message, mockCoordinator);
       // No error should be thrown
     });
 
@@ -379,28 +366,28 @@ describe('ConsolidatedMessageManager', () => {
         success: true,
       };
 
-      await test.messageManager.receiveMessage(message, test.mockCoordinator);
+      await messageManager.receiveMessage(message, mockCoordinator);
       // No error should be thrown
     });
   });
 
   describe('Disposal', () => {
     it('should dispose cleanly', () => {
-      test.messageManager.dispose();
+      messageManager.dispose();
       // Should not throw error
     });
 
     it('should clear handlers on dispose', () => {
       const messages: unknown[] = [];
-      test.messageManager.onMessage((msg) => {
+      messageManager.onMessage((msg) => {
         messages.push(msg);
       });
 
-      test.messageManager.dispose();
+      messageManager.dispose();
 
       // After disposal, handlers should be cleared
       // Creating new manager to avoid using disposed one
-      const newManager = new ConsolidatedMessageManager(test.mockCoordinator);
+      const newManager = new ConsolidatedMessageManager(mockCoordinator);
       newManager.handleExtensionMessage({ command: 'test' });
       newManager.dispose();
 
@@ -419,7 +406,7 @@ describe('ConsolidatedMessageManager', () => {
       };
 
       // Should not throw
-      await test.messageManager.receiveMessage(message, test.mockCoordinator);
+      await messageManager.receiveMessage(message, mockCoordinator);
     });
 
     it('should handle coordinator not available error', async () => {
@@ -439,17 +426,17 @@ describe('ConsolidatedMessageManager', () => {
 
   describe('Message Queue Integration', () => {
     it('should enqueue messages', () => {
-      const initialStats = test.messageManager.getQueueStats();
+      const initialStats = messageManager.getQueueStats();
       const initialSize = initialStats.queueSize;
 
-      test.messageManager.postMessage({ command: 'test' });
+      messageManager.postMessage({ command: 'test' });
 
-      const newStats = test.messageManager.getQueueStats();
+      const newStats = messageManager.getQueueStats();
       expect(newStats.queueSize).to.be.greaterThan(initialSize);
     });
 
     it('should report queue statistics', () => {
-      const stats = test.messageManager.getQueueStats();
+      const stats = messageManager.getQueueStats();
 
       expect(stats).to.have.property('queueSize');
       expect(stats).to.have.property('isProcessing');

@@ -1,54 +1,6 @@
-<!-- OPENSPEC:START -->
-# OpenSpec Instructions
-
-These instructions are for AI assistants working in this project.
-
-Always open `@/openspec/AGENTS.md` when the request:
-- Mentions planning or proposals (words like proposal, spec, change, plan)
-- Introduces new capabilities, breaking changes, architecture shifts, or big performance/security work
-- Sounds ambiguous and you need the authoritative spec before coding
-
-Use `@/openspec/AGENTS.md` to learn:
-- How to create and apply change proposals
-- Spec format and conventions
-- Project structure and guidelines
-
-Keep this managed block so 'openspec update' can refresh the instructions.
-
-<!-- OPENSPEC:END -->
-
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
-## Terminal Command System
-
-For terminal-related development, use specialized slash commands that leverage multiple AI agents:
-
-### Quick Commands
-```bash
-# Research terminal implementation patterns
-/terminal-research How does VS Code handle IME composition events?
-
-# Research + Implement with TDD
-/terminal-implement Add terminal tab completion support
-```
-
-### Available Agents
-- **vscode-terminal-resolver**: Analyzes VS Code official terminal implementation
-- **serena-semantic-search**: Searches current codebase semantically
-- **xterm-info-analyzer**: Provides xterm.js documentation
-- **terminal-implementer**: Implements features using TDD methodology
-
-### Workflow
-1. **Phase 1 (Parallel)**: 3 research agents gather VS Code patterns, codebase context, and xterm.js docs
-2. **Phase 2 (Sequential)**: terminal-implementer produces working code with tests
-
-### Documentation
-See `.claude/docs/` for complete guides:
-- `README.md` - System overview
-- `TERMINAL_COMMANDS_README.md` - Complete command reference
-- `TERMINAL_RESEARCH_GUIDE.md` - Research workflow guide
 
 ## Essential Development Commands
 

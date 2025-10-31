@@ -16,17 +16,11 @@ import { log } from './logger';
  * Safe process.cwd() that works in test environments
  * Returns current working directory or fallback value
  */
-export function safeProcessCwd(fallback?: string): string {
+export function safeProcessCwd(fallback: string = '/'): string {
   try {
-    const cwd = process.cwd && typeof process.cwd === 'function' ? process.cwd() : null;
-    // Don't use root directory as cwd
-    if (cwd && cwd !== '/') {
-      return cwd;
-    }
-    // Fallback to home directory instead of root
-    return fallback || os.homedir();
+    return process.cwd && typeof process.cwd === 'function' ? process.cwd() : fallback;
   } catch (e) {
-    return fallback || os.homedir();
+    return fallback;
   }
 }
 

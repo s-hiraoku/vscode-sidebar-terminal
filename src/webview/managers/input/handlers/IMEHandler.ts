@@ -26,8 +26,6 @@ interface CompositionContext {
  * Implements VS Code standard TextAreaInput pattern with new architecture
  */
 export class IMEHandler extends BaseInputHandler implements IIMEHandler {
-  private static readonly IME_CURSOR_STYLE_ID = 'terminal-ime-cursor-style';
-  private static readonly IME_ACTIVE_CLASS = 'terminal-ime-composing';
   // IME composition state - VS Code standard pattern
   private compositionContext: CompositionContext | null = null;
 
@@ -80,9 +78,6 @@ export class IMEHandler extends BaseInputHandler implements IIMEHandler {
    */
   public setupIMEHandling(): void {
     this.logger('Setting up VS Code standard IME composition handling');
-
-    // Ensure cursor styling matches VS Code behavior before events fire
-    this.ensureIMECursorStyle();
 
     // Create hidden textarea for proper IME positioning (VS Code pattern)
     this.createHiddenTextarea();
@@ -139,9 +134,6 @@ export class IMEHandler extends BaseInputHandler implements IIMEHandler {
     const compositionEvent = event as CompositionEvent;
     this.logger(`IME composition started: ${compositionEvent.data || 'no data'}`);
 
-    // Hide cursor while IME composition is active (VS Code standard behavior)
-    this.setIMECursorVisibility(true);
-
     // Create composition context (VS Code CompositionContext pattern)
     this.compositionContext = {
       data: compositionEvent.data || '',
@@ -175,9 +167,6 @@ export class IMEHandler extends BaseInputHandler implements IIMEHandler {
   private handleCompositionUpdate(event: Event): void {
     const compositionEvent = event as CompositionEvent;
     this.logger(`IME composition update: ${compositionEvent.data || 'no data'}`);
-
-    // Ensure cursor stays hidden during composition updates
-    this.setIMECursorVisibility(true);
 
     // Update composition context with new data
     if (this.compositionContext) {
@@ -219,9 +208,6 @@ export class IMEHandler extends BaseInputHandler implements IIMEHandler {
 
     this.lastCompositionEvent = 'end';
 
-    // Restore cursor visibility immediately after composition completes
-    this.setIMECursorVisibility(false);
-
     // Update state manager
     this.stateManager.updateIMEState({
       isActive: false,
@@ -236,9 +222,6 @@ export class IMEHandler extends BaseInputHandler implements IIMEHandler {
       this.compositionContext = null;
       this.lastCompositionEvent = null;
       this.hideHiddenTextarea();
-
-      // Ensure cursor visibility is restored after cleanup
-      this.setIMECursorVisibility(false);
 
       // Final state reset
       this.stateManager.updateIMEState({
@@ -360,62 +343,6 @@ export class IMEHandler extends BaseInputHandler implements IIMEHandler {
   }
 
   /**
-   * Ensure VS Code style cursor rules exist for IME composition
-   */
-  private ensureIMECursorStyle(): void {
-    if (document.getElementById(IMEHandler.IME_CURSOR_STYLE_ID)) {
-      return;
-    }
-
-    const styleElement = document.createElement('style');
-    styleElement.id = IMEHandler.IME_CURSOR_STYLE_ID;
-    styleElement.textContent = `body.${IMEHandler.IME_ACTIVE_CLASS} .terminal-container .xterm .xterm-cursor,
-body.${IMEHandler.IME_ACTIVE_CLASS} .terminal-container .xterm .xterm-cursor-block,
-body.${IMEHandler.IME_ACTIVE_CLASS} .terminal-container .xterm .xterm-cursor-bar,
-body.${IMEHandler.IME_ACTIVE_CLASS} .terminal-container .xterm .xterm-cursor-outline,
-body.${IMEHandler.IME_ACTIVE_CLASS} .terminal-container .xterm .xterm-cursor-overwrite {
-  opacity: 0 !important;
-  width: 0 !important;
-  border: 0 !important;
-  margin: 0 !important;
-}
-
-body.${IMEHandler.IME_ACTIVE_CLASS} .terminal-container .xterm .xterm-cursor::before,
-body.${IMEHandler.IME_ACTIVE_CLASS} .terminal-container .xterm .xterm-cursor::after {
-  display: none !important;
-}
-
-body.${IMEHandler.IME_ACTIVE_CLASS} .terminal-container .xterm .xterm-cursor-layer,
-body.${IMEHandler.IME_ACTIVE_CLASS} .terminal-container .xterm .xterm-cursor-layer canvas {
-  opacity: 0 !important;
-}
-
-body.${IMEHandler.IME_ACTIVE_CLASS} .terminal-container .xterm .composition-view {
-  margin-left: 0 !important;
-}`;
-
-    (document.head || document.body).appendChild(styleElement);
-    this.logger('Injected IME cursor style for VS Code parity');
-  }
-
-  /**
-   * Toggle cursor visibility during IME composition to match VS Code terminal
-   */
-  private setIMECursorVisibility(active: boolean): void {
-    this.ensureIMECursorStyle();
-
-    if (!document.body) {
-      return;
-    }
-
-    if (active) {
-      document.body.classList.add(IMEHandler.IME_ACTIVE_CLASS);
-    } else {
-      document.body.classList.remove(IMEHandler.IME_ACTIVE_CLASS);
-    }
-  }
-
-  /**
    * Clear any pending input events that might conflict with IME
    */
   public clearPendingInputEvents(): void {
@@ -447,11 +374,6 @@ body.${IMEHandler.IME_ACTIVE_CLASS} .terminal-container .xterm .composition-view
         this.logger(`Error removing hidden textarea: ${error}`);
       }
       this.hiddenTextarea = null;
-    }
-
-    // Ensure cursor class is cleared during disposal
-    if (document.body) {
-      document.body.classList.remove(IMEHandler.IME_ACTIVE_CLASS);
     }
 
     // Reset IME state in state manager

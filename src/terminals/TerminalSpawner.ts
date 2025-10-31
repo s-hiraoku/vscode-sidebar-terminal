@@ -1,4 +1,3 @@
-import * as fs from 'fs';
 import * as pty from '@homebridge/node-pty-prebuilt-multiarch';
 import { TERMINAL_CONSTANTS } from '../constants';
 import { terminal as log } from '../utils/logger';
@@ -23,50 +22,21 @@ export class TerminalSpawner {
   spawnTerminal(request: TerminalSpawnRequest): TerminalSpawnResult {
     const env = this.buildSpawnEnv(request.env);
 
-    const candidateCwds = this.getCandidateWorkingDirectories(request.cwd, env.HOME);
+    log(
+      `🔧 [SPAWNER] Spawning PTY for ${request.terminalId} (shell=${request.shell}, cwd=${request.cwd})`
+    );
 
-    const attemptedShells = this.getCandidateShells(request.shell);
+    const ptyProcess = pty.spawn(request.shell, request.shellArgs, {
+      name: 'xterm-256color',
+      cols: TERMINAL_CONSTANTS.DEFAULT_COLS,
+      rows: TERMINAL_CONSTANTS.DEFAULT_ROWS,
+      cwd: request.cwd,
+      env,
+    });
 
-    let lastError: unknown = null;
+    log(`✅ [SPAWNER] PTY spawned successfully for ${request.terminalId} (pid=${ptyProcess.pid})`);
 
-    for (const cwd of candidateCwds) {
-      if (!this.isDirectoryAccessible(cwd)) {
-        log(`⚠️ [SPAWNER] Skipping inaccessible cwd candidate: ${cwd}`);
-        continue;
-      }
-
-      for (const shell of attemptedShells) {
-        try {
-          log(
-            `🔧 [SPAWNER] Attempting PTY spawn for ${request.terminalId} (shell=${shell}, cwd=${cwd})`
-          );
-
-          const ptyProcess = pty.spawn(shell, request.shellArgs, {
-            name: 'xterm-256color',
-            cols: TERMINAL_CONSTANTS.DEFAULT_COLS,
-            rows: TERMINAL_CONSTANTS.DEFAULT_ROWS,
-            cwd,
-            env,
-          });
-
-          log(
-            `✅ [SPAWNER] PTY spawned successfully for ${request.terminalId} (pid=${ptyProcess.pid}, shell=${shell}, cwd=${cwd})`
-          );
-
-          return { ptyProcess };
-        } catch (error) {
-          lastError = error;
-          const err = error as NodeJS.ErrnoException;
-          log(
-            `❌ [SPAWNER] PTY spawn failed for shell=${shell} cwd=${cwd}: ${err?.message || error}`
-          );
-          // Try next fallback shell/cwd
-        }
-      }
-    }
-
-    log('❌ [SPAWNER] All spawn attempts failed. Throwing last error.');
-    throw lastError ?? new Error('Failed to spawn PTY process');
+    return { ptyProcess };
   }
 
   private buildSpawnEnv(baseEnv: Record<string, string>): Record<string, string> {
@@ -85,55 +55,5 @@ export class TerminalSpawner {
       ...(baseEnv.ENV && { ENV: baseEnv.ENV }),
     };
   }
-
-  private getCandidateShells(primaryShell: string): string[] {
-    const fallbacks = ['/bin/zsh', '/bin/bash', '/bin/sh'];
-    const candidates = [primaryShell, ...fallbacks];
-    const seen = new Set<string>();
-    return candidates.filter((shellPath) => {
-      if (!shellPath) {
-        return false;
-      }
-      const normalized = shellPath.trim();
-      if (!normalized || seen.has(normalized)) {
-        return false;
-      }
-      seen.add(normalized);
-      return true;
-    });
-  }
-
-  private getCandidateWorkingDirectories(requestedCwd: string, home?: string): string[] {
-    const candidates = [requestedCwd];
-    if (home) {
-      candidates.push(home);
-    }
-    // Only add process.cwd() if it's not root directory
-    const currentCwd = process.cwd();
-    if (currentCwd && currentCwd !== '/') {
-      candidates.push(currentCwd);
-    }
-    // Add home directory as last fallback if available
-    if (home && !candidates.includes(home)) {
-      candidates.push(home);
-    }
-    // Ensure we have at least one valid directory (fallback to /tmp)
-    if (candidates.filter((c) => !!c).length === 0) {
-      candidates.push('/tmp');
-    }
-    return candidates.filter((cwd, index, arr) => !!cwd && arr.indexOf(cwd) === index);
-  }
-
-  private isDirectoryAccessible(dirPath: string): boolean {
-    try {
-      const stat = fs.statSync(dirPath);
-      if (!stat.isDirectory()) {
-        return false;
-      }
-      fs.accessSync(dirPath, fs.constants.R_OK | fs.constants.X_OK);
-      return true;
-    } catch {
-      return false;
-    }
-  }
 }
+

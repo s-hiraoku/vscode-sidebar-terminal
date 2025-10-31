@@ -867,10 +867,7 @@ export function setupTestEnvironmentSync(): void {
 try {
   setupTestEnvironmentSync();
 } catch (error) {
-  // Suppress error log in test environment
-  if (process.env.NODE_ENV !== 'test') {
-    console.error('Failed to setup test environment:', error);
-  }
+  console.error('Failed to setup test environment:', error);
   throw error;
 }
 

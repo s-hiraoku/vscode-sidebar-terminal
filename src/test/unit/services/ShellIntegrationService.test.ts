@@ -10,32 +10,29 @@
 
 import * as assert from 'assert';
 import * as sinon from 'sinon';
-import { BaseTest } from '../../utils';
 import { ShellIntegrationService } from '../../../services/ShellIntegrationService';
 import { TerminalManager } from '../../../terminals/TerminalManager';
 
-class ShellIntegrationServiceTest extends BaseTest {
-  public shellIntegrationService!: ShellIntegrationService;
-  public mockTerminalManager!: sinon.SinonStubbedInstance<TerminalManager>;
-
-  protected override setup(): void {
-    super.setup();
-    this.mockTerminalManager = this.sandbox.createStubInstance(TerminalManager);
-    this.shellIntegrationService = new ShellIntegrationService(this.mockTerminalManager);
-  }
-}
-
 describe('ShellIntegrationService', () => {
-  const test = new ShellIntegrationServiceTest();
+  let shellIntegrationService: ShellIntegrationService;
+  let mockTerminalManager: sinon.SinonStubbedInstance<TerminalManager>;
+  let sandbox: sinon.SinonSandbox;
 
-  beforeEach(() => test.beforeEach());
-  afterEach(() => test.afterEach());
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+    mockTerminalManager = sandbox.createStubInstance(TerminalManager);
+    shellIntegrationService = new ShellIntegrationService(mockTerminalManager);
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
 
   describe('Constructor and Initialization', () => {
     it('should initialize with proper patterns', () => {
-      assert.ok(test.shellIntegrationService);
+      assert.ok(shellIntegrationService);
       // Verify service is properly constructed
-      assert.strictEqual(typeof test.shellIntegrationService.processTerminalData, 'function');
+      assert.strictEqual(typeof shellIntegrationService.processTerminalData, 'function');
     });
   });
 
@@ -46,10 +43,10 @@ describe('ShellIntegrationService', () => {
       const commandStartData = '\x1b]633;A\x07';
 
       // Process the command start sequence
-      test.shellIntegrationService.processTerminalData(testTerminalId, commandStartData);
+      shellIntegrationService.processTerminalData(testTerminalId, commandStartData);
 
       // Verify terminal is marked as executing
-      const isExecuting = test.shellIntegrationService.isExecuting(testTerminalId);
+      const isExecuting = shellIntegrationService.isExecuting(testTerminalId);
       assert.strictEqual(isExecuting, true);
     });
 
@@ -58,20 +55,20 @@ describe('ShellIntegrationService', () => {
       const commandFinishedData = '\x1b]633;C;0\x07';
 
       // Start command first
-      test.shellIntegrationService.processTerminalData(testTerminalId, commandStartData);
-      assert.strictEqual(test.shellIntegrationService.isExecuting(testTerminalId), true);
+      shellIntegrationService.processTerminalData(testTerminalId, commandStartData);
+      assert.strictEqual(shellIntegrationService.isExecuting(testTerminalId), true);
 
       // Finish command
-      test.shellIntegrationService.processTerminalData(testTerminalId, commandFinishedData);
-      assert.strictEqual(test.shellIntegrationService.isExecuting(testTerminalId), false);
+      shellIntegrationService.processTerminalData(testTerminalId, commandFinishedData);
+      assert.strictEqual(shellIntegrationService.isExecuting(testTerminalId), false);
     });
 
     it('should handle CWD change sequence', () => {
       const cwdData = '\x1b]633;P;Cwd=/home/user\x07';
 
-      test.shellIntegrationService.processTerminalData(testTerminalId, cwdData);
+      shellIntegrationService.processTerminalData(testTerminalId, cwdData);
 
-      const currentCwd = test.shellIntegrationService.getCurrentCwd(testTerminalId);
+      const currentCwd = shellIntegrationService.getCurrentCwd(testTerminalId);
       assert.strictEqual(currentCwd, '/home/user');
     });
 
@@ -81,11 +78,11 @@ describe('ShellIntegrationService', () => {
       const commandFinishedData = '\x1b]633;C;0\x07';
 
       // Process full command sequence
-      test.shellIntegrationService.processTerminalData(testTerminalId, commandStartData);
-      test.shellIntegrationService.processTerminalData(testTerminalId, commandExecutedData);
-      test.shellIntegrationService.processTerminalData(testTerminalId, commandFinishedData);
+      shellIntegrationService.processTerminalData(testTerminalId, commandStartData);
+      shellIntegrationService.processTerminalData(testTerminalId, commandExecutedData);
+      shellIntegrationService.processTerminalData(testTerminalId, commandFinishedData);
 
-      const history = test.shellIntegrationService.getCommandHistory(testTerminalId);
+      const history = shellIntegrationService.getCommandHistory(testTerminalId);
       assert.strictEqual(history.length, 1);
       assert.strictEqual(history[0]?.command, 'ls -la');
       assert.strictEqual(history[0]?.exitCode, 0);
@@ -97,12 +94,12 @@ describe('ShellIntegrationService', () => {
 
     beforeEach(() => {
       mockPtyProcess = {
-        write: test.sandbox.stub(),
+        write: sandbox.stub(),
       };
     });
 
     it('should inject bash/zsh integration script', () => {
-      test.shellIntegrationService.injectShellIntegration('terminal1', '/bin/bash', mockPtyProcess);
+      shellIntegrationService.injectShellIntegration('terminal1', '/bin/bash', mockPtyProcess);
 
       assert.strictEqual(mockPtyProcess.write.calledOnce, true);
       const scriptCall = mockPtyProcess.write.getCall(0);
@@ -111,7 +108,7 @@ describe('ShellIntegrationService', () => {
     });
 
     it('should inject fish integration script', () => {
-      test.shellIntegrationService.injectShellIntegration('terminal1', '/usr/bin/fish', mockPtyProcess);
+      shellIntegrationService.injectShellIntegration('terminal1', '/usr/bin/fish', mockPtyProcess);
 
       assert.strictEqual(mockPtyProcess.write.calledOnce, true);
       const scriptCall = mockPtyProcess.write.getCall(0);
@@ -120,7 +117,7 @@ describe('ShellIntegrationService', () => {
     });
 
     it('should inject PowerShell integration script', () => {
-      test.shellIntegrationService.injectShellIntegration('terminal1', 'powershell', mockPtyProcess);
+      shellIntegrationService.injectShellIntegration('terminal1', 'powershell', mockPtyProcess);
 
       assert.strictEqual(mockPtyProcess.write.calledOnce, true);
       const scriptCall = mockPtyProcess.write.getCall(0);
@@ -129,7 +126,7 @@ describe('ShellIntegrationService', () => {
     });
 
     it('should not inject script for unknown shell', () => {
-      test.shellIntegrationService.injectShellIntegration(
+      shellIntegrationService.injectShellIntegration(
         'terminal1',
         '/bin/unknown-shell',
         mockPtyProcess
@@ -150,12 +147,12 @@ describe('ShellIntegrationService', () => {
       ];
 
       commands.forEach((cmd) => {
-        test.shellIntegrationService.processTerminalData(testTerminalId, cmd.start);
-        test.shellIntegrationService.processTerminalData(testTerminalId, cmd.exec);
-        test.shellIntegrationService.processTerminalData(testTerminalId, cmd.finish);
+        shellIntegrationService.processTerminalData(testTerminalId, cmd.start);
+        shellIntegrationService.processTerminalData(testTerminalId, cmd.exec);
+        shellIntegrationService.processTerminalData(testTerminalId, cmd.finish);
       });
 
-      const history = test.shellIntegrationService.getCommandHistory(testTerminalId);
+      const history = shellIntegrationService.getCommandHistory(testTerminalId);
       assert.strictEqual(history.length, 2);
       assert.strictEqual(history[0]?.command, 'pwd');
       assert.strictEqual(history[1]?.command, 'ls');
@@ -168,12 +165,12 @@ describe('ShellIntegrationService', () => {
         const exec = `\x1b]633;B;command${i}\x07`;
         const finish = '\x1b]633;C;0\x07';
 
-        test.shellIntegrationService.processTerminalData(testTerminalId, start);
-        test.shellIntegrationService.processTerminalData(testTerminalId, exec);
-        test.shellIntegrationService.processTerminalData(testTerminalId, finish);
+        shellIntegrationService.processTerminalData(testTerminalId, start);
+        shellIntegrationService.processTerminalData(testTerminalId, exec);
+        shellIntegrationService.processTerminalData(testTerminalId, finish);
       }
 
-      const history = test.shellIntegrationService.getCommandHistory(testTerminalId);
+      const history = shellIntegrationService.getCommandHistory(testTerminalId);
       assert.strictEqual(history.length, 100);
       // Should have the most recent commands
       assert.strictEqual(history[99]?.command, 'command104');
@@ -183,9 +180,9 @@ describe('ShellIntegrationService', () => {
   describe('Error Handling', () => {
     it('should handle invalid terminal data gracefully', () => {
       assert.doesNotThrow(() => {
-        test.shellIntegrationService.processTerminalData('', '');
-        test.shellIntegrationService.processTerminalData('valid-id', '');
-        test.shellIntegrationService.processTerminalData('', 'valid-data');
+        shellIntegrationService.processTerminalData('', '');
+        shellIntegrationService.processTerminalData('valid-id', '');
+        shellIntegrationService.processTerminalData('', 'valid-data');
       });
     });
 
@@ -194,7 +191,7 @@ describe('ShellIntegrationService', () => {
       const malformedData = '\x1b]633;INVALID\x07';
 
       assert.doesNotThrow(() => {
-        test.shellIntegrationService.processTerminalData(testTerminalId, malformedData);
+        shellIntegrationService.processTerminalData(testTerminalId, malformedData);
       });
     });
 
@@ -202,7 +199,7 @@ describe('ShellIntegrationService', () => {
       // This test verifies the try-catch in initializePatterns works
       // By creating a service instance, we verify it doesn't throw during construction
       assert.doesNotThrow(() => {
-        const service = new ShellIntegrationService(test.mockTerminalManager);
+        const service = new ShellIntegrationService(mockTerminalManager);
         assert.ok(service);
       });
     });
@@ -213,15 +210,15 @@ describe('ShellIntegrationService', () => {
       const testTerminalId = 'disposal-test';
 
       // Create some state for the terminal
-      test.shellIntegrationService.processTerminalData(testTerminalId, '\x1b]633;A\x07');
-      assert.strictEqual(test.shellIntegrationService.isExecuting(testTerminalId), true);
+      shellIntegrationService.processTerminalData(testTerminalId, '\x1b]633;A\x07');
+      assert.strictEqual(shellIntegrationService.isExecuting(testTerminalId), true);
 
       // Dispose the terminal
-      test.shellIntegrationService.disposeTerminal(testTerminalId);
+      shellIntegrationService.disposeTerminal(testTerminalId);
 
       // State should be reset
-      assert.strictEqual(test.shellIntegrationService.isExecuting(testTerminalId), false);
-      assert.strictEqual(test.shellIntegrationService.getCommandHistory(testTerminalId).length, 0);
+      assert.strictEqual(shellIntegrationService.isExecuting(testTerminalId), false);
+      assert.strictEqual(shellIntegrationService.getCommandHistory(testTerminalId).length, 0);
     });
 
     it('should dispose all resources on service disposal', () => {
@@ -229,18 +226,18 @@ describe('ShellIntegrationService', () => {
       const testTerminalId2 = 'test2';
 
       // Create state for multiple terminals
-      test.shellIntegrationService.processTerminalData(testTerminalId1, '\x1b]633;A\x07');
-      test.shellIntegrationService.processTerminalData(testTerminalId2, '\x1b]633;A\x07');
+      shellIntegrationService.processTerminalData(testTerminalId1, '\x1b]633;A\x07');
+      shellIntegrationService.processTerminalData(testTerminalId2, '\x1b]633;A\x07');
 
-      assert.strictEqual(test.shellIntegrationService.isExecuting(testTerminalId1), true);
-      assert.strictEqual(test.shellIntegrationService.isExecuting(testTerminalId2), true);
+      assert.strictEqual(shellIntegrationService.isExecuting(testTerminalId1), true);
+      assert.strictEqual(shellIntegrationService.isExecuting(testTerminalId2), true);
 
       // Dispose service
-      test.shellIntegrationService.dispose();
+      shellIntegrationService.dispose();
 
       // All state should be cleared
-      assert.strictEqual(test.shellIntegrationService.isExecuting(testTerminalId1), false);
-      assert.strictEqual(test.shellIntegrationService.isExecuting(testTerminalId2), false);
+      assert.strictEqual(shellIntegrationService.isExecuting(testTerminalId1), false);
+      assert.strictEqual(shellIntegrationService.isExecuting(testTerminalId2), false);
     });
   });
 });

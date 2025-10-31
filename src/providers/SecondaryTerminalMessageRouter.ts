@@ -1,8 +1,6 @@
 import { WebviewMessage } from '../types/common';
 import { MessageHandler } from '../types/type-guards';
 
-export type MessageHandlerMap = Record<string, MessageHandler>;
-
 /**
  * Lightweight command router for SecondaryTerminalProvider.
  * Handles registration and dispatch without exposing the underlying map.
@@ -15,10 +13,6 @@ export class SecondaryTerminalMessageRouter {
       return;
     }
     this.handlers.set(command, handler);
-  }
-
-  registerAll(map: MessageHandlerMap): void {
-    Object.entries(map).forEach(([command, handler]) => this.register(command, handler));
   }
 
   reset(): void {
@@ -39,3 +33,4 @@ export class SecondaryTerminalMessageRouter {
     this.handlers.clear();
   }
 }
+

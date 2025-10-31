@@ -654,7 +654,7 @@ export class WebViewHtmlGenerationService {
                 if (typeof window.acquireVsCodeApi === 'function') {
                     const vscode = window.acquireVsCodeApi();
                     window.vscodeApi = vscode;
-                    console.log('✅ VS Code API acquired successfully');
+                    log('✅ VS Code API acquired successfully');
                 } else {
                     console.error('❌ acquireVsCodeApi not available');
                 }
@@ -667,7 +667,7 @@ export class WebViewHtmlGenerationService {
                 const script = document.getElementById('webview-main-script');
                 if (script) {
                     script.addEventListener('load', function() {
-                        console.log('✅ webview.js loaded successfully');
+                        log('✅ webview.js loaded successfully');
                     });
                     script.addEventListener('error', function(event) {
                         console.error('❌ webview.js failed to load', event);

@@ -69,7 +69,6 @@ export interface ExtensionTerminalConfig
   };
   readonly enableCliAgentIntegration?: boolean;
   readonly highlightActiveBorder?: boolean;
-  readonly persistentSessionScrollback?: number;
 }
 
 /**
