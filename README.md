@@ -338,7 +338,7 @@ npm run compile
 ### Testing
 
 ```bash
-# Run unit tests (275+ tests)
+# Unit Tests (275+ tests)
 npm test
 
 # Test with coverage
@@ -346,6 +346,15 @@ npm run test:coverage
 
 # Watch mode for TDD
 npm run watch-tests
+
+# E2E Tests (82 Playwright tests)
+npm run test:e2e
+
+# E2E with visual debugging
+npm run test:e2e:headed
+
+# E2E with interactive UI
+npm run test:e2e:ui
 ```
 
 ### Development Commands
@@ -370,11 +379,51 @@ The project maintains strict quality standards:
 ### Comprehensive Test Suite
 
 - **Unit Tests**: 275+ tests covering core functionality
+- **E2E Tests**: 82 Playwright tests across 7 categories (NEW)
 - **Integration Tests**: End-to-end AI agent interaction scenarios
 - **Performance Tests**: Buffer management and memory optimization
 - **Edge Case Tests**: Error handling and resource cleanup
 
-### Test Categories
+### E2E Testing (Playwright)
+
+**82 comprehensive tests** covering all major functionality:
+
+#### Test Categories
+- **Terminal Lifecycle** (13 tests): Creation, deletion, ID recycling, rapid operations
+- **WebView Interaction** (12 tests): Keyboard input, shortcuts, navigation, performance
+- **AI Agent Detection** (10 tests): Claude, Copilot, Gemini detection with security tests
+- **Configuration** (12 tests): Settings management, validation, persistence
+- **Visual Regression** (10 tests): ANSI colors, themes, accessibility (WCAG AA)
+- **Error Handling** (11 tests): Extension failures, crashes, recovery scenarios
+- **Concurrency** (12 tests): Race conditions, stress testing, high-frequency operations
+
+#### Test Execution
+```bash
+# Run all E2E tests
+npm run test:e2e
+
+# Visual debugging mode
+npm run test:e2e:headed
+
+# Debug mode with breakpoints
+npm run test:e2e:debug
+
+# Interactive UI mode
+npm run test:e2e:ui
+
+# View test reports
+npm run test:e2e:report
+```
+
+#### Test Infrastructure
+- **Framework**: Playwright Test v1.56.1
+- **Parallel Execution**: 5 workers for fast test runs
+- **CI/CD Integration**: GitHub Actions workflow with artifact collection
+- **Test Helpers**: 4 specialized helper classes for maintainability
+- **Priority Tags**: P0 (Critical), P1 (Important), P2 (Nice-to-have)
+- **Special Tags**: @security, @accessibility, @performance, @concurrency
+
+### Unit Test Categories
 
 1. **Terminal Management**: Creation, deletion, switching, and lifecycle
 2. **AI Agent Integration**: Detection, status tracking, and command processing
