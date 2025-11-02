@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.128] - 2025-11-02
+
+### Fixed
+- **TypeScript Compilation Errors**: Resolved all pre-release blocking errors
+  - Fixed duplicate identifier 'isRestoringSession' in LightweightTerminalWebviewManager
+  - Extended getSessionInfo() return type with activeTerminalId and scrollbackData
+  - Added null check for optional timestamp in Date constructor
+  - Fixed Playwright API type issues (Alt+Click, evaluate callbacks)
+  - Added 'pushScrollbackData' to WebviewMessage union type
+  - Fixed Event/Disposable type mismatch in test stubs
+- **ESLint Errors**: Achieved 0 errors (266 acceptable warnings)
+  - Prefixed unused test parameters with underscore
+  - Removed unused imports (AI_AGENT_CONSTANTS, TERMINAL_CONSTANTS)
+  - Fixed all placeholder test implementations
+
 ### Added
 - **Comprehensive E2E Testing Infrastructure (Phases 1-4)**
   - **82 E2E Tests**: Comprehensive test coverage across 7 categories
