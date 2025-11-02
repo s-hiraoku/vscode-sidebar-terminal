@@ -1,0 +1,7 @@
+{
+  "secondaryTerminal.fontSize": "not-a-number",
+  "secondaryTerminal.maxTerminals": -1,
+  "secondaryTerminal.shell.linux": null,
+  "secondaryTerminal.scrollback": 999999,
+  "secondaryTerminal.invalidProperty": "should-be-ignored"
+}

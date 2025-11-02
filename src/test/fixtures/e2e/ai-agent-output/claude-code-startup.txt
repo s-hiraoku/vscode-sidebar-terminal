@@ -1,0 +1,14 @@
+Welcome to Claude Code
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Version: 1.0.0
+Environment: VS Code Extension Host
+
+Claude Code is ready to assist you with:
+  • Code generation and modification
+  • File operations and refactoring
+  • Terminal command execution
+  • Project analysis and understanding
+
+Type your request or use @file mentions to reference code.
+
+>
