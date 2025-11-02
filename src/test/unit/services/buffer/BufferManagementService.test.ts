@@ -4,7 +4,7 @@
  * Tests for the buffer management service.
  */
 
-// import { expect } from 'chai';
+import { expect } from 'chai';
 import { EventBus } from '../../../../core/EventBus';
 import {
   BufferManagementService,

@@ -4,7 +4,7 @@
  * RED-GREEN-REFACTOR cycles with focus on state validation, error handling, and listeners
  */
 
-// import { expect } from 'chai';
+import { expect } from 'chai';
 import { describe, it, beforeEach, afterEach } from 'mocha';
 import sinon from 'sinon';
 import {

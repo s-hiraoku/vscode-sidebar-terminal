@@ -4,7 +4,7 @@
  * Tests for shell integration message handling
  */
 
-// import { expect } from 'chai';
+import { expect } from 'chai';
 import { ShellIntegrationMessageHandler } from '../../../../../webview/managers/handlers/ShellIntegrationMessageHandler';
 import { IManagerCoordinator } from '../../../../../webview/interfaces/ManagerInterfaces';
 import { MessageCommand } from '../../../../../webview/managers/messageTypes';

@@ -5,7 +5,7 @@ import {
   TerminalLifecycleHelper,
   WebViewInteractionHelper,
 } from '../../helpers';
-import { TEST_PATHS, AI_AGENT_CONSTANTS } from '../../config/test-constants';
+import { TEST_PATHS } from '../../config/test-constants';
 
 /**
  * AI Agent Detection Tests
@@ -130,7 +130,7 @@ test.describe('AI Agent Detection', () => {
    * - "copilot"
    * - "gh copilot"
    */
-  test('should detect GitHub Copilot variants @P1 @ai-agent-detection', async ({ page }) => {
+  test('should detect GitHub Copilot variants @P1 @ai-agent-detection', async ({ page: _page }) => {
     // Test "copilot" command
     await terminalHelper.sendText(1, 'copilot suggest');
 
@@ -297,7 +297,7 @@ test.describe('AI Agent Detection', () => {
    * Validates that detected agents show visual status
    * indicators in terminal headers.
    */
-  test('should display visual status indicator for detected agent @P1 @ai-agent-detection @visual', async ({ page }) => {
+  test('should display visual status indicator for detected agent @P1 @ai-agent-detection @visual', async ({ page: _page }) => {
     // Arrange: Load Claude Code startup
     const claudeStartup = readFileSync(
       `${TEST_PATHS.AI_AGENT_OUTPUT}/claude-code-startup.txt`,

@@ -3,7 +3,7 @@
 
 // VS Code mocks are now set up globally via mocha-setup.ts
 
-// import { expect } from 'chai';
+import { expect } from 'chai';
 import * as sinon from 'sinon';
 import { JSDOM } from 'jsdom';
 
@@ -365,7 +365,7 @@ describe('Common Utils', () => {
     });
 
     it('should set and get active terminal ID', () => {
-      const _terminalId = 'terminal-1';
+      const terminalId = 'terminal-1';
 
       manager.setActive(terminalId);
 
@@ -380,7 +380,7 @@ describe('Common Utils', () => {
     });
 
     it('should check if terminal is active', () => {
-      const _terminalId = 'terminal-1';
+      const terminalId = 'terminal-1';
 
       manager.setActive(terminalId);
 

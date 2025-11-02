@@ -6,7 +6,7 @@
  */
 
 import * as sinon from 'sinon';
-// import { expect } from 'chai';
+import { expect } from 'chai';
 import { UIManager } from '../../../webview/managers/UIManager';
 import { HeaderFactory } from '../../../webview/factories/HeaderFactory';
 import type { TerminalHeaderElements } from '../../../webview/factories/HeaderFactory';

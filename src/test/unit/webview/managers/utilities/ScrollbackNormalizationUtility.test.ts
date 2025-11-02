@@ -4,7 +4,7 @@
  * Tests for scrollback data normalization and transformation
  */
 
-// import { expect } from 'chai';
+import { expect } from 'chai';
 import {
   ScrollbackNormalizationUtility,
   ScrollbackLine,

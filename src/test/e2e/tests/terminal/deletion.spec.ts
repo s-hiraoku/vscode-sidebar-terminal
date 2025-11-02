@@ -1,6 +1,5 @@
 import { test, expect } from '@playwright/test';
 import { VSCodeExtensionTestHelper, TerminalLifecycleHelper } from '../../helpers';
-import { TERMINAL_CONSTANTS } from '../../config/test-constants';
 
 /**
  * Terminal Deletion Tests

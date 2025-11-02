@@ -14,7 +14,7 @@
  * 3. REFACTOR: Improve lifecycle management while keeping tests green
  */
 
-// import { expect } from 'chai';
+import { expect } from 'chai';
 import * as sinon from 'sinon';
 import {
   BaseManager,

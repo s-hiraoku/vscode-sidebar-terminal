@@ -5,7 +5,7 @@
  * Tests based on VS Code terminal integration requirements and user expectations
  */
 
-// import { expect } from 'chai';
+import { expect } from 'chai';
 import { describe, it, beforeEach, afterEach } from 'mocha';
 import sinon from 'sinon';
 import { JSDOM } from 'jsdom';

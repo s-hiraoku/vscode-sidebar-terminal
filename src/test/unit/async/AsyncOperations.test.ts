@@ -16,7 +16,7 @@
 
 import * as _assert from 'assert';
 import * as sinon from 'sinon';
-// import { expect } from 'chai';
+import { expect } from 'chai';
 
 // Test setup
 import '../../shared/TestSetup';
@@ -714,7 +714,7 @@ describe('Async Operations', () => {
         }> {
           try {
             // Step 1: Create terminal
-            const _terminalId = `terminal-${Date.now()}`;
+            const terminalId = `terminal-${Date.now()}`;
             const terminal = {
               id: terminalId,
               name: terminalName,

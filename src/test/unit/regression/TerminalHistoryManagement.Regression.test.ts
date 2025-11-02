@@ -14,7 +14,7 @@
  */
 
 import * as sinon from 'sinon';
-// import { expect } from 'chai';
+import { expect } from 'chai';
 
 // Test setup
 import '../../shared/TestSetup';
@@ -584,7 +584,7 @@ describe('Terminal History Management - Regression Tests', () => {
       const dataBuffer = new TerminalDataBuffer();
 
       // Simulate high frequency output
-      const _terminalId = 'high-freq-terminal';
+      const terminalId = 'high-freq-terminal';
 
       // Add large amount of data
       for (let i = 0; i < 1500; i++) {

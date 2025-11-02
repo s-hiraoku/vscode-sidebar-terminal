@@ -15,7 +15,7 @@
  * 3. REFACTOR: Optimize messaging while maintaining reliability
  */
 
-// import { expect } from 'chai';
+import { expect } from 'chai';
 import * as sinon from 'sinon';
 import { setupTestEnvironment, resetTestEnvironment, mockVscode as _mockVscode } from '../../shared/TestSetup';
 import { ConsolidatedMessageManager } from '../../../webview/managers/ConsolidatedMessageManager';
@@ -88,7 +88,7 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
       it('should handle Extension → WebView terminal output message flow', async () => {
         // RED: Complete message flow from Extension to WebView should work
 
-        const _terminalId = 'terminal-123';
+        const terminalId = 'terminal-123';
         const outputData = 'Hello, World!\n';
 
         // Step 1: Extension sends terminal output to WebView
@@ -124,7 +124,7 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
       it('should handle WebView → Extension terminal input message flow', async () => {
         // RED: Complete message flow from WebView to Extension should work
 
-        const _terminalId = 'terminal-456';
+        const terminalId = 'terminal-456';
         const inputData = 'ls -la\r';
 
         // Step 1: WebView sends terminal input to Extension
@@ -160,7 +160,7 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
       it('should handle bidirectional terminal lifecycle messages', async () => {
         // RED: Complete terminal lifecycle should work through messaging
 
-        const _terminalId = 'terminal-lifecycle-test';
+        const terminalId = 'terminal-lifecycle-test';
 
         // Step 1: WebView requests terminal creation
         const createRequest: WebviewMessage = {
@@ -521,7 +521,7 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
       it('should handle high-frequency terminal output messages efficiently', async () => {
         // RED: High-frequency messaging should not cause performance degradation
 
-        const _terminalId = 'performance-test';
+        const terminalId = 'performance-test';
         const messageCount = 1000;
         const messagesPerSecond = 100;
 
@@ -604,7 +604,7 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
       it('should maintain low latency for interactive terminal operations', async () => {
         // RED: Interactive operations should have minimal latency
 
-        const _terminalId = 'latency-test';
+        const terminalId = 'latency-test';
         const operationCount = 50;
         const latencies: number[] = [];
 
@@ -661,7 +661,7 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
           if (typedMessage.type === MessageType.TERMINAL_OUTPUT) {
             totalMessagesReceived++;
             const messageData = typedMessage.data as any;
-            const _terminalId = messageData?.terminalId;
+            const terminalId = messageData?.terminalId;
             if (terminalId) {
               messagesByTerminal.set(terminalId, (messagesByTerminal.get(terminalId) || 0) + 1);
             }
@@ -806,7 +806,7 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
       it('should preserve message order for sequential terminal operations', async () => {
         // RED: Messages should be processed in the order they were sent
 
-        const _terminalId = 'sequence-test';
+        const terminalId = 'sequence-test';
         const messageSequence: ExtensionMessage[] = [
           {
             type: MessageType.TERMINAL_OUTPUT,
@@ -848,7 +848,7 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
       it('should handle out-of-order message delivery with sequence numbers', async () => {
         // RED: Out-of-order messages should be reordered correctly
 
-        const _terminalId = 'reorder-test';
+        const terminalId = 'reorder-test';
         const outOfOrderMessages: ExtensionMessage[] = [
           {
             type: MessageType.TERMINAL_OUTPUT,

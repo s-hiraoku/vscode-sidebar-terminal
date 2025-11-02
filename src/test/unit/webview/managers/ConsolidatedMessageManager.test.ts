@@ -4,7 +4,7 @@
  * Tests for the main message routing and handling manager
  */
 
-// import { expect } from 'chai';
+import { expect } from 'chai';
 import { ConsolidatedMessageManager } from '../../../../webview/managers/ConsolidatedMessageManager';
 import { IManagerCoordinator } from '../../../../webview/interfaces/ManagerInterfaces';
 import { MessageCommand } from '../../../../webview/managers/messageTypes';

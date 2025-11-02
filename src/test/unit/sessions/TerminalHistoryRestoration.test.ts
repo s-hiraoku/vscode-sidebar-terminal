@@ -193,7 +193,7 @@ describe('Terminal History Restoration', () => {
     it('should fail: async terminal creation should request session data', async () => {
       // RED: This test should FAIL because async flow isn't properly implemented
 
-      const _terminalId = 'async-terminal-123';
+      const terminalId = 'async-terminal-123';
 
       // Mock async terminal creation
       const createTerminalPromise = new Promise((resolve) => {

@@ -11,7 +11,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 
 import { describe, it, beforeEach, afterEach } from 'mocha';
-// import { expect } from 'chai';
+import { expect } from 'chai';
 import * as sinon from 'sinon';
 import { TerminalManager } from '../../../terminals/TerminalManager';
 import { EventEmitter } from 'vscode';
@@ -158,7 +158,7 @@ describe('CliAgentDetection in Terminal Manager', () => {
   describe('CLI Agent Command Detection', () => {
     it('should detect claude command input', () => {
       // Setup
-      const _terminalId = terminalManager.createTerminal();
+      const terminalId = terminalManager.createTerminal();
 
       // Act - send claude command
       terminalManager.sendInput('claude help\r', terminalId);
@@ -175,7 +175,7 @@ describe('CliAgentDetection in Terminal Manager', () => {
 
     it('should detect variations of claude commands', () => {
       // Setup
-      const _terminalId = terminalManager.createTerminal();
+      const terminalId = terminalManager.createTerminal();
 
       // Test different command variations
       const claudeCommands = [
@@ -198,7 +198,7 @@ describe('CliAgentDetection in Terminal Manager', () => {
 
     it('should not detect non-claude commands', () => {
       // Setup
-      const _terminalId = terminalManager.createTerminal();
+      const terminalId = terminalManager.createTerminal();
 
       // Act - send non-claude commands
       const nonCliAgentCommands = [
@@ -220,7 +220,7 @@ describe('CliAgentDetection in Terminal Manager', () => {
 
     it('should track command history correctly', () => {
       // Setup
-      const _terminalId = terminalManager.createTerminal();
+      const terminalId = terminalManager.createTerminal();
 
       // Act - send multiple commands
       terminalManager.sendInput('ls -la\r', terminalId);
@@ -235,7 +235,7 @@ describe('CliAgentDetection in Terminal Manager', () => {
 
     it('should handle partial input properly', () => {
       // Setup
-      const _terminalId = terminalManager.createTerminal();
+      const terminalId = terminalManager.createTerminal();
 
       // Act - send partial input (no newline)
       terminalManager.sendInput('clau', terminalId);
@@ -251,7 +251,7 @@ describe('CliAgentDetection in Terminal Manager', () => {
   describe('CLI Agent Output Pattern Detection', () => {
     it('should detect CLI Agent welcome message', () => {
       // Setup
-      const _terminalId = terminalManager.createTerminal();
+      const terminalId = terminalManager.createTerminal();
 
       // Act - simulate CLI Agent output
       terminalManager.handleTerminalOutputForCliAgent(terminalId, 'Welcome to CLI Agent\n');
@@ -263,7 +263,7 @@ describe('CliAgentDetection in Terminal Manager', () => {
 
     it('should detect CLI Agent Code output patterns', () => {
       // Setup
-      const _terminalId = terminalManager.createTerminal();
+      const terminalId = terminalManager.createTerminal();
 
       const claudePatterns = [
         'Welcome to CLI Agent',
@@ -292,7 +292,7 @@ describe('CliAgentDetection in Terminal Manager', () => {
 
     it('should detect Human/Assistant conversation patterns', () => {
       // Setup
-      const _terminalId = terminalManager.createTerminal();
+      const terminalId = terminalManager.createTerminal();
 
       // Act - simulate conversation output
       terminalManager.handleTerminalOutputForCliAgent(terminalId, '\nHuman: Hello CLI Agent\n');
@@ -307,7 +307,7 @@ describe('CliAgentDetection in Terminal Manager', () => {
 
     it('should detect CLI Agent exit patterns', () => {
       // Setup
-      const _terminalId = terminalManager.createTerminal();
+      const terminalId = terminalManager.createTerminal();
 
       // First activate CLI Agent
       terminalManager.handleTerminalOutputForCliAgent(terminalId, 'Welcome to CLI Agent');
@@ -329,7 +329,7 @@ describe('CliAgentDetection in Terminal Manager', () => {
 
     it('should handle case-insensitive pattern matching', () => {
       // Setup
-      const _terminalId = terminalManager.createTerminal();
+      const terminalId = terminalManager.createTerminal();
 
       // Act - test case variations
       terminalManager.handleTerminalOutputForCliAgent(terminalId, 'WELCOME TO CLAUDE');
@@ -342,7 +342,7 @@ describe('CliAgentDetection in Terminal Manager', () => {
 
     it('should not detect false positives', () => {
       // Setup
-      const _terminalId = terminalManager.createTerminal();
+      const terminalId = terminalManager.createTerminal();
 
       // Act - send output that might contain keywords but isn't CLI Agent
       const falsePositives = [
@@ -401,7 +401,7 @@ describe('CliAgentDetection in Terminal Manager', () => {
 
     it('should clean up CLI Agent state when terminal is removed', () => {
       // Setup
-      const _terminalId = terminalManager.createTerminal();
+      const terminalId = terminalManager.createTerminal();
       terminalManager.sendInput('claude help\r', terminalId);
       expect(terminalManager.isCliAgentConnected(terminalId)).to.be.true;
 
@@ -431,7 +431,7 @@ describe('CliAgentDetection in Terminal Manager', () => {
 
     it('should limit command history size', () => {
       // Setup
-      const _terminalId = terminalManager.createTerminal();
+      const terminalId = terminalManager.createTerminal();
       const maxHistorySize = 100; // From implementation
 
       // Act - send more commands than the limit
@@ -446,7 +446,7 @@ describe('CliAgentDetection in Terminal Manager', () => {
 
     it('should handle empty commands gracefully', () => {
       // Setup
-      const _terminalId = terminalManager.createTerminal();
+      const terminalId = terminalManager.createTerminal();
 
       // Act - send empty commands
       terminalManager.sendInput('\r', terminalId);
@@ -459,7 +459,7 @@ describe('CliAgentDetection in Terminal Manager', () => {
 
     it('should handle commands with special characters', () => {
       // Setup
-      const _terminalId = terminalManager.createTerminal();
+      const terminalId = terminalManager.createTerminal();
 
       // Act - send commands with special characters
       const complexCommands = [
@@ -497,7 +497,7 @@ describe('CliAgentDetection in Terminal Manager', () => {
 
     it('should handle malformed input gracefully', () => {
       // Setup
-      const _terminalId = terminalManager.createTerminal();
+      const terminalId = terminalManager.createTerminal();
 
       // Act & Assert - should not throw
       expect(() => {
@@ -511,7 +511,7 @@ describe('CliAgentDetection in Terminal Manager', () => {
 
     it('should handle rapid command sequences', () => {
       // Setup
-      const _terminalId = terminalManager.createTerminal();
+      const terminalId = terminalManager.createTerminal();
 
       // Act - send rapid commands
       for (let i = 0; i < 50; i++) {
@@ -528,7 +528,7 @@ describe('CliAgentDetection in Terminal Manager', () => {
 
     it('should handle large output chunks', () => {
       // Setup
-      const _terminalId = terminalManager.createTerminal();
+      const terminalId = terminalManager.createTerminal();
 
       // Act - simulate large output with CLI Agent pattern
       const largeOutput = 'x'.repeat(10000) + 'Welcome to CLI Agent' + 'y'.repeat(10000);
@@ -540,7 +540,7 @@ describe('CliAgentDetection in Terminal Manager', () => {
 
     it('should handle concurrent operations safely', (done) => {
       // Setup
-      const _terminalId = terminalManager.createTerminal();
+      const terminalId = terminalManager.createTerminal();
       let operationsCompleted = 0;
       const totalOperations = 10;
 

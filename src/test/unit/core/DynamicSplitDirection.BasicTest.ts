@@ -4,7 +4,7 @@
  */
 
 import { describe, it } from 'mocha';
-// import { expect } from 'chai';
+import { expect } from 'chai';
 
 describe('Dynamic Split Direction - Basic Logic Tests', function () {
   describe('Panel Location Detection Logic', function () {

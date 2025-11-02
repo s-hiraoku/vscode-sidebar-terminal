@@ -15,7 +15,7 @@
  */
 
 import * as sinon from 'sinon';
-// import { expect } from 'chai';
+import { expect } from 'chai';
 import { StandardTerminalSessionManager } from '../../../sessions/StandardTerminalSessionManager';
 
 // Test setup shared utilities

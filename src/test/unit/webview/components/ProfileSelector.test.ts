@@ -3,7 +3,7 @@
  * Tests the terminal profile selector UI component
  */
 
-// import { expect } from 'chai';
+import { expect } from 'chai';
 import { describe, it, beforeEach, afterEach } from 'mocha';
 import sinon from 'sinon';
 import { JSDOM } from 'jsdom';

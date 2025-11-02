@@ -1,4 +1,4 @@
-// import { expect } from 'chai';
+import { expect } from 'chai';
 
 import '../../shared/TestSetup';
 import { TerminalLifecycleService } from '../../../terminals/core/TerminalLifecycleService';

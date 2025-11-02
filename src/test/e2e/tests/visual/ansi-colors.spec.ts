@@ -23,7 +23,7 @@ test.describe('ANSI Color Rendering', () => {
   let webviewHelper: WebViewInteractionHelper;
   let visualHelper: VisualTestingUtility;
 
-  test.beforeEach(async ({ page: _page }) => {
+  test.beforeEach(async ({ page }) => {
     extensionHelper = new VSCodeExtensionTestHelper(page);
     terminalHelper = new TerminalLifecycleHelper(page);
     webviewHelper = new WebViewInteractionHelper(page);

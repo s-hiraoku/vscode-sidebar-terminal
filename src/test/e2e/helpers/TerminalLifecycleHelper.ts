@@ -104,10 +104,10 @@ export class TerminalLifecycleHelper {
 
   /**
    * Get terminal output
-   * @param terminalId - Terminal ID
+   * @param _terminalId - Terminal ID
    * @returns Terminal output text
    */
-  async getTerminalOutput(terminalId: number): Promise<string> {
+  async getTerminalOutput(_terminalId: number): Promise<string> {
     // Future: Read terminal output
     return '';
   }

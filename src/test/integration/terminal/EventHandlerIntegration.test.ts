@@ -11,7 +11,7 @@
  * - Test memory leak prevention
  */
 
-// import { expect } from 'chai';
+import { expect } from 'chai';
 import '../../shared/TestSetup';
 import { TerminalManager } from '../../../terminals/TerminalManager';
 import { ProcessState } from '../../../types/shared';
@@ -97,7 +97,7 @@ describe('Terminal Event Handler Integration Tests', () => {
     it('should clean up event handlers when terminal is deleted', async function (this: Mocha.Context) {
       this.timeout(5000);
 
-      const _terminalId = terminalManager.createTerminal();
+      const terminalId = terminalManager.createTerminal();
 
       // Send some data
       terminalManager.sendInput('test\n', terminalId);
@@ -140,7 +140,7 @@ describe('Terminal Event Handler Integration Tests', () => {
     it('should maintain correct process states across terminal lifecycle', function (this: Mocha.Context) {
       this.timeout(5000);
 
-      const _terminalId = terminalManager.createTerminal();
+      const terminalId = terminalManager.createTerminal();
       const terminal = terminalManager.getTerminal(terminalId);
 
       // Initial state should be Launching
@@ -177,7 +177,7 @@ describe('Terminal Event Handler Integration Tests', () => {
     it('should handle concurrent sendInput operations safely', function (this: Mocha.Context) {
       this.timeout(5000);
 
-      const _terminalId = terminalManager.createTerminal();
+      const terminalId = terminalManager.createTerminal();
 
       // Send multiple inputs concurrently
       const inputs = ['cmd1\n', 'cmd2\n', 'cmd3\n', 'cmd4\n', 'cmd5\n'];
@@ -237,7 +237,7 @@ describe('Terminal Event Handler Integration Tests', () => {
     it('should handle high-frequency data events without duplication', function (this: Mocha.Context) {
       this.timeout(10000);
 
-      const _terminalId = terminalManager.createTerminal();
+      const terminalId = terminalManager.createTerminal();
       const dataEvents: string[] = [];
 
       // Track all data events
@@ -288,7 +288,7 @@ describe('Terminal Event Handler Integration Tests', () => {
     it('should continue functioning after event handler errors', function (this: Mocha.Context) {
       this.timeout(5000);
 
-      const _terminalId = terminalManager.createTerminal();
+      const terminalId = terminalManager.createTerminal();
 
       // Add a handler that throws an error
       let errorCount = 0;
@@ -359,7 +359,7 @@ describe('Terminal Event Handler Regression Tests', () => {
     it('should not duplicate terminal output characters', function (this: Mocha.Context) {
       this.timeout(5000);
 
-      const _terminalId = terminalManager.createTerminal();
+      const terminalId = terminalManager.createTerminal();
       const outputChunks: string[] = [];
 
       // Collect all output

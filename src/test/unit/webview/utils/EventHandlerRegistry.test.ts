@@ -3,7 +3,7 @@
  * Tests for centralized event listener management with automatic cleanup
  */
 
-// import { expect } from 'chai';
+import { expect } from 'chai';
 import { SinonSandbox, createSandbox } from 'sinon';
 import { JSDOM } from 'jsdom';
 import { EventHandlerRegistry } from '../../../../webview/utils/EventHandlerRegistry';

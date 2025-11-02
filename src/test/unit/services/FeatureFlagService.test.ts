@@ -1,5 +1,5 @@
 import { describe, it, beforeEach, afterEach } from 'mocha';
-// import { expect } from 'chai';
+import { expect } from 'chai';
 import * as sinon from 'sinon';
 import { FeatureFlagService } from '../../../services/FeatureFlagService';
 import * as vscode from 'vscode';
@@ -115,7 +115,7 @@ describe('FeatureFlagService', () => {
     it('should clamp scrollback limit to minimum (200)', () => {
       // Given: Scrollback limit below minimum
       mockConfiguration.get.withArgs('scrollbackLineLimit').returns(100);
-      const _showWarningStub = sandbox.stub(vscode.window, 'showWarningMessage');
+      const showWarningStub = sandbox.stub(vscode.window, 'showWarningMessage');
 
       // When: Get scrollback limit
       const limit = featureFlagService.getScrollbackLineLimit();
@@ -129,7 +129,7 @@ describe('FeatureFlagService', () => {
     it('should clamp scrollback limit to maximum (3000)', () => {
       // Given: Scrollback limit above maximum
       mockConfiguration.get.withArgs('scrollbackLineLimit').returns(5000);
-      const _showWarningStub = sandbox.stub(vscode.window, 'showWarningMessage');
+      const showWarningStub = sandbox.stub(vscode.window, 'showWarningMessage');
 
       // When: Get scrollback limit
       const limit = featureFlagService.getScrollbackLineLimit();
@@ -143,7 +143,7 @@ describe('FeatureFlagService', () => {
     it('should accept scrollback limit within valid range', () => {
       // Given: Scrollback limit within range
       mockConfiguration.get.withArgs('scrollbackLineLimit').returns(1500);
-      const _showWarningStub = sandbox.stub(vscode.window, 'showWarningMessage');
+      const showWarningStub = sandbox.stub(vscode.window, 'showWarningMessage');
 
       // When: Get scrollback limit
       const limit = featureFlagService.getScrollbackLineLimit();
@@ -155,7 +155,7 @@ describe('FeatureFlagService', () => {
 
     it('should handle edge case scrollback limits (200 and 3000)', () => {
       // Given: Exact boundary values
-      const _showWarningStub = sandbox.stub(vscode.window, 'showWarningMessage');
+      const showWarningStub = sandbox.stub(vscode.window, 'showWarningMessage');
 
       // When: Test minimum boundary
       mockConfiguration.get.withArgs('scrollbackLineLimit').returns(200);

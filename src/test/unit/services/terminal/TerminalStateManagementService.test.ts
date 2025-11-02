@@ -283,7 +283,7 @@ describe('TerminalStateManagementService', () => {
 
   describe('Being Killed Tracking', () => {
     it('should mark and check terminal as being killed', () => {
-      const _terminalId = 'test1';
+      const terminalId = 'test1';
 
       assert.strictEqual(service.isTerminalBeingKilled(terminalId), false);
 

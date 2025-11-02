@@ -3,7 +3,7 @@
  * Tests for centralized terminal container creation and styling
  */
 
-// import { expect } from 'chai';
+import { expect } from 'chai';
 import { SinonSandbox, createSandbox } from 'sinon';
 import { JSDOM } from 'jsdom';
 import {

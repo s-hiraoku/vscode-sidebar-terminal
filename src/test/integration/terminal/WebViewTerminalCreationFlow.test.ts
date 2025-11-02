@@ -17,7 +17,7 @@
  * - No duplicate event handlers registered
  */
 
-// import { expect } from 'chai';
+import { expect } from 'chai';
 import * as sinon from 'sinon';
 import '../../shared/TestSetup';
 import { TerminalManager } from '../../../terminals/TerminalManager';
@@ -112,7 +112,7 @@ class MockSecondaryTerminalProvider {
 
     if (terminals.length === 0) {
       // Create initial terminal
-      const _terminalId = this.terminalManager.createTerminal();
+      const terminalId = this.terminalManager.createTerminal();
       const terminal = this.terminalManager.getTerminal(terminalId);
 
       if (terminal) {
@@ -141,7 +141,7 @@ class MockSecondaryTerminalProvider {
 
   private handleRequestInitialTerminal(): void {
     // Create initial terminal on demand
-    const _terminalId = this.terminalManager.createTerminal();
+    const terminalId = this.terminalManager.createTerminal();
     const terminal = this.terminalManager.getTerminal(terminalId);
 
     if (terminal) {
@@ -314,7 +314,7 @@ describe('[TM-CF-003] Terminal Creation Flow Integration', () => {
 
       setTimeout(() => {
         const terminalCreatedMsg = mockWebView.findMessage('terminalCreated');
-        const _terminalId = terminalCreatedMsg?.terminal.id;
+        const terminalId = terminalCreatedMsg?.terminal.id;
         const terminal = terminalManager.getTerminal(terminalId);
 
         // Assert: PTY process exists
@@ -338,7 +338,7 @@ describe('[TM-CF-003] Terminal Creation Flow Integration', () => {
 
       setTimeout(() => {
         const terminalCreatedMsg = mockWebView.findMessage('terminalCreated');
-        const _terminalId = terminalCreatedMsg?.terminal.id;
+        const terminalId = terminalCreatedMsg?.terminal.id;
         const terminal = terminalManager.getTerminal(terminalId);
         const ptyProcess = terminal?.ptyProcess as any;
 
@@ -361,7 +361,7 @@ describe('[TM-CF-003] Terminal Creation Flow Integration', () => {
 
       setTimeout(() => {
         const terminalCreatedMsg = mockWebView.findMessage('terminalCreated');
-        const _terminalId = terminalCreatedMsg?.terminal.id;
+        const terminalId = terminalCreatedMsg?.terminal.id;
 
         // Spy on terminal manager's sendInput
         const sendInputSpy = sinon.spy(terminalManager, 'sendInput');
@@ -422,7 +422,7 @@ describe('[TM-CF-003] Terminal Creation Flow Integration', () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       const terminalCreatedMsg = mockWebView.findMessage('terminalCreated');
-      const _terminalId = terminalCreatedMsg?.terminal.id;
+      const terminalId = terminalCreatedMsg?.terminal.id;
 
       // Create second terminal to avoid last-terminal protection
       terminalManager.createTerminal();

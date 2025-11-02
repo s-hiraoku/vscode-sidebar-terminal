@@ -3,7 +3,7 @@
  * Tests for centralized debounced resize logic and ResizeObserver management
  */
 
-// import { expect } from 'chai';
+import { expect } from 'chai';
 import { SinonSandbox, createSandbox } from 'sinon';
 import { JSDOM } from 'jsdom';
 import { ResizeManager } from '../../../../webview/utils/ResizeManager';

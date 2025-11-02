@@ -3,7 +3,7 @@
  * @description Tests for scroll position preservation during AI agent output
  */
 
-// import { expect } from 'chai';
+import { expect } from 'chai';
 import { Terminal } from '@xterm/xterm';
 import { PerformanceManager } from '../../../../webview/managers/PerformanceManager';
 import { IManagerCoordinator } from '../../../../webview/interfaces/ManagerInterfaces';

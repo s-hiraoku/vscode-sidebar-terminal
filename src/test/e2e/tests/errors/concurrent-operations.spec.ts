@@ -218,7 +218,7 @@ test.describe('Concurrent Operations', () => {
    * Validates that typing in multiple terminals
    * simultaneously doesn't cause input conflicts.
    */
-  test('should handle multiple WebView interactions @P1 @concurrency', async ({ page }) => {
+  test('should handle multiple WebView interactions @P1 @concurrency', async ({ page: _page }) => {
     // Arrange: Create 3 terminals
     await terminalHelper.createTerminal(); // 1
     await terminalHelper.createTerminal(); // 2

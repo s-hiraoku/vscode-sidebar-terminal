@@ -3,7 +3,7 @@
  * Ensures VS Code parity for IME composition cursor behavior
  */
 
-// import { expect } from 'chai';
+import { expect } from 'chai';
 import { describe, it, beforeEach, afterEach } from 'mocha';
 import sinon from 'sinon';
 import { JSDOM } from 'jsdom';

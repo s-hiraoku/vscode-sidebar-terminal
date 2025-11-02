@@ -11,7 +11,7 @@
  * - REFACTOR: Add comprehensive edge case coverage
  */
 
-// import { expect } from 'chai';
+import { expect } from 'chai';
 import * as sinon from 'sinon';
 import '../../shared/TestSetup';
 import { TerminalManager } from '../../../terminals/TerminalManager';
@@ -106,7 +106,7 @@ describe('TerminalManager - Event Handler Setup (TDD)', () => {
   describe('RED Phase: Event Handler Duplication Detection', () => {
     it('should register onData handler exactly once in createTerminal()', () => {
       // Act: Create terminal (this triggers _setupTerminalEvents)
-      const _terminalId = terminalManager.createTerminal();
+      const terminalId = terminalManager.createTerminal();
 
       // Assert: Only one data handler should be registered
       expect(mockPty.getDataHandlerCount()).to.equal(
@@ -120,7 +120,7 @@ describe('TerminalManager - Event Handler Setup (TDD)', () => {
 
     it('should register onExit handler exactly once in createTerminal()', () => {
       // Act: Create terminal
-      const _terminalId = terminalManager.createTerminal();
+      const terminalId = terminalManager.createTerminal();
 
       // Assert: Only one exit handler should be registered
       expect(mockPty.getExitHandlerCount()).to.equal(
@@ -134,7 +134,7 @@ describe('TerminalManager - Event Handler Setup (TDD)', () => {
 
     it('should register onData handler exactly once in createTerminalWithProfile()', async () => {
       // Act: Create terminal with profile
-      const _terminalId = await terminalManager.createTerminalWithProfile();
+      const terminalId = await terminalManager.createTerminalWithProfile();
 
       // Assert: Only one data handler should be registered
       expect(mockPty.getDataHandlerCount()).to.equal(
@@ -148,7 +148,7 @@ describe('TerminalManager - Event Handler Setup (TDD)', () => {
 
     it('should register onExit handler exactly once in createTerminalWithProfile()', async () => {
       // Act: Create terminal with profile
-      const _terminalId = await terminalManager.createTerminalWithProfile();
+      const terminalId = await terminalManager.createTerminalWithProfile();
 
       // Assert: Only one exit handler should be registered
       expect(mockPty.getExitHandlerCount()).to.equal(
@@ -163,7 +163,7 @@ describe('TerminalManager - Event Handler Setup (TDD)', () => {
 
   describe('RED Phase: Data Event Emission Count', () => {
     it('should emit data event exactly once when PTY sends data', (done) => {
-      const _terminalId = terminalManager.createTerminal();
+      const terminalId = terminalManager.createTerminal();
       let dataEventCount = 0;
       const testData = 'test output';
 
@@ -186,7 +186,7 @@ describe('TerminalManager - Event Handler Setup (TDD)', () => {
     });
 
     it('should emit exit event exactly once when PTY process exits', (done) => {
-      const _terminalId = terminalManager.createTerminal();
+      const terminalId = terminalManager.createTerminal();
       let exitEventCount = 0;
 
       // Listen for exit events
@@ -209,7 +209,7 @@ describe('TerminalManager - Event Handler Setup (TDD)', () => {
 
   describe('GREEN Phase: Process State Management', () => {
     it('should initialize terminal with Launching state', () => {
-      const _terminalId = terminalManager.createTerminal();
+      const terminalId = terminalManager.createTerminal();
       const terminal = terminalManager.getTerminal(terminalId);
 
       expect(terminal).to.exist;
@@ -222,7 +222,7 @@ describe('TerminalManager - Event Handler Setup (TDD)', () => {
     });
 
     it('should transition from Launching to Running on first data', (done) => {
-      const _terminalId = terminalManager.createTerminal();
+      const terminalId = terminalManager.createTerminal();
       const terminal = terminalManager.getTerminal(terminalId);
 
       expect(terminal?.processState).to.equal(ProcessState.Launching);
@@ -244,7 +244,7 @@ describe('TerminalManager - Event Handler Setup (TDD)', () => {
     });
 
     it('should set KilledByUser state when deleteTerminal is called', (done) => {
-      const _terminalId = terminalManager.createTerminal();
+      const terminalId = terminalManager.createTerminal();
 
       // Transition to Running state first
       mockPty.emitData('initial data');
@@ -319,7 +319,7 @@ describe('TerminalManager - Event Handler Setup (TDD)', () => {
     });
 
     it('should not register duplicate handlers on multiple state transitions', (done) => {
-      const _terminalId = terminalManager.createTerminal();
+      const terminalId = terminalManager.createTerminal();
 
       // Emit multiple data events to trigger state transitions
       mockPty.emitData('data 1');
@@ -339,7 +339,7 @@ describe('TerminalManager - Event Handler Setup (TDD)', () => {
     });
 
     it('should handle terminal deletion during data processing', (done) => {
-      const _terminalId = terminalManager.createTerminal();
+      const terminalId = terminalManager.createTerminal();
 
       // Start data emission
       mockPty.emitData('data before deletion');
@@ -357,7 +357,7 @@ describe('TerminalManager - Event Handler Setup (TDD)', () => {
 
   describe('REFACTOR Phase: Handler Cleanup', () => {
     it('should clean up handlers when terminal is removed', (done) => {
-      const _terminalId = terminalManager.createTerminal();
+      const terminalId = terminalManager.createTerminal();
 
       expect(mockPty.getDataHandlerCount()).to.equal(1);
       expect(mockPty.getExitHandlerCount()).to.equal(1);
