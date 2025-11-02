@@ -4,7 +4,7 @@
  * RED-GREEN-REFACTOR cycles with comprehensive coverage including edge cases
  */
 
-import { expect } from 'chai';
+// import { expect } from 'chai';
 import { describe, it, beforeEach, afterEach } from 'mocha';
 import sinon from 'sinon';
 import { JSDOM } from 'jsdom';

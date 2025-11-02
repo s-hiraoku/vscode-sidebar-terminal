@@ -4,7 +4,7 @@
  * Tests for the typed event bus system.
  */
 
-import { expect } from 'chai';
+// import { expect } from 'chai';
 import {
   EventBus,
   createEventType,

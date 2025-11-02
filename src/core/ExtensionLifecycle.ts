@@ -26,6 +26,7 @@ export class ExtensionLifecycle {
   private keyboardShortcutService: KeyboardShortcutService | undefined;
   private decorationsService: TerminalDecorationsService | undefined;
   private linksService: TerminalLinksService | undefined;
+  private _extensionContext: vscode.ExtensionContext | undefined;
 
   // シンプルな復元管理
   private _restoreExecuted = false;
@@ -35,6 +36,9 @@ export class ExtensionLifecycle {
    */
   activate(context: vscode.ExtensionContext): Promise<void> {
     log('🚀 [EXTENSION] === ACTIVATION START ===');
+
+    // Store extension context for later use
+    this._extensionContext = context;
 
     // Configure logger based on extension mode
     if (context.extensionMode === vscode.ExtensionMode.Development) {
@@ -375,6 +379,14 @@ export class ExtensionLifecycle {
           await this.handleTestScrollbackCommand();
         },
       },
+      // ======================= セッション診断コマンド =======================
+      {
+        command: 'secondaryTerminal.diagnoseSession',
+        handler: async () => {
+          log('🔍 [DIAGNOSTIC] Command executed: diagnoseSession');
+          await this.diagnoseSessionData();
+        },
+      },
 
       // ======================= デバッグコマンド =======================
       {
@@ -436,9 +448,10 @@ export class ExtensionLifecycle {
     // シンプルセッション保存処理
     await this.saveSimpleSessionOnExit();
 
-    // Dispose standard session manager
+    // Dispose standard session manager (cleanup auto-save timers)
     if (this.standardSessionManager) {
       log('🔧 [EXTENSION] Disposing standard session manager...');
+      this.standardSessionManager.dispose(); // Cleanup auto-save timers
       this.standardSessionManager = undefined;
     }
 
@@ -900,6 +913,116 @@ export class ExtensionLifecycle {
       }
     } catch (error) {
       log(`❌ [STANDARD_SESSION] Exception during session save on exit: ${String(error)}`);
+    }
+  }
+
+  /**
+   * セッションデータ診断
+   */
+  private async diagnoseSessionData(): Promise<void> {
+    if (!this.standardSessionManager || !this._extensionContext) {
+      await vscode.window.showErrorMessage('Session manager or context not available');
+      return;
+    }
+
+    try {
+      log('🔍 [DIAGNOSTIC] ===== SESSION DATA DIAGNOSIS =====');
+
+      // Get session info
+      const sessionInfo = this.standardSessionManager.getSessionInfo();
+      const sessionStats = this.standardSessionManager.getSessionStats();
+
+      log('📊 [DIAGNOSTIC] Session Statistics:', sessionStats);
+
+      if (sessionInfo) {
+        log('📄 [DIAGNOSTIC] Session Data Details:');
+        log(`  - Version: ${sessionInfo.version}`);
+        log(`  - Timestamp: ${sessionInfo.timestamp ? new Date(sessionInfo.timestamp).toLocaleString() : 'Unknown'}`);
+        log(`  - Terminal Count: ${sessionInfo.terminals?.length || 0}`);
+        log(`  - Active Terminal ID: ${sessionInfo.activeTerminalId || 'none'}`);
+
+        // Build detailed diagnostic text
+        const diagnosticLines: string[] = [];
+        diagnosticLines.push('📊 SESSION DIAGNOSTIC REPORT');
+        diagnosticLines.push('');
+        diagnosticLines.push(`✅ Has Session: ${sessionStats.hasSession ? 'Yes' : 'No'}`);
+        diagnosticLines.push(`📅 Last Saved: ${sessionStats.lastSaved ? sessionStats.lastSaved.toLocaleString() : 'Never'}`);
+        diagnosticLines.push(`⏰ Is Expired: ${sessionStats.isExpired ? 'Yes' : 'No'}`);
+        diagnosticLines.push(`🔧 Config Enabled: ${sessionStats.configEnabled ? 'Yes' : 'No'}`);
+        diagnosticLines.push('');
+        diagnosticLines.push(`📁 Version: ${sessionInfo.version}`);
+        diagnosticLines.push(`🔢 Terminal Count: ${sessionInfo.terminals?.length || 0}`);
+        diagnosticLines.push(`🎯 Active Terminal: ${sessionInfo.activeTerminalId || 'none'}`);
+        diagnosticLines.push('');
+
+        if (sessionInfo.terminals && sessionInfo.terminals.length > 0) {
+          diagnosticLines.push('📋 TERMINAL DETAILS:');
+          diagnosticLines.push('');
+
+          sessionInfo.terminals.forEach((terminal: any, index: number) => {
+            const scrollbackData = sessionInfo.scrollbackData?.[terminal.id];
+            const scrollbackLines = Array.isArray(scrollbackData) ? scrollbackData.length : 0;
+
+            diagnosticLines.push(`Terminal ${index + 1}:`);
+            diagnosticLines.push(`  • ID: ${terminal.id}`);
+            diagnosticLines.push(`  • Name: ${terminal.name}`);
+            diagnosticLines.push(`  • Scrollback Lines: ${scrollbackLines} 📜`);
+            diagnosticLines.push(`  • CWD: ${terminal.cwd}`);
+            diagnosticLines.push('');
+
+            log(`  Terminal ${index + 1}:`);
+            log(`    - ID: ${terminal.id}`);
+            log(`    - Name: ${terminal.name}`);
+            log(`    - Scrollback Lines: ${scrollbackLines}`);
+            log(`    - CWD: ${terminal.cwd}`);
+          });
+        } else {
+          diagnosticLines.push('⚠️ No terminals in session data');
+        }
+
+        // Create a temporary document to show the diagnostic
+        const doc = await vscode.workspace.openTextDocument({
+          content: diagnosticLines.join('\n'),
+          language: 'plaintext',
+        });
+
+        await vscode.window.showTextDocument(doc, {
+          preview: true,
+          viewColumn: vscode.ViewColumn.Beside,
+        });
+
+        // Also show a summary notification
+        const scrollbackStatus = sessionInfo.terminals?.map((t: any) => {
+          const scrollbackData = sessionInfo.scrollbackData?.[t.id];
+          const lines = Array.isArray(scrollbackData) ? scrollbackData.length : 0;
+          return `${t.name}: ${lines} lines`;
+        }).join(', ') || 'No terminals';
+
+        await vscode.window.showInformationMessage(
+          `Session found! ${sessionInfo.terminals?.length || 0} terminal(s). Scrollback: ${scrollbackStatus}`
+        );
+      } else {
+        log('📭 [DIAGNOSTIC] No session data found');
+
+        const doc = await vscode.workspace.openTextDocument({
+          content: '❌ NO SESSION DATA FOUND\n\nTry:\n1. Save session: Cmd+Shift+P → "Secondary Terminal: Save Terminal Session"\n2. Wait 5 minutes for auto-save\n3. Close VS Code (saves automatically on exit)',
+          language: 'plaintext',
+        });
+
+        await vscode.window.showTextDocument(doc, {
+          preview: true,
+          viewColumn: vscode.ViewColumn.Beside,
+        });
+
+        await vscode.window.showWarningMessage('No session data found. See diagnostic report.');
+      }
+
+      log('🔍 [DIAGNOSTIC] ===== DIAGNOSIS COMPLETE =====');
+    } catch (error) {
+      log('❌ [DIAGNOSTIC] Error during diagnosis:', error);
+      await vscode.window.showErrorMessage(
+        `Diagnostic failed: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 

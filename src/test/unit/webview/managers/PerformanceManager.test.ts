@@ -2,7 +2,7 @@
  * PerformanceManager Test Suite - Buffer optimization and input responsiveness validation
  */
 
-import { expect } from 'chai';
+// import { expect } from 'chai';
 import { describe, it, beforeEach, afterEach } from 'mocha';
 import sinon from 'sinon';
 import { PerformanceManager } from '../../../../webview/managers/PerformanceManager';

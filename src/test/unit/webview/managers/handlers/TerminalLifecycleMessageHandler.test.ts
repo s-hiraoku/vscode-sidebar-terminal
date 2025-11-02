@@ -4,7 +4,7 @@
  * Tests for terminal lifecycle message handling
  */
 
-import { expect } from 'chai';
+// import { expect } from 'chai';
 import { TerminalLifecycleMessageHandler } from '../../../../../webview/managers/handlers/TerminalLifecycleMessageHandler';
 import { IManagerCoordinator } from '../../../../../webview/interfaces/ManagerInterfaces';
 import { MessageCommand } from '../../../../../webview/managers/messageTypes';

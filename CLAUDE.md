@@ -136,6 +136,66 @@ Real-time detection of CLI agents with visual status indicators:
 - **Security**: URL substring sanitization using regex patterns (not includes())
 - **Visual Feedback**: Color-coded status indicators in terminal headers
 
+## Development Guidelines
+
+### Feature Implementation Reference
+
+**When adding features, always refer to VS Code's standard terminal implementation.**
+
+The VS Code repository contains the canonical implementation of terminal functionality. Before implementing any new feature:
+
+1. **Research VS Code's approach**: Check how the feature is implemented in the official VS Code terminal
+2. **Repository**: https://github.com/microsoft/vscode
+3. **Terminal source**: `src/vs/workbench/contrib/terminal/`
+4. **Follow their patterns**: Maintain consistency with VS Code's architecture and UX
+
+This ensures:
+- Consistency with user expectations from the native terminal
+- Adherence to best practices used by the VS Code team
+- Compatibility with VS Code's extension API patterns
+- Better long-term maintainability
+
+### Use Specialized Agents for Implementation
+
+**When implementing features, leverage specialized agents via the Task tool.**
+
+Agents are specialized AI assistants designed for specific tasks. Using them improves code quality and efficiency:
+
+#### When to Use Agents
+
+- **Research Phase**: Use `vscode-terminal-resolver` to reference VS Code's terminal implementation
+- **Terminal Features**: Use `terminal-implementer` for production-ready terminal code
+- **Code Analysis**: Use `serena-semantic-search` to find similar implementations in the codebase
+- **Refactoring**: Use `similarity-based-refactoring` to identify patterns and improve code structure
+- **Testing**: Use `tdd-quality-engineer` to implement comprehensive TDD tests
+- **Documentation**: Use `xterm-info-analyzer` for accurate xterm.js API information
+
+#### Agent Workflow Example
+
+```bash
+# 1. Research how VS Code implements the feature
+Task(vscode-terminal-resolver): "How does VS Code handle terminal process lifecycle?"
+
+# 2. Search for similar implementations in our codebase
+Task(serena-semantic-search): "Find terminal lifecycle management patterns"
+
+# 3. Implement the feature using terminal patterns
+Task(terminal-implementer): "Implement terminal process lifecycle based on VS Code patterns"
+
+# 4. Create comprehensive tests
+Task(tdd-quality-engineer): "Create TDD tests for terminal lifecycle management"
+
+# 5. Refactor for maintainability
+Task(similarity-based-refactoring): "Identify and consolidate duplicate lifecycle code"
+```
+
+#### Benefits of Using Agents
+
+- **Consistency**: Agents follow established patterns and best practices
+- **Efficiency**: Specialized knowledge reduces research and implementation time
+- **Quality**: Built-in testing and validation improve code reliability
+- **Maintainability**: Code follows consistent architectural patterns
+
 ## Known Issues & Workarounds
 
 ### CI/CD Issues

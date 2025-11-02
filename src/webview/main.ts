@@ -112,17 +112,17 @@ async function initializeWebView(): Promise<void> {
     // 🔍 [DEBUG] Expose terminal manager globally for debugging
     window.terminalManager = terminalManager;
 
-    // 📍 Setup panel location monitoring (after terminalManager initialization)
-    // Small delay to ensure terminalManager is fully ready
-    setTimeout(() => {
-      log('🔧 [DEBUG] Setting up panel location monitoring...');
-      try {
-        setupPanelLocationMonitoring();
-        log('🔧 [DEBUG] Panel location monitoring setup completed');
-      } catch (error) {
-        error_category('🔧 [DEBUG] Failed to setup panel location monitoring:', error);
-      }
-    }, 500);
+    // 📍 Setup panel location monitoring (immediately after terminalManager initialization)
+    log('🔧 [DEBUG] Setting up panel location monitoring...');
+    console.log('🔧 [DEBUG-CONSOLE] Setting up panel location monitoring...');
+    try {
+      setupPanelLocationMonitoring();
+      log('🔧 [DEBUG] Panel location monitoring setup completed');
+      console.log('🔧 [DEBUG-CONSOLE] Panel location monitoring setup completed');
+    } catch (error) {
+      error_category('🔧 [DEBUG] Failed to setup panel location monitoring:', error);
+      console.error('🔧 [DEBUG-CONSOLE] Failed to setup panel location monitoring:', error);
+    }
 
     // 🔧 [DEBUG] Setup debugging keyboard shortcuts
     document.addEventListener('keydown', (event) => {
@@ -246,8 +246,11 @@ function setupPerformanceMonitoring(): void {
  */
 function setupPanelLocationMonitoring(): void {
   try {
+    console.log('📍 [PANEL-MONITOR-CONSOLE] Setting up panel location monitoring...');
     log('📍 [PANEL-MONITOR] Setting up panel location monitoring...');
+    console.log(`📍 [PANEL-MONITOR-CONSOLE] terminalManager exists: ${!!terminalManager}`);
     log(`📍 [PANEL-MONITOR] terminalManager exists: ${!!terminalManager}`);
+    console.log(`📍 [PANEL-MONITOR-CONSOLE] document.body exists: ${!!document.body}`);
     log(`📍 [PANEL-MONITOR] document.body exists: ${!!document.body}`);
 
     let previousAspectRatio: number | null = null;
@@ -258,10 +261,12 @@ function setupPanelLocationMonitoring(): void {
     // ResizeObserverでdocument.bodyのサイズ変更を監視
     const resizeObserver = new ResizeObserver((entries) => {
       resizeCount++;
+      console.log(`📍 [PANEL-MONITOR-CONSOLE] ResizeObserver fired! (count: ${resizeCount})`);
       log(`📍 [PANEL-MONITOR] ResizeObserver fired! (count: ${resizeCount})`);
 
       for (const entry of entries) {
         const { width, height } = entry.contentRect;
+        console.log(`📍 [PANEL-MONITOR-CONSOLE] Dimensions: ${width}px × ${height}px`);
         log(`📍 [PANEL-MONITOR] Dimensions: ${width}px × ${height}px`);
 
         if (width === 0 || height === 0) {
@@ -279,6 +284,7 @@ function setupPanelLocationMonitoring(): void {
         if (!isInitialized) {
           previousAspectRatio = aspectRatio;
           isInitialized = true;
+          console.log(`📍 [PANEL-MONITOR-CONSOLE] Initial measurement: ${aspectRatio.toFixed(3)} (${detectedLocation})`);
           log(`📍 [PANEL-MONITOR] Initial measurement: ${aspectRatio.toFixed(3)} (${detectedLocation})`);
 
           // 🔧 FIX: 初回測定時も位置を報告してExtensionに初期状態を知らせる
@@ -297,6 +303,33 @@ function setupPanelLocationMonitoring(): void {
             if (splitManager) {
               splitManager.setPanelLocation(detectedLocation);
               log(`📍 [PANEL-MONITOR] ✅ SplitManager panel location updated: ${detectedLocation}`);
+            }
+
+            // 🎯 FIX: Update terminals-wrapper flexDirection on initial detection
+            // Panel → row (横並び), Sidebar → column (縦並び)
+            const terminalsWrapper = document.getElementById('terminals-wrapper');
+            if (terminalsWrapper) {
+              const initialFlexDirection = isPanelLocation ? 'row' : 'column';
+              terminalsWrapper.style.flexDirection = initialFlexDirection;
+              console.log(`📍 [PANEL-MONITOR-CONSOLE] ✅ Updated terminals-wrapper flexDirection: ${initialFlexDirection}`);
+              log(`📍 [PANEL-MONITOR] ✅ Updated terminals-wrapper flexDirection on initial detection: ${initialFlexDirection}`);
+            } else {
+              console.warn(`📍 [PANEL-MONITOR-CONSOLE] ⚠️ terminals-wrapper not found yet - will retry`);
+              log(`📍 [PANEL-MONITOR] ⚠️ terminals-wrapper not found yet - will retry`);
+
+              // terminals-wrapper がまだ存在しない場合、少し待ってからリトライ
+              setTimeout(() => {
+                const wrapper = document.getElementById('terminals-wrapper');
+                if (wrapper) {
+                  const flexDirection = isPanelLocation ? 'row' : 'column';
+                  wrapper.style.flexDirection = flexDirection;
+                  console.log(`📍 [PANEL-MONITOR-CONSOLE] ✅ [RETRY] Updated terminals-wrapper flexDirection: ${flexDirection}`);
+                  log(`📍 [PANEL-MONITOR] ✅ [RETRY] Updated terminals-wrapper flexDirection: ${flexDirection}`);
+                } else {
+                  console.error(`📍 [PANEL-MONITOR-CONSOLE] ❌ terminals-wrapper still not found after retry`);
+                  log(`📍 [PANEL-MONITOR] ❌ terminals-wrapper still not found after retry`);
+                }
+              }, 100);
             }
           }
           continue;
@@ -342,11 +375,13 @@ function setupPanelLocationMonitoring(): void {
     });
 
     // document.bodyを監視
+    console.log(`📍 [PANEL-MONITOR-CONSOLE] Starting to observe document.body...`);
     log(`📍 [PANEL-MONITOR] Starting to observe document.body...`);
     resizeObserver.observe(document.body);
-
+    console.log('📍 [PANEL-MONITOR-CONSOLE] ✅ Panel location monitoring started successfully');
     log('📍 [PANEL-MONITOR] ✅ Panel location monitoring started successfully');
   } catch (error) {
+    console.error('📍 [PANEL-MONITOR-CONSOLE] ❌ Failed to setup panel location monitoring:', error);
     error_category('📍 [PANEL-MONITOR] ❌ Failed to setup panel location monitoring:', error);
   }
 }

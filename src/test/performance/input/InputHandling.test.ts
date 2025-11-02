@@ -5,7 +5,7 @@
  * Tests input handling architecture under various load conditions
  */
 
-import { expect } from 'chai';
+// import { expect } from 'chai';
 import { describe, it, beforeEach, afterEach } from 'mocha';
 import sinon from 'sinon';
 import { JSDOM } from 'jsdom';

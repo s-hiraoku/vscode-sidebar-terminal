@@ -45,7 +45,7 @@ suite('TerminalManager Test Suite', () => {
   });
 
   test('Should create terminal', () => {
-    const terminalId = terminalManager.createTerminal();
+    const _terminalId = terminalManager.createTerminal();
     assert.ok(terminalId);
     assert.strictEqual(terminalManager.hasActiveTerminal(), true);
     assert.strictEqual(terminalManager.getActiveTerminalId(), terminalId);
@@ -119,7 +119,7 @@ suite('TerminalManager Test Suite', () => {
   });
 
   test('Should handle PTY input correctly', () => {
-    const terminalId = terminalManager.createTerminal();
+    const _terminalId = terminalManager.createTerminal();
     assert.ok(terminalId);
 
     // Test that PTY input doesn't throw errors
@@ -134,7 +134,7 @@ suite('TerminalManager Test Suite', () => {
   });
 
   test('Should handle PTY resize correctly', () => {
-    const terminalId = terminalManager.createTerminal();
+    const _terminalId = terminalManager.createTerminal();
     assert.ok(terminalId);
 
     // Test that PTY resize doesn't throw errors
@@ -149,7 +149,7 @@ suite('TerminalManager Test Suite', () => {
   });
 
   test('Should validate PTY instance integrity', () => {
-    const terminalId = terminalManager.createTerminal();
+    const _terminalId = terminalManager.createTerminal();
     assert.ok(terminalId);
 
     const terminals = terminalManager.getTerminals();

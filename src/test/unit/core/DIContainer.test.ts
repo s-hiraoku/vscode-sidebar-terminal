@@ -4,7 +4,7 @@
  * Tests for the lightweight dependency injection container.
  */
 
-import { expect } from 'chai';
+// import { expect } from 'chai';
 import {
   DIContainer,
   ServiceLifetime,

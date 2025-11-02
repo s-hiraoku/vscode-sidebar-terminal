@@ -3,7 +3,7 @@
  * Tests the complete profile selection flow including shortcuts and messaging
  */
 
-import { expect } from 'chai';
+// import { expect } from 'chai';
 import { describe, it, beforeEach, afterEach } from 'mocha';
 import sinon from 'sinon';
 import { JSDOM } from 'jsdom';

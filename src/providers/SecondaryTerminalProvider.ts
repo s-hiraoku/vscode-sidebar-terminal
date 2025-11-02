@@ -1216,6 +1216,14 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         return;
       }
 
+      // Handle pushed scrollback data (instant save like VS Code)
+      if (message.command === 'pushScrollbackData') {
+        if (this._standardSessionManager) {
+          this._standardSessionManager.handlePushedScrollbackData(message);
+        }
+        return;
+      }
+
       // Minimal router: if a handler exists, use it and return
       const dispatched = await this._messageRouter.dispatch(message);
       if (dispatched) {

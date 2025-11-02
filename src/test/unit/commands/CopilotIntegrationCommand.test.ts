@@ -1,7 +1,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { expect } from 'chai';
+// import { expect } from 'chai';
 import * as sinon from 'sinon';
 import * as vscode from 'vscode';
 

@@ -14,6 +14,9 @@ export class StandardTerminalPersistenceManager {
     setState: (state: unknown) => void;
   } | null = null; // VS Code API instance cached
 
+  // Serialized content cache for instant access
+  private serializedCache: Map<string, string> = new Map();
+
   // ローカルストレージキー
   private static readonly STORAGE_KEY_PREFIX = 'terminal-session-';
   private static readonly STORAGE_VERSION = '1.0.0';
@@ -159,16 +162,10 @@ export class StandardTerminalPersistenceManager {
         return;
       }
 
-      const storageKey = `${StandardTerminalPersistenceManager.STORAGE_KEY_PREFIX}${terminalId}`;
-      const storageData = {
-        version: StandardTerminalPersistenceManager.STORAGE_VERSION,
-        terminalId,
-        content: serializedData.content,
-        timestamp: Date.now(),
-      };
+      // Cache serialized content for instant access
+      this.serializedCache.set(terminalId, serializedData.content);
 
-      // VS CodeのWebView内ではlocalStorageの代わりにstateを使用
-      // HTMLで既に取得済みのAPIを使用
+      // Initialize VS Code API if needed
       if (!this.vscodeApi) {
         const windowWithApi = window as Window & {
           vscodeApi?: {
@@ -185,13 +182,16 @@ export class StandardTerminalPersistenceManager {
       }
 
       if (this.vscodeApi) {
-        const currentState = this.vscodeApi.getState() as Record<string, unknown> | null;
-        this.vscodeApi.setState({
-          ...(currentState || {}),
-          [storageKey]: storageData,
+        // Push serialized content to Extension immediately (VS Code standard approach)
+        this.vscodeApi.postMessage({
+          command: 'pushScrollbackData',
+          terminalId,
+          scrollbackData: serializedData.content.split('\n'),
+          timestamp: Date.now(),
         });
+
         log(
-          `💾 [WEBVIEW-PERSISTENCE] Saved terminal ${terminalId} content (${serializedData.content.length} chars)`
+          `💾 [WEBVIEW-PERSISTENCE] Pushed terminal ${terminalId} scrollback to Extension (${serializedData.content.length} chars)`
         );
       } else {
         console.warn(`⚠️ [WEBVIEW-PERSISTENCE] No VS Code API available for saving`);

@@ -523,6 +523,7 @@ export interface WebviewMessage {
     | 'scrollbackProgress'
     | 'saveAllTerminalSessions'
     | 'extractScrollbackData'
+    | 'pushScrollbackData'
     | 'performScrollbackRestore'
     | 'scrollbackDataCollected'
     | 'panelLocationUpdate'

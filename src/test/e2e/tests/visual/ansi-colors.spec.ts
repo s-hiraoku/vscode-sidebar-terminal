@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test } from '@playwright/test';
 import { readFileSync } from 'fs';
 import {
   VSCodeExtensionTestHelper,
@@ -23,7 +23,7 @@ test.describe('ANSI Color Rendering', () => {
   let webviewHelper: WebViewInteractionHelper;
   let visualHelper: VisualTestingUtility;
 
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page: _page }) => {
     extensionHelper = new VSCodeExtensionTestHelper(page);
     terminalHelper = new TerminalLifecycleHelper(page);
     webviewHelper = new WebViewInteractionHelper(page);
@@ -212,7 +212,7 @@ test.describe('ANSI Color Rendering', () => {
    * Validates that color combinations meet accessibility
    * standards (WCAG AA).
    */
-  test('should maintain adequate color contrast @P1 @visual-regression @accessibility', async ({ page }) => {
+  test('should maintain adequate color contrast @P1 @visual-regression @accessibility', async ({ page: _page }) => {
     // Arrange: Send colored text
     const ansiOutput = readFileSync(`${TEST_PATHS.TERMINAL_OUTPUT}/ansi-colors.txt`, 'utf-8');
     await terminalHelper.sendText(1, ansiOutput);

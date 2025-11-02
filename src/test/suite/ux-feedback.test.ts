@@ -111,7 +111,7 @@ suite('UX Feedback Test Suite', () => {
 
     try {
       // These operations should complete quickly and successfully
-      const terminalId = terminalManager.createTerminal();
+      const _terminalId = terminalManager.createTerminal();
       assert.ok(terminalId, 'Terminal creation should return an ID');
 
       provider.killTerminal();
@@ -170,7 +170,7 @@ suite('UX Feedback Test Suite', () => {
   });
 
   test('User input should be responsive', () => {
-    const terminalId = terminalManager.createTerminal();
+    const _terminalId = terminalManager.createTerminal();
 
     const testInputs = [
       'echo "Hello World"',
@@ -191,7 +191,7 @@ suite('UX Feedback Test Suite', () => {
 
   test('Accessibility features should work', () => {
     // Test that the extension provides proper accessibility support
-    const terminalId = terminalManager.createTerminal();
+    const _terminalId = terminalManager.createTerminal();
     const terminals = terminalManager.getTerminals();
 
     // Verify terminal has proper identification
@@ -247,7 +247,7 @@ suite('UX Feedback Test Suite', () => {
 
   test('Error recovery should be smooth', () => {
     // Test that the extension recovers gracefully from errors
-    const terminalId = terminalManager.createTerminal();
+    const _terminalId = terminalManager.createTerminal();
 
     // Kill the terminal
     terminalManager.killTerminal(terminalId);

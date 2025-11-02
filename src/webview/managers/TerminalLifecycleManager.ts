@@ -605,6 +605,9 @@ export class TerminalLifecycleManager {
         this.splitManager.getTerminals().set(terminalId, terminalInstance);
         this.splitManager.getTerminalContainers().set(terminalId, mainContainer);
 
+        // 🆕 Setup auto-save for scrollback (VS Code standard approach)
+        this.setupScrollbackAutoSave(terminal, terminalId, serializeAddon);
+
         // 🆕 NEW (Issue #198): Register container with TerminalContainerManager
         const containerManager = this.coordinator?.getTerminalContainerManager?.();
         if (containerManager) {
@@ -1441,11 +1444,12 @@ export class TerminalLifecycleManager {
       let terminalsWrapper = document.getElementById('terminals-wrapper');
       if (!terminalsWrapper) {
         terminalLogger.info('Creating terminals-wrapper container');
+
         terminalsWrapper = document.createElement('div');
         terminalsWrapper.id = 'terminals-wrapper';
         terminalsWrapper.style.cssText = `
           display: flex;
-          flex-direction: column;
+          flex-direction: row;
           flex: 1;
           width: 100%;
           height: 100%;
@@ -1462,7 +1466,7 @@ export class TerminalLifecycleManager {
           terminalsWrapper!.appendChild(terminal);
         });
 
-        terminalLogger.info('✅ terminals-wrapper container created and existing terminals moved');
+        terminalLogger.info('✅ terminals-wrapper created with default flexDirection: row (ResizeObserver will adjust)');
       }
 
       terminalLogger.info('Terminal body container initialized');
@@ -1549,6 +1553,83 @@ export class TerminalLifecycleManager {
       activeTerminalId: this.activeTerminalId,
       terminalIds: Array.from(terminals.keys()),
     };
+  }
+
+  /**
+   * Setup automatic scrollback save on terminal output (VS Code standard approach)
+   */
+  private setupScrollbackAutoSave(
+    terminal: Terminal,
+    terminalId: string,
+    serializeAddon: import('@xterm/addon-serialize').SerializeAddon
+  ): void {
+    let saveTimer: number | null = null;
+
+    const pushScrollbackToExtension = (): void => {
+      if (saveTimer) {
+        window.clearTimeout(saveTimer);
+      }
+
+      saveTimer = window.setTimeout(() => {
+        try {
+          // Serialize terminal content with colors
+          const serialized = serializeAddon.serialize({ scrollback: 1000 });
+          const lines = serialized.split('\n');
+
+          // Get VS Code API
+          const windowWithApi = window as Window & {
+            vscodeApi?: {
+              postMessage: (message: unknown) => void;
+            };
+          };
+
+          const message = {
+            command: 'pushScrollbackData',
+            terminalId,
+            scrollbackData: lines,
+            timestamp: Date.now(),
+          };
+
+          // Try window.vscodeApi first
+          if (windowWithApi.vscodeApi) {
+            windowWithApi.vscodeApi.postMessage(message);
+            terminalLogger.info(
+              `💾 [AUTO-SAVE] Pushed scrollback via vscodeApi for terminal ${terminalId}: ${lines.length} lines`
+            );
+          } else {
+            // Fallback: Use coordinator's message manager
+            terminalLogger.warn(
+              `⚠️ [AUTO-SAVE] window.vscodeApi not available, using MessageManager fallback`
+            );
+
+            if (this.coordinator && typeof this.coordinator.postMessageToExtension === 'function') {
+              this.coordinator.postMessageToExtension(message);
+              terminalLogger.info(
+                `💾 [AUTO-SAVE] Pushed scrollback via MessageManager for terminal ${terminalId}: ${lines.length} lines`
+              );
+            } else {
+              terminalLogger.error(
+                `❌ [AUTO-SAVE] No message transport available for terminal ${terminalId}`
+              );
+            }
+          }
+        } catch (error) {
+          terminalLogger.warn(`⚠️ [AUTO-SAVE] Failed to push scrollback for terminal ${terminalId}:`, error);
+        }
+      }, 1000); // 1 second debounce
+    };
+
+    // Auto-save on terminal data output
+    terminal.onData(pushScrollbackToExtension);
+    terminal.onLineFeed(pushScrollbackToExtension);
+
+    // Force initial push after 2 seconds to ensure data is captured
+    setTimeout(() => {
+      terminalLogger.info(`🔄 [AUTO-SAVE] Forcing initial scrollback push for terminal: ${terminalId}`);
+      pushScrollbackToExtension();
+    }, 2000);
+
+    terminalLogger.info(`✅ [AUTO-SAVE] Scrollback auto-save enabled for terminal: ${terminalId}`);
   }
 
   /**

@@ -11,9 +11,19 @@ export class StandardTerminalSessionManager {
   private static readonly STORAGE_KEY = 'standard-terminal-session-v3';
   private static readonly SESSION_VERSION = '3.0.0';
   private static readonly MAX_SESSION_AGE_DAYS = 7;
+  private static readonly AUTO_SAVE_DEBOUNCE_MS = 30000; // 30 seconds
 
   // VS Code標準アプローチ: 複雑なメッセージパッシングは不要
   // StandardTerminalPersistenceManagerが自動的にscrollbackを管理
+
+  // Optional: debounced auto-save timer (for real-time save)
+  private autoSaveDebounceTimer?: NodeJS.Timeout;
+
+  // Flag to prevent auto-save during restore
+  private isRestoring = false;
+
+  // Cache for pushed scrollback data from WebView (instant save)
+  private pushedScrollbackCache: Map<string, string[]> = new Map();
 
   constructor(
     private readonly context: vscode.ExtensionContext,
@@ -22,7 +32,9 @@ export class StandardTerminalSessionManager {
       _sendMessage: (message: unknown) => Promise<void>;
       sendMessageToWebview: (message: unknown) => Promise<void>;
     }
-  ) {}
+  ) {
+    // Session save happens in ExtensionLifecycle.deactivate()
+  }
 
   private pendingRestoreResponse?: {
     expectedCount: number;
@@ -78,6 +90,12 @@ export class StandardTerminalSessionManager {
     error?: string;
   }> {
     try {
+      // Skip save during restore to prevent overwriting session with empty data
+      if (this.isRestoring) {
+        log('⚠️ [STANDARD-SESSION] Skipping save during restore operation');
+        return { success: true, terminalCount: 0 };
+      }
+
       log('💾 [STANDARD-SESSION] Starting VS Code standard session save...');
 
       const config = this.getTerminalPersistenceConfig();
@@ -103,16 +121,44 @@ export class StandardTerminalSessionManager {
         isActive: terminal.id === activeTerminalId,
       }));
 
-      // WebViewから履歴データを取得
-      log('💾 [STANDARD-SESSION] Requesting scrollback data from WebView...');
-      const terminalInfos = terminals.map((terminal) => ({
-        id: terminal.id,
-        name: terminal.name,
-        number: terminal.number || 1,
-        cwd: terminal.cwd || safeProcessCwd(),
-        isActive: terminal.id === activeTerminalId,
-      }));
-      const scrollbackData = await this.requestScrollbackDataFromWebView(terminalInfos);
+      // Try to use cached scrollback data first (instant save like VS Code)
+      const scrollbackData: Record<string, unknown> = {};
+      let cachedCount = 0;
+      let requestedCount = 0;
+
+      for (const terminal of terminals) {
+        const cachedData = this.pushedScrollbackCache.get(terminal.id);
+        if (cachedData && cachedData.length > 0) {
+          scrollbackData[terminal.id] = cachedData;
+          cachedCount++;
+          log(`✅ [INSTANT-SAVE] Using cached scrollback for terminal ${terminal.id}: ${cachedData.length} lines`);
+        }
+      }
+
+      // If no cached data, request from WebView (fallback)
+      if (cachedCount === 0) {
+        log('💾 [STANDARD-SESSION] No cached data - requesting scrollback from WebView...');
+        log(`🔍 [DEBUG-SAVE] Terminal count: ${terminals.length}`);
+        const terminalInfos = terminals.map((terminal) => ({
+          id: terminal.id,
+          name: terminal.name,
+          number: terminal.number || 1,
+          cwd: terminal.cwd || safeProcessCwd(),
+          isActive: terminal.id === activeTerminalId,
+        }));
+        log(`🔍 [DEBUG-SAVE] Requesting scrollback for terminals: ${terminalInfos.map(t => t.id).join(', ')}`);
+        const requestedData = await this.requestScrollbackDataFromWebView(terminalInfos);
+        Object.assign(scrollbackData, requestedData);
+        requestedCount = Object.keys(requestedData).length;
+        log(`🔍 [DEBUG-SAVE] Received scrollback data for ${requestedCount} terminals`);
+        Object.keys(requestedData).forEach(termId => {
+          const data = requestedData[termId];
+          const lineCount = Array.isArray(data) ? data.length : 0;
+          log(`🔍 [DEBUG-SAVE] Terminal ${termId}: ${lineCount} lines`);
+        });
+      }
+
+      log(`✅ [INSTANT-SAVE] Scrollback data summary: ${cachedCount} from cache, ${requestedCount} from request`);
 
       const sessionData = {
         terminals: basicTerminals,
@@ -132,6 +178,23 @@ export class StandardTerminalSessionManager {
         StandardTerminalSessionManager.STORAGE_KEY,
         sessionData
       );
+
+      // Verification: Immediately read back to confirm persistence
+      const verifyData = this.context.workspaceState.get<typeof sessionData>(
+        StandardTerminalSessionManager.STORAGE_KEY
+      );
+      log(`🔍 [VERIFY-SAVE] Data persisted to workspaceState: ${!!verifyData}`);
+      if (verifyData) {
+        log(`🔍 [VERIFY-SAVE] Terminals in storage: ${verifyData.terminals?.length || 0}`);
+        log(`🔍 [VERIFY-SAVE] Scrollback data keys: ${Object.keys(verifyData.scrollbackData || {}).join(', ')}`);
+        Object.keys(verifyData.scrollbackData || {}).forEach(termId => {
+          const data = verifyData.scrollbackData?.[termId];
+          const lineCount = Array.isArray(data) ? data.length : 0;
+          log(`🔍 [VERIFY-SAVE] Storage verification - Terminal ${termId}: ${lineCount} lines`);
+        });
+      } else {
+        log(`❌ [VERIFY-SAVE] WARNING: Data NOT found in workspaceState immediately after save!`);
+      }
 
       log(
         `✅ [STANDARD-SESSION] VS Code standard session saved: ${basicTerminals.length} terminals`
@@ -164,6 +227,8 @@ export class StandardTerminalSessionManager {
     }>;
     timestamp?: number;
     version?: string;
+    activeTerminalId?: string | null;
+    scrollbackData?: Record<string, unknown>;
   } | null {
     try {
       // Use workspaceState for per-workspace session isolation (multi-window support)
@@ -200,6 +265,8 @@ export class StandardTerminalSessionManager {
         terminals: sessionData.terminals,
         timestamp: sessionData.timestamp,
         version: sessionData.version,
+        activeTerminalId: sessionData.activeTerminalId,
+        scrollbackData: sessionData.scrollbackData,
       };
     } catch (error) {
       log(`❌ [STANDARD-SESSION] Error getting session info: ${String(error)}`);
@@ -217,7 +284,18 @@ export class StandardTerminalSessionManager {
     error?: string;
   }> {
     try {
+      // Set flag to prevent auto-save during restore
+      this.isRestoring = true;
       log('🔄 [STANDARD-SESSION] === VS Code Standard Session Restore Start ===');
+
+      // Notify WebView that restore is in progress
+      if (this.sidebarProvider) {
+        await this.sidebarProvider.sendMessageToWebview({
+          command: 'setRestoringSession',
+          isRestoring: true,
+        });
+        log('📤 [STANDARD-SESSION] Sent isRestoring=true to WebView');
+      }
 
       const config = this.getTerminalPersistenceConfig();
       if (!config.enablePersistentSessions) {
@@ -250,6 +328,22 @@ export class StandardTerminalSessionManager {
       }
 
       log(`🔍 [STANDARD-SESSION] Found session with ${sessionData.terminals.length} terminals`);
+
+      // Verification: Log what scrollback data was found in storage
+      log(`🔍 [VERIFY-RESTORE] Session timestamp: ${new Date(sessionData.timestamp).toISOString()}`);
+      log(`🔍 [VERIFY-RESTORE] Session version: ${sessionData.version}`);
+      log(`🔍 [VERIFY-RESTORE] Has scrollbackData property: ${!!sessionData.scrollbackData}`);
+      if (sessionData.scrollbackData) {
+        const scrollbackKeys = Object.keys(sessionData.scrollbackData);
+        log(`🔍 [VERIFY-RESTORE] Scrollback data keys in storage: ${scrollbackKeys.join(', ')}`);
+        scrollbackKeys.forEach(termId => {
+          const data = sessionData.scrollbackData?.[termId];
+          const lineCount = Array.isArray(data) ? data.length : 0;
+          log(`🔍 [VERIFY-RESTORE] Storage data for terminal ${termId}: ${lineCount} lines`);
+        });
+      } else {
+        log(`❌ [VERIFY-RESTORE] WARNING: No scrollbackData found in storage!`);
+      }
 
       // セッション期限チェック
       if (this.isSessionExpired(sessionData)) {
@@ -432,6 +526,19 @@ export class StandardTerminalSessionManager {
         skippedCount: 0,
         error: String(error),
       };
+    } finally {
+      // Clear flag to re-enable auto-save after restore completes
+      this.isRestoring = false;
+      log('✅ [STANDARD-SESSION] Restore flag cleared - auto-save re-enabled');
+
+      // Notify WebView that restore is complete
+      if (this.sidebarProvider) {
+        await this.sidebarProvider.sendMessageToWebview({
+          command: 'setRestoringSession',
+          isRestoring: false,
+        });
+        log('📤 [STANDARD-SESSION] Sent isRestoring=false to WebView');
+      }
     }
   }
 
@@ -450,6 +557,8 @@ export class StandardTerminalSessionManager {
     log(
       `📋 [STANDARD-SESSION] Requesting scrollback data from WebView via extractScrollbackData`
     );
+    log(`🔍 [SCROLLBACK-DEBUG] Terminal count: ${terminals.length}`);
+    log(`🔍 [SCROLLBACK-DEBUG] Terminal IDs: ${terminals.map(t => t.id).join(', ')}`);
 
     if (!this.sidebarProvider) {
       log('⚠️ [STANDARD-SESSION] No sidebar provider available for scrollback request');
@@ -465,16 +574,19 @@ export class StandardTerminalSessionManager {
         terminals.map(async (terminal) => {
           try {
             const requestId = `scrollback-${terminal.id}-${Date.now()}`;
+            log(`📤 [SCROLLBACK-DEBUG] Sending request ${requestId} for terminal ${terminal.id}`);
 
             const scrollbackData = await new Promise<string[]>((resolve) => {
               const timeout = setTimeout(() => {
-                log(`⏰ [STANDARD-SESSION] Timeout for terminal ${terminal.id}, using empty scrollback`);
+                log(`⏰ [SCROLLBACK-DEBUG] ⚠️ TIMEOUT (10s) for terminal ${terminal.id} - NO RESPONSE FROM WEBVIEW`);
+                log(`⏰ [SCROLLBACK-DEBUG] Request ID was: ${requestId}`);
                 resolve([]);
               }, 10000); // 10 second timeout per terminal
 
               // Store pending request
               if (!(this as any)._pendingScrollbackRequests) {
                 (this as any)._pendingScrollbackRequests = new Map();
+                log(`🔍 [SCROLLBACK-DEBUG] Created new _pendingScrollbackRequests Map`);
               }
 
               (this as any)._pendingScrollbackRequests.set(requestId, {
@@ -482,8 +594,10 @@ export class StandardTerminalSessionManager {
                 timeout,
                 terminalId: terminal.id,
               });
+              log(`🔍 [SCROLLBACK-DEBUG] Stored pending request ${requestId} in Map`);
 
               // Send extractScrollbackData command to WebView
+              log(`📨 [SCROLLBACK-DEBUG] Sending 'extractScrollbackData' command to WebView...`);
               this.sidebarProvider!.sendMessageToWebview({
                 command: 'extractScrollbackData',
                 terminalId: terminal.id,
@@ -491,11 +605,16 @@ export class StandardTerminalSessionManager {
                 maxLines: 1000,
                 timestamp: Date.now(),
               });
+              log(`✅ [SCROLLBACK-DEBUG] Message sent to WebView for terminal ${terminal.id}`);
             });
+
+            log(`📥 [SCROLLBACK-DEBUG] Promise resolved for terminal ${terminal.id}: ${scrollbackData.length} lines`);
 
             if (scrollbackData && scrollbackData.length > 0) {
               scrollbackDataMap[terminal.id] = scrollbackData;
               log(`✅ [STANDARD-SESSION] Received ${scrollbackData.length} lines for terminal ${terminal.id}`);
+            } else {
+              log(`⚠️ [SCROLLBACK-DEBUG] No scrollback data received for terminal ${terminal.id}`);
             }
           } catch (error) {
             log(`❌ [STANDARD-SESSION] Failed to get scrollback for terminal ${terminal.id}:`, error);
@@ -504,6 +623,7 @@ export class StandardTerminalSessionManager {
       );
 
       log(`✅ [STANDARD-SESSION] Collected scrollback data for ${Object.keys(scrollbackDataMap).length}/${terminals.length} terminals`);
+      log(`🔍 [SCROLLBACK-DEBUG] Final scrollback map keys: ${Object.keys(scrollbackDataMap).join(', ')}`);
       return scrollbackDataMap;
     } catch (error) {
       log(`❌ [STANDARD-SESSION] Failed to request scrollback data:`, error);
@@ -521,20 +641,34 @@ export class StandardTerminalSessionManager {
     scrollbackData?: string[];
     error?: string;
   }): void {
+    log(`📥 [SCROLLBACK-RESPONSE] Received response from WebView`);
+    log(`🔍 [SCROLLBACK-RESPONSE] Request ID: ${message.requestId || 'MISSING'}`);
+    log(`🔍 [SCROLLBACK-RESPONSE] Terminal ID: ${message.terminalId || 'MISSING'}`);
+    log(`🔍 [SCROLLBACK-RESPONSE] Data length: ${message.scrollbackData?.length || 0}`);
+    log(`🔍 [SCROLLBACK-RESPONSE] Error: ${message.error || 'none'}`);
+
     if (!message.requestId) {
+      log(`⚠️ [SCROLLBACK-RESPONSE] No requestId in message - ignoring`);
       return;
     }
 
     const pendingRequests = (this as any)._pendingScrollbackRequests as Map<string, any> | undefined;
     if (!pendingRequests) {
+      log(`⚠️ [SCROLLBACK-RESPONSE] No _pendingScrollbackRequests Map found!`);
       return;
     }
 
+    log(`🔍 [SCROLLBACK-RESPONSE] Pending requests count: ${pendingRequests.size}`);
+    log(`🔍 [SCROLLBACK-RESPONSE] Pending request IDs: ${Array.from(pendingRequests.keys()).join(', ')}`);
+
     const pendingRequest = pendingRequests.get(message.requestId);
     if (!pendingRequest) {
-      log(`⚠️ [STANDARD-SESSION] No pending request found for ${message.requestId}`);
+      log(`⚠️ [SCROLLBACK-RESPONSE] No pending request found for ${message.requestId}`);
+      log(`⚠️ [SCROLLBACK-RESPONSE] This request may have timed out already`);
       return;
     }
+
+    log(`✅ [SCROLLBACK-RESPONSE] Found pending request for ${message.requestId}`);
 
     // Clear timeout and resolve promise
     clearTimeout(pendingRequest.timeout);
@@ -547,6 +681,29 @@ export class StandardTerminalSessionManager {
       log(`✅ [STANDARD-SESSION] Scrollback data received for terminal ${message.terminalId}: ${message.scrollbackData?.length || 0} lines`);
       pendingRequest.resolve(message.scrollbackData || []);
     }
+  }
+
+  /**
+   * Handle pushed scrollback data from WebView (instant save like VS Code)
+   */
+  public handlePushedScrollbackData(message: {
+    command: string;
+    terminalId?: string;
+    scrollbackData?: string[];
+    timestamp?: number;
+  }): void {
+    log(`📥 [INSTANT-SAVE] Received pushed scrollback data from WebView`);
+    log(`🔍 [INSTANT-SAVE] Terminal ID: ${message.terminalId || 'MISSING'}`);
+    log(`🔍 [INSTANT-SAVE] Data length: ${message.scrollbackData?.length || 0} lines`);
+
+    if (!message.terminalId || !message.scrollbackData) {
+      log(`⚠️ [INSTANT-SAVE] Missing terminalId or scrollbackData - ignoring`);
+      return;
+    }
+
+    // Store in cache for instant access during save
+    this.pushedScrollbackCache.set(message.terminalId, message.scrollbackData);
+    log(`✅ [INSTANT-SAVE] Cached scrollback for terminal ${message.terminalId}: ${message.scrollbackData.length} lines`);
   }
 
   private _oldRequestSerializationMethod_DEPRECATED(): void {
@@ -893,5 +1050,46 @@ export class StandardTerminalSessionManager {
         : false,
       configEnabled: config.enablePersistentSessions,
     };
+  }
+
+  /**
+   * Schedule debounced auto-save (optional, for real-time save)
+   * Call this method when terminal content changes to trigger auto-save
+   */
+  public scheduleAutoSave(): void {
+    // Clear existing timer
+    if (this.autoSaveDebounceTimer) {
+      clearTimeout(this.autoSaveDebounceTimer);
+    }
+
+    // Schedule new auto-save after debounce delay
+    this.autoSaveDebounceTimer = setTimeout(async () => {
+      log('💾 [STANDARD-SESSION] Auto-saving session (debounced)...');
+      try {
+        const result = await this.saveCurrentSession();
+        if (result.success) {
+          log(
+            `✅ [STANDARD-SESSION] Debounced auto-save completed: ${result.terminalCount} terminals`
+          );
+        } else {
+          log(`⚠️ [STANDARD-SESSION] Debounced auto-save failed: ${result.error}`);
+        }
+      } catch (error) {
+        log(`❌ [STANDARD-SESSION] Debounced auto-save error: ${String(error)}`);
+      }
+    }, StandardTerminalSessionManager.AUTO_SAVE_DEBOUNCE_MS);
+  }
+
+  /**
+   * Dispose auto-save timers
+   * Should be called when extension deactivates
+   */
+  public dispose(): void {
+    // Clear debounce timer
+    if (this.autoSaveDebounceTimer) {
+      clearTimeout(this.autoSaveDebounceTimer);
+      this.autoSaveDebounceTimer = undefined;
+      log('🔧 [STANDARD-SESSION] Cleared auto-save debounce timer');
+    }
   }
 }

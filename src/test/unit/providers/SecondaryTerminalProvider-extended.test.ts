@@ -1,7 +1,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { expect } from 'chai';
+// import { expect } from 'chai';
 import * as sinon from 'sinon';
 import { JSDOM } from 'jsdom';
 
@@ -203,7 +203,7 @@ describe('SecondaryTerminalProvider Extended', () => {
     });
 
     it('should create new terminal', () => {
-      const terminalId = 'terminal-123';
+      const _terminalId = 'terminal-123';
       mockTerminalManager.createTerminal.returns(terminalId);
 
       const result = mockTerminalManager.createTerminal();
@@ -213,7 +213,7 @@ describe('SecondaryTerminalProvider Extended', () => {
     });
 
     it('should kill terminal', () => {
-      const terminalId = 'terminal-123';
+      const _terminalId = 'terminal-123';
 
       mockProvider._performKillTerminal(terminalId);
 
@@ -227,7 +227,7 @@ describe('SecondaryTerminalProvider Extended', () => {
     });
 
     it('should write to terminal', () => {
-      const terminalId = 'terminal-123';
+      const _terminalId = 'terminal-123';
       const data = 'echo "Hello World"';
 
       mockTerminalManager.writeToTerminal(terminalId, data);
@@ -236,7 +236,7 @@ describe('SecondaryTerminalProvider Extended', () => {
     });
 
     it('should resize terminal', () => {
-      const terminalId = 'terminal-123';
+      const _terminalId = 'terminal-123';
       const rows = 30;
       const cols = 100;
 

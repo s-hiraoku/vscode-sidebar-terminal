@@ -50,7 +50,7 @@ suite('Performance Test Suite', () => {
   });
 
   test('Large data input should be handled efficiently', () => {
-    const terminalId = terminalManager.createTerminal();
+    const _terminalId = terminalManager.createTerminal();
     const largeData = 'x'.repeat(10000); // 10KB of data
 
     const startTime = Date.now();
@@ -131,7 +131,7 @@ suite('Performance Test Suite', () => {
   });
 
   test('Concurrent operations should not degrade performance', async () => {
-    const terminalId = terminalManager.createTerminal();
+    const _terminalId = terminalManager.createTerminal();
 
     const startTime = Date.now();
 
@@ -175,7 +175,7 @@ suite('Performance Test Suite', () => {
 
     // Create and destroy terminals to trigger events
     for (let i = 0; i < 10; i++) {
-      const terminalId = terminalManager.createTerminal();
+      const _terminalId = terminalManager.createTerminal();
       terminalManager.sendInput('echo test\n', terminalId);
       terminalManager.killTerminal(terminalId);
     }

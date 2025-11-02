@@ -51,7 +51,9 @@ export class WebViewInteractionHelper {
    * @param y - Y coordinate
    */
   async altClick(x: number, y: number): Promise<void> {
-    await this.page.mouse.click(x, y, { modifiers: ['Alt'] });
+    await this.page.keyboard.down('Alt');
+    await this.page.mouse.click(x, y);
+    await this.page.keyboard.up('Alt');
   }
 
   /**
@@ -77,8 +79,8 @@ export class WebViewInteractionHelper {
    * @param scrollTop - Scroll position
    */
   async scrollTo(scrollTop: number): Promise<void> {
-    const frame = this.getWebViewFrame();
-    await frame.evaluate((top) => {
+    // Future: Scroll WebView iframe
+    await this.page.evaluate((top: number) => {
       window.scrollTo(0, top);
     }, scrollTop);
   }
@@ -88,8 +90,7 @@ export class WebViewInteractionHelper {
    * @returns Current scroll position
    */
   async getScrollPosition(): Promise<number> {
-    const frame = this.getWebViewFrame();
-    return await frame.evaluate(() => window.scrollY);
+    return await this.page.evaluate(() => window.scrollY);
   }
 
   /**

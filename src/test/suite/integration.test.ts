@@ -66,7 +66,7 @@ suite('Integration Test Suite', () => {
 
   test('Should manage terminal lifecycle', () => {
     // Create terminal
-    const terminalId = terminalManager.createTerminal();
+    const _terminalId = terminalManager.createTerminal();
     assert.ok(terminalId);
     assert.strictEqual(terminalManager.hasActiveTerminal(), true);
 
@@ -102,7 +102,7 @@ suite('Integration Test Suite', () => {
     });
 
     // Create terminal and simulate data
-    const terminalId = terminalManager.createTerminal();
+    const _terminalId = terminalManager.createTerminal();
 
     // Simulate data event (this would normally come from PTY)
     setTimeout(() => {

@@ -52,6 +52,9 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
       case 'terminalRemoved':
         this.handleTerminalRemoved(msg, coordinator);
         break;
+      case 'setRestoringSession':
+        this.handleSetRestoringSession(msg, coordinator);
+        break;
       case 'clear':
       case 'clearTerminal':
         this.handleClearTerminal(msg, coordinator);
@@ -230,9 +233,27 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
   }
 
   /**
+   * Handle set restoring session flag
+   */
+  private handleSetRestoringSession(msg: MessageCommand, coordinator: IManagerCoordinator): void {
+    const isRestoring = (msg as { isRestoring?: boolean }).isRestoring || false;
+    if (typeof coordinator.setRestoringSession === 'function') {
+      coordinator.setRestoringSession(isRestoring);
+      this.logger.info(`🔄 [SESSION-RESTORE] isRestoringSession flag set to: ${isRestoring}`);
+    }
+  }
+
+  /**
    * Handle clear terminal request
    */
   private handleClearTerminal(msg: MessageCommand, coordinator: IManagerCoordinator): void {
+    // 🎯 FIX: Block terminal clear during session restore
+    if (typeof coordinator.isRestoringSession === 'function' && coordinator.isRestoringSession()) {
+      const terminalId = msg.terminalId as string;
+      this.logger.warn(`⚠️ [SESSION-RESTORE] Terminal clear blocked during restore: ${terminalId || 'all'}`);
+      return;
+    }
+
     const terminalId = msg.terminalId as string;
     if (terminalId) {
       const terminal = coordinator.getTerminalInstance(terminalId);

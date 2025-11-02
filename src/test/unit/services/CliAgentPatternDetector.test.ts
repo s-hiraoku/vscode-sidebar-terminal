@@ -14,7 +14,7 @@
  */
 
 import { describe, it, beforeEach } from 'mocha';
-import { expect } from 'chai';
+// import { expect } from 'chai';
 
 import { CliAgentPatternDetector } from '../../../services/CliAgentDetectionService';
 import { ICliAgentPatternDetector } from '../../../interfaces/CliAgentService';

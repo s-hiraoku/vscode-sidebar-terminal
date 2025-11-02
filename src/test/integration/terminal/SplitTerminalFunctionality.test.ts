@@ -15,7 +15,7 @@
  * 3. REFACTOR: Optimize split operations while maintaining functionality
  */
 
-import { expect } from 'chai';
+// import { expect } from 'chai';
 import * as sinon from 'sinon';
 import { setupTestEnvironment, resetTestEnvironment, mockVscode } from '../../shared/TestSetup';
 import { SplitManager } from '../../../webview/managers/SplitManager';

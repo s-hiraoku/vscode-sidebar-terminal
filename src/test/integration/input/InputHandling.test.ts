@@ -4,7 +4,7 @@
  * Tests real-world input processing flows and component interaction patterns
  */
 
-import { expect } from 'chai';
+// import { expect } from 'chai';
 import { describe, it, beforeEach, afterEach } from 'mocha';
 import sinon from 'sinon';
 import { JSDOM } from 'jsdom';

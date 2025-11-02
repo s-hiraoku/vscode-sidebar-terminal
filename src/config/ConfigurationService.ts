@@ -7,6 +7,7 @@
 
 import * as vscode from 'vscode';
 import { extension as log } from '../utils/logger';
+import { FeatureFlagService } from '../services/FeatureFlagService';
 
 /**
  * 設定変更イベントハンドラー
@@ -26,8 +27,10 @@ export class ConfigurationService {
   private configCache = new Map<string, unknown>();
   private changeHandlers = new Set<ConfigChangeHandler>();
   private disposables: vscode.Disposable[] = [];
+  private featureFlagService: FeatureFlagService;
 
   private constructor() {
+    this.featureFlagService = new FeatureFlagService();
     this.setupConfigurationWatcher();
   }
 
@@ -51,6 +54,7 @@ export class ConfigurationService {
     this.disposables = [];
     this.configCache.clear();
     this.changeHandlers.clear();
+    this.featureFlagService.dispose();
   }
 
   // === VS Code設定セクション取得 ===
@@ -81,6 +85,57 @@ export class ConfigurationService {
    */
   getWorkbenchConfig(): vscode.WorkspaceConfiguration {
     return vscode.workspace.getConfiguration('workbench');
+  }
+
+  // === Feature Flag アクセス ===
+
+  /**
+   * Feature Flag Service を取得
+   */
+  getFeatureFlagService(): FeatureFlagService {
+    return this.featureFlagService;
+  }
+
+  /**
+   * Enhanced scrollback persistence が有効かどうか
+   */
+  isEnhancedScrollbackEnabled(): boolean {
+    return this.featureFlagService.isEnhancedScrollbackEnabled();
+  }
+
+  /**
+   * Scrollback line limit を取得
+   */
+  getScrollbackLineLimit(): number {
+    return this.featureFlagService.getScrollbackLineLimit();
+  }
+
+  /**
+   * VS Code standard IME が有効かどうか
+   */
+  isVSCodeStandardIMEEnabled(): boolean {
+    return this.featureFlagService.isVSCodeStandardIMEEnabled();
+  }
+
+  /**
+   * VS Code keyboard shortcuts が有効かどうか
+   */
+  isVSCodeKeyboardShortcutsEnabled(): boolean {
+    return this.featureFlagService.isVSCodeKeyboardShortcutsEnabled();
+  }
+
+  /**
+   * VS Code standard cursor が有効かどうか
+   */
+  isVSCodeStandardCursorEnabled(): boolean {
+    return this.featureFlagService.isVSCodeStandardCursorEnabled();
+  }
+
+  /**
+   * Full ANSI support が有効かどうか
+   */
+  isFullANSISupportEnabled(): boolean {
+    return this.featureFlagService.isFullANSISupportEnabled();
   }
 
   // === キャッシュ付き設定値取得 ===

@@ -132,6 +132,20 @@ export class PanelLocationHandler implements IMessageHandler {
       ) {
         splitManager.updateSplitDirection(newSplitDirection, location);
       }
+
+      // 🎯 FIX: Also update terminals-wrapper flexDirection in normal mode
+      // Panel (horizontal) → row (横並び)
+      // Sidebar (vertical) → column (縦並び)
+      const terminalsWrapper = document.getElementById('terminals-wrapper');
+      if (terminalsWrapper) {
+        const newFlexDirection = newSplitDirection === 'horizontal' ? 'row' : 'column';
+        terminalsWrapper.style.flexDirection = newFlexDirection;
+        this.logger.info(
+          `✅ Updated terminals-wrapper flexDirection to: ${newFlexDirection} (location: ${location})`
+        );
+      } else {
+        this.logger.warn('terminals-wrapper element not found, cannot update flexDirection');
+      }
     } catch (error) {
       this.logger.error('Error handling panel location update', error);
     }

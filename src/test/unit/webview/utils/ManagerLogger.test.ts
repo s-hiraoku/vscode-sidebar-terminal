@@ -3,7 +3,7 @@
  * Tests for standardized logging across managers with emoji prefixes
  */
 
-import { expect } from 'chai';
+// import { expect } from 'chai';
 import { SinonSandbox, createSandbox } from 'sinon';
 
 describe.skip('ManagerLogger', () => {

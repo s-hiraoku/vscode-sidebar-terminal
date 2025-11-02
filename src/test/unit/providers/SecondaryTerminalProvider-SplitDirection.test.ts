@@ -4,7 +4,7 @@
  */
 
 import { describe, it, beforeEach, afterEach } from 'mocha';
-import { expect } from 'chai';
+// import { expect } from 'chai';
 import * as sinon from 'sinon';
 import * as vscode from 'vscode';
 import { SecondaryTerminalProvider } from '../../../providers/SecondaryTerminalProvider';

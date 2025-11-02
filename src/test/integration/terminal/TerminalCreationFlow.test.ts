@@ -14,7 +14,7 @@
  * 3. REFACTOR: Optimize integration while maintaining functionality
  */
 
-import { expect } from 'chai';
+// import { expect } from 'chai';
 import * as sinon from 'sinon';
 import { setupTestEnvironment, resetTestEnvironment, mockVscode } from '../../shared/TestSetup';
 import {
@@ -55,7 +55,7 @@ describe('Terminal Creation Flow - Integration TDD Suite', () => {
         expect(platformShell.length).to.be.greaterThan(0);
 
         // Step 3: Generate unique terminal ID
-        const terminalId = generateTerminalId();
+        const _terminalId = generateTerminalId();
         expect(terminalId).to.be.a('string');
         expect(terminalId).to.match(/^terminal-\d+-[a-z0-9]+$/);
 

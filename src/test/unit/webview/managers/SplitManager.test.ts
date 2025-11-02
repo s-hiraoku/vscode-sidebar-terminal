@@ -4,7 +4,7 @@
  */
 
 import { describe, it, beforeEach, afterEach } from 'mocha';
-import { expect } from 'chai';
+// import { expect } from 'chai';
 import * as sinon from 'sinon';
 import { JSDOM } from 'jsdom';
 import { SplitManager, TerminalInstance } from '../../../../webview/managers/SplitManager';
@@ -190,7 +190,7 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
 
     it('should preserve terminal state during layout transitions', function () {
       // Arrange
-      const terminalId = 'terminal-1';
+      const _terminalId = 'terminal-1';
       const container = document.createElement('div');
       container.id = `terminal-container-${terminalId}`;
       container.setAttribute('data-terminal-id', terminalId);
@@ -326,7 +326,7 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
 
     it('should handle fitAddon.fit() failures gracefully', function () {
       // Arrange
-      const terminalId = 'terminal-1';
+      const _terminalId = 'terminal-1';
       const container = document.createElement('div');
       document.getElementById('terminal-body')!.appendChild(container);
 
@@ -355,7 +355,7 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
   describe('Performance', function () {
     it('should efficiently handle rapid split direction changes', function () {
       // Arrange
-      const terminalId = 'terminal-1';
+      const _terminalId = 'terminal-1';
       const container = document.createElement('div');
       document.getElementById('terminal-body')!.appendChild(container);
 
@@ -386,7 +386,7 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
 
     it('should not cause memory leaks with repeated layout changes', function () {
       // Arrange
-      const terminalId = 'terminal-1';
+      const _terminalId = 'terminal-1';
       const container = document.createElement('div');
       document.getElementById('terminal-body')!.appendChild(container);
 

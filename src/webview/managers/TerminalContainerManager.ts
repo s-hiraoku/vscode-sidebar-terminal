@@ -296,10 +296,18 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
       targetBody.style.height = '100%';
       targetBody.style.overflow = 'hidden';
 
-      // 🆕 Reset terminals-wrapper flexDirection to column
+      // 🎯 FIX: Reset terminals-wrapper flexDirection based on panel location
       const terminalsWrapper = document.getElementById('terminals-wrapper');
       if (terminalsWrapper) {
-        terminalsWrapper.style.flexDirection = 'column';
+        // Detect panel location from container aspect ratio
+        const container = document.body;
+        const aspectRatio = container.clientWidth / container.clientHeight;
+        const ASPECT_RATIO_THRESHOLD = 1.2;
+        const isPanel = aspectRatio > ASPECT_RATIO_THRESHOLD;
+        const correctFlexDirection = isPanel ? 'row' : 'column';
+
+        terminalsWrapper.style.flexDirection = correctFlexDirection;
+        this.log(`🎨 [CLEAR-SPLIT] Reset terminals-wrapper flexDirection to: ${correctFlexDirection} (aspect: ${aspectRatio.toFixed(3)})`);
       }
 
       this.normalizeTerminalBody(targetBody);
@@ -629,6 +637,9 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
     this.log(`🎨 [LAYOUT] Terminal count: ${terminalCount}`);
     this.log(`🎨 [LAYOUT] Split direction: ${splitDirection}`);
 
+    // 🎯 CORRECT MAPPING:
+    // Panel (horizontal) → row (横並び) - wide layout needs side-by-side
+    // Sidebar (vertical) → column (縦並び) - tall layout needs stacked
     const flexDirection = splitDirection === 'horizontal' ? 'row' : 'column';
     this.log(`🎨 [LAYOUT] CSS flexDirection will be set to: ${flexDirection}`);
     this.log(`🎨 [LAYOUT] Explanation: ${splitDirection} → ${flexDirection} → ${flexDirection === 'row' ? '横並び (side by side)' : '縦並び (stacked)'}`);

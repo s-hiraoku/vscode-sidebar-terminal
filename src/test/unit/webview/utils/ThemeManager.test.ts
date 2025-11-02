@@ -3,7 +3,7 @@
  * Tests for centralized theme and styling management with VS Code integration
  */
 
-import { expect } from 'chai';
+// import { expect } from 'chai';
 import { SinonSandbox, createSandbox } from 'sinon';
 import { JSDOM } from 'jsdom';
 import { ThemeManager } from '../../../../webview/utils/ThemeManager';

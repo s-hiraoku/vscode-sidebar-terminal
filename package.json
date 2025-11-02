@@ -160,6 +160,12 @@
         "category": "Secondary Terminal"
       },
       {
+        "command": "secondaryTerminal.diagnoseSession",
+        "title": "Diagnose Session Data",
+        "category": "Secondary Terminal",
+        "icon": "$(search)"
+      },
+      {
         "command": "secondaryTerminal.clearCorruptedHistory",
         "title": "Clear Corrupted Terminal History",
         "category": "Secondary Terminal",
@@ -778,6 +784,38 @@
           "type": "boolean",
           "default": true,
           "description": "Enable enhanced screen reader support for terminal content (Phase 8: Advanced Terminal Features)."
+        },
+        "secondaryTerminal.features.enhancedScrollbackPersistence": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable VS Code-compatible enhanced scrollback persistence with full state restoration. Beta feature - will be enabled by default in v0.2.0."
+        },
+        "secondaryTerminal.features.scrollbackLineLimit": {
+          "type": "number",
+          "default": 1000,
+          "minimum": 200,
+          "maximum": 3000,
+          "description": "Maximum number of scrollback lines to persist (200-3000). Higher values use more storage. Default: 1000 (matching VS Code)."
+        },
+        "secondaryTerminal.features.vscodeStandardIME": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable VS Code standard IME composition handling patterns. Beta feature - will be enabled by default in v0.2.0."
+        },
+        "secondaryTerminal.features.vscodeKeyboardShortcuts": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable VS Code standard keyboard shortcuts (Ctrl+C copy/SIGINT, Ctrl+V paste, etc.)."
+        },
+        "secondaryTerminal.features.vscodeStandardCursor": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable VS Code standard cursor rendering with configurable styles and blinking. Beta feature - will be enabled by default in v0.2.0."
+        },
+        "secondaryTerminal.features.fullANSISupport": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable full ANSI escape sequence support (256-color, true color, text formatting)."
         }
       }
     },
@@ -898,6 +936,11 @@
     "test:refactored": "npm run test:integration && npm run test:performance",
     "coverage:report": "nyc report --reporter=text --reporter=html",
     "coverage:check": "nyc check-coverage --lines 70 --functions 70 --branches 60",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:report": "playwright show-report",
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
     "vsce:package": "@vscode/vsce package",
     "vsce:publish": "@vscode/vsce publish",
@@ -942,6 +985,7 @@
   },
   "devDependencies": {
     "@istanbuljs/nyc-config-typescript": "^1.0.2",
+    "@playwright/test": "^1.56.1",
     "@testing-library/dom": "^10.4.0",
     "@types/chai": "^5.2.2",
     "@types/chai-as-promised": "^8.0.2",

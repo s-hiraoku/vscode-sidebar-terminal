@@ -193,6 +193,9 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
   // Track processed scrollback requests to prevent duplicates
   private processedScrollbackRequests = new Set<string>();
 
+  // Flag to prevent terminal clear during session restore
+  private _isRestoringSession = false;
+
   constructor() {
     log('🚀 RefactoredTerminalWebviewManager initializing...');
 
@@ -538,6 +541,21 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
   public getSplitManager(): SplitManager {
     return this.splitManager;
+  }
+
+  /**
+   * Check if session restore is in progress
+   */
+  public isRestoringSession(): boolean {
+    return this._isRestoringSession;
+  }
+
+  /**
+   * Set session restore flag
+   */
+  public setRestoringSession(isRestoring: boolean): void {
+    this._isRestoringSession = isRestoring;
+    log(`🔄 [SESSION-RESTORE] isRestoringSession set to: ${isRestoring}`);
   }
 
   // Terminal management delegation

@@ -138,6 +138,10 @@ export interface IManagerCoordinator {
   ): void;
   ensureTerminalFocus(terminalId: string): void;
 
+  // Session restore flag management
+  isRestoringSession?(): boolean;
+  setRestoringSession?(isRestoring: boolean): void;
+
   // セッション復元関連
   createTerminalFromSession?(
     id: string,

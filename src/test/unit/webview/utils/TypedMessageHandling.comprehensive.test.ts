@@ -13,7 +13,7 @@
  * 3. REFACTOR: Improve design while keeping tests green
  */
 
-import { expect } from 'chai';
+// import { expect } from 'chai';
 import * as sinon from 'sinon';
 import {
   MessageDataValidator,
@@ -367,7 +367,7 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
 
       it('should send multiple messages in sequence', () => {
         // RED: Batch sending should work
-        const messages = [
+        const _messages = [
           { command: 'cmd1', data: { value: 1 } },
           { command: 'cmd2', data: { value: 2 } },
           { command: 'cmd3' }

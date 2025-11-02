@@ -1,5 +1,5 @@
 import { describe, it, beforeEach, afterEach } from 'mocha';
-import { expect } from 'chai';
+// import { expect } from 'chai';
 import { JSDOM } from 'jsdom';
 import { TerminalTabManager } from '../../../../webview/managers/TerminalTabManager';
 

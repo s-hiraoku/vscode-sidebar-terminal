@@ -15,7 +15,7 @@
  * 3. REFACTOR: Optimize persistence while maintaining reliability
  */
 
-import { expect } from 'chai';
+// import { expect } from 'chai';
 import * as sinon from 'sinon';
 import { setupTestEnvironment, resetTestEnvironment, mockVscode as _mockVscode } from '../../shared/TestSetup';
 import { StandardTerminalPersistenceManager } from '../../../webview/managers/StandardTerminalPersistenceManager';
@@ -112,7 +112,7 @@ describe('Session Persistence Integration - TDD Suite', () => {
         // RED: Complete terminal state should be serializable
 
         // Step 1: Create terminal with scrollback history
-        const terminalId = generateTerminalId();
+        const _terminalId = generateTerminalId();
         const _terminalInfo = normalizeTerminalInfo({
           id: terminalId,
           name: 'Serialization Test Terminal',
@@ -161,7 +161,7 @@ describe('Session Persistence Integration - TDD Suite', () => {
 
         // Step 1: Create multiple terminals with different states
         for (let i = 0; i < terminalCount; i++) {
-          const terminalId = generateTerminalId();
+          const _terminalId = generateTerminalId();
           const terminalInfo = normalizeTerminalInfo({
             id: terminalId,
             name: `Terminal ${i + 1}`,
@@ -220,7 +220,7 @@ describe('Session Persistence Integration - TDD Suite', () => {
       it('should handle large scrollback history efficiently', async () => {
         // RED: Large scrollback should be serialized without performance issues
 
-        const terminalId = generateTerminalId();
+        const _terminalId = generateTerminalId();
         const _terminalInfo = normalizeTerminalInfo({
           id: terminalId,
           name: 'Large Scrollback Terminal',
@@ -258,7 +258,7 @@ describe('Session Persistence Integration - TDD Suite', () => {
       it('should compress scrollback data to optimize storage', async () => {
         // RED: Scrollback compression should reduce storage requirements
 
-        const terminalId = generateTerminalId();
+        const _terminalId = generateTerminalId();
 
         // Create repetitive content that compresses well
         const repetitiveContent = Array(1000).fill('This is a repeated line of terminal output').join('\n');
@@ -347,7 +347,7 @@ describe('Session Persistence Integration - TDD Suite', () => {
         // Step 1: Create multiple terminals with relationships
         const terminals: any[] = [];
         for (let i = 0; i < 3; i++) {
-          const terminalId = generateTerminalId();
+          const _terminalId = generateTerminalId();
           const terminal = {
             id: terminalId,
             name: `Project Terminal ${i + 1}`,
@@ -544,7 +544,7 @@ describe('Session Persistence Integration - TDD Suite', () => {
       it('should persist sessions to VS Code globalState', async () => {
         // RED: Sessions should be saved to VS Code globalState for persistence
 
-        const terminalId = generateTerminalId();
+        const _terminalId = generateTerminalId();
         const scrollback = ['Persistence test line 1', 'Persistence test line 2'];
 
         // for (const line of scrollback) {
@@ -645,7 +645,7 @@ describe('Session Persistence Integration - TDD Suite', () => {
         // Step 1: Create complex session state
         const terminals: any[] = [];
         for (let i = 0; i < 3; i++) {
-          const terminalId = generateTerminalId();
+          const _terminalId = generateTerminalId();
           const scrollback = [
             `Terminal ${i + 1} session start`,
             `$ cd /workspace/project${i + 1}`,
@@ -708,7 +708,7 @@ describe('Session Persistence Integration - TDD Suite', () => {
         const startTime = Date.now();
 
         for (let i = 0; i < terminalCount; i++) {
-          const terminalId = generateTerminalId();
+          const _terminalId = generateTerminalId();
           const _scrollback = Array(scrollbackSize).fill(`Terminal ${i} line`);
 
           // await persistenceManager.addScrollbackBatch(terminalId, _scrollback); // Method doesn't exist
@@ -737,7 +737,7 @@ describe('Session Persistence Integration - TDD Suite', () => {
 
         // Perform many persistence cycles
         for (let cycle = 0; cycle < 20; cycle++) {
-          const terminalId = generateTerminalId();
+          const _terminalId = generateTerminalId();
           const _scrollback = Array(500).fill(`Cycle ${cycle} line`);
 
           // await persistenceManager.addScrollbackBatch(terminalId, _scrollback); // Method doesn't exist
@@ -766,7 +766,7 @@ describe('Session Persistence Integration - TDD Suite', () => {
         // Start many concurrent persistence operations
         for (let i = 0; i < concurrentOperations; i++) {
           promises.push((async () => {
-            const terminalId = generateTerminalId();
+            const _terminalId = generateTerminalId();
             const _scrollback = [`Concurrent operation ${i}`, `Line ${i}`];
 
             // await persistenceManager.addScrollbackBatch(terminalId, _scrollback); // Method doesn't exist
@@ -832,7 +832,7 @@ describe('Session Persistence Integration - TDD Suite', () => {
       it('should recover from storage failures gracefully', async () => {
         // RED: Storage failures should not lose session data
 
-        const terminalId = generateTerminalId();
+        const _terminalId = generateTerminalId();
         const _criticalScrollback = [
           'Important work session',
           '$ git commit -m "Critical changes"',
@@ -871,7 +871,7 @@ describe('Session Persistence Integration - TDD Suite', () => {
         // Create multiple terminals
         const terminals: any[] = [];
         for (let i = 0; i < 5; i++) {
-          const terminalId = generateTerminalId();
+          const _terminalId = generateTerminalId();
           terminals.push(terminalId);
 
           // await persistenceManager.addScrollbackLine(terminalId, `Terminal ${i} data`); // Method doesn't exist
@@ -908,7 +908,7 @@ describe('Session Persistence Integration - TDD Suite', () => {
         // RED: Automatic backups should enable recovery from corruption
 
         // Create session data
-        const terminalId = generateTerminalId();
+        const _terminalId = generateTerminalId();
         const _originalScrollback = ['Original session data', 'Important work'];
 
         // await persistenceManager.addScrollbackBatch(terminalId, _originalScrollback); // Method doesn't exist

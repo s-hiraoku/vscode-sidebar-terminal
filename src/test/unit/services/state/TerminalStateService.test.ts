@@ -4,7 +4,7 @@
  * Tests for the terminal state management service.
  */
 
-import { expect } from 'chai';
+// import { expect } from 'chai';
 import { EventBus } from '../../../../core/EventBus';
 import {
   TerminalStateService,

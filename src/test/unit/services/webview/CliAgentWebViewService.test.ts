@@ -1,4 +1,4 @@
-import { expect } from 'chai';
+// import { expect } from 'chai';
 import * as sinon from 'sinon';
 import { CliAgentWebViewService } from '../../../../services/webview/CliAgentWebViewService';
 import { IMessageHandlerContext } from '../../../../services/webview/interfaces';

@@ -3,7 +3,7 @@
  */
 
 import { describe, it, beforeEach, afterEach } from 'mocha';
-import { expect } from 'chai';
+// import { expect } from 'chai';
 import * as sinon from 'sinon';
 import { TerminalCoordinator, TerminalCoordinatorFactory } from '../../../webview/services/TerminalCoordinator';
 import { TerminalCoordinatorConfig } from '../../../webview/services/ITerminalCoordinator';
@@ -122,7 +122,7 @@ describe('TerminalCoordinator Service', () => {
     });
 
     it('should create terminal successfully', async () => {
-      const terminalId = await coordinator.createTerminal();
+      const _terminalId = await coordinator.createTerminal();
 
       expect(terminalId).to.be.a('string');
       expect(terminalId).to.match(/^terminal-\d+$/);
@@ -139,7 +139,7 @@ describe('TerminalCoordinator Service', () => {
         environmentVariables: { NODE_ENV: 'test' }
       };
 
-      const terminalId = await coordinator.createTerminal(options);
+      const _terminalId = await coordinator.createTerminal(options);
 
       expect(terminalId).to.be.a('string');
       expect(coordinator.getTerminalCount()).to.equal(1);
@@ -149,7 +149,7 @@ describe('TerminalCoordinator Service', () => {
       const terminalIds: string[] = [];
 
       for (let i = 0; i < mockConfig.maxTerminals; i++) {
-        const terminalId = await coordinator.createTerminal();
+        const _terminalId = await coordinator.createTerminal();
         terminalIds.push(terminalId);
         expect(coordinator.getTerminalCount()).to.equal(i + 1);
       }
@@ -179,7 +179,7 @@ describe('TerminalCoordinator Service', () => {
       const eventSpy = sandbox.spy();
       coordinator.addEventListener('onTerminalCreated', eventSpy);
 
-      const terminalId = await coordinator.createTerminal();
+      const _terminalId = await coordinator.createTerminal();
 
       expect(eventSpy.calledOnce).to.be.true;
 
@@ -474,7 +474,7 @@ describe('TerminalCoordinator Service', () => {
       coordinator.addEventListener('onTerminalActivated', activatedListener);
 
       // Create terminal (should trigger created and activated)
-      const terminalId = coordinator.createTerminal();
+      const _terminalId = coordinator.createTerminal();
       expect(createdListener.called).to.be.true;
       expect(activatedListener.called).to.be.true;
 
@@ -535,7 +535,7 @@ describe('TerminalCoordinator Service', () => {
     });
 
     it('should handle terminal removal failures gracefully', async () => {
-      const terminalId = await coordinator.createTerminal();
+      const _terminalId = await coordinator.createTerminal();
       const terminal = coordinator.getTerminal(terminalId);
 
       // Mock dispose to throw
@@ -557,7 +557,7 @@ describe('TerminalCoordinator Service', () => {
 
       // Rapid creation
       for (let i = 0; i < Math.min(operations, mockConfig.maxTerminals); i++) {
-        const terminalId = await coordinator.createTerminal();
+        const _terminalId = await coordinator.createTerminal();
         terminalIds.push(terminalId);
       }
 

@@ -102,24 +102,24 @@ export class VisualTestingUtility {
 
   /**
    * Check if two screenshots match
-   * @param actual - Actual screenshot path
-   * @param expected - Expected screenshot path
-   * @param tolerance - Pixel difference tolerance (0.0-1.0)
+   * @param _actual - Actual screenshot path
+   * @param _expected - Expected screenshot path
+   * @param _tolerance - Pixel difference tolerance (0.0-1.0)
    * @returns True if screenshots match within tolerance
    */
-  async screenshotsMatch(actual: string, expected: string, tolerance: number = 0.001): Promise<boolean> {
+  async screenshotsMatch(_actual: string, _expected: string, _tolerance: number = 0.001): Promise<boolean> {
     // Future: Implement pixel-by-pixel comparison
-    console.log(`[E2E] Comparing screenshots: ${actual} vs ${expected}`);
+    console.log('[E2E] Comparing screenshots (placeholder)');
     return true;
   }
 
   /**
    * Get screenshot diff percentage
-   * @param actual - Actual screenshot path
-   * @param expected - Expected screenshot path
+   * @param _actual - Actual screenshot path
+   * @param _expected - Expected screenshot path
    * @returns Percentage of different pixels (0.0-100.0)
    */
-  async getScreenshotDiff(actual: string, expected: string): Promise<number> {
+  async getScreenshotDiff(_actual: string, _expected: string): Promise<number> {
     // Future: Calculate pixel difference percentage
     return 0.0;
   }

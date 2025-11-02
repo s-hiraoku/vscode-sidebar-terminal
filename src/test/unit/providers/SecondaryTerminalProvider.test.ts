@@ -16,7 +16,7 @@
 
 import * as _assert from 'assert';
 import * as sinon from 'sinon';
-import { expect } from 'chai';
+// import { expect } from 'chai';
 
 // Test setup
 import '../../shared/TestSetup';
@@ -228,7 +228,7 @@ describe('SecondaryTerminalProvider', () => {
               terminalsCreated = restoreResult.restoredCount;
             } else {
               // Create initial terminal
-              const terminalId = this._terminalManager.createTerminal();
+              const _terminalId = this._terminalManager.createTerminal();
               if (terminalId) {
                 terminalsCreated = 1;
               }
@@ -271,7 +271,7 @@ describe('SecondaryTerminalProvider', () => {
         _sendMessage: sandbox.stub().resolves(),
 
         _handleCreateTerminal() {
-          const terminalId = this._terminalManager.createTerminal();
+          const _terminalId = this._terminalManager.createTerminal();
 
           if (terminalId) {
             this._sendMessage({
@@ -512,7 +512,7 @@ describe('SecondaryTerminalProvider', () => {
           try {
             switch (message.command) {
               case 'createTerminal':
-                const terminalId = this._terminalManager.createTerminal();
+                const _terminalId = this._terminalManager.createTerminal();
                 if (!terminalId) {
                   throw new Error('Terminal creation failed');
                 }
