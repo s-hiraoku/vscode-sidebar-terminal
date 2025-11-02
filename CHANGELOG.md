@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.1.128] - 2025-11-02
+## [0.1.129] - 2025-11-02
 
 ### Fixed
 - **TypeScript Compilation Errors**: Resolved all pre-release blocking errors
