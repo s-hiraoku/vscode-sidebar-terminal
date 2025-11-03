@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **WebView Initialization**: Fixed `log is not defined` error during WebView startup
+  - Changed inline scripts to use `console.log()` instead of `log()` function
+  - Ensures WebView initializes successfully before webview.js loads
+- **Terminal Container Display**: Fixed terminals not appearing after creation
+  - Added missing `appendChild()` call to attach containers to DOM
+  - Containers now properly registered and visible in terminals-wrapper
+
+### Changed
+- **WebView Layout Architecture**: Refactored to follow VS Code GridView patterns
+  - **DOMManager**: Priority-based DOM operation scheduling (READ/WRITE/NORMAL)
+    - Prevents layout thrashing with batched operations
+    - Schedules operations at next animation frame
+    - 150 lines with comprehensive unit tests
+  - **LayoutController**: VS Code-style layout enablement control
+    - Controls when layout operations execute (initialization vs runtime)
+    - Supports batch operations with `withLayoutDisabled()`
+    - 114 lines with comprehensive unit tests
+  - **TerminalLifecycleManager**: Element reference storage pattern
+    - Stores `_terminalsWrapper` and `_terminalBody` references
+    - Removed `getElementById()` calls from hot paths
+    - Added `layout()` and `onPanelLocationChange()` methods
+    - Uses LayoutController for explicit layout control
+  - **Panel Location Detection**: Extension-driven approach
+    - PanelLocationService detects panel position accurately
+    - Removed ResizeObserver-based aspect ratio detection
+    - Eliminates 100ms setTimeout retry logic
+    - More reliable with multi-window support
+
+### Added
+- **Unit Tests**: Comprehensive test coverage for new utilities
+  - `DOMManager.spec.ts`: 200+ lines testing scheduling priorities
+  - `LayoutController.spec.ts`: 300+ lines testing layout control patterns
+  - Tests validate VS Code pattern compliance
+
+### Deprecated
+- **ResizeObserver Pattern**: Removed in favor of Extension-driven detection
+  - Aspect ratio calculation removed
+  - Polling-based detection eliminated
+  - More predictable panel location updates
+
 ## [0.1.129] - 2025-11-02
 
 ### Fixed
