@@ -571,6 +571,15 @@ export class TerminalLifecycleManager {
         mainContainer.style.display = 'flex';
         mainContainer.style.visibility = 'visible';
 
+        // 🔧 CRITICAL FIX: Append container to DOM (was missing!)
+        const bodyElement = document.getElementById('terminal-body');
+        if (bodyElement) {
+          bodyElement.appendChild(mainContainer);
+          terminalLogger.info(`✅ Container appended to DOM: ${terminalId}`);
+        } else {
+          terminalLogger.error(`❌ terminal-body not found, cannot append container: ${terminalId}`);
+        }
+
         // 🚀 PHASE 3: Optimized initial resize timing
         ResizeManager.debounceResize(
           `initial-${terminalId}`,
