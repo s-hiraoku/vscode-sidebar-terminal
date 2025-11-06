@@ -207,19 +207,27 @@ export class TerminalLifecycleManager {
     this.activeTerminalId = terminalId;
     terminalLogger.info(`Active terminal set to: ${terminalId}`);
 
-    // 🎯 FIX: Only focus if terminal is not already focused
+    // 🎯 PHASE 4: Optimized focus logic - only focus if truly needed
     // Avoid interrupting terminal output or initialization
     if (terminalId) {
       const terminalInstance = this.splitManager.getTerminals().get(terminalId);
       if (terminalInstance && terminalInstance.terminal) {
-        // Check if terminal needs focus (avoid redundant focus calls)
         const terminal = terminalInstance.terminal;
-        if (!terminal.textarea?.hasAttribute('focused')) {
-          // Use setTimeout to avoid interrupting current operations
+
+        // Check if terminal actually needs focus (avoid redundant focus calls)
+        // Use hasAttribute instead of checking document.activeElement for better reliability
+        const textArea = terminal.textarea;
+        const needsFocus = textArea && !textArea.hasAttribute('focused') &&
+                          document.activeElement !== textArea;
+
+        if (needsFocus) {
+          // 🎯 PHASE 4: Reduced delay from 10ms to 5ms for faster response
           setTimeout(() => {
             terminal.focus();
             terminalLogger.info(`🎯 Focused xterm.js terminal: ${terminalId}`);
-          }, 10);
+          }, 5);
+        } else {
+          terminalLogger.debug(`🎯 Terminal ${terminalId} already focused, skipping focus call`);
         }
       }
     }
@@ -270,6 +278,11 @@ export class TerminalLifecycleManager {
 
     const attemptCreation = async (): Promise<Terminal | null> => {
       try {
+        // 🎯 PHASE 4: Pause all ResizeObservers during terminal creation
+        // This prevents multiple resize triggers during DOM manipulation
+        ResizeManager.pauseObservers();
+        terminalLogger.info(`⏸️ Paused all ResizeObservers during terminal creation: ${terminalId}`);
+
         performanceMonitor.startTimer(`terminal-creation-attempt-${terminalId}-${currentRetry}`);
         terminalLogger.info(
           `Creating terminal: ${terminalId} (${terminalName}) - attempt ${currentRetry + 1}/${maxRetries + 1}`
@@ -529,25 +542,20 @@ export class TerminalLifecycleManager {
             // 🔧 VS CODE STANDARD: Use click event with hasSelection() check
             // This mirrors VS Code's built-in terminal behavior exactly
             const clickHandler = (_event: Event) => {
-              // 🚀 PHASE 3: Optimized timing - reduced from 10ms to 5ms
-              setTimeout(() => {
-                // Only activate terminal if no text is selected (VS Code standard behavior)
-                if (!terminal.hasSelection()) {
-                  terminalLogger.info(
-                    `🎯 Terminal clicked for activation (no selection): ${terminalId}`
-                  );
-                  this.coordinator?.setActiveTerminalId(terminalId);
-
-                  // Only focus if not already focused to avoid interrupting output
-                  if (!terminal.textarea?.hasAttribute('focused')) {
-                    terminal.focus();
-                  }
-                } else {
-                  terminalLogger.debug(
-                    `🎯 Click ignored due to text selection in terminal: ${terminalId}`
-                  );
-                }
-              }, 5); // Optimized delay
+              // 🚀 PHASE 4: Optimized timing - reduced delay to 0ms (immediate)
+              // Only activate terminal if no text is selected (VS Code standard behavior)
+              if (!terminal.hasSelection()) {
+                terminalLogger.info(
+                  `🎯 Terminal clicked for activation (no selection): ${terminalId}`
+                );
+                // 🎯 PHASE 4: Let setActiveTerminalId handle focus logic
+                // This avoids duplicate focus operations
+                this.coordinator?.setActiveTerminalId(terminalId);
+              } else {
+                terminalLogger.debug(
+                  `🎯 Click ignored due to text selection in terminal: ${terminalId}`
+                );
+              }
             };
 
             xtermElement.addEventListener('click', clickHandler);
@@ -694,28 +702,30 @@ export class TerminalLifecycleManager {
         // Setup shell integration decorations
         this.setupShellIntegration(terminal, terminalId);
 
-        const creationTime = performanceMonitor.endTimer(
+        performanceMonitor.endTimer(
           `terminal-creation-attempt-${terminalId}-${currentRetry}`
         );
-        terminalLogger.info(
-          `✅ Terminal created successfully: ${terminalId} (${creationTime?.toFixed(2)}ms)`
-        );
 
-        // 🎯 CRITICAL FIX: Notify Extension that WebView terminal initialization is complete
-        // This ensures shell initialization starts only after xterm is fully ready
+        // Notify Extension that WebView terminal initialization is complete
         setTimeout(() => {
           this.coordinator.postMessageToExtension({
             command: 'terminalInitializationComplete',
             terminalId: terminalId,
             timestamp: Date.now(),
           });
-          terminalLogger.info(
-            `📡 Terminal initialization completion notified to Extension: ${terminalId}`
-          );
-        }, 50); // Small delay to ensure all rendering is complete
+        }, 50);
+
+        // Resume ResizeObservers after terminal creation
+        setTimeout(() => {
+          ResizeManager.resumeObservers();
+        }, 100);
 
         return terminal;
       } catch (error) {
+        // 🎯 PHASE 4: Resume observers even on error to prevent deadlock
+        ResizeManager.resumeObservers();
+        terminalLogger.info(`▶️ Resumed ResizeObservers after creation error: ${terminalId}`);
+
         performanceMonitor.endTimer(`terminal-creation-attempt-${terminalId}-${currentRetry}`);
         terminalLogger.error(
           `❌ Terminal creation attempt ${currentRetry + 1} failed for ${terminalId}:`,
@@ -1179,8 +1189,9 @@ export class TerminalLifecycleManager {
           `Terminal initial size: ${terminalId} (${terminal.cols}x${terminal.rows})`
         );
 
-        // Focus the terminal
-        terminal.focus();
+        // 🎯 PHASE 4: Don't focus here - let setActiveTerminalId handle it
+        // This avoids duplicate focus operations during terminal creation
+        // terminal.focus(); // REMOVED - handled by setActiveTerminalId
       } else {
         terminalLogger.warn(
           `Container too small for initial resize: ${terminalId} (${rect.width}x${rect.height})`
@@ -1360,9 +1371,11 @@ export class TerminalLifecycleManager {
       terminalInstance.container.style.display = 'flex';
       terminalInstance.container.style.visibility = 'visible';
 
-      // Focus and resize with ResizeManager
-      terminalInstance.terminal.focus();
+      // 🎯 PHASE 4: Let setActiveTerminalId handle focus to avoid duplicates
+      // Focus is already called in setActiveTerminalId above
+      // terminalInstance.terminal.focus(); // REMOVED - handled by setActiveTerminalId
 
+      // Resize with ResizeManager
       ResizeManager.debounceResize(
         `switch-${terminalId}`,
         async () => {
@@ -1449,16 +1462,17 @@ export class TerminalLifecycleManager {
       container.className = 'terminal-body-container';
 
       // 🆕 Create terminals-wrapper container for terminal layout control
-      // This container's flex-direction will change based on panel location
+      // This container's flex-direction will be managed by PanelLocationHandler
       let terminalsWrapper = document.getElementById('terminals-wrapper');
       if (!terminalsWrapper) {
         terminalLogger.info('Creating terminals-wrapper container');
 
         terminalsWrapper = document.createElement('div');
         terminalsWrapper.id = 'terminals-wrapper';
+        // 🎯 Don't set flex-direction here - let PanelLocationHandler manage it (VS Code pattern)
+        // This prevents race conditions and ensures single source of truth
         terminalsWrapper.style.cssText = `
           display: flex;
-          flex-direction: row;
           flex: 1;
           width: 100%;
           height: 100%;
@@ -1475,7 +1489,8 @@ export class TerminalLifecycleManager {
           terminalsWrapper!.appendChild(terminal);
         });
 
-        terminalLogger.info('✅ terminals-wrapper created with default flexDirection: row (ResizeObserver will adjust)');
+        // 🎯 VS Code Pattern: PanelLocationHandler automatically detects via ResizeObserver
+        // No manual update needed - this prevents duplicate updates
       }
 
       terminalLogger.info('Terminal body container initialized');

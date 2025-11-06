@@ -124,6 +124,35 @@ export class ConsolidatedMessageManager implements IMessageManager {
   }
 
   /**
+   * 🎯 PUBLIC API: Update panel location and flex-direction if changed
+   * Single entry point for layout updates (VS Code pattern)
+   *
+   * @returns true if layout was updated, false if no change
+   */
+  public updatePanelLocationIfNeeded(): boolean {
+    if (!this.coordinator) {
+      this.logger.warn('Cannot update panel location: coordinator not initialized');
+      return false;
+    }
+
+    return this.panelLocationHandler.updateFlexDirectionIfNeeded(this.coordinator);
+  }
+
+  /**
+   * Get current panel location from handler
+   */
+  public getCurrentPanelLocation(): 'sidebar' | 'panel' | null {
+    return this.panelLocationHandler.getCurrentPanelLocation();
+  }
+
+  /**
+   * Get current flex-direction from handler
+   */
+  public getCurrentFlexDirection(): 'row' | 'column' | null {
+    return this.panelLocationHandler.getCurrentFlexDirection();
+  }
+
+  /**
    * Legacy interface compatibility method
    */
   public receiveMessage(message: unknown, coordinator: IManagerCoordinator): Promise<void> {

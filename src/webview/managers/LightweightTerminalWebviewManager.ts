@@ -544,6 +544,31 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
   }
 
   /**
+   * 🎯 PUBLIC API: Update panel location and flex-direction if changed
+   * Delegates to ConsolidatedMessageManager → PanelLocationHandler
+   * Single entry point for layout updates (VS Code pattern)
+   *
+   * @returns true if layout was updated, false if no change
+   */
+  public updatePanelLocationIfNeeded(): boolean {
+    return this.messageManager.updatePanelLocationIfNeeded();
+  }
+
+  /**
+   * Get current panel location
+   */
+  public getCurrentPanelLocation(): 'sidebar' | 'panel' | null {
+    return this.messageManager.getCurrentPanelLocation();
+  }
+
+  /**
+   * Get current flex-direction
+   */
+  public getCurrentFlexDirection(): 'row' | 'column' | null {
+    return this.messageManager.getCurrentFlexDirection();
+  }
+
+  /**
    * Check if session restore is in progress
    */
   public isRestoringSession(): boolean {
@@ -930,18 +955,12 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
   }
 
   /**
-   * 🆕 NEW: Setup scrollback extraction message listener
+   * Setup scrollback extraction message listener
+   * NOTE: This is now handled by ConsolidatedMessageManager to avoid duplicate listeners
    */
   private setupScrollbackMessageListener(): void {
-    if (window.addEventListener) {
-      window.addEventListener('message', (event) => {
-        const message = event.data;
-
-        if (message && message.command === 'extractScrollbackData') {
-          this.handleExtractScrollbackRequest(message);
-        }
-      });
-    }
+    // Removed: Duplicate message listener
+    // extractScrollbackData is now handled by ConsolidatedMessageManager
   }
 
   /**

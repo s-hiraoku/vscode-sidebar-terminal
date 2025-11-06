@@ -25,7 +25,10 @@ export interface ResizeOptions {
 export class ResizeManager {
   private static timers = new Map<string, number>();
   private static observers = new Map<string, ResizeObserver>();
+  private static observerCallbacks = new Map<string, (entry: ResizeObserverEntry) => void>();
+  private static firstCallbackSkip = new Map<string, boolean>();
   private static DEFAULT_DELAY = 100;
+  private static paused = false;
 
   /**
    * Execute a resize callback with debouncing
@@ -120,8 +123,27 @@ export class ResizeManager {
     this.unobserveResize(key);
 
     try {
+      // Store callback for potential resume
+      this.observerCallbacks.set(key, callback);
+
+      // Mark to skip first callback (common pattern to avoid initial resize)
+      this.firstCallbackSkip.set(key, true);
+
       const observer = new ResizeObserver((entries) => {
+        // Skip if globally paused
+        if (this.paused) {
+          log(`⏸️ ResizeManager: Observer ${key} paused, skipping callback`);
+          return;
+        }
+
         for (const entry of entries) {
+          // Skip first callback to avoid initial resize during creation
+          if (this.firstCallbackSkip.get(key)) {
+            this.firstCallbackSkip.set(key, false);
+            log(`⏭️ ResizeManager: Skipped first callback for ${key}`);
+            continue;
+          }
+
           this.debounceResize(`observer-${key}`, () => callback(entry), options);
         }
       });
@@ -144,8 +166,38 @@ export class ResizeManager {
     if (observer) {
       observer.disconnect();
       this.observers.delete(key);
+      this.observerCallbacks.delete(key);
+      this.firstCallbackSkip.delete(key);
       log(`🧹 ResizeManager: Observer removed for ${key}`);
     }
+  }
+
+  /**
+   * Pause all ResizeObservers temporarily
+   * Useful during terminal creation to prevent premature resize triggers
+   */
+  static pauseObservers(): void {
+    if (!this.paused) {
+      this.paused = true;
+      log(`⏸️ ResizeManager: All observers paused (${this.observers.size} active)`);
+    }
+  }
+
+  /**
+   * Resume all ResizeObservers
+   */
+  static resumeObservers(): void {
+    if (this.paused) {
+      this.paused = false;
+      log(`▶️ ResizeManager: All observers resumed (${this.observers.size} active)`);
+    }
+  }
+
+  /**
+   * Check if observers are currently paused
+   */
+  static isPaused(): boolean {
+    return this.paused;
   }
 
   /**
@@ -202,6 +254,9 @@ export class ResizeManager {
       observer.disconnect();
     }
     this.observers.clear();
+    this.observerCallbacks.clear();
+    this.firstCallbackSkip.clear();
+    this.paused = false;
 
     log('🧹 ResizeManager: Disposed all resources');
   }

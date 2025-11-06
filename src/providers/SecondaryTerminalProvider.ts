@@ -246,6 +246,10 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     // STEP 4: Set HTML AFTER listeners are ready (VS Code standard)
     log('🔧 [PROVIDER] Step 4: Setting webview HTML...');
     this._setWebviewHtml(webviewView, false);
+
+    // 🎯 HANDSHAKE PROTOCOL: extensionReady is now sent in _handleWebviewReady
+    // This ensures proper handshake sequence: webviewReady → extensionReady
+    log('🤝 [HANDSHAKE] HTML set, waiting for webviewReady from WebView');
   }
 
   private _registerCoreListeners(): void {
@@ -420,6 +424,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
   /**
    * Extracted handler for webview readiness
+   * 🎯 HANDSHAKE PROTOCOL: Respond with extensionReady
    */
   private _handleWebviewReady(_message: WebviewMessage): void {
     log('🔥 [TERMINAL-INIT] === _handleWebviewReady CALLED ===');
@@ -429,12 +434,23 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       return;
     }
 
-    log('🎯 [TERMINAL-INIT] WebView ready - initializing terminal with coordinated restoration');
+    log('🎯 [TERMINAL-INIT] WebView ready - sending extensionReady confirmation');
+
+    // 🎯 HANDSHAKE PROTOCOL: Send extensionReady FIRST
+    log('🤝 [HANDSHAKE] Sending extensionReady in response to webviewReady');
+    void this._communicationService.sendMessage({
+      command: 'extensionReady',
+      timestamp: Date.now(),
+    });
+    log('✅ [HANDSHAKE] extensionReady sent to WebView');
+
+    // Mark as initialized
     this._isInitialized = true;
 
     // Send version information to WebView
     this._sendVersionInfo();
 
+    // Start terminal initialization
     void this._initializationCoordinator.initialize();
   }
 
@@ -645,33 +661,26 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   }
 
   /**
-   * 🎯 CRITICAL FIX: Handle terminal initialization completion from WebView
+   * Handle terminal initialization completion from WebView
    * Starts shell initialization only after WebView terminal is fully ready
    */
   private async _handleTerminalInitializationComplete(message: WebviewMessage): Promise<void> {
     const terminalId = message.terminalId as string;
-    log(`🎯 [INITIALIZATION] WebView terminal initialization complete: ${terminalId}`);
 
     if (!terminalId) {
-      log('❌ [INITIALIZATION] No terminalId provided for initialization completion');
       return;
     }
 
     try {
-      // Get terminal instance to access PTY process
       const terminal = this._terminalManager.getTerminal(terminalId);
       if (!terminal || !terminal.ptyProcess) {
-        log(`❌ [INITIALIZATION] Terminal or PTY process not found: ${terminalId}`);
         return;
       }
 
-      log(`✅ [INITIALIZATION] Starting shell initialization for: ${terminalId}`);
-
-      // Call TerminalManager's shell initialization with proper timing (safe mode enabled to skip shell integration)
+      // Initialize shell (safe mode enabled to skip shell integration)
       this._terminalManager.initializeShellForTerminal(terminalId, terminal.ptyProcess, true);
-      log(`🐚 [INITIALIZATION] Shell initialization initiated for: ${terminalId}`);
     } catch (error) {
-      log(`❌ [INITIALIZATION] Failed to initialize shell for terminal ${terminalId}:`, error);
+      log(`Failed to initialize shell for terminal ${terminalId}:`, error);
     }
   }
 

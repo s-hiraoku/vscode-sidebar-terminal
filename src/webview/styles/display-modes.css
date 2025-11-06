@@ -7,6 +7,30 @@
    Terminal Container Display Modes
    ======================================== */
 
+/* ========================================
+   Terminals Wrapper - Panel Location Layout
+   🎯 VS Code Pattern: CSS class-based layout control
+   ======================================== */
+
+/* Default: Horizontal layout (bottom panel) */
+#terminals-wrapper {
+  display: flex;
+  flex-direction: row; /* Default: side-by-side for bottom panel */
+  gap: 4px;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Vertical layout for sidebar */
+#terminals-wrapper.terminal-side-view {
+  flex-direction: column; /* Stacked for sidebar */
+}
+
+/* ========================================
+   Terminal Container Display Modes
+   ======================================== */
+
 .terminal-container.normal-mode {
   display: block;
   width: 100%;

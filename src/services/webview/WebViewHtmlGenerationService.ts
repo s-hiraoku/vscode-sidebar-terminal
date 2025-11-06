@@ -645,29 +645,22 @@ export class WebViewHtmlGenerationService {
 
   /**
    * Generate inline scripts for VS Code API initialization
+   *
+   * 🎯 NOTE: acquireVsCodeApi() is called in main.ts (webview.js) at top level
+   * This inline script only monitors script loading - no API acquisition needed here
    */
   private _generateInlineScripts(nonce: string): string {
     return `
         <script nonce="${nonce}">
-            // Acquire VS Code API once and store it globally for webview.js to use
-            try {
-                if (typeof window.acquireVsCodeApi === 'function') {
-                    const vscode = window.acquireVsCodeApi();
-                    window.vscodeApi = vscode;
-                    log('✅ VS Code API acquired successfully');
-                } else {
-                    console.error('❌ acquireVsCodeApi not available');
-                }
-            } catch (error) {
-                console.error('❌ Error acquiring VS Code API:', error);
-            }
+            // 🎯 NOTE: VS Code API is acquired in webview.js (main.ts) at top level
+            // and stored in window.vscodeApi - no need to acquire it here
 
             // Add script loading event handlers
             document.addEventListener('DOMContentLoaded', function() {
                 const script = document.getElementById('webview-main-script');
                 if (script) {
                     script.addEventListener('load', function() {
-                        log('✅ webview.js loaded successfully');
+                        console.log('✅ webview.js loaded successfully');
                     });
                     script.addEventListener('error', function(event) {
                         console.error('❌ webview.js failed to load', event);

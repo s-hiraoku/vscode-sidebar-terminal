@@ -52,6 +52,11 @@ export class PanelLocationService implements vscode.Disposable {
    */
   private static readonly CONTEXT_KEY = 'secondaryTerminal.panelLocation';
 
+  /**
+   * Debounce delay for panel location detection requests (ms)
+   */
+  private static readonly DEBOUNCE_DELAY = 300;
+
   private readonly _disposables: vscode.Disposable[] = [];
 
   /**
@@ -64,12 +69,20 @@ export class PanelLocationService implements vscode.Disposable {
    */
   private readonly _sendMessage: (message: unknown) => Promise<void>;
 
+  /**
+   * Debounce timer for panel location detection requests
+   */
+  private _detectionDebounceTimer: NodeJS.Timeout | null = null;
+
   constructor(sendMessage: (message: unknown) => Promise<void>) {
     this._sendMessage = sendMessage;
   }
 
   /**
    * Initialize panel location detection
+   *
+   * 🎯 OPTIMIZATION: Defers initial detection to WebView DOM ready
+   * This prevents premature detection that causes layout issues
    */
   public async initialize(webviewView?: vscode.WebviewView): Promise<void> {
     // Set up configuration change listener
@@ -80,12 +93,17 @@ export class PanelLocationService implements vscode.Disposable {
       this._setupVisibilityListener(webviewView);
     }
 
-    // Request initial panel location detection
-    await this.requestPanelLocationDetection();
+    // 🎯 REMOVED: Don't request detection immediately
+    // Let WebView detect autonomously when DOM is ready
+    // await this.requestPanelLocationDetection();
+    log('📍 [PANEL-DETECTION] Panel location service initialized (detection deferred to WebView)');
   }
 
   /**
    * Handle panel location report from WebView
+   *
+   * 🎯 OPTIMIZATION: Removed redundant panelLocationUpdate message
+   * WebView now applies changes autonomously without Extension confirmation
    */
   public async handlePanelLocationReport(
     location: unknown,
@@ -116,12 +134,10 @@ export class PanelLocationService implements vscode.Disposable {
     );
     log('📍 [DEBUG] Context key updated with panel location:', location);
 
-    // Notify WebView of the confirmed panel location
-    await this._sendMessage({
-      command: 'panelLocationUpdate',
-      location: location,
-    });
-    log('📍 [DEBUG] Panel location update confirmed to WebView:', location);
+    // 🎯 REMOVED: No longer send confirmation back to WebView
+    // WebView applies changes autonomously, reducing message round-trips
+    // await this._sendMessage({ command: 'panelLocationUpdate', location: location });
+    log('📍 [DEBUG] ✅ Location cached and context updated (no confirmation message sent)');
 
     // Notify caller if location changed
     if (previousLocation !== location && onLocationChange) {
@@ -133,31 +149,38 @@ export class PanelLocationService implements vscode.Disposable {
   }
 
   /**
-   * Request panel location detection from WebView
+   * Request panel location detection from WebView (with debouncing)
+   *
+   * 🎯 OPTIMIZATION: Debounced to prevent multiple rapid requests
    */
   public async requestPanelLocationDetection(): Promise<void> {
-    try {
-      log('📍 [PANEL-DETECTION] Requesting panel location detection from WebView');
-
-      await this._sendMessage({
-        command: 'requestPanelLocationDetection',
-      });
-    } catch (error) {
-      log('⚠️ [PANEL-DETECTION] Error requesting panel location detection:', error);
-
-      // Fallback to sidebar assumption
-      await this._sendMessage({
-        command: 'panelLocationUpdate',
-        location: 'sidebar',
-      });
-
-      // Set fallback context key
-      await vscode.commands.executeCommand(
-        'setContext',
-        PanelLocationService.CONTEXT_KEY,
-        'sidebar'
-      );
+    // Clear existing timer
+    if (this._detectionDebounceTimer) {
+      clearTimeout(this._detectionDebounceTimer);
     }
+
+    // Schedule new detection request
+    this._detectionDebounceTimer = setTimeout(async () => {
+      try {
+        log('📍 [PANEL-DETECTION] Requesting panel location detection from WebView (debounced)');
+
+        await this._sendMessage({
+          command: 'requestPanelLocationDetection',
+        });
+      } catch (error) {
+        log('⚠️ [PANEL-DETECTION] Error requesting panel location detection:', error);
+
+        // Fallback to sidebar assumption - but don't send panelLocationUpdate
+        // Let WebView handle its own layout
+
+        // Set fallback context key
+        await vscode.commands.executeCommand(
+          'setContext',
+          PanelLocationService.CONTEXT_KEY,
+          'sidebar'
+        );
+      }
+    }, PanelLocationService.DEBOUNCE_DELAY);
   }
 
   /**
@@ -283,6 +306,12 @@ export class PanelLocationService implements vscode.Disposable {
    * Clean up resources
    */
   public dispose(): void {
+    // Clear debounce timer
+    if (this._detectionDebounceTimer) {
+      clearTimeout(this._detectionDebounceTimer);
+      this._detectionDebounceTimer = null;
+    }
+
     this._disposables.forEach((d) => d.dispose());
   }
 }

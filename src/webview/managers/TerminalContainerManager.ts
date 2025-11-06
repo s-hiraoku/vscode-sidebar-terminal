@@ -296,18 +296,12 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
       targetBody.style.height = '100%';
       targetBody.style.overflow = 'hidden';
 
-      // 🎯 FIX: Reset terminals-wrapper flexDirection based on panel location
-      const terminalsWrapper = document.getElementById('terminals-wrapper');
-      if (terminalsWrapper) {
-        // Detect panel location from container aspect ratio
-        const container = document.body;
-        const aspectRatio = container.clientWidth / container.clientHeight;
-        const ASPECT_RATIO_THRESHOLD = 1.2;
-        const isPanel = aspectRatio > ASPECT_RATIO_THRESHOLD;
-        const correctFlexDirection = isPanel ? 'row' : 'column';
-
-        terminalsWrapper.style.flexDirection = correctFlexDirection;
-        this.log(`🎨 [CLEAR-SPLIT] Reset terminals-wrapper flexDirection to: ${correctFlexDirection} (aspect: ${aspectRatio.toFixed(3)})`);
+      // 🎯 Use central handler to reset flex-direction (VS Code pattern)
+      if (this.coordinator) {
+        const updated = (this.coordinator as { updatePanelLocationIfNeeded?: () => boolean }).updatePanelLocationIfNeeded?.();
+        if (updated !== undefined) {
+          this.log(`🎨 [CLEAR-SPLIT] Flex-direction ${updated ? 'updated by central handler' : 'already correct'}`);
+        }
       }
 
       this.normalizeTerminalBody(targetBody);

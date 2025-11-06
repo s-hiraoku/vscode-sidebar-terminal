@@ -14,10 +14,18 @@ import { ManagerLogger } from '../../utils/ManagerLogger';
 /**
  * Panel Location Handler
  *
+ * 🎯 SINGLE SOURCE OF TRUTH for panel location and flex-direction updates
+ *
  * Responsibilities:
  * - Detect panel location based on WebView dimensions
  * - Update split direction based on panel location
  * - Report panel location to Extension
+ * - Manage cached state to prevent redundant updates (VS Code pattern)
+ *
+ * Architecture Pattern (from VS Code):
+ * - Cached state comparison (update only when changed)
+ * - Double-guard pattern (check at multiple levels)
+ * - No debouncing (simple state comparison is sufficient)
  */
 export class PanelLocationHandler implements IMessageHandler {
   /**
@@ -34,10 +42,147 @@ export class PanelLocationHandler implements IMessageHandler {
    */
   private static readonly PANEL_ASPECT_RATIO_THRESHOLD = 1.2;
 
+  /**
+   * 🎯 Cached state to prevent redundant updates (VS Code pattern)
+   */
+  private cachedFlexDirection: 'row' | 'column' | null = null;
+  private cachedPanelLocation: 'sidebar' | 'panel' | null = null;
+
   constructor(
     private readonly messageQueue: MessageQueue,
     private readonly logger: ManagerLogger
-  ) {}
+  ) {
+    // 🎯 OPTIMIZATION: Initialize autonomous detection when DOM is ready
+    // ResizeObserver will wait for valid (non-zero) dimensions before applying
+    this.initializeAutonomousDetection();
+  }
+
+  /**
+   * Initialize autonomous panel location detection
+   *
+   * 🎯 VS Code Pattern: CSS class-based layout with state comparison
+   */
+  private initializeAutonomousDetection(): void {
+    let initialDetectionDone = false;
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+
+        // Wait for valid dimensions
+        if (width === 0 || height === 0) {
+          continue;
+        }
+
+        const detectedLocation = this.detectPanelLocation();
+
+        // Initial detection
+        if (!initialDetectionDone) {
+          const terminalsWrapper = document.getElementById('terminals-wrapper');
+          if (terminalsWrapper) {
+            // Apply CSS class for vertical layout (sidebar)
+            if (detectedLocation === 'sidebar') {
+              terminalsWrapper.classList.add('terminal-side-view');
+            } else {
+              terminalsWrapper.classList.remove('terminal-side-view');
+            }
+
+            // Update cached state
+            this.cachedFlexDirection = detectedLocation === 'panel' ? 'row' : 'column';
+            this.cachedPanelLocation = detectedLocation;
+          }
+
+          // Report to Extension
+          void this.messageQueue.enqueue({
+            command: 'reportPanelLocation',
+            location: detectedLocation,
+            timestamp: Date.now(),
+          });
+
+          initialDetectionDone = true;
+        } else {
+          // Change detection: Only update if location changed
+          if (this.cachedPanelLocation !== detectedLocation) {
+            const terminalsWrapper = document.getElementById('terminals-wrapper');
+            if (terminalsWrapper) {
+              // Toggle CSS class
+              if (detectedLocation === 'sidebar') {
+                terminalsWrapper.classList.add('terminal-side-view');
+              } else {
+                terminalsWrapper.classList.remove('terminal-side-view');
+              }
+            }
+
+            // Update cached state
+            this.cachedFlexDirection = detectedLocation === 'panel' ? 'row' : 'column';
+            this.cachedPanelLocation = detectedLocation;
+
+            // Report to Extension
+            void this.messageQueue.enqueue({
+              command: 'reportPanelLocation',
+              location: detectedLocation,
+              timestamp: Date.now(),
+            });
+          }
+        }
+
+        break;
+      }
+    });
+
+    // Start observing
+    if (document.body) {
+      resizeObserver.observe(document.body);
+    } else {
+      document.addEventListener('DOMContentLoaded', () => {
+        resizeObserver.observe(document.body);
+      });
+    }
+  }
+
+  /**
+   * 🎯 PUBLIC API: Update flex-direction if panel location has changed
+   * Uses VS Code's double-guard pattern to prevent redundant updates
+   */
+  public updateFlexDirectionIfNeeded(coordinator: IManagerCoordinator): boolean {
+    const detectedLocation = this.detectPanelLocation();
+
+    // First guard: Check if location changed
+    if (this.cachedPanelLocation === detectedLocation) {
+      return false;
+    }
+
+    const newFlexDirection = detectedLocation === 'panel' ? 'row' : 'column';
+
+    // Second guard: Check if flex-direction changed
+    if (this.cachedFlexDirection === newFlexDirection) {
+      this.cachedPanelLocation = detectedLocation;
+      return false;
+    }
+
+    // Apply the update
+    this.applyFlexDirection(newFlexDirection, detectedLocation, coordinator);
+
+    // Update cached state
+    this.cachedFlexDirection = newFlexDirection;
+    this.cachedPanelLocation = detectedLocation;
+
+    return true;
+  }
+
+  /**
+   * 🎯 PUBLIC API: Get current flex-direction
+   */
+  public getCurrentFlexDirection(): 'row' | 'column' | null {
+    return this.cachedFlexDirection;
+  }
+
+  /**
+   * 🎯 PUBLIC API: Get current panel location
+   */
+  public getCurrentPanelLocation(): 'sidebar' | 'panel' | null {
+    return this.cachedPanelLocation;
+  }
 
   /**
    * Handle panel location related messages
@@ -65,28 +210,90 @@ export class PanelLocationHandler implements IMessageHandler {
   }
 
   /**
-   * Handle panel location update message
+   * 🎯 Detect panel location based on aspect ratio
+   */
+  private detectPanelLocation(): 'sidebar' | 'panel' {
+    try {
+      let width = window.innerWidth;
+      let height = window.innerHeight;
+
+      // Fallback chain
+      if (width === 0 || height === 0) {
+        width = document.documentElement.clientWidth;
+        height = document.documentElement.clientHeight;
+      }
+
+      if (width === 0 || height === 0) {
+        width = document.body.clientWidth;
+        height = document.body.clientHeight;
+      }
+
+      if (width === 0 || height === 0) {
+        return 'sidebar';
+      }
+
+      const aspectRatio = width / height;
+      return aspectRatio > PanelLocationHandler.PANEL_ASPECT_RATIO_THRESHOLD ? 'panel' : 'sidebar';
+    } catch (error) {
+      this.logger.error('Error detecting panel location', error);
+      return 'sidebar';
+    }
+  }
+
+  /**
+   * 🎯 VS Code Pattern: Apply CSS class-based layout
+   */
+  private applyFlexDirection(
+    newFlexDirection: 'row' | 'column',
+    location: 'sidebar' | 'panel',
+    coordinator: IManagerCoordinator
+  ): void {
+    // Update split manager
+    const splitManager = (coordinator as { getSplitManager?: () => unknown }).getSplitManager?.();
+    if (splitManager) {
+      const newSplitDirection = newFlexDirection === 'row' ? 'horizontal' : 'vertical';
+
+      if (
+        hasProperty(
+          splitManager,
+          'updateSplitDirection',
+          (
+            value
+          ): value is (
+            direction: 'horizontal' | 'vertical',
+            location: 'sidebar' | 'panel'
+          ) => void => typeof value === 'function'
+        )
+      ) {
+        splitManager.updateSplitDirection(newSplitDirection, location);
+      }
+    }
+
+    // Apply CSS class to terminals-wrapper
+    const terminalsWrapper = document.getElementById('terminals-wrapper');
+    if (terminalsWrapper) {
+      // Toggle CSS class based on location
+      if (location === 'sidebar') {
+        terminalsWrapper.classList.add('terminal-side-view');
+      } else {
+        terminalsWrapper.classList.remove('terminal-side-view');
+      }
+    }
+  }
+
+  /**
+   * Handle panel location update message (backward compatibility)
    */
   private handlePanelLocationUpdate(
-    msg: MessageCommand,
+    _msg: MessageCommand,
     coordinator: IManagerCoordinator
   ): void {
     try {
-      const location = ((msg as { location?: string }).location as 'sidebar' | 'panel') || 'sidebar';
-      this.logger.info(`Panel location update: ${location}`);
-
-      // Get split manager from coordinator
-      const splitManager = (coordinator as { getSplitManager?: () => unknown }).getSplitManager?.();
-      if (!splitManager) {
-        this.logger.warn('SplitManager not available on coordinator');
-        return;
-      }
-
-      // Check if dynamic split direction is enabled via settings
+      // Check if dynamic split direction is enabled
       const configManager = (
         coordinator as { getManagers?: () => { config?: unknown } }
       ).getManagers?.()?.config;
-      let isDynamicSplitEnabled = true; // Default to enabled
+      let isDynamicSplitEnabled = true;
 
       if (configManager) {
         try {
@@ -102,49 +309,17 @@ export class PanelLocationHandler implements IMessageHandler {
             isDynamicSplitEnabled = settings.dynamicSplitDirection !== false;
           }
         } catch (error) {
-          this.logger.warn('Could not load settings, using default behavior');
+          // Use default
         }
       }
 
       if (!isDynamicSplitEnabled) {
-        this.logger.info(
-          'Dynamic split direction is disabled via settings, ignoring location update'
-        );
         return;
       }
 
-      // Update split direction based on panel location
-      const newSplitDirection = location === 'panel' ? 'horizontal' : 'vertical';
-      this.logger.info(`Updating split direction to: ${newSplitDirection} (location: ${location})`);
-
-      // Update split direction if it has changed
-      if (
-        hasProperty(
-          splitManager,
-          'updateSplitDirection',
-          (
-            value
-          ): value is (
-            direction: 'horizontal' | 'vertical',
-            location: 'sidebar' | 'panel'
-          ) => void => typeof value === 'function'
-        )
-      ) {
-        splitManager.updateSplitDirection(newSplitDirection, location);
-      }
-
-      // 🎯 FIX: Also update terminals-wrapper flexDirection in normal mode
-      // Panel (horizontal) → row (横並び)
-      // Sidebar (vertical) → column (縦並び)
-      const terminalsWrapper = document.getElementById('terminals-wrapper');
-      if (terminalsWrapper) {
-        const newFlexDirection = newSplitDirection === 'horizontal' ? 'row' : 'column';
-        terminalsWrapper.style.flexDirection = newFlexDirection;
-        this.logger.info(
-          `✅ Updated terminals-wrapper flexDirection to: ${newFlexDirection} (location: ${location})`
-        );
-      } else {
-        this.logger.warn('terminals-wrapper element not found, cannot update flexDirection');
+      // Only update if autonomous detection hasn't completed
+      if (this.cachedPanelLocation === null || this.cachedFlexDirection === null) {
+        this.updateFlexDirectionIfNeeded(coordinator);
       }
     } catch (error) {
       this.logger.error('Error handling panel location update', error);
@@ -156,26 +331,15 @@ export class PanelLocationHandler implements IMessageHandler {
    */
   private handleRequestPanelLocationDetection(_coordinator: IManagerCoordinator): void {
     try {
-      this.logger.info('📍 [WEBVIEW] ==================== PANEL LOCATION DETECTION ====================');
-      this.logger.info('📍 [WEBVIEW] Handling panel location detection request');
-
-      // Analyze WebView dimensions to determine likely panel location
       const detectedLocation = this.analyzeWebViewDimensions();
 
-      this.logger.info(`📍 [WEBVIEW] ✅ Dimension analysis result: ${detectedLocation}`);
-
-      // Report back to Extension
       void this.messageQueue.enqueue({
         command: 'reportPanelLocation',
         location: detectedLocation,
         timestamp: Date.now(),
       });
-
-      this.logger.info('📍 [WEBVIEW] Sent reportPanelLocation message to Extension');
-      this.logger.info('📍 [WEBVIEW] ==================================================================');
     } catch (error) {
       this.logger.error('Error in panel location detection', error);
-      // Fallback to sidebar
       void this.messageQueue.enqueue({
         command: 'reportPanelLocation',
         location: 'sidebar',
@@ -186,48 +350,23 @@ export class PanelLocationHandler implements IMessageHandler {
 
   /**
    * Analyze WebView dimensions to determine panel location
-   *
-   * This method uses aspect ratio heuristics to detect whether the webview is displayed
-   * in the sidebar (narrow and tall) or bottom panel (wide and short). The detection
-   * is based on the container's width/height ratio compared to PANEL_ASPECT_RATIO_THRESHOLD.
-   *
-   * @returns 'sidebar' if the layout appears to be in the sidebar, 'panel' if in bottom panel
    */
   private analyzeWebViewDimensions(): 'sidebar' | 'panel' {
     try {
-      // Get WebView container dimensions
       const container = document.body;
       if (!container) {
-        this.logger.warn('No container found, defaulting to sidebar');
         return 'sidebar';
       }
 
       const width = container.clientWidth;
       const height = container.clientHeight;
 
-      this.logger.info(`📐 [DIMENSIONS] Container: ${width}px × ${height}px`);
-
       if (width === 0 || height === 0) {
-        this.logger.warn('Invalid dimensions, defaulting to sidebar');
         return 'sidebar';
       }
 
-      // Calculate aspect ratio (width/height)
       const aspectRatio = width / height;
-      const threshold = PanelLocationHandler.PANEL_ASPECT_RATIO_THRESHOLD;
-
-      this.logger.info(`📐 [DIMENSIONS] Aspect ratio: ${aspectRatio.toFixed(3)} (threshold: ${threshold})`);
-
-      // Apply heuristic: Compare aspect ratio against threshold
-      // Sidebar: narrow and tall (aspect ratio < threshold)
-      // Bottom Panel: wide and short (aspect ratio > threshold)
-      if (aspectRatio > threshold) {
-        this.logger.info(`📐 [DIMENSIONS] ✅ Wide layout (${aspectRatio.toFixed(3)} > ${threshold}) → BOTTOM PANEL`);
-        return 'panel';
-      } else {
-        this.logger.info(`📐 [DIMENSIONS] ✅ Tall/Square layout (${aspectRatio.toFixed(3)} ≤ ${threshold}) → SIDEBAR`);
-        return 'sidebar';
-      }
+      return aspectRatio > PanelLocationHandler.PANEL_ASPECT_RATIO_THRESHOLD ? 'panel' : 'sidebar';
     } catch (error) {
       this.logger.error('Error analyzing dimensions', error);
       return 'sidebar';

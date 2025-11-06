@@ -60,6 +60,9 @@ export class TerminalManager {
   // Track terminals being killed to prevent infinite loops
   private readonly _terminalBeingKilled = new Set<string>();
 
+  // 🎯 HANDSHAKE PROTOCOL: Track shell integration initialization to prevent duplicates
+  private readonly _shellInitialized = new Set<string>();
+
   // Performance optimization: Data batching for high-frequency output
   private readonly _dataBuffers = new Map<string, string[]>();
   private readonly _dataFlushTimers = new Map<string, NodeJS.Timeout>();
@@ -421,10 +424,20 @@ export class TerminalManager {
 
   /**
    * Initialize shell for a terminal after PTY creation
+   * 🎯 HANDSHAKE PROTOCOL: Prevents duplicate initialization that causes multiple prompts
    */
   public initializeShellForTerminal(terminalId: string, ptyProcess: any, safeMode: boolean): void {
     try {
+      // 🎯 HANDSHAKE PROTOCOL: Guard against duplicate initialization
+      if (this._shellInitialized.has(terminalId)) {
+        log(`⏭️ [TERMINAL] Shell already initialized for ${terminalId}, skipping duplicate init`);
+        return;
+      }
+
       log(`🔍 [TERMINAL] Post-creation initialization for: ${terminalId} (Safe Mode: ${safeMode})`);
+
+      // Mark as initialized BEFORE starting async operations to prevent race conditions
+      this._shellInitialized.add(terminalId);
 
       // Inject shell integration if service is available (async)
       if (this._shellIntegrationService && !safeMode) {
@@ -1185,6 +1198,13 @@ export class TerminalManager {
 
     // Stop any pending prompt readiness guard for this terminal
     this._cleanupInitialPromptGuard(terminalId);
+
+    // 🎯 HANDSHAKE PROTOCOL: Clean up shell initialization flag
+    // This allows the terminal ID to be reused without "already initialized" errors
+    if (this._shellInitialized.has(terminalId)) {
+      this._shellInitialized.delete(terminalId);
+      log(`🧹 [TERMINAL] Cleaned up shell initialization flag for: ${terminalId}`);
+    }
 
     // Clean up data buffers for this terminal
     this._flushBuffer(terminalId);
