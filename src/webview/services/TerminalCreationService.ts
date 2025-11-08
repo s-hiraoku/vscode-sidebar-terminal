@@ -25,6 +25,7 @@ import { TerminalEventManager } from '../managers/TerminalEventManager';
 import { TerminalLinkManager } from '../managers/TerminalLinkManager';
 import { TerminalContainerFactory, TerminalContainerConfig, TerminalHeaderConfig } from '../factories/TerminalContainerFactory';
 import { ResizeManager } from '../utils/ResizeManager';
+import { RenderingOptimizer } from '../optimizers/RenderingOptimizer';
 import { PerformanceMonitor } from '../../utils/PerformanceOptimizer';
 import { EventHandlerRegistry } from '../utils/EventHandlerRegistry';
 import { terminalLogger } from '../utils/ManagerLogger';
@@ -271,6 +272,15 @@ export class TerminalCreationService {
         const xtermElement = terminalContent.querySelector('.xterm');
         this.enableScrollbarDisplay(xtermElement, terminalId);
 
+        // Setup RenderingOptimizer for performance optimization
+        const renderingOptimizer = await this.setupRenderingOptimizer(
+          terminalId,
+          terminal,
+          fitAddon,
+          container,
+          terminalConfig.enableGpuAcceleration ?? true
+        );
+
         // Create terminal instance record
         const terminalInstance: TerminalInstance = {
           id: terminalId,
@@ -282,6 +292,7 @@ export class TerminalCreationService {
           number: terminalNumberToUse,
           searchAddon,
           serializeAddon,
+          renderingOptimizer,
         };
 
         // Register with SplitManager
@@ -314,9 +325,6 @@ export class TerminalCreationService {
 
         // Perform initial resize
         this.performInitialResize(terminal, fitAddon, container, terminalId);
-
-        // Setup resize observer
-        this.setupResizeObserver(terminalId, terminalInstance);
 
         // Setup input handling via InputManager
         if (this.coordinator?.inputManager) {
@@ -386,10 +394,11 @@ export class TerminalCreationService {
         return false;
       }
 
-      // Cleanup resize observer using ResizeManager
-      ResizeManager.unobserveResize(terminalId);
-      ResizeManager.clearResize(`resize-${terminalId}`);
-      ResizeManager.clearResize(`initial-${terminalId}`);
+      // Cleanup RenderingOptimizer
+      if (terminalInstance.renderingOptimizer) {
+        terminalInstance.renderingOptimizer.dispose();
+        terminalLogger.info(`✅ RenderingOptimizer disposed for: ${terminalId}`);
+      }
 
       // Cleanup event handlers
       this.eventManager.removeTerminalEvents(terminalId);
@@ -686,46 +695,41 @@ export class TerminalCreationService {
   }
 
   /**
-   * Setup resize observer using ResizeManager
+   * Setup RenderingOptimizer for terminal performance optimization
    */
-  private setupResizeObserver(terminalId: string, terminalInstance: TerminalInstance): void {
+  private async setupRenderingOptimizer(
+    terminalId: string,
+    terminal: Terminal,
+    fitAddon: FitAddon,
+    container: HTMLElement,
+    enableGpuAcceleration: boolean
+  ): Promise<any> {
     try {
-      ResizeManager.observeResize(
-        terminalId,
-        terminalInstance.container,
-        (entry) => {
-          const { width, height } = entry.contentRect;
-          if (width > 50 && height > 50) {
-            this.handleTerminalResize(terminalId, terminalInstance);
-          }
-        },
-        { delay: 100 }
-      );
+      // Create RenderingOptimizer instance
+      const renderingOptimizer = new RenderingOptimizer({
+        enableWebGL: enableGpuAcceleration,
+        resizeDebounceMs: 100,
+        minWidth: 50,
+        minHeight: 50,
+      });
 
-      terminalLogger.debug(`ResizeObserver setup for: ${terminalId}`);
+      // Setup optimized resize with dimension validation and debouncing
+      renderingOptimizer.setupOptimizedResize(terminal, fitAddon, container, terminalId);
+
+      // Enable WebGL rendering if GPU acceleration is enabled
+      if (enableGpuAcceleration) {
+        await renderingOptimizer.enableWebGL(terminal, terminalId);
+      }
+
+      // Setup device-specific smooth scrolling (trackpad vs mouse)
+      renderingOptimizer.setupSmoothScrolling(terminal, container, terminalId);
+
+      terminalLogger.info(`✅ RenderingOptimizer setup completed for: ${terminalId}`);
+      return renderingOptimizer;
     } catch (error) {
-      terminalLogger.error(`Failed to setup ResizeObserver for ${terminalId}:`, error);
+      terminalLogger.error(`Failed to setup RenderingOptimizer for ${terminalId}:`, error);
+      return null;
     }
-  }
-
-  /**
-   * Handle terminal resize using ResizeManager
-   */
-  private handleTerminalResize(terminalId: string, terminalInstance: TerminalInstance): void {
-    ResizeManager.debounceResize(
-      `resize-${terminalId}`,
-      async () => {
-        try {
-          if (terminalInstance.fitAddon) {
-            terminalInstance.fitAddon.fit();
-            this.notifyExtensionResize(terminalId, terminalInstance.terminal);
-          }
-        } catch (error) {
-          terminalLogger.error(`Resize failed for ${terminalId}:`, error);
-        }
-      },
-      { delay: 100 }
-    );
   }
 
   /**

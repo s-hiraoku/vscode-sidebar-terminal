@@ -37,6 +37,8 @@ export interface TerminalInstance {
   readonly webglAddon?: WebglAddon;
   readonly unicode11Addon?: Unicode11Addon;
   readonly serializeAddon?: SerializeAddon; // For scrollback with color preservation
+  // Performance Optimization
+  readonly renderingOptimizer?: any; // RenderingOptimizer for performance
 }
 
 export type TerminalDisplayMode = 'normal' | 'fullscreen' | 'split';
