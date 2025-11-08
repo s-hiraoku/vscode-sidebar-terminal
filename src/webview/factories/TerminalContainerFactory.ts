@@ -27,6 +27,7 @@ export interface TerminalHeaderConfig {
   onHeaderClick?: (terminalId: string) => void;
   onContainerClick?: (terminalId: string) => void;
   onCloseClick?: (terminalId: string) => void;
+  onSplitClick?: (terminalId: string) => void;
   onAiAgentToggleClick?: (terminalId: string) => void;
 }
 
@@ -108,8 +109,10 @@ export class TerminalContainerFactory {
         headerElements = HeaderFactory.createTerminalHeader({
           terminalId: config.id,
           terminalName: headerConfig.customTitle || config.name,
+          showSplitButton: headerConfig.showSplitButton,
           onHeaderClick: headerConfig.onHeaderClick,
           onCloseClick: headerConfig.onCloseClick,
+          onSplitClick: headerConfig.onSplitClick,
           onAiAgentToggleClick: headerConfig.onAiAgentToggleClick,
         });
         header = headerElements.container;

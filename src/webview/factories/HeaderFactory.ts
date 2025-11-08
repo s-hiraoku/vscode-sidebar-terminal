@@ -24,8 +24,10 @@ export interface HeaderConfig {
   terminalId: string;
   terminalName: string;
   customClasses?: string[];
+  showSplitButton?: boolean;
   onHeaderClick?: (terminalId: string) => void;
   onCloseClick?: (terminalId: string) => void;
+  onSplitClick?: (terminalId: string) => void;
   onAiAgentToggleClick?: (terminalId: string) => void;
 }
 
@@ -194,6 +196,35 @@ export class HeaderFactory {
       }
     );
 
+    // 分割ボタン (Split button)
+    let splitButton: HTMLButtonElement | null = null;
+    if (config.showSplitButton) {
+      splitButton = DOMUtils.createElement(
+        'button',
+        {
+          background: 'none',
+          border: 'none',
+          color: 'var(--vscode-tab-activeForeground)',
+          cursor: 'pointer',
+          fontSize: '14px',
+          padding: '2px 4px',
+          borderRadius: '2px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          opacity: '0.7',
+          transition: 'opacity 0.2s, background-color 0.2s',
+          marginRight: '2px',
+        },
+        {
+          textContent: '⊞',
+          className: 'terminal-control split-btn',
+          title: 'Split Terminal',
+          'data-terminal-id': terminalId,
+        }
+      );
+    }
+
     // ホバーエフェクトを追加
     aiAgentToggleButton.addEventListener('mouseenter', () => {
       aiAgentToggleButton.style.opacity = '1';
@@ -215,6 +246,19 @@ export class HeaderFactory {
       closeButton.style.backgroundColor = 'transparent';
     });
 
+    // Split button hover effects
+    if (splitButton) {
+      splitButton.addEventListener('mouseenter', () => {
+        splitButton!.style.opacity = '1';
+        splitButton!.style.backgroundColor = 'var(--vscode-toolbar-hoverBackground)';
+      });
+
+      splitButton.addEventListener('mouseleave', () => {
+        splitButton!.style.opacity = '0.7';
+        splitButton!.style.backgroundColor = 'transparent';
+      });
+    }
+
     // Add AI Agent toggle button click handler
     if (config.onAiAgentToggleClick) {
       aiAgentToggleButton.addEventListener('click', (event: MouseEvent) => {
@@ -230,6 +274,15 @@ export class HeaderFactory {
         event.stopPropagation(); // Prevent header click event
         config.onCloseClick!(terminalId);
         log(`🗑️ [HeaderFactory] Close button clicked for terminal: ${terminalId}`);
+      });
+    }
+
+    // Add split button click handler
+    if (splitButton && config.onSplitClick) {
+      splitButton.addEventListener('click', (event: MouseEvent) => {
+        event.stopPropagation(); // Prevent header click event
+        config.onSplitClick!(terminalId);
+        log(`⊞ [HeaderFactory] Split button clicked for terminal: ${terminalId}`);
       });
     }
 
@@ -252,7 +305,14 @@ export class HeaderFactory {
 
     // 要素を組み立て
     DOMUtils.appendChildren(titleSection, nameSpan);
-    DOMUtils.appendChildren(controlsSection, aiAgentToggleButton, closeButton);
+
+    // Add buttons to controls section (splitButton before closeButton)
+    if (splitButton) {
+      DOMUtils.appendChildren(controlsSection, aiAgentToggleButton, splitButton, closeButton);
+    } else {
+      DOMUtils.appendChildren(controlsSection, aiAgentToggleButton, closeButton);
+    }
+
     DOMUtils.appendChildren(container, titleSection, statusSection, controlsSection);
 
     log(`🏗️ [HeaderFactory] Created unified header for terminal: ${terminalId}`);
@@ -268,6 +328,7 @@ export class HeaderFactory {
       controlsSection,
       aiAgentToggleButton,
       closeButton,
+      splitButton,
     };
   }
 
