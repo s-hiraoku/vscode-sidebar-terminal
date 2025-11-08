@@ -524,12 +524,25 @@ export function resetTestEnvironment(): void {
     sinon.reset();
   } catch (error) {
     // Reset may fail if nothing to reset, this is OK
+    console.debug('Sinon reset warning:', error);
   }
 
   try {
     sinon.restore();
   } catch (error) {
     // Restore may fail if nothing to restore, this is OK
+    console.debug('Sinon restore warning:', error);
+  }
+
+  // Reset mockVscode stubs
+  try {
+    if (mockVscode && mockVscode.workspace && mockVscode.workspace.getConfiguration) {
+      if (typeof mockVscode.workspace.getConfiguration.reset === 'function') {
+        mockVscode.workspace.getConfiguration.reset();
+      }
+    }
+  } catch (error) {
+    console.debug('MockVscode reset warning:', error);
   }
 }
 
@@ -574,28 +587,53 @@ export function setupCompleteTestEnvironment(htmlContent?: string): {
 export function cleanupTestEnvironment(sandbox?: sinon.SinonSandbox, dom?: JSDOM): void {
   // sinon スタブをリセット
   if (sandbox) {
-    sandbox.restore();
+    try {
+      sandbox.restore();
+    } catch (error) {
+      // Restore may fail if already restored, this is OK
+      console.debug('Sandbox restore warning:', error);
+    }
   }
 
   // JSDOM をクリーンアップ
   if (dom) {
-    dom.window.close();
+    try {
+      dom.window.close();
+    } catch (error) {
+      // Window may already be closed, this is OK
+      console.debug('JSDOM cleanup warning:', error);
+    }
   }
 
   // グローバル状態をクリア
-  const config = mockVscode.workspace.getConfiguration();
-  if (config && typeof config === 'object') {
-    Object.keys(config).forEach((key) => {
-      if (typeof config[key] === 'object' && config[key] && config[key].reset) {
-        config[key].reset();
-      }
-    });
+  try {
+    const config = mockVscode.workspace.getConfiguration();
+    if (config && typeof config === 'object') {
+      Object.keys(config).forEach((key) => {
+        if (typeof config[key] === 'object' && config[key] && config[key].reset) {
+          try {
+            config[key].reset();
+          } catch (error) {
+            // Reset may fail, this is OK
+            console.debug(`Config reset warning for ${key}:`, error);
+          }
+        }
+      });
+    }
+  } catch (error) {
+    // Config cleanup may fail, this is OK
+    console.debug('Config cleanup warning:', error);
   }
 
-  // グローバルオブジェクトの部分的クリアアップ
-  delete (global as any).window;
-  delete (global as any).document;
-  delete (global as any).navigator;
+  // グローバルオブジェクトの部分的クリーンアップ
+  try {
+    delete (global as any).window;
+    delete (global as any).document;
+    delete (global as any).navigator;
+  } catch (error) {
+    // Global cleanup may fail, this is OK
+    console.debug('Global cleanup warning:', error);
+  }
 }
 
 // Fix process.removeListener issue for Mocha
