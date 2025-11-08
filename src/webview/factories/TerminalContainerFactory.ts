@@ -2,7 +2,7 @@
  * TerminalContainerFactory
  *
  * Centralized terminal container creation and styling to eliminate
- * code duplication across TerminalLifecycleManager and SplitManager
+ * code duplication across TerminalLifecycleCoordinator and SplitManager
  */
 
 import { terminalLogger } from '../utils/ManagerLogger';
@@ -143,7 +143,7 @@ export class TerminalContainerFactory {
           terminalLogger.info(`Header click activation enabled for terminal: ${config.id}`);
         } else {
           // For split terminals without headers: Use VS Code standard approach
-          // The TerminalLifecycleManager will handle xterm.js hasSelection() logic
+          // The TerminalLifecycleCoordinator will handle xterm.js hasSelection() logic
           // This preserves the onContainerClick functionality while allowing text selection
           terminalLogger.info(`Split terminal will use xterm hasSelection() logic: ${config.id}`);
         }

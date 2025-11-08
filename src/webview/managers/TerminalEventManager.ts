@@ -1,7 +1,7 @@
 /**
  * Terminal Event Manager
  *
- * Extracted from TerminalLifecycleManager to centralize event handling.
+ * Extracted from TerminalLifecycleCoordinator to centralize event handling.
  *
  * Responsibilities:
  * - Terminal click event handling for activation

@@ -114,7 +114,7 @@ import { ConsolidatedMessageManager } from './ConsolidatedMessageManager';
 import { OptimizedTerminalPersistenceManager } from '../services/OptimizedPersistenceManager';
 import { SimplePersistenceManager } from './SimplePersistenceManager';
 import { WebViewApiManager } from './WebViewApiManager';
-import { TerminalLifecycleManager } from './TerminalLifecycleManager';
+import { TerminalLifecycleCoordinator } from './TerminalLifecycleCoordinator';
 import { TerminalTabManager } from './TerminalTabManager';
 import { CliAgentStateManager } from './CliAgentStateManager';
 import { EventHandlerManager } from './EventHandlerManager';
@@ -137,7 +137,7 @@ import { HeaderManager } from './HeaderManager';
 export class LightweightTerminalWebviewManager implements IManagerCoordinator {
   // 専門マネージャーの協調
   private webViewApiManager: WebViewApiManager;
-  private terminalLifecycleManager: TerminalLifecycleManager;
+  private terminalLifecycleManager: TerminalLifecycleCoordinator;
   private cliAgentStateManager: CliAgentStateManager;
   private eventHandlerManager: EventHandlerManager;
   public shellIntegrationManager: IShellIntegrationBridge;
@@ -203,7 +203,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     this.webViewApiManager = new WebViewApiManager();
     this.splitManager = new SplitManager();
     this.splitManager.setCoordinator(this);
-    this.terminalLifecycleManager = new TerminalLifecycleManager(this.splitManager, this);
+    this.terminalLifecycleManager = new TerminalLifecycleCoordinator(this.splitManager, this);
     this.cliAgentStateManager = new CliAgentStateManager();
     this.eventHandlerManager = new EventHandlerManager();
     this.findInTerminalManager = new FindInTerminalManager();
@@ -657,7 +657,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
         terminalId,
         terminalName,
         config,
-        terminalNumber // Pass terminal number to TerminalLifecycleManager
+        terminalNumber // Pass terminal number to TerminalLifecycleCoordinator
       );
 
       if (!terminal) {
@@ -2592,7 +2592,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
   // Statistics and diagnostics
 
   public getManagerStats(): {
-    terminals: ReturnType<TerminalLifecycleManager['getTerminalStats']>;
+    terminals: ReturnType<TerminalLifecycleCoordinator['getTerminalStats']>;
     cliAgents: ReturnType<CliAgentStateManager['getAgentStats']>;
     events: ReturnType<EventHandlerManager['getEventStats']>;
     api: ReturnType<WebViewApiManager['getDiagnostics']>;

@@ -1,7 +1,7 @@
 /**
  * Terminal Addon Manager
  *
- * Extracted from TerminalLifecycleManager to centralize addon management.
+ * Extracted from TerminalLifecycleCoordinator to centralize addon management.
  *
  * Responsibilities:
  * - Loading and initializing xterm.js addons

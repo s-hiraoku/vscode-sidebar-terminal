@@ -19,7 +19,7 @@ import { expect } from 'chai';
 import * as sinon from 'sinon';
 import { setupTestEnvironment, resetTestEnvironment, mockVscode as _mockVscode } from '../../shared/TestSetup';
 import { StandardTerminalPersistenceManager } from '../../../webview/managers/StandardTerminalPersistenceManager';
-import { TerminalLifecycleManager } from '../../../webview/managers/TerminalLifecycleManager';
+import { TerminalLifecycleCoordinator } from '../../../webview/managers/TerminalLifecycleCoordinator';
 import { ConsolidatedMessageManager } from '../../../webview/managers/ConsolidatedMessageManager';
 import {
   generateTerminalId,
@@ -39,7 +39,7 @@ interface TerminalSessionData {
 describe('Session Persistence Integration - TDD Suite', () => {
   let sandbox: sinon.SinonSandbox;
   let persistenceManager: StandardTerminalPersistenceManager;
-  let lifecycleManager: TerminalLifecycleManager;
+  let lifecycleManager: TerminalLifecycleCoordinator;
   let messageManager: ConsolidatedMessageManager;
   let mockExtensionContext: any;
   let mockGlobalState: Map<string, any>;
@@ -84,7 +84,7 @@ describe('Session Persistence Integration - TDD Suite', () => {
       isReady: sandbox.stub().returns(true),
       dispose: sandbox.stub()
     };
-    lifecycleManager = new TerminalLifecycleManager(mockSplitManager as any, mockCoordinator as any);
+    lifecycleManager = new TerminalLifecycleCoordinator(mockSplitManager as any, mockCoordinator as any);
     messageManager = new ConsolidatedMessageManager();
 
     // Update mock coordinator
@@ -92,7 +92,7 @@ describe('Session Persistence Integration - TDD Suite', () => {
     (mockCoordinator as any).logger = sandbox.stub();
 
     mockCoordinator.getManager.withArgs('StandardTerminalPersistenceManager').returns(persistenceManager);
-    mockCoordinator.getManager.withArgs('TerminalLifecycleManager').returns(lifecycleManager);
+    mockCoordinator.getManager.withArgs('TerminalLifecycleCoordinator').returns(lifecycleManager);
     mockCoordinator.getManager.withArgs('ConsolidatedMessageManager').returns(messageManager);
   });
 

@@ -2,7 +2,7 @@
  * EventHandlerRegistry Utility
  *
  * Centralized event listener management to eliminate code duplication
- * across InputManager, TerminalLifecycleManager, and other managers
+ * across InputManager, TerminalLifecycleCoordinator, and other managers
  */
 
 import { webview as log } from '../../utils/logger';

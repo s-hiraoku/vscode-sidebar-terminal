@@ -50,7 +50,7 @@ export class ManagerLogger {
 
   /**
    * Create a logger instance for a specific manager
-   * @param managerName Name of the manager (e.g., 'TerminalLifecycleManager')
+   * @param managerName Name of the manager (e.g., 'TerminalLifecycleCoordinator')
    * @param emoji Emoji to use for this manager's logs
    * @param config Optional logging configuration
    */

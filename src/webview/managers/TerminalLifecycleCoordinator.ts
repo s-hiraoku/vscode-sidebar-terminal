@@ -23,7 +23,7 @@ import { ThemeManager } from '../utils/ThemeManager';
 /**
  * Terminal Lifecycle Coordinator
  *
- * Refactored from TerminalLifecycleManager to act as a lightweight coordinator.
+ * Refactored from TerminalLifecycleCoordinator to act as a lightweight coordinator.
  * Delegates operations to specialized services while maintaining the public API.
  *
  * Services:
@@ -34,7 +34,7 @@ import { ThemeManager } from '../utils/ThemeManager';
  *
  * @see openspec/changes/refactor-terminal-foundation/specs/split-lifecycle-manager/spec.md
  */
-export class TerminalLifecycleManager {
+export class TerminalLifecycleCoordinator {
   private splitManager: SplitManager;
   private coordinator: IManagerCoordinator;
   private eventRegistry: EventHandlerRegistry;
@@ -66,7 +66,7 @@ export class TerminalLifecycleManager {
       terminalLogger.warn('Failed to initialize ThemeManager:', error);
     }
 
-    terminalLogger.info('TerminalLifecycleManager initialized with TerminalCreationService');
+    terminalLogger.info('TerminalLifecycleCoordinator initialized with TerminalCreationService');
   }
 
   /**
@@ -420,7 +420,7 @@ export class TerminalLifecycleManager {
    * Dispose all resources using centralized utilities
    */
   public dispose(): void {
-    terminalLogger.info('Disposing TerminalLifecycleManager...');
+    terminalLogger.info('Disposing TerminalLifecycleCoordinator...');
 
     try {
       // Clean up all ResizeManager operations
@@ -448,9 +448,9 @@ export class TerminalLifecycleManager {
       this.fitAddon = null;
       this.terminalContainer = null;
 
-      terminalLogger.info('TerminalLifecycleManager disposed');
+      terminalLogger.info('TerminalLifecycleCoordinator disposed');
     } catch (error) {
-      terminalLogger.error('Error disposing TerminalLifecycleManager:', error);
+      terminalLogger.error('Error disposing TerminalLifecycleCoordinator:', error);
     }
   }
 }

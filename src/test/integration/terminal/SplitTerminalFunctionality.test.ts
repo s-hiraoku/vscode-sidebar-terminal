@@ -19,14 +19,14 @@ import { expect } from 'chai';
 import * as sinon from 'sinon';
 import { setupTestEnvironment, resetTestEnvironment, mockVscode } from '../../shared/TestSetup';
 import { SplitManager } from '../../../webview/managers/SplitManager';
-import { TerminalLifecycleManager } from '../../../webview/managers/TerminalLifecycleManager';
+import { TerminalLifecycleCoordinator } from '../../../webview/managers/TerminalLifecycleCoordinator';
 import { UIManager } from '../../../webview/managers/UIManager';
 import { TerminalConfig } from '../../../types/shared';
 
 describe('Split Terminal Functionality - Integration TDD Suite', () => {
   let sandbox: sinon.SinonSandbox;
   let splitManager: SplitManager;
-  let lifecycleManager: TerminalLifecycleManager;
+  let lifecycleManager: TerminalLifecycleCoordinator;
   let uiManager: UIManager;
   let mockCoordinator: any;
   let mockContainer: HTMLElement;
@@ -54,12 +54,12 @@ describe('Split Terminal Functionality - Integration TDD Suite', () => {
 
     // Initialize managers
     splitManager = new SplitManager();
-    lifecycleManager = new TerminalLifecycleManager(splitManager, mockCoordinator);
+    lifecycleManager = new TerminalLifecycleCoordinator(splitManager, mockCoordinator);
     uiManager = new UIManager();
 
     // Setup coordinator responses
     mockCoordinator.getManager.withArgs('SplitManager').returns(splitManager);
-    mockCoordinator.getManager.withArgs('TerminalLifecycleManager').returns(lifecycleManager);
+    mockCoordinator.getManager.withArgs('TerminalLifecycleCoordinator').returns(lifecycleManager);
     mockCoordinator.getManager.withArgs('UIManager').returns(uiManager);
 
     // Add mock methods that don't exist in the real implementation

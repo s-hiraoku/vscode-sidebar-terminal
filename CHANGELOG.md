@@ -5,6 +5,27 @@ All notable changes to the "Secondary Terminal" extension will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- **Architecture**: Completed Terminal Foundation Refactoring (OpenSpec Phase 1-5)
+  - **BREAKING**: Renamed `TerminalLifecycleManager` to `TerminalLifecycleCoordinator`
+  - Reduced coordinator from 1694 lines to 456 lines (73% reduction)
+  - Extracted specialized services:
+    - `TerminalCreationService` (864 lines): Terminal creation, removal, switching
+    - `TerminalAddonManager` (164 lines): xterm.js addon loading and disposal
+    - `TerminalEventManager` (367 lines): Event handling (click, focus, wheel)
+    - `TerminalLinkManager` (356 lines): File/URL link detection
+  - Improved code maintainability through Single Responsibility Principle
+  - All services under 500 lines for better testability
+  - Build size maintained: extension 642KB, webview 1.3MB
+
+### Developer
+- Completed OpenSpec refactor-terminal-foundation Phase 1-5
+- All lint checks passing (0 errors, 276 acceptable `any` type warnings)
+- Production-ready compilation verified
+- Coordinator pattern successfully applied
+
 ## [0.1.131] - 2025-11-08
 
 ### Changed

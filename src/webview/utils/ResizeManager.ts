@@ -2,7 +2,7 @@
  * ResizeManager Utility
  *
  * Centralized debounced resize logic to eliminate code duplication
- * across TerminalLifecycleManager, PerformanceManager, and SplitManager
+ * across TerminalLifecycleCoordinator, PerformanceManager, and SplitManager
  */
 
 import { webview as log } from '../../utils/logger';

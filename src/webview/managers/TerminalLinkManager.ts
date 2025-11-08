@@ -1,7 +1,7 @@
 /**
  * Terminal Link Manager
  *
- * Extracted from TerminalLifecycleManager to centralize link detection and handling.
+ * Extracted from TerminalLifecycleCoordinator to centralize link detection and handling.
  *
  * Responsibilities:
  * - File path detection and link creation

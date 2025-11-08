@@ -1,7 +1,7 @@
 /**
  * Terminal Creation Service
  *
- * Extracted from TerminalLifecycleManager to follow Single Responsibility Principle.
+ * Extracted from TerminalLifecycleCoordinator to follow Single Responsibility Principle.
  *
  * Responsibilities:
  * - Terminal instance creation with full xterm.js configuration
