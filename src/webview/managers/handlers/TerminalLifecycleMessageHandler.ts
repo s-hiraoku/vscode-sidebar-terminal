@@ -370,9 +370,6 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
       return;
     }
 
-    this.logger.debug(
-      `OUTPUT message received for terminal ${terminal.name} (${terminalId}): ${data.length} chars`
-    );
 
     // Log significant CLI agent patterns for optimization
     if (

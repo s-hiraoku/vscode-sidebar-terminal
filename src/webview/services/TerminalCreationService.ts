@@ -1,0 +1,1158 @@
+/**
+ * Terminal Creation Service
+ *
+ * Extracted from TerminalLifecycleManager to follow Single Responsibility Principle.
+ *
+ * Responsibilities:
+ * - Terminal instance creation with full xterm.js configuration
+ * - Terminal removal with proper cleanup
+ * - Terminal switching with state management
+ * - Link provider registration and management
+ * - Resize handling and observer setup
+ * - Scrollback auto-save integration
+ *
+ * @see openspec/changes/refactor-terminal-foundation/specs/split-lifecycle-manager/spec.md
+ */
+
+import { Terminal, type ILinkProvider, type ILink } from '@xterm/xterm';
+import { FitAddon } from '@xterm/addon-fit';
+import { WebLinksAddon } from '@xterm/addon-web-links';
+import { SearchAddon } from '@xterm/addon-search';
+import { SerializeAddon } from '@xterm/addon-serialize';
+import { Unicode11Addon } from '@xterm/addon-unicode11';
+import { WebglAddon } from '@xterm/addon-webgl';
+
+import { TerminalConfig } from '../../types/shared';
+import { TerminalInstance, IManagerCoordinator } from '../interfaces/ManagerInterfaces';
+import { SplitManager } from '../managers/SplitManager';
+import { TerminalAddonManager, type LoadedAddons } from '../managers/TerminalAddonManager';
+import { TerminalEventManager } from '../managers/TerminalEventManager';
+import { TerminalLinkManager } from '../managers/TerminalLinkManager';
+import { TerminalContainerFactory, TerminalContainerConfig, TerminalHeaderConfig } from '../factories/TerminalContainerFactory';
+import { ThemeManager } from '../utils/ThemeManager';
+import { ResizeManager } from '../utils/ResizeManager';
+import { PerformanceMonitor } from '../../utils/PerformanceOptimizer';
+import { EventHandlerRegistry } from '../utils/EventHandlerRegistry';
+import { terminalLogger } from '../utils/ManagerLogger';
+import { TerminalHeaderElements } from '../factories/HeaderFactory';
+
+/**
+ * Service responsible for terminal creation, removal, and switching operations
+ */
+export class TerminalCreationService {
+  private readonly splitManager: SplitManager;
+  private readonly coordinator: IManagerCoordinator;
+  private readonly eventRegistry: EventHandlerRegistry;
+  private readonly addonManager: TerminalAddonManager;
+  private readonly eventManager: TerminalEventManager;
+  private readonly linkManager: TerminalLinkManager;
+
+  // File path detection regex patterns
+  private readonly absoluteFilePathRegex =
+    /(?:\/[a-zA-Z0-9._-]+)+|(?:[A-Za-z]:\\(?:[^\\/:*?"<>|\r\n]+\\)*[^\\/:*?"<>|\r\n]+)/g;
+  private readonly relativeFilePathRegex = /(?:\.{1,2}\/)+[a-zA-Z0-9._/-]+/g;
+
+  // Allowed file extensions for link detection
+  private readonly allowedFileExtensions = new Set([
+    'js',
+    'ts',
+    'jsx',
+    'tsx',
+    'json',
+    'md',
+    'txt',
+    'py',
+    'rb',
+    'java',
+    'c',
+    'cpp',
+    'h',
+    'cs',
+    'go',
+    'rs',
+    'php',
+    'html',
+    'css',
+    'scss',
+    'sass',
+    'less',
+    'xml',
+    'yaml',
+    'yml',
+    'toml',
+    'ini',
+    'cfg',
+    'conf',
+    'sh',
+    'bash',
+    'zsh',
+    'fish',
+    'ps1',
+    'gradle',
+    'sql',
+  ]);
+
+  // VS Code Standard Terminal Configuration
+  private readonly DEFAULT_TERMINAL_CONFIG = {
+    // Basic appearance
+    cursorBlink: true,
+    fontFamily: 'monospace',
+    fontSize: 14,
+    fontWeight: 'normal',
+    fontWeightBold: 'bold',
+    lineHeight: 1.0,
+    letterSpacing: 0,
+    theme: {
+      background: '#000000',
+      foreground: '#ffffff',
+    },
+
+    // VS Code Standard Options - Core Features
+    altClickMovesCursor: true,
+    drawBoldTextInBrightColors: false,
+    minimumContrastRatio: 1,
+    tabStopWidth: 8,
+    macOptionIsMeta: false,
+    rightClickSelectsWord: true,
+
+    // Scrolling and Navigation
+    fastScrollModifier: 'alt' as const,
+    fastScrollSensitivity: 5,
+    scrollSensitivity: 1,
+    scrollback: 2000,
+    scrollOnUserInput: true,
+
+    // Word and Selection
+    wordSeparator: ' ()[]{}\'"`,;',
+
+    // Rendering Options
+    allowTransparency: false,
+    rescaleOverlappingGlyphs: false,
+    allowProposedApi: true,
+
+    // Cursor Configuration
+    cursorStyle: 'block' as const,
+    cursorInactiveStyle: 'outline' as const,
+    cursorWidth: 1,
+
+    // Terminal Behavior
+    convertEol: false,
+    disableStdin: false,
+    screenReaderMode: false,
+
+    // Bell Configuration
+    bellSound: undefined,
+
+    // Advanced Options
+    windowOptions: {
+      restoreWin: false,
+      minimizeWin: false,
+      setWinPosition: false,
+      setWinSizePixels: false,
+      raiseWin: false,
+      lowerWin: false,
+      refreshWin: false,
+      setWinSizeChars: false,
+      maximizeWin: false,
+      fullscreenWin: false,
+    },
+
+    // Addon Configuration
+    enableGpuAcceleration: true,
+    enableSearchAddon: true,
+    enableUnicode11: true,
+  };
+
+  constructor(
+    splitManager: SplitManager,
+    coordinator: IManagerCoordinator,
+    eventRegistry: EventHandlerRegistry
+  ) {
+    this.splitManager = splitManager;
+    this.coordinator = coordinator;
+    this.eventRegistry = eventRegistry;
+    this.addonManager = new TerminalAddonManager();
+    this.eventManager = new TerminalEventManager(coordinator, eventRegistry);
+    this.linkManager = new TerminalLinkManager(coordinator);
+  }
+
+  /**
+   * Create new terminal using centralized utilities
+   */
+  public async createTerminal(
+    terminalId: string,
+    terminalName: string,
+    config?: TerminalConfig,
+    terminalNumber?: number
+  ): Promise<Terminal | null> {
+    const performanceMonitor = PerformanceMonitor.getInstance();
+    const maxRetries = 2;
+    let currentRetry = 0;
+
+    const attemptCreation = async (): Promise<Terminal | null> => {
+      try {
+        // Pause all ResizeObservers during terminal creation
+        ResizeManager.pauseObservers();
+        terminalLogger.info(`⏸️ Paused all ResizeObservers during terminal creation: ${terminalId}`);
+
+        performanceMonitor.startTimer(`terminal-creation-attempt-${terminalId}-${currentRetry}`);
+        terminalLogger.info(
+          `Creating terminal: ${terminalId} (${terminalName}) - attempt ${currentRetry + 1}/${maxRetries + 1}`
+        );
+
+        // Enhanced DOM readiness check with recovery
+        const terminalBody = document.getElementById('terminal-body');
+        if (!terminalBody) {
+          terminalLogger.error('Main terminal container not found');
+
+          // Recovery - Try to create terminal-body if missing
+          const mainDiv = document.querySelector('#terminal-view') || document.body;
+          if (mainDiv) {
+            const newTerminalBody = document.createElement('div');
+            newTerminalBody.id = 'terminal-body';
+            newTerminalBody.style.cssText = `
+              display: flex;
+              flex-direction: column;
+              width: 100%;
+              height: 100%;
+              background: #000000;
+            `;
+            mainDiv.appendChild(newTerminalBody);
+            terminalLogger.info('✅ Created missing terminal-body container');
+          } else {
+            throw new Error('Cannot find parent container for terminal-body');
+          }
+        }
+
+        // Merge config with defaults
+        const terminalConfig = { ...this.DEFAULT_TERMINAL_CONFIG, ...config };
+
+        // Create Terminal instance
+        const terminal = new Terminal(terminalConfig);
+        terminalLogger.info(`✅ Terminal instance created: ${terminalId}`);
+
+        // Load all addons using TerminalAddonManager
+        const loadedAddons = await this.addonManager.loadAllAddons(terminal, terminalId, {
+          enableGpuAcceleration: terminalConfig.enableGpuAcceleration,
+          enableSearchAddon: terminalConfig.enableSearchAddon,
+          enableUnicode11: terminalConfig.enableUnicode11,
+        });
+
+        // Extract individual addons for convenience
+        const { fitAddon, serializeAddon, searchAddon } = loadedAddons;
+
+        // Create terminal container using factory with proper config
+        const terminalNumberToUse = terminalNumber ?? this.extractTerminalNumber(terminalId);
+
+        const containerConfig: TerminalContainerConfig = {
+          id: terminalId,
+          name: terminalName,
+          className: 'terminal-container',
+          isSplit: false,
+          isActive: false,
+        };
+
+        const headerConfig: TerminalHeaderConfig = {
+          showHeader: true,
+          showCloseButton: true,
+          showSplitButton: false,
+          customTitle: terminalName,
+          onHeaderClick: (clickedTerminalId) => {
+            terminalLogger.info(`🎯 Header clicked for terminal: ${clickedTerminalId}`);
+            this.coordinator?.setActiveTerminalId(clickedTerminalId);
+          },
+          onContainerClick: (clickedTerminalId) => {
+            terminalLogger.info(`🎯 Container clicked for terminal: ${clickedTerminalId}`);
+            this.coordinator?.setActiveTerminalId(clickedTerminalId);
+          },
+          onCloseClick: (clickedTerminalId) => {
+            terminalLogger.info(`🗑️ Header close button clicked: ${clickedTerminalId}`);
+            if (this.coordinator.deleteTerminalSafely) {
+              void this.coordinator.deleteTerminalSafely(clickedTerminalId);
+            } else {
+              this.coordinator.closeTerminal(clickedTerminalId);
+            }
+          },
+          onAiAgentToggleClick: (clickedTerminalId) => {
+            terminalLogger.info(`📎 AI Agent toggle clicked for terminal: ${clickedTerminalId}`);
+            this.coordinator.handleAiAgentToggle?.(clickedTerminalId);
+          },
+        };
+
+        const containerElements = TerminalContainerFactory.createContainer(containerConfig, headerConfig);
+        if (!containerElements || !containerElements.container || !containerElements.body) {
+          throw new Error('Invalid container elements created');
+        }
+
+        const container = containerElements.container;
+        const terminalContent = containerElements.body;
+        terminalLogger.info(`✅ Container created: ${terminalId} with terminal number: ${terminalNumberToUse}`);
+
+        // Open terminal in the body div
+        terminal.open(terminalContent);
+        terminalLogger.info(`✅ Terminal opened in container: ${terminalId}`);
+
+        // Make container visible
+        container.style.display = 'flex';
+        container.style.visibility = 'visible';
+
+        // 🔧 CRITICAL: Append container to DOM
+        const bodyElement = document.getElementById('terminal-body');
+        if (bodyElement) {
+          bodyElement.appendChild(container);
+          terminalLogger.info(`✅ Container appended to DOM: ${terminalId}`);
+        } else {
+          terminalLogger.error(`❌ terminal-body not found, cannot append container: ${terminalId}`);
+        }
+
+        // Setup event handlers for click, focus, keyboard, etc.
+        this.eventManager.setupTerminalEvents(terminal, terminalId, container);
+
+        // Setup shell integration
+        this.setupShellIntegration(terminal, terminalId);
+
+        // Register file link handlers using TerminalLinkManager
+        this.linkManager.registerTerminalLinkHandlers(terminal, terminalId);
+
+        // Enable VS Code standard scrollbar
+        const xtermElement = terminalContent.querySelector('.xterm');
+        this.enableScrollbarDisplay(xtermElement, terminalId);
+
+        // Create terminal instance record
+        const terminalInstance: TerminalInstance = {
+          terminal,
+          fitAddon,
+          container,
+          name: terminalName,
+          isActive: false,
+          number: terminalNumberToUse,
+          searchAddon,
+          serializeAddon,
+        };
+
+        // Register with SplitManager
+        this.splitManager.getTerminals().set(terminalId, terminalInstance);
+        this.splitManager.getTerminalContainers().set(terminalId, container);
+        terminalLogger.info(`✅ Terminal registered with SplitManager: ${terminalId}`);
+
+        // Register container with TerminalContainerManager
+        const containerManager = this.coordinator?.getTerminalContainerManager?.();
+        if (containerManager) {
+          containerManager.registerContainer(terminalId, container);
+          terminalLogger.info(`✅ Container registered with TerminalContainerManager: ${terminalId}`);
+        }
+
+        // Ensure split layouts are refreshed when new terminals are created during split mode
+        if (this.splitManager.getIsSplitMode()) {
+          this.splitManager.addNewTerminalToSplit(terminalId, terminalName);
+          const displayManager = this.coordinator.getDisplayModeManager?.();
+          displayManager?.showAllTerminalsSplit();
+        }
+
+        // AI Agent Support: Register header elements with UIManager for status updates
+        if (containerElements.headerElements) {
+          const uiManager = this.coordinator.getManagers().ui;
+          if (this.hasHeaderElementsCache(uiManager)) {
+            uiManager.headerElementsCache.set(terminalId, containerElements.headerElements);
+            terminalLogger.info(`✅ Header elements registered with UIManager for AI Agent support: ${terminalId}`);
+          }
+        }
+
+        // Perform initial resize
+        this.performInitialResize(terminal, fitAddon, container, terminalId);
+
+        // Setup resize observer
+        this.setupResizeObserver(terminalId, terminalInstance);
+
+        // Setup input handling via InputManager
+        if (this.coordinator?.inputManager) {
+          this.coordinator.inputManager.addXtermClickHandler(
+            terminal,
+            terminalId,
+            container,
+            this.coordinator
+          );
+          terminalLogger.info(`✅ Input handling setup for terminal: ${terminalId}`);
+        } else {
+          terminalLogger.error(`❌ InputManager not available for terminal: ${terminalId}`);
+        }
+
+        // Setup scrollback auto-save
+        this.setupScrollbackAutoSave(terminal, terminalId, serializeAddon);
+
+        const elapsed = performanceMonitor.endTimer(`terminal-creation-attempt-${terminalId}-${currentRetry}`);
+        terminalLogger.info(`✅ Terminal creation completed: ${terminalId} in ${elapsed}ms`);
+
+        // Notify Extension that WebView terminal initialization is complete
+        setTimeout(() => {
+          this.coordinator.postMessageToExtension({
+            command: 'terminalInitializationComplete',
+            terminalId: terminalId,
+            timestamp: Date.now(),
+          });
+        }, 50);
+
+        // Resume ResizeObservers after terminal creation
+        setTimeout(() => {
+          ResizeManager.resumeObservers();
+          terminalLogger.info(`▶️ Resumed all ResizeObservers after terminal creation: ${terminalId}`);
+        }, 100);
+
+        return terminal;
+      } catch (error) {
+        terminalLogger.error(`Failed to create terminal ${terminalId}:`, error);
+
+        // Resume observers even on error
+        ResizeManager.resumeObservers();
+
+        if (currentRetry < maxRetries) {
+          currentRetry++;
+          terminalLogger.info(`Retrying terminal creation: ${terminalId} (${currentRetry}/${maxRetries})`);
+          await new Promise((resolve) => setTimeout(resolve, 500));
+          return attemptCreation();
+        }
+
+        return null;
+      }
+    };
+
+    return attemptCreation();
+  }
+
+  /**
+   * Remove terminal with proper cleanup
+   */
+  public async removeTerminal(terminalId: string): Promise<boolean> {
+    try {
+      terminalLogger.info(`Removing terminal: ${terminalId}`);
+
+      const terminalInstance = this.splitManager.getTerminals().get(terminalId);
+      if (!terminalInstance) {
+        terminalLogger.warn(`Terminal not found: ${terminalId}`);
+        return false;
+      }
+
+      // Cleanup resize observer using ResizeManager
+      ResizeManager.unobserveResize(terminalId);
+      ResizeManager.clearResize(`resize-${terminalId}`);
+      ResizeManager.clearResize(`initial-${terminalId}`);
+
+      // Cleanup event handlers
+      this.eventManager.removeTerminalEvents(terminalId);
+
+      // Cleanup link providers
+      this.linkManager.unregisterTerminalLinkProvider(terminalId);
+
+      // Dispose terminal
+      terminalInstance.terminal.dispose();
+
+      // Remove container
+      if (terminalInstance.container && terminalInstance.container.parentNode) {
+        terminalInstance.container.parentNode.removeChild(terminalInstance.container);
+      }
+
+      // Remove from maps
+      this.splitManager.getTerminals().delete(terminalId);
+      this.splitManager.getTerminalContainers().delete(terminalId);
+
+      // Unregister container from TerminalContainerManager
+      const containerManager = this.coordinator?.getTerminalContainerManager?.();
+      if (containerManager) {
+        containerManager.unregisterContainer(terminalId);
+        terminalLogger.info(`✅ Container unregistered from TerminalContainerManager: ${terminalId}`);
+      }
+
+      terminalLogger.info(`Terminal removed successfully: ${terminalId}`);
+      return true;
+    } catch (error) {
+      terminalLogger.error(`Failed to remove terminal ${terminalId}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Switch to terminal with ResizeManager integration
+   */
+  public async switchToTerminal(
+    terminalId: string,
+    currentActiveId: string | null,
+    onActivate: (id: string) => void
+  ): Promise<boolean> {
+    try {
+      terminalLogger.info(`Switching to terminal: ${terminalId}`);
+
+      const terminalInstance = this.splitManager.getTerminals().get(terminalId);
+      if (!terminalInstance) {
+        terminalLogger.error(`Terminal not found: ${terminalId}`);
+        return false;
+      }
+
+      // Deactivate current terminal
+      if (currentActiveId) {
+        const currentInstance = this.splitManager.getTerminals().get(currentActiveId);
+        if (currentInstance) {
+          currentInstance.isActive = false;
+          currentInstance.container.classList.remove('active');
+        }
+      }
+
+      // Activate new terminal
+      terminalInstance.isActive = true;
+      terminalInstance.container.classList.add('active');
+      onActivate(terminalId);
+
+      // Debounced resize for smooth transition
+      ResizeManager.debounceResize(
+        `switch-${terminalId}`,
+        async () => {
+          try {
+            if (terminalInstance.fitAddon) {
+              terminalInstance.fitAddon.fit();
+              this.notifyExtensionResize(terminalId, terminalInstance.terminal);
+            }
+          } catch (error) {
+            terminalLogger.error(`Switch resize failed for ${terminalId}:`, error);
+          }
+        },
+        { delay: 100 }
+      );
+
+      terminalLogger.info(`Switched to terminal successfully: ${terminalId}`);
+      return true;
+    } catch (error) {
+      terminalLogger.error(`Failed to switch to terminal ${terminalId}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Check if manager has headerElementsCache for AI Agent support
+   */
+  private hasHeaderElementsCache(
+    manager: unknown
+  ): manager is { headerElementsCache: Map<string, TerminalHeaderElements> } {
+    if (
+      typeof manager === 'object' &&
+      manager !== null &&
+      'headerElementsCache' in manager
+    ) {
+      const cache = (manager as { headerElementsCache?: unknown }).headerElementsCache;
+      return cache instanceof Map;
+    }
+    return false;
+  }
+
+  private enableScrollbarDisplay(xtermElement: Element | null, terminalId: string): void {
+    if (!xtermElement) return;
+
+    try {
+      const viewport = xtermElement.querySelector('.xterm-viewport') as HTMLElement;
+      const screen = xtermElement.querySelector('.xterm-screen') as HTMLElement;
+
+      if (!viewport) {
+        terminalLogger.warn(`Viewport not found for terminal ${terminalId}`);
+        return;
+      }
+
+      // Apply VS Code standard viewport settings for maximum display area
+      viewport.style.overflow = 'auto';
+      viewport.style.scrollbarWidth = 'auto';
+      viewport.style.position = 'absolute';
+      viewport.style.top = '0';
+      viewport.style.left = '0';
+      viewport.style.right = '0';
+      viewport.style.bottom = '0';
+
+      // Ensure screen uses full available space
+      if (screen) {
+        screen.style.position = 'relative';
+        screen.style.width = '100%';
+        screen.style.height = '100%';
+      }
+
+      // Add VS Code standard scrollbar styling (only once)
+      if (!document.head.querySelector('#terminal-scrollbar-styles')) {
+        const style = document.createElement('style');
+        style.id = 'terminal-scrollbar-styles';
+        style.textContent = `
+          /* VS Code Terminal - Full Display Area Implementation */
+          .terminal-container {
+            display: flex !important;
+            flex-direction: column !important;
+            width: 100% !important;
+            height: 100% !important;
+            position: relative !important;
+            padding: 0 !important;
+            margin: 0 !important;
+          }
+
+          .terminal-content {
+            flex: 1 1 auto !important;
+            width: 100% !important;
+            height: 100% !important;
+            position: relative !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            overflow: hidden !important;
+          }
+
+          .terminal-container .xterm {
+            position: relative !important;
+            width: 100% !important;
+            height: 100% !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            box-sizing: border-box !important;
+          }
+
+          .terminal-container .xterm-viewport {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            overflow: auto !important;
+            z-index: 30;
+            background: transparent !important;
+          }
+
+          .terminal-container .xterm-screen {
+            position: relative !important;
+            z-index: 31;
+            width: 100% !important;
+            min-height: 100% !important;
+            padding: 8px !important;
+            box-sizing: border-box !important;
+          }
+
+          /* VS Code Standard Scrollbar Styling - 14px width */
+          .terminal-container .xterm-viewport::-webkit-scrollbar {
+            width: 14px;
+            height: 14px;
+          }
+
+          .terminal-container .xterm-viewport::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 0px;
+          }
+
+          .terminal-container .xterm-viewport::-webkit-scrollbar-thumb {
+            background-color: rgba(121, 121, 121, 0.4);
+            border-radius: 0px;
+            border: 3px solid transparent;
+            background-clip: content-box;
+            min-height: 20px;
+          }
+
+          .terminal-container .xterm-viewport::-webkit-scrollbar-thumb:hover {
+            background-color: rgba(100, 100, 100, 0.7);
+          }
+
+          .terminal-container .xterm-viewport::-webkit-scrollbar-thumb:active {
+            background-color: rgba(68, 68, 68, 0.8);
+          }
+
+          .terminal-container .xterm-viewport::-webkit-scrollbar-corner {
+            background: transparent;
+          }
+
+          /* Firefox scrollbar styling */
+          .terminal-container .xterm-viewport {
+            scrollbar-width: auto !important;
+            scrollbar-color: rgba(121, 121, 121, 0.4) rgba(0, 0, 0, 0.1);
+          }
+
+          /* Ensure text selection is visible */
+          .terminal-container .xterm .xterm-selection div {
+            position: absolute;
+            background-color: rgba(255, 255, 255, 0.3);
+            pointer-events: none;
+          }
+
+          /* Override any existing height restrictions */
+          #terminal-body,
+          #terminal-body .terminal-container,
+          #terminal-body .terminal-content {
+            height: 100% !important;
+            max-height: none !important;
+          }
+
+          /* Ensure cursor rendering is correct */
+          .terminal-container .xterm .xterm-cursor-layer {
+            z-index: 32;
+          }
+        `;
+        document.head.appendChild(style);
+      }
+
+      terminalLogger.info(`✅ VS Code standard full viewport and scrollbar enabled for terminal: ${terminalId}`);
+    } catch (error) {
+      terminalLogger.error(`Failed to enable scrollbar for terminal ${terminalId}:`, error);
+    }
+  }
+
+  /**
+   * Setup shell integration decorations and link providers
+   */
+  private setupShellIntegration(terminal: Terminal, terminalId: string): void {
+    try {
+      const shellManager = this.coordinator.shellIntegrationManager;
+      if (shellManager) {
+        shellManager.decorateTerminalOutput(terminal, terminalId);
+        terminalLogger.info(`Shell integration decorations added for terminal: ${terminalId}`);
+      }
+    } catch (error) {
+      terminalLogger.warn(`Failed to setup shell integration for terminal ${terminalId}:`, error);
+    }
+  }
+
+  /**
+   * Register terminal link handlers for file and URL detection
+   */
+  private registerTerminalLinkHandlers(terminal: Terminal, terminalId: string): void {
+    try {
+      const existingDisposable = this.linkProviderDisposables.get(terminalId);
+      existingDisposable?.dispose();
+
+      const disposable = terminal.registerLinkProvider({
+        provideLinks: (bufferLineNumber, callback) => {
+          try {
+            const line = terminal.buffer.active.getLine(bufferLineNumber - 1);
+            if (!line) {
+              callback([]);
+              return;
+            }
+
+            const text = line.translateToString(false);
+            const links = this.extractFileLinks(text, bufferLineNumber, terminalId);
+            callback(links);
+          } catch (error) {
+            terminalLogger.warn('⚠️ Failed to analyze terminal links:', error);
+            callback([]);
+          }
+        },
+      });
+
+      this.linkProviderDisposables.set(terminalId, disposable);
+      terminalLogger.debug(`Registered terminal link provider for ${terminalId}`);
+    } catch (error) {
+      terminalLogger.warn(`⚠️ Unable to register link provider for ${terminalId}:`, error);
+    }
+  }
+
+  /**
+   * Extract file links from terminal line
+   */
+  private extractFileLinks(text: string, bufferLineNumber: number, terminalId: string): ILink[] {
+    const matches: ILink[] = [];
+    const processed = new Set<string>();
+
+    const evaluateRegex = (regex: RegExp) => {
+      regex.lastIndex = 0;
+      let match: RegExpExecArray | null;
+      while ((match = regex.exec(text)) !== null) {
+        const raw = match[0];
+        const sanitizedResult = this.sanitizeLinkText(raw);
+        if (!sanitizedResult) {
+          continue;
+        }
+
+        const { text: sanitizedText, leadingOffset } = sanitizedResult;
+        const key = `${match.index + leadingOffset}:${sanitizedText}`;
+        if (processed.has(key)) {
+          continue;
+        }
+        processed.add(key);
+
+        const { path: candidatePath, line, column } = this.parseFileLink(sanitizedText);
+        if (!candidatePath) {
+          continue;
+        }
+
+        const absoluteIndex = match.index + leadingOffset;
+        const startColumn = absoluteIndex + 1;
+        const endColumn = startColumn + sanitizedText.length;
+
+        matches.push({
+          text: sanitizedText,
+          range: {
+            start: { x: startColumn, y: bufferLineNumber },
+            end: { x: endColumn, y: bufferLineNumber },
+          },
+          activate: () => this.openFileFromTerminal(candidatePath, line, column, terminalId),
+        });
+      }
+    };
+
+    evaluateRegex(this.absoluteFilePathRegex);
+    evaluateRegex(this.relativeFilePathRegex);
+
+    return matches;
+  }
+
+  /**
+   * Sanitize link text by removing surrounding quotes and brackets
+   */
+  private sanitizeLinkText(raw: string): { text: string; leadingOffset: number } | null {
+    if (!raw) {
+      return null;
+    }
+
+    let startOffset = 0;
+    let endOffset = raw.length;
+
+    const trimChars = new Set([
+      "'",
+      '"',
+      '`',
+      '(',
+      ')',
+      '[',
+      ']',
+      '<',
+      '>',
+      '{',
+      '}',
+      ' ',
+      ',',
+      '.',
+      ';',
+    ]);
+
+    while (startOffset < endOffset) {
+      const char = raw[startOffset];
+      if (!char || !trimChars.has(char)) {
+        break;
+      }
+      startOffset++;
+    }
+
+    while (endOffset > startOffset) {
+      const char = raw[endOffset - 1];
+      if (!char || !trimChars.has(char)) {
+        break;
+      }
+      endOffset--;
+    }
+
+    if (startOffset >= endOffset) {
+      return null;
+    }
+
+    const text = raw.substring(startOffset, endOffset);
+    return text ? { text, leadingOffset: startOffset } : null;
+  }
+
+  /**
+   * Parse file link to extract path, line number, and column number
+   */
+  private parseFileLink(linkText: string): { path: string | null; line?: number; column?: number } {
+    if (!linkText || linkText.includes('://')) {
+      return { path: null };
+    }
+
+    let candidate = linkText;
+    let lineNumber: number | undefined;
+    let columnNumber: number | undefined;
+
+    let searchEnd = candidate.length;
+    const numericSegments: number[] = [];
+
+    while (searchEnd > 0) {
+      const colonIndex = candidate.lastIndexOf(':', searchEnd - 1);
+      if (colonIndex <= 0) {
+        break;
+      }
+
+      const numericPart = candidate.substring(colonIndex + 1, searchEnd);
+      if (!/^\d+$/.test(numericPart)) {
+        break;
+      }
+
+      if (colonIndex === 1 && candidate[0] && /^[A-Za-z]$/.test(candidate[0])) {
+        break;
+      }
+
+      numericSegments.unshift(Number.parseInt(numericPart, 10));
+      searchEnd = colonIndex;
+    }
+
+    if (numericSegments.length > 0) {
+      lineNumber = numericSegments[0];
+      if (numericSegments.length > 1) {
+        columnNumber = numericSegments[1];
+      }
+      candidate = candidate.substring(0, searchEnd);
+    }
+
+    candidate = candidate.trim();
+    if (!candidate) {
+      return { path: null };
+    }
+
+    return {
+      path: this.isSupportedFilePath(candidate) ? candidate : null,
+      line: lineNumber,
+      column: columnNumber,
+    };
+  }
+
+  /**
+   * Check if candidate path is a supported file path
+   */
+  private isSupportedFilePath(candidate: string | null): string | null {
+    if (!candidate) {
+      return null;
+    }
+
+    const hasDirectory = candidate.includes('/') || candidate.includes('\\');
+    if (!hasDirectory) {
+      const extensionMatch = candidate.match(/\.([A-Za-z0-9]+)$/);
+      if (!extensionMatch || !extensionMatch[1]) {
+        return null;
+      }
+
+      const extension = extensionMatch[1].toLowerCase();
+      if (!this.allowedFileExtensions.has(extension)) {
+        return null;
+      }
+    }
+
+    return candidate;
+  }
+
+  /**
+   * Open URL from terminal
+   */
+  private openUrlFromTerminal(url: string, terminalId: string): void {
+    this.coordinator?.postMessageToExtension({
+      command: 'openTerminalLink',
+      linkType: 'url',
+      url,
+      terminalId,
+      timestamp: Date.now(),
+    });
+  }
+
+  /**
+   * Open file from terminal
+   */
+  private openFileFromTerminal(
+    filePath: string,
+    lineNumber: number | undefined,
+    columnNumber: number | undefined,
+    terminalId: string
+  ): void {
+    this.coordinator?.postMessageToExtension({
+      command: 'openTerminalLink',
+      linkType: 'file',
+      filePath,
+      lineNumber,
+      columnNumber,
+      terminalId,
+      timestamp: Date.now(),
+    });
+  }
+
+  /**
+   * Perform initial terminal resize
+   */
+  private performInitialResize(
+    terminal: Terminal,
+    fitAddon: FitAddon,
+    container: HTMLElement,
+    terminalId: string
+  ): void {
+    try {
+      const rect = container.getBoundingClientRect();
+
+      if (rect.width > 50 && rect.height > 50) {
+        fitAddon.fit();
+        terminalLogger.debug(`Terminal initial size: ${terminalId} (${terminal.cols}x${terminal.rows})`);
+      } else {
+        terminalLogger.warn(
+          `Container too small for initial resize: ${terminalId} (${rect.width}x${rect.height})`
+        );
+      }
+    } catch (error) {
+      terminalLogger.error(`Failed initial resize for ${terminalId}:`, error);
+    }
+  }
+
+  /**
+   * Setup resize observer using ResizeManager
+   */
+  private setupResizeObserver(terminalId: string, terminalInstance: TerminalInstance): void {
+    try {
+      ResizeManager.observeResize(
+        terminalId,
+        terminalInstance.container,
+        (entry) => {
+          const { width, height } = entry.contentRect;
+          if (width > 50 && height > 50) {
+            this.handleTerminalResize(terminalId, terminalInstance);
+          }
+        },
+        { delay: 100 }
+      );
+
+      terminalLogger.debug(`ResizeObserver setup for: ${terminalId}`);
+    } catch (error) {
+      terminalLogger.error(`Failed to setup ResizeObserver for ${terminalId}:`, error);
+    }
+  }
+
+  /**
+   * Handle terminal resize using ResizeManager
+   */
+  private handleTerminalResize(terminalId: string, terminalInstance: TerminalInstance): void {
+    ResizeManager.debounceResize(
+      `resize-${terminalId}`,
+      async () => {
+        try {
+          if (terminalInstance.fitAddon) {
+            terminalInstance.fitAddon.fit();
+            this.notifyExtensionResize(terminalId, terminalInstance.terminal);
+          }
+        } catch (error) {
+          terminalLogger.error(`Resize failed for ${terminalId}:`, error);
+        }
+      },
+      { delay: 100 }
+    );
+  }
+
+  /**
+   * Notify extension about terminal resize
+   */
+  private notifyExtensionResize(terminalId: string, terminal: Terminal): void {
+    try {
+      this.coordinator.postMessageToExtension({
+        command: 'resize',
+        terminalId: terminalId,
+        cols: terminal.cols,
+        rows: terminal.rows,
+      });
+
+      terminalLogger.debug(`Sent resize notification: ${terminalId} (${terminal.cols}x${terminal.rows})`);
+    } catch (error) {
+      terminalLogger.error(`Failed to notify extension of resize for ${terminalId}:`, error);
+    }
+  }
+
+  /**
+   * Extract terminal number from terminal ID (e.g., "terminal-3" -> 3)
+   */
+  private extractTerminalNumber(terminalId: string | undefined): number {
+    if (!terminalId) {
+      return 1;
+    }
+    const match = terminalId.match(/terminal-(\d+)/);
+    if (match && match[1]) {
+      return parseInt(match[1], 10);
+    }
+
+    // Fallback: find available number
+    const existingNumbers = new Set<number>();
+    const terminals = this.splitManager.getTerminals();
+    terminals.forEach((terminal) => {
+      if (terminal.number) {
+        existingNumbers.add(terminal.number);
+      }
+    });
+
+    // Find first available number (1-5)
+    for (let i = 1; i <= 5; i++) {
+      if (!existingNumbers.has(i)) {
+        return i;
+      }
+    }
+
+    terminalLogger.warn(`Could not extract terminal number from ID: ${terminalId}, defaulting to 1`);
+    return 1;
+  }
+
+  /**
+   * Setup automatic scrollback save on terminal output (VS Code standard approach)
+   */
+  private setupScrollbackAutoSave(
+    terminal: Terminal,
+    terminalId: string,
+    serializeAddon: import('@xterm/addon-serialize').SerializeAddon
+  ): void {
+    let saveTimer: number | null = null;
+
+    const pushScrollbackToExtension = (): void => {
+      if (saveTimer) {
+        window.clearTimeout(saveTimer);
+      }
+
+      saveTimer = window.setTimeout(() => {
+        try {
+          const serialized = serializeAddon.serialize({ scrollback: 1000 });
+          const lines = serialized.split('\n');
+
+          const windowWithApi = window as Window & {
+            vscodeApi?: {
+              postMessage: (message: unknown) => void;
+            };
+          };
+
+          const message = {
+            command: 'pushScrollbackData',
+            terminalId,
+            scrollbackData: lines,
+            timestamp: Date.now(),
+          };
+
+          if (windowWithApi.vscodeApi) {
+            windowWithApi.vscodeApi.postMessage(message);
+            terminalLogger.info(
+              `💾 [AUTO-SAVE] Pushed scrollback via vscodeApi for terminal ${terminalId}: ${lines.length} lines`
+            );
+          } else {
+            if (this.coordinator && typeof this.coordinator.postMessageToExtension === 'function') {
+              this.coordinator.postMessageToExtension(message);
+              terminalLogger.info(
+                `💾 [AUTO-SAVE] Pushed scrollback via MessageManager for terminal ${terminalId}: ${lines.length} lines`
+              );
+            } else {
+              terminalLogger.error(
+                `❌ [AUTO-SAVE] No message transport available for terminal ${terminalId}`
+              );
+            }
+          }
+        } catch (error) {
+          terminalLogger.warn(`⚠️ [AUTO-SAVE] Failed to push scrollback for terminal ${terminalId}:`, error);
+        }
+      }, 3000);
+    };
+
+    terminal.onData(pushScrollbackToExtension);
+    setTimeout(pushScrollbackToExtension, 2000);
+
+    terminalLogger.info(`✅ [AUTO-SAVE] Scrollback auto-save enabled for terminal: ${terminalId}`);
+  }
+
+  /**
+   * Dispose all resources
+   */
+  public dispose(): void {
+    terminalLogger.info('Disposing TerminalCreationService...');
+
+    try {
+      // Dispose addon manager
+      this.addonManager.dispose();
+
+      // Dispose event manager
+      this.eventManager.dispose();
+
+      // Dispose link manager
+      this.linkManager.dispose();
+
+      terminalLogger.info('TerminalCreationService disposed');
+    } catch (error) {
+      terminalLogger.error('Error disposing TerminalCreationService:', error);
+    }
+  }
+}
