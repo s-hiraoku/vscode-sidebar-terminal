@@ -275,7 +275,7 @@ export class TerminalEventManager {
           `terminal-${terminalId}-keydown`,
           textArea,
           'keydown',
-          keyHandler
+          keyHandler as EventListener
         );
 
         terminalLogger.debug(`✅ Keyboard handler setup for terminal: ${terminalId}`);

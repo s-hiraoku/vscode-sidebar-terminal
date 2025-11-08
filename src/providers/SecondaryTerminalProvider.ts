@@ -458,7 +458,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     // 🎯 HANDSHAKE PROTOCOL: Send extensionReady FIRST
     log('🤝 [HANDSHAKE] Sending extensionReady in response to webviewReady');
     void this._communicationService.sendMessage({
-      command: 'extensionReady',
+      command: 'extensionReady' as any,
       timestamp: Date.now(),
     });
     log('✅ [HANDSHAKE] extensionReady sent to WebView');
