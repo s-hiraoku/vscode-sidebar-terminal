@@ -130,7 +130,7 @@ npx mocha out/test/unit/example/MyFeature.test.js
 
 ### ディレクトリ構造
 
-```
+```text
 src/test/
 ├── shared/              # 共通テストユーティリティ
 │   ├── TestSetup.ts    # グローバルセットアップ
