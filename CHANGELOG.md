@@ -5,6 +5,32 @@ All notable changes to the "Secondary Terminal" extension will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.130] - 2025-11-08
+
+### Added
+- **Split Button**: Terminal headers now display a split button (⊞) for quick terminal creation
+  - Click the split button to create a new terminal with the default profile
+  - Button positioned between AI Agent toggle and close button
+
+### Changed
+- **OpenSpec Refactoring Phase 2-4**: Extracted reusable utilities from TerminalLifecycleManager
+  - Created `AddonLoader`: Generic xterm.js addon loading utility (reduced 79 lines, 33.6%)
+  - Created `ErrorHandler`: Standardized error handling with severity levels (❌ ⚠️ ℹ️)
+  - Created `BaseMessageHandler`: Abstract base class for message handlers
+  - Comprehensive test coverage: 800+ lines of unit tests
+
+### Fixed
+- Resolved 10 ESLint errors (unused variables and imports)
+- Fixed TypeScript compilation errors in main codebase
+- Updated ErrorHandler API calls across HeaderManager and SettingsPanel
+- Corrected split button implementation to use profileManager
+
+### Developer
+- All lint errors resolved (0 errors, 274 warnings remain for `any` types)
+- Main code compiles successfully with 0 TypeScript errors
+- Created 6 new utility classes with comprehensive tests
+- Improved code maintainability and reusability
+
 ## [Unreleased]
 
 ### Fixed
