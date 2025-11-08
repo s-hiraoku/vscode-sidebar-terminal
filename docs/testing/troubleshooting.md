@@ -19,24 +19,67 @@
 ### 症状
 テスト実行後に以下のようなエラーが表示される：
 
-```bash
+```text
 Error: Process completed with exit code 7
 ```
 
 ### 原因
-グローバルリソースのクリーンアップ処理で発生する既知の問題です。テスト自体は正常に実行されています。
+グローバルリソースのクリーンアップ処理で発生する問題です。主な原因：
+- テスト間でリソースが適切に解放されていない
+- Mochaのイベントリスナーが残留している
+- グローバル状態の不完全なリセット
+
+**重要**: このエラーを単に許容するのではなく、根本原因を特定して解決することが重要です。
 
 ### 解決方法
 
-#### 方法1: 許容する（推奨）
-CI/CDでは exit code 7 を許容する設定になっています：
+#### 方法1: 適切なクリーンアップ処理の実装（推奨）
+テストファイルで確実なクリーンアップを行う：
+
+```typescript
+import { cleanupTestEnvironment, resetTestEnvironment } from '../../shared/TestSetup';
+
+describe('Test Suite', () => {
+  let sandbox: sinon.SinonSandbox;
+  let dom: JSDOM;
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+    // 各テスト前にリセット
+    resetTestEnvironment();
+  });
+
+  afterEach(() => {
+    // 確実なクリーンアップ
+    cleanupTestEnvironment(sandbox, dom);
+  });
+
+  // テストケース
+});
+```
+
+#### 方法2: リソースリークの調査
+exit code 7が発生する場合、以下を確認：
 
 ```bash
-# テスト実行（exit code 7を許容）
+# デバッグモードでテスト実行
+DEBUG=* npm run test:unit
+
+# 特定のテストファイルのみ実行して原因を特定
+npx mocha out/test/unit/specific-file.test.js --reporter tap
+```
+
+#### 方法3: CI/CDでの一時的な対処（非推奨）
+根本原因の調査中のみ、CI/CDで一時的に許容：
+
+```bash
+# 一時的な対処（根本原因を解決するまで）
 npm run test:unit || {
   exit_code=$?
   if [ $exit_code -eq 7 ]; then
-    echo "Tests passed (Mocha cleanup exit code 7)"
+    echo "⚠️  Exit code 7 detected - requires investigation"
+    echo "See: docs/testing/troubleshooting.md#mocha-exit-code-7問題"
+    # TODO: Issue #XXX で根本原因を解決する
     exit 0
   else
     exit $exit_code
@@ -44,16 +87,7 @@ npm run test:unit || {
 }
 ```
 
-#### 方法2: クリーンアップ処理の改善
-テストファイルで適切なクリーンアップを行う：
-
-```typescript
-import { cleanupTestEnvironment } from '../../shared/TestSetup';
-
-afterEach(() => {
-  cleanupTestEnvironment(sandbox, dom);
-});
-```
+**注意**: この方法は一時的な回避策であり、根本解決ではありません。
 
 ### 参考
 - [GitHub Issue: Mocha exit code 7](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues)
@@ -64,7 +98,7 @@ afterEach(() => {
 ## テストタイムアウト
 
 ### 症状
-```
+```text
 Error: Timeout of 2000ms exceeded
 ```
 
@@ -129,7 +163,7 @@ it('should save data', () => {
 
 ### 症状1: "Attempted to wrap already wrapped function"
 
-```
+```text
 Error: Attempted to wrap someFunction which is already wrapped
 ```
 
@@ -182,7 +216,7 @@ expect(stub).to.have.been.calledWith('expected arg');
 ## VS Code API モックエラー
 
 ### 症状
-```
+```text
 TypeError: Cannot read property 'workspace' of undefined
 ```
 
@@ -223,7 +257,7 @@ beforeEach(() => {
 ## node-ptyエラー
 
 ### 症状
-```
+```text
 Error: Cannot find module '@homebridge/node-pty-prebuilt-multiarch'
 ```
 
@@ -252,7 +286,7 @@ export const spawn = () => ({
 ## JSDOM関連エラー
 
 ### 症状
-```
+```text
 ReferenceError: document is not defined
 ```
 
@@ -303,7 +337,7 @@ const { dom, document } = setupJSDOMEnvironment(htmlContent);
 ## カバレッジレポート生成エラー
 
 ### 症状
-```
+```text
 Error: No coverage information was collected
 ```
 

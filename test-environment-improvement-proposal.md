@@ -113,73 +113,103 @@ npm run test:unit -- --grep "cleanup|dispose|teardown"
 
 ### 優先度 2: 重要（3-4週間）
 
-#### 2.1 Playwright E2Eテスト環境構築
+#### 2.1 VS Code拡張機能E2Eテスト環境構築
 **目標**: 完全なE2Eテスト基盤の確立
 
+**重要**: VS Code拡張機能のE2Eテストは、通常のWebアプリケーションとは異なるアプローチが必要です。`@vscode/test-electron`を使用した拡張機能専用のテスト環境を構築します。
+
 **実施内容**:
-1. Playwright設定ファイル作成
+1. `@vscode/test-electron` ベースのE2Eテストフレームワーク構築
 2. E2Eテストスイートの実装
-3. ビジュアルリグレッションテストの導入
+3. VS Code APIを使用した統合テスト
 4. CI/CD統合
 
-**Playwright設定**:
-```typescript
-// playwright.config.ts
-import { defineConfig } from '@playwright/test';
-
-export default defineConfig({
-  testDir: './e2e',
-  timeout: 30000,
-  fullyParallel: true,
-  forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
-  reporter: [
-    ['html'],
-    ['junit', { outputFile: 'test-results/junit.xml' }]
-  ],
-  use: {
-    trace: 'on-first-retry',
-    screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
-  },
-  projects: [
-    {
-      name: 'chromium',
-      use: { channel: 'chrome' },
-    },
-  ],
-});
+**必要な依存関係**:
+```json
+{
+  "devDependencies": {
+    "@vscode/test-electron": "^2.3.8",
+    "@types/vscode": "^1.74.0"
+  }
+}
 ```
 
-**E2Eテスト例**:
+**E2Eテストランナー設定**:
 ```typescript
-// e2e/terminal-lifecycle.spec.ts
-import { test, expect } from '@playwright/test';
+// src/test/suite/e2e/runE2ETests.ts
+import * as path from 'path';
+import { runTests } from '@vscode/test-electron';
 
-test.describe('Terminal Lifecycle', () => {
-  test('should create and manage multiple terminals', async ({ page }) => {
-    // VS Code拡張機能のテストページを開く
-    await page.goto('vscode://extension/s-hiraoku.vscode-sidebar-terminal');
+async function main() {
+  try {
+    const extensionDevelopmentPath = path.resolve(__dirname, '../../../');
+    const extensionTestsPath = path.resolve(__dirname, './index');
 
-    // ターミナル作成
-    await page.click('[data-testid="create-terminal"]');
-    await expect(page.locator('.terminal-instance')).toHaveCount(1);
+    await runTests({
+      extensionDevelopmentPath,
+      extensionTestsPath,
+      launchArgs: [
+        '--disable-extensions', // 他の拡張機能を無効化
+        '--disable-gpu',
+      ],
+    });
+  } catch (err) {
+    console.error('Failed to run E2E tests');
+    process.exit(1);
+  }
+}
 
-    // スプリット
-    await page.click('[data-testid="split-terminal"]');
-    await expect(page.locator('.terminal-instance')).toHaveCount(2);
+main();
+```
 
-    // スクリーンショット比較（ビジュアルリグレッション）
-    await expect(page).toHaveScreenshot('terminal-split-view.png');
+**E2Eテスト例（VS Code API使用）**:
+```typescript
+// src/test/suite/e2e/terminal-lifecycle.test.ts
+import * as assert from 'assert';
+import * as vscode from 'vscode';
+
+suite('Terminal Lifecycle E2E Tests', () => {
+  test('should create and manage multiple terminals', async () => {
+    // 拡張機能のコマンドを実行
+    await vscode.commands.executeCommand('secondaryTerminal.createTerminal');
+
+    // ターミナルが作成されたことを確認
+    // Note: 実際のE2Eテストでは、WebViewの状態を確認する必要があります
+    // これにはカスタムメッセージングやテスト用APIが必要です
+
+    await new Promise(resolve => setTimeout(resolve, 1000)); // WebView初期化待ち
+
+    // スプリットコマンド実行
+    await vscode.commands.executeCommand('secondaryTerminal.splitTerminal');
+
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // テスト用メッセージングでWebView状態を確認
+    // (実装が必要)
+  });
+
+  test('should preserve terminal session on reload', async () => {
+    // セッション保存のテスト
+    await vscode.commands.executeCommand('secondaryTerminal.saveSession');
+
+    // 拡張機能の再読み込みシミュレーション
+    // (実装が必要: globalStateの確認など)
   });
 });
 ```
 
+**今後の検討事項**:
+- WebViewの状態確認のためのテスト用APIの実装
+- ビジュアルリグレッションテストは別のアプローチを検討（スクリーンショット撮影など）
+- Playwrightとの統合は、VS Code Web版のテストでのみ有効
+
 **期待効果**:
 - ユーザーシナリオの自動検証
-- UIリグレッション早期検出
-- E2Eカバレッジ向上
+- VS Code APIレベルでの統合テスト
+- E2Eカバレッジ向上（目標40%）
+
+**注意**:
+Phase 2では、まず基本的なE2Eテストフレームワークを構築し、WebViewの状態確認メカニズムを段階的に追加していきます。ビジュアルリグレッションテストは Phase 3以降で検討します。
 
 #### 2.2 テストカバレッジ目標の引き上げ
 **目標**: 業界標準レベルのカバレッジ達成
