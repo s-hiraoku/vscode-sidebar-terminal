@@ -455,7 +455,7 @@ export class StandardTerminalPersistenceManager {
       `🔄 [WEBVIEW-PERSISTENCE] Restoring session for terminal ${sessionData.terminalId}`
     );
 
-    const { terminalId, scrollbackData, sessionRestoreMessage } = sessionData;
+    const { terminalId, scrollbackData } = sessionData;
     const terminal = this.terminals.get(terminalId);
 
     if (!terminal) {

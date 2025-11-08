@@ -7,7 +7,7 @@
 
 import { expect } from 'chai';
 import * as sinon from 'sinon';
-import { ErrorHandler, ErrorSeverity } from '../../../../webview/utils/ErrorHandler';
+import { ErrorHandler } from '../../../../webview/utils/ErrorHandler';
 import { terminalLogger } from '../../../../webview/utils/ManagerLogger';
 
 describe('ErrorHandler', function () {
@@ -47,7 +47,7 @@ describe('ErrorHandler', function () {
       });
 
       expect(result.severity).to.equal('warn');
-      expect(result.message).to.equal('  Warning operation failed');
+      expect(result.message).to.equal('ï¿½ Warning operation failed');
       expect(loggerWarnStub.calledOnce).to.be.true;
       expect(loggerErrorStub.called).to.be.false;
     });
@@ -254,10 +254,10 @@ describe('ErrorHandler', function () {
       expect(result.message).to.include('L');
     });
 
-    it('should use   emoji for warn severity', function () {
+    it('should use ï¿½ emoji for warn severity', function () {
       const error = new Error('Test');
       const result = ErrorHandler.handleOperationError('Test', error, { severity: 'warn' });
-      expect(result.message).to.include(' ');
+      expect(result.message).to.include('ï¿½');
     });
 
     it('should use 9 emoji for info severity', function () {

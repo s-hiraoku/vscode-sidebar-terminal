@@ -16,20 +16,14 @@
 
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
-import { WebLinksAddon } from '@xterm/addon-web-links';
-import { SearchAddon } from '@xterm/addon-search';
-import { SerializeAddon } from '@xterm/addon-serialize';
-import { Unicode11Addon } from '@xterm/addon-unicode11';
-import { WebglAddon } from '@xterm/addon-webgl';
 
 import { TerminalConfig } from '../../types/shared';
 import { TerminalInstance, IManagerCoordinator } from '../interfaces/ManagerInterfaces';
 import { SplitManager } from '../managers/SplitManager';
-import { TerminalAddonManager, type LoadedAddons } from '../managers/TerminalAddonManager';
+import { TerminalAddonManager } from '../managers/TerminalAddonManager';
 import { TerminalEventManager } from '../managers/TerminalEventManager';
 import { TerminalLinkManager } from '../managers/TerminalLinkManager';
 import { TerminalContainerFactory, TerminalContainerConfig, TerminalHeaderConfig } from '../factories/TerminalContainerFactory';
-import { ThemeManager } from '../utils/ThemeManager';
 import { ResizeManager } from '../utils/ResizeManager';
 import { PerformanceMonitor } from '../../utils/PerformanceOptimizer';
 import { EventHandlerRegistry } from '../utils/EventHandlerRegistry';
@@ -183,7 +177,7 @@ export class TerminalCreationService {
         const terminalConfig = { ...this.DEFAULT_TERMINAL_CONFIG, ...config };
 
         // Create Terminal instance
-        const terminal = new Terminal(terminalConfig);
+        const terminal = new Terminal(terminalConfig as any);
         terminalLogger.info(`✅ Terminal instance created: ${terminalId}`);
 
         // Load all addons using TerminalAddonManager
@@ -230,7 +224,7 @@ export class TerminalCreationService {
           },
           onSplitClick: (_clickedTerminalId) => {
             terminalLogger.info(`⊞ Split button clicked, creating new terminal`);
-            void this.coordinator?.createTerminalWithDefaultProfile?.();
+            void this.coordinator.profileManager?.createTerminalWithDefaultProfile();
           },
           onAiAgentToggleClick: (clickedTerminalId) => {
             terminalLogger.info(`📎 AI Agent toggle clicked for terminal: ${clickedTerminalId}`);

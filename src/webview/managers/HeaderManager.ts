@@ -57,9 +57,9 @@ export class HeaderManager implements IHeaderManager {
 
       log('✅ [HEADER] WebView header created successfully');
     } catch (error) {
-      ErrorHandler.getInstance().handleGenericError(
-        error as Error,
-        'HeaderManager.createWebViewHeader'
+      ErrorHandler.handleOperationError(
+        'HeaderManager.createWebViewHeader',
+        error
       );
     }
   }
@@ -91,9 +91,9 @@ export class HeaderManager implements IHeaderManager {
 
       log(`🎯 [HEADER] Terminal count badge updated: ${terminalCount}`);
     } catch (error) {
-      ErrorHandler.getInstance().handleGenericError(
-        error as Error,
-        'HeaderManager.updateTerminalCountBadge'
+      ErrorHandler.handleOperationError(
+        'HeaderManager.updateTerminalCountBadge',
+        error
       );
     }
   }
@@ -470,7 +470,7 @@ export class HeaderManager implements IHeaderManager {
       this.removeExistingHeader();
       this.coordinator = null;
     } catch (error) {
-      ErrorHandler.getInstance().handleGenericError(error as Error, 'HeaderManager.dispose');
+      ErrorHandler.handleOperationError('HeaderManager.dispose', error);
     }
   }
 }

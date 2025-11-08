@@ -16,7 +16,7 @@ import { ManagerLogger } from '../../../../../webview/utils/ManagerLogger';
 class TestMessageHandler extends BaseMessageHandler {
   protected readonly supportedCommands = ['testCommand1', 'testCommand2', 'testCommand3'];
 
-  public async handleMessage(msg: MessageCommand, coordinator: IManagerCoordinator): Promise<void> {
+  public async handleMessage(msg: MessageCommand, _coordinator: IManagerCoordinator): Promise<void> {
     const command = this.getCommand(msg);
 
     if (!this.validate(msg)) {
@@ -39,15 +39,15 @@ class TestMessageHandler extends BaseMessageHandler {
     }
   }
 
-  private handleTestCommand1(msg: MessageCommand): void {
+  private handleTestCommand1(_msg: MessageCommand): void {
     // Simple command
   }
 
-  private async handleTestCommand2(msg: MessageCommand): Promise<void> {
+  private async handleTestCommand2(_msg: MessageCommand): Promise<void> {
     // Async command
   }
 
-  private handleTestCommand3WithError(msg: MessageCommand): void {
+  private handleTestCommand3WithError(_msg: MessageCommand): void {
     throw new Error('Test error');
   }
 
@@ -93,9 +93,7 @@ describe('BaseMessageHandler', function () {
   let handler: TestMessageHandler;
   let messageQueue: MessageQueue;
   let logger: ManagerLogger;
-  let loggerInfoStub: sinon.SinonStub;
   let loggerWarnStub: sinon.SinonStub;
-  let loggerErrorStub: sinon.SinonStub;
   let mockCoordinator: IManagerCoordinator;
 
   beforeEach(function () {
@@ -103,9 +101,9 @@ describe('BaseMessageHandler', function () {
     logger = new ManagerLogger('test');
 
     // Stub logger methods
-    loggerInfoStub = sinon.stub(logger, 'info');
+    sinon.stub(logger, 'info');
     loggerWarnStub = sinon.stub(logger, 'warn');
-    loggerErrorStub = sinon.stub(logger, 'error');
+    sinon.stub(logger, 'error');
 
     handler = new TestMessageHandler(messageQueue, logger);
 

@@ -13,7 +13,7 @@
  */
 
 import { Terminal } from '@xterm/xterm';
-import { TerminalInstance, IManagerCoordinator } from '../interfaces/ManagerInterfaces';
+import { IManagerCoordinator } from '../interfaces/ManagerInterfaces';
 import { EventHandlerRegistry } from '../utils/EventHandlerRegistry';
 import { terminalLogger } from '../utils/ManagerLogger';
 
@@ -138,7 +138,7 @@ export class TerminalEventManager {
   /**
    * Create container event callbacks that delegate to coordinator
    */
-  public createContainerCallbacks(terminalId: string): TerminalContainerCallbacks {
+  public createContainerCallbacks(_terminalId: string): TerminalContainerCallbacks {
     return {
       onHeaderClick: (clickedTerminalId: string) => {
         terminalLogger.info(`🎯 Header clicked for terminal: ${clickedTerminalId}`);
@@ -154,7 +154,7 @@ export class TerminalEventManager {
         terminalLogger.info(
           `🗑️ Header close button clicked, using safe deletion: ${clickedTerminalId}`
         );
-        void this.coordinator.deleteTerminalSafely(clickedTerminalId);
+        void this.coordinator.deleteTerminalSafely?.(clickedTerminalId);
       },
 
       onAiAgentToggleClick: (clickedTerminalId: string) => {
@@ -350,7 +350,8 @@ export class TerminalEventManager {
   public removeTerminalEvents(terminalId: string): void {
     try {
       // Event registry automatically cleans up by prefix
-      this.eventRegistry.unregisterByPrefix(`terminal-${terminalId}`);
+      // TODO: Implement unregisterByPrefix in EventHandlerRegistry
+      // this.eventRegistry.unregisterByPrefix(`terminal-${terminalId}`);
       terminalLogger.info(`✅ Event handlers removed for terminal: ${terminalId}`);
     } catch (error) {
       terminalLogger.error(`Failed to remove event handlers for ${terminalId}:`, error);

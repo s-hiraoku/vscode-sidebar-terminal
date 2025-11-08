@@ -55,7 +55,7 @@ export class SettingsPanel {
       log('⚙️ [SETTINGS] Settings panel opened successfully');
     } catch (error) {
       console.error('❌ [SETTINGS] Error in show():', error);
-      ErrorHandler.getInstance().handleGenericError(error as Error, 'SettingsPanel.show');
+      ErrorHandler.handleOperationError('SettingsPanel.show', error);
     }
   }
 
@@ -73,7 +73,7 @@ export class SettingsPanel {
 
       log('⚙️ [SETTINGS] Settings panel closed');
     } catch (error) {
-      ErrorHandler.getInstance().handleGenericError(error as Error, 'SettingsPanel.hide');
+      ErrorHandler.handleOperationError('SettingsPanel.hide', error);
     }
   }
 
@@ -355,7 +355,7 @@ export class SettingsPanel {
       this.onSettingsChange?.(settings);
       this.hide();
     } catch (error) {
-      ErrorHandler.getInstance().handleSettingsError(error as Error, 'SettingsPanel.applySettings');
+      ErrorHandler.handleOperationError('SettingsPanel.applySettings', error);
     }
   }
 
@@ -371,7 +371,7 @@ export class SettingsPanel {
 
       this.populateSettings(defaultSettings);
     } catch (error) {
-      ErrorHandler.getInstance().handleSettingsError(error as Error, 'SettingsPanel.resetSettings');
+      ErrorHandler.handleOperationError('SettingsPanel.resetSettings', error);
     }
   }
 
@@ -421,10 +421,7 @@ export class SettingsPanel {
         claudeCodeIntegrationCheckbox.checked = settings.enableCliAgentIntegration;
       }
     } catch (error) {
-      ErrorHandler.getInstance().handleSettingsError(
-        error as Error,
-        'SettingsPanel.populateSettings'
-      );
+      ErrorHandler.handleOperationError('SettingsPanel.populateSettings', error);
     }
   }
 
