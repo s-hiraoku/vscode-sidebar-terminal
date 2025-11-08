@@ -2,7 +2,7 @@
   "name": "vscode-sidebar-terminal",
   "displayName": "Secondary Terminal",
   "description": "Production-ready VS Code extension with TypeScript-compliant terminal in sidebar, ProcessState/InteractionState management, and comprehensive session management.",
-  "version": "0.1.130",
+  "version": "0.1.131",
   "publisher": "s-hiraoku",
   "engines": {
     "vscode": "^1.74.0",

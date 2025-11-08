@@ -51,6 +51,7 @@
 - **Persistent Tab Drag & Drop**: Reorder terminals by dragging tabs; the extension now syncs the updated order with the host for VS Code-style persistence (v0.1.113+)
 - **Multi-Agent Workflow**: Seamlessly work with multiple AI agents across different terminals simultaneously
 - **Tab Close Button**: Hover-visible white × button for closing terminals, with last tab protection (v0.1.108+)
+- **Split Button**: Quick terminal creation with ⊞ button in terminal headers - instantly create new terminals with default profile (v0.1.130+)
 - **Stable Tab Visibility**: Terminal tabs remain visible throughout all operations (v0.1.109+)
 - **IME Support**: Full Japanese and multi-language input method support
 - **Split Terminal Views**: Vertical and horizontal terminal splitting optimized for AI agent workflows
