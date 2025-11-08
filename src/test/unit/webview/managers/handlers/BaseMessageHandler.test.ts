@@ -97,7 +97,7 @@ describe('BaseMessageHandler', function () {
   let mockCoordinator: IManagerCoordinator;
 
   beforeEach(function () {
-    messageQueue = new MessageQueue();
+    messageQueue = new MessageQueue({} as any, {} as any);
     logger = new ManagerLogger('test');
 
     // Stub logger methods
