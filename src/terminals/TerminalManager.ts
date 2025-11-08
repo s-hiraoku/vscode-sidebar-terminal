@@ -63,6 +63,10 @@ export class TerminalManager {
   // 🎯 HANDSHAKE PROTOCOL: Track shell integration initialization to prevent duplicates
   private readonly _shellInitialized = new Set<string>();
 
+  // 🎯 HANDSHAKE PROTOCOL: Track PTY output handlers to prevent duplicates and enable deferred start
+  private readonly _ptyOutputStarted = new Set<string>();
+  private readonly _ptyDataDisposables = new Map<string, vscode.Disposable>();
+
   // Performance optimization: Data batching for high-frequency output
   private readonly _dataBuffers = new Map<string, string[]>();
   private readonly _dataFlushTimers = new Map<string, NodeJS.Timeout>();
@@ -377,10 +381,8 @@ export class TerminalManager {
       this._terminals.set(terminalId, terminal);
       this._activeTerminalManager.setActive(terminalId);
 
-      // PTY data handler - clean, no duplicates
-      ptyProcess.onData((data: string) => {
-        this._bufferData(terminalId, data);
-      });
+      // 🎯 HANDSHAKE PROTOCOL: PTY data handler registration moved to startPtyOutput()
+      // This will be called after WebView confirms initialization complete
 
       // Simple PTY exit handler
       ptyProcess.onExit((event: number | { exitCode: number; signal?: number }) => {
@@ -434,8 +436,6 @@ export class TerminalManager {
         return;
       }
 
-      log(`🔍 [TERMINAL] Post-creation initialization for: ${terminalId} (Safe Mode: ${safeMode})`);
-
       // Mark as initialized BEFORE starting async operations to prevent race conditions
       this._shellInitialized.add(terminalId);
 
@@ -457,11 +457,64 @@ export class TerminalManager {
         log(`🛡️ [TERMINAL] Skipping shell integration in safe mode for: ${terminalId}`);
       }
 
-      // Kick off deterministic prompt readiness guard
-      this._ensureInitialPrompt(terminalId, ptyProcess);
+      // 🎯 FIX: Skip prompt initialization in safe mode (session restore)
+      // Safe mode is used during session restore where prompt is already in scrollback
+      if (!safeMode) {
+        // Kick off deterministic prompt readiness guard
+        this._ensureInitialPrompt(terminalId, ptyProcess);
+      }
     } catch (error) {
       log(`⚠️ [TERMINAL] Post-creation initialization error for ${terminalId}:`, error);
     }
+  }
+
+  /**
+   * Start PTY output after WebView handshake complete
+   * 🎯 VS Code Pattern: Defer PTY output until WebView confirms ready
+   */
+  public startPtyOutput(terminalId: string): void {
+    // Guard against duplicate start
+    if (this._ptyOutputStarted.has(terminalId)) {
+      log(`⏭️ [TERMINAL] PTY output already started for ${terminalId}, skipping`);
+      return;
+    }
+
+    const terminal = this._terminals.get(terminalId);
+    if (!terminal || !terminal.ptyProcess) {
+      log(`❌ [TERMINAL] Cannot start PTY output - terminal not found: ${terminalId}`);
+      return;
+    }
+
+    log(`🎯 [TERMINAL] Starting PTY output for ${terminalId} after handshake`);
+
+    // Register PTY data handler
+    const dataDisposable = terminal.ptyProcess.onData((data: string) => {
+      // Update process state to running on first data
+      if (terminal.processState === ProcessState.Launching) {
+        terminal.processState = ProcessState.Running;
+        this._notifyProcessStateChange(terminal, ProcessState.Running);
+      }
+
+      // Process shell integration sequences if service is available
+      try {
+        if (this._shellIntegrationService) {
+          this._shellIntegrationService.processTerminalData(terminalId, data);
+        }
+      } catch (error) {
+        log(`⚠️ [TERMINAL] Shell integration processing error: ${error}`);
+      }
+
+      // Buffer data for efficient output
+      this._bufferData(terminalId, data);
+    });
+
+    // Store disposable for cleanup
+    this._ptyDataDisposables.set(terminalId, dataDisposable);
+
+    // Mark as started
+    this._ptyOutputStarted.add(terminalId);
+
+    log(`✅ [TERMINAL] PTY output started successfully for ${terminalId}`);
   }
 
   /**
@@ -1290,7 +1343,6 @@ export class TerminalManager {
 
           if (this._hasVisibleOutput(chunk)) {
             promptSeen = true;
-            log(`✅ [TERMINAL] Initial output detected for ${terminalId}`);
             guard.dispose();
           }
         });
@@ -1301,9 +1353,6 @@ export class TerminalManager {
 
     timer = setTimeout(() => {
       if (!promptSeen) {
-        log(
-          `⚠️ [TERMINAL] Initial prompt not detected for ${terminalId} within ${PROMPT_TIMEOUT_MS}ms - sending newline`
-        );
         try {
           ptyProcess.write('\r');
         } catch (writeError) {

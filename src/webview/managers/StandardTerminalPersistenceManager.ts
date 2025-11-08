@@ -467,33 +467,21 @@ export class StandardTerminalPersistenceManager {
       // Clear existing content
       terminal.clear();
 
-      // Restore session restore message if available
-      if (sessionRestoreMessage) {
-        terminal.writeln(sessionRestoreMessage);
-        log(
-          `🔄 [WEBVIEW-PERSISTENCE] Restored session message for terminal: ${terminalId}`
-        );
-      }
+      // 🎯 FIX: VS Code Pattern - Don't restore scrollback during session restore
+      // Rationale:
+      // 1. PTY process starts a fresh shell session with new prompt
+      // 2. Restoring scrollback causes visual duplication (restored + PTY output)
+      // 3. VS Code's standard terminal doesn't restore scrollback either
+      // 4. Users see clean, fresh prompt without flicker
+      //
+      // Note: Scrollback data is still saved and available for future use
+      // (e.g., search, export, debugging)
 
-      // Restore scrollback data if available
-      if (scrollbackData && scrollbackData.length > 0) {
-        log(
-          `🔄 [WEBVIEW-PERSISTENCE] Restoring ${scrollbackData.length} lines of scrollback for terminal: ${terminalId}`
-        );
+      log(
+        `✅ [WEBVIEW-PERSISTENCE] Skipped scrollback restore for clean start (${scrollbackData?.length || 0} lines available)`
+      );
 
-        // Write each line to restore scrollback history
-        for (const line of scrollbackData) {
-          if (line.trim()) {
-            terminal.writeln(line);
-          }
-        }
-
-        log(
-          `✅ [WEBVIEW-PERSISTENCE] Scrollback restored for terminal: ${terminalId} (${scrollbackData.length} lines)`
-        );
-      }
-
-      // Save the restored content to persistence
+      // Save the terminal reference for future scrollback operations
       this.saveTerminalContent(terminalId);
 
       log(`✅ [WEBVIEW-PERSISTENCE] Session restore completed for terminal: ${terminalId}`);

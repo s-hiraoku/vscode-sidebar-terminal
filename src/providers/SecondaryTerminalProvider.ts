@@ -63,6 +63,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
   private _view?: vscode.WebviewView;
   private _isInitialized = false; // Prevent duplicate initialization
+  private _messageListenerRegistered = false; // 🎯 Prevent duplicate message listener registration
   // Removed all state variables - using simple "fresh start" approach
 
   // Panel location now managed by PanelLocationService
@@ -180,14 +181,29 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     this._eventCoordinator.initialize();
     log('✅ [PROVIDER] Event coordinator initialized');
 
-    // Reset initialization flag for new WebView (including panel moves)
-    this._isInitialized = false;
-    log('✅ [PROVIDER] Initialization flag reset');
+    // 🎯 VS Code Pattern: Do NOT reset initialization flag
+    // resolveWebviewView() is called multiple times:
+    // - Initial display
+    // - Panel position moves (sidebar ↔ bottom)
+    // - WebView recreation
+    //
+    // _isInitialized tracks whether _handleWebviewReady has been processed.
+    // WebView sends webviewReady only once per session, so flag should persist.
+    // Resetting causes duplicate initialization when moving panels.
   }
 
   private _registerWebviewMessageListener(webviewView: vscode.WebviewView): void {
     // STEP 2: Set up MESSAGE LISTENERS BEFORE HTML (VS Code standard practice)
     // This is CRITICAL - listeners must be set before HTML is loaded
+
+    // 🎯 CRITICAL FIX: Prevent duplicate message listener registration
+    // resolveWebviewView() is called multiple times (panel moves, initial display, recreation)
+    // but we should only register ONE message listener for the lifetime of the provider
+    if (this._messageListenerRegistered) {
+      log('⏭️ [PROVIDER] Message listener already registered, skipping duplicate registration');
+      return;
+    }
+
     log('🔧 [PROVIDER] Step 2: Setting up message listeners (BEFORE HTML)...');
     const disposable = webviewView.webview.onDidReceiveMessage(
       (message: WebviewMessage) => {
@@ -217,6 +233,9 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     );
 
     this._extensionContext.subscriptions.push(disposable);
+
+    // Mark as registered to prevent duplicates
+    this._messageListenerRegistered = true;
     log('✅ [PROVIDER] Message listener registered and added to subscriptions');
   }
 
@@ -662,7 +681,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
   /**
    * Handle terminal initialization completion from WebView
-   * Starts shell initialization only after WebView terminal is fully ready
+   * 🎯 HANDSHAKE PROTOCOL: Start PTY output after WebView confirms ready
    */
   private async _handleTerminalInitializationComplete(message: WebviewMessage): Promise<void> {
     const terminalId = message.terminalId as string;
@@ -676,6 +695,12 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       if (!terminal || !terminal.ptyProcess) {
         return;
       }
+
+      log(`🤝 [HANDSHAKE] WebView confirmed ready for terminal: ${terminalId}`);
+
+      // 🎯 HANDSHAKE PROTOCOL: Start PTY output AFTER WebView confirmation
+      // This ensures PTY data only flows after WebView is fully initialized
+      this._terminalManager.startPtyOutput(terminalId);
 
       // Initialize shell (safe mode enabled to skip shell integration)
       this._terminalManager.initializeShellForTerminal(terminalId, terminal.ptyProcess, true);
