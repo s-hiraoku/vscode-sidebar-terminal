@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Performance**: Started OpenSpec optimize-terminal-rendering implementation
+  - Created `RenderingOptimizer` class for rendering performance improvements
+  - Implemented ResizeObserver-based debounced resizing (100ms)
+  - Added dimension validation (min 50px width/height)
+  - Implemented WebGL auto-fallback mechanism
+  - Added device-specific smooth scrolling (trackpad: 0ms, mouse: 125ms)
+  - Passive event listeners for better scroll performance
+  - Comprehensive unit tests for rendering optimization
+
 ### Changed
 - **Architecture**: Completed Terminal Foundation Refactoring (OpenSpec Phase 1-5)
   - **BREAKING**: Renamed `TerminalLifecycleManager` to `TerminalLifecycleCoordinator`
@@ -22,7 +32,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Developer
 - Completed OpenSpec refactor-terminal-foundation Phase 1-5
-- All lint checks passing (0 errors, 276 acceptable `any` type warnings)
+- Started OpenSpec optimize-terminal-rendering Phase 1 Task 1.1
+- All lint checks passing (0 errors, 277 acceptable `any` type warnings)
 - Production-ready compilation verified
 - Coordinator pattern successfully applied
 
