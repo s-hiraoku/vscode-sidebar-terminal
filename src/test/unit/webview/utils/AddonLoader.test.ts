@@ -7,8 +7,8 @@
 import { expect } from 'chai';
 import * as sinon from 'sinon';
 import { Terminal } from '@xterm/xterm';
-import { AddonLoader } from '../../../../src/webview/utils/AddonLoader';
-import { terminalLogger } from '../../../../src/webview/utils/ManagerLogger';
+import { AddonLoader } from '../../../../webview/utils/AddonLoader';
+import { terminalLogger } from '../../../../webview/utils/ManagerLogger';
 
 describe('AddonLoader', function () {
   let terminal: Terminal;

@@ -21,6 +21,7 @@ import { Unicode11Addon } from '@xterm/addon-unicode11';
 import { WebglAddon } from '@xterm/addon-webgl';
 import { terminalLogger } from '../utils/ManagerLogger';
 import { AddonLoader } from '../utils/AddonLoader';
+import { ErrorHandler } from '../utils/ErrorHandler';
 
 /**
  * Configuration for addon loading
@@ -102,7 +103,12 @@ export class TerminalAddonManager {
 
       return addons as LoadedAddons;
     } catch (error) {
-      terminalLogger.error(`Failed to load addons for terminal ${terminalId}:`, error);
+      ErrorHandler.handleOperationError(`Addon loading for ${terminalId}`, error, {
+        severity: 'error',
+        rethrow: true,
+        context: { terminalId },
+      });
+      // TypeScript requires return statement after rethrow (unreachable code)
       throw error;
     }
   }
@@ -142,7 +148,10 @@ export class TerminalAddonManager {
 
       terminalLogger.info('✅ Addons disposed successfully');
     } catch (error) {
-      terminalLogger.warn('⚠️ Error disposing addons:', error);
+      ErrorHandler.handleOperationError('Addon disposal', error, {
+        severity: 'warn',
+        rethrow: false,
+      });
     }
   }
 
