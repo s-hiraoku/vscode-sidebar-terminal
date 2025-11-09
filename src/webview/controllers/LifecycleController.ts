@@ -17,7 +17,7 @@
  * @see openspec/changes/optimize-terminal-rendering/specs/lifecycle-improvement/spec.md
  */
 
-import { Terminal, IDisposable } from '@xterm/xterm';
+import { Terminal, IDisposable, ITerminalAddon } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { SearchAddon } from '@xterm/addon-search';
 import { SerializeAddon } from '@xterm/addon-serialize';
@@ -101,7 +101,7 @@ export interface AddonLoadOptions {
 export interface ILifecycleController {
   attachTerminal(terminalId: string, terminal: Terminal): void;
   detachTerminal(terminalId: string): void;
-  loadAddonLazy<T extends IDisposable>(
+  loadAddonLazy<T extends ITerminalAddon>(
     terminalId: string,
     addonName: string,
     AddonClass: new () => T,
@@ -176,7 +176,7 @@ export class LifecycleController implements ILifecycleController {
    *
    * Phase 3 Feature: Lazy loading reduces initial memory usage by 30%
    */
-  public loadAddonLazy<T extends IDisposable>(
+  public loadAddonLazy<T extends ITerminalAddon>(
     terminalId: string,
     addonName: string,
     AddonClass: new () => T,

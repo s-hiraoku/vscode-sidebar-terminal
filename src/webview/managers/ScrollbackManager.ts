@@ -304,12 +304,12 @@ export class ScrollbackManager implements IScrollbackManager {
       const lines = content.split('\n');
 
       // Trim trailing empty lines
-      while (lines.length > 0 && lines[lines.length - 1].trim().length === 0) {
+      while (lines.length > 0 && lines[lines.length - 1]!.trim().length === 0) {
         lines.pop();
       }
 
       // Trim leading empty lines
-      while (lines.length > 0 && lines[0].trim().length === 0) {
+      while (lines.length > 0 && lines[0]!.trim().length === 0) {
         lines.shift();
       }
 

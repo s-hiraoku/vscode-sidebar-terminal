@@ -96,6 +96,7 @@ describe('LifecycleController', function () {
 
     it('should load addon lazily', function () {
       class MockAddon {
+        public activate() {}
         public dispose() {}
       }
 
@@ -112,6 +113,7 @@ describe('LifecycleController', function () {
 
     it('should reuse existing addon for same terminal', function () {
       class MockAddon {
+        public activate() {}
         public dispose() {}
       }
 
@@ -132,6 +134,7 @@ describe('LifecycleController', function () {
 
     it('should cache addon globally when enabled', function () {
       class MockAddon {
+        public activate() {}
         public dispose() {}
       }
 
@@ -155,6 +158,7 @@ describe('LifecycleController', function () {
 
     it('should not cache addon when cache disabled', function () {
       class MockAddon {
+        public activate() {}
         public dispose() {}
       }
 
@@ -170,6 +174,7 @@ describe('LifecycleController', function () {
 
     it('should return null for non-existent terminal', function () {
       class MockAddon {
+        public activate() {}
         public dispose() {}
       }
 
@@ -187,6 +192,7 @@ describe('LifecycleController', function () {
         constructor() {
           throw new Error('Addon initialization failed');
         }
+        public activate() {}
         public dispose() {}
       }
 
@@ -202,6 +208,7 @@ describe('LifecycleController', function () {
         constructor() {
           throw new Error('Addon initialization failed');
         }
+        public activate() {}
         public dispose() {}
       }
 
@@ -223,6 +230,7 @@ describe('LifecycleController', function () {
 
     it('should get loaded addon', function () {
       class MockAddon {
+        public activate() {}
         public dispose() {}
       }
 
@@ -291,6 +299,7 @@ describe('LifecycleController', function () {
 
     it('should dispose terminal and all resources', function () {
       class MockAddon {
+        public activate() {}
         public dispose = sinon.stub();
       }
 
@@ -314,6 +323,7 @@ describe('LifecycleController', function () {
 
     it('should dispose in reasonable time (<100ms)', function () {
       class MockAddon {
+        public activate() {}
         public dispose() {}
       }
 
@@ -328,9 +338,11 @@ describe('LifecycleController', function () {
 
     it('should dispose multiple addons', function () {
       class MockAddon1 {
+        public activate() {}
         public dispose = sinon.stub();
       }
       class MockAddon2 {
+        public activate() {}
         public dispose = sinon.stub();
       }
 
@@ -355,6 +367,7 @@ describe('LifecycleController', function () {
   describe('Controller Disposal', function () {
     it('should dispose all terminals', function () {
       class MockAddon {
+        public activate() {}
         public dispose = sinon.stub();
       }
 
@@ -425,6 +438,7 @@ describe('LifecycleController', function () {
   describe('Memory Leak Prevention', function () {
     it('should clear all references on dispose', function () {
       class MockAddon {
+        public activate() {}
         public dispose() {}
       }
 
