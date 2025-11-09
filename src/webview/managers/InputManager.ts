@@ -930,21 +930,23 @@ export class InputManager extends BaseManager implements IInputManager {
     this.logger(`Setting up VS Code standard input handling for terminal ${terminalId}`);
 
     // CRITICAL: Set up keyboard input handling with IME awareness
-    terminal.onData((data: string) => {
+    // Use onKey instead of onData to avoid capturing PTY echo output
+    terminal.onKey((event: { key: string; domEvent: KeyboardEvent }) => {
       // VS Code standard: Check IME composition state before processing
       if (this.imeHandler.isIMEComposing()) {
-        this.logger(`Terminal ${terminalId} data during IME composition - allowing xterm.js to handle`);
+        this.logger(`Terminal ${terminalId} key during IME composition - allowing xterm.js to handle`);
         // Let xterm.js handle IME composition internally
-        // But still send to extension for proper processing
-      } else {
-        this.logger(`Terminal ${terminalId} normal data: ${data.length} chars`);
+        // Don't send to extension during composition to avoid duplicate input
+        return;
       }
 
-      // Always send data to extension (VS Code standard behavior)
+      // Send only user keyboard input to extension (not PTY echo)
+      this.logger(`Terminal ${terminalId} user input: ${event.key.length} chars`);
+
       manager.postMessageToExtension({
         command: 'input',
         terminalId: terminalId,
-        data: data,
+        data: event.key,
         timestamp: Date.now(),
       });
     });

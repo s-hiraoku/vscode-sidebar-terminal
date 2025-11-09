@@ -40,6 +40,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Result**: <100ms disposal time, zero memory leaks
 
 ### Fixed
+- **Input Handling**: Fixed duplicate character input in terminal (OpenSpec: fix-duplicate-input-echo)
+  - Replaced `terminal.onData()` with `terminal.onKey()` in InputManager
+  - `onData` was capturing both user input AND PTY echo output, causing duplication
+  - `onKey` captures only user keyboard events, excluding programmatic writes
+  - Updated IME composition handling with early return during composition
+  - **Result**: Single character input now appears exactly once, no duplicates
+
 - **TypeScript**: Fixed type constraints for terminal addon system
   - Changed `IDisposable` to `ITerminalAddon` in LifecycleController
   - Added non-null assertions in ScrollbackManager array access
