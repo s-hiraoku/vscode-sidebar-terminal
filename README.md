@@ -54,6 +54,7 @@
 - **Split Button**: Quick terminal creation with ⊞ button in terminal headers - instantly create new terminals with default profile (v0.1.130+)
 - **Stable Tab Visibility**: Terminal tabs remain visible throughout all operations (v0.1.109+)
 - **IME Support**: Full Japanese and multi-language input method support
+- **Fixed Duplicate Input**: Resolved issue where typing single characters appeared duplicated (e.g., "a" → "aa") by switching from `terminal.onData()` to `terminal.onKey()` - now captures only user keyboard input, excluding PTY echo output (v0.1.132+)
 - **Split Terminal Views**: Vertical and horizontal terminal splitting optimized for AI agent workflows
 - **Split Layout Stability**: New terminals created in split mode now stay aligned with the existing layout without jumping to fullscreen (v0.1.119)
 - **Command Palette Integration**: Full VS Code command palette support
