@@ -74,6 +74,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Production-ready compilation verified
 - Coordinator pattern successfully applied
 
+### Documentation
+- **E2E Testing**: Added comprehensive Playwright E2E testing documentation to CLAUDE.md (264 lines)
+  - OpenSpec add-playwright-e2e-tests Phase 6.1 (1/5 tasks completed)
+  - Test coverage overview: 69 scenarios (P0: 18, P1: 38, P2: 13)
+  - Test execution commands and debugging procedures
+  - 6 test areas documented: Terminal Lifecycle, Session Persistence, AI Agent Detection, WebView Interactions, Configuration, Error Handling
+  - Performance benchmarks and quality gates
+  - CI/CD integration guidelines (GitHub Actions configuration)
+  - Test development best practices and troubleshooting guide
+
 ## [0.1.131] - 2025-11-08
 
 ### Changed

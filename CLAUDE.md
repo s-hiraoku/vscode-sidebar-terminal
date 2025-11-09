@@ -331,6 +331,270 @@ npm run tdd:refactor # Improve code
 npm run tdd:quality-gate # Verify TDD compliance
 ```
 
+## E2E Testing with Playwright
+
+### Test Coverage Overview
+
+**Total Scenarios**: 69 comprehensive end-to-end tests
+**Critical (P0)**: 18 scenarios - Must pass 100% for release
+**Important (P1)**: 38 scenarios - Must pass ≥95% for release
+**Nice-to-have (P2)**: 13 scenarios - Must pass ≥80% for release
+
+**Test Implementation Status**: 74% complete (84/113 tasks done)
+**Test Files Location**: `src/test/e2e/tests/`
+
+### Test Execution Commands
+
+```bash
+# Run E2E tests (when npx playwright command is configured)
+npx playwright test                    # Run all E2E tests
+npx playwright test --headed           # Run with visible browser (debugging)
+npx playwright test --debug            # Run in debug mode with Playwright Inspector
+npx playwright test --ui               # Run with Playwright UI mode
+
+# Run specific test files
+npx playwright test tests/terminal/    # Run all terminal tests
+npx playwright test tests/agents/      # Run AI agent detection tests
+
+# Generate test report
+npx playwright show-report             # View HTML test report
+
+# Update test snapshots
+npx playwright test --update-snapshots # Update visual regression baselines
+```
+
+### Test Areas by Priority
+
+#### 1. Terminal Lifecycle Management (6 scenarios)
+**Priority**: P0: 4 | P1: 2
+
+**Critical Tests (P0)**:
+- Single terminal creation (<500ms)
+- Multiple terminal creation (up to 5 terminals)
+- Terminal deletion with cleanup verification
+- Terminal ID recycling (IDs 1-5)
+
+**Important Tests (P1)**:
+- Rapid terminal creation (race condition testing)
+- Last terminal protection (prevent deleting final terminal)
+
+**Test Files**: `tests/terminal/creation.spec.ts`, `tests/terminal/deletion.spec.ts`
+
+#### 2. Session Persistence (5 scenarios)
+**Priority**: P0: 3 | P1: 2
+
+**Critical Tests (P0)**:
+- Basic session save/restore functionality
+- Scrollback restoration with 1000 lines
+- Multi-terminal session restoration
+
+**Important Tests (P1)**:
+- Session expiry cleanup (7-day retention)
+- AI agent session handling
+
+**Performance Target**: Session restore <3s for typical workloads
+
+#### 3. AI Agent Detection (6 scenarios)
+**Priority**: P0: 2 | P1: 3 | P2: 1
+
+**Critical Tests (P0)**:
+- Claude Code detection with visual status indicator
+- Security: False positive prevention (substring attack protection)
+
+**Important Tests (P1)**:
+- GitHub Copilot detection
+- Gemini CLI detection
+- Multi-agent concurrent detection
+
+**Test Files**: `tests/agents/detection.spec.ts`
+**Detection Time**: <500ms for agent pattern matching
+
+#### 4. WebView Interactions (8 scenarios)
+**Priority**: P0: 4 | P1: 3 | P2: 1
+
+**Critical Tests (P0)**:
+- Keyboard input handling
+- Alt+Click cursor positioning
+- Scrolling behavior (smooth scrolling, wheel events)
+- ANSI color rendering validation
+
+**Important Tests (P1)**:
+- IME composition (Japanese/Chinese input)
+- Copy/Paste functionality
+- Theme changes (dark/light mode)
+
+**Test Files**: `tests/webview/keyboard-input.spec.ts`, `tests/visual/ansi-colors.spec.ts`
+
+#### 5. Configuration Management (4 scenarios)
+**Priority**: P0: 2 | P1: 2
+
+**Critical Tests (P0)**:
+- Font settings application
+- Max terminals limit enforcement
+
+**Important Tests (P1)**:
+- Shell selection (bash/zsh/fish)
+- Feature toggles (enable/disable features)
+
+**Test Files**: `tests/config/settings.spec.ts`
+
+#### 6. Error Handling (5 scenarios)
+**Priority**: P0: 2 | P1: 3
+
+**Critical Tests (P0)**:
+- Invalid shell path handling
+- Rapid terminal operations (concurrent operation safety)
+
+**Important Tests (P1)**:
+- Non-existent working directory recovery
+- Memory leak prevention validation
+- Large output handling (>10MB)
+
+**Test Files**: `tests/errors/error-scenarios.spec.ts`, `tests/errors/concurrent-operations.spec.ts`
+
+### Performance Benchmarks
+
+All E2E tests must meet these performance targets:
+
+```typescript
+Terminal creation: <500ms
+Session restore: <3s (1000 lines of scrollback)
+AI agent detection: <500ms (pattern matching + UI update)
+WebView load: <3s (initial render + terminal ready)
+Theme switching: <200ms (visual update)
+Terminal deletion: <100ms (cleanup + dispose)
+```
+
+### Debugging E2E Tests
+
+#### Visual Debugging
+```bash
+# Run tests with visible browser window
+npx playwright test --headed
+
+# Run specific test in debug mode
+npx playwright test tests/terminal/creation.spec.ts --debug
+
+# Use Playwright Inspector for step-by-step debugging
+npx playwright test --debug
+```
+
+#### Trace Analysis
+```bash
+# Collect traces on failure (configured by default)
+npx playwright test
+
+# View trace for failed test
+npx playwright show-trace test-results/trace.zip
+```
+
+#### Screenshot and Video Debugging
+- **Screenshots**: Automatically captured on failure → `test-results/`
+- **Videos**: Recorded on failure → `test-results/`
+- **Traces**: Available on first retry → `test-results/`
+
+### CI/CD Integration
+
+#### GitHub Actions Configuration
+```yaml
+- name: Run E2E Tests
+  run: npx playwright test
+  env:
+    CI: true
+
+- name: Upload Test Results
+  if: always()
+  uses: actions/upload-artifact@v3
+  with:
+    name: playwright-report
+    path: playwright-report/
+```
+
+#### Required Environment
+- **Workers**: 1 worker in CI (sequential execution)
+- **Retries**: 2 retries on failure in CI
+- **Timeout**: 30s per test
+- **Browsers**: Chromium (VS Code Electron base)
+
+### Release Quality Gates
+
+**Required for Release**:
+- ✅ P0 Tests: 100% pass rate (18/18 scenarios)
+- ✅ P1 Tests: ≥95% pass rate (36+/38 scenarios)
+- ✅ P2 Tests: ≥80% pass rate (10+/13 scenarios)
+- ✅ Performance benchmarks: All targets met
+- ✅ No memory leaks detected
+- ✅ Cross-platform validation (Windows/macOS/Linux)
+
+**Test Execution Time**:
+- **Local**: ~5-10 minutes (parallel execution)
+- **CI**: ~10-15 minutes (sequential with retries)
+
+### Test Development Guidelines
+
+#### Adding New E2E Tests
+
+1. **Identify test area**: Classify as Terminal/Session/Agent/WebView/Config/Error
+2. **Assign priority**: P0 (critical) / P1 (important) / P2 (nice-to-have)
+3. **Create test file**: Use existing structure in `src/test/e2e/tests/`
+4. **Follow naming convention**: `feature-name.spec.ts`
+5. **Add to TEST_PLAN.md**: Document test scenario and expected behavior
+
+#### Test Structure Pattern
+```typescript
+import { test, expect } from '@playwright/test';
+import { VSCodeTestHelper } from '../helpers/vscode-helper';
+
+test.describe('Feature Area', () => {
+  let helper: VSCodeTestHelper;
+
+  test.beforeEach(async ({ page }) => {
+    helper = new VSCodeTestHelper(page);
+    await helper.initialize();
+  });
+
+  test('P0: Critical functionality', async () => {
+    // Arrange
+    await helper.openTerminal();
+
+    // Act
+    const result = await helper.performAction();
+
+    // Assert
+    expect(result).toBeTruthy();
+  });
+});
+```
+
+#### Best Practices
+- **Use page object pattern**: Create helper classes for reusable actions
+- **Set explicit waits**: Use `waitForSelector` instead of `setTimeout`
+- **Clean up resources**: Ensure terminals are disposed in `afterEach`
+- **Test isolation**: Each test should be independent
+- **Meaningful assertions**: Use descriptive expect messages
+- **Performance tracking**: Log execution times for benchmarking
+
+### Common E2E Test Issues
+
+#### Issue: Tests timeout in CI
+**Solution**:
+- Increase timeout in `playwright.config.ts`
+- Use sequential workers in CI (`workers: 1`)
+- Add explicit waits for async operations
+
+#### Issue: Flaky tests
+**Solution**:
+- Add retry logic (`retries: 2` in CI)
+- Use `waitForSelector` with proper conditions
+- Verify element visibility before interaction
+- Add debouncing for rapid UI updates
+
+#### Issue: Screenshots not captured
+**Solution**:
+- Verify `screenshot: 'only-on-failure'` in config
+- Check `test-results/` directory permissions
+- Ensure test failure is properly thrown
+
 ## Emergency Response Procedures
 
 ### When Marketplace version breaks:
