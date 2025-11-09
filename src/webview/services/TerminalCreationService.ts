@@ -26,6 +26,7 @@ import { TerminalLinkManager } from '../managers/TerminalLinkManager';
 import { TerminalContainerFactory, TerminalContainerConfig, TerminalHeaderConfig } from '../factories/TerminalContainerFactory';
 import { ResizeManager } from '../utils/ResizeManager';
 import { RenderingOptimizer } from '../optimizers/RenderingOptimizer';
+import { LifecycleController } from '../controllers/LifecycleController';
 import { PerformanceMonitor } from '../../utils/PerformanceOptimizer';
 import { EventHandlerRegistry } from '../utils/EventHandlerRegistry';
 import { terminalLogger } from '../utils/ManagerLogger';
@@ -33,6 +34,8 @@ import { TerminalHeaderElements } from '../factories/HeaderFactory';
 
 /**
  * Service responsible for terminal creation, removal, and switching operations
+ *
+ * Phase 3 Update: Integrated LifecycleController for proper resource management
  */
 export class TerminalCreationService {
   private readonly splitManager: SplitManager;
@@ -41,6 +44,7 @@ export class TerminalCreationService {
   private readonly addonManager: TerminalAddonManager;
   private readonly eventManager: TerminalEventManager;
   private readonly linkManager: TerminalLinkManager;
+  private readonly lifecycleController: LifecycleController;
 
   // VS Code Standard Terminal Configuration
   private readonly DEFAULT_TERMINAL_CONFIG = {
@@ -124,6 +128,7 @@ export class TerminalCreationService {
     this.addonManager = new TerminalAddonManager();
     this.eventManager = new TerminalEventManager(coordinator, eventRegistry);
     this.linkManager = new TerminalLinkManager(coordinator);
+    this.lifecycleController = new LifecycleController(); // Phase 3: Lifecycle management
   }
 
   /**
@@ -245,6 +250,9 @@ export class TerminalCreationService {
         // Open terminal in the body div
         terminal.open(terminalContent);
         terminalLogger.info(`✅ Terminal opened in container: ${terminalId}`);
+
+        // Phase 3: Attach terminal to LifecycleController for resource management
+        this.lifecycleController.attachTerminal(terminalId, terminal);
 
         // Make container visible
         container.style.display = 'flex';
@@ -399,6 +407,9 @@ export class TerminalCreationService {
         terminalInstance.renderingOptimizer.dispose();
         terminalLogger.info(`✅ RenderingOptimizer disposed for: ${terminalId}`);
       }
+
+      // Phase 3: Dispose terminal via LifecycleController for proper resource cleanup
+      this.lifecycleController.disposeTerminal(terminalId);
 
       // Cleanup event handlers
       this.eventManager.removeTerminalEvents(terminalId);
