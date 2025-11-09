@@ -1,13 +1,21 @@
 import { SerializeAddon } from '@xterm/addon-serialize';
 import { Terminal } from '@xterm/xterm';
 import { webview as log } from '../../utils/logger';
+import { ScrollbackManager, ScrollbackOptions } from './ScrollbackManager';
 
 /**
  * WebView側でxterm.js serialize addonを使用したVS Code標準ターミナル永続化
+ *
+ * Phase 2 Update: Integrated ScrollbackManager for advanced scrollback processing
+ * - ANSI color preservation with SerializeAddon
+ * - Wrapped line detection and joining
+ * - Empty line trimming for storage optimization
+ * - Buffer reverse iteration for efficient processing
  */
 export class StandardTerminalPersistenceManager {
   private serializeAddons: Map<string, SerializeAddon> = new Map();
   private terminals: Map<string, Terminal> = new Map();
+  private scrollbackManager: ScrollbackManager;
   private vscodeApi: {
     postMessage: (message: unknown) => void;
     getState: () => unknown;
@@ -16,6 +24,10 @@ export class StandardTerminalPersistenceManager {
 
   // Serialized content cache for instant access
   private serializedCache: Map<string, string> = new Map();
+
+  constructor() {
+    this.scrollbackManager = new ScrollbackManager();
+  }
 
   // ローカルストレージキー
   private static readonly STORAGE_KEY_PREFIX = 'terminal-session-';
@@ -52,6 +64,9 @@ export class StandardTerminalPersistenceManager {
 
       this.serializeAddons.set(terminalId, serializeAddon);
       this.terminals.set(terminalId, terminal);
+
+      // Register terminal with ScrollbackManager for advanced scrollback processing
+      this.scrollbackManager.registerTerminal(terminalId, terminal, serializeAddon);
 
       // ターミナル内容が変更されたときに自動保存
       this.setupAutoSave(terminalId, terminal);
@@ -129,6 +144,8 @@ export class StandardTerminalPersistenceManager {
 
   /**
    * ターミナル内容の自動保存をセットアップ
+   *
+   * Phase 2 Update: 3-second debounce for better performance with high-frequency output
    */
   private setupAutoSave(terminalId: string, terminal: Terminal): void {
     // データ変更時に自動保存（デバウンス付き）
@@ -139,31 +156,53 @@ export class StandardTerminalPersistenceManager {
         clearTimeout(saveTimer);
       }
 
+      // Phase 2 Update: 3-second debounce (was 1 second)
+      // This reduces performance impact during high-frequency output
+      // while still ensuring data is saved regularly
       saveTimer = window.setTimeout(() => {
         this.saveTerminalContent(terminalId);
-      }, 1000); // 1秒のデバウンス
+      }, 3000); // 3秒のデバウンス (Phase 2 optimization)
     };
 
     // ターミナルデータ変更イベント
+    // onData: Fires on every data chunk (high frequency)
+    // onLineFeed: Fires on line feeds (lower frequency)
     terminal.onData(saveContent);
     terminal.onLineFeed(saveContent);
 
-    log(`🔧 [WEBVIEW-PERSISTENCE] Auto-save enabled for terminal ${terminalId}`);
+    log(
+      `🔧 [WEBVIEW-PERSISTENCE] Auto-save enabled for terminal ${terminalId} (3s debounce)`
+    );
   }
 
   /**
    * ターミナルコンテンツをローカルストレージに保存
+   *
+   * Phase 2 Update: Uses ScrollbackManager for advanced processing
    */
   public saveTerminalContent(terminalId: string): void {
     try {
-      const serializedData = this.serializeTerminal(terminalId, { scrollback: 1000 });
+      // Use ScrollbackManager for advanced scrollback processing
+      const scrollbackOptions: ScrollbackOptions = {
+        scrollback: 1000,
+        excludeModes: false,
+        excludeAltBuffer: true,
+        trimEmptyLines: true,
+        preserveWrappedLines: true,
+      };
 
-      if (!serializedData) {
+      const scrollbackData = this.scrollbackManager.saveScrollback(
+        terminalId,
+        scrollbackOptions
+      );
+
+      if (!scrollbackData) {
+        log(`⚠️ [WEBVIEW-PERSISTENCE] Failed to save scrollback for ${terminalId}`);
         return;
       }
 
       // Cache serialized content for instant access
-      this.serializedCache.set(terminalId, serializedData.content);
+      this.serializedCache.set(terminalId, scrollbackData.content);
 
       // Initialize VS Code API if needed
       if (!this.vscodeApi) {
@@ -186,12 +225,14 @@ export class StandardTerminalPersistenceManager {
         this.vscodeApi.postMessage({
           command: 'pushScrollbackData',
           terminalId,
-          scrollbackData: serializedData.content.split('\n'),
+          scrollbackData: scrollbackData.content.split('\n'),
           timestamp: Date.now(),
         });
 
         log(
-          `💾 [WEBVIEW-PERSISTENCE] Pushed terminal ${terminalId} scrollback to Extension (${serializedData.content.length} chars)`
+          `💾 [WEBVIEW-PERSISTENCE] Pushed terminal ${terminalId} scrollback to Extension ` +
+            `(${scrollbackData.lineCount} lines, ${scrollbackData.trimmedSize} chars, ` +
+            `${((1 - scrollbackData.trimmedSize / scrollbackData.originalSize) * 100).toFixed(1)}% size reduction)`
         );
       } else {
         console.warn(`⚠️ [WEBVIEW-PERSISTENCE] No VS Code API available for saving`);
@@ -203,6 +244,8 @@ export class StandardTerminalPersistenceManager {
 
   /**
    * ターミナルを削除
+   *
+   * Phase 2 Update: Unregister from ScrollbackManager
    */
   public removeTerminal(terminalId: string): void {
     log(
@@ -221,8 +264,12 @@ export class StandardTerminalPersistenceManager {
       }
     }
 
+    // Unregister from ScrollbackManager
+    this.scrollbackManager.unregisterTerminal(terminalId);
+
     this.serializeAddons.delete(terminalId);
     this.terminals.delete(terminalId);
+    this.serializedCache.delete(terminalId);
   }
 
   /**
@@ -445,17 +492,20 @@ export class StandardTerminalPersistenceManager {
 
   /**
    * 🔄 Restore session data to a terminal (Extension integration)
+   *
+   * Phase 2 Update: Uses ScrollbackManager for advanced restore with ANSI colors
    */
   public async restoreSession(sessionData: {
     terminalId: string;
     scrollbackData?: string[];
     sessionRestoreMessage?: string;
+    restoreScrollback?: boolean; // New option to enable scrollback restore
   }): Promise<boolean> {
     log(
       `🔄 [WEBVIEW-PERSISTENCE] Restoring session for terminal ${sessionData.terminalId}`
     );
 
-    const { terminalId, scrollbackData } = sessionData;
+    const { terminalId, scrollbackData, restoreScrollback = false } = sessionData;
     const terminal = this.terminals.get(terminalId);
 
     if (!terminal) {
@@ -464,22 +514,40 @@ export class StandardTerminalPersistenceManager {
     }
 
     try {
-      // Clear existing content
-      terminal.clear();
+      // Option 1: Restore scrollback with ANSI colors using ScrollbackManager
+      if (restoreScrollback && scrollbackData && scrollbackData.length > 0) {
+        const scrollbackContent = scrollbackData.join('\n');
+        const restored = this.scrollbackManager.restoreScrollback(terminalId, scrollbackContent);
 
-      // 🎯 FIX: VS Code Pattern - Don't restore scrollback during session restore
-      // Rationale:
-      // 1. PTY process starts a fresh shell session with new prompt
-      // 2. Restoring scrollback causes visual duplication (restored + PTY output)
-      // 3. VS Code's standard terminal doesn't restore scrollback either
-      // 4. Users see clean, fresh prompt without flicker
-      //
-      // Note: Scrollback data is still saved and available for future use
-      // (e.g., search, export, debugging)
+        if (restored) {
+          log(
+            `✅ [WEBVIEW-PERSISTENCE] Restored ${scrollbackData.length} lines with ANSI colors for ${terminalId}`
+          );
+        } else {
+          log(
+            `⚠️ [WEBVIEW-PERSISTENCE] Failed to restore scrollback for ${terminalId}, starting clean`
+          );
+          terminal.clear();
+        }
+      } else {
+        // Option 2: VS Code Pattern - Don't restore scrollback (default)
+        // Clear existing content for clean start
+        terminal.clear();
 
-      log(
-        `✅ [WEBVIEW-PERSISTENCE] Skipped scrollback restore for clean start (${scrollbackData?.length || 0} lines available)`
-      );
+        // 🎯 FIX: VS Code Pattern - Don't restore scrollback during session restore
+        // Rationale:
+        // 1. PTY process starts a fresh shell session with new prompt
+        // 2. Restoring scrollback causes visual duplication (restored + PTY output)
+        // 3. VS Code's standard terminal doesn't restore scrollback either
+        // 4. Users see clean, fresh prompt without flicker
+        //
+        // Note: Scrollback data is still saved and available for future use
+        // (e.g., search, export, debugging)
+
+        log(
+          `✅ [WEBVIEW-PERSISTENCE] Skipped scrollback restore for clean start (${scrollbackData?.length || 0} lines available)`
+        );
+      }
 
       // Save the terminal reference for future scrollback operations
       this.saveTerminalContent(terminalId);
@@ -530,6 +598,8 @@ export class StandardTerminalPersistenceManager {
 
   /**
    * クリーンアップ
+   *
+   * Phase 2 Update: Dispose ScrollbackManager
    */
   public dispose(): void {
     log(
@@ -544,8 +614,12 @@ export class StandardTerminalPersistenceManager {
       }
     }
 
+    // Dispose ScrollbackManager
+    this.scrollbackManager.dispose();
+
     this.serializeAddons.clear();
     this.terminals.clear();
+    this.serializedCache.clear();
 
     log(`✅ [WEBVIEW-PERSISTENCE] Persistence manager disposed`);
   }
