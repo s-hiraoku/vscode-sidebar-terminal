@@ -1,16 +1,11 @@
 # Proposal: Fix Duplicate Input Echo
 
-## Problem Statement
+## Why
 
-Users experience duplicate character input when typing in the terminal. For example, typing "a" results in "aa" being displayed. This occurs because the WebView's `InputManager` incorrectly captures both user input and PTY echo output through xterm.js's `onData` event, creating a feedback loop.
+Users experience duplicate character input when typing in the terminal. For example, typing "a" results in "aa" being displayed.
 
-## Root Cause
+**Root Cause**: In `src/webview/managers/InputManager.ts` (line 933-950), the `terminal.onData()` event handler captures both user keyboard input and PTY echo output sent from extension via `terminal.write()`. This creates a feedback loop:
 
-In `src/webview/managers/InputManager.ts` (line 933-950), the `terminal.onData()` event handler captures:
-1. User keyboard input (correct)
-2. PTY echo output sent from extension via `terminal.write()` (incorrect)
-
-This causes the following flow:
 1. User types "a"
 2. `onData` fires → sends "a" to extension
 3. Extension writes "a" to PTY
@@ -19,7 +14,9 @@ This causes the following flow:
 6. `onData` fires again → sends "a" to extension again (duplicate!)
 7. Result: "aa" displayed
 
-## Proposed Solution
+This issue affects all user input including typing, paste operations, and IME composition.
+
+## What Changes
 
 Replace `terminal.onData()` with `terminal.onKey()` to capture only user keyboard input, excluding programmatic writes and PTY echo output.
 

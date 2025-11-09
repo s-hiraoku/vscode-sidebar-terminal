@@ -1,6 +1,6 @@
 # Spec: Terminal Input Handling
 
-## MODIFIED Requirements
+## ADDED Requirements
 
 ### Requirement: WebView terminal input event handling
 
