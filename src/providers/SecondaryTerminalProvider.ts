@@ -64,6 +64,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   private _view?: vscode.WebviewView;
   private _isInitialized = false; // Prevent duplicate initialization
   private _messageListenerRegistered = false; // 🎯 Prevent duplicate message listener registration
+  private _htmlSet = false; // 🎯 Prevent duplicate HTML setting (WebView reload)
   // Removed all state variables - using simple "fresh start" approach
 
   // Panel location now managed by PanelLocationService
@@ -263,8 +264,19 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
   private _initializeWebviewContent(webviewView: vscode.WebviewView): void {
     // STEP 4: Set HTML AFTER listeners are ready (VS Code standard)
+
+    // 🎯 CRITICAL FIX: Prevent duplicate HTML setting (WebView reload)
+    // resolveWebviewView() is called multiple times (panel moves, initial display)
+    // but we should only set HTML ONCE to prevent WebView reload and DOM reconstruction
+    if (this._htmlSet) {
+      log('⏭️ [PROVIDER] HTML already set, skipping duplicate HTML setting to prevent WebView reload');
+      return;
+    }
+
     log('🔧 [PROVIDER] Step 4: Setting webview HTML...');
     this._setWebviewHtml(webviewView, false);
+    this._htmlSet = true;
+    log('✅ [PROVIDER] HTML set flag marked as true');
 
     // 🎯 HANDSHAKE PROTOCOL: extensionReady is now sent in _handleWebviewReady
     // This ensures proper handshake sequence: webviewReady → extensionReady
@@ -2398,6 +2410,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     // Clear references and reset state
     this._view = undefined;
     this._isInitialized = false;
+    this._htmlSet = false;
 
     log('✅ [DEBUG] SecondaryTerminalProvider disposed');
   }
