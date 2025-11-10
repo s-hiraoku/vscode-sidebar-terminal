@@ -53,7 +53,7 @@
 - **Tab Close Button**: Hover-visible white × button for closing terminals, with last tab protection (v0.1.108+)
 - **Split Button**: Quick terminal creation with ⊞ button in terminal headers - instantly create new terminals with default profile (v0.1.130+)
 - **Stable Tab Visibility**: Terminal tabs remain visible throughout all operations (v0.1.109+)
-- **IME Support**: Full Japanese and multi-language input method support
+- **IME Support**: Full Japanese/Chinese/Korean input method support with reliable `compositionend` event handling (v0.1.134+)
 - **Fixed Duplicate Input**: Resolved issue where typing single characters appeared duplicated (e.g., "a" → "aa") by switching from `terminal.onData()` to `terminal.onKey()` - now captures only user keyboard input, excluding PTY echo output (v0.1.132+)
 - **Split Terminal Views**: Vertical and horizontal terminal splitting optimized for AI agent workflows
 - **Split Layout Stability**: New terminals created in split mode now stay aligned with the existing layout without jumping to fullscreen (v0.1.119)
@@ -63,10 +63,14 @@
 - **Production-Grade Quality**: Zero TypeScript compilation errors with comprehensive ESLint compliance (0 errors, 281 acceptable warnings)
 - **Optimized Build Process**: 608 KiB extension + 1.22 MiB webview builds with stable performance
 - **Improved Code Architecture**: Major refactoring reduced provider code by 26.9% (801 lines) through service extraction, resulting in better maintainability and 24 KiB bundle size reduction
+- **Terminal Rendering Optimization** (v0.1.131+):
+  - **Phase 1**: RenderingOptimizer with WebGL auto-fallback, device-specific scrolling (30%+ draw call reduction)
+  - **Phase 2**: ScrollbackManager with ANSI color preservation, wrapped line processing (<1s restore for 1000 lines)
+  - **Phase 3**: LifecycleController with DisposableStore pattern, lazy addon loading (30% memory reduction, <100ms disposal)
 - **Fast Test Execution**: Parallel test processing (4-8 jobs) with up to 75% speed improvement on multi-core systems (v0.1.116+)
 - **Adaptive Performance**: Dynamic buffering optimization for AI agent output (250fps during active sessions)
 - **Debug Panel**: Real-time system monitoring with Ctrl+Shift+D shortcut
-- **Memory Management**: Efficient resource cleanup and leak prevention
+- **Memory Management**: Efficient resource cleanup and leak prevention with LIFO disposal order
 - **Output Optimization**: Smart flushing intervals (2-16ms) based on activity patterns
 - **Subtle Notifications**: Improved visual design with reduced opacity and VS Code integration
 

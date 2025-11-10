@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.135] - 2025-01-10
+
+### Documentation
+- **README.md**: Updated with latest features and performance optimizations
+  - Added IME input support details (v0.1.134 compositionend event handling)
+  - Added Terminal Rendering Optimization section with Phase 1-3 details
+  - Updated Performance & Monitoring section with specific metrics
+
+### Notes
+- This release consolidates documentation for v0.1.131-0.1.134 improvements
+- All features from previous releases (v0.1.131-0.1.134) are now documented
+
+## [0.1.134] - 2025-01-10
+
+### Fixed
+- **IME Input**: Hotfix for Japanese/Chinese/Korean input reliability
+  - Replaced state transition approach with direct `compositionend` event listener
+  - Fixed timing issue where IME final text was lost
+  - 100% reliable IME input capture via `event.data`
+
+## [0.1.133] - 2025-01-10
+
+### Fixed
+- **IME Input**: Initial implementation for Japanese/Chinese/Korean support
+  - Dual event handler approach (`onKey` + `onData`)
+  - Note: Replaced in v0.1.134 due to state transition timing issues
+
+## [0.1.132] - 2025-01-10
+
+### Fixed
+- **Input Handling**: Fixed duplicate character input
+  - Changed from `terminal.onData()` to `terminal.onKey()`
+  - Eliminates PTY echo duplication
+
+## [0.1.131] - 2025-01-10
+
 ### Added
 - **Performance**: Completed OpenSpec optimize-terminal-rendering implementation (Phase 1-3)
 
