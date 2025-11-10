@@ -47,20 +47,19 @@ export class PanelLocationController implements vscode.Disposable {
     );
   }
 
+  /**
+   * 🎯 DEPRECATED: Visibility listener consolidated in SecondaryTerminalProvider
+   * Following VS Code ViewPane pattern for single visibility handler
+   * This duplicate listener has been replaced by SecondaryTerminalProvider._registerVisibilityListener()
+   *
+   * @deprecated Use SecondaryTerminalProvider._registerVisibilityListener() instead
+   */
   public registerVisibilityListener(webviewView: vscode.WebviewView): void {
-    const disposable = webviewView.onDidChangeVisibility?.(() => {
-      if (!webviewView.visible) {
-        return;
-      }
+    log('⚠️ [DEPRECATED] PanelLocationController.registerVisibilityListener is deprecated - visibility handled by SecondaryTerminalProvider');
 
-      setTimeout(() => {
-        void this.panelLocationService.requestPanelLocationDetection();
-      }, 500);
-    });
-
-    if (disposable) {
-      this.options.extensionContext.subscriptions.push(disposable);
-    }
+    // Method kept for backward compatibility but does nothing
+    // Visibility listener is now consolidated in SecondaryTerminalProvider
+    void webviewView; // Suppress unused parameter warning
   }
 
   public async setupPanelLocationChangeListener(webviewView: vscode.WebviewView): Promise<void> {

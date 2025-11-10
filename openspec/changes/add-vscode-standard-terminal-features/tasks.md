@@ -22,12 +22,41 @@
 - [ ] 1.2.4 Write unit tests for FeatureFlagService (85%+ coverage)
 - [ ] 1.2.5 Update ConfigurationService to load feature flags
 
-### 1.3 Dependency Verification
-- [ ] 1.3.1 Verify xterm.js version compatibility (current: 5.5.0)
-- [ ] 1.3.2 Install xterm-addon-serialize if not present
-- [ ] 1.3.3 Verify xterm-addon-webgl for performance optimization
-- [ ] 1.3.4 Run `npm audit` and resolve any vulnerabilities
-- [ ] 1.3.5 Update package.json with any new dependencies
+### 1.3 WebView Lifecycle Stability (Decision 5)
+**Goal**: Implement VS Code ViewPane pattern to prevent duplicate HTML rendering on panel position changes
+
+- [ ] 1.3.1 Add `_bodyRendered` flag to SecondaryTerminalProvider (ViewPane pattern)
+  - Add `private _bodyRendered = false;` alongside existing flags
+  - Update `resolveWebviewView()` to check `_bodyRendered` first and return early
+  - Set `_bodyRendered = true` after complete initialization
+  - Reset flag to `false` in `dispose()`
+- [ ] 1.3.2 Consolidate visibility listeners (reduce 3 → 1)
+  - Remove duplicate visibility listeners from multiple locations
+  - Create single `_setupVisibilityHandling()` method
+  - Implement state save/restore pattern (no HTML re-initialization)
+  - Add diagnostic logging for visibility changes
+- [ ] 1.3.3 Add ViewPane lifecycle tests
+  - Test: `resolveWebviewView` ignores duplicate calls
+  - Test: HTML set exactly once
+  - Test: Listeners registered exactly once
+  - Test: Panel position change preserves state
+  - Test: Visibility change does not re-initialize HTML
+- [ ] 1.3.4 Performance monitoring
+  - Add metrics: `resolveWebviewView` call count
+  - Add metrics: HTML set operations (target: 1)
+  - Add metrics: Listener registrations (target: 1)
+  - Add metrics: Panel movement time (target: < 200ms)
+- [ ] 1.3.5 Update CLAUDE.md documentation
+  - Document ViewPane pattern implementation
+  - Add troubleshooting guide for WebView lifecycle issues
+  - Reference VS Code source files used
+
+### 1.4 Dependency Verification
+- [ ] 1.4.1 Verify xterm.js version compatibility (current: 5.5.0)
+- [ ] 1.4.2 Install xterm-addon-serialize if not present
+- [ ] 1.4.3 Verify xterm-addon-webgl for performance optimization
+- [ ] 1.4.4 Run `npm audit` and resolve any vulnerabilities
+- [ ] 1.4.5 Update package.json with any new dependencies
 
 ## Phase 2: Enhanced Scrollback Persistence (v0.1.129)
 

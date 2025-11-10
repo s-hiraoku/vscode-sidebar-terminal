@@ -65,6 +65,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   private _isInitialized = false; // Prevent duplicate initialization
   private _messageListenerRegistered = false; // 🎯 Prevent duplicate message listener registration
   private _htmlSet = false; // 🎯 Prevent duplicate HTML setting (WebView reload)
+  private _bodyRendered = false; // 🎯 VS Code ViewPane pattern: Prevent duplicate body rendering
   // Removed all state variables - using simple "fresh start" approach
 
   // Panel location now managed by PanelLocationService
@@ -143,6 +144,22 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     log('🚀 [PROVIDER] WebView object exists:', !!webviewView);
     log('🚀 [PROVIDER] WebView webview exists:', !!webviewView.webview);
 
+    // 🎯 VS Code ViewPane Pattern: Guard 1 - Check if body already rendered
+    // resolveWebviewView() is called multiple times:
+    // - Initial display
+    // - Panel position moves (sidebar ↔ auxiliary bar)
+    // - WebView recreation (window reload)
+    //
+    // The _bodyRendered flag follows VS Code's ViewPane.renderBody() pattern
+    // from src/vs/base/browser/ui/splitview/paneview.ts
+    if (this._bodyRendered) {
+      log('⏭️ [PROVIDER] Body already rendered, skipping duplicate initialization (VS Code ViewPane pattern)');
+      // Update view reference for panel movements but don't re-initialize
+      this._view = webviewView;
+      this._communicationService.setView(webviewView);
+      return;
+    }
+
     try {
       this._resetForNewView(webviewView);
       log('🔧 [PROVIDER] Step 1: Configuring webview options...');
@@ -153,6 +170,10 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       this._initializeWebviewContent(webviewView);
       this._registerCoreListeners();
       this._setupPanelLocationChangeListener(webviewView);
+
+      // 🎯 VS Code ViewPane Pattern: Mark body as rendered
+      this._bodyRendered = true;
+      log('✅ [PROVIDER] Body rendering complete, _bodyRendered flag set to true');
 
       log('✅ [PROVIDER] WebView setup completed successfully');
       log('🚀 [PROVIDER] === WEBVIEW VIEW RESOLUTION COMPLETE ===');
@@ -240,26 +261,64 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     log('✅ [PROVIDER] Message listener registered and added to subscriptions');
   }
 
+  /**
+   * 🎯 VS Code ViewPane Pattern: Single consolidated visibility handler
+   * Replaces 3 duplicate visibility listeners:
+   * - SecondaryTerminalProvider._registerVisibilityListener (this method)
+   * - PanelLocationService._setupVisibilityListener
+   * - PanelLocationController.registerVisibilityListener
+   *
+   * VS Code Pattern: Save state when hidden, restore when visible (no HTML re-initialization)
+   * From: src/vs/workbench/contrib/webviewView/browser/webviewViewPane.ts
+   */
   private _registerVisibilityListener(webviewView: vscode.WebviewView): void {
-    // STEP 3: Set up visibility listener
-    log('🔧 [PROVIDER] Step 3: Setting up visibility listener...');
+    log('🔧 [PROVIDER] Step 3: Setting up consolidated visibility listener (VS Code pattern)...');
     const disposable = webviewView.onDidChangeVisibility(
       () => {
         if (webviewView.visible) {
           log('👁️ [PROVIDER] WebView became visible');
-          // Trigger panel location detection when WebView becomes visible
-          setTimeout(() => {
-            this._requestPanelLocationDetection();
-          }, 500);
+          this._handleWebviewVisible();
         } else {
           log('👁️ [PROVIDER] WebView became hidden');
+          this._handleWebviewHidden();
         }
       },
       undefined,
       this._extensionContext.subscriptions
     );
     this._extensionContext.subscriptions.push(disposable);
-    log('✅ [PROVIDER] Visibility listener registered');
+    log('✅ [PROVIDER] Consolidated visibility listener registered');
+  }
+
+  /**
+   * Handle WebView becoming visible
+   * - Restore state (future: implement state restoration)
+   * - Trigger panel location detection
+   * - Do NOT re-initialize HTML (VS Code pattern)
+   */
+  private _handleWebviewVisible(): void {
+    log('🔄 [VISIBILITY] Handling WebView visible event');
+
+    // Future: Implement state restoration
+    // this._restoreState();
+
+    // Trigger panel location detection with debounce
+    // Consolidates timing from PanelLocationService (100ms) and PanelLocationController (500ms)
+    setTimeout(() => {
+      log('📍 [VISIBILITY] Requesting panel location detection after visibility change');
+      this._requestPanelLocationDetection();
+    }, 200); // Balanced delay between 100ms and 500ms
+  }
+
+  /**
+   * Handle WebView becoming hidden
+   * - Save state (future: implement state saving)
+   */
+  private _handleWebviewHidden(): void {
+    log('🔄 [VISIBILITY] Handling WebView hidden event');
+
+    // Future: Implement state saving
+    // this._saveState();
   }
 
   private _initializeWebviewContent(webviewView: vscode.WebviewView): void {
@@ -1821,44 +1880,17 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   }
 
   /**
-   * Set up WebView event listeners
+   * 🎯 REMOVED: Dead code - never called
+   * Visibility listener consolidated in SecondaryTerminalProvider._registerVisibilityListener()
+   * Following VS Code ViewPane pattern for single visibility handler
+   *
+   * This method contained a duplicate visibility listener that has been replaced by
+   * the consolidated _registerVisibilityListener() method.
+   *
+   * private _setupWebviewEventListeners(webviewView: vscode.WebviewView, isPanelMove: boolean): void {
+   *   // Duplicate visibility listener - now handled in _registerVisibilityListener()
+   * }
    */
-  private _setupWebviewEventListeners(webviewView: vscode.WebviewView, isPanelMove: boolean): void {
-    try {
-      log('🎆 [TRACE] ===========================================');
-      log('🎆 [TRACE] _setupWebviewEventListeners called');
-      log('🎆 [TRACE] isPanelMove:', isPanelMove);
-      log('🎆 [TRACE] WebView exists:', !!webviewView.webview);
-
-      // Message listener is set in resolveWebviewView (before HTML). Avoid duplicate listeners here.
-      log('🎆 [TRACE] Message listener already configured in resolveWebviewView');
-
-      // Set up visibility change handler for panel move detection
-      webviewView.onDidChangeVisibility(
-        () => {
-          if (webviewView.visible) {
-            log('👁️ [DEBUG] WebView became visible - triggering panel location detection');
-
-            // 🆕 Trigger panel location detection when WebView becomes visible
-            // This handles cases where the panel was moved while hidden
-            setTimeout(() => {
-              log('📍 [DEBUG] Requesting panel location detection after visibility change');
-              this._requestPanelLocationDetection();
-            }, 500); // Small delay to ensure WebView is fully loaded
-          } else {
-            log('👁️ [DEBUG] WebView became hidden');
-          }
-        },
-        null,
-        this._extensionContext.subscriptions
-      );
-
-      log('✅ [DEBUG] WebView event listeners set up successfully');
-    } catch (error) {
-      log('❌ [ERROR] Failed to set up WebView event listeners:', error);
-      throw error; // Re-throw to be handled by caller
-    }
-  }
 
   /**
    * Handle WebView setup errors gracefully
@@ -2411,6 +2443,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     this._view = undefined;
     this._isInitialized = false;
     this._htmlSet = false;
+    this._bodyRendered = false; // 🎯 VS Code ViewPane pattern: Reset body rendered flag
 
     log('✅ [DEBUG] SecondaryTerminalProvider disposed');
   }

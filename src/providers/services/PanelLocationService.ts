@@ -83,15 +83,19 @@ export class PanelLocationService implements vscode.Disposable {
    *
    * 🎯 OPTIMIZATION: Defers initial detection to WebView DOM ready
    * This prevents premature detection that causes layout issues
+   *
+   * 🎯 VS Code Pattern: Visibility listener consolidated in SecondaryTerminalProvider
+   * No longer registers duplicate visibility listener here
    */
   public async initialize(webviewView?: vscode.WebviewView): Promise<void> {
     // Set up configuration change listener
     this._setupConfigurationListener();
 
-    // Set up visibility change listener if webviewView provided
-    if (webviewView) {
-      this._setupVisibilityListener(webviewView);
-    }
+    // 🎯 REMOVED: Visibility listener consolidated in SecondaryTerminalProvider
+    // Following VS Code ViewPane pattern for single visibility handler
+    // if (webviewView) {
+    //   this._setupVisibilityListener(webviewView);
+    // }
 
     // 🎯 REMOVED: Don't request detection immediately
     // Let WebView detect autonomously when DOM is ready
@@ -286,21 +290,23 @@ export class PanelLocationService implements vscode.Disposable {
   }
 
   /**
-   * Set up visibility change listener
+   * 🎯 REMOVED: Visibility listener consolidated in SecondaryTerminalProvider
+   * Following VS Code ViewPane pattern for single visibility handler
+   * This duplicate listener has been replaced by SecondaryTerminalProvider._registerVisibilityListener()
+   *
+   * private _setupVisibilityListener(webviewView: vscode.WebviewView): void {
+   *   if (webviewView.onDidChangeVisibility) {
+   *     this._disposables.push(
+   *       webviewView.onDidChangeVisibility(() => {
+   *         setTimeout(() => {
+   *           log('📍 [PANEL-DETECTION] Visibility change detected - requesting detection');
+   *           void this.requestPanelLocationDetection();
+   *         }, 100);
+   *       })
+   *     );
+   *   }
+   * }
    */
-  private _setupVisibilityListener(webviewView: vscode.WebviewView): void {
-    if (webviewView.onDidChangeVisibility) {
-      this._disposables.push(
-        webviewView.onDidChangeVisibility(() => {
-          // When visibility changes, re-detect panel location
-          setTimeout(() => {
-            log('📍 [PANEL-DETECTION] Visibility change detected - requesting detection');
-            void this.requestPanelLocationDetection();
-          }, 100); // Small delay to ensure layout is settled
-        })
-      );
-    }
-  }
 
   /**
    * Clean up resources

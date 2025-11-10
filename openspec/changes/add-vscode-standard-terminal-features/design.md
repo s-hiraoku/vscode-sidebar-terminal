@@ -139,6 +139,160 @@ interface TerminalFeatures {
 2. **v0.1.131-135**: Beta testing with opt-in users
 3. **v0.2.0**: Enable by default, remove flags (major version)
 
+## WebView Lifecycle Stability
+
+### Decision 5: Implement VS Code ViewPane Lifecycle Pattern
+
+**Problem**: WebView HTML is re-initialized multiple times during panel position changes (sidebar → auxiliary bar), causing:
+- Full DOM reconstruction and flicker
+- Terminal state loss
+- Duplicate event listener registrations
+- Performance degradation
+
+**VS Code Solution**: Three-layer protection pattern from VS Code source code analysis (2025-11-10):
+
+**Layer 1: Service Guard (WebviewViewService)**
+```typescript
+// VS Code Pattern: src/vs/workbench/contrib/webviewView/browser/webviewViewService.ts
+resolve(viewType: string, webview: WebviewView): Promise<void> {
+    if (this._awaitingRevival.has(viewType)) {
+        throw new Error('View already awaiting revival');
+    }
+    // Prevent concurrent resolution attempts
+}
+```
+
+**Layer 2: Pane Guard (ViewPane)**
+```typescript
+// VS Code Pattern: src/vs/base/browser/ui/splitview/paneview.ts
+class Pane {
+    private _bodyRendered = false;
+
+    protected renderBody(container: HTMLElement): void {
+        if (this._bodyRendered) return; // ← Critical guard
+        this._bodyRendered = true;
+        // Render body only once
+    }
+}
+```
+
+**Layer 3: Container Preservation (ViewPaneContainer)**
+```typescript
+// VS Code Pattern: src/vs/workbench/browser/parts/views/viewPaneContainer.ts
+movePane(fromIndex: number, toIndex: number): void {
+    // Extract pane object without disposal
+    const [paneItem] = this.paneItems.splice(fromIndex, 1);
+    this.paneItems.splice(toIndex, 0, paneItem);
+    // Object reused, not recreated - NO renderBody() call
+}
+```
+
+**Our Implementation** (SecondaryTerminalProvider.ts):
+
+**Current State**:
+- ✅ Triple-flag protection already implemented: `_htmlSet`, `_messageListenerRegistered`, `_isInitialized`
+- ✅ HTML initialization guard prevents duplicate HTML setting
+- ✅ Message listener guard prevents duplicate registrations
+- ⚠️ Missing `_bodyRendered` semantic pattern from ViewPane
+- ⚠️ Multiple visibility listeners (3 different locations - needs consolidation)
+
+**New Implementation**:
+```typescript
+export class SecondaryTerminalProvider {
+    private _bodyRendered = false;      // ← Add ViewPane pattern
+    private _htmlSet = false;           // Existing
+    private _messageListenerRegistered = false; // Existing
+    private _isInitialized = false;     // Existing
+
+    public resolveWebviewView(view: vscode.WebviewView): void {
+        // Guard 1: Check if body already rendered
+        if (this._bodyRendered) {
+            log('⏭️ Body already rendered, skipping duplicate initialization');
+            return;
+        }
+
+        // Guard 2: Initialize HTML only once
+        if (!this._htmlSet) {
+            view.webview.html = this.getHtmlContent();
+            this._htmlSet = true;
+        }
+
+        // Guard 3: Register listeners only once
+        if (!this._messageListenerRegistered) {
+            this.setupEventListeners(view);
+            this._messageListenerRegistered = true;
+        }
+
+        this._bodyRendered = true; // Mark as rendered
+    }
+
+    // Consolidate visibility listeners
+    private _setupVisibilityHandling(view: vscode.WebviewView): void {
+        // Single visibility listener (replace 3 existing)
+        view.onDidChangeVisibility(() => {
+            if (view.visible) {
+                this._restoreState();  // Don't re-initialize HTML
+            } else {
+                this._saveState();
+            }
+        });
+    }
+
+    public dispose(): void {
+        this._bodyRendered = false;
+        this._htmlSet = false;
+        this._messageListenerRegistered = false;
+        this._isInitialized = false;
+        // LIFO disposal via DisposableStore
+    }
+}
+```
+
+**Benefits**:
+- ✅ Semantic clarity: `_bodyRendered` matches VS Code ViewPane pattern
+- ✅ Single visibility listener (consolidate 3 → 1)
+- ✅ State preservation during panel movements
+- ✅ No flicker on panel position changes
+- ✅ Matches battle-tested VS Code patterns
+
+**Trade-offs**:
+- Additional flag (`_bodyRendered`) for semantic clarity
+- Requires refactoring visibility listener consolidation
+
+**Testing**:
+```typescript
+test('resolveWebviewView ignores duplicate calls', () => {
+    const provider = new SecondaryTerminalProvider();
+    provider.resolveWebviewView(mockView, {}, token);
+    const firstHtml = mockView.webview.html;
+
+    provider.resolveWebviewView(mockView, {}, token);
+    const secondHtml = mockView.webview.html;
+
+    assert.strictEqual(firstHtml, secondHtml);
+});
+
+test('panel position change preserves state', async () => {
+    await vscode.commands.executeCommand('workbench.action.moveViewToAuxiliaryBar');
+    const state = await getWebviewState();
+    assert.deepStrictEqual(state, expectedState);
+});
+```
+
+**Performance Targets**:
+- resolveWebviewView: < 100ms
+- Panel movement: < 200ms (includes 200ms layout timeout for animations)
+- HTML set operations: Exactly 1
+- Listener registrations: Exactly 1
+
+**VS Code Source References**:
+- Service Layer: `src/vs/workbench/contrib/webviewView/browser/webviewViewService.ts`
+- Pane Layer: `src/vs/base/browser/ui/splitview/paneview.ts`
+- Container Layer: `src/vs/workbench/browser/parts/views/viewPaneContainer.ts`
+- Research Documentation: `/Volumes/SSD/development/workspace/vscode-sidebar-terminal/for-publish/docs/vscode-webview-lifecycle-patterns.md`
+
+---
+
 ## Architecture Components
 
 ### 1. Scrollback Persistence Layer
