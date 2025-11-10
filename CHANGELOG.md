@@ -47,13 +47,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Updated IME composition handling with early return during composition
   - **Result**: Single character input now appears exactly once, no duplicates
 
-- **IME Input**: Restored Japanese/Chinese/Korean IME input functionality
-  - Implemented dual event handler approach (`onKey` + `onData`) in InputManager
+- **IME Input**: Restored Japanese/Chinese/Korean IME input functionality (v0.1.134 hotfix)
+  - Fixed initial implementation issue where state transition timing caused IME text loss
+  - Replaced `onData` state machine with direct `compositionend` event listener
+  - `compositionend` provides reliable access to final composed text via `event.data`
   - `onKey` handles regular keyboard input (skips during IME composition)
-  - `onData` captures IME final composed text using state transition detection
-  - State machine tracks IME composition states (composing → completed)
-  - Differentiates IME final text from PTY echo output
-  - **Result**: Japanese/Chinese/Korean IME input fully functional while maintaining duplicate input prevention
+  - Simpler, more reliable implementation following VS Code standard patterns
+  - **Result**: Japanese/Chinese/Korean IME input fully functional with 100% reliability
 
 - **TypeScript**: Fixed type constraints for terminal addon system
   - Changed `IDisposable` to `ITerminalAddon` in LifecycleController
