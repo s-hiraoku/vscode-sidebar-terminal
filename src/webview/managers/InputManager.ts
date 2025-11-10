@@ -930,7 +930,7 @@ export class InputManager extends BaseManager implements IInputManager {
     this.logger(`Setting up VS Code standard input handling for terminal ${terminalId}`);
 
     // CRITICAL: Set up keyboard input handling with IME awareness
-    // Use onKey instead of onData to avoid capturing PTY echo output
+    // Use onKey for regular keyboard input (non-IME)
     terminal.onKey((event: { key: string; domEvent: KeyboardEvent }) => {
       // VS Code standard: Check IME composition state before processing
       if (this.imeHandler.isIMEComposing()) {
@@ -949,6 +949,44 @@ export class InputManager extends BaseManager implements IInputManager {
         data: event.key,
         timestamp: Date.now(),
       });
+    });
+
+    // CRITICAL: Add onData handler for IME final composed text
+    // xterm.js emits onData for IME composed text after composition ends
+    // We need this to capture Japanese/Chinese/Korean final text
+    let lastIMEComposingState = false;
+    const checkIMEState = () => {
+      const currentState = this.imeHandler.isIMEComposing();
+      const wasComposing = lastIMEComposingState;
+      lastIMEComposingState = currentState;
+      return { currentState, wasComposing };
+    };
+
+    terminal.onData((data: string) => {
+      const { currentState, wasComposing } = checkIMEState();
+
+      // If we just finished IME composition, this is the final composed text
+      // Send it to extension immediately
+      if (!currentState && wasComposing) {
+        this.logger(`Terminal ${terminalId} IME final text: ${data.length} chars`);
+        manager.postMessageToExtension({
+          command: 'input',
+          terminalId: terminalId,
+          data: data,
+          timestamp: Date.now(),
+        });
+        return;
+      }
+
+      // During composition, ignore onData (let onKey handle it)
+      if (currentState) {
+        this.logger(`Terminal ${terminalId} data during IME composition - ignoring`);
+        return;
+      }
+
+      // NOT IME and not during composition -> This is PTY echo, ignore it
+      // onKey will handle regular keyboard input
+      this.logger(`Terminal ${terminalId} data (likely PTY echo) - ignoring`);
     });
 
     // Set up focus handling - xterm.js doesn't have onFocus/onBlur, comment out
