@@ -67,6 +67,21 @@ export interface TerminalSerializedData {
     compressed: boolean;
     timestamp: number;
     version: string;
+    // Phase 2.1.3: Enhanced metadata for full state restoration
+    dimensions?: {
+      cols: number;
+      rows: number;
+    };
+    cursor?: {
+      x: number;
+      y: number;
+    };
+    selection?: {
+      start: { x: number; y: number };
+      end: { x: number; y: number };
+    } | null;
+    workingDirectory?: string;
+    scrollPosition?: number;
   };
 }
 
@@ -253,6 +268,23 @@ export class OptimizedTerminalPersistenceManager {
 
       const compressed = finalContent !== content;
 
+      // Phase 2.1.3: Capture terminal state metadata
+      const dimensions = {
+        cols: registration.terminal.cols,
+        rows: registration.terminal.rows,
+      };
+
+      const cursorPosition = registration.terminal.buffer.active.cursorY >= 0 ? {
+        x: registration.terminal.buffer.active.cursorX,
+        y: registration.terminal.buffer.active.cursorY,
+      } : undefined;
+
+      // Capture selection if present
+      const selection = registration.terminal.hasSelection() ? {
+        start: { x: registration.terminal.getSelectionPosition()?.start.x || 0, y: registration.terminal.getSelectionPosition()?.start.y || 0 },
+        end: { x: registration.terminal.getSelectionPosition()?.end.x || 0, y: registration.terminal.getSelectionPosition()?.end.y || 0 },
+      } : null;
+
       const serializedData: TerminalSerializedData = {
         content: finalContent,
         html,
@@ -262,6 +294,11 @@ export class OptimizedTerminalPersistenceManager {
           compressed,
           timestamp: Date.now(),
           version: STORAGE_VERSION,
+          // Enhanced metadata for Phase 2.1.3
+          dimensions,
+          cursor: cursorPosition,
+          selection,
+          scrollPosition: registration.terminal.buffer.active.viewportY,
         },
       };
 

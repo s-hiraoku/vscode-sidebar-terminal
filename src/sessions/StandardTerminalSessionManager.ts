@@ -25,6 +25,9 @@ export class StandardTerminalSessionManager {
   // Cache for pushed scrollback data from WebView (instant save)
   private pushedScrollbackCache: Map<string, string[]> = new Map();
 
+  // Phase 2.1.4: onWillSaveState listener disposable
+  private onWillSaveStateDisposable?: vscode.Disposable;
+
   constructor(
     private readonly context: vscode.ExtensionContext,
     private readonly terminalManager: TerminalManager,
@@ -33,7 +36,30 @@ export class StandardTerminalSessionManager {
       sendMessageToWebview: (message: unknown) => Promise<void>;
     }
   ) {
-    // Session save happens in ExtensionLifecycle.deactivate()
+    // Phase 2.1.4: Setup auto-save on window close/reload
+    this.setupAutoSave();
+    log('✅ [STANDARD-SESSION] Auto-save on window close/reload configured');
+  }
+
+  /**
+   * Phase 2.1.4: Setup auto-save listeners including onWillSaveState
+   */
+  private setupAutoSave(): void {
+    // VS Code standard: Save session when window is closing or reloading
+    this.onWillSaveStateDisposable = vscode.workspace.onWillSaveState(async (event) => {
+      log('💾 [STANDARD-SESSION] onWillSaveState triggered - saving session');
+
+      // Wait for save to complete before allowing window close
+      event.waitUntil(
+        this.saveCurrentSession().then((result) => {
+          if (result.success) {
+            log(`✅ [STANDARD-SESSION] Session saved on window close: ${result.terminalCount} terminals`);
+          } else {
+            log(`⚠️ [STANDARD-SESSION] Session save failed: ${result.error}`);
+          }
+        })
+      );
+    });
   }
 
   private pendingRestoreResponse?: {
@@ -1081,8 +1107,10 @@ export class StandardTerminalSessionManager {
   }
 
   /**
-   * Dispose auto-save timers
+   * Dispose auto-save timers and listeners
    * Should be called when extension deactivates
+   *
+   * Phase 2.1.4 Update: Dispose onWillSaveState listener
    */
   public dispose(): void {
     // Clear debounce timer
@@ -1091,5 +1119,14 @@ export class StandardTerminalSessionManager {
       this.autoSaveDebounceTimer = undefined;
       log('🔧 [STANDARD-SESSION] Cleared auto-save debounce timer');
     }
+
+    // Phase 2.1.4: Dispose onWillSaveState listener
+    if (this.onWillSaveStateDisposable) {
+      this.onWillSaveStateDisposable.dispose();
+      this.onWillSaveStateDisposable = undefined;
+      log('🔧 [STANDARD-SESSION] Disposed onWillSaveState listener');
+    }
+
+    log('🔧 [STANDARD-SESSION] Disposed all auto-save resources');
   }
 }

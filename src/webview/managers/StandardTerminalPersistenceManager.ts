@@ -176,9 +176,60 @@ export class StandardTerminalPersistenceManager {
   }
 
   /**
+   * Phase 2.1.3: Capture terminal state metadata for full restoration
+   */
+  private captureTerminalMetadata(terminalId: string): {
+    dimensions: { cols: number; rows: number };
+    cursor?: { x: number; y: number };
+    selection: { start: { x: number; y: number }; end: { x: number; y: number } } | null;
+    scrollPosition: number;
+  } | null {
+    const terminal = this.terminals.get(terminalId);
+    if (!terminal) {
+      return null;
+    }
+
+    try {
+      const dimensions = {
+        cols: terminal.cols,
+        rows: terminal.rows,
+      };
+
+      const cursor = terminal.buffer.active.cursorY >= 0 ? {
+        x: terminal.buffer.active.cursorX,
+        y: terminal.buffer.active.cursorY,
+      } : undefined;
+
+      const selection = terminal.hasSelection() ? {
+        start: {
+          x: terminal.getSelectionPosition()?.start.x || 0,
+          y: terminal.getSelectionPosition()?.start.y || 0,
+        },
+        end: {
+          x: terminal.getSelectionPosition()?.end.x || 0,
+          y: terminal.getSelectionPosition()?.end.y || 0,
+        },
+      } : null;
+
+      const scrollPosition = terminal.buffer.active.viewportY;
+
+      return {
+        dimensions,
+        cursor,
+        selection,
+        scrollPosition,
+      };
+    } catch (error) {
+      console.warn(`⚠️ [WEBVIEW-PERSISTENCE] Failed to capture metadata for ${terminalId}:`, error);
+      return null;
+    }
+  }
+
+  /**
    * ターミナルコンテンツをローカルストレージに保存
    *
    * Phase 2 Update: Uses ScrollbackManager for advanced processing
+   * Phase 2.1.3 Update: Captures terminal state metadata (dimensions, cursor, selection)
    */
   public saveTerminalContent(terminalId: string): void {
     try {
@@ -220,19 +271,24 @@ export class StandardTerminalPersistenceManager {
         }
       }
 
+      // Phase 2.1.3: Capture terminal state metadata
+      const metadata = this.captureTerminalMetadata(terminalId);
+
       if (this.vscodeApi) {
         // Push serialized content to Extension immediately (VS Code standard approach)
         this.vscodeApi.postMessage({
           command: 'pushScrollbackData',
           terminalId,
           scrollbackData: scrollbackData.content.split('\n'),
+          metadata, // Phase 2.1.3: Include metadata
           timestamp: Date.now(),
         });
 
         log(
           `💾 [WEBVIEW-PERSISTENCE] Pushed terminal ${terminalId} scrollback to Extension ` +
             `(${scrollbackData.lineCount} lines, ${scrollbackData.trimmedSize} chars, ` +
-            `${((1 - scrollbackData.trimmedSize / scrollbackData.originalSize) * 100).toFixed(1)}% size reduction)`
+            `${((1 - scrollbackData.trimmedSize / scrollbackData.originalSize) * 100).toFixed(1)}% size reduction, ` +
+            `${metadata ? 'metadata captured' : 'no metadata'})`
         );
       } else {
         console.warn(`⚠️ [WEBVIEW-PERSISTENCE] No VS Code API available for saving`);
