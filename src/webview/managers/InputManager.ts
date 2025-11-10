@@ -951,42 +951,20 @@ export class InputManager extends BaseManager implements IInputManager {
       });
     });
 
-    // CRITICAL: Add onData handler for IME final composed text
-    // xterm.js emits onData for IME composed text after composition ends
-    // We need this to capture Japanese/Chinese/Korean final text
-    let lastIMEComposingState = false;
-    const checkIMEState = () => {
-      const currentState = this.imeHandler.isIMEComposing();
-      const wasComposing = lastIMEComposingState;
-      lastIMEComposingState = currentState;
-      return { currentState, wasComposing };
-    };
-
-    terminal.onData((data: string) => {
-      const { currentState, wasComposing } = checkIMEState();
-
-      // If we just finished IME composition, this is the final composed text
-      // Send it to extension immediately
-      if (!currentState && wasComposing) {
-        this.logger(`Terminal ${terminalId} IME final text: ${data.length} chars`);
+    // CRITICAL: Add compositionend listener for IME final text
+    // This is the most reliable way to capture Japanese/Chinese/Korean input
+    // The compositionend event fires with the final composed text
+    container.addEventListener('compositionend', (event: CompositionEvent) => {
+      const finalText = event.data;
+      if (finalText) {
+        this.logger(`Terminal ${terminalId} IME compositionend - final text: "${finalText}"`);
         manager.postMessageToExtension({
           command: 'input',
           terminalId: terminalId,
-          data: data,
+          data: finalText,
           timestamp: Date.now(),
         });
-        return;
       }
-
-      // During composition, ignore onData (let onKey handle it)
-      if (currentState) {
-        this.logger(`Terminal ${terminalId} data during IME composition - ignoring`);
-        return;
-      }
-
-      // NOT IME and not during composition -> This is PTY echo, ignore it
-      // onKey will handle regular keyboard input
-      this.logger(`Terminal ${terminalId} data (likely PTY echo) - ignoring`);
     });
 
     // Set up focus handling - xterm.js doesn't have onFocus/onBlur, comment out
