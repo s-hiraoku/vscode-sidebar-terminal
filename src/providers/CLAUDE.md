@@ -32,6 +32,92 @@
 - イベント駆動型通信
 - リソース効率的管理
 
+#### ViewPaneライフサイクル管理（OpenSpec 1.3）
+
+**VS Code ViewPane Pattern実装** - 重複レンダリング防止とパフォーマンス最適化
+
+**`_bodyRendered`フラグパターン（決定5）**:
+- VS Code `src/vs/base/browser/ui/splitview/paneview.ts`の`Pane.renderBody()`パターンを採用
+- `resolveWebviewView()`は複数回呼ばれる（初回表示、パネル移動、WebView再作成）
+- `_bodyRendered`フラグで初回レンダリング完了を記録
+- 2回目以降の呼び出しは早期リターンで重複初期化を防止
+
+**実装箇所**:
+```typescript
+// SecondaryTerminalProvider.ts
+
+// フラグ定義（line 68）
+private _bodyRendered = false;
+
+// resolveWebviewView()内のガード（lines 169-181）
+if (this._bodyRendered) {
+  log('⏭️ Body already rendered, skipping duplicate initialization');
+  this._view = webviewView;
+  this._communicationService.setView(webviewView);
+  return; // パネル移動時は早期リターン
+}
+
+// 初期化完了後にフラグセット（line 195）
+this._bodyRendered = true;
+
+// dispose()でリセット（line 2479）
+this._bodyRendered = false;
+```
+
+**visibilityリスナー統合**:
+- Before: 3箇所の重複リスナー（PanelLocationService, PanelLocationController, SecondaryTerminalProvider）
+- After: 1箇所の統合リスナー（SecondaryTerminalProvider._registerVisibilityListener）
+- 可視性変更時はHTML再初期化せず、状態保存/復元のみ実行
+
+**パフォーマンスメトリクス（OpenSpec 1.3.4）**:
+```typescript
+// メトリクス定義（lines 71-78）
+private _performanceMetrics = {
+  resolveWebviewViewCallCount: 0,    // resolveWebviewView呼び出し回数
+  htmlSetOperations: 0,              // HTML設定回数（目標: 1）
+  listenerRegistrations: 0,          // リスナー登録回数（目標: 1）
+  lastPanelMovementTime: 0,          // 最後のパネル移動時間（目標: <200ms）
+  totalInitializationTime: 0,        // 初期化総時間（目標: <100ms）
+};
+
+// パブリックAPI（lines 2448-2457）
+public getPerformanceMetrics() {
+  return {
+    ...this._performanceMetrics,
+    meetsInitializationTarget: totalInitializationTime < 100,
+    meetsPanelMovementTarget: lastPanelMovementTime < 200,
+    meetsHtmlSetTarget: htmlSetOperations === 1,
+    meetsListenerTarget: listenerRegistrations === 1,
+  };
+}
+```
+
+**パフォーマンス目標**:
+| メトリクス | 目標値 | 説明 |
+|-----------|--------|------|
+| resolveWebviewView実行時間 | <100ms | 初回初期化時間 |
+| パネル移動時間 | <200ms | sidebar ↔ auxiliary bar移動 |
+| HTML設定回数 | 1回 | プロバイダーインスタンスあたり |
+| リスナー登録回数 | 1回 | プロバイダーインスタンスあたり |
+
+**テストケース（OpenSpec 1.3.3）**:
+- `SecondaryTerminalProvider-ViewPaneLifecycle.test.ts`に完全なテストスイートを実装
+- 重複呼び出し防止、HTML単一設定、リスナー単一登録、状態保存をカバー
+
+**トラブルシューティング**:
+- **症状**: パネル移動時にWebViewがちらつく
+  - **原因**: `_bodyRendered`フラグが正しく機能していない
+  - **解決**: `resolveWebviewView()`開始時にフラグをチェック、trueなら早期リターン
+
+- **症状**: パフォーマンスが悪い
+  - **診断**: `getPerformanceMetrics()`でメトリクスを確認
+  - **解決**: 目標値未達成の項目を特定し、該当コードを最適化
+
+**参考資料**:
+- VS Code Source: `src/vs/base/browser/ui/splitview/paneview.ts`
+- VS Code Source: `src/vs/workbench/contrib/webviewView/browser/webviewViewService.ts`
+- Research Doc: `docs/vscode-webview-lifecycle-patterns.md`
+
 #### HTML生成・セキュリティ設計
 
 **CSP (Content Security Policy) 戦略**

@@ -22,34 +22,38 @@
 - [ ] 1.2.4 Write unit tests for FeatureFlagService (85%+ coverage)
 - [ ] 1.2.5 Update ConfigurationService to load feature flags
 
-### 1.3 WebView Lifecycle Stability (Decision 5)
+### 1.3 WebView Lifecycle Stability (Decision 5) ✅ COMPLETED
 **Goal**: Implement VS Code ViewPane pattern to prevent duplicate HTML rendering on panel position changes
 
-- [ ] 1.3.1 Add `_bodyRendered` flag to SecondaryTerminalProvider (ViewPane pattern)
-  - Add `private _bodyRendered = false;` alongside existing flags
-  - Update `resolveWebviewView()` to check `_bodyRendered` first and return early
-  - Set `_bodyRendered = true` after complete initialization
-  - Reset flag to `false` in `dispose()`
-- [ ] 1.3.2 Consolidate visibility listeners (reduce 3 → 1)
+- [x] 1.3.1 Add `_bodyRendered` flag to SecondaryTerminalProvider (ViewPane pattern)
+  - Add `private _bodyRendered = false;` alongside existing flags (line 68)
+  - Update `resolveWebviewView()` to check `_bodyRendered` first and return early (lines 169-181)
+  - Set `_bodyRendered = true` after complete initialization (line 195)
+  - Reset flag to `false` in `dispose()` (line 2479)
+- [x] 1.3.2 Consolidate visibility listeners (reduce 3 → 1)
   - Remove duplicate visibility listeners from multiple locations
-  - Create single `_setupVisibilityHandling()` method
+  - Create single `_registerVisibilityListener()` method (lines 264-322)
   - Implement state save/restore pattern (no HTML re-initialization)
   - Add diagnostic logging for visibility changes
-- [ ] 1.3.3 Add ViewPane lifecycle tests
-  - Test: `resolveWebviewView` ignores duplicate calls
-  - Test: HTML set exactly once
-  - Test: Listeners registered exactly once
-  - Test: Panel position change preserves state
-  - Test: Visibility change does not re-initialize HTML
-- [ ] 1.3.4 Performance monitoring
-  - Add metrics: `resolveWebviewView` call count
-  - Add metrics: HTML set operations (target: 1)
-  - Add metrics: Listener registrations (target: 1)
-  - Add metrics: Panel movement time (target: < 200ms)
-- [ ] 1.3.5 Update CLAUDE.md documentation
-  - Document ViewPane pattern implementation
-  - Add troubleshooting guide for WebView lifecycle issues
-  - Reference VS Code source files used
+- [x] 1.3.3 Add ViewPane lifecycle tests
+  - Test: `resolveWebviewView` ignores duplicate calls ✅
+  - Test: HTML set exactly once ✅
+  - Test: Listeners registered exactly once ✅
+  - Test: Panel position change preserves state ✅
+  - Test: Visibility change does not re-initialize HTML ✅
+  - **File**: `src/test/unit/providers/SecondaryTerminalProvider-ViewPaneLifecycle.test.ts`
+- [x] 1.3.4 Performance monitoring
+  - Add metrics: `resolveWebviewView` call count (lines 153-154)
+  - Add metrics: HTML set operations (target: 1) (lines 365-366)
+  - Add metrics: Listener registrations (target: 1) (lines 257-258)
+  - Add metrics: Panel movement time (target: < 200ms) (lines 174-175)
+  - **Public API**: `getPerformanceMetrics()` (lines 2448-2457)
+  - **Logging**: `_logPerformanceMetrics()` (lines 2432-2442)
+- [x] 1.3.5 Update CLAUDE.md documentation
+  - Document ViewPane pattern implementation ✅
+  - Add troubleshooting guide for WebView lifecycle issues ✅
+  - Reference VS Code source files used ✅
+  - **File**: `src/providers/CLAUDE.md` (lines 35-119)
 
 ### 1.4 Dependency Verification
 - [ ] 1.4.1 Verify xterm.js version compatibility (current: 5.5.0)

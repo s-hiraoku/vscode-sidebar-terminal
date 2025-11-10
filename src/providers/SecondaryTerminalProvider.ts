@@ -68,6 +68,15 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   private _bodyRendered = false; // 🎯 VS Code ViewPane pattern: Prevent duplicate body rendering
   // Removed all state variables - using simple "fresh start" approach
 
+  // 🎯 Performance Metrics (OpenSpec 1.3.4)
+  private _performanceMetrics = {
+    resolveWebviewViewCallCount: 0,
+    htmlSetOperations: 0,
+    listenerRegistrations: 0,
+    lastPanelMovementTime: 0,
+    totalInitializationTime: 0,
+  };
+
   // Panel location now managed by PanelLocationService
 
   // Minimal command router for incoming webview messages
@@ -140,7 +149,12 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     _context: vscode.WebviewViewResolveContext,
     _token: vscode.CancellationToken
   ): void {
+    // 🎯 Performance Metric: Track resolveWebviewView call count
+    const startTime = Date.now();
+    this._performanceMetrics.resolveWebviewViewCallCount++;
+
     log('🚀 [PROVIDER] === RESOLVING WEBVIEW VIEW ===');
+    log(`📊 [METRICS] resolveWebviewView call #${this._performanceMetrics.resolveWebviewViewCallCount}`);
     log('🚀 [PROVIDER] WebView object exists:', !!webviewView);
     log('🚀 [PROVIDER] WebView webview exists:', !!webviewView.webview);
 
@@ -154,6 +168,12 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     // from src/vs/base/browser/ui/splitview/paneview.ts
     if (this._bodyRendered) {
       log('⏭️ [PROVIDER] Body already rendered, skipping duplicate initialization (VS Code ViewPane pattern)');
+      log(`📊 [METRICS] Early return on call #${this._performanceMetrics.resolveWebviewViewCallCount} (panel movement)`);
+
+      // 🎯 Performance Metric: Track panel movement time
+      this._performanceMetrics.lastPanelMovementTime = Date.now() - startTime;
+      log(`📊 [METRICS] Panel movement time: ${this._performanceMetrics.lastPanelMovementTime}ms (target: <200ms)`);
+
       // Update view reference for panel movements but don't re-initialize
       this._view = webviewView;
       this._communicationService.setView(webviewView);
@@ -174,6 +194,11 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       // 🎯 VS Code ViewPane Pattern: Mark body as rendered
       this._bodyRendered = true;
       log('✅ [PROVIDER] Body rendering complete, _bodyRendered flag set to true');
+
+      // 🎯 Performance Metric: Track total initialization time
+      this._performanceMetrics.totalInitializationTime = Date.now() - startTime;
+      log(`📊 [METRICS] Total initialization time: ${this._performanceMetrics.totalInitializationTime}ms (target: <100ms)`);
+      this._logPerformanceMetrics();
 
       log('✅ [PROVIDER] WebView setup completed successfully');
       log('🚀 [PROVIDER] === WEBVIEW VIEW RESOLUTION COMPLETE ===');
@@ -227,6 +252,10 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     }
 
     log('🔧 [PROVIDER] Step 2: Setting up message listeners (BEFORE HTML)...');
+
+    // 🎯 Performance Metric: Track listener registration (target: exactly 1)
+    this._performanceMetrics.listenerRegistrations++;
+    log(`📊 [METRICS] Listener registration #${this._performanceMetrics.listenerRegistrations} (target: 1)`);
     const disposable = webviewView.webview.onDidReceiveMessage(
       (message: WebviewMessage) => {
         log('📨 [PROVIDER] ✅ MESSAGE RECEIVED FROM WEBVIEW!');
@@ -335,6 +364,10 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     log('🔧 [PROVIDER] Step 4: Setting webview HTML...');
     this._setWebviewHtml(webviewView, false);
     this._htmlSet = true;
+
+    // 🎯 Performance Metric: Track HTML set operations (target: exactly 1)
+    this._performanceMetrics.htmlSetOperations++;
+    log(`📊 [METRICS] HTML set operation #${this._performanceMetrics.htmlSetOperations} (target: 1)`);
     log('✅ [PROVIDER] HTML set flag marked as true');
 
     // 🎯 HANDSHAKE PROTOCOL: extensionReady is now sent in _handleWebviewReady
@@ -2391,6 +2424,36 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       log('Persistence restore error:', error);
       return false;
     }
+  }
+
+  /**
+   * Log performance metrics (OpenSpec 1.3.4)
+   */
+  private _logPerformanceMetrics(): void {
+    log('');
+    log('📊 [METRICS] ========== ViewPane Lifecycle Performance ==========');
+    log(`📊 [METRICS] resolveWebviewView calls: ${this._performanceMetrics.resolveWebviewViewCallCount}`);
+    log(`📊 [METRICS] HTML set operations: ${this._performanceMetrics.htmlSetOperations} (target: 1)`);
+    log(`📊 [METRICS] Listener registrations: ${this._performanceMetrics.listenerRegistrations} (target: 1)`);
+    log(`📊 [METRICS] Total initialization time: ${this._performanceMetrics.totalInitializationTime}ms (target: <100ms)`);
+    log(`📊 [METRICS] Last panel movement time: ${this._performanceMetrics.lastPanelMovementTime}ms (target: <200ms)`);
+    log('📊 [METRICS] =======================================================');
+    log('');
+  }
+
+  /**
+   * Get performance metrics (OpenSpec 1.3.4)
+   * Public API for testing and diagnostics
+   */
+  public getPerformanceMetrics() {
+    return {
+      ...this._performanceMetrics,
+      // Add computed metrics
+      meetsInitializationTarget: this._performanceMetrics.totalInitializationTime < 100,
+      meetsPanelMovementTarget: this._performanceMetrics.lastPanelMovementTime < 200,
+      meetsHtmlSetTarget: this._performanceMetrics.htmlSetOperations === 1,
+      meetsListenerTarget: this._performanceMetrics.listenerRegistrations === 1,
+    };
   }
 
   /**
