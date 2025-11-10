@@ -2,12 +2,33 @@
 
 ## Phase 1: Research & Setup (v0.1.128)
 
-### 1.1 VS Code Source Code Research
-- [ ] 1.1.1 Run `/terminal-research How does VS Code serialize terminal scrollback?`
-- [ ] 1.1.2 Run `/terminal-research How does VS Code handle IME composition events?`
-- [ ] 1.1.3 Run `/terminal-research How does VS Code render cursor styles?`
-- [ ] 1.1.4 Run `/terminal-research What are VS Code's terminal theme integration patterns?`
-- [ ] 1.1.5 Document VS Code version used (e.g., v1.85.0) in design.md
+### 1.1 VS Code Source Code Research ✅ COMPLETED
+**Goal**: Research VS Code terminal implementation patterns from source code
+
+- [x] 1.1.1 Run `/terminal-research How does VS Code serialize terminal scrollback?` ✅
+  - **VS Code Implementation**: XtermSerializer.generateReplayEvent() uses SerializeAddon (`ptyService.ts:1314-1340`)
+  - **Data Structure**: IPtyHostProcessReplayEvent with cols, rows, serialized data
+  - **Storage Format**: JSON with scrollback limit from `terminal.integrated.scrollback` config
+  - **Current Codebase**: ScrollbackManager (`src/webview/managers/ScrollbackManager.ts`) with ANSI preservation
+- [x] 1.1.2 Run `/terminal-research How does VS Code handle IME composition events?` ✅
+  - **VS Code Implementation**: CompositionHelper.ts (xterm.js) with 3-phase event handling
+  - **Critical Pattern**: setTimeout(0) strategy for reliable text extraction
+  - **Keycode 229**: Detection for IME-active state
+  - **Current Codebase**: IMEHandler (`src/webview/managers/input/handlers/IMEHandler.ts:91-113`)
+- [x] 1.1.3 Run `/terminal-research How does VS Code render cursor styles?` ✅
+  - **VS Code Implementation**: terminalConfiguration.ts with cursorStyle, cursorBlink, cursorWidth options
+  - **Style Mapping**: VS Code 'line' → xterm.js 'bar' for consistency (`xtermTerminal.ts:1009-1015`)
+  - **Dynamic Updates**: Setter methods for runtime cursor changes (`xtermTerminal.ts:763-788`)
+  - **Current Codebase**: TerminalCreationService defaults (`src/webview/services/TerminalCreationService.ts:87-90`)
+- [x] 1.1.4 Run `/terminal-research What are VS Code's terminal theme integration patterns?` ✅
+  - **VS Code Implementation**: TerminalInstanceColorProvider with location-based background (`terminalInstance.ts:2890+`)
+  - **ANSI Mapping**: getXtermTheme() maps 16 ANSI colors from VS Code theme (`xtermTerminal.ts:450+`)
+  - **Reactive Updates**: onDidColorThemeChange listener for dynamic theme switching
+  - **Current Codebase**: ThemeManager (`src/webview/utils/ThemeManager.ts`) with CSS variable extraction
+- [x] 1.1.5 Document VS Code version used (v1.85.0) in design.md ✅
+  - **File**: `openspec/changes/add-vscode-standard-terminal-features/design.md` (lines 19-37)
+  - **Research Date**: 2025-01-10
+  - **Key References**: Scrollback serialization, IME composition, cursor styles, theme integration
 
 ### 1.2 Feature Flag Infrastructure
 - [ ] 1.2.1 Add feature flag configuration schema to package.json

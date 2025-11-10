@@ -18,12 +18,23 @@ Secondary Terminal was built with a custom terminal management architecture opti
 
 **VS Code Version Reference**: v1.85.0 (January 2024)
 - Repository: https://github.com/microsoft/vscode
-- Research conducted: 2025-01-01
+- Research conducted: 2025-01-10 (Phase 1, Section 1.1)
 - Key files referenced:
-  - `src/vs/platform/terminal/node/ptyService.ts:1050-1150`
-  - `src/vs/workbench/contrib/terminal/browser/xterm/xtermTerminal.ts`
-  - `src/vs/workbench/contrib/terminal/common/terminalConfiguration.ts`
-  - `src/vs/workbench/contrib/terminal/common/terminalColorRegistry.ts`
+  - **Scrollback Serialization** (Task 1.1.1):
+    - `src/vs/platform/terminal/node/ptyService.ts:1314-1340` - XtermSerializer.generateReplayEvent()
+    - `src/vs/platform/terminal/node/ptyService.ts:370-390` - serializeTerminalState()
+    - `src/vs/workbench/contrib/terminal/browser/terminalEditorSerializer.ts:36` - Terminal metadata
+  - **IME Composition** (Task 1.1.2):
+    - `xterm.js: src/browser/input/CompositionHelper.ts` - Core IME event handling
+    - `src/vs/workbench/contrib/terminal/browser/xterm/xtermTerminal.ts` - Terminal wrapper
+  - **Cursor Styles** (Task 1.1.3):
+    - `src/vs/workbench/contrib/terminal/common/terminalConfiguration.ts:285-304` - Cursor settings
+    - `src/vs/workbench/contrib/terminal/browser/xterm/xtermTerminal.ts:763-788` - Cursor setter methods
+    - `src/vs/workbench/contrib/terminal/browser/xterm/xtermTerminal.ts:1009-1015` - Style mapping
+  - **Theme Integration** (Task 1.1.4):
+    - `src/vs/workbench/contrib/terminal/browser/terminalInstance.ts:2890+` - TerminalInstanceColorProvider
+    - `src/vs/workbench/contrib/terminal/browser/xterm/xtermTerminal.ts:450+` - getXtermTheme()
+    - `src/vs/workbench/contrib/terminal/common/terminalColorRegistry.ts` - ANSI color mapping
 
 ## Goals / Non-Goals
 
