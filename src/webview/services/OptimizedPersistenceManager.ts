@@ -361,11 +361,17 @@ export class OptimizedTerminalPersistenceManager {
 
   /**
    * Restores terminal content from serialized data
+   *
+   * Phase 2.2.1: Progressive loading support for large scrollback
    */
   public restoreTerminalContent(
     terminalId: string,
     serializedData: string | TerminalSerializedData,
-    options: { validateFormat?: boolean } = {}
+    options: {
+      validateFormat?: boolean;
+      progressive?: boolean;  // Phase 2.2.1: Enable progressive loading
+      initialLines?: number;  // Phase 2.2.1: Number of lines to load initially (default: 500)
+    } = {}
   ): boolean {
     const registration = this.getTerminalRegistration(terminalId);
     if (!registration) {
@@ -399,32 +405,63 @@ export class OptimizedTerminalPersistenceManager {
       // Clear terminal first
       registration.terminal.clear();
 
-      // Write content line by line for better performance
+      // Phase 2.2.1 & 2.2.2: Progressive loading with performance tracking
+      const startTime = performance.now();
       const lines = content.split('\n');
+      const totalLines = lines.length;
+
+      // Phase 2.2.1: Determine if progressive loading should be used
+      const useProgressive = options.progressive !== false && totalLines > 500;
+      const initialLines = useProgressive ? (options.initialLines || 500) : totalLines;
       const batchSize = 100; // Process in batches to avoid blocking
 
-      const writeBatch = (startIndex: number) => {
-        const endIndex = Math.min(startIndex + batchSize, lines.length);
+      // Store remaining lines for lazy loading (Phase 2.2.3)
+      let remainingLines: string[] = [];
+      if (useProgressive && totalLines > initialLines) {
+        remainingLines = lines.slice(initialLines);
+        log(`📊 [WEBVIEW-PERSISTENCE] Progressive loading: ${initialLines}/${totalLines} lines initially, ${remainingLines.length} lines deferred`);
+      }
+
+      const writeBatch = (startIndex: number, linesToWrite: string[]) => {
+        const endIndex = Math.min(startIndex + batchSize, linesToWrite.length);
 
         for (let i = startIndex; i < endIndex; i++) {
-          const line = lines[i];
+          const line = linesToWrite[i];
           if (line !== undefined) {
             registration.terminal.write(line);
-            if (i < lines.length - 1) {
+            if (i < linesToWrite.length - 1) {
               registration.terminal.write('\r\n');
             }
           }
         }
 
-        if (endIndex < lines.length) {
+        if (endIndex < linesToWrite.length) {
           // Schedule next batch
-          setTimeout(() => writeBatch(endIndex), 0);
+          setTimeout(() => writeBatch(endIndex, linesToWrite), 0);
         } else {
-          log(`✅ [WEBVIEW-PERSISTENCE] Terminal restored: ${terminalId} (${lines.length} lines)`);
+          // Phase 2.2.2: Performance tracking
+          const endTime = performance.now();
+          const duration = endTime - startTime;
+          const isLargeScrollback = totalLines > 1000;
+          const targetDuration = isLargeScrollback ? 1000 : 500;
+          const performanceStatus = duration < targetDuration ? '✅' : '⚠️';
+
+          log(
+            `${performanceStatus} [WEBVIEW-PERSISTENCE] Terminal restored: ${terminalId} ` +
+            `(${linesToWrite.length}/${totalLines} lines, ${duration.toFixed(0)}ms, ` +
+            `target: ${targetDuration}ms)`
+          );
+
+          // Phase 2.2.3: Setup lazy loading for remaining content if needed
+          if (remainingLines.length > 0) {
+            this.setupLazyLoading(terminalId, remainingLines);
+          }
         }
       };
 
-      writeBatch(0);
+      // Start with initial lines only (progressive) or all lines (non-progressive)
+      const initialContent = useProgressive ? lines.slice(0, initialLines) : lines;
+      writeBatch(0, initialContent);
       return true;
     } catch (error) {
       this.stats.errorCount++;
@@ -575,6 +612,53 @@ export class OptimizedTerminalPersistenceManager {
   }
 
   // Private helper methods
+
+  /**
+   * Phase 2.2.3: Setup lazy loading for deferred scrollback content
+   */
+  private setupLazyLoading(terminalId: string, remainingLines: string[]): void {
+    const registration = this.getTerminalRegistration(terminalId);
+    if (!registration) {
+      return;
+    }
+
+    log(`🔄 [WEBVIEW-PERSISTENCE] Lazy loading setup: ${remainingLines.length} lines available on scroll`);
+
+    // Listen for scroll-to-top events
+    const scrollListener = () => {
+      const buffer = registration.terminal.buffer.active;
+      const isAtTop = buffer.viewportY === 0;
+
+      if (isAtTop && remainingLines.length > 0) {
+        log(`📜 [WEBVIEW-PERSISTENCE] Loading more history: ${Math.min(500, remainingLines.length)} lines`);
+
+        // Load next chunk (500 lines)
+        const chunkSize = 500;
+        const chunk = remainingLines.splice(0, chunkSize);
+
+        // Prepend chunk to terminal
+        const currentCursorY = buffer.cursorY;
+        registration.terminal.write('\x1b[H'); // Move to top
+        chunk.forEach((line, index) => {
+          registration.terminal.write(line);
+          if (index < chunk.length - 1) {
+            registration.terminal.write('\r\n');
+          }
+        });
+        registration.terminal.write(`\x1b[${currentCursorY + chunk.length};0H`); // Restore cursor
+
+        if (remainingLines.length === 0) {
+          log(`✅ [WEBVIEW-PERSISTENCE] All history loaded for ${terminalId}`);
+          // Remove listener when all content is loaded
+          registration.terminal.onScroll.dispose();
+        } else {
+          log(`📊 [WEBVIEW-PERSISTENCE] ${remainingLines.length} lines remaining`);
+        }
+      }
+    };
+
+    registration.terminal.onScroll(scrollListener);
+  }
 
   private getTerminalRegistration(terminalId: string): TerminalRegistration | null {
     if (this.disposed) {

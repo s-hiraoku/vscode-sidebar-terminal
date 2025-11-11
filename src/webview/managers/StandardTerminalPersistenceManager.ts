@@ -550,18 +550,21 @@ export class StandardTerminalPersistenceManager {
    * 🔄 Restore session data to a terminal (Extension integration)
    *
    * Phase 2 Update: Uses ScrollbackManager for advanced restore with ANSI colors
+   * Phase 2.2 Update: Progressive loading for large scrollback
    */
   public async restoreSession(sessionData: {
     terminalId: string;
     scrollbackData?: string[];
     sessionRestoreMessage?: string;
     restoreScrollback?: boolean; // New option to enable scrollback restore
+    progressive?: boolean; // Phase 2.2: Enable progressive loading (default: true for >500 lines)
+    initialLines?: number; // Phase 2.2: Initial lines to load (default: 500)
   }): Promise<boolean> {
     log(
       `🔄 [WEBVIEW-PERSISTENCE] Restoring session for terminal ${sessionData.terminalId}`
     );
 
-    const { terminalId, scrollbackData, restoreScrollback = false } = sessionData;
+    const { terminalId, scrollbackData, restoreScrollback = false, progressive, initialLines } = sessionData;
     const terminal = this.terminals.get(terminalId);
 
     if (!terminal) {
@@ -572,13 +575,30 @@ export class StandardTerminalPersistenceManager {
     try {
       // Option 1: Restore scrollback with ANSI colors using ScrollbackManager
       if (restoreScrollback && scrollbackData && scrollbackData.length > 0) {
-        const scrollbackContent = scrollbackData.join('\n');
-        const restored = this.scrollbackManager.restoreScrollback(terminalId, scrollbackContent);
+        // Phase 2.2: Progressive loading for large scrollback
+        const useProgressive = progressive !== false && scrollbackData.length > 500;
+        const linesToLoad = useProgressive ? (initialLines || 500) : scrollbackData.length;
+
+        if (useProgressive) {
+          log(
+            `📊 [WEBVIEW-PERSISTENCE] Progressive restore: ${linesToLoad}/${scrollbackData.length} lines initially`
+          );
+        }
+
+        // Load initial chunk
+        const initialContent = scrollbackData.slice(0, linesToLoad).join('\n');
+        const restored = this.scrollbackManager.restoreScrollback(terminalId, initialContent);
 
         if (restored) {
           log(
-            `✅ [WEBVIEW-PERSISTENCE] Restored ${scrollbackData.length} lines with ANSI colors for ${terminalId}`
+            `✅ [WEBVIEW-PERSISTENCE] Restored ${linesToLoad} lines with ANSI colors for ${terminalId}`
           );
+
+          // Phase 2.2.3: Setup lazy loading for remaining lines
+          if (useProgressive && scrollbackData.length > linesToLoad) {
+            const remainingLines = scrollbackData.slice(linesToLoad);
+            this.setupLazyScrollbackLoading(terminalId, remainingLines);
+          }
         } else {
           log(
             `⚠️ [WEBVIEW-PERSISTENCE] Failed to restore scrollback for ${terminalId}, starting clean`
@@ -650,6 +670,43 @@ export class StandardTerminalPersistenceManager {
     } else {
       console.warn(`⚠️ [WEBVIEW-PERSISTENCE] No VS Code API available for scrollback request`);
     }
+  }
+
+  /**
+   * Phase 2.2.3: Setup lazy loading for remaining scrollback content
+   */
+  private setupLazyScrollbackLoading(terminalId: string, remainingLines: string[]): void {
+    const terminal = this.terminals.get(terminalId);
+    if (!terminal) {
+      return;
+    }
+
+    log(`🔄 [WEBVIEW-PERSISTENCE] Lazy scrollback loading setup: ${remainingLines.length} lines available`);
+
+    // Listen for scroll-to-top events
+    const scrollListener = terminal.onScroll(() => {
+      const buffer = terminal.buffer.active;
+      const isAtTop = buffer.viewportY === 0;
+
+      if (isAtTop && remainingLines.length > 0) {
+        const chunkSize = Math.min(500, remainingLines.length);
+        log(`📜 [WEBVIEW-PERSISTENCE] Loading more scrollback history: ${chunkSize} lines`);
+
+        // Load next chunk
+        const chunk = remainingLines.splice(0, chunkSize);
+        const chunkContent = chunk.join('\n');
+
+        // Prepend to existing scrollback
+        this.scrollbackManager.restoreScrollback(terminalId, chunkContent, { prepend: true });
+
+        if (remainingLines.length === 0) {
+          log(`✅ [WEBVIEW-PERSISTENCE] All scrollback history loaded for ${terminalId}`);
+          scrollListener.dispose();
+        } else {
+          log(`📊 [WEBVIEW-PERSISTENCE] ${remainingLines.length} lines remaining for ${terminalId}`);
+        }
+      }
+    });
   }
 
   /**
