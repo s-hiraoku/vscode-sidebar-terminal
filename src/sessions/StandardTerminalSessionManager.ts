@@ -45,21 +45,31 @@ export class StandardTerminalSessionManager {
    * Phase 2.1.4: Setup auto-save listeners including onWillSaveState
    */
   private setupAutoSave(): void {
-    // VS Code standard: Save session when window is closing or reloading
-    this.onWillSaveStateDisposable = vscode.workspace.onWillSaveState(async (event) => {
-      log('💾 [STANDARD-SESSION] onWillSaveState triggered - saving session');
+    // Phase 2.1.4: Check if onWillSaveState API is available (VS Code 1.86+)
+    if (typeof vscode.workspace.onWillSaveState === 'function') {
+      // VS Code standard: Save session when window is closing or reloading
+      this.onWillSaveStateDisposable = vscode.workspace.onWillSaveState(async (event) => {
+        log('💾 [STANDARD-SESSION] onWillSaveState triggered - saving session');
 
-      // Wait for save to complete before allowing window close
-      event.waitUntil(
-        this.saveCurrentSession().then((result) => {
-          if (result.success) {
-            log(`✅ [STANDARD-SESSION] Session saved on window close: ${result.terminalCount} terminals`);
-          } else {
-            log(`⚠️ [STANDARD-SESSION] Session save failed: ${result.error}`);
-          }
-        })
-      );
-    });
+        // Wait for save to complete before allowing window close
+        event.waitUntil(
+          this.saveCurrentSession().then((result) => {
+            if (result.success) {
+              log(`✅ [STANDARD-SESSION] Session saved on window close: ${result.terminalCount} terminals`);
+            } else {
+              log(`⚠️ [STANDARD-SESSION] Session save failed: ${result.error}`);
+            }
+          })
+        );
+      });
+      log('✅ [STANDARD-SESSION] onWillSaveState listener registered');
+    } else {
+      log('⚠️ [STANDARD-SESSION] onWillSaveState API not available - using existing auto-save mechanisms');
+      // Fallback: Rely on existing auto-save mechanisms:
+      // - ExtensionLifecycle.deactivate() calls saveSessionOnExit()
+      // - Terminal create/remove triggers immediate save
+      // - Periodic save every 5 minutes
+    }
   }
 
   private pendingRestoreResponse?: {
