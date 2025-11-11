@@ -464,6 +464,27 @@
           ],
           "description": "When to save terminal sessions for restoration"
         },
+        "secondaryTerminal.persistentSessionStorageLimit": {
+          "type": "number",
+          "default": 20,
+          "minimum": 1,
+          "maximum": 100,
+          "description": "Maximum storage size for session data in MB (session will be optimized or cleared if exceeded)"
+        },
+        "secondaryTerminal.persistentSessionRetentionDays": {
+          "type": "number",
+          "default": 7,
+          "minimum": 1,
+          "maximum": 365,
+          "description": "Number of days to retain session data before automatic cleanup"
+        },
+        "secondaryTerminal.persistentSessionStorageWarningThreshold": {
+          "type": "number",
+          "default": 80,
+          "minimum": 50,
+          "maximum": 95,
+          "description": "Storage usage percentage threshold for optimization warning (default: 80%)"
+        },
         "secondaryTerminal.hideOnStartup": {
           "type": "string",
           "default": "never",

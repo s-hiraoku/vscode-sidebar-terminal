@@ -78,10 +78,167 @@ export class SessionDataTransformer {
 
   /**
    * Check if session has expired
+   * Phase 2.4: Enhanced with configurable expiry period
    */
   static isSessionExpired(sessionData: SessionStorageData, expiryDays: number = 7): boolean {
     const expiryMs = expiryDays * 24 * 60 * 60 * 1000;
     return Date.now() - sessionData.timestamp > expiryMs;
+  }
+
+  /**
+   * Phase 2.4.2: Calculate storage size of session data in bytes
+   */
+  static calculateStorageSize(sessionData: SessionStorageData): number {
+    try {
+      const jsonString = JSON.stringify(sessionData);
+      // Approximate UTF-8 byte size (more accurate than just string length)
+      const byteSize = new Blob([jsonString]).size;
+      return byteSize;
+    } catch (error) {
+      console.error('[SESSION-STORAGE] Failed to calculate storage size:', error);
+      return 0;
+    }
+  }
+
+  /**
+   * Phase 2.4.3: Check if storage size exceeds limit
+   * Default limit: 20MB (20 * 1024 * 1024 bytes)
+   */
+  static isStorageLimitExceeded(
+    sessionData: SessionStorageData,
+    limitMB: number = 20
+  ): {
+    exceeded: boolean;
+    currentSizeMB: number;
+    limitMB: number;
+    percentageUsed: number;
+  } {
+    const currentSizeBytes = this.calculateStorageSize(sessionData);
+    const currentSizeMB = currentSizeBytes / (1024 * 1024);
+    const percentageUsed = (currentSizeMB / limitMB) * 100;
+
+    return {
+      exceeded: currentSizeMB > limitMB,
+      currentSizeMB: parseFloat(currentSizeMB.toFixed(2)),
+      limitMB,
+      percentageUsed: parseFloat(percentageUsed.toFixed(1)),
+    };
+  }
+
+  /**
+   * Phase 2.4.4: Get cleanup recommendations based on storage and age
+   */
+  static getCleanupRecommendations(
+    sessionData: SessionStorageData,
+    config: {
+      maxAgeDays?: number;
+      maxStorageMB?: number;
+      warnThresholdPercent?: number;
+    } = {}
+  ): {
+    shouldCleanup: boolean;
+    reason: string[];
+    storageInfo: ReturnType<typeof SessionDataTransformer.isStorageLimitExceeded>;
+    ageInfo: { ageInDays: number; maxAgeDays: number };
+  } {
+    const maxAgeDays = config.maxAgeDays ?? 7;
+    const maxStorageMB = config.maxStorageMB ?? 20;
+    const warnThresholdPercent = config.warnThresholdPercent ?? 80;
+
+    const storageInfo = this.isStorageLimitExceeded(sessionData, maxStorageMB);
+    const ageInDays = (Date.now() - sessionData.timestamp) / (24 * 60 * 60 * 1000);
+    const ageInfo = { ageInDays: parseFloat(ageInDays.toFixed(1)), maxAgeDays };
+
+    const reasons: string[] = [];
+    let shouldCleanup = false;
+
+    // Check age
+    if (this.isSessionExpired(sessionData, maxAgeDays)) {
+      reasons.push(`Session expired (${ageInfo.ageInDays} days old, limit: ${maxAgeDays} days)`);
+      shouldCleanup = true;
+    }
+
+    // Check storage limit
+    if (storageInfo.exceeded) {
+      reasons.push(
+        `Storage limit exceeded (${storageInfo.currentSizeMB}MB / ${storageInfo.limitMB}MB)`
+      );
+      shouldCleanup = true;
+    }
+
+    // Check warning threshold
+    if (storageInfo.percentageUsed >= warnThresholdPercent && !storageInfo.exceeded) {
+      reasons.push(
+        `Storage usage high (${storageInfo.percentageUsed}% of ${storageInfo.limitMB}MB)`
+      );
+    }
+
+    return {
+      shouldCleanup,
+      reason: reasons,
+      storageInfo,
+      ageInfo,
+    };
+  }
+
+  /**
+   * Phase 2.4.4: Optimize session data to reduce storage size
+   * Trims scrollback to fit within storage limits
+   */
+  static optimizeSessionStorage(
+    sessionData: SessionStorageData,
+    targetSizeMB: number = 18 // 90% of 20MB default limit
+  ): {
+    optimized: boolean;
+    originalSizeMB: number;
+    newSizeMB: number;
+    reductionPercent: number;
+    message: string;
+  } {
+    const originalSize = this.calculateStorageSize(sessionData);
+    const originalSizeMB = originalSize / (1024 * 1024);
+    const targetSizeBytes = targetSizeMB * 1024 * 1024;
+
+    if (originalSize <= targetSizeBytes) {
+      return {
+        optimized: false,
+        originalSizeMB: parseFloat(originalSizeMB.toFixed(2)),
+        newSizeMB: parseFloat(originalSizeMB.toFixed(2)),
+        reductionPercent: 0,
+        message: 'No optimization needed',
+      };
+    }
+
+    // Reduce scrollback data to fit within target size
+    let currentSize = originalSize;
+    let reductionFactor = 0.9; // Start by reducing to 90%
+
+    while (currentSize > targetSizeBytes && reductionFactor > 0.1) {
+      if (sessionData.scrollbackData) {
+        // Reduce scrollback for each terminal
+        Object.keys(sessionData.scrollbackData).forEach((termId) => {
+          const scrollback = sessionData.scrollbackData![termId];
+          if (Array.isArray(scrollback)) {
+            const targetLength = Math.floor(scrollback.length * reductionFactor);
+            sessionData.scrollbackData![termId] = scrollback.slice(-targetLength);
+          }
+        });
+      }
+
+      currentSize = this.calculateStorageSize(sessionData);
+      reductionFactor -= 0.1;
+    }
+
+    const newSizeMB = currentSize / (1024 * 1024);
+    const reductionPercent = ((originalSize - currentSize) / originalSize) * 100;
+
+    return {
+      optimized: true,
+      originalSizeMB: parseFloat(originalSizeMB.toFixed(2)),
+      newSizeMB: parseFloat(newSizeMB.toFixed(2)),
+      reductionPercent: parseFloat(reductionPercent.toFixed(1)),
+      message: `Reduced storage from ${originalSizeMB.toFixed(2)}MB to ${newSizeMB.toFixed(2)}MB`,
+    };
   }
 
   /**

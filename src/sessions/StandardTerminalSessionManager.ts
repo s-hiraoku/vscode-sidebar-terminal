@@ -72,6 +72,112 @@ export class StandardTerminalSessionManager {
     }
   }
 
+  /**
+   * Phase 2.4.4: Perform cleanup of old or oversized session data
+   * Called during extension activation to maintain storage hygiene
+   */
+  public async performSessionCleanup(config: {
+    maxAgeDays?: number;
+    maxStorageMB?: number;
+    warnThresholdPercent?: number;
+  } = {}): Promise<{
+    cleaned: boolean;
+    reason: string[];
+    beforeSizeMB?: number;
+    afterSizeMB?: number;
+  }> {
+    try {
+      const { SessionDataTransformer } = await import('../shared/session.types');
+      const sessionData = this.context.workspaceState.get<{
+        terminals: Array<any>;
+        timestamp: number;
+        version: string;
+        scrollbackData?: Record<string, unknown>;
+        config?: { scrollbackLines: number; reviveProcess: string };
+      }>(StandardTerminalSessionManager.STORAGE_KEY);
+
+      if (!sessionData) {
+        log('📁 [SESSION-CLEANUP] No session data found, no cleanup needed');
+        return { cleaned: false, reason: ['No session data exists'] };
+      }
+
+      // Phase 2.4.5: Use configuration values if not explicitly provided
+      const persistenceConfig = this.getTerminalPersistenceConfig();
+      const maxAgeDays = config.maxAgeDays ?? persistenceConfig.persistentSessionRetentionDays;
+      const maxStorageMB = config.maxStorageMB ?? persistenceConfig.persistentSessionStorageLimit;
+      const warnThresholdPercent =
+        config.warnThresholdPercent ?? persistenceConfig.persistentSessionStorageWarningThreshold;
+
+      // Get cleanup recommendations
+      const recommendations = SessionDataTransformer.getCleanupRecommendations(
+        sessionData as any,
+        {
+          maxAgeDays,
+          maxStorageMB,
+          warnThresholdPercent,
+        }
+      );
+
+      log(
+        `📊 [SESSION-CLEANUP] Storage: ${recommendations.storageInfo.currentSizeMB}MB / ${recommendations.storageInfo.limitMB}MB (${recommendations.storageInfo.percentageUsed}%)`
+      );
+      log(`📊 [SESSION-CLEANUP] Age: ${recommendations.ageInfo.ageInDays} days`);
+
+      if (recommendations.shouldCleanup) {
+        log(
+          `🗑️ [SESSION-CLEANUP] Cleanup recommended: ${recommendations.reason.join(', ')}`
+        );
+        await this.clearSession();
+        return {
+          cleaned: true,
+          reason: recommendations.reason,
+          beforeSizeMB: recommendations.storageInfo.currentSizeMB,
+          afterSizeMB: 0,
+        };
+      }
+
+      // If storage is high but not exceeded, optimize instead of clearing
+      if (recommendations.storageInfo.percentageUsed > warnThresholdPercent) {
+        log('🔄 [SESSION-CLEANUP] Storage usage high, optimizing...');
+        const beforeSize = recommendations.storageInfo.currentSizeMB;
+        // Phase 2.4.5: Target 90% of configured storage limit
+        const targetSize = maxStorageMB * 0.9;
+        const optimization = SessionDataTransformer.optimizeSessionStorage(
+          sessionData as any,
+          targetSize
+        );
+
+        if (optimization.optimized) {
+          await this.context.workspaceState.update(
+            StandardTerminalSessionManager.STORAGE_KEY,
+            sessionData
+          );
+          log(
+            `✅ [SESSION-CLEANUP] ${optimization.message} (${optimization.reductionPercent}% reduction)`
+          );
+          return {
+            cleaned: true,
+            reason: ['Storage optimized to reduce usage'],
+            beforeSizeMB: beforeSize,
+            afterSizeMB: optimization.newSizeMB,
+          };
+        }
+      }
+
+      log('✅ [SESSION-CLEANUP] No cleanup needed');
+      return {
+        cleaned: false,
+        reason: ['Session within acceptable limits'],
+      };
+    } catch (error) {
+      log(`❌ [SESSION-CLEANUP] Cleanup failed: ${String(error)}`);
+      return {
+        cleaned: false,
+        reason: [`Error: ${String(error)}`],
+      };
+    }
+  }
+
   private pendingRestoreResponse?: {
     expectedCount: number;
     resolve: (result: {
@@ -103,6 +209,9 @@ export class StandardTerminalSessionManager {
     enablePersistentSessions: boolean;
     persistentSessionScrollback: number;
     persistentSessionReviveProcess: string;
+    persistentSessionStorageLimit: number;
+    persistentSessionRetentionDays: number;
+    persistentSessionStorageWarningThreshold: number;
   } {
     // Fixed: Use secondaryTerminal configuration namespace instead of terminal.integrated
     const config = vscode.workspace.getConfiguration('secondaryTerminal');
@@ -112,6 +221,13 @@ export class StandardTerminalSessionManager {
       persistentSessionReviveProcess: config.get<string>(
         'persistentSessionReviveProcess',
         'onExitAndWindowClose'
+      ),
+      // Phase 2.4.5: Storage optimization configuration
+      persistentSessionStorageLimit: config.get<number>('persistentSessionStorageLimit', 20),
+      persistentSessionRetentionDays: config.get<number>('persistentSessionRetentionDays', 7),
+      persistentSessionStorageWarningThreshold: config.get<number>(
+        'persistentSessionStorageWarningThreshold',
+        80
       ),
     };
   }
@@ -196,7 +312,7 @@ export class StandardTerminalSessionManager {
 
       log(`✅ [INSTANT-SAVE] Scrollback data summary: ${cachedCount} from cache, ${requestedCount} from request`);
 
-      const sessionData = {
+      let sessionData = {
         terminals: basicTerminals,
         activeTerminalId: activeTerminalId || null,
         timestamp: Date.now(),
@@ -208,6 +324,34 @@ export class StandardTerminalSessionManager {
         // VS Code標準: 履歴データも保存
         scrollbackData: scrollbackData || {},
       };
+
+      // Phase 2.4: Storage optimization and limit enforcement
+      const { SessionDataTransformer } = await import('../shared/session.types');
+
+      // Check storage size and optimize if needed (Phase 2.4.5: Use config values)
+      const storageLimit = config.persistentSessionStorageLimit;
+      const warningThreshold = config.persistentSessionStorageWarningThreshold;
+      const storageCheck = SessionDataTransformer.isStorageLimitExceeded(
+        sessionData,
+        storageLimit
+      );
+      log(
+        `📊 [STORAGE-CHECK] Session size: ${storageCheck.currentSizeMB}MB / ${storageCheck.limitMB}MB (${storageCheck.percentageUsed}%)`
+      );
+
+      if (storageCheck.exceeded || storageCheck.percentageUsed > warningThreshold) {
+        log('🔄 [STORAGE-OPTIMIZE] Optimizing session data to fit within limits...');
+        // Target 90% of the configured limit
+        const targetSize = storageLimit * 0.9;
+        const optimization = SessionDataTransformer.optimizeSessionStorage(sessionData, targetSize);
+        if (optimization.optimized) {
+          log(
+            `✅ [STORAGE-OPTIMIZE] ${optimization.message} (${optimization.reductionPercent}% reduction)`
+          );
+          // Update sessionData with optimized version
+          // Note: optimizeSessionStorage modifies sessionData in place
+        }
+      }
 
       // Use workspaceState for per-workspace session isolation (multi-window support)
       await this.context.workspaceState.update(
