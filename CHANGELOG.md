@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Phase 2.2: Progressive Scrollback Loading** (v0.1.137)
+  - **Chunk-based Loading**: Initial 500-line load with 500-line chunks for lazy loading
+  - **Performance Benchmarks**: Targets <1000ms for large scrollback, <500ms for small
+  - **Lazy Loading**: Automatic chunk loading when scrolling to top
+  - **Files**: `OptimizedPersistenceManager.ts`, `StandardTerminalPersistenceManager.ts`
+
+- **Phase 2.3: Backward Compatibility & Migration** (v0.1.137)
+  - **Session Format Migration**: Automatic upgrade from 200-line to 1000-line scrollback
+  - **Data Loss Prevention**: Validation system ensures no data lost during migration
+  - **Migration Progress**: Real-time progress tracking during session restoration
+  - **Version Detection**: Detects old format (version < 0.1.137 or scrollbackLines < 500)
+  - **Files**: `session.types.ts`, `StandardTerminalSessionManager.ts`
+
 ## [0.1.135] - 2025-01-10
 
 ### Documentation
