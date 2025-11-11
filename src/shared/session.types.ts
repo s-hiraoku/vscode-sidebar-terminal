@@ -157,4 +157,131 @@ export class SessionDataTransformer {
       message: `Restore failed: ${message}`,
     };
   }
+
+  /**
+   * Phase 2.3.1: Migrate old session format (200-line scrollback) to new format (1000-line scrollback)
+   * Detects sessions created before v0.1.137 and updates their configuration
+   */
+  static migrateSessionFormat(sessionData: SessionStorageData): {
+    migrated: boolean;
+    sessionData: SessionStorageData;
+    message: string;
+  } {
+    let migrated = false;
+    let message = 'No migration needed';
+
+    // Check if this is an old format session (missing version or version < 0.1.137)
+    const needsMigration =
+      !sessionData.version ||
+      sessionData.version < '0.1.137' ||
+      (sessionData.config?.scrollbackLines && sessionData.config.scrollbackLines < 500);
+
+    if (needsMigration) {
+      migrated = true;
+
+      // Update scrollback line limit from 200 to 1000
+      if (!sessionData.config) {
+        sessionData.config = {
+          scrollbackLines: 1000,
+          reviveProcess: 'auto',
+        };
+        message = 'Migrated session: Added default config (1000-line scrollback)';
+      } else if (sessionData.config.scrollbackLines < 500) {
+        const oldLimit = sessionData.config.scrollbackLines;
+        sessionData.config.scrollbackLines = 1000;
+        message = `Migrated session: Updated scrollback limit from ${oldLimit} to 1000 lines`;
+      }
+
+      // Update version to current
+      sessionData.version = '0.1.137';
+
+      // Log migration details
+      console.log(
+        `[SESSION-MIGRATION] ${message} (${sessionData.terminals.length} terminals)`
+      );
+    }
+
+    return {
+      migrated,
+      sessionData,
+      message,
+    };
+  }
+
+  /**
+   * Phase 2.3.2: Validate that session data can be safely restored without data loss
+   */
+  static validateSessionForRestore(sessionData: SessionStorageData): {
+    valid: boolean;
+    issues: string[];
+    warnings: string[];
+  } {
+    const issues: string[] = [];
+    const warnings: string[] = [];
+
+    // Check for required fields
+    if (!sessionData.terminals || !Array.isArray(sessionData.terminals)) {
+      issues.push('Missing or invalid terminals array');
+    }
+
+    if (typeof sessionData.timestamp !== 'number') {
+      issues.push('Missing or invalid timestamp');
+    }
+
+    // Check for potential data loss scenarios
+    if (sessionData.scrollbackData) {
+      const scrollbackKeys = Object.keys(sessionData.scrollbackData);
+      sessionData.terminals.forEach((terminal) => {
+        if (!scrollbackKeys.includes(terminal.id)) {
+          warnings.push(`Terminal ${terminal.id} (${terminal.name}) has no scrollback data`);
+        }
+      });
+    }
+
+    // Check scrollback line counts for old format detection
+    if (sessionData.scrollbackData) {
+      Object.entries(sessionData.scrollbackData).forEach(([termId, data]) => {
+        if (Array.isArray(data)) {
+          if (data.length === 200) {
+            warnings.push(
+              `Terminal ${termId} has exactly 200 lines (possible old format truncation)`
+            );
+          } else if (data.length > 0 && data.length < 200) {
+            warnings.push(`Terminal ${termId} has only ${data.length} lines of history`);
+          }
+        }
+      });
+    }
+
+    return {
+      valid: issues.length === 0,
+      issues,
+      warnings,
+    };
+  }
+
+  /**
+   * Phase 2.3.4: Create migration progress indicator data
+   */
+  static createMigrationProgress(
+    totalTerminals: number,
+    processedTerminals: number,
+    migrated: boolean
+  ): {
+    progress: number;
+    status: string;
+    message: string;
+  } {
+    const progress = totalTerminals > 0 ? (processedTerminals / totalTerminals) * 100 : 100;
+    const status = migrated ? 'migrating' : 'restoring';
+    const message = migrated
+      ? `Migrating session format... ${processedTerminals}/${totalTerminals} terminals`
+      : `Restoring session... ${processedTerminals}/${totalTerminals} terminals`;
+
+    return {
+      progress,
+      status,
+      message,
+    };
+  }
 }

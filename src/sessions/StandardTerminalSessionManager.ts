@@ -365,6 +365,41 @@ export class StandardTerminalSessionManager {
 
       log(`🔍 [STANDARD-SESSION] Found session with ${sessionData.terminals.length} terminals`);
 
+      // Phase 2.3: Migrate old session format (200-line scrollback) to new format (1000-line scrollback)
+      const { SessionDataTransformer } = await import('../shared/session.types');
+
+      // Phase 2.3.1: Detect and migrate old format
+      const migrationResult = SessionDataTransformer.migrateSessionFormat(sessionData);
+      if (migrationResult.migrated) {
+        log(`🔄 [SESSION-MIGRATION] ${migrationResult.message}`);
+        // Save migrated session back to storage
+        await this.context.workspaceState.update(
+          StandardTerminalSessionManager.STORAGE_KEY,
+          migrationResult.sessionData
+        );
+        // Update reference to migrated data
+        sessionData = migrationResult.sessionData;
+      }
+
+      // Phase 2.3.2 & 2.3.3: Validate session before restoration to ensure no data loss
+      const validation = SessionDataTransformer.validateSessionForRestore(sessionData);
+      if (!validation.valid) {
+        log(`❌ [SESSION-MIGRATION] Session validation failed: ${validation.issues.join(', ')}`);
+        return {
+          success: false,
+          restoredCount: 0,
+          skippedCount: sessionData.terminals.length,
+          error: `Session validation failed: ${validation.issues.join(', ')}`,
+        };
+      }
+
+      // Log warnings (non-fatal issues)
+      if (validation.warnings.length > 0) {
+        validation.warnings.forEach((warning) => {
+          log(`⚠️ [SESSION-MIGRATION] ${warning}`);
+        });
+      }
+
       // Verification: Log what scrollback data was found in storage
       log(`🔍 [VERIFY-RESTORE] Session timestamp: ${new Date(sessionData.timestamp).toISOString()}`);
       log(`🔍 [VERIFY-RESTORE] Session version: ${sessionData.version}`);
@@ -442,7 +477,10 @@ export class StandardTerminalSessionManager {
       
       let activeTerminalSet = false;
 
-      // Step 1: Create all terminals
+      // Step 1: Create all terminals with progress tracking
+      const totalTerminals = sessionData.terminals.length;
+      let processedTerminals = 0;
+
       for (const terminalInfo of sessionData.terminals) {
         try {
           log(`🔄 [STANDARD-SESSION] Creating terminal: ${terminalInfo.name}`);
@@ -455,6 +493,7 @@ export class StandardTerminalSessionManager {
               terminalId: null,
               success: false,
             });
+            processedTerminals++;
             continue;
           }
 
@@ -471,6 +510,18 @@ export class StandardTerminalSessionManager {
             success: true,
           });
 
+          processedTerminals++;
+
+          // Phase 2.3.4: Report migration/restoration progress
+          const progress = SessionDataTransformer.createMigrationProgress(
+            totalTerminals,
+            processedTerminals,
+            migrationResult.migrated
+          );
+          log(
+            `📊 [SESSION-PROGRESS] ${progress.message} (${progress.progress.toFixed(0)}%)`
+          );
+
           log(`✅ [STANDARD-SESSION] Created terminal: ${terminalInfo.name} (${terminalId})`);
         } catch (error) {
           log(
@@ -481,6 +532,7 @@ export class StandardTerminalSessionManager {
             terminalId: null,
             success: false,
           });
+          processedTerminals++;
         }
       }
 
