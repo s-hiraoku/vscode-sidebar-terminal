@@ -144,15 +144,32 @@
   - ✅ Comprehensive logging added - Lines 50, 56, 58, 1120, 1127
   - ✅ Compatible with existing auto-save mechanisms (terminal create/remove, periodic)
 
-### 2.2 Progressive Loading
-- [ ] 2.2.1 Implement chunk-based loading in `StandardTerminalPersistenceManager.ts`:
-  - Initial load: 500 lines
-  - Chunk size: 500 lines
-  - Add "Load more history" UI indicator
-- [ ] 2.2.2 Add performance benchmarks:
-  - Target: < 1000ms for large scrollback (3000 lines)
-  - Target: < 500ms for small scrollback (< 500 lines)
-- [ ] 2.2.3 Implement lazy loading trigger on scroll-to-top
+### 2.2 Progressive Loading ✅ COMPLETED (v0.1.137)
+- [x] 2.2.1 Implement chunk-based loading: ✅ IMPLEMENTED
+  - **OptimizedPersistenceManager**: Lines 367-465, 616-661
+    - Progressive loading trigger: >500 lines
+    - Initial load: 500 lines (configurable via `initialLines` option)
+    - Batch processing: 100-line batches to avoid UI blocking
+    - Deferred content stored for lazy loading
+  - **StandardTerminalPersistenceManager**: Lines 555-607, 675-710
+    - Progressive restore for scrollback data
+    - Automatic detection and chunking for large sessions
+    - Integration with ScrollbackManager for ANSI preservation
+- [x] 2.2.2 Add performance benchmarks: ✅ IMPLEMENTED
+  - **Timing Metrics**: performance.now() API for accurate measurement
+  - **Performance Targets**: Large (>1000 lines): <1000ms, Small (<1000 lines): <500ms
+  - **Status Indicators**: ✅ (success) / ⚠️ (warning) based on targets
+  - **Detailed Logging**: Line counts, duration, and target comparison
+- [x] 2.2.3 Implement lazy loading trigger on scroll-to-top: ✅ IMPLEMENTED
+  - **OptimizedPersistenceManager.setupLazyLoading()**: Lines 616-661
+    - Scroll event listener detects viewport at top (viewportY === 0)
+    - Loads next 500-line chunk automatically
+    - ANSI escape sequences for cursor positioning
+    - Automatic cleanup when all history loaded
+  - **StandardTerminalPersistenceManager.setupLazyScrollbackLoading()**: Lines 675-710
+    - Integration with ScrollbackManager for ANSI color preservation
+    - Prepend mode for historical content
+    - Efficient memory management with array.splice()
 
 ### 2.3 Backward Compatibility
 - [ ] 2.3.1 Add migration logic for old 200-line format
