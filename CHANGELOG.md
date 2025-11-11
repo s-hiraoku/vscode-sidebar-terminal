@@ -21,6 +21,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Version Detection**: Detects old format (version < 0.1.137 or scrollbackLines < 500)
   - **Files**: `session.types.ts`, `StandardTerminalSessionManager.ts`
 
+- **Phase 2.4: Storage Optimization & Retention Management** (v0.1.137)
+  - **Storage Size Tracking**: Accurate UTF-8 byte size calculation using Blob API
+  - **Storage Limit Enforcement**: Default 20MB limit with configurable threshold (80% warning)
+  - **Automatic Cleanup**: Expires sessions older than 7 days, optimizes high-usage sessions
+  - **Iterative Optimization**: Progressive scrollback reduction to fit within storage limits
+  - **Configuration Options**:
+    - `persistentSessionStorageLimit`: Storage limit in MB (default: 20MB)
+    - `persistentSessionRetentionDays`: Retention period in days (default: 7 days)
+    - `persistentSessionStorageWarningThreshold`: Warning threshold % (default: 80%)
+  - **Files**: `session.types.ts`, `StandardTerminalSessionManager.ts`, `package.json`
+
 ## [0.1.135] - 2025-01-10
 
 ### Documentation
