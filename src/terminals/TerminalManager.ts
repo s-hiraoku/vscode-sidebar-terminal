@@ -31,6 +31,10 @@ import { CliAgentDetectionService } from '../services/CliAgentDetectionService';
 import { ICliAgentDetectionService } from '../interfaces/CliAgentService';
 import { TerminalSpawner } from './TerminalSpawner';
 import type { IDisposable } from '@homebridge/node-pty-prebuilt-multiarch';
+import {
+  TerminalLifecycleStateMachineManager,
+  TerminalLifecycleState,
+} from '../services/state/TerminalLifecycleStateMachine';
 
 const ENABLE_TERMINAL_DEBUG_LOGS = process.env.SECONDARY_TERMINAL_DEBUG_LOGS === 'true';
 // Removed unused service imports - these were for the RefactoredTerminalManager which was removed
@@ -53,6 +57,8 @@ export class TerminalManager {
   private readonly _cliAgentService: ICliAgentDetectionService;
   private readonly _terminalSpawner: TerminalSpawner;
   private readonly _debugLoggingEnabled = ENABLE_TERMINAL_DEBUG_LOGS;
+  // Terminal Lifecycle State Machine Manager for centralized state management
+  private readonly _lifecycleManager: TerminalLifecycleStateMachineManager;
 
   // 操作の順序保証のためのキュー
   private operationQueue: Promise<void> = Promise.resolve();
@@ -104,6 +110,24 @@ export class TerminalManager {
     this._cliAgentService.startHeartbeat();
 
     this._terminalSpawner = new TerminalSpawner();
+
+    // Initialize Terminal Lifecycle State Machine Manager
+    this._lifecycleManager = new TerminalLifecycleStateMachineManager();
+
+    // Add global listener for all terminal state changes
+    this._lifecycleManager.addGlobalListener((event) => {
+      log(
+        `[LIFECYCLE] Terminal ${event.terminalId}: ${event.previousState} → ${event.newState}`,
+        event.metadata.reason ? `(${event.metadata.reason})` : ''
+      );
+
+      // Handle special states
+      if (event.newState === TerminalLifecycleState.Error) {
+        log(`❌ [LIFECYCLE] Terminal ${event.terminalId} entered Error state:`, event.metadata.error);
+      } else if (event.newState === TerminalLifecycleState.Closed) {
+        log(`✅ [LIFECYCLE] Terminal ${event.terminalId} closed successfully`);
+      }
+    });
   }
 
   /**
@@ -184,7 +208,18 @@ export class TerminalManager {
       `🔍 [TERMINAL] Creating terminal with profile: ID=${terminalId}, Shell=${profileConfig.shell}, CWD=${cwd}`
     );
 
+    // Create state machine for this terminal
+    const stateMachine = this._lifecycleManager.createStateMachine(
+      terminalId,
+      TerminalLifecycleState.Creating
+    );
+
     try {
+      // Transition to Initializing state
+      stateMachine.transition(TerminalLifecycleState.Initializing, {
+        reason: 'Spawning terminal process with profile',
+        data: { profile: profileName, shell: profileConfig.shell },
+      });
       // Prepare environment variables with profile env merged
       const env = {
         ...process.env,
@@ -237,12 +272,25 @@ export class TerminalManager {
       this._terminalCreatedEmitter.fire(terminal);
       this._notifyStateUpdate();
 
+      // Transition to Ready state
+      stateMachine.transition(TerminalLifecycleState.Ready, {
+        reason: 'Terminal process spawned and ready',
+        data: { pid: terminal.pid },
+      });
+
       // 🎯 TIMING FIX: Shell initialization moved to _handleTerminalInitializationComplete
       // This ensures WebView terminal is fully ready before shell initialization
 
       return terminalId;
     } catch (error) {
       log(`❌ [TERMINAL] Failed to create terminal with profile: ${error}`);
+
+      // Transition to Error state
+      stateMachine.transition(TerminalLifecycleState.Error, {
+        reason: 'Failed to create terminal with profile',
+        error: error as Error,
+      });
+
       showErrorMessage(`Failed to create terminal: ${error}`);
       return '';
     }
@@ -318,6 +366,12 @@ export class TerminalManager {
     const terminalId = generateTerminalId();
     log(`🔍 [TERMINAL] Generated terminal ID: ${terminalId}`);
 
+    // Create state machine for this terminal
+    const stateMachine = this._lifecycleManager.createStateMachine(
+      terminalId,
+      TerminalLifecycleState.Creating
+    );
+
     const shell = getShellForPlatform();
     const shellArgs = config.shellArgs;
     const cwd = getWorkingDirectory();
@@ -327,6 +381,11 @@ export class TerminalManager {
     );
 
     try {
+      // Transition to Initializing state
+      stateMachine.transition(TerminalLifecycleState.Initializing, {
+        reason: 'Spawning terminal process',
+        data: { shell, cwd },
+      });
       // Prepare environment variables with explicit PWD
       const env = {
         ...process.env,
@@ -413,12 +472,25 @@ export class TerminalManager {
       this._notifyStateUpdate();
       log('🔍 [TERMINAL] State update completed');
 
+      // Transition to Ready state
+      stateMachine.transition(TerminalLifecycleState.Ready, {
+        reason: 'Terminal process spawned and ready',
+        data: { pid: terminal.ptyProcess?.pid },
+      });
+
       log(`🔍 [TERMINAL] === CREATE TERMINAL FINISHED: ${terminalId} ===`);
       return terminalId;
     } catch (error) {
       log(
         `❌ [TERMINAL] Error creating terminal: ${error instanceof Error ? error.message : String(error)}`
       );
+
+      // Transition to Error state
+      stateMachine.transition(TerminalLifecycleState.Error, {
+        reason: 'Failed to create terminal',
+        error: error as Error,
+      });
+
       showErrorMessage(ERROR_MESSAGES.TERMINAL_CREATION_FAILED, error instanceof Error ? error.message : String(error));
       throw error;
     }
@@ -730,9 +802,32 @@ export class TerminalManager {
   public setActiveTerminal(terminalId: string): void {
     const terminal = this._terminals.get(terminalId);
     if (terminal) {
+      // Transition previously active terminals to Ready state
+      const activeTerminals = this._lifecycleManager.getTerminalsInState(
+        TerminalLifecycleState.Active
+      );
+      for (const activeId of activeTerminals) {
+        if (activeId !== terminalId) {
+          const activeSm = this._lifecycleManager.getStateMachine(activeId);
+          if (activeSm && activeSm.canTransitionTo(TerminalLifecycleState.Ready)) {
+            activeSm.transition(TerminalLifecycleState.Ready, {
+              reason: 'Another terminal became active',
+            });
+          }
+        }
+      }
+
       this._deactivateAllTerminals();
       terminal.isActive = true;
       this._activeTerminalManager.setActive(terminalId);
+
+      // Transition new active terminal to Active state
+      const stateMachine = this._lifecycleManager.getStateMachine(terminalId);
+      if (stateMachine && stateMachine.canTransitionTo(TerminalLifecycleState.Active)) {
+        stateMachine.transition(TerminalLifecycleState.Active, {
+          reason: 'Terminal set as active',
+        });
+      }
     }
   }
 
@@ -829,6 +924,15 @@ export class TerminalManager {
       return { success: false, reason: 'Terminal not found' };
     }
 
+    // Transition to Closing state
+    const stateMachine = this._lifecycleManager.getStateMachine(terminalId);
+    if (stateMachine) {
+      stateMachine.transition(TerminalLifecycleState.Closing, {
+        reason: 'Terminal deletion requested',
+        data: { source: options.source, force: options.force },
+      });
+    }
+
     try {
       // 3. プロセスの終了
       log(`🗑️ [DELETE] Killing terminal process: ${terminalId}`);
@@ -841,11 +945,27 @@ export class TerminalManager {
       // 4. 状態の更新は onExit ハンドラで行われる
       log(`✅ [DELETE] Delete operation completed for: ${terminalId}`);
 
+      // Transition to Closed state
+      if (stateMachine) {
+        stateMachine.transition(TerminalLifecycleState.Closed, {
+          reason: 'Terminal process terminated successfully',
+        });
+      }
+
       // 5. 新しい状態を返す (非同期なので現在の状態を返す)
       return { success: true, newState: this.getCurrentState() };
     } catch (error) {
       log(`❌ [DELETE] Error during delete operation:`, error);
       this._terminalBeingKilled.delete(terminalId);
+
+      // Transition to Error state
+      if (stateMachine) {
+        stateMachine.transition(TerminalLifecycleState.Error, {
+          reason: 'Failed to delete terminal',
+          error: error as Error,
+        });
+      }
+
       return { success: false, reason: `Delete failed: ${String(error)}` };
     }
   }
@@ -1069,6 +1189,9 @@ export class TerminalManager {
     // Dispose CLI Agent detection service
     this._cliAgentService.dispose();
 
+    // Dispose lifecycle state machine manager
+    this._lifecycleManager.dispose();
+
     for (const terminal of this._terminals.values()) {
       const p = (terminal.ptyProcess || terminal.pty) as { kill?: () => void } | undefined;
       if (p && typeof p.kill === 'function') {
@@ -1270,6 +1393,12 @@ export class TerminalManager {
 
     // CLI Agent cleanup handled by service
     this._cliAgentService.handleTerminalRemoved(terminalId);
+
+    // Clean up state machine
+    const removedStateMachine = this._lifecycleManager.removeStateMachine(terminalId);
+    if (removedStateMachine) {
+      log(`🧹 [TERMINAL] State machine cleaned up for: ${terminalId}`);
+    }
 
     // Remove from terminals map
     const deletionResult = this._terminals.delete(terminalId);
