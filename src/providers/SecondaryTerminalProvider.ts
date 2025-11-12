@@ -717,10 +717,22 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   private _setupPanelLocationChangeListener(webviewView: vscode.WebviewView): void {
     log('🔧 [PROVIDER] Setting up panel location change listener...');
 
-    const configService = require('../config/UnifiedConfigurationService').getUnifiedConfigurationService();
-    const disposable = configService.onDidChangePanelLocation(async (location: PanelLocation) => {
-      log(`📍 [PROVIDER] Panel location changed to: ${location}`);
-      await this._panelLocationService.handlePanelLocationReport(location);
+    // Use onDidChangeConfiguration instead of non-existent onDidChangePanelLocation
+    const disposable = vscode.workspace.onDidChangeConfiguration((event) => {
+      // Check if panelLocation setting changed
+      if (event.affectsConfiguration('sidebarTerminal.panelLocation')) {
+        log('📍 [PROVIDER] Panel location configuration changed');
+
+        // Get the new location from configuration
+        const newLocation = vscode.workspace
+          .getConfiguration('sidebarTerminal')
+          .get<PanelLocation>('panelLocation', 'auto');
+
+        log(`📍 [PROVIDER] New panel location: ${newLocation}`);
+        this._panelLocationService.handlePanelLocationReport(newLocation).catch((error) => {
+          log(`❌ [PROVIDER] Failed to handle panel location change: ${error}`);
+        });
+      }
     });
 
     this._cleanupService.addDisposable(disposable);
