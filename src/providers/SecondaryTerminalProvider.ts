@@ -84,7 +84,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   constructor(
     private readonly _extensionContext: vscode.ExtensionContext,
     private readonly _terminalManager: TerminalManager,
-    private readonly _standardSessionManager?: import('../sessions/StandardTerminalSessionManager').StandardTerminalSessionManager
+    private readonly _extensionPersistenceService?: import('../services/persistence/ExtensionPersistenceService').ExtensionPersistenceService
   ) {
     this._htmlGenerationService = new WebViewHtmlGenerationService();
 
@@ -120,7 +120,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         sendInitializationComplete: this._sendInitializationComplete.bind(this),
         restoreLastSession: () => this.restoreLastSession(),
       },
-      this._standardSessionManager
+      this._extensionPersistenceService
     );
 
     // Initialize NEW Facade pattern services (Issue #214)

@@ -7,6 +7,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Refactored - Issue #215: Persistence Layer Consolidation
+
+**Major architectural refactoring** that consolidates 7 persistence implementations into 2 unified services, reducing codebase by ~4,932 lines (87% reduction).
+
+#### New Unified Services
+
+- **ExtensionPersistenceService** (~400 lines)
+  - Consolidates: ConsolidatedTerminalPersistenceService, TerminalPersistenceService, UnifiedTerminalPersistenceService, StandardTerminalSessionManager
+  - Unified session save/restore with workspace isolation
+  - Auto-save on window close with VS Code onWillSaveState API
+  - CLI Agent detection (Claude Code, Gemini)
+  - Storage optimization and automatic cleanup
+  - Compression support for large scrollback data
+
+- **WebViewPersistenceService** (~300 lines)
+  - Consolidates: SimplePersistenceManager, StandardTerminalPersistenceManager, OptimizedTerminalPersistenceManager
+  - SerializeAddon integration for terminal serialization
+  - Progressive loading for large scrollback (>500 lines)
+  - Lazy loading for deferred content
+  - Auto-save with 3-second debounce
+  - Metadata capture (dimensions, cursor position, selection state)
+
+#### Files Removed
+
+- `src/services/ConsolidatedTerminalPersistenceService.ts` (1,468 lines)
+- `src/services/TerminalPersistenceService.ts` (686 lines)
+- `src/services/UnifiedTerminalPersistenceService.ts` (382 lines)
+- `src/sessions/StandardTerminalSessionManager.ts` (1,341 lines)
+- `src/webview/managers/SimplePersistenceManager.ts` (240 lines)
+- `src/webview/managers/StandardTerminalPersistenceManager.ts` (740 lines)
+- `src/webview/services/OptimizedPersistenceManager.ts` (775 lines)
+
+**Total reduction:** 5,632 lines → 700 lines (87% reduction)
+
+#### Tests Added
+
+- `src/test/unit/services/ExtensionPersistenceService.test.ts` - Comprehensive test suite for extension-side persistence
+- `src/test/unit/webview/WebViewPersistenceService.test.ts` - Comprehensive test suite for WebView-side persistence
+
+#### Benefits
+
+- Single source of truth for persistence logic
+- Consistent behavior across all terminal types
+- Improved maintainability with simplified architecture
+- Better testability with focused, well-defined services
+- Reduced memory footprint and faster session operations
+- Enhanced error handling with proper TypeScript typing
+
 ## [0.1.138] - 2025-01-13
 
 ### Added

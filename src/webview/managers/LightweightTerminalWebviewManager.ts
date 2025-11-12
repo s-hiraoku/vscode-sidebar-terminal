@@ -111,8 +111,7 @@ import { PerformanceManager } from './PerformanceManager';
 import { UIManager } from './UIManager';
 import { InputManager } from './InputManager';
 import { ConsolidatedMessageManager } from './ConsolidatedMessageManager';
-import { OptimizedTerminalPersistenceManager } from '../services/OptimizedPersistenceManager';
-import { SimplePersistenceManager } from './SimplePersistenceManager';
+import { WebViewPersistenceService } from '../services/WebViewPersistenceService';
 import { WebViewApiManager } from './WebViewApiManager';
 import { TerminalLifecycleCoordinator } from './TerminalLifecycleCoordinator';
 import { TerminalTabManager } from './TerminalTabManager';
@@ -160,10 +159,8 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
   private uiManager!: UIManager;
   public inputManager!: InputManager;
   public messageManager!: ConsolidatedMessageManager;
-  public persistenceManager: OptimizedTerminalPersistenceManager | SimplePersistenceManager | null =
-    null;
-  public optimizedPersistenceManager!: OptimizedTerminalPersistenceManager;
-  public simplePersistenceManager!: SimplePersistenceManager;
+  public persistenceManager: WebViewPersistenceService | null = null;
+  public webViewPersistenceService!: WebViewPersistenceService;
 
   // バージョン情報
   private versionInfo: string = 'v0.1.0';
@@ -308,13 +305,13 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     this.configManager = new ConfigManager();
 
     // 🚀 PHASE 3: Initialize persistence managers with proper API access
-    this.simplePersistenceManager = new SimplePersistenceManager(this.webViewApiManager.getApi());
-    this.optimizedPersistenceManager = new OptimizedTerminalPersistenceManager();
+    this.webViewPersistenceService = new WebViewPersistenceService();
+    this.persistenceManager = this.webViewPersistenceService;
 
     // Message Manager は後で初期化
     this.messageManager = new ConsolidatedMessageManager();
     this.messageManager.setCoordinator(this); // 🆕 Coordinator を設定（×ボタン機能に必要）
-    this.persistenceManager = this.simplePersistenceManager;
+    this.persistenceManager = this.webViewPersistenceService;
 
     // Set up coordinator relationships for specialized managers
     this.findInTerminalManager.setCoordinator(this);
@@ -452,9 +449,9 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       log(`🎯 [WEBVIEW] Notified Extension of active terminal change: ${terminalId}`);
 
       // 🆕 SIMPLE: Save session when active terminal changes
-      if (this.simplePersistenceManager) {
+      if (this.webViewPersistenceService) {
         setTimeout(() => {
-          this.simplePersistenceManager.saveSession().then((success) => {
+          this.webViewPersistenceService.saveSession().then((success) => {
             if (success) {
               log(`💾 [SIMPLE-PERSISTENCE] Session saved after active terminal change`);
             }
@@ -509,7 +506,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     findInTerminal?: IFindInTerminalManager;
     profile?: IProfileManager;
     tabs?: ITerminalTabManager;
-    persistence: OptimizedTerminalPersistenceManager | SimplePersistenceManager | null;
+    persistence: WebViewPersistenceService | null;
     terminalContainer?: ITerminalContainerManager;
     displayMode?: IDisplayModeManager;
     header?: IHeaderManager;
@@ -684,11 +681,11 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       // 🆕 SIMPLE: Save current session state after terminal creation
       // No complex serialization - just session metadata
       setTimeout(() => {
-        if (this.simplePersistenceManager) {
+        if (this.webViewPersistenceService) {
           log(
             `💾 [SIMPLE-PERSISTENCE] Saving session after terminal ${terminalId} creation`
           );
-          this.simplePersistenceManager.saveSession().then((success) => {
+          this.webViewPersistenceService.saveSession().then((success) => {
             if (success) {
               log(`✅ [SIMPLE-PERSISTENCE] Session saved successfully`);
             } else {
@@ -852,11 +849,11 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
     // 🆕 SIMPLE: Update session state after terminal removal
     setTimeout(() => {
-      if (this.simplePersistenceManager) {
+      if (this.webViewPersistenceService) {
         log(
           `💾 [SIMPLE-PERSISTENCE] Updating session after terminal ${terminalId} removal`
         );
-        this.simplePersistenceManager.saveSession().then((success) => {
+        this.webViewPersistenceService.saveSession().then((success) => {
           if (success) {
             log(`✅ [SIMPLE-PERSISTENCE] Session updated after removal`);
           }
@@ -1694,17 +1691,17 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     try {
       log('🔄 [SIMPLE-RESTORATION] Attempting session restoration...');
 
-      if (!this.simplePersistenceManager) {
+      if (!this.webViewPersistenceService) {
         console.warn('⚠️ [SIMPLE-RESTORATION] SimplePersistenceManager not available');
         return;
       }
 
       // Load previous session data
-      const sessionData = await this.simplePersistenceManager.loadSession();
+      const sessionData = await this.webViewPersistenceService.loadSession();
 
       if (!sessionData) {
         // No previous session - show welcome message
-        const welcomeMessage = this.simplePersistenceManager.getWelcomeMessage();
+        const welcomeMessage = this.webViewPersistenceService.getWelcomeMessage();
         this.displaySessionMessage(welcomeMessage);
         log('📭 [SIMPLE-RESTORATION] No previous session found - showing welcome message');
         return;
@@ -1736,7 +1733,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       }
 
       // Show session restoration message
-      const sessionMessage = this.simplePersistenceManager.getSessionMessage(sessionData);
+      const sessionMessage = this.webViewPersistenceService.getSessionMessage(sessionData);
       setTimeout(() => {
         this.displaySessionMessage(sessionMessage);
       }, 1000); // Delay to allow terminals to be created
@@ -1756,8 +1753,8 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       console.error('❌ [SIMPLE-RESTORATION] Failed to restore session:', error);
 
       // Show welcome message as fallback
-      if (this.simplePersistenceManager) {
-        const welcomeMessage = this.simplePersistenceManager.getWelcomeMessage();
+      if (this.webViewPersistenceService) {
+        const welcomeMessage = this.webViewPersistenceService.getWelcomeMessage();
         this.displaySessionMessage(welcomeMessage);
       }
     }
@@ -2638,7 +2635,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
       // 既存マネージャーのクリーンアップ
       this.messageManager.dispose();
-      this.optimizedPersistenceManager.dispose();
+      this.webViewPersistenceService.dispose();
 
       // Clean up scrollback request tracking
       this.processedScrollbackRequests.clear();
