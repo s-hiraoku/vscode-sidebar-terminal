@@ -4,7 +4,9 @@
 
 This document tracks the consolidation of 7 persistence implementations into 2 unified services, reducing code from ~5,632 lines to ~700 lines (87% reduction).
 
-## Status: IN PROGRESS ✅
+## Status: PHASE 2 COMPLETE ✅
+
+**Latest Update:** Phase 2 core integration completed successfully!
 
 ### Completed Work
 
@@ -52,24 +54,31 @@ This document tracks the consolidation of 7 persistence implementations into 2 u
 - Replaced `StandardTerminalSessionManager` with `ExtensionPersistenceService`
 - Updated session restoration logic
 
+✅ **SecondaryTerminalProvider.ts**
+- Replaced `StandardTerminalSessionManager` constructor parameter with `ExtensionPersistenceService`
+- Updated all persistence service references throughout the file
+- Updated message handlers for persistence operations
+
+✅ **PersistenceOrchestrator.ts**
+- Replaced `ConsolidatedTerminalPersistenceService` import with `ExtensionPersistenceService`
+- Updated default service factory to use new service
+- Updated sidebar provider configuration
+
+✅ **LightweightTerminalWebviewManager.ts**
+- Replaced `SimplePersistenceManager` and `OptimizedTerminalPersistenceManager` with `WebViewPersistenceService`
+- Updated all persistence manager references
+- Simplified initialization code
+
+✅ **ExtensionPersistenceService.ts**
+- Added `setSidebarProvider()` method for WebView communication
+- Added `cleanupExpiredSessions()` method to match TerminalPersistencePort interface
+- Now fully compatible with existing orchestration patterns
+
 ### Remaining Work
 
-#### 3. Files Requiring Updates
+#### 3. Files Still Requiring Updates
 
-❌ **SecondaryTerminalProvider.ts**
-- Replace `StandardTerminalSessionManager` constructor parameter
-- Update persistence service initialization
-- Update message handlers for persistence operations
-
-❌ **PersistenceOrchestrator.ts**
-- Update to use new persistence services
-- Coordinate between Extension and WebView persistence
-
-❌ **LightweightTerminalWebviewManager.ts**
-- Update WebView persistence integration
-- Replace old manager references
-
-❌ **Test Files**
+⚠️ **Test Files**
 - `test/unit/sessions/StandardTerminalSessionManager.test.ts`
 - `test/integration/sessions/SessionPersistence.test.ts`
 - Update tests to use new services
@@ -128,11 +137,12 @@ WebView-side:
 2. ✅ Create WebViewPersistenceService
 3. ✅ Implement all core features
 
-### Phase 2: Core Integration (IN PROGRESS 🔄)
+### Phase 2: Core Integration (COMPLETED ✅)
 1. ✅ Update ExtensionLifecycle.ts
 2. ✅ Update TerminalInitializationCoordinator.ts
-3. ❌ Update SecondaryTerminalProvider.ts
-4. ❌ Update remaining providers and coordinators
+3. ✅ Update SecondaryTerminalProvider.ts
+4. ✅ Update PersistenceOrchestrator.ts
+5. ✅ Update LightweightTerminalWebviewManager.ts
 
 ### Phase 3: Testing & Validation (PENDING ⏳)
 1. Update unit tests
@@ -165,12 +175,13 @@ WebView-side:
 
 ## Timeline Estimate
 
-- ✅ Phase 1 (Implementation): 2 days - COMPLETED
-- 🔄 Phase 2 (Core Integration): 1 day - IN PROGRESS (60% complete)
-- ⏳ Phase 3 (Testing & Validation): 1 day
-- ⏳ Phase 4 (Cleanup): 1 day
+- ✅ Phase 1 (Implementation): 1 day - COMPLETED
+- ✅ Phase 2 (Core Integration): 1 day - COMPLETED
+- ⏳ Phase 3 (Testing & Validation): 1-2 days
+- ⏳ Phase 4 (Cleanup): 0.5 day
 
-**Total:** 4-5 days (Original estimate: 4-6 days)
+**Progress:** 2/4 days completed (50%)
+**Estimated Completion:** 3.5-4.5 days total (Original estimate: 4-6 days)
 
 ## Related Files
 
@@ -181,28 +192,61 @@ WebView-side:
 ### Modified Files
 - `src/core/ExtensionLifecycle.ts`
 - `src/providers/TerminalInitializationCoordinator.ts`
-
-### To Be Modified
 - `src/providers/SecondaryTerminalProvider.ts`
 - `src/providers/secondaryTerminal/PersistenceOrchestrator.ts`
 - `src/webview/managers/LightweightTerminalWebviewManager.ts`
-- `src/services/persistence/TerminalPersistencePort.ts`
-- Test files
+- `src/services/persistence/ExtensionPersistenceService.ts`
+
+### To Be Modified
+- Test files (unit and integration)
 
 ### To Be Removed
 - 7 old persistence implementation files (listed above)
 
-## Next Steps
+## Phase 2 Completion Summary
 
-1. Update SecondaryTerminalProvider.ts to use new services
-2. Update PersistenceOrchestrator.ts coordination logic
-3. Update WebView integration in LightweightTerminalWebviewManager.ts
-4. Update and run all tests
-5. Remove old persistence files
-6. Final verification and documentation
+### What Was Accomplished
+
+**Core Architecture Migration:**
+- All primary extension providers now use `ExtensionPersistenceService`
+- All WebView managers now use `WebViewPersistenceService`
+- Persistence orchestration updated for new services
+- Interface compatibility maintained
+
+**Code Quality:**
+- Consistent error handling
+- Proper TypeScript typing
+- Simplified initialization flows
+- Reduced coupling between components
+
+**Commits:**
+- Phase 1: `32c9464` - Initial implementation
+- Phase 2: `bc79aa9` - Core integration complete
+
+### Next Steps (Phase 3 & 4)
+
+1. **Testing & Validation** (1-2 days)
+   - Update unit tests for new services
+   - Update integration tests
+   - Run full test suite
+   - Manual testing of key workflows
+   - Performance benchmarking
+
+2. **Cleanup & Documentation** (0.5 day)
+   - Remove 7 legacy persistence files (~5,632 lines)
+   - Update API documentation
+   - Final verification
+   - Update CHANGELOG.md
+
+## Current Status
+
+**✅ Ready for Testing Phase**
+
+The core refactoring is complete. The new unified services are integrated
+into all major components. The next phase focuses on validation and cleanup.
 
 ---
 
-*Last Updated: 2025-11-12*
+*Last Updated: 2025-11-12 (Phase 2 Complete)*
 *Issue: #215*
 *Branch: claude/fix-issue-215-011CV4FFDKcUEpi8ZpTVszVT*
