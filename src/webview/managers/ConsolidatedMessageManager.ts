@@ -27,6 +27,15 @@ import { TerminalLifecycleMessageHandler } from './handlers/TerminalLifecycleMes
 import { SettingsAndConfigMessageHandler } from './handlers/SettingsAndConfigMessageHandler';
 import { ShellIntegrationMessageHandler } from './handlers/ShellIntegrationMessageHandler';
 import { ProfileMessageHandler } from './handlers/ProfileMessageHandler';
+import { ClipboardMessageHandler } from './handlers/ClipboardMessageHandler';
+
+/**
+ * Message handler function type
+ */
+type MessageHandlerFn = (
+  msg: MessageCommand,
+  coordinator: IManagerCoordinator
+) => void | Promise<void>;
 
 /**
  * Consolidated Message Manager
@@ -62,6 +71,10 @@ export class ConsolidatedMessageManager implements IMessageManager {
   private readonly settingsHandler: SettingsAndConfigMessageHandler;
   private readonly shellIntegrationHandler: ShellIntegrationMessageHandler;
   private readonly profileHandler: ProfileMessageHandler;
+  private readonly clipboardHandler: ClipboardMessageHandler;
+
+  // Message command to handler mapping for efficient dispatch
+  private readonly messageHandlers: Map<string, MessageHandlerFn>;
 
   constructor(coordinator?: IManagerCoordinator) {
     this.logger.lifecycle('initialization', 'starting');
@@ -103,8 +116,136 @@ export class ConsolidatedMessageManager implements IMessageManager {
     this.settingsHandler = new SettingsAndConfigMessageHandler(this.logger);
     this.shellIntegrationHandler = new ShellIntegrationMessageHandler(this.logger);
     this.profileHandler = new ProfileMessageHandler(this.logger);
+    this.clipboardHandler = new ClipboardMessageHandler(this.logger);
+
+    // Build message handler registry for O(1) lookup instead of O(n) switch statement
+    this.messageHandlers = this.buildMessageHandlerRegistry();
 
     this.logger.lifecycle('initialization', 'completed');
+  }
+
+  /**
+   * Build message handler registry
+   * Maps message commands to their respective handlers
+   * This replaces the large switch statement with a more maintainable approach
+   */
+  private buildMessageHandlerRegistry(): Map<string, MessageHandlerFn> {
+    const registry = new Map<string, MessageHandlerFn>();
+
+    // Terminal Lifecycle Messages
+    const lifecycleCommands = [
+      'init',
+      'output',
+      'terminalCreated',
+      'newTerminal',
+      'focusTerminal',
+      'setActiveTerminal',
+      'deleteTerminalResponse',
+      'terminalRemoved',
+      'clear',
+    ];
+    lifecycleCommands.forEach(cmd =>
+      registry.set(cmd, (msg, coord) => this.lifecycleHandler.handleMessage(msg, coord))
+    );
+
+    // Settings and Configuration Messages
+    const settingsCommands = ['fontSettingsUpdate', 'settingsResponse', 'openSettings', 'versionInfo', 'stateUpdate'];
+    settingsCommands.forEach(cmd =>
+      registry.set(cmd, (msg, coord) => this.settingsHandler.handleMessage(msg, coord))
+    );
+
+    // CLI Agent Messages
+    registry.set('cliAgentStatusUpdate', (msg, coord) =>
+      this.cliAgentController.handleStatusUpdateMessage(msg, coord)
+    );
+    registry.set('cliAgentFullStateSync', (msg, coord) =>
+      this.cliAgentController.handleFullStateSyncMessage(msg, coord)
+    );
+    registry.set('switchAiAgentResponse', (msg, coord) =>
+      this.cliAgentController.handleSwitchResponseMessage(msg, coord)
+    );
+
+    // Session Messages
+    registry.set('sessionRestore', async (msg, coord) =>
+      this.sessionController.handleSessionRestoreMessage(msg, coord)
+    );
+    registry.set('sessionRestoreStarted', msg =>
+      this.sessionController.handleSessionRestoreStartedMessage(msg)
+    );
+    registry.set('sessionRestoreProgress', msg =>
+      this.sessionController.handleSessionRestoreProgressMessage(msg)
+    );
+    registry.set('sessionRestoreCompleted', msg =>
+      this.sessionController.handleSessionRestoreCompletedMessage(msg)
+    );
+    registry.set('sessionRestoreError', msg =>
+      this.sessionController.handleSessionRestoreErrorMessage(msg)
+    );
+    registry.set('sessionSaved', msg => this.sessionController.handleSessionSavedMessage(msg));
+    registry.set('sessionSaveError', msg => this.sessionController.handleSessionSaveErrorMessage(msg));
+    registry.set('sessionCleared', () => this.sessionController.handleSessionClearedMessage());
+    registry.set('sessionRestored', msg => this.sessionController.handleSessionRestoredMessage(msg));
+    registry.set('sessionRestoreSkipped', msg =>
+      this.sessionController.handleSessionRestoreSkippedMessage(msg)
+    );
+    registry.set('terminalRestoreError', msg =>
+      this.sessionController.handleTerminalRestoreErrorMessage(msg)
+    );
+
+    // Scrollback Messages
+    const scrollbackCommands = ['getScrollback', 'restoreScrollback', 'scrollbackProgress', 'extractScrollbackData'];
+    scrollbackCommands.forEach(cmd =>
+      registry.set(cmd, (msg, coord) => this.scrollbackHandler.handleMessage(msg, coord))
+    );
+
+    // Shell Integration Messages
+    const shellIntegrationCommands = ['shellStatus', 'cwdUpdate', 'commandHistory', 'find'];
+    shellIntegrationCommands.forEach(cmd =>
+      registry.set(cmd, (msg, coord) => this.shellIntegrationHandler.handleMessage(msg, coord))
+    );
+
+    // Terminal Serialization Messages
+    const serializationCommands = [
+      'serializeTerminal',
+      'restoreSerializedContent',
+      'terminalRestoreInfo',
+      'saveAllTerminalSessions',
+      'requestTerminalSerialization',
+      'restoreTerminalSerialization',
+      'sessionRestorationData',
+      'persistenceSaveSessionResponse',
+      'persistenceRestoreSessionResponse',
+      'persistenceClearSessionResponse',
+    ];
+    serializationCommands.forEach(cmd =>
+      registry.set(cmd, (msg, coord) => this.serializationHandler.handleMessage(msg, coord))
+    );
+
+    // Panel Location Messages
+    const panelLocationCommands = ['panelLocationUpdate', 'requestPanelLocationDetection'];
+    panelLocationCommands.forEach(cmd =>
+      registry.set(cmd, (msg, coord) => this.panelLocationHandler.handleMessage(msg, coord))
+    );
+
+    // Split and Layout Messages
+    const splitCommands = ['split', 'relayoutTerminals'];
+    splitCommands.forEach(cmd =>
+      registry.set(cmd, (msg, coord) => {
+        this.logger.info(`🔄 [MESSAGE-MANAGER] Routing ${msg.command} to SplitHandler`);
+        this.splitHandler.handleMessage(msg, coord);
+      })
+    );
+
+    // Profile Management Messages
+    const profileCommands = ['showProfileSelector', 'profilesUpdated', 'defaultProfileChanged'];
+    profileCommands.forEach(cmd =>
+      registry.set(cmd, (msg, coord) => this.profileHandler.handleMessage(msg, coord))
+    );
+
+    // Clipboard Messages
+    registry.set('clipboardContent', (msg, coord) => this.clipboardHandler.handleMessage(msg, coord));
+
+    return registry;
   }
 
   /**
@@ -178,158 +319,24 @@ export class ConsolidatedMessageManager implements IMessageManager {
 
   /**
    * Handle incoming messages from the extension with comprehensive command support
+   * Uses Map-based dispatch for O(1) lookup instead of O(n) switch statement
    */
   public async handleMessage(
     message: MessageEvent,
     coordinator: IManagerCoordinator
   ): Promise<void> {
     try {
-      const msg = message.data as MessageCommand;
-      this.logger.debug(`Message received: ${msg.command}`);
+      const messageCommand = message.data as MessageCommand;
+      this.logger.debug(`Message received: ${messageCommand.command}`);
 
-      switch (msg.command) {
-        // Terminal Lifecycle Messages
-        case 'init':
-        case 'output':
-        case 'terminalCreated':
-        case 'newTerminal':
-        case 'focusTerminal':
-        case 'setActiveTerminal':
-        case 'deleteTerminalResponse':
-        case 'terminalRemoved':
-        case 'clear':
-          this.lifecycleHandler.handleMessage(msg, coordinator);
-          break;
+      // Lookup handler in registry
+      const handler = this.messageHandlers.get(messageCommand.command);
 
-        // Settings and Configuration Messages
-        case 'fontSettingsUpdate':
-        case 'settingsResponse':
-        case 'openSettings':
-        case 'versionInfo':
-        case 'stateUpdate':
-          this.settingsHandler.handleMessage(msg, coordinator);
-          break;
-        case 'cliAgentStatusUpdate':
-          this.cliAgentController.handleStatusUpdateMessage(msg, coordinator);
-          break;
-        case 'cliAgentFullStateSync':
-          this.cliAgentController.handleFullStateSyncMessage(msg, coordinator);
-          break;
-        case 'sessionRestore':
-          await this.sessionController.handleSessionRestoreMessage(msg, coordinator);
-          break;
-        case 'switchAiAgentResponse':
-          this.cliAgentController.handleSwitchResponseMessage(msg, coordinator);
-          break;
-        case 'sessionRestoreStarted':
-          this.sessionController.handleSessionRestoreStartedMessage(msg);
-          break;
-        case 'sessionRestoreProgress':
-          this.sessionController.handleSessionRestoreProgressMessage(msg);
-          break;
-        case 'sessionRestoreCompleted':
-          this.sessionController.handleSessionRestoreCompletedMessage(msg);
-          break;
-        case 'sessionRestoreError':
-          this.sessionController.handleSessionRestoreErrorMessage(msg);
-          break;
-
-        // Scrollback Messages
-        case 'getScrollback':
-        case 'restoreScrollback':
-        case 'scrollbackProgress':
-        case 'extractScrollbackData':
-          this.scrollbackHandler.handleMessage(msg, coordinator);
-          break;
-        case 'sessionSaved':
-          this.sessionController.handleSessionSavedMessage(msg);
-          break;
-        case 'sessionSaveError':
-          this.sessionController.handleSessionSaveErrorMessage(msg);
-          break;
-        case 'sessionCleared':
-          this.sessionController.handleSessionClearedMessage();
-          break;
-        case 'sessionRestored':
-          this.sessionController.handleSessionRestoredMessage(msg);
-          break;
-
-        // Shell Integration Messages
-        case 'shellStatus':
-        case 'cwdUpdate':
-        case 'commandHistory':
-        case 'find':
-          this.shellIntegrationHandler.handleMessage(msg, coordinator);
-          break;
-
-        // Terminal Serialization Messages
-        case 'serializeTerminal':
-        case 'restoreSerializedContent':
-        case 'terminalRestoreInfo':
-        case 'saveAllTerminalSessions':
-        case 'requestTerminalSerialization':
-        case 'restoreTerminalSerialization':
-        case 'sessionRestorationData':
-        case 'persistenceSaveSessionResponse':
-        case 'persistenceRestoreSessionResponse':
-        case 'persistenceClearSessionResponse':
-          this.serializationHandler.handleMessage(msg, coordinator);
-          break;
-        case 'sessionRestoreSkipped':
-          this.sessionController.handleSessionRestoreSkippedMessage(msg);
-          break;
-        case 'terminalRestoreError':
-          void this.sessionController.handleTerminalRestoreErrorMessage(msg);
-          break;
-
-        // Panel Location Messages
-        case 'panelLocationUpdate':
-        case 'requestPanelLocationDetection':
-          this.panelLocationHandler.handleMessage(msg, coordinator);
-          break;
-
-        // Split and Layout Messages
-        case 'split':
-        case 'relayoutTerminals':
-          this.logger.info(`🔄 [MESSAGE-MANAGER] Routing ${msg.command} to SplitHandler`);
-          this.splitHandler.handleMessage(msg, coordinator);
-          break;
-
-        // Profile Management Messages
-        case 'showProfileSelector':
-        case 'profilesUpdated':
-        case 'defaultProfileChanged':
-          this.profileHandler.handleMessage(msg, coordinator);
-          break;
-
-        // Clipboard Messages
-        case 'clipboardContent': {
-          console.log('[CLIPBOARD] Received clipboardContent message:', msg);
-          const terminalId = (msg as any).terminalId as string;
-          const text = (msg as any).text as string;
-          console.log('[CLIPBOARD] terminalId:', terminalId, 'text length:', text?.length);
-
-          if (terminalId && text !== undefined) {
-            const terminalInstance = coordinator.getTerminalInstance(terminalId);
-            console.log('[CLIPBOARD] terminalInstance:', terminalInstance);
-
-            if (terminalInstance) {
-              this.logger.info(`📋 [CLIPBOARD] Pasting ${text.length} characters to terminal ${terminalId}`);
-              console.log('[CLIPBOARD] Calling terminal.paste() with text:', text.substring(0, 50) + (text.length > 50 ? '...' : ''));
-              terminalInstance.terminal.paste(text);
-              console.log('[CLIPBOARD] Paste completed');
-            } else {
-              this.logger.warn(`📋 [CLIPBOARD] Terminal ${terminalId} not found for paste`);
-              console.log('[CLIPBOARD] Available terminals:', coordinator.getActiveTerminalId());
-            }
-          } else {
-            console.log('[CLIPBOARD] Invalid clipboardContent message - missing terminalId or text');
-          }
-          break;
-        }
-
-        default:
-          this.logger.warn(`Unknown command: ${msg.command}`);
+      if (handler) {
+        // Execute handler (may be sync or async)
+        await handler(messageCommand, coordinator);
+      } else {
+        this.logger.warn(`Unknown command: ${messageCommand.command}`);
       }
     } catch (error) {
       this.logger.error('Error handling message', error);
