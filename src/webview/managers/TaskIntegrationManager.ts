@@ -7,7 +7,6 @@
  * - Terminal/task association management
  */
 
-// import { Terminal } from '@xterm/xterm'; // Removed: not used in current implementation
 import { IManagerCoordinator } from '../interfaces/ManagerInterfaces';
 
 export interface TaskDefinition {

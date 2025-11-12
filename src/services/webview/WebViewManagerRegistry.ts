@@ -1,4 +1,3 @@
-// import { IManagerCoordinator } from '../../webview/interfaces/IManagerCoordinator';
 import { terminal as log } from '../../utils/logger';
 
 /**

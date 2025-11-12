@@ -249,10 +249,6 @@ describe('Session Persistence Integration - TDD Suite', () => {
           expect((serializedSession as any).content).to.be.a('string');
         }
         expect(duration).to.be.lessThan(2000); // Should complete within 2 seconds
-
-        // Verify scrollback integrity (content-based check)
-        // expect(serializedSession.scrollback[0]).to.equal(largeScrollback[0]);
-        // expect(serializedSession.scrollback[9999]).to.equal(largeScrollback[9999]);
       });
 
       it('should compress scrollback data to optimize storage', async () => {
@@ -268,21 +264,11 @@ describe('Session Persistence Integration - TDD Suite', () => {
         persistenceManager.saveTerminalContent(terminalId);
 
         const serializedSession = persistenceManager.serializeTerminal(terminalId);
-        // const compressedData = await persistenceManager.compressSessionData(serializedSession);
 
         // Original data size check
         if (serializedSession) {
           const originalSize = JSON.stringify(serializedSession).length;
           expect(originalSize).to.be.greaterThan(0);
-
-          // Comment out compression tests as methods don't exist
-          // expect(compressedData.compressed).to.be.true;
-          // expect(compressedData.originalSize).to.equal(originalSize);
-          // expect(compressedData.compressedSize).to.be.lessThan(originalSize * 0.1);
-
-          // Verify decompression works
-          // const decompressedSession = await persistenceManager.decompressSessionData(compressedData);
-          // expect(decompressedSession).to.deep.equal(serializedSession);
         }
       });
 
@@ -309,13 +295,6 @@ describe('Session Persistence Integration - TDD Suite', () => {
 
         // Save terminal content (replaces addScrollbackLine)
         persistenceManager.saveTerminalContent(originalTerminalId);
-
-        // Comment out non-existent methods
-        // await // persistenceManager.setTerminalWorkingDirectory // Method doesn't exist(originalTerminalId, '/project/root');
-        // await persistenceManager.setTerminalEnvironment(originalTerminalId, {
-        //   'NODE_ENV': 'test',
-        //   'CI': 'true'
-        // });
 
         const _serializedSession = persistenceManager.serializeTerminal(originalTerminalId);
 
@@ -361,12 +340,6 @@ describe('Session Persistence Integration - TDD Suite', () => {
             workingDirectory: `/project/module${i + 1}`
           };
 
-          for (const _line of terminal.scrollback) {
-            // await persistenceManager.addScrollbackLine(terminalId, _line); // Method doesn't exist
-          }
-
-          // await persistenceManager.setTerminalWorkingDirectory(terminalId, terminal.workingDirectory); // Method doesn't exist
-
           terminals.push(terminal);
         }
 
@@ -395,14 +368,6 @@ describe('Session Persistence Integration - TDD Suite', () => {
         // Verify terminals are available
         const stats = persistenceManager.getStats();
         expect(stats.terminalCount).to.be.greaterThan(0);
-
-        // Working directories should be preserved - commented out as terminal relationships aren't tracked
-        // const activeTerminal = availableTerminals.find(id => terminals.find(t => t.id === id && t.isActive));
-        // expect(activeTerminal).to.exist;
-        // expect(activeTerminal!.name).to.equal('Project Terminal 2'); // Was index 1
-        // restoredSessions.terminals.forEach((terminal: any, index: number) => {
-        //   expect(terminal.workingDirectory).to.equal(`/project/module${index + 1}`);
-        // });
       });
 
       it('should handle corrupted session data gracefully', async () => {
@@ -457,13 +422,6 @@ describe('Session Persistence Integration - TDD Suite', () => {
         const stats = persistenceManager.getStats();
         expect(availableTerminals.length).to.be.greaterThan(0);
         expect(stats.terminalCount).to.be.greaterThan(0);
-
-        // Comment out corrupted session validation as getAllSessions doesn't exist
-        // expect(restoredSessions.terminals).to.have.length(2); // Only valid ones
-        // const terminalNames = restoredSessions.terminals.map((t: any) => t.name);
-        // expect(terminalNames).to.include('Valid Terminal');
-        // expect(terminalNames).to.include('Another Valid Terminal');
-        // expect(terminalNames).to.not.include('Corrupted Terminal');
       });
 
       it('should implement progressive session restoration for large datasets', async () => {
@@ -547,13 +505,7 @@ describe('Session Persistence Integration - TDD Suite', () => {
         const terminalId = generateTerminalId();
         const scrollback = ['Persistence test line 1', 'Persistence test line 2'];
 
-        // for (const line of scrollback) {
-        //   await persistenceManager.addScrollbackLine(terminalId, line);
-        // }
         persistenceManager.saveTerminalContent(terminalId);
-
-        // Trigger persistence to globalState
-        // await persistenceManager.persistToGlobalState(mockExtensionContext); // Method doesn't exist
 
         // Verify data was saved to globalState
         expect(mockExtensionContext.globalState.update).to.have.been.called;
@@ -711,16 +663,11 @@ describe('Session Persistence Integration - TDD Suite', () => {
           const terminalId = generateTerminalId();
           const _scrollback = Array(scrollbackSize).fill(`Terminal ${i} line`);
 
-          // await persistenceManager.addScrollbackBatch(terminalId, _scrollback); // Method doesn't exist
-          // await persistenceManager.setTerminalWorkingDirectory(terminalId, `/path/${i}`); // Method doesn't exist
           persistenceManager.saveTerminalContent(terminalId);
         }
 
         // Serialize all sessions
         const serializedSessions = await persistenceManager.serializeAllTerminals();
-
-        // Persist to storage
-        // await persistenceManager.persistToGlobalState(mockExtensionContext); // Method doesn't exist
 
         const endTime = Date.now();
         const totalTime = endTime - startTime;
@@ -740,7 +687,6 @@ describe('Session Persistence Integration - TDD Suite', () => {
           const terminalId = generateTerminalId();
           const _scrollback = Array(500).fill(`Cycle ${cycle} line`);
 
-          // await persistenceManager.addScrollbackBatch(terminalId, _scrollback); // Method doesn't exist
           const _result = persistenceManager.serializeTerminal(terminalId);
           persistenceManager.removeTerminal(terminalId);
         }
