@@ -38,6 +38,12 @@ export {
   WebviewMessage,
   VsCodeMessage,
 
+  // Parameter Object Patterns (Issue #225)
+  TerminalCreationWithSafeModeOptions,
+  TerminalInteractionPayload,
+  TerminalResizeOptions,
+  ConfigUpdateOptions,
+
   // 型エイリアス
   TerminalTheme,
   SplitDirection,

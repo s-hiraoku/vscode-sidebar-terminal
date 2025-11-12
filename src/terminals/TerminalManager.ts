@@ -11,6 +11,7 @@ import {
   TerminalInfo,
   DeleteResult,
   ProcessState,
+  TerminalCreationWithSafeModeOptions,
 } from '../types/shared';
 import { TERMINAL_CONSTANTS, ERROR_MESSAGES } from '../constants';
 import { ShellIntegrationService } from '../services/ShellIntegrationService';
@@ -431,14 +432,9 @@ export class TerminalManager {
    * automatically falls back to safe mode (--noprofile --norc)
    */
   private async createTerminalWithSafeModeSupport(
-    terminalId: string,
-    shell: string,
-    shellArgs: string[],
-    cwd: string,
-    env: { [key: string]: string },
-    terminalNumber: number,
-    retryAttempt: number = 0
+    options: TerminalCreationWithSafeModeOptions
   ): Promise<{ ptyProcess: any; safeMode: boolean }> {
+    const { terminalId, shell, shellArgs, cwd, env, terminalNumber, retryAttempt = 0 } = options;
     const MAX_RETRY_ATTEMPTS = 1;
     const isSafeModeAttempt = retryAttempt > 0;
 
@@ -592,15 +588,15 @@ export class TerminalManager {
         log(`🔄 [SAFE-MODE] Retrying with safe mode fallback...`);
         await new Promise((resolve) => setTimeout(resolve, 100)); // Brief delay
 
-        return this.createTerminalWithSafeModeSupport(
+        return this.createTerminalWithSafeModeSupport({
           terminalId,
           shell,
           shellArgs,
           cwd,
           env,
           terminalNumber,
-          retryAttempt + 1
-        );
+          retryAttempt: retryAttempt + 1,
+        });
       }
 
       throw error;

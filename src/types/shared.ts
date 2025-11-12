@@ -902,6 +902,55 @@ export interface VsCodeMessage {
   isForceReconnect?: boolean; // Alternative property name for compatibility
 }
 
+// ===== Parameter Object Patterns (Issue #225) =====
+
+/**
+ * Options for creating terminal with safe mode support
+ * Replaces 7 individual parameters with a structured object
+ */
+export interface TerminalCreationWithSafeModeOptions {
+  readonly terminalId: string;
+  readonly shell: string;
+  readonly shellArgs: string[];
+  readonly cwd: string;
+  readonly env: { [key: string]: string };
+  readonly terminalNumber: number;
+  readonly retryAttempt?: number;
+}
+
+/**
+ * Payload for terminal interaction events
+ * Replaces 4 individual parameters with a structured object
+ */
+export interface TerminalInteractionPayload {
+  readonly type: TerminalInteractionEvent['type'];
+  readonly terminalId: string;
+  readonly data: unknown;
+  readonly context?: unknown; // IMessageHandlerContext or IManagerCoordinator
+}
+
+/**
+ * Options for terminal resize operations
+ * Replaces 4 individual parameters with a structured object
+ */
+export interface TerminalResizeOptions {
+  readonly cols: number;
+  readonly rows: number;
+  readonly terminalId?: string;
+  readonly coordinator?: unknown; // IManagerCoordinator
+}
+
+/**
+ * Options for configuration value updates
+ * Replaces 4 individual parameters with a structured object
+ */
+export interface ConfigUpdateOptions {
+  readonly section: string;
+  readonly key: string;
+  readonly value: unknown;
+  readonly target?: unknown; // vscode.ConfigurationTarget
+}
+
 // ===== 型ガード関数 =====
 
 /**
