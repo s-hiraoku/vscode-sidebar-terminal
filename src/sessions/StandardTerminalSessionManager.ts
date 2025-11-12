@@ -46,9 +46,11 @@ export class StandardTerminalSessionManager {
    */
   private setupAutoSave(): void {
     // Phase 2.1.4: Check if onWillSaveState API is available (VS Code 1.86+)
-    if (typeof vscode.workspace.onWillSaveState === 'function') {
+    // Type assertion needed as this API may not be in older type definitions
+    const workspaceWithSaveState = vscode.workspace as any;
+    if (typeof workspaceWithSaveState.onWillSaveState === 'function') {
       // VS Code standard: Save session when window is closing or reloading
-      this.onWillSaveStateDisposable = vscode.workspace.onWillSaveState(async (event) => {
+      this.onWillSaveStateDisposable = workspaceWithSaveState.onWillSaveState(async (event: any) => {
         log('💾 [STANDARD-SESSION] onWillSaveState triggered - saving session');
 
         // Wait for save to complete before allowing window close
@@ -268,7 +270,7 @@ export class StandardTerminalSessionManager {
       const basicTerminals = terminals.map((terminal) => ({
         id: terminal.id,
         name: terminal.name,
-        number: terminal.number,
+        number: terminal.number || 1, // Ensure number is always defined
         cwd: terminal.cwd || safeProcessCwd(),
         isActive: terminal.id === activeTerminalId,
       }));
@@ -514,6 +516,7 @@ export class StandardTerminalSessionManager {
 
       // Phase 2.3.1: Detect and migrate old format
       const migrationResult = SessionDataTransformer.migrateSessionFormat(sessionData);
+      let currentSessionData = sessionData; // Use mutable variable for migration updates
       if (migrationResult.migrated) {
         log(`🔄 [SESSION-MIGRATION] ${migrationResult.message}`);
         // Save migrated session back to storage
@@ -522,17 +525,17 @@ export class StandardTerminalSessionManager {
           migrationResult.sessionData
         );
         // Update reference to migrated data
-        sessionData = migrationResult.sessionData;
+        currentSessionData = migrationResult.sessionData as typeof sessionData;
       }
 
       // Phase 2.3.2 & 2.3.3: Validate session before restoration to ensure no data loss
-      const validation = SessionDataTransformer.validateSessionForRestore(sessionData);
+      const validation = SessionDataTransformer.validateSessionForRestore(currentSessionData);
       if (!validation.valid) {
         log(`❌ [SESSION-MIGRATION] Session validation failed: ${validation.issues.join(', ')}`);
         return {
           success: false,
           restoredCount: 0,
-          skippedCount: sessionData.terminals.length,
+          skippedCount: currentSessionData.terminals.length,
           error: `Session validation failed: ${validation.issues.join(', ')}`,
         };
       }
@@ -545,14 +548,14 @@ export class StandardTerminalSessionManager {
       }
 
       // Verification: Log what scrollback data was found in storage
-      log(`🔍 [VERIFY-RESTORE] Session timestamp: ${new Date(sessionData.timestamp).toISOString()}`);
-      log(`🔍 [VERIFY-RESTORE] Session version: ${sessionData.version}`);
-      log(`🔍 [VERIFY-RESTORE] Has scrollbackData property: ${!!sessionData.scrollbackData}`);
-      if (sessionData.scrollbackData) {
-        const scrollbackKeys = Object.keys(sessionData.scrollbackData);
+      log(`🔍 [VERIFY-RESTORE] Session timestamp: ${new Date(currentSessionData.timestamp).toISOString()}`);
+      log(`🔍 [VERIFY-RESTORE] Session version: ${currentSessionData.version}`);
+      log(`🔍 [VERIFY-RESTORE] Has scrollbackData property: ${!!currentSessionData.scrollbackData}`);
+      if (currentSessionData.scrollbackData) {
+        const scrollbackKeys = Object.keys(currentSessionData.scrollbackData);
         log(`🔍 [VERIFY-RESTORE] Scrollback data keys in storage: ${scrollbackKeys.join(', ')}`);
         scrollbackKeys.forEach(termId => {
-          const data = sessionData.scrollbackData?.[termId];
+          const data = currentSessionData.scrollbackData?.[termId];
           const lineCount = Array.isArray(data) ? data.length : 0;
           log(`🔍 [VERIFY-RESTORE] Storage data for terminal ${termId}: ${lineCount} lines`);
         });
@@ -561,7 +564,7 @@ export class StandardTerminalSessionManager {
       }
 
       // セッション期限チェック
-      if (this.isSessionExpired(sessionData)) {
+      if (this.isSessionExpired(currentSessionData)) {
         log('⏰ [STANDARD-SESSION] Session expired, clearing...');
         await this.clearSession();
         return { success: true, restoredCount: 0, skippedCount: 0 };
@@ -576,7 +579,7 @@ export class StandardTerminalSessionManager {
         return {
           success: true,
           restoredCount: 0,
-          skippedCount: sessionData.terminals.length,
+          skippedCount: currentSessionData.terminals.length,
         };
       }
 
@@ -622,10 +625,10 @@ export class StandardTerminalSessionManager {
       let activeTerminalSet = false;
 
       // Step 1: Create all terminals with progress tracking
-      const totalTerminals = sessionData.terminals.length;
+      const totalTerminals = currentSessionData.terminals.length;
       let processedTerminals = 0;
 
-      for (const terminalInfo of sessionData.terminals) {
+      for (const terminalInfo of currentSessionData.terminals) {
         try {
           log(`🔄 [STANDARD-SESSION] Creating terminal: ${terminalInfo.name}`);
 
@@ -684,15 +687,15 @@ export class StandardTerminalSessionManager {
       let restoredCount = successfulCreations.length;
 
       // Step 2: 🎯 IMPROVED: Wait a moment for terminals to fully initialize, then restore content
-      if (restoredCount > 0 && sessionData.scrollbackData) {
+      if (restoredCount > 0 && currentSessionData.scrollbackData) {
         log('⏳ [STANDARD-SESSION] Waiting for terminal initialization before content restoration...');
         await new Promise((resolve) => setTimeout(resolve, 800)); // Wait for terminal setup
 
         log('🔄 [STANDARD-SESSION] Requesting scrollback restoration from WebView...');
-        
+
         // Create terminal data mapping with new IDs
         const terminalRestoreData = successfulCreations.map(result => {
-          const rawScrollback = sessionData.scrollbackData?.[result.originalInfo.id];
+          const rawScrollback = currentSessionData.scrollbackData?.[result.originalInfo.id];
           let serializedContent = '';
 
           if (typeof rawScrollback === 'string') {
@@ -724,7 +727,7 @@ export class StandardTerminalSessionManager {
 
           const fallbackRestored = await this.restoreScrollbackFallback(
             successfulCreations,
-            sessionData.scrollbackData || {}
+            currentSessionData.scrollbackData || {}
           );
 
           if (fallbackRestored > 0) {
@@ -748,7 +751,7 @@ export class StandardTerminalSessionManager {
       return {
         success: restoredCount > 0,
         restoredCount,
-        skippedCount: sessionData.terminals.length - restoredCount,
+        skippedCount: currentSessionData.terminals.length - restoredCount,
       };
     } catch (error) {
       log(`❌ [STANDARD-SESSION] Restore failed: ${String(error)}`);

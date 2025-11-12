@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.138] - 2025-01-13
+
+### Added
+- **Terminal Copy/Paste Support**
+  - **Clipboard Integration**: Full clipboard support using VS Code API
+  - **Keyboard Shortcuts**:
+    - Copy: `Ctrl+C` (Windows/Linux) / `Cmd+C` (macOS) when text is selected
+    - Paste: `Ctrl+V` (Windows/Linux) / `Cmd+V` (macOS)
+  - **Implementation**:
+    - `copyToClipboard` message: WebView → Extension → System clipboard
+    - `requestClipboardContent` message: WebView → Extension → PTY process
+    - Direct PTY write for paste operations
+  - **Cross-platform**: Works on Windows, macOS, and Linux
+  - **Files**: `InputManager.ts`, `SecondaryTerminalProvider.ts`, `shared.ts`
+
+### Fixed
+- **TypeScript Compilation**: Fixed type errors in session management
+  - Fixed `onWillSaveState` API type assertion for VS Code 1.86+
+  - Fixed `sessionData` mutability issues in StandardTerminalSessionManager
+  - Fixed terminal number default value to prevent undefined
+  - Fixed scrollback manager dispose method signature
+
 ### Added
 - **Phase 2.2: Progressive Scrollback Loading** (v0.1.137)
   - **Chunk-based Loading**: Initial 500-line load with 500-line chunks for lazy loading

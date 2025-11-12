@@ -548,7 +548,7 @@ describe('SessionDataTransformer - Phase 2.3 & 2.4', () => {
           },
         };
 
-        const originalLastLine = session.scrollbackData!['1'][9999];
+        const originalLastLine = (session.scrollbackData!['1'] as string[])[9999];
 
         SessionDataTransformer.optimizeSessionStorage(session, 0.1); // Very small target
 

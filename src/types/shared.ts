@@ -537,6 +537,8 @@ export interface WebviewMessage {
     | 'commandHistory'
     | 'relayoutTerminals' // Terminal relayout command
     | 'deleteTerminalResponse' // 🎯 FIX: 削除処理統一化で追加
+    | 'copyToClipboard' // 📋 Clipboard: Copy text to system clipboard
+    | 'requestClipboardContent' // 📋 Clipboard: Request clipboard content for paste
     | 'switchAiAgentResponse' // AIエージェント切り替えレスポンス
     | 'phase8ServicesReady' // Phase 8: Terminal Decorations & Links service ready notification
     | 'htmlScriptTest' // HTML script test message
@@ -763,6 +765,9 @@ export interface WebviewMessage {
   action?: string; // switchAiAgentコマンドのアクション
   newStatus?: 'connected' | 'disconnected' | 'none'; // AIエージェントの新しいステータス
   agentType?: string | null; // エージェントタイプ
+
+  // 📋 Clipboard operation properties
+  text?: string; // Text content for clipboard operations
 
   // Terminal Profile properties
   profiles?: Array<{

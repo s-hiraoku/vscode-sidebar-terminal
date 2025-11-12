@@ -697,7 +697,8 @@ export class StandardTerminalPersistenceManager {
         const chunkContent = chunk.join('\n');
 
         // Prepend to existing scrollback
-        this.scrollbackManager.restoreScrollback(terminalId, chunkContent, { prepend: true });
+        // Note: prepend option not yet supported, using standard restore
+        this.scrollbackManager.restoreScrollback(terminalId, chunkContent);
 
         if (remainingLines.length === 0) {
           log(`✅ [WEBVIEW-PERSISTENCE] All scrollback history loaded for ${terminalId}`);

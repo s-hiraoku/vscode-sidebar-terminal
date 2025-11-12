@@ -625,6 +625,7 @@ export class OptimizedTerminalPersistenceManager {
     log(`🔄 [WEBVIEW-PERSISTENCE] Lazy loading setup: ${remainingLines.length} lines available on scroll`);
 
     // Listen for scroll-to-top events
+    let scrollDisposable: { dispose: () => void } | undefined;
     const scrollListener = () => {
       const buffer = registration.terminal.buffer.active;
       const isAtTop = buffer.viewportY === 0;
@@ -650,14 +651,16 @@ export class OptimizedTerminalPersistenceManager {
         if (remainingLines.length === 0) {
           log(`✅ [WEBVIEW-PERSISTENCE] All history loaded for ${terminalId}`);
           // Remove listener when all content is loaded
-          registration.terminal.onScroll.dispose();
+          if (scrollDisposable) {
+            scrollDisposable.dispose();
+          }
         } else {
           log(`📊 [WEBVIEW-PERSISTENCE] ${remainingLines.length} lines remaining`);
         }
       }
     };
 
-    registration.terminal.onScroll(scrollListener);
+    scrollDisposable = registration.terminal.onScroll(scrollListener);
   }
 
   private getTerminalRegistration(terminalId: string): TerminalRegistration | null {

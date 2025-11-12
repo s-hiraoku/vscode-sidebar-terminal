@@ -40,6 +40,7 @@
 - **Timeout-based Detection**: Intelligent timeout handling for reliable state management
 
 ### 🔧 **Developer Experience**
+- **Copy/Paste Support**: Full clipboard integration with standard keyboard shortcuts (Ctrl+C/V or Cmd+C/V) for seamless text operations (v0.1.138+)
 - **Version Information Display**: Built-in version display in Terminal Settings with "About" section and command palette support (v0.1.105+)
 - **Streamlined UI**: Compact "ST" panel title for cleaner activity bar (v0.1.105+)
 - **Smart Terminal Switching**: Click any tab to switch terminals without changing display mode - clean tab navigation (v0.1.115+)
@@ -101,6 +102,8 @@ Optimized for modern developers who need to use multiple AI agents simultaneousl
 
 | Shortcut | Action | Description |
 |----------|--------|-------------|
+| `CMD+C` (Mac)<br>`Ctrl+C` (Win/Linux) | **Copy** | Copy selected text to system clipboard (v0.1.138+) |
+| `CMD+V` (Mac)<br>`Ctrl+V` (Win/Linux) | **Paste** | Paste from system clipboard to terminal (v0.1.138+) |
 | `CMD+Option+L` (Mac)<br>`Ctrl+Alt+L` (Win/Linux) | **File Reference** | Send current file to "AI Agent Connected" terminals with @filename format - essential for efficient AI agent workflows |
 | `CMD+K CMD+C` (Mac)<br>`Ctrl+K Ctrl+C` (Win/Linux) | **Copilot Integration** | Activate GitHub Copilot Chat with #file: reference |
 | `Alt+Click` | **Cursor Positioning** | Position terminal cursor (VS Code standard behavior) |
