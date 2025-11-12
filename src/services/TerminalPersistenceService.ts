@@ -244,7 +244,7 @@ export class UnifiedTerminalPersistenceService
       }
 
       const sessionData = await this.getStoredSessionData();
-      if (!sessionData || !sessionData.terminals) {
+      if (!sessionData?.terminals) {
         log('📑 [PERSISTENCE] No session data found');
         return { success: true, restoredCount: 0, skippedCount: 0 };
       }
@@ -338,7 +338,7 @@ export class UnifiedTerminalPersistenceService
         UnifiedTerminalPersistenceService.STORAGE_KEY
       );
 
-      if (!sessionData || !sessionData.terminals) {
+      if (!sessionData?.terminals) {
         return { exists: false };
       }
 

@@ -171,7 +171,7 @@ export class StandardTerminalSessionManager {
         };
       }>(StandardTerminalSessionManager.STORAGE_KEY);
 
-      if (!sessionData || !sessionData.terminals) {
+      if (!sessionData?.terminals) {
         return { exists: false };
       }
 
@@ -229,7 +229,7 @@ export class StandardTerminalSessionManager {
         };
       }>(StandardTerminalSessionManager.STORAGE_KEY);
 
-      if (!sessionData || !sessionData.terminals) {
+      if (!sessionData?.terminals) {
         log('📁 [STANDARD-SESSION] No session data found');
         return { success: true, restoredCount: 0, skippedCount: 0 };
       }
@@ -445,7 +445,7 @@ export class StandardTerminalSessionManager {
   /**
    * WebViewからのscrollbackデータ応答を処理
    */
-  private handleScrollbackDataResponse = (_data: Record<string, unknown>): void => {
+  private readonly handleScrollbackDataResponse = (_data: Record<string, unknown>): void => {
     // デフォルト実装（上記のPromiseで動的に上書きされる）
     log('📋 [STANDARD-SESSION] Default scrollback response handler called');
   };
@@ -460,7 +460,7 @@ export class StandardTerminalSessionManager {
     
     // 🎯 IMPROVED: Handle pending request properly
     const pendingRequest = (this as any)._pendingScrollbackRequest;
-    if (pendingRequest && pendingRequest.handler) {
+    if (pendingRequest?.handler) {
       pendingRequest.handler(data);
       // Clean up pending request
       delete (this as any)._pendingScrollbackRequest;
@@ -547,7 +547,7 @@ export class StandardTerminalSessionManager {
         };
       }>(StandardTerminalSessionManager.STORAGE_KEY);
 
-      if (!sessionData || !sessionData.terminals || sessionData.terminals.length === 0) {
+      if (!sessionData?.terminals || sessionData.terminals.length === 0) {
         log('📭 [STANDARD-SESSION] No session data to send to WebView');
         return;
       }

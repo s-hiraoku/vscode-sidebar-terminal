@@ -71,7 +71,7 @@ export function getWebviewTheme(settings?: { theme?: string }): TerminalTheme {
   // Settings-based theme selection
   if (settings?.theme === 'light') {
     return WEBVIEW_THEME_CONSTANTS.LIGHT_THEME;
-  } else if (settings?.theme === 'dark') {
+  } if (settings?.theme === 'dark') {
     return WEBVIEW_THEME_CONSTANTS.DARK_THEME;
   }
 
@@ -82,7 +82,7 @@ export function getWebviewTheme(settings?: { theme?: string }): TerminalTheme {
   // VS Code は 'vscode-dark' または 'vscode-light' クラスを body に設定する
   if (classList.contains('vscode-dark')) {
     return WEBVIEW_THEME_CONSTANTS.DARK_THEME;
-  } else if (classList.contains('vscode-light')) {
+  } if (classList.contains('vscode-light')) {
     return WEBVIEW_THEME_CONSTANTS.LIGHT_THEME;
   }
 

@@ -137,7 +137,7 @@ describe('Terminal Creation Flow - Integration TDD Suite', () => {
         const config = getTerminalConfig();
 
         // If defaultDirectory is specified in config, it should be validated
-        if (config.defaultDirectory && config.defaultDirectory.trim()) {
+        if (config.defaultDirectory?.trim()) {
           // In real implementation, this would be validated by validateDirectory
           expect(config.defaultDirectory).to.be.a('string');
           expect(config.defaultDirectory.length).to.be.greaterThan(0);

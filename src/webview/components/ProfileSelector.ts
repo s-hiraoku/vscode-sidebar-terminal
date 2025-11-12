@@ -6,7 +6,7 @@
 import { ITerminalProfile } from '../../types/profiles';
 
 export class ProfileSelector {
-  private _container: HTMLElement;
+  private readonly _container: HTMLElement;
   private _isVisible = false;
   private _profiles: ITerminalProfile[] = [];
   private _selectedProfileId?: string;
@@ -134,7 +134,7 @@ export class ProfileSelector {
 
     // Filter input
     const filterInput = this._container.querySelector('.profile-filter') as HTMLInputElement;
-    filterInput?.addEventListener('input', (e) => {
+    filterInput.addEventListener('input', (e) => {
       this._filterText = (e.target as HTMLInputElement).value;
       this._updateProfileList();
     });

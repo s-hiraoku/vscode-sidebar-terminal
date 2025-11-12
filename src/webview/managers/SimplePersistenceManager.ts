@@ -16,14 +16,14 @@ import { Debouncer, PerformanceMonitor } from '../../utils/PerformanceOptimizer'
  * - Reliable terminal recreation
  */
 export class SimplePersistenceManager implements ISimplePersistenceManager {
-  private vscodeApi: {
+  private readonly vscodeApi: {
     getState(): any;
     setState(state: any): void;
     postMessage(message: any): void;
   };
 
-  private saveDebouncer: Debouncer;
-  private performanceMonitor: PerformanceMonitor;
+  private readonly saveDebouncer: Debouncer;
+  private readonly performanceMonitor: PerformanceMonitor;
 
   constructor(vscodeApi: any) {
     this.vscodeApi = vscodeApi;
@@ -107,7 +107,7 @@ export class SimplePersistenceManager implements ISimplePersistenceManager {
   public async loadSession(): Promise<SimpleSessionData | null> {
     try {
       const currentState = this.vscodeApi.getState();
-      if (!currentState || !currentState[SIMPLE_PERSISTENCE.STORAGE_KEY]) {
+      if (!currentState?.[SIMPLE_PERSISTENCE.STORAGE_KEY]) {
         console.log('📭 [SIMPLE-PERSISTENCE] No previous session found');
         return null;
       }

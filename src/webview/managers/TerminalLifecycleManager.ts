@@ -34,9 +34,9 @@ import { ThemeManager } from '../utils/ThemeManager';
 import { PerformanceMonitor } from '../../utils/PerformanceOptimizer';
 
 export class TerminalLifecycleManager {
-  private splitManager: SplitManager;
-  private coordinator: IManagerCoordinator;
-  private eventRegistry: EventHandlerRegistry;
+  private readonly splitManager: SplitManager;
+  private readonly coordinator: IManagerCoordinator;
+  private readonly eventRegistry: EventHandlerRegistry;
 
   public activeTerminalId: string | null = null;
   public terminal: Terminal | null = null;
@@ -148,7 +148,7 @@ export class TerminalLifecycleManager {
     // Avoid interrupting terminal output or initialization
     if (terminalId) {
       const terminalInstance = this.splitManager.getTerminals().get(terminalId);
-      if (terminalInstance && terminalInstance.terminal) {
+      if (terminalInstance?.terminal) {
         // Check if terminal needs focus (avoid redundant focus calls)
         const terminal = terminalInstance.terminal;
         if (!terminal.textarea?.hasAttribute('focused')) {
@@ -325,7 +325,7 @@ export class TerminalLifecycleManager {
         }
 
         // Initialize shell integration after essential addons
-        if (this.coordinator?.shellIntegrationManager) {
+        if (this.coordinator.shellIntegrationManager) {
           try {
             this.coordinator.shellIntegrationManager.initializeTerminalShellIntegration(
               terminal,
@@ -377,11 +377,11 @@ export class TerminalLifecycleManager {
           customTitle: terminalName,
           onHeaderClick: (clickedTerminalId) => {
             terminalLogger.info(`🎯 Header clicked for terminal: ${clickedTerminalId}`);
-            this.coordinator?.setActiveTerminalId(clickedTerminalId);
+            this.coordinator.setActiveTerminalId(clickedTerminalId);
           },
           onContainerClick: (clickedTerminalId) => {
             terminalLogger.info(`🎯 Container clicked for terminal: ${clickedTerminalId}`);
-            this.coordinator?.setActiveTerminalId(clickedTerminalId);
+            this.coordinator.setActiveTerminalId(clickedTerminalId);
           },
           onCloseClick: (clickedTerminalId) => {
             // 仕様: ヘッダーのクローズボタンはそのヘッダーのターミナルを削除する
@@ -392,7 +392,7 @@ export class TerminalLifecycleManager {
               void (this.coordinator as any).deleteTerminalSafely(clickedTerminalId);
             } else {
               // Fallback to standard closeTerminal
-              void this.coordinator?.closeTerminal(clickedTerminalId);
+              void this.coordinator.closeTerminal(clickedTerminalId);
             }
           },
           onAiAgentToggleClick: (clickedTerminalId) => {
@@ -410,7 +410,7 @@ export class TerminalLifecycleManager {
             containerConfig,
             headerConfig
           );
-          if (!containerElements || !containerElements.container || !containerElements.body) {
+          if (!containerElements.container || !containerElements.body) {
             throw new Error('Invalid container elements created');
           }
         } catch (error) {
@@ -453,7 +453,7 @@ export class TerminalLifecycleManager {
                   terminalLogger.info(
                     `🎯 Terminal clicked for activation (no selection): ${terminalId}`
                   );
-                  this.coordinator?.setActiveTerminalId(terminalId);
+                  this.coordinator.setActiveTerminalId(terminalId);
 
                   // Only focus if not already focused to avoid interrupting output
                   if (!terminal.textarea?.hasAttribute('focused')) {
@@ -523,7 +523,7 @@ export class TerminalLifecycleManager {
 
         // 🔧 AI Agent Support: Register header elements with UIManager for status updates
         if (containerElements.headerElements) {
-          const uiManager = this.coordinator?.getManagers()?.ui;
+          const uiManager = this.coordinator.getManagers().ui;
           if (uiManager && 'headerElementsCache' in uiManager) {
             // Add header elements to UIManager cache for AI Agent status updates
             (uiManager as any).headerElementsCache.set(
@@ -1111,7 +1111,7 @@ export class TerminalLifecycleManager {
       return 1; // Default to 1 if terminalId is undefined
     }
     const match = terminalId.match(/terminal-(\d+)/);
-    if (match && match[1]) {
+    if (match?.[1]) {
       return parseInt(match[1], 10);
     }
 

@@ -10,7 +10,7 @@ import { TERMINAL_CONSTANTS } from '../../../constants';
 export class FocusTerminalHandler extends BaseMessageHandler {
   protected readonly supportedCommands = [
     'focusTerminal',
-    TERMINAL_CONSTANTS?.COMMANDS?.FOCUS_TERMINAL || 'focusTerminal',
+    TERMINAL_CONSTANTS.COMMANDS.FOCUS_TERMINAL || 'focusTerminal',
   ];
 
   async handle(message: WebviewMessage, context: IMessageHandlerContext): Promise<void> {

@@ -28,8 +28,8 @@ import {
  */
 export class TerminalLogger {
   constructor(
-    private terminalId?: string,
-    private terminalName?: string
+    private readonly terminalId?: string,
+    private readonly terminalName?: string
   ) {}
 
   private formatContext(action: string): string {
@@ -79,7 +79,7 @@ export class TerminalLogger {
  * Specialized logging for message processing, queuing, and communication
  */
 export class MessageLogger {
-  constructor(private context: string = 'MessageManager') {}
+  constructor(private readonly context: string = 'MessageManager') {}
 
   private formatContext(action: string): string {
     return `[${this.context}] ${action}`;
@@ -115,7 +115,7 @@ export class MessageLogger {
  * Specialized logging for webview operations, DOM manipulation, and UI updates
  */
 export class WebViewLogger {
-  constructor(private managerId: string) {}
+  constructor(private readonly managerId: string) {}
 
   private formatContext(action: string): string {
     return `[${this.managerId}] ${action}`;
@@ -155,7 +155,7 @@ export class WebViewLogger {
  * Specialized logging for extension providers, VS Code integration, and commands
  */
 export class ExtensionLogger {
-  constructor(private providerId: string) {}
+  constructor(private readonly providerId: string) {}
 
   private formatContext(action: string): string {
     return `[${this.providerId}] ${action}`;
@@ -191,7 +191,7 @@ export class ExtensionLogger {
  * Specialized logging for session management, persistence, and restoration
  */
 export class SessionLogger {
-  constructor(private sessionType: string = 'Session') {}
+  constructor(private readonly sessionType: string = 'Session') {}
 
   private formatContext(action: string): string {
     return `[${this.sessionType}] ${action}`;
@@ -223,7 +223,7 @@ export class SessionLogger {
  * Specialized logging for performance monitoring, metrics, and optimization
  */
 export class PerformanceLogger {
-  constructor(private component: string) {}
+  constructor(private readonly component: string) {}
 
   private formatContext(action: string): string {
     return `[${this.component}] ${action}`;
@@ -257,7 +257,7 @@ export class PerformanceLogger {
  * Specialized logging for CLI Agent detection, status, and interactions
  */
 export class AgentLogger {
-  constructor(private agentType?: string) {}
+  constructor(private readonly agentType?: string) {}
 
   private formatContext(action: string): string {
     const type = this.agentType ? `[${this.agentType}]` : '[Agent]';

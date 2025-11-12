@@ -55,8 +55,8 @@ export interface IWebViewMessageRouter extends IManagerLifecycle {
 }
 
 export class WebViewMessageRouter implements IWebViewMessageRouter {
-  private routes = new Map<MessageType, MessageRoute[]>();
-  private messageQueue: WebViewMessage[] = [];
+  private readonly routes = new Map<MessageType, MessageRoute[]>();
+  private readonly messageQueue: WebViewMessage[] = [];
   private isProcessing = false;
   private disposed = false;
   private vscodeApi?: any;

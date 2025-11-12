@@ -25,10 +25,10 @@ export interface MessageRegistration<T extends MessagePayload = MessagePayload> 
  * 新規実装ではTypedMessageRouterを使用してください
  */
 export class MessageRouter {
-  private handlers = new Map<string, MessageHandler>();
-  private logger: LoggerFunction;
+  private readonly handlers = new Map<string, MessageHandler>();
+  private readonly logger: LoggerFunction;
 
-  constructor(private componentName: string) {
+  constructor(private readonly componentName: string) {
     this.logger = (message: string, ...args: unknown[]) => {
       console.log(`[${this.componentName.toUpperCase()}-ROUTER]`, message, ...args);
     };
@@ -114,11 +114,11 @@ export function createWebViewMessageListener(
  * 新規実装ではTypedMessageSenderを使用してください
  */
 export class MessageSender {
-  private logger: LoggerFunction;
+  private readonly logger: LoggerFunction;
 
   constructor(
-    private vscode: VSCodeWebviewAPI,
-    private componentName: string
+    private readonly vscode: VSCodeWebviewAPI,
+    private readonly componentName: string
   ) {
     this.logger = (message: string, ...args: unknown[]) => {
       console.log(`[${this.componentName.toUpperCase()}-SENDER]`, message, ...args);
@@ -196,7 +196,7 @@ export const COMMON_COMMANDS = {
  * 新規実装ではMessageDataValidatorを使用してください
  */
 export class MessageValidator {
-  private static logger: LoggerFunction = (message: string, ...args: unknown[]) => {
+  private static readonly logger: LoggerFunction = (message: string, ...args: unknown[]) => {
     console.log('[MESSAGE-VALIDATOR]', message, ...args);
   };
 

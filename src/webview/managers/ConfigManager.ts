@@ -467,9 +467,9 @@ export class ConfigManager implements IConfigManager {
         this.saveSettings(settings);
         log('⚙️ [CONFIG] Settings imported from backup');
         return settings;
-      } else {
+      } 
         throw new Error('Invalid settings format');
-      }
+      
     } catch (error) {
       log('❌ [CONFIG] Error importing settings:', error);
       throw error;

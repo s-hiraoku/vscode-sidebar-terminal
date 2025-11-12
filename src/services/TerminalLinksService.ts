@@ -37,7 +37,7 @@ export class TerminalLinksService {
     links: TerminalLink[];
   }>();
   private _settings: LinkDetectionSettings;
-  private _workspaceRoot: string;
+  private readonly _workspaceRoot: string;
 
   public readonly onLinksDetected = this._linkEmitter.event;
 

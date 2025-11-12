@@ -141,8 +141,8 @@ export class ErrorHandlingManager {
   private static instance: ErrorHandlingManager;
   private errorLog: ErrorReport[] = [];
   private readonly maxLogSize = 1000;
-  private errorHandlers = new Map<ErrorCategory, Set<ErrorHandler>>();
-  private globalHandlers = new Set<ErrorHandler>();
+  private readonly errorHandlers = new Map<ErrorCategory, Set<ErrorHandler>>();
+  private readonly globalHandlers = new Set<ErrorHandler>();
 
   private constructor() {}
 

@@ -15,7 +15,7 @@ export class ProfileManager implements IProfileManager {
   private coordinator: IManagerCoordinator | null = null;
   private profileSelector: ProfileSelector | null = null;
   private profileSelectorContainer: HTMLElement | null = null;
-  private availableProfiles: Map<string, ITerminalProfile> = new Map();
+  private readonly availableProfiles: Map<string, ITerminalProfile> = new Map();
   private defaultProfileId: string | null = null;
   private selectedProfileId: string | undefined;
   private lastRefreshTime = 0;

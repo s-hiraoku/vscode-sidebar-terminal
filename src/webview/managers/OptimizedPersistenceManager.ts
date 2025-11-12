@@ -42,7 +42,7 @@ export class OptimizedPersistenceManager {
   };
 
   private autoSaveTimer?: NodeJS.Timeout;
-  private pendingOperations = new Set<string>();
+  private readonly pendingOperations = new Set<string>();
   private isInitialized = false;
 
   constructor(private readonly coordinator: IManagerCoordinator) {
@@ -114,10 +114,10 @@ export class OptimizedPersistenceManager {
         this.updateSaveStats(optimizedData, terminals.length);
         log(`✅ [PERSISTENCE-WEBVIEW] Session saved: ${terminals.length} terminals`);
         return true;
-      } else {
+      } 
         log(`❌ [PERSISTENCE-WEBVIEW] Save failed: ${response.error}`);
         return false;
-      }
+      
     } catch (error) {
       log(`❌ [PERSISTENCE-WEBVIEW] Save operation failed: ${error}`);
       return false;
@@ -159,10 +159,10 @@ export class OptimizedPersistenceManager {
         this.updateRestoreStats(response.data.length);
         log(`✅ [PERSISTENCE-WEBVIEW] Session restored: ${response.data.length} terminals`);
         return true;
-      } else {
+      } 
         log(`📦 [PERSISTENCE-WEBVIEW] No session to restore: ${response.error || 'No data'}`);
         return false;
-      }
+      
     } catch (error) {
       log(`❌ [PERSISTENCE-WEBVIEW] Restore operation failed: ${error}`);
       return false;
@@ -184,10 +184,10 @@ export class OptimizedPersistenceManager {
         this.resetStats();
         log('✅ [PERSISTENCE-WEBVIEW] Session cleared successfully');
         return true;
-      } else {
+      } 
         log(`❌ [PERSISTENCE-WEBVIEW] Clear failed: ${response.error}`);
         return false;
-      }
+      
     } catch (error) {
       log(`❌ [PERSISTENCE-WEBVIEW] Clear operation failed: ${error}`);
       return false;
@@ -282,7 +282,7 @@ export class OptimizedPersistenceManager {
       }
 
       // フォールバック: バッファから直接読み取り
-      if (xtermInstance.buffer && xtermInstance.buffer.active) {
+      if (xtermInstance.buffer?.active) {
         const buffer = xtermInstance.buffer.active;
         const lines: string[] = [];
 
@@ -374,7 +374,7 @@ export class OptimizedPersistenceManager {
     }
   }
 
-  private pendingResponses = new Map<
+  private readonly pendingResponses = new Map<
     string,
     { resolve: (value: any) => void; timeout: NodeJS.Timeout }
   >();

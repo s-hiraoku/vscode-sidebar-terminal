@@ -13,11 +13,11 @@ export enum LogLevel {
 
 class Logger {
   private level: LogLevel;
-  private isDevelopment: boolean;
-  private isProduction: boolean;
+  private readonly isDevelopment: boolean;
+  private readonly isProduction: boolean;
   private logBuffer: Array<{ level: string; args: unknown[]; timestamp: number }> = [];
-  private bufferFlushInterval: number = 100; // ms
-  private maxBufferSize: number = 50;
+  private readonly bufferFlushInterval: number = 100; // ms
+  private readonly maxBufferSize: number = 50;
   private flushTimer?: NodeJS.Timeout;
 
   constructor() {
@@ -48,12 +48,12 @@ class Logger {
     if (typeof window !== 'undefined') {
       // VS Code development host detection
       const isDevHost =
-        window.location?.hostname === 'localhost' ||
-        window.location?.protocol === 'vscode-webview:';
+        window.location.hostname === 'localhost' ||
+        window.location.protocol === 'vscode-webview:';
 
       // Check for debug flags in URL or global variables
       const hasDebugFlag =
-        window.location?.search?.includes('debug=true') ||
+        window.location.search.includes('debug=true') ||
         (window as Window & { VSCODE_DEBUG?: boolean }).VSCODE_DEBUG === true;
 
       return isDevHost || hasDebugFlag;

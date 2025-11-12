@@ -34,10 +34,10 @@ export interface ShellIntegrationState {
 }
 
 export class ShellIntegrationService {
-  private states = new Map<string, ShellIntegrationState>();
+  private readonly states = new Map<string, ShellIntegrationState>();
   private cwdDetectionPatterns: RegExp[] = [];
   private promptPatterns: RegExp[] = [];
-  private commandStartTime = new Map<string, number>();
+  private readonly commandStartTime = new Map<string, number>();
 
   // VS Code standard shell integration sequences
   private readonly OSC_SEQUENCES = {
@@ -49,7 +49,7 @@ export class ShellIntegrationService {
     PROMPT_END: '\x1b]633;E\x07',
   };
 
-  constructor(private terminalManager: TerminalManager) {
+  constructor(private readonly terminalManager: TerminalManager) {
     this.initializePatterns();
     // Don't setup event listeners in constructor - wait for terminal creation
   }
@@ -112,7 +112,7 @@ export class ShellIntegrationService {
 
     // Check for CWD change
     const cwdMatch = data.match(/\x1b\]633;P;Cwd=([^\x07]+)\x07/);
-    if (cwdMatch && cwdMatch[1]) {
+    if (cwdMatch?.[1]) {
       this.handleCwdChange(state, cwdMatch[1]);
     }
 
@@ -133,7 +133,7 @@ export class ShellIntegrationService {
   private handleCommandExecuted(state: ShellIntegrationState, data: string): void {
     // Extract command from data if available
     const commandMatch = data.match(/\x1b\]633;B;([^\x07]+)\x07/);
-    if (commandMatch && commandMatch[1]) {
+    if (commandMatch?.[1]) {
       state.currentCommand = commandMatch[1];
     }
   }
@@ -141,7 +141,7 @@ export class ShellIntegrationService {
   private handleCommandFinished(state: ShellIntegrationState, data: string): void {
     // Extract exit code if available
     const exitCodeMatch = data.match(/\x1b\]633;C;(\d+)\x07/);
-    const exitCode = exitCodeMatch && exitCodeMatch[1] ? parseInt(exitCodeMatch[1], 10) : undefined;
+    const exitCode = exitCodeMatch?.[1] ? parseInt(exitCodeMatch[1], 10) : undefined;
 
     // Calculate duration
     const startTime = this.commandStartTime.get(state.terminalId);
@@ -200,7 +200,7 @@ export class ShellIntegrationService {
     // Try to detect CWD changes
     for (const pattern of this.cwdDetectionPatterns) {
       const match = data.match(pattern);
-      if (match && match[1]) {
+      if (match?.[1]) {
         this.handleCwdChange(state, match[1]);
         break;
       }

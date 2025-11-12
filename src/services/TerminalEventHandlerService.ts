@@ -33,9 +33,9 @@ export class TerminalEventHandlerService implements ITerminalEventHandlerService
   private terminalIdMapping?: Map<string, string>;
 
   constructor(
-    private terminalManager: ITerminalManagerForEvents,
-    private sendMessage: (message: WebviewMessage) => Promise<void>,
-    private extensionContext: vscode.ExtensionContext
+    private readonly terminalManager: ITerminalManagerForEvents,
+    private readonly sendMessage: (message: WebviewMessage) => Promise<void>,
+    private readonly extensionContext: vscode.ExtensionContext
   ) {}
 
   public setupTerminalEventListeners(): void {

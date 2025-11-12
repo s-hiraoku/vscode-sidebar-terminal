@@ -266,7 +266,7 @@ export class WebViewSettingsManagerService implements IWebViewSettingsManager {
         setTimeout(() => {
           // Request panel location detection from state manager
           const stateManager = (context as any).stateManager;
-          if (stateManager && stateManager.requestPanelLocationDetection) {
+          if (stateManager?.requestPanelLocationDetection) {
             stateManager.requestPanelLocationDetection(context);
           }
         }, 100); // Small delay to ensure settings are applied
@@ -314,7 +314,7 @@ export class WebViewSettingsManagerService implements IWebViewSettingsManager {
 
       // Send initial panel location
       const stateManager = (context as any).stateManager;
-      if (stateManager && stateManager.getPanelLocation) {
+      if (stateManager?.getPanelLocation) {
         const panelLocation = stateManager.getPanelLocation();
         log(`📍 [SettingsManager] Sending initial panel location: ${panelLocation}`);
         await context.sendMessage({

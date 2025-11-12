@@ -17,7 +17,7 @@ import {
 
 export class TerminalProfileService {
   private readonly platform: TerminalPlatform;
-  private profileCache: Map<string, TerminalProfile> = new Map();
+  private readonly profileCache: Map<string, TerminalProfile> = new Map();
 
   constructor() {
     this.platform = this.getCurrentPlatform();

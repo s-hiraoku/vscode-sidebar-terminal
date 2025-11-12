@@ -21,8 +21,8 @@ export interface FeedbackOptions {
 
 export class FeedbackManager {
   private static instance: FeedbackManager;
-  private statusBarItem: vscode.StatusBarItem;
-  private activeNotifications = new Map<string, vscode.Disposable>();
+  private readonly statusBarItem: vscode.StatusBarItem;
+  private readonly activeNotifications = new Map<string, vscode.Disposable>();
 
   private constructor() {
     this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);

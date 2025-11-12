@@ -133,7 +133,7 @@ describe('UnifiedConfigurationService', () => {
       assert.strictEqual(settings.bellSound, false);
       assert.strictEqual(settings.enableCliAgentIntegration, true);
       assert.strictEqual(settings.cursor?.style, 'block');
-      assert.strictEqual(settings.cursor?.blink, true);
+      assert.strictEqual(settings.cursor.blink, true);
       assert.strictEqual(settings.dynamicSplitDirection, true);
       assert.strictEqual(settings.panelLocation, 'auto');
     });

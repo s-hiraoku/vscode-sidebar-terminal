@@ -597,7 +597,7 @@ export class CodeQualityManager {
         encoding: 'utf-8'
       });
       const match = coverageData.match(/All files\s+\|\s+([\d.]+)/);
-      return match && match[1] ? parseFloat(match[1]) : 0;
+      return match?.[1] ? parseFloat(match[1]) : 0;
     } catch {
       return 0;
     }

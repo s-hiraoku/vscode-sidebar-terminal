@@ -49,14 +49,14 @@ export class OperationResultHandler {
           notificationService.showSuccess(successMessage);
         }
         return result.data || null;
-      } else {
+      } 
         const reason = result.reason || 'Operation failed';
         log(`⚠️ [${context}] Operation failed: ${reason}`);
         if (notificationService) {
           notificationService.showError(reason);
         }
         return null;
-      }
+      
     } catch (error) {
       const errorMessage = `Operation error: ${String(error)}`;
       log(`❌ [${context}] ${errorMessage}`);
@@ -85,14 +85,14 @@ export class OperationResultHandler {
           notificationService.showSuccess(successMessage);
         }
         return result.data || null;
-      } else {
+      } 
         const reason = result.reason || 'Operation failed';
         log(`⚠️ [${context}] Operation failed: ${reason}`);
         if (notificationService) {
           notificationService.showError(reason);
         }
         return null;
-      }
+      
     } catch (error) {
       const errorMessage = `Operation error: ${String(error)}`;
       log(`❌ [${context}] ${errorMessage}`);

@@ -55,9 +55,9 @@ export function getWorkingDirectory(): string {
     if (validateDirectory(customDir.trim())) {
       console.log('📁 [WORKDIR] Using validated custom directory:', customDir);
       return customDir.trim();
-    } else {
+    } 
       console.warn('⚠️ [WORKDIR] Custom directory not accessible, trying alternatives');
-    }
+    
   }
 
   // Check workspace folders
@@ -75,17 +75,15 @@ export function getWorkingDirectory(): string {
     if (workspaceRoot && validateDirectory(workspaceRoot)) {
       console.log('📁 [WORKDIR] Using validated workspace root:', workspaceRoot);
       return workspaceRoot;
-    } else {
+    } 
       console.warn('⚠️ [WORKDIR] Workspace root not accessible, trying alternatives');
-    }
+    
   }
 
   // Check active editor for file directory
   const activeEditor = vscode.window.activeTextEditor;
   if (
-    activeEditor &&
-    activeEditor.document &&
-    activeEditor.document.uri &&
+    activeEditor?.document.uri &&
     activeEditor.document.uri.scheme === 'file'
   ) {
     const activeFileDir = path.dirname(activeEditor.document.uri.fsPath);

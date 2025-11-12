@@ -154,7 +154,7 @@ describe('Terminal History Restoration - TDD Suite', () => {
 
       // EXPECTED TO FAIL: Data structure validation not implemented
       assert.ok(
-        retrievedData && retrievedData.terminals && retrievedData.terminals.length > 0,
+        retrievedData?.terminals && retrievedData.terminals.length > 0,
         'Should fail - session data not properly retrieved'
       );
 
@@ -249,7 +249,7 @@ describe('Terminal History Restoration - TDD Suite', () => {
       const restored = mockContext.globalState.get('standard-terminal-session-v3');
 
       // EXPECTED TO FAIL: CLI Agent history not found
-      assert.ok(restored && restored.terminals, 'Should fail - no restored terminals');
+      assert.ok(restored?.terminals, 'Should fail - no restored terminals');
 
       const terminal = restored.terminals[0];
       assert.ok(
@@ -299,11 +299,11 @@ describe('Terminal History Restoration - TDD Suite', () => {
       const term2 = restored?.terminals?.find((t: any) => t.id === 'term2');
 
       assert.ok(
-        term1 && term1.serializedContent.includes('npm install'),
+        term1?.serializedContent.includes('npm install'),
         'Should fail - Terminal 1 history not preserved'
       );
       assert.ok(
-        term2 && term2.serializedContent.includes('git status'),
+        term2?.serializedContent.includes('git status'),
         'Should fail - Terminal 2 history not preserved'
       );
     });

@@ -33,7 +33,7 @@ export class CentralizedSettingsManager {
     fontFamily: 'monospace',
   };
 
-  private listeners = new Set<SettingsChangeListener>();
+  private readonly listeners = new Set<SettingsChangeListener>();
   private settingsHistory: Array<{ settings: PartialTerminalSettings; timestamp: number }> = [];
   private readonly maxHistorySize = 10;
 

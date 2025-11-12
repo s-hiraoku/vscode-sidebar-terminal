@@ -31,7 +31,7 @@ export class UIManager extends BaseManager implements IUIManager {
   private readonly UPDATE_DEBOUNCE_MS = 100;
 
   // Header elements cache for efficient CLI Agent status updates
-  private headerElementsCache = new Map<string, TerminalHeaderElements>();
+  private readonly headerElementsCache = new Map<string, TerminalHeaderElements>();
 
   // Event registry for proper cleanup
   protected eventRegistry: EventHandlerRegistry;
@@ -491,7 +491,7 @@ export class UIManager extends BaseManager implements IUIManager {
 
     // キャッシュされたヘッダー要素を使用（高速）
     for (const [, headerElements] of this.headerElementsCache) {
-      const terminalName = headerElements.nameSpan.textContent?.trim();
+      const terminalName = headerElements.nameSpan.textContent.trim();
       const isTargetTerminal = terminalName === activeTerminalName;
 
       if (status === 'none') {

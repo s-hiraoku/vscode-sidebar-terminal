@@ -100,7 +100,7 @@ describe('ConfigManager', () => {
 
       // Check if already stubbed to avoid double stubbing
       const onDidChangeStub = vscode.workspace.onDidChangeConfiguration as any;
-      if (!onDidChangeStub || !onDidChangeStub.isSinonProxy) {
+      if (!onDidChangeStub?.isSinonProxy) {
         sandbox.stub(vscode.workspace, 'onDidChangeConfiguration').returns(mockDisposable);
       } else {
         onDidChangeStub.returns(mockDisposable);

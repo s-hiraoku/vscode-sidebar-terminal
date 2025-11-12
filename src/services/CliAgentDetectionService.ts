@@ -29,7 +29,7 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
   public readonly stateManager = new CliAgentStateManager();
   public readonly configManager = new CliAgentDetectionConfig();
 
-  private detectionCache = new LRUCache<string, DetectionCacheEntry>(50);
+  private readonly detectionCache = new LRUCache<string, DetectionCacheEntry>(50);
 
   constructor() {
     // Initialize detection cache with configuration - store as cache entries
@@ -297,7 +297,7 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
           newStatus: 'connected',
           agentType: agentInfo.type,
         };
-      } else if (currentState.status === 'none') {
+      } if (currentState.status === 'none') {
         // 🆕 NEW: Allow switching 'none' state terminals to connected (assume Claude by default)
         // This allows user to manually activate any terminal as an AI agent
         const agentType = 'claude'; // Default to Claude, could be made configurable
@@ -308,7 +308,7 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
           newStatus: 'connected',
           agentType: agentType,
         };
-      } else if (currentState.status === 'connected') {
+      } if (currentState.status === 'connected') {
         // 🎯 IMPROVED: If already connected, this is essentially a no-op success
         // But if user clicks connected terminal, they may want to move connection to this terminal
         // In this case, we still call setConnectedAgent to trigger the state transitions
@@ -385,10 +385,10 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
           `✅ [MANUAL-RESET] Successfully force-reconnected ${agentType} in terminal ${terminalId}`
         );
         return true;
-      } else {
+      } 
         log(`❌ [MANUAL-RESET] Failed to force-reconnect ${agentType} in terminal ${terminalId}`);
         return false;
-      }
+      
     } catch (error) {
       log('❌ [MANUAL-RESET] Error during force reconnect:', error);
       return false;
@@ -426,10 +426,10 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
       if (success) {
         log(`✅ [MANUAL-RESET] Successfully cleared detection errors for terminal ${terminalId}`);
         return true;
-      } else {
+      } 
         log(`⚠️ [MANUAL-RESET] No detection errors to clear for terminal ${terminalId}`);
         return false;
-      }
+      
     } catch (error) {
       log('❌ [MANUAL-RESET] Error during detection error clear:', error);
       return false;
@@ -576,14 +576,14 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
               source: 'output',
               detectedLine: fullyCleanLine,
             };
-          } else {
+          } 
             // Debug: Log why Gemini wasn't detected
             if (fullyCleanLine.toLowerCase().includes('gemini')) {
               log(
                 `🔍 [GEMINI-DEBUG] Gemini keyword found but not detected as startup: "${fullyCleanLine}"`
               );
             }
-          }
+          
 
           // OpenAI Codex startup detection
           if (this.detectCodexFromOutput(fullyCleanLine)) {
@@ -700,9 +700,9 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
           detectedLine: cleanLine,
           reason: 'Shell prompt detected (relaxed mode)',
         };
-      } else {
+      } 
         log(`⚠️ [TERMINATION] Possible AI output detected, ignoring: "${cleanLine}"`);
-      }
+      
     }
 
     // 🔄 KEEP: Claude-specific detection but make it more lenient

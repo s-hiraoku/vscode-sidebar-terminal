@@ -72,10 +72,10 @@ import { ProfileManager } from './ProfileManager';
  */
 export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
   // 専門マネージャーの協調
-  private webViewApiManager: WebViewApiManager;
-  private terminalLifecycleManager: TerminalLifecycleManager;
-  private cliAgentStateManager: CliAgentStateManager;
-  private eventHandlerManager: EventHandlerManager;
+  private readonly webViewApiManager: WebViewApiManager;
+  private readonly terminalLifecycleManager: TerminalLifecycleManager;
+  private readonly cliAgentStateManager: CliAgentStateManager;
+  private readonly eventHandlerManager: EventHandlerManager;
   public shellIntegrationManager: ShellIntegrationManager;
   public findInTerminalManager: FindInTerminalManager;
   public profileManager: ProfileManager;
@@ -108,10 +108,10 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
 
   // 初期化状態
   private isInitialized = false;
-  private isComposing = false;
+  private readonly isComposing = false;
 
   // Track processed scrollback requests to prevent duplicates
-  private processedScrollbackRequests = new Set<string>();
+  private readonly processedScrollbackRequests = new Set<string>();
 
   constructor() {
     log('🚀 RefactoredTerminalWebviewManager initializing...');
@@ -239,7 +239,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
         origin: event.origin,
         hasData: !!event.data,
         dataType: typeof event.data,
-        dataCommand: event.data?.command,
+        dataCommand: event.data.command,
         timestamp: Date.now(),
       });
 
@@ -284,7 +284,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       // This is critical for CLI agent scenarios while preserving shell prompt
       const terminals = this.splitManager.getTerminals();
       const terminalInstance = terminals.get(terminalId);
-      if (terminalInstance && terminalInstance.terminal) {
+      if (terminalInstance?.terminal) {
         const terminal = terminalInstance.terminal;
         // Check if terminal actually needs focus
         if (!terminal.textarea?.hasAttribute('focused')) {
@@ -479,7 +479,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       }
 
       // ターミナルフォーカスも確実に設定
-      if (terminal && terminal.textarea) {
+      if (terminal.textarea) {
         setTimeout(() => {
           terminal.focus();
           console.log(`🎯 [FIX] Focused new terminal: ${terminalId}`);
@@ -574,7 +574,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
       const terminalInstance = this.getTerminalInstance(terminalId);
       console.log(`🔍 [EXTRACT-DEBUG] Terminal instance found:`, !!terminalInstance);
 
-      if (!terminalInstance || !terminalInstance.terminal) {
+      if (!terminalInstance?.terminal) {
         console.warn(`⚠️ [EXTRACT-DEBUG] Terminal ${terminalId} not found or no terminal`);
         return [];
       }
@@ -1338,7 +1338,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
   /**
    * Performance tracking for debug panel
    */
-  private debugCounters = {
+  private readonly debugCounters = {
     stateUpdates: 0,
     lastSync: new Date().toISOString(),
     systemStartTime: Date.now(),
@@ -1624,11 +1624,11 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
 
     if (hours > 0) {
       return `${hours}h ${minutes}m ${seconds}s`;
-    } else if (minutes > 0) {
+    } if (minutes > 0) {
       return `${minutes}m ${seconds}s`;
-    } else {
+    } 
       return `${seconds}s`;
-    }
+    
   }
 
   /**
@@ -1758,8 +1758,8 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
   /**
    * Terminal deletion tracking for state synchronization
    */
-  private deletionTracker = new Set<string>();
-  private deletionTimeouts = new Map<string, NodeJS.Timeout>();
+  private readonly deletionTracker = new Set<string>();
+  private readonly deletionTimeouts = new Map<string, NodeJS.Timeout>();
 
   /**
    * Track terminal deletion for state synchronization
@@ -1824,7 +1824,7 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
   /**
    * Pending creation request queue
    */
-  private pendingCreationRequests: Array<{
+  private readonly pendingCreationRequests: Array<{
     id: string;
     name: string;
     timestamp: number;
@@ -1927,10 +1927,10 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
           // Show user-friendly message
           this.showTerminalLimitMessage(currentCount, maxCount);
           return false;
-        } else {
+        } 
           log('❌ [SAFE-CREATE] No state available for creation check');
           return false;
-        }
+        
       }
 
       // 4. Check if any deletions are in progress

@@ -17,7 +17,7 @@ import { BaseManager } from '../managers/BaseManager';
 export class UIController extends BaseManager implements IUIController {
   private readonly config: UIControllerConfig;
   private isDebugPanelVisible = false;
-  private currentNotifications = new Set<HTMLElement>();
+  private readonly currentNotifications = new Set<HTMLElement>();
   private loadingElement: HTMLElement | null = null;
 
   constructor(config: UIControllerConfig) {
@@ -239,7 +239,7 @@ export class UIController extends BaseManager implements IUIController {
   public clearTerminalLimitMessage(): void {
     // Remove any limit-related notifications
     this.currentNotifications.forEach(notification => {
-      if (notification.textContent?.includes('Terminal limit reached')) {
+      if (notification.textContent.includes('Terminal limit reached')) {
         notification.remove();
         this.currentNotifications.delete(notification);
       }
@@ -432,7 +432,7 @@ export class UIController extends BaseManager implements IUIController {
     const containers = document.querySelectorAll('.terminal-container');
     containers.forEach(container => {
       const terminal = (container as HTMLElement & { _terminal?: { resize: (cols: number, rows: number) => void } })._terminal;
-      if (terminal && terminal.resize) {
+      if (terminal?.resize) {
         terminal.resize(cols, rows);
       }
     });

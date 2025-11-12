@@ -27,7 +27,7 @@ import {
 
 export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vscode.Disposable {
   public static readonly viewType = 'secondaryTerminal';
-  private _disposables: vscode.Disposable[] = [];
+  private readonly _disposables: vscode.Disposable[] = [];
   private _terminalEventDisposables: vscode.Disposable[] = [];
   private _terminalIdMapping?: Map<string, string>; // VS Code Pattern: Map Extension terminal ID to WebView terminal ID
 
@@ -36,7 +36,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   // Removed all state variables - using simple "fresh start" approach
 
   // Minimal command router for incoming webview messages
-  private _messageHandlers = new Map<string, MessageHandler>();
+  private readonly _messageHandlers = new Map<string, MessageHandler>();
   private readonly _htmlGenerationService: WebViewHtmlGenerationService;
 
   // Phase 8 services (typed properly)
@@ -96,7 +96,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
           log('📨 [PROVIDER] Message command:', message.command);
           try {
             const { isDebugEnabled } = require('../utils/logger');
-            if (isDebugEnabled && isDebugEnabled()) {
+            if (isDebugEnabled?.()) {
               log('📨 [PROVIDER] Message data:', message);
             }
           } catch {}
@@ -212,7 +212,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     // Handle readiness messages via a dedicated handler
     this._messageHandlers.set('webviewReady', (message) => this._handleWebviewReady(message));
     // Alias: support constant-based command name
-    if (TERMINAL_CONSTANTS?.COMMANDS?.READY) {
+    if (TERMINAL_CONSTANTS.COMMANDS.READY) {
       this._messageHandlers.set(TERMINAL_CONSTANTS.COMMANDS.READY, (message) =>
         this._handleWebviewReady(message)
       );
@@ -227,7 +227,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     this._messageHandlers.set('focusTerminal', async (message) => {
       await this._handleFocusTerminal(message);
     });
-    if (TERMINAL_CONSTANTS?.COMMANDS?.FOCUS_TERMINAL) {
+    if (TERMINAL_CONSTANTS.COMMANDS.FOCUS_TERMINAL) {
       this._messageHandlers.set(TERMINAL_CONSTANTS.COMMANDS.FOCUS_TERMINAL, async (message) => {
         await this._handleFocusTerminal(message);
       });
@@ -242,21 +242,21 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     this._messageHandlers.set('createTerminal', async (message) => {
       await this._handleCreateTerminal(message);
     });
-    if (TERMINAL_CONSTANTS?.COMMANDS?.CREATE_TERMINAL) {
+    if (TERMINAL_CONSTANTS.COMMANDS.CREATE_TERMINAL) {
       this._messageHandlers.set(TERMINAL_CONSTANTS.COMMANDS.CREATE_TERMINAL, async (message) => {
         await this._handleCreateTerminal(message);
       });
     }
 
     // Terminal input
-    if (TERMINAL_CONSTANTS?.COMMANDS?.INPUT) {
+    if (TERMINAL_CONSTANTS.COMMANDS.INPUT) {
       this._messageHandlers.set(TERMINAL_CONSTANTS.COMMANDS.INPUT, (message) => {
         this._handleTerminalInput(message);
       });
     }
 
     // Terminal resize
-    if (TERMINAL_CONSTANTS?.COMMANDS?.RESIZE) {
+    if (TERMINAL_CONSTANTS.COMMANDS.RESIZE) {
       this._messageHandlers.set(TERMINAL_CONSTANTS.COMMANDS.RESIZE, (message) => {
         this._handleTerminalResize(message);
       });
@@ -540,7 +540,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       log('🎆 [TRACE] WEBVIEW CONFIRMS INIT COMPLETE!');
       try {
         const { isDebugEnabled } = require('../utils/logger');
-        if (isDebugEnabled && isDebugEnabled()) {
+        if (isDebugEnabled?.()) {
           log('🎆 [TRACE] Message data:', message);
         }
       } catch {}
@@ -1115,7 +1115,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     // Avoid expensive stringify unless debug is enabled
     try {
       const { isDebugEnabled } = require('../utils/logger');
-      if (isDebugEnabled && isDebugEnabled()) {
+      if (isDebugEnabled?.()) {
         log('📨 [DEBUG] Full message object:', JSON.stringify(message, null, 2));
       }
     } catch {
@@ -2072,7 +2072,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
    * Simple webview availability check (removed complex health check)
    */
   private _isWebviewAvailable(): boolean {
-    return !!(this._view && this._view.webview);
+    return !!(this._view?.webview);
   }
 
   // Removed complex message processing - simplified approach
@@ -2319,10 +2319,10 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       if (response.success) {
         log(`✅ [PERSISTENCE] Session saved successfully: ${response.terminalCount} terminals`);
         return true;
-      } else {
+      } 
         log(`❌ [PERSISTENCE] Session save failed: ${response.error}`);
         return false;
-      }
+      
     } catch (error) {
       log(`❌ [PERSISTENCE] Auto-save failed: ${error}`);
       console.error('Persistence save error:', error);
@@ -2337,7 +2337,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
    * Request scrollback data from WebView for a specific terminal
    */
   // Map to store pending scrollback requests
-  private pendingScrollbackRequests = new Map<
+  private readonly pendingScrollbackRequests = new Map<
     string,
     {
       resolve: (data: string[]) => void;
@@ -2548,14 +2548,14 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
           });
 
           return true;
-        } else {
+        } 
           log('⚠️ [PERSISTENCE] No terminals were successfully restored');
           return false;
-        }
-      } else {
+        
+      } 
         log(`📦 [PERSISTENCE] No session to restore: ${response.error || 'No data'}`);
         return false;
-      }
+      
     } catch (error) {
       log(`❌ [PERSISTENCE] Auto-restore failed: ${error}`);
       console.error('Persistence restore error:', error);

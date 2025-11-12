@@ -114,10 +114,10 @@ describe('AI Agent Toggle Button (Issue #122)', () => {
 
       assert.ok(headerElements.aiAgentToggleButton);
       assert.strictEqual(
-        headerElements.aiAgentToggleButton?.className,
+        headerElements.aiAgentToggleButton.className,
         'terminal-control ai-agent-toggle-btn'
       );
-      assert.ok(headerElements.aiAgentToggleButton?.innerHTML.includes('<svg'));
+      assert.ok(headerElements.aiAgentToggleButton.innerHTML.includes('<svg'));
     });
 
     it('AI Agent切断時にボタンを表示する', () => {
@@ -129,7 +129,7 @@ describe('AI Agent Toggle Button (Issue #122)', () => {
       HeaderFactory.setAiAgentToggleButtonVisibility(headerElements, true, 'disconnected');
 
       assert.strictEqual(headerElements.aiAgentToggleButton?.style.display, 'flex');
-      assert.strictEqual(headerElements.aiAgentToggleButton?.title, 'Connect AI Agent');
+      assert.strictEqual(headerElements.aiAgentToggleButton.title, 'Connect AI Agent');
     });
 
     it('AI Agent未検出時にボタンを非表示にする', () => {
@@ -193,7 +193,7 @@ describe('AI Agent Toggle Button (Issue #122)', () => {
 
       // 6. Button should remain visible when connected (always visible specification)
       HeaderFactory.setAiAgentToggleButtonVisibility(headerElements, true, 'connected');
-      assert.strictEqual(headerElements.aiAgentToggleButton?.style.display, 'flex');
+      assert.strictEqual(headerElements.aiAgentToggleButton.style.display, 'flex');
     });
   });
 });

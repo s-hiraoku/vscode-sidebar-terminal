@@ -70,7 +70,7 @@ interface ConfigurationSchema {
  * Configuration registry following VS Code's IConfigurationRegistry pattern
  */
 class ConfigurationRegistry {
-  private _schemas = new Map<string, ConfigurationSchema>();
+  private readonly _schemas = new Map<string, ConfigurationSchema>();
 
   register(key: string, schema: ConfigurationSchema): void {
     this._schemas.set(key, schema);
@@ -168,7 +168,7 @@ export class UnifiedConfigurationService implements Disposable {
 
     try {
       // Test VS Code API availability
-      if (typeof vscode !== 'undefined' && vscode?.workspace) {
+      if (typeof vscode !== 'undefined' && vscode.workspace) {
         // Test if we can actually use getConfiguration
         vscode.workspace.getConfiguration(); // This should work if API is available
         this._initialized = true;
@@ -717,7 +717,7 @@ export class UnifiedConfigurationService implements Disposable {
    */
   private _initializeConfigurationWatcher(): void {
     try {
-      if (vscode?.workspace?.onDidChangeConfiguration) {
+      if (vscode.workspace.onDidChangeConfiguration) {
         const disposable = vscode.workspace.onDidChangeConfiguration((event) => {
           const affectedSections = [
             CONFIG_SECTIONS.SIDEBAR_TERMINAL,

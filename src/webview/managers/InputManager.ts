@@ -42,16 +42,16 @@ export class InputManager extends BaseManager implements IInputManager {
   private notificationManager: INotificationManager | null = null;
 
   // IME Handler for composition events
-  private imeHandler: IIMEHandler;
+  private readonly imeHandler: IIMEHandler;
 
   // Debounce timers for events
-  private eventDebounceTimers = new Map<string, number>();
+  private readonly eventDebounceTimers = new Map<string, number>();
   // Simple arrow key handling for agent interactions
   private agentInteractionMode = false;
 
   // VS Code keybinding system state
   private sendKeybindingsToShell = false;
-  private commandsToSkipShell = new Set<string>();
+  private readonly commandsToSkipShell = new Set<string>();
   private isInChordMode = false;
   private allowChords = true;
   private allowMnemonics = true;
@@ -190,7 +190,7 @@ export class InputManager extends BaseManager implements IInputManager {
     }
 
     // Ctrl+V without clipboard API support (for pasting)
-    if (event.ctrlKey && event.key === 'v' && !navigator.clipboard?.readText) {
+    if (event.ctrlKey && event.key === 'v' && !navigator.clipboard.readText) {
       return true;
     }
 
@@ -718,7 +718,7 @@ export class InputManager extends BaseManager implements IInputManager {
     if (!activeTerminalId) return;
 
     const terminalInstance = manager.getTerminalInstance(activeTerminalId);
-    if (!terminalInstance || !terminalInstance.searchAddon) {
+    if (!terminalInstance?.searchAddon) {
       this.logger(`Search addon not available for terminal ${activeTerminalId}`);
       return;
     }

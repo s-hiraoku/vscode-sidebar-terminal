@@ -131,8 +131,8 @@ describe('Async Operations Strategy - TDD Implementation', () => {
     it('should implement WebView communication with proper timeout handling', async () => {
       // GREEN: Implement reliable WebView communication
       class AsyncWebViewCommunicator {
-        private webview: any;
-        private pendingRequests = new Map<string, {
+        private readonly webview: any;
+        private readonly pendingRequests = new Map<string, {
           resolve: (value: any) => void;
           reject: (error: any) => void;
           timeoutId: NodeJS.Timeout;
@@ -239,13 +239,13 @@ describe('Async Operations Strategy - TDD Implementation', () => {
     it('should handle concurrent terminal creation with proper resource management', async () => {
       // GREEN: Implement safe concurrent terminal creation
       class ConcurrentTerminalManager {
-        private activeCreations = new Set<string>();
-        private creationQueue: Array<{
+        private readonly activeCreations = new Set<string>();
+        private readonly creationQueue: Array<{
           id: string;
           resolve: (result: any) => void;
           reject: (error: any) => void;
         }> = [];
-        private maxConcurrentCreations = 2;
+        private readonly maxConcurrentCreations = 2;
 
         async createTerminalsSimultaneously(count: number): Promise<{
           success: boolean;
@@ -304,9 +304,9 @@ describe('Async Operations Strategy - TDD Implementation', () => {
 
             if (success) {
               return { success: true, id: terminalId };
-            } else {
+            } 
               return { success: false, error: `Failed to create ${terminalId}` };
-            }
+            
           } finally {
             this.activeCreations.delete(terminalId);
           }
@@ -329,7 +329,7 @@ describe('Async Operations Strategy - TDD Implementation', () => {
     it('should implement resilient session restoration with interruption recovery', async () => {
       // GREEN: Implement session restoration that can handle interruptions
       class ResilientSessionRestoration {
-        private restorationState = {
+        private readonly restorationState = {
           inProgress: false,
           currentStep: 0,
           totalSteps: 0,
@@ -436,8 +436,8 @@ describe('Async Operations Strategy - TDD Implementation', () => {
     it('should optimize CLI agent detection with debouncing and caching', async () => {
       // REFACTOR: Improve CLI agent detection performance
       class OptimizedCLIAgentDetector {
-        private detectionCache = new Map<string, { result: string | null; timestamp: number }>();
-        private debounceTimers = new Map<string, NodeJS.Timeout>();
+        private readonly detectionCache = new Map<string, { result: string | null; timestamp: number }>();
+        private readonly debounceTimers = new Map<string, NodeJS.Timeout>();
         private readonly CACHE_TTL_MS = 5000;
         private readonly DEBOUNCE_MS = 200;
 
@@ -533,8 +533,8 @@ describe('Async Operations Strategy - TDD Implementation', () => {
     it('should implement graceful resource cleanup on async operation failures', async () => {
       // REFACTOR: Ensure resources are cleaned up even when async operations fail
       class ResourceManagedAsyncOperation {
-        private activeResources = new Set<string>();
-        private cleanupCallbacks = new Map<string, () => void>();
+        private readonly activeResources = new Set<string>();
+        private readonly cleanupCallbacks = new Map<string, () => void>();
 
         async performOperationWithCleanup<T>(
           resourceId: string,
@@ -714,9 +714,9 @@ describe('Async Operations Strategy - TDD Implementation', () => {
     it('should handle complete terminal lifecycle with async coordination', async () => {
       // Integration test for full terminal lifecycle
       class TerminalLifecycleCoordinator {
-        private terminals = new Map<string, any>();
-        private sessionManager: any;
-        private webviewCommunicator: any;
+        private readonly terminals = new Map<string, any>();
+        private readonly sessionManager: any;
+        private readonly webviewCommunicator: any;
 
         constructor(sessionManager: any, webviewCommunicator: any) {
           this.sessionManager = sessionManager;

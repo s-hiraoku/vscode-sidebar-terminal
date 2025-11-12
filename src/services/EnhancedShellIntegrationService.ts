@@ -40,7 +40,7 @@ export class EnhancedShellIntegrationService extends ShellIntegrationService {
     commands: EnhancedShellCommand[];
   }>();
 
-  private _terminalStatuses = new Map<string, TerminalStatusInfo>();
+  private readonly _terminalStatuses = new Map<string, TerminalStatusInfo>();
   private _globalCommandHistory: EnhancedShellCommand[] = [];
   private _webviewProvider: SecondaryTerminalProvider | null = null;
 

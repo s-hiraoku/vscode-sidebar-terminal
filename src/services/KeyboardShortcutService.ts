@@ -12,8 +12,8 @@ export class KeyboardShortcutService {
   private readonly _disposables: vscode.Disposable[] = [];
   private readonly _terminalManager: TerminalManager;
   private _commandHistory: string[] = [];
-  private _currentHistoryIndex: number = -1;
-  private _searchBox: vscode.InputBox | null = null;
+  private readonly _currentHistoryIndex: number = -1;
+  private readonly _searchBox: vscode.InputBox | null = null;
 
   constructor(terminalManager: TerminalManager) {
     this._terminalManager = terminalManager;

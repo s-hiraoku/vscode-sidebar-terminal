@@ -74,9 +74,9 @@ export interface ServiceRegistration<T = any> {
  * Dependency injection container with lifecycle management
  */
 export class DependencyContainer {
-  private services = new Map<ServiceType, ServiceRegistration>();
-  private initializationOrder: ServiceType[] = [];
-  private disposalOrder: ServiceType[] = [];
+  private readonly services = new Map<ServiceType, ServiceRegistration>();
+  private readonly initializationOrder: ServiceType[] = [];
+  private readonly disposalOrder: ServiceType[] = [];
   private isDisposing = false;
 
   /**

@@ -177,7 +177,7 @@ export class CliAgentHandler extends BaseMessageHandler {
 
     // Update UI and show user feedback
     const managers = context.coordinator.getManagers();
-    if (!managers?.notification) {
+    if (!managers.notification) {
       context.logger.warn('NotificationManager not available for AI Agent feedback');
       return;
     }

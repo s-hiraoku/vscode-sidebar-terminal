@@ -454,7 +454,7 @@ export class SessionHandler extends BaseMessageHandler {
       // Remove trailing empty lines
       while (scrollbackLines.length > 0) {
         const lastLine = scrollbackLines[scrollbackLines.length - 1];
-        if (!lastLine || !lastLine.content.trim()) {
+        if (!lastLine?.content.trim()) {
           scrollbackLines.pop();
         } else {
           break;

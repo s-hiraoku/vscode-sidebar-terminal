@@ -157,7 +157,7 @@ export abstract class BaseLogger {
 // =============================================================================
 
 export class IntegratedLogger extends BaseLogger {
-  private static instances = new Map<string, IntegratedLogger>();
+  private static readonly instances = new Map<string, IntegratedLogger>();
   private logBuffer: LogEntry[] = [];
   private outputChannel?: vscode.OutputChannel;
   private fileStream?: fs.WriteStream;
@@ -444,7 +444,7 @@ export class IntegratedLogger extends BaseLogger {
 // =============================================================================
 
 export class ContextualLogger {
-  private logger: IntegratedLogger;
+  private readonly logger: IntegratedLogger;
   private context: Record<string, unknown>;
 
   constructor(
@@ -503,8 +503,8 @@ export class ContextualLogger {
 // =============================================================================
 
 export class PerformanceLogger {
-  private logger: IntegratedLogger;
-  private timers = new Map<string, number>();
+  private readonly logger: IntegratedLogger;
+  private readonly timers = new Map<string, number>();
 
   constructor(category: string, component: string, config?: Partial<LoggerConfig>) {
     this.logger = IntegratedLogger.getLogger(category, component, config);

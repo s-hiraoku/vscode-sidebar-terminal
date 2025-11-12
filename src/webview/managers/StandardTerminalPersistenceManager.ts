@@ -5,8 +5,8 @@ import { Terminal } from '@xterm/xterm';
  * WebView側でxterm.js serialize addonを使用したVS Code標準ターミナル永続化
  */
 export class StandardTerminalPersistenceManager {
-  private serializeAddons: Map<string, SerializeAddon> = new Map();
-  private terminals: Map<string, Terminal> = new Map();
+  private readonly serializeAddons: Map<string, SerializeAddon> = new Map();
+  private readonly terminals: Map<string, Terminal> = new Map();
   private vscodeApi: {
     postMessage: (message: unknown) => void;
     getState: () => unknown;
@@ -25,14 +25,14 @@ export class StandardTerminalPersistenceManager {
 
     try {
       // 🔧 FIX: Check if terminal is ready before adding addon
-      if (!terminal || !terminal.textarea) {
+      if (!terminal.textarea) {
         console.warn(
           `⚠️ [WEBVIEW-PERSISTENCE] Terminal ${terminalId} not ready for addon - scheduling retry`
         );
 
         // Retry after a short delay when terminal is ready
         setTimeout(() => {
-          if (terminal && terminal.textarea) {
+          if (terminal.textarea) {
             this.addTerminal(terminalId, terminal);
           } else {
             console.error(
@@ -319,7 +319,7 @@ export class StandardTerminalPersistenceManager {
           }
         | undefined;
 
-      if (!storageData || !storageData.content) {
+      if (!storageData?.content) {
         console.log(`📭 [WEBVIEW-PERSISTENCE] No saved content found for terminal ${terminalId}`);
         return false;
       }

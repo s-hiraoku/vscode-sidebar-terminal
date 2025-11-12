@@ -8,8 +8,8 @@ import type { PartialTerminalSettings } from '../../types/shared';
 export class SettingsPanel {
   private panelElement: HTMLElement | null = null;
   private isVisible = false;
-  private onSettingsChange?: (settings: PartialTerminalSettings) => void;
-  private onClose?: () => void;
+  private readonly onSettingsChange?: (settings: PartialTerminalSettings) => void;
+  private readonly onClose?: () => void;
 
   /**
    * コンストラクタ
@@ -360,9 +360,9 @@ export class SettingsPanel {
     ) as HTMLInputElement;
 
     return {
-      theme: themeSelect?.value || 'auto',
-      cursorBlink: cursorBlinkCheckbox?.checked ?? true,
-      enableCliAgentIntegration: claudeCodeIntegrationCheckbox?.checked ?? true,
+      theme: themeSelect.value || 'auto',
+      cursorBlink: cursorBlinkCheckbox.checked ?? true,
+      enableCliAgentIntegration: claudeCodeIntegrationCheckbox.checked ?? true,
     };
   }
 

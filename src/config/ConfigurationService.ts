@@ -23,8 +23,8 @@ export type ConfigChangeHandler = (
  */
 export class ConfigurationService {
   private static instance: ConfigurationService;
-  private configCache = new Map<string, unknown>();
-  private changeHandlers = new Set<ConfigChangeHandler>();
+  private readonly configCache = new Map<string, unknown>();
+  private readonly changeHandlers = new Set<ConfigChangeHandler>();
   private disposables: vscode.Disposable[] = [];
 
   private constructor() {

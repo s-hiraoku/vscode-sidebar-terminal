@@ -30,9 +30,9 @@ export class WebViewStateManager implements IWebViewStateManager {
   private _terminalIdMapping?: Map<string, string>;
 
   constructor(
-    private terminalManager: any, // TODO: Replace with proper interface
-    private standardSessionManager?: any, // TODO: Replace with proper interface
-    private sendMessage?: (message: WebviewMessage) => Promise<void>
+    private readonly terminalManager: any, // TODO: Replace with proper interface
+    private readonly standardSessionManager?: any, // TODO: Replace with proper interface
+    private readonly sendMessage?: (message: WebviewMessage) => Promise<void>
   ) {}
 
   public isInitialized(): boolean {
@@ -250,8 +250,7 @@ export class WebViewStateManager implements IWebViewStateManager {
       const sessionInfo = this.standardSessionManager.getSessionInfo();
 
       if (
-        sessionInfo &&
-        sessionInfo.exists &&
+        sessionInfo?.exists &&
         sessionInfo.terminals &&
         sessionInfo.terminals.length > 0
       ) {

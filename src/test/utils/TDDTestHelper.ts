@@ -27,7 +27,7 @@ import {
  */
 export class TDDWorkflowManager {
   private currentPhase: TDDPhase = TDD_PHASES.RED;
-  private testResults: Array<{
+  private readonly testResults: Array<{
     phase: TDDPhase;
     testName: string;
     passed: boolean;
@@ -198,7 +198,7 @@ export class PerformanceTestHelper {
  * 一貫性のあるモックオブジェクトの生成と管理
  */
 export class MockManager {
-  private sandbox: sinon.SinonSandbox;
+  private readonly sandbox: sinon.SinonSandbox;
 
   constructor(sandbox: sinon.SinonSandbox) {
     this.sandbox = sandbox;

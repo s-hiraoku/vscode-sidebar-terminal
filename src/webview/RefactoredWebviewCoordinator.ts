@@ -311,13 +311,13 @@ export class RefactoredWebviewCoordinator {
         }
 
         return result;
-      } else {
+      } 
         console.warn(`No handler for command: ${command}`);
         return {
           success: false,
           error: `No handler for command: ${command}`
         };
-      }
+      
     } catch (error) {
       console.error(`Unexpected error handling message ${command}:`, error);
       return {

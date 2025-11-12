@@ -46,7 +46,7 @@ export class ExtensionLifecycle {
 
     // Get extension version info
     const extension = vscode.extensions.getExtension('s-hiraoku.vscode-sidebar-terminal');
-    const version = (extension?.packageJSON as { version?: string })?.version || 'unknown';
+    const version = (extension?.packageJSON as { version?: string }).version || 'unknown';
 
     log('Sidebar Terminal extension is now active!');
     log(`Extension version: ${version}`);

@@ -53,7 +53,7 @@ export class SplitManager extends BaseManager {
   }
 
   // Internal coordinator reference
-  private coordinator: any = null;
+  private readonly coordinator: any = null;
 
   // Split functionality
   public isSplitMode = false;
@@ -61,12 +61,12 @@ export class SplitManager extends BaseManager {
 
   // Multiple terminal management
   public terminals = new Map<string, TerminalInstance>();
-  private terminalContainers = new Map<string, HTMLElement>();
+  private readonly terminalContainers = new Map<string, HTMLElement>();
 
   // Multi-split layout management
-  private splitTerminals = new Map<string, HTMLElement>();
-  private maxSplitCount = SPLIT_CONSTANTS.MAX_SPLIT_COUNT;
-  private minTerminalHeight = SPLIT_CONSTANTS.MIN_TERMINAL_HEIGHT;
+  private readonly splitTerminals = new Map<string, HTMLElement>();
+  private readonly maxSplitCount = SPLIT_CONSTANTS.MAX_SPLIT_COUNT;
+  private readonly minTerminalHeight = SPLIT_CONSTANTS.MIN_TERMINAL_HEIGHT;
 
   public calculateSplitLayout(): { canSplit: boolean; terminalHeight: number; reason?: string } {
     const terminalBody = document.getElementById('terminal-body');
@@ -487,7 +487,7 @@ export class SplitManager extends BaseManager {
       // Resize main terminal instance
       if (mainTerminal && mainFitAddon) {
         setTimeout(() => {
-          mainFitAddon?.fit();
+          mainFitAddon.fit();
         }, 100);
       }
     }
@@ -700,9 +700,9 @@ export class SplitManager extends BaseManager {
   ): 'vertical' | 'horizontal' {
     if (location === 'panel') {
       return 'horizontal'; // Wide layout - horizontal split
-    } else {
+    } 
       return 'vertical'; // Sidebar or unknown - vertical split
-    }
+    
   }
 
   // Setters

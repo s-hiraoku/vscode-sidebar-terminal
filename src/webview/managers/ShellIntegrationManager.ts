@@ -30,11 +30,11 @@ export interface ShellStatus {
 
 export class ShellIntegrationManager implements IShellIntegrationEvents {
   private coordinator: IManagerCoordinator | null = null;
-  private statusMap = new Map<string, ShellStatus>();
-  private statusIndicators = new Map<string, HTMLElement>();
-  private cwdDisplays = new Map<string, HTMLElement>();
-  private shellAddons = new Map<string, ShellIntegrationAddon>();
-  private commandStartTimes = new Map<string, number>();
+  private readonly statusMap = new Map<string, ShellStatus>();
+  private readonly statusIndicators = new Map<string, HTMLElement>();
+  private readonly cwdDisplays = new Map<string, HTMLElement>();
+  private readonly shellAddons = new Map<string, ShellIntegrationAddon>();
+  private readonly commandStartTimes = new Map<string, number>();
 
   // VS Code standard colors
   private readonly STATUS_COLORS = {

@@ -256,7 +256,7 @@ export namespace PerformanceUtils {
 
       if (comparison === 0) {
         return mid;
-      } else if (comparison < 0) {
+      } if (comparison < 0) {
         left = mid + 1;
       } else {
         right = mid - 1;

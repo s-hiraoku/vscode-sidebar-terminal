@@ -77,9 +77,9 @@ export interface ProblemMatcher {
  */
 export class TaskIntegrationManager {
   private coordinator: IManagerCoordinator | null = null;
-  private activeTasks = new Map<string, TaskExecution>();
-  private taskTerminals = new Map<string, string>(); // terminalId -> taskId
-  private problemMatchers = new Map<string, ProblemMatcher>();
+  private readonly activeTasks = new Map<string, TaskExecution>();
+  private readonly taskTerminals = new Map<string, string>(); // terminalId -> taskId
+  private readonly problemMatchers = new Map<string, ProblemMatcher>();
   private taskHistory: TaskExecution[] = [];
 
   constructor() {

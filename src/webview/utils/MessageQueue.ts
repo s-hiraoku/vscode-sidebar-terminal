@@ -39,7 +39,7 @@ export class MessageQueue {
   private config: Required<MessageQueueConfig>;
 
   constructor(
-    private sender: MessageSender,
+    private readonly sender: MessageSender,
     config: MessageQueueConfig = {}
   ) {
     this.config = {
@@ -201,7 +201,7 @@ export class MessageQueue {
 
     try {
       const msgObj = message as { command?: string; type?: string };
-      const messageType = msgObj?.command || msgObj?.type || 'unknown';
+      const messageType = msgObj.command || msgObj.type || 'unknown';
 
       // High priority message types (user input, interactions)
       const highPriorityTypes = [

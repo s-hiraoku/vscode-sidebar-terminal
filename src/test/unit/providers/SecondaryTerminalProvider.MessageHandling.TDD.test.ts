@@ -596,7 +596,7 @@ describe('SecondaryTerminalProvider - Message Handling TDD Suite', () => {
         _messageQueue: [] as any[],
 
         _isWebviewAvailable(): boolean {
-          return !!(this._view && this._view.webview);
+          return !!(this._view?.webview);
         },
 
         async _sendMessage(message: any): Promise<boolean> {

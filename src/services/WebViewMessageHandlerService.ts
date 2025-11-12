@@ -27,12 +27,12 @@ export interface IMessageHandlerContext {
 }
 
 export class WebViewMessageHandlerService {
-  private handlers = new Map<string, IMessageHandler>();
-  private defaultHandler: IMessageHandler;
+  private readonly handlers = new Map<string, IMessageHandler>();
+  private readonly defaultHandler: IMessageHandler;
 
   constructor(
-    private context: IMessageHandlerContext,
-    private extensionContext: vscode.ExtensionContext
+    private readonly context: IMessageHandlerContext,
+    private readonly extensionContext: vscode.ExtensionContext
   ) {
     this.defaultHandler = new UnknownMessageHandler();
     this.initializeHandlers();

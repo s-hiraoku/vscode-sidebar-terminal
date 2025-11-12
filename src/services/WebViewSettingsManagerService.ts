@@ -28,12 +28,12 @@ export interface IWebViewSettingsManagerService {
 }
 
 export class WebViewSettingsManagerService implements IWebViewSettingsManagerService {
-  private configChangeDisposables: vscode.Disposable[] = [];
+  private readonly configChangeDisposables: vscode.Disposable[] = [];
 
   constructor(
-    private sendMessage: (message: WebviewMessage) => Promise<void>,
-    private extensionContext: vscode.ExtensionContext,
-    private requestPanelLocationDetection?: () => void
+    private readonly sendMessage: (message: WebviewMessage) => Promise<void>,
+    private readonly extensionContext: vscode.ExtensionContext,
+    private readonly requestPanelLocationDetection?: () => void
   ) {}
 
   public getCurrentSettings(): PartialTerminalSettings {

@@ -99,8 +99,8 @@ describe('Terminal History Management - Regression Tests', () => {
     it('should handle terminal number recycling correctly without conflicts', () => {
       // REGRESSION: Terminal numbers were conflicting during rapid create/delete cycles
       class TerminalNumberManager {
-        private usedNumbers = new Set<number>();
-        private maxTerminals = 5;
+        private readonly usedNumbers = new Set<number>();
+        private readonly maxTerminals = 5;
 
         assignNumber(): number | null {
           // FIXED: Proper number recycling logic
@@ -392,7 +392,7 @@ describe('Terminal History Management - Regression Tests', () => {
       }
 
       class RefactoredMessageManager {
-        private coordinator: IManagerCoordinator;
+        private readonly coordinator: IManagerCoordinator;
         private messageQueue: any[] = [];
         private isReady: boolean = false;
 
@@ -467,8 +467,8 @@ describe('Terminal History Management - Regression Tests', () => {
     it('should handle WebView disposal properly to prevent memory leaks', () => {
       // REGRESSION: EventEmitters were not properly disposed, causing memory leaks
       class WebViewManager {
-        private disposables: any[] = [];
-        private eventEmitters: any[] = [];
+        private readonly disposables: any[] = [];
+        private readonly eventEmitters: any[] = [];
 
         addEventEmitter(emitter: any): void {
           this.eventEmitters.push(emitter);
@@ -537,9 +537,9 @@ describe('Terminal History Management - Regression Tests', () => {
     it('should prevent buffer overflow in high-frequency terminal output', () => {
       // REGRESSION: High frequency output caused memory issues
       class TerminalDataBuffer {
-        private buffers = new Map<string, string[]>();
-        private maxBufferSize = 1000; // lines
-        private maxLineLength = 2000; // characters
+        private readonly buffers = new Map<string, string[]>();
+        private readonly maxBufferSize = 1000; // lines
+        private readonly maxLineLength = 2000; // characters
 
         bufferData(terminalId: string, data: string): void {
           if (!this.buffers.has(terminalId)) {
@@ -601,9 +601,9 @@ describe('Terminal History Management - Regression Tests', () => {
     it('should cleanup CLI agent detection patterns to prevent memory growth', () => {
       // REGRESSION: CLI agent patterns accumulated without cleanup
       class CLIAgentPatternManager {
-        private detectionPatterns = new Map<string, RegExp>();
-        private patternUsageCount = new Map<string, number>();
-        private maxPatterns = 50;
+        private readonly detectionPatterns = new Map<string, RegExp>();
+        private readonly patternUsageCount = new Map<string, number>();
+        private readonly maxPatterns = 50;
 
         addPattern(name: string, pattern: string): void {
           // FIXED: Limit number of patterns and track usage

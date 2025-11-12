@@ -27,7 +27,7 @@ describe('ResizeManager', () => {
 
     // Mock ResizeObserver
     global.ResizeObserver = class MockResizeObserver {
-      constructor(private callback: ResizeObserverCallback) {}
+      constructor(private readonly callback: ResizeObserverCallback) {}
       observe = sandbox.stub();
       unobserve = sandbox.stub();
       disconnect = sandbox.stub();

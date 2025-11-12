@@ -91,10 +91,10 @@ export interface PersistenceStats {
  * Optimized persistence manager for WebView terminal persistence operations
  */
 export class OptimizedTerminalPersistenceManager {
-  private terminals = new Map<string, TerminalRegistration>();
+  private readonly terminals = new Map<string, TerminalRegistration>();
   private autoSaveTimer?: number;
   private cleanupTimer?: number;
-  private stats: PersistenceStats = {
+  private readonly stats: PersistenceStats = {
     terminalCount: 0,
     totalStorageSize: 0,
     compressionRatio: 1.0,
@@ -105,7 +105,7 @@ export class OptimizedTerminalPersistenceManager {
   private disposed = false;
 
   // VS Code API for local storage
-  private vscodeApi = (() => {
+  private readonly vscodeApi = (() => {
     try {
       return acquireVsCodeApi();
     } catch {
@@ -343,7 +343,7 @@ export class OptimizedTerminalPersistenceManager {
         content = serializedData;
       } else {
         // New format with metadata
-        content = serializedData.metadata?.compressed
+        content = serializedData.metadata.compressed
           ? this.decompressContent(serializedData.content)
           : serializedData.content;
 
@@ -448,7 +448,7 @@ export class OptimizedTerminalPersistenceManager {
       const state = this.vscodeApi.getState();
       const storageData = state?.[storageKey];
 
-      if (!storageData || !storageData.data) {
+      if (!storageData?.data) {
         return null;
       }
 

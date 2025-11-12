@@ -141,7 +141,7 @@ export const mockVscode = {
   ViewColumn: { One: 1, Two: 2, Three: 3, Left: 1, Right: 2 },
   TreeDataProvider: sinon.stub(),
   EventEmitter: class MockEventEmitter {
-    private listeners: Array<(event: any) => void> = [];
+    private readonly listeners: Array<(event: any) => void> = [];
 
     fire = (event: any) => {
       this.listeners.forEach((listener) => {
@@ -550,7 +550,7 @@ export function resetTestEnvironment(): void {
  * 安全なSinon stub作成 - "already wrapped" エラーを防ぐ
  */
 export function safeStub(obj: any, method: string): sinon.SinonStub {
-  if (obj[method] && obj[method].restore) {
+  if (obj[method]?.restore) {
     obj[method].restore();
   }
   return sinon.stub(obj, method);
@@ -610,7 +610,7 @@ export function cleanupTestEnvironment(sandbox?: sinon.SinonSandbox, dom?: JSDOM
     const config = mockVscode.workspace.getConfiguration();
     if (config && typeof config === 'object') {
       Object.keys(config).forEach((key) => {
-        if (typeof config[key] === 'object' && config[key] && config[key].reset) {
+        if (typeof config[key] === 'object' && config[key]?.reset) {
           try {
             config[key].reset();
           } catch (error) {

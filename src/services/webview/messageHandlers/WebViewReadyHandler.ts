@@ -10,7 +10,7 @@ import { TERMINAL_CONSTANTS } from '../../../constants';
 export class WebViewReadyHandler extends BaseMessageHandler {
   protected readonly supportedCommands = [
     'webviewReady',
-    TERMINAL_CONSTANTS?.COMMANDS?.READY || 'ready',
+    TERMINAL_CONSTANTS.COMMANDS.READY || 'ready',
   ];
 
   async handle(message: WebviewMessage, context: IMessageHandlerContext): Promise<void> {
@@ -51,7 +51,7 @@ export class WebViewReadyHandler extends BaseMessageHandler {
       // This will be handled by WebViewStateManager in the future
       // For now, we'll call the provider's method directly
       const provider = (context as any).provider;
-      if (provider && provider._initializeTerminal) {
+      if (provider?._initializeTerminal) {
         await provider._initializeTerminal();
       }
     } catch (error) {

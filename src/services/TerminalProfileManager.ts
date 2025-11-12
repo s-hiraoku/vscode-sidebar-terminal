@@ -20,9 +20,9 @@ import {
 import { provider as log } from '../utils/logger';
 
 export class TerminalProfileManager extends EventEmitter implements ITerminalProfileManager {
-  private _profiles = new Map<string, ITerminalProfile>();
+  private readonly _profiles = new Map<string, ITerminalProfile>();
   private _defaultProfileId?: string;
-  private _platform: OSType;
+  private readonly _platform: OSType;
   private _initialized = false;
 
   constructor() {
@@ -265,11 +265,11 @@ export class TerminalProfileManager extends EventEmitter implements ITerminalPro
       errors.push('Profile ID is required');
     }
 
-    if (!profile.name?.trim()) {
+    if (!profile.name.trim()) {
       errors.push('Profile name is required');
     }
 
-    if (!profile.path?.trim()) {
+    if (!profile.path.trim()) {
       errors.push('Shell path is required');
     }
 

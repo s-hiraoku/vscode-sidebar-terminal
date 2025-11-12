@@ -32,7 +32,7 @@ export class TerminalNumberManager {
       } else {
         // Fallback: extract from terminal name for backward compatibility
         const match = terminal.name.match(/Terminal (\d+)/);
-        if (match && match[1]) {
+        if (match?.[1]) {
           const numberFromName = parseInt(match[1], 10);
           usedNumbers.add(numberFromName);
           console.log(`⚠️ [TERMINAL-NUMBER-MANAGER] Added number from name: ${numberFromName}`);

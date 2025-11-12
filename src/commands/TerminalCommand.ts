@@ -7,7 +7,7 @@ import { extension as log } from '../utils/logger';
  * テキスト送信、コマンド実行などの基本操作を提供
  */
 export class TerminalCommand {
-  constructor(private terminalManager: TerminalManager) {}
+  constructor(private readonly terminalManager: TerminalManager) {}
 
   /**
    * アクティブなターミナルにコンテンツを送信

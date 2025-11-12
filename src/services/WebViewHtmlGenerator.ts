@@ -20,7 +20,7 @@ export interface IWebViewHtmlGenerator {
 }
 
 export class WebViewHtmlGenerator implements IWebViewHtmlGenerator {
-  constructor(private extensionContext: vscode.ExtensionContext) {}
+  constructor(private readonly extensionContext: vscode.ExtensionContext) {}
 
   public generateHtml(webview: vscode.Webview): string {
     try {

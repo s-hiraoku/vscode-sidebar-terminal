@@ -22,7 +22,7 @@ export class NotificationManager extends BaseManager implements INotificationMan
   }
 
   // Active notifications tracking
-  private activeNotifications: Map<string, HTMLElement> = new Map();
+  private readonly activeNotifications: Map<string, HTMLElement> = new Map();
   private notificationCounter = 0;
 
   // Default notification settings

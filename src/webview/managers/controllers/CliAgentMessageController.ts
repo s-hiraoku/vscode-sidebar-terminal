@@ -105,7 +105,7 @@ export class CliAgentMessageController {
     });
 
     const managers = coordinator.getManagers();
-    if (!managers?.notification) {
+    if (!managers.notification) {
       this.logger.warn('NotificationManager not available for AI Agent feedback');
       return;
     }

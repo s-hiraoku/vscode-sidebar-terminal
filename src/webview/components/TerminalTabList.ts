@@ -29,13 +29,13 @@ export interface TerminalTabEvents {
  * Manages terminal tabs with VS Code-style UI and interactions
  */
 export class TerminalTabList {
-  private container: HTMLElement;
+  private readonly container: HTMLElement;
   private tabsContainer!: HTMLElement;
   private addButton!: HTMLElement;
-  private tabs: Map<string, TerminalTab> = new Map();
-  private events: TerminalTabEvents;
+  private readonly tabs: Map<string, TerminalTab> = new Map();
+  private readonly events: TerminalTabEvents;
   private draggedTab: string | null = null;
-  private dropIndicator: HTMLElement;
+  private readonly dropIndicator: HTMLElement;
 
   constructor(container: HTMLElement, events: TerminalTabEvents) {
     this.container = container;

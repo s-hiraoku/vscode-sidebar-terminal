@@ -231,7 +231,7 @@ export interface TerminalManagerStats {
 }
 
 // Export commonly used combinations
-export type TerminalInstance = {
+export interface TerminalInstance {
   id: string;
   name: string;
   number: number;
@@ -241,7 +241,7 @@ export type TerminalInstance = {
   isActive: boolean;
   session: TerminalSession;
   config: TerminalConfig;
-};
+}
 
 export type TerminalMap = Map<string, TerminalInstance>;
 export type TerminalContainerMap = Map<string, HTMLElement>;

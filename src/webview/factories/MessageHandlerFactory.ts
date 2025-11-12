@@ -39,8 +39,8 @@ interface HandlerEntry {
  * Centralized factory for creating consistent message handlers
  */
 export class MessageHandlerFactory {
-  private static handlers = new Map<string, HandlerEntry>();
-  private static defaultLogPrefix = '[MESSAGE_HANDLER]';
+  private static readonly handlers = new Map<string, HandlerEntry>();
+  private static readonly defaultLogPrefix = '[MESSAGE_HANDLER]';
 
   /**
    * Register a message handler

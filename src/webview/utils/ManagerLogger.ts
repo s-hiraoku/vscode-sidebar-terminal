@@ -31,16 +31,16 @@ export interface LogEntry {
  */
 export class ManagerLogger {
   private static logHistory: LogEntry[] = [];
-  private static maxHistorySize = 1000;
+  private static readonly maxHistorySize = 1000;
   private static globalConfig: LogConfig = {
     enableTimestamp: false,
     enableLevel: true,
     maxMessageLength: 500,
   };
 
-  private managerName: string;
-  private emoji: string;
-  private config: LogConfig;
+  private readonly managerName: string;
+  private readonly emoji: string;
+  private readonly config: LogConfig;
 
   constructor(managerName: string, emoji: string = '📋', config: LogConfig = {}) {
     this.managerName = managerName;

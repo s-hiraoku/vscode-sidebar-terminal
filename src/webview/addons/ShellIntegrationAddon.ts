@@ -33,7 +33,7 @@ export class ShellIntegrationAddon implements ITerminalAddon {
   private currentCommand?: ICommandDetection;
   private commandHistory: ICommandDetection[] = [];
   private currentCwd: string = '';
-  private events?: IShellIntegrationEvents;
+  private readonly events?: IShellIntegrationEvents;
   private disposables: (() => void)[] = [];
 
   constructor(events?: IShellIntegrationEvents) {

@@ -144,7 +144,7 @@ describe('Refactored Architecture Integration Tests', () => {
 
       expect(statusIndicator?.textContent).to.equal('READY');
       expect(terminalCount?.textContent).to.equal('0/5');
-      expect(createButton?.disabled).to.be.false;
+      expect(createButton.disabled).to.be.false;
     });
   });
 
@@ -231,7 +231,7 @@ describe('Refactored Architecture Integration Tests', () => {
 
       expect(terminalCount?.textContent).to.equal('5/5');
       expect(terminalCount?.className).to.include('terminal-count-full');
-      expect(createButton?.disabled).to.be.true;
+      expect(createButton.disabled).to.be.true;
 
       // Attempt to create another
       try {

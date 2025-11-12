@@ -297,7 +297,7 @@ export class TerminalLifecycleService {
       const ptyProcess = pty.spawn(shell, args, ptyOptions);
 
       // Verify process was created successfully
-      if (!ptyProcess || !ptyProcess.pid) {
+      if (!ptyProcess.pid) {
         throw new Error(`Failed to spawn PTY process for shell: ${shell}`);
       }
 

@@ -18,7 +18,7 @@ export class IMEHandler extends BaseManager implements IIMEHandler {
   private isComposing = false;
 
   // Reference to parent's debounce timers for cleanup
-  private eventDebounceTimers: Map<string, number>;
+  private readonly eventDebounceTimers: Map<string, number>;
 
   constructor(eventDebounceTimers: Map<string, number>) {
     super('IMEHandler', {

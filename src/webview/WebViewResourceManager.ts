@@ -35,8 +35,8 @@ export interface IWebViewResourceManager extends IManagerLifecycle {
 }
 
 export class WebViewResourceManager implements IWebViewResourceManager {
-  private resources = new Map<string, WebViewResource>();
-  private loadingPromises = new Map<string, Promise<WebViewResource>>();
+  private readonly resources = new Map<string, WebViewResource>();
+  private readonly loadingPromises = new Map<string, Promise<WebViewResource>>();
   private disposed = false;
 
   constructor() {}

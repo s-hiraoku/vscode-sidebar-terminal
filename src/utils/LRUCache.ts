@@ -3,7 +3,7 @@
  * Useful for caching detection results and other temporary data
  */
 export class LRUCache<K, V> {
-  private cache: Map<K, V> = new Map();
+  private readonly cache: Map<K, V> = new Map();
   private readonly maxSize: number;
 
   constructor(maxSize: number = 100) {

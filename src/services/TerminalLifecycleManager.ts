@@ -228,9 +228,9 @@ export class TerminalLifecycleManager implements ITerminalLifecycleManager {
         (terminal.pty as pty.IPty).resize(cols, rows);
         log(`📏 [LIFECYCLE] Terminal resized: ${terminalId} (${cols}x${rows})`);
         return OperationResultHandler.success();
-      } else {
+      } 
         return OperationResultHandler.failure('Terminal pty not available for resize');
-      }
+      
     } catch (error) {
       return OperationResultHandler.failure(`Resize failed: ${String(error)}`);
     }
@@ -249,9 +249,9 @@ export class TerminalLifecycleManager implements ITerminalLifecycleManager {
       if (terminal.pty && typeof (terminal.pty as pty.IPty).write === 'function') {
         (terminal.pty as pty.IPty).write(data);
         return OperationResultHandler.success();
-      } else {
+      } 
         return OperationResultHandler.failure('Terminal pty not available for write');
-      }
+      
     } catch (error) {
       return OperationResultHandler.failure(`Write failed: ${String(error)}`);
     }

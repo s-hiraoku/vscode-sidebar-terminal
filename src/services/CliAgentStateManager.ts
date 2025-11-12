@@ -8,7 +8,7 @@ import { terminal as log } from '../utils/logger';
 export class CliAgentStateManager implements ICliAgentStateManager {
   private _connectedAgentTerminalId: string | null = null;
   private _connectedAgentType: 'claude' | 'gemini' | 'codex' | null = null;
-  private _disconnectedAgents = new Map<string, DisconnectedAgentInfo>();
+  private readonly _disconnectedAgents = new Map<string, DisconnectedAgentInfo>();
 
   private readonly _onStatusChange = new vscode.EventEmitter<{
     terminalId: string;
@@ -424,10 +424,10 @@ export class CliAgentStateManager implements ICliAgentStateManager {
 
       log(`✅ [MANUAL-RESET] Reset terminal ${terminalId} to 'none' state (was: ${previousType})`);
       return true;
-    } else {
+    } 
       log(`⚠️ [MANUAL-RESET] No state to clear for terminal ${terminalId}`);
       return false;
-    }
+    
   }
 
   getDisconnectedAgents(): Map<string, DisconnectedAgentInfo> {

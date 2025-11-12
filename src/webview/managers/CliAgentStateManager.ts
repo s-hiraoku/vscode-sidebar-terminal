@@ -25,7 +25,7 @@ export interface CliAgentState {
  */
 export class CliAgentStateManager {
   // ターミナル毎のCLI Agent状態
-  private cliAgentStates = new Map<string, CliAgentState>();
+  private readonly cliAgentStates = new Map<string, CliAgentState>();
   private currentConnectedAgentId: string | null = null;
 
   // エージェント出力検出パターン

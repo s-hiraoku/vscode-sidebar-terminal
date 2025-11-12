@@ -20,8 +20,8 @@ import { TERMINAL_CONSTANTS } from '../constants';
  */
 export class ConfigManager {
   private static _instance: ConfigManager;
-  private _configCache = new Map<string, unknown>();
-  private _cacheExpiry = new Map<string, number>();
+  private readonly _configCache = new Map<string, unknown>();
+  private readonly _cacheExpiry = new Map<string, number>();
   private readonly CACHE_TTL = 5000; // 5秒のキャッシュ
 
   /**
@@ -47,7 +47,7 @@ export class ConfigManager {
 
     // VS Code設定変更イベントを監視してキャッシュをクリア（テスト環境では安全にスキップ）
     try {
-      if (vscode?.workspace?.onDidChangeConfiguration) {
+      if (vscode.workspace.onDidChangeConfiguration) {
         vscode.workspace.onDidChangeConfiguration((event) => {
           if (
             event.affectsConfiguration(CONFIG_SECTIONS.SIDEBAR_TERMINAL) ||
@@ -257,7 +257,7 @@ export class ConfigManager {
 
       // Debug log removed for production
 
-      if (terminalFontFamily && terminalFontFamily.trim()) {
+      if (terminalFontFamily?.trim()) {
         return terminalFontFamily.trim();
       }
 
@@ -267,7 +267,7 @@ export class ConfigManager {
 
       // Debug log removed for production
 
-      if (editorFontFamily && editorFontFamily.trim()) {
+      if (editorFontFamily?.trim()) {
         return editorFontFamily.trim();
       }
 
@@ -329,7 +329,7 @@ export class ConfigManager {
       const extensionConfig = vscode.workspace.getConfiguration('secondaryTerminal');
       const extensionFontWeight = extensionConfig.get<string>('fontWeight');
 
-      if (extensionFontWeight && extensionFontWeight.trim()) {
+      if (extensionFontWeight?.trim()) {
         return extensionFontWeight.trim();
       }
 
@@ -337,7 +337,7 @@ export class ConfigManager {
       const terminalConfig = vscode.workspace.getConfiguration('terminal.integrated');
       const terminalFontWeight = terminalConfig.get<string>('fontWeight');
 
-      if (terminalFontWeight && terminalFontWeight.trim()) {
+      if (terminalFontWeight?.trim()) {
         return terminalFontWeight.trim();
       }
 
@@ -361,7 +361,7 @@ export class ConfigManager {
       const extensionConfig = vscode.workspace.getConfiguration('secondaryTerminal');
       const extensionFontWeightBold = extensionConfig.get<string>('fontWeightBold');
 
-      if (extensionFontWeightBold && extensionFontWeightBold.trim()) {
+      if (extensionFontWeightBold?.trim()) {
         return extensionFontWeightBold.trim();
       }
 
@@ -369,7 +369,7 @@ export class ConfigManager {
       const terminalConfig = vscode.workspace.getConfiguration('terminal.integrated');
       const terminalFontWeightBold = terminalConfig.get<string>('fontWeightBold');
 
-      if (terminalFontWeightBold && terminalFontWeightBold.trim()) {
+      if (terminalFontWeightBold?.trim()) {
         return terminalFontWeightBold.trim();
       }
 

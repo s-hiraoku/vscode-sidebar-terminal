@@ -41,7 +41,7 @@ export class RefactoredMessageManager implements IMessageManager {
   private readonly logger = messageLogger;
 
   // MessageQueue utility for centralized queue management
-  private messageQueue: MessageQueue;
+  private readonly messageQueue: MessageQueue;
   private coordinator?: IManagerCoordinator;
   private cachedTerminalRestoreInfo: {
     terminals: Array<Record<string, unknown>>;
@@ -961,7 +961,7 @@ export class RefactoredMessageManager implements IMessageManager {
     // Get or create search addon
     const terminalWithAddons = terminal as ITerminalWithAddons;
     const searchAddon = terminalWithAddons._addonManager?._addons?.find(
-      (addon) => addon.addon && addon.addon.findNext
+      (addon) => addon.addon?.findNext
     )?.addon;
 
     if (searchAddon) {
@@ -1168,9 +1168,9 @@ export class RefactoredMessageManager implements IMessageManager {
         const terminal = elementWithTerminal._terminal;
         if (terminal) {
           const searchAddon = terminal._addonManager?._addons?.find(
-            (addon) => addon.addon && addon.addon.clearDecorations
+            (addon) => addon.addon?.clearDecorations
           )?.addon;
-          if (searchAddon && searchAddon.clearDecorations) {
+          if (searchAddon?.clearDecorations) {
             searchAddon.clearDecorations();
           }
         }
@@ -1417,7 +1417,7 @@ export class RefactoredMessageManager implements IMessageManager {
       // Remove trailing empty lines
       while (scrollbackLines.length > 0) {
         const lastLine = scrollbackLines[scrollbackLines.length - 1];
-        if (!lastLine || !lastLine.content.trim()) {
+        if (!lastLine?.content.trim()) {
           scrollbackLines.pop();
         } else {
           break;
@@ -1488,7 +1488,7 @@ export class RefactoredMessageManager implements IMessageManager {
       // Check if dynamic split direction is enabled via settings
       const configManager = (
         coordinator as { getManagers?: () => { config?: unknown } }
-      ).getManagers?.()?.config;
+      ).getManagers?.().config;
       let isDynamicSplitEnabled = true; // Default to enabled
 
       if (configManager) {
@@ -1600,14 +1600,14 @@ export class RefactoredMessageManager implements IMessageManager {
       if (aspectRatio > 2.0) {
         this.logger.info('Wide layout detected → Bottom Panel');
         return 'panel';
-      } else if (aspectRatio < 1.5) {
+      } if (aspectRatio < 1.5) {
         this.logger.info('Tall layout detected → Sidebar');
         return 'sidebar';
-      } else {
+      } 
         // Ambiguous, default to sidebar
         this.logger.info('Ambiguous aspect ratio, defaulting to sidebar');
         return 'sidebar';
-      }
+      
     } catch (error) {
       this.logger.error('Error analyzing dimensions', error);
       return 'sidebar';
@@ -1776,7 +1776,7 @@ export class RefactoredMessageManager implements IMessageManager {
     });
 
     try {
-      const notificationManager = coordinator.getManagers()?.notification;
+      const notificationManager = coordinator.getManagers().notification;
       if (notificationManager && terminals.length > 0) {
         notificationManager.showNotificationInTerminal(
           `💾 Session data available for ${terminals.length} terminal${terminals.length === 1 ? '' : 's'}`,
@@ -1833,7 +1833,7 @@ export class RefactoredMessageManager implements IMessageManager {
         timestamp: Date.now(),
       });
 
-      const notificationManager = coordinator.getManagers()?.notification;
+      const notificationManager = coordinator.getManagers().notification;
       if (notificationManager) {
         notificationManager.showNotificationInTerminal(
           terminalIds.length > 0
@@ -2311,7 +2311,7 @@ export class RefactoredMessageManager implements IMessageManager {
    */
   private extractScrollbackFromTerminal(terminal: any, maxLines: number): string[] {
     try {
-      if (!terminal || !terminal.instance) {
+      if (!terminal?.instance) {
         return [];
       }
 
@@ -2322,7 +2322,7 @@ export class RefactoredMessageManager implements IMessageManager {
       }
 
       // Fallback: Read from buffer directly
-      if (terminal.instance.buffer && terminal.instance.buffer.normal) {
+      if (terminal.instance.buffer?.normal) {
         const buffer = terminal.instance.buffer.normal;
         const lines: string[] = [];
 
@@ -2365,7 +2365,7 @@ export class RefactoredMessageManager implements IMessageManager {
 
     // Forward to OptimizedPersistenceManager if available
     const managers = coordinator.getManagers();
-    if (managers?.persistence && 'handlePersistenceResponse' in managers.persistence) {
+    if (managers.persistence && 'handlePersistenceResponse' in managers.persistence) {
       (managers.persistence as any).handlePersistenceResponse(messageId, {
         success,
         error,
@@ -2395,7 +2395,7 @@ export class RefactoredMessageManager implements IMessageManager {
 
     // Forward to OptimizedPersistenceManager if available
     const managers = coordinator.getManagers();
-    if (managers?.persistence && 'handlePersistenceResponse' in managers.persistence) {
+    if (managers.persistence && 'handlePersistenceResponse' in managers.persistence) {
       (managers.persistence as any).handlePersistenceResponse(messageId, {
         success,
         error,
@@ -2422,7 +2422,7 @@ export class RefactoredMessageManager implements IMessageManager {
 
     // Forward to OptimizedPersistenceManager if available
     const managers = coordinator.getManagers();
-    if (managers?.persistence && 'handlePersistenceResponse' in managers.persistence) {
+    if (managers.persistence && 'handlePersistenceResponse' in managers.persistence) {
       (managers.persistence as any).handlePersistenceResponse(messageId, {
         success,
         error,

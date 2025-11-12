@@ -8,7 +8,7 @@ import { VSCODE_COMMANDS } from '../constants';
  * CMD+OPT+L で現在のファイルパスを CLI Agent に送信する
  */
 export class FileReferenceCommand {
-  constructor(private terminalManager: TerminalManager) {}
+  constructor(private readonly terminalManager: TerminalManager) {}
 
   /**
    * @filename 送信処理（CLI Agent連携）

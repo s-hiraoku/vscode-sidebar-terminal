@@ -24,7 +24,7 @@ export interface RegisteredEventListener extends EventListenerConfig {
  * Provides automatic cleanup and organized event listener management
  */
 export class EventHandlerRegistry {
-  private listeners = new Map<string, RegisteredEventListener>();
+  private readonly listeners = new Map<string, RegisteredEventListener>();
   private disposed = false;
 
   /**
@@ -223,8 +223,8 @@ export class EventHandlerRegistry {
  */
 export class ScopedEventRegistry {
   constructor(
-    private registry: EventHandlerRegistry,
-    private prefix: string
+    private readonly registry: EventHandlerRegistry,
+    private readonly prefix: string
   ) {}
 
   register(

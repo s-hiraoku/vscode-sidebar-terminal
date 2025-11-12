@@ -48,7 +48,7 @@ export interface TerminalMessageHandlerDependencies {
  * Handler for creating new terminals
  */
 export class CreateTerminalHandler extends BaseMessageHandler<CreateTerminalData, { terminalId: string }> {
-  constructor(private dependencies: TerminalMessageHandlerDependencies) {
+  constructor(private readonly dependencies: TerminalMessageHandlerDependencies) {
     super('CreateTerminalHandler');
   }
 
@@ -76,7 +76,7 @@ export class CreateTerminalHandler extends BaseMessageHandler<CreateTerminalData
  * Handler for deleting terminals
  */
 export class DeleteTerminalHandler extends BaseMessageHandler<DeleteTerminalData, { success: boolean }> {
-  constructor(private dependencies: TerminalMessageHandlerDependencies) {
+  constructor(private readonly dependencies: TerminalMessageHandlerDependencies) {
     super('DeleteTerminalHandler');
   }
 
@@ -109,7 +109,7 @@ export class DeleteTerminalHandler extends BaseMessageHandler<DeleteTerminalData
  * Handler for terminal input
  */
 export class TerminalInputHandler extends BaseMessageHandler<TerminalInputData, { success: boolean }> {
-  constructor(private dependencies: TerminalMessageHandlerDependencies) {
+  constructor(private readonly dependencies: TerminalMessageHandlerDependencies) {
     super('TerminalInputHandler');
   }
 
@@ -131,7 +131,7 @@ export class TerminalInputHandler extends BaseMessageHandler<TerminalInputData, 
  * Handler for terminal resize operations
  */
 export class TerminalResizeHandler extends BaseMessageHandler<TerminalResizeData, { success: boolean }> {
-  constructor(private dependencies: TerminalMessageHandlerDependencies) {
+  constructor(private readonly dependencies: TerminalMessageHandlerDependencies) {
     super('TerminalResizeHandler');
   }
 
@@ -158,7 +158,7 @@ export class TerminalResizeHandler extends BaseMessageHandler<TerminalResizeData
  * Handler for focusing terminals
  */
 export class FocusTerminalHandler extends BaseMessageHandler<FocusTerminalData, { success: boolean }> {
-  constructor(private dependencies: TerminalMessageHandlerDependencies) {
+  constructor(private readonly dependencies: TerminalMessageHandlerDependencies) {
     super('FocusTerminalHandler');
   }
 
@@ -181,7 +181,7 @@ export class FocusTerminalHandler extends BaseMessageHandler<FocusTerminalData, 
  * Handler for getting terminal settings
  */
 export class GetSettingsHandler extends BaseMessageHandler<void, { settings: Record<string, any> }> {
-  constructor(private dependencies: TerminalMessageHandlerDependencies) {
+  constructor(private readonly dependencies: TerminalMessageHandlerDependencies) {
     super('GetSettingsHandler');
   }
 
@@ -201,7 +201,7 @@ export class GetSettingsHandler extends BaseMessageHandler<void, { settings: Rec
  * Handler for updating settings
  */
 export class UpdateSettingsHandler extends BaseMessageHandler<UpdateSettingsData, { success: boolean }> {
-  constructor(private dependencies: TerminalMessageHandlerDependencies) {
+  constructor(private readonly dependencies: TerminalMessageHandlerDependencies) {
     super('UpdateSettingsHandler');
   }
 
@@ -224,7 +224,7 @@ export class UpdateSettingsHandler extends BaseMessageHandler<UpdateSettingsData
  * Handler for session restoration requests
  */
 export class SessionRestorationHandler extends BaseMessageHandler<void, { sessionData: any }> {
-  constructor(private dependencies: TerminalMessageHandlerDependencies) {
+  constructor(private readonly dependencies: TerminalMessageHandlerDependencies) {
     super('SessionRestorationHandler');
   }
 
@@ -245,7 +245,7 @@ export class SessionRestorationHandler extends BaseMessageHandler<void, { sessio
  * Handler for split terminal operations
  */
 export class SplitTerminalHandler extends BaseMessageHandler<{ direction?: 'horizontal' | 'vertical' }, { terminalId: string }> {
-  constructor(private dependencies: TerminalMessageHandlerDependencies) {
+  constructor(private readonly dependencies: TerminalMessageHandlerDependencies) {
     super('SplitTerminalHandler');
   }
 

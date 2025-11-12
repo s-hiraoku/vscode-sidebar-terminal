@@ -10,8 +10,8 @@ export class Debouncer {
   private timeoutId: number | null = null;
 
   constructor(
-    private func: (...args: any[]) => void | Promise<void>,
-    private delay: number
+    private readonly func: (...args: any[]) => void | Promise<void>,
+    private readonly delay: number
   ) {}
 
   public execute(...args: any[]): void {
@@ -85,7 +85,7 @@ export class DOMBatcher {
  */
 export class PerformanceMonitor {
   private static instance: PerformanceMonitor;
-  private metrics: Map<string, { start: number; duration?: number }> = new Map();
+  private readonly metrics: Map<string, { start: number; duration?: number }> = new Map();
 
   public static getInstance(): PerformanceMonitor {
     if (!PerformanceMonitor.instance) {

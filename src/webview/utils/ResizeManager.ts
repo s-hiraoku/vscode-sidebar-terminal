@@ -23,9 +23,9 @@ export interface ResizeOptions {
  * Provides debounced resize functionality with comprehensive cleanup
  */
 export class ResizeManager {
-  private static timers = new Map<string, number>();
-  private static observers = new Map<string, ResizeObserver>();
-  private static DEFAULT_DELAY = 100;
+  private static readonly timers = new Map<string, number>();
+  private static readonly observers = new Map<string, ResizeObserver>();
+  private static readonly DEFAULT_DELAY = 100;
 
   /**
    * Execute a resize callback with debouncing

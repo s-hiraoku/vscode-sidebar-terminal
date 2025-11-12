@@ -24,7 +24,7 @@ export class TerminalTabManager implements TerminalTabEvents {
   private coordinator: IManagerCoordinator | null = null;
   private tabList: TerminalTabList | null = null;
   private tabContainer: HTMLElement | null = null;
-  private tabs: Map<string, TerminalTab> = new Map();
+  private readonly tabs: Map<string, TerminalTab> = new Map();
   private tabOrder: string[] = [];
   private isEnabled: boolean = true;
   private hideWhenSingleTab: boolean = true;
