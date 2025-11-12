@@ -62,7 +62,7 @@ describe('Tab Click Fullscreen Integration (Issue #198)', function () {
     };
 
     // Create managers with constructor injection (Issue #216)
-    containerManager = new TerminalContainerManager();
+    containerManager = new TerminalContainerManager(mockCoordinator);
     displayManager = new DisplayModeManager(mockCoordinator);
     splitManager = new SplitManager();
     tabManager = new TerminalTabManager();
@@ -70,8 +70,7 @@ describe('Tab Click Fullscreen Integration (Issue #198)', function () {
     // Update splitManager reference in coordinator
     mockCoordinator.splitManager = splitManager;
 
-    // Set coordinators and initialize (remaining managers not yet migrated)
-    containerManager.setCoordinator(mockCoordinator);
+    // Set coordinators for remaining managers not yet migrated (Phase 5+)
     splitManager.setCoordinator(mockCoordinator);
     tabManager.setCoordinator(mockCoordinator);
 

@@ -335,6 +335,130 @@ manager.initialize();
 - Constructor injection pattern enforcement
 - Independent manager verification (UIManager)
 
+## Phase 5 Examples: Terminal Managers
+
+### TerminalContainerManager Migration
+
+**Before**:
+```typescript
+export class TerminalContainerManager extends BaseManager implements ITerminalContainerManager {
+  private coordinator: IManagerCoordinator | null = null;
+
+  constructor() {
+    super('TerminalContainerManager', { /* options */ });
+  }
+
+  public setCoordinator(coordinator: IManagerCoordinator): void {
+    this.coordinator = coordinator;
+    this.log('Coordinator set');
+  }
+}
+
+// Usage (late-binding)
+const manager = new TerminalContainerManager();
+manager.setCoordinator(this);
+manager.initialize();
+```
+
+**After** (✅ Completed in Phase 5):
+```typescript
+export class TerminalContainerManager extends BaseManager implements ITerminalContainerManager {
+  private readonly coordinator: IManagerCoordinator;
+
+  constructor(coordinator: IManagerCoordinator) {
+    super('TerminalContainerManager', {
+      enableLogging: true,
+      enableValidation: true,
+      enableErrorRecovery: true,
+    });
+    this.coordinator = coordinator;
+  }
+
+  protected doInitialize(): void {
+    this.log('Initializing TerminalContainerManager');
+    this.discoverExistingContainers();
+    this.log('TerminalContainerManager initialized successfully');
+  }
+
+  protected doDispose(): void {
+    this.containerCache.clear();
+    this.containerModes.clear();
+    this.splitWrapperCache.clear();
+    this.splitResizers.clear();
+  }
+}
+
+// Usage (constructor injection)
+const manager = new TerminalContainerManager(this);
+manager.initialize();
+```
+
+### TerminalLinkManager Migration
+
+**Before**:
+```typescript
+export class TerminalLinkManager {
+  private readonly coordinator: IManagerCoordinator;
+
+  constructor(coordinator: IManagerCoordinator) {
+    this.coordinator = coordinator;
+  }
+
+  public dispose(): void {
+    this.linkProviderDisposables.forEach((disposable) => {
+      disposable.dispose();
+    });
+    this.linkProviderDisposables.clear();
+  }
+}
+```
+
+**After** (✅ Completed in Phase 5):
+```typescript
+export class TerminalLinkManager extends BaseManager {
+  private readonly coordinator: IManagerCoordinator;
+
+  constructor(coordinator: IManagerCoordinator) {
+    super('TerminalLinkManager', {
+      enableLogging: false,
+      enablePerformanceTracking: true,
+      enableErrorRecovery: true,
+    });
+    this.coordinator = coordinator;
+  }
+
+  protected doInitialize(): void {
+    this.logger('TerminalLinkManager initialized');
+    terminalLogger.info('✅ TerminalLinkManager ready');
+  }
+
+  protected doDispose(): void {
+    this.linkProviderDisposables.forEach((disposable) => {
+      disposable.dispose();
+    });
+    this.linkProviderDisposables.clear();
+    terminalLogger.info('🧹 TerminalLinkManager disposed');
+  }
+}
+```
+
+### Key Pattern: Terminal Managers with Complex State
+
+Phase 5 demonstrates that terminal managers with complex DOM state can be successfully migrated:
+1. Managers already extending BaseManager just need `setCoordinator()` removal
+2. Constructor injection makes coordinator dependency explicit and required
+3. Complex cleanup logic moves cleanly to `doDispose()`
+4. BaseManager provides performance tracking and health monitoring for free
+5. No null checks needed for coordinator throughout the manager
+
+### Test Coverage
+
+- `src/test/unit/webview/managers/Phase5.Migrations.test.ts`
+- Comprehensive integration tests for both managers
+- Constructor injection pattern verification
+- BaseManager lifecycle enforcement tests
+- Multi-instance coordinator verification
+
 ## Benefits
 
 1. **Type Safety**: Coordinators are required at construction, eliminating null checks
@@ -430,9 +554,13 @@ Given the scope (38+ managers), migration will be performed in phases:
 - ✅ Document late-binding elimination pattern
 - **Progress**: 6/38 managers migrated (16% complete)
 
-### Phase 5: Terminal Managers
-- Update `TerminalContainerManager` (already extends BaseManager, remove setCoordinator)
-- Migrate remaining terminal managers
+### Phase 5: Terminal Managers (✅ Complete)
+- ✅ Migrate `TerminalContainerManager` to constructor injection (removed setCoordinator)
+- ✅ Migrate `TerminalLinkManager` to BaseManager (already had constructor injection)
+- ✅ Update all callers (LightweightTerminalWebviewManager, tests)
+- ✅ Add comprehensive Phase 5 integration tests
+- ✅ Verify TerminalAddonManager (stateless utility, no migration needed)
+- **Progress**: 8/38 managers migrated (21% complete)
 
 ### Phase 6: Service & Utility Managers
 - Migrate service managers

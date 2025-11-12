@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Refactoring
-- **[Issue #216] Manager Pattern Standardization (Phase 1-4 Complete)**
+- **[Issue #216] Manager Pattern Standardization (Phase 1-5 Complete)**
   - **Phase 1 - Foundation**:
     - **BaseManager Enhancement**: Explicitly implements `IDisposable` interface for consistent resource cleanup
     - **Documentation**: Created comprehensive migration guide at `docs/refactoring/issue-216-manager-standardization.md`
@@ -34,10 +34,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - **Integration Tests**: Added `Phase4.Migrations.test.ts` with late-binding elimination verification
     - **Key Improvement**: Single-step instantiation instead of two-step pattern
     - **Type Safety**: Coordinator is now `readonly` and required, eliminating null checks
+  - **Phase 5 - Terminal Managers**:
+    - **TerminalContainerManager Migration**: Eliminated `setCoordinator()`, moved to constructor injection
+    - **TerminalLinkManager Migration**: Extended BaseManager (already had constructor injection)
+    - **Caller Updates**: Updated `LightweightTerminalWebviewManager` and all test files for both managers
+    - **Integration Tests**: Added `Phase5.Migrations.test.ts` with comprehensive pattern verification
+    - **Key Achievement**: Demonstrated complex DOM-state managers can be cleanly migrated
+    - **Benefits**: No null checks for coordinator, explicit dependencies, full BaseManager capabilities
+    - **Documentation**: Added Phase 5 examples with terminal manager migration patterns
   - **Pattern Enforcement**: Foundation for constructor injection pattern to replace late-binding
-  - **Files**: `BaseManager.ts`, `ScrollbackManager.ts`, `SimplePersistenceManager.ts`, `TerminalEventManager.ts`, `DisplayModeManager.ts`, `LightweightTerminalWebviewManager.ts`, `.eslintrc.js`, `eslint-rules/`, `docs/refactoring/`, test files
-  - **Progress**: 6/38 managers migrated (16% complete)
-  - **Next Steps**: Phase 5 will migrate Terminal managers (TerminalContainerManager, etc.) and continue setCoordinator elimination
+  - **Files**: `BaseManager.ts`, `ScrollbackManager.ts`, `SimplePersistenceManager.ts`, `TerminalEventManager.ts`, `DisplayModeManager.ts`, `TerminalContainerManager.ts`, `TerminalLinkManager.ts`, `LightweightTerminalWebviewManager.ts`, `.eslintrc.js`, `eslint-rules/`, `docs/refactoring/`, test files
+  - **Progress**: 8/38 managers migrated (21% complete)
+  - **Next Steps**: Phase 6 will migrate remaining service and utility managers, continue setCoordinator elimination
 
 ## [0.1.138] - 2025-01-13
 

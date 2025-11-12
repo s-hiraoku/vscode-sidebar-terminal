@@ -19,8 +19,7 @@ describe('TerminalContainerManager', () => {
       postMessageToExtension: jest.fn(),
     };
 
-    containerManager = new TerminalContainerManager();
-    containerManager.setCoordinator(mockCoordinator as IManagerCoordinator);
+    containerManager = new TerminalContainerManager(mockCoordinator as IManagerCoordinator);
   });
 
   afterEach(() => {
@@ -45,9 +44,8 @@ describe('TerminalContainerManager', () => {
       container2.setAttribute('data-terminal-id', 'terminal-2');
       document.body.appendChild(container2);
 
-      // 初期化
-      const newManager = new TerminalContainerManager();
-      newManager.setCoordinator(mockCoordinator as IManagerCoordinator);
+      // 初期化 (Issue #216: constructor injection)
+      const newManager = new TerminalContainerManager(mockCoordinator as IManagerCoordinator);
       newManager.initialize();
 
       // 発見されたコンテナを確認
