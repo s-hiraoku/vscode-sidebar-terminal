@@ -7,6 +7,17 @@ import { WebViewReadyHandler } from './messageHandlers/WebViewReadyHandler';
 import { TerminalInputHandler } from './messageHandlers/TerminalInputHandler';
 import { TerminalResizeHandler } from './messageHandlers/TerminalResizeHandler';
 import { FocusTerminalHandler } from './messageHandlers/FocusTerminalHandler';
+import { GetSettingsHandler } from './messageHandlers/GetSettingsHandler';
+import { UpdateSettingsHandler } from './messageHandlers/UpdateSettingsHandler';
+import { CreateTerminalHandler } from './messageHandlers/CreateTerminalHandler';
+import { DeleteTerminalHandler } from './messageHandlers/DeleteTerminalHandler';
+import { KillTerminalHandler } from './messageHandlers/KillTerminalHandler';
+import { TerminalClosedHandler } from './messageHandlers/TerminalClosedHandler';
+import { RequestInitialTerminalHandler } from './messageHandlers/RequestInitialTerminalHandler';
+import { SplitTerminalHandler } from './messageHandlers/SplitTerminalHandler';
+import { PanelLocationHandler } from './messageHandlers/PanelLocationHandler';
+import { TestMessageHandler } from './messageHandlers/TestMessageHandler';
+import { ProfileMessageHandler } from './handlers/ProfileMessageHandler';
 
 /**
  * Service that manages all WebView message handling using the Command pattern
@@ -14,7 +25,6 @@ import { FocusTerminalHandler } from './messageHandlers/FocusTerminalHandler';
  * This service replaces the massive switch statement in SecondaryTerminalProvider
  * with a modular, testable, and extensible handler system.
  */
-import { ProfileMessageHandler } from './handlers/ProfileMessageHandler';
 
 export class WebViewMessageHandlerService {
   private readonly handlers: IMessageHandler[] = [];
@@ -28,20 +38,35 @@ export class WebViewMessageHandlerService {
    */
   private initializeHandlers(): void {
     this.handlers.push(
+      // Initialization handlers
       new WebViewReadyHandler(),
+
+      // Terminal operation handlers
       new TerminalInputHandler(),
       new TerminalResizeHandler(),
       new FocusTerminalHandler(),
-      new ProfileMessageHandler() // Add profile handler
-      // TODO: Add more handlers as we extract them:
-      // new CreateTerminalHandler(),
-      // new DeleteTerminalHandler(),
-      // new SplitTerminalHandler(),
-      // new SettingsHandler(),
-      // new PanelLocationHandler(),
-      // new CliAgentHandler(),
-      // new SessionHandler(),
-      // new TestMessageHandler()
+      new CreateTerminalHandler(),
+      new DeleteTerminalHandler(),
+      new KillTerminalHandler(),
+      new TerminalClosedHandler(),
+      new RequestInitialTerminalHandler(),
+      new SplitTerminalHandler(),
+
+      // Settings handlers
+      new GetSettingsHandler(),
+      new UpdateSettingsHandler(),
+
+      // Panel location handler
+      new PanelLocationHandler(),
+
+      // Profile handler
+      new ProfileMessageHandler(),
+
+      // Test/Debug handlers
+      new TestMessageHandler()
+
+      // Note: Persistence handlers are managed separately via PersistenceMessageHandler
+      // Note: CliAgent handlers may be added in the future
     );
 
     log(`📨 [MessageHandler] Initialized ${this.handlers.length} message handlers`);
