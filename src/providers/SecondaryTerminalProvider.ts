@@ -11,8 +11,7 @@ import {
   WebViewHtmlGenerationService,
   HtmlGenerationOptions,
 } from '../services/webview/WebViewHtmlGenerationService';
-import { UnifiedTerminalPersistenceService } from '../services/UnifiedTerminalPersistenceService';
-import { PersistenceMessageHandler } from '../handlers/PersistenceMessageHandler';
+import { ExtensionPersistenceService } from '../services/ExtensionPersistenceService';
 import {
   isWebviewMessage,
   hasTerminalId,
@@ -43,26 +42,23 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   private _decorationsService?: import('../services/TerminalDecorationsService').TerminalDecorationsService;
   private _linksService?: import('../services/TerminalLinksService').TerminalLinksService;
 
-  // Terminal persistence services
-  private _persistenceService?: UnifiedTerminalPersistenceService;
-  private _persistenceHandler?: PersistenceMessageHandler;
+  // Terminal persistence service
+  private _persistenceService?: ExtensionPersistenceService;
 
   constructor(
     private readonly _extensionContext: vscode.ExtensionContext,
     private readonly _terminalManager: TerminalManager,
-    private readonly _standardSessionManager?: import('../sessions/StandardTerminalSessionManager').StandardTerminalSessionManager
+    private readonly _extensionPersistenceService?: ExtensionPersistenceService
   ) {
     this._htmlGenerationService = new WebViewHtmlGenerationService();
 
-    // Initialize persistence services
-    this._persistenceService = new UnifiedTerminalPersistenceService(
-      this._extensionContext,
-      this._terminalManager
-    );
-    this._persistenceHandler = new PersistenceMessageHandler(this._persistenceService);
+    // Use the provided persistence service
+    this._persistenceService = _extensionPersistenceService;
 
     log('🎨 [PROVIDER] HTML generation service initialized');
-    log('💾 [PROVIDER] Terminal persistence services initialized');
+    if (this._persistenceService) {
+      log('💾 [PROVIDER] Terminal persistence service connected');
+    }
   }
 
   public resolveWebviewView(
