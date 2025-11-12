@@ -310,10 +310,13 @@ export class IMEHandler extends BaseInputHandler implements IIMEHandler {
     this.hiddenTextarea.style.position = 'absolute';
     this.hiddenTextarea.style.left = '-9999px';
     this.hiddenTextarea.style.top = '-9999px';
-    this.hiddenTextarea.style.width = '1px';
+    this.hiddenTextarea.style.width = '0px'; // VS Code pattern: 0px width
     this.hiddenTextarea.style.height = '1px';
     this.hiddenTextarea.style.opacity = '0';
     this.hiddenTextarea.style.zIndex = '-1';
+    this.hiddenTextarea.style.padding = '0'; // Remove any padding
+    this.hiddenTextarea.style.border = 'none'; // Remove border
+    this.hiddenTextarea.style.margin = '0'; // Remove margin
     this.hiddenTextarea.setAttribute('aria-hidden', 'true');
     this.hiddenTextarea.tabIndex = -1;
 
@@ -390,8 +393,23 @@ body.${IMEHandler.IME_ACTIVE_CLASS} .terminal-container .xterm .xterm-cursor-lay
   opacity: 0 !important;
 }
 
-body.${IMEHandler.IME_ACTIVE_CLASS} .terminal-container .xterm .composition-view {
+/* Fix composition view positioning - remove all spacing */
+body.${IMEHandler.IME_ACTIVE_CLASS} .terminal-container .xterm .composition-view,
+.terminal-container .xterm .composition-view {
+  margin: 0 !important;
+  padding: 0 !important;
   margin-left: 0 !important;
+  padding-left: 0 !important;
+  left: 0 !important;
+}
+
+/* Ensure textarea has no spacing that could affect composition view */
+.terminal-container .xterm textarea,
+body.${IMEHandler.IME_ACTIVE_CLASS} .terminal-container .xterm textarea {
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  width: 0 !important;
 }`;
 
     (document.head || document.body).appendChild(styleElement);
