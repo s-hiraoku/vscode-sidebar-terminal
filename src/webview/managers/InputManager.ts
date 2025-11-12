@@ -1357,6 +1357,25 @@ export class InputManager extends BaseManager implements IInputManager {
       return true;
     }
 
+    // Ctrl+Insert (Windows/Linux): Copy - VS Code standard shortcut
+    if (event.ctrlKey && event.key === 'Insert') {
+      const terminal = manager.getTerminalInstance(terminalId);
+      if (terminal && terminal.terminal.hasSelection()) {
+        this.logger(`Ctrl+Insert copy for terminal ${terminalId}`);
+        event.preventDefault();
+        this.handleTerminalCopy(manager);
+        return true;
+      }
+    }
+
+    // Shift+Insert (Windows/Linux): Paste - VS Code standard shortcut
+    if (event.shiftKey && event.key === 'Insert') {
+      this.logger(`Shift+Insert paste for terminal ${terminalId}`);
+      event.preventDefault();
+      this.handleTerminalPaste(manager);
+      return true;
+    }
+
     return false;
   }
 

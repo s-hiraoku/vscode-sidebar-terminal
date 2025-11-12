@@ -326,6 +326,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       { command: 'htmlScriptTest', handler: (msg: WebviewMessage) => this._handleHtmlScriptTest(msg), category: 'debug' as const },
       { command: 'timeoutTest', handler: (msg: WebviewMessage) => this._handleTimeoutTest(msg), category: 'debug' as const },
       { command: 'test', handler: (msg: WebviewMessage) => this._handleDebugTest(msg), category: 'debug' as const },
+      { command: 'requestClipboardContent', handler: async (msg: WebviewMessage) => await this._handleClipboardRequest(msg), category: 'terminal' as const },
     ];
 
     this._messageRouter.registerHandlers(handlers);
@@ -542,6 +543,92 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     }
 
     this._terminalManager.sendInput(message.data, message.terminalId);
+  }
+
+  /**
+   * VS Code Standard Terminal Pattern: Multi-line paste handling with confirmation
+   * Phase 3.3: Implements VS Code's multi-line paste with bracketed paste mode support
+   */
+  private async _handleClipboardRequest(message: WebviewMessage): Promise<void> {
+    if (!hasTerminalId(message)) {
+      log('⚠️ [PROVIDER] Clipboard request missing terminalId');
+      return;
+    }
+
+    try {
+      log('📋 [PROVIDER] Reading clipboard content...');
+      const clipboardText = await vscode.env.clipboard.readText();
+
+      if (!clipboardText) {
+        log('⚠️ [PROVIDER] Clipboard is empty');
+        return;
+      }
+
+      log(`📋 [PROVIDER] Clipboard content length: ${clipboardText.length} characters`);
+
+      // Count newlines to detect multi-line paste
+      const lines = clipboardText.split('\n');
+      const lineCount = lines.length;
+
+      // VS Code standard: Show confirmation for 3+ lines
+      if (lineCount >= 3) {
+        log(`⚠️ [PROVIDER] Multi-line paste detected: ${lineCount} lines`);
+
+        const response = await vscode.window.showWarningMessage(
+          `Are you sure you want to paste ${lineCount} lines into the terminal?`,
+          { modal: true },
+          'Paste',
+          'Cancel'
+        );
+
+        if (response !== 'Paste') {
+          log('🚫 [PROVIDER] User cancelled multi-line paste');
+          return;
+        }
+
+        log('✅ [PROVIDER] User confirmed multi-line paste');
+      }
+
+      // Escape special characters based on shell type (VS Code pattern)
+      const terminal = this._terminalManager.getTerminal(message.terminalId);
+      if (!terminal) {
+        log('❌ [PROVIDER] Terminal not found for paste operation');
+        return;
+      }
+
+      const shellPath = terminal.shellPath || '';
+      const processedText = this._escapeTextForShell(clipboardText, shellPath);
+
+      // Send to terminal using sendInput (VS Code standard)
+      log(`📋 [PROVIDER] Sending ${lineCount} lines to terminal ${message.terminalId}`);
+      this._terminalManager.sendInput(processedText, message.terminalId);
+
+      log('✅ [PROVIDER] Clipboard content pasted successfully');
+    } catch (error) {
+      log('❌ [PROVIDER] Failed to handle clipboard request:', error);
+      await vscode.window.showErrorMessage(
+        'Failed to paste clipboard content into terminal'
+      );
+    }
+  }
+
+  /**
+   * Escape special characters for shell (VS Code standard pattern)
+   * Supports bash/zsh (backslash) and PowerShell (backtick)
+   */
+  private _escapeTextForShell(text: string, shellPath: string): string {
+    const shellName = shellPath.toLowerCase();
+
+    // PowerShell: Use backtick for escaping
+    if (shellName.includes('powershell') || shellName.includes('pwsh')) {
+      // PowerShell special characters that need escaping
+      return text.replace(/([`$"\\])/g, '`$1');
+    }
+
+    // Bash/Zsh: Use backslash for escaping (default)
+    // In most modern terminals, bracketed paste mode handles this automatically
+    // So we only escape truly dangerous characters
+    return text.replace(/([\\$`])/g, '\\$1');
   }
 
   private _handleTerminalResize(message: WebviewMessage): void {
