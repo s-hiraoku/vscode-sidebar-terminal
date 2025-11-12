@@ -10,9 +10,9 @@
 import { IManagerCoordinator, IProfileManager } from '../interfaces/ManagerInterfaces';
 import { ITerminalProfile } from '../../types/profiles';
 import { ProfileSelector } from '../components/ProfileSelector';
+import { BaseManager } from './BaseManager';
 
-export class ProfileManager implements IProfileManager {
-  private coordinator: IManagerCoordinator | null = null;
+export class ProfileManager extends BaseManager<IManagerCoordinator> implements IProfileManager {
   private profileSelector: ProfileSelector | null = null;
   private profileSelectorContainer: HTMLElement | null = null;
   private availableProfiles: Map<string, ITerminalProfile> = new Map();
@@ -21,26 +21,42 @@ export class ProfileManager implements IProfileManager {
   private lastRefreshTime = 0;
   private readonly CACHE_DURATION = 60000; // 1 minute cache
 
-  constructor() {
-    this.setupProfileSelectorContainer();
-  }
-
-  public setCoordinator(coordinator: IManagerCoordinator): void {
-    this.coordinator = coordinator;
+  constructor(coordinator: IManagerCoordinator) {
+    super('ProfileManager', coordinator);
   }
 
   /**
-   * Initialize profile manager
+   * Initialize profile manager (BaseManager implementation)
    */
-  public async initialize(): Promise<void> {
+  protected async doInitialize(): Promise<void> {
     if (!this.coordinator) {
-      console.error('ProfileManager: Coordinator not set');
+      this.logger('Coordinator not available during initialization');
       return;
     }
 
     this.setupProfileSelectorContainer();
     await this.refreshProfiles();
-    console.log('🎯 Profile Manager initialized with', this.availableProfiles.size, 'profiles');
+    this.logger(`Profile Manager initialized with ${this.availableProfiles.size} profiles`);
+  }
+
+  /**
+   * Dispose resources (BaseManager implementation)
+   */
+  protected doDispose(): void {
+    if (this.profileSelector) {
+      this.profileSelector.dispose();
+      this.profileSelector = null;
+    }
+
+    if (this.profileSelectorContainer && this.profileSelectorContainer.parentNode) {
+      this.profileSelectorContainer.parentNode.removeChild(this.profileSelectorContainer);
+    }
+
+    this.availableProfiles.clear();
+    this.selectedProfileId = undefined;
+    this.defaultProfileId = null;
+
+    this.logger('Profile Manager disposed');
   }
 
   private setupProfileSelectorContainer(): void {
@@ -342,24 +358,4 @@ export class ProfileManager implements IProfileManager {
     };
   }
 
-  /**
-   * Dispose resources
-   */
-  public dispose(): void {
-    if (this.profileSelector) {
-      this.profileSelector.dispose();
-      this.profileSelector = null;
-    }
-
-    if (this.profileSelectorContainer && this.profileSelectorContainer.parentNode) {
-      this.profileSelectorContainer.parentNode.removeChild(this.profileSelectorContainer);
-    }
-
-    this.availableProfiles.clear();
-    this.coordinator = null;
-    this.selectedProfileId = undefined;
-    this.defaultProfileId = null;
-
-    console.log('🎯 Profile Manager disposed');
-  }
 }

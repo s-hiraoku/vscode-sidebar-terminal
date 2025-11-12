@@ -9,6 +9,7 @@
 import { Terminal } from '@xterm/xterm';
 import { IManagerCoordinator } from '../interfaces/ManagerInterfaces';
 import { TerminalTabList, TerminalTab, TerminalTabEvents } from '../components/TerminalTabList';
+import { BaseManager } from './BaseManager';
 
 export interface TerminalTabState {
   tabs: TerminalTab[];
@@ -20,8 +21,7 @@ export interface TerminalTabState {
  * Terminal Tab Manager
  * Coordinates terminal tabs with the main terminal system
  */
-export class TerminalTabManager implements TerminalTabEvents {
-  private coordinator: IManagerCoordinator | null = null;
+export class TerminalTabManager extends BaseManager<IManagerCoordinator> implements TerminalTabEvents {
   private tabList: TerminalTabList | null = null;
   private tabContainer: HTMLElement | null = null;
   private tabs: Map<string, TerminalTab> = new Map();
@@ -29,26 +29,43 @@ export class TerminalTabManager implements TerminalTabEvents {
   private isEnabled: boolean = true;
   private hideWhenSingleTab: boolean = true;
 
-  constructor() {
-    this.setupTabContainer();
-  }
-
-  public setCoordinator(coordinator: IManagerCoordinator): void {
-    this.coordinator = coordinator;
+  constructor(coordinator: IManagerCoordinator) {
+    super('TerminalTabManager', coordinator);
   }
 
   /**
-   * Initialize tab system
+   * Initialize tab system (BaseManager implementation)
    */
-  public initialize(): void {
+  protected doInitialize(): void {
+    this.setupTabContainer();
+
     if (!this.tabContainer) {
-      console.error('Tab container not found');
+      this.logger('Tab container not found');
       return;
     }
 
     this.tabList = new TerminalTabList(this.tabContainer, this);
     this.updateTabVisibility();
-    console.log('🗂️ Terminal Tab Manager initialized');
+    this.logger('Terminal Tab Manager initialized');
+  }
+
+  /**
+   * Dispose resources (BaseManager implementation)
+   */
+  protected doDispose(): void {
+    if (this.tabList) {
+      this.tabList.dispose();
+      this.tabList = null;
+    }
+
+    if (this.tabContainer && this.tabContainer.parentNode) {
+      this.tabContainer.parentNode.removeChild(this.tabContainer);
+    }
+
+    this.tabs.clear();
+    this.tabOrder = [];
+
+    this.logger('Terminal Tab Manager disposed');
   }
 
   private setupTabContainer(): void {
@@ -338,23 +355,4 @@ export class TerminalTabManager implements TerminalTabEvents {
     this.updateTabVisibility();
   }
 
-  /**
-   * Cleanup
-   */
-  public dispose(): void {
-    if (this.tabList) {
-      this.tabList.dispose();
-      this.tabList = null;
-    }
-
-    if (this.tabContainer && this.tabContainer.parentNode) {
-      this.tabContainer.parentNode.removeChild(this.tabContainer);
-    }
-
-    this.tabs.clear();
-    this.tabOrder = [];
-    this.coordinator = null;
-
-    console.log('🗂️ Terminal Tab Manager disposed');
-  }
 }

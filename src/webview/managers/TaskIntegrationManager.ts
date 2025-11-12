@@ -9,6 +9,7 @@
 
 // import { Terminal } from '@xterm/xterm'; // Removed: not used in current implementation
 import { IManagerCoordinator } from '../interfaces/ManagerInterfaces';
+import { BaseManager } from './BaseManager';
 
 export interface TaskDefinition {
   type: string;
@@ -75,21 +76,41 @@ export interface ProblemMatcher {
  * Task Integration Manager
  * Provides VS Code task system integration for Secondary Sidebar Terminal
  */
-export class TaskIntegrationManager {
-  private coordinator: IManagerCoordinator | null = null;
+export class TaskIntegrationManager extends BaseManager<IManagerCoordinator> {
   private activeTasks = new Map<string, TaskExecution>();
   private taskTerminals = new Map<string, string>(); // terminalId -> taskId
   private problemMatchers = new Map<string, ProblemMatcher>();
   private taskHistory: TaskExecution[] = [];
 
-  constructor() {
-    this.initializeBuiltinProblemMatchers();
-    this.initializeErrorNotificationStyles();
+  constructor(coordinator: IManagerCoordinator) {
+    super('TaskIntegrationManager', coordinator);
   }
 
-  public setCoordinator(coordinator: IManagerCoordinator): void {
-    this.coordinator = coordinator;
-    console.log('🎯 Task Integration Manager initialized');
+  /**
+   * Initialize task integration manager (BaseManager implementation)
+   */
+  protected doInitialize(): void {
+    this.initializeBuiltinProblemMatchers();
+    this.initializeErrorNotificationStyles();
+    this.logger('Task Integration Manager initialized');
+  }
+
+  /**
+   * Dispose resources (BaseManager implementation)
+   */
+  protected doDispose(): void {
+    // Cancel all active tasks
+    this.activeTasks.forEach((execution) => {
+      if (execution.task._disposeProblemMonitoring) {
+        execution.task._disposeProblemMonitoring();
+      }
+    });
+
+    this.activeTasks.clear();
+    this.taskTerminals.clear();
+    this.taskHistory = [];
+
+    this.logger('Task Integration Manager disposed');
   }
 
   /**
@@ -967,19 +988,4 @@ export class TaskIntegrationManager {
     return Math.abs(hash).toString(36);
   }
 
-  public dispose(): void {
-    // Cancel all active tasks
-    this.activeTasks.forEach((execution) => {
-      if (execution.task._disposeProblemMonitoring) {
-        execution.task._disposeProblemMonitoring();
-      }
-    });
-
-    this.activeTasks.clear();
-    this.taskTerminals.clear();
-    this.taskHistory = [];
-    this.coordinator = null;
-
-    console.log('🎯 Task Integration Manager disposed');
-  }
 }

@@ -196,24 +196,43 @@ export abstract class ResourceManager {
 // 統合された基底マネージャークラス
 // =============================================================================
 
-export abstract class BaseManager extends ResourceManager {
+export abstract class BaseManager<TCoordinator = any> extends ResourceManager {
   protected isReady = false;
   protected isDisposed = false;
   private initializationStartTime = 0;
   protected readonly logger: LoggerFunction;
   private readonly errorHandler: ManagerErrorHandler;
   private readonly performanceTracker: ManagerPerformanceTracker;
+  protected readonly coordinator: TCoordinator | null;
 
   constructor(
     protected readonly managerName: string,
-    protected readonly options: ManagerInitOptions = {
-      enableLogging: true,
-      enablePerformanceTracking: true,
-      enableErrorRecovery: true,
-      initializationTimeoutMs: 5000
-    }
+    coordinatorOrOptions?: TCoordinator | ManagerInitOptions,
+    optionsWhenCoordinatorProvided?: ManagerInitOptions
   ) {
     super();
+
+    // Determine if first parameter is coordinator or options
+    const isCoordinator = coordinatorOrOptions !== undefined &&
+      coordinatorOrOptions !== null &&
+      typeof coordinatorOrOptions === 'object' &&
+      !('enableLogging' in coordinatorOrOptions);
+
+    // Extract coordinator and options
+    this.coordinator = isCoordinator ? (coordinatorOrOptions as TCoordinator) : null;
+    const options: ManagerInitOptions = isCoordinator
+      ? (optionsWhenCoordinatorProvided ?? {
+          enableLogging: true,
+          enablePerformanceTracking: true,
+          enableErrorRecovery: true,
+          initializationTimeoutMs: 5000
+        })
+      : (coordinatorOrOptions as ManagerInitOptions | undefined) ?? {
+          enableLogging: true,
+          enablePerformanceTracking: true,
+          enableErrorRecovery: true,
+          initializationTimeoutMs: 5000
+        };
 
     this.logger = options.customLogger ?? this.createDefaultLogger();
     this.errorHandler = new ManagerErrorHandler(

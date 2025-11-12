@@ -8,6 +8,7 @@
  */
 
 import { IManagerCoordinator, IFindInTerminalManager } from '../interfaces/ManagerInterfaces';
+import { BaseManager } from './BaseManager';
 
 export interface FindOptions {
   caseSensitive: boolean;
@@ -27,8 +28,7 @@ export interface FindResult {
  * Provides VS Code-style find functionality for terminals
  */
 
-export class FindInTerminalManager implements IFindInTerminalManager {
-  private coordinator: IManagerCoordinator | null = null;
+export class FindInTerminalManager extends BaseManager<IManagerCoordinator> implements IFindInTerminalManager {
   private searchPanel: HTMLElement | null = null;
   private searchInput: HTMLInputElement | null = null;
   private matchCounter: HTMLElement | null = null;
@@ -46,13 +46,35 @@ export class FindInTerminalManager implements IFindInTerminalManager {
   private currentMatchIndex = 0;
   private totalMatches = 0;
 
-  constructor() {
-    this.setupStyles();
-    this.setupKeyboardShortcuts();
+  constructor(coordinator: IManagerCoordinator) {
+    super('FindInTerminalManager', coordinator);
   }
 
-  public setCoordinator(coordinator: IManagerCoordinator): void {
-    this.coordinator = coordinator;
+  /**
+   * Initialize find in terminal manager (BaseManager implementation)
+   */
+  protected doInitialize(): void {
+    this.setupStyles();
+    this.setupKeyboardShortcuts();
+    this.logger('Find in Terminal Manager initialized');
+  }
+
+  /**
+   * Dispose resources (BaseManager implementation)
+   */
+  protected doDispose(): void {
+    this.hideSearch();
+
+    if (this.searchPanel) {
+      this.searchPanel.remove();
+      this.searchPanel = null;
+    }
+
+    this.searchInput = null;
+    this.matchCounter = null;
+    this.currentTerminalId = null;
+
+    this.logger('Find in Terminal Manager disposed');
   }
 
   /**
@@ -586,22 +608,4 @@ export class FindInTerminalManager implements IFindInTerminalManager {
     };
   }
 
-  /**
-   * Dispose resources
-   */
-  public dispose(): void {
-    this.hideSearch();
-
-    if (this.searchPanel) {
-      this.searchPanel.remove();
-      this.searchPanel = null;
-    }
-
-    this.searchInput = null;
-    this.matchCounter = null;
-    this.coordinator = null;
-    this.currentTerminalId = null;
-
-    console.log('🔍 Find in Terminal Manager disposed');
-  }
 }

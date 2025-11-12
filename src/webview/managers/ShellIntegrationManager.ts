@@ -18,6 +18,7 @@ import {
   ICommandDetection,
   IShellIntegrationEvents,
 } from '../addons/ShellIntegrationAddon';
+import { BaseManager } from './BaseManager';
 
 export interface ShellStatus {
   terminalId: string;
@@ -28,8 +29,7 @@ export interface ShellStatus {
   lastDuration?: number;
 }
 
-export class ShellIntegrationManager implements IShellIntegrationEvents {
-  private coordinator: IManagerCoordinator | null = null;
+export class ShellIntegrationManager extends BaseManager<IManagerCoordinator> implements IShellIntegrationEvents {
   private statusMap = new Map<string, ShellStatus>();
   private statusIndicators = new Map<string, HTMLElement>();
   private cwdDisplays = new Map<string, HTMLElement>();
@@ -44,12 +44,32 @@ export class ShellIntegrationManager implements IShellIntegrationEvents {
     error: '#f85149', // Red for error
   };
 
-  constructor() {
-    this.setupStyles();
+  constructor(coordinator: IManagerCoordinator) {
+    super('ShellIntegrationManager', coordinator);
   }
 
-  public setCoordinator(coordinator: IManagerCoordinator): void {
-    this.coordinator = coordinator;
+  /**
+   * Initialize shell integration manager (BaseManager implementation)
+   */
+  protected doInitialize(): void {
+    this.setupStyles();
+    this.logger('Shell Integration Manager initialized');
+  }
+
+  /**
+   * Dispose resources (BaseManager implementation)
+   */
+  protected doDispose(): void {
+    this.statusMap.clear();
+    this.commandStartTimes.clear();
+    this.statusIndicators.forEach((indicator) => indicator.remove());
+    this.statusIndicators.clear();
+    this.cwdDisplays.forEach((display) => display.remove());
+    this.cwdDisplays.clear();
+    this.shellAddons.forEach((addon) => addon.dispose());
+    this.shellAddons.clear();
+
+    this.logger('Shell Integration Manager disposed');
   }
 
   /**
@@ -560,16 +580,6 @@ export class ShellIntegrationManager implements IShellIntegrationEvents {
     }
   }
 
-  public dispose(): void {
-    this.statusMap.clear();
-    this.commandStartTimes.clear();
-    this.statusIndicators.forEach((indicator) => indicator.remove());
-    this.statusIndicators.clear();
-    this.cwdDisplays.forEach((display) => display.remove());
-    this.cwdDisplays.clear();
-    this.shellAddons.forEach((addon) => addon.dispose());
-    this.shellAddons.clear();
-  }
 
   /**
    * Get shell integration state for a terminal

@@ -122,15 +122,17 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     this.terminalLifecycleManager = new TerminalLifecycleManager(this.splitManager, this);
     this.cliAgentStateManager = new CliAgentStateManager();
     this.eventHandlerManager = new EventHandlerManager();
-    this.findInTerminalManager = new FindInTerminalManager();
-    this.profileManager = new ProfileManager();
+
+    // Initialize managers with constructor DI (standardized pattern)
+    this.findInTerminalManager = new FindInTerminalManager(this);
+    this.profileManager = new ProfileManager(this);
     try {
-      this.shellIntegrationManager = new ShellIntegrationManager();
+      this.shellIntegrationManager = new ShellIntegrationManager(this);
     } catch (error) {
       console.error('Failed to initialize ShellIntegrationManager:', error);
       // Create minimal stub to prevent further errors
       this.shellIntegrationManager = {
-        setCoordinator: () => {},
+        initialize: () => Promise.resolve(),
         handleMessage: () => {},
         dispose: () => {},
       } as any;
@@ -184,13 +186,16 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     this.messageManager = new RefactoredMessageManager();
     this.persistenceManager = this.simplePersistenceManager;
 
-    // Set up coordinator relationships for specialized managers
-    this.findInTerminalManager.setCoordinator(this);
-    this.profileManager.setCoordinator(this);
-    this.shellIntegrationManager.setCoordinator &&
-      this.shellIntegrationManager.setCoordinator(this);
+    // Initialize all managers using standardized BaseManager pattern
+    this.findInTerminalManager.initialize().catch((error) => {
+      console.error('❌ FindInTerminalManager initialization failed:', error);
+    });
 
-    // Initialize ProfileManager asynchronously
+    this.shellIntegrationManager.initialize().catch((error) => {
+      console.error('❌ ShellIntegrationManager initialization failed:', error);
+    });
+
+    // Initialize ProfileManager asynchronously (needs to fetch profiles)
     setTimeout(async () => {
       try {
         await this.profileManager.initialize();
