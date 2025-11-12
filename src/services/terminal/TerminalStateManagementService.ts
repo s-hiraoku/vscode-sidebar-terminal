@@ -4,6 +4,11 @@ import { terminal as log } from '../../utils/logger';
 import { getTerminalConfig } from '../../utils/common';
 import { TerminalNumberManager } from '../../utils/TerminalNumberManager';
 import { ActiveTerminalManager } from '../../utils/common';
+import {
+  TerminalLifecycleStateMachine,
+  TerminalLifecycleState,
+  StateTransition,
+} from './TerminalLifecycleStateMachine';
 
 /**
  * Service responsible for terminal state management
@@ -18,11 +23,13 @@ export class TerminalStateManagementService {
   private readonly _terminals = new Map<string, TerminalInstance>();
   private readonly _activeTerminalManager: ActiveTerminalManager;
   private readonly _terminalNumberManager: TerminalNumberManager;
+  private readonly _lifecycleStateMachine: TerminalLifecycleStateMachine;
 
   // Event emitters for state changes
   private readonly _stateUpdateEmitter = new vscode.EventEmitter<TerminalState>();
   private readonly _terminalRemovedEmitter = new vscode.EventEmitter<string>();
   private readonly _terminalAddedEmitter = new vscode.EventEmitter<TerminalInstance>();
+  private readonly _lifecycleStateChangeEmitter = new vscode.EventEmitter<StateTransition>();
 
   // Track terminals being killed to prevent race conditions
   private readonly _terminalBeingKilled = new Set<string>();
@@ -30,13 +37,20 @@ export class TerminalStateManagementService {
   public readonly onStateUpdate = this._stateUpdateEmitter.event;
   public readonly onTerminalRemoved = this._terminalRemovedEmitter.event;
   public readonly onTerminalAdded = this._terminalAddedEmitter.event;
+  public readonly onLifecycleStateChange = this._lifecycleStateChangeEmitter.event;
 
   constructor() {
     const config = getTerminalConfig();
     this._activeTerminalManager = new ActiveTerminalManager();
     this._terminalNumberManager = new TerminalNumberManager(config.maxTerminals);
+    this._lifecycleStateMachine = new TerminalLifecycleStateMachine();
 
-    log('📊 [StateManager] Terminal state management service initialized');
+    // Forward lifecycle state changes to our own event
+    this._lifecycleStateMachine.onStateChange((transition) => {
+      this._lifecycleStateChangeEmitter.fire(transition);
+    });
+
+    log('📊 [StateManager] Terminal state management service initialized with lifecycle state machine');
   }
 
   /**
@@ -45,6 +59,13 @@ export class TerminalStateManagementService {
   addTerminal(terminal: TerminalInstance): void {
     try {
       this._terminals.set(terminal.id, terminal);
+
+      // Initialize lifecycle state machine for this terminal
+      this._lifecycleStateMachine.initializeTerminal(terminal.id, {
+        name: terminal.name,
+        number: terminal.number,
+      });
+
       log(`➕ [StateManager] Terminal added to state: ${terminal.id} (${terminal.name})`);
 
       // Emit events
@@ -67,8 +88,33 @@ export class TerminalStateManagementService {
         return;
       }
 
+      // Transition to Closed state in lifecycle state machine
+      const currentLifecycleState = this._lifecycleStateMachine.getState(terminalId);
+      if (currentLifecycleState && currentLifecycleState !== TerminalLifecycleState.Closed) {
+        // Ensure terminal is in Closing state before removing
+        if (currentLifecycleState !== TerminalLifecycleState.Closing) {
+          this._lifecycleStateMachine.transition(
+            terminalId,
+            TerminalLifecycleState.Closing,
+            'Terminal removal initiated'
+          );
+        }
+        this._lifecycleStateMachine.transition(
+          terminalId,
+          TerminalLifecycleState.Closed,
+          'Terminal removed from state'
+        );
+      }
+
       this._terminals.delete(terminalId);
       this._terminalBeingKilled.delete(terminalId); // Clean up killing tracker
+
+      // Remove from lifecycle state machine after a delay to preserve history
+      setTimeout(() => {
+        if (this._lifecycleStateMachine.hasTerminal(terminalId)) {
+          this._lifecycleStateMachine.removeTerminal(terminalId);
+        }
+      }, 5000); // Keep history for 5 seconds for debugging
 
       // Terminal number release handled externally
       if (terminal.number) {
@@ -162,12 +208,37 @@ export class TerminalStateManagementService {
         return false;
       }
 
+      // Get previous active terminal
+      const previousActiveId = this._activeTerminalManager.getActive();
+
+      // Transition previous active terminal to Inactive
+      if (previousActiveId && previousActiveId !== terminalId) {
+        const previousState = this._lifecycleStateMachine.getState(previousActiveId);
+        if (previousState === TerminalLifecycleState.Active) {
+          this._lifecycleStateMachine.transition(
+            previousActiveId,
+            TerminalLifecycleState.Inactive,
+            'Another terminal became active'
+          );
+        }
+      }
+
       // Deactivate all terminals
       this._deactivateAllTerminals();
 
       // Set new active terminal
       terminal.isActive = true;
       this._activeTerminalManager.setActive(terminalId);
+
+      // Transition new active terminal to Active state
+      const currentState = this._lifecycleStateMachine.getState(terminalId);
+      if (currentState === TerminalLifecycleState.Ready || currentState === TerminalLifecycleState.Inactive) {
+        this._lifecycleStateMachine.transition(
+          terminalId,
+          TerminalLifecycleState.Active,
+          'Terminal set as active'
+        );
+      }
 
       log(`✅ [StateManager] Set active terminal: ${terminalId} (${terminal.name})`);
       this._notifyStateUpdate();
@@ -329,6 +400,56 @@ export class TerminalStateManagementService {
   }
 
   /**
+   * Transition terminal lifecycle state
+   */
+  transitionLifecycleState(
+    terminalId: string,
+    toState: TerminalLifecycleState,
+    reason?: string
+  ): boolean {
+    return this._lifecycleStateMachine.transition(terminalId, toState, reason);
+  }
+
+  /**
+   * Transition terminal to error state
+   */
+  transitionToError(terminalId: string, reason: string, metadata?: Record<string, unknown>): boolean {
+    return this._lifecycleStateMachine.transitionToError(terminalId, reason, metadata);
+  }
+
+  /**
+   * Get terminal lifecycle state
+   */
+  getLifecycleState(terminalId: string): TerminalLifecycleState | undefined {
+    return this._lifecycleStateMachine.getState(terminalId);
+  }
+
+  /**
+   * Get lifecycle state history for a terminal
+   */
+  getLifecycleHistory(terminalId: string): StateTransition[] {
+    return this._lifecycleStateMachine.getHistory(terminalId);
+  }
+
+  /**
+   * Get terminals in specific lifecycle state
+   */
+  getTerminalsInLifecycleState(state: TerminalLifecycleState): string[] {
+    return this._lifecycleStateMachine.getTerminalsInState(state);
+  }
+
+  /**
+   * Get lifecycle state machine debug info
+   */
+  getLifecycleDebugInfo(): {
+    totalTerminals: number;
+    stateCounts: Record<TerminalLifecycleState, number>;
+    terminals: Array<{ id: string; state: TerminalLifecycleState; historyCount: number }>;
+  } {
+    return this._lifecycleStateMachine.getDebugInfo();
+  }
+
+  /**
    * Deactivate all terminals
    */
   private _deactivateAllTerminals(): void {
@@ -361,10 +482,14 @@ export class TerminalStateManagementService {
       this._terminals.clear();
       this._terminalBeingKilled.clear();
 
+      // Dispose lifecycle state machine
+      this._lifecycleStateMachine.dispose();
+
       // Dispose event emitters
       this._stateUpdateEmitter.dispose();
       this._terminalRemovedEmitter.dispose();
       this._terminalAddedEmitter.dispose();
+      this._lifecycleStateChangeEmitter.dispose();
 
       log('✅ [StateManager] Terminal state management service disposed');
     } catch (error) {
