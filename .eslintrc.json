@@ -39,6 +39,13 @@
         "ignoreRestSiblings": true
       }
     ],
+    "no-warning-comments": [
+      "warn",
+      {
+        "terms": ["TODO", "FIXME", "XXX"],
+        "location": "start"
+      }
+    ],
     "curly": ["warn", "multi-line"],
     "eqeqeq": ["error", "always"],
     "no-throw-literal": "error",

@@ -57,16 +57,14 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
         return null;
       }
 
-      // Check cache first - TEMPORARILY DISABLED for debugging
+      // Check cache first
       const cacheKey = `input:${terminalId}:${trimmedInput}`;
-      // const cachedResult = this.detectionCache.get(cacheKey);
-      // if (cachedResult && Date.now() - cachedResult.timestamp < this.configManager.getConfig().cacheTtlMs) {
-      //   log(`🎯 [CLI-AGENT] Cache hit for input detection: "${trimmedInput}"`);
-      //   return cachedResult.result;
-      // }
-      log(
-        `🔍 [CACHE-DEBUG] Cache temporarily disabled for debugging - processing fresh: "${trimmedInput}"`
-      );
+      const cachedResult = this.detectionCache.get(cacheKey);
+      if (cachedResult && Date.now() - cachedResult.timestamp < this.configManager.getConfig().cacheTtlMs) {
+        log(`🎯 [CLI-AGENT] Cache hit for input detection: "${trimmedInput}"`);
+        return cachedResult.result;
+      }
+      log(`🔍 [CLI-AGENT] Cache miss, processing fresh: "${trimmedInput}"`);
 
       let result: CliAgentDetectionResult | null = null;
 

@@ -393,17 +393,15 @@ export class SettingsMessageHandler implements MessageHandler {
     switch (command) {
       case 'getSettings':
         log('⚙️ [DEBUG] Getting settings from webview...');
-        // This would need to be implemented with actual settings logic
-        // For now, delegate back to the provider
-        // TODO: Extract settings logic into a dedicated service
+        // TODO(#227): Extract settings logic into a dedicated SettingsService
+        // This should be handled by a SettingsService rather than delegating to the provider
         break;
 
       case 'updateSettings':
         log('⚙️ [DEBUG] Updating settings from webview:', message.settings);
         if (message.settings) {
-          // This would need to be implemented with actual settings logic
-          // For now, delegate back to the provider
-          // TODO: Extract settings logic into a dedicated service
+          // TODO(#227): Extract settings logic into a dedicated SettingsService
+          // This should be handled by a SettingsService rather than delegating to the provider
         }
         break;
     }

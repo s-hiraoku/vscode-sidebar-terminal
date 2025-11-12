@@ -325,7 +325,7 @@ export class WebViewStateManager implements IWebViewStateManager {
     }, 100); // Very short delay to ensure WebView is ready
   }
 
-  // TODO: Move this to SettingsManager when created
+  // TODO(#227): Move this to SettingsManager when created - part of settings service extraction
   private getCurrentFontSettings(): any {
     // Placeholder - this should be moved to SettingsManager
     return {

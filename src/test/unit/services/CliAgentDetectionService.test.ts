@@ -624,7 +624,8 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
   describe('⚡ Performance and Caching Tests', () => {
     it('should use debouncing to prevent excessive detection calls', () => {
       // ARRANGE: Configure short debounce time
-      // configManager.updateConfig({ debounceMs: 10 }); // TODO: Fix config management
+      // TODO(#227): Re-enable config management after refactoring ConfigManager interface
+      // configManager.updateConfig({ debounceMs: 10 });
 
       // ACT: Rapid consecutive calls
       const results = [];
@@ -639,7 +640,8 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
 
     it('should cache detection results for identical data', () => {
       // ARRANGE: Configure caching
-      // configManager.updateConfig({ cacheTtlMs: 1000 }); // TODO: Fix config management
+      // TODO(#227): Re-enable config management after refactoring ConfigManager interface
+      // configManager.updateConfig({ cacheTtlMs: 1000 });
 
       // ACT: Send identical data multiple times
       const result1 = detectionService.detectFromOutput('term1', 'some random output');
