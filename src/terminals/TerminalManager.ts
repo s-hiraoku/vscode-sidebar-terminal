@@ -11,7 +11,12 @@ import {
   DeleteResult,
   ProcessState,
 } from '../types/shared';
-import { ERROR_MESSAGES } from '../constants';
+import {
+  ERROR_MESSAGES,
+  PERFORMANCE_CONSTANTS,
+  TIMING_CONSTANTS,
+} from '../constants';
+import { TERMINAL_CONSTANTS } from '../constants/SystemConstants';
 import { ShellIntegrationService } from '../services/ShellIntegrationService';
 import { TerminalProfileService } from '../services/TerminalProfileService';
 import { terminal as log } from '../utils/logger';
@@ -82,8 +87,11 @@ export class TerminalManager {
   // Performance optimization: Data batching for high-frequency output
   private readonly _dataBuffers = new Map<string, string[]>();
   private readonly _dataFlushTimers = new Map<string, NodeJS.Timeout>();
-  private readonly DATA_FLUSH_INTERVAL = 8; // ~125fps for improved responsiveness
-  private readonly MAX_BUFFER_SIZE = 50;
+  // Use centralized performance constants from SystemConstants
+  // @see https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/226
+  private readonly DATA_FLUSH_INTERVAL =
+    PERFORMANCE_CONSTANTS.CLI_AGENT_FAST_FLUSH_INTERVAL_MS * 2; // 8ms (~125fps) for improved responsiveness
+  private readonly MAX_BUFFER_SIZE = PERFORMANCE_CONSTANTS.MAX_BUFFER_CHUNK_COUNT;
   private readonly _initialPromptGuards = new Map<string, { dispose: () => void }>();
 
   // CLI Agent detection moved to service - cache removed from TerminalManager
