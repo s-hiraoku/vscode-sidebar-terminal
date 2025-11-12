@@ -80,8 +80,14 @@ export class WebViewPersistenceService {
   private static readonly PROGRESSIVE_THRESHOLD = 500; // lines
 
   constructor() {
-    // @ts-ignore - VS Code API available in webview
-    this.vscodeApi = acquireVsCodeApi();
+    // Use globally acquired VS Code API from main.ts to avoid "already acquired" error
+    // @ts-ignore - VS Code API stored on window by main.ts
+    this.vscodeApi = window.vscodeApi;
+
+    if (!this.vscodeApi) {
+      throw new Error('VS Code API not available on window. main.ts should acquire it first.');
+    }
+
     log('✅ [WV-PERSISTENCE] WebView Persistence Service initialized');
   }
 
