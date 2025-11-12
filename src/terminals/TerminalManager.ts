@@ -10,6 +10,7 @@ import {
   TerminalInfo,
   DeleteResult,
   ProcessState,
+  TerminalInitOptions,
 } from '../types/shared';
 import { ERROR_MESSAGES } from '../constants';
 import { ShellIntegrationService } from '../services/ShellIntegrationService';
@@ -519,8 +520,11 @@ export class TerminalManager {
   /**
    * Initialize shell for a terminal after PTY creation
    * 🎯 HANDSHAKE PROTOCOL: Prevents duplicate initialization that causes multiple prompts
+   * @param options Terminal initialization options (Parameter Object Pattern)
    */
-  public initializeShellForTerminal(terminalId: string, ptyProcess: any, safeMode: boolean): void {
+  public initializeShellForTerminal(options: TerminalInitOptions): void {
+    const { terminalId, ptyProcess, safeMode } = options;
+
     try {
       // 🎯 HANDSHAKE PROTOCOL: Guard against duplicate initialization
       if (this._shellInitialized.has(terminalId)) {
