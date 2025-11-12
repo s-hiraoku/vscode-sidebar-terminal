@@ -1152,6 +1152,18 @@ export class TerminalManager {
     // Clear kill tracking
     this._terminalBeingKilled.clear();
 
+    // 🔧 FIX: Dispose PTY data listeners to prevent memory leaks
+    for (const disposable of this._ptyDataDisposables.values()) {
+      disposable.dispose();
+    }
+    this._ptyDataDisposables.clear();
+
+    // 🔧 FIX: Clean up initial prompt guards
+    for (const guard of this._initialPromptGuards.values()) {
+      guard.dispose();
+    }
+    this._initialPromptGuards.clear();
+
     // Dispose CLI Agent detection service
     this._cliAgentService.dispose();
 
@@ -1168,6 +1180,11 @@ export class TerminalManager {
     this._terminalRemovedEmitter.dispose();
     this._stateUpdateEmitter.dispose();
     this._terminalFocusEmitter.dispose();
+
+    // 🔧 FIX: Dispose output emitter if it was created
+    if (this._outputEmitter) {
+      this._outputEmitter.dispose();
+    }
   }
 
   // Performance optimization: Buffer data to reduce event frequency
