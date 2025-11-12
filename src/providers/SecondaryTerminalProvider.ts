@@ -102,7 +102,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   constructor(
     private readonly _extensionContext: vscode.ExtensionContext,
     private readonly _terminalManager: TerminalManager,
-    private readonly _standardSessionManager?: import('../sessions/StandardTerminalSessionManager').StandardTerminalSessionManager
+    private readonly _extensionPersistenceService?: import('../services/persistence/ExtensionPersistenceService').ExtensionPersistenceService
   ) {
     this._htmlGenerationService = new WebViewHtmlGenerationService();
 
@@ -140,7 +140,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         sendInitializationComplete: this._sendInitializationComplete.bind(this),
         restoreLastSession: () => this.restoreLastSession(),
       },
-      this._standardSessionManager
+      this._extensionPersistenceService
     );
   }
 
@@ -1347,8 +1347,8 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         this._scrollbackCoordinator.handleScrollbackDataResponse(message);
 
         // Also forward to StandardTerminalSessionManager for session persistence
-        if (this._standardSessionManager) {
-          this._standardSessionManager.handleScrollbackDataResponse(message);
+        if (this._extensionPersistenceService) {
+          this._extensionPersistenceService.handleScrollbackDataResponse(message);
         }
 
         return;
@@ -1356,8 +1356,8 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
       // Handle pushed scrollback data (instant save like VS Code)
       if (message.command === 'pushScrollbackData') {
-        if (this._standardSessionManager) {
-          this._standardSessionManager.handlePushedScrollbackData(message);
+        if (this._extensionPersistenceService) {
+          this._extensionPersistenceService.handlePushedScrollbackData(message);
         }
         return;
       }
@@ -1482,8 +1482,8 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
               );
 
               // Forward to StandardTerminalSessionManager
-              if (this._standardSessionManager) {
-                this._standardSessionManager.handleSerializationResponse(serializationData);
+              if (this._extensionPersistenceService) {
+                this._extensionPersistenceService.handleSerializationResponse(serializationData);
               }
             }
           } catch (persistenceError) {
@@ -1505,8 +1505,8 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
               log(`✅ [PERSISTENCE] Restored ${restoredCount}/${totalCount} terminals`);
             }
 
-            if (this._standardSessionManager) {
-              this._standardSessionManager.handleSerializationRestoreResponse(message as unknown as Record<string, unknown>);
+            if (this._extensionPersistenceService) {
+              this._extensionPersistenceService.handleSerializationRestoreResponse(message as unknown as Record<string, unknown>);
             }
           } catch (restoreError) {
             log('❌ [PERSISTENCE] Error handling restore response:', restoreError);
@@ -2093,13 +2093,13 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
     try {
       // Get session data from StandardTerminalSessionManager
-      if (!this._standardSessionManager) {
+      if (!this._extensionPersistenceService) {
         log('⚠️ [DEBUG] No StandardTerminalSessionManager available for session restoration');
         await this._sendSessionRestorationResponse(terminalId, null);
         return;
       }
 
-      const sessionInfo = this._standardSessionManager.getSessionInfo();
+      const sessionInfo = this._extensionPersistenceService.getSessionInfo();
 
       if (!sessionInfo || !sessionInfo.exists || !sessionInfo.terminals) {
         log('📭 [DEBUG] No session info available');

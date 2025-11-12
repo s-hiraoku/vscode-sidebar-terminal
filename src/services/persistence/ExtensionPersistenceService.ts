@@ -282,6 +282,16 @@ export class ExtensionPersistenceService {
   }
 
   /**
+   * Set sidebar provider for WebView communication
+   */
+  public setSidebarProvider(provider: {
+    sendMessageToWebview: (message: unknown) => Promise<void>;
+  }): void {
+    this.sidebarProvider = provider;
+    log('[EXT-PERSISTENCE] Sidebar provider configured');
+  }
+
+  /**
    * Handle pushed scrollback data from WebView (for instant save)
    */
   public handlePushedScrollbackData(message: {
@@ -294,6 +304,30 @@ export class ExtensionPersistenceService {
 
     this.pushedScrollbackCache.set(message.terminalId, message.scrollbackData);
     log(`[EXT-PERSISTENCE] Cached scrollback for ${message.terminalId}: ${message.scrollbackData.length} lines`);
+  }
+
+  /**
+   * Cleanup expired sessions
+   */
+  public async cleanupExpiredSessions(): Promise<void> {
+    try {
+      const config = this.getPersistenceConfig();
+      const sessionData = this.context.workspaceState.get<SessionStorageData>(
+        ExtensionPersistenceService.STORAGE_KEY
+      );
+
+      if (!sessionData) {
+        return;
+      }
+
+      if (SessionDataTransformer.isSessionExpired(sessionData, config.persistentSessionExpiryDays)) {
+        log('[EXT-PERSISTENCE] Cleaning up expired session...');
+        await this.clearSession();
+        log('✅ [EXT-PERSISTENCE] Expired session cleaned up');
+      }
+    } catch (error) {
+      log(`❌ [EXT-PERSISTENCE] Failed to cleanup expired sessions: ${error}`);
+    }
   }
 
   /**
