@@ -3,8 +3,6 @@
  * VS Code compatible terminal profile system
  */
 
-// import * as vscode from 'vscode';
-
 /**
  * Terminal profile configuration
  */
