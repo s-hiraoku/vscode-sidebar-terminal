@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Result Pattern for Standardized Error Handling** ([Issue #224](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/224))
+  - **Type-Safe Error Handling**: Introduced `Result<T, E>` discriminated union type for explicit success/failure handling
+  - **Structured Error Details**: `ResultError` class with error codes, messages, context, and causes
+  - **Error Code Classification**: 25+ specific error codes (e.g., `TERMINAL_NOT_FOUND`, `CONFIG_LOAD_FAILED`)
+  - **Helper Functions**: `success()`, `failure()`, `tryCatch()`, `fromPromise()`, `map()`, `chain()`, etc.
+  - **Service Updates**:
+    - `TerminalLifecycleService`: All operations return `Result` types
+    - `TerminalProfileService`: Configuration updates return `Result` types
+  - **Documentation**:
+    - `docs/RESULT_PATTERN_MIGRATION.md`: Comprehensive migration guide
+    - `docs/RESULT_PATTERN_EXAMPLES.md`: Practical usage examples and patterns
+  - **Benefits**: Eliminates silent error swallowing, provides consistent error handling, improves debugging
+
 ## [0.1.138] - 2025-01-13
 
 ### Added

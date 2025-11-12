@@ -13,6 +13,11 @@ import {
   TerminalProfilesConfig,
   CONFIG_SECTIONS,
   CONFIG_KEYS,
+  Result,
+  ErrorCode,
+  success,
+  failureFromDetails,
+  fromPromise,
 } from '../types/shared';
 
 export class TerminalProfileService {
@@ -340,58 +345,80 @@ export class TerminalProfileService {
 
   /**
    * Update profile configuration
+   * @returns Result indicating success or failure
    */
   public async updateProfileConfig(
     platform: TerminalPlatform,
     profileName: string,
     profile: TerminalProfile | null
-  ): Promise<void> {
-    const config = vscode.workspace.getConfiguration(CONFIG_SECTIONS.SIDEBAR_TERMINAL);
+  ): Promise<Result<void>> {
+    return fromPromise(
+      (async () => {
+        const config = vscode.workspace.getConfiguration(CONFIG_SECTIONS.SIDEBAR_TERMINAL);
 
-    let profileKey: string;
-    switch (platform) {
-      case 'windows':
-        profileKey = CONFIG_KEYS.PROFILES_WINDOWS;
-        break;
-      case 'linux':
-        profileKey = CONFIG_KEYS.PROFILES_LINUX;
-        break;
-      case 'osx':
-        profileKey = CONFIG_KEYS.PROFILES_OSX;
-        break;
-    }
+        let profileKey: string;
+        switch (platform) {
+          case 'windows':
+            profileKey = CONFIG_KEYS.PROFILES_WINDOWS;
+            break;
+          case 'linux':
+            profileKey = CONFIG_KEYS.PROFILES_LINUX;
+            break;
+          case 'osx':
+            profileKey = CONFIG_KEYS.PROFILES_OSX;
+            break;
+        }
 
-    const currentProfiles = config.get<Record<string, TerminalProfile | null>>(profileKey, {});
-    const updatedProfiles = {
-      ...currentProfiles,
-      [profileName]: profile,
-    };
+        const currentProfiles = config.get<Record<string, TerminalProfile | null>>(profileKey, {});
+        const updatedProfiles = {
+          ...currentProfiles,
+          [profileName]: profile,
+        };
 
-    await config.update(profileKey, updatedProfiles, vscode.ConfigurationTarget.Global);
+        await config.update(profileKey, updatedProfiles, vscode.ConfigurationTarget.Global);
+      })(),
+      (error) => ({
+        code: ErrorCode.CONFIG_LOAD_FAILED,
+        message: error instanceof Error ? error.message : 'Failed to update profile configuration',
+        context: { platform, profileName, profile: profile !== null },
+        cause: error instanceof Error ? error : undefined,
+      })
+    );
   }
 
   /**
    * Set default profile for platform
+   * @returns Result indicating success or failure
    */
   public async setDefaultProfile(
     platform: TerminalPlatform,
     profileName: string | null
-  ): Promise<void> {
-    const config = vscode.workspace.getConfiguration(CONFIG_SECTIONS.SIDEBAR_TERMINAL);
+  ): Promise<Result<void>> {
+    return fromPromise(
+      (async () => {
+        const config = vscode.workspace.getConfiguration(CONFIG_SECTIONS.SIDEBAR_TERMINAL);
 
-    let defaultKey: string;
-    switch (platform) {
-      case 'windows':
-        defaultKey = CONFIG_KEYS.DEFAULT_PROFILE_WINDOWS;
-        break;
-      case 'linux':
-        defaultKey = CONFIG_KEYS.DEFAULT_PROFILE_LINUX;
-        break;
-      case 'osx':
-        defaultKey = CONFIG_KEYS.DEFAULT_PROFILE_OSX;
-        break;
-    }
+        let defaultKey: string;
+        switch (platform) {
+          case 'windows':
+            defaultKey = CONFIG_KEYS.DEFAULT_PROFILE_WINDOWS;
+            break;
+          case 'linux':
+            defaultKey = CONFIG_KEYS.DEFAULT_PROFILE_LINUX;
+            break;
+          case 'osx':
+            defaultKey = CONFIG_KEYS.DEFAULT_PROFILE_OSX;
+            break;
+        }
 
-    await config.update(defaultKey, profileName, vscode.ConfigurationTarget.Global);
+        await config.update(defaultKey, profileName, vscode.ConfigurationTarget.Global);
+      })(),
+      (error) => ({
+        code: ErrorCode.CONFIG_LOAD_FAILED,
+        message: error instanceof Error ? error.message : 'Failed to set default profile',
+        context: { platform, profileName },
+        cause: error instanceof Error ? error : undefined,
+      })
+    );
   }
 }
