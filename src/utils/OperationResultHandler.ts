@@ -3,9 +3,20 @@
  *
  * 重複していたエラーハンドリングパターンを統一し、
  * 一貫性のある成功/失敗処理を提供します。
+ *
+ * NOTE: This module maintains backward compatibility with the legacy OperationResult interface.
+ * For new code, prefer using the Result<T, E> type from '../types/Result'.
  */
 
 import { extension as log } from './logger';
+import {
+  Result,
+  success as resultSuccess,
+  failure as resultFailure,
+  isSuccess,
+  ErrorDetail,
+  ErrorCode
+} from '../types/Result';
 
 export interface OperationResult<T = unknown> {
   success: boolean;
@@ -179,5 +190,104 @@ export class OperationResultHandler {
    */
   static failure<T = unknown>(reason: string, error?: Error): OperationResult<T> {
     return this.createResult<T>(false, undefined, reason, error);
+  }
+
+  // =============================================================================
+  // New Result<T, E> Integration
+  // =============================================================================
+
+  /**
+   * Converts OperationResult to Result type
+   */
+  static toResult<T>(operationResult: OperationResult<T>): Result<T, ErrorDetail> {
+    if (operationResult.success) {
+      return resultSuccess(operationResult.data as T);
+    }
+
+    return resultFailure({
+      code: ErrorCode.UNKNOWN,
+      message: operationResult.reason || 'Operation failed',
+      cause: operationResult.error
+    });
+  }
+
+  /**
+   * Converts Result to OperationResult
+   */
+  static fromResult<T>(result: Result<T, ErrorDetail | Error | string>): OperationResult<T> {
+    if (isSuccess(result)) {
+      return this.success(result.value);
+    }
+
+    const error = result.error;
+
+    if (typeof error === 'string') {
+      return this.failure(error);
+    }
+
+    if (error instanceof Error) {
+      return this.failure(error.message, error);
+    }
+
+    // ErrorDetail
+    return this.failure(error.message, error.cause);
+  }
+
+  /**
+   * Handles operations that return Result<T, E>
+   */
+  static async handleResultOperation<T>(
+    operation: () => Promise<Result<T, ErrorDetail>>,
+    context: string,
+    successMessage?: string,
+    notificationService?: NotificationService
+  ): Promise<T | null> {
+    try {
+      const result = await operation();
+
+      if (isSuccess(result)) {
+        log(`✅ [${context}] Operation successful`);
+        if (successMessage && notificationService) {
+          notificationService.showSuccess(successMessage);
+        }
+        return result.value;
+      } else {
+        const errorMsg = result.error.message;
+        log(`⚠️ [${context}] Operation failed: ${errorMsg}`);
+        if (notificationService) {
+          notificationService.showError(errorMsg);
+        }
+        return null;
+      }
+    } catch (error) {
+      const errorMessage = `Operation error: ${String(error)}`;
+      log(`❌ [${context}] ${errorMessage}`);
+      if (notificationService) {
+        notificationService.showError(errorMessage);
+      }
+      return null;
+    }
+  }
+
+  /**
+   * Wraps a function that returns Result<T, E> with error handling
+   */
+  static async wrapWithResult<T>(
+    fn: () => Promise<T>,
+    errorCode: ErrorCode,
+    errorMessage: string,
+    context?: Record<string, unknown>
+  ): Promise<Result<T, ErrorDetail>> {
+    try {
+      const value = await fn();
+      return resultSuccess(value);
+    } catch (error) {
+      return resultFailure({
+        code: errorCode,
+        message: errorMessage,
+        context,
+        cause: error instanceof Error ? error : new Error(String(error))
+      });
+    }
   }
 }
