@@ -65,11 +65,11 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     log('💾 [PROVIDER] Terminal persistence services initialized');
   }
 
-  public resolveWebviewView(
+  public async resolveWebviewView(
     webviewView: vscode.WebviewView,
     _context: vscode.WebviewViewResolveContext,
     _token: vscode.CancellationToken
-  ): void {
+  ): Promise<void> {
     log('🚀 [PROVIDER] === RESOLVING WEBVIEW VIEW ===');
     log('🚀 [PROVIDER] WebView object exists:', !!webviewView);
     log('🚀 [PROVIDER] WebView webview exists:', !!webviewView.webview);
@@ -83,80 +83,25 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       this._isInitialized = false;
       log('✅ [PROVIDER] Initialization flag reset');
 
-      // STEP 1: Configure webview options FIRST (VS Code standard)
-      log('🔧 [PROVIDER] Step 1: Configuring webview options...');
-      this._configureWebview(webviewView);
-
-      // STEP 2: Set up MESSAGE LISTENERS BEFORE HTML (VS Code standard practice)
-      // This is CRITICAL - listeners must be set before HTML is loaded
-      log('🔧 [PROVIDER] Step 2: Setting up message listeners (BEFORE HTML)...');
-      const messageDisposable = webviewView.webview.onDidReceiveMessage(
-        (message: WebviewMessage) => {
-          log('📨 [PROVIDER] ✅ MESSAGE RECEIVED FROM WEBVIEW!');
-          log('📨 [PROVIDER] Message command:', message.command);
-          try {
-            const { isDebugEnabled } = require('../utils/logger');
-            if (isDebugEnabled && isDebugEnabled()) {
-              log('📨 [PROVIDER] Message data:', message);
-            }
-          } catch {}
-          log('📨 [PROVIDER] WebView visible:', webviewView.visible);
-
-          // Validate message before handling
-          if (!this._isValidWebviewMessage(message)) {
-            log('⚠️ [PROVIDER] Invalid WebviewMessage received, ignoring');
-            return;
-          }
-
-          // Handle message immediately
-          this._handleWebviewMessage(message).catch((error) => {
-            log('❌ [PROVIDER] Error handling message:', error);
-          });
-        },
-        undefined,
-        this._extensionContext.subscriptions
+      // 🆕 NEW: Use Template Method pattern for initialization
+      const { SecondaryTerminalProviderInitializer } = await import(
+        './initialization/SecondaryTerminalProviderInitializer'
       );
 
-      // Add disposable to subscriptions for cleanup
-      this._extensionContext.subscriptions.push(messageDisposable);
-      log('✅ [PROVIDER] Message listener registered and added to subscriptions');
-
-      // Initialize minimal router
-      this._initializeMessageHandlers();
-
-      // STEP 3: Set up visibility listener
-      log('🔧 [PROVIDER] Step 3: Setting up visibility listener...');
-      const visibilityDisposable = webviewView.onDidChangeVisibility(
-        () => {
-          if (webviewView.visible) {
-            log('👁️ [PROVIDER] WebView became visible');
-            // Trigger panel location detection when WebView becomes visible
-            setTimeout(() => {
-              this._requestPanelLocationDetection();
-            }, 500);
-          } else {
-            log('👁️ [PROVIDER] WebView became hidden');
-          }
+      const initializer = new SecondaryTerminalProviderInitializer(
+        {
+          provider: this,
+          webviewView,
+          extensionContext: this._extensionContext,
         },
-        undefined,
-        this._extensionContext.subscriptions
+        log
       );
-      this._extensionContext.subscriptions.push(visibilityDisposable);
-      log('✅ [PROVIDER] Visibility listener registered');
 
-      // STEP 4: Set HTML AFTER listeners are ready (VS Code standard)
-      log('🔧 [PROVIDER] Step 4: Setting webview HTML...');
-      this._setWebviewHtml(webviewView, false);
+      // Execute initialization sequence
+      await initializer.initialize();
 
-      // STEP 5: Set up terminal and other listeners
-      log('🔧 [PROVIDER] Step 5: Setting up terminal listeners...');
-      this._setupTerminalEventListeners();
-      this._setupCliAgentStatusListeners();
-      this._setupConfigurationChangeListeners();
-
-      // STEP 6: Set up panel location change listener
-      log('🔧 [PROVIDER] Step 6: Setting up panel location listener...');
-      this._setupPanelLocationChangeListener(webviewView);
+      // Mark as initialized
+      this._isInitialized = true;
 
       log('✅ [PROVIDER] WebView setup completed successfully');
       log('🚀 [PROVIDER] === WEBVIEW VIEW RESOLUTION COMPLETE ===');

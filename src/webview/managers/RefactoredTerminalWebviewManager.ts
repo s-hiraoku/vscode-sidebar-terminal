@@ -116,6 +116,14 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
   constructor() {
     log('🚀 RefactoredTerminalWebviewManager initializing...');
 
+    // 🆕 Template Method Pattern: Initialization follows standardized 7-phase sequence
+    // See: https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/218
+
+    // Phase 1: Prerequisites Validation (implicit - constructor called successfully)
+    // Phase 2: Webview Configuration (not applicable - browser context)
+
+    // Phase 3: Message Listeners Setup (deferred to later phase)
+    // Phase 4: Managers Initialization
     // 専門マネージャーの初期化
     this.webViewApiManager = new WebViewApiManager();
     this.splitManager = new SplitManager();
@@ -139,15 +147,19 @@ export class RefactoredTerminalWebviewManager implements IManagerCoordinator {
     // 既存マネージャーの初期化
     this.initializeExistingManagers();
 
-    // 設定読み込み
-    this.loadSettings();
-
+    // Phase 5: Event Handlers Setup
     // イベントハンドラーの設定
     this.setupEventHandlers();
 
+    // Phase 6: Settings Loading
+    // 設定読み込み
+    this.loadSettings();
+
+    // Phase 3 (Deferred): Message Listeners Setup
     // 🆕 NEW: Setup scrollback extraction message listener
     this.setupScrollbackMessageListener();
 
+    // Phase 7: Finalization
     this.isInitialized = true;
     log('✅ RefactoredTerminalWebviewManager initialized');
   }
