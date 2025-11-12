@@ -315,6 +315,40 @@ export class WebViewPersistenceService {
   }
 
   /**
+   * Save all terminal sessions
+   * Serializes all active terminals and pushes data to extension
+   */
+  public async saveSession(): Promise<boolean> {
+    try {
+      const terminalIds = this.getAvailableTerminals();
+
+      if (terminalIds.length === 0) {
+        log('[WV-PERSISTENCE] No terminals to save');
+        return true;
+      }
+
+      log(`[WV-PERSISTENCE] Saving session for ${terminalIds.length} terminals`);
+
+      // Save each terminal's content
+      let successCount = 0;
+      for (const terminalId of terminalIds) {
+        const saved = this.saveTerminalContent(terminalId);
+        if (saved) {
+          successCount++;
+        }
+      }
+
+      const allSaved = successCount === terminalIds.length;
+      log(`[WV-PERSISTENCE] Session save ${allSaved ? 'completed' : 'partial'}: ${successCount}/${terminalIds.length} terminals`);
+
+      return allSaved;
+    } catch (error) {
+      log(`❌ [WV-PERSISTENCE] Session save failed: ${error}`);
+      return false;
+    }
+  }
+
+  /**
    * Get cached serialized data
    */
   public loadTerminalContent(terminalId: string): SerializedTerminalData | null {
