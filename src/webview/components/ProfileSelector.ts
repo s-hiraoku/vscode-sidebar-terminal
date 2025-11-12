@@ -88,29 +88,32 @@ export class ProfileSelector {
 
   private _createUI(): void {
     this._container.innerHTML = `
-      <div class="profile-selector-overlay">
+      <div class="profile-selector-overlay" role="dialog" aria-modal="true" aria-labelledby="profile-selector-title">
         <div class="profile-selector-dialog">
           <div class="profile-selector-header">
-            <h3>Select Terminal Profile</h3>
-            <button class="profile-selector-close" title="Close">×</button>
+            <h3 id="profile-selector-title">Select Terminal Profile</h3>
+            <button class="profile-selector-close" type="button" aria-label="Close profile selector" title="Close">×</button>
           </div>
-          
+
           <div class="profile-selector-search">
-            <input 
-              type="text" 
-              class="profile-filter" 
+            <label for="profile-filter" class="sr-only">Filter profiles</label>
+            <input
+              id="profile-filter"
+              type="text"
+              class="profile-filter"
               placeholder="Type to filter profiles..."
               autocomplete="off"
+              aria-label="Filter profiles by name or description"
             >
           </div>
-          
-          <div class="profile-list-container">
-            <ul class="profile-list"></ul>
+
+          <div class="profile-list-container" role="region" aria-label="Available profiles">
+            <ul class="profile-list" role="listbox" aria-label="Terminal profiles"></ul>
           </div>
-          
-          <div class="profile-selector-footer">
-            <button class="btn-secondary profile-selector-cancel">Cancel</button>
-            <button class="btn-primary profile-selector-confirm" disabled>Select</button>
+
+          <div class="profile-selector-footer" role="group" aria-label="Dialog actions">
+            <button class="btn-secondary profile-selector-cancel" type="button" aria-label="Cancel and close">Cancel</button>
+            <button class="btn-primary profile-selector-confirm" type="button" aria-label="Confirm selection" disabled>Select</button>
           </div>
         </div>
       </div>
@@ -171,19 +174,25 @@ export class ProfileSelector {
       const listItem = document.createElement('li');
       listItem.className = 'profile-item';
       listItem.dataset.profileId = profile.id;
+      listItem.setAttribute('role', 'option');
+      listItem.setAttribute('aria-label', `${profile.name}${profile.isDefault ? ' (Default)' : ''}`);
+      listItem.setAttribute('tabindex', '0');
 
       if (profile.id === this._selectedProfileId) {
         listItem.classList.add('selected');
+        listItem.setAttribute('aria-selected', 'true');
+      } else {
+        listItem.setAttribute('aria-selected', 'false');
       }
 
       listItem.innerHTML = `
-        <div class="profile-item-icon">
+        <div class="profile-item-icon" aria-hidden="true">
           ${this._getProfileIcon(profile)}
         </div>
         <div class="profile-item-content">
           <div class="profile-item-name">
             ${this._escapeHtml(profile.name)}
-            ${profile.isDefault ? '<span class="profile-default-badge">Default</span>' : ''}
+            ${profile.isDefault ? '<span class="profile-default-badge" role="status">Default</span>' : ''}
           </div>
           <div class="profile-item-description">
             ${this._escapeHtml(profile.description || profile.path)}
@@ -200,6 +209,15 @@ export class ProfileSelector {
       listItem.addEventListener('dblclick', () => {
         this._selectProfile(profile.id);
         this._confirmSelection();
+      });
+
+      // Keyboard activation
+      listItem.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          this._selectProfile(profile.id);
+          this._confirmSelection();
+        }
       });
 
       profileList.appendChild(listItem);
@@ -320,6 +338,17 @@ export class ProfileSelector {
     const style = document.createElement('style');
     style.id = styleId;
     style.textContent = `
+      /* Screen reader only content */
+      .sr-only {
+        position: absolute;
+        left: -10000px;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+      }
+
       .profile-selector-overlay {
         position: fixed;
         top: 0;

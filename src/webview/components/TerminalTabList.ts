@@ -52,19 +52,21 @@ export class TerminalTabList {
 
   private setup(): void {
     this.container.className = 'terminal-tabs-container';
+    this.container.setAttribute('role', 'navigation');
+    this.container.setAttribute('aria-label', 'Terminal tabs navigation');
     this.container.innerHTML = `
-      <div class="terminal-tabs-list" role="tablist">
-        <div class="terminal-mode-indicator" role="status" aria-live="polite" data-mode="normal" aria-label="Single terminal layout">
+      <div class="terminal-tabs-list" role="tablist" aria-label="Terminal tabs">
+        <div class="terminal-mode-indicator" role="status" aria-live="polite" data-mode="normal" aria-label="Single terminal layout" tabindex="0">
           <span class="terminal-mode-indicator-symbol" aria-hidden="true"></span>
         </div>
-        <div class="terminal-tabs-scroll">
+        <div class="terminal-tabs-scroll" role="region" aria-label="Terminal tabs list">
           <div class="terminal-tabs-wrapper">
             <!-- Tabs will be inserted here -->
           </div>
         </div>
         <div class="terminal-tab-actions">
-          <button class="terminal-tab-add" title="New Terminal" role="button">
-            <span class="codicon codicon-plus"></span>
+          <button class="terminal-tab-add" title="New Terminal" aria-label="Create new terminal" role="button" type="button">
+            <span class="codicon codicon-plus" aria-hidden="true"></span>
           </button>
         </div>
       </div>
@@ -421,9 +423,16 @@ export class TerminalTabList {
     // Deactivate all tabs
     this.tabs.forEach((tab, id) => {
       tab.isActive = id === tabId;
-      const tabElement = this.container.querySelector(`[data-tab-id="${id}"]`);
+      const tabElement = this.container.querySelector(`[data-tab-id="${id}"]`) as HTMLElement;
       if (tabElement) {
         tabElement.classList.toggle('active', tab.isActive);
+        tabElement.setAttribute('aria-selected', tab.isActive.toString());
+        tabElement.setAttribute('tabindex', tab.isActive ? '0' : '-1');
+
+        // Focus the newly active tab for keyboard users
+        if (tab.isActive) {
+          tabElement.focus();
+        }
       }
     });
   }
@@ -442,6 +451,9 @@ export class TerminalTabList {
     tabElement.setAttribute('data-tab-id', tab.id);
     tabElement.setAttribute('role', 'tab');
     tabElement.setAttribute('aria-selected', tab.isActive.toString());
+    tabElement.setAttribute('aria-label', `Terminal: ${tab.name}${tab.isDirty ? ' (modified)' : ''}`);
+    tabElement.setAttribute('tabindex', tab.isActive ? '0' : '-1');
+    tabElement.setAttribute('aria-controls', `terminal-panel-${tab.id}`);
     tabElement.draggable = true;
 
     this.updateTabElement(tabElement, tab);
@@ -452,13 +464,16 @@ export class TerminalTabList {
 
   private updateTabElement(tabElement: HTMLElement, tab: TerminalTab): void {
     tabElement.innerHTML = `
-      ${tab.icon ? `<span class="terminal-tab-icon codicon codicon-${tab.icon}"></span>` : ''}
+      ${tab.icon ? `<span class="terminal-tab-icon codicon codicon-${tab.icon}" aria-hidden="true"></span>` : ''}
       <span class="terminal-tab-label" title="${tab.name}">${tab.name}</span>
-      ${tab.isDirty ? '<span class="terminal-tab-dirty-indicator"></span>' : ''}
+      ${tab.isDirty ? '<span class="terminal-tab-dirty-indicator" role="status" aria-label="Modified" title="This terminal has unsaved changes"></span>' : ''}
       ${tab.isClosable ? `
-        <button class="terminal-tab-close" title="Close Terminal" aria-label="Close" type="button">×</button>
+        <button class="terminal-tab-close" title="Close Terminal" aria-label="Close ${tab.name}" type="button">×</button>
       ` : ''}
     `;
+
+    // Update ARIA attributes
+    tabElement.setAttribute('aria-label', `Terminal: ${tab.name}${tab.isDirty ? ' (modified)' : ''}`);
 
     if (tab.color) {
       tabElement.style.setProperty('--tab-color', tab.color);

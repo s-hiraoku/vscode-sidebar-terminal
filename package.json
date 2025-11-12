@@ -809,18 +809,6 @@
         "secondaryTerminal.features.enhancedScrollbackPersistence": {
           "type": "boolean",
           "default": false,
-          "description": "Enable VS Code-compatible enhanced scrollback persistence with full state restoration. Beta feature - will be enabled by default in v0.2.0."
-        },
-        "secondaryTerminal.features.scrollbackLineLimit": {
-          "type": "number",
-          "default": 1000,
-          "minimum": 200,
-          "maximum": 3000,
-          "description": "Maximum number of scrollback lines to persist (200-3000). Higher values use more storage. Default: 1000 (matching VS Code)."
-        },
-        "secondaryTerminal.features.enhancedScrollbackPersistence": {
-          "type": "boolean",
-          "default": false,
           "description": "Enable VS Code standard scrollback serialization with ANSI color preservation and full state restoration. Beta feature - will be enabled by default in v0.2.0."
         },
         "secondaryTerminal.features.scrollbackLineLimit": {
@@ -1017,6 +1005,7 @@
     "quality:fix": "node commands/release.js --fix-only"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.0",
     "@istanbuljs/nyc-config-typescript": "^1.0.2",
     "@playwright/test": "^1.56.1",
     "@testing-library/dom": "^10.4.0",
@@ -1033,6 +1022,7 @@
     "@typescript-eslint/parser": "^6.15.0",
     "@vscode/test-electron": "^2.3.8",
     "@vscode/vsce": "^3.6.0",
+    "axe-core": "^4.11.0",
     "chai": "^4.5.0",
     "chai-as-promised": "^8.0.2",
     "css-loader": "^7.1.2",

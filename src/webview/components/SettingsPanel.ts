@@ -104,6 +104,9 @@ export class SettingsPanel {
       },
       {
         id: 'settings-panel',
+        role: 'dialog',
+        'aria-modal': 'true',
+        'aria-labelledby': 'settings-panel-title',
       }
     );
 
@@ -129,10 +132,10 @@ export class SettingsPanel {
 
     content.innerHTML = `
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <h2 style="color: var(--vscode-foreground, #cccccc); margin: 0; font-size: 18px; font-weight: 600;">
+        <h2 id="settings-panel-title" style="color: var(--vscode-foreground, #cccccc); margin: 0; font-size: 18px; font-weight: 600;">
           Terminal Settings
         </h2>
-        <button id="close-settings" style="
+        <button id="close-settings" type="button" aria-label="Close settings dialog" style="
           background: transparent;
           border: none;
           color: var(--vscode-foreground, #cccccc);
@@ -143,14 +146,14 @@ export class SettingsPanel {
         " title="Close">✕</button>
       </div>
 
-      <div style="display: grid; gap: 16px;">
+      <div role="group" aria-label="Settings options" style="display: grid; gap: 16px;">
         ${this.createActiveBorderControl()}
         ${this.createClaudeCodeIntegrationControl()}
         ${this.createVersionInfoSection()}
       </div>
 
-      <div style="display: flex; gap: 12px; margin-top: 24px; justify-content: flex-end;">
-        <button id="reset-settings" style="
+      <div role="group" aria-label="Settings actions" style="display: flex; gap: 12px; margin-top: 24px; justify-content: flex-end;">
+        <button id="reset-settings" type="button" aria-label="Reset all settings to default values" style="
           background: var(--vscode-button-secondaryBackground, #5a5a5a);
           color: var(--vscode-button-secondaryForeground, #cccccc);
           border: 1px solid var(--vscode-widget-border, #454545);
@@ -159,7 +162,7 @@ export class SettingsPanel {
           cursor: pointer;
           font-size: 13px;
         ">Reset to Defaults</button>
-        <button id="apply-settings" style="
+        <button id="apply-settings" type="button" aria-label="Apply and save current settings" style="
           background: var(--vscode-button-background, #0e639c);
           color: var(--vscode-button-foreground, #ffffff);
           border: none;

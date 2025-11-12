@@ -8,6 +8,7 @@
 // Import logger first to avoid initialization order issues
 import { error_category, webview as log } from '../utils/logger';
 import { createWebViewLogger } from '../utils/ComponentLoggers';
+import { initializeAccessibility } from './utils/AccessibilityUtils';
 
 // Initialize WebView logger
 const webviewLogger = createWebViewLogger('MainWebView');
@@ -75,6 +76,10 @@ async function initializeWebView(): Promise<void> {
     }
 
     webviewLogger.domReady();
+
+    // Initialize accessibility features
+    initializeAccessibility();
+    log('✅ [A11Y] Accessibility features initialized');
 
     // Initialize Terminal Manager
     terminalManager = new LightweightTerminalWebviewManager();
