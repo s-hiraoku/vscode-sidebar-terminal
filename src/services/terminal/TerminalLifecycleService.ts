@@ -1,6 +1,15 @@
 // import * as vscode from 'vscode'; // unused
 import * as pty from '@homebridge/node-pty-prebuilt-multiarch';
-import { TerminalInstance } from '../../types/shared';
+import {
+  TerminalInstance,
+  Result,
+  ErrorCode,
+  success,
+  failure,
+  failureFromDetails,
+  fromPromise,
+  tryCatch,
+} from '../../types/shared';
 import { terminal as log } from '../../utils/logger';
 import {
   getTerminalConfig,
@@ -53,14 +62,21 @@ export class TerminalLifecycleService {
 
   /**
    * Create a new terminal with the specified options
+   * @returns Result containing TerminalInstance or error details
    */
-  async createTerminal(options: TerminalCreationOptions = {}): Promise<TerminalInstance> {
+  async createTerminal(
+    options: TerminalCreationOptions = {}
+  ): Promise<Result<TerminalInstance>> {
     const terminalId = generateTerminalId();
 
     try {
       // Prevent duplicate creation
       if (this._terminalsBeingCreated.has(terminalId)) {
-        throw new Error(`Terminal ${terminalId} is already being created`);
+        return failureFromDetails({
+          code: ErrorCode.TERMINAL_ALREADY_EXISTS,
+          message: `Terminal ${terminalId} is already being created`,
+          context: { terminalId, options },
+        });
       }
 
       this._terminalsBeingCreated.add(terminalId);
@@ -71,11 +87,16 @@ export class TerminalLifecycleService {
       const terminalNumber = this._terminalNumberManager.findAvailableNumber(terminals);
       if (terminalNumber > 5) {
         // Default max terminals
-        throw new Error('Maximum number of terminals reached');
+        return failureFromDetails({
+          code: ErrorCode.RESOURCE_EXHAUSTED,
+          message: 'Maximum number of terminals reached',
+          context: { maxTerminals: 5, attemptedNumber: terminalNumber },
+        });
       }
 
       // Resolve shell and working directory
-      const terminalProfile = await this.resolveTerminalProfile(options.profileName);
+      const profileResult = await this.resolveTerminalProfile(options.profileName);
+      const terminalProfile = profileResult; // Already handles errors internally with fallback
       const shell = options.shell || terminalProfile.shell;
       const shellArgs = options.shellArgs || terminalProfile.args;
       const cwd = options.cwd || (await getWorkingDirectory());
@@ -88,12 +109,18 @@ export class TerminalLifecycleService {
       );
 
       // Create PTY process
-      const ptyProcess = await this.createPtyProcess({
+      const ptyResult = await this.createPtyProcess({
         shell,
         args: shellArgs,
         cwd,
         safeMode: options.safeMode || false,
       });
+
+      if (!ptyResult.success) {
+        return ptyResult;
+      }
+
+      const ptyProcess = ptyResult.value;
 
       // Create terminal instance
       const terminal: TerminalInstance = {
@@ -109,16 +136,23 @@ export class TerminalLifecycleService {
         shellArgs: shellArgs,
       };
 
-      // Initialize shell integration if available
+      // Initialize shell integration if available (non-fatal)
       this.initializeShellIntegration(terminal, options.safeMode || false);
 
       log(`✅ [LifecycleService] Terminal created successfully: ${terminalId} (${terminalName})`);
-      return terminal;
+      return success(terminal);
     } catch (error) {
-      // No need to release number as allocation failed
-
       log(`❌ [LifecycleService] Failed to create terminal ${terminalId}:`, error);
-      throw error;
+
+      return failureFromDetails({
+        code: ErrorCode.TERMINAL_CREATION_FAILED,
+        message:
+          error instanceof Error
+            ? error.message
+            : `Failed to create terminal: ${String(error)}`,
+        context: { terminalId, options },
+        cause: error instanceof Error ? error : undefined,
+      });
     } finally {
       this._terminalsBeingCreated.delete(terminalId);
     }
@@ -126,8 +160,9 @@ export class TerminalLifecycleService {
 
   /**
    * Dispose of a terminal and clean up resources
+   * @returns Result indicating success or failure
    */
-  async disposeTerminal(terminal: TerminalInstance): Promise<void> {
+  async disposeTerminal(terminal: TerminalInstance): Promise<Result<void>> {
     try {
       log(`🗑️ [LifecycleService] Disposing terminal ${terminal.id} (${terminal.name})`);
 
@@ -154,46 +189,74 @@ export class TerminalLifecycleService {
       }
 
       log(`✅ [LifecycleService] Terminal ${terminal.id} disposed successfully`);
+      return success(undefined);
     } catch (error) {
       log(`❌ [LifecycleService] Error disposing terminal ${terminal.id}:`, error);
-      throw error;
+
+      return failureFromDetails({
+        code: ErrorCode.TERMINAL_PROCESS_FAILED,
+        message:
+          error instanceof Error ? error.message : `Failed to dispose terminal: ${String(error)}`,
+        context: { terminalId: terminal.id, terminalName: terminal.name },
+        cause: error instanceof Error ? error : undefined,
+      });
     }
   }
 
   /**
    * Resize a terminal
+   * @returns Result indicating success or failure
    */
-  resizeTerminal(terminal: TerminalInstance, cols: number, rows: number): void {
-    try {
-      if (!terminal.pty) {
-        log(`⚠️ [LifecycleService] Cannot resize terminal without PTY ${terminal.id}`);
-        return;
-      }
-
-      terminal.pty.resize(cols, rows);
-      log(`📏 [LifecycleService] Resized terminal ${terminal.id} to ${cols}x${rows}`);
-    } catch (error) {
-      log(`❌ [LifecycleService] Error resizing terminal ${terminal.id}:`, error);
-      throw error;
+  resizeTerminal(terminal: TerminalInstance, cols: number, rows: number): Result<void> {
+    if (!terminal.pty) {
+      log(`⚠️ [LifecycleService] Cannot resize terminal without PTY ${terminal.id}`);
+      return failureFromDetails({
+        code: ErrorCode.TERMINAL_NOT_FOUND,
+        message: 'Cannot resize terminal without PTY',
+        context: { terminalId: terminal.id, cols, rows },
+      });
     }
+
+    return tryCatch(
+      () => {
+        terminal.pty!.resize(cols, rows);
+        log(`📏 [LifecycleService] Resized terminal ${terminal.id} to ${cols}x${rows}`);
+      },
+      (error) => ({
+        code: ErrorCode.TERMINAL_PROCESS_FAILED,
+        message: error instanceof Error ? error.message : `Failed to resize terminal: ${String(error)}`,
+        context: { terminalId: terminal.id, cols, rows },
+        cause: error instanceof Error ? error : undefined,
+      })
+    );
   }
 
   /**
    * Send input to a terminal
+   * @returns Result indicating success or failure
    */
-  sendInputToTerminal(terminal: TerminalInstance, data: string): void {
-    try {
-      if (!terminal.pty) {
-        log(`⚠️ [LifecycleService] Cannot send input to terminal without PTY ${terminal.id}`);
-        return;
-      }
-
-      terminal.pty.write(data);
-      log(`⌨️ [LifecycleService] Sent ${data.length} chars to terminal ${terminal.id}`);
-    } catch (error) {
-      log(`❌ [LifecycleService] Error sending input to terminal ${terminal.id}:`, error);
-      throw error;
+  sendInputToTerminal(terminal: TerminalInstance, data: string): Result<void> {
+    if (!terminal.pty) {
+      log(`⚠️ [LifecycleService] Cannot send input to terminal without PTY ${terminal.id}`);
+      return failureFromDetails({
+        code: ErrorCode.TERMINAL_NOT_FOUND,
+        message: 'Cannot send input to terminal without PTY',
+        context: { terminalId: terminal.id, dataLength: data.length },
+      });
     }
+
+    return tryCatch(
+      () => {
+        terminal.pty!.write(data);
+        log(`⌨️ [LifecycleService] Sent ${data.length} chars to terminal ${terminal.id}`);
+      },
+      (error) => ({
+        code: ErrorCode.TERMINAL_PROCESS_FAILED,
+        message: error instanceof Error ? error.message : `Failed to send input: ${String(error)}`,
+        context: { terminalId: terminal.id, dataLength: data.length },
+        cause: error instanceof Error ? error : undefined,
+      })
+    );
   }
 
   /**
@@ -265,13 +328,14 @@ export class TerminalLifecycleService {
 
   /**
    * Create PTY process with safe mode support
+   * @returns Result containing IPty or error details
    */
   private async createPtyProcess(options: {
     shell: string;
     args: string[];
     cwd: string;
     safeMode: boolean;
-  }): Promise<pty.IPty> {
+  }): Promise<Result<pty.IPty>> {
     try {
       const { shell, args, cwd, safeMode } = options;
 
@@ -297,14 +361,25 @@ export class TerminalLifecycleService {
 
       // Verify process was created successfully
       if (!ptyProcess || !ptyProcess.pid) {
-        throw new Error(`Failed to spawn PTY process for shell: ${shell}`);
+        return failureFromDetails({
+          code: ErrorCode.TERMINAL_PROCESS_FAILED,
+          message: `Failed to spawn PTY process for shell: ${shell}`,
+          context: { shell, args, cwd, safeMode },
+        });
       }
 
       log(`✅ [LifecycleService] PTY process created with PID: ${ptyProcess.pid}`);
-      return ptyProcess;
+      return success(ptyProcess);
     } catch (error) {
       log(`❌ [LifecycleService] Failed to create PTY process:`, error);
-      throw new Error(`Terminal creation failed: ${String(error)}`);
+
+      return failureFromDetails({
+        code: ErrorCode.TERMINAL_PROCESS_FAILED,
+        message:
+          error instanceof Error ? error.message : `Terminal creation failed: ${String(error)}`,
+        context: options,
+        cause: error instanceof Error ? error : undefined,
+      });
     }
   }
 
