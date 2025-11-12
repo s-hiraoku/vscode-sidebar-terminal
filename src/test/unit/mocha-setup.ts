@@ -3,19 +3,8 @@
  * This ensures VS Code mocks are available before any module imports
  */
 
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/no-var-requires */
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/explicit-function-return-type */
-/* eslint-disable @typescript-eslint/no-extraneous-class */
-/* eslint-disable prefer-rest-params */
-
 // Override module resolution before any imports
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const Module = require('module');
 const originalRequire = Module.prototype.require;
 
@@ -24,6 +13,7 @@ import * as sinon from 'sinon';
 import * as chai from 'chai';
 
 // Import and setup sinon-chai plugin
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const sinonChai = require('sinon-chai');
 chai.use(sinonChai);
 
@@ -98,9 +88,11 @@ const mockConfigManager = {
 };
 
 // Store original config manager for cleanup
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 (global as any)._originalConfigManager = mockConfigManager;
 
 // Override module resolution globally
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 Module.prototype.require = function (id: string) {
   if (id === 'vscode') {
     return mockVscode;
@@ -119,6 +111,7 @@ Module.prototype.require = function (id: string) {
   if (isConfigManagerImport) {
     return {
       getConfigManager: () => mockConfigManager,
+      // eslint-disable-next-line @typescript-eslint/no-extraneous-class
       ConfigManager: class MockConfigManager {
         static getInstance() {
           return mockConfigManager;
@@ -127,10 +120,12 @@ Module.prototype.require = function (id: string) {
     };
   }
 
+  // eslint-disable-next-line prefer-rest-params
   return originalRequire.apply(this, arguments);
 };
 
 // Set up global mocks
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 (global as any).vscode = mockVscode;
 
 // Store original process reference (don't modify globally here)

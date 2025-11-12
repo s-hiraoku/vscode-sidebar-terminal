@@ -1,6 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
-
 import { expect } from 'chai';
 import * as sinon from 'sinon';
 import { JSDOM } from 'jsdom';
@@ -33,9 +30,13 @@ describe('PerformanceUtils', () => {
     });
 
     document = dom.window.document;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (global as any).document = document;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (global as any).window = dom.window;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (global as any).requestAnimationFrame = sinon.stub().callsArg(0);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (global as any).cancelAnimationFrame = sinon.stub();
 
     sandbox = sinon.createSandbox();
@@ -90,6 +91,7 @@ describe('PerformanceUtils', () => {
   describe.skip('throttle', () => {
     beforeEach(() => {
       // Mock window.setTimeout for throttle function
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (global as any).window = {
         setTimeout: sinon.stub().callsFake((fn, delay) => setTimeout(fn, delay)),
         clearTimeout: sinon.stub().callsFake(clearTimeout),
@@ -172,6 +174,7 @@ describe('PerformanceUtils', () => {
   describe('getMemoryUsage', () => {
     it('should return memory usage info', () => {
       // Mock performance.memory
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (global as any).performance = {
         memory: {
           usedJSHeapSize: 1000000,
@@ -189,15 +192,18 @@ describe('PerformanceUtils', () => {
 
     it('should handle missing performance.memory', () => {
       // Save original performance
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const originalPerf = (global as any).performance;
 
       // Set performance without memory property
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (global as any).performance = {};
 
       const usage = PerformanceUtils.getMemoryUsage();
       expect(usage).to.be.null;
 
       // Restore original performance
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (global as any).performance = originalPerf;
     });
   });

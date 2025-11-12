@@ -1,6 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
-
 import { expect } from 'chai';
 import * as sinon from 'sinon';
 import { JSDOM } from 'jsdom';
@@ -34,6 +31,7 @@ const mockVscode = {
 
 // Global setup
 function setupTestEnvironment() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (global as any).vscode = mockVscode;
   mockVscode.window.createStatusBarItem.returns({
     text: '',
@@ -56,7 +54,9 @@ describe('FeedbackManager', () => {
 
     dom = new JSDOM(`<!DOCTYPE html><html><body></body></html>`);
     document = dom.window.document;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (global as any).document = document;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (global as any).window = dom.window;
 
     feedbackManager = FeedbackManager.getInstance();
@@ -70,8 +70,8 @@ describe('FeedbackManager', () => {
       dom.window.close();
     }
     // Reset singleton instance (manual reset)
-    // @ts-ignore - Test only: reset singleton for clean test state
-    FeedbackManager.instance = undefined;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (FeedbackManager as any).instance = undefined;
   });
 
   describe('singleton pattern', () => {

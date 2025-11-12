@@ -4,13 +4,6 @@
  * Red-Green-Refactorサイクルを支援するためのツール群
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-
 import { expect } from 'chai';
 import * as sinon from 'sinon';
 import {
@@ -269,6 +262,7 @@ export class RestoreAssertionHelper {
    * TerminalManager呼び出しの検証
    */
   public static validateTerminalManagerCalls(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mockTerminalManager: any,
     expectedCreateCalls: number,
     expectedSetActiveCalls: number,
@@ -285,6 +279,7 @@ export class RestoreAssertionHelper {
    * Scrollback復元の検証
    */
   public static async validateScrollbackRestore(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mockSidebarProvider: any,
     expectedTerminalId: string,
     expectedLines: number,
@@ -323,6 +318,7 @@ export class TestDataFactory {
 
     for (let i = 1; i <= terminalCount; i++) {
       const terminalId = `term${i}`;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const terminal: any = {
         id: terminalId,
         name: `Terminal ${i}`,
@@ -353,6 +349,7 @@ export class TestDataFactory {
    * 期限切れセッションデータを生成
    */
   public static createExpiredSessionData(daysAgo: number): unknown {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const sessionData = this.createSessionData(1) as any;
     return {
       ...(sessionData as Record<string, unknown>),

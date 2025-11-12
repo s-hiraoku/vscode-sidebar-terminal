@@ -1038,6 +1038,7 @@
     "css-loader": "^7.1.2",
     "eslint": "^8.56.0",
     "eslint-config-prettier": "^10.0.0",
+    "eslint-plugin-eslint-comments": "^3.2.0",
     "eslint-plugin-prettier": "^5.1.2",
     "glob": "^11.0.0",
     "jsdom": "^26.1.0",

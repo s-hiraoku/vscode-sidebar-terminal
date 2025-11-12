@@ -3,13 +3,6 @@
  * This file serves as a compatibility layer for legacy test setup
  */
 
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-/* eslint-disable @typescript-eslint/no-var-requires */
-/* eslint-disable prefer-rest-params */
-
 // Import shared test setup functionality
 import { setupTestEnvironment, mockVscode } from '../shared/TestSetup';
 
@@ -23,9 +16,11 @@ const vscode = mockVscode;
 module.exports = { vscode };
 
 // Override module loading for vscode (stronger hook)
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const Module = require('module');
 const originalRequire = Module.prototype.require;
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 Module.prototype.require = function (id: string) {
   if (id === 'vscode') {
     return vscode;
@@ -33,6 +28,7 @@ Module.prototype.require = function (id: string) {
   if (id === 'node-pty') {
     return _ptyMock;
   }
+  // eslint-disable-next-line prefer-rest-params
   return originalRequire.apply(this, arguments);
 };
 
