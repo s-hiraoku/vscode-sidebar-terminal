@@ -229,12 +229,183 @@ export class TerminalManager {
     }
   }
 
-  public createTerminal(): string {
-    log('🔍 [TERMINAL] === CREATE TERMINAL CALLED ===');
+  /**
+   * Register event handlers for terminal process
+   * @param terminalId Terminal ID
+   * @param ptyProcess PTY process
+   */
+  private registerTerminalEvents(terminalId: string, ptyProcess: any): void {
+    log('🔍 [TERMINAL] === REGISTERING TERMINAL EVENTS ===');
+
+    // PTY data handler - clean, no duplicates
+    ptyProcess.onData((data: string) => {
+      this._bufferData(terminalId, data);
+    });
+
+    // Simple PTY exit handler
+    ptyProcess.onExit((event: number | { exitCode: number; signal?: number }) => {
+      const exitCode = typeof event === 'number' ? event : event.exitCode;
+      log('🚪 [PTY-EXIT] Terminal exited:', terminalId, 'ExitCode:', exitCode);
+
+      this._cliAgentService.handleTerminalRemoved(terminalId);
+      this._exitEmitter.fire({ terminalId, exitCode });
+      this._removeTerminal(terminalId);
+    });
+
+    log(`✅ [TERMINAL] Events registered for terminal: ${terminalId}`);
+  }
+
+  /**
+   * Create terminal instance and store in terminals map
+   * @param terminalId Terminal ID
+   * @param terminalNumber Terminal number
+   * @param ptyProcess PTY process
+   * @param cwd Current working directory
+   * @returns Created terminal instance
+   */
+  private createTerminalInstance(
+    terminalId: string,
+    terminalNumber: number,
+    ptyProcess: any,
+    cwd: string
+  ): TerminalInstance {
+    log('🔍 [TERMINAL] === CREATING TERMINAL INSTANCE ===');
+
+    // Create terminal with actual PTY from the start
+    const terminal: TerminalInstance = {
+      id: terminalId,
+      pty: ptyProcess,
+      ptyProcess: ptyProcess,
+      name: generateTerminalName(terminalNumber),
+      number: terminalNumber,
+      cwd: cwd,
+      isActive: true,
+      createdAt: new Date(),
+    };
+
+    // Set all other terminals as inactive
+    this._deactivateAllTerminals();
+    this._terminals.set(terminalId, terminal);
+    this._activeTerminalManager.setActive(terminalId);
+
+    log(`✅ [TERMINAL] Terminal instance created: ${terminal.name} (${terminalId})`);
+    return terminal;
+  }
+
+  /**
+   * Spawn terminal PTY process
+   * @param shell Shell path
+   * @param cwd Current working directory
+   * @returns Spawned PTY process
+   */
+  private spawnTerminalProcess(shell: string, cwd: string): any {
+    log('🔧 [TERMINAL] === SPAWNING TERMINAL PROCESS ===');
+    log('🔧 [TERMINAL] Creating PTY process synchronously...');
+    log('🔧 [TERMINAL] Creating PTY with minimal, reliable configuration...');
+
+    try {
+      // Create PTY with login shell for proper initialization
+      const ptyProcess = pty.spawn(shell, ['-l'], {
+        name: 'xterm-256color',
+        cols: TERMINAL_CONSTANTS.DEFAULT_COLS,
+        rows: TERMINAL_CONSTANTS.DEFAULT_ROWS,
+        cwd,
+        env: {
+          ...process.env,
+          PWD: cwd,
+          TERM: 'xterm-256color',
+        },
+      });
+      log(`✅ [TERMINAL] PTY created successfully - PID: ${ptyProcess.pid}`);
+      return ptyProcess;
+    } catch (error) {
+      log(`❌ [TERMINAL] PTY creation failed: ${error}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Prepare environment variables for terminal process
+   * @param cwd Current working directory
+   * @returns Environment variables object
+   */
+  private prepareEnvironmentVariables(cwd: string): { [key: string]: string } {
+    log('🔍 [TERMINAL] === PREPARING ENVIRONMENT VARIABLES ===');
+
+    // Prepare environment variables with explicit PWD
+    const env = {
+      ...process.env,
+      PWD: cwd,
+      // Add VS Code workspace information if available
+      ...(vscode.workspace.workspaceFolders &&
+        vscode.workspace.workspaceFolders.length > 0 && {
+          VSCODE_WORKSPACE: vscode.workspace.workspaceFolders[0]?.uri.fsPath || '',
+          VSCODE_PROJECT_NAME: vscode.workspace.workspaceFolders[0]?.name || '',
+        }),
+    } as { [key: string]: string };
+
+    // 🚨 CRITICAL ESP-IDF DEBUG: Log environment variables that might cause issues
+    log('🔍 [ESP-IDF-DEBUG] Checking for ESP-IDF related environment variables:');
+    const espidxRelatedEnvs = Object.keys(env).filter(
+      (key) =>
+        key.includes('ESP') || key.includes('IDF') || key.includes('PYTHON') || key === 'PATH'
+    );
+    espidxRelatedEnvs.forEach((key) => {
+      const value = env[key];
+      if (value && value.length > 100) {
+        log(
+          `🔍 [ESP-IDF-DEBUG] ${key}=${value.substring(0, 100)}... (truncated ${value.length} chars)`
+        );
+      } else {
+        log(`🔍 [ESP-IDF-DEBUG] ${key}=${value}`);
+      }
+    });
+
+    return env;
+  }
+
+  /**
+   * Resolve terminal configuration including ID, number, shell, and working directory
+   * @returns Configuration object with terminal details
+   */
+  private resolveTerminalConfiguration(): {
+    terminalNumber: number;
+    terminalId: string;
+    shell: string;
+    shellArgs: string[];
+    cwd: string;
+  } {
+    log('🔍 [TERMINAL] === RESOLVING TERMINAL CONFIGURATION ===');
+
+    log('🔍 [TERMINAL] Finding available terminal number...');
+    const terminalNumber = this._terminalNumberManager.findAvailableNumber(this._terminals);
+    log(`🔍 [TERMINAL] Found available terminal number: ${terminalNumber}`);
+
+    log('🔍 [TERMINAL] Generating terminal ID...');
+    const terminalId = generateTerminalId();
+    log(`🔍 [TERMINAL] Generated terminal ID: ${terminalId}`);
+
+    const config = getTerminalConfig();
+    const shell = getShellForPlatform();
+    const shellArgs = config.shellArgs;
+    const cwd = getWorkingDirectory();
+
+    log(
+      `🔍 [TERMINAL] Configuration resolved: ID=${terminalId}, Shell=${shell}, Args=${JSON.stringify(shellArgs)}, CWD=${cwd}`
+    );
+
+    return { terminalNumber, terminalId, shell, shellArgs, cwd };
+  }
+
+  /**
+   * Validate if a new terminal can be created
+   * @returns true if terminal can be created, false otherwise
+   */
+  private validateTerminalCreation(): boolean {
+    log('🔍 [TERMINAL] === VALIDATING TERMINAL CREATION ===');
 
     const config = getTerminalConfig();
     log(`🔍 [TERMINAL] Config loaded: maxTerminals=${config.maxTerminals}`);
-
     log(`🔍 [TERMINAL] Current terminals count: ${this._terminals.size}`);
 
     // Force debug the actual terminal state before validation
@@ -282,120 +453,41 @@ export class TerminalManager {
       if (this._terminals.size === 0) {
         log('🚨🚨🚨 [TERMINAL] CRITICAL BUG: No terminals exist but canCreate returned FALSE!');
         log('🚨🚨🚨 [TERMINAL] This should NEVER happen - forcing creation');
-        // Don't return early - continue with creation
+        return true; // Force creation when no terminals exist
       } else {
         showWarningMessage(`${ERROR_MESSAGES.MAX_TERMINALS_REACHED} (${config.maxTerminals})`);
-        return this._activeTerminalManager.getActive() || '';
+        return false;
       }
-    } else {
-      log('✅ [TERMINAL] canCreate() returned TRUE - proceeding with creation');
     }
 
-    log('🔍 [TERMINAL] Finding available terminal number...');
-    const terminalNumber = this._terminalNumberManager.findAvailableNumber(this._terminals);
-    log(`🔍 [TERMINAL] Found available terminal number: ${terminalNumber}`);
+    log('✅ [TERMINAL] canCreate() returned TRUE - proceeding with creation');
+    return true;
+  }
 
-    log('🔍 [TERMINAL] Generating terminal ID...');
-    const terminalId = generateTerminalId();
-    log(`🔍 [TERMINAL] Generated terminal ID: ${terminalId}`);
-
-    const shell = getShellForPlatform();
-    const shellArgs = config.shellArgs;
-    const cwd = getWorkingDirectory();
-
-    log(
-      `🔍 [TERMINAL] Creating terminal: ID=${terminalId}, Shell=${shell}, Args=${JSON.stringify(shellArgs)}, CWD=${cwd}`
-    );
+  public createTerminal(): string {
+    log('🔍 [TERMINAL] === CREATE TERMINAL CALLED ===');
 
     try {
-      // Prepare environment variables with explicit PWD
-      const env = {
-        ...process.env,
-        PWD: cwd,
-        // Add VS Code workspace information if available
-        ...(vscode.workspace.workspaceFolders &&
-          vscode.workspace.workspaceFolders.length > 0 && {
-            VSCODE_WORKSPACE: vscode.workspace.workspaceFolders[0]?.uri.fsPath || '',
-            VSCODE_PROJECT_NAME: vscode.workspace.workspaceFolders[0]?.name || '',
-          }),
-      } as { [key: string]: string };
-
-      // 🚨 CRITICAL ESP-IDF DEBUG: Log environment variables that might cause issues
-      log('🔍 [ESP-IDF-DEBUG] Checking for ESP-IDF related environment variables:');
-      const espidxRelatedEnvs = Object.keys(env).filter(
-        (key) =>
-          key.includes('ESP') || key.includes('IDF') || key.includes('PYTHON') || key === 'PATH'
-      );
-      espidxRelatedEnvs.forEach((key) => {
-        const value = env[key];
-        if (value && value.length > 100) {
-          log(
-            `🔍 [ESP-IDF-DEBUG] ${key}=${value.substring(0, 100)}... (truncated ${value.length} chars)`
-          );
-        } else {
-          log(`🔍 [ESP-IDF-DEBUG] ${key}=${value}`);
-        }
-      });
-
-      // 🛡️ SYNCHRONOUS PTY CREATION: Create PTY immediately for proper shell initialization
-      log('🔧 [TERMINAL] Creating PTY process synchronously...');
-
-      // Try to create PTY process with node-pty directly (synchronous)
-      let ptyProcess: any;
-
-      // 🚨 SIMPLE PTY CREATION: Back to basics for reliability
-      log('🔧 [TERMINAL] Creating PTY with minimal, reliable configuration...');
-
-      try {
-        // Create PTY with login shell for proper initialization
-        ptyProcess = pty.spawn(shell, ['-l'], {
-          name: 'xterm-256color',
-          cols: TERMINAL_CONSTANTS.DEFAULT_COLS,
-          rows: TERMINAL_CONSTANTS.DEFAULT_ROWS,
-          cwd,
-          env: {
-            ...process.env,
-            PWD: cwd,
-            TERM: 'xterm-256color',
-          },
-        });
-        log(`✅ [TERMINAL] PTY created successfully - PID: ${ptyProcess.pid}`);
-      } catch (error) {
-        log(`❌ [TERMINAL] PTY creation failed: ${error}`);
-        throw error;
+      // Step 1: Validate terminal creation
+      if (!this.validateTerminalCreation()) {
+        return this._activeTerminalManager.getActive() || '';
       }
 
-      // Create terminal with actual PTY from the start
-      const terminal: TerminalInstance = {
-        id: terminalId,
-        pty: ptyProcess,
-        ptyProcess: ptyProcess,
-        name: generateTerminalName(terminalNumber),
-        number: terminalNumber,
-        cwd: cwd,
-        isActive: true,
-        createdAt: new Date(),
-      };
+      // Step 2: Resolve terminal configuration
+      const config = this.resolveTerminalConfiguration();
+      const { terminalId, terminalNumber, shell, cwd } = config;
 
-      // Set all other terminals as inactive
-      this._deactivateAllTerminals();
-      this._terminals.set(terminalId, terminal);
-      this._activeTerminalManager.setActive(terminalId);
+      // Step 3: Prepare environment variables (for logging purposes)
+      this.prepareEnvironmentVariables(cwd);
 
-      // PTY data handler - clean, no duplicates
-      ptyProcess.onData((data: string) => {
-        this._bufferData(terminalId, data);
-      });
+      // Step 4: Spawn terminal process
+      const ptyProcess = this.spawnTerminalProcess(shell, cwd);
 
-      // Simple PTY exit handler
-      ptyProcess.onExit((event: number | { exitCode: number; signal?: number }) => {
-        const exitCode = typeof event === 'number' ? event : event.exitCode;
-        log('🚪 [PTY-EXIT] Terminal exited:', terminalId, 'ExitCode:', exitCode);
+      // Step 5: Create terminal instance
+      const terminal = this.createTerminalInstance(terminalId, terminalNumber, ptyProcess, cwd);
 
-        this._cliAgentService.handleTerminalRemoved(terminalId);
-        this._exitEmitter.fire({ terminalId, exitCode });
-        this._removeTerminal(terminalId);
-      });
+      // Step 6: Register terminal events
+      this.registerTerminalEvents(terminalId, ptyProcess);
 
       // Fire terminal created event
       this._terminalCreatedEmitter.fire(terminal);
@@ -409,7 +501,7 @@ export class TerminalManager {
 
       log(`✅ [TERMINAL] Terminal created successfully: ${terminal.name} (${terminalId})`);
 
-      // 状態更新を通知
+      // Notify state update
       log('🔍 [TERMINAL] Notifying state update...');
       this._notifyStateUpdate();
       log('🔍 [TERMINAL] State update completed');
@@ -420,7 +512,10 @@ export class TerminalManager {
       log(
         `❌ [TERMINAL] Error creating terminal: ${error instanceof Error ? error.message : String(error)}`
       );
-      showErrorMessage(ERROR_MESSAGES.TERMINAL_CREATION_FAILED, error instanceof Error ? error.message : String(error));
+      showErrorMessage(
+        ERROR_MESSAGES.TERMINAL_CREATION_FAILED,
+        error instanceof Error ? error.message : String(error)
+      );
       throw error;
     }
   }
