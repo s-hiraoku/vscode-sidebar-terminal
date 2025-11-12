@@ -9,13 +9,16 @@
  * - Wrapped line detection and joining
  * - Empty line trimming for storage optimization
  * - Buffer reverse iteration for efficient processing
+ * - BaseManager integration for consistent lifecycle management
  *
  * @see openspec/changes/optimize-terminal-rendering/specs/scrollback-fix/spec.md
+ * @see docs/refactoring/issue-216-manager-standardization.md
  */
 
 import { Terminal, IBufferLine } from '@xterm/xterm';
 import { SerializeAddon } from '@xterm/addon-serialize';
 import { terminalLogger } from '../utils/ManagerLogger';
+import { BaseManager } from './BaseManager';
 
 export interface ScrollbackOptions {
   scrollback?: number;
@@ -45,10 +48,32 @@ export interface IScrollbackManager {
 
 /**
  * Scrollback Manager Implementation
+ *
+ * Extends BaseManager for consistent lifecycle management and monitoring.
+ * Implements IScrollbackManager for scrollback operations.
+ *
+ * @see Issue #216 - Manager Pattern Standardization
  */
-export class ScrollbackManager implements IScrollbackManager {
+export class ScrollbackManager extends BaseManager implements IScrollbackManager {
   private serializeAddons: Map<string, SerializeAddon> = new Map();
   private terminals: Map<string, Terminal> = new Map();
+
+  constructor() {
+    super('ScrollbackManager', {
+      enableLogging: false, // Use terminalLogger instead
+      enablePerformanceTracking: true,
+      enableErrorRecovery: true,
+    });
+  }
+
+  /**
+   * Initialize ScrollbackManager
+   * No special initialization needed - manager is ready immediately
+   */
+  protected doInitialize(): void {
+    // ScrollbackManager is stateless and ready immediately
+    this.logger('ScrollbackManager initialized');
+  }
 
   /**
    * Register terminal with SerializeAddon
@@ -338,8 +363,9 @@ export class ScrollbackManager implements IScrollbackManager {
 
   /**
    * Dispose all resources
+   * Called by BaseManager.dispose() for cleanup
    */
-  public dispose(): void {
+  protected doDispose(): void {
     this.terminals.clear();
     this.serializeAddons.clear();
     terminalLogger.info('🧹 ScrollbackManager: Disposed');

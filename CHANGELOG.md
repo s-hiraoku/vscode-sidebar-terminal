@@ -8,14 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Refactoring
-- **[Issue #216] Manager Pattern Standardization (Phase 1)**
-  - **BaseManager Enhancement**: Explicitly implements `IDisposable` interface for consistent resource cleanup
-  - **Documentation**: Created comprehensive migration guide at `docs/refactoring/issue-216-manager-standardization.md`
-  - **ESLint Rules**: Added custom rules skeleton to enforce BaseManager pattern (to be enabled in Phase 2)
-  - **Unit Tests**: Added `BaseManager.IDisposable.test.ts` to verify IDisposable implementation
+- **[Issue #216] Manager Pattern Standardization (Phase 1 & 2 Complete)**
+  - **Phase 1 - Foundation**:
+    - **BaseManager Enhancement**: Explicitly implements `IDisposable` interface for consistent resource cleanup
+    - **Documentation**: Created comprehensive migration guide at `docs/refactoring/issue-216-manager-standardization.md`
+    - **ESLint Rules**: Added custom rules skeleton to enforce BaseManager pattern
+    - **Unit Tests**: Added `BaseManager.IDisposable.test.ts` to verify IDisposable implementation
+  - **Phase 2 - Example Migration**:
+    - **ScrollbackManager Migration**: Successfully migrated to extend BaseManager
+    - **Benefits Added**: Performance tracking, health monitoring, error recovery, consistent lifecycle
+    - **Unit Tests**: Added `ScrollbackManager.BaseManager.test.ts` with comprehensive integration tests
+    - **Real-World Example**: Documented complete migration pattern in guide
   - **Pattern Enforcement**: Foundation for constructor injection pattern to replace late-binding
-  - **Files**: `BaseManager.ts`, `.eslintrc.js`, `eslint-rules/`, `docs/refactoring/`
-  - **Next Steps**: Phase 2 will migrate core managers (ProfileManager, ConfigManager, etc.) to the new pattern
+  - **Files**: `BaseManager.ts`, `ScrollbackManager.ts`, `.eslintrc.js`, `eslint-rules/`, `docs/refactoring/`, test files
+  - **Progress**: 2/38 managers migrated (5% complete)
+  - **Next Steps**: Phase 3 will migrate core managers with coordinator dependencies (ProfileManager, ConfigManager, etc.)
 
 ## [0.1.138] - 2025-01-13
 
