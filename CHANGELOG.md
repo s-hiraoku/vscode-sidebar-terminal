@@ -32,6 +32,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `persistentSessionStorageWarningThreshold`: Warning threshold % (default: 80%)
   - **Files**: `session.types.ts`, `StandardTerminalSessionManager.ts`, `package.json`
 
+- **Phase 2.5: Comprehensive Testing** (v0.1.137)
+  - **Unit Tests**: 50+ tests for SessionDataTransformer (migration, storage optimization)
+  - **Integration Tests**: 25+ tests for progressive loading (chunk-based, lazy loading)
+  - **Performance Tests**: 30+ tests validating performance targets
+    - Large scrollback: <1000ms for 2000 lines
+    - Small scrollback: <500ms for 500 lines
+    - Storage optimization: <10ms calculation, <100ms optimization
+  - **Test Coverage**: Migration, backward compatibility, storage limits, memory efficiency
+  - **Files**: `SessionDataTransformer.test.ts`, `ProgressiveLoading.test.ts`, `PerformanceTests.test.ts`
+
 ## [0.1.135] - 2025-01-10
 
 ### Documentation
