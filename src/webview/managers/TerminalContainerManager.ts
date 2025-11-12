@@ -849,7 +849,7 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
           terminalsWrapper.appendChild(container);
         }
       });
-      storage.innerHTML = '';
+      storage.textContent = ''; // Safe: clearing content
     }
 
     this.containerCache.forEach((container) => {
