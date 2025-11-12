@@ -607,6 +607,23 @@ The project uses GitHub Actions for automated testing and releases:
 - 🔧 **Detection Improvements**: Enhanced startup and termination pattern recognition
 - 📊 **Stability Enhancements**: Improved state management and error handling
 
+## 📚 Documentation
+
+### API Documentation
+
+Comprehensive API documentation is available for developers who want to understand the extension's architecture or contribute to the codebase:
+
+- **[API Documentation Guide](docs/API_DOCUMENTATION.md)** - Complete guide to the API documentation
+- **[Generated API Reference](docs/api/index.html)** - Browse the full API documentation (TypeDoc)
+- **Generate docs**: `npm run docs:generate`
+- **View all docs**: See [docs/README.md](docs/README.md) for the complete documentation structure
+
+The API documentation includes:
+- Core components (ExtensionLifecycle, Terminal Management)
+- Service APIs (Shell Integration, Configuration, Keyboard Shortcuts)
+- Command implementations (File References, Copilot Integration)
+- Utilities and helpers
+
 ## 🤝 Contributing
 
 We welcome contributions! Please see our [GitHub Issues](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues) to get started.
