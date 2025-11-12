@@ -818,18 +818,6 @@
           "maximum": 3000,
           "description": "Maximum number of scrollback lines to persist (200-3000). Higher values use more storage. Default: 1000 (matching VS Code)."
         },
-        "secondaryTerminal.features.enhancedScrollbackPersistence": {
-          "type": "boolean",
-          "default": false,
-          "description": "Enable VS Code standard scrollback serialization with ANSI color preservation and full state restoration. Beta feature - will be enabled by default in v0.2.0."
-        },
-        "secondaryTerminal.features.scrollbackLineLimit": {
-          "type": "number",
-          "default": 1000,
-          "minimum": 200,
-          "maximum": 3000,
-          "description": "Maximum number of scrollback lines for enhanced persistence (200-3000). Only applies when enhancedScrollbackPersistence is enabled. Default: 1000 (matching VS Code)."
-        },
         "secondaryTerminal.features.vscodeStandardIME": {
           "type": "boolean",
           "default": false,
