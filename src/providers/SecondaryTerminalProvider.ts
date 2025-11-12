@@ -528,9 +528,32 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   private async _handleTerminalInitializationComplete(message: WebviewMessage): Promise<void> {
     log('✅ [PROVIDER] Terminal initialization complete notification from WebView');
     const terminalId = message.terminalId as string;
-    if (terminalId) {
-      log(`✅ [PROVIDER] Terminal ${terminalId} initialization confirmed by WebView`);
+
+    if (!terminalId) {
+      log('⚠️ [PROVIDER] Terminal initialization complete missing terminalId');
+      return;
     }
+
+    log(`✅ [PROVIDER] Terminal ${terminalId} initialization confirmed by WebView`);
+
+    // Get terminal instance to access PTY process
+    const terminal = this._terminalManager.getTerminal(terminalId);
+    if (!terminal || !terminal.ptyProcess) {
+      log(`❌ [PROVIDER] Terminal ${terminalId} not found or PTY not available`);
+      return;
+    }
+
+    // Initialize shell for this terminal (sends initial prompt, shell integration, etc.)
+    log(`🔧 [PROVIDER] Initializing shell for terminal ${terminalId}`);
+    this._terminalManager.initializeShellForTerminal(
+      terminalId,
+      terminal.ptyProcess,
+      false // safeMode = false for new terminals
+    );
+
+    // Start PTY output (begins data flow from PTY to WebView)
+    log(`🎯 [PROVIDER] Starting PTY output for terminal ${terminalId}`);
+    this._terminalManager.startPtyOutput(terminalId);
   }
 
   private _handleTerminalInput(message: WebviewMessage): void {
