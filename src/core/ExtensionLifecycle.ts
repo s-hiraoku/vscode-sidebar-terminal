@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { SecondaryTerminalProvider } from '../providers/SecondaryTerminalProvider';
 import { TerminalManager } from '../terminals/TerminalManager';
-import { StandardTerminalSessionManager } from '../sessions/StandardTerminalSessionManager';
+import { ExtensionPersistenceService } from '../services/persistence/ExtensionPersistenceService';
 import { extension as log, logger, LogLevel } from '../utils/logger';
 import { FileReferenceCommand, TerminalCommand } from '../commands';
 import { CopilotIntegrationCommand } from '../commands/CopilotIntegrationCommand';
@@ -18,7 +18,7 @@ import { VersionUtils } from '../utils/VersionUtils';
 export class ExtensionLifecycle {
   private terminalManager: TerminalManager | undefined;
   private sidebarProvider: SecondaryTerminalProvider | undefined;
-  private standardSessionManager: StandardTerminalSessionManager | undefined;
+  private extensionPersistenceService: ExtensionPersistenceService | undefined;
   private fileReferenceCommand: FileReferenceCommand | undefined;
   private terminalCommand: TerminalCommand | undefined;
   private copilotIntegrationCommand: CopilotIntegrationCommand | undefined;
@@ -64,13 +64,13 @@ export class ExtensionLifecycle {
       // Initialize terminal manager
       this.terminalManager = new TerminalManager();
 
-      // Initialize standard terminal session manager
-      log('🔧 [EXTENSION] Initializing VS Code standard session manager...');
-      this.standardSessionManager = new StandardTerminalSessionManager(
+      // Initialize extension persistence service
+      log('🔧 [EXTENSION] Initializing Extension Persistence Service...');
+      this.extensionPersistenceService = new ExtensionPersistenceService(
         context,
         this.terminalManager
       );
-      log('✅ [EXTENSION] Standard session manager initialized');
+      log('✅ [EXTENSION] Extension Persistence Service initialized');
 
       // Initialize command handlers
       this.fileReferenceCommand = new FileReferenceCommand(this.terminalManager);
@@ -96,13 +96,13 @@ export class ExtensionLifecycle {
       this.sidebarProvider = new SecondaryTerminalProvider(
         context,
         this.terminalManager,
-        this.standardSessionManager
+        this.extensionPersistenceService
       );
 
-      // Set sidebar provider for StandardSessionManager
-      if (this.standardSessionManager) {
-        this.standardSessionManager.setSidebarProvider(this.sidebarProvider);
-        log('🔧 [EXTENSION] Sidebar provider set for StandardSessionManager');
+      // Set sidebar provider for ExtensionPersistenceService
+      if (this.extensionPersistenceService) {
+        (this.extensionPersistenceService as any).setSidebarProvider?.(this.sidebarProvider);
+        log('🔧 [EXTENSION] Sidebar provider set for ExtensionPersistenceService');
       }
 
       // Initialize keyboard shortcut service
@@ -245,8 +245,8 @@ export class ExtensionLifecycle {
         handler: async () => {
           log('🔧 [DEBUG] Command executed: clearCorruptedHistory');
           try {
-            if (this.standardSessionManager) {
-              await this.standardSessionManager.clearSession();
+            if (this.extensionPersistenceService) {
+              await this.extensionPersistenceService.clearSession();
               void vscode.window.showInformationMessage(
                 '🧹 Terminal session cleared! VS Code standard session will be saved from now on.'
               );
@@ -449,10 +449,10 @@ export class ExtensionLifecycle {
     await this.saveSimpleSessionOnExit();
 
     // Dispose standard session manager (cleanup auto-save timers)
-    if (this.standardSessionManager) {
+    if (this.extensionPersistenceService) {
       log('🔧 [EXTENSION] Disposing standard session manager...');
-      this.standardSessionManager.dispose(); // Cleanup auto-save timers
-      this.standardSessionManager = undefined;
+      this.extensionPersistenceService.dispose(); // Cleanup auto-save timers
+      this.extensionPersistenceService = undefined;
     }
 
     // Dispose keyboard shortcut service
@@ -520,8 +520,8 @@ export class ExtensionLifecycle {
   /**
    * 現在の標準セッションマネージャーを取得（テスト用）
    */
-  getStandardSessionManager(): StandardTerminalSessionManager | undefined {
-    return this.standardSessionManager;
+  getExtensionPersistenceService(): ExtensionPersistenceService | undefined {
+    return this.extensionPersistenceService;
   }
 
   // ==================== セッション管理関連のメソッド - DISABLED FOR DEBUGGING ====================
@@ -531,7 +531,7 @@ export class ExtensionLifecycle {
    */
   private async restoreSessionOnStartup(): Promise<void> {
     try {
-      if (!this.standardSessionManager) {
+      if (!this.extensionPersistenceService) {
         log('⚠️ [SESSION] Standard session manager not initialized');
         return;
       }
@@ -540,9 +540,9 @@ export class ExtensionLifecycle {
 
       // 少し遅延させてから復元（他の初期化処理完了を待つ）
       try {
-        if (this.standardSessionManager && this.terminalManager) {
+        if (this.extensionPersistenceService && this.terminalManager) {
           log('🔄 [SESSION] Executing VS Code standard session restore...');
-          const result = await this.standardSessionManager.restoreSession();
+          const result = await this.extensionPersistenceService.restoreSession();
 
           if (result.success && result.restoredCount && result.restoredCount > 0) {
             log(
@@ -627,16 +627,16 @@ export class ExtensionLifecycle {
    */
   private async saveSessionOnExit(): Promise<void> {
     try {
-      if (!this.standardSessionManager) {
-        log('⚠️ [EXTENSION] Standard session manager not available for save');
+      if (!this.extensionPersistenceService) {
+        log('⚠️ [EXTENSION] Extension persistence service not available for save');
         return;
       }
 
-      log('💾 [EXTENSION] Saving VS Code standard session on exit...');
-      const result = await this.standardSessionManager.saveCurrentSession();
+      log('💾 [EXTENSION] Saving session on exit...');
+      const result = await this.extensionPersistenceService.saveCurrentSession();
 
       if (result.success) {
-        log(`✅ [EXTENSION] VS Code standard session saved: ${result.terminalCount} terminals`);
+        log(`✅ [EXTENSION] Session saved: ${result.terminalCount} terminals`);
       } else {
         log('⚠️ [EXTENSION] Session save failed or no terminals to save');
       }
@@ -650,14 +650,14 @@ export class ExtensionLifecycle {
    */
   private async saveSessionImmediately(trigger: string): Promise<void> {
     try {
-      if (!this.standardSessionManager || !this.terminalManager) {
+      if (!this.extensionPersistenceService || !this.terminalManager) {
         return;
       }
 
       const terminals = this.terminalManager.getTerminals();
       log(`💾 [EXTENSION] Immediate save triggered by ${trigger}: ${terminals.length} terminals`);
 
-      const result = await this.standardSessionManager.saveCurrentSession();
+      const result = await this.extensionPersistenceService.saveCurrentSession();
 
       if (result.success) {
         log(
@@ -678,7 +678,7 @@ export class ExtensionLifecycle {
    */
   private async saveSessionPeriodically(): Promise<void> {
     try {
-      if (!this.standardSessionManager || !this.terminalManager) {
+      if (!this.extensionPersistenceService || !this.terminalManager) {
         return;
       }
 
@@ -689,7 +689,7 @@ export class ExtensionLifecycle {
       }
 
       log(`💾 [EXTENSION] Periodic VS Code standard save: ${terminals.length} terminals`);
-      const result = await this.standardSessionManager.saveCurrentSession();
+      const result = await this.extensionPersistenceService.saveCurrentSession();
 
       if (result.success) {
         log(`✅ [EXTENSION] Periodic save completed: ${result.terminalCount} terminals`);
@@ -703,7 +703,7 @@ export class ExtensionLifecycle {
    * Setup session manager event listeners to forward notifications to WebView - RE-ENABLED FOR TESTING
    */
   private setupSessionEventListeners(): void {
-    if (!this.standardSessionManager || !this.sidebarProvider) {
+    if (!this.extensionPersistenceService || !this.sidebarProvider) {
       log('❌ [SESSION] Cannot setup event listeners - missing dependencies');
       return;
     }
@@ -719,13 +719,13 @@ export class ExtensionLifecycle {
    * Handle save session command - RE-ENABLED FOR TESTING
    */
   private async handleSaveSessionCommand(): Promise<void> {
-    if (!this.standardSessionManager) {
+    if (!this.extensionPersistenceService) {
       await vscode.window.showErrorMessage('Standard session manager not available');
       return;
     }
 
     try {
-      const result = await this.standardSessionManager.saveCurrentSession();
+      const result = await this.extensionPersistenceService.saveCurrentSession();
       if (result.success) {
         await vscode.window.showInformationMessage(
           `Terminal session saved successfully (${result.terminalCount || 0} terminal${(result.terminalCount || 0) > 1 ? 's' : ''})`
@@ -744,13 +744,13 @@ export class ExtensionLifecycle {
    * Handle restore session command - RE-ENABLED FOR TESTING
    */
   private async handleRestoreSessionCommand(): Promise<void> {
-    if (!this.standardSessionManager) {
+    if (!this.extensionPersistenceService) {
       await vscode.window.showErrorMessage('Standard session manager not available');
       return;
     }
 
     try {
-      const result = await this.standardSessionManager.restoreSession();
+      const result = await this.extensionPersistenceService.restoreSession();
       if (result.success) {
         if (result.restoredCount && result.restoredCount > 0) {
           await vscode.window.showInformationMessage(
@@ -773,7 +773,7 @@ export class ExtensionLifecycle {
    * Handle clear session command - RE-ENABLED FOR TESTING
    */
   private async handleClearSessionCommand(): Promise<void> {
-    if (!this.standardSessionManager) {
+    if (!this.extensionPersistenceService) {
       await vscode.window.showErrorMessage('Standard session manager not available');
       return;
     }
@@ -787,7 +787,7 @@ export class ExtensionLifecycle {
 
     if (confirm === 'Clear Session') {
       try {
-        await this.standardSessionManager.clearSession();
+        await this.extensionPersistenceService.clearSession();
         await vscode.window.showInformationMessage('Terminal session data cleared successfully');
       } catch (error) {
         await vscode.window.showErrorMessage(`Failed to clear session: ${String(error)}`);
@@ -801,8 +801,8 @@ export class ExtensionLifecycle {
    * 統合セッション保存コマンドハンドラー
    */
   private async handleSimpleSaveSessionCommand(): Promise<void> {
-    if (!this.standardSessionManager) {
-      await vscode.window.showErrorMessage('Standard session manager not available');
+    if (!this.extensionPersistenceService) {
+      await vscode.window.showErrorMessage('Extension persistence service not available');
       return;
     }
 
@@ -813,7 +813,7 @@ export class ExtensionLifecycle {
       log('✅ [SIMPLE_SESSION] Scrollback extraction completed');
 
       // 通常のセッション保存を実行
-      const result = await this.standardSessionManager.saveCurrentSession();
+      const result = await this.extensionPersistenceService.saveCurrentSession();
       if (result.success) {
         await vscode.window.showInformationMessage(
           `Terminal session saved successfully (${result.terminalCount} terminal${result.terminalCount !== 1 ? 's' : ''})`
@@ -834,13 +834,13 @@ export class ExtensionLifecycle {
    * 統合セッション復元コマンドハンドラー
    */
   private async handleSimpleRestoreSessionCommand(): Promise<void> {
-    if (!this.standardSessionManager) {
-      await vscode.window.showErrorMessage('Standard session manager not available');
+    if (!this.extensionPersistenceService) {
+      await vscode.window.showErrorMessage('Extension persistence service not available');
       return;
     }
 
     try {
-      const result = await this.standardSessionManager.restoreSession();
+      const result = await this.extensionPersistenceService.restoreSession();
 
       if (result.success) {
         if (result.restoredCount && result.restoredCount > 0) {
@@ -869,8 +869,8 @@ export class ExtensionLifecycle {
    * 統合セッションクリアコマンドハンドラー
    */
   private async handleSimpleClearSessionCommand(): Promise<void> {
-    if (!this.standardSessionManager) {
-      await vscode.window.showErrorMessage('Standard session manager not available');
+    if (!this.extensionPersistenceService) {
+      await vscode.window.showErrorMessage('Extension persistence service not available');
       return;
     }
 
@@ -883,7 +883,7 @@ export class ExtensionLifecycle {
 
     if (confirm === 'Clear Session') {
       try {
-        await this.standardSessionManager.clearSession();
+        await this.extensionPersistenceService.clearSession();
         await vscode.window.showInformationMessage('Terminal session data cleared successfully');
       } catch (error) {
         await vscode.window.showErrorMessage(
@@ -897,7 +897,7 @@ export class ExtensionLifecycle {
    * 終了時の統合セッション保存処理
    */
   private async saveSimpleSessionOnExit(): Promise<void> {
-    if (!this.standardSessionManager) {
+    if (!this.extensionPersistenceService) {
       log('⚠️ [STANDARD_SESSION] Session manager not available, skipping save on exit');
       return;
     }
@@ -905,7 +905,7 @@ export class ExtensionLifecycle {
     log('💾 [STANDARD_SESSION] Saving session on exit...');
 
     try {
-      const result = await this.standardSessionManager.saveCurrentSession();
+      const result = await this.extensionPersistenceService.saveCurrentSession();
       if (result.success) {
         log(`✅ [STANDARD_SESSION] Session saved on exit: ${result.terminalCount} terminals`);
       } else {
@@ -920,7 +920,7 @@ export class ExtensionLifecycle {
    * セッションデータ診断
    */
   private async diagnoseSessionData(): Promise<void> {
-    if (!this.standardSessionManager || !this._extensionContext) {
+    if (!this.extensionPersistenceService || !this._extensionContext) {
       await vscode.window.showErrorMessage('Session manager or context not available');
       return;
     }
@@ -929,8 +929,8 @@ export class ExtensionLifecycle {
       log('🔍 [DIAGNOSTIC] ===== SESSION DATA DIAGNOSIS =====');
 
       // Get session info
-      const sessionInfo = this.standardSessionManager.getSessionInfo();
-      const sessionStats = this.standardSessionManager.getSessionStats();
+      const sessionInfo = this.extensionPersistenceService.getSessionInfo();
+      const sessionStats = this.extensionPersistenceService.getSessionStats();
 
       log('📊 [DIAGNOSTIC] Session Statistics:', sessionStats);
 
@@ -1041,12 +1041,12 @@ export class ExtensionLifecycle {
     try {
       log('🔄 [EXTENSION] Starting session restore...');
 
-      if (!this.standardSessionManager) {
+      if (!this.extensionPersistenceService) {
         log('❌ [EXTENSION] Session manager not available');
         return;
       }
 
-      const result = await this.standardSessionManager.restoreSession();
+      const result = await this.extensionPersistenceService.restoreSession();
 
       if (result.success && result.restoredCount && result.restoredCount > 0) {
         log(`✅ [EXTENSION] Restored ${result.restoredCount} terminals`);
@@ -1068,7 +1068,7 @@ export class ExtensionLifecycle {
     log('🔍 [SESSION] === RESTORE SESSION STARTUP CALLED ===');
 
     try {
-      if (!this.standardSessionManager || !this.terminalManager) {
+      if (!this.extensionPersistenceService || !this.terminalManager) {
         log('⚠️ [SESSION] Managers not available');
         return;
       }
@@ -1083,7 +1083,7 @@ export class ExtensionLifecycle {
 
       log('🔍 [SESSION] About to call standardSessionManager.restoreSession()');
       // セッション復元を実行
-      const result = await this.standardSessionManager.restoreSession();
+      const result = await this.extensionPersistenceService.restoreSession();
       log(`🔍 [SESSION] restoreSession() completed with result: ${JSON.stringify(result)}`);
 
       if (result.success && result.restoredCount && result.restoredCount > 0) {

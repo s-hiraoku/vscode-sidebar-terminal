@@ -173,43 +173,7 @@ See: `src/test/unit/webview/managers/ScrollbackManager.BaseManager.test.ts`
 
 ## Phase 3 Examples: Constructor Injection Managers
 
-### SimplePersistenceManager Migration
-
-**Before**:
-```typescript
-export class SimplePersistenceManager implements ISimplePersistenceManager {
-  constructor(vscodeApi: any) {
-    this.vscodeApi = vscodeApi;
-    // initialization logic
-  }
-  // No dispose method
-}
-```
-
-**After** (✅ Completed in Phase 3):
-```typescript
-export class SimplePersistenceManager extends BaseManager implements ISimplePersistenceManager {
-  constructor(vscodeApi: any) {
-    super('SimplePersistenceManager', {
-      enableLogging: false,
-      enablePerformanceTracking: true,
-      enableErrorRecovery: true,
-    });
-    this.vscodeApi = vscodeApi;
-  }
-
-  protected doInitialize(): void {
-    this.logger('SimplePersistenceManager initialized');
-  }
-
-  protected doDispose(): void {
-    if (this.saveDebouncer) {
-      this.saveDebouncer.cancel?.();
-    }
-    log('🧹 SimplePersistenceManager disposed');
-  }
-}
-```
+> **Note**: SimplePersistenceManager was migrated in Phase 3 but was subsequently removed in Issue #215 (Persistence Layer Consolidation). It was replaced by the unified `WebViewPersistenceService` as part of a major architectural refactoring that reduced persistence code by 87%.
 
 ### TerminalEventManager Migration
 
@@ -541,10 +505,10 @@ Given the scope (38+ managers), migration will be performed in phases:
 - ⏳ Migrate `HeaderManager`
 
 ### Phase 3: Independent Managers (✅ Complete)
-- ✅ Migrate `SimplePersistenceManager` to BaseManager
 - ✅ Migrate `TerminalEventManager` to BaseManager (constructor injection already in place)
 - ✅ Add comprehensive Phase 3 integration tests
 - ✅ Verify TerminalAddonManager (stateless utility, no migration needed)
+- ℹ️ Note: SimplePersistenceManager was initially migrated but later removed in Issue #215
 
 ### Phase 4: Display & UI Managers (✅ Complete)
 - ✅ Migrate `DisplayModeManager` to constructor injection (removed setCoordinator)
@@ -560,7 +524,7 @@ Given the scope (38+ managers), migration will be performed in phases:
 - ✅ Update all callers (LightweightTerminalWebviewManager, tests)
 - ✅ Add comprehensive Phase 5 integration tests
 - ✅ Verify TerminalAddonManager (stateless utility, no migration needed)
-- **Progress**: 8/38 managers migrated (21% complete)
+- **Progress**: 7/38 managers migrated (18% complete)
 
 ### Phase 6: Service & Utility Managers
 - Migrate service managers

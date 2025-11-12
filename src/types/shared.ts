@@ -3,6 +3,34 @@
  * Extension Host と WebView 間で共有される型定義
  */
 
+// ===== Result Pattern (Issue #224) =====
+// Export Result pattern types for standardized error handling
+export type {
+  Result,
+  ErrorDetails,
+} from './result';
+
+export {
+  ErrorCode,
+  ResultError,
+  success,
+  failure,
+  failureFromDetails,
+  failureFromError,
+  isSuccess,
+  isFailure,
+  unwrap,
+  unwrapOr,
+  map,
+  chain,
+  mapError,
+  onFailure,
+  onSuccess,
+  fromPromise,
+  tryCatch,
+  all,
+} from './result';
+
 // ===== 基本ターミナル設定 =====
 
 /**
