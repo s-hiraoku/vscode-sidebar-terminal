@@ -1,6 +1,10 @@
 import * as vscode from 'vscode';
 import { terminal as log } from '../../utils/logger';
-import { CompleteTerminalSettings, WebViewTerminalSettings } from '../../types/shared';
+import {
+  CompleteTerminalSettings,
+  WebViewTerminalSettings,
+  ConfigUpdateOptions,
+} from '../../types/shared';
 
 /**
  * Configuration change event with proper typing
@@ -184,17 +188,15 @@ export class UnifiedConfigurationService {
   /**
    * Update configuration value
    */
-  async update(
-    section: string,
-    key: string,
-    value: unknown,
-    target?: vscode.ConfigurationTarget
-  ): Promise<void> {
+  async update(options: ConfigUpdateOptions): Promise<void> {
+    const { section, key, value, target } = options;
+
     try {
       const config = vscode.workspace.getConfiguration(section);
       const oldValue = config.get(key);
 
-      await config.update(key, value, target);
+      const configTarget = target as vscode.ConfigurationTarget | undefined;
+      await config.update(key, value, configTarget);
 
       // Clear cache for this key
       const fullKey = `${section}.${key}`;

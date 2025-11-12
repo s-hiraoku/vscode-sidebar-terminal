@@ -7,6 +7,7 @@
 
 import * as vscode from 'vscode';
 import { extension as log } from '../utils/logger';
+import { ConfigUpdateOptions } from '../types/common';
 
 /**
  * 設定変更イベントハンドラー
@@ -233,14 +234,17 @@ export class ConfigurationService {
   /**
    * 設定値を更新
    */
-  async updateValue(
-    section: string,
-    key: string,
-    value: unknown,
-    target: vscode.ConfigurationTarget = vscode.ConfigurationTarget.Workspace
-  ): Promise<void> {
+  async updateValue(options: ConfigUpdateOptions): Promise<void> {
+    const {
+      section,
+      key,
+      value,
+      target = vscode.ConfigurationTarget.Workspace,
+    } = options;
+
     try {
-      await vscode.workspace.getConfiguration(section).update(key, value, target);
+      const configTarget = (target as vscode.ConfigurationTarget) || vscode.ConfigurationTarget.Workspace;
+      await vscode.workspace.getConfiguration(section).update(key, value, configTarget);
 
       // キャッシュを更新
       const cacheKey = `${section}.${key}`;
@@ -268,12 +272,12 @@ export class ConfigurationService {
 
     for (const update of updates) {
       try {
-        await this.updateValue(
-          update.section,
-          update.key,
-          update.value,
-          update.target || vscode.ConfigurationTarget.Workspace
-        );
+        await this.updateValue({
+          section: update.section,
+          key: update.key,
+          value: update.value,
+          target: update.target || vscode.ConfigurationTarget.Workspace,
+        });
       } catch (error) {
         errors.push(`${update.section}.${update.key}: ${String(error)}`);
       }

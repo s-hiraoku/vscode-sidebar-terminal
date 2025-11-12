@@ -5,7 +5,11 @@
  * settings, and state updates.
  */
 
-import { WebviewMessage, TerminalInteractionEvent } from '../../types/common';
+import {
+  WebviewMessage,
+  TerminalInteractionEvent,
+  TerminalInteractionPayload,
+} from '../../types/common';
 import { WebViewFontSettings } from '../../types/shared';
 import { IMessageHandlerContext, MessagePriority } from '../UnifiedMessageDispatcher';
 import { BaseMessageHandler } from './BaseMessageHandler';
@@ -60,7 +64,12 @@ export class SystemMessageHandler extends BaseMessageHandler {
       });
 
       // Emit ready event
-      await this.emitTerminalInteractionEvent('webview-ready', '', undefined, context);
+      await this.emitTerminalInteractionEvent({
+        type: 'webview-ready',
+        terminalId: '',
+        data: undefined,
+        context,
+      });
 
       // Send confirmation back to extension
       await context.postMessage({
@@ -87,7 +96,12 @@ export class SystemMessageHandler extends BaseMessageHandler {
     if (fontSettings) {
       context.logger.info('Font settings update received', fontSettings);
       context.coordinator.applyFontSettings(fontSettings);
-      await this.emitTerminalInteractionEvent('font-settings-update', '', fontSettings, context);
+      await this.emitTerminalInteractionEvent({
+        type: 'font-settings-update',
+        terminalId: '',
+        data: fontSettings,
+        context,
+      });
     }
   }
 
@@ -101,7 +115,12 @@ export class SystemMessageHandler extends BaseMessageHandler {
     const settings = message.settings;
     if (settings) {
       context.logger.info('Settings response received');
-      await this.emitTerminalInteractionEvent('settings-update', '', settings, context);
+      await this.emitTerminalInteractionEvent({
+        type: 'settings-update',
+        terminalId: '',
+        data: settings,
+        context,
+      });
     }
   }
 
@@ -133,22 +152,22 @@ export class SystemMessageHandler extends BaseMessageHandler {
    * Emit terminal interaction event
    */
   private async emitTerminalInteractionEvent(
-    type: TerminalInteractionEvent['type'],
-    terminalId: string,
-    data: unknown,
-    context: IMessageHandlerContext
+    payload: TerminalInteractionPayload
   ): Promise<void> {
+    const { type, terminalId, data, context } = payload;
+    const handlerContext = context as IMessageHandlerContext;
+
     try {
-      await context.postMessage({
+      await handlerContext.postMessage({
         command: 'terminalInteraction',
         type,
         terminalId,
         data,
         timestamp: Date.now(),
       });
-      this.logActivity(context, `Terminal interaction event sent: ${type} for ${terminalId}`);
+      this.logActivity(handlerContext, `Terminal interaction event sent: ${type} for ${terminalId}`);
     } catch (error) {
-      context.logger.error('Error emitting terminal interaction event', error);
+      handlerContext.logger.error('Error emitting terminal interaction event', error);
     }
   }
 }

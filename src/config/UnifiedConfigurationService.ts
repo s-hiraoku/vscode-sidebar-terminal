@@ -26,6 +26,7 @@ import {
   WebViewFontSettings,
   WebViewTerminalSettings,
   TerminalProfilesConfig,
+  ConfigUpdateOptions,
 } from '../types/shared';
 import { TERMINAL_CONSTANTS } from '../constants';
 import { terminal as log } from '../utils/logger';
@@ -222,12 +223,13 @@ export class UnifiedConfigurationService implements Disposable {
   /**
    * Update configuration value following VS Code patterns
    */
-  public async update(
-    section: string,
-    key: string,
-    value: unknown,
-    target: vscode.ConfigurationTarget = vscode.ConfigurationTarget.Global
-  ): Promise<void> {
+  public async update(options: ConfigUpdateOptions): Promise<void> {
+    const {
+      section,
+      key,
+      value,
+      target = vscode.ConfigurationTarget.Global,
+    } = options;
     const fullKey = `${section}.${key}`;
 
     try {
@@ -240,7 +242,8 @@ export class UnifiedConfigurationService implements Disposable {
       const config = vscode.workspace.getConfiguration(section);
       const oldValue = config.get(key);
 
-      await config.update(key, value, target);
+      const configTarget = (target as vscode.ConfigurationTarget) || vscode.ConfigurationTarget.Global;
+      await config.update(key, value, configTarget);
 
       // Clear cache
       this._configurationCache.delete(fullKey);

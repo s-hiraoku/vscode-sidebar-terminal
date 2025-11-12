@@ -1643,27 +1643,39 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
       // Update VS Code settings using unified configuration service
       if (settings.cursorBlink !== undefined) {
-        await configService.update('sidebarTerminal', 'cursorBlink', settings.cursorBlink);
+        await configService.update({
+          section: 'sidebarTerminal',
+          key: 'cursorBlink',
+          value: settings.cursorBlink,
+        });
       }
       if (settings.theme) {
-        await configService.update('sidebarTerminal', 'theme', settings.theme);
+        await configService.update({
+          section: 'sidebarTerminal',
+          key: 'theme',
+          value: settings.theme,
+        });
       }
       if (settings.enableCliAgentIntegration !== undefined) {
-        await configService.update(
-          'sidebarTerminal',
-          'enableCliAgentIntegration',
-          settings.enableCliAgentIntegration
-        );
+        await configService.update({
+          section: 'sidebarTerminal',
+          key: 'enableCliAgentIntegration',
+          value: settings.enableCliAgentIntegration,
+        });
       }
       if (settings.dynamicSplitDirection !== undefined) {
-        await configService.update(
-          'sidebarTerminal',
-          'dynamicSplitDirection',
-          settings.dynamicSplitDirection
-        );
+        await configService.update({
+          section: 'sidebarTerminal',
+          key: 'dynamicSplitDirection',
+          value: settings.dynamicSplitDirection,
+        });
       }
       if (settings.panelLocation !== undefined) {
-        await configService.update('sidebarTerminal', 'panelLocation', settings.panelLocation);
+        await configService.update({
+          section: 'sidebarTerminal',
+          key: 'panelLocation',
+          value: settings.panelLocation,
+        });
         log(
           '🔧 [DEBUG] CLI Agent Code integration setting updated:',
           settings.enableCliAgentIntegration

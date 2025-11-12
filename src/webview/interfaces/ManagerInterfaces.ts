@@ -8,7 +8,12 @@ import { SearchAddon } from '@xterm/addon-search';
 import { WebglAddon } from '@xterm/addon-webgl';
 import { Unicode11Addon } from '@xterm/addon-unicode11';
 import { PartialTerminalSettings, WebViewFontSettings } from '../../types/shared';
-import { AltClickState, TerminalInteractionEvent } from '../../types/common';
+import {
+  AltClickState,
+  TerminalInteractionEvent,
+  TerminalInteractionPayload,
+  TerminalResizeOptions,
+} from '../../types/common';
 import { ITerminalProfile } from '../../types/profiles';
 
 // Core terminal data structure with VS Code Standard Addons
@@ -220,12 +225,7 @@ export interface IMessageManager {
   postMessage(message: unknown): void;
   receiveMessage(message: unknown, coordinator: IManagerCoordinator): Promise<void>;
   sendReadyMessage(coordinator: IManagerCoordinator): void;
-  emitTerminalInteractionEvent(
-    type: TerminalInteractionEvent['type'],
-    terminalId: string,
-    data: unknown,
-    coordinator: IManagerCoordinator
-  ): void;
+  emitTerminalInteractionEvent(payload: TerminalInteractionPayload): void;
   getQueueStats(): {
     queueSize: number;
     isProcessing: boolean;
@@ -233,12 +233,7 @@ export interface IMessageManager {
     isLocked?: boolean;
   };
   sendInput(input: string, terminalId?: string, coordinator?: IManagerCoordinator): void;
-  sendResize(
-    cols: number,
-    rows: number,
-    terminalId?: string,
-    coordinator?: IManagerCoordinator
-  ): void;
+  sendResize(options: TerminalResizeOptions): void;
   // 新しいアーキテクチャ: 統一された削除メッセージ
   sendDeleteTerminalMessage(
     terminalId: string,

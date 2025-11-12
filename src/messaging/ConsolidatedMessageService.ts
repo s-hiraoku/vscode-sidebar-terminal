@@ -15,7 +15,12 @@ import {
   IManagerCoordinator,
   IManagerLifecycle,
 } from '../webview/interfaces/ManagerInterfaces';
-import { WebviewMessage, TerminalInteractionEvent } from '../types/common';
+import {
+  WebviewMessage,
+  TerminalInteractionEvent,
+  TerminalInteractionPayload,
+  TerminalResizeOptions,
+} from '../types/common';
 import { UnifiedMessageDispatcher, MessagePriority } from './UnifiedMessageDispatcher';
 import { messageLogger } from '../webview/utils/ManagerLogger';
 
@@ -165,13 +170,11 @@ export class ConsolidatedMessageService implements IMessageManager, IManagerLife
   /**
    * Emit terminal interaction event
    */
-  public emitTerminalInteractionEvent(
-    type: TerminalInteractionEvent['type'],
-    terminalId: string,
-    data: unknown,
-    coordinator: IManagerCoordinator
-  ): void {
+  public emitTerminalInteractionEvent(payload: TerminalInteractionPayload): void {
+    const { type, terminalId, data, context } = payload;
+
     // Update coordinator if provided
+    const coordinator = context as IManagerCoordinator | undefined;
     if (coordinator && !this.coordinator) {
       this.coordinator = coordinator;
     }
@@ -220,14 +223,11 @@ export class ConsolidatedMessageService implements IMessageManager, IManagerLife
   /**
    * Send resize command
    */
-  public sendResize(
-    cols: number,
-    rows: number,
-    terminalId?: string,
-    coordinator?: IManagerCoordinator
-  ): void {
+  public sendResize(options: TerminalResizeOptions): void {
+    const { cols, rows, terminalId, coordinator } = options;
+
     if (coordinator && !this.coordinator) {
-      this.coordinator = coordinator;
+      this.coordinator = coordinator as IManagerCoordinator;
     }
 
     this.dispatcher.sendResize(cols, rows, terminalId, MessagePriority.HIGH);
