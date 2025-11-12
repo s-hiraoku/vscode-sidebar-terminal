@@ -15,6 +15,8 @@
  * @see https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/218
  */
 
+import { info as logInfo, warn as logWarn, error as logError } from '../../utils/logger';
+
 export interface IManager {
   /** Set coordinator reference (optional) */
   setCoordinator?(coordinator: unknown): void;
@@ -270,20 +272,20 @@ export abstract class ManagerCoordinatorBase<TManagerKey extends string = string
    * Log initialization information
    */
   protected logInitialization(message: string): void {
-    console.log(`[ManagerCoordinator] ${message}`);
+    logInfo(`[ManagerCoordinator] ${message}`);
   }
 
   /**
    * Log warning
    */
   protected logWarning(message: string): void {
-    console.warn(`[ManagerCoordinator] ${message}`);
+    logWarn(`[ManagerCoordinator] ${message}`);
   }
 
   /**
    * Log error
    */
   protected logError(message: string, error: unknown): void {
-    console.error(`[ManagerCoordinator] ${message}:`, error);
+    logError(`[ManagerCoordinator] ${message}:`, error);
   }
 }

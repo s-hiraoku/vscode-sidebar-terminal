@@ -7,7 +7,7 @@ const webpack = require('webpack');
 /** @type {import('webpack').Configuration} */
 const extensionConfig = {
   target: 'node',
-  mode: 'none',
+  mode: process.env.NODE_ENV === 'production' ? 'production' : 'none',
 
   entry: './src/extension.ts',
   resolve: {
@@ -49,6 +49,27 @@ const extensionConfig = {
     // Keep @homebridge/node-pty-prebuilt-multiarch as external since it's included in the package
     '@homebridge/node-pty-prebuilt-multiarch': 'commonjs @homebridge/node-pty-prebuilt-multiarch',
   },
+  optimization: {
+    minimize: process.env.NODE_ENV === 'production',
+    ...(process.env.NODE_ENV === 'production' && {
+      minimizer: [
+        new (require('terser-webpack-plugin'))({
+          terserOptions: {
+            compress: {
+              // Remove console.log, console.debug in production
+              pure_funcs: ['console.log', 'console.debug', 'console.info'],
+              // Keep console.error and console.warn for critical logging
+            },
+            mangle: {
+              // Keep class names for better debugging
+              keep_classnames: true,
+              keep_fnames: true,
+            },
+          },
+        }),
+      ],
+    }),
+  },
   devtool: 'nosources-source-map',
   infrastructureLogging: {
     level: 'log',
@@ -58,7 +79,7 @@ const extensionConfig = {
 /** @type {import('webpack').Configuration} */
 const webviewConfig = {
   target: 'web',
-  mode: 'none',
+  mode: process.env.NODE_ENV === 'production' ? 'production' : 'none',
 
   entry: './src/webview/main.ts',
   resolve: {
@@ -110,11 +131,29 @@ const webviewConfig = {
     filename: 'webview.js',
   },
   optimization: {
-    minimize: false,
+    minimize: process.env.NODE_ENV === 'production',
+    ...(process.env.NODE_ENV === 'production' && {
+      minimizer: [
+        new (require('terser-webpack-plugin'))({
+          terserOptions: {
+            compress: {
+              // Remove console.log, console.debug in production
+              pure_funcs: ['console.log', 'console.debug', 'console.info'],
+              // Keep console.error and console.warn for critical logging
+            },
+            mangle: {
+              // Keep class names for better debugging
+              keep_classnames: true,
+              keep_fnames: true,
+            },
+          },
+        }),
+      ],
+    }),
   },
   plugins: [
     new webpack.DefinePlugin({
-      'process.env.NODE_ENV': JSON.stringify('production'),
+      'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production'),
     }),
     new webpack.ProvidePlugin({
       process: 'process/browser',

@@ -13,6 +13,7 @@
  */
 
 import * as vscode from 'vscode';
+import { error as logError } from '../utils/logger';
 
 /**
  * Service lifetime options
@@ -243,7 +244,7 @@ export class DIContainer implements vscode.Disposable {
         try {
           (instance as vscode.Disposable).dispose();
         } catch (error) {
-          console.error('Error disposing singleton:', error);
+          logError('Error disposing singleton:', error);
         }
       }
     }

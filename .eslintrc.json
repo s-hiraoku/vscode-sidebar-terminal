@@ -50,7 +50,21 @@
         "property": "innerHTML",
         "message": "SECURITY: innerHTML is not allowed due to XSS vulnerability risk. Use textContent, createElement, or appendChild instead. See issue #229."
       }
+    ],
+    "no-console": [
+      "error",
+      {
+        "allow": []
+      }
     ]
   },
+  "overrides": [
+    {
+      "files": ["src/utils/logger.ts", "src/webview/utils/ManagerLogger.ts", "src/test/**/*.ts", "src/test/**/*.js"],
+      "rules": {
+        "no-console": "off"
+      }
+    }
+  ],
   "ignorePatterns": ["out", "dist", "**/*.d.ts", "webpack.config.js"]
 }

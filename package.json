@@ -837,6 +837,35 @@
           "type": "boolean",
           "default": true,
           "description": "Enable full ANSI escape sequence support (256-color, true color, text formatting)."
+        },
+        "secondaryTerminal.logging.level": {
+          "type": "string",
+          "default": "warn",
+          "enum": [
+            "none",
+            "error",
+            "warn",
+            "info",
+            "debug"
+          ],
+          "enumDescriptions": [
+            "No logging",
+            "Log only errors",
+            "Log errors and warnings (default)",
+            "Log errors, warnings, and informational messages",
+            "Log everything including debug messages"
+          ],
+          "description": "Set the logging level for the extension. View logs in Output > Secondary Terminal."
+        },
+        "secondaryTerminal.logging.enableTimestamp": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include timestamps in log messages."
+        },
+        "secondaryTerminal.logging.enableContext": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include context information (source location) in log messages."
         }
       }
     },

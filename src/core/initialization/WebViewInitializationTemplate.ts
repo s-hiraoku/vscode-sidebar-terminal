@@ -20,6 +20,8 @@
  * @see https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/218
  */
 
+import { info as logInfo, error as logError } from '../../utils/logger';
+
 export interface InitializationMetrics {
   startTime: number;
   endTime: number;
@@ -371,13 +373,13 @@ export abstract class WebViewInitializationTemplate {
    * Log phase information
    */
   protected logPhase(phase: string, message: string): void {
-    console.log(`[${phase}] ${message}`);
+    logInfo(`[${phase}] ${message}`);
   }
 
   /**
    * Log error information
    */
   protected logError(message: string, error: unknown): void {
-    console.error(`[ERROR] ${message}:`, error);
+    logError(`[ERROR] ${message}:`, error);
   }
 }
