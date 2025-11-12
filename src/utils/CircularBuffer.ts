@@ -55,7 +55,10 @@ export class CircularBuffer {
     let current = this.head;
 
     for (let i = 0; i < this.size; i++) {
-      result.push(this.buffer[current]);
+      const item = this.buffer[current];
+      if (item !== undefined) {
+        result.push(item);
+      }
       current = (current + 1) % this.capacity;
     }
 
@@ -75,7 +78,10 @@ export class CircularBuffer {
     let current = this.head;
 
     for (let i = 0; i < this.size; i++) {
-      result.push(this.buffer[current]);
+      const item = this.buffer[current];
+      if (item !== undefined) {
+        result.push(item);
+      }
       current = (current + 1) % this.capacity;
     }
 
