@@ -6,6 +6,7 @@ import {
 } from '../../types/SimplePersistence';
 import { Debouncer, PerformanceMonitor } from '../../utils/PerformanceOptimizer';
 import { webview as log } from '../../utils/logger';
+import { BaseManager } from './BaseManager';
 
 /**
  * Simple Terminal Persistence Manager
@@ -15,8 +16,12 @@ import { webview as log } from '../../utils/logger';
  * - Simple session metadata storage
  * - Session continuation messages
  * - Reliable terminal recreation
+ *
+ * Extended BaseManager for consistent lifecycle management (Issue #216)
+ *
+ * @see docs/refactoring/issue-216-manager-standardization.md
  */
-export class SimplePersistenceManager implements ISimplePersistenceManager {
+export class SimplePersistenceManager extends BaseManager implements ISimplePersistenceManager {
   private vscodeApi: {
     getState(): any;
     setState(state: any): void;
@@ -27,6 +32,12 @@ export class SimplePersistenceManager implements ISimplePersistenceManager {
   private performanceMonitor: PerformanceMonitor;
 
   constructor(vscodeApi: any) {
+    super('SimplePersistenceManager', {
+      enableLogging: false, // Use webview logger instead
+      enablePerformanceTracking: true,
+      enableErrorRecovery: true,
+    });
+
     this.vscodeApi = vscodeApi;
     this.performanceMonitor = PerformanceMonitor.getInstance();
 
@@ -39,6 +50,13 @@ export class SimplePersistenceManager implements ISimplePersistenceManager {
     );
 
     log('🆕 [SIMPLE-PERSISTENCE] SimplePersistenceManager initialized with debouncing');
+  }
+
+  /**
+   * Initialize manager
+   */
+  protected doInitialize(): void {
+    this.logger('SimplePersistenceManager initialized');
   }
 
   /**
@@ -213,11 +231,11 @@ export class SimplePersistenceManager implements ISimplePersistenceManager {
   ): void {
     const messageHtml = `
       <div style="
-        color: #00d4aa; 
-        background: rgba(0, 212, 170, 0.1); 
-        padding: 8px 12px; 
-        margin: 4px 0; 
-        border-left: 3px solid #00d4aa; 
+        color: #00d4aa;
+        background: rgba(0, 212, 170, 0.1);
+        padding: 8px 12px;
+        margin: 4px 0;
+        border-left: 3px solid #00d4aa;
         font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
         font-size: 12px;
         line-height: 1.4;
@@ -236,5 +254,18 @@ export class SimplePersistenceManager implements ISimplePersistenceManager {
         `📢 [SESSION-MESSAGE] ${message.message}${message.details ? ` - ${message.details}` : ''}`
       );
     }
+  }
+
+  /**
+   * Dispose resources
+   * Called by BaseManager.dispose() for cleanup
+   */
+  protected doDispose(): void {
+    // Cancel any pending debounced saves
+    if (this.saveDebouncer) {
+      this.saveDebouncer.cancel?.();
+    }
+
+    log('🧹 [SIMPLE-PERSISTENCE] SimplePersistenceManager disposed');
   }
 }

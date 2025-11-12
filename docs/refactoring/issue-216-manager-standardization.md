@@ -171,6 +171,102 @@ export class ScrollbackManager extends BaseManager implements IScrollbackManager
 
 See: `src/test/unit/webview/managers/ScrollbackManager.BaseManager.test.ts`
 
+## Phase 3 Examples: Constructor Injection Managers
+
+### SimplePersistenceManager Migration
+
+**Before**:
+```typescript
+export class SimplePersistenceManager implements ISimplePersistenceManager {
+  constructor(vscodeApi: any) {
+    this.vscodeApi = vscodeApi;
+    // initialization logic
+  }
+  // No dispose method
+}
+```
+
+**After** (✅ Completed in Phase 3):
+```typescript
+export class SimplePersistenceManager extends BaseManager implements ISimplePersistenceManager {
+  constructor(vscodeApi: any) {
+    super('SimplePersistenceManager', {
+      enableLogging: false,
+      enablePerformanceTracking: true,
+      enableErrorRecovery: true,
+    });
+    this.vscodeApi = vscodeApi;
+  }
+
+  protected doInitialize(): void {
+    this.logger('SimplePersistenceManager initialized');
+  }
+
+  protected doDispose(): void {
+    if (this.saveDebouncer) {
+      this.saveDebouncer.cancel?.();
+    }
+    log('🧹 SimplePersistenceManager disposed');
+  }
+}
+```
+
+### TerminalEventManager Migration
+
+**Before**:
+```typescript
+export class TerminalEventManager {
+  constructor(coordinator: IManagerCoordinator, eventRegistry: EventHandlerRegistry) {
+    this.coordinator = coordinator;
+    this.eventRegistry = eventRegistry;
+  }
+
+  public dispose(): void {
+    terminalLogger.info('TerminalEventManager disposed');
+  }
+}
+```
+
+**After** (✅ Completed in Phase 3):
+```typescript
+export class TerminalEventManager extends BaseManager {
+  constructor(coordinator: IManagerCoordinator, eventRegistry: EventHandlerRegistry) {
+    super('TerminalEventManager', {
+      enableLogging: false,
+      enablePerformanceTracking: true,
+      enableErrorRecovery: true,
+    });
+    this.coordinator = coordinator;
+    this.eventRegistry = eventRegistry;
+  }
+
+  protected doInitialize(): void {
+    this.logger('TerminalEventManager initialized');
+    terminalLogger.info('✅ TerminalEventManager ready');
+  }
+
+  protected doDispose(): void {
+    terminalLogger.info('🧹 TerminalEventManager disposed');
+  }
+}
+```
+
+### Key Pattern: Constructor Injection Already Works
+
+Phase 3 demonstrates that managers already using constructor injection can be easily migrated to BaseManager:
+1. Add `extends BaseManager` to class declaration
+2. Call `super()` at the beginning of constructor
+3. Move initialization logic to `doInitialize()`
+4. Convert `dispose()` to `protected doDispose()`
+5. Gain all BaseManager benefits (metrics, health monitoring, error recovery)
+
+### Test Coverage
+
+- `src/test/unit/webview/managers/Phase3.Migrations.test.ts`
+- Comprehensive integration tests for both managers
+- Constructor injection pattern verification
+- BaseManager lifecycle enforcement tests
+
 ## Benefits
 
 1. **Type Safety**: Coordinators are required at construction, eliminating null checks
@@ -252,18 +348,23 @@ Given the scope (38+ managers), migration will be performed in phases:
 - ⏳ Migrate `ConfigManager`
 - ⏳ Migrate `HeaderManager`
 
-### Phase 3: Display & UI Managers
-- Update `DisplayModeManager` (already extends BaseManager)
-- Update `UIManager` (already extends BaseManager)
+### Phase 3: Independent Managers (✅ Complete)
+- ✅ Migrate `SimplePersistenceManager` to BaseManager
+- ✅ Migrate `TerminalEventManager` to BaseManager (constructor injection already in place)
+- ✅ Add comprehensive Phase 3 integration tests
+- ✅ Verify TerminalAddonManager (stateless utility, no migration needed)
+- **Progress**: 5/38 managers migrated (13% complete)
+
+### Phase 4: Display & UI Managers (Next)
+- Update `DisplayModeManager` (already extends BaseManager, remove setCoordinator)
+- Update `UIManager` (already extends BaseManager, remove setCoordinator)
 - Migrate remaining UI managers
 
-### Phase 4: Terminal Managers
-- Update `TerminalContainerManager` (already extends BaseManager)
-- Migrate `TerminalEventManager`
-- Migrate `TerminalAddonManager`
+### Phase 5: Terminal Managers
+- Update `TerminalContainerManager` (already extends BaseManager, remove setCoordinator)
 - Migrate remaining terminal managers
 
-### Phase 5: Service & Utility Managers
+### Phase 6: Service & Utility Managers
 - Migrate service managers
 - Migrate utility managers
 - Final cleanup and testing
