@@ -31,6 +31,14 @@ import { CliAgentDetectionService } from '../services/CliAgentDetectionService';
 import { ICliAgentDetectionService } from '../interfaces/CliAgentService';
 import { TerminalSpawner } from './TerminalSpawner';
 import type { IDisposable } from '@homebridge/node-pty-prebuilt-multiarch';
+import {
+  TerminalProcessManager,
+  ITerminalProcessManager,
+} from '../services/TerminalProcessManager';
+import {
+  TerminalValidationService,
+  ITerminalValidationService,
+} from '../services/TerminalValidationService';
 
 const ENABLE_TERMINAL_DEBUG_LOGS = process.env.SECONDARY_TERMINAL_DEBUG_LOGS === 'true';
 // Removed unused service imports - these were for the RefactoredTerminalManager which was removed
@@ -52,6 +60,10 @@ export class TerminalManager {
   // CLI Agent Detection Service (extracted for SRP)
   private readonly _cliAgentService: ICliAgentDetectionService;
   private readonly _terminalSpawner: TerminalSpawner;
+  // Terminal Process Manager (PTY operations)
+  private readonly _processManager: ITerminalProcessManager;
+  // Terminal Validation Service (validation and recovery)
+  private readonly _validationService: ITerminalValidationService;
   private readonly _debugLoggingEnabled = ENABLE_TERMINAL_DEBUG_LOGS;
 
   // 操作の順序保証のためのキュー
@@ -104,6 +116,14 @@ export class TerminalManager {
     this._cliAgentService.startHeartbeat();
 
     this._terminalSpawner = new TerminalSpawner();
+
+    // Initialize refactored services for issue #213
+    this._processManager = new TerminalProcessManager();
+    this._validationService = new TerminalValidationService({
+      maxTerminals: config.maxTerminals,
+    });
+
+    log('🚀 [TERMINAL-MANAGER] Initialized with refactored services (issue #213)');
   }
 
   /**
@@ -751,18 +771,12 @@ export class TerminalManager {
 
   /**
    * ターミナルが削除可能かチェック（統一された検証ロジック）
+   * Delegates to TerminalValidationService (issue #213 refactoring)
    */
   private _validateDeletion(terminalId: string): { canDelete: boolean; reason?: string } {
-    if (!this._terminals.has(terminalId)) {
-      return { canDelete: false, reason: 'Terminal not found' };
-    }
-
-    // 最低1つのターミナルは保持する
-    if (this._terminals.size <= 1) {
-      return { canDelete: false, reason: 'Must keep at least 1 terminal open' };
-    }
-
-    return { canDelete: true };
+    // Delegate to validation service
+    const result = this._validationService.validateDeletion(terminalId, this._terminals, false);
+    return { canDelete: result.success, reason: result.error };
   }
 
   /**
@@ -1687,152 +1701,54 @@ export class TerminalManager {
 
   /**
    * Write to PTY with validation and error handling
+   * Delegates to TerminalProcessManager (issue #213 refactoring)
    */
   private _writeToPtyWithValidation(
     terminal: TerminalInstance,
     data: string
   ): { success: boolean; error?: string } {
-    // 🛡️ PTY READINESS CHECK: Handle case where PTY is not yet ready
-    const ptyInstance = terminal.ptyProcess || terminal.pty;
+    // Delegate to process manager
+    const result = this._processManager.writeToPty(terminal, data);
 
-    if (!ptyInstance) {
-      log(`⏳ [PTY-WAIT] PTY not ready for terminal ${terminal.id}, queuing input...`);
-
+    // Handle PTY not ready case with retry
+    if (!result.success && result.error === 'PTY not ready') {
       // Queue the input and try again after a short delay
       setTimeout(() => {
         const updatedTerminal = this._terminals.get(terminal.id);
-        if (updatedTerminal && (updatedTerminal.ptyProcess || updatedTerminal.pty)) {
-          log(`🔄 [PTY-RETRY] Retrying input for terminal ${terminal.id} after PTY ready`);
-          this._writeToPtyWithValidation(updatedTerminal, data);
-        } else {
-          log(`❌ [PTY-TIMEOUT] PTY still not ready for terminal ${terminal.id} after retry`);
+        if (updatedTerminal) {
+          this._processManager.retryWrite(updatedTerminal, data).catch((error) => {
+            log(`❌ [PTY-RETRY] Retry failed for terminal ${terminal.id}: ${error}`);
+          });
         }
       }, 500);
 
-      return { success: false, error: 'PTY not ready, input queued for retry' };
+      return { success: true }; // Return success to avoid error display while waiting
     }
 
-    if (typeof ptyInstance.write !== 'function') {
-      return { success: false, error: 'PTY instance missing write method' };
-    }
-
-    // Check if PTY process is still alive
-    if (
-      terminal.ptyProcess &&
-      typeof terminal.ptyProcess === 'object' &&
-      'killed' in terminal.ptyProcess &&
-      (terminal.ptyProcess as any).killed
-    ) {
-      return { success: false, error: 'PTY process has been killed' };
-    }
-
-    try {
-      ptyInstance.write(data);
-      log(`✅ [PTY-WRITE] Successfully wrote ${data.length} chars to terminal ${terminal.id}`);
-      return { success: true };
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      return { success: false, error: `Write failed: ${errorMessage}` };
-    }
+    return result;
   }
 
   /**
    * Attempt to recover from PTY write failure
+   * Delegates to TerminalProcessManager (issue #213 refactoring)
    */
-  private _attemptPtyRecovery(terminal: TerminalInstance, data: string): boolean {
-    log('⚠️ [RECOVERY] Attempting PTY recovery for terminal:', terminal.id);
-
-    // Try alternative PTY instance if available
-    const alternatives = [terminal.ptyProcess, terminal.pty].filter(Boolean);
-
-    for (const ptyInstance of alternatives) {
-      if (ptyInstance && typeof ptyInstance.write === 'function') {
-        try {
-          // Double-check that this instance wasn't already tried
-          if (ptyInstance === (terminal.ptyProcess || terminal.pty)) {
-            continue; // Skip the same instance that already failed
-          }
-
-          ptyInstance.write(data);
-          this.debugLog('✅ [RECOVERY] PTY write recovered using alternative instance');
-
-          // Update the terminal to use the working instance
-          if (ptyInstance === terminal.pty) {
-            terminal.ptyProcess = undefined; // Clear the failing instance
-          }
-
-          return true;
-        } catch (recoveryError) {
-          log('⚠️ [RECOVERY] Alternative PTY instance also failed:', recoveryError);
-        }
-      }
-    }
-
-    // If all alternatives failed, log the failure
-    console.error('❌ [RECOVERY] All PTY recovery attempts failed for terminal:', terminal.id);
-    return false;
+  private _attemptPtyRecovery(terminal: TerminalInstance, _data: string): boolean {
+    // Delegate to process manager
+    const result = this._processManager.attemptRecovery(terminal);
+    return result.success;
   }
 
   /**
    * Resize PTY with validation and error handling
+   * Delegates to TerminalProcessManager (issue #213 refactoring)
    */
   private _resizePtyWithValidation(
     terminal: TerminalInstance,
     cols: number,
     rows: number
   ): { success: boolean; error?: string } {
-    // Validate dimensions first
-    if (cols <= 0 || rows <= 0) {
-      return { success: false, error: `Invalid dimensions: ${cols}x${rows}` };
-    }
-
-    if (cols > 500 || rows > 200) {
-      return { success: false, error: `Dimensions too large: ${cols}x${rows}` };
-    }
-
-    // Get PTY instance
-    const ptyInstance = terminal.ptyProcess || terminal.pty;
-
-    if (!ptyInstance) {
-      return { success: false, error: 'No PTY instance available' };
-    }
-
-    if (typeof ptyInstance.resize !== 'function') {
-      return { success: false, error: 'PTY instance missing resize method' };
-    }
-
-    // Check if PTY process is still alive
-    if (
-      terminal.ptyProcess &&
-      typeof terminal.ptyProcess === 'object' &&
-      'killed' in terminal.ptyProcess &&
-      (terminal.ptyProcess as any).killed
-    ) {
-      return { success: false, error: 'PTY process has been killed' };
-    }
-
-    try {
-      ptyInstance.resize(cols, rows);
-      log(`📏 [TERMINAL] Terminal resized: ${terminal.name} → ${cols}x${rows}`);
-
-      // VS Code pattern: Force shell refresh after resize
-      setTimeout(() => {
-        try {
-          // Send SIGWINCH signal to shell process to trigger prompt refresh
-          if (ptyInstance.pid) {
-            log(`🔄 [TERMINAL] Sending refresh signal to process ${ptyInstance.pid}`);
-            ptyInstance.write('\x0c'); // Form feed character to refresh display
-          }
-        } catch (refreshError) {
-          log(`⚠️ [TERMINAL] Failed to refresh shell for ${terminal.name}:`, refreshError);
-        }
-      }, 50);
-
-      return { success: true };
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      return { success: false, error: `Resize failed: ${errorMessage}` };
-    }
+    // Delegate to process manager
+    return this._processManager.resizePty(terminal, cols, rows);
   }
 
   // =================== CLI Agent Detection - MOVED TO SERVICE ===================
