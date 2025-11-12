@@ -4,6 +4,7 @@
   "description": "Production-ready VS Code extension with TypeScript-compliant terminal in sidebar, ProcessState/InteractionState management, and comprehensive session management.",
   "version": "0.1.138",
   "publisher": "s-hiraoku",
+  "sideEffects": false,
   "engines": {
     "vscode": "^1.74.0",
     "node": ">=18.0.0"
@@ -954,6 +955,8 @@
     "compile": "webpack",
     "watch": "webpack --watch",
     "package": "webpack --mode production --devtool hidden-source-map",
+    "check-bundle-size": "node scripts/check-bundle-size.js",
+    "package:check": "npm run package && npm run check-bundle-size",
     "compile-tests": "tsc -p . --outDir out",
     "watch-tests": "tsc -p . -w --outDir out",
     "pretest": "npm run compile-tests && npm run compile && npm run lint",
