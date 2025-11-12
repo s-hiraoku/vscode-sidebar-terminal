@@ -19,11 +19,15 @@ export interface RegisteredEventListener extends EventListenerConfig {
   registeredAt: number;
 }
 
+interface Disposable {
+  dispose(): void;
+}
+
 /**
  * Centralized event handler registry
  * Provides automatic cleanup and organized event listener management
  */
-export class EventHandlerRegistry {
+export class EventHandlerRegistry implements Disposable {
   private listeners = new Map<string, RegisteredEventListener>();
   private disposed = false;
 

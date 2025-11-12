@@ -47,7 +47,7 @@ const FEATURE_FLAG_SECTION = 'secondaryTerminal.features';
 /**
  * Service for managing VS Code standard terminal feature flags
  */
-export class FeatureFlagService {
+export class FeatureFlagService implements vscode.Disposable {
   private flagCache: Map<string, boolean | number> = new Map();
   private disposables: vscode.Disposable[] = [];
 

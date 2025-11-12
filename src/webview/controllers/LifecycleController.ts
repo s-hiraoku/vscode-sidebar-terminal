@@ -111,10 +111,14 @@ export interface ILifecycleController {
   dispose(): void;
 }
 
+interface Disposable {
+  dispose(): void;
+}
+
 /**
  * Lifecycle Controller Implementation
  */
-export class LifecycleController implements ILifecycleController {
+export class LifecycleController implements ILifecycleController, Disposable {
   private terminals: Map<string, TerminalResources> = new Map();
   private addonCache: Map<string, any> = new Map(); // Global addon cache for reuse
   private disposed = false;
