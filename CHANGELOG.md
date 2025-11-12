@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Refactoring
-- **[Issue #216] Manager Pattern Standardization (Phase 1, 2 & 3 Complete)**
+- **[Issue #216] Manager Pattern Standardization (Phase 1-4 Complete)**
   - **Phase 1 - Foundation**:
     - **BaseManager Enhancement**: Explicitly implements `IDisposable` interface for consistent resource cleanup
     - **Documentation**: Created comprehensive migration guide at `docs/refactoring/issue-216-manager-standardization.md`
@@ -26,10 +26,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - **Integration Tests**: Added `Phase3.Migrations.test.ts` with comprehensive pattern verification
     - **Benefits Demonstrated**: Easy migration path for managers already using constructor injection
     - **Documentation**: Added Phase 3 examples with before/after patterns
+  - **Phase 4 - Late-Binding Elimination**:
+    - **DisplayModeManager Migration**: Eliminated `setCoordinator()` pattern, moved to constructor injection
+    - **UIManager Verification**: Confirmed already extends BaseManager with no coordinator dependency
+    - **Interface Cleanup**: Removed `setCoordinator()` from `IDisplayModeManager` interface
+    - **Caller Updates**: Updated `LightweightTerminalWebviewManager` and all test files
+    - **Integration Tests**: Added `Phase4.Migrations.test.ts` with late-binding elimination verification
+    - **Key Improvement**: Single-step instantiation instead of two-step pattern
+    - **Type Safety**: Coordinator is now `readonly` and required, eliminating null checks
   - **Pattern Enforcement**: Foundation for constructor injection pattern to replace late-binding
-  - **Files**: `BaseManager.ts`, `ScrollbackManager.ts`, `SimplePersistenceManager.ts`, `TerminalEventManager.ts`, `.eslintrc.js`, `eslint-rules/`, `docs/refactoring/`, test files
-  - **Progress**: 5/38 managers migrated (13% complete)
-  - **Next Steps**: Phase 4 will migrate Display & UI managers (DisplayModeManager, UIManager) and remove setCoordinator pattern
+  - **Files**: `BaseManager.ts`, `ScrollbackManager.ts`, `SimplePersistenceManager.ts`, `TerminalEventManager.ts`, `DisplayModeManager.ts`, `LightweightTerminalWebviewManager.ts`, `.eslintrc.js`, `eslint-rules/`, `docs/refactoring/`, test files
+  - **Progress**: 6/38 managers migrated (16% complete)
+  - **Next Steps**: Phase 5 will migrate Terminal managers (TerminalContainerManager, etc.) and continue setCoordinator elimination
 
 ## [0.1.138] - 2025-01-13
 

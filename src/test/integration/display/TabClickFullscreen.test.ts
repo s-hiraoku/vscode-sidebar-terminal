@@ -43,13 +43,7 @@ describe('Tab Click Fullscreen Integration (Issue #198)', function () {
     global.document = dom.window.document;
     global.HTMLElement = dom.window.HTMLElement;
 
-    // Create managers
-    containerManager = new TerminalContainerManager();
-    displayManager = new DisplayModeManager();
-    splitManager = new SplitManager();
-    tabManager = new TerminalTabManager();
-
-    // Create mock coordinator that connects all managers
+    // Create mock coordinator first (Issue #216)
     mockCoordinator = {
       getTerminalContainerManager: () => containerManager,
       getDisplayModeManager: () => displayManager,
@@ -64,12 +58,20 @@ describe('Tab Click Fullscreen Integration (Issue #198)', function () {
       postMessageToExtension: sinon.stub(),
       createTerminal: sinon.stub(),
       closeTerminal: sinon.stub(),
-      splitManager: splitManager,
+      splitManager: null as any, // Will be set after splitManager creation
     };
 
-    // Set coordinators and initialize
+    // Create managers with constructor injection (Issue #216)
+    containerManager = new TerminalContainerManager();
+    displayManager = new DisplayModeManager(mockCoordinator);
+    splitManager = new SplitManager();
+    tabManager = new TerminalTabManager();
+
+    // Update splitManager reference in coordinator
+    mockCoordinator.splitManager = splitManager;
+
+    // Set coordinators and initialize (remaining managers not yet migrated)
     containerManager.setCoordinator(mockCoordinator);
-    displayManager.setCoordinator(mockCoordinator);
     splitManager.setCoordinator(mockCoordinator);
     tabManager.setCoordinator(mockCoordinator);
 

@@ -267,6 +267,74 @@ Phase 3 demonstrates that managers already using constructor injection can be ea
 - Constructor injection pattern verification
 - BaseManager lifecycle enforcement tests
 
+## Phase 4 Example: Eliminating Late-Binding Pattern
+
+### DisplayModeManager Migration
+
+**Before**:
+```typescript
+export class DisplayModeManager extends BaseManager implements IDisplayModeManager {
+  private coordinator: IManagerCoordinator | null = null;
+
+  constructor() {
+    super('DisplayModeManager', { /* options */ });
+  }
+
+  public setCoordinator(coordinator: IManagerCoordinator): void {
+    this.coordinator = coordinator;
+    this.log('Coordinator set');
+  }
+
+  protected doInitialize(): void {
+    // Initialization logic
+  }
+}
+
+// Usage (late-binding)
+const manager = new DisplayModeManager();
+manager.setCoordinator(this);
+manager.initialize();
+```
+
+**After** (✅ Completed in Phase 4):
+```typescript
+export class DisplayModeManager extends BaseManager implements IDisplayModeManager {
+  private readonly coordinator: IManagerCoordinator;
+
+  constructor(coordinator: IManagerCoordinator) {
+    super('DisplayModeManager', {
+      enableLogging: true,
+      enableValidation: true,
+      enableErrorRecovery: true,
+    });
+    this.coordinator = coordinator;
+  }
+
+  protected doInitialize(): void {
+    // Initialization logic - coordinator already available
+  }
+}
+
+// Usage (constructor injection)
+const manager = new DisplayModeManager(this);
+manager.initialize();
+```
+
+### Key Improvements in Phase 4
+
+1. **Eliminated Late-Binding**: Removed `setCoordinator()` method entirely
+2. **Type Safety**: Coordinator is `readonly` and required at construction
+3. **No Null Checks**: Coordinator is guaranteed to exist, eliminating `| null` checks
+4. **Interface Cleanup**: Removed `setCoordinator()` from `IDisplayModeManager` interface
+5. **Caller Simplification**: Single-step instantiation instead of two-step pattern
+
+### Test Coverage
+
+- `src/test/unit/webview/managers/Phase4.Migrations.test.ts`
+- Late-binding elimination verification
+- Constructor injection pattern enforcement
+- Independent manager verification (UIManager)
+
 ## Benefits
 
 1. **Type Safety**: Coordinators are required at construction, eliminating null checks
@@ -353,12 +421,14 @@ Given the scope (38+ managers), migration will be performed in phases:
 - ✅ Migrate `TerminalEventManager` to BaseManager (constructor injection already in place)
 - ✅ Add comprehensive Phase 3 integration tests
 - ✅ Verify TerminalAddonManager (stateless utility, no migration needed)
-- **Progress**: 5/38 managers migrated (13% complete)
 
-### Phase 4: Display & UI Managers (Next)
-- Update `DisplayModeManager` (already extends BaseManager, remove setCoordinator)
-- Update `UIManager` (already extends BaseManager, remove setCoordinator)
-- Migrate remaining UI managers
+### Phase 4: Display & UI Managers (✅ Complete)
+- ✅ Migrate `DisplayModeManager` to constructor injection (removed setCoordinator)
+- ✅ Verify `UIManager` (already extends BaseManager, no coordinator dependency)
+- ✅ Update all callers (LightweightTerminalWebviewManager, tests)
+- ✅ Add comprehensive Phase 4 integration tests
+- ✅ Document late-binding elimination pattern
+- **Progress**: 6/38 managers migrated (16% complete)
 
 ### Phase 5: Terminal Managers
 - Update `TerminalContainerManager` (already extends BaseManager, remove setCoordinator)

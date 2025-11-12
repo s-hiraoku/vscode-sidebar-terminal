@@ -220,11 +220,11 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     this.headerManager.setCoordinator(this);
 
     // 🆕 DisplayModeManager と TerminalContainerManager の実体化（Issue #198）
+    // Issue #216: Use constructor injection pattern
     this.terminalContainerManager = new TerminalContainerManager();
     this.terminalContainerManager.setCoordinator(this);
 
-    this.displayModeManager = new DisplayModeManager();
-    this.displayModeManager.setCoordinator(this);
+    this.displayModeManager = new DisplayModeManager(this);
 
     log('✅ All managers initialized');
 
