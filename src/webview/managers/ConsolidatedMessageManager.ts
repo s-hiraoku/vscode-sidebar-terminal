@@ -301,6 +301,33 @@ export class ConsolidatedMessageManager implements IMessageManager {
         case 'defaultProfileChanged':
           this.profileHandler.handleMessage(msg, coordinator);
           break;
+
+        // Clipboard Messages
+        case 'clipboardContent': {
+          console.log('[CLIPBOARD] Received clipboardContent message:', msg);
+          const terminalId = (msg as any).terminalId as string;
+          const text = (msg as any).text as string;
+          console.log('[CLIPBOARD] terminalId:', terminalId, 'text length:', text?.length);
+
+          if (terminalId && text !== undefined) {
+            const terminalInstance = coordinator.getTerminalInstance(terminalId);
+            console.log('[CLIPBOARD] terminalInstance:', terminalInstance);
+
+            if (terminalInstance) {
+              this.logger.info(`📋 [CLIPBOARD] Pasting ${text.length} characters to terminal ${terminalId}`);
+              console.log('[CLIPBOARD] Calling terminal.paste() with text:', text.substring(0, 50) + (text.length > 50 ? '...' : ''));
+              terminalInstance.terminal.paste(text);
+              console.log('[CLIPBOARD] Paste completed');
+            } else {
+              this.logger.warn(`📋 [CLIPBOARD] Terminal ${terminalId} not found for paste`);
+              console.log('[CLIPBOARD] Available terminals:', coordinator.getActiveTerminalId());
+            }
+          } else {
+            console.log('[CLIPBOARD] Invalid clipboardContent message - missing terminalId or text');
+          }
+          break;
+        }
+
         default:
           this.logger.warn(`Unknown command: ${msg.command}`);
       }

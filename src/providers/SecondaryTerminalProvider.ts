@@ -1514,6 +1514,52 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
           break;
         }
 
+        case 'copyToClipboard': {
+          log('📋 [CLIPBOARD] copyToClipboard message received');
+          const text = (message as any).text as string;
+          log(`📋 [CLIPBOARD] Text length: ${text?.length}`);
+          if (text) {
+            try {
+              await vscode.env.clipboard.writeText(text);
+              log(`✅ [CLIPBOARD] Copied ${text.length} characters to clipboard`);
+              console.log('[CLIPBOARD] Extension: Successfully copied to clipboard');
+            } catch (error) {
+              log('❌ [CLIPBOARD] Failed to copy to clipboard:', error);
+              console.error('[CLIPBOARD] Extension: Copy error:', error);
+            }
+          } else {
+            log('⚠️ [CLIPBOARD] No text provided for copy');
+            console.log('[CLIPBOARD] Extension: No text in copyToClipboard message');
+          }
+          break;
+        }
+
+        case 'requestClipboardContent': {
+          log('📋 [CLIPBOARD] requestClipboardContent message received');
+          const terminalId = (message as any).terminalId as string;
+          log(`📋 [CLIPBOARD] Terminal ID: ${terminalId}`);
+          try {
+            const clipboardText = await vscode.env.clipboard.readText();
+            log(`📋 [CLIPBOARD] Read ${clipboardText.length} characters from clipboard`);
+            console.log('[CLIPBOARD] Extension: Read clipboard:', clipboardText.substring(0, 50) + (clipboardText.length > 50 ? '...' : ''));
+
+            // 🔧 Write directly to PTY process instead of sending to WebView
+            const terminal = this._terminalManager.getTerminal(terminalId);
+            if (terminal && terminal.ptyProcess) {
+              terminal.ptyProcess.write(clipboardText);
+              log(`✅ [CLIPBOARD] Wrote ${clipboardText.length} chars to PTY process for terminal ${terminalId}`);
+              console.log('[CLIPBOARD] Extension: Wrote to PTY process');
+            } else {
+              log(`❌ [CLIPBOARD] Terminal or PTY process not found for terminal ${terminalId}`);
+              console.error('[CLIPBOARD] Extension: Terminal or PTY process not found');
+            }
+          } catch (error) {
+            log('❌ [CLIPBOARD] Failed to read clipboard:', error);
+            console.error('[CLIPBOARD] Extension: Read error:', error);
+          }
+          break;
+        }
+
         default: {
           log('⚠️ [DEBUG] Unknown webview message command:', message.command);
           break;

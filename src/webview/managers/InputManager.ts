@@ -684,50 +684,78 @@ export class InputManager extends BaseManager implements IInputManager {
 
   /**
    * Handle terminal copy selection
+   * Note: In VS Code WebView, navigator.clipboard may not work.
+   * We send selection to Extension to copy via VS Code API.
    */
   private handleTerminalCopy(manager: IManagerCoordinator): void {
     const activeTerminalId = manager.getActiveTerminalId();
-    if (!activeTerminalId) return;
+    console.log('[CLIPBOARD] Copy: activeTerminalId =', activeTerminalId);
+    if (!activeTerminalId) {
+      console.log('[CLIPBOARD] Copy: No active terminal');
+      return;
+    }
 
     const terminalInstance = manager.getTerminalInstance(activeTerminalId);
-    if (!terminalInstance) return;
+    console.log('[CLIPBOARD] Copy: terminalInstance =', terminalInstance);
+    if (!terminalInstance) {
+      console.log('[CLIPBOARD] Copy: No terminal instance');
+      return;
+    }
 
     const terminal = terminalInstance.terminal;
-    if (terminal.hasSelection()) {
+    const hasSelection = terminal.hasSelection();
+    console.log('[CLIPBOARD] Copy: hasSelection =', hasSelection);
+
+    if (hasSelection) {
       const selection = terminal.getSelection();
-      if (selection && navigator.clipboard) {
-        navigator.clipboard
-          .writeText(selection)
-          .then(() => {
-            this.logger(`Copied selection from terminal ${activeTerminalId}`);
-          })
-          .catch((error) => {
-            this.logger(`Failed to copy selection: ${error}`);
-          });
+      console.log('[CLIPBOARD] Copy: selection length =', selection?.length);
+
+      if (selection) {
+        // Send selection to Extension to copy to clipboard
+        this.logger(`📋 Copying selection from terminal ${activeTerminalId} (${selection.length} chars)`);
+        console.log('[CLIPBOARD] Copy: Sending copyToClipboard message', { command: 'copyToClipboard', terminalId: activeTerminalId, textLength: selection.length });
+
+        manager.postMessageToExtension({
+          command: 'copyToClipboard',
+          terminalId: activeTerminalId,
+          text: selection,
+        });
+
+        // Clear selection after copy (like VS Code terminal)
+        terminal.clearSelection();
+        console.log('[CLIPBOARD] Copy: Selection cleared');
       }
+    } else {
+      console.log('[CLIPBOARD] Copy: No selection to copy');
     }
   }
 
   /**
    * Handle terminal paste operation
+   * Note: In VS Code WebView, navigator.clipboard may not work.
+   * We request clipboard content from Extension via messaging.
    */
   private handleTerminalPaste(manager: IManagerCoordinator): void {
     const activeTerminalId = manager.getActiveTerminalId();
-    if (!activeTerminalId) return;
-
-    if (navigator.clipboard) {
-      navigator.clipboard
-        .readText()
-        .then((text) => {
-          if (text) {
-            this.emitTerminalInteractionEvent('paste', activeTerminalId, { text }, manager);
-            this.logger(`Pasted text to terminal ${activeTerminalId}`);
-          }
-        })
-        .catch((error) => {
-          this.logger(`Failed to paste: ${error}`);
-        });
+    console.log('[CLIPBOARD] Paste: activeTerminalId =', activeTerminalId);
+    if (!activeTerminalId) {
+      console.log('[CLIPBOARD] Paste: No active terminal');
+      return;
     }
+
+    // Request clipboard content from Extension
+    this.logger(`📋 Requesting clipboard content from Extension for terminal ${activeTerminalId}`);
+    console.log('[CLIPBOARD] Paste: Sending requestClipboardContent message');
+
+    // Send message to Extension to get clipboard content
+    manager.postMessageToExtension({
+      command: 'requestClipboardContent',
+      terminalId: activeTerminalId,
+    });
+
+    console.log('[CLIPBOARD] Paste: Request sent, waiting for clipboardContent response');
+    // Extension will respond with 'clipboardContent' message
+    // which is handled in message handler
   }
 
   /**
@@ -1133,11 +1161,41 @@ export class InputManager extends BaseManager implements IInputManager {
     this.logger('Setting up global keyboard listener');
 
     const globalKeyHandler = (event: KeyboardEvent): void => {
+      // 🔍 DEBUG: Log ALL keyboard events
+      console.log('[KEYBOARD] Event detected:', {
+        key: event.key,
+        ctrl: event.ctrlKey,
+        meta: event.metaKey,
+        shift: event.shiftKey,
+        target: (event.target as HTMLElement)?.tagName,
+        hasCoordinator: !!this.coordinator
+      });
+
       // Handle keyboard shortcuts and commands here
       // This will be populated with global shortcut handling logic
       if (event.ctrlKey && event.shiftKey && event.key === 'D') {
         // Debug panel toggle handled elsewhere
         return;
+      }
+
+      // Handle special keys (Ctrl+C/V, etc.) for the active terminal
+      const manager = this.coordinator;
+      if (manager) {
+        const activeTerminalId = manager.getActiveTerminalId();
+        if (activeTerminalId) {
+          console.log('[KEYBOARD] Global handler: activeTerminalId =', activeTerminalId, 'key =', event.key, 'ctrl =', event.ctrlKey, 'meta =', event.metaKey);
+          const handled = this.handleSpecialKeys(event, activeTerminalId, manager);
+          console.log('[KEYBOARD] handleSpecialKeys returned:', handled);
+          if (handled) {
+            console.log('[KEYBOARD] Event handled, preventing default');
+            // Event was handled, no need for further processing
+            return;
+          }
+        } else {
+          console.log('[KEYBOARD] Global handler: No active terminal');
+        }
+      } else {
+        console.log('[KEYBOARD] Global handler: No coordinator');
       }
 
       // Additional global shortcuts can be added here
@@ -1150,6 +1208,8 @@ export class InputManager extends BaseManager implements IInputManager {
       globalKeyHandler as EventListener,
       true
     );
+
+    console.log('[KEYBOARD] ✅ Global keyboard listener registered on document');
   }
 
   /**
@@ -1275,24 +1335,31 @@ export class InputManager extends BaseManager implements IInputManager {
       return true;
     }
 
-    // Ctrl+C: Copy (if selection exists) or interrupt
-    if (event.ctrlKey && event.key === 'c') {
+    // Ctrl+C (Windows/Linux) or Cmd+C (macOS): Copy (if selection exists) or interrupt
+    if ((event.ctrlKey || event.metaKey) && event.key === 'c') {
       const terminal = manager.getTerminalInstance(terminalId);
       if (terminal && terminal.terminal.hasSelection()) {
-        // Let browser handle copy
-        return false;
+        // Use Extension messaging for clipboard (navigator.clipboard doesn't work in VS Code WebView)
+        this.logger(`${event.metaKey ? 'Cmd' : 'Ctrl'}+C copy for terminal ${terminalId}`);
+        event.preventDefault();
+        this.handleTerminalCopy(manager);
+        return true;
       }
-      // Send interrupt signal
-      this.logger(`Ctrl+C interrupt for terminal ${terminalId}`);
-      this.emitTerminalInteractionEvent('interrupt', terminalId, undefined, manager);
-      return true;
+      // Send interrupt signal (only on Ctrl+C, not Cmd+C on macOS)
+      if (!event.metaKey) {
+        this.logger(`Ctrl+C interrupt for terminal ${terminalId}`);
+        this.emitTerminalInteractionEvent('interrupt', terminalId, undefined, manager);
+        return true;
+      }
     }
 
-    // Ctrl+V: Paste
-    if (event.ctrlKey && event.key === 'v') {
-      this.logger(`Ctrl+V paste for terminal ${terminalId}`);
-      this.emitTerminalInteractionEvent('paste', terminalId, undefined, manager);
-      return false; // Let browser handle paste
+    // Ctrl+V (Windows/Linux) or Cmd+V (macOS): Paste
+    if ((event.ctrlKey || event.metaKey) && event.key === 'v') {
+      // Use Extension messaging for clipboard (navigator.clipboard doesn't work in VS Code WebView)
+      this.logger(`${event.metaKey ? 'Cmd' : 'Ctrl'}+V paste for terminal ${terminalId}`);
+      event.preventDefault();
+      this.handleTerminalPaste(manager);
+      return true;
     }
 
     return false;

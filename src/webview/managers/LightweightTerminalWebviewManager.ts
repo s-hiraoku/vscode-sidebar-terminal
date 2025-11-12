@@ -237,6 +237,9 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     // イベントハンドラーの設定
     this.setupEventHandlers();
 
+    // 🔧 Setup InputManager (keyboard shortcuts, IME, Alt+Click)
+    this.setupInputManager();
+
     // 🆕 NEW: Setup scrollback extraction message listener
     this.setupScrollbackMessageListener();
 
@@ -298,6 +301,8 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
     // Input Manager - 重要：入力機能のために必須
     this.inputManager = new InputManager();
+    this.inputManager.setCoordinator(this); // 🔧 Set coordinator for clipboard operations
+    this.inputManager.initialize(); // 🔧 Initialize InputManager to register keyboard listeners
 
     // Config Manager
     this.configManager = new ConfigManager();
