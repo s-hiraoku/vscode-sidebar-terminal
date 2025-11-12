@@ -16,13 +16,17 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
   // Specialized logger for Split Manager
   private readonly splitManagerLogger = splitLogger;
 
-  constructor() {
+  // Internal coordinator reference (Issue #216: constructor injection)
+  private readonly coordinator: IManagerCoordinator;
+
+  constructor(coordinator: IManagerCoordinator) {
     super('SplitManager', {
       enableLogging: true,
       enableValidation: false,
       enableErrorRecovery: true,
     });
 
+    this.coordinator = coordinator;
     this.splitManagerLogger.lifecycle('initialization', 'starting');
   }
 
@@ -48,13 +52,6 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
     this.splitDirection = null;
 
     this.splitManagerLogger.lifecycle('disposal', 'completed');
-  }
-
-  // Internal coordinator reference
-  private coordinator: IManagerCoordinator | null = null;
-
-  public setCoordinator(coordinator: IManagerCoordinator): void {
-    this.coordinator = coordinator;
   }
 
   // Split functionality

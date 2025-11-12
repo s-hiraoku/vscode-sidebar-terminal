@@ -61,7 +61,7 @@ describe('InputManager - Arrow Key Handling', () => {
       ensureTerminalFocus: sinon.stub(),
     };
 
-    inputManager = new InputManager();
+    inputManager = new InputManager(_mockCoordinator as any);
   });
 
   afterEach(() => {

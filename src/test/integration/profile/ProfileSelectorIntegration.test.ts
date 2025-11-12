@@ -73,8 +73,7 @@ describe('Profile Selector Integration', () => {
     profileManager.setCoordinator(mockCoordinator as any);
     profileManager.updateProfiles(mockProfiles, 'bash');
 
-    inputManager = new InputManager();
-    inputManager.setCoordinator(mockCoordinator as any);
+    inputManager = new InputManager(mockCoordinator as any);
   });
 
   afterEach(() => {
