@@ -30,6 +30,14 @@ import {
 import { TerminalNumberManager } from '../utils/TerminalNumberManager';
 import { CliAgentDetectionService } from '../services/CliAgentDetectionService';
 import { ICliAgentDetectionService } from '../interfaces/CliAgentService';
+import {
+  DATA_FLUSH_INTERVALS,
+  BUFFER_LIMITS,
+  OPERATION_TIMEOUTS,
+  DELAY_INTERVALS,
+  RETRY_CONFIG,
+  PERFORMANCE_LIMITS,
+} from '../constants/PerformanceConstants';
 // Removed unused service imports - these were for the RefactoredTerminalManager which was removed
 
 export class TerminalManager {
@@ -58,8 +66,8 @@ export class TerminalManager {
   // Performance optimization: Data batching for high-frequency output
   private readonly _dataBuffers = new Map<string, string[]>();
   private readonly _dataFlushTimers = new Map<string, NodeJS.Timeout>();
-  private readonly DATA_FLUSH_INTERVAL = 8; // ~125fps for improved responsiveness
-  private readonly MAX_BUFFER_SIZE = 50;
+  private readonly DATA_FLUSH_INTERVAL = DATA_FLUSH_INTERVALS.STANDARD; // ~125fps for improved responsiveness
+  private readonly MAX_BUFFER_SIZE = BUFFER_LIMITS.MAX_BUFFER_SIZE;
 
   // CLI Agent detection moved to service - cache removed from TerminalManager
 
@@ -439,7 +447,7 @@ export class TerminalManager {
     terminalNumber: number,
     retryAttempt: number = 0
   ): Promise<{ ptyProcess: any; safeMode: boolean }> {
-    const MAX_RETRY_ATTEMPTS = 1;
+    const MAX_RETRY_ATTEMPTS = RETRY_CONFIG.MAX_TERMINAL_CREATION_RETRIES;
     const isSafeModeAttempt = retryAttempt > 0;
 
     log(
@@ -470,7 +478,9 @@ export class TerminalManager {
     return new Promise<{ ptyProcess: any; safeMode: boolean }>((resolve, reject) => {
       let healthCheckTimeout: NodeJS.Timeout;
       let healthCheckPassed = false;
-      const HEALTH_CHECK_TIMEOUT_MS = isSafeModeAttempt ? 2000 : 3000; // Shorter timeout for retry
+      const HEALTH_CHECK_TIMEOUT_MS = isSafeModeAttempt
+        ? OPERATION_TIMEOUTS.HEALTH_CHECK_SAFE_MODE
+        : OPERATION_TIMEOUTS.HEALTH_CHECK_NORMAL; // Shorter timeout for retry
 
       try {
         log(
@@ -578,7 +588,7 @@ export class TerminalManager {
             clearTimeout(healthCheckTimeout);
             reject(writeError);
           }
-        }, 500);
+        }, DELAY_INTERVALS.HEALTH_CHECK_SEND);
       } catch (spawnError) {
         log(`❌ [SAFE-MODE] PTY spawn failed on attempt ${retryAttempt + 1}: ${spawnError}`);
         reject(spawnError);
@@ -590,7 +600,7 @@ export class TerminalManager {
         (error.message === 'HealthCheckTimeout' || error.message === 'PTYExitedDuringHealthCheck')
       ) {
         log(`🔄 [SAFE-MODE] Retrying with safe mode fallback...`);
-        await new Promise((resolve) => setTimeout(resolve, 100)); // Brief delay
+        await new Promise((resolve) => setTimeout(resolve, DELAY_INTERVALS.RETRY_ATTEMPT)); // Brief delay
 
         return this.createTerminalWithSafeModeSupport(
           terminalId,
@@ -638,20 +648,20 @@ export class TerminalManager {
           setTimeout(() => {
             ptyProcess.write('\\r');
             log(`✅ [TERMINAL] First prompt request sent for: ${terminalId}`);
-          }, 100);
+          }, DELAY_INTERVALS.PROMPT_REFRESH.FIRST);
 
           // Additional prompt trigger for ESP-IDF environments
           setTimeout(() => {
             ptyProcess.write('\\r');
             log(`✅ [TERMINAL] Second prompt request sent for: ${terminalId}`);
-          }, 500);
+          }, DELAY_INTERVALS.PROMPT_REFRESH.SECOND);
 
           // Final fallback prompt
           if (safeMode) {
             setTimeout(() => {
               ptyProcess.write('echo "Terminal ready"\\r');
               log(`🛡️ [TERMINAL] Safe mode confirmation sent for: ${terminalId}`);
-            }, 1000);
+            }, DELAY_INTERVALS.PROMPT_REFRESH.SAFE_MODE);
           }
         } catch (writeError) {
           log(`❌ [TERMINAL] Error sending prompt requests: ${writeError}`);
@@ -1054,7 +1064,7 @@ export class TerminalManager {
    * Setup launch timeout monitoring
    */
   private _setupLaunchTimeout(terminal: TerminalInstance): void {
-    const timeoutMs = 10000; // 10 seconds timeout
+    const timeoutMs = OPERATION_TIMEOUTS.TERMINAL_LAUNCH; // 10 seconds timeout
 
     setTimeout(() => {
       if (terminal.processState === ProcessState.Launching) {
@@ -1227,7 +1237,7 @@ export class TerminalManager {
     );
 
     // Flush immediately if buffer is full or data is large
-    if (buffer.length >= this.MAX_BUFFER_SIZE || data.length > 1000) {
+    if (buffer.length >= this.MAX_BUFFER_SIZE || data.length > BUFFER_LIMITS.LARGE_DATA_THRESHOLD) {
       this._flushBuffer(terminalId);
     } else {
       this._scheduleFlush(terminalId);
@@ -1701,7 +1711,7 @@ export class TerminalManager {
         } else {
           log(`❌ [PTY-TIMEOUT] PTY still not ready for terminal ${terminal.id} after retry`);
         }
-      }, 500);
+      }, DELAY_INTERVALS.PTY_READY_CHECK);
 
       return { success: true }; // Return success to avoid error display while waiting
     }
@@ -1780,7 +1790,7 @@ export class TerminalManager {
       return { success: false, error: `Invalid dimensions: ${cols}x${rows}` };
     }
 
-    if (cols > 500 || rows > 200) {
+    if (cols > PERFORMANCE_LIMITS.MAX_TERMINAL_COLS || rows > PERFORMANCE_LIMITS.MAX_TERMINAL_ROWS) {
       return { success: false, error: `Dimensions too large: ${cols}x${rows}` };
     }
 
@@ -1820,7 +1830,7 @@ export class TerminalManager {
         } catch (refreshError) {
           log(`⚠️ [TERMINAL] Failed to refresh shell for ${terminal.name}:`, refreshError);
         }
-      }, 50);
+      }, DELAY_INTERVALS.SHELL_REFRESH);
 
       return { success: true };
     } catch (error) {

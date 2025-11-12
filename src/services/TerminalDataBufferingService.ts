@@ -6,6 +6,10 @@
  */
 
 import { extension as log } from '../utils/logger';
+import {
+  DATA_FLUSH_INTERVALS,
+  BUFFER_LIMITS,
+} from '../constants/PerformanceConstants';
 
 export interface ITerminalDataBufferingService {
   bufferData(terminalId: string, data: string): void;
@@ -57,11 +61,11 @@ export class TerminalDataBufferingService implements ITerminalDataBufferingServi
 
   constructor(config: Partial<BufferingConfig> = {}, initialHandlers: DataFlushHandler[] = []) {
     this.config = {
-      normalFlushInterval: 16, // 60fps for standard operation
-      fastFlushInterval: 8, // 125fps for high-frequency data
-      maxBufferSize: 50, // Maximum buffer entries
-      adaptiveThreshold: 100, // Characters per flush to trigger fast mode
-      cliAgentFlushInterval: 4, // 250fps for CLI Agent operations
+      normalFlushInterval: DATA_FLUSH_INTERVALS.NORMAL, // 60fps for standard operation
+      fastFlushInterval: DATA_FLUSH_INTERVALS.FAST, // 125fps for high-frequency data
+      maxBufferSize: BUFFER_LIMITS.MAX_BUFFER_SIZE, // Maximum buffer entries
+      adaptiveThreshold: BUFFER_LIMITS.ADAPTIVE_THRESHOLD, // Characters per flush to trigger fast mode
+      cliAgentFlushInterval: DATA_FLUSH_INTERVALS.CLI_AGENT, // 250fps for CLI Agent operations
       ...config,
     };
 

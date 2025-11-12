@@ -32,6 +32,12 @@ import { ThemeManager } from '../utils/ThemeManager';
  * Focus on reliable terminal display and resize handling
  */
 import { PerformanceMonitor } from '../../utils/PerformanceOptimizer';
+import { SCROLLBACK_CONFIG } from '../../constants/StorageConstants';
+import {
+  TERMINAL_DIMENSIONS,
+  TERMINAL_DISPLAY,
+  TERMINAL_SELECTION,
+} from '../../constants/TerminalConstants';
 
 export class TerminalLifecycleManager {
   private splitManager: SplitManager;
@@ -47,12 +53,12 @@ export class TerminalLifecycleManager {
   private readonly DEFAULT_TERMINAL_CONFIG = {
     // Basic appearance
     cursorBlink: true,
-    fontFamily: 'monospace',
-    fontSize: 14,
-    fontWeight: 'normal',
-    fontWeightBold: 'bold',
-    lineHeight: 1.0,
-    letterSpacing: 0,
+    fontFamily: TERMINAL_DISPLAY.DEFAULT_FONT_FAMILY,
+    fontSize: TERMINAL_DISPLAY.DEFAULT_FONT_SIZE,
+    fontWeight: TERMINAL_DISPLAY.DEFAULT_FONT_WEIGHT,
+    fontWeightBold: TERMINAL_DISPLAY.BOLD_FONT_WEIGHT,
+    lineHeight: TERMINAL_DISPLAY.LINE_HEIGHT,
+    letterSpacing: TERMINAL_DISPLAY.LETTER_SPACING,
     theme: {
       background: '#000000',
       foreground: '#ffffff',
@@ -61,20 +67,20 @@ export class TerminalLifecycleManager {
     // VS Code Standard Options - Core Features
     altClickMovesCursor: true,
     drawBoldTextInBrightColors: false,
-    minimumContrastRatio: 1,
-    tabStopWidth: 8,
+    minimumContrastRatio: TERMINAL_SELECTION.MIN_CONTRAST_RATIO,
+    tabStopWidth: TERMINAL_DISPLAY.TAB_STOP_WIDTH,
     macOptionIsMeta: false,
     rightClickSelectsWord: true,
 
     // Scrolling and Navigation
     fastScrollModifier: 'alt' as const,
-    fastScrollSensitivity: 5,
-    scrollSensitivity: 1,
-    scrollback: 1000,
+    fastScrollSensitivity: TERMINAL_DISPLAY.FAST_SCROLL_SENSITIVITY,
+    scrollSensitivity: TERMINAL_DISPLAY.SCROLL_SENSITIVITY,
+    scrollback: SCROLLBACK_CONFIG.DEFAULT_LINES,
     scrollOnUserInput: true,
 
     // Word and Selection
-    wordSeparator: ' ()[]{}\'"`,;',
+    wordSeparator: TERMINAL_SELECTION.WORD_SEPARATORS,
 
     // Rendering Options
     allowTransparency: false,
@@ -84,7 +90,7 @@ export class TerminalLifecycleManager {
     // Cursor Configuration
     cursorStyle: 'block' as const,
     cursorInactiveStyle: 'outline' as const,
-    cursorWidth: 1,
+    cursorWidth: TERMINAL_DISPLAY.CURSOR_WIDTH,
 
     // Terminal Behavior
     convertEol: false,
