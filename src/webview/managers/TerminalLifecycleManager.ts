@@ -762,6 +762,27 @@ export class TerminalLifecycleManager {
         .terminal-container .xterm .xterm-cursor-layer {
           z-index: 32;
         }
+
+        /* IME composition view positioning fix - Issue #202 */
+        /* xterm.js uses hidden textarea and composition view for IME input */
+        /* These elements need to compensate for xterm-screen padding (8px) */
+        .terminal-container .xterm .xterm-helpers {
+          position: absolute !important;
+          top: 0 !important;
+          left: -8px !important; /* Compensate for xterm-screen padding */
+        }
+
+        .terminal-container .xterm .xterm-helper-textarea {
+          position: absolute !important;
+          /* Textarea positioning is handled by xterm.js, but we ensure no extra spacing */
+        }
+
+        .terminal-container .xterm .xterm-composition-view {
+          position: absolute !important;
+          /* Composition view positioning inherits from parent .xterm-helpers offset */
+          background: transparent !important;
+          color: inherit !important;
+        }
       `;
 
       // Append style if not already added
