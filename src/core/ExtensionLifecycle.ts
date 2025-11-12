@@ -10,6 +10,7 @@ import { KeyboardShortcutService } from '../services/KeyboardShortcutService';
 import { TerminalDecorationsService } from '../services/TerminalDecorationsService';
 import { TerminalLinksService } from '../services/TerminalLinksService';
 import { VersionUtils } from '../utils/VersionUtils';
+import { TelemetryService } from '../services/TelemetryService';
 
 /**
  * VS Code拡張機能のライフサイクル管理
@@ -26,6 +27,7 @@ export class ExtensionLifecycle {
   private keyboardShortcutService: KeyboardShortcutService | undefined;
   private decorationsService: TerminalDecorationsService | undefined;
   private linksService: TerminalLinksService | undefined;
+  private telemetryService: TelemetryService | undefined;
   private _extensionContext: vscode.ExtensionContext | undefined;
 
   // シンプルな復元管理
@@ -35,6 +37,7 @@ export class ExtensionLifecycle {
    * 拡張機能の起動処理
    */
   activate(context: vscode.ExtensionContext): Promise<void> {
+    const activationStartTime = Date.now();
     log('🚀 [EXTENSION] === ACTIVATION START ===');
 
     // Store extension context for later use
@@ -52,6 +55,19 @@ export class ExtensionLifecycle {
     // Get extension version info
     const extension = vscode.extensions.getExtension('s-hiraoku.vscode-sidebar-terminal');
     const version = (extension?.packageJSON as { version?: string })?.version || 'unknown';
+
+    // Initialize telemetry service
+    try {
+      this.telemetryService = new TelemetryService(
+        context,
+        's-hiraoku.vscode-sidebar-terminal',
+        version
+      );
+      log('📊 [TELEMETRY] Telemetry service initialized');
+    } catch (error) {
+      log('⚠️ [TELEMETRY] Failed to initialize telemetry service:', error);
+      // Continue without telemetry
+    }
 
     log('Sidebar Terminal extension is now active!');
     log(`Extension version: ${version}`);
@@ -183,11 +199,25 @@ export class ExtensionLifecycle {
 
       log('✅ Sidebar Terminal extension activated successfully');
 
+      // Track successful activation
+      const activationDuration = Date.now() - activationStartTime;
+      this.telemetryService?.trackActivation(activationDuration);
+      log(`📊 [TELEMETRY] Activation tracked: ${activationDuration}ms`);
+
+      // Setup telemetry event listeners
+      this.setupTelemetryEventListeners();
+
       // CRITICAL: Ensure activation Promise resolves immediately
       // This prevents VS Code progress spinner from hanging
       return Promise.resolve();
     } catch (error) {
       log('Failed to activate Sidebar Terminal extension:', error);
+
+      // Track activation error
+      if (error instanceof Error) {
+        this.telemetryService?.trackError(error, 'activation');
+      }
+
       void vscode.window.showErrorMessage(
         `Failed to activate Sidebar Terminal: ${error instanceof Error ? error.message : String(error)}`
       );
@@ -432,9 +462,22 @@ export class ExtensionLifecycle {
       },
     ];
 
-    // Register all commands
+    // Register all commands with telemetry tracking
     commandDisposables.forEach(({ command, handler }) => {
-      const disposable = vscode.commands.registerCommand(command, handler);
+      const wrappedHandler = async (...args: any[]) => {
+        try {
+          this.telemetryService?.trackCommandExecuted(command, true);
+          return await handler(...args);
+        } catch (error) {
+          this.telemetryService?.trackCommandExecuted(command, false);
+          if (error instanceof Error) {
+            this.telemetryService?.trackError(error, `command:${command}`);
+          }
+          throw error;
+        }
+      };
+
+      const disposable = vscode.commands.registerCommand(command, wrappedHandler);
       context.subscriptions.push(disposable);
     });
   }
@@ -444,6 +487,10 @@ export class ExtensionLifecycle {
    */
   async deactivate(): Promise<void> {
     log('🔧 [EXTENSION] Starting deactivation...');
+
+    // Track deactivation
+    this.telemetryService?.trackDeactivation();
+    log('📊 [TELEMETRY] Deactivation tracked');
 
     // シンプルセッション保存処理
     await this.saveSimpleSessionOnExit();
@@ -498,6 +545,13 @@ export class ExtensionLifecycle {
     if (this.shellIntegrationService) {
       this.shellIntegrationService.dispose();
       this.shellIntegrationService = undefined;
+    }
+
+    // Dispose telemetry service (this should be last to track all events)
+    if (this.telemetryService) {
+      log('📊 [TELEMETRY] Disposing telemetry service...');
+      this.telemetryService.dispose();
+      this.telemetryService = undefined;
     }
 
     log('✅ [EXTENSION] Deactivation complete');
@@ -1248,4 +1302,74 @@ export class ExtensionLifecycle {
   //   // DISABLED: This method was causing VS Code spinner hang during extension activation
   //   // Session restore is now handled by SecondaryTerminalProvider._performAsyncSessionRestore()
   // }
+
+  /**
+   * Setup telemetry event listeners for tracking key metrics
+   */
+  private setupTelemetryEventListeners(): void {
+    if (!this.telemetryService) {
+      log('⚠️ [TELEMETRY] Telemetry service not available, skipping event listener setup');
+      return;
+    }
+
+    log('📊 [TELEMETRY] Setting up telemetry event listeners...');
+
+    // Track terminal creation
+    if (this.terminalManager) {
+      const terminalCreatedDisposable = this.terminalManager.onTerminalCreated((terminal) => {
+        this.telemetryService?.trackTerminalCreated(terminal.id);
+        log(`📊 [TELEMETRY] Terminal created: ${terminal.id}`);
+      });
+
+      // Track terminal deletion
+      const terminalRemovedDisposable = this.terminalManager.onTerminalRemoved((terminalId) => {
+        this.telemetryService?.trackTerminalDeleted(terminalId);
+        log(`📊 [TELEMETRY] Terminal deleted: ${terminalId}`);
+      });
+
+      // Track terminal focus
+      const terminalFocusedDisposable = this.terminalManager.onTerminalFocused((terminalId) => {
+        this.telemetryService?.trackTerminalFocused(terminalId);
+      });
+
+      if (this._extensionContext) {
+        this._extensionContext.subscriptions.push(
+          terminalCreatedDisposable,
+          terminalRemovedDisposable,
+          terminalFocusedDisposable
+        );
+      }
+    }
+
+    // Track CLI Agent detection events
+    if (this.shellIntegrationService) {
+      const cliAgentService = (this.shellIntegrationService as any).cliAgentDetectionService;
+
+      if (cliAgentService?.onCliAgentStatusChange) {
+        const cliAgentStatusDisposable = cliAgentService.onCliAgentStatusChange((event: any) => {
+          if (event.status === 'connected') {
+            this.telemetryService?.trackCliAgentDetected(event.type || 'unknown');
+            log(`📊 [TELEMETRY] CLI Agent detected: ${event.type}`);
+          } else if (event.status === 'disconnected') {
+            // Track disconnection with session duration (if available)
+            this.telemetryService?.trackCliAgentDisconnected(event.type || 'unknown', 0);
+            log(`📊 [TELEMETRY] CLI Agent disconnected: ${event.type}`);
+          }
+        });
+
+        if (this._extensionContext) {
+          this._extensionContext.subscriptions.push(cliAgentStatusDisposable);
+        }
+      }
+    }
+
+    // Track session save/restore
+    if (this.standardSessionManager) {
+      // Note: StandardTerminalSessionManager may not expose events
+      // If it does, we can add tracking here
+      log('📊 [TELEMETRY] Session manager event tracking (to be implemented if events available)');
+    }
+
+    log('✅ [TELEMETRY] Telemetry event listeners setup complete');
+  }
 }
