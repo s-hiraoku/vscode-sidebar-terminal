@@ -1470,7 +1470,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
       // Add close button
       const closeButton = document.createElement('button');
-      closeButton.innerHTML = '×';
+      closeButton.textContent = '×'; // Safe: fixed character
       closeButton.style.cssText = `
         position: absolute;
         top: 8px;

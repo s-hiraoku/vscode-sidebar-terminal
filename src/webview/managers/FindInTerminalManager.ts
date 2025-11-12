@@ -349,7 +349,7 @@ export class FindInTerminalManager implements IFindInTerminalManager {
     // Close button
     const closeButton = document.createElement('button');
     closeButton.className = 'find-close-button';
-    closeButton.innerHTML = '✕';
+    closeButton.textContent = '✕'; // Safe: fixed character
     closeButton.title = 'Close (Escape)';
     closeButton.addEventListener('click', () => this.hideSearch());
 
@@ -381,7 +381,7 @@ export class FindInTerminalManager implements IFindInTerminalManager {
   private createButton(text: string, title: string, onClick: () => void): HTMLButtonElement {
     const button = document.createElement('button');
     button.className = 'find-button';
-    button.innerHTML = text;
+    button.textContent = text; // Safe: textContent escapes HTML
     button.title = title;
     button.addEventListener('click', onClick);
     return button;
@@ -397,7 +397,7 @@ export class FindInTerminalManager implements IFindInTerminalManager {
   ): HTMLButtonElement {
     const button = document.createElement('button');
     button.className = 'find-option-button';
-    button.innerHTML = text;
+    button.textContent = text; // Safe: textContent escapes HTML
     button.title = title;
 
     if (this.findOptions[option]) {
