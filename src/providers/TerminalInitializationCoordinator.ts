@@ -1,5 +1,5 @@
 import { TerminalManager } from '../terminals/TerminalManager';
-import { StandardTerminalSessionManager } from '../sessions/StandardTerminalSessionManager';
+import { ExtensionPersistenceService } from '../services/persistence/ExtensionPersistenceService';
 import { terminal as log } from '../utils/logger';
 
 type InitializationCompleteSender = (terminalCount: number) => Promise<void>;
@@ -15,7 +15,7 @@ export class TerminalInitializationCoordinator {
   constructor(
     private readonly terminalManager: TerminalManager,
     private readonly actions: TerminalInitializationActions,
-    private readonly standardSessionManager?: StandardTerminalSessionManager
+    private readonly extensionPersistenceService?: ExtensionPersistenceService
   ) {}
 
   public async initialize(): Promise<void> {
@@ -59,19 +59,19 @@ export class TerminalInitializationCoordinator {
   private async attemptSessionRestoration(): Promise<boolean> {
     let restorationSuccessful = false;
 
-    if (this.standardSessionManager) {
+    if (this.extensionPersistenceService) {
       try {
-        log('🔄 [STANDARD-RESTORE] Attempting VS Code standard session restore...');
-        const standardResult = await this.standardSessionManager.restoreSession(false);
+        log('🔄 [EXT-RESTORE] Attempting extension session restore...');
+        const result = await this.extensionPersistenceService.restoreSession(false);
 
-        if (standardResult.success && standardResult.restoredCount > 0) {
-          log(`✅ [STANDARD-RESTORE] Successfully restored ${standardResult.restoredCount} terminals`);
+        if (result.success && result.restoredCount && result.restoredCount > 0) {
+          log(`✅ [EXT-RESTORE] Successfully restored ${result.restoredCount} terminals`);
           restorationSuccessful = true;
         } else {
-          log('📝 [STANDARD-RESTORE] No VS Code standard session found');
+          log('📝 [EXT-RESTORE] No extension session found');
         }
       } catch (error) {
-        log('❌ [STANDARD-RESTORE] VS Code standard restore failed:', error);
+        log('❌ [EXT-RESTORE] Extension restore failed:', error);
       }
     }
 

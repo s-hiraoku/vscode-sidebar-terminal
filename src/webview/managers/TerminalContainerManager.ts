@@ -13,6 +13,10 @@
  * - DOM操作の散在を防止
  * - DisplayModeManager実装の基盤
  * - テスト容易性の向上
+ *
+ * Migrated to constructor injection pattern (Issue #216)
+ *
+ * @see docs/refactoring/issue-216-manager-standardization.md
  */
 
 import { BaseManager } from './BaseManager';
@@ -27,9 +31,10 @@ import {
  * TerminalContainerManager
  *
  * ターミナルコンテナのライフサイクルと表示状態を管理
+ * Uses constructor injection for coordinator dependency (Issue #216)
  */
 export class TerminalContainerManager extends BaseManager implements ITerminalContainerManager {
-  private coordinator: IManagerCoordinator | null = null;
+  private readonly coordinator: IManagerCoordinator;
 
   // コンテナのキャッシュ（パフォーマンス最適化）
   private containerCache = new Map<string, HTMLElement>();
@@ -51,20 +56,14 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
     orderedTerminalIds: [],
   };
 
-  constructor() {
+  constructor(coordinator: IManagerCoordinator) {
     super('TerminalContainerManager', {
       enableLogging: true,
       enableValidation: true,
       enableErrorRecovery: true,
     });
-  }
 
-  /**
-   * コーディネーターを設定
-   */
-  public setCoordinator(coordinator: IManagerCoordinator): void {
     this.coordinator = coordinator;
-    this.log('Coordinator set');
   }
 
   /**
@@ -849,7 +848,7 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
           terminalsWrapper.appendChild(container);
         }
       });
-      storage.innerHTML = '';
+      storage.textContent = ''; // Safe: clearing content
     }
 
     this.containerCache.forEach((container) => {

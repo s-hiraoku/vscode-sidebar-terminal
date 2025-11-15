@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { provider as log } from '../../utils/logger';
-import { ConsolidatedTerminalPersistenceService } from '../../services/ConsolidatedTerminalPersistenceService';
+import { ExtensionPersistenceService } from '../../services/persistence/ExtensionPersistenceService';
 import { TerminalPersistencePort } from '../../services/persistence/TerminalPersistencePort';
 import {
   PersistenceMessageHandler,
@@ -26,7 +26,7 @@ export interface PersistenceOrchestratorOptions {
 const defaultServiceFactory = (
   context: vscode.ExtensionContext,
   terminalManager: TerminalManager
-): TerminalPersistencePort => new ConsolidatedTerminalPersistenceService(context, terminalManager);
+): TerminalPersistencePort => new ExtensionPersistenceService(context, terminalManager);
 
 const defaultHandlerFactory = (
   service: TerminalPersistencePort
@@ -47,9 +47,9 @@ export class PersistenceOrchestrator implements vscode.Disposable {
     this.handler = (options.handlerFactory || defaultHandlerFactory)(this.persistenceService);
     this.sendMessageImpl = options.sendMessage;
 
-    // 🔧 FIX: Set sidebar provider on ConsolidatedTerminalPersistenceService
+    // 🔧 FIX: Set sidebar provider on ExtensionPersistenceService
     if ('setSidebarProvider' in this.persistenceService) {
-      (this.persistenceService as ConsolidatedTerminalPersistenceService).setSidebarProvider({
+      (this.persistenceService as ExtensionPersistenceService).setSidebarProvider?.({
         sendMessageToWebview: options.sendMessage,
       });
       this.logger('✅ [PERSISTENCE-ORCH] Sidebar provider configured for persistence service');
@@ -180,7 +180,7 @@ export class PersistenceOrchestrator implements vscode.Disposable {
     this.logger(`📋 [PERSISTENCE-ORCH] Routing serialization response to persistence service`);
 
     if ('handleSerializationResponseMessage' in this.persistenceService) {
-      (this.persistenceService as ConsolidatedTerminalPersistenceService).handleSerializationResponseMessage(
+      (this.persistenceService as any).handleSerializationResponseMessage?.(
         serializationData
       );
       this.logger(`✅ [PERSISTENCE-ORCH] Serialization response forwarded successfully`);

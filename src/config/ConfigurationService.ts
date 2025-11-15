@@ -22,7 +22,7 @@ export type ConfigChangeHandler = (
 /**
  * 統一された設定サービス
  */
-export class ConfigurationService {
+export class ConfigurationService implements vscode.Disposable {
   private static instance: ConfigurationService;
   private configCache = new Map<string, unknown>();
   private changeHandlers = new Set<ConfigChangeHandler>();

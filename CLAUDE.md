@@ -595,6 +595,38 @@ test.describe('Feature Area', () => {
 - Check `test-results/` directory permissions
 - Ensure test failure is properly thrown
 
+### Additional E2E Testing Resources
+
+For comprehensive guides on E2E testing, refer to these detailed documents in `src/test/e2e/`:
+
+- **[QUICK_START.md](src/test/e2e/QUICK_START.md)**: Get started with E2E testing in 5 minutes
+  - Installation and setup
+  - Running your first test
+  - Writing basic tests
+  - Common patterns and examples
+  - FAQ and troubleshooting
+
+- **[DEBUGGING.md](src/test/e2e/DEBUGGING.md)**: Debug failing or flaky tests
+  - Visual debugging strategies
+  - Playwright Inspector usage
+  - Trace viewer analysis
+  - Common issues and solutions
+  - Performance debugging
+
+- **[MAINTENANCE.md](src/test/e2e/MAINTENANCE.md)**: Maintain test suite health
+  - Test review process
+  - Naming conventions
+  - Page object patterns
+  - Test data management
+  - Failure triage procedures
+  - CI/CD integration
+
+**Playwright Agent Usage** (Claude Code):
+- Use `playwright-test-planner` agent to generate test scenarios
+- Use `playwright-test-generator` agent to implement tests
+- Use `playwright-test-healer` agent to debug and fix failing tests
+- All agents accessible via Task tool in Claude Code
+
 ## Emergency Response Procedures
 
 ### When Marketplace version breaks:

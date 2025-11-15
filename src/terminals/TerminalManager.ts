@@ -10,7 +10,14 @@ import {
   TerminalInfo,
   DeleteResult,
   ProcessState,
+  TerminalInitOptions,
 } from '../types/shared';
+import {
+  ERROR_MESSAGES,
+  PERFORMANCE_CONSTANTS,
+  TIMING_CONSTANTS,
+} from '../constants';
+import { TERMINAL_CONSTANTS } from '../constants/SystemConstants';
 import { ShellIntegrationService } from '../services/ShellIntegrationService';
 import { TerminalProfileService } from '../services/TerminalProfileService';
 import { terminal as log } from '../utils/logger';
@@ -22,8 +29,18 @@ import { TerminalNumberManager } from '../utils/TerminalNumberManager';
 import { CliAgentDetectionService } from '../services/CliAgentDetectionService';
 import { ICliAgentDetectionService } from '../interfaces/CliAgentService';
 import { TerminalSpawner } from './TerminalSpawner';
+import type { IDisposable } from '@homebridge/node-pty-prebuilt-multiarch';
+import {
+  TerminalProcessManager,
+  ITerminalProcessManager,
+} from '../services/TerminalProcessManager';
+import {
+  TerminalValidationService,
+  ITerminalValidationService,
+} from '../services/TerminalValidationService';
+import { CircularBufferManager } from '../utils/CircularBufferManager';
 
-// Import new modules
+// Import new modules (Issue #237 Phase 1)
 import { TerminalDataBufferManager } from './TerminalDataBufferManager';
 import { TerminalStateCoordinator } from './TerminalStateCoordinator';
 import { TerminalIOCoordinator } from './TerminalIOCoordinator';
@@ -41,6 +58,11 @@ const ENABLE_TERMINAL_DEBUG_LOGS = process.env.SECONDARY_TERMINAL_DEBUG_LOGS ===
  * - Delegate to TerminalDataBufferManager for output buffering
  * - Delegate to TerminalStateCoordinator for state management
  * - Delegate to TerminalIOCoordinator for input/output operations
+ *
+ * Integration with Issue #213 services:
+ * - Uses TerminalProcessManager (PTY operations)
+ * - Uses TerminalValidationService (validation and recovery)
+ * - Uses CircularBufferManager (efficient data buffering)
  *
  * Design Pattern: Facade + Coordinator
  * Benefits: Single Responsibility, Testability, Maintainability
@@ -61,14 +83,35 @@ export class TerminalManager {
   private readonly _profileService: TerminalProfileService;
   private readonly _cliAgentService: ICliAgentDetectionService;
   private readonly _terminalSpawner: TerminalSpawner;
+
+  // Issue #213 services - PTY operations and validation
+  private readonly _processManager: ITerminalProcessManager;
+  private readonly _validationService: ITerminalValidationService;
   private readonly _debugLoggingEnabled = ENABLE_TERMINAL_DEBUG_LOGS;
 
-  // Module coordinators
+  // Issue #237 Phase 1 - Module coordinators
   private readonly _dataBufferManager: TerminalDataBufferManager;
   private readonly _stateCoordinator: TerminalStateCoordinator;
   private readonly _ioCoordinator: TerminalIOCoordinator;
   private readonly _processCoordinator: TerminalProcessCoordinator;
   private readonly _lifecycleManager: TerminalLifecycleManager;
+
+  // Operation queue for atomic operations
+  private operationQueue: Promise<void> = Promise.resolve();
+
+  // Track terminals being killed to prevent infinite loops
+  private readonly _terminalBeingKilled = new Set<string>();
+
+  // 🎯 HANDSHAKE PROTOCOL: Track shell integration initialization to prevent duplicates
+  private readonly _shellInitialized = new Set<string>();
+
+  // 🎯 HANDSHAKE PROTOCOL: Track PTY output handlers to prevent duplicates and enable deferred start
+  private readonly _ptyOutputStarted = new Set<string>();
+  private readonly _ptyDataDisposables = new Map<string, vscode.Disposable>();
+
+  // Performance optimization: Circular Buffer Manager for efficient data buffering
+  private readonly _bufferManager: CircularBufferManager;
+  private readonly _initialPromptGuards = new Map<string, { dispose: () => void }>();
 
   // Public event accessors
   public readonly onData = this._dataEmitter.event;
@@ -100,7 +143,19 @@ export class TerminalManager {
 
     this._terminalSpawner = new TerminalSpawner();
 
-    // Initialize module coordinators
+    // Initialize refactored services for issue #213
+    this._processManager = new TerminalProcessManager();
+    this._validationService = new TerminalValidationService({
+      maxTerminals: config.maxTerminals,
+    });
+
+    // Initialize Circular Buffer Manager with optimized settings
+    this._bufferManager = new CircularBufferManager({
+      flushInterval: PERFORMANCE_CONSTANTS.BUFFER_FLUSH_INTERVAL,
+      maxBufferSize: PERFORMANCE_CONSTANTS.MAX_BUFFER_SIZE,
+    });
+
+    // Initialize Issue #237 Phase 1 module coordinators
     this._dataBufferManager = new TerminalDataBufferManager(
       this._terminals,
       this._dataEmitter,

@@ -79,15 +79,53 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const reportPath = 'playwright-report/index.html';
+            const resultsPath = 'test-results/results.json';
 
             let comment = '## 🎭 Playwright E2E Test Results\n\n';
 
-            if (fs.existsSync(reportPath)) {
-              comment += '✅ Tests completed. Check artifacts for detailed results.\n\n';
-              comment += `📊 [View Full Report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\n`;
-            } else {
-              comment += '❌ Tests failed or did not complete.\n';
+            try {
+              if (fs.existsSync(resultsPath)) {
+                const results = JSON.parse(fs.readFileSync(resultsPath, 'utf8'));
+                const stats = results.stats || {};
+                const duration = ((results.duration || 0) / 1000).toFixed(2);
+
+                const passed = stats.expected || 0;
+                const failed = stats.unexpected || 0;
+                const flaky = stats.flaky || 0;
+                const skipped = stats.skipped || 0;
+                const total = passed + failed + flaky + skipped;
+
+                // Status emoji
+                const statusEmoji = failed > 0 ? '❌' : (flaky > 0 ? '⚠️' : '✅');
+
+                comment += `${statusEmoji} **Test Execution Summary**\n\n`;
+                comment += '| Metric | Value |\n';
+                comment += '|--------|-------|\n';
+                comment += `| Total Tests | ${total} |\n`;
+                comment += `| ✅ Passed | ${passed} |\n`;
+                if (failed > 0) comment += `| ❌ Failed | ${failed} |\n`;
+                if (flaky > 0) comment += `| ⚠️ Flaky | ${flaky} |\n`;
+                if (skipped > 0) comment += `| ⏭️ Skipped | ${skipped} |\n`;
+                comment += `| ⏱️ Duration | ${duration}s |\n\n`;
+
+                // Priority breakdown
+                comment += '### Test Priority Breakdown\n';
+                comment += '- 🔴 P0 (Critical): Must pass 100%\n';
+                comment += '- 🟡 P1 (Important): Must pass ≥95%\n';
+                comment += '- 🟢 P2 (Nice-to-have): Must pass ≥80%\n\n';
+
+                // Link to artifacts
+                comment += `📊 [View Detailed Report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\n`;
+                comment += `📦 [Download Artifacts](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifacts)\n`;
+
+                if (failed > 0) {
+                  comment += '\n⚠️ **Some tests failed.** Please review the detailed report above.\n';
+                }
+              } else {
+                comment += '❌ Test results file not found. Tests may not have completed.\n';
+              }
+            } catch (error) {
+              comment += `⚠️ Error reading test results: ${error.message}\n`;
             }
 
             comment += '\n---\n';

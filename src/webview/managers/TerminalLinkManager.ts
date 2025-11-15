@@ -9,17 +9,22 @@
  * - Link provider registration with xterm.js
  * - File opening with line/column navigation
  *
+ * Extended BaseManager for consistent lifecycle management (Issue #216)
+ *
  * @see openspec/changes/refactor-terminal-foundation/specs/split-lifecycle-manager/spec.md
+ * @see docs/refactoring/issue-216-manager-standardization.md
  */
 
 import { Terminal, type ILink, type IDisposable } from '@xterm/xterm';
 import { IManagerCoordinator } from '../interfaces/ManagerInterfaces';
 import { terminalLogger } from '../utils/ManagerLogger';
+import { BaseManager } from './BaseManager';
 
 /**
  * Service responsible for managing terminal links (file paths and URLs)
+ * Uses constructor injection pattern (Issue #216)
  */
-export class TerminalLinkManager {
+export class TerminalLinkManager extends BaseManager {
   private readonly coordinator: IManagerCoordinator;
   private readonly linkProviderDisposables: Map<string, IDisposable> = new Map();
 
@@ -69,7 +74,20 @@ export class TerminalLinkManager {
   ]);
 
   constructor(coordinator: IManagerCoordinator) {
+    super('TerminalLinkManager', {
+      enableLogging: false, // Use terminalLogger instead
+      enablePerformanceTracking: true,
+      enableErrorRecovery: true,
+    });
     this.coordinator = coordinator;
+  }
+
+  /**
+   * Initialize manager
+   */
+  protected doInitialize(): void {
+    this.logger('TerminalLinkManager initialized');
+    terminalLogger.info('✅ TerminalLinkManager ready');
   }
 
   /**
@@ -341,14 +359,15 @@ export class TerminalLinkManager {
 
   /**
    * Cleanup and dispose all link providers
+   * Called by BaseManager.dispose() for cleanup
    */
-  public dispose(): void {
+  protected doDispose(): void {
     try {
       this.linkProviderDisposables.forEach((disposable) => {
         disposable.dispose();
       });
       this.linkProviderDisposables.clear();
-      terminalLogger.info('TerminalLinkManager disposed');
+      terminalLogger.info('🧹 TerminalLinkManager disposed');
     } catch (error) {
       terminalLogger.error('Error disposing TerminalLinkManager:', error);
     }
