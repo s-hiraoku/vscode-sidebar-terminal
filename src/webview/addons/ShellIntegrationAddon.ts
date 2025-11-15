@@ -24,11 +24,15 @@ export interface IShellIntegrationEvents {
   onPromptStart: () => void;
 }
 
+interface Disposable {
+  dispose(): void;
+}
+
 /**
  * Shell Integration Addon for processing OSC sequences
  * Compatible with VS Code terminal shell integration
  */
-export class ShellIntegrationAddon implements ITerminalAddon {
+export class ShellIntegrationAddon implements ITerminalAddon, Disposable {
   private terminal?: Terminal;
   private currentCommand?: ICommandDetection;
   private commandHistory: ICommandDetection[] = [];

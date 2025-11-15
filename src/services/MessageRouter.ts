@@ -80,14 +80,6 @@ export class MessageRouter {
     const startTime = performance.now();
     const messageId = `msg-${++this.messageCounter}`;
 
-    // Message context for logging (not currently used in handler)
-    // const context: MessageContext<TData> = {
-    //   command,
-    //   data: data as TData,
-    //   timestamp: Date.now(),
-    //   id: messageId
-    // };
-
     this.log(`Routing message: ${command} (${messageId})`);
 
     // Check if we're at the concurrent handler limit

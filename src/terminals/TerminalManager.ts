@@ -10,8 +10,14 @@ import {
   TerminalInfo,
   DeleteResult,
   ProcessState,
+  TerminalInitOptions,
 } from '../types/shared';
-import { ERROR_MESSAGES } from '../constants';
+import {
+  ERROR_MESSAGES,
+  PERFORMANCE_CONSTANTS,
+  TIMING_CONSTANTS,
+} from '../constants';
+import { TERMINAL_CONSTANTS } from '../constants/SystemConstants';
 import { ShellIntegrationService } from '../services/ShellIntegrationService';
 import { TerminalProfileService } from '../services/TerminalProfileService';
 import { terminal as log } from '../utils/logger';
@@ -31,6 +37,15 @@ import { CliAgentDetectionService } from '../services/CliAgentDetectionService';
 import { ICliAgentDetectionService } from '../interfaces/CliAgentService';
 import { TerminalSpawner } from './TerminalSpawner';
 import type { IDisposable } from '@homebridge/node-pty-prebuilt-multiarch';
+import {
+  TerminalProcessManager,
+  ITerminalProcessManager,
+} from '../services/TerminalProcessManager';
+import {
+  TerminalValidationService,
+  ITerminalValidationService,
+} from '../services/TerminalValidationService';
+import { CircularBufferManager } from '../utils/CircularBufferManager';
 
 const ENABLE_TERMINAL_DEBUG_LOGS = process.env.SECONDARY_TERMINAL_DEBUG_LOGS === 'true';
 // Removed unused service imports - these were for the RefactoredTerminalManager which was removed
@@ -52,6 +67,10 @@ export class TerminalManager {
   // CLI Agent Detection Service (extracted for SRP)
   private readonly _cliAgentService: ICliAgentDetectionService;
   private readonly _terminalSpawner: TerminalSpawner;
+  // Terminal Process Manager (PTY operations)
+  private readonly _processManager: ITerminalProcessManager;
+  // Terminal Validation Service (validation and recovery)
+  private readonly _validationService: ITerminalValidationService;
   private readonly _debugLoggingEnabled = ENABLE_TERMINAL_DEBUG_LOGS;
 
   // 操作の順序保証のためのキュー
@@ -67,11 +86,8 @@ export class TerminalManager {
   private readonly _ptyOutputStarted = new Set<string>();
   private readonly _ptyDataDisposables = new Map<string, vscode.Disposable>();
 
-  // Performance optimization: Data batching for high-frequency output
-  private readonly _dataBuffers = new Map<string, string[]>();
-  private readonly _dataFlushTimers = new Map<string, NodeJS.Timeout>();
-  private readonly DATA_FLUSH_INTERVAL = 8; // ~125fps for improved responsiveness
-  private readonly MAX_BUFFER_SIZE = 50;
+  // Performance optimization: Circular Buffer Manager for efficient data buffering
+  private readonly _bufferManager: CircularBufferManager;
   private readonly _initialPromptGuards = new Map<string, { dispose: () => void }>();
 
   // CLI Agent detection moved to service - cache removed from TerminalManager
@@ -104,6 +120,25 @@ export class TerminalManager {
     this._cliAgentService.startHeartbeat();
 
     this._terminalSpawner = new TerminalSpawner();
+
+    // Initialize refactored services for issue #213
+    this._processManager = new TerminalProcessManager();
+    this._validationService = new TerminalValidationService({
+      maxTerminals: config.maxTerminals,
+    });
+
+    // Initialize Circular Buffer Manager with optimized settings
+    this._bufferManager = new CircularBufferManager(
+      (terminalId: string, data: string) => this._handleBufferFlush(terminalId, data),
+      {
+        flushInterval: 16, // ~60fps for smooth output
+        bufferCapacity: 50,
+        maxDataSize: 1000,
+        debug: false, // Set to true for debugging
+      }
+    );
+
+    log('🚀 [TERMINAL-MANAGER] Initialized with refactored services (issue #213)');
   }
 
   /**
@@ -248,73 +283,62 @@ export class TerminalManager {
     }
   }
 
-  public createTerminal(): string {
+  /**
+   * Validate terminal creation constraints
+   * @returns Validation result with config if successful
+   * @private
+   */
+  private validateTerminalCreation(): { canCreate: boolean; config: ReturnType<typeof getTerminalConfig> } {
     log('🔍 [TERMINAL] === CREATE TERMINAL CALLED ===');
 
     const config = getTerminalConfig();
     log(`🔍 [TERMINAL] Config loaded: maxTerminals=${config.maxTerminals}`);
-
     log(`🔍 [TERMINAL] Current terminals count: ${this._terminals.size}`);
 
-    // Force debug the actual terminal state before validation
-    log('🔍 [TERMINAL] Current terminals in map:', this._terminals.size);
+    // Debug terminal state before validation
+    this.debugLog('🔍 [TERMINAL] Current terminals in map:', this._terminals.size);
     for (const [id, terminal] of this._terminals.entries()) {
-      log(`🔍 [TERMINAL] Map entry: ${id} -> ${terminal.name} (number: ${terminal.number})`);
+      this.debugLog(`🔍 [TERMINAL] Map entry: ${id} -> ${terminal.name} (number: ${terminal.number})`);
     }
 
-    // 🚨 CRITICAL DEBUG: Detailed canCreate analysis
-    log('🔍 [TERMINAL] === DETAILED canCreate() ANALYSIS ===');
-    log('🔍 [TERMINAL] this._terminals.size:', this._terminals.size);
-    log('🔍 [TERMINAL] config.maxTerminals:', config.maxTerminals);
-
-    // Call canCreate and get detailed information
+    // Check if terminal creation is allowed
     const canCreateResult = this._terminalNumberManager.canCreate(this._terminals);
     log('🔍 [TERMINAL] canCreate() returned:', canCreateResult);
 
     if (!canCreateResult) {
       log('🚨 [TERMINAL] Cannot create terminal: all slots used');
-      log('🚨 [TERMINAL] Final canCreate check failed - investigating...');
 
-      // Force re-check the numbers manually
-      const usedNumbers = new Set<number>();
-      log('🚨 [TERMINAL] Analyzing each terminal in map:');
-      for (const [id, terminal] of this._terminals.entries()) {
-        log(`🚨 [TERMINAL] Terminal ${id}:`, {
-          name: terminal.name,
-          number: terminal.number,
-          hasValidNumber: typeof terminal.number === 'number' && !isNaN(terminal.number),
-        });
-
-        if (terminal.number && typeof terminal.number === 'number') {
-          usedNumbers.add(terminal.number);
-        }
-      }
-      log('🚨 [TERMINAL] Used numbers from current terminals:', Array.from(usedNumbers));
-      log(
-        '🚨 [TERMINAL] Available slots should be:',
-        Array.from({ length: config.maxTerminals }, (_, i) => i + 1).filter(
-          (n) => !usedNumbers.has(n)
-        )
-      );
-
-      // 🚨 CRITICAL: If terminals map is empty but canCreate returns false, there's a bug
+      // Critical bug check: empty map but cannot create
       if (this._terminals.size === 0) {
-        log('🚨🚨🚨 [TERMINAL] CRITICAL BUG: No terminals exist but canCreate returned FALSE!');
-        log('🚨🚨🚨 [TERMINAL] This should NEVER happen - forcing creation');
-        // Don't return early - continue with creation
+        log('🚨 [TERMINAL] CRITICAL BUG: No terminals exist but canCreate returned FALSE!');
+        // Allow creation to proceed
       } else {
         showWarningMessage(`${ERROR_MESSAGES.MAX_TERMINALS_REACHED} (${config.maxTerminals})`);
-        return this._activeTerminalManager.getActive() || '';
+        return { canCreate: false, config };
       }
-    } else {
-      log('✅ [TERMINAL] canCreate() returned TRUE - proceeding with creation');
     }
 
-    log('🔍 [TERMINAL] Finding available terminal number...');
+    return { canCreate: true, config };
+  }
+
+  /**
+   * Resolve terminal configuration including ID, number, shell, and cwd
+   * @returns Configuration object for terminal creation
+   * @private
+   */
+  private resolveTerminalConfiguration(): {
+    terminalId: string;
+    terminalNumber: number;
+    shell: string;
+    shellArgs: string[];
+    cwd: string;
+  } {
+    log('🔍 [TERMINAL] Resolving terminal configuration...');
+
+    const config = getTerminalConfig();
     const terminalNumber = this._terminalNumberManager.findAvailableNumber(this._terminals);
     log(`🔍 [TERMINAL] Found available terminal number: ${terminalNumber}`);
 
-    log('🔍 [TERMINAL] Generating terminal ID...');
     const terminalId = generateTerminalId();
     log(`🔍 [TERMINAL] Generated terminal ID: ${terminalId}`);
 
@@ -323,24 +347,32 @@ export class TerminalManager {
     const cwd = getWorkingDirectory();
 
     log(
-      `🔍 [TERMINAL] Creating terminal: ID=${terminalId}, Shell=${shell}, Args=${JSON.stringify(shellArgs)}, CWD=${cwd}`
+      `🔍 [TERMINAL] Configuration resolved: ID=${terminalId}, Shell=${shell}, CWD=${cwd}`
     );
 
-    try {
-      // Prepare environment variables with explicit PWD
-      const env = {
-        ...process.env,
-        PWD: cwd,
-        // Add VS Code workspace information if available
-        ...(vscode.workspace.workspaceFolders &&
-          vscode.workspace.workspaceFolders.length > 0 && {
-            VSCODE_WORKSPACE: vscode.workspace.workspaceFolders[0]?.uri.fsPath || '',
-            VSCODE_PROJECT_NAME: vscode.workspace.workspaceFolders[0]?.name || '',
-          }),
-      } as { [key: string]: string };
+    return { terminalId, terminalNumber, shell, shellArgs, cwd };
+  }
 
-      // 🚨 CRITICAL ESP-IDF DEBUG: Log environment variables that might cause issues
-      log('🔍 [ESP-IDF-DEBUG] Checking for ESP-IDF related environment variables:');
+  /**
+   * Prepare environment variables for terminal process
+   * @param cwd Working directory for the terminal
+   * @returns Environment variables object
+   * @private
+   */
+  private prepareEnvironmentVariables(cwd: string): Record<string, string> {
+    const env = {
+      ...process.env,
+      PWD: cwd,
+      // Add VS Code workspace information if available
+      ...(vscode.workspace.workspaceFolders &&
+        vscode.workspace.workspaceFolders.length > 0 && {
+          VSCODE_WORKSPACE: vscode.workspace.workspaceFolders[0]?.uri.fsPath || '',
+          VSCODE_PROJECT_NAME: vscode.workspace.workspaceFolders[0]?.name || '',
+        }),
+    } as Record<string, string>;
+
+    // Debug log environment variables if debugging is enabled
+    if (this._debugLoggingEnabled) {
       const espidxRelatedEnvs = Object.keys(env).filter(
         (key) =>
           key.includes('ESP') || key.includes('IDF') || key.includes('PYTHON') || key === 'PATH'
@@ -348,78 +380,153 @@ export class TerminalManager {
       espidxRelatedEnvs.forEach((key) => {
         const value = env[key];
         if (value && value.length > 100) {
-          log(
-            `🔍 [ESP-IDF-DEBUG] ${key}=${value.substring(0, 100)}... (truncated ${value.length} chars)`
+          this.debugLog(
+            `🔍 [ENV-DEBUG] ${key}=${value.substring(0, 100)}... (truncated ${value.length} chars)`
           );
         } else {
-          log(`🔍 [ESP-IDF-DEBUG] ${key}=${value}`);
+          this.debugLog(`🔍 [ENV-DEBUG] ${key}=${value}`);
         }
       });
+    }
 
-      const { ptyProcess } = this._terminalSpawner.spawnTerminal({
-        terminalId,
-        shell,
-        shellArgs: shellArgs || [],
-        cwd,
+    return env;
+  }
+
+  /**
+   * Spawn terminal process using configured parameters
+   * @param params Process spawn parameters
+   * @returns PTY process instance
+   * @private
+   */
+  private spawnTerminalProcess(params: {
+    terminalId: string;
+    shell: string;
+    shellArgs: string[];
+    cwd: string;
+    env: Record<string, string>;
+  }): any {
+    log(
+      `🔍 [TERMINAL] Spawning process: Shell=${params.shell}, Args=${JSON.stringify(params.shellArgs)}`
+    );
+
+    const { ptyProcess } = this._terminalSpawner.spawnTerminal(params);
+
+    log(`✅ [TERMINAL] Process spawned successfully for ${params.terminalId}`);
+    return ptyProcess;
+  }
+
+  /**
+   * Create terminal instance object and register it
+   * @param params Terminal instance parameters
+   * @returns Created terminal instance
+   * @private
+   */
+  private createTerminalInstance(params: {
+    terminalId: string;
+    terminalNumber: number;
+    cwd: string;
+    ptyProcess: any;
+  }): TerminalInstance {
+    const terminal: TerminalInstance = {
+      id: params.terminalId,
+      pty: params.ptyProcess,
+      ptyProcess: params.ptyProcess,
+      name: generateTerminalName(params.terminalNumber),
+      number: params.terminalNumber,
+      cwd: params.cwd,
+      isActive: true,
+      createdAt: new Date(),
+    };
+
+    // Set all other terminals as inactive and register new terminal
+    this._deactivateAllTerminals();
+    this._terminals.set(params.terminalId, terminal);
+    this._activeTerminalManager.setActive(params.terminalId);
+
+    log(`✅ [TERMINAL] Terminal instance created: ${terminal.name} (${params.terminalId})`);
+    return terminal;
+  }
+
+  /**
+   * Register event handlers for terminal process
+   * @param terminalId Terminal identifier
+   * @param ptyProcess PTY process instance
+   * @private
+   */
+  private registerTerminalEvents(terminalId: string, ptyProcess: any): void {
+    log(`🔍 [TERMINAL] Registering event handlers for ${terminalId}`);
+
+    // Register PTY exit handler
+    ptyProcess.onExit((event: number | { exitCode: number; signal?: number }) => {
+      const exitCode = typeof event === 'number' ? event : event.exitCode;
+      log('🚪 [PTY-EXIT] Terminal exited:', terminalId, 'ExitCode:', exitCode);
+
+      this._cliAgentService.handleTerminalRemoved(terminalId);
+      this._exitEmitter.fire({ terminalId, exitCode });
+      this._removeTerminal(terminalId);
+    });
+
+    // Verify PTY write capability
+    if (ptyProcess && typeof ptyProcess.write === 'function') {
+      log(`✅ [TERMINAL] PTY write capability verified for ${terminalId}`);
+    } else {
+      log(`❌ [TERMINAL] PTY write method not available for ${terminalId}`);
+    }
+
+    log(`✅ [TERMINAL] Event handlers registered for ${terminalId}`);
+  }
+
+  public createTerminal(): string {
+    try {
+      // 1. Validate terminal creation
+      const validation = this.validateTerminalCreation();
+      if (!validation.canCreate) {
+        return this._activeTerminalManager.getActive() || '';
+      }
+
+      // 2. Resolve terminal configuration
+      const config = this.resolveTerminalConfiguration();
+
+      // 3. Prepare environment variables
+      const env = this.prepareEnvironmentVariables(config.cwd);
+
+      // 4. Spawn terminal process
+      const ptyProcess = this.spawnTerminalProcess({
+        terminalId: config.terminalId,
+        shell: config.shell,
+        shellArgs: config.shellArgs,
+        cwd: config.cwd,
         env,
       });
 
-      // Create terminal with actual PTY from the start
-      const terminal: TerminalInstance = {
-        id: terminalId,
-        pty: ptyProcess,
-        ptyProcess: ptyProcess,
-        name: generateTerminalName(terminalNumber),
-        number: terminalNumber,
-        cwd: cwd,
-        isActive: true,
-        createdAt: new Date(),
-      };
-
-      // Set all other terminals as inactive
-      this._deactivateAllTerminals();
-      this._terminals.set(terminalId, terminal);
-      this._activeTerminalManager.setActive(terminalId);
-
-      // 🎯 HANDSHAKE PROTOCOL: PTY data handler registration moved to startPtyOutput()
-      // This will be called after WebView confirms initialization complete
-
-      // Simple PTY exit handler
-      ptyProcess.onExit((event: number | { exitCode: number; signal?: number }) => {
-        const exitCode = typeof event === 'number' ? event : event.exitCode;
-        log('🚪 [PTY-EXIT] Terminal exited:', terminalId, 'ExitCode:', exitCode);
-
-        this._cliAgentService.handleTerminalRemoved(terminalId);
-        this._exitEmitter.fire({ terminalId, exitCode });
-        this._removeTerminal(terminalId);
+      // 5. Create terminal instance
+      const terminal = this.createTerminalInstance({
+        terminalId: config.terminalId,
+        terminalNumber: config.terminalNumber,
+        cwd: config.cwd,
+        ptyProcess,
       });
+
+      // 6. Register terminal events
+      this.registerTerminalEvents(config.terminalId, ptyProcess);
 
       // Fire terminal created event
       this._terminalCreatedEmitter.fire(terminal);
 
-      // Verify PTY write capability without sending test commands
-      if (ptyProcess && typeof ptyProcess.write === 'function') {
-        log(`✅ [TERMINAL] PTY write capability verified for ${terminalId}`);
-      } else {
-        log(`❌ [TERMINAL] PTY write method not available for ${terminalId}`);
-      }
-
-      log(`✅ [TERMINAL] Terminal created successfully: ${terminal.name} (${terminalId})`);
-
-      // 🎯 TIMING FIX: Shell initialization moved to _handleTerminalInitializationComplete
-
-      // 状態更新を通知
+      // Notify state update
       log('🔍 [TERMINAL] Notifying state update...');
       this._notifyStateUpdate();
-      log('🔍 [TERMINAL] State update completed');
 
-      log(`🔍 [TERMINAL] === CREATE TERMINAL FINISHED: ${terminalId} ===`);
-      return terminalId;
+      log(`🔍 [TERMINAL] === CREATE TERMINAL FINISHED: ${config.terminalId} ===`);
+      return config.terminalId;
     } catch (error) {
       log(
         `❌ [TERMINAL] Error creating terminal: ${error instanceof Error ? error.message : String(error)}`
       );
-      showErrorMessage(ERROR_MESSAGES.TERMINAL_CREATION_FAILED, error instanceof Error ? error.message : String(error));
+      showErrorMessage(
+        ERROR_MESSAGES.TERMINAL_CREATION_FAILED,
+        error instanceof Error ? error.message : String(error)
+      );
       throw error;
     }
   }
@@ -427,8 +534,11 @@ export class TerminalManager {
   /**
    * Initialize shell for a terminal after PTY creation
    * 🎯 HANDSHAKE PROTOCOL: Prevents duplicate initialization that causes multiple prompts
+   * @param options Terminal initialization options (Parameter Object Pattern)
    */
-  public initializeShellForTerminal(terminalId: string, ptyProcess: any, safeMode: boolean): void {
+  public initializeShellForTerminal(options: TerminalInitOptions): void {
+    const { terminalId, ptyProcess, safeMode } = options;
+
     try {
       // 🎯 HANDSHAKE PROTOCOL: Guard against duplicate initialization
       if (this._shellInitialized.has(terminalId)) {
@@ -751,18 +861,12 @@ export class TerminalManager {
 
   /**
    * ターミナルが削除可能かチェック（統一された検証ロジック）
+   * Delegates to TerminalValidationService (issue #213 refactoring)
    */
   private _validateDeletion(terminalId: string): { canDelete: boolean; reason?: string } {
-    if (!this._terminals.has(terminalId)) {
-      return { canDelete: false, reason: 'Terminal not found' };
-    }
-
-    // 最低1つのターミナルは保持する
-    if (this._terminals.size <= 1) {
-      return { canDelete: false, reason: 'Must keep at least 1 terminal open' };
-    }
-
-    return { canDelete: true };
+    // Delegate to validation service
+    const result = this._validationService.validateDeletion(terminalId, this._terminals, false);
+    return { canDelete: result.success, reason: result.error };
   }
 
   /**
@@ -1055,16 +1159,23 @@ export class TerminalManager {
   }
 
   public dispose(): void {
-    // Clean up data buffers and timers
-    this._flushAllBuffers();
-    for (const timer of this._dataFlushTimers.values()) {
-      clearTimeout(timer);
-    }
-    this._dataBuffers.clear();
-    this._dataFlushTimers.clear();
+    // Dispose CircularBufferManager (flushes and cleans up all buffers)
+    this._bufferManager.dispose();
 
     // Clear kill tracking
     this._terminalBeingKilled.clear();
+
+    // 🔧 FIX: Dispose PTY data listeners to prevent memory leaks
+    for (const disposable of this._ptyDataDisposables.values()) {
+      disposable.dispose();
+    }
+    this._ptyDataDisposables.clear();
+
+    // 🔧 FIX: Clean up initial prompt guards
+    for (const guard of this._initialPromptGuards.values()) {
+      guard.dispose();
+    }
+    this._initialPromptGuards.clear();
 
     // Dispose CLI Agent detection service
     this._cliAgentService.dispose();
@@ -1082,6 +1193,11 @@ export class TerminalManager {
     this._terminalRemovedEmitter.dispose();
     this._stateUpdateEmitter.dispose();
     this._terminalFocusEmitter.dispose();
+
+    // 🔧 FIX: Dispose output emitter if it was created
+    if (this._outputEmitter) {
+      this._outputEmitter.dispose();
+    }
   }
 
   // Performance optimization: Buffer data to reduce event frequency
@@ -1100,121 +1216,48 @@ export class TerminalManager {
       return;
     }
 
-    if (!this._dataBuffers.has(terminalId)) {
-      this._dataBuffers.set(terminalId, []);
-      this.debugLog(`📊 [TERMINAL] Created new data buffer for terminal: ${terminalId}`);
-    }
-
-    const buffer = this._dataBuffers.get(terminalId);
-    if (!buffer) {
-      log('🚨 [TERMINAL] Buffer creation failed for terminal:', terminalId);
-      this._dataBuffers.set(terminalId, []);
-      return;
-    }
-
-    // ✅ CRITICAL: Add terminal ID validation to each data chunk
-    const validatedData = this._validateDataForTerminal(terminalId, data);
-    const normalizedData = this._normalizeControlSequences(validatedData);
-    buffer.push(normalizedData);
-
-    this.debugLog(
-      `📊 [TERMINAL] Data buffered for ${terminalId}: ${data.length} chars (buffer size: ${buffer.length})`
-    );
-
-    // Flush immediately if buffer is full or data is large
-    if (buffer.length >= this.MAX_BUFFER_SIZE || data.length > 1000) {
-      this._flushBuffer(terminalId);
-    } else {
-      this._scheduleFlush(terminalId);
-    }
+    // Delegate to CircularBufferManager for efficient buffering
+    this._bufferManager.bufferData(terminalId, data);
   }
 
   /**
-   * ✅ NEW: Validate data belongs to specific terminal
-   * Prevents cross-terminal data contamination
+   * Handle buffer flush from CircularBufferManager
+   * This is called by the global timer or on immediate flush conditions
    */
-  private _validateDataForTerminal(terminalId: string, data: string): string {
-    // Basic validation - could be enhanced with more sophisticated checks
-    if (data.includes('\x1b]0;') && !data.includes(terminalId)) {
-      // Window title escape sequences might contain terminal context
-      this.debugLog(`🔍 [TERMINAL] Window title detected for ${terminalId}`);
-    }
-
-    // Return data as-is for now, but this method provides a hook for future validation
-    return data;
-  }
-
-  private _scheduleFlush(terminalId: string): void {
-    if (!this._dataFlushTimers.has(terminalId)) {
-      const timer = setTimeout(() => {
-        this._flushBuffer(terminalId);
-      }, this.DATA_FLUSH_INTERVAL);
-      this._dataFlushTimers.set(terminalId, timer);
-    }
-  }
-
-  private _flushBuffer(terminalId: string): void {
-    // ✅ CRITICAL FIX: Strict terminal ID validation before flushing
-    if (!terminalId || typeof terminalId !== 'string') {
-      log('🚨 [TERMINAL] Invalid terminalId for buffer flushing:', terminalId);
-      return;
-    }
-
+  private _handleBufferFlush(terminalId: string, data: string): void {
     // Double-check terminal still exists
     if (!this._terminals.has(terminalId)) {
-      log(`⚠️ [TERMINAL] Cannot flush buffer for removed terminal: ${terminalId}`);
-      // Clean up orphaned buffer and timer
-      this._dataBuffers.delete(terminalId);
-      const timer = this._dataFlushTimers.get(terminalId);
-      if (timer) {
-        clearTimeout(timer);
-        this._dataFlushTimers.delete(terminalId);
-      }
+      console.warn(`⚠️ [TERMINAL] Cannot flush buffer for removed terminal: ${terminalId}`);
       return;
     }
 
-    const timer = this._dataFlushTimers.get(terminalId);
-    if (timer) {
-      clearTimeout(timer);
-      this._dataFlushTimers.delete(terminalId);
+    const terminal = this._terminals.get(terminalId);
+    if (!terminal) {
+      console.error(`🚨 [TERMINAL] Terminal disappeared during flush: ${terminalId}`);
+      return;
     }
 
-    const buffer = this._dataBuffers.get(terminalId);
-    if (buffer && buffer.length > 0) {
-      const combinedData = buffer.join('');
-      buffer.length = 0; // Clear buffer
-
-      // ✅ CRITICAL: Additional validation before emitting data
-      const terminal = this._terminals.get(terminalId);
-      if (!terminal) {
-        log(`🚨 [TERMINAL] Terminal disappeared during flush: ${terminalId}`);
-        return;
-      }
-
-      // Send to CLI Agent detection service with validation
-      try {
-        this._cliAgentService.detectFromOutput(terminalId, combinedData);
-      } catch (error) {
-        log(`⚠️ [TERMINAL] CLI Agent detection failed for ${terminalId}:`, error);
-      }
-
-      // ✅ EMIT DATA WITH STRICT TERMINAL ID ASSOCIATION
-      this.debugLog(
-        `📤 [TERMINAL] Flushing data for terminal ${terminal.name} (${terminalId}): ${combinedData.length} chars`
-      );
-      this._dataEmitter.fire({
-        terminalId: terminalId, // Ensure exact ID match
-        data: combinedData,
-        timestamp: Date.now(), // Add timestamp for debugging
-        terminalName: terminal.name, // Add terminal name for validation
-      });
+    // Send to CLI Agent detection service with validation
+    try {
+      this._cliAgentService.detectFromOutput(terminalId, data);
+    } catch (error) {
+      console.warn(`⚠️ [TERMINAL] CLI Agent detection failed for ${terminalId}:`, error);
     }
+
+    // ✅ EMIT DATA WITH STRICT TERMINAL ID ASSOCIATION
+    this.debugLog(
+      `📤 [TERMINAL] Flushing data for terminal ${terminal.name} (${terminalId}): ${data.length} chars`
+    );
+    this._dataEmitter.fire({
+      terminalId: terminalId, // Ensure exact ID match
+      data: data,
+      timestamp: Date.now(), // Add timestamp for debugging
+      terminalName: terminal.name, // Add terminal name for validation
+    });
   }
 
   private _flushAllBuffers(): void {
-    for (const terminalId of this._dataBuffers.keys()) {
-      this._flushBuffer(terminalId);
-    }
+    this._bufferManager.flushAll();
   }
 
   /**
@@ -1259,14 +1302,8 @@ export class TerminalManager {
       log(`🧹 [TERMINAL] Cleaned up shell initialization flag for: ${terminalId}`);
     }
 
-    // Clean up data buffers for this terminal
-    this._flushBuffer(terminalId);
-    this._dataBuffers.delete(terminalId);
-    const timer = this._dataFlushTimers.get(terminalId);
-    if (timer) {
-      clearTimeout(timer);
-      this._dataFlushTimers.delete(terminalId);
-    }
+    // Clean up data buffers for this terminal using CircularBufferManager
+    this._bufferManager.removeTerminal(terminalId);
 
     // CLI Agent cleanup handled by service
     this._cliAgentService.handleTerminalRemoved(terminalId);
@@ -1687,152 +1724,54 @@ export class TerminalManager {
 
   /**
    * Write to PTY with validation and error handling
+   * Delegates to TerminalProcessManager (issue #213 refactoring)
    */
   private _writeToPtyWithValidation(
     terminal: TerminalInstance,
     data: string
   ): { success: boolean; error?: string } {
-    // 🛡️ PTY READINESS CHECK: Handle case where PTY is not yet ready
-    const ptyInstance = terminal.ptyProcess || terminal.pty;
+    // Delegate to process manager
+    const result = this._processManager.writeToPty(terminal, data);
 
-    if (!ptyInstance) {
-      log(`⏳ [PTY-WAIT] PTY not ready for terminal ${terminal.id}, queuing input...`);
-
+    // Handle PTY not ready case with retry
+    if (!result.success && result.error === 'PTY not ready') {
       // Queue the input and try again after a short delay
       setTimeout(() => {
         const updatedTerminal = this._terminals.get(terminal.id);
-        if (updatedTerminal && (updatedTerminal.ptyProcess || updatedTerminal.pty)) {
-          log(`🔄 [PTY-RETRY] Retrying input for terminal ${terminal.id} after PTY ready`);
-          this._writeToPtyWithValidation(updatedTerminal, data);
-        } else {
-          log(`❌ [PTY-TIMEOUT] PTY still not ready for terminal ${terminal.id} after retry`);
+        if (updatedTerminal) {
+          this._processManager.retryWrite(updatedTerminal, data).catch((error) => {
+            log(`❌ [PTY-RETRY] Retry failed for terminal ${terminal.id}: ${error}`);
+          });
         }
       }, 500);
 
-      return { success: false, error: 'PTY not ready, input queued for retry' };
+      return { success: true }; // Return success to avoid error display while waiting
     }
 
-    if (typeof ptyInstance.write !== 'function') {
-      return { success: false, error: 'PTY instance missing write method' };
-    }
-
-    // Check if PTY process is still alive
-    if (
-      terminal.ptyProcess &&
-      typeof terminal.ptyProcess === 'object' &&
-      'killed' in terminal.ptyProcess &&
-      (terminal.ptyProcess as any).killed
-    ) {
-      return { success: false, error: 'PTY process has been killed' };
-    }
-
-    try {
-      ptyInstance.write(data);
-      log(`✅ [PTY-WRITE] Successfully wrote ${data.length} chars to terminal ${terminal.id}`);
-      return { success: true };
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      return { success: false, error: `Write failed: ${errorMessage}` };
-    }
+    return result;
   }
 
   /**
    * Attempt to recover from PTY write failure
+   * Delegates to TerminalProcessManager (issue #213 refactoring)
    */
-  private _attemptPtyRecovery(terminal: TerminalInstance, data: string): boolean {
-    log('⚠️ [RECOVERY] Attempting PTY recovery for terminal:', terminal.id);
-
-    // Try alternative PTY instance if available
-    const alternatives = [terminal.ptyProcess, terminal.pty].filter(Boolean);
-
-    for (const ptyInstance of alternatives) {
-      if (ptyInstance && typeof ptyInstance.write === 'function') {
-        try {
-          // Double-check that this instance wasn't already tried
-          if (ptyInstance === (terminal.ptyProcess || terminal.pty)) {
-            continue; // Skip the same instance that already failed
-          }
-
-          ptyInstance.write(data);
-          this.debugLog('✅ [RECOVERY] PTY write recovered using alternative instance');
-
-          // Update the terminal to use the working instance
-          if (ptyInstance === terminal.pty) {
-            terminal.ptyProcess = undefined; // Clear the failing instance
-          }
-
-          return true;
-        } catch (recoveryError) {
-          log('⚠️ [RECOVERY] Alternative PTY instance also failed:', recoveryError);
-        }
-      }
-    }
-
-    // If all alternatives failed, log the failure
-    console.error('❌ [RECOVERY] All PTY recovery attempts failed for terminal:', terminal.id);
-    return false;
+  private _attemptPtyRecovery(terminal: TerminalInstance, _data: string): boolean {
+    // Delegate to process manager
+    const result = this._processManager.attemptRecovery(terminal);
+    return result.success;
   }
 
   /**
    * Resize PTY with validation and error handling
+   * Delegates to TerminalProcessManager (issue #213 refactoring)
    */
   private _resizePtyWithValidation(
     terminal: TerminalInstance,
     cols: number,
     rows: number
   ): { success: boolean; error?: string } {
-    // Validate dimensions first
-    if (cols <= 0 || rows <= 0) {
-      return { success: false, error: `Invalid dimensions: ${cols}x${rows}` };
-    }
-
-    if (cols > 500 || rows > 200) {
-      return { success: false, error: `Dimensions too large: ${cols}x${rows}` };
-    }
-
-    // Get PTY instance
-    const ptyInstance = terminal.ptyProcess || terminal.pty;
-
-    if (!ptyInstance) {
-      return { success: false, error: 'No PTY instance available' };
-    }
-
-    if (typeof ptyInstance.resize !== 'function') {
-      return { success: false, error: 'PTY instance missing resize method' };
-    }
-
-    // Check if PTY process is still alive
-    if (
-      terminal.ptyProcess &&
-      typeof terminal.ptyProcess === 'object' &&
-      'killed' in terminal.ptyProcess &&
-      (terminal.ptyProcess as any).killed
-    ) {
-      return { success: false, error: 'PTY process has been killed' };
-    }
-
-    try {
-      ptyInstance.resize(cols, rows);
-      log(`📏 [TERMINAL] Terminal resized: ${terminal.name} → ${cols}x${rows}`);
-
-      // VS Code pattern: Force shell refresh after resize
-      setTimeout(() => {
-        try {
-          // Send SIGWINCH signal to shell process to trigger prompt refresh
-          if (ptyInstance.pid) {
-            log(`🔄 [TERMINAL] Sending refresh signal to process ${ptyInstance.pid}`);
-            ptyInstance.write('\x0c'); // Form feed character to refresh display
-          }
-        } catch (refreshError) {
-          log(`⚠️ [TERMINAL] Failed to refresh shell for ${terminal.name}:`, refreshError);
-        }
-      }, 50);
-
-      return { success: true };
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      return { success: false, error: `Resize failed: ${errorMessage}` };
-    }
+    // Delegate to process manager
+    return this._processManager.resizePty(terminal, cols, rows);
   }
 
   // =================== CLI Agent Detection - MOVED TO SERVICE ===================

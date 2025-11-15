@@ -19,19 +19,21 @@ export class InputManager extends BaseManager implements IInputManager {
   // Event handler registry for centralized event management
   protected readonly eventRegistry = new EventHandlerRegistry();
 
-  // Coordinator for accessing other managers
-  private coordinator: IManagerCoordinator | null = null;
+  // Coordinator for accessing other managers (Issue #216: constructor injection)
+  private readonly coordinator: IManagerCoordinator;
 
   // New architecture services
   private stateManager: InputStateManager;
   private eventService: InputEventService;
 
-  constructor() {
+  constructor(coordinator: IManagerCoordinator) {
     super('InputManager', {
       enableLogging: true,
       enableValidation: true,
       enableErrorRecovery: true,
     });
+
+    this.coordinator = coordinator;
 
     // Initialize new architecture services
     this.stateManager = new InputStateManager((message: string) => this.logger(message));
@@ -45,13 +47,6 @@ export class InputManager extends BaseManager implements IInputManager {
     );
 
     this.logger('initialization', 'starting');
-  }
-
-  /**
-   * Set coordinator for accessing other managers
-   */
-  public setCoordinator(coordinator: IManagerCoordinator): void {
-    this.coordinator = coordinator;
   }
 
   // Alt+Click state management

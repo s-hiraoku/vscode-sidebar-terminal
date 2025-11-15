@@ -52,6 +52,120 @@ Please include the following information in your vulnerability report:
 
 This project implements the following security measures:
 
+### XSS Vulnerability Mitigation (Issue #229)
+
+#### Background
+
+The extension previously used `innerHTML` extensively throughout the codebase, which posed a significant XSS vulnerability risk. Issue #229 documented 68+ instances of innerHTML usage that needed to be addressed.
+
+#### Remediation Strategy
+
+We have implemented a comprehensive four-phase approach to eliminate XSS vulnerabilities:
+
+**Phase 1: Audit (Completed)**
+- Audited all innerHTML usage locations in the codebase
+- Classified each usage by risk level:
+  - **HIGH RISK**: User input or terminal output directly inserted into DOM
+  - **MEDIUM RISK**: System information or partially sanitized content
+  - **LOW RISK**: Fixed content or clear operations
+
+**Phase 2: Remediation (Completed for High/Low Risk)**
+Replaced vulnerable innerHTML patterns with safe alternatives:
+
+High-Risk Replacements:
+- `DOMUtils.ts`: Blocked innerHTML attribute support with warning
+- `UIController.ts`: Notification messages now use textContent + DOM construction
+- `UIManager.ts`: Notification content uses safe DOM APIs
+
+Low-Risk Replacements:
+- All `innerHTML = ''` changed to `textContent = ''`
+- All `innerHTML = '×'` changed to `textContent = '×'`
+- Clear operations now use textContent instead of innerHTML
+
+Medium-Risk Replacements:
+- Loading indicators: Use createElement + textContent
+- Debug panels: Build DOM structure with safe APIs
+- Terminal tabs: Construct using DOM elements
+
+**Phase 3: Prevention (Completed)**
+Implemented automated safeguards:
+
+ESLint Rule:
+```json
+{
+  "no-restricted-properties": [
+    "error",
+    {
+      "object": "*",
+      "property": "innerHTML",
+      "message": "SECURITY: innerHTML is not allowed due to XSS vulnerability risk. Use textContent, createElement, or appendChild instead. See issue #229."
+    }
+  ]
+}
+```
+
+DOMUtils Security:
+- innerHTML attribute in `DOMUtils.createElement()` now logs warning and falls back to textContent
+- Developers are guided to use safe alternatives
+
+**Phase 4: Testing (In Progress)**
+- TypeScript compilation verified with no errors
+- ESLint rules active to prevent future innerHTML usage
+- XSS test suite to be implemented in future PR
+
+#### Safe DOM Manipulation Patterns
+
+When building UI elements, always use these safe patterns:
+
+✅ **SAFE: Using textContent**
+```typescript
+element.textContent = userInput; // Automatically escapes HTML
+```
+
+✅ **SAFE: Building DOM with createElement**
+```typescript
+const div = document.createElement('div');
+div.className = 'message';
+
+const span = document.createElement('span');
+span.textContent = message; // Safe
+
+div.appendChild(span);
+```
+
+✅ **SAFE: Using DocumentFragment**
+```typescript
+const fragment = document.createDocumentFragment();
+items.forEach(item => {
+  const li = document.createElement('li');
+  li.textContent = item.name; // Safe
+  fragment.appendChild(li);
+});
+container.appendChild(fragment);
+```
+
+❌ **UNSAFE: Using innerHTML with user input**
+```typescript
+element.innerHTML = userInput; // XSS RISK!
+element.innerHTML = `<div>${terminalOutput}</div>`; // XSS RISK!
+```
+
+#### Remaining Work
+
+The following files still contain innerHTML for large fixed HTML templates:
+- `src/webview/components/ProfileSelector.ts` (uses _escapeHtml for sanitization)
+- `src/webview/components/TerminalTabList.ts`
+- `src/webview/components/SettingsPanel.ts`
+- `src/webview/managers/LightweightTerminalWebviewManager.ts`
+- `src/webview/managers/handlers/ShellIntegrationMessageHandler.ts`
+
+These are lower priority as they use:
+1. Fixed HTML templates (no user input)
+2. HTML escape functions (_escapeHtml)
+3. System information only
+
+Future work will convert these to safe DOM construction methods.
+
 ### Automated Security Scanning
 
 - **npm audit**: Runs on every CI build to detect vulnerable dependencies
@@ -77,7 +191,34 @@ This project implements the following security measures:
 - Automated dependency updates
 - Security alerts enabled on GitHub
 
-## Security Best Practices for Users
+## Security Best Practices
+
+### For Developers
+
+#### 1. Input Validation
+- Always validate and sanitize user input before processing
+- Use TypeScript types to enforce expected data shapes
+- Never trust terminal output or external data sources
+
+#### 2. Content Security Policy (CSP)
+The extension uses VS Code's WebView CSP to restrict:
+- Script sources to trusted origins only
+- No inline script execution
+- Restricted style sources
+
+#### 3. Code Review Guidelines
+When reviewing PRs, check for:
+- Use of innerHTML (should trigger ESLint error)
+- Direct DOM manipulation without sanitization
+- User input being inserted into HTML attributes
+- Terminal output being rendered as HTML
+
+#### 4. Dependencies
+- Regularly update dependencies to patch known vulnerabilities
+- Run `npm audit` to identify and fix security issues
+- Use `npm audit fix` for automated patches
+
+### For Users
 
 When using vscode-sidebar-terminal, we recommend:
 
@@ -107,9 +248,21 @@ For any security-related questions or concerns, please contact the repository ma
 
 ## Additional Resources
 
-- [GitHub Security Best Practices](https://docs.github.com/en/code-security)
+- [OWASP XSS Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html)
 - [OWASP Top 10](https://owasp.org/www-project-top-ten/)
-- [VS Code Extension Security](https://code.visualstudio.com/api/references/extension-manifest#security)
+- [VS Code Extension Security Best Practices](https://code.visualstudio.com/api/extension-guides/webview#security)
+- [Content Security Policy Guide](https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP)
+- [GitHub Security Best Practices](https://docs.github.com/en/code-security)
+
+## Changelog
+
+### 2025-11-12
+- Initial security documentation created
+- XSS vulnerability remediation (Issue #229) completed for high/low risk areas
+- ESLint rule added to prevent future innerHTML usage
+- DOMUtils.createElement() secured against innerHTML usage
+- Comprehensive security scanning enabled in CI (Issue #233)
+- npm audit enforcement, Snyk SAST, and Dependabot integration
 
 ---
 

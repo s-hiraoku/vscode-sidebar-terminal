@@ -46,7 +46,7 @@ describe('InputManager', () => {
       }),
     } as any;
 
-    inputManager = new InputManager();
+    inputManager = new InputManager(mockCoordinator);
   });
 
   afterEach(() => {

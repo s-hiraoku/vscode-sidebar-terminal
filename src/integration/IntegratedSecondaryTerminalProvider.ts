@@ -32,7 +32,7 @@ import { log } from '../utils/logger';
  * Note: This is a demonstration class showing the integration patterns.
  * The actual SecondaryTerminalProvider should be updated following these patterns.
  */
-export class IntegratedSecondaryTerminalProvider implements vscode.WebviewViewProvider {
+export class IntegratedSecondaryTerminalProvider implements vscode.WebviewViewProvider, vscode.Disposable {
   public static readonly viewType = 'secondaryTerminal';
 
   // Core services

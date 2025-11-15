@@ -18,6 +18,10 @@ export interface ScrollbackDataResponse {
   error?: string;
 }
 
+interface Disposable {
+  dispose(): void;
+}
+
 /**
  * Scrollback Coordinator
  *
@@ -26,7 +30,7 @@ export interface ScrollbackDataResponse {
  * - Handling scrollback data responses
  * - Managing scrollback collection state
  */
-export class ScrollbackCoordinator {
+export class ScrollbackCoordinator implements Disposable {
   private _pendingScrollbackRequests = new Map<
     string,
     {

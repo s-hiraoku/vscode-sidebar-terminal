@@ -818,18 +818,6 @@
           "maximum": 3000,
           "description": "Maximum number of scrollback lines to persist (200-3000). Higher values use more storage. Default: 1000 (matching VS Code)."
         },
-        "secondaryTerminal.features.enhancedScrollbackPersistence": {
-          "type": "boolean",
-          "default": false,
-          "description": "Enable VS Code standard scrollback serialization with ANSI color preservation and full state restoration. Beta feature - will be enabled by default in v0.2.0."
-        },
-        "secondaryTerminal.features.scrollbackLineLimit": {
-          "type": "number",
-          "default": 1000,
-          "minimum": 200,
-          "maximum": 3000,
-          "description": "Maximum number of scrollback lines for enhanced persistence (200-3000). Only applies when enhancedScrollbackPersistence is enabled. Default: 1000 (matching VS Code)."
-        },
         "secondaryTerminal.features.vscodeStandardIME": {
           "type": "boolean",
           "default": false,
@@ -958,10 +946,12 @@
     "watch-tests": "tsc -p . -w --outDir out",
     "pretest": "npm run compile-tests && npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
+    "lint:memory-leaks": "eslint src --ext ts --config .eslintrc.memory-leaks.json",
     "test": "npm run test:unit",
     "test:coverage": "nyc --reporter=text --reporter=html --reporter=lcov npm run test",
     "test:watch": "npm run watch-tests & npm run test",
     "test:unit": "nyc mocha",
+    "test:memory-leaks": "mocha --require ./src/test/shared/setup-exit-handler.js --require out/test/shared/TestSetup.js --expose-gc --timeout 30000 'out/test/unit/**/*.MemoryLeak.test.js'",
     "test:integration": "nyc mocha --require ./src/test/shared/setup-exit-handler.js --require out/test/shared/TestSetup.js --timeout 60000 --exit 'out/test/integration/**/*.test.js'",
     "test:performance": "nyc mocha --require ./src/test/shared/setup-exit-handler.js --require out/test/shared/TestSetup.js --timeout 120000 --exit 'out/test/performance/**/*.test.js'",
     "test:all": "npm run test:unit && npm run test:integration && npm run test:performance",

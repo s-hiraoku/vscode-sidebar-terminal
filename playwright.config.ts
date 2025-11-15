@@ -11,16 +11,31 @@ export default defineConfig({
   // Maximum time one test can run
   timeout: 30 * 1000,
 
+  // Global timeout for entire test run
+  globalTimeout: process.env.CI ? 10 * 60 * 1000 : undefined, // 10 minutes in CI
+
+  // Test expectations timeout
+  expect: {
+    timeout: 5 * 1000, // 5 seconds for expect assertions
+  },
+
   // Test execution settings
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
 
+  // Test sharding for CI (splits tests across multiple machines)
+  // Usage: npx playwright test --shard=1/3
+  shard: process.env.CI && process.env.SHARD
+    ? { current: parseInt(process.env.SHARD.split('/')[0]), total: parseInt(process.env.SHARD.split('/')[1]) }
+    : undefined,
+
   // Reporter configuration
   reporter: [
-    ['html', { outputFolder: 'playwright-report' }],
-    ['list'],
+    ['html', { outputFolder: 'playwright-report', open: 'never' }],
+    ['json', { outputFile: 'test-results/results.json' }],
+    ['junit', { outputFile: 'test-results/junit.xml' }],
     process.env.CI ? ['github'] : ['list'],
   ],
 

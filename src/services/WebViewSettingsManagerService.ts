@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import { PartialTerminalSettings, WebViewFontSettings } from '../types/shared';
 import { getConfigManager } from '../config/ConfigManager';
-// import { getTerminalConfig } from '../utils/common'; // unused
 import { showSuccess, showError } from '../utils/feedback';
 import { provider as log } from '../utils/logger';
 import { WebviewMessage } from '../types/common';
