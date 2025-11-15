@@ -1,0 +1,45 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["src/extension.ts"],
+  "entryPointStrategy": "expand",
+  "out": "docs/api",
+  "exclude": [
+    "**/node_modules/**",
+    "**/test/**",
+    "**/tests/**",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/dist/**",
+    "**/out/**",
+    "**/webview/**"
+  ],
+  "excludePrivate": true,
+  "excludeProtected": false,
+  "excludeInternal": true,
+  "skipErrorChecking": true,
+  "compilerOptions": {
+    "skipLibCheck": true
+  },
+  "readme": "none",
+  "name": "Secondary Terminal API Documentation",
+  "includeVersion": true,
+  "sort": ["source-order"],
+  "categorizeByGroup": true,
+  "defaultCategory": "Other",
+  "categoryOrder": [
+    "Core",
+    "Providers",
+    "Managers",
+    "Services",
+    "Commands",
+    "Utilities",
+    "*"
+  ],
+  "navigation": {
+    "includeCategories": true,
+    "includeGroups": true
+  },
+  "cleanOutputDir": true,
+  "githubPages": false,
+  "hideGenerator": true
+}

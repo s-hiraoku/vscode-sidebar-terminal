@@ -1004,7 +1004,10 @@
     "monitor:check": "node scripts/marketplace-monitor.js check",
     "monitor:continuous": "node scripts/marketplace-monitor.js continuous",
     "quality:check": "node commands/release.js --check-only",
-    "quality:fix": "node commands/release.js --fix-only"
+    "quality:fix": "node commands/release.js --fix-only",
+    "docs:generate": "npx typedoc",
+    "docs:watch": "npx typedoc --watch",
+    "docs:clean": "rm -rf docs/api"
   },
   "devDependencies": {
     "@istanbuljs/nyc-config-typescript": "^1.0.2",
@@ -1040,6 +1043,8 @@
     "style-loader": "^4.0.0",
     "ts-loader": "^9.5.1",
     "ts-node": "^10.9.2",
+    "typedoc": "^0.26.0",
+    "typedoc-plugin-markdown": "^4.2.0",
     "typescript": "^5.3.3",
     "vsce": "^2.15.0",
     "vscode-test": "^1.6.1",
