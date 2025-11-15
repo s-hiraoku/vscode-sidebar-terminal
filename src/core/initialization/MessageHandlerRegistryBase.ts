@@ -16,6 +16,8 @@
  * @see https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/218
  */
 
+import { info as logInfo, warn as logWarn, error as logError } from '../../utils/logger';
+
 export type MessageHandler<TMessage = unknown, TContext = unknown> = (
   message: TMessage,
   context?: TContext
@@ -314,20 +316,20 @@ export abstract class MessageHandlerRegistryBase<
    * Log registration information
    */
   protected logRegistration(message: string): void {
-    console.log(`[HandlerRegistry] ${message}`);
+    logInfo(`[HandlerRegistry] ${message}`);
   }
 
   /**
    * Log warning
    */
   protected logWarning(message: string): void {
-    console.warn(`[HandlerRegistry] ${message}`);
+    logWarn(`[HandlerRegistry] ${message}`);
   }
 
   /**
    * Log error
    */
   protected logError(message: string, error: unknown): void {
-    console.error(`[HandlerRegistry] ${message}:`, error);
+    logError(`[HandlerRegistry] ${message}:`, error);
   }
 }

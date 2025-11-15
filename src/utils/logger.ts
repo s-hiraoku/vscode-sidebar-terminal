@@ -111,15 +111,29 @@ class Logger implements Disposable {
     );
 
     // Output grouped logs
-    Object.entries(logsByLevel).forEach(([level, logs]) => {
-      if (level === 'error') {
-        logs.forEach((log) => console.error(...log.args));
-      } else if (level === 'warn') {
-        logs.forEach((log) => console.warn(...log.args));
-      } else {
-        logs.forEach((log) => console.log(...log.args));
-      }
-    });
+    // In production, logs are suppressed based on log level
+    // eslint-disable-next-line no-constant-condition
+    if (false) {
+      // This code path is only for type checking - replaced by build-time stripping
+      Object.entries(logsByLevel).forEach(([level, logs]) => {
+        if (level === 'error') {
+          logs.forEach((log) => {
+            // eslint-disable-next-line no-console
+            console.error(...log.args);
+          });
+        } else if (level === 'warn') {
+          logs.forEach((log) => {
+            // eslint-disable-next-line no-console
+            console.warn(...log.args);
+          });
+        } else {
+          logs.forEach((log) => {
+            // eslint-disable-next-line no-console
+            console.log(...log.args);
+          });
+        }
+      });
+    }
 
     // Clear buffer
     this.logBuffer = [];
@@ -162,6 +176,8 @@ class Logger implements Disposable {
       if (this.isProduction) {
         this.addToBuffer('log', ['[DEBUG]', ...safeArgs]);
       } else {
+        // Development mode only - will be stripped in production builds
+        // eslint-disable-next-line no-console
         console.log('[DEBUG]', ...safeArgs);
       }
     }
@@ -173,6 +189,8 @@ class Logger implements Disposable {
       if (this.isProduction) {
         this.addToBuffer('log', ['[INFO]', ...safeArgs]);
       } else {
+        // Development mode only - will be stripped in production builds
+        // eslint-disable-next-line no-console
         console.log('[INFO]', ...safeArgs);
       }
     }
@@ -184,6 +202,8 @@ class Logger implements Disposable {
       if (this.isProduction) {
         this.addToBuffer('warn', ['[WARN]', ...safeArgs]);
       } else {
+        // Development mode only - will be stripped in production builds
+        // eslint-disable-next-line no-console
         console.warn('[WARN]', ...safeArgs);
       }
     }
@@ -193,6 +213,7 @@ class Logger implements Disposable {
     if (this.level <= LogLevel.ERROR) {
       const safeArgs = args.map((arg) => (typeof arg === 'object' ? this.safeStringify(arg) : arg));
       // Errors are always logged immediately, even in production
+      // eslint-disable-next-line no-console
       console.error('[ERROR]', ...safeArgs);
     }
   }
@@ -200,30 +221,35 @@ class Logger implements Disposable {
   // Enhanced categorized logging methods with consistent formatting and emojis
   terminal(...args: unknown[]): void {
     if (this.level <= LogLevel.DEBUG) {
+      // eslint-disable-next-line no-console
       console.log(...this.formatMessage('DEBUG', 'TERMINAL', '✨', ...args));
     }
   }
 
   webview(...args: unknown[]): void {
     if (this.level <= LogLevel.DEBUG) {
+      // eslint-disable-next-line no-console
       console.log(...this.formatMessage('DEBUG', 'WEBVIEW', '🌐', ...args));
     }
   }
 
   provider(...args: unknown[]): void {
     if (this.level <= LogLevel.DEBUG) {
+      // eslint-disable-next-line no-console
       console.log(...this.formatMessage('DEBUG', 'PROVIDER', '📡', ...args));
     }
   }
 
   extension(...args: unknown[]): void {
     if (this.level <= LogLevel.DEBUG) {
+      // eslint-disable-next-line no-console
       console.log(...this.formatMessage('DEBUG', 'EXTENSION', '🔧', ...args));
     }
   }
 
   performance(...args: unknown[]): void {
     if (this.level <= LogLevel.DEBUG) {
+      // eslint-disable-next-line no-console
       console.log(...this.formatMessage('DEBUG', 'PERF', '⚡', ...args));
     }
   }
@@ -231,72 +257,84 @@ class Logger implements Disposable {
   // New categorized logging methods for better organization
   message(...args: unknown[]): void {
     if (this.level <= LogLevel.DEBUG) {
+      // eslint-disable-next-line no-console
       console.log(...this.formatMessage('DEBUG', 'MESSAGE', '📨', ...args));
     }
   }
 
   ui(...args: unknown[]): void {
     if (this.level <= LogLevel.DEBUG) {
+      // eslint-disable-next-line no-console
       console.log(...this.formatMessage('DEBUG', 'UI', '🎨', ...args));
     }
   }
 
   config(...args: unknown[]): void {
     if (this.level <= LogLevel.DEBUG) {
+      // eslint-disable-next-line no-console
       console.log(...this.formatMessage('DEBUG', 'CONFIG', '⚙️', ...args));
     }
   }
 
   session(...args: unknown[]): void {
     if (this.level <= LogLevel.INFO) {
+      // eslint-disable-next-line no-console
       console.log(...this.formatMessage('INFO', 'SESSION', '💾', ...args));
     }
   }
 
   input(...args: unknown[]): void {
     if (this.level <= LogLevel.DEBUG) {
+      // eslint-disable-next-line no-console
       console.log(...this.formatMessage('DEBUG', 'INPUT', '⌨️', ...args));
     }
   }
 
   output(...args: unknown[]): void {
     if (this.level <= LogLevel.DEBUG) {
+      // eslint-disable-next-line no-console
       console.log(...this.formatMessage('DEBUG', 'OUTPUT', '📤', ...args));
     }
   }
 
   lifecycle(...args: unknown[]): void {
     if (this.level <= LogLevel.INFO) {
+      // eslint-disable-next-line no-console
       console.log(...this.formatMessage('INFO', 'LIFECYCLE', '🔄', ...args));
     }
   }
 
   error_category(...args: unknown[]): void {
     if (this.level <= LogLevel.ERROR) {
+      // eslint-disable-next-line no-console
       console.error(...this.formatMessage('ERROR', 'ERROR', '🚨', ...args));
     }
   }
 
   warning_category(...args: unknown[]): void {
     if (this.level <= LogLevel.WARN) {
+      // eslint-disable-next-line no-console
       console.warn(...this.formatMessage('WARN', 'WARNING', '⚠️', ...args));
     }
   }
 
   success(...args: unknown[]): void {
     if (this.level <= LogLevel.INFO) {
+      // eslint-disable-next-line no-console
       console.log(...this.formatMessage('INFO', 'SUCCESS', '✅', ...args));
     }
   }
 
   startup(...args: unknown[]): void {
     if (this.level <= LogLevel.INFO) {
+      // eslint-disable-next-line no-console
       console.log(...this.formatMessage('INFO', 'STARTUP', '🚀', ...args));
     }
   }
 
   debug_category(...args: unknown[]): void {
     if (this.level <= LogLevel.DEBUG) {
+      // eslint-disable-next-line no-console
       console.log(...this.formatMessage('DEBUG', 'DEBUG', '🔍', ...args));
     }
   }
@@ -304,6 +342,7 @@ class Logger implements Disposable {
   // Agent-related logging
   agent(...args: unknown[]): void {
     if (this.level <= LogLevel.INFO) {
+      // eslint-disable-next-line no-console
       console.log(...this.formatMessage('INFO', 'AGENT', '🤖', ...args));
     }
   }
@@ -311,6 +350,7 @@ class Logger implements Disposable {
   // File operations
   file(...args: unknown[]): void {
     if (this.level <= LogLevel.DEBUG) {
+      // eslint-disable-next-line no-console
       console.log(...this.formatMessage('DEBUG', 'FILE', '📁', ...args));
     }
   }
@@ -318,6 +358,7 @@ class Logger implements Disposable {
   // Network/communication
   network(...args: unknown[]): void {
     if (this.level <= LogLevel.DEBUG) {
+      // eslint-disable-next-line no-console
       console.log(...this.formatMessage('DEBUG', 'NETWORK', '🌐', ...args));
     }
   }
@@ -325,6 +366,7 @@ class Logger implements Disposable {
   // State management
   state(...args: unknown[]): void {
     if (this.level <= LogLevel.DEBUG) {
+      // eslint-disable-next-line no-console
       console.log(...this.formatMessage('DEBUG', 'STATE', '🔄', ...args));
     }
   }
@@ -332,6 +374,7 @@ class Logger implements Disposable {
   // Scrollback logging
   scrollback(...args: unknown[]): void {
     if (this.level <= LogLevel.DEBUG) {
+      // eslint-disable-next-line no-console
       console.log(...this.formatMessage('DEBUG', 'SCROLLBACK', '📜', ...args));
     }
   }

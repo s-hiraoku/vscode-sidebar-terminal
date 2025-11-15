@@ -8,6 +8,7 @@
 import type { DIContainer } from './DIContainer';
 import { ServiceLifetime } from './DIContainer';
 import type { EventBus } from './EventBus';
+import { error as logError } from '../utils/logger';
 import { BufferManagementService } from '../services/buffer/BufferManagementService';
 import { IBufferManagementService } from '../services/buffer/IBufferManagementService';
 import { TerminalStateService } from '../services/state/TerminalStateService';
@@ -102,8 +103,8 @@ export async function registerPhase3Plugins(
     return { pluginManager, configService };
   } catch (error) {
     // 🔧 FIX: Log detailed error information for plugin registration failures
-    console.error('[PLUGIN-REGISTRATION] Failed to register Phase 3 plugins:', error);
-    console.error('[PLUGIN-REGISTRATION] Error details:', {
+    logError('[PLUGIN-REGISTRATION] Failed to register Phase 3 plugins:', error);
+    logError('[PLUGIN-REGISTRATION] Error details:', {
       message: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
     });

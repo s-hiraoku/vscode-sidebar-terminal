@@ -19,6 +19,7 @@
  */
 
 import * as vscode from 'vscode';
+import { error as logError } from '../utils/logger';
 
 /**
  * Event type identifier with associated data type
@@ -295,7 +296,7 @@ export class EventBus implements vscode.Disposable {
 
   private _handleHandlerError<T>(event: Event<T>, error: Error): void {
     // Log error but don't prevent other handlers from running
-    console.error(`Error in event handler for ${event.type.name}:`, error);
+    logError(`Error in event handler for ${event.type.name}:`, error);
 
     // Add error to history for debugging
     const historyEntry = this._eventHistory.find((entry) => entry.event.id === event.id);

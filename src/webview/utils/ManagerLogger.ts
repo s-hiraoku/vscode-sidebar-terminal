@@ -179,6 +179,7 @@ export class ManagerLogger {
     } catch (error) {
       // Fallback to base logger if formatting fails
       baseLog(`❌ ManagerLogger error for ${this.managerName}: ${message}`);
+      // eslint-disable-next-line no-console
       console.error('ManagerLogger error:', error);
     }
   }

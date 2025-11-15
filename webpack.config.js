@@ -8,7 +8,7 @@ const TerserPlugin = require('terser-webpack-plugin');
 /** @type {import('webpack').Configuration} */
 const extensionConfig = {
   target: 'node',
-  mode: 'production',
+  mode: process.env.NODE_ENV === 'production' ? 'production' : 'none',
 
   entry: './src/extension.ts',
   resolve: {
@@ -51,21 +51,30 @@ const extensionConfig = {
     '@homebridge/node-pty-prebuilt-multiarch': 'commonjs @homebridge/node-pty-prebuilt-multiarch',
   },
   optimization: {
-    minimize: true,
-    minimizer: [
-      new TerserPlugin({
-        terserOptions: {
-          compress: {
-            drop_console: true,
-            drop_debugger: true,
+    minimize: process.env.NODE_ENV === 'production',
+    ...(process.env.NODE_ENV === 'production' && {
+      minimizer: [
+        new TerserPlugin({
+          terserOptions: {
+            compress: {
+              // Remove console.log, console.debug in production
+              pure_funcs: ['console.log', 'console.debug', 'console.info'],
+              // Keep console.error and console.warn for critical logging
+              drop_debugger: true,
+            },
+            mangle: {
+              // Keep class names for better debugging
+              keep_classnames: true,
+              keep_fnames: true,
+            },
+            format: {
+              comments: false,
+            },
           },
-          format: {
-            comments: false,
-          },
-        },
-        extractComments: false,
-      }),
-    ],
+          extractComments: false,
+        }),
+      ],
+    }),
   },
   devtool: 'nosources-source-map',
   performance: {
@@ -81,7 +90,7 @@ const extensionConfig = {
 /** @type {import('webpack').Configuration} */
 const webviewConfig = {
   target: 'web',
-  mode: 'production',
+  mode: process.env.NODE_ENV === 'production' ? 'production' : 'none',
 
   entry: './src/webview/main.ts',
   resolve: {
@@ -134,25 +143,34 @@ const webviewConfig = {
     filename: 'webview.js',
   },
   optimization: {
-    minimize: true,
-    minimizer: [
-      new TerserPlugin({
-        terserOptions: {
-          compress: {
-            drop_console: true,
-            drop_debugger: true,
+    minimize: process.env.NODE_ENV === 'production',
+    ...(process.env.NODE_ENV === 'production' && {
+      minimizer: [
+        new TerserPlugin({
+          terserOptions: {
+            compress: {
+              // Remove console.log, console.debug in production
+              pure_funcs: ['console.log', 'console.debug', 'console.info'],
+              // Keep console.error and console.warn for critical logging
+              drop_debugger: true,
+            },
+            mangle: {
+              // Keep class names for better debugging
+              keep_classnames: true,
+              keep_fnames: true,
+            },
+            format: {
+              comments: false,
+            },
           },
-          format: {
-            comments: false,
-          },
-        },
-        extractComments: false,
-      }),
-    ],
+          extractComments: false,
+        }),
+      ],
+    }),
   },
   plugins: [
     new webpack.DefinePlugin({
-      'process.env.NODE_ENV': JSON.stringify('production'),
+      'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production'),
     }),
     new webpack.ProvidePlugin({
       process: 'process/browser',
