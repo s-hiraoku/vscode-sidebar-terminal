@@ -43,6 +43,9 @@
     "eqeqeq": ["error", "always"],
     "no-throw-literal": "error",
     "semi": ["error", "always"],
+    "no-eval": "error",
+    "no-implied-eval": "error",
+    "no-new-func": "error",
     "no-restricted-properties": [
       "error",
       {
