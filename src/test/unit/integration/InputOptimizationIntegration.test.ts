@@ -67,8 +67,8 @@ describe('Input Optimization Integration', () => {
       }),
     } as any;
 
-    // Initialize managers
-    inputManager = new InputManager();
+    // Initialize managers (Issue #216: constructor injection)
+    inputManager = new InputManager(mockCoordinator);
     messageManager = new ConsolidatedMessageManager();
     performanceManager = new PerformanceManager();
     performanceManager.initialize();

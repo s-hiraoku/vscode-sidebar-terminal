@@ -743,6 +743,6 @@ export class TerminalTabList {
 
   public dispose(): void {
     this.tabs.clear();
-    this.container.innerHTML = '';
+    this.container.textContent = ''; // Safe: clearing content
   }
 }

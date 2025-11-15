@@ -167,7 +167,7 @@ export class ProfileSelector {
     );
 
     // Clear existing items
-    profileList.innerHTML = '';
+    profileList.textContent = ''; // Safe: clearing content
 
     // Add profile items
     filteredProfiles.forEach((profile, _index) => {
@@ -544,6 +544,6 @@ export class ProfileSelector {
   public dispose(): void {
     this._onProfileSelected = undefined;
     this._onClosed = undefined;
-    this._container.innerHTML = '';
+    this._container.textContent = ''; // Safe: clearing content
   }
 }

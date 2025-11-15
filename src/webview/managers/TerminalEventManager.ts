@@ -9,13 +9,17 @@
  * - Mouse and keyboard event coordination
  * - Event handler registration and cleanup
  *
+ * Extended BaseManager for consistent lifecycle management (Issue #216)
+ *
  * @see openspec/changes/refactor-terminal-foundation/specs/split-lifecycle-manager/spec.md
+ * @see docs/refactoring/issue-216-manager-standardization.md
  */
 
 import { Terminal } from '@xterm/xterm';
 import { IManagerCoordinator } from '../interfaces/ManagerInterfaces';
 import { EventHandlerRegistry } from '../utils/EventHandlerRegistry';
 import { terminalLogger } from '../utils/ManagerLogger';
+import { BaseManager } from './BaseManager';
 
 /**
  * Event handler callbacks for terminal container
@@ -29,14 +33,29 @@ export interface TerminalContainerCallbacks {
 
 /**
  * Service responsible for managing terminal events
+ * Uses constructor injection pattern for dependencies
  */
-export class TerminalEventManager {
+export class TerminalEventManager extends BaseManager {
   private readonly eventRegistry: EventHandlerRegistry;
   private readonly coordinator: IManagerCoordinator;
 
   constructor(coordinator: IManagerCoordinator, eventRegistry: EventHandlerRegistry) {
+    super('TerminalEventManager', {
+      enableLogging: false, // Use terminalLogger instead
+      enablePerformanceTracking: true,
+      enableErrorRecovery: true,
+    });
+
     this.coordinator = coordinator;
     this.eventRegistry = eventRegistry;
+  }
+
+  /**
+   * Initialize manager
+   */
+  protected doInitialize(): void {
+    this.logger('TerminalEventManager initialized');
+    terminalLogger.info('✅ TerminalEventManager ready');
   }
 
   /**
@@ -360,8 +379,10 @@ export class TerminalEventManager {
 
   /**
    * Cleanup and dispose
+   * Called by BaseManager.dispose() for cleanup
    */
-  public dispose(): void {
-    terminalLogger.info('TerminalEventManager disposed');
+  protected doDispose(): void {
+    terminalLogger.info('🧹 TerminalEventManager disposed');
+    // Event registry cleanup handled by caller
   }
 }
