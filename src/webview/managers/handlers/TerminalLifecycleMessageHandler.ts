@@ -145,10 +145,11 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
     const terminalName = msg.terminalName as string;
     const terminalNumber = msg.terminalNumber as number;
     const config = msg.config;
+    const isActive = (msg as any).terminal?.isActive ?? false;
 
     if (terminalId && terminalName && config) {
       this.logger.info(
-        `🔍 TERMINAL_CREATED message received: ${terminalId} (${terminalName}) #${terminalNumber || 'unknown'}`
+        `🔍 TERMINAL_CREATED message received: ${terminalId} (${terminalName}) #${terminalNumber || 'unknown'}${isActive ? ' [ACTIVE]' : ''}`
       );
       this.logger.info(
         `🔍 Current terminal count before creation: ${coordinator.getAllTerminalInstances().size}`
@@ -172,6 +173,7 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
         terminalName,
         terminalNumber,
         success: !!result,
+        isActive,
         existingTerminals: Array.from(coordinator.getAllTerminalInstances().keys()),
       });
 
@@ -179,6 +181,12 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
 
       if (result) {
         this.scheduleInitializationAck(terminalId, coordinator);
+
+        // 🎯 FIX: Activate terminal if Extension marked it as active
+        if (isActive) {
+          this.logger.info(`🎯 Activating terminal as requested by Extension: ${terminalId}`);
+          coordinator.setActiveTerminalId(terminalId);
+        }
       } else {
         this.logger.warn(
           `⚠️ [HANDSHAKE] Terminal ${terminalId} creation reported failure; skipping initialization ack`

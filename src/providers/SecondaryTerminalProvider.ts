@@ -16,6 +16,8 @@ import {
 } from '../types/type-guards';
 import { WebViewHtmlGenerationService } from '../services/webview/WebViewHtmlGenerationService';
 import { TelemetryService } from '../services/TelemetryService';
+import { getUnifiedConfigurationService } from '../config/UnifiedConfigurationService';
+import { ITerminalProfile } from '../types/profiles';
 
 // New refactored services (existing)
 import {
@@ -98,6 +100,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   private readonly _watchdogPhases = new Map<string, 'ack' | 'prompt'>();
   private readonly _terminalInitStartTimes = new Map<string, number>();
   private readonly _safeModeNotified = new Set<string>();
+  private readonly _pendingInitRetries = new Map<string, number>();
 
   private static readonly ACK_WATCHDOG_OPTIONS: WatchdogOptions = {
     initialDelayMs: 700,
@@ -343,6 +346,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       { command: TERMINAL_CONSTANTS?.COMMANDS?.CREATE_TERMINAL, handler: async (msg: WebviewMessage) => await this._handleCreateTerminal(msg), category: 'terminal' as const },
       { command: TERMINAL_CONSTANTS?.COMMANDS?.INPUT, handler: (msg: WebviewMessage) => this._handleTerminalInput(msg), category: 'terminal' as const },
       { command: TERMINAL_CONSTANTS?.COMMANDS?.RESIZE, handler: (msg: WebviewMessage) => this._handleTerminalResize(msg), category: 'terminal' as const },
+      { command: 'getTerminalProfiles', handler: async () => await this._handleGetTerminalProfiles(), category: 'terminal' as const },
       { command: 'killTerminal', handler: async (msg: WebviewMessage) => await this._handleKillTerminal(msg), category: 'terminal' as const },
       { command: 'deleteTerminal', handler: async (msg: WebviewMessage) => await this._handleDeleteTerminal(msg), category: 'terminal' as const },
       { command: 'updateSettings', handler: async (msg: WebviewMessage) => await this._handleUpdateSettings(msg), category: 'settings' as const },
@@ -357,6 +361,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       { command: 'persistenceClearSession', handler: async (msg: WebviewMessage) => await this._handlePersistenceMessage(msg), category: 'persistence' as const },
       { command: 'terminalSerializationRequest', handler: async (msg: WebviewMessage) => await this._handleLegacyPersistenceMessage(msg), category: 'persistence' as const },
       { command: 'terminalSerializationRestoreRequest', handler: async (msg: WebviewMessage) => await this._handleLegacyPersistenceMessage(msg), category: 'persistence' as const },
+      { command: 'pushScrollbackData', handler: async (msg: WebviewMessage) => await this._handlePushScrollbackData(msg), category: 'persistence' as const },
       { command: 'htmlScriptTest', handler: (msg: WebviewMessage) => this._handleHtmlScriptTest(msg), category: 'debug' as const },
       { command: 'timeoutTest', handler: (msg: WebviewMessage) => this._handleTimeoutTest(msg), category: 'debug' as const },
       { command: 'test', handler: (msg: WebviewMessage) => this._handleDebugTest(msg), category: 'debug' as const },
@@ -369,6 +374,74 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
   private async _handleOpenTerminalLink(message: WebviewMessage): Promise<void> {
     await this._linkResolver.handleOpenTerminalLink(message);
+  }
+
+  private async _handleGetTerminalProfiles(): Promise<void> {
+    try {
+      const configService = getUnifiedConfigurationService();
+      const profilesConfig = configService.getTerminalProfilesConfig();
+
+      const platform: 'windows' | 'linux' | 'osx' =
+        process.platform === 'win32'
+          ? 'windows'
+          : process.platform === 'darwin'
+            ? 'osx'
+            : 'linux';
+
+      const platformProfiles = profilesConfig.profiles[platform] || {};
+      const defaultProfileId = profilesConfig.defaultProfiles[platform];
+
+      const profiles: ITerminalProfile[] = Object.entries(platformProfiles).map(([id, profile]) => {
+        const normalized = profile as any;
+        return {
+          id,
+          name: normalized?.name ?? id,
+          description: normalized?.description,
+          icon: normalized?.icon,
+          path: normalized?.path ?? '',
+          args: normalized?.args,
+          env: normalized?.env,
+          cwd: normalized?.cwd,
+          color: normalized?.color,
+          isDefault: defaultProfileId ? defaultProfileId === id : Boolean(normalized?.isDefault),
+          hidden: normalized?.hidden,
+          source: normalized?.source,
+        } as ITerminalProfile;
+      });
+
+      await this._sendMessage({
+        command: 'profilesUpdated' as const,
+        profiles,
+        defaultProfileId: defaultProfileId ?? profiles.find((p) => p.isDefault)?.id ?? null,
+      } as WebviewMessage);
+    } catch (error) {
+      log('❌ [PROVIDER] Failed to fetch terminal profiles:', error);
+      await this._sendMessage({
+        command: 'profilesUpdated' as const,
+        profiles: [],
+        defaultProfileId: null,
+        error: (error as Error).message ?? String(error),
+      } as WebviewMessage);
+    }
+  }
+
+  private async _handlePushScrollbackData(message: WebviewMessage): Promise<void> {
+    if (!this._extensionPersistenceService) {
+      log('⚠️ [PROVIDER] Received pushScrollbackData but persistence service is unavailable');
+      return;
+    }
+
+    const handler = (this._extensionPersistenceService as any).handlePushedScrollbackData;
+    if (typeof handler !== 'function') {
+      log('⚠️ [PROVIDER] Persistence service does not support pushScrollbackData');
+      return;
+    }
+
+    try {
+      handler.call(this._extensionPersistenceService, message);
+    } catch (error) {
+      log('❌ [PROVIDER] Failed to process pushScrollbackData message:', error);
+    }
   }
 
   private async _handleReorderTerminals(message: WebviewMessage): Promise<void> {
@@ -571,7 +644,8 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     }
 
     const currentState = this._terminalInitStateMachine.getState(terminalId);
-    if (currentState >= TerminalInitializationState.ViewReady && !this._safeModeTerminals.has(terminalId)) {
+    const phase = this._watchdogPhases.get(terminalId);
+    if (phase === 'prompt' && currentState >= TerminalInitializationState.ViewReady && !this._safeModeTerminals.has(terminalId)) {
       log(`⏭️ [PROVIDER] Ignoring duplicate terminalInitializationComplete for ${terminalId}`);
       return;
     }
@@ -583,9 +657,23 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
     const terminal = this._terminalManager.getTerminal(terminalId);
     if (!terminal || !terminal.ptyProcess) {
-      log(`❌ [PROVIDER] Terminal ${terminalId} not found or PTY not available`);
+      const attempts = (this._pendingInitRetries.get(terminalId) ?? 0) + 1;
+      this._pendingInitRetries.set(terminalId, attempts);
+
+      if (attempts > 5) {
+        log(`❌ [PROVIDER] Terminal ${terminalId} still unavailable after ${attempts} retries`);
+        this._pendingInitRetries.delete(terminalId);
+        return;
+      }
+
+      log(
+        `⏳ [PROVIDER] Terminal ${terminalId} not ready (attempt=${attempts}). Retrying terminalInitializationComplete handler...`
+      );
+      setTimeout(() => this._handleTerminalInitializationComplete(message), 50 * attempts);
       return;
     }
+
+    this._pendingInitRetries.delete(terminalId);
 
     try {
       this._terminalInitStateMachine.markShellInitializing(terminalId, 'initializeShell');

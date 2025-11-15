@@ -1447,7 +1447,7 @@ export class ExtensionLifecycle {
       });
 
       // Track terminal focus
-      const terminalFocusedDisposable = this.terminalManager.onTerminalFocused((terminalId) => {
+      const terminalFocusedDisposable = this.terminalManager.onTerminalFocus((terminalId) => {
         this.telemetryService?.trackTerminalFocused(terminalId);
       });
 
