@@ -119,7 +119,7 @@ export class ResultError extends Error implements ErrorDetails {
   /**
    * Convert to a plain object for serialization
    */
-  toJSON(): ErrorDetails {
+  override toJSON(): ErrorDetails {
     return {
       code: this.code,
       message: this.message,
