@@ -690,6 +690,62 @@ npm run rollback:hotfix
 - **Performance**: Memory-efficient implementations with proper cleanup
 - **Release Safety**: Automated rollback system for production stability
 
+## 🔒 Privacy & Telemetry
+
+### Privacy-Respecting Telemetry
+
+Secondary Terminal implements **privacy-respecting telemetry** to help us improve the extension while protecting your data.
+
+#### What We Collect
+
+We collect **anonymous usage data** to understand:
+- Which features are most used
+- Where errors occur
+- Performance bottlenecks
+- Feature adoption rates
+
+**Examples of data collected:**
+- Extension activation time
+- Number of terminals created/deleted
+- CLI agent types detected (e.g., 'claude', 'gemini', 'copilot')
+- Command execution success/failure
+- Performance metrics (operation duration)
+
+#### What We DO NOT Collect
+
+We **never** collect:
+- ❌ Terminal content (commands you type)
+- ❌ Terminal output
+- ❌ File paths or file content
+- ❌ Working directory paths
+- ❌ Environment variables
+- ❌ Credentials or passwords
+- ❌ Personal identifiable information (PII)
+
+### Your Privacy Controls
+
+This extension **automatically respects** VS Code's telemetry settings.
+
+**To disable telemetry:**
+1. Open VS Code Settings (`Ctrl+,` or `Cmd+,`)
+2. Search for "telemetry"
+3. Set **"Telemetry: Telemetry Level"** to `"off"`
+
+Or add to your `settings.json`:
+```json
+{
+  "telemetry.telemetryLevel": "off"
+}
+```
+
+### Learn More
+
+For complete details about our privacy practices, see:
+- 📄 [Privacy Policy](PRIVACY.md) - Full privacy documentation
+- ✅ Complies with GDPR principles
+- 🔒 HTTPS encryption for all data transmission
+- 🎯 Minimal data collection approach
+
 ## 📝 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
