@@ -86,9 +86,8 @@ describe('DisplayModeManager - Fullscreen Display (Issue #198)', function () {
       splitManager: mockSplitManager,
     } as any;
 
-    // Create DisplayModeManager instance
-    displayManager = new DisplayModeManager();
-    displayManager.setCoordinator(mockCoordinator as any);
+    // Create DisplayModeManager instance with constructor injection (Issue #216)
+    displayManager = new DisplayModeManager(mockCoordinator as any);
     displayManager.initialize();
   });
 

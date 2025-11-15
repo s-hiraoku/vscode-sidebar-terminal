@@ -12,6 +12,10 @@
  * 連携:
  * - TerminalContainerManager: コンテナの表示制御
  * - SplitManager (ISplitLayoutController): 分割レイアウト制御
+ *
+ * Migrated to constructor injection pattern (Issue #216)
+ *
+ * @see docs/refactoring/issue-216-manager-standardization.md
  */
 
 import { BaseManager } from './BaseManager';
@@ -27,7 +31,6 @@ export type DisplayMode = 'normal' | 'fullscreen' | 'split';
  * Display Mode Manager Interface
  */
 export interface IDisplayModeManager {
-  setCoordinator(coordinator: IManagerCoordinator): void;
   initialize(): void;
 
   // モード切り替え
@@ -55,9 +58,10 @@ export interface IDisplayModeManager {
  * DisplayModeManager
  *
  * ターミナルの表示モードを一元管理
+ * Uses constructor injection for coordinator dependency (Issue #216)
  */
 export class DisplayModeManager extends BaseManager implements IDisplayModeManager {
-  private coordinator: IManagerCoordinator | null = null;
+  private readonly coordinator: IManagerCoordinator;
 
   // 現在の表示モード
   private currentMode: DisplayMode = 'normal';
@@ -71,20 +75,14 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
   // ターミナルの可視性マップ
   private terminalVisibility = new Map<string, boolean>();
 
-  constructor() {
+  constructor(coordinator: IManagerCoordinator) {
     super('DisplayModeManager', {
       enableLogging: true,
       enableValidation: true,
       enableErrorRecovery: true,
     });
-  }
 
-  /**
-   * コーディネーターを設定
-   */
-  public setCoordinator(coordinator: IManagerCoordinator): void {
     this.coordinator = coordinator;
-    this.log('Coordinator set');
   }
 
   /**

@@ -7,7 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Refactored - Issue #215: Persistence Layer Consolidation
+### Refactoring
+- **[Issue #216] Manager Pattern Standardization (Phase 1-5 Complete)**
+  - **Phase 1 - Foundation**:
+    - **BaseManager Enhancement**: Explicitly implements `IDisposable` interface for consistent resource cleanup
+    - **Documentation**: Created comprehensive migration guide at `docs/refactoring/issue-216-manager-standardization.md`
+    - **ESLint Rules**: Added custom rules skeleton to enforce BaseManager pattern
+    - **Unit Tests**: Added `BaseManager.IDisposable.test.ts` to verify IDisposable implementation
+  - **Phase 2 - Example Migration**:
+    - **ScrollbackManager Migration**: Successfully migrated to extend BaseManager
+    - **Benefits Added**: Performance tracking, health monitoring, error recovery, consistent lifecycle
+    - **Unit Tests**: Added `ScrollbackManager.BaseManager.test.ts` with comprehensive integration tests
+    - **Real-World Example**: Documented complete migration pattern in guide
+  - **Phase 3 - Constructor Injection Managers**:
+    - **TerminalEventManager Migration**: Migrated to extend BaseManager (constructor injection already in place)
+    - **Pattern Validation**: Verified TerminalAddonManager as stateless utility (no migration needed)
+    - **Integration Tests**: Added `Phase3.Migrations.test.ts` with comprehensive pattern verification
+    - **Benefits Demonstrated**: Easy migration path for managers already using constructor injection
+    - **Documentation**: Added Phase 3 examples with before/after patterns
+    - **Note**: SimplePersistenceManager was removed in Issue #215 persistence consolidation
+  - **Phase 4 - Late-Binding Elimination**:
+    - **DisplayModeManager Migration**: Eliminated `setCoordinator()` pattern, moved to constructor injection
+    - **UIManager Verification**: Confirmed already extends BaseManager with no coordinator dependency
+    - **Interface Cleanup**: Removed `setCoordinator()` from `IDisplayModeManager` interface
+    - **Caller Updates**: Updated `LightweightTerminalWebviewManager` and all test files
+    - **Integration Tests**: Added `Phase4.Migrations.test.ts` with late-binding elimination verification
+    - **Key Improvement**: Single-step instantiation instead of two-step pattern
+    - **Type Safety**: Coordinator is now `readonly` and required, eliminating null checks
+  - **Phase 5 - Terminal Managers**:
+    - **TerminalContainerManager Migration**: Eliminated `setCoordinator()`, moved to constructor injection
+    - **TerminalLinkManager Migration**: Extended BaseManager (already had constructor injection)
+    - **Caller Updates**: Updated `LightweightTerminalWebviewManager` and all test files for both managers
+    - **Integration Tests**: Added `Phase5.Migrations.test.ts` with comprehensive pattern verification
+    - **Key Achievement**: Demonstrated complex DOM-state managers can be cleanly migrated
+    - **Benefits**: No null checks for coordinator, explicit dependencies, full BaseManager capabilities
+    - **Documentation**: Added Phase 5 examples with terminal manager migration patterns
+  - **Pattern Enforcement**: Foundation for constructor injection pattern to replace late-binding
+  - **Files**: `BaseManager.ts`, `ScrollbackManager.ts`, `TerminalEventManager.ts`, `DisplayModeManager.ts`, `TerminalContainerManager.ts`, `TerminalLinkManager.ts`, `LightweightTerminalWebviewManager.ts`, `.eslintrc.js`, `eslint-rules/`, `docs/refactoring/`, test files
+  - **Progress**: 7/38 managers migrated (18% complete)
+  - **Next Steps**: Phase 6 will migrate remaining service and utility managers, continue setCoordinator elimination
+
+- **[Issue #215] Persistence Layer Consolidation**
 
 **Major architectural refactoring** that consolidates 7 persistence implementations into 2 unified services, reducing codebase by ~4,932 lines (87% reduction).
 
