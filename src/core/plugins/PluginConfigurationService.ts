@@ -22,7 +22,7 @@ export interface PluginSystemConfig {
   codex: AgentPluginConfig;
 }
 
-export class PluginConfigurationService {
+export class PluginConfigurationService implements vscode.Disposable {
   private readonly _configSection = 'secondaryTerminal.plugins';
   private _disposables: vscode.Disposable[] = [];
 

@@ -64,7 +64,7 @@ export interface TerminalRestoreData {
 // Extension Persistence Service
 // ============================================================================
 
-export class ExtensionPersistenceService {
+export class ExtensionPersistenceService implements vscode.Disposable {
   private static readonly STORAGE_KEY = 'terminal-session-unified';
   private static readonly SESSION_VERSION = '4.0.0';
   private static readonly MAX_CONCURRENT_RESTORES = 3;
