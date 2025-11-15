@@ -59,6 +59,10 @@ export enum MessagePriority {
   BACKGROUND = 0, // Analytics, cleanup
 }
 
+interface Disposable {
+  dispose(): void;
+}
+
 /**
  * Unified Message Dispatcher
  *
@@ -69,7 +73,7 @@ export enum MessagePriority {
  * - Message validation and error handling
  * - Performance metrics and monitoring
  */
-export class UnifiedMessageDispatcher implements IManagerLifecycle {
+export class UnifiedMessageDispatcher implements IManagerLifecycle, Disposable {
   private readonly logger = messageLogger;
   private readonly handlers = new Map<string, IUnifiedMessageHandler[]>();
   private messageQueue!: MessageQueue;

@@ -81,6 +81,7 @@ const webviewConfig = {
           path.resolve(__dirname, 'src/types'),
           path.resolve(__dirname, 'src/shared'),
           path.resolve(__dirname, 'src/utils'),
+          path.resolve(__dirname, 'src/constants'),
         ],
         exclude: [
           path.resolve(__dirname, 'src/test'),

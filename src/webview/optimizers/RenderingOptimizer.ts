@@ -26,10 +26,14 @@ export interface DeviceType {
   smoothScrollDuration: number;
 }
 
+interface Disposable {
+  dispose(): void;
+}
+
 /**
  * Optimizes terminal rendering performance
  */
-export class RenderingOptimizer {
+export class RenderingOptimizer implements Disposable {
   private resizeObserver: ResizeObserver | null = null;
   private resizeTimer: number | null = null;
   private readonly options: Required<RenderingOptimizerOptions>;

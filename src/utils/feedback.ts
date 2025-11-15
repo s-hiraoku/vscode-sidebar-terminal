@@ -20,7 +20,7 @@ export interface FeedbackOptions {
   actions?: Array<{ title: string; action: () => void }>;
 }
 
-export class FeedbackManager {
+export class FeedbackManager implements vscode.Disposable {
   private static instance: FeedbackManager;
   private statusBarItem: vscode.StatusBarItem;
   private activeNotifications = new Map<string, vscode.Disposable>();

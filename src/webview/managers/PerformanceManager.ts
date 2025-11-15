@@ -1,5 +1,8 @@
 /**
  * Performance Manager - Handles output buffering, debouncing, and performance optimizations
+ *
+ * @see https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/226
+ * マジックナンバーをSystemConstantsから参照するように変更しました。
  */
 
 import { Terminal } from '@xterm/xterm';

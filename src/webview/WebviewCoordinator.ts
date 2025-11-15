@@ -3,6 +3,7 @@
  * Demonstrates the simplified architecture using extracted services
  */
 
+import * as vscode from 'vscode';
 import { ITerminalCoordinator, TerminalCoordinatorFactory } from './services/TerminalCoordinator';
 import { IUIController, UIControllerFactory } from './services/UIController';
 import { MessageRouter, MessageRouterFactory } from '../services/MessageRouter';
@@ -17,7 +18,7 @@ import { safeProcessCwd } from '../utils/common';
  * Simplified webview coordinator using service architecture
  * Replaces the complex terminal webview manager
  */
-export class WebviewCoordinator {
+export class WebviewCoordinator implements vscode.Disposable {
   private readonly terminalCoordinator: ITerminalCoordinator;
   private readonly uiController: IUIController;
   private readonly messageRouter: MessageRouter;
