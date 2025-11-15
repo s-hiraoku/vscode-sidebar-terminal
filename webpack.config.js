@@ -3,11 +3,12 @@
 
 const path = require('path');
 const webpack = require('webpack');
+const TerserPlugin = require('terser-webpack-plugin');
 
 /** @type {import('webpack').Configuration} */
 const extensionConfig = {
   target: 'node',
-  mode: 'none',
+  mode: 'production',
 
   entry: './src/extension.ts',
   resolve: {
@@ -49,7 +50,29 @@ const extensionConfig = {
     // Keep @homebridge/node-pty-prebuilt-multiarch as external since it's included in the package
     '@homebridge/node-pty-prebuilt-multiarch': 'commonjs @homebridge/node-pty-prebuilt-multiarch',
   },
+  optimization: {
+    minimize: true,
+    minimizer: [
+      new TerserPlugin({
+        terserOptions: {
+          compress: {
+            drop_console: true,
+            drop_debugger: true,
+          },
+          format: {
+            comments: false,
+          },
+        },
+        extractComments: false,
+      }),
+    ],
+  },
   devtool: 'nosources-source-map',
+  performance: {
+    maxEntrypointSize: 1024000, // 1MB
+    maxAssetSize: 1024000, // 1MB
+    hints: 'warning',
+  },
   infrastructureLogging: {
     level: 'log',
   },
@@ -58,7 +81,7 @@ const extensionConfig = {
 /** @type {import('webpack').Configuration} */
 const webviewConfig = {
   target: 'web',
-  mode: 'none',
+  mode: 'production',
 
   entry: './src/webview/main.ts',
   resolve: {
@@ -111,7 +134,21 @@ const webviewConfig = {
     filename: 'webview.js',
   },
   optimization: {
-    minimize: false,
+    minimize: true,
+    minimizer: [
+      new TerserPlugin({
+        terserOptions: {
+          compress: {
+            drop_console: true,
+            drop_debugger: true,
+          },
+          format: {
+            comments: false,
+          },
+        },
+        extractComments: false,
+      }),
+    ],
   },
   plugins: [
     new webpack.DefinePlugin({
@@ -122,6 +159,11 @@ const webviewConfig = {
     }),
   ],
   devtool: 'nosources-source-map',
+  performance: {
+    maxEntrypointSize: 819200, // 800KB
+    maxAssetSize: 819200, // 800KB
+    hints: 'warning',
+  },
 };
 
 module.exports = [extensionConfig, webviewConfig];
