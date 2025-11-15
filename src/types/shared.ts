@@ -512,6 +512,7 @@ export interface WebviewMessage {
     | 'input'
     | 'resize'
     | 'output'
+    | 'startOutput'
     | 'clear'
     | 'exit'
     | 'split'
@@ -1112,4 +1113,3 @@ export interface CliAgentStatusUpdateOptions {
 export function isBaseTerminalConfig(obj: unknown): obj is BaseTerminalConfig {
   return typeof obj === 'object' && obj !== null;
 }
-

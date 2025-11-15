@@ -166,7 +166,8 @@ export class ExtensionLifecycle {
       this.sidebarProvider = new SecondaryTerminalProvider(
         context,
         this.terminalManager,
-        this.extensionPersistenceService
+        this.extensionPersistenceService,
+        this.telemetryService
       );
 
       // Set sidebar provider for ExtensionPersistenceService

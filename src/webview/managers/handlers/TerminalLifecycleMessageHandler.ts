@@ -11,6 +11,13 @@ import { MessageQueue } from '../../utils/MessageQueue';
 import { ManagerLogger } from '../../utils/ManagerLogger';
 import { hasProperty } from '../../../types/type-guards';
 
+interface AckTracker {
+  attempt: number;
+  acked: boolean;
+  delay: number;
+  timer?: ReturnType<typeof setTimeout>;
+}
+
 /**
  * Terminal Lifecycle Message Handler
  *
@@ -22,6 +29,10 @@ import { hasProperty } from '../../../types/type-guards';
  * - Terminal deletion response handling
  */
 export class TerminalLifecycleMessageHandler implements IMessageHandler {
+  private readonly outputGates = new Map<string, { enabled: boolean; buffer: string[] }>();
+  private readonly initAckTrackers = new Map<string, AckTracker>();
+  private static readonly ACK_INITIAL_DELAY_MS = 200;
+  private static readonly ACK_MAX_ATTEMPTS = 4;
   constructor(
     private readonly messageQueue: MessageQueue,
     private readonly logger: ManagerLogger
@@ -68,6 +79,9 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
       case 'output':
         this.handleOutput(msg, coordinator);
         break;
+      case 'startOutput':
+        this.handleStartOutput(msg, coordinator);
+        break;
       default:
         this.logger.warn(`Unknown terminal lifecycle command: ${command}`);
     }
@@ -87,6 +101,7 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
       'setActiveTerminal',
       'deleteTerminalResponse',
       'output',
+      'startOutput',
     ];
   }
 
@@ -159,6 +174,16 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
         success: !!result,
         existingTerminals: Array.from(coordinator.getAllTerminalInstances().keys()),
       });
+
+      this.outputGates.set(terminalId, { enabled: false, buffer: [] });
+
+      if (result) {
+        this.scheduleInitializationAck(terminalId, coordinator);
+      } else {
+        this.logger.warn(
+          `⚠️ [HANDSHAKE] Terminal ${terminalId} creation reported failure; skipping initialization ack`
+        );
+      }
     } else {
       this.logger.error('Invalid terminalCreated message', {
         hasTerminalId: !!terminalId,
@@ -210,6 +235,8 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
     if (terminalId) {
       this.logger.info(`Terminal removed from extension: ${terminalId}`);
       this.handleTerminalRemovedFromExtension(terminalId, coordinator);
+      this.outputGates.delete(terminalId);
+      this.clearAckTracker(terminalId);
     }
   }
 
@@ -361,7 +388,142 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
       return;
     }
 
-    // Validate terminal exists before processing output
+    const gate = this.ensureOutputGate(terminalId);
+    if (!gate.enabled) {
+      gate.buffer.push(data);
+      this.logger.info(
+        `⏸️ [OUTPUT-GATE] Buffering output for ${terminalId} (chunks=${gate.buffer.length}, length=${data.length})`
+      );
+      return;
+    }
+
+    this.writeOutputToTerminal(terminalId, data, coordinator);
+  }
+
+  private handleStartOutput(msg: MessageCommand, coordinator: IManagerCoordinator): void {
+    const terminalId = msg.terminalId as string;
+    if (!terminalId) {
+      this.logger.warn('startOutput message missing terminalId');
+      return;
+    }
+
+    this.markAckReceived(terminalId);
+
+    const gate = this.ensureOutputGate(terminalId);
+    if (gate.enabled) {
+      this.logger.info(`⏭️ [OUTPUT-GATE] startOutput already processed for ${terminalId}`);
+      return;
+    }
+
+    gate.enabled = true;
+    this.logger.info(
+      `▶️ [OUTPUT-GATE] Output enabled for ${terminalId}, flushing ${gate.buffer.length} buffered chunks`
+    );
+
+    while (gate.buffer.length > 0) {
+      const chunk = gate.buffer.shift();
+      if (chunk) {
+        this.writeOutputToTerminal(terminalId, chunk, coordinator);
+      }
+    }
+  }
+
+  private scheduleInitializationAck(terminalId: string, coordinator: IManagerCoordinator): void {
+    this.clearAckTracker(terminalId);
+
+    const tracker: AckTracker = {
+      attempt: 0,
+      acked: false,
+      delay: TerminalLifecycleMessageHandler.ACK_INITIAL_DELAY_MS,
+    };
+
+    this.initAckTrackers.set(terminalId, tracker);
+    this.dispatchInitializationComplete(terminalId, coordinator, tracker);
+  }
+
+  private dispatchInitializationComplete(
+    terminalId: string,
+    coordinator: IManagerCoordinator,
+    tracker: AckTracker
+  ): void {
+    tracker.attempt += 1;
+    this.logger.info(
+      `📡 [HANDSHAKE] Sending terminalInitializationComplete for ${terminalId} (attempt #${tracker.attempt})`
+    );
+
+    coordinator.postMessageToExtension({
+      command: 'terminalInitializationComplete',
+      terminalId,
+      timestamp: Date.now(),
+      attempt: tracker.attempt,
+    });
+
+    tracker.timer = setTimeout(() => {
+      if (tracker.acked) {
+        return;
+      }
+
+      if (tracker.attempt >= TerminalLifecycleMessageHandler.ACK_MAX_ATTEMPTS) {
+        this.logger.error(
+          `❌ [HANDSHAKE] startOutput ack not received for ${terminalId} after ${tracker.attempt} attempts`
+        );
+        this.initAckTrackers.delete(terminalId);
+        return;
+      }
+
+      tracker.delay *= 2;
+      this.logger.warn(
+        `⏳ [HANDSHAKE] No startOutput ack yet for ${terminalId}. Retrying in ${tracker.delay}ms`
+      );
+      this.dispatchInitializationComplete(terminalId, coordinator, tracker);
+    }, tracker.delay);
+  }
+
+  private markAckReceived(terminalId: string): void {
+    const tracker = this.initAckTrackers.get(terminalId);
+    if (!tracker) {
+      this.logger.info(`📨 [HANDSHAKE] startOutput ack received for ${terminalId} (no tracker)`);
+      return;
+    }
+
+    tracker.acked = true;
+    if (tracker.timer) {
+      clearTimeout(tracker.timer);
+      tracker.timer = undefined;
+    }
+
+    this.logger.info(
+      `📨 [HANDSHAKE] startOutput ack received for ${terminalId} (attempt #${tracker.attempt})`
+    );
+    this.initAckTrackers.delete(terminalId);
+  }
+
+  private clearAckTracker(terminalId: string): void {
+    const tracker = this.initAckTrackers.get(terminalId);
+    if (!tracker) {
+      return;
+    }
+
+    if (tracker.timer) {
+      clearTimeout(tracker.timer);
+    }
+    this.initAckTrackers.delete(terminalId);
+  }
+
+  private ensureOutputGate(terminalId: string): { enabled: boolean; buffer: string[] } {
+    let gate = this.outputGates.get(terminalId);
+    if (!gate) {
+      gate = { enabled: false, buffer: [] };
+      this.outputGates.set(terminalId, gate);
+    }
+    return gate;
+  }
+
+  private writeOutputToTerminal(
+    terminalId: string,
+    data: string,
+    coordinator: IManagerCoordinator
+  ): void {
     const terminal = coordinator.getTerminalInstance(terminalId);
     if (!terminal) {
       this.logger.error(`Output for non-existent terminal: ${terminalId}`, {
@@ -370,8 +532,6 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
       return;
     }
 
-
-    // Log significant CLI agent patterns for optimization
     if (
       data.length > 2000 &&
       (data.includes('Gemini') || data.includes('gemini') || data.includes('Claude'))
@@ -386,7 +546,6 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
     }
 
     try {
-      // Use PerformanceManager for buffered write with scroll preservation
       const managers = coordinator.getManagers();
       if (managers && managers.performance) {
         managers.performance.bufferedWrite(data, terminal.terminal, terminalId);
@@ -394,7 +553,6 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
           `Output buffered via PerformanceManager for ${terminal.name}: ${data.length} chars`
         );
       } else {
-        // Fallback to direct write if performance manager is not available
         terminal.terminal.write(data);
         this.logger.debug(`Output written directly to ${terminal.name}: ${data.length} chars`);
       }
@@ -424,6 +582,6 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
    * Clean up resources
    */
   public dispose(): void {
-    // No resources to clean up
+    this.outputGates.clear();
   }
 }

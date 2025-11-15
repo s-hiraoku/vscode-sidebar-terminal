@@ -11,6 +11,7 @@ export const SHARED_TERMINAL_COMMANDS = {
   INIT: 'init',
   INPUT: 'input',
   OUTPUT: 'output',
+  START_OUTPUT: 'startOutput',
   RESIZE: 'resize',
   CLEAR: 'clear',
   EXIT: 'exit',

@@ -357,15 +357,6 @@ export class TerminalCreationService implements Disposable {
         const elapsed = performanceMonitor.endTimer(`terminal-creation-attempt-${terminalId}-${currentRetry}`);
         terminalLogger.info(`✅ Terminal creation completed: ${terminalId} in ${elapsed}ms`);
 
-        // Notify Extension that WebView terminal initialization is complete
-        setTimeout(() => {
-          this.coordinator.postMessageToExtension({
-            command: 'terminalInitializationComplete',
-            terminalId: terminalId,
-            timestamp: Date.now(),
-          });
-        }, 50);
-
         // Resume ResizeObservers after terminal creation
         setTimeout(() => {
           ResizeManager.resumeObservers();

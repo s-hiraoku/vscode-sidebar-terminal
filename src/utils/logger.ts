@@ -31,12 +31,12 @@ class Logger implements Disposable {
     if (isWebViewEnvironment) {
       // WebView environment - use conservative logging in production
       this.isDevelopment = this.detectWebViewDevMode();
-      this.level = this.isDevelopment ? LogLevel.INFO : LogLevel.WARN;
+      this.level = this.isDevelopment ? LogLevel.WARN : LogLevel.ERROR;
     } else {
       // Extension environment
       this.isDevelopment =
         process.env.NODE_ENV === 'development' || process.env.VSCODE_DEBUG_MODE === 'true';
-      this.level = this.isDevelopment ? LogLevel.DEBUG : LogLevel.ERROR;
+      this.level = this.isDevelopment ? LogLevel.WARN : LogLevel.ERROR;
     }
 
     this.isProduction = !this.isDevelopment;

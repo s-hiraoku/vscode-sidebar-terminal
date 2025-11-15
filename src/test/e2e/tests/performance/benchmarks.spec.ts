@@ -4,7 +4,7 @@ import {
   TerminalLifecycleHelper,
   WebViewInteractionHelper,
 } from '../../helpers';
-import { TEST_TIMEOUTS, TERMINAL_CONSTANTS } from '../../config/test-constants';
+import { TERMINAL_CONSTANTS } from '../../config/test-constants';
 
 /**
  * Performance Benchmark Tests

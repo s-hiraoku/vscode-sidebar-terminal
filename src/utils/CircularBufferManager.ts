@@ -75,7 +75,10 @@ export class CircularBufferManager {
    */
   public bufferData(terminalId: string, data: string): void {
     if (!terminalId || typeof terminalId !== 'string') {
-      console.error('🚨 [CircularBufferManager] Invalid terminalId:', terminalId);
+      // Only log critical errors
+      if (this.options.debug) {
+        console.error('🚨 [CircularBufferManager] Invalid terminalId:', terminalId);
+      }
       return;
     }
 

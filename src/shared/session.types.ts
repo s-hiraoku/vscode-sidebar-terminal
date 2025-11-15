@@ -352,10 +352,12 @@ export class SessionDataTransformer {
       // Update version to current
       sessionData.version = '0.1.137';
 
-      // Log migration details
-      console.log(
-        `[SESSION-MIGRATION] ${message} (${sessionData.terminals.length} terminals)`
-      );
+      // Log migration details only in development mode
+      if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'development') {
+        console.log(
+          `[SESSION-MIGRATION] ${message} (${sessionData.terminals.length} terminals)`
+        );
+      }
     }
 
     return {

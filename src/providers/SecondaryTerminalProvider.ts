@@ -15,6 +15,7 @@ import {
   hasDirection,
 } from '../types/type-guards';
 import { WebViewHtmlGenerationService } from '../services/webview/WebViewHtmlGenerationService';
+import { TelemetryService } from '../services/TelemetryService';
 
 // New refactored services (existing)
 import {
@@ -38,7 +39,6 @@ import {
   TerminalInitializationWatchdog,
   WatchdogOptions,
 } from './services/TerminalInitializationWatchdog';
-import type { TerminalInstance } from '../types/shared';
 
 export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vscode.Disposable {
   public static readonly viewType = 'secondaryTerminal';
@@ -84,6 +84,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   private readonly _lifecycleManager: WebViewLifecycleManager;
   private readonly _messageRouter: MessageRoutingFacade;
   private readonly _orchestrator: InitializationOrchestrator;
+  private readonly _telemetryService?: TelemetryService;
   private readonly _terminalInitStateMachine = new TerminalInitializationStateMachine();
   private readonly _terminalInitWatchdog = new TerminalInitializationWatchdog((terminalId, info) =>
     this._handleInitializationTimeout(terminalId, info.attempt, info.isFinalAttempt)
@@ -92,6 +93,8 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   private readonly _safeModeTerminals = new Set<string>();
   private readonly _recordedInitMetrics = new Set<string>();
   private readonly _watchdogPhases = new Map<string, 'ack' | 'prompt'>();
+  private readonly _terminalInitStartTimes = new Map<string, number>();
+  private readonly _safeModeNotified = new Set<string>();
 
   private static readonly ACK_WATCHDOG_OPTIONS: WatchdogOptions = {
     initialDelayMs: 700,
@@ -101,16 +104,18 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
   private static readonly PROMPT_WATCHDOG_OPTIONS: WatchdogOptions = {
     initialDelayMs: 1000,
-    maxAttempts: 2,
-    backoffFactor: 1.5,
+    maxAttempts: 1,
+    backoffFactor: 1,
   };
 
   constructor(
     private readonly _extensionContext: vscode.ExtensionContext,
     private readonly _terminalManager: TerminalManager,
-    private readonly _extensionPersistenceService?: import('../services/persistence/ExtensionPersistenceService').ExtensionPersistenceService
+    private readonly _extensionPersistenceService?: import('../services/persistence/ExtensionPersistenceService').ExtensionPersistenceService,
+    telemetryService?: TelemetryService
   ) {
     this._htmlGenerationService = new WebViewHtmlGenerationService();
+    this._telemetryService = telemetryService;
 
     // Initialize existing refactored services
     this._communicationService = new WebViewCommunicationService();
@@ -563,8 +568,9 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     }
 
     log(`✅ [PROVIDER] Terminal ${terminalId} initialization confirmed by WebView`);
-    this._terminalInitWatchdog.stop(terminalId, 'webviewAck');
+    this._stopWatchdogForTerminal(terminalId, 'webviewAck');
     this._terminalInitStateMachine.markViewReady(terminalId, 'webviewAck');
+    this._startWatchdogForTerminal(terminalId, 'prompt', 'awaitPrompt');
 
     const terminal = this._terminalManager.getTerminal(terminalId);
     if (!terminal || !terminal.ptyProcess) {
@@ -579,7 +585,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     } catch (error) {
       log(`❌ [PROVIDER] Shell initialization failed for ${terminalId}:`, error);
       this._terminalInitStateMachine.markFailed(terminalId, 'initializeShell');
-      this._startWatchdogForTerminal(terminalId, 'shellInitRetry');
+      this._startWatchdogForTerminal(terminalId, 'prompt', 'shellInitRetry');
       return;
     }
 
@@ -589,7 +595,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     } catch (error) {
       log(`❌ [PROVIDER] PTY output start failed for ${terminalId}:`, error);
       this._terminalInitStateMachine.markFailed(terminalId, 'startPtyOutput');
-      this._startWatchdogForTerminal(terminalId, 'ptyRetry');
+      this._startWatchdogForTerminal(terminalId, 'prompt', 'ptyRetry');
       return;
     }
 
@@ -600,6 +606,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     });
     this._eventCoordinator?.flushBufferedOutput(terminalId);
     this._terminalInitStateMachine.markPromptReady(terminalId, 'startOutput');
+    this._stopWatchdogForTerminal(terminalId, 'promptReady');
     this._safeModeTerminals.delete(terminalId);
     this._recordInitializationMetric('success', terminalId);
   }
@@ -1197,21 +1204,24 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
           return;
         }
 
+        this._terminalInitStartTimes.set(terminal.id, Date.now());
         this._terminalInitStateMachine.markViewPending(terminal.id, 'terminalCreated');
         this._terminalInitStateMachine.markPtySpawned(terminal.id, 'terminalCreated');
 
         if (this._isInitialized) {
-          this._startWatchdogForTerminal(terminal.id, 'terminalCreated');
+          this._startWatchdogForTerminal(terminal.id, 'ack', 'terminalCreated');
         } else {
           this._pendingWatchdogTerminals.add(terminal.id);
         }
       });
 
       const removedDisposable = this._terminalManager.onTerminalRemoved((terminalId) => {
-        this._terminalInitWatchdog.stop(terminalId, 'terminalRemoved');
+        this._stopWatchdogForTerminal(terminalId, 'terminalRemoved');
         this._terminalInitStateMachine.reset(terminalId);
         this._pendingWatchdogTerminals.delete(terminalId);
         this._safeModeTerminals.delete(terminalId);
+        this._safeModeNotified.delete(terminalId);
+        this._terminalInitStartTimes.delete(terminalId);
         this._recordedInitMetrics.delete(`${terminalId}:success`);
         this._recordedInitMetrics.delete(`${terminalId}:timeout`);
       });
@@ -1225,8 +1235,9 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
           continue;
         }
 
+        this._terminalInitStartTimes.set(terminal.id, Date.now());
         if (this._isInitialized) {
-          this._startWatchdogForTerminal(terminal.id, 'existingTerminal');
+          this._startWatchdogForTerminal(terminal.id, 'ack', 'existingTerminal');
         } else {
           this._pendingWatchdogTerminals.add(terminal.id);
         }
@@ -1236,9 +1247,27 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     }
   }
 
-  private _startWatchdogForTerminal(terminalId: string, source: string): void {
-    this._terminalInitWatchdog.start(terminalId);
-    log(`⏳ [WATCHDOG] Started for ${terminalId} (source=${source})`);
+  private _startWatchdogForTerminal(
+    terminalId: string,
+    phase: 'ack' | 'prompt',
+    source: string,
+    overrideOptions?: Partial<WatchdogOptions>
+  ): void {
+    const baseOptions =
+      phase === 'prompt'
+        ? SecondaryTerminalProvider.PROMPT_WATCHDOG_OPTIONS
+        : SecondaryTerminalProvider.ACK_WATCHDOG_OPTIONS;
+    this._watchdogPhases.set(terminalId, phase);
+    this._terminalInitWatchdog.start(terminalId, `${phase}:${source}`, {
+      ...baseOptions,
+      ...overrideOptions,
+    });
+    log(`⏳ [WATCHDOG] Started for ${terminalId} (phase=${phase}, source=${source})`);
+  }
+
+  private _stopWatchdogForTerminal(terminalId: string, reason: string): void {
+    this._terminalInitWatchdog.stop(terminalId, reason);
+    this._watchdogPhases.delete(terminalId);
   }
 
   private _startPendingWatchdogs(): void {
@@ -1247,7 +1276,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     }
 
     for (const terminalId of Array.from(this._pendingWatchdogTerminals.values())) {
-      this._startWatchdogForTerminal(terminalId, 'pendingQueue');
+      this._startWatchdogForTerminal(terminalId, 'ack', 'pendingQueue');
       this._pendingWatchdogTerminals.delete(terminalId);
     }
   }
@@ -1258,62 +1287,45 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     isFinalAttempt: boolean
   ): void {
     const terminal = this._terminalManager.getTerminal(terminalId);
+    const phase = this._watchdogPhases.get(terminalId) ?? 'ack';
     if (!terminal || !terminal.ptyProcess) {
-      this._terminalInitWatchdog.stop(terminalId, 'terminalMissing');
+      this._stopWatchdogForTerminal(terminalId, 'terminalMissing');
       return;
     }
 
     log(
-      `⚠️ [WATCHDOG] Terminal ${terminalId} init timeout (attempt=${attempt}, final=${isFinalAttempt})`
+      `⚠️ [WATCHDOG] Terminal ${terminalId} init timeout (phase=${phase}, attempt=${attempt}, final=${isFinalAttempt})`
     );
 
-    const retried = this._attemptStandardInitializationRetry(terminalId, terminal);
-    if (!isFinalAttempt) {
-      this._startWatchdogForTerminal(terminalId, retried ? 'retry' : 'retry-noop');
+    if (phase === 'ack') {
+      if (isFinalAttempt) {
+        this._stopWatchdogForTerminal(terminalId, 'ackTimeout');
+        this._recordInitializationMetric('timeout', terminalId);
+        void this._notifyInitializationFailure(terminalId);
+      }
       return;
     }
 
     if (!this._safeModeTerminals.has(terminalId)) {
       this._safeModeTerminals.add(terminalId);
       log(`⚠️ Prompt timeout -> safe mode for ${terminalId}`);
+      this._notifySafeMode(terminalId);
       try {
         this._terminalManager.initializeShellForTerminal(terminalId, terminal.ptyProcess, true);
-        this._startWatchdogForTerminal(terminalId, 'safeMode');
+        this._startWatchdogForTerminal(terminalId, 'prompt', 'safeModeMonitor');
         return;
       } catch (error) {
         log(`❌ [FALLBACK] Safe mode initialization failed for ${terminalId}:`, error);
       }
     }
 
-    this._terminalInitWatchdog.stop(terminalId, 'safeModeFailed');
+    if (!isFinalAttempt) {
+      return;
+    }
+
+    this._stopWatchdogForTerminal(terminalId, 'safeModeFailed');
+    this._recordInitializationMetric('timeout', terminalId);
     void this._notifyInitializationFailure(terminalId);
-  }
-
-  private _attemptStandardInitializationRetry(
-    terminalId: string,
-    terminal: TerminalInstance
-  ): boolean {
-    let retried = false;
-
-    if (!this._terminalManager.isShellInitialized(terminalId)) {
-      try {
-        this._terminalManager.initializeShellForTerminal(terminalId, terminal.ptyProcess, false);
-        retried = true;
-      } catch (error) {
-        log(`❌ [FALLBACK] Shell initialization retry failed for ${terminalId}:`, error);
-      }
-    }
-
-    if (!this._terminalManager.isPtyOutputStarted(terminalId)) {
-      try {
-        this._terminalManager.startPtyOutput(terminalId);
-        retried = true;
-      } catch (error) {
-        log(`❌ [FALLBACK] PTY output retry failed for ${terminalId}:`, error);
-      }
-    }
-
-    return retried;
   }
 
   private _recordInitializationMetric(metric: 'success' | 'timeout', terminalId: string): void {
@@ -1323,13 +1335,37 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     }
 
     this._recordedInitMetrics.add(key);
-    log(`📊 [METRIC] terminal.init.${metric} (terminal=${terminalId})`);
+    const startTime = this._terminalInitStartTimes.get(terminalId);
+    const duration = startTime ? Date.now() - startTime : 0;
+    this._terminalInitStartTimes.delete(terminalId);
+    this._safeModeNotified.delete(terminalId);
+
+    log(`📊 [METRIC] terminal.init.${metric} (terminal=${terminalId}, duration=${duration}ms)`);
+    this._telemetryService?.trackPerformance({
+      operation: 'terminal.init',
+      duration,
+      success: metric === 'success',
+      metadata: {
+        result: metric,
+      },
+    });
   }
 
   private async _notifyInitializationFailure(terminalId: string): Promise<void> {
     this._recordInitializationMetric('timeout', terminalId);
     await vscode.window.showErrorMessage(
       'Sidebar Terminal failed to initialize its shell. Close the terminal and create a new one.'
+    );
+  }
+
+  private _notifySafeMode(terminalId: string): void {
+    if (this._safeModeNotified.has(terminalId)) {
+      return;
+    }
+
+    this._safeModeNotified.add(terminalId);
+    void vscode.window.showWarningMessage(
+      'Sidebar Terminal prompt is taking longer than expected. Retrying in safe mode...'
     );
   }
 

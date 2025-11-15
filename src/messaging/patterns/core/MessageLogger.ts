@@ -78,7 +78,7 @@ export class MessageLogger {
 
   constructor(config: Partial<ILoggerConfig> = {}) {
     this.config = {
-      minLevel: config.minLevel ?? LogLevel.INFO,
+      minLevel: config.minLevel ?? LogLevel.WARN,
       includeTimestamp: config.includeTimestamp ?? true,
       includeSource: config.includeSource ?? true,
       maxHistorySize: config.maxHistorySize ?? 1000,

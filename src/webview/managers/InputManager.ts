@@ -684,31 +684,24 @@ export class InputManager extends BaseManager implements IInputManager {
    */
   private handleTerminalCopy(manager: IManagerCoordinator): void {
     const activeTerminalId = manager.getActiveTerminalId();
-    console.log('[CLIPBOARD] Copy: activeTerminalId =', activeTerminalId);
     if (!activeTerminalId) {
-      console.log('[CLIPBOARD] Copy: No active terminal');
       return;
     }
 
     const terminalInstance = manager.getTerminalInstance(activeTerminalId);
-    console.log('[CLIPBOARD] Copy: terminalInstance =', terminalInstance);
     if (!terminalInstance) {
-      console.log('[CLIPBOARD] Copy: No terminal instance');
       return;
     }
 
     const terminal = terminalInstance.terminal;
     const hasSelection = terminal.hasSelection();
-    console.log('[CLIPBOARD] Copy: hasSelection =', hasSelection);
 
     if (hasSelection) {
       const selection = terminal.getSelection();
-      console.log('[CLIPBOARD] Copy: selection length =', selection?.length);
 
       if (selection) {
         // Send selection to Extension to copy to clipboard
         this.logger(`📋 Copying selection from terminal ${activeTerminalId} (${selection.length} chars)`);
-        console.log('[CLIPBOARD] Copy: Sending copyToClipboard message', { command: 'copyToClipboard', terminalId: activeTerminalId, textLength: selection.length });
 
         manager.postMessageToExtension({
           command: 'copyToClipboard',
@@ -718,10 +711,7 @@ export class InputManager extends BaseManager implements IInputManager {
 
         // Clear selection after copy (like VS Code terminal)
         terminal.clearSelection();
-        console.log('[CLIPBOARD] Copy: Selection cleared');
       }
-    } else {
-      console.log('[CLIPBOARD] Copy: No selection to copy');
     }
   }
 
@@ -732,15 +722,12 @@ export class InputManager extends BaseManager implements IInputManager {
    */
   private handleTerminalPaste(manager: IManagerCoordinator): void {
     const activeTerminalId = manager.getActiveTerminalId();
-    console.log('[CLIPBOARD] Paste: activeTerminalId =', activeTerminalId);
     if (!activeTerminalId) {
-      console.log('[CLIPBOARD] Paste: No active terminal');
       return;
     }
 
     // Request clipboard content from Extension
     this.logger(`📋 Requesting clipboard content from Extension for terminal ${activeTerminalId}`);
-    console.log('[CLIPBOARD] Paste: Sending requestClipboardContent message');
 
     // Send message to Extension to get clipboard content
     manager.postMessageToExtension({
@@ -748,7 +735,6 @@ export class InputManager extends BaseManager implements IInputManager {
       terminalId: activeTerminalId,
     });
 
-    console.log('[CLIPBOARD] Paste: Request sent, waiting for clipboardContent response');
     // Extension will respond with 'clipboardContent' message
     // which is handled in message handler
   }
@@ -1156,16 +1142,6 @@ export class InputManager extends BaseManager implements IInputManager {
     this.logger('Setting up global keyboard listener');
 
     const globalKeyHandler = (event: KeyboardEvent): void => {
-      // 🔍 DEBUG: Log ALL keyboard events
-      console.log('[KEYBOARD] Event detected:', {
-        key: event.key,
-        ctrl: event.ctrlKey,
-        meta: event.metaKey,
-        shift: event.shiftKey,
-        target: (event.target as HTMLElement)?.tagName,
-        hasCoordinator: !!this.coordinator
-      });
-
       // Handle keyboard shortcuts and commands here
       // This will be populated with global shortcut handling logic
       if (event.ctrlKey && event.shiftKey && event.key === 'D') {
@@ -1178,19 +1154,12 @@ export class InputManager extends BaseManager implements IInputManager {
       if (manager) {
         const activeTerminalId = manager.getActiveTerminalId();
         if (activeTerminalId) {
-          console.log('[KEYBOARD] Global handler: activeTerminalId =', activeTerminalId, 'key =', event.key, 'ctrl =', event.ctrlKey, 'meta =', event.metaKey);
           const handled = this.handleSpecialKeys(event, activeTerminalId, manager);
-          console.log('[KEYBOARD] handleSpecialKeys returned:', handled);
           if (handled) {
-            console.log('[KEYBOARD] Event handled, preventing default');
             // Event was handled, no need for further processing
             return;
           }
-        } else {
-          console.log('[KEYBOARD] Global handler: No active terminal');
         }
-      } else {
-        console.log('[KEYBOARD] Global handler: No coordinator');
       }
 
       // Additional global shortcuts can be added here
@@ -1203,8 +1172,6 @@ export class InputManager extends BaseManager implements IInputManager {
       globalKeyHandler as EventListener,
       true
     );
-
-    console.log('[KEYBOARD] ✅ Global keyboard listener registered on document');
   }
 
   /**

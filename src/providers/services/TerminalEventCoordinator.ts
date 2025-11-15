@@ -11,6 +11,7 @@ import { TerminalManager } from '../../terminals/TerminalManager';
 import { TERMINAL_CONSTANTS } from '../../constants';
 import { getTerminalConfig } from '../../utils/common';
 import { WebviewMessage } from '../../types/common';
+import { TerminalInitializationStateMachine } from './TerminalInitializationStateMachine';
 
 /**
  * Terminal Event Coordinator
@@ -25,13 +26,15 @@ import { WebviewMessage } from '../../types/common';
 export class TerminalEventCoordinator implements vscode.Disposable {
   private readonly _terminalEventDisposables: vscode.Disposable[] = [];
   private readonly _disposables: vscode.Disposable[] = [];
+  private readonly _outputBuffers = new Map<string, string[]>();
 
   constructor(
     private readonly _terminalManager: TerminalManager,
     private readonly _sendMessage: (message: WebviewMessage) => Promise<void>,
     private readonly _saveSession: () => Promise<void>,
     private readonly _sendFullCliAgentStateSync: () => void,
-    private readonly _terminalIdMapping?: Map<string, string>
+    private readonly _terminalIdMapping?: Map<string, string>,
+    private readonly _initializationState?: TerminalInitializationStateMachine
   ) {}
 
   /**
@@ -53,33 +56,34 @@ export class TerminalEventCoordinator implements vscode.Disposable {
 
     // Handle terminal output
     const dataDisposable = this._terminalManager.onData((event) => {
-      if (event.data) {
-        // Map Extension terminal ID to WebView terminal ID if mapping exists
-        const webviewTerminalId =
-          this._terminalIdMapping?.get(event.terminalId) || event.terminalId;
-
-        log(
-          '🔍 [EVENT-COORDINATOR] Terminal output received:',
-          event.data.length,
-          'chars, Extension ID:',
-          event.terminalId,
-          '→ WebView ID:',
-          webviewTerminalId,
-          'data preview:',
-          JSON.stringify(event.data.substring(0, 50))
-        );
-
-        const outputMessage = {
-          command: TERMINAL_CONSTANTS.COMMANDS.OUTPUT,
-          data: event.data,
-          terminalId: webviewTerminalId,
-        };
-
-        log('📤 [EVENT-COORDINATOR] Sending OUTPUT to WebView terminal:', webviewTerminalId);
-        void this._sendMessage(outputMessage);
-      } else {
+      if (!event.data) {
         log('⚠️ [EVENT-COORDINATOR] Empty data received from terminal:', event.terminalId);
+        return;
       }
+
+      const webviewTerminalId = this._resolveWebviewTerminalId(event.terminalId);
+      const outputAllowed =
+        !this._initializationState || this._initializationState.isOutputAllowed(event.terminalId);
+
+      log(
+        '🔍 [EVENT-COORDINATOR] Terminal output received:',
+        event.data.length,
+        'chars, Extension ID:',
+        event.terminalId,
+        '→ WebView ID:',
+        webviewTerminalId,
+        'ready:',
+        outputAllowed,
+        'preview:',
+        JSON.stringify(event.data.substring(0, 50))
+      );
+
+      if (!outputAllowed) {
+        this._bufferOutput(webviewTerminalId, event.data);
+        return;
+      }
+
+      this._sendOutput(webviewTerminalId, event.data);
     });
 
     // Handle terminal exit
@@ -118,6 +122,7 @@ export class TerminalEventCoordinator implements vscode.Disposable {
 
     // Handle terminal removal
     const removedDisposable = this._terminalManager.onTerminalRemoved((terminalId) => {
+      this._outputBuffers.delete(this._resolveWebviewTerminalId(terminalId));
       void this._sendMessage({
         command: TERMINAL_CONSTANTS.COMMANDS.TERMINAL_REMOVED,
         terminalId,
@@ -171,7 +176,44 @@ export class TerminalEventCoordinator implements vscode.Disposable {
       disposable.dispose();
     });
     this._terminalEventDisposables.length = 0;
+    this._outputBuffers.clear();
     log('🧹 [EVENT-COORDINATOR] Terminal event listeners cleared');
+  }
+
+  public flushBufferedOutput(extensionTerminalId: string): void {
+    const webviewTerminalId = this._resolveWebviewTerminalId(extensionTerminalId);
+    const buffer = this._outputBuffers.get(webviewTerminalId);
+    if (!buffer || buffer.length === 0) {
+      return;
+    }
+
+    const combined = buffer.join('');
+    this._outputBuffers.delete(webviewTerminalId);
+    log(
+      `📤 [EVENT-COORDINATOR] Flushing buffered output for ${webviewTerminalId}: ${combined.length} chars (${buffer.length} chunks)`
+    );
+    this._sendOutput(webviewTerminalId, combined);
+  }
+
+  private _bufferOutput(webviewTerminalId: string, chunk: string): void {
+    const existing = this._outputBuffers.get(webviewTerminalId) ?? [];
+    existing.push(chunk);
+    this._outputBuffers.set(webviewTerminalId, existing);
+    log(
+      `⏸️ [EVENT-COORDINATOR] Buffering output for ${webviewTerminalId} (chunks=${existing.length}, length=${chunk.length})`
+    );
+  }
+
+  private _sendOutput(webviewTerminalId: string, data: string): void {
+    void this._sendMessage({
+      command: TERMINAL_CONSTANTS.COMMANDS.OUTPUT,
+      data,
+      terminalId: webviewTerminalId,
+    });
+  }
+
+  private _resolveWebviewTerminalId(extensionTerminalId: string): string {
+    return this._terminalIdMapping?.get(extensionTerminalId) || extensionTerminalId;
   }
 
   /**

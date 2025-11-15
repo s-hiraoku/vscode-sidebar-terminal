@@ -105,7 +105,10 @@ export class ExtensionMessageBridge implements IExtensionCommunicationBridge {
     handler: (message: Message) => Promise<MessageProcessingResult>
   ): void {
     if (this.handlers.has(command)) {
-      console.warn(`Handler for command '${command}' already registered, overwriting`);
+      // Only warn in development mode
+      if (process.env.NODE_ENV === 'development') {
+        console.warn(`Handler for command '${command}' already registered, overwriting`);
+      }
     }
     this.handlers.set(command, handler);
   }
