@@ -1013,6 +1013,7 @@
     "docs:clean": "rm -rf docs/api"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.0",
     "@istanbuljs/nyc-config-typescript": "^1.0.2",
     "@playwright/test": "^1.56.1",
     "@testing-library/dom": "^10.4.0",
@@ -1029,6 +1030,7 @@
     "@typescript-eslint/parser": "^6.15.0",
     "@vscode/test-electron": "^2.3.8",
     "@vscode/vsce": "^3.6.0",
+    "axe-core": "^4.11.0",
     "chai": "^4.5.0",
     "chai-as-promised": "^8.0.2",
     "css-loader": "^7.1.2",
