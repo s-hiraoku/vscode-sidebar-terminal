@@ -5,7 +5,6 @@ import { TERMINAL_CONSTANTS } from '../constants';
 import { safeProcessCwd } from '../utils/common';
 import { TerminalErrorHandler } from '../utils/feedback';
 import { provider as log } from '../utils/logger';
-import { ExtensionPersistenceService } from '../services/persistence/ExtensionPersistenceService';
 import { PersistenceMessageHandler } from '../handlers/PersistenceMessageHandler';
 import { TerminalInitializationCoordinator } from './TerminalInitializationCoordinator';
 import {
@@ -62,7 +61,6 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   private _linksService?: import('../services/TerminalLinksService').TerminalLinksService;
 
   // Terminal persistence services
-  private _persistenceService?: ExtensionPersistenceService;
   private _persistenceHandler?: PersistenceMessageHandler;
   private readonly _initializationCoordinator: TerminalInitializationCoordinator;
 
@@ -103,13 +101,12 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     log('🎨 [PROVIDER] Existing refactored services initialized');
 
     // Initialize persistence services
-    this._persistenceService = new ExtensionPersistenceService(
-      this._extensionContext,
-      this._terminalManager
-    );
-    this._persistenceHandler = new PersistenceMessageHandler(this._persistenceService);
-
-    log('💾 [PROVIDER] Terminal persistence services initialized');
+    if (this._extensionPersistenceService) {
+      this._persistenceHandler = new PersistenceMessageHandler(this._extensionPersistenceService);
+      log('💾 [PROVIDER] Terminal persistence services initialized');
+    } else {
+      log('⚠️ [PROVIDER] ExtensionPersistenceService not provided, persistence disabled');
+    }
 
     // Initialize terminal initialization coordinator
     this._initializationCoordinator = new TerminalInitializationCoordinator(
@@ -969,7 +966,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   }
 
   public async saveCurrentSession(): Promise<boolean> {
-    if (!this._persistenceService) {
+    if (!this._extensionPersistenceService) {
       log('⚠️ [PERSISTENCE] Persistence service not available');
       return false;
     }
@@ -987,7 +984,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         scrollback: [], // Scrollback is managed by WebView
       }));
 
-      await this._persistenceService.saveSession(terminalData);
+      await this._extensionPersistenceService.saveSession(terminalData);
       const response = { success: true, error: undefined };
 
       if (response.success) {
@@ -1004,14 +1001,14 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   }
 
   public async restoreLastSession(): Promise<boolean> {
-    if (!this._persistenceService) {
+    if (!this._extensionPersistenceService) {
       log('⚠️ [PERSISTENCE] Persistence service not available');
       return false;
     }
 
     try {
       log('💾 [PERSISTENCE] Restoring last session...');
-      const sessionData = await this._persistenceService.restoreSession();
+      const sessionData = await this._extensionPersistenceService.restoreSession();
 
       if (sessionData && sessionData.length > 0) {
         log(`📦 [PERSISTENCE] Found ${sessionData.length} terminals to restore`);
@@ -1110,6 +1107,149 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     }
   }
 
+  private _registerInitializationWatchdogs(): void {
+    try {
+      const createdDisposable = this._terminalManager.onTerminalCreated((terminal) => {
+        if (!terminal?.id) {
+          return;
+        }
+
+        this._terminalInitStateMachine.markViewPending(terminal.id, 'terminalCreated');
+        this._terminalInitStateMachine.markPtySpawned(terminal.id, 'terminalCreated');
+
+        if (this._isInitialized) {
+          this._startWatchdogForTerminal(terminal.id, 'terminalCreated');
+        } else {
+          this._pendingWatchdogTerminals.add(terminal.id);
+        }
+      });
+
+      const removedDisposable = this._terminalManager.onTerminalRemoved((terminalId) => {
+        this._terminalInitWatchdog.stop(terminalId, 'terminalRemoved');
+        this._terminalInitStateMachine.reset(terminalId);
+        this._pendingWatchdogTerminals.delete(terminalId);
+        this._safeModeTerminals.delete(terminalId);
+        this._recordedInitMetrics.delete(`${terminalId}:success`);
+        this._recordedInitMetrics.delete(`${terminalId}:timeout`);
+      });
+
+      this._cleanupService.addDisposable(createdDisposable);
+      this._cleanupService.addDisposable(removedDisposable);
+
+      const existingTerminals = this._terminalManager.getTerminals();
+      for (const terminal of existingTerminals) {
+        if (!terminal.id) {
+          continue;
+        }
+
+        if (this._isInitialized) {
+          this._startWatchdogForTerminal(terminal.id, 'existingTerminal');
+        } else {
+          this._pendingWatchdogTerminals.add(terminal.id);
+        }
+      }
+    } catch (error) {
+      log('⚠️ [PROVIDER] Failed to register initialization watchdogs:', error);
+    }
+  }
+
+  private _startWatchdogForTerminal(terminalId: string, source: string): void {
+    this._terminalInitWatchdog.start(terminalId);
+    log(`⏳ [WATCHDOG] Started for ${terminalId} (source=${source})`);
+  }
+
+  private _startPendingWatchdogs(): void {
+    if (!this._isInitialized || this._pendingWatchdogTerminals.size === 0) {
+      return;
+    }
+
+    for (const terminalId of Array.from(this._pendingWatchdogTerminals.values())) {
+      this._startWatchdogForTerminal(terminalId, 'pendingQueue');
+      this._pendingWatchdogTerminals.delete(terminalId);
+    }
+  }
+
+  private _handleInitializationTimeout(
+    terminalId: string,
+    attempt: number,
+    isFinalAttempt: boolean
+  ): void {
+    const terminal = this._terminalManager.getTerminal(terminalId);
+    if (!terminal || !terminal.ptyProcess) {
+      this._terminalInitWatchdog.stop(terminalId, 'terminalMissing');
+      return;
+    }
+
+    log(
+      `⚠️ [WATCHDOG] Terminal ${terminalId} init timeout (attempt=${attempt}, final=${isFinalAttempt})`
+    );
+
+    const retried = this._attemptStandardInitializationRetry(terminalId, terminal);
+    if (!isFinalAttempt) {
+      this._startWatchdogForTerminal(terminalId, retried ? 'retry' : 'retry-noop');
+      return;
+    }
+
+    if (!this._safeModeTerminals.has(terminalId)) {
+      this._safeModeTerminals.add(terminalId);
+      log(`⚠️ Prompt timeout -> safe mode for ${terminalId}`);
+      try {
+        this._terminalManager.initializeShellForTerminal(terminalId, terminal.ptyProcess, true);
+        this._startWatchdogForTerminal(terminalId, 'safeMode');
+        return;
+      } catch (error) {
+        log(`❌ [FALLBACK] Safe mode initialization failed for ${terminalId}:`, error);
+      }
+    }
+
+    this._terminalInitWatchdog.stop(terminalId, 'safeModeFailed');
+    void this._notifyInitializationFailure(terminalId);
+  }
+
+  private _attemptStandardInitializationRetry(
+    terminalId: string,
+    terminal: TerminalInstance
+  ): boolean {
+    let retried = false;
+
+    if (!this._terminalManager.isShellInitialized(terminalId)) {
+      try {
+        this._terminalManager.initializeShellForTerminal(terminalId, terminal.ptyProcess, false);
+        retried = true;
+      } catch (error) {
+        log(`❌ [FALLBACK] Shell initialization retry failed for ${terminalId}:`, error);
+      }
+    }
+
+    if (!this._terminalManager.isPtyOutputStarted(terminalId)) {
+      try {
+        this._terminalManager.startPtyOutput(terminalId);
+        retried = true;
+      } catch (error) {
+        log(`❌ [FALLBACK] PTY output retry failed for ${terminalId}:`, error);
+      }
+    }
+
+    return retried;
+  }
+
+  private _recordInitializationMetric(metric: 'success' | 'timeout', terminalId: string): void {
+    const key = `${terminalId}:${metric}`;
+    if (this._recordedInitMetrics.has(key)) {
+      return;
+    }
+
+    this._recordedInitMetrics.add(key);
+    log(`📊 [METRIC] terminal.init.${metric} (terminal=${terminalId})`);
+  }
+
+  private async _notifyInitializationFailure(terminalId: string): Promise<void> {
+    this._recordInitializationMetric('timeout', terminalId);
+    await vscode.window.showErrorMessage(
+      'Sidebar Terminal failed to initialize its shell. Close the terminal and create a new one.'
+    );
+  }
+
   public getPerformanceMetrics() {
     return this._lifecycleManager.getPerformanceMetrics();
   }
@@ -1144,12 +1284,11 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     this._htmlGenerationService.dispose();
 
     // Dispose persistence services
-    if (this._persistenceService) {
-      this._persistenceService
+    if (this._extensionPersistenceService) {
+      this._extensionPersistenceService
         .cleanupExpiredSessions()
         .catch((error) => log(`⚠️ [PERSISTENCE] Cleanup during dispose failed: ${error}`));
     }
-    this._persistenceService = undefined;
     this._persistenceHandler = undefined;
 
     // Dispose all tracked resources using ResourceCleanupService

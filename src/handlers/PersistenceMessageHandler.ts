@@ -88,25 +88,25 @@ export class PersistenceMessageHandler {
    */
   private async handleSaveSession(terminalData: unknown): Promise<PersistenceResponse> {
     try {
-      if (!terminalData || !Array.isArray(terminalData)) {
+      // ExtensionPersistenceService.saveCurrentSession() doesn't take parameters
+      // It gets terminal data directly from TerminalManager
+      const result = await this.persistenceService.saveCurrentSession();
+
+      if (!result.success) {
         return {
           success: false,
-          error: 'Invalid terminal data for save operation',
+          error: result.error || 'Save operation failed',
         };
       }
 
-      const result = await this.persistenceService.saveCurrentSession();
-
-      log(`✅ [MSG-HANDLER] Session saved successfully: ${terminalData.length} terminals`);
+      log(`✅ [MSG-HANDLER] Session saved successfully: ${result.terminalCount} terminals`);
       return {
-        success: result.success,
-        terminalCount: terminalData.length,
-        data: result.message || 'Session saved successfully',
-        error: result.error,
+        success: true,
+        terminalCount: result.terminalCount,
+        data: 'Session saved successfully',
       };
     } catch (error) {
       const errorMsg = `Save operation failed: ${(error as Error).message}`;
-
       log(`❌ [MSG-HANDLER] Save failed: ${errorMsg}`);
       return {
         success: false,
@@ -122,25 +122,24 @@ export class PersistenceMessageHandler {
     try {
       const result = await this.persistenceService.restoreSession();
 
-      if (!result.success || result.terminals.length === 0) {
+      if (!result.success || result.terminalsRestored === 0) {
         log('📦 [MSG-HANDLER] No session to restore');
         return {
           success: true,
           terminalCount: 0,
           data: [],
-          error: 'No session found to restore',
+          error: result.message || 'No session found to restore',
         };
       }
 
-      log(`✅ [MSG-HANDLER] Session restored successfully: ${result.terminals.length} terminals`);
+      log(`✅ [MSG-HANDLER] Session restored successfully: ${result.terminalsRestored} terminals`);
       return {
         success: true,
-        terminalCount: result.terminals.length,
-        data: result.terminals,
+        terminalCount: result.terminalsRestored,
+        data: result.terminals || [],
       };
     } catch (error) {
       const errorMsg = `Restore operation failed: ${(error as Error).message}`;
-
       log(`❌ [MSG-HANDLER] Restore failed: ${errorMsg}`);
       return {
         success: false,
