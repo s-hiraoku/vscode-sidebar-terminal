@@ -4,8 +4,6 @@
  * 統一された設定アクセスサービスのテスト
  * VS Code設定へのアクセス集約機能とキャッシュ機能を検証
  */
-/* eslint-disable */
-// @ts-nocheck
 import { expect, use } from 'chai';
 import sinonChai from 'sinon-chai';
 import * as sinon from 'sinon';
@@ -23,13 +21,16 @@ import {
 describe('ConfigurationService', () => {
   let testEnv: TestEnvironment;
   let configService: ConfigurationService;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockVSCodeWorkspace: sinon.SinonStubbedInstance<any>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockConfiguration: sinon.SinonStubbedInstance<any>;
   let logSpy: sinon.SinonStub;
   let configChangeEvent: sinon.SinonStub;
 
   beforeEach(() => {
     // CRITICAL: Reset singleton FIRST before setting up test environment
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (ConfigurationService as any).instance = undefined;
 
     testEnv = setupTestEnvironment();
@@ -54,6 +55,7 @@ describe('ConfigurationService', () => {
         WorkspaceFolder: 3,
       },
     };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (global as any).vscode = vscodeModule;
 
     // CRITICAL: Update require.cache so ConfigurationService imports this mock
@@ -91,9 +93,11 @@ describe('ConfigurationService', () => {
     }
 
     // Reset singleton instance for next test
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (ConfigurationService as any).instance = undefined;
 
     cleanupTestEnvironment(testEnv);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     delete (global as any).vscode;
   });
 
@@ -110,6 +114,7 @@ describe('ConfigurationService', () => {
       instance1.dispose();
 
       // Reset singleton for test
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (ConfigurationService as any).instance = undefined;
 
       const instance2 = ConfigurationService.getInstance();
@@ -125,6 +130,7 @@ describe('ConfigurationService', () => {
 
       // Re-create service to trigger disposable registration
       configService.dispose();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (ConfigurationService as any).instance = undefined;
       configService = ConfigurationService.getInstance();
 
@@ -561,6 +567,7 @@ describe('ConfigurationService', () => {
 
         // Simulate configuration change event by calling the internal notification method
         // Access private method for testing
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const service = configService as any;
         service.notifyConfigurationChange('secondaryTerminal', {});
 
@@ -705,6 +712,7 @@ describe('ConfigurationService', () => {
 
       // Verify cache is cleared by checking internal state
       // This tests the internal cache map is cleared
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const internalCache = (configService as any).configCache;
       expect(internalCache.size).to.equal(0);
     });
@@ -719,6 +727,7 @@ describe('ConfigurationService', () => {
       configService.dispose();
 
       // Verify handlers are cleared
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const internalHandlers = (configService as any).changeHandlers;
       expect(internalHandlers.size).to.equal(0);
     });
