@@ -182,7 +182,7 @@ export class TelemetryService {
   /**
    * Track terminal deletion
    */
-  public trackTerminalDeleted(terminalId: string): void {
+  public trackTerminalDeleted(_terminalId: string): void {
     this.telemetryLogger.logUsage(TelemetryEventType.TerminalDeleted, {
       // Note: We don't send terminalId to respect privacy
     });
@@ -191,7 +191,7 @@ export class TelemetryService {
   /**
    * Track terminal focus
    */
-  public trackTerminalFocused(terminalId: string): void {
+  public trackTerminalFocused(_terminalId: string): void {
     this.telemetryLogger.logUsage(TelemetryEventType.TerminalFocused, {
       // Note: We don't send terminalId to respect privacy
     });

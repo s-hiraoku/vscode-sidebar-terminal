@@ -34,7 +34,7 @@ export class ExtensionPersistenceService implements IExtensionPersistencePort {
   /**
    * Save the current session
    */
-  async saveSession(request: SaveSessionRequestDTO): Promise<SaveSessionResponseDTO> {
+  async saveSession(_request: SaveSessionRequestDTO): Promise<SaveSessionResponseDTO> {
     try {
       const sessionData = await this.collectSessionData();
       const success = await this.storeSessionData(sessionData);
@@ -176,7 +176,7 @@ export class ExtensionPersistenceService implements IExtensionPersistencePort {
   /**
    * Get session data
    */
-  async getSessionData(sessionId?: string): Promise<SessionDataDTO | null> {
+  async getSessionData(_sessionId?: string): Promise<SessionDataDTO | null> {
     try {
       // Try workspace state first, then global state
       let data =

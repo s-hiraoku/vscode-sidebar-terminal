@@ -250,7 +250,7 @@ test.describe('Cross-Platform Compatibility', () => {
       await new Promise((resolve) => setTimeout(resolve, 500));
 
       // Assert: Old text should be cleared (depending on implementation)
-      const output = await terminalHelper.getTerminalOutput(terminalId);
+      const _output = await terminalHelper.getTerminalOutput(terminalId);
       // This assertion depends on whether Cmd+K actually clears or not
       // Some terminals don't support this shortcut
     });
@@ -290,7 +290,7 @@ test.describe('Cross-Platform Compatibility', () => {
     // Test 5: Architecture Detection (Apple Silicon vs Intel)
     await test.step('should work on both Apple Silicon and Intel Macs', async () => {
       // Get CPU architecture
-      const arch = await page.evaluate(() => {
+      const _arch = await page.evaluate(() => {
         return navigator.userAgent.includes('ARM') || navigator.platform === 'MacIntel'
           ? 'detected'
           : 'unknown';

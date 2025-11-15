@@ -18,11 +18,6 @@
  */
 
 import { Terminal, IDisposable, ITerminalAddon } from '@xterm/xterm';
-import { FitAddon } from '@xterm/addon-fit';
-import { SearchAddon } from '@xterm/addon-search';
-import { SerializeAddon } from '@xterm/addon-serialize';
-import { Unicode11Addon } from '@xterm/addon-unicode11';
-import { WebglAddon } from '@xterm/addon-webgl';
 import { terminalLogger } from '../utils/ManagerLogger';
 
 /**

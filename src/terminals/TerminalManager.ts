@@ -7,17 +7,11 @@ import {
   TerminalInstance,
   TerminalEvent,
   TerminalState,
-  TerminalInfo,
   DeleteResult,
-  ProcessState,
-  TerminalInitOptions,
 } from '../types/shared';
 import {
-  ERROR_MESSAGES,
   PERFORMANCE_CONSTANTS,
-  TIMING_CONSTANTS,
 } from '../constants';
-import { TERMINAL_CONSTANTS } from '../constants/SystemConstants';
 import { ShellIntegrationService } from '../services/ShellIntegrationService';
 import { TerminalProfileService } from '../services/TerminalProfileService';
 import { terminal as log } from '../utils/logger';
@@ -29,7 +23,6 @@ import { TerminalNumberManager } from '../utils/TerminalNumberManager';
 import { CliAgentDetectionService } from '../services/CliAgentDetectionService';
 import { ICliAgentDetectionService } from '../interfaces/CliAgentService';
 import { TerminalSpawner } from './TerminalSpawner';
-import type { IDisposable } from '@homebridge/node-pty-prebuilt-multiarch';
 import {
   TerminalProcessManager,
   ITerminalProcessManager,

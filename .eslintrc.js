@@ -1,6 +1,6 @@
 module.exports = {
   parser: '@typescript-eslint/parser',
-  plugins: ['@typescript-eslint', 'local-rules'],
+  plugins: ['@typescript-eslint'],
   parserOptions: {
     ecmaVersion: 2020,
     sourceType: 'module',
@@ -11,6 +11,7 @@ module.exports = {
 
     // Issue #216: Manager pattern standardization
     // Note: These rules will be gradually enforced as managers are migrated
+    // TODO: Re-enable local-rules plugin after eslint-local-rules directory is set up
     // 'local-rules/require-base-manager': 'warn', // TODO: Enable after Phase 1 migration
   },
   env: {

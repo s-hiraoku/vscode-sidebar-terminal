@@ -171,7 +171,7 @@ describe('Progressive Loading Integration - Phase 2.2', () => {
       const remainingLines = totalLines - initialLines;
 
       // When: Progressive loading setup
-      const mockTerminal = createMockTerminal();
+      const _mockTerminal = createMockTerminal();
       let lazyLoadSetup = false;
 
       if (totalLines > initialLines) {

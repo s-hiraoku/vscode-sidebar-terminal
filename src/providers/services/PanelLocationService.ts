@@ -87,7 +87,7 @@ export class PanelLocationService implements vscode.Disposable {
    * 🎯 VS Code Pattern: Visibility listener consolidated in SecondaryTerminalProvider
    * No longer registers duplicate visibility listener here
    */
-  public async initialize(webviewView?: vscode.WebviewView): Promise<void> {
+  public async initialize(_webviewView?: vscode.WebviewView): Promise<void> {
     // Set up configuration change listener
     this._setupConfigurationListener();
 

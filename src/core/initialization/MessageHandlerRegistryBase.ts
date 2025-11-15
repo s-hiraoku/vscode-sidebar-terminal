@@ -203,7 +203,7 @@ export abstract class MessageHandlerRegistryBase<
    * - Log warning
    * - Send error message back to sender
    */
-  protected handleUnknownCommand(command: TCommandKey, message: TMessage): void {
+  protected handleUnknownCommand(command: TCommandKey, _message: TMessage): void {
     this.logWarning(`Unknown command: ${String(command)}`);
   }
 

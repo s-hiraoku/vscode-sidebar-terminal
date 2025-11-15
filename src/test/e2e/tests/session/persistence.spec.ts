@@ -4,7 +4,7 @@ import {
   TerminalLifecycleHelper,
   WebViewInteractionHelper,
 } from '../../helpers';
-import { TEST_TIMEOUTS, TERMINAL_CONSTANTS } from '../../config/test-constants';
+import { TERMINAL_CONSTANTS } from '../../config/test-constants';
 
 /**
  * Session Persistence Tests
@@ -135,7 +135,7 @@ test.describe('Session Persistence', () => {
 
     // Assert: Scrollback should contain last 1000 lines
     const output = await terminalHelper.getTerminalOutput(1);
-    const lines = output.split('\n');
+    const _lines = output.split('\n');
 
     // Last 1000 lines should be preserved (Lines 501-1500)
     expect(output).toContain('Line 1500');

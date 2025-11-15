@@ -4,7 +4,7 @@ import {
   TerminalLifecycleHelper,
   WebViewInteractionHelper,
 } from '../../helpers';
-import { TEST_TIMEOUTS, TERMINAL_CONSTANTS } from '../../config/test-constants';
+import { TERMINAL_CONSTANTS } from '../../config/test-constants';
 
 /**
  * Split Terminal and Layout Tests
@@ -293,7 +293,7 @@ test.describe('Split Terminal and Layout', () => {
     await extensionHelper.updateConfiguration('secondaryTerminal.maxSplitTerminals', 3);
 
     // Act: Create terminals up to the limit
-    const terminal1Id = await terminalHelper.createTerminal();
+    const _terminal1Id = await terminalHelper.createTerminal();
 
     await extensionHelper.executeCommand('secondaryTerminal.splitTerminalVertical');
     await new Promise((resolve) => setTimeout(resolve, 500));
@@ -401,7 +401,7 @@ test.describe('Split Terminal and Layout', () => {
     page,
   }) => {
     // Arrange: Create split terminals with output
-    const terminal1Id = await terminalHelper.createTerminal();
+    const _terminal1Id = await terminalHelper.createTerminal();
     await extensionHelper.executeCommand('secondaryTerminal.splitTerminalVertical');
 
     await terminalHelper.sendText(1, 'for i in {1..100}; do echo "T1 Line $i"; done');

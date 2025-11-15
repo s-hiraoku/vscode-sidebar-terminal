@@ -33,6 +33,12 @@ import { ResourceCleanupService } from './services/ResourceCleanupService';
 import { WebViewLifecycleManager } from './services/WebViewLifecycleManager';
 import { MessageRoutingFacade } from './services/MessageRoutingFacade';
 import { InitializationOrchestrator } from './services/InitializationOrchestrator';
+import { TerminalInitializationStateMachine } from './services/TerminalInitializationStateMachine';
+import {
+  TerminalInitializationWatchdog,
+  WatchdogOptions,
+} from './services/TerminalInitializationWatchdog';
+import type { TerminalInstance } from '../types/shared';
 
 export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vscode.Disposable {
   public static readonly viewType = 'secondaryTerminal';
@@ -78,6 +84,26 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   private readonly _lifecycleManager: WebViewLifecycleManager;
   private readonly _messageRouter: MessageRoutingFacade;
   private readonly _orchestrator: InitializationOrchestrator;
+  private readonly _terminalInitStateMachine = new TerminalInitializationStateMachine();
+  private readonly _terminalInitWatchdog = new TerminalInitializationWatchdog((terminalId, info) =>
+    this._handleInitializationTimeout(terminalId, info.attempt, info.isFinalAttempt)
+  );
+  private readonly _pendingWatchdogTerminals = new Set<string>();
+  private readonly _safeModeTerminals = new Set<string>();
+  private readonly _recordedInitMetrics = new Set<string>();
+  private readonly _watchdogPhases = new Map<string, 'ack' | 'prompt'>();
+
+  private static readonly ACK_WATCHDOG_OPTIONS: WatchdogOptions = {
+    initialDelayMs: 700,
+    maxAttempts: 4,
+    backoffFactor: 2,
+  };
+
+  private static readonly PROMPT_WATCHDOG_OPTIONS: WatchdogOptions = {
+    initialDelayMs: 1000,
+    maxAttempts: 2,
+    backoffFactor: 1.5,
+  };
 
   constructor(
     private readonly _extensionContext: vscode.ExtensionContext,
@@ -142,6 +168,8 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
     log('🎨 [PROVIDER] NEW Facade pattern services initialized (Issue #214)');
     log('✅ [PROVIDER] SecondaryTerminalProvider constructed with all services');
+
+    this._registerInitializationWatchdogs();
   }
 
   public resolveWebviewView(
@@ -203,7 +231,8 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       this._communicationService.sendMessage.bind(this._communicationService),
       async () => { await this.saveCurrentSession(); },
       () => this.sendFullCliAgentStateSync(),
-      this._terminalIdMapping
+      this._terminalIdMapping,
+      this._terminalInitStateMachine
     );
     this._eventCoordinator.initialize();
     log('✅ [PROVIDER] Event coordinator initialized');
@@ -372,6 +401,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
     // Mark as initialized
     this._isInitialized = true;
+    this._startPendingWatchdogs();
 
     // Send version information
     void this._communicationService.sendVersionInfo();
@@ -487,7 +517,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     });
   }
 
-  private async _handleCreateTerminal(message: WebviewMessage): Promise<void> {
+  private async _handleCreateTerminal(_message: WebviewMessage): Promise<void> {
     log('🎨 [PROVIDER] Creating new terminal from WebView request');
     try {
       const terminalId = this._terminalManager.createTerminal();
@@ -526,34 +556,52 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   }
 
   private async _handleTerminalInitializationComplete(message: WebviewMessage): Promise<void> {
-    log('✅ [PROVIDER] Terminal initialization complete notification from WebView');
     const terminalId = message.terminalId as string;
-
     if (!terminalId) {
       log('⚠️ [PROVIDER] Terminal initialization complete missing terminalId');
       return;
     }
 
     log(`✅ [PROVIDER] Terminal ${terminalId} initialization confirmed by WebView`);
+    this._terminalInitWatchdog.stop(terminalId, 'webviewAck');
+    this._terminalInitStateMachine.markViewReady(terminalId, 'webviewAck');
 
-    // Get terminal instance to access PTY process
     const terminal = this._terminalManager.getTerminal(terminalId);
     if (!terminal || !terminal.ptyProcess) {
       log(`❌ [PROVIDER] Terminal ${terminalId} not found or PTY not available`);
       return;
     }
 
-    // Initialize shell for this terminal (sends initial prompt, shell integration, etc.)
-    log(`🔧 [PROVIDER] Initializing shell for terminal ${terminalId}`);
-    this._terminalManager.initializeShellForTerminal(
-      terminalId,
-      terminal.ptyProcess,
-      false // safeMode = false for new terminals
-    );
+    try {
+      this._terminalInitStateMachine.markShellInitializing(terminalId, 'initializeShell');
+      this._terminalManager.initializeShellForTerminal(terminalId, terminal.ptyProcess, false);
+      this._terminalInitStateMachine.markShellInitialized(terminalId, 'initializeShell');
+    } catch (error) {
+      log(`❌ [PROVIDER] Shell initialization failed for ${terminalId}:`, error);
+      this._terminalInitStateMachine.markFailed(terminalId, 'initializeShell');
+      this._startWatchdogForTerminal(terminalId, 'shellInitRetry');
+      return;
+    }
 
-    // Start PTY output (begins data flow from PTY to WebView)
-    log(`🎯 [PROVIDER] Starting PTY output for terminal ${terminalId}`);
-    this._terminalManager.startPtyOutput(terminalId);
+    try {
+      this._terminalManager.startPtyOutput(terminalId);
+      this._terminalInitStateMachine.markOutputStreaming(terminalId, 'startPtyOutput');
+    } catch (error) {
+      log(`❌ [PROVIDER] PTY output start failed for ${terminalId}:`, error);
+      this._terminalInitStateMachine.markFailed(terminalId, 'startPtyOutput');
+      this._startWatchdogForTerminal(terminalId, 'ptyRetry');
+      return;
+    }
+
+    await this._sendMessage({
+      command: TERMINAL_CONSTANTS.COMMANDS.START_OUTPUT,
+      terminalId,
+      timestamp: Date.now(),
+    });
+    this._eventCoordinator?.flushBufferedOutput(terminalId);
+    this._terminalInitStateMachine.markPromptReady(terminalId, 'startOutput');
+    this._safeModeTerminals.delete(terminalId);
+    this._recordInitializationMetric('success', terminalId);
   }
 
   private _handleTerminalInput(message: WebviewMessage): void {
@@ -737,7 +785,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     return this._panelLocationService.getCurrentPanelLocation();
   }
 
-  private _setupPanelLocationChangeListener(webviewView: vscode.WebviewView): void {
+  private _setupPanelLocationChangeListener(_webviewView: vscode.WebviewView): void {
     log('🔧 [PROVIDER] Setting up panel location change listener...');
 
     // Use onDidChangeConfiguration instead of non-existent onDidChangePanelLocation
@@ -1305,6 +1353,10 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     if (this._eventCoordinator) {
       this._eventCoordinator.dispose();
     }
+    this._terminalInitWatchdog.dispose();
+    this._pendingWatchdogTerminals.clear();
+    this._safeModeTerminals.clear();
+    this._recordedInitMetrics.clear();
 
     // Dispose new Facade services
     this._lifecycleManager.dispose();

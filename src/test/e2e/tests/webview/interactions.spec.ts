@@ -473,7 +473,7 @@ test.describe('WebView Interactions', () => {
 
     // Act: Get terminal output
     const output = await terminalHelper.getTerminalOutput(1);
-    const lines = output.split('\n').filter((line) => line.trim().length > 0);
+    const _lines = output.split('\n').filter((line) => line.trim().length > 0);
 
     // Assert: Only last 2000 lines should be preserved
     // First 500 lines should be discarded

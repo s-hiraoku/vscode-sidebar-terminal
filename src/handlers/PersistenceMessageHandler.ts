@@ -86,7 +86,7 @@ export class PersistenceMessageHandler {
   /**
    * セッション保存処理
    */
-  private async handleSaveSession(terminalData: unknown): Promise<PersistenceResponse> {
+  private async handleSaveSession(_terminalData: unknown): Promise<PersistenceResponse> {
     try {
       // ExtensionPersistenceService.saveCurrentSession() doesn't take parameters
       // It gets terminal data directly from TerminalManager

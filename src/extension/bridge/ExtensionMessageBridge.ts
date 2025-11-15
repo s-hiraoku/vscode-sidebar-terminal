@@ -12,8 +12,6 @@ import {
   IExtensionCommunicationBridge,
   Message,
   MessageProcessingResult,
-  ExtensionToWebViewMessage,
-  WebViewToExtensionMessage,
 } from '../../communication';
 
 /**

@@ -30,7 +30,7 @@ export class WebViewPersistenceService implements IWebViewPersistencePort {
   /**
    * Save the current session
    */
-  async saveSession(request: SaveSessionRequestDTO): Promise<SaveSessionResponseDTO> {
+  async saveSession(_request: SaveSessionRequestDTO): Promise<SaveSessionResponseDTO> {
     try {
       const sessionData = await this.collectLocalSessionData();
       const success = await this.storeLocalSessionData(sessionData);
@@ -68,7 +68,7 @@ export class WebViewPersistenceService implements IWebViewPersistencePort {
    * Restore a session
    */
   async restoreSession(
-    request: RestoreSessionRequestDTO
+    _request: RestoreSessionRequestDTO
   ): Promise<RestoreSessionResponseDTO> {
     try {
       const sessionData = await this.getLocalSessionData();
@@ -104,7 +104,7 @@ export class WebViewPersistenceService implements IWebViewPersistencePort {
   /**
    * Clear stored session data
    */
-  async clearSession(request: ClearSessionRequestDTO): Promise<ClearSessionResponseDTO> {
+  async clearSession(_request: ClearSessionRequestDTO): Promise<ClearSessionResponseDTO> {
     try {
       const success = await this.clearLocalStorage();
 
