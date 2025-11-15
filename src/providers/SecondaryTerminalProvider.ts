@@ -5,7 +5,7 @@ import { TERMINAL_CONSTANTS } from '../constants';
 import { safeProcessCwd } from '../utils/common';
 import { TerminalErrorHandler } from '../utils/feedback';
 import { provider as log } from '../utils/logger';
-import { UnifiedTerminalPersistenceService } from '../services/UnifiedTerminalPersistenceService';
+import { ExtensionPersistenceService } from '../services/persistence/ExtensionPersistenceService';
 import { PersistenceMessageHandler } from '../handlers/PersistenceMessageHandler';
 import { TerminalInitializationCoordinator } from './TerminalInitializationCoordinator';
 import {
@@ -62,7 +62,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   private _linksService?: import('../services/TerminalLinksService').TerminalLinksService;
 
   // Terminal persistence services
-  private _persistenceService?: UnifiedTerminalPersistenceService;
+  private _persistenceService?: ExtensionPersistenceService;
   private _persistenceHandler?: PersistenceMessageHandler;
   private readonly _initializationCoordinator: TerminalInitializationCoordinator;
 
@@ -103,7 +103,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     log('🎨 [PROVIDER] Existing refactored services initialized');
 
     // Initialize persistence services
-    this._persistenceService = new UnifiedTerminalPersistenceService(
+    this._persistenceService = new ExtensionPersistenceService(
       this._extensionContext,
       this._terminalManager
     );
