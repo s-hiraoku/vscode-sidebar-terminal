@@ -440,9 +440,12 @@ export class WebViewPersistenceService {
       const endIndex = Math.min(startIndex + BATCH_SIZE, lines.length);
 
       for (let i = startIndex; i < endIndex; i++) {
-        terminal.write(lines[i]);
-        if (i < lines.length - 1) {
-          terminal.write('\r\n');
+        const line = lines[i];
+        if (line !== undefined) {
+          terminal.write(line);
+          if (i < lines.length - 1) {
+            terminal.write('\r\n');
+          }
         }
       }
 

@@ -3,6 +3,7 @@
 
 const path = require('path');
 const webpack = require('webpack');
+const TerserPlugin = require('terser-webpack-plugin');
 
 /** @type {import('webpack').Configuration} */
 const extensionConfig = {
@@ -53,24 +54,34 @@ const extensionConfig = {
     minimize: process.env.NODE_ENV === 'production',
     ...(process.env.NODE_ENV === 'production' && {
       minimizer: [
-        new (require('terser-webpack-plugin'))({
+        new TerserPlugin({
           terserOptions: {
             compress: {
               // Remove console.log, console.debug in production
               pure_funcs: ['console.log', 'console.debug', 'console.info'],
               // Keep console.error and console.warn for critical logging
+              drop_debugger: true,
             },
             mangle: {
               // Keep class names for better debugging
               keep_classnames: true,
               keep_fnames: true,
             },
+            format: {
+              comments: false,
+            },
           },
+          extractComments: false,
         }),
       ],
     }),
   },
   devtool: 'nosources-source-map',
+  performance: {
+    maxEntrypointSize: 1024000, // 1MB
+    maxAssetSize: 1024000, // 1MB
+    hints: 'warning',
+  },
   infrastructureLogging: {
     level: 'log',
   },
@@ -102,6 +113,7 @@ const webviewConfig = {
           path.resolve(__dirname, 'src/types'),
           path.resolve(__dirname, 'src/shared'),
           path.resolve(__dirname, 'src/utils'),
+          path.resolve(__dirname, 'src/constants'),
         ],
         exclude: [
           path.resolve(__dirname, 'src/test'),
@@ -134,19 +146,24 @@ const webviewConfig = {
     minimize: process.env.NODE_ENV === 'production',
     ...(process.env.NODE_ENV === 'production' && {
       minimizer: [
-        new (require('terser-webpack-plugin'))({
+        new TerserPlugin({
           terserOptions: {
             compress: {
               // Remove console.log, console.debug in production
               pure_funcs: ['console.log', 'console.debug', 'console.info'],
               // Keep console.error and console.warn for critical logging
+              drop_debugger: true,
             },
             mangle: {
               // Keep class names for better debugging
               keep_classnames: true,
               keep_fnames: true,
             },
+            format: {
+              comments: false,
+            },
           },
+          extractComments: false,
         }),
       ],
     }),
@@ -160,6 +177,11 @@ const webviewConfig = {
     }),
   ],
   devtool: 'nosources-source-map',
+  performance: {
+    maxEntrypointSize: 819200, // 800KB
+    maxAssetSize: 819200, // 800KB
+    hints: 'warning',
+  },
 };
 
 module.exports = [extensionConfig, webviewConfig];

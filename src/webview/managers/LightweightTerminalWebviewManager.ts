@@ -198,8 +198,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
     // 専門マネージャーの初期化
     this.webViewApiManager = new WebViewApiManager();
-    this.splitManager = new SplitManager();
-    this.splitManager.setCoordinator(this);
+    this.splitManager = new SplitManager(this); // Issue #216: constructor injection
     this.terminalLifecycleManager = new TerminalLifecycleCoordinator(this.splitManager, this);
     this.cliAgentStateManager = new CliAgentStateManager();
     this.eventHandlerManager = new EventHandlerManager();
@@ -217,11 +216,10 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     this.headerManager.setCoordinator(this);
 
     // 🆕 DisplayModeManager と TerminalContainerManager の実体化（Issue #198）
-    this.terminalContainerManager = new TerminalContainerManager();
-    this.terminalContainerManager.setCoordinator(this);
+    // Issue #216: Constructor injection pattern
+    this.terminalContainerManager = new TerminalContainerManager(this);
 
-    this.displayModeManager = new DisplayModeManager();
-    this.displayModeManager.setCoordinator(this);
+    this.displayModeManager = new DisplayModeManager(this);
 
     log('✅ All managers initialized');
 
@@ -296,9 +294,8 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     this.terminalTabManager = new TerminalTabManager();
     this.terminalTabManager.setCoordinator(this);
 
-    // Input Manager - 重要：入力機能のために必須
-    this.inputManager = new InputManager();
-    this.inputManager.setCoordinator(this); // 🔧 Set coordinator for clipboard operations
+    // Input Manager - 重要：入力機能のために必須 (Issue #216: constructor injection)
+    this.inputManager = new InputManager(this);
     this.inputManager.initialize(); // 🔧 Initialize InputManager to register keyboard listeners
 
     // Config Manager

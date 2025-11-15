@@ -19,12 +19,16 @@ export interface PluginRegistrationOptions {
   config?: PluginConfiguration;
 }
 
+interface Disposable {
+  dispose(): void;
+}
+
 /**
  * Plugin Manager
  *
  * Central registry and lifecycle manager for all plugins.
  */
-export class PluginManager {
+export class PluginManager implements Disposable {
   private readonly _plugins = new Map<string, IPlugin>();
   private readonly _agentPlugins = new Map<string, IAgentPlugin>();
   private _isDisposed = false;

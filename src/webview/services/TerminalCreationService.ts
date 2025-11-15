@@ -32,12 +32,16 @@ import { EventHandlerRegistry } from '../utils/EventHandlerRegistry';
 import { terminalLogger } from '../utils/ManagerLogger';
 import { TerminalHeaderElements } from '../factories/HeaderFactory';
 
+interface Disposable {
+  dispose(): void;
+}
+
 /**
  * Service responsible for terminal creation, removal, and switching operations
  *
  * Phase 3 Update: Integrated LifecycleController for proper resource management
  */
-export class TerminalCreationService {
+export class TerminalCreationService implements Disposable {
   private readonly splitManager: SplitManager;
   private readonly coordinator: IManagerCoordinator;
   private readonly eventRegistry: EventHandlerRegistry;

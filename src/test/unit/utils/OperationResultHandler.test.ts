@@ -4,8 +4,6 @@
  * 統一されたオペレーション結果処理ユーティリティのテスト
  * 重複していたエラーハンドリングパターンを統一する機能を検証
  */
-/* eslint-disable */
-// @ts-nocheck
 import { expect, use } from 'chai';
 import sinonChai from 'sinon-chai';
 import * as sinon from 'sinon';

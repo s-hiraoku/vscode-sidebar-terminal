@@ -37,6 +37,15 @@ Testing documentation and guides:
 - `TERMINAL_RESTORATION_TEST_GUIDE.md` - Terminal restoration testing guide
 - `TEST_COVERAGE_REPORT.md` - Test coverage analysis
 
+## 📚 API Documentation
+
+### 🔍 `/api`
+Auto-generated API documentation using TypeDoc:
+- **[API Documentation Guide](API_DOCUMENTATION.md)** - Comprehensive guide to the API documentation
+- **`api/index.html`** - Generated HTML API reference (open in browser)
+- To generate: `npm run docs:generate`
+- To clean: `npm run docs:clean`
+
 ## 📋 Additional Documentation
 
 Root-level documentation files in the docs directory:

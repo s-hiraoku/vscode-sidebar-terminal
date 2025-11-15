@@ -93,3 +93,19 @@ export const VSCODE_COMMANDS = {
   WORKBENCH_OPEN_SETTINGS: 'workbench.action.openSettings',
   WORKBENCH_RELOAD_WINDOW: 'workbench.action.reloadWindow',
 } as const;
+
+/**
+ * SystemConstants.tsから詳細な定数グループをエクスポート
+ * @see https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/226
+ */
+export {
+  PERFORMANCE_CONSTANTS,
+  TIMING_CONSTANTS,
+  UI_CONSTANTS,
+  COMMUNICATION_CONSTANTS,
+  ERROR_CONSTANTS,
+} from './SystemConstants';
+
+// SystemConstants.tsのTERMINAL_CONSTANTSを、既存のTERMINAL_CONSTANTSに優先して使用
+// 既存のTERMINAL_CONSTANTSは後方互換性のために保持
+export { TERMINAL_CONSTANTS as SYSTEM_TERMINAL_CONSTANTS } from './SystemConstants';

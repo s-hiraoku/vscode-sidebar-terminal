@@ -45,9 +45,8 @@ describe('TerminalContainerManager - Display State Management (Issue #198)', fun
       getManagers: sinon.stub().returns({}),
     } as any;
 
-    // Create TerminalContainerManager instance
-    containerManager = new TerminalContainerManager();
-    containerManager.setCoordinator(mockCoordinator as any);
+    // Create TerminalContainerManager instance (Issue #216: constructor injection)
+    containerManager = new TerminalContainerManager(mockCoordinator as any);
     containerManager.initialize();
 
     // Register containers

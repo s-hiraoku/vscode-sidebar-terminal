@@ -1,6 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
-
 import { expect } from 'chai';
 import * as sinon from 'sinon';
 import * as vscode from 'vscode';
@@ -13,8 +10,11 @@ import { TerminalManager } from '../../../terminals/TerminalManager';
 describe('FileReferenceCommand', () => {
   let fileReferenceCommand: FileReferenceCommand;
   let mockTerminalManager: sinon.SinonStubbedInstance<TerminalManager>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockActiveEditor: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockDocument: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockSelection: any;
   let sandbox: sinon.SinonSandbox;
 
@@ -33,6 +33,7 @@ describe('FileReferenceCommand', () => {
     ]);
 
     // Create FileReferenceCommand instance
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     fileReferenceCommand = new FileReferenceCommand(mockTerminalManager as any);
 
     // Mock VS Code workspace configuration
@@ -42,6 +43,7 @@ describe('FileReferenceCommand', () => {
     (vscode.workspace.getConfiguration as sinon.SinonStub).returns(mockConfig);
 
     // Mock workspace folders
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (vscode.workspace as any).workspaceFolders = [
       {
         uri: { fsPath: '/workspace/project' },
@@ -66,6 +68,7 @@ describe('FileReferenceCommand', () => {
       selection: mockSelection,
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (vscode.window as any).activeTextEditor = mockActiveEditor;
 
     // Mock commands
@@ -81,6 +84,7 @@ describe('FileReferenceCommand', () => {
 
   describe('getActiveFileInfo', () => {
     it('should return file info without selection when no text is selected', () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = (fileReferenceCommand as any).getActiveFileInfo();
 
       expect(result).to.deep.equal({
@@ -97,6 +101,7 @@ describe('FileReferenceCommand', () => {
       mockSelection.start = { line: 4 }; // 0-based
       mockSelection.end = { line: 4 }; // 0-based
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = (fileReferenceCommand as any).getActiveFileInfo();
 
       expect(result).to.deep.equal({
@@ -117,6 +122,7 @@ describe('FileReferenceCommand', () => {
       mockSelection.start = { line: 2 }; // 0-based
       mockSelection.end = { line: 6 }; // 0-based
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = (fileReferenceCommand as any).getActiveFileInfo();
 
       expect(result).to.deep.equal({
@@ -132,8 +138,10 @@ describe('FileReferenceCommand', () => {
     });
 
     it('should return null when no active editor', () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (vscode.window as any).activeTextEditor = null;
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = (fileReferenceCommand as any).getActiveFileInfo();
 
       expect(result).to.be.null;
@@ -146,6 +154,7 @@ describe('FileReferenceCommand', () => {
         relativePath: 'src/test.ts',
       };
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = (fileReferenceCommand as any).formatFileReference(fileInfo);
 
       expect(result).to.equal('@src/test.ts ');
@@ -161,6 +170,7 @@ describe('FileReferenceCommand', () => {
         },
       };
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = (fileReferenceCommand as any).formatFileReference(fileInfo);
 
       expect(result).to.equal('@src/test.ts#L5 ');
@@ -176,6 +186,7 @@ describe('FileReferenceCommand', () => {
         },
       };
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = (fileReferenceCommand as any).formatFileReference(fileInfo);
 
       expect(result).to.equal('@src/test.ts#L3-L7 ');
@@ -223,6 +234,7 @@ describe('FileReferenceCommand', () => {
     });
 
     it('should show warning when no active editor', () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (vscode.window as any).activeTextEditor = null;
 
       fileReferenceCommand.handleSendAtMention();
