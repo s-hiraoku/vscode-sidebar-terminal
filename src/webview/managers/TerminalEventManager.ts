@@ -38,6 +38,7 @@ export interface TerminalContainerCallbacks {
 export class TerminalEventManager extends BaseManager {
   private readonly eventRegistry: EventHandlerRegistry;
   private readonly coordinator: IManagerCoordinator;
+  private readonly disposables: Array<{ dispose: () => void }> = [];
 
   constructor(coordinator: IManagerCoordinator, eventRegistry: EventHandlerRegistry) {
     super('TerminalEventManager', {
@@ -66,6 +67,9 @@ export class TerminalEventManager extends BaseManager {
     terminalId: string,
     container: HTMLElement
   ): void {
+    // Setup user input handler (send to Extension)
+    this.setupInputHandler(terminal, terminalId);
+
     // Setup click handler for terminal activation
     this.setupTerminalClickHandler(terminal, terminalId, container);
 
@@ -73,6 +77,29 @@ export class TerminalEventManager extends BaseManager {
     this.setupFocusOptimization(terminal, terminalId);
 
     terminalLogger.info(`✅ Event handlers setup for terminal: ${terminalId}`);
+  }
+
+  /**
+   * Setup input handler to send user input to Extension
+   */
+  private setupInputHandler(terminal: Terminal, terminalId: string): void {
+    try {
+      const inputDisposable = terminal.onData((data: string) => {
+        terminalLogger.debug(`⌨️ User input for ${terminalId}:`, data.length, 'chars');
+
+        // Send input to Extension
+        this.coordinator?.postMessageToExtension({
+          command: 'input',
+          data,
+          terminalId,
+        });
+      });
+
+      this.disposables.push(inputDisposable);
+      terminalLogger.info(`✅ Input handler enabled for terminal: ${terminalId}`);
+    } catch (error) {
+      terminalLogger.error(`Failed to setup input handler for ${terminalId}:`, error);
+    }
   }
 
   /**
@@ -382,6 +409,18 @@ export class TerminalEventManager extends BaseManager {
    * Called by BaseManager.dispose() for cleanup
    */
   protected doDispose(): void {
+    // Dispose all input handlers
+    while (this.disposables.length > 0) {
+      const disposable = this.disposables.pop();
+      if (disposable) {
+        try {
+          disposable.dispose();
+        } catch (error) {
+          terminalLogger.warn('⚠️ Error disposing input handler:', error);
+        }
+      }
+    }
+
     terminalLogger.info('🧹 TerminalEventManager disposed');
     // Event registry cleanup handled by caller
   }

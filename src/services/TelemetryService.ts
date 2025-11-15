@@ -113,7 +113,7 @@ export class TelemetryService {
   /**
    * Send telemetry data (internal implementation)
    */
-  private sendTelemetryData(eventName: string, data: Record<string, any>): void {
+  private sendTelemetryData(eventName: string, data: Record<string, any> = {}): void {
     // VS Code's TelemetryLogger automatically handles:
     // - Checking user's telemetry opt-out settings
     // - HTTPS encryption
@@ -131,7 +131,7 @@ export class TelemetryService {
   /**
    * Send error telemetry (internal implementation)
    */
-  private sendErrorTelemetry(error: Error, data?: Record<string, any>): void {
+  private sendErrorTelemetry(error: Error, data: Record<string, any> = {}): void {
     if (process.env.NODE_ENV === 'development') {
       console.error(`[Telemetry Error] ${error.message}:`, data);
     }
@@ -148,7 +148,6 @@ export class TelemetryService {
       version: this.extensionVersion,
       platform: process.platform,
       nodeVersion: process.version,
-    }, {
       activationTime,
     });
   }
@@ -164,7 +163,6 @@ export class TelemetryService {
     this.telemetryLogger.logUsage(TelemetryEventType.ExtensionDeactivated, {
       extensionId: this.extensionId,
       version: this.extensionVersion,
-    }, {
       sessionDuration,
     });
   }
@@ -221,7 +219,6 @@ export class TelemetryService {
   public trackCliAgentDisconnected(agentType: string, sessionDuration: number): void {
     this.telemetryLogger.logUsage(TelemetryEventType.CliAgentDisconnected, {
       agentType,
-    }, {
       sessionDuration,
     });
   }
@@ -264,7 +261,6 @@ export class TelemetryService {
   public trackSessionSaved(terminalCount: number, success: boolean): void {
     this.telemetryLogger.logUsage(TelemetryEventType.SessionSaved, {
       success,
-    }, {
       terminalCount,
     });
   }
@@ -275,7 +271,6 @@ export class TelemetryService {
   public trackSessionRestored(terminalCount: number, success: boolean): void {
     this.telemetryLogger.logUsage(TelemetryEventType.SessionRestored, {
       success,
-    }, {
       terminalCount,
     });
   }
@@ -287,9 +282,8 @@ export class TelemetryService {
     this.telemetryLogger.logUsage(TelemetryEventType.PerformanceMetric, {
       operation: metric.operation,
       success: metric.success,
-      ...metric.metadata,
-    }, {
       duration: metric.duration,
+      ...metric.metadata,
     });
   }
 

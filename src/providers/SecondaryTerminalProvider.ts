@@ -34,7 +34,10 @@ import { ResourceCleanupService } from './services/ResourceCleanupService';
 import { WebViewLifecycleManager } from './services/WebViewLifecycleManager';
 import { MessageRoutingFacade } from './services/MessageRoutingFacade';
 import { InitializationOrchestrator } from './services/InitializationOrchestrator';
-import { TerminalInitializationStateMachine } from './services/TerminalInitializationStateMachine';
+import {
+  TerminalInitializationStateMachine,
+  TerminalInitializationState,
+} from './services/TerminalInitializationStateMachine';
 import {
   TerminalInitializationWatchdog,
   WatchdogOptions,
@@ -564,6 +567,12 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     const terminalId = message.terminalId as string;
     if (!terminalId) {
       log('⚠️ [PROVIDER] Terminal initialization complete missing terminalId');
+      return;
+    }
+
+    const currentState = this._terminalInitStateMachine.getState(terminalId);
+    if (currentState >= TerminalInitializationState.ViewReady && !this._safeModeTerminals.has(terminalId)) {
+      log(`⏭️ [PROVIDER] Ignoring duplicate terminalInitializationComplete for ${terminalId}`);
       return;
     }
 
