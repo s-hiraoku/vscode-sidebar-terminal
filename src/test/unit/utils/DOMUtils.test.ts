@@ -1,8 +1,6 @@
 /**
  * DOMUtils unit tests
  */
-/* eslint-disable */
-// @ts-nocheck
 import { expect, use } from 'chai';
 import sinonChai from 'sinon-chai';
 

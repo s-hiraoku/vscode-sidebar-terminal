@@ -3,7 +3,17 @@ node_modules/
 out/
 dist/
 *.vsix
+# Environment and credential files
 .env
+.env.*
+.env.local
+.env.*.local
+*.pem
+*.key
+*.p12
+*.pfx
+credentials.json
+secrets.json
 .DS_Store
 coverage/
 .nyc_output/

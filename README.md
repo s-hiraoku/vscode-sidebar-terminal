@@ -607,6 +607,23 @@ The project uses GitHub Actions for automated testing and releases:
 - 🔧 **Detection Improvements**: Enhanced startup and termination pattern recognition
 - 📊 **Stability Enhancements**: Improved state management and error handling
 
+## 📚 Documentation
+
+### API Documentation
+
+Comprehensive API documentation is available for developers who want to understand the extension's architecture or contribute to the codebase:
+
+- **[API Documentation Guide](docs/API_DOCUMENTATION.md)** - Complete guide to the API documentation
+- **[Generated API Reference](docs/api/index.html)** - Browse the full API documentation (TypeDoc)
+- **Generate docs**: `npm run docs:generate`
+- **View all docs**: See [docs/README.md](docs/README.md) for the complete documentation structure
+
+The API documentation includes:
+- Core components (ExtensionLifecycle, Terminal Management)
+- Service APIs (Shell Integration, Configuration, Keyboard Shortcuts)
+- Command implementations (File References, Copilot Integration)
+- Utilities and helpers
+
 ## 🤝 Contributing
 
 We welcome contributions! Please see our [GitHub Issues](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues) to get started.
@@ -672,6 +689,62 @@ npm run rollback:hotfix
 - **Documentation**: Clear inline comments and updated guides
 - **Performance**: Memory-efficient implementations with proper cleanup
 - **Release Safety**: Automated rollback system for production stability
+
+## 🔒 Privacy & Telemetry
+
+### Privacy-Respecting Telemetry
+
+Secondary Terminal implements **privacy-respecting telemetry** to help us improve the extension while protecting your data.
+
+#### What We Collect
+
+We collect **anonymous usage data** to understand:
+- Which features are most used
+- Where errors occur
+- Performance bottlenecks
+- Feature adoption rates
+
+**Examples of data collected:**
+- Extension activation time
+- Number of terminals created/deleted
+- CLI agent types detected (e.g., 'claude', 'gemini', 'copilot')
+- Command execution success/failure
+- Performance metrics (operation duration)
+
+#### What We DO NOT Collect
+
+We **never** collect:
+- ❌ Terminal content (commands you type)
+- ❌ Terminal output
+- ❌ File paths or file content
+- ❌ Working directory paths
+- ❌ Environment variables
+- ❌ Credentials or passwords
+- ❌ Personal identifiable information (PII)
+
+### Your Privacy Controls
+
+This extension **automatically respects** VS Code's telemetry settings.
+
+**To disable telemetry:**
+1. Open VS Code Settings (`Ctrl+,` or `Cmd+,`)
+2. Search for "telemetry"
+3. Set **"Telemetry: Telemetry Level"** to `"off"`
+
+Or add to your `settings.json`:
+```json
+{
+  "telemetry.telemetryLevel": "off"
+}
+```
+
+### Learn More
+
+For complete details about our privacy practices, see:
+- 📄 [Privacy Policy](PRIVACY.md) - Full privacy documentation
+- ✅ Complies with GDPR principles
+- 🔒 HTTPS encryption for all data transmission
+- 🎯 Minimal data collection approach
 
 ## 📝 License
 

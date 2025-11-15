@@ -3,13 +3,6 @@
  * Tests CLI Agent Code command and output pattern detection
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-
 import { describe, it, beforeEach, afterEach } from 'mocha';
 import { expect } from 'chai';
 import * as sinon from 'sinon';
@@ -109,26 +102,20 @@ describe('CliAgentDetection in Terminal Manager', () => {
     sinon.restore();
 
     // Setup mock modules
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    require.cache[require.resolve('vscode')] = {
-      exports: mockVscode,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
+    require.cache[require.resolve('vscode')] = { exports: mockVscode } as any;
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
     require.cache[require.resolve('@homebridge/node-pty-prebuilt-multiarch')] = {
       exports: mockPty,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any;
 
     // Reset pty mock
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     mockPtyProcess.onData = sinon.stub().callsFake((callback: (data: string) => void) => {
       _onDataCallback = callback;
       return { dispose: sinon.stub() };
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     mockPtyProcess.onExit = sinon.stub().callsFake((callback: (code: number) => void) => {
       _onExitCallback = callback;
       return { dispose: sinon.stub() };
@@ -502,9 +489,9 @@ describe('CliAgentDetection in Terminal Manager', () => {
       // Act & Assert - should not throw
       expect(() => {
         terminalManager.sendInput('', terminalId);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         terminalManager.sendInput(null as any, terminalId);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         terminalManager.sendInput(undefined as any, terminalId);
       }).to.not.throw();
     });
