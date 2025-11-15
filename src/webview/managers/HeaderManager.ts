@@ -127,6 +127,7 @@ export class HeaderManager implements IHeaderManager {
         userSelect: 'none',
         minHeight: `${UI_CONSTANTS.SIZES.HEADER_HEIGHT}px`,
         flexShrink: '0',
+        boxSizing: 'border-box',
       },
       {
         id: 'webview-header',
@@ -154,7 +155,9 @@ export class HeaderManager implements IHeaderManager {
       display: 'flex',
       alignItems: 'center',
       gap: `${UI_CONSTANTS.SPACING.TITLE_GAP}px`,
-      flex: '1',
+      flex: '1 1 auto',
+      minWidth: '0',
+      overflow: 'hidden',
     });
 
     const terminalIcon = this.createTerminalIcon();
@@ -176,6 +179,7 @@ export class HeaderManager implements IHeaderManager {
         fontSize: `${UI_CONSTANTS.SIZES.TERMINAL_ICON_SIZE}px`,
         opacity: '0.8',
         lineHeight: '1',
+        flexShrink: '0',
       },
       {
         textContent: '🖥️',
@@ -194,6 +198,11 @@ export class HeaderManager implements IHeaderManager {
         fontWeight: '600',
         letterSpacing: '0.02em',
         lineHeight: '1.2',
+        flex: '0 1 auto',
+        minWidth: '0',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
       },
       {
         textContent: this.config.title,
@@ -217,6 +226,7 @@ export class HeaderManager implements IHeaderManager {
         minWidth: '20px',
         textAlign: 'center',
         lineHeight: '18px',
+        flexShrink: '0',
       },
       {
         id: 'terminal-count-badge',
@@ -236,6 +246,7 @@ export class HeaderManager implements IHeaderManager {
         alignItems: 'center',
         gap: `${UI_CONSTANTS.SPACING.ICON_GAP}px`,
         position: 'relative',
+        flex: '0 0 auto',
       },
       {
         className: 'sample-icons',
@@ -265,7 +276,7 @@ export class HeaderManager implements IHeaderManager {
         border: 'none',
         color: 'var(--vscode-foreground)',
         cursor: 'pointer',
-        padding: '4px 8px',
+        padding: '6px',
         borderRadius: '4px',
         fontSize: '16px',
         transition: 'background-color 0.2s ease, color 0.2s ease',
@@ -274,6 +285,7 @@ export class HeaderManager implements IHeaderManager {
         justifyContent: 'center',
         minWidth: `${UI_CONSTANTS.SIZES.ICON_BUTTON_SIZE}px`,
         height: `${UI_CONSTANTS.SIZES.ICON_BUTTON_SIZE}px`,
+        boxSizing: 'border-box',
       },
       {
         innerHTML: '⊞', // Unicode split icon
@@ -344,6 +356,7 @@ export class HeaderManager implements IHeaderManager {
         userSelect: 'none',
         filter: 'grayscale(30%)',
         transition: 'opacity 0.2s ease',
+        boxSizing: 'border-box',
       },
       {
         className: 'sample-icon',
