@@ -3,6 +3,10 @@
  * Provides environment-aware logging with configurable levels
  */
 
+interface Disposable {
+  dispose(): void;
+}
+
 export enum LogLevel {
   DEBUG = 0,
   INFO = 1,
@@ -11,7 +15,7 @@ export enum LogLevel {
   NONE = 4,
 }
 
-class Logger {
+class Logger implements Disposable {
   private level: LogLevel;
   private isDevelopment: boolean;
   private isProduction: boolean;

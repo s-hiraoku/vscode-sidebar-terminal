@@ -22,7 +22,12 @@ export namespace DOMUtils {
         if (key === 'textContent') {
           element.textContent = value;
         } else if (key === 'innerHTML') {
-          element.innerHTML = value;
+          // SECURITY: innerHTML is blocked to prevent XSS vulnerabilities
+          // Use textContent instead, or build DOM structure with createElement/appendChild
+          console.warn(
+            '[SECURITY] DOMUtils.createElement: innerHTML attribute is not supported. Use textContent instead.'
+          );
+          element.textContent = value;
         } else if (key === 'className') {
           element.className = value;
         } else {

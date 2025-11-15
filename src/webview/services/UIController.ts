@@ -95,7 +95,7 @@ export class UIController extends BaseManager implements IUIController {
     if (!tabsContainer) return;
 
     // Clear existing tabs
-    tabsContainer.innerHTML = '';
+    tabsContainer.textContent = ''; // Safe: clearing content
 
     // Create tabs for each terminal
     for (const terminalInfo of terminalInfos) {
@@ -111,10 +111,18 @@ export class UIController extends BaseManager implements IUIController {
     tab.className = `terminal-tab ${terminalInfo.isActive ? 'active' : ''}`;
     tab.setAttribute('data-terminal-id', terminalInfo.id);
 
-    tab.innerHTML = `
-      <span class="tab-number">${terminalInfo.number}</span>
-      <span class="tab-close" data-action="close">×</span>
-    `;
+    // SECURITY: Build DOM structure safely to prevent XSS
+    const numberSpan = document.createElement('span');
+    numberSpan.className = 'tab-number';
+    numberSpan.textContent = String(terminalInfo.number);
+
+    const closeSpan = document.createElement('span');
+    closeSpan.className = 'tab-close';
+    closeSpan.setAttribute('data-action', 'close');
+    closeSpan.textContent = '×';
+
+    tab.appendChild(numberSpan);
+    tab.appendChild(closeSpan);
 
     // Add click handlers
     tab.addEventListener('click', (e) => {
@@ -264,28 +272,76 @@ export class UIController extends BaseManager implements IUIController {
 
     const debugPanel = document.getElementById('debug-panel');
     if (debugPanel) {
-      debugPanel.innerHTML = `
-        <h3>Debug Information</h3>
-        <div class="debug-section">
-          <strong>System Status:</strong> ${debugInfo.systemStatus}
-        </div>
-        <div class="debug-section">
-          <strong>Active Terminal:</strong> ${debugInfo.activeTerminal || 'None'}
-        </div>
-        <div class="debug-section">
-          <strong>Terminal Count:</strong> ${debugInfo.terminalCount}
-        </div>
-        <div class="debug-section">
-          <strong>Available Slots:</strong> ${debugInfo.availableSlots}
-        </div>
-        <div class="debug-section">
-          <strong>Uptime:</strong> ${debugInfo.uptime}
-        </div>
-        <div class="debug-section">
-          <strong>Pending Operations:</strong> ${debugInfo.pendingOperations.length}
-          ${debugInfo.pendingOperations.length > 0 ? `<ul>${debugInfo.pendingOperations.map(op => `<li>${op}</li>`).join('')}</ul>` : ''}
-        </div>
-      `;
+      // SECURITY: Build DOM structure safely to prevent XSS
+      debugPanel.textContent = ''; // Clear existing content
+
+      const h3 = document.createElement('h3');
+      h3.textContent = 'Debug Information';
+      debugPanel.appendChild(h3);
+
+      // System Status
+      const statusSection = document.createElement('div');
+      statusSection.className = 'debug-section';
+      const statusLabel = document.createElement('strong');
+      statusLabel.textContent = 'System Status: ';
+      statusSection.appendChild(statusLabel);
+      statusSection.appendChild(document.createTextNode(debugInfo.systemStatus));
+      debugPanel.appendChild(statusSection);
+
+      // Active Terminal
+      const terminalSection = document.createElement('div');
+      terminalSection.className = 'debug-section';
+      const terminalLabel = document.createElement('strong');
+      terminalLabel.textContent = 'Active Terminal: ';
+      terminalSection.appendChild(terminalLabel);
+      terminalSection.appendChild(document.createTextNode(debugInfo.activeTerminal || 'None'));
+      debugPanel.appendChild(terminalSection);
+
+      // Terminal Count
+      const countSection = document.createElement('div');
+      countSection.className = 'debug-section';
+      const countLabel = document.createElement('strong');
+      countLabel.textContent = 'Terminal Count: ';
+      countSection.appendChild(countLabel);
+      countSection.appendChild(document.createTextNode(String(debugInfo.terminalCount)));
+      debugPanel.appendChild(countSection);
+
+      // Available Slots
+      const slotsSection = document.createElement('div');
+      slotsSection.className = 'debug-section';
+      const slotsLabel = document.createElement('strong');
+      slotsLabel.textContent = 'Available Slots: ';
+      slotsSection.appendChild(slotsLabel);
+      slotsSection.appendChild(document.createTextNode(String(debugInfo.availableSlots)));
+      debugPanel.appendChild(slotsSection);
+
+      // Uptime
+      const uptimeSection = document.createElement('div');
+      uptimeSection.className = 'debug-section';
+      const uptimeLabel = document.createElement('strong');
+      uptimeLabel.textContent = 'Uptime: ';
+      uptimeSection.appendChild(uptimeLabel);
+      uptimeSection.appendChild(document.createTextNode(debugInfo.uptime));
+      debugPanel.appendChild(uptimeSection);
+
+      // Pending Operations
+      const opsSection = document.createElement('div');
+      opsSection.className = 'debug-section';
+      const opsLabel = document.createElement('strong');
+      opsLabel.textContent = 'Pending Operations: ';
+      opsSection.appendChild(opsLabel);
+      opsSection.appendChild(document.createTextNode(String(debugInfo.pendingOperations.length)));
+
+      if (debugInfo.pendingOperations.length > 0) {
+        const ul = document.createElement('ul');
+        debugInfo.pendingOperations.forEach(op => {
+          const li = document.createElement('li');
+          li.textContent = op;
+          ul.appendChild(li);
+        });
+        opsSection.appendChild(ul);
+      }
+      debugPanel.appendChild(opsSection);
     }
   }
 
@@ -318,20 +374,27 @@ export class UIController extends BaseManager implements IUIController {
 
     const notification = document.createElement('div');
     notification.className = `notification notification-${options.type}`;
-    notification.innerHTML = `
-      <div class="notification-content">
-        <span class="notification-message">${options.message}</span>
-        <button class="notification-close">×</button>
-      </div>
-    `;
+
+    // SECURITY: Build DOM structure safely to prevent XSS
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'notification-content';
+
+    const messageSpan = document.createElement('span');
+    messageSpan.className = 'notification-message';
+    messageSpan.textContent = options.message; // Safe: textContent escapes HTML
+
+    const closeButton = document.createElement('button');
+    closeButton.className = 'notification-close';
+    closeButton.textContent = '×';
+
+    contentDiv.appendChild(messageSpan);
+    contentDiv.appendChild(closeButton);
+    notification.appendChild(contentDiv);
 
     // Add close handler
-    const closeButton = notification.querySelector('.notification-close');
-    if (closeButton) {
-      closeButton.addEventListener('click', () => {
-        this.removeNotification(notification);
-      });
-    }
+    closeButton.addEventListener('click', () => {
+      this.removeNotification(notification);
+    });
 
     // Add action buttons if provided
     if (options.actions) {
@@ -444,12 +507,21 @@ export class UIController extends BaseManager implements IUIController {
 
     this.loadingElement = document.createElement('div');
     this.loadingElement.className = 'loading-overlay';
-    this.loadingElement.innerHTML = `
-      <div class="loading-content">
-        <div class="loading-spinner"></div>
-        <div class="loading-message">${message}</div>
-      </div>
-    `;
+
+    // SECURITY: Build DOM structure safely to prevent XSS
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'loading-content';
+
+    const spinnerDiv = document.createElement('div');
+    spinnerDiv.className = 'loading-spinner';
+
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'loading-message';
+    messageDiv.textContent = message; // Safe: textContent escapes HTML
+
+    contentDiv.appendChild(spinnerDiv);
+    contentDiv.appendChild(messageDiv);
+    this.loadingElement.appendChild(contentDiv);
 
     document.body.appendChild(this.loadingElement);
   }

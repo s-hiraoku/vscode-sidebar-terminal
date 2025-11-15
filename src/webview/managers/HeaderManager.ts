@@ -397,15 +397,26 @@ export class HeaderManager implements IHeaderManager {
       }
     );
 
-    helpTooltip.innerHTML = `
-      <div style="display: flex; align-items: center; gap: 4px;">
-        <span>📌</span>
-        <span>Sample Icons (Display Only)</span>
-      </div>
-      <div style="margin-top: 2px; color: var(--vscode-descriptionForeground, #969696);">
-        Use VS Code panel buttons for actions
-      </div>
-    `;
+    // SECURITY: Build DOM structure safely to prevent XSS
+    const headerDiv = document.createElement('div');
+    headerDiv.style.cssText = 'display: flex; align-items: center; gap: 4px;';
+
+    const iconSpan = document.createElement('span');
+    iconSpan.textContent = '📌';
+
+    const textSpan = document.createElement('span');
+    textSpan.textContent = 'Sample Icons (Display Only)';
+
+    headerDiv.appendChild(iconSpan);
+    headerDiv.appendChild(textSpan);
+
+    const descriptionDiv = document.createElement('div');
+    descriptionDiv.style.cssText =
+      'margin-top: 2px; color: var(--vscode-descriptionForeground, #969696);';
+    descriptionDiv.textContent = 'Use VS Code panel buttons for actions';
+
+    helpTooltip.appendChild(headerDiv);
+    helpTooltip.appendChild(descriptionDiv);
 
     this.addTooltipInteraction(container, helpTooltip);
     container.appendChild(helpTooltip);

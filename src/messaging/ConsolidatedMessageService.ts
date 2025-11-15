@@ -35,7 +35,11 @@ import { SessionHandler } from './handlers/SessionHandler';
  * - Publisher-subscriber routing (replaces WebViewMessageRouter)
  * - Complete backward compatibility with existing interfaces
  */
-export class ConsolidatedMessageService implements IMessageManager, IManagerLifecycle {
+interface Disposable {
+  dispose(): void;
+}
+
+export class ConsolidatedMessageService implements IMessageManager, IManagerLifecycle, Disposable {
   private readonly logger = messageLogger;
   private readonly dispatcher: UnifiedMessageDispatcher;
   private coordinator?: IManagerCoordinator;

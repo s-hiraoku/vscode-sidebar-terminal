@@ -208,13 +208,27 @@ export class UIManager extends BaseManager implements IUIManager {
       placeholder = document.createElement('div');
       placeholder.id = 'terminal-placeholder';
       placeholder.className = 'terminal-placeholder';
-      placeholder.innerHTML = `
-        <div class="placeholder-content">
-          <div class="placeholder-icon">⚡</div>
-          <div class="placeholder-title">No Terminal Active</div>
-          <div class="placeholder-subtitle">Create a new terminal to get started</div>
-        </div>
-      `;
+
+      // SECURITY: Build DOM structure safely to prevent XSS
+      const contentDiv = document.createElement('div');
+      contentDiv.className = 'placeholder-content';
+
+      const iconDiv = document.createElement('div');
+      iconDiv.className = 'placeholder-icon';
+      iconDiv.textContent = '⚡';
+
+      const titleDiv = document.createElement('div');
+      titleDiv.className = 'placeholder-title';
+      titleDiv.textContent = 'No Terminal Active';
+
+      const subtitleDiv = document.createElement('div');
+      subtitleDiv.className = 'placeholder-subtitle';
+      subtitleDiv.textContent = 'Create a new terminal to get started';
+
+      contentDiv.appendChild(iconDiv);
+      contentDiv.appendChild(titleDiv);
+      contentDiv.appendChild(subtitleDiv);
+      placeholder.appendChild(contentDiv);
 
       const terminalContainer = document.getElementById('terminal-container');
       if (terminalContainer) {
@@ -307,10 +321,17 @@ export class UIManager extends BaseManager implements IUIManager {
   public showLoadingIndicator(message: string = 'Loading...'): HTMLElement {
     const indicator = document.createElement('div');
     indicator.className = 'loading-indicator';
-    indicator.innerHTML = `
-      <div class="loading-spinner"></div>
-      <div class="loading-message">${message}</div>
-    `;
+
+    // SECURITY: Build DOM structure safely to prevent XSS
+    const spinnerDiv = document.createElement('div');
+    spinnerDiv.className = 'loading-spinner';
+
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'loading-message';
+    messageDiv.textContent = message; // Safe: textContent escapes HTML
+
+    indicator.appendChild(spinnerDiv);
+    indicator.appendChild(messageDiv);
 
     const terminalContainer = document.getElementById('terminal-container');
     if (terminalContainer) {
@@ -652,7 +673,7 @@ export class UIManager extends BaseManager implements IUIManager {
     // HeaderFactory構造なので適切なstatusセクションを使用
     const statusSection = header.querySelector('.terminal-status');
     if (statusSection) {
-      statusSection.innerHTML = ''; // Clear existing status
+      statusSection.textContent = ''; // Safe: clearing content
     }
 
     if (isActive) {
@@ -718,13 +739,28 @@ export class UIManager extends BaseManager implements IUIManager {
     const container = document.createElement('div');
     const icon = config.icon || this.getDefaultIcon(config.type);
 
-    container.innerHTML = `
-      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-        <span style="font-size: 14px;">${icon}</span>
-        <strong>${config.title}</strong>
-      </div>
-      <div style="font-size: 10px; line-height: 1.4;">${config.message}</div>
-    `;
+    // SECURITY: Build DOM structure safely to prevent XSS
+    // Create header with icon and title
+    const headerDiv = document.createElement('div');
+    headerDiv.style.cssText = 'display: flex; align-items: center; gap: 8px; margin-bottom: 4px;';
+
+    const iconSpan = document.createElement('span');
+    iconSpan.style.fontSize = '14px';
+    iconSpan.textContent = icon; // Safe: textContent escapes HTML
+
+    const titleStrong = document.createElement('strong');
+    titleStrong.textContent = config.title; // Safe: textContent escapes HTML
+
+    headerDiv.appendChild(iconSpan);
+    headerDiv.appendChild(titleStrong);
+
+    // Create message div
+    const messageDiv = document.createElement('div');
+    messageDiv.style.cssText = 'font-size: 10px; line-height: 1.4;';
+    messageDiv.textContent = config.message; // Safe: textContent escapes HTML
+
+    container.appendChild(headerDiv);
+    container.appendChild(messageDiv);
 
     const closeBtn = this.createNotificationCloseButton(colors);
     container.appendChild(closeBtn);

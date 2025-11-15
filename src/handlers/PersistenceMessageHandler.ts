@@ -1,7 +1,4 @@
-import {
-  UnifiedTerminalPersistenceService,
-  PersistenceError,
-} from '../services/UnifiedTerminalPersistenceService';
+import { ExtensionPersistenceService } from '../services/persistence/ExtensionPersistenceService';
 import { extension as log } from '../utils/logger';
 
 /**
@@ -44,13 +41,13 @@ export interface IPersistenceMessageHandler {
  * Factory function to create PersistenceMessageHandler instance
  */
 export function createPersistenceMessageHandler(
-  persistenceService: UnifiedTerminalPersistenceService
+  persistenceService: ExtensionPersistenceService
 ): IPersistenceMessageHandler {
   return new PersistenceMessageHandler(persistenceService);
 }
 
 export class PersistenceMessageHandler {
-  constructor(private readonly persistenceService: UnifiedTerminalPersistenceService) {
+  constructor(private readonly persistenceService: ExtensionPersistenceService) {
     log('🔧 [MSG-HANDLER] PersistenceMessageHandler initialized');
   }
 
@@ -98,19 +95,17 @@ export class PersistenceMessageHandler {
         };
       }
 
-      await this.persistenceService.saveSession(terminalData);
+      const result = await this.persistenceService.saveCurrentSession();
 
       log(`✅ [MSG-HANDLER] Session saved successfully: ${terminalData.length} terminals`);
       return {
-        success: true,
+        success: result.success,
         terminalCount: terminalData.length,
-        data: 'Session saved successfully',
+        data: result.message || 'Session saved successfully',
+        error: result.error,
       };
     } catch (error) {
-      const errorMsg =
-        error instanceof PersistenceError
-          ? error.message
-          : `Save operation failed: ${(error as Error).message}`;
+      const errorMsg = `Save operation failed: ${(error as Error).message}`;
 
       log(`❌ [MSG-HANDLER] Save failed: ${errorMsg}`);
       return {
@@ -125,9 +120,9 @@ export class PersistenceMessageHandler {
    */
   private async handleRestoreSession(): Promise<PersistenceResponse> {
     try {
-      const restoredTerminals = await this.persistenceService.restoreSession();
+      const result = await this.persistenceService.restoreSession();
 
-      if (restoredTerminals.length === 0) {
+      if (!result.success || result.terminals.length === 0) {
         log('📦 [MSG-HANDLER] No session to restore');
         return {
           success: true,
@@ -137,17 +132,14 @@ export class PersistenceMessageHandler {
         };
       }
 
-      log(`✅ [MSG-HANDLER] Session restored successfully: ${restoredTerminals.length} terminals`);
+      log(`✅ [MSG-HANDLER] Session restored successfully: ${result.terminals.length} terminals`);
       return {
         success: true,
-        terminalCount: restoredTerminals.length,
-        data: restoredTerminals,
+        terminalCount: result.terminals.length,
+        data: result.terminals,
       };
     } catch (error) {
-      const errorMsg =
-        error instanceof PersistenceError
-          ? error.message
-          : `Restore operation failed: ${(error as Error).message}`;
+      const errorMsg = `Restore operation failed: ${(error as Error).message}`;
 
       log(`❌ [MSG-HANDLER] Restore failed: ${errorMsg}`);
       return {

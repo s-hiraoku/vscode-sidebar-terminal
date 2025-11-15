@@ -9,6 +9,7 @@
 
 import { LoggerFunction } from '../utils/TypedMessageHandling';
 import { webview as log } from '../../utils/logger';
+import { IDisposable } from '../utils/DOMManager';
 
 // =============================================================================
 // インターフェースと型定義 - 統合された設定オプション
@@ -197,7 +198,7 @@ export abstract class ResourceManager {
 // 統合された基底マネージャークラス
 // =============================================================================
 
-export abstract class BaseManager extends ResourceManager {
+export abstract class BaseManager extends ResourceManager implements IDisposable {
   protected isReady = false;
   protected isDisposed = false;
   private initializationStartTime = 0;
