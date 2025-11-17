@@ -92,6 +92,16 @@ describe('ConsolidatedMessageManager', () => {
       // No error should be thrown
     });
 
+    it('should handle startOutput message', async () => {
+      const message: MessageCommand = {
+        command: 'startOutput',
+        terminalId: 'terminal-1',
+      };
+
+      await messageManager.receiveMessage(message, mockCoordinator);
+      // No error should be thrown
+    });
+
     it('should handle terminalCreated message', async () => {
       const message: MessageCommand = {
         command: 'terminalCreated',

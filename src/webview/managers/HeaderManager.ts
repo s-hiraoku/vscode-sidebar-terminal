@@ -288,7 +288,7 @@ export class HeaderManager implements IHeaderManager {
         boxSizing: 'border-box',
       },
       {
-        innerHTML: '⊞', // Unicode split icon
+        textContent: '⊞', // Unicode split icon
         title: 'Toggle Split View',
         className: 'split-mode-toggle-button',
       }

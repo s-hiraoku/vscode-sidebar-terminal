@@ -149,8 +149,9 @@ export class TerminalContainerFactory {
         }
       }
 
-      // Apply container to document
-      this.appendToMainContainer(container);
+      // 🔧 FIX: Don't append here! Let TerminalCreationService handle DOM append
+      // after terminal.open() is called. Appending before terminal setup causes issues.
+      // this.appendToMainContainer(container);  // REMOVED
 
       const elements: ContainerElements = {
         container,

@@ -186,6 +186,7 @@ export class WebViewLifecycleManager implements vscode.Disposable {
         throw new Error('Generated HTML is empty');
       }
 
+      // Use actual HTML content
       webviewView.webview.html = htmlContent;
       this._htmlSet = true;
       this._performanceMetrics.htmlSetOperations++;

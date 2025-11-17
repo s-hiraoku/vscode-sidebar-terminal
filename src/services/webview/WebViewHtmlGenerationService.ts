@@ -674,7 +674,7 @@ export class WebViewHtmlGenerationService {
             <!-- Screen reader announcements -->
             <div role="status" aria-live="polite" aria-atomic="true" class="sr-only" id="sr-status"></div>
             <div role="alert" aria-live="assertive" aria-atomic="true" class="sr-only" id="sr-alert"></div>
-            <!-- Terminal container -->
+            <!-- Terminal containers will be added here by JavaScript -->
         </div>
     `;
   }
@@ -688,10 +688,7 @@ export class WebViewHtmlGenerationService {
   private _generateInlineScripts(nonce: string): string {
     return `
         <script nonce="${nonce}">
-            // 🎯 NOTE: VS Code API is acquired in webview.js (main.ts) at top level
-            // and stored in window.vscodeApi - no need to acquire it here
-
-            // Add script loading event handlers
+            // Script loading monitoring
             document.addEventListener('DOMContentLoaded', function() {
                 const script = document.getElementById('webview-main-script');
                 if (script) {

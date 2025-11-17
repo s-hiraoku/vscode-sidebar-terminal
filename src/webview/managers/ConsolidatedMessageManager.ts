@@ -143,6 +143,7 @@ export class ConsolidatedMessageManager implements IMessageManager {
       'deleteTerminalResponse',
       'terminalRemoved',
       'clear',
+      'startOutput',
     ];
     lifecycleCommands.forEach(cmd =>
       registry.set(cmd, (msg, coord) => this.lifecycleHandler.handleMessage(msg, coord))

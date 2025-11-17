@@ -172,7 +172,7 @@ export class HeaderFactory {
         boxSizing: 'border-box',
       },
       {
-        innerHTML: '<span style="filter: brightness(1.2) saturate(1.1);">📎</span>', // AI Agentを表すクリップアイコン
+        textContent: '📎', // AI Agentを表すクリップアイコン
         className: 'terminal-control ai-agent-toggle-btn',
         title: 'Switch AI Agent Connection',
         'data-terminal-id': terminalId,

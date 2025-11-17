@@ -67,8 +67,14 @@ export class TerminalEventManager extends BaseManager {
     terminalId: string,
     container: HTMLElement
   ): void {
-    // Setup user input handler (send to Extension)
-    this.setupInputHandler(terminal, terminalId);
+    if (this.shouldUseLegacyInputHandler()) {
+      // Setup user input handler (send to Extension) when InputManager is unavailable
+      this.setupInputHandler(terminal, terminalId);
+    } else {
+      terminalLogger.debug(
+        `⏭️ Skipping legacy onData handler for ${terminalId}; InputManager controls keyboard input`
+      );
+    }
 
     // Setup click handler for terminal activation
     this.setupTerminalClickHandler(terminal, terminalId, container);
@@ -79,25 +85,63 @@ export class TerminalEventManager extends BaseManager {
     terminalLogger.info(`✅ Event handlers setup for terminal: ${terminalId}`);
   }
 
+  private shouldUseLegacyInputHandler(): boolean {
+    try {
+      if (this.coordinator?.inputManager) {
+        return false;
+      }
+
+      const managers = this.coordinator?.getManagers?.();
+      if (managers?.input) {
+        return false;
+      }
+    } catch (error) {
+      terminalLogger.warn('⚠️ Failed to detect InputManager availability, defaulting to legacy handler', error);
+    }
+
+    return true;
+  }
+
   /**
    * Setup input handler to send user input to Extension
    */
   private setupInputHandler(terminal: Terminal, terminalId: string): void {
     try {
+      terminalLogger.info(`🔧 Setting up input handler for ${terminalId}...`);
+
       const inputDisposable = terminal.onData((data: string) => {
+        // 🔍 CRITICAL DEBUG: Log every keystroke to verify handler is called
+        console.log(`🔍 [INPUT-DEBUG] onData fired for ${terminalId}:`, {
+          dataLength: data.length,
+          data: data,
+          charCodes: Array.from(data).map(c => c.charCodeAt(0)),
+          timestamp: Date.now()
+        });
         terminalLogger.debug(`⌨️ User input for ${terminalId}:`, data.length, 'chars');
 
         // Send input to Extension
-        this.coordinator?.postMessageToExtension({
+        const message = {
           command: 'input',
           data,
           terminalId,
-        });
+        };
+
+        console.log(`🔍 [INPUT-DEBUG] Sending to Extension:`, message);
+        this.coordinator?.postMessageToExtension(message);
+        console.log(`🔍 [INPUT-DEBUG] Message sent`);
       });
 
       this.disposables.push(inputDisposable);
+
+      // 🔍 CRITICAL DEBUG: Verify handler was registered
+      console.log(`🔍 [INPUT-DEBUG] Input handler registered for ${terminalId}`, {
+        hasCoordinator: !!this.coordinator,
+        disposableCount: this.disposables.length
+      });
+
       terminalLogger.info(`✅ Input handler enabled for terminal: ${terminalId}`);
     } catch (error) {
+      console.error(`🔍 [INPUT-DEBUG] FAILED to setup input handler:`, error);
       terminalLogger.error(`Failed to setup input handler for ${terminalId}:`, error);
     }
   }

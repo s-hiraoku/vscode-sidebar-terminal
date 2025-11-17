@@ -251,28 +251,43 @@ export class TerminalCreationService implements Disposable {
         const terminalContent = containerElements.body;
         terminalLogger.info(`✅ Container created: ${terminalId} with terminal number: ${terminalNumberToUse}`);
 
-        // Open terminal in the body div
-        terminal.open(terminalContent);
-        terminalLogger.info(`✅ Terminal opened in container: ${terminalId}`);
-
-        // Phase 3: Attach terminal to LifecycleController for resource management
-        this.lifecycleController.attachTerminal(terminalId, terminal);
-
-        // Make container visible
-        container.style.display = 'flex';
-        container.style.visibility = 'visible';
-
-        // 🔧 CRITICAL: Append container to DOM
+        // 🔧 CRITICAL FIX: Append container to DOM BEFORE opening terminal
+        // xterm.js needs the element to be in the DOM to render correctly
         const bodyElement = document.getElementById('terminal-body');
         if (bodyElement) {
           bodyElement.appendChild(container);
           terminalLogger.info(`✅ Container appended to DOM: ${terminalId}`);
         } else {
           terminalLogger.error(`❌ terminal-body not found, cannot append container: ${terminalId}`);
+          throw new Error('terminal-body element not found');
         }
+
+        // Make container visible
+        container.style.display = 'flex';
+        container.style.visibility = 'visible';
+
+        // Open terminal in the body div (AFTER container is in DOM)
+        terminal.open(terminalContent);
+        terminalLogger.info(`✅ Terminal opened in container: ${terminalId}`);
+
+        // Phase 3: Attach terminal to LifecycleController for resource management
+        this.lifecycleController.attachTerminal(terminalId, terminal);
 
         // Setup event handlers for click, focus, keyboard, etc.
         this.eventManager.setupTerminalEvents(terminal, terminalId, container);
+
+        // 🔧 CRITICAL FIX: Ensure terminal receives focus for keyboard input
+        // Must wait for xterm.js to fully initialize the textarea
+        this.ensureTerminalFocus(terminal, terminalId, terminalContent);
+
+        // 🔧 FIX: Re-focus terminal when container is clicked (VS Code standard)
+        container.addEventListener('click', (event) => {
+          const target = event.target as HTMLElement;
+          // Don't focus if clicking on buttons
+          if (!target.closest('.terminal-control')) {
+            this.ensureTerminalFocus(terminal, terminalId, terminalContent);
+          }
+        });
 
         // Setup shell integration
         this.setupShellIntegration(terminal, terminalId);
@@ -786,6 +801,108 @@ export class TerminalCreationService implements Disposable {
 
     terminalLogger.warn(`Could not extract terminal number from ID: ${terminalId}, defaulting to 1`);
     return 1;
+  }
+
+  /**
+   * Ensure terminal receives keyboard focus
+   * Critical fix: Properly focus xterm.js textarea for keyboard input
+   *
+   * Strategy:
+   * 1. Wait for xterm.js to fully create the textarea DOM element
+   * 2. Verify textarea exists before attempting focus
+   * 3. Focus using both terminal.focus() and direct textarea.focus()
+   * 4. Verify focus succeeded and log result
+   *
+   * This fixes the issue where terminal renders but doesn't accept keyboard input.
+   */
+  private ensureTerminalFocus(
+    terminal: Terminal,
+    terminalId: string,
+    terminalContent: HTMLElement
+  ): void {
+    // Use requestAnimationFrame to ensure DOM is fully settled
+    requestAnimationFrame(() => {
+      try {
+        // Find the xterm textarea
+        const textarea = terminalContent.querySelector('.xterm-helper-textarea') as HTMLTextAreaElement;
+
+        if (!textarea) {
+          // Retry once after a short delay if textarea doesn't exist yet
+          setTimeout(() => {
+            const retryTextarea = terminalContent.querySelector('.xterm-helper-textarea') as HTMLTextAreaElement;
+            if (retryTextarea) {
+              this.focusTerminalTextarea(terminal, retryTextarea, terminalId);
+            } else {
+              terminalLogger.error(`❌ xterm-helper-textarea never appeared for: ${terminalId}`);
+            }
+          }, 50);
+          return;
+        }
+
+        this.focusTerminalTextarea(terminal, textarea, terminalId);
+      } catch (error) {
+        terminalLogger.error(`Failed to ensure terminal focus for ${terminalId}:`, error);
+      }
+    });
+  }
+
+  /**
+   * Focus the terminal textarea and verify success
+   */
+  private focusTerminalTextarea(
+    terminal: Terminal,
+    textarea: HTMLTextAreaElement,
+    terminalId: string
+  ): void {
+    try {
+      console.log(`🔍 [FOCUS-DEBUG] Attempting to focus ${terminalId}...`);
+
+      // Focus using xterm.js API (preferred method)
+      terminal.focus();
+      console.log(`🔍 [FOCUS-DEBUG] Called terminal.focus()`);
+
+      // Double-check with direct textarea focus
+      textarea.focus();
+      console.log(`🔍 [FOCUS-DEBUG] Called textarea.focus()`);
+
+      // Verify focus succeeded
+      setTimeout(() => {
+        const hasFocus = document.activeElement === textarea;
+        const activeTag = document.activeElement?.tagName;
+        const activeClass = document.activeElement?.className;
+
+        console.log(`🔍 [FOCUS-DEBUG] Focus verification for ${terminalId}:`, {
+          hasFocus,
+          activeElement: `${activeTag}.${activeClass}`,
+          textareaInDOM: document.body.contains(textarea),
+          textareaVisible: textarea.offsetParent !== null
+        });
+
+        if (hasFocus) {
+          console.log(`✅ [FOCUS-DEBUG] Terminal focused successfully: ${terminalId}`);
+          terminalLogger.info(`✅ Terminal successfully focused and ready for input: ${terminalId}`);
+
+          // 🔍 TEST: Simulate a keystroke to verify input handler
+          setTimeout(() => {
+            console.log(`🔍 [FOCUS-DEBUG] Testing input by simulating 'a' key...`);
+            const event = new KeyboardEvent('keydown', { key: 'a', code: 'KeyA' });
+            textarea.dispatchEvent(event);
+          }, 100);
+        } else {
+          console.warn(`⚠️ [FOCUS-DEBUG] Focus failed for ${terminalId}`);
+          console.warn(`   Active element: ${activeTag}.${activeClass}`);
+          terminalLogger.warn(`⚠️ Terminal focus verification failed for: ${terminalId}`);
+          terminalLogger.warn(`   Active element: ${activeTag}.${activeClass}`);
+
+          // One final focus attempt
+          textarea.focus();
+          console.log(`🔍 [FOCUS-DEBUG] Retried textarea.focus()`);
+        }
+      }, 10);
+    } catch (error) {
+      console.error(`🔍 [FOCUS-DEBUG] Exception during focus:`, error);
+      terminalLogger.error(`Failed to focus terminal textarea for ${terminalId}:`, error);
+    }
   }
 
   /**

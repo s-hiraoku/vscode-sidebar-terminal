@@ -99,36 +99,10 @@ export class TerminalProcessCoordinator {
       return;
     }
 
-    log(`🎯 [TERMINAL] Starting PTY output for ${terminalId} after handshake`);
-
-    // Register PTY data handler
-    const dataDisposable = terminal.ptyProcess.onData((data: string) => {
-      // Update process state to running on first data
-      if (terminal.processState === ProcessState.Launching) {
-        terminal.processState = ProcessState.Running;
-        this.notifyProcessStateChange(terminal, ProcessState.Running);
-      }
-
-      // Process shell integration sequences if service is available
-      try {
-        if (this._shellIntegrationService) {
-          this._shellIntegrationService.processTerminalData(terminalId, data);
-        }
-      } catch (error) {
-        log(`⚠️ [TERMINAL] Shell integration processing error: ${error}`);
-      }
-
-      // Buffer data for efficient output
-      this._bufferDataCallback(terminalId, data);
-    });
-
-    // Store disposable for cleanup
-    this._ptyDataDisposables.set(terminalId, dataDisposable);
-
-    // Mark as started
+    // Mark as started (data handler is already registered in setupTerminalEvents)
     this._ptyOutputStarted.add(terminalId);
 
-    log(`✅ [TERMINAL] PTY output started successfully for ${terminalId}`);
+    log(`✅ [TERMINAL] PTY output acknowledged for ${terminalId} (listener active)`);
   }
 
   /**
@@ -145,7 +119,7 @@ export class TerminalProcessCoordinator {
     this.notifyProcessStateChange(terminal, ProcessState.Launching);
 
     // Set up data event handler with CLI agent detection and shell integration
-    (ptyProcess as any).onData((data: string) => {
+    const dataDisposable: IDisposable = (ptyProcess as any).onData((data: string) => {
       // Update process state to running on first data
       if (terminal.processState === ProcessState.Launching) {
         terminal.processState = ProcessState.Running;
@@ -170,6 +144,9 @@ export class TerminalProcessCoordinator {
       // Performance optimization: Batch small data chunks
       this._bufferDataCallback(terminalId, data);
     });
+
+    // Track the disposable so repeated events don't accumulate listeners
+    this._ptyDataDisposables.set(terminalId, dataDisposable);
 
     // Set up exit event handler
     (ptyProcess as any).onExit((event: number | { exitCode: number; signal?: number }) => {
