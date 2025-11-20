@@ -1078,7 +1078,7 @@
     "style-loader": "^4.0.0",
     "ts-loader": "^9.5.1",
     "ts-node": "^10.9.2",
-    "typedoc": "^0.26.0",
+    "typedoc": "^0.28.0",
     "typedoc-plugin-markdown": "^4.2.0",
     "typescript": "^5.3.3",
     "vsce": "^2.15.0",
