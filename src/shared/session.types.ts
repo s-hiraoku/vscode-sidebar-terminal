@@ -42,6 +42,8 @@ export interface SessionInfo {
   terminals?: TerminalSessionData[];
   timestamp?: number;
   version?: string;
+  activeTerminalId?: string | null;
+  scrollbackData?: Record<string, unknown>;
 }
 
 /**
@@ -53,6 +55,8 @@ export interface SessionRestoreResult {
   skippedCount?: number;
   message?: string;
   terminals?: TerminalSessionData[];
+  error?: string | Error;
+  terminalsRestored?: number;
 }
 
 /**

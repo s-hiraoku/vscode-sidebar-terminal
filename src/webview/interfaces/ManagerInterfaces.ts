@@ -313,7 +313,6 @@ export interface IMessageManager {
 
 // Terminal Container management interface
 export interface ITerminalContainerManager {
-  setCoordinator(coordinator: IManagerCoordinator): void;
   initialize(): void;
   setContainerVisibility(terminalId: string, visible: boolean): void;
   setContainerMode(terminalId: string, mode: 'normal' | 'fullscreen' | 'split'): void;
@@ -334,7 +333,6 @@ export interface ITerminalContainerManager {
 
 // Display Mode management interface
 export interface IDisplayModeManager {
-  setCoordinator(coordinator: IManagerCoordinator): void;
   initialize(): void;
   setDisplayMode(mode: 'normal' | 'fullscreen' | 'split'): void;
   toggleSplitMode(): void;

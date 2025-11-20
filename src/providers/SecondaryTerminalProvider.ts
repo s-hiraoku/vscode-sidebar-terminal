@@ -413,7 +413,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         command: 'profilesUpdated' as const,
         profiles,
         defaultProfileId: defaultProfileId ?? profiles.find((p) => p.isDefault)?.id ?? null,
-      } as WebviewMessage);
+      } as unknown as WebviewMessage);
     } catch (error) {
       log('❌ [PROVIDER] Failed to fetch terminal profiles:', error);
       await this._sendMessage({
@@ -421,7 +421,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         profiles: [],
         defaultProfileId: null,
         error: (error as Error).message ?? String(error),
-      } as WebviewMessage);
+      } as unknown as WebviewMessage);
     }
   }
 
@@ -768,7 +768,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         return;
       }
 
-      const shellPath = terminal.shellPath || '';
+      const shellPath = (terminal as any).shellPath || '';
       const processedText = this._escapeTextForShell(clipboardText, shellPath);
 
       // Send to terminal using sendInput (VS Code standard)
@@ -901,7 +901,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         // Get the new location from configuration
         const newLocation = vscode.workspace
           .getConfiguration('sidebarTerminal')
-          .get<PanelLocation>('panelLocation', 'auto');
+          .get<PanelLocation>('panelLocation', 'sidebar');
 
         log(`📍 [PROVIDER] New panel location: ${newLocation}`);
         this._panelLocationService.handlePanelLocationReport(newLocation).catch((error) => {
@@ -1171,8 +1171,8 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         scrollback: [], // Scrollback is managed by WebView
       }));
 
-      await this._extensionPersistenceService.saveSession(terminalData);
-      const response = { success: true, error: undefined };
+      const response = await this._extensionPersistenceService.saveCurrentSession();
+      // terminalData is used for logging purposes
 
       if (response.success) {
         log(`✅ [PERSISTENCE] Session saved successfully: ${terminalData.length} terminals`);
@@ -1195,10 +1195,10 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
     try {
       log('💾 [PERSISTENCE] Restoring last session...');
-      const sessionData = await this._extensionPersistenceService.restoreSession();
+      const sessionResult = await this._extensionPersistenceService.restoreSession();
 
-      if (sessionData && sessionData.length > 0) {
-        log(`📦 [PERSISTENCE] Found ${sessionData.length} terminals to restore`);
+      if (sessionResult && sessionResult.terminals && sessionResult.terminals.length > 0) {
+        log(`📦 [PERSISTENCE] Found ${sessionResult.terminals.length} terminals to restore`);
 
         const terminalMappings: Array<{
           oldId: string;
@@ -1207,7 +1207,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         }> = [];
 
         const restoredTerminals = [];
-        for (const terminalData of sessionData) {
+        for (const terminalData of sessionResult.terminals) {
           try {
             const newTerminalId = this._terminalManager.createTerminal();
             restoredTerminals.push(newTerminalId);
@@ -1258,7 +1258,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
           }
 
           log(
-            `✅ [PERSISTENCE] Session restored successfully: ${restoredTerminals.length}/${sessionData.length} terminals`
+            `✅ [PERSISTENCE] Session restored successfully: ${restoredTerminals.length}/${sessionResult.terminals.length} terminals`
           );
 
           // Set active terminal
@@ -1276,7 +1276,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
             command: 'sessionRestored',
             success: true,
             restoredCount: restoredTerminals.length,
-            totalCount: sessionData.length,
+            totalCount: sessionResult.terminals.length,
           });
 
           return true;

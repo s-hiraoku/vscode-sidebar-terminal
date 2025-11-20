@@ -144,8 +144,8 @@ export class TerminalManager {
 
     // Initialize Circular Buffer Manager with optimized settings
     this._bufferManager = new CircularBufferManager({
-      flushInterval: PERFORMANCE_CONSTANTS.BUFFER_FLUSH_INTERVAL,
-      maxBufferSize: PERFORMANCE_CONSTANTS.MAX_BUFFER_SIZE,
+      flushInterval: PERFORMANCE_CONSTANTS.OUTPUT_BUFFER_FLUSH_INTERVAL_MS,
+      maxBufferSize: PERFORMANCE_CONSTANTS.MAX_BUFFER_SIZE_BYTES,
     });
 
     // Initialize Issue #237 Phase 1 module coordinators
