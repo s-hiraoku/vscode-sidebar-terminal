@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.139] - 2024-11-20
+
+### Fixed
+
+- **ESLint Error Resolution**: Fixed 36 ESLint no-unused-vars errors across 22 test files
+  - Prefixed unused variables with underscore (_) to indicate intentional non-use
+  - Fixed import path in TerminalInitializationStateMachine.test.ts
+  - Updated ExtensionPersistenceService.ts unused parameter
+  - All lint errors resolved (0 errors, 307 warnings remaining)
+
 ### Refactoring
 
 - **[Issue #216] Manager Pattern Standardization (Phase 1-5 Complete)**
