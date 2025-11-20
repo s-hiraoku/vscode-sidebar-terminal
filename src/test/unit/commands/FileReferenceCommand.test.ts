@@ -28,7 +28,7 @@ describe('FileReferenceCommand', () => {
     mockTerminalManager.getConnectedAgents.returns([
       {
         terminalId: 'terminal-1',
-        agentInfo: { type: 'claude', status: 'connected' },
+        agentInfo: { type: 'claude' },
       },
     ]);
 

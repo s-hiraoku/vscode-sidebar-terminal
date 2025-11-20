@@ -256,7 +256,7 @@ describe('Terminal Edge Cases Tests (TDD)', () => {
         validTransitions: {
           active: ['inactive', 'disposed'],
           inactive: ['active', 'disposed'],
-          disposed: [],
+          disposed: [] as string[],
         },
         canTransitionTo: function (newState: string) {
           return this.validTransitions[this.state as keyof typeof this.validTransitions]?.includes(

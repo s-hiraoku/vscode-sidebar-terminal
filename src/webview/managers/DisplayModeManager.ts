@@ -394,7 +394,6 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
     // 状態をクリア
     this.terminalVisibility.clear();
     this.fullscreenTerminalId = null;
-    this.coordinator = null;
 
     this.log('DisplayModeManager disposed successfully');
   }

@@ -574,8 +574,6 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
     this.splitWrapperCache.clear();
     this.splitResizers.clear();
 
-    this.coordinator = null;
-
     this.log('TerminalContainerManager disposed successfully');
   }
 

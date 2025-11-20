@@ -97,7 +97,7 @@ export interface ErrorDetails {
 export class ResultError extends Error implements ErrorDetails {
   public readonly code: ErrorCode;
   public readonly context?: Record<string, unknown>;
-  public readonly cause?: Error;
+  public override readonly cause?: Error;
 
   constructor(details: ErrorDetails) {
     super(details.message);
@@ -119,7 +119,7 @@ export class ResultError extends Error implements ErrorDetails {
   /**
    * Convert to a plain object for serialization
    */
-  override toJSON(): ErrorDetails {
+  toJSON(): ErrorDetails {
     return {
       code: this.code,
       message: this.message,

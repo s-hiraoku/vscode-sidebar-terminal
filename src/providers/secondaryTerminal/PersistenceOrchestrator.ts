@@ -50,7 +50,9 @@ export class PersistenceOrchestrator implements vscode.Disposable {
     // 🔧 FIX: Set sidebar provider on ExtensionPersistenceService
     if ('setSidebarProvider' in this.persistenceService) {
       (this.persistenceService as ExtensionPersistenceService).setSidebarProvider?.({
-        sendMessageToWebview: options.sendMessage,
+        sendMessageToWebview: async (message: unknown) => {
+          await options.sendMessage(message as WebviewMessage);
+        },
       });
       this.logger('✅ [PERSISTENCE-ORCH] Sidebar provider configured for persistence service');
     }
@@ -162,11 +164,14 @@ export class PersistenceOrchestrator implements vscode.Disposable {
       const result = await this.persistenceService.restoreSession(true);
 
       if (result.success) {
+        const restoredCount = result.restoredCount ?? 0;
+        const skippedCount = result.skippedCount ?? 0;
         this.logger(
-          `✅ [PERSISTENCE] Session restored successfully: ${result.restoredCount}/${result.restoredCount + result.skippedCount} terminals`
+          `✅ [PERSISTENCE] Session restored successfully: ${restoredCount}/${restoredCount + skippedCount} terminals`
         );
       } else {
-        this.logger(`📦 [PERSISTENCE] Restore failed: ${result.error?.message ?? 'unknown error'}`);
+        const errorMessage = result.error instanceof Error ? result.error.message : String(result.error ?? 'unknown error');
+        this.logger(`📦 [PERSISTENCE] Restore failed: ${errorMessage}`);
       }
 
       return result.success && (result.restoredCount ?? 0) > 0;

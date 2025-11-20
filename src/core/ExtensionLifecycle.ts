@@ -89,43 +89,30 @@ export class ExtensionLifecycle {
    * ```
    *
    * @public
-   */
+  */
   activate(context: vscode.ExtensionContext): Promise<void> {
     const activationStartTime = Date.now();
-    log('🚀 [EXTENSION] === ACTIVATION START ===');
-
-    // Store extension context for later use
     this._extensionContext = context;
 
-    // Configure logger based on extension mode
-    if (context.extensionMode === vscode.ExtensionMode.Development) {
-      logger.setLevel(LogLevel.DEBUG);
-      log('🔧 [EXTENSION] Logger set to DEBUG mode');
-    } else {
-      logger.setLevel(LogLevel.WARN);
-      log('⚠️ [EXTENSION] Logger set to WARN mode');
-    }
-
-    // Get extension version info
+    const logLevel = this.configureLogger(context);
     const extension = vscode.extensions.getExtension('s-hiraoku.vscode-sidebar-terminal');
     const version = (extension?.packageJSON as { version?: string })?.version || 'unknown';
 
-    // Initialize telemetry service
+    logger.lifecycle('Sidebar Terminal activation started', {
+      mode: this.getExtensionModeLabel(context.extensionMode),
+      version,
+      logLevel: LogLevel[logLevel],
+    });
+
     try {
       this.telemetryService = new TelemetryService(
         context,
         's-hiraoku.vscode-sidebar-terminal',
         version
       );
-      log('📊 [TELEMETRY] Telemetry service initialized');
     } catch (error) {
-      log('⚠️ [TELEMETRY] Failed to initialize telemetry service:', error);
-      // Continue without telemetry
+      logger.warn('Telemetry service unavailable; continuing without analytics', error);
     }
-
-    log('Sidebar Terminal extension is now active!');
-    log(`Extension version: ${version}`);
-    log('Extension path:', context.extensionPath);
 
     try {
       // Ensure node-pty looks for release binaries
@@ -135,12 +122,10 @@ export class ExtensionLifecycle {
       this.terminalManager = new TerminalManager();
 
       // Initialize extension persistence service
-      log('🔧 [EXTENSION] Initializing Extension Persistence Service...');
       this.extensionPersistenceService = new ExtensionPersistenceService(
         context,
         this.terminalManager
       );
-      log('✅ [EXTENSION] Extension Persistence Service initialized');
 
       // Initialize command handlers
       this.fileReferenceCommand = new FileReferenceCommand(this.terminalManager);
@@ -148,7 +133,6 @@ export class ExtensionLifecycle {
       this.copilotIntegrationCommand = new CopilotIntegrationCommand();
 
       // Initialize enhanced shell integration service
-      log('🚀 [EXTENSION] Initializing enhanced shell integration service...');
       try {
         this.shellIntegrationService = new EnhancedShellIntegrationService(
           this.terminalManager,
@@ -156,9 +140,8 @@ export class ExtensionLifecycle {
         );
         // Set shell integration service on TerminalManager
         this.terminalManager.setShellIntegrationService(this.shellIntegrationService);
-        log('✅ [EXTENSION] Enhanced shell integration service initialized and connected');
       } catch (error) {
-        log('❌ [EXTENSION] Failed to initialize enhanced shell integration service:', error);
+        logger.warn('Enhanced shell integration service unavailable', error);
         // Continue without shell integration
       }
 
@@ -173,7 +156,6 @@ export class ExtensionLifecycle {
       // Set sidebar provider for ExtensionPersistenceService
       if (this.extensionPersistenceService) {
         (this.extensionPersistenceService as any).setSidebarProvider?.(this.sidebarProvider);
-        log('🔧 [EXTENSION] Sidebar provider set for ExtensionPersistenceService');
       }
 
       // Initialize keyboard shortcut service
@@ -185,37 +167,28 @@ export class ExtensionLifecycle {
       // Connect enhanced shell integration service to webview provider
       if (this.shellIntegrationService) {
         this.shellIntegrationService.setWebviewProvider(this.sidebarProvider);
-        log('🔗 [EXTENSION] Enhanced shell integration connected to webview');
       }
-
-      log('⌨️ [EXTENSION] Keyboard shortcut service initialized');
 
       // Initialize Phase 8: Terminal Decorations & Links Services
       try {
         // Initialize terminal decorations service
         this.decorationsService = new TerminalDecorationsService();
-        log('🎨 [EXTENSION] Terminal decorations service initialized');
 
         // Initialize terminal links service
         this.linksService = new TerminalLinksService();
-        log('🔗 [EXTENSION] Terminal links service initialized');
 
         // Connect Phase 8 services to webview provider
         if (this.decorationsService && this.linksService) {
           this.sidebarProvider.setPhase8Services(this.decorationsService, this.linksService);
-          log('🎨 [EXTENSION] Phase 8 services connected to webview provider');
         }
 
         // Connect Phase 8 services to terminal manager for data processing
         if (this.terminalManager) {
           // Set up data processing for decorations through terminal manager
           // Note: This will be connected via message passing in the webview
-          log('🔄 [EXTENSION] Phase 8 services ready for webview integration');
         }
-
-        log('✅ [EXTENSION] Phase 8 services (Decorations & Links) initialized successfully');
       } catch (error) {
-        log('❌ [EXTENSION] Failed to initialize Phase 8 services:', error);
+        logger.warn('Phase 8 services unavailable; continuing without decorations/links', error);
         // Continue without Phase 8 features
       }
 
@@ -231,13 +204,7 @@ export class ExtensionLifecycle {
 
       // CRITICAL: Session restore is now handled by SecondaryTerminalProvider asynchronously
       // This prevents VS Code activation spinner from hanging
-      log(
-        '🚀 [EXTENSION] Session restore will be handled asynchronously by SecondaryTerminalProvider'
-      );
-      log('✅ [EXTENSION] Activation will complete immediately to prevent spinner hang');
-
       // Register webview providers AFTER session restore completes
-      log('🔧 [EXTENSION] Registering WebView providers after session restore...');
       const sidebarWebviewProvider = vscode.window.registerWebviewViewProvider(
         SecondaryTerminalProvider.viewType,
         this.sidebarProvider,
@@ -251,13 +218,13 @@ export class ExtensionLifecycle {
 
       // 自動保存設定
       this.setupSessionAutoSave(context);
-
-      log('✅ Sidebar Terminal extension activated successfully');
-
       // Track successful activation
       const activationDuration = Date.now() - activationStartTime;
       this.telemetryService?.trackActivation(activationDuration);
-      log(`📊 [TELEMETRY] Activation tracked: ${activationDuration}ms`);
+      logger.lifecycle('Sidebar Terminal extension activated', {
+        durationMs: activationDuration,
+        version,
+      });
 
       // Setup telemetry event listeners
       this.setupTelemetryEventListeners();
@@ -266,7 +233,7 @@ export class ExtensionLifecycle {
       // This prevents VS Code progress spinner from hanging
       return Promise.resolve();
     } catch (error) {
-      log('Failed to activate Sidebar Terminal extension:', error);
+      logger.error('Failed to activate Sidebar Terminal extension', error);
 
       // Track activation error
       if (error instanceof Error) {
@@ -279,6 +246,52 @@ export class ExtensionLifecycle {
 
       // CRITICAL: Even on error, resolve activation Promise to prevent spinner hanging
       return Promise.resolve();
+    }
+  }
+
+  private configureLogger(context: vscode.ExtensionContext): LogLevel {
+    const override = this.resolveLogLevelOverride();
+    if (override !== undefined) {
+      logger.setLevel(override);
+      return override;
+    }
+
+    if (context.extensionMode === vscode.ExtensionMode.Production) {
+      logger.setLevel(LogLevel.WARN);
+      return LogLevel.WARN;
+    }
+
+    logger.setLevel(LogLevel.INFO);
+    return LogLevel.INFO;
+  }
+
+  private resolveLogLevelOverride(): LogLevel | undefined {
+    const rawLevel = process.env.SECONDARY_TERMINAL_LOG_LEVEL?.toLowerCase();
+    switch (rawLevel) {
+      case 'debug':
+        return LogLevel.DEBUG;
+      case 'info':
+        return LogLevel.INFO;
+      case 'warn':
+      case 'warning':
+        return LogLevel.WARN;
+      case 'error':
+        return LogLevel.ERROR;
+      case 'none':
+        return LogLevel.NONE;
+      default:
+        return undefined;
+    }
+  }
+
+  private getExtensionModeLabel(mode: vscode.ExtensionMode): string {
+    switch (mode) {
+      case vscode.ExtensionMode.Development:
+        return 'Development';
+      case vscode.ExtensionMode.Test:
+        return 'Test';
+      default:
+        return 'Production';
     }
   }
 
@@ -308,14 +321,12 @@ export class ExtensionLifecycle {
       {
         command: 'secondaryTerminal.splitTerminal',
         handler: () => {
-          log('🔧 [DEBUG] Command executed: splitTerminal (auto-detect direction based on panel location)');
           this.sidebarProvider?.splitTerminal(); // Let splitTerminal() auto-detect direction
         },
       },
       {
         command: 'secondaryTerminal.splitTerminalHorizontal',
         handler: () => {
-          log('🔧 [DEBUG] Command executed: splitTerminalHorizontal (force horizontal)');
           this.sidebarProvider?.splitTerminal('horizontal');
         },
       },
@@ -325,7 +336,6 @@ export class ExtensionLifecycle {
       {
         command: 'secondaryTerminal.sendAtMention',
         handler: () => {
-          log('🔧 [DEBUG] Command executed: sendAtMention (independent @filename command)');
           void this.fileReferenceCommand?.handleSendAtMention();
         },
       },
@@ -334,9 +344,6 @@ export class ExtensionLifecycle {
       {
         command: 'secondaryTerminal.activateCopilot',
         handler: async () => {
-          log(
-            '🔧 [DEBUG] Command executed: activateCopilot (GitHub Copilot Chat integration - CMD+K CMD+C)'
-          );
           await this.copilotIntegrationCommand?.handleActivateCopilot();
         },
       },
@@ -345,7 +352,6 @@ export class ExtensionLifecycle {
       {
         command: 'secondaryTerminal.clearCorruptedHistory',
         handler: async () => {
-          log('🔧 [DEBUG] Command executed: clearCorruptedHistory');
           try {
             if (this.extensionPersistenceService) {
               await this.extensionPersistenceService.clearSession();
@@ -356,7 +362,7 @@ export class ExtensionLifecycle {
               void vscode.window.showErrorMessage('Session manager not available');
             }
           } catch (error) {
-            log(`❌ [ERROR] Failed to clear session: ${String(error)}`);
+            logger.error('Failed to clear terminal session via clearCorruptedHistory command', error);
             void vscode.window.showErrorMessage(
               `Failed to clear session: ${error instanceof Error ? error.message : String(error)}`
             );
@@ -368,19 +374,16 @@ export class ExtensionLifecycle {
       {
         command: 'secondaryTerminal.sendToTerminal',
         handler: (content?: string) => {
-          log('🔧 [DEBUG] Command executed: sendToTerminal');
           this.terminalCommand?.handleSendToTerminal(content);
         },
       },
       {
         command: 'secondaryTerminal.killTerminal',
         handler: async () => {
-          log('🔧 [DEBUG] Command executed: killTerminal');
           try {
             await this.sidebarProvider?.killTerminal();
-            log('🔧 [DEBUG] killTerminal command completed successfully');
           } catch (error) {
-            log('🔧 [ERROR] killTerminal command failed:', error);
+            logger.error('Failed to execute killTerminal command', error);
           }
         },
       },
@@ -389,7 +392,6 @@ export class ExtensionLifecycle {
       {
         command: 'secondaryTerminal.updateShellStatus',
         handler: (args: { terminalId: string; status: string }) => {
-          log('🔧 [DEBUG] Command executed: updateShellStatus');
           this.sidebarProvider?.sendMessageToWebview({
             command: 'updateShellStatus',
             terminalId: args.terminalId,
@@ -400,7 +402,6 @@ export class ExtensionLifecycle {
       {
         command: 'secondaryTerminal.updateCwd',
         handler: (args: { terminalId: string; cwd: string }) => {
-          log('🔧 [DEBUG] Command executed: updateCwd');
           this.sidebarProvider?.sendMessageToWebview({
             command: 'updateCwd',
             terminalId: args.terminalId,
@@ -411,7 +412,6 @@ export class ExtensionLifecycle {
       {
         command: 'secondaryTerminal.getCommandHistory',
         handler: (terminalId: string) => {
-          log('🔧 [DEBUG] Command executed: getCommandHistory');
           if (this.shellIntegrationService) {
             const history = this.shellIntegrationService.getCommandHistory(terminalId);
             this.sidebarProvider?.sendMessageToWebview({
@@ -429,7 +429,6 @@ export class ExtensionLifecycle {
       {
         command: 'secondaryTerminal.find',
         handler: () => {
-          log('🔧 [DEBUG] Command executed: find (Ctrl+F search)');
           this.keyboardShortcutService?.find();
         },
       },
@@ -437,7 +436,6 @@ export class ExtensionLifecycle {
       {
         command: 'secondaryTerminal.selectProfile',
         handler: () => {
-          log('🔧 [DEBUG] Command executed: selectProfile');
           this.sidebarProvider?.selectProfile();
         },
       },
@@ -446,7 +444,6 @@ export class ExtensionLifecycle {
       {
         command: 'secondaryTerminal.openSettings',
         handler: () => {
-          log('🔧 [DEBUG] Command executed: openSettings');
           this.sidebarProvider?.openSettings();
         },
       },
@@ -455,21 +452,18 @@ export class ExtensionLifecycle {
       {
         command: 'secondaryTerminal.saveSession',
         handler: async () => {
-          log('🔧 [DEBUG] Command executed: saveSession (simple)');
           await this.handleSimpleSaveSessionCommand();
         },
       },
       {
         command: 'secondaryTerminal.restoreSession',
         handler: async () => {
-          log('🔧 [DEBUG] Command executed: restoreSession (simple)');
           await this.handleSimpleRestoreSessionCommand();
         },
       },
       {
         command: 'secondaryTerminal.clearSession',
         handler: async () => {
-          log('🔧 [DEBUG] Command executed: clearSession (simple)');
           await this.handleSimpleClearSessionCommand();
         },
       },
@@ -477,7 +471,6 @@ export class ExtensionLifecycle {
       {
         command: 'secondaryTerminal.testScrollback',
         handler: async () => {
-          log('🔧 [DEBUG] Command executed: testScrollback');
           await this.handleTestScrollbackCommand();
         },
       },
@@ -485,7 +478,6 @@ export class ExtensionLifecycle {
       {
         command: 'secondaryTerminal.diagnoseSession',
         handler: async () => {
-          log('🔍 [DIAGNOSTIC] Command executed: diagnoseSession');
           await this.diagnoseSessionData();
         },
       },
@@ -494,30 +486,23 @@ export class ExtensionLifecycle {
       {
         command: 'secondaryTerminal.debugInput',
         handler: async () => {
-          log('🔧 [DEBUG-CMD] Direct input test command triggered');
-
           if (!this.terminalManager) {
-            log('❌ [DEBUG-CMD] TerminalManager not available');
             void vscode.window.showErrorMessage('TerminalManager not available');
             return;
           }
 
           // Get active terminal
           const activeTerminalId = this.terminalManager.getActiveTerminalId();
-          log('🔧 [DEBUG-CMD] Active terminal ID:', activeTerminalId);
 
           if (!activeTerminalId) {
-            log('❌ [DEBUG-CMD] No active terminal');
             void vscode.window.showErrorMessage('No active terminal available');
             return;
           }
 
           // Send test input directly to TerminalManager
           const testCommand = 'echo "DEBUG: Direct Extension input test successful"\\r';
-          log('🔧 [DEBUG-CMD] Sending test input:', testCommand);
 
           this.terminalManager.sendInput(testCommand, activeTerminalId);
-          log('🔧 [DEBUG-CMD] Test input sent successfully');
 
           void vscode.window.showInformationMessage('Debug input test sent directly to terminal');
         },
@@ -527,7 +512,6 @@ export class ExtensionLifecycle {
       {
         command: 'secondaryTerminal.showVersion',
         handler: () => {
-          log('🔧 [DEBUG] Command executed: showVersion');
           const versionInfo = VersionUtils.getExtensionDisplayInfo();
           void vscode.window.showInformationMessage(versionInfo);
         },
@@ -536,10 +520,10 @@ export class ExtensionLifecycle {
 
     // Register all commands with telemetry tracking
     commandDisposables.forEach(({ command, handler }) => {
-      const wrappedHandler = async (...args: any[]) => {
+      const wrappedHandler = async (...args: unknown[]) => {
         try {
           this.telemetryService?.trackCommandExecuted(command, true);
-          return await handler(...args);
+          return await (handler as (...args: unknown[]) => unknown)(...args);
         } catch (error) {
           this.telemetryService?.trackCommandExecuted(command, false);
           if (error instanceof Error) {
@@ -582,13 +566,13 @@ export class ExtensionLifecycle {
    * ```
    *
    * @public
-   */
+  */
   async deactivate(): Promise<void> {
-    log('🔧 [EXTENSION] Starting deactivation...');
+    logger.lifecycle('Sidebar Terminal deactivation started');
 
     // Track deactivation
     this.telemetryService?.trackDeactivation();
-    log('📊 [TELEMETRY] Deactivation tracked');
+    logger.lifecycle('Sidebar Terminal deactivation tracked');
 
     // シンプルセッション保存処理
     await this.saveSimpleSessionOnExit();
@@ -652,7 +636,7 @@ export class ExtensionLifecycle {
       this.telemetryService = undefined;
     }
 
-    log('✅ [EXTENSION] Deactivation complete');
+    logger.lifecycle('Sidebar Terminal deactivation complete');
   }
 
   /**
@@ -705,7 +689,7 @@ export class ExtensionLifecycle {
   private async restoreSessionOnStartup(): Promise<void> {
     try {
       if (!this.extensionPersistenceService) {
-        log('⚠️ [SESSION] Standard session manager not initialized');
+        logger.warn('Standard session manager not initialized; skipping restore');
         return;
       }
 
@@ -735,19 +719,17 @@ export class ExtensionLifecycle {
             this.createInitialTerminal();
           }
         } else {
-          log('⚠️ [SESSION] Session manager not available - creating initial terminal');
+          logger.warn('Session manager not available during startup restore; creating fallback terminal');
           if (this.terminalManager) {
             this.createInitialTerminal();
           }
         }
       } catch (error) {
-        log(
-          `❌ [SESSION] Error during session restore: ${String(error)} - creating fallback terminal`
-        );
+        logger.error('Session restore failed; creating fallback terminal', error);
         this.createInitialTerminal();
       }
     } catch (error) {
-      log(`❌ [SESSION] Error during session restore: ${String(error)}`);
+      logger.error('Unexpected error during session restore', error);
     }
   }
 
@@ -801,7 +783,7 @@ export class ExtensionLifecycle {
   private async saveSessionOnExit(): Promise<void> {
     try {
       if (!this.extensionPersistenceService) {
-        log('⚠️ [EXTENSION] Extension persistence service not available for save');
+        logger.warn('Extension persistence service not available during save-on-exit');
         return;
       }
 
@@ -811,10 +793,10 @@ export class ExtensionLifecycle {
       if (result.success) {
         log(`✅ [EXTENSION] Session saved: ${result.terminalCount} terminals`);
       } else {
-        log('⚠️ [EXTENSION] Session save failed or no terminals to save');
+        logger.warn('Session save failed or no terminals to save');
       }
     } catch (error) {
-      log(`❌ [EXTENSION] Error saving session on exit: ${String(error)}`);
+      logger.error('Error saving session on exit', error);
     }
   }
 
@@ -837,12 +819,12 @@ export class ExtensionLifecycle {
           `✅ [EXTENSION] Immediate save completed (${trigger}): ${result.terminalCount} terminals`
         );
       } else {
-        log(
-          `⚠️ [EXTENSION] Immediate save failed (${trigger}): ${result.error || 'unknown error'}`
+        logger.warn(
+          `Immediate save failed (${trigger}): ${result.error || 'unknown error'}`
         );
       }
     } catch (error) {
-      log(`❌ [EXTENSION] Error in immediate save (${trigger}): ${String(error)}`);
+      logger.error(`Error in immediate save (${trigger})`, error);
     }
   }
 
@@ -868,7 +850,7 @@ export class ExtensionLifecycle {
         log(`✅ [EXTENSION] Periodic save completed: ${result.terminalCount} terminals`);
       }
     } catch (error) {
-      log(`❌ [EXTENSION] Error in periodic save: ${String(error)}`);
+      logger.error('Error in periodic session save', error);
     }
   }
 
@@ -877,7 +859,7 @@ export class ExtensionLifecycle {
    */
   private setupSessionEventListeners(): void {
     if (!this.extensionPersistenceService || !this.sidebarProvider) {
-      log('❌ [SESSION] Cannot setup event listeners - missing dependencies');
+      logger.warn('Cannot setup session event listeners - missing dependencies');
       return;
     }
 
@@ -1071,7 +1053,7 @@ export class ExtensionLifecycle {
    */
   private async saveSimpleSessionOnExit(): Promise<void> {
     if (!this.extensionPersistenceService) {
-      log('⚠️ [STANDARD_SESSION] Session manager not available, skipping save on exit');
+      logger.warn('Session manager not available, skipping save on exit');
       return;
     }
 
@@ -1082,10 +1064,10 @@ export class ExtensionLifecycle {
       if (result.success) {
         log(`✅ [STANDARD_SESSION] Session saved on exit: ${result.terminalCount} terminals`);
       } else {
-        log(`❌ [STANDARD_SESSION] Failed to save session on exit: ${result.error}`);
+        logger.error(`Failed to save session on exit: ${result.error}`);
       }
     } catch (error) {
-      log(`❌ [STANDARD_SESSION] Exception during session save on exit: ${String(error)}`);
+      logger.error('Exception during session save on exit', error);
     }
   }
 
@@ -1103,9 +1085,8 @@ export class ExtensionLifecycle {
 
       // Get session info
       const sessionInfo = this.extensionPersistenceService.getSessionInfo();
-      const sessionStats = this.extensionPersistenceService.getSessionStats();
 
-      log('📊 [DIAGNOSTIC] Session Statistics:', sessionStats);
+      log('📊 [DIAGNOSTIC] Session Info:', sessionInfo);
 
       if (sessionInfo) {
         log('📄 [DIAGNOSTIC] Session Data Details:');
@@ -1118,10 +1099,8 @@ export class ExtensionLifecycle {
         const diagnosticLines: string[] = [];
         diagnosticLines.push('📊 SESSION DIAGNOSTIC REPORT');
         diagnosticLines.push('');
-        diagnosticLines.push(`✅ Has Session: ${sessionStats.hasSession ? 'Yes' : 'No'}`);
-        diagnosticLines.push(`📅 Last Saved: ${sessionStats.lastSaved ? sessionStats.lastSaved.toLocaleString() : 'Never'}`);
-        diagnosticLines.push(`⏰ Is Expired: ${sessionStats.isExpired ? 'Yes' : 'No'}`);
-        diagnosticLines.push(`🔧 Config Enabled: ${sessionStats.configEnabled ? 'Yes' : 'No'}`);
+        diagnosticLines.push(`✅ Has Session: ${sessionInfo.exists ? 'Yes' : 'No'}`);
+        diagnosticLines.push(`📅 Timestamp: ${sessionInfo.timestamp ? new Date(sessionInfo.timestamp).toLocaleString() : 'Never'}`);
         diagnosticLines.push('');
         diagnosticLines.push(`📁 Version: ${sessionInfo.version}`);
         diagnosticLines.push(`🔢 Terminal Count: ${sessionInfo.terminals?.length || 0}`);
@@ -1192,7 +1171,7 @@ export class ExtensionLifecycle {
 
       log('🔍 [DIAGNOSTIC] ===== DIAGNOSIS COMPLETE =====');
     } catch (error) {
-      log('❌ [DIAGNOSTIC] Error during diagnosis:', error);
+      logger.error('Error during session diagnosis', error);
       await vscode.window.showErrorMessage(
         `Diagnostic failed: ${error instanceof Error ? error.message : String(error)}`
       );
@@ -1205,7 +1184,7 @@ export class ExtensionLifecycle {
   private async executeOneTimeRestore(): Promise<void> {
     // 重複実行防止
     if (this._restoreExecuted) {
-      log('⚠️ [EXTENSION] Restore already executed, skipping');
+      logger.warn('Restore already executed, skipping duplicate invocation');
       return;
     }
 
@@ -1215,7 +1194,7 @@ export class ExtensionLifecycle {
       log('🔄 [EXTENSION] Starting session restore...');
 
       if (!this.extensionPersistenceService) {
-        log('❌ [EXTENSION] Session manager not available');
+        logger.warn('Session manager not available during simple restore');
         return;
       }
 
@@ -1230,7 +1209,7 @@ export class ExtensionLifecycle {
         log('📭 [EXTENSION] No terminals to restore');
       }
     } catch (error) {
-      log(`❌ [EXTENSION] Restore error: ${String(error)}`);
+      logger.error('Error during terminal restore', error);
     }
   }
 
@@ -1242,7 +1221,7 @@ export class ExtensionLifecycle {
 
     try {
       if (!this.extensionPersistenceService || !this.terminalManager) {
-        log('⚠️ [SESSION] Managers not available');
+        logger.warn('Managers not available during startup restore');
         return;
       }
 
@@ -1271,14 +1250,11 @@ export class ExtensionLifecycle {
         log('📭 [SESSION] No session data found - creating initial terminal');
         this.createInitialTerminal();
       } else {
-        log(`❌ [SESSION] Restore failed: ${result.error}`);
+        logger.error(`Session restore failed: ${result.error}`);
         this.createInitialTerminal();
       }
     } catch (error) {
-      log(
-        `❌ [SESSION] Error during restore: ${error instanceof Error ? error.message : String(error)}`
-      );
-      log(`❌ [SESSION] Error stack: ${error instanceof Error ? error.stack : 'No stack'}`);
+      logger.error('Error during session restore', error);
       // エラー時も初期ターミナルを作成
       this.createInitialTerminal();
     }
@@ -1343,7 +1319,7 @@ export class ExtensionLifecycle {
     log('🔍 [SCROLLBACK_EXTRACT] Extracting scrollback from all terminals');
 
     if (!this.terminalManager || !this.sidebarProvider) {
-      log('❌ [SCROLLBACK_EXTRACT] Terminal manager or sidebar provider not available');
+      logger.warn('Scrollback extract skipped - terminal manager or sidebar provider unavailable');
       return;
     }
 
@@ -1404,12 +1380,10 @@ export class ExtensionLifecycle {
           );
         }
       } else {
-        log('❌ [SIMPLE_SESSION] Cannot create initial terminal - terminal manager not available');
+        logger.warn('Cannot create initial terminal - terminal manager not available');
       }
     } catch (error) {
-      log(
-        `❌ [SIMPLE_SESSION] Error creating initial terminal: ${error instanceof Error ? error.message : String(error)}`
-      );
+      logger.error('Error creating initial terminal', error);
     }
   }
 
@@ -1427,7 +1401,7 @@ export class ExtensionLifecycle {
    */
   private setupTelemetryEventListeners(): void {
     if (!this.telemetryService) {
-      log('⚠️ [TELEMETRY] Telemetry service not available, skipping event listener setup');
+      logger.warn('Telemetry service not available, skipping telemetry event listener setup');
       return;
     }
 
@@ -1483,8 +1457,8 @@ export class ExtensionLifecycle {
     }
 
     // Track session save/restore
-    if (this.standardSessionManager) {
-      // Note: StandardTerminalSessionManager may not expose events
+    if (this.extensionPersistenceService) {
+      // Note: ExtensionPersistenceService may not expose events
       // If it does, we can add tracking here
       log('📊 [TELEMETRY] Session manager event tracking (to be implemented if events available)');
     }

@@ -1685,76 +1685,9 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
    * 🆕 Attempt simple session restoration
    */
   private async attemptSimpleSessionRestore(): Promise<void> {
-    try {
-      log('🔄 [SIMPLE-RESTORATION] Attempting session restoration...');
-
-      if (!this.webViewPersistenceService) {
-        console.warn('⚠️ [SIMPLE-RESTORATION] SimplePersistenceManager not available');
-        return;
-      }
-
-      // Load previous session data
-      const sessionData = await this.webViewPersistenceService.loadSession();
-
-      if (!sessionData) {
-        // No previous session - show welcome message
-        const welcomeMessage = this.webViewPersistenceService.getWelcomeMessage();
-        this.displaySessionMessage(welcomeMessage);
-        log('📭 [SIMPLE-RESTORATION] No previous session found - showing welcome message');
-        return;
-      }
-
-      // Restore terminals based on session data
-      log(
-        `🔄 [SIMPLE-RESTORATION] Restoring ${sessionData.terminalCount} terminals from previous session`
-      );
-
-      // Create terminals one by one
-      for (let i = 0; i < sessionData.terminalCount; i++) {
-        const terminalName = sessionData.terminalNames[i] || `Terminal ${i + 1}`;
-        const terminalId = `terminal-${i + 1}`;
-
-        // Request terminal creation from Extension
-        this.postMessageToExtension({
-          command: 'createTerminal',
-          terminalId: terminalId,
-          terminalName: terminalName,
-          isSessionRestore: true,
-          timestamp: Date.now(),
-        });
-
-        log(`🔄 [SIMPLE-RESTORATION] Requested recreation of terminal: ${terminalName}`);
-
-        // Small delay between terminal creations
-        await new Promise((resolve) => setTimeout(resolve, 100));
-      }
-
-      // Show session restoration message
-      const sessionMessage = this.webViewPersistenceService.getSessionMessage(sessionData);
-      setTimeout(() => {
-        this.displaySessionMessage(sessionMessage);
-      }, 1000); // Delay to allow terminals to be created
-
-      // Restore active terminal if specified
-      if (sessionData.activeTerminalId) {
-        setTimeout(() => {
-          this.setActiveTerminalId(sessionData.activeTerminalId!);
-          log(
-            `🎯 [SIMPLE-RESTORATION] Restored active terminal: ${sessionData.activeTerminalId}`
-          );
-        }, 1500);
-      }
-
-      log('✅ [SIMPLE-RESTORATION] Session restoration completed');
-    } catch (error) {
-      console.error('❌ [SIMPLE-RESTORATION] Failed to restore session:', error);
-
-      // Show welcome message as fallback
-      if (this.webViewPersistenceService) {
-        const welcomeMessage = this.webViewPersistenceService.getWelcomeMessage();
-        this.displaySessionMessage(welcomeMessage);
-      }
-    }
+    // Note: Simple session restoration is not fully implemented in WebViewPersistenceService
+    // Full session restoration is handled by Extension-side persistence services
+    log('⏭️ [SIMPLE-RESTORATION] Skipped - full restoration handled by Extension');
   }
 
   /**

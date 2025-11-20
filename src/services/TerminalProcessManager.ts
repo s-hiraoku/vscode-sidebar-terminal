@@ -176,7 +176,7 @@ export class TerminalProcessManager implements ITerminalProcessManager {
     data: string,
     maxRetries: number = this.DEFAULT_MAX_RETRIES
   ): Promise<OperationResult<void>> {
-    let lastError: string | undefined;
+    let lastError: string | Error | undefined;
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       const result = this.writeToPty(terminal, data);

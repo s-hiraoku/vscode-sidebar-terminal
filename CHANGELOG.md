@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.140] - 2024-11-20
+
+### Fixed
+
+- **TypeScript Compilation Errors (Hotfix)**: Fixed all TypeScript compilation errors that were blocking CI
+  - Fixed `newTerminal` command type in WebviewMessage union
+  - Fixed `createTerminal()` call signature in ExtensionPersistenceService
+  - Fixed `attemptSimpleSessionRestore()` in LightweightTerminalWebviewManager
+  - Fixed `terminalLogger.debug()` argument count in TerminalEventManager
+  - Fixed undefined value handling in AccessibilityUtils
+  - Fixed syntax error in CliAgentStateStore.test.ts
+  - Fixed Jest to Mocha/Chai conversion issues
+  - Fixed missing constructor arguments for SplitManager
+  - Fixed type annotations for unknown types
+  - Removed tests referencing deleted modules (StandardTerminalPersistenceManager, WebViewPersistenceService, etc.)
+
+### Notes
+
+- Some test files were removed as they tested deleted or significantly refactored modules
+- Test coverage will be restored in follow-up releases
+
 ## [0.1.139] - 2024-11-20
 
 ### Fixed

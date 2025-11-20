@@ -454,7 +454,7 @@ describe('SecondaryTerminalProvider Extended', () => {
       try {
         mockTerminalManager.createTerminal();
       } catch (e) {
-        expect(e.message).to.equal('Terminal creation failed');
+        expect((e as Error).message).to.equal('Terminal creation failed');
       }
     });
 

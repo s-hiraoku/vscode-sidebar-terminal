@@ -21,7 +21,7 @@ describe('LifecycleController', function () {
     };
 
     // Create mock addon
-    mockAddon = {
+    _mockAddon = {
       dispose: sinon.stub(),
     };
   });

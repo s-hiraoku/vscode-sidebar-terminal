@@ -112,7 +112,7 @@ export class PerformanceManager extends BaseManager {
   ): void {
     if (entry.timer === null) {
       // Dynamic flush interval based on CLI Agent state and output frequency
-      let flushInterval = this.BUFFER_FLUSH_INTERVAL; // Default 16ms (optimized for performance)
+      let flushInterval: number = this.BUFFER_FLUSH_INTERVAL; // Default 16ms (optimized for performance)
 
       if (this.isCliAgentMode) {
         flushInterval = Math.max(8, this.BUFFER_FLUSH_INTERVAL / 2); // 8ms when CLI agent active

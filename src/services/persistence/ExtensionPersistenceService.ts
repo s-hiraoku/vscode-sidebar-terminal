@@ -77,13 +77,19 @@ export class ExtensionPersistenceService implements vscode.Disposable {
   private onWillSaveStateDisposable?: vscode.Disposable;
   private isRestoring = false;
 
+  // Sidebar provider for WebView communication (can be set after construction)
+  private sidebarProvider?: {
+    sendMessageToWebview: (message: unknown) => Promise<void>;
+  };
+
   constructor(
     private readonly context: vscode.ExtensionContext,
     private readonly terminalManager: TerminalManager,
-    private readonly sidebarProvider?: {
+    sidebarProvider?: {
       sendMessageToWebview: (message: unknown) => Promise<void>;
     }
   ) {
+    this.sidebarProvider = sidebarProvider;
     this.setupAutoSave();
     log('✅ [EXT-PERSISTENCE] Extension Persistence Service initialized');
   }
@@ -450,10 +456,8 @@ export class ExtensionPersistenceService implements vscode.Disposable {
     const terminalCreations: TerminalRestoreData[] = [];
 
     for (const terminalInfo of terminals) {
-      const terminalId = this.terminalManager.createTerminal({
-        name: terminalInfo.name,
-        cwd: terminalInfo.cwd,
-      });
+      // Note: createTerminal() doesn't accept options, name/cwd are handled during scrollback restoration
+      const terminalId = this.terminalManager.createTerminal();
 
       if (terminalId) {
         terminalCreations.push({

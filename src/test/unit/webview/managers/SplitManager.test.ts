@@ -42,8 +42,13 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
     mockTerminal = sinon.createStubInstance(Terminal);
     mockFitAddon = sinon.createStubInstance(FitAddon);
 
+    // Create mock coordinator
+    const mockCoordinator = {
+      postMessageToExtension: sinon.stub(),
+    } as any;
+
     // Create SplitManager instance
-    splitManager = new SplitManager();
+    splitManager = new SplitManager(mockCoordinator);
   });
 
   afterEach(function () {

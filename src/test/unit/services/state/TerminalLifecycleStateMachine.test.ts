@@ -252,12 +252,12 @@ describe('TerminalLifecycleStateMachine', () => {
 
       const history = stateMachine.getTransitionHistory();
       expect(history).to.have.length(3);
-      expect(history[0].from).to.equal(TerminalLifecycleState.Creating);
-      expect(history[0].to).to.equal(TerminalLifecycleState.Initializing);
-      expect(history[1].from).to.equal(TerminalLifecycleState.Initializing);
-      expect(history[1].to).to.equal(TerminalLifecycleState.Ready);
-      expect(history[2].from).to.equal(TerminalLifecycleState.Ready);
-      expect(history[2].to).to.equal(TerminalLifecycleState.Active);
+      expect(history[0]!.from).to.equal(TerminalLifecycleState.Creating);
+      expect(history[0]!.to).to.equal(TerminalLifecycleState.Initializing);
+      expect(history[1]!.from).to.equal(TerminalLifecycleState.Initializing);
+      expect(history[1]!.to).to.equal(TerminalLifecycleState.Ready);
+      expect(history[2]!.from).to.equal(TerminalLifecycleState.Ready);
+      expect(history[2]!.to).to.equal(TerminalLifecycleState.Active);
     });
 
     it('should limit history size', () => {
@@ -273,8 +273,8 @@ describe('TerminalLifecycleStateMachine', () => {
 
       const history = stateMachine.getTransitionHistory();
       expect(history).to.have.length(2); // Only last 2 transitions
-      expect(history[0].to).to.equal(TerminalLifecycleState.Ready);
-      expect(history[1].to).to.equal(TerminalLifecycleState.Active);
+      expect(history[0]!.to).to.equal(TerminalLifecycleState.Ready);
+      expect(history[1]!.to).to.equal(TerminalLifecycleState.Active);
     });
 
     it('should return limited history when requested', () => {
@@ -285,8 +285,8 @@ describe('TerminalLifecycleStateMachine', () => {
 
       const history = stateMachine.getTransitionHistory(2);
       expect(history).to.have.length(2);
-      expect(history[0].to).to.equal(TerminalLifecycleState.Ready);
-      expect(history[1].to).to.equal(TerminalLifecycleState.Active);
+      expect(history[0]!.to).to.equal(TerminalLifecycleState.Ready);
+      expect(history[1]!.to).to.equal(TerminalLifecycleState.Active);
     });
 
     it('should return last transition', () => {
@@ -324,15 +324,13 @@ describe('TerminalLifecycleStateMachine', () => {
       stateMachine.transition(TerminalLifecycleState.Initializing);
 
       expect(eventReceived).to.exist;
-      if (eventReceived) {
-        expect(eventReceived.terminalId).to.equal('term1');
-        expect(eventReceived.previousState).to.equal(
-          TerminalLifecycleState.Creating
-        );
-        expect(eventReceived.newState).to.equal(
-          TerminalLifecycleState.Initializing
-        );
-      }
+      expect(eventReceived!.terminalId).to.equal('term1');
+      expect(eventReceived!.previousState).to.equal(
+        TerminalLifecycleState.Creating
+      );
+      expect(eventReceived!.newState).to.equal(
+        TerminalLifecycleState.Initializing
+      );
     });
 
     it('should support multiple listeners', () => {

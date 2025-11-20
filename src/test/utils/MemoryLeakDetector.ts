@@ -154,6 +154,10 @@ export class MemoryLeakDetector {
     const initial = this.snapshots[0];
     const final = this.snapshots[this.snapshots.length - 1];
 
+    if (!initial || !final) {
+      return 'No memory snapshots available';
+    }
+
     const report = [
       '=== Memory Leak Detection Report ===',
       '',

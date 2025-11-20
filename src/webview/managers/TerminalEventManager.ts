@@ -117,7 +117,7 @@ export class TerminalEventManager extends BaseManager {
           charCodes: Array.from(data).map(c => c.charCodeAt(0)),
           timestamp: Date.now()
         });
-        terminalLogger.debug(`⌨️ User input for ${terminalId}:`, data.length, 'chars');
+        terminalLogger.debug(`⌨️ User input for ${terminalId}: ${data.length} chars`);
 
         // Send input to Extension
         const message = {

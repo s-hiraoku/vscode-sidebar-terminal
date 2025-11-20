@@ -347,14 +347,14 @@ export class ConsolidatedMessageManager implements IMessageManager {
   /**
    * Test compatibility methods
    */
-  private messageHandlers: Array<(message: unknown) => void> = [];
+  private testMessageHandlers: Array<(message: unknown) => void> = [];
   private errorHandlers: Array<(error: unknown) => void> = [];
 
   /**
    * Add message handler (for test compatibility)
    */
   public onMessage(handler: (message: unknown) => void): void {
-    this.messageHandlers.push(handler);
+    this.testMessageHandlers.push(handler);
   }
 
   /**
@@ -382,7 +382,7 @@ export class ConsolidatedMessageManager implements IMessageManager {
 
     try {
       // Trigger message handlers
-      this.messageHandlers.forEach(handler => {
+      this.testMessageHandlers.forEach(handler => {
         try {
           handler(message);
         } catch (error) {
@@ -462,7 +462,7 @@ export class ConsolidatedMessageManager implements IMessageManager {
     this.profileHandler.dispose();
 
     // Clear message handlers
-    this.messageHandlers = [];
+    this.testMessageHandlers = [];
     this.errorHandlers = [];
     this.connectionLostHandlers = [];
 

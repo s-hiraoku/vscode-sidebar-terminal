@@ -517,6 +517,7 @@ export interface WebviewMessage {
     | 'exit'
     | 'split'
     | 'terminalCreated'
+    | 'newTerminal'
     | 'terminalRemoved'
     | 'settingsResponse'
     | 'fontSettingsUpdate'

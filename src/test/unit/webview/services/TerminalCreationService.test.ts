@@ -48,7 +48,10 @@ describe('TerminalCreationService', function () {
     global.Element = dom.window.Element;
 
     // Create mocks
-    splitManager = new SplitManager();
+    const splitManagerCoordinator = {
+      postMessageToExtension: sinon.stub(),
+    } as any;
+    splitManager = new SplitManager(splitManagerCoordinator);
     eventRegistry = new EventHandlerRegistry();
 
     // Create mock coordinator

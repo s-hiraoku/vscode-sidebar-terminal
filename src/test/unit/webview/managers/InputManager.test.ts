@@ -203,7 +203,7 @@ describe('InputManager', () => {
       clock.runAll();
 
       expect(mockCoordinator.postMessageToExtension.callCount).to.equal(1);
-      const payload = mockCoordinator.postMessageToExtension.getCall(0).args[0];
+      const payload = mockCoordinator.postMessageToExtension.getCall(0).args[0] as { data: string };
       expect(payload.data).to.equal('ab');
     });
 

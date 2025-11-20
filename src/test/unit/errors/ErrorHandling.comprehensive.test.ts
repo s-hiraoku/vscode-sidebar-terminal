@@ -230,7 +230,7 @@ describe('Comprehensive Error Handling Tests (TDD)', () => {
           constructor(
             message: string,
             public context: string,
-            public cause?: Error
+            public override cause?: Error
           ) {
             super(message);
             this.name = 'ContextualError';
