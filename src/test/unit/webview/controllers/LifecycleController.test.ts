@@ -4,12 +4,12 @@
 
 import { expect } from 'chai';
 import * as sinon from 'sinon';
-import { LifecycleController, AddonLoadOptions } from '../../../../webview/controllers/LifecycleController';
+import { LifecycleController, AddonLoadOptions as _AddonLoadOptions } from '../../../../webview/controllers/LifecycleController';
 
 describe('LifecycleController', function () {
   let lifecycleController: LifecycleController;
   let mockTerminal: any;
-  let mockAddon: any;
+  let _mockAddon: any;
 
   beforeEach(function () {
     lifecycleController = new LifecycleController();
@@ -166,7 +166,7 @@ describe('LifecycleController', function () {
         cache: false,
       });
 
-      const stats = lifecycleController.getStats();
+      const _stats = lifecycleController.getStats();
       // Note: Cache size may still be > 0 from previous tests if not isolated
       // Just verify addon was loaded
       expect(mockTerminal.loadAddon.called).to.be.true;

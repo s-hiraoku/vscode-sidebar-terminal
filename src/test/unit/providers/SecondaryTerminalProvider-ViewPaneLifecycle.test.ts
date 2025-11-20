@@ -10,7 +10,7 @@
  * Reference: docs/vscode-webview-lifecycle-patterns.md
  */
 
-import * as assert from 'assert';
+import * as _assert from 'assert';
 import * as sinon from 'sinon';
 import { expect } from 'chai';
 
@@ -20,8 +20,8 @@ import '../../shared/TestSetup';
 describe('SecondaryTerminalProvider - ViewPane Lifecycle (OpenSpec 1.3)', () => {
   let sandbox: sinon.SinonSandbox;
   let mockWebviewView: any;
-  let mockContext: any;
-  let mockTerminalManager: any;
+  let _mockContext: any;
+  let _mockTerminalManager: any;
   let htmlSetCount: number;
   let listenerRegistrationCount: number;
 

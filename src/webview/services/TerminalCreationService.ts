@@ -605,8 +605,20 @@ export class TerminalCreationService implements Disposable {
             z-index: 31;
             width: 100% !important;
             min-height: 100% !important;
-            padding: 8px !important;
+            padding: 0 !important;
             box-sizing: border-box !important;
+          }
+
+          .terminal-container .xterm .xterm-rows {
+            padding: 0 !important;
+            line-height: 1 !important;
+          }
+
+          .terminal-container .xterm .xterm-link-layer,
+          .terminal-container .xterm .xterm-selection-layer,
+          .terminal-container .xterm .xterm-decoration-container {
+            top: 0 !important;
+            left: 0 !important;
           }
 
           /* VS Code Standard Scrollbar Styling - 14px width */

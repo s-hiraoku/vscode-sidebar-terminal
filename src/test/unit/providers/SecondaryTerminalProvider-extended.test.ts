@@ -468,7 +468,7 @@ describe('SecondaryTerminalProvider Extended', () => {
       const disposeCallback = sinon.spy();
       mockWebviewView.onDidDispose.returns({ dispose: disposeCallback });
 
-      const disposable = mockWebviewView.onDidDispose(() => {});
+      const _disposable = mockWebviewView.onDidDispose(() => {});
 
       expect(mockWebviewView.onDidDispose).to.have.been.called;
     });
@@ -476,9 +476,9 @@ describe('SecondaryTerminalProvider Extended', () => {
 
   describe('Performance optimization', () => {
     it('should debounce terminal output', () => {
-      let outputCount = 0;
+      let _outputCount = 0;
       const debouncedOutput = sinon.spy(() => {
-        outputCount++;
+        _outputCount++;
       });
 
       // Simulate debounced output

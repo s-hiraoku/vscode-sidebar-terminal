@@ -56,7 +56,7 @@ describe('CircularBuffer Performance', () => {
         circularBuffer.push(`data${i}`);
       }
 
-      const circularMemory = process.memoryUsage().heapUsed - circularStart;
+      const _circularMemory = process.memoryUsage().heapUsed - circularStart;
 
       // Array-based approach (old implementation)
       const arrayBuffer: string[] = [];
@@ -67,7 +67,7 @@ describe('CircularBuffer Performance', () => {
         // Simulate old behavior: growing array without bounds
       }
 
-      const arrayMemory = process.memoryUsage().heapUsed - arrayStart;
+      const _arrayMemory = process.memoryUsage().heapUsed - arrayStart;
 
       // Circular buffer should use less memory (or similar, but bounded)
       // The key is that circular buffer has O(1) space, array has O(n)

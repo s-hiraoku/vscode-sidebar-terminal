@@ -4,7 +4,7 @@ import {
   TerminalLifecycleHelper,
   WebViewInteractionHelper,
 } from '../../helpers';
-import { TEST_TIMEOUTS } from '../../config/test-constants';
+import { TEST_TIMEOUTS as _TEST_TIMEOUTS } from '../../config/test-constants';
 
 /**
  * Cross-Platform Compatibility Tests

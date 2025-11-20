@@ -201,7 +201,7 @@ describe('Progressive Loading Integration - Phase 2.2', () => {
       let chunkLoaded = false;
 
       if (isAtTop && remainingLines.length > 0) {
-        const chunkSize = Math.min(500, remainingLines.length);
+        const _chunkSize = Math.min(500, remainingLines.length);
         chunkLoaded = true;
       }
 

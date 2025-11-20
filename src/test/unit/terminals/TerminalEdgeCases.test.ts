@@ -112,7 +112,7 @@ describe('Terminal Edge Cases Tests (TDD)', () => {
 
       it('should handle invalid CWD path', () => {
         // EDGE CASE: Non-existent or invalid directory
-        const invalidCwd = '/non/existent/path';
+        const _invalidCwd = '/non/existent/path';
         // Should fallback to safe default
         const safeCwd = '/'; // Fallback
         expect(safeCwd).to.equal('/');
@@ -120,7 +120,7 @@ describe('Terminal Edge Cases Tests (TDD)', () => {
 
       it('should handle invalid shell path', () => {
         // EDGE CASE: Non-existent shell executable
-        const invalidShell = '/bin/nonexistent';
+        const _invalidShell = '/bin/nonexistent';
         // Should fallback to default shell
         const defaultShell = process.env.SHELL || '/bin/sh';
         expect(defaultShell).to.be.a('string');
@@ -156,7 +156,7 @@ describe('Terminal Edge Cases Tests (TDD)', () => {
         id: 'test-1',
         isDisposed: false,
         isWriting: true,
-        write: (data: string) => {
+        write: (_data: string) => {
           if (terminal.isDisposed) {
             throw new Error('Terminal disposed');
           }
@@ -343,7 +343,7 @@ describe('Terminal Edge Cases Tests (TDD)', () => {
       const terminal = {
         id: 'test-1',
         isInitialized: false,
-        write: function (data: string) {
+        write: function (_data: string) {
           if (!this.isInitialized) {
             throw new Error('Terminal not initialized');
           }

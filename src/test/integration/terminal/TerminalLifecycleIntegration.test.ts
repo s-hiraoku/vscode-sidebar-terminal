@@ -393,7 +393,7 @@ describe('Terminal Lifecycle Integration Tests (TDD Complete)', () => {
       };
 
       const num1 = assignNumber(); // 1
-      const num2 = assignNumber(); // 2
+      const _num2 = assignNumber(); // 2
       releaseNumber(num1); // Release 1
       const num3 = assignNumber(); // Should reuse 1
 

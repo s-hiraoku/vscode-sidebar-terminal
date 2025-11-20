@@ -32,6 +32,7 @@ export class TerminalLinkManager extends BaseManager {
   private readonly absoluteFilePathRegex =
     /(?:\/[a-zA-Z0-9._-]+)+|(?:[A-Za-z]:\\(?:[^\\/:*?"<>|\r\n]+\\)*[^\\/:*?"<>|\r\n]+)/g;
   private readonly relativeFilePathRegex = /(?:\.{1,2}\/)+[a-zA-Z0-9._/-]+/g;
+  private readonly urlRegex = /(?:(?:https?):\/\/)[^\s"'<>]+/gi;
 
   // Allowed file extensions for link detection
   private readonly allowedFileExtensions = new Set([
@@ -107,13 +108,13 @@ export class TerminalLinkManager extends BaseManager {
               return;
             }
 
-            const text = line.translateToString(false);
-            const links = this.extractFileLinks(text, bufferLineNumber, terminalId);
-            callback(links);
-          } catch (error) {
-            terminalLogger.warn('⚠️ Failed to analyze terminal links:', error);
-            callback([]);
-          }
+          const text = line.translateToString(false);
+          const links = this.extractLinks(text, bufferLineNumber, terminalId);
+          callback(links);
+        } catch (error) {
+          terminalLogger.warn('⚠️ Failed to analyze terminal links:', error);
+          callback([]);
+        }
         },
       });
 
@@ -127,9 +128,20 @@ export class TerminalLinkManager extends BaseManager {
   /**
    * Extract file links from terminal line
    */
-  private extractFileLinks(text: string, bufferLineNumber: number, terminalId: string): ILink[] {
-    const matches: ILink[] = [];
+  private extractLinks(text: string, bufferLineNumber: number, terminalId: string): ILink[] {
     const processed = new Set<string>();
+    const fileLinks = this.extractFileLinks(text, bufferLineNumber, terminalId, processed);
+    const urlLinks = this.extractUrlLinks(text, bufferLineNumber, terminalId, processed);
+    return [...fileLinks, ...urlLinks];
+  }
+
+  private extractFileLinks(
+    text: string,
+    bufferLineNumber: number,
+    terminalId: string,
+    processed: Set<string>
+  ): ILink[] {
+    const matches: ILink[] = [];
 
     const evaluateRegex = (regex: RegExp) => {
       regex.lastIndex = 0;
@@ -170,6 +182,50 @@ export class TerminalLinkManager extends BaseManager {
 
     evaluateRegex(this.absoluteFilePathRegex);
     evaluateRegex(this.relativeFilePathRegex);
+
+    return matches;
+  }
+
+  private extractUrlLinks(
+    text: string,
+    bufferLineNumber: number,
+    terminalId: string,
+    processed: Set<string>
+  ): ILink[] {
+    const matches: ILink[] = [];
+    this.urlRegex.lastIndex = 0;
+
+    let match: RegExpExecArray | null;
+    while ((match = this.urlRegex.exec(text)) !== null) {
+      const sanitizedResult = this.sanitizeLinkText(match[0]);
+      if (!sanitizedResult) {
+        continue;
+      }
+
+      const { text: sanitizedUrl, leadingOffset } = sanitizedResult;
+      if (!/^https?:\/\//i.test(sanitizedUrl)) {
+        continue;
+      }
+
+      const key = `${match.index + leadingOffset}:${sanitizedUrl}`;
+      if (processed.has(key)) {
+        continue;
+      }
+      processed.add(key);
+
+      const absoluteIndex = match.index + leadingOffset;
+      const startColumn = absoluteIndex + 1;
+      const endColumn = startColumn + sanitizedUrl.length;
+
+      matches.push({
+        text: sanitizedUrl,
+        range: {
+          start: { x: startColumn, y: bufferLineNumber },
+          end: { x: endColumn, y: bufferLineNumber },
+        },
+        activate: () => this.openUrlFromTerminal(sanitizedUrl, terminalId),
+      });
+    }
 
     return matches;
   }

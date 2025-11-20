@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import '../../shared/TestSetup';
+import '../../../shared/TestSetup';
 
 import {
   TerminalInitializationStateMachine,

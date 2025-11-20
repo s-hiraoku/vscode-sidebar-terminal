@@ -215,7 +215,7 @@ describe('BaseManager - IDisposable Implementation', () => {
 
   describe('Abstract Method Enforcement', () => {
     it('should require doInitialize implementation', () => {
-      class IncompleteManager extends BaseManager {
+      class _IncompleteManager extends BaseManager {
         protected doDispose(): void {}
         // Missing doInitialize - TypeScript should enforce this
       }

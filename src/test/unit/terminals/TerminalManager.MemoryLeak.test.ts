@@ -7,10 +7,10 @@
  * Related: Issue #232 - Memory Leak Detection
  */
 
-import { describe, it, beforeEach, afterEach } from 'mocha';
+import { describe, it, beforeEach as _beforeEach, afterEach } from 'mocha';
 import { expect } from 'chai';
 import { TerminalManager } from '../../../terminals/TerminalManager';
-import { MemoryLeakDetector, DisposalStressTest } from '../../utils/MemoryLeakDetector';
+import { MemoryLeakDetector, DisposalStressTest as _DisposalStressTest } from '../../utils/MemoryLeakDetector';
 
 describe('TerminalManager - Memory Leak Detection', () => {
   let terminalManager: TerminalManager | null = null;

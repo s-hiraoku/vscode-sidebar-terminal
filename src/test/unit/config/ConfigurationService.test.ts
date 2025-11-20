@@ -26,7 +26,7 @@ describe('ConfigurationService', () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockConfiguration: sinon.SinonStubbedInstance<any>;
   let logSpy: sinon.SinonStub;
-  let configChangeEvent: sinon.SinonStub;
+  let _configChangeEvent: sinon.SinonStub;
 
   beforeEach(() => {
     // CRITICAL: Reset singleton FIRST before setting up test environment
@@ -59,7 +59,7 @@ describe('ConfigurationService', () => {
     (global as any).vscode = vscodeModule;
 
     // CRITICAL: Update require.cache so ConfigurationService imports this mock
-    const Module = require('module');
+    const _Module = require('module');
     try {
       const vscodeModulePath = require.resolve('vscode', { paths: [process.cwd()] });
       require.cache[vscodeModulePath] = {

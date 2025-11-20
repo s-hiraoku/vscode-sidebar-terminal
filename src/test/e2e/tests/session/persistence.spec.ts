@@ -4,7 +4,7 @@ import {
   TerminalLifecycleHelper,
   WebViewInteractionHelper,
 } from '../../helpers';
-import { TERMINAL_CONSTANTS } from '../../config/test-constants';
+import { TERMINAL_CONSTANTS as _TERMINAL_CONSTANTS } from '../../config/test-constants';
 
 /**
  * Session Persistence Tests

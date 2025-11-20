@@ -12,7 +12,7 @@ use(sinonChai);
 
 import {
   OperationResultHandler,
-  OperationResult,
+  OperationResult as _OperationResult,
   NotificationService,
 } from '../../../utils/OperationResultHandler';
 import {

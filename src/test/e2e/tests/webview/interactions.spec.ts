@@ -5,7 +5,7 @@ import {
   WebViewInteractionHelper,
   VisualTestingUtility,
 } from '../../helpers';
-import { TEST_TIMEOUTS } from '../../config/test-constants';
+import { TEST_TIMEOUTS as _TEST_TIMEOUTS } from '../../config/test-constants';
 
 /**
  * WebView Interaction Tests

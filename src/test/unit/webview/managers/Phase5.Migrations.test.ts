@@ -17,6 +17,8 @@ import { TerminalContainerManager } from '../../../../webview/managers/TerminalC
 import { TerminalLinkManager } from '../../../../webview/managers/TerminalLinkManager';
 import { IDisposable } from '../../../../webview/utils/DOMManager';
 import { IManagerCoordinator } from '../../../../webview/interfaces/ManagerInterfaces';
+import sinon from 'sinon';
+import type { ILink } from '@xterm/xterm';
 
 describe('Phase 5 Manager Migrations', () => {
   describe('TerminalContainerManager', () => {
@@ -110,13 +112,17 @@ describe('Phase 5 Manager Migrations', () => {
 
   describe('TerminalLinkManager', () => {
     let manager: TerminalLinkManager;
-    const mockCoordinator: IManagerCoordinator = {
-      setActiveTerminalId: (_id: string) => {},
-      getManagers: () => ({} as any),
-    } as any;
+    let mockCoordinator: sinon.SinonStubbedInstance<IManagerCoordinator> & IManagerCoordinator;
 
     beforeEach(() => {
       // Issue #216: Constructor injection pattern
+      mockCoordinator = {
+        setActiveTerminalId: sinon.stub(),
+        getManagers: sinon.stub().returns({}),
+        postMessageToExtension: sinon.stub(),
+        getMessageManager: sinon.stub().returns(null),
+      } as unknown as sinon.SinonStubbedInstance<IManagerCoordinator> & IManagerCoordinator;
+
       manager = new TerminalLinkManager(mockCoordinator);
     });
 
@@ -177,6 +183,43 @@ describe('Phase 5 Manager Migrations', () => {
       expect(metrics).to.have.property('initializationTimeMs');
       expect(metrics).to.have.property('operationCount');
       expect(metrics.initializationTimeMs).to.be.greaterThan(0);
+    });
+
+    it('should detect and activate HTTP links in terminal output', () => {
+      let capturedProvider: { provideLinks: Function } | null = null;
+      const mockTerminal = {
+        buffer: {
+          active: {
+            getLine: sinon.stub().returns({
+              translateToString: () => 'Docs: https://example.com/docs?q=hello).',
+            }),
+          },
+        },
+        registerLinkProvider: (provider: any) => {
+          capturedProvider = provider;
+          return { dispose: () => {} };
+        },
+      } as any;
+
+      manager.registerTerminalLinkHandlers(mockTerminal, 'terminal-url-test');
+      expect(capturedProvider).to.not.be.null;
+
+      let providedLinks: ILink[] = [];
+      capturedProvider!.provideLinks(1, (links: ILink[]) => {
+        providedLinks = links;
+      });
+
+      expect(providedLinks).to.have.lengthOf(1);
+      expect(providedLinks[0].text).to.equal('https://example.com/docs?q=hello');
+
+      providedLinks[0].activate();
+
+      sinon.assert.calledWithMatch(mockCoordinator.postMessageToExtension as sinon.SinonStub, {
+        command: 'openTerminalLink',
+        linkType: 'url',
+        url: 'https://example.com/docs?q=hello',
+        terminalId: 'terminal-url-test',
+      });
     });
   });
 

@@ -505,7 +505,7 @@ describe('Terminal Performance Tests (TDD)', () => {
         const startTime = Date.now();
 
         for (let i = 0; i < iterations; i++) {
-          const terminal = {
+          const _terminal = {
             id: `terminal-${i}`,
             buffer: [] as string[],
           };

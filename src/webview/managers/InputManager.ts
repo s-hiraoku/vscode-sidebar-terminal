@@ -63,6 +63,7 @@ export class InputManager extends BaseManager implements IInputManager {
 
   // Debounce timers for events
   private eventDebounceTimers = new Map<string, number>();
+  private pendingInputBuffers = new Map<string, { data: string[]; timer: number | null }>();
   // Simple arrow key handling for agent interactions
   private agentInteractionMode = false;
 
@@ -951,13 +952,8 @@ export class InputManager extends BaseManager implements IInputManager {
 
       // Send only user keyboard input to extension (not PTY echo)
       this.logger(`Terminal ${terminalId} user input: ${event.key.length} chars`);
-
-      manager.postMessageToExtension({
-        command: 'input',
-        terminalId: terminalId,
-        data: event.key,
-        timestamp: Date.now(),
-      });
+      const needsImmediateFlush = this.shouldFlushImmediately(event.key, event.domEvent);
+      this.queueInputData(terminalId, event.key, needsImmediateFlush);
     });
 
     // CRITICAL: Add compositionend listener for IME final text
@@ -967,12 +963,7 @@ export class InputManager extends BaseManager implements IInputManager {
       const finalText = event.data;
       if (finalText) {
         this.logger(`Terminal ${terminalId} IME compositionend - final text: "${finalText}"`);
-        manager.postMessageToExtension({
-          command: 'input',
-          terminalId: terminalId,
-          data: finalText,
-          timestamp: Date.now(),
-        });
+        this.queueInputData(terminalId, finalText, true);
       }
     });
 
@@ -1346,6 +1337,75 @@ export class InputManager extends BaseManager implements IInputManager {
     return false;
   }
 
+  private shouldFlushImmediately(data: string, domEvent: KeyboardEvent): boolean {
+    if (!data) {
+      return true;
+    }
+
+    const immediateKeys = new Set(['Enter', 'Backspace', 'Delete']);
+    if (immediateKeys.has(domEvent.key)) {
+      return true;
+    }
+
+    return /[\r\n]/.test(data);
+  }
+
+  private queueInputData(terminalId: string, data: string, flushImmediately: boolean): void {
+    if (!terminalId || data.length === 0) {
+      return;
+    }
+
+    let entry = this.pendingInputBuffers.get(terminalId);
+    if (!entry) {
+      entry = { data: [], timer: null };
+      this.pendingInputBuffers.set(terminalId, entry);
+    }
+
+    entry.data.push(data);
+
+    if (flushImmediately) {
+      this.flushPendingInput(terminalId);
+      return;
+    }
+
+    if (entry.timer !== null) {
+      return;
+    }
+
+    entry.timer = window.setTimeout(() => {
+      entry!.timer = null;
+      this.flushPendingInput(terminalId);
+    }, 0);
+  }
+
+  private flushPendingInput(terminalId: string): void {
+    const entry = this.pendingInputBuffers.get(terminalId);
+    if (!entry || entry.data.length === 0) {
+      return;
+    }
+
+    if (entry.timer !== null) {
+      clearTimeout(entry.timer);
+      entry.timer = null;
+    }
+
+    const payload = entry.data.join('');
+    entry.data.length = 0;
+
+    const messageManager = this.coordinator.getMessageManager?.();
+    if (messageManager && typeof messageManager.sendInput === 'function') {
+      messageManager.sendInput(payload, terminalId);
+      return;
+    }
+
+    this.coordinator.postMessageToExtension({
+      command: 'input',
+      terminalId,
+      data: payload,
+      timestamp: Date.now(),
+    });
+  }
+
   /**
    * Initialize the InputManager (BaseManager abstract method implementation)
    */
@@ -1378,6 +1438,15 @@ export class InputManager extends BaseManager implements IInputManager {
       clearTimeout(timer);
     }
     this.eventDebounceTimers.clear();
+
+    // Flush and clear pending input buffers
+    for (const entry of this.pendingInputBuffers.values()) {
+      if (entry.timer !== null) {
+        clearTimeout(entry.timer);
+      }
+      entry.data.length = 0;
+    }
+    this.pendingInputBuffers.clear();
 
     // Reset Alt+Click state
     this.altClickState = {

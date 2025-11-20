@@ -67,7 +67,7 @@ describe('ScrollbackManager - BaseManager Integration', () => {
 
     it('should not reinitialize if already initialized', async () => {
       await manager.initialize();
-      const firstInit = Date.now();
+      const _firstInit = Date.now();
 
       await manager.initialize();
       const metrics = manager.getPerformanceMetrics();

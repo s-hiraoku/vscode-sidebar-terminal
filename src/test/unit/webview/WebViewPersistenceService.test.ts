@@ -15,7 +15,7 @@
 
 import * as sinon from 'sinon';
 import { expect } from 'chai';
-import { Terminal } from '@xterm/xterm';
+import { Terminal as _Terminal } from '@xterm/xterm';
 import { SerializeAddon } from '@xterm/addon-serialize';
 import { WebViewPersistenceService } from '../../../../webview/services/WebViewPersistenceService';
 
@@ -24,7 +24,7 @@ describe('WebViewPersistenceService', () => {
   let persistenceService: WebViewPersistenceService;
   let mockVscodeApi: any;
   let mockTerminal: any;
-  let mockSerializeAddon: any;
+  let _mockSerializeAddon: any;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
@@ -59,7 +59,7 @@ describe('WebViewPersistenceService', () => {
     };
 
     // Mock SerializeAddon
-    mockSerializeAddon = {
+    _mockSerializeAddon = {
       serialize: sandbox.stub().returns('serialized content'),
     };
 

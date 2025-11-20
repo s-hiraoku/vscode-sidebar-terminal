@@ -303,10 +303,10 @@ describe('Comprehensive Error Handling Tests (TDD)', () => {
         }
 
         const breaker = new CircuitBreaker();
-        let callCount = 0;
+        let _callCount = 0;
 
         const failingOperation = () => {
-          callCount++;
+          _callCount++;
           throw new Error('Operation failed');
         };
 
@@ -487,7 +487,7 @@ describe('Comprehensive Error Handling Tests (TDD)', () => {
       it('should handle WebView not ready', () => {
         const webview = {
           isReady: false,
-          postMessage: function (message: any) {
+          postMessage: function (_message: any) {
             if (!this.isReady) {
               throw new Error('WebView not ready');
             }

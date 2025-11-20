@@ -230,13 +230,13 @@ test.describe('Keyboard Navigation Tests', () => {
     expect(focusedElement.tagName).toBeTruthy();
   });
 
-  test('should support Escape key to close dialogs', async ({ page }) => {
+  test('should support Escape key to close dialogs', async ({ page: _page }) => {
     // This test would need actual dialog interaction
     // Placeholder for now
     expect(true).toBe(true);
   });
 
-  test('should support Arrow keys for list navigation', async ({ page }) => {
+  test('should support Arrow keys for list navigation', async ({ page: _page }) => {
     // This test would need actual list interaction
     // Placeholder for now
     expect(true).toBe(true);

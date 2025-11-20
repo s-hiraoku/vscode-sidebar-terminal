@@ -413,9 +413,10 @@ export class ExtensionPersistenceService implements vscode.Disposable {
    */
   private optimizeSessionData(
     sessionData: SessionStorageData,
-    config: PersistenceConfig
+    _config: PersistenceConfig
   ): SessionStorageData {
-    const _targetSize = config.persistentSessionStorageLimit * 0.9 * 1024 * 1024; // 90% of limit
+    // Target size calculation for future optimization
+    // const _targetSize = config.persistentSessionStorageLimit * 0.9 * 1024 * 1024; // 90% of limit
 
     // Strategy: Reduce scrollback lines progressively
     const optimized = { ...sessionData };
