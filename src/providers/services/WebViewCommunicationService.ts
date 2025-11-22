@@ -20,12 +20,24 @@ import { WebviewMessage } from '../../types/common';
  */
 export class WebViewCommunicationService {
   private _view?: vscode.WebviewView;
+  // Queue messages until the WebView is ready (prevents lost messages during activation)
+  private _pendingMessages: WebviewMessage[] = [];
 
   /**
    * Set the WebView view
    */
   public setView(view: vscode.WebviewView | undefined): void {
     this._view = view;
+
+    // Flush any messages queued while the view was unavailable
+    if (this._view && this._pendingMessages.length > 0) {
+      const toFlush = [...this._pendingMessages];
+      this._pendingMessages = [];
+
+      toFlush.forEach(message => {
+        void this._sendMessageDirect(message);
+      });
+    }
   }
 
   /**
@@ -57,7 +69,8 @@ export class WebViewCommunicationService {
    */
   public async sendMessage(message: WebviewMessage): Promise<void> {
     if (!this._view) {
-      log('⚠️ [COMMUNICATION] No webview available to send message');
+      log('⚠️ [COMMUNICATION] No webview available to send message, queueing');
+      this._pendingMessages.push(message);
       return;
     }
 

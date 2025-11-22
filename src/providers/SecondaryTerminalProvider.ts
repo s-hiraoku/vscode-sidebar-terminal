@@ -101,6 +101,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   private readonly _terminalInitStartTimes = new Map<string, number>();
   private readonly _safeModeNotified = new Set<string>();
   private readonly _pendingInitRetries = new Map<string, number>();
+  private _pendingMessages: WebviewMessage[] = [];
 
   private static readonly ACK_WATCHDOG_OPTIONS: WatchdogOptions = {
     initialDelayMs: 700,
@@ -482,6 +483,14 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
     // Mark as initialized
     this._isInitialized = true;
+    // Flush any messages queued before the webview was ready
+    if (this._pendingMessages.length > 0) {
+      const queued = [...this._pendingMessages];
+      this._pendingMessages = [];
+      queued.forEach(message => {
+        void this._communicationService.sendMessage(message);
+      });
+    }
     this._startPendingWatchdogs();
 
     // Send version information
@@ -1024,6 +1033,13 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   }
 
   private async _sendMessage(message: WebviewMessage): Promise<void> {
+    if (!this._isInitialized && message.command !== 'extensionReady') {
+      // Queue until WebView signals readiness to avoid losing messages during reload
+      this._pendingMessages.push(message);
+      log(`⏳ [PROVIDER] Queuing message until webviewReady: ${message.command}`);
+      return;
+    }
+
     await this._communicationService.sendMessage(message);
   }
 

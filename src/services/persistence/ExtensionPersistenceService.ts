@@ -372,7 +372,8 @@ export class ExtensionPersistenceService implements vscode.Disposable {
    * Get persistence configuration
    */
   private getPersistenceConfig(): PersistenceConfig {
-    const config = vscode.workspace.getConfiguration('sidebarTerminal');
+    // Settings are contributed under the `secondaryTerminal` namespace
+    const config = vscode.workspace.getConfiguration('secondaryTerminal');
 
     return {
       enablePersistentSessions: config.get('enablePersistentSessions', true),
@@ -402,16 +403,12 @@ export class ExtensionPersistenceService implements vscode.Disposable {
   /**
    * Compress scrollback data if it exceeds threshold
    */
-  private compressIfNeeded(scrollbackLines: string[]): string[] | string {
-    const content = scrollbackLines.join('\n');
-
-    if (content.length < ExtensionPersistenceService.COMPRESSION_THRESHOLD) {
-      return scrollbackLines;
-    }
-
-    // Simple compression: store as single string instead of array
-    // In production, could use actual compression (zlib, etc.)
-    return content;
+  private compressIfNeeded(scrollbackLines: string[]): string[] {
+    // Previously we collapsed long scrollback into a single string. The WebView
+    // restore path expects an array and silently discarded string payloads,
+    // resulting in empty scrollback on restore. Keep the hook but always return
+    // the original array to preserve fidelity.
+    return scrollbackLines;
   }
 
   /**
@@ -502,14 +499,25 @@ export class ExtensionPersistenceService implements vscode.Disposable {
     }
 
     try {
+      // Normalize historical payloads where scrollback was stored as a single string
+      const normalizedTerminals = terminals.map(t => {
+        let scrollbackArray: string[] | undefined = t.scrollbackData;
+
+        if (!Array.isArray(scrollbackArray) && typeof t.scrollbackData === 'string') {
+          scrollbackArray = t.scrollbackData.split('\n');
+        }
+
+        return {
+          terminalId: t.id,
+          scrollbackData: scrollbackArray,
+          restoreScrollback: true,
+          progressive: Array.isArray(scrollbackArray) && scrollbackArray.length > 500,
+        };
+      });
+
       await this.sidebarProvider.sendMessageToWebview({
         command: 'restoreTerminalSessions',
-        terminals: terminals.map(t => ({
-          terminalId: t.id,
-          scrollbackData: t.scrollbackData,
-          restoreScrollback: true,
-          progressive: Array.isArray(t.scrollbackData) && t.scrollbackData.length > 500,
-        })),
+        terminals: normalizedTerminals,
       });
 
       log(`[EXT-PERSISTENCE] Scrollback restoration requested for ${terminals.length} terminals`);

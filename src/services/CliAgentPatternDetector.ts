@@ -1,10 +1,12 @@
+import * as vscode from 'vscode';
 import { ICliAgentPatternDetector } from '../interfaces/CliAgentService';
 import { terminal as log } from '../utils/logger';
 
 /**
  * Responsible for detecting CLI agent startup and shell prompt patterns in terminal output
  */
-export class CliAgentPatternDetector implements ICliAgentPatternDetector {
+export class CliAgentPatternDetector implements ICliAgentPatternDetector, vscode.Disposable {
+  private disposed = false;
   /**
    * Detect Claude Code startup patterns
    */
@@ -335,5 +337,16 @@ export class CliAgentPatternDetector implements ICliAgentPatternDetector {
         .replace(/[\x00-\x1F\x7F]/g, '')
         .trim()
     );
+  }
+
+  /**
+   * Dispose of resources
+   */
+  dispose(): void {
+    if (this.disposed) {
+      return;
+    }
+    this.disposed = true;
+    log(`🧹 [PATTERN-DETECTOR] Disposed CliAgentPatternDetector`);
   }
 }

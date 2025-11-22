@@ -5,6 +5,7 @@
  * Handles line cleaning, activity tracking, and orchestrates strategy-based detection.
  */
 
+import * as vscode from 'vscode';
 import { terminal as log } from '../utils/logger';
 import { CliAgentDetectionResult } from '../interfaces/CliAgentService';
 import { CliAgentPatternDetector } from './CliAgentPatternDetector';
@@ -18,9 +19,10 @@ interface DetectionCacheEntry {
   timestamp: number;
 }
 
-export class OutputDetectionProcessor {
+export class OutputDetectionProcessor implements vscode.Disposable {
   private patternDetector = new CliAgentPatternDetector();
   private strategyRegistry = new AgentDetectionStrategyRegistry();
+  private disposed = false;
 
   constructor(
     private stateManager: CliAgentStateManager,
@@ -199,5 +201,30 @@ export class OutputDetectionProcessor {
     return line
       .replace(/[\u2502\u256d\u2570\u2500\u256f]/g, '') // Remove box characters only
       .trim();
+  }
+
+  /**
+   * Dispose of resources
+   */
+  dispose(): void {
+    if (this.disposed) {
+      return;
+    }
+    this.disposed = true;
+
+    // Clear the pattern detector if it has cleanup
+    if ('dispose' in this.patternDetector && typeof this.patternDetector.dispose === 'function') {
+      this.patternDetector.dispose();
+    }
+
+    // Dispose of strategy registry if it has a dispose method
+    if ('dispose' in this.strategyRegistry && typeof this.strategyRegistry.dispose === 'function') {
+      this.strategyRegistry.dispose();
+    }
+
+    // Clear detection cache
+    this.detectionCache.clear();
+
+    log(`🧹 [OUTPUT-PROCESSOR] Disposed OutputDetectionProcessor`);
   }
 }

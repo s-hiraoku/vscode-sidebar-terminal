@@ -3,7 +3,7 @@
  * Specific handlers for terminal operations extracted from SecondaryTerminalProvider
  */
 
-import { BaseMessageHandler } from '../MessageRouter';
+import { BaseMessageHandler, MessageRouter } from '../MessageRouter';
 import { safeProcessCwd } from '../../utils/common';
 
 // Terminal operation data types
@@ -34,15 +34,41 @@ export interface FocusTerminalData {
 }
 
 export interface UpdateSettingsData {
-  settings: Record<string, any>;
+  settings: Record<string, unknown>;
 }
 
-// Dependencies interface - will be injected
+// Extension-side service interfaces for handler dependencies
+export interface ITerminalManagerForHandler {
+  createTerminal(options: CreateTerminalData): Promise<string>;
+  deleteTerminal(terminalId: string, force: boolean): Promise<boolean>;
+  sendInput(terminalId: string, input: string): void;
+  resize(terminalId: string, cols: number, rows: number): void;
+  focusTerminal(terminalId: string): void;
+  getActiveTerminalId(): string | null;
+  getWorkingDirectory(terminalId: string): Promise<string>;
+}
+
+export interface IPersistenceServiceForHandler {
+  getLastSession(): Promise<unknown>;
+}
+
+export interface IConfigServiceForHandler {
+  getCurrentSettings(): Record<string, unknown>;
+  updateSettings(settings: Record<string, unknown>): Promise<void>;
+}
+
+export interface INotificationServiceForHandler {
+  showError(message: string): void;
+  showInfo(message: string): void;
+  showWarning(message: string): void;
+}
+
+// Dependencies interface with proper types
 export interface TerminalMessageHandlerDependencies {
-  terminalManager: any; // TerminalManager interface
-  persistenceService: any; // Persistence service interface
-  configService: any; // Configuration service interface
-  notificationService: any; // Notification service interface
+  terminalManager: ITerminalManagerForHandler;
+  persistenceService: IPersistenceServiceForHandler;
+  configService: IConfigServiceForHandler;
+  notificationService: INotificationServiceForHandler;
 }
 
 /**
@@ -181,12 +207,12 @@ export class FocusTerminalHandler extends BaseMessageHandler<FocusTerminalData, 
 /**
  * Handler for getting terminal settings
  */
-export class GetSettingsHandler extends BaseMessageHandler<void, { settings: Record<string, any> }> {
+export class GetSettingsHandler extends BaseMessageHandler<void, { settings: Record<string, unknown> }> {
   constructor(private dependencies: TerminalMessageHandlerDependencies) {
     super('GetSettingsHandler');
   }
 
-  public handle(): { settings: Record<string, any> } {
+  public handle(): { settings: Record<string, unknown> } {
     try {
       const settings = this.dependencies.configService.getCurrentSettings();
       return { settings };
@@ -224,12 +250,12 @@ export class UpdateSettingsHandler extends BaseMessageHandler<UpdateSettingsData
 /**
  * Handler for session restoration requests
  */
-export class SessionRestorationHandler extends BaseMessageHandler<void, { sessionData: any }> {
+export class SessionRestorationHandler extends BaseMessageHandler<void, { sessionData: unknown }> {
   constructor(private dependencies: TerminalMessageHandlerDependencies) {
     super('SessionRestorationHandler');
   }
 
-  public async handle(): Promise<{ sessionData: any }> {
+  public async handle(): Promise<{ sessionData: unknown }> {
     try {
       const sessionData = await this.dependencies.persistenceService.getLastSession();
       this.log('Session data retrieved successfully');
@@ -305,7 +331,7 @@ export class TerminalMessageHandlerFactory {
   }
 
   public static registerAllHandlers(
-    messageRouter: any, // MessageRouter interface
+    messageRouter: MessageRouter,
     dependencies: TerminalMessageHandlerDependencies
   ): void {
     const handlers = TerminalMessageHandlerFactory.createAllHandlers(dependencies);
@@ -315,3 +341,6 @@ export class TerminalMessageHandlerFactory {
     }
   }
 }
+
+// Re-export MessageRouter type for external use
+export type { MessageRouter } from '../MessageRouter';

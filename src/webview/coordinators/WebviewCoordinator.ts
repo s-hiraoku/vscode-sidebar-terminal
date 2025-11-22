@@ -111,7 +111,7 @@ export class WebviewCoordinator {
     );
 
     this.register(
-      ['getScrollback', 'restoreScrollback', 'scrollbackProgress', 'extractScrollbackData'],
+      ['getScrollback', 'restoreScrollback', 'scrollbackProgress', 'extractScrollbackData', 'restoreTerminalSessions'],
       (message, coordinator) => this.deps.scrollbackHandler.handleMessage(message, coordinator)
     );
 

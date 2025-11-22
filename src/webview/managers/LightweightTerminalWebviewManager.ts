@@ -894,6 +894,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
   /**
    * 🆕 NEW: Extract scrollback data from a specific terminal
+   * Uses SerializeAddon for ANSI color preservation when available
    */
   public extractScrollbackData(terminalId: string, maxLines: number = 1000): string[] {
     log(`🔥 [EXTRACT-DEBUG] === extractScrollbackData called for ${terminalId} ===`);
@@ -911,11 +912,34 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       log(`🔍 [EXTRACT-DEBUG] Terminal details:`, {
         hasBuffer: !!terminal.buffer,
         hasNormalBuffer: !!(terminal.buffer && terminal.buffer.normal),
+        hasSerializeAddon: !!terminalInstance.serializeAddon,
       });
 
-      // Use buffer method for scrollback extraction
+      // 🎨 Use SerializeAddon first (preserves ANSI color codes)
+      if (terminalInstance.serializeAddon) {
+        log('✅ [EXTRACT-DEBUG] Using SerializeAddon for color-preserving scrollback extraction');
+        try {
+          const serialized = terminalInstance.serializeAddon.serialize({ scrollback: maxLines });
+          const lines = serialized.split('\n');
+
+          // Trim trailing empty lines
+          while (lines.length > 0 && !lines[lines.length - 1]?.trim()) {
+            lines.pop();
+          }
+
+          log(`📦 [EXTRACT-DEBUG] SerializeAddon extracted ${lines.length} lines with ANSI colors`);
+          log('📄 [EXTRACT-DEBUG] First few lines:', lines.slice(0, 3));
+          return lines;
+        } catch (serializeError) {
+          console.warn('⚠️ [EXTRACT-DEBUG] SerializeAddon extraction failed, falling back to buffer:', serializeError);
+        }
+      } else {
+        log('⚠️ [EXTRACT-DEBUG] SerializeAddon not available - colors will be lost');
+      }
+
+      // Fallback: Use buffer method (colors will be lost)
       if (terminal.buffer && terminal.buffer.normal) {
-        log('📄 [EXTRACT-DEBUG] Using buffer method for scrollback extraction');
+        log('📄 [EXTRACT-DEBUG] Using buffer method for scrollback extraction (plain text)');
         try {
           const buffer = terminal.buffer.normal;
           const lines: string[] = [];
@@ -932,7 +956,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
             }
           }
 
-          log(`📦 [EXTRACT-DEBUG] Buffer method extracted ${lines.length} lines`);
+          log(`📦 [EXTRACT-DEBUG] Buffer method extracted ${lines.length} lines (plain text)`);
           log('📄 [EXTRACT-DEBUG] First few lines:', lines.slice(0, 3));
           return lines;
         } catch (bufferError) {

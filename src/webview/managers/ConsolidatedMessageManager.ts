@@ -194,7 +194,7 @@ export class ConsolidatedMessageManager implements IMessageManager {
     );
 
     // Scrollback Messages
-    const scrollbackCommands = ['getScrollback', 'restoreScrollback', 'scrollbackProgress', 'extractScrollbackData'];
+    const scrollbackCommands = ['getScrollback', 'restoreScrollback', 'scrollbackProgress', 'extractScrollbackData', 'restoreTerminalSessions'];
     scrollbackCommands.forEach(cmd =>
       registry.set(cmd, (msg, coord) => this.scrollbackHandler.handleMessage(msg, coord))
     );

@@ -5,13 +5,15 @@
  * Uses strategy pattern to eliminate code duplication and provide clean separation of concerns.
  */
 
+import * as vscode from 'vscode';
 import { terminal as log } from '../utils/logger';
 import { CliAgentDetectionResult } from '../interfaces/CliAgentService';
 import { CliAgentStateManager } from './CliAgentStateManager';
 import { AgentDetectionStrategyRegistry } from './strategies/AgentDetectionStrategyRegistry';
 
-export class InputDetectionProcessor {
+export class InputDetectionProcessor implements vscode.Disposable {
   private strategyRegistry = new AgentDetectionStrategyRegistry();
+  private disposed = false;
 
   constructor(private stateManager: CliAgentStateManager) {}
 
@@ -70,5 +72,22 @@ export class InputDetectionProcessor {
    */
   getSupportedAgentTypes(): string[] {
     return this.strategyRegistry.getSupportedAgentTypes();
+  }
+
+  /**
+   * Dispose of resources
+   */
+  dispose(): void {
+    if (this.disposed) {
+      return;
+    }
+    this.disposed = true;
+
+    // Dispose of strategy registry if it has a dispose method
+    if ('dispose' in this.strategyRegistry && typeof this.strategyRegistry.dispose === 'function') {
+      this.strategyRegistry.dispose();
+    }
+
+    log(`🧹 [INPUT-PROCESSOR] Disposed InputDetectionProcessor`);
   }
 }

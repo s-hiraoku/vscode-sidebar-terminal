@@ -57,6 +57,9 @@ export class ScrollbackMessageHandler implements IMessageHandler {
       case 'extractScrollbackData':
         await this.handleExtractScrollbackData(msg, coordinator);
         break;
+      case 'restoreTerminalSessions':
+        await this.handleRestoreTerminalSessions(msg, coordinator);
+        break;
       default:
         this.logger.warn(`Unknown scrollback command: ${command}`);
     }
@@ -66,7 +69,7 @@ export class ScrollbackMessageHandler implements IMessageHandler {
    * Get supported command types
    */
   public getSupportedCommands(): string[] {
-    return ['getScrollback', 'restoreScrollback', 'scrollbackProgress', 'extractScrollbackData'];
+    return ['getScrollback', 'restoreScrollback', 'scrollbackProgress', 'extractScrollbackData', 'restoreTerminalSessions'];
   }
 
   /**
@@ -138,6 +141,7 @@ export class ScrollbackMessageHandler implements IMessageHandler {
     const terminalId = msg.terminalId as string;
     // Handle both old and new message formats
     const scrollbackContent = (msg.scrollback || msg.scrollbackContent) as
+      | string
       | string[]
       | ScrollbackLine[];
 
@@ -467,8 +471,14 @@ export class ScrollbackMessageHandler implements IMessageHandler {
    * Normalize scrollback data to consistent format
    */
   private normalizeScrollbackData(
-    scrollbackContent: string[] | ScrollbackLine[]
+    scrollbackContent: string | string[] | ScrollbackLine[]
   ): ScrollbackLine[] {
+    // Accept legacy payloads that were stored as a single string
+    if (typeof scrollbackContent === 'string') {
+      const lines = scrollbackContent.split('\n');
+      return lines.map(line => ({ content: line, type: 'output' as const }));
+    }
+
     if (!Array.isArray(scrollbackContent) || scrollbackContent.length === 0) {
       this.logger.warn('Empty scrollback content');
       return [];
@@ -489,6 +499,69 @@ export class ScrollbackMessageHandler implements IMessageHandler {
       type: item.type === 'input' || item.type === 'error' ? item.type : ('output' as const),
       timestamp: item.timestamp,
     }));
+  }
+
+  /**
+   * Handle restore terminal sessions request (batch restoration)
+   */
+  private async handleRestoreTerminalSessions(
+    msg: MessageCommand,
+    coordinator: IManagerCoordinator
+  ): Promise<void> {
+    this.logger.info('🔄 [RESTORE-SESSIONS] Handling restoreTerminalSessions message');
+
+    const terminals = (msg as any).terminals as Array<{
+      terminalId: string;
+      scrollbackData?: string[];
+      restoreScrollback?: boolean;
+      progressive?: boolean;
+    }>;
+
+    if (!Array.isArray(terminals) || terminals.length === 0) {
+      this.logger.warn('⚠️ [RESTORE-SESSIONS] No terminals provided for restoration');
+      return;
+    }
+
+    this.logger.info(`📦 [RESTORE-SESSIONS] Restoring ${terminals.length} terminals`);
+
+    for (const terminalData of terminals) {
+      const { terminalId, scrollbackData, restoreScrollback } = terminalData;
+
+      if (!terminalId) {
+        this.logger.warn('⚠️ [RESTORE-SESSIONS] Terminal data missing terminalId');
+        continue;
+      }
+
+      if (!restoreScrollback || !scrollbackData || scrollbackData.length === 0) {
+        this.logger.info(`⏭️ [RESTORE-SESSIONS] Skipping terminal ${terminalId} - no scrollback data`);
+        continue;
+      }
+
+      try {
+        // Delegate to existing restoreScrollback handler
+        const restoreMsg: MessageCommand = {
+          command: 'restoreScrollback',
+          terminalId,
+          scrollbackContent: scrollbackData,
+        };
+
+        this.handleRestoreScrollback(restoreMsg, coordinator);
+        this.logger.info(`✅ [RESTORE-SESSIONS] Restored scrollback for terminal ${terminalId}: ${scrollbackData.length} lines`);
+      } catch (error) {
+        this.logger.error(
+          `❌ [RESTORE-SESSIONS] Failed to restore terminal ${terminalId}: ${error instanceof Error ? error.message : String(error)}`
+        );
+      }
+    }
+
+    // Notify extension that restoration is complete
+    void this.messageQueue.enqueue({
+      command: 'terminalSessionsRestored',
+      terminalsRestored: terminals.length,
+      timestamp: Date.now(),
+    });
+
+    this.logger.info(`✅ [RESTORE-SESSIONS] Completed restoration of ${terminals.length} terminals`);
   }
 
   /**

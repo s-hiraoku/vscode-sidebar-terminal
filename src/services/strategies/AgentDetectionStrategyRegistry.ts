@@ -5,14 +5,16 @@
  * Provides a centralized way to access strategy implementations for different CLI agents.
  */
 
+import * as vscode from 'vscode';
 import { AgentDetectionStrategy } from './AgentDetectionStrategy';
 import { ClaudeDetectionStrategy } from './ClaudeDetectionStrategy';
 import { GeminiDetectionStrategy } from './GeminiDetectionStrategy';
 import { CodexDetectionStrategy } from './CodexDetectionStrategy';
 import { CopilotDetectionStrategy } from './CopilotDetectionStrategy';
 
-export class AgentDetectionStrategyRegistry {
+export class AgentDetectionStrategyRegistry implements vscode.Disposable {
   private strategies = new Map<string, AgentDetectionStrategy>();
+  private disposed = false;
 
   constructor() {
     this.registerDefaultStrategies();
@@ -68,5 +70,16 @@ export class AgentDetectionStrategyRegistry {
    */
   isSupported(agentType: string): boolean {
     return this.strategies.has(agentType);
+  }
+
+  /**
+   * Dispose of resources
+   */
+  dispose(): void {
+    if (this.disposed) {
+      return;
+    }
+    this.disposed = true;
+    this.strategies.clear();
   }
 }
