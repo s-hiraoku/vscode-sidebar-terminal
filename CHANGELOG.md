@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.141] - 2025-11-22
+
 ### Fixed
 
 - **Scrollback Restoration**: Fixed critical scrollback restoration issues
