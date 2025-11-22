@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.142] - 2025-11-23
+
+### Fixed
+
+- **Terminal Links & Clipboard Reliability**
+  - Wired WebView `copyToClipboard` messages into `SecondaryTerminalProvider` so Cmd/Ctrl+C on a selection always copies via VS Code's clipboard API, even in the sidebar WebView terminal
+  - Re-routed URL link activation through xterm's WebLinksAddon and the `openTerminalLink`/`TerminalLinkResolver` pipeline, ensuring HTTP/HTTPS links (including those printed by Claude Code and other AI CLIs) open in the system browser
+  - Fixed xterm overlay CSS (z-index and layer offsets) so link hitboxes line up with visible text and drag selection no longer blocks link clicks
+
 ## [0.1.141] - 2025-11-22
 
 ### Fixed

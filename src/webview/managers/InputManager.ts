@@ -287,7 +287,9 @@ export class InputManager extends BaseManager implements IInputManager {
 
       // Copy/paste (when appropriate)
       [`${isMac ? 'meta' : 'ctrl'}+c`]: 'workbench.action.terminal.copySelection',
+      [`${isMac ? 'meta' : 'ctrl'}+shift+c`]: 'workbench.action.terminal.copySelection',
       [`${isMac ? 'meta' : 'ctrl'}+v`]: 'workbench.action.terminal.paste',
+      [`${isMac ? 'meta' : 'ctrl'}+shift+v`]: 'workbench.action.terminal.paste',
       [`${isMac ? 'meta' : 'ctrl'}+a`]: 'workbench.action.terminal.selectAll',
 
       // Find

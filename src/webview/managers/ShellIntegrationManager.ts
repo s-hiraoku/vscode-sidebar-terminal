@@ -438,75 +438,12 @@ export class ShellIntegrationManager implements IShellIntegrationEvents {
   /**
    * Add decorations to terminal output
    */
-  public decorateTerminalOutput(terminal: Terminal, _terminalId: string): void {
-    // Add link provider for file paths
-    terminal.registerLinkProvider({
-      provideLinks: (line: number, callback: (links: any[] | undefined) => void) => {
-        // Simple file path detection
-        const lineContent = terminal.buffer.active.getLine(line - 1)?.translateToString();
-        if (!lineContent) {
-          callback(undefined);
-          return;
-        }
-
-        const filePathRegex = /(?:[a-zA-Z]:)?(?:\/|\\)?(?:[\w.-]+(?:\/|\\))*[\w.-]+\.\w+/g;
-        const links: any[] = [];
-        let match: RegExpExecArray | null;
-
-        while ((match = filePathRegex.exec(lineContent)) !== null) {
-          links.push({
-            range: {
-              start: { x: match.index + 1, y: line },
-              end: { x: match.index + match[0].length + 1, y: line },
-            },
-            text: match[0],
-            activate: () => {
-              // Send open file command to extension
-              if (match) {
-                this.coordinator?.postMessageToExtension({
-                  command: 'openFile',
-                  filePath: match[0],
-                });
-              }
-            },
-          });
-        }
-
-        callback(links);
-      },
-    });
-
-    // Add link provider for URLs
-    terminal.registerLinkProvider({
-      provideLinks: (line: number, callback: (links: any[] | undefined) => void) => {
-        const lineContent = terminal.buffer.active.getLine(line - 1)?.translateToString();
-        if (!lineContent) {
-          callback(undefined);
-          return;
-        }
-
-        const urlRegex = /https?:\/\/[^\s]+/g;
-        const links: any[] = [];
-        let match: RegExpExecArray | null;
-
-        while ((match = urlRegex.exec(lineContent)) !== null) {
-          links.push({
-            range: {
-              start: { x: match.index + 1, y: line },
-              end: { x: match.index + match[0].length + 1, y: line },
-            },
-            text: match[0],
-            activate: () => {
-              if (match) {
-                window.open(match[0], '_blank');
-              }
-            },
-          });
-        }
-
-        callback(links);
-      },
-    });
+  public decorateTerminalOutput(_terminal: Terminal, _terminalId: string): void {
+    // Link handling now relies on:
+    // - xterm WebLinksAddon (custom handler posts to extension)
+    // - TerminalLinkManager for file links
+    // No additional per-line link providers are needed here. This keeps
+    // selection/copy behavior intact and avoids duplicate overlays.
   }
 
   /**

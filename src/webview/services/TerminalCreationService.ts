@@ -191,11 +191,30 @@ export class TerminalCreationService implements Disposable {
         terminalLogger.info(`✅ Terminal instance created: ${terminalId}`);
 
         // Load all addons using TerminalAddonManager
-        const loadedAddons = await this.addonManager.loadAllAddons(terminal, terminalId, {
-          enableGpuAcceleration: terminalConfig.enableGpuAcceleration,
-          enableSearchAddon: terminalConfig.enableSearchAddon,
-          enableUnicode11: terminalConfig.enableUnicode11,
-        });
+      const loadedAddons = await this.addonManager.loadAllAddons(terminal, terminalId, {
+        enableGpuAcceleration: terminalConfig.enableGpuAcceleration,
+        enableSearchAddon: terminalConfig.enableSearchAddon,
+        enableUnicode11: terminalConfig.enableUnicode11,
+        linkHandler: (_event, uri) => {
+          // Delegate to extension so it can honor workspace trust and external uri handling
+          const sent = this.coordinator?.postMessageToExtension({
+            command: 'openTerminalLink',
+            linkType: 'url',
+            url: uri,
+            terminalId,
+            timestamp: Date.now(),
+          });
+
+          if (!sent) {
+            // Fallback: attempt to open directly (may be blocked by CSP, but useful for debugging)
+            try {
+              window.open(uri, '_blank');
+            } catch (error) {
+              // swallow; extension path is primary
+            }
+          }
+        },
+      });
 
         // Extract individual addons for convenience
         const { fitAddon, serializeAddon, searchAddon } = loadedAddons;
@@ -596,13 +615,11 @@ export class TerminalCreationService implements Disposable {
             right: 0 !important;
             bottom: 0 !important;
             overflow: auto !important;
-            z-index: 30;
             background: transparent !important;
           }
 
           .terminal-container .xterm-screen {
             position: relative !important;
-            z-index: 31;
             width: 100% !important;
             min-height: 100% !important;
             padding: 0 !important;
@@ -614,11 +631,12 @@ export class TerminalCreationService implements Disposable {
             line-height: 1 !important;
           }
 
+          /* Let xterm manage overlay positioning; overriding can misalign hitboxes */
           .terminal-container .xterm .xterm-link-layer,
           .terminal-container .xterm .xterm-selection-layer,
           .terminal-container .xterm .xterm-decoration-container {
-            top: 0 !important;
-            left: 0 !important;
+            top: initial !important;
+            left: initial !important;
           }
 
           /* VS Code Standard Scrollbar Styling - 14px width */
@@ -658,11 +676,10 @@ export class TerminalCreationService implements Disposable {
             scrollbar-color: rgba(121, 121, 121, 0.4) rgba(0, 0, 0, 0.1);
           }
 
-          /* Ensure text selection is visible */
+          /* Ensure text selection is visible - do not override pointer events to keep native selection */
           .terminal-container .xterm .xterm-selection div {
             position: absolute;
             background-color: rgba(255, 255, 255, 0.3);
-            pointer-events: none;
           }
 
           /* Override any existing height restrictions */
@@ -673,10 +690,6 @@ export class TerminalCreationService implements Disposable {
             max-height: none !important;
           }
 
-          /* Ensure cursor rendering is correct */
-          .terminal-container .xterm .xterm-cursor-layer {
-            z-index: 32;
-          }
         `;
         document.head.appendChild(style);
       }

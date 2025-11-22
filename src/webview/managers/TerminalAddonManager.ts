@@ -30,6 +30,7 @@ export interface AddonConfig {
   enableGpuAcceleration?: boolean;
   enableSearchAddon?: boolean;
   enableUnicode11?: boolean;
+  linkHandler?: (event: MouseEvent | undefined, uri: string) => void;
 }
 
 /**
@@ -67,9 +68,38 @@ export class TerminalAddonManager {
         required: true,
       });
 
-      addons.webLinksAddon = await AddonLoader.loadAddon(terminal, terminalId, WebLinksAddon, {
-        required: true,
-      });
+      if (config.linkHandler) {
+        // Use custom handler so links are opened by the extension (vscode.env.openExternal)
+        // and allow plain clicks (no Ctrl/Cmd) while still permitting text selection when dragging.
+        const webLinksAddon = new WebLinksAddon(
+          (event, uri) => {
+            try {
+              terminalLogger.info(
+                `🔗 [WEBVIEW] Link clicked in terminal ${terminalId}: ${uri} (meta=${Boolean(
+                  (event as MouseEvent | undefined)?.metaKey
+                )}, ctrl=${Boolean((event as MouseEvent | undefined)?.ctrlKey)})`
+              );
+
+              // Forward to extension
+              config.linkHandler?.(event as MouseEvent | undefined, uri);
+            } catch (error) {
+              terminalLogger.warn(`⚠️ WebLinksAddon handler failed for ${terminalId}:`, error);
+            }
+          },
+          {
+            // Allow standard left click to activate; xterm suppresses activation during drag selection
+            willLinkActivate: (event) => Boolean(event && event.button === 0),
+          }
+        );
+
+        terminal.loadAddon(webLinksAddon);
+        addons.webLinksAddon = webLinksAddon;
+        terminalLogger.info(`✅ WebLinksAddon loaded with custom handler for terminal: ${terminalId}`);
+      } else {
+        addons.webLinksAddon = await AddonLoader.loadAddon(terminal, terminalId, WebLinksAddon, {
+          required: true,
+        });
+      }
 
       addons.serializeAddon = await AddonLoader.loadAddon(terminal, terminalId, SerializeAddon, {
         required: true,

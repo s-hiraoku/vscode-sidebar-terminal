@@ -131,8 +131,8 @@ export class TerminalLinkManager extends BaseManager {
   private extractLinks(text: string, bufferLineNumber: number, terminalId: string): ILink[] {
     const processed = new Set<string>();
     const fileLinks = this.extractFileLinks(text, bufferLineNumber, terminalId, processed);
-    const urlLinks = this.extractUrlLinks(text, bufferLineNumber, terminalId, processed);
-    return [...fileLinks, ...urlLinks];
+    // URL links are handled by WebLinksAddon to avoid duplicate overlays
+    return fileLinks;
   }
 
   private extractFileLinks(

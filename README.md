@@ -41,6 +41,7 @@
 
 ### 🔧 **Developer Experience**
 - **Copy/Paste Support**: Full clipboard integration with standard keyboard shortcuts (Ctrl+C/V or Cmd+C/V) for seamless text operations (v0.1.138+)
+  - Reliability improvements in v0.1.141+: selection from the sidebar WebView terminal is now always copied via VS Code's clipboard API, even for long AI agent outputs.
 - **Version Information Display**: Built-in version display in Terminal Settings with "About" section and command palette support (v0.1.105+)
 - **Streamlined UI**: Compact "ST" panel title for cleaner activity bar (v0.1.105+)
 - **Smart Terminal Switching**: Click any tab to switch terminals without changing display mode - clean tab navigation (v0.1.115+)
@@ -48,7 +49,7 @@
 - **Seamless Tab Reordering**: Drag & drop tabs to reorder terminals - visual and actual display order stay synchronized (v0.1.115+)
 - **Alt+Click Cursor Positioning**: VS Code-standard cursor positioning with intelligent CLI agent conflict detection
 - **Smart File Reference System**: Instantly share code with AI agents using CMD+Option+L - automatically targets "AI Agent Connected" terminals
-- **VS Code Link Parity**: Click any file path emitted in the terminal (e.g. `src/app.ts:42:7`) to open the file at the exact line/column inside VS Code, matching the built-in terminal experience (v0.1.111+)
+- **VS Code Link Parity**: Click any file path emitted in the terminal (e.g. `src/app.ts:42:7`) to open the file at the exact line/column inside VS Code, matching the built-in terminal experience (v0.1.111+). HTTP/HTTPS URLs printed by tools like Claude Code now open reliably in your default browser via VS Code's `openExternal` API (v0.1.141+).
 - **Persistent Tab Drag & Drop**: Reorder terminals by dragging tabs; the extension now syncs the updated order with the host for VS Code-style persistence (v0.1.113+)
 - **Multi-Agent Workflow**: Seamlessly work with multiple AI agents across different terminals simultaneously
 - **Tab Close Button**: Hover-visible white × button for closing terminals, with last tab protection (v0.1.108+)

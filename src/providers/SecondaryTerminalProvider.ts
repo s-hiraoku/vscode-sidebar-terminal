@@ -367,6 +367,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       { command: 'timeoutTest', handler: (msg: WebviewMessage) => this._handleTimeoutTest(msg), category: 'debug' as const },
       { command: 'test', handler: (msg: WebviewMessage) => this._handleDebugTest(msg), category: 'debug' as const },
       { command: 'requestClipboardContent', handler: async (msg: WebviewMessage) => await this._handleClipboardRequest(msg), category: 'terminal' as const },
+      { command: 'copyToClipboard', handler: async (msg: WebviewMessage) => await this._handleCopyToClipboard(msg), category: 'terminal' as const },
     ];
 
     this._messageRouter.registerHandlers(handlers);
@@ -374,6 +375,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   }
 
   private async _handleOpenTerminalLink(message: WebviewMessage): Promise<void> {
+    log(`🔗 [PROVIDER] openTerminalLink received: type=${message.linkType} url=${message.url ?? ''} file=${message.filePath ?? ''} terminal=${message.terminalId ?? ''}`);
     await this._linkResolver.handleOpenTerminalLink(message);
   }
 
@@ -790,6 +792,21 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       await vscode.window.showErrorMessage(
         'Failed to paste clipboard content into terminal'
       );
+    }
+  }
+
+  private async _handleCopyToClipboard(message: WebviewMessage): Promise<void> {
+    const text = (message as any)?.text;
+    if (typeof text !== 'string' || text.length === 0) {
+      log('⚠️ [CLIPBOARD] copyToClipboard called without text');
+      return;
+    }
+
+    try {
+      await vscode.env.clipboard.writeText(text);
+      log(`📋 [CLIPBOARD] Copied ${text.length} chars from terminal ${message.terminalId ?? 'unknown'}`);
+    } catch (error) {
+      log('❌ [CLIPBOARD] Failed to copy text to clipboard:', error);
     }
   }
 
