@@ -1033,7 +1033,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   }
 
   private async _sendMessage(message: WebviewMessage): Promise<void> {
-    if (!this._isInitialized && message.command !== 'extensionReady') {
+    if (!this._isInitialized && (message.command as string) !== 'extensionReady') {
       // Queue until WebView signals readiness to avoid losing messages during reload
       this._pendingMessages.push(message);
       log(`⏳ [PROVIDER] Queuing message until webviewReady: ${message.command}`);

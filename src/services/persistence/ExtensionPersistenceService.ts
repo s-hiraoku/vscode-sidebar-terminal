@@ -189,8 +189,8 @@ export class ExtensionPersistenceService implements vscode.Disposable {
    * Restore terminal session from workspace storage
    */
   public async restoreSession(forceRestore = false): Promise<SessionRestoreResult> {
+    this.isRestoring = true;
     try {
-      this.isRestoring = true;
       const config = this.getPersistenceConfig();
 
       // Load session data
@@ -239,10 +239,12 @@ export class ExtensionPersistenceService implements vscode.Disposable {
       };
 
     } catch (error) {
-      this.isRestoring = false;
       const errorMsg = error instanceof Error ? error.message : String(error);
       log(`❌ [EXT-PERSISTENCE] Restore failed: ${errorMsg}`);
       return { success: false, message: errorMsg };
+    } finally {
+      // Always clear restoring flag so subsequent save/restore attempts are allowed
+      this.isRestoring = false;
     }
   }
 
@@ -503,8 +505,9 @@ export class ExtensionPersistenceService implements vscode.Disposable {
       const normalizedTerminals = terminals.map(t => {
         let scrollbackArray: string[] | undefined = t.scrollbackData;
 
+        // Handle legacy string format
         if (!Array.isArray(scrollbackArray) && typeof t.scrollbackData === 'string') {
-          scrollbackArray = t.scrollbackData.split('\n');
+          scrollbackArray = (t.scrollbackData as string).split('\n');
         }
 
         return {

@@ -193,7 +193,7 @@ export class WebviewCoordinator implements vscode.Disposable {
       },
 
       getActiveTerminalId: () => {
-        return this.terminalCoordinator.getActiveTerminalId();
+        return this.terminalCoordinator.getActiveTerminalId() ?? null;
       },
 
       getWorkingDirectory: async () => {
@@ -248,9 +248,23 @@ export class WebviewCoordinator implements vscode.Disposable {
    */
   private createNotificationAdapter() {
     return {
-      showNotification: (message: string, type: string) => {
+      showError: (message: string) => {
         this.uiController.showNotification({
-          type: type as any,
+          type: 'error' as any,
+          message,
+          duration: 5000
+        });
+      },
+      showInfo: (message: string) => {
+        this.uiController.showNotification({
+          type: 'info' as any,
+          message,
+          duration: 5000
+        });
+      },
+      showWarning: (message: string) => {
+        this.uiController.showNotification({
+          type: 'warning' as any,
           message,
           duration: 5000
         });

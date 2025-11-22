@@ -1,7 +1,6 @@
 import * as assert from 'assert';
 import * as sinon from 'sinon';
 import { TerminalLifecycleService } from '../../../../services/terminal/TerminalLifecycleService';
-import { TerminalInstance } from '../../../../types/shared';
 import { Result, isSuccess } from '../../../../types/result';
 
 // Helper to unwrap Result for tests
