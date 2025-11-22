@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Scrollback Restoration**: Fixed critical scrollback restoration issues
+  - Fixed `compressIfNeeded` to always return string arrays (WebView expects arrays, not strings)
+  - Added normalization for historical payloads stored as strings
+  - Implemented `restoreTerminalSessions` command handling in WebView
+  - Use SerializeAddon for ANSI color preservation in scrollback extraction
+  - Fixed configuration namespace from 'sidebarTerminal' to 'secondaryTerminal'
+
+- **Message Queuing**: Prevent message loss during WebView initialization
+  - Added pending message queue in SecondaryTerminalProvider
+  - Added pending message queue in WebViewCommunicationService
+  - Messages are now queued until WebView signals readiness
+
+### Improved
+
+- **Type Safety**: Replace `any` types with proper interfaces in TerminalMessageHandlers
+  - Added `ITerminalManagerForHandler`, `IPersistenceServiceForHandler`, `IConfigServiceForHandler`, `INotificationServiceForHandler` interfaces
+  - Improved type safety for handler dependencies
+
+- **Resource Management**: Add dispose handlers for proper cleanup
+  - CliAgentPatternDetector now implements vscode.Disposable
+  - InputDetectionProcessor now implements vscode.Disposable
+  - OutputDetectionProcessor now implements vscode.Disposable
+  - AgentDetectionStrategyRegistry now implements vscode.Disposable
+
 ## [0.1.140] - 2024-11-20
 
 ### Fixed

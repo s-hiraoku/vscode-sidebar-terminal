@@ -490,18 +490,27 @@ The project uses GitHub Actions for automated testing and releases:
 
 ## 📈 Version History
 
-### v0.1.109 (Current) - 🐛 **Terminal Tabs Visibility Fix**
-- 🐛 **Terminal Tabs Fix**: Fixed tabs disappearing after terminal creation (regression from v0.1.108)
-- 🔧 **Container Preservation**: Tabs container now preserved when clearing placeholder content
-- ✅ **Initialization Stability**: Ensured proper WebView initialization sequence
+### v0.1.141 (Development) - 🔧 **Scrollback Restoration & Message Queuing**
+- 🔧 **Scrollback Fix**: Fixed critical scrollback restoration issues with proper array/string handling
+- 📨 **Message Queuing**: Added message queuing to prevent loss during WebView initialization
+- 🎨 **ANSI Colors**: Use SerializeAddon for color preservation in scrollback extraction
+- 🔒 **Type Safety**: Replaced `any` types with proper interfaces in handlers
+- 🧹 **Resource Cleanup**: Added dispose handlers to multiple services
 
-### v0.1.108 - ✨ **Tab Close Button & AI Detection Enhancement**
-- ✨ **Tab Close Button**: Added hover-visible white × button for closing terminals with smart last-tab protection
-- 🎨 **Stable Tab Layout**: Tab size remains constant during hover, preventing layout shift
-- 🤖 **Enhanced Claude Code Detection**: Updated detection pattern to match new "Claude Code" startup message format
-- 🔧 **Event Delegation**: Improved event handling architecture to prevent duplicate listeners and memory leaks
-- 🛡️ **Last Tab Protection**: Prevents accidental closure of the last terminal with warning notification
-- 🎯 **Global Event Handling**: Implemented efficient event delegation pattern for better performance
+### v0.1.140 - 🔧 **TypeScript Compilation Hotfix**
+- 🔧 **TypeScript Fix**: Fixed all TypeScript compilation errors blocking CI
+- 🧪 **Test Cleanup**: Removed tests referencing deleted modules
+
+### v0.1.139 - 📦 **ESLint & Manager Pattern Standardization**
+- ✅ **ESLint**: Fixed 36 ESLint errors across 22 test files
+- 🏗️ **Manager Pattern**: Phase 1-5 complete for manager standardization (7/38 migrated)
+- 📋 **Standard Input**: Added Ctrl+Insert/Shift+Insert shortcuts, multi-line paste handling
+- 🎨 **Display Rendering**: Verified 256-color and 24-bit RGB true color support
+
+### v0.1.138 - 📋 **Copy/Paste Support**
+- 📋 **Clipboard Integration**: Full copy/paste support with Ctrl/Cmd+C/V
+- 📦 **Progressive Loading**: Chunk-based scrollback loading with performance benchmarks
+- 💾 **Storage Optimization**: 20MB limit with 7-day retention and automatic cleanup
 
 ### v0.1.107 - 🎨 **UI Correction**
 - 🎨 **Panel Title Fix**: Corrected activity bar abbreviation from "SC" to "ST" (Secondary Terminal)
