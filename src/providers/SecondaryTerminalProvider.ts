@@ -363,6 +363,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       { command: 'terminalSerializationRequest', handler: async (msg: WebviewMessage) => await this._handleLegacyPersistenceMessage(msg), category: 'persistence' as const },
       { command: 'terminalSerializationRestoreRequest', handler: async (msg: WebviewMessage) => await this._handleLegacyPersistenceMessage(msg), category: 'persistence' as const },
       { command: 'pushScrollbackData', handler: async (msg: WebviewMessage) => await this._handlePushScrollbackData(msg), category: 'persistence' as const },
+      { command: 'scrollbackDataCollected', handler: async (msg: WebviewMessage) => await this._handleScrollbackDataCollected(msg), category: 'persistence' as const },
       { command: 'htmlScriptTest', handler: (msg: WebviewMessage) => this._handleHtmlScriptTest(msg), category: 'debug' as const },
       { command: 'timeoutTest', handler: (msg: WebviewMessage) => this._handleTimeoutTest(msg), category: 'debug' as const },
       { command: 'test', handler: (msg: WebviewMessage) => this._handleDebugTest(msg), category: 'debug' as const },
@@ -445,6 +446,17 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     } catch (error) {
       log('❌ [PROVIDER] Failed to process pushScrollbackData message:', error);
     }
+  }
+
+  private async _handleScrollbackDataCollected(message: WebviewMessage): Promise<void> {
+    // Treat collected scrollback the same as pushScrollbackData to cache immediately
+    if (!Array.isArray((message as any)?.scrollbackData)) {
+      log('⚠️ [PROVIDER] scrollbackDataCollected missing scrollbackData array');
+      return;
+    }
+
+    (message as any).command = 'pushScrollbackData';
+    await this._handlePushScrollbackData(message);
   }
 
   private async _handleReorderTerminals(message: WebviewMessage): Promise<void> {

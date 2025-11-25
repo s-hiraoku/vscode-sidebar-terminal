@@ -986,7 +986,9 @@ export class TerminalCreationService implements Disposable {
       }, 3000);
     };
 
+    // Capture both user input (onData) and process output (onLineFeed) so AI-generated output is saved
     terminal.onData(pushScrollbackToExtension);
+    terminal.onLineFeed(pushScrollbackToExtension);
     setTimeout(pushScrollbackToExtension, 2000);
 
     terminalLogger.info(`✅ [AUTO-SAVE] Scrollback auto-save enabled for terminal: ${terminalId}`);
