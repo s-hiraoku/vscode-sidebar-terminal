@@ -181,11 +181,18 @@ export class ExtensionPersistenceService implements vscode.Disposable {
 
       log(`[EXT-PERSISTENCE] Scrollback: ${cachedCount} cached, ${extractedCount} extracted, ${terminals.length} total`);
 
-      // Debug: Log scrollback data sizes
+      // Debug: Log scrollback data sizes and preview content
       for (const terminalId of Object.keys(scrollbackData)) {
         const data = scrollbackData[terminalId];
         if (Array.isArray(data)) {
           log(`📦 [EXT-PERSISTENCE] Saving scrollback for ${terminalId}: ${data.length} lines`);
+          // Log first 3 lines as preview
+          if (data.length > 0) {
+            const preview = data.slice(0, 3).map(line =>
+              typeof line === 'string' ? line.substring(0, 80) : JSON.stringify(line).substring(0, 80)
+            );
+            log(`📦 [EXT-PERSISTENCE] Preview for ${terminalId}: ${JSON.stringify(preview)}`);
+          }
         }
       }
 

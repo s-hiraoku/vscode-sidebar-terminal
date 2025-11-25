@@ -795,29 +795,6 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
       log(`📋 [PROVIDER] Clipboard content length: ${clipboardText.length} characters`);
 
-      // Count newlines to detect multi-line paste
-      const lines = clipboardText.split('\n');
-      const lineCount = lines.length;
-
-      // VS Code standard: Show confirmation for 3+ lines
-      if (lineCount >= 3) {
-        log(`⚠️ [PROVIDER] Multi-line paste detected: ${lineCount} lines`);
-
-        const response = await vscode.window.showWarningMessage(
-          `Are you sure you want to paste ${lineCount} lines into the terminal?`,
-          { modal: true },
-          'Paste',
-          'Cancel'
-        );
-
-        if (response !== 'Paste') {
-          log('🚫 [PROVIDER] User cancelled multi-line paste');
-          return;
-        }
-
-        log('✅ [PROVIDER] User confirmed multi-line paste');
-      }
-
       // Escape special characters based on shell type (VS Code pattern)
       const terminal = this._terminalManager.getTerminal(message.terminalId);
       if (!terminal) {
@@ -829,7 +806,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       const processedText = this._escapeTextForShell(clipboardText, shellPath);
 
       // Send to terminal using sendInput (VS Code standard)
-      log(`📋 [PROVIDER] Sending ${lineCount} lines to terminal ${message.terminalId}`);
+      log(`📋 [PROVIDER] Pasting to terminal ${message.terminalId}`);
       this._terminalManager.sendInput(processedText, message.terminalId);
 
       log('✅ [PROVIDER] Clipboard content pasted successfully');
