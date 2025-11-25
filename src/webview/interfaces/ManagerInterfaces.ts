@@ -60,8 +60,9 @@ export interface TerminalDisplaySnapshot {
 }
 
 // Header management interface (subset used by other managers)
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
 export interface IHeaderManager {
-  updateSplitButtonState(isSplitMode: boolean): void;
+  // Empty interface - split button removed
 }
 
 // Manager coordination interface

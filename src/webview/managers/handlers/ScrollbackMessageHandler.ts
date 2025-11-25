@@ -136,6 +136,8 @@ export class ScrollbackMessageHandler implements IMessageHandler {
     msg: MessageCommand,
     coordinator: IManagerCoordinator
   ): void {
+    // eslint-disable-next-line no-console
+    console.log('[SCROLLBACK-RESTORE] handleRestoreScrollback called', { terminalId: msg.terminalId, timestamp: Date.now() });
     this.logger.info('Handling restore scrollback message');
 
     const terminalId = msg.terminalId as string;
@@ -178,10 +180,14 @@ export class ScrollbackMessageHandler implements IMessageHandler {
         timestamp: Date.now(),
       });
 
+      // eslint-disable-next-line no-console
+      console.log(`[SCROLLBACK-RESTORE] ✅ Restored ${normalizedScrollback.length} lines to terminal ${terminalId}`);
       this.logger.info(
         `✅ [RESTORE-DEBUG] Scrollback restored for terminal ${terminalId}: ${normalizedScrollback.length} lines`
       );
     } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error(`[SCROLLBACK-RESTORE] ❌ Error:`, error);
       this.logger.error(
         `❌ [RESTORE-DEBUG] Error restoring scrollback: ${error instanceof Error ? error.message : String(error)}`
       );
@@ -501,13 +507,27 @@ export class ScrollbackMessageHandler implements IMessageHandler {
     }));
   }
 
+  // Pending scrollback restorations - wait for shell output before restoring
+  private pendingScrollbackRestorations = new Map<string, {
+    scrollbackData: string[];
+    onDataDisposable?: { dispose: () => void };
+  }>();
+
   /**
    * Handle restore terminal sessions request (batch restoration)
+   * CRITICAL FIX: Wait for shell output before restoring scrollback
+   *
+   * The issue is that if we restore scrollback immediately, the shell's
+   * initialization output (prompt, welcome message) will overwrite/scroll
+   * out the restored content. Solution: Queue the restoration and trigger
+   * it after the first shell output is received.
    */
   private async handleRestoreTerminalSessions(
     msg: MessageCommand,
     coordinator: IManagerCoordinator
   ): Promise<void> {
+    // eslint-disable-next-line no-console
+    console.log('[SCROLLBACK-RESTORE] handleRestoreTerminalSessions called', { terminals: (msg as any).terminals?.length, timestamp: Date.now() });
     this.logger.info('🔄 [RESTORE-SESSIONS] Handling restoreTerminalSessions message');
 
     const terminals = (msg as any).terminals as Array<{
@@ -524,50 +544,166 @@ export class ScrollbackMessageHandler implements IMessageHandler {
 
     this.logger.info(`📦 [RESTORE-SESSIONS] Restoring ${terminals.length} terminals`);
 
+    let queuedCount = 0;
+    let skippedCount = 0;
+
     for (const terminalData of terminals) {
       const { terminalId, scrollbackData, restoreScrollback } = terminalData;
 
       if (!terminalId) {
         this.logger.warn('⚠️ [RESTORE-SESSIONS] Terminal data missing terminalId');
+        skippedCount++;
         continue;
       }
 
       if (!restoreScrollback || !scrollbackData || scrollbackData.length === 0) {
         this.logger.info(`⏭️ [RESTORE-SESSIONS] Skipping terminal ${terminalId} - no scrollback data`);
+        skippedCount++;
         continue;
       }
 
-      try {
-        // Delegate to existing restoreScrollback handler
-        const restoreMsg: MessageCommand = {
-          command: 'restoreScrollback',
-          terminalId,
-          scrollbackContent: scrollbackData,
-        };
-
-        this.handleRestoreScrollback(restoreMsg, coordinator);
-        this.logger.info(`✅ [RESTORE-SESSIONS] Restored scrollback for terminal ${terminalId}: ${scrollbackData.length} lines`);
-      } catch (error) {
-        this.logger.error(
-          `❌ [RESTORE-SESSIONS] Failed to restore terminal ${terminalId}: ${error instanceof Error ? error.message : String(error)}`
-        );
-      }
+      // Queue scrollback restoration - will be triggered after first shell output
+      this.queueScrollbackRestoration(terminalId, scrollbackData, coordinator);
+      queuedCount++;
     }
 
-    // Notify extension that restoration is complete
+    // Notify extension that restoration is queued (not complete yet)
     void this.messageQueue.enqueue({
       command: 'terminalSessionsRestored',
-      terminalsRestored: terminals.length,
+      terminalsRestored: queuedCount,
+      terminalsFailed: skippedCount,
+      status: 'queued', // Mark as queued, not complete
       timestamp: Date.now(),
     });
 
-    this.logger.info(`✅ [RESTORE-SESSIONS] Completed restoration of ${terminals.length} terminals`);
+    this.logger.info(`✅ [RESTORE-SESSIONS] Queued restoration: ${queuedCount} queued, ${skippedCount} skipped`);
+  }
+
+  /**
+   * Queue scrollback restoration for a terminal
+   * Will be triggered after the first shell output is received
+   *
+   * IMPORTANT: We use a simple delay-based approach because:
+   * - terminal.onData() is for USER INPUT, not shell output
+   * - Shell output arrives via Extension messages ('output' command)
+   * - The most reliable approach is to wait for shell initialization
+   */
+  private queueScrollbackRestoration(
+    terminalId: string,
+    scrollbackData: string[],
+    coordinator: IManagerCoordinator
+  ): void {
+    // eslint-disable-next-line no-console
+    console.log(`[SCROLLBACK-RESTORE] Queueing restoration for ${terminalId}: ${scrollbackData.length} lines`);
+
+    // Wait for terminal to be available
+    const checkAndQueue = async (): Promise<void> => {
+      const maxRetries = 10;
+      const retryDelay = 200; // ms
+
+      for (let retryCount = 0; retryCount < maxRetries; retryCount++) {
+        const terminalInstance = coordinator.getTerminalInstance(terminalId);
+
+        if (terminalInstance && terminalInstance.terminal) {
+          // Terminal is available
+
+          // eslint-disable-next-line no-console
+          console.log(`[SCROLLBACK-RESTORE] Terminal ${terminalId} available, scheduling delayed restoration...`);
+
+          // Store pending restoration data
+          const pendingData = {
+            scrollbackData,
+            onDataDisposable: undefined as { dispose: () => void } | undefined,
+          };
+          this.pendingScrollbackRestorations.set(terminalId, pendingData);
+
+          // STRATEGY: Use a fixed delay to wait for shell initialization
+          // This is more reliable than trying to detect shell output
+          // because output arrives via Extension messages, not terminal events
+          //
+          // Typical shell init times:
+          // - bash/zsh: 200-500ms
+          // - fish: 300-800ms
+          // - PowerShell: 500-1500ms
+          //
+          // We use 1500ms to be safe across all shells
+          setTimeout(() => {
+            if (this.pendingScrollbackRestorations.has(terminalId)) {
+              // eslint-disable-next-line no-console
+              console.log(`[SCROLLBACK-RESTORE] Executing restoration for ${terminalId} after shell init delay`);
+              this.executeDelayedRestoration(terminalId, coordinator);
+            }
+          }, 1500); // 1.5 second delay for shell initialization
+
+          return; // Successfully queued
+        }
+
+        // Terminal not ready, retry after delay
+        if (retryCount < maxRetries - 1) {
+          this.logger.info(`⏳ [RESTORE-SESSIONS] Terminal ${terminalId} not ready, retry ${retryCount + 1}/${maxRetries}`);
+          await new Promise(resolve => setTimeout(resolve, retryDelay));
+        }
+      }
+
+      // eslint-disable-next-line no-console
+      console.error(`[SCROLLBACK-RESTORE] Failed to queue restoration for ${terminalId} - terminal not available`);
+    };
+
+    void checkAndQueue();
+  }
+
+  /**
+   * Execute delayed scrollback restoration after shell output
+   */
+  private executeDelayedRestoration(
+    terminalId: string,
+    coordinator: IManagerCoordinator
+  ): void {
+    const pending = this.pendingScrollbackRestorations.get(terminalId);
+    if (!pending) {
+      // eslint-disable-next-line no-console
+      console.log(`[SCROLLBACK-RESTORE] No pending restoration for ${terminalId}`);
+      return;
+    }
+
+    // Cleanup
+    if (pending.onDataDisposable) {
+      pending.onDataDisposable.dispose();
+    }
+    this.pendingScrollbackRestorations.delete(terminalId);
+
+    // eslint-disable-next-line no-console
+    console.log(`[SCROLLBACK-RESTORE] Executing delayed restoration for ${terminalId}: ${pending.scrollbackData.length} lines`);
+
+    try {
+      // Delegate to existing restoreScrollback handler
+      const restoreMsg: MessageCommand = {
+        command: 'restoreScrollback',
+        terminalId,
+        scrollbackContent: pending.scrollbackData,
+      };
+
+      this.handleRestoreScrollback(restoreMsg, coordinator);
+      this.logger.info(`✅ [RESTORE-SESSIONS] Delayed restoration completed for terminal ${terminalId}`);
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error(`[SCROLLBACK-RESTORE] Delayed restoration failed for ${terminalId}:`, error);
+      this.logger.error(
+        `❌ [RESTORE-SESSIONS] Delayed restoration failed for terminal ${terminalId}: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
   }
 
   /**
    * Clean up resources
    */
   public dispose(): void {
-    // No resources to clean up
+    // Cleanup pending scrollback restorations
+    for (const [, pending] of this.pendingScrollbackRestorations) {
+      if (pending.onDataDisposable) {
+        pending.onDataDisposable.dispose();
+      }
+    }
+    this.pendingScrollbackRestorations.clear();
   }
 }

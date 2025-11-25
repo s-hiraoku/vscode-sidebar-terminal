@@ -254,74 +254,12 @@ export class HeaderManager implements IHeaderManager {
     );
 
     if (this.config.showIcons) {
-      // 🆕 Add split mode button first
-      this.addSplitModeButton(commandSection);
-
       // Existing sample icons
       this.addSampleIcons(commandSection);
       this.addHelpTooltip(commandSection);
     }
 
     return commandSection;
-  }
-
-  /**
-   * 🆕 分割モード切り替えボタンを追加
-   */
-  private addSplitModeButton(container: HTMLElement): void {
-    const splitButton = DOMUtils.createElement(
-      'button',
-      {
-        background: 'transparent',
-        border: 'none',
-        color: 'var(--vscode-foreground)',
-        cursor: 'pointer',
-        padding: '6px',
-        borderRadius: '4px',
-        fontSize: '16px',
-        transition: 'background-color 0.2s ease, color 0.2s ease',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minWidth: `${UI_CONSTANTS.SIZES.ICON_BUTTON_SIZE}px`,
-        height: `${UI_CONSTANTS.SIZES.ICON_BUTTON_SIZE}px`,
-        boxSizing: 'border-box',
-      },
-      {
-        textContent: '⊞', // Unicode split icon
-        title: 'Toggle Split View',
-        className: 'split-mode-toggle-button',
-      }
-    );
-
-    // Click handler
-    DOMUtils.addEventListenerSafe(splitButton, 'click', () => {
-      const displayManager = this.coordinator?.getDisplayModeManager?.();
-      if (displayManager) {
-        displayManager.toggleSplitMode();
-
-        // Update button visual feedback
-        const currentMode = displayManager.getCurrentMode();
-        splitButton.classList.toggle('active', currentMode === 'split');
-
-        log(`🆕 [HEADER] Split mode toggled: ${currentMode}`);
-      }
-    });
-
-    // Hover effect
-    DOMUtils.addEventListenerSafe(splitButton, 'mouseenter', () => {
-      splitButton.style.background = 'var(--vscode-toolbar-hoverBackground)';
-    });
-
-    DOMUtils.addEventListenerSafe(splitButton, 'mouseleave', () => {
-      const displayManager = this.coordinator?.getDisplayModeManager?.();
-      const isActive = displayManager?.getCurrentMode() === 'split';
-      splitButton.style.background = isActive
-        ? 'var(--vscode-button-background)'
-        : 'transparent';
-    });
-
-    container.appendChild(splitButton);
   }
 
   /**
@@ -467,23 +405,6 @@ export class HeaderManager implements IHeaderManager {
    */
   private recreateHeader(): void {
     this.createWebViewHeader();
-  }
-
-  /**
-   * 🆕 分割ボタンの状態を更新（外部から呼び出し可能）
-   */
-  public updateSplitButtonState(isSplitMode: boolean): void {
-    const button = this.headerElement?.querySelector('.split-mode-toggle-button');
-    if (button) {
-      button.classList.toggle('active', isSplitMode);
-
-      // Update background color
-      if (isSplitMode) {
-        (button as HTMLElement).style.background = 'var(--vscode-button-background)';
-      } else {
-        (button as HTMLElement).style.background = 'transparent';
-      }
-    }
   }
 
   /**

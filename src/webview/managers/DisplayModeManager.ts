@@ -400,23 +400,10 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
 
   /**
    * Split toggle buttonの状態を同期
+   * Note: Split button has been removed from the header
    */
   private refreshSplitToggleState(): void {
-    try {
-      const headerManager = this.coordinator?.getManagers()?.header;
-      headerManager?.updateSplitButtonState(this.currentMode === 'split');
-    } catch (error) {
-      this.log(`⚠️ [DISPLAY] Failed to sync split button state: ${error}`, 'warn');
-    }
-
-    const button = document.querySelector('.split-mode-toggle-button');
-    if (button instanceof HTMLElement) {
-      const isSplit = this.currentMode === 'split';
-      button.classList.toggle('active', isSplit);
-      button.style.background = isSplit
-        ? 'var(--vscode-button-background)'
-        : 'transparent';
-    }
+    // Split button removed - no-op
   }
 
   private syncVisibilityFromSnapshot(): void {

@@ -50,7 +50,7 @@ describe('Tab Click Fullscreen Integration (Issue #198)', function () {
       getSplitManager: () => splitManager,
       getManagers: () => ({
         header: {
-          updateSplitButtonState: sinon.stub(),
+          // Split button removed - empty interface
         },
         tabs: tabManager,
       }),

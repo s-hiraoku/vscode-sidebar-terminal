@@ -233,7 +233,7 @@ export class TerminalCreationService implements Disposable {
         const headerConfig: TerminalHeaderConfig = {
           showHeader: true,
           showCloseButton: true,
-          showSplitButton: true,
+          showSplitButton: false,
           customTitle: terminalName,
           onHeaderClick: (clickedTerminalId) => {
             terminalLogger.info(`🎯 Header clicked for terminal: ${clickedTerminalId}`);
@@ -345,6 +345,14 @@ export class TerminalCreationService implements Disposable {
         this.splitManager.getTerminals().set(terminalId, terminalInstance);
         this.splitManager.getTerminalContainers().set(terminalId, container);
         terminalLogger.info(`✅ Terminal registered with SplitManager: ${terminalId}`);
+
+        // Notify extension that terminal is fully initialized and ready
+        this.coordinator.postMessageToExtension({
+          command: 'terminalReady',
+          terminalId,
+          timestamp: Date.now(),
+        });
+        terminalLogger.info(`📤 Emitted terminalReady for: ${terminalId}`);
 
         // Register container with TerminalContainerManager
         const containerManager = this.coordinator?.getTerminalContainerManager?.();

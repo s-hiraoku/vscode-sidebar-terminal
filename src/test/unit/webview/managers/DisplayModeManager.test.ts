@@ -77,7 +77,7 @@ describe('DisplayModeManager - Fullscreen Display (Issue #198)', function () {
       getTerminalContainerManager: sinon.stub().returns(mockContainerManager),
       getManagers: sinon.stub().returns({
         header: {
-          updateSplitButtonState: sinon.stub(),
+          // Split button removed - empty interface
         },
         tabs: {
           updateModeIndicator: sinon.stub(),
@@ -167,18 +167,7 @@ describe('DisplayModeManager - Fullscreen Display (Issue #198)', function () {
       }
     });
 
-    it('should update split button state', function () {
-      // Arrange
-      const mockHeader = mockCoordinator.getManagers().header;
-
-      // Act
-      displayManager.showTerminalFullscreen('1');
-
-      // Assert
-      if (mockHeader) {
-        expect(mockHeader.updateSplitButtonState).to.have.been.called;
-      }
-    });
+    // Split button removed - test removed
   });
 
   describe('Split Mode Toggle', function () {

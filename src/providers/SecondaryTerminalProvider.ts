@@ -364,11 +364,13 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       { command: 'terminalSerializationRestoreRequest', handler: async (msg: WebviewMessage) => await this._handleLegacyPersistenceMessage(msg), category: 'persistence' as const },
       { command: 'pushScrollbackData', handler: async (msg: WebviewMessage) => await this._handlePushScrollbackData(msg), category: 'persistence' as const },
       { command: 'scrollbackDataCollected', handler: async (msg: WebviewMessage) => await this._handleScrollbackDataCollected(msg), category: 'persistence' as const },
+      { command: 'terminalReady', handler: async (msg: WebviewMessage) => await this._handleTerminalReady(msg), category: 'terminal' as const },
       { command: 'htmlScriptTest', handler: (msg: WebviewMessage) => this._handleHtmlScriptTest(msg), category: 'debug' as const },
       { command: 'timeoutTest', handler: (msg: WebviewMessage) => this._handleTimeoutTest(msg), category: 'debug' as const },
       { command: 'test', handler: (msg: WebviewMessage) => this._handleDebugTest(msg), category: 'debug' as const },
       { command: 'requestClipboardContent', handler: async (msg: WebviewMessage) => await this._handleClipboardRequest(msg), category: 'terminal' as const },
       { command: 'copyToClipboard', handler: async (msg: WebviewMessage) => await this._handleCopyToClipboard(msg), category: 'terminal' as const },
+      { command: 'switchAiAgent', handler: async (msg: WebviewMessage) => await this._handleSwitchAiAgent(msg), category: 'terminal' as const },
     ];
 
     this._messageRouter.registerHandlers(handlers);
@@ -449,14 +451,46 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   }
 
   private async _handleScrollbackDataCollected(message: WebviewMessage): Promise<void> {
-    // Treat collected scrollback the same as pushScrollbackData to cache immediately
-    if (!Array.isArray((message as any)?.scrollbackData)) {
+    const scrollbackData = (message as any)?.scrollbackData;
+    const requestId = (message as any)?.requestId;
+    const terminalId = (message as any)?.terminalId;
+
+    if (!Array.isArray(scrollbackData)) {
       log('⚠️ [PROVIDER] scrollbackDataCollected missing scrollbackData array');
       return;
     }
 
+    // Forward to persistence service for handling (supports both cache update and pending request resolution)
+    if (this._extensionPersistenceService) {
+      const handler = (this._extensionPersistenceService as any).handleScrollbackDataCollected;
+      if (typeof handler === 'function') {
+        handler.call(this._extensionPersistenceService, { terminalId, requestId, scrollbackData });
+        log(`✅ [PROVIDER] scrollbackDataCollected forwarded to persistence service (requestId=${requestId || 'none'})`);
+        return;
+      }
+    }
+
+    // Fallback: treat as pushScrollbackData for cache update
     (message as any).command = 'pushScrollbackData';
     await this._handlePushScrollbackData(message);
+  }
+
+  private async _handleTerminalReady(message: WebviewMessage): Promise<void> {
+    const terminalId = message.terminalId as string;
+    if (!terminalId) {
+      log('⚠️ [PROVIDER] terminalReady missing terminalId');
+      return;
+    }
+
+    log(`✅ [PROVIDER] Terminal ready: ${terminalId}`);
+
+    // Forward to persistence service for terminal ready event handling
+    if (this._extensionPersistenceService) {
+      const handler = (this._extensionPersistenceService as any).handleTerminalReady;
+      if (typeof handler === 'function') {
+        handler.call(this._extensionPersistenceService, terminalId);
+      }
+    }
   }
 
   private async _handleReorderTerminals(message: WebviewMessage): Promise<void> {
@@ -819,6 +853,55 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       log(`📋 [CLIPBOARD] Copied ${text.length} chars from terminal ${message.terminalId ?? 'unknown'}`);
     } catch (error) {
       log('❌ [CLIPBOARD] Failed to copy text to clipboard:', error);
+    }
+  }
+
+  /**
+   * Handle AI Agent connection switch from WebView
+   * Issue #122: AI Agent connection toggle button functionality
+   */
+  private async _handleSwitchAiAgent(message: WebviewMessage): Promise<void> {
+    const terminalId = message.terminalId;
+    const action = (message as any)?.action || 'activate';
+
+    log(`📎 [PROVIDER] switchAiAgent received: terminalId=${terminalId}, action=${action}`);
+
+    if (!terminalId) {
+      log('⚠️ [PROVIDER] switchAiAgent called without terminalId');
+      return;
+    }
+
+    try {
+      // Call TerminalManager's switchAiAgentConnection method
+      const result = this._terminalManager.switchAiAgentConnection(terminalId);
+
+      log(`📎 [PROVIDER] switchAiAgentConnection result: success=${result.success}, newStatus=${result.newStatus}, agentType=${result.agentType}`);
+
+      // Send response back to WebView
+      this._communicationService.sendMessage({
+        command: 'switchAiAgentResponse',
+        terminalId,
+        success: result.success,
+        newStatus: result.newStatus,
+        agentType: result.agentType,
+        reason: result.reason,
+      } as WebviewMessage);
+
+      if (result.success) {
+        log(`✅ [PROVIDER] AI Agent switch succeeded: ${terminalId} -> ${result.newStatus}`);
+      } else {
+        log(`⚠️ [PROVIDER] AI Agent switch failed: ${terminalId}, reason: ${result.reason}`);
+      }
+    } catch (error) {
+      log('❌ [PROVIDER] Error handling switchAiAgent:', error);
+
+      // Send error response to WebView
+      this._communicationService.sendMessage({
+        command: 'switchAiAgentResponse',
+        terminalId,
+        success: false,
+        reason: 'Internal error occurred',
+      } as WebviewMessage);
     }
   }
 

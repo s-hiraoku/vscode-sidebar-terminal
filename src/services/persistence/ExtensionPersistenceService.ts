@@ -22,8 +22,11 @@
 
 import * as vscode from 'vscode';
 import { TerminalManager } from '../../terminals/TerminalManager';
-import { extension as log } from '../../utils/logger';
 import { safeProcessCwd } from '../../utils/common';
+
+// Direct console.log for reliable debugging output
+// eslint-disable-next-line no-console
+const log = (message: string, ...args: unknown[]) => console.log(`[EXT-PERSISTENCE] ${message}`, ...args);
 import {
   SessionStorageData,
   TerminalSessionData,
@@ -73,6 +76,16 @@ export class ExtensionPersistenceService implements vscode.Disposable {
   // Pushed scrollback cache for instant save
   private pushedScrollbackCache = new Map<string, string[]>();
 
+  // Terminal ready event tracking for synchronized restoration
+  private pendingTerminalReadyCallbacks = new Map<Set<string>, () => void>();
+
+  // Pending scrollback extraction requests for on-demand save
+  private pendingScrollbackRequests = new Map<string, {
+    resolve: (data: { id: string; scrollback: string[] }) => void;
+    timeout: NodeJS.Timeout;
+    terminalId: string;
+  }>();
+
   // Disposables
   private onWillSaveStateDisposable?: vscode.Disposable;
   private isRestoring = false;
@@ -102,22 +115,28 @@ export class ExtensionPersistenceService implements vscode.Disposable {
    * Save current terminal session to workspace storage
    */
   public async saveCurrentSession(): Promise<PersistenceResult> {
+    log('🔵 saveCurrentSession() called');
+
     if (this.isRestoring) {
-      log('⏭️ [EXT-PERSISTENCE] Skipping save during restore');
+      log('⏭️ Skipping save during restore');
       return { success: true, terminalCount: 0 };
     }
 
     try {
       const config = this.getPersistenceConfig();
+      log(`🔵 Config: enablePersistentSessions=${config.enablePersistentSessions}`);
+
       if (!config.enablePersistentSessions) {
+        log('⏭️ Persistence disabled by config');
         return { success: true, terminalCount: 0, message: 'Persistence disabled' };
       }
 
       const terminals = this.terminalManager.getTerminals();
       const activeTerminalId = this.terminalManager.getActiveTerminalId();
+      log(`🔵 Terminals: ${terminals.length}, activeId: ${activeTerminalId}`);
 
       if (terminals.length === 0) {
-        log('[EXT-PERSISTENCE] No terminals to save');
+        log('⏭️ No terminals to save');
         return { success: true, terminalCount: 0 };
       }
 
@@ -131,19 +150,44 @@ export class ExtensionPersistenceService implements vscode.Disposable {
         cliAgentType: this.detectCLIAgent(terminal),
       }));
 
-      // Collect scrollback data from cache (instant save)
-      const scrollbackData: Record<string, unknown> = {};
-      let cachedCount = 0;
-
-      for (const terminal of terminals) {
+      // Collect scrollback data - check cache first, request fresh if needed
+      const scrollbackPromises = terminals.map(async (terminal) => {
         const cachedScrollback = this.pushedScrollbackCache.get(terminal.id);
         if (cachedScrollback && cachedScrollback.length > 0) {
-          scrollbackData[terminal.id] = this.compressIfNeeded(cachedScrollback);
-          cachedCount++;
+          return { id: terminal.id, scrollback: cachedScrollback, fromCache: true };
+        }
+        // Request fresh extraction if cache miss
+        const extracted = await this.requestImmediateScrollbackExtraction(terminal.id);
+        return { ...extracted, fromCache: false };
+      });
+
+      const extractedScrollbacks = await Promise.all(scrollbackPromises);
+
+      // Build scrollbackData from collected results
+      const scrollbackData: Record<string, unknown> = {};
+      let cachedCount = 0;
+      let extractedCount = 0;
+
+      for (const { id, scrollback, fromCache } of extractedScrollbacks) {
+        if (scrollback.length > 0) {
+          scrollbackData[id] = this.compressIfNeeded(scrollback);
+          if (fromCache) {
+            cachedCount++;
+          } else {
+            extractedCount++;
+          }
         }
       }
 
-      log(`[EXT-PERSISTENCE] Using cached scrollback for ${cachedCount}/${terminals.length} terminals`);
+      log(`[EXT-PERSISTENCE] Scrollback: ${cachedCount} cached, ${extractedCount} extracted, ${terminals.length} total`);
+
+      // Debug: Log scrollback data sizes
+      for (const terminalId of Object.keys(scrollbackData)) {
+        const data = scrollbackData[terminalId];
+        if (Array.isArray(data)) {
+          log(`📦 [EXT-PERSISTENCE] Saving scrollback for ${terminalId}: ${data.length} lines`);
+        }
+      }
 
       // Build session data
       let sessionData: SessionStorageData = {
@@ -189,6 +233,7 @@ export class ExtensionPersistenceService implements vscode.Disposable {
    * Restore terminal session from workspace storage
    */
   public async restoreSession(forceRestore = false): Promise<SessionRestoreResult> {
+    log('🟢 restoreSession() called');
     this.isRestoring = true;
     try {
       const config = this.getPersistenceConfig();
@@ -198,7 +243,22 @@ export class ExtensionPersistenceService implements vscode.Disposable {
         ExtensionPersistenceService.STORAGE_KEY
       );
 
+      log(`🟢 Session data: ${sessionData ? `${sessionData.terminals?.length} terminals` : 'null'}`);
+
+      // Debug: Log detailed session info
+      if (sessionData) {
+        log(`🟢 Session version: ${sessionData.version}`);
+        log(`🟢 Session timestamp: ${new Date(sessionData.timestamp).toISOString()}`);
+        log(`🟢 Active terminal ID: ${sessionData.activeTerminalId}`);
+        sessionData.terminals?.forEach((t, i) => {
+          const scrollback = sessionData.scrollbackData?.[t.id];
+          const scrollbackLines = Array.isArray(scrollback) ? scrollback.length : 0;
+          log(`🟢 Terminal ${i + 1}: id=${t.id}, name=${t.name}, scrollback=${scrollbackLines} lines`);
+        });
+      }
+
       if (!sessionData) {
+        log('⏭️ No session found');
         return { success: false, message: 'No session found' };
       }
 
@@ -315,6 +375,52 @@ export class ExtensionPersistenceService implements vscode.Disposable {
   }
 
   /**
+   * Handle terminal ready event from WebView
+   * Called when a terminal is fully initialized and ready for data operations
+   */
+  public handleTerminalReady(terminalId: string): void {
+    for (const [remaining, callback] of this.pendingTerminalReadyCallbacks.entries()) {
+      if (remaining.has(terminalId)) {
+        remaining.delete(terminalId);
+        log(`✅ [EXT-PERSISTENCE] Terminal ready: ${terminalId}, remaining: ${remaining.size}`);
+        if (remaining.size === 0) {
+          callback();
+          this.pendingTerminalReadyCallbacks.delete(remaining);
+        }
+      }
+    }
+  }
+
+  /**
+   * Handle scrollback data collected from WebView (for on-demand extraction)
+   */
+  public handleScrollbackDataCollected(message: {
+    terminalId?: string;
+    requestId?: string;
+    scrollbackData?: string[];
+  }): void {
+    const { terminalId, requestId, scrollbackData } = message;
+
+    // Update cache regardless of request
+    if (terminalId && scrollbackData) {
+      this.pushedScrollbackCache.set(terminalId, scrollbackData);
+      log(`[EXT-PERSISTENCE] Updated scrollback cache for ${terminalId}: ${scrollbackData.length} lines`);
+    }
+
+    // Handle pending extraction request
+    if (requestId && this.pendingScrollbackRequests.has(requestId)) {
+      const pending = this.pendingScrollbackRequests.get(requestId)!;
+      clearTimeout(pending.timeout);
+      this.pendingScrollbackRequests.delete(requestId);
+      pending.resolve({
+        id: pending.terminalId,
+        scrollback: scrollbackData || [],
+      });
+      log(`✅ [EXT-PERSISTENCE] Scrollback extraction completed for request: ${requestId}`);
+    }
+  }
+
+  /**
    * Cleanup expired sessions
    */
   public async cleanupExpiredSessions(): Promise<void> {
@@ -342,8 +448,14 @@ export class ExtensionPersistenceService implements vscode.Disposable {
    * Cleanup and dispose
    */
   public dispose(): void {
+    if (this.periodicSaveTimer) {
+      clearInterval(this.periodicSaveTimer);
+      this.periodicSaveTimer = undefined;
+    }
     this.onWillSaveStateDisposable?.dispose();
     this.pushedScrollbackCache.clear();
+    this.pendingTerminalReadyCallbacks.clear();
+    this.pendingScrollbackRequests.clear();
     log('[EXT-PERSISTENCE] Disposed');
   }
 
@@ -351,10 +463,15 @@ export class ExtensionPersistenceService implements vscode.Disposable {
   // Private Methods
   // ==========================================================================
 
+  // Periodic save timer for reliable session persistence
+  private periodicSaveTimer: NodeJS.Timeout | undefined;
+  private static readonly PERIODIC_SAVE_INTERVAL = 60000; // 60 seconds
+
   /**
-   * Setup auto-save on window close/reload
+   * Setup auto-save on window close/reload and periodic saves
    */
   private setupAutoSave(): void {
+    // Setup onWillSaveState for window close
     const workspaceWithSaveState = vscode.workspace as any;
 
     if (typeof workspaceWithSaveState.onWillSaveState === 'function') {
@@ -368,6 +485,24 @@ export class ExtensionPersistenceService implements vscode.Disposable {
     } else {
       log('⚠️ [EXT-PERSISTENCE] onWillSaveState API not available');
     }
+
+    // Setup periodic save timer for reliability
+    // This ensures scrollback is saved even if onWillSaveState fails
+    this.periodicSaveTimer = setInterval(async () => {
+      if (this.isRestoring) {
+        return; // Don't save during restore
+      }
+      try {
+        const result = await this.saveCurrentSession();
+        if (result.success && result.terminalCount > 0) {
+          log(`💾 [EXT-PERSISTENCE] Periodic save completed: ${result.terminalCount} terminals`);
+        }
+      } catch (error) {
+        log(`⚠️ [EXT-PERSISTENCE] Periodic save failed: ${error}`);
+      }
+    }, ExtensionPersistenceService.PERIODIC_SAVE_INTERVAL);
+
+    log('✅ [EXT-PERSISTENCE] Periodic save configured (60s interval)');
   }
 
   /**
@@ -443,6 +578,60 @@ export class ExtensionPersistenceService implements vscode.Disposable {
   }
 
   /**
+   * Wait for all specified terminals to be ready (event-based)
+   */
+  private waitForTerminalsReady(terminalIds: Set<string>, timeout: number): Promise<void> {
+    if (terminalIds.size === 0) {
+      return Promise.resolve();
+    }
+
+    return new Promise((resolve) => {
+      const remaining = new Set(terminalIds);
+      const timeoutId = setTimeout(() => {
+        log(`⚠️ [EXT-PERSISTENCE] Timeout waiting for terminals: ${Array.from(remaining).join(', ')}`);
+        this.pendingTerminalReadyCallbacks.delete(remaining);
+        resolve(); // Continue anyway to not block restoration
+      }, timeout);
+
+      this.pendingTerminalReadyCallbacks.set(remaining, () => {
+        clearTimeout(timeoutId);
+        resolve();
+      });
+    });
+  }
+
+  /**
+   * Request immediate scrollback extraction from WebView (for on-demand save)
+   */
+  private async requestImmediateScrollbackExtraction(
+    terminalId: string
+  ): Promise<{ id: string; scrollback: string[] }> {
+    if (!this.sidebarProvider) {
+      return { id: terminalId, scrollback: [] };
+    }
+
+    return new Promise((resolve) => {
+      const requestId = `extract-${terminalId}-${Date.now()}`;
+      const timeout = setTimeout(() => {
+        this.pendingScrollbackRequests.delete(requestId);
+        log(`⚠️ [EXT-PERSISTENCE] Scrollback extraction timeout for ${terminalId}`);
+        resolve({ id: terminalId, scrollback: [] });
+      }, 500); // 500ms timeout - short because periodic save ensures recent data is cached
+
+      this.pendingScrollbackRequests.set(requestId, { resolve, timeout, terminalId });
+
+      void this.sidebarProvider!.sendMessageToWebview({
+        command: 'extractScrollbackData',
+        terminalId,
+        requestId,
+        maxLines: this.getPersistenceConfig().persistentSessionScrollback,
+      });
+
+      log(`[EXT-PERSISTENCE] Requested immediate scrollback extraction for ${terminalId} (${requestId})`);
+    });
+  }
+
+  /**
    * Batch restore terminals with concurrency control
    */
   private async batchRestoreTerminals(
@@ -478,8 +667,11 @@ export class ExtensionPersistenceService implements vscode.Disposable {
       }
     }
 
-    // Wait for terminals to initialize
-    await new Promise(resolve => setTimeout(resolve, 800));
+    // Wait for terminals to be ready (event-based with 3s timeout)
+    const pendingTerminalIds = new Set(terminalCreations.map(t => t.id));
+    log(`[EXT-PERSISTENCE] Waiting for ${pendingTerminalIds.size} terminals to be ready...`);
+    await this.waitForTerminalsReady(pendingTerminalIds, 3000);
+    log(`✅ [EXT-PERSISTENCE] All terminals ready or timeout reached`);
 
     // Restore scrollback content in batches
     if (terminalCreations.length > 0 && scrollbackData) {
@@ -510,6 +702,9 @@ export class ExtensionPersistenceService implements vscode.Disposable {
           scrollbackArray = (t.scrollbackData as string).split('\n');
         }
 
+        // Debug: Log scrollback data for each terminal
+        log(`📦 [EXT-PERSISTENCE] Terminal ${t.id} (original: ${t.originalId}): scrollback ${scrollbackArray?.length ?? 0} lines`);
+
         return {
           terminalId: t.id,
           scrollbackData: scrollbackArray,
@@ -518,12 +713,21 @@ export class ExtensionPersistenceService implements vscode.Disposable {
         };
       });
 
+      // Debug: Check if any terminal has scrollback data
+      const terminalsWithData = normalizedTerminals.filter(t => t.scrollbackData && t.scrollbackData.length > 0);
+      log(`📦 [EXT-PERSISTENCE] ${terminalsWithData.length}/${normalizedTerminals.length} terminals have scrollback data`);
+
+      if (terminalsWithData.length === 0) {
+        log('⚠️ [EXT-PERSISTENCE] No scrollback data to restore - skipping');
+        return;
+      }
+
       await this.sidebarProvider.sendMessageToWebview({
         command: 'restoreTerminalSessions',
         terminals: normalizedTerminals,
       });
 
-      log(`[EXT-PERSISTENCE] Scrollback restoration requested for ${terminals.length} terminals`);
+      log(`✅ [EXT-PERSISTENCE] Scrollback restoration requested for ${terminals.length} terminals`);
     } catch (error) {
       log(`❌ [EXT-PERSISTENCE] Scrollback restoration failed: ${error}`);
     }
