@@ -314,3 +314,4 @@ export const splitLogger = ManagerLogger.createLogger('Split', '📱');
 export const messageLogger = ManagerLogger.createLogger('Message', '📨');
 export const notificationLogger = ManagerLogger.createLogger('Notification', '🔔');
 export const configLogger = ManagerLogger.createLogger('Config', '⚙️');
+export const containerLogger = ManagerLogger.createLogger('Container', '📦');
