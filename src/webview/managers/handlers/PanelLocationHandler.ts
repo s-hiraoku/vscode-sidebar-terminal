@@ -80,11 +80,12 @@ export class PanelLocationHandler implements IMessageHandler {
         if (!initialDetectionDone) {
           const terminalsWrapper = document.getElementById('terminals-wrapper');
           if (terminalsWrapper) {
-            // Apply CSS class for vertical layout (sidebar)
-            if (detectedLocation === 'sidebar') {
-              terminalsWrapper.classList.add('terminal-side-view');
+            // 🔧 FIX: Apply CSS class for horizontal layout (bottom panel only)
+            // Default is column (vertical/sidebar), add class for row (horizontal/panel)
+            if (detectedLocation === 'panel') {
+              terminalsWrapper.classList.add('terminal-split-horizontal');
             } else {
-              terminalsWrapper.classList.remove('terminal-side-view');
+              terminalsWrapper.classList.remove('terminal-split-horizontal');
             }
 
             // Update cached state
@@ -105,11 +106,11 @@ export class PanelLocationHandler implements IMessageHandler {
           if (this.cachedPanelLocation !== detectedLocation) {
             const terminalsWrapper = document.getElementById('terminals-wrapper');
             if (terminalsWrapper) {
-              // Toggle CSS class
-              if (detectedLocation === 'sidebar') {
-                terminalsWrapper.classList.add('terminal-side-view');
+              // 🔧 FIX: Toggle CSS class for horizontal layout (bottom panel only)
+              if (detectedLocation === 'panel') {
+                terminalsWrapper.classList.add('terminal-split-horizontal');
               } else {
-                terminalsWrapper.classList.remove('terminal-side-view');
+                terminalsWrapper.classList.remove('terminal-split-horizontal');
               }
             }
 
@@ -272,11 +273,11 @@ export class PanelLocationHandler implements IMessageHandler {
     // Apply CSS class to terminals-wrapper
     const terminalsWrapper = document.getElementById('terminals-wrapper');
     if (terminalsWrapper) {
-      // Toggle CSS class based on location
-      if (location === 'sidebar') {
-        terminalsWrapper.classList.add('terminal-side-view');
+      // 🔧 FIX: Toggle CSS class for horizontal layout (bottom panel only)
+      if (location === 'panel') {
+        terminalsWrapper.classList.add('terminal-split-horizontal');
       } else {
-        terminalsWrapper.classList.remove('terminal-side-view');
+        terminalsWrapper.classList.remove('terminal-split-horizontal');
       }
     }
   }

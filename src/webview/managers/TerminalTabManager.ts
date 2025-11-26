@@ -299,7 +299,10 @@ export class TerminalTabManager implements TerminalTabEvents {
     };
 
     this.tabs.set(terminalId, tab);
-    this.tabOrder.push(terminalId);
+    // 🔧 FIX: Only push to tabOrder if not already present (defensive)
+    if (!this.tabOrder.includes(terminalId)) {
+      this.tabOrder.push(terminalId);
+    }
 
     if (this.tabList) {
       this.tabList.addTab(tab);
@@ -449,7 +452,10 @@ export class TerminalTabManager implements TerminalTabEvents {
           terminal: undefined,
         };
         this.tabs.set(info.id, tab);
-        this.tabOrder.push(info.id);
+        // 🔧 FIX: Only push to tabOrder if not already present
+        if (!this.tabOrder.includes(info.id)) {
+          this.tabOrder.push(info.id);
+        }
         this.tabList?.addTab(tab);
       } else {
         const updates: Partial<TerminalTab> = {};

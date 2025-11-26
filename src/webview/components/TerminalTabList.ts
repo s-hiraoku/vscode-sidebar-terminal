@@ -390,10 +390,18 @@ export class TerminalTabList {
   }
 
   public addTab(tab: TerminalTab): void {
+    // 🔧 FIX: Check for existing tab to prevent duplicates
+    if (this.tabs.has(tab.id)) {
+      log(`🗂️ [TAB-LIST] Tab already exists, updating: ${tab.id}`);
+      this.updateTab(tab.id, tab);
+      return;
+    }
+
     this.tabs.set(tab.id, tab);
     const tabElement = this.createTabElement(tab);
     this.tabsContainer.appendChild(tabElement);
     this.updateTabVisibility();
+    log(`🗂️ [TAB-LIST] Tab added: ${tab.id}`);
   }
 
   public removeTab(tabId: string): void {

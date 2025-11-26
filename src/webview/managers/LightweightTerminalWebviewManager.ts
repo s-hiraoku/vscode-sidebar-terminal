@@ -36,19 +36,7 @@ import {
   IShellIntegrationBridge,
 } from '../interfaces/ManagerInterfaces';
 
-// Debug info interface
-interface DebugInfo {
-  totalCount: number;
-  maxTerminals: number;
-  availableSlots: number[];
-  activeTerminalId: string | null;
-  terminals: Array<{
-    id: string;
-    isActive: boolean;
-  }>;
-  timestamp: number;
-  operation?: string;
-}
+// Note: DebugInfo, DebugCounters, SystemDiagnostics moved to DebugPanelManager
 
 interface ScrollbackRequestMessage {
   command: 'extractScrollbackData';
@@ -63,33 +51,6 @@ interface SystemStatusSnapshot {
   pendingOperations: {
     deletions: string[];
     creations: number;
-  };
-}
-
-interface DebugCounters {
-  stateUpdates: number;
-  lastSync: string;
-  systemStartTime: number;
-}
-
-interface SystemDiagnostics {
-  timestamp: string;
-  systemStatus: SystemStatusSnapshot;
-  performanceCounters: DebugCounters;
-  configuration: {
-    debugMode: boolean;
-    maxTerminals: number | 'unknown';
-  };
-  extensionCommunication: {
-    lastStateRequest: string;
-    messageQueueStatus: string;
-  };
-  troubleshootingInfo: {
-    userAgent: string;
-    platform: string;
-    language: string;
-    cookieEnabled: boolean;
-    onLine: boolean;
   };
 }
 
@@ -124,6 +85,8 @@ import { ProfileManager } from './ProfileManager';
 import { TerminalContainerManager } from './TerminalContainerManager';
 import { DisplayModeManager } from './DisplayModeManager';
 import { HeaderManager } from './HeaderManager';
+import { DebugPanelManager, SystemDiagnostics } from './DebugPanelManager';
+import { TerminalStateDisplayManager } from './TerminalStateDisplayManager';
 
 /**
  * 軽量化されたTerminalWebviewManager
@@ -150,6 +113,8 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
   private terminalContainerManager!: TerminalContainerManager;
   private displayModeManager!: DisplayModeManager;
   private headerManager!: HeaderManager;
+  private debugPanelManager: DebugPanelManager;
+  private terminalStateDisplayManager!: TerminalStateDisplayManager;
 
   // 既存マネージャー（段階的移行）
   public splitManager: SplitManager;
@@ -221,6 +186,9 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     this.terminalContainerManager = new TerminalContainerManager(this);
 
     this.displayModeManager = new DisplayModeManager(this);
+
+    // DebugPanelManager（デバッグパネル表示用）
+    this.debugPanelManager = new DebugPanelManager();
 
     log('✅ All managers initialized');
 
@@ -332,6 +300,21 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     // 🆕 Initialize DisplayModeManager and TerminalContainerManager (Issue #198)
     this.displayModeManager.initialize();
     this.terminalContainerManager.initialize();
+
+    // Setup DebugPanelManager callbacks
+    this.debugPanelManager.setCallbacks({
+      getSystemStatus: () => this.getSystemStatus(),
+      forceSynchronization: () => this.forceSynchronization(),
+      requestLatestState: () => this.requestLatestState(),
+    });
+
+    // Initialize TerminalStateDisplayManager
+    this.terminalStateDisplayManager = new TerminalStateDisplayManager(
+      this.uiManager,
+      this.notificationManager,
+      this.terminalTabManager,
+      this.terminalContainerManager
+    );
 
     log('✅ All managers initialized');
   }
@@ -1312,71 +1295,21 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
   /**
    * Update UI elements based on current terminal state
+   * Delegates to TerminalStateDisplayManager
    */
   private updateUIFromState(state: TerminalState): void {
-    try {
-      // Sync terminal order with Extension state
-      const terminalOrder = state.terminals.map(t => t.id);
-      if (terminalOrder.length > 0 && this.terminalContainerManager) {
-        this.terminalContainerManager.reorderContainers(terminalOrder);
-        log(`🔄 [STATE] Synced terminal container order:`, terminalOrder);
-      }
-
-      // Update terminal count display
-      this.updateTerminalCountDisplay(state.terminals.length, state.maxTerminals);
-
-      // Update available slots display
-      this.updateAvailableSlotsDisplay(state.availableSlots);
-
-      // Update active terminal highlighting
-      if (state.activeTerminalId) {
-        this.highlightActiveTerminal(state.activeTerminalId);
-      }
-
-      if (this.terminalTabManager) {
-        this.terminalTabManager.syncTabs(
-          state.terminals.map((terminal) => ({
-            id: terminal.id,
-            name: terminal.name,
-            isActive: terminal.isActive,
-            isClosable: state.terminals.length > 1,
-          }))
-        );
-      }
-
-      log(
-        `🎨 [UI] UI updated: ${state.terminals.length}/${state.maxTerminals} terminals, slots: [${state.availableSlots.join(',')}]`
-      );
-    } catch (error) {
-      log('❌ [UI] Error updating UI from state:', error);
-    }
+    this.terminalStateDisplayManager.updateFromState(state);
   }
 
   /**
    * Update terminal creation button state and messaging
+   * Delegates to TerminalStateDisplayManager
    */
   private updateTerminalCreationState(): void {
     if (!this.currentTerminalState) {
       return;
     }
-
-    const canCreate = this.currentTerminalState.availableSlots.length > 0;
-    const currentCount = this.currentTerminalState.terminals.length;
-    const maxCount = this.currentTerminalState.maxTerminals;
-
-    // Update create button availability
-    this.setCreateButtonEnabled(canCreate);
-
-    // Update status messaging
-    if (!canCreate) {
-      this.showTerminalLimitMessage(currentCount, maxCount);
-    } else {
-      this.clearTerminalLimitMessage();
-    }
-
-    log(
-      `🎯 [CREATION] Terminal creation ${canCreate ? 'ENABLED' : 'DISABLED'} (${currentCount}/${maxCount})`
-    );
+    this.terminalStateDisplayManager.updateCreationState(this.currentTerminalState);
   }
 
   /**
@@ -1387,324 +1320,27 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     this.updateDebugDisplayExtended(state, 'state-update');
   }
 
-  /**
-   * Display terminal count information
-   */
-  private updateTerminalCountDisplay(current: number, max: number): void {
-    // Update any terminal count UI elements
-    const countElements = document.querySelectorAll('[data-terminal-count]');
-    countElements.forEach((element) => {
-      element.textContent = `${current}/${max}`;
-    });
-  }
-
-  /**
-   * Display available slots information
-   */
-  private updateAvailableSlotsDisplay(slots: number[]): void {
-    // Update available slots UI elements
-    const slotElements = document.querySelectorAll('[data-available-slots]');
-    slotElements.forEach((element) => {
-      element.textContent =
-        slots.length > 0 ? `Available: ${slots.join(', ')}` : 'No slots available';
-    });
-  }
-
-  /**
-   * Highlight the active terminal
-   */
-  private highlightActiveTerminal(terminalId: string): void {
-    // Remove previous active highlighting
-    document.querySelectorAll('.terminal-container.active').forEach((el) => {
-      el.classList.remove('active');
-    });
-
-    // Add active highlighting to current terminal
-    const activeContainer = document.querySelector(`[data-terminal-id="${terminalId}"]`);
-    if (activeContainer) {
-      activeContainer.classList.add('active');
-    }
-
-    this.uiManager.updateSplitTerminalBorders(terminalId);
-  }
-
-  /**
-   * Enable/disable terminal creation button
-   */
-  private setCreateButtonEnabled(enabled: boolean): void {
-    const createButtons = document.querySelectorAll('[data-action="create-terminal"]');
-    createButtons.forEach((button) => {
-      if (button instanceof HTMLButtonElement) {
-        button.disabled = !enabled;
-        button.title = enabled ? 'Create new terminal' : 'Maximum terminals reached';
-      }
-    });
-  }
+  // Note: updateTerminalCountDisplay, updateAvailableSlotsDisplay, highlightActiveTerminal,
+  // setCreateButtonEnabled, clearTerminalLimitMessage moved to TerminalStateDisplayManager
 
   /**
    * Show terminal limit reached message
+   * Kept as wrapper for backward compatibility
    */
   private showTerminalLimitMessage(current: number, max: number): void {
-    const message = `Terminal limit reached (${current}/${max}). Delete a terminal to create new ones.`;
-
-    // Show in notification system if available
-    if (this.notificationManager) {
-      this.notificationManager.showWarning(message);
-    }
-
-    // Update status bar if available
-    const statusElements = document.querySelectorAll('[data-terminal-status]');
-    statusElements.forEach((element) => {
-      element.textContent = message;
-      element.className = 'terminal-status warning';
-    });
-  }
-
-  /**
-   * Clear terminal limit message
-   */
-  private clearTerminalLimitMessage(): void {
-    // Clear notifications
-    if (this.notificationManager) {
-      this.notificationManager.clearWarnings();
-    }
-
-    // Clear status bar
-    const statusElements = document.querySelectorAll('[data-terminal-status]');
-    statusElements.forEach((element) => {
-      element.textContent = '';
-      element.className = 'terminal-status';
-    });
-  }
-
-  /**
-   * Display debug information
-   */
-  private displayDebugInfo(info: DebugInfo): void {
-    let debugElement = document.getElementById('terminal-debug-info');
-    if (!debugElement) {
-      debugElement = document.createElement('div');
-      debugElement.id = 'terminal-debug-info';
-      debugElement.style.cssText = `
-        position: fixed;
-        top: 10px;
-        right: 10px;
-        background: rgba(0,0,0,0.92);
-        color: #fff;
-        padding: 16px;
-        border-radius: 8px;
-        font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
-        font-size: 11px;
-        z-index: 10000;
-        max-width: 400px;
-        min-width: 320px;
-        border: 1px solid #444;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        line-height: 1.4;
-      `;
-      document.body.appendChild(debugElement);
-
-      // Add close button
-      const closeButton = document.createElement('button');
-      closeButton.textContent = '×'; // Safe: fixed character
-      closeButton.style.cssText = `
-        position: absolute;
-        top: 8px;
-        right: 8px;
-        background: none;
-        border: none;
-        color: #fff;
-        font-size: 16px;
-        cursor: pointer;
-        padding: 0;
-        width: 20px;
-        height: 20px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      `;
-      closeButton.onclick = () => {
-        this.debugMode = false;
-        debugElement?.remove();
-      };
-      debugElement.appendChild(closeButton);
-    }
-
-    // Get current system status
-    const systemStatus = this.getSystemStatus();
-    const ready = systemStatus.ready;
-
-    // Color coding based on system state
-    const statusColor = ready ? '#10b981' : '#ef4444'; // Green or Red
-    const warningColor = '#f59e0b'; // Amber
-    const infoColor = '#3b82f6'; // Blue
-
-    debugElement.innerHTML = `
-      <button style="position: absolute; top: 8px; right: 8px; background: none; border: none; color: #fff; font-size: 16px; cursor: pointer; padding: 0; width: 20px; height: 20px;" onclick="this.parentElement.remove(); window.terminalManager && (window.terminalManager.debugMode = false);">×</button>
-
-      <div style="margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #444;">
-        <div style="color: #fbbf24; font-weight: bold; font-size: 12px;">🔍 Terminal State Debug Panel</div>
-        <div style="color: #94a3b8; font-size: 10px; margin-top: 2px;">Last Update: ${new Date().toLocaleTimeString()}</div>
-      </div>
-
-      <!-- System Status -->
-      <div style="margin-bottom: 12px;">
-        <div style="color: ${statusColor}; font-weight: bold; margin-bottom: 4px;">
-          ${ready ? '✅' : '⚠️'} System Status: ${ready ? 'READY' : 'BUSY'}
-        </div>
-        ${
-          !ready
-            ? `
-          <div style="color: ${warningColor}; font-size: 10px; margin-left: 16px;">
-            ${systemStatus.pendingOperations.deletions.length > 0 ? `🗑️ Deletions: ${systemStatus.pendingOperations.deletions.length}` : ''}
-            ${systemStatus.pendingOperations.creations > 0 ? `📥 Queued: ${systemStatus.pendingOperations.creations}` : ''}
-          </div>
-        `
-            : ''
-        }
-      </div>
-
-      <!-- Terminal Count & Slots -->
-      <div style="margin-bottom: 12px;">
-        <div style="color: ${infoColor}; font-weight: bold; margin-bottom: 4px;">
-          📊 Terminal Management
-        </div>
-        <div style="margin-left: 16px; color: #e5e7eb;">
-          <div>Active: <span style="color: #10b981; font-weight: bold;">${info.totalCount}</span>/<span style="color: #fbbf24;">${info.maxTerminals}</span></div>
-          <div>Available Slots: <span style="color: ${info.availableSlots.length > 0 ? '#10b981' : '#ef4444'}; font-weight: bold;">[${info.availableSlots.join(', ') || 'none'}]</span></div>
-          <div>Active Terminal: <span style="color: #60a5fa;">${info.activeTerminalId || 'none'}</span></div>
-        </div>
-      </div>
-
-      <!-- Terminal List -->
-      <div style="margin-bottom: 12px;">
-        <div style="color: ${infoColor}; font-weight: bold; margin-bottom: 4px;">
-          🖥️ Terminal Instances
-        </div>
-        <div style="margin-left: 16px; color: #e5e7eb; max-height: 120px; overflow-y: auto;">
-          ${
-            info.terminals.length > 0
-              ? info.terminals
-                  .map(
-                    (t) => `
-              <div style="margin: 2px 0; padding: 2px 4px; background: ${t.isActive ? 'rgba(16, 185, 129, 0.1)' : 'rgba(75, 85, 99, 0.3)'}; border-radius: 3px; border-left: 2px solid ${t.isActive ? '#10b981' : '#6b7280'};">
-                <span style="color: ${t.isActive ? '#10b981' : '#9ca3af'};">${t.id}</span>
-                ${t.isActive ? '<span style="color: #fbbf24;">●</span>' : ''}
-              </div>
-            `
-                  )
-                  .join('')
-              : '<div style="color: #6b7280; font-style: italic;">No terminals</div>'
-          }
-        </div>
-      </div>
-
-      <!-- Pending Operations -->
-      ${
-        systemStatus.pendingOperations.deletions.length > 0 ||
-        systemStatus.pendingOperations.creations > 0
-          ? `
-        <div style="margin-bottom: 12px;">
-          <div style="color: ${warningColor}; font-weight: bold; margin-bottom: 4px;">
-            ⏳ Pending Operations
-          </div>
-          <div style="margin-left: 16px; color: #e5e7eb;">
-            ${
-              systemStatus.pendingOperations.deletions.length > 0
-                ? `
-              <div style="margin: 2px 0;">
-                <span style="color: #ef4444;">🗑️ Deletions (${systemStatus.pendingOperations.deletions.length}):</span>
-                <div style="margin-left: 16px; font-size: 10px; color: #fca5a5;">
-                  ${systemStatus.pendingOperations.deletions.map((id) => `• ${id}`).join('<br>')}
-                </div>
-              </div>
-            `
-                : ''
-            }
-            ${
-              systemStatus.pendingOperations.creations > 0
-                ? `
-              <div style="margin: 2px 0;">
-                <span style="color: #f59e0b;">📥 Creations:</span>
-                <span style="color: #fbbf24; font-weight: bold;">${systemStatus.pendingOperations.creations} queued</span>
-              </div>
-            `
-                : ''
-            }
-          </div>
-        </div>
-      `
-          : ''
+    // Create a temporary state for the display manager
+    if (this.currentTerminalState) {
+      this.terminalStateDisplayManager.updateCreationState(this.currentTerminalState);
+    } else {
+      // Fallback: show notification directly
+      const message = `Terminal limit reached (${current}/${max}). Delete a terminal to create new ones.`;
+      if (this.notificationManager) {
+        this.notificationManager.showWarning(message);
       }
-
-      <!-- Number Recycling Status -->
-      <div style="margin-bottom: 12px;">
-        <div style="color: ${infoColor}; font-weight: bold; margin-bottom: 4px;">
-          🔄 Number Recycling
-        </div>
-        <div style="margin-left: 16px; color: #e5e7eb;">
-          <div style="display: flex; gap: 8px; margin-bottom: 4px;">
-            ${[1, 2, 3, 4, 5]
-              .map((num) => {
-                const isUsed = info.terminals.some((t) => t.id === `terminal-${num}`);
-                const isAvailable = info.availableSlots.includes(num);
-                const color = isUsed ? '#ef4444' : isAvailable ? '#10b981' : '#6b7280';
-                const symbol = isUsed ? '●' : isAvailable ? '○' : '◌';
-                return `<span style="color: ${color}; font-weight: bold; width: 20px; text-align: center;">${num}${symbol}</span>`;
-              })
-              .join('')}
-          </div>
-          <div style="font-size: 10px; color: #9ca3af;">
-            <span style="color: #ef4444;">● Used</span> |
-            <span style="color: #10b981;">○ Available</span> |
-            <span style="color: #6b7280;">◌ Unavailable</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Performance Metrics -->
-      <div style="margin-bottom: 8px;">
-        <div style="color: ${infoColor}; font-weight: bold; margin-bottom: 4px;">
-          ⚡ Performance
-        </div>
-        <div style="margin-left: 16px; color: #e5e7eb; font-size: 10px;">
-          <div>State Updates: <span id="debug-state-updates">0</span></div>
-          <div>Last Sync: <span id="debug-last-sync">${info.timestamp}</span></div>
-          <div>System Uptime: <span id="debug-uptime">${this.getSystemUptime()}</span></div>
-        </div>
-      </div>
-
-      <!-- Quick Actions -->
-      <div style="margin-top: 12px; padding-top: 8px; border-top: 1px solid #444;">
-        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-          <button onclick="window.terminalManager?.forceSynchronization()" style="
-            background: #ef4444; color: white; border: none; padding: 4px 8px;
-            border-radius: 4px; font-size: 10px; cursor: pointer; font-weight: bold;
-          ">🔄 Force Sync</button>
-          <button onclick="window.terminalManager?.requestLatestState()" style="
-            background: #3b82f6; color: white; border: none; padding: 4px 8px;
-            border-radius: 4px; font-size: 10px; cursor: pointer; font-weight: bold;
-          ">📡 Refresh State</button>
-          <button onclick="log('Terminal System Status:', window.terminalManager?.getSystemStatus())" style="
-            background: #6b7280; color: white; border: none; padding: 4px 8px;
-            border-radius: 4px; font-size: 10px; cursor: pointer; font-weight: bold;
-          ">📋 Log Status</button>
-        </div>
-      </div>
-    `;
-
-    // Update performance counters
-    this.updatePerformanceCounters();
+    }
   }
 
-  /**
-   * Performance tracking for debug panel
-   */
-  private debugCounters: DebugCounters = {
-    stateUpdates: 0,
-    lastSync: new Date().toISOString(),
-    systemStartTime: Date.now(),
-  };
+  // Note: displayDebugInfo has been moved to DebugPanelManager
 
   /**
    * 🔄 Initialize session restoration capability
@@ -1919,127 +1555,40 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     }
   }
 
-  /**
-   * Update performance counters
-   */
-  private updatePerformanceCounters(): void {
-    // Update state update counter
-    this.debugCounters.stateUpdates++;
-    this.debugCounters.lastSync = new Date().toISOString();
-
-    // Update DOM elements if they exist
-    const stateUpdatesElement = document.getElementById('debug-state-updates');
-    if (stateUpdatesElement) {
-      stateUpdatesElement.textContent = this.debugCounters.stateUpdates.toString();
-    }
-
-    const lastSyncElement = document.getElementById('debug-last-sync');
-    if (lastSyncElement) {
-      lastSyncElement.textContent = new Date().toLocaleTimeString();
-    }
-
-    const uptimeElement = document.getElementById('debug-uptime');
-    if (uptimeElement) {
-      uptimeElement.textContent = this.getSystemUptime();
-    }
-  }
-
-  /**
-   * Get system uptime in human readable format
-   */
-  private getSystemUptime(): string {
-    const uptimeMs = Date.now() - this.debugCounters.systemStartTime;
-    const hours = Math.floor(uptimeMs / (1000 * 60 * 60));
-    const minutes = Math.floor((uptimeMs % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((uptimeMs % (1000 * 60)) / 1000);
-
-    if (hours > 0) {
-      return `${hours}h ${minutes}m ${seconds}s`;
-    } else if (minutes > 0) {
-      return `${minutes}m ${seconds}s`;
-    } else {
-      return `${seconds}s`;
-    }
-  }
+  // Note: updatePerformanceCounters and getSystemUptime moved to DebugPanelManager
 
   /**
    * Enhanced updateDebugDisplay with operation tracking
+   * Delegates to DebugPanelManager
    */
   private updateDebugDisplayExtended(state: TerminalState, operation?: string): void {
-    if (!this.debugMode) {
-      return;
-    }
-
-    // Track the operation that triggered this update
     if (operation) {
       log(`🔍 [DEBUG] Display update triggered by: ${operation}`);
     }
-
-    const debugInfo: DebugInfo = {
-      timestamp: Date.now(),
-      terminals: state.terminals.map((t) => ({
-        id: t.id,
-        isActive: t.isActive,
-      })),
-      availableSlots: state.availableSlots,
-      activeTerminalId: state.activeTerminalId,
-      totalCount: state.terminals.length,
-      maxTerminals: state.maxTerminals,
-      operation: operation || 'state-update',
-    };
-
-    this.displayDebugInfo(debugInfo);
+    this.debugPanelManager.updateDisplay(state, operation);
   }
 
   /**
    * Real-time debug panel toggle
+   * Delegates to DebugPanelManager
    */
   public toggleDebugPanel(): void {
-    this.debugMode = !this.debugMode;
-
-    if (this.debugMode) {
-      log('🔍 [DEBUG] Debug panel enabled');
-      // Show current state immediately
-      if (this.currentTerminalState) {
-        this.updateDebugDisplayExtended(this.currentTerminalState, 'manual-toggle');
-      } else {
-        // Request state if not available
-        this.requestLatestState();
-      }
-    } else {
-      log('🔍 [DEBUG] Debug panel disabled');
-      const debugElement = document.getElementById('terminal-debug-info');
-      if (debugElement) {
-        debugElement.remove();
-      }
+    this.debugPanelManager.toggle(this.currentTerminalState || undefined);
+    // Request state if not available and panel is now active
+    if (this.debugPanelManager.isActive() && !this.currentTerminalState) {
+      this.requestLatestState();
     }
   }
 
   /**
    * Export system diagnostics for troubleshooting
+   * Delegates to DebugPanelManager
    */
   public exportSystemDiagnostics(): SystemDiagnostics {
-    const diagnostics: SystemDiagnostics = {
-      timestamp: new Date().toISOString(),
-      systemStatus: this.getSystemStatus(),
-      performanceCounters: this.debugCounters,
-      configuration: {
-        debugMode: this.debugMode,
-        maxTerminals: this.currentTerminalState?.maxTerminals || 'unknown',
-      },
-      extensionCommunication: {
-        lastStateRequest: 'tracked in logs',
-        messageQueueStatus: 'see WebView console',
-      },
-      troubleshootingInfo: {
-        userAgent: navigator.userAgent,
-        platform: navigator.platform,
-        language: navigator.language,
-        cookieEnabled: navigator.cookieEnabled,
-        onLine: navigator.onLine,
-      },
-    };
-
+    const diagnostics = this.debugPanelManager.exportDiagnostics(
+      this.getSystemStatus(),
+      this.currentTerminalState?.maxTerminals || 'unknown'
+    );
     log('🔧 [DIAGNOSTICS] System diagnostics exported:', diagnostics);
     return diagnostics;
   }
@@ -2497,7 +2046,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
   // Add state properties
   private currentTerminalState: TerminalState | null = null;
-  private debugMode: boolean = false; // Enable only when needed for debugging
+  // Note: debugMode moved to DebugPanelManager
 
   public ensureTerminalFocus(): void {
     const activeId = this.getActiveTerminalId();
@@ -2637,6 +2186,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       // 🆕 新規マネージャーのクリーンアップ（Issue #198）
       this.displayModeManager?.dispose();
       this.terminalContainerManager?.dispose();
+      this.debugPanelManager?.dispose();
 
       // 既存マネージャーのクリーンアップ
       this.messageManager.dispose();
