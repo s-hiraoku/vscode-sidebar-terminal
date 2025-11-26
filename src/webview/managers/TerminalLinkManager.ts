@@ -29,9 +29,13 @@ export class TerminalLinkManager extends BaseManager {
   private readonly linkProviderDisposables: Map<string, IDisposable> = new Map();
 
   // File path detection regex patterns
+  // Improved patterns to handle more file path formats
+  // Unix absolute paths: /path/to/file.ext or /path/to/file.ext:10:5
+  // Windows absolute paths: C:\path\to\file.ext
+  // Relative paths: ./file.ext or ../path/to/file.ext
   private readonly absoluteFilePathRegex =
-    /(?:\/[a-zA-Z0-9._-]+)+|(?:[A-Za-z]:\\(?:[^\\/:*?"<>|\r\n]+\\)*[^\\/:*?"<>|\r\n]+)/g;
-  private readonly relativeFilePathRegex = /(?:\.{1,2}\/)+[a-zA-Z0-9._/-]+/g;
+    /(?:\/[^\s:*?"<>|()[\]{}',;]+(?::\d+(?::\d+)?)?)|(?:[A-Za-z]:\\[^\s:*?"<>|]+)/g;
+  private readonly relativeFilePathRegex = /\.\.?\/[^\s:*?"<>|()[\]{}',;]+(?::\d+(?::\d+)?)?/g;
   private readonly urlRegex = /(?:(?:https?):\/\/)[^\s"'<>]+/gi;
 
   // Allowed file extensions for link detection
@@ -339,25 +343,34 @@ export class TerminalLinkManager extends BaseManager {
 
   /**
    * Check if candidate path is a supported file path
+   * Returns the path if it looks like a valid file path, null otherwise
    */
   private isSupportedFilePath(candidate: string | null): string | null {
     if (!candidate) {
       return null;
     }
 
+    // If it has a directory component, accept it as a file path
     const hasDirectory = candidate.includes('/') || candidate.includes('\\');
-    if (!hasDirectory) {
-      const extensionMatch = candidate.match(/\.([A-Za-z0-9]+)$/);
-      if (!extensionMatch || !extensionMatch[1]) {
-        return null;
-      }
-
-      const extension = extensionMatch[1].toLowerCase();
-      if (!this.allowedFileExtensions.has(extension)) {
-        return null;
-      }
+    if (hasDirectory) {
+      terminalLogger.debug(`🔗 [LINK] Path accepted (has directory): ${candidate}`);
+      return candidate;
     }
 
+    // For bare filenames, require a known extension
+    const extensionMatch = candidate.match(/\.([A-Za-z0-9]+)$/);
+    if (!extensionMatch || !extensionMatch[1]) {
+      terminalLogger.debug(`🔗 [LINK] Path rejected (no extension): ${candidate}`);
+      return null;
+    }
+
+    const extension = extensionMatch[1].toLowerCase();
+    if (!this.allowedFileExtensions.has(extension)) {
+      terminalLogger.debug(`🔗 [LINK] Path rejected (unknown extension .${extension}): ${candidate}`);
+      return null;
+    }
+
+    terminalLogger.debug(`🔗 [LINK] Path accepted (known extension): ${candidate}`);
     return candidate;
   }
 

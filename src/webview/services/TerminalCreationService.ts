@@ -42,6 +42,39 @@ interface Disposable {
  * Phase 3 Update: Integrated LifecycleController for proper resource management
  */
 export class TerminalCreationService implements Disposable {
+  // Static Set to track terminals currently being restored (blocks auto-save)
+  private static restoringTerminals = new Set<string>();
+
+  /**
+   * Mark a terminal as currently being restored (blocks auto-save)
+   * Called from ScrollbackMessageHandler at restoration start
+   */
+  public static markTerminalRestoring(terminalId: string): void {
+    TerminalCreationService.restoringTerminals.add(terminalId);
+    // eslint-disable-next-line no-console
+    console.log(`[AUTO-SAVE] 🔒 Marked terminal as restoring: ${terminalId}`);
+  }
+
+  /**
+   * Mark a terminal as restored (ends protection period after delay)
+   * Called from ScrollbackMessageHandler after restoration completes
+   */
+  public static markTerminalRestored(terminalId: string): void {
+    // 5 second protection period to allow restoration to settle
+    setTimeout(() => {
+      TerminalCreationService.restoringTerminals.delete(terminalId);
+      // eslint-disable-next-line no-console
+      console.log(`[AUTO-SAVE] 🔓 Restoration protection ended: ${terminalId}`);
+    }, 5000);
+  }
+
+  /**
+   * Check if a terminal is currently being restored
+   */
+  public static isTerminalRestoring(terminalId: string): boolean {
+    return TerminalCreationService.restoringTerminals.has(terminalId);
+  }
+
   private readonly splitManager: SplitManager;
   private readonly coordinator: IManagerCoordinator;
   private readonly eventRegistry: EventHandlerRegistry;
@@ -949,11 +982,25 @@ export class TerminalCreationService implements Disposable {
     let saveTimer: number | null = null;
 
     const pushScrollbackToExtension = (): void => {
+      // Skip auto-save if terminal is currently being restored
+      if (TerminalCreationService.isTerminalRestoring(terminalId)) {
+        // eslint-disable-next-line no-console
+        console.log(`[AUTO-SAVE] ⏭️ Skipped save during restoration: ${terminalId}`);
+        return;
+      }
+
       if (saveTimer) {
         window.clearTimeout(saveTimer);
       }
 
       saveTimer = window.setTimeout(() => {
+        // Double-check restoration status before actually saving
+        if (TerminalCreationService.isTerminalRestoring(terminalId)) {
+          // eslint-disable-next-line no-console
+          console.log(`[AUTO-SAVE] ⏭️ Skipped delayed save during restoration: ${terminalId}`);
+          return;
+        }
+
         try {
           const serialized = serializeAddon.serialize({ scrollback: 1000 });
           const lines = serialized.split('\n');

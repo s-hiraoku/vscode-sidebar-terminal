@@ -10,6 +10,7 @@
 import { Terminal } from '@xterm/xterm';
 import { webview as log } from '../../utils/logger';
 import { SPLIT_CONSTANTS } from '../constants/webview';
+import { TerminalCreationService } from '../services/TerminalCreationService';
 import {
   PartialTerminalSettings,
   WebViewFontSettings,
@@ -1796,6 +1797,10 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
   /**
    * 🔄 PUBLIC API: Restore terminal session from Extension data
+   *
+   * NOTE: This method now checks for duplicate restoration attempts
+   * using TerminalCreationService.isTerminalRestoring() to prevent
+   * overwriting previously restored scrollback data.
    */
   public async restoreSession(sessionData: {
     terminalId: string;
@@ -1804,9 +1809,29 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     sessionRestoreMessage?: string;
   }): Promise<boolean> {
     try {
-      log(`🔄 [RESTORATION] Starting session restore for terminal: ${sessionData.terminalId}`);
-
       const { terminalId, terminalName, scrollbackData, sessionRestoreMessage } = sessionData;
+
+      log(`🔄 [RESTORATION] Starting session restore for terminal: ${terminalId}`);
+
+      // 🔒 Check if terminal is already being restored or was recently restored
+      // This prevents duplicate restoration from different code paths
+      if (TerminalCreationService.isTerminalRestoring(terminalId)) {
+        // eslint-disable-next-line no-console
+        console.log(`[RESTORATION] ⏭️ Terminal ${terminalId} is already being restored, skipping`);
+        log(`⏭️ [RESTORATION] Terminal ${terminalId} is already being restored, skipping`);
+        return true; // Return true since restoration is already in progress
+      }
+
+      // Also check processedScrollbackRequests to prevent re-processing
+      if (this.processedScrollbackRequests.has(terminalId)) {
+        // eslint-disable-next-line no-console
+        console.log(`[RESTORATION] ⏭️ Terminal ${terminalId} scrollback already processed, skipping`);
+        log(`⏭️ [RESTORATION] Terminal ${terminalId} scrollback already processed, skipping`);
+        return true;
+      }
+
+      // 🔒 Mark terminal as restoring (blocks auto-save)
+      TerminalCreationService.markTerminalRestoring(terminalId);
 
       // 1. Create terminal if it doesn't exist
       let terminal = this.getTerminalInstance(terminalId);
@@ -1815,6 +1840,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
         const xtermInstance = await this.createTerminal(terminalId, terminalName);
         if (!xtermInstance) {
           log(`❌ [RESTORATION] Failed to create terminal for restore: ${terminalId}`);
+          TerminalCreationService.markTerminalRestored(terminalId);
           return false;
         }
 
@@ -1825,11 +1851,14 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
       if (!terminal?.terminal) {
         log(`❌ [RESTORATION] Terminal instance not available for restore: ${terminalId}`);
+        TerminalCreationService.markTerminalRestored(terminalId);
         return false;
       }
 
-      // 2. Clear existing content
-      terminal.terminal.clear();
+      // 2. Clear existing content (only if we're actually restoring data)
+      if (scrollbackData && scrollbackData.length > 0) {
+        terminal.terminal.clear();
+      }
 
       // 3. Restore session restore message if available
       if (sessionRestoreMessage) {
@@ -1855,6 +1884,12 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
         );
       }
 
+      // 🔒 Mark as processed to prevent duplicate restoration
+      this.processedScrollbackRequests.add(terminalId);
+
+      // 🔓 Mark restoration complete (starts 5s protection period countdown)
+      TerminalCreationService.markTerminalRestored(terminalId);
+
       // 5. Focus terminal if it's the active one
       if (this.getActiveTerminalId() === terminalId) {
         terminal.terminal.focus();
@@ -1864,6 +1899,8 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       return true;
     } catch (error) {
       log(`❌ [RESTORATION] Error during session restore:`, error);
+      // Even on error, mark as restored to prevent infinite retries
+      TerminalCreationService.markTerminalRestored(sessionData.terminalId);
       return false;
     }
   }

@@ -294,7 +294,16 @@ export class ExtensionPersistenceService implements vscode.Disposable {
       // Batch restore terminals with concurrency control
       const restoreResults = await this.batchRestoreTerminals(sessionData);
 
-      this.isRestoring = false;
+      // 🔒 Delay clearing isRestoring flag to provide protection period
+      // This prevents auto-save from immediately overwriting restored scrollback
+      // The 5 second delay allows:
+      // 1. Terminal restoration to complete
+      // 2. Shell initialization to settle
+      // 3. WebView-side protection period to synchronize
+      setTimeout(() => {
+        this.isRestoring = false;
+        log('✅ [EXT-PERSISTENCE] Restoration protection period ended (5s delay)');
+      }, 5000);
 
       const successCount = restoreResults.filter(r => r.success).length;
       log(`✅ [EXT-PERSISTENCE] Restored ${successCount}/${sessionData.terminals.length} terminals`);
@@ -308,11 +317,12 @@ export class ExtensionPersistenceService implements vscode.Disposable {
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       log(`❌ [EXT-PERSISTENCE] Restore failed: ${errorMsg}`);
-      return { success: false, message: errorMsg };
-    } finally {
-      // Always clear restoring flag so subsequent save/restore attempts are allowed
+      // On error, clear isRestoring flag immediately
       this.isRestoring = false;
+      return { success: false, message: errorMsg };
     }
+    // Note: Do NOT use finally block here - it would override the 5s setTimeout delay
+    // The isRestoring flag is cleared by setTimeout in the success path
   }
 
   /**

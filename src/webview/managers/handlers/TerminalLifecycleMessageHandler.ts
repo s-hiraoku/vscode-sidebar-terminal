@@ -10,6 +10,7 @@ import { MessageCommand } from '../messageTypes';
 import { MessageQueue } from '../../utils/MessageQueue';
 import { ManagerLogger } from '../../utils/ManagerLogger';
 import { hasProperty } from '../../../types/type-guards';
+import { TerminalCreationService } from '../../services/TerminalCreationService';
 
 interface AckTracker {
   attempt: number;
@@ -396,6 +397,10 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
       return;
     }
 
+    // Debug: Log output data for restored terminals
+    // eslint-disable-next-line no-console
+    console.log(`[OUTPUT-DEBUG] Received output for ${terminalId}: length=${data.length}, first100chars="${data.substring(0, 100).replace(/\x1b/g, '\\x1b').replace(/\r/g, '\\r').replace(/\n/g, '\\n')}"`);
+
     const gate = this.ensureOutputGate(terminalId);
     if (!gate.enabled) {
       gate.buffer.push(data);
@@ -538,6 +543,16 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
         availableTerminals: Array.from(coordinator.getAllTerminalInstances().keys()),
       });
       return;
+    }
+
+    // 🔒 Block ALL PTY output during restoration protection period
+    // Shell initialization sends prompts, clear sequences, etc. that would overwrite restored scrollback
+    // Instead of filtering specific sequences, we discard ALL output during the 5-second protection window
+    if (TerminalCreationService.isTerminalRestoring(terminalId)) {
+      // eslint-disable-next-line no-console
+      console.log(`[OUTPUT-BLOCK] ⏭️ Blocking ALL output during restoration: ${terminalId}, length=${data.length}`);
+      this.logger.info(`🛡️ [OUTPUT-BLOCK] Blocking output during restoration for: ${terminalId} (${data.length} chars)`);
+      return; // Discard all PTY output during restoration protection period
     }
 
     if (
