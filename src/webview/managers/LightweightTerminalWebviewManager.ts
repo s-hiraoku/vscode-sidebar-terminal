@@ -842,10 +842,22 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
   }
 
   public async removeTerminal(terminalId: string): Promise<boolean> {
+    log(`🗑️ [REMOVAL] Starting removal for terminal: ${terminalId}`);
+
     // CLI Agent状態もクリーンアップ
     this.cliAgentStateManager.removeTerminalState(terminalId);
 
-    // 🆕 SIMPLE: Update session state after terminal removal
+    // Step 1: タブを先に削除（UI即時反映のため）
+    if (this.terminalTabManager) {
+      log(`🗑️ [REMOVAL] Removing tab for: ${terminalId}`);
+      this.terminalTabManager.removeTab(terminalId);
+    }
+
+    // Step 2: ライフサイクルマネージャーから削除
+    const removed = await this.terminalLifecycleManager.removeTerminal(terminalId);
+    log(`🗑️ [REMOVAL] Lifecycle removal result for ${terminalId}: ${removed}`);
+
+    // Step 3: セッション更新（遅延実行）
     setTimeout(() => {
       if (this.webViewPersistenceService) {
         log(
@@ -859,10 +871,6 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       }
     }, 100); // Delay for DOM cleanup
 
-    const removed = await this.terminalLifecycleManager.removeTerminal(terminalId);
-    if (removed && this.terminalTabManager) {
-      this.terminalTabManager.removeTab(terminalId);
-    }
     return removed;
   }
 
@@ -1223,8 +1231,14 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
   // Compatibility methods for existing code
 
-  public handleTerminalRemovedFromExtension(terminalId: string): void {
-    this.removeTerminal(terminalId);
+  public async handleTerminalRemovedFromExtension(terminalId: string): Promise<void> {
+    // ✅ await を追加して確実に削除を完了させる
+    const removed = await this.removeTerminal(terminalId);
+    if (removed) {
+      log(`✅ Terminal cleanup confirmed for ${terminalId}`);
+    } else {
+      log(`⚠️ Terminal cleanup may have failed for ${terminalId}`);
+    }
   }
 
   public closeTerminal(terminalId?: string): void {

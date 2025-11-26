@@ -305,14 +305,35 @@ export class TerminalCreationService implements Disposable {
 
         // 🔧 CRITICAL FIX: Append container to DOM BEFORE opening terminal
         // xterm.js needs the element to be in the DOM to render correctly
+        // 🔧 FIX: Prefer terminals-wrapper over terminal-body for proper layout
         const bodyElement = document.getElementById('terminal-body');
-        if (bodyElement) {
-          bodyElement.appendChild(container);
-          terminalLogger.info(`✅ Container appended to DOM: ${terminalId}`);
-        } else {
+        if (!bodyElement) {
           terminalLogger.error(`❌ terminal-body not found, cannot append container: ${terminalId}`);
           throw new Error('terminal-body element not found');
         }
+
+        // 🔧 FIX: Create terminals-wrapper if it doesn't exist (for session restore timing)
+        let terminalsWrapper = document.getElementById('terminals-wrapper');
+        if (!terminalsWrapper) {
+          terminalLogger.info('🆕 Creating terminals-wrapper (not yet initialized)');
+          terminalsWrapper = document.createElement('div');
+          terminalsWrapper.id = 'terminals-wrapper';
+          terminalsWrapper.style.cssText = `
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            padding: 4px;
+            gap: 4px;
+            box-sizing: border-box;
+          `;
+          bodyElement.appendChild(terminalsWrapper);
+        }
+
+        terminalsWrapper.appendChild(container);
+        terminalLogger.info(`✅ Container appended to terminals-wrapper: ${terminalId}`);
 
         // Make container visible
         container.style.display = 'flex';

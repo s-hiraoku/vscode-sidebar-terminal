@@ -12,19 +12,19 @@
    🎯 VS Code Pattern: CSS class-based layout control
    ======================================== */
 
-/* Default: Horizontal layout (bottom panel) */
+/* Default: Vertical layout (stacked terminals) */
 #terminals-wrapper {
   display: flex;
-  flex-direction: row; /* Default: side-by-side for bottom panel */
+  flex-direction: column; /* Default: stacked for single terminal view */
   gap: 4px;
   width: 100%;
   height: 100%;
   overflow: hidden;
 }
 
-/* Vertical layout for sidebar */
-#terminals-wrapper.terminal-side-view {
-  flex-direction: column; /* Stacked for sidebar */
+/* Horizontal layout for split mode in bottom panel */
+#terminals-wrapper.terminal-split-horizontal {
+  flex-direction: row; /* Side-by-side for split mode */
 }
 
 /* ========================================

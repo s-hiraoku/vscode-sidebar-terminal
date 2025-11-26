@@ -407,6 +407,9 @@ export class TerminalTabManager implements TerminalTabEvents {
   }
 
   public syncTabs(tabInfos: TabSyncInfo[]): void {
+    log(`🔄 [SYNC-TABS] syncTabs called with ${tabInfos.length} tabs:`, tabInfos.map(t => t.id));
+    log(`🔄 [SYNC-TABS] Current tabs: ${this.tabs.size}:`, Array.from(this.tabs.keys()));
+
     if (tabInfos.length === 0 && this.tabs.size === 0) {
       return;
     }
@@ -418,17 +421,25 @@ export class TerminalTabManager implements TerminalTabEvents {
 
     const incomingIds = new Set(tabInfos.map((tab) => tab.id));
 
-    // Remove tabs that no longer exist
-    Array.from(this.tabs.keys()).forEach((tabId) => {
-      if (!incomingIds.has(tabId)) {
-        this.removeTab(tabId);
-      }
-    });
+    // 🔧 FIX: Only remove tabs if incoming state has terminals
+    // This prevents clearing all tabs when Extension state is stale or empty
+    if (tabInfos.length > 0) {
+      // Remove tabs that no longer exist
+      Array.from(this.tabs.keys()).forEach((tabId) => {
+        if (!incomingIds.has(tabId)) {
+          log(`🔄 [SYNC-TABS] Removing tab not in incoming: ${tabId}`);
+          this.removeTab(tabId);
+        }
+      });
+    } else {
+      log(`🔄 [SYNC-TABS] ⚠️ Incoming tabs empty, skipping removal to preserve existing tabs`);
+    }
 
     // Add or update tabs
     tabInfos.forEach((info) => {
       const existing = this.tabs.get(info.id);
       if (!existing) {
+        log(`🔄 [SYNC-TABS] Adding new tab: ${info.id}`);
         const tab: TerminalTab = {
           id: info.id,
           name: info.name,

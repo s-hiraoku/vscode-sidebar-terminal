@@ -102,17 +102,20 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
   public registerContainer(terminalId: string, container: HTMLElement): void {
     this.containerCache.set(terminalId, container);
     this.containerModes.set(terminalId, 'normal');
-    this.log(`Registered container: ${terminalId}`);
+    this.log(`✅ [REGISTER] Container registered: ${terminalId}, cache size: ${this.containerCache.size}`);
+    this.log(`✅ [REGISTER] All cached terminals: ${Array.from(this.containerCache.keys()).join(', ')}`);
   }
 
   /**
    * コンテナの登録を解除
    */
   public unregisterContainer(terminalId: string): void {
+    const existed = this.containerCache.has(terminalId);
     this.containerCache.delete(terminalId);
     this.containerModes.delete(terminalId);
     this.unregisterSplitWrapper(terminalId);
-    this.log(`Unregistered container: ${terminalId}`);
+    this.log(`🗑️ [UNREGISTER] Container unregistered: ${terminalId}, existed: ${existed}, cache size: ${this.containerCache.size}`);
+    this.log(`🗑️ [UNREGISTER] Remaining cached terminals: ${Array.from(this.containerCache.keys()).join(', ') || '(none)'}`);
   }
 
   /**
@@ -472,11 +475,19 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
 
     for (const terminalId of order) {
       const container = this.containerCache.get(terminalId);
-      if (container && container.parentElement === parentContainer) {
-        reorderedContainers.push(container);
-        this.log(`🔁 [REORDER]   Found container for terminal: ${terminalId}`);
+      if (container) {
+        // 🔧 FIX: Accept container if it exists in cache and is in the DOM
+        // Don't require exact parent match - containers may be in terminal-body or terminals-wrapper
+        if (document.contains(container)) {
+          reorderedContainers.push(container);
+          this.log(`🔁 [REORDER]   Found container for terminal: ${terminalId}`);
+        } else {
+          this.log(`🔁 [REORDER]   ⚠️ Container not in DOM: ${terminalId}`, 'warn');
+          // Remove stale cache entry
+          this.containerCache.delete(terminalId);
+        }
       } else {
-        this.log(`🔁 [REORDER]   ⚠️ Container not found or wrong parent: ${terminalId}`, 'warn');
+        this.log(`🔁 [REORDER]   ⚠️ Container not in cache: ${terminalId}`, 'warn');
       }
     }
 

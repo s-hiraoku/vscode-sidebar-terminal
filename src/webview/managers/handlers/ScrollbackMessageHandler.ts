@@ -455,10 +455,21 @@ export class ScrollbackMessageHandler implements IMessageHandler {
     console.log('[SCROLLBACK-RESTORE] Content to restore:', scrollbackContent.map(l => l.content));
 
     // Write each line to the terminal
-    for (const line of scrollbackContent) {
+    // Use writeln() for all lines EXCEPT the last one
+    // The last line uses write() to keep cursor on the same line (typically the prompt)
+    const lastIndex = scrollbackContent.length - 1;
+    for (let i = 0; i < scrollbackContent.length; i++) {
+      const line = scrollbackContent[i];
       // eslint-disable-next-line no-console
-      console.log(`[SCROLLBACK-RESTORE] Writing line: "${line.content.substring(0, 100)}..."`);
-      terminal.writeln(line.content);
+      console.log(`[SCROLLBACK-RESTORE] Writing line ${i}: "${line.content.substring(0, 100)}..."`);
+
+      if (i < lastIndex) {
+        // All lines except the last: add newline
+        terminal.writeln(line.content);
+      } else {
+        // Last line: don't add newline so cursor stays on the prompt line
+        terminal.write(line.content);
+      }
     }
 
     // eslint-disable-next-line no-console

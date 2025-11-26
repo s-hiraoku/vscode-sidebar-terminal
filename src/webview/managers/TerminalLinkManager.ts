@@ -1,18 +1,8 @@
 /**
  * Terminal Link Manager
  *
- * Extracted from TerminalLifecycleCoordinator to centralize link detection and handling.
- *
- * Responsibilities:
- * - File path detection and link creation
- * - URL detection and handling
- * - Link provider registration with xterm.js
- * - File opening with line/column navigation
- *
- * Extended BaseManager for consistent lifecycle management (Issue #216)
- *
- * @see openspec/changes/refactor-terminal-foundation/specs/split-lifecycle-manager/spec.md
- * @see docs/refactoring/issue-216-manager-standardization.md
+ * Handles file path and URL link detection in terminal output.
+ * Simplified implementation focusing on clarity and maintainability.
  */
 
 import { Terminal, type ILink, type IDisposable } from '@xterm/xterm';
@@ -21,387 +11,209 @@ import { terminalLogger } from '../utils/ManagerLogger';
 import { BaseManager } from './BaseManager';
 
 /**
- * Service responsible for managing terminal links (file paths and URLs)
- * Uses constructor injection pattern (Issue #216)
+ * Parsed file link with optional line and column numbers
+ */
+interface ParsedFileLink {
+  path: string;
+  line?: number;
+  column?: number;
+}
+
+/**
+ * Terminal Link Manager
+ *
+ * Detects clickable file paths in terminal output and opens them in the editor.
+ * URL links are handled separately by WebLinksAddon.
  */
 export class TerminalLinkManager extends BaseManager {
   private readonly coordinator: IManagerCoordinator;
-  private readonly linkProviderDisposables: Map<string, IDisposable> = new Map();
+  private readonly linkProviderDisposables = new Map<string, IDisposable>();
 
-  // File path detection regex patterns
-  // Improved patterns to handle more file path formats
-  // Unix absolute paths: /path/to/file.ext or /path/to/file.ext:10:5
-  // Windows absolute paths: C:\path\to\file.ext
-  // Relative paths: ./file.ext or ../path/to/file.ext
-  private readonly absoluteFilePathRegex =
-    /(?:\/[^\s:*?"<>|()[\]{}',;]+(?::\d+(?::\d+)?)?)|(?:[A-Za-z]:\\[^\s:*?"<>|]+)/g;
-  private readonly relativeFilePathRegex = /\.\.?\/[^\s:*?"<>|()[\]{}',;]+(?::\d+(?::\d+)?)?/g;
-  private readonly urlRegex = /(?:(?:https?):\/\/)[^\s"'<>]+/gi;
-
-  // Allowed file extensions for link detection
-  private readonly allowedFileExtensions = new Set([
-    'js',
-    'ts',
-    'jsx',
-    'tsx',
-    'json',
-    'md',
-    'txt',
-    'py',
-    'rb',
-    'java',
-    'c',
-    'cpp',
-    'h',
-    'cs',
-    'go',
-    'rs',
-    'php',
-    'html',
-    'css',
-    'scss',
-    'sass',
-    'less',
-    'xml',
-    'yaml',
-    'yml',
-    'toml',
-    'ini',
-    'cfg',
-    'conf',
-    'sh',
-    'bash',
-    'zsh',
-    'fish',
-    'ps1',
-    'gradle',
-    'sql',
-  ]);
+  // Simple regex to match file paths
+  // Matches: /path/to/file, ./relative/path, ../parent/path, C:\windows\path
+  private readonly filePathRegex = /(?:\.{0,2}\/|[A-Za-z]:\\)[^\s"'<>()[\]{}|]+/g;
 
   constructor(coordinator: IManagerCoordinator) {
     super('TerminalLinkManager', {
-      enableLogging: false, // Use terminalLogger instead
+      enableLogging: false,
       enablePerformanceTracking: true,
       enableErrorRecovery: true,
     });
     this.coordinator = coordinator;
   }
 
-  /**
-   * Initialize manager
-   */
   protected doInitialize(): void {
-    this.logger('TerminalLinkManager initialized');
-    terminalLogger.info('✅ TerminalLinkManager ready');
+    terminalLogger.info('TerminalLinkManager initialized');
   }
 
   /**
-   * Register link provider for file path detection
+   * Register link provider for a terminal
    */
   public registerTerminalLinkHandlers(terminal: Terminal, terminalId: string): void {
     try {
-      const existingDisposable = this.linkProviderDisposables.get(terminalId);
-      existingDisposable?.dispose();
+      // Dispose existing provider if any
+      this.linkProviderDisposables.get(terminalId)?.dispose();
 
       const disposable = terminal.registerLinkProvider({
-        provideLinks: (bufferLineNumber, callback) => {
-          try {
-            const line = terminal.buffer.active.getLine(bufferLineNumber - 1);
-            if (!line) {
-              callback([]);
-              return;
-            }
-
-          const text = line.translateToString(false);
-          const links = this.extractLinks(text, bufferLineNumber, terminalId);
+        provideLinks: (lineNumber, callback) => {
+          const links = this.findLinksInLine(terminal, lineNumber, terminalId);
           callback(links);
-        } catch (error) {
-          terminalLogger.warn('⚠️ Failed to analyze terminal links:', error);
-          callback([]);
-        }
         },
       });
 
       this.linkProviderDisposables.set(terminalId, disposable);
-      terminalLogger.debug(`Registered terminal link provider for ${terminalId}`);
+      terminalLogger.debug(`Link provider registered for ${terminalId}`);
     } catch (error) {
-      terminalLogger.warn(`⚠️ Unable to register link provider for ${terminalId}:`, error);
+      terminalLogger.warn(`Failed to register link provider for ${terminalId}:`, error);
     }
   }
 
   /**
-   * Extract file links from terminal line
+   * Find all file links in a terminal line
    */
-  private extractLinks(text: string, bufferLineNumber: number, terminalId: string): ILink[] {
-    const processed = new Set<string>();
-    const fileLinks = this.extractFileLinks(text, bufferLineNumber, terminalId, processed);
-    // URL links are handled by WebLinksAddon to avoid duplicate overlays
-    return fileLinks;
+  private findLinksInLine(terminal: Terminal, lineNumber: number, terminalId: string): ILink[] {
+    try {
+      const line = terminal.buffer.active.getLine(lineNumber - 1);
+      if (!line) return [];
+
+      const text = line.translateToString(false);
+      return this.extractFileLinks(text, lineNumber, terminalId);
+    } catch (error) {
+      terminalLogger.warn('Error finding links:', error);
+      return [];
+    }
   }
 
-  private extractFileLinks(
-    text: string,
-    bufferLineNumber: number,
-    terminalId: string,
-    processed: Set<string>
-  ): ILink[] {
-    const matches: ILink[] = [];
+  /**
+   * Extract file links from text
+   */
+  private extractFileLinks(text: string, lineNumber: number, terminalId: string): ILink[] {
+    const links: ILink[] = [];
+    const seen = new Set<string>();
 
-    const evaluateRegex = (regex: RegExp) => {
-      regex.lastIndex = 0;
-      let match: RegExpExecArray | null;
-      while ((match = regex.exec(text)) !== null) {
-        const raw = match[0];
-        const sanitizedResult = this.sanitizeLinkText(raw);
-        if (!sanitizedResult) {
-          continue;
-        }
-
-        const { text: sanitizedText, leadingOffset } = sanitizedResult;
-        const key = `${match.index + leadingOffset}:${sanitizedText}`;
-        if (processed.has(key)) {
-          continue;
-        }
-        processed.add(key);
-
-        const { path: candidatePath, line, column } = this.parseFileLink(sanitizedText);
-        if (!candidatePath) {
-          continue;
-        }
-
-        const absoluteIndex = match.index + leadingOffset;
-        const startColumn = absoluteIndex + 1;
-        const endColumn = startColumn + sanitizedText.length;
-
-        matches.push({
-          text: sanitizedText,
-          range: {
-            start: { x: startColumn, y: bufferLineNumber },
-            end: { x: endColumn, y: bufferLineNumber },
-          },
-          activate: () => this.openFileFromTerminal(candidatePath, line, column, terminalId),
-        });
-      }
-    };
-
-    evaluateRegex(this.absoluteFilePathRegex);
-    evaluateRegex(this.relativeFilePathRegex);
-
-    return matches;
-  }
-
-  private extractUrlLinks(
-    text: string,
-    bufferLineNumber: number,
-    terminalId: string,
-    processed: Set<string>
-  ): ILink[] {
-    const matches: ILink[] = [];
-    this.urlRegex.lastIndex = 0;
-
+    this.filePathRegex.lastIndex = 0;
     let match: RegExpExecArray | null;
-    while ((match = this.urlRegex.exec(text)) !== null) {
-      const sanitizedResult = this.sanitizeLinkText(match[0]);
-      if (!sanitizedResult) {
-        continue;
-      }
 
-      const { text: sanitizedUrl, leadingOffset } = sanitizedResult;
-      if (!/^https?:\/\//i.test(sanitizedUrl)) {
-        continue;
-      }
+    while ((match = this.filePathRegex.exec(text)) !== null) {
+      const raw = match[0];
+      const cleaned = this.cleanLinkText(raw);
+      if (!cleaned) continue;
 
-      const key = `${match.index + leadingOffset}:${sanitizedUrl}`;
-      if (processed.has(key)) {
-        continue;
-      }
-      processed.add(key);
+      // Avoid duplicates
+      const key = `${match.index}:${cleaned}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
 
-      const absoluteIndex = match.index + leadingOffset;
-      const startColumn = absoluteIndex + 1;
-      const endColumn = startColumn + sanitizedUrl.length;
+      // Parse path and optional line:column
+      const parsed = this.parseFileLink(cleaned);
+      if (!parsed) continue;
 
-      matches.push({
-        text: sanitizedUrl,
+      // Calculate link position
+      const startX = match.index + 1;
+      const endX = startX + cleaned.length;
+
+      links.push({
+        text: cleaned,
         range: {
-          start: { x: startColumn, y: bufferLineNumber },
-          end: { x: endColumn, y: bufferLineNumber },
+          start: { x: startX, y: lineNumber },
+          end: { x: endX, y: lineNumber },
         },
-        activate: () => this.openUrlFromTerminal(sanitizedUrl, terminalId),
+        activate: () => this.openFile(parsed, terminalId),
       });
     }
 
-    return matches;
+    return links;
   }
 
   /**
-   * Sanitize link text by removing surrounding quotes and brackets
+   * Clean trailing punctuation and brackets from link text
    */
-  private sanitizeLinkText(raw: string): { text: string; leadingOffset: number } | null {
-    if (!raw) {
-      return null;
-    }
+  private cleanLinkText(text: string): string | null {
+    if (!text) return null;
 
-    let startOffset = 0;
-    let endOffset = raw.length;
+    // Remove trailing punctuation that's likely not part of the path
+    let cleaned = text.replace(/[,;:.'"`)\]}>]+$/, '');
 
-    const trimChars = new Set([
-      "'",
-      '"',
-      '`',
-      '(',
-      ')',
-      '[',
-      ']',
-      '<',
-      '>',
-      '{',
-      '}',
-      ' ',
-      ',',
-      '.',
-      ';',
-    ]);
-
-    while (startOffset < endOffset) {
-      const char = raw[startOffset];
-      if (!char || !trimChars.has(char)) {
+    // Handle matched brackets/quotes at the end
+    const brackets: Record<string, string> = { ')': '(', ']': '[', '}': '{', '>': '<' };
+    while (cleaned.length > 0) {
+      const lastChar = cleaned[cleaned.length - 1];
+      const openChar = brackets[lastChar];
+      if (openChar && !cleaned.includes(openChar)) {
+        cleaned = cleaned.slice(0, -1);
+      } else {
         break;
       }
-      startOffset++;
     }
 
-    while (endOffset > startOffset) {
-      const char = raw[endOffset - 1];
-      if (!char || !trimChars.has(char)) {
-        break;
-      }
-      endOffset--;
-    }
-
-    if (startOffset >= endOffset) {
-      return null;
-    }
-
-    const text = raw.substring(startOffset, endOffset);
-    return text ? { text, leadingOffset: startOffset } : null;
+    return cleaned || null;
   }
 
   /**
-   * Parse file link to extract path, line number, and column number
+   * Parse file path with optional :line:column suffix
+   *
+   * Examples:
+   *   /path/to/file.ts        -> { path: '/path/to/file.ts' }
+   *   /path/to/file.ts:10     -> { path: '/path/to/file.ts', line: 10 }
+   *   /path/to/file.ts:10:5   -> { path: '/path/to/file.ts', line: 10, column: 5 }
+   *   C:\path\file.ts         -> { path: 'C:\path\file.ts' }
    */
-  private parseFileLink(linkText: string): { path: string | null; line?: number; column?: number } {
-    if (!linkText || linkText.includes('://')) {
-      return { path: null };
-    }
+  private parseFileLink(text: string): ParsedFileLink | null {
+    // Skip URLs
+    if (text.includes('://')) return null;
 
-    let candidate = linkText;
-    let lineNumber: number | undefined;
-    let columnNumber: number | undefined;
+    // Match path with optional :line:column at the end
+    const match = text.match(/^(.+?)(?::(\d+)(?::(\d+))?)?$/);
+    if (!match || !match[1]) return null;
 
-    let searchEnd = candidate.length;
-    const numericSegments: number[] = [];
+    const path = match[1];
 
-    while (searchEnd > 0) {
-      const colonIndex = candidate.lastIndexOf(':', searchEnd - 1);
-      if (colonIndex <= 0) {
-        break;
-      }
-
-      const numericPart = candidate.substring(colonIndex + 1, searchEnd);
-      if (!/^\d+$/.test(numericPart)) {
-        break;
-      }
-
-      if (colonIndex === 1 && candidate[0] && /^[A-Za-z]$/.test(candidate[0])) {
-        break;
-      }
-
-      numericSegments.unshift(Number.parseInt(numericPart, 10));
-      searchEnd = colonIndex;
-    }
-
-    if (numericSegments.length > 0) {
-      lineNumber = numericSegments[0];
-      if (numericSegments.length > 1) {
-        columnNumber = numericSegments[1];
-      }
-      candidate = candidate.substring(0, searchEnd);
-    }
-
-    candidate = candidate.trim();
-    if (!candidate) {
-      return { path: null };
-    }
+    // Validate it looks like a file path
+    if (!this.isValidFilePath(path)) return null;
 
     return {
-      path: this.isSupportedFilePath(candidate) ? candidate : null,
-      line: lineNumber,
-      column: columnNumber,
+      path,
+      line: match[2] ? parseInt(match[2], 10) : undefined,
+      column: match[3] ? parseInt(match[3], 10) : undefined,
     };
   }
 
   /**
-   * Check if candidate path is a supported file path
-   * Returns the path if it looks like a valid file path, null otherwise
+   * Check if a string looks like a valid file path
    */
-  private isSupportedFilePath(candidate: string | null): string | null {
-    if (!candidate) {
-      return null;
-    }
+  private isValidFilePath(path: string): boolean {
+    // Must start with /, ./, ../, or drive letter
+    const hasPathPrefix = /^(\/|\.\.?\/|[A-Za-z]:\\)/.test(path);
+    if (!hasPathPrefix) return false;
 
-    // If it has a directory component, accept it as a file path
-    const hasDirectory = candidate.includes('/') || candidate.includes('\\');
-    if (hasDirectory) {
-      terminalLogger.debug(`🔗 [LINK] Path accepted (has directory): ${candidate}`);
-      return candidate;
-    }
-
-    // For bare filenames, require a known extension
-    const extensionMatch = candidate.match(/\.([A-Za-z0-9]+)$/);
-    if (!extensionMatch || !extensionMatch[1]) {
-      terminalLogger.debug(`🔗 [LINK] Path rejected (no extension): ${candidate}`);
-      return null;
-    }
-
-    const extension = extensionMatch[1].toLowerCase();
-    if (!this.allowedFileExtensions.has(extension)) {
-      terminalLogger.debug(`🔗 [LINK] Path rejected (unknown extension .${extension}): ${candidate}`);
-      return null;
-    }
-
-    terminalLogger.debug(`🔗 [LINK] Path accepted (known extension): ${candidate}`);
-    return candidate;
+    // Must have at least one path separator
+    const hasPathSeparator = path.includes('/') || path.includes('\\');
+    return hasPathSeparator;
   }
 
   /**
-   * Open URL from terminal
+   * Open a file in the editor
    */
-  public openUrlFromTerminal(url: string, terminalId: string): void {
+  private openFile(link: ParsedFileLink, terminalId: string): void {
     this.coordinator?.postMessageToExtension({
       command: 'openTerminalLink',
-      linkType: 'url',
-      url,
+      linkType: 'file',
+      filePath: link.path,
+      lineNumber: link.line,
+      columnNumber: link.column,
       terminalId,
       timestamp: Date.now(),
     });
   }
 
   /**
-   * Open file from terminal with optional line and column navigation
+   * Open a URL in the browser (kept for compatibility)
    */
-  private openFileFromTerminal(
-    filePath: string,
-    lineNumber: number | undefined,
-    columnNumber: number | undefined,
-    terminalId: string
-  ): void {
+  public openUrlFromTerminal(url: string, terminalId: string): void {
     this.coordinator?.postMessageToExtension({
       command: 'openTerminalLink',
-      linkType: 'file',
-      filePath,
-      lineNumber,
-      columnNumber,
+      linkType: 'url',
+      url,
       terminalId,
       timestamp: Date.now(),
     });
@@ -415,7 +227,6 @@ export class TerminalLinkManager extends BaseManager {
     if (disposable) {
       disposable.dispose();
       this.linkProviderDisposables.delete(terminalId);
-      terminalLogger.debug(`Unregistered link provider for terminal: ${terminalId}`);
     }
   }
 
@@ -426,19 +237,9 @@ export class TerminalLinkManager extends BaseManager {
     return Array.from(this.linkProviderDisposables.keys());
   }
 
-  /**
-   * Cleanup and dispose all link providers
-   * Called by BaseManager.dispose() for cleanup
-   */
   protected doDispose(): void {
-    try {
-      this.linkProviderDisposables.forEach((disposable) => {
-        disposable.dispose();
-      });
-      this.linkProviderDisposables.clear();
-      terminalLogger.info('🧹 TerminalLinkManager disposed');
-    } catch (error) {
-      terminalLogger.error('Error disposing TerminalLinkManager:', error);
-    }
+    this.linkProviderDisposables.forEach((d) => d.dispose());
+    this.linkProviderDisposables.clear();
+    terminalLogger.info('TerminalLinkManager disposed');
   }
 }

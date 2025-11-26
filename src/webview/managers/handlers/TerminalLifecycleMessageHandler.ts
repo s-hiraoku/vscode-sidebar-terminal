@@ -236,33 +236,37 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
   /**
    * Handle terminal removed message from extension
    */
-  private handleTerminalRemoved(
+  private async handleTerminalRemoved(
     msg: MessageCommand,
     coordinator: IManagerCoordinator
-  ): void {
+  ): Promise<void> {
     const terminalId = msg.terminalId as string;
     if (terminalId) {
       this.logger.info(`Terminal removed from extension: ${terminalId}`);
-      this.handleTerminalRemovedFromExtension(terminalId, coordinator);
+      // ✅ await で削除完了を待つ
+      await this.handleTerminalRemovedFromExtension(terminalId, coordinator);
       this.outputGates.delete(terminalId);
       this.clearAckTracker(terminalId);
+      this.logger.info(`✅ Cleanup completed for ${terminalId}`);
     }
   }
 
   /**
    * Handle terminal removed from extension - clean up UI
    */
-  private handleTerminalRemovedFromExtension(
+  private async handleTerminalRemovedFromExtension(
     terminalId: string,
     coordinator: IManagerCoordinator
-  ): void {
+  ): Promise<void> {
     this.logger.info(`Handling terminal removal from extension: ${terminalId}`);
 
     if (
       'handleTerminalRemovedFromExtension' in coordinator &&
       typeof coordinator.handleTerminalRemovedFromExtension === 'function'
     ) {
-      coordinator.handleTerminalRemovedFromExtension(terminalId);
+      // ✅ await して完了を待つ
+      await coordinator.handleTerminalRemovedFromExtension(terminalId);
+      this.logger.info(`✅ Terminal removal completed: ${terminalId}`);
     } else {
       this.logger.warn('handleTerminalRemovedFromExtension method not found on coordinator');
     }
