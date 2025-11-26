@@ -285,12 +285,25 @@ export class HeaderFactory {
       });
     }
 
-    // Add close button click handler
+    // Add close button click handler with double-click protection
     if (config.onCloseClick) {
+      let isClosing = false;
       closeButton.addEventListener('click', (event: MouseEvent) => {
         event.stopPropagation(); // Prevent header click event
-        config.onCloseClick!(terminalId);
+        event.preventDefault();
+
+        // 🔧 FIX: Prevent double-click from triggering multiple deletions
+        if (isClosing) {
+          log(`🗑️ [HeaderFactory] Close already in progress, ignoring: ${terminalId}`);
+          return;
+        }
+        isClosing = true;
+
         log(`🗑️ [HeaderFactory] Close button clicked for terminal: ${terminalId}`);
+        config.onCloseClick!(terminalId);
+
+        // Reset after a short delay to allow re-click if needed
+        setTimeout(() => { isClosing = false; }, 500);
       });
     }
 

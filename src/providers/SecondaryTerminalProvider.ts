@@ -7,17 +7,9 @@ import { TerminalErrorHandler } from '../utils/feedback';
 import { provider as log } from '../utils/logger';
 import { PersistenceMessageHandler } from '../handlers/PersistenceMessageHandler';
 import { TerminalInitializationCoordinator } from './TerminalInitializationCoordinator';
-import {
-  hasTerminalId,
-  hasResizeParams,
-  hasSettings,
-  hasInputData,
-  hasDirection,
-} from '../types/type-guards';
+import { hasSettings } from '../types/type-guards';
 import { WebViewHtmlGenerationService } from '../services/webview/WebViewHtmlGenerationService';
 import { TelemetryService } from '../services/TelemetryService';
-import { getUnifiedConfigurationService } from '../config/UnifiedConfigurationService';
-import { ITerminalProfile } from '../types/profiles';
 
 // New refactored services (existing)
 import {
@@ -44,6 +36,7 @@ import {
   TerminalInitializationWatchdog,
   WatchdogOptions,
 } from './services/TerminalInitializationWatchdog';
+import { TerminalCommandHandlers } from './services/TerminalCommandHandlers';
 
 export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vscode.Disposable {
   public static readonly viewType = 'secondaryTerminal';
@@ -90,6 +83,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   private readonly _messageRouter: MessageRoutingFacade;
   private readonly _orchestrator: InitializationOrchestrator;
   private readonly _telemetryService?: TelemetryService;
+  private readonly _terminalCommandHandlers: TerminalCommandHandlers;
   private readonly _terminalInitStateMachine = new TerminalInitializationStateMachine();
   private readonly _terminalInitWatchdog = new TerminalInitializationWatchdog((terminalId, info) =>
     this._handleInitializationTimeout(terminalId, info.attempt, info.isFinalAttempt)
@@ -177,6 +171,14 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       this._lifecycleManager,
       this._messageRouter
     );
+
+    // Initialize terminal command handlers
+    this._terminalCommandHandlers = new TerminalCommandHandlers({
+      terminalManager: this._terminalManager,
+      communicationService: this._communicationService,
+      linkResolver: this._linkResolver,
+      getSplitDirection: () => this._determineSplitDirection(),
+    });
 
     log('🎨 [PROVIDER] NEW Facade pattern services initialized (Issue #214)');
     log('✅ [PROVIDER] SecondaryTerminalProvider constructed with all services');
@@ -337,26 +339,37 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
   private _initializeMessageHandlers(): void {
     const handlers = [
+      // UI handlers
       { command: 'webviewReady', handler: (msg: WebviewMessage) => this._handleWebviewReady(msg), category: 'ui' as const },
       { command: TERMINAL_CONSTANTS?.COMMANDS?.READY, handler: (msg: WebviewMessage) => this._handleWebviewReady(msg), category: 'ui' as const },
-      { command: 'getSettings', handler: async () => await this._handleGetSettings(), category: 'settings' as const },
-      { command: 'focusTerminal', handler: async (msg: WebviewMessage) => await this._handleFocusTerminal(msg), category: 'terminal' as const },
-      { command: TERMINAL_CONSTANTS?.COMMANDS?.FOCUS_TERMINAL, handler: async (msg: WebviewMessage) => await this._handleFocusTerminal(msg), category: 'terminal' as const },
-      { command: 'splitTerminal', handler: (msg: WebviewMessage) => this._handleSplitTerminal(msg), category: 'terminal' as const },
-      { command: 'createTerminal', handler: async (msg: WebviewMessage) => await this._handleCreateTerminal(msg), category: 'terminal' as const },
-      { command: TERMINAL_CONSTANTS?.COMMANDS?.CREATE_TERMINAL, handler: async (msg: WebviewMessage) => await this._handleCreateTerminal(msg), category: 'terminal' as const },
-      { command: TERMINAL_CONSTANTS?.COMMANDS?.INPUT, handler: (msg: WebviewMessage) => this._handleTerminalInput(msg), category: 'terminal' as const },
-      { command: TERMINAL_CONSTANTS?.COMMANDS?.RESIZE, handler: (msg: WebviewMessage) => this._handleTerminalResize(msg), category: 'terminal' as const },
-      { command: 'getTerminalProfiles', handler: async () => await this._handleGetTerminalProfiles(), category: 'terminal' as const },
-      { command: 'killTerminal', handler: async (msg: WebviewMessage) => await this._handleKillTerminal(msg), category: 'terminal' as const },
-      { command: 'deleteTerminal', handler: async (msg: WebviewMessage) => await this._handleDeleteTerminal(msg), category: 'terminal' as const },
-      { command: 'updateSettings', handler: async (msg: WebviewMessage) => await this._handleUpdateSettings(msg), category: 'settings' as const },
       { command: 'reportPanelLocation', handler: async (msg: WebviewMessage) => await this._handleReportPanelLocation(msg), category: 'ui' as const },
-      { command: 'terminalClosed', handler: async (msg: WebviewMessage) => await this._handleTerminalClosed(msg), category: 'terminal' as const },
-      { command: 'openTerminalLink', handler: async (msg: WebviewMessage) => await this._handleOpenTerminalLink(msg), category: 'terminal' as const },
-      { command: 'reorderTerminals', handler: async (msg: WebviewMessage) => await this._handleReorderTerminals(msg), category: 'terminal' as const },
-      { command: 'requestInitialTerminal', handler: async (msg: WebviewMessage) => await this._handleRequestInitialTerminal(msg), category: 'terminal' as const },
+
+      // Settings handlers
+      { command: 'getSettings', handler: async () => await this._handleGetSettings(), category: 'settings' as const },
+      { command: 'updateSettings', handler: async (msg: WebviewMessage) => await this._handleUpdateSettings(msg), category: 'settings' as const },
+
+      // Terminal handlers (delegated to TerminalCommandHandlers)
+      { command: 'focusTerminal', handler: async (msg: WebviewMessage) => await this._terminalCommandHandlers.handleFocusTerminal(msg), category: 'terminal' as const },
+      { command: TERMINAL_CONSTANTS?.COMMANDS?.FOCUS_TERMINAL, handler: async (msg: WebviewMessage) => await this._terminalCommandHandlers.handleFocusTerminal(msg), category: 'terminal' as const },
+      { command: 'splitTerminal', handler: (msg: WebviewMessage) => this._terminalCommandHandlers.handleSplitTerminal(msg), category: 'terminal' as const },
+      { command: 'createTerminal', handler: async (msg: WebviewMessage) => await this._terminalCommandHandlers.handleCreateTerminal(msg), category: 'terminal' as const },
+      { command: TERMINAL_CONSTANTS?.COMMANDS?.CREATE_TERMINAL, handler: async (msg: WebviewMessage) => await this._terminalCommandHandlers.handleCreateTerminal(msg), category: 'terminal' as const },
+      { command: TERMINAL_CONSTANTS?.COMMANDS?.INPUT, handler: (msg: WebviewMessage) => this._terminalCommandHandlers.handleTerminalInput(msg), category: 'terminal' as const },
+      { command: TERMINAL_CONSTANTS?.COMMANDS?.RESIZE, handler: (msg: WebviewMessage) => this._terminalCommandHandlers.handleTerminalResize(msg), category: 'terminal' as const },
+      { command: 'getTerminalProfiles', handler: async () => await this._terminalCommandHandlers.handleGetTerminalProfiles(), category: 'terminal' as const },
+      { command: 'killTerminal', handler: async (msg: WebviewMessage) => await this._terminalCommandHandlers.handleKillTerminal(msg), category: 'terminal' as const },
+      { command: 'deleteTerminal', handler: async (msg: WebviewMessage) => await this._terminalCommandHandlers.handleDeleteTerminal(msg), category: 'terminal' as const },
+      { command: 'terminalClosed', handler: async (msg: WebviewMessage) => await this._terminalCommandHandlers.handleTerminalClosed(msg), category: 'terminal' as const },
+      { command: 'openTerminalLink', handler: async (msg: WebviewMessage) => await this._terminalCommandHandlers.handleOpenTerminalLink(msg), category: 'terminal' as const },
+      { command: 'reorderTerminals', handler: async (msg: WebviewMessage) => await this._terminalCommandHandlers.handleReorderTerminals(msg), category: 'terminal' as const },
+      { command: 'requestInitialTerminal', handler: async (msg: WebviewMessage) => await this._terminalCommandHandlers.handleRequestInitialTerminal(msg), category: 'terminal' as const },
       { command: 'terminalInitializationComplete', handler: async (msg: WebviewMessage) => await this._handleTerminalInitializationComplete(msg), category: 'terminal' as const },
+      { command: 'terminalReady', handler: async (msg: WebviewMessage) => await this._handleTerminalReady(msg), category: 'terminal' as const },
+      { command: 'requestClipboardContent', handler: async (msg: WebviewMessage) => await this._terminalCommandHandlers.handleClipboardRequest(msg), category: 'terminal' as const },
+      { command: 'copyToClipboard', handler: async (msg: WebviewMessage) => await this._terminalCommandHandlers.handleCopyToClipboard(msg), category: 'terminal' as const },
+      { command: 'switchAiAgent', handler: async (msg: WebviewMessage) => await this._terminalCommandHandlers.handleSwitchAiAgent(msg), category: 'terminal' as const },
+
+      // Persistence handlers
       { command: 'persistenceSaveSession', handler: async (msg: WebviewMessage) => await this._handlePersistenceMessage(msg), category: 'persistence' as const },
       { command: 'persistenceRestoreSession', handler: async (msg: WebviewMessage) => await this._handlePersistenceMessage(msg), category: 'persistence' as const },
       { command: 'persistenceClearSession', handler: async (msg: WebviewMessage) => await this._handlePersistenceMessage(msg), category: 'persistence' as const },
@@ -364,71 +377,15 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       { command: 'terminalSerializationRestoreRequest', handler: async (msg: WebviewMessage) => await this._handleLegacyPersistenceMessage(msg), category: 'persistence' as const },
       { command: 'pushScrollbackData', handler: async (msg: WebviewMessage) => await this._handlePushScrollbackData(msg), category: 'persistence' as const },
       { command: 'scrollbackDataCollected', handler: async (msg: WebviewMessage) => await this._handleScrollbackDataCollected(msg), category: 'persistence' as const },
-      { command: 'terminalReady', handler: async (msg: WebviewMessage) => await this._handleTerminalReady(msg), category: 'terminal' as const },
+
+      // Debug handlers
       { command: 'htmlScriptTest', handler: (msg: WebviewMessage) => this._handleHtmlScriptTest(msg), category: 'debug' as const },
       { command: 'timeoutTest', handler: (msg: WebviewMessage) => this._handleTimeoutTest(msg), category: 'debug' as const },
       { command: 'test', handler: (msg: WebviewMessage) => this._handleDebugTest(msg), category: 'debug' as const },
-      { command: 'requestClipboardContent', handler: async (msg: WebviewMessage) => await this._handleClipboardRequest(msg), category: 'terminal' as const },
-      { command: 'copyToClipboard', handler: async (msg: WebviewMessage) => await this._handleCopyToClipboard(msg), category: 'terminal' as const },
-      { command: 'switchAiAgent', handler: async (msg: WebviewMessage) => await this._handleSwitchAiAgent(msg), category: 'terminal' as const },
     ];
 
     this._messageRouter.registerHandlers(handlers);
     log('✅ [PROVIDER] Message handlers initialized via MessageRoutingFacade');
-  }
-
-  private async _handleOpenTerminalLink(message: WebviewMessage): Promise<void> {
-    log(`🔗 [PROVIDER] openTerminalLink received: type=${message.linkType} url=${message.url ?? ''} file=${message.filePath ?? ''} terminal=${message.terminalId ?? ''}`);
-    await this._linkResolver.handleOpenTerminalLink(message);
-  }
-
-  private async _handleGetTerminalProfiles(): Promise<void> {
-    try {
-      const configService = getUnifiedConfigurationService();
-      const profilesConfig = configService.getTerminalProfilesConfig();
-
-      const platform: 'windows' | 'linux' | 'osx' =
-        process.platform === 'win32'
-          ? 'windows'
-          : process.platform === 'darwin'
-            ? 'osx'
-            : 'linux';
-
-      const platformProfiles = profilesConfig.profiles[platform] || {};
-      const defaultProfileId = profilesConfig.defaultProfiles[platform];
-
-      const profiles: ITerminalProfile[] = Object.entries(platformProfiles).map(([id, profile]) => {
-        const normalized = profile as any;
-        return {
-          id,
-          name: normalized?.name ?? id,
-          description: normalized?.description,
-          icon: normalized?.icon,
-          path: normalized?.path ?? '',
-          args: normalized?.args,
-          env: normalized?.env,
-          cwd: normalized?.cwd,
-          color: normalized?.color,
-          isDefault: defaultProfileId ? defaultProfileId === id : Boolean(normalized?.isDefault),
-          hidden: normalized?.hidden,
-          source: normalized?.source,
-        } as ITerminalProfile;
-      });
-
-      await this._sendMessage({
-        command: 'profilesUpdated' as const,
-        profiles,
-        defaultProfileId: defaultProfileId ?? profiles.find((p) => p.isDefault)?.id ?? null,
-      } as unknown as WebviewMessage);
-    } catch (error) {
-      log('❌ [PROVIDER] Failed to fetch terminal profiles:', error);
-      await this._sendMessage({
-        command: 'profilesUpdated' as const,
-        profiles: [],
-        defaultProfileId: null,
-        error: (error as Error).message ?? String(error),
-      } as unknown as WebviewMessage);
-    }
   }
 
   private async _handlePushScrollbackData(message: WebviewMessage): Promise<void> {
@@ -490,24 +447,6 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       if (typeof handler === 'function') {
         handler.call(this._extensionPersistenceService, terminalId);
       }
-    }
-  }
-
-  private async _handleReorderTerminals(message: WebviewMessage): Promise<void> {
-    const order = Array.isArray(message.order)
-      ? (message.order.filter((id): id is string => typeof id === 'string' && id.length > 0))
-      : [];
-
-    if (order.length === 0) {
-      log('🔁 [PROVIDER] Reorder request missing valid order array');
-      return;
-    }
-
-    try {
-      log('🔁 [PROVIDER] Applying terminal reorder:', order);
-      this._terminalManager.reorderTerminals(order);
-    } catch (error) {
-      log('❌ [PROVIDER] Failed to reorder terminals:', error);
     }
   }
 
@@ -579,48 +518,6 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     }
   }
 
-  private async _handleFocusTerminal(message: WebviewMessage): Promise<void> {
-    log('🎯 [DEBUG] ========== FOCUS TERMINAL COMMAND RECEIVED (router) ==========');
-    if (!hasTerminalId(message)) {
-      log('❌ [DEBUG] No terminal ID provided for focusTerminal');
-      return;
-    }
-
-    try {
-      const currentActive = this._terminalManager.getActiveTerminalId();
-      log(`🔍 [DEBUG] Current active terminal: ${currentActive}`);
-      log(`🔍 [DEBUG] Requested active terminal: ${message.terminalId}`);
-      this._terminalManager.setActiveTerminal(message.terminalId);
-      const newActive = this._terminalManager.getActiveTerminalId();
-      log(`🔍 [DEBUG] Verified active terminal after update: ${newActive}`);
-
-      if (newActive === message.terminalId) {
-        log(`✅ [DEBUG] Active terminal successfully updated to: ${message.terminalId}`);
-      } else {
-        log(
-          `❌ [DEBUG] Active terminal update failed. Expected: ${message.terminalId}, Got: ${newActive}`
-        );
-      }
-    } catch (error) {
-      log(`❌ [DEBUG] Error setting active terminal:`, error);
-    }
-  }
-
-  private _handleSplitTerminal(message: WebviewMessage): void {
-    log('🔀 [DEBUG] Splitting terminal from webview (router)...');
-    const direction = hasDirection(message) ? message.direction : undefined;
-    try {
-      if (direction) {
-        this.splitTerminal(direction);
-      } else {
-        this.splitTerminal();
-      }
-    } catch (error) {
-      log('❌ [ERROR] Failed to split terminal:', error);
-      TerminalErrorHandler.handleWebviewError(error);
-    }
-  }
-
   private _handleHtmlScriptTest(message: WebviewMessage): void {
     log('🔥 [DEBUG] ========== HTML INLINE SCRIPT TEST MESSAGE RECEIVED ==========');
     log('🔥 [DEBUG] HTML script communication is working!');
@@ -653,44 +550,6 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       terminalCount: terminalCount,
       timestamp: Date.now(),
     });
-  }
-
-  private async _handleCreateTerminal(_message: WebviewMessage): Promise<void> {
-    log('🎨 [PROVIDER] Creating new terminal from WebView request');
-    try {
-      const terminalId = this._terminalManager.createTerminal();
-      log(`✅ [PROVIDER] Terminal created: ${terminalId}`);
-
-      this._terminalManager.setActiveTerminal(terminalId);
-      await this._sendMessage({
-        command: 'stateUpdate',
-        state: this._terminalManager.getCurrentState(),
-      });
-    } catch (error) {
-      log('❌ [ERROR] Failed to create terminal:', error);
-      TerminalErrorHandler.handleWebviewError(error);
-    }
-  }
-
-  private async _handleRequestInitialTerminal(_message: WebviewMessage): Promise<void> {
-    log('🎯 [PROVIDER] Initial terminal requested by WebView');
-    try {
-      const currentTerminals = this._terminalManager.getTerminals();
-      if (currentTerminals.length === 0) {
-        const terminalId = this._terminalManager.createTerminal();
-        this._terminalManager.setActiveTerminal(terminalId);
-        log(`✅ [PROVIDER] Initial terminal created: ${terminalId}`);
-      } else {
-        log(`📊 [PROVIDER] Terminals already exist (${currentTerminals.length}), skipping creation`);
-      }
-
-      await this._sendMessage({
-        command: 'stateUpdate',
-        state: this._terminalManager.getCurrentState(),
-      });
-    } catch (error) {
-      log('❌ [ERROR] Failed to handle initial terminal request:', error);
-    }
   }
 
   private async _handleTerminalInitializationComplete(message: WebviewMessage): Promise<void> {
@@ -763,195 +622,6 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     this._stopWatchdogForTerminal(terminalId, 'promptReady');
     this._safeModeTerminals.delete(terminalId);
     this._recordInitializationMetric('success', terminalId);
-  }
-
-  private _handleTerminalInput(message: WebviewMessage): void {
-    if (!hasTerminalId(message) || !hasInputData(message)) {
-      log('⚠️ [PROVIDER] Invalid terminal input message');
-      return;
-    }
-
-    this._terminalManager.sendInput(message.data, message.terminalId);
-  }
-
-  /**
-   * VS Code Standard Terminal Pattern: Multi-line paste handling with confirmation
-   * Phase 3.3: Implements VS Code's multi-line paste with bracketed paste mode support
-   */
-  private async _handleClipboardRequest(message: WebviewMessage): Promise<void> {
-    if (!hasTerminalId(message)) {
-      log('⚠️ [PROVIDER] Clipboard request missing terminalId');
-      return;
-    }
-
-    try {
-      log('📋 [PROVIDER] Reading clipboard content...');
-      const clipboardText = await vscode.env.clipboard.readText();
-
-      if (!clipboardText) {
-        log('⚠️ [PROVIDER] Clipboard is empty');
-        return;
-      }
-
-      log(`📋 [PROVIDER] Clipboard content length: ${clipboardText.length} characters`);
-
-      // Escape special characters based on shell type (VS Code pattern)
-      const terminal = this._terminalManager.getTerminal(message.terminalId);
-      if (!terminal) {
-        log('❌ [PROVIDER] Terminal not found for paste operation');
-        return;
-      }
-
-      const shellPath = (terminal as any).shellPath || '';
-      const processedText = this._escapeTextForShell(clipboardText, shellPath);
-
-      // Send to terminal using sendInput (VS Code standard)
-      log(`📋 [PROVIDER] Pasting to terminal ${message.terminalId}`);
-      this._terminalManager.sendInput(processedText, message.terminalId);
-
-      log('✅ [PROVIDER] Clipboard content pasted successfully');
-    } catch (error) {
-      log('❌ [PROVIDER] Failed to handle clipboard request:', error);
-      await vscode.window.showErrorMessage(
-        'Failed to paste clipboard content into terminal'
-      );
-    }
-  }
-
-  private async _handleCopyToClipboard(message: WebviewMessage): Promise<void> {
-    const text = (message as any)?.text;
-    if (typeof text !== 'string' || text.length === 0) {
-      log('⚠️ [CLIPBOARD] copyToClipboard called without text');
-      return;
-    }
-
-    try {
-      await vscode.env.clipboard.writeText(text);
-      log(`📋 [CLIPBOARD] Copied ${text.length} chars from terminal ${message.terminalId ?? 'unknown'}`);
-    } catch (error) {
-      log('❌ [CLIPBOARD] Failed to copy text to clipboard:', error);
-    }
-  }
-
-  /**
-   * Handle AI Agent connection switch from WebView
-   * Issue #122: AI Agent connection toggle button functionality
-   */
-  private async _handleSwitchAiAgent(message: WebviewMessage): Promise<void> {
-    const terminalId = message.terminalId;
-    const action = (message as any)?.action || 'activate';
-
-    log(`📎 [PROVIDER] switchAiAgent received: terminalId=${terminalId}, action=${action}`);
-
-    if (!terminalId) {
-      log('⚠️ [PROVIDER] switchAiAgent called without terminalId');
-      return;
-    }
-
-    try {
-      // Call TerminalManager's switchAiAgentConnection method
-      const result = this._terminalManager.switchAiAgentConnection(terminalId);
-
-      log(`📎 [PROVIDER] switchAiAgentConnection result: success=${result.success}, newStatus=${result.newStatus}, agentType=${result.agentType}`);
-
-      // Send response back to WebView
-      this._communicationService.sendMessage({
-        command: 'switchAiAgentResponse',
-        terminalId,
-        success: result.success,
-        newStatus: result.newStatus,
-        agentType: result.agentType,
-        reason: result.reason,
-      } as WebviewMessage);
-
-      if (result.success) {
-        log(`✅ [PROVIDER] AI Agent switch succeeded: ${terminalId} -> ${result.newStatus}`);
-      } else {
-        log(`⚠️ [PROVIDER] AI Agent switch failed: ${terminalId}, reason: ${result.reason}`);
-      }
-    } catch (error) {
-      log('❌ [PROVIDER] Error handling switchAiAgent:', error);
-
-      // Send error response to WebView
-      this._communicationService.sendMessage({
-        command: 'switchAiAgentResponse',
-        terminalId,
-        success: false,
-        reason: 'Internal error occurred',
-      } as WebviewMessage);
-    }
-  }
-
-  /**
-   * Escape special characters for shell (VS Code standard pattern)
-   * Supports bash/zsh (backslash) and PowerShell (backtick)
-   */
-  private _escapeTextForShell(text: string, shellPath: string): string {
-    const shellName = shellPath.toLowerCase();
-
-    // PowerShell: Use backtick for escaping
-    if (shellName.includes('powershell') || shellName.includes('pwsh')) {
-      // PowerShell special characters that need escaping
-      return text.replace(/([`$"\\])/g, '`$1');
-    }
-
-    // Bash/Zsh: Use backslash for escaping (default)
-    // In most modern terminals, bracketed paste mode handles this automatically
-    // So we only escape truly dangerous characters
-    return text.replace(/([\\$`])/g, '\\$1');
-  }
-
-  private _handleTerminalResize(message: WebviewMessage): void {
-    if (!hasTerminalId(message) || !hasResizeParams(message)) {
-      log('⚠️ [PROVIDER] Invalid terminal resize message');
-      return;
-    }
-
-    this._terminalManager.resize(message.cols, message.rows, message.terminalId);
-  }
-
-  private async _handleTerminalClosed(message: WebviewMessage): Promise<void> {
-    if (!hasTerminalId(message)) {
-      log('⚠️ [PROVIDER] Terminal closed message missing terminalId');
-      return;
-    }
-
-    try {
-      log(`🗑️ [PROVIDER] Terminal closed by WebView: ${message.terminalId}`);
-      this._terminalManager.removeTerminal(message.terminalId);
-    } catch (error) {
-      log('❌ [ERROR] Failed to handle terminal closed:', error);
-    }
-  }
-
-  private async _handleKillTerminal(message: WebviewMessage): Promise<void> {
-    if (!hasTerminalId(message)) {
-      log('⚠️ [PROVIDER] Kill terminal message missing terminalId');
-      return;
-    }
-
-    try {
-      log(`🗑️ [PROVIDER] Killing terminal: ${message.terminalId}`);
-      await this._performKillTerminal(message.terminalId);
-    } catch (error) {
-      log('❌ [ERROR] Failed to kill terminal:', error);
-      TerminalErrorHandler.handleWebviewError(error);
-    }
-  }
-
-  private async _handleDeleteTerminal(message: WebviewMessage): Promise<void> {
-    if (!hasTerminalId(message)) {
-      log('⚠️ [PROVIDER] Delete terminal message missing terminalId');
-      return;
-    }
-
-    try {
-      log(`🗑️ [PROVIDER] Deleting terminal: ${message.terminalId}`);
-      await this._performKillSpecificTerminal(message.terminalId);
-    } catch (error) {
-      log('❌ [ERROR] Failed to delete terminal:', error);
-      TerminalErrorHandler.handleWebviewError(error);
-    }
   }
 
   private async _handleUpdateSettings(message: WebviewMessage): Promise<void> {

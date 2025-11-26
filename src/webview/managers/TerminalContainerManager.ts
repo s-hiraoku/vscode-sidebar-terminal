@@ -666,6 +666,7 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
       terminalsWrapper.id = 'terminals-wrapper';
       terminalsWrapper.style.cssText = `
         display: flex;
+        flex-direction: column;
         flex: 1;
         width: 100%;
         height: 100%;

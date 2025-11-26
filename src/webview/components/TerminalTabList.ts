@@ -323,6 +323,9 @@ export class TerminalTabList {
    * This prevents duplicate listeners when updateTabElement is called
    */
   private setupGlobalEventDelegation(): void {
+    // 🔧 FIX: Track closing state to prevent double-click issues
+    const closingTabs = new Set<string>();
+
     // Delegate click events for tabs and close buttons
     this.tabsContainer.addEventListener('click', (e) => {
       const target = e.target as HTMLElement;
@@ -337,8 +340,18 @@ export class TerminalTabList {
         if (tabElement) {
           const tabId = tabElement.getAttribute('data-tab-id');
           if (tabId) {
+            // 🔧 FIX: Prevent double-click from triggering multiple deletions
+            if (closingTabs.has(tabId)) {
+              log('🗂️ Close already in progress, ignoring:', tabId);
+              return;
+            }
+            closingTabs.add(tabId);
+
             log('🗂️ Close button clicked for tab:', tabId);
             this.events.onTabClose(tabId);
+
+            // Reset after a short delay
+            setTimeout(() => closingTabs.delete(tabId), 500);
           }
         }
         return;

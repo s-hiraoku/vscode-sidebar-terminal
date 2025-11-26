@@ -305,10 +305,11 @@ export class TerminalLifecycleCoordinator {
 
         terminalsWrapper = document.createElement('div');
         terminalsWrapper.id = 'terminals-wrapper';
-        // 🎯 Don't set flex-direction here - let PanelLocationHandler manage it (VS Code pattern)
-        // This prevents race conditions and ensures single source of truth
+        // 🔧 FIX: Set default flex-direction to column (vertical/sidebar)
+        // PanelLocationHandler will add terminal-split-horizontal class for bottom panel
         terminalsWrapper.style.cssText = `
           display: flex;
+          flex-direction: column;
           flex: 1;
           width: 100%;
           height: 100%;
