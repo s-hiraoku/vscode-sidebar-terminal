@@ -198,12 +198,26 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
     // Check if body already rendered (VS Code ViewPane pattern)
     if (this._lifecycleManager.isBodyRendered()) {
-      log('⏭️ [PROVIDER] Body already rendered, skipping duplicate initialization (VS Code ViewPane pattern)');
+      log('⏭️ [PROVIDER] Body already rendered - checking if WebView needs reinitialization');
       this._lifecycleManager.trackPanelMovement(startTime);
 
       // Update view references for panel movements
       this._lifecycleManager.setView(webviewView);
       this._communicationService.setView(webviewView);
+
+      // 🔧 FIX: Panel movement creates new WebView instance - must reinitialize HTML
+      // VS Code destroys WebView content when moving between panel locations
+      log('🔄 [PROVIDER] Panel moved - reinitializing WebView content');
+      this._lifecycleManager.configureWebview(webviewView);
+      this._registerWebviewMessageListener(webviewView);
+      this._initializeWebviewContent(webviewView);
+
+      // Restore terminal state after reinitialization
+      setTimeout(() => {
+        log('🔄 [PROVIDER] Restoring terminal state after panel move');
+        this._syncTerminalStateToWebView();
+      }, 100);
+
       return;
     }
 
@@ -785,6 +799,25 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     });
 
     log('✅ [PROVIDER] Terminal initialization complete');
+  }
+
+  /**
+   * Sync terminal state to WebView after panel movement
+   * This is needed because VS Code destroys WebView content when moving panels
+   */
+  private _syncTerminalStateToWebView(): void {
+    log('🔄 [PROVIDER] Syncing terminal state to WebView after panel move');
+
+    // Reset initialization state to allow message sending
+    this._isInitialized = true;
+
+    // Re-initialize terminals in WebView
+    void this._initializeTerminal();
+
+    // Sync CLI agent state
+    this.sendFullCliAgentStateSync();
+
+    log('✅ [PROVIDER] Terminal state sync complete');
   }
 
   public async sendMessageToWebview(message: WebviewMessage): Promise<void> {

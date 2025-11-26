@@ -10,7 +10,6 @@ import { KeyboardShortcutService } from '../services/KeyboardShortcutService';
 import { TerminalDecorationsService } from '../services/TerminalDecorationsService';
 import { TerminalLinksService } from '../services/TerminalLinksService';
 import { TelemetryService } from '../services/TelemetryService';
-import { VersionUtils } from '../utils/VersionUtils';
 import { CommandRegistrar } from './CommandRegistrar';
 import { SessionLifecycleManager } from './SessionLifecycleManager';
 

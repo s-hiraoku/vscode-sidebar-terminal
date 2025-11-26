@@ -460,6 +460,7 @@ export class ScrollbackMessageHandler implements IMessageHandler {
     const lastIndex = scrollbackContent.length - 1;
     for (let i = 0; i < scrollbackContent.length; i++) {
       const line = scrollbackContent[i];
+      if (!line) continue;
       // eslint-disable-next-line no-console
       console.log(`[SCROLLBACK-RESTORE] Writing line ${i}: "${line.content.substring(0, 100)}..."`);
 

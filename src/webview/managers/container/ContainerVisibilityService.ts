@@ -30,7 +30,7 @@ export class ContainerVisibilityService {
   public enforceFullscreenState(
     activeTerminalId: string | null,
     terminalBody: HTMLElement,
-    containerCache: Map<string, HTMLElement>
+    _containerCache: Map<string, HTMLElement>
   ): void {
     const containers = terminalBody.querySelectorAll<HTMLElement>('.terminal-container');
     const hiddenStorage = this.getHiddenStorage(terminalBody, true);

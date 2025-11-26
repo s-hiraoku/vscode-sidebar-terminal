@@ -35,7 +35,6 @@ import { TerminalHeaderElements } from '../factories/HeaderFactory';
 // Extracted services
 import {
   TerminalConfigService,
-  DEFAULT_TERMINAL_CONFIG,
   TerminalFocusService,
   TerminalScrollbarService,
   TerminalAutoSaveService,

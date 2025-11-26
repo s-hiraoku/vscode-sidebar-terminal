@@ -8,7 +8,6 @@
 import * as vscode from 'vscode';
 import { WebviewMessage } from '../../types/common';
 import { TerminalManager } from '../../terminals/TerminalManager';
-import { TERMINAL_CONSTANTS } from '../../constants';
 import { safeProcessCwd } from '../../utils/common';
 import { TerminalErrorHandler } from '../../utils/feedback';
 import { provider as log } from '../../utils/logger';

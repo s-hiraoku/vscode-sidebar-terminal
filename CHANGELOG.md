@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.143] - 2025-11-27
+
+### Fixed
+
+- **Terminal Layout**: Fixed terminals appearing horizontally instead of vertically in sidebar
+  - Added default `flex-direction: column` to `terminals-wrapper` in all creation paths
+  - Fixed CSS class name mismatch (`terminal-side-view` → `terminal-split-horizontal`)
+  - Sidebar now shows vertical layout, bottom panel shows horizontal layout
+
+- **Tab/Terminal Count Mismatch**: Fixed duplicate tab creation causing count discrepancy
+  - Added duplicate check in `TerminalTabList.addTab()` - updates existing instead of creating duplicate
+  - Added `tabOrder` duplicate prevention in `TerminalTabManager.addTab()` and `syncTabs()`
+
+- **Double-Click Delete Prevention**: Fixed closing button triggering multiple deletions
+  - Added double-click protection to header close button in `HeaderFactory`
+  - Added double-click protection to tab close button in `TerminalTabList`
+
+- **Panel Movement Terminal Loss**: Fixed terminals disappearing when moving extension between sidebar and bottom panel
+  - Detect panel movement in `resolveWebviewView` and reinitialize WebView HTML
+  - Added `_syncTerminalStateToWebView()` to restore terminal state after panel move
+  - VS Code destroys WebView content on panel location change - now properly handled
+
 ## [0.1.142] - 2025-11-23
 
 ### Fixed
