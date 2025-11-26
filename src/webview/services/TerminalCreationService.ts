@@ -32,6 +32,15 @@ import { EventHandlerRegistry } from '../utils/EventHandlerRegistry';
 import { terminalLogger } from '../utils/ManagerLogger';
 import { TerminalHeaderElements } from '../factories/HeaderFactory';
 
+// Extracted services
+import {
+  TerminalConfigService,
+  DEFAULT_TERMINAL_CONFIG,
+  TerminalFocusService,
+  TerminalScrollbarService,
+  TerminalAutoSaveService,
+} from './terminal';
+
 interface Disposable {
   dispose(): void;
 }
@@ -40,39 +49,31 @@ interface Disposable {
  * Service responsible for terminal creation, removal, and switching operations
  *
  * Phase 3 Update: Integrated LifecycleController for proper resource management
+ * Phase 4 Update: Extracted config, focus, scrollbar, and auto-save services
  */
 export class TerminalCreationService implements Disposable {
-  // Static Set to track terminals currently being restored (blocks auto-save)
-  private static restoringTerminals = new Set<string>();
-
   /**
    * Mark a terminal as currently being restored (blocks auto-save)
-   * Called from ScrollbackMessageHandler at restoration start
+   * Delegates to TerminalAutoSaveService
    */
   public static markTerminalRestoring(terminalId: string): void {
-    TerminalCreationService.restoringTerminals.add(terminalId);
-    // eslint-disable-next-line no-console
-    console.log(`[AUTO-SAVE] 🔒 Marked terminal as restoring: ${terminalId}`);
+    TerminalAutoSaveService.markTerminalRestoring(terminalId);
   }
 
   /**
    * Mark a terminal as restored (ends protection period after delay)
-   * Called from ScrollbackMessageHandler after restoration completes
+   * Delegates to TerminalAutoSaveService
    */
   public static markTerminalRestored(terminalId: string): void {
-    // 5 second protection period to allow restoration to settle
-    setTimeout(() => {
-      TerminalCreationService.restoringTerminals.delete(terminalId);
-      // eslint-disable-next-line no-console
-      console.log(`[AUTO-SAVE] 🔓 Restoration protection ended: ${terminalId}`);
-    }, 5000);
+    TerminalAutoSaveService.markTerminalRestored(terminalId);
   }
 
   /**
    * Check if a terminal is currently being restored
+   * Delegates to TerminalAutoSaveService
    */
   public static isTerminalRestoring(terminalId: string): boolean {
-    return TerminalCreationService.restoringTerminals.has(terminalId);
+    return TerminalAutoSaveService.isTerminalRestoring(terminalId);
   }
 
   private readonly splitManager: SplitManager;
@@ -83,76 +84,10 @@ export class TerminalCreationService implements Disposable {
   private readonly linkManager: TerminalLinkManager;
   private readonly lifecycleController: LifecycleController;
 
-  // VS Code Standard Terminal Configuration
-  private readonly DEFAULT_TERMINAL_CONFIG = {
-    // Basic appearance
-    cursorBlink: true,
-    fontFamily: 'monospace',
-    fontSize: 14,
-    fontWeight: 'normal' as const,
-    fontWeightBold: 'bold' as const,
-    lineHeight: 1.0,
-    letterSpacing: 0,
-    theme: {
-      background: '#000000',
-      foreground: '#ffffff',
-    },
-
-    // VS Code Standard Options - Core Features
-    altClickMovesCursor: true,
-    drawBoldTextInBrightColors: false,
-    minimumContrastRatio: 1,
-    tabStopWidth: 8,
-    macOptionIsMeta: false,
-    rightClickSelectsWord: true,
-
-    // Scrolling and Navigation
-    fastScrollModifier: 'alt' as const,
-    fastScrollSensitivity: 5,
-    scrollSensitivity: 1,
-    scrollback: 2000,
-    scrollOnUserInput: true,
-
-    // Word and Selection
-    wordSeparator: ' ()[]{}\'"`,;',
-
-    // Rendering Options
-    allowTransparency: false,
-    rescaleOverlappingGlyphs: false,
-    allowProposedApi: true,
-
-    // Cursor Configuration
-    cursorStyle: 'block' as const,
-    cursorInactiveStyle: 'outline' as const,
-    cursorWidth: 1,
-
-    // Terminal Behavior
-    convertEol: false,
-    disableStdin: false,
-    screenReaderMode: false,
-
-    // Bell Configuration
-    bellSound: undefined,
-
-    // Advanced Options
-    windowOptions: {
-      restoreWin: false,
-      minimizeWin: false,
-      setWinPosition: false,
-      setWinSizePixels: false,
-      raiseWin: false,
-      lowerWin: false,
-      refreshWin: false,
-      setWinSizeChars: false,
-      maximizeWin: false,
-      fullscreenWin: false,
-    },
-
-    // Addon Configuration
-    enableGpuAcceleration: true,
-    enableSearchAddon: true,
-    enableUnicode11: true,
-  };
+  // Extracted services
+  private readonly focusService: TerminalFocusService;
+  private readonly scrollbarService: TerminalScrollbarService;
+  private readonly autoSaveService: TerminalAutoSaveService;
 
   constructor(
     splitManager: SplitManager,
@@ -166,6 +101,11 @@ export class TerminalCreationService implements Disposable {
     this.eventManager = new TerminalEventManager(coordinator, eventRegistry);
     this.linkManager = new TerminalLinkManager(coordinator);
     this.lifecycleController = new LifecycleController(); // Phase 3: Lifecycle management
+
+    // Phase 4: Initialize extracted services
+    this.focusService = new TerminalFocusService();
+    this.scrollbarService = new TerminalScrollbarService();
+    this.autoSaveService = new TerminalAutoSaveService(coordinator);
   }
 
   /**
@@ -216,8 +156,8 @@ export class TerminalCreationService implements Disposable {
           }
         }
 
-        // Merge config with defaults
-        const terminalConfig = { ...this.DEFAULT_TERMINAL_CONFIG, ...config };
+        // Merge config with defaults using TerminalConfigService
+        const terminalConfig = TerminalConfigService.mergeConfig(config);
 
         // Create Terminal instance
         const terminal = new Terminal(terminalConfig as any);
@@ -349,18 +289,12 @@ export class TerminalCreationService implements Disposable {
         // Setup event handlers for click, focus, keyboard, etc.
         this.eventManager.setupTerminalEvents(terminal, terminalId, container);
 
-        // 🔧 CRITICAL FIX: Ensure terminal receives focus for keyboard input
+        // CRITICAL FIX: Ensure terminal receives focus for keyboard input
         // Must wait for xterm.js to fully initialize the textarea
-        this.ensureTerminalFocus(terminal, terminalId, terminalContent);
+        this.focusService.ensureTerminalFocus(terminal, terminalId, terminalContent);
 
-        // 🔧 FIX: Re-focus terminal when container is clicked (VS Code standard)
-        container.addEventListener('click', (event) => {
-          const target = event.target as HTMLElement;
-          // Don't focus if clicking on buttons
-          if (!target.closest('.terminal-control')) {
-            this.ensureTerminalFocus(terminal, terminalId, terminalContent);
-          }
-        });
+        // FIX: Re-focus terminal when container is clicked (VS Code standard)
+        this.focusService.setupContainerFocusHandler(terminal, terminalId, container, terminalContent);
 
         // Setup shell integration
         this.setupShellIntegration(terminal, terminalId);
@@ -368,9 +302,9 @@ export class TerminalCreationService implements Disposable {
         // Register file link handlers using TerminalLinkManager
         this.linkManager.registerTerminalLinkHandlers(terminal, terminalId);
 
-        // Enable VS Code standard scrollbar
+        // Enable VS Code standard scrollbar using TerminalScrollbarService
         const xtermElement = terminalContent.querySelector('.xterm');
-        this.enableScrollbarDisplay(xtermElement, terminalId);
+        this.scrollbarService.enableScrollbarDisplay(xtermElement, terminalId);
 
         // Setup RenderingOptimizer for performance optimization
         const renderingOptimizer = await this.setupRenderingOptimizer(
@@ -447,8 +381,8 @@ export class TerminalCreationService implements Disposable {
           terminalLogger.error(`❌ InputManager not available for terminal: ${terminalId}`);
         }
 
-        // Setup scrollback auto-save
-        this.setupScrollbackAutoSave(terminal, terminalId, serializeAddon);
+        // Setup scrollback auto-save using TerminalAutoSaveService
+        this.autoSaveService.setupScrollbackAutoSave(terminal, terminalId, serializeAddon);
 
         const elapsed = performanceMonitor.endTimer(`terminal-creation-attempt-${terminalId}-${currentRetry}`);
         terminalLogger.info(`✅ Terminal creation completed: ${terminalId} in ${elapsed}ms`);
@@ -607,161 +541,6 @@ export class TerminalCreationService implements Disposable {
     return false;
   }
 
-  private enableScrollbarDisplay(xtermElement: Element | null, terminalId: string): void {
-    if (!xtermElement) return;
-
-    try {
-      const viewport = xtermElement.querySelector('.xterm-viewport') as HTMLElement;
-      const screen = xtermElement.querySelector('.xterm-screen') as HTMLElement;
-
-      if (!viewport) {
-        terminalLogger.warn(`Viewport not found for terminal ${terminalId}`);
-        return;
-      }
-
-      // Apply VS Code standard viewport settings for maximum display area
-      viewport.style.overflow = 'auto';
-      viewport.style.scrollbarWidth = 'auto';
-      viewport.style.position = 'absolute';
-      viewport.style.top = '0';
-      viewport.style.left = '0';
-      viewport.style.right = '0';
-      viewport.style.bottom = '0';
-
-      // Ensure screen uses full available space
-      if (screen) {
-        screen.style.position = 'relative';
-        screen.style.width = '100%';
-        screen.style.height = '100%';
-      }
-
-      // Add VS Code standard scrollbar styling (only once)
-      if (!document.head.querySelector('#terminal-scrollbar-styles')) {
-        const style = document.createElement('style');
-        style.id = 'terminal-scrollbar-styles';
-        style.textContent = `
-          /* VS Code Terminal - Full Display Area Implementation */
-          .terminal-container {
-            display: flex !important;
-            flex-direction: column !important;
-            width: 100% !important;
-            height: 100% !important;
-            position: relative !important;
-            padding: 0 !important;
-            margin: 0 !important;
-          }
-
-          .terminal-content {
-            flex: 1 1 auto !important;
-            width: 100% !important;
-            height: 100% !important;
-            position: relative !important;
-            padding: 0 !important;
-            margin: 0 !important;
-            overflow: hidden !important;
-          }
-
-          .terminal-container .xterm {
-            position: relative !important;
-            width: 100% !important;
-            height: 100% !important;
-            padding: 0 !important;
-            margin: 0 !important;
-            box-sizing: border-box !important;
-          }
-
-          .terminal-container .xterm-viewport {
-            position: absolute !important;
-            top: 0 !important;
-            left: 0 !important;
-            right: 0 !important;
-            bottom: 0 !important;
-            overflow: auto !important;
-            background: transparent !important;
-          }
-
-          .terminal-container .xterm-screen {
-            position: relative !important;
-            width: 100% !important;
-            min-height: 100% !important;
-            padding: 0 !important;
-            box-sizing: border-box !important;
-          }
-
-          .terminal-container .xterm .xterm-rows {
-            padding: 0 !important;
-            line-height: 1 !important;
-          }
-
-          /* Let xterm manage overlay positioning; overriding can misalign hitboxes */
-          .terminal-container .xterm .xterm-link-layer,
-          .terminal-container .xterm .xterm-selection-layer,
-          .terminal-container .xterm .xterm-decoration-container {
-            top: initial !important;
-            left: initial !important;
-          }
-
-          /* VS Code Standard Scrollbar Styling - 14px width */
-          .terminal-container .xterm-viewport::-webkit-scrollbar {
-            width: 14px;
-            height: 14px;
-          }
-
-          .terminal-container .xterm-viewport::-webkit-scrollbar-track {
-            background: rgba(0, 0, 0, 0.1);
-            border-radius: 0px;
-          }
-
-          .terminal-container .xterm-viewport::-webkit-scrollbar-thumb {
-            background-color: rgba(121, 121, 121, 0.4);
-            border-radius: 0px;
-            border: 3px solid transparent;
-            background-clip: content-box;
-            min-height: 20px;
-          }
-
-          .terminal-container .xterm-viewport::-webkit-scrollbar-thumb:hover {
-            background-color: rgba(100, 100, 100, 0.7);
-          }
-
-          .terminal-container .xterm-viewport::-webkit-scrollbar-thumb:active {
-            background-color: rgba(68, 68, 68, 0.8);
-          }
-
-          .terminal-container .xterm-viewport::-webkit-scrollbar-corner {
-            background: transparent;
-          }
-
-          /* Firefox scrollbar styling */
-          .terminal-container .xterm-viewport {
-            scrollbar-width: auto !important;
-            scrollbar-color: rgba(121, 121, 121, 0.4) rgba(0, 0, 0, 0.1);
-          }
-
-          /* Ensure text selection is visible - do not override pointer events to keep native selection */
-          .terminal-container .xterm .xterm-selection div {
-            position: absolute;
-            background-color: rgba(255, 255, 255, 0.3);
-          }
-
-          /* Override any existing height restrictions */
-          #terminal-body,
-          #terminal-body .terminal-container,
-          #terminal-body .terminal-content {
-            height: 100% !important;
-            max-height: none !important;
-          }
-
-        `;
-        document.head.appendChild(style);
-      }
-
-      terminalLogger.info(`✅ VS Code standard full viewport and scrollbar enabled for terminal: ${terminalId}`);
-    } catch (error) {
-      terminalLogger.error(`Failed to enable scrollbar for terminal ${terminalId}:`, error);
-    }
-  }
-
   /**
    * Setup shell integration decorations and link providers
    */
@@ -888,186 +667,6 @@ export class TerminalCreationService implements Disposable {
 
     terminalLogger.warn(`Could not extract terminal number from ID: ${terminalId}, defaulting to 1`);
     return 1;
-  }
-
-  /**
-   * Ensure terminal receives keyboard focus
-   * Critical fix: Properly focus xterm.js textarea for keyboard input
-   *
-   * Strategy:
-   * 1. Wait for xterm.js to fully create the textarea DOM element
-   * 2. Verify textarea exists before attempting focus
-   * 3. Focus using both terminal.focus() and direct textarea.focus()
-   * 4. Verify focus succeeded and log result
-   *
-   * This fixes the issue where terminal renders but doesn't accept keyboard input.
-   */
-  private ensureTerminalFocus(
-    terminal: Terminal,
-    terminalId: string,
-    terminalContent: HTMLElement
-  ): void {
-    // Use requestAnimationFrame to ensure DOM is fully settled
-    requestAnimationFrame(() => {
-      try {
-        // Find the xterm textarea
-        const textarea = terminalContent.querySelector('.xterm-helper-textarea') as HTMLTextAreaElement;
-
-        if (!textarea) {
-          // Retry once after a short delay if textarea doesn't exist yet
-          setTimeout(() => {
-            const retryTextarea = terminalContent.querySelector('.xterm-helper-textarea') as HTMLTextAreaElement;
-            if (retryTextarea) {
-              this.focusTerminalTextarea(terminal, retryTextarea, terminalId);
-            } else {
-              terminalLogger.error(`❌ xterm-helper-textarea never appeared for: ${terminalId}`);
-            }
-          }, 50);
-          return;
-        }
-
-        this.focusTerminalTextarea(terminal, textarea, terminalId);
-      } catch (error) {
-        terminalLogger.error(`Failed to ensure terminal focus for ${terminalId}:`, error);
-      }
-    });
-  }
-
-  /**
-   * Focus the terminal textarea and verify success
-   */
-  private focusTerminalTextarea(
-    terminal: Terminal,
-    textarea: HTMLTextAreaElement,
-    terminalId: string
-  ): void {
-    try {
-      console.log(`🔍 [FOCUS-DEBUG] Attempting to focus ${terminalId}...`);
-
-      // Focus using xterm.js API (preferred method)
-      terminal.focus();
-      console.log(`🔍 [FOCUS-DEBUG] Called terminal.focus()`);
-
-      // Double-check with direct textarea focus
-      textarea.focus();
-      console.log(`🔍 [FOCUS-DEBUG] Called textarea.focus()`);
-
-      // Verify focus succeeded
-      setTimeout(() => {
-        const hasFocus = document.activeElement === textarea;
-        const activeTag = document.activeElement?.tagName;
-        const activeClass = document.activeElement?.className;
-
-        console.log(`🔍 [FOCUS-DEBUG] Focus verification for ${terminalId}:`, {
-          hasFocus,
-          activeElement: `${activeTag}.${activeClass}`,
-          textareaInDOM: document.body.contains(textarea),
-          textareaVisible: textarea.offsetParent !== null
-        });
-
-        if (hasFocus) {
-          console.log(`✅ [FOCUS-DEBUG] Terminal focused successfully: ${terminalId}`);
-          terminalLogger.info(`✅ Terminal successfully focused and ready for input: ${terminalId}`);
-
-          // 🔍 TEST: Simulate a keystroke to verify input handler
-          setTimeout(() => {
-            console.log(`🔍 [FOCUS-DEBUG] Testing input by simulating 'a' key...`);
-            const event = new KeyboardEvent('keydown', { key: 'a', code: 'KeyA' });
-            textarea.dispatchEvent(event);
-          }, 100);
-        } else {
-          console.warn(`⚠️ [FOCUS-DEBUG] Focus failed for ${terminalId}`);
-          console.warn(`   Active element: ${activeTag}.${activeClass}`);
-          terminalLogger.warn(`⚠️ Terminal focus verification failed for: ${terminalId}`);
-          terminalLogger.warn(`   Active element: ${activeTag}.${activeClass}`);
-
-          // One final focus attempt
-          textarea.focus();
-          console.log(`🔍 [FOCUS-DEBUG] Retried textarea.focus()`);
-        }
-      }, 10);
-    } catch (error) {
-      console.error(`🔍 [FOCUS-DEBUG] Exception during focus:`, error);
-      terminalLogger.error(`Failed to focus terminal textarea for ${terminalId}:`, error);
-    }
-  }
-
-  /**
-   * Setup automatic scrollback save on terminal output (VS Code standard approach)
-   */
-  private setupScrollbackAutoSave(
-    terminal: Terminal,
-    terminalId: string,
-    serializeAddon: import('@xterm/addon-serialize').SerializeAddon
-  ): void {
-    let saveTimer: number | null = null;
-
-    const pushScrollbackToExtension = (): void => {
-      // Skip auto-save if terminal is currently being restored
-      if (TerminalCreationService.isTerminalRestoring(terminalId)) {
-        // eslint-disable-next-line no-console
-        console.log(`[AUTO-SAVE] ⏭️ Skipped save during restoration: ${terminalId}`);
-        return;
-      }
-
-      if (saveTimer) {
-        window.clearTimeout(saveTimer);
-      }
-
-      saveTimer = window.setTimeout(() => {
-        // Double-check restoration status before actually saving
-        if (TerminalCreationService.isTerminalRestoring(terminalId)) {
-          // eslint-disable-next-line no-console
-          console.log(`[AUTO-SAVE] ⏭️ Skipped delayed save during restoration: ${terminalId}`);
-          return;
-        }
-
-        try {
-          const serialized = serializeAddon.serialize({ scrollback: 1000 });
-          const lines = serialized.split('\n');
-
-          const windowWithApi = window as Window & {
-            vscodeApi?: {
-              postMessage: (message: unknown) => void;
-            };
-          };
-
-          const message = {
-            command: 'pushScrollbackData',
-            terminalId,
-            scrollbackData: lines,
-            timestamp: Date.now(),
-          };
-
-          if (windowWithApi.vscodeApi) {
-            windowWithApi.vscodeApi.postMessage(message);
-            terminalLogger.info(
-              `💾 [AUTO-SAVE] Pushed scrollback via vscodeApi for terminal ${terminalId}: ${lines.length} lines`
-            );
-          } else {
-            if (this.coordinator && typeof this.coordinator.postMessageToExtension === 'function') {
-              this.coordinator.postMessageToExtension(message);
-              terminalLogger.info(
-                `💾 [AUTO-SAVE] Pushed scrollback via MessageManager for terminal ${terminalId}: ${lines.length} lines`
-              );
-            } else {
-              terminalLogger.error(
-                `❌ [AUTO-SAVE] No message transport available for terminal ${terminalId}`
-              );
-            }
-          }
-        } catch (error) {
-          terminalLogger.warn(`⚠️ [AUTO-SAVE] Failed to push scrollback for terminal ${terminalId}:`, error);
-        }
-      }, 3000);
-    };
-
-    // Capture both user input (onData) and process output (onLineFeed) so AI-generated output is saved
-    terminal.onData(pushScrollbackToExtension);
-    terminal.onLineFeed(pushScrollbackToExtension);
-    setTimeout(pushScrollbackToExtension, 2000);
-
-    terminalLogger.info(`✅ [AUTO-SAVE] Scrollback auto-save enabled for terminal: ${terminalId}`);
   }
 
   /**
