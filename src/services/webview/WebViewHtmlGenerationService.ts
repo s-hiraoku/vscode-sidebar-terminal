@@ -263,6 +263,39 @@ export class WebViewHtmlGenerationService {
             flex-direction: column;
             gap: 0;
         }
+
+        /* Screen reader only content */
+        .sr-only {
+            position: absolute;
+            left: -10000px;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+        }
+
+        /* Focus visible styles for keyboard navigation */
+        *:focus-visible {
+            outline: 2px solid var(--vscode-focusBorder, #007acc);
+            outline-offset: 2px;
+        }
+
+        /* Skip to main content link */
+        .skip-link {
+            position: absolute;
+            top: -40px;
+            left: 0;
+            background: var(--vscode-button-background, #0e639c);
+            color: var(--vscode-button-foreground, #fff);
+            padding: 8px;
+            text-decoration: none;
+            z-index: 10000;
+        }
+
+        .skip-link:focus {
+            top: 0;
+        }
     `;
   }
 
@@ -335,18 +368,21 @@ export class WebViewHtmlGenerationService {
         .xterm {
             margin: 0 !important;
             padding: 0 !important;
+            width: 100% !important;
             height: 100% !important;
         }
 
         .xterm-viewport {
             margin: 0 !important;
             padding: 0 !important;
+            width: 100% !important;
             height: 100% !important;
         }
 
         .xterm-screen {
             margin: 0 !important;
             padding: 0 !important;
+            width: 100% !important;
             height: 100% !important;
         }
 
@@ -637,32 +673,25 @@ export class WebViewHtmlGenerationService {
    */
   private _generateBodyContent(): string {
     return `
-        <div id="terminal-body">
-            <!-- Simple terminal container -->
+        <div id="terminal-body" role="main" aria-label="Terminal workspace">
+            <!-- Screen reader announcements -->
+            <div role="status" aria-live="polite" aria-atomic="true" class="sr-only" id="sr-status"></div>
+            <div role="alert" aria-live="assertive" aria-atomic="true" class="sr-only" id="sr-alert"></div>
+            <!-- Terminal containers will be added here by JavaScript -->
         </div>
     `;
   }
 
   /**
    * Generate inline scripts for VS Code API initialization
+   *
+   * 🎯 NOTE: acquireVsCodeApi() is called in main.ts (webview.js) at top level
+   * This inline script only monitors script loading - no API acquisition needed here
    */
   private _generateInlineScripts(nonce: string): string {
     return `
         <script nonce="${nonce}">
-            // Acquire VS Code API once and store it globally for webview.js to use
-            try {
-                if (typeof window.acquireVsCodeApi === 'function') {
-                    const vscode = window.acquireVsCodeApi();
-                    window.vscodeApi = vscode;
-                    console.log('✅ VS Code API acquired successfully');
-                } else {
-                    console.error('❌ acquireVsCodeApi not available');
-                }
-            } catch (error) {
-                console.error('❌ Error acquiring VS Code API:', error);
-            }
-
-            // Add script loading event handlers
+            // Script loading monitoring
             document.addEventListener('DOMContentLoaded', function() {
                 const script = document.getElementById('webview-main-script');
                 if (script) {
