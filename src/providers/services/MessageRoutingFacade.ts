@@ -172,8 +172,9 @@ export class MessageRoutingFacade {
   /**
    * Validate that required handlers are registered; logs any gaps for early detection.
    */
-  public validateHandlers(requiredCommands: string[]): void {
-    const missing = requiredCommands.filter((cmd) => !this._router.has(cmd));
+  public validateHandlers(requiredCommands: (string | undefined)[]): void {
+    const commands = requiredCommands.filter(Boolean) as string[];
+    const missing = commands.filter((cmd) => !this._router.has(cmd));
     if (missing.length > 0) {
       log(`❌ [ROUTING] Missing handlers for critical commands: ${missing.join(', ')}`);
       log('📋 [ROUTING] Currently registered commands:', this._router.getRegisteredCommands());

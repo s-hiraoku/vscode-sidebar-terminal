@@ -366,6 +366,9 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   }
 
   private _initializeMessageHandlers(): void {
+    // Reset router to avoid duplicate registrations across reinitializations
+    this._messageRouter.reset();
+
     const handlers = [
       // UI handlers
       {
@@ -570,7 +573,11 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       'terminalReady',
       TERMINAL_CONSTANTS?.COMMANDS?.READY,
       TERMINAL_CONSTANTS?.COMMANDS?.RESIZE,
+      TERMINAL_CONSTANTS?.COMMANDS?.FOCUS_TERMINAL,
     ]);
+
+    // Emit registry snapshot for diagnostics (matches VS Code terminal tracing style)
+    this._messageRouter.logRegisteredHandlers();
 
     log('✅ [PROVIDER] Message handlers initialized via MessageRoutingFacade');
   }
@@ -629,6 +636,14 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     }
 
     log(`✅ [PROVIDER] Terminal ready: ${terminalId}`);
+
+    // If the state machine hasn't seen the init-complete yet, advance to ViewReady to unblock shell init
+    const currentState = this._terminalInitStateMachine.getState(terminalId);
+    if (currentState < TerminalInitializationState.ViewReady) {
+      this._terminalInitStateMachine.markViewReady(terminalId, 'terminalReady');
+      this._startWatchdogForTerminal(terminalId, 'prompt', 'terminalReady');
+      log(`🔄 [PROVIDER] terminalReady promoted state to ViewReady for ${terminalId}`);
+    }
 
     // Forward to persistence service for terminal ready event handling
     if (this._extensionPersistenceService) {
