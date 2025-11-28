@@ -156,7 +156,8 @@ export class TerminalCreationService implements Disposable {
         }
 
         // Merge config with defaults using TerminalConfigService
-        const terminalConfig = TerminalConfigService.mergeConfig(config);
+        // Cast config to WebViewTerminalConfig compatible type
+        const terminalConfig = TerminalConfigService.mergeConfig(config as Parameters<typeof TerminalConfigService.mergeConfig>[0]);
 
         // Create Terminal instance
         const terminal = new Terminal(terminalConfig as any);
@@ -169,19 +170,19 @@ export class TerminalCreationService implements Disposable {
         enableUnicode11: terminalConfig.enableUnicode11,
         linkHandler: (_event, uri) => {
           // Delegate to extension so it can honor workspace trust and external uri handling
-          const sent = this.coordinator?.postMessageToExtension({
-            command: 'openTerminalLink',
-            linkType: 'url',
-            url: uri,
-            terminalId,
-            timestamp: Date.now(),
-          });
-
-          if (!sent) {
+          try {
+            this.coordinator?.postMessageToExtension({
+              command: 'openTerminalLink',
+              linkType: 'url',
+              url: uri,
+              terminalId,
+              timestamp: Date.now(),
+            });
+          } catch {
             // Fallback: attempt to open directly (may be blocked by CSP, but useful for debugging)
             try {
               window.open(uri, '_blank');
-            } catch (error) {
+            } catch {
               // swallow; extension path is primary
             }
           }
@@ -263,6 +264,8 @@ export class TerminalCreationService implements Disposable {
             flex: 1;
             width: 100%;
             height: 100%;
+            min-width: 0;
+            min-height: 0;
             overflow: hidden;
             padding: 4px;
             gap: 4px;
@@ -556,7 +559,11 @@ export class TerminalCreationService implements Disposable {
   }
 
   /**
-   * Perform initial terminal resize
+   * Perform initial terminal resize with retry mechanism
+   *
+   * 🔧 FIX: Sometimes the container doesn't have valid dimensions during initial resize
+   * (e.g., when WebView is in sidebar and being rendered). This retry mechanism
+   * ensures the terminal gets properly resized once the container is ready.
    */
   private performInitialResize(
     terminal: Terminal,
@@ -564,20 +571,63 @@ export class TerminalCreationService implements Disposable {
     container: HTMLElement,
     terminalId: string
   ): void {
-    try {
-      const rect = container.getBoundingClientRect();
+    const maxRetries = 5;
+    const retryDelays = [0, 50, 100, 200, 500]; // Progressive delays
+    let retryCount = 0;
 
-      if (rect.width > 50 && rect.height > 50) {
-        fitAddon.fit();
-        terminalLogger.debug(`Terminal initial size: ${terminalId} (${terminal.cols}x${terminal.rows})`);
-      } else {
-        terminalLogger.warn(
-          `Container too small for initial resize: ${terminalId} (${rect.width}x${rect.height})`
-        );
+    const attemptResize = (): void => {
+      try {
+        const rect = container.getBoundingClientRect();
+
+        if (rect.width > 50 && rect.height > 50) {
+          fitAddon.fit();
+          terminalLogger.debug(
+            `Terminal initial size: ${terminalId} (${terminal.cols}x${terminal.rows}) after ${retryCount} retries`
+          );
+
+          // 🔧 FIX: Schedule an additional resize after a short delay
+          // This handles cases where CSS transitions or layout shifts occur after initial render
+          setTimeout(() => {
+            try {
+              const finalRect = container.getBoundingClientRect();
+              if (finalRect.width > 50 && finalRect.height > 50) {
+                fitAddon.fit();
+                terminalLogger.debug(
+                  `Terminal delayed resize: ${terminalId} (${terminal.cols}x${terminal.rows})`
+                );
+              }
+            } catch (error) {
+              terminalLogger.warn(`Delayed resize failed for ${terminalId}:`, error);
+            }
+          }, 300);
+        } else {
+          // Container not ready - retry with increasing delays
+          if (retryCount < maxRetries) {
+            retryCount++;
+            const delay = retryDelays[retryCount] || 500;
+            terminalLogger.debug(
+              `Container too small, retry ${retryCount}/${maxRetries} in ${delay}ms: ${terminalId} (${rect.width}x${rect.height})`
+            );
+            setTimeout(attemptResize, delay);
+          } else {
+            terminalLogger.warn(
+              `Container still too small after ${maxRetries} retries: ${terminalId} (${rect.width}x${rect.height})`
+            );
+            // 🔧 FIX: Force a fit anyway as last resort - xterm.js may handle small dimensions
+            try {
+              fitAddon.fit();
+              terminalLogger.info(`Forced fit for small container: ${terminalId}`);
+            } catch (e) {
+              terminalLogger.error(`Forced fit failed for ${terminalId}:`, e);
+            }
+          }
+        }
+      } catch (error) {
+        terminalLogger.error(`Failed initial resize for ${terminalId}:`, error);
       }
-    } catch (error) {
-      terminalLogger.error(`Failed initial resize for ${terminalId}:`, error);
-    }
+    };
+
+    attemptResize();
   }
 
   /**

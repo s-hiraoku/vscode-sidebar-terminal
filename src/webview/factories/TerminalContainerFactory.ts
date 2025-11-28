@@ -51,7 +51,8 @@ export class TerminalContainerFactory {
       flexDirection: 'column' as const,
       width: '100%',
       height: '100%',
-      minHeight: '200px',
+      minWidth: '0', // 🔧 FIX: Allow shrinking below content size for proper flex behavior
+      minHeight: '0', // 🔧 FIX: Allow shrinking below content size
       margin: '0',
       padding: '0',
       position: 'relative' as const,
@@ -62,9 +63,12 @@ export class TerminalContainerFactory {
       flex: '1 1 auto',
     },
     body: {
-      display: 'block',
+      display: 'flex', // 🔧 FIX: Changed from 'block' to 'flex' for proper xterm expansion
+      flexDirection: 'column' as const,
       width: '100%',
       height: '100%',
+      minWidth: '0', // 🔧 FIX: Allow shrinking below content size
+      minHeight: '0', // 🔧 FIX: Allow shrinking below content size
       position: 'relative' as const,
       overflow: 'hidden',
       background: '#000',

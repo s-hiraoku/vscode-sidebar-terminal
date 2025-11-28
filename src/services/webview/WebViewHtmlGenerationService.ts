@@ -246,12 +246,14 @@ export class WebViewHtmlGenerationService {
         }
 
         html, body {
+            width: 100% !important;
             height: 100% !important;
             margin: 0 !important;
             padding: 0 !important;
         }
 
         body {
+            width: 100%;
             margin: 0;
             padding: 0;
             overflow: hidden;
@@ -306,8 +308,13 @@ export class WebViewHtmlGenerationService {
     return `
         /* Terminal containers */
         #terminal {
-            flex: 1;
+            display: flex; /* 🔧 FIX: Enable flex to allow children to expand */
+            flex: 1 1 auto; /* 🔧 FIX: Use flex-grow, flex-shrink, and flex-basis */
+            flex-direction: column;
             width: 100%;
+            height: 100%; /* 🔧 FIX: Explicit height for proper sizing */
+            min-width: 0; /* 🔧 FIX: Allow shrinking */
+            min-height: 0;
             background: #000;
             position: relative;
             overflow: hidden;
@@ -316,16 +323,30 @@ export class WebViewHtmlGenerationService {
         }
 
         #terminal-body {
-            flex: 1;
+            display: flex;
+            flex: 1 1 auto;
+            flex-direction: column;
             width: 100%;
             height: 100%;
+            min-width: 0; /* 🔧 FIX: Allow shrinking below content size */
+            min-height: 0;
             background: #000;
             position: relative;
             overflow: hidden;
             margin: 0;
             padding: 0;
+        }
+
+        /* 🔧 FIX: terminals-wrapper must expand to full size */
+        #terminals-wrapper {
             display: flex;
             flex-direction: column;
+            flex: 1 1 auto;
+            width: 100%;
+            height: 100%;
+            min-width: 0; /* Allow shrinking below content size */
+            min-height: 0;
+            overflow: hidden;
         }
 
         .secondary-terminal {
@@ -366,6 +387,9 @@ export class WebViewHtmlGenerationService {
 
         /* XTerm.js container fixes */
         .xterm {
+            display: flex !important; /* 🔧 FIX: Enable flex for proper expansion */
+            flex: 1 1 auto !important; /* 🔧 FIX: Allow xterm to expand with container */
+            flex-direction: column !important;
             margin: 0 !important;
             padding: 0 !important;
             width: 100% !important;
@@ -380,14 +404,26 @@ export class WebViewHtmlGenerationService {
         }
 
         .xterm-screen {
+            flex: 1 1 auto !important; /* 🔧 FIX: Allow screen to expand */
             margin: 0 !important;
             padding: 0 !important;
             width: 100% !important;
             height: 100% !important;
         }
 
+        /* Terminal content container (xterm parent) */
+        .terminal-content {
+            display: flex !important;
+            flex-direction: column !important;
+            flex: 1 1 auto !important;
+            width: 100% !important;
+            height: 100% !important;
+        }
+
         /* Terminal container fixes */
         [data-terminal-container] {
+            display: flex !important;
+            flex-direction: column !important;
             margin: 0 !important;
             padding: 2px !important;
             height: 100% !important;

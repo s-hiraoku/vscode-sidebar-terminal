@@ -244,6 +244,8 @@ export class SplitLayoutService {
         flex: 1;
         width: 100%;
         height: 100%;
+        min-width: 0;
+        min-height: 0;
         overflow: hidden;
         padding: 4px;
         gap: 4px;

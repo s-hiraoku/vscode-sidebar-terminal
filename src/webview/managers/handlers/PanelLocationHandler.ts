@@ -101,6 +101,9 @@ export class PanelLocationHandler implements IMessageHandler {
           });
 
           initialDetectionDone = true;
+
+          // 🔧 FIX: Schedule terminal refit after initial detection
+          this.scheduleTerminalRefitViaDOM();
         } else {
           // Change detection: Only update if location changed
           if (this.cachedPanelLocation !== detectedLocation) {
@@ -124,6 +127,9 @@ export class PanelLocationHandler implements IMessageHandler {
               location: detectedLocation,
               timestamp: Date.now(),
             });
+
+            // 🔧 FIX: Schedule terminal refit after panel location change
+            this.scheduleTerminalRefitViaDOM();
           }
         }
 
@@ -139,6 +145,27 @@ export class PanelLocationHandler implements IMessageHandler {
         resizeObserver.observe(document.body);
       });
     }
+  }
+
+  /**
+   * 🔧 FIX: Schedule terminal refit via DOM event
+   * Used when coordinator is not available (autonomous detection)
+   * Dispatches a custom event that TerminalWebviewManager can listen to
+   */
+  private scheduleTerminalRefitViaDOM(): void {
+    setTimeout(() => {
+      try {
+        // Dispatch custom event for terminal refit
+        const event = new CustomEvent('terminal-panel-location-changed', {
+          bubbles: true,
+          detail: { location: this.cachedPanelLocation },
+        });
+        window.dispatchEvent(event);
+        this.logger.info('📤 Dispatched terminal-panel-location-changed event');
+      } catch (error) {
+        this.logger.error('Failed to dispatch terminal refit event:', error);
+      }
+    }, 150); // Allow CSS layout to settle
   }
 
   /**
@@ -280,6 +307,38 @@ export class PanelLocationHandler implements IMessageHandler {
         terminalsWrapper.classList.remove('terminal-split-horizontal');
       }
     }
+
+    // 🔧 FIX: Trigger resize on all terminals after panel location change
+    // This ensures terminals expand to full width after layout change
+    this.scheduleTerminalRefit(coordinator);
+  }
+
+  /**
+   * 🔧 FIX: Schedule terminal refit after layout change
+   * Delays the fit to allow CSS layout to settle
+   */
+  private scheduleTerminalRefit(coordinator: IManagerCoordinator): void {
+    setTimeout(() => {
+      try {
+        // Get split manager and refit all terminals
+        const splitManager = (coordinator as { getSplitManager?: () => { getTerminals?: () => Map<string, { fitAddon?: { fit: () => void }, terminal?: { cols: number, rows: number } }> } }).getSplitManager?.();
+        if (splitManager && typeof splitManager.getTerminals === 'function') {
+          const terminals = splitManager.getTerminals();
+          terminals.forEach((terminalData, terminalId) => {
+            if (terminalData.fitAddon) {
+              try {
+                terminalData.fitAddon.fit();
+                this.logger.info(`✅ Terminal ${terminalId} refitted after panel location change`);
+              } catch (error) {
+                this.logger.warn(`Failed to refit terminal ${terminalId}:`, error);
+              }
+            }
+          });
+        }
+      } catch (error) {
+        this.logger.error('Failed to refit terminals after panel location change:', error);
+      }
+    }, 150); // Allow CSS layout to settle
   }
 
   /**

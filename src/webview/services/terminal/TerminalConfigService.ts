@@ -5,12 +5,22 @@
  * Manages default terminal configuration and settings.
  */
 
-import { TerminalConfig } from '../../../types/shared';
+import { ITerminalOptions, ITheme } from '@xterm/xterm';
+
+/**
+ * Extended terminal configuration for WebView xterm.js instance
+ * Uses ITerminalOptions directly for xterm.js compatibility with addon flags
+ */
+export interface WebViewTerminalConfig extends ITerminalOptions {
+  enableGpuAcceleration?: boolean;
+  enableSearchAddon?: boolean;
+  enableUnicode11?: boolean;
+}
 
 /**
  * VS Code Standard Terminal Configuration with all default values
  */
-export const DEFAULT_TERMINAL_CONFIG: TerminalConfig = {
+export const DEFAULT_TERMINAL_CONFIG: WebViewTerminalConfig = {
   // Basic appearance
   cursorBlink: true,
   fontFamily: 'monospace',
@@ -22,7 +32,7 @@ export const DEFAULT_TERMINAL_CONFIG: TerminalConfig = {
   theme: {
     background: '#000000',
     foreground: '#ffffff',
-  },
+  } as ITheme,
 
   // VS Code Standard Options - Core Features
   altClickMovesCursor: true,
@@ -57,8 +67,8 @@ export const DEFAULT_TERMINAL_CONFIG: TerminalConfig = {
   disableStdin: false,
   screenReaderMode: false,
 
-  // Bell Configuration
-  bellSound: undefined,
+  // Bell Configuration - xterm.js uses bellStyle, not bellSound
+  // bellStyle: undefined,
 
   // Advanced Options
   windowOptions: {
@@ -87,21 +97,21 @@ export class TerminalConfigService {
   /**
    * Merge user config with default terminal configuration
    */
-  public static mergeConfig(userConfig?: Partial<TerminalConfig>): TerminalConfig {
+  public static mergeConfig(userConfig?: Partial<WebViewTerminalConfig>): WebViewTerminalConfig {
     return { ...DEFAULT_TERMINAL_CONFIG, ...userConfig };
   }
 
   /**
    * Get default terminal configuration
    */
-  public static getDefaultConfig(): TerminalConfig {
+  public static getDefaultConfig(): WebViewTerminalConfig {
     return { ...DEFAULT_TERMINAL_CONFIG };
   }
 
   /**
    * Validate terminal configuration
    */
-  public static validateConfig(config: Partial<TerminalConfig>): boolean {
+  public static validateConfig(config: Partial<WebViewTerminalConfig>): boolean {
     // Basic validation for critical fields
     if (config.fontSize !== undefined && (config.fontSize < 6 || config.fontSize > 72)) {
       return false;

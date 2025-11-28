@@ -16,6 +16,11 @@ export interface ResizeOptions {
   immediate?: boolean;
   onStart?: () => void;
   onComplete?: () => void;
+  /**
+   * Whether to skip the first callback (default: true for terminal containers)
+   * Set to false for parent container observers where initial resize should trigger fit()
+   */
+  skipFirstCallback?: boolean;
 }
 
 /**
@@ -122,12 +127,16 @@ export class ResizeManager {
     // Clean up existing observer
     this.unobserveResize(key);
 
+    // 🔧 FIX: Use skipFirstCallback option (default: true for backward compatibility)
+    const shouldSkipFirstCallback = options.skipFirstCallback !== false;
+
     try {
       // Store callback for potential resume
       this.observerCallbacks.set(key, callback);
 
       // Mark to skip first callback (common pattern to avoid initial resize)
-      this.firstCallbackSkip.set(key, true);
+      // 🔧 FIX: Only skip if explicitly requested or default behavior
+      this.firstCallbackSkip.set(key, shouldSkipFirstCallback);
 
       const observer = new ResizeObserver((entries) => {
         // Skip if globally paused
@@ -151,7 +160,7 @@ export class ResizeManager {
       observer.observe(element);
       this.observers.set(key, observer);
 
-      log(`👁️ ResizeManager: Observer setup for ${key}`);
+      log(`👁️ ResizeManager: Observer setup for ${key} (skipFirstCallback: ${shouldSkipFirstCallback})`);
     } catch (error) {
       log(`❌ ResizeManager: Failed to setup observer for ${key}:`, error);
     }

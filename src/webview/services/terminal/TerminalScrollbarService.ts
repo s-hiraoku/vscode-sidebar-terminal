@@ -85,15 +85,21 @@ export class TerminalScrollbarService {
         flex-direction: column !important;
         width: 100% !important;
         height: 100% !important;
+        min-width: 0 !important; /* 🔧 FIX: Allow shrinking below content size */
+        min-height: 0 !important;
         position: relative !important;
         padding: 0 !important;
         margin: 0 !important;
       }
 
       .terminal-content {
+        display: flex !important; /* 🔧 FIX: Ensure flex display for xterm expansion */
+        flex-direction: column !important;
         flex: 1 1 auto !important;
         width: 100% !important;
         height: 100% !important;
+        min-width: 0 !important; /* 🔧 FIX: Allow shrinking below content size */
+        min-height: 0 !important;
         position: relative !important;
         padding: 0 !important;
         margin: 0 !important;
@@ -101,9 +107,14 @@ export class TerminalScrollbarService {
       }
 
       .terminal-container .xterm {
+        display: flex !important; /* 🔧 FIX: Ensure flex for xterm expansion */
+        flex: 1 1 auto !important; /* 🔧 FIX: Allow xterm to expand */
+        flex-direction: column !important;
         position: relative !important;
         width: 100% !important;
         height: 100% !important;
+        min-width: 0 !important; /* 🔧 FIX: Allow shrinking below content size */
+        min-height: 0 !important;
         padding: 0 !important;
         margin: 0 !important;
         box-sizing: border-box !important;

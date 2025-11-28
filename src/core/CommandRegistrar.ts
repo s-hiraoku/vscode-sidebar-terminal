@@ -19,10 +19,12 @@ import { logger } from '../utils/logger';
 
 /**
  * Command handler definition
+ * Handler accepts any arguments (typed at call site) to avoid strict type incompatibility
  */
 interface CommandDefinition {
   command: string;
-  handler: (...args: unknown[]) => unknown | Promise<unknown>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  handler: (...args: any[]) => unknown | Promise<unknown>;
 }
 
 /**

@@ -367,6 +367,13 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       this.openSettings();
     });
 
+    // 🔧 FIX: Listen for panel location changes to trigger terminal resize
+    // This ensures terminals expand to full width after layout change
+    window.addEventListener('terminal-panel-location-changed', () => {
+      log('📍 Panel location changed event received - refitting all terminals');
+      this.refitAllTerminals();
+    });
+
     // VS Code pattern: ResizeObserver handles individual terminal container resizing
     // Window resize events are no longer needed as ResizeObserver provides more precise detection
     log('🔍 Using ResizeObserver pattern instead of window resize events');
@@ -377,6 +384,102 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     });
 
     log('🎭 Event handlers configured');
+  }
+
+  /**
+   * 🔧 FIX: Refit all terminals to their container dimensions
+   * Called after panel location changes or layout updates
+   */
+  private refitAllTerminals(): void {
+    try {
+      const terminals = this.splitManager.getTerminals();
+      const terminalBody = document.getElementById('terminal-body');
+      const terminalsWrapper = document.getElementById('terminals-wrapper');
+
+      // 🔍 DEBUG: Log ALL parent container dimensions from body down
+      const body = document.body;
+      if (body) {
+        const bodyRect = body.getBoundingClientRect();
+        log(`📐 [DEBUG] document.body size: ${bodyRect.width}x${bodyRect.height}, clientWidth: ${body.clientWidth}`);
+      }
+      if (terminalBody) {
+        const bodyRect = terminalBody.getBoundingClientRect();
+        log(`📐 [DEBUG] terminal-body size: ${bodyRect.width}x${bodyRect.height}, clientWidth: ${terminalBody.clientWidth}`);
+        log(`📐 [DEBUG] terminal-body computedStyle width: ${window.getComputedStyle(terminalBody).width}`);
+      }
+      if (terminalsWrapper) {
+        const wrapperRect = terminalsWrapper.getBoundingClientRect();
+        log(`📐 [DEBUG] terminals-wrapper size: ${wrapperRect.width}x${wrapperRect.height}, clientWidth: ${terminalsWrapper.clientWidth}`);
+      }
+
+      terminals.forEach((terminalData, terminalId) => {
+        if (terminalData.fitAddon) {
+          try {
+            // 🔍 DEBUG: Log container dimensions before fit
+            if (terminalData.container) {
+              const containerRect = terminalData.container.getBoundingClientRect();
+              log(`📐 [DEBUG] Container ${terminalId} size BEFORE fit: ${containerRect.width}x${containerRect.height}`);
+
+              // Check xterm element
+              const xtermElement = terminalData.container.querySelector('.xterm');
+              if (xtermElement) {
+                const xtermRect = xtermElement.getBoundingClientRect();
+                log(`📐 [DEBUG] .xterm ${terminalId} size: ${xtermRect.width}x${xtermRect.height}`);
+              }
+
+              // Check terminal-content element
+              const contentElement = terminalData.container.querySelector('.terminal-content');
+              if (contentElement) {
+                const contentRect = contentElement.getBoundingClientRect();
+                log(`📐 [DEBUG] .terminal-content ${terminalId} size: ${contentRect.width}x${contentRect.height}`);
+              }
+            }
+
+            // 🔍 DEBUG: Check proposeDimensions before fit
+            const proposedDims = terminalData.fitAddon.proposeDimensions();
+            log(`📐 [DEBUG] proposeDimensions for ${terminalId}: cols=${proposedDims?.cols}, rows=${proposedDims?.rows}`);
+
+            // 🔧 FIX: Force terminal-content to match container size before fit
+            // This ensures FitAddon calculates based on actual available space
+            if (terminalData.container) {
+              const containerRect = terminalData.container.getBoundingClientRect();
+              const contentElement = terminalData.container.querySelector('.terminal-content') as HTMLElement;
+              const headerElement = terminalData.container.querySelector('.terminal-header') as HTMLElement;
+
+              if (contentElement) {
+                // Calculate available height (minus header if present)
+                const headerHeight = headerElement ? headerElement.getBoundingClientRect().height : 0;
+                const availableHeight = containerRect.height - headerHeight;
+
+                // Force content element size
+                contentElement.style.width = `${containerRect.width}px`;
+                contentElement.style.height = `${availableHeight}px`;
+                log(`📐 [DEBUG] Forced .terminal-content size: ${containerRect.width}x${availableHeight}`);
+              }
+            }
+
+            terminalData.fitAddon.fit();
+
+            // 🔍 DEBUG: Log terminal cols/rows after fit
+            if (terminalData.terminal) {
+              log(`✅ Terminal ${terminalId} refitted: ${terminalData.terminal.cols}x${terminalData.terminal.rows}`);
+
+              // 🔍 DEBUG: Check canvas dimensions after fit
+              if (terminalData.container) {
+                const canvas = terminalData.container.querySelector('canvas.xterm-text-layer, canvas.xterm-link-layer');
+                if (canvas) {
+                  log(`📐 [DEBUG] Canvas after fit: ${(canvas as HTMLCanvasElement).width}x${(canvas as HTMLCanvasElement).height}`);
+                }
+              }
+            }
+          } catch (error) {
+            log(`⚠️ Failed to refit terminal ${terminalId}:`, error);
+          }
+        }
+      });
+    } catch (error) {
+      log('❌ Error refitting all terminals:', error);
+    }
   }
 
   // IManagerCoordinator interface implementation
@@ -1210,6 +1313,52 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
     // 🆕 その後にWebView headerを作成（DOMが準備完了後）
     this.headerManager.createWebViewHeader();
+
+    // 🔧 FIX: Setup parent container ResizeObserver to handle WebView resizing
+    // This ensures terminals expand to full width when the panel is resized
+    this.setupParentContainerResizeObserver();
+  }
+
+  // 🔧 FIX: Store ResizeObserver for cleanup
+  private parentResizeObserver: ResizeObserver | null = null;
+  private parentResizeTimer: number | null = null;
+
+  /**
+   * 🔧 FIX: Setup ResizeObserver on parent container to detect WebView resizing
+   * This is critical for terminals to expand beyond their initial size
+   */
+  private setupParentContainerResizeObserver(): void {
+    const terminalBody = document.getElementById('terminal-body');
+    if (!terminalBody) {
+      log('⚠️ terminal-body not found for parent ResizeObserver');
+      return;
+    }
+
+    log('🔧 Setting up direct ResizeObserver on terminal-body');
+
+    // 🔧 FIX: Use direct ResizeObserver instead of ResizeManager
+    // This avoids any first-callback-skip logic
+    this.parentResizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        log(`📐 [RESIZE] Parent container resized: ${width}x${height}`);
+
+        // Debounce the refit
+        if (this.parentResizeTimer !== null) {
+          window.clearTimeout(this.parentResizeTimer);
+        }
+
+        this.parentResizeTimer = window.setTimeout(() => {
+          log(`📐 [RESIZE] Triggering refitAllTerminals after debounce`);
+          this.refitAllTerminals();
+        }, 100);
+      }
+    });
+
+    this.parentResizeObserver.observe(terminalBody);
+    log('✅ Direct ResizeObserver setup on terminal-body');
+
+    log('✅ Parent container ResizeObserver setup');
   }
 
   // Compatibility methods for existing code

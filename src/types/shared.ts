@@ -97,6 +97,10 @@ export interface ExtensionTerminalConfig
   };
   readonly enableCliAgentIntegration?: boolean;
   readonly highlightActiveBorder?: boolean;
+  // Addon configuration for WebView terminal rendering
+  readonly enableGpuAcceleration?: boolean;
+  readonly enableSearchAddon?: boolean;
+  readonly enableUnicode11?: boolean;
 }
 
 /**

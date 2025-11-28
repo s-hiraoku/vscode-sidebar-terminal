@@ -86,10 +86,12 @@ export class TerminalAddonManager {
               terminalLogger.warn(`⚠️ WebLinksAddon handler failed for ${terminalId}:`, error);
             }
           },
+          // Use type assertion for options that may not be in type definitions
+          // willLinkActivate allows plain left-click; xterm suppresses during drag selection
           {
-            // Allow standard left click to activate; xterm suppresses activation during drag selection
-            willLinkActivate: (event) => Boolean(event && event.button === 0),
-          }
+            willLinkActivate: (event: MouseEvent) => Boolean(event && event.button === 0),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          } as any
         );
 
         terminal.loadAddon(webLinksAddon);

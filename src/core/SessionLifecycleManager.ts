@@ -319,8 +319,8 @@ export class SessionLifecycleManager {
     timestamp?: number;
     version?: string;
     terminals?: Array<{ id: string; name: string; cwd: string }>;
-    activeTerminalId?: string;
-    scrollbackData?: Record<string, unknown[]>;
+    activeTerminalId?: string | null;
+    scrollbackData?: Record<string, unknown>;
   }): string[] {
     const diagnosticLines: string[] = [];
     diagnosticLines.push('📊 SESSION DIAGNOSTIC REPORT');

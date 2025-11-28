@@ -138,6 +138,7 @@ export class TerminalLinkManager extends BaseManager {
     const brackets: Record<string, string> = { ')': '(', ']': '[', '}': '{', '>': '<' };
     while (cleaned.length > 0) {
       const lastChar = cleaned[cleaned.length - 1];
+      if (lastChar === undefined) break;
       const openChar = brackets[lastChar];
       if (openChar && !cleaned.includes(openChar)) {
         cleaned = cleaned.slice(0, -1);
