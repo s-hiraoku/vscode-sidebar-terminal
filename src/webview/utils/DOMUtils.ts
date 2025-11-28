@@ -239,10 +239,28 @@ export namespace DOMUtils {
       terminalsWrapper.style.maxWidth = '';
     }
 
+    // 🔧 CRITICAL FIX: Reset .xterm-helpers as well
+    // This element may also have fixed dimensions set by xterm.js
+    const xtermHelpers = container.querySelector('.xterm-helpers') as HTMLElement;
+    if (xtermHelpers) {
+      xtermHelpers.style.width = '';
+    }
+
+    // 🔧 CRITICAL FIX: Reset terminal-split-wrapper parent if it exists
+    // Split layout may have fixed widths
+    const splitWrapper = container.closest('.terminal-split-wrapper') as HTMLElement;
+    if (splitWrapper) {
+      splitWrapper.style.width = '';
+      splitWrapper.style.maxWidth = '';
+    }
+
     // Force browser layout reflow to ensure new sizes are calculated
     if (forceReflow) {
       // eslint-disable-next-line @typescript-eslint/no-unused-expressions
       container.offsetHeight;
+      // Also read clientWidth to force horizontal reflow
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+      container.clientWidth;
     }
 
     return true;
