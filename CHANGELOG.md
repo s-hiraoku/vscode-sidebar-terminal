@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.144] - 2025-11-28
+
+### Fixed
+
+- **Terminal Width Expansion**: Fixed terminal not expanding to full container width
+  - Added `min-width: 0` to all flex containers in the terminal hierarchy
+  - Added direct ResizeObserver on `#terminal-body` for reliable resize events
+  - Fixed flex shrink behavior allowing proper width adjustment when resizing WebView panel
+
+- **TypeScript Compilation**: Fixed multiple type errors
+  - Added `enableGpuAcceleration`, `enableSearchAddon`, `enableUnicode11` to `ExtensionTerminalConfig`
+  - Updated `TerminalConfigService` to use xterm.js `ITerminalOptions`
+  - Fixed command handler types in `CommandRegistrar`
+  - Fixed session diagnostic report types in `SessionLifecycleManager`
+  - Fixed WebLinksAddon options type assertion in `TerminalAddonManager`
+  - Fixed potential undefined index access in `TerminalLinkManager`
+
 ## [0.1.143] - 2025-11-27
 
 ### Fixed
