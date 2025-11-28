@@ -167,32 +167,65 @@ export class ResizeCoordinator {
       // 🔧 CRITICAL FIX: Use requestAnimationFrame to ensure CSS has been applied
       // before calling fit() on terminals
       requestAnimationFrame(() => {
+        // 🔧 DOUBLE-FIT PATTERN: First fit to get xterm to recalculate,
+        // then reset styles and fit again to ensure expansion works
         terminals.forEach((terminalData, terminalId) => {
           if (terminalData.fitAddon && terminalData.terminal) {
             try {
               const container = terminalData.container;
-              const xtermEl = container?.querySelector('.xterm') as HTMLElement;
 
               // デバッグ: fit前
               log(`📐 [DEBUG] Before fit - ${terminalId}:`);
               log(`  container: ${container?.clientWidth}x${container?.clientHeight}`);
 
-              // 寸法提案をログ
-              const proposedDims = terminalData.fitAddon.proposeDimensions();
-              log(`📐 [DEBUG] proposeDimensions - ${terminalId}: cols=${proposedDims?.cols}, rows=${proposedDims?.rows}`);
-
-              // fit() を呼び出し
+              // First fit() - this may be constrained by previous dimensions
               terminalData.fitAddon.fit();
 
-              // デバッグ: fit後
-              log(`📐 [DEBUG] After fit - ${terminalId}:`);
-              log(`  .xterm: ${xtermEl?.clientWidth}x${xtermEl?.clientHeight}`);
-
-              log(`✅ Terminal ${terminalId} refitted: ${terminalData.terminal.cols}x${terminalData.terminal.rows}`);
+              log(`📐 [DEBUG] After first fit - ${terminalId}: ${terminalData.terminal.cols}x${terminalData.terminal.rows}`);
             } catch (error) {
               log(`⚠️ Failed to refit terminal ${terminalId}:`, error);
             }
           }
+        });
+
+        // 🔧 CRITICAL: Second pass - reset styles again and refit
+        // xterm.js may have set new fixed dimensions after first fit()
+        requestAnimationFrame(() => {
+          // Reset all container styles again
+          terminals.forEach((terminalData) => {
+            if (terminalData.container) {
+              DOMUtils.resetXtermInlineStyles(terminalData.container, false);
+            }
+          });
+
+          // Force reflow
+          // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+          document.body.offsetWidth;
+
+          // Second fit() with clean styles
+          terminals.forEach((terminalData, terminalId) => {
+            if (terminalData.fitAddon && terminalData.terminal) {
+              try {
+                const container = terminalData.container;
+                const xtermEl = container?.querySelector('.xterm') as HTMLElement;
+
+                // 寸法提案をログ
+                const proposedDims = terminalData.fitAddon.proposeDimensions();
+                log(`📐 [DEBUG] proposeDimensions (2nd) - ${terminalId}: cols=${proposedDims?.cols}, rows=${proposedDims?.rows}`);
+
+                // Second fit()
+                terminalData.fitAddon.fit();
+
+                // デバッグ: fit後
+                log(`📐 [DEBUG] After second fit - ${terminalId}:`);
+                log(`  .xterm: ${xtermEl?.clientWidth}x${xtermEl?.clientHeight}`);
+
+                log(`✅ Terminal ${terminalId} refitted: ${terminalData.terminal.cols}x${terminalData.terminal.rows}`);
+              } catch (error) {
+                log(`⚠️ Failed to refit terminal ${terminalId} (2nd pass):`, error);
+              }
+            }
+          });
         });
       });
     } catch (error) {

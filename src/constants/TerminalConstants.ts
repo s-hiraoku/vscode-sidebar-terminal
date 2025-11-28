@@ -12,11 +12,30 @@ export const TERMINAL_CONSTANTS = {
   /** 最大ターミナル数 (5個) */
   MAX_TERMINAL_COUNT: 5,
 
+  /** デフォルトの最大ターミナル数 (5個) */
+  DEFAULT_MAX_TERMINALS: 5,
+
   /** 最小ターミナルID番号 (1) */
   MIN_TERMINAL_ID_NUMBER: 1,
 
   /** 最大ターミナルID番号 (5) */
   MAX_TERMINAL_ID_NUMBER: 5,
+
+  // ========================================
+  // プラットフォーム設定
+  // ========================================
+
+  /** プラットフォーム別デフォルトシェル */
+  PLATFORMS: {
+    WINDOWS: 'win32',
+    MACOS: 'darwin',
+    LINUX: 'linux',
+    DEFAULT_SHELLS: {
+      win32: 'powershell.exe',
+      darwin: '/bin/zsh',
+      linux: '/bin/bash',
+    },
+  },
 
   // ========================================
   // ターミナル設定

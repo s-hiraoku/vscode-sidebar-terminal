@@ -41,6 +41,9 @@ import {
 import { TerminalOperationsCoordinator } from '../coordinators/TerminalOperationsCoordinator';
 import { ResizeCoordinator } from '../coordinators/ResizeCoordinator';
 
+// Services
+import { FontSettingsService } from '../services/FontSettingsService';
+
 interface SystemStatusSnapshot {
   ready: boolean;
   state: TerminalState | null;
@@ -83,7 +86,6 @@ import { DisplayModeManager } from './DisplayModeManager';
 import { HeaderManager } from './HeaderManager';
 import { DebugPanelManager, SystemDiagnostics } from './DebugPanelManager';
 import { TerminalStateDisplayManager } from './TerminalStateDisplayManager';
-import { DOMUtils } from '../utils/DOMUtils';
 
 /**
  * 軽量化されたTerminalWebviewManager
@@ -133,6 +135,11 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
   public webViewPersistenceService!: WebViewPersistenceService;
 
   // ========================================
+  // Services (単一責任の原則)
+  // ========================================
+  private fontSettingsService!: FontSettingsService;
+
+  // ========================================
   // 状態
   // ========================================
   private versionInfo: string = 'v0.1.0';
@@ -143,10 +150,6 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     altClickMovesCursor: true,
     multiCursorModifier: 'alt',
     highlightActiveBorder: true,
-  };
-  private currentFontSettings: WebViewFontSettings = {
-    fontSize: 14,
-    fontFamily: 'monospace',
   };
   private isInitialized = false;
   private processedScrollbackRequests = new Set<string>();
@@ -181,6 +184,9 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
     // DebugPanelManager
     this.debugPanelManager = new DebugPanelManager();
+
+    // FontSettingsService (単一責任: フォント設定の一元管理)
+    this.fontSettingsService = new FontSettingsService();
 
     log('✅ All managers initialized');
 
@@ -294,6 +300,9 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     this.uiManager = new UIManager();
     this.uiManager.setHighlightActiveBorder(this.currentSettings.highlightActiveBorder ?? true);
 
+    // Connect FontSettingsService with UIManager (Dependency Injection)
+    this.fontSettingsService.setApplicator(this.uiManager);
+
     // Terminal Tab Manager
     this.terminalTabManager = new TerminalTabManager();
     this.terminalTabManager.setCoordinator(this);
@@ -304,6 +313,8 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
     // Config Manager
     this.configManager = new ConfigManager();
+    // Connect ConfigManager to FontSettingsService for single source of truth
+    this.configManager.setFontSettingsService(this.fontSettingsService);
 
     // 🚀 PHASE 3: Initialize persistence managers with proper API access
     this.webViewPersistenceService = new WebViewPersistenceService();
@@ -1101,31 +1112,29 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     }
   }
 
+  /**
+   * Apply font settings to all terminals
+   *
+   * Delegates to FontSettingsService for single source of truth management.
+   * This method is the entry point for font settings updates from Extension.
+   */
   public applyFontSettings(fontSettings: WebViewFontSettings): void {
     try {
-      this.currentFontSettings = { ...this.currentFontSettings, ...fontSettings };
-      log('🔤 Font settings received:', fontSettings);
-
-      // Apply font settings to all existing terminals
+      // Delegate to FontSettingsService (single source of truth)
       const terminals = this.splitManager.getTerminals();
-      terminals.forEach((terminalInstance, terminalId) => {
-        try {
-          this.uiManager.applyFontSettings(terminalInstance.terminal, this.currentFontSettings);
-          log(`🔤 Font settings applied to terminal ${terminalId}`);
-        } catch (terminalError) {
-          log(`❌ Error applying font to terminal ${terminalId}:`, terminalError);
-        }
-      });
+      this.fontSettingsService.updateSettings(fontSettings, terminals);
 
-      // Also update ConfigManager's font settings cache
-      if (this.configManager) {
-        this.configManager.applyFontSettings(this.currentFontSettings, terminals);
-      }
-
-      log('🔤 Font settings applied to all terminals');
+      log('🔤 Font settings applied via FontSettingsService');
     } catch (error) {
       log('❌ Error applying font settings:', error);
     }
+  }
+
+  /**
+   * Get current font settings from FontSettingsService
+   */
+  public getCurrentFontSettings(): WebViewFontSettings {
+    return this.fontSettingsService.getCurrentSettings();
   }
 
   public loadSettings(): void {
@@ -1153,7 +1162,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     try {
       const state = {
         settings: this.currentSettings,
-        fontSettings: this.currentFontSettings,
+        fontSettings: this.fontSettingsService.getCurrentSettings(),
         timestamp: Date.now(),
       };
 

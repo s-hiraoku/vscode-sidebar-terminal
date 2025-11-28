@@ -122,6 +122,10 @@
    🔧 CRITICAL: xterm.js sets fixed pixel width on canvas elements.
    We need max-width: 100% to allow terminal expansion beyond initial size.
    The actual canvas pixel dimensions are controlled by xterm.js fit() addon.
+
+   NOTE: We do NOT set width: 100% !important on canvas because xterm.js
+   needs to control the actual pixel dimensions for proper rendering.
+   max-width allows expansion while letting xterm.js control the size.
 */
 .xterm .xterm-screen canvas {
   max-width: 100% !important;
@@ -130,6 +134,21 @@
 /* xterm-rows contains the actual rendered text spans */
 .xterm-rows {
   width: 100% !important;
+}
+
+/* 🔧 CRITICAL FIX: xterm-helpers contains measurement elements
+   This element may get fixed width that prevents expansion
+*/
+.xterm-helpers {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* 🔧 CRITICAL FIX: xterm-cursor-layer and other layers
+   These layers inside xterm-screen may have fixed dimensions
+*/
+.xterm-screen > div {
+  max-width: 100% !important;
 }
 
 /* ========================================
