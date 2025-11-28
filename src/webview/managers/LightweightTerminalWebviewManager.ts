@@ -4,7 +4,9 @@
  * 責務分離による軽量化されたWebViewマネージャー
  * 協調パターンを使用して各専門マネージャーを統合
  *
- * 元のTerminalWebviewManager（2,153行）から300行以下に大幅削減
+ * リファクタリング: コーディネーターパターンによる更なる責務分離
+ * - TerminalOperationsCoordinator: ターミナルCRUD操作
+ * - ResizeCoordinator: リサイズ処理
  */
 
 import { Terminal } from '@xterm/xterm';
@@ -17,7 +19,6 @@ import {
   TerminalConfig,
   TerminalState,
 } from '../../types/shared';
-// Removed unused imports: TerminalInteractionEvent, WebviewMessage
 import {
   IManagerCoordinator,
   TerminalInstance,
@@ -36,7 +37,9 @@ import {
   IShellIntegrationBridge,
 } from '../interfaces/ManagerInterfaces';
 
-// Note: DebugInfo, DebugCounters, SystemDiagnostics moved to DebugPanelManager
+// Coordinators (リファクタリングで抽出)
+import { TerminalOperationsCoordinator } from '../coordinators/TerminalOperationsCoordinator';
+import { ResizeCoordinator } from '../coordinators/ResizeCoordinator';
 
 interface SystemStatusSnapshot {
   ready: boolean;
@@ -87,12 +90,19 @@ import { DOMUtils } from '../utils/DOMUtils';
  *
  * 主な改善点：
  * - 責務分離による専門マネージャー協調
- * - 2,153行から300行以下への大幅削減
- * - 協調パターンによる疎結合設計
+ * - コーディネーターパターンによる更なる責務分離
  * - 拡張性とメンテナンス性の向上
  */
 export class LightweightTerminalWebviewManager implements IManagerCoordinator {
-  // 専門マネージャーの協調
+  // ========================================
+  // Coordinators (リファクタリングで抽出された責務)
+  // ========================================
+  private terminalOperations!: TerminalOperationsCoordinator;
+  private resizeCoordinator!: ResizeCoordinator;
+
+  // ========================================
+  // 専門マネージャー
+  // ========================================
   private webViewApiManager: WebViewApiManager;
   private terminalLifecycleManager: TerminalLifecycleCoordinator;
   private cliAgentStateManager: CliAgentStateManager;
@@ -103,14 +113,14 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
   public terminalTabManager!: TerminalTabManager;
 
-  // 🆕 新規マネージャー（Issue #198用）
+  // UI/Display マネージャー
   private terminalContainerManager!: TerminalContainerManager;
   private displayModeManager!: DisplayModeManager;
   private headerManager!: HeaderManager;
   private debugPanelManager: DebugPanelManager;
   private terminalStateDisplayManager!: TerminalStateDisplayManager;
 
-  // 既存マネージャー（段階的移行）
+  // 既存マネージャー
   public splitManager: SplitManager;
   private settingsPanel!: SettingsPanel;
   private notificationManager!: NotificationManager;
@@ -122,14 +132,11 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
   public persistenceManager: WebViewPersistenceService | null = null;
   public webViewPersistenceService!: WebViewPersistenceService;
 
-  // バージョン情報
+  // ========================================
+  // 状態
+  // ========================================
   private versionInfo: string = 'v0.1.0';
-
-  // Split mode transition coordination
   private pendingSplitTransition: Promise<void> | null = null;
-  private pendingTerminalCreations = new Set<string>();
-
-  // 設定管理
   private currentSettings: PartialTerminalSettings = {
     theme: 'auto',
     cursorBlink: true,
@@ -137,27 +144,21 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     multiCursorModifier: 'alt',
     highlightActiveBorder: true,
   };
-
   private currentFontSettings: WebViewFontSettings = {
     fontSize: 14,
     fontFamily: 'monospace',
   };
-
-  // 初期化状態
   private isInitialized = false;
-
-  // Track processed scrollback requests to prevent duplicates
   private processedScrollbackRequests = new Set<string>();
-
-  // Flag to prevent terminal clear during session restore
   private _isRestoringSession = false;
+  private currentTerminalState: TerminalState | null = null;
 
   constructor() {
     log('🚀 RefactoredTerminalWebviewManager initializing...');
 
     // 専門マネージャーの初期化
     this.webViewApiManager = new WebViewApiManager();
-    this.splitManager = new SplitManager(this); // Issue #216: constructor injection
+    this.splitManager = new SplitManager(this);
     this.terminalLifecycleManager = new TerminalLifecycleCoordinator(this.splitManager, this);
     this.cliAgentStateManager = new CliAgentStateManager();
     this.eventHandlerManager = new EventHandlerManager();
@@ -170,17 +171,15 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       this.shellIntegrationManager = NOOP_SHELL_INTEGRATION_MANAGER;
     }
 
-    // HeaderManager（AI Status表示に必要）
+    // HeaderManager
     this.headerManager = new HeaderManager();
     this.headerManager.setCoordinator(this);
 
-    // 🆕 DisplayModeManager と TerminalContainerManager の実体化（Issue #198）
-    // Issue #216: Constructor injection pattern
+    // DisplayModeManager と TerminalContainerManager
     this.terminalContainerManager = new TerminalContainerManager(this);
-
     this.displayModeManager = new DisplayModeManager(this);
 
-    // DebugPanelManager（デバッグパネル表示用）
+    // DebugPanelManager
     this.debugPanelManager = new DebugPanelManager();
 
     log('✅ All managers initialized');
@@ -188,17 +187,63 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     // 既存マネージャーの初期化
     this.initializeExistingManagers();
 
+    // コーディネーターの初期化
+    this.initializeCoordinators();
+
     // 設定読み込み
     this.loadSettings();
 
     // イベントハンドラーの設定
     this.setupEventHandlers();
 
-    // 🔧 Setup InputManager (keyboard shortcuts, IME, Alt+Click)
+    // InputManager設定
     this.setupInputManager();
 
     this.isInitialized = true;
     log('✅ RefactoredTerminalWebviewManager initialized');
+  }
+
+  /**
+   * コーディネーターの初期化
+   */
+  private initializeCoordinators(): void {
+    // ResizeCoordinator
+    this.resizeCoordinator = new ResizeCoordinator({
+      getTerminals: () => this.splitManager.getTerminals(),
+    });
+    this.resizeCoordinator.initialize();
+    this.resizeCoordinator.setupPanelLocationListener();
+
+    // TerminalOperationsCoordinator
+    this.terminalOperations = new TerminalOperationsCoordinator({
+      getActiveTerminalId: () => this.getActiveTerminalId(),
+      setActiveTerminalId: (id) => this.terminalLifecycleManager.setActiveTerminalId(id),
+      getTerminalInstance: (id) => this.getTerminalInstance(id),
+      getAllTerminalInstances: () => this.getAllTerminalInstances(),
+      getTerminalStats: () => this.terminalLifecycleManager.getTerminalStats(),
+      postMessageToExtension: (msg) => this.postMessageToExtension(msg),
+      showWarning: (msg) => this.notificationManager?.showWarning(msg),
+      createTerminalInstance: async (id, name, config, num) =>
+        this.terminalLifecycleManager.createTerminal(id, name, config, num),
+      removeTerminalInstance: (id) => this.terminalLifecycleManager.removeTerminal(id),
+      getTerminalCount: () => this.splitManager?.getTerminals()?.size ?? 0,
+      ensureSplitModeBeforeCreation: () => this.ensureSplitModeBeforeTerminalCreation(),
+      refreshSplitLayout: () => this.displayModeManager?.showAllTerminalsSplit(),
+      prepareDisplayForDeletion: (id, stats) => this.prepareDisplayForTerminalDeletion(id, stats),
+      updateTerminalBorders: (id) =>
+        this.uiManager?.updateTerminalBorders(id, this.terminalLifecycleManager.getAllTerminalContainers()),
+      focusTerminal: (id) => {
+        const instance = this.getTerminalInstance(id);
+        instance?.terminal?.focus();
+      },
+      addTab: (id, name, terminal) => this.terminalTabManager?.addTab(id, name, terminal),
+      setActiveTab: (id) => this.terminalTabManager?.setActiveTab(id),
+      removeTab: (id) => this.terminalTabManager?.removeTab(id),
+      saveSession: () => this.webViewPersistenceService?.saveSession() ?? Promise.resolve(false),
+      removeCliAgentState: (id) => this.cliAgentStateManager.removeTerminalState(id),
+    });
+
+    log('✅ Coordinators initialized');
   }
 
   /**
@@ -334,21 +379,16 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
   /**
    * イベントハンドラーの設定
+   * リサイズ処理はResizeCoordinatorに委譲
    */
   private setupEventHandlers(): void {
     // メッセージイベント
     this.eventHandlerManager.setMessageEventHandler(async (event) => {
-      // 🔍 DEBUG: Track message reception at the highest level
       log(`🔍 [DEBUG] WebView received message event:`, {
         type: event.type,
-        origin: event.origin,
-        hasData: !!event.data,
-        dataType: typeof event.data,
         dataCommand: event.data?.command,
         timestamp: Date.now(),
       });
-
-      // 🔍 FIX: Pass event.data as the message content, not the full event
       await this.messageManager.receiveMessage(event.data, this);
     });
 
@@ -356,47 +396,6 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     document.addEventListener('settings-open-requested' as keyof DocumentEventMap, () => {
       this.openSettings();
     });
-
-    // 🔧 FIX: Listen for panel location changes to trigger terminal resize
-    // This ensures terminals expand to full width after layout change
-    window.addEventListener('terminal-panel-location-changed', () => {
-      log('📍 Panel location changed event received - refitting all terminals');
-      this.refitAllTerminals();
-    });
-
-    // 🔧 CRITICAL FIX: Add window resize event listener for WebView width changes
-    // ResizeObserver on individual containers may not detect parent size changes
-    // This ensures terminals expand when the WebView sidebar/panel is resized
-    let windowResizeTimer: number | null = null;
-    window.addEventListener('resize', () => {
-      // Debounce window resize events
-      if (windowResizeTimer !== null) {
-        window.clearTimeout(windowResizeTimer);
-      }
-      windowResizeTimer = window.setTimeout(() => {
-        log('📐 Window resize detected - refitting all terminals');
-        this.refitAllTerminals();
-        windowResizeTimer = null;
-      }, 100);
-    });
-    log('🔍 Window resize listener added for terminal width expansion');
-
-    // 🔧 CRITICAL FIX: Add ResizeObserver on document.body to detect WebView size changes
-    // VS Code WebView may not fire window.resize events when sidebar/panel is resized
-    let bodyResizeTimer: number | null = null;
-    const bodyResizeObserver = new ResizeObserver(() => {
-      // Debounce body resize events
-      if (bodyResizeTimer !== null) {
-        window.clearTimeout(bodyResizeTimer);
-      }
-      bodyResizeTimer = window.setTimeout(() => {
-        log('📐 Body resize detected - refitting all terminals');
-        this.refitAllTerminals();
-        bodyResizeTimer = null;
-      }, 100);
-    });
-    bodyResizeObserver.observe(document.body);
-    log('🔍 Body ResizeObserver added for WebView size change detection');
 
     // ページライフサイクル
     this.eventHandlerManager.onPageUnload(() => {
@@ -407,66 +406,11 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
   }
 
   /**
-   * 🔧 FIX: Refit all terminals to their container dimensions
-   * Called after panel location changes or layout updates
+   * Refit all terminals to their container dimensions
+   * 委譲: ResizeCoordinator
    */
   private refitAllTerminals(): void {
-    try {
-      const terminals = this.splitManager.getTerminals();
-
-      // 🔍 DEBUG: Log body and wrapper dimensions
-      const body = document.body;
-      const terminalBody = document.getElementById('terminal-body');
-      const terminalsWrapper = document.getElementById('terminals-wrapper');
-      log(`📐 [DEBUG] body: ${body.clientWidth}x${body.clientHeight}`);
-      log(`📐 [DEBUG] terminal-body: ${terminalBody?.clientWidth}x${terminalBody?.clientHeight}`);
-      log(`📐 [DEBUG] terminals-wrapper: ${terminalsWrapper?.clientWidth}x${terminalsWrapper?.clientHeight}`);
-
-      terminals.forEach((terminalData, terminalId) => {
-        if (terminalData.fitAddon && terminalData.terminal) {
-          try {
-            const container = terminalData.container;
-            const terminalContent = container?.querySelector('.terminal-content') as HTMLElement;
-            const xtermEl = container?.querySelector('.xterm') as HTMLElement;
-
-            // 🔍 DEBUG: Log dimensions before reset
-            log(`📐 [DEBUG] Before reset - ${terminalId}:`);
-            log(`  container: ${container?.clientWidth}x${container?.clientHeight}, style.width=${container?.style.width}`);
-            log(`  terminal-content: ${terminalContent?.clientWidth}x${terminalContent?.clientHeight}, style.width=${terminalContent?.style.width}`);
-            log(`  .xterm: ${xtermEl?.clientWidth}x${xtermEl?.clientHeight}, style.width=${xtermEl?.style.width}`);
-
-            // 🔧 FIX: Use shared utility to reset xterm inline styles
-            // This ensures CSS flex/100% can properly expand
-            DOMUtils.resetXtermInlineStyles(terminalData.container);
-
-            // 🔍 DEBUG: Log dimensions after reset
-            log(`📐 [DEBUG] After reset - ${terminalId}:`);
-            log(`  container: ${container?.clientWidth}x${container?.clientHeight}`);
-            log(`  terminal-content: ${terminalContent?.clientWidth}x${terminalContent?.clientHeight}`);
-            log(`  .xterm: ${xtermEl?.clientWidth}x${xtermEl?.clientHeight}`);
-
-            // 🔍 DEBUG: Check proposeDimensions before fit
-            const proposedDims = terminalData.fitAddon.proposeDimensions();
-            log(`📐 [DEBUG] proposeDimensions - ${terminalId}: cols=${proposedDims?.cols}, rows=${proposedDims?.rows}`);
-
-            // Call fit() to recalculate terminal dimensions based on new container size
-            terminalData.fitAddon.fit();
-
-            // 🔍 DEBUG: Log dimensions after fit
-            log(`📐 [DEBUG] After fit - ${terminalId}:`);
-            log(`  .xterm: ${xtermEl?.clientWidth}x${xtermEl?.clientHeight}, style.width=${xtermEl?.style.width}`);
-
-            log(
-              `✅ Terminal ${terminalId} refitted: ${terminalData.terminal.cols}x${terminalData.terminal.rows}`
-            );
-          } catch (error) {
-            log(`⚠️ Failed to refit terminal ${terminalId}:`, error);
-          }
-        }
-      });
-    } catch (error) {
-      log('❌ Error refitting all terminals:', error);
-    }
+    this.resizeCoordinator.refitAllTerminals();
   }
 
   // IManagerCoordinator interface implementation
@@ -676,7 +620,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
         timestamp: Date.now(),
       });
 
-      if (this.pendingTerminalCreations.has(terminalId)) {
+      if (this.terminalOperations.isTerminalCreationPending(terminalId)) {
         log(
           `⏳ [DEBUG] Terminal ${terminalId} creation already pending (source: ${requestSource}), skipping duplicate request`
         );
@@ -723,7 +667,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
       log(`🚀 Creating terminal with header: ${terminalId} (${terminalName}) #${terminalNumber}`);
 
-      this.pendingTerminalCreations.add(terminalId);
+      this.terminalOperations.markTerminalCreationPending(terminalId);
 
       // 1. ターミナルインスタンスを作成
       const terminal = await this.terminalLifecycleManager.createTerminal(
@@ -847,7 +791,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       log(`❌ Error creating terminal ${terminalId}:`, error);
       return null;
     } finally {
-      this.pendingTerminalCreations.delete(terminalId);
+      this.terminalOperations.clearTerminalCreationPending(terminalId);
     }
   }
 
@@ -1316,8 +1260,8 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
         activeTerminalId: terminalState.activeTerminalId,
       });
 
-      // 🎯 [SYNC] Handle deletion synchronization FIRST
-      this.handleStateUpdateWithDeletionSync(terminalState);
+      // 🎯 [SYNC] Handle deletion synchronization FIRST (delegated to coordinator)
+      this.terminalOperations.updateState(terminalState);
 
       // 1. Update internal state cache
       this.currentTerminalState = {
@@ -1336,12 +1280,12 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       // 4. Debug visualization (if enabled)
       this.updateDebugDisplay(this.currentTerminalState);
 
-      // 5. 🔄 [QUEUE] Process any pending creation requests
-      if (this.pendingCreationRequests.length > 0) {
+      // 5. 🔄 [QUEUE] Process any pending creation requests (delegated to coordinator)
+      if (this.terminalOperations.hasPendingCreations()) {
         log(
-          `🔄 [QUEUE] State updated, processing ${this.pendingCreationRequests.length} pending requests`
+          `🔄 [QUEUE] State updated, processing ${this.terminalOperations.getPendingCreationsCount()} pending requests`
         );
-        setTimeout(() => this.processPendingCreationRequests(), 50);
+        setTimeout(() => this.terminalOperations.processPendingCreationRequests(), 50);
       }
 
       log('✅ [STATE] State update completed successfully');
@@ -1572,335 +1516,44 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
    * Check if terminal creation is currently allowed
    */
   public canCreateTerminal(): boolean {
-    const maxTerminals =
-      this.currentTerminalState?.maxTerminals ?? SPLIT_CONSTANTS.MAX_TERMINALS ?? 5;
-
-    const localCount = this.splitManager?.getTerminals()?.size ?? 0;
-    const pending = this.pendingTerminalCreations.size;
-
-    if (!this.currentTerminalState) {
-      log('⚠️ [STATE] No cached state available for creation check, using local count');
-      return localCount + pending < maxTerminals;
-    }
-
-    if (this.currentTerminalState.availableSlots.length > 0) {
-      return true;
-    }
-
-    return localCount + pending < maxTerminals;
+    // Delegate to coordinator for consistent state management
+    return this.terminalOperations.canCreateTerminal();
   }
 
   /**
    * Get next available terminal number
+   * 委譲: TerminalOperationsCoordinator
    */
   public getNextAvailableNumber(): number | null {
-    if (!this.currentTerminalState || this.currentTerminalState.availableSlots.length === 0) {
-      return null;
-    }
-
-    return Math.min(...this.currentTerminalState.availableSlots);
+    return this.terminalOperations.getNextAvailableNumber();
   }
 
-  /**
-   * Terminal deletion tracking for state synchronization
-   */
-  private deletionTracker = new Set<string>();
-  private deletionTimeouts = new Map<string, NodeJS.Timeout>();
+  // ========================================
+  // 委譲: TerminalOperationsCoordinator
+  // ========================================
 
   /**
-   * Track terminal deletion for state synchronization
-   */
-  private trackTerminalDeletion(terminalId: string): void {
-    this.deletionTracker.add(terminalId);
-
-    // Set timeout to automatically clear tracking
-    const timeout = setTimeout(() => {
-      this.clearTerminalDeletionTracking(terminalId);
-    }, 5000); // 5 second timeout
-
-    this.deletionTimeouts.set(terminalId, timeout);
-    log(`🎯 [TRACK] Started tracking deletion for terminal: ${terminalId}`);
-  }
-
-  /**
-   * Check if terminal deletion is being tracked
-   */
-  private isTerminalDeletionTracked(terminalId: string): boolean {
-    return this.deletionTracker.has(terminalId);
-  }
-
-  /**
-   * Clear terminal deletion tracking
-   */
-  private clearTerminalDeletionTracking(terminalId: string): void {
-    this.deletionTracker.delete(terminalId);
-
-    const timeout = this.deletionTimeouts.get(terminalId);
-    if (timeout) {
-      clearTimeout(timeout);
-      this.deletionTimeouts.delete(terminalId);
-    }
-
-    log(`🎯 [TRACK] Cleared deletion tracking for terminal: ${terminalId}`);
-  }
-
-  /**
-   * Enhanced state update with deletion synchronization
-   */
-  private handleStateUpdateWithDeletionSync(state: TerminalState): void {
-    // Check if any tracked deletions have been processed
-    const trackedDeletions = Array.from(this.deletionTracker);
-
-    for (const deletedTerminalId of trackedDeletions) {
-      // Check if the deleted terminal is no longer in the state
-      const stillExists = state.terminals.some((terminal) => terminal.id === deletedTerminalId);
-
-      if (!stillExists) {
-        log(`✅ [SYNC] Deletion confirmed for terminal: ${deletedTerminalId}`);
-        this.clearTerminalDeletionTracking(deletedTerminalId);
-
-        // Trigger any pending creation operations
-        this.processPendingCreationRequests();
-      } else {
-        log(`⏳ [SYNC] Terminal still exists in state, waiting: ${deletedTerminalId}`);
-      }
-    }
-  }
-
-  /**
-   * Pending creation request queue
-   */
-  private pendingCreationRequests: Array<{
-    id: string;
-    name: string;
-    timestamp: number;
-    resolve: (result: boolean) => void;
-    reject: (error: Error) => void;
-  }> = [];
-
-  /**
-   * Queue terminal creation request when deletion is in progress
+   * Queue terminal creation request
+   * 委譲: TerminalOperationsCoordinator
    */
   public queueTerminalCreation(terminalId: string, terminalName: string): Promise<boolean> {
-    return new Promise((resolve, reject) => {
-      const request = {
-        id: terminalId,
-        name: terminalName,
-        timestamp: Date.now(),
-        resolve,
-        reject,
-      };
-
-      this.pendingCreationRequests.push(request);
-      log(`📥 [QUEUE] Queued terminal creation: ${terminalId} (${terminalName})`);
-
-      // Set timeout for request
-      setTimeout(() => {
-        const index = this.pendingCreationRequests.findIndex((r) => r.id === terminalId);
-        if (index !== -1) {
-          this.pendingCreationRequests.splice(index, 1);
-          reject(new Error('Terminal creation request timed out'));
-        }
-      }, 10000); // 10 second timeout
-    });
-  }
-
-  /**
-   * Process pending creation requests
-   */
-  private processPendingCreationRequests(): void {
-    if (this.pendingCreationRequests.length === 0) {
-      return;
-    }
-
-    log(`🔄 [QUEUE] Processing ${this.pendingCreationRequests.length} pending creation requests`);
-
-    // Process oldest request first
-    const request = this.pendingCreationRequests.shift();
-    if (!request) {
-      return;
-    }
-
-    // Check if we can create the terminal now
-    const canCreate = this.canCreateTerminal();
-    if (canCreate) {
-      log(`✅ [QUEUE] Processing terminal creation: ${request.id}`);
-
-      // Send creation request to Extension
-      this.postMessageToExtension({
-        command: 'createTerminal',
-        terminalId: request.id,
-        terminalName: request.name,
-        timestamp: Date.now(),
-      });
-
-      request.resolve(true);
-    } else {
-      log(`❌ [QUEUE] Cannot create terminal yet, re-queueing: ${request.id}`);
-
-      // Re-queue the request
-      this.pendingCreationRequests.unshift(request);
-
-      // Request fresh state and try again later
-      this.requestLatestState();
-      setTimeout(() => this.processPendingCreationRequests(), 500);
-    }
+    return this.terminalOperations.queueTerminalCreation(terminalId, terminalName);
   }
 
   /**
    * Smart terminal creation with race condition protection
+   * 委譲: TerminalOperationsCoordinator
    */
   public async createTerminalSafely(terminalName?: string): Promise<boolean> {
-    try {
-      log('🛡️ [SAFE-CREATE] Starting safe terminal creation...');
-
-      // 1. Request latest state to ensure we have current information
-      this.requestLatestState();
-
-      // 2. Wait a moment for state to update
-      await new Promise((resolve) => setTimeout(resolve, 200));
-
-      // 3. Check if creation is possible
-      if (!this.canCreateTerminal()) {
-        const currentState = this.currentTerminalState;
-        if (currentState) {
-          const currentCount = currentState.terminals.length;
-          const maxCount = currentState.maxTerminals;
-          log(
-            `❌ [SAFE-CREATE] Cannot create terminal: ${currentCount}/${maxCount}, slots: [${currentState.availableSlots.join(',')}]`
-          );
-
-          // Show user-friendly message
-          this.showTerminalLimitMessage(currentCount, maxCount);
-          return false;
-        } else {
-          log('❌ [SAFE-CREATE] No state available for creation check');
-          return false;
-        }
-      }
-
-      // 4. Check if any deletions are in progress
-      if (this.deletionTracker.size > 0) {
-        const trackedDeletions = Array.from(this.deletionTracker);
-        log(
-          `⏳ [SAFE-CREATE] Deletions in progress: [${trackedDeletions.join(',')}], queueing creation...`
-        );
-
-        // Generate terminal ID
-        const nextNumber = this.getNextAvailableNumber();
-        if (!nextNumber) {
-          log('❌ [SAFE-CREATE] No available number for queued creation');
-          return false;
-        }
-
-        const terminalId = `terminal-${nextNumber}`;
-        const finalTerminalName = terminalName || `Terminal ${nextNumber}`;
-
-        // Queue the creation request
-        try {
-          const result = await this.queueTerminalCreation(terminalId, finalTerminalName);
-          log(`✅ [SAFE-CREATE] Queued creation completed: ${terminalId}`);
-          return result;
-        } catch (error) {
-          log(`❌ [SAFE-CREATE] Queued creation failed:`, error);
-          return false;
-        }
-      }
-
-      // 5. Direct creation - no deletions in progress
-      const nextNumber = this.getNextAvailableNumber();
-      if (!nextNumber) {
-        log('❌ [SAFE-CREATE] No available number for direct creation');
-        return false;
-      }
-
-      const terminalId = `terminal-${nextNumber}`;
-      const finalTerminalName = terminalName || `Terminal ${nextNumber}`;
-
-      log(`🚀 [SAFE-CREATE] Creating terminal directly: ${terminalId} (${finalTerminalName})`);
-
-      // Send creation request to Extension
-      this.postMessageToExtension({
-        command: 'createTerminal',
-        terminalId,
-        terminalName: finalTerminalName,
-        timestamp: Date.now(),
-      });
-
-      log(`✅ [SAFE-CREATE] Creation request sent: ${terminalId}`);
-      return true;
-    } catch (error) {
-      log('❌ [SAFE-CREATE] Error in safe terminal creation:', error);
-      return false;
-    }
+    return this.terminalOperations.createTerminalSafely(terminalName);
   }
 
   /**
    * Enhanced terminal deletion with proper cleanup
+   * 委譲: TerminalOperationsCoordinator
    */
   public async deleteTerminalSafely(terminalId?: string): Promise<boolean> {
-    try {
-      const targetId = terminalId || this.getActiveTerminalId();
-      if (!targetId) {
-        log('❌ [SAFE-DELETE] No terminal to delete');
-        return false;
-      }
-
-      log(`🛡️ [SAFE-DELETE] Starting safe deletion: ${targetId}`);
-
-      // 1. Check if terminal exists
-      const terminalInstance = this.getTerminalInstance(targetId);
-      if (!terminalInstance) {
-        log(`❌ [SAFE-DELETE] Terminal not found: ${targetId}`);
-        return false;
-      }
-
-      // 🎯 FIX: Check terminal count BEFORE deletion to protect the last one
-      const terminalStats = this.terminalLifecycleManager.getTerminalStats();
-      const totalTerminals = terminalStats.totalTerminals;
-      if (totalTerminals <= 1) {
-        log(`🛡️ [SAFE-DELETE] Cannot delete last terminal: ${targetId} (total: ${totalTerminals})`);
-        // Show user notification about protection
-        if (this.notificationManager && 'showWarning' in this.notificationManager) {
-          this.notificationManager.showWarning('Must keep at least 1 terminal open');
-        }
-        return false;
-      }
-
-      this.prepareDisplayForTerminalDeletion(targetId, terminalStats);
-
-      // 2. Check if deletion is already in progress
-      if (this.isTerminalDeletionTracked(targetId)) {
-        log(`⏳ [SAFE-DELETE] Deletion already in progress: ${targetId}`);
-        return false;
-      }
-
-      // 3. Send deletion request to Extension
-      log(
-        `🗑️ [SAFE-DELETE] Sending deletion request: ${targetId} (${totalTerminals} -> ${totalTerminals - 1})`
-      );
-
-      // Track the deletion
-      this.trackTerminalDeletion(targetId);
-
-      // Send delete message to Extension
-      this.postMessageToExtension({
-        command: 'deleteTerminal',
-        terminalId: targetId,
-        requestSource: 'header', // Set correct source for header X button
-        timestamp: Date.now(),
-      });
-
-      // 🎯 FIX: Wait for Extension response before removing from WebView
-      // Remove the immediate removal - let Extension handle validation and notify back
-      // this.removeTerminal(targetId);  // ← This was causing the issue
-
-      log(`✅ [SAFE-DELETE] Deletion request sent, awaiting Extension response: ${targetId}`);
-      return true;
-    } catch (error) {
-      log('❌ [SAFE-DELETE] Error in safe terminal deletion:', error);
-      return false;
-    }
+    return this.terminalOperations.deleteTerminalSafely(terminalId);
   }
 
   private prepareDisplayForTerminalDeletion(
@@ -1911,22 +1564,13 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       if (!this.displayModeManager) {
         return;
       }
-
       const currentMode = this.displayModeManager.getCurrentMode();
-      const moreThanOneTerminal = stats.totalTerminals > 1;
-
-      if (!moreThanOneTerminal) {
-        return;
-      }
-
-      if (currentMode === 'fullscreen') {
-        log(
-          `🖥️ [SAFE-DELETE] Exiting fullscreen before deleting ${targetTerminalId}, switching to split mode`
-        );
+      if (stats.totalTerminals > 1 && currentMode === 'fullscreen') {
+        log(`🖥️ Exiting fullscreen before deleting ${targetTerminalId}`);
         this.displayModeManager.setDisplayMode('split');
       }
     } catch (error) {
-      log('⚠️ [SAFE-DELETE] Failed to prepare display for deletion:', error);
+      log('⚠️ Failed to prepare display for deletion:', error);
     }
   }
 
@@ -1935,46 +1579,24 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
    */
   public isSystemReady(): boolean {
     const hasCachedState = !!this.currentTerminalState;
-    const noPendingDeletions = this.deletionTracker.size === 0;
-    const noPendingCreations = this.pendingCreationRequests.length === 0;
-
-    const isReady = hasCachedState && noPendingDeletions && noPendingCreations;
-
-    log(
-      `🔍 [SYSTEM] System ready check: state=${hasCachedState}, deletions=${noPendingDeletions}, creations=${noPendingCreations} => ${isReady}`
-    );
-
-    return isReady;
+    const noPendingDeletions = !this.terminalOperations.hasPendingDeletions();
+    const noPendingCreations = !this.terminalOperations.hasPendingCreations();
+    return hasCachedState && noPendingDeletions && noPendingCreations;
   }
 
   /**
    * Force system synchronization
+   * 委譲: TerminalOperationsCoordinator
    */
   public forceSynchronization(): void {
-    log('🔄 [FORCE-SYNC] Forcing system synchronization...');
-
-    // Clear all pending operations
-    this.deletionTracker.clear();
-    this.deletionTimeouts.forEach((timeout) => clearTimeout(timeout));
-    this.deletionTimeouts.clear();
-
-    // Reject all pending creation requests
-    this.pendingCreationRequests.forEach((request) => {
-      request.reject(new Error('System synchronization forced'));
-    });
-    this.pendingCreationRequests.length = 0;
-
-    // Request fresh state
+    this.terminalOperations.forceSynchronization();
     this.requestLatestState();
-
-    log('✅ [FORCE-SYNC] System synchronization completed');
   }
 
   /**
    * Public API: Request new terminal creation (safe)
    */
   public async requestNewTerminal(terminalName?: string): Promise<boolean> {
-    log('🎯 [API] Terminal creation requested via public API');
     return await this.createTerminalSafely(terminalName);
   }
 
@@ -1982,7 +1604,6 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
    * Public API: Request terminal deletion (safe)
    */
   public async requestTerminalDeletion(terminalId?: string): Promise<boolean> {
-    log('🎯 [API] Terminal deletion requested via public API');
     return await this.deleteTerminalSafely(terminalId);
   }
 
@@ -1994,15 +1615,11 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       ready: this.isSystemReady(),
       state: this.currentTerminalState,
       pendingOperations: {
-        deletions: Array.from(this.deletionTracker),
-        creations: this.pendingCreationRequests.length,
+        deletions: this.terminalOperations.getPendingDeletions(),
+        creations: this.terminalOperations.getPendingCreationsCount(),
       },
     };
   }
-
-  // Add state properties
-  private currentTerminalState: TerminalState | null = null;
-  // Note: debugMode moved to DebugPanelManager
 
   public ensureTerminalFocus(): void {
     const activeId = this.getActiveTerminalId();
@@ -2151,10 +1768,9 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       // Clean up scrollback request tracking
       this.processedScrollbackRequests.clear();
 
-      // 🔧 FIX: Clean up deletion tracking to prevent memory leaks
-      this.deletionTimeouts.forEach((timeout) => clearTimeout(timeout));
-      this.deletionTimeouts.clear();
-      this.deletionTracker.clear();
+      // Coordinators のクリーンアップ
+      this.terminalOperations.dispose();
+      this.resizeCoordinator.dispose();
 
       this.isInitialized = false;
       log('✅ RefactoredTerminalWebviewManager disposed');
