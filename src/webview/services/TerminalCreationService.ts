@@ -23,7 +23,11 @@ import { SplitManager } from '../managers/SplitManager';
 import { TerminalAddonManager } from '../managers/TerminalAddonManager';
 import { TerminalEventManager } from '../managers/TerminalEventManager';
 import { TerminalLinkManager } from '../managers/TerminalLinkManager';
-import { TerminalContainerFactory, TerminalContainerConfig, TerminalHeaderConfig } from '../factories/TerminalContainerFactory';
+import {
+  TerminalContainerFactory,
+  TerminalContainerConfig,
+  TerminalHeaderConfig,
+} from '../factories/TerminalContainerFactory';
 import { ResizeManager } from '../utils/ResizeManager';
 import { RenderingOptimizer } from '../optimizers/RenderingOptimizer';
 import { LifecycleController } from '../controllers/LifecycleController';
@@ -39,6 +43,7 @@ import {
   TerminalScrollbarService,
   TerminalAutoSaveService,
 } from './terminal';
+import { TerminalScrollIndicatorService } from './terminal/TerminalScrollIndicatorService';
 
 interface Disposable {
   dispose(): void;
@@ -87,6 +92,8 @@ export class TerminalCreationService implements Disposable {
   private readonly focusService: TerminalFocusService;
   private readonly scrollbarService: TerminalScrollbarService;
   private readonly autoSaveService: TerminalAutoSaveService;
+  private readonly scrollIndicatorService: TerminalScrollIndicatorService;
+  private readonly scrollIndicatorDisposables: Map<string, () => void> = new Map();
 
   constructor(
     splitManager: SplitManager,
@@ -105,6 +112,7 @@ export class TerminalCreationService implements Disposable {
     this.focusService = new TerminalFocusService();
     this.scrollbarService = new TerminalScrollbarService();
     this.autoSaveService = new TerminalAutoSaveService(coordinator);
+    this.scrollIndicatorService = new TerminalScrollIndicatorService();
   }
 
   /**
@@ -124,7 +132,9 @@ export class TerminalCreationService implements Disposable {
       try {
         // Pause all ResizeObservers during terminal creation
         ResizeManager.pauseObservers();
-        terminalLogger.info(`⏸️ Paused all ResizeObservers during terminal creation: ${terminalId}`);
+        terminalLogger.info(
+          `⏸️ Paused all ResizeObservers during terminal creation: ${terminalId}`
+        );
 
         performanceMonitor.startTimer(`terminal-creation-attempt-${terminalId}-${currentRetry}`);
         terminalLogger.info(
@@ -157,37 +167,39 @@ export class TerminalCreationService implements Disposable {
 
         // Merge config with defaults using TerminalConfigService
         // Cast config to WebViewTerminalConfig compatible type
-        const terminalConfig = TerminalConfigService.mergeConfig(config as Parameters<typeof TerminalConfigService.mergeConfig>[0]);
+        const terminalConfig = TerminalConfigService.mergeConfig(
+          config as Parameters<typeof TerminalConfigService.mergeConfig>[0]
+        );
 
         // Create Terminal instance
         const terminal = new Terminal(terminalConfig as any);
         terminalLogger.info(`✅ Terminal instance created: ${terminalId}`);
 
         // Load all addons using TerminalAddonManager
-      const loadedAddons = await this.addonManager.loadAllAddons(terminal, terminalId, {
-        enableGpuAcceleration: terminalConfig.enableGpuAcceleration,
-        enableSearchAddon: terminalConfig.enableSearchAddon,
-        enableUnicode11: terminalConfig.enableUnicode11,
-        linkHandler: (_event, uri) => {
-          // Delegate to extension so it can honor workspace trust and external uri handling
-          try {
-            this.coordinator?.postMessageToExtension({
-              command: 'openTerminalLink',
-              linkType: 'url',
-              url: uri,
-              terminalId,
-              timestamp: Date.now(),
-            });
-          } catch {
-            // Fallback: attempt to open directly (may be blocked by CSP, but useful for debugging)
+        const loadedAddons = await this.addonManager.loadAllAddons(terminal, terminalId, {
+          enableGpuAcceleration: terminalConfig.enableGpuAcceleration,
+          enableSearchAddon: terminalConfig.enableSearchAddon,
+          enableUnicode11: terminalConfig.enableUnicode11,
+          linkHandler: (_event, uri) => {
+            // Delegate to extension so it can honor workspace trust and external uri handling
             try {
-              window.open(uri, '_blank');
+              this.coordinator?.postMessageToExtension({
+                command: 'openTerminalLink',
+                linkType: 'url',
+                url: uri,
+                terminalId,
+                timestamp: Date.now(),
+              });
             } catch {
-              // swallow; extension path is primary
+              // Fallback: attempt to open directly (may be blocked by CSP, but useful for debugging)
+              try {
+                window.open(uri, '_blank');
+              } catch {
+                // swallow; extension path is primary
+              }
             }
-          }
-        },
-      });
+          },
+        });
 
         // Extract individual addons for convenience
         const { fitAddon, serializeAddon, searchAddon } = loadedAddons;
@@ -234,48 +246,70 @@ export class TerminalCreationService implements Disposable {
           },
         };
 
-        const containerElements = TerminalContainerFactory.createContainer(containerConfig, headerConfig);
+        const containerElements = TerminalContainerFactory.createContainer(
+          containerConfig,
+          headerConfig
+        );
         if (!containerElements || !containerElements.container || !containerElements.body) {
           throw new Error('Invalid container elements created');
         }
 
         const container = containerElements.container;
         const terminalContent = containerElements.body;
-        terminalLogger.info(`✅ Container created: ${terminalId} with terminal number: ${terminalNumberToUse}`);
+        terminalLogger.info(
+          `✅ Container created: ${terminalId} with terminal number: ${terminalNumberToUse}`
+        );
 
         // 🔧 CRITICAL FIX: Append container to DOM BEFORE opening terminal
         // xterm.js needs the element to be in the DOM to render correctly
         // 🔧 FIX: Prefer terminals-wrapper over terminal-body for proper layout
         const bodyElement = document.getElementById('terminal-body');
         if (!bodyElement) {
-          terminalLogger.error(`❌ terminal-body not found, cannot append container: ${terminalId}`);
+          terminalLogger.error(
+            `❌ terminal-body not found, cannot append container: ${terminalId}`
+          );
           throw new Error('terminal-body element not found');
         }
 
         // 🔧 FIX: Create terminals-wrapper if it doesn't exist (for session restore timing)
+        // Note: Styles are defined in display-modes.css to avoid duplication
         let terminalsWrapper = document.getElementById('terminals-wrapper');
         if (!terminalsWrapper) {
           terminalLogger.info('🆕 Creating terminals-wrapper (not yet initialized)');
           terminalsWrapper = document.createElement('div');
           terminalsWrapper.id = 'terminals-wrapper';
+          // 🔧 CRITICAL: Only set minimal inline styles, let CSS handle the rest
+          // This prevents inline styles from overriding CSS rules
           terminalsWrapper.style.cssText = `
             display: flex;
-            flex-direction: column;
-            flex: 1;
-            width: 100%;
-            height: 100%;
-            min-width: 0;
-            min-height: 0;
-            overflow: hidden;
-            padding: 4px;
+            flex: 1 1 auto;
             gap: 4px;
-            box-sizing: border-box;
+            padding: 4px;
           `;
           bodyElement.appendChild(terminalsWrapper);
         }
 
         terminalsWrapper.appendChild(container);
         terminalLogger.info(`✅ Container appended to terminals-wrapper: ${terminalId}`);
+
+        // Apply VS Code-like styling and visual settings before rendering
+        const managers = this.coordinator.getManagers?.();
+        const uiManager = managers?.ui;
+        if (uiManager) {
+          uiManager.applyVSCodeStyling(container);
+
+          const configManager = managers?.config;
+          const currentSettings = configManager?.getCurrentSettings?.();
+          const currentFontSettings = configManager?.getCurrentFontSettings?.();
+
+          if (currentSettings) {
+            uiManager.applyAllVisualSettings(terminal, currentSettings);
+          }
+
+          if (currentFontSettings) {
+            uiManager.applyFontSettings(terminal, currentFontSettings);
+          }
+        }
 
         // Make container visible
         container.style.display = 'flex';
@@ -296,7 +330,12 @@ export class TerminalCreationService implements Disposable {
         this.focusService.ensureTerminalFocus(terminal, terminalId, terminalContent);
 
         // FIX: Re-focus terminal when container is clicked (VS Code standard)
-        this.focusService.setupContainerFocusHandler(terminal, terminalId, container, terminalContent);
+        this.focusService.setupContainerFocusHandler(
+          terminal,
+          terminalId,
+          container,
+          terminalContent
+        );
 
         // Setup shell integration
         this.setupShellIntegration(terminal, terminalId);
@@ -307,6 +346,14 @@ export class TerminalCreationService implements Disposable {
         // Enable VS Code standard scrollbar using TerminalScrollbarService
         const xtermElement = terminalContent.querySelector('.xterm');
         this.scrollbarService.enableScrollbarDisplay(xtermElement, terminalId);
+
+        // Enable VS Code-style scroll-to-bottom indicator when scrolled away
+        const scrollIndicatorDispose = this.scrollIndicatorService.attach(
+          terminal,
+          container,
+          terminalId
+        );
+        this.scrollIndicatorDisposables.set(terminalId, scrollIndicatorDispose);
 
         // Setup RenderingOptimizer for performance optimization
         const renderingOptimizer = await this.setupRenderingOptimizer(
@@ -337,18 +384,27 @@ export class TerminalCreationService implements Disposable {
         terminalLogger.info(`✅ Terminal registered with SplitManager: ${terminalId}`);
 
         // Notify extension that terminal is fully initialized and ready
-        this.coordinator.postMessageToExtension({
+        const terminalReadyMessage = {
           command: 'terminalReady',
           terminalId,
           timestamp: Date.now(),
-        });
-        terminalLogger.info(`📤 Emitted terminalReady for: ${terminalId}`);
+        };
+
+        terminalLogger.info(
+          `📨 [WebView] Sending terminalReady for terminalId: ${terminalId}`
+        );
+        terminalLogger.debug('📨 [WebView] Message payload:', terminalReadyMessage);
+
+        this.coordinator.postMessageToExtension(terminalReadyMessage);
+        terminalLogger.info('✅ [WebView] terminalReady sent successfully');
 
         // Register container with TerminalContainerManager
         const containerManager = this.coordinator?.getTerminalContainerManager?.();
         if (containerManager) {
           containerManager.registerContainer(terminalId, container);
-          terminalLogger.info(`✅ Container registered with TerminalContainerManager: ${terminalId}`);
+          terminalLogger.info(
+            `✅ Container registered with TerminalContainerManager: ${terminalId}`
+          );
         }
 
         // Ensure split layouts are refreshed when new terminals are created during split mode
@@ -363,7 +419,9 @@ export class TerminalCreationService implements Disposable {
           const uiManager = this.coordinator.getManagers().ui;
           if (this.hasHeaderElementsCache(uiManager)) {
             uiManager.headerElementsCache.set(terminalId, containerElements.headerElements);
-            terminalLogger.info(`✅ Header elements registered with UIManager for AI Agent support: ${terminalId}`);
+            terminalLogger.info(
+              `✅ Header elements registered with UIManager for AI Agent support: ${terminalId}`
+            );
           }
         }
 
@@ -386,13 +444,17 @@ export class TerminalCreationService implements Disposable {
         // Setup scrollback auto-save using TerminalAutoSaveService
         this.autoSaveService.setupScrollbackAutoSave(terminal, terminalId, serializeAddon);
 
-        const elapsed = performanceMonitor.endTimer(`terminal-creation-attempt-${terminalId}-${currentRetry}`);
+        const elapsed = performanceMonitor.endTimer(
+          `terminal-creation-attempt-${terminalId}-${currentRetry}`
+        );
         terminalLogger.info(`✅ Terminal creation completed: ${terminalId} in ${elapsed}ms`);
 
         // Resume ResizeObservers after terminal creation
         setTimeout(() => {
           ResizeManager.resumeObservers();
-          terminalLogger.info(`▶️ Resumed all ResizeObservers after terminal creation: ${terminalId}`);
+          terminalLogger.info(
+            `▶️ Resumed all ResizeObservers after terminal creation: ${terminalId}`
+          );
         }, 100);
 
         return terminal;
@@ -404,7 +466,9 @@ export class TerminalCreationService implements Disposable {
 
         if (currentRetry < maxRetries) {
           currentRetry++;
-          terminalLogger.info(`Retrying terminal creation: ${terminalId} (${currentRetry}/${maxRetries})`);
+          terminalLogger.info(
+            `Retrying terminal creation: ${terminalId} (${currentRetry}/${maxRetries})`
+          );
           await new Promise((resolve) => setTimeout(resolve, 500));
           return attemptCreation();
         }
@@ -435,6 +499,13 @@ export class TerminalCreationService implements Disposable {
         terminalLogger.info(`✅ RenderingOptimizer disposed for: ${terminalId}`);
       }
 
+      // Cleanup scroll indicator
+      const disposeScrollIndicator = this.scrollIndicatorDisposables.get(terminalId);
+      if (disposeScrollIndicator) {
+        disposeScrollIndicator();
+        this.scrollIndicatorDisposables.delete(terminalId);
+      }
+
       // Phase 3: Dispose terminal via LifecycleController for proper resource cleanup
       this.lifecycleController.disposeTerminal(terminalId);
 
@@ -460,7 +531,9 @@ export class TerminalCreationService implements Disposable {
       const containerManager = this.coordinator?.getTerminalContainerManager?.();
       if (containerManager) {
         containerManager.unregisterContainer(terminalId);
-        terminalLogger.info(`✅ Container unregistered from TerminalContainerManager: ${terminalId}`);
+        terminalLogger.info(
+          `✅ Container unregistered from TerminalContainerManager: ${terminalId}`
+        );
       }
 
       terminalLogger.info(`Terminal removed successfully: ${terminalId}`);
@@ -532,11 +605,7 @@ export class TerminalCreationService implements Disposable {
   private hasHeaderElementsCache(
     manager: unknown
   ): manager is { headerElementsCache: Map<string, TerminalHeaderElements> } {
-    if (
-      typeof manager === 'object' &&
-      manager !== null &&
-      'headerElementsCache' in manager
-    ) {
+    if (typeof manager === 'object' && manager !== null && 'headerElementsCache' in manager) {
       const cache = (manager as { headerElementsCache?: unknown }).headerElementsCache;
       return cache instanceof Map;
     }
@@ -580,6 +649,8 @@ export class TerminalCreationService implements Disposable {
         const rect = container.getBoundingClientRect();
 
         if (rect.width > 50 && rect.height > 50) {
+          // 🔧 CRITICAL FIX: Reset xterm inline styles BEFORE fit() to allow width expansion
+          DOMUtils.resetXtermInlineStyles(container);
           fitAddon.fit();
           terminalLogger.debug(
             `Terminal initial size: ${terminalId} (${terminal.cols}x${terminal.rows}) after ${retryCount} retries`
@@ -591,6 +662,8 @@ export class TerminalCreationService implements Disposable {
             try {
               const finalRect = container.getBoundingClientRect();
               if (finalRect.width > 50 && finalRect.height > 50) {
+                // 🔧 FIX: Reset xterm inline styles before delayed fit as well
+                DOMUtils.resetXtermInlineStyles(container);
                 fitAddon.fit();
                 terminalLogger.debug(
                   `Terminal delayed resize: ${terminalId} (${terminal.cols}x${terminal.rows})`
@@ -615,6 +688,7 @@ export class TerminalCreationService implements Disposable {
             );
             // 🔧 FIX: Force a fit anyway as last resort - xterm.js may handle small dimensions
             try {
+              DOMUtils.resetXtermInlineStyles(container);
               fitAddon.fit();
               terminalLogger.info(`Forced fit for small container: ${terminalId}`);
             } catch (e) {
@@ -680,7 +754,9 @@ export class TerminalCreationService implements Disposable {
         rows: terminal.rows,
       });
 
-      terminalLogger.debug(`Sent resize notification: ${terminalId} (${terminal.cols}x${terminal.rows})`);
+      terminalLogger.debug(
+        `Sent resize notification: ${terminalId} (${terminal.cols}x${terminal.rows})`
+      );
     } catch (error) {
       terminalLogger.error(`Failed to notify extension of resize for ${terminalId}:`, error);
     }
@@ -714,7 +790,9 @@ export class TerminalCreationService implements Disposable {
       }
     }
 
-    terminalLogger.warn(`Could not extract terminal number from ID: ${terminalId}, defaulting to 1`);
+    terminalLogger.warn(
+      `Could not extract terminal number from ID: ${terminalId}, defaulting to 1`
+    );
     return 1;
   }
 

@@ -5,10 +5,7 @@
 
 // ===== Result Pattern (Issue #224) =====
 // Export Result pattern types for standardized error handling
-export type {
-  Result,
-  ErrorDetails,
-} from './result';
+export type { Result, ErrorDetails } from './result';
 
 export {
   ErrorCode,
@@ -394,7 +391,7 @@ export enum ProcessState {
   /** Process was explicitly terminated by the user */
   KilledByUser = 4,
   /** Process terminated on its own */
-  KilledByProcess = 5
+  KilledByProcess = 5,
 }
 
 /**
@@ -406,7 +403,7 @@ export enum InteractionState {
   /** Replay only mode */
   ReplayOnly = 1,
   /** Session interaction mode */
-  Session = 2
+  Session = 2,
 }
 
 export interface TerminalState {

@@ -118,7 +118,10 @@ export class TerminalAutoSaveService {
             }
           }
         } catch (error) {
-          terminalLogger.warn(`[AUTO-SAVE] Failed to push scrollback for terminal ${terminalId}:`, error);
+          terminalLogger.warn(
+            `[AUTO-SAVE] Failed to push scrollback for terminal ${terminalId}:`,
+            error
+          );
         }
       }, 3000);
     };

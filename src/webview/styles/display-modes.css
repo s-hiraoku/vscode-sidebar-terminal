@@ -1,90 +1,179 @@
 /**
  * Display Modes CSS
- * ターミナル表示モード（normal/fullscreen/split）のスタイル定義
+ *
+ * 🎯 SIMPLE DESIGN PRINCIPLE:
+ * - All containers use width: 100% and flex: 1
+ * - xterm.js inline styles are overridden with !important
+ * - No complex nested selectors
+ * - Panel location only changes flex-direction
  */
 
 /* ========================================
-   Terminal Container Display Modes
+   ROOT CONTAINERS - Always 100% width
    ======================================== */
 
-/* ========================================
-   Terminals Wrapper - Panel Location Layout
-   🎯 VS Code Pattern: CSS class-based layout control
-   ======================================== */
-
-/* Default: Vertical layout (stacked terminals) */
-#terminals-wrapper {
-  display: flex;
-  flex-direction: column; /* Default: stacked for single terminal view */
-  gap: 4px;
-  width: 100%;
-  height: 100%;
-  min-width: 0; /* 🔧 FIX: Allow shrinking below content size for proper flex behavior */
-  min-height: 0;
-  overflow: hidden;
-}
-
-/* Horizontal layout for split mode in bottom panel */
-#terminals-wrapper.terminal-split-horizontal {
-  flex-direction: row; /* Side-by-side for split mode */
-}
-
-/* ========================================
-   Terminal Container Display Modes
-   ======================================== */
-
-.terminal-container.normal-mode {
-  display: block;
-  width: 100%;
-  height: auto;
-  position: relative;
-}
-
-.terminal-container.fullscreen-mode {
-  display: block !important;
-  width: 100%;
-  height: 100%;
-  z-index: 10;
-  position: relative;
-}
-
-.terminal-container--fullscreen {
+#terminal-body {
   display: flex !important;
-  width: 100%;
-  height: 100%;
-  flex: 1 1 auto;
+  flex-direction: column !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
-.terminal-container.hidden-mode {
+#terminals-wrapper {
+  display: flex !important;
+  flex-direction: column !important; /* Default: sidebar (vertical stack) */
+  flex: 1 1 auto !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  gap: 4px;
+  overflow: hidden !important;
+}
+
+/* Panel mode: horizontal layout */
+#terminals-wrapper.terminal-split-horizontal {
+  flex-direction: row !important;
+}
+
+/* ========================================
+   TERMINAL CONTAINERS - Always 100% width
+   ======================================== */
+
+.terminal-split-wrapper {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+.terminal-container,
+[data-terminal-container] {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  position: relative !important;
+  border: 1px solid transparent;
+  transition: border-color 0.2s ease-in-out;
+  box-sizing: border-box !important;
+}
+
+.terminal-container.active {
+  border-color: var(--vscode-focusBorder, #007acc) !important;
+}
+
+.terminal-content {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+/* ========================================
+   XTERM.JS OVERRIDES - Force 100% width
+
+   🔧 CRITICAL: xterm.js sets inline styles with
+   fixed pixel values. We MUST override them.
+   ======================================== */
+
+.xterm {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  position: relative !important;
+}
+
+.xterm-viewport {
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+}
+
+.xterm-screen {
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+}
+
+/* Canvas elements inside xterm
+   🔧 CRITICAL: xterm.js sets fixed pixel width on canvas elements.
+   We need max-width: 100% to allow terminal expansion beyond initial size.
+   The actual canvas pixel dimensions are controlled by xterm.js fit() addon.
+*/
+.xterm .xterm-screen canvas {
+  max-width: 100% !important;
+}
+
+/* xterm-rows contains the actual rendered text spans */
+.xterm-rows {
+  width: 100% !important;
+}
+
+/* ========================================
+   DISPLAY MODE CLASSES
+   ======================================== */
+
+.terminal-container.hidden-mode,
+.terminal-container--hidden {
   display: none !important;
 }
 
-.terminal-container.split-mode {
-  /* SplitManager が動的にスタイルを制御するため、
-     基本的なスタイルのみ定義 */
-  display: flex;
-  flex-direction: column;
+.terminal-container--fullscreen {
+  flex: 1 1 auto !important;
 }
 
 .terminal-container--split {
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 auto;
+  flex: 1 1 0 !important;
 }
 
-.terminal-split-wrapper {
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 auto;
-}
+/* ========================================
+   SPLIT RESIZER
+   ======================================== */
 
 .split-resizer {
   background: var(--vscode-widget-border, #454545);
   flex-shrink: 0;
 }
 
+/* Vertical split (sidebar) - horizontal resizer */
+#terminals-wrapper:not(.terminal-split-horizontal) .split-resizer {
+  height: 4px;
+  width: 100%;
+  cursor: row-resize;
+}
+
+/* Horizontal split (panel) - vertical resizer */
+#terminals-wrapper.terminal-split-horizontal .split-resizer {
+  width: 4px;
+  height: 100%;
+  cursor: col-resize;
+}
+
 /* ========================================
-   Split Mode Toggle Button
+   UI COMPONENTS
    ======================================== */
 
 .split-mode-toggle-button {
@@ -95,7 +184,9 @@
   padding: 4px 8px;
   border-radius: 4px;
   font-size: 16px;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -115,13 +206,11 @@
   outline-offset: 2px;
 }
 
-/* ========================================
-   Tab Close Button Enhancements
-   ======================================== */
-
-/* 閉じるボタンのアニメーション */
 .terminal-tab-close {
-  transition: opacity 0.15s ease, background-color 0.15s ease, transform 0.1s ease;
+  transition:
+    opacity 0.15s ease,
+    background-color 0.15s ease,
+    transform 0.1s ease;
 }
 
 .terminal-tab-close:hover {
@@ -132,70 +221,15 @@
   transform: scale(0.95);
 }
 
-/* アクセシビリティ: フォーカス時の視覚フィードバック */
 .terminal-tab-close:focus {
   outline: 1px solid var(--vscode-focusBorder);
   outline-offset: 1px;
 }
 
 /* ========================================
-   Fullscreen Mode Animations
+   ACCESSIBILITY
    ======================================== */
 
-.terminal-container.fullscreen-mode {
-  animation: fadeIn 0.2s ease-in-out;
-}
-
-.terminal-container.hidden-mode {
-  animation: fadeOut 0.15s ease-in-out;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@keyframes fadeOut {
-  from {
-    opacity: 1;
-  }
-  to {
-    opacity: 0;
-  }
-}
-
-/* ========================================
-   Responsive Adjustments
-   ======================================== */
-
-@media (max-width: 600px) {
-  /* 小さい画面では分割ボタンのサイズを調整 */
-  .split-mode-toggle-button {
-    padding: 3px 6px;
-    font-size: 14px;
-  }
-}
-
-/* ========================================
-   Dark/Light Theme Support
-   ======================================== */
-
-/*
-   VSCodeのテーマ変数を使用しているため、
-   テーマ切り替えに自動対応
-*/
-
-/* ========================================
-   Accessibility Enhancements
-   ======================================== */
-
-/* ハイコントラストモード対応 */
 @media (prefers-contrast: high) {
   .split-mode-toggle-button.active {
     border: 2px solid var(--vscode-contrastActiveBorder, var(--vscode-focusBorder));
@@ -206,22 +240,10 @@
   }
 }
 
-/* モーション削減設定対応 */
 @media (prefers-reduced-motion: reduce) {
-  .terminal-container.fullscreen-mode,
-  .terminal-container.hidden-mode,
+  .terminal-container,
   .terminal-tab-close {
     animation: none;
     transition: none;
   }
-}
-
-/* ========================================
-   Debug Utilities (Development Only)
-   ======================================== */
-
-/* デバッグ用のクラス（本番環境では不使用） */
-.terminal-container.debug-mode-highlight {
-  outline: 2px dashed var(--vscode-editorError-foreground);
-  outline-offset: -2px;
 }

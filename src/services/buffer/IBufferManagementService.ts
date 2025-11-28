@@ -163,4 +163,6 @@ export interface IBufferManagementService {
  * Service token for dependency injection
  */
 import { createServiceToken } from '../../core/DIContainer';
-export const IBufferManagementService = createServiceToken<IBufferManagementService>('IBufferManagementService');
+export const IBufferManagementService = createServiceToken<IBufferManagementService>(
+  'IBufferManagementService'
+);

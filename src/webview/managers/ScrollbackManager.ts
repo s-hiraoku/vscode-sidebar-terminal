@@ -100,19 +100,14 @@ export class ScrollbackManager extends BaseManager implements IScrollbackManager
   /**
    * Save scrollback with ANSI color preservation
    */
-  public saveScrollback(
-    terminalId: string,
-    options?: ScrollbackOptions
-  ): ScrollbackData | null {
+  public saveScrollback(terminalId: string, options?: ScrollbackOptions): ScrollbackData | null {
     terminalLogger.debug(`💾 ScrollbackManager: Saving scrollback for ${terminalId}`);
 
     const terminal = this.terminals.get(terminalId);
     const serializeAddon = this.serializeAddons.get(terminalId);
 
     if (!terminal || !serializeAddon) {
-      terminalLogger.warn(
-        `⚠️ ScrollbackManager: Terminal or addon not found for ${terminalId}`
-      );
+      terminalLogger.warn(`⚠️ ScrollbackManager: Terminal or addon not found for ${terminalId}`);
       return null;
     }
 
@@ -179,9 +174,7 @@ export class ScrollbackManager extends BaseManager implements IScrollbackManager
 
     const terminal = this.terminals.get(terminalId);
     if (!terminal) {
-      terminalLogger.warn(
-        `⚠️ ScrollbackManager: Terminal not found for restore: ${terminalId}`
-      );
+      terminalLogger.warn(`⚠️ ScrollbackManager: Terminal not found for restore: ${terminalId}`);
       return false;
     }
 
@@ -197,9 +190,7 @@ export class ScrollbackManager extends BaseManager implements IScrollbackManager
         }
       }
 
-      terminalLogger.info(
-        `✅ ScrollbackManager: Restored ${terminalId} - ${lines.length} lines`
-      );
+      terminalLogger.info(`✅ ScrollbackManager: Restored ${terminalId} - ${lines.length} lines`);
       return true;
     } catch (error) {
       terminalLogger.error(
@@ -251,10 +242,7 @@ export class ScrollbackManager extends BaseManager implements IScrollbackManager
    *
    * Iterates buffer from startLine backwards to 0
    */
-  public *getBufferReverseIterator(
-    buffer: any,
-    startLine: number
-  ): IterableIterator<IBufferLine> {
+  public *getBufferReverseIterator(buffer: any, startLine: number): IterableIterator<IBufferLine> {
     try {
       for (let i = startLine; i >= 0; i--) {
         const line = buffer.getLine(i);
@@ -263,10 +251,7 @@ export class ScrollbackManager extends BaseManager implements IScrollbackManager
         }
       }
     } catch (error) {
-      terminalLogger.warn(
-        `⚠️ ScrollbackManager: Error during buffer reverse iteration:`,
-        error
-      );
+      terminalLogger.warn(`⚠️ ScrollbackManager: Error during buffer reverse iteration:`, error);
     }
   }
 

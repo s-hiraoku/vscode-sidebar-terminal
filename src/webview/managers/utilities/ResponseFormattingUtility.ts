@@ -55,10 +55,7 @@ export class ResponseFormattingUtility {
   /**
    * Send response message to extension
    */
-  public static sendResponse(
-    coordinator: IManagerCoordinator,
-    response: MessageCommand
-  ): void {
+  public static sendResponse(coordinator: IManagerCoordinator, response: MessageCommand): void {
     coordinator.postMessageToExtension(response);
   }
 

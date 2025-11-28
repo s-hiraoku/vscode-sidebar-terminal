@@ -245,9 +245,7 @@ export class BufferManagementService implements IBufferManagementService {
 
     const currentSize = state.buffer.join('').length;
     const avgFlushInterval =
-      state.stats.flushCount > 0
-        ? state.stats.totalFlushTime / state.stats.flushCount
-        : 0;
+      state.stats.flushCount > 0 ? state.stats.totalFlushTime / state.stats.flushCount : 0;
 
     return {
       terminalId,

@@ -93,10 +93,7 @@ export type StateChangeListener = (event: StateChangeEvent) => void;
  * Defines which state transitions are allowed.
  * Key: current state, Value: array of allowed next states
  */
-const VALID_TRANSITIONS: Record<
-  TerminalLifecycleState,
-  TerminalLifecycleState[]
-> = {
+const VALID_TRANSITIONS: Record<TerminalLifecycleState, TerminalLifecycleState[]> = {
   [TerminalLifecycleState.Creating]: [
     TerminalLifecycleState.Initializing,
     TerminalLifecycleState.Error,
@@ -116,15 +113,9 @@ const VALID_TRANSITIONS: Record<
     TerminalLifecycleState.Closing,
     TerminalLifecycleState.Error,
   ],
-  [TerminalLifecycleState.Closing]: [
-    TerminalLifecycleState.Closed,
-    TerminalLifecycleState.Error,
-  ],
+  [TerminalLifecycleState.Closing]: [TerminalLifecycleState.Closed, TerminalLifecycleState.Error],
   [TerminalLifecycleState.Closed]: [],
-  [TerminalLifecycleState.Error]: [
-    TerminalLifecycleState.Closing,
-    TerminalLifecycleState.Closed,
-  ],
+  [TerminalLifecycleState.Error]: [TerminalLifecycleState.Closing, TerminalLifecycleState.Closed],
 };
 
 /**
@@ -412,10 +403,7 @@ export class TerminalLifecycleStateMachine {
       try {
         listener(event);
       } catch (error) {
-        console.error(
-          `Error in state change listener for terminal ${this._terminalId}:`,
-          error
-        );
+        console.error(`Error in state change listener for terminal ${this._terminalId}:`, error);
       }
     }
   }
@@ -457,15 +445,10 @@ export class TerminalLifecycleStateMachineManager {
     initialState?: TerminalLifecycleState
   ): TerminalLifecycleStateMachine {
     if (this._stateMachines.has(terminalId)) {
-      throw new Error(
-        `State machine already exists for terminal ${terminalId}`
-      );
+      throw new Error(`State machine already exists for terminal ${terminalId}`);
     }
 
-    const stateMachine = new TerminalLifecycleStateMachine(
-      terminalId,
-      initialState
-    );
+    const stateMachine = new TerminalLifecycleStateMachine(terminalId, initialState);
 
     // Add global listeners to the new state machine
     for (const listener of this._globalListeners) {
@@ -482,9 +465,7 @@ export class TerminalLifecycleStateMachineManager {
    * @param terminalId Terminal identifier
    * @returns The state machine or undefined if not found
    */
-  public getStateMachine(
-    terminalId: string
-  ): TerminalLifecycleStateMachine | undefined {
+  public getStateMachine(terminalId: string): TerminalLifecycleStateMachine | undefined {
     return this._stateMachines.get(terminalId);
   }
 
@@ -546,9 +527,7 @@ export class TerminalLifecycleStateMachineManager {
    * @param terminalId Terminal identifier
    * @returns Current state or undefined if not found
    */
-  public getCurrentState(
-    terminalId: string
-  ): TerminalLifecycleState | undefined {
+  public getCurrentState(terminalId: string): TerminalLifecycleState | undefined {
     return this._stateMachines.get(terminalId)?.getCurrentState();
   }
 
@@ -559,10 +538,7 @@ export class TerminalLifecycleStateMachineManager {
    * @param state State to check
    * @returns True if terminal is in the specified state
    */
-  public isTerminalInState(
-    terminalId: string,
-    state: TerminalLifecycleState
-  ): boolean {
+  public isTerminalInState(terminalId: string, state: TerminalLifecycleState): boolean {
     return this._stateMachines.get(terminalId)?.isInState(state) ?? false;
   }
 

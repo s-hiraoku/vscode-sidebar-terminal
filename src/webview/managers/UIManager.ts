@@ -44,6 +44,9 @@ export class UIManager extends BaseManager implements IUIManager {
   // Event registry for proper cleanup
   protected eventRegistry: EventHandlerRegistry;
 
+  // 🔧 FIX: Track ResizeObserver keys for proper individual cleanup
+  private resizeObserverKeys: Set<string> = new Set();
+
   // Extracted services
   private readonly notificationService: NotificationService;
   private readonly borderService: TerminalBorderService;
@@ -82,6 +85,9 @@ export class UIManager extends BaseManager implements IUIManager {
     this.currentTheme = null;
     this.themeApplied = false;
     this.headerElementsCache.clear();
+
+    // 🔧 FIX: Clear resize observer keys tracking
+    this.resizeObserverKeys.clear();
 
     this.logger('✅ UIManager resources disposed');
   }
@@ -214,6 +220,16 @@ export class UIManager extends BaseManager implements IUIManager {
     this.applyTerminalTheme(terminal, settings);
 
     // Apply cursor settings
+    if (settings.cursor && typeof settings.cursor === 'object') {
+      if (settings.cursor.style) {
+        terminal.options.cursorStyle = settings.cursor.style;
+        uiLogger.debug(`Applied cursor style: ${settings.cursor.style}`);
+      }
+      if (settings.cursor.blink !== undefined) {
+        terminal.options.cursorBlink = settings.cursor.blink;
+        uiLogger.debug(`Applied cursor blink (nested): ${settings.cursor.blink}`);
+      }
+    }
     if (settings.cursorBlink !== undefined) {
       terminal.options.cursorBlink = settings.cursorBlink;
       uiLogger.debug(`Applied cursor blink: ${settings.cursorBlink}`);
@@ -476,6 +492,9 @@ export class UIManager extends BaseManager implements IUIManager {
   ): void {
     const key = `terminal-resize-${container.id || Date.now()}`;
 
+    // 🔧 FIX: Track the key for proper cleanup on dispose
+    this.resizeObserverKeys.add(key);
+
     ResizeManager.observeResize(
       key,
       container,
@@ -564,8 +583,12 @@ export class UIManager extends BaseManager implements IUIManager {
       // Dispose event registry
       this.eventRegistry.dispose();
 
-      // Clear resize operations
-      ResizeManager.dispose();
+      // 🔧 FIX: Unobserve individual ResizeObserver keys instead of global dispose
+      // This prevents affecting other components that may use ResizeManager
+      for (const key of this.resizeObserverKeys) {
+        ResizeManager.unobserveResize(key);
+      }
+      this.resizeObserverKeys.clear();
 
       // Reset theme cache
       this.currentTheme = null;

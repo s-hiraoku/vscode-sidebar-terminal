@@ -11,12 +11,12 @@ import sinon from 'sinon';
 import { JSDOM } from 'jsdom';
 import {
   InputEventService,
-  EventHandlerConfig as _EventHandlerConfig
+  EventHandlerConfig as _EventHandlerConfig,
 } from '../../../../../webview/managers/input/services/InputEventService';
 import {
   InputStateManager,
   AltClickState as _AltClickState,
-  KeyboardState as _KeyboardState
+  KeyboardState as _KeyboardState,
 } from '../../../../../webview/managers/input/services/InputStateManager';
 
 // Mock VS Code settings that affect terminal behavior
@@ -53,7 +53,7 @@ const VS_CODE_KEYBINDINGS = {
   // Multi-cursor
   'alt+click': 'editor.action.insertCursorAtEndOfEachLineSelected',
   'ctrl+alt+down': 'editor.action.insertCursorBelow',
-  'ctrl+alt+up': 'editor.action.insertCursorAbove'
+  'ctrl+alt+up': 'editor.action.insertCursorAbove',
 };
 
 // Mock VS Code API patterns
@@ -83,7 +83,7 @@ class MockVSCodeTerminalIntegration {
       'workbench.list.automaticKeyboardNavigation': true,
       'terminal.integrated.macOptionIsMeta': false,
       'terminal.integrated.macOptionClickForcesSelection': false,
-      ...settings
+      ...settings,
     };
 
     this.setupVSCodePatterns();
@@ -119,13 +119,15 @@ class MockVSCodeTerminalIntegration {
 
     // Update state with VS Code settings
     this.stateManager.updateAltClickState({
-      isVSCodeAltClickEnabled: this.isAltClickEnabled()
+      isVSCodeAltClickEnabled: this.isAltClickEnabled(),
     });
   }
 
   private isAltClickEnabled(): boolean {
-    return this.settings['terminal.integrated.altClickMovesCursor'] === true &&
-           this.settings['editor.multiCursorModifier'] === 'alt';
+    return (
+      this.settings['terminal.integrated.altClickMovesCursor'] === true &&
+      this.settings['editor.multiCursorModifier'] === 'alt'
+    );
   }
 
   private handleAltClick(event: Event): void {
@@ -139,7 +141,7 @@ class MockVSCodeTerminalIntegration {
 
       this.stateManager.updateAltClickState({
         lastClickPosition: { x: mouseEvent.clientX, y: mouseEvent.clientY },
-        clickCount: altClickState.clickCount + 1
+        clickCount: altClickState.clickCount + 1,
       });
 
       // Simulate cursor positioning
@@ -159,9 +161,9 @@ class MockVSCodeTerminalIntegration {
         ctrl: keyEvent.ctrlKey,
         alt: keyEvent.altKey,
         shift: keyEvent.shiftKey,
-        meta: keyEvent.metaKey
+        meta: keyEvent.metaKey,
       },
-      lastKeyTimestamp: Date.now()
+      lastKeyTimestamp: Date.now(),
     });
 
     // Handle VS Code terminal-specific keybindings
@@ -186,7 +188,7 @@ class MockVSCodeTerminalIntegration {
     // Detect chord initiation (Ctrl+K)
     if (keyEvent.ctrlKey && keyEvent.key.toLowerCase() === 'k') {
       this.stateManager.updateKeyboardState({
-        isInChordMode: true
+        isInChordMode: true,
       });
 
       keyEvent.preventDefault();
@@ -199,7 +201,7 @@ class MockVSCodeTerminalIntegration {
       const chordCommand = `ctrl+k ${keyEvent.key.toLowerCase()}`;
 
       this.stateManager.updateKeyboardState({
-        isInChordMode: false
+        isInChordMode: false,
       });
 
       this.handleVSCodeKeybinding(chordCommand, keyEvent);
@@ -253,7 +255,7 @@ class MockVSCodeTerminalIntegration {
 
     // Update state to reflect new settings
     this.stateManager.updateAltClickState({
-      isVSCodeAltClickEnabled: this.isAltClickEnabled()
+      isVSCodeAltClickEnabled: this.isAltClickEnabled(),
     });
   }
 
@@ -264,7 +266,7 @@ class MockVSCodeTerminalIntegration {
   public simulateVSCodeCommand(command: string): void {
     // Simulate VS Code command execution
     const keybinding = Object.keys(VS_CODE_KEYBINDINGS).find(
-      key => VS_CODE_KEYBINDINGS[key as keyof typeof VS_CODE_KEYBINDINGS] === command
+      (key) => VS_CODE_KEYBINDINGS[key as keyof typeof VS_CODE_KEYBINDINGS] === command
     );
 
     if (keybinding) {
@@ -284,7 +286,8 @@ describe('VS Code Compatibility Pattern TDD Test Suite', () => {
 
   beforeEach(() => {
     // Arrange: Setup VS Code-like DOM environment
-    jsdom = new JSDOM(`
+    jsdom = new JSDOM(
+      `
       <!DOCTYPE html>
       <html>
         <body>
@@ -297,11 +300,13 @@ describe('VS Code Compatibility Pattern TDD Test Suite', () => {
           </div>
         </body>
       </html>
-    `, {
-      url: 'vscode-webview://terminal',
-      pretendToBeVisual: true,
-      resources: 'usable'
-    });
+    `,
+      {
+        url: 'vscode-webview://terminal',
+        pretendToBeVisual: true,
+        resources: 'usable',
+      }
+    );
 
     // Setup global environment
     global.window = jsdom.window as any;
@@ -318,7 +323,9 @@ describe('VS Code Compatibility Pattern TDD Test Suite', () => {
 
     // Setup services
     logMessages = [];
-    const mockLogger = (message: string) => { logMessages.push(message); };
+    const mockLogger = (message: string) => {
+      logMessages.push(message);
+    };
 
     eventService = new InputEventService(mockLogger);
     stateManager = new InputStateManager(mockLogger);
@@ -355,7 +362,7 @@ describe('VS Code Compatibility Pattern TDD Test Suite', () => {
           clientY: 200,
           altKey: true,
           bubbles: true,
-          cancelable: true
+          cancelable: true,
         });
 
         terminalElement.dispatchEvent(altClickEvent);
@@ -371,7 +378,7 @@ describe('VS Code Compatibility Pattern TDD Test Suite', () => {
       it('should disable Alt+Click when VS Code settings are incompatible', () => {
         // Act: Update settings to disable Alt+Click
         vscodeIntegration.updateSettings({
-          'editor.multiCursorModifier': 'ctrlCmd' // Not 'alt'
+          'editor.multiCursorModifier': 'ctrlCmd', // Not 'alt'
         });
 
         // Assert: Should disable Alt+Click
@@ -385,7 +392,7 @@ describe('VS Code Compatibility Pattern TDD Test Suite', () => {
         const altClickEvent = new jsdom.window.MouseEvent('click', {
           clientX: 150,
           clientY: 250,
-          altKey: true
+          altKey: true,
         });
 
         terminalElement.dispatchEvent(altClickEvent);
@@ -402,7 +409,7 @@ describe('VS Code Compatibility Pattern TDD Test Suite', () => {
         // Act: Configure macOS Option behavior
         vscodeIntegration.updateSettings({
           'terminal.integrated.macOptionIsMeta': true,
-          'terminal.integrated.macOptionClickForcesSelection': true
+          'terminal.integrated.macOptionClickForcesSelection': true,
         });
 
         // Act: Simulate Option+Click on macOS
@@ -410,7 +417,7 @@ describe('VS Code Compatibility Pattern TDD Test Suite', () => {
           clientX: 300,
           clientY: 400,
           altKey: true, // Alt key represents Option on macOS
-          metaKey: false
+          metaKey: false,
         });
 
         const selectionCallback = sinon.stub();
@@ -430,7 +437,7 @@ describe('VS Code Compatibility Pattern TDD Test Suite', () => {
         let preventDefaultCalled = false;
         const originalPreventDefault = jsdom.window.MouseEvent.prototype.preventDefault;
 
-        jsdom.window.MouseEvent.prototype.preventDefault = function() {
+        jsdom.window.MouseEvent.prototype.preventDefault = function () {
           preventDefaultCalled = true;
           originalPreventDefault.call(this);
         };
@@ -441,7 +448,7 @@ describe('VS Code Compatibility Pattern TDD Test Suite', () => {
           clientY: 200,
           altKey: true,
           bubbles: true,
-          cancelable: true
+          cancelable: true,
         });
 
         terminalElement.dispatchEvent(altClickEvent);
@@ -459,12 +466,12 @@ describe('VS Code Compatibility Pattern TDD Test Suite', () => {
         // Act: Test different multi-cursor modifiers
         const modifierTests = [
           { setting: 'alt', expectEnabled: true },
-          { setting: 'ctrlCmd', expectEnabled: false }
+          { setting: 'ctrlCmd', expectEnabled: false },
         ] as const;
 
         modifierTests.forEach(({ setting, expectEnabled }) => {
           vscodeIntegration.updateSettings({
-            'editor.multiCursorModifier': setting
+            'editor.multiCursorModifier': setting,
           });
 
           const altClickState = stateManager.getStateSection('altClick');
@@ -475,13 +482,13 @@ describe('VS Code Compatibility Pattern TDD Test Suite', () => {
       it('should handle Alt+Click tracking independent of multi-cursor setting', () => {
         // Act: Disable Alt+Click via multi-cursor setting
         vscodeIntegration.updateSettings({
-          'editor.multiCursorModifier': 'ctrlCmd'
+          'editor.multiCursorModifier': 'ctrlCmd',
         });
 
         // Act: Still track Alt key state for other purposes
         const keyEvent = new jsdom.window.KeyboardEvent('keydown', {
           key: 'Alt',
-          altKey: true
+          altKey: true,
         });
 
         terminalElement.dispatchEvent(keyEvent);
@@ -505,11 +512,14 @@ describe('VS Code Compatibility Pattern TDD Test Suite', () => {
           newTerminal: sinon.stub(),
           nextTerminal: sinon.stub(),
           prevTerminal: sinon.stub(),
-          focusTerminal1: sinon.stub()
+          focusTerminal1: sinon.stub(),
         };
 
         vscodeIntegration.registerKeybindingCallback('ctrl+shift+`', terminalCallbacks.newTerminal);
-        vscodeIntegration.registerKeybindingCallback('ctrl+pagedown', terminalCallbacks.nextTerminal);
+        vscodeIntegration.registerKeybindingCallback(
+          'ctrl+pagedown',
+          terminalCallbacks.nextTerminal
+        );
         vscodeIntegration.registerKeybindingCallback('ctrl+pageup', terminalCallbacks.prevTerminal);
         vscodeIntegration.registerKeybindingCallback('ctrl+1', terminalCallbacks.focusTerminal1);
 
@@ -518,7 +528,7 @@ describe('VS Code Compatibility Pattern TDD Test Suite', () => {
           { key: '`', ctrlKey: true, shiftKey: true, callback: terminalCallbacks.newTerminal },
           { key: 'PageDown', ctrlKey: true, callback: terminalCallbacks.nextTerminal },
           { key: 'PageUp', ctrlKey: true, callback: terminalCallbacks.prevTerminal },
-          { key: '1', ctrlKey: true, callback: terminalCallbacks.focusTerminal1 }
+          { key: '1', ctrlKey: true, callback: terminalCallbacks.focusTerminal1 },
         ];
 
         keys.forEach(({ key, ctrlKey, shiftKey = false, callback }) => {
@@ -527,7 +537,7 @@ describe('VS Code Compatibility Pattern TDD Test Suite', () => {
             ctrlKey,
             shiftKey,
             bubbles: true,
-            cancelable: true
+            cancelable: true,
           });
 
           terminalElement.dispatchEvent(keyEvent);
@@ -541,7 +551,7 @@ describe('VS Code Compatibility Pattern TDD Test Suite', () => {
         // Act: Configure to send keybindings to shell
         vscodeIntegration.updateSettings({
           'terminal.integrated.sendKeybindingsToShell': true,
-          'terminal.integrated.commandsToSkipShell': ['ctrl+c', 'ctrl+d']
+          'terminal.integrated.commandsToSkipShell': ['ctrl+c', 'ctrl+d'],
         });
 
         const _shellCallback = sinon.stub();
@@ -552,7 +562,7 @@ describe('VS Code Compatibility Pattern TDD Test Suite', () => {
         // Act: Send Ctrl+L (should go to shell)
         const ctrlL = new jsdom.window.KeyboardEvent('keydown', {
           key: 'l',
-          ctrlKey: true
+          ctrlKey: true,
         });
 
         terminalElement.dispatchEvent(ctrlL);
@@ -563,7 +573,7 @@ describe('VS Code Compatibility Pattern TDD Test Suite', () => {
         // Act: Send Ctrl+C (should be handled by VS Code due to skip list)
         const ctrlC = new jsdom.window.KeyboardEvent('keydown', {
           key: 'c',
-          ctrlKey: true
+          ctrlKey: true,
         });
 
         vscodeIntegration.registerKeybindingCallback('ctrl+c', vscodeCallback);
@@ -579,7 +589,7 @@ describe('VS Code Compatibility Pattern TDD Test Suite', () => {
           { key: 'Tab', shiftKey: true }, // Shift+Tab
           { key: 'F1', ctrlKey: false }, // F1 (Command palette)
           { key: 'p', ctrlKey: true, shiftKey: true }, // Ctrl+Shift+P
-          { key: 'Enter', altKey: true } // Alt+Enter
+          { key: 'Enter', altKey: true }, // Alt+Enter
         ];
 
         keySequences.forEach(({ key, ctrlKey = false, shiftKey = false, altKey = false }) => {
@@ -587,7 +597,7 @@ describe('VS Code Compatibility Pattern TDD Test Suite', () => {
             key,
             ctrlKey,
             shiftKey,
-            altKey
+            altKey,
           });
 
           terminalElement.dispatchEvent(keyEvent);
@@ -606,25 +616,28 @@ describe('VS Code Compatibility Pattern TDD Test Suite', () => {
       it('should handle VS Code chord commands when enabled', () => {
         // Arrange: Enable chord commands
         vscodeIntegration.updateSettings({
-          'terminal.integrated.allowChords': true
+          'terminal.integrated.allowChords': true,
         });
 
         const chordCallbacks = {
           addComment: sinon.stub(),
           removeComment: sinon.stub(),
-          openKeyboardShortcuts: sinon.stub()
+          openKeyboardShortcuts: sinon.stub(),
         };
 
         vscodeIntegration.registerKeybindingCallback('ctrl+k c', chordCallbacks.addComment);
         vscodeIntegration.registerKeybindingCallback('ctrl+k u', chordCallbacks.removeComment);
-        vscodeIntegration.registerKeybindingCallback('ctrl+k s', chordCallbacks.openKeyboardShortcuts);
+        vscodeIntegration.registerKeybindingCallback(
+          'ctrl+k s',
+          chordCallbacks.openKeyboardShortcuts
+        );
 
         // Act: Execute chord sequence (Ctrl+K, then C)
         const ctrlK = new jsdom.window.KeyboardEvent('keydown', {
           key: 'k',
           ctrlKey: true,
           bubbles: true,
-          cancelable: true
+          cancelable: true,
         });
 
         terminalElement.dispatchEvent(ctrlK);
@@ -636,7 +649,7 @@ describe('VS Code Compatibility Pattern TDD Test Suite', () => {
         // Act: Complete chord with 'C'
         const cKey = new jsdom.window.KeyboardEvent('keydown', {
           key: 'c',
-          ctrlKey: false
+          ctrlKey: false,
         });
 
         terminalElement.dispatchEvent(cKey);
@@ -651,7 +664,7 @@ describe('VS Code Compatibility Pattern TDD Test Suite', () => {
       it('should disable chord commands when setting is false', () => {
         // Act: Disable chord commands
         vscodeIntegration.updateSettings({
-          'terminal.integrated.allowChords': false
+          'terminal.integrated.allowChords': false,
         });
 
         const chordCallback = sinon.stub();
@@ -660,7 +673,7 @@ describe('VS Code Compatibility Pattern TDD Test Suite', () => {
         // Act: Try chord sequence
         const ctrlK = new jsdom.window.KeyboardEvent('keydown', {
           key: 'k',
-          ctrlKey: true
+          ctrlKey: true,
         });
 
         terminalElement.dispatchEvent(ctrlK);
@@ -676,13 +689,13 @@ describe('VS Code Compatibility Pattern TDD Test Suite', () => {
       it('should handle chord timeout and cancellation', () => {
         // Arrange: Enable chords
         vscodeIntegration.updateSettings({
-          'terminal.integrated.allowChords': true
+          'terminal.integrated.allowChords': true,
         });
 
         // Act: Start chord sequence
         const ctrlK = new jsdom.window.KeyboardEvent('keydown', {
           key: 'k',
-          ctrlKey: true
+          ctrlKey: true,
         });
 
         terminalElement.dispatchEvent(ctrlK);
@@ -690,7 +703,7 @@ describe('VS Code Compatibility Pattern TDD Test Suite', () => {
 
         // Act: Press Escape to cancel chord
         const escKey = new jsdom.window.KeyboardEvent('keydown', {
-          key: 'Escape'
+          key: 'Escape',
         });
 
         terminalElement.dispatchEvent(escKey);
@@ -704,7 +717,7 @@ describe('VS Code Compatibility Pattern TDD Test Suite', () => {
         // Act: Enter chord mode
         const ctrlK = new jsdom.window.KeyboardEvent('keydown', {
           key: 'k',
-          ctrlKey: true
+          ctrlKey: true,
         });
 
         terminalElement.dispatchEvent(ctrlK);
@@ -714,7 +727,7 @@ describe('VS Code Compatibility Pattern TDD Test Suite', () => {
 
         // Act: Exit chord mode
         const cKey = new jsdom.window.KeyboardEvent('keydown', {
-          key: 'c'
+          key: 'c',
         });
 
         terminalElement.dispatchEvent(cKey);
@@ -730,7 +743,7 @@ describe('VS Code Compatibility Pattern TDD Test Suite', () => {
       it('should handle automatic keyboard navigation when enabled', () => {
         // Act: Enable automatic keyboard navigation
         vscodeIntegration.updateSettings({
-          'workbench.list.automaticKeyboardNavigation': true
+          'workbench.list.automaticKeyboardNavigation': true,
         });
 
         const navigationCallback = sinon.stub();
@@ -739,7 +752,7 @@ describe('VS Code Compatibility Pattern TDD Test Suite', () => {
         // Act: Use navigation keys
         const navigationKey = new jsdom.window.KeyboardEvent('keydown', {
           key: 'PageDown',
-          ctrlKey: true
+          ctrlKey: true,
         });
 
         terminalElement.dispatchEvent(navigationKey);
@@ -752,15 +765,15 @@ describe('VS Code Compatibility Pattern TDD Test Suite', () => {
         // Act: Test focus-related keyboard events
         const focusEvents = [
           { key: 'Tab', expectFocusChange: false }, // Should stay in terminal
-          { key: 'F6', expectFocusChange: true },   // Should change focus area
-          { key: 'Tab', ctrlKey: true, expectFocusChange: true } // Should change tab/terminal
+          { key: 'F6', expectFocusChange: true }, // Should change focus area
+          { key: 'Tab', ctrlKey: true, expectFocusChange: true }, // Should change tab/terminal
         ];
 
         focusEvents.forEach(({ key, ctrlKey = false, expectFocusChange: _expectFocusChange }) => {
           const keyEvent = new jsdom.window.KeyboardEvent('keydown', {
             key,
             ctrlKey,
-            bubbles: true
+            bubbles: true,
           });
 
           terminalElement.dispatchEvent(keyEvent);
@@ -776,18 +789,24 @@ describe('VS Code Compatibility Pattern TDD Test Suite', () => {
         const managementCallbacks = {
           splitTerminal: sinon.stub(),
           killTerminal: sinon.stub(),
-          renameTerminal: sinon.stub()
+          renameTerminal: sinon.stub(),
         };
 
-        vscodeIntegration.registerKeybindingCallback('ctrl+shift+5', managementCallbacks.splitTerminal);
-        vscodeIntegration.registerKeybindingCallback('ctrl+shift+w', managementCallbacks.killTerminal);
+        vscodeIntegration.registerKeybindingCallback(
+          'ctrl+shift+5',
+          managementCallbacks.splitTerminal
+        );
+        vscodeIntegration.registerKeybindingCallback(
+          'ctrl+shift+w',
+          managementCallbacks.killTerminal
+        );
         vscodeIntegration.registerKeybindingCallback('f2', managementCallbacks.renameTerminal);
 
         // Act: Use terminal management keys
         const managementKeys = [
           { key: '5', ctrlKey: true, shiftKey: true, callback: managementCallbacks.splitTerminal },
           { key: 'w', ctrlKey: true, shiftKey: true, callback: managementCallbacks.killTerminal },
-          { key: 'F2', callback: managementCallbacks.renameTerminal }
+          { key: 'F2', callback: managementCallbacks.renameTerminal },
         ];
 
         managementKeys.forEach(({ key, ctrlKey = false, shiftKey = false, callback }) => {
@@ -796,7 +815,7 @@ describe('VS Code Compatibility Pattern TDD Test Suite', () => {
             ctrlKey,
             shiftKey,
             bubbles: true,
-            cancelable: true
+            cancelable: true,
           });
 
           terminalElement.dispatchEvent(keyEvent);
@@ -812,7 +831,7 @@ describe('VS Code Compatibility Pattern TDD Test Suite', () => {
 
         // Act: Change settings to disable Alt+Click
         vscodeIntegration.updateSettings({
-          'terminal.integrated.altClickMovesCursor': false
+          'terminal.integrated.altClickMovesCursor': false,
         });
 
         // Assert: Should immediately reflect setting change
@@ -820,7 +839,7 @@ describe('VS Code Compatibility Pattern TDD Test Suite', () => {
 
         // Act: Re-enable Alt+Click
         vscodeIntegration.updateSettings({
-          'terminal.integrated.altClickMovesCursor': true
+          'terminal.integrated.altClickMovesCursor': true,
         });
 
         // Assert: Should re-enable functionality
@@ -833,24 +852,24 @@ describe('VS Code Compatibility Pattern TDD Test Suite', () => {
           {
             settings: {
               'terminal.integrated.altClickMovesCursor': true,
-              'editor.multiCursorModifier': 'alt' as const
+              'editor.multiCursorModifier': 'alt' as const,
             },
-            expectAltClick: true
+            expectAltClick: true,
           },
           {
             settings: {
               'terminal.integrated.altClickMovesCursor': true,
-              'editor.multiCursorModifier': 'ctrlCmd' as const
+              'editor.multiCursorModifier': 'ctrlCmd' as const,
             },
-            expectAltClick: false
+            expectAltClick: false,
           },
           {
             settings: {
               'terminal.integrated.altClickMovesCursor': false,
-              'editor.multiCursorModifier': 'alt' as const
+              'editor.multiCursorModifier': 'alt' as const,
             },
-            expectAltClick: false
-          }
+            expectAltClick: false,
+          },
         ];
 
         settingCombinations.forEach(({ settings, expectAltClick }) => {
@@ -867,7 +886,7 @@ describe('VS Code Compatibility Pattern TDD Test Suite', () => {
         stateManager.addStateListener('altClick', (newState, previousState) => {
           settingChanges.push({
             from: previousState.isVSCodeAltClickEnabled,
-            to: newState.isVSCodeAltClickEnabled
+            to: newState.isVSCodeAltClickEnabled,
           });
         });
 
@@ -894,11 +913,14 @@ describe('VS Code Compatibility Pattern TDD Test Suite', () => {
         const commandCallbacks = {
           openSettings: sinon.stub(),
           openKeyboardShortcuts: sinon.stub(),
-          toggleTerminal: sinon.stub()
+          toggleTerminal: sinon.stub(),
         };
 
         vscodeIntegration.registerKeybindingCallback('ctrl+,', commandCallbacks.openSettings);
-        vscodeIntegration.registerKeybindingCallback('ctrl+k s', commandCallbacks.openKeyboardShortcuts);
+        vscodeIntegration.registerKeybindingCallback(
+          'ctrl+k s',
+          commandCallbacks.openKeyboardShortcuts
+        );
         vscodeIntegration.registerKeybindingCallback('ctrl+`', commandCallbacks.toggleTerminal);
 
         // Act: Simulate command execution
@@ -917,33 +939,41 @@ describe('VS Code Compatibility Pattern TDD Test Suite', () => {
         const extensionCallbacks = {
           formatDocument: sinon.stub(),
           quickOpen: sinon.stub(),
-          commandPalette: sinon.stub()
+          commandPalette: sinon.stub(),
         };
 
-        vscodeIntegration.registerKeybindingCallback('shift+alt+f', extensionCallbacks.formatDocument);
+        vscodeIntegration.registerKeybindingCallback(
+          'shift+alt+f',
+          extensionCallbacks.formatDocument
+        );
         vscodeIntegration.registerKeybindingCallback('ctrl+p', extensionCallbacks.quickOpen);
-        vscodeIntegration.registerKeybindingCallback('ctrl+shift+p', extensionCallbacks.commandPalette);
+        vscodeIntegration.registerKeybindingCallback(
+          'ctrl+shift+p',
+          extensionCallbacks.commandPalette
+        );
 
         // Simulate extension keybindings
         const extensionKeys = [
           { key: 'f', shiftKey: true, altKey: true, callback: extensionCallbacks.formatDocument },
           { key: 'p', ctrlKey: true, callback: extensionCallbacks.quickOpen },
-          { key: 'p', ctrlKey: true, shiftKey: true, callback: extensionCallbacks.commandPalette }
+          { key: 'p', ctrlKey: true, shiftKey: true, callback: extensionCallbacks.commandPalette },
         ];
 
-        extensionKeys.forEach(({ key, ctrlKey = false, shiftKey = false, altKey = false, callback }) => {
-          const keyEvent = new jsdom.window.KeyboardEvent('keydown', {
-            key,
-            ctrlKey,
-            shiftKey,
-            altKey,
-            bubbles: true,
-            cancelable: true
-          });
+        extensionKeys.forEach(
+          ({ key, ctrlKey = false, shiftKey = false, altKey = false, callback }) => {
+            const keyEvent = new jsdom.window.KeyboardEvent('keydown', {
+              key,
+              ctrlKey,
+              shiftKey,
+              altKey,
+              bubbles: true,
+              cancelable: true,
+            });
 
-          terminalElement.dispatchEvent(keyEvent);
-          expect(callback.called).to.be.true;
-        });
+            terminalElement.dispatchEvent(keyEvent);
+            expect(callback.called).to.be.true;
+          }
+        );
       });
     });
 
@@ -958,7 +988,7 @@ describe('VS Code Compatibility Pattern TDD Test Suite', () => {
             key: String.fromCharCode(65 + (i % 26)), // A-Z
             ctrlKey: i % 3 === 0,
             shiftKey: i % 5 === 0,
-            altKey: i % 7 === 0
+            altKey: i % 7 === 0,
           });
 
           terminalElement.dispatchEvent(keyEvent);
@@ -968,7 +998,7 @@ describe('VS Code Compatibility Pattern TDD Test Suite', () => {
             const clickEvent = new jsdom.window.MouseEvent('click', {
               clientX: i % 500,
               clientY: i % 300,
-              altKey: true
+              altKey: true,
             });
 
             terminalElement.dispatchEvent(clickEvent);
@@ -1002,7 +1032,7 @@ describe('VS Code Compatibility Pattern TDD Test Suite', () => {
             const clickEvent = new jsdom.window.MouseEvent('click', {
               clientX: 100 + i,
               clientY: 200 + i,
-              altKey: true
+              altKey: true,
             });
 
             terminalElement.dispatchEvent(clickEvent);
@@ -1012,11 +1042,11 @@ describe('VS Code Compatibility Pattern TDD Test Suite', () => {
           for (let i = 0; i < 5; i++) {
             const ctrlK = new jsdom.window.KeyboardEvent('keydown', {
               key: 'k',
-              ctrlKey: true
+              ctrlKey: true,
             });
 
             const cKey = new jsdom.window.KeyboardEvent('keydown', {
-              key: 'c'
+              key: 'c',
             });
 
             terminalElement.dispatchEvent(ctrlK);
@@ -1043,19 +1073,17 @@ describe('VS Code Compatibility Pattern TDD Test Suite', () => {
         const malformedEvents = [
           new jsdom.window.KeyboardEvent('keydown', { key: null as any }),
           new jsdom.window.KeyboardEvent('keydown', { key: undefined as any }),
-          new jsdom.window.MouseEvent('click', { clientX: NaN, clientY: NaN })
+          new jsdom.window.MouseEvent('click', { clientX: NaN, clientY: NaN }),
         ];
 
-        malformedEvents.forEach(event => {
+        malformedEvents.forEach((event) => {
           expect(() => {
             terminalElement.dispatchEvent(event);
           }).to.not.throw();
         });
 
         // Assert: Should handle gracefully without errors
-        const errorLogs = logMessages.filter(msg =>
-          msg.toLowerCase().includes('error')
-        );
+        const errorLogs = logMessages.filter((msg) => msg.toLowerCase().includes('error'));
         expect(errorLogs.length).to.equal(0);
       });
 
@@ -1066,7 +1094,7 @@ describe('VS Code Compatibility Pattern TDD Test Suite', () => {
           'editor.multiCursorModifier': 'alt',
           // Conflicting: send to shell but also handle in VS Code
           'terminal.integrated.sendKeybindingsToShell': true,
-          'terminal.integrated.commandsToSkipShell': []
+          'terminal.integrated.commandsToSkipShell': [],
         });
 
         // Should still maintain consistent state
@@ -1077,7 +1105,7 @@ describe('VS Code Compatibility Pattern TDD Test Suite', () => {
         expect(() => {
           const keyEvent = new jsdom.window.KeyboardEvent('keydown', {
             key: 'l',
-            ctrlKey: true
+            ctrlKey: true,
           });
           terminalElement.dispatchEvent(keyEvent);
         }).to.not.throw();
@@ -1090,7 +1118,7 @@ describe('VS Code Compatibility Pattern TDD Test Suite', () => {
         const callbacks = {
           altClick: sinon.stub(),
           chord: sinon.stub(),
-          navigation: sinon.stub()
+          navigation: sinon.stub(),
         };
 
         vscodeIntegration.registerKeybindingCallback('alt+click', callbacks.altClick);
@@ -1101,7 +1129,7 @@ describe('VS Code Compatibility Pattern TDD Test Suite', () => {
         const clickEvent = new jsdom.window.MouseEvent('click', {
           clientX: 100,
           clientY: 200,
-          altKey: true
+          altKey: true,
         });
         terminalElement.dispatchEvent(clickEvent);
 

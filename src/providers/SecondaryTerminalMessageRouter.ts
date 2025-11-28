@@ -19,6 +19,14 @@ export class SecondaryTerminalMessageRouter {
     this.handlers.clear();
   }
 
+  has(command: string): boolean {
+    return this.handlers.has(command);
+  }
+
+  getRegisteredCommands(): string[] {
+    return Array.from(this.handlers.keys());
+  }
+
   async dispatch(message: WebviewMessage): Promise<boolean> {
     const handler = this.handlers.get(message.command);
     if (!handler) {
@@ -33,4 +41,3 @@ export class SecondaryTerminalMessageRouter {
     this.handlers.clear();
   }
 }
-

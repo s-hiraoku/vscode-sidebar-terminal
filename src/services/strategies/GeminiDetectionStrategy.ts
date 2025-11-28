@@ -37,7 +37,7 @@ export class GeminiDetectionStrategy extends BaseDetectionStrategy {
       return {
         isDetected: true,
         confidence: 1.0,
-        detectedLine: input
+        detectedLine: input,
       };
     }
 
@@ -46,7 +46,7 @@ export class GeminiDetectionStrategy extends BaseDetectionStrategy {
       return {
         isDetected: true,
         confidence: 0.95,
-        detectedLine: input
+        detectedLine: input,
       };
     }
 
@@ -55,7 +55,7 @@ export class GeminiDetectionStrategy extends BaseDetectionStrategy {
       return {
         isDetected: true,
         confidence: 0.95,
-        detectedLine: input
+        detectedLine: input,
       };
     }
 
@@ -64,7 +64,7 @@ export class GeminiDetectionStrategy extends BaseDetectionStrategy {
       return {
         isDetected: true,
         confidence: 0.9,
-        detectedLine: input
+        detectedLine: input,
       };
     }
 
@@ -110,10 +110,10 @@ export class GeminiDetectionStrategy extends BaseDetectionStrategy {
       'analyze',
       'review',
       'chat',
-      'code'
+      'code',
     ];
 
-    return subcommands.some(cmd => line.includes(cmd));
+    return subcommands.some((cmd) => line.includes(cmd));
   }
 
   private containsGeminiPatterns(output: string): boolean {
@@ -123,7 +123,7 @@ export class GeminiDetectionStrategy extends BaseDetectionStrategy {
       /\bbard\s+(response|answer)\b/i,
     ];
 
-    return patterns.some(pattern => pattern.test(output));
+    return patterns.some((pattern) => pattern.test(output));
   }
 
   private detectGeminiAsciiArt(output: string): boolean {
@@ -145,14 +145,14 @@ export class GeminiDetectionStrategy extends BaseDetectionStrategy {
       /░░░\s+░░░░░░░░░\s+░░░░░░░░░░\s+░░░░░\s+░░░░░\s+░░░░░\s+░░░░░\s+░░░░░\s+░░░░░/,
 
       // Check for the specific progression pattern (indentation gets smaller)
-      /\s*███\s+.*█████████.*██████████/,  // First line pattern
-      /\s*░░░███\s+.*███░░░░░███/,          // Second line pattern with indentation
-      /\s{2,}░░░███\s+.*███\s+░░░/,         // Third line with more indentation
-      /\s{4,}░░░███\s+.*░███\s+░██████/,    // Fourth line with even more indentation
+      /\s*███\s+.*█████████.*██████████/, // First line pattern
+      /\s*░░░███\s+.*███░░░░░███/, // Second line pattern with indentation
+      /\s{2,}░░░███\s+.*███\s+░░░/, // Third line with more indentation
+      /\s{4,}░░░███\s+.*░███\s+░██████/, // Fourth line with even more indentation
 
       // Very simple but unique: the specific sequence at the end
-      /░░█████\s+█████$/,                   // End of second-to-last line
-      /░░░░░\s+░░░░░$/                      // End of last line
+      /░░█████\s+█████$/, // End of second-to-last line
+      /░░░░░\s+░░░░░$/, // End of last line
     ];
 
     // Also check for the unique indentation pattern
@@ -168,10 +168,14 @@ export class GeminiDetectionStrategy extends BaseDetectionStrategy {
 
       // Check if we have the specific indentation pattern
       if (
-        line1 && /^\s*███\s+/.test(line1) &&           // Starts with minimal spaces + ███
-        line2 && /^\s*░░░███\s+/.test(line2) &&        // Starts with minimal spaces + ░░░███
-        line3 && /^\s{2,}░░░███\s+/.test(line3) &&     // Starts with 2+ spaces + ░░░███
-        line4 && /^\s{4,}░░░███\s+/.test(line4)        // Starts with 4+ spaces + ░░░███
+        line1 &&
+        /^\s*███\s+/.test(line1) && // Starts with minimal spaces + ███
+        line2 &&
+        /^\s*░░░███\s+/.test(line2) && // Starts with minimal spaces + ░░░███
+        line3 &&
+        /^\s{2,}░░░███\s+/.test(line3) && // Starts with 2+ spaces + ░░░███
+        line4 &&
+        /^\s{4,}░░░███\s+/.test(line4) // Starts with 4+ spaces + ░░░███
       ) {
         hasIndentationPattern = true;
         break;
@@ -179,7 +183,7 @@ export class GeminiDetectionStrategy extends BaseDetectionStrategy {
     }
 
     // Check for any of the unique patterns
-    const hasUniquePattern = uniquePatterns.some(pattern => pattern.test(cleanOutput));
+    const hasUniquePattern = uniquePatterns.some((pattern) => pattern.test(cleanOutput));
 
     return hasUniquePattern || hasIndentationPattern;
   }

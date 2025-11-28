@@ -58,13 +58,30 @@ if (typeof (global as any).HTMLCanvasElement === 'undefined') {
       return null;
     }
 
-    get width() { return 300; }
+    get width() {
+      return 300;
+    }
     set width(_value: number) {}
-    get height() { return 150; }
+    get height() {
+      return 150;
+    }
     set height(_value: number) {}
-    toDataURL() { return 'data:,'; }
+    toDataURL() {
+      return 'data:,';
+    }
     toBlob() {}
-    getBoundingClientRect() { return { width: 300, height: 150, x: 0, y: 0, top: 0, left: 0, right: 300, bottom: 150 } as any; }
+    getBoundingClientRect() {
+      return {
+        width: 300,
+        height: 150,
+        x: 0,
+        y: 0,
+        top: 0,
+        left: 0,
+        right: 300,
+        bottom: 150,
+      } as any;
+    }
   };
 }
 
@@ -309,7 +326,12 @@ export async function setupTestEnvironment(): Promise<void> {
       };
     }
     // すべてのxterm関連モジュールをモック
-    if (id === 'xterm' || id === '@xterm/xterm' || id.startsWith('xterm') || id.startsWith('@xterm/')) {
+    if (
+      id === 'xterm' ||
+      id === '@xterm/xterm' ||
+      id.startsWith('xterm') ||
+      id.startsWith('@xterm/')
+    ) {
       return {
         Terminal: function () {
           return {
@@ -359,19 +381,24 @@ export async function setupTestEnvironment(): Promise<void> {
   // Save original process methods NOW before they might get replaced
   // CRITICAL: Save actual Node.js EventEmitter methods to prevent "process.emit is not a function" errors
   const EventEmitter = require('events');
-  const originalProcessEmit = process.emit && typeof process.emit === 'function'
-    ? process.emit.bind(process)
-    : EventEmitter.prototype.emit.bind(process);
-  const originalProcessOn = process.on && typeof process.on === 'function'
-    ? process.on.bind(process)
-    : EventEmitter.prototype.on.bind(process);
-  const originalProcessListeners = process.listeners && typeof process.listeners === 'function'
-    ? process.listeners.bind(process)
-    : EventEmitter.prototype.listeners.bind(process);
-  const originalProcessListenerCount = process.listenerCount && typeof process.listenerCount === 'function'
-    ? process.listenerCount.bind(process)
-    : (() => 0);
-  const savedCwd = process.cwd && typeof process.cwd === 'function' ? process.cwd.bind(process) : null;
+  const originalProcessEmit =
+    process.emit && typeof process.emit === 'function'
+      ? process.emit.bind(process)
+      : EventEmitter.prototype.emit.bind(process);
+  const originalProcessOn =
+    process.on && typeof process.on === 'function'
+      ? process.on.bind(process)
+      : EventEmitter.prototype.on.bind(process);
+  const originalProcessListeners =
+    process.listeners && typeof process.listeners === 'function'
+      ? process.listeners.bind(process)
+      : EventEmitter.prototype.listeners.bind(process);
+  const originalProcessListenerCount =
+    process.listenerCount && typeof process.listenerCount === 'function'
+      ? process.listenerCount.bind(process)
+      : () => 0;
+  const savedCwd =
+    process.cwd && typeof process.cwd === 'function' ? process.cwd.bind(process) : null;
 
   const processPolyfill = {
     ...process,
@@ -818,16 +845,21 @@ if (process) {
   const requiredMethods = ['removeListener', 'removeAllListeners', 'off', 'listenerCount'];
   requiredMethods.forEach((method) => {
     if (!(process as any)[method]) {
-      const stub = method === 'listenerCount'
-        ? function () { return 0; } // Return 0 listeners for test environment
-        : function () { return process; };
+      const stub =
+        method === 'listenerCount'
+          ? function () {
+              return 0;
+            } // Return 0 listeners for test environment
+          : function () {
+              return process;
+            };
 
       try {
         Object.defineProperty(process, method, {
           value: stub,
           writable: true,
           configurable: true,
-          enumerable: false
+          enumerable: false,
         });
       } catch (e) {
         // Fallback to direct assignment if defineProperty fails
@@ -893,7 +925,7 @@ export function setupTestEnvironmentSync(): void {
         value: fallbackCwd,
         writable: true,
         configurable: true,
-        enumerable: false
+        enumerable: false,
       });
     } catch (e) {
       (process as any).cwd = fallbackCwd;

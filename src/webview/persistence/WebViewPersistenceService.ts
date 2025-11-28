@@ -67,9 +67,7 @@ export class WebViewPersistenceService implements IWebViewPersistencePort {
   /**
    * Restore a session
    */
-  async restoreSession(
-    _request: RestoreSessionRequestDTO
-  ): Promise<RestoreSessionResponseDTO> {
+  async restoreSession(_request: RestoreSessionRequestDTO): Promise<RestoreSessionResponseDTO> {
     try {
       const sessionData = await this.getLocalSessionData();
 

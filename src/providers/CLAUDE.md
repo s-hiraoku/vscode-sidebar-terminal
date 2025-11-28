@@ -37,12 +37,14 @@
 **VS Code ViewPane Pattern実装** - 重複レンダリング防止とパフォーマンス最適化
 
 **`_bodyRendered`フラグパターン（決定5）**:
+
 - VS Code `src/vs/base/browser/ui/splitview/paneview.ts`の`Pane.renderBody()`パターンを採用
 - `resolveWebviewView()`は複数回呼ばれる（初回表示、パネル移動、WebView再作成）
 - `_bodyRendered`フラグで初回レンダリング完了を記録
 - 2回目以降の呼び出しは早期リターンで重複初期化を防止
 
 **実装箇所**:
+
 ```typescript
 // SecondaryTerminalProvider.ts
 
@@ -65,11 +67,13 @@ this._bodyRendered = false;
 ```
 
 **visibilityリスナー統合**:
+
 - Before: 3箇所の重複リスナー（PanelLocationService, PanelLocationController, SecondaryTerminalProvider）
-- After: 1箇所の統合リスナー（SecondaryTerminalProvider._registerVisibilityListener）
+- After: 1箇所の統合リスナー（SecondaryTerminalProvider.\_registerVisibilityListener）
 - 可視性変更時はHTML再初期化せず、状態保存/復元のみ実行
 
 **パフォーマンスメトリクス（OpenSpec 1.3.4）**:
+
 ```typescript
 // メトリクス定義（lines 71-78）
 private _performanceMetrics = {
@@ -101,10 +105,12 @@ public getPerformanceMetrics() {
 | リスナー登録回数 | 1回 | プロバイダーインスタンスあたり |
 
 **テストケース（OpenSpec 1.3.3）**:
+
 - `SecondaryTerminalProvider-ViewPaneLifecycle.test.ts`に完全なテストスイートを実装
 - 重複呼び出し防止、HTML単一設定、リスナー単一登録、状態保存をカバー
 
 **トラブルシューティング**:
+
 - **症状**: パネル移動時にWebViewがちらつく
   - **原因**: `_bodyRendered`フラグが正しく機能していない
   - **解決**: `resolveWebviewView()`開始時にフラグをチェック、trueなら早期リターン
@@ -114,6 +120,7 @@ public getPerformanceMetrics() {
   - **解決**: 目標値未達成の項目を特定し、該当コードを最適化
 
 **参考資料**:
+
 - VS Code Source: `src/vs/base/browser/ui/splitview/paneview.ts`
 - VS Code Source: `src/vs/workbench/contrib/webviewView/browser/webviewViewService.ts`
 - Research Doc: `docs/vscode-webview-lifecycle-patterns.md`

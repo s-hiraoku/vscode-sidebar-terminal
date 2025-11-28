@@ -809,8 +809,8 @@
         },
         "secondaryTerminal.features.enhancedScrollbackPersistence": {
           "type": "boolean",
-          "default": false,
-          "description": "Enable VS Code-compatible enhanced scrollback persistence with full state restoration. Beta feature - will be enabled by default in v0.2.0."
+          "default": true,
+          "description": "Enable VS Code-compatible enhanced scrollback persistence with full state restoration. Enabled by default to mirror VS Code."
         },
         "secondaryTerminal.features.scrollbackLineLimit": {
           "type": "number",
@@ -821,8 +821,8 @@
         },
         "secondaryTerminal.features.vscodeStandardIME": {
           "type": "boolean",
-          "default": false,
-          "description": "Enable VS Code standard IME composition handling patterns. Beta feature - will be enabled by default in v0.2.0."
+          "default": true,
+          "description": "Enable VS Code standard IME composition handling patterns. Enabled by default to mirror VS Code."
         },
         "secondaryTerminal.features.vscodeKeyboardShortcuts": {
           "type": "boolean",
@@ -831,8 +831,8 @@
         },
         "secondaryTerminal.features.vscodeStandardCursor": {
           "type": "boolean",
-          "default": false,
-          "description": "Enable VS Code standard cursor rendering with configurable styles and blinking. Beta feature - will be enabled by default in v0.2.0."
+          "default": true,
+          "description": "Enable VS Code standard cursor rendering with configurable styles and blinking. Enabled by default to match VS Code."
         },
         "secondaryTerminal.features.fullANSISupport": {
           "type": "boolean",

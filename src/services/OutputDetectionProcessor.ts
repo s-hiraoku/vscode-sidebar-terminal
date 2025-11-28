@@ -89,7 +89,11 @@ export class OutputDetectionProcessor implements vscode.Disposable {
   /**
    * Handle termination detection for connected agents
    */
-  private handleConnectedAgent(terminalId: string, line: string, fullyCleanLine: string): CliAgentDetectionResult | null {
+  private handleConnectedAgent(
+    terminalId: string,
+    line: string,
+    fullyCleanLine: string
+  ): CliAgentDetectionResult | null {
     const terminationResult = this.terminationDetector.detectStrictTermination(terminalId, line);
 
     if (terminationResult.isTerminated) {
@@ -119,7 +123,11 @@ export class OutputDetectionProcessor implements vscode.Disposable {
   /**
    * Handle termination detection for disconnected agents
    */
-  private handleDisconnectedAgent(terminalId: string, line: string, fullyCleanLine: string): boolean {
+  private handleDisconnectedAgent(
+    terminalId: string,
+    line: string,
+    fullyCleanLine: string
+  ): boolean {
     const disconnectedAgents = this.stateManager.getDisconnectedAgents();
     if (!disconnectedAgents.has(terminalId)) {
       return false;
@@ -140,9 +148,7 @@ export class OutputDetectionProcessor implements vscode.Disposable {
       );
 
       if (isValidTermination) {
-        log(
-          `🔻 [TERMINATION] Setting DISCONNECTED agent as terminated in terminal ${terminalId}`
-        );
+        log(`🔻 [TERMINATION] Setting DISCONNECTED agent as terminated in terminal ${terminalId}`);
         // Note: Actual termination setting is disabled to keep status always visible
       }
 
@@ -155,7 +161,10 @@ export class OutputDetectionProcessor implements vscode.Disposable {
   /**
    * Detect startup patterns using strategies
    */
-  private detectStartupPatterns(terminalId: string, fullyCleanLine: string): CliAgentDetectionResult | null {
+  private detectStartupPatterns(
+    terminalId: string,
+    fullyCleanLine: string
+  ): CliAgentDetectionResult | null {
     const strategies = this.strategyRegistry.getAllStrategies();
 
     for (const strategy of strategies) {
@@ -184,12 +193,12 @@ export class OutputDetectionProcessor implements vscode.Disposable {
    */
   private updateAIActivityTimestamp(terminalId: string, line: string): void {
     const strategies = this.strategyRegistry.getAllStrategies();
-    const isAIActivity = strategies.some(strategy => strategy.isAgentActivity(line));
+    const isAIActivity = strategies.some((strategy) => strategy.isAgentActivity(line));
 
     if (isAIActivity || line.length > 50) {
       this.detectionCache.set(`${terminalId}_lastAIOutput`, {
         result: null,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
     }
   }

@@ -99,7 +99,7 @@ describe('🔍 CLI Agent Detection Engine Unit Tests', () => {
       it('should not detect non-agent commands', () => {
         const commands = ['ls', 'git status', 'npm install', 'echo hello'];
 
-        commands.forEach(command => {
+        commands.forEach((command) => {
           const result = engine.detectFromInput('terminal-1', command);
           expect(result.isDetected).to.be.false;
           expect(result.agentType).to.be.null;
@@ -151,13 +151,9 @@ describe('🔍 CLI Agent Detection Engine Unit Tests', () => {
       });
 
       it('should detect Gemini CLI patterns', () => {
-        const patterns = [
-          'Gemini CLI started',
-          'Google Gemini is ready',
-          'Using gemini-1.5-pro',
-        ];
+        const patterns = ['Gemini CLI started', 'Google Gemini is ready', 'Using gemini-1.5-pro'];
 
-        patterns.forEach(pattern => {
+        patterns.forEach((pattern) => {
           const result = engine.detectFromOutput('terminal-1', pattern);
           expect(result.isDetected).to.be.true;
           expect(result.agentType).to.equal('gemini');
@@ -200,14 +196,9 @@ describe('🔍 CLI Agent Detection Engine Unit Tests', () => {
 
     describe('Non-agent output', () => {
       it('should not detect non-agent output', () => {
-        const outputs = [
-          'user@host:~$',
-          'npm install complete',
-          'Hello world',
-          'ls -la output',
-        ];
+        const outputs = ['user@host:~$', 'npm install complete', 'Hello world', 'ls -la output'];
 
-        outputs.forEach(output => {
+        outputs.forEach((output) => {
           const result = engine.detectFromOutput('terminal-1', output);
           expect(result.isDetected).to.be.false;
           expect(result.agentType).to.be.null;
@@ -229,13 +220,9 @@ describe('🔍 CLI Agent Detection Engine Unit Tests', () => {
       });
 
       it('should detect agent-specific termination', () => {
-        const patterns = [
-          'goodbye claude',
-          'exiting gemini',
-          'claude session ended',
-        ];
+        const patterns = ['goodbye claude', 'exiting gemini', 'claude session ended'];
 
-        patterns.forEach(pattern => {
+        patterns.forEach((pattern) => {
           const result = engine.detectTermination('terminal-1', pattern);
           expect(result.isTerminated).to.be.true;
         });
@@ -244,7 +231,7 @@ describe('🔍 CLI Agent Detection Engine Unit Tests', () => {
       it('should detect simple exit commands', () => {
         const commands = ['exit', 'quit', 'goodbye', 'bye'];
 
-        commands.forEach(command => {
+        commands.forEach((command) => {
           const result = engine.detectTermination('terminal-1', command);
           expect(result.isTerminated).to.be.true;
         });
@@ -253,14 +240,9 @@ describe('🔍 CLI Agent Detection Engine Unit Tests', () => {
 
     describe('Shell prompt detection', () => {
       it('should detect standard bash prompts', () => {
-        const prompts = [
-          'user@host:~$',
-          'user@host:/path$',
-          '$',
-          '%',
-        ];
+        const prompts = ['user@host:~$', 'user@host:/path$', '$', '%'];
 
-        prompts.forEach(prompt => {
+        prompts.forEach((prompt) => {
           const result = engine.detectTermination('terminal-1', prompt);
           expect(result.isTerminated).to.be.true;
         });
@@ -283,7 +265,7 @@ describe('🔍 CLI Agent Detection Engine Unit Tests', () => {
       it('should detect process completion indicators', () => {
         const indicators = ['[done]', 'finished', 'completed'];
 
-        indicators.forEach(indicator => {
+        indicators.forEach((indicator) => {
           const result = engine.detectTermination('terminal-1', indicator);
           expect(result.isTerminated).to.be.true;
         });
@@ -318,13 +300,9 @@ describe('🔍 CLI Agent Detection Engine Unit Tests', () => {
 
     describe('Non-termination output', () => {
       it('should not detect normal output as termination', () => {
-        const outputs = [
-          'Hello world',
-          'Processing request...',
-          'Thinking...',
-        ];
+        const outputs = ['Hello world', 'Processing request...', 'Thinking...'];
 
-        outputs.forEach(output => {
+        outputs.forEach((output) => {
           const result = engine.detectTermination('terminal-1', output);
           expect(result.isTerminated).to.be.false;
         });
@@ -442,7 +420,12 @@ describe('🔍 CLI Agent Detection Engine Unit Tests', () => {
       const registry = engine.getPatternRegistry();
 
       expect(registry).to.not.be.undefined;
-      expect(registry.getAllAgentTypes()).to.include.members(['claude', 'gemini', 'codex', 'copilot']);
+      expect(registry.getAllAgentTypes()).to.include.members([
+        'claude',
+        'gemini',
+        'codex',
+        'copilot',
+      ]);
     });
 
     it('should use registry patterns for detection', () => {

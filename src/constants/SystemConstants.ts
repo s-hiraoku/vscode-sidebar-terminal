@@ -230,7 +230,7 @@ export const PERFORMANCE_CONSTANTS = {
    * @rationale 100MBを超えると、積極的なクリーンアップが
    * トリガーされます。
    */
-  MEMORY_PRESSURE_THRESHOLD_MB: 100
+  MEMORY_PRESSURE_THRESHOLD_MB: 100,
 } as const;
 
 // =============================================================================
@@ -453,8 +453,8 @@ export const TERMINAL_CONSTANTS = {
     CLAUDE_CODE: /Claude Code/i,
     GITHUB_COPILOT: /GitHub Copilot|copilot/i,
     GEMINI_CLI: /gemini|bard/i,
-    GENERAL_AI: /AI|Assistant|Chat/i
-  }
+    GENERAL_AI: /AI|Assistant|Chat/i,
+  },
 } as const;
 
 // =============================================================================
@@ -767,7 +767,7 @@ export const UI_CONSTANTS = {
    * @ux
    * ボタンやリンクのホバー時に適用
    */
-  OPACITY_HOVER: 0.8
+  OPACITY_HOVER: 0.8,
 } as const;
 
 // =============================================================================
@@ -946,7 +946,7 @@ export const COMMUNICATION_CONSTANTS = {
    * @performance
    * メモリリークを防止し、リソースを解放
    */
-  SESSION_CLEANUP_INTERVAL_MS: 5 * 60 * 1000 // 5 minutes
+  SESSION_CLEANUP_INTERVAL_MS: 5 * 60 * 1000, // 5 minutes
 } as const;
 
 // =============================================================================
@@ -1135,7 +1135,7 @@ export const ERROR_CONSTANTS = {
    * @performance
    * クリティカルパスの遅延を最小化
    */
-  CRITICAL_OPERATION_TIMEOUT_MS: 5000
+  CRITICAL_OPERATION_TIMEOUT_MS: 5000,
 } as const;
 
 // =============================================================================
@@ -1323,9 +1323,8 @@ export const TIMING_CONSTANTS = {
    * @performance
    * 長時間未使用のリソースを解放
    */
-  SLEEP_DELAY_MS: 10000
+  SLEEP_DELAY_MS: 10000,
 } as const;
-
 
 // =============================================================================
 // 列挙型定義 - 型安全な定数グループ
@@ -1340,7 +1339,7 @@ export enum SystemStatus {
   BUSY = 'busy',
   ERROR = 'error',
   DISPOSING = 'disposing',
-  DISPOSED = 'disposed'
+  DISPOSED = 'disposed',
 }
 
 /**
@@ -1354,7 +1353,7 @@ export enum TerminalAction {
   CLEAR = 'clear',
   SPLIT = 'split',
   KILL = 'kill',
-  RESTART = 'restart'
+  RESTART = 'restart',
 }
 
 /**
@@ -1365,7 +1364,7 @@ export enum MessageSeverity {
   INFO = 'info',
   WARNING = 'warning',
   ERROR = 'error',
-  CRITICAL = 'critical'
+  CRITICAL = 'critical',
 }
 
 /**
@@ -1375,7 +1374,7 @@ export enum NotificationType {
   SUCCESS = 'success',
   INFO = 'info',
   WARNING = 'warning',
-  ERROR = 'error'
+  ERROR = 'error',
 }
 
 /**
@@ -1387,7 +1386,7 @@ export enum CliAgentStatus {
   ACTIVE = 'active',
   PROCESSING = 'processing',
   IDLE = 'idle',
-  ERROR = 'error'
+  ERROR = 'error',
 }
 
 /**
@@ -1400,7 +1399,7 @@ export enum TerminalState {
   BUSY = 'busy',
   CLOSING = 'closing',
   CLOSED = 'closed',
-  ERROR = 'error'
+  ERROR = 'error',
 }
 
 /**
@@ -1411,7 +1410,7 @@ export enum SessionOperation {
   RESTORE = 'restore',
   CLEAR = 'clear',
   EXPORT = 'export',
-  IMPORT = 'import'
+  IMPORT = 'import',
 }
 
 /**
@@ -1423,7 +1422,7 @@ export enum PerformanceMetric {
   AVERAGE_OPERATION_TIME = 'averageOperationTime',
   ERROR_RATE = 'errorRate',
   MEMORY_USAGE = 'memoryUsage',
-  CPU_USAGE = 'cpuUsage'
+  CPU_USAGE = 'cpuUsage',
 }
 
 /**
@@ -1436,7 +1435,7 @@ export enum ResourceType {
   SUBSCRIPTION = 'subscription',
   CONNECTION = 'connection',
   STREAM = 'stream',
-  OBSERVER = 'observer'
+  OBSERVER = 'observer',
 }
 
 /**
@@ -1448,6 +1447,80 @@ export enum ConfigurationCategory {
   BEHAVIOR = 'behavior',
   PERFORMANCE = 'performance',
   ADVANCED = 'advanced',
-  DEBUG = 'debug'
+  DEBUG = 'debug',
 }
 
+// =============================================================================
+// 設定キャッシュ関連定数
+// =============================================================================
+
+/**
+ * 設定キャッシュ関連の定数群
+ *
+ * これらの定数は、設定値のキャッシュ、プロファイル自動検出、
+ * セッションストレージなどを制御します。
+ */
+export const CONFIG_CACHE_CONSTANTS = {
+  /**
+   * 設定キャッシュTTL（ミリ秒）
+   *
+   * @rationale
+   * 5秒は、設定変更の即座の反映と、頻繁なディスクアクセスの防止のバランス
+   *
+   * @performance
+   * キャッシュにより、設定取得のパフォーマンスを向上
+   */
+  CACHE_TTL_MS: 5000,
+
+  /**
+   * プロファイルキャッシュ有効期限（ミリ秒）
+   *
+   * @rationale
+   * 1時間は、プロファイル自動検出結果のキャッシュに適切
+   *
+   * @performance
+   * 長時間キャッシュにより、ファイルシステムアクセスを削減
+   */
+  PROFILE_CACHE_EXPIRATION_MS: 3600000,
+
+  /**
+   * デフォルトフォントサイズ（ピクセル）
+   *
+   * @rationale
+   * 14pxは、ターミナルとUI要素の両方で読みやすい標準サイズ
+   */
+  DEFAULT_FONT_SIZE: 14,
+
+  /**
+   * デフォルトフォントファミリー
+   *
+   * @rationale
+   * 'monospace'は、ターミナルフォントの汎用的なフォールバック
+   */
+  DEFAULT_FONT_FAMILY: 'monospace',
+
+  /**
+   * デフォルトフォントウェイト
+   */
+  DEFAULT_FONT_WEIGHT: 'normal',
+
+  /**
+   * デフォルトフォントウェイト（太字）
+   */
+  DEFAULT_FONT_WEIGHT_BOLD: 'bold',
+
+  /**
+   * デフォルト行間隔
+   */
+  DEFAULT_LINE_HEIGHT: 1.0,
+
+  /**
+   * デフォルト文字間隔
+   */
+  DEFAULT_LETTER_SPACING: 0,
+
+  /**
+   * デフォルトのターミナル数上限
+   */
+  DEFAULT_MAX_TERMINALS: 5,
+} as const;

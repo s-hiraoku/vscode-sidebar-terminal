@@ -29,10 +29,7 @@ import { CodexPlugin } from '../plugins/agents/CodexPlugin';
  * @param container DI container instance
  * @param eventBus Shared EventBus instance
  */
-export function registerPhase2Services(
-  container: DIContainer,
-  eventBus: EventBus
-): void {
+export function registerPhase2Services(container: DIContainer, eventBus: EventBus): void {
   // Register BufferManagementService (Phase 2 Week 1)
   container.register(
     IBufferManagementService,
@@ -125,9 +122,7 @@ export class ServiceFactory {
    * @param eventBus EventBus instance for event publishing
    * @returns BufferManagementService instance
    */
-  static createBufferManagementService(
-    eventBus: EventBus
-  ): BufferManagementService {
+  static createBufferManagementService(eventBus: EventBus): BufferManagementService {
     return new BufferManagementService(eventBus);
   }
 
@@ -137,9 +132,7 @@ export class ServiceFactory {
    * @param eventBus EventBus instance for event publishing
    * @returns TerminalStateService instance
    */
-  static createTerminalStateService(
-    eventBus: EventBus
-  ): TerminalStateService {
+  static createTerminalStateService(eventBus: EventBus): TerminalStateService {
     return new TerminalStateService(eventBus);
   }
 }

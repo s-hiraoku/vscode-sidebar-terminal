@@ -3,12 +3,7 @@
  * Handles all visual aspects of the terminal interface
  */
 
-import {
-  IUIController,
-  DebugInfo,
-  NotificationOptions,
-  UIControllerConfig
-} from './IUIController';
+import { IUIController, DebugInfo, NotificationOptions, UIControllerConfig } from './IUIController';
 import { BaseManager } from '../managers/BaseManager';
 
 /**
@@ -90,7 +85,9 @@ export class UIController extends BaseManager implements IUIController {
   }
 
   // UI State Management
-  public updateTerminalTabs(terminalInfos: Array<{ id: string; number: number; isActive: boolean }>): void {
+  public updateTerminalTabs(
+    terminalInfos: Array<{ id: string; number: number; isActive: boolean }>
+  ): void {
     const tabsContainer = document.getElementById('terminal-tabs-container');
     if (!tabsContainer) return;
 
@@ -106,7 +103,11 @@ export class UIController extends BaseManager implements IUIController {
     this.logger(`Updated terminal tabs: ${terminalInfos.length} terminals`);
   }
 
-  private createTerminalTab(terminalInfo: { id: string; number: number; isActive: boolean }): HTMLElement {
+  private createTerminalTab(terminalInfo: {
+    id: string;
+    number: number;
+    isActive: boolean;
+  }): HTMLElement {
     const tab = document.createElement('div');
     tab.className = `terminal-tab ${terminalInfo.isActive ? 'active' : ''}`;
     tab.setAttribute('data-terminal-id', terminalInfo.id);
@@ -139,21 +140,21 @@ export class UIController extends BaseManager implements IUIController {
 
   private emitTerminalCloseRequest(terminalId: string): void {
     const event = new CustomEvent('terminal-close-requested', {
-      detail: { terminalId }
+      detail: { terminalId },
     });
     document.dispatchEvent(event);
   }
 
   private emitTerminalSwitchRequest(terminalId: string): void {
     const event = new CustomEvent('terminal-switch-requested', {
-      detail: { terminalId }
+      detail: { terminalId },
     });
     document.dispatchEvent(event);
   }
 
   public updateActiveTerminalIndicator(terminalId: string | undefined): void {
     const tabs = document.querySelectorAll('.terminal-tab');
-    tabs.forEach(tab => {
+    tabs.forEach((tab) => {
       const tabElement = tab as HTMLElement;
       const tabTerminalId = tabElement.getAttribute('data-terminal-id');
 
@@ -185,7 +186,7 @@ export class UIController extends BaseManager implements IUIController {
   public showTerminalContainer(terminalId: string, container: HTMLElement): void {
     // Hide all other containers
     const allContainers = document.querySelectorAll('.terminal-container');
-    allContainers.forEach(c => {
+    allContainers.forEach((c) => {
       (c as HTMLElement).style.display = 'none';
     });
 
@@ -211,7 +212,7 @@ export class UIController extends BaseManager implements IUIController {
   public highlightActiveTerminal(terminalId: string): void {
     // Remove highlight from all containers
     const allContainers = document.querySelectorAll('.terminal-container');
-    allContainers.forEach(c => c.classList.remove('active-terminal'));
+    allContainers.forEach((c) => c.classList.remove('active-terminal'));
 
     // Add highlight to active container
     const container = document.getElementById(`terminal-container-${terminalId}`);
@@ -240,13 +241,13 @@ export class UIController extends BaseManager implements IUIController {
     this.showNotification({
       type: 'warning',
       message: `Terminal limit reached (${currentCount}/${maxCount}). Close a terminal to create a new one.`,
-      duration: 5000
+      duration: 5000,
     });
   }
 
   public clearTerminalLimitMessage(): void {
     // Remove any limit-related notifications
-    this.currentNotifications.forEach(notification => {
+    this.currentNotifications.forEach((notification) => {
       if (notification.textContent?.includes('Terminal limit reached')) {
         notification.remove();
         this.currentNotifications.delete(notification);
@@ -334,7 +335,7 @@ export class UIController extends BaseManager implements IUIController {
 
       if (debugInfo.pendingOperations.length > 0) {
         const ul = document.createElement('ul');
-        debugInfo.pendingOperations.forEach(op => {
+        debugInfo.pendingOperations.forEach((op) => {
           const li = document.createElement('li');
           li.textContent = op;
           ul.appendChild(li);
@@ -434,7 +435,7 @@ export class UIController extends BaseManager implements IUIController {
   }
 
   public clearNotifications(): void {
-    this.currentNotifications.forEach(notification => {
+    this.currentNotifications.forEach((notification) => {
       if (notification.parentNode) {
         notification.parentNode.removeChild(notification);
       }
@@ -493,8 +494,10 @@ export class UIController extends BaseManager implements IUIController {
 
   public resizeTerminalContainers(cols: number, rows: number): void {
     const containers = document.querySelectorAll('.terminal-container');
-    containers.forEach(container => {
-      const terminal = (container as HTMLElement & { _terminal?: { resize: (cols: number, rows: number) => void } })._terminal;
+    containers.forEach((container) => {
+      const terminal = (
+        container as HTMLElement & { _terminal?: { resize: (cols: number, rows: number) => void } }
+      )._terminal;
       if (terminal && terminal.resize) {
         terminal.resize(cols, rows);
       }

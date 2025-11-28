@@ -16,7 +16,7 @@ const ensureProcessMethod = (name, impl) => {
         value: impl,
         writable: true,
         configurable: true,
-        enumerable: false
+        enumerable: false,
       });
     } catch (e) {
       // Fallback to direct assignment
@@ -27,7 +27,8 @@ const ensureProcessMethod = (name, impl) => {
 
 // Ensure process.cwd exists and works (critical for many tests)
 // Save reference to original cwd before any modifications
-const originalCwd = process.cwd && typeof process.cwd === 'function' ? process.cwd.bind(process) : null;
+const originalCwd =
+  process.cwd && typeof process.cwd === 'function' ? process.cwd.bind(process) : null;
 
 // Always wrap process.cwd to ensure it never throws
 const safeCwd = function () {
@@ -48,7 +49,7 @@ try {
     value: safeCwd,
     writable: true,
     configurable: true,
-    enumerable: false
+    enumerable: false,
   });
 } catch (e) {
   // Fallback to direct assignment
@@ -56,9 +57,10 @@ try {
 }
 
 // Save original EventEmitter methods for removeListener
-const originalRemoveListener = process.removeListener && typeof process.removeListener === 'function'
-  ? process.removeListener.bind(process)
-  : EventEmitter.prototype.removeListener.bind(process);
+const originalRemoveListener =
+  process.removeListener && typeof process.removeListener === 'function'
+    ? process.removeListener.bind(process)
+    : EventEmitter.prototype.removeListener.bind(process);
 
 ensureProcessMethod('removeListener', function (...args) {
   try {
@@ -107,9 +109,10 @@ ensureProcessMethod('listenerCount', function (eventName) {
 
 // Ensure process.emit exists (required by signal-exit in nyc)
 // Save reference to original emit before any modifications
-const originalEmit = process.emit && typeof process.emit === 'function'
-  ? process.emit.bind(process)
-  : EventEmitter.prototype.emit.bind(process);
+const originalEmit =
+  process.emit && typeof process.emit === 'function'
+    ? process.emit.bind(process)
+    : EventEmitter.prototype.emit.bind(process);
 
 ensureProcessMethod('emit', function (eventName, ...args) {
   try {
@@ -131,11 +134,11 @@ setImmediate(() => {
     if (Runner && Runner.prototype._addEventListener) {
       const original_addEventListener = Runner.prototype._addEventListener;
 
-      Runner.prototype._addEventListener = function(target, eventName, listener) {
+      Runner.prototype._addEventListener = function (target, eventName, listener) {
         // Ensure listenerCount exists on the target before calling original method
         if (target && (!target.listenerCount || typeof target.listenerCount !== 'function')) {
           // Use simple assignment instead of defineProperty to avoid breaking process
-          target.listenerCount = function(evtName) {
+          target.listenerCount = function (evtName) {
             if (this.listeners && typeof this.listeners === 'function') {
               try {
                 const listeners = this.listeners(evtName);

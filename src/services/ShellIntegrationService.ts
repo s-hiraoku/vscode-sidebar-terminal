@@ -60,14 +60,18 @@ export class ShellIntegrationService {
    * shell integration scripts into their terminal sessions.
    */
   private static readonly PERMISSION_MESSAGES = {
-    MAIN_MESSAGE: 'Secondary Terminal wants to enable Shell Integration to provide enhanced features like command tracking and history. This requires modifying your shell startup script.',
+    MAIN_MESSAGE:
+      'Secondary Terminal wants to enable Shell Integration to provide enhanced features like command tracking and history. This requires modifying your shell startup script.',
     BUTTON_ALLOW: 'Allow',
     BUTTON_DENY: 'Deny',
     BUTTON_ALWAYS_ALLOW: 'Always Allow',
     BUTTON_NEVER_ALLOW: 'Never Allow',
   } as const;
 
-  constructor(private terminalManager: TerminalManager, context?: vscode.ExtensionContext) {
+  constructor(
+    private terminalManager: TerminalManager,
+    context?: vscode.ExtensionContext
+  ) {
     this.initializePatterns();
     // Don't setup event listeners in constructor - wait for terminal creation
 

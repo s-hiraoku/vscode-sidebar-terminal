@@ -7,7 +7,12 @@
 
 import { TerminalState } from '../../types/shared';
 import { webview as log } from '../../utils/logger';
-import { IUIManager, INotificationManager, ITerminalTabManager, ITerminalContainerManager } from '../interfaces/ManagerInterfaces';
+import {
+  IUIManager,
+  INotificationManager,
+  ITerminalTabManager,
+  ITerminalContainerManager,
+} from '../interfaces/ManagerInterfaces';
 
 export class TerminalStateDisplayManager {
   constructor(
@@ -142,12 +147,26 @@ export class TerminalStateDisplayManager {
   private syncTabs(state: TerminalState): void {
     if (!this.terminalTabManager) return;
 
+    // 🔧 FIX: Filter out terminals that are pending deletion to prevent race conditions
+    // This prevents deleted tabs from being re-added during state sync
+    const filteredTerminals = state.terminals.filter(
+      (terminal) => !this.terminalTabManager!.hasPendingDeletion(terminal.id)
+    );
+
+    const pendingDeletions = this.terminalTabManager.getPendingDeletions();
+    if (pendingDeletions.size > 0) {
+      log(
+        `🔄 [SYNC-TABS] Filtering ${pendingDeletions.size} pending deletions:`,
+        Array.from(pendingDeletions)
+      );
+    }
+
     this.terminalTabManager.syncTabs(
-      state.terminals.map((terminal) => ({
+      filteredTerminals.map((terminal) => ({
         id: terminal.id,
         name: terminal.name,
         isActive: terminal.isActive,
-        isClosable: state.terminals.length > 1,
+        isClosable: filteredTerminals.length > 1,
       }))
     );
   }

@@ -50,10 +50,7 @@ export class ProfileMessageHandler implements IMessageHandler {
   /**
    * Handle show profile selector message
    */
-  private handleShowProfileSelector(
-    msg: MessageCommand,
-    coordinator: IManagerCoordinator
-  ): void {
+  private handleShowProfileSelector(msg: MessageCommand, coordinator: IManagerCoordinator): void {
     this.logger.info('Show profile selector');
 
     // Forward to ProfileManager if it exists
@@ -69,10 +66,7 @@ export class ProfileMessageHandler implements IMessageHandler {
   /**
    * Handle profiles updated message
    */
-  private handleProfilesUpdated(
-    msg: MessageCommand,
-    coordinator: IManagerCoordinator
-  ): void {
+  private handleProfilesUpdated(msg: MessageCommand, coordinator: IManagerCoordinator): void {
     this.logger.info('Profiles updated');
 
     // Forward to ProfileManager if it exists
@@ -85,10 +79,7 @@ export class ProfileMessageHandler implements IMessageHandler {
   /**
    * Handle default profile changed message
    */
-  private handleDefaultProfileChanged(
-    msg: MessageCommand,
-    coordinator: IManagerCoordinator
-  ): void {
+  private handleDefaultProfileChanged(msg: MessageCommand, coordinator: IManagerCoordinator): void {
     this.logger.info('Default profile changed');
 
     // Forward to ProfileManager if it exists

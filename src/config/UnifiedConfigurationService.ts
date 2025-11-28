@@ -27,7 +27,7 @@ import {
   WebViewTerminalSettings,
   TerminalProfilesConfig,
 } from '../types/shared';
-import { TERMINAL_CONSTANTS } from '../constants';
+import { TERMINAL_CONSTANTS, CONFIG_CACHE_CONSTANTS } from '../constants/SystemConstants';
 import { terminal as log } from '../utils/logger';
 
 /**
@@ -139,7 +139,7 @@ export class UnifiedConfigurationService implements Disposable {
   private readonly _disposables: vscode.Disposable[] = [];
 
   // Cache configuration
-  private readonly CACHE_TTL = 5000; // 5 seconds
+  private readonly CACHE_TTL = CONFIG_CACHE_CONSTANTS.CACHE_TTL_MS;
   private _initialized = false;
 
   /**
@@ -331,7 +331,11 @@ export class UnifiedConfigurationService implements Disposable {
         CONFIG_KEYS.MULTI_CURSOR_MODIFIER,
         'ctrlCmd'
       ),
-      highlightActiveBorder: this.get(CONFIG_SECTIONS.SIDEBAR_TERMINAL, 'highlightActiveBorder', true),
+      highlightActiveBorder: this.get(
+        CONFIG_SECTIONS.SIDEBAR_TERMINAL,
+        'highlightActiveBorder',
+        true
+      ),
     };
   }
 
@@ -466,10 +470,10 @@ export class UnifiedConfigurationService implements Disposable {
       }
 
       // 3. System default
-      return 'monospace';
+      return CONFIG_CACHE_CONSTANTS.DEFAULT_FONT_FAMILY;
     } catch (error) {
       log('❌ [UnifiedConfig] Error getting fontFamily:', error);
-      return 'monospace';
+      return CONFIG_CACHE_CONSTANTS.DEFAULT_FONT_FAMILY;
     }
   }
 
@@ -493,10 +497,10 @@ export class UnifiedConfigurationService implements Disposable {
       }
 
       // 3. Default
-      return 14;
+      return CONFIG_CACHE_CONSTANTS.DEFAULT_FONT_SIZE;
     } catch (error) {
       log('❌ [UnifiedConfig] Error getting fontSize:', error);
-      return 14;
+      return CONFIG_CACHE_CONSTANTS.DEFAULT_FONT_SIZE;
     }
   }
 
@@ -520,10 +524,10 @@ export class UnifiedConfigurationService implements Disposable {
       }
 
       // 3. Default
-      return 'normal';
+      return CONFIG_CACHE_CONSTANTS.DEFAULT_FONT_WEIGHT;
     } catch (error) {
       log('❌ [UnifiedConfig] Error getting fontWeight:', error);
-      return 'normal';
+      return CONFIG_CACHE_CONSTANTS.DEFAULT_FONT_WEIGHT;
     }
   }
 
@@ -547,10 +551,10 @@ export class UnifiedConfigurationService implements Disposable {
       }
 
       // 3. Default
-      return 'bold';
+      return CONFIG_CACHE_CONSTANTS.DEFAULT_FONT_WEIGHT_BOLD;
     } catch (error) {
       log('❌ [UnifiedConfig] Error getting fontWeightBold:', error);
-      return 'bold';
+      return CONFIG_CACHE_CONSTANTS.DEFAULT_FONT_WEIGHT_BOLD;
     }
   }
 
@@ -574,10 +578,10 @@ export class UnifiedConfigurationService implements Disposable {
       }
 
       // 3. Default
-      return 1.0;
+      return CONFIG_CACHE_CONSTANTS.DEFAULT_LINE_HEIGHT;
     } catch (error) {
       log('❌ [UnifiedConfig] Error getting lineHeight:', error);
-      return 1.0;
+      return CONFIG_CACHE_CONSTANTS.DEFAULT_LINE_HEIGHT;
     }
   }
 
@@ -601,10 +605,10 @@ export class UnifiedConfigurationService implements Disposable {
       }
 
       // 3. Default
-      return 0;
+      return CONFIG_CACHE_CONSTANTS.DEFAULT_LETTER_SPACING;
     } catch (error) {
       log('❌ [UnifiedConfig] Error getting letterSpacing:', error);
-      return 0;
+      return CONFIG_CACHE_CONSTANTS.DEFAULT_LETTER_SPACING;
     }
   }
 
@@ -630,7 +634,7 @@ export class UnifiedConfigurationService implements Disposable {
         enabled: this.get(section, CONFIG_KEYS.ENABLE_PROFILE_AUTO_DETECTION, true),
         searchPaths: [],
         useCache: true,
-        cacheExpiration: 3600000,
+        cacheExpiration: CONFIG_CACHE_CONSTANTS.PROFILE_CACHE_EXPIRATION_MS,
       },
       inheritVSCodeProfiles: this.get(section, CONFIG_KEYS.INHERIT_VSCODE_PROFILES, true),
     };

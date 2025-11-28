@@ -14,11 +14,7 @@
  */
 
 import { WebviewMessage } from '../../../types/common';
-import {
-  IMessageHandler,
-  IMessageHandlerContext,
-  IMessageHandlerResult,
-} from './IMessageHandler';
+import { IMessageHandler, IMessageHandlerContext, IMessageHandlerResult } from './IMessageHandler';
 import { MessageLogger } from './MessageLogger';
 import { MessageValidator } from './MessageValidator';
 
@@ -136,10 +132,7 @@ export class MessageHandlerRegistry {
       }
     }
 
-    this.logger.info(
-      'MessageHandlerRegistry',
-      `Unregistered handler: ${handler.getName()}`
-    );
+    this.logger.info('MessageHandlerRegistry', `Unregistered handler: ${handler.getName()}`);
   }
 
   /**
@@ -296,10 +289,7 @@ export class MessageHandlerRegistry {
   /**
    * Execute a function with timeout
    */
-  private async executeWithTimeout<T>(
-    fn: () => Promise<T>,
-    timeoutMs: number
-  ): Promise<T> {
+  private async executeWithTimeout<T>(fn: () => Promise<T>, timeoutMs: number): Promise<T> {
     return new Promise((resolve, reject) => {
       const timeoutId = setTimeout(() => {
         reject(new Error(`Handler timeout after ${timeoutMs}ms`));
@@ -346,8 +336,7 @@ export class MessageHandlerRegistry {
   public getStats(): IRegistryStats {
     const avgTime =
       this.processingTimes.length > 0
-        ? this.processingTimes.reduce((sum, time) => sum + time, 0) /
-          this.processingTimes.length
+        ? this.processingTimes.reduce((sum, time) => sum + time, 0) / this.processingTimes.length
         : 0;
 
     return {

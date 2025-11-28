@@ -4,7 +4,10 @@
 
 import { expect } from 'chai';
 import * as sinon from 'sinon';
-import { LifecycleController, AddonLoadOptions as _AddonLoadOptions } from '../../../../webview/controllers/LifecycleController';
+import {
+  LifecycleController,
+  AddonLoadOptions as _AddonLoadOptions,
+} from '../../../../webview/controllers/LifecycleController';
 
 describe('LifecycleController', function () {
   let lifecycleController: LifecycleController;
@@ -100,12 +103,9 @@ describe('LifecycleController', function () {
         public dispose() {}
       }
 
-      const addon = lifecycleController.loadAddonLazy(
-        'test-1',
-        'MockAddon',
-        MockAddon,
-        { lazy: true }
-      );
+      const addon = lifecycleController.loadAddonLazy('test-1', 'MockAddon', MockAddon, {
+        lazy: true,
+      });
 
       expect(addon).to.not.be.null;
       expect(mockTerminal.loadAddon.called).to.be.true;
@@ -117,16 +117,8 @@ describe('LifecycleController', function () {
         public dispose() {}
       }
 
-      const addon1 = lifecycleController.loadAddonLazy(
-        'test-1',
-        'MockAddon',
-        MockAddon
-      );
-      const addon2 = lifecycleController.loadAddonLazy(
-        'test-1',
-        'MockAddon',
-        MockAddon
-      );
+      const addon1 = lifecycleController.loadAddonLazy('test-1', 'MockAddon', MockAddon);
+      const addon2 = lifecycleController.loadAddonLazy('test-1', 'MockAddon', MockAddon);
 
       expect(addon1).to.equal(addon2);
       expect(mockTerminal.loadAddon.calledOnce).to.be.true; // Only loaded once
@@ -178,11 +170,7 @@ describe('LifecycleController', function () {
         public dispose() {}
       }
 
-      const addon = lifecycleController.loadAddonLazy(
-        'non-existent',
-        'MockAddon',
-        MockAddon
-      );
+      const addon = lifecycleController.loadAddonLazy('non-existent', 'MockAddon', MockAddon);
 
       expect(addon).to.be.null;
     });
@@ -212,12 +200,9 @@ describe('LifecycleController', function () {
         public dispose() {}
       }
 
-      const addon = lifecycleController.loadAddonLazy(
-        'test-1',
-        'FailingAddon',
-        FailingAddon,
-        { required: false }
-      );
+      const addon = lifecycleController.loadAddonLazy('test-1', 'FailingAddon', FailingAddon, {
+        required: false,
+      });
 
       expect(addon).to.be.null;
     });
@@ -234,11 +219,7 @@ describe('LifecycleController', function () {
         public dispose() {}
       }
 
-      const loadedAddon = lifecycleController.loadAddonLazy(
-        'test-1',
-        'MockAddon',
-        MockAddon
-      );
+      const loadedAddon = lifecycleController.loadAddonLazy('test-1', 'MockAddon', MockAddon);
 
       const retrievedAddon = lifecycleController.getAddon('test-1', 'MockAddon');
 
@@ -303,11 +284,7 @@ describe('LifecycleController', function () {
         public dispose = sinon.stub();
       }
 
-      const addon = lifecycleController.loadAddonLazy(
-        'test-1',
-        'MockAddon',
-        MockAddon
-      );
+      const addon = lifecycleController.loadAddonLazy('test-1', 'MockAddon', MockAddon);
 
       lifecycleController.disposeTerminal('test-1');
 
@@ -346,16 +323,8 @@ describe('LifecycleController', function () {
         public dispose = sinon.stub();
       }
 
-      const addon1 = lifecycleController.loadAddonLazy(
-        'test-1',
-        'MockAddon1',
-        MockAddon1
-      );
-      const addon2 = lifecycleController.loadAddonLazy(
-        'test-1',
-        'MockAddon2',
-        MockAddon2
-      );
+      const addon1 = lifecycleController.loadAddonLazy('test-1', 'MockAddon1', MockAddon1);
+      const addon2 = lifecycleController.loadAddonLazy('test-1', 'MockAddon2', MockAddon2);
 
       lifecycleController.disposeTerminal('test-1');
 
@@ -376,16 +345,8 @@ describe('LifecycleController', function () {
       lifecycleController.attachTerminal('test-1', mockTerminal);
       lifecycleController.attachTerminal('test-2', mockTerminal2);
 
-      const addon1 = lifecycleController.loadAddonLazy(
-        'test-1',
-        'MockAddon',
-        MockAddon
-      );
-      const addon2 = lifecycleController.loadAddonLazy(
-        'test-2',
-        'MockAddon',
-        MockAddon
-      );
+      const addon1 = lifecycleController.loadAddonLazy('test-1', 'MockAddon', MockAddon);
+      const addon2 = lifecycleController.loadAddonLazy('test-2', 'MockAddon', MockAddon);
 
       lifecycleController.dispose();
 

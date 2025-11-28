@@ -116,7 +116,11 @@ export abstract class BaseMessageHandler implements IMessageHandler {
    * Handle errors with standardized ErrorHandler
    * Common error handling for all handlers
    */
-  protected handleError(error: unknown, operation: string, context?: Record<string, unknown>): void {
+  protected handleError(
+    error: unknown,
+    operation: string,
+    context?: Record<string, unknown>
+  ): void {
     ErrorHandler.handleOperationError(operation, error, {
       severity: 'error',
       context,

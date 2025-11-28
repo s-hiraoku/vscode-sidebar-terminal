@@ -45,10 +45,10 @@ describe('CLI Agent Detection - Improved Patterns', () => {
         '% ',
         '> ',
         'john@server:/home/john$ ',
-        'PS C:\\Users\\User> '
+        'PS C:\\Users\\User> ',
       ];
 
-      testPrompts.forEach(prompt => {
+      testPrompts.forEach((prompt) => {
         const result = detectionService.detectTermination('terminal-1', prompt);
         expect(result.isTerminated).to.be.true;
         expect(result.confidence).to.be.greaterThan(0.4);
@@ -68,14 +68,14 @@ describe('CLI Agent Detection - Improved Patterns', () => {
     it('should still avoid false positives from AI output', () => {
       const aiOutputs = [
         "I'll help you with that task",
-        "Let me analyze the code for you",
+        'Let me analyze the code for you',
         "Here's what I found in the documentation",
-        "Claude Code is analyzing your request",
-        "Thinking about the best approach...",
-        "I can help you implement this feature"
+        'Claude Code is analyzing your request',
+        'Thinking about the best approach...',
+        'I can help you implement this feature',
       ];
 
-      aiOutputs.forEach(output => {
+      aiOutputs.forEach((output) => {
         const result = detectionService.detectTermination('terminal-1', output);
         expect(result.isTerminated).to.be.false;
       });
@@ -90,10 +90,10 @@ describe('CLI Agent Detection - Improved Patterns', () => {
         'goodbye',
         'process exited with code 0',
         '[done]',
-        'completed'
+        'completed',
       ];
 
-      terminationMessages.forEach(message => {
+      terminationMessages.forEach((message) => {
         const result = detectionService.detectTermination('terminal-1', message);
         expect(result.isTerminated).to.be.true;
         expect(result.confidence).to.be.greaterThan(0.6);
@@ -104,15 +104,9 @@ describe('CLI Agent Detection - Improved Patterns', () => {
   describe('Claude Session End Detection', () => {
     it('should be more lenient with shell prompts', () => {
       // Test the private method indirectly through detectTermination
-      const shellPrompts = [
-        'user@macbook:~$ ',
-        'hostname$ ',
-        'john@server:/path$ ',
-        '$ ',
-        '% '
-      ];
+      const shellPrompts = ['user@macbook:~$ ', 'hostname$ ', 'john@server:/path$ ', '$ ', '% '];
 
-      shellPrompts.forEach(prompt => {
+      shellPrompts.forEach((prompt) => {
         const result = detectionService.detectTermination('terminal-1', prompt);
         expect(result.isTerminated).to.be.true;
       });
@@ -125,10 +119,10 @@ describe('CLI Agent Detection - Improved Patterns', () => {
         'done',
         'complete',
         'completed',
-        'process exited with code 0'
+        'process exited with code 0',
       ];
 
-      completionMessages.forEach(message => {
+      completionMessages.forEach((message) => {
         const result = detectionService.detectTermination('terminal-1', message);
         expect(result.isTerminated).to.be.true;
       });
@@ -163,17 +157,19 @@ describe('CLI Agent Detection - Improved Patterns', () => {
 
     it('should track AI activity timestamps', () => {
       const aiOutputs = [
-        "Claude is thinking about your request",
-        "Let me analyze this code",
-        "I can help you with that"
+        'Claude is thinking about your request',
+        'Let me analyze this code',
+        'I can help you with that',
       ];
 
-      aiOutputs.forEach(output => {
+      aiOutputs.forEach((output) => {
         detectionService.detectFromOutput('terminal-1', output);
       });
 
       // Verify that activity tracking is working (we'll check that it's recording activity)
-      const hasActivity = (detectionService as any).getDetectionCacheValue('terminal-1_lastAIOutput');
+      const hasActivity = (detectionService as any).getDetectionCacheValue(
+        'terminal-1_lastAIOutput'
+      );
       expect(hasActivity).to.be.a('number');
     });
   });
@@ -196,10 +192,10 @@ describe('CLI Agent Detection - Improved Patterns', () => {
         '\n\n\n',
         '\x1b[2J\x1b[H', // ANSI escape sequences
         '���', // Invalid UTF-8
-        'a'.repeat(10000) // Very long string
+        'a'.repeat(10000), // Very long string
       ];
 
-      malformedInputs.forEach(input => {
+      malformedInputs.forEach((input) => {
         expect(() => {
           detectionService.detectFromOutput('terminal-1', input);
         }).to.not.throw();

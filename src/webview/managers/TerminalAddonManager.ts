@@ -96,7 +96,9 @@ export class TerminalAddonManager {
 
         terminal.loadAddon(webLinksAddon);
         addons.webLinksAddon = webLinksAddon;
-        terminalLogger.info(`✅ WebLinksAddon loaded with custom handler for terminal: ${terminalId}`);
+        terminalLogger.info(
+          `✅ WebLinksAddon loaded with custom handler for terminal: ${terminalId}`
+        );
       } else {
         addons.webLinksAddon = await AddonLoader.loadAddon(terminal, terminalId, WebLinksAddon, {
           required: true,

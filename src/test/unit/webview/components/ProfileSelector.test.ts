@@ -146,8 +146,8 @@ describe('ProfileSelector Component', () => {
       const profileItems = container.querySelectorAll('.profile-item');
       expect(profileItems).to.have.length(3);
 
-      const profileNames = Array.from(profileItems).map(
-        (item) => item.querySelector('.profile-item-name')?.textContent?.trim()
+      const profileNames = Array.from(profileItems).map((item) =>
+        item.querySelector('.profile-item-name')?.textContent?.trim()
       );
 
       expect(profileNames).to.include('Bash');

@@ -3,22 +3,12 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 import * as vscode from 'vscode';
-import {
-  TerminalInstance,
-  TerminalEvent,
-  TerminalState,
-  DeleteResult,
-} from '../types/shared';
-import {
-  PERFORMANCE_CONSTANTS,
-} from '../constants';
+import { TerminalInstance, TerminalEvent, TerminalState, DeleteResult } from '../types/shared';
+import { PERFORMANCE_CONSTANTS } from '../constants';
 import { ShellIntegrationService } from '../services/ShellIntegrationService';
 import { TerminalProfileService } from '../services/TerminalProfileService';
 import { terminal as log } from '../utils/logger';
-import {
-  getTerminalConfig,
-  ActiveTerminalManager,
-} from '../utils/common';
+import { getTerminalConfig, ActiveTerminalManager } from '../utils/common';
 import { TerminalNumberManager } from '../utils/TerminalNumberManager';
 import { CliAgentDetectionService } from '../services/CliAgentDetectionService';
 import { ICliAgentDetectionService } from '../interfaces/CliAgentService';
@@ -390,26 +380,32 @@ export class TerminalManager {
 
   /**
    * Kill active terminal
+   * @returns Promise that resolves when terminal is deleted
    */
-  public killTerminal(terminalId?: string): void {
-    const activeId = this._activeTerminalManager.getActive();
-    if (!activeId) {
-      log('⚠️ [WARN] No active terminal to kill');
+  public async killTerminal(terminalId?: string): Promise<void> {
+    // 🔧 FIX: Use specified terminalId if provided, otherwise fall back to active
+    const targetId = terminalId || this._activeTerminalManager.getActive();
+    if (!targetId) {
+      log('⚠️ [WARN] No terminal to kill');
       return;
     }
 
-    if (terminalId && terminalId !== activeId) {
+    if (terminalId && terminalId !== this._activeTerminalManager.getActive()) {
       log(
-        '🔄 [TERMINAL] Requested to kill:',
+        '🔄 [TERMINAL] Killing specific terminal:',
         terminalId,
-        'but will kill active terminal:',
-        activeId
+        '(active:',
+        this._activeTerminalManager.getActive(),
+        ')'
       );
     }
 
-    this.deleteTerminal(activeId, { force: true, source: 'command' }).catch((error) => {
-      log('❌ [TERMINAL] Error killing terminal:', error);
-    });
+    // 🔧 FIX: await the deletion to ensure it completes before returning
+    const result = await this.deleteTerminal(targetId, { force: true, source: 'command' });
+    if (!result.success) {
+      log('❌ [TERMINAL] Error killing terminal:', result.reason);
+      throw new Error(result.reason || 'Failed to kill terminal');
+    }
   }
 
   // =================== CLI AGENT INTEGRATION ===================
@@ -602,18 +598,21 @@ export class TerminalManager {
    * Setup terminal event handlers
    */
   private _setupTerminalEvents(terminal: TerminalInstance): void {
-    this._processCoordinator.setupTerminalEvents(terminal, (terminalId: string, exitCode: number) => {
-      // Handle CLI agent termination on process exit
-      this._cliAgentService.handleTerminalRemoved(terminalId);
+    this._processCoordinator.setupTerminalEvents(
+      terminal,
+      (terminalId: string, exitCode: number) => {
+        // Handle CLI agent termination on process exit
+        this._cliAgentService.handleTerminalRemoved(terminalId);
 
-      // Clean up terminal and notify listeners
-      this._terminals.delete(terminalId);
-      this._terminalRemovedEmitter.fire(terminalId);
-      this._exitEmitter.fire({ terminalId, exitCode });
-      this._stateCoordinator.notifyStateUpdate();
+        // Clean up terminal and notify listeners
+        this._terminals.delete(terminalId);
+        this._terminalRemovedEmitter.fire(terminalId);
+        this._exitEmitter.fire({ terminalId, exitCode });
+        this._stateCoordinator.notifyStateUpdate();
 
-      log(`🗑️ [TERMINAL] Terminal ${terminalId} cleaned up after exit`);
-    });
+        log(`🗑️ [TERMINAL] Terminal ${terminalId} cleaned up after exit`);
+      }
+    );
   }
 
   /**

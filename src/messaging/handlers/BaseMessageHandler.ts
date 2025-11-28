@@ -10,20 +10,22 @@
  */
 
 import { WebviewMessage } from '../../types/common';
+import { IUnifiedMessageHandler, MessagePriority } from '../UnifiedMessageDispatcher';
 import {
-  IUnifiedMessageHandler,
-  MessagePriority,
-} from '../UnifiedMessageDispatcher';
-import { IMessageHandler, IMessageHandlerContext as WebViewContext } from '../../services/webview/interfaces';
+  IMessageHandler,
+  IMessageHandlerContext as WebViewContext,
+} from '../../services/webview/interfaces';
 import { provider as log } from '../../utils/logger';
 
 // Union type for context to support both Extension and WebView handlers
-export type IMessageHandlerContext = WebViewContext | {
-  logger: {
-    debug: (message: string, data?: unknown) => void;
-    error: (message: string, data?: unknown) => void;
-  };
-};
+export type IMessageHandlerContext =
+  | WebViewContext
+  | {
+      logger: {
+        debug: (message: string, data?: unknown) => void;
+        error: (message: string, data?: unknown) => void;
+      };
+    };
 
 /**
  * Abstract base class for unified message handlers

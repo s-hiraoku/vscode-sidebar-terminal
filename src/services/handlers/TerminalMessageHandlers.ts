@@ -74,7 +74,10 @@ export interface TerminalMessageHandlerDependencies {
 /**
  * Handler for creating new terminals
  */
-export class CreateTerminalHandler extends BaseMessageHandler<CreateTerminalData, { terminalId: string }> {
+export class CreateTerminalHandler extends BaseMessageHandler<
+  CreateTerminalData,
+  { terminalId: string }
+> {
   constructor(private dependencies: TerminalMessageHandlerDependencies) {
     super('CreateTerminalHandler');
   }
@@ -91,7 +94,6 @@ export class CreateTerminalHandler extends BaseMessageHandler<CreateTerminalData
 
       this.log(`Terminal created successfully: ${terminalId}`);
       return { terminalId };
-
     } catch (error) {
       this.log(`Failed to create terminal: ${error}`);
       throw new Error(`Terminal creation failed: ${error}`);
@@ -102,7 +104,10 @@ export class CreateTerminalHandler extends BaseMessageHandler<CreateTerminalData
 /**
  * Handler for deleting terminals
  */
-export class DeleteTerminalHandler extends BaseMessageHandler<DeleteTerminalData, { success: boolean }> {
+export class DeleteTerminalHandler extends BaseMessageHandler<
+  DeleteTerminalData,
+  { success: boolean }
+> {
   constructor(private dependencies: TerminalMessageHandlerDependencies) {
     super('DeleteTerminalHandler');
   }
@@ -124,7 +129,6 @@ export class DeleteTerminalHandler extends BaseMessageHandler<DeleteTerminalData
       }
 
       return { success };
-
     } catch (error) {
       this.log(`Error deleting terminal: ${error}`);
       throw new Error(`Terminal deletion failed: ${error}`);
@@ -135,7 +139,10 @@ export class DeleteTerminalHandler extends BaseMessageHandler<DeleteTerminalData
 /**
  * Handler for terminal input
  */
-export class TerminalInputHandler extends BaseMessageHandler<TerminalInputData, { success: boolean }> {
+export class TerminalInputHandler extends BaseMessageHandler<
+  TerminalInputData,
+  { success: boolean }
+> {
   constructor(private dependencies: TerminalMessageHandlerDependencies) {
     super('TerminalInputHandler');
   }
@@ -146,7 +153,6 @@ export class TerminalInputHandler extends BaseMessageHandler<TerminalInputData, 
     try {
       this.dependencies.terminalManager.sendInput(data.terminalId, data.input);
       return { success: true };
-
     } catch (error) {
       this.log(`Error sending input to terminal ${data.terminalId}: ${error}`);
       throw new Error(`Input sending failed: ${error}`);
@@ -157,7 +163,10 @@ export class TerminalInputHandler extends BaseMessageHandler<TerminalInputData, 
 /**
  * Handler for terminal resize operations
  */
-export class TerminalResizeHandler extends BaseMessageHandler<TerminalResizeData, { success: boolean }> {
+export class TerminalResizeHandler extends BaseMessageHandler<
+  TerminalResizeData,
+  { success: boolean }
+> {
   constructor(private dependencies: TerminalMessageHandlerDependencies) {
     super('TerminalResizeHandler');
   }
@@ -173,7 +182,6 @@ export class TerminalResizeHandler extends BaseMessageHandler<TerminalResizeData
       this.dependencies.terminalManager.resize(data.terminalId, data.cols, data.rows);
       this.log(`Terminal resized: ${data.terminalId} (${data.cols}x${data.rows})`);
       return { success: true };
-
     } catch (error) {
       this.log(`Error resizing terminal ${data.terminalId}: ${error}`);
       throw new Error(`Terminal resize failed: ${error}`);
@@ -184,7 +192,10 @@ export class TerminalResizeHandler extends BaseMessageHandler<TerminalResizeData
 /**
  * Handler for focusing terminals
  */
-export class FocusTerminalHandler extends BaseMessageHandler<FocusTerminalData, { success: boolean }> {
+export class FocusTerminalHandler extends BaseMessageHandler<
+  FocusTerminalData,
+  { success: boolean }
+> {
   constructor(private dependencies: TerminalMessageHandlerDependencies) {
     super('FocusTerminalHandler');
   }
@@ -196,7 +207,6 @@ export class FocusTerminalHandler extends BaseMessageHandler<FocusTerminalData, 
       this.dependencies.terminalManager.focusTerminal(data.terminalId);
       this.log(`Terminal focused: ${data.terminalId}`);
       return { success: true };
-
     } catch (error) {
       this.log(`Error focusing terminal ${data.terminalId}: ${error}`);
       throw new Error(`Terminal focus failed: ${error}`);
@@ -207,7 +217,10 @@ export class FocusTerminalHandler extends BaseMessageHandler<FocusTerminalData, 
 /**
  * Handler for getting terminal settings
  */
-export class GetSettingsHandler extends BaseMessageHandler<void, { settings: Record<string, unknown> }> {
+export class GetSettingsHandler extends BaseMessageHandler<
+  void,
+  { settings: Record<string, unknown> }
+> {
   constructor(private dependencies: TerminalMessageHandlerDependencies) {
     super('GetSettingsHandler');
   }
@@ -216,7 +229,6 @@ export class GetSettingsHandler extends BaseMessageHandler<void, { settings: Rec
     try {
       const settings = this.dependencies.configService.getCurrentSettings();
       return { settings };
-
     } catch (error) {
       this.log(`Error getting settings: ${error}`);
       throw new Error(`Failed to get settings: ${error}`);
@@ -227,7 +239,10 @@ export class GetSettingsHandler extends BaseMessageHandler<void, { settings: Rec
 /**
  * Handler for updating settings
  */
-export class UpdateSettingsHandler extends BaseMessageHandler<UpdateSettingsData, { success: boolean }> {
+export class UpdateSettingsHandler extends BaseMessageHandler<
+  UpdateSettingsData,
+  { success: boolean }
+> {
   constructor(private dependencies: TerminalMessageHandlerDependencies) {
     super('UpdateSettingsHandler');
   }
@@ -239,7 +254,6 @@ export class UpdateSettingsHandler extends BaseMessageHandler<UpdateSettingsData
       await this.dependencies.configService.updateSettings(data.settings);
       this.log('Settings updated successfully');
       return { success: true };
-
     } catch (error) {
       this.log(`Error updating settings: ${error}`);
       throw new Error(`Settings update failed: ${error}`);
@@ -260,7 +274,6 @@ export class SessionRestorationHandler extends BaseMessageHandler<void, { sessio
       const sessionData = await this.dependencies.persistenceService.getLastSession();
       this.log('Session data retrieved successfully');
       return { sessionData };
-
     } catch (error) {
       this.log(`Error retrieving session data: ${error}`);
       throw new Error(`Session retrieval failed: ${error}`);
@@ -271,12 +284,17 @@ export class SessionRestorationHandler extends BaseMessageHandler<void, { sessio
 /**
  * Handler for split terminal operations
  */
-export class SplitTerminalHandler extends BaseMessageHandler<{ direction?: 'horizontal' | 'vertical' }, { terminalId: string }> {
+export class SplitTerminalHandler extends BaseMessageHandler<
+  { direction?: 'horizontal' | 'vertical' },
+  { terminalId: string }
+> {
   constructor(private dependencies: TerminalMessageHandlerDependencies) {
     super('SplitTerminalHandler');
   }
 
-  public async handle(data: { direction?: 'horizontal' | 'vertical' }): Promise<{ terminalId: string }> {
+  public async handle(data: {
+    direction?: 'horizontal' | 'vertical';
+  }): Promise<{ terminalId: string }> {
     try {
       // Create a new terminal for the split
       const terminalId = await this.dependencies.terminalManager.createTerminal({
@@ -286,7 +304,6 @@ export class SplitTerminalHandler extends BaseMessageHandler<{ direction?: 'hori
 
       this.log(`Split terminal created: ${terminalId} (${data.direction || 'default'})`);
       return { terminalId };
-
     } catch (error) {
       this.log(`Error creating split terminal: ${error}`);
       throw new Error(`Split terminal creation failed: ${error}`);

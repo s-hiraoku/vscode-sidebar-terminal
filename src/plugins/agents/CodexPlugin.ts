@@ -18,10 +18,7 @@ export class CodexPlugin extends BaseAgentPlugin {
   }
 
   protected getDetectionPatterns(): RegExp[] {
-    return [
-      /OpenAI\s+Codex/i,
-      /Codex\s+CLI/i,
-    ];
+    return [/OpenAI\s+Codex/i, /Codex\s+CLI/i];
   }
 
   protected getCommandPrefixes(): string[] {

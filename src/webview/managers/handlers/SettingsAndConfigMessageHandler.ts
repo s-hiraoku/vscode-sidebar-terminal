@@ -59,10 +59,7 @@ export class SettingsAndConfigMessageHandler implements IMessageHandler {
   /**
    * Handle font settings update from extension
    */
-  private handleFontSettingsUpdate(
-    msg: MessageCommand,
-    coordinator: IManagerCoordinator
-  ): void {
+  private handleFontSettingsUpdate(msg: MessageCommand, coordinator: IManagerCoordinator): void {
     const fontSettings = msg.fontSettings as WebViewFontSettings;
     if (fontSettings) {
       this.logger.info('Font settings update received', fontSettings);
@@ -74,10 +71,7 @@ export class SettingsAndConfigMessageHandler implements IMessageHandler {
   /**
    * Handle settings response from extension
    */
-  private handleSettingsResponse(
-    msg: MessageCommand,
-    coordinator: IManagerCoordinator
-  ): void {
+  private handleSettingsResponse(msg: MessageCommand, coordinator: IManagerCoordinator): void {
     const settings = msg.settings;
     if (settings) {
       this.logger.info('Settings response received');
@@ -93,7 +87,11 @@ export class SettingsAndConfigMessageHandler implements IMessageHandler {
    */
   private handleVersionInfo(msg: MessageCommand, coordinator: IManagerCoordinator): void {
     const version = msg.version;
-    if (version && typeof version === 'string' && typeof coordinator.setVersionInfo === 'function') {
+    if (
+      version &&
+      typeof version === 'string' &&
+      typeof coordinator.setVersionInfo === 'function'
+    ) {
       coordinator.setVersionInfo(version);
       this.logger.info(`Version info received: ${version}`);
     }

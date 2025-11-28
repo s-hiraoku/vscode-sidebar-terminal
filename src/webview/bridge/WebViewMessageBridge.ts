@@ -7,11 +7,7 @@
  * @see Issue #223 - Phase 3: Message Handling Separation
  */
 
-import {
-  IWebViewCommunicationBridge,
-  Message,
-  MessageProcessingResult,
-} from '../../communication';
+import { IWebViewCommunicationBridge, Message, MessageProcessingResult } from '../../communication';
 
 /**
  * VS Code API interface for WebView

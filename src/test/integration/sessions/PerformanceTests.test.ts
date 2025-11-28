@@ -336,10 +336,7 @@ describe('Session Persistence Performance Tests - Phase 2.5.3', () => {
         scrollbackData: {
           '1': Array(2000)
             .fill(null)
-            .map(
-              (_, i) =>
-                `\x1b[${31 + (i % 7)}mLine ${i}: Colored terminal output\x1b[0m`
-            ),
+            .map((_, i) => `\x1b[${31 + (i % 7)}mLine ${i}: Colored terminal output\x1b[0m`),
         },
       };
 
@@ -403,10 +400,7 @@ describe('Session Persistence Performance Tests - Phase 2.5.3', () => {
 /**
  * Helper function to create session with scrollback data
  */
-function createSessionWithScrollback(
-  lineCount: number,
-  lineLength: number
-): SessionStorageData {
+function createSessionWithScrollback(lineCount: number, lineLength: number): SessionStorageData {
   return {
     terminals: [
       {

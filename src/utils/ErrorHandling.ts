@@ -14,7 +14,7 @@ export enum ErrorSeverity {
   INFO = 'info',
   WARNING = 'warning',
   ERROR = 'error',
-  CRITICAL = 'critical'
+  CRITICAL = 'critical',
 }
 
 export enum ErrorCategory {
@@ -24,7 +24,7 @@ export enum ErrorCategory {
   WEBVIEW = 'webview',
   COMMUNICATION = 'communication',
   RESOURCE = 'resource',
-  UNKNOWN = 'unknown'
+  UNKNOWN = 'unknown',
 }
 
 export interface ErrorContext {
@@ -60,7 +60,7 @@ export abstract class BaseError extends Error {
       severity: ErrorSeverity.ERROR,
       component: 'Unknown',
       timestamp: Date.now(),
-      ...context
+      ...context,
     };
     this.recoverable = recoverable;
 
@@ -74,63 +74,83 @@ export abstract class BaseError extends Error {
       context: this.context,
       error: this,
       stack: this.stack,
-      recoverable: this.recoverable
+      recoverable: this.recoverable,
     };
   }
 }
 
 export class TerminalError extends BaseError {
   constructor(message: string, component: string, operation?: string, recoverable = true) {
-    super(message, {
-      category: ErrorCategory.TERMINAL,
-      severity: ErrorSeverity.ERROR,
-      component,
-      operation
-    }, recoverable);
+    super(
+      message,
+      {
+        category: ErrorCategory.TERMINAL,
+        severity: ErrorSeverity.ERROR,
+        component,
+        operation,
+      },
+      recoverable
+    );
   }
 }
 
 export class SessionError extends BaseError {
   constructor(message: string, component: string, operation?: string, recoverable = true) {
-    super(message, {
-      category: ErrorCategory.SESSION,
-      severity: ErrorSeverity.ERROR,
-      component,
-      operation
-    }, recoverable);
+    super(
+      message,
+      {
+        category: ErrorCategory.SESSION,
+        severity: ErrorSeverity.ERROR,
+        component,
+        operation,
+      },
+      recoverable
+    );
   }
 }
 
 export class ConfigurationError extends BaseError {
   constructor(message: string, component: string, operation?: string) {
-    super(message, {
-      category: ErrorCategory.CONFIGURATION,
-      severity: ErrorSeverity.WARNING,
-      component,
-      operation
-    }, true);
+    super(
+      message,
+      {
+        category: ErrorCategory.CONFIGURATION,
+        severity: ErrorSeverity.WARNING,
+        component,
+        operation,
+      },
+      true
+    );
   }
 }
 
 export class CommunicationError extends BaseError {
   constructor(message: string, component: string, operation?: string, recoverable = false) {
-    super(message, {
-      category: ErrorCategory.COMMUNICATION,
-      severity: ErrorSeverity.ERROR,
-      component,
-      operation
-    }, recoverable);
+    super(
+      message,
+      {
+        category: ErrorCategory.COMMUNICATION,
+        severity: ErrorSeverity.ERROR,
+        component,
+        operation,
+      },
+      recoverable
+    );
   }
 }
 
 export class ResourceError extends BaseError {
   constructor(message: string, component: string, operation?: string) {
-    super(message, {
-      category: ErrorCategory.RESOURCE,
-      severity: ErrorSeverity.CRITICAL,
-      component,
-      operation
-    }, false);
+    super(
+      message,
+      {
+        category: ErrorCategory.RESOURCE,
+        severity: ErrorSeverity.CRITICAL,
+        component,
+        operation,
+      },
+      false
+    );
   }
 }
 
@@ -207,11 +227,11 @@ export class ErrorHandlingManager {
         component: context?.component || 'Unknown',
         operation: context?.operation,
         metadata: context?.metadata,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       },
       error: error instanceof Error ? error : undefined,
       stack: errorStack,
-      recoverable: context?.severity !== ErrorSeverity.CRITICAL
+      recoverable: context?.severity !== ErrorSeverity.CRITICAL,
     };
   }
 
@@ -251,11 +271,11 @@ export class ErrorHandlingManager {
     // カテゴリ別ハンドラー
     const categoryHandlers = this.errorHandlers.get(report.context.category);
     if (categoryHandlers) {
-      categoryHandlers.forEach(handler => handler(report));
+      categoryHandlers.forEach((handler) => handler(report));
     }
 
     // グローバルハンドラー
-    this.globalHandlers.forEach(handler => handler(report));
+    this.globalHandlers.forEach((handler) => handler(report));
   }
 
   /**
@@ -310,7 +330,7 @@ export class ErrorHandlingManager {
     let log = this.errorLog;
 
     if (category) {
-      log = log.filter(report => report.context.category === category);
+      log = log.filter((report) => report.context.category === category);
     }
 
     return log.slice(-limit);
@@ -325,10 +345,10 @@ export class ErrorHandlingManager {
       byCategory: {},
       bySeverity: {},
       recoverable: 0,
-      unrecoverable: 0
+      unrecoverable: 0,
     };
 
-    this.errorLog.forEach(report => {
+    this.errorLog.forEach((report) => {
       // カテゴリ別集計
       const category = report.context.category;
       stats.byCategory[category] = (stats.byCategory[category] || 0) + 1;
@@ -407,11 +427,7 @@ export function isRecoverableError(error: unknown): boolean {
 /**
  * デコレーター: エラーハンドリング付きメソッド
  */
-export function withErrorHandling(
-  category: ErrorCategory,
-  component: string,
-  recoverable = true
-) {
+export function withErrorHandling(category: ErrorCategory, component: string, recoverable = true) {
   return function (
     target: any,
     propertyKey: string,
@@ -421,15 +437,12 @@ export function withErrorHandling(
 
     descriptor.value = async function (...args: any[]) {
       const manager = ErrorHandlingManager.getInstance();
-      return manager.executeWithErrorHandling(
-        () => originalMethod.apply(this, args),
-        {
-          category,
-          component,
-          operation: propertyKey,
-          severity: recoverable ? ErrorSeverity.ERROR : ErrorSeverity.CRITICAL
-        }
-      );
+      return manager.executeWithErrorHandling(() => originalMethod.apply(this, args), {
+        category,
+        component,
+        operation: propertyKey,
+        severity: recoverable ? ErrorSeverity.ERROR : ErrorSeverity.CRITICAL,
+      });
     };
 
     return descriptor;

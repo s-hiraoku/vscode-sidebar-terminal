@@ -128,7 +128,7 @@ export class MessageValidationUtility {
       return null;
     }
 
-    return field as string || null;
+    return (field as string) || null;
   }
 
   /**
@@ -149,7 +149,7 @@ export class MessageValidationUtility {
       return null;
     }
 
-    return field as number || null;
+    return (field as number) || null;
   }
 
   /**

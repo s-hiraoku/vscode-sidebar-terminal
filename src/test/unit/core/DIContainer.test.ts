@@ -60,11 +60,7 @@ describe('DIContainer', () => {
       const ILogger = createServiceToken<{ id: number }>('ILogger');
       let idCounter = 0;
 
-      container.register(
-        ILogger,
-        () => ({ id: ++idCounter }),
-        ServiceLifetime.Singleton
-      );
+      container.register(ILogger, () => ({ id: ++idCounter }), ServiceLifetime.Singleton);
 
       const instance1 = container.resolve(ILogger);
       const instance2 = container.resolve(ILogger);
@@ -79,11 +75,7 @@ describe('DIContainer', () => {
       const ILogger = createServiceToken<{ id: number }>('ILogger');
       let idCounter = 0;
 
-      container.register(
-        ILogger,
-        () => ({ id: ++idCounter }),
-        ServiceLifetime.Transient
-      );
+      container.register(ILogger, () => ({ id: ++idCounter }), ServiceLifetime.Transient);
 
       const instance1 = container.resolve(ILogger);
       const instance2 = container.resolve(ILogger);
@@ -99,11 +91,7 @@ describe('DIContainer', () => {
       const ILogger = createServiceToken<{ id: number }>('ILogger');
       let idCounter = 0;
 
-      container.register(
-        ILogger,
-        () => ({ id: ++idCounter }),
-        ServiceLifetime.Scoped
-      );
+      container.register(ILogger, () => ({ id: ++idCounter }), ServiceLifetime.Scoped);
 
       const scope = container.createScope();
       const instance1 = scope.resolve(ILogger);
@@ -119,11 +107,7 @@ describe('DIContainer', () => {
       const ILogger = createServiceToken<{ id: number }>('ILogger');
       let idCounter = 0;
 
-      container.register(
-        ILogger,
-        () => ({ id: ++idCounter }),
-        ServiceLifetime.Scoped
-      );
+      container.register(ILogger, () => ({ id: ++idCounter }), ServiceLifetime.Scoped);
 
       const scope1 = container.createScope();
       const scope2 = container.createScope();
@@ -215,11 +199,7 @@ describe('DIContainer', () => {
       const ILogger = createServiceToken<ILogger>('ILogger');
       const IService = createServiceToken<IService>('IService');
 
-      container.register(
-        ILogger,
-        () => ({ log: () => {} }),
-        ServiceLifetime.Singleton
-      );
+      container.register(ILogger, () => ({ log: () => {} }), ServiceLifetime.Singleton);
       container.register(
         IService,
         (c) => ({ logger: c.resolve(ILogger) }),
@@ -295,9 +275,7 @@ describe('DIContainer', () => {
 
       container.dispose();
 
-      expect(() => container.resolve(IService)).to.throw(
-        'Cannot use disposed DIContainer'
-      );
+      expect(() => container.resolve(IService)).to.throw('Cannot use disposed DIContainer');
     });
 
     it('should dispose all scopes when container is disposed', () => {

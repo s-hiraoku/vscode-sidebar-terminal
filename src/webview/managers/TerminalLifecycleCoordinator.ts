@@ -93,8 +93,8 @@ export class TerminalLifecycleCoordinator {
         // Check if terminal actually needs focus (avoid redundant focus calls)
         // Use hasAttribute instead of checking document.activeElement for better reliability
         const textArea = terminal.textarea;
-        const needsFocus = textArea && !textArea.hasAttribute('focused') &&
-                          document.activeElement !== textArea;
+        const needsFocus =
+          textArea && !textArea.hasAttribute('focused') && document.activeElement !== textArea;
 
         if (needsFocus) {
           // 🎯 PHASE 4: Reduced delay from 10ms to 5ms for faster response
@@ -148,7 +148,12 @@ export class TerminalLifecycleCoordinator {
     config?: TerminalConfig,
     terminalNumber?: number
   ): Promise<Terminal | null> {
-    return this.terminalCreationService.createTerminal(terminalId, terminalName, config, terminalNumber);
+    return this.terminalCreationService.createTerminal(
+      terminalId,
+      terminalName,
+      config,
+      terminalNumber
+    );
   }
 
   /**
@@ -157,9 +162,6 @@ export class TerminalLifecycleCoordinator {
   /**
    * Enable VS Code standard scrollbar display with correct viewport sizing
    */
-
-
-
 
   /**
    * Handle terminal resize using ResizeManager
@@ -322,7 +324,9 @@ export class TerminalLifecycleCoordinator {
         `;
 
         // Move existing terminal containers into terminals-wrapper
-        const existingTerminals = Array.from(container.querySelectorAll('[data-terminal-container]'));
+        const existingTerminals = Array.from(
+          container.querySelectorAll('[data-terminal-container]')
+        );
         container.appendChild(terminalsWrapper);
         existingTerminals.forEach((terminal) => {
           terminalsWrapper!.appendChild(terminal);
@@ -417,7 +421,6 @@ export class TerminalLifecycleCoordinator {
       terminalIds: Array.from(terminals.keys()),
     };
   }
-
 
   /**
    * Dispose all resources using centralized utilities

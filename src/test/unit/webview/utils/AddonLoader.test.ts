@@ -138,12 +138,9 @@ describe('AddonLoader', function () {
 
   describe('loadAddonWithResult()', function () {
     it('should return success result for successful load', async function () {
-      const result = await AddonLoader.loadAddonWithResult(
-        terminal,
-        'terminal-1',
-        MockAddon,
-        { required: true }
-      );
+      const result = await AddonLoader.loadAddonWithResult(terminal, 'terminal-1', MockAddon, {
+        required: true,
+      });
 
       expect(result.success).to.be.true;
       expect(result.addon).to.be.instanceOf(MockAddon);
@@ -153,12 +150,9 @@ describe('AddonLoader', function () {
     it('should return failure result for failed required addon', async function () {
       loadAddonStub.throws(new Error('Load failed'));
 
-      const result = await AddonLoader.loadAddonWithResult(
-        terminal,
-        'terminal-1',
-        MockAddon,
-        { required: true }
-      );
+      const result = await AddonLoader.loadAddonWithResult(terminal, 'terminal-1', MockAddon, {
+        required: true,
+      });
 
       expect(result.success).to.be.false;
       expect(result.addon).to.be.undefined;
@@ -168,12 +162,9 @@ describe('AddonLoader', function () {
     it('should return failure result for failed optional addon', async function () {
       loadAddonStub.throws(new Error('Load failed'));
 
-      const result = await AddonLoader.loadAddonWithResult(
-        terminal,
-        'terminal-1',
-        MockAddon,
-        { required: false }
-      );
+      const result = await AddonLoader.loadAddonWithResult(terminal, 'terminal-1', MockAddon, {
+        required: false,
+      });
 
       expect(result.success).to.be.false;
       expect(result.addon).to.be.undefined;

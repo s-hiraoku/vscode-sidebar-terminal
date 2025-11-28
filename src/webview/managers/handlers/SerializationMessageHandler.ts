@@ -31,10 +31,7 @@ export class SerializationMessageHandler implements IMessageHandler {
   /**
    * Handle serialization related messages
    */
-  public async handleMessage(
-    msg: MessageCommand,
-    coordinator: IManagerCoordinator
-  ): Promise<void> {
+  public async handleMessage(msg: MessageCommand, coordinator: IManagerCoordinator): Promise<void> {
     const command = (msg as { command?: string }).command;
 
     switch (command) {
@@ -78,10 +75,7 @@ export class SerializationMessageHandler implements IMessageHandler {
   /**
    * Handle serialize terminal request (single terminal)
    */
-  private handleSerializeTerminal(
-    msg: MessageCommand,
-    coordinator: IManagerCoordinator
-  ): void {
+  private handleSerializeTerminal(msg: MessageCommand, coordinator: IManagerCoordinator): void {
     this.logger.info('Terminal serialization requested (single terminal)');
 
     const terminalIds: string[] = [];
@@ -140,8 +134,8 @@ export class SerializationMessageHandler implements IMessageHandler {
       typeof (msg as any).sessionRestoreMessage === 'string'
         ? ((msg as any).sessionRestoreMessage as string)
         : typeof (msg as any).resumeMessage === 'string'
-        ? ((msg as any).resumeMessage as string)
-        : undefined;
+          ? ((msg as any).resumeMessage as string)
+          : undefined;
     const isActive = Boolean((msg as any).isActive);
     const requestId = (msg as any).requestId;
     const messageId = (msg as any).messageId;
@@ -176,15 +170,23 @@ export class SerializationMessageHandler implements IMessageHandler {
       let errorMessage: string | undefined;
 
       try {
-        if (persistenceManager && typeof serializedContent === 'string' && serializedContent.length > 0) {
-          restored = Boolean(persistenceManager.restoreTerminalContent(terminalId, serializedContent));
+        if (
+          persistenceManager &&
+          typeof serializedContent === 'string' &&
+          serializedContent.length > 0
+        ) {
+          restored = Boolean(
+            persistenceManager.restoreTerminalContent(terminalId, serializedContent)
+          );
         }
 
         if (!restored && scrollbackData && scrollbackData.length > 0 && restoreSessionFn) {
           restored = await restoreSessionFn({
             terminalId,
             terminalName:
-              typeof msg.terminalName === 'string' ? (msg.terminalName as string) : `Terminal ${terminalId}`,
+              typeof msg.terminalName === 'string'
+                ? (msg.terminalName as string)
+                : `Terminal ${terminalId}`,
             scrollbackData,
             sessionRestoreMessage,
           });
@@ -215,17 +217,16 @@ export class SerializationMessageHandler implements IMessageHandler {
   /**
    * Handle terminal restore info message
    */
-  private handleTerminalRestoreInfo(
-    msg: MessageCommand,
-    _coordinator: IManagerCoordinator
-  ): void {
+  private handleTerminalRestoreInfo(msg: MessageCommand, _coordinator: IManagerCoordinator): void {
     this.logger.info('Terminal restore info received');
 
     const terminals = Array.isArray((msg as any).terminals)
       ? ((msg as any).terminals as Array<Record<string, unknown>>)
       : [];
     const activeTerminalId =
-      typeof (msg as any).activeTerminalId === 'string' ? ((msg as any).activeTerminalId as string) : null;
+      typeof (msg as any).activeTerminalId === 'string'
+        ? ((msg as any).activeTerminalId as string)
+        : null;
     const config = (msg as any).config;
 
     this.cachedTerminalRestoreInfo = {
@@ -363,7 +364,9 @@ export class SerializationMessageHandler implements IMessageHandler {
             serializedContent = lines.slice(startIndex).join('\n');
           } else {
             // Fallback: Extract plain text from buffer
-            this.logger.warn(`⚠️ SerializeAddon not available for terminal ${terminalId}, using plain text`);
+            this.logger.warn(
+              `⚠️ SerializeAddon not available for terminal ${terminalId}, using plain text`
+            );
             const buffer = terminalInstance.terminal.buffer.active;
             const lines: string[] = [];
             const startLine = Math.max(0, buffer.length - scrollbackLines);
@@ -434,8 +437,12 @@ export class SerializationMessageHandler implements IMessageHandler {
       // Restore serialized content to each terminal
       terminalData.forEach((terminal: any, index: number) => {
         const { id, serializedContent, isActive } = terminal;
-        this.logger.info(`[RESTORE-DEBUG] Processing terminal ${index + 1}/${terminalData.length}: ${id}`);
-        this.logger.info(`[RESTORE-DEBUG] Has serializedContent: ${!!(serializedContent && serializedContent.length > 0)}, length: ${serializedContent?.length || 0}`);
+        this.logger.info(
+          `[RESTORE-DEBUG] Processing terminal ${index + 1}/${terminalData.length}: ${id}`
+        );
+        this.logger.info(
+          `[RESTORE-DEBUG] Has serializedContent: ${!!(serializedContent && serializedContent.length > 0)}, length: ${serializedContent?.length || 0}`
+        );
 
         if (serializedContent && serializedContent.length > 0) {
           try {
@@ -454,10 +461,14 @@ export class SerializationMessageHandler implements IMessageHandler {
               type: 'output' as const,
               timestamp: Date.now(),
             }));
-            this.logger.info(`[RESTORE-DEBUG] Created ${scrollbackLines.length} scrollback lines for terminal ${id}`);
+            this.logger.info(
+              `[RESTORE-DEBUG] Created ${scrollbackLines.length} scrollback lines for terminal ${id}`
+            );
 
             // Restore scrollback with ANSI colors preserved
-            this.logger.info(`[RESTORE-DEBUG] Writing ${scrollbackLines.length} lines to terminal ${id}...`);
+            this.logger.info(
+              `[RESTORE-DEBUG] Writing ${scrollbackLines.length} lines to terminal ${id}...`
+            );
             scrollbackLines.forEach((line: any) => {
               terminalInstance.terminal.writeln(line.content);
             });
@@ -470,7 +481,9 @@ export class SerializationMessageHandler implements IMessageHandler {
             }
 
             restoredCount++;
-            this.logger.info(`✅ [RESTORE-DEBUG] Restored terminal ${id}: ${scrollbackLines.length} lines with ANSI colors`);
+            this.logger.info(
+              `✅ [RESTORE-DEBUG] Restored terminal ${id}: ${scrollbackLines.length} lines with ANSI colors`
+            );
           } catch (restoreError) {
             this.logger.error(`❌ [RESTORE-DEBUG] Error restoring terminal ${id}:`, restoreError);
           }

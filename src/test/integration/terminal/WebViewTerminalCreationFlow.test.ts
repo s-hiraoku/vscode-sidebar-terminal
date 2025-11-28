@@ -322,10 +322,7 @@ describe('[TM-CF-003] Terminal Creation Flow Integration', () => {
         expect(terminal?.pty).to.exist;
 
         // Assert: Process state is initialized
-        expect(terminal?.processState).to.be.oneOf([
-          ProcessState.Launching,
-          ProcessState.Running,
-        ]);
+        expect(terminal?.processState).to.be.oneOf([ProcessState.Launching, ProcessState.Running]);
 
         done();
       }, 100);

@@ -142,7 +142,9 @@ export class MessageRoutingFacade {
   /**
    * Get all registered handlers by category
    */
-  public getHandlersByCategory(category: MessageHandlerRegistry['category']): MessageHandlerRegistry[] {
+  public getHandlersByCategory(
+    category: MessageHandlerRegistry['category']
+  ): MessageHandlerRegistry[] {
     return this._handlerRegistry.filter((reg) => reg.category === category);
   }
 
@@ -164,7 +166,20 @@ export class MessageRoutingFacade {
    * Check if a handler is registered for a command
    */
   public hasHandler(command: string): boolean {
-    return this._handlerRegistry.some((reg) => reg.command === command);
+    return this._router.has(command);
+  }
+
+  /**
+   * Validate that required handlers are registered; logs any gaps for early detection.
+   */
+  public validateHandlers(requiredCommands: string[]): void {
+    const missing = requiredCommands.filter((cmd) => !this._router.has(cmd));
+    if (missing.length > 0) {
+      log(`❌ [ROUTING] Missing handlers for critical commands: ${missing.join(', ')}`);
+      log('📋 [ROUTING] Currently registered commands:', this._router.getRegisteredCommands());
+    } else {
+      log('✅ [ROUTING] All critical handlers registered');
+    }
   }
 
   /**

@@ -36,7 +36,10 @@ describe('Async Operations', () => {
     it('should define WebView communication timeout behavior', async () => {
       // RED: Specify exactly how WebView timeouts should be handled
       interface AsyncWebViewCommunicator {
-        sendMessageWithTimeout(message: any, timeoutMs: number): Promise<{
+        sendMessageWithTimeout(
+          message: any,
+          timeoutMs: number
+        ): Promise<{
           success: boolean;
           data?: any;
           timedOut?: boolean;
@@ -49,13 +52,10 @@ describe('Async Operations', () => {
         sendMessageWithTimeout: async (_message: any, _timeoutMs: number) => {
           // Initially return failure to establish RED phase
           return { success: false, error: 'Not implemented' };
-        }
+        },
       };
 
-      const result = await communicator.sendMessageWithTimeout(
-        { command: 'test' },
-        1000
-      );
+      const result = await communicator.sendMessageWithTimeout({ command: 'test' }, 1000);
 
       // This test should fail initially (RED phase)
       expect(result.success).to.be.false;
@@ -80,9 +80,9 @@ describe('Async Operations', () => {
             success: false,
             created: [],
             failed: count,
-            errors: ['Concurrent creation not implemented']
+            errors: ['Concurrent creation not implemented'],
           };
-        }
+        },
       };
 
       const result = await processManager.createTerminalsSimultaneously(3);
@@ -114,7 +114,7 @@ describe('Async Operations', () => {
             failedCount: 0,
             canRetry: false,
           };
-        }
+        },
       };
 
       const result = await restorationManager.restoreSessionWithInterruption();
@@ -129,17 +129,23 @@ describe('Async Operations', () => {
       // GREEN: Implement reliable WebView communication
       class AsyncWebViewCommunicator {
         private webview: any;
-        private pendingRequests = new Map<string, {
-          resolve: (value: any) => void;
-          reject: (error: any) => void;
-          timeoutId: NodeJS.Timeout;
-        }>();
+        private pendingRequests = new Map<
+          string,
+          {
+            resolve: (value: any) => void;
+            reject: (error: any) => void;
+            timeoutId: NodeJS.Timeout;
+          }
+        >();
 
         constructor(webview: any) {
           this.webview = webview;
         }
 
-        async sendMessageWithTimeout(message: any, timeoutMs: number): Promise<{
+        async sendMessageWithTimeout(
+          message: any,
+          timeoutMs: number
+        ): Promise<{
           success: boolean;
           data?: any;
           timedOut?: boolean;
@@ -155,7 +161,7 @@ describe('Async Operations', () => {
               resolve({
                 success: false,
                 timedOut: true,
-                error: `Request timed out after ${timeoutMs}ms`
+                error: `Request timed out after ${timeoutMs}ms`,
               });
             }, timeoutMs);
 
@@ -171,7 +177,7 @@ describe('Async Operations', () => {
                 this.pendingRequests.delete(requestId);
                 resolve({ success: false, error: error.message });
               },
-              timeoutId
+              timeoutId,
             });
 
             // Send message
@@ -211,17 +217,14 @@ describe('Async Operations', () => {
       const communicator = new AsyncWebViewCommunicator(mockWebview);
 
       // Test successful communication
-      const messagePromise = communicator.sendMessageWithTimeout(
-        { command: 'getSettings' },
-        1000
-      );
+      const messagePromise = communicator.sendMessageWithTimeout({ command: 'getSettings' }, 1000);
 
       // Simulate response immediately
       const sentMessage = mockWebview.postMessage.getCall(0).args[0];
       setTimeout(() => {
         communicator.handleResponse({
           requestId: sentMessage.requestId,
-          settings: { theme: 'dark' }
+          settings: { theme: 'dark' },
         });
       }, 10);
 
@@ -286,7 +289,7 @@ describe('Async Operations', () => {
           // Wait for available slot with timeout
           let waitCount = 0;
           while (this.activeCreations.size >= this.maxConcurrentCreations && waitCount < 50) {
-            await new Promise(resolve => setTimeout(resolve, 10));
+            await new Promise((resolve) => setTimeout(resolve, 10));
             waitCount++;
           }
 
@@ -298,7 +301,7 @@ describe('Async Operations', () => {
 
           try {
             // Simulate terminal creation process with deterministic result
-            await new Promise(resolve => setTimeout(resolve, 50));
+            await new Promise((resolve) => setTimeout(resolve, 50));
 
             // Use deterministic success based on ID for testing
             const success = terminalId.includes('1') || terminalId.includes('2');
@@ -375,7 +378,8 @@ describe('Async Operations', () => {
               this.restorationState.currentStep++;
             }
 
-            const completed = this.restorationState.currentStep === this.restorationState.totalSteps;
+            const completed =
+              this.restorationState.currentStep === this.restorationState.totalSteps;
             const partialRestore = this.restorationState.restoredTerminals.length > 0 && !completed;
 
             return {
@@ -392,7 +396,7 @@ describe('Async Operations', () => {
 
         private async restoreTerminal(terminalData: any): Promise<boolean> {
           // Simulate terminal restoration with deterministic result
-          await new Promise(resolve => setTimeout(resolve, 100));
+          await new Promise((resolve) => setTimeout(resolve, 100));
           return terminalData.id !== 'term-3'; // Make term-3 fail for testing
         }
 
@@ -495,7 +499,7 @@ describe('Async Operations', () => {
 
       const [result1, result2] = await Promise.all([
         detector.detectAgent('term-1', output1),
-        detector.detectAgent('term-1', output2)
+        detector.detectAgent('term-1', output2),
       ]);
 
       expect(result1).to.equal('claude-code');
@@ -525,7 +529,10 @@ describe('Async Operations', () => {
             const result = await operation();
             return { success: true, result };
           } catch (error) {
-            return { success: false, error: error instanceof Error ? error.message : String(error) };
+            return {
+              success: false,
+              error: error instanceof Error ? error.message : String(error),
+            };
           } finally {
             // Always cleanup resources
             await this.cleanupResource(resourceId);
@@ -539,7 +546,10 @@ describe('Async Operations', () => {
               cleanup();
             } catch (error) {
               // Log cleanup errors but don't throw
-              console.warn(`Cleanup failed for ${resourceId}:`, error instanceof Error ? error.message : String(error));
+              console.warn(
+                `Cleanup failed for ${resourceId}:`,
+                error instanceof Error ? error.message : String(error)
+              );
             }
           }
 
@@ -548,7 +558,7 @@ describe('Async Operations', () => {
         }
 
         async cleanupAllResources(): Promise<void> {
-          const cleanupPromises = Array.from(this.activeResources).map(resourceId =>
+          const cleanupPromises = Array.from(this.activeResources).map((resourceId) =>
             this.cleanupResource(resourceId)
           );
 
@@ -605,7 +615,12 @@ describe('Async Operations', () => {
         private readonly TIMEOUT_MS = 5000;
         private callCount = 0;
 
-        async performOperation(): Promise<{ success: boolean; data?: any; error?: string; circuitOpen?: boolean }> {
+        async performOperation(): Promise<{
+          success: boolean;
+          data?: any;
+          error?: string;
+          circuitOpen?: boolean;
+        }> {
           if (this.state === 'OPEN') {
             if (Date.now() - this.lastFailureTime > this.TIMEOUT_MS) {
               this.state = 'HALF_OPEN';
@@ -632,7 +647,10 @@ describe('Async Operations', () => {
             return { success: true, data: 'operation-result' };
           } catch (error) {
             this.handleFailure();
-            return { success: false, error: error instanceof Error ? error.message : String(error) };
+            return {
+              success: false,
+              error: error instanceof Error ? error.message : String(error),
+            };
           }
         }
 
@@ -679,8 +697,8 @@ describe('Async Operations', () => {
       }
 
       // Should have some failures and circuit should eventually open
-      const failedResults = results.filter(r => !r.success);
-      const _circuitOpenResults = results.filter(r => r.circuitOpen);
+      const failedResults = results.filter((r) => !r.success);
+      const _circuitOpenResults = results.filter((r) => r.circuitOpen);
 
       expect(failedResults.length).to.be.greaterThan(0);
 

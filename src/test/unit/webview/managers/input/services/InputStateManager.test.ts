@@ -14,7 +14,7 @@ import {
   KeyboardState,
   AgentInteractionState,
   InputState as _InputState,
-  StateChangeListener
+  StateChangeListener,
 } from '../../../../../../webview/managers/input/services/InputStateManager';
 
 describe('InputStateManager TDD Test Suite', () => {
@@ -127,7 +127,7 @@ describe('InputStateManager TDD Test Suite', () => {
         stateManager.updateIMEState({
           isActive: true,
           data: 'test',
-          timestamp: Date.now()
+          timestamp: Date.now(),
         });
 
         // Act: Get state and attempt to modify it
@@ -150,7 +150,7 @@ describe('InputStateManager TDD Test Suite', () => {
         // Arrange: Set keyboard state
         stateManager.updateKeyboardState({
           lastKeyPressed: 'Enter',
-          modifiers: { ctrl: true, alt: false, shift: true, meta: false }
+          modifiers: { ctrl: true, alt: false, shift: true, meta: false },
         });
 
         // Act: Get state section and attempt to modify
@@ -188,7 +188,7 @@ describe('InputStateManager TDD Test Suite', () => {
           startOffset: 0,
           endOffset: 5,
           lastEvent: 'update',
-          timestamp: Date.now()
+          timestamp: Date.now(),
         };
 
         stateManager.updateIMEState(updates);
@@ -211,13 +211,14 @@ describe('InputStateManager TDD Test Suite', () => {
         stateManager.updateIMEState({
           isActive: true,
           data: '', // Active but no data
-          lastEvent: 'update' // Not a start event
+          lastEvent: 'update', // Not a start event
         });
 
         // Assert: Should log validation warning
-        const warningLogs = logMessages.filter(msg =>
-          msg.includes('State validation warnings for ime') &&
-          msg.includes('IME active but no composition data')
+        const warningLogs = logMessages.filter(
+          (msg) =>
+            msg.includes('State validation warnings for ime') &&
+            msg.includes('IME active but no composition data')
         );
         expect(warningLogs).to.have.length.greaterThan(0);
       });
@@ -227,11 +228,11 @@ describe('InputStateManager TDD Test Suite', () => {
         stateManager.updateIMEState({
           startOffset: -1,
           endOffset: -5,
-          timestamp: -1000
+          timestamp: -1000,
         });
 
         // Assert: Should log validation errors
-        const errorLogs = logMessages.filter(msg =>
+        const errorLogs = logMessages.filter((msg) =>
           msg.includes('State validation errors for ime')
         );
         expect(errorLogs).to.have.length.greaterThan(0);
@@ -267,7 +268,7 @@ describe('InputStateManager TDD Test Suite', () => {
           isVSCodeAltClickEnabled: true,
           isAltKeyPressed: true,
           lastClickPosition: { x: 150, y: 300 },
-          clickCount: 3
+          clickCount: 3,
         };
 
         stateManager.updateAltClickState(updates);
@@ -288,13 +289,14 @@ describe('InputStateManager TDD Test Suite', () => {
         // Act: Update with inconsistent Alt+Click state
         stateManager.updateAltClickState({
           isAltKeyPressed: true,
-          isVSCodeAltClickEnabled: false // Alt pressed but not enabled
+          isVSCodeAltClickEnabled: false, // Alt pressed but not enabled
         });
 
         // Assert: Should log validation warning
-        const warningLogs = logMessages.filter(msg =>
-          msg.includes('State validation warnings for altClick') &&
-          msg.includes('Alt key pressed but Alt+Click not enabled')
+        const warningLogs = logMessages.filter(
+          (msg) =>
+            msg.includes('State validation warnings for altClick') &&
+            msg.includes('Alt key pressed but Alt+Click not enabled')
         );
         expect(warningLogs).to.have.length.greaterThan(0);
       });
@@ -302,13 +304,14 @@ describe('InputStateManager TDD Test Suite', () => {
       it('should validate Alt+Click state and error on invalid click count', () => {
         // Act: Update with invalid click count
         stateManager.updateAltClickState({
-          clickCount: -5
+          clickCount: -5,
         });
 
         // Assert: Should log validation error
-        const errorLogs = logMessages.filter(msg =>
-          msg.includes('State validation errors for altClick') &&
-          msg.includes('Invalid click count')
+        const errorLogs = logMessages.filter(
+          (msg) =>
+            msg.includes('State validation errors for altClick') &&
+            msg.includes('Invalid click count')
         );
         expect(errorLogs).to.have.length.greaterThan(0);
       });
@@ -330,9 +333,9 @@ describe('InputStateManager TDD Test Suite', () => {
             ctrl: true,
             alt: false,
             shift: true,
-            meta: false
+            meta: false,
           },
-          lastKeyTimestamp: Date.now()
+          lastKeyTimestamp: Date.now(),
         };
 
         stateManager.updateKeyboardState(updates);
@@ -360,13 +363,14 @@ describe('InputStateManager TDD Test Suite', () => {
         // Act: Update with inconsistent chord mode state
         stateManager.updateKeyboardState({
           isInChordMode: true,
-          lastKeyPressed: null // In chord mode but no key recorded
+          lastKeyPressed: null, // In chord mode but no key recorded
         });
 
         // Assert: Should log validation warning
-        const warningLogs = logMessages.filter(msg =>
-          msg.includes('State validation warnings for keyboard') &&
-          msg.includes('In chord mode but no last key recorded')
+        const warningLogs = logMessages.filter(
+          (msg) =>
+            msg.includes('State validation warnings for keyboard') &&
+            msg.includes('In chord mode but no last key recorded')
         );
         expect(warningLogs).to.have.length.greaterThan(0);
       });
@@ -374,13 +378,14 @@ describe('InputStateManager TDD Test Suite', () => {
       it('should validate keyboard state and error on invalid timestamp', () => {
         // Act: Update with invalid timestamp
         stateManager.updateKeyboardState({
-          lastKeyTimestamp: -1000
+          lastKeyTimestamp: -1000,
         });
 
         // Assert: Should log validation error
-        const errorLogs = logMessages.filter(msg =>
-          msg.includes('State validation errors for keyboard') &&
-          msg.includes('Invalid keyboard timestamp')
+        const errorLogs = logMessages.filter(
+          (msg) =>
+            msg.includes('State validation errors for keyboard') &&
+            msg.includes('Invalid keyboard timestamp')
         );
         expect(errorLogs).to.have.length.greaterThan(0);
       });
@@ -400,7 +405,7 @@ describe('InputStateManager TDD Test Suite', () => {
           agentType: 'claude-code',
           isAwaitingResponse: true,
           lastCommand: '@filename src/test.ts',
-          commandTimestamp: Date.now()
+          commandTimestamp: Date.now(),
         };
 
         stateManager.updateAgentState(updates);
@@ -429,13 +434,14 @@ describe('InputStateManager TDD Test Suite', () => {
         // Act: Update with agent mode but no type
         stateManager.updateAgentState({
           isAgentMode: true,
-          agentType: null
+          agentType: null,
         });
 
         // Assert: Should log validation warning
-        const warningLogs = logMessages.filter(msg =>
-          msg.includes('State validation warnings for agent') &&
-          msg.includes('Agent mode active but no agent type set')
+        const warningLogs = logMessages.filter(
+          (msg) =>
+            msg.includes('State validation warnings for agent') &&
+            msg.includes('Agent mode active but no agent type set')
         );
         expect(warningLogs).to.have.length.greaterThan(0);
       });
@@ -443,13 +449,14 @@ describe('InputStateManager TDD Test Suite', () => {
       it('should validate agent state and error on invalid timestamp', () => {
         // Act: Update with invalid command timestamp
         stateManager.updateAgentState({
-          commandTimestamp: -5000
+          commandTimestamp: -5000,
         });
 
         // Assert: Should log validation error
-        const errorLogs = logMessages.filter(msg =>
-          msg.includes('State validation errors for agent') &&
-          msg.includes('Invalid agent command timestamp')
+        const errorLogs = logMessages.filter(
+          (msg) =>
+            msg.includes('State validation errors for agent') &&
+            msg.includes('Invalid agent command timestamp')
         );
         expect(errorLogs).to.have.length.greaterThan(0);
       });
@@ -598,7 +605,7 @@ describe('InputStateManager TDD Test Suite', () => {
         }).to.not.throw();
 
         // Assert: Error should be logged
-        const errorLogs = logMessages.filter(msg =>
+        const errorLogs = logMessages.filter((msg) =>
           msg.includes('Error in state change listener for ime')
         );
         expect(errorLogs).to.have.length.greaterThan(0);
@@ -619,7 +626,7 @@ describe('InputStateManager TDD Test Suite', () => {
         }).to.not.throw();
 
         // Assert: Error should be logged
-        const errorLogs = logMessages.filter(msg =>
+        const errorLogs = logMessages.filter((msg) =>
           msg.includes('Error in global state change listener')
         );
         expect(errorLogs).to.have.length.greaterThan(0);
@@ -691,7 +698,7 @@ describe('InputStateManager TDD Test Suite', () => {
         stateManager.updateIMEState({
           isActive: true,
           data: 'original',
-          timestamp: 12345
+          timestamp: 12345,
         });
 
         // Act: Get history and attempt to modify
@@ -720,25 +727,25 @@ describe('InputStateManager TDD Test Suite', () => {
         stateManager.updateIMEState({
           isActive: true,
           data: 'composing text',
-          lastEvent: 'update'
+          lastEvent: 'update',
         });
 
         stateManager.updateAltClickState({
           isVSCodeAltClickEnabled: true,
           isAltKeyPressed: false,
-          clickCount: 5
+          clickCount: 5,
         });
 
         stateManager.updateKeyboardState({
           isInChordMode: true,
           lastKeyPressed: 'Ctrl+K',
-          modifiers: { ctrl: true, alt: false, shift: true, meta: false }
+          modifiers: { ctrl: true, alt: false, shift: true, meta: false },
         });
 
         stateManager.updateAgentState({
           isAgentMode: true,
           agentType: 'claude-code',
-          isAwaitingResponse: false
+          isAwaitingResponse: false,
         });
 
         // Act: Get state summary
@@ -766,7 +773,7 @@ describe('InputStateManager TDD Test Suite', () => {
         // Arrange: Keyboard state with no modifiers
         stateManager.updateKeyboardState({
           lastKeyPressed: 'a',
-          modifiers: { ctrl: false, alt: false, shift: false, meta: false }
+          modifiers: { ctrl: false, alt: false, shift: false, meta: false },
         });
 
         // Act: Get summary
@@ -801,7 +808,7 @@ describe('InputStateManager TDD Test Suite', () => {
           startOffset: 5,
           endOffset: 10,
           lastEvent: 'update',
-          timestamp: Date.now()
+          timestamp: Date.now(),
         });
 
         // Verify state is modified
@@ -832,7 +839,7 @@ describe('InputStateManager TDD Test Suite', () => {
         // Arrange: Modify keyboard state
         stateManager.updateKeyboardState({
           isInChordMode: true,
-          lastKeyPressed: 'Ctrl+K'
+          lastKeyPressed: 'Ctrl+K',
         });
 
         // Clear previous changes
@@ -853,7 +860,7 @@ describe('InputStateManager TDD Test Suite', () => {
         stateManager.resetStateSection('altClick');
 
         // Assert: Should log reset operation
-        const resetLogs = logMessages.filter(msg =>
+        const resetLogs = logMessages.filter((msg) =>
           msg.includes('Reset altClick state to default')
         );
         expect(resetLogs).to.have.length.greaterThan(0);
@@ -924,9 +931,7 @@ describe('InputStateManager TDD Test Suite', () => {
         stateManager.resetAllState();
 
         // Assert: Should log complete reset
-        const resetLogs = logMessages.filter(msg =>
-          msg.includes('Reset all state to default')
-        );
+        const resetLogs = logMessages.filter((msg) => msg.includes('Reset all state to default'));
         expect(resetLogs).to.have.length.greaterThan(0);
       });
 
@@ -1015,12 +1020,12 @@ describe('InputStateManager TDD Test Suite', () => {
         // Act: Try to update state (should not cause validation errors)
         stateManager.updateIMEState({
           startOffset: -1, // Would normally cause validation error
-          endOffset: -1
+          endOffset: -1,
         });
 
         // Assert: Should not log validation errors after disposal
         const recentLogs = logMessages.slice(-5); // Check recent logs
-        const validationErrors = recentLogs.filter(msg =>
+        const validationErrors = recentLogs.filter((msg) =>
           msg.includes('State validation errors')
         );
         expect(validationErrors).to.have.length(0);
@@ -1138,14 +1143,14 @@ describe('InputStateManager TDD Test Suite', () => {
           data: '', // Warning: active but no data
           startOffset: -1, // Error: invalid offset
           endOffset: -5, // Error: invalid offset
-          timestamp: -1000 // Error: invalid timestamp
+          timestamp: -1000, // Error: invalid timestamp
         });
 
         // Assert: Should log both errors and warnings
-        const errorLogs = logMessages.filter(msg =>
+        const errorLogs = logMessages.filter((msg) =>
           msg.includes('State validation errors for ime')
         );
-        const warningLogs = logMessages.filter(msg =>
+        const warningLogs = logMessages.filter((msg) =>
           msg.includes('State validation warnings for ime')
         );
 
@@ -1157,29 +1162,29 @@ describe('InputStateManager TDD Test Suite', () => {
         // Act: Update multiple sections with validation issues
         stateManager.updateIMEState({
           startOffset: -1,
-          timestamp: -1
+          timestamp: -1,
         });
 
         stateManager.updateAltClickState({
           clickCount: -5,
           isAltKeyPressed: true,
-          isVSCodeAltClickEnabled: false
+          isVSCodeAltClickEnabled: false,
         });
 
         stateManager.updateKeyboardState({
           lastKeyTimestamp: -1000,
           isInChordMode: true,
-          lastKeyPressed: null
+          lastKeyPressed: null,
         });
 
         // Assert: Should validate all sections independently
-        const imeErrorLogs = logMessages.filter(msg =>
+        const imeErrorLogs = logMessages.filter((msg) =>
           msg.includes('State validation errors for ime')
         );
-        const altClickErrorLogs = logMessages.filter(msg =>
+        const altClickErrorLogs = logMessages.filter((msg) =>
           msg.includes('State validation errors for altClick')
         );
-        const keyboardErrorLogs = logMessages.filter(msg =>
+        const keyboardErrorLogs = logMessages.filter((msg) =>
           msg.includes('State validation errors for keyboard')
         );
 

@@ -85,9 +85,7 @@ export class TerminalIOCoordinator {
         }
         this._activeTerminalManager.setActive(emergencyTerminal);
         resolvedTerminalId = emergencyTerminal;
-        log(
-          `⚠️ [TERMINAL] Emergency fallback to first available terminal: ${resolvedTerminalId}`
-        );
+        log(`⚠️ [TERMINAL] Emergency fallback to first available terminal: ${resolvedTerminalId}`);
       } else {
         resolvedTerminalId = activeId;
       }
@@ -142,7 +140,7 @@ export class TerminalIOCoordinator {
           terminal.ptyProcess &&
           typeof terminal.ptyProcess === 'object' &&
           'write' in terminal.ptyProcess
-            ? typeof (terminal.ptyProcess as any).write
+            ? typeof (terminal.ptyProcess as { write: unknown }).write
             : 'no ptyProcess',
         createdAt: terminal.createdAt,
         cwd: terminal.cwd,
@@ -211,9 +209,18 @@ export class TerminalIOCoordinator {
     }
 
     try {
+      // 🔧 FIX: Get PTY instance with null check
       const ptyInstance = terminal.ptyProcess || terminal.pty;
+
+      // 🔧 FIX: Add explicit null check for ptyInstance
       if (!ptyInstance) {
         log(`❌ [TERMINAL] Cannot write to terminal ${terminalId}: no PTY instance`);
+        return false;
+      }
+
+      // 🔧 FIX: Check if write method exists before calling
+      if (typeof ptyInstance.write !== 'function') {
+        log(`❌ [TERMINAL] Cannot write to terminal ${terminalId}: PTY missing write method`);
         return false;
       }
 
@@ -274,7 +281,7 @@ export class TerminalIOCoordinator {
       terminal.ptyProcess &&
       typeof terminal.ptyProcess === 'object' &&
       'killed' in terminal.ptyProcess &&
-      (terminal.ptyProcess as any).killed
+      (terminal.ptyProcess as { killed: boolean }).killed
     ) {
       return { success: false, error: 'PTY process has been killed' };
     }
@@ -346,6 +353,7 @@ export class TerminalIOCoordinator {
     // Get PTY instance
     const ptyInstance = terminal.ptyProcess || terminal.pty;
 
+    // 🔧 FIX: Add explicit null check for ptyInstance
     if (!ptyInstance) {
       return { success: false, error: 'No PTY instance available' };
     }
@@ -359,7 +367,7 @@ export class TerminalIOCoordinator {
       terminal.ptyProcess &&
       typeof terminal.ptyProcess === 'object' &&
       'killed' in terminal.ptyProcess &&
-      (terminal.ptyProcess as any).killed
+      (terminal.ptyProcess as { killed: boolean }).killed
     ) {
       return { success: false, error: 'PTY process has been killed' };
     }

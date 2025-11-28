@@ -130,25 +130,21 @@ export abstract class ConfigurationTest extends BaseTest {
   /**
    * Assert configuration was updated with specific target
    */
-  protected assertConfigUpdated(
-    key: string,
-    value: unknown,
-    target?: number
-  ): void {
+  protected assertConfigUpdated(key: string, value: unknown, target?: number): void {
     const updateStub = this.vscode.configuration.update as sinon.SinonStub;
 
     if (target !== undefined) {
       if (!updateStub.calledWith(key, value, target)) {
         throw new Error(
           `Expected configuration "${key}" to be updated to ${JSON.stringify(value)} ` +
-          `with target ${target}, but it wasn't`
+            `with target ${target}, but it wasn't`
         );
       }
     } else {
       if (!updateStub.calledWith(key, value)) {
         throw new Error(
           `Expected configuration "${key}" to be updated to ${JSON.stringify(value)}, ` +
-          `but it wasn't`
+            `but it wasn't`
         );
       }
     }
@@ -157,9 +153,7 @@ export abstract class ConfigurationTest extends BaseTest {
   /**
    * Reset singleton instance (useful for configuration services)
    */
-  protected resetSingleton<T extends { instance?: unknown }>(
-    serviceClass: T
-  ): void {
+  protected resetSingleton<T extends { instance?: unknown }>(serviceClass: T): void {
     (serviceClass as { instance?: unknown }).instance = undefined;
   }
 

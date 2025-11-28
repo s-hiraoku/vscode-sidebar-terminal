@@ -1,10 +1,6 @@
 import * as vscode from 'vscode';
 import { provider as log } from '../../utils/logger';
-import {
-  MessageBridge,
-  WebviewMessageHandler,
-  WebviewMessageValidator,
-} from './MessageBridge';
+import { MessageBridge, WebviewMessageHandler, WebviewMessageValidator } from './MessageBridge';
 import { PanelLocationController } from './PanelLocationController';
 
 export interface ViewBootstrapperHooks {
@@ -23,7 +19,10 @@ export class ViewBootstrapper {
     private readonly logger: typeof log = log
   ) {}
 
-  public async bootstrap(webviewView: vscode.WebviewView, hooks: ViewBootstrapperHooks): Promise<void> {
+  public async bootstrap(
+    webviewView: vscode.WebviewView,
+    hooks: ViewBootstrapperHooks
+  ): Promise<void> {
     this.logger('🚀 [BOOTSTRAP] Starting Secondary Terminal webview setup');
 
     this.messageBridge.register(webviewView, hooks.validateMessage, hooks.handleMessage);

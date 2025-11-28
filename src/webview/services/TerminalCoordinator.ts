@@ -10,11 +10,12 @@ import {
   TerminalInfo,
   TerminalCreationOptions,
   TerminalCoordinatorEvents,
-  TerminalCoordinatorConfig
+  TerminalCoordinatorConfig,
 } from './ITerminalCoordinator';
 import { BaseManager } from '../managers/BaseManager';
 import { SPLIT_CONSTANTS } from '../constants/webview';
 import { safeProcessCwd } from '../../utils/common';
+import { DOMUtils } from '../utils/DOMUtils';
 
 interface InternalTerminalInfo extends TerminalInfo {
   container: HTMLElement;
@@ -72,7 +73,7 @@ export class TerminalCoordinator extends BaseManager implements ITerminalCoordin
       'onTerminalRemoved',
       'onTerminalActivated',
       'onTerminalOutput',
-      'onTerminalResize'
+      'onTerminalResize',
     ];
 
     for (const eventType of eventTypes) {
@@ -99,7 +100,9 @@ export class TerminalCoordinator extends BaseManager implements ITerminalCoordin
   // Terminal lifecycle management
   public async createTerminal(_options: TerminalCreationOptions = {}): Promise<string> {
     if (!this.canCreateTerminal()) {
-      throw new Error(`Cannot create terminal: maximum of ${this.config.maxTerminals} terminals reached`);
+      throw new Error(
+        `Cannot create terminal: maximum of ${this.config.maxTerminals} terminals reached`
+      );
     }
 
     const terminalId = `terminal-${++this.terminalCounter}`;
@@ -130,6 +133,8 @@ export class TerminalCoordinator extends BaseManager implements ITerminalCoordin
 
       // Open terminal in container
       terminal.open(container);
+      // Reset xterm.js inline styles before fit to allow terminal expansion
+      DOMUtils.resetXtermInlineStyles(container);
       fitAddon.fit();
 
       // Setup terminal event handlers
@@ -158,7 +163,6 @@ export class TerminalCoordinator extends BaseManager implements ITerminalCoordin
 
       this.logger(`Terminal created: ${terminalId}`);
       return terminalId;
-
     } catch (error) {
       this.logger(`Failed to create terminal: ${error}`);
       throw error;
@@ -193,7 +197,6 @@ export class TerminalCoordinator extends BaseManager implements ITerminalCoordin
 
       this.logger(`Terminal removed: ${terminalId}`);
       return true;
-
     } catch (error) {
       this.logger(`Failed to remove terminal ${terminalId}: ${error}`);
       return false;
@@ -221,6 +224,8 @@ export class TerminalCoordinator extends BaseManager implements ITerminalCoordin
     (terminalInfo as any).isActive = true;
     terminalInfo.container.style.display = 'block';
     terminalInfo.terminal.focus();
+    // Reset xterm.js inline styles before fit to allow terminal expansion
+    DOMUtils.resetXtermInlineStyles(terminalInfo.container);
     terminalInfo.fitAddon.fit();
 
     // Emit activation event
@@ -280,6 +285,8 @@ export class TerminalCoordinator extends BaseManager implements ITerminalCoordin
     const terminalInfo = this.terminals.get(terminalId);
     if (terminalInfo) {
       terminalInfo.terminal.resize(cols, rows);
+      // Reset xterm.js inline styles before fit to allow terminal expansion
+      DOMUtils.resetXtermInlineStyles(terminalInfo.container);
       terminalInfo.fitAddon.fit();
       this.emitEvent('onTerminalResize', terminalId, cols, rows);
     } else {

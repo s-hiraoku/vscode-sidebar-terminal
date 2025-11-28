@@ -242,8 +242,7 @@ describe('Profile Selector Integration', () => {
 
       expect((mockCoordinator.postMessageToExtension as sinon.SinonStub).calledOnce).to.be.true;
 
-      const message = (mockCoordinator.postMessageToExtension as sinon.SinonStub).firstCall
-        .args[0];
+      const message = (mockCoordinator.postMessageToExtension as sinon.SinonStub).firstCall.args[0];
       expect((message as any).command).to.equal('getTerminalProfiles');
     });
 
@@ -284,7 +283,7 @@ describe('Profile Selector Integration', () => {
       ).firstCall.args;
 
       expect(terminalId).to.be.a('string');
-      expect((terminalName as string)).to.include('Bash');
+      expect(terminalName as string).to.include('Bash');
       expect((options as any).profileId).to.equal('bash');
       expect((options as any).shell).to.equal('/bin/bash');
     });
@@ -294,8 +293,7 @@ describe('Profile Selector Integration', () => {
 
       expect((mockCoordinator.postMessageToExtension as sinon.SinonStub).calledOnce).to.be.true;
 
-      const message = (mockCoordinator.postMessageToExtension as sinon.SinonStub).firstCall
-        .args[0];
+      const message = (mockCoordinator.postMessageToExtension as sinon.SinonStub).firstCall.args[0];
       expect((message as any).command).to.equal('setDefaultProfile');
       expect((message as any).profileId).to.equal('zsh');
     });

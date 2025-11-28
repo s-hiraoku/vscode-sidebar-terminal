@@ -71,9 +71,7 @@ export class ExtensionPersistenceService implements IExtensionPersistencePort {
   /**
    * Restore a session
    */
-  async restoreSession(
-    request: RestoreSessionRequestDTO
-  ): Promise<RestoreSessionResponseDTO> {
+  async restoreSession(request: RestoreSessionRequestDTO): Promise<RestoreSessionResponseDTO> {
     try {
       const sessionData = await this.getSessionData(request.sessionId);
 
@@ -163,10 +161,7 @@ export class ExtensionPersistenceService implements IExtensionPersistencePort {
       const retentionMs = ExtensionPersistenceService.RETENTION_DAYS * 24 * 60 * 60 * 1000;
 
       if (now - sessionData.timestamp > retentionMs) {
-        await this.context.globalState.update(
-          ExtensionPersistenceService.STORAGE_KEY,
-          undefined
-        );
+        await this.context.globalState.update(ExtensionPersistenceService.STORAGE_KEY, undefined);
       }
     } catch (error) {
       console.error('Failed to cleanup expired sessions:', error);
@@ -180,9 +175,7 @@ export class ExtensionPersistenceService implements IExtensionPersistencePort {
     try {
       // Try workspace state first, then global state
       let data =
-        this.context.workspaceState.get<SessionDataDTO>(
-          ExtensionPersistenceService.STORAGE_KEY
-        ) ||
+        this.context.workspaceState.get<SessionDataDTO>(ExtensionPersistenceService.STORAGE_KEY) ||
         this.context.globalState.get<SessionDataDTO>(ExtensionPersistenceService.STORAGE_KEY);
 
       return data || null;

@@ -8,7 +8,10 @@ import { expect } from 'chai';
 import { describe, it, beforeEach, afterEach } from 'mocha';
 import sinon from 'sinon';
 import { JSDOM } from 'jsdom';
-import { BaseInputHandler, InputHandlerConfig } from '../../../webview/managers/input/handlers/BaseInputHandler';
+import {
+  BaseInputHandler,
+  InputHandlerConfig,
+} from '../../../webview/managers/input/handlers/BaseInputHandler';
 import { InputEventService } from '../../../webview/managers/input/services/InputEventService';
 import { InputStateManager } from '../../../webview/managers/input/services/InputStateManager';
 
@@ -94,9 +97,9 @@ class IntegratedInputHandler extends BaseInputHandler {
         ctrl: keyEvent.ctrlKey,
         alt: keyEvent.altKey,
         shift: keyEvent.shiftKey,
-        meta: keyEvent.metaKey
+        meta: keyEvent.metaKey,
       },
-      lastKeyTimestamp: Date.now()
+      lastKeyTimestamp: Date.now(),
     });
 
     // Handle chord mode detection
@@ -130,7 +133,7 @@ class IntegratedInputHandler extends BaseInputHandler {
       // Handle Alt+Click
       this.stateManager.updateAltClickState({
         lastClickPosition: { x: mouseEvent.clientX, y: mouseEvent.clientY },
-        clickCount: altClickState.clickCount + 1
+        clickCount: altClickState.clickCount + 1,
       });
     }
   }
@@ -141,7 +144,7 @@ class IntegratedInputHandler extends BaseInputHandler {
       isActive: true,
       data: compEvent.data || '',
       lastEvent: 'start',
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
   }
 
@@ -151,7 +154,7 @@ class IntegratedInputHandler extends BaseInputHandler {
       isActive: false,
       data: compEvent.data || '',
       lastEvent: 'end',
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
   }
 
@@ -160,11 +163,15 @@ class IntegratedInputHandler extends BaseInputHandler {
   }
 
   private onKeyboardStateChange(newState: any, previousState: any): void {
-    this.logger(`Keyboard state changed: chord mode ${previousState.isInChordMode} -> ${newState.isInChordMode}`);
+    this.logger(
+      `Keyboard state changed: chord mode ${previousState.isInChordMode} -> ${newState.isInChordMode}`
+    );
   }
 
   private onAltClickStateChange(newState: any, previousState: any): void {
-    this.logger(`Alt+Click state changed: pressed ${previousState.isAltKeyPressed} -> ${newState.isAltKeyPressed}`);
+    this.logger(
+      `Alt+Click state changed: pressed ${previousState.isAltKeyPressed} -> ${newState.isAltKeyPressed}`
+    );
   }
 
   // Expose internal services for testing
@@ -238,7 +245,8 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
 
   beforeEach(() => {
     // Arrange: Setup comprehensive DOM environment
-    dom = new JSDOM(`
+    dom = new JSDOM(
+      `
       <!DOCTYPE html>
       <html>
         <body>
@@ -247,11 +255,13 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
           </div>
         </body>
       </html>
-    `, {
-      url: 'http://localhost',
-      pretendToBeVisual: true,
-      resources: 'usable'
-    });
+    `,
+      {
+        url: 'http://localhost',
+        pretendToBeVisual: true,
+        resources: 'usable',
+      }
+    );
 
     restoreGlobals = installDomGlobals(dom.window as any);
 
@@ -293,7 +303,7 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
           ctrlKey: true,
           altKey: false,
           shiftKey: true,
-          metaKey: false
+          metaKey: false,
         });
 
         terminalElement.dispatchEvent(keyEvent);
@@ -335,8 +345,8 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
         expect(eventMetrics.totalDebounced).to.equal(1);
 
         // Assert: Should check IME state during processing (via logs)
-        const imeCheckLogs = logMessages.filter(msg =>
-          msg.includes('Processing regular input') || msg.includes('IME')
+        const imeCheckLogs = logMessages.filter(
+          (msg) => msg.includes('Processing regular input') || msg.includes('IME')
         );
         // Since IME is active, regular input processing should be skipped
         expect(imeCheckLogs.length).to.equal(0);
@@ -346,17 +356,17 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
         // Act: Trigger multiple event types simultaneously
         const keydownEvent = new dom.window.KeyboardEvent('keydown', {
           key: 'k',
-          ctrlKey: true
+          ctrlKey: true,
         });
 
         const clickEvent = new dom.window.MouseEvent('click', {
           clientX: 100,
           clientY: 200,
-          altKey: true
+          altKey: true,
         });
 
         const compositionEvent = new dom.window.CompositionEvent('compositionstart', {
-          data: 'test'
+          data: 'test',
         });
 
         // Dispatch events concurrently
@@ -418,16 +428,14 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
         // Act: Trigger keyboard event that should update state
         const keyEvent = new dom.window.KeyboardEvent('keydown', {
           key: 'k',
-          ctrlKey: true
+          ctrlKey: true,
         });
 
         terminalElement.dispatchEvent(keyEvent);
 
         // Assert: Should have triggered state changes
         expect(stateChanges.length).to.be.greaterThan(0);
-        const keyboardChanges = stateChanges.filter(change =>
-          change.stateKey === 'keyboard'
-        );
+        const keyboardChanges = stateChanges.filter((change) => change.stateKey === 'keyboard');
         expect(keyboardChanges.length).to.be.greaterThan(0);
       });
 
@@ -438,7 +446,7 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
         for (let i = 0; i < 10; i++) {
           const keyEvent = new dom.window.KeyboardEvent('keydown', {
             key: 'a',
-            altKey: i % 2 === 0 // Alternate Alt key state
+            altKey: i % 2 === 0, // Alternate Alt key state
           });
 
           terminalElement.dispatchEvent(keyEvent);
@@ -464,7 +472,7 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
 
         // Act: Start IME composition
         const compositionStart = new dom.window.CompositionEvent('compositionstart', {
-          data: 'k'
+          data: 'k',
         });
         terminalElement.dispatchEvent(compositionStart);
 
@@ -475,10 +483,10 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
 
         // Act: Composition update events
         const compositionUpdate1 = new dom.window.CompositionEvent('compositionupdate', {
-          data: 'ko'
+          data: 'ko',
         });
         const compositionUpdate2 = new dom.window.CompositionEvent('compositionupdate', {
-          data: 'kon'
+          data: 'kon',
         });
 
         terminalElement.dispatchEvent(compositionUpdate1);
@@ -490,7 +498,7 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
 
         // Act: Complete composition
         const compositionEnd = new dom.window.CompositionEvent('compositionend', {
-          data: 'こん'
+          data: 'こん',
         });
         terminalElement.dispatchEvent(compositionEnd);
 
@@ -504,9 +512,7 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
         expect(eventService.getGlobalMetrics().totalProcessed).to.be.greaterThan(3);
 
         // Assert: Input processing was properly coordinated
-        const inputLogs = logMessages.filter(msg =>
-          msg.includes('Processing regular input')
-        );
+        const inputLogs = logMessages.filter((msg) => msg.includes('Processing regular input'));
         // Input should not be processed during IME composition
         expect(inputLogs.length).to.equal(0);
       });
@@ -516,7 +522,7 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
 
         // Act: Start and immediately cancel IME composition
         const compositionStart = new dom.window.CompositionEvent('compositionstart', {
-          data: 'test'
+          data: 'test',
         });
         terminalElement.dispatchEvent(compositionStart);
 
@@ -524,7 +530,7 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
 
         // Act: Cancel composition (empty data)
         const compositionEnd = new dom.window.CompositionEvent('compositionend', {
-          data: ''
+          data: '',
         });
         terminalElement.dispatchEvent(compositionEnd);
 
@@ -541,13 +547,13 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
 
         // Arrange: Enable VS Code Alt+Click
         stateManager.updateAltClickState({
-          isVSCodeAltClickEnabled: true
+          isVSCodeAltClickEnabled: true,
         });
 
         // Act: Alt+Click sequence
         const altKeyDown = new dom.window.KeyboardEvent('keydown', {
           key: 'Alt',
-          altKey: true
+          altKey: true,
         });
         terminalElement.dispatchEvent(altKeyDown);
 
@@ -558,7 +564,7 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
         const altClick = new dom.window.MouseEvent('click', {
           clientX: 150,
           clientY: 250,
-          altKey: true
+          altKey: true,
         });
         terminalElement.dispatchEvent(altClick);
 
@@ -570,7 +576,7 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
         // Act: Release Alt key
         const altKeyUp = new dom.window.KeyboardEvent('keyup', {
           key: 'Alt',
-          altKey: false
+          altKey: false,
         });
         terminalElement.dispatchEvent(altKeyUp);
 
@@ -586,14 +592,14 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
 
         // Arrange: Disable VS Code Alt+Click
         stateManager.updateAltClickState({
-          isVSCodeAltClickEnabled: false
+          isVSCodeAltClickEnabled: false,
         });
 
         // Act: Alt+Click
         const altClick = new dom.window.MouseEvent('click', {
           clientX: 100,
           clientY: 200,
-          altKey: true
+          altKey: true,
         });
         terminalElement.dispatchEvent(altClick);
 
@@ -611,7 +617,7 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
         // Act: Trigger Ctrl+K to enter chord mode
         const ctrlK = new dom.window.KeyboardEvent('keydown', {
           key: 'k',
-          ctrlKey: true
+          ctrlKey: true,
         });
         terminalElement.dispatchEvent(ctrlK);
 
@@ -627,7 +633,7 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
         // Act: Follow with second key to complete chord
         const secondKey = new dom.window.KeyboardEvent('keydown', {
           key: 'c',
-          ctrlKey: false
+          ctrlKey: false,
         });
         terminalElement.dispatchEvent(secondKey);
 
@@ -647,26 +653,26 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
 
         stateManager.addStateListener('keyboard', (newState, previousState) => {
           stateChanges.push({
-            chordMode: { from: previousState.isInChordMode, to: newState.isInChordMode }
+            chordMode: { from: previousState.isInChordMode, to: newState.isInChordMode },
           });
         });
 
         // Act: Enter and exit chord mode
         const ctrlK = new dom.window.KeyboardEvent('keydown', {
           key: 'k',
-          ctrlKey: true
+          ctrlKey: true,
         });
         terminalElement.dispatchEvent(ctrlK);
 
         const escKey = new dom.window.KeyboardEvent('keydown', {
-          key: 'Escape'
+          key: 'Escape',
         });
         terminalElement.dispatchEvent(escKey);
 
         // Assert: Should track chord mode transitions
         expect(stateChanges.length).to.be.greaterThan(0);
-        const chordModeChanges = stateChanges.filter(change =>
-          change.chordMode.from !== change.chordMode.to
+        const chordModeChanges = stateChanges.filter(
+          (change) => change.chordMode.from !== change.chordMode.to
         );
         expect(chordModeChanges.length).to.be.greaterThan(0);
       });
@@ -680,14 +686,14 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
 
         // Act: Start IME composition
         const compositionStart = new dom.window.CompositionEvent('compositionstart', {
-          data: 'test'
+          data: 'test',
         });
         terminalElement.dispatchEvent(compositionStart);
 
         // Act: Try keyboard shortcut during IME composition
         const ctrlC = new dom.window.KeyboardEvent('keydown', {
           key: 'c',
-          ctrlKey: true
+          ctrlKey: true,
         });
         terminalElement.dispatchEvent(ctrlC);
 
@@ -708,7 +714,7 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
 
         // Act: Start IME composition
         const compositionStart = new dom.window.CompositionEvent('compositionstart', {
-          data: 'composing'
+          data: 'composing',
         });
         terminalElement.dispatchEvent(compositionStart);
 
@@ -726,7 +732,7 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
         expect(eventService.getGlobalMetrics().totalProcessed).to.be.greaterThan(3);
 
         // Assert: But regular input processing should be skipped (via logs)
-        const inputProcessingLogs = logMessages.filter(msg =>
+        const inputProcessingLogs = logMessages.filter((msg) =>
           msg.includes('Processing regular input event')
         );
         expect(inputProcessingLogs.length).to.equal(0); // No regular processing during IME
@@ -745,7 +751,7 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
 
         // Act: Trigger event that will cause error
         const keyEvent = new dom.window.KeyboardEvent('keydown', {
-          key: 'a'
+          key: 'a',
         });
 
         expect(() => {
@@ -772,23 +778,21 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
         stateManager.updateIMEState({
           startOffset: -1,
           endOffset: -5,
-          timestamp: -1000
+          timestamp: -1000,
         });
 
         stateManager.updateKeyboardState({
-          lastKeyTimestamp: -2000
+          lastKeyTimestamp: -2000,
         });
 
         // Assert: Should log validation errors
-        const errorLogs = logMessages.filter(msg =>
-          msg.includes('State validation errors')
-        );
+        const errorLogs = logMessages.filter((msg) => msg.includes('State validation errors'));
         expect(errorLogs.length).to.be.greaterThan(0);
 
         // Assert: Services should remain functional despite validation errors
         expect(() => {
           const keyEvent = new dom.window.KeyboardEvent('keydown', {
-            key: 'b'
+            key: 'b',
           });
           terminalElement.dispatchEvent(keyEvent);
         }).to.not.throw();
@@ -797,7 +801,7 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
         stateManager.updateIMEState({
           isActive: true,
           data: 'valid data',
-          timestamp: Date.now()
+          timestamp: Date.now(),
         });
 
         const imeState = stateManager.getStateSection('ime');
@@ -814,7 +818,7 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
         const startTime = Date.now();
         for (let i = 0; i < 1000; i++) {
           const keyEvent = new dom.window.KeyboardEvent('keydown', {
-            key: String.fromCharCode(65 + (i % 26)) // A-Z
+            key: String.fromCharCode(65 + (i % 26)), // A-Z
           });
           terminalElement.dispatchEvent(keyEvent);
         }
@@ -839,12 +843,12 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
         for (let i = 0; i < 100; i++) {
           stateManager.updateIMEState({
             data: `rapid${i}`,
-            timestamp: Date.now() + i
+            timestamp: Date.now() + i,
           });
 
           stateManager.updateKeyboardState({
             lastKeyPressed: `key${i}`,
-            lastKeyTimestamp: Date.now() + i
+            lastKeyTimestamp: Date.now() + i,
           });
 
           clock.tick(1);
@@ -891,8 +895,8 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
         expect(state.ime.isActive).to.be.false;
 
         // Assert: Should log disposal
-        const disposalLogs = logMessages.filter(msg =>
-          msg.includes('disposing') || msg.includes('disposed')
+        const disposalLogs = logMessages.filter(
+          (msg) => msg.includes('disposing') || msg.includes('disposed')
         );
         expect(disposalLogs.length).to.be.greaterThan(0);
       });
@@ -909,9 +913,7 @@ describe('Input Handling Architecture Integration TDD Test Suite', () => {
         clock.tick(50);
 
         // Assert: No errors should occur and logs should indicate clean disposal
-        const errorLogs = logMessages.filter(msg =>
-          msg.toLowerCase().includes('error')
-        );
+        const errorLogs = logMessages.filter((msg) => msg.toLowerCase().includes('error'));
         expect(errorLogs.length).to.equal(0);
       });
 

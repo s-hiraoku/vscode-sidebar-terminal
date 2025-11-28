@@ -193,7 +193,10 @@ export class CommandRegistrar {
               void vscode.window.showErrorMessage('Session manager not available');
             }
           } catch (error) {
-            logger.error('Failed to clear terminal session via clearCorruptedHistory command', error);
+            logger.error(
+              'Failed to clear terminal session via clearCorruptedHistory command',
+              error
+            );
             void vscode.window.showErrorMessage(
               `Failed to clear session: ${error instanceof Error ? error.message : String(error)}`
             );
@@ -286,7 +289,9 @@ export class CommandRegistrar {
         command: 'secondaryTerminal.getCommandHistory',
         handler: (terminalId: string) => {
           if (this.deps.shellIntegrationService) {
-            const history = this.deps.shellIntegrationService.getCommandHistory(terminalId as string);
+            const history = this.deps.shellIntegrationService.getCommandHistory(
+              terminalId as string
+            );
             this.deps.sidebarProvider?.sendMessageToWebview({
               command: 'commandHistory',
               terminalId,

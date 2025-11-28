@@ -15,7 +15,10 @@ import { IIMEHandler } from './input/interfaces/IInputHandlers';
 import { InputStateManager } from './input/services/InputStateManager';
 import { InputEventService } from './input/services/InputEventService';
 import { KeybindingService } from './input/services/KeybindingService';
-import { TerminalOperationsService, ScrollDirection } from './input/services/TerminalOperationsService';
+import {
+  TerminalOperationsService,
+  ScrollDirection,
+} from './input/services/TerminalOperationsService';
 
 export class InputManager extends BaseManager implements IInputManager {
   // Event handler registry for centralized event management
@@ -45,7 +48,13 @@ export class InputManager extends BaseManager implements IInputManager {
     this.keybindingService = new KeybindingService((message: string) => this.logger(message));
     this.terminalOperationsService = new TerminalOperationsService(
       (message: string) => this.logger(message),
-      (type, terminalId, data, manager) => this.emitTerminalInteractionEvent(type as TerminalInteractionEvent['type'], terminalId, data, manager)
+      (type, terminalId, data, manager) =>
+        this.emitTerminalInteractionEvent(
+          type as TerminalInteractionEvent['type'],
+          terminalId,
+          data,
+          manager
+        )
     );
 
     // Initialize IME handler with new architecture
@@ -179,7 +188,8 @@ export class InputManager extends BaseManager implements IInputManager {
       }
 
       // Check for KEY_IN_COMPOSITION (VS Code standard)
-      if (event.keyCode === 229) { // KeyCode.KEY_IN_COMPOSITION
+      if (event.keyCode === 229) {
+        // KeyCode.KEY_IN_COMPOSITION
         this.logger('KEY_IN_COMPOSITION detected - stopping propagation');
         event.stopPropagation();
         return;
@@ -417,7 +427,9 @@ export class InputManager extends BaseManager implements IInputManager {
 
       if (selection) {
         // Send selection to Extension to copy to clipboard
-        this.logger(`📋 Copying selection from terminal ${activeTerminalId} (${selection.length} chars)`);
+        this.logger(
+          `📋 Copying selection from terminal ${activeTerminalId} (${selection.length} chars)`
+        );
 
         manager.postMessageToExtension({
           command: 'copyToClipboard',
@@ -631,7 +643,9 @@ export class InputManager extends BaseManager implements IInputManager {
     terminal.onKey((event: { key: string; domEvent: KeyboardEvent }) => {
       // VS Code standard: Check IME composition state before processing
       if (this.imeHandler.isIMEComposing()) {
-        this.logger(`Terminal ${terminalId} key during IME composition - allowing xterm.js to handle`);
+        this.logger(
+          `Terminal ${terminalId} key during IME composition - allowing xterm.js to handle`
+        );
         // Let xterm.js handle IME composition internally
         // Don't send to extension during composition to avoid duplicate input
         return;
@@ -679,9 +693,7 @@ export class InputManager extends BaseManager implements IInputManager {
       // Alt+Click handling
       if (event.altKey && this.altClickState.isVSCodeAltClickEnabled) {
         // VS Code standard Alt+Click behavior
-        this.logger(
-          `Alt+Click on terminal ${terminalId} at (${event.clientX}, ${event.clientY})`
-        );
+        this.logger(`Alt+Click on terminal ${terminalId} at (${event.clientX}, ${event.clientY})`);
 
         // Show visual feedback
         if (this.notificationManager) {
@@ -756,10 +768,10 @@ export class InputManager extends BaseManager implements IInputManager {
 
     if (wasEnabled !== isEnabled) {
       this.altClickState.isVSCodeAltClickEnabled = isEnabled;
-      
+
       // Update unified state manager
       this.stateManager.updateAltClickState({
-        isVSCodeAltClickEnabled: isEnabled
+        isVSCodeAltClickEnabled: isEnabled,
       });
 
       this.logger(`Alt+Click setting changed: ${wasEnabled} → ${isEnabled}`);
@@ -797,9 +809,7 @@ export class InputManager extends BaseManager implements IInputManager {
 
     if (this.agentInteractionMode !== actualEnabled) {
       this.agentInteractionMode = actualEnabled;
-      this.logger(
-        `Agent interaction mode: ${actualEnabled} (VS Code standard - always disabled)`
-      );
+      this.logger(`Agent interaction mode: ${actualEnabled} (VS Code standard - always disabled)`);
 
       // Clean up any existing arrow key listener
       this.eventRegistry.unregister('agent-arrow-keys');
@@ -969,7 +979,8 @@ export class InputManager extends BaseManager implements IInputManager {
     }
 
     // Check for KEY_IN_COMPOSITION (VS Code standard)
-    if (event.keyCode === 229) { // KeyCode.KEY_IN_COMPOSITION
+    if (event.keyCode === 229) {
+      // KeyCode.KEY_IN_COMPOSITION
       this.logger('KEY_IN_COMPOSITION in special keys - blocking');
       event.stopPropagation();
       return true;

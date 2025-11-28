@@ -123,16 +123,12 @@ export class LifecycleController implements ILifecycleController, Disposable {
    */
   public attachTerminal(terminalId: string, terminal: Terminal): void {
     if (this.disposed) {
-      terminalLogger.warn(
-        `⚠️ LifecycleController disposed, cannot attach terminal: ${terminalId}`
-      );
+      terminalLogger.warn(`⚠️ LifecycleController disposed, cannot attach terminal: ${terminalId}`);
       return;
     }
 
     if (this.terminals.has(terminalId)) {
-      terminalLogger.warn(
-        `⚠️ Terminal ${terminalId} already attached, detaching first`
-      );
+      terminalLogger.warn(`⚠️ Terminal ${terminalId} already attached, detaching first`);
       this.detachTerminal(terminalId);
     }
 
@@ -153,9 +149,7 @@ export class LifecycleController implements ILifecycleController, Disposable {
   public detachTerminal(terminalId: string): void {
     const resources = this.terminals.get(terminalId);
     if (!resources) {
-      terminalLogger.warn(
-        `⚠️ Terminal ${terminalId} not found for detachment`
-      );
+      terminalLogger.warn(`⚠️ Terminal ${terminalId} not found for detachment`);
       return;
     }
 
@@ -185,26 +179,20 @@ export class LifecycleController implements ILifecycleController, Disposable {
 
     const resources = this.terminals.get(terminalId);
     if (!resources) {
-      terminalLogger.warn(
-        `⚠️ Terminal ${terminalId} not found for addon loading: ${addonName}`
-      );
+      terminalLogger.warn(`⚠️ Terminal ${terminalId} not found for addon loading: ${addonName}`);
       return null;
     }
 
     // Check if addon already loaded for this terminal
     if (resources.addons.has(addonName)) {
-      terminalLogger.debug(
-        `♻️ Reusing existing addon for ${terminalId}: ${addonName}`
-      );
+      terminalLogger.debug(`♻️ Reusing existing addon for ${terminalId}: ${addonName}`);
       return resources.addons.get(addonName) as T;
     }
 
     // Check global cache if caching enabled
     const cacheKey = `${addonName}`;
     if (cache && this.addonCache.has(cacheKey)) {
-      terminalLogger.debug(
-        `♻️ Reusing cached addon: ${addonName}`
-      );
+      terminalLogger.debug(`♻️ Reusing cached addon: ${addonName}`);
       const cachedAddon = this.addonCache.get(cacheKey) as T;
       resources.addons.set(addonName, cachedAddon);
       return cachedAddon;
@@ -256,18 +244,14 @@ export class LifecycleController implements ILifecycleController, Disposable {
   ): void {
     const resources = this.terminals.get(terminalId);
     if (!resources) {
-      terminalLogger.warn(
-        `⚠️ Terminal ${terminalId} not found for event listener: ${eventName}`
-      );
+      terminalLogger.warn(`⚠️ Terminal ${terminalId} not found for event listener: ${eventName}`);
       return;
     }
 
     // Store handler for cleanup
     resources.eventListeners.set(eventName, handler);
 
-    terminalLogger.debug(
-      `✅ Added event listener for ${terminalId}: ${eventName}`
-    );
+    terminalLogger.debug(`✅ Added event listener for ${terminalId}: ${eventName}`);
   }
 
   /**
@@ -280,9 +264,7 @@ export class LifecycleController implements ILifecycleController, Disposable {
     }
 
     resources.eventListeners.delete(eventName);
-    terminalLogger.debug(
-      `🧹 Removed event listener for ${terminalId}: ${eventName}`
-    );
+    terminalLogger.debug(`🧹 Removed event listener for ${terminalId}: ${eventName}`);
   }
 
   /**
@@ -293,9 +275,7 @@ export class LifecycleController implements ILifecycleController, Disposable {
   public disposeTerminal(terminalId: string): void {
     const resources = this.terminals.get(terminalId);
     if (!resources) {
-      terminalLogger.warn(
-        `⚠️ Terminal ${terminalId} not found for disposal`
-      );
+      terminalLogger.warn(`⚠️ Terminal ${terminalId} not found for disposal`);
       return;
     }
 
@@ -319,10 +299,7 @@ export class LifecycleController implements ILifecycleController, Disposable {
         `✅ LifecycleController: Disposed terminal ${terminalId} in ${elapsed.toFixed(2)}ms`
       );
     } catch (error) {
-      terminalLogger.error(
-        `❌ Error disposing terminal ${terminalId}:`,
-        error
-      );
+      terminalLogger.error(`❌ Error disposing terminal ${terminalId}:`, error);
     }
   }
 
@@ -370,9 +347,7 @@ export class LifecycleController implements ILifecycleController, Disposable {
 
     this.disposed = true;
 
-    terminalLogger.info(
-      `🧹 LifecycleController: Disposing ${this.terminals.size} terminals`
-    );
+    terminalLogger.info(`🧹 LifecycleController: Disposing ${this.terminals.size} terminals`);
 
     // Dispose all terminals
     for (const [terminalId] of this.terminals) {

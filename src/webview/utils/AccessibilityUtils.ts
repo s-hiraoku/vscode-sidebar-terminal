@@ -230,7 +230,10 @@ export class AriaHelper {
   /**
    * Mark element as current (for navigation)
    */
-  static setCurrent(element: HTMLElement, current: 'page' | 'step' | 'location' | 'date' | 'time' | 'true' | 'false'): void {
+  static setCurrent(
+    element: HTMLElement,
+    current: 'page' | 'step' | 'location' | 'date' | 'time' | 'true' | 'false'
+  ): void {
     element.setAttribute('aria-current', current);
   }
 }

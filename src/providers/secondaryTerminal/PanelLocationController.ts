@@ -55,7 +55,9 @@ export class PanelLocationController implements vscode.Disposable {
    * @deprecated Use SecondaryTerminalProvider._registerVisibilityListener() instead
    */
   public registerVisibilityListener(webviewView: vscode.WebviewView): void {
-    log('⚠️ [DEPRECATED] PanelLocationController.registerVisibilityListener is deprecated - visibility handled by SecondaryTerminalProvider');
+    log(
+      '⚠️ [DEPRECATED] PanelLocationController.registerVisibilityListener is deprecated - visibility handled by SecondaryTerminalProvider'
+    );
 
     // Method kept for backward compatibility but does nothing
     // Visibility listener is now consolidated in SecondaryTerminalProvider

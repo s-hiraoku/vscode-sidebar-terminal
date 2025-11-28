@@ -51,7 +51,7 @@ export class IMEHandler extends BaseInputHandler implements IIMEHandler {
     super('IMEHandler', eventDebounceTimers, {
       enableDebouncing: false, // IME events should not be debounced
       enableStateTracking: true,
-      enableEventPrevention: false
+      enableEventPrevention: false,
     });
 
     this.stateManager = stateManager;
@@ -147,7 +147,7 @@ export class IMEHandler extends BaseInputHandler implements IIMEHandler {
       data: compositionEvent.data || '',
       isActive: true,
       startOffset: 0,
-      endOffset: 0
+      endOffset: 0,
     };
 
     this.lastCompositionEvent = 'start';
@@ -159,7 +159,7 @@ export class IMEHandler extends BaseInputHandler implements IIMEHandler {
       startOffset: 0,
       endOffset: 0,
       lastEvent: 'start',
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
 
     // Clear any pending input events to avoid conflicts
@@ -189,7 +189,7 @@ export class IMEHandler extends BaseInputHandler implements IIMEHandler {
         data: compositionEvent.data || '',
         isActive: true,
         startOffset: 0,
-        endOffset: 0
+        endOffset: 0,
       };
     }
 
@@ -200,7 +200,7 @@ export class IMEHandler extends BaseInputHandler implements IIMEHandler {
       isActive: true,
       data: compositionEvent.data || '',
       lastEvent: 'update',
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
   }
 
@@ -227,7 +227,7 @@ export class IMEHandler extends BaseInputHandler implements IIMEHandler {
       isActive: false,
       data: compositionEvent.data || '',
       lastEvent: 'end',
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
 
     // Clear composition context after a brief delay to handle input events
@@ -245,7 +245,7 @@ export class IMEHandler extends BaseInputHandler implements IIMEHandler {
         isActive: false,
         data: '',
         lastEvent: null,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
     }, 0);
   }
@@ -258,7 +258,9 @@ export class IMEHandler extends BaseInputHandler implements IIMEHandler {
 
     // Only process input events during active composition
     if (this.compositionContext?.isActive) {
-      this.logger(`Input during composition: ${inputEvent.data || 'no data'}, isComposing: ${inputEvent.isComposing}`);
+      this.logger(
+        `Input during composition: ${inputEvent.data || 'no data'}, isComposing: ${inputEvent.isComposing}`
+      );
 
       // Update composition context with input data if available
       if (inputEvent.data && this.compositionContext) {
@@ -267,7 +269,7 @@ export class IMEHandler extends BaseInputHandler implements IIMEHandler {
         // Update state manager
         this.stateManager.updateIMEState({
           data: inputEvent.data,
-          timestamp: Date.now()
+          timestamp: Date.now(),
         });
       }
     }
@@ -280,7 +282,9 @@ export class IMEHandler extends BaseInputHandler implements IIMEHandler {
     const inputEvent = event as InputEvent;
 
     if (this.compositionContext?.isActive) {
-      this.logger(`Before input during composition: ${inputEvent.data || 'no data'}, isComposing: ${inputEvent.isComposing}`);
+      this.logger(
+        `Before input during composition: ${inputEvent.data || 'no data'}, isComposing: ${inputEvent.isComposing}`
+      );
     }
   }
 

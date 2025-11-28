@@ -44,6 +44,8 @@ export class TerminalTabManager implements TerminalTabEvents {
   private pendingDeletions: Set<string> = new Set();
   // 🔧 FIX: Track tabs being created to prevent duplicate additions
   private pendingCreations: Set<string> = new Set();
+  // 🔧 FIX: Track pending timeouts for proper cleanup on dispose
+  private pendingTimeouts: Set<ReturnType<typeof setTimeout>> = new Set();
 
   constructor() {}
 
@@ -81,32 +83,49 @@ export class TerminalTabManager implements TerminalTabEvents {
   }
 
   private setupTabContainer(): void {
-    const existing = document.getElementById('terminal-tabs-container');
-    if (existing) {
-      this.tabContainer = existing;
-      if (existing.parentElement?.id !== 'terminal-body') {
-        const terminalBody = document.getElementById('terminal-body');
-        if (terminalBody) {
-          terminalBody.insertBefore(existing, terminalBody.firstChild);
-        }
-      }
-      existing.classList.add('terminal-tabs-root');
-      return;
-    }
-
     const terminalBody = document.getElementById('terminal-body');
     if (!terminalBody) {
       console.warn('TerminalTabManager: terminal-body not found, tabs will be created later');
       return;
     }
 
+    // Check for existing container
+    const existing = document.getElementById('terminal-tabs-container');
+    if (existing) {
+      // 🔧 FIX: Only reuse if this is our container (check for marker attribute)
+      if (existing.hasAttribute('data-tab-manager-initialized')) {
+        // Already initialized by this manager, just use it
+        this.tabContainer = existing;
+        log('[Tabs] Reusing already initialized tab container');
+        return;
+      }
+
+      // Container exists but wasn't initialized by us - remove it
+      log('[Tabs] Removing orphaned tab container');
+      existing.remove();
+    }
+
+    // Create new container
     const container = document.createElement('div');
     container.id = 'terminal-tabs-container';
     container.className = 'terminal-tabs-root';
+    container.setAttribute('data-tab-manager-initialized', 'true');
     terminalBody.insertBefore(container, terminalBody.firstChild);
 
     this.tabContainer = container;
-    log('[Tabs] Tab container created');
+    log('[Tabs] Tab container created (new)');
+  }
+
+  /**
+   * Helper: Schedule a timeout and track it for cleanup
+   */
+  private scheduleTimeout(callback: () => void, delay: number): ReturnType<typeof setTimeout> {
+    const timeoutId = setTimeout(() => {
+      this.pendingTimeouts.delete(timeoutId);
+      callback();
+    }, delay);
+    this.pendingTimeouts.add(timeoutId);
+    return timeoutId;
   }
 
   /**
@@ -129,12 +148,22 @@ export class TerminalTabManager implements TerminalTabEvents {
   public onTabClose = (tabId: string): void => {
     log(`🗂️ Tab close requested: ${tabId}`);
 
+    // 🔧 FIX: Check if deletion is already in progress to prevent duplicate deletions
+    if (this.pendingDeletions.has(tabId)) {
+      log(`⏭️ [TAB-CLOSE] Deletion already in progress, skipping: ${tabId}`);
+      return;
+    }
+
     // Protect the last tab from being closed
     if (this.tabs.size <= 1) {
       console.warn('⚠️ Cannot close the last terminal tab');
       this.showNotification('Cannot close the last terminal');
       return;
     }
+
+    // 🔧 FIX: Mark as pending deletion BEFORE any operations
+    this.pendingDeletions.add(tabId);
+    log(`🗂️ [TAB-CLOSE] Marked as pending deletion: ${tabId}`);
 
     // Handle display mode transition before closing
     this.handleDisplayModeAfterClose(tabId);
@@ -232,8 +261,10 @@ export class TerminalTabManager implements TerminalTabEvents {
 
         // Step 2: Wait for layout to complete, then add new terminal
         // Increased delay to ensure split layout is fully applied
-        setTimeout(() => {
-          log(`➕ Adding new terminal (${currentTerminalCount + 1}/${currentTerminalCount + 1}): ${newTerminalId}`);
+        this.scheduleTimeout(() => {
+          log(
+            `➕ Adding new terminal (${currentTerminalCount + 1}/${currentTerminalCount + 1}): ${newTerminalId}`
+          );
           this.coordinator!.createTerminal(newTerminalId, terminalName);
         }, 250);
       }
@@ -335,29 +366,42 @@ export class TerminalTabManager implements TerminalTabEvents {
     this.pendingDeletions.add(terminalId);
     log(`🗂️ [TAB-REMOVE] Starting removal for: ${terminalId}`);
 
+    // 🔧 FIX: Check if this was the active tab BEFORE deleting it
+    const removingTab = this.tabs.get(terminalId);
+    const wasActive = removingTab?.isActive ?? false;
+
+    // Now delete the tab
     this.tabs.delete(terminalId);
     this.tabOrder = this.tabOrder.filter((id) => id !== terminalId);
 
     this.tabList.removeTab(terminalId);
 
-    // If this was the active tab, activate another one
-    const wasActive = this.getActiveTabId() === terminalId;
+    // 🔧 FIX: If this was the active tab, activate another one
     if (wasActive && this.tabs.size > 0) {
       const nextTab = this.tabOrder[0] || Array.from(this.tabs.keys())[0];
       if (nextTab) {
+        log(`🗂️ [TAB-REMOVE] Activating next tab after removal: ${nextTab}`);
         this.setActiveTab(nextTab);
+
+        // Also notify coordinator to switch active terminal
+        if (this.coordinator) {
+          this.coordinator.setActiveTerminalId(nextTab);
+        }
       }
     }
 
     this.updateTabVisibility();
 
-    // 🔧 FIX: Clear pending deletion after a short delay to prevent race conditions
-    setTimeout(() => {
+    // 🔧 FIX: Clear pending deletion after a delay to prevent race conditions
+    // Extended from 300ms to 500ms to allow for async message processing
+    this.scheduleTimeout(() => {
       this.pendingDeletions.delete(terminalId);
       log(`🗂️ [TAB-REMOVE] Deletion tracking cleared for: ${terminalId}`);
-    }, 300);
+    }, 500);
 
-    log(`🗂️ [TAB-REMOVE] Tab removed: ${terminalId}, remaining tabs: ${this.tabs.size}`);
+    log(
+      `🗂️ [TAB-REMOVE] Tab removed: ${terminalId}, remaining tabs: ${this.tabs.size}, wasActive: ${wasActive}`
+    );
   }
 
   public updateTab(terminalId: string, updates: Partial<TerminalTab>): void {
@@ -419,6 +463,22 @@ export class TerminalTabManager implements TerminalTabEvents {
   }
 
   /**
+   * Check if a terminal ID is pending deletion
+   * Used by TerminalStateDisplayManager to filter out pending deletions from state sync
+   */
+  public hasPendingDeletion(terminalId: string): boolean {
+    return this.pendingDeletions.has(terminalId);
+  }
+
+  /**
+   * Get all pending deletion IDs
+   * Used for debugging and state verification
+   */
+  public getPendingDeletions(): Set<string> {
+    return new Set(this.pendingDeletions);
+  }
+
+  /**
    * Tab configuration
    */
   public setTabsEnabled(enabled: boolean): void {
@@ -432,9 +492,15 @@ export class TerminalTabManager implements TerminalTabEvents {
   }
 
   public syncTabs(tabInfos: TabSyncInfo[]): void {
-    log(`🔄 [SYNC-TABS] syncTabs called with ${tabInfos.length} tabs:`, tabInfos.map(t => t.id));
+    log(
+      `🔄 [SYNC-TABS] syncTabs called with ${tabInfos.length} tabs:`,
+      tabInfos.map((t) => t.id)
+    );
     log(`🔄 [SYNC-TABS] Current tabs: ${this.tabs.size}:`, Array.from(this.tabs.keys()));
-    log(`🔄 [SYNC-TABS] Pending deletions: ${this.pendingDeletions.size}:`, Array.from(this.pendingDeletions));
+    log(
+      `🔄 [SYNC-TABS] Pending deletions: ${this.pendingDeletions.size}:`,
+      Array.from(this.pendingDeletions)
+    );
 
     if (tabInfos.length === 0 && this.tabs.size === 0) {
       return;
@@ -531,17 +597,11 @@ export class TerminalTabManager implements TerminalTabEvents {
   private rebuildTabsInOrder(): void {
     if (!this.tabList) return;
 
-    // Clear and rebuild tabs in new order
-    this.tabs.forEach((_, tabId) => {
-      this.tabList!.removeTab(tabId);
-    });
+    log(`🔄 [REBUILD] Rebuilding tabs in order: ${this.tabOrder.join(', ')}`);
 
-    this.tabOrder.forEach((tabId) => {
-      const tab = this.tabs.get(tabId);
-      if (tab) {
-        this.tabList!.addTab(tab);
-      }
-    });
+    // 🔧 FIX: Use reorderTabs method instead of remove/add cycle
+    // This prevents duplicate DOM elements from being created
+    this.tabList.reorderTabs(this.tabOrder);
   }
 
   private generateTerminalId(): string {
@@ -607,9 +667,9 @@ export class TerminalTabManager implements TerminalTabEvents {
 
     if (remainingCount === 1) {
       // Keep fullscreen with remaining terminal
-      const remainingTerminalId = Array.from(this.tabs.keys()).find(id => id !== closedTabId);
+      const remainingTerminalId = Array.from(this.tabs.keys()).find((id) => id !== closedTabId);
       if (remainingTerminalId) {
-        setTimeout(() => displayManager.showTerminalFullscreen(remainingTerminalId), 50);
+        this.scheduleTimeout(() => displayManager.showTerminalFullscreen(remainingTerminalId), 50);
       } else {
         displayManager.setDisplayMode('normal');
       }
@@ -631,9 +691,9 @@ export class TerminalTabManager implements TerminalTabEvents {
     }
 
     if (remainingCount === 1) {
-      setTimeout(() => displayManager.setDisplayMode('normal'), 50);
+      this.scheduleTimeout(() => displayManager.setDisplayMode('normal'), 50);
     } else {
-      setTimeout(() => displayManager.showAllTerminalsSplit(), 50);
+      this.scheduleTimeout(() => displayManager.showAllTerminalsSplit(), 50);
     }
   }
 
@@ -646,7 +706,7 @@ export class TerminalTabManager implements TerminalTabEvents {
     }
 
     if ('deleteTerminalSafely' in this.coordinator) {
-      (this.coordinator as any).deleteTerminalSafely(tabId);
+      (this.coordinator as unknown as { deleteTerminalSafely: (id: string) => void }).deleteTerminalSafely(tabId);
     } else {
       this.coordinator.closeTerminal(tabId);
     }
@@ -681,7 +741,7 @@ export class TerminalTabManager implements TerminalTabEvents {
       // Show all terminals in split mode (not just set the mode)
       displayManager.showAllTerminalsSplit();
       log(`⏱️ Waiting ${delay}ms for layout to complete...`);
-      setTimeout(callback, delay);
+      this.scheduleTimeout(callback, delay);
     }
   }
 
@@ -691,7 +751,7 @@ export class TerminalTabManager implements TerminalTabEvents {
   private refreshSplitModeIfActive(): void {
     const displayManager = this.getDisplayManager();
     if (displayManager && displayManager.getCurrentMode() === 'split') {
-      setTimeout(() => displayManager.showAllTerminalsSplit(), 50);
+      this.scheduleTimeout(() => displayManager.showAllTerminalsSplit(), 50);
     }
   }
 
@@ -708,7 +768,7 @@ export class TerminalTabManager implements TerminalTabEvents {
     log(`🎯 Terminal created: ${terminalId}, terminals: ${previousCount} → ${newCount}`);
 
     // Make the new tab active and refresh split mode if needed
-    setTimeout(() => {
+    this.scheduleTimeout(() => {
       this.setActiveTab(terminalId);
 
       // If in split mode, refresh layout to include new terminal
@@ -773,6 +833,10 @@ export class TerminalTabManager implements TerminalTabEvents {
    * Cleanup
    */
   public dispose(): void {
+    // 🔧 FIX: Clear all pending timeouts to prevent memory leaks
+    this.pendingTimeouts.forEach((timeoutId) => clearTimeout(timeoutId));
+    this.pendingTimeouts.clear();
+
     if (this.tabList) {
       this.tabList.dispose();
       this.tabList = null;
@@ -784,6 +848,8 @@ export class TerminalTabManager implements TerminalTabEvents {
 
     this.tabs.clear();
     this.tabOrder = [];
+    this.pendingDeletions.clear();
+    this.pendingCreations.clear();
     this.coordinator = null;
 
     log('🗂️ Terminal Tab Manager disposed');

@@ -86,7 +86,11 @@ export class UnifiedMessageDispatcher implements IManagerLifecycle, Disposable {
   private processingTimes: number[] = [];
 
   // VS Code API for WebView communication
-  private vscodeApi?: { postMessage: (message: unknown) => void; setState: (state: unknown) => void; getState: () => unknown };
+  private vscodeApi?: {
+    postMessage: (message: unknown) => void;
+    setState: (state: unknown) => void;
+    getState: () => unknown;
+  };
 
   constructor(coordinator?: IManagerCoordinator) {
     this.logger.info('UnifiedMessageDispatcher initializing');
@@ -103,7 +107,11 @@ export class UnifiedMessageDispatcher implements IManagerLifecycle, Disposable {
    */
   private setupVsCodeApi(): void {
     interface WindowWithVSCode extends Window {
-      acquireVsCodeApi?: () => { postMessage: (message: unknown) => void; setState: (state: unknown) => void; getState: () => unknown };
+      acquireVsCodeApi?: () => {
+        postMessage: (message: unknown) => void;
+        setState: (state: unknown) => void;
+        getState: () => unknown;
+      };
     }
     if (typeof window !== 'undefined' && (window as WindowWithVSCode).acquireVsCodeApi) {
       this.vscodeApi = (window as WindowWithVSCode).acquireVsCodeApi?.();

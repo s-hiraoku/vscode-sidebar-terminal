@@ -10,6 +10,8 @@ import { MessageCommand } from '../messageTypes';
 import { hasProperty } from '../../../types/type-guards';
 import { MessageQueue } from '../../utils/MessageQueue';
 import { ManagerLogger } from '../../utils/ManagerLogger';
+import { DOMUtils } from '../../utils/DOMUtils';
+import { PANEL_LOCATION_CONSTANTS, WEBVIEW_TIMING } from '../../constants/webview';
 
 /**
  * Panel Location Handler
@@ -28,20 +30,6 @@ import { ManagerLogger } from '../../utils/ManagerLogger';
  * - No debouncing (simple state comparison is sufficient)
  */
 export class PanelLocationHandler implements IMessageHandler {
-  /**
-   * Panel Location Detection Constants
-   *
-   * PANEL_ASPECT_RATIO_THRESHOLD: The aspect ratio (width/height) threshold used to distinguish
-   * between sidebar and panel layouts. A value of 1.2 was chosen based on empirical testing:
-   * - Sidebar layouts are typically narrow and tall (aspect ratio < 1.2)
-   * - Bottom panel layouts are typically wide and short (aspect ratio > 1.2)
-   * - The threshold of 1.2 provides a comfortable buffer above 1.0 to account for
-   *   edge cases where the sidebar might be slightly wider than tall
-   *
-   * This threshold balances accuracy with tolerance for various window configurations.
-   */
-  private static readonly PANEL_ASPECT_RATIO_THRESHOLD = 1.2;
-
   /**
    * 🎯 Cached state to prevent redundant updates (VS Code pattern)
    */
@@ -165,7 +153,7 @@ export class PanelLocationHandler implements IMessageHandler {
       } catch (error) {
         this.logger.error('Failed to dispatch terminal refit event:', error);
       }
-    }, 150); // Allow CSS layout to settle
+    }, WEBVIEW_TIMING.PANEL_REFIT_DELAY_MS);
   }
 
   /**
@@ -261,7 +249,7 @@ export class PanelLocationHandler implements IMessageHandler {
       }
 
       const aspectRatio = width / height;
-      return aspectRatio > PanelLocationHandler.PANEL_ASPECT_RATIO_THRESHOLD ? 'panel' : 'sidebar';
+      return aspectRatio > PANEL_LOCATION_CONSTANTS.ASPECT_RATIO_THRESHOLD ? 'panel' : 'sidebar';
     } catch (error) {
       this.logger.error('Error detecting panel location', error);
       return 'sidebar';
@@ -316,17 +304,38 @@ export class PanelLocationHandler implements IMessageHandler {
   /**
    * 🔧 FIX: Schedule terminal refit after layout change
    * Delays the fit to allow CSS layout to settle
+   *
+   * 🎯 CRITICAL: Reset xterm.js inline styles BEFORE fit() to allow width expansion
    */
   private scheduleTerminalRefit(coordinator: IManagerCoordinator): void {
     setTimeout(() => {
       try {
         // Get split manager and refit all terminals
-        const splitManager = (coordinator as { getSplitManager?: () => { getTerminals?: () => Map<string, { fitAddon?: { fit: () => void }, terminal?: { cols: number, rows: number } }> } }).getSplitManager?.();
+        const splitManager = (
+          coordinator as {
+            getSplitManager?: () => {
+              getTerminals?: () => Map<
+                string,
+                {
+                  fitAddon?: { fit: () => void };
+                  terminal?: { cols: number; rows: number };
+                  container?: HTMLElement;
+                }
+              >;
+            };
+          }
+        ).getSplitManager?.();
         if (splitManager && typeof splitManager.getTerminals === 'function') {
           const terminals = splitManager.getTerminals();
           terminals.forEach((terminalData, terminalId) => {
             if (terminalData.fitAddon) {
               try {
+                // 🎯 CRITICAL FIX: Reset xterm.js inline styles BEFORE fit()
+                // This allows the terminal to expand to full container width
+                if (terminalData.container) {
+                  DOMUtils.resetXtermInlineStyles(terminalData.container);
+                }
+
                 terminalData.fitAddon.fit();
                 this.logger.info(`✅ Terminal ${terminalId} refitted after panel location change`);
               } catch (error) {
@@ -338,16 +347,13 @@ export class PanelLocationHandler implements IMessageHandler {
       } catch (error) {
         this.logger.error('Failed to refit terminals after panel location change:', error);
       }
-    }, 150); // Allow CSS layout to settle
+    }, WEBVIEW_TIMING.PANEL_REFIT_DELAY_MS);
   }
 
   /**
    * Handle panel location update message (backward compatibility)
    */
-  private handlePanelLocationUpdate(
-    _msg: MessageCommand,
-    coordinator: IManagerCoordinator
-  ): void {
+  private handlePanelLocationUpdate(_msg: MessageCommand, coordinator: IManagerCoordinator): void {
     try {
       // Check if dynamic split direction is enabled
       const configManager = (
@@ -426,7 +432,7 @@ export class PanelLocationHandler implements IMessageHandler {
       }
 
       const aspectRatio = width / height;
-      return aspectRatio > PanelLocationHandler.PANEL_ASPECT_RATIO_THRESHOLD ? 'panel' : 'sidebar';
+      return aspectRatio > PANEL_LOCATION_CONSTANTS.ASPECT_RATIO_THRESHOLD ? 'panel' : 'sidebar';
     } catch (error) {
       this.logger.error('Error analyzing dimensions', error);
       return 'sidebar';

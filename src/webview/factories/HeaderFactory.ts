@@ -303,7 +303,9 @@ export class HeaderFactory {
         config.onCloseClick!(terminalId);
 
         // Reset after a short delay to allow re-click if needed
-        setTimeout(() => { isClosing = false; }, 500);
+        setTimeout(() => {
+          isClosing = false;
+        }, 500);
       });
     }
 

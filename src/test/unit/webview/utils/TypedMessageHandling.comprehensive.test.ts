@@ -24,7 +24,7 @@ import {
   TypedMessageHandler,
   TypedMessageRegistration,
   MESSAGE_COMMANDS,
-  LoggerFunction
+  LoggerFunction,
 } from '../../../../webview/utils/TypedMessageHandling';
 import { setupTestEnvironment, resetTestEnvironment } from '../../../shared/TestSetup';
 
@@ -44,9 +44,7 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
   });
 
   describe('MessageDataValidator - Type-Safe Data Validation', () => {
-
     describe('RED Phase - Validation Requirements', () => {
-
       it('should fail when validating null data', () => {
         // RED: Null data should be invalid
         const validator = new MessageDataValidator<TerminalMessageData>(['terminalId'], mockLogger);
@@ -79,7 +77,10 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
 
       it('should fail when required fields are missing', () => {
         // RED: Missing required fields should be invalid
-        const validator = new MessageDataValidator<TerminalMessageData>(['terminalId', 'action'], mockLogger);
+        const validator = new MessageDataValidator<TerminalMessageData>(
+          ['terminalId', 'action'],
+          mockLogger
+        );
 
         const invalidData = { terminalId: 'term-1' }; // missing 'action'
         const result = validator.validate(invalidData);
@@ -99,11 +100,9 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
         expect(result.errors).to.be.empty;
         expect(result.data.terminalId).to.equal('term-1');
       });
-
     });
 
     describe('Factory Methods - Pre-configured Validators', () => {
-
       it('should create terminal validator with correct required fields', () => {
         // RED: Terminal validator should require terminalId
         const validator = MessageDataValidator.createTerminalValidator(mockLogger);
@@ -120,17 +119,15 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
 
         const validData = {
           sessionId: 'session-1',
-          terminalStates: { 'term-1': {} }
+          terminalStates: { 'term-1': {} },
         };
         const result = validator.validate(validData);
 
         expect(result.isValid).to.be.true;
       });
-
     });
 
     describe('Edge Cases and Error Handling', () => {
-
       it('should handle empty object validation', () => {
         // RED: Empty object with required fields should fail
         const validator = new MessageDataValidator<TerminalMessageData>(['terminalId'], mockLogger);
@@ -159,13 +156,10 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
 
         expect(mockLogger).to.have.been.calledWith('Validation failed:', sinon.match.array);
       });
-
     });
-
   });
 
   describe('TypedMessageRouter - Message Routing and Processing', () => {
-
     let router: TypedMessageRouter;
 
     beforeEach(() => {
@@ -173,7 +167,6 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
     });
 
     describe('RED Phase - Handler Registration', () => {
-
       it('should fail to process unregistered commands', async () => {
         // RED: Unregistered commands should fail
         const result = await router.processMessage('unregistered', {});
@@ -188,7 +181,7 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
         const registration: TypedMessageRegistration<TerminalMessageData> = {
           command: 'terminal:create',
           handler,
-          description: 'Create terminal'
+          description: 'Create terminal',
         };
 
         router.registerHandler(registration);
@@ -200,10 +193,12 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
 
       it('should handle handler execution errors', async () => {
         // RED: Handler errors should be caught and reported
-        const handler: TypedMessageHandler<TerminalMessageData> = sinon.stub().rejects(new Error('Handler failed'));
+        const handler: TypedMessageHandler<TerminalMessageData> = sinon
+          .stub()
+          .rejects(new Error('Handler failed'));
         const registration: TypedMessageRegistration<TerminalMessageData> = {
           command: 'terminal:create',
-          handler
+          handler,
         };
 
         router.registerHandler(registration);
@@ -212,11 +207,9 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
         expect(result.success).to.be.false;
         expect(result.error?.message).to.equal('Handler failed');
       });
-
     });
 
     describe('Validation Integration', () => {
-
       it('should validate data before passing to handler', async () => {
         // RED: Invalid data should not reach handler
         const handler: TypedMessageHandler<TerminalMessageData> = sinon.stub().resolves();
@@ -224,7 +217,7 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
         const registration: TypedMessageRegistration<TerminalMessageData> = {
           command: 'terminal:create',
           handler,
-          validator
+          validator,
         };
 
         router.registerHandler(registration);
@@ -242,7 +235,7 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
         const registration: TypedMessageRegistration<TerminalMessageData> = {
           command: 'terminal:create',
           handler,
-          validator
+          validator,
         };
 
         router.registerHandler(registration);
@@ -251,11 +244,9 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
         expect(result.success).to.be.true;
         expect(handler).to.have.been.calledWith({ terminalId: 'term-1' });
       });
-
     });
 
     describe('Multiple Handler Management', () => {
-
       it('should register multiple handlers without conflicts', () => {
         // RED: Multiple handlers should coexist
         const handler1: TypedMessageHandler = sinon.stub().resolves();
@@ -276,7 +267,7 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
         const registrations: TypedMessageRegistration[] = [
           { command: 'cmd1', handler: sinon.stub().resolves() },
           { command: 'cmd2', handler: sinon.stub().resolves() },
-          { command: 'cmd3', handler: sinon.stub().resolves() }
+          { command: 'cmd3', handler: sinon.stub().resolves() },
         ];
 
         router.registerMultipleHandlers(registrations);
@@ -295,15 +286,13 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
         const commands = router.getRegisteredCommands();
         expect(commands.length).to.equal(0);
       });
-
     });
 
     describe('Performance and Timing', () => {
-
       it('should measure processing time accurately', async () => {
         // RED: Processing time should be measured
         const slowHandler: TypedMessageHandler = async () => {
-          await new Promise(resolve => setTimeout(resolve, 50));
+          await new Promise((resolve) => setTimeout(resolve, 50));
         };
 
         router.registerHandler({ command: 'slow', handler: slowHandler });
@@ -312,25 +301,21 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
         expect(result.processingTimeMs).to.be.greaterThan(40);
         expect(result.processingTimeMs).to.be.lessThan(100);
       });
-
     });
-
   });
 
   describe('TypedMessageSender - Message Transmission', () => {
-
     let mockVSCodeAPI: any;
     let sender: TypedMessageSender;
 
     beforeEach(() => {
       mockVSCodeAPI = {
-        postMessage: sinon.stub()
+        postMessage: sinon.stub(),
       };
       sender = new TypedMessageSender(mockVSCodeAPI, 'TestComponent', mockLogger);
     });
 
     describe('RED Phase - Basic Message Sending', () => {
-
       it('should send message with command and data', () => {
         // RED: Basic message sending should work
         const data: TerminalMessageData = { terminalId: 'term-1', action: 'create' };
@@ -340,7 +325,7 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
         expect(mockVSCodeAPI.postMessage).to.have.been.calledWith({
           command: 'terminal:create',
           terminalId: 'term-1',
-          action: 'create'
+          action: 'create',
         });
       });
 
@@ -349,7 +334,7 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
         sender.sendMessage('simple:command');
 
         expect(mockVSCodeAPI.postMessage).to.have.been.calledWith({
-          command: 'simple:command'
+          command: 'simple:command',
         });
       });
 
@@ -358,19 +343,20 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
         mockVSCodeAPI.postMessage.throws(new Error('PostMessage failed'));
 
         expect(() => sender.sendMessage('test:command', {})).to.not.throw();
-        expect(mockLogger).to.have.been.calledWith(sinon.match.string, sinon.match.instanceOf(Error));
+        expect(mockLogger).to.have.been.calledWith(
+          sinon.match.string,
+          sinon.match.instanceOf(Error)
+        );
       });
-
     });
 
     describe('Batch and Conditional Sending', () => {
-
       it('should send multiple messages in sequence', () => {
         // RED: Batch sending should work
         const messages = [
           { command: 'cmd1', data: { value: 1 } },
           { command: 'cmd2', data: { value: 2 } },
-          { command: 'cmd3' }
+          { command: 'cmd3' },
         ];
 
         sender.sendMultipleMessages(messages);
@@ -386,7 +372,7 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
         expect(mockVSCodeAPI.postMessage).to.have.been.calledOnce;
         expect(mockVSCodeAPI.postMessage).to.have.been.calledWith({
           command: 'conditional:command',
-          sent: true
+          sent: true,
         });
       });
 
@@ -401,11 +387,9 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
 
         expect(mockVSCodeAPI.postMessage).to.have.been.calledOnce;
       });
-
     });
 
     describe('Retry Mechanism', () => {
-
       it('should queue failed messages for retry', () => {
         // RED: Failed messages should be queued
         mockVSCodeAPI.postMessage.throws(new Error('Network error'));
@@ -427,13 +411,10 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
         // Should eventually succeed on retry
         expect(mockVSCodeAPI.postMessage).to.have.been.calledTwice;
       });
-
     });
-
   });
 
   describe('Message Event Listener - Event Processing', () => {
-
     let router: TypedMessageRouter;
     let eventListener: (event: MessageEvent) => void;
 
@@ -443,14 +424,13 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
     });
 
     describe('RED Phase - Event Processing', () => {
-
       it('should process valid message events', async () => {
         // RED: Valid events should be processed
         const handler: TypedMessageHandler = sinon.stub().resolves();
         router.registerHandler({ command: 'test:command', handler });
 
         const mockEvent = {
-          data: { command: 'test:command', payload: 'test' }
+          data: { command: 'test:command', payload: 'test' },
         } as MessageEvent;
 
         await eventListener(mockEvent);
@@ -461,7 +441,7 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
       it('should handle events without valid command', () => {
         // RED: Invalid events should be handled gracefully
         const mockEvent = {
-          data: { invalidData: true }
+          data: { invalidData: true },
         } as MessageEvent;
 
         expect(() => eventListener(mockEvent)).to.not.throw();
@@ -473,7 +453,7 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
         const listener = createTypedMessageEventListener(router, unhandledCallback);
 
         const mockEvent = {
-          data: { command: 'unknown:command' }
+          data: { command: 'unknown:command' },
         } as MessageEvent;
 
         await listener(mockEvent);
@@ -487,20 +467,16 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
         router.registerHandler({ command: 'error:command', handler });
 
         const mockEvent = {
-          data: { command: 'error:command' }
+          data: { command: 'error:command' },
         } as MessageEvent;
 
         expect(async () => await eventListener(mockEvent)).to.not.throw();
       });
-
     });
-
   });
 
   describe('Message Constants - Command Definitions', () => {
-
     describe('RED Phase - Constant Validation', () => {
-
       it('should provide all required terminal commands', () => {
         // RED: All terminal commands should be available
         expect(MESSAGE_COMMANDS.TERMINAL_CREATE).to.equal('terminal:create');
@@ -541,11 +517,9 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
         expect(MESSAGE_COMMANDS.NOTIFICATION_SHOW).to.equal('notification:show');
         expect(MESSAGE_COMMANDS.NOTIFICATION_HIDE).to.equal('notification:hide');
       });
-
     });
 
     describe('Command Uniqueness', () => {
-
       it('should have unique command values', () => {
         // RED: All commands should be unique
         const commands = Object.values(MESSAGE_COMMANDS);
@@ -562,13 +536,10 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
           expect(command).to.match(/^[a-z]+:[a-zA-Z]+$/);
         }
       });
-
     });
-
   });
 
   describe('Integration Tests - End-to-End Message Flow', () => {
-
     it('should handle complete message processing workflow', async () => {
       // RED: Complete workflow should work end-to-end
       const router = new TypedMessageRouter('TestComponent', mockLogger);
@@ -580,14 +551,14 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
         command: MESSAGE_COMMANDS.TERMINAL_CREATE,
         handler,
         validator,
-        description: 'Create new terminal'
+        description: 'Create new terminal',
       });
 
       // Process message
-      const result = await router.processMessage(
-        MESSAGE_COMMANDS.TERMINAL_CREATE,
-        { terminalId: 'term-1', action: 'create' }
-      );
+      const result = await router.processMessage(MESSAGE_COMMANDS.TERMINAL_CREATE, {
+        terminalId: 'term-1',
+        action: 'create',
+      });
 
       expect(result.success).to.be.true;
       expect(handler).to.have.been.calledWith({ terminalId: 'term-1', action: 'create' });
@@ -608,7 +579,7 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
       expect(mockVSCodeAPI.postMessage).to.have.been.calledWith({
         command: MESSAGE_COMMANDS.TERMINAL_CREATE,
         terminalId: 'term-1',
-        action: 'create'
+        action: 'create',
       });
 
       // Simulate receiving the same message structure
@@ -616,17 +587,15 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
         data: {
           command: MESSAGE_COMMANDS.TERMINAL_CREATE,
           terminalId: 'term-1',
-          action: 'create'
-        }
+          action: 'create',
+        },
       } as MessageEvent;
 
       expect(() => eventListener(mockEvent)).to.not.throw();
     });
-
   });
 
   describe('Performance and Memory Management', () => {
-
     it('should handle high-frequency message processing without memory leaks', async () => {
       // RED: High frequency processing should be stable
       const router = new TypedMessageRouter('TestComponent', mockLogger);
@@ -643,7 +612,7 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
       const results = await Promise.all(promises);
 
       // All should succeed
-      expect(results.every(r => r.success)).to.be.true;
+      expect(results.every((r) => r.success)).to.be.true;
       expect(handler).to.have.callCount(100);
     });
 
@@ -651,7 +620,7 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
       // RED: Concurrent processing should be safe
       const router = new TypedMessageRouter('TestComponent', mockLogger);
       const slowHandler: TypedMessageHandler = async (data: any) => {
-        await new Promise(resolve => setTimeout(resolve, 10));
+        await new Promise((resolve) => setTimeout(resolve, 10));
         return data;
       };
 
@@ -661,15 +630,13 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
       const promises = [
         router.processMessage('concurrent:test', { id: 1 }),
         router.processMessage('concurrent:test', { id: 2 }),
-        router.processMessage('concurrent:test', { id: 3 })
+        router.processMessage('concurrent:test', { id: 3 }),
       ];
 
       const results = await Promise.all(promises);
 
       // All should complete successfully
-      expect(results.every(r => r.success)).to.be.true;
+      expect(results.every((r) => r.success)).to.be.true;
     });
-
   });
-
 });

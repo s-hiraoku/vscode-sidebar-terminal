@@ -107,7 +107,11 @@ export class VisualTestingUtility {
    * @param _tolerance - Pixel difference tolerance (0.0-1.0)
    * @returns True if screenshots match within tolerance
    */
-  async screenshotsMatch(_actual: string, _expected: string, _tolerance: number = 0.001): Promise<boolean> {
+  async screenshotsMatch(
+    _actual: string,
+    _expected: string,
+    _tolerance: number = 0.001
+  ): Promise<boolean> {
     // Future: Implement pixel-by-pixel comparison
     console.log('[E2E] Comparing screenshots (placeholder)');
     return true;

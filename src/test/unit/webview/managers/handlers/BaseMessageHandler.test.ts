@@ -16,7 +16,10 @@ import { ManagerLogger } from '../../../../../webview/utils/ManagerLogger';
 class TestMessageHandler extends BaseMessageHandler {
   protected readonly supportedCommands = ['testCommand1', 'testCommand2', 'testCommand3'];
 
-  public async handleMessage(msg: MessageCommand, _coordinator: IManagerCoordinator): Promise<void> {
+  public async handleMessage(
+    msg: MessageCommand,
+    _coordinator: IManagerCoordinator
+  ): Promise<void> {
     const command = this.getCommand(msg);
 
     if (!this.validate(msg)) {
@@ -265,8 +268,8 @@ describe('BaseMessageHandler', function () {
       const msg = { command: 'test' } as MessageCommand;
       const terminalId = handler.testGetRequiredProperty<string>(msg, 'terminalId');
       expect(terminalId).to.be.undefined;
-      expect(loggerWarnStub.calledWith("Required property 'terminalId' missing from message")).to
-        .be.true;
+      expect(loggerWarnStub.calledWith("Required property 'terminalId' missing from message")).to.be
+        .true;
     });
   });
 

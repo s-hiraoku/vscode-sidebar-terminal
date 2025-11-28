@@ -32,7 +32,9 @@ import { log } from '../utils/logger';
  * Note: This is a demonstration class showing the integration patterns.
  * The actual SecondaryTerminalProvider should be updated following these patterns.
  */
-export class IntegratedSecondaryTerminalProvider implements vscode.WebviewViewProvider, vscode.Disposable {
+export class IntegratedSecondaryTerminalProvider
+  implements vscode.WebviewViewProvider, vscode.Disposable
+{
   public static readonly viewType = 'secondaryTerminal';
 
   // Core services
@@ -45,6 +47,8 @@ export class IntegratedSecondaryTerminalProvider implements vscode.WebviewViewPr
   private readonly messageHandlers = new Map<string, (message: WebviewMessage) => Promise<void>>();
   private view?: vscode.WebviewView;
   private isInitialized = false;
+  // 🔧 FIX: Track pending timeouts for proper cleanup on dispose
+  private pendingTimeouts: Set<ReturnType<typeof setTimeout>> = new Set();
 
   constructor(
     private readonly context: vscode.ExtensionContext,
@@ -60,7 +64,8 @@ export class IntegratedSecondaryTerminalProvider implements vscode.WebviewViewPr
 
     // Initialize persistence message handler with clean separation
     this.persistenceMessageHandler = createPersistenceMessageHandler(
-      this.persistenceService as unknown as import('../services/UnifiedTerminalPersistenceService').UnifiedTerminalPersistenceService
+      this
+        .persistenceService as unknown as import('../services/UnifiedTerminalPersistenceService').UnifiedTerminalPersistenceService
     );
 
     this.initializeServices();
@@ -272,11 +277,23 @@ export class IntegratedSecondaryTerminalProvider implements vscode.WebviewViewPr
   }
 
   /**
+   * Helper: Schedule a timeout and track it for cleanup
+   */
+  private scheduleTimeout(callback: () => void, delay: number): ReturnType<typeof setTimeout> {
+    const timeoutId = setTimeout(() => {
+      this.pendingTimeouts.delete(timeoutId);
+      callback();
+    }, delay);
+    this.pendingTimeouts.add(timeoutId);
+    return timeoutId;
+  }
+
+  /**
    * Schedules initial setup operations
    */
   private scheduleInitialSetup(): void {
-    // Schedule session restoration check
-    setTimeout(async () => {
+    // 🔧 FIX: Schedule session restoration check with proper timeout tracking
+    this.scheduleTimeout(async () => {
       try {
         await this.checkAndRestoreSession();
       } catch (error) {
@@ -332,6 +349,10 @@ export class IntegratedSecondaryTerminalProvider implements vscode.WebviewViewPr
    */
   public dispose(): void {
     try {
+      // 🔧 FIX: Clear all pending timeouts to prevent memory leaks
+      this.pendingTimeouts.forEach((timeoutId) => clearTimeout(timeoutId));
+      this.pendingTimeouts.clear();
+
       // Dispose of all event listeners
       this.disposables.forEach((d) => d.dispose());
       this.disposables.length = 0;

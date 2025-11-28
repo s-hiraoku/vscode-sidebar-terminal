@@ -10,7 +10,7 @@ import { MessageRouter, MessageRouterFactory } from '../services/MessageRouter';
 import { webview as log } from '../utils/logger';
 import {
   TerminalMessageHandlerFactory,
-  TerminalMessageHandlerDependencies
+  TerminalMessageHandlerDependencies,
 } from '../services/handlers/TerminalMessageHandlers';
 import { safeProcessCwd } from '../utils/common';
 
@@ -54,7 +54,6 @@ export class WebviewCoordinator implements vscode.Disposable {
 
       this.isInitialized = true;
       log('WebviewCoordinator initialized successfully');
-
     } catch (error) {
       log('Failed to initialize WebviewCoordinator:', error);
       throw error;
@@ -73,7 +72,7 @@ export class WebviewCoordinator implements vscode.Disposable {
       // Post message to extension
       this.postMessageToExtension('terminalCreated', {
         terminalId: terminalInfo.id,
-        number: terminalInfo.number
+        number: terminalInfo.number,
       });
     });
 
@@ -132,7 +131,7 @@ export class WebviewCoordinator implements vscode.Disposable {
       terminalManager: this.createTerminalManagerAdapter(),
       persistenceService: this.createPersistenceAdapter(),
       configService: this.createConfigAdapter(),
-      notificationService: this.createNotificationAdapter()
+      notificationService: this.createNotificationAdapter(),
     };
 
     // Register all terminal message handlers
@@ -151,16 +150,15 @@ export class WebviewCoordinator implements vscode.Disposable {
             originalCommand: command,
             success: result.success,
             data: result.data,
-            error: result.error
+            error: result.error,
           });
-
         } catch (error) {
           log(`Message handling error for command ${command}:`, error);
 
           this.postMessageToExtension('messageResponse', {
             originalCommand: command,
             success: false,
-            error: error instanceof Error ? error.message : String(error)
+            error: error instanceof Error ? error.message : String(error),
           });
         }
       }
@@ -199,7 +197,7 @@ export class WebviewCoordinator implements vscode.Disposable {
       getWorkingDirectory: async () => {
         // This would need to be implemented based on actual requirements
         return safeProcessCwd();
-      }
+      },
     };
   }
 
@@ -223,7 +221,7 @@ export class WebviewCoordinator implements vscode.Disposable {
 
           window.addEventListener('message', handler);
         });
-      }
+      },
     };
   }
 
@@ -239,7 +237,7 @@ export class WebviewCoordinator implements vscode.Disposable {
 
       updateSettings: async (settings: any) => {
         this.postMessageToExtension('updateSettings', { settings });
-      }
+      },
     };
   }
 
@@ -252,23 +250,23 @@ export class WebviewCoordinator implements vscode.Disposable {
         this.uiController.showNotification({
           type: 'error' as any,
           message,
-          duration: 5000
+          duration: 5000,
         });
       },
       showInfo: (message: string) => {
         this.uiController.showNotification({
           type: 'info' as any,
           message,
-          duration: 5000
+          duration: 5000,
         });
       },
       showWarning: (message: string) => {
         this.uiController.showNotification({
           type: 'warning' as any,
           message,
-          duration: 5000
+          duration: 5000,
         });
-      }
+      },
     };
   }
 
@@ -282,10 +280,10 @@ export class WebviewCoordinator implements vscode.Disposable {
 
     // Update terminal tabs
     this.uiController.updateTerminalTabs(
-      terminalInfos.map(info => ({
+      terminalInfos.map((info) => ({
         id: info.id,
         number: info.number,
-        isActive: info.isActive
+        isActive: info.isActive,
       }))
     );
 
@@ -323,7 +321,7 @@ export class WebviewCoordinator implements vscode.Disposable {
           this.uiController.showNotification({
             type: 'error',
             message: `Operation failed: ${result.error}`,
-            duration: 5000
+            duration: 5000,
           });
         }
 
@@ -332,14 +330,14 @@ export class WebviewCoordinator implements vscode.Disposable {
         log(`No handler for command: ${command}`);
         return {
           success: false,
-          error: `No handler for command: ${command}`
+          error: `No handler for command: ${command}`,
         };
       }
     } catch (error) {
       log(`Unexpected error handling message ${command}:`, error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       };
     }
   }
@@ -391,7 +389,7 @@ export class WebviewCoordinator implements vscode.Disposable {
       registeredCommands: this.messageRouter.getRegisteredCommands(),
       activeHandlers: this.messageRouter.getActiveHandlerCount(),
       systemStatus: this.isInitialized ? 'READY' : 'INITIALIZING',
-      isInitialized: this.isInitialized
+      isInitialized: this.isInitialized,
     };
   }
 

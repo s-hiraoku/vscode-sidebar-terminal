@@ -79,7 +79,6 @@ export class ManagerErrorHandler {
 
       this.logger(`✅ ${operationName} completed successfully (${executionTime.toFixed(2)}ms)`);
       return result;
-
     } catch (error) {
       this.errorCount++;
       const processedError = error instanceof Error ? error : new Error(String(error));
@@ -138,11 +137,10 @@ export class ManagerPerformanceTracker {
     return {
       initializationTimeMs: this.initializationTime,
       operationCount: this.operationCount,
-      averageOperationTimeMs: this.operationCount > 0
-        ? this.totalOperationTime / this.operationCount
-        : 0,
+      averageOperationTimeMs:
+        this.operationCount > 0 ? this.totalOperationTime / this.operationCount : 0,
       errorCount: 0, // Will be provided by ErrorHandler
-      lastOperationTimestamp: this.lastOperationTimestamp
+      lastOperationTimestamp: this.lastOperationTimestamp,
     };
   }
 
@@ -189,7 +187,7 @@ export abstract class ResourceManager {
       success: errors.length === 0,
       cleanedResourceCount,
       errors,
-      cleanupTimeMs: performance.now() - startTime
+      cleanupTimeMs: performance.now() - startTime,
     };
   }
 }
@@ -212,7 +210,7 @@ export abstract class BaseManager extends ResourceManager implements IDisposable
       enableLogging: true,
       enablePerformanceTracking: true,
       enableErrorRecovery: true,
-      initializationTimeoutMs: 5000
+      initializationTimeoutMs: 5000,
     }
   ) {
     super();
@@ -378,7 +376,7 @@ export abstract class BaseManager extends ResourceManager implements IDisposable
     const metrics = this.performanceTracker.getMetrics();
     return {
       ...metrics,
-      errorCount: this.errorHandler.getErrorCount()
+      errorCount: this.errorHandler.getErrorCount(),
     };
   }
 
@@ -394,7 +392,7 @@ export abstract class BaseManager extends ResourceManager implements IDisposable
       isDisposed: this.isDisposed,
       upTimeMs,
       performanceMetrics: this.getPerformanceMetrics(),
-      lastError: this.errorHandler.getLastError()
+      lastError: this.errorHandler.getLastError(),
     };
   }
 

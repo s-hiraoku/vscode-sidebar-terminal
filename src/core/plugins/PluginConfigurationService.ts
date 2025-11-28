@@ -56,10 +56,7 @@ export class PluginConfigurationService implements vscode.Disposable {
     const config = vscode.workspace.getConfiguration();
 
     return {
-      enablePluginSystem: config.get<boolean>(
-        'secondaryTerminal.plugins.enablePluginSystem',
-        true
-      ),
+      enablePluginSystem: config.get<boolean>('secondaryTerminal.plugins.enablePluginSystem', true),
       claude: {
         enabled: config.get<boolean>('secondaryTerminal.plugins.claude.enabled', true),
         confidenceThreshold: config.get<number>(

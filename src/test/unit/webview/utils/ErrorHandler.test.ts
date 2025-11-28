@@ -121,8 +121,7 @@ describe('ErrorHandler', function () {
       }).to.not.throw();
 
       // Should log recovery error
-      expect(loggerErrorStub.calledWith('L Recovery callback failed:', sinon.match.any)).to.be
-        .true;
+      expect(loggerErrorStub.calledWith('L Recovery callback failed:', sinon.match.any)).to.be.true;
     });
 
     it('should notify user when notify option is true', function () {

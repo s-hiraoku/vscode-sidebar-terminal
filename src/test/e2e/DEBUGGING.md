@@ -40,11 +40,13 @@ npm run test:e2e:headed
 ```
 
 **Benefits**:
+
 - See browser window and interactions in real-time
 - Observe test failures visually
 - Understand timing issues
 
 **Tips**:
+
 - Add `await page.pause()` to stop execution at specific points
 - Use `slowMo` option to slow down test execution:
   ```typescript
@@ -62,12 +64,14 @@ npm run test:e2e:debug
 ```
 
 **Features**:
+
 - Step through test execution line by line
 - Inspect page state at each step
 - Run Playwright commands in console
 - Record actions to generate test code
 
 **Tips**:
+
 - Click on any step to jump to that point
 - Use "Pick Locator" to test selectors
 - View network requests and console logs
@@ -81,12 +85,14 @@ npm run test:e2e:ui
 ```
 
 **Features**:
+
 - Interactive test runner with visual feedback
 - Time-travel debugging through test steps
 - Watch mode for automatic re-runs
 - Visual comparison of before/after states
 
 **Tips**:
+
 - Use "Watch" mode during test development
 - Click on any action to see the page state
 - Filter tests by status (passed/failed/skipped)
@@ -103,6 +109,7 @@ npx playwright show-trace test-results/trace.zip
 ```
 
 **Features**:
+
 - Full timeline of test execution
 - Network activity
 - Console logs
@@ -110,6 +117,7 @@ npx playwright show-trace test-results/trace.zip
 - DOM snapshots
 
 **Tips**:
+
 - Hover over timeline to see snapshots
 - Click network tab to see all requests
 - Use console tab for application logs
@@ -121,6 +129,7 @@ Screenshots and videos are automatically captured on failure.
 **Location**: `test-results/`
 
 **Configuration**:
+
 ```typescript
 use: {
   screenshot: 'only-on-failure',
@@ -129,6 +138,7 @@ use: {
 ```
 
 **Manual capture**:
+
 ```typescript
 await page.screenshot({ path: 'debug-screenshot.png' });
 ```
@@ -138,11 +148,14 @@ await page.screenshot({ path: 'debug-screenshot.png' });
 ### Issue: Test times out
 
 **Symptoms**:
+
 - Test exceeds 30-second timeout
 - "Test timeout of 30000ms exceeded" error
 
 **Solutions**:
+
 1. Increase timeout for specific test:
+
    ```typescript
    test('slow operation', async () => {
      test.setTimeout(60000); // 60 seconds
@@ -151,6 +164,7 @@ await page.screenshot({ path: 'debug-screenshot.png' });
    ```
 
 2. Add explicit waits:
+
    ```typescript
    await page.waitForSelector('[data-testid="element"]', { timeout: 10000 });
    ```
@@ -160,15 +174,18 @@ await page.screenshot({ path: 'debug-screenshot.png' });
 ### Issue: Flaky test (passes sometimes, fails other times)
 
 **Symptoms**:
+
 - Test passes locally but fails in CI
 - Inconsistent failures
 
 **Solutions**:
+
 1. Add proper waits instead of `setTimeout`:
+
    ```typescript
    // Bad
    await page.click('button');
-   await new Promise(resolve => setTimeout(resolve, 1000));
+   await new Promise((resolve) => setTimeout(resolve, 1000));
 
    // Good
    await page.click('button');
@@ -176,6 +193,7 @@ await page.screenshot({ path: 'debug-screenshot.png' });
    ```
 
 2. Use `waitForSelector` with proper state:
+
    ```typescript
    await page.waitForSelector('button', { state: 'visible' });
    await page.click('button');
@@ -189,12 +207,15 @@ await page.screenshot({ path: 'debug-screenshot.png' });
 ### Issue: Element not found
 
 **Symptoms**:
+
 - "Element not found" error
 - "Selector did not match any elements"
 
 **Solutions**:
+
 1. Use Playwright Inspector's "Pick Locator" to find correct selector
 2. Add wait before interaction:
+
    ```typescript
    await page.waitForSelector('[data-testid="button"]');
    await page.click('[data-testid="button"]');
@@ -209,10 +230,12 @@ await page.screenshot({ path: 'debug-screenshot.png' });
 ### Issue: VS Code Extension not activating
 
 **Symptoms**:
+
 - WebView not loading
 - Extension commands not available
 
 **Solutions**:
+
 1. Check extension activation events in package.json
 2. Verify extension is compiled: `npm run compile`
 3. Check VS Code Extension Host logs
@@ -221,11 +244,14 @@ await page.screenshot({ path: 'debug-screenshot.png' });
 ### Issue: Race conditions in concurrent tests
 
 **Symptoms**:
+
 - Tests fail when run in parallel
 - Interference between tests
 
 **Solutions**:
+
 1. Use test isolation with beforeEach/afterEach:
+
    ```typescript
    test.beforeEach(async () => {
      // Create clean test state
@@ -237,6 +263,7 @@ await page.screenshot({ path: 'debug-screenshot.png' });
    ```
 
 2. Run tests serially for debugging:
+
    ```bash
    npx playwright test --workers=1
    ```
@@ -300,7 +327,7 @@ Add custom logging to tests:
 test('debug example', async ({ page }) => {
   console.log('Starting test...');
 
-  page.on('console', msg => {
+  page.on('console', (msg) => {
     console.log('Browser console:', msg.text());
   });
 
@@ -328,12 +355,12 @@ Capture and analyze network traffic:
 ```typescript
 test('network debug', async ({ page }) => {
   // Log all requests
-  page.on('request', request => {
+  page.on('request', (request) => {
     console.log('>>', request.method(), request.url());
   });
 
   // Log all responses
-  page.on('response', response => {
+  page.on('response', (response) => {
     console.log('<<', response.status(), response.url());
   });
 

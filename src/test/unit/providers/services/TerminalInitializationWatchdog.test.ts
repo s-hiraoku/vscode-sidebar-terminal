@@ -1,6 +1,6 @@
 import { expect } from 'chai';
 import * as sinon from 'sinon';
-import '../../shared/TestSetup';
+import '../../../shared/TestSetup';
 
 import { TerminalInitializationWatchdog } from '../../../../providers/services/TerminalInitializationWatchdog';
 

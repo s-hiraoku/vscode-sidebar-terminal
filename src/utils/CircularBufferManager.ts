@@ -57,10 +57,7 @@ export class CircularBufferManager {
     }
   >();
 
-  constructor(
-    flushCallback: FlushCallback,
-    options: CircularBufferManagerOptions = {}
-  ) {
+  constructor(flushCallback: FlushCallback, options: CircularBufferManagerOptions = {}) {
     this.flushCallback = flushCallback;
     this.options = {
       flushInterval: options.flushInterval ?? 16, // ~60fps for smooth output
@@ -323,10 +320,7 @@ export class CircularBufferManager {
         );
       }
     } catch (error) {
-      console.error(
-        `❌ [CircularBufferManager] Error flushing buffer for ${terminalId}:`,
-        error
-      );
+      console.error(`❌ [CircularBufferManager] Error flushing buffer for ${terminalId}:`, error);
     }
   }
 }

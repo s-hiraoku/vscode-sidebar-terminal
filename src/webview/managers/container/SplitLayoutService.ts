@@ -6,6 +6,7 @@
  */
 
 import { containerLogger } from '../../utils/ManagerLogger';
+import { SPLIT_LAYOUT_CONSTANTS } from '../../constants/webview';
 
 /**
  * Service for managing split terminal layouts
@@ -87,7 +88,9 @@ export class SplitLayoutService {
       return;
     }
 
-    containerLogger.info('🎨 [LAYOUT] ==================== ACTIVATING SPLIT LAYOUT ====================');
+    containerLogger.info(
+      '🎨 [LAYOUT] ==================== ACTIVATING SPLIT LAYOUT ===================='
+    );
     containerLogger.info(`🎨 [LAYOUT] Terminal count: ${terminalCount}`);
     containerLogger.info(`🎨 [LAYOUT] Split direction: ${splitDirection}`);
 
@@ -111,13 +114,17 @@ export class SplitLayoutService {
 
     // Apply flex-direction to terminals-wrapper
     terminalsWrapper.style.flexDirection = flexDirection;
-    containerLogger.info(`🎨 [LAYOUT] ✅ terminals-wrapper flexDirection applied: ${terminalsWrapper.style.flexDirection}`);
+    containerLogger.info(
+      `🎨 [LAYOUT] ✅ terminals-wrapper flexDirection applied: ${terminalsWrapper.style.flexDirection}`
+    );
 
     // 🔧 FIX: Before creating wrappers, ensure all containers are in terminals-wrapper
     orderedTerminalIds.forEach((terminalId) => {
       const container = getContainer(terminalId);
       if (container && container.parentElement !== terminalsWrapper) {
-        containerLogger.debug(`🔧 [SPLIT-FIX] Moving ${terminalId} container to terminals-wrapper before split layout`);
+        containerLogger.debug(
+          `🔧 [SPLIT-FIX] Moving ${terminalId} container to terminals-wrapper before split layout`
+        );
         terminalsWrapper.appendChild(container);
       }
     });
@@ -129,7 +136,9 @@ export class SplitLayoutService {
         return;
       }
 
-      containerLogger.debug(`🎨 [SPLIT-LAYOUT] Processing terminal ${index + 1}/${terminalCount}: ${terminalId}`);
+      containerLogger.debug(
+        `🎨 [SPLIT-LAYOUT] Processing terminal ${index + 1}/${terminalCount}: ${terminalId}`
+      );
 
       // Create wrapper with equal flex distribution
       const wrapper = this.createSplitWrapper(terminalId, splitDirection);
@@ -159,11 +168,17 @@ export class SplitLayoutService {
       }
     });
 
-    containerLogger.info(`Split layout activated: ${orderedTerminalIds.length} wrappers, ${this.splitResizers.size} resizers`);
+    containerLogger.info(
+      `Split layout activated: ${orderedTerminalIds.length} wrappers, ${this.splitResizers.size} resizers`
+    );
   }
 
   /**
    * Create a split wrapper element
+   *
+   * 🎯 LAYOUT STRATEGY:
+   * - Sidebar (vertical): Terminals stacked vertically, each takes full width
+   * - Panel (horizontal): Terminals side-by-side, each takes full height
    */
   public createSplitWrapper(
     terminalId: string,
@@ -183,12 +198,19 @@ export class SplitLayoutService {
     // flex: 1 1 0 means: grow equally, shrink equally, base size 0
     wrapper.style.flex = '1 1 0';
 
+    // 🎯 CRITICAL: Apply layout based on split direction
     if (splitDirection === 'vertical') {
+      // Sidebar mode: Terminals stacked vertically
+      // Each terminal takes FULL WIDTH of the sidebar
       wrapper.style.width = '100%';
+      wrapper.style.minWidth = '0'; // 🔧 FIX: Allow content to determine min-width
       wrapper.style.minHeight = '0'; // Allow shrinking below content size
     } else {
+      // Panel mode: Terminals side-by-side horizontally
+      // Each terminal takes FULL HEIGHT of the panel
       wrapper.style.height = '100%';
       wrapper.style.minWidth = '0'; // Allow shrinking below content size
+      wrapper.style.minHeight = '0'; // 🔧 FIX: Allow content to determine min-height
     }
 
     this.getWrapperArea(wrapper, terminalId, true);
@@ -201,11 +223,12 @@ export class SplitLayoutService {
   public createSplitResizer(direction: 'vertical' | 'horizontal'): HTMLElement {
     const resizer = document.createElement('div');
     resizer.className = 'split-resizer';
+    const resizerSize = `${SPLIT_LAYOUT_CONSTANTS.RESIZER_SIZE_PX}px`;
     if (direction === 'horizontal') {
-      resizer.style.width = '4px';
+      resizer.style.width = resizerSize;
       resizer.style.cursor = 'col-resize';
     } else {
-      resizer.style.height = '4px';
+      resizer.style.height = resizerSize;
       resizer.style.cursor = 'row-resize';
     }
     resizer.style.background = 'var(--vscode-widget-border, #454545)';
@@ -216,7 +239,11 @@ export class SplitLayoutService {
   /**
    * Get or create wrapper area for a terminal
    */
-  public getWrapperArea(wrapper: HTMLElement, terminalId: string, createIfMissing = false): HTMLElement | null {
+  public getWrapperArea(
+    wrapper: HTMLElement,
+    terminalId: string,
+    createIfMissing = false
+  ): HTMLElement | null {
     let area = wrapper.querySelector<HTMLElement>(`[data-terminal-area-id="${terminalId}"]`);
     if (!area && createIfMissing) {
       area = document.createElement('div');
@@ -253,7 +280,9 @@ export class SplitLayoutService {
       `;
 
       // Move existing terminals into wrapper
-      const existingTerminals = Array.from(terminalBody.querySelectorAll('[data-terminal-container]'));
+      const existingTerminals = Array.from(
+        terminalBody.querySelectorAll('[data-terminal-container]')
+      );
       terminalBody.appendChild(terminalsWrapper);
       existingTerminals.forEach((terminal) => {
         terminalsWrapper!.appendChild(terminal);

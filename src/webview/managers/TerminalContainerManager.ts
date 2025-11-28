@@ -97,7 +97,9 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
   public registerContainer(terminalId: string, container: HTMLElement): void {
     this.containerCache.set(terminalId, container);
     this.containerModes.set(terminalId, 'normal');
-    this.log(`✅ [REGISTER] Container registered: ${terminalId}, cache size: ${this.containerCache.size}`);
+    this.log(
+      `✅ [REGISTER] Container registered: ${terminalId}, cache size: ${this.containerCache.size}`
+    );
   }
 
   /**
@@ -197,7 +199,11 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
     this.log(`Display state applied: ${state.mode}`);
 
     if (state.mode === 'fullscreen') {
-      this.visibilityService.enforceFullscreenState(state.activeTerminalId, terminalBody, this.containerCache);
+      this.visibilityService.enforceFullscreenState(
+        state.activeTerminalId,
+        terminalBody,
+        this.containerCache
+      );
     } else if (state.mode === 'normal') {
       this.visibilityService.normalizeTerminalBody(terminalBody, this.containerCache);
     }
@@ -288,9 +294,13 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
       targetBody.style.overflow = 'hidden';
 
       if (this.coordinator) {
-        const updated = (this.coordinator as { updatePanelLocationIfNeeded?: () => boolean }).updatePanelLocationIfNeeded?.();
+        const updated = (
+          this.coordinator as { updatePanelLocationIfNeeded?: () => boolean }
+        ).updatePanelLocationIfNeeded?.();
         if (updated !== undefined) {
-          this.log(`🎨 [CLEAR-SPLIT] Flex-direction ${updated ? 'updated by central handler' : 'already correct'}`);
+          this.log(
+            `🎨 [CLEAR-SPLIT] Flex-direction ${updated ? 'updated by central handler' : 'already correct'}`
+          );
         }
       }
 
@@ -350,7 +360,11 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
     }
 
     // IDベースでフォールバック検索
-    const idSelectors = [`#terminal-${terminalId}`, `#split-terminal-${terminalId}`, `#primary-terminal`];
+    const idSelectors = [
+      `#terminal-${terminalId}`,
+      `#split-terminal-${terminalId}`,
+      `#primary-terminal`,
+    ];
 
     for (const idSelector of idSelectors) {
       const element = document.querySelector(idSelector);

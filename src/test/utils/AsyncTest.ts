@@ -103,9 +103,7 @@ export abstract class AsyncTest extends BaseTest {
 
     while (this.pendingPromises.size > 0) {
       if (Date.now() - startTime > timeout) {
-        throw new Error(
-          `Timeout waiting for ${this.pendingPromises.size} pending promises`
-        );
+        throw new Error(`Timeout waiting for ${this.pendingPromises.size} pending promises`);
       }
       await new Promise((resolve) => setTimeout(resolve, 10));
     }
@@ -146,15 +144,13 @@ export abstract class AsyncTest extends BaseTest {
         if (typeof expectedError === 'string') {
           if (!message.includes(expectedError)) {
             throw new Error(
-              `Expected error message to include "${expectedError}", ` +
-              `but got "${message}"`
+              `Expected error message to include "${expectedError}", ` + `but got "${message}"`
             );
           }
         } else {
           if (!expectedError.test(message)) {
             throw new Error(
-              `Expected error message to match ${expectedError}, ` +
-              `but got "${message}"`
+              `Expected error message to match ${expectedError}, ` + `but got "${message}"`
             );
           }
         }
@@ -166,10 +162,7 @@ export abstract class AsyncTest extends BaseTest {
   /**
    * Wait for a promise to resolve within timeout
    */
-  protected async expectResolution<T>(
-    promise: Promise<T>,
-    timeout: number = 1000
-  ): Promise<T> {
+  protected async expectResolution<T>(promise: Promise<T>, timeout: number = 1000): Promise<T> {
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         reject(new Error(`Promise did not resolve within ${timeout}ms`));
@@ -190,9 +183,7 @@ export abstract class AsyncTest extends BaseTest {
   /**
    * Test race condition by running operations concurrently
    */
-  protected async testRaceCondition<T>(
-    operations: Array<() => Promise<T>>
-  ): Promise<T[]> {
+  protected async testRaceCondition<T>(operations: Array<() => Promise<T>>): Promise<T[]> {
     const promises = operations.map((op) => op());
     return Promise.all(promises);
   }
@@ -273,9 +264,7 @@ export abstract class AsyncTest extends BaseTest {
     }
 
     if (errors.length !== expectedFailures) {
-      throw new Error(
-        `Expected ${expectedFailures} failures, but got ${errors.length}`
-      );
+      throw new Error(`Expected ${expectedFailures} failures, but got ${errors.length}`);
     }
 
     return { result, attempts, errors };
@@ -293,9 +282,7 @@ export abstract class AsyncTest extends BaseTest {
 
     while (stub.callCount < count) {
       if (Date.now() - startTime > timeout) {
-        throw new Error(
-          `Timeout waiting for ${count} calls. Got ${stub.callCount} calls`
-        );
+        throw new Error(`Timeout waiting for ${count} calls. Got ${stub.callCount} calls`);
       }
       await new Promise((resolve) => setTimeout(resolve, 10));
     }

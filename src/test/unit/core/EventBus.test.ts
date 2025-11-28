@@ -5,11 +5,7 @@
  */
 
 import { expect } from 'chai';
-import {
-  EventBus,
-  createEventType,
-  Event,
-} from '../../../core/EventBus';
+import { EventBus, createEventType, Event } from '../../../core/EventBus';
 
 describe('EventBus', () => {
   let eventBus: EventBus;

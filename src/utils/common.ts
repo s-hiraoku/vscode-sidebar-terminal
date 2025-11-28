@@ -137,7 +137,6 @@ export function generateTerminalId(): string {
   return `terminal-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 }
 
-
 /**
  * ターミナル情報を正規化
  */
@@ -279,13 +278,19 @@ export function getShellForPlatform(): string {
 /**
  * Show error message (restored from refactoring)
  */
-export function showErrorMessage(message: string, ...items: string[]): Thenable<string | undefined> {
+export function showErrorMessage(
+  message: string,
+  ...items: string[]
+): Thenable<string | undefined> {
   return vscode.window.showErrorMessage(message, ...items);
 }
 
 /**
  * Show warning message (restored from refactoring)
  */
-export function showWarningMessage(message: string, ...items: string[]): Thenable<string | undefined> {
+export function showWarningMessage(
+  message: string,
+  ...items: string[]
+): Thenable<string | undefined> {
   return vscode.window.showWarningMessage(message, ...items);
 }

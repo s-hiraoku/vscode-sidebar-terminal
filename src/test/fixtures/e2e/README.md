@@ -29,10 +29,7 @@ Use these files to test terminal rendering and output processing:
 import { readFileSync } from 'fs';
 import { TEST_PATHS } from '../config/test-constants';
 
-const ansiOutput = readFileSync(
-  `${TEST_PATHS.TERMINAL_OUTPUT}/ansi-colors.txt`,
-  'utf-8'
-);
+const ansiOutput = readFileSync(`${TEST_PATHS.TERMINAL_OUTPUT}/ansi-colors.txt`, 'utf-8');
 ```
 
 ### AI Agent Output Fixtures

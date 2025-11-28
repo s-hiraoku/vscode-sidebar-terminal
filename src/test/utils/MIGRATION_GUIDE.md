@@ -9,11 +9,13 @@ This guide helps you migrate existing tests to use our standardized base test cl
 ### 1. BaseTest - Foundation for All Tests
 
 **Use When:**
+
 - Testing services, utilities, or standalone functions
 - Need sandbox and mock management
 - No special async or domain requirements
 
 **Example:**
+
 ```typescript
 import { BaseTest } from '../utils';
 import { MyService } from '../../../services/MyService';
@@ -50,11 +52,13 @@ describe('MyService', () => {
 ### 2. ConfigurationTest - Configuration Testing
 
 **Use When:**
+
 - Testing configuration services
 - Need to simulate config changes
 - Working with VSCode settings
 
 **Example:**
+
 ```typescript
 import { ConfigurationTest } from '../utils';
 import { ConfigService } from '../../../config/ConfigService';
@@ -95,11 +99,13 @@ describe('ConfigService', () => {
 ### 3. AsyncTest - Async Operations & Timers
 
 **Use When:**
+
 - Testing async operations
 - Need fake timers for time-based testing
 - Working with promises and timeouts
 
 **Example:**
+
 ```typescript
 import { AsyncTest } from '../utils';
 import { AsyncService } from '../../../services/AsyncService';
@@ -135,11 +141,13 @@ describe('AsyncService', () => {
 ### 4. WebViewTest - WebView Testing
 
 **Use When:**
+
 - Testing WebView managers or coordinators
 - Need message queue simulation
 - Working with webview communication
 
 **Example:**
+
 ```typescript
 import { WebViewTest } from '../utils';
 import { MessageManager } from '../../../webview/MessageManager';
@@ -179,11 +187,13 @@ describe('MessageManager', () => {
 ### 5. TerminalTest - Terminal Testing
 
 **Use When:**
+
 - Testing terminal managers or services
 - Need mock terminal creation
 - Working with terminal processes
 
 **Example:**
+
 ```typescript
 import { TerminalTest } from '../utils';
 import { TerminalService } from '../../../services/TerminalService';
@@ -224,6 +234,7 @@ describe('TerminalService', () => {
 ### Step 1: Identify the Right Base Class
 
 Look at what your test is testing:
+
 - **Service/Utility** → BaseTest
 - **Configuration** → ConfigurationTest
 - **Async/Timers** → AsyncTest
@@ -285,6 +296,7 @@ sed -i '' -E 's/([^.])sandbox\./\1test.sandbox./g' my-test.test.ts
 ```
 
 **Manual fixes needed for:**
+
 - Variable declarations: `const service` → `test.service`
 - Function parameters: `myFunc(service)` → `myFunc(test.service)`
 - Comparisons: `expect(service)` → `expect(test.service)`
@@ -296,6 +308,7 @@ npm run compile-tests
 ```
 
 Fix any errors:
+
 - Missing `test.` prefix
 - Wrong import path (usually `../../utils` for service tests, `../utils` for config tests)
 - Incorrect property visibility (should be `public`, not `protected`)
@@ -397,6 +410,7 @@ import { BaseTest } from '../../../utils';
 ```
 
 **Rule of thumb:**
+
 - Count directory depth from `src/test/unit/` to your test file
 - Use `../../utils` for depth 1 (unit/something/)
 - Use `../../../utils` for depth 2 (unit/something/subsomething/)
@@ -447,6 +461,7 @@ import { BaseTest } from '../../../utils';
 ## Examples Repository
 
 See migrated tests for reference:
+
 - `src/test/unit/services/terminal/TerminalDataBufferService.test.ts` - BaseTest
 - `src/test/unit/config/ConfigurationService.test.ts` - ConfigurationTest
 - `src/test/unit/async/AsyncOperations.test.ts` - AsyncTest

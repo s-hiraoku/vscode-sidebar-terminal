@@ -39,7 +39,12 @@ describe('WebviewCoordinator', () => {
   let profileHandler: ReturnType<typeof createHandler>;
   let sessionController: ReturnType<typeof createSessionController>;
   let cliAgentController: ReturnType<typeof createCliAgentController>;
-  let logger: { warn: sinon.SinonStub; info: sinon.SinonStub; error: sinon.SinonStub; debug: sinon.SinonStub };
+  let logger: {
+    warn: sinon.SinonStub;
+    info: sinon.SinonStub;
+    error: sinon.SinonStub;
+    debug: sinon.SinonStub;
+  };
 
   beforeEach(() => {
     lifecycleHandler = createHandler();

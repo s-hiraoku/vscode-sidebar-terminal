@@ -88,20 +88,14 @@ export abstract class BaseTest {
   /**
    * Stub a method on an object
    */
-  protected stub<T extends object, K extends keyof T>(
-    object: T,
-    method: K
-  ): sinon.SinonStub {
+  protected stub<T extends object, K extends keyof T>(object: T, method: K): sinon.SinonStub {
     return this.sandbox.stub(object, method as keyof T);
   }
 
   /**
    * Create a spy on a method
    */
-  protected spy<T extends object, K extends keyof T>(
-    object: T,
-    method: K
-  ): sinon.SinonSpy {
+  protected spy<T extends object, K extends keyof T>(object: T, method: K): sinon.SinonSpy {
     return this.sandbox.spy(object, method as keyof T);
   }
 
@@ -133,10 +127,7 @@ export abstract class BaseTest {
   /**
    * Wait for an async operation to complete
    */
-  protected async waitForAsync<T>(
-    operation: () => Promise<T>,
-    timeout: number = 1000
-  ): Promise<T> {
+  protected async waitForAsync<T>(operation: () => Promise<T>, timeout: number = 1000): Promise<T> {
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         reject(new Error('Async operation timeout'));
@@ -157,14 +148,11 @@ export abstract class BaseTest {
   /**
    * Assert that a stub was called with specific arguments
    */
-  protected assertCalledWith<T extends sinon.SinonStub>(
-    stub: T,
-    ...args: unknown[]
-  ): void {
+  protected assertCalledWith<T extends sinon.SinonStub>(stub: T, ...args: unknown[]): void {
     if (!stub.calledWith(...args)) {
       throw new Error(
         `Expected stub to be called with ${JSON.stringify(args)}, ` +
-        `but it was called with ${JSON.stringify(stub.args)}`
+          `but it was called with ${JSON.stringify(stub.args)}`
       );
     }
   }
@@ -172,14 +160,10 @@ export abstract class BaseTest {
   /**
    * Assert that a stub was called exactly N times
    */
-  protected assertCallCount<T extends sinon.SinonStub>(
-    stub: T,
-    count: number
-  ): void {
+  protected assertCallCount<T extends sinon.SinonStub>(stub: T, count: number): void {
     if (stub.callCount !== count) {
       throw new Error(
-        `Expected stub to be called ${count} times, ` +
-        `but it was called ${stub.callCount} times`
+        `Expected stub to be called ${count} times, ` + `but it was called ${stub.callCount} times`
       );
     }
   }

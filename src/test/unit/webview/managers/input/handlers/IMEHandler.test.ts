@@ -36,7 +36,7 @@ describe('IMEHandler Cursor Visibility', () => {
        </html>`,
       {
         url: 'http://localhost',
-        pretendToBeVisual: true
+        pretendToBeVisual: true,
       }
     );
 
@@ -72,7 +72,7 @@ describe('IMEHandler Cursor Visibility', () => {
 
   it('toggles IME cursor class during composition lifecycle', () => {
     const startEvent = new (global as any).CompositionEvent('compositionstart', {
-      data: 'あ'
+      data: 'あ',
     });
 
     document.dispatchEvent(startEvent);
@@ -80,7 +80,7 @@ describe('IMEHandler Cursor Visibility', () => {
     expect(document.body.classList.contains('terminal-ime-composing')).to.be.true;
 
     const endEvent = new (global as any).CompositionEvent('compositionend', {
-      data: 'あ'
+      data: 'あ',
     });
 
     document.dispatchEvent(endEvent);
@@ -95,7 +95,7 @@ describe('IMEHandler Cursor Visibility', () => {
     expect(styleElement!.textContent).to.contain('width: 0');
 
     const startEvent = new (global as any).CompositionEvent('compositionstart', {
-      data: '候補'
+      data: '候補',
     });
     document.dispatchEvent(startEvent);
 
@@ -103,7 +103,7 @@ describe('IMEHandler Cursor Visibility', () => {
     expect(duplicateCheck.length).to.equal(1);
 
     const endEvent = new (global as any).CompositionEvent('compositionend', {
-      data: '候補'
+      data: '候補',
     });
     document.dispatchEvent(endEvent);
     clock.tick(1);

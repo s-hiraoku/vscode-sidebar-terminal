@@ -127,7 +127,9 @@ export class WebViewLifecycleManager implements vscode.Disposable {
    */
   public trackPanelMovement(startTime: number): void {
     this._performanceMetrics.lastPanelMovementTime = Date.now() - startTime;
-    log(`📊 [METRICS] Panel movement time: ${this._performanceMetrics.lastPanelMovementTime}ms (target: <200ms)`);
+    log(
+      `📊 [METRICS] Panel movement time: ${this._performanceMetrics.lastPanelMovementTime}ms (target: <200ms)`
+    );
   }
 
   /**
@@ -135,7 +137,9 @@ export class WebViewLifecycleManager implements vscode.Disposable {
    */
   public trackInitializationComplete(startTime: number): void {
     this._performanceMetrics.totalInitializationTime = Date.now() - startTime;
-    log(`📊 [METRICS] Total initialization time: ${this._performanceMetrics.totalInitializationTime}ms (target: <100ms)`);
+    log(
+      `📊 [METRICS] Total initialization time: ${this._performanceMetrics.totalInitializationTime}ms (target: <100ms)`
+    );
   }
 
   /**
@@ -143,7 +147,9 @@ export class WebViewLifecycleManager implements vscode.Disposable {
    */
   public trackListenerRegistration(): void {
     this._performanceMetrics.listenerRegistrations++;
-    log(`📊 [METRICS] Listener registration #${this._performanceMetrics.listenerRegistrations} (target: 1)`);
+    log(
+      `📊 [METRICS] Listener registration #${this._performanceMetrics.listenerRegistrations} (target: 1)`
+    );
   }
 
   /**
@@ -278,7 +284,8 @@ export class WebViewLifecycleManager implements vscode.Disposable {
     return this._htmlGenerationService.generateErrorHtml({
       error,
       allowRetry: true,
-      customMessage: 'Terminal initialization failed. Please try reloading the terminal view or restarting VS Code.',
+      customMessage:
+        'Terminal initialization failed. Please try reloading the terminal view or restarting VS Code.',
     });
   }
 
@@ -296,11 +303,21 @@ export class WebViewLifecycleManager implements vscode.Disposable {
    */
   public logPerformanceMetrics(): void {
     log('📊 [METRICS] === WebView Lifecycle Performance Metrics ===');
-    log(`📊 [METRICS] resolveWebviewView calls: ${this._performanceMetrics.resolveWebviewViewCallCount}`);
-    log(`📊 [METRICS] HTML set operations: ${this._performanceMetrics.htmlSetOperations} (target: 1)`);
-    log(`📊 [METRICS] Listener registrations: ${this._performanceMetrics.listenerRegistrations} (target: 1)`);
-    log(`📊 [METRICS] Last panel movement time: ${this._performanceMetrics.lastPanelMovementTime}ms (target: <200ms)`);
-    log(`📊 [METRICS] Total initialization time: ${this._performanceMetrics.totalInitializationTime}ms (target: <100ms)`);
+    log(
+      `📊 [METRICS] resolveWebviewView calls: ${this._performanceMetrics.resolveWebviewViewCallCount}`
+    );
+    log(
+      `📊 [METRICS] HTML set operations: ${this._performanceMetrics.htmlSetOperations} (target: 1)`
+    );
+    log(
+      `📊 [METRICS] Listener registrations: ${this._performanceMetrics.listenerRegistrations} (target: 1)`
+    );
+    log(
+      `📊 [METRICS] Last panel movement time: ${this._performanceMetrics.lastPanelMovementTime}ms (target: <200ms)`
+    );
+    log(
+      `📊 [METRICS] Total initialization time: ${this._performanceMetrics.totalInitializationTime}ms (target: <100ms)`
+    );
 
     // Check if targets are met
     const meetsHtmlSetTarget = this._performanceMetrics.htmlSetOperations === 1;

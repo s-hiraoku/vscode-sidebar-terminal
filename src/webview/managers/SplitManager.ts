@@ -11,6 +11,7 @@ import { ISplitLayoutController } from '../interfaces/ISplitLayoutController';
 export { TerminalInstance };
 import { splitLogger } from '../utils/ManagerLogger';
 import { IManagerCoordinator } from '../interfaces/ManagerInterfaces';
+import { DOMUtils } from '../utils/DOMUtils';
 
 export class SplitManager extends BaseManager implements ISplitLayoutController {
   // Specialized logger for Split Manager
@@ -180,36 +181,6 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
   }
 
   /**
-   * 🆕 Update individual terminal container for new split direction
-   */
-  private updateTerminalContainerForDirection(
-    container: HTMLElement,
-    terminalId: string,
-    direction: 'horizontal' | 'vertical'
-  ): void {
-    this.splitManagerLogger.debug(
-      `updateTerminalContainerForDirection invoked for ${terminalId} (${direction})`
-    );
-  }
-
-  /**
-   * 🆕 Recalculate split sizing for new direction
-   */
-  private recalculateSplitSizing(
-    direction: 'horizontal' | 'vertical',
-    location: 'sidebar' | 'panel'
-  ): void {
-    const terminalCount = this.terminals.size;
-    if (terminalCount <= 1) {
-      return;
-    }
-
-    this.splitManagerLogger.info(
-      `Recalculating sizing for ${terminalCount} terminals (${direction}, ${location})`
-    );
-  }
-
-  /**
    * 🆕 Refit all terminals after layout change
    */
   private refitAllTerminals(): void {
@@ -218,11 +189,9 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
     this.terminals.forEach((terminalData, terminalId) => {
       if (terminalData.fitAddon && terminalData.terminal) {
         try {
-          // Force layout recalculation
+          // 🔧 FIX: Use shared utility to reset xterm inline styles
           const container = this.terminalContainers.get(terminalId);
-          if (container) {
-            container.offsetHeight; // Trigger reflow
-          }
+          DOMUtils.resetXtermInlineStyles(container ?? null);
 
           // Refit the terminal
           terminalData.fitAddon.fit();
@@ -274,8 +243,6 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
     return calculatedHeight;
   }
 
-
-
   public addTerminalToSplit(terminalId: string, _terminalName: string): void {
     const layoutInfo = this.calculateSplitLayout();
     if (!layoutInfo.canSplit) {
@@ -288,9 +255,7 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
   }
 
   public addNewTerminalToSplit(terminalId: string, _terminalName: string): void {
-    this.splitManagerLogger.info(
-      `Adding new terminal to split: ${terminalId} (${_terminalName})`
-    );
+    this.splitManagerLogger.info(`Adding new terminal to split: ${terminalId} (${_terminalName})`);
 
     // Check if we can split
     const layoutInfo = this.calculateSplitLayout();
@@ -301,13 +266,6 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
 
     this.requestSplitLayoutUpdate();
     this.splitManagerLogger.info(`New terminal added to split layout: ${terminalId}`);
-  }
-
-  private moveTerminalToSplitLayout(terminalId: string, _terminalName: string): void {
-    this.splitManagerLogger.info(
-      `Rebalancing split layout for terminal ${terminalId} (${_terminalName})`
-    );
-    this.requestSplitLayoutUpdate();
   }
 
   public showSplitLimitWarning(reason: string): void {
@@ -430,7 +388,9 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
    * 🆕 Set current panel location
    */
   public setPanelLocation(location: 'sidebar' | 'panel'): void {
-    this.splitManagerLogger.info(`📍 [SPLIT] Panel location updated: ${this.currentPanelLocation} → ${location}`);
+    this.splitManagerLogger.info(
+      `📍 [SPLIT] Panel location updated: ${this.currentPanelLocation} → ${location}`
+    );
     this.currentPanelLocation = location;
   }
 
@@ -464,6 +424,10 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
       `Removing terminal ${id}, terminal: ${!!terminal}, container: ${!!container}`
     );
 
+    // 🔧 FIX: Check split mode state BEFORE removal
+    const wasInSplitMode = this.isSplitMode;
+    const remainingAfterRemoval = this.terminals.size - (terminal ? 1 : 0);
+
     if (terminal) {
       // Dispose terminal
       try {
@@ -495,6 +459,29 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
     this.splitManagerLogger.debug(
       `Remaining containers: ${Array.from(this.terminalContainers.keys())}`
     );
+
+    // 🔧 FIX: Handle split mode state AFTER removal is complete
+    // Use setTimeout to ensure DOM cleanup is done first
+    if (wasInSplitMode) {
+      setTimeout(() => {
+        if (remainingAfterRemoval <= 1) {
+          this.splitManagerLogger.info(
+            `🔧 Exiting split mode after removal (${this.terminals.size} terminal remaining)`
+          );
+          // Only reset split mode flags, don't call full exitSplitMode which causes refit issues
+          this.isSplitMode = false;
+          this.splitDirection = null;
+        } else if (this.terminals.size > 1) {
+          // 🔧 FIX: Refresh split layout after terminal removal
+          this.splitManagerLogger.info(
+            `🔧 Refreshing split layout after removal (${this.terminals.size} terminals remaining)`
+          );
+          this.requestSplitLayoutUpdate();
+          // Refit remaining terminals after layout update
+          setTimeout(() => this.refitAllTerminals(), 50);
+        }
+      }, 50);
+    }
   }
 
   /**

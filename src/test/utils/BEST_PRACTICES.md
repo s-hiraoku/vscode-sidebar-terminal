@@ -16,20 +16,20 @@ describe('MyService', () => {
 });
 
 // ❌ Bad - Multiple test classes
-class Test1 extends BaseTest { }
-class Test2 extends BaseTest { }
+class Test1 extends BaseTest {}
+class Test2 extends BaseTest {}
 ```
 
 ### 2. Descriptive Test Class Names
 
 ```typescript
 // ✅ Good - Clear what's being tested
-class TerminalDataBufferServiceTest extends BaseTest { }
-class ShellIntegrationServiceTest extends BaseTest { }
+class TerminalDataBufferServiceTest extends BaseTest {}
+class ShellIntegrationServiceTest extends BaseTest {}
 
 // ❌ Bad - Generic names
-class Test extends BaseTest { }
-class MyTest extends BaseTest { }
+class Test extends BaseTest {}
+class MyTest extends BaseTest {}
 ```
 
 ### 3. Organize Tests by Feature
@@ -42,16 +42,16 @@ describe('MyService', () => {
   afterEach(() => test.afterEach());
 
   describe('Feature A', () => {
-    it('should handle case 1', () => { });
-    it('should handle case 2', () => { });
+    it('should handle case 1', () => {});
+    it('should handle case 2', () => {});
   });
 
   describe('Feature B', () => {
-    it('should work correctly', () => { });
+    it('should work correctly', () => {});
   });
 
   describe('Error Handling', () => {
-    it('should handle errors gracefully', () => { });
+    it('should handle errors gracefully', () => {});
   });
 });
 ```
@@ -214,7 +214,7 @@ it('should wait', async () => {
 // ❌ Bad - Real timers (slow tests)
 it('should wait', async () => {
   const promise = test.service.delayed();
-  await new Promise(resolve => setTimeout(resolve, 1000)); // Actually waits
+  await new Promise((resolve) => setTimeout(resolve, 1000)); // Actually waits
   await promise;
 });
 ```
@@ -372,7 +372,9 @@ it('should post message', () => {
 // ❌ Bad - Manual verification
 it('should post message', () => {
   let called = false;
-  test.mockWebview.postMessage = () => { called = true; };
+  test.mockWebview.postMessage = () => {
+    called = true;
+  };
   test.manager.postMessage({ command: 'test' });
   expect(called).to.be.true; // More verbose
 });
@@ -452,7 +454,7 @@ it('completes quickly', async () => {
 
 // ❌ Bad - Actually waits
 it('takes forever', async () => {
-  await new Promise(r => setTimeout(r, 10000)); // 10 seconds!
+  await new Promise((r) => setTimeout(r, 10000)); // 10 seconds!
 });
 ```
 
@@ -565,6 +567,7 @@ class MyTest extends BaseTest {
 ## Summary
 
 ✅ **DO:**
+
 - Extend appropriate base class
 - Call `super.setup()` first, `super.teardown()` last
 - Use `public` for properties accessed in tests
@@ -574,6 +577,7 @@ class MyTest extends BaseTest {
 - Write independent tests
 
 ❌ **DON'T:**
+
 - Share state between tests
 - Forget `super` calls
 - Use standalone stubs (use sandbox)
@@ -585,6 +589,7 @@ class MyTest extends BaseTest {
 ## Reference
 
 See migrated tests for examples:
+
 - `src/test/unit/services/terminal/TerminalDataBufferService.test.ts`
 - `src/test/unit/config/ConfigurationService.test.ts`
 - `src/test/unit/async/AsyncOperations.test.ts`

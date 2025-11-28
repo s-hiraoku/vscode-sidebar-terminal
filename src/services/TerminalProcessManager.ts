@@ -34,7 +34,11 @@ export interface ITerminalProcessManager {
   /**
    * PTY書き込みの再試行
    */
-  retryWrite(terminal: TerminalInstance, data: string, maxRetries?: number): Promise<OperationResult<void>>;
+  retryWrite(
+    terminal: TerminalInstance,
+    data: string,
+    maxRetries?: number
+  ): Promise<OperationResult<void>>;
 
   /**
    * PTYリカバリを試行する
@@ -304,10 +308,7 @@ export class TerminalProcessManager implements ITerminalProcessManager {
   /**
    * PTYが準備できるまで待つ
    */
-  private async waitForPtyReady(
-    terminal: TerminalInstance,
-    timeoutMs: number
-  ): Promise<boolean> {
+  private async waitForPtyReady(terminal: TerminalInstance, timeoutMs: number): Promise<boolean> {
     const startTime = Date.now();
 
     while (Date.now() - startTime < timeoutMs) {

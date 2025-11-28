@@ -38,9 +38,7 @@ describe('ScrollbackNormalizationUtility', () => {
 
     it('should normalize object array with timestamps', () => {
       const timestamp = Date.now();
-      const input = [
-        { content: 'line 1', type: 'output', timestamp },
-      ];
+      const input = [{ content: 'line 1', type: 'output', timestamp }];
       const result = ScrollbackNormalizationUtility.normalizeScrollbackContent(input);
 
       expect(result).to.have.lengthOf(1);
@@ -48,9 +46,7 @@ describe('ScrollbackNormalizationUtility', () => {
     });
 
     it('should normalize invalid type to output', () => {
-      const input = [
-        { content: 'line 1', type: 'invalid-type' },
-      ];
+      const input = [{ content: 'line 1', type: 'invalid-type' }];
       const result = ScrollbackNormalizationUtility.normalizeScrollbackContent(input);
 
       expect(result).to.have.lengthOf(1);
@@ -81,11 +77,7 @@ describe('ScrollbackNormalizationUtility', () => {
     });
 
     it('should filter out objects with non-string content', () => {
-      const input = [
-        { content: 'valid line' },
-        { content: 123 },
-        { content: null },
-      ];
+      const input = [{ content: 'valid line' }, { content: 123 }, { content: null }];
       const result = ScrollbackNormalizationUtility.normalizeScrollbackContent(input);
 
       expect(result).to.have.lengthOf(1);
@@ -108,18 +100,14 @@ describe('ScrollbackNormalizationUtility', () => {
 
     it('should include timestamp if present', () => {
       const timestamp = Date.now();
-      const input: ScrollbackLine[] = [
-        { content: 'line 1', type: 'output', timestamp },
-      ];
+      const input: ScrollbackLine[] = [{ content: 'line 1', type: 'output', timestamp }];
       const result = ScrollbackNormalizationUtility.formatScrollbackForTransfer(input);
 
       expect(result[0]!.timestamp).to.equal(timestamp);
     });
 
     it('should default type to output if not specified', () => {
-      const input: ScrollbackLine[] = [
-        { content: 'line 1' } as ScrollbackLine,
-      ];
+      const input: ScrollbackLine[] = [{ content: 'line 1' } as ScrollbackLine];
       const result = ScrollbackNormalizationUtility.formatScrollbackForTransfer(input);
 
       expect(result[0]!.type).to.equal('output');
@@ -244,15 +232,9 @@ describe('ScrollbackNormalizationUtility', () => {
 
   describe('merge', () => {
     it('should merge multiple arrays', () => {
-      const array1: ScrollbackLine[] = [
-        { content: 'line 1', type: 'output' },
-      ];
-      const array2: ScrollbackLine[] = [
-        { content: 'line 2', type: 'output' },
-      ];
-      const array3: ScrollbackLine[] = [
-        { content: 'line 3', type: 'output' },
-      ];
+      const array1: ScrollbackLine[] = [{ content: 'line 1', type: 'output' }];
+      const array2: ScrollbackLine[] = [{ content: 'line 2', type: 'output' }];
+      const array3: ScrollbackLine[] = [{ content: 'line 3', type: 'output' }];
       const result = ScrollbackNormalizationUtility.merge(array1, array2, array3);
 
       expect(result).to.have.lengthOf(3);
@@ -263,9 +245,7 @@ describe('ScrollbackNormalizationUtility', () => {
 
     it('should handle empty arrays', () => {
       const array1: ScrollbackLine[] = [];
-      const array2: ScrollbackLine[] = [
-        { content: 'line 1', type: 'output' },
-      ];
+      const array2: ScrollbackLine[] = [{ content: 'line 1', type: 'output' }];
       const result = ScrollbackNormalizationUtility.merge(array1, array2);
 
       expect(result).to.have.lengthOf(1);
@@ -365,9 +345,7 @@ describe('ScrollbackNormalizationUtility', () => {
     });
 
     it('should default missing type to output', () => {
-      const input = [
-        { content: 'line 1' },
-      ];
+      const input = [{ content: 'line 1' }];
       const result = ScrollbackNormalizationUtility.sanitize(input);
 
       expect(result[0]!.type).to.equal('output');
@@ -388,9 +366,7 @@ describe('ScrollbackNormalizationUtility', () => {
 
     it('should preserve timestamps', () => {
       const timestamp = Date.now();
-      const input = [
-        { content: 'test', timestamp },
-      ];
+      const input = [{ content: 'test', timestamp }];
       const result = ScrollbackNormalizationUtility.sanitize(input);
 
       expect(result[0]!.timestamp).to.equal(timestamp);
@@ -404,14 +380,7 @@ describe('ScrollbackNormalizationUtility', () => {
 
   describe('Integration Tests', () => {
     it('should normalize, filter, and truncate in sequence', () => {
-      const input = [
-        'line 1',
-        'line 2',
-        '',
-        'line 3',
-        'line 4',
-        '',
-      ];
+      const input = ['line 1', 'line 2', '', 'line 3', 'line 4', ''];
 
       const normalized = ScrollbackNormalizationUtility.normalizeScrollbackContent(input);
       const filtered = ScrollbackNormalizationUtility.filterEmptyLines(normalized);

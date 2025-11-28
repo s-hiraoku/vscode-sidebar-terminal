@@ -55,7 +55,7 @@ export abstract class BaseInputHandler extends BaseManager implements IInputHand
     eventsRegistered: 0,
     eventsProcessed: 0,
     eventsDebounced: 0,
-    lastEventTimestamp: 0
+    lastEventTimestamp: 0,
   };
 
   constructor(
@@ -77,7 +77,7 @@ export abstract class BaseInputHandler extends BaseManager implements IInputHand
       debounceDelay: 50,
       enableStateTracking: true,
       enableEventPrevention: false,
-      ...config
+      ...config,
     };
 
     this.logger('initialization', 'starting');
@@ -126,7 +126,7 @@ export abstract class BaseInputHandler extends BaseManager implements IInputHand
       eventType,
       handler: finalHandler,
       options,
-      debounced: enableDebounce
+      debounced: enableDebounce,
     });
 
     this.metrics.eventsRegistered++;
@@ -166,7 +166,7 @@ export abstract class BaseInputHandler extends BaseManager implements IInputHand
       this.handlerState.set(`${id}-lastEvent`, {
         type: event.type,
         timestamp: Date.now(),
-        target: event.target
+        target: event.target,
       });
 
       this.metrics.eventsProcessed++;
@@ -199,7 +199,7 @@ export abstract class BaseInputHandler extends BaseManager implements IInputHand
           this.handlerState.set(`${id}-lastError`, {
             error: error instanceof Error ? error.message : String(error),
             timestamp: Date.now(),
-            eventType: event.type
+            eventType: event.type,
           });
         }
       }
@@ -284,7 +284,7 @@ export abstract class BaseInputHandler extends BaseManager implements IInputHand
       eventsRegistered: 0,
       eventsProcessed: 0,
       eventsDebounced: 0,
-      lastEventTimestamp: 0
+      lastEventTimestamp: 0,
     };
 
     this.logger('disposal', 'completed');

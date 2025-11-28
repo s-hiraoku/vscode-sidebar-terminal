@@ -8,7 +8,10 @@ import { expect } from 'chai';
 import { describe, it, beforeEach, afterEach } from 'mocha';
 import sinon from 'sinon';
 import { JSDOM } from 'jsdom';
-import { BaseInputHandler, InputHandlerConfig } from '../../../../../../webview/managers/input/handlers/BaseInputHandler';
+import {
+  BaseInputHandler,
+  InputHandlerConfig,
+} from '../../../../../../webview/managers/input/handlers/BaseInputHandler';
 import { EventHandlerRegistry as _EventHandlerRegistry } from '../../../../../../webview/utils/EventHandlerRegistry';
 
 // Test implementation of BaseInputHandler for testing abstract methods
@@ -78,7 +81,7 @@ describe('BaseInputHandler TDD Test Suite', () => {
     jsdom = new JSDOM('<!DOCTYPE html><html><body><div id="test-element"></div></body></html>', {
       url: 'http://localhost',
       pretendToBeVisual: true,
-      resources: 'usable'
+      resources: 'usable',
     });
 
     // Setup global environment
@@ -120,7 +123,7 @@ describe('BaseInputHandler TDD Test Suite', () => {
           enableDebouncing: true,
           debounceDelay: 50,
           enableStateTracking: true,
-          enableEventPrevention: false
+          enableEventPrevention: false,
         };
 
         // Act: Handler is created in beforeEach
@@ -139,11 +142,15 @@ describe('BaseInputHandler TDD Test Suite', () => {
           enableDebouncing: false,
           debounceDelay: 100,
           enableStateTracking: false,
-          enableEventPrevention: true
+          enableEventPrevention: true,
         };
 
         // Act: Create handler with custom config
-        const customHandler = new TestInputHandler('CustomHandler', sharedDebounceTimers, customConfig);
+        const customHandler = new TestInputHandler(
+          'CustomHandler',
+          sharedDebounceTimers,
+          customConfig
+        );
 
         // Assert: Configuration should match custom values
         const config = (customHandler as any).config;
@@ -209,7 +216,9 @@ describe('BaseInputHandler TDD Test Suite', () => {
       it('should register event handler and update metrics', () => {
         // Arrange: Event handler function
         let eventCalled = false;
-        const testHandler = () => { eventCalled = true; };
+        const testHandler = () => {
+          eventCalled = true;
+        };
 
         // Act: Register event handler
         handler.testRegisterEventHandler('test-click', testElement, 'click', testHandler);
@@ -247,7 +256,7 @@ describe('BaseInputHandler TDD Test Suite', () => {
         const handlers = ['handler1', 'handler2', 'handler3'];
 
         // Act: Register multiple handlers
-        handlers.forEach(id => {
+        handlers.forEach((id) => {
           handler.testRegisterEventHandler(id, testElement, 'click', () => {});
         });
 
@@ -255,7 +264,7 @@ describe('BaseInputHandler TDD Test Suite', () => {
         const registeredHandlers = (handler as any).registeredHandlers;
         expect(registeredHandlers.size).to.equal(3);
 
-        handlers.forEach(id => {
+        handlers.forEach((id) => {
           expect(registeredHandlers.has(id)).to.be.true;
         });
       });
@@ -265,10 +274,19 @@ describe('BaseInputHandler TDD Test Suite', () => {
       it('should create debounced handler when enableDebounce is true', () => {
         // Arrange: Debounced handler
         let callCount = 0;
-        const debouncedHandler = () => { callCount++; };
+        const debouncedHandler = () => {
+          callCount++;
+        };
 
         // Act: Register with debouncing enabled
-        handler.testRegisterEventHandler('debounced-test', testElement, 'input', debouncedHandler, undefined, true);
+        handler.testRegisterEventHandler(
+          'debounced-test',
+          testElement,
+          'input',
+          debouncedHandler,
+          undefined,
+          true
+        );
 
         // Act: Trigger multiple rapid events
         for (let i = 0; i < 5; i++) {
@@ -291,10 +309,19 @@ describe('BaseInputHandler TDD Test Suite', () => {
       it('should execute immediately when enableDebounce is false', () => {
         // Arrange: Non-debounced handler
         let callCount = 0;
-        const immediateHandler = () => { callCount++; };
+        const immediateHandler = () => {
+          callCount++;
+        };
 
         // Act: Register without debouncing
-        handler.testRegisterEventHandler('immediate-test', testElement, 'input', immediateHandler, undefined, false);
+        handler.testRegisterEventHandler(
+          'immediate-test',
+          testElement,
+          'input',
+          immediateHandler,
+          undefined,
+          false
+        );
 
         // Act: Trigger multiple events
         for (let i = 0; i < 3; i++) {
@@ -311,9 +338,18 @@ describe('BaseInputHandler TDD Test Suite', () => {
       it('should clear previous debounce timer on new events', () => {
         // Arrange: Debounced handler
         let callCount = 0;
-        const debouncedHandler = () => { callCount++; };
+        const debouncedHandler = () => {
+          callCount++;
+        };
 
-        handler.testRegisterEventHandler('debounce-clear-test', testElement, 'input', debouncedHandler, undefined, true);
+        handler.testRegisterEventHandler(
+          'debounce-clear-test',
+          testElement,
+          'input',
+          debouncedHandler,
+          undefined,
+          true
+        );
 
         // Act: Trigger event, wait partial time, trigger again
         testElement.dispatchEvent(new jsdom.window.Event('input'));
@@ -337,10 +373,19 @@ describe('BaseInputHandler TDD Test Suite', () => {
       it('should track event processing when state tracking is enabled', () => {
         // Arrange: Handler with state tracking enabled
         const config: InputHandlerConfig = { enableStateTracking: true };
-        const stateTrackingHandler = new TestInputHandler('StateTracker', sharedDebounceTimers, config);
+        const stateTrackingHandler = new TestInputHandler(
+          'StateTracker',
+          sharedDebounceTimers,
+          config
+        );
 
         const testHandler = () => {};
-        stateTrackingHandler.testRegisterEventHandler('state-test', testElement, 'click', testHandler);
+        stateTrackingHandler.testRegisterEventHandler(
+          'state-test',
+          testElement,
+          'click',
+          testHandler
+        );
 
         // Act: Trigger event
         testElement.dispatchEvent(new jsdom.window.Event('click'));
@@ -384,7 +429,9 @@ describe('BaseInputHandler TDD Test Suite', () => {
     describe('Error Handling and Recovery', () => {
       it('should handle errors in event handlers gracefully', () => {
         // Arrange: Handler that throws error
-        const errorHandler = () => { throw new Error('Test error'); };
+        const errorHandler = () => {
+          throw new Error('Test error');
+        };
 
         // Act: Register error handler
         handler.testRegisterEventHandler('error-test', testElement, 'click', errorHandler);
@@ -397,8 +444,8 @@ describe('BaseInputHandler TDD Test Suite', () => {
         // Assert: Error should be logged
         expect(consoleStub.called).to.be.true;
         const logCalls = consoleStub.getCalls();
-        const errorLogs = logCalls.some(call =>
-          call.args[0] && call.args[0].includes('Error in event handler error-test')
+        const errorLogs = logCalls.some(
+          (call) => call.args[0] && call.args[0].includes('Error in event handler error-test')
         );
         expect(errorLogs).to.be.true;
       });
@@ -407,12 +454,23 @@ describe('BaseInputHandler TDD Test Suite', () => {
         // Arrange: Handler with state tracking and error prevention
         const config: InputHandlerConfig = {
           enableStateTracking: true,
-          enableEventPrevention: true
+          enableEventPrevention: true,
         };
-        const errorTrackingHandler = new TestInputHandler('ErrorTracker', sharedDebounceTimers, config);
+        const errorTrackingHandler = new TestInputHandler(
+          'ErrorTracker',
+          sharedDebounceTimers,
+          config
+        );
 
-        const errorHandler = () => { throw new Error('Tracked error'); };
-        errorTrackingHandler.testRegisterEventHandler('error-state-test', testElement, 'click', errorHandler);
+        const errorHandler = () => {
+          throw new Error('Tracked error');
+        };
+        errorTrackingHandler.testRegisterEventHandler(
+          'error-state-test',
+          testElement,
+          'click',
+          errorHandler
+        );
 
         // Act: Trigger error
         testElement.dispatchEvent(new jsdom.window.Event('click'));
@@ -432,10 +490,21 @@ describe('BaseInputHandler TDD Test Suite', () => {
       it('should prevent event propagation on error when configured', () => {
         // Arrange: Handler with event prevention enabled
         const config: InputHandlerConfig = { enableEventPrevention: true };
-        const preventionHandler = new TestInputHandler('PreventionHandler', sharedDebounceTimers, config);
+        const preventionHandler = new TestInputHandler(
+          'PreventionHandler',
+          sharedDebounceTimers,
+          config
+        );
 
-        const errorHandler = () => { throw new Error('Prevention test'); };
-        preventionHandler.testRegisterEventHandler('prevention-test', testElement, 'click', errorHandler);
+        const errorHandler = () => {
+          throw new Error('Prevention test');
+        };
+        preventionHandler.testRegisterEventHandler(
+          'prevention-test',
+          testElement,
+          'click',
+          errorHandler
+        );
 
         // Arrange: Event with propagation tracking
         let propagationStopped = false;
@@ -470,7 +539,9 @@ describe('BaseInputHandler TDD Test Suite', () => {
       it('should unregister event handler and remove tracking', () => {
         // Arrange: Register handler
         let eventCalled = false;
-        const testHandler = () => { eventCalled = true; };
+        const testHandler = () => {
+          eventCalled = true;
+        };
 
         handler.testRegisterEventHandler('unregister-test', testElement, 'click', testHandler);
         expect(handler.getHandlerMetrics().eventsRegistered).to.equal(1);
@@ -552,9 +623,16 @@ describe('BaseInputHandler TDD Test Suite', () => {
       it('should track event processing metrics accurately', () => {
         // Arrange: Register handler
         let processCount = 0;
-        const processingHandler = () => { processCount++; };
+        const processingHandler = () => {
+          processCount++;
+        };
 
-        handler.testRegisterEventHandler('processing-test', testElement, 'click', processingHandler);
+        handler.testRegisterEventHandler(
+          'processing-test',
+          testElement,
+          'click',
+          processingHandler
+        );
 
         // Act: Trigger multiple events
         for (let i = 0; i < 3; i++) {
@@ -571,9 +649,18 @@ describe('BaseInputHandler TDD Test Suite', () => {
       it('should track debounce metrics separately from processing', () => {
         // Arrange: Register debounced handler
         let callCount = 0;
-        const debouncedHandler = () => { callCount++; };
+        const debouncedHandler = () => {
+          callCount++;
+        };
 
-        handler.testRegisterEventHandler('debounce-metrics', testElement, 'input', debouncedHandler, undefined, true);
+        handler.testRegisterEventHandler(
+          'debounce-metrics',
+          testElement,
+          'input',
+          debouncedHandler,
+          undefined,
+          true
+        );
 
         // Act: Trigger multiple rapid events
         for (let i = 0; i < 4; i++) {
@@ -612,7 +699,9 @@ describe('BaseInputHandler TDD Test Suite', () => {
         const freshState = stateHandler.getHandlerState();
 
         // Assert: Original state should be unchanged (deep copy)
-        expect((freshState['state-inspect-lastEvent'] as any).timestamp).to.equal(originalTimestamp);
+        expect((freshState['state-inspect-lastEvent'] as any).timestamp).to.equal(
+          originalTimestamp
+        );
 
         stateHandler.dispose();
       });
@@ -664,7 +753,14 @@ describe('BaseInputHandler TDD Test Suite', () => {
       it('should clear active debounce timers on disposal', () => {
         // Arrange: Register debounced handlers
         const debouncedHandler = sinon.stub();
-        handler.testRegisterEventHandler('cleanup-test', testElement, 'input', debouncedHandler, undefined, true);
+        handler.testRegisterEventHandler(
+          'cleanup-test',
+          testElement,
+          'input',
+          debouncedHandler,
+          undefined,
+          true
+        );
 
         // Act: Trigger events to create active timers
         for (let i = 0; i < 3; i++) {
@@ -717,7 +813,7 @@ describe('BaseInputHandler TDD Test Suite', () => {
       it('should dispose EventHandlerRegistry and cleanup all listeners', () => {
         // Arrange: Register multiple event handlers
         const handlers = ['handler1', 'handler2', 'handler3'];
-        handlers.forEach(id => {
+        handlers.forEach((id) => {
           handler.testRegisterEventHandler(id, testElement, 'click', () => {});
         });
 
@@ -803,10 +899,19 @@ describe('BaseInputHandler TDD Test Suite', () => {
         const zeroDelayHandler = new TestInputHandler('ZeroDelay', sharedDebounceTimers, config);
 
         let callCount = 0;
-        const testHandler = () => { callCount++; };
+        const testHandler = () => {
+          callCount++;
+        };
 
         // Act: Register with debouncing enabled but zero delay
-        zeroDelayHandler.testRegisterEventHandler('zero-delay', testElement, 'input', testHandler, undefined, true);
+        zeroDelayHandler.testRegisterEventHandler(
+          'zero-delay',
+          testElement,
+          'input',
+          testHandler,
+          undefined,
+          true
+        );
 
         // Trigger events
         testElement.dispatchEvent(new jsdom.window.Event('input'));
@@ -827,10 +932,19 @@ describe('BaseInputHandler TDD Test Suite', () => {
         const highDelayHandler = new TestInputHandler('HighDelay', sharedDebounceTimers, config);
 
         let callCount = 0;
-        const testHandler = () => { callCount++; };
+        const testHandler = () => {
+          callCount++;
+        };
 
         // Act: Register with high delay
-        highDelayHandler.testRegisterEventHandler('high-delay', testElement, 'input', testHandler, undefined, true);
+        highDelayHandler.testRegisterEventHandler(
+          'high-delay',
+          testElement,
+          'input',
+          testHandler,
+          undefined,
+          true
+        );
 
         testElement.dispatchEvent(new jsdom.window.Event('input'));
 
@@ -851,11 +965,13 @@ describe('BaseInputHandler TDD Test Suite', () => {
           type: 'click',
           target: null,
           preventDefault: sinon.stub(),
-          stopPropagation: sinon.stub()
+          stopPropagation: sinon.stub(),
         };
 
         let handlerCalled = false;
-        const nullTargetHandler = () => { handlerCalled = true; };
+        const nullTargetHandler = () => {
+          handlerCalled = true;
+        };
 
         // Act: Register handler (this should work)
         handler.testRegisterEventHandler('null-target', testElement, 'click', nullTargetHandler);
@@ -880,7 +996,7 @@ describe('BaseInputHandler TDD Test Suite', () => {
         const handlerIds = ['rapid1', 'rapid2', 'rapid3', 'rapid4', 'rapid5'];
 
         // Act: Rapidly register and unregister
-        handlerIds.forEach(id => {
+        handlerIds.forEach((id) => {
           handler.testRegisterEventHandler(id, testElement, 'click', () => {});
           handler.testUnregisterEventHandler(id);
         });
@@ -895,7 +1011,9 @@ describe('BaseInputHandler TDD Test Suite', () => {
       it('should handle events during disposal process', () => {
         // Arrange: Register handler
         let eventDuringDisposal = false;
-        const testHandler = () => { eventDuringDisposal = true; };
+        const testHandler = () => {
+          eventDuringDisposal = true;
+        };
 
         handler.testRegisterEventHandler('disposal-event', testElement, 'click', testHandler);
 
@@ -919,12 +1037,16 @@ describe('BaseInputHandler TDD Test Suite', () => {
         const invalidConfig = {
           debounceDelay: -100,
           enableDebouncing: null as any,
-          enableStateTracking: undefined as any
+          enableStateTracking: undefined as any,
         };
 
         // Act: Create handler with invalid config (should not throw)
         expect(() => {
-          const invalidHandler = new TestInputHandler('InvalidConfig', sharedDebounceTimers, invalidConfig);
+          const invalidHandler = new TestInputHandler(
+            'InvalidConfig',
+            sharedDebounceTimers,
+            invalidConfig
+          );
           invalidHandler.dispose();
         }).to.not.throw();
       });
@@ -934,7 +1056,11 @@ describe('BaseInputHandler TDD Test Suite', () => {
         const partialConfig = { enableDebouncing: false };
 
         // Act: Create handler with partial config
-        const partialHandler = new TestInputHandler('PartialConfig', sharedDebounceTimers, partialConfig);
+        const partialHandler = new TestInputHandler(
+          'PartialConfig',
+          sharedDebounceTimers,
+          partialConfig
+        );
 
         // Assert: Should fill in defaults for missing values
         const config = (partialHandler as any).config;

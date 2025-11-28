@@ -160,7 +160,9 @@ export class ResizeManager {
       observer.observe(element);
       this.observers.set(key, observer);
 
-      log(`👁️ ResizeManager: Observer setup for ${key} (skipFirstCallback: ${shouldSkipFirstCallback})`);
+      log(
+        `👁️ ResizeManager: Observer setup for ${key} (skipFirstCallback: ${shouldSkipFirstCallback})`
+      );
     } catch (error) {
       log(`❌ ResizeManager: Failed to setup observer for ${key}:`, error);
     }

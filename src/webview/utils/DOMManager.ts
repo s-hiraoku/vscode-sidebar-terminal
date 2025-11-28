@@ -53,9 +53,7 @@ export class DOMManager {
     // Return disposable to allow cancellation
     return {
       dispose: () => {
-        const index = this.pendingCallbacks.findIndex(
-          (item) => item.callback === callback
-        );
+        const index = this.pendingCallbacks.findIndex((item) => item.callback === callback);
         if (index >= 0) {
           this.pendingCallbacks.splice(index, 1);
         }
@@ -95,9 +93,7 @@ export class DOMManager {
     }
 
     // Sort by priority (higher priority first)
-    const callbacks = [...this.pendingCallbacks].sort(
-      (a, b) => b.priority - a.priority
-    );
+    const callbacks = [...this.pendingCallbacks].sort((a, b) => b.priority - a.priority);
 
     // Clear pending callbacks
     this.pendingCallbacks = [];

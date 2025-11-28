@@ -131,11 +131,7 @@ export class PanelLocationService implements vscode.Disposable {
     log('📍 [DEBUG] ✅ Cached panel location UPDATED:', location);
 
     // Update context key for VS Code when clause
-    await vscode.commands.executeCommand(
-      'setContext',
-      PanelLocationService.CONTEXT_KEY,
-      location
-    );
+    await vscode.commands.executeCommand('setContext', PanelLocationService.CONTEXT_KEY, location);
     log('📍 [DEBUG] Context key updated with panel location:', location);
 
     // 🎯 REMOVED: No longer send confirmation back to WebView
@@ -202,8 +198,7 @@ export class PanelLocationService implements vscode.Disposable {
     // Map panel location to split direction
     // Sidebar (tall/narrow) → vertical split → column layout (terminals stacked)
     // Panel (wide/short) → horizontal split → row layout (terminals side by side)
-    const splitDirection: SplitDirection =
-      panelLocation === 'panel' ? 'horizontal' : 'vertical';
+    const splitDirection: SplitDirection = panelLocation === 'panel' ? 'horizontal' : 'vertical';
 
     log(`🔀 [SPLIT] Mapping logic: ${panelLocation} === 'panel' ? 'horizontal' : 'vertical'`);
     log(`🔀 [SPLIT] ✅ Result: ${splitDirection}`);
@@ -282,7 +277,9 @@ export class PanelLocationService implements vscode.Disposable {
         }
 
         if (event.affectsConfiguration('secondaryTerminal.dynamicSplitDirection')) {
-          log('📍 [PANEL-DETECTION] Dynamic split direction setting changed - requesting detection');
+          log(
+            '📍 [PANEL-DETECTION] Dynamic split direction setting changed - requesting detection'
+          );
           void this.requestPanelLocationDetection();
         }
       })

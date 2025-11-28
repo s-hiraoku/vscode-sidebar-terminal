@@ -297,7 +297,9 @@ test.describe('AI Agent Detection', () => {
    * Validates that detected agents show visual status
    * indicators in terminal headers.
    */
-  test('should display visual status indicator for detected agent @P1 @ai-agent-detection @visual', async ({ page: _page }) => {
+  test('should display visual status indicator for detected agent @P1 @ai-agent-detection @visual', async ({
+    page: _page,
+  }) => {
     // Arrange: Load Claude Code startup
     const claudeStartup = readFileSync(
       `${TEST_PATHS.AI_AGENT_OUTPUT}/claude-code-startup.txt`,

@@ -50,6 +50,7 @@ describe('MyService', () => {
 ### BaseTest
 
 Foundation class providing:
+
 - Automatic sinon sandbox creation/cleanup
 - VS Code mock setup via `VSCodeMockFactory`
 - Console log suppression
@@ -85,11 +86,13 @@ describe('My Feature', () => {
 ```
 
 **Available Properties:**
+
 - `test.sandbox: sinon.SinonSandbox` - Sinon sandbox (auto-restored)
 - `test.vscode: VSCodeMocks` - VS Code API mocks
 - `test.logSpy: sinon.SinonStub` - console.log stub
 
 **Helper Methods:**
+
 - `configureDefaults<T>(defaults: T)` - Set VS Code config defaults
 - `stub<T, K>(object: T, method: K)` - Create stub
 - `spy<T, K>(object: T, method: K)` - Create spy
@@ -104,6 +107,7 @@ describe('My Feature', () => {
 ### ConfigurationTest
 
 Extends `BaseTest` with configuration-specific features:
+
 - Automatic configuration defaults
 - Configuration change simulation
 - Configuration update helpers
@@ -142,10 +146,12 @@ describe('Configuration Feature', () => {
 ```
 
 **Additional Properties:**
+
 - `configChangeHandlers: Array<Function>` - Registered handlers
 - `configChangeEmitter: sinon.SinonStub` - Change emitter stub
 
 **Additional Methods:**
+
 - `getDefaultConfig()` - Override to provide defaults
 - `triggerConfigChange(affectsConfiguration)` - Trigger change
 - `triggerSectionChange(...sections)` - Trigger for sections
@@ -162,6 +168,7 @@ describe('Configuration Feature', () => {
 ### AsyncTest
 
 Extends `BaseTest` with async operation utilities:
+
 - Fake timers (Sinon clock)
 - Promise tracking
 - Async operation helpers
@@ -210,11 +217,13 @@ describe('Async Feature', () => {
 ```
 
 **Additional Properties:**
+
 - `clock: sinon.SinonFakeTimers` - Fake timers (if enabled)
 - `useFakeTimers: boolean` - Enable fake timers (default: false)
 - `pendingPromises: Set<Promise>` - Tracked promises
 
 **Additional Methods:**
+
 - `tick(ms)` - Advance fake timers
 - `tickNext()` - Advance to next timer
 - `tickAll()` - Run all pending timers
@@ -279,7 +288,7 @@ class MyServiceTest extends ConfigurationTest {
   }
 
   protected override getDefaultConfig() {
-    return { 'key1': 'value1' };
+    return { key1: 'value1' };
   }
 }
 
@@ -296,6 +305,7 @@ describe('MyService', () => {
 ```
 
 **Benefits:**
+
 - ✅ 60% less boilerplate code
 - ✅ Automatic resource management
 - ✅ Type-safe access to test utilities
@@ -380,6 +390,7 @@ it('should timeout after 5 seconds', async () => {
 ## Phase 2 Summary
 
 **Created Files:**
+
 1. `src/test/utils/BaseTest.ts` - 190 lines
 2. `src/test/utils/ConfigurationTest.ts` - 175 lines
 3. `src/test/utils/AsyncTest.ts` - 275 lines
@@ -387,6 +398,7 @@ it('should timeout after 5 seconds', async () => {
 5. `src/test/utils/README.md` - This file
 
 **Status:**
+
 - ✅ All base classes compile successfully
 - ✅ TypeScript errors: 0
 - ✅ Full type safety maintained
@@ -394,6 +406,7 @@ it('should timeout after 5 seconds', async () => {
 - ✅ Ready for test migration
 
 **Next Steps (Phase 3):**
+
 - Migrate existing test files to use base classes
 - Reduce codebase test boilerplate by ~60%
 - Improve test maintainability and consistency

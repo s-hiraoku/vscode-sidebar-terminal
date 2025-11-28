@@ -125,10 +125,7 @@ export class TerminalLinkResolver {
    * 3. Process CWD + relative path
    * 4. Absolute path (if provided)
    */
-  public async resolveFileLink(
-    filePath: string,
-    terminalId?: string
-  ): Promise<vscode.Uri | null> {
+  public async resolveFileLink(filePath: string, terminalId?: string): Promise<vscode.Uri | null> {
     const candidates = this.buildPathCandidates(filePath, terminalId);
 
     for (const candidate of candidates) {

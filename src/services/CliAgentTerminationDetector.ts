@@ -38,7 +38,9 @@ export class CliAgentTerminationDetector {
 
     // If we saw AI activity within the last 10 seconds, require higher confidence
     if (timeSinceLastAIOutput < 10000) {
-      log(`🔍 [VALIDATION] Recent AI activity detected (${timeSinceLastAIOutput}ms ago), requiring higher confidence`);
+      log(
+        `🔍 [VALIDATION] Recent AI activity detected (${timeSinceLastAIOutput}ms ago), requiring higher confidence`
+      );
       return terminationResult.confidence >= 0.8;
     }
 
@@ -60,7 +62,9 @@ export class CliAgentTerminationDetector {
     }
 
     // 6. Default to false for low confidence termination signals
-    log(`🔍 [VALIDATION] Termination signal validation failed: confidence=${terminationResult.confidence}, timeSinceAI=${timeSinceLastAIOutput}ms`);
+    log(
+      `🔍 [VALIDATION] Termination signal validation failed: confidence=${terminationResult.confidence}, timeSinceAI=${timeSinceLastAIOutput}ms`
+    );
     return false;
   }
 
@@ -147,8 +151,7 @@ export class CliAgentTerminationDetector {
           cleanLine.match(/^\s*[>]\s*$/i) || // Simple >
           cleanLine.match(/^In\s*\[\d+\]:\s*$/i) || // Jupyter/IPython style
           cleanLine.match(/^Out\s*\[\d+\]:\s*$/i) ||
-          (cleanLine.length <= 10 && cleanLine.match(/[#$%>]+\s*$/)) // Short prompts
-        );
+          (cleanLine.length <= 10 && cleanLine.match(/[#$%>]+\s*$/))); // Short prompts
 
       if (isProbablyShellPrompt) {
         log(`✅ [TERMINATION] Shell prompt detected (relaxed): "${cleanLine}"`);
@@ -178,11 +181,15 @@ export class CliAgentTerminationDetector {
     // If we haven't seen AI output for a while, be more lenient
     const lastAIOutputEntry = this.detectionCache.get(`${terminalId}_lastAIOutput`);
     const timeSinceLastAIOutput = Date.now() - (lastAIOutputEntry?.timestamp || 0);
-    if (timeSinceLastAIOutput > 30000) { // 30 seconds
+    if (timeSinceLastAIOutput > 30000) {
+      // 30 seconds
       // After 30 seconds of no AI output, be much more lenient about shell prompts
-      if (cleanLine.length <= 30 &&
-          (cleanLine.includes('$') || cleanLine.includes('%') || cleanLine.includes('>')) &&
-          !cleanLine.includes('claude') && !cleanLine.includes('gemini')) {
+      if (
+        cleanLine.length <= 30 &&
+        (cleanLine.includes('$') || cleanLine.includes('%') || cleanLine.includes('>')) &&
+        !cleanLine.includes('claude') &&
+        !cleanLine.includes('gemini')
+      ) {
         log(`✅ [TERMINATION] Timeout-based shell prompt detected: "${cleanLine}"`);
         return {
           isTerminated: true,
@@ -211,20 +218,20 @@ export class CliAgentTerminationDetector {
     // Very obvious shell prompt patterns
     return (
       // Standard shell prompts
-      /^[a-z0-9._-]+@[a-z0-9.-]+:[~\/][^$]*\$\s*$/i.test(line) || // user@host:~$
-      /^[a-z0-9._-]+@[a-z0-9.-]+\s*\$\s*$/i.test(line) || // user@host $
-      /^\$\s*$/.test(line) || // Just $
-      /^%\s*$/.test(line) || // % (zsh)
-      /^>\s*$/.test(line) || // > (some shells)
-      /^PS\d+>\s*$/i.test(line) || // PowerShell
-      /^C:\\.+>\s*$/i.test(line) // Windows Command Prompt
-    ) &&
-    // Exclude lines that look like AI responses
-    !line.includes('claude') &&
-    !line.includes('gemini') &&
-    !line.includes('assistant') &&
-    !line.includes('help') &&
-    line.length < 50; // Shell prompts are typically short
+      (/^[a-z0-9._-]+@[a-z0-9.-]+:[~\/][^$]*\$\s*$/i.test(line) || // user@host:~$
+        /^[a-z0-9._-]+@[a-z0-9.-]+\s*\$\s*$/i.test(line) || // user@host $
+        /^\$\s*$/.test(line) || // Just $
+        /^%\s*$/.test(line) || // % (zsh)
+        /^>\s*$/.test(line) || // > (some shells)
+        /^PS\d+>\s*$/i.test(line) || // PowerShell
+        /^C:\\.+>\s*$/i.test(line)) && // Windows Command Prompt
+      // Exclude lines that look like AI responses
+      !line.includes('claude') &&
+      !line.includes('gemini') &&
+      !line.includes('assistant') &&
+      !line.includes('help') &&
+      line.length < 50
+    ); // Shell prompts are typically short
   }
 
   /**
@@ -395,10 +402,12 @@ export class CliAgentTerminationDetector {
 
       // After 20 seconds of no obvious Claude activity, be more lenient
       if (timeSinceActivity > 20000) {
-        return line.length <= 30 &&
-               (line.includes('$') || line.includes('%') || line.includes('>')) &&
-               !line.includes('claude code') &&
-               !line.includes('gemini cli');
+        return (
+          line.length <= 30 &&
+          (line.includes('$') || line.includes('%') || line.includes('>')) &&
+          !line.includes('claude code') &&
+          !line.includes('gemini cli')
+        );
       }
       return false;
     })();
@@ -412,8 +421,14 @@ export class CliAgentTerminationDetector {
       isTimeBasedRelaxed; // 🆕 Add time-based relaxation
 
     // 🆕 UPDATE ACTIVITY TRACKING: Track when we see Claude-like activity
-    if (line.includes('claude') || line.includes('thinking') || line.includes('analyzing') ||
-        line.includes('let me') || line.includes('i can') || line.includes('i will')) {
+    if (
+      line.includes('claude') ||
+      line.includes('thinking') ||
+      line.includes('analyzing') ||
+      line.includes('let me') ||
+      line.includes('i can') ||
+      line.includes('i will')
+    ) {
       this.detectionCache.set('lastClaudeActivity', { result: null, timestamp: Date.now() });
     }
 

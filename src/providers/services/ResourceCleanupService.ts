@@ -105,9 +105,7 @@ export class ResourceCleanupService implements vscode.Disposable {
         const result = callback();
         if (result instanceof Promise) {
           // Fire and forget for async callbacks
-          result.catch((error) =>
-            log(`⚠️ [CLEANUP] Async cleanup callback failed: ${error}`)
-          );
+          result.catch((error) => log(`⚠️ [CLEANUP] Async cleanup callback failed: ${error}`));
         }
       } catch (error) {
         log(`⚠️ [CLEANUP] Cleanup callback failed: ${error}`);

@@ -17,19 +17,12 @@ describe('TerminalLifecycleStateMachine', () => {
   describe('Basic State Management', () => {
     it('should initialize with Creating state by default', () => {
       const stateMachine = new TerminalLifecycleStateMachine('term1');
-      expect(stateMachine.getCurrentState()).to.equal(
-        TerminalLifecycleState.Creating
-      );
+      expect(stateMachine.getCurrentState()).to.equal(TerminalLifecycleState.Creating);
     });
 
     it('should initialize with custom initial state', () => {
-      const stateMachine = new TerminalLifecycleStateMachine(
-        'term1',
-        TerminalLifecycleState.Ready
-      );
-      expect(stateMachine.getCurrentState()).to.equal(
-        TerminalLifecycleState.Ready
-      );
+      const stateMachine = new TerminalLifecycleStateMachine('term1', TerminalLifecycleState.Ready);
+      expect(stateMachine.getCurrentState()).to.equal(TerminalLifecycleState.Ready);
     });
 
     it('should return correct terminal ID', () => {
@@ -38,24 +31,15 @@ describe('TerminalLifecycleStateMachine', () => {
     });
 
     it('should correctly check if in specific state', () => {
-      const stateMachine = new TerminalLifecycleStateMachine(
-        'term1',
-        TerminalLifecycleState.Ready
-      );
+      const stateMachine = new TerminalLifecycleStateMachine('term1', TerminalLifecycleState.Ready);
       expect(stateMachine.isInState(TerminalLifecycleState.Ready)).to.be.true;
       expect(stateMachine.isInState(TerminalLifecycleState.Active)).to.be.false;
     });
 
     it('should correctly check if in any of specified states', () => {
-      const stateMachine = new TerminalLifecycleStateMachine(
-        'term1',
-        TerminalLifecycleState.Ready
-      );
+      const stateMachine = new TerminalLifecycleStateMachine('term1', TerminalLifecycleState.Ready);
       expect(
-        stateMachine.isInAnyState([
-          TerminalLifecycleState.Ready,
-          TerminalLifecycleState.Active,
-        ])
+        stateMachine.isInAnyState([TerminalLifecycleState.Ready, TerminalLifecycleState.Active])
       ).to.be.true;
       expect(
         stateMachine.isInAnyState([
@@ -69,12 +53,8 @@ describe('TerminalLifecycleStateMachine', () => {
   describe('State Transition Rules', () => {
     it('should allow valid transition: Creating -> Initializing', () => {
       const stateMachine = new TerminalLifecycleStateMachine('term1');
-      expect(() =>
-        stateMachine.transition(TerminalLifecycleState.Initializing)
-      ).to.not.throw();
-      expect(stateMachine.getCurrentState()).to.equal(
-        TerminalLifecycleState.Initializing
-      );
+      expect(() => stateMachine.transition(TerminalLifecycleState.Initializing)).to.not.throw();
+      expect(stateMachine.getCurrentState()).to.equal(TerminalLifecycleState.Initializing);
     });
 
     it('should allow valid transition: Initializing -> Ready', () => {
@@ -82,23 +62,14 @@ describe('TerminalLifecycleStateMachine', () => {
         'term1',
         TerminalLifecycleState.Initializing
       );
-      expect(() => stateMachine.transition(TerminalLifecycleState.Ready)).to.not
-        .throw();
-      expect(stateMachine.getCurrentState()).to.equal(
-        TerminalLifecycleState.Ready
-      );
+      expect(() => stateMachine.transition(TerminalLifecycleState.Ready)).to.not.throw();
+      expect(stateMachine.getCurrentState()).to.equal(TerminalLifecycleState.Ready);
     });
 
     it('should allow valid transition: Ready -> Active', () => {
-      const stateMachine = new TerminalLifecycleStateMachine(
-        'term1',
-        TerminalLifecycleState.Ready
-      );
-      expect(() => stateMachine.transition(TerminalLifecycleState.Active)).to
-        .not.throw();
-      expect(stateMachine.getCurrentState()).to.equal(
-        TerminalLifecycleState.Active
-      );
+      const stateMachine = new TerminalLifecycleStateMachine('term1', TerminalLifecycleState.Ready);
+      expect(() => stateMachine.transition(TerminalLifecycleState.Active)).to.not.throw();
+      expect(stateMachine.getCurrentState()).to.equal(TerminalLifecycleState.Active);
     });
 
     it('should allow valid transition: Active -> Ready', () => {
@@ -106,11 +77,8 @@ describe('TerminalLifecycleStateMachine', () => {
         'term1',
         TerminalLifecycleState.Active
       );
-      expect(() => stateMachine.transition(TerminalLifecycleState.Ready)).to.not
-        .throw();
-      expect(stateMachine.getCurrentState()).to.equal(
-        TerminalLifecycleState.Ready
-      );
+      expect(() => stateMachine.transition(TerminalLifecycleState.Ready)).to.not.throw();
+      expect(stateMachine.getCurrentState()).to.equal(TerminalLifecycleState.Ready);
     });
 
     it('should allow valid transition: Active -> Closing', () => {
@@ -118,11 +86,8 @@ describe('TerminalLifecycleStateMachine', () => {
         'term1',
         TerminalLifecycleState.Active
       );
-      expect(() => stateMachine.transition(TerminalLifecycleState.Closing)).to
-        .not.throw();
-      expect(stateMachine.getCurrentState()).to.equal(
-        TerminalLifecycleState.Closing
-      );
+      expect(() => stateMachine.transition(TerminalLifecycleState.Closing)).to.not.throw();
+      expect(stateMachine.getCurrentState()).to.equal(TerminalLifecycleState.Closing);
     });
 
     it('should allow valid transition: Closing -> Closed', () => {
@@ -130,11 +95,8 @@ describe('TerminalLifecycleStateMachine', () => {
         'term1',
         TerminalLifecycleState.Closing
       );
-      expect(() => stateMachine.transition(TerminalLifecycleState.Closed)).to
-        .not.throw();
-      expect(stateMachine.getCurrentState()).to.equal(
-        TerminalLifecycleState.Closed
-      );
+      expect(() => stateMachine.transition(TerminalLifecycleState.Closed)).to.not.throw();
+      expect(stateMachine.getCurrentState()).to.equal(TerminalLifecycleState.Closed);
     });
 
     it('should allow transition to Error from any non-terminal state', () => {
@@ -148,28 +110,23 @@ describe('TerminalLifecycleStateMachine', () => {
 
       for (const state of states) {
         const stateMachine = new TerminalLifecycleStateMachine('term1', state);
-        expect(() => stateMachine.transition(TerminalLifecycleState.Error)).to
-          .not.throw();
-        expect(stateMachine.getCurrentState()).to.equal(
-          TerminalLifecycleState.Error
-        );
+        expect(() => stateMachine.transition(TerminalLifecycleState.Error)).to.not.throw();
+        expect(stateMachine.getCurrentState()).to.equal(TerminalLifecycleState.Error);
       }
     });
 
     it('should reject invalid transition: Creating -> Ready', () => {
       const stateMachine = new TerminalLifecycleStateMachine('term1');
-      expect(() => stateMachine.transition(TerminalLifecycleState.Ready)).to
-        .throw('Invalid state transition');
+      expect(() => stateMachine.transition(TerminalLifecycleState.Ready)).to.throw(
+        'Invalid state transition'
+      );
     });
 
     it('should reject invalid transition: Ready -> Initializing', () => {
-      const stateMachine = new TerminalLifecycleStateMachine(
-        'term1',
-        TerminalLifecycleState.Ready
+      const stateMachine = new TerminalLifecycleStateMachine('term1', TerminalLifecycleState.Ready);
+      expect(() => stateMachine.transition(TerminalLifecycleState.Initializing)).to.throw(
+        'Invalid state transition'
       );
-      expect(() =>
-        stateMachine.transition(TerminalLifecycleState.Initializing)
-      ).to.throw('Invalid state transition');
     });
 
     it('should reject any transition from Closed state', () => {
@@ -177,15 +134,13 @@ describe('TerminalLifecycleStateMachine', () => {
         'term1',
         TerminalLifecycleState.Closed
       );
-      expect(() => stateMachine.transition(TerminalLifecycleState.Ready)).to
-        .throw('Invalid state transition');
+      expect(() => stateMachine.transition(TerminalLifecycleState.Ready)).to.throw(
+        'Invalid state transition'
+      );
     });
 
     it('should correctly identify valid next states', () => {
-      const stateMachine = new TerminalLifecycleStateMachine(
-        'term1',
-        TerminalLifecycleState.Ready
-      );
+      const stateMachine = new TerminalLifecycleStateMachine('term1', TerminalLifecycleState.Ready);
       const validStates = stateMachine.getValidNextStates();
       expect(validStates).to.include(TerminalLifecycleState.Active);
       expect(validStates).to.include(TerminalLifecycleState.Closing);
@@ -194,15 +149,9 @@ describe('TerminalLifecycleStateMachine', () => {
     });
 
     it('should correctly check if transition is valid', () => {
-      const stateMachine = new TerminalLifecycleStateMachine(
-        'term1',
-        TerminalLifecycleState.Ready
-      );
-      expect(stateMachine.canTransitionTo(TerminalLifecycleState.Active)).to.be
-        .true;
-      expect(
-        stateMachine.canTransitionTo(TerminalLifecycleState.Initializing)
-      ).to.be.false;
+      const stateMachine = new TerminalLifecycleStateMachine('term1', TerminalLifecycleState.Ready);
+      expect(stateMachine.canTransitionTo(TerminalLifecycleState.Active)).to.be.true;
+      expect(stateMachine.canTransitionTo(TerminalLifecycleState.Initializing)).to.be.false;
     });
   });
 
@@ -325,12 +274,8 @@ describe('TerminalLifecycleStateMachine', () => {
 
       expect(eventReceived).to.exist;
       expect(eventReceived!.terminalId).to.equal('term1');
-      expect(eventReceived!.previousState).to.equal(
-        TerminalLifecycleState.Creating
-      );
-      expect(eventReceived!.newState).to.equal(
-        TerminalLifecycleState.Initializing
-      );
+      expect(eventReceived!.previousState).to.equal(TerminalLifecycleState.Creating);
+      expect(eventReceived!.newState).to.equal(TerminalLifecycleState.Initializing);
     });
 
     it('should support multiple listeners', () => {
@@ -419,9 +364,7 @@ describe('TerminalLifecycleStateMachine', () => {
       });
 
       // Should not throw despite error in first listener
-      expect(() =>
-        stateMachine.transition(TerminalLifecycleState.Initializing)
-      ).to.not.throw();
+      expect(() => stateMachine.transition(TerminalLifecycleState.Initializing)).to.not.throw();
       expect(goodListenerCalled).to.be.true;
     });
   });
@@ -430,16 +373,11 @@ describe('TerminalLifecycleStateMachine', () => {
     it('should allow forced transition bypassing validation', () => {
       const stateMachine = new TerminalLifecycleStateMachine('term1');
       // Invalid transition normally
-      expect(() => stateMachine.transition(TerminalLifecycleState.Closed)).to
-        .throw();
+      expect(() => stateMachine.transition(TerminalLifecycleState.Closed)).to.throw();
 
       // Should work with force
-      expect(() =>
-        stateMachine.forceTransition(TerminalLifecycleState.Closed)
-      ).to.not.throw();
-      expect(stateMachine.getCurrentState()).to.equal(
-        TerminalLifecycleState.Closed
-      );
+      expect(() => stateMachine.forceTransition(TerminalLifecycleState.Closed)).to.not.throw();
+      expect(stateMachine.getCurrentState()).to.equal(TerminalLifecycleState.Closed);
     });
 
     it('should record forced transitions in history', () => {
@@ -505,19 +443,12 @@ describe('TerminalLifecycleStateMachineManager', () => {
 
     it('should throw error when creating duplicate state machine', () => {
       manager.createStateMachine('term1');
-      expect(() => manager.createStateMachine('term1')).to.throw(
-        'already exists'
-      );
+      expect(() => manager.createStateMachine('term1')).to.throw('already exists');
     });
 
     it('should create state machine with custom initial state', () => {
-      const stateMachine = manager.createStateMachine(
-        'term1',
-        TerminalLifecycleState.Ready
-      );
-      expect(stateMachine.getCurrentState()).to.equal(
-        TerminalLifecycleState.Ready
-      );
+      const stateMachine = manager.createStateMachine('term1', TerminalLifecycleState.Ready);
+      expect(stateMachine.getCurrentState()).to.equal(TerminalLifecycleState.Ready);
     });
   });
 
@@ -575,17 +506,12 @@ describe('TerminalLifecycleStateMachineManager', () => {
       const stateMachine = manager.createStateMachine('term1');
       stateMachine.transition(TerminalLifecycleState.Initializing);
 
-      expect(
-        manager.isTerminalInState('term1', TerminalLifecycleState.Initializing)
-      ).to.be.true;
-      expect(manager.isTerminalInState('term1', TerminalLifecycleState.Ready))
-        .to.be.false;
+      expect(manager.isTerminalInState('term1', TerminalLifecycleState.Initializing)).to.be.true;
+      expect(manager.isTerminalInState('term1', TerminalLifecycleState.Ready)).to.be.false;
     });
 
     it('should return false for non-existent terminal state check', () => {
-      expect(
-        manager.isTerminalInState('term1', TerminalLifecycleState.Ready)
-      ).to.be.false;
+      expect(manager.isTerminalInState('term1', TerminalLifecycleState.Ready)).to.be.false;
     });
 
     it('should get all terminals in specific state', () => {
@@ -599,9 +525,7 @@ describe('TerminalLifecycleStateMachineManager', () => {
       sm2.transition(TerminalLifecycleState.Ready);
       sm3.transition(TerminalLifecycleState.Initializing);
 
-      const readyTerminals = manager.getTerminalsInState(
-        TerminalLifecycleState.Ready
-      );
+      const readyTerminals = manager.getTerminalsInState(TerminalLifecycleState.Ready);
       expect(readyTerminals).to.have.length(2);
       expect(readyTerminals).to.include('term1');
       expect(readyTerminals).to.include('term2');

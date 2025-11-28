@@ -135,9 +135,7 @@ export class ScrollbackCoordinator implements Disposable {
 
     const pendingRequest = this._pendingScrollbackRequests.get(requestId);
     if (!pendingRequest) {
-      log(
-        `⚠️ [SCROLLBACK-COORDINATOR] No pending request found for requestId: ${requestId}`
-      );
+      log(`⚠️ [SCROLLBACK-COORDINATOR] No pending request found for requestId: ${requestId}`);
       return;
     }
 

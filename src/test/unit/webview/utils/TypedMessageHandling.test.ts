@@ -17,11 +17,10 @@ import {
   SessionMessageData,
   MessageProcessingResult,
   VSCodeWebviewAPI,
-  LoggerFunction
+  LoggerFunction,
 } from '../../../../webview/utils/TypedMessageHandling';
 
 describe('TypedMessageHandling - 型安全なメッセージシステム', () => {
-
   // =============================================================================
   // テストセットアップとユーティリティ
   // =============================================================================
@@ -32,7 +31,7 @@ describe('TypedMessageHandling - 型安全なメッセージシステム', () =>
   beforeEach(() => {
     mockLogger = sinon.stub();
     mockVSCodeAPI = {
-      postMessage: sinon.stub()
+      postMessage: sinon.stub(),
     };
   });
 
@@ -45,9 +44,7 @@ describe('TypedMessageHandling - 型安全なメッセージシステム', () =>
   // =============================================================================
 
   describe('MessageDataValidator - データ検証機能', () => {
-
     describe('基本的な検証機能', () => {
-
       it('should validate required fields correctly', () => {
         const validator = new MessageDataValidator(['terminalId', 'action'], mockLogger);
 
@@ -76,18 +73,16 @@ describe('TypedMessageHandling - 型安全なメッセージシステム', () =>
         expect(validator.validate(undefined).isValid).to.be.false;
         expect(validator.validate('string').isValid).to.be.false;
       });
-
     });
 
     describe('専用バリデーター作成機能', () => {
-
       it('should create terminal message validator', () => {
         const validator = MessageDataValidator.createTerminalValidator(mockLogger);
 
         const validTerminalData: TerminalMessageData = {
           terminalId: 'term-123',
           action: 'create',
-          payload: { shell: '/bin/bash' }
+          payload: { shell: '/bin/bash' },
         };
 
         const result = validator.validate(validTerminalData);
@@ -99,15 +94,13 @@ describe('TypedMessageHandling - 型安全なメッセージシステム', () =>
 
         const validSessionData: SessionMessageData = {
           sessionId: 'session-456',
-          terminalStates: { 'term-1': { active: true } }
+          terminalStates: { 'term-1': { active: true } },
         };
 
         const result = validator.validate(validSessionData);
         expect(result.isValid).to.be.true;
       });
-
     });
-
   });
 
   // =============================================================================
@@ -115,7 +108,6 @@ describe('TypedMessageHandling - 型安全なメッセージシステム', () =>
   // =============================================================================
 
   describe('TypedMessageRouter - メッセージルーティング', () => {
-
     let router: TypedMessageRouter;
 
     beforeEach(() => {
@@ -123,14 +115,13 @@ describe('TypedMessageHandling - 型安全なメッセージシステム', () =>
     });
 
     describe('ハンドラー登録機能', () => {
-
       it('should register single handler successfully', () => {
         const handler = sinon.stub().resolves();
 
         router.registerHandler({
           command: MESSAGE_COMMANDS.TERMINAL_CREATE,
           handler,
-          description: 'Create terminal handler'
+          description: 'Create terminal handler',
         });
 
         const commands = router.getRegisteredCommands();
@@ -145,12 +136,12 @@ describe('TypedMessageHandling - 型安全なメッセージシステム', () =>
         const handlers = [
           {
             command: MESSAGE_COMMANDS.TERMINAL_CREATE,
-            handler: sinon.stub().resolves()
+            handler: sinon.stub().resolves(),
           },
           {
             command: MESSAGE_COMMANDS.TERMINAL_DELETE,
-            handler: sinon.stub().resolves()
-          }
+            handler: sinon.stub().resolves(),
+          },
         ];
 
         router.registerMultipleHandlers(handlers);
@@ -158,26 +149,23 @@ describe('TypedMessageHandling - 型安全なメッセージシステム', () =>
         const commands = router.getRegisteredCommands();
         expect(commands).to.include.members([
           MESSAGE_COMMANDS.TERMINAL_CREATE,
-          MESSAGE_COMMANDS.TERMINAL_DELETE
+          MESSAGE_COMMANDS.TERMINAL_DELETE,
         ]);
       });
-
     });
 
     describe('メッセージ処理機能', () => {
-
       it('should process valid message successfully', async () => {
         const handler = sinon.stub().resolves();
 
         router.registerHandler({
           command: MESSAGE_COMMANDS.TERMINAL_CREATE,
-          handler
+          handler,
         });
 
-        const result = await router.processMessage(
-          MESSAGE_COMMANDS.TERMINAL_CREATE,
-          { terminalId: 'term-1' }
-        );
+        const result = await router.processMessage(MESSAGE_COMMANDS.TERMINAL_CREATE, {
+          terminalId: 'term-1',
+        });
 
         expect(result.success).to.be.true;
         expect(result.command).to.equal(MESSAGE_COMMANDS.TERMINAL_CREATE);
@@ -200,22 +188,19 @@ describe('TypedMessageHandling - 型安全なメッセージシステム', () =>
 
         router.registerHandler({
           command: MESSAGE_COMMANDS.TERMINAL_CREATE,
-          handler
+          handler,
         });
 
-        const result = await router.processMessage(
-          MESSAGE_COMMANDS.TERMINAL_CREATE,
-          { terminalId: 'term-1' }
-        );
+        const result = await router.processMessage(MESSAGE_COMMANDS.TERMINAL_CREATE, {
+          terminalId: 'term-1',
+        });
 
         expect(result.success).to.be.false;
         expect(result.error).to.equal(error);
       });
-
     });
 
     describe('データ検証統合', () => {
-
       it('should use validator when provided', async () => {
         const validator = MessageDataValidator.createTerminalValidator(mockLogger);
         const handler = sinon.stub().resolves();
@@ -223,14 +208,13 @@ describe('TypedMessageHandling - 型安全なメッセージシステム', () =>
         router.registerHandler({
           command: MESSAGE_COMMANDS.TERMINAL_CREATE,
           handler,
-          validator
+          validator,
         });
 
         // Valid data
-        const validResult = await router.processMessage(
-          MESSAGE_COMMANDS.TERMINAL_CREATE,
-          { terminalId: 'term-1' }
-        );
+        const validResult = await router.processMessage(MESSAGE_COMMANDS.TERMINAL_CREATE, {
+          terminalId: 'term-1',
+        });
         expect(validResult.success).to.be.true;
 
         // Invalid data
@@ -241,15 +225,13 @@ describe('TypedMessageHandling - 型安全なメッセージシステム', () =>
         expect(invalidResult.success).to.be.false;
         expect(invalidResult.error?.message).to.include('Validation failed');
       });
-
     });
 
     describe('リソース管理', () => {
-
       it('should clear all handlers and validators', () => {
         router.registerHandler({
           command: MESSAGE_COMMANDS.TERMINAL_CREATE,
-          handler: sinon.stub().resolves()
+          handler: sinon.stub().resolves(),
         });
 
         expect(router.getRegisteredCommands()).to.not.be.empty;
@@ -258,9 +240,7 @@ describe('TypedMessageHandling - 型安全なメッセージシステム', () =>
 
         expect(router.getRegisteredCommands()).to.be.empty;
       });
-
     });
-
   });
 
   // =============================================================================
@@ -268,7 +248,6 @@ describe('TypedMessageHandling - 型安全なメッセージシステム', () =>
   // =============================================================================
 
   describe('TypedMessageSender - メッセージ送信機能', () => {
-
     let sender: TypedMessageSender;
 
     beforeEach(() => {
@@ -276,25 +255,24 @@ describe('TypedMessageHandling - 型安全なメッセージシステム', () =>
     });
 
     describe('基本的な送信機能', () => {
-
       it('should send message successfully', () => {
         const terminalData: TerminalMessageData = {
           terminalId: 'term-1',
-          action: 'create'
+          action: 'create',
         };
 
         sender.sendMessage(MESSAGE_COMMANDS.TERMINAL_CREATE, terminalData);
 
         expect(mockVSCodeAPI.postMessage).to.have.been.calledOnceWith({
           command: MESSAGE_COMMANDS.TERMINAL_CREATE,
-          ...terminalData
+          ...terminalData,
         });
       });
 
       it('should send multiple messages sequentially', () => {
         const messages = [
           { command: MESSAGE_COMMANDS.TERMINAL_CREATE, data: { terminalId: 'term-1' } },
-          { command: MESSAGE_COMMANDS.TERMINAL_DELETE, data: { terminalId: 'term-2' } }
+          { command: MESSAGE_COMMANDS.TERMINAL_DELETE, data: { terminalId: 'term-2' } },
         ];
 
         sender.sendMultipleMessages(messages);
@@ -317,11 +295,9 @@ describe('TypedMessageHandling - 型安全なメッセージシステム', () =>
         sender.sendConditionalMessage(() => true, MESSAGE_COMMANDS.TERMINAL_RESIZE, data);
         expect(mockVSCodeAPI.postMessage).to.have.been.calledTwice;
       });
-
     });
 
     describe('エラーハンドリングとリトライ', () => {
-
       it('should handle postMessage errors gracefully', () => {
         mockVSCodeAPI.postMessage.throws(new Error('VS Code API error'));
 
@@ -346,9 +322,7 @@ describe('TypedMessageHandling - 型安全なメッセージシステム', () =>
           sinon.match(MESSAGE_COMMANDS.TERMINAL_CREATE)
         );
       });
-
     });
-
   });
 
   // =============================================================================
@@ -356,7 +330,6 @@ describe('TypedMessageHandling - 型安全なメッセージシステム', () =>
   // =============================================================================
 
   describe('createTypedMessageEventListener - イベント統合', () => {
-
     let router: TypedMessageRouter;
     let eventListener: (event: MessageEvent) => void;
     let onUnhandled: sinon.SinonStub;
@@ -371,14 +344,14 @@ describe('TypedMessageHandling - 型安全なメッセージシステム', () =>
       const handler = sinon.stub().resolves();
       router.registerHandler({
         command: MESSAGE_COMMANDS.TERMINAL_CREATE,
-        handler
+        handler,
       });
 
       const event = new MessageEvent('message', {
         data: {
           command: MESSAGE_COMMANDS.TERMINAL_CREATE,
-          terminalId: 'term-1'
-        }
+          terminalId: 'term-1',
+        },
       });
 
       await eventListener(event);
@@ -389,7 +362,7 @@ describe('TypedMessageHandling - 型安全なメッセージシステム', () =>
 
     it('should handle events without command', async () => {
       const event = new MessageEvent('message', {
-        data: { data: 'some data without command' }
+        data: { data: 'some data without command' },
       });
 
       await eventListener(event);
@@ -401,15 +374,14 @@ describe('TypedMessageHandling - 型安全なメッセージシステム', () =>
       const event = new MessageEvent('message', {
         data: {
           command: 'unknown-command',
-          data: 'test'
-        }
+          data: 'test',
+        },
       });
 
       await eventListener(event);
 
       expect(onUnhandled).to.have.been.calledOnceWith(event);
     });
-
   });
 
   // =============================================================================
@@ -417,14 +389,13 @@ describe('TypedMessageHandling - 型安全なメッセージシステム', () =>
   // =============================================================================
 
   describe('パフォーマンスとスケーラビリティ', () => {
-
     it('should handle high-frequency message processing', async () => {
       const router = new TypedMessageRouter('perf-test', mockLogger);
       const handler = sinon.stub().resolves();
 
       router.registerHandler({
         command: MESSAGE_COMMANDS.TERMINAL_OUTPUT,
-        handler
+        handler,
       });
 
       const messageCount = 1000;
@@ -433,17 +404,19 @@ describe('TypedMessageHandling - 型安全なメッセージシステム', () =>
       const startTime = performance.now();
 
       for (let i = 0; i < messageCount; i++) {
-        promises.push(router.processMessage(
-          MESSAGE_COMMANDS.TERMINAL_OUTPUT,
-          { terminalId: `term-${i}`, data: `output-${i}` }
-        ));
+        promises.push(
+          router.processMessage(MESSAGE_COMMANDS.TERMINAL_OUTPUT, {
+            terminalId: `term-${i}`,
+            data: `output-${i}`,
+          })
+        );
       }
 
       const results = await Promise.all(promises);
       const endTime = performance.now();
 
       expect(results).to.have.length(messageCount);
-      expect(results.every(r => r.success)).to.be.true;
+      expect(results.every((r) => r.success)).to.be.true;
       expect(endTime - startTime).to.be.lessThan(1000); // Should complete in under 1 second
       expect(handler).to.have.callCount(messageCount);
     });
@@ -456,7 +429,7 @@ describe('TypedMessageHandling - 型安全なメッセージシステム', () =>
       for (let i = 0; i < handlerCount; i++) {
         router.registerHandler({
           command: `command-${i}`,
-          handler: sinon.stub().resolves()
+          handler: sinon.stub().resolves(),
         });
       }
 
@@ -467,7 +440,6 @@ describe('TypedMessageHandling - 型安全なメッセージシステム', () =>
 
       expect(router.getRegisteredCommands()).to.be.empty;
     });
-
   });
 
   // =============================================================================
@@ -475,7 +447,6 @@ describe('TypedMessageHandling - 型安全なメッセージシステム', () =>
   // =============================================================================
 
   describe('統合テスト - エンドツーエンドシナリオ', () => {
-
     it('should handle complete terminal creation workflow', async () => {
       const router = new TypedMessageRouter('integration-test', mockLogger);
       const sender = new TypedMessageSender(mockVSCodeAPI, 'integration-sender', mockLogger);
@@ -485,21 +456,18 @@ describe('TypedMessageHandling - 型安全なメッセージシステム', () =>
       router.registerHandler({
         command: MESSAGE_COMMANDS.TERMINAL_CREATE,
         handler: createHandler,
-        validator: MessageDataValidator.createTerminalValidator(mockLogger)
+        validator: MessageDataValidator.createTerminalValidator(mockLogger),
       });
 
       // Simulate message from extension to webview
       const terminalData: TerminalMessageData = {
         terminalId: 'term-integration-1',
         action: 'create',
-        payload: { shell: '/bin/bash', cwd: '/home/user' }
+        payload: { shell: '/bin/bash', cwd: '/home/user' },
       };
 
       // Process incoming message
-      const result = await router.processMessage(
-        MESSAGE_COMMANDS.TERMINAL_CREATE,
-        terminalData
-      );
+      const result = await router.processMessage(MESSAGE_COMMANDS.TERMINAL_CREATE, terminalData);
 
       expect(result.success).to.be.true;
       expect(createHandler).to.have.been.calledOnce;
@@ -507,13 +475,13 @@ describe('TypedMessageHandling - 型安全なメッセージシステム', () =>
       // Send response back to extension
       sender.sendMessage(MESSAGE_COMMANDS.STATE_UPDATE, {
         terminalId: terminalData.terminalId,
-        status: 'created'
+        status: 'created',
       });
 
       expect(mockVSCodeAPI.postMessage).to.have.been.calledOnceWith({
         command: MESSAGE_COMMANDS.STATE_UPDATE,
         terminalId: terminalData.terminalId,
-        status: 'created'
+        status: 'created',
       });
     });
 
@@ -532,26 +500,22 @@ describe('TypedMessageHandling - 型安全なメッセージシステム', () =>
 
       router.registerHandler({
         command: MESSAGE_COMMANDS.TERMINAL_CREATE,
-        handler: flakyHandler
+        handler: flakyHandler,
       });
 
       // First call should fail
-      const firstResult = await router.processMessage(
-        MESSAGE_COMMANDS.TERMINAL_CREATE,
-        { terminalId: 'term-1' }
-      );
+      const firstResult = await router.processMessage(MESSAGE_COMMANDS.TERMINAL_CREATE, {
+        terminalId: 'term-1',
+      });
       expect(firstResult.success).to.be.false;
 
       // Second call should succeed
-      const secondResult = await router.processMessage(
-        MESSAGE_COMMANDS.TERMINAL_CREATE,
-        { terminalId: 'term-1' }
-      );
+      const secondResult = await router.processMessage(MESSAGE_COMMANDS.TERMINAL_CREATE, {
+        terminalId: 'term-1',
+      });
       expect(secondResult.success).to.be.true;
     });
-
   });
-
 });
 
 // =============================================================================
@@ -559,7 +523,6 @@ describe('TypedMessageHandling - 型安全なメッセージシステム', () =>
 // =============================================================================
 
 describe('TypeScript Type Safety Verification', () => {
-
   it('should enforce type safety at compile time', () => {
     // These tests primarily verify that TypeScript compilation succeeds
     // with proper type checking enabled
@@ -574,7 +537,7 @@ describe('TypeScript Type Safety Verification', () => {
         const terminalId: string = data.terminalId;
         expect(terminalId).to.be.a('string');
         // Handlers should not return anything (void)
-      }
+      },
     });
 
     // TypeScript should prevent invalid registrations at compile time
@@ -586,5 +549,4 @@ describe('TypeScript Type Safety Verification', () => {
 
     expect(true).to.be.true; // Test passes if compilation succeeds
   });
-
 });

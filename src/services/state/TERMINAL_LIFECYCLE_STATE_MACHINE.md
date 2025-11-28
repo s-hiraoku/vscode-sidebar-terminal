@@ -7,6 +7,7 @@ This document describes the Terminal Lifecycle State Machine implementation that
 ## Problem Statement
 
 Previously, terminal lifecycle logic was scattered across 5+ classes without clear state management:
+
 - Creation logic in `TerminalManager`
 - Initialization in `SecondaryTerminalProvider`
 - Coordination in `TerminalInitializationCoordinator`
@@ -14,6 +15,7 @@ Previously, terminal lifecycle logic was scattered across 5+ classes without cle
 - WebView lifecycle in `LightweightTerminalWebviewManager`
 
 This fragmentation led to:
+
 - No defined states
 - Difficult transition tracking
 - Inconsistent error handling
@@ -30,13 +32,13 @@ Seven distinct states representing the terminal lifecycle:
 
 ```typescript
 enum TerminalLifecycleState {
-  Creating,     // Terminal is being created (before initialization)
+  Creating, // Terminal is being created (before initialization)
   Initializing, // Terminal is initializing (spawning process, setting up environment)
-  Ready,        // Terminal is ready for use (process running, not active)
-  Active,       // Terminal is currently active and receiving user input
-  Closing,      // Terminal is in the process of closing
-  Closed,       // Terminal has been closed
-  Error,        // Terminal encountered an error
+  Ready, // Terminal is ready for use (process running, not active)
+  Active, // Terminal is currently active and receiving user input
+  Closing, // Terminal is in the process of closing
+  Closed, // Terminal has been closed
+  Error, // Terminal encountered an error
 }
 ```
 
@@ -64,36 +66,42 @@ Manages the lifecycle state of a single terminal instance.
 
 ```typescript
 class TerminalLifecycleStateMachine {
-  constructor(terminalId: string, initialState?: TerminalLifecycleState, maxHistorySize?: number)
+  constructor(terminalId: string, initialState?: TerminalLifecycleState, maxHistorySize?: number);
 
   // State queries
-  getCurrentState(): TerminalLifecycleState
-  isInState(state: TerminalLifecycleState): boolean
-  isInAnyState(states: TerminalLifecycleState[]): boolean
+  getCurrentState(): TerminalLifecycleState;
+  isInState(state: TerminalLifecycleState): boolean;
+  isInAnyState(states: TerminalLifecycleState[]): boolean;
 
   // Transition validation
-  canTransitionTo(targetState: TerminalLifecycleState): boolean
-  getValidNextStates(): TerminalLifecycleState[]
+  canTransitionTo(targetState: TerminalLifecycleState): boolean;
+  getValidNextStates(): TerminalLifecycleState[];
 
   // State transitions
-  transition(targetState: TerminalLifecycleState, metadata?: Partial<StateTransitionMetadata>): void
-  forceTransition(targetState: TerminalLifecycleState, metadata?: Partial<StateTransitionMetadata>): void
+  transition(
+    targetState: TerminalLifecycleState,
+    metadata?: Partial<StateTransitionMetadata>
+  ): void;
+  forceTransition(
+    targetState: TerminalLifecycleState,
+    metadata?: Partial<StateTransitionMetadata>
+  ): void;
 
   // Listeners
-  addListener(listener: StateChangeListener): () => void
-  removeListener(listener: StateChangeListener): boolean
-  clearListeners(): void
+  addListener(listener: StateChangeListener): () => void;
+  removeListener(listener: StateChangeListener): boolean;
+  clearListeners(): void;
 
   // History
-  getTransitionHistory(limit?: number): StateTransitionRecord[]
-  getLastTransition(): StateTransitionRecord | undefined
-  clearHistory(): void
+  getTransitionHistory(limit?: number): StateTransitionRecord[];
+  getLastTransition(): StateTransitionRecord | undefined;
+  clearHistory(): void;
 
   // Summary
-  getStateSummary(): StateSummary
+  getStateSummary(): StateSummary;
 
   // Cleanup
-  dispose(): void
+  dispose(): void;
 }
 ```
 
@@ -104,28 +112,34 @@ Manages multiple terminal state machines centrally.
 ```typescript
 class TerminalLifecycleStateMachineManager {
   // State machine management
-  createStateMachine(terminalId: string, initialState?: TerminalLifecycleState): TerminalLifecycleStateMachine
-  getStateMachine(terminalId: string): TerminalLifecycleStateMachine | undefined
-  getOrCreateStateMachine(terminalId: string, initialState?: TerminalLifecycleState): TerminalLifecycleStateMachine
-  removeStateMachine(terminalId: string): boolean
+  createStateMachine(
+    terminalId: string,
+    initialState?: TerminalLifecycleState
+  ): TerminalLifecycleStateMachine;
+  getStateMachine(terminalId: string): TerminalLifecycleStateMachine | undefined;
+  getOrCreateStateMachine(
+    terminalId: string,
+    initialState?: TerminalLifecycleState
+  ): TerminalLifecycleStateMachine;
+  removeStateMachine(terminalId: string): boolean;
 
   // State queries
-  getCurrentState(terminalId: string): TerminalLifecycleState | undefined
-  isTerminalInState(terminalId: string, state: TerminalLifecycleState): boolean
-  getTerminalsInState(state: TerminalLifecycleState): string[]
+  getCurrentState(terminalId: string): TerminalLifecycleState | undefined;
+  isTerminalInState(terminalId: string, state: TerminalLifecycleState): boolean;
+  getTerminalsInState(state: TerminalLifecycleState): string[];
 
   // Global listeners
-  addGlobalListener(listener: StateChangeListener): () => void
-  removeGlobalListener(listener: StateChangeListener): boolean
-  clearGlobalListeners(): void
+  addGlobalListener(listener: StateChangeListener): () => void;
+  removeGlobalListener(listener: StateChangeListener): boolean;
+  clearGlobalListeners(): void;
 
   // Bulk operations
-  getAllTerminalIds(): string[]
-  getAllStateSummaries(): Map<string, StateSummary>
-  getStateMachineCount(): number
+  getAllTerminalIds(): string[];
+  getAllStateSummaries(): Map<string, StateSummary>;
+  getStateMachineCount(): number;
 
   // Cleanup
-  dispose(): void
+  dispose(): void;
 }
 ```
 
@@ -181,9 +195,7 @@ console.log(`Ready terminals: ${readyTerminals.join(', ')}`);
 
 // Add global listener for all state changes
 manager.addGlobalListener((event) => {
-  console.log(
-    `Terminal ${event.terminalId}: ${event.previousState} → ${event.newState}`
-  );
+  console.log(`Terminal ${event.terminalId}: ${event.previousState} → ${event.newState}`);
 });
 ```
 
@@ -401,11 +413,13 @@ Error states are properly tracked with metadata, making error diagnosis easier.
 ## Testing
 
 Comprehensive unit tests are provided in:
+
 ```
 src/test/unit/services/state/TerminalLifecycleStateMachine.test.ts
 ```
 
 Tests cover:
+
 - State initialization
 - Valid and invalid transitions
 - Transition metadata
@@ -415,6 +429,7 @@ Tests cover:
 - Error handling
 
 Run tests with:
+
 ```bash
 npm test -- src/test/unit/services/state/TerminalLifecycleStateMachine.test.ts
 ```
@@ -463,8 +478,10 @@ import { ITerminalStateService } from './ITerminalStateService';
 stateMachine.addListener((event) => {
   const stateService = getDI().get(ITerminalStateService);
 
-  if (event.newState === TerminalLifecycleState.Ready ||
-      event.newState === TerminalLifecycleState.Active) {
+  if (
+    event.newState === TerminalLifecycleState.Ready ||
+    event.newState === TerminalLifecycleState.Active
+  ) {
     stateService.setProcessState(event.terminalId, ProcessState.Running);
   } else if (event.newState === TerminalLifecycleState.Error) {
     stateService.setProcessState(event.terminalId, ProcessState.KilledByProcess);

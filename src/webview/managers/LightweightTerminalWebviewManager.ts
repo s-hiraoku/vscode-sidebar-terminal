@@ -38,13 +38,6 @@ import {
 
 // Note: DebugInfo, DebugCounters, SystemDiagnostics moved to DebugPanelManager
 
-interface ScrollbackRequestMessage {
-  command: 'extractScrollbackData';
-  terminalId?: string;
-  requestId?: string;
-  maxLines?: number;
-}
-
 interface SystemStatusSnapshot {
   ready: boolean;
   state: TerminalState | null;
@@ -87,6 +80,7 @@ import { DisplayModeManager } from './DisplayModeManager';
 import { HeaderManager } from './HeaderManager';
 import { DebugPanelManager, SystemDiagnostics } from './DebugPanelManager';
 import { TerminalStateDisplayManager } from './TerminalStateDisplayManager';
+import { DOMUtils } from '../utils/DOMUtils';
 
 /**
  * 軽量化されたTerminalWebviewManager
@@ -151,7 +145,6 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
   // 初期化状態
   private isInitialized = false;
-  private isComposing = false;
 
   // Track processed scrollback requests to prevent duplicates
   private processedScrollbackRequests = new Set<string>();
@@ -203,9 +196,6 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
     // 🔧 Setup InputManager (keyboard shortcuts, IME, Alt+Click)
     this.setupInputManager();
-
-    // 🆕 NEW: Setup scrollback extraction message listener
-    this.setupScrollbackMessageListener();
 
     this.isInitialized = true;
     log('✅ RefactoredTerminalWebviewManager initialized');
@@ -374,9 +364,39 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       this.refitAllTerminals();
     });
 
-    // VS Code pattern: ResizeObserver handles individual terminal container resizing
-    // Window resize events are no longer needed as ResizeObserver provides more precise detection
-    log('🔍 Using ResizeObserver pattern instead of window resize events');
+    // 🔧 CRITICAL FIX: Add window resize event listener for WebView width changes
+    // ResizeObserver on individual containers may not detect parent size changes
+    // This ensures terminals expand when the WebView sidebar/panel is resized
+    let windowResizeTimer: number | null = null;
+    window.addEventListener('resize', () => {
+      // Debounce window resize events
+      if (windowResizeTimer !== null) {
+        window.clearTimeout(windowResizeTimer);
+      }
+      windowResizeTimer = window.setTimeout(() => {
+        log('📐 Window resize detected - refitting all terminals');
+        this.refitAllTerminals();
+        windowResizeTimer = null;
+      }, 100);
+    });
+    log('🔍 Window resize listener added for terminal width expansion');
+
+    // 🔧 CRITICAL FIX: Add ResizeObserver on document.body to detect WebView size changes
+    // VS Code WebView may not fire window.resize events when sidebar/panel is resized
+    let bodyResizeTimer: number | null = null;
+    const bodyResizeObserver = new ResizeObserver(() => {
+      // Debounce body resize events
+      if (bodyResizeTimer !== null) {
+        window.clearTimeout(bodyResizeTimer);
+      }
+      bodyResizeTimer = window.setTimeout(() => {
+        log('📐 Body resize detected - refitting all terminals');
+        this.refitAllTerminals();
+        bodyResizeTimer = null;
+      }, 100);
+    });
+    bodyResizeObserver.observe(document.body);
+    log('🔍 Body ResizeObserver added for WebView size change detection');
 
     // ページライフサイクル
     this.eventHandlerManager.onPageUnload(() => {
@@ -394,38 +414,51 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     try {
       const terminals = this.splitManager.getTerminals();
 
+      // 🔍 DEBUG: Log body and wrapper dimensions
+      const body = document.body;
+      const terminalBody = document.getElementById('terminal-body');
+      const terminalsWrapper = document.getElementById('terminals-wrapper');
+      log(`📐 [DEBUG] body: ${body.clientWidth}x${body.clientHeight}`);
+      log(`📐 [DEBUG] terminal-body: ${terminalBody?.clientWidth}x${terminalBody?.clientHeight}`);
+      log(`📐 [DEBUG] terminals-wrapper: ${terminalsWrapper?.clientWidth}x${terminalsWrapper?.clientHeight}`);
+
       terminals.forEach((terminalData, terminalId) => {
         if (terminalData.fitAddon && terminalData.terminal) {
           try {
-            if (terminalData.container) {
-              // 🔧 FIX: Reset fixed pixel sizes on ALL elements in the hierarchy
-              // This ensures CSS flex/100% can properly expand
-              const contentElement = terminalData.container.querySelector('.terminal-content') as HTMLElement;
-              const xtermElement = terminalData.container.querySelector('.xterm') as HTMLElement;
+            const container = terminalData.container;
+            const terminalContent = container?.querySelector('.terminal-content') as HTMLElement;
+            const xtermEl = container?.querySelector('.xterm') as HTMLElement;
 
-              // Reset terminal-content to allow flex expansion
-              if (contentElement) {
-                contentElement.style.width = '';
-                contentElement.style.height = '';
-              }
+            // 🔍 DEBUG: Log dimensions before reset
+            log(`📐 [DEBUG] Before reset - ${terminalId}:`);
+            log(`  container: ${container?.clientWidth}x${container?.clientHeight}, style.width=${container?.style.width}`);
+            log(`  terminal-content: ${terminalContent?.clientWidth}x${terminalContent?.clientHeight}, style.width=${terminalContent?.style.width}`);
+            log(`  .xterm: ${xtermEl?.clientWidth}x${xtermEl?.clientHeight}, style.width=${xtermEl?.style.width}`);
 
-              // 🔧 FIX: Reset xterm element inline styles that may have been set by xterm.js
-              // xterm.js sets inline width/height which prevents expansion
-              if (xtermElement) {
-                xtermElement.style.width = '';
-                xtermElement.style.height = '';
-              }
+            // 🔧 FIX: Use shared utility to reset xterm inline styles
+            // This ensures CSS flex/100% can properly expand
+            DOMUtils.resetXtermInlineStyles(terminalData.container);
 
-              // 🔧 FIX: Force browser layout reflow before fit()
-              // This ensures getBoundingClientRect() returns updated values
-              // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-              terminalData.container.offsetHeight;
-            }
+            // 🔍 DEBUG: Log dimensions after reset
+            log(`📐 [DEBUG] After reset - ${terminalId}:`);
+            log(`  container: ${container?.clientWidth}x${container?.clientHeight}`);
+            log(`  terminal-content: ${terminalContent?.clientWidth}x${terminalContent?.clientHeight}`);
+            log(`  .xterm: ${xtermEl?.clientWidth}x${xtermEl?.clientHeight}`);
+
+            // 🔍 DEBUG: Check proposeDimensions before fit
+            const proposedDims = terminalData.fitAddon.proposeDimensions();
+            log(`📐 [DEBUG] proposeDimensions - ${terminalId}: cols=${proposedDims?.cols}, rows=${proposedDims?.rows}`);
 
             // Call fit() to recalculate terminal dimensions based on new container size
             terminalData.fitAddon.fit();
 
-            log(`✅ Terminal ${terminalId} refitted: ${terminalData.terminal.cols}x${terminalData.terminal.rows}`);
+            // 🔍 DEBUG: Log dimensions after fit
+            log(`📐 [DEBUG] After fit - ${terminalId}:`);
+            log(`  .xterm: ${xtermEl?.clientWidth}x${xtermEl?.clientHeight}, style.width=${xtermEl?.style.width}`);
+
+            log(
+              `✅ Terminal ${terminalId} refitted: ${terminalData.terminal.cols}x${terminalData.terminal.rows}`
+            );
           } catch (error) {
             log(`⚠️ Failed to refit terminal ${terminalId}:`, error);
           }
@@ -509,7 +542,9 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     return this.terminalLifecycleManager.getTerminalInstance(terminalId);
   }
 
-  public getSerializeAddon(terminalId: string): import('@xterm/addon-serialize').SerializeAddon | undefined {
+  public getSerializeAddon(
+    terminalId: string
+  ): import('@xterm/addon-serialize').SerializeAddon | undefined {
     const instance = this.terminalLifecycleManager.getTerminalInstance(terminalId);
     return instance?.serializeAddon;
   }
@@ -664,9 +699,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
         const localCount = this.splitManager?.getTerminals()?.size ?? 0;
         const maxCount =
           this.currentTerminalState?.maxTerminals ?? SPLIT_CONSTANTS.MAX_TERMINALS ?? 5;
-        log(
-          `❌ [STATE] Terminal creation blocked (local count=${localCount}, max=${maxCount})`
-        );
+        log(`❌ [STATE] Terminal creation blocked (local count=${localCount}, max=${maxCount})`);
         this.showTerminalLimitMessage(localCount, maxCount);
         return null;
       }
@@ -720,9 +753,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       // No complex serialization - just session metadata
       setTimeout(() => {
         if (this.webViewPersistenceService) {
-          log(
-            `💾 [SIMPLE-PERSISTENCE] Saving session after terminal ${terminalId} creation`
-          );
+          log(`💾 [SIMPLE-PERSISTENCE] Saving session after terminal ${terminalId} creation`);
           this.webViewPersistenceService.saveSession().then((success) => {
             if (success) {
               log(`✅ [SIMPLE-PERSISTENCE] Session saved successfully`);
@@ -900,9 +931,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     // Step 3: セッション更新（遅延実行）
     setTimeout(() => {
       if (this.webViewPersistenceService) {
-        log(
-          `💾 [SIMPLE-PERSISTENCE] Updating session after terminal ${terminalId} removal`
-        );
+        log(`💾 [SIMPLE-PERSISTENCE] Updating session after terminal ${terminalId} removal`);
         this.webViewPersistenceService.saveSession().then((success) => {
           if (success) {
             log(`✅ [SIMPLE-PERSISTENCE] Session updated after removal`);
@@ -980,7 +1009,10 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
           log('📄 [EXTRACT-DEBUG] First few lines:', lines.slice(0, 3));
           return lines;
         } catch (serializeError) {
-          console.warn('⚠️ [EXTRACT-DEBUG] SerializeAddon extraction failed, falling back to buffer:', serializeError);
+          console.warn(
+            '⚠️ [EXTRACT-DEBUG] SerializeAddon extraction failed, falling back to buffer:',
+            serializeError
+          );
         }
       } else {
         log('⚠️ [EXTRACT-DEBUG] SerializeAddon not available - colors will be lost');
@@ -993,9 +1025,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
           const buffer = terminal.buffer.normal;
           const lines: string[] = [];
 
-          log(
-            `🔍 [EXTRACT-DEBUG] Buffer length: ${buffer.length}, requesting max: ${maxLines}`
-          );
+          log(`🔍 [EXTRACT-DEBUG] Buffer length: ${buffer.length}, requesting max: ${maxLines}`);
 
           const startIndex = Math.max(0, buffer.length - maxLines);
           for (let i = startIndex; i < buffer.length; i++) {
@@ -1023,93 +1053,6 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
         error
       );
       return [];
-    }
-  }
-
-  /**
-   * Setup scrollback extraction message listener
-   * NOTE: This is now handled by ConsolidatedMessageManager to avoid duplicate listeners
-   */
-  private setupScrollbackMessageListener(): void {
-    // Removed: Duplicate message listener
-    // extractScrollbackData is now handled by ConsolidatedMessageManager
-  }
-
-  /**
-   * 🆕 NEW: Handle scrollback extraction request from Extension
-   */
-  private async handleExtractScrollbackRequest(message: ScrollbackRequestMessage): Promise<void> {
-    log('🔥 [SCROLLBACK-DEBUG] === handleExtractScrollbackRequest called ===', message);
-
-    try {
-      const { terminalId, requestId, maxLines } = message;
-
-      if (!terminalId || !requestId) {
-        console.error(
-          '❌ [SCROLLBACK-DEBUG] Missing terminalId or requestId for scrollback extraction'
-        );
-        return;
-      }
-
-      // Check if this request has already been processed
-      if (this.processedScrollbackRequests.has(requestId)) {
-        log(
-          `⚠️ [SCROLLBACK-DEBUG] Request ${requestId} already processed, ignoring duplicate`
-        );
-        return;
-      }
-
-      log(
-        `🔍 [SCROLLBACK-DEBUG] Processing request for terminal: ${terminalId}, requestId: ${requestId}, maxLines: ${maxLines}`
-      );
-
-      // Mark this request as being processed
-      this.processedScrollbackRequests.add(requestId);
-
-      // Extract the scrollback data
-      const scrollbackData = this.extractScrollbackData(terminalId, maxLines || 1000);
-
-      log(
-        `📦 [SCROLLBACK-DEBUG] Extracted ${scrollbackData.length} lines for terminal ${terminalId}`
-      );
-      log('📄 [SCROLLBACK-DEBUG] Sample scrollback data:', scrollbackData.slice(0, 3));
-
-      // Send the response back to Extension
-      this.postMessageToExtension({
-        command: 'scrollbackDataCollected',
-        terminalId,
-        requestId,
-        scrollbackData,
-        timestamp: Date.now(),
-      });
-
-      log(`✅ [SCROLLBACK-DEBUG] Sent response to Extension for terminal ${terminalId}`);
-
-      // Clean up processed requests after a timeout to prevent memory leaks
-      setTimeout(() => {
-        this.processedScrollbackRequests.delete(requestId);
-      }, 30000); // 30 seconds timeout
-    } catch (error) {
-      console.error('❌ [SCROLLBACK-DEBUG] Failed to handle scrollback extraction request:', error);
-
-      // Send error response
-      this.postMessageToExtension({
-        command: 'scrollbackDataCollected',
-        terminalId: message.terminalId,
-        requestId: message.requestId,
-        scrollbackData: [],
-        error: error instanceof Error ? error.message : 'Unknown error',
-        timestamp: Date.now(),
-      });
-
-      // Also mark as processed to prevent retries
-      if (message.requestId) {
-        this.processedScrollbackRequests.add(message.requestId);
-        const requestId = message.requestId;
-        setTimeout(() => {
-          this.processedScrollbackRequests.delete(requestId);
-        }, 30000);
-      }
     }
   }
 
@@ -1288,10 +1231,12 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       return;
     }
 
-    log('🔧 Setting up ResizeObserver on document.body and terminal-body');
+    log('🔧 Setting up ResizeObserver on document.body, terminal-body, and terminals-wrapper');
 
-    // 🔧 FIX: Single ResizeObserver that watches both document.body and terminal-body
-    // document.body catches WebView panel resize, terminal-body catches internal layout changes
+    // 🔧 FIX: Single ResizeObserver that watches multiple containers
+    // document.body catches WebView panel resize
+    // terminal-body catches internal layout changes
+    // terminals-wrapper catches split layout changes
     this.parentResizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const { width, height } = entry.contentRect;
@@ -1310,10 +1255,18 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       }
     });
 
-    // Observe both document.body (for WebView resize) and terminal-body (for layout changes)
+    // Observe document.body (for WebView resize) and terminal-body (for layout changes)
     this.parentResizeObserver.observe(document.body);
     this.parentResizeObserver.observe(terminalBody);
-    log('✅ ResizeObserver setup on document.body and terminal-body');
+
+    // 🔧 FIX: Also observe terminals-wrapper if it exists (may be created later)
+    const terminalsWrapper = document.getElementById('terminals-wrapper');
+    if (terminalsWrapper) {
+      this.parentResizeObserver.observe(terminalsWrapper);
+      log('✅ ResizeObserver also observing terminals-wrapper');
+    }
+
+    log('✅ ResizeObserver setup complete');
   }
 
   // Compatibility methods for existing code
@@ -1447,109 +1400,6 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
   // Note: displayDebugInfo has been moved to DebugPanelManager
 
   /**
-   * 🔄 Initialize session restoration capability
-   */
-  private initializeSessionRestoration(): void {
-    log('🆕 [SIMPLE-RESTORATION] Initializing simple session restoration...');
-
-    // Immediately attempt to restore previous session
-    setTimeout(() => {
-      this.attemptSimpleSessionRestore();
-    }, 500); // Wait for initialization to complete
-
-    log('✅ [SIMPLE-RESTORATION] Simple session restoration capability initialized');
-  }
-
-  /**
-   * 🆕 Attempt simple session restoration
-   */
-  private async attemptSimpleSessionRestore(): Promise<void> {
-    // Note: Simple session restoration is not fully implemented in WebViewPersistenceService
-    // Full session restoration is handled by Extension-side persistence services
-    log('⏭️ [SIMPLE-RESTORATION] Skipped - full restoration handled by Extension');
-  }
-
-  /**
-   * 🆕 Display session continuation message
-   */
-  private displaySessionMessage(message: {
-    type: string;
-    message: string;
-    details?: string;
-    timestamp: number;
-  }): void {
-    try {
-      // Create a notification-style message
-      const messageElement = document.createElement('div');
-      messageElement.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: rgba(0, 212, 170, 0.95);
-        color: white;
-        padding: 12px 16px;
-        border-radius: 8px;
-        font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
-        font-size: 13px;
-        font-weight: 500;
-        z-index: 10000;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        border: 1px solid rgba(0, 212, 170, 0.3);
-        max-width: 400px;
-        word-wrap: break-word;
-      `;
-
-      const mainMessage = document.createElement('div');
-      mainMessage.textContent = message.message;
-      messageElement.appendChild(mainMessage);
-
-      if (message.details) {
-        const detailsElement = document.createElement('div');
-        detailsElement.style.cssText = `
-          margin-top: 4px;
-          opacity: 0.9;
-          font-size: 11px;
-        `;
-        detailsElement.textContent = message.details;
-        messageElement.appendChild(detailsElement);
-      }
-
-      // Add to DOM
-      document.body.appendChild(messageElement);
-
-      // Auto-remove after 5 seconds
-      setTimeout(() => {
-        if (messageElement.parentNode) {
-          messageElement.style.transition = 'opacity 0.3s ease-out';
-          messageElement.style.opacity = '0';
-          setTimeout(() => {
-            if (messageElement.parentNode) {
-              messageElement.parentNode.removeChild(messageElement);
-            }
-          }, 300);
-        }
-      }, 5000);
-
-      log(`📢 [SESSION-MESSAGE] Displayed: ${message.message}`);
-    } catch (error) {
-      console.error('❌ [SESSION-MESSAGE] Failed to display message:', error);
-      // Fallback to console log
-      log(
-        `📢 [SESSION-MESSAGE] ${message.message}${message.details ? ` - ${message.details}` : ''}`
-      );
-    }
-  }
-
-  /**
-   * 🔄 Setup message listener for session restore commands
-   */
-  private setupSessionRestoreMessageListener(): void {
-    // This will be handled by ConsolidatedMessageManager's handleSessionRestore method
-    // The message handler is already set up in the message manager
-    log('🔄 [RESTORATION] Session restore message listener configured');
-  }
-
-  /**
    * 🔄 PUBLIC API: Restore terminal session from Extension data
    *
    * NOTE: This method now checks for duplicate restoration attempts
@@ -1579,7 +1429,9 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       // Also check processedScrollbackRequests to prevent re-processing
       if (this.processedScrollbackRequests.has(terminalId)) {
         // eslint-disable-next-line no-console
-        console.log(`[RESTORATION] ⏭️ Terminal ${terminalId} scrollback already processed, skipping`);
+        console.log(
+          `[RESTORATION] ⏭️ Terminal ${terminalId} scrollback already processed, skipping`
+        );
         log(`⏭️ [RESTORATION] Terminal ${terminalId} scrollback already processed, skipping`);
         return true;
       }
@@ -2298,6 +2150,11 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
       // Clean up scrollback request tracking
       this.processedScrollbackRequests.clear();
+
+      // 🔧 FIX: Clean up deletion tracking to prevent memory leaks
+      this.deletionTimeouts.forEach((timeout) => clearTimeout(timeout));
+      this.deletionTimeouts.clear();
+      this.deletionTracker.clear();
 
       this.isInitialized = false;
       log('✅ RefactoredTerminalWebviewManager disposed');

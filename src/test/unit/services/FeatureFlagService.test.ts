@@ -45,9 +45,9 @@ describe('FeatureFlagService', () => {
     _mockWorkspace = sandbox.stub(vscode.workspace, 'getConfiguration').returns(mockConfiguration);
 
     // Mock onDidChangeConfiguration
-    sandbox.stub(vscode.workspace, 'onDidChangeConfiguration').callsFake(
-      (listener) => configChangeEmitter.event(listener)
-    );
+    sandbox
+      .stub(vscode.workspace, 'onDidChangeConfiguration')
+      .callsFake((listener) => configChangeEmitter.event(listener));
 
     // Create service instance
     featureFlagService = new FeatureFlagService();
@@ -68,11 +68,11 @@ describe('FeatureFlagService', () => {
       const flags = featureFlagService.getFeatureFlags();
 
       // Then: Default values returned
-      expect(flags.enhancedScrollbackPersistence).to.be.false;
+      expect(flags.enhancedScrollbackPersistence).to.be.true;
       expect(flags.scrollbackLineLimit).to.equal(1000);
-      expect(flags.vscodeStandardIME).to.be.false;
+      expect(flags.vscodeStandardIME).to.be.true;
       expect(flags.vscodeKeyboardShortcuts).to.be.true;
-      expect(flags.vscodeStandardCursor).to.be.false;
+      expect(flags.vscodeStandardCursor).to.be.true;
       expect(flags.fullANSISupport).to.be.true;
     });
 
@@ -185,8 +185,7 @@ describe('FeatureFlagService', () => {
       // When: Configuration changes
       mockConfiguration.get.withArgs('enhancedScrollbackPersistence').returns(true);
       configChangeEmitter.fire({
-        affectsConfiguration: (section: string) =>
-          section === 'secondaryTerminal.features',
+        affectsConfiguration: (section: string) => section === 'secondaryTerminal.features',
       } as vscode.ConfigurationChangeEvent);
 
       // Then: Cache invalidated and new value returned
@@ -225,9 +224,7 @@ describe('FeatureFlagService', () => {
       } as vscode.ConfigurationChangeEvent);
 
       // Then: affectsConfiguration called with correct section
-      expect(
-        affectsConfigurationStub.calledWith('secondaryTerminal.features')
-      ).to.be.true;
+      expect(affectsConfigurationStub.calledWith('secondaryTerminal.features')).to.be.true;
     });
   });
 
@@ -343,7 +340,7 @@ describe('FeatureFlagService', () => {
       const flags = featureFlagService.getFeatureFlags();
 
       // Then: Default values returned
-      expect(flags.enhancedScrollbackPersistence).to.be.false;
+      expect(flags.enhancedScrollbackPersistence).to.be.true;
       expect(flags.scrollbackLineLimit).to.equal(1000);
     });
 
@@ -355,7 +352,7 @@ describe('FeatureFlagService', () => {
       const flags = featureFlagService.getFeatureFlags();
 
       // Then: Default values returned
-      expect(flags.vscodeStandardIME).to.be.false;
+      expect(flags.vscodeStandardIME).to.be.true;
       expect(flags.vscodeKeyboardShortcuts).to.be.true;
     });
 

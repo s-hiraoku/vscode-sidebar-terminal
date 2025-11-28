@@ -358,9 +358,7 @@ export class SessionDataTransformer {
 
       // Log migration details only in development mode
       if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'development') {
-        console.log(
-          `[SESSION-MIGRATION] ${message} (${sessionData.terminals.length} terminals)`
-        );
+        console.log(`[SESSION-MIGRATION] ${message} (${sessionData.terminals.length} terminals)`);
       }
     }
 

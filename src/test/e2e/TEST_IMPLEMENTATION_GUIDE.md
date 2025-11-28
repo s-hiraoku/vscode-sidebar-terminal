@@ -7,19 +7,24 @@ This guide explains how to implement E2E tests using the Playwright Test framewo
 ## Quick Start
 
 ### 1. Review the Test Plan
+
 Start by reviewing the test scenarios in [TEST_PLAN.md](./TEST_PLAN.md) or [TEST_PLAN_SUMMARY.md](./TEST_PLAN_SUMMARY.md).
 
 ### 2. Choose a Test Scenario
+
 Pick a test scenario from the plan (preferably P0 or P1 priority).
 
 ### 3. Create a Test File
+
 Create a new test file in the appropriate directory:
+
 - Terminal tests: `tests/terminal/`
 - WebView tests: `tests/webview/`
 - AI agent tests: `tests/agents/`
 - Config tests: `tests/config/`
 
 ### 4. Implement the Test
+
 Use the test helpers and follow the patterns shown below.
 
 ---
@@ -307,11 +312,13 @@ test('should handle invalid shell path gracefully', async () => {
 Use tags to categorize and filter tests:
 
 ### Priority Tags
+
 - `@P0` - Critical (must pass before release)
 - `@P1` - Important (should pass before release)
 - `@P2` - Nice-to-have (can be deferred)
 
 ### Feature Tags
+
 - `@terminal-lifecycle` - Terminal creation/deletion/switching
 - `@webview-interaction` - UI interactions
 - `@ai-agent-detection` - AI agent features
@@ -360,10 +367,7 @@ import { readFileSync } from 'fs';
 import { TEST_PATHS } from '../../config/test-constants';
 
 // Load terminal output fixture
-const ansiOutput = readFileSync(
-  `${TEST_PATHS.TERMINAL_OUTPUT}/ansi-colors.txt`,
-  'utf-8'
-);
+const ansiOutput = readFileSync(`${TEST_PATHS.TERMINAL_OUTPUT}/ansi-colors.txt`, 'utf-8');
 
 // Load AI agent output fixture
 const claudeStartup = readFileSync(
@@ -380,11 +384,13 @@ const defaultConfig = require(`${TEST_PATHS.CONFIGURATIONS}/default-config.json`
 ## Best Practices
 
 ### 1. Test Isolation
+
 - Each test should be independent
 - Clean up resources in `afterEach`
 - Don't rely on test execution order
 
 ### 2. Clear Test Names
+
 ```typescript
 // ✅ Good
 test('should create terminal with ID 1 when first terminal is created', async () => {});
@@ -394,6 +400,7 @@ test('test terminal', async () => {});
 ```
 
 ### 3. Arrange-Act-Assert Pattern
+
 ```typescript
 test('should...', async () => {
   // Arrange: Set up test data
@@ -408,6 +415,7 @@ test('should...', async () => {
 ```
 
 ### 4. Meaningful Assertions
+
 ```typescript
 // ✅ Good - specific assertion
 expect(terminalId).toBe(1);
@@ -417,6 +425,7 @@ expect(terminalId).toBeTruthy();
 ```
 
 ### 5. Test Performance
+
 ```typescript
 test('should complete within timeout', async () => {
   const startTime = Date.now();
@@ -429,6 +438,7 @@ test('should complete within timeout', async () => {
 ```
 
 ### 6. Use Test Constants
+
 ```typescript
 // ✅ Good
 expect(count).toBe(TERMINAL_CONSTANTS.MAX_TERMINALS);
@@ -438,6 +448,7 @@ expect(count).toBe(5);
 ```
 
 ### 7. Handle Async Properly
+
 ```typescript
 // ✅ Good - await all promises
 const terminalId = await terminalHelper.createTerminal();
@@ -452,24 +463,29 @@ terminalHelper.createTerminal(); // Returns unresolved promise!
 ## Debugging Tests
 
 ### 1. Headed Mode
+
 ```bash
 npm run test:e2e:headed
 ```
 
 ### 2. Debug Mode
+
 ```bash
 npm run test:e2e:debug
 ```
 
 ### 3. Playwright Inspector
+
 ```bash
 npx playwright test --debug
 ```
 
 ### 4. Screenshots on Failure
+
 Screenshots are automatically captured on test failures and saved to `test-results/`
 
 ### 5. Console Logging
+
 ```typescript
 test('should...', async ({ page }) => {
   page.on('console', (msg) => console.log('[Browser]', msg.text()));
@@ -483,6 +499,7 @@ test('should...', async ({ page }) => {
 ## Example: Complete Test File
 
 See `tests/terminal/creation.spec.ts` for a complete, working example that demonstrates:
+
 - Proper test structure
 - Helper usage
 - Multiple test scenarios
@@ -505,6 +522,7 @@ See `tests/terminal/creation.spec.ts` for a complete, working example that demon
 ---
 
 **Questions or Issues?**
+
 - Review this guide
 - Check existing test examples
 - Consult Playwright docs: https://playwright.dev/

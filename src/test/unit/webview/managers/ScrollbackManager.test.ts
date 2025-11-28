@@ -4,7 +4,10 @@
 
 import { expect } from 'chai';
 import * as sinon from 'sinon';
-import { ScrollbackManager, ScrollbackOptions } from '../../../../webview/managers/ScrollbackManager';
+import {
+  ScrollbackManager,
+  ScrollbackOptions,
+} from '../../../../webview/managers/ScrollbackManager';
 import { IBufferLine as _IBufferLine } from '@xterm/xterm';
 
 describe('ScrollbackManager', function () {

@@ -57,10 +57,7 @@ export class HeaderManager implements IHeaderManager {
 
       log('✅ [HEADER] WebView header created successfully');
     } catch (error) {
-      ErrorHandler.handleOperationError(
-        'HeaderManager.createWebViewHeader',
-        error
-      );
+      ErrorHandler.handleOperationError('HeaderManager.createWebViewHeader', error);
     }
   }
 
@@ -91,10 +88,7 @@ export class HeaderManager implements IHeaderManager {
 
       log(`🎯 [HEADER] Terminal count badge updated: ${terminalCount}`);
     } catch (error) {
-      ErrorHandler.handleOperationError(
-        'HeaderManager.updateTerminalCountBadge',
-        error
-      );
+      ErrorHandler.handleOperationError('HeaderManager.updateTerminalCountBadge', error);
     }
   }
 

@@ -49,9 +49,7 @@ export class TerminalDataBufferManager {
 
     // Validate terminal exists before buffering data
     if (!this._terminals.has(terminalId)) {
-      log(
-        `⚠️ [TERMINAL] Attempting to buffer data for non-existent terminal: ${terminalId}`
-      );
+      log(`⚠️ [TERMINAL] Attempting to buffer data for non-existent terminal: ${terminalId}`);
       return;
     }
 

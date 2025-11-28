@@ -276,7 +276,13 @@ export class TerminalEventCoordinator implements vscode.Disposable {
       // Configuration updates are handled by specific message handlers
       // (settingsResponse and fontSettingsUpdate) in SecondaryTerminalProvider
       if (shouldUpdateSettings || shouldUpdateFontSettings) {
-        log('⚙️ [EVENT-COORDINATOR] Configuration changed (settings:', shouldUpdateSettings, ', fonts:', shouldUpdateFontSettings, ')');
+        log(
+          '⚙️ [EVENT-COORDINATOR] Configuration changed (settings:',
+          shouldUpdateSettings,
+          ', fonts:',
+          shouldUpdateFontSettings,
+          ')'
+        );
       }
     });
 

@@ -78,7 +78,7 @@ describe('Split Mode Specification Tests', () => {
       terminalBody.style.flexDirection = 'column';
 
       // Verify all wrappers have same flex value
-      wrappers.forEach(wrapper => {
+      wrappers.forEach((wrapper) => {
         expect(wrapper.style.flex).to.equal('1 1 0');
       });
 
@@ -101,7 +101,7 @@ describe('Split Mode Specification Tests', () => {
       }
 
       // Verify no wrapper has display:none or visibility:hidden
-      wrappers.forEach(wrapper => {
+      wrappers.forEach((wrapper) => {
         expect(wrapper.style.display).to.not.equal('none');
         expect(wrapper.style.visibility).to.not.equal('hidden');
       });
@@ -137,7 +137,7 @@ describe('Split Mode Specification Tests', () => {
       const wrappers = terminalBody.querySelectorAll('.terminal-split-wrapper');
       expect(wrappers.length).to.equal(3);
 
-      wrappers.forEach(wrapper => {
+      wrappers.forEach((wrapper) => {
         expect((wrapper as HTMLElement).style.flex).to.equal('1 1 0');
       });
     });
@@ -150,7 +150,7 @@ describe('Split Mode Specification Tests', () => {
       const wrappers = terminalBody.querySelectorAll('.terminal-split-wrapper');
       expect(wrappers.length).to.equal(5);
 
-      wrappers.forEach(wrapper => {
+      wrappers.forEach((wrapper) => {
         expect((wrapper as HTMLElement).style.flex).to.equal('1 1 0');
       });
     });
@@ -158,7 +158,9 @@ describe('Split Mode Specification Tests', () => {
     it('TC-2.3: New terminal should be visible immediately', () => {
       setupSplitLayout(3);
 
-      const lastWrapper = terminalBody.querySelector('.terminal-split-wrapper:last-child') as HTMLElement;
+      const lastWrapper = terminalBody.querySelector(
+        '.terminal-split-wrapper:last-child'
+      ) as HTMLElement;
       expect(lastWrapper).to.exist;
       expect(lastWrapper.style.display).to.not.equal('none');
     });
@@ -208,7 +210,7 @@ describe('Split Mode Specification Tests', () => {
       const wrappers = terminalBody.querySelectorAll('.terminal-split-wrapper');
 
       expect(wrappers.length).to.equal(3);
-      wrappers.forEach(wrapper => {
+      wrappers.forEach((wrapper) => {
         expect((wrapper as HTMLElement).style.display).to.not.equal('none');
       });
     });
@@ -220,7 +222,7 @@ describe('Split Mode Specification Tests', () => {
       const wrappers = terminalBody.querySelectorAll('.terminal-split-wrapper');
       expect(wrappers.length).to.equal(4);
 
-      wrappers.forEach(wrapper => {
+      wrappers.forEach((wrapper) => {
         expect((wrapper as HTMLElement).style.flex).to.equal('1 1 0');
       });
     });
@@ -252,7 +254,7 @@ describe('Split Mode Specification Tests', () => {
       const wrappers = terminalBody.querySelectorAll('.terminal-split-wrapper');
       expect(wrappers.length).to.equal(3);
 
-      wrappers.forEach(wrapper => {
+      wrappers.forEach((wrapper) => {
         expect((wrapper as HTMLElement).style.flex).to.equal('1 1 0');
       });
     });
@@ -273,7 +275,7 @@ describe('Split Mode Specification Tests', () => {
       setupSplitLayout(3);
 
       const wrappers = terminalBody.querySelectorAll('.terminal-split-wrapper');
-      wrappers.forEach(wrapper => {
+      wrappers.forEach((wrapper) => {
         expect((wrapper as HTMLElement).style.display).to.not.equal('none');
       });
     });
@@ -293,7 +295,7 @@ describe('Split Mode Specification Tests', () => {
       setupSplitLayout(3);
 
       const wrappers = Array.from(terminalBody.querySelectorAll('.terminal-split-wrapper'));
-      const ids = wrappers.map(w => w.getAttribute('data-terminal-wrapper-id'));
+      const ids = wrappers.map((w) => w.getAttribute('data-terminal-wrapper-id'));
 
       expect(ids).to.deep.equal(['terminal-1', 'terminal-2', 'terminal-3']);
 
@@ -301,8 +303,10 @@ describe('Split Mode Specification Tests', () => {
       clearTerminalBody();
       setupSplitLayoutWithOrder(['terminal-3', 'terminal-1', 'terminal-2']);
 
-      const reorderedWrappers = Array.from(terminalBody.querySelectorAll('.terminal-split-wrapper'));
-      const reorderedIds = reorderedWrappers.map(w => w.getAttribute('data-terminal-wrapper-id'));
+      const reorderedWrappers = Array.from(
+        terminalBody.querySelectorAll('.terminal-split-wrapper')
+      );
+      const reorderedIds = reorderedWrappers.map((w) => w.getAttribute('data-terminal-wrapper-id'));
 
       expect(reorderedIds).to.deep.equal(['terminal-3', 'terminal-1', 'terminal-2']);
     });
@@ -311,7 +315,7 @@ describe('Split Mode Specification Tests', () => {
       setupSplitLayoutWithOrder(['terminal-2', 'terminal-1', 'terminal-3']);
 
       const wrappers = terminalBody.querySelectorAll('.terminal-split-wrapper');
-      wrappers.forEach(wrapper => {
+      wrappers.forEach((wrapper) => {
         expect((wrapper as HTMLElement).style.flex).to.equal('1 1 0');
       });
     });
@@ -322,7 +326,7 @@ describe('Split Mode Specification Tests', () => {
       const wrappers = terminalBody.querySelectorAll('.terminal-split-wrapper');
       expect(wrappers.length).to.equal(3);
 
-      wrappers.forEach(wrapper => {
+      wrappers.forEach((wrapper) => {
         expect((wrapper as HTMLElement).style.display).to.not.equal('none');
       });
     });

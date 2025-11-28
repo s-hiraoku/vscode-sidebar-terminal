@@ -365,9 +365,7 @@ test.describe('Concurrent Operations', () => {
     const writePromises = [];
     for (let i = 1; i <= 3; i++) {
       for (let j = 0; j < 10; j++) {
-        writePromises.push(
-          terminalHelper.sendText(i, `Terminal ${i} - Line ${j}\n`)
-        );
+        writePromises.push(terminalHelper.sendText(i, `Terminal ${i} - Line ${j}\n`));
       }
     }
 

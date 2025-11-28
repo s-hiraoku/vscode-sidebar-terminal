@@ -5,10 +5,7 @@
  * Responsible for tracking terminal registration, process states, and active terminal management.
  */
 
-import type {
-  ProcessState,
-  InteractionState,
-} from '../../types/shared';
+import type { ProcessState, InteractionState } from '../../types/shared';
 
 /**
  * Terminal metadata for state tracking
@@ -136,10 +133,7 @@ export interface ITerminalStateService {
    * @param updates Partial lifecycle state updates
    * @returns True if updated successfully, false if terminal doesn't exist
    */
-  updateLifecycleState(
-    id: string,
-    updates: Partial<TerminalLifecycleState>
-  ): boolean;
+  updateLifecycleState(id: string, updates: Partial<TerminalLifecycleState>): boolean;
 
   /**
    * Get complete terminal state (metadata + lifecycle)
@@ -260,9 +254,7 @@ export interface ITerminalStateService {
    * @param predicate Filter function
    * @returns Array of matching terminal metadata
    */
-  findTerminals(
-    predicate: (metadata: TerminalMetadata) => boolean
-  ): TerminalMetadata[];
+  findTerminals(predicate: (metadata: TerminalMetadata) => boolean): TerminalMetadata[];
 
   /**
    * Update last active time for terminal
@@ -295,4 +287,5 @@ export interface ITerminalStateService {
  * Service token for dependency injection
  */
 import { createServiceToken } from '../../core/DIContainer';
-export const ITerminalStateService = createServiceToken<ITerminalStateService>('ITerminalStateService');
+export const ITerminalStateService =
+  createServiceToken<ITerminalStateService>('ITerminalStateService');

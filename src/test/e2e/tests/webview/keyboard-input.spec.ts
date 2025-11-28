@@ -149,7 +149,9 @@ test.describe('WebView Keyboard Input', () => {
    * Validates that Ctrl+C copies selected text instead of
    * sending SIGINT when text is selected.
    */
-  test('should copy text with Ctrl+C when text is selected @P0 @webview-interaction', async ({ page }) => {
+  test('should copy text with Ctrl+C when text is selected @P0 @webview-interaction', async ({
+    page,
+  }) => {
     // Arrange: Generate some terminal output
     await webviewHelper.typeInTerminal('echo "test output"');
     await page.keyboard.press('Enter');
@@ -166,7 +168,9 @@ test.describe('WebView Keyboard Input', () => {
    *
    * Validates that Ctrl+C sends SIGINT when no text is selected.
    */
-  test('should send SIGINT with Ctrl+C when no selection @P0 @webview-interaction', async ({ page }) => {
+  test('should send SIGINT with Ctrl+C when no selection @P0 @webview-interaction', async ({
+    page,
+  }) => {
     // Arrange: Start a long-running process
     await webviewHelper.typeInTerminal('sleep 100');
     await page.keyboard.press('Enter');

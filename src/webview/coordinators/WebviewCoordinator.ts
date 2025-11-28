@@ -13,7 +13,10 @@ import { CliAgentMessageController } from '../managers/controllers/CliAgentMessa
 
 type CommandString = MessageCommand['command'];
 
-type CommandHandler = (message: MessageCommand, coordinator: IManagerCoordinator) => void | Promise<void>;
+type CommandHandler = (
+  message: MessageCommand,
+  coordinator: IManagerCoordinator
+) => void | Promise<void>;
 
 interface HandlerDependencies {
   lifecycleHandler: TerminalLifecycleMessageHandler;
@@ -61,7 +64,17 @@ export class WebviewCoordinator {
 
   private registerHandlers(): void {
     this.register(
-      ['init', 'output', 'terminalCreated', 'newTerminal', 'focusTerminal', 'setActiveTerminal', 'deleteTerminalResponse', 'terminalRemoved', 'clear'],
+      [
+        'init',
+        'output',
+        'terminalCreated',
+        'newTerminal',
+        'focusTerminal',
+        'setActiveTerminal',
+        'deleteTerminalResponse',
+        'terminalRemoved',
+        'clear',
+      ],
       (message, coordinator) => this.deps.lifecycleHandler.handleMessage(message, coordinator)
     );
 
@@ -70,74 +83,67 @@ export class WebviewCoordinator {
       (message, coordinator) => this.deps.settingsHandler.handleMessage(message, coordinator)
     );
 
-    this.register(
-      ['cliAgentStatusUpdate'],
-      (message, coordinator) => this.deps.cliAgentController.handleStatusUpdateMessage(message, coordinator)
+    this.register(['cliAgentStatusUpdate'], (message, coordinator) =>
+      this.deps.cliAgentController.handleStatusUpdateMessage(message, coordinator)
+    );
+
+    this.register(['cliAgentFullStateSync'], (message, coordinator) =>
+      this.deps.cliAgentController.handleFullStateSyncMessage(message, coordinator)
+    );
+
+    this.register(['switchAiAgentResponse'], (message, coordinator) =>
+      this.deps.cliAgentController.handleSwitchResponseMessage(message, coordinator)
+    );
+
+    this.register(['sessionRestore'], (message, coordinator) =>
+      this.deps.sessionController.handleSessionRestoreMessage(message, coordinator)
+    );
+
+    this.register(['sessionRestoreStarted'], (message) =>
+      this.deps.sessionController.handleSessionRestoreStartedMessage(message)
+    );
+
+    this.register(['sessionRestoreProgress'], (message) =>
+      this.deps.sessionController.handleSessionRestoreProgressMessage(message)
+    );
+
+    this.register(['sessionRestoreCompleted'], (message) =>
+      this.deps.sessionController.handleSessionRestoreCompletedMessage(message)
+    );
+
+    this.register(['sessionRestoreError'], (message) =>
+      this.deps.sessionController.handleSessionRestoreErrorMessage(message)
     );
 
     this.register(
-      ['cliAgentFullStateSync'],
-      (message, coordinator) => this.deps.cliAgentController.handleFullStateSyncMessage(message, coordinator)
-    );
-
-    this.register(
-      ['switchAiAgentResponse'],
-      (message, coordinator) => this.deps.cliAgentController.handleSwitchResponseMessage(message, coordinator)
-    );
-
-    this.register(
-      ['sessionRestore'],
-      (message, coordinator) => this.deps.sessionController.handleSessionRestoreMessage(message, coordinator)
-    );
-
-    this.register(
-      ['sessionRestoreStarted'],
-      message => this.deps.sessionController.handleSessionRestoreStartedMessage(message)
-    );
-
-    this.register(
-      ['sessionRestoreProgress'],
-      message => this.deps.sessionController.handleSessionRestoreProgressMessage(message)
-    );
-
-    this.register(
-      ['sessionRestoreCompleted'],
-      message => this.deps.sessionController.handleSessionRestoreCompletedMessage(message)
-    );
-
-    this.register(
-      ['sessionRestoreError'],
-      message => this.deps.sessionController.handleSessionRestoreErrorMessage(message)
-    );
-
-    this.register(
-      ['getScrollback', 'restoreScrollback', 'scrollbackProgress', 'extractScrollbackData', 'restoreTerminalSessions'],
+      [
+        'getScrollback',
+        'restoreScrollback',
+        'scrollbackProgress',
+        'extractScrollbackData',
+        'restoreTerminalSessions',
+      ],
       (message, coordinator) => this.deps.scrollbackHandler.handleMessage(message, coordinator)
     );
 
-    this.register(
-      ['sessionSaved'],
-      message => this.deps.sessionController.handleSessionSavedMessage(message)
+    this.register(['sessionSaved'], (message) =>
+      this.deps.sessionController.handleSessionSavedMessage(message)
     );
 
-    this.register(
-      ['sessionSaveError'],
-      message => this.deps.sessionController.handleSessionSaveErrorMessage(message)
+    this.register(['sessionSaveError'], (message) =>
+      this.deps.sessionController.handleSessionSaveErrorMessage(message)
     );
 
-    this.register(
-      ['sessionCleared'],
-      () => this.deps.sessionController.handleSessionClearedMessage()
+    this.register(['sessionCleared'], () =>
+      this.deps.sessionController.handleSessionClearedMessage()
     );
 
-    this.register(
-      ['sessionRestored'],
-      message => this.deps.sessionController.handleSessionRestoredMessage(message)
+    this.register(['sessionRestored'], (message) =>
+      this.deps.sessionController.handleSessionRestoredMessage(message)
     );
 
-    this.register(
-      ['shellStatus', 'cwdUpdate', 'commandHistory', 'find'],
-      (message, coordinator) => this.deps.shellIntegrationHandler.handleMessage(message, coordinator)
+    this.register(['shellStatus', 'cwdUpdate', 'commandHistory', 'find'], (message, coordinator) =>
+      this.deps.shellIntegrationHandler.handleMessage(message, coordinator)
     );
 
     this.register(
@@ -151,19 +157,17 @@ export class WebviewCoordinator {
         'sessionRestorationData',
         'persistenceSaveSessionResponse',
         'persistenceRestoreSessionResponse',
-        'persistenceClearSessionResponse'
+        'persistenceClearSessionResponse',
       ],
       (message, coordinator) => this.deps.serializationHandler.handleMessage(message, coordinator)
     );
 
-    this.register(
-      ['sessionRestoreSkipped'],
-      message => this.deps.sessionController.handleSessionRestoreSkippedMessage(message)
+    this.register(['sessionRestoreSkipped'], (message) =>
+      this.deps.sessionController.handleSessionRestoreSkippedMessage(message)
     );
 
-    this.register(
-      ['terminalRestoreError'],
-      message => this.deps.sessionController.handleTerminalRestoreErrorMessage(message)
+    this.register(['terminalRestoreError'], (message) =>
+      this.deps.sessionController.handleTerminalRestoreErrorMessage(message)
     );
 
     this.register(
@@ -171,9 +175,8 @@ export class WebviewCoordinator {
       (message, coordinator) => this.deps.panelLocationHandler.handleMessage(message, coordinator)
     );
 
-    this.register(
-      ['split', 'relayoutTerminals'],
-      (message, coordinator) => this.deps.splitHandler.handleMessage(message, coordinator)
+    this.register(['split', 'relayoutTerminals'], (message, coordinator) =>
+      this.deps.splitHandler.handleMessage(message, coordinator)
     );
 
     this.register(
@@ -183,6 +186,6 @@ export class WebviewCoordinator {
   }
 
   private register(commands: CommandString[], handler: CommandHandler): void {
-    commands.forEach(command => this.handlers.set(command, handler));
+    commands.forEach((command) => this.handlers.set(command, handler));
   }
 }

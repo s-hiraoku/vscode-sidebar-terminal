@@ -153,10 +153,7 @@ export class MyCustomHandler extends BaseCommandHandler {
     );
   }
 
-  public async handle(
-    message: WebviewMessage,
-    context: IMessageHandlerContext
-  ): Promise<void> {
+  public async handle(message: WebviewMessage, context: IMessageHandlerContext): Promise<void> {
     const { command } = message;
 
     // Validate required fields
@@ -241,31 +238,37 @@ console.log(`Registered commands: ${stats.registeredCommands.join(', ')}`);
 ## Benefits
 
 ### 1. Single Source of Truth
+
 - All message handling logic in one place
 - No more scattered switch statements
 - Consistent error handling and logging
 
 ### 2. Massive Code Reduction
+
 - **~70% reduction** in code (~1,974 → ~600 lines)
 - Eliminates 800+ lines of duplicated patterns
 - Consolidates 5 different implementations
 
 ### 3. Improved Testability
+
 - Each handler can be tested independently
 - Mock-friendly architecture
 - Clear separation of concerns
 
 ### 4. Enhanced Extensibility
+
 - Add new handlers without modifying existing code
 - Priority-based handler selection
 - Chain of Responsibility allows multiple handlers
 
 ### 5. Better Maintainability
+
 - Centralized validation and logging
 - Consistent patterns across all handlers
 - Easy to understand and modify
 
 ### 6. Performance Monitoring
+
 - Built-in statistics tracking
 - Processing time measurement
 - Error counting and reporting
@@ -275,12 +278,14 @@ console.log(`Registered commands: ${stats.registeredCommands.join(', ')}`);
 ### Step 1: Replace Message Manager
 
 **Before:**
+
 ```typescript
 const messageManager = new ConsolidatedMessageManager(coordinator);
 await messageManager.handleMessage(messageEvent, coordinator);
 ```
 
 **After:**
+
 ```typescript
 const processor = createMessageProcessor({ coordinator });
 processor.registerHandlers([
@@ -294,6 +299,7 @@ await processor.processMessage(messageEvent.data);
 ### Step 2: Migrate Custom Handlers
 
 **Before:**
+
 ```typescript
 // In ConsolidatedMessageManager.handleMessage()
 case 'myCommand':
@@ -307,6 +313,7 @@ case 'myCommand':
 ```
 
 **After:**
+
 ```typescript
 export class MyCommandHandler extends BaseCommandHandler {
   constructor() {
@@ -324,12 +331,14 @@ export class MyCommandHandler extends BaseCommandHandler {
 ### Step 3: Update Tests
 
 **Before:**
+
 ```typescript
 const manager = new ConsolidatedMessageManager();
 await manager.receiveMessage(testMessage, mockCoordinator);
 ```
 
 **After:**
+
 ```typescript
 const processor = createMessageProcessor({ coordinator: mockCoordinator });
 processor.registerHandler(new TestHandler());

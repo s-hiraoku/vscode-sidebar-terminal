@@ -91,7 +91,7 @@ export class ExtensionLifecycle {
    * ```
    *
    * @public
-  */
+   */
   activate(context: vscode.ExtensionContext): Promise<void> {
     const activationStartTime = Date.now();
     this._extensionContext = context;
@@ -353,7 +353,7 @@ export class ExtensionLifecycle {
    * ```
    *
    * @public
-  */
+   */
   async deactivate(): Promise<void> {
     logger.lifecycle('Sidebar Terminal deactivation started');
 

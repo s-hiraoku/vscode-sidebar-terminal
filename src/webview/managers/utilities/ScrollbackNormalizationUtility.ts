@@ -24,9 +24,7 @@ export class ScrollbackNormalizationUtility {
    *
    * Handles both string arrays and object arrays
    */
-  public static normalizeScrollbackContent(
-    scrollbackContent: unknown
-  ): ScrollbackLine[] {
+  public static normalizeScrollbackContent(scrollbackContent: unknown): ScrollbackLine[] {
     if (!Array.isArray(scrollbackContent) || scrollbackContent.length === 0) {
       return [];
     }
@@ -65,8 +63,7 @@ export class ScrollbackNormalizationUtility {
       })
       .map((item) => {
         const type = (item as any).type;
-        const normalizedType =
-          type === 'input' || type === 'error' ? type : ('output' as const);
+        const normalizedType = type === 'input' || type === 'error' ? type : ('output' as const);
 
         return {
           content: (item as any).content,

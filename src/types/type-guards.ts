@@ -5,10 +5,7 @@
  * with proper type checking throughout the codebase.
  */
 
-import {
-  WebviewMessage,
-  PartialTerminalSettings,
-} from './shared';
+import { WebviewMessage, PartialTerminalSettings } from './shared';
 
 // ===== Type Guard Functions =====
 
@@ -232,4 +229,3 @@ export interface ExtensionError extends Error {
   context?: Record<string, unknown>;
   terminalId?: string;
 }
-

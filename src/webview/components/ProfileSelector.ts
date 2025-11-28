@@ -175,7 +175,10 @@ export class ProfileSelector {
       listItem.className = 'profile-item';
       listItem.dataset.profileId = profile.id;
       listItem.setAttribute('role', 'option');
-      listItem.setAttribute('aria-label', `${profile.name}${profile.isDefault ? ' (Default)' : ''}`);
+      listItem.setAttribute(
+        'aria-label',
+        `${profile.name}${profile.isDefault ? ' (Default)' : ''}`
+      );
       listItem.setAttribute('tabindex', '0');
 
       if (profile.id === this._selectedProfileId) {

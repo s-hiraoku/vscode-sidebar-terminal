@@ -26,13 +26,14 @@ import { safeProcessCwd } from '../../utils/common';
 
 // Direct console.log for reliable debugging output
 // eslint-disable-next-line no-console
-const log = (message: string, ...args: unknown[]) => console.log(`[EXT-PERSISTENCE] ${message}`, ...args);
+const log = (message: string, ...args: unknown[]) =>
+  console.log(`[EXT-PERSISTENCE] ${message}`, ...args);
 import {
   SessionStorageData,
   TerminalSessionData,
   SessionInfo,
   SessionRestoreResult,
-  SessionDataTransformer
+  SessionDataTransformer,
 } from '../../shared/session.types';
 
 // ============================================================================
@@ -80,11 +81,14 @@ export class ExtensionPersistenceService implements vscode.Disposable {
   private pendingTerminalReadyCallbacks = new Map<Set<string>, () => void>();
 
   // Pending scrollback extraction requests for on-demand save
-  private pendingScrollbackRequests = new Map<string, {
-    resolve: (data: { id: string; scrollback: string[] }) => void;
-    timeout: NodeJS.Timeout;
-    terminalId: string;
-  }>();
+  private pendingScrollbackRequests = new Map<
+    string,
+    {
+      resolve: (data: { id: string; scrollback: string[] }) => void;
+      timeout: NodeJS.Timeout;
+      terminalId: string;
+    }
+  >();
 
   // Disposables
   private onWillSaveStateDisposable?: vscode.Disposable;
@@ -179,7 +183,9 @@ export class ExtensionPersistenceService implements vscode.Disposable {
         }
       }
 
-      log(`[EXT-PERSISTENCE] Scrollback: ${cachedCount} cached, ${extractedCount} extracted, ${terminals.length} total`);
+      log(
+        `[EXT-PERSISTENCE] Scrollback: ${cachedCount} cached, ${extractedCount} extracted, ${terminals.length} total`
+      );
 
       // Debug: Log scrollback data sizes and preview content
       for (const terminalId of Object.keys(scrollbackData)) {
@@ -188,9 +194,13 @@ export class ExtensionPersistenceService implements vscode.Disposable {
           log(`📦 [EXT-PERSISTENCE] Saving scrollback for ${terminalId}: ${data.length} lines`);
           // Log first 3 lines as preview
           if (data.length > 0) {
-            const preview = data.slice(0, 3).map(line =>
-              typeof line === 'string' ? line.substring(0, 80) : JSON.stringify(line).substring(0, 80)
-            );
+            const preview = data
+              .slice(0, 3)
+              .map((line) =>
+                typeof line === 'string'
+                  ? line.substring(0, 80)
+                  : JSON.stringify(line).substring(0, 80)
+              );
             log(`📦 [EXT-PERSISTENCE] Preview for ${terminalId}: ${JSON.stringify(preview)}`);
           }
         }
@@ -228,7 +238,6 @@ export class ExtensionPersistenceService implements vscode.Disposable {
 
       log(`✅ [EXT-PERSISTENCE] Session saved: ${terminals.length} terminals`);
       return { success: true, terminalCount: terminals.length };
-
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       log(`❌ [EXT-PERSISTENCE] Save failed: ${errorMsg}`);
@@ -250,7 +259,9 @@ export class ExtensionPersistenceService implements vscode.Disposable {
         ExtensionPersistenceService.STORAGE_KEY
       );
 
-      log(`🟢 Session data: ${sessionData ? `${sessionData.terminals?.length} terminals` : 'null'}`);
+      log(
+        `🟢 Session data: ${sessionData ? `${sessionData.terminals?.length} terminals` : 'null'}`
+      );
 
       // Debug: Log detailed session info
       if (sessionData) {
@@ -260,7 +271,9 @@ export class ExtensionPersistenceService implements vscode.Disposable {
         sessionData.terminals?.forEach((t, i) => {
           const scrollback = sessionData.scrollbackData?.[t.id];
           const scrollbackLines = Array.isArray(scrollback) ? scrollback.length : 0;
-          log(`🟢 Terminal ${i + 1}: id=${t.id}, name=${t.name}, scrollback=${scrollbackLines} lines`);
+          log(
+            `🟢 Terminal ${i + 1}: id=${t.id}, name=${t.name}, scrollback=${scrollbackLines} lines`
+          );
         });
       }
 
@@ -277,7 +290,9 @@ export class ExtensionPersistenceService implements vscode.Disposable {
       }
 
       // Check expiry
-      if (SessionDataTransformer.isSessionExpired(sessionData, config.persistentSessionExpiryDays)) {
+      if (
+        SessionDataTransformer.isSessionExpired(sessionData, config.persistentSessionExpiryDays)
+      ) {
         log('[EXT-PERSISTENCE] Session expired, clearing...');
         await this.clearSession();
         return { success: false, message: 'Session expired' };
@@ -305,15 +320,16 @@ export class ExtensionPersistenceService implements vscode.Disposable {
         log('✅ [EXT-PERSISTENCE] Restoration protection period ended (5s delay)');
       }, 5000);
 
-      const successCount = restoreResults.filter(r => r.success).length;
-      log(`✅ [EXT-PERSISTENCE] Restored ${successCount}/${sessionData.terminals.length} terminals`);
+      const successCount = restoreResults.filter((r) => r.success).length;
+      log(
+        `✅ [EXT-PERSISTENCE] Restored ${successCount}/${sessionData.terminals.length} terminals`
+      );
 
       return {
         success: successCount > 0,
         restoredCount: successCount,
         skippedCount: restoreResults.length - successCount,
       };
-
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       log(`❌ [EXT-PERSISTENCE] Restore failed: ${errorMsg}`);
@@ -355,10 +371,7 @@ export class ExtensionPersistenceService implements vscode.Disposable {
    */
   public async clearSession(): Promise<void> {
     try {
-      await this.context.workspaceState.update(
-        ExtensionPersistenceService.STORAGE_KEY,
-        undefined
-      );
+      await this.context.workspaceState.update(ExtensionPersistenceService.STORAGE_KEY, undefined);
       this.pushedScrollbackCache.clear();
       log('✅ [EXT-PERSISTENCE] Session cleared');
     } catch (error) {
@@ -388,7 +401,9 @@ export class ExtensionPersistenceService implements vscode.Disposable {
     }
 
     this.pushedScrollbackCache.set(message.terminalId, message.scrollbackData);
-    log(`[EXT-PERSISTENCE] Cached scrollback for ${message.terminalId}: ${message.scrollbackData.length} lines`);
+    log(
+      `[EXT-PERSISTENCE] Cached scrollback for ${message.terminalId}: ${message.scrollbackData.length} lines`
+    );
   }
 
   /**
@@ -421,7 +436,9 @@ export class ExtensionPersistenceService implements vscode.Disposable {
     // Update cache regardless of request
     if (terminalId && scrollbackData) {
       this.pushedScrollbackCache.set(terminalId, scrollbackData);
-      log(`[EXT-PERSISTENCE] Updated scrollback cache for ${terminalId}: ${scrollbackData.length} lines`);
+      log(
+        `[EXT-PERSISTENCE] Updated scrollback cache for ${terminalId}: ${scrollbackData.length} lines`
+      );
     }
 
     // Handle pending extraction request
@@ -451,7 +468,9 @@ export class ExtensionPersistenceService implements vscode.Disposable {
         return;
       }
 
-      if (SessionDataTransformer.isSessionExpired(sessionData, config.persistentSessionExpiryDays)) {
+      if (
+        SessionDataTransformer.isSessionExpired(sessionData, config.persistentSessionExpiryDays)
+      ) {
         log('[EXT-PERSISTENCE] Cleaning up expired session...');
         await this.clearSession();
         log('✅ [EXT-PERSISTENCE] Expired session cleaned up');
@@ -541,7 +560,10 @@ export class ExtensionPersistenceService implements vscode.Disposable {
   /**
    * Detect CLI Agent type from terminal name/cwd
    */
-  private detectCLIAgent(terminal: { name: string; cwd?: string }): 'claude' | 'gemini' | undefined {
+  private detectCLIAgent(terminal: {
+    name: string;
+    cwd?: string;
+  }): 'claude' | 'gemini' | undefined {
     const name = terminal.name.toLowerCase();
     const cwd = terminal.cwd?.toLowerCase() || '';
 
@@ -605,7 +627,9 @@ export class ExtensionPersistenceService implements vscode.Disposable {
     return new Promise((resolve) => {
       const remaining = new Set(terminalIds);
       const timeoutId = setTimeout(() => {
-        log(`⚠️ [EXT-PERSISTENCE] Timeout waiting for terminals: ${Array.from(remaining).join(', ')}`);
+        log(
+          `⚠️ [EXT-PERSISTENCE] Timeout waiting for terminals: ${Array.from(remaining).join(', ')}`
+        );
         this.pendingTerminalReadyCallbacks.delete(remaining);
         resolve(); // Continue anyway to not block restoration
       }, timeout);
@@ -644,7 +668,9 @@ export class ExtensionPersistenceService implements vscode.Disposable {
         maxLines: this.getPersistenceConfig().persistentSessionScrollback,
       });
 
-      log(`[EXT-PERSISTENCE] Requested immediate scrollback extraction for ${terminalId} (${requestId})`);
+      log(
+        `[EXT-PERSISTENCE] Requested immediate scrollback extraction for ${terminalId} (${requestId})`
+      );
     });
   }
 
@@ -685,7 +711,7 @@ export class ExtensionPersistenceService implements vscode.Disposable {
     }
 
     // Wait for terminals to be ready (event-based with 3s timeout)
-    const pendingTerminalIds = new Set(terminalCreations.map(t => t.id));
+    const pendingTerminalIds = new Set(terminalCreations.map((t) => t.id));
     log(`[EXT-PERSISTENCE] Waiting for ${pendingTerminalIds.size} terminals to be ready...`);
     await this.waitForTerminalsReady(pendingTerminalIds, 3000);
     log(`✅ [EXT-PERSISTENCE] All terminals ready or timeout reached`);
@@ -701,9 +727,7 @@ export class ExtensionPersistenceService implements vscode.Disposable {
   /**
    * Request scrollback restoration via WebView
    */
-  private async requestScrollbackRestoration(
-    terminals: TerminalRestoreData[]
-  ): Promise<void> {
+  private async requestScrollbackRestoration(terminals: TerminalRestoreData[]): Promise<void> {
     if (!this.sidebarProvider) {
       log('⚠️ [EXT-PERSISTENCE] No sidebar provider for restoration');
       return;
@@ -711,7 +735,7 @@ export class ExtensionPersistenceService implements vscode.Disposable {
 
     try {
       // Normalize historical payloads where scrollback was stored as a single string
-      const normalizedTerminals = terminals.map(t => {
+      const normalizedTerminals = terminals.map((t) => {
         let scrollbackArray: string[] | undefined = t.scrollbackData;
 
         // Handle legacy string format
@@ -720,7 +744,9 @@ export class ExtensionPersistenceService implements vscode.Disposable {
         }
 
         // Debug: Log scrollback data for each terminal
-        log(`📦 [EXT-PERSISTENCE] Terminal ${t.id} (original: ${t.originalId}): scrollback ${scrollbackArray?.length ?? 0} lines`);
+        log(
+          `📦 [EXT-PERSISTENCE] Terminal ${t.id} (original: ${t.originalId}): scrollback ${scrollbackArray?.length ?? 0} lines`
+        );
 
         return {
           terminalId: t.id,
@@ -731,8 +757,12 @@ export class ExtensionPersistenceService implements vscode.Disposable {
       });
 
       // Debug: Check if any terminal has scrollback data
-      const terminalsWithData = normalizedTerminals.filter(t => t.scrollbackData && t.scrollbackData.length > 0);
-      log(`📦 [EXT-PERSISTENCE] ${terminalsWithData.length}/${normalizedTerminals.length} terminals have scrollback data`);
+      const terminalsWithData = normalizedTerminals.filter(
+        (t) => t.scrollbackData && t.scrollbackData.length > 0
+      );
+      log(
+        `📦 [EXT-PERSISTENCE] ${terminalsWithData.length}/${normalizedTerminals.length} terminals have scrollback data`
+      );
 
       if (terminalsWithData.length === 0) {
         log('⚠️ [EXT-PERSISTENCE] No scrollback data to restore - skipping');
@@ -744,7 +774,9 @@ export class ExtensionPersistenceService implements vscode.Disposable {
         terminals: normalizedTerminals,
       });
 
-      log(`✅ [EXT-PERSISTENCE] Scrollback restoration requested for ${terminals.length} terminals`);
+      log(
+        `✅ [EXT-PERSISTENCE] Scrollback restoration requested for ${terminals.length} terminals`
+      );
     } catch (error) {
       log(`❌ [EXT-PERSISTENCE] Scrollback restoration failed: ${error}`);
     }

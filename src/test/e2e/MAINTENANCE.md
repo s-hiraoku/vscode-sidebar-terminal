@@ -38,6 +38,7 @@ This guide provides guidelines for maintaining and updating the Playwright E2E t
 ### Code Review Guidelines
 
 **What to check**:
+
 1. **Test Structure**: Follows Arrange-Act-Assert pattern
 2. **Selectors**: Uses data-testid for stability
 3. **Waits**: Proper use of waitForSelector, waitForLoadState
@@ -46,11 +47,12 @@ This guide provides guidelines for maintaining and updating the Playwright E2E t
 6. **Documentation**: Comments for non-obvious behavior
 
 **Example**:
+
 ```typescript
 // ❌ Bad: Unclear test name, hard-coded wait, vague assertion
 test('test terminal', async () => {
   await page.click('button');
-  await new Promise(r => setTimeout(r, 1000));
+  await new Promise((r) => setTimeout(r, 1000));
   expect(await page.locator('div').count()).toBeGreaterThan(0);
 });
 
@@ -88,6 +90,7 @@ tests/
 ```
 
 **Naming Rules**:
+
 - Use kebab-case: `terminal-creation.spec.ts`
 - Be specific and descriptive
 - Group related tests in same file
@@ -98,13 +101,15 @@ tests/
 **Format**: `@Priority should [action] [condition] @category:tag`
 
 **Examples**:
+
 ```typescript
-test('@P0 should create terminal with default settings @category:terminal-lifecycle')
-test('@P1 should handle rapid terminal creation without race conditions @category:concurrency')
-test('@P2 should display AI agent status indicator @category:ai-detection @security')
+test('@P0 should create terminal with default settings @category:terminal-lifecycle');
+test('@P1 should handle rapid terminal creation without race conditions @category:concurrency');
+test('@P2 should display AI agent status indicator @category:ai-detection @security');
 ```
 
 **Rules**:
+
 - Start with priority tag (@P0, @P1, @P2)
 - Use "should" for expected behavior
 - Be specific about what is being tested
@@ -136,12 +141,14 @@ describe('Feature Area', () => {
 ### When to Use
 
 Use Page Objects for:
+
 - Repeated UI interactions
 - Complex page structures
 - Reusable selectors
 - Multi-step workflows
 
 **Don't use for**:
+
 - Simple, one-time actions
 - Tests with unique page structures
 
@@ -281,10 +288,12 @@ export class TestDataFactory {
 #### Pattern 1: Timing Issues
 
 **Symptoms**:
+
 - "Element not found" errors
 - Tests pass locally, fail in CI
 
 **Solutions**:
+
 ```typescript
 // Add proper waits
 await page.waitForSelector('[data-testid="element"]');
@@ -300,10 +309,12 @@ await page.waitForFunction(() => window.myApp.isReady);
 #### Pattern 2: Race Conditions
 
 **Symptoms**:
+
 - Tests fail in parallel
 - Inconsistent results
 
 **Solutions**:
+
 ```typescript
 // Ensure test isolation
 test.beforeEach(async () => {
@@ -323,10 +334,12 @@ test.describe.serial('sequential tests', () => {
 #### Pattern 3: State Pollution
 
 **Symptoms**:
+
 - Tests pass individually, fail in suite
 - Order-dependent failures
 
 **Solutions**:
+
 ```typescript
 // Reset state between tests
 test.beforeEach(async () => {
@@ -341,6 +354,7 @@ const testId = `test-${Date.now()}`;
 ### Failure Documentation
 
 Create issue with:
+
 ```markdown
 ## Test Failure Report
 
@@ -350,7 +364,9 @@ Create issue with:
 
 **Error**:
 ```
+
 TimeoutError: Waiting for selector '[data-terminal-id="1"]' failed
+
 ```
 
 **Screenshots**: [Attach]
@@ -383,25 +399,27 @@ TimeoutError: Waiting for selector '[data-terminal-id="1"]' failed
 ### Refactoring Example
 
 **Before**:
+
 ```typescript
 test('test 1', async () => {
   await page.goto('http://localhost:3000');
   await page.click('[data-testid="create"]');
-  await new Promise(r => setTimeout(r, 1000));
+  await new Promise((r) => setTimeout(r, 1000));
   expect(await page.locator('[data-terminal-id]').count()).toBe(1);
 });
 
 test('test 2', async () => {
   await page.goto('http://localhost:3000');
   await page.click('[data-testid="create"]');
-  await new Promise(r => setTimeout(r, 1000));
+  await new Promise((r) => setTimeout(r, 1000));
   await page.click('[data-testid="create"]');
-  await new Promise(r => setTimeout(r, 1000));
+  await new Promise((r) => setTimeout(r, 1000));
   expect(await page.locator('[data-terminal-id]').count()).toBe(2);
 });
 ```
 
 **After**:
+
 ```typescript
 class TerminalHelper {
   async createTerminal(): Promise<void> {
@@ -468,12 +486,14 @@ Review `.github/workflows/e2e-tests.yml` monthly:
 ### Monitoring CI Health
 
 **Key Metrics**:
+
 - Test pass rate (target: ≥95%)
 - Average execution time (target: <10 minutes)
 - Flaky test rate (target: <5%)
 - Artifact storage usage
 
 **Monthly Review**:
+
 ```bash
 # Check recent CI runs
 gh run list --workflow=e2e-tests.yml --limit 20
@@ -485,23 +505,27 @@ gh run download <run-id> --name test-results
 ## Maintenance Schedule
 
 ### Weekly
+
 - [ ] Review failed CI runs
 - [ ] Fix flaky tests
 - [ ] Update test data if needed
 
 ### Monthly
+
 - [ ] Review test execution times
 - [ ] Refactor slow/flaky tests
 - [ ] Update dependencies
 - [ ] Review CI metrics
 
 ### Quarterly
+
 - [ ] Comprehensive test suite review
 - [ ] Update test priorities based on usage
 - [ ] Archive obsolete tests
 - [ ] Performance optimization
 
 ### Before Major Release
+
 - [ ] Run full test suite 3x times
 - [ ] Review all P0 tests
 - [ ] Update test documentation

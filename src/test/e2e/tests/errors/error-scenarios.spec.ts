@@ -40,7 +40,9 @@ test.describe('Error Scenarios', () => {
    * Validates that extension handles activation failure gracefully
    * and provides useful error messages to the user.
    */
-  test('should handle extension activation failure gracefully @P0 @error-handling', async ({ page: _page }) => {
+  test('should handle extension activation failure gracefully @P0 @error-handling', async ({
+    page: _page,
+  }) => {
     // Arrange: Simulate activation failure conditions
     // Future: Mock VS Code API to throw activation error
     // await page.evaluate(() => {
@@ -75,7 +77,9 @@ test.describe('Error Scenarios', () => {
    * Validates that WebView initialization failure is handled
    * without crashing the extension.
    */
-  test('should handle WebView initialization failure @P0 @error-handling', async ({ page: _page }) => {
+  test('should handle WebView initialization failure @P0 @error-handling', async ({
+    page: _page,
+  }) => {
     // Arrange: Simulate WebView initialization failure
     // Future: Mock WebView creation to fail
     // await page.evaluate(() => {
@@ -145,7 +149,9 @@ test.describe('Error Scenarios', () => {
    * Validates that extension handles terminal crashes
    * and allows recovery or recreation.
    */
-  test('should handle terminal crash and allow recovery @P0 @error-handling', async ({ page: _page }) => {
+  test('should handle terminal crash and allow recovery @P0 @error-handling', async ({
+    page: _page,
+  }) => {
     // Arrange: Create terminal
     await extensionHelper.activateExtension();
     await webviewHelper.waitForWebViewLoad();

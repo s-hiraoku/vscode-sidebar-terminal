@@ -145,13 +145,19 @@ export class ConsolidatedMessageManager implements IMessageManager {
       'clear',
       'startOutput',
     ];
-    lifecycleCommands.forEach(cmd =>
+    lifecycleCommands.forEach((cmd) =>
       registry.set(cmd, (msg, coord) => this.lifecycleHandler.handleMessage(msg, coord))
     );
 
     // Settings and Configuration Messages
-    const settingsCommands = ['fontSettingsUpdate', 'settingsResponse', 'openSettings', 'versionInfo', 'stateUpdate'];
-    settingsCommands.forEach(cmd =>
+    const settingsCommands = [
+      'fontSettingsUpdate',
+      'settingsResponse',
+      'openSettings',
+      'versionInfo',
+      'stateUpdate',
+    ];
+    settingsCommands.forEach((cmd) =>
       registry.set(cmd, (msg, coord) => this.settingsHandler.handleMessage(msg, coord))
     );
 
@@ -170,38 +176,48 @@ export class ConsolidatedMessageManager implements IMessageManager {
     registry.set('sessionRestore', async (msg, coord) =>
       this.sessionController.handleSessionRestoreMessage(msg, coord)
     );
-    registry.set('sessionRestoreStarted', msg =>
+    registry.set('sessionRestoreStarted', (msg) =>
       this.sessionController.handleSessionRestoreStartedMessage(msg)
     );
-    registry.set('sessionRestoreProgress', msg =>
+    registry.set('sessionRestoreProgress', (msg) =>
       this.sessionController.handleSessionRestoreProgressMessage(msg)
     );
-    registry.set('sessionRestoreCompleted', msg =>
+    registry.set('sessionRestoreCompleted', (msg) =>
       this.sessionController.handleSessionRestoreCompletedMessage(msg)
     );
-    registry.set('sessionRestoreError', msg =>
+    registry.set('sessionRestoreError', (msg) =>
       this.sessionController.handleSessionRestoreErrorMessage(msg)
     );
-    registry.set('sessionSaved', msg => this.sessionController.handleSessionSavedMessage(msg));
-    registry.set('sessionSaveError', msg => this.sessionController.handleSessionSaveErrorMessage(msg));
+    registry.set('sessionSaved', (msg) => this.sessionController.handleSessionSavedMessage(msg));
+    registry.set('sessionSaveError', (msg) =>
+      this.sessionController.handleSessionSaveErrorMessage(msg)
+    );
     registry.set('sessionCleared', () => this.sessionController.handleSessionClearedMessage());
-    registry.set('sessionRestored', msg => this.sessionController.handleSessionRestoredMessage(msg));
-    registry.set('sessionRestoreSkipped', msg =>
+    registry.set('sessionRestored', (msg) =>
+      this.sessionController.handleSessionRestoredMessage(msg)
+    );
+    registry.set('sessionRestoreSkipped', (msg) =>
       this.sessionController.handleSessionRestoreSkippedMessage(msg)
     );
-    registry.set('terminalRestoreError', msg =>
+    registry.set('terminalRestoreError', (msg) =>
       this.sessionController.handleTerminalRestoreErrorMessage(msg)
     );
 
     // Scrollback Messages
-    const scrollbackCommands = ['getScrollback', 'restoreScrollback', 'scrollbackProgress', 'extractScrollbackData', 'restoreTerminalSessions'];
-    scrollbackCommands.forEach(cmd =>
+    const scrollbackCommands = [
+      'getScrollback',
+      'restoreScrollback',
+      'scrollbackProgress',
+      'extractScrollbackData',
+      'restoreTerminalSessions',
+    ];
+    scrollbackCommands.forEach((cmd) =>
       registry.set(cmd, (msg, coord) => this.scrollbackHandler.handleMessage(msg, coord))
     );
 
     // Shell Integration Messages
     const shellIntegrationCommands = ['shellStatus', 'cwdUpdate', 'commandHistory', 'find'];
-    shellIntegrationCommands.forEach(cmd =>
+    shellIntegrationCommands.forEach((cmd) =>
       registry.set(cmd, (msg, coord) => this.shellIntegrationHandler.handleMessage(msg, coord))
     );
 
@@ -218,19 +234,19 @@ export class ConsolidatedMessageManager implements IMessageManager {
       'persistenceRestoreSessionResponse',
       'persistenceClearSessionResponse',
     ];
-    serializationCommands.forEach(cmd =>
+    serializationCommands.forEach((cmd) =>
       registry.set(cmd, (msg, coord) => this.serializationHandler.handleMessage(msg, coord))
     );
 
     // Panel Location Messages
     const panelLocationCommands = ['panelLocationUpdate', 'requestPanelLocationDetection'];
-    panelLocationCommands.forEach(cmd =>
+    panelLocationCommands.forEach((cmd) =>
       registry.set(cmd, (msg, coord) => this.panelLocationHandler.handleMessage(msg, coord))
     );
 
     // Split and Layout Messages
     const splitCommands = ['split', 'relayoutTerminals'];
-    splitCommands.forEach(cmd =>
+    splitCommands.forEach((cmd) =>
       registry.set(cmd, (msg, coord) => {
         this.logger.info(`🔄 [MESSAGE-MANAGER] Routing ${msg.command} to SplitHandler`);
         this.splitHandler.handleMessage(msg, coord);
@@ -239,12 +255,14 @@ export class ConsolidatedMessageManager implements IMessageManager {
 
     // Profile Management Messages
     const profileCommands = ['showProfileSelector', 'profilesUpdated', 'defaultProfileChanged'];
-    profileCommands.forEach(cmd =>
+    profileCommands.forEach((cmd) =>
       registry.set(cmd, (msg, coord) => this.profileHandler.handleMessage(msg, coord))
     );
 
     // Clipboard Messages
-    registry.set('clipboardContent', (msg, coord) => this.clipboardHandler.handleMessage(msg, coord));
+    registry.set('clipboardContent', (msg, coord) =>
+      this.clipboardHandler.handleMessage(msg, coord)
+    );
 
     return registry;
   }
@@ -370,7 +388,7 @@ export class ConsolidatedMessageManager implements IMessageManager {
   public async handleExtensionMessage(message: unknown): Promise<void> {
     if (!this.coordinator) {
       const error = new Error('Coordinator not available');
-      this.errorHandlers.forEach(handler => {
+      this.errorHandlers.forEach((handler) => {
         try {
           handler(error);
         } catch (err) {
@@ -382,12 +400,12 @@ export class ConsolidatedMessageManager implements IMessageManager {
 
     try {
       // Trigger message handlers
-      this.testMessageHandlers.forEach(handler => {
+      this.testMessageHandlers.forEach((handler) => {
         try {
           handler(message);
         } catch (error) {
           this.logger.error('Error in message handler:', error);
-          this.errorHandlers.forEach(errorHandler => {
+          this.errorHandlers.forEach((errorHandler) => {
             try {
               errorHandler(error);
             } catch (err) {
@@ -400,7 +418,7 @@ export class ConsolidatedMessageManager implements IMessageManager {
       // Process the message using the existing logic
       await this.receiveMessage(message, this.coordinator);
     } catch (error) {
-      this.errorHandlers.forEach(handler => {
+      this.errorHandlers.forEach((handler) => {
         try {
           handler(error);
         } catch (err) {
@@ -425,7 +443,10 @@ export class ConsolidatedMessageManager implements IMessageManager {
   /**
    * Send message to extension with retry (for test compatibility)
    */
-  public async sendToExtensionWithRetry(message: unknown, options?: { maxRetries?: number }): Promise<void> {
+  public async sendToExtensionWithRetry(
+    message: unknown,
+    options?: { maxRetries?: number }
+  ): Promise<void> {
     const maxRetries = options?.maxRetries ?? 3;
     let attempt = 0;
 
@@ -439,7 +460,7 @@ export class ConsolidatedMessageManager implements IMessageManager {
           throw error;
         }
         // Wait before retry
-        await new Promise(resolve => setTimeout(resolve, 100 * attempt));
+        await new Promise((resolve) => setTimeout(resolve, 100 * attempt));
       }
     }
   }
@@ -501,8 +522,10 @@ export class ConsolidatedMessageManager implements IMessageManager {
       const message = JSON.parse(rawMessage);
       await this.handleExtensionMessage(message);
     } catch (error) {
-      const parseError = new Error(`Invalid JSON message: ${error instanceof Error ? error.message : String(error)}`);
-      this.errorHandlers.forEach(handler => {
+      const parseError = new Error(
+        `Invalid JSON message: ${error instanceof Error ? error.message : String(error)}`
+      );
+      this.errorHandlers.forEach((handler) => {
         try {
           handler(parseError);
         } catch (err) {
@@ -541,7 +564,7 @@ export class ConsolidatedMessageManager implements IMessageManager {
       type,
       terminalId,
       data,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
   }
 
@@ -559,7 +582,7 @@ export class ConsolidatedMessageManager implements IMessageManager {
       queueSize: stats.total,
       isProcessing: stats.isProcessing,
       highPriorityQueueSize: stats.highPriority,
-      isLocked: false
+      isLocked: false,
     };
   }
 
@@ -570,7 +593,7 @@ export class ConsolidatedMessageManager implements IMessageManager {
     this.messageQueue.enqueue({
       command: 'input',
       data: input,
-      terminalId: terminalId || this.coordinator?.getActiveTerminalId()
+      terminalId: terminalId || this.coordinator?.getActiveTerminalId(),
     });
   }
 
@@ -587,7 +610,7 @@ export class ConsolidatedMessageManager implements IMessageManager {
       command: 'resize',
       cols,
       rows,
-      terminalId: terminalId || this.coordinator?.getActiveTerminalId()
+      terminalId: terminalId || this.coordinator?.getActiveTerminalId(),
     });
   }
 
@@ -602,7 +625,7 @@ export class ConsolidatedMessageManager implements IMessageManager {
     this.messageQueue.enqueue({
       command: 'deleteTerminal',
       terminalId,
-      requestSource
+      requestSource,
     });
   }
 }

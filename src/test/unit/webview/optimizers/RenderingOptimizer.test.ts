@@ -203,12 +203,7 @@ describe('RenderingOptimizer', function () {
         } as any;
       });
 
-      optimizer.setupOptimizedResize(
-        mockTerminal,
-        mockFitAddon,
-        mockContainer,
-        'test-terminal'
-      );
+      optimizer.setupOptimizedResize(mockTerminal, mockFitAddon, mockContainer, 'test-terminal');
 
       optimizer.dispose();
 

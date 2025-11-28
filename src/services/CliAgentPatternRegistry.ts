@@ -93,11 +93,7 @@ export class CliAgentPatternRegistry {
         'goodbye',
         'bye',
       ],
-      terminationRegexPatterns: [
-        /session terminated/i,
-        /connection closed/i,
-        /process exited/i,
-      ],
+      terminationRegexPatterns: [/session terminated/i, /connection closed/i, /process exited/i],
     });
 
     // Gemini CLI patterns
@@ -145,11 +141,7 @@ export class CliAgentPatternRegistry {
         'goodbye',
         'bye',
       ],
-      terminationRegexPatterns: [
-        /session terminated/i,
-        /connection closed/i,
-        /process exited/i,
-      ],
+      terminationRegexPatterns: [/session terminated/i, /connection closed/i, /process exited/i],
     });
 
     // OpenAI Codex patterns
@@ -170,11 +162,7 @@ export class CliAgentPatternRegistry {
         'goodbye',
         'bye',
       ],
-      terminationRegexPatterns: [
-        /session terminated/i,
-        /connection closed/i,
-        /process exited/i,
-      ],
+      terminationRegexPatterns: [/session terminated/i, /connection closed/i, /process exited/i],
     });
 
     // GitHub Copilot CLI patterns
@@ -195,11 +183,7 @@ export class CliAgentPatternRegistry {
         'goodbye',
         'bye',
       ],
-      terminationRegexPatterns: [
-        /session terminated/i,
-        /connection closed/i,
-        /process exited/i,
-      ],
+      terminationRegexPatterns: [/session terminated/i, /connection closed/i, /process exited/i],
     });
 
     return patterns;
@@ -252,14 +236,7 @@ export class CliAgentPatternRegistry {
         /^Connection to .* closed\.$/,
         /^Session terminated\.$/i,
       ],
-      processCompletion: [
-        '[done]',
-        '[finished]',
-        'done',
-        'finished',
-        'complete',
-        'completed',
-      ],
+      processCompletion: ['[done]', '[finished]', 'done', 'finished', 'complete', 'completed'],
       explicitTermination: [
         'session ended',
         'connection closed',
@@ -384,7 +361,7 @@ export class CliAgentPatternRegistry {
     if (agentType) {
       const patterns = this.agentPatterns.get(agentType);
       if (patterns) {
-        return patterns.activityKeywords.some(keyword =>
+        return patterns.activityKeywords.some((keyword) =>
           lowerOutput.includes(keyword.toLowerCase())
         );
       }
@@ -392,7 +369,7 @@ export class CliAgentPatternRegistry {
 
     // Check all agent types
     for (const patterns of this.agentPatterns.values()) {
-      const hasKeyword = patterns.activityKeywords.some(keyword =>
+      const hasKeyword = patterns.activityKeywords.some((keyword) =>
         lowerOutput.includes(keyword.toLowerCase())
       );
       if (hasKeyword) {
@@ -419,7 +396,7 @@ export class CliAgentPatternRegistry {
     }
 
     // Check against standard shell prompt patterns
-    return this.shellPromptPatterns.standard.some(pattern => pattern.test(line));
+    return this.shellPromptPatterns.standard.some((pattern) => pattern.test(line));
   }
 
   /**
@@ -432,23 +409,29 @@ export class CliAgentPatternRegistry {
     const lowerLine = line.toLowerCase().trim();
 
     // Check explicit termination messages
-    if (this.shellPromptPatterns.explicitTermination.some(pattern =>
-      lowerLine.includes(pattern.toLowerCase())
-    )) {
+    if (
+      this.shellPromptPatterns.explicitTermination.some((pattern) =>
+        lowerLine.includes(pattern.toLowerCase())
+      )
+    ) {
       return true;
     }
 
     // Check process completion
-    if (this.shellPromptPatterns.processCompletion.some(pattern =>
-      lowerLine === pattern.toLowerCase()
-    )) {
+    if (
+      this.shellPromptPatterns.processCompletion.some(
+        (pattern) => lowerLine === pattern.toLowerCase()
+      )
+    ) {
       return true;
     }
 
     // Check crash indicators
-    if (this.shellPromptPatterns.crashIndicators.some(pattern =>
-      lowerLine.includes(pattern.toLowerCase())
-    )) {
+    if (
+      this.shellPromptPatterns.crashIndicators.some((pattern) =>
+        lowerLine.includes(pattern.toLowerCase())
+      )
+    ) {
       return true;
     }
 
@@ -461,12 +444,12 @@ export class CliAgentPatternRegistry {
       if (!pattern) continue;
 
       // Check string patterns
-      if (pattern.terminationPatterns.some(p => lowerLine.includes(p.toLowerCase()))) {
+      if (pattern.terminationPatterns.some((p) => lowerLine.includes(p.toLowerCase()))) {
         return true;
       }
 
       // Check regex patterns
-      if (pattern.terminationRegexPatterns.some(regex => regex.test(line))) {
+      if (pattern.terminationRegexPatterns.some((regex) => regex.test(line))) {
         return true;
       }
     }

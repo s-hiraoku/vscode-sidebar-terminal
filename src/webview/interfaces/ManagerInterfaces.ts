@@ -13,13 +13,43 @@ import { AltClickState, TerminalInteractionEvent } from '../../types/common';
 import { ITerminalProfile } from '../../types/profiles';
 import type { IShellIntegrationManager } from '../../types/type-guards';
 
+/**
+ * Interface for RenderingOptimizer
+ */
+export interface IRenderingOptimizer {
+  setupOptimizedResize(
+    terminal: Terminal,
+    fitAddon: FitAddon,
+    container: HTMLElement,
+    terminalId: string
+  ): void;
+  detectDevice(event: WheelEvent): void;
+  dispose(): void;
+}
+
+/**
+ * Interface for persistence manager
+ */
+export interface IPersistenceManager {
+  saveSession?(sessionId: string, data: unknown): Promise<void>;
+  loadSession?(sessionId: string): Promise<unknown>;
+  clearSession?(sessionId: string): Promise<void>;
+  dispose(): void;
+}
+
 export interface ITerminalTabManager {
   initialize(): void;
   addTab(terminalId: string, name: string, terminal?: Terminal): void;
   removeTab(terminalId: string): void;
   setActiveTab(terminalId: string): void;
-  syncTabs(tabInfos: Array<{ id: string; name: string; isActive: boolean; isClosable?: boolean }>): void;
+  syncTabs(
+    tabInfos: Array<{ id: string; name: string; isActive: boolean; isClosable?: boolean }>
+  ): void;
   updateModeIndicator(mode: 'normal' | 'fullscreen' | 'split'): void;
+  /** Check if a terminal ID is pending deletion (prevents race conditions in state sync) */
+  hasPendingDeletion(terminalId: string): boolean;
+  /** Get all terminal IDs currently pending deletion */
+  getPendingDeletions(): Set<string>;
   dispose(): void;
 }
 
@@ -38,7 +68,7 @@ export interface TerminalInstance {
   readonly unicode11Addon?: Unicode11Addon;
   readonly serializeAddon?: SerializeAddon; // For scrollback with color preservation
   // Performance Optimization
-  readonly renderingOptimizer?: any; // RenderingOptimizer for performance
+  readonly renderingOptimizer?: IRenderingOptimizer; // RenderingOptimizer for performance
 }
 
 export type TerminalDisplayMode = 'normal' | 'fullscreen' | 'split';
@@ -110,7 +140,7 @@ export interface IManagerCoordinator {
     findInTerminal?: IFindInTerminalManager;
     profile?: IProfileManager;
     tabs?: ITerminalTabManager;
-    persistence?: any; // Optional persistence manager
+    persistence?: IPersistenceManager; // Optional persistence manager
     terminalContainer?: ITerminalContainerManager; // Terminal container manager
     displayMode?: IDisplayModeManager; // Display mode manager
     header?: IHeaderManager; // Header manager for UI sync
@@ -397,7 +427,7 @@ export interface IProfileManager {
   createTerminalWithDefaultProfile(name?: string): Promise<void>;
   switchToProfileByIndex(index: number): Promise<void>;
   updateProfiles(profiles: ITerminalProfile[], defaultProfileId?: string): void;
-  handleMessage(message: any): void;
+  handleMessage(message: unknown): void;
   isProfileSelectorVisible(): boolean;
   getSelectedProfileId(): string | undefined;
   dispose(): void;

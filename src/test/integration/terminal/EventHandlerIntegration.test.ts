@@ -160,12 +160,8 @@ describe('Terminal Event Handler Integration Tests', () => {
       const terminal2 = terminalManager.createTerminal();
 
       // Both should start in Launching state
-      expect(terminalManager.getTerminal(terminal1)?.processState).to.equal(
-        ProcessState.Launching
-      );
-      expect(terminalManager.getTerminal(terminal2)?.processState).to.equal(
-        ProcessState.Launching
-      );
+      expect(terminalManager.getTerminal(terminal1)?.processState).to.equal(ProcessState.Launching);
+      expect(terminalManager.getTerminal(terminal2)?.processState).to.equal(ProcessState.Launching);
 
       // Cleanup
       terminalManager.removeTerminal(terminal1);

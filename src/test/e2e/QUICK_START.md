@@ -52,6 +52,7 @@ npm run test:e2e:ui
 ```
 
 This opens an interactive test runner where you can:
+
 - See all tests with status
 - Run individual tests with one click
 - Watch tests re-run automatically
@@ -103,6 +104,7 @@ test('@P0 should create terminal with ID 1 @category:terminal-lifecycle', async 
 ```
 
 **Key Elements**:
+
 - **Priority Tag**: `@P0` (Critical), `@P1` (Important), `@P2` (Nice-to-have)
 - **Test Name**: Clear description of what's being tested
 - **Category Tag**: `@category:terminal-lifecycle` for organization
@@ -158,6 +160,7 @@ npx playwright test tests/terminal/my-first-test.spec.ts --debug
 ```
 
 This opens Playwright Inspector where you can:
+
 - Step through test line by line
 - Inspect page state
 - Try different selectors
@@ -192,7 +195,7 @@ test('async operation', async ({ page }) => {
   // Wait for completion
   await page.waitForSelector('[data-testid="data-loaded"]', {
     state: 'visible',
-    timeout: 5000
+    timeout: 5000,
   });
 
   // Verify result
@@ -215,9 +218,9 @@ test('multiple terminals', async ({ page }) => {
   expect(terminals).toBe(3);
 
   // Check each terminal has unique ID
-  const ids = await page.locator('[data-terminal-id]').evaluateAll(
-    elements => elements.map(el => el.getAttribute('data-terminal-id'))
-  );
+  const ids = await page
+    .locator('[data-terminal-id]')
+    .evaluateAll((elements) => elements.map((el) => el.getAttribute('data-terminal-id')));
   expect(new Set(ids).size).toBe(3); // All unique
 });
 ```
@@ -246,6 +249,7 @@ test('with helper', async ({ page }) => {
 These tests validate core functionality. If a P0 test fails, **do not merge**.
 
 **Examples**:
+
 - Terminal creation
 - Terminal deletion
 - Basic keyboard input
@@ -256,6 +260,7 @@ These tests validate core functionality. If a P0 test fails, **do not merge**.
 These tests validate important features. Occasional failures acceptable but should be investigated.
 
 **Examples**:
+
 - AI agent detection
 - Configuration changes
 - Advanced keyboard shortcuts
@@ -266,6 +271,7 @@ These tests validate important features. Occasional failures acceptable but shou
 These tests validate nice-to-have features. Some failures acceptable but should be tracked.
 
 **Examples**:
+
 - Visual regression tests
 - Performance benchmarks
 - Edge case handling
@@ -300,13 +306,13 @@ Claude: *Uses Task tool to launch playwright-test-generator agent*
 
 ```typescript
 // 1. Ask Claude to generate test plan
-"Can you create a test plan for AI agent detection?"
+'Can you create a test plan for AI agent detection?';
 
 // 2. Claude uses playwright-test-planner agent
 // Generates: TEST_PLAN.md with scenarios
 
 // 3. Ask Claude to implement tests
-"Implement the AI agent detection tests"
+'Implement the AI agent detection tests';
 
 // 4. Claude uses playwright-test-generator agent
 // Creates: tests/agents/detection.spec.ts
@@ -358,7 +364,7 @@ await page.waitForSelector('[data-testid="slow-element"]', { timeout: 10000 });
 ```typescript
 // ❌ Bad: Hard-coded wait
 await page.click('button');
-await new Promise(r => setTimeout(r, 1000));
+await new Promise((r) => setTimeout(r, 1000));
 
 // ✅ Good: Wait for specific condition
 await page.click('button');

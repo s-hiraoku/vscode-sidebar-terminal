@@ -41,10 +41,7 @@ export class PluginManager implements Disposable {
    * @param plugin Plugin instance
    * @param options Registration options
    */
-  async registerPlugin(
-    plugin: IPlugin,
-    options: PluginRegistrationOptions = {}
-  ): Promise<void> {
+  async registerPlugin(plugin: IPlugin, options: PluginRegistrationOptions = {}): Promise<void> {
     this._ensureNotDisposed();
 
     const { id } = plugin.metadata;

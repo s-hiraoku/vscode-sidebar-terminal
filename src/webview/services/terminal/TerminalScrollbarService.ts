@@ -47,7 +47,9 @@ export class TerminalScrollbarService {
       // Inject scrollbar styles once
       this.injectScrollbarStyles();
 
-      terminalLogger.info(`VS Code standard full viewport and scrollbar enabled for terminal: ${terminalId}`);
+      terminalLogger.info(
+        `VS Code standard full viewport and scrollbar enabled for terminal: ${terminalId}`
+      );
     } catch (error) {
       terminalLogger.error(`Failed to enable scrollbar for terminal ${terminalId}:`, error);
     }

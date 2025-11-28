@@ -8,7 +8,9 @@ import { TerminalManager } from '../../terminals/TerminalManager';
  */
 export interface ISessionManager {
   getSessionInfo(): { hasValidSession: boolean; sessionData?: any };
-  restoreSession(force: boolean): Promise<{ success: boolean; message?: string; terminals?: any[] }>;
+  restoreSession(
+    force: boolean
+  ): Promise<{ success: boolean; message?: string; terminals?: any[] }>;
   saveSession(terminals: any[]): Promise<void>;
 }
 

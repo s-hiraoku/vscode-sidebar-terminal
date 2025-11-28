@@ -33,12 +33,16 @@ export class TerminalFocusService {
     requestAnimationFrame(() => {
       try {
         // Find the xterm textarea
-        const textarea = terminalContent.querySelector('.xterm-helper-textarea') as HTMLTextAreaElement;
+        const textarea = terminalContent.querySelector(
+          '.xterm-helper-textarea'
+        ) as HTMLTextAreaElement;
 
         if (!textarea) {
           // Retry once after a short delay if textarea doesn't exist yet
           setTimeout(() => {
-            const retryTextarea = terminalContent.querySelector('.xterm-helper-textarea') as HTMLTextAreaElement;
+            const retryTextarea = terminalContent.querySelector(
+              '.xterm-helper-textarea'
+            ) as HTMLTextAreaElement;
             if (retryTextarea) {
               this.focusTerminalTextarea(terminal, retryTextarea, terminalId);
             } else {
@@ -88,7 +92,7 @@ export class TerminalFocusService {
           hasFocus,
           activeElement: `${activeTag}.${activeClass}`,
           textareaInDOM: document.body.contains(textarea),
-          textareaVisible: textarea.offsetParent !== null
+          textareaVisible: textarea.offsetParent !== null,
         });
 
         if (hasFocus) {

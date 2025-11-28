@@ -168,9 +168,7 @@ describe('ShellIntegrationMessageHandler', () => {
       const message: MessageCommand = {
         command: 'commandHistory',
         terminalId: 'terminal-1',
-        history: [
-          { command: 'npm test', exitCode: 0, duration: 1234 },
-        ],
+        history: [{ command: 'npm test', exitCode: 0, duration: 1234 }],
       };
 
       handler.handleMessage(message, mockCoordinator);

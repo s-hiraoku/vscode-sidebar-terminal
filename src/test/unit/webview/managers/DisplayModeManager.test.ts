@@ -64,12 +64,20 @@ describe('DisplayModeManager - Fullscreen Display (Issue #198)', function () {
     // Create mock split manager
     let isSplitMode = false;
     mockSplitManager = {
-      get isSplitMode() { return isSplitMode; },
-      set isSplitMode(value: boolean) { isSplitMode = value; },
+      get isSplitMode() {
+        return isSplitMode;
+      },
+      set isSplitMode(value: boolean) {
+        isSplitMode = value;
+      },
       getIsSplitMode: sinon.stub().callsFake(() => isSplitMode),
-      exitSplitMode: sinon.stub().callsFake(() => { isSplitMode = false; }),
+      exitSplitMode: sinon.stub().callsFake(() => {
+        isSplitMode = false;
+      }),
       getOptimalSplitDirection: sinon.stub().returns('vertical'),
-      prepareSplitMode: sinon.stub().callsFake(() => { isSplitMode = true; }),
+      prepareSplitMode: sinon.stub().callsFake(() => {
+        isSplitMode = true;
+      }),
     } as any;
 
     // Create mock coordinator
@@ -324,7 +332,7 @@ describe('DisplayModeManager - Fullscreen Display (Issue #198)', function () {
       const originalGetManagers = mockCoordinator.getManagers;
       (mockCoordinator as any).getManagers = sinon.stub().returns({
         header: undefined,
-        tabs: undefined
+        tabs: undefined,
       });
 
       // Act & Assert - should not throw

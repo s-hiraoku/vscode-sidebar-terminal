@@ -61,9 +61,7 @@ export class TerminalLifecycleService {
    * Create a new terminal with the specified options
    * @returns Result containing TerminalInstance or error details
    */
-  async createTerminal(
-    options: TerminalCreationOptions = {}
-  ): Promise<Result<TerminalInstance>> {
+  async createTerminal(options: TerminalCreationOptions = {}): Promise<Result<TerminalInstance>> {
     const terminalId = generateTerminalId();
 
     try {
@@ -144,9 +142,7 @@ export class TerminalLifecycleService {
       return failureFromDetails({
         code: ErrorCode.TERMINAL_CREATION_FAILED,
         message:
-          error instanceof Error
-            ? error.message
-            : `Failed to create terminal: ${String(error)}`,
+          error instanceof Error ? error.message : `Failed to create terminal: ${String(error)}`,
         context: { terminalId, options },
         cause: error instanceof Error ? error : undefined,
       });
@@ -221,7 +217,8 @@ export class TerminalLifecycleService {
       },
       (error) => ({
         code: ErrorCode.TERMINAL_PROCESS_FAILED,
-        message: error instanceof Error ? error.message : `Failed to resize terminal: ${String(error)}`,
+        message:
+          error instanceof Error ? error.message : `Failed to resize terminal: ${String(error)}`,
         context: { terminalId: terminal.id, cols, rows },
         cause: error instanceof Error ? error : undefined,
       })

@@ -222,7 +222,6 @@ export class SettingsPanel {
    * バージョン情報セクションを作成
    */
   private createVersionInfoSection(): string {
-
     return `
       <div style="border-top: 1px solid var(--vscode-widget-border, #454545); padding-top: 16px;">
         <h3 style="
@@ -415,9 +414,7 @@ export class SettingsPanel {
 
       if (highlightBorderCheckbox) {
         highlightBorderCheckbox.checked =
-          settings.highlightActiveBorder !== undefined
-            ? settings.highlightActiveBorder
-            : true;
+          settings.highlightActiveBorder !== undefined ? settings.highlightActiveBorder : true;
       }
 
       if (claudeCodeIntegrationCheckbox && settings.enableCliAgentIntegration !== undefined) {

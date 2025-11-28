@@ -10,7 +10,10 @@
 import { describe, it, beforeEach as _beforeEach, afterEach } from 'mocha';
 import { expect } from 'chai';
 import { TerminalManager } from '../../../terminals/TerminalManager';
-import { MemoryLeakDetector, DisposalStressTest as _DisposalStressTest } from '../../utils/MemoryLeakDetector';
+import {
+  MemoryLeakDetector,
+  DisposalStressTest as _DisposalStressTest,
+} from '../../utils/MemoryLeakDetector';
 
 describe('TerminalManager - Memory Leak Detection', () => {
   let terminalManager: TerminalManager | null = null;
@@ -22,7 +25,7 @@ describe('TerminalManager - Memory Leak Detection', () => {
     }
   });
 
-  it('should not leak memory when creating and disposing TerminalManager', async function() {
+  it('should not leak memory when creating and disposing TerminalManager', async function () {
     // Increase timeout for stress test
     this.timeout(30000);
 
@@ -47,7 +50,7 @@ describe('TerminalManager - Memory Leak Detection', () => {
     // Log warnings if any
     if (result.warnings.length > 0) {
       console.warn('Memory warnings detected:');
-      result.warnings.forEach(warning => console.warn('  - ' + warning));
+      result.warnings.forEach((warning) => console.warn('  - ' + warning));
     }
 
     expect(result.hasLeak).to.be.false;
@@ -72,7 +75,7 @@ describe('TerminalManager - Memory Leak Detection', () => {
     }).to.not.throw();
   });
 
-  it('should clean up PTY data disposables when disposing', async function() {
+  it('should clean up PTY data disposables when disposing', async function () {
     this.timeout(10000);
 
     terminalManager = new TerminalManager();
@@ -94,7 +97,7 @@ describe('TerminalManager - Memory Leak Detection', () => {
     }
 
     // Wait a bit for everything to initialize
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
     // Dispose the manager - should clean up all PTY disposables
     terminalManager.dispose();
@@ -104,7 +107,7 @@ describe('TerminalManager - Memory Leak Detection', () => {
     expect(true).to.be.true;
   });
 
-  it('should clean up timers when disposing', async function() {
+  it('should clean up timers when disposing', async function () {
     this.timeout(10000);
 
     terminalManager = new TerminalManager();
@@ -122,20 +125,20 @@ describe('TerminalManager - Memory Leak Detection', () => {
     }
 
     // Wait for timers to be created
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
     // Dispose should clean up all timers
     terminalManager.dispose();
     terminalManager = null;
 
     // Wait to ensure timers don't fire after disposal
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await new Promise((resolve) => setTimeout(resolve, 200));
 
     // If we get here without errors, timers were cleaned up properly
     expect(true).to.be.true;
   });
 
-  it('should handle rapid create/dispose cycles without leaking', async function() {
+  it('should handle rapid create/dispose cycles without leaking', async function () {
     this.timeout(30000);
 
     const detector = new MemoryLeakDetector();
@@ -171,7 +174,7 @@ describe('TerminalManager - Memory Leak Detection', () => {
 
     if (result.warnings.length > 0) {
       console.warn('Memory warnings detected:');
-      result.warnings.forEach(warning => console.warn('  - ' + warning));
+      result.warnings.forEach((warning) => console.warn('  - ' + warning));
     }
 
     // Allow some memory growth for rapid cycles, but not excessive
@@ -185,7 +188,7 @@ describe('TerminalManager - Memory Leak Detection', () => {
     const mockService = {
       injectShellIntegration: () => Promise.resolve(),
       processTerminalData: () => {},
-      dispose: () => {}
+      dispose: () => {},
     };
 
     terminalManager.setShellIntegrationService(mockService);
@@ -210,7 +213,7 @@ describe('TerminalManager - Disposal Patterns', () => {
     const disposables = [
       new MockDisposable('first'),
       new MockDisposable('second'),
-      new MockDisposable('third')
+      new MockDisposable('third'),
     ];
 
     // Dispose in reverse order (LIFO)

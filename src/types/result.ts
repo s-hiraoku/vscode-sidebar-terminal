@@ -11,9 +11,7 @@
  * @template T - Type of the success value
  * @template E - Type of the error (defaults to Error)
  */
-export type Result<T, E = Error> =
-  | { success: true; value: T }
-  | { success: false; error: E };
+export type Result<T, E = Error> = { success: true; value: T } | { success: false; error: E };
 
 /**
  * Standardized error codes for consistent error classification
@@ -236,10 +234,7 @@ export function map<T, U, E>(result: Result<T, E>, fn: (value: T) => U): Result<
  * @param fn - Function that returns a new Result
  * @returns New Result
  */
-export function chain<T, U, E>(
-  result: Result<T, E>,
-  fn: (value: T) => Result<U, E>
-): Result<U, E> {
+export function chain<T, U, E>(result: Result<T, E>, fn: (value: T) => Result<U, E>): Result<U, E> {
   return isSuccess(result) ? fn(result.value) : result;
 }
 
@@ -249,10 +244,7 @@ export function chain<T, U, E>(
  * @param fn - Error mapping function
  * @returns New Result with mapped error
  */
-export function mapError<T, E, F>(
-  result: Result<T, E>,
-  fn: (error: E) => F
-): Result<T, F> {
+export function mapError<T, E, F>(result: Result<T, E>, fn: (error: E) => F): Result<T, F> {
   return isFailure(result) ? failure(fn(result.error)) : result;
 }
 
@@ -262,10 +254,7 @@ export function mapError<T, E, F>(
  * @param fn - Function to execute on error
  * @returns Original result
  */
-export function onFailure<T, E>(
-  result: Result<T, E>,
-  fn: (error: E) => void
-): Result<T, E> {
+export function onFailure<T, E>(result: Result<T, E>, fn: (error: E) => void): Result<T, E> {
   if (isFailure(result)) {
     fn(result.error);
   }
@@ -278,10 +267,7 @@ export function onFailure<T, E>(
  * @param fn - Function to execute on value
  * @returns Original result
  */
-export function onSuccess<T, E>(
-  result: Result<T, E>,
-  fn: (value: T) => void
-): Result<T, E> {
+export function onSuccess<T, E>(result: Result<T, E>, fn: (value: T) => void): Result<T, E> {
   if (isSuccess(result)) {
     fn(result.value);
   }

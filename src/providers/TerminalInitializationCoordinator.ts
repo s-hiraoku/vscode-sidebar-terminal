@@ -126,7 +126,9 @@ export class TerminalInitializationCoordinator {
   // private scheduleInitializationCompleteMessage(): void { }
 
   private logExistingTerminals(currentTerminalCount: number): void {
-    log(`ℹ️ [TERMINAL-INIT] Terminals already exist (${currentTerminalCount}) - no restoration needed`);
+    log(
+      `ℹ️ [TERMINAL-INIT] Terminals already exist (${currentTerminalCount}) - no restoration needed`
+    );
 
     const existingTerminals = this.terminalManager.getTerminals();
     existingTerminals.forEach((terminal, index) => {
@@ -143,4 +145,3 @@ export class TerminalInitializationCoordinator {
     }
   }
 }
-

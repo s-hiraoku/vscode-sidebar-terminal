@@ -8,7 +8,9 @@ import { TERMINAL_CONSTANTS } from '../../../constants';
  * Handles terminal resize messages from WebView
  */
 export class TerminalResizeHandler extends BaseMessageHandler {
-  protected override readonly supportedCommands = [TERMINAL_CONSTANTS?.COMMANDS?.RESIZE || 'resize'];
+  protected override readonly supportedCommands = [
+    TERMINAL_CONSTANTS?.COMMANDS?.RESIZE || 'resize',
+  ];
 
   override async handle(message: WebviewMessage, context: IMessageHandlerContext): Promise<void> {
     this.logMessageHandling(message, 'TerminalResize');

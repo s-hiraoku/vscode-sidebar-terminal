@@ -28,9 +28,8 @@ const defaultServiceFactory = (
   terminalManager: TerminalManager
 ): TerminalPersistencePort => new ExtensionPersistenceService(context, terminalManager);
 
-const defaultHandlerFactory = (
-  service: TerminalPersistencePort
-): PersistenceMessageHandler => new PersistenceMessageHandler(service as any);
+const defaultHandlerFactory = (service: TerminalPersistencePort): PersistenceMessageHandler =>
+  new PersistenceMessageHandler(service as any);
 
 export class PersistenceOrchestrator implements vscode.Disposable {
   private readonly persistenceService: TerminalPersistencePort;
@@ -146,7 +145,9 @@ export class PersistenceOrchestrator implements vscode.Disposable {
     try {
       const result = await this.persistenceService.saveCurrentSession();
       if (result.success) {
-        this.logger(`✅ [PERSISTENCE] Session saved successfully: ${result.terminalCount} terminals`);
+        this.logger(
+          `✅ [PERSISTENCE] Session saved successfully: ${result.terminalCount} terminals`
+        );
       } else {
         this.logger('❌ [PERSISTENCE] Session save failed via persistence service');
       }
@@ -170,7 +171,10 @@ export class PersistenceOrchestrator implements vscode.Disposable {
           `✅ [PERSISTENCE] Session restored successfully: ${restoredCount}/${restoredCount + skippedCount} terminals`
         );
       } else {
-        const errorMessage = result.error instanceof Error ? result.error.message : String(result.error ?? 'unknown error');
+        const errorMessage =
+          result.error instanceof Error
+            ? result.error.message
+            : String(result.error ?? 'unknown error');
         this.logger(`📦 [PERSISTENCE] Restore failed: ${errorMessage}`);
       }
 
@@ -185,12 +189,12 @@ export class PersistenceOrchestrator implements vscode.Disposable {
     this.logger(`📋 [PERSISTENCE-ORCH] Routing serialization response to persistence service`);
 
     if ('handleSerializationResponseMessage' in this.persistenceService) {
-      (this.persistenceService as any).handleSerializationResponseMessage?.(
-        serializationData
-      );
+      (this.persistenceService as any).handleSerializationResponseMessage?.(serializationData);
       this.logger(`✅ [PERSISTENCE-ORCH] Serialization response forwarded successfully`);
     } else {
-      this.logger(`⚠️ [PERSISTENCE-ORCH] Persistence service does not support handleSerializationResponseMessage`);
+      this.logger(
+        `⚠️ [PERSISTENCE-ORCH] Persistence service does not support handleSerializationResponseMessage`
+      );
     }
   }
 

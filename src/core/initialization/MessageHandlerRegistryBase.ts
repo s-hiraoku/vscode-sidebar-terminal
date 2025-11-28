@@ -45,7 +45,7 @@ export interface HandlerMetrics {
 export abstract class MessageHandlerRegistryBase<
   TMessage = unknown,
   TContext = unknown,
-  TCommandKey extends string = string
+  TCommandKey extends string = string,
 > {
   protected readonly handlers = new Map<TCommandKey, MessageHandler<TMessage, TContext>>();
   private _registrationMetrics: HandlerMetrics = {
@@ -101,9 +101,7 @@ export abstract class MessageHandlerRegistryBase<
     context?: TContext,
     commandExtractor?: (msg: TMessage) => TCommandKey
   ): Promise<void> {
-    const command = commandExtractor
-      ? commandExtractor(message)
-      : this.extractCommand(message);
+    const command = commandExtractor ? commandExtractor(message) : this.extractCommand(message);
 
     const handler = this.handlers.get(command);
 

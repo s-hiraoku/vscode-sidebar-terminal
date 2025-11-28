@@ -46,7 +46,9 @@ describe('PersistenceOrchestrator', () => {
     handler.handleMessage.resolves({ success: true, data: [] });
     service = {
       saveCurrentSession: sandbox.stub().resolves({ success: true, terminalCount: 1 } as any),
-      restoreSession: sandbox.stub().resolves({ success: true, restoredCount: 1, skippedCount: 0 } as any),
+      restoreSession: sandbox
+        .stub()
+        .resolves({ success: true, restoredCount: 1, skippedCount: 0 } as any),
       clearSession: sandbox.stub().resolves(),
       cleanupExpiredSessions: sandbox.stub().resolves(),
       dispose: sandbox.stub(),

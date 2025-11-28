@@ -58,8 +58,8 @@ describe('PanelLocationController', () => {
     } as WebviewMessage);
 
     expect(serviceStub.handlePanelLocationReport.calledOnce).to.be.true;
-    expect(sendMessage.calledWithMatch({ command: 'relayoutTerminals', direction: 'horizontal' })).to.be
-      .true;
+    expect(sendMessage.calledWithMatch({ command: 'relayoutTerminals', direction: 'horizontal' }))
+      .to.be.true;
   });
 
   it('requests detection again when visibility changes', async () => {
@@ -82,7 +82,9 @@ describe('PanelLocationController', () => {
 
   it('initializes listeners and reacts to configuration changes', async () => {
     const webviewView = {} as vscode.WebviewView;
-    let capturedListener: ((event: { affectsConfiguration: (section: string) => boolean }) => void) | undefined;
+    let capturedListener:
+      | ((event: { affectsConfiguration: (section: string) => boolean }) => void)
+      | undefined;
     const configListener = sandbox.stub().callsFake((listener: typeof capturedListener) => {
       capturedListener = listener;
       return { dispose: sandbox.stub() };

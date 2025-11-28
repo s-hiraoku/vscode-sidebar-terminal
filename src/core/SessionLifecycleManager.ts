@@ -253,11 +253,14 @@ export class SessionLifecycleManager {
           viewColumn: vscode.ViewColumn.Beside,
         });
 
-        const scrollbackStatus = sessionInfo.terminals?.map((t: { id: string; name: string }) => {
-          const scrollbackData = sessionInfo.scrollbackData?.[t.id];
-          const lines = Array.isArray(scrollbackData) ? scrollbackData.length : 0;
-          return `${t.name}: ${lines} lines`;
-        }).join(', ') || 'No terminals';
+        const scrollbackStatus =
+          sessionInfo.terminals
+            ?.map((t: { id: string; name: string }) => {
+              const scrollbackData = sessionInfo.scrollbackData?.[t.id];
+              const lines = Array.isArray(scrollbackData) ? scrollbackData.length : 0;
+              return `${t.name}: ${lines} lines`;
+            })
+            .join(', ') || 'No terminals';
 
         await vscode.window.showInformationMessage(
           `Session found! ${sessionInfo.terminals?.length || 0} terminal(s). Scrollback: ${scrollbackStatus}`
@@ -266,7 +269,8 @@ export class SessionLifecycleManager {
         log('📭 [DIAGNOSTIC] No session data found');
 
         const doc = await vscode.workspace.openTextDocument({
-          content: '❌ NO SESSION DATA FOUND\n\nTry:\n1. Save session: Cmd+Shift+P → "Secondary Terminal: Save Terminal Session"\n2. Wait 5 minutes for auto-save\n3. Close VS Code (saves automatically on exit)',
+          content:
+            '❌ NO SESSION DATA FOUND\n\nTry:\n1. Save session: Cmd+Shift+P → "Secondary Terminal: Save Terminal Session"\n2. Wait 5 minutes for auto-save\n3. Close VS Code (saves automatically on exit)',
           language: 'plaintext',
         });
 
@@ -304,7 +308,9 @@ export class SessionLifecycleManager {
         const terminalId = terminalManager.createTerminal();
         log(`✅ [SIMPLE_SESSION] Initial terminal created: ${terminalId}`);
       } else {
-        log(`📋 [SIMPLE_SESSION] Skipping initial terminal creation - ${terminals.length} terminals already exist`);
+        log(
+          `📋 [SIMPLE_SESSION] Skipping initial terminal creation - ${terminals.length} terminals already exist`
+        );
       }
     } catch (error) {
       logger.error('Error creating initial terminal', error);
@@ -326,7 +332,9 @@ export class SessionLifecycleManager {
     diagnosticLines.push('📊 SESSION DIAGNOSTIC REPORT');
     diagnosticLines.push('');
     diagnosticLines.push(`✅ Has Session: ${sessionInfo.exists ? 'Yes' : 'No'}`);
-    diagnosticLines.push(`📅 Timestamp: ${sessionInfo.timestamp ? new Date(sessionInfo.timestamp).toLocaleString() : 'Never'}`);
+    diagnosticLines.push(
+      `📅 Timestamp: ${sessionInfo.timestamp ? new Date(sessionInfo.timestamp).toLocaleString() : 'Never'}`
+    );
     diagnosticLines.push('');
     diagnosticLines.push(`📁 Version: ${sessionInfo.version}`);
     diagnosticLines.push(`🔢 Terminal Count: ${sessionInfo.terminals?.length || 0}`);
@@ -379,7 +387,9 @@ export class SessionLifecycleManager {
       const result = await extensionPersistenceService.saveCurrentSession();
 
       if (result.success) {
-        log(`✅ [EXTENSION] Immediate save completed (${trigger}): ${result.terminalCount} terminals`);
+        log(
+          `✅ [EXTENSION] Immediate save completed (${trigger}): ${result.terminalCount} terminals`
+        );
       } else {
         logger.warn(`Immediate save failed (${trigger}): ${result.error || 'unknown error'}`);
       }
@@ -435,7 +445,9 @@ export class SessionLifecycleManager {
       try {
         log(`🔍 [SCROLLBACK_EXTRACT] Requesting scrollback for terminal ${terminal.id}`);
 
-        await (sidebarProvider as unknown as { _sendMessage: (msg: unknown) => Promise<void> })._sendMessage({
+        await (
+          sidebarProvider as unknown as { _sendMessage: (msg: unknown) => Promise<void> }
+        )._sendMessage({
           command: 'getScrollback',
           terminalId: terminal.id,
           maxLines: 1000,
@@ -444,7 +456,9 @@ export class SessionLifecycleManager {
 
         await new Promise((resolve) => setTimeout(resolve, 100));
       } catch (error) {
-        log(`❌ [SCROLLBACK_EXTRACT] Error extracting scrollback for terminal ${terminal.id}: ${error instanceof Error ? error.message : String(error)}`);
+        log(
+          `❌ [SCROLLBACK_EXTRACT] Error extracting scrollback for terminal ${terminal.id}: ${error instanceof Error ? error.message : String(error)}`
+        );
       }
     }
 
@@ -455,7 +469,9 @@ export class SessionLifecycleManager {
    * Restore scrollback for all terminals (placeholder)
    */
   private restoreScrollbackForAllTerminals(): Promise<void> {
-    log('🔄 [SCROLLBACK_RESTORE] Scrollback restoration temporarily disabled - using SimpleSessionManager');
+    log(
+      '🔄 [SCROLLBACK_RESTORE] Scrollback restoration temporarily disabled - using SimpleSessionManager'
+    );
     return Promise.resolve();
   }
 }

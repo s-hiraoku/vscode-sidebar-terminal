@@ -18,10 +18,7 @@ export class ClaudePlugin extends BaseAgentPlugin {
   }
 
   protected getDetectionPatterns(): RegExp[] {
-    return [
-      /Claude\s+Code/i,
-      /Anthropic/i,
-    ];
+    return [/Claude\s+Code/i, /Anthropic/i];
   }
 
   protected getCommandPrefixes(): string[] {

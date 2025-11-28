@@ -27,15 +27,15 @@ export interface FeatureFlagConfig {
  */
 const DEFAULT_FEATURE_FLAGS: FeatureFlagConfig = {
   // Scrollback features
-  enhancedScrollbackPersistence: false, // v0.2.0: true
+  enhancedScrollbackPersistence: true, // Default enabled to match VS Code persistence
   scrollbackLineLimit: 1000,
 
   // Input features
-  vscodeStandardIME: false, // v0.2.0: true
+  vscodeStandardIME: true, // Default enabled to match VS Code IME handling
   vscodeKeyboardShortcuts: true, // Already stable
 
   // Display features
-  vscodeStandardCursor: false, // v0.2.0: true
+  vscodeStandardCursor: true, // Default enabled to match VS Code cursor behaviour
   fullANSISupport: true, // Already stable
 };
 
@@ -80,19 +80,13 @@ export class FeatureFlagService implements vscode.Disposable {
       scrollbackLineLimit: this.validateScrollbackLimit(
         this.getCachedFlag(
           'scrollbackLineLimit',
-          config.get<number>(
-            'scrollbackLineLimit',
-            DEFAULT_FEATURE_FLAGS.scrollbackLineLimit
-          )
+          config.get<number>('scrollbackLineLimit', DEFAULT_FEATURE_FLAGS.scrollbackLineLimit)
         ) as number
       ),
 
       vscodeStandardIME: this.getCachedFlag(
         'vscodeStandardIME',
-        config.get<boolean>(
-          'vscodeStandardIME',
-          DEFAULT_FEATURE_FLAGS.vscodeStandardIME
-        )
+        config.get<boolean>('vscodeStandardIME', DEFAULT_FEATURE_FLAGS.vscodeStandardIME)
       ) as boolean,
 
       vscodeKeyboardShortcuts: this.getCachedFlag(
@@ -105,10 +99,7 @@ export class FeatureFlagService implements vscode.Disposable {
 
       vscodeStandardCursor: this.getCachedFlag(
         'vscodeStandardCursor',
-        config.get<boolean>(
-          'vscodeStandardCursor',
-          DEFAULT_FEATURE_FLAGS.vscodeStandardCursor
-        )
+        config.get<boolean>('vscodeStandardCursor', DEFAULT_FEATURE_FLAGS.vscodeStandardCursor)
       ) as boolean,
 
       fullANSISupport: this.getCachedFlag(

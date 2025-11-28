@@ -71,7 +71,7 @@ export class InputEventService {
     totalDebounced: 0,
     totalErrors: 0,
     lastEventTimestamp: 0,
-    averageProcessingTime: 0
+    averageProcessingTime: 0,
   };
 
   // Logger function (injected)
@@ -108,7 +108,7 @@ export class InputEventService {
       once: false,
       passive: false,
       capture: false,
-      ...config
+      ...config,
     };
 
     // Create wrapped handler with all features
@@ -118,17 +118,11 @@ export class InputEventService {
     const options: AddEventListenerOptions = {
       once: finalConfig.once,
       passive: finalConfig.passive,
-      capture: finalConfig.capture
+      capture: finalConfig.capture,
     };
 
     // Register with EventHandlerRegistry
-    this.eventRegistry.register(
-      id,
-      element,
-      eventType,
-      wrappedHandler,
-      options
-    );
+    this.eventRegistry.register(id, element, eventType, wrappedHandler, options);
 
     // Track registration
     const registeredEvent: RegisteredEvent = {
@@ -142,8 +136,8 @@ export class InputEventService {
       metrics: {
         callCount: 0,
         errorCount: 0,
-        totalProcessingTime: 0
-      }
+        totalProcessingTime: 0,
+      },
     };
 
     this.registeredEvents.set(id, registeredEvent);
@@ -151,7 +145,7 @@ export class InputEventService {
 
     this.logger(
       `Registered event handler: ${id} (${eventType}) - ` +
-      `debounced: ${finalConfig.debounce}, passive: ${finalConfig.passive}`
+        `debounced: ${finalConfig.debounce}, passive: ${finalConfig.passive}`
     );
   }
 
@@ -200,7 +194,6 @@ export class InputEventService {
         this.metrics.totalProcessed++;
         this.metrics.lastEventTimestamp = Date.now();
         this.updateAverageProcessingTime(processingTime);
-
       } catch (error) {
         // Handle errors
         registeredEvent.metrics.errorCount++;
@@ -257,7 +250,7 @@ export class InputEventService {
     } else {
       // Running average calculation
       this.metrics.averageProcessingTime =
-        ((this.metrics.averageProcessingTime * (this.metrics.totalProcessed - 1)) + newTime) /
+        (this.metrics.averageProcessingTime * (this.metrics.totalProcessed - 1) + newTime) /
         this.metrics.totalProcessed;
     }
   }
@@ -343,16 +336,15 @@ export class InputEventService {
   } {
     const now = Date.now();
     const lastEventAge = now - this.metrics.lastEventTimestamp;
-    const errorRate = this.metrics.totalProcessed > 0
-      ? this.metrics.totalErrors / this.metrics.totalProcessed
-      : 0;
+    const errorRate =
+      this.metrics.totalProcessed > 0 ? this.metrics.totalErrors / this.metrics.totalProcessed : 0;
 
     return {
       isHealthy: errorRate < 0.1 && this.metrics.averageProcessingTime < 100, // < 10% error rate, < 100ms avg
       totalHandlers: this.registeredEvents.size,
       averageProcessingTime: this.metrics.averageProcessingTime,
       errorRate,
-      lastEventAge
+      lastEventAge,
     };
   }
 
@@ -366,7 +358,7 @@ export class InputEventService {
       totalDebounced: 0,
       totalErrors: 0,
       lastEventTimestamp: 0,
-      averageProcessingTime: 0
+      averageProcessingTime: 0,
     };
 
     // Reset individual handler metrics
@@ -374,7 +366,7 @@ export class InputEventService {
       registeredEvent.metrics = {
         callCount: 0,
         errorCount: 0,
-        totalProcessingTime: 0
+        totalProcessingTime: 0,
       };
     }
 
@@ -403,7 +395,7 @@ export class InputEventService {
       totalDebounced: 0,
       totalErrors: 0,
       lastEventTimestamp: 0,
-      averageProcessingTime: 0
+      averageProcessingTime: 0,
     };
 
     this.logger('InputEventService disposed');

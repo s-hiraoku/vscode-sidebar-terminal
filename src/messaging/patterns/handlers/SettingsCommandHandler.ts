@@ -19,13 +19,7 @@ export class SettingsCommandHandler extends BaseCommandHandler {
   constructor() {
     super(
       'SettingsCommandHandler',
-      [
-        'fontSettingsUpdate',
-        'settingsResponse',
-        'openSettings',
-        'versionInfo',
-        'stateUpdate',
-      ],
+      ['fontSettingsUpdate', 'settingsResponse', 'openSettings', 'versionInfo', 'stateUpdate'],
       50 // Normal priority for settings operations
     );
   }
@@ -127,7 +121,10 @@ export class SettingsCommandHandler extends BaseCommandHandler {
   /**
    * Handle open settings command
    */
-  private async handleOpenSettings(coordinator: any, context: IMessageHandlerContext): Promise<void> {
+  private async handleOpenSettings(
+    coordinator: any,
+    context: IMessageHandlerContext
+  ): Promise<void> {
     this.log(context, 'info', 'Opening settings');
 
     // Request to open VS Code settings

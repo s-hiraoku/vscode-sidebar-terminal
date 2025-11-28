@@ -35,8 +35,7 @@ export class TerminalDataBufferService {
 
   constructor(config: BufferConfig = {}) {
     this._config = {
-      flushInterval:
-        config.flushInterval ?? PERFORMANCE_CONSTANTS.OUTPUT_BUFFER_FLUSH_INTERVAL_MS, // ~60fps default
+      flushInterval: config.flushInterval ?? PERFORMANCE_CONSTANTS.OUTPUT_BUFFER_FLUSH_INTERVAL_MS, // ~60fps default
       maxBufferSize: config.maxBufferSize ?? PERFORMANCE_CONSTANTS.MAX_BUFFER_CHUNK_COUNT,
       cliAgentFlushInterval:
         config.cliAgentFlushInterval ?? PERFORMANCE_CONSTANTS.CLI_AGENT_FAST_FLUSH_INTERVAL_MS, // ~250fps for CLI agents

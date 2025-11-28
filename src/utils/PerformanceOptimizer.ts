@@ -152,9 +152,7 @@ export class MemoryMonitor {
   public static logMemoryUsage(context: string): void {
     const usage = this.getMemoryUsage();
     if (usage) {
-      log(
-        `🧠 [MEMORY] ${context}: ${usage.used}MB/${usage.total}MB (${usage.percentage}%)`
-      );
+      log(`🧠 [MEMORY] ${context}: ${usage.used}MB/${usage.total}MB (${usage.percentage}%)`);
     }
   }
 }

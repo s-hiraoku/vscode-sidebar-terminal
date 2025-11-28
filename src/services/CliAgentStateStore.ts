@@ -125,7 +125,7 @@ export class CliAgentStateStore {
     this.statusChangeEmitter.fire(event);
 
     // Notify observers
-    this.observers.forEach(observer => {
+    this.observers.forEach((observer) => {
       try {
         observer(event);
       } catch (error) {
@@ -140,11 +140,7 @@ export class CliAgentStateStore {
    * @param agentType Agent type
    * @param terminalName Terminal name (optional)
    */
-  public setConnectedAgent(
-    terminalId: string,
-    agentType: AgentType,
-    terminalName?: string
-  ): void {
+  public setConnectedAgent(terminalId: string, agentType: AgentType, terminalName?: string): void {
     // Prevent unnecessary state changes
     if (this.connectedAgentTerminalId === terminalId && this.connectedAgentType === agentType) {
       log(
@@ -259,7 +255,9 @@ export class CliAgentStateStore {
       this.disconnectedAgents.delete(terminalId);
       wasDisconnected = true;
 
-      log(`🔻 [STATE-STORE] Disconnected agent ${agentInfo.type} in terminal ${terminalId} terminated`);
+      log(
+        `🔻 [STATE-STORE] Disconnected agent ${agentInfo.type} in terminal ${terminalId} terminated`
+      );
     }
 
     // Update agent state to 'none'
@@ -564,16 +562,14 @@ export class CliAgentStateStore {
     const states = Array.from(this.agentStates.values());
     const agentTypes = Array.from(
       new Set(
-        states
-          .map(state => state.agentType)
-          .filter((type): type is AgentType => type !== null)
+        states.map((state) => state.agentType).filter((type): type is AgentType => type !== null)
       )
     );
 
     return {
       totalAgents: this.agentStates.size,
-      connectedAgents: states.filter(state => state.status === 'connected').length,
-      disconnectedAgents: states.filter(state => state.status === 'disconnected').length,
+      connectedAgents: states.filter((state) => state.status === 'connected').length,
+      disconnectedAgents: states.filter((state) => state.status === 'disconnected').length,
       currentConnectedId: this.connectedAgentTerminalId,
       agentTypes,
     };

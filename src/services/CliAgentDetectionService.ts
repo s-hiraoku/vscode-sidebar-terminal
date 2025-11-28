@@ -30,6 +30,8 @@ import { AgentType } from './CliAgentPatternRegistry';
 export class CliAgentDetectionService implements ICliAgentDetectionService {
   private readonly detectionEngine: CliAgentDetectionEngine;
   private readonly stateStore: CliAgentStateStore;
+  // 🔧 FIX: Track heartbeat interval for proper cleanup on dispose
+  private heartbeatInterval: ReturnType<typeof setInterval> | undefined;
 
   constructor() {
     this.detectionEngine = new CliAgentDetectionEngine();
@@ -144,7 +146,10 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
   /**
    * Get connected agent info
    */
-  getConnectedAgent(): { terminalId: string; type: 'claude' | 'gemini' | 'codex' | 'copilot' } | null {
+  getConnectedAgent(): {
+    terminalId: string;
+    type: 'claude' | 'gemini' | 'codex' | 'copilot';
+  } | null {
     const terminalId = this.stateStore.getConnectedAgentTerminalId();
     const type = this.stateStore.getConnectedAgentType();
 
@@ -158,8 +163,14 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
   /**
    * Get disconnected agents
    */
-  getDisconnectedAgents(): Map<string, { type: 'claude' | 'gemini' | 'codex' | 'copilot'; startTime: Date }> {
-    return this.stateStore.getDisconnectedAgents() as Map<string, { type: 'claude' | 'gemini' | 'codex' | 'copilot'; startTime: Date }>;
+  getDisconnectedAgents(): Map<
+    string,
+    { type: 'claude' | 'gemini' | 'codex' | 'copilot'; startTime: Date }
+  > {
+    return this.stateStore.getDisconnectedAgents() as Map<
+      string,
+      { type: 'claude' | 'gemini' | 'codex' | 'copilot'; startTime: Date }
+    >;
   }
 
   /**
@@ -237,6 +248,11 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
    * Dispose resources
    */
   dispose(): void {
+    // 🔧 FIX: Clear heartbeat interval to prevent memory leaks
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+      this.heartbeatInterval = undefined;
+    }
     this.stateStore.dispose();
   }
 
@@ -244,10 +260,17 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
    * Start heartbeat (validation)
    */
   public startHeartbeat(): void {
+    // 🔧 FIX: Clear existing interval before starting a new one
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+    }
+
     // Validation every 30 seconds
-    setInterval(() => {
+    this.heartbeatInterval = setInterval(() => {
       const stats = this.stateStore.getStateStats();
-      log(`💓 [HEARTBEAT] State: ${stats.connectedAgents} connected, ${stats.disconnectedAgents} disconnected`);
+      log(
+        `💓 [HEARTBEAT] State: ${stats.connectedAgents} connected, ${stats.disconnectedAgents} disconnected`
+      );
     }, 30000);
   }
 

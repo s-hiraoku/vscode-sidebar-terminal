@@ -97,10 +97,7 @@ export abstract class TerminalTest extends BaseTest {
   /**
    * Simulate terminal exit
    */
-  protected simulateTerminalExit(
-    terminalId: number,
-    exitCode: number = 0
-  ): void {
+  protected simulateTerminalExit(terminalId: number, exitCode: number = 0): void {
     const terminal = this.mockTerminals.get(terminalId);
     if (!terminal) {
       throw new Error(`Terminal ${terminalId} not found`);
@@ -142,24 +139,20 @@ export abstract class TerminalTest extends BaseTest {
   /**
    * Assert terminal received data
    */
-  protected assertTerminalReceivedData(
-    terminalId: number,
-    expectedData: string | RegExp
-  ): void {
+  protected assertTerminalReceivedData(terminalId: number, expectedData: string | RegExp): void {
     const output = this.getTerminalOutput(terminalId);
 
     if (typeof expectedData === 'string') {
       if (!output.includes(expectedData)) {
         throw new Error(
-          `Expected terminal ${terminalId} to receive "${expectedData}", ` +
-          `but got: "${output}"`
+          `Expected terminal ${terminalId} to receive "${expectedData}", ` + `but got: "${output}"`
         );
       }
     } else {
       if (!expectedData.test(output)) {
         throw new Error(
           `Expected terminal ${terminalId} output to match ${expectedData}, ` +
-          `but got: "${output}"`
+            `but got: "${output}"`
         );
       }
     }
@@ -188,10 +181,7 @@ export abstract class TerminalTest extends BaseTest {
   /**
    * Wait for terminal to be ready
    */
-  protected async waitForTerminalReady(
-    terminalId: number,
-    timeout: number = 1000
-  ): Promise<void> {
+  protected async waitForTerminalReady(terminalId: number, timeout: number = 1000): Promise<void> {
     const startTime = Date.now();
 
     while (Date.now() - startTime < timeout) {

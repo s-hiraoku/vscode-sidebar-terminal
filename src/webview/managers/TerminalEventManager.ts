@@ -62,11 +62,7 @@ export class TerminalEventManager extends BaseManager {
   /**
    * Setup all event handlers for a terminal
    */
-  public setupTerminalEvents(
-    terminal: Terminal,
-    terminalId: string,
-    container: HTMLElement
-  ): void {
+  public setupTerminalEvents(terminal: Terminal, terminalId: string, container: HTMLElement): void {
     if (this.shouldUseLegacyInputHandler()) {
       // Setup user input handler (send to Extension) when InputManager is unavailable
       this.setupInputHandler(terminal, terminalId);
@@ -96,7 +92,10 @@ export class TerminalEventManager extends BaseManager {
         return false;
       }
     } catch (error) {
-      terminalLogger.warn('⚠️ Failed to detect InputManager availability, defaulting to legacy handler', error);
+      terminalLogger.warn(
+        '⚠️ Failed to detect InputManager availability, defaulting to legacy handler',
+        error
+      );
     }
 
     return true;
@@ -114,8 +113,8 @@ export class TerminalEventManager extends BaseManager {
         console.log(`🔍 [INPUT-DEBUG] onData fired for ${terminalId}:`, {
           dataLength: data.length,
           data: data,
-          charCodes: Array.from(data).map(c => c.charCodeAt(0)),
-          timestamp: Date.now()
+          charCodes: Array.from(data).map((c) => c.charCodeAt(0)),
+          timestamp: Date.now(),
         });
         terminalLogger.debug(`⌨️ User input for ${terminalId}: ${data.length} chars`);
 
@@ -136,7 +135,7 @@ export class TerminalEventManager extends BaseManager {
       // 🔍 CRITICAL DEBUG: Verify handler was registered
       console.log(`🔍 [INPUT-DEBUG] Input handler registered for ${terminalId}`, {
         hasCoordinator: !!this.coordinator,
-        disposableCount: this.disposables.length
+        disposableCount: this.disposables.length,
       });
 
       terminalLogger.info(`✅ Input handler enabled for terminal: ${terminalId}`);

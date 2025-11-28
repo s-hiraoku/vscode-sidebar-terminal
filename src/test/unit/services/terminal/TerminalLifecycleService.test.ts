@@ -272,9 +272,11 @@ describe('TerminalLifecycleService', () => {
 
     it('should handle terminal profile resolution errors', async () => {
       // Should fallback to default profile
-      const terminal = unwrapResult(await service.createTerminal({
-        profileName: 'non-existent-profile',
-      }));
+      const terminal = unwrapResult(
+        await service.createTerminal({
+          profileName: 'non-existent-profile',
+        })
+      );
 
       assert.ok(terminal.id);
       assert.ok(terminal.shell || terminal.process);

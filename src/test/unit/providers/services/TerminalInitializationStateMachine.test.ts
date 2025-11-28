@@ -19,22 +19,16 @@ describe('TerminalInitializationStateMachine', () => {
     expect(stateMachine.isOutputAllowed(terminalId)).to.be.false;
 
     stateMachine.markOutputStreaming(terminalId, 'unit');
-    expect(stateMachine.getState(terminalId)).to.equal(
-      TerminalInitializationState.OutputStreaming
-    );
+    expect(stateMachine.getState(terminalId)).to.equal(TerminalInitializationState.OutputStreaming);
     expect(stateMachine.isOutputAllowed(terminalId)).to.be.true;
   });
 
   it('prevents state regressions by default', () => {
     stateMachine.markPtySpawned(terminalId, 'spawned');
-    expect(stateMachine.getState(terminalId)).to.equal(
-      TerminalInitializationState.PtySpawned
-    );
+    expect(stateMachine.getState(terminalId)).to.equal(TerminalInitializationState.PtySpawned);
 
     stateMachine.markViewPending(terminalId, 'late-message');
-    expect(stateMachine.getState(terminalId)).to.equal(
-      TerminalInitializationState.PtySpawned
-    );
+    expect(stateMachine.getState(terminalId)).to.equal(TerminalInitializationState.PtySpawned);
   });
 
   it('allows failure state overrides and reset cleanup', () => {

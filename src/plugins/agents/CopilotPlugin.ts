@@ -18,10 +18,7 @@ export class CopilotPlugin extends BaseAgentPlugin {
   }
 
   protected getDetectionPatterns(): RegExp[] {
-    return [
-      /Welcome\s+to\s+GitHub\s+Copilot\s+CLI/i,
-      /GitHub\s+Copilot/i,
-    ];
+    return [/Welcome\s+to\s+GitHub\s+Copilot\s+CLI/i, /GitHub\s+Copilot/i];
   }
 
   protected getCommandPrefixes(): string[] {

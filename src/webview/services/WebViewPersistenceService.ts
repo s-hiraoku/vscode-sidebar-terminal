@@ -182,7 +182,7 @@ export class WebViewPersistenceService {
       let finalContent = content;
       if (options.trimEmptyLines) {
         const lines = content.split('\n');
-        const trimmed = lines.filter(line => line.trim().length > 0);
+        const trimmed = lines.filter((line) => line.trim().length > 0);
         finalContent = trimmed.join('\n');
       }
 
@@ -202,7 +202,6 @@ export class WebViewPersistenceService {
 
       log(`[WV-PERSISTENCE] Serialized terminal ${terminalId}: ${lineCount} lines`);
       return serializedData;
-
     } catch (error) {
       log(`❌ [WV-PERSISTENCE] Serialization failed for ${terminalId}: ${error}`);
       return null;
@@ -245,23 +244,24 @@ export class WebViewPersistenceService {
 
     try {
       // Extract content
-      const content = typeof serializedData === 'string'
-        ? serializedData
-        : serializedData.content;
+      const content = typeof serializedData === 'string' ? serializedData : serializedData.content;
 
       const lines = content.split('\n');
       const totalLines = lines.length;
 
       // Determine if progressive loading should be used
-      const useProgressive = options.progressive !== false &&
+      const useProgressive =
+        options.progressive !== false &&
         totalLines > WebViewPersistenceService.PROGRESSIVE_THRESHOLD;
 
       const linesToLoad = useProgressive
-        ? (options.initialLines || WebViewPersistenceService.PROGRESSIVE_THRESHOLD)
+        ? options.initialLines || WebViewPersistenceService.PROGRESSIVE_THRESHOLD
         : totalLines;
 
-      log(`[WV-PERSISTENCE] Restoring ${terminalId}: ${linesToLoad}/${totalLines} lines` +
-        (useProgressive ? ' (progressive)' : ''));
+      log(
+        `[WV-PERSISTENCE] Restoring ${terminalId}: ${linesToLoad}/${totalLines} lines` +
+          (useProgressive ? ' (progressive)' : '')
+      );
 
       const startTime = performance.now();
 
@@ -280,11 +280,12 @@ export class WebViewPersistenceService {
       const targetDuration = isLarge ? 1000 : 500;
       const status = duration < targetDuration ? '✅' : '⚠️';
 
-      log(`${status} [WV-PERSISTENCE] Restored ${terminalId}: ` +
-        `${totalLines} lines, ${duration.toFixed(0)}ms (target: ${targetDuration}ms)`);
+      log(
+        `${status} [WV-PERSISTENCE] Restored ${terminalId}: ` +
+          `${totalLines} lines, ${duration.toFixed(0)}ms (target: ${targetDuration}ms)`
+      );
 
       return true;
-
     } catch (error) {
       log(`❌ [WV-PERSISTENCE] Restoration failed for ${terminalId}: ${error}`);
       return false;
@@ -339,7 +340,9 @@ export class WebViewPersistenceService {
       }
 
       const allSaved = successCount === terminalIds.length;
-      log(`[WV-PERSISTENCE] Session save ${allSaved ? 'completed' : 'partial'}: ${successCount}/${terminalIds.length} terminals`);
+      log(
+        `[WV-PERSISTENCE] Session save ${allSaved ? 'completed' : 'partial'}: ${successCount}/${terminalIds.length} terminals`
+      );
 
       return allSaved;
     } catch (error) {
@@ -435,7 +438,9 @@ export class WebViewPersistenceService {
     terminal.onData(() => scheduleAutoSave());
     terminal.onLineFeed(() => scheduleAutoSave());
 
-    log(`[WV-PERSISTENCE] Auto-save configured for ${terminalId} (${WebViewPersistenceService.AUTO_SAVE_DEBOUNCE_MS}ms debounce)`);
+    log(
+      `[WV-PERSISTENCE] Auto-save configured for ${terminalId} (${WebViewPersistenceService.AUTO_SAVE_DEBOUNCE_MS}ms debounce)`
+    );
   }
 
   /**
@@ -500,12 +505,10 @@ export class WebViewPersistenceService {
   /**
    * Setup lazy loading for remaining terminal content
    */
-  private setupLazyLoading(
-    terminalId: string,
-    terminal: Terminal,
-    remainingLines: string[]
-  ): void {
-    log(`[WV-PERSISTENCE] Setting up lazy loading for ${terminalId}: ${remainingLines.length} remaining lines`);
+  private setupLazyLoading(terminalId: string, terminal: Terminal, remainingLines: string[]): void {
+    log(
+      `[WV-PERSISTENCE] Setting up lazy loading for ${terminalId}: ${remainingLines.length} remaining lines`
+    );
 
     // Load remaining content after a delay
     setTimeout(() => {

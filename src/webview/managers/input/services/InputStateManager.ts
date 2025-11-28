@@ -134,13 +134,13 @@ export class InputStateManager {
         startOffset: 0,
         endOffset: 0,
         lastEvent: null,
-        timestamp: 0
+        timestamp: 0,
       },
       altClick: {
         isVSCodeAltClickEnabled: false,
         isAltKeyPressed: false,
         lastClickPosition: null,
-        clickCount: 0
+        clickCount: 0,
       },
       keyboard: {
         isInChordMode: false,
@@ -149,17 +149,17 @@ export class InputStateManager {
           ctrl: false,
           alt: false,
           shift: false,
-          meta: false
+          meta: false,
         },
-        lastKeyTimestamp: 0
+        lastKeyTimestamp: 0,
       },
       agent: {
         isAgentMode: false,
         agentType: null,
         isAwaitingResponse: false,
         lastCommand: null,
-        commandTimestamp: 0
-      }
+        commandTimestamp: 0,
+      },
     };
   }
 
@@ -187,7 +187,7 @@ export class InputStateManager {
       return {
         isValid: errors.length === 0,
         errors,
-        warnings
+        warnings,
       };
     });
 
@@ -207,7 +207,7 @@ export class InputStateManager {
       return {
         isValid: errors.length === 0,
         errors,
-        warnings
+        warnings,
       };
     });
 
@@ -227,7 +227,7 @@ export class InputStateManager {
       return {
         isValid: errors.length === 0,
         errors,
-        warnings
+        warnings,
       };
     });
 
@@ -247,7 +247,7 @@ export class InputStateManager {
       return {
         isValid: errors.length === 0,
         errors,
-        warnings
+        warnings,
       };
     });
   }
@@ -307,7 +307,7 @@ export class InputStateManager {
     // Apply updates
     this.state[section] = {
       ...this.state[section],
-      ...updates
+      ...updates,
     };
 
     // Validate new state
@@ -317,7 +317,9 @@ export class InputStateManager {
     }
 
     if (validationResult.warnings.length > 0) {
-      this.logger(`State validation warnings for ${section}: ${validationResult.warnings.join(', ')}`);
+      this.logger(
+        `State validation warnings for ${section}: ${validationResult.warnings.join(', ')}`
+      );
     }
 
     // Record state change
@@ -332,9 +334,7 @@ export class InputStateManager {
   /**
    * Validate specific state section
    */
-  private validateStateSection<K extends keyof InputState>(
-    section: K
-  ): StateValidationResult {
+  private validateStateSection<K extends keyof InputState>(section: K): StateValidationResult {
     const validator = this.validationRules.get(section);
     if (validator) {
       return validator(this.state[section]);
@@ -343,7 +343,7 @@ export class InputStateManager {
     return {
       isValid: true,
       errors: [],
-      warnings: []
+      warnings: [],
     };
   }
 
@@ -355,7 +355,7 @@ export class InputStateManager {
       timestamp: Date.now(),
       stateKey,
       previousValue: JSON.parse(JSON.stringify(previousValue)),
-      newValue: JSON.parse(JSON.stringify(newValue))
+      newValue: JSON.parse(JSON.stringify(newValue)),
     });
 
     // Keep history size manageable
@@ -473,23 +473,23 @@ export class InputStateManager {
       ime: {
         active: this.state.ime.isActive,
         hasData: this.state.ime.data.length > 0,
-        lastEvent: this.state.ime.lastEvent
+        lastEvent: this.state.ime.lastEvent,
       },
       altClick: {
         enabled: this.state.altClick.isVSCodeAltClickEnabled,
         pressed: this.state.altClick.isAltKeyPressed,
-        clickCount: this.state.altClick.clickCount
+        clickCount: this.state.altClick.clickCount,
       },
       keyboard: {
         chordMode: this.state.keyboard.isInChordMode,
         lastKey: this.state.keyboard.lastKeyPressed,
-        modifiersActive: Object.values(this.state.keyboard.modifiers).some(Boolean)
+        modifiersActive: Object.values(this.state.keyboard.modifiers).some(Boolean),
       },
       agent: {
         active: this.state.agent.isAgentMode,
         type: this.state.agent.agentType,
-        awaiting: this.state.agent.isAwaitingResponse
-      }
+        awaiting: this.state.agent.isAwaitingResponse,
+      },
     };
   }
 

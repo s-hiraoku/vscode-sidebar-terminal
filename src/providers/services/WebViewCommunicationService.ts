@@ -34,7 +34,7 @@ export class WebViewCommunicationService {
       const toFlush = [...this._pendingMessages];
       this._pendingMessages = [];
 
-      toFlush.forEach(message => {
+      toFlush.forEach((message) => {
         void this._sendMessageDirect(message);
       });
     }

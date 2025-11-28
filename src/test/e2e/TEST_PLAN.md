@@ -51,10 +51,12 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 #### 1.1 Single Terminal Creation (P0 - Critical)
 
 **Prerequisites**:
+
 - VS Code with extension installed
 - No existing terminals in sidebar
 
 **Steps**:
+
 1. Open VS Code
 2. Click Secondary Terminal icon in activity bar
 3. Verify terminal appears in sidebar
@@ -63,6 +65,7 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 6. Verify shell prompt appears within 2 seconds
 
 **Expected Results**:
+
 - Terminal initializes successfully
 - Terminal ID = 1
 - Shell prompt visible
@@ -77,10 +80,12 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 #### 1.2 Multiple Terminal Creation (P0 - Critical)
 
 **Prerequisites**:
+
 - VS Code with extension installed
 - Secondary Terminal view visible
 
 **Steps**:
+
 1. Create first terminal (should get ID 1)
 2. Click "Split Terminal" icon or use Cmd+\ (Mac) / Ctrl+Shift+5 (Windows/Linux)
 3. Create second terminal (should get ID 2)
@@ -89,6 +94,7 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 6. Attempt to create 6th terminal
 
 **Expected Results**:
+
 - Terminals 1-5 created successfully
 - Each terminal has unique ID
 - All terminals accessible via tabs
@@ -104,9 +110,11 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 #### 1.3 Terminal ID Recycling (P1 - Important)
 
 **Prerequisites**:
+
 - 5 active terminals (IDs 1-5)
 
 **Steps**:
+
 1. Delete terminal with ID 3 using trash icon
 2. Wait for deletion to complete (process cleanup)
 3. Create new terminal
@@ -116,6 +124,7 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 7. Verify newest terminal gets ID 1
 
 **Expected Results**:
+
 - IDs are recycled in order of deletion
 - No gaps in ID sequence when terminals are recreated
 - Terminal name matches recycled ID
@@ -130,9 +139,11 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 #### 1.4 Terminal Deletion Edge Cases (P1 - Important)
 
 **Prerequisites**:
+
 - Multiple terminals active
 
 **Steps**:
+
 1. **Test: Delete last terminal**
    - Create terminal (ID 1)
    - Enable `protectLastTerminal: true` in settings
@@ -156,6 +167,7 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
    - Verify no infinite loop or duplicate deletion
 
 **Expected Results**:
+
 - Last terminal protection works
 - Confirmation dialog prevents accidental deletion
 - Atomic delete operation prevents race conditions
@@ -170,9 +182,11 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 #### 1.5 Terminal Switching and Focus (P1 - Important)
 
 **Prerequisites**:
+
 - 3 active terminals
 
 **Steps**:
+
 1. Click tab for Terminal 1
 2. Verify Terminal 1 is visible and focused
 3. Click tab for Terminal 3
@@ -184,6 +198,7 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 9. Verify command appears in correct terminal
 
 **Expected Results**:
+
 - Tab clicks switch terminal correctly
 - Keyboard shortcuts cycle through terminals
 - Focus indicator visible on active terminal
@@ -201,10 +216,12 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 #### 2.1 Basic Session Save and Restore (P0 - Critical)
 
 **Prerequisites**:
+
 - Settings: `enablePersistentSessions: true`
 - Settings: `persistentSessionReviveProcess: "onExitAndWindowClose"`
 
 **Steps**:
+
 1. Create 2 terminals
 2. Terminal 1: Run `cd /tmp && echo "Terminal 1 test"`
 3. Terminal 2: Run `ls -la`
@@ -214,6 +231,7 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 7. Open Secondary Terminal view
 
 **Expected Results**:
+
 - Both terminals restored automatically
 - Terminal 1 shows scrollback with "Terminal 1 test"
 - Terminal 2 shows scrollback with directory listing
@@ -229,10 +247,12 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 #### 2.2 Scrollback Restoration (P1 - Important)
 
 **Prerequisites**:
+
 - Settings: `persistentSessionScrollback: 1000`
 - Settings: `enablePersistentSessions: true`
 
 **Steps**:
+
 1. Create terminal
 2. Generate 1500 lines of output:
    ```bash
@@ -244,6 +264,7 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 6. Scroll to top of terminal output
 
 **Expected Results**:
+
 - Last 1000 lines of output preserved
 - Lines 501-1500 visible in scrollback
 - Lines 1-500 not preserved (exceeds limit)
@@ -259,10 +280,12 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 #### 2.3 Multi-Terminal Session Restoration (P1 - Important)
 
 **Prerequisites**:
+
 - Settings: `maxTerminals: 5`
 - Settings: `enablePersistentSessions: true`
 
 **Steps**:
+
 1. Create 5 terminals with different activities:
    - Terminal 1: `cd ~/projects && ls`
    - Terminal 2: Run Python script
@@ -274,6 +297,7 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 4. Reload VS Code
 
 **Expected Results**:
+
 - All 5 terminals restored in correct order
 - Terminal IDs match (1-5)
 - Terminal 3 is active/focused after restore
@@ -290,9 +314,11 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 #### 2.4 Session Expiry and Cleanup (P2 - Nice-to-have)
 
 **Prerequisites**:
+
 - Settings: `persistentSessionScrollback: 1000`
 
 **Steps**:
+
 1. Create session with 2 terminals
 2. Save session to storage
 3. Manually modify session timestamp to 8 days old in VS Code global storage:
@@ -300,13 +326,14 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
    // Access via Extension Host debugging
    context.globalState.update('standard-terminal-session-v3', {
      ...sessionData,
-     timestamp: Date.now() - (8 * 24 * 60 * 60 * 1000)
-   })
+     timestamp: Date.now() - 8 * 24 * 60 * 60 * 1000,
+   });
    ```
 4. Reload VS Code
 5. Open Secondary Terminal
 
 **Expected Results**:
+
 - Expired session not restored (7-day limit)
 - New fresh terminal created
 - No error messages about corrupt data
@@ -321,10 +348,12 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 #### 2.5 Session Save/Restore with AI Agents (P1 - Important)
 
 **Prerequisites**:
+
 - Claude Code or Gemini CLI installed
 - Settings: `enablePersistentSessions: true`
 
 **Steps**:
+
 1. Terminal 1: Start Claude Code session
    ```bash
    claude "write a hello world script"
@@ -335,6 +364,7 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 5. Reload VS Code
 
 **Expected Results**:
+
 - Both terminals restored
 - Terminal 1 shows Claude Code scrollback
 - Claude status indicator shows "Disconnected" (session not active)
@@ -353,10 +383,12 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 #### 3.1 Claude Code Detection (P0 - Critical)
 
 **Prerequisites**:
+
 - Claude Code installed and configured
 - Settings: `enableCliAgentIntegration: true`
 
 **Steps**:
+
 1. Create new terminal
 2. Verify initial status indicator shows "None"
 3. Start Claude Code:
@@ -366,6 +398,7 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 4. Observe terminal header status indicator
 
 **Expected Results**:
+
 - Status transitions: None → Connected (on startup banner)
 - Status transitions: Connected → Active (on output streaming)
 - Status indicator color: Blue (Connected), Green (Active)
@@ -381,10 +414,12 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 #### 3.2 GitHub Copilot Detection (P1 - Important)
 
 **Prerequisites**:
+
 - GitHub CLI with Copilot installed
 - Settings: `enableGitHubCopilotIntegration: true`
 
 **Steps**:
+
 1. Create new terminal
 2. Test detection for multiple variants:
    - Variant 1: `gh copilot suggest "how to list files"`
@@ -393,6 +428,7 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 3. Observe status indicator for each variant
 
 **Expected Results**:
+
 - All variants detected successfully
 - Status shows "Connected" when command starts
 - Status shows "Active" during suggestion output
@@ -409,10 +445,12 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 #### 3.3 Gemini CLI Detection (P1 - Important)
 
 **Prerequisites**:
+
 - Gemini CLI installed
 - Settings: `enableCliAgentIntegration: true`
 
 **Steps**:
+
 1. Create new terminal
 2. Start Gemini CLI (shows ASCII art banner):
    ```bash
@@ -423,6 +461,7 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 5. Observe status during response streaming
 
 **Expected Results**:
+
 - Detection occurs on ASCII art banner appearance
 - Status: None → Connected → Active
 - Detection pattern matches Gemini-specific output signatures
@@ -438,10 +477,12 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 #### 3.4 Multi-Agent Scenario (P1 - Important)
 
 **Prerequisites**:
+
 - Claude Code and GitHub Copilot available
 - 3 terminals created
 
 **Steps**:
+
 1. Terminal 1: Start Claude Code session
 2. Terminal 2: Start GitHub Copilot session
 3. Terminal 3: Regular shell (no agent)
@@ -449,6 +490,7 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 5. Verify each terminal shows correct status
 
 **Expected Results**:
+
 - Terminal 1: Shows Claude Code status (Active/Connected)
 - Terminal 2: Shows GitHub Copilot status (Active/Connected)
 - Terminal 3: Shows "None" status
@@ -465,15 +507,18 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 #### 3.5 Agent Termination Detection (P1 - Important)
 
 **Prerequisites**:
+
 - Claude Code session active
 
 **Steps**:
+
 1. Start Claude Code with command
 2. Verify status shows "Active"
 3. Wait for Claude Code to complete (exit)
 4. Observe status change
 
 **Expected Results**:
+
 - Status transitions: Active → Disconnected
 - Termination detected via patterns:
   - Shell prompt reappearance
@@ -491,9 +536,11 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 #### 3.6 Security: False Positive Prevention (P0 - Critical)
 
 **Prerequisites**:
+
 - Terminal with no AI agents
 
 **Steps**:
+
 1. Create terminal
 2. Test potential false positive scenarios:
    ```bash
@@ -511,6 +558,7 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
    ```
 
 **Expected Results**:
+
 - False positive tests: Status remains "None"
 - Valid command: Status changes to "Connected"
 - Regex patterns use word boundaries: `/(^|\s)claude(\s|$)/i`
@@ -528,9 +576,11 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 #### 4.1 Keyboard Input and Special Keys (P0 - Critical)
 
 **Prerequisites**:
+
 - Terminal created and focused
 
 **Steps**:
+
 1. Type alphanumeric text: `hello world`
 2. Press Enter
 3. Test special keys:
@@ -545,6 +595,7 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
    - Ctrl+V / Cmd+V (paste)
 
 **Expected Results**:
+
 - All text appears correctly in terminal
 - Special keys behave as expected in shell
 - Ctrl+C copies when text selected, sends SIGINT otherwise
@@ -560,10 +611,12 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 #### 4.2 Alt+Click Cursor Positioning (P1 - Important)
 
 **Prerequisites**:
+
 - Settings: `altClickMovesCursor: true`
 - Terminal with multi-line output
 
 **Steps**:
+
 1. Run command to generate output:
    ```bash
    echo "Line 1: First line"
@@ -577,6 +630,7 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 6. Verify cursor position
 
 **Expected Results**:
+
 - Cursor moves to clicked position
 - ANSI escape sequences sent to move cursor
 - Text inserted at correct position
@@ -592,10 +646,12 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 #### 4.3 IME Composition (Japanese Input) (P1 - Important)
 
 **Prerequisites**:
+
 - Japanese IME enabled on system
 - Terminal focused
 
 **Steps**:
+
 1. Switch to Japanese input mode
 2. Type romaji: `nihongo` (日本語)
 3. Observe composition underline
@@ -604,6 +660,7 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 6. Verify final text in terminal
 
 **Expected Results**:
+
 - Composition events handled correctly
 - Underline shows during composition (compositionstart)
 - Candidate selection works
@@ -620,10 +677,12 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 #### 4.4 IME Composition (Chinese Input) (P2 - Nice-to-have)
 
 **Prerequisites**:
+
 - Chinese (Simplified or Traditional) IME enabled
 - Terminal focused
 
 **Steps**:
+
 1. Switch to Chinese input mode
 2. Type pinyin: `zhongwen` (中文)
 3. Select characters from candidate window
@@ -631,6 +690,7 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 5. Verify text appears correctly
 
 **Expected Results**:
+
 - Composition handled for both Simplified and Traditional Chinese
 - Candidate selection works
 - Multi-byte characters display correctly
@@ -646,9 +706,11 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 #### 4.5 Copy and Paste Functionality (P0 - Critical)
 
 **Prerequisites**:
+
 - Terminal with output
 
 **Steps**:
+
 1. Run command: `echo "Test content for copy-paste"`
 2. Select "Test content" with mouse drag
 3. Press Ctrl+C / Cmd+C (or right-click → Copy)
@@ -658,6 +720,7 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 7. Verify text pasted correctly
 
 **Expected Results**:
+
 - Text selection visible with highlight
 - Copy places text in system clipboard
 - Paste inserts text at cursor position
@@ -674,9 +737,11 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 #### 4.6 Scrolling Behavior (P1 - Important)
 
 **Prerequisites**:
+
 - Terminal with scrollback content
 
 **Steps**:
+
 1. Generate 100 lines of output:
    ```bash
    for i in {1..100}; do echo "Line $i"; done
@@ -690,6 +755,7 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 4. Observe auto-scroll behavior
 
 **Expected Results**:
+
 - All scroll methods work smoothly
 - Scrollbar position reflects buffer position
 - Auto-scroll to bottom when new output appears
@@ -706,9 +772,11 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 #### 4.7 ANSI Color Rendering (P1 - Important)
 
 **Prerequisites**:
+
 - Terminal created
 
 **Steps**:
+
 1. Test 16-color ANSI:
    ```bash
    echo -e "\033[31mRed\033[0m \033[32mGreen\033[0m \033[34mBlue\033[0m"
@@ -727,6 +795,7 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
    ```
 
 **Expected Results**:
+
 - 16 basic colors render correctly
 - 256-color palette displays accurately
 - True color (RGB) renders correctly
@@ -743,9 +812,11 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 #### 4.8 Theme Changes (P1 - Important)
 
 **Prerequisites**:
+
 - Terminal with content
 
 **Steps**:
+
 1. VS Code theme: Light theme
 2. Verify terminal background is light
 3. Verify text is dark colored
@@ -756,6 +827,7 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 8. Verify high contrast colors applied
 
 **Expected Results**:
+
 - Terminal colors update immediately on theme change
 - Background, foreground, cursor colors match theme
 - ANSI colors adjusted for theme (light/dark variants)
@@ -774,9 +846,11 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 #### 5.1 Font Settings (P1 - Important)
 
 **Prerequisites**:
+
 - Terminal created
 
 **Steps**:
+
 1. Open Settings: Secondary Terminal → Font Size
 2. Change font size from 12 to 16
 3. Verify terminal text size increases
@@ -786,6 +860,7 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 7. Verify line spacing increases
 
 **Expected Results**:
+
 - Font size change applies immediately
 - Font family change applies immediately
 - Line height adjusts spacing
@@ -802,9 +877,11 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 #### 5.2 Shell Selection (P1 - Important)
 
 **Prerequisites**:
+
 - Multiple shells available (bash, zsh, fish, etc.)
 
 **Steps**:
+
 1. Open Settings: Secondary Terminal → Shell
 2. Set shell to `/bin/zsh` (or other available shell)
 3. Create new terminal
@@ -815,6 +892,7 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 8. Verify bash prompt appears
 
 **Expected Results**:
+
 - Shell setting applies to new terminals
 - Existing terminals unaffected by setting change
 - Invalid shell path shows error notification
@@ -830,9 +908,11 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 #### 5.3 Max Terminals Limit (P1 - Important)
 
 **Prerequisites**:
+
 - No active terminals
 
 **Steps**:
+
 1. Set `maxTerminals: 3` in settings
 2. Create 3 terminals successfully
 3. Attempt to create 4th terminal
@@ -843,6 +923,7 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 8. Create 2 more terminals (should reach 5 total)
 
 **Expected Results**:
+
 - Limit enforced strictly
 - Clear error message when limit reached
 - Deletion frees up slot for new terminal
@@ -858,9 +939,11 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 #### 5.4 Feature Toggles (P2 - Nice-to-have)
 
 **Prerequisites**:
+
 - Extension installed
 
 **Steps**:
+
 1. **Persistent Sessions Toggle**:
    - Set `enablePersistentSessions: false`
    - Create terminal, add content
@@ -883,6 +966,7 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
    - Verify cursor does NOT move
 
 **Expected Results**:
+
 - Each feature toggle works independently
 - Disabling features removes related UI elements
 - No errors when features disabled
@@ -899,9 +983,11 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 #### 6.1 Vertical Split (P1 - Important)
 
 **Prerequisites**:
+
 - One terminal active
 
 **Steps**:
+
 1. Click "Split Terminal" icon (vertical split icon)
 2. Verify two terminals visible side-by-side
 3. Verify left terminal retains content
@@ -910,6 +996,7 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 6. Verify both terminals resize proportionally
 
 **Expected Results**:
+
 - Split creates two equal-width terminals
 - Original terminal content preserved
 - Both terminals independently scrollable
@@ -925,10 +1012,12 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 #### 6.2 Horizontal Split (P1 - Important)
 
 **Prerequisites**:
+
 - One terminal active
 - Panel location: Bottom
 
 **Steps**:
+
 1. Set `dynamicSplitDirection: true`
 2. Set `panelLocation: "panel"` (bottom panel)
 3. Click horizontal split icon
@@ -937,6 +1026,7 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 6. Verify resize works smoothly
 
 **Expected Results**:
+
 - Horizontal split creates stacked layout
 - Splitter draggable with mouse
 - Minimum height enforced (100px default)
@@ -952,9 +1042,11 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 #### 6.3 Maximum Split Terminals (P2 - Nice-to-have)
 
 **Prerequisites**:
+
 - Settings: `maxSplitTerminals: 3`
 
 **Steps**:
+
 1. Create and split until 3 terminals visible
 2. Attempt 4th split
 3. Verify warning message
@@ -962,6 +1054,7 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 5. Attempt split again (should succeed)
 
 **Expected Results**:
+
 - Maximum 3 terminals in split view
 - Error message when limit reached
 - Split view reorganizes when terminal closed
@@ -978,14 +1071,17 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 #### 7.1 Invalid Shell Path (P1 - Important)
 
 **Prerequisites**:
+
 - Extension active
 
 **Steps**:
+
 1. Set shell to invalid path: `/invalid/shell/path`
 2. Create new terminal
 3. Observe error handling
 
 **Expected Results**:
+
 - Error notification shown: "Failed to start terminal: shell not found"
 - Terminal creation fails gracefully
 - No crash or unhandled exception
@@ -1001,14 +1097,17 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 #### 7.2 Working Directory Does Not Exist (P1 - Important)
 
 **Prerequisites**:
+
 - Extension active
 
 **Steps**:
+
 1. Set `defaultDirectory: "/nonexistent/path"`
 2. Create terminal
 3. Observe fallback behavior
 
 **Expected Results**:
+
 - Warning notification shown
 - Terminal created with fallback directory (workspace root or home)
 - Terminal functional despite invalid directory
@@ -1023,14 +1122,17 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 #### 7.3 Rapid Terminal Creation (Race Condition Test) (P1 - Important)
 
 **Prerequisites**:
+
 - No active terminals
 
 **Steps**:
+
 1. Rapidly click "Create Terminal" 5 times in quick succession
 2. Wait for all operations to complete
 3. Count active terminals
 
 **Expected Results**:
+
 - Exactly 5 terminals created (no duplicates)
 - All terminals have unique IDs
 - No race condition errors in console
@@ -1046,9 +1148,11 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 #### 7.4 Memory Leak Prevention (P2 - Nice-to-have)
 
 **Prerequisites**:
+
 - Extension active
 
 **Steps**:
+
 1. Record initial memory usage (Extension Host)
 2. Create and delete 20 terminals in sequence
 3. Wait 1 minute (allow garbage collection)
@@ -1056,6 +1160,7 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 5. Calculate memory delta
 
 **Expected Results**:
+
 - Memory increase < 10MB after 20 create/delete cycles
 - Event listeners properly disposed
 - No orphaned PTY processes
@@ -1071,9 +1176,11 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 #### 7.5 Large Output Handling (P2 - Nice-to-have)
 
 **Prerequisites**:
+
 - Terminal created
 
 **Steps**:
+
 1. Generate large output (10MB+):
    ```bash
    cat /dev/urandom | base64 | head -c 10M
@@ -1083,6 +1190,7 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 4. Test scrolling during output
 
 **Expected Results**:
+
 - Terminal remains responsive
 - Output buffering prevents UI freeze (16ms flush interval)
 - Scrollback limited to 2000 lines (oldest discarded)
@@ -1100,10 +1208,12 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 #### 8.1 Windows-Specific Features (P1 - Important)
 
 **Prerequisites**:
+
 - Windows OS
 - Extension installed
 
 **Steps**:
+
 1. Test PowerShell as default shell
 2. Test Command Prompt (cmd.exe)
 3. Test Git Bash (if installed)
@@ -1111,6 +1221,7 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 5. Verify keyboard shortcuts (Ctrl-based)
 
 **Expected Results**:
+
 - PowerShell works with proper prompt detection
 - cmd.exe works with ANSI support
 - Git Bash recognized and functional
@@ -1126,10 +1237,12 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 #### 8.2 macOS-Specific Features (P1 - Important)
 
 **Prerequisites**:
+
 - macOS
 - Extension installed
 
 **Steps**:
+
 1. Test default shell (zsh on modern macOS)
 2. Test bash (legacy shell)
 3. Test Command key shortcuts (Cmd+K, Cmd+\)
@@ -1137,6 +1250,7 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 5. Verify Rosetta 2 compatibility (Apple Silicon)
 
 **Expected Results**:
+
 - zsh works with proper prompt
 - bash functional
 - Cmd shortcuts work (not Ctrl)
@@ -1152,10 +1266,12 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 #### 8.3 Linux-Specific Features (P1 - Important)
 
 **Prerequisites**:
+
 - Linux (Ubuntu/Debian/Fedora/Arch)
 - Extension installed
 
 **Steps**:
+
 1. Test bash as default shell
 2. Test zsh, fish (if installed)
 3. Test Ctrl-based keyboard shortcuts
@@ -1163,6 +1279,7 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
 5. Test on different desktop environments (GNOME, KDE, XFCE)
 
 **Expected Results**:
+
 - Multiple shells supported
 - Ctrl shortcuts functional
 - Works across desktop environments
@@ -1274,7 +1391,7 @@ test.describe('Terminal Lifecycle', () => {
     }
 
     // Verify IDs are 1-5
-    const ids = await Promise.all(terminals.map(t => t.getId()));
+    const ids = await Promise.all(terminals.map((t) => t.getId()));
     expect(ids).toEqual([1, 2, 3, 4, 5]);
 
     // Attempt 6th terminal
@@ -1300,6 +1417,7 @@ test.describe('Terminal Lifecycle', () => {
 ### Test Prioritization
 
 **P0 (Critical)**: Must pass before release
+
 - Terminal creation and deletion
 - Basic session save/restore
 - AI agent detection (core functionality)
@@ -1307,6 +1425,7 @@ test.describe('Terminal Lifecycle', () => {
 - Security: false positive prevention
 
 **P1 (Important)**: Should pass before release
+
 - ID recycling, multi-terminal management
 - Scrollback restoration
 - Multi-agent scenarios
@@ -1315,6 +1434,7 @@ test.describe('Terminal Lifecycle', () => {
 - Configuration management
 
 **P2 (Nice-to-have)**: Can be deferred
+
 - Session expiry
 - Memory leak testing
 - Large output handling
@@ -1323,6 +1443,7 @@ test.describe('Terminal Lifecycle', () => {
 ### Acceptance Criteria
 
 **Release Readiness**:
+
 - All P0 tests pass: 100%
 - P1 tests pass: ≥95%
 - P2 tests pass: ≥80%
@@ -1330,6 +1451,7 @@ test.describe('Terminal Lifecycle', () => {
 - Manual exploratory testing complete
 
 **Performance Benchmarks**:
+
 - Terminal creation: <500ms
 - Session restore (5 terminals): <3 seconds
 - AI agent detection: <100ms after output
@@ -1337,6 +1459,7 @@ test.describe('Terminal Lifecycle', () => {
 - Memory usage (5 terminals): <100MB
 
 **Quality Metrics**:
+
 - Code coverage: ≥85%
 - No memory leaks detected
 - No race conditions in automated tests
@@ -1375,7 +1498,7 @@ console.log('Type "exit" to quit\n');
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
-  prompt: 'claude> '
+  prompt: 'claude> ',
 });
 
 rl.prompt();

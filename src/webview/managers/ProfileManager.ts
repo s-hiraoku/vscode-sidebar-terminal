@@ -209,12 +209,7 @@ export class ProfileManager implements IProfileManager {
       this.profileSelector.updateProfiles(profiles);
     }
 
-    log(
-      '🎯 Updated profiles:',
-      profiles.length,
-      'profiles, default:',
-      this.defaultProfileId
-    );
+    log('🎯 Updated profiles:', profiles.length, 'profiles, default:', this.defaultProfileId);
   }
 
   /**

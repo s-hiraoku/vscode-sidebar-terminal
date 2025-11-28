@@ -110,7 +110,7 @@ export class DisposableStore implements vscode.Disposable {
  */
 export function toDisposable(cleanup: () => void): vscode.Disposable {
   return {
-    dispose: cleanup
+    dispose: cleanup,
   };
 }
 
@@ -131,6 +131,6 @@ export function combineDisposables(...disposables: vscode.Disposable[]): vscode.
           }
         }
       }
-    }
+    },
   };
 }

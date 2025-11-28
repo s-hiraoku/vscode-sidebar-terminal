@@ -185,7 +185,11 @@ export interface ICliAgentDetectionService {
    * @param type Agent type
    * @param terminalName Optional terminal name
    */
-  setAgentConnected(terminalId: string, type: 'claude' | 'gemini' | 'codex' | 'copilot', terminalName?: string): void;
+  setAgentConnected(
+    terminalId: string,
+    type: 'claude' | 'gemini' | 'codex' | 'copilot',
+    terminalName?: string
+  ): void;
 }
 
 // =================== Pattern Detection Interface ===================

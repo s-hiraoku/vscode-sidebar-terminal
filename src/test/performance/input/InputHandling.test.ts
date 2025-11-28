@@ -9,8 +9,14 @@ import { expect } from 'chai';
 import { describe, it, beforeEach, afterEach } from 'mocha';
 import sinon from 'sinon';
 import { JSDOM } from 'jsdom';
-import { BaseInputHandler, InputHandlerConfig as _InputHandlerConfig } from '../../../webview/managers/input/handlers/BaseInputHandler';
-import { InputEventService, EventHandlerConfig as _EventHandlerConfig } from '../../../webview/managers/input/services/InputEventService';
+import {
+  BaseInputHandler,
+  InputHandlerConfig as _InputHandlerConfig,
+} from '../../../webview/managers/input/handlers/BaseInputHandler';
+import {
+  InputEventService,
+  EventHandlerConfig as _EventHandlerConfig,
+} from '../../../webview/managers/input/services/InputEventService';
 import { InputStateManager } from '../../../webview/managers/input/services/InputStateManager';
 
 // Performance benchmark thresholds (configurable based on requirements)
@@ -34,7 +40,7 @@ const PERFORMANCE_THRESHOLDS = {
 
   // Resource cleanup performance
   MAX_DISPOSAL_TIME: 50, // milliseconds for complete disposal
-  MAX_LISTENER_CLEANUP_TIME: 10 // milliseconds for listener cleanup
+  MAX_LISTENER_CLEANUP_TIME: 10, // milliseconds for listener cleanup
 };
 
 // Performance testing utility class
@@ -90,18 +96,18 @@ class PerformanceTestHarness {
             return new (global as any).KeyboardEvent('keydown', {
               key: String.fromCharCode(65 + (i % 26)), // A-Z
               ctrlKey: i % 10 === 0,
-              altKey: i % 15 === 0
+              altKey: i % 15 === 0,
             });
           case 'input':
             return new (global as any).Event('input');
           case 'click':
             return new (global as any).MouseEvent('click', {
               clientX: i % 500,
-              clientY: i % 300
+              clientY: i % 300,
             });
           case 'compositionstart':
             return new (global as any).CompositionEvent('compositionstart', {
-              data: `comp${i}`
+              data: `comp${i}`,
             });
           default:
             return new (global as any).Event('input');
@@ -120,12 +126,14 @@ class PerformanceTestHarness {
     const events = this.createHighFrequencyEventSequence(eventCount);
     let processedCount = 0;
 
-    const handler = () => { processedCount++; };
+    const handler = () => {
+      processedCount++;
+    };
     eventService.registerEventHandler('perf-test', element, 'click', handler);
 
     this.markStart('event-processing');
 
-    events.forEach(eventFactory => {
+    events.forEach((eventFactory) => {
       const event = eventFactory();
       if (event.type === 'click') {
         element.dispatchEvent(event);
@@ -169,7 +177,7 @@ class PerformanceTestInputHandler extends BaseInputHandler {
     const data = {
       type: event.type,
       timestamp: Date.now(),
-      target: event.target
+      target: event.target,
     };
 
     // Minimal processing to simulate real work
@@ -213,18 +221,21 @@ describe('Input Handling Performance TDD Test Suite', () => {
 
   beforeEach(() => {
     // Arrange: Setup high-performance test environment
-    jsdom = new JSDOM(`
+    jsdom = new JSDOM(
+      `
       <!DOCTYPE html>
       <html>
         <body>
           <div id="performance-test-element" style="width: 1000px; height: 1000px;"></div>
         </body>
       </html>
-    `, {
-      url: 'http://localhost',
-      pretendToBeVisual: true,
-      resources: 'usable'
-    });
+    `,
+      {
+        url: 'http://localhost',
+        pretendToBeVisual: true,
+        resources: 'usable',
+      }
+    );
 
     // Setup global environment
     global.window = jsdom.window as any;
@@ -234,7 +245,7 @@ describe('Input Handling Performance TDD Test Suite', () => {
     global.MouseEvent = jsdom.window.MouseEvent;
     global.CompositionEvent = jsdom.window.CompositionEvent;
     global.performance = jsdom.window.performance || {
-      now: () => Date.now()
+      now: () => Date.now(),
     };
 
     testElement = document.getElementById('performance-test-element')!;
@@ -263,7 +274,7 @@ describe('Input Handling Performance TDD Test Suite', () => {
 
   describe('TDD Red Phase: Event Processing Performance', () => {
     describe('High-Frequency Event Processing', () => {
-      it('should process events within performance thresholds', function() {
+      it('should process events within performance thresholds', function () {
         this.timeout(10000); // Extended timeout for performance tests
 
         // Act: Register handler and measure processing performance
@@ -277,7 +288,7 @@ describe('Input Handling Performance TDD Test Suite', () => {
           const clickEvent = new jsdom.window.MouseEvent('click', {
             clientX: i % 500,
             clientY: i % 300,
-            bubbles: true
+            bubbles: true,
           });
 
           testElement.dispatchEvent(clickEvent);
@@ -293,7 +304,9 @@ describe('Input Handling Performance TDD Test Suite', () => {
         const eventsPerSecond = (eventCount / totalTime) * 1000;
 
         expect(avgProcessingTime).to.be.lessThan(PERFORMANCE_THRESHOLDS.MAX_EVENT_PROCESSING_TIME);
-        expect(maxProcessingTime).to.be.lessThan(PERFORMANCE_THRESHOLDS.MAX_EVENT_PROCESSING_TIME * 2);
+        expect(maxProcessingTime).to.be.lessThan(
+          PERFORMANCE_THRESHOLDS.MAX_EVENT_PROCESSING_TIME * 2
+        );
         expect(eventsPerSecond).to.be.greaterThan(PERFORMANCE_THRESHOLDS.MIN_EVENTS_PER_SECOND);
 
         console.log(`Performance metrics:
@@ -305,7 +318,7 @@ describe('Input Handling Performance TDD Test Suite', () => {
         `);
       });
 
-      it('should maintain performance under sustained load', function() {
+      it('should maintain performance under sustained load', function () {
         this.timeout(15000);
 
         // Arrange: Setup sustained load test
@@ -322,7 +335,7 @@ describe('Input Handling Performance TDD Test Suite', () => {
           for (let i = 0; i < batchSize; i++) {
             const keyEvent = new jsdom.window.KeyboardEvent('keydown', {
               key: String.fromCharCode(65 + (i % 26)),
-              ctrlKey: i % 10 === 0
+              ctrlKey: i % 10 === 0,
             });
 
             testElement.dispatchEvent(keyEvent);
@@ -341,8 +354,10 @@ describe('Input Handling Performance TDD Test Suite', () => {
 
         // Check batch processing times
         processingTimes.forEach((time, index) => {
-          expect(time).to.be.lessThan(PERFORMANCE_THRESHOLDS.MAX_BATCH_PROCESSING_TIME,
-            `Batch ${index} processing time exceeded threshold`);
+          expect(time).to.be.lessThan(
+            PERFORMANCE_THRESHOLDS.MAX_BATCH_PROCESSING_TIME,
+            `Batch ${index} processing time exceeded threshold`
+          );
         });
 
         // Check for performance degradation across batches
@@ -353,23 +368,20 @@ describe('Input Handling Performance TDD Test Suite', () => {
         expect(degradation).to.be.lessThan(0.5, 'Performance degradation exceeded 50%');
       });
 
-      it('should handle event bursts without significant delays', function() {
+      it('should handle event bursts without significant delays', function () {
         this.timeout(5000);
 
         // Arrange: Setup burst testing
-        eventService.registerEventHandler(
-          'burst-test',
-          testElement,
-          'input',
-          () => {},
-          { debounce: true, debounceDelay: 50 }
-        );
+        eventService.registerEventHandler('burst-test', testElement, 'input', () => {}, {
+          debounce: true,
+          debounceDelay: 50,
+        });
 
         // Act: Generate event bursts
         const burstSizes = [1, 10, 50, 100, 200, 500];
         const burstResults: Array<{ size: number; processingTime: number }> = [];
 
-        burstSizes.forEach(burstSize => {
+        burstSizes.forEach((burstSize) => {
           perfHarness.markStart(`burst-${burstSize}`);
 
           // Generate rapid burst
@@ -401,13 +413,15 @@ describe('Input Handling Performance TDD Test Suite', () => {
         const scalingFactor = largeBurst!.processingTime / smallBurst!.processingTime;
         const eventRatio = largeBurst!.size / smallBurst!.size;
 
-        expect(scalingFactor).to.be.lessThan(eventRatio * 0.5,
-          'Processing time should scale sub-linearly with event count');
+        expect(scalingFactor).to.be.lessThan(
+          eventRatio * 0.5,
+          'Processing time should scale sub-linearly with event count'
+        );
       });
     });
 
     describe('Debouncing Performance', () => {
-      it('should maintain precise debouncing timing under load', function() {
+      it('should maintain precise debouncing timing under load', function () {
         this.timeout(5000);
 
         // Arrange: Setup debouncing precision test
@@ -448,10 +462,12 @@ describe('Input Handling Performance TDD Test Suite', () => {
 
         const timingVariance = Math.abs(actualExecutionTime! - expectedExecutionTime);
 
-        expect(timingVariance).to.be.lessThan(PERFORMANCE_THRESHOLDS.MAX_DEBOUNCE_PRECISION_VARIANCE);
+        expect(timingVariance).to.be.lessThan(
+          PERFORMANCE_THRESHOLDS.MAX_DEBOUNCE_PRECISION_VARIANCE
+        );
       });
 
-      it('should handle multiple concurrent debouncing efficiently', function() {
+      it('should handle multiple concurrent debouncing efficiently', function () {
         this.timeout(5000);
 
         // Arrange: Register multiple debounced handlers
@@ -463,7 +479,9 @@ describe('Input Handling Performance TDD Test Suite', () => {
             `concurrent-debounce-${i}`,
             testElement,
             'input',
-            () => { executionCounts[i]++; },
+            () => {
+              executionCounts[i]++;
+            },
             { debounce: true, debounceDelay: 50 + (i % 10) } // Varied delays
           );
         }
@@ -500,7 +518,7 @@ describe('Input Handling Performance TDD Test Suite', () => {
 
   describe('TDD Red Phase: State Management Performance', () => {
     describe('State Update Performance', () => {
-      it('should update state within performance thresholds', function() {
+      it('should update state within performance thresholds', function () {
         this.timeout(5000);
 
         // Act: Measure state update performance
@@ -510,12 +528,12 @@ describe('Input Handling Performance TDD Test Suite', () => {
         for (let i = 0; i < updateCount; i++) {
           stateManager.updateIMEState({
             data: `update-${i}`,
-            timestamp: Date.now() + i
+            timestamp: Date.now() + i,
           });
 
           stateManager.updateKeyboardState({
             lastKeyPressed: String.fromCharCode(65 + (i % 26)),
-            lastKeyTimestamp: Date.now() + i
+            lastKeyTimestamp: Date.now() + i,
           });
         }
 
@@ -526,7 +544,9 @@ describe('Input Handling Performance TDD Test Suite', () => {
         expect(avgUpdateTime).to.be.lessThan(PERFORMANCE_THRESHOLDS.MAX_STATE_UPDATE_TIME);
 
         const updatesPerSecond = ((updateCount * 2) / totalUpdateTime) * 1000;
-        expect(updatesPerSecond).to.be.greaterThan(PERFORMANCE_THRESHOLDS.MIN_STATE_UPDATES_PER_SECOND);
+        expect(updatesPerSecond).to.be.greaterThan(
+          PERFORMANCE_THRESHOLDS.MIN_STATE_UPDATES_PER_SECOND
+        );
 
         console.log(`State update performance:
           - Total updates: ${updateCount * 2}
@@ -536,7 +556,7 @@ describe('Input Handling Performance TDD Test Suite', () => {
         `);
       });
 
-      it('should handle state listener notifications efficiently', function() {
+      it('should handle state listener notifications efficiently', function () {
         this.timeout(5000);
 
         // Arrange: Register multiple state listeners
@@ -556,7 +576,7 @@ describe('Input Handling Performance TDD Test Suite', () => {
         for (let i = 0; i < stateUpdateCount; i++) {
           stateManager.updateIMEState({
             data: `notification-test-${i}`,
-            timestamp: Date.now() + i
+            timestamp: Date.now() + i,
           });
         }
 
@@ -566,10 +586,12 @@ describe('Input Handling Performance TDD Test Suite', () => {
         expect(totalNotifications).to.equal(listenerCount * stateUpdateCount);
 
         const avgNotificationTime = notificationTime / totalNotifications;
-        expect(avgNotificationTime).to.be.lessThan(PERFORMANCE_THRESHOLDS.MAX_STATE_LISTENER_NOTIFICATION_TIME);
+        expect(avgNotificationTime).to.be.lessThan(
+          PERFORMANCE_THRESHOLDS.MAX_STATE_LISTENER_NOTIFICATION_TIME
+        );
       });
 
-      it('should maintain state history efficiently under load', function() {
+      it('should maintain state history efficiently under load', function () {
         this.timeout(5000);
 
         // Arrange: Generate extensive state history
@@ -579,12 +601,12 @@ describe('Input Handling Performance TDD Test Suite', () => {
         for (let i = 0; i < historyGenerationCount; i++) {
           stateManager.updateIMEState({
             data: `history-${i}`,
-            timestamp: Date.now() + i
+            timestamp: Date.now() + i,
           });
 
           stateManager.updateKeyboardState({
             lastKeyPressed: `key-${i}`,
-            lastKeyTimestamp: Date.now() + i
+            lastKeyTimestamp: Date.now() + i,
           });
 
           // Periodically check memory growth
@@ -600,7 +622,9 @@ describe('Input Handling Performance TDD Test Suite', () => {
 
         // Assert: Memory usage should be reasonable
         const finalMemoryGrowth = perfHarness.getMemoryGrowth();
-        expect(finalMemoryGrowth).to.be.lessThan(PERFORMANCE_THRESHOLDS.MAX_SUSTAINED_MEMORY_GROWTH);
+        expect(finalMemoryGrowth).to.be.lessThan(
+          PERFORMANCE_THRESHOLDS.MAX_SUSTAINED_MEMORY_GROWTH
+        );
 
         // Assert: History should be managed efficiently
         const history = stateManager.getStateHistory(200);
@@ -615,7 +639,7 @@ describe('Input Handling Performance TDD Test Suite', () => {
     });
 
     describe('Critical State Detection Performance', () => {
-      it('should detect critical state changes quickly', function() {
+      it('should detect critical state changes quickly', function () {
         this.timeout(3000);
 
         // Act: Measure critical state detection performance
@@ -632,7 +656,7 @@ describe('Input Handling Performance TDD Test Suite', () => {
           const hasCriticalState = stateManager.hasCriticalStateActive();
 
           // Verify correctness while measuring performance
-          const expectedCritical = (i % 2 === 0) || (i % 3 === 0) || (i % 5 === 0);
+          const expectedCritical = i % 2 === 0 || i % 3 === 0 || i % 5 === 0;
           expect(hasCriticalState).to.equal(expectedCritical);
         }
 
@@ -653,7 +677,7 @@ describe('Input Handling Performance TDD Test Suite', () => {
 
   describe('TDD Red Phase: Memory Management Performance', () => {
     describe('Memory Leak Prevention', () => {
-      it('should prevent memory leaks during extended operation', function() {
+      it('should prevent memory leaks during extended operation', function () {
         this.timeout(10000);
 
         // Arrange: Setup memory tracking
@@ -673,7 +697,7 @@ describe('Input Handling Performance TDD Test Suite', () => {
           for (let i = 0; i < eventsPerCycle; i++) {
             const clickEvent = new jsdom.window.MouseEvent('click', {
               clientX: i,
-              clientY: i
+              clientY: i,
             });
             testElement.dispatchEvent(clickEvent);
           }
@@ -692,7 +716,9 @@ describe('Input Handling Performance TDD Test Suite', () => {
         const finalMemoryGrowth = perfHarness.getMemoryGrowth();
 
         // Assert: Memory growth should be reasonable
-        expect(finalMemoryGrowth).to.be.lessThan(PERFORMANCE_THRESHOLDS.MAX_SUSTAINED_MEMORY_GROWTH);
+        expect(finalMemoryGrowth).to.be.lessThan(
+          PERFORMANCE_THRESHOLDS.MAX_SUSTAINED_MEMORY_GROWTH
+        );
 
         const memoryPerEvent = finalMemoryGrowth / (operationCycles * eventsPerCycle);
         expect(memoryPerEvent).to.be.lessThan(PERFORMANCE_THRESHOLDS.MAX_MEMORY_GROWTH_PER_EVENT);
@@ -704,7 +730,7 @@ describe('Input Handling Performance TDD Test Suite', () => {
         `);
       });
 
-      it('should clean up resources efficiently on disposal', function() {
+      it('should clean up resources efficiently on disposal', function () {
         this.timeout(5000);
 
         // Arrange: Create services with significant state
@@ -722,7 +748,7 @@ describe('Input Handling Performance TDD Test Suite', () => {
 
           largeStateManager.updateIMEState({
             data: `cleanup-data-${i}`,
-            timestamp: Date.now() + i
+            timestamp: Date.now() + i,
           });
         }
 
@@ -749,14 +775,15 @@ describe('Input Handling Performance TDD Test Suite', () => {
     });
 
     describe('Resource Scaling Performance', () => {
-      it('should handle increasing resource counts gracefully', function() {
+      it('should handle increasing resource counts gracefully', function () {
         this.timeout(15000);
 
         // Act: Test performance scaling with increasing resource counts
         const resourceCounts = [10, 50, 100, 200, 500, 1000];
-        const scalingResults: Array<{ count: number; setupTime: number; processingTime: number }> = [];
+        const scalingResults: Array<{ count: number; setupTime: number; processingTime: number }> =
+          [];
 
-        resourceCounts.forEach(count => {
+        resourceCounts.forEach((count) => {
           const scalingEventService = new InputEventService(() => {});
 
           // Measure setup time
@@ -780,7 +807,7 @@ describe('Input Handling Performance TDD Test Suite', () => {
           for (let i = 0; i < 100; i++) {
             const clickEvent = new jsdom.window.MouseEvent('click', {
               clientX: i,
-              clientY: i
+              clientY: i,
             });
             testElement.dispatchEvent(clickEvent);
           }
@@ -796,10 +823,16 @@ describe('Input Handling Performance TDD Test Suite', () => {
         // Assert: Performance should scale reasonably
         scalingResults.forEach(({ count, setupTime, processingTime }) => {
           const setupTimePerResource = setupTime / count;
-          expect(setupTimePerResource).to.be.lessThan(2, `Setup scaling failed at ${count} resources`);
+          expect(setupTimePerResource).to.be.lessThan(
+            2,
+            `Setup scaling failed at ${count} resources`
+          );
 
           // Processing time should not grow linearly with resource count
-          expect(processingTime).to.be.lessThan(count * 0.5, `Processing scaling failed at ${count} resources`);
+          expect(processingTime).to.be.lessThan(
+            count * 0.5,
+            `Processing scaling failed at ${count} resources`
+          );
         });
 
         // Check that scaling is sub-linear
@@ -812,8 +845,10 @@ describe('Input Handling Performance TDD Test Suite', () => {
         const setupScalingFactor = largeScale!.setupTime / smallScale!.setupTime;
         const resourceRatio = largeScale!.count / smallScale!.count;
 
-        expect(setupScalingFactor).to.be.lessThan(resourceRatio * 0.7,
-          'Setup time should scale sub-linearly');
+        expect(setupScalingFactor).to.be.lessThan(
+          resourceRatio * 0.7,
+          'Setup time should scale sub-linearly'
+        );
 
         console.log('Scaling performance results:');
         scalingResults.forEach(({ count, setupTime, processingTime }) => {
@@ -825,7 +860,7 @@ describe('Input Handling Performance TDD Test Suite', () => {
 
   describe('TDD Red Phase: Real-World Performance Scenarios', () => {
     describe('Gaming and High-Interaction Scenarios', () => {
-      it('should handle gaming-level input frequencies', function() {
+      it('should handle gaming-level input frequencies', function () {
         this.timeout(10000);
 
         // Simulate gaming scenario: 120 FPS with multiple inputs per frame
@@ -846,24 +881,26 @@ describe('Input Handling Performance TDD Test Suite', () => {
           // Mouse movement (smooth)
           const mouseMoveEvent = new jsdom.window.MouseEvent('mousemove', {
             clientX: 400 + Math.sin(frame * 0.1) * 200,
-            clientY: 300 + Math.cos(frame * 0.1) * 150
+            clientY: 300 + Math.cos(frame * 0.1) * 150,
           });
           testElement.dispatchEvent(mouseMoveEvent);
 
           // Occasional clicks
-          if (frame % 30 === 0) { // ~4 clicks per second
+          if (frame % 30 === 0) {
+            // ~4 clicks per second
             const clickEvent = new jsdom.window.MouseEvent('click', {
               clientX: 400,
-              clientY: 300
+              clientY: 300,
             });
             testElement.dispatchEvent(clickEvent);
           }
 
           // Key presses (WASD movement pattern)
-          if (frame % 8 === 0) { // ~15 key presses per second
+          if (frame % 8 === 0) {
+            // ~15 key presses per second
             const keys = ['w', 'a', 's', 'd'];
             const keyEvent = new jsdom.window.KeyboardEvent('keydown', {
-              key: keys[frame % keys.length]
+              key: keys[frame % keys.length],
             });
             testElement.dispatchEvent(keyEvent);
           }
@@ -890,13 +927,13 @@ describe('Input Handling Performance TDD Test Suite', () => {
           - Duration: ${gamingTime}ms
           - Avg processing: ${avgProcessingTime.toFixed(3)}ms
           - Memory growth: ${(memoryGrowth / 1024 / 1024).toFixed(2)}MB
-          - Inputs per second: ${(metrics.totalProcessed / gamingTime * 1000).toFixed(0)}
+          - Inputs per second: ${((metrics.totalProcessed / gamingTime) * 1000).toFixed(0)}
         `);
       });
     });
 
     describe('Professional Development Scenarios', () => {
-      it('should handle intensive coding session patterns', function() {
+      it('should handle intensive coding session patterns', function () {
         this.timeout(8000);
 
         // Simulate intensive coding: lots of typing, frequent shortcuts, IME input
@@ -904,12 +941,17 @@ describe('Input Handling Performance TDD Test Suite', () => {
         eventService.registerEventHandler('coding-ime', testElement, 'compositionstart', () => {});
 
         let shortcutCount = 0;
-        eventService.registerEventHandler('coding-shortcuts', testElement, 'keydown', (event: Event) => {
-          const keyEvent = event as KeyboardEvent;
-          if (keyEvent.ctrlKey || keyEvent.altKey) {
-            shortcutCount++;
+        eventService.registerEventHandler(
+          'coding-shortcuts',
+          testElement,
+          'keydown',
+          (event: Event) => {
+            const keyEvent = event as KeyboardEvent;
+            if (keyEvent.ctrlKey || keyEvent.altKey) {
+              shortcutCount++;
+            }
           }
-        });
+        );
 
         perfHarness.markStart('coding-session');
 
@@ -919,7 +961,7 @@ describe('Input Handling Performance TDD Test Suite', () => {
           () => {
             for (let i = 0; i < 50; i++) {
               const keyEvent = new jsdom.window.KeyboardEvent('keydown', {
-                key: String.fromCharCode(97 + (i % 26)) // a-z
+                key: String.fromCharCode(97 + (i % 26)), // a-z
               });
               testElement.dispatchEvent(keyEvent);
             }
@@ -934,7 +976,7 @@ describe('Input Handling Performance TDD Test Suite', () => {
               { key: 'z', ctrlKey: true }, // Undo
             ];
 
-            shortcuts.forEach(shortcut => {
+            shortcuts.forEach((shortcut) => {
               const shortcutEvent = new jsdom.window.KeyboardEvent('keydown', shortcut);
               testElement.dispatchEvent(shortcutEvent);
             });
@@ -943,15 +985,15 @@ describe('Input Handling Performance TDD Test Suite', () => {
           // IME input (Japanese comments)
           () => {
             const imeEvent = new jsdom.window.CompositionEvent('compositionstart', {
-              data: 'konnichiwa'
+              data: 'konnichiwa',
             });
             testElement.dispatchEvent(imeEvent);
-          }
+          },
         ];
 
         // Execute coding patterns repeatedly
         for (let session = 0; session < 20; session++) {
-          codingPatterns.forEach(pattern => pattern());
+          codingPatterns.forEach((pattern) => pattern());
           clock.tick(100); // Small breaks between patterns
         }
 

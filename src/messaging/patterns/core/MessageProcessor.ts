@@ -16,11 +16,7 @@
 
 import { WebviewMessage } from '../../../types/common';
 import { IManagerCoordinator } from '../../../webview/interfaces/ManagerInterfaces';
-import {
-  IMessageHandler,
-  IMessageHandlerContext,
-  IMessageHandlerResult,
-} from './IMessageHandler';
+import { IMessageHandler, IMessageHandlerContext, IMessageHandlerResult } from './IMessageHandler';
 import { MessageHandlerRegistry, IRegistryStats, IDispatchOptions } from './MessageHandlerRegistry';
 import { MessageLogger, LogLevel, createMessageLogger } from './MessageLogger';
 import { MessageValidator, createMessageValidator } from './MessageValidator';
@@ -67,14 +63,18 @@ export class MessageProcessor {
   private readonly validator: MessageValidator;
   private readonly registry: MessageHandlerRegistry;
   private coordinator?: IManagerCoordinator;
-  private readonly config: Required<Omit<IMessageProcessorConfig, 'coordinator' | 'logger' | 'validator'>>;
+  private readonly config: Required<
+    Omit<IMessageProcessorConfig, 'coordinator' | 'logger' | 'validator'>
+  >;
   private initialized = false;
 
   constructor(config: IMessageProcessorConfig = {}) {
     // Initialize logger
-    this.logger = config.logger || createMessageLogger({
-      minLevel: config.logLevel ?? LogLevel.INFO,
-    });
+    this.logger =
+      config.logger ||
+      createMessageLogger({
+        minLevel: config.logLevel ?? LogLevel.INFO,
+      });
 
     // Initialize validator
     this.validator = config.validator || createMessageValidator();

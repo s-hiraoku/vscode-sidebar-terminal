@@ -35,7 +35,7 @@ export class ScrollbackService implements IScrollbackService {
 
   public startRecording(terminalId: string): void {
     if (this._sessions.has(terminalId)) return;
-    
+
     this._sessions.set(terminalId, {
       terminalId,
       entries: [],
@@ -74,12 +74,15 @@ export class ScrollbackService implements IScrollbackService {
     session.unacknowledgedChars += data.length;
   }
 
-  public getSerializedData(terminalId: string, options?: IScrollbackSerializationOptions): string | null {
+  public getSerializedData(
+    terminalId: string,
+    options?: IScrollbackSerializationOptions
+  ): string | null {
     const session = this._sessions.get(terminalId);
     if (!session || session.entries.length === 0) return null;
 
     const limit = options?.scrollback ?? this._config.persistentSessionScrollback;
-    let entries = options?.range 
+    let entries = options?.range
       ? session.entries.slice(options.range.start, options.range.end)
       : session.entries;
 
@@ -94,7 +97,7 @@ export class ScrollbackService implements IScrollbackService {
       }
     }
 
-    return limited.map(e => e.data).join('');
+    return limited.map((e) => e.data).join('');
   }
 
   public getReplayEvent(terminalId: string): IScrollbackReplayEvent | null {

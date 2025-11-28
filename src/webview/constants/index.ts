@@ -2,11 +2,7 @@
  * WebView terminal constants
  * Using shared constants from src/shared/constants.ts
  */
-import {
-  SHARED_TERMINAL_COMMANDS,
-  SHARED_DELAYS,
-  SHARED_SIZES,
-} from '../../shared/constants';
+import { SHARED_TERMINAL_COMMANDS, SHARED_DELAYS, SHARED_SIZES } from '../../shared/constants';
 
 export const TERMINAL_CONSTANTS = {
   COMMANDS: SHARED_TERMINAL_COMMANDS,

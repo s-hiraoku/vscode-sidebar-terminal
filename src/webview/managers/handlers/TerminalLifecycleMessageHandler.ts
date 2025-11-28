@@ -42,10 +42,7 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
   /**
    * Handle terminal lifecycle related messages
    */
-  public async handleMessage(
-    msg: MessageCommand,
-    coordinator: IManagerCoordinator
-  ): Promise<void> {
+  public async handleMessage(msg: MessageCommand, coordinator: IManagerCoordinator): Promise<void> {
     const command = (msg as { command?: string }).command;
 
     switch (command) {
@@ -290,7 +287,9 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
     // 🎯 FIX: Block terminal clear during session restore
     if (typeof coordinator.isRestoringSession === 'function' && coordinator.isRestoringSession()) {
       const terminalId = msg.terminalId as string;
-      this.logger.warn(`⚠️ [SESSION-RESTORE] Terminal clear blocked during restore: ${terminalId || 'all'}`);
+      this.logger.warn(
+        `⚠️ [SESSION-RESTORE] Terminal clear blocked during restore: ${terminalId || 'all'}`
+      );
       return;
     }
 
@@ -307,10 +306,7 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
   /**
    * Handle set active terminal request
    */
-  private handleSetActiveTerminal(
-    msg: MessageCommand,
-    coordinator: IManagerCoordinator
-  ): void {
+  private handleSetActiveTerminal(msg: MessageCommand, coordinator: IManagerCoordinator): void {
     const terminalId = msg.terminalId as string;
 
     if (!terminalId) {
@@ -409,7 +405,9 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
 
     // Debug: Log output data for restored terminals
     // eslint-disable-next-line no-console
-    console.log(`[OUTPUT-DEBUG] Received output for ${terminalId}: length=${data.length}, first100chars="${data.substring(0, 100).replace(/\x1b/g, '\\x1b').replace(/\r/g, '\\r').replace(/\n/g, '\\n')}"`);
+    console.log(
+      `[OUTPUT-DEBUG] Received output for ${terminalId}: length=${data.length}, first100chars="${data.substring(0, 100).replace(/\x1b/g, '\\x1b').replace(/\r/g, '\\r').replace(/\n/g, '\\n')}"`
+    );
 
     const gate = this.ensureOutputGate(terminalId);
     if (!gate.enabled) {
@@ -560,8 +558,12 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
     // Instead of filtering specific sequences, we discard ALL output during the 5-second protection window
     if (TerminalCreationService.isTerminalRestoring(terminalId)) {
       // eslint-disable-next-line no-console
-      console.log(`[OUTPUT-BLOCK] ⏭️ Blocking ALL output during restoration: ${terminalId}, length=${data.length}`);
-      this.logger.info(`🛡️ [OUTPUT-BLOCK] Blocking output during restoration for: ${terminalId} (${data.length} chars)`);
+      console.log(
+        `[OUTPUT-BLOCK] ⏭️ Blocking ALL output during restoration: ${terminalId}, length=${data.length}`
+      );
+      this.logger.info(
+        `🛡️ [OUTPUT-BLOCK] Blocking output during restoration for: ${terminalId} (${data.length} chars)`
+      );
       return; // Discard all PTY output during restoration protection period
     }
 

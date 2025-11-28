@@ -62,7 +62,7 @@ export class MemoryLeakDetector {
       heapTotal: memUsage.heapTotal,
       external: memUsage.external,
       arrayBuffers: memUsage.arrayBuffers,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
 
     this.snapshots.push(snapshot);
@@ -113,10 +113,9 @@ export class MemoryLeakDetector {
 
     // Check for external memory growth (native resources)
     const externalGrowth = finalSnapshot.external - initialSnapshot.external;
-    if (externalGrowth > 5 * 1024 * 1024) { // 5MB threshold
-      warnings.push(
-        `External memory grew by ${(externalGrowth / 1024 / 1024).toFixed(2)} MB`
-      );
+    if (externalGrowth > 5 * 1024 * 1024) {
+      // 5MB threshold
+      warnings.push(`External memory grew by ${(externalGrowth / 1024 / 1024).toFixed(2)} MB`);
     }
 
     const hasLeak = heapGrowthPercent > this.LEAK_THRESHOLD_PERCENT;
@@ -126,7 +125,7 @@ export class MemoryLeakDetector {
       heapGrowth,
       heapGrowthPercent,
       snapshots: this.snapshots,
-      warnings
+      warnings,
     };
   }
 
@@ -177,7 +176,7 @@ export class MemoryLeakDetector {
       '',
       'Snapshots Taken: ' + this.snapshots.length,
       'Duration: ' + ((final.timestamp - initial.timestamp) / 1000).toFixed(2) + 's',
-      ''
+      '',
     ];
 
     return report.join('\n');
@@ -187,7 +186,7 @@ export class MemoryLeakDetector {
    * Sleep for a specified duration
    */
   private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**

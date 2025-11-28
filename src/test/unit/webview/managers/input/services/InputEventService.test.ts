@@ -11,7 +11,7 @@ import { JSDOM } from 'jsdom';
 import {
   InputEventService,
   EventHandlerConfig,
-  EventMetrics as _EventMetrics
+  EventMetrics as _EventMetrics,
 } from '../../../../../../webview/managers/input/services/InputEventService';
 
 describe('InputEventService TDD Test Suite', () => {
@@ -27,7 +27,7 @@ describe('InputEventService TDD Test Suite', () => {
     jsdom = new JSDOM('<!DOCTYPE html><html><body><div id="test-element"></div></body></html>', {
       url: 'http://localhost',
       pretendToBeVisual: true,
-      resources: 'usable'
+      resources: 'usable',
     });
 
     // Setup global environment
@@ -37,7 +37,7 @@ describe('InputEventService TDD Test Suite', () => {
     global.KeyboardEvent = jsdom.window.KeyboardEvent;
     global.MouseEvent = jsdom.window.MouseEvent;
     global.performance = {
-      now: sinon.stub().returns(Date.now())
+      now: sinon.stub().returns(Date.now()),
     } as any;
 
     // Setup test elements
@@ -120,7 +120,9 @@ describe('InputEventService TDD Test Suite', () => {
       it('should register event handler with default configuration', () => {
         // Arrange: Basic event handler
         let eventTriggered = false;
-        const handler = () => { eventTriggered = true; };
+        const handler = () => {
+          eventTriggered = true;
+        };
 
         // Act: Register handler
         eventService.registerEventHandler('basic-test', testElement, 'click', handler);
@@ -148,11 +150,13 @@ describe('InputEventService TDD Test Suite', () => {
           stopPropagation: true,
           once: true,
           passive: false,
-          capture: true
+          capture: true,
         };
 
         let eventCount = 0;
-        const handler = () => { eventCount++; };
+        const handler = () => {
+          eventCount++;
+        };
 
         // Act: Register with custom config
         eventService.registerEventHandler('custom-config', testElement, 'click', handler, config);
@@ -197,11 +201,17 @@ describe('InputEventService TDD Test Suite', () => {
         const config: EventHandlerConfig = {
           passive: true,
           capture: true,
-          once: false
+          once: false,
         };
 
         // Act: Register with options
-        eventService.registerEventHandler('complex-options', testElement, 'scroll', handler, config);
+        eventService.registerEventHandler(
+          'complex-options',
+          testElement,
+          'scroll',
+          handler,
+          config
+        );
 
         // Assert: Should register successfully
         expect(eventService.hasEventHandler('complex-options')).to.be.true;
@@ -219,7 +229,13 @@ describe('InputEventService TDD Test Suite', () => {
         const handler = sinon.stub();
 
         // Act: Register with partial config
-        eventService.registerEventHandler('partial-config', testElement, 'input', handler, partialConfig);
+        eventService.registerEventHandler(
+          'partial-config',
+          testElement,
+          'input',
+          handler,
+          partialConfig
+        );
 
         // Assert: Should fill defaults and work
         expect(eventService.hasEventHandler('partial-config')).to.be.true;
@@ -251,7 +267,13 @@ describe('InputEventService TDD Test Suite', () => {
         const handler = sinon.stub();
 
         // Act: Register with null config
-        eventService.registerEventHandler('null-config', testElement, 'click', handler, null as any);
+        eventService.registerEventHandler(
+          'null-config',
+          testElement,
+          'click',
+          handler,
+          null as any
+        );
 
         // Assert: Should use defaults and work
         expect(eventService.hasEventHandler('null-config')).to.be.true;
@@ -268,10 +290,20 @@ describe('InputEventService TDD Test Suite', () => {
         let performanceEndCalled = false;
 
         (global.performance.now as sinon.SinonStub)
-          .onFirstCall().callsFake(() => { performanceStartCalled = true; return 1000; })
-          .onSecondCall().callsFake(() => { performanceEndCalled = true; return 1010; }); // 10ms processing
+          .onFirstCall()
+          .callsFake(() => {
+            performanceStartCalled = true;
+            return 1000;
+          })
+          .onSecondCall()
+          .callsFake(() => {
+            performanceEndCalled = true;
+            return 1010;
+          }); // 10ms processing
 
-        const handler = () => { /* test handler */ };
+        const handler = () => {
+          /* test handler */
+        };
 
         // Act: Register handler
         eventService.registerEventHandler('perf-test', testElement, 'click', handler);
@@ -289,7 +321,9 @@ describe('InputEventService TDD Test Suite', () => {
 
       it('should wrap handlers with error handling', () => {
         // Arrange: Handler that throws error
-        const errorHandler = () => { throw new Error('Test error'); };
+        const errorHandler = () => {
+          throw new Error('Test error');
+        };
 
         // Act: Register error handler
         eventService.registerEventHandler('error-handler', testElement, 'click', errorHandler);
@@ -300,7 +334,8 @@ describe('InputEventService TDD Test Suite', () => {
         }).to.not.throw();
 
         // Assert: Error should be logged
-        expect(logMessages.some((msg: string) => /Error in event handler error-handler/.test(msg))).to.be.true;
+        expect(logMessages.some((msg: string) => /Error in event handler error-handler/.test(msg)))
+          .to.be.true;
 
         // Assert: Error metrics should be updated
         const metrics = eventService.getGlobalMetrics();
@@ -362,11 +397,19 @@ describe('InputEventService TDD Test Suite', () => {
       it('should debounce events with default delay', () => {
         // Arrange: Debounced handler
         let callCount = 0;
-        const debouncedHandler = () => { callCount++; };
+        const debouncedHandler = () => {
+          callCount++;
+        };
         const config: EventHandlerConfig = { debounce: true };
 
         // Act: Register debounced handler
-        eventService.registerEventHandler('debounce-default', testElement, 'input', debouncedHandler, config);
+        eventService.registerEventHandler(
+          'debounce-default',
+          testElement,
+          'input',
+          debouncedHandler,
+          config
+        );
 
         // Act: Trigger multiple rapid events
         for (let i = 0; i < 5; i++) {
@@ -390,14 +433,22 @@ describe('InputEventService TDD Test Suite', () => {
       it('should debounce events with custom delay', () => {
         // Arrange: Custom debounce delay
         let callCount = 0;
-        const debouncedHandler = () => { callCount++; };
+        const debouncedHandler = () => {
+          callCount++;
+        };
         const config: EventHandlerConfig = {
           debounce: true,
-          debounceDelay: 200
+          debounceDelay: 200,
         };
 
         // Act: Register with custom delay
-        eventService.registerEventHandler('debounce-custom', testElement, 'scroll', debouncedHandler, config);
+        eventService.registerEventHandler(
+          'debounce-custom',
+          testElement,
+          'scroll',
+          debouncedHandler,
+          config
+        );
 
         // Act: Trigger events
         testElement.dispatchEvent(new jsdom.window.Event('scroll'));
@@ -415,10 +466,18 @@ describe('InputEventService TDD Test Suite', () => {
       it('should reset debounce timer on new events', () => {
         // Arrange: Debounced handler
         let callCount = 0;
-        const debouncedHandler = () => { callCount++; };
+        const debouncedHandler = () => {
+          callCount++;
+        };
         const config: EventHandlerConfig = { debounce: true, debounceDelay: 100 };
 
-        eventService.registerEventHandler('debounce-reset', testElement, 'keydown', debouncedHandler, config);
+        eventService.registerEventHandler(
+          'debounce-reset',
+          testElement,
+          'keydown',
+          debouncedHandler,
+          config
+        );
 
         // Act: Trigger event, wait partial time, trigger again
         testElement.dispatchEvent(new jsdom.window.Event('keydown'));
@@ -442,14 +501,30 @@ describe('InputEventService TDD Test Suite', () => {
         let handler1Count = 0;
         let handler2Count = 0;
 
-        const handler1 = () => { handler1Count++; };
-        const handler2 = () => { handler2Count++; };
+        const handler1 = () => {
+          handler1Count++;
+        };
+        const handler2 = () => {
+          handler2Count++;
+        };
 
         const config: EventHandlerConfig = { debounce: true, debounceDelay: 50 };
 
         // Act: Register multiple handlers
-        eventService.registerEventHandler('multi-debounce-1', testElement, 'input', handler1, config);
-        eventService.registerEventHandler('multi-debounce-2', testElement, 'change', handler2, config);
+        eventService.registerEventHandler(
+          'multi-debounce-1',
+          testElement,
+          'input',
+          handler1,
+          config
+        );
+        eventService.registerEventHandler(
+          'multi-debounce-2',
+          testElement,
+          'change',
+          handler2,
+          config
+        );
 
         // Act: Trigger different events
         testElement.dispatchEvent(new jsdom.window.Event('input'));
@@ -468,10 +543,12 @@ describe('InputEventService TDD Test Suite', () => {
       it('should handle zero debounce delay', () => {
         // Arrange: Zero delay debouncing
         let callCount = 0;
-        const handler = () => { callCount++; };
+        const handler = () => {
+          callCount++;
+        };
         const config: EventHandlerConfig = {
           debounce: true,
-          debounceDelay: 0
+          debounceDelay: 0,
         };
 
         eventService.registerEventHandler('zero-debounce', testElement, 'input', handler, config);
@@ -490,10 +567,18 @@ describe('InputEventService TDD Test Suite', () => {
       it('should handle debounce timer cleanup on service disposal', () => {
         // Arrange: Debounced handler
         let callCount = 0;
-        const handler = () => { callCount++; };
+        const handler = () => {
+          callCount++;
+        };
         const config: EventHandlerConfig = { debounce: true, debounceDelay: 100 };
 
-        eventService.registerEventHandler('cleanup-debounce', testElement, 'input', handler, config);
+        eventService.registerEventHandler(
+          'cleanup-debounce',
+          testElement,
+          'input',
+          handler,
+          config
+        );
 
         // Act: Trigger event to create timer
         testElement.dispatchEvent(new jsdom.window.Event('input'));
@@ -510,10 +595,18 @@ describe('InputEventService TDD Test Suite', () => {
 
       it('should handle errors in debounced handlers', () => {
         // Arrange: Debounced handler that throws
-        const errorHandler = () => { throw new Error('Debounced error'); };
+        const errorHandler = () => {
+          throw new Error('Debounced error');
+        };
         const config: EventHandlerConfig = { debounce: true, debounceDelay: 50 };
 
-        eventService.registerEventHandler('debounce-error', testElement, 'input', errorHandler, config);
+        eventService.registerEventHandler(
+          'debounce-error',
+          testElement,
+          'input',
+          errorHandler,
+          config
+        );
 
         // Act: Trigger event
         testElement.dispatchEvent(new jsdom.window.Event('input'));
@@ -522,7 +615,9 @@ describe('InputEventService TDD Test Suite', () => {
         clock.tick(50);
 
         // Assert: Error should be logged
-        expect(logMessages.some((msg: string) => /Error in debounced handler debounce-error/.test(msg))).to.be.true;
+        expect(
+          logMessages.some((msg: string) => /Error in debounced handler debounce-error/.test(msg))
+        ).to.be.true;
 
         const metrics = eventService.getGlobalMetrics();
         expect(metrics.totalErrors).to.equal(1);
@@ -587,7 +682,9 @@ describe('InputEventService TDD Test Suite', () => {
           return timeIndex % 2 === 1 ? startTime : endTime;
         });
 
-        const handler = () => { /* test processing */ };
+        const handler = () => {
+          /* test processing */
+        };
         eventService.registerEventHandler('perf-avg', testElement, 'click', handler);
 
         // Act: Trigger events
@@ -605,9 +702,15 @@ describe('InputEventService TDD Test Suite', () => {
     describe('Error Metrics', () => {
       it('should track error count across handlers', () => {
         // Arrange: Multiple error handlers
-        const errorHandler1 = () => { throw new Error('Error 1'); };
-        const errorHandler2 = () => { throw new Error('Error 2'); };
-        const goodHandler = () => { /* works fine */ };
+        const errorHandler1 = () => {
+          throw new Error('Error 1');
+        };
+        const errorHandler2 = () => {
+          throw new Error('Error 2');
+        };
+        const goodHandler = () => {
+          /* works fine */
+        };
 
         eventService.registerEventHandler('error-1', testElement, 'click', errorHandler1);
         eventService.registerEventHandler('error-2', testElement, 'keydown', errorHandler2);
@@ -634,7 +737,12 @@ describe('InputEventService TDD Test Suite', () => {
           }
         };
 
-        eventService.registerEventHandler('intermittent', testElement, 'click', intermittentErrorHandler);
+        eventService.registerEventHandler(
+          'intermittent',
+          testElement,
+          'click',
+          intermittentErrorHandler
+        );
 
         // Act: Trigger multiple events
         for (let i = 0; i < 6; i++) {
@@ -655,7 +763,13 @@ describe('InputEventService TDD Test Suite', () => {
         const debouncedHandler = () => {};
         const config: EventHandlerConfig = { debounce: true, debounceDelay: 50 };
 
-        eventService.registerEventHandler('debounce-metrics', testElement, 'input', debouncedHandler, config);
+        eventService.registerEventHandler(
+          'debounce-metrics',
+          testElement,
+          'input',
+          debouncedHandler,
+          config
+        );
 
         // Act: Trigger multiple events (should debounce to one execution)
         for (let i = 0; i < 10; i++) {
@@ -678,13 +792,19 @@ describe('InputEventService TDD Test Suite', () => {
         // Arrange: Mostly good handlers
         const goodHandler = () => {};
         const occasionalErrorHandler = () => {
-          if (Math.random() < 0.05) { // 5% error rate
+          if (Math.random() < 0.05) {
+            // 5% error rate
             throw new Error('Occasional error');
           }
         };
 
         eventService.registerEventHandler('good', testElement, 'click', goodHandler);
-        eventService.registerEventHandler('occasional-error', testElement, 'input', occasionalErrorHandler);
+        eventService.registerEventHandler(
+          'occasional-error',
+          testElement,
+          'input',
+          occasionalErrorHandler
+        );
 
         // Act: Trigger many events
         for (let i = 0; i < 100; i++) {
@@ -719,10 +839,14 @@ describe('InputEventService TDD Test Suite', () => {
       it('should report unhealthy status with slow processing', () => {
         // Arrange: Mock slow processing times
         (global.performance.now as sinon.SinonStub)
-          .onFirstCall().returns(1000)
-          .onSecondCall().returns(1200); // 200ms processing time
+          .onFirstCall()
+          .returns(1000)
+          .onSecondCall()
+          .returns(1200); // 200ms processing time
 
-        const slowHandler = () => { /* simulated slow processing */ };
+        const slowHandler = () => {
+          /* simulated slow processing */
+        };
         eventService.registerEventHandler('slow', testElement, 'click', slowHandler);
 
         // Act: Trigger event
@@ -766,7 +890,7 @@ describe('InputEventService TDD Test Suite', () => {
       it('should return complete list of registered handlers', () => {
         // Arrange: Register handlers
         const handlerIds = ['list-1', 'list-2', 'list-3', 'list-4'];
-        handlerIds.forEach(id => {
+        handlerIds.forEach((id) => {
           eventService.registerEventHandler(id, testElement, 'click', () => {});
         });
 
@@ -775,7 +899,7 @@ describe('InputEventService TDD Test Suite', () => {
 
         // Assert: Should contain all handlers
         expect(registeredHandlers).to.have.length(4);
-        handlerIds.forEach(id => {
+        handlerIds.forEach((id) => {
           expect(registeredHandlers).to.include(id);
         });
       });
@@ -787,7 +911,9 @@ describe('InputEventService TDD Test Suite', () => {
       it('should unregister handler and stop event handling', () => {
         // Arrange: Register handler
         let eventCount = 0;
-        const handler = () => { eventCount++; };
+        const handler = () => {
+          eventCount++;
+        };
 
         eventService.registerEventHandler('unregister-basic', testElement, 'click', handler);
 
@@ -810,10 +936,18 @@ describe('InputEventService TDD Test Suite', () => {
       it('should clear debounce timers on unregistration', () => {
         // Arrange: Debounced handler
         let callCount = 0;
-        const debouncedHandler = () => { callCount++; };
+        const debouncedHandler = () => {
+          callCount++;
+        };
         const config: EventHandlerConfig = { debounce: true, debounceDelay: 100 };
 
-        eventService.registerEventHandler('unregister-debounce', testElement, 'input', debouncedHandler, config);
+        eventService.registerEventHandler(
+          'unregister-debounce',
+          testElement,
+          'input',
+          debouncedHandler,
+          config
+        );
 
         // Act: Trigger event to create timer
         testElement.dispatchEvent(new jsdom.window.Event('input'));
@@ -922,8 +1056,13 @@ describe('InputEventService TDD Test Suite', () => {
 
         eventService.registerEventHandler('dispose-1', testElement, 'click', handler1);
         eventService.registerEventHandler('dispose-2', testElement, 'input', handler2);
-        eventService.registerEventHandler('dispose-debounced', testElement, 'scroll', debouncedHandler,
-          { debounce: true, debounceDelay: 100 });
+        eventService.registerEventHandler(
+          'dispose-debounced',
+          testElement,
+          'scroll',
+          debouncedHandler,
+          { debounce: true, debounceDelay: 100 }
+        );
 
         // Trigger events
         testElement.dispatchEvent(new jsdom.window.Event('click'));
@@ -970,7 +1109,7 @@ describe('InputEventService TDD Test Suite', () => {
       it('should clear all registered handlers tracking', () => {
         // Arrange: Multiple registered handlers
         const handlerIds = ['clear-1', 'clear-2', 'clear-3'];
-        handlerIds.forEach(id => {
+        handlerIds.forEach((id) => {
           eventService.registerEventHandler(id, testElement, 'click', () => {});
         });
 
@@ -981,7 +1120,7 @@ describe('InputEventService TDD Test Suite', () => {
 
         // Assert: No handlers should be tracked
         expect(eventService.getRegisteredHandlers()).to.have.length(0);
-        handlerIds.forEach(id => {
+        handlerIds.forEach((id) => {
           expect(eventService.hasEventHandler(id)).to.be.false;
         });
       });
@@ -1042,7 +1181,12 @@ describe('InputEventService TDD Test Suite', () => {
         }).to.not.throw();
 
         expect(() => {
-          eventService.registerEventHandler('undefined-element', undefined as any, 'click', () => {});
+          eventService.registerEventHandler(
+            'undefined-element',
+            undefined as any,
+            'click',
+            () => {}
+          );
         }).to.not.throw();
       });
 
@@ -1051,7 +1195,12 @@ describe('InputEventService TDD Test Suite', () => {
         expect(() => {
           eventService.registerEventHandler('empty-event', testElement, '', () => {});
           eventService.registerEventHandler('null-event', testElement, null as any, () => {});
-          eventService.registerEventHandler('undefined-event', testElement, undefined as any, () => {});
+          eventService.registerEventHandler(
+            'undefined-event',
+            testElement,
+            undefined as any,
+            () => {}
+          );
         }).to.not.throw();
       });
 
@@ -1059,7 +1208,12 @@ describe('InputEventService TDD Test Suite', () => {
         // Act & Assert: Should handle gracefully
         expect(() => {
           eventService.registerEventHandler('null-handler', testElement, 'click', null as any);
-          eventService.registerEventHandler('undefined-handler', testElement, 'click', undefined as any);
+          eventService.registerEventHandler(
+            'undefined-handler',
+            testElement,
+            'click',
+            undefined as any
+          );
         }).to.not.throw();
       });
     });
@@ -1081,7 +1235,9 @@ describe('InputEventService TDD Test Suite', () => {
       it('should handle rapid event firing', () => {
         // Arrange: Handler for rapid events
         let eventCount = 0;
-        const rapidHandler = () => { eventCount++; };
+        const rapidHandler = () => {
+          eventCount++;
+        };
 
         eventService.registerEventHandler('rapid-fire', testElement, 'mousemove', rapidHandler);
 
@@ -1105,7 +1261,7 @@ describe('InputEventService TDD Test Suite', () => {
         const handlerIds = ['concurrent-1', 'concurrent-2', 'concurrent-3'];
 
         // Act: Register and unregister in rapid succession
-        handlerIds.forEach(id => {
+        handlerIds.forEach((id) => {
           eventService.registerEventHandler(id, testElement, 'click', () => {});
           eventService.unregisterEventHandler(id);
         });

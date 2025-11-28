@@ -26,9 +26,8 @@ interface InternalTerminalState {
 /**
  * Terminal state change event
  */
-export const TerminalStateChangedEvent = createEventType<TerminalStateChangeData>(
-  'terminal.state.changed'
-);
+export const TerminalStateChangedEvent =
+  createEventType<TerminalStateChangeData>('terminal.state.changed');
 
 /**
  * Terminal State Service Implementation
@@ -73,10 +72,15 @@ export class TerminalStateService implements ITerminalStateService {
     });
 
     // Publish state change event
-    this._publishStateChange(id, undefined, {
-      ...fullMetadata,
-      lifecycle,
-    }, 'registered');
+    this._publishStateChange(
+      id,
+      undefined,
+      {
+        ...fullMetadata,
+        lifecycle,
+      },
+      'registered'
+    );
   }
 
   unregisterTerminal(id: string): boolean {
@@ -138,10 +142,7 @@ export class TerminalStateService implements ITerminalStateService {
     return this._terminals.get(id)?.lifecycle;
   }
 
-  updateLifecycleState(
-    id: string,
-    updates: Partial<TerminalLifecycleState>
-  ): boolean {
+  updateLifecycleState(id: string, updates: Partial<TerminalLifecycleState>): boolean {
     this._ensureNotDisposed();
 
     const state = this._terminals.get(id);
@@ -267,9 +268,7 @@ export class TerminalStateService implements ITerminalStateService {
   }
 
   getAllStates(): TerminalState[] {
-    return Array.from(this._terminals.values()).map((state) =>
-      this._getCompleteState(state)
-    );
+    return Array.from(this._terminals.values()).map((state) => this._getCompleteState(state));
   }
 
   getTerminalCount(): number {
@@ -285,9 +284,7 @@ export class TerminalStateService implements ITerminalStateService {
     return this._activeTerminalId === id;
   }
 
-  findTerminals(
-    predicate: (metadata: TerminalMetadata) => boolean
-  ): TerminalMetadata[] {
+  findTerminals(predicate: (metadata: TerminalMetadata) => boolean): TerminalMetadata[] {
     const results: TerminalMetadata[] = [];
 
     for (const state of this._terminals.values()) {

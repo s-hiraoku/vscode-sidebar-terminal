@@ -9,6 +9,7 @@ This document outlines the comprehensive Test-Driven Development (TDD) strategy 
 ### 1. **Comprehensive Test Coverage for Critical Components**
 
 #### StandardTerminalSessionManager
+
 - **File**: `src/test/unit/sessions/StandardTerminalSessionManager.TDD.test.ts`
 - **Coverage**: Session persistence, restoration, WebView communication, error handling
 - **TDD Phases**:
@@ -17,6 +18,7 @@ This document outlines the comprehensive Test-Driven Development (TDD) strategy 
   - REFACTOR: Performance optimization, memory management
 
 #### SecondaryTerminalProvider Message Handling
+
 - **File**: `src/test/unit/providers/SecondaryTerminalProvider.MessageHandling.TDD.test.ts`
 - **Coverage**: WebView ↔ Extension communication, message routing, async operations
 - **TDD Phases**:
@@ -27,6 +29,7 @@ This document outlines the comprehensive Test-Driven Development (TDD) strategy 
 ### 2. **Regression Prevention Suite**
 
 #### Terminal History Management
+
 - **File**: `src/test/unit/regression/TerminalHistoryManagement.Regression.test.ts`
 - **Purpose**: Prevent regressions from recent fixes (commits 1ead11a, d542481, 6a73e44)
 - **Areas Covered**:
@@ -40,6 +43,7 @@ This document outlines the comprehensive Test-Driven Development (TDD) strategy 
 ### 3. **Async Operations and Edge Cases Strategy**
 
 #### Comprehensive Async Testing Framework
+
 - **File**: `src/test/unit/async/AsyncOperationsStrategy.TDD.test.ts`
 - **Coverage**: WebView timeouts, concurrent operations, session interruption
 - **Advanced Patterns**:
@@ -53,11 +57,15 @@ This document outlines the comprehensive Test-Driven Development (TDD) strategy 
 ### RED-GREEN-REFACTOR Cycle Implementation
 
 #### RED Phase: Behavior Specification
+
 ```typescript
 it('should specify WebView communication timeout behavior', async () => {
   // RED: Define contract that will initially fail
   interface AsyncWebViewCommunicator {
-    sendMessageWithTimeout(message: any, timeoutMs: number): Promise<{
+    sendMessageWithTimeout(
+      message: any,
+      timeoutMs: number
+    ): Promise<{
       success: boolean;
       data?: any;
       timedOut?: boolean;
@@ -72,6 +80,7 @@ it('should specify WebView communication timeout behavior', async () => {
 ```
 
 #### GREEN Phase: Minimal Implementation
+
 ```typescript
 async sendMessageWithTimeout(message: any, timeoutMs: number): Promise<{...}> {
   return new Promise((resolve) => {
@@ -89,6 +98,7 @@ async sendMessageWithTimeout(message: any, timeoutMs: number): Promise<{...}> {
 ```
 
 #### REFACTOR Phase: Quality Improvement
+
 ```typescript
 class OptimizedWebViewCommunicator {
   private pendingRequests = new Map<string, PendingRequest>();
@@ -110,6 +120,7 @@ class OptimizedWebViewCommunicator {
 ## 📊 Test Quality Metrics
 
 ### Current Coverage Status
+
 - **Total Tests**: 275+ (with new TDD tests: ~350+)
 - **TDD Compliance**: Target 85% (from 50%)
 - **Success Rate**: Target 95% (from 93%)
@@ -118,21 +129,25 @@ class OptimizedWebViewCommunicator {
 ### Test Categories
 
 #### Unit Tests
+
 - Component functionality and edge cases
 - Mock-based isolation testing
 - Async operation behavior verification
 
 #### Integration Tests
+
 - End-to-end terminal lifecycle scenarios
 - WebView ↔ Extension Host communication
 - CLI agent interaction patterns
 
 #### Regression Tests
+
 - Historical bug prevention
 - Recent fix validation
 - Performance characteristic preservation
 
 #### Performance Tests
+
 - Buffer management under load
 - Memory leak detection
 - Resource cleanup verification
@@ -140,6 +155,7 @@ class OptimizedWebViewCommunicator {
 ## 🚀 TDD Scripts and Commands
 
 ### Core TDD Workflow
+
 ```bash
 # RED Phase: Run failing tests
 npm run tdd:red
@@ -155,6 +171,7 @@ npm run tdd:quality-gate
 ```
 
 ### Specific Test Execution
+
 ```bash
 # Session Manager TDD Tests
 npm run compile-tests
@@ -173,11 +190,13 @@ npm run compile-tests
 ## 🎯 Quality Gates
 
 ### Pre-Commit Checks
+
 ```bash
 npm run tdd:quality-gate  # Must pass before commit
 ```
 
 ### CI/CD Integration
+
 ```yaml
 # GitHub Actions Quality Gate
 - name: TDD Quality Gate
@@ -192,21 +211,25 @@ npm run tdd:quality-gate  # Must pass before commit
 ## 📈 Benefits Delivered
 
 ### 1. **Regression Prevention**
+
 - Tests capture exact behavior that was previously broken
 - Prevent infinite loops, race conditions, memory leaks
 - Ensure VS Code standard compliance continues working
 
 ### 2. **Reliability Improvement**
+
 - Comprehensive async operation testing
 - Error recovery scenario validation
 - Resource cleanup verification
 
 ### 3. **Maintainability Enhancement**
+
 - Clear behavior specifications in test names
 - Executable documentation through tests
 - Refactoring safety through comprehensive test coverage
 
 ### 4. **Development Velocity**
+
 - Rapid feedback on changes
 - Confident refactoring with safety net
 - Clear specification of expected behavior
@@ -214,6 +237,7 @@ npm run tdd:quality-gate  # Must pass before commit
 ## 🔍 Test Structure Patterns
 
 ### Descriptive Test Naming
+
 ```typescript
 describe('StandardTerminalSessionManager - TDD Complete Suite', () => {
   describe('RED Phase: Configuration Management (Behavior Specification)', () => {
@@ -237,6 +261,7 @@ describe('StandardTerminalSessionManager - TDD Complete Suite', () => {
 ```
 
 ### Comprehensive Error Scenarios
+
 ```typescript
 describe('Error Handling and Edge Cases (Regression Prevention)', () => {
   it('should handle save operation failures gracefully', async () => {
@@ -269,11 +294,13 @@ describe('Error Handling and Edge Cases (Regression Prevention)', () => {
 ## 🎯 Next Steps
 
 ### Immediate Actions
+
 1. Run new TDD test suite to establish baseline
 2. Integrate TDD quality gates into CI/CD pipeline
 3. Train team on new testing patterns and tools
 
 ### Continuous Improvement
+
 1. Monitor test success rates and TDD compliance metrics
 2. Expand TDD patterns to other components
 3. Refine async testing strategies based on real-world usage

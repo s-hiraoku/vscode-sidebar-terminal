@@ -13,10 +13,7 @@ export { MessageHandlerRegistryBase } from './MessageHandlerRegistryBase';
 export { ManagerCoordinatorBase } from './ManagerCoordinatorBase';
 
 // Types
-export type {
-  InitializationMetrics,
-  InitializationContext,
-} from './WebViewInitializationTemplate';
+export type { InitializationMetrics, InitializationContext } from './WebViewInitializationTemplate';
 
 export type {
   MessageHandler,

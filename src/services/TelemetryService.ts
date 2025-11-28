@@ -156,9 +156,7 @@ export class TelemetryService {
    * Track extension deactivation
    */
   public trackDeactivation(): void {
-    const sessionDuration = this.activationTime
-      ? Date.now() - this.activationTime
-      : 0;
+    const sessionDuration = this.activationTime ? Date.now() - this.activationTime : 0;
 
     this.telemetryLogger.logUsage(TelemetryEventType.ExtensionDeactivated, {
       extensionId: this.extensionId,
@@ -318,11 +316,7 @@ export class TelemetryService {
   /**
    * Measure sync operation performance
    */
-  public measure<T>(
-    operation: string,
-    fn: () => T,
-    metadata?: TelemetryProperties
-  ): T {
+  public measure<T>(operation: string, fn: () => T, metadata?: TelemetryProperties): T {
     const startTime = Date.now();
     let success = true;
 

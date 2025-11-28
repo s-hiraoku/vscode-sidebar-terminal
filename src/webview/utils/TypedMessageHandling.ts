@@ -107,15 +107,19 @@ export class MessageDataValidator<T extends MessagePayload = MessagePayload> {
     return {
       data: typedData as T,
       isValid,
-      errors
+      errors,
     };
   }
 
-  public static createTerminalValidator(logger: LoggerFunction): MessageDataValidator<TerminalMessageData> {
+  public static createTerminalValidator(
+    logger: LoggerFunction
+  ): MessageDataValidator<TerminalMessageData> {
     return new MessageDataValidator(['terminalId'], logger);
   }
 
-  public static createSessionValidator(logger: LoggerFunction): MessageDataValidator<SessionMessageData> {
+  public static createSessionValidator(
+    logger: LoggerFunction
+  ): MessageDataValidator<SessionMessageData> {
     return new MessageDataValidator(['sessionId', 'terminalStates'], logger);
   }
 }
@@ -138,26 +142,27 @@ export class TypedMessageRouter {
   public registerHandler<T extends MessagePayload>(
     registration: TypedMessageRegistration<T>
   ): void {
-    this.handlers.set(registration.command, registration.handler as TypedMessageHandler<MessagePayload>);
+    this.handlers.set(
+      registration.command,
+      registration.handler as TypedMessageHandler<MessagePayload>
+    );
 
     if (registration.validator) {
-      this.validators.set(registration.command, registration.validator as MessageDataValidator<MessagePayload>);
+      this.validators.set(
+        registration.command,
+        registration.validator as MessageDataValidator<MessagePayload>
+      );
     }
 
     this.logger(`✅ Registered handler for command: "${registration.command}"`);
   }
 
-  public registerMultipleHandlers(
-    registrations: ReadonlyArray<TypedMessageRegistration>
-  ): void {
-    registrations.forEach(registration => this.registerHandler(registration));
+  public registerMultipleHandlers(registrations: ReadonlyArray<TypedMessageRegistration>): void {
+    registrations.forEach((registration) => this.registerHandler(registration));
     this.logger(`✅ Registered ${registrations.length} handlers`);
   }
 
-  public async processMessage(
-    command: string,
-    rawData: unknown
-  ): Promise<MessageProcessingResult> {
+  public async processMessage(command: string, rawData: unknown): Promise<MessageProcessingResult> {
     const startTime = performance.now();
 
     try {
@@ -183,7 +188,6 @@ export class TypedMessageRouter {
       await handler(rawData as MessagePayload);
 
       return this.createSuccessResult(command, startTime);
-
     } catch (error) {
       const processedError = error instanceof Error ? error : new Error(String(error));
       this.logger(`❌ Handler failed for command ${command}:`, processedError);
@@ -213,7 +217,7 @@ export class TypedMessageRouter {
     return {
       success: true,
       command,
-      processingTimeMs: performance.now() - startTime
+      processingTimeMs: performance.now() - startTime,
     };
   }
 
@@ -226,7 +230,7 @@ export class TypedMessageRouter {
       success: false,
       command,
       processingTimeMs: performance.now() - startTime,
-      error
+      error,
     };
   }
 }
@@ -260,10 +264,7 @@ export class TypedMessageSender {
     this.logger = customLogger ?? this.createDefaultLogger();
   }
 
-  public sendMessage<T extends MessagePayload>(
-    command: string,
-    data: T = {} as T
-  ): void {
+  public sendMessage<T extends MessagePayload>(command: string, data: T = {} as T): void {
     try {
       const message = { command, ...data };
       this.vscodeApi.postMessage(message);
@@ -297,7 +298,7 @@ export class TypedMessageSender {
     const messagesToRetry = [...this.messageQueue];
     this.messageQueue.length = 0;
 
-    messagesToRetry.forEach(queuedMessage => {
+    messagesToRetry.forEach((queuedMessage) => {
       if (queuedMessage.retryCount < this.maxRetries) {
         setTimeout(() => {
           this.sendMessage(queuedMessage.command, queuedMessage.data);
@@ -313,7 +314,7 @@ export class TypedMessageSender {
       command,
       data,
       timestamp: Date.now(),
-      retryCount: 0
+      retryCount: 0,
     };
 
     this.messageQueue.push(queuedMessage);
@@ -351,7 +352,6 @@ export function createTypedMessageEventListener(
       if (!result.success && onUnhandledMessage) {
         onUnhandledMessage(event);
       }
-
     } catch (error) {
       console.error('Error processing message event:', error);
       onUnhandledMessage?.(event);
@@ -391,7 +391,7 @@ export const MESSAGE_COMMANDS = {
 
   // 通知
   NOTIFICATION_SHOW: 'notification:show',
-  NOTIFICATION_HIDE: 'notification:hide'
+  NOTIFICATION_HIDE: 'notification:hide',
 } as const;
 
-export type MessageCommand = typeof MESSAGE_COMMANDS[keyof typeof MESSAGE_COMMANDS];
+export type MessageCommand = (typeof MESSAGE_COMMANDS)[keyof typeof MESSAGE_COMMANDS];

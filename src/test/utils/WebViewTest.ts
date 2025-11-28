@@ -102,7 +102,7 @@ export abstract class WebViewTest extends BaseTest {
     if (!found) {
       throw new Error(
         `Expected message with command "${command}" to be posted, ` +
-        `but found: ${JSON.stringify(this.messageQueue.map((m) => m.command))}`
+          `but found: ${JSON.stringify(this.messageQueue.map((m) => m.command))}`
       );
     }
   }
@@ -110,10 +110,7 @@ export abstract class WebViewTest extends BaseTest {
   /**
    * Wait for message to be posted
    */
-  protected async waitForMessage(
-    command: string,
-    timeout: number = 1000
-  ): Promise<any> {
+  protected async waitForMessage(command: string, timeout: number = 1000): Promise<any> {
     const startTime = Date.now();
 
     while (Date.now() - startTime < timeout) {
@@ -125,7 +122,7 @@ export abstract class WebViewTest extends BaseTest {
 
     throw new Error(
       `Timeout waiting for message with command "${command}". ` +
-      `Found: ${JSON.stringify(this.messageQueue.map((m) => m.command))}`
+        `Found: ${JSON.stringify(this.messageQueue.map((m) => m.command))}`
     );
   }
 

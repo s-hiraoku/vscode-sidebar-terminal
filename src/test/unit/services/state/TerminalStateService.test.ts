@@ -229,9 +229,7 @@ describe('TerminalStateService', () => {
 
       service.setInteractionState('term1', InteractionState.Session);
 
-      expect(service.getInteractionState('term1')).to.equal(
-        InteractionState.Session
-      );
+      expect(service.getInteractionState('term1')).to.equal(InteractionState.Session);
     });
 
     it('should return undefined for non-existent terminal states', () => {

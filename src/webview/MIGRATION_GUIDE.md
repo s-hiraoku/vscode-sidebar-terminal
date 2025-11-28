@@ -7,9 +7,11 @@ This guide helps migrate from legacy message handling to our new type-safe frame
 ## Key Components
 
 ### 1. BaseManager (Unified)
+
 **Location**: `src/webview/managers/BaseManager.ts`
 
 **Features**:
+
 - Performance tracking with `ManagerPerformanceTracker`
 - Error handling with `ManagerErrorHandler`
 - Resource management with `ResourceManager`
@@ -17,6 +19,7 @@ This guide helps migrate from legacy message handling to our new type-safe frame
 - Type-safe logger functions
 
 **Migration**:
+
 ```typescript
 // Old approach
 class MyManager {
@@ -33,7 +36,7 @@ class MyManager extends BaseManager {
     super('MyManager', {
       enableLogging: true,
       enablePerformanceTracking: true,
-      enableErrorRecovery: true
+      enableErrorRecovery: true,
     });
   }
 
@@ -48,9 +51,11 @@ class MyManager extends BaseManager {
 ```
 
 ### 2. TypedMessageHandling
+
 **Location**: `src/webview/utils/TypedMessageHandling.ts`
 
 **Features**:
+
 - Complete elimination of `any` types
 - Type-safe message routing with `TypedMessageRouter`
 - Validated message data with `MessageDataValidator`
@@ -58,13 +63,14 @@ class MyManager extends BaseManager {
 - Automatic error handling and recovery
 
 **Migration**:
+
 ```typescript
 // Old approach
 router.register({
   command: 'terminalCreate',
   handler: (data: any) => {
     console.log('Creating terminal:', data.terminalId);
-  }
+  },
 });
 
 // New approach
@@ -77,18 +83,21 @@ router.registerHandler<TerminalMessageData>({
     // data.terminalId is type-safe (string)
     console.log('Creating terminal:', data.terminalId);
   },
-  validator: MessageDataValidator.createTerminalValidator(logger)
+  validator: MessageDataValidator.createTerminalValidator(logger),
 });
 ```
 
 ### 3. Message Types
+
 **Available Message Types**:
+
 - `TerminalMessageData`: Terminal operations
 - `SessionMessageData`: Session management
 - `ConfigurationMessageData`: Configuration updates
 - `StatusMessageData`: Status notifications
 
 **Usage**:
+
 ```typescript
 import { TerminalMessageData, TypedMessageHandler } from './TypedMessageHandling';
 
@@ -100,39 +109,44 @@ const terminalHandler: TypedMessageHandler<TerminalMessageData> = async (data) =
 ```
 
 ### 4. Constants Migration
+
 **Old**: `COMMON_COMMANDS` in MessageHandlingUtils.ts
 **New**: `MESSAGE_COMMANDS` in TypedMessageHandling.ts
 
 ```typescript
 // Old
 import { COMMON_COMMANDS } from './MessageHandlingUtils';
-COMMON_COMMANDS.CREATE_TERMINAL
+COMMON_COMMANDS.CREATE_TERMINAL;
 
 // New
 import { MESSAGE_COMMANDS } from './TypedMessageHandling';
-MESSAGE_COMMANDS.TERMINAL_CREATE
+MESSAGE_COMMANDS.TERMINAL_CREATE;
 ```
 
 ## Migration Steps
 
 ### Step 1: Update Manager Base Classes
+
 1. Extend `BaseManager` instead of custom base classes
 2. Implement `doInitialize()` and `doDispose()` abstract methods
 3. Use provided logger and error handling utilities
 
 ### Step 2: Migrate Message Handling
+
 1. Replace `MessageRouter` with `TypedMessageRouter`
 2. Define specific message data types
 3. Add validators for critical message types
 4. Update command constants
 
 ### Step 3: Type Safety Improvements
+
 1. Replace `any` types with specific interfaces
 2. Use `unknown` for truly unknown data
 3. Implement proper type guards where needed
 4. Add validation for external data
 
 ### Step 4: Testing
+
 1. Update test mocks to use new interfaces
 2. Add tests for type validation
 3. Verify error handling scenarios
@@ -141,24 +155,28 @@ MESSAGE_COMMANDS.TERMINAL_CREATE
 ## Benefits
 
 ### Type Safety
+
 - Eliminates runtime type errors
 - Provides IDE autocompletion
 - Catches errors at compile time
 - Improves code maintainability
 
 ### Performance
+
 - Automatic performance tracking
 - Error counting and reporting
 - Resource usage monitoring
 - Initialization time tracking
 
 ### Maintainability
+
 - Consistent error handling patterns
 - Centralized logging utilities
 - Automated resource cleanup
 - Health status monitoring
 
 ### Developer Experience
+
 - Clear migration path
 - Comprehensive type definitions
 - Detailed error messages
@@ -167,6 +185,7 @@ MESSAGE_COMMANDS.TERMINAL_CREATE
 ## Example: Complete Migration
 
 **Before**:
+
 ```typescript
 export class OldTerminalManager {
   private handlers = new Map<string, (data: any) => void>();
@@ -192,6 +211,7 @@ export class OldTerminalManager {
 ```
 
 **After**:
+
 ```typescript
 import { BaseManager, ManagerInitOptions } from './BaseManager';
 import {
@@ -199,7 +219,7 @@ import {
   TerminalMessageData,
   MESSAGE_COMMANDS,
   MessageDataValidator,
-  VSCodeWebviewAPI
+  VSCodeWebviewAPI,
 } from '../utils/TypedMessageHandling';
 
 export class ModernTerminalManager extends BaseManager {
@@ -213,7 +233,7 @@ export class ModernTerminalManager extends BaseManager {
       enableLogging: true,
       enablePerformanceTracking: true,
       enableErrorRecovery: true,
-      ...options
+      ...options,
     });
 
     this.messageRouter = new TypedMessageRouter('TerminalManager', this.logger);
@@ -236,7 +256,7 @@ export class ModernTerminalManager extends BaseManager {
         await this.createTerminal(data);
       },
       validator: MessageDataValidator.createTerminalValidator(this.logger),
-      description: 'Creates a new terminal instance'
+      description: 'Creates a new terminal instance',
     });
   }
 
@@ -249,18 +269,15 @@ export class ModernTerminalManager extends BaseManager {
 
   private async createTerminal(data: TerminalMessageData): Promise<void> {
     // Implementation with full type safety
-    return this.executeWithErrorHandling(
-      async () => {
-        // Type-safe terminal creation logic
-      },
-      'createTerminal'
-    );
+    return this.executeWithErrorHandling(async () => {
+      // Type-safe terminal creation logic
+    }, 'createTerminal');
   }
 
   public getHealthStatus() {
     return {
       ...super.getHealthStatus(),
-      registeredCommands: this.messageRouter.getRegisteredCommands()
+      registeredCommands: this.messageRouter.getRegisteredCommands(),
     };
   }
 }

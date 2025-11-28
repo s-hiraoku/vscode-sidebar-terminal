@@ -239,12 +239,14 @@ export class CliAgentDetectionEngine {
         }
       }
 
-      return bestResult || {
-        isTerminated: false,
-        confidence: 0,
-        detectedLine: '',
-        reason: 'No termination detected',
-      };
+      return (
+        bestResult || {
+          isTerminated: false,
+          confidence: 0,
+          detectedLine: '',
+          reason: 'No termination detected',
+        }
+      );
     } catch (error) {
       log('ERROR: Termination detection failed:', error);
       return {
@@ -438,7 +440,7 @@ export class CliAgentDetectionEngine {
     }
 
     // Delete collected keys
-    keysToDelete.forEach(key => this.detectionCache.delete(key));
+    keysToDelete.forEach((key) => this.detectionCache.delete(key));
     log(`🧹 [CACHE-CLEAR] Cleared ${keysToDelete.length} entries for terminal ${terminalId}`);
   }
 

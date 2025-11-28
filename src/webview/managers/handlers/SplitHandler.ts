@@ -47,9 +47,14 @@ export class SplitHandler implements IMessageHandler {
    */
   private handleSplit(msg: MessageCommand, coordinator: IManagerCoordinator): void {
     try {
-      const direction = (msg as { direction?: string }).direction as 'horizontal' | 'vertical' | undefined;
+      const direction = (msg as { direction?: string }).direction as
+        | 'horizontal'
+        | 'vertical'
+        | undefined;
       this.logger.info(`🔀 [WEBVIEW] ==================== SPLIT COMMAND ====================`);
-      this.logger.info(`🔀 [WEBVIEW] Received split command with direction: ${direction || 'auto'}`);
+      this.logger.info(
+        `🔀 [WEBVIEW] Received split command with direction: ${direction || 'auto'}`
+      );
 
       // Get split manager from coordinator
       const splitManager = (coordinator as { getSplitManager?: () => unknown }).getSplitManager?.();
@@ -61,10 +66,14 @@ export class SplitHandler implements IMessageHandler {
       // Call splitTerminal with the direction
       if (direction) {
         this.logger.info(`🔀 [WEBVIEW] Calling splitTerminal with direction: ${direction}`);
-        (splitManager as { splitTerminal: (direction: 'horizontal' | 'vertical') => void }).splitTerminal(direction);
+        (
+          splitManager as { splitTerminal: (direction: 'horizontal' | 'vertical') => void }
+        ).splitTerminal(direction);
       } else {
         this.logger.info(`🔀 [WEBVIEW] Calling splitTerminal with default direction`);
-        (splitManager as { splitTerminal: (direction: 'horizontal' | 'vertical') => void }).splitTerminal('vertical'); // Default
+        (
+          splitManager as { splitTerminal: (direction: 'horizontal' | 'vertical') => void }
+        ).splitTerminal('vertical'); // Default
       }
 
       this.logger.info(`🔀 [WEBVIEW] ===========================================================`);
@@ -79,9 +88,14 @@ export class SplitHandler implements IMessageHandler {
    */
   private handleRelayoutTerminals(msg: MessageCommand, coordinator: IManagerCoordinator): void {
     try {
-      const direction = (msg as { direction?: string }).direction as 'horizontal' | 'vertical' | undefined;
+      const direction = (msg as { direction?: string }).direction as
+        | 'horizontal'
+        | 'vertical'
+        | undefined;
       this.logger.info(`🔄 [WEBVIEW] ==================== RELAYOUT COMMAND ====================`);
-      this.logger.info(`🔄 [WEBVIEW] Received relayout command with direction: ${direction || 'auto'}`);
+      this.logger.info(
+        `🔄 [WEBVIEW] Received relayout command with direction: ${direction || 'auto'}`
+      );
 
       // Get split manager from coordinator
       const splitManager = (coordinator as { getSplitManager?: () => unknown }).getSplitManager?.();
@@ -103,7 +117,8 @@ export class SplitHandler implements IMessageHandler {
       // Update split direction
       const newDirection = direction || 'vertical';
       this.logger.info(`🔄 [WEBVIEW] Updating split direction to: ${newDirection}`);
-      (splitManager as { splitDirection: 'horizontal' | 'vertical' | null }).splitDirection = newDirection;
+      (splitManager as { splitDirection: 'horizontal' | 'vertical' | null }).splitDirection =
+        newDirection;
 
       // Get container manager and apply new layout
       const containerManager = coordinator.getTerminalContainerManager?.();
@@ -112,7 +127,9 @@ export class SplitHandler implements IMessageHandler {
         return;
       }
 
-      const orderedIds = (containerManager as { getContainerOrder: () => string[] }).getContainerOrder();
+      const orderedIds = (
+        containerManager as { getContainerOrder: () => string[] }
+      ).getContainerOrder();
       this.logger.info(`🔄 [WEBVIEW] Applying new layout to ${orderedIds.length} terminals`);
 
       (containerManager as { applyDisplayState: (state: unknown) => void }).applyDisplayState({
@@ -123,7 +140,9 @@ export class SplitHandler implements IMessageHandler {
       });
 
       this.logger.info(`🔄 [WEBVIEW] ✅ Relayout completed successfully`);
-      this.logger.info(`🔄 [WEBVIEW] ===============================================================`);
+      this.logger.info(
+        `🔄 [WEBVIEW] ===============================================================`
+      );
     } catch (error) {
       this.logger.error('Error handling relayout terminals message', error);
     }

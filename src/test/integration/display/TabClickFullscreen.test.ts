@@ -114,7 +114,7 @@ describe('Tab Click Fullscreen Integration (Issue #198)', function () {
       const snapshot = containerManager.getDisplaySnapshot();
       expect(snapshot.visibleTerminals).to.deep.equal(['2']);
       const allTerminals = ['1', '2', '3'];
-      const hiddenTerminals = allTerminals.filter(id => !snapshot.visibleTerminals.includes(id));
+      const hiddenTerminals = allTerminals.filter((id) => !snapshot.visibleTerminals.includes(id));
       expect(hiddenTerminals).to.have.members(['1', '3']);
     });
 
@@ -256,7 +256,7 @@ describe('Tab Click Fullscreen Integration (Issue #198)', function () {
       const snapshot = containerManager.getDisplaySnapshot();
       expect(snapshot.visibleTerminals).to.include('2');
       const allTerminals = ['1', '2', '3'];
-      const hiddenTerminals = allTerminals.filter(id => !snapshot.visibleTerminals.includes(id));
+      const hiddenTerminals = allTerminals.filter((id) => !snapshot.visibleTerminals.includes(id));
       expect(hiddenTerminals).to.include('1');
       expect(hiddenTerminals).to.include('3');
     });

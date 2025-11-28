@@ -118,11 +118,10 @@ export class MessageLogger {
    * Log message received
    */
   public logMessageReceived(source: string, message: WebviewMessage): void {
-    this.debug(
-      source,
-      `Message received: ${message.command}`,
-      { command: message.command, timestamp: Date.now() }
-    );
+    this.debug(source, `Message received: ${message.command}`, {
+      command: message.command,
+      timestamp: Date.now(),
+    });
   }
 
   /**
@@ -130,22 +129,17 @@ export class MessageLogger {
    */
   public logMessageSent(source: string, message: unknown): void {
     const command = (message as any)?.command || 'unknown';
-    this.debug(
-      source,
-      `Message sent: ${command}`,
-      { command, timestamp: Date.now() }
-    );
+    this.debug(source, `Message sent: ${command}`, { command, timestamp: Date.now() });
   }
 
   /**
    * Log message handling started
    */
   public logHandlingStarted(source: string, message: WebviewMessage, handlerName: string): void {
-    this.info(
-      source,
-      `Handler '${handlerName}' processing: ${message.command}`,
-      { command: message.command, handler: handlerName }
-    );
+    this.info(source, `Handler '${handlerName}' processing: ${message.command}`, {
+      command: message.command,
+      handler: handlerName,
+    });
   }
 
   /**
@@ -185,11 +179,10 @@ export class MessageLogger {
    * Log validation error
    */
   public logValidationError(source: string, message: WebviewMessage, error: string): void {
-    this.error(
-      source,
-      `Validation failed for ${message.command}: ${error}`,
-      { command: message.command, error }
-    );
+    this.error(source, `Validation failed for ${message.command}: ${error}`, {
+      command: message.command,
+      error,
+    });
   }
 
   /**

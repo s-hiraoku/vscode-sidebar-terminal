@@ -42,7 +42,7 @@ describe('🔍 CLI Agent Pattern Registry Unit Tests', () => {
     it('should return valid pattern definitions for each agent', () => {
       const agentTypes: AgentType[] = ['claude', 'gemini', 'codex', 'copilot'];
 
-      agentTypes.forEach(agentType => {
+      agentTypes.forEach((agentType) => {
         const patterns = registry.getAgentPatterns(agentType);
 
         expect(patterns).to.not.be.undefined;
@@ -59,7 +59,12 @@ describe('🔍 CLI Agent Pattern Registry Unit Tests', () => {
       const allPatterns = registry.getAllAgentPatterns();
 
       expect(allPatterns).to.have.lengthOf(4);
-      expect(allPatterns.map(p => p.type)).to.include.members(['claude', 'gemini', 'codex', 'copilot']);
+      expect(allPatterns.map((p) => p.type)).to.include.members([
+        'claude',
+        'gemini',
+        'codex',
+        'copilot',
+      ]);
     });
   });
 

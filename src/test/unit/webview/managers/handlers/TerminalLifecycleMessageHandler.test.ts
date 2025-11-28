@@ -55,7 +55,7 @@ describe('TerminalLifecycleMessageHandler', () => {
         message: {} as any,
         notification: {} as any,
       }),
-      getMessageManager: () => ({} as any),
+      getMessageManager: () => ({}) as any,
     } as IManagerCoordinator;
 
     // Create mock message queue

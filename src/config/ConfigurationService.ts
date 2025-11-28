@@ -8,6 +8,7 @@
 import * as vscode from 'vscode';
 import { extension as log } from '../utils/logger';
 import { FeatureFlagService } from '../services/FeatureFlagService';
+import { DisposableBase } from '../patterns/DisposableBase';
 
 /**
  * 設定変更イベントハンドラー
@@ -21,17 +22,23 @@ export type ConfigChangeHandler = (
 
 /**
  * 統一された設定サービス
+ *
+ * DisposableBaseを継承してリソース管理を標準化
  */
-export class ConfigurationService implements vscode.Disposable {
+export class ConfigurationService extends DisposableBase {
   private static instance: ConfigurationService;
-  private configCache = new Map<string, unknown>();
-  private changeHandlers = new Set<ConfigChangeHandler>();
-  private disposables: vscode.Disposable[] = [];
-  private featureFlagService: FeatureFlagService;
+  private readonly configCache = new Map<string, unknown>();
+  private readonly changeHandlers = new Set<ConfigChangeHandler>();
+  private readonly featureFlagService: FeatureFlagService;
 
   private constructor() {
+    super();
     this.featureFlagService = new FeatureFlagService();
     this.setupConfigurationWatcher();
+
+    // Register cleanup actions for collections
+    this.registerCleanup(() => this.configCache.clear());
+    this.registerCleanup(() => this.changeHandlers.clear());
   }
 
   /**
@@ -45,16 +52,11 @@ export class ConfigurationService implements vscode.Disposable {
   }
 
   /**
-   * リソースを解放
+   * Additional cleanup specific to this service
    */
-  dispose(): void {
-    this.disposables.forEach((d) => {
-      d.dispose();
-    });
-    this.disposables = [];
-    this.configCache.clear();
-    this.changeHandlers.clear();
+  protected doDispose(): void {
     this.featureFlagService.dispose();
+    log('🧹 [ConfigurationService] Disposed');
   }
 
   // === VS Code設定セクション取得 ===
@@ -227,7 +229,11 @@ export class ConfigurationService implements vscode.Disposable {
         'enableGitHubCopilotIntegration',
         true
       ),
-      highlightActiveBorder: this.getCachedValue('secondaryTerminal', 'highlightActiveBorder', true),
+      highlightActiveBorder: this.getCachedValue(
+        'secondaryTerminal',
+        'highlightActiveBorder',
+        true
+      ),
     };
   }
 
@@ -389,7 +395,8 @@ export class ConfigurationService implements vscode.Disposable {
       }
     });
 
-    this.disposables.push(disposable);
+    // Use DisposableBase's registerDisposable instead of manual array
+    this.registerDisposable(disposable);
   }
 
   /**

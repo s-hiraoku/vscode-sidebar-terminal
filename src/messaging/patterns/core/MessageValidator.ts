@@ -77,11 +77,7 @@ export class MessageValidator {
   public validate(message: WebviewMessage): void {
     const result = this.validateMessage(message);
     if (!result.valid) {
-      throw new MessageValidationError(
-        result.errors.join('; '),
-        undefined,
-        message.command
-      );
+      throw new MessageValidationError(result.errors.join('; '), undefined, message.command);
     }
   }
 
@@ -161,10 +157,11 @@ export class MessageValidator {
   /**
    * Validate message has terminal ID
    */
-  public hasTerminalId(message: WebviewMessage): message is WebviewMessage & { terminalId: string } {
+  public hasTerminalId(
+    message: WebviewMessage
+  ): message is WebviewMessage & { terminalId: string } {
     return (
-      typeof (message as any).terminalId === 'string' &&
-      (message as any).terminalId.length > 0
+      typeof (message as any).terminalId === 'string' && (message as any).terminalId.length > 0
     );
   }
 
@@ -175,12 +172,7 @@ export class MessageValidator {
     message: WebviewMessage
   ): message is WebviewMessage & { cols: number; rows: number } {
     const { cols, rows } = message as any;
-    return (
-      typeof cols === 'number' &&
-      typeof rows === 'number' &&
-      cols > 0 &&
-      rows > 0
-    );
+    return typeof cols === 'number' && typeof rows === 'number' && cols > 0 && rows > 0;
   }
 
   /**
@@ -222,9 +214,7 @@ export class MessageValidator {
           const actualType = Array.isArray(value) ? 'array' : typeof value;
 
           if (actualType !== expectedType) {
-            errors.push(
-              `Field '${field}' must be of type ${expectedType}, got ${actualType}`
-            );
+            errors.push(`Field '${field}' must be of type ${expectedType}, got ${actualType}`);
           }
         }
       }

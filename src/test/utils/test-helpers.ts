@@ -75,7 +75,12 @@ export function captureStubCalls<T extends any[]>(stub: sinon.SinonStub): T[] {
  */
 export function resetAllStubs(obj: any): void {
   Object.values(obj).forEach((value) => {
-    if (value && typeof value === 'object' && 'reset' in value && typeof value.reset === 'function') {
+    if (
+      value &&
+      typeof value === 'object' &&
+      'reset' in value &&
+      typeof value.reset === 'function'
+    ) {
       value.reset();
     }
   });
@@ -94,14 +99,9 @@ export function createSpy<T extends (...args: any[]) => any>(
 /**
  * Asserts that a stub was called with specific arguments
  */
-export function assertStubCalledWith(
-  stub: sinon.SinonStub,
-  ...args: any[]
-): void {
+export function assertStubCalledWith(stub: sinon.SinonStub, ...args: any[]): void {
   const calls = stub.getCalls();
-  const found = calls.some((call) =>
-    args.every((arg, index) => call.args[index] === arg)
-  );
+  const found = calls.some((call) => args.every((arg, index) => call.args[index] === arg));
 
   if (!found) {
     throw new Error(
@@ -113,12 +113,11 @@ export function assertStubCalledWith(
 /**
  * Asserts that a stub was called a specific number of times
  */
-export function assertStubCallCount(
-  stub: sinon.SinonStub,
-  expectedCount: number
-): void {
+export function assertStubCallCount(stub: sinon.SinonStub, expectedCount: number): void {
   const actualCount = stub.callCount;
   if (actualCount !== expectedCount) {
-    throw new Error(`Expected stub to be called ${expectedCount} times, but was called ${actualCount} times`);
+    throw new Error(
+      `Expected stub to be called ${expectedCount} times, but was called ${actualCount} times`
+    );
   }
 }

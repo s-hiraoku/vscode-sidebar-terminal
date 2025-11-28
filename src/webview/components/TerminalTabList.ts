@@ -94,7 +94,14 @@ export class TerminalTabList {
   }
 
   private setupStyles(): void {
+    // 🔧 FIX: Prevent duplicate style injection
+    const existingStyle = document.getElementById('terminal-tab-list-styles');
+    if (existingStyle) {
+      return; // Styles already injected
+    }
+
     const style = document.createElement('style');
+    style.id = 'terminal-tab-list-styles';
     style.textContent = `
       .terminal-tabs-container {
         display: flex;
@@ -426,6 +433,33 @@ export class TerminalTabList {
     this.updateTabVisibility();
   }
 
+  /**
+   * 🔧 FIX: Reorder existing tabs without recreating DOM elements
+   * This prevents duplicate tabs from appearing
+   */
+  public reorderTabs(newOrder: string[]): void {
+    log(`🔄 [TAB-LIST] Reordering tabs: ${newOrder.join(', ')}`);
+
+    // Get existing tab elements in DOM
+    const existingElements = new Map<string, HTMLElement>();
+    this.tabsContainer.querySelectorAll('.terminal-tab').forEach((el) => {
+      const tabId = el.getAttribute('data-tab-id');
+      if (tabId) {
+        existingElements.set(tabId, el as HTMLElement);
+      }
+    });
+
+    // Reorder by appending in new order (appendChild moves existing elements)
+    newOrder.forEach((tabId) => {
+      const element = existingElements.get(tabId);
+      if (element) {
+        this.tabsContainer.appendChild(element);
+      }
+    });
+
+    log(`🔄 [TAB-LIST] Tabs reordered successfully`);
+  }
+
   public updateTab(tabId: string, updates: Partial<TerminalTab>): void {
     const tab = this.tabs.get(tabId);
     if (!tab) return;
@@ -472,7 +506,10 @@ export class TerminalTabList {
     tabElement.setAttribute('data-tab-id', tab.id);
     tabElement.setAttribute('role', 'tab');
     tabElement.setAttribute('aria-selected', tab.isActive.toString());
-    tabElement.setAttribute('aria-label', `Terminal: ${tab.name}${tab.isDirty ? ' (modified)' : ''}`);
+    tabElement.setAttribute(
+      'aria-label',
+      `Terminal: ${tab.name}${tab.isDirty ? ' (modified)' : ''}`
+    );
     tabElement.setAttribute('tabindex', tab.isActive ? '0' : '-1');
     tabElement.setAttribute('aria-controls', `terminal-panel-${tab.id}`);
     tabElement.draggable = true;
@@ -488,13 +525,20 @@ export class TerminalTabList {
       ${tab.icon ? `<span class="terminal-tab-icon codicon codicon-${tab.icon}" aria-hidden="true"></span>` : ''}
       <span class="terminal-tab-label" title="${tab.name}">${tab.name}</span>
       ${tab.isDirty ? '<span class="terminal-tab-dirty-indicator" role="status" aria-label="Modified" title="This terminal has unsaved changes"></span>' : ''}
-      ${tab.isClosable ? `
+      ${
+        tab.isClosable
+          ? `
         <button class="terminal-tab-close" title="Close Terminal" aria-label="Close ${tab.name}" type="button">×</button>
-      ` : ''}
+      `
+          : ''
+      }
     `;
 
     // Update ARIA attributes
-    tabElement.setAttribute('aria-label', `Terminal: ${tab.name}${tab.isDirty ? ' (modified)' : ''}`);
+    tabElement.setAttribute(
+      'aria-label',
+      `Terminal: ${tab.name}${tab.isDirty ? ' (modified)' : ''}`
+    );
 
     if (tab.color) {
       tabElement.style.setProperty('--tab-color', tab.color);
@@ -633,7 +677,9 @@ export class TerminalTabList {
       return;
     }
 
-    log(`📐 [TAB-LIST] Setting tab container flex-direction to: ${direction} (${direction === 'row' ? 'horizontal tabs' : 'vertical tabs'})`);
+    log(
+      `📐 [TAB-LIST] Setting tab container flex-direction to: ${direction} (${direction === 'row' ? 'horizontal tabs' : 'vertical tabs'})`
+    );
     this.container.style.flexDirection = direction;
 
     // Verify the change was applied

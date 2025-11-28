@@ -135,7 +135,10 @@ export class NotificationService {
     );
   }
 
-  private createNotificationContent(config: NotificationConfig, colors: NotificationColors): HTMLElement {
+  private createNotificationContent(
+    config: NotificationConfig,
+    colors: NotificationColors
+  ): HTMLElement {
     const container = document.createElement('div');
     const icon = config.icon || this.getDefaultIcon(config.type);
 

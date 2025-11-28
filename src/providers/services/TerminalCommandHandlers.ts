@@ -301,11 +301,7 @@ export class TerminalCommandHandlers {
       const profilesConfig = configService.getTerminalProfilesConfig();
 
       const platform: 'windows' | 'linux' | 'osx' =
-        process.platform === 'win32'
-          ? 'windows'
-          : process.platform === 'darwin'
-            ? 'osx'
-            : 'linux';
+        process.platform === 'win32' ? 'windows' : process.platform === 'darwin' ? 'osx' : 'linux';
 
       const platformProfiles = profilesConfig.profiles[platform] || {};
       const defaultProfileId = profilesConfig.defaultProfiles[platform];
@@ -381,9 +377,7 @@ export class TerminalCommandHandlers {
       log('✅ [HANDLER] Clipboard content pasted successfully');
     } catch (error) {
       log('❌ [HANDLER] Failed to handle clipboard request:', error);
-      await vscode.window.showErrorMessage(
-        'Failed to paste clipboard content into terminal'
-      );
+      await vscode.window.showErrorMessage('Failed to paste clipboard content into terminal');
     }
   }
 
@@ -399,7 +393,9 @@ export class TerminalCommandHandlers {
 
     try {
       await vscode.env.clipboard.writeText(text);
-      log(`📋 [HANDLER] Copied ${text.length} chars from terminal ${message.terminalId ?? 'unknown'}`);
+      log(
+        `📋 [HANDLER] Copied ${text.length} chars from terminal ${message.terminalId ?? 'unknown'}`
+      );
     } catch (error) {
       log('❌ [HANDLER] Failed to copy text to clipboard:', error);
     }

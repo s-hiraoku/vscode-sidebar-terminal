@@ -169,7 +169,7 @@ describe('TerminalContainerManager - Display State Management (Issue #198)', fun
       expect(snapshot.visibleTerminals).to.have.members(['2']);
       // Only terminal 2 is visible in fullscreen mode
       const allTerminals = ['1', '2', '3'];
-      const hiddenTerminals = allTerminals.filter(id => !snapshot.visibleTerminals.includes(id));
+      const hiddenTerminals = allTerminals.filter((id) => !snapshot.visibleTerminals.includes(id));
       expect(hiddenTerminals).to.have.members(['1', '3']);
     });
 
@@ -212,7 +212,7 @@ describe('TerminalContainerManager - Display State Management (Issue #198)', fun
       // Assert
       const snapshot = containerManager.getDisplaySnapshot();
       const allTerminals = ['1', '2', '3'];
-      const hiddenTerminals = allTerminals.filter(id => !snapshot.visibleTerminals.includes(id));
+      const hiddenTerminals = allTerminals.filter((id) => !snapshot.visibleTerminals.includes(id));
       expect(hiddenTerminals).to.include('1');
       expect(hiddenTerminals).to.include('3');
     });
@@ -362,7 +362,7 @@ describe('TerminalContainerManager - Display State Management (Issue #198)', fun
       expect(snapshot.visibleTerminals).to.deep.equal(['2']);
       // Only terminal 2 is visible in fullscreen mode
       const allTerminals = ['1', '2', '3'];
-      const hiddenTerminals = allTerminals.filter(id => !snapshot.visibleTerminals.includes(id));
+      const hiddenTerminals = allTerminals.filter((id) => !snapshot.visibleTerminals.includes(id));
       expect(hiddenTerminals).to.have.members(['1', '3']);
     });
 

@@ -189,7 +189,10 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
     }
 
     // 🔧 FIX: Get current panel location from SplitManager instead of hardcoding
-    const currentLocation = (splitManager as { getCurrentPanelLocation?: () => 'sidebar' | 'panel' }).getCurrentPanelLocation?.() || 'sidebar';
+    const currentLocation =
+      (
+        splitManager as { getCurrentPanelLocation?: () => 'sidebar' | 'panel' }
+      ).getCurrentPanelLocation?.() || 'sidebar';
     this.log(`Current panel location: ${currentLocation}`);
 
     // 分割方向を決定（パネル位置に応じて）

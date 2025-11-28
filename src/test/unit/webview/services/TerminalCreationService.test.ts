@@ -124,7 +124,12 @@ describe('TerminalCreationService', function () {
       const terminalNumber = 3;
 
       // Act
-      const terminal = await service.createTerminal(terminalId, terminalName, undefined, terminalNumber);
+      const terminal = await service.createTerminal(
+        terminalId,
+        terminalName,
+        undefined,
+        terminalNumber
+      );
 
       // Assert
       expect(terminal).to.not.be.null;

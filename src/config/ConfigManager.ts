@@ -12,7 +12,7 @@ import {
   TerminalProfile,
   TerminalProfilesConfig,
 } from '../types/shared';
-import { TERMINAL_CONSTANTS } from '../constants';
+import { TERMINAL_CONSTANTS, CONFIG_CACHE_CONSTANTS } from '../constants/SystemConstants';
 import { config as log } from '../utils/logger';
 
 /**
@@ -23,7 +23,7 @@ export class ConfigManager {
   private static _instance: ConfigManager;
   private _configCache = new Map<string, unknown>();
   private _cacheExpiry = new Map<string, number>();
-  private readonly CACHE_TTL = 5000; // 5秒のキャッシュ
+  private readonly CACHE_TTL = CONFIG_CACHE_CONSTANTS.CACHE_TTL_MS;
 
   /**
    * シングルトンインスタンスを取得
@@ -164,7 +164,11 @@ export class ConfigManager {
         CONFIG_KEYS.MULTI_CURSOR_MODIFIER,
         'ctrlCmd'
       ),
-      highlightActiveBorder: this.getConfig(CONFIG_SECTIONS.SIDEBAR_TERMINAL, 'highlightActiveBorder', true),
+      highlightActiveBorder: this.getConfig(
+        CONFIG_SECTIONS.SIDEBAR_TERMINAL,
+        'highlightActiveBorder',
+        true
+      ),
     };
   }
 
@@ -275,11 +279,10 @@ export class ConfigManager {
       }
 
       // 3. システムデフォルトのmonospaceフォント
-      // Debug log removed for production
-      return 'monospace';
+      return CONFIG_CACHE_CONSTANTS.DEFAULT_FONT_FAMILY;
     } catch (error) {
       log('[ConfigManager] Error getting fontFamily:', error);
-      return 'monospace';
+      return CONFIG_CACHE_CONSTANTS.DEFAULT_FONT_FAMILY;
     }
   }
 
@@ -312,11 +315,10 @@ export class ConfigManager {
       }
 
       // 3. デフォルトフォントサイズ
-      // Debug log removed for production
-      return 14;
+      return CONFIG_CACHE_CONSTANTS.DEFAULT_FONT_SIZE;
     } catch (error) {
       log('[ConfigManager] Error getting fontSize:', error);
-      return 14;
+      return CONFIG_CACHE_CONSTANTS.DEFAULT_FONT_SIZE;
     }
   }
 
@@ -345,10 +347,10 @@ export class ConfigManager {
       }
 
       // 3. デフォルトフォント太さ
-      return 'normal';
+      return CONFIG_CACHE_CONSTANTS.DEFAULT_FONT_WEIGHT;
     } catch (error) {
       log('[ConfigManager] Error getting fontWeight:', error);
-      return 'normal';
+      return CONFIG_CACHE_CONSTANTS.DEFAULT_FONT_WEIGHT;
     }
   }
 
@@ -377,10 +379,10 @@ export class ConfigManager {
       }
 
       // 3. デフォルトフォント太字
-      return 'bold';
+      return CONFIG_CACHE_CONSTANTS.DEFAULT_FONT_WEIGHT_BOLD;
     } catch (error) {
       log('[ConfigManager] Error getting fontWeightBold:', error);
-      return 'bold';
+      return CONFIG_CACHE_CONSTANTS.DEFAULT_FONT_WEIGHT_BOLD;
     }
   }
 
@@ -409,10 +411,10 @@ export class ConfigManager {
       }
 
       // 3. デフォルト行間隔
-      return 1.0;
+      return CONFIG_CACHE_CONSTANTS.DEFAULT_LINE_HEIGHT;
     } catch (error) {
       log('[ConfigManager] Error getting lineHeight:', error);
-      return 1.0;
+      return CONFIG_CACHE_CONSTANTS.DEFAULT_LINE_HEIGHT;
     }
   }
 
@@ -441,10 +443,10 @@ export class ConfigManager {
       }
 
       // 3. デフォルト文字間隔
-      return 0;
+      return CONFIG_CACHE_CONSTANTS.DEFAULT_LETTER_SPACING;
     } catch (error) {
       log('[ConfigManager] Error getting letterSpacing:', error);
-      return 0;
+      return CONFIG_CACHE_CONSTANTS.DEFAULT_LETTER_SPACING;
     }
   }
 
@@ -493,7 +495,7 @@ export class ConfigManager {
         enabled: this.getConfig(section, CONFIG_KEYS.ENABLE_PROFILE_AUTO_DETECTION, true),
         searchPaths: [],
         useCache: true,
-        cacheExpiration: 3600000, // 1 hour
+        cacheExpiration: CONFIG_CACHE_CONSTANTS.PROFILE_CACHE_EXPIRATION_MS,
       },
       inheritVSCodeProfiles: this.getConfig(section, CONFIG_KEYS.INHERIT_VSCODE_PROFILES, true),
     };

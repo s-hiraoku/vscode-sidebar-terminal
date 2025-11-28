@@ -12,10 +12,13 @@ import { IManagerCoordinator } from '../interfaces/ManagerInterfaces';
 import { BaseManager } from './BaseManager';
 // import { performanceLogger } from '../utils/ManagerLogger';
 import { ResizeManager } from '../utils/ResizeManager';
+import { DOMUtils } from '../utils/DOMUtils';
 
 const ENABLE_WEBVIEW_DEBUG_LOGS = Boolean(
   typeof globalThis !== 'undefined' &&
-    (((globalThis as Record<string, unknown>).SECONDARY_TERMINAL_DEBUG_LOGS as boolean | undefined) === true ||
+    (((globalThis as Record<string, unknown>).SECONDARY_TERMINAL_DEBUG_LOGS as
+      | boolean
+      | undefined) === true ||
       (typeof localStorage !== 'undefined' &&
         localStorage.getItem('SECONDARY_TERMINAL_DEBUG_LOGS') === 'true'))
 );
@@ -26,7 +29,7 @@ export class PerformanceManager extends BaseManager {
       enableLogging: ENABLE_WEBVIEW_DEBUG_LOGS,
       enableValidation: false,
       enableErrorRecovery: true,
-      customLogger: ENABLE_WEBVIEW_DEBUG_LOGS ? undefined : () => {}
+      customLogger: ENABLE_WEBVIEW_DEBUG_LOGS ? undefined : () => {},
     });
 
     // Logger is automatically provided by BaseManager
@@ -256,6 +259,12 @@ export class PerformanceManager extends BaseManager {
       async () => {
         try {
           terminal.resize(cols, rows);
+          // Reset xterm.js inline styles before fit to allow terminal expansion
+          // terminal.element is the container element where terminal is opened
+          const container = terminal.element?.parentElement;
+          if (container) {
+            DOMUtils.resetXtermInlineStyles(container);
+          }
           fitAddon.fit();
           if (this.debugLoggingEnabled) {
             this.logger(`Debounced resize applied: ${cols}x${rows}`);

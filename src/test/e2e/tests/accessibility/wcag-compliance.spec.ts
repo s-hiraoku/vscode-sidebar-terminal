@@ -73,9 +73,7 @@ test.describe('WCAG AA Accessibility Compliance', () => {
   });
 
   test('should have proper form labels', async ({ page }) => {
-    const accessibilityScanResults = await new AxeBuilder({ page })
-      .withTags(['forms'])
-      .analyze();
+    const accessibilityScanResults = await new AxeBuilder({ page }).withTags(['forms']).analyze();
 
     expect(accessibilityScanResults.violations).toEqual([]);
   });
@@ -130,9 +128,11 @@ test.describe('WCAG AA Accessibility Compliance', () => {
 
   test('should have proper tab navigation order', async ({ page }) => {
     // Get all focusable elements
-    const focusableElements = await page.locator(
-      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-    ).all();
+    const focusableElements = await page
+      .locator(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      )
+      .all();
 
     expect(focusableElements.length).toBeGreaterThan(0);
 
@@ -171,9 +171,7 @@ test.describe('WCAG AA Accessibility Compliance', () => {
   });
 
   test('should pass landmark rules', async ({ page }) => {
-    const accessibilityScanResults = await new AxeBuilder({ page })
-      .withRules(['region'])
-      .analyze();
+    const accessibilityScanResults = await new AxeBuilder({ page }).withRules(['region']).analyze();
 
     // Should have proper landmark regions
     expect(accessibilityScanResults.violations).toEqual([]);
@@ -245,7 +243,7 @@ test.describe('Keyboard Navigation Tests', () => {
   test('should support Enter/Space for button activation', async ({ page }) => {
     // Get first button
     const button = page.locator('button').first();
-    if (await button.count() > 0) {
+    if ((await button.count()) > 0) {
       await button.focus();
 
       // Should be focusable
