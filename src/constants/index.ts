@@ -95,17 +95,55 @@ export const VSCODE_COMMANDS = {
 } as const;
 
 /**
- * SystemConstants.tsから詳細な定数グループをエクスポート
+ * ドメイン別定数ファイルからの詳細な定数グループをエクスポート
  * @see https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/226
+ *
+ * リファクタリング: SystemConstants.ts を以下のドメイン別ファイルに分割
+ * - PerformanceConstants.ts: パフォーマンス関連
+ * - TerminalConstants.ts: ターミナル関連
+ * - UIConstants.ts: UI/UX 関連
+ * - CommunicationConstants.ts: 通信・メッセージング関連
+ * - ErrorConstants.ts: エラーハンドリング関連
+ * - TimingConstants.ts: タイミング関連
+ * - ConfigCacheConstants.ts: 設定キャッシュ関連
+ * - EnumConstants.ts: 列挙型定義
  */
-export {
-  PERFORMANCE_CONSTANTS,
-  TIMING_CONSTANTS,
-  UI_CONSTANTS,
-  COMMUNICATION_CONSTANTS,
-  ERROR_CONSTANTS,
-} from './SystemConstants';
 
-// SystemConstants.tsのTERMINAL_CONSTANTSを、既存のTERMINAL_CONSTANTSに優先して使用
-// 既存のTERMINAL_CONSTANTSは後方互換性のために保持
-export { TERMINAL_CONSTANTS as SYSTEM_TERMINAL_CONSTANTS } from './SystemConstants';
+// パフォーマンス関連定数
+export { PERFORMANCE_CONSTANTS, type PerformanceConstantsType } from './PerformanceConstants';
+
+// タイミング関連定数
+export { TIMING_CONSTANTS, type TimingConstantsType } from './TimingConstants';
+
+// UI/UX関連定数
+export { UI_CONSTANTS, type UIConstantsType } from './UIConstants';
+
+// 通信・メッセージング関連定数
+export { COMMUNICATION_CONSTANTS, type CommunicationConstantsType } from './CommunicationConstants';
+
+// エラーハンドリング関連定数
+export { ERROR_CONSTANTS, type ErrorConstantsType } from './ErrorConstants';
+
+// 設定キャッシュ関連定数
+export { CONFIG_CACHE_CONSTANTS, type ConfigCacheConstantsType } from './ConfigCacheConstants';
+
+// システムターミナル定数（詳細版）
+export { TERMINAL_CONSTANTS as SYSTEM_TERMINAL_CONSTANTS, type TerminalConstantsType } from './TerminalConstants';
+
+// 列挙型
+export {
+  SystemStatus,
+  TerminalAction,
+  MessageSeverity,
+  NotificationType,
+  CliAgentStatus,
+  TerminalState,
+  SessionOperation,
+  PerformanceMetric,
+  ResourceType,
+  ConfigurationCategory,
+} from './EnumConstants';
+
+// 後方互換性のため SystemConstants.ts からもエクスポート
+// 新しいコードでは上記のドメイン別インポートを推奨
+export * from './SystemConstants';
