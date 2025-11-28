@@ -11,5 +11,7 @@
   "spec": ["out/test/unit/**/*.test.js"],
   "parallel": false,
   "bail": false,
-  "exit": true
+  "exit": true,
+  "jobs": 4,
+  "retries": 0
 }

@@ -368,18 +368,21 @@ export class WebViewHtmlGenerationService {
         .xterm {
             margin: 0 !important;
             padding: 0 !important;
+            width: 100% !important;
             height: 100% !important;
         }
 
         .xterm-viewport {
             margin: 0 !important;
             padding: 0 !important;
+            width: 100% !important;
             height: 100% !important;
         }
 
         .xterm-screen {
             margin: 0 !important;
             padding: 0 !important;
+            width: 100% !important;
             height: 100% !important;
         }
 
