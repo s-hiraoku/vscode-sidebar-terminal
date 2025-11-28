@@ -140,42 +140,60 @@ export class ResizeCoordinator {
       log(`📐 [DEBUG] terminal-body: ${terminalBody?.clientWidth}x${terminalBody?.clientHeight}`);
       log(`📐 [DEBUG] terminals-wrapper: ${terminalsWrapper?.clientWidth}x${terminalsWrapper?.clientHeight}`);
 
-      terminals.forEach((terminalData, terminalId) => {
-        if (terminalData.fitAddon && terminalData.terminal) {
-          try {
-            const container = terminalData.container;
-            const terminalContent = container?.querySelector('.terminal-content') as HTMLElement;
-            const xtermEl = container?.querySelector('.xterm') as HTMLElement;
+      // 🔧 CRITICAL FIX: Reset parent container styles ONCE before processing terminals
+      // This ensures all parent containers have their width calculated from CSS
+      if (terminalsWrapper) {
+        terminalsWrapper.style.width = '';
+        terminalsWrapper.style.maxWidth = '';
+      }
+      if (terminalBody) {
+        terminalBody.style.width = '';
+        terminalBody.style.maxWidth = '';
+      }
 
-            // デバッグ: リセット前
-            log(`📐 [DEBUG] Before reset - ${terminalId}:`);
-            log(`  container: ${container?.clientWidth}x${container?.clientHeight}, style.width=${container?.style.width}`);
-            log(`  terminal-content: ${terminalContent?.clientWidth}x${terminalContent?.clientHeight}`);
-            log(`  .xterm: ${xtermEl?.clientWidth}x${xtermEl?.clientHeight}`);
-
-            // インラインスタイルをリセット
-            DOMUtils.resetXtermInlineStyles(terminalData.container);
-
-            // デバッグ: リセット後
-            log(`📐 [DEBUG] After reset - ${terminalId}:`);
-            log(`  container: ${container?.clientWidth}x${container?.clientHeight}`);
-
-            // 寸法提案をログ
-            const proposedDims = terminalData.fitAddon.proposeDimensions();
-            log(`📐 [DEBUG] proposeDimensions - ${terminalId}: cols=${proposedDims?.cols}, rows=${proposedDims?.rows}`);
-
-            // fit() を呼び出し
-            terminalData.fitAddon.fit();
-
-            // デバッグ: fit後
-            log(`📐 [DEBUG] After fit - ${terminalId}:`);
-            log(`  .xterm: ${xtermEl?.clientWidth}x${xtermEl?.clientHeight}`);
-
-            log(`✅ Terminal ${terminalId} refitted: ${terminalData.terminal.cols}x${terminalData.terminal.rows}`);
-          } catch (error) {
-            log(`⚠️ Failed to refit terminal ${terminalId}:`, error);
-          }
+      // 🔧 CRITICAL FIX: Reset ALL terminal container styles first
+      // This must happen before ANY fit() calls to allow CSS to recalculate widths
+      terminals.forEach((terminalData) => {
+        if (terminalData.container) {
+          DOMUtils.resetXtermInlineStyles(terminalData.container, false); // Don't force reflow individually
         }
+      });
+
+      // 🔧 CRITICAL FIX: Force a single reflow after all resets
+      // This allows the browser to recalculate all container sizes based on CSS
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+      document.body.offsetWidth;
+
+      // 🔧 CRITICAL FIX: Use requestAnimationFrame to ensure CSS has been applied
+      // before calling fit() on terminals
+      requestAnimationFrame(() => {
+        terminals.forEach((terminalData, terminalId) => {
+          if (terminalData.fitAddon && terminalData.terminal) {
+            try {
+              const container = terminalData.container;
+              const xtermEl = container?.querySelector('.xterm') as HTMLElement;
+
+              // デバッグ: fit前
+              log(`📐 [DEBUG] Before fit - ${terminalId}:`);
+              log(`  container: ${container?.clientWidth}x${container?.clientHeight}`);
+
+              // 寸法提案をログ
+              const proposedDims = terminalData.fitAddon.proposeDimensions();
+              log(`📐 [DEBUG] proposeDimensions - ${terminalId}: cols=${proposedDims?.cols}, rows=${proposedDims?.rows}`);
+
+              // fit() を呼び出し
+              terminalData.fitAddon.fit();
+
+              // デバッグ: fit後
+              log(`📐 [DEBUG] After fit - ${terminalId}:`);
+              log(`  .xterm: ${xtermEl?.clientWidth}x${xtermEl?.clientHeight}`);
+
+              log(`✅ Terminal ${terminalId} refitted: ${terminalData.terminal.cols}x${terminalData.terminal.rows}`);
+            } catch (error) {
+              log(`⚠️ Failed to refit terminal ${terminalId}:`, error);
+            }
+          }
+        });
       });
     } catch (error) {
       log('❌ Error refitting all terminals:', error);

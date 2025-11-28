@@ -186,22 +186,45 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
   private refitAllTerminals(): void {
     this.splitManagerLogger.info(`Refitting all ${this.terminals.size} terminals`);
 
-    this.terminals.forEach((terminalData, terminalId) => {
-      if (terminalData.fitAddon && terminalData.terminal) {
-        try {
-          // 🔧 FIX: Use shared utility to reset xterm inline styles
-          const container = this.terminalContainers.get(terminalId);
-          DOMUtils.resetXtermInlineStyles(container ?? null);
+    // 🔧 CRITICAL FIX: Reset parent container styles first
+    const terminalsWrapper = document.getElementById('terminals-wrapper');
+    const terminalBody = document.getElementById('terminal-body');
+    if (terminalsWrapper) {
+      terminalsWrapper.style.width = '';
+      terminalsWrapper.style.maxWidth = '';
+    }
+    if (terminalBody) {
+      terminalBody.style.width = '';
+      terminalBody.style.maxWidth = '';
+    }
 
-          // Refit the terminal
-          terminalData.fitAddon.fit();
-          terminalData.terminal.refresh(0, terminalData.terminal.rows - 1);
-
-          this.splitManagerLogger.debug(`Refitted terminal ${terminalId}`);
-        } catch (error) {
-          this.splitManagerLogger.error(`Error refitting terminal ${terminalId}: ${error}`);
-        }
+    // 🔧 CRITICAL FIX: Reset ALL terminal container styles first
+    this.terminals.forEach((_terminalData, terminalId) => {
+      const container = this.terminalContainers.get(terminalId);
+      if (container) {
+        DOMUtils.resetXtermInlineStyles(container, false); // Don't force reflow individually
       }
+    });
+
+    // 🔧 CRITICAL FIX: Force a single reflow after all resets
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+    document.body.offsetWidth;
+
+    // 🔧 CRITICAL FIX: Use requestAnimationFrame to ensure CSS has been applied
+    requestAnimationFrame(() => {
+      this.terminals.forEach((terminalData, terminalId) => {
+        if (terminalData.fitAddon && terminalData.terminal) {
+          try {
+            // Refit the terminal
+            terminalData.fitAddon.fit();
+            terminalData.terminal.refresh(0, terminalData.terminal.rows - 1);
+
+            this.splitManagerLogger.debug(`Refitted terminal ${terminalId}`);
+          } catch (error) {
+            this.splitManagerLogger.error(`Error refitting terminal ${terminalId}: ${error}`);
+          }
+        }
+      });
     });
   }
 

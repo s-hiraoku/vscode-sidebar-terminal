@@ -82,13 +82,17 @@ async function initializeWebView(): Promise<void> {
     log('✅ [A11Y] Accessibility features initialized');
 
     // Initialize Terminal Manager
+    log('🔧 [INIT] Creating LightweightTerminalWebviewManager...');
     terminalManager = new LightweightTerminalWebviewManager();
+    log('🔧 [INIT] Calling initializeSimpleTerminal...');
     terminalManager.initializeSimpleTerminal();
+    log('🔧 [INIT] initializeSimpleTerminal completed');
 
     webviewLogger.initialized();
 
     // 🎯 HANDSHAKE: Notify Extension that WebView is fully initialized and ready for messages
     // This prevents race conditions where terminalCreated messages arrive before handlers are ready
+    log('🤝 [HANDSHAKE] About to send webviewInitialized to Extension...');
     vscodeApi.postMessage({
       command: 'webviewInitialized',
       timestamp: Date.now(),

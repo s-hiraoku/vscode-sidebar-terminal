@@ -19,6 +19,7 @@ import { ResizeManager } from '../utils/ResizeManager';
 import { EventHandlerRegistry } from '../utils/EventHandlerRegistry';
 import { terminalLogger } from '../utils/ManagerLogger';
 import { ThemeManager } from '../utils/ThemeManager';
+import { DOMUtils } from '../utils/DOMUtils';
 
 /**
  * Terminal Lifecycle Coordinator
@@ -350,22 +351,48 @@ export class TerminalLifecycleCoordinator {
       const terminals = this.splitManager.getTerminals();
       terminalLogger.info(`Resizing ${terminals.size} terminals`);
 
-      terminals.forEach((terminalInstance, terminalId) => {
-        if (terminalInstance.terminal && terminalInstance.fitAddon && terminalInstance.container) {
-          // Use ResizeManager for consistent resize behavior
-          ResizeManager.debounceResize(
-            `resize-all-${terminalId}`,
-            async () => {
-              try {
-                terminalInstance.fitAddon.fit();
-                this.notifyExtensionResize(terminalId, terminalInstance.terminal);
-              } catch (error) {
-                terminalLogger.error(`Failed to resize terminal ${terminalId}:`, error);
-              }
-            },
-            { delay: 50 }
-          );
+      // 🔧 CRITICAL FIX: Reset parent container styles first
+      const terminalsWrapper = document.getElementById('terminals-wrapper');
+      const terminalBody = document.getElementById('terminal-body');
+      if (terminalsWrapper) {
+        terminalsWrapper.style.width = '';
+        terminalsWrapper.style.maxWidth = '';
+      }
+      if (terminalBody) {
+        terminalBody.style.width = '';
+        terminalBody.style.maxWidth = '';
+      }
+
+      // 🔧 CRITICAL FIX: Reset ALL terminal container styles first
+      terminals.forEach((terminalInstance) => {
+        if (terminalInstance.container) {
+          DOMUtils.resetXtermInlineStyles(terminalInstance.container, false);
         }
+      });
+
+      // 🔧 CRITICAL FIX: Force a single reflow after all resets
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+      document.body.offsetWidth;
+
+      // 🔧 CRITICAL FIX: Use requestAnimationFrame for better timing
+      requestAnimationFrame(() => {
+        terminals.forEach((terminalInstance, terminalId) => {
+          if (terminalInstance.terminal && terminalInstance.fitAddon && terminalInstance.container) {
+            // Use ResizeManager for consistent resize behavior
+            ResizeManager.debounceResize(
+              `resize-all-${terminalId}`,
+              async () => {
+                try {
+                  terminalInstance.fitAddon.fit();
+                  this.notifyExtensionResize(terminalId, terminalInstance.terminal);
+                } catch (error) {
+                  terminalLogger.error(`Failed to resize terminal ${terminalId}:`, error);
+                }
+              },
+              { delay: 50 }
+            );
+          }
+        });
       });
     } catch (error) {
       terminalLogger.error('Failed to resize terminals:', error);

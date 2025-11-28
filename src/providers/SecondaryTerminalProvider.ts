@@ -289,6 +289,15 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       (message: WebviewMessage) => {
         log('📨 [PROVIDER] ✅ MESSAGE RECEIVED FROM WEBVIEW!');
         log('📨 [PROVIDER] Message command:', message.command);
+
+        // 🎯 HANDSHAKE: Special logging for critical handshake messages
+        if (message.command === 'webviewReady') {
+          log('🤝 [HANDSHAKE] <<<< webviewReady received from WebView');
+        }
+        if (message.command === 'webviewInitialized') {
+          log('🤝 [HANDSHAKE] <<<< webviewInitialized received from WebView');
+        }
+
         try {
           const { isDebugEnabled } = require('../utils/logger');
           if (isDebugEnabled && isDebugEnabled()) {
