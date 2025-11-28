@@ -204,6 +204,8 @@ export class TerminalCreationService implements Disposable {
         // Extract individual addons for convenience
         const { fitAddon, serializeAddon, searchAddon } = loadedAddons;
 
+
+
         // Create terminal container using factory with proper config
         const terminalNumberToUse = terminalNumber ?? this.extractTerminalNumber(terminalId);
 
@@ -292,23 +294,27 @@ export class TerminalCreationService implements Disposable {
         terminalsWrapper.appendChild(container);
         terminalLogger.info(`✅ Container appended to terminals-wrapper: ${terminalId}`);
 
-        // Apply VS Code-like styling and visual settings before rendering
-        const managers = this.coordinator.getManagers?.();
-        const uiManager = managers?.ui;
-        if (uiManager) {
-          uiManager.applyVSCodeStyling(container);
+        // Apply VS Code-like styling and visual settings before rendering (non-fatal)
+        try {
+          const managers = this.coordinator.getManagers?.();
+          const uiManager = managers?.ui;
+          if (uiManager) {
+            uiManager.applyVSCodeStyling(container);
 
-          const configManager = managers?.config;
-          const currentSettings = configManager?.getCurrentSettings?.();
-          const currentFontSettings = configManager?.getCurrentFontSettings?.();
+            const configManager = managers?.config;
+            const currentSettings = configManager?.getCurrentSettings?.();
+            const currentFontSettings = configManager?.getCurrentFontSettings?.();
 
-          if (currentSettings) {
-            uiManager.applyAllVisualSettings(terminal, currentSettings);
+            if (currentSettings) {
+              uiManager.applyAllVisualSettings(terminal, currentSettings);
+            }
+
+            if (currentFontSettings) {
+              uiManager.applyFontSettings(terminal, currentFontSettings);
+            }
           }
-
-          if (currentFontSettings) {
-            uiManager.applyFontSettings(terminal, currentFontSettings);
-          }
+        } catch (error) {
+          terminalLogger.warn('⚠️ Styling application failed; continuing without styling', error);
         }
 
         // Make container visible
