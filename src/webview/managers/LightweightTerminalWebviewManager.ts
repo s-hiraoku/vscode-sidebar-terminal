@@ -35,6 +35,7 @@ import {
   IDisplayModeManager,
   IHeaderManager,
   IShellIntegrationBridge,
+  IPersistenceManager,
 } from '../interfaces/ManagerInterfaces';
 
 // Coordinators (リファクタリングで抽出)
@@ -156,6 +157,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
   private pendingSplitTransition: Promise<void> | null = null;
   private isInitialized = false;
   private currentTerminalState: TerminalState | null = null;
+  private currentSettings: PartialTerminalSettings = {};
 
   constructor() {
     log('🚀 RefactoredTerminalWebviewManager initializing...');
@@ -549,7 +551,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     findInTerminal?: IFindInTerminalManager;
     profile?: IProfileManager;
     tabs?: ITerminalTabManager;
-    persistence: WebViewPersistenceService | null;
+    persistence?: IPersistenceManager;
     terminalContainer?: ITerminalContainerManager;
     displayMode?: IDisplayModeManager;
     header?: IHeaderManager;
@@ -564,7 +566,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       findInTerminal: this.findInTerminalManager,
       profile: this.profileManager,
       tabs: this.terminalTabManager,
-      persistence: this.persistenceManager,
+      persistence: this.persistenceManager ?? undefined,
       terminalContainer: this.terminalContainerManager,
       displayMode: this.displayModeManager,
       header: this.headerManager,

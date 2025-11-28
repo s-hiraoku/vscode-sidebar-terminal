@@ -129,10 +129,10 @@ export class SettingsCommandHandler extends BaseCommandHandler {
 
     // Request to open VS Code settings
     if (context.postMessage) {
-      context.postMessage({
-        command: 'openSettingsRequested',
+      await context.postMessage({
+        command: 'openSettings',
         timestamp: Date.now(),
-      });
+      } as WebviewMessage);
     }
   }
 

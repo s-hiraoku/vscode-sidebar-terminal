@@ -144,7 +144,10 @@ export abstract class DisposableBase implements vscode.Disposable {
     // Dispose in reverse order (LIFO) for proper dependency cleanup
     for (let i = this._disposables.length - 1; i >= 0; i--) {
       try {
-        this._disposables[i].dispose();
+        const disposable = this._disposables[i];
+        if (disposable) {
+          disposable.dispose();
+        }
       } catch (error) {
         // Log but don't throw - we want to dispose everything
         console.error(`Error disposing resource in ${this.constructor.name}:`, error);

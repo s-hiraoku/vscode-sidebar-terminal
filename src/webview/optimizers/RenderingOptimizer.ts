@@ -113,14 +113,6 @@ export class RenderingOptimizer implements Disposable {
         // xterm.js sets fixed pixel widths that prevent expansion beyond initial size
         this.resetXtermInlineStyles(terminalId);
 
-        // 🔧 CRITICAL FIX: Also reset parent wrapper styles
-        // Parent elements may have fixed widths from previous layout
-        this.resetParentContainerStyles();
-
-        // 🔧 CRITICAL FIX: Force reflow before fit() to ensure CSS recalculation
-        // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-        document.body.offsetWidth;
-
         fitAddon.fit();
         terminalLogger.debug(`✅ Terminal ${terminalId} resized to ${width}x${height}`);
       } catch (error) {
@@ -143,42 +135,6 @@ export class RenderingOptimizer implements Disposable {
     DOMUtils.resetXtermInlineStyles(this.container);
 
     terminalLogger.debug(`🔧 Reset xterm inline styles for terminal ${terminalId}`);
-  }
-
-  /**
-   * 🔧 CRITICAL FIX: Reset parent container styles that may constrain terminal width
-   * FitAddon measures parentElement dimensions, so parents must not have fixed widths
-   */
-  private resetParentContainerStyles(): void {
-    // Reset terminals-wrapper
-    const terminalsWrapper = document.getElementById('terminals-wrapper');
-    if (terminalsWrapper) {
-      terminalsWrapper.style.width = '';
-      terminalsWrapper.style.maxWidth = '';
-    }
-
-    // Reset terminal-body
-    const terminalBody = document.getElementById('terminal-body');
-    if (terminalBody) {
-      terminalBody.style.width = '';
-      terminalBody.style.maxWidth = '';
-    }
-
-    // Reset split-wrapper if container is inside one
-    if (this.container) {
-      const splitWrapper = this.container.closest('.terminal-split-wrapper') as HTMLElement;
-      if (splitWrapper) {
-        splitWrapper.style.width = '';
-        splitWrapper.style.maxWidth = '';
-      }
-
-      // Reset the data-terminal-area element
-      const terminalArea = this.container.closest('[data-terminal-area-id]') as HTMLElement;
-      if (terminalArea) {
-        terminalArea.style.width = '';
-        terminalArea.style.maxWidth = '';
-      }
-    }
   }
 
   /**

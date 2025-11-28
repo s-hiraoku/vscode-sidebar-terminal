@@ -281,20 +281,13 @@ export class TerminalCreationService implements Disposable {
           terminalLogger.info('🆕 Creating terminals-wrapper (not yet initialized)');
           terminalsWrapper = document.createElement('div');
           terminalsWrapper.id = 'terminals-wrapper';
-          // 🔧 CRITICAL FIX: Set width: 100% and flex-direction to ensure proper expansion
-          // Without these, FitAddon cannot measure correct container width
+          // 🔧 CRITICAL: Only set minimal inline styles, let CSS handle the rest
+          // This prevents inline styles from overriding CSS rules
           terminalsWrapper.style.cssText = `
             display: flex;
-            flex-direction: column;
             flex: 1 1 auto;
-            width: 100%;
-            height: 100%;
-            min-width: 0;
-            min-height: 0;
             gap: 4px;
             padding: 4px;
-            box-sizing: border-box;
-            overflow: hidden;
           `;
           bodyElement.appendChild(terminalsWrapper);
         }

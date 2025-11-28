@@ -20,6 +20,20 @@ export interface IMessageHandlerContext {
 }
 
 /**
+ * Result of message handling
+ */
+export interface IMessageHandlerResult {
+  /** Whether the handler successfully processed the message */
+  success: boolean;
+  /** Name of the handler that processed the message */
+  handledBy: string;
+  /** Processing time in milliseconds */
+  processingTime: number;
+  /** Error message if handling failed */
+  error?: string;
+}
+
+/**
  * Interface for message handlers
  */
 export interface IMessageHandler {
@@ -29,10 +43,20 @@ export interface IMessageHandler {
   readonly supportedCommands: readonly string[];
   /** Priority (higher = processed first) */
   readonly priority: number;
+
+  /** Get handler name (for compatibility) */
+  getName(): string;
+  /** Get supported commands (for compatibility) */
+  getSupportedCommands(): readonly string[];
+  /** Get priority (for compatibility) */
+  getPriority(): number;
+
   /** Check if handler can process this message */
-  canHandle(message: WebviewMessage): boolean;
+  canHandle(message: WebviewMessage, context?: IMessageHandlerContext): boolean;
   /** Process the message */
   handle(message: WebviewMessage, context: IMessageHandlerContext): Promise<void>;
+  /** Dispose resources (optional) */
+  dispose?(): void;
 }
 
 /**
@@ -51,9 +75,30 @@ export abstract class BaseCommandHandler implements IMessageHandler {
   }
 
   /**
+   * Get handler name (for compatibility with existing code)
+   */
+  public getName(): string {
+    return this.name;
+  }
+
+  /**
+   * Get supported commands (for compatibility with existing code)
+   */
+  public getSupportedCommands(): readonly string[] {
+    return this.supportedCommands;
+  }
+
+  /**
+   * Get priority (for compatibility with existing code)
+   */
+  public getPriority(): number {
+    return this.priority;
+  }
+
+  /**
    * Check if this handler can process the message
    */
-  public canHandle(message: WebviewMessage): boolean {
+  public canHandle(message: WebviewMessage, _context?: IMessageHandlerContext): boolean {
     return this.supportedCommands.includes(message.command);
   }
 
@@ -61,6 +106,13 @@ export abstract class BaseCommandHandler implements IMessageHandler {
    * Process the message - must be implemented by subclasses
    */
   public abstract handle(message: WebviewMessage, context: IMessageHandlerContext): Promise<void>;
+
+  /**
+   * Dispose resources (optional)
+   */
+  public dispose(): void {
+    // Override in subclasses if cleanup is needed
+  }
 
   /**
    * Log a message using the context logger
@@ -98,9 +150,9 @@ export abstract class BaseCommandHandler implements IMessageHandler {
     data?: Record<string, unknown>
   ): Promise<void> {
     await context.postMessage({
-      command: `${command}Success`,
+      command: `${command}Success` as WebviewMessage['command'],
       ...data,
-    });
+    } as WebviewMessage);
   }
 
   /**
@@ -113,8 +165,8 @@ export abstract class BaseCommandHandler implements IMessageHandler {
   ): Promise<void> {
     const errorMessage = error instanceof Error ? error.message : error;
     await context.postMessage({
-      command: `${command}Error`,
+      command: `${command}Error` as WebviewMessage['command'],
       error: errorMessage,
-    });
+    } as WebviewMessage);
   }
 }

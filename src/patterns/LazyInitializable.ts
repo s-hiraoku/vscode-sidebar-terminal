@@ -42,11 +42,13 @@ export enum InitializationState {
  * Error thrown when initialization fails
  */
 export class InitializationError extends Error {
-  constructor(
-    public readonly serviceName: string,
-    public readonly cause?: Error
-  ) {
+  public readonly serviceName: string;
+  public readonly cause?: Error;
+
+  constructor(serviceName: string, cause?: Error) {
     super(`Failed to initialize ${serviceName}: ${cause?.message || 'Unknown error'}`);
+    this.serviceName = serviceName;
+    this.cause = cause;
     this.name = 'InitializationError';
   }
 }

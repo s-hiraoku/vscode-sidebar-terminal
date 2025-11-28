@@ -153,15 +153,32 @@ export class MessageProcessor {
     // Create handler context
     const context: IMessageHandlerContext = {
       coordinator: this.coordinator,
-      logger: {
-        debug: (msg, data) => this.logger.debug('MessageHandler', msg, data),
-        info: (msg, data) => this.logger.info('MessageHandler', msg, data),
-        warn: (msg, data) => this.logger.warn('MessageHandler', msg, data),
-        error: (msg, err) => this.logger.error('MessageHandler', msg, err),
+      log: (
+        level: 'info' | 'warn' | 'error' | 'debug',
+        message: string,
+        ...args: unknown[]
+      ): void => {
+        switch (level) {
+          case 'debug':
+            this.logger.debug('MessageHandler', message, args);
+            break;
+          case 'info':
+            this.logger.info('MessageHandler', message, args);
+            break;
+          case 'warn':
+            this.logger.warn('MessageHandler', message, args);
+            break;
+          case 'error':
+            this.logger.error('MessageHandler', message, args);
+            break;
+        }
       },
       postMessage: this.coordinator
-        ? (msg) => this.coordinator!.postMessageToExtension(msg)
-        : undefined,
+        ? async (msg: WebviewMessage): Promise<boolean> => {
+            this.coordinator!.postMessageToExtension(msg);
+            return true;
+          }
+        : async (_msg: WebviewMessage): Promise<boolean> => false,
       metadata: {},
     };
 

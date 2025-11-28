@@ -647,7 +647,11 @@ export interface WebviewMessage {
     | 'requestStateResponse' // Request state response
     | 'updateShellStatusResponse' // Update shell status response
     | 'updateCwdResponse' // Update CWD response
-    | 'commandHistoryResponse'; // Command history response
+    | 'commandHistoryResponse' // Command history response
+    // Additional commands for WebView initialization
+    | 'webviewInitialized' // WebView initialization complete
+    | 'terminalInitializationComplete' // Terminal initialization complete
+    | 'terminalReady'; // Terminal ready for use
   config?: TerminalConfig;
   data?: string | any[]; // Support both string and array data
   exitCode?: number;

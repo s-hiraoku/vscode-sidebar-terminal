@@ -255,6 +255,13 @@ export const TERMINAL_CONSTANTS = {
   MAX_TERMINAL_COUNT: 5,
 
   /**
+   * デフォルトの最大ターミナル数 (5個)
+   *
+   * @rationale ユーザー設定のデフォルト値として使用されます。
+   */
+  DEFAULT_MAX_TERMINALS: 5,
+
+  /**
    * 最小ターミナルID番号 (1)
    *
    * @rationale ターミナルIDは1から始まり、ユーザーに分かりやすい番号体系を提供します。
@@ -264,9 +271,32 @@ export const TERMINAL_CONSTANTS = {
   /**
    * 最大ターミナルID番号 (5)
    *
-   * @rationale MAX_TERMINAL_COUNTと一致し、一貫性のあるID管理を提供します。
+   * @rationale MAX_TERMINAL_COUNTと一致し、一貫性のあるID管理を提供します.
    */
   MAX_TERMINAL_ID_NUMBER: 5,
+
+  // プラットフォーム設定
+  /**
+   * プラットフォーム識別子
+   *
+   * @rationale process.platformの値と一致させ、クロスプラットフォーム対応を提供します。
+   */
+  PLATFORMS: {
+    /** Windows プラットフォーム */
+    WINDOWS: 'win32',
+    /** macOS プラットフォーム */
+    MACOS: 'darwin',
+    /** macOS プラットフォーム (alternative name) */
+    DARWIN: 'darwin',
+    /** Linux プラットフォーム */
+    LINUX: 'linux',
+    /** プラットフォーム別デフォルトシェル */
+    DEFAULT_SHELLS: {
+      win32: 'powershell.exe',
+      darwin: '/bin/zsh',
+      linux: '/bin/bash',
+    } as const,
+  },
 
   // ターミナル設定
   /**
