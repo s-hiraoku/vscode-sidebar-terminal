@@ -382,6 +382,12 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         category: 'ui' as const,
       },
       {
+        // 🎯 HANDSHAKE: webviewInitialized is sent AFTER WebView's message handlers are set up
+        command: 'webviewInitialized',
+        handler: (msg: WebviewMessage) => this._handleWebviewInitialized(msg),
+        category: 'ui' as const,
+      },
+      {
         command: 'reportPanelLocation',
         handler: async (msg: WebviewMessage) => await this._handleReportPanelLocation(msg),
         category: 'ui' as const,
@@ -672,7 +678,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     });
     log('✅ [HANDSHAKE] extensionReady sent to WebView');
 
-    // Mark as initialized
+    // Mark as initialized (allows messages to be sent)
     this._isInitialized = true;
     // Flush any messages queued before the webview was ready
     if (this._pendingMessages.length > 0) {
@@ -687,7 +693,23 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     // Send version information
     void this._communicationService.sendVersionInfo();
 
+    // 🎯 HANDSHAKE: Do NOT start terminal initialization here!
+    // We must wait for webviewInitialized message to ensure WebView's
+    // message handlers are fully set up before sending terminalCreated messages.
+    // The orchestrator.initialize() will be called in _handleWebviewInitialized().
+    log('⏳ [HANDSHAKE] Waiting for webviewInitialized before starting terminal initialization');
+  }
+
+  /**
+   * Handle webviewInitialized message from WebView
+   * This is sent AFTER WebView's message handlers are fully set up
+   */
+  private _handleWebviewInitialized(_message: WebviewMessage): void {
+    log('🔥 [TERMINAL-INIT] === _handleWebviewInitialized CALLED ===');
+    log('🎯 [TERMINAL-INIT] WebView fully initialized - starting terminal initialization');
+
     // Start initialization via orchestrator
+    // Now it's safe to create terminals because WebView can handle terminalCreated messages
     void this._orchestrator.initialize();
   }
 

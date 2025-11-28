@@ -87,6 +87,14 @@ async function initializeWebView(): Promise<void> {
 
     webviewLogger.initialized();
 
+    // 🎯 HANDSHAKE: Notify Extension that WebView is fully initialized and ready for messages
+    // This prevents race conditions where terminalCreated messages arrive before handlers are ready
+    vscodeApi.postMessage({
+      command: 'webviewInitialized',
+      timestamp: Date.now(),
+    });
+    log('🤝 [HANDSHAKE] Sent webviewInitialized to Extension');
+
     // 🎯 VS Code Pattern: Extension controls all terminal creation
     // WebView only initializes managers - no independent terminal creation
     // Extension's TerminalInitializationCoordinator handles:
