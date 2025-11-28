@@ -91,6 +91,10 @@
 
    🔧 CRITICAL: xterm.js sets inline styles with
    fixed pixel values. We MUST override them.
+
+   VS Code Terminal Padding Reference:
+   - Horizontal padding: 10px (left) + 14px (right for scrollbar)
+   - Vertical padding: varies by platform
    ======================================== */
 
 .xterm {
@@ -102,6 +106,9 @@
   min-width: 0 !important;
   min-height: 0 !important;
   position: relative !important;
+  /* VS Code standard terminal padding */
+  padding: 0 10px 0 10px !important;
+  box-sizing: border-box !important;
 }
 
 .xterm-viewport {
@@ -265,4 +272,70 @@
     animation: none;
     transition: none;
   }
+}
+
+/* ========================================
+   VS CODE STYLE SCROLLBAR
+   Matches VS Code's integrated terminal scrollbar
+   ======================================== */
+
+.xterm-viewport::-webkit-scrollbar {
+  width: 14px;
+  height: 14px;
+}
+
+.xterm-viewport::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.xterm-viewport::-webkit-scrollbar-thumb {
+  background-color: var(--vscode-scrollbarSlider-background, rgba(121, 121, 121, 0.4));
+  border-radius: 7px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+
+.xterm-viewport::-webkit-scrollbar-thumb:hover {
+  background-color: var(--vscode-scrollbarSlider-hoverBackground, rgba(100, 100, 100, 0.7));
+}
+
+.xterm-viewport::-webkit-scrollbar-thumb:active {
+  background-color: var(--vscode-scrollbarSlider-activeBackground, rgba(191, 191, 191, 0.4));
+}
+
+.xterm-viewport::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* ========================================
+   VS CODE STYLE CURSOR
+   Smooth cursor animation like VS Code terminal
+   ======================================== */
+
+.xterm-cursor-layer {
+  /* Cursor layer positioning */
+}
+
+/* Blinking cursor animation */
+@keyframes terminal-cursor-blink {
+  0%, 50% {
+    opacity: 1;
+  }
+  51%, 100% {
+    opacity: 0;
+  }
+}
+
+/* ========================================
+   VS CODE STYLE SELECTION
+   Semi-transparent selection like VS Code
+   ======================================== */
+
+.xterm .xterm-selection div {
+  background-color: var(--vscode-terminal-selectionBackground, rgba(38, 79, 120, 0.5)) !important;
+}
+
+/* Inactive selection (when terminal not focused) */
+.xterm:not(:focus-within) .xterm-selection div {
+  background-color: var(--vscode-terminal-inactiveSelectionBackground, rgba(38, 79, 120, 0.3)) !important;
 }

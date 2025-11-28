@@ -41,6 +41,10 @@ import {
 import { TerminalOperationsCoordinator } from '../coordinators/TerminalOperationsCoordinator';
 import { ResizeCoordinator } from '../coordinators/ResizeCoordinator';
 
+// Managers (リファクタリングで抽出)
+import { SessionRestoreManager, SessionData } from './SessionRestoreManager';
+import { TerminalSettingsManager } from './TerminalSettingsManager';
+
 // Services
 import { FontSettingsService } from '../services/FontSettingsService';
 
@@ -140,20 +144,17 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
   private fontSettingsService!: FontSettingsService;
 
   // ========================================
+  // Extracted Managers (リファクタリングで抽出)
+  // ========================================
+  private sessionRestoreManager!: SessionRestoreManager;
+  private settingsManager!: TerminalSettingsManager;
+
+  // ========================================
   // 状態
   // ========================================
   private versionInfo: string = 'v0.1.0';
   private pendingSplitTransition: Promise<void> | null = null;
-  private currentSettings: PartialTerminalSettings = {
-    theme: 'auto',
-    cursorBlink: true,
-    altClickMovesCursor: true,
-    multiCursorModifier: 'alt',
-    highlightActiveBorder: true,
-  };
   private isInitialized = false;
-  private processedScrollbackRequests = new Set<string>();
-  private _isRestoringSession = false;
   private currentTerminalState: TerminalState | null = null;
 
   constructor() {
@@ -361,6 +362,20 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       this.terminalTabManager,
       this.terminalContainerManager
     );
+
+    // Initialize SessionRestoreManager (extracted for better separation)
+    this.sessionRestoreManager = new SessionRestoreManager({
+      getTerminalInstance: (id) => this.getTerminalInstance(id),
+      createTerminal: (id, name) => this.createTerminal(id, name),
+      getActiveTerminalId: () => this.getActiveTerminalId(),
+    });
+
+    // Initialize TerminalSettingsManager (extracted for better separation)
+    this.settingsManager = new TerminalSettingsManager(this.uiManager, this.configManager, {
+      getAllTerminalInstances: () => this.getAllTerminalInstances(),
+      getAllTerminalContainers: () => this.getAllTerminalContainers(),
+      getActiveTerminalId: () => this.getActiveTerminalId(),
+    });
 
     log('✅ All managers initialized');
   }
@@ -596,21 +611,6 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
    */
   public getCurrentFlexDirection(): 'row' | 'column' | null {
     return this.messageManager.getCurrentFlexDirection();
-  }
-
-  /**
-   * Check if session restore is in progress
-   */
-  public isRestoringSession(): boolean {
-    return this._isRestoringSession;
-  }
-
-  /**
-   * Set session restore flag
-   */
-  public setRestoringSession(isRestoring: boolean): void {
-    this._isRestoringSession = isRestoring;
-    log(`🔄 [SESSION-RESTORE] isRestoringSession set to: ${isRestoring}`);
   }
 
   // Terminal management delegation
@@ -1372,114 +1372,25 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
   /**
    * 🔄 PUBLIC API: Restore terminal session from Extension data
-   *
-   * NOTE: This method now checks for duplicate restoration attempts
-   * using TerminalCreationService.isTerminalRestoring() to prevent
-   * overwriting previously restored scrollback data.
+   * Delegates to SessionRestoreManager for deduplication and actual restoration.
    */
-  public async restoreSession(sessionData: {
-    terminalId: string;
-    terminalName: string;
-    scrollbackData?: string[];
-    sessionRestoreMessage?: string;
-  }): Promise<boolean> {
-    try {
-      const { terminalId, terminalName, scrollbackData, sessionRestoreMessage } = sessionData;
+  public async restoreSession(sessionData: SessionData): Promise<boolean> {
+    const result = await this.sessionRestoreManager.restoreSession(sessionData);
+    return result.success;
+  }
 
-      log(`🔄 [RESTORATION] Starting session restore for terminal: ${terminalId}`);
+  /**
+   * Check if session restore is in progress
+   */
+  public isRestoringSession(): boolean {
+    return this.sessionRestoreManager.isRestoringSession();
+  }
 
-      // 🔒 Check if terminal is already being restored or was recently restored
-      // This prevents duplicate restoration from different code paths
-      if (TerminalCreationService.isTerminalRestoring(terminalId)) {
-        // eslint-disable-next-line no-console
-        console.log(`[RESTORATION] ⏭️ Terminal ${terminalId} is already being restored, skipping`);
-        log(`⏭️ [RESTORATION] Terminal ${terminalId} is already being restored, skipping`);
-        return true; // Return true since restoration is already in progress
-      }
-
-      // Also check processedScrollbackRequests to prevent re-processing
-      if (this.processedScrollbackRequests.has(terminalId)) {
-        // eslint-disable-next-line no-console
-        console.log(
-          `[RESTORATION] ⏭️ Terminal ${terminalId} scrollback already processed, skipping`
-        );
-        log(`⏭️ [RESTORATION] Terminal ${terminalId} scrollback already processed, skipping`);
-        return true;
-      }
-
-      // 🔒 Mark terminal as restoring (blocks auto-save)
-      TerminalCreationService.markTerminalRestoring(terminalId);
-
-      // 1. Create terminal if it doesn't exist
-      let terminal = this.getTerminalInstance(terminalId);
-      if (!terminal) {
-        log(`🔄 [RESTORATION] Creating terminal for restore: ${terminalId}`);
-        const xtermInstance = await this.createTerminal(terminalId, terminalName);
-        if (!xtermInstance) {
-          log(`❌ [RESTORATION] Failed to create terminal for restore: ${terminalId}`);
-          TerminalCreationService.markTerminalRestored(terminalId);
-          return false;
-        }
-
-        // Wait for terminal to be fully created
-        await new Promise((resolve) => setTimeout(resolve, 100));
-        terminal = this.getTerminalInstance(terminalId);
-      }
-
-      if (!terminal?.terminal) {
-        log(`❌ [RESTORATION] Terminal instance not available for restore: ${terminalId}`);
-        TerminalCreationService.markTerminalRestored(terminalId);
-        return false;
-      }
-
-      // 2. Clear existing content (only if we're actually restoring data)
-      if (scrollbackData && scrollbackData.length > 0) {
-        terminal.terminal.clear();
-      }
-
-      // 3. Restore session restore message if available
-      if (sessionRestoreMessage) {
-        terminal.terminal.writeln(sessionRestoreMessage);
-        log(`🔄 [RESTORATION] Restored session message for terminal: ${terminalId}`);
-      }
-
-      // 4. Restore scrollback data if available
-      if (scrollbackData && scrollbackData.length > 0) {
-        log(
-          `🔄 [RESTORATION] Restoring ${scrollbackData.length} lines of scrollback for terminal: ${terminalId}`
-        );
-
-        // Write each line to restore scrollback history
-        for (const line of scrollbackData) {
-          if (line.trim()) {
-            terminal.terminal.writeln(line);
-          }
-        }
-
-        log(
-          `✅ [RESTORATION] Scrollback restored for terminal: ${terminalId} (${scrollbackData.length} lines)`
-        );
-      }
-
-      // 🔒 Mark as processed to prevent duplicate restoration
-      this.processedScrollbackRequests.add(terminalId);
-
-      // 🔓 Mark restoration complete (starts 5s protection period countdown)
-      TerminalCreationService.markTerminalRestored(terminalId);
-
-      // 5. Focus terminal if it's the active one
-      if (this.getActiveTerminalId() === terminalId) {
-        terminal.terminal.focus();
-      }
-
-      log(`✅ [RESTORATION] Session restore completed for terminal: ${terminalId}`);
-      return true;
-    } catch (error) {
-      log(`❌ [RESTORATION] Error during session restore:`, error);
-      // Even on error, mark as restored to prevent infinite retries
-      TerminalCreationService.markTerminalRestored(sessionData.terminalId);
-      return false;
-    }
+  /**
+   * Set session restore flag
+   */
+  public setRestoringSession(isRestoring: boolean): void {
+    this.sessionRestoreManager.setRestoringSession(isRestoring);
   }
 
   // Note: updatePerformanceCounters and getSystemUptime moved to DebugPanelManager
@@ -1792,8 +1703,9 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       this.messageManager.dispose();
       this.webViewPersistenceService.dispose();
 
-      // Clean up scrollback request tracking
-      this.processedScrollbackRequests.clear();
+      // Extracted managers のクリーンアップ
+      this.sessionRestoreManager?.dispose();
+      this.settingsManager?.dispose();
 
       // Coordinators のクリーンアップ
       this.terminalOperations.dispose();

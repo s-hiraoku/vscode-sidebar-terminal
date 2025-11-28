@@ -48,16 +48,37 @@ export interface IFontSettingsApplicator {
 }
 
 /**
- * Default font settings following VS Code terminal defaults
+ * Detect platform for platform-specific defaults
  */
-const DEFAULT_FONT_SETTINGS: Readonly<WebViewFontSettings> = {
-  fontSize: 14,
-  fontFamily: 'monospace',
-  fontWeight: 'normal',
-  fontWeightBold: 'bold',
-  lineHeight: 1.0,
-  letterSpacing: 0,
-} as const;
+const detectPlatform = (): 'darwin' | 'linux' | 'win32' => {
+  const userAgent = navigator.userAgent.toLowerCase();
+  if (userAgent.includes('mac')) return 'darwin';
+  if (userAgent.includes('linux')) return 'linux';
+  return 'win32';
+};
+
+/**
+ * Default font settings following VS Code terminal defaults
+ * Platform-specific adjustments:
+ * - macOS: 12px font size (VS Code default)
+ * - Linux: lineHeight 1.1 (better underline rendering)
+ * - Windows/Other: 14px font size, lineHeight 1.0
+ *
+ * @see https://github.com/microsoft/vscode/blob/main/src/vs/workbench/contrib/terminal/common/terminalConfiguration.ts
+ */
+const getDefaultFontSettings = (): WebViewFontSettings => {
+  const platform = detectPlatform();
+  return {
+    fontSize: platform === 'darwin' ? 12 : 14,
+    fontFamily: "Menlo, Monaco, 'Courier New', monospace",
+    fontWeight: 'normal',
+    fontWeightBold: 'bold',
+    lineHeight: platform === 'linux' ? 1.1 : 1.0,
+    letterSpacing: 0,
+  };
+};
+
+const DEFAULT_FONT_SETTINGS: Readonly<WebViewFontSettings> = getDefaultFontSettings();
 
 /**
  * Font settings validation constraints

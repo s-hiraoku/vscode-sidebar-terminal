@@ -48,13 +48,15 @@ export type TerminalThemeData = TerminalTheme;
 
 /**
  * Theme constants for dark theme
+ * Based on VS Code's default dark terminal colors
+ * @see https://github.com/microsoft/vscode/blob/main/src/vs/workbench/contrib/terminal/common/terminalColorRegistry.ts
  */
 export const DARK_THEME: TerminalTheme = {
-  background: '#0c0c0c', // VS Code standard terminal background
+  background: '#1e1e1e', // VS Code editor background (more visible than pure black)
   foreground: '#cccccc',
-  cursor: '#cccccc',
+  cursor: '#aeafad',
   cursorAccent: '#000000',
-  selection: '#264f78',
+  selection: 'rgba(38, 79, 120, 0.5)', // VS Code selection with transparency
   black: '#000000',
   red: '#cd3131',
   green: '#0dbc79',
@@ -75,13 +77,15 @@ export const DARK_THEME: TerminalTheme = {
 
 /**
  * Theme constants for light theme
+ * Based on VS Code's default light terminal colors
+ * @see https://github.com/microsoft/vscode/blob/main/src/vs/workbench/contrib/terminal/common/terminalColorRegistry.ts
  */
 export const LIGHT_THEME: TerminalTheme = {
-  background: '#f8f8f8', // VS Code standard light terminal background
+  background: '#ffffff', // VS Code light editor background
   foreground: '#333333',
-  cursor: '#333333',
+  cursor: '#000000',
   cursorAccent: '#ffffff',
-  selection: '#add6ff',
+  selection: 'rgba(173, 214, 255, 0.5)', // VS Code selection with transparency
   black: '#000000',
   red: '#cd3131',
   green: '#00bc00',
