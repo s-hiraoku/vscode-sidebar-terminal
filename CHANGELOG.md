@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.145] - 2025-11-28
+
+### Fixed
+
+- **Terminal Width Resize Tracking**: Fixed terminal not following panel width when expanding
+  - Reset inline styles on `.xterm` element before `fit()` to allow CSS flex to work
+  - Added ResizeObserver on `document.body` to detect WebView panel resize
+  - Force browser layout reflow before `fit()` for accurate dimension calculation
+  - Reduced debounce time from 100ms to 50ms for faster resize response
+
+### Improved
+
+- **CSS Flex Layout**: Enhanced flex container styling for reliable width expansion
+  - Added `width: 100%`, `min-width: 0`, `box-sizing: border-box` to `[data-terminal-container]`
+  - Added `position: relative`, `min-width: 0` to `.xterm` element
+  - Added `overflow: hidden` to `.terminal-content` for proper clipping
+  - Added `min-width: 0`, `min-height: 0` to `.terminal-container`
+
 ## [0.1.144] - 2025-11-28
 
 ### Fixed

@@ -40,6 +40,11 @@ export class TerminalTabManager implements TerminalTabEvents {
   private isInitialized = false;
   private currentDisplayMode: 'normal' | 'fullscreen' | 'split' = 'normal';
 
+  // 🔧 FIX: Track tabs being deleted to prevent race conditions with syncTabs
+  private pendingDeletions: Set<string> = new Set();
+  // 🔧 FIX: Track tabs being created to prevent duplicate additions
+  private pendingCreations: Set<string> = new Set();
+
   constructor() {}
 
   public setCoordinator(coordinator: IManagerCoordinator): void {
@@ -313,12 +318,22 @@ export class TerminalTabManager implements TerminalTabEvents {
   }
 
   public removeTab(terminalId: string): void {
-    if (!this.tabs.has(terminalId)) return;
+    // 🔧 FIX: Check if tab exists and log if already removed
+    if (!this.tabs.has(terminalId)) {
+      log(`🗂️ [TAB-REMOVE] Tab already removed or doesn't exist: ${terminalId}`);
+      // Clear from pending deletions if it was tracked
+      this.pendingDeletions.delete(terminalId);
+      return;
+    }
 
     this.ensureInitialized();
     if (!this.tabList) {
       return;
     }
+
+    // 🔧 FIX: Mark as pending deletion before removal
+    this.pendingDeletions.add(terminalId);
+    log(`🗂️ [TAB-REMOVE] Starting removal for: ${terminalId}`);
 
     this.tabs.delete(terminalId);
     this.tabOrder = this.tabOrder.filter((id) => id !== terminalId);
@@ -335,7 +350,14 @@ export class TerminalTabManager implements TerminalTabEvents {
     }
 
     this.updateTabVisibility();
-    log(`🗂️ Tab removed: ${terminalId}`);
+
+    // 🔧 FIX: Clear pending deletion after a short delay to prevent race conditions
+    setTimeout(() => {
+      this.pendingDeletions.delete(terminalId);
+      log(`🗂️ [TAB-REMOVE] Deletion tracking cleared for: ${terminalId}`);
+    }, 300);
+
+    log(`🗂️ [TAB-REMOVE] Tab removed: ${terminalId}, remaining tabs: ${this.tabs.size}`);
   }
 
   public updateTab(terminalId: string, updates: Partial<TerminalTab>): void {
@@ -412,6 +434,7 @@ export class TerminalTabManager implements TerminalTabEvents {
   public syncTabs(tabInfos: TabSyncInfo[]): void {
     log(`🔄 [SYNC-TABS] syncTabs called with ${tabInfos.length} tabs:`, tabInfos.map(t => t.id));
     log(`🔄 [SYNC-TABS] Current tabs: ${this.tabs.size}:`, Array.from(this.tabs.keys()));
+    log(`🔄 [SYNC-TABS] Pending deletions: ${this.pendingDeletions.size}:`, Array.from(this.pendingDeletions));
 
     if (tabInfos.length === 0 && this.tabs.size === 0) {
       return;
@@ -440,6 +463,12 @@ export class TerminalTabManager implements TerminalTabEvents {
 
     // Add or update tabs
     tabInfos.forEach((info) => {
+      // 🔧 FIX: Skip tabs that are pending deletion to prevent race conditions
+      if (this.pendingDeletions.has(info.id)) {
+        log(`🔄 [SYNC-TABS] ⏭️ Skipping tab pending deletion: ${info.id}`);
+        return;
+      }
+
       const existing = this.tabs.get(info.id);
       if (!existing) {
         log(`🔄 [SYNC-TABS] Adding new tab: ${info.id}`);

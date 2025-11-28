@@ -393,85 +393,39 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
   private refitAllTerminals(): void {
     try {
       const terminals = this.splitManager.getTerminals();
-      const terminalBody = document.getElementById('terminal-body');
-      const terminalsWrapper = document.getElementById('terminals-wrapper');
-
-      // 🔍 DEBUG: Log ALL parent container dimensions from body down
-      const body = document.body;
-      if (body) {
-        const bodyRect = body.getBoundingClientRect();
-        log(`📐 [DEBUG] document.body size: ${bodyRect.width}x${bodyRect.height}, clientWidth: ${body.clientWidth}`);
-      }
-      if (terminalBody) {
-        const bodyRect = terminalBody.getBoundingClientRect();
-        log(`📐 [DEBUG] terminal-body size: ${bodyRect.width}x${bodyRect.height}, clientWidth: ${terminalBody.clientWidth}`);
-        log(`📐 [DEBUG] terminal-body computedStyle width: ${window.getComputedStyle(terminalBody).width}`);
-      }
-      if (terminalsWrapper) {
-        const wrapperRect = terminalsWrapper.getBoundingClientRect();
-        log(`📐 [DEBUG] terminals-wrapper size: ${wrapperRect.width}x${wrapperRect.height}, clientWidth: ${terminalsWrapper.clientWidth}`);
-      }
 
       terminals.forEach((terminalData, terminalId) => {
-        if (terminalData.fitAddon) {
+        if (terminalData.fitAddon && terminalData.terminal) {
           try {
-            // 🔍 DEBUG: Log container dimensions before fit
             if (terminalData.container) {
-              const containerRect = terminalData.container.getBoundingClientRect();
-              log(`📐 [DEBUG] Container ${terminalId} size BEFORE fit: ${containerRect.width}x${containerRect.height}`);
-
-              // Check xterm element
-              const xtermElement = terminalData.container.querySelector('.xterm');
-              if (xtermElement) {
-                const xtermRect = xtermElement.getBoundingClientRect();
-                log(`📐 [DEBUG] .xterm ${terminalId} size: ${xtermRect.width}x${xtermRect.height}`);
-              }
-
-              // Check terminal-content element
-              const contentElement = terminalData.container.querySelector('.terminal-content');
-              if (contentElement) {
-                const contentRect = contentElement.getBoundingClientRect();
-                log(`📐 [DEBUG] .terminal-content ${terminalId} size: ${contentRect.width}x${contentRect.height}`);
-              }
-            }
-
-            // 🔍 DEBUG: Check proposeDimensions before fit
-            const proposedDims = terminalData.fitAddon.proposeDimensions();
-            log(`📐 [DEBUG] proposeDimensions for ${terminalId}: cols=${proposedDims?.cols}, rows=${proposedDims?.rows}`);
-
-            // 🔧 FIX: Force terminal-content to match container size before fit
-            // This ensures FitAddon calculates based on actual available space
-            if (terminalData.container) {
-              const containerRect = terminalData.container.getBoundingClientRect();
+              // 🔧 FIX: Reset fixed pixel sizes on ALL elements in the hierarchy
+              // This ensures CSS flex/100% can properly expand
               const contentElement = terminalData.container.querySelector('.terminal-content') as HTMLElement;
-              const headerElement = terminalData.container.querySelector('.terminal-header') as HTMLElement;
+              const xtermElement = terminalData.container.querySelector('.xterm') as HTMLElement;
 
+              // Reset terminal-content to allow flex expansion
               if (contentElement) {
-                // Calculate available height (minus header if present)
-                const headerHeight = headerElement ? headerElement.getBoundingClientRect().height : 0;
-                const availableHeight = containerRect.height - headerHeight;
-
-                // Force content element size
-                contentElement.style.width = `${containerRect.width}px`;
-                contentElement.style.height = `${availableHeight}px`;
-                log(`📐 [DEBUG] Forced .terminal-content size: ${containerRect.width}x${availableHeight}`);
+                contentElement.style.width = '';
+                contentElement.style.height = '';
               }
+
+              // 🔧 FIX: Reset xterm element inline styles that may have been set by xterm.js
+              // xterm.js sets inline width/height which prevents expansion
+              if (xtermElement) {
+                xtermElement.style.width = '';
+                xtermElement.style.height = '';
+              }
+
+              // 🔧 FIX: Force browser layout reflow before fit()
+              // This ensures getBoundingClientRect() returns updated values
+              // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+              terminalData.container.offsetHeight;
             }
 
+            // Call fit() to recalculate terminal dimensions based on new container size
             terminalData.fitAddon.fit();
 
-            // 🔍 DEBUG: Log terminal cols/rows after fit
-            if (terminalData.terminal) {
-              log(`✅ Terminal ${terminalId} refitted: ${terminalData.terminal.cols}x${terminalData.terminal.rows}`);
-
-              // 🔍 DEBUG: Check canvas dimensions after fit
-              if (terminalData.container) {
-                const canvas = terminalData.container.querySelector('canvas.xterm-text-layer, canvas.xterm-link-layer');
-                if (canvas) {
-                  log(`📐 [DEBUG] Canvas after fit: ${(canvas as HTMLCanvasElement).width}x${(canvas as HTMLCanvasElement).height}`);
-                }
-              }
-            }
+            log(`✅ Terminal ${terminalId} refitted: ${terminalData.terminal.cols}x${terminalData.terminal.rows}`);
           } catch (error) {
             log(`⚠️ Failed to refit terminal ${terminalId}:`, error);
           }
@@ -1334,14 +1288,15 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       return;
     }
 
-    log('🔧 Setting up direct ResizeObserver on terminal-body');
+    log('🔧 Setting up ResizeObserver on document.body and terminal-body');
 
-    // 🔧 FIX: Use direct ResizeObserver instead of ResizeManager
-    // This avoids any first-callback-skip logic
+    // 🔧 FIX: Single ResizeObserver that watches both document.body and terminal-body
+    // document.body catches WebView panel resize, terminal-body catches internal layout changes
     this.parentResizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const { width, height } = entry.contentRect;
-        log(`📐 [RESIZE] Parent container resized: ${width}x${height}`);
+        const targetId = (entry.target as HTMLElement).id || 'body';
+        log(`📐 [RESIZE] ${targetId} resized: ${width}x${height}`);
 
         // Debounce the refit
         if (this.parentResizeTimer !== null) {
@@ -1351,14 +1306,14 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
         this.parentResizeTimer = window.setTimeout(() => {
           log(`📐 [RESIZE] Triggering refitAllTerminals after debounce`);
           this.refitAllTerminals();
-        }, 100);
+        }, 50); // Reduced debounce for faster response
       }
     });
 
+    // Observe both document.body (for WebView resize) and terminal-body (for layout changes)
+    this.parentResizeObserver.observe(document.body);
     this.parentResizeObserver.observe(terminalBody);
-    log('✅ Direct ResizeObserver setup on terminal-body');
-
-    log('✅ Parent container ResizeObserver setup');
+    log('✅ ResizeObserver setup on document.body and terminal-body');
   }
 
   // Compatibility methods for existing code

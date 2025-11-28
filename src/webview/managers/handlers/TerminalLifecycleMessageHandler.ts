@@ -369,12 +369,18 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
         }
       }
     } else {
-      // Delete succeeded - terminal should already be removed from WebView
+      // Delete succeeded - terminal should already be removed from WebView via terminalRemoved message
       this.logger.info(`Terminal deletion confirmed by Extension: ${terminalId}`);
 
-      // Ensure terminal is properly removed from WebView
-      if ('removeTerminal' in coordinator && typeof coordinator.removeTerminal === 'function') {
-        coordinator.removeTerminal(terminalId);
+      // 🔧 FIX: Do NOT call removeTerminal here - terminalRemoved message already handles removal
+      // Calling removeTerminal here caused duplicate tab removal and state inconsistency
+      // Just clear deletion tracking to allow future operations
+      if (
+        'clearTerminalDeletionTracking' in coordinator &&
+        typeof coordinator.clearTerminalDeletionTracking === 'function'
+      ) {
+        coordinator.clearTerminalDeletionTracking(terminalId);
+        this.logger.info(`🔧 Cleared deletion tracking for: ${terminalId}`);
       }
     }
   }

@@ -360,8 +360,11 @@ export class WebViewHtmlGenerationService {
             position: relative;
             width: 100%;
             height: 100%;
+            min-width: 0; /* 🔧 FIX: Allow shrinking below content size */
+            min-height: 0;
             border: 1px solid transparent !important;
             transition: border-color 0.2s ease-in-out;
+            box-sizing: border-box;
         }
 
         .terminal-container.active {
@@ -390,10 +393,14 @@ export class WebViewHtmlGenerationService {
             display: flex !important; /* 🔧 FIX: Enable flex for proper expansion */
             flex: 1 1 auto !important; /* 🔧 FIX: Allow xterm to expand with container */
             flex-direction: column !important;
+            position: relative !important; /* 🔧 FIX: Required for absolute positioned children */
             margin: 0 !important;
             padding: 0 !important;
             width: 100% !important;
             height: 100% !important;
+            min-width: 0 !important; /* 🔧 FIX: Allow shrinking below content size */
+            min-height: 0 !important;
+            box-sizing: border-box !important;
         }
 
         .xterm-viewport {
@@ -418,6 +425,10 @@ export class WebViewHtmlGenerationService {
             flex: 1 1 auto !important;
             width: 100% !important;
             height: 100% !important;
+            min-width: 0 !important; /* 🔧 FIX: Allow shrinking below content size */
+            min-height: 0 !important;
+            box-sizing: border-box !important;
+            overflow: hidden !important;
         }
 
         /* Terminal container fixes */
@@ -426,8 +437,12 @@ export class WebViewHtmlGenerationService {
             flex-direction: column !important;
             margin: 0 !important;
             padding: 2px !important;
+            width: 100% !important; /* 🔧 FIX: Ensure full width */
             height: 100% !important;
-            flex: 1 !important;
+            min-width: 0 !important; /* 🔧 FIX: Allow shrinking below content size */
+            min-height: 0 !important;
+            flex: 1 1 auto !important; /* 🔧 FIX: Proper flex grow/shrink/basis */
+            box-sizing: border-box !important;
         }
     `;
   }
