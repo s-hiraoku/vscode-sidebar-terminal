@@ -276,6 +276,8 @@ export class TerminalCoordinator extends BaseManager implements ITerminalCoordin
     const terminal = this.getTerminal(terminalId);
     if (terminal) {
       terminal.write(data);
+      // Auto-scroll to bottom to match VS Code standard terminal behavior
+      terminal.scrollToBottom();
     } else {
       this.logger(`Cannot write to terminal: ${terminalId} not found`);
     }

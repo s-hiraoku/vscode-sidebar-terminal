@@ -496,6 +496,9 @@ export class WebViewPersistenceService {
 
       if (endIndex < lines.length) {
         setTimeout(() => writeBatch(endIndex), 0);
+      } else {
+        // Auto-scroll to bottom after all content is written
+        terminal.scrollToBottom();
       }
     };
 
@@ -514,6 +517,7 @@ export class WebViewPersistenceService {
     setTimeout(() => {
       log(`[WV-PERSISTENCE] Loading remaining content for ${terminalId}`);
       this.writeBatchToTerminal(terminal, remainingLines);
+      // writeBatchToTerminal will call scrollToBottom after completion
     }, 2000); // 2 second delay
   }
 }
