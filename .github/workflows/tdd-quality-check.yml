@@ -95,7 +95,7 @@ jobs:
           })
           
     - name: Upload TDD Metrics
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: tdd-metrics-${{ matrix.node-version }}
         path: |
