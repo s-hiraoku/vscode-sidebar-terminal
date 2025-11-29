@@ -43,7 +43,7 @@ export enum InitializationState {
  */
 export class InitializationError extends Error {
   public readonly serviceName: string;
-  public readonly cause?: Error;
+  public override readonly cause?: Error;
 
   constructor(serviceName: string, cause?: Error) {
     super(`Failed to initialize ${serviceName}: ${cause?.message || 'Unknown error'}`);
@@ -158,7 +158,9 @@ export abstract class LazyInitializable {
     if (this._initPromise) {
       await this._initPromise;
 
-      if (this._state === InitializationState.FAILED) {
+      // Re-check state after await (state may have changed during initialization)
+      const currentState = this._state as InitializationState;
+      if (currentState === InitializationState.FAILED) {
         throw new InitializationError(this.constructor.name, this._initError ?? undefined);
       }
       return;
@@ -212,7 +214,8 @@ export abstract class LazyInitializable {
  * Use this when you need to apply lazy initialization to a class that already
  * has a base class.
  */
-export function withLazyInitialization<T extends new (...args: unknown[]) => object>(Base: T) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function withLazyInitialization<T extends new (...args: any[]) => object>(Base: T) {
   return class extends Base {
     private _initState: InitializationState = InitializationState.UNINITIALIZED;
     private _initPromise: Promise<void> | null = null;

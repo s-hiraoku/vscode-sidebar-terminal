@@ -81,7 +81,7 @@ export class ManagerRegistry {
   ): T | null {
     if (this.managers.has(name)) {
       log(`[ManagerRegistry] ⚠️ Manager '${name}' already registered, skipping`);
-      return this.get<T>(name);
+      return this.get<T>(name) ?? null;
     }
 
     const registered: RegisteredManager = {

@@ -92,7 +92,7 @@ interface RegisteredHandler {
 /**
  * Priority value mapping
  */
-const PRIORITY_VALUES: Record<string, number> = {
+const PRIORITY_VALUES: Record<'high' | 'normal' | 'low', number> = {
   high: 0,
   normal: 50,
   low: 100,
@@ -118,7 +118,7 @@ export class CommandRegistry {
     handler: CommandHandler<T>,
     options: HandlerOptions = {}
   ): void {
-    const priorityValue = PRIORITY_VALUES[options.priority ?? 'normal'];
+    const priorityValue: number = PRIORITY_VALUES[options.priority ?? 'normal'] ?? PRIORITY_VALUES.normal;
 
     const registered: RegisteredHandler = {
       handler: handler as CommandHandler,
@@ -262,7 +262,9 @@ export class CommandRegistry {
     const next = async (): Promise<void> => {
       if (index < this.middlewares.length) {
         const middleware = this.middlewares[index++];
-        await middleware(message, context, next);
+        if (middleware) {
+          await middleware(message, context, next);
+        }
       } else {
         await handlers();
       }

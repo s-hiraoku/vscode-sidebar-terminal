@@ -23,7 +23,8 @@
  */
 
 import { Terminal } from '@xterm/xterm';
-import { WebViewFontSettings, TerminalInstance } from '../../types/shared';
+import { WebViewFontSettings } from '../../types/shared';
+import { TerminalInstance } from '../interfaces/ManagerInterfaces';
 import { webview as log } from '../../utils/logger';
 
 /**
@@ -254,7 +255,8 @@ export class FontSettingsService {
     }
 
     const weightStr = String(weight);
-    if (FONT_CONSTRAINTS.VALID_FONT_WEIGHTS.includes(weightStr)) {
+    const validWeights: readonly string[] = FONT_CONSTRAINTS.VALID_FONT_WEIGHTS;
+    if (validWeights.includes(weightStr)) {
       return weightStr;
     }
 

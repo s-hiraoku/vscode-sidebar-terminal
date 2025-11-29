@@ -81,21 +81,9 @@ export class SettingsAndConfigMessageHandler implements IMessageHandler {
   private handleFontSettingsUpdate(msg: MessageCommand, coordinator: IManagerCoordinator): void {
     const fontSettings = msg.fontSettings as WebViewFontSettings;
 
-    // 🔍 DEBUG: Log the entire message to see what's being received
-    this.logger.info('🔤 [FONT-DEBUG] Raw message received:', JSON.stringify(msg));
-    this.logger.info('🔤 [FONT-DEBUG] fontSettings extracted:', JSON.stringify(fontSettings));
-
     if (fontSettings) {
-      this.logger.info('🔤 [FONT-DEBUG] Applying font settings:', {
-        fontFamily: fontSettings.fontFamily,
-        fontSize: fontSettings.fontSize,
-        fontWeight: fontSettings.fontWeight,
-        lineHeight: fontSettings.lineHeight,
-      });
       coordinator.applyFontSettings(fontSettings);
       this.emitTerminalInteractionEvent('font-settings-update', '', fontSettings, coordinator);
-    } else {
-      this.logger.warn('🔤 [FONT-DEBUG] No fontSettings in message!');
     }
   }
 

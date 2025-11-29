@@ -184,7 +184,8 @@ export class VSCodeCommandHandler {
       'workbench.action.terminal.scrollToNextCommand': 'nextCommand',
     };
 
-    const handlers: Record<string, (msg: { manager: unknown }) => void> = {};
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const handlers: Record<string, (msg: any) => void> = {};
 
     for (const [command, direction] of Object.entries(scrollCommands)) {
       handlers[command] = (msg) => {

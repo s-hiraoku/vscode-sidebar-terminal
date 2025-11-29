@@ -295,27 +295,15 @@ export class TerminalCreationService implements Disposable {
         terminalsWrapper.appendChild(container);
         terminalLogger.info(`✅ Container appended to terminals-wrapper: ${terminalId}`);
 
-        // Apply VS Code-like styling and visual settings before rendering (non-fatal)
+        // Apply VS Code-like container styling before rendering (non-fatal)
         try {
           const managers = this.coordinator.getManagers?.();
           const uiManager = managers?.ui;
           if (uiManager) {
             uiManager.applyVSCodeStyling(container);
-
-            const configManager = managers?.config;
-            const currentSettings = configManager?.getCurrentSettings?.();
-            const currentFontSettings = configManager?.getCurrentFontSettings?.();
-
-            if (currentSettings) {
-              uiManager.applyAllVisualSettings(terminal, currentSettings);
-            }
-
-            if (currentFontSettings) {
-              uiManager.applyFontSettings(terminal, currentFontSettings);
-            }
           }
         } catch (error) {
-          terminalLogger.warn('⚠️ Styling application failed; continuing without styling', error);
+          terminalLogger.warn('⚠️ Container styling application failed; continuing without styling', error);
         }
 
         // Make container visible
@@ -325,6 +313,31 @@ export class TerminalCreationService implements Disposable {
         // Open terminal in the body div (AFTER container is in DOM)
         terminal.open(terminalContent);
         terminalLogger.info(`✅ Terminal opened in container: ${terminalId}`);
+
+        // 🎯 VS Code Pattern: Apply font and visual settings AFTER terminal.open()
+        // xterm.js requires the terminal to be attached to DOM before settings can be applied
+        try {
+          const managers = this.coordinator.getManagers?.();
+          const uiManager = managers?.ui;
+          const configManager = managers?.config;
+
+          if (uiManager) {
+            const currentSettings = configManager?.getCurrentSettings?.();
+            const currentFontSettings = configManager?.getCurrentFontSettings?.();
+
+            if (currentSettings) {
+              uiManager.applyAllVisualSettings(terminal, currentSettings);
+              terminalLogger.info(`✅ Visual settings applied to terminal: ${terminalId}`);
+            }
+
+            if (currentFontSettings) {
+              uiManager.applyFontSettings(terminal, currentFontSettings);
+              terminalLogger.info(`✅ Font settings applied to terminal: ${terminalId} (${currentFontSettings.fontFamily}, ${currentFontSettings.fontSize}px)`);
+            }
+          }
+        } catch (error) {
+          terminalLogger.warn('⚠️ Terminal settings application failed; continuing with defaults', error);
+        }
 
         // Phase 3: Attach terminal to LifecycleController for resource management
         this.lifecycleController.attachTerminal(terminalId, terminal);

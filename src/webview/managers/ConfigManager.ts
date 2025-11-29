@@ -246,10 +246,13 @@ export class ConfigManager implements IConfigManager {
   public getCurrentFontSettings(): WebViewFontSettings {
     // Prefer FontSettingsService (single source of truth)
     if (this.fontSettingsService) {
-      return this.fontSettingsService.getCurrentSettings();
+      const settings = this.fontSettingsService.getCurrentSettings();
+      log(`🔤 [CONFIG] getCurrentFontSettings from FontSettingsService: ${settings.fontFamily}, ${settings.fontSize}px`);
+      return settings;
     }
 
     // Fallback for backward compatibility
+    log(`🔤 [CONFIG] getCurrentFontSettings FALLBACK: ${this.fallbackFontSettings.fontFamily}, ${this.fallbackFontSettings.fontSize}px`);
     return { ...this.fallbackFontSettings };
   }
 

@@ -61,7 +61,7 @@ export interface TerminalInstance {
   readonly terminal: Terminal;
   readonly fitAddon: FitAddon;
   readonly container: HTMLElement;
-  isActive?: boolean;
+  isActive: boolean;
   // VS Code Standard Addons
   readonly searchAddon?: SearchAddon;
   readonly webglAddon?: WebglAddon;
@@ -287,6 +287,7 @@ export interface IUIManager {
     agentType: string | null
   ): void;
   applyVSCodeStyling(container: HTMLElement): void;
+  setHighlightActiveBorder(enabled: boolean): void;
   dispose(): void;
 }
 
@@ -398,6 +399,8 @@ export interface INotificationManager {
 export interface IFindInTerminalManager {
   showSearch(): void;
   hideSearch(): void;
+  show?(): void; // Alias for showSearch
+  hide?(): void; // Alias for hideSearch
   findNext(): void;
   findPrevious(): void;
   getSearchState(): {

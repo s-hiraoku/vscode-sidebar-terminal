@@ -717,14 +717,22 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     log('🔥 [TERMINAL-INIT] === _handleWebviewInitialized CALLED ===');
     log('🎯 [TERMINAL-INIT] WebView fully initialized - starting terminal initialization');
 
+    // 🔤 FIX: Send init message to WebView to trigger font settings request
+    // This was missing - WebView needs init message to send getSettings request
+    log('📤 [TERMINAL-INIT] Sending init message to WebView...');
+    void this._sendMessage({
+      command: 'init',
+      timestamp: Date.now(),
+    }).then(() => {
+      log('✅ [TERMINAL-INIT] init message sent to WebView');
+    });
+
     // Start initialization via orchestrator
     // Now it's safe to create terminals because WebView can handle terminalCreated messages
     void this._orchestrator.initialize();
   }
 
   private async _handleGetSettings(): Promise<void> {
-    log('⚙️ [DEBUG] Getting settings from webview...');
-
     // Use SettingsSyncService for settings
     const settings = this._settingsService.getCurrentSettings();
     const fontSettings = this._settingsService.getCurrentFontSettings();

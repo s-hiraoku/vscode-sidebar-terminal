@@ -32,6 +32,10 @@ interface Disposable {
   dispose(): void;
 }
 
+interface WebglAddonType extends Disposable {
+  onContextLoss(callback: () => void): void;
+}
+
 /**
  * Optimizes terminal rendering performance
  */
@@ -39,7 +43,7 @@ export class RenderingOptimizer implements Disposable {
   private resizeObserver: ResizeObserver | null = null;
   private resizeTimer: number | null = null;
   private readonly options: Required<RenderingOptimizerOptions>;
-  private webglAddon: unknown = null;
+  private webglAddon: WebglAddonType | null = null;
   private currentDevice: DeviceType = {
     isTrackpad: true,
     smoothScrollDuration: RENDERING_CONSTANTS.TRACKPAD_SMOOTH_SCROLL_MS,
@@ -156,10 +160,11 @@ export class RenderingOptimizer implements Disposable {
     try {
       // Lazy load WebglAddon
       const { WebglAddon } = await import('@xterm/addon-webgl');
-      this.webglAddon = new WebglAddon();
+      const addon = new WebglAddon() as WebglAddonType;
+      this.webglAddon = addon;
 
       // Setup context loss handler
-      this.webglAddon.onContextLoss(() => {
+      addon.onContextLoss(() => {
         terminalLogger.warn(
           `⚠️ WebGL context lost for terminal ${terminalId}, falling back to DOM renderer`
         );
@@ -167,7 +172,8 @@ export class RenderingOptimizer implements Disposable {
       });
 
       // Load WebGL addon
-      terminal.loadAddon(this.webglAddon);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      terminal.loadAddon(addon as any);
       terminalLogger.info(`✅ WebGL renderer enabled for terminal: ${terminalId}`);
       return true;
     } catch (error) {

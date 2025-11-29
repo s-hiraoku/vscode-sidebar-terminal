@@ -72,6 +72,7 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
         name: 'Terminal 1',
         number: 1,
         container: container1,
+        isActive: false,
       };
 
       const terminalId2 = 'terminal-2';
@@ -86,6 +87,7 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
         name: 'Terminal 2',
         number: 2,
         container: container2,
+        isActive: false,
       };
 
       splitManager.terminals.set(terminalId1, terminalInstance1);
@@ -118,6 +120,7 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
         name: 'Terminal 1',
         number: 1,
         container: container1,
+        isActive: false,
       };
 
       const terminalId2 = 'terminal-2';
@@ -132,6 +135,7 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
         name: 'Terminal 2',
         number: 2,
         container: container2,
+        isActive: false,
       };
 
       splitManager.terminals.set(terminalId1, terminalInstance1);
@@ -170,6 +174,7 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
           name: `Terminal ${id}`,
           number: parseInt(id.split('-')[1] || '1') || 1,
           container,
+          isActive: false,
         };
 
         splitManager.terminals.set(id, instance);
@@ -208,6 +213,7 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
         name: 'Terminal 1',
         number: 1,
         container,
+        isActive: false,
       };
 
       splitManager.terminals.set(terminalId, terminalInstance);
@@ -240,6 +246,7 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
         name: 'Terminal 1',
         number: 1,
         container: container1,
+        isActive: false,
       };
 
       const terminalInstance2: TerminalInstance = {
@@ -249,6 +256,7 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
         name: 'Terminal 2',
         number: 2,
         container: container2,
+        isActive: false,
       };
 
       splitManager.terminals.set(terminalId1, terminalInstance1);
@@ -318,6 +326,7 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
         name: 'Broken Terminal',
         number: 1,
         container: null as any, // Simulate missing container
+        isActive: false,
       };
 
       splitManager.terminals.set('broken-terminal', terminalInstance);
@@ -345,6 +354,7 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
         name: 'Terminal 1',
         number: 1,
         container,
+        isActive: false,
       };
 
       splitManager.terminals.set(terminalId, terminalInstance);
@@ -371,6 +381,7 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
         name: 'Terminal 1',
         number: 1,
         container,
+        isActive: false,
       };
 
       splitManager.terminals.set(terminalId, terminalInstance);
@@ -402,6 +413,7 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
         name: 'Terminal 1',
         number: 1,
         container,
+        isActive: false,
       };
 
       splitManager.terminals.set(terminalId, terminalInstance);
@@ -465,6 +477,7 @@ describe('SplitManager - Dynamic Split Direction (Issue #148)', function () {
           name: `Terminal ${id}`,
           number: parseInt(id.split('-')[1] || '1') || 1,
           container,
+          isActive: false,
         };
 
         splitManager.terminals.set(id, instance);

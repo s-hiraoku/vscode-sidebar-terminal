@@ -62,19 +62,34 @@ export class SettingsCommandHandler extends BaseCommandHandler {
 
   /**
    * Handle font settings update
+   *
+   * 🔧 FIX: Extension sends fontSettings as an object, not individual properties
+   * Message format: { command: 'fontSettingsUpdate', fontSettings: { fontSize, fontFamily, ... } }
    */
   private async handleFontSettingsUpdate(
     message: WebviewMessage,
     coordinator: any,
     context: IMessageHandlerContext
   ): Promise<void> {
-    const { fontSize, fontFamily, lineHeight } = message as any;
+    // 🔧 FIX: Extract fontSettings object from message
+    const fontSettings = (message as any).fontSettings || {};
+    const { fontSize, fontFamily, fontWeight, fontWeightBold, lineHeight, letterSpacing } = fontSettings;
 
     this.log(context, 'info', 'Updating font settings', {
       fontSize,
       fontFamily,
+      fontWeight,
       lineHeight,
+      letterSpacing,
     });
+
+    // 🔧 FIX: Also update ConfigManager's font settings cache
+    const managers = coordinator.getManagers?.();
+    const configManager = managers?.config;
+    if (configManager) {
+      // Update ConfigManager's internal cache so getCurrentFontSettings() returns correct values
+      configManager.applyFontSettings?.(fontSettings, coordinator.getAllTerminals?.() || new Map());
+    }
 
     // Apply font settings to all terminals
     const terminals = coordinator.getAllTerminals?.() || [];
@@ -88,14 +103,28 @@ export class SettingsCommandHandler extends BaseCommandHandler {
         if (fontFamily !== undefined) {
           options.fontFamily = fontFamily;
         }
+        if (fontWeight !== undefined) {
+          options.fontWeight = fontWeight;
+        }
+        if (fontWeightBold !== undefined) {
+          options.fontWeightBold = fontWeightBold;
+        }
         if (lineHeight !== undefined) {
           options.lineHeight = lineHeight;
+        }
+        if (letterSpacing !== undefined) {
+          options.letterSpacing = letterSpacing;
         }
 
         terminal.terminal.options = {
           ...terminal.terminal.options,
           ...options,
         };
+
+        this.log(context, 'debug', `Applied font settings to terminal: ${terminal.id}`, {
+          fontFamily: options.fontFamily,
+          fontSize: options.fontSize,
+        });
       }
     }
   }

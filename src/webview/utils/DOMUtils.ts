@@ -187,6 +187,7 @@ export namespace DOMUtils {
     // The container (.terminal-container) may have fixed width from previous fit()
     container.style.width = '';
     container.style.maxWidth = '';
+    container.style.minWidth = '';
 
     // Reset inline styles on known xterm.js elements
     for (const selector of XTERM_STYLE_RESET_SELECTORS) {
@@ -195,6 +196,7 @@ export namespace DOMUtils {
         element.style.width = '';
         element.style.height = '';
         element.style.maxWidth = '';
+        element.style.minWidth = '';
       }
     }
 
@@ -210,17 +212,41 @@ export namespace DOMUtils {
     const xtermElement = container.querySelector('.xterm') as HTMLElement;
     if (xtermElement) {
       xtermElement.style.maxWidth = '';
+      xtermElement.style.minWidth = '';
       xtermElement.style.width = '';
       xtermElement.style.height = '';
     }
 
-    // 🔧 CRITICAL FIX: Reset canvas element inline styles
-    // xterm.js sets fixed pixel width/height on canvas elements
-    // which prevents terminal from expanding beyond initial size
+    // 🔧 CRITICAL FIX: Reset xterm-viewport - this is the scrollable container
+    // FitAddon uses this element's dimensions for calculation
+    const xtermViewport = container.querySelector('.xterm-viewport') as HTMLElement;
+    if (xtermViewport) {
+      xtermViewport.style.width = '';
+      xtermViewport.style.height = '';
+      xtermViewport.style.maxWidth = '';
+      xtermViewport.style.minWidth = '';
+    }
+
+    // 🔧 CRITICAL FIX: Reset xterm-screen - this contains the canvas layers
+    const xtermScreen = container.querySelector('.xterm-screen') as HTMLElement;
+    if (xtermScreen) {
+      xtermScreen.style.width = '';
+      xtermScreen.style.height = '';
+      xtermScreen.style.maxWidth = '';
+      xtermScreen.style.minWidth = '';
+    }
+
+    // 🔧 FIX: Reset canvas element inline styles ONLY (NOT attributes!)
+    // xterm.js sets fixed pixel width/height on canvas elements as:
+    // 1. HTML attributes (width="XXX" height="YYY") - REQUIRED for rendering resolution
+    // 2. Inline styles (style="width: XXXpx; height: YYYpx") - for display size
+    //
+    // ⚠️ WARNING: Do NOT remove width/height ATTRIBUTES - xterm.js needs them for rendering!
+    // Only clear the inline STYLES to allow CSS to control display size.
     const canvasElements = container.querySelectorAll('.xterm-screen canvas');
     canvasElements.forEach((canvas) => {
       const canvasEl = canvas as HTMLCanvasElement;
-      // Clear inline styles (not the width/height attributes - those are set by xterm.js fit())
+      // Clear inline styles only - let CSS control display size
       canvasEl.style.width = '';
       canvasEl.style.height = '';
     });
@@ -252,6 +278,17 @@ export namespace DOMUtils {
     if (splitWrapper) {
       splitWrapper.style.width = '';
       splitWrapper.style.maxWidth = '';
+      splitWrapper.style.minWidth = '';
+    }
+
+    // 🔧 CRITICAL FIX: Reset terminal-area wrapper if it exists (in split layout)
+    // This element wraps the terminal container and may have fixed dimensions
+    const terminalArea = container.closest('[data-terminal-area-id]') as HTMLElement;
+    if (terminalArea) {
+      terminalArea.style.width = '';
+      terminalArea.style.maxWidth = '';
+      terminalArea.style.minWidth = '';
+      terminalArea.style.height = '';
     }
 
     // Force browser layout reflow to ensure new sizes are calculated

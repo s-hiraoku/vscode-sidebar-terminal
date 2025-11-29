@@ -56,6 +56,18 @@
   overflow: hidden !important;
 }
 
+/* Terminal area inside split wrapper - wraps the actual terminal container */
+[data-terminal-area-id] {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
 .terminal-container,
 [data-terminal-container] {
   display: flex !important;
@@ -84,6 +96,11 @@
   min-width: 0 !important;
   min-height: 0 !important;
   overflow: hidden !important;
+  /* 🔧 VS Code standard terminal padding applied here
+     This ensures FitAddon calculates dimensions correctly
+     (padding is included in clientWidth for the parent) */
+  padding: 0 4px !important;
+  box-sizing: border-box !important;
 }
 
 /* ========================================
@@ -106,8 +123,10 @@
   min-width: 0 !important;
   min-height: 0 !important;
   position: relative !important;
-  /* VS Code standard terminal padding */
-  padding: 0 10px 0 10px !important;
+  /* 🔧 FIX: Remove padding to allow FitAddon to calculate correct dimensions
+     FitAddon uses parentElement.clientWidth which doesn't account for padding
+     Padding should be applied via terminal margins or container padding instead */
+  padding: 0 !important;
   box-sizing: border-box !important;
 }
 
