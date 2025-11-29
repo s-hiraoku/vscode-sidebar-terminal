@@ -6,6 +6,67 @@
 // Require EventEmitter once at the top for all process method polyfills
 const EventEmitter = require('events');
 
+// CRITICAL: Preserve process.argv for Mocha v11 + Node.js v24 compatibility
+// Mocha v11's run-helpers.js uses process.argv.includes() at exit
+// Node.js v24 may have process.argv become undefined in certain conditions
+const originalArgv = process.argv ? [...process.argv] : [];
+
+// Create a safe argv proxy that always returns a valid array
+const safeArgv = new Proxy(originalArgv, {
+  get(target, prop) {
+    if (prop === 'includes') {
+      return (...args) => target.includes(...args);
+    }
+    return target[prop];
+  },
+});
+
+// Ensure process.argv is always a valid array
+if (!Array.isArray(process.argv)) {
+  process.argv = originalArgv;
+}
+
+// Patch Mocha's run-helpers.js exitMocha function to handle undefined process.argv
+// This must run before any tests to catch the case where process.argv becomes undefined
+try {
+  const runHelpers = require('mocha/lib/cli/run-helpers.js');
+
+  // Directly patch the exitMocha function if it exists
+  if (runHelpers && typeof runHelpers.exitMocha === 'function' && !runHelpers._exitMochaPatched) {
+    const originalExitMocha = runHelpers.exitMocha;
+
+    runHelpers.exitMocha = function(code) {
+      // Ensure process.argv exists before calling original
+      if (!process.argv || !Array.isArray(process.argv)) {
+        process.argv = originalArgv;
+      }
+      return originalExitMocha.call(this, code);
+    };
+
+    runHelpers._exitMochaPatched = true;
+    console.log('✅ Patched Mocha exitMocha to handle undefined process.argv');
+  }
+} catch (e) {
+  // Ignore if patching fails
+  console.warn('⚠️ Failed to patch Mocha exitMocha:', e.message);
+}
+
+// Ensure process.argv has includes method and is always valid
+Object.defineProperty(process, 'argv', {
+  get: function() {
+    return originalArgv;
+  },
+  set: function(value) {
+    // Allow setting but maintain our reference
+    if (Array.isArray(value)) {
+      originalArgv.length = 0;
+      originalArgv.push(...value);
+    }
+  },
+  configurable: true,
+  enumerable: true,
+});
+
 // Add missing event handler methods to process for Mocha compatibility
 // Use Object.defineProperty to make these more resistant to being overwritten
 
@@ -231,25 +292,44 @@ process.on('uncaughtException', (error) => {
 });
 
 // Ensure process.stdout and process.stderr exist for Mocha exit handling
-if (!process.stdout) {
-  process.stdout = {
-    write: (data, encoding, callback) => {
-      if (typeof encoding === 'function') callback = encoding;
-      if (callback) setImmediate(callback);
-      return true;
-    },
-    fd: 1,
-  };
-}
-if (!process.stderr) {
-  process.stderr = {
-    write: (data, encoding, callback) => {
-      if (typeof encoding === 'function') callback = encoding;
-      if (callback) setImmediate(callback);
-      return true;
-    },
-    fd: 2,
-  };
-}
+// Save original references
+const originalStdout = process.stdout;
+const originalStderr = process.stderr;
+
+const createFallbackStream = (fd) => ({
+  write: (data, encoding, callback) => {
+    if (typeof encoding === 'function') callback = encoding;
+    if (callback) setImmediate(callback);
+    return true;
+  },
+  fd,
+  on: () => {},
+  once: () => {},
+  emit: () => {},
+  end: () => {},
+});
+
+// Define stdout and stderr as getters that always return a valid object
+Object.defineProperty(process, 'stdout', {
+  get: function() {
+    return originalStdout || createFallbackStream(1);
+  },
+  set: function(value) {
+    // Allow setting but maintain reference
+  },
+  configurable: true,
+  enumerable: true,
+});
+
+Object.defineProperty(process, 'stderr', {
+  get: function() {
+    return originalStderr || createFallbackStream(2);
+  },
+  set: function(value) {
+    // Allow setting but maintain reference
+  },
+  configurable: true,
+  enumerable: true,
+});
 
 module.exports = {};
