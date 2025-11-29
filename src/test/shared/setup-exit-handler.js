@@ -1,176 +1,109 @@
 /**
  * Mocha process exit handler setup
- * This fixes the exit code 7 issue by properly handling process cleanup
+ * Minimal setup to ensure Mocha can exit cleanly with Node.js v24+
  */
 
-// Require EventEmitter once at the top for all process method polyfills
-const EventEmitter = require('events');
+'use strict';
 
-// Add missing event handler methods to process for Mocha compatibility
-// Use Object.defineProperty to make these more resistant to being overwritten
+// Save original process methods at the very start before anything can modify them
+// Use safe accessors to handle the case where process methods might already be undefined
+const _originalExit = typeof process.exit === 'function'
+  ? process.exit.bind(process)
+  : function(code) { process.exitCode = code; };
+const _originalArgv = process.argv ? [...process.argv] : [];
+const _originalStdout = process.stdout;
+const _originalStderr = process.stderr;
+const _originalCwd = typeof process.cwd === 'function' ? process.cwd.bind(process) : () => '/test';
 
-const ensureProcessMethod = (name, impl) => {
-  if (!process[name] || typeof process[name] !== 'function') {
-    try {
-      Object.defineProperty(process, name, {
-        value: impl,
-        writable: true,
-        configurable: true,
-        enumerable: false,
-      });
-    } catch (e) {
-      // Fallback to direct assignment
-      process[name] = impl;
+// Create a safe exit function that always works
+const safeExit = function(code) {
+  try {
+    if (typeof _originalExit === 'function') {
+      _originalExit(code);
+    } else {
+      process.exitCode = code;
     }
+  } catch {
+    process.exitCode = code;
   }
 };
 
-// Ensure process.cwd exists and works (critical for many tests)
-// Save reference to original cwd before any modifications
-const originalCwd =
-  process.cwd && typeof process.cwd === 'function' ? process.cwd.bind(process) : null;
-
-// Always wrap process.cwd to ensure it never throws
-const safeCwd = function () {
-  // Try original cwd first
-  if (originalCwd) {
-    try {
-      return originalCwd();
-    } catch (e) {
-      // Original cwd failed, fall through to default
-    }
-  }
-  return '/test';
-};
-
-// Force replace process.cwd with safe version
+// Ensure process.exit is always available as a function
 try {
-  Object.defineProperty(process, 'cwd', {
-    value: safeCwd,
+  Object.defineProperty(process, 'exit', {
+    value: safeExit,
     writable: true,
     configurable: true,
     enumerable: false,
   });
-} catch (e) {
-  // Fallback to direct assignment
-  process.cwd = safeCwd;
+} catch {
+  process.exit = safeExit;
 }
 
-// Save original EventEmitter methods for removeListener
-const originalRemoveListener =
-  process.removeListener && typeof process.removeListener === 'function'
-    ? process.removeListener.bind(process)
-    : EventEmitter.prototype.removeListener.bind(process);
+// Ensure process.argv is always a valid array with includes method
+if (!Array.isArray(process.argv) || typeof process.argv.includes !== 'function') {
+  process.argv = _originalArgv;
+}
 
-ensureProcessMethod('removeListener', function (...args) {
-  try {
-    return originalRemoveListener.call(this, ...args);
-  } catch (e) {
-    console.warn('process.removeListener failed:', e.message);
-    return this;
-  }
-});
+// Ensure process.cwd is always available
+if (typeof process.cwd !== 'function') {
+  process.cwd = _originalCwd;
+}
 
-ensureProcessMethod('removeAllListeners', function (event) {
-  if (event && this.listeners) {
-    const listeners = this.listeners(event);
-    listeners.forEach((listener) => {
+// Ensure process.stdout and stderr are valid
+if (!_originalStdout || typeof _originalStdout.write !== 'function') {
+  console.warn('⚠️ process.stdout is not available');
+}
+if (!_originalStderr || typeof _originalStderr.write !== 'function') {
+  console.warn('⚠️ process.stderr is not available');
+}
+
+// Add listenerCount if missing (needed by Mocha)
+if (typeof process.listenerCount !== 'function') {
+  process.listenerCount = function(eventName) {
+    if (typeof this.listeners === 'function') {
       try {
-        originalRemoveListener.call(this, event, listener);
-      } catch (e) {
-        // Ignore errors during cleanup
+        const listeners = this.listeners(eventName);
+        return Array.isArray(listeners) ? listeners.length : 0;
+      } catch {
+        return 0;
       }
-    });
-  }
-  return this;
-});
+    }
+    return 0;
+  };
+}
 
-ensureProcessMethod('off', function (...args) {
-  try {
-    return originalRemoveListener.call(this, ...args);
-  } catch (e) {
-    console.warn('process.off failed:', e.message);
-    return this;
-  }
-});
+// CRITICAL: Wrap process.emit to prevent infinite recursion on unhandledRejection
+// This is needed because Mocha's Runner.unhandled can cause infinite loops in Node.js v24
+const _originalEmit = process.emit.bind(process);
+const _emitDepth = { unhandledRejection: 0, uncaughtException: 0 };
+const _maxEmitDepth = 3;
 
-ensureProcessMethod('listenerCount', function (eventName) {
-  // If the native implementation exists in EventEmitter.prototype, use it
-  if (this.listeners && typeof this.listeners === 'function') {
+process.emit = function(eventName, ...args) {
+  // Guard against recursive calls for error events
+  if (eventName === 'unhandledRejection' || eventName === 'uncaughtException') {
+    if (_emitDepth[eventName] >= _maxEmitDepth) {
+      console.error(`Mocha compat: Suppressed recursive ${eventName} (depth: ${_emitDepth[eventName]})`);
+      return false;
+    }
+    _emitDepth[eventName]++;
     try {
-      const listeners = this.listeners(eventName);
-      return Array.isArray(listeners) ? listeners.length : 0;
-    } catch (e) {
-      return 0;
+      return _originalEmit.call(this, eventName, ...args);
+    } finally {
+      _emitDepth[eventName]--;
     }
   }
-  return 0;
-});
+  return _originalEmit.call(this, eventName, ...args);
+};
 
-// Ensure process.emit exists (required by signal-exit in nyc)
-// Save reference to original emit before any modifications
-const originalEmit =
-  process.emit && typeof process.emit === 'function'
-    ? process.emit.bind(process)
-    : EventEmitter.prototype.emit.bind(process);
-
-ensureProcessMethod('emit', function (eventName, ...args) {
-  try {
-    return originalEmit.call(this, eventName, ...args);
-  } catch (e) {
-    // If emit fails, log but don't crash
-    console.warn(`process.emit failed for event ${eventName}:`, e.message);
-    return false;
-  }
-});
-
-// Directly patch Mocha's Runner class to handle missing listenerCount
-// Wait for next tick to ensure Mocha is loaded
-setImmediate(() => {
-  try {
-    // Try to get the Runner class directly
-    const Runner = require('mocha/lib/runner.js');
-
-    if (Runner && Runner.prototype._addEventListener) {
-      const original_addEventListener = Runner.prototype._addEventListener;
-
-      Runner.prototype._addEventListener = function (target, eventName, listener) {
-        // Ensure listenerCount exists on the target before calling original method
-        if (target && (!target.listenerCount || typeof target.listenerCount !== 'function')) {
-          // Use simple assignment instead of defineProperty to avoid breaking process
-          target.listenerCount = function (evtName) {
-            if (this.listeners && typeof this.listeners === 'function') {
-              try {
-                const listeners = this.listeners(evtName);
-                return Array.isArray(listeners) ? listeners.length : 0;
-              } catch (e) {
-                return 0;
-              }
-            }
-            return 0;
-          };
-        }
-
-        return original_addEventListener.call(this, target, eventName, listener);
-      };
-
-      console.log('✅ Patched Mocha Runner._addEventListener to handle missing listenerCount');
-    }
-  } catch (e) {
-    console.warn('⚠️  Failed to patch Mocha Runner:', e.message);
-  }
-});
-
-// Handle unhandled promise rejections
-process.on('unhandledRejection', (reason, promise) => {
+// Handle unhandled promise rejections without crashing
+process.on('unhandledRejection', (reason) => {
   console.warn('Unhandled promise rejection:', reason);
-  // Don't exit on unhandled rejection in tests
 });
 
-// Handle uncaught exceptions
+// Handle uncaught exceptions without crashing
 process.on('uncaughtException', (error) => {
   console.error('Uncaught exception:', error);
-  // Log but don't exit in test environment
 });
 
 module.exports = {};

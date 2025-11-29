@@ -20,6 +20,7 @@ const ENABLE_WEBVIEW_DEBUG_LOGS = Boolean(
       | boolean
       | undefined) === true ||
       (typeof localStorage !== 'undefined' &&
+        typeof localStorage.getItem === 'function' &&
         localStorage.getItem('SECONDARY_TERMINAL_DEBUG_LOGS') === 'true'))
 );
 

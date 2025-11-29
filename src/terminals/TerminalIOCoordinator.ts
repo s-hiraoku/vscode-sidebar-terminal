@@ -245,29 +245,47 @@ export class TerminalIOCoordinator {
     }
   }
 
+  // 🔧 FIX: Max retry attempts for PTY write operations
+  private static readonly MAX_PTY_RETRY_ATTEMPTS = 3;
+  private static readonly PTY_RETRY_DELAY_MS = 300;
+
   /**
    * Write to PTY with validation and error handling
+   * 🔧 FIX: Enhanced retry mechanism with configurable attempts
    */
   private writeToPtyWithValidation(
     terminal: TerminalInstance,
-    data: string
+    data: string,
+    retryAttempt: number = 0
   ): { success: boolean; error?: string } {
     // 🛡️ PTY READINESS CHECK: Handle case where PTY is not yet ready
     const ptyInstance = terminal.ptyProcess || terminal.pty;
 
     if (!ptyInstance) {
-      log(`⏳ [PTY-WAIT] PTY not ready for terminal ${terminal.id}, queuing input...`);
+      // 🔧 FIX: Check if we've exceeded max retries
+      if (retryAttempt >= TerminalIOCoordinator.MAX_PTY_RETRY_ATTEMPTS) {
+        log(
+          `❌ [PTY-TIMEOUT] PTY not ready for terminal ${terminal.id} after ${retryAttempt} attempts`
+        );
+        return { success: false, error: `PTY not ready after ${retryAttempt} retry attempts` };
+      }
 
-      // Queue the input and try again after a short delay
+      log(
+        `⏳ [PTY-WAIT] PTY not ready for terminal ${terminal.id}, queuing input (attempt ${retryAttempt + 1}/${TerminalIOCoordinator.MAX_PTY_RETRY_ATTEMPTS})...`
+      );
+
+      // 🔧 FIX: Queue the input and try again with exponential backoff
+      const delay = TerminalIOCoordinator.PTY_RETRY_DELAY_MS * Math.pow(1.5, retryAttempt);
       setTimeout(() => {
         const updatedTerminal = this._terminals.get(terminal.id);
         if (updatedTerminal && (updatedTerminal.ptyProcess || updatedTerminal.pty)) {
-          log(`🔄 [PTY-RETRY] Retrying input for terminal ${terminal.id} after PTY ready`);
-          this.writeToPtyWithValidation(updatedTerminal, data);
+          log(`🔄 [PTY-RETRY] Retrying input for terminal ${terminal.id} (attempt ${retryAttempt + 1})`);
+          this.writeToPtyWithValidation(updatedTerminal, data, retryAttempt + 1);
         } else {
-          log(`❌ [PTY-TIMEOUT] PTY still not ready for terminal ${terminal.id} after retry`);
+          // 🔧 FIX: Recursively retry with incremented attempt counter
+          this.writeToPtyWithValidation(updatedTerminal || terminal, data, retryAttempt + 1);
         }
-      }, 500);
+      }, delay);
 
       return { success: false, error: 'PTY not ready, input queued for retry' };
     }
