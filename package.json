@@ -248,6 +248,31 @@
         "command": "secondaryTerminal.showVersion",
         "title": "Show Version",
         "category": "Secondary Terminal"
+      },
+      {
+        "command": "secondaryTerminal.focusTerminal1",
+        "title": "Focus Terminal 1",
+        "category": "Secondary Terminal"
+      },
+      {
+        "command": "secondaryTerminal.focusTerminal2",
+        "title": "Focus Terminal 2",
+        "category": "Secondary Terminal"
+      },
+      {
+        "command": "secondaryTerminal.focusTerminal3",
+        "title": "Focus Terminal 3",
+        "category": "Secondary Terminal"
+      },
+      {
+        "command": "secondaryTerminal.focusTerminal4",
+        "title": "Focus Terminal 4",
+        "category": "Secondary Terminal"
+      },
+      {
+        "command": "secondaryTerminal.focusTerminal5",
+        "title": "Focus Terminal 5",
+        "category": "Secondary Terminal"
       }
     ],
     "menus": {
@@ -1081,7 +1106,8 @@
     "quality:fix": "node commands/release.js --fix-only",
     "docs:generate": "npx typedoc",
     "docs:watch": "npx typedoc --watch",
-    "docs:clean": "rm -rf docs/api"
+    "docs:clean": "rm -rf docs/api",
+    "rebuild:fast": "npm rebuild @homebridge/node-pty-prebuilt-multiarch"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.11.0",
