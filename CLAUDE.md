@@ -242,29 +242,34 @@ Agents are specialized AI assistants designed for specific tasks. Using them imp
 
 #### When to Use Agents
 
-- **Research Phase**: Use `vscode-terminal-resolver` to reference VS Code's terminal implementation
-- **Terminal Features**: Use `terminal-implementer` for production-ready terminal code
+- **Terminal Features**: Use `terminal-implementer` for production-ready terminal code (it invokes `terminal-expert` Skill automatically)
 - **Code Analysis**: Use `serena-semantic-search` to find similar implementations in the codebase
 - **Refactoring**: Use `similarity-based-refactoring` to identify patterns and improve code structure
 - **Testing**: Use `tdd-quality-engineer` to implement comprehensive TDD tests
-- **Documentation**: Use `xterm-info-analyzer` for accurate xterm.js API information
+
+#### Skills vs Agents Pattern (Updated)
+
+**Skills** provide domain knowledge (what to do):
+- `terminal-expert` - Unified xterm.js + VS Code terminal knowledge
+- `vscode-extension-expert` - VS Code extension development
+- `mcp-*` Skills - MCP tool usage guidance
+
+**Agents** execute tasks (how to do it) and **invoke Skills for knowledge**:
+- `terminal-implementer` invokes `terminal-expert` Skill before implementing
 
 #### Agent Workflow Example
 
 ```bash
-# 1. Research how VS Code implements the feature
-Task(vscode-terminal-resolver): "How does VS Code handle terminal process lifecycle?"
+# 1. Implement terminal feature (Agent automatically invokes terminal-expert Skill)
+Task(terminal-implementer): "Implement terminal process lifecycle"
 
 # 2. Search for similar implementations in our codebase
 Task(serena-semantic-search): "Find terminal lifecycle management patterns"
 
-# 3. Implement the feature using terminal patterns
-Task(terminal-implementer): "Implement terminal process lifecycle based on VS Code patterns"
-
-# 4. Create comprehensive tests
+# 3. Create comprehensive tests
 Task(tdd-quality-engineer): "Create TDD tests for terminal lifecycle management"
 
-# 5. Refactor for maintainability
+# 4. Refactor for maintainability
 Task(similarity-based-refactoring): "Identify and consolidate duplicate lifecycle code"
 ```
 

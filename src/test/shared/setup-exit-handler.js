@@ -1,61 +1,26 @@
 /**
  * Mocha process exit handler setup
- * Minimal setup to ensure Mocha can exit cleanly with Node.js v24+
+ * Clean setup for Mocha v11 + Node.js v24 compatibility
  */
 
 'use strict';
 
-// Save original process methods at the very start before anything can modify them
-// Use safe accessors to handle the case where process methods might already be undefined
+// Save original process methods at the very start
 const _originalExit = typeof process.exit === 'function'
   ? process.exit.bind(process)
   : function(code) { process.exitCode = code; };
-const _originalArgv = process.argv ? [...process.argv] : [];
-const _originalStdout = process.stdout;
-const _originalStderr = process.stderr;
-const _originalCwd = typeof process.cwd === 'function' ? process.cwd.bind(process) : () => '/test';
+const _originalCwd = typeof process.cwd === 'function'
+  ? process.cwd.bind(process)
+  : () => '/test';
 
-// Create a safe exit function that always works
-const safeExit = function(code) {
-  try {
-    if (typeof _originalExit === 'function') {
-      _originalExit(code);
-    } else {
-      process.exitCode = code;
-    }
-  } catch {
-    process.exitCode = code;
-  }
-};
-
-// Ensure process.exit is always available as a function
-try {
-  Object.defineProperty(process, 'exit', {
-    value: safeExit,
-    writable: true,
-    configurable: true,
-    enumerable: false,
-  });
-} catch {
-  process.exit = safeExit;
-}
-
-// Ensure process.argv is always a valid array with includes method
-if (!Array.isArray(process.argv) || typeof process.argv.includes !== 'function') {
-  process.argv = _originalArgv;
+// Ensure process.exit is always available
+if (typeof process.exit !== 'function') {
+  process.exit = _originalExit;
 }
 
 // Ensure process.cwd is always available
 if (typeof process.cwd !== 'function') {
   process.cwd = _originalCwd;
-}
-
-// Ensure process.stdout and stderr are valid
-if (!_originalStdout || typeof _originalStdout.write !== 'function') {
-  console.warn('⚠️ process.stdout is not available');
-}
-if (!_originalStderr || typeof _originalStderr.write !== 'function') {
-  console.warn('⚠️ process.stderr is not available');
 }
 
 // Add listenerCount if missing (needed by Mocha)
@@ -73,17 +38,15 @@ if (typeof process.listenerCount !== 'function') {
   };
 }
 
-// CRITICAL: Wrap process.emit to prevent infinite recursion on unhandledRejection
-// This is needed because Mocha's Runner.unhandled can cause infinite loops in Node.js v24
+// Wrap process.emit to prevent infinite recursion on error events
 const _originalEmit = process.emit.bind(process);
 const _emitDepth = { unhandledRejection: 0, uncaughtException: 0 };
 const _maxEmitDepth = 3;
 
 process.emit = function(eventName, ...args) {
-  // Guard against recursive calls for error events
   if (eventName === 'unhandledRejection' || eventName === 'uncaughtException') {
     if (_emitDepth[eventName] >= _maxEmitDepth) {
-      console.error(`Mocha compat: Suppressed recursive ${eventName} (depth: ${_emitDepth[eventName]})`);
+      console.error(`[setup-exit-handler] Suppressed recursive ${eventName}`);
       return false;
     }
     _emitDepth[eventName]++;

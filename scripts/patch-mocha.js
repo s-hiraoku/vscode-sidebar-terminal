@@ -2,88 +2,13 @@
 
 /**
  * Patch Mocha for Node.js v24 compatibility
- * This script modifies run-helpers.js to handle undefined process.stdout/stderr
+ * This script modifies runner.js to prevent infinite unhandledRejection loops
  */
 
 const fs = require('fs');
 const path = require('path');
 
-const runHelpersPath = path.join(
-  __dirname,
-  '..',
-  'node_modules',
-  'mocha',
-  'lib',
-  'cli',
-  'run-helpers.js'
-);
-
-// Check if file exists
-if (!fs.existsSync(runHelpersPath)) {
-  console.log('⚠️ Mocha run-helpers.js not found, skipping patch');
-  process.exit(0);
-}
-
-// Read the file
-let content = fs.readFileSync(runHelpersPath, 'utf8');
-
-// Check if already patched
-if (content.includes('// PATCHED FOR NODE.JS V24 COMPATIBILITY')) {
-  console.log('✅ Mocha already patched for Node.js v24 compatibility');
-  process.exit(0);
-}
-
-// Find and patch the exitMocha function
-// The problematic code is:
-//   const streams = [process.stdout, process.stderr];
-//   streams.forEach(stream => {
-//     stream.write('', done);
-//   });
-
-// Pattern 1: Mocha v10.x style
-const patchTarget1 = `const streams = [process.stdout, process.stderr];
-
-  streams.forEach(stream => {
-    // submit empty write request and wait for completion
-    draining += 1;
-    stream.write('', done);
-  });`;
-
-const patchReplacement1 = `// PATCHED FOR NODE.JS V24 COMPATIBILITY
-  const streams = [process.stdout, process.stderr].filter(Boolean);
-
-  streams.forEach(stream => {
-    // submit empty write request and wait for completion
-    if (stream && stream.write) {
-      draining += 1;
-      stream.write('', done);
-    }
-  });`;
-
-// Pattern 2: Alternative Mocha style
-const patchTarget2 = `[process.stdout, process.stderr].forEach(stream => {`;
-const patchReplacement2 = `// PATCHED FOR NODE.JS V24 COMPATIBILITY
-  [process.stdout, process.stderr].filter(Boolean).forEach(stream => {`;
-
-if (content.includes(patchTarget1)) {
-  content = content.replace(patchTarget1, patchReplacement1);
-  fs.writeFileSync(runHelpersPath, content);
-  console.log('✅ Successfully patched Mocha for Node.js v24 compatibility (pattern 1)');
-} else if (content.includes(patchTarget2)) {
-  content = content.replace(patchTarget2, patchReplacement2);
-  // Also need to patch the stream.write line
-  content = content.replace(
-    /stream\.write\('',\s*done\);/g,
-    `if (stream && stream.write) stream.write('', done); else done();`
-  );
-  fs.writeFileSync(runHelpersPath, content);
-  console.log('✅ Successfully patched Mocha for Node.js v24 compatibility (pattern 2)');
-} else {
-  console.log('⚠️ Could not find patch target in Mocha run-helpers.js');
-  console.log('Content preview:', content.substring(0, 2000));
-}
-
-// Patch Runner.js to prevent infinite unhandled loops
+// Patch Runner.js to prevent infinite unhandled loops (CRITICAL for Mocha v11 + Node.js v24)
 const runnerPath = path.join(
   __dirname,
   '..',
@@ -93,87 +18,116 @@ const runnerPath = path.join(
   'runner.js'
 );
 
-if (fs.existsSync(runnerPath)) {
-  let runnerContent = fs.readFileSync(runnerPath, 'utf8');
+if (!fs.existsSync(runnerPath)) {
+  console.log('⚠️ Mocha runner.js not found');
+  process.exit(0);
+}
 
-  // Check if already patched with recursion guard in unhandled function
-  if (!runnerContent.includes('_unhandledDepth')) {
-    // Add recursion depth counter at the start after 'use strict'
-    const useStrictTarget = "'use strict';";
-    const useStrictReplacement = `'use strict';
+let runnerContent = fs.readFileSync(runnerPath, 'utf8');
 
-// PATCHED RUNNER FOR NODE.JS V24 - recursion guard
-var _unhandledDepth = 0;
-var _maxUnhandledDepth = 5;`;
+// Check if already patched
+if (runnerContent.includes('// PATCHED FOR NODE.JS V24')) {
+  console.log('✅ Mocha Runner.js already patched for Node.js v24 compatibility');
+  process.exit(0);
+}
 
-    runnerContent = runnerContent.replace(useStrictTarget, useStrictReplacement);
+// Mocha v11 has a different structure - it's a class-based Runner
+// The problematic code is in the constructor:
+//
+//   this.unhandled = (reason, promise) => {
+//     if (isMochaError(reason)) {
+//       ...
+//     } else {
+//       ...
+//       this._removeEventListener(process, 'unhandledRejection', this.unhandled);
+//       try {
+//         process.emit('unhandledRejection', reason, promise);
+//       } finally {
+//         this._addEventListener(process, 'unhandledRejection', this.unhandled);
+//       }
+//     }
+//   };
 
-    // Patch the unhandled function to add recursion guard
-    // Find: this.unhandled = (reason, promise) => {
-    // Replace with version that has recursion guard
-    const unhandledTarget = `this.unhandled = (reason, promise) => {
+// Patch Strategy: Instead of re-emitting, just log the rejection and skip
+// This prevents the infinite loop while still allowing tests to run
+
+const unhandledFunctionStart = `this.unhandled = (reason, promise) => {
       if (isMochaError(reason)) {`;
-    const unhandledReplacement = `this.unhandled = (reason, promise) => {
-      // Recursion guard for Node.js v24 compatibility
-      if (_unhandledDepth > _maxUnhandledDepth) {
-        console.error('Mocha: Suppressed recursive unhandledRejection (depth:', _unhandledDepth, ')');
+
+// Use a module-level (global) depth counter since multiple Runner instances may exist
+const unhandledFunctionPatch = `// PATCHED FOR NODE.JS V24: Global recursion guard and skip re-emit
+    this.unhandled = (reason, promise) => {
+      // Global recursion guard using module-level counter
+      if (!Runner._globalUnhandledDepth) Runner._globalUnhandledDepth = 0;
+      if (Runner._globalUnhandledDepth > 2) {
+        debug('Suppressed recursive unhandledRejection (depth > 2)');
         return;
       }
-      _unhandledDepth++;
+      Runner._globalUnhandledDepth++;
       try {
       if (isMochaError(reason)) {`;
 
-    if (runnerContent.includes(unhandledTarget)) {
-      runnerContent = runnerContent.replace(unhandledTarget, unhandledReplacement);
+// Find and patch the unhandled function start
+if (runnerContent.includes(unhandledFunctionStart)) {
+  runnerContent = runnerContent.replace(unhandledFunctionStart, unhandledFunctionPatch);
 
-      // Find the closing of the unhandled function and add finally block
-      // The function ends with: }; after the try-finally block
-      // We need to close the try block we opened
-      const closingTarget = `        this._addEventListener(process, 'unhandledRejection', this.unhandled);
+  // Now we need to add the finally block to close the try
+  // The function ends like this in Mocha v11:
+  //         this._addEventListener(process, 'unhandledRejection', this.unhandled);
+  //       }
+  //     }
+  //   };
+
+  const unhandledFunctionEnd = `this._addEventListener(process, 'unhandledRejection', this.unhandled);
         }
       }
     };`;
-      const closingReplacement = `        this._addEventListener(process, 'unhandledRejection', this.unhandled);
+
+  const unhandledFunctionEndPatch = `this._addEventListener(process, 'unhandledRejection', this.unhandled);
         }
       }
       } finally {
-        _unhandledDepth--;
+        Runner._globalUnhandledDepth--;
       }
     };`;
 
-      if (runnerContent.includes(closingTarget)) {
-        runnerContent = runnerContent.replace(closingTarget, closingReplacement);
-        fs.writeFileSync(runnerPath, runnerContent);
-        console.log('✅ Patched Mocha Runner.js unhandled function with recursion guard');
-      } else {
-        // Try alternative closing pattern
-        const altClosingTarget = `this._addEventListener(process, 'unhandledRejection', this.unhandled);
-        }
-      }
-    };`;
-        const altClosingReplacement = `this._addEventListener(process, 'unhandledRejection', this.unhandled);
-        }
-      }
-      } finally {
-        _unhandledDepth--;
-      }
-    };`;
-
-        if (runnerContent.includes(altClosingTarget)) {
-          runnerContent = runnerContent.replace(altClosingTarget, altClosingReplacement);
-          fs.writeFileSync(runnerPath, runnerContent);
-          console.log('✅ Patched Mocha Runner.js unhandled function with recursion guard (alt pattern)');
-        } else {
-          fs.writeFileSync(runnerPath, runnerContent);
-          console.log('⚠️ Partial patch applied - could not find closing pattern');
-        }
-      }
-    } else {
-      console.log('⚠️ Could not find unhandled function pattern in Runner.js');
-    }
+  if (runnerContent.includes(unhandledFunctionEnd)) {
+    runnerContent = runnerContent.replace(unhandledFunctionEnd, unhandledFunctionEndPatch);
+    fs.writeFileSync(runnerPath, runnerContent);
+    console.log('✅ Successfully patched Mocha Runner.js for Node.js v24 compatibility');
   } else {
-    console.log('✅ Mocha Runner.js already patched with recursion guard');
+    // Try with different indentation
+    const altEnd = `        this._addEventListener(process, 'unhandledRejection', this.unhandled);
+        }
+      }
+    };`;
+    const altEndPatch = `        this._addEventListener(process, 'unhandledRejection', this.unhandled);
+        }
+      }
+      } finally {
+        Runner._globalUnhandledDepth--;
+      }
+    };`;
+
+    if (runnerContent.includes(altEnd)) {
+      runnerContent = runnerContent.replace(altEnd, altEndPatch);
+      fs.writeFileSync(runnerPath, runnerContent);
+      console.log('✅ Successfully patched Mocha Runner.js for Node.js v24 compatibility (alt pattern)');
+    } else {
+      // Write partial patch anyway
+      fs.writeFileSync(runnerPath, runnerContent);
+      console.log('⚠️ Partial patch applied - unhandled function start patched, but closing not found');
+      console.log('You may need to manually verify runner.js');
+    }
   }
 } else {
-  console.log('⚠️ Mocha runner.js not found');
+  console.log('⚠️ Could not find unhandled function pattern in Mocha v11 Runner.js');
+  console.log('Looking for pattern:', unhandledFunctionStart.substring(0, 100));
+
+  // Show actual content around 'this.unhandled' for debugging
+  const idx = runnerContent.indexOf('this.unhandled');
+  if (idx !== -1) {
+    console.log('Found this.unhandled at index', idx);
+    console.log('Context:', runnerContent.substring(idx, idx + 300));
+  }
 }
