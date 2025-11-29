@@ -92,7 +92,10 @@ const webviewConfig = {
   target: 'web',
   mode: process.env.NODE_ENV === 'production' ? 'production' : 'none',
 
-  entry: './src/webview/main.ts',
+  entry: {
+    webview: './src/webview/main.ts',
+    'webview-simple': './src/webview/simple/SimpleTerminalWebView.ts',
+  },
   resolve: {
     extensions: ['.ts', '.js'],
     fallback: {
@@ -140,7 +143,7 @@ const webviewConfig = {
   },
   output: {
     path: path.resolve(__dirname, 'dist'),
-    filename: 'webview.js',
+    filename: '[name].js',
   },
   optimization: {
     minimize: process.env.NODE_ENV === 'production',

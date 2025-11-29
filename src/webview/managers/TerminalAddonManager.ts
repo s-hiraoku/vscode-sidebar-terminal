@@ -31,6 +31,13 @@ export interface AddonConfig {
   enableSearchAddon?: boolean;
   enableUnicode11?: boolean;
   linkHandler?: (event: MouseEvent | undefined, uri: string) => void;
+  /**
+   * VS Code standard link activation modifier key.
+   * - 'alt': Alt+Click activates links (VS Code default)
+   * - 'ctrlCmd': Cmd+Click (macOS) or Ctrl+Click (Windows/Linux) activates links
+   * Follows VS Code's editor.multiCursorModifier setting.
+   */
+  linkModifier?: 'alt' | 'ctrlCmd';
 }
 
 /**
@@ -70,14 +77,21 @@ export class TerminalAddonManager {
 
       if (config.linkHandler) {
         // Use custom handler so links are opened by the extension (vscode.env.openExternal)
-        // and allow plain clicks (no Ctrl/Cmd) while still permitting text selection when dragging.
+        // VS Code standard: links require modifier key + click to activate
+        // This follows editor.multiCursorModifier setting:
+        // - 'alt': Alt+Click activates links (VS Code default when multiCursorModifier is 'alt')
+        // - 'ctrlCmd': Cmd/Ctrl+Click activates links (when multiCursorModifier is 'ctrlCmd')
+        const linkModifier = config.linkModifier ?? 'ctrlCmd'; // Default to Cmd/Ctrl for link activation
+
         const webLinksAddon = new WebLinksAddon(
           (event, uri) => {
             try {
               terminalLogger.info(
                 `🔗 [WEBVIEW] Link clicked in terminal ${terminalId}: ${uri} (meta=${Boolean(
                   (event as MouseEvent | undefined)?.metaKey
-                )}, ctrl=${Boolean((event as MouseEvent | undefined)?.ctrlKey)})`
+                )}, ctrl=${Boolean((event as MouseEvent | undefined)?.ctrlKey)}, alt=${Boolean(
+                  (event as MouseEvent | undefined)?.altKey
+                )})`
               );
 
               // Forward to extension
@@ -86,10 +100,25 @@ export class TerminalAddonManager {
               terminalLogger.warn(`⚠️ WebLinksAddon handler failed for ${terminalId}:`, error);
             }
           },
-          // Use type assertion for options that may not be in type definitions
-          // willLinkActivate allows plain left-click; xterm suppresses during drag selection
+          // VS Code standard: willLinkActivate checks for modifier key
+          // When modifier is pressed + left click, activate the link
+          // This allows normal text selection without triggering links
           {
-            willLinkActivate: (event: MouseEvent) => Boolean(event && event.button === 0),
+            willLinkActivate: (event: MouseEvent) => {
+              if (!event || event.button !== 0) return false;
+
+              // Check for the appropriate modifier key based on VS Code settings
+              // VS Code's terminal uses the OPPOSITE modifier for links:
+              // - When multiCursorModifier is 'alt', Cmd/Ctrl+Click opens links
+              // - When multiCursorModifier is 'ctrlCmd', Alt+Click opens links
+              if (linkModifier === 'alt') {
+                // Alt is used for multi-cursor, so Cmd/Ctrl opens links
+                return event.metaKey || event.ctrlKey;
+              } else {
+                // Cmd/Ctrl is used for multi-cursor, so Alt opens links
+                return event.altKey;
+              }
+            },
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
           } as any
         );

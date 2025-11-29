@@ -19,8 +19,13 @@ export interface WebViewTerminalConfig extends ITerminalOptions {
 
 /**
  * Detect platform for platform-specific defaults
+ * Falls back to 'linux' in Node.js test environments where navigator is not available
  */
 const detectPlatform = (): 'darwin' | 'linux' | 'win32' => {
+  // Handle Node.js test environments where navigator is not available
+  if (typeof navigator === 'undefined') {
+    return 'linux'; // Default to linux for test environments
+  }
   const userAgent = navigator.userAgent.toLowerCase();
   if (userAgent.includes('mac')) return 'darwin';
   if (userAgent.includes('linux')) return 'linux';
