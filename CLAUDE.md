@@ -275,6 +275,64 @@ Task(similarity-based-refactoring): "Identify and consolidate duplicate lifecycl
 - **Quality**: Built-in testing and validation improve code reliability
 - **Maintainability**: Code follows consistent architectural patterns
 
+### MCP Tool Usage via Skills
+
+**When using MCP tools, always invoke the corresponding Skill first to reduce context usage.**
+
+MCP tools consume significant context tokens when loaded directly. Using Skills instead loads only the necessary documentation on demand, saving ~40k tokens.
+
+#### Available MCP Skills
+
+| Skill | MCP Server | Use When |
+|-------|------------|----------|
+| `mcp-deepwiki` | deepwiki | Researching GitHub repositories, understanding library APIs, asking questions about open-source projects |
+| `mcp-brave-search` | brave-search | Searching the web for current information, news, documentation, or local businesses |
+| `mcp-playwright` | playwright | Browser automation, taking screenshots, filling forms, testing web applications |
+| `mcp-firecrawl` | firecrawl | Web scraping, crawling websites, extracting structured data from web pages |
+| `mcp-chrome-devtools` | chrome-devtools | Browser debugging, analyzing performance, inspecting network requests and console |
+
+#### How to Use
+
+Before calling any MCP tool, invoke the corresponding Skill:
+
+```bash
+# Example: Before using DeepWiki MCP
+Skill: mcp-deepwiki
+
+# Then use the tool with proper parameters
+mcp__deepwiki__ask_question({
+  repoName: "microsoft/vscode",
+  question: "How does the terminal handle PTY integration?"
+})
+```
+
+#### Skill Invocation Pattern
+
+```bash
+# Web search
+Skill: mcp-brave-search
+mcp__brave-search__brave_web_search({ query: "xterm.js tutorial" })
+
+# Web scraping
+Skill: mcp-firecrawl
+mcp__firecrawl__firecrawl_scrape({ url: "https://docs.example.com" })
+
+# Browser automation
+Skill: mcp-playwright
+mcp__playwright__browser_navigate({ url: "https://example.com" })
+
+# Browser debugging
+Skill: mcp-chrome-devtools
+mcp__chrome-devtools__take_snapshot({})
+```
+
+#### Benefits
+
+- **Context Savings**: ~40k tokens saved by not loading all MCP tool definitions
+- **On-Demand Loading**: Skills load only when needed
+- **Better Documentation**: Each Skill includes usage examples and best practices
+- **Tool Reference**: `references/tools.md` in each Skill provides detailed parameter documentation
+
 ## Known Issues & Workarounds
 
 ### CI/CD Issues

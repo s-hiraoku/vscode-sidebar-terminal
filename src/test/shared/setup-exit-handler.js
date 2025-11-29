@@ -73,6 +73,29 @@ if (typeof process.listenerCount !== 'function') {
   };
 }
 
+// CRITICAL: Wrap process.emit to prevent infinite recursion on unhandledRejection
+// This is needed because Mocha's Runner.unhandled can cause infinite loops in Node.js v24
+const _originalEmit = process.emit.bind(process);
+const _emitDepth = { unhandledRejection: 0, uncaughtException: 0 };
+const _maxEmitDepth = 3;
+
+process.emit = function(eventName, ...args) {
+  // Guard against recursive calls for error events
+  if (eventName === 'unhandledRejection' || eventName === 'uncaughtException') {
+    if (_emitDepth[eventName] >= _maxEmitDepth) {
+      console.error(`Mocha compat: Suppressed recursive ${eventName} (depth: ${_emitDepth[eventName]})`);
+      return false;
+    }
+    _emitDepth[eventName]++;
+    try {
+      return _originalEmit.call(this, eventName, ...args);
+    } finally {
+      _emitDepth[eventName]--;
+    }
+  }
+  return _originalEmit.call(this, eventName, ...args);
+};
+
 // Handle unhandled promise rejections without crashing
 process.on('unhandledRejection', (reason) => {
   console.warn('Unhandled promise rejection:', reason);
