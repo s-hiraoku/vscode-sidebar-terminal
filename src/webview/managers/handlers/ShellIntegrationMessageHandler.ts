@@ -2,6 +2,9 @@
  * Shell Integration Message Handler
  *
  * Handles shell integration features like status, CWD, history, and search
+ *
+ * Uses registry-based dispatch pattern instead of switch-case
+ * for better maintainability and extensibility.
  */
 
 import { IMessageHandler } from './IMessageHandler';
@@ -17,6 +20,11 @@ import {
 } from '../../../types/type-guards';
 
 /**
+ * Handler function type
+ */
+type CommandHandler = (msg: MessageCommand, coordinator: IManagerCoordinator) => void;
+
+/**
  * Shell Integration Message Handler
  *
  * Responsibilities:
@@ -26,29 +34,42 @@ import {
  * - Terminal search functionality
  */
 export class ShellIntegrationMessageHandler implements IMessageHandler {
-  constructor(private readonly logger: ManagerLogger) {}
+  private readonly handlers: Map<string, CommandHandler>;
+
+  constructor(private readonly logger: ManagerLogger) {
+    this.handlers = this.buildHandlerRegistry();
+  }
 
   /**
-   * Handle shell integration related messages
+   * Build handler registry - replaces switch-case pattern
+   */
+  private buildHandlerRegistry(): Map<string, CommandHandler> {
+    const registry = new Map<string, CommandHandler>();
+
+    registry.set('shellStatus', (msg, coord) => this.handleShellStatus(msg, coord));
+    registry.set('cwdUpdate', (msg, coord) => this.handleCwdUpdate(msg, coord));
+    registry.set('commandHistory', (msg, coord) => this.handleCommandHistory(msg, coord));
+    registry.set('find', (msg, coord) => this.handleFind(msg, coord));
+
+    return registry;
+  }
+
+  /**
+   * Handle shell integration related messages using registry dispatch
    */
   public handleMessage(msg: MessageCommand, coordinator: IManagerCoordinator): void {
     const command = (msg as { command?: string }).command;
 
-    switch (command) {
-      case 'shellStatus':
-        this.handleShellStatus(msg, coordinator);
-        break;
-      case 'cwdUpdate':
-        this.handleCwdUpdate(msg, coordinator);
-        break;
-      case 'commandHistory':
-        this.handleCommandHistory(msg, coordinator);
-        break;
-      case 'find':
-        this.handleFind(msg, coordinator);
-        break;
-      default:
-        this.logger.warn(`Unknown shell integration command: ${command}`);
+    if (!command) {
+      this.logger.warn('Message received without command property');
+      return;
+    }
+
+    const handler = this.handlers.get(command);
+    if (handler) {
+      handler(msg, coordinator);
+    } else {
+      this.logger.warn(`Unknown shell integration command: ${command}`);
     }
   }
 
@@ -56,7 +77,7 @@ export class ShellIntegrationMessageHandler implements IMessageHandler {
    * Get supported command types
    */
   public getSupportedCommands(): string[] {
-    return ['shellStatus', 'cwdUpdate', 'commandHistory', 'find'];
+    return Array.from(this.handlers.keys());
   }
 
   /**
@@ -396,6 +417,9 @@ export class ShellIntegrationMessageHandler implements IMessageHandler {
    * Clean up resources
    */
   public dispose(): void {
+    // Clear handler registry
+    this.handlers.clear();
+
     // Remove search UI if exists
     const searchContainer = document.getElementById('terminal-search-container');
     if (searchContainer) {

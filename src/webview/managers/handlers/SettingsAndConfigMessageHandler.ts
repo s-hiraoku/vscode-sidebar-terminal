@@ -2,6 +2,9 @@
  * Settings and Config Message Handler
  *
  * Handles settings, configuration, and state updates
+ *
+ * Uses registry-based dispatch pattern instead of switch-case
+ * for better maintainability and extensibility.
  */
 
 import { IMessageHandler } from './IMessageHandler';
@@ -9,6 +12,11 @@ import { IManagerCoordinator } from '../../interfaces/ManagerInterfaces';
 import { MessageCommand } from '../messageTypes';
 import { ManagerLogger } from '../../utils/ManagerLogger';
 import { WebViewFontSettings } from '../../../types/shared';
+
+/**
+ * Handler function type
+ */
+type CommandHandler = (msg: MessageCommand, coordinator: IManagerCoordinator) => void;
 
 /**
  * Settings and Config Message Handler
@@ -20,32 +28,43 @@ import { WebViewFontSettings } from '../../../types/shared';
  * - State updates from extension
  */
 export class SettingsAndConfigMessageHandler implements IMessageHandler {
-  constructor(private readonly logger: ManagerLogger) {}
+  private readonly handlers: Map<string, CommandHandler>;
+
+  constructor(private readonly logger: ManagerLogger) {
+    this.handlers = this.buildHandlerRegistry();
+  }
 
   /**
-   * Handle settings and config related messages
+   * Build handler registry - replaces switch-case pattern
+   */
+  private buildHandlerRegistry(): Map<string, CommandHandler> {
+    const registry = new Map<string, CommandHandler>();
+
+    registry.set('fontSettingsUpdate', (msg, coord) => this.handleFontSettingsUpdate(msg, coord));
+    registry.set('settingsResponse', (msg, coord) => this.handleSettingsResponse(msg, coord));
+    registry.set('openSettings', (_msg, coord) => coord.openSettings());
+    registry.set('versionInfo', (msg, coord) => this.handleVersionInfo(msg, coord));
+    registry.set('stateUpdate', (msg, coord) => this.handleStateUpdate(msg, coord));
+
+    return registry;
+  }
+
+  /**
+   * Handle settings and config related messages using registry dispatch
    */
   public handleMessage(msg: MessageCommand, coordinator: IManagerCoordinator): void {
     const command = (msg as { command?: string }).command;
 
-    switch (command) {
-      case 'fontSettingsUpdate':
-        this.handleFontSettingsUpdate(msg, coordinator);
-        break;
-      case 'settingsResponse':
-        this.handleSettingsResponse(msg, coordinator);
-        break;
-      case 'openSettings':
-        coordinator.openSettings();
-        break;
-      case 'versionInfo':
-        this.handleVersionInfo(msg, coordinator);
-        break;
-      case 'stateUpdate':
-        this.handleStateUpdate(msg, coordinator);
-        break;
-      default:
-        this.logger.warn(`Unknown settings/config command: ${command}`);
+    if (!command) {
+      this.logger.warn('Message received without command property');
+      return;
+    }
+
+    const handler = this.handlers.get(command);
+    if (handler) {
+      handler(msg, coordinator);
+    } else {
+      this.logger.warn(`Unknown settings/config command: ${command}`);
     }
   }
 
@@ -53,7 +72,7 @@ export class SettingsAndConfigMessageHandler implements IMessageHandler {
    * Get supported command types
    */
   public getSupportedCommands(): string[] {
-    return ['fontSettingsUpdate', 'settingsResponse', 'openSettings', 'versionInfo', 'stateUpdate'];
+    return Array.from(this.handlers.keys());
   }
 
   /**
@@ -61,10 +80,22 @@ export class SettingsAndConfigMessageHandler implements IMessageHandler {
    */
   private handleFontSettingsUpdate(msg: MessageCommand, coordinator: IManagerCoordinator): void {
     const fontSettings = msg.fontSettings as WebViewFontSettings;
+
+    // 🔍 DEBUG: Log the entire message to see what's being received
+    this.logger.info('🔤 [FONT-DEBUG] Raw message received:', JSON.stringify(msg));
+    this.logger.info('🔤 [FONT-DEBUG] fontSettings extracted:', JSON.stringify(fontSettings));
+
     if (fontSettings) {
-      this.logger.info('Font settings update received', fontSettings);
+      this.logger.info('🔤 [FONT-DEBUG] Applying font settings:', {
+        fontFamily: fontSettings.fontFamily,
+        fontSize: fontSettings.fontSize,
+        fontWeight: fontSettings.fontWeight,
+        lineHeight: fontSettings.lineHeight,
+      });
       coordinator.applyFontSettings(fontSettings);
       this.emitTerminalInteractionEvent('font-settings-update', '', fontSettings, coordinator);
+    } else {
+      this.logger.warn('🔤 [FONT-DEBUG] No fontSettings in message!');
     }
   }
 
@@ -134,6 +165,6 @@ export class SettingsAndConfigMessageHandler implements IMessageHandler {
    * Clean up resources
    */
   public dispose(): void {
-    // No resources to clean up
+    this.handlers.clear();
   }
 }
