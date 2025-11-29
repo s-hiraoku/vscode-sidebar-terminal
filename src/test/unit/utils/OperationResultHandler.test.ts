@@ -4,8 +4,6 @@
  * 統一されたオペレーション結果処理ユーティリティのテスト
  * 重複していたエラーハンドリングパターンを統一する機能を検証
  */
-/* eslint-disable */
-// @ts-nocheck
 import { expect, use } from 'chai';
 import sinonChai from 'sinon-chai';
 import * as sinon from 'sinon';
@@ -14,13 +12,14 @@ use(sinonChai);
 
 import {
   OperationResultHandler,
-  OperationResult,
+  OperationResult as _OperationResult,
   NotificationService,
 } from '../../../utils/OperationResultHandler';
 import {
   setupTestEnvironment,
   cleanupTestEnvironment,
   TestEnvironment,
+  safeStub,
 } from '../../utils/CommonTestSetup';
 
 describe('OperationResultHandler', () => {
@@ -38,9 +37,9 @@ describe('OperationResultHandler', () => {
       showWarning: testEnv.sandbox.stub(),
     };
 
-    // Mock logger
+    // Mock logger using safe stub to prevent "already stubbed" errors
     const loggerModule = require('../../../utils/logger');
-    logSpy = testEnv.sandbox.stub(loggerModule, 'extension');
+    logSpy = safeStub(testEnv.sandbox, loggerModule, 'extension');
   });
 
   afterEach(() => {

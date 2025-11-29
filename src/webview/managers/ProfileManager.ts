@@ -10,6 +10,7 @@
 import { IManagerCoordinator, IProfileManager } from '../interfaces/ManagerInterfaces';
 import { ITerminalProfile } from '../../types/profiles';
 import { ProfileSelector } from '../components/ProfileSelector';
+import { webview as log } from '../../utils/logger';
 
 export class ProfileManager implements IProfileManager {
   private coordinator: IManagerCoordinator | null = null;
@@ -40,7 +41,7 @@ export class ProfileManager implements IProfileManager {
 
     this.setupProfileSelectorContainer();
     await this.refreshProfiles();
-    console.log('🎯 Profile Manager initialized with', this.availableProfiles.size, 'profiles');
+    log('🎯 Profile Manager initialized with', this.availableProfiles.size, 'profiles');
   }
 
   private setupProfileSelectorContainer(): void {
@@ -89,7 +90,7 @@ export class ProfileManager implements IProfileManager {
       }
     );
 
-    console.log('🎯 Profile selector shown with', profiles.length, 'profiles');
+    log('🎯 Profile selector shown with', profiles.length, 'profiles');
   }
 
   /**
@@ -159,7 +160,7 @@ export class ProfileManager implements IProfileManager {
       profileId: profileId,
     });
 
-    console.log('🎯 Default profile set to:', profileId);
+    log('🎯 Default profile set to:', profileId);
   }
 
   /**
@@ -177,7 +178,7 @@ export class ProfileManager implements IProfileManager {
         command: 'getTerminalProfiles',
       });
 
-      console.log('🎯 Requested profile refresh from extension');
+      log('🎯 Requested profile refresh from extension');
     } catch (error) {
       console.error('ProfileManager: Failed to refresh profiles:', error);
     }
@@ -208,12 +209,7 @@ export class ProfileManager implements IProfileManager {
       this.profileSelector.updateProfiles(profiles);
     }
 
-    console.log(
-      '🎯 Updated profiles:',
-      profiles.length,
-      'profiles, default:',
-      this.defaultProfileId
-    );
+    log('🎯 Updated profiles:', profiles.length, 'profiles, default:', this.defaultProfileId);
   }
 
   /**
@@ -243,7 +239,7 @@ export class ProfileManager implements IProfileManager {
         cwd: profile.cwd,
       });
 
-      console.log('🎯 Created terminal with profile:', profileId, '→', terminalId);
+      log('🎯 Created terminal with profile:', profileId, '→', terminalId);
     } catch (error) {
       console.error('ProfileManager: Failed to create terminal with profile:', error);
 
@@ -360,6 +356,6 @@ export class ProfileManager implements IProfileManager {
     this.selectedProfileId = undefined;
     this.defaultProfileId = null;
 
-    console.log('🎯 Profile Manager disposed');
+    log('🎯 Profile Manager disposed');
   }
 }

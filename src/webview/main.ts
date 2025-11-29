@@ -6,177 +6,147 @@
  */
 
 // Import logger first to avoid initialization order issues
-import { startup, lifecycle, success, error_category, webview as log } from '../utils/logger';
+import { error_category, webview as log } from '../utils/logger';
 import { createWebViewLogger } from '../utils/ComponentLoggers';
+import { initializeAccessibility } from './utils/AccessibilityUtils';
 
 // Initialize WebView logger
 const webviewLogger = createWebViewLogger('MainWebView');
 
-// WebView initialization logging
-startup('Refactored WebView script started');
+// 🎯 CRITICAL: Acquire VS Code API once at top level
+// This can only be called once per webview instance
+declare function acquireVsCodeApi(): {
+  postMessage: (message: unknown) => void;
+  getState: () => unknown;
+  setState: (state: unknown) => void;
+};
+
+const vscodeApi = acquireVsCodeApi();
+// Store on window for WebViewApiManager to access
+window.vscodeApi = vscodeApi;
 
 import '@xterm/xterm/css/xterm.css';
-import { RefactoredTerminalWebviewManager } from './managers/RefactoredTerminalWebviewManager';
+import { LightweightTerminalWebviewManager } from './managers/LightweightTerminalWebviewManager';
+
+declare global {
+  interface Window {
+    terminalManager?: LightweightTerminalWebviewManager;
+    debugLog?: typeof log;
+    getManagerStats?: () => ReturnType<LightweightTerminalWebviewManager['getManagerStats']> | null;
+    vscodeApi?: ReturnType<typeof acquireVsCodeApi>;
+  }
+}
 
 /**
  * グローバルターミナルマネージャーインスタンス
  */
-let terminalManager: RefactoredTerminalWebviewManager | null = null;
+let terminalManager: LightweightTerminalWebviewManager | null = null;
+
+/**
+ * 🎯 HANDSHAKE PROTOCOL: Track if Extension is ready
+ */
+let extensionReady = false;
+let initializationAttempted = false;
 
 /**
  * WebView初期化のメイン関数
+ * 🎯 HANDSHAKE PROTOCOL: This function is now called AFTER receiving extensionReady
  */
 async function initializeWebView(): Promise<void> {
   try {
-    lifecycle('Initializing WebView...');
+    // Prevent duplicate initialization
+    if (initializationAttempted) {
+      return;
+    }
 
-    // DOMが準備できているかを確認
+    // Ensure Extension is ready before proceeding
+    if (!extensionReady) {
+      return;
+    }
+
+    initializationAttempted = true;
+
+    // Check DOM is ready
     const terminalBody = document.getElementById('terminal-body');
     if (!terminalBody) {
       error_category('terminal-body element not found in DOM');
-      // 少し待ってから再試行
+      initializationAttempted = false;
       setTimeout(() => initializeWebView(), 100);
       return;
     }
 
     webviewLogger.domReady();
 
-    // Terminal Manager を初期化
-    terminalManager = new RefactoredTerminalWebviewManager();
+    // Initialize accessibility features
+    initializeAccessibility();
+    log('✅ [A11Y] Accessibility features initialized');
 
-    // 初期ターミナルコンテナを設定
+    // Initialize Terminal Manager
+    log('🔧 [INIT] Creating LightweightTerminalWebviewManager...');
+    terminalManager = new LightweightTerminalWebviewManager();
+    log('🔧 [INIT] Calling initializeSimpleTerminal...');
     terminalManager.initializeSimpleTerminal();
-
-    // Extension側からのセッション復元またはterminalCreatedメッセージを待つ
-    lifecycle('Waiting for Extension to send terminal creation messages...');
-
-    // 🔧 FIX: Request Extension to create initial terminals instead of creating emergency terminals
-    // This ensures all terminals have proper PTY backing and shell functionality
-    setTimeout(() => {
-      if (terminalManager && terminalManager.getAllTerminalInstances().size === 0) {
-        lifecycle('⚠️ No terminals received from Extension - requesting initial terminal creation');
-
-        // Request Extension to create a terminal with PTY backing
-        terminalManager.postMessageToExtension({
-          command: 'requestInitialTerminal',
-          timestamp: Date.now(),
-        });
-
-        log('📤 Requested initial terminal creation from Extension');
-      }
-    }, 2000); // Reduced to 2 seconds for faster response
+    log('🔧 [INIT] initializeSimpleTerminal completed');
 
     webviewLogger.initialized();
 
-    // Note: Resize handling is now managed by RefactoredTerminalWebviewManager's EventHandlerManager
-    // Initial resize after a short delay to ensure proper terminal sizing
-    setTimeout(() => {
-      if (terminalManager) {
-        log('🔄 Initial terminal resize');
-        // terminalManager.terminalLifecycleManager.resizeAllTerminals(); // Private property, commented out
-      }
-    }, 300);
-
-    // 初期化完了メッセージをExtensionに送信
-    console.log('🔍 [DEBUG] Sending webviewReady message to Extension');
-    terminalManager.postMessageToExtension({
-      command: 'webviewReady',
+    // 🎯 HANDSHAKE: Notify Extension that WebView is fully initialized and ready for messages
+    // This prevents race conditions where terminalCreated messages arrive before handlers are ready
+    log('🤝 [HANDSHAKE] About to send webviewInitialized to Extension...');
+    vscodeApi.postMessage({
+      command: 'webviewInitialized',
       timestamp: Date.now(),
     });
-    console.log('🔍 [DEBUG] webviewReady message sent successfully');
+    log('🤝 [HANDSHAKE] Sent webviewInitialized to Extension');
 
-    // 📡 Request current state from Extension for proper synchronization
-    setTimeout(() => {
-      if (terminalManager) {
-        log('📡 [STATE] Requesting initial state from Extension...');
-        terminalManager.requestLatestState();
+    // 🎯 VS Code Pattern: Extension controls all terminal creation
+    // WebView only initializes managers - no independent terminal creation
+    // Extension's TerminalInitializationCoordinator handles:
+    // 1. Session restoration
+    // 2. Creating initial terminal if no sessions exist
+    // This prevents duplicate terminal creation race conditions
 
-        // 🔄 Request session restoration from Extension
-        log('🔄 [RESTORATION] Requesting session restoration from Extension...');
-        terminalManager.postMessageToExtension({
-          command: 'requestSessionRestore',
-          timestamp: Date.now(),
-        });
+    // Expose for debugging
+    window.terminalManager = terminalManager;
 
-        // 🔧 [INPUT-FIX] Retroactively attach input handlers to any existing terminals
-        // This fixes keyboard input for terminals that existed before the handler fix
-        setTimeout(() => {
-          if (terminalManager) {
-            terminalManager.attachInputHandlersToExistingTerminals();
-            log('🔧 [INPUT-FIX] Retroactive input handler attachment completed');
-          }
-        }, 1000); // Additional delay to ensure terminals are fully initialized
-      }
-    }, 500); // Small delay to ensure Extension has processed webviewReady
-
-    // 🔍 [DEBUG] Expose terminal manager globally for debugging
-    (window as any).terminalManager = terminalManager;
-
-    // 🔧 [DEBUG] Setup debugging keyboard shortcuts
+    // Setup debugging keyboard shortcuts
     document.addEventListener('keydown', (event) => {
-      // Ctrl+Shift+D: Toggle debug panel
       if (event.ctrlKey && event.shiftKey && event.key === 'D') {
         event.preventDefault();
         if (terminalManager) {
           terminalManager.toggleDebugPanel();
-          log('🔍 [DEBUG] Debug panel toggled via keyboard shortcut');
         }
       }
 
-      // Ctrl+Shift+X: Export system diagnostics
       if (event.ctrlKey && event.shiftKey && event.key === 'X') {
         event.preventDefault();
         if (terminalManager) {
           const diagnostics = terminalManager.exportSystemDiagnostics();
-          log('🔧 [DIAGNOSTICS] System diagnostics exported via keyboard shortcut');
-
-          // Copy to clipboard if possible
           if (navigator.clipboard) {
-            navigator.clipboard
-              .writeText(JSON.stringify(diagnostics, null, 2))
-              .then(() => log('📋 [CLIPBOARD] Diagnostics copied to clipboard'))
-              .catch((err) => log('❌ [CLIPBOARD] Failed to copy diagnostics:', err));
+            navigator.clipboard.writeText(JSON.stringify(diagnostics, null, 2)).catch(() => {});
           }
         }
       }
 
-      // Ctrl+Shift+R: Force synchronization
       if (event.ctrlKey && event.shiftKey && event.key === 'R') {
         event.preventDefault();
         if (terminalManager) {
           terminalManager.forceSynchronization();
-          log('🔄 [FORCE-SYNC] System synchronization forced via keyboard shortcut');
         }
       }
 
-      // Ctrl+Shift+I: Attach input handlers (INPUT-FIX debugging)
-      if (event.ctrlKey && event.shiftKey && event.key === 'I') {
-        event.preventDefault();
-        if (terminalManager) {
-          terminalManager.attachInputHandlersToExistingTerminals();
-          log('🔧 [INPUT-FIX] Input handlers manually attached via keyboard shortcut');
-        }
-      }
-
-      // Ctrl+Shift+T: Test terminal input (TEST debugging)
       if (event.ctrlKey && event.shiftKey && event.key === 'T') {
         event.preventDefault();
         if (terminalManager) {
-          log('🔧 [TEST] Sending test input to active terminal...');
           terminalManager.postMessageToExtension({
             command: 'input',
             terminalId: terminalManager.getActiveTerminalId(),
             data: 'echo "Test input working"\r',
             timestamp: Date.now(),
           });
-          log('🔧 [TEST] Test input sent successfully');
         }
       }
     });
-
-    log(
-      '🔧 [DEBUG] Debugging tools initialized - Shortcuts: Ctrl+Shift+D (debug), Ctrl+Shift+X (export), Ctrl+Shift+R (sync), Ctrl+Shift+I (input fix), Ctrl+Shift+T (test input)'
-    );
   } catch (error) {
     error_category('Failed to initialize WebView', {
       name: error instanceof Error ? error.name : 'Unknown',
@@ -193,7 +163,6 @@ async function initializeWebView(): Promise<void> {
  * エラーハンドリングの設定
  */
 function setupErrorHandling(): void {
-  // Global error handler
   window.addEventListener('error', (event) => {
     error_category('Global error:', {
       message: event.message,
@@ -204,36 +173,63 @@ function setupErrorHandling(): void {
     });
   });
 
-  // Unhandled promise rejection handler
   window.addEventListener('unhandledrejection', (event) => {
     error_category('Unhandled promise rejection:', event.reason);
-    event.preventDefault(); // Prevent console error
+    event.preventDefault();
   });
-
-  success('Error handling configured');
 }
 
 /**
  * パフォーマンス監視の設定
  */
 function setupPerformanceMonitoring(): void {
-  // Performance monitoring
   if ('performance' in window && performance.mark) {
     performance.mark('webview-start');
-
-    // 初期化完了後のパフォーマンス計測
     setTimeout(() => {
       performance.mark('webview-initialized');
       performance.measure('webview-initialization', 'webview-start', 'webview-initialized');
-
-      const measurements = performance.getEntriesByType('measure');
-      for (const measurement of measurements) {
-        log(`Performance: ${measurement.name} took ${measurement.duration.toFixed(2)}ms`);
-      }
     }, 100);
   }
+}
 
-  success('Performance monitoring configured');
+/**
+ * 📍 PHASE 3: Panel location monitoring delegated to PanelLocationHandler
+ *
+ * REMOVED: setupPanelLocationMonitoring() function
+ *
+ * Reason: Duplicate ResizeObserver causing multiple screen updates
+ * - This function created a separate ResizeObserver on document.body
+ * - PanelLocationHandler already has ResizeObserver for the same purpose
+ * - Having 2 observers caused double detection and double updates
+ *
+ * Solution: PanelLocationHandler now handles both:
+ * 1. Initial detection (when valid dimensions available)
+ * 2. Change monitoring (when panel location changes)
+ */
+
+/**
+ * Set up message listener for extensionReady
+ */
+function setupHandshakeListener(): void {
+  window.addEventListener('message', (event) => {
+    const message = event.data;
+
+    if (message.command === 'extensionReady') {
+      extensionReady = true;
+
+      if (document.readyState === 'loading') {
+        // Will be initialized when DOM is ready
+      } else {
+        void initializeWebView();
+      }
+    }
+  });
+
+  // Send webviewReady immediately
+  vscodeApi.postMessage({
+    command: 'webviewReady',
+    timestamp: Date.now(),
+  });
 }
 
 /**
@@ -241,23 +237,18 @@ function setupPerformanceMonitoring(): void {
  */
 function onDOMContentLoaded(): void {
   webviewLogger.domReady();
-
-  // エラーハンドリングを設定
   setupErrorHandling();
-
-  // パフォーマンス監視を設定
   setupPerformanceMonitoring();
 
-  // WebViewを初期化
-  initializeWebView();
+  if (extensionReady) {
+    void initializeWebView();
+  }
 }
 
 /**
  * ページ離脱時のクリーンアップ
  */
 function onPageUnload(): void {
-  lifecycle('Page unloading - cleaning up resources');
-
   try {
     if (terminalManager) {
       terminalManager.dispose();
@@ -268,11 +259,13 @@ function onPageUnload(): void {
   }
 }
 
+// Set up listener immediately (before DOM ready)
+setupHandshakeListener();
+
 // DOM ready event handling
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', onDOMContentLoaded);
 } else {
-  // DOM is already ready
   onDOMContentLoaded();
 }
 
@@ -280,31 +273,23 @@ if (document.readyState === 'loading') {
 window.addEventListener('beforeunload', onPageUnload);
 window.addEventListener('unload', onPageUnload);
 
-// Export for debugging and testing
+// Export for debugging
 if (typeof window !== 'undefined') {
-  (window as any).terminalManager = terminalManager;
-  (window as any).debugLog = log;
+  window.terminalManager = terminalManager || undefined;
+  window.debugLog = log;
 }
 
-success('Refactored WebView main script initialized');
-
-/**
- * Development mode utilities
- */
+// Development mode utilities
 if (process.env.NODE_ENV === 'development') {
-  // Development-only logging and debugging
-  log('Development mode enabled');
-
-  // Expose debug utilities
-  (window as any).getManagerStats = () => {
+  window.getManagerStats = () => {
     return terminalManager?.getManagerStats() || null;
   };
 
-  // Hot reload support (if needed in future)
-  const moduleWithHot = module as any;
+  const moduleWithHot = module as typeof module & {
+    hot?: { accept: (path: string, callback: () => void) => void };
+  };
   if (moduleWithHot.hot) {
     moduleWithHot.hot.accept('./managers/RefactoredTerminalWebviewManager', () => {
-      lifecycle('Hot reloading terminal manager...');
       // Hot reload logic would go here
     });
   }

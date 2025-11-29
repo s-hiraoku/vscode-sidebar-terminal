@@ -1,5 +1,8 @@
 /**
  * Performance Manager - Handles output buffering, debouncing, and performance optimizations
+ *
+ * @see https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/226
+ * マジックナンバーをSystemConstantsから参照するように変更しました。
  */
 
 import { Terminal } from '@xterm/xterm';
@@ -9,104 +12,173 @@ import { IManagerCoordinator } from '../interfaces/ManagerInterfaces';
 import { BaseManager } from './BaseManager';
 // import { performanceLogger } from '../utils/ManagerLogger';
 import { ResizeManager } from '../utils/ResizeManager';
+import { DOMUtils } from '../utils/DOMUtils';
+
+const ENABLE_WEBVIEW_DEBUG_LOGS = Boolean(
+  typeof globalThis !== 'undefined' &&
+    (((globalThis as Record<string, unknown>).SECONDARY_TERMINAL_DEBUG_LOGS as
+      | boolean
+      | undefined) === true ||
+      (typeof localStorage !== 'undefined' &&
+        localStorage.getItem('SECONDARY_TERMINAL_DEBUG_LOGS') === 'true'))
+);
 
 export class PerformanceManager extends BaseManager {
   constructor() {
     super('PerformanceManager', {
-      enableLogging: true,
+      enableLogging: ENABLE_WEBVIEW_DEBUG_LOGS,
       enableValidation: false,
       enableErrorRecovery: true,
+      customLogger: ENABLE_WEBVIEW_DEBUG_LOGS ? undefined : () => {},
     });
 
     // Logger is automatically provided by BaseManager
 
-    this.logger('initialization', 'starting');
+    if (this.debugLoggingEnabled) {
+      this.logger('initialization', 'starting');
+    }
   }
 
-  // Performance optimization: Buffer output and batch writes
-  private outputBuffer: string[] = [];
-  private bufferFlushTimer: number | null = null;
+  // Performance optimization: Buffer output and batch writes per terminal
+  private readonly bufferEntries = new Map<
+    Terminal,
+    {
+      data: string[];
+      timer: number | null;
+    }
+  >();
   private readonly BUFFER_FLUSH_INTERVAL = SPLIT_CONSTANTS.BUFFER_FLUSH_INTERVAL;
   private readonly MAX_BUFFER_SIZE = SPLIT_CONSTANTS.MAX_BUFFER_SIZE;
+  private readonly debugLoggingEnabled = ENABLE_WEBVIEW_DEBUG_LOGS;
 
   // CLI Agent mode for performance optimization
   private isCliAgentMode = false;
-
-  // Current terminal for buffer operations
-  private currentBufferTerminal: Terminal | null = null;
 
   /**
    * Schedule output to be written to terminal with intelligent buffering
    */
   public scheduleOutputBuffer(data: string, targetTerminal: Terminal): void {
-    this.currentBufferTerminal = targetTerminal;
+    const entry = this.getOrCreateBufferEntry(targetTerminal);
+
+    const normalizedData =
+      data.indexOf('\f') === -1 ? data : data.replace(/\f+/g, '\u001b[2J\u001b[H');
 
     // Enhanced buffering strategy for CLI Agent compatibility
-    const isLargeOutput = data.length >= 500; // Reduced from 1000 to 500 for better responsiveness
-    const bufferFull = this.outputBuffer.length >= this.MAX_BUFFER_SIZE;
-    const isSmallInput = data.length <= 10; // New: Immediate flush for small inputs (typing)
-    const isModerateOutput = data.length >= 50; // Reduced from 100 to 50
+    const isLargeOutput = normalizedData.length >= 500; // Reduced from 1000 to 500 for better responsiveness
+    const bufferFull = entry.data.length >= this.MAX_BUFFER_SIZE;
+    const isSmallInput = normalizedData.length <= 10; // Immediate flush for small inputs (typing)
+    const isModerateOutput = normalizedData.length >= 50; // Reduced from 100 to 50
 
     // Immediate flush conditions (prioritized for cursor accuracy and input responsiveness)
-    // Immediate flush for: large output, buffer full, small inputs (typing), or CLI Agent mode
     const shouldFlushImmediately =
       isLargeOutput || bufferFull || isSmallInput || (this.isCliAgentMode && isModerateOutput);
 
     if (shouldFlushImmediately) {
-      this.flushOutputBuffer();
+      this.flushEntry(targetTerminal, entry);
 
       // xterm.js automatically preserves scroll position if user has scrolled up
-      // The terminal's internal isUserScrolling flag handles this behavior
-      targetTerminal.write(data);
+      targetTerminal.write(normalizedData);
 
-      const reason = isSmallInput
-        ? 'small input (typing)'
-        : this.isCliAgentMode
-          ? 'CLI Agent mode'
-          : isLargeOutput
-            ? 'large output'
-            : 'buffer full';
-      this.logger(`Immediate write: ${data.length} chars (${reason})`);
+      if (this.debugLoggingEnabled) {
+        const reason = isSmallInput
+          ? 'small input (typing)'
+          : this.isCliAgentMode
+            ? 'CLI Agent mode'
+            : isLargeOutput
+              ? 'large output'
+              : 'buffer full';
+        this.logger(`Immediate write: ${normalizedData.length} chars (${reason})`);
+      }
     } else {
-      this.outputBuffer.push(data);
-      this.scheduleBufferFlush();
-      this.logger(
-        `Buffered write: ${data.length} chars (buffer: ${this.outputBuffer.length}, CLI Agent: ${this.isCliAgentMode})`
-      );
+      entry.data.push(normalizedData);
+      this.scheduleEntryFlush(targetTerminal, entry);
+      if (this.debugLoggingEnabled) {
+        this.logger(
+          `Buffered write: ${normalizedData.length} chars (buffer: ${entry.data.length}, CLI Agent: ${this.isCliAgentMode})`
+        );
+      }
     }
   }
 
-  /**
-   * Schedule buffer flush with dynamic interval based on activity
-   */
-  private scheduleBufferFlush(): void {
-    if (this.bufferFlushTimer === null) {
+  private getOrCreateBufferEntry(terminal: Terminal): { data: string[]; timer: number | null } {
+    let entry = this.bufferEntries.get(terminal);
+    if (!entry) {
+      entry = { data: [], timer: null };
+      this.bufferEntries.set(terminal, entry);
+    }
+    return entry;
+  }
+
+  private scheduleEntryFlush(
+    terminal: Terminal,
+    entry: { data: string[]; timer: number | null }
+  ): void {
+    if (entry.timer === null) {
       // Dynamic flush interval based on CLI Agent state and output frequency
-      let flushInterval = this.BUFFER_FLUSH_INTERVAL; // Default 4ms (improved from 16ms)
+      let flushInterval: number = this.BUFFER_FLUSH_INTERVAL; // Default 16ms (optimized for performance)
 
       if (this.isCliAgentMode) {
-        // CLI Agent active: Use very aggressive flushing for cursor accuracy
-        flushInterval = 2; // Reduced from 4ms to 2ms for CLI Agent output
-      } else if (this.outputBuffer.length > 3) {
-        // High-frequency output: Use shorter interval (reduced threshold from 5 to 3)
-        flushInterval = 2; // Reduced from 8ms to 2ms for frequent output
+        flushInterval = Math.max(8, this.BUFFER_FLUSH_INTERVAL / 2); // 8ms when CLI agent active
+      } else if (entry.data.length > 3) {
+        flushInterval = Math.max(12, this.BUFFER_FLUSH_INTERVAL * 0.75); // 12ms for high-frequency output
       }
 
-      this.bufferFlushTimer = window.setTimeout(() => {
+      entry.timer = window.setTimeout(() => {
         try {
-          this.flushOutputBuffer();
+          this.flushEntryByTerminal(terminal);
         } catch (error) {
-          this.logger(`Error during buffer flush: ${error}`);
-          // Reset the timer to prevent stuck state
-          this.bufferFlushTimer = null;
-          // Clear the buffer to prevent memory issues
-          this.outputBuffer = [];
+          if (this.debugLoggingEnabled) {
+            this.logger(`Error during buffer flush: ${error}`);
+          } else {
+            console.error('[PerformanceManager] Error during buffer flush:', error);
+          }
+          const currentEntry = this.bufferEntries.get(terminal);
+          if (currentEntry) {
+            currentEntry.timer = null;
+            currentEntry.data.length = 0;
+          }
         }
       }, flushInterval);
 
-      this.logger(
-        `Scheduled flush in ${flushInterval}ms (CLI Agent: ${this.isCliAgentMode}, buffer size: ${this.outputBuffer.length})`
-      );
+      if (this.debugLoggingEnabled) {
+        this.logger(
+          `Scheduled flush in ${flushInterval}ms (CLI Agent: ${this.isCliAgentMode}, buffer size: ${entry.data.length})`
+        );
+      }
+    }
+  }
+
+  private flushEntryByTerminal(terminal: Terminal): void {
+    const entry = this.bufferEntries.get(terminal);
+    if (entry) {
+      this.flushEntry(terminal, entry);
+    }
+  }
+
+  private flushEntry(terminal: Terminal, entry: { data: string[]; timer: number | null }): void {
+    if (entry.timer !== null) {
+      window.clearTimeout(entry.timer);
+      entry.timer = null;
+    }
+
+    if (entry.data.length === 0) {
+      return;
+    }
+
+    const bufferedData = entry.data.join('');
+    entry.data.length = 0;
+
+    try {
+      terminal.write(bufferedData);
+      if (this.debugLoggingEnabled) {
+        this.logger(`Flushed buffer: ${bufferedData.length} chars`);
+      }
+    } catch (error) {
+      if (this.debugLoggingEnabled) {
+        this.logger(`Error during buffer flush: ${error}`);
+      } else {
+        console.error('[PerformanceManager] Error during buffer flush:', error);
+      }
     }
   }
 
@@ -114,40 +186,15 @@ export class PerformanceManager extends BaseManager {
    * Flush all buffered output to the current terminal
    */
   public flushOutputBuffer(): void {
-    if (this.bufferFlushTimer !== null) {
-      window.clearTimeout(this.bufferFlushTimer);
-      this.bufferFlushTimer = null;
-    }
-
-    if (this.outputBuffer.length > 0) {
-      const bufferedData = this.outputBuffer.join('');
-      this.outputBuffer = [];
-
-      // Use the most recently set terminal for buffer output
-      if (this.currentBufferTerminal) {
-        try {
-          // xterm.js automatically preserves scroll position if user has scrolled up
-          this.currentBufferTerminal.write(bufferedData);
-          this.logger(`Flushed buffer: ${bufferedData.length} chars`);
-        } catch (error) {
-          this.logger(`Error during buffer flush: ${error}`);
-        }
-      } else {
-        this.logger(
-          `No terminal available for buffer flush: ${bufferedData.length} chars lost`
-        );
-      }
-    }
+    this.bufferEntries.forEach((entry, terminal) => {
+      this.flushEntry(terminal, entry);
+    });
   }
 
   /**
    * Buffered write with scroll preservation (main API method)
    */
   public bufferedWrite(data: string, targetTerminal: Terminal, _terminalId: string): void {
-    // Set the current terminal for buffering
-    this.currentBufferTerminal = targetTerminal;
-
-    // Use existing optimization logic
     this.scheduleOutputBuffer(data, targetTerminal);
   }
 
@@ -158,27 +205,33 @@ export class PerformanceManager extends BaseManager {
    * Initialize the PerformanceManager (BaseManager abstract method implementation)
    */
   protected doInitialize(): void {
-    this.logger('initialization', 'completed');
+    if (this.debugLoggingEnabled) {
+      this.logger('initialization', 'completed');
+    }
   }
 
   /**
    * Dispose PerformanceManager resources (BaseManager abstract method implementation)
    */
   protected doDispose(): void {
-    this.logger('disposal', 'starting');
-
-    // Clear any pending buffer flush
-    if (this.bufferFlushTimer) {
-      clearTimeout(this.bufferFlushTimer);
-      this.bufferFlushTimer = null;
+    if (this.debugLoggingEnabled) {
+      this.logger('disposal', 'starting');
     }
 
-    // Clear buffers
-    this.outputBuffer = [];
-    this.currentBufferTerminal = null;
+    // Clear any pending buffer flush timers and buffers
+    this.bufferEntries.forEach((entry) => {
+      if (entry.timer) {
+        clearTimeout(entry.timer);
+        entry.timer = null;
+      }
+      entry.data.length = 0;
+    });
+    this.bufferEntries.clear();
     this.coordinator = null;
 
-    this.logger('disposal', 'completed');
+    if (this.debugLoggingEnabled) {
+      this.logger('disposal', 'completed');
+    }
   }
 
   /**
@@ -186,7 +239,9 @@ export class PerformanceManager extends BaseManager {
    */
   public initializePerformance(coordinator: IManagerCoordinator): void {
     this.coordinator = coordinator;
-    this.logger('initialization', 'completed');
+    if (this.debugLoggingEnabled) {
+      this.logger('initialization', 'completed');
+    }
   }
 
   /**
@@ -195,27 +250,45 @@ export class PerformanceManager extends BaseManager {
   public debouncedResize(cols: number, rows: number, terminal: Terminal, fitAddon: FitAddon): void {
     const resizeKey = `terminal-resize-${cols}x${rows}`;
 
-    this.logger(`Scheduling debounced resize: ${cols}x${rows}`);
+    if (this.debugLoggingEnabled) {
+      this.logger(`Scheduling debounced resize: ${cols}x${rows}`);
+    }
 
     ResizeManager.debounceResize(
       resizeKey,
       async () => {
         try {
           terminal.resize(cols, rows);
+          // Reset xterm.js inline styles before fit to allow terminal expansion
+          // terminal.element is the container element where terminal is opened
+          const container = terminal.element?.parentElement;
+          if (container) {
+            DOMUtils.resetXtermInlineStyles(container);
+          }
           fitAddon.fit();
-          this.logger(`Debounced resize applied: ${cols}x${rows}`);
+          if (this.debugLoggingEnabled) {
+            this.logger(`Debounced resize applied: ${cols}x${rows}`);
+          }
         } catch (error) {
-          this.logger(`Error during debounced resize: ${error}`);
+          if (this.debugLoggingEnabled) {
+            this.logger(`Error during debounced resize: ${error}`);
+          } else {
+            console.error('[PerformanceManager] Error during debounced resize:', error);
+          }
           throw error; // Let ResizeManager handle the error
         }
       },
       {
         delay: SPLIT_CONSTANTS.RESIZE_DEBOUNCE_DELAY,
         onStart: () => {
-          this.logger(`Starting resize operation for ${cols}x${rows}`);
+          if (this.debugLoggingEnabled) {
+            this.logger(`Starting resize operation for ${cols}x${rows}`);
+          }
         },
         onComplete: () => {
-          this.logger(`Completed resize operation for ${cols}x${rows}`);
+          if (this.debugLoggingEnabled) {
+            this.logger(`Completed resize operation for ${cols}x${rows}`);
+          }
         },
       }
     );
@@ -227,7 +300,9 @@ export class PerformanceManager extends BaseManager {
   public setCliAgentMode(isActive: boolean): void {
     if (this.isCliAgentMode !== isActive) {
       this.isCliAgentMode = isActive;
-      this.logger(`CLI Agent mode: ${isActive ? 'ACTIVE' : 'INACTIVE'}`);
+      if (this.debugLoggingEnabled) {
+        this.logger(`CLI Agent mode: ${isActive ? 'ACTIVE' : 'INACTIVE'}`);
+      }
 
       // Flush immediately when mode changes
       if (!isActive) {
@@ -249,11 +324,20 @@ export class PerformanceManager extends BaseManager {
     isCliAgentMode: boolean;
     currentTerminal: boolean;
   } {
+    let bufferSize = 0;
+    let isFlushScheduled = false;
+    this.bufferEntries.forEach((entry) => {
+      bufferSize += entry.data.length;
+      if (entry.timer !== null) {
+        isFlushScheduled = true;
+      }
+    });
+
     return {
-      bufferSize: this.outputBuffer.length,
-      isFlushScheduled: this.bufferFlushTimer !== null,
+      bufferSize,
+      isFlushScheduled,
       isCliAgentMode: this.isCliAgentMode,
-      currentTerminal: this.currentBufferTerminal !== null,
+      currentTerminal: this.bufferEntries.size > 0,
     };
   }
 
@@ -261,7 +345,9 @@ export class PerformanceManager extends BaseManager {
    * Force immediate flush of all buffers (emergency flush)
    */
   public forceFlush(): void {
-    this.logger('Force flushing all buffers');
+    if (this.debugLoggingEnabled) {
+      this.logger('Force flushing all buffers');
+    }
     this.flushOutputBuffer();
   }
 
@@ -269,12 +355,16 @@ export class PerformanceManager extends BaseManager {
    * Clear all buffers without writing (emergency clear)
    */
   public clearBuffers(): void {
-    this.logger('Clearing all buffers without writing');
-    this.outputBuffer = [];
-    if (this.bufferFlushTimer !== null) {
-      window.clearTimeout(this.bufferFlushTimer);
-      this.bufferFlushTimer = null;
+    if (this.debugLoggingEnabled) {
+      this.logger('Clearing all buffers without writing');
     }
+    this.bufferEntries.forEach((entry) => {
+      entry.data.length = 0;
+      if (entry.timer !== null) {
+        window.clearTimeout(entry.timer);
+        entry.timer = null;
+      }
+    });
   }
 
   /**
@@ -282,16 +372,18 @@ export class PerformanceManager extends BaseManager {
    */
   public preloadNextOperation(): void {
     // Schedule a small flush to keep the pipeline moving
-    if (this.outputBuffer.length > 0) {
-      this.scheduleBufferFlush();
-    }
+    this.bufferEntries.forEach((entry, terminal) => {
+      if (entry.data.length > 0) {
+        this.scheduleEntryFlush(terminal, entry);
+      }
+    });
   }
 
   /**
    * Dispose of all timers and cleanup resources
    */
   public override dispose(): void {
-    if (this.logger && typeof this.logger === 'function') {
+    if (this.debugLoggingEnabled) {
       this.logger('Disposing performance manager');
     }
 
@@ -302,15 +394,14 @@ export class PerformanceManager extends BaseManager {
     ResizeManager.clearResize('terminal-resize');
 
     // Clear references
-    this.currentBufferTerminal = null;
-    this.outputBuffer = [];
     this.isCliAgentMode = false;
+    this.bufferEntries.clear();
 
     // Call parent dispose
     super.dispose();
 
     // Safe lifecycle logging
-    if (this.logger && typeof this.logger === 'function') {
+    if (this.debugLoggingEnabled) {
       this.logger('PerformanceManager', 'completed');
     }
   }

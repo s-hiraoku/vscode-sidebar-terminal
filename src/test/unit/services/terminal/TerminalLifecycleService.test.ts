@@ -1,6 +1,15 @@
 import * as assert from 'assert';
 import * as sinon from 'sinon';
 import { TerminalLifecycleService } from '../../../../services/terminal/TerminalLifecycleService';
+import { Result, isSuccess } from '../../../../types/result';
+
+// Helper to unwrap Result for tests
+function unwrapResult<T>(result: Result<T>): T {
+  if (!isSuccess(result)) {
+    throw new Error(`Result is failure: ${result.error}`);
+  }
+  return result.value;
+}
 
 describe('TerminalLifecycleService', () => {
   let service: TerminalLifecycleService;
@@ -28,7 +37,7 @@ describe('TerminalLifecycleService', () => {
 
   describe('createTerminal', () => {
     it('should create terminal with default options', async () => {
-      const terminal = await service.createTerminal();
+      const terminal = unwrapResult(await service.createTerminal());
 
       assert.ok(terminal.id);
       assert.ok(terminal.name);
@@ -50,7 +59,7 @@ describe('TerminalLifecycleService', () => {
         shellArgs: ['--login'],
       };
 
-      const terminal = await service.createTerminal(options);
+      const terminal = unwrapResult(await service.createTerminal(options));
 
       assert.strictEqual(terminal.name, 'Custom Terminal');
       assert.strictEqual(terminal.cwd, '/tmp');
@@ -59,7 +68,7 @@ describe('TerminalLifecycleService', () => {
     });
 
     it('should create terminal with profile', async () => {
-      const terminal = await service.createTerminal({ profileName: 'default' });
+      const terminal = unwrapResult(await service.createTerminal({ profileName: 'default' }));
 
       assert.ok(terminal.id);
       assert.ok(terminal.shell || terminal.process);
@@ -67,7 +76,7 @@ describe('TerminalLifecycleService', () => {
     });
 
     it('should handle safe mode', async () => {
-      const terminal = await service.createTerminal({ safeMode: true });
+      const terminal = unwrapResult(await service.createTerminal({ safeMode: true }));
 
       assert.ok(terminal.id);
       assert.ok(terminal.process || terminal.pty);
@@ -75,9 +84,9 @@ describe('TerminalLifecycleService', () => {
     });
 
     it('should assign sequential terminal numbers', async () => {
-      const terminal1 = await service.createTerminal();
-      const terminal2 = await service.createTerminal();
-      const terminal3 = await service.createTerminal();
+      const terminal1 = unwrapResult(await service.createTerminal());
+      const terminal2 = unwrapResult(await service.createTerminal());
+      const terminal3 = unwrapResult(await service.createTerminal());
 
       assert.strictEqual(terminal1.number, 1);
       assert.strictEqual(terminal2.number, 2);
@@ -90,12 +99,12 @@ describe('TerminalLifecycleService', () => {
     });
 
     it('should reuse terminal numbers after disposal', async () => {
-      const terminal1 = await service.createTerminal();
+      const terminal1 = unwrapResult(await service.createTerminal());
       assert.strictEqual(terminal1.number, 1);
 
       await service.disposeTerminal(terminal1);
 
-      const terminal2 = await service.createTerminal();
+      const terminal2 = unwrapResult(await service.createTerminal());
       assert.strictEqual(terminal2.number, 1); // Should reuse number 1
 
       await service.disposeTerminal(terminal2);
@@ -114,7 +123,7 @@ describe('TerminalLifecycleService', () => {
       try {
         // Create maximum number of terminals
         for (let i = 0; i < maxTerminals; i++) {
-          const terminal = await service.createTerminal();
+          const terminal = unwrapResult(await service.createTerminal());
           terminals.push(terminal);
         }
 
@@ -137,7 +146,7 @@ describe('TerminalLifecycleService', () => {
 
   describe('disposeTerminal', () => {
     it('should dispose terminal successfully', async () => {
-      const terminal = await service.createTerminal();
+      const terminal = unwrapResult(await service.createTerminal());
 
       await service.disposeTerminal(terminal);
 
@@ -146,7 +155,7 @@ describe('TerminalLifecycleService', () => {
     });
 
     it('should handle disposal of already disposed terminal', async () => {
-      const terminal = await service.createTerminal();
+      const terminal = unwrapResult(await service.createTerminal());
 
       await service.disposeTerminal(terminal);
 
@@ -155,7 +164,7 @@ describe('TerminalLifecycleService', () => {
     });
 
     it('should release terminal number on disposal', async () => {
-      const terminal = await service.createTerminal();
+      const terminal = unwrapResult(await service.createTerminal());
       const terminalNumber = terminal.number!;
 
       await service.disposeTerminal(terminal);
@@ -166,7 +175,7 @@ describe('TerminalLifecycleService', () => {
     });
 
     it('should clean up shell integration', async () => {
-      const terminal = await service.createTerminal();
+      const terminal = unwrapResult(await service.createTerminal());
 
       // Should not throw error even if shell integration fails
       await service.disposeTerminal(terminal);
@@ -175,7 +184,7 @@ describe('TerminalLifecycleService', () => {
 
   describe('resizeTerminal', () => {
     it('should resize terminal successfully', async () => {
-      const terminal = await service.createTerminal();
+      const terminal = unwrapResult(await service.createTerminal());
 
       // Should not throw error
       service.resizeTerminal(terminal, 100, 50);
@@ -184,7 +193,7 @@ describe('TerminalLifecycleService', () => {
     });
 
     it('should handle resize of disposed terminal', async () => {
-      const terminal = await service.createTerminal();
+      const terminal = unwrapResult(await service.createTerminal());
       await service.disposeTerminal(terminal);
 
       // Should not throw error
@@ -194,7 +203,7 @@ describe('TerminalLifecycleService', () => {
 
   describe('sendInputToTerminal', () => {
     it('should send input successfully', async () => {
-      const terminal = await service.createTerminal();
+      const terminal = unwrapResult(await service.createTerminal());
 
       // Should not throw error
       service.sendInputToTerminal(terminal, 'echo hello\n');
@@ -203,7 +212,7 @@ describe('TerminalLifecycleService', () => {
     });
 
     it('should handle input to disposed terminal', async () => {
-      const terminal = await service.createTerminal();
+      const terminal = unwrapResult(await service.createTerminal());
       await service.disposeTerminal(terminal);
 
       // Should not throw error
@@ -213,7 +222,7 @@ describe('TerminalLifecycleService', () => {
 
   describe('isTerminalAlive', () => {
     it('should return true for alive terminal', async () => {
-      const terminal = await service.createTerminal();
+      const terminal = unwrapResult(await service.createTerminal());
 
       assert.strictEqual(service.isTerminalAlive(terminal), true);
 
@@ -221,7 +230,7 @@ describe('TerminalLifecycleService', () => {
     });
 
     it('should return false for disposed terminal', async () => {
-      const terminal = await service.createTerminal();
+      const terminal = unwrapResult(await service.createTerminal());
       await service.disposeTerminal(terminal);
 
       assert.strictEqual(service.isTerminalAlive(terminal), false);
@@ -230,8 +239,8 @@ describe('TerminalLifecycleService', () => {
 
   describe('getTerminalStats', () => {
     it('should return accurate statistics', async () => {
-      const terminal1 = await service.createTerminal();
-      const terminal2 = await service.createTerminal();
+      const terminal1 = unwrapResult(await service.createTerminal());
+      const terminal2 = unwrapResult(await service.createTerminal());
 
       const stats = service.getTerminalStats();
 
@@ -263,9 +272,11 @@ describe('TerminalLifecycleService', () => {
 
     it('should handle terminal profile resolution errors', async () => {
       // Should fallback to default profile
-      const terminal = await service.createTerminal({
-        profileName: 'non-existent-profile',
-      });
+      const terminal = unwrapResult(
+        await service.createTerminal({
+          profileName: 'non-existent-profile',
+        })
+      );
 
       assert.ok(terminal.id);
       assert.ok(terminal.shell || terminal.process);
@@ -274,7 +285,7 @@ describe('TerminalLifecycleService', () => {
     });
 
     it('should handle shell integration errors gracefully', async () => {
-      const terminal = await service.createTerminal();
+      const terminal = unwrapResult(await service.createTerminal());
 
       // Shell integration errors should not prevent terminal creation
       assert.ok(terminal.id);
@@ -292,7 +303,7 @@ describe('TerminalLifecycleService', () => {
       try {
         // Create multiple terminals rapidly
         for (let i = 0; i < 3; i++) {
-          const terminal = await service.createTerminal();
+          const terminal = unwrapResult(await service.createTerminal());
           terminals.push(terminal);
         }
 
@@ -322,7 +333,7 @@ describe('TerminalLifecycleService', () => {
       try {
         // Create and dispose terminals to test number reuse
         for (let i = 0; i < 5; i++) {
-          const terminal = await service.createTerminal();
+          const terminal = unwrapResult(await service.createTerminal());
           terminals.push(terminal);
 
           if (i % 2 === 0) {

@@ -35,7 +35,11 @@ import { SessionHandler } from './handlers/SessionHandler';
  * - Publisher-subscriber routing (replaces WebViewMessageRouter)
  * - Complete backward compatibility with existing interfaces
  */
-export class ConsolidatedMessageService implements IMessageManager, IManagerLifecycle {
+interface Disposable {
+  dispose(): void;
+}
+
+export class ConsolidatedMessageService implements IMessageManager, IManagerLifecycle, Disposable {
   private readonly logger = messageLogger;
   private readonly dispatcher: UnifiedMessageDispatcher;
   private coordinator?: IManagerCoordinator;
@@ -105,9 +109,10 @@ export class ConsolidatedMessageService implements IMessageManager, IManagerLife
    * Handle incoming messages (replaces RefactoredMessageManager functionality)
    */
   public async receiveMessage(message: unknown, coordinator: IManagerCoordinator): Promise<void> {
+    const msg = message as Record<string, unknown>;
     this.logger.debug('receiveMessage called', {
       messageType: typeof message,
-      command: (message as any)?.command,
+      command: msg?.command,
       timestamp: Date.now(),
     });
 
@@ -368,7 +373,7 @@ export class ConsolidatedMessageService implements IMessageManager, IManagerLife
       throw new Error('Invalid message format');
     }
 
-    const msg = message as any;
+    const msg = message as Record<string, unknown>;
 
     // Handle MessageEvent wrapper
     if (msg.data && typeof msg.data === 'object') {
@@ -377,7 +382,7 @@ export class ConsolidatedMessageService implements IMessageManager, IManagerLife
 
     // Handle direct WebviewMessage
     if (typeof msg.command === 'string') {
-      return msg as WebviewMessage;
+      return msg as unknown as WebviewMessage;
     }
 
     throw new Error('Unable to normalize message to WebviewMessage format');

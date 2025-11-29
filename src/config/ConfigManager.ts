@@ -12,7 +12,8 @@ import {
   TerminalProfile,
   TerminalProfilesConfig,
 } from '../types/shared';
-import { TERMINAL_CONSTANTS } from '../constants';
+import { TERMINAL_CONSTANTS, CONFIG_CACHE_CONSTANTS } from '../constants/SystemConstants';
+import { config as log } from '../utils/logger';
 
 /**
  * VS Code設定アクセスを統合管理するクラス
@@ -22,7 +23,7 @@ export class ConfigManager {
   private static _instance: ConfigManager;
   private _configCache = new Map<string, unknown>();
   private _cacheExpiry = new Map<string, number>();
-  private readonly CACHE_TTL = 5000; // 5秒のキャッシュ
+  private readonly CACHE_TTL = CONFIG_CACHE_CONSTANTS.CACHE_TTL_MS;
 
   /**
    * シングルトンインスタンスを取得
@@ -60,7 +61,7 @@ export class ConfigManager {
       }
     } catch (error) {
       // テスト環境やモック環境では無視
-      console.warn('ConfigManager: VS Code workspace API not available:', error);
+      log('ConfigManager: VS Code workspace API not available:', error);
     }
 
     this._initialized = true;
@@ -121,6 +122,7 @@ export class ConfigManager {
         blink: this.getConfig(section, CONFIG_KEYS.CURSOR_BLINK, true),
       },
       enableCliAgentIntegration: this.getConfig(section, 'enableCliAgentIntegration', true),
+      highlightActiveBorder: this.getConfig(section, 'highlightActiveBorder', true),
     };
   }
 
@@ -162,6 +164,11 @@ export class ConfigManager {
         CONFIG_KEYS.MULTI_CURSOR_MODIFIER,
         'ctrlCmd'
       ),
+      highlightActiveBorder: this.getConfig(
+        CONFIG_SECTIONS.SIDEBAR_TERMINAL,
+        'highlightActiveBorder',
+        true
+      ),
     };
   }
 
@@ -179,7 +186,7 @@ export class ConfigManager {
       cursorBlink: baseConfig.cursorBlink,
       maxTerminals: baseConfig.maxTerminals,
       minTerminalHeight: this.getConfig(section, 'minTerminalHeight', 200),
-      autoHideStatus: this.getConfig(section, 'autoHideStatus', true),
+      autoHideStatus: this.getConfig(section, 'autoHideStatus', false),
       statusDisplayDuration: this.getConfig(section, 'statusDisplayDuration', 3000),
       showWebViewHeader: this.getConfig(section, 'showWebViewHeader', true),
       webViewTitle: this.getConfig(section, 'webViewTitle', 'Terminal'),
@@ -272,11 +279,10 @@ export class ConfigManager {
       }
 
       // 3. システムデフォルトのmonospaceフォント
-      // Debug log removed for production
-      return 'monospace';
+      return CONFIG_CACHE_CONSTANTS.DEFAULT_FONT_FAMILY;
     } catch (error) {
-      console.error('[ConfigManager] Error getting fontFamily:', error);
-      return 'monospace';
+      log('[ConfigManager] Error getting fontFamily:', error);
+      return CONFIG_CACHE_CONSTANTS.DEFAULT_FONT_FAMILY;
     }
   }
 
@@ -309,11 +315,10 @@ export class ConfigManager {
       }
 
       // 3. デフォルトフォントサイズ
-      // Debug log removed for production
-      return 14;
+      return CONFIG_CACHE_CONSTANTS.DEFAULT_FONT_SIZE;
     } catch (error) {
-      console.error('[ConfigManager] Error getting fontSize:', error);
-      return 14;
+      log('[ConfigManager] Error getting fontSize:', error);
+      return CONFIG_CACHE_CONSTANTS.DEFAULT_FONT_SIZE;
     }
   }
 
@@ -342,10 +347,10 @@ export class ConfigManager {
       }
 
       // 3. デフォルトフォント太さ
-      return 'normal';
+      return CONFIG_CACHE_CONSTANTS.DEFAULT_FONT_WEIGHT;
     } catch (error) {
-      console.error('[ConfigManager] Error getting fontWeight:', error);
-      return 'normal';
+      log('[ConfigManager] Error getting fontWeight:', error);
+      return CONFIG_CACHE_CONSTANTS.DEFAULT_FONT_WEIGHT;
     }
   }
 
@@ -374,10 +379,10 @@ export class ConfigManager {
       }
 
       // 3. デフォルトフォント太字
-      return 'bold';
+      return CONFIG_CACHE_CONSTANTS.DEFAULT_FONT_WEIGHT_BOLD;
     } catch (error) {
-      console.error('[ConfigManager] Error getting fontWeightBold:', error);
-      return 'bold';
+      log('[ConfigManager] Error getting fontWeightBold:', error);
+      return CONFIG_CACHE_CONSTANTS.DEFAULT_FONT_WEIGHT_BOLD;
     }
   }
 
@@ -406,10 +411,10 @@ export class ConfigManager {
       }
 
       // 3. デフォルト行間隔
-      return 1.0;
+      return CONFIG_CACHE_CONSTANTS.DEFAULT_LINE_HEIGHT;
     } catch (error) {
-      console.error('[ConfigManager] Error getting lineHeight:', error);
-      return 1.0;
+      log('[ConfigManager] Error getting lineHeight:', error);
+      return CONFIG_CACHE_CONSTANTS.DEFAULT_LINE_HEIGHT;
     }
   }
 
@@ -438,10 +443,10 @@ export class ConfigManager {
       }
 
       // 3. デフォルト文字間隔
-      return 0;
+      return CONFIG_CACHE_CONSTANTS.DEFAULT_LETTER_SPACING;
     } catch (error) {
-      console.error('[ConfigManager] Error getting letterSpacing:', error);
-      return 0;
+      log('[ConfigManager] Error getting letterSpacing:', error);
+      return CONFIG_CACHE_CONSTANTS.DEFAULT_LETTER_SPACING;
     }
   }
 
@@ -490,7 +495,7 @@ export class ConfigManager {
         enabled: this.getConfig(section, CONFIG_KEYS.ENABLE_PROFILE_AUTO_DETECTION, true),
         searchPaths: [],
         useCache: true,
-        cacheExpiration: 3600000, // 1 hour
+        cacheExpiration: CONFIG_CACHE_CONSTANTS.PROFILE_CACHE_EXPIRATION_MS,
       },
       inheritVSCodeProfiles: this.getConfig(section, CONFIG_KEYS.INHERIT_VSCODE_PROFILES, true),
     };
@@ -563,24 +568,27 @@ export class ConfigManager {
     }
 
     const vscodeConfig = vscode.workspace.getConfiguration('terminal.integrated');
-    const vscodeProfiles = vscodeConfig.get<Record<string, any>>(profileKey, {});
+    const vscodeProfiles = vscodeConfig.get<Record<string, unknown>>(profileKey, {});
 
     // VS CodeのプロファイルフォーマットをTerminalProfileに変換
     const convertedProfiles: Record<string, TerminalProfile> = {};
 
     for (const [name, profile] of Object.entries(vscodeProfiles)) {
-      if (profile && typeof profile === 'object' && profile.path) {
-        convertedProfiles[name] = {
-          path: profile.path,
-          args: profile.args,
-          cwd: profile.cwd,
-          env: profile.env,
-          icon: profile.icon,
-          color: profile.color,
-          isVisible: profile.isVisible !== false, // デフォルトはtrue
-          overrideName: profile.overrideName,
-          useColor: profile.useColor,
-        };
+      if (profile && typeof profile === 'object') {
+        const prof = profile as Record<string, unknown>;
+        if (prof.path) {
+          convertedProfiles[name] = {
+            path: prof.path as string,
+            args: prof.args as string[] | undefined,
+            cwd: prof.cwd as string | undefined,
+            env: prof.env as Record<string, string> | undefined,
+            icon: prof.icon as string | undefined,
+            color: prof.color as string | undefined,
+            isVisible: prof.isVisible !== false, // デフォルトはtrue
+            overrideName: prof.overrideName as boolean | undefined,
+            useColor: prof.useColor as boolean | undefined,
+          };
+        }
       }
     }
 

@@ -9,7 +9,7 @@ import {
   MessageRouter,
   MessageRouterFactory,
   BaseMessageHandler,
-  MessageRouterConfig
+  MessageRouterConfig,
 } from '../../../services/MessageRouter';
 
 describe('MessageRouter Service', () => {
@@ -24,7 +24,7 @@ describe('MessageRouter Service', () => {
       enableLogging: true,
       enableValidation: true,
       timeoutMs: 1000,
-      maxConcurrentHandlers: 3
+      maxConcurrentHandlers: 3,
     };
 
     messageRouter = new MessageRouter(mockConfig);
@@ -50,7 +50,7 @@ describe('MessageRouter Service', () => {
       const customConfig: Partial<MessageRouterConfig> = {
         enableLogging: false,
         timeoutMs: 5000,
-        maxConcurrentHandlers: 20
+        maxConcurrentHandlers: 20,
       };
 
       const customRouter = MessageRouterFactory.create(customConfig);
@@ -69,7 +69,7 @@ describe('MessageRouter Service', () => {
   describe('Handler Registration', () => {
     it('should register handler successfully', () => {
       const mockHandler = {
-        handle: sandbox.stub().resolves('success')
+        handle: sandbox.stub().resolves('success'),
       };
 
       messageRouter.registerHandler('testCommand', mockHandler);
@@ -112,7 +112,7 @@ describe('MessageRouter Service', () => {
       const handlers = {
         command1: { handle: sandbox.stub() },
         command2: { handle: sandbox.stub() },
-        command3: { handle: sandbox.stub() }
+        command3: { handle: sandbox.stub() },
       };
 
       for (const [command, handler] of Object.entries(handlers)) {
@@ -120,7 +120,11 @@ describe('MessageRouter Service', () => {
       }
 
       expect(messageRouter.getRegisteredCommands()).to.have.length(3);
-      expect(messageRouter.getRegisteredCommands()).to.include.members(['command1', 'command2', 'command3']);
+      expect(messageRouter.getRegisteredCommands()).to.include.members([
+        'command1',
+        'command2',
+        'command3',
+      ]);
     });
 
     it('should clear all handlers', () => {
@@ -140,7 +144,7 @@ describe('MessageRouter Service', () => {
 
     beforeEach(() => {
       mockHandler = {
-        handle: sandbox.stub().resolves({ result: 'success' })
+        handle: sandbox.stub().resolves({ result: 'success' }),
       };
 
       messageRouter.registerHandler('testCommand', mockHandler);
@@ -160,7 +164,7 @@ describe('MessageRouter Service', () => {
 
     it('should handle synchronous handlers', async () => {
       const syncHandler = {
-        handle: sandbox.stub().returns({ sync: 'result' })
+        handle: sandbox.stub().returns({ sync: 'result' }),
       };
 
       messageRouter.registerHandler('syncCommand', syncHandler);
@@ -173,7 +177,7 @@ describe('MessageRouter Service', () => {
 
     it('should handle handler errors', async () => {
       const errorHandler = {
-        handle: sandbox.stub().rejects(new Error('Handler error'))
+        handle: sandbox.stub().rejects(new Error('Handler error')),
       };
 
       messageRouter.registerHandler('errorCommand', errorHandler);
@@ -187,7 +191,7 @@ describe('MessageRouter Service', () => {
 
     it('should handle non-Error exceptions', async () => {
       const errorHandler = {
-        handle: sandbox.stub().rejects('String error')
+        handle: sandbox.stub().rejects('String error'),
       };
 
       messageRouter.registerHandler('stringErrorCommand', errorHandler);
@@ -215,7 +219,7 @@ describe('MessageRouter Service', () => {
 
     it('should track execution duration', async () => {
       const slowHandler = {
-        handle: () => new Promise(resolve => setTimeout(() => resolve('done'), 50))
+        handle: () => new Promise((resolve) => setTimeout(() => resolve('done'), 50)),
       };
 
       messageRouter.registerHandler('slowCommand', slowHandler);
@@ -239,7 +243,7 @@ describe('MessageRouter Service', () => {
     it('should validate terminal input data', async () => {
       const validData = {
         terminalId: 'terminal-1',
-        input: 'ls -la'
+        input: 'ls -la',
       };
 
       const result = await messageRouter.routeMessage('terminalInput', validData);
@@ -248,7 +252,7 @@ describe('MessageRouter Service', () => {
 
     it('should reject invalid terminal input data', async () => {
       const invalidData = {
-        terminalId: 'terminal-1'
+        terminalId: 'terminal-1',
         // Missing 'input' field
       };
 
@@ -261,7 +265,7 @@ describe('MessageRouter Service', () => {
       const validData = {
         terminalId: 'terminal-1',
         cols: 80,
-        rows: 24
+        rows: 24,
       };
 
       const result = await messageRouter.routeMessage('terminalResize', validData);
@@ -271,7 +275,7 @@ describe('MessageRouter Service', () => {
     it('should reject invalid resize data', async () => {
       const invalidData = {
         terminalId: 'terminal-1',
-        cols: 80
+        cols: 80,
         // Missing 'rows' field
       };
 
@@ -288,7 +292,7 @@ describe('MessageRouter Service', () => {
     it('should bypass validation when disabled', async () => {
       const noValidationRouter = new MessageRouter({
         ...mockConfig,
-        enableValidation: false
+        enableValidation: false,
       });
 
       const mockHandler = { handle: sandbox.stub().resolves('success') };
@@ -307,11 +311,11 @@ describe('MessageRouter Service', () => {
     it('should timeout long-running handlers', async () => {
       const timeoutRouter = new MessageRouter({
         ...mockConfig,
-        timeoutMs: 100
+        timeoutMs: 100,
       });
 
       const slowHandler = {
-        handle: () => new Promise(resolve => setTimeout(resolve, 200))
+        handle: () => new Promise((resolve) => setTimeout(resolve, 200)),
       };
 
       timeoutRouter.registerHandler('slowCommand', slowHandler);
@@ -328,11 +332,11 @@ describe('MessageRouter Service', () => {
     it('should not timeout fast handlers', async () => {
       const timeoutRouter = new MessageRouter({
         ...mockConfig,
-        timeoutMs: 100
+        timeoutMs: 100,
       });
 
       const fastHandler = {
-        handle: () => Promise.resolve('fast result')
+        handle: () => Promise.resolve('fast result'),
       };
 
       timeoutRouter.registerHandler('fastCommand', fastHandler);
@@ -348,11 +352,11 @@ describe('MessageRouter Service', () => {
     it('should handle timeout with custom timeout value', async () => {
       const customTimeoutRouter = new MessageRouter({
         ...mockConfig,
-        timeoutMs: 50
+        timeoutMs: 50,
       });
 
       const mediumHandler = {
-        handle: () => new Promise(resolve => setTimeout(resolve, 75))
+        handle: () => new Promise((resolve) => setTimeout(resolve, 75)),
       };
 
       customTimeoutRouter.registerHandler('mediumCommand', mediumHandler);
@@ -370,11 +374,11 @@ describe('MessageRouter Service', () => {
     it('should enforce concurrent handler limits', async () => {
       const limitedRouter = new MessageRouter({
         ...mockConfig,
-        maxConcurrentHandlers: 2
+        maxConcurrentHandlers: 2,
       });
 
       const slowHandler = {
-        handle: () => new Promise(resolve => setTimeout(resolve, 100))
+        handle: () => new Promise((resolve) => setTimeout(resolve, 100)),
       };
 
       limitedRouter.registerHandler('slowCommand', slowHandler);
@@ -383,16 +387,16 @@ describe('MessageRouter Service', () => {
       const promises = [
         limitedRouter.routeMessage('slowCommand', { id: 1 }),
         limitedRouter.routeMessage('slowCommand', { id: 2 }),
-        limitedRouter.routeMessage('slowCommand', { id: 3 })
+        limitedRouter.routeMessage('slowCommand', { id: 3 }),
       ];
 
       const results = await Promise.all(promises);
 
       // At least one should fail due to concurrency limit
-      const failures = results.filter(r => !r.success);
+      const failures = results.filter((r) => !r.success);
       expect(failures.length).to.be.greaterThan(0);
 
-      const concurrencyFailures = failures.filter(r =>
+      const concurrencyFailures = failures.filter((r) =>
         r.error?.includes('Maximum concurrent handlers reached')
       );
       expect(concurrencyFailures.length).to.be.greaterThan(0);
@@ -404,7 +408,7 @@ describe('MessageRouter Service', () => {
       expect(messageRouter.getActiveHandlerCount()).to.equal(0);
 
       const slowHandler = {
-        handle: () => new Promise(resolve => setTimeout(resolve, 50))
+        handle: () => new Promise((resolve) => setTimeout(resolve, 50)),
       };
 
       messageRouter.registerHandler('slowCommand', slowHandler);
@@ -422,14 +426,14 @@ describe('MessageRouter Service', () => {
 
     it('should handle concurrent successes correctly', async () => {
       const fastHandler = {
-        handle: (data: any) => Promise.resolve(`result-${data.id}`)
+        handle: (data: any) => Promise.resolve(`result-${data.id}`),
       };
 
       messageRouter.registerHandler('fastCommand', fastHandler);
 
       const promises = [
         messageRouter.routeMessage('fastCommand', { id: 1 }),
-        messageRouter.routeMessage('fastCommand', { id: 2 })
+        messageRouter.routeMessage('fastCommand', { id: 2 }),
       ];
 
       const results = await Promise.all(promises);
@@ -444,7 +448,7 @@ describe('MessageRouter Service', () => {
 
     it('should reset active count on handler errors', async () => {
       const errorHandler = {
-        handle: () => Promise.reject(new Error('Handler error'))
+        handle: () => Promise.reject(new Error('Handler error')),
       };
 
       messageRouter.registerHandler('errorCommand', errorHandler);
@@ -470,7 +474,7 @@ describe('MessageRouter Service', () => {
     it('should not log when logging is disabled', async () => {
       const silentRouter = new MessageRouter({
         ...mockConfig,
-        enableLogging: false
+        enableLogging: false,
       });
 
       const consoleSpy = sandbox.spy(console, 'log');
@@ -480,9 +484,9 @@ describe('MessageRouter Service', () => {
 
       await silentRouter.routeMessage('silentCommand', {});
 
-      const routerLogs = consoleSpy.getCalls().filter(call =>
-        call.args[0]?.includes('[MessageRouter]')
-      );
+      const routerLogs = consoleSpy
+        .getCalls()
+        .filter((call) => call.args[0]?.includes('[MessageRouter]'));
       expect(routerLogs).to.have.length(0);
 
       silentRouter.dispose();
@@ -543,7 +547,7 @@ describe('MessageRouter Service', () => {
     it('should recover from handler disposal errors', () => {
       const mockHandler = {
         handle: sandbox.stub().resolves('success'),
-        dispose: sandbox.stub().throws(new Error('Dispose error'))
+        dispose: sandbox.stub().throws(new Error('Dispose error')),
       };
 
       messageRouter.registerHandler('disposableCommand', mockHandler);
@@ -554,13 +558,13 @@ describe('MessageRouter Service', () => {
 
     it('should handle malformed message data', async () => {
       const mockHandler = {
-        handle: sandbox.stub().resolves('success')
+        handle: sandbox.stub().resolves('success'),
       };
 
       messageRouter.registerHandler('testCommand', mockHandler);
 
       // Test with various malformed data
-      const malformedData = [null, undefined, Symbol('test'), function() {}];
+      const malformedData = [null, undefined, Symbol('test'), function () {}];
 
       for (const data of malformedData) {
         const result = await messageRouter.routeMessage('testCommand', data);
@@ -572,7 +576,7 @@ describe('MessageRouter Service', () => {
 
     it('should handle circular reference data', async () => {
       const mockHandler = {
-        handle: sandbox.stub().resolves('success')
+        handle: sandbox.stub().resolves('success'),
       };
 
       messageRouter.registerHandler('circularCommand', mockHandler);
@@ -622,7 +626,7 @@ describe('MessageRouter Service', () => {
   describe('Performance', () => {
     it('should handle many rapid messages', async () => {
       const fastHandler = {
-        handle: (data: any) => Promise.resolve(data.id)
+        handle: (data: any) => Promise.resolve(data.id),
       };
 
       messageRouter.registerHandler('rapidCommand', fastHandler);
@@ -637,7 +641,7 @@ describe('MessageRouter Service', () => {
       const results = await Promise.all(promises);
 
       expect(results).to.have.length(messageCount);
-      expect(results.every(r => r.success)).to.be.true;
+      expect(results.every((r) => r.success)).to.be.true;
     });
 
     it('should maintain performance with many handlers', () => {
@@ -645,7 +649,7 @@ describe('MessageRouter Service', () => {
 
       for (let i = 0; i < handlerCount; i++) {
         messageRouter.registerHandler(`command${i}`, {
-          handle: () => `result${i}`
+          handle: () => `result${i}`,
         });
       }
 

@@ -6,6 +6,11 @@ on:
   push:
     branches: [ main ]
 
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
 jobs:
   tdd-quality-check:
     runs-on: ubuntu-latest
@@ -36,7 +41,7 @@ jobs:
     - name: Run tests with coverage
       run: |
         # Run tests with timeout and handle Mocha exit code 7 (known cleanup issue)
-        timeout 300s npm run test:coverage || {
+        timeout 180s npm run test:coverage || {
           exit_code=$?
           if [ $exit_code -eq 7 ] || [ $exit_code -eq 124 ]; then
             echo "⚠️ Test execution completed with expected exit code $exit_code (Mocha cleanup or timeout)"
@@ -47,6 +52,7 @@ jobs:
             exit $exit_code
           fi
         }
+      timeout-minutes: 5
       
     - name: TDD Quality Check
       run: |

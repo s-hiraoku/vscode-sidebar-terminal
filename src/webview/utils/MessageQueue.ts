@@ -1,7 +1,7 @@
 /**
  * MessageQueue Utility
  *
- * Extracted from RefactoredMessageManager to provide centralized
+ * Extracted from ConsolidatedMessageManager to provide centralized
  * message queuing with priority handling and race condition protection
  */
 
@@ -27,10 +27,14 @@ export interface MessageSender {
   (message: unknown): void | Promise<void>;
 }
 
+interface Disposable {
+  dispose(): void;
+}
+
 /**
  * Centralized message queue with priority handling and reliability features
  */
-export class MessageQueue {
+export class MessageQueue implements Disposable {
   private highPriorityQueue: QueuedMessage[] = [];
   private normalQueue: QueuedMessage[] = [];
   private queueLock = false;

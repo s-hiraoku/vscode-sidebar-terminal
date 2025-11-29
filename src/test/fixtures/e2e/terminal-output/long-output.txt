@@ -1,0 +1,20 @@
+Line 001: This is a test of long terminal output
+Line 002: Each line is numbered for easy verification
+Line 003: This output tests scrollback functionality
+Line 004: Terminal should handle long output efficiently
+Line 005: Performance should remain good with many lines
+Line 006: ANSI codes should be preserved if needed
+Line 007: Scrolling should work smoothly
+Line 008: Auto-scroll behavior should be tested
+Line 009: Manual scroll position should be preserved
+Line 010: Search functionality should work with long output
+Line 011: Testing continues...
+Line 012: More content here
+Line 013: Even more content
+Line 014: Keep adding lines
+Line 015: Scrollback limit is 1000 lines for persistence
+Line 016: Memory limit is 2000 lines total
+Line 017: This tests the middle range
+Line 018: Terminal rendering performance
+Line 019: Buffer management
+Line 020: Output processing

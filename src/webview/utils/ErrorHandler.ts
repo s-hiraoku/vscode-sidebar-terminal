@@ -1,191 +1,229 @@
 /**
- * 統一されたエラーハンドリングクラス
+ * ErrorHandler Utility
+ *
+ * Generic utility for standardized error handling across all WebView operations.
+ *
+ * Eliminates code duplication by providing a consistent error handling pattern
+ * with logging, notifications, recovery, and rethrow capabilities.
+ *
+ * @see openspec/changes/refactor-terminal-foundation/specs/standardize-error-handling/spec.md
+ */
+
+import { terminalLogger } from './ManagerLogger';
+
+/**
+ * Severity levels for error handling
+ */
+export type ErrorSeverity = 'error' | 'warn' | 'info';
+
+/**
+ * Options for error handling behavior
+ */
+export interface ErrorHandlerOptions {
+  /**
+   * Severity level (determines emoji and logging level)
+   */
+  severity?: ErrorSeverity;
+
+  /**
+   * Whether to notify the user via UI
+   */
+  notify?: boolean;
+
+  /**
+   * Whether to rethrow the error after handling
+   */
+  rethrow?: boolean;
+
+  /**
+   * Recovery callback to execute after error handling
+   */
+  recovery?: () => void | Promise<void>;
+
+  /**
+   * Custom context information to include in logs
+   */
+  context?: Record<string, unknown>;
+}
+
+/**
+ * Result of error handling operation
+ */
+export interface ErrorHandlingResult {
+  handled: boolean;
+  severity: ErrorSeverity;
+  message: string;
+  error?: unknown;
+}
+
+/**
+ * Generic error handler with consistent pattern across all operations
  */
 export class ErrorHandler {
-  private static instance: ErrorHandler;
-
-  public static getInstance(): ErrorHandler {
-    if (!ErrorHandler.instance) {
-      ErrorHandler.instance = new ErrorHandler();
-    }
-    return ErrorHandler.instance;
-  }
-
   /**
-   * ターミナル関連のエラーを処理
+   * Handle operation error with consistent logging and optional recovery
+   *
+   * @param operation - Name of the operation that failed (e.g., "Terminal creation", "Addon loading")
+   * @param error - The error that occurred
+   * @param options - Error handling options (severity, notify, rethrow, recovery)
+   * @returns Error handling result for testing/debugging
+   *
+   * @example
+   * // Basic error handling
+   * try {
+   *   await dangerousOperation();
+   * } catch (error) {
+   *   ErrorHandler.handleOperationError('Terminal creation', error);
+   * }
+   *
+   * @example
+   * // With notification and recovery
+   * try {
+   *   await criticalOperation();
+   * } catch (error) {
+   *   ErrorHandler.handleOperationError('Critical operation', error, {
+   *     severity: 'error',
+   *     notify: true,
+   *     recovery: () => fallbackOperation()
+   *   });
+   * }
+   *
+   * @example
+   * // Warning level with rethrow
+   * try {
+   *   await optionalOperation();
+   * } catch (error) {
+   *   ErrorHandler.handleOperationError('Optional operation', error, {
+   *     severity: 'warn',
+   *     rethrow: false
+   *   });
+   * }
    */
-  public handleTerminalError(error: Error, context: string): void {
-    console.error(`[TERMINAL_ERROR] ${context}:`, error);
+  public static handleOperationError(
+    operation: string,
+    error: unknown,
+    options: ErrorHandlerOptions = {}
+  ): ErrorHandlingResult {
+    const severity = options.severity || 'error';
+    const emoji = this.getSeverityEmoji(severity);
+    const message = `${emoji} ${operation} failed`;
 
-    // ユーザーに表示するエラーメッセージ
-    this.showUserError(`Terminal Error: ${error.message}`);
+    // Log error with appropriate severity
+    this.logError(severity, message, error, options.context);
 
-    // 拡張機能にエラー詳細を送信
-    this.reportToExtension({
-      type: 'terminal',
-      message: error.message,
-      context,
-      stack: error.stack,
-    });
-  }
-
-  /**
-   * レイアウト関連のエラーを処理
-   */
-  public handleLayoutError(error: Error, context: string): void {
-    console.error(`[LAYOUT_ERROR] ${context}:`, error);
-
-    // レイアウトエラーは表示のみでユーザーには通知しない
-    // 重大な場合のみ処理を継続
-    if (this.isCriticalLayoutError(error)) {
-      this.showUserError('Layout initialization failed');
-    }
-  }
-
-  /**
-   * 設定関連のエラーを処理
-   */
-  public handleSettingsError(error: Error, context: string): void {
-    console.error(`[SETTINGS_ERROR] ${context}:`, error);
-    this.showUserError('Settings update failed');
-
-    this.reportToExtension({
-      type: 'settings',
-      message: error.message,
-      context,
-      stack: error.stack,
-    });
-  }
-
-  /**
-   * WebView通信エラーを処理
-   */
-  public handleCommunicationError(error: Error, context: string): void {
-    console.error(`[COMMUNICATION_ERROR] ${context}:`, error);
-    this.showUserError('Communication with extension failed');
-
-    this.reportToExtension({
-      type: 'communication',
-      message: error.message,
-      context,
-      stack: error.stack,
-    });
-  }
-
-  /**
-   * DOM操作エラーを処理
-   */
-  public handleDOMError(error: Error, context: string): void {
-    console.error(`[DOM_ERROR] ${context}:`, error);
-
-    // DOM操作エラーは通常回復可能
-    if (this.isCriticalDOMError(error)) {
-      this.showUserError('Interface update failed');
-    }
-  }
-
-  /**
-   * 一般的なエラーを処理
-   */
-  public handleGenericError(error: Error, context: string): void {
-    console.error(`[GENERIC_ERROR] ${context}:`, error);
-    this.showUserError('An unexpected error occurred');
-
-    this.reportToExtension({
-      type: 'generic',
-      message: error.message,
-      context,
-      stack: error.stack,
-    });
-  }
-
-  /**
-   * ユーザーにエラーメッセージを表示
-   */
-  private showUserError(message: string): void {
-    // コンソールログのみ
-    console.warn('Error message:', message);
-  }
-
-  /**
-   * 拡張機能にエラーを報告
-   */
-  private reportToExtension(errorInfo: {
-    type: string;
-    message: string;
-    context: string;
-    stack?: string;
-  }): void {
-    try {
-      const windowWithVscode = window as unknown as Record<string, unknown> & {
-        vscode?: {
-          postMessage: (message: Record<string, unknown>) => void;
-        };
-      };
-
-      if (typeof window !== 'undefined' && windowWithVscode.vscode) {
-        windowWithVscode.vscode.postMessage({
-          command: 'error',
-          ...errorInfo,
-          timestamp: Date.now(),
-        });
+    // Execute recovery callback if provided
+    if (options.recovery) {
+      try {
+        const recoveryResult = options.recovery();
+        if (recoveryResult instanceof Promise) {
+          recoveryResult.catch((recoveryError) => {
+            terminalLogger.error('❌ Recovery callback failed:', recoveryError);
+          });
+        }
+      } catch (recoveryError) {
+        terminalLogger.error('❌ Recovery callback failed:', recoveryError);
       }
-    } catch (reportError) {
-      console.error('Failed to report error to extension:', reportError);
+    }
+
+    // Notify user if requested
+    if (options.notify) {
+      this.notifyUser(message, severity);
+    }
+
+    // Rethrow if requested
+    if (options.rethrow) {
+      throw error;
+    }
+
+    return {
+      handled: true,
+      severity,
+      message,
+      error,
+    };
+  }
+
+  /**
+   * Get emoji for severity level
+   */
+  private static getSeverityEmoji(severity: ErrorSeverity): string {
+    switch (severity) {
+      case 'error':
+        return '❌';
+      case 'warn':
+        return '⚠️';
+      case 'info':
+        return 'ℹ️';
+      default:
+        return '❌';
     }
   }
 
   /**
-   * レイアウトエラーが重大かどうか判定
+   * Log error with appropriate severity level
    */
-  private isCriticalLayoutError(error: Error): boolean {
-    const criticalMessages = [
-      'container not found',
-      'terminal body not available',
-      'failed to initialize layout',
-    ];
+  private static logError(
+    severity: ErrorSeverity,
+    message: string,
+    error: unknown,
+    context?: Record<string, unknown>
+  ): void {
+    const contextStr = context ? JSON.stringify(context) : '';
+    const contextInfo = contextStr ? ` [Context: ${contextStr}]` : '';
+    const fullMessage = `${message}${contextInfo}`;
 
-    return criticalMessages.some((msg) => error.message.toLowerCase().includes(msg));
-  }
-
-  /**
-   * DOMエラーが重大かどうか判定
-   */
-  private isCriticalDOMError(error: Error): boolean {
-    const criticalMessages = [
-      'cannot access property',
-      'null is not an object',
-      'failed to create element',
-    ];
-
-    return criticalMessages.some((msg) => error.message.toLowerCase().includes(msg));
-  }
-
-  /**
-   * 安全な関数実行ラッパー
-   */
-  public static safeExecute<T>(fn: () => T, context: string, fallback?: T): T | undefined {
-    try {
-      return fn();
-    } catch (error) {
-      ErrorHandler.getInstance().handleGenericError(error as Error, context);
-      return fallback;
+    switch (severity) {
+      case 'error':
+        terminalLogger.error(fullMessage, error);
+        break;
+      case 'warn':
+        terminalLogger.warn(fullMessage, error);
+        break;
+      case 'info':
+        terminalLogger.info(fullMessage, error);
+        break;
     }
   }
 
   /**
-   * 非同期関数の安全な実行ラッパー
+   * Notify user via UI (placeholder for actual notification system)
+   * This should be integrated with the actual NotificationManager
    */
-  public static async safeExecuteAsync<T>(
-    fn: () => Promise<T>,
-    context: string,
-    fallback?: T
-  ): Promise<T | undefined> {
-    try {
-      return await fn();
-    } catch (error) {
-      ErrorHandler.getInstance().handleGenericError(error as Error, context);
-      return fallback;
+  private static notifyUser(message: string, severity: ErrorSeverity): void {
+    // Log notification intent (actual notification would go through NotificationManager)
+    terminalLogger.debug(`[User Notification] ${severity.toUpperCase()}: ${message}`);
+
+    // TODO: Integrate with NotificationManager when available
+    // coordinator.notificationManager?.showNotification(message, severity);
+  }
+
+  /**
+   * Create formatted error message with operation context
+   */
+  public static formatErrorMessage(operation: string, details?: string): string {
+    return details ? `${operation}: ${details}` : operation;
+  }
+
+  /**
+   * Extract error message from unknown error type
+   */
+  public static extractErrorMessage(error: unknown): string {
+    if (error instanceof Error) {
+      return error.message;
     }
+    if (typeof error === 'string') {
+      return error;
+    }
+    return String(error);
+  }
+
+  /**
+   * Check if error is a specific type
+   */
+  public static isErrorType<T extends Error>(
+    error: unknown,
+    errorType: new (...args: any[]) => T
+  ): error is T {
+    return error instanceof errorType;
   }
 }

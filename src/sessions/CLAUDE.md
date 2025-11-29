@@ -58,7 +58,7 @@ interface TerminalSessionData {
 ```typescript
 export class UnifiedSessionManager {
   private static readonly SESSION_KEY = 'terminalSessions';
-  private static readonly MAX_SCROLLBACK_LINES = 1000;
+  private static readonly MAX_SCROLLBACK_LINES = 2000;
   private static readonly SESSION_EXPIRY_DAYS = 7;
 
   async saveSession(terminals: TerminalInfo[]): Promise<void> {

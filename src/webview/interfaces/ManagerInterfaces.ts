@@ -7,9 +7,51 @@ import { FitAddon } from '@xterm/addon-fit';
 import { SearchAddon } from '@xterm/addon-search';
 import { WebglAddon } from '@xterm/addon-webgl';
 import { Unicode11Addon } from '@xterm/addon-unicode11';
+import { SerializeAddon } from '@xterm/addon-serialize';
 import { PartialTerminalSettings, WebViewFontSettings } from '../../types/shared';
 import { AltClickState, TerminalInteractionEvent } from '../../types/common';
 import { ITerminalProfile } from '../../types/profiles';
+import type { IShellIntegrationManager } from '../../types/type-guards';
+
+/**
+ * Interface for RenderingOptimizer
+ */
+export interface IRenderingOptimizer {
+  setupOptimizedResize(
+    terminal: Terminal,
+    fitAddon: FitAddon,
+    container: HTMLElement,
+    terminalId: string
+  ): void;
+  detectDevice(event: WheelEvent): void;
+  dispose(): void;
+}
+
+/**
+ * Interface for persistence manager
+ */
+export interface IPersistenceManager {
+  saveSession?(sessionId: string, data: unknown): Promise<void>;
+  loadSession?(sessionId: string): Promise<unknown>;
+  clearSession?(sessionId: string): Promise<void>;
+  dispose(): void;
+}
+
+export interface ITerminalTabManager {
+  initialize(): void;
+  addTab(terminalId: string, name: string, terminal?: Terminal): void;
+  removeTab(terminalId: string): void;
+  setActiveTab(terminalId: string): void;
+  syncTabs(
+    tabInfos: Array<{ id: string; name: string; isActive: boolean; isClosable?: boolean }>
+  ): void;
+  updateModeIndicator(mode: 'normal' | 'fullscreen' | 'split'): void;
+  /** Check if a terminal ID is pending deletion (prevents race conditions in state sync) */
+  hasPendingDeletion(terminalId: string): boolean;
+  /** Get all terminal IDs currently pending deletion */
+  getPendingDeletions(): Set<string>;
+  dispose(): void;
+}
 
 // Core terminal data structure with VS Code Standard Addons
 export interface TerminalInstance {
@@ -19,18 +61,55 @@ export interface TerminalInstance {
   readonly terminal: Terminal;
   readonly fitAddon: FitAddon;
   readonly container: HTMLElement;
-  isActive?: boolean;
+  isActive: boolean;
   // VS Code Standard Addons
   readonly searchAddon?: SearchAddon;
   readonly webglAddon?: WebglAddon;
   readonly unicode11Addon?: Unicode11Addon;
+  readonly serializeAddon?: SerializeAddon; // For scrollback with color preservation
+  // Performance Optimization
+  readonly renderingOptimizer?: IRenderingOptimizer; // RenderingOptimizer for performance
+}
+
+export type TerminalDisplayMode = 'normal' | 'fullscreen' | 'split';
+
+export interface TerminalDisplayState {
+  mode: TerminalDisplayMode;
+  activeTerminalId: string | null;
+  orderedTerminalIds?: string[];
+  splitDirection?: 'vertical' | 'horizontal';
+}
+
+export interface TerminalDisplaySnapshot {
+  mode: TerminalDisplayMode;
+  activeTerminalId: string | null;
+  visibleTerminals: string[];
+  registeredContainers: number;
+  registeredWrappers: number;
+  orphanNodeCount: number;
+}
+
+// Header management interface (subset used by other managers)
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
+export interface IHeaderManager {
+  // Empty interface - split button removed
 }
 
 // Manager coordination interface
+export interface IShellIntegrationBridge extends IShellIntegrationManager {
+  setCoordinator(coordinator: IManagerCoordinator): void;
+  handleMessage(message: unknown): void;
+  dispose(): void;
+  initializeTerminalShellIntegration(terminal: Terminal, terminalId: string): void;
+  decorateTerminalOutput(terminal: Terminal, terminalId: string): void;
+  updateWorkingDirectory?(terminalId: string, cwd: string): void;
+}
+
 export interface IManagerCoordinator {
   getActiveTerminalId(): string | null;
   setActiveTerminalId(terminalId: string): void;
   getTerminalInstance(terminalId: string): TerminalInstance | undefined;
+  getSerializeAddon(terminalId: string): SerializeAddon | undefined;
   getAllTerminalInstances(): Map<string, TerminalInstance>;
   getAllTerminalContainers(): Map<string, HTMLElement>;
   getTerminalElement(terminalId: string): HTMLElement | undefined;
@@ -40,14 +119,17 @@ export interface IManagerCoordinator {
     id: string,
     name: string,
     config?: unknown,
-    terminalNumber?: number
+    terminalNumber?: number,
+    requestSource?: 'webview' | 'extension'
   ): Promise<unknown>;
   openSettings(): void;
+  setVersionInfo(version: string): void;
   applyFontSettings(fontSettings: WebViewFontSettings): void;
   closeTerminal(id?: string): void;
-  shellIntegrationManager?: any; // Shell integration manager
+  shellIntegrationManager?: IShellIntegrationBridge;
   findInTerminalManager?: IFindInTerminalManager; // Find in Terminal manager
   profileManager?: IProfileManager; // Profile manager
+  inputManager?: IInputManager; // Input management for terminal events
   getManagers(): {
     performance: IPerformanceManager;
     input: IInputManager;
@@ -57,9 +139,17 @@ export interface IManagerCoordinator {
     notification: INotificationManager;
     findInTerminal?: IFindInTerminalManager;
     profile?: IProfileManager;
-    persistence?: any; // Optional persistence manager
+    tabs?: ITerminalTabManager;
+    persistence?: IPersistenceManager; // Optional persistence manager
+    terminalContainer?: ITerminalContainerManager; // Terminal container manager
+    displayMode?: IDisplayModeManager; // Display mode manager
+    header?: IHeaderManager; // Header manager for UI sync
   };
   getMessageManager(): IMessageManager;
+  getTerminalContainerManager?(): ITerminalContainerManager;
+  getDisplayModeManager?(): IDisplayModeManager;
+  deleteTerminalSafely?(terminalId: string): Promise<boolean>;
+  handleAiAgentToggle?(terminalId: string): void;
   // 新しいアーキテクチャ: 状態更新処理
   updateState?(state: unknown): void;
   handleTerminalRemovedFromExtension?(terminalId: string): void;
@@ -80,6 +170,10 @@ export interface IManagerCoordinator {
     agentType: string | null
   ): void;
   ensureTerminalFocus(terminalId: string): void;
+
+  // Session restore flag management
+  isRestoringSession?(): boolean;
+  setRestoringSession?(isRestoring: boolean): void;
 
   // セッション復元関連
   createTerminalFromSession?(
@@ -193,6 +287,7 @@ export interface IUIManager {
     agentType: string | null
   ): void;
   applyVSCodeStyling(container: HTMLElement): void;
+  setHighlightActiveBorder(enabled: boolean): void;
   dispose(): void;
 }
 
@@ -248,6 +343,40 @@ export interface IMessageManager {
   dispose(): void;
 }
 
+// Terminal Container management interface
+export interface ITerminalContainerManager {
+  initialize(): void;
+  setContainerVisibility(terminalId: string, visible: boolean): void;
+  setContainerMode(terminalId: string, mode: 'normal' | 'fullscreen' | 'split'): void;
+  getContainer(terminalId: string): HTMLElement | null;
+  getAllContainers(): Map<string, HTMLElement>;
+  registerContainer(terminalId: string, container: HTMLElement): void;
+  unregisterContainer(terminalId: string): void;
+  registerSplitWrapper(terminalId: string, wrapper: HTMLElement): void;
+  unregisterSplitWrapper(terminalId: string): void;
+  registerSplitResizer(resizer: HTMLElement): void;
+  clearSplitArtifacts(): void;
+  applyDisplayState(state: TerminalDisplayState): void;
+  getContainerOrder(): string[];
+  getDisplaySnapshot(): TerminalDisplaySnapshot;
+  reorderContainers(order: string[]): void;
+  dispose(): void;
+}
+
+// Display Mode management interface
+export interface IDisplayModeManager {
+  initialize(): void;
+  setDisplayMode(mode: 'normal' | 'fullscreen' | 'split'): void;
+  toggleSplitMode(): void;
+  showTerminalFullscreen(terminalId: string): void;
+  showAllTerminalsSplit(): void;
+  hideAllTerminalsExcept(terminalId: string): void;
+  showAllTerminals(): void;
+  getCurrentMode(): 'normal' | 'fullscreen' | 'split';
+  isTerminalVisible(terminalId: string): boolean;
+  dispose(): void;
+}
+
 // Notification management interface
 export interface INotificationManager {
   showNotificationInTerminal(message: string, type: 'info' | 'success' | 'warning' | 'error'): void;
@@ -270,6 +399,8 @@ export interface INotificationManager {
 export interface IFindInTerminalManager {
   showSearch(): void;
   hideSearch(): void;
+  show?(): void; // Alias for showSearch
+  hide?(): void; // Alias for hideSearch
   findNext(): void;
   findPrevious(): void;
   getSearchState(): {
@@ -299,7 +430,7 @@ export interface IProfileManager {
   createTerminalWithDefaultProfile(name?: string): Promise<void>;
   switchToProfileByIndex(index: number): Promise<void>;
   updateProfiles(profiles: ITerminalProfile[], defaultProfileId?: string): void;
-  handleMessage(message: any): void;
+  handleMessage(message: unknown): void;
   isProfileSelectorVisible(): boolean;
   getSelectedProfileId(): string | undefined;
   dispose(): void;

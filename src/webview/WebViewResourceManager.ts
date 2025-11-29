@@ -34,7 +34,11 @@ export interface IWebViewResourceManager extends IManagerLifecycle {
   isReady(): boolean;
 }
 
-export class WebViewResourceManager implements IWebViewResourceManager {
+interface Disposable {
+  dispose(): void;
+}
+
+export class WebViewResourceManager implements IWebViewResourceManager, Disposable {
   private resources = new Map<string, WebViewResource>();
   private loadingPromises = new Map<string, Promise<WebViewResource>>();
   private disposed = false;

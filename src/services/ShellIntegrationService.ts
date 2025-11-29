@@ -11,6 +11,8 @@
 
 import * as vscode from 'vscode';
 import { TerminalManager } from '../terminals/TerminalManager';
+import { terminal as log } from '../utils/logger';
+import { safeProcessCwd } from '../utils/common';
 
 interface PtyProcess {
   write(data: string): void;
@@ -38,6 +40,8 @@ export class ShellIntegrationService {
   private cwdDetectionPatterns: RegExp[] = [];
   private promptPatterns: RegExp[] = [];
   private commandStartTime = new Map<string, number>();
+  private shellIntegrationPermissionGranted: boolean | undefined = undefined;
+  private context: vscode.ExtensionContext;
 
   // VS Code standard shell integration sequences
   private readonly OSC_SEQUENCES = {
@@ -49,9 +53,39 @@ export class ShellIntegrationService {
     PROMPT_END: '\x1b]633;E\x07',
   };
 
-  constructor(private terminalManager: TerminalManager) {
+  /**
+   * Shell Integration Permission Dialog Constants
+   *
+   * These messages are displayed when requesting user permission to inject
+   * shell integration scripts into their terminal sessions.
+   */
+  private static readonly PERMISSION_MESSAGES = {
+    MAIN_MESSAGE:
+      'Secondary Terminal wants to enable Shell Integration to provide enhanced features like command tracking and history. This requires modifying your shell startup script.',
+    BUTTON_ALLOW: 'Allow',
+    BUTTON_DENY: 'Deny',
+    BUTTON_ALWAYS_ALLOW: 'Always Allow',
+    BUTTON_NEVER_ALLOW: 'Never Allow',
+  } as const;
+
+  constructor(
+    private terminalManager: TerminalManager,
+    context?: vscode.ExtensionContext
+  ) {
     this.initializePatterns();
     // Don't setup event listeners in constructor - wait for terminal creation
+
+    // Store context for persistent settings
+    if (context) {
+      this.context = context;
+      // Load previously saved permission
+      this.shellIntegrationPermissionGranted = context.globalState.get<boolean>(
+        'shellIntegrationPermission'
+      );
+    } else {
+      // Fallback if no context provided (for backward compatibility)
+      this.context = null as any;
+    }
   }
 
   private initializePatterns(): void {
@@ -75,7 +109,7 @@ export class ShellIntegrationService {
         /\x1b\]633;P;Cwd=([^\x07]+)\x07/, // VS Code OSC sequence
       ];
     } catch (error) {
-      console.error('Failed to initialize shell integration patterns:', error);
+      log('Failed to initialize shell integration patterns:', error);
       // Initialize with empty arrays to prevent crashes
       this.promptPatterns = [];
       this.cwdDetectionPatterns = [];
@@ -177,6 +211,12 @@ export class ShellIntegrationService {
     if (cwd) {
       state.currentCwd = cwd;
 
+      try {
+        this.terminalManager.updateTerminalCwd(state.terminalId, cwd);
+      } catch (error) {
+        log('Failed to update terminal cwd:', error);
+      }
+
       // Send CWD update to webview
       this.sendCwdUpdate(state.terminalId, cwd);
     }
@@ -211,7 +251,7 @@ export class ShellIntegrationService {
     if (!this.states.has(terminalId)) {
       this.states.set(terminalId, {
         terminalId,
-        currentCwd: process.cwd(),
+        currentCwd: safeProcessCwd(),
         commandHistory: [],
         isExecuting: false,
       });
@@ -255,7 +295,7 @@ export class ShellIntegrationService {
    */
   public getCurrentCwd(terminalId: string): string {
     const state = this.states.get(terminalId);
-    return state ? state.currentCwd : process.cwd();
+    return state ? state.currentCwd : safeProcessCwd();
   }
 
   /**
@@ -270,7 +310,34 @@ export class ShellIntegrationService {
    * Inject shell integration script
    * This is called when a new terminal is created
    */
-  public injectShellIntegration(terminalId: string, shell: string, ptyProcess: PtyProcess): void {
+  public async injectShellIntegration(
+    _terminalId: string,
+    shell: string,
+    ptyProcess: PtyProcess
+  ): Promise<void> {
+    // Check if shell integration is enabled in settings
+    const config = vscode.workspace.getConfiguration('secondaryTerminal');
+    const shellIntegrationEnabled = config.get<boolean>('enableShellIntegration', true);
+
+    if (!shellIntegrationEnabled) {
+      log('Shell integration disabled in settings');
+      return;
+    }
+
+    // Check if user has granted permission for shell integration
+    if (this.shellIntegrationPermissionGranted === undefined) {
+      // First time - ask for permission
+      const granted = await this.requestShellIntegrationPermission();
+      if (!granted) {
+        log('Shell integration permission denied by user');
+        return;
+      }
+    } else if (this.shellIntegrationPermissionGranted === false) {
+      // User previously denied permission
+      return;
+    }
+
+    // Permission granted - inject shell integration
     // Detect shell type and inject appropriate integration
     if ((shell && shell.includes('bash')) || (shell && shell.includes('zsh'))) {
       this.injectBashZshIntegration(ptyProcess);
@@ -278,6 +345,61 @@ export class ShellIntegrationService {
       this.injectFishIntegration(ptyProcess);
     } else if (shell && (shell.includes('powershell') || shell.includes('pwsh'))) {
       this.injectPowerShellIntegration(ptyProcess);
+    }
+  }
+
+  /**
+   * Request user permission to inject shell integration scripts
+   *
+   * Displays a modal dialog asking the user for permission to inject shell
+   * integration scripts. The user's choice can be saved persistently.
+   *
+   * @returns Promise<boolean> - true if permission granted, false otherwise
+   */
+  private async requestShellIntegrationPermission(): Promise<boolean> {
+    const { MAIN_MESSAGE, BUTTON_ALLOW, BUTTON_ALWAYS_ALLOW, BUTTON_DENY, BUTTON_NEVER_ALLOW } =
+      ShellIntegrationService.PERMISSION_MESSAGES;
+
+    const result = await vscode.window.showWarningMessage(
+      MAIN_MESSAGE,
+      { modal: true },
+      BUTTON_ALLOW,
+      BUTTON_ALWAYS_ALLOW,
+      BUTTON_DENY,
+      BUTTON_NEVER_ALLOW
+    );
+
+    // Handle user's choice
+    switch (result) {
+      case BUTTON_ALLOW:
+        // Allow for this session only
+        this.shellIntegrationPermissionGranted = true;
+        log('Shell integration allowed for this session');
+        return true;
+
+      case BUTTON_ALWAYS_ALLOW:
+        // Always allow - save to persistent storage
+        this.shellIntegrationPermissionGranted = true;
+        if (this.context) {
+          await this.context.globalState.update('shellIntegrationPermission', true);
+        }
+        log('Shell integration always allowed (saved to settings)');
+        return true;
+
+      case BUTTON_NEVER_ALLOW:
+        // Never allow - save to persistent storage
+        this.shellIntegrationPermissionGranted = false;
+        if (this.context) {
+          await this.context.globalState.update('shellIntegrationPermission', false);
+        }
+        log('Shell integration never allowed (saved to settings)');
+        return false;
+
+      default:
+        // Deny for this session (user dismissed dialog or clicked Deny)
+        this.shellIntegrationPermissionGranted = false;
+        log('Shell integration denied for this session');
+        return false;
     }
   }
 

@@ -3,6 +3,31 @@
  * Extension Host と WebView 間で共有される型定義
  */
 
+// ===== Result Pattern (Issue #224) =====
+// Export Result pattern types for standardized error handling
+export type { Result, ErrorDetails } from './result';
+
+export {
+  ErrorCode,
+  ResultError,
+  success,
+  failure,
+  failureFromDetails,
+  failureFromError,
+  isSuccess,
+  isFailure,
+  unwrap,
+  unwrapOr,
+  map,
+  chain,
+  mapError,
+  onFailure,
+  onSuccess,
+  fromPromise,
+  tryCatch,
+  all,
+} from './result';
+
 // ===== 基本ターミナル設定 =====
 
 /**
@@ -47,16 +72,7 @@ export interface InteractionConfig {
   readonly confirmBeforeKill?: boolean;
   readonly altClickMovesCursor?: boolean;
   readonly multiCursorModifier?: string;
-}
-
-/**
- * キーバインディング関連設定
- */
-export interface KeybindingConfig {
-  readonly sendKeybindingsToShell?: boolean;
-  readonly commandsToSkipShell?: string[];
-  readonly allowChords?: boolean;
-  readonly allowMnemonics?: boolean;
+  readonly highlightActiveBorder?: boolean;
 }
 
 // ===== 統合型定義 =====
@@ -77,14 +93,11 @@ export interface ExtensionTerminalConfig
     blink?: boolean;
   };
   readonly enableCliAgentIntegration?: boolean;
-}
-
-/**
- * WebView で使用するターミナル設定
- * xterm.js 固有の設定を含む
- */
-export interface WebViewTerminalConfig extends DisplayConfig, ShellConfig {
-  readonly theme: TerminalTheme; // WebView では必須
+  readonly highlightActiveBorder?: boolean;
+  // Addon configuration for WebView terminal rendering
+  readonly enableGpuAcceleration?: boolean;
+  readonly enableSearchAddon?: boolean;
+  readonly enableUnicode11?: boolean;
 }
 
 /**
@@ -102,6 +115,7 @@ export interface PartialTerminalSettings {
   altClickMovesCursor?: boolean;
   multiCursorModifier?: string;
   enableCliAgentIntegration?: boolean;
+  highlightActiveBorder?: boolean;
   // VS Code keybinding system settings
   sendKeybindingsToShell?: boolean;
   commandsToSkipShell?: string[];
@@ -190,8 +204,6 @@ export interface CompleteExtensionConfig extends WebViewDisplayConfig, TerminalL
 // ===== 型エイリアス =====
 
 export type TerminalTheme = 'auto' | 'dark' | 'light';
-export type SplitDirection = 'horizontal' | 'vertical';
-export type CliAgentStatusType = 'info' | 'success' | 'error' | 'warning';
 
 // ===== Terminal Profile System Types =====
 
@@ -304,8 +316,6 @@ export interface ProfileSelectionResult {
  * 段階的移行で使用
  */
 export type TerminalConfig = ExtensionTerminalConfig;
-export type TerminalSettings = CompleteTerminalSettings;
-export type ExtensionConfig = CompleteExtensionConfig;
 
 // ===== 設定キー定数 =====
 
@@ -348,6 +358,7 @@ export const CONFIG_KEYS = {
   DEFAULT_PROFILE_OSX: 'defaultProfile.osx',
   INHERIT_VSCODE_PROFILES: 'inheritVSCodeProfiles',
   ENABLE_PROFILE_AUTO_DETECTION: 'enableProfileAutoDetection',
+  HIGHLIGHT_ACTIVE_BORDER: 'highlightActiveBorder',
 } as const;
 
 // ===== ターミナル管理型 =====
@@ -380,7 +391,7 @@ export enum ProcessState {
   /** Process was explicitly terminated by the user */
   KilledByUser = 4,
   /** Process terminated on its own */
-  KilledByProcess = 5
+  KilledByProcess = 5,
 }
 
 /**
@@ -392,7 +403,7 @@ export enum InteractionState {
   /** Replay only mode */
   ReplayOnly = 1,
   /** Session interaction mode */
-  Session = 2
+  Session = 2,
 }
 
 export interface TerminalState {
@@ -438,14 +449,6 @@ export interface TerminalInstance {
   isSessionRestored?: boolean; // セッション復元で作成されたターミナルかどうか
   sessionRestoreMessage?: string; // 復元メッセージ
   sessionScrollback?: string[]; // 復元時の履歴データ
-}
-
-/**
- * ターミナル寸法
- */
-export interface TerminalDimensions {
-  cols: number;
-  rows: number;
 }
 
 /**
@@ -510,14 +513,18 @@ export interface WebviewMessage {
     | 'input'
     | 'resize'
     | 'output'
+    | 'startOutput'
     | 'clear'
     | 'exit'
     | 'split'
     | 'terminalCreated'
+    | 'newTerminal'
     | 'terminalRemoved'
     | 'settingsResponse'
     | 'fontSettingsUpdate'
     | 'openSettings'
+    | 'openTerminalLink'
+    | 'reorderTerminals'
     | 'stateUpdate'
     | 'claudeStatusUpdate'
     | 'cliAgentStatusUpdate'
@@ -547,6 +554,7 @@ export interface WebviewMessage {
     | 'scrollbackProgress'
     | 'saveAllTerminalSessions'
     | 'extractScrollbackData'
+    | 'pushScrollbackData'
     | 'performScrollbackRestore'
     | 'scrollbackDataCollected'
     | 'panelLocationUpdate'
@@ -558,7 +566,10 @@ export interface WebviewMessage {
     | 'updateShellStatus'
     | 'updateCwd'
     | 'commandHistory'
+    | 'relayoutTerminals' // Terminal relayout command
     | 'deleteTerminalResponse' // 🎯 FIX: 削除処理統一化で追加
+    | 'copyToClipboard' // 📋 Clipboard: Copy text to system clipboard
+    | 'requestClipboardContent' // 📋 Clipboard: Request clipboard content for paste
     | 'switchAiAgentResponse' // AIエージェント切り替えレスポンス
     | 'phase8ServicesReady' // Phase 8: Terminal Decorations & Links service ready notification
     | 'htmlScriptTest' // HTML script test message
@@ -604,6 +615,7 @@ export interface WebviewMessage {
     | 'initResponse' // Init operation response
     | 'initializationComplete' // Initialization complete notification
     | 'setActiveTerminal' // Set active terminal command
+    | 'versionInfo' // Version information from Extension to WebView
     | 'inputResponse' // Input operation response
     | 'outputResponse' // Output operation response
     | 'clearResponse' // Clear operation response
@@ -635,7 +647,11 @@ export interface WebviewMessage {
     | 'requestStateResponse' // Request state response
     | 'updateShellStatusResponse' // Update shell status response
     | 'updateCwdResponse' // Update CWD response
-    | 'commandHistoryResponse'; // Command history response
+    | 'commandHistoryResponse' // Command history response
+    // Additional commands for WebView initialization
+    | 'webviewInitialized' // WebView initialization complete
+    | 'terminalInitializationComplete' // Terminal initialization complete
+    | 'terminalReady'; // Terminal ready for use
   config?: TerminalConfig;
   data?: string | any[]; // Support both string and array data
   exitCode?: number;
@@ -707,6 +723,12 @@ export interface WebviewMessage {
 
   cols?: number; // リサイズ用
   rows?: number; // リサイズ用
+  linkType?: 'file' | 'url';
+  url?: string;
+  filePath?: string;
+  lineNumber?: number;
+  columnNumber?: number;
+  order?: string[];
   requestSource?: 'header' | 'panel'; // 削除リクエストの送信元
   timestamp?: number; // エラー報告用
   type?: string; // For test messages and error reporting
@@ -779,6 +801,9 @@ export interface WebviewMessage {
   newStatus?: 'connected' | 'disconnected' | 'none'; // AIエージェントの新しいステータス
   agentType?: string | null; // エージェントタイプ
 
+  // 📋 Clipboard operation properties
+  text?: string; // Text content for clipboard operations
+
   // Terminal Profile properties
   profiles?: Array<{
     id: string;
@@ -813,6 +838,7 @@ export interface WebviewMessage {
     env?: Record<string, string>;
     shellArgs?: string[];
   }; // Profile options for terminal creation
+  version?: string; // Extension version information
 }
 
 /**
@@ -902,6 +928,189 @@ export interface VsCodeMessage {
   isForceReconnect?: boolean; // Alternative property name for compatibility
 }
 
+// ===== Parameter Object Pattern Interfaces (Issue #225) =====
+
+/**
+ * Terminal initialization options (Parameter Object Pattern)
+ * Replaces multiple parameters in initializeShellForTerminal
+ * @see TerminalManager.initializeShellForTerminal
+ */
+export interface TerminalInitOptions {
+  /** Terminal ID to initialize */
+  readonly terminalId: string;
+  /** PTY process instance */
+  readonly ptyProcess: any;
+  /** Whether to run in safe mode (skip shell integration) */
+  readonly safeMode: boolean;
+}
+
+/**
+ * Terminal creation options (Parameter Object Pattern)
+ * Consolidates parameters for terminal creation functions
+ * @see createTerminal functions across multiple managers
+ */
+export interface TerminalCreationOptions {
+  /** Terminal ID */
+  readonly terminalId: string;
+  /** Terminal name */
+  readonly terminalName: string;
+  /** Optional terminal configuration */
+  readonly config?: PartialTerminalSettings;
+  /** Terminal number (slot) */
+  readonly terminalNumber?: number;
+  /** Source of the creation request */
+  readonly requestSource?: 'header' | 'panel' | 'command' | 'user';
+}
+
+/**
+ * Terminal interaction event options (Parameter Object Pattern)
+ * Consolidates parameters for emitting terminal interaction events
+ * @see emitTerminalInteractionEvent functions
+ */
+export interface TerminalInteractionEventOptions {
+  /** Type of terminal event */
+  readonly type: string;
+  /** Terminal ID */
+  readonly terminalId: string;
+  /** Event data */
+  readonly data: any;
+  /** Message coordinator instance */
+  readonly coordinator?: any;
+  /** Event context (for SystemMessageHandler) */
+  readonly context?: any;
+  /** Event priority (for UnifiedMessageDispatcher) */
+  readonly priority?: 'high' | 'normal' | 'low';
+}
+
+/**
+ * Terminal resize options (Parameter Object Pattern)
+ * Consolidates parameters for terminal resize operations
+ * @see sendResize, debouncedResize functions
+ */
+export interface TerminalResizeOptions {
+  /** Number of columns */
+  readonly cols: number;
+  /** Number of rows */
+  readonly rows: number;
+  /** Optional terminal ID (defaults to active terminal) */
+  readonly terminalId?: string;
+  /** Message coordinator instance */
+  readonly coordinator?: any;
+  /** Event priority (for UnifiedMessageDispatcher) */
+  readonly priority?: 'high' | 'normal' | 'low';
+  /** Terminal instance (for debouncedResize) */
+  readonly terminal?: any;
+  /** Fit addon instance (for debouncedResize) */
+  readonly fitAddon?: any;
+}
+
+/**
+ * Terminal persistence add options (Parameter Object Pattern)
+ * Consolidates parameters for adding terminal to persistence
+ * @see addTerminal in persistence services
+ */
+export interface TerminalPersistenceAddOptions {
+  /** Terminal ID */
+  readonly terminalId: string;
+  /** Terminal instance */
+  readonly terminal: any;
+  /** Serialize addon for xterm */
+  readonly serializeAddon: any;
+  /** Additional options */
+  readonly options?: {
+    readonly force?: boolean;
+    readonly skipValidation?: boolean;
+  };
+}
+
+/**
+ * Configuration update options (Parameter Object Pattern)
+ * Consolidates parameters for configuration updates
+ * @see update method in configuration services
+ */
+export interface ConfigurationUpdateOptions {
+  /** Configuration section (e.g., 'secondaryTerminal') */
+  readonly section: string;
+  /** Configuration key */
+  readonly key: string;
+  /** New value */
+  readonly value: any;
+  /** Configuration target scope */
+  readonly target?: any;
+}
+
+/**
+ * Event handler registration options (Parameter Object Pattern)
+ * Consolidates parameters for event handler registration
+ * @see registerEventHandler, addEventListener functions
+ */
+export interface EventHandlerRegistrationOptions {
+  /** Unique identifier for this handler */
+  readonly id?: string;
+  /** DOM element or event target */
+  readonly element: EventTarget | HTMLElement;
+  /** Event type (e.g., 'click', 'keydown') */
+  readonly eventType: string;
+  /** Event handler function */
+  readonly handler: EventListener | ((event: Event) => void);
+  /** Event listener options */
+  readonly options?: AddEventListenerOptions | boolean;
+  /** Enable debouncing for this event */
+  readonly enableDebounce?: boolean;
+  /** Debounce delay in milliseconds */
+  readonly debounceDelay?: number;
+}
+
+/**
+ * Terminal link opening options (Parameter Object Pattern)
+ * Consolidates parameters for opening files from terminal links
+ * @see openFileFromTerminal in TerminalLinkManager
+ */
+export interface TerminalLinkOpenOptions {
+  /** File path to open */
+  readonly filePath: string;
+  /** Line number to navigate to */
+  readonly lineNumber?: number;
+  /** Column number to navigate to */
+  readonly columnNumber?: number;
+  /** Terminal ID where link was clicked */
+  readonly terminalId: string;
+}
+
+/**
+ * Rendering optimizer setup options (Parameter Object Pattern)
+ * Consolidates parameters for setting up rendering optimizations
+ * @see setupOptimizedResize, setupRenderingOptimizer functions
+ */
+export interface RenderingOptimizerOptions {
+  /** Terminal ID */
+  readonly terminalId: string;
+  /** XTerm terminal instance */
+  readonly terminal: any;
+  /** Fit addon instance */
+  readonly fitAddon: any;
+  /** Container element */
+  readonly container: HTMLElement;
+  /** Enable GPU acceleration */
+  readonly enableGpuAcceleration?: boolean;
+}
+
+/**
+ * Status update options (Parameter Object Pattern)
+ * Consolidates parameters for CLI Agent status updates
+ * @see sendStatusUpdate in CliAgentWebViewService
+ */
+export interface CliAgentStatusUpdateOptions {
+  /** Active terminal name */
+  readonly activeTerminalName: string;
+  /** Agent status */
+  readonly status: 'connected' | 'disconnected' | 'none';
+  /** Agent type */
+  readonly agentType: string | null;
+  /** Status update context */
+  readonly context?: any;
+}
+
 // ===== 型ガード関数 =====
 
 /**
@@ -909,16 +1118,4 @@ export interface VsCodeMessage {
  */
 export function isBaseTerminalConfig(obj: unknown): obj is BaseTerminalConfig {
   return typeof obj === 'object' && obj !== null;
-}
-
-/**
- * ExtensionTerminalConfig の型ガード
- */
-export function isExtensionTerminalConfig(obj: unknown): obj is ExtensionTerminalConfig {
-  return (
-    isBaseTerminalConfig(obj) &&
-    typeof (obj as ExtensionTerminalConfig).shell === 'string' &&
-    Array.isArray((obj as ExtensionTerminalConfig).shellArgs) &&
-    typeof (obj as ExtensionTerminalConfig).maxTerminals === 'number'
-  );
 }

@@ -2,7 +2,7 @@
  * EventHandlerRegistry Utility
  *
  * Centralized event listener management to eliminate code duplication
- * across InputManager, TerminalLifecycleManager, and other managers
+ * across InputManager, TerminalLifecycleCoordinator, and other managers
  */
 
 import { webview as log } from '../../utils/logger';
@@ -19,11 +19,15 @@ export interface RegisteredEventListener extends EventListenerConfig {
   registeredAt: number;
 }
 
+interface Disposable {
+  dispose(): void;
+}
+
 /**
  * Centralized event handler registry
  * Provides automatic cleanup and organized event listener management
  */
-export class EventHandlerRegistry {
+export class EventHandlerRegistry implements Disposable {
   private listeners = new Map<string, RegisteredEventListener>();
   private disposed = false;
 

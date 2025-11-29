@@ -1,6 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
-
 import { expect } from 'chai';
 import * as sinon from 'sinon';
 import { JSDOM } from 'jsdom';
@@ -296,6 +293,7 @@ describe('Logger', () => {
     });
 
     it('should handle circular references', () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const circularObj: any = { prop: 'value' };
       circularObj.self = circularObj;
 

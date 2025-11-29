@@ -160,6 +160,112 @@ Then create a Pull Request on GitHub with:
 - Ensure cross-platform compatibility
 - Test with different shells (bash, zsh, PowerShell, cmd)
 
+## 🔒 Security Guidelines
+
+Security is a top priority for this project. Please follow these guidelines when contributing:
+
+### Never Commit Credentials
+
+**CRITICAL**: Never commit any of the following:
+- API keys, tokens, or passwords
+- Private keys or certificates (`.pem`, `.key`, `.p12`, `.pfx`)
+- Environment files with sensitive data
+- Any hardcoded secrets in source code
+
+These files are automatically excluded via `.gitignore`:
+```
+.env, .env.*, credentials.json, secrets.json
+*.pem, *.key, *.p12, *.pfx
+```
+
+### Use VS Code SecretStorage API
+
+If you need to store credentials:
+
+✅ **CORRECT**: Use VS Code's SecretStorage API
+```typescript
+// Store a secret
+await context.secrets.store('myExtension.apiKey', apiKey);
+
+// Retrieve a secret
+const apiKey = await context.secrets.get('myExtension.apiKey');
+
+// Delete a secret
+await context.secrets.delete('myExtension.apiKey');
+```
+
+❌ **INCORRECT**: Never do this
+```typescript
+// Don't hardcode credentials
+const API_KEY = "sk-1234567890abcdef";
+
+// Don't store in workspace configuration
+vscode.workspace.getConfiguration().update('apiKey', key);
+
+// Don't store in plain text files
+fs.writeFileSync('credentials.json', JSON.stringify({ key }));
+```
+
+### Code Security Best Practices
+
+1. **Avoid dangerous functions**: `eval()`, `Function()`, `setTimeout(string)`, `setInterval(string)`
+   - These are blocked by our ESLint rules
+
+2. **Validate all input**: Especially user input and data from external sources
+   - Sanitize terminal input/output
+   - Validate configuration values
+
+3. **Dependencies**: Keep them updated and secure
+   ```bash
+   # Check for vulnerabilities
+   npm audit
+
+   # Fix vulnerabilities automatically (when possible)
+   npm audit fix
+   ```
+
+4. **Environment variables**: Only use for system configuration
+   - ✅ OK: `process.env.HOME`, `process.env.SHELL`
+   - ❌ NOT OK: `process.env.API_KEY`, `process.env.PASSWORD`
+
+### Security Testing
+
+Before submitting a PR:
+
+1. **Check for hardcoded secrets**:
+   ```bash
+   # Search for potential secrets (future implementation)
+   git diff main | grep -iE "(password|secret|token|api_key)"
+   ```
+
+2. **Run security linters**:
+   ```bash
+   npm run lint
+   ```
+
+3. **Test with realistic data**: Use mock/placeholder credentials in tests
+
+### Reporting Security Vulnerabilities
+
+**DO NOT** create public issues for security vulnerabilities.
+
+Instead:
+1. Email the maintainer directly
+2. Use GitHub's "Report a vulnerability" feature
+3. Include reproduction steps and potential impact
+
+See [SECURITY.md](../SECURITY.md) for full details.
+
+### Pre-commit Checklist
+
+Before committing:
+- [ ] No hardcoded credentials in code
+- [ ] No `.env` files or credential files staged
+- [ ] All secrets use VS Code SecretStorage API
+- [ ] ESLint passes with no security warnings
+- [ ] Tests pass and include security test cases
+- [ ] Dependencies are up to date (`npm audit` clean)
+
 ## 🐛 Bug Reports
 
 We use GitHub issues to track public bugs. Report a bug by [opening a new issue](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/new/choose).

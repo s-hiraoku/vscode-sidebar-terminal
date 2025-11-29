@@ -30,11 +30,7 @@ export class CliAgentMessageController {
       const terminalId = this.resolveTerminalId(cliAgentStatus, coordinator);
       const mappedStatus = this.mapLegacyStatus(cliAgentStatus.status);
 
-      coordinator.updateCliAgentStatus(
-        terminalId,
-        mappedStatus,
-        cliAgentStatus.agentType || null
-      );
+      coordinator.updateCliAgentStatus(terminalId, mappedStatus, cliAgentStatus.agentType || null);
 
       this.logger.info(
         `CLI Agent status updated successfully: ${mappedStatus} for terminal ${terminalId}`

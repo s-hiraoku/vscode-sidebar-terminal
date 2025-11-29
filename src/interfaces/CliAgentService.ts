@@ -11,7 +11,7 @@ import * as vscode from 'vscode';
 // =================== Detection Result Types ===================
 
 export interface CliAgentDetectionResult {
-  type: 'claude' | 'gemini' | 'codex';
+  type: 'claude' | 'gemini' | 'codex' | 'copilot';
   confidence: number;
   source: 'input' | 'output' | 'startup' | 'termination';
   detectedLine?: string;
@@ -28,11 +28,11 @@ export interface TerminationDetectionResult {
 
 export interface CliAgentState {
   status: 'connected' | 'disconnected' | 'none';
-  agentType: 'claude' | 'gemini' | 'codex' | null;
+  agentType: 'claude' | 'gemini' | 'codex' | 'copilot' | null;
 }
 
 export interface DisconnectedAgentInfo {
-  type: 'claude' | 'gemini' | 'codex';
+  type: 'claude' | 'gemini' | 'codex' | 'copilot';
   startTime: Date;
   terminalName?: string;
 }
@@ -167,7 +167,7 @@ export interface ICliAgentDetectionService {
    */
   forceReconnectAgent(
     terminalId: string,
-    agentType?: 'claude' | 'gemini' | 'codex',
+    agentType?: 'claude' | 'gemini' | 'codex' | 'copilot',
     terminalName?: string
   ): boolean;
 
@@ -177,6 +177,19 @@ export interface ICliAgentDetectionService {
    * @returns True if errors were cleared successfully
    */
   clearDetectionError(terminalId: string): boolean;
+
+  /**
+   * 🔄 BACKWARD COMPATIBILITY: Set agent connected (delegates to state manager)
+   * This method maintains compatibility with existing tests and legacy code
+   * @param terminalId Terminal ID to set as connected
+   * @param type Agent type
+   * @param terminalName Optional terminal name
+   */
+  setAgentConnected(
+    terminalId: string,
+    type: 'claude' | 'gemini' | 'codex' | 'copilot',
+    terminalName?: string
+  ): void;
 }
 
 // =================== Pattern Detection Interface ===================
@@ -200,6 +213,13 @@ export interface ICliAgentPatternDetector {
    * @returns True if Gemini startup detected
    */
   detectGeminiStartup(cleanLine: string): boolean;
+
+  /**
+   * Detect GitHub Copilot CLI startup patterns
+   * @param cleanLine Cleaned terminal line
+   * @returns True if GitHub Copilot startup detected
+   */
+  detectCopilotStartup(cleanLine: string): boolean;
 
   /**
    * Detect shell prompt return (indicating CLI agent termination)
@@ -232,7 +252,7 @@ export interface ICliAgentStateManager {
    */
   setConnectedAgent(
     terminalId: string,
-    type: 'claude' | 'gemini' | 'codex',
+    type: 'claude' | 'gemini' | 'codex' | 'copilot',
     terminalName?: string
   ): void;
 
@@ -262,7 +282,7 @@ export interface ICliAgentStateManager {
    * Get connected agent type
    * @returns Agent type of connected agent or null
    */
-  getConnectedAgentType(): 'claude' | 'gemini' | 'codex' | null;
+  getConnectedAgentType(): 'claude' | 'gemini' | 'codex' | 'copilot' | null;
 
   /**
    * Check if a terminal has a connected CLI agent
@@ -324,7 +344,7 @@ export interface ICliAgentStateManager {
    */
   forceReconnectAgent(
     terminalId: string,
-    agentType: 'claude' | 'gemini' | 'codex',
+    agentType: 'claude' | 'gemini' | 'codex' | 'copilot',
     terminalName?: string
   ): boolean;
 

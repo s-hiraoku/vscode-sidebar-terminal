@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { VSCODE_COMMANDS } from '../constants';
+import { log } from './logger';
 
 /**
  * Enhanced user feedback and error handling utilities
@@ -19,7 +20,7 @@ export interface FeedbackOptions {
   actions?: Array<{ title: string; action: () => void }>;
 }
 
-export class FeedbackManager {
+export class FeedbackManager implements vscode.Disposable {
   private static instance: FeedbackManager;
   private statusBarItem: vscode.StatusBarItem;
   private activeNotifications = new Map<string, vscode.Disposable>();
@@ -43,7 +44,7 @@ export class FeedbackManager {
     // Log to console
     if (logToConsole) {
       const prefix = this.getLogPrefix(type);
-      console.log(`${prefix} ${message}`);
+      log(`${prefix} ${message}`);
     }
 
     // Show notification

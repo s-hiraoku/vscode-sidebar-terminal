@@ -88,7 +88,7 @@ export class WebViewApiManager {
   public postMessageToExtension(message: unknown): boolean {
     try {
       // 🔍 DEBUG: Enhanced message sending tracking
-      console.log('🔍 [DEBUG] WebViewApiManager.postMessageToExtension called with:', {
+      log('🔍 [DEBUG] WebViewApiManager.postMessageToExtension called with:', {
         message,
         messageType: typeof message,
         command: (message as any)?.command,
@@ -104,9 +104,9 @@ export class WebViewApiManager {
         return false;
       }
 
-      console.log('🔍 [DEBUG] About to call api.postMessage');
+      log('🔍 [DEBUG] About to call api.postMessage');
       api.postMessage(message as VsCodeMessage);
-      console.log('🔍 [DEBUG] api.postMessage called successfully');
+      log('🔍 [DEBUG] api.postMessage called successfully');
 
       log(`📤 Message sent to extension: ${(message as any)?.command || 'unknown'}`);
       return true;

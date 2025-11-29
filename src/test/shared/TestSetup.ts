@@ -17,15 +17,91 @@ if (!(global as any).window) {
   (global as any).window = global;
 }
 
+// Mock HTMLCanvasElement.getContext BEFORE any xterm.js imports
+if (typeof (global as any).HTMLCanvasElement === 'undefined') {
+  (global as any).HTMLCanvasElement = class MockHTMLCanvasElement {
+    getContext(contextType: string): any {
+      if (contextType === '2d') {
+        return {
+          fillStyle: '',
+          strokeStyle: '',
+          lineWidth: 1,
+          fillRect: () => {},
+          strokeRect: () => {},
+          clearRect: () => {},
+          beginPath: () => {},
+          closePath: () => {},
+          moveTo: () => {},
+          lineTo: () => {},
+          arc: () => {},
+          fill: () => {},
+          stroke: () => {},
+          fillText: () => {},
+          strokeText: () => {},
+          measureText: () => ({ width: 0 }),
+          save: () => {},
+          restore: () => {},
+          scale: () => {},
+          rotate: () => {},
+          translate: () => {},
+          transform: () => {},
+          setTransform: () => {},
+          createLinearGradient: () => ({ addColorStop: () => {} }),
+          createRadialGradient: () => ({ addColorStop: () => {} }),
+          createPattern: () => null,
+          getImageData: () => ({ data: new Uint8ClampedArray(), width: 0, height: 0 }),
+          putImageData: () => {},
+          drawImage: () => {},
+          canvas: this,
+        };
+      }
+      return null;
+    }
+
+    get width() {
+      return 300;
+    }
+    set width(_value: number) {}
+    get height() {
+      return 150;
+    }
+    set height(_value: number) {}
+    toDataURL() {
+      return 'data:,';
+    }
+    toBlob() {}
+    getBoundingClientRect() {
+      return {
+        width: 300,
+        height: 150,
+        x: 0,
+        y: 0,
+        top: 0,
+        left: 0,
+        right: 300,
+        bottom: 150,
+      } as any;
+    }
+  };
+}
+
 import * as sinon from 'sinon';
 import * as chai from 'chai';
 import sinonChai from 'sinon-chai';
-import chaiAsPromised from 'chai-as-promised';
 import { JSDOM } from 'jsdom';
 
 // Set up chai plugins
 chai.use(sinonChai);
-chai.use(chaiAsPromised);
+
+// Async setup for chai-as-promised ES module
+let chaiAsPromisedSetup = false;
+async function setupChaiAsPromised() {
+  if (!chaiAsPromisedSetup) {
+    const chaiAsPromised = await import('chai-as-promised');
+    chai.use(chaiAsPromised.default);
+    chaiAsPromisedSetup = true;
+  }
+}
 
 /**
  * VS Code API のモックオブジェクト
@@ -207,13 +283,29 @@ export const mockVscode = {
  * 基本的なテスト環境セットアップ
  * グローバルなモックとNode.js環境のセットアップを行う
  */
-export function setupTestEnvironment(): void {
+export async function setupTestEnvironment(): Promise<void> {
+  // Setup chai-as-promised first
+  await setupChaiAsPromised();
   // Mock VS Code module
   (global as any).vscode = mockVscode;
 
-  // Override module loading for vscode and node-pty
+  // CRITICAL: Register vscode mock in require.cache so that `import * as vscode from 'vscode'` returns the mock
+  // This fixes ConfigurationService and other modules that import vscode directly
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const Module = require('module');
+  try {
+    const vscodeModulePath = require.resolve('vscode', { paths: [process.cwd()] });
+    require.cache[vscodeModulePath] = {
+      id: vscodeModulePath,
+      filename: vscodeModulePath,
+      loaded: true,
+      exports: mockVscode,
+    } as NodeModule;
+  } catch (e) {
+    // vscode module not found in require.resolve, will be handled by Module.prototype.require override
+  }
+
+  // Override module loading for vscode and node-pty
   const originalRequire = Module.prototype.require;
 
   Module.prototype.require = function (id: string) {
@@ -233,7 +325,13 @@ export function setupTestEnvironment(): void {
         }),
       };
     }
-    if (id === 'xterm' || id === 'xterm-addon-fit') {
+    // すべてのxterm関連モジュールをモック
+    if (
+      id === 'xterm' ||
+      id === '@xterm/xterm' ||
+      id.startsWith('xterm') ||
+      id.startsWith('@xterm/')
+    ) {
       return {
         Terminal: function () {
           return {
@@ -280,15 +378,40 @@ export function setupTestEnvironment(): void {
   (global as any).module = { exports: {} };
 
   // Enhanced process polyfilling for test compatibility
+  // Save original process methods NOW before they might get replaced
+  // CRITICAL: Save actual Node.js EventEmitter methods to prevent "process.emit is not a function" errors
+  const EventEmitter = require('events');
+  const originalProcessEmit =
+    process.emit && typeof process.emit === 'function'
+      ? process.emit.bind(process)
+      : EventEmitter.prototype.emit.bind(process);
+  const originalProcessOn =
+    process.on && typeof process.on === 'function'
+      ? process.on.bind(process)
+      : EventEmitter.prototype.on.bind(process);
+  const originalProcessListeners =
+    process.listeners && typeof process.listeners === 'function'
+      ? process.listeners.bind(process)
+      : EventEmitter.prototype.listeners.bind(process);
+  const originalProcessListenerCount =
+    process.listenerCount && typeof process.listenerCount === 'function'
+      ? process.listenerCount.bind(process)
+      : () => 0;
+  const savedCwd =
+    process.cwd && typeof process.cwd === 'function' ? process.cwd.bind(process) : null;
+
   const processPolyfill = {
     ...process,
     nextTick: (callback: () => void) => setImmediate(callback),
     env: { ...process.env, NODE_ENV: 'test' },
     platform: process.platform,
-    cwd: () => process.cwd(),
+    cwd: savedCwd || (() => '/test'),
     argv: process.argv,
     pid: process.pid,
-    on: () => {},
+    on: originalProcessOn,
+    emit: originalProcessEmit,
+    listeners: originalProcessListeners,
+    listenerCount: originalProcessListenerCount,
     removeListener: () => processPolyfill,
     removeAllListeners: () => processPolyfill,
     off: () => processPolyfill,
@@ -299,12 +422,22 @@ export function setupTestEnvironment(): void {
     (global as any).process = processPolyfill;
   } else {
     // 既存のprocessオブジェクトに不足しているメソッドを追加
+    // Use saved original functions to ensure they work correctly
     const existingProcess = (global as any).process;
     if (!existingProcess.nextTick) {
       existingProcess.nextTick = (callback: () => void) => setImmediate(callback);
     }
-    if (!existingProcess.on) {
-      existingProcess.on = () => {};
+    if (!existingProcess.on || typeof existingProcess.on !== 'function') {
+      existingProcess.on = originalProcessOn;
+    }
+    if (!existingProcess.emit || typeof existingProcess.emit !== 'function') {
+      existingProcess.emit = originalProcessEmit;
+    }
+    if (!existingProcess.listeners || typeof existingProcess.listeners !== 'function') {
+      existingProcess.listeners = originalProcessListeners;
+    }
+    if (!existingProcess.listenerCount || typeof existingProcess.listenerCount !== 'function') {
+      existingProcess.listenerCount = originalProcessListenerCount;
     }
     if (!existingProcess.removeListener) {
       existingProcess.removeListener = () => existingProcess;
@@ -314,6 +447,9 @@ export function setupTestEnvironment(): void {
     }
     if (!existingProcess.off) {
       existingProcess.off = () => existingProcess;
+    }
+    if (!existingProcess.cwd) {
+      existingProcess.cwd = savedCwd || (() => '/test');
     }
   }
 
@@ -385,6 +521,7 @@ export function setupTestEnvironment(): void {
 /**
  * 拡張コンソールモックセットアップ
  * テスト中のコンソール出力を制御するためのモック
+ * Note: This preserves original console functionality while allowing tests to suppress output
  */
 export function setupConsoleMocks(): {
   log: sinon.SinonStub;
@@ -393,15 +530,20 @@ export function setupConsoleMocks(): {
   info: sinon.SinonStub;
   debug: sinon.SinonStub;
 } {
+  // Preserve original console for fallback
+  const originalConsole = console;
+
+  // Create pass-through stubs that call original console
   const consoleMocks = {
-    log: sinon.stub(),
-    warn: sinon.stub(),
-    error: sinon.stub(),
-    info: sinon.stub(),
-    debug: sinon.stub(),
+    log: sinon.stub().callsFake((...args) => originalConsole.log(...args)),
+    warn: sinon.stub().callsFake((...args) => originalConsole.warn(...args)),
+    error: sinon.stub().callsFake((...args) => originalConsole.error(...args)),
+    info: sinon.stub().callsFake((...args) => originalConsole.info(...args)),
+    debug: sinon.stub().callsFake((...args) => originalConsole.debug(...args)),
   };
 
-  (global as Record<string, unknown>).console = consoleMocks;
+  // Don't replace global console - this was causing hangs
+  // Tests that need to mock console can access consoleMocks directly
 
   return consoleMocks;
 }
@@ -510,6 +652,60 @@ export function setupJSDOMEnvironment(htmlContent?: string): {
     unobserve() {}
     disconnect() {}
   };
+
+  // HTMLCanvasElement.getContext モック (xterm.jsのCanvas依存関係対応)
+  if (window.HTMLCanvasElement && !window.HTMLCanvasElement.prototype.getContext) {
+    window.HTMLCanvasElement.prototype.getContext = function (contextType: string): any {
+      if (contextType === '2d') {
+        return {
+          fillStyle: '',
+          strokeStyle: '',
+          lineWidth: 1,
+          fillRect: () => {},
+          strokeRect: () => {},
+          clearRect: () => {},
+          beginPath: () => {},
+          closePath: () => {},
+          moveTo: () => {},
+          lineTo: () => {},
+          arc: () => {},
+          fill: () => {},
+          stroke: () => {},
+          fillText: () => {},
+          strokeText: () => {},
+          measureText: () => ({ width: 0 }),
+          save: () => {},
+          restore: () => {},
+          scale: () => {},
+          rotate: () => {},
+          translate: () => {},
+          transform: () => {},
+          setTransform: () => {},
+          createLinearGradient: () => ({
+            addColorStop: () => {},
+          }),
+          createRadialGradient: () => ({
+            addColorStop: () => {},
+          }),
+          createPattern: () => null,
+          getImageData: () => ({
+            data: new Uint8ClampedArray(),
+            width: 0,
+            height: 0,
+          }),
+          putImageData: () => {},
+          drawImage: () => {},
+          canvas: this,
+        };
+      }
+      return null;
+    };
+  }
+
+  // グローバルにもHTMLCanvasElementモックを設定
+  if (!(global as any).HTMLCanvasElement) {
+    (global as any).HTMLCanvasElement = window.HTMLCanvasElement;
+  }
 
   return { dom, document, window };
 }
@@ -646,18 +842,104 @@ if (process && !process.removeListener) {
 // Additional process polyfills for Mocha compatibility
 if (process) {
   // Ensure all required event emitter methods exist
-  const requiredMethods = ['removeListener', 'removeAllListeners', 'off'];
+  const requiredMethods = ['removeListener', 'removeAllListeners', 'off', 'listenerCount'];
   requiredMethods.forEach((method) => {
     if (!(process as any)[method]) {
-      (process as any)[method] = function () {
-        return process;
-      };
+      const stub =
+        method === 'listenerCount'
+          ? function () {
+              return 0;
+            } // Return 0 listeners for test environment
+          : function () {
+              return process;
+            };
+
+      try {
+        Object.defineProperty(process, method, {
+          value: stub,
+          writable: true,
+          configurable: true,
+          enumerable: false,
+        });
+      } catch (e) {
+        // Fallback to direct assignment if defineProperty fails
+        (process as any)[method] = stub;
+      }
     }
   });
 }
 
-// Auto-setup when this module is imported
-setupTestEnvironment();
+// Sync version for backwards compatibility (without chai-as-promised)
+export function setupTestEnvironmentSync(): void {
+  // Mock VS Code module
+  (global as any).vscode = mockVscode;
+
+  // CRITICAL: Register vscode mock in require.cache so that `import * as vscode from 'vscode'` returns the mock
+  // This fixes ConfigurationService and other modules that import vscode directly
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const Module = require('module');
+  try {
+    const vscodeModulePath = require.resolve('vscode', { paths: [process.cwd()] });
+    require.cache[vscodeModulePath] = {
+      id: vscodeModulePath,
+      filename: vscodeModulePath,
+      loaded: true,
+      exports: mockVscode,
+    } as NodeModule;
+  } catch (e) {
+    // vscode module not found in require.resolve, will be handled by Module.prototype.require override
+  }
+
+  // Override module loading for vscode and node-pty
+  const originalRequire = Module.prototype.require;
+
+  Module.prototype.require = function (id: string) {
+    if (id === 'vscode') {
+      return mockVscode;
+    }
+    if (id === '@homebridge/node-pty-prebuilt-multiarch') {
+      return {
+        spawn: () => ({
+          write: () => {},
+          resize: () => {},
+          kill: () => {},
+          dispose: () => {},
+        }),
+      };
+    }
+    // Continue with other mocks...
+    return originalRequire.apply(this, arguments);
+  };
+
+  // Set up DOM environment
+  // setupJSDOMEnvironment(); // Temporarily disabled - tests don't need DOM yet
+  setupConsoleMocks(); // Re-enabled with pass-through implementation
+
+  // Ensure process.cwd exists and is callable
+  // Note: setup-exit-handler.js should have already wrapped process.cwd,
+  // but we double-check here in case it wasn't loaded first
+  if (!process.cwd || typeof process.cwd !== 'function') {
+    const fallbackCwd = () => '/test';
+    try {
+      Object.defineProperty(process, 'cwd', {
+        value: fallbackCwd,
+        writable: true,
+        configurable: true,
+        enumerable: false,
+      });
+    } catch (e) {
+      (process as any).cwd = fallbackCwd;
+    }
+  }
+}
+
+// Auto-setup when this module is imported (sync version for compatibility)
+try {
+  setupTestEnvironmentSync();
+} catch (error) {
+  console.error('Failed to setup test environment:', error);
+  throw error;
+}
 
 /**
  * TypeScript型定義の拡張

@@ -4,14 +4,38 @@ import { PartialTerminalSettings, WebViewFontSettings } from '../../types/shared
 import { TerminalManager } from '../../terminals/TerminalManager';
 
 /**
+ * Session Manager interface for message handlers
+ */
+export interface ISessionManager {
+  getSessionInfo(): { hasValidSession: boolean; sessionData?: any };
+  restoreSession(
+    force: boolean
+  ): Promise<{ success: boolean; message?: string; terminals?: any[] }>;
+  saveSession(terminals: any[]): Promise<void>;
+}
+
+/**
+ * Profile Manager interface for terminal profiles
+ */
+export interface IProfileManager {
+  getProfiles(): any[];
+  getDefaultProfile(): any;
+  createProfile(profile: any): any;
+  createTerminalWithProfile(profileId: string, options?: any): any;
+  updateProfile(profileId: string, profile: any): void;
+  deleteProfile(profileId: string): void;
+  setDefaultProfile(profileId: string): void;
+}
+
+/**
  * Context interface for message handlers
  */
 export interface IMessageHandlerContext {
   extensionContext: vscode.ExtensionContext;
   terminalManager: TerminalManager;
   webview: vscode.Webview | undefined;
-  standardSessionManager?: any; // TODO: Add proper type
-  profileManager?: any; // TODO: Add proper type for TerminalProfileManager
+  standardSessionManager?: ISessionManager;
+  profileManager?: IProfileManager;
   sendMessage: (message: WebviewMessage) => Promise<void>;
   terminalIdMapping?: Map<string, string>;
 }

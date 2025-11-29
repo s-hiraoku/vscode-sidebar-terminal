@@ -8,6 +8,7 @@
  */
 
 import { IManagerCoordinator, IFindInTerminalManager } from '../interfaces/ManagerInterfaces';
+import { webview as log } from '../../utils/logger';
 
 export interface FindOptions {
   caseSensitive: boolean;
@@ -262,7 +263,7 @@ export class FindInTerminalManager implements IFindInTerminalManager {
   public showSearch(): void {
     const activeTerminalId = this.coordinator?.getActiveTerminalId();
     if (!activeTerminalId) {
-      console.warn('No active terminal for search');
+      log('No active terminal for search');
       return;
     }
 
@@ -288,7 +289,7 @@ export class FindInTerminalManager implements IFindInTerminalManager {
       this.searchInput?.select();
     }, 10);
 
-    console.log(`🔍 Search panel opened for terminal: ${activeTerminalId}`);
+    log(`🔍 Search panel opened for terminal: ${activeTerminalId}`);
   }
 
   /**
@@ -308,7 +309,7 @@ export class FindInTerminalManager implements IFindInTerminalManager {
       this.searchPanel.parentNode.removeChild(this.searchPanel);
     }
 
-    console.log('🔍 Search panel closed');
+    log('🔍 Search panel closed');
   }
 
   /**
@@ -348,7 +349,7 @@ export class FindInTerminalManager implements IFindInTerminalManager {
     // Close button
     const closeButton = document.createElement('button');
     closeButton.className = 'find-close-button';
-    closeButton.innerHTML = '✕';
+    closeButton.textContent = '✕'; // Safe: fixed character
     closeButton.title = 'Close (Escape)';
     closeButton.addEventListener('click', () => this.hideSearch());
 
@@ -380,7 +381,7 @@ export class FindInTerminalManager implements IFindInTerminalManager {
   private createButton(text: string, title: string, onClick: () => void): HTMLButtonElement {
     const button = document.createElement('button');
     button.className = 'find-button';
-    button.innerHTML = text;
+    button.textContent = text; // Safe: textContent escapes HTML
     button.title = title;
     button.addEventListener('click', onClick);
     return button;
@@ -396,7 +397,7 @@ export class FindInTerminalManager implements IFindInTerminalManager {
   ): HTMLButtonElement {
     const button = document.createElement('button');
     button.className = 'find-option-button';
-    button.innerHTML = text;
+    button.textContent = text; // Safe: textContent escapes HTML
     button.title = title;
 
     if (this.findOptions[option]) {
@@ -446,7 +447,7 @@ export class FindInTerminalManager implements IFindInTerminalManager {
 
     const terminalInstance = this.coordinator.getTerminalInstance(this.currentTerminalId);
     if (!terminalInstance?.searchAddon) {
-      console.warn('Search addon not available for terminal:', this.currentTerminalId);
+      log('Search addon not available for terminal:', this.currentTerminalId);
       return;
     }
 
@@ -474,7 +475,7 @@ export class FindInTerminalManager implements IFindInTerminalManager {
 
       this.updateMatchCounter();
     } catch (error) {
-      console.error('Search failed:', error);
+      log('Search failed:', error);
       this.searchInput?.classList.add('no-matches');
       this.updateMatchCounter();
     }
@@ -602,6 +603,6 @@ export class FindInTerminalManager implements IFindInTerminalManager {
     this.coordinator = null;
     this.currentTerminalId = null;
 
-    console.log('🔍 Find in Terminal Manager disposed');
+    log('🔍 Find in Terminal Manager disposed');
   }
 }

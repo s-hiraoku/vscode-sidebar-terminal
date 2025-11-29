@@ -1,9 +1,10 @@
 {
   "name": "vscode-sidebar-terminal",
   "displayName": "Secondary Terminal",
-  "description": "Production-ready VS Code extension with TypeScript-compliant terminal in sidebar, ProcessState/InteractionState management, AI agent integration (Claude Code, CodeRabbit CLI, GitHub Copilot, Gemini), and comprehensive session management.",
-  "version": "0.1.94",
+  "description": "Production-ready VS Code extension with TypeScript-compliant terminal in sidebar, ProcessState/InteractionState management, and comprehensive session management.",
+  "version": "0.1.146",
   "publisher": "s-hiraoku",
+  "sideEffects": false,
   "engines": {
     "vscode": "^1.74.0",
     "node": ">=18.0.0"
@@ -39,6 +40,7 @@
     "error handling",
     "ai agent detection",
     "claude code",
+    "codex cli",
     "coderabbit cli",
     "github copilot",
     "gemini cli",
@@ -73,7 +75,7 @@
       "activitybar": [
         {
           "id": "secondaryTerminalContainer",
-          "title": "Secondary Terminal",
+          "title": "ST",
           "icon": "$(terminal)"
         }
       ]
@@ -85,7 +87,7 @@
           "name": "Terminal",
           "type": "webview",
           "icon": "$(terminal)",
-          "contextualTitle": "Secondary Terminal"
+          "contextualTitle": "ST"
         }
       ]
     },
@@ -157,6 +159,12 @@
         "command": "secondaryTerminal.testScrollback",
         "title": "Test Scrollback Feature",
         "category": "Secondary Terminal"
+      },
+      {
+        "command": "secondaryTerminal.diagnoseSession",
+        "title": "Diagnose Session Data",
+        "category": "Secondary Terminal",
+        "icon": "$(search)"
       },
       {
         "command": "secondaryTerminal.clearCorruptedHistory",
@@ -235,18 +243,18 @@
         "title": "Manage Terminal Profiles",
         "category": "Secondary Terminal",
         "icon": "$(gear)"
+      },
+      {
+        "command": "secondaryTerminal.showVersion",
+        "title": "Show Version",
+        "category": "Secondary Terminal"
       }
     ],
     "menus": {
       "view/title": [
         {
           "command": "secondaryTerminal.splitTerminal",
-          "when": "view == secondaryTerminal && secondaryTerminal.panelLocation == sidebar",
-          "group": "navigation@1"
-        },
-        {
-          "command": "secondaryTerminal.splitTerminalHorizontal",
-          "when": "view == secondaryTerminal && secondaryTerminal.panelLocation == panel",
+          "when": "view == secondaryTerminal",
           "group": "navigation@1"
         },
         {
@@ -415,6 +423,11 @@
           "default": true,
           "description": "Focus secondary terminal after sending @filename with CMD+OPT+L"
         },
+        "secondaryTerminal.enableShellIntegration": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable shell integration for command tracking, history, and working directory detection. Requires terminal restart to take effect."
+        },
         "secondaryTerminal.enableCliAgentIntegration": {
           "type": "boolean",
           "default": true,
@@ -432,7 +445,7 @@
         },
         "secondaryTerminal.persistentSessionScrollback": {
           "type": "number",
-          "default": 100,
+          "default": 1000,
           "minimum": 0,
           "maximum": 10000,
           "description": "Number of lines to restore from terminal history (0 to disable scrollback restore)"
@@ -451,6 +464,27 @@
             "Save sessions when VS Code exits or window closes"
           ],
           "description": "When to save terminal sessions for restoration"
+        },
+        "secondaryTerminal.persistentSessionStorageLimit": {
+          "type": "number",
+          "default": 20,
+          "minimum": 1,
+          "maximum": 100,
+          "description": "Maximum storage size for session data in MB (session will be optimized or cleared if exceeded)"
+        },
+        "secondaryTerminal.persistentSessionRetentionDays": {
+          "type": "number",
+          "default": 7,
+          "minimum": 1,
+          "maximum": 365,
+          "description": "Number of days to retain session data before automatic cleanup"
+        },
+        "secondaryTerminal.persistentSessionStorageWarningThreshold": {
+          "type": "number",
+          "default": 80,
+          "minimum": 50,
+          "maximum": 95,
+          "description": "Storage usage percentage threshold for optimization warning (default: 80%)"
         },
         "secondaryTerminal.hideOnStartup": {
           "type": "string",
@@ -531,9 +565,9 @@
         },
         "secondaryTerminal.scrollback": {
           "type": "number",
-          "default": 1000,
+          "default": 2000,
           "minimum": 0,
-          "maximum": 50000,
+          "maximum": 100000,
           "description": "Controls the maximum number of lines the terminal keeps in its buffer."
         },
         "secondaryTerminal.cursorStyle": {
@@ -611,7 +645,7 @@
         },
         "secondaryTerminal.scrollbackLines": {
           "type": "number",
-          "default": 1000,
+          "default": 2000,
           "minimum": 0,
           "maximum": 10000,
           "description": "Maximum number of lines to restore from terminal history (0 to disable)"
@@ -628,7 +662,7 @@
         },
         "secondaryTerminal.scrollbackMaxStorageSize": {
           "type": "number",
-          "default": 10485760,
+          "default": 20971520,
           "minimum": 1048576,
           "maximum": 104857600,
           "description": "Maximum storage size for scrollback data in bytes (1MB - 100MB)"
@@ -726,6 +760,11 @@
           "default": "#ffff00",
           "description": "Color for running command decorations."
         },
+        "secondaryTerminal.highlightActiveBorder": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show a blue border around the focused sidebar terminal."
+        },
         "secondaryTerminal.links.enabled": {
           "type": "boolean",
           "default": true,
@@ -767,6 +806,67 @@
           "type": "boolean",
           "default": true,
           "description": "Enable enhanced screen reader support for terminal content (Phase 8: Advanced Terminal Features)."
+        },
+        "secondaryTerminal.features.enhancedScrollbackPersistence": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable VS Code-compatible enhanced scrollback persistence with full state restoration. Enabled by default to mirror VS Code."
+        },
+        "secondaryTerminal.features.scrollbackLineLimit": {
+          "type": "number",
+          "default": 1000,
+          "minimum": 200,
+          "maximum": 3000,
+          "description": "Maximum number of scrollback lines to persist (200-3000). Higher values use more storage. Default: 1000 (matching VS Code)."
+        },
+        "secondaryTerminal.features.vscodeStandardIME": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable VS Code standard IME composition handling patterns. Enabled by default to mirror VS Code."
+        },
+        "secondaryTerminal.features.vscodeKeyboardShortcuts": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable VS Code standard keyboard shortcuts (Ctrl+C copy/SIGINT, Ctrl+V paste, etc.)."
+        },
+        "secondaryTerminal.features.vscodeStandardCursor": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable VS Code standard cursor rendering with configurable styles and blinking. Enabled by default to match VS Code."
+        },
+        "secondaryTerminal.features.fullANSISupport": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable full ANSI escape sequence support (256-color, true color, text formatting)."
+        },
+        "secondaryTerminal.logging.level": {
+          "type": "string",
+          "default": "warn",
+          "enum": [
+            "none",
+            "error",
+            "warn",
+            "info",
+            "debug"
+          ],
+          "enumDescriptions": [
+            "No logging",
+            "Log only errors",
+            "Log errors and warnings (default)",
+            "Log errors, warnings, and informational messages",
+            "Log everything including debug messages"
+          ],
+          "description": "Set the logging level for the extension. View logs in Output > Secondary Terminal."
+        },
+        "secondaryTerminal.logging.enableTimestamp": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include timestamps in log messages."
+        },
+        "secondaryTerminal.logging.enableContext": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include context information (source location) in log messages."
         }
       }
     },
@@ -872,23 +972,33 @@
     "compile": "webpack",
     "watch": "webpack --watch",
     "package": "webpack --mode production --devtool hidden-source-map",
+    "check-bundle-size": "node scripts/check-bundle-size.js",
+    "package:check": "npm run package && npm run check-bundle-size",
     "compile-tests": "tsc -p . --outDir out",
     "watch-tests": "tsc -p . -w --outDir out",
     "pretest": "npm run compile-tests && npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
+    "lint:memory-leaks": "eslint src --ext ts --config .eslintrc.memory-leaks.json",
     "test": "npm run test:unit",
     "test:coverage": "nyc --reporter=text --reporter=html --reporter=lcov npm run test",
     "test:watch": "npm run watch-tests & npm run test",
-    "test:unit": "nyc mocha --require ./src/test/shared/setup-exit-handler.js --require out/test/shared/TestSetup.js --timeout 30000 'out/test/unit/**/*.test.js'",
+    "test:unit": "nyc mocha",
     "test:unit:parallel": "nyc mocha --config .mocharc.parallel.json --require ./src/test/shared/setup-exit-handler.js --require out/test/shared/TestSetup.js 'out/test/unit/**/*.test.js'",
-    "test:integration": "nyc mocha --require ./src/test/shared/setup-exit-handler.js --require out/test/shared/TestSetup.js --timeout 60000 'out/test/integration/**/*.test.js'",
+    "test:memory-leaks": "mocha --require ./src/test/shared/setup-exit-handler.js --require out/test/shared/TestSetup.js --expose-gc --timeout 30000 'out/test/unit/**/*.MemoryLeak.test.js'",
+    "test:integration": "nyc mocha --require ./src/test/shared/setup-exit-handler.js --require out/test/shared/TestSetup.js --timeout 60000 --exit 'out/test/integration/**/*.test.js'",
     "test:integration:parallel": "nyc mocha --config .mocharc.parallel.json --require ./src/test/shared/setup-exit-handler.js --require out/test/shared/TestSetup.js --timeout 60000 'out/test/integration/**/*.test.js'",
-    "test:performance": "nyc mocha --require ./src/test/shared/setup-exit-handler.js --require out/test/shared/TestSetup.js --timeout 120000 'out/test/performance/**/*.test.js'",
+    "test:performance": "nyc mocha --require ./src/test/shared/setup-exit-handler.js --require out/test/shared/TestSetup.js --timeout 120000 --exit 'out/test/performance/**/*.test.js'",
     "test:all": "npm run test:unit && npm run test:integration && npm run test:performance",
     "test:all:parallel": "npm run test:unit:parallel && npm run test:integration:parallel && npm run test:performance",
+    "test:fast": "mocha --require ./src/test/shared/xterm-mock.js --require ./src/test/shared/setup-exit-handler.js --require out/test/shared/TestSetup.js --timeout 10000 --exit 'out/test/unit/**/*.test.js'",
     "test:refactored": "npm run test:integration && npm run test:performance",
     "coverage:report": "nyc report --reporter=text --reporter=html",
     "coverage:check": "nyc check-coverage --lines 70 --functions 70 --branches 60",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:report": "playwright show-report",
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
     "vsce:package": "@vscode/vsce package",
     "vsce:publish": "@vscode/vsce publish",
@@ -902,7 +1012,7 @@
     "vsce:package:alpine-x64": "@vscode/vsce package --target alpine-x64",
     "vsce:package:alpine-arm64": "@vscode/vsce package --target alpine-arm64",
     "create-icons": "node scripts/create-icon.js",
-    "pre-release:check": "npm run tdd:comprehensive-check",
+    "pre-release:check": "npm run tdd:comprehensive-check && node scripts/pre-release-hook.js",
     "release:patch": "npm run pre-release:check && npm version patch && git push origin --follow-tags",
     "release:minor": "npm run pre-release:check && npm version minor && git push origin --follow-tags",
     "release:major": "npm run pre-release:check && npm version major && git push origin --follow-tags",
@@ -918,11 +1028,26 @@
     "release:patch:safe": "node commands/release.js patch",
     "release:minor:safe": "node commands/release.js minor",
     "release:major:safe": "node commands/release.js major",
+    "rollback:emergency": "node scripts/rollback-release.js emergency",
+    "rollback:to": "node scripts/rollback-release.js to",
+    "rollback:list": "node scripts/rollback-release.js list",
+    "rollback:plan": "node scripts/rollback-release.js plan",
+    "rollback:backup": "node scripts/rollback-release.js backup",
+    "rollback:emergency:publish": "node scripts/automated-rollback-publisher.js emergency",
+    "rollback:hotfix": "node scripts/automated-rollback-publisher.js hotfix",
+    "rollback:verify": "node scripts/automated-rollback-publisher.js verify",
+    "monitor:check": "node scripts/marketplace-monitor.js check",
+    "monitor:continuous": "node scripts/marketplace-monitor.js continuous",
     "quality:check": "node commands/release.js --check-only",
-    "quality:fix": "node commands/release.js --fix-only"
+    "quality:fix": "node commands/release.js --fix-only",
+    "docs:generate": "npx typedoc",
+    "docs:watch": "npx typedoc --watch",
+    "docs:clean": "rm -rf docs/api"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.0",
     "@istanbuljs/nyc-config-typescript": "^1.0.2",
+    "@playwright/test": "^1.56.1",
     "@testing-library/dom": "^10.4.0",
     "@types/chai": "^5.2.2",
     "@types/chai-as-promised": "^8.0.2",
@@ -937,13 +1062,16 @@
     "@typescript-eslint/parser": "^6.15.0",
     "@vscode/test-electron": "^2.3.8",
     "@vscode/vsce": "^3.6.0",
+    "axe-core": "^4.11.0",
     "chai": "^4.5.0",
     "chai-as-promised": "^8.0.2",
     "css-loader": "^7.1.2",
     "eslint": "^8.56.0",
     "eslint-config-prettier": "^10.0.0",
+    "eslint-plugin-eslint-comments": "^3.2.0",
     "eslint-plugin-prettier": "^5.1.2",
     "glob": "^11.0.0",
+    "http-server": "^14.1.1",
     "jsdom": "^26.1.0",
     "mocha": "^10.8.2",
     "nyc": "^17.1.0",
@@ -954,6 +1082,8 @@
     "style-loader": "^4.0.0",
     "ts-loader": "^9.5.1",
     "ts-node": "^10.9.2",
+    "typedoc": "^0.28.0",
+    "typedoc-plugin-markdown": "^4.2.0",
     "typescript": "^5.3.3",
     "vsce": "^2.15.0",
     "vscode-test": "^1.6.1",

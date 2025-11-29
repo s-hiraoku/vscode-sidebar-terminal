@@ -1,8 +1,5 @@
 import type { TerminalInteractionEvent } from '../../types/common';
-import {
-  MessagePayload,
-  TerminalMessageData
-} from '../utils/TypedMessageHandling';
+import { MessagePayload, TerminalMessageData } from '../utils/TypedMessageHandling';
 
 export interface MessageCommand {
   command: string;
@@ -16,11 +13,7 @@ export interface MessageCommand {
 }
 
 export interface TerminalInteractionEventEmitter {
-  (
-    type: TerminalInteractionEvent['type'],
-    terminalId: string,
-    data: unknown
-  ): void;
+  (type: TerminalInteractionEvent['type'], terminalId: string, data: unknown): void;
 }
 
 // Additional exports for test compatibility
@@ -41,7 +34,7 @@ export enum MessageType {
   PING = 'ping',
   // Version negotiation message types (for tests)
   VERSION_ANNOUNCEMENT = 'versionAnnouncement',
-  VERSION_NEGOTIATION = 'versionNegotiation'
+  VERSION_NEGOTIATION = 'versionNegotiation',
 }
 
 export interface ExtensionMessage {
@@ -69,8 +62,4 @@ export interface SystemMessage {
 }
 
 // Re-exports for migration
-export {
-  MessagePayload,
-  TerminalMessageData
-} from '../utils/TypedMessageHandling';
-
+export { MessagePayload, TerminalMessageData } from '../utils/TypedMessageHandling';

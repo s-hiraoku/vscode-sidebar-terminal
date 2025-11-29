@@ -2,7 +2,7 @@
  * TerminalContainerFactory
  *
  * Centralized terminal container creation and styling to eliminate
- * code duplication across TerminalLifecycleManager and SplitManager
+ * code duplication across TerminalLifecycleCoordinator and SplitManager
  */
 
 import { terminalLogger } from '../utils/ManagerLogger';
@@ -27,6 +27,7 @@ export interface TerminalHeaderConfig {
   onHeaderClick?: (terminalId: string) => void;
   onContainerClick?: (terminalId: string) => void;
   onCloseClick?: (terminalId: string) => void;
+  onSplitClick?: (terminalId: string) => void;
   onAiAgentToggleClick?: (terminalId: string) => void;
 }
 
@@ -50,7 +51,8 @@ export class TerminalContainerFactory {
       flexDirection: 'column' as const,
       width: '100%',
       height: '100%',
-      minHeight: '200px',
+      minWidth: '0', // 🔧 FIX: Allow shrinking below content size for proper flex behavior
+      minHeight: '0', // 🔧 FIX: Allow shrinking below content size
       margin: '0',
       padding: '0',
       position: 'relative' as const,
@@ -61,9 +63,12 @@ export class TerminalContainerFactory {
       flex: '1 1 auto',
     },
     body: {
-      display: 'block',
+      display: 'flex', // 🔧 FIX: Changed from 'block' to 'flex' for proper xterm expansion
+      flexDirection: 'column' as const,
       width: '100%',
       height: '100%',
+      minWidth: '0', // 🔧 FIX: Allow shrinking below content size
+      minHeight: '0', // 🔧 FIX: Allow shrinking below content size
       position: 'relative' as const,
       overflow: 'hidden',
       background: '#000',
@@ -108,8 +113,10 @@ export class TerminalContainerFactory {
         headerElements = HeaderFactory.createTerminalHeader({
           terminalId: config.id,
           terminalName: headerConfig.customTitle || config.name,
+          showSplitButton: headerConfig.showSplitButton,
           onHeaderClick: headerConfig.onHeaderClick,
           onCloseClick: headerConfig.onCloseClick,
+          onSplitClick: headerConfig.onSplitClick,
           onAiAgentToggleClick: headerConfig.onAiAgentToggleClick,
         });
         header = headerElements.container;
@@ -140,14 +147,15 @@ export class TerminalContainerFactory {
           terminalLogger.info(`Header click activation enabled for terminal: ${config.id}`);
         } else {
           // For split terminals without headers: Use VS Code standard approach
-          // The TerminalLifecycleManager will handle xterm.js hasSelection() logic
+          // The TerminalLifecycleCoordinator will handle xterm.js hasSelection() logic
           // This preserves the onContainerClick functionality while allowing text selection
           terminalLogger.info(`Split terminal will use xterm hasSelection() logic: ${config.id}`);
         }
       }
 
-      // Apply container to document
-      this.appendToMainContainer(container);
+      // 🔧 FIX: Don't append here! Let TerminalCreationService handle DOM append
+      // after terminal.open() is called. Appending before terminal setup causes issues.
+      // this.appendToMainContainer(container);  // REMOVED
 
       const elements: ContainerElements = {
         container,

@@ -59,6 +59,10 @@ export enum MessagePriority {
   BACKGROUND = 0, // Analytics, cleanup
 }
 
+interface Disposable {
+  dispose(): void;
+}
+
 /**
  * Unified Message Dispatcher
  *
@@ -69,7 +73,7 @@ export enum MessagePriority {
  * - Message validation and error handling
  * - Performance metrics and monitoring
  */
-export class UnifiedMessageDispatcher implements IManagerLifecycle {
+export class UnifiedMessageDispatcher implements IManagerLifecycle, Disposable {
   private readonly logger = messageLogger;
   private readonly handlers = new Map<string, IUnifiedMessageHandler[]>();
   private messageQueue!: MessageQueue;
@@ -82,7 +86,11 @@ export class UnifiedMessageDispatcher implements IManagerLifecycle {
   private processingTimes: number[] = [];
 
   // VS Code API for WebView communication
-  private vscodeApi?: any;
+  private vscodeApi?: {
+    postMessage: (message: unknown) => void;
+    setState: (state: unknown) => void;
+    getState: () => unknown;
+  };
 
   constructor(coordinator?: IManagerCoordinator) {
     this.logger.info('UnifiedMessageDispatcher initializing');
@@ -98,8 +106,15 @@ export class UnifiedMessageDispatcher implements IManagerLifecycle {
    * Initialize VS Code API for WebView communication
    */
   private setupVsCodeApi(): void {
-    if (typeof window !== 'undefined' && (window as any).acquireVsCodeApi) {
-      this.vscodeApi = (window as any).acquireVsCodeApi();
+    interface WindowWithVSCode extends Window {
+      acquireVsCodeApi?: () => {
+        postMessage: (message: unknown) => void;
+        setState: (state: unknown) => void;
+        getState: () => unknown;
+      };
+    }
+    if (typeof window !== 'undefined' && (window as WindowWithVSCode).acquireVsCodeApi) {
+      this.vscodeApi = (window as WindowWithVSCode).acquireVsCodeApi?.();
       this.logger.info('VS Code API acquired successfully');
     } else {
       this.logger.warn('VS Code API not available - running in test environment');
@@ -173,7 +188,7 @@ export class UnifiedMessageDispatcher implements IManagerLifecycle {
     this.messageQueue.dispose();
     this.handlers.clear();
     this.coordinator = undefined;
-    this.vscodeApi = null;
+    this.vscodeApi = undefined;
 
     this.logger.info('UnifiedMessageDispatcher disposed');
   }
@@ -359,12 +374,11 @@ export class UnifiedMessageDispatcher implements IManagerLifecycle {
    * Validate message format
    */
   private isValidMessage(message: unknown): message is WebviewMessage {
-    return !!(
-      message &&
-      typeof message === 'object' &&
-      typeof (message as any).command === 'string' &&
-      (message as any).command.length > 0
-    );
+    if (!message || typeof message !== 'object') {
+      return false;
+    }
+    const msg = message as Record<string, unknown>;
+    return typeof msg.command === 'string' && msg.command.length > 0;
   }
 
   // =================================================================

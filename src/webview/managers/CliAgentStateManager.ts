@@ -30,7 +30,7 @@ export class CliAgentStateManager {
 
   // エージェント出力検出パターン
   private readonly AGENT_OUTPUT_PATTERNS = [
-    /claude-code/i,
+    /Claude\s+Code/, // "Claude Code" (大文字のみ)
     /gemini.*code/i,
     /Thinking|Processing|Analyzing/i,
     /Select|Choose|Option/i,
@@ -38,7 +38,7 @@ export class CliAgentStateManager {
 
   // エージェント種別検出パターン
   private readonly AGENT_TYPE_PATTERNS = {
-    claude: /claude-code|claude\s+code/i,
+    claude: /Claude\s+Code/, // "Claude Code" (大文字のみ)
     gemini: /gemini.*code/i,
     generic: /AI|Assistant|Agent/i,
   };

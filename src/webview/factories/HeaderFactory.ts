@@ -24,8 +24,10 @@ export interface HeaderConfig {
   terminalId: string;
   terminalName: string;
   customClasses?: string[];
+  showSplitButton?: boolean;
   onHeaderClick?: (terminalId: string) => void;
   onCloseClick?: (terminalId: string) => void;
+  onSplitClick?: (terminalId: string) => void;
   onAiAgentToggleClick?: (terminalId: string) => void;
 }
 
@@ -58,7 +60,7 @@ export class HeaderFactory {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '4px 8px',
+        padding: '6px 12px',
         backgroundColor: 'var(--vscode-tab-activeBackground)',
         borderBottom: '1px solid var(--vscode-tab-border)',
         fontSize: '11px',
@@ -66,7 +68,8 @@ export class HeaderFactory {
         color: 'var(--vscode-tab-activeForeground)',
         cursor: 'pointer',
         userSelect: 'none',
-        minHeight: '28px',
+        minHeight: '32px',
+        boxSizing: 'border-box',
       },
       {
         'data-terminal-id': terminalId,
@@ -80,8 +83,10 @@ export class HeaderFactory {
       {
         display: 'flex',
         alignItems: 'center',
-        flexGrow: '1',
-        minWidth: '0', // flexアイテムの縮小を許可
+        flex: '1 1 auto',
+        minWidth: '60px', // 最小幅を確保してテキストの省略を防ぐ
+        maxWidth: '100%',
+        overflow: 'hidden',
       },
       {
         className: 'terminal-title',
@@ -92,7 +97,7 @@ export class HeaderFactory {
     const nameSpan = DOMUtils.createElement(
       'span',
       {
-        flexGrow: '1',
+        flex: '1 1 auto',
         minWidth: '0',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
@@ -119,7 +124,10 @@ export class HeaderFactory {
         alignItems: 'center',
         gap: '4px',
         marginLeft: '8px',
-        flexShrink: '0',
+        flex: '0 1 auto',
+        minWidth: '0',
+        maxWidth: '200px',
+        overflow: 'hidden',
       },
       {
         className: 'terminal-status',
@@ -132,9 +140,9 @@ export class HeaderFactory {
       {
         display: 'flex',
         alignItems: 'center',
-        gap: '2px',
+        gap: '4px',
         marginLeft: '8px',
-        flexShrink: '0',
+        flex: '0 0 auto',
       },
       {
         className: 'terminal-controls',
@@ -149,20 +157,22 @@ export class HeaderFactory {
         border: 'none',
         color: 'var(--vscode-tab-activeForeground)',
         cursor: 'pointer',
-        fontSize: '12px',
-        padding: '2px 4px',
-        borderRadius: '2px',
+        fontSize: '13px',
+        padding: '4px',
+        borderRadius: '3px',
         display: 'flex', // Always visible - changed from 'none' to support constant visibility
         alignItems: 'center',
         justifyContent: 'center',
         opacity: '0.7',
         transition: 'opacity 0.2s, background-color 0.2s, filter 0.2s',
-        marginRight: '2px',
         width: '24px',
         height: '24px',
+        minWidth: '24px',
+        minHeight: '24px',
+        boxSizing: 'border-box',
       },
       {
-        innerHTML: '<span style="filter: brightness(1.2) saturate(1.1);">📎</span>', // AI Agentを表すクリップアイコン
+        textContent: '📎', // AI Agentを表すクリップアイコン
         className: 'terminal-control ai-agent-toggle-btn',
         title: 'Switch AI Agent Connection',
         'data-terminal-id': terminalId,
@@ -178,13 +188,18 @@ export class HeaderFactory {
         color: 'var(--vscode-tab-activeForeground)',
         cursor: 'pointer',
         fontSize: '14px',
-        padding: '2px 4px',
-        borderRadius: '2px',
+        padding: '4px',
+        borderRadius: '3px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         opacity: '0.7',
         transition: 'opacity 0.2s, background-color 0.2s',
+        width: '24px',
+        height: '24px',
+        minWidth: '24px',
+        minHeight: '24px',
+        boxSizing: 'border-box',
       },
       {
         textContent: '✕',
@@ -193,6 +208,39 @@ export class HeaderFactory {
         'data-terminal-id': terminalId,
       }
     );
+
+    // 分割ボタン (Split button)
+    let splitButton: HTMLButtonElement | null = null;
+    if (config.showSplitButton) {
+      splitButton = DOMUtils.createElement(
+        'button',
+        {
+          background: 'none',
+          border: 'none',
+          color: 'var(--vscode-tab-activeForeground)',
+          cursor: 'pointer',
+          fontSize: '14px',
+          padding: '4px',
+          borderRadius: '3px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          opacity: '0.7',
+          transition: 'opacity 0.2s, background-color 0.2s',
+          width: '24px',
+          height: '24px',
+          minWidth: '24px',
+          minHeight: '24px',
+          boxSizing: 'border-box',
+        },
+        {
+          textContent: '⊞',
+          className: 'terminal-control split-btn',
+          title: 'Split Terminal',
+          'data-terminal-id': terminalId,
+        }
+      );
+    }
 
     // ホバーエフェクトを追加
     aiAgentToggleButton.addEventListener('mouseenter', () => {
@@ -215,6 +263,19 @@ export class HeaderFactory {
       closeButton.style.backgroundColor = 'transparent';
     });
 
+    // Split button hover effects
+    if (splitButton) {
+      splitButton.addEventListener('mouseenter', () => {
+        splitButton!.style.opacity = '1';
+        splitButton!.style.backgroundColor = 'var(--vscode-toolbar-hoverBackground)';
+      });
+
+      splitButton.addEventListener('mouseleave', () => {
+        splitButton!.style.opacity = '0.7';
+        splitButton!.style.backgroundColor = 'transparent';
+      });
+    }
+
     // Add AI Agent toggle button click handler
     if (config.onAiAgentToggleClick) {
       aiAgentToggleButton.addEventListener('click', (event: MouseEvent) => {
@@ -224,12 +285,36 @@ export class HeaderFactory {
       });
     }
 
-    // Add close button click handler
+    // Add close button click handler with double-click protection
     if (config.onCloseClick) {
+      let isClosing = false;
       closeButton.addEventListener('click', (event: MouseEvent) => {
         event.stopPropagation(); // Prevent header click event
-        config.onCloseClick!(terminalId);
+        event.preventDefault();
+
+        // 🔧 FIX: Prevent double-click from triggering multiple deletions
+        if (isClosing) {
+          log(`🗑️ [HeaderFactory] Close already in progress, ignoring: ${terminalId}`);
+          return;
+        }
+        isClosing = true;
+
         log(`🗑️ [HeaderFactory] Close button clicked for terminal: ${terminalId}`);
+        config.onCloseClick!(terminalId);
+
+        // Reset after a short delay to allow re-click if needed
+        setTimeout(() => {
+          isClosing = false;
+        }, 500);
+      });
+    }
+
+    // Add split button click handler
+    if (splitButton && config.onSplitClick) {
+      splitButton.addEventListener('click', (event: MouseEvent) => {
+        event.stopPropagation(); // Prevent header click event
+        config.onSplitClick!(terminalId);
+        log(`⊞ [HeaderFactory] Split button clicked for terminal: ${terminalId}`);
       });
     }
 
@@ -252,7 +337,14 @@ export class HeaderFactory {
 
     // 要素を組み立て
     DOMUtils.appendChildren(titleSection, nameSpan);
-    DOMUtils.appendChildren(controlsSection, aiAgentToggleButton, closeButton);
+
+    // Add buttons to controls section (splitButton before closeButton)
+    if (splitButton) {
+      DOMUtils.appendChildren(controlsSection, aiAgentToggleButton, splitButton, closeButton);
+    } else {
+      DOMUtils.appendChildren(controlsSection, aiAgentToggleButton, closeButton);
+    }
+
     DOMUtils.appendChildren(container, titleSection, statusSection, controlsSection);
 
     log(`🏗️ [HeaderFactory] Created unified header for terminal: ${terminalId}`);
@@ -268,6 +360,7 @@ export class HeaderFactory {
       controlsSection,
       aiAgentToggleButton,
       closeButton,
+      splitButton,
     };
   }
 
@@ -296,6 +389,9 @@ export class HeaderFactory {
       {
         fontSize: '10px',
         color: 'var(--vscode-descriptionForeground)',
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
       },
       {
         textContent: statusText,
@@ -311,6 +407,7 @@ export class HeaderFactory {
         lineHeight: '1',
         color: isConnected ? '#4CAF50' : '#f44747',
         animation: isConnected ? 'blink 1s infinite' : 'none',
+        flexShrink: '0',
       },
       {
         textContent: '●',

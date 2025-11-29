@@ -13,6 +13,7 @@ import * as vscode from 'vscode';
 import { ShellIntegrationService } from './ShellIntegrationService';
 import { SecondaryTerminalProvider } from '../providers/SecondaryTerminalProvider';
 import { terminal as log } from '../utils/logger';
+import { safeProcessCwd } from '../utils/common';
 
 export interface EnhancedShellCommand {
   command: string;
@@ -47,9 +48,9 @@ export class EnhancedShellIntegrationService extends ShellIntegrationService {
   public readonly onStatusUpdate = this._statusEmitter.event;
   public readonly onCommandHistoryUpdate = this._commandHistoryEmitter.event;
 
-  constructor(terminalManager: any) {
+  constructor(terminalManager: any, context?: vscode.ExtensionContext) {
     // eslint-disable-line @typescript-eslint/no-explicit-any
-    super(terminalManager);
+    super(terminalManager, context);
     this.setupAdvancedPatterns();
   }
 
@@ -70,7 +71,7 @@ export class EnhancedShellIntegrationService extends ShellIntegrationService {
 
     const status: TerminalStatusInfo = {
       terminalId,
-      currentCwd: process.cwd(),
+      currentCwd: safeProcessCwd(),
       commandStatus: 'idle',
       commandCount: 0,
     };

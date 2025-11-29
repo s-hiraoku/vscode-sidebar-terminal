@@ -17,20 +17,24 @@
 
 import { expect } from 'chai';
 import * as sinon from 'sinon';
-import { setupTestEnvironment, resetTestEnvironment, mockVscode as _mockVscode } from '../../shared/TestSetup';
-import { RefactoredMessageManager } from '../../../webview/managers/RefactoredMessageManager';
+import {
+  setupTestEnvironment,
+  resetTestEnvironment,
+  mockVscode as _mockVscode,
+} from '../../shared/TestSetup';
+import { ConsolidatedMessageManager } from '../../../webview/managers/ConsolidatedMessageManager';
 import {
   MessageType,
   ExtensionMessage,
   WebviewMessage,
   TerminalMessage as _TerminalMessage,
   SystemMessage as _SystemMessage,
-  MessagePayload
+  MessagePayload,
 } from '../../../webview/managers/messageTypes';
 
 describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
   let sandbox: sinon.SinonSandbox;
-  let messageManager: RefactoredMessageManager;
+  let messageManager: ConsolidatedMessageManager;
   let mockWebviewApi: any;
   let _mockExtensionContext: any;
 
@@ -42,7 +46,7 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
     mockWebviewApi = {
       postMessage: sandbox.stub(),
       onDidReceiveMessage: sandbox.stub(),
-      dispose: sandbox.stub()
+      dispose: sandbox.stub(),
     };
 
     // Mock Extension Context
@@ -50,12 +54,12 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
       subscriptions: [],
       workspaceState: {
         get: sandbox.stub(),
-        update: sandbox.stub().resolves()
+        update: sandbox.stub().resolves(),
       },
       globalState: {
         get: sandbox.stub(),
-        update: sandbox.stub().resolves()
-      }
+        update: sandbox.stub().resolves(),
+      },
     };
 
     // Setup global vscode mock with webview panel
@@ -67,12 +71,12 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
           webview: mockWebviewApi,
           dispose: sandbox.stub(),
           onDidDispose: sandbox.stub(),
-          reveal: sandbox.stub()
-        })
-      }
+          reveal: sandbox.stub(),
+        }),
+      },
     };
 
-    messageManager = new RefactoredMessageManager();
+    messageManager = new ConsolidatedMessageManager();
   });
 
   afterEach(() => {
@@ -82,9 +86,7 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
   });
 
   describe('End-to-End Message Flow', () => {
-
     describe('RED Phase - Complete Messaging Workflow', () => {
-
       it('should handle Extension → WebView terminal output message flow', async () => {
         // RED: Complete message flow from Extension to WebView should work
 
@@ -97,8 +99,8 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
           data: {
             terminalId,
             output: outputData,
-            timestamp: Date.now()
-          } as MessagePayload
+            timestamp: Date.now(),
+          } as MessagePayload,
         };
 
         // Step 2: WebView should receive and process the message
@@ -133,8 +135,8 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
           data: {
             terminalId,
             input: inputData,
-            timestamp: Date.now()
-          } as MessagePayload
+            timestamp: Date.now(),
+          } as MessagePayload,
         };
 
         // Step 2: Extension should receive and process the message
@@ -169,9 +171,9 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
             terminalId,
             options: {
               name: 'Test Terminal',
-              cwd: '/test/path'
-            }
-          } as MessagePayload
+              cwd: '/test/path',
+            },
+          } as MessagePayload,
         };
 
         let createMessageSent = false;
@@ -190,8 +192,8 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
           data: {
             terminalId,
             processId: 12345,
-            success: true
-          } as MessagePayload
+            success: true,
+          } as MessagePayload,
         };
 
         let creationConfirmed = false;
@@ -209,8 +211,8 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
         const deleteRequest: WebviewMessage = {
           type: MessageType.DELETE_TERMINAL,
           data: {
-            terminalId
-          } as MessagePayload
+            terminalId,
+          } as MessagePayload,
         };
 
         let deleteMessageSent = false;
@@ -232,8 +234,8 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
           type: MessageType.REQUEST_STATE,
           data: {
             requestId: 'state-sync-123',
-            timestamp: Date.now()
-          } as MessagePayload
+            timestamp: Date.now(),
+          } as MessagePayload,
         };
 
         let stateRequestSent = false;
@@ -252,12 +254,12 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
           data: {
             terminals: [
               { id: 'terminal-1', name: 'Terminal 1', isActive: true },
-              { id: 'terminal-2', name: 'Terminal 2', isActive: false }
+              { id: 'terminal-2', name: 'Terminal 2', isActive: false },
             ],
             activeTerminalId: 'terminal-1',
             systemReady: true,
-            timestamp: Date.now()
-          } as MessagePayload
+            timestamp: Date.now(),
+          } as MessagePayload,
         };
 
         let stateReceived = false;
@@ -271,22 +273,18 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
         await messageManager.handleExtensionMessage(stateResponse);
         expect(stateReceived).to.be.true;
       });
-
     });
-
   });
 
   describe('Message Validation and Type Safety', () => {
-
     describe('RED Phase - Message Validation', () => {
-
       it('should validate message structure before processing', async () => {
         // RED: Invalid messages should be rejected with proper error handling
 
         // Test invalid message type
         const invalidTypeMessage = {
           type: 'INVALID_TYPE',
-          data: { test: 'data' }
+          data: { test: 'data' },
         };
 
         let validationError: Error | null = null;
@@ -313,9 +311,9 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
         const invalidOutputMessage: Partial<ExtensionMessage> = {
           type: MessageType.TERMINAL_OUTPUT,
           data: {
-            output: 'test output'
+            output: 'test output',
             // Missing terminalId
-          } as MessagePayload
+          } as MessagePayload,
         };
 
         let fieldValidationError: Error | null = null;
@@ -366,8 +364,8 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
           data: {
             terminalId: 'terminal-size-test',
             output: largeOutput,
-            timestamp: Date.now()
-          } as MessagePayload
+            timestamp: Date.now(),
+          } as MessagePayload,
         };
 
         let sizeError: Error | null = null;
@@ -386,15 +384,11 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
           expect((sizeError as Error).message).to.include('size limit');
         }
       });
-
     });
-
   });
 
   describe('Error Handling and Recovery', () => {
-
     describe('RED Phase - Error Recovery', () => {
-
       it('should handle WebView communication failures gracefully', async () => {
         // RED: WebView communication errors should not crash the system
 
@@ -406,8 +400,8 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
           data: {
             terminalId: 'test-terminal',
             input: 'test input',
-            timestamp: Date.now()
-          } as MessagePayload
+            timestamp: Date.now(),
+          } as MessagePayload,
         };
 
         let communicationError: Error | null = null;
@@ -441,8 +435,8 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
           data: {
             terminalId: 'retry-test',
             input: 'test',
-            timestamp: Date.now()
-          } as MessagePayload
+            timestamp: Date.now(),
+          } as MessagePayload,
         };
 
         // Should eventually succeed after retries
@@ -459,7 +453,7 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
 
         const testMessage: WebviewMessage = {
           type: MessageType.PING,
-          data: { timestamp: Date.now() } as MessagePayload
+          data: { timestamp: Date.now() } as MessagePayload,
         };
 
         let disconnectionDetected = false;
@@ -481,12 +475,20 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
         const queuedMessages: WebviewMessage[] = [
           {
             type: MessageType.TERMINAL_INPUT,
-            data: { terminalId: 'queue-1', input: 'command1', timestamp: Date.now() } as MessagePayload
+            data: {
+              terminalId: 'queue-1',
+              input: 'command1',
+              timestamp: Date.now(),
+            } as MessagePayload,
           },
           {
             type: MessageType.TERMINAL_INPUT,
-            data: { terminalId: 'queue-2', input: 'command2', timestamp: Date.now() } as MessagePayload
-          }
+            data: {
+              terminalId: 'queue-2',
+              input: 'command2',
+              timestamp: Date.now(),
+            } as MessagePayload,
+          },
         ];
 
         // Send messages while disconnected - should be queued
@@ -509,15 +511,11 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
         expect(sentMessages[0].data.input).to.equal('command1');
         expect(sentMessages[1].data.input).to.equal('command2');
       });
-
     });
-
   });
 
   describe('Performance and Scalability', () => {
-
     describe('RED Phase - Performance Characteristics', () => {
-
       it('should handle high-frequency terminal output messages efficiently', async () => {
         // RED: High-frequency messaging should not cause performance degradation
 
@@ -543,15 +541,15 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
             data: {
               terminalId,
               output: `Output line ${i}\n`,
-              timestamp: Date.now()
-            } as MessagePayload
+              timestamp: Date.now(),
+            } as MessagePayload,
           };
 
           messagePromises.push(messageManager.handleExtensionMessage(message));
 
           // Rate limiting
           if (i % messagesPerSecond === 0) {
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await new Promise((resolve) => setTimeout(resolve, 1000));
           }
         }
 
@@ -577,15 +575,15 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
             data: {
               terminalId: 'memory-test',
               output: `Memory test output ${messageCount++}\n`,
-              timestamp: Date.now()
-            } as MessagePayload
+              timestamp: Date.now(),
+            } as MessagePayload,
           };
 
           await messageManager.handleExtensionMessage(message);
         }, messageInterval);
 
         // Run for specified duration
-        await new Promise(resolve => setTimeout(resolve, sessionDuration));
+        await new Promise((resolve) => setTimeout(resolve, sessionDuration));
         clearInterval(messageTimer);
 
         // Force garbage collection if available
@@ -617,8 +615,8 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
             data: {
               terminalId,
               input: `echo "Interactive ${i}"\r`,
-              timestamp: Date.now()
-            } as MessagePayload
+              timestamp: Date.now(),
+            } as MessagePayload,
           };
 
           await messageManager.sendToExtension(inputMessage);
@@ -629,8 +627,8 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
             data: {
               terminalId,
               output: `Interactive ${i}\n`,
-              timestamp: Date.now()
-            } as MessagePayload
+              timestamp: Date.now(),
+            } as MessagePayload,
           };
 
           await messageManager.handleExtensionMessage(outputMessage);
@@ -651,7 +649,10 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
 
         const terminalCount = 10;
         const messagesPerTerminal = 100;
-        const terminals = Array.from({ length: terminalCount }, (_, i) => `terminal-concurrent-${i}`);
+        const terminals = Array.from(
+          { length: terminalCount },
+          (_, i) => `terminal-concurrent-${i}`
+        );
 
         let totalMessagesReceived = 0;
         const messagesByTerminal = new Map<string, number>();
@@ -677,8 +678,8 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
               data: {
                 terminalId,
                 output: `Terminal ${terminalId} output ${i}\n`,
-                timestamp: Date.now()
-              } as MessagePayload
+                timestamp: Date.now(),
+              } as MessagePayload,
             };
             promises.push(messageManager.handleExtensionMessage(message));
           }
@@ -690,19 +691,15 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
         expect(totalMessagesReceived).to.equal(terminalCount * messagesPerTerminal);
 
         // Each terminal should have received all its messages
-        terminals.forEach(terminalId => {
+        terminals.forEach((terminalId) => {
           expect(messagesByTerminal.get(terminalId)).to.equal(messagesPerTerminal);
         });
       });
-
     });
-
   });
 
   describe('Protocol Versioning and Compatibility', () => {
-
     describe('RED Phase - Protocol Evolution', () => {
-
       it('should handle version negotiation between Extension and WebView', async () => {
         // RED: Version negotiation should establish compatible protocol version
 
@@ -715,8 +712,8 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
           data: {
             version: webviewVersion,
             supportedFeatures: ['terminal-splitting', 'session-persistence'],
-            protocolVersion: '2.x'
-          } as MessagePayload
+            protocolVersion: '2.x',
+          } as MessagePayload,
         };
 
         let _negotiatedVersion: string | null = null;
@@ -733,8 +730,8 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
             extensionVersion,
             negotiatedVersion: '2.0.0', // Compatible version
             supportedFeatures: ['terminal-splitting'],
-            protocolVersion: '2.x'
-          } as MessagePayload
+            protocolVersion: '2.x',
+          } as MessagePayload,
         };
 
         await messageManager.handleExtensionMessage(versionResponse);
@@ -751,9 +748,9 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
           type: MessageType.TERMINAL_OUTPUT,
           data: {
             terminalId: 'legacy-terminal',
-            output: 'Legacy output\n'
+            output: 'Legacy output\n',
             // Missing timestamp field
-          }
+          },
         };
 
         let legacyMessageProcessed = false;
@@ -778,8 +775,8 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
           type: 'FUTURE_MESSAGE_TYPE',
           data: {
             newFeature: 'future-data',
-            version: '3.0.0'
-          }
+            version: '3.0.0',
+          },
         };
 
         let _unsupportedMessageHandled = false;
@@ -794,15 +791,11 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
         // Unsupported message handling needs to be implemented in the test
         // expect(unsupportedMessageHandled).to.be.true;
       });
-
     });
-
   });
 
   describe('Message Ordering and Sequencing', () => {
-
     describe('RED Phase - Message Order Guarantees', () => {
-
       it('should preserve message order for sequential terminal operations', async () => {
         // RED: Messages should be processed in the order they were sent
 
@@ -810,16 +803,24 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
         const messageSequence: ExtensionMessage[] = [
           {
             type: MessageType.TERMINAL_OUTPUT,
-            data: { terminalId, output: 'First output\n', timestamp: Date.now() } as MessagePayload
+            data: { terminalId, output: 'First output\n', timestamp: Date.now() } as MessagePayload,
           },
           {
             type: MessageType.TERMINAL_OUTPUT,
-            data: { terminalId, output: 'Second output\n', timestamp: Date.now() + 1 } as MessagePayload
+            data: {
+              terminalId,
+              output: 'Second output\n',
+              timestamp: Date.now() + 1,
+            } as MessagePayload,
           },
           {
             type: MessageType.TERMINAL_OUTPUT,
-            data: { terminalId, output: 'Third output\n', timestamp: Date.now() + 2 } as MessagePayload
-          }
+            data: {
+              terminalId,
+              output: 'Third output\n',
+              timestamp: Date.now() + 2,
+            } as MessagePayload,
+          },
         ];
 
         const receivedOrder: string[] = [];
@@ -841,7 +842,7 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
         expect(receivedOrder).to.deep.equal([
           'First output\n',
           'Second output\n',
-          'Third output\n'
+          'Third output\n',
         ]);
       });
 
@@ -856,8 +857,8 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
               terminalId,
               output: 'Third message\n',
               sequenceNumber: 3,
-              timestamp: Date.now()
-            } as MessagePayload
+              timestamp: Date.now(),
+            } as MessagePayload,
           },
           {
             type: MessageType.TERMINAL_OUTPUT,
@@ -865,8 +866,8 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
               terminalId,
               output: 'First message\n',
               sequenceNumber: 1,
-              timestamp: Date.now()
-            } as MessagePayload
+              timestamp: Date.now(),
+            } as MessagePayload,
           },
           {
             type: MessageType.TERMINAL_OUTPUT,
@@ -874,9 +875,9 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
               terminalId,
               output: 'Second message\n',
               sequenceNumber: 2,
-              timestamp: Date.now()
-            } as MessagePayload
-          }
+              timestamp: Date.now(),
+            } as MessagePayload,
+          },
         ];
 
         const reorderedOutput: string[] = [];
@@ -892,23 +893,19 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
         }
 
         // Allow time for reordering
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
 
         expect(reorderedOutput).to.deep.equal([
           'First message\n',
           'Second message\n',
-          'Third message\n'
+          'Third message\n',
         ]);
       });
-
     });
-
   });
 
   describe('Connection State Management', () => {
-
     describe('RED Phase - Connection Lifecycle', () => {
-
       it('should detect and report connection health status', async () => {
         // RED: Connection health should be monitored and reported
 
@@ -923,7 +920,7 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
         // Simulate healthy communication
         const pingMessage: WebviewMessage = {
           type: MessageType.PING,
-          data: { timestamp: Date.now() } as MessagePayload
+          data: { timestamp: Date.now() } as MessagePayload,
         };
 
         await messageManager.sendToExtension(pingMessage);
@@ -958,7 +955,7 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
         // messageManager.startHeartbeat(100); // 100ms interval
 
         // Allow several heartbeats
-        await new Promise(resolve => setTimeout(resolve, 300));
+        await new Promise((resolve) => setTimeout(resolve, 300));
 
         // Heartbeat mechanism needs to be implemented in the test
         // expect(heartbeatReceived).to.be.true;
@@ -967,14 +964,11 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
         mockWebviewApi.postMessage.throws(new Error('Heartbeat failed'));
 
         // Allow time for heartbeat failure detection
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise((resolve) => setTimeout(resolve, 500));
 
         // Connection lost detection needs to be implemented in the test
         // expect(connectionLost).to.be.true;
       });
-
     });
-
   });
-
 });

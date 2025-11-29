@@ -2,12 +2,15 @@ import { SAMPLE_ICONS, UI_CONSTANTS } from '../constants';
 import { DOMUtils } from '../utils/DOMUtils';
 import { ErrorHandler } from '../utils/ErrorHandler';
 import type { HeaderConfig, SampleIcon } from '../types/webview.types';
+import { IHeaderManager, IManagerCoordinator } from '../interfaces/ManagerInterfaces';
+import { webview as log } from '../../utils/logger';
 
 /**
  * WebViewヘッダーの管理を担当するクラス
  */
-export class HeaderManager {
+export class HeaderManager implements IHeaderManager {
   private headerElement: HTMLElement | null = null;
+  private coordinator: IManagerCoordinator | null = null;
   private config: HeaderConfig = {
     showHeader: true,
     title: 'Terminal',
@@ -15,6 +18,13 @@ export class HeaderManager {
     iconSize: UI_CONSTANTS.SIZES.SAMPLE_ICON_SIZE,
     fontSize: UI_CONSTANTS.SIZES.TITLE_FONT_SIZE,
   };
+
+  /**
+   * コーディネーターを設定
+   */
+  public setCoordinator(coordinator: IManagerCoordinator): void {
+    this.coordinator = coordinator;
+  }
 
   /**
    * ヘッダー設定を更新
@@ -32,10 +42,10 @@ export class HeaderManager {
    */
   public createWebViewHeader(): void {
     try {
-      console.log('🎯 [HEADER] Creating WebView header');
+      log('🎯 [HEADER] Creating WebView header');
 
       if (!this.config.showHeader) {
-        console.log('🎯 [HEADER] WebView header disabled by configuration');
+        log('🎯 [HEADER] WebView header disabled by configuration');
         return;
       }
 
@@ -45,12 +55,9 @@ export class HeaderManager {
       this.insertHeaderIntoDOM();
       this.updateTerminalCountBadge();
 
-      console.log('✅ [HEADER] WebView header created successfully');
+      log('✅ [HEADER] WebView header created successfully');
     } catch (error) {
-      ErrorHandler.getInstance().handleGenericError(
-        error as Error,
-        'HeaderManager.createWebViewHeader'
-      );
+      ErrorHandler.handleOperationError('HeaderManager.createWebViewHeader', error);
     }
   }
 
@@ -79,12 +86,9 @@ export class HeaderManager {
 
       badge.style.background = backgroundColor;
 
-      console.log(`🎯 [HEADER] Terminal count badge updated: ${terminalCount}`);
+      log(`🎯 [HEADER] Terminal count badge updated: ${terminalCount}`);
     } catch (error) {
-      ErrorHandler.getInstance().handleGenericError(
-        error as Error,
-        'HeaderManager.updateTerminalCountBadge'
-      );
+      ErrorHandler.handleOperationError('HeaderManager.updateTerminalCountBadge', error);
     }
   }
 
@@ -117,6 +121,7 @@ export class HeaderManager {
         userSelect: 'none',
         minHeight: `${UI_CONSTANTS.SIZES.HEADER_HEIGHT}px`,
         flexShrink: '0',
+        boxSizing: 'border-box',
       },
       {
         id: 'webview-header',
@@ -144,7 +149,9 @@ export class HeaderManager {
       display: 'flex',
       alignItems: 'center',
       gap: `${UI_CONSTANTS.SPACING.TITLE_GAP}px`,
-      flex: '1',
+      flex: '1 1 auto',
+      minWidth: '0',
+      overflow: 'hidden',
     });
 
     const terminalIcon = this.createTerminalIcon();
@@ -166,6 +173,7 @@ export class HeaderManager {
         fontSize: `${UI_CONSTANTS.SIZES.TERMINAL_ICON_SIZE}px`,
         opacity: '0.8',
         lineHeight: '1',
+        flexShrink: '0',
       },
       {
         textContent: '🖥️',
@@ -184,6 +192,11 @@ export class HeaderManager {
         fontWeight: '600',
         letterSpacing: '0.02em',
         lineHeight: '1.2',
+        flex: '0 1 auto',
+        minWidth: '0',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
       },
       {
         textContent: this.config.title,
@@ -207,6 +220,7 @@ export class HeaderManager {
         minWidth: '20px',
         textAlign: 'center',
         lineHeight: '18px',
+        flexShrink: '0',
       },
       {
         id: 'terminal-count-badge',
@@ -226,6 +240,7 @@ export class HeaderManager {
         alignItems: 'center',
         gap: `${UI_CONSTANTS.SPACING.ICON_GAP}px`,
         position: 'relative',
+        flex: '0 0 auto',
       },
       {
         className: 'sample-icons',
@@ -233,6 +248,7 @@ export class HeaderManager {
     );
 
     if (this.config.showIcons) {
+      // Existing sample icons
       this.addSampleIcons(commandSection);
       this.addHelpTooltip(commandSection);
     }
@@ -244,10 +260,8 @@ export class HeaderManager {
    * サンプルアイコンを追加
    */
   private addSampleIcons(container: HTMLElement): void {
-    const sampleIconOpacity = 0.4; // TODO: Get from configuration
-
     SAMPLE_ICONS.forEach((sample) => {
-      const iconElement = this.createSampleIcon(sample, sampleIconOpacity);
+      const iconElement = this.createSampleIcon(sample, UI_CONSTANTS.OPACITY.SAMPLE_ICON);
       container.appendChild(iconElement);
     });
   }
@@ -274,6 +288,7 @@ export class HeaderManager {
         userSelect: 'none',
         filter: 'grayscale(30%)',
         transition: 'opacity 0.2s ease',
+        boxSizing: 'border-box',
       },
       {
         className: 'sample-icon',
@@ -327,15 +342,26 @@ export class HeaderManager {
       }
     );
 
-    helpTooltip.innerHTML = `
-      <div style="display: flex; align-items: center; gap: 4px;">
-        <span>📌</span>
-        <span>Sample Icons (Display Only)</span>
-      </div>
-      <div style="margin-top: 2px; color: var(--vscode-descriptionForeground, #969696);">
-        Use VS Code panel buttons for actions
-      </div>
-    `;
+    // SECURITY: Build DOM structure safely to prevent XSS
+    const headerDiv = document.createElement('div');
+    headerDiv.style.cssText = 'display: flex; align-items: center; gap: 4px;';
+
+    const iconSpan = document.createElement('span');
+    iconSpan.textContent = '📌';
+
+    const textSpan = document.createElement('span');
+    textSpan.textContent = 'Sample Icons (Display Only)';
+
+    headerDiv.appendChild(iconSpan);
+    headerDiv.appendChild(textSpan);
+
+    const descriptionDiv = document.createElement('div');
+    descriptionDiv.style.cssText =
+      'margin-top: 2px; color: var(--vscode-descriptionForeground, #969696);';
+    descriptionDiv.textContent = 'Use VS Code panel buttons for actions';
+
+    helpTooltip.appendChild(headerDiv);
+    helpTooltip.appendChild(descriptionDiv);
 
     this.addTooltipInteraction(container, helpTooltip);
     container.appendChild(helpTooltip);
@@ -381,8 +407,9 @@ export class HeaderManager {
   public dispose(): void {
     try {
       this.removeExistingHeader();
+      this.coordinator = null;
     } catch (error) {
-      ErrorHandler.getInstance().handleGenericError(error as Error, 'HeaderManager.dispose');
+      ErrorHandler.handleOperationError('HeaderManager.dispose', error);
     }
   }
 }

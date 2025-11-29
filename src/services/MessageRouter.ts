@@ -3,6 +3,8 @@
  * Simplifies message handling extracted from SecondaryTerminalProvider
  */
 
+import { log } from '../utils/logger';
+
 export interface MessageHandler<TData = unknown, TResponse = unknown> {
   handle(data: TData): Promise<TResponse> | TResponse;
 }
@@ -78,14 +80,6 @@ export class MessageRouter {
     const startTime = performance.now();
     const messageId = `msg-${++this.messageCounter}`;
 
-    // Message context for logging (not currently used in handler)
-    // const context: MessageContext<TData> = {
-    //   command,
-    //   data: data as TData,
-    //   timestamp: Date.now(),
-    //   id: messageId
-    // };
-
     this.log(`Routing message: ${command} (${messageId})`);
 
     // Check if we're at the concurrent handler limit
@@ -128,9 +122,8 @@ export class MessageRouter {
       return {
         success: true,
         data: result as TResponse,
-        duration
+        duration,
       } as MessageResult<TResponse>;
-
     } catch (error) {
       const duration = performance.now() - startTime;
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -138,7 +131,6 @@ export class MessageRouter {
       this.log(`Message handling failed: ${command} - ${errorMessage}`);
 
       return this.createErrorResult<TResponse>(errorMessage, duration);
-
     } finally {
       this.activeHandlers.delete(messageId);
     }
@@ -176,21 +168,18 @@ export class MessageRouter {
   /**
    * Execute a function with timeout
    */
-  private async executeWithTimeout<T>(
-    fn: () => Promise<T> | T,
-    timeoutMs: number
-  ): Promise<T> {
+  private async executeWithTimeout<T>(fn: () => Promise<T> | T, timeoutMs: number): Promise<T> {
     return new Promise((resolve, reject) => {
       const timeoutId = setTimeout(() => {
         reject(new Error(`Handler timeout after ${timeoutMs}ms`));
       }, timeoutMs);
 
       Promise.resolve(fn())
-        .then(result => {
+        .then((result) => {
           clearTimeout(timeoutId);
           resolve(result);
         })
-        .catch(error => {
+        .catch((error) => {
           clearTimeout(timeoutId);
           reject(error);
         });
@@ -212,10 +201,12 @@ export class MessageRouter {
         return data && typeof data.terminalId === 'string' && typeof data.input === 'string';
 
       case 'terminalResize':
-        return data &&
-               typeof data.terminalId === 'string' &&
-               typeof data.cols === 'number' &&
-               typeof data.rows === 'number';
+        return (
+          data &&
+          typeof data.terminalId === 'string' &&
+          typeof data.cols === 'number' &&
+          typeof data.rows === 'number'
+        );
 
       default:
         return true; // Allow unknown commands by default
@@ -229,7 +220,7 @@ export class MessageRouter {
     return {
       success: false,
       error,
-      duration
+      duration,
     };
   }
 
@@ -238,7 +229,7 @@ export class MessageRouter {
    */
   private log(message: string): void {
     if (this.config.enableLogging) {
-      console.log(`[MessageRouter] ${message}`);
+      log(`[MessageRouter] ${message}`);
     }
   }
 
@@ -275,7 +266,9 @@ export class MessageRouterFactory {
 /**
  * Abstract base class for message handlers
  */
-export abstract class BaseMessageHandler<TData = any, TResponse = any> implements MessageHandler<TData, TResponse> {
+export abstract class BaseMessageHandler<TData = any, TResponse = any>
+  implements MessageHandler<TData, TResponse>
+{
   protected readonly handlerName: string;
 
   constructor(handlerName: string) {
@@ -285,7 +278,7 @@ export abstract class BaseMessageHandler<TData = any, TResponse = any> implement
   public abstract handle(data: TData): Promise<TResponse> | TResponse;
 
   protected log(message: string): void {
-    console.log(`[${this.handlerName}] ${message}`);
+    log(`[${this.handlerName}] ${message}`);
   }
 
   protected validateRequired(data: any, fields: string[]): void {

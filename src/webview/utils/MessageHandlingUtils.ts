@@ -4,12 +4,14 @@
  * TypedMessageHandling.tsとの移行ブリッジ（廃止予定）
  */
 
+import { webview as log } from '../../utils/logger';
+
 import {
   TypedMessageHandler,
   MessagePayload,
   LoggerFunction,
   VSCodeWebviewAPI,
-  MESSAGE_COMMANDS
+  MESSAGE_COMMANDS,
 } from './TypedMessageHandling';
 
 export type MessageHandler<T extends MessagePayload = MessagePayload> = TypedMessageHandler<T>;
@@ -30,7 +32,7 @@ export class MessageRouter {
 
   constructor(private componentName: string) {
     this.logger = (message: string, ...args: unknown[]) => {
-      console.log(`[${this.componentName.toUpperCase()}-ROUTER]`, message, ...args);
+      log(`[${this.componentName.toUpperCase()}-ROUTER]`, message, ...args);
     };
   }
 
@@ -121,7 +123,7 @@ export class MessageSender {
     private componentName: string
   ) {
     this.logger = (message: string, ...args: unknown[]) => {
-      console.log(`[${this.componentName.toUpperCase()}-SENDER]`, message, ...args);
+      log(`[${this.componentName.toUpperCase()}-SENDER]`, message, ...args);
     };
   }
 
@@ -197,7 +199,7 @@ export const COMMON_COMMANDS = {
  */
 export class MessageValidator {
   private static logger: LoggerFunction = (message: string, ...args: unknown[]) => {
-    console.log('[MESSAGE-VALIDATOR]', message, ...args);
+    log('[MESSAGE-VALIDATOR]', message, ...args);
   };
 
   /**
@@ -207,7 +209,7 @@ export class MessageValidator {
     data: Record<string, unknown>,
     requiredFields: string[]
   ): { isValid: boolean; missingFields: string[] } {
-    const missingFields = requiredFields.filter(field => !(field in data));
+    const missingFields = requiredFields.filter((field) => !(field in data));
     const isValid = missingFields.length === 0;
 
     if (!isValid) {
@@ -231,11 +233,7 @@ export class MessageValidator {
   /**
    * 数値範囲チェック
    */
-  public static validateRange(
-    value: unknown,
-    min: number,
-    max: number
-  ): boolean {
+  public static validateRange(value: unknown, min: number, max: number): boolean {
     const isValid = typeof value === 'number' && value >= min && value <= max;
     if (!isValid) {
       this.logger(`❌ Value ${value} is not in range [${min}, ${max}]`);

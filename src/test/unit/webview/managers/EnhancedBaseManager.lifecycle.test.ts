@@ -19,7 +19,7 @@ import * as sinon from 'sinon';
 import {
   BaseManager,
   ManagerInitOptions,
-  ResourceCleanupResult
+  ResourceCleanupResult,
 } from '../../../../webview/managers/BaseManager';
 import { LoggerFunction } from '../../../../webview/utils/TypedMessageHandling';
 import { setupTestEnvironment, resetTestEnvironment } from '../../../shared/TestSetup';
@@ -60,7 +60,7 @@ describe('EnhancedBaseManager Lifecycle - Comprehensive TDD Suite', () => {
       }
 
       if (this.initializationDelay > 0) {
-        await new Promise(resolve => setTimeout(resolve, this.initializationDelay));
+        await new Promise((resolve) => setTimeout(resolve, this.initializationDelay));
       }
     }
 
@@ -110,14 +110,14 @@ describe('EnhancedBaseManager Lifecycle - Comprehensive TDD Suite', () => {
   }
 
   describe('Manager Initialization Lifecycle', () => {
-
     describe('RED Phase - Initialization Requirements', () => {
-
       it('should fail to execute operations before initialization', () => {
         // RED: Uninitialized manager should reject operations
         const manager = new TestLifecycleManager('TestManager');
 
-        expect(() => manager.testEnsureManagerReady()).to.throw('Manager not initialized: TestManager');
+        expect(() => manager.testEnsureManagerReady()).to.throw(
+          'Manager not initialized: TestManager'
+        );
       });
 
       it('should initialize successfully with default options', async () => {
@@ -139,7 +139,7 @@ describe('EnhancedBaseManager Lifecycle - Comprehensive TDD Suite', () => {
           enablePerformanceTracking: true,
           enableErrorRecovery: false,
           initializationTimeoutMs: 10000,
-          customLogger: mockLogger
+          customLogger: mockLogger,
         };
 
         const manager = new TestLifecycleManager('TestManager', customOptions);
@@ -155,7 +155,7 @@ describe('EnhancedBaseManager Lifecycle - Comprehensive TDD Suite', () => {
           enableLogging: true,
           enablePerformanceTracking: true,
           enableErrorRecovery: true,
-          initializationTimeoutMs: 50
+          initializationTimeoutMs: 50,
         });
 
         manager.initializationDelay = 100; // Longer than timeout
@@ -210,7 +210,7 @@ describe('EnhancedBaseManager Lifecycle - Comprehensive TDD Suite', () => {
           enableLogging: true,
           enablePerformanceTracking: true,
           enableErrorRecovery: true,
-          initializationTimeoutMs: 5000
+          initializationTimeoutMs: 5000,
         });
 
         manager.initializationDelay = 50;
@@ -221,15 +221,11 @@ describe('EnhancedBaseManager Lifecycle - Comprehensive TDD Suite', () => {
         expect(health.performanceMetrics.initializationTimeMs).to.be.greaterThan(40);
         expect(health.performanceMetrics.initializationTimeMs).to.be.lessThan(100);
       });
-
     });
-
   });
 
   describe('Manager Disposal Lifecycle', () => {
-
     describe('RED Phase - Disposal Requirements', () => {
-
       it('should dispose initialized manager successfully', async () => {
         // RED: Disposal should work for initialized managers
         const manager = new TestLifecycleManager('TestManager');
@@ -302,15 +298,11 @@ describe('EnhancedBaseManager Lifecycle - Comprehensive TDD Suite', () => {
         // Resource cleanup is tested via the ResourceManager functionality
         expect(manager.disposeCalled).to.be.true;
       });
-
     });
-
   });
 
   describe('Error Handling and Recovery', () => {
-
     describe('RED Phase - Error Handling Requirements', () => {
-
       it('should handle operation errors with fallback values', async () => {
         // RED: Operations should support fallback values
         const manager = new TestLifecycleManager('TestManager');
@@ -320,10 +312,7 @@ describe('EnhancedBaseManager Lifecycle - Comprehensive TDD Suite', () => {
           throw new Error('Operation failed');
         };
 
-        const result = await manager.testExecuteOperationSafely(
-          failingOperation,
-          'test operation'
-        );
+        const result = await manager.testExecuteOperationSafely(failingOperation, 'test operation');
 
         expect(result).to.be.null;
       });
@@ -337,10 +326,7 @@ describe('EnhancedBaseManager Lifecycle - Comprehensive TDD Suite', () => {
           throw new Error('Operation failed');
         };
 
-        const result = await manager.testExecuteOperationSafely(
-          failingOperation,
-          'test operation'
-        );
+        const result = await manager.testExecuteOperationSafely(failingOperation, 'test operation');
 
         expect(result).to.be.null;
       });
@@ -379,22 +365,18 @@ describe('EnhancedBaseManager Lifecycle - Comprehensive TDD Suite', () => {
         expect(health.lastError).to.not.be.undefined;
         expect(health.lastError?.message).to.equal('Specific error message');
       });
-
     });
-
   });
 
   describe('Performance Tracking and Monitoring', () => {
-
     describe('RED Phase - Performance Requirements', () => {
-
       it('should track operation counts accurately', async () => {
         // RED: Operation counts should be tracked
         const manager = new TestLifecycleManager('TestManager', {
           enableLogging: true,
           enablePerformanceTracking: true,
           enableErrorRecovery: true,
-          initializationTimeoutMs: 5000
+          initializationTimeoutMs: 5000,
         });
         await manager.initialize();
 
@@ -417,12 +399,12 @@ describe('EnhancedBaseManager Lifecycle - Comprehensive TDD Suite', () => {
           enableLogging: true,
           enablePerformanceTracking: true,
           enableErrorRecovery: true,
-          initializationTimeoutMs: 5000
+          initializationTimeoutMs: 5000,
         });
         await manager.initialize();
 
         const timedOperation = async (): Promise<string> => {
-          await new Promise(resolve => setTimeout(resolve, 10));
+          await new Promise((resolve) => setTimeout(resolve, 10));
           return 'success';
         };
 
@@ -441,7 +423,7 @@ describe('EnhancedBaseManager Lifecycle - Comprehensive TDD Suite', () => {
           enableLogging: true,
           enablePerformanceTracking: true,
           enableErrorRecovery: true,
-          initializationTimeoutMs: 5000
+          initializationTimeoutMs: 5000,
         });
         await manager.initialize();
 
@@ -465,21 +447,17 @@ describe('EnhancedBaseManager Lifecycle - Comprehensive TDD Suite', () => {
         await manager.initialize();
 
         // Wait a bit
-        await new Promise(resolve => setTimeout(resolve, 50));
+        await new Promise((resolve) => setTimeout(resolve, 50));
 
         const health = manager.getHealthStatus();
         expect(health.upTimeMs).to.be.greaterThan(40);
         expect(health.upTimeMs).to.be.lessThan(200);
       });
-
     });
-
   });
 
   describe('Health Status Reporting', () => {
-
     describe('RED Phase - Health Status Requirements', () => {
-
       it('should report healthy status for properly functioning manager', async () => {
         // RED: Healthy manager should report as healthy
         const manager = new TestLifecycleManager('TestManager');
@@ -534,13 +512,10 @@ describe('EnhancedBaseManager Lifecycle - Comprehensive TDD Suite', () => {
         expect(health.isHealthy).to.be.false;
         expect(health.isInitialized).to.be.false;
       });
-
     });
-
   });
 
   describe('Resource Management', () => {
-
     class ResourceTrackingManager extends TestLifecycleManager {
       public cleanupCallCount = 0;
 
@@ -556,7 +531,6 @@ describe('EnhancedBaseManager Lifecycle - Comprehensive TDD Suite', () => {
     }
 
     describe('RED Phase - Resource Management Requirements', () => {
-
       it('should register and cleanup resources properly', async () => {
         // RED: Resources should be properly managed
         const manager = new ResourceTrackingManager('TestManager');
@@ -604,15 +578,11 @@ describe('EnhancedBaseManager Lifecycle - Comprehensive TDD Suite', () => {
         expect(result.errors).to.have.length(1);
         expect(result.errors[0]).to.include('Cleanup failed');
       });
-
     });
-
   });
 
   describe('Manager Factory', () => {
-
     describe('RED Phase - Factory Requirements', () => {
-
       it('should create manager with factory method', () => {
         // RED: Factory should create managers correctly
 
@@ -643,25 +613,17 @@ describe('EnhancedBaseManager Lifecycle - Comprehensive TDD Suite', () => {
 
         await manager.dispose();
       });
-
     });
-
   });
 
   describe('Concurrent Operations and Thread Safety', () => {
-
     describe('RED Phase - Concurrency Requirements', () => {
-
       it('should handle concurrent initialization attempts safely', async () => {
         // RED: Concurrent initialization should be safe
         const manager = new TestLifecycleManager('TestManager');
 
         // Start multiple initialization attempts
-        const promises = [
-          manager.initialize(),
-          manager.initialize(),
-          manager.initialize()
-        ];
+        const promises = [manager.initialize(), manager.initialize(), manager.initialize()];
 
         await Promise.all(promises);
 
@@ -676,12 +638,12 @@ describe('EnhancedBaseManager Lifecycle - Comprehensive TDD Suite', () => {
           enableLogging: true,
           enablePerformanceTracking: true,
           enableErrorRecovery: true,
-          initializationTimeoutMs: 5000
+          initializationTimeoutMs: 5000,
         });
         await manager.initialize();
 
         const operation = async (): Promise<number> => {
-          await new Promise(resolve => setTimeout(resolve, 10));
+          await new Promise((resolve) => setTimeout(resolve, 10));
           return Math.random();
         };
 
@@ -694,7 +656,7 @@ describe('EnhancedBaseManager Lifecycle - Comprehensive TDD Suite', () => {
         const results = await Promise.all(promises);
 
         // All operations should complete successfully
-        expect(results.every(r => r !== null)).to.be.true;
+        expect(results.every((r) => r !== null)).to.be.true;
         expect(manager.getHealthStatus().performanceMetrics.operationCount).to.equal(10);
       });
 
@@ -704,11 +666,7 @@ describe('EnhancedBaseManager Lifecycle - Comprehensive TDD Suite', () => {
         await manager.initialize();
 
         // Start multiple disposal attempts
-        const promises = [
-          manager.dispose(),
-          manager.dispose(),
-          manager.dispose()
-        ];
+        const promises = [manager.dispose(), manager.dispose(), manager.dispose()];
 
         await Promise.all(promises);
 
@@ -716,15 +674,11 @@ describe('EnhancedBaseManager Lifecycle - Comprehensive TDD Suite', () => {
         expect(manager.disposeCalled).to.be.true;
         expect(manager.getHealthStatus().isDisposed).to.be.true;
       });
-
     });
-
   });
 
   describe('Integration with Logging System', () => {
-
     describe('RED Phase - Logging Integration Requirements', () => {
-
       it('should use custom logger when provided', async () => {
         // RED: Custom logger should be used
         const customLogger = sinon.stub();
@@ -733,7 +687,7 @@ describe('EnhancedBaseManager Lifecycle - Comprehensive TDD Suite', () => {
           enablePerformanceTracking: true,
           enableErrorRecovery: true,
           initializationTimeoutMs: 5000,
-          customLogger
+          customLogger,
         });
 
         await manager.initialize();
@@ -749,7 +703,7 @@ describe('EnhancedBaseManager Lifecycle - Comprehensive TDD Suite', () => {
           enablePerformanceTracking: true,
           enableErrorRecovery: true,
           initializationTimeoutMs: 5000,
-          customLogger
+          customLogger,
         });
 
         await manager.initialize();
@@ -759,15 +713,11 @@ describe('EnhancedBaseManager Lifecycle - Comprehensive TDD Suite', () => {
         const callCount = customLogger.callCount;
         expect(callCount).to.be.lessThan(10); // Arbitrary threshold
       });
-
     });
-
   });
 
   describe('Edge Cases and Boundary Conditions', () => {
-
     describe('RED Phase - Edge Case Requirements', () => {
-
       it('should handle manager with empty name', async () => {
         // RED: Empty name should be handled gracefully
         const manager = new TestLifecycleManager('');
@@ -784,7 +734,7 @@ describe('EnhancedBaseManager Lifecycle - Comprehensive TDD Suite', () => {
           enableLogging: true,
           enablePerformanceTracking: true,
           enableErrorRecovery: true,
-          initializationTimeoutMs: 1 // Very short timeout
+          initializationTimeoutMs: 1, // Very short timeout
         });
 
         let caughtError: Error | null = null;
@@ -814,14 +764,14 @@ describe('EnhancedBaseManager Lifecycle - Comprehensive TDD Suite', () => {
         };
 
         const nullResult = await manager.testExecuteOperationSafely(nullOperation, 'null test');
-        const undefinedResult = await manager.testExecuteOperationSafely(undefinedOperation, 'undefined test');
+        const undefinedResult = await manager.testExecuteOperationSafely(
+          undefinedOperation,
+          'undefined test'
+        );
 
         expect(nullResult).to.be.null;
         expect(undefinedResult).to.be.undefined;
       });
-
     });
-
   });
-
 });

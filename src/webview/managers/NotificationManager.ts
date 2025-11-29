@@ -115,7 +115,7 @@ export class NotificationManager extends BaseManager implements INotificationMan
    * Clear all notifications
    */
   public clearNotifications(): void {
-    this.activeNotifications.forEach((notification, id) => {
+    this.activeNotifications.forEach((_notification, id) => {
       this.removeNotification(id);
     });
 
@@ -234,19 +234,31 @@ export class NotificationManager extends BaseManager implements INotificationMan
     });
 
     notification.classList.add('loading-notification');
-    notification.innerHTML = `
-      <div style="display: flex; align-items: center; gap: 8px;">
-        <div class="loading-spinner" style="
-          width: 16px;
-          height: 16px;
-          border: 2px solid rgba(255, 255, 255, 0.3);
-          border-top: 2px solid white;
-          border-radius: 50%;
-          animation: spin 1s linear infinite;
-        "></div>
-        <span>${message}</span>
-      </div>
+
+    // SECURITY: Build DOM structure safely to prevent XSS
+    const containerDiv = document.createElement('div');
+    containerDiv.style.cssText = 'display: flex; align-items: center; gap: 8px;';
+
+    const spinnerDiv = document.createElement('div');
+    spinnerDiv.className = 'loading-spinner';
+    spinnerDiv.style.cssText = `
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top: 2px solid white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
     `;
+
+    const messageSpan = document.createElement('span');
+    messageSpan.textContent = message; // Safe: textContent escapes HTML
+
+    containerDiv.appendChild(spinnerDiv);
+    containerDiv.appendChild(messageSpan);
+
+    // Clear existing content and append new structure
+    notification.textContent = '';
+    notification.appendChild(containerDiv);
 
     this.activeNotifications.set(id, notification);
     this.addNotificationToTerminal(notification);

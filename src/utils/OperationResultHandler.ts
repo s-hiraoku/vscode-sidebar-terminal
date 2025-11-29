@@ -26,13 +26,48 @@ export interface NotificationService {
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class
 export class OperationResultHandler {
   /**
-   * ターミナル操作の結果を統一的に処理
-   *
-   * @param operation 実行するオペレーション
-   * @param context ログ用のコンテキスト名
-   * @param successMessage 成功時の通知メッセージ（省略時は通知なし）
-   * @param notificationService 通知サービス（省略時は通知なし）
-   * @returns 成功時はデータ、失敗時はnull
+   * Common result processing logic (private helper)
+   */
+  private static processResult<T>(
+    result: OperationResult<T>,
+    context: string,
+    successMessage?: string,
+    notificationService?: NotificationService
+  ): T | null {
+    if (result.success) {
+      log(`✅ [${context}] Operation successful`);
+      if (successMessage && notificationService) {
+        notificationService.showSuccess(successMessage);
+      }
+      return result.data || null;
+    } else {
+      const reason = result.reason || 'Operation failed';
+      log(`⚠️ [${context}] Operation failed: ${reason}`);
+      if (notificationService) {
+        notificationService.showError(reason);
+      }
+      return null;
+    }
+  }
+
+  /**
+   * Common error handling logic (private helper)
+   */
+  private static handleErrorInternal(
+    error: unknown,
+    context: string,
+    notificationService?: NotificationService
+  ): null {
+    const errorMessage = `Operation error: ${String(error)}`;
+    log(`❌ [${context}] ${errorMessage}`);
+    if (notificationService) {
+      notificationService.showError(errorMessage);
+    }
+    return null;
+  }
+
+  /**
+   * Handle terminal operation result (async)
    */
   static async handleTerminalOperation<T>(
     operation: () => Promise<OperationResult<T>>,
@@ -42,33 +77,14 @@ export class OperationResultHandler {
   ): Promise<T | null> {
     try {
       const result = await operation();
-
-      if (result.success) {
-        log(`✅ [${context}] Operation successful`);
-        if (successMessage && notificationService) {
-          notificationService.showSuccess(successMessage);
-        }
-        return result.data || null;
-      } else {
-        const reason = result.reason || 'Operation failed';
-        log(`⚠️ [${context}] Operation failed: ${reason}`);
-        if (notificationService) {
-          notificationService.showError(reason);
-        }
-        return null;
-      }
+      return this.processResult(result, context, successMessage, notificationService);
     } catch (error) {
-      const errorMessage = `Operation error: ${String(error)}`;
-      log(`❌ [${context}] ${errorMessage}`);
-      if (notificationService) {
-        notificationService.showError(errorMessage);
-      }
-      return null;
+      return this.handleErrorInternal(error, context, notificationService);
     }
   }
 
   /**
-   * 同期的なオペレーション結果処理
+   * Handle sync operation result
    */
   static handleSyncOperation<T>(
     operation: () => OperationResult<T>,
@@ -78,28 +94,9 @@ export class OperationResultHandler {
   ): T | null {
     try {
       const result = operation();
-
-      if (result.success) {
-        log(`✅ [${context}] Operation successful`);
-        if (successMessage && notificationService) {
-          notificationService.showSuccess(successMessage);
-        }
-        return result.data || null;
-      } else {
-        const reason = result.reason || 'Operation failed';
-        log(`⚠️ [${context}] Operation failed: ${reason}`);
-        if (notificationService) {
-          notificationService.showError(reason);
-        }
-        return null;
-      }
+      return this.processResult(result, context, successMessage, notificationService);
     } catch (error) {
-      const errorMessage = `Operation error: ${String(error)}`;
-      log(`❌ [${context}] ${errorMessage}`);
-      if (notificationService) {
-        notificationService.showError(errorMessage);
-      }
-      return null;
+      return this.handleErrorInternal(error, context, notificationService);
     }
   }
 

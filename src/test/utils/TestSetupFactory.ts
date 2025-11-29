@@ -165,6 +165,7 @@ export class TestSetupFactory {
       log: options.enableLogging !== false ? sinon.stub() : sinon.stub(),
       createTerminal: sinon.stub().returns('terminal-new'),
       openSettings: sinon.stub(),
+      setVersionInfo: sinon.stub(),
       applyFontSettings: sinon.stub(),
       closeTerminal: sinon.stub(),
       getManagers: sinon.stub().returns({
@@ -182,6 +183,7 @@ export class TestSetupFactory {
       updateCliAgentStatus: sinon.stub(),
       ensureTerminalFocus: sinon.stub(),
       createTerminalFromSession: sinon.stub(),
+      getSerializeAddon: sinon.stub().returns(undefined),
       getMessageManager: sinon.stub().returns({
         postMessage: sinon.stub(),
         handleMessage: sinon.stub(),

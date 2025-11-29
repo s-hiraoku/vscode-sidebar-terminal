@@ -1,7 +1,4 @@
-import {
-  UnifiedTerminalPersistenceService,
-  PersistenceError,
-} from '../services/UnifiedTerminalPersistenceService';
+import { ExtensionPersistenceService } from '../services/persistence/ExtensionPersistenceService';
 import { extension as log } from '../utils/logger';
 
 /**
@@ -10,13 +7,13 @@ import { extension as log } from '../utils/logger';
  */
 export interface PersistenceMessage {
   command: 'saveSession' | 'restoreSession' | 'clearSession';
-  data?: any;
+  data?: unknown;
   terminalId?: string; // Changed from number to string to match WebviewMessage
 }
 
 export interface PersistenceResponse {
   success: boolean;
-  data?: any;
+  data?: unknown;
   error?: string;
   terminalCount?: number;
 }
@@ -24,26 +21,33 @@ export interface PersistenceResponse {
 /**
  * PersistenceMessageHandler interface for dependency injection
  */
+export interface WebViewMessage {
+  command: string;
+  data: unknown;
+  success: boolean;
+  timestamp: number;
+}
+
 export interface IPersistenceMessageHandler {
   handleMessage(message: PersistenceMessage): Promise<PersistenceResponse>;
-  createWebViewMessage(command: string, data: any, success?: boolean): any;
-  createErrorResponse(command: string, error: string): any;
-  createSuccessResponse(command: string, data: any): any;
+  createWebViewMessage(command: string, data: unknown, success?: boolean): WebViewMessage;
+  createErrorResponse(command: string, error: string): WebViewMessage;
+  createSuccessResponse(command: string, data: unknown): WebViewMessage;
   registerMessageHandlers(): void;
-  handlePersistenceMessage(message: any): Promise<any>;
+  handlePersistenceMessage(message: unknown): Promise<PersistenceResponse>;
 }
 
 /**
  * Factory function to create PersistenceMessageHandler instance
  */
 export function createPersistenceMessageHandler(
-  persistenceService: UnifiedTerminalPersistenceService
+  persistenceService: ExtensionPersistenceService
 ): IPersistenceMessageHandler {
   return new PersistenceMessageHandler(persistenceService);
 }
 
 export class PersistenceMessageHandler {
-  constructor(private readonly persistenceService: UnifiedTerminalPersistenceService) {
+  constructor(private readonly persistenceService: ExtensionPersistenceService) {
     log('🔧 [MSG-HANDLER] PersistenceMessageHandler initialized');
   }
 
@@ -82,29 +86,27 @@ export class PersistenceMessageHandler {
   /**
    * セッション保存処理
    */
-  private async handleSaveSession(terminalData: any): Promise<PersistenceResponse> {
+  private async handleSaveSession(_terminalData: unknown): Promise<PersistenceResponse> {
     try {
-      if (!terminalData || !Array.isArray(terminalData)) {
+      // ExtensionPersistenceService.saveCurrentSession() doesn't take parameters
+      // It gets terminal data directly from TerminalManager
+      const result = await this.persistenceService.saveCurrentSession();
+
+      if (!result.success) {
         return {
           success: false,
-          error: 'Invalid terminal data for save operation',
+          error: result.error || 'Save operation failed',
         };
       }
 
-      await this.persistenceService.saveSession(terminalData);
-
-      log(`✅ [MSG-HANDLER] Session saved successfully: ${terminalData.length} terminals`);
+      log(`✅ [MSG-HANDLER] Session saved successfully: ${result.terminalCount} terminals`);
       return {
         success: true,
-        terminalCount: terminalData.length,
+        terminalCount: result.terminalCount,
         data: 'Session saved successfully',
       };
     } catch (error) {
-      const errorMsg =
-        error instanceof PersistenceError
-          ? error.message
-          : `Save operation failed: ${(error as Error).message}`;
-
+      const errorMsg = `Save operation failed: ${(error as Error).message}`;
       log(`❌ [MSG-HANDLER] Save failed: ${errorMsg}`);
       return {
         success: false,
@@ -118,30 +120,26 @@ export class PersistenceMessageHandler {
    */
   private async handleRestoreSession(): Promise<PersistenceResponse> {
     try {
-      const restoredTerminals = await this.persistenceService.restoreSession();
+      const result = await this.persistenceService.restoreSession();
 
-      if (restoredTerminals.length === 0) {
+      if (!result.success || result.terminalsRestored === 0) {
         log('📦 [MSG-HANDLER] No session to restore');
         return {
           success: true,
           terminalCount: 0,
           data: [],
-          error: 'No session found to restore',
+          error: result.message || 'No session found to restore',
         };
       }
 
-      log(`✅ [MSG-HANDLER] Session restored successfully: ${restoredTerminals.length} terminals`);
+      log(`✅ [MSG-HANDLER] Session restored successfully: ${result.terminalsRestored} terminals`);
       return {
         success: true,
-        terminalCount: restoredTerminals.length,
-        data: restoredTerminals,
+        terminalCount: result.terminalsRestored,
+        data: result.terminals || [],
       };
     } catch (error) {
-      const errorMsg =
-        error instanceof PersistenceError
-          ? error.message
-          : `Restore operation failed: ${(error as Error).message}`;
-
+      const errorMsg = `Restore operation failed: ${(error as Error).message}`;
       log(`❌ [MSG-HANDLER] Restore failed: ${errorMsg}`);
       return {
         success: false,
@@ -175,7 +173,7 @@ export class PersistenceMessageHandler {
   /**
    * WebView向けメッセージ作成ヘルパー
    */
-  createWebViewMessage(command: string, data: any, success: boolean = true): any {
+  createWebViewMessage(command: string, data: unknown, success: boolean = true): WebViewMessage {
     return {
       command: `persistence${command.charAt(0).toUpperCase() + command.slice(1)}Response`,
       data,
@@ -187,14 +185,14 @@ export class PersistenceMessageHandler {
   /**
    * エラーレスポンス作成ヘルパー
    */
-  createErrorResponse(command: string, error: string): any {
+  createErrorResponse(command: string, error: string): WebViewMessage {
     return this.createWebViewMessage(command, { error }, false);
   }
 
   /**
    * 成功レスポンス作成ヘルパー
    */
-  createSuccessResponse(command: string, data: any): any {
+  createSuccessResponse(command: string, data: unknown): WebViewMessage {
     return this.createWebViewMessage(command, data, true);
   }
 
@@ -209,7 +207,7 @@ export class PersistenceMessageHandler {
   /**
    * 永続化メッセージ処理（compatibility method）
    */
-  async handlePersistenceMessage(message: any): Promise<any> {
+  async handlePersistenceMessage(message: unknown): Promise<PersistenceResponse> {
     // Delegate to handleMessage for compatibility
     return await this.handleMessage(message as PersistenceMessage);
   }

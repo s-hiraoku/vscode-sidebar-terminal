@@ -1,0 +1,15 @@
+[31mRed text[0m
+[32mGreen text[0m
+[33mYellow text[0m
+[34mBlue text[0m
+[35mMagenta text[0m
+[36mCyan text[0m
+[1mBold text[0m
+[3mItalic text[0m
+[4mUnderline text[0m
+[41;37mRed background with white text[0m
+[42;30mGreen background with black text[0m
+Normal text
+[1;32m✓[0m Success message
+[1;31m✗[0m Error message
+[1;33m⚠[0m Warning message

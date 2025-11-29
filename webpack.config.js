@@ -3,11 +3,12 @@
 
 const path = require('path');
 const webpack = require('webpack');
+const TerserPlugin = require('terser-webpack-plugin');
 
 /** @type {import('webpack').Configuration} */
 const extensionConfig = {
   target: 'node',
-  mode: 'none',
+  mode: process.env.NODE_ENV === 'production' ? 'production' : 'none',
 
   entry: './src/extension.ts',
   resolve: {
@@ -49,7 +50,38 @@ const extensionConfig = {
     // Keep @homebridge/node-pty-prebuilt-multiarch as external since it's included in the package
     '@homebridge/node-pty-prebuilt-multiarch': 'commonjs @homebridge/node-pty-prebuilt-multiarch',
   },
+  optimization: {
+    minimize: process.env.NODE_ENV === 'production',
+    ...(process.env.NODE_ENV === 'production' && {
+      minimizer: [
+        new TerserPlugin({
+          terserOptions: {
+            compress: {
+              // Remove console.log, console.debug in production
+              pure_funcs: ['console.log', 'console.debug', 'console.info'],
+              // Keep console.error and console.warn for critical logging
+              drop_debugger: true,
+            },
+            mangle: {
+              // Keep class names for better debugging
+              keep_classnames: true,
+              keep_fnames: true,
+            },
+            format: {
+              comments: false,
+            },
+          },
+          extractComments: false,
+        }),
+      ],
+    }),
+  },
   devtool: 'nosources-source-map',
+  performance: {
+    maxEntrypointSize: 1024000, // 1MB
+    maxAssetSize: 1024000, // 1MB
+    hints: 'warning',
+  },
   infrastructureLogging: {
     level: 'log',
   },
@@ -58,7 +90,7 @@ const extensionConfig = {
 /** @type {import('webpack').Configuration} */
 const webviewConfig = {
   target: 'web',
-  mode: 'none',
+  mode: process.env.NODE_ENV === 'production' ? 'production' : 'none',
 
   entry: './src/webview/main.ts',
   resolve: {
@@ -81,6 +113,7 @@ const webviewConfig = {
           path.resolve(__dirname, 'src/types'),
           path.resolve(__dirname, 'src/shared'),
           path.resolve(__dirname, 'src/utils'),
+          path.resolve(__dirname, 'src/constants'),
         ],
         exclude: [
           path.resolve(__dirname, 'src/test'),
@@ -110,17 +143,45 @@ const webviewConfig = {
     filename: 'webview.js',
   },
   optimization: {
-    minimize: false,
+    minimize: process.env.NODE_ENV === 'production',
+    ...(process.env.NODE_ENV === 'production' && {
+      minimizer: [
+        new TerserPlugin({
+          terserOptions: {
+            compress: {
+              // Remove console.log, console.debug in production
+              pure_funcs: ['console.log', 'console.debug', 'console.info'],
+              // Keep console.error and console.warn for critical logging
+              drop_debugger: true,
+            },
+            mangle: {
+              // Keep class names for better debugging
+              keep_classnames: true,
+              keep_fnames: true,
+            },
+            format: {
+              comments: false,
+            },
+          },
+          extractComments: false,
+        }),
+      ],
+    }),
   },
   plugins: [
     new webpack.DefinePlugin({
-      'process.env.NODE_ENV': JSON.stringify('production'),
+      'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production'),
     }),
     new webpack.ProvidePlugin({
       process: 'process/browser',
     }),
   ],
   devtool: 'nosources-source-map',
+  performance: {
+    maxEntrypointSize: 819200, // 800KB
+    maxAssetSize: 819200, // 800KB
+    hints: 'warning',
+  },
 };
 
 module.exports = [extensionConfig, webviewConfig];

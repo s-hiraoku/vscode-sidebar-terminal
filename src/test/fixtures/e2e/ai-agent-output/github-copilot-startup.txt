@@ -1,0 +1,11 @@
+? Welcome to GitHub Copilot in the CLI!
+version 1.0.0
+
+I'm powered by AI, so surprises and mistakes are possible.
+
+? What kind of help would you like?
+> generic shell commands
+  gh commands
+  general coding questions
+
+? Ask GitHub Copilot: ▌

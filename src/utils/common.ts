@@ -10,7 +10,25 @@ import { TERMINAL_CONSTANTS } from '../constants';
 import { TerminalInfo } from '../types/common';
 import { TerminalConfig } from '../types/shared';
 import { getUnifiedConfigurationService } from '../config/UnifiedConfigurationService';
+import { log } from './logger';
 
+/**
+ * Safe process.cwd() that works in test environments
+ * Returns current working directory or fallback value
+ */
+export function safeProcessCwd(fallback?: string): string {
+  try {
+    const cwd = process.cwd && typeof process.cwd === 'function' ? process.cwd() : null;
+    // Don't use root directory as cwd
+    if (cwd && cwd !== '/') {
+      return cwd;
+    }
+    // Fallback to home directory instead of root
+    return fallback || os.homedir();
+  } catch (e) {
+    return fallback || os.homedir();
+  }
+}
 
 /**
  * ディレクトリが存在し、アクセス可能かを検証
@@ -23,7 +41,7 @@ export function validateDirectory(dirPath: string): boolean {
     // Try to access the directory
     fs.accessSync(dirPath, fs.constants.R_OK | fs.constants.X_OK);
 
-    console.log('📁 [VALIDATE] Directory validation:', {
+    log('📁 [VALIDATE] Directory validation:', {
       path: dirPath,
       exists: true,
       isDirectory,
@@ -47,36 +65,36 @@ export function getWorkingDirectory(): string {
   const config = getUnifiedConfigurationService().getExtensionTerminalConfig();
   const customDir = config.defaultDirectory || '';
 
-  console.log('📁 [WORKDIR] Getting working directory...');
-  console.log('📁 [WORKDIR] Custom directory from config:', customDir);
+  log('📁 [WORKDIR] Getting working directory...');
+  log('📁 [WORKDIR] Custom directory from config:', customDir);
 
   if (customDir && customDir.trim()) {
-    console.log('📁 [WORKDIR] Candidate custom directory:', customDir);
+    log('📁 [WORKDIR] Candidate custom directory:', customDir);
     if (validateDirectory(customDir.trim())) {
-      console.log('📁 [WORKDIR] Using validated custom directory:', customDir);
+      log('📁 [WORKDIR] Using validated custom directory:', customDir);
       return customDir.trim();
     } else {
-      console.warn('⚠️ [WORKDIR] Custom directory not accessible, trying alternatives');
+      log('⚠️ [WORKDIR] Custom directory not accessible, trying alternatives');
     }
   }
 
   // Check workspace folders
   const workspaceFolders = vscode.workspace.workspaceFolders;
-  console.log(
+  log(
     '📁 [WORKDIR] Workspace folders:',
     workspaceFolders?.map((f) => f.uri.fsPath)
   );
 
   if (workspaceFolders && workspaceFolders.length > 0) {
     const workspaceRoot = workspaceFolders[0]?.uri.fsPath;
-    console.log('📁 [WORKDIR] Candidate workspace root:', workspaceRoot);
+    log('📁 [WORKDIR] Candidate workspace root:', workspaceRoot);
 
     // Validate directory exists and is accessible
     if (workspaceRoot && validateDirectory(workspaceRoot)) {
-      console.log('📁 [WORKDIR] Using validated workspace root:', workspaceRoot);
+      log('📁 [WORKDIR] Using validated workspace root:', workspaceRoot);
       return workspaceRoot;
     } else {
-      console.warn('⚠️ [WORKDIR] Workspace root not accessible, trying alternatives');
+      log('⚠️ [WORKDIR] Workspace root not accessible, trying alternatives');
     }
   }
 
@@ -89,17 +107,17 @@ export function getWorkingDirectory(): string {
     activeEditor.document.uri.scheme === 'file'
   ) {
     const activeFileDir = path.dirname(activeEditor.document.uri.fsPath);
-    console.log('📁 [WORKDIR] Candidate active file directory:', activeFileDir);
+    log('📁 [WORKDIR] Candidate active file directory:', activeFileDir);
 
     if (validateDirectory(activeFileDir)) {
-      console.log('📁 [WORKDIR] Using validated active file directory:', activeFileDir);
+      log('📁 [WORKDIR] Using validated active file directory:', activeFileDir);
       return activeFileDir;
     }
   }
 
   // Fallback to home directory
   const homeDir = os.homedir();
-  console.log('📁 [WORKDIR] Using fallback home directory:', homeDir);
+  log('📁 [WORKDIR] Using fallback home directory:', homeDir);
 
   // Final validation of home directory
   if (validateDirectory(homeDir)) {
@@ -107,8 +125,8 @@ export function getWorkingDirectory(): string {
   }
 
   // Last resort - current process directory
-  const processDir = process.cwd();
-  console.log('📁 [WORKDIR] Last resort - process cwd:', processDir);
+  const processDir = safeProcessCwd();
+  log('📁 [WORKDIR] Last resort - process cwd:', processDir);
   return processDir;
 }
 
@@ -118,7 +136,6 @@ export function getWorkingDirectory(): string {
 export function generateTerminalId(): string {
   return `terminal-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 }
-
 
 /**
  * ターミナル情報を正規化
@@ -261,13 +278,19 @@ export function getShellForPlatform(): string {
 /**
  * Show error message (restored from refactoring)
  */
-export function showErrorMessage(message: string, ...items: string[]): Thenable<string | undefined> {
+export function showErrorMessage(
+  message: string,
+  ...items: string[]
+): Thenable<string | undefined> {
   return vscode.window.showErrorMessage(message, ...items);
 }
 
 /**
  * Show warning message (restored from refactoring)
  */
-export function showWarningMessage(message: string, ...items: string[]): Thenable<string | undefined> {
+export function showWarningMessage(
+  message: string,
+  ...items: string[]
+): Thenable<string | undefined> {
   return vscode.window.showWarningMessage(message, ...items);
 }

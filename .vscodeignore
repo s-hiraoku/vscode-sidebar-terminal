@@ -5,20 +5,32 @@
 # Source files (only include dist)
 src/**
 **/tsconfig.json
+**/tsconfig.*.json
 **/*.ts
 **/*.map
 
-# Development and build
+# Development and build tools
 node_modules/**
-!node_modules/@homebridge/node-pty-prebuilt-multiarch/**
+# Include only essential node-pty files
+!node_modules/@homebridge/node-pty-prebuilt-multiarch/package.json
+!node_modules/@homebridge/node-pty-prebuilt-multiarch/LICENSE
+!node_modules/@homebridge/node-pty-prebuilt-multiarch/lib/**
+!node_modules/@homebridge/node-pty-prebuilt-multiarch/build/**
+!node_modules/@homebridge/node-pty-prebuilt-multiarch/prebuilds/**
+!node_modules/@homebridge/node-pty-prebuilt-multiarch/third_party/**
+!node_modules/@homebridge/node-pty-prebuilt-multiarch/typings/**
+# Exclude unnecessary files within node-pty
+node_modules/@homebridge/node-pty-prebuilt-multiarch/**/*.test.js
+node_modules/@homebridge/node-pty-prebuilt-multiarch/**/*.test.js.map
+node_modules/@homebridge/node-pty-prebuilt-multiarch/**/*.js.map
 webpack.config.js
 .gitignore
 .yarnrc
 vsc-extension-quickstart.md
 **/.eslintrc.json
+**/.eslintrc.*.json
 **/.github/**
 **/test/**
-out/test/**
 **/.nyc_output/**
 **/coverage/**
 **/*.vsix
@@ -27,15 +39,75 @@ out/test/**
 .prettierignore
 renovate.json
 
-# Documentation (keep only essential files)
+# Compiled test output (out/ directory - tests only)
+out/**
+
+# Compiled temp output
+temp_out/**
+
+# Test results and reports
+test-results/**
+playwright-report/**
+test-*.js
+test-*.json
+test-*.html
+test-*.log
+test-*.md
+
+# Coverage and metrics
+tdd-metrics.json
+**/jscpd-report.json
+report/**
+
+# Development documentation
 docs/**
 DEBUG.md
 CLAUDE.md
 README-EN.md
-create-github-issues.sh
-test-extension.js
-test-terminal-functionality.js
+SECURITY.md
+PRIVACY.md
+AGENTS.md
+PR_BODY.md
+PHASE*.md
+*_PLAN.md
+*_REPORT.md
+*_SUMMARY.md
+*_COMPARISON.md
+REFACTORING*.md
+SCROLLBACK*.md
+PERSISTENCE*.md
+github-issue*.md
+*-improvement-proposal.md
+failure-list.txt
+coverage-analysis.js
+validate-*.js
 
-# Development directories
+# OpenSpec (development specs)
+openspec/**
+
+# Development tools and configs
+commands/**
+eslint-rules/**
 .claude/**
 .devcontainer/**
+.serena/**
+.research/**
+.version-backups/**
+.mypy_cache/**
+
+# Mocha/nyc config files
+.mocharc.json
+.mocharc.*.json
+.nycrc.json
+
+# MCP config
+.mcp.json
+
+# TypeDoc
+typedoc.json
+
+# Shell scripts
+*.sh
+
+# Build artifacts
+*.tsbuildinfo

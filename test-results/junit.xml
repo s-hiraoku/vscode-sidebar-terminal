@@ -1,0 +1,42 @@
+<testsuites id="" name="" tests="19" failures="0" skipped="0" errors="0" time="12.228228999999999">
+<testsuite name="tests/webview/standalone-webview.spec.ts" timestamp="2025-11-29T05:02:10.231Z" hostname="chromium" tests="19" failures="0" skipped="0" time="16.829" errors="0">
+<testcase name="Standalone WebView Tests › Basic Functionality › should load the WebView page successfully" classname="tests/webview/standalone-webview.spec.ts" time="0.916">
+</testcase>
+<testcase name="Standalone WebView Tests › Basic Functionality › should display initial terminal tab" classname="tests/webview/standalone-webview.spec.ts" time="0.605">
+</testcase>
+<testcase name="Standalone WebView Tests › Basic Functionality › should hide loading indicator after initialization" classname="tests/webview/standalone-webview.spec.ts" time="0.836">
+</testcase>
+<testcase name="Standalone WebView Tests › Terminal Tab Management › should create new terminal when clicking + button" classname="tests/webview/standalone-webview.spec.ts" time="0.242">
+</testcase>
+<testcase name="Standalone WebView Tests › Terminal Tab Management › should switch active terminal when clicking tab" classname="tests/webview/standalone-webview.spec.ts" time="1.279">
+</testcase>
+<testcase name="Standalone WebView Tests › Terminal Tab Management › should close terminal when clicking close button" classname="tests/webview/standalone-webview.spec.ts" time="0.66">
+</testcase>
+<testcase name="Standalone WebView Tests › Terminal Tab Management › should not exceed maximum of 5 terminals" classname="tests/webview/standalone-webview.spec.ts" time="1.041">
+</testcase>
+<testcase name="Standalone WebView Tests › Action Buttons › should have all action buttons visible" classname="tests/webview/standalone-webview.spec.ts" time="0.136">
+</testcase>
+<testcase name="Standalone WebView Tests › Action Buttons › should have proper ARIA labels on action buttons" classname="tests/webview/standalone-webview.spec.ts" time="0.947">
+</testcase>
+<testcase name="Standalone WebView Tests › AI Agent Status › should show agent status when agent is detected" classname="tests/webview/standalone-webview.spec.ts" time="0.512">
+</testcase>
+<testcase name="Standalone WebView Tests › AI Agent Status › should apply correct styling for different agents" classname="tests/webview/standalone-webview.spec.ts" time="0.372">
+</testcase>
+<testcase name="Standalone WebView Tests › AI Agent Status › should hide agent status when agent disconnects" classname="tests/webview/standalone-webview.spec.ts" time="0.227">
+</testcase>
+<testcase name="Standalone WebView Tests › Debug Panel › should toggle debug panel with Ctrl+Shift+D" classname="tests/webview/standalone-webview.spec.ts" time="1.01">
+</testcase>
+<testcase name="Standalone WebView Tests › Debug Panel › should display terminal state in debug panel" classname="tests/webview/standalone-webview.spec.ts" time="0.547">
+</testcase>
+<testcase name="Standalone WebView Tests › Accessibility › should have proper ARIA roles" classname="tests/webview/standalone-webview.spec.ts" time="0.317">
+</testcase>
+<testcase name="Standalone WebView Tests › Accessibility › should have proper aria-selected on tabs" classname="tests/webview/standalone-webview.spec.ts" time="0.465">
+</testcase>
+<testcase name="Standalone WebView Tests › Notifications › should display notification and auto-dismiss" classname="tests/webview/standalone-webview.spec.ts" time="5.352">
+</testcase>
+<testcase name="Standalone WebView Tests › Notifications › should show info notification on terminal ready" classname="tests/webview/standalone-webview.spec.ts" time="1.171">
+</testcase>
+<testcase name="Standalone WebView Tests › Keyboard Navigation › should allow tab navigation through action buttons" classname="tests/webview/standalone-webview.spec.ts" time="0.194">
+</testcase>
+</testsuite>
+</testsuites>

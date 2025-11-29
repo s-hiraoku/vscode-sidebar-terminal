@@ -60,7 +60,7 @@ describe('UIController Service', () => {
         'system-status-indicator',
         'create-terminal-button',
         'split-terminal-button',
-        'notification-container'
+        'notification-container',
       ];
 
       for (const elementId of requiredElements) {
@@ -110,7 +110,7 @@ describe('UIController Service', () => {
         enableNotifications: false,
         enableCliAgentStatus: false,
         defaultTheme: { '--background': '#000' },
-        animationDuration: 500
+        animationDuration: 500,
       };
 
       const customController = UIControllerFactory.create(customConfig);
@@ -128,7 +128,7 @@ describe('UIController Service', () => {
       const terminalInfos = [
         { id: 'terminal-1', number: 1, isActive: true },
         { id: 'terminal-2', number: 2, isActive: false },
-        { id: 'terminal-3', number: 3, isActive: false }
+        { id: 'terminal-3', number: 3, isActive: false },
       ];
 
       uiController.updateTerminalTabs(terminalInfos);
@@ -148,7 +148,7 @@ describe('UIController Service', () => {
     it('should show active terminal correctly', () => {
       const terminalInfos = [
         { id: 'terminal-1', number: 1, isActive: false },
-        { id: 'terminal-2', number: 2, isActive: true }
+        { id: 'terminal-2', number: 2, isActive: true },
       ];
 
       uiController.updateTerminalTabs(terminalInfos);
@@ -167,9 +167,7 @@ describe('UIController Service', () => {
     it('should emit events when tabs are clicked', () => {
       const eventSpy = sandbox.spy(document, 'dispatchEvent');
 
-      const terminalInfos = [
-        { id: 'terminal-1', number: 1, isActive: true }
-      ];
+      const terminalInfos = [{ id: 'terminal-1', number: 1, isActive: true }];
 
       uiController.updateTerminalTabs(terminalInfos);
 
@@ -182,9 +180,7 @@ describe('UIController Service', () => {
     it('should emit close events when close button clicked', () => {
       const eventSpy = sandbox.spy(document, 'dispatchEvent');
 
-      const terminalInfos = [
-        { id: 'terminal-1', number: 1, isActive: true }
-      ];
+      const terminalInfos = [{ id: 'terminal-1', number: 1, isActive: true }];
 
       uiController.updateTerminalTabs(terminalInfos);
 
@@ -197,7 +193,7 @@ describe('UIController Service', () => {
     it('should update active terminal indicator', () => {
       const terminalInfos = [
         { id: 'terminal-1', number: 1, isActive: false },
-        { id: 'terminal-2', number: 2, isActive: false }
+        { id: 'terminal-2', number: 2, isActive: false },
       ];
 
       uiController.updateTerminalTabs(terminalInfos);
@@ -383,9 +379,9 @@ describe('UIController Service', () => {
           cpuUsage: 25,
           renderFrames: 60,
           averageResponseTime: 10,
-          bufferSize: 1024
+          bufferSize: 1024,
         },
-        pendingOperations: ['create-terminal', 'delete-terminal']
+        pendingOperations: ['create-terminal', 'delete-terminal'],
       };
 
       uiController.updateDebugInfo(debugInfo);
@@ -412,9 +408,9 @@ describe('UIController Service', () => {
           cpuUsage: 15,
           renderFrames: 60,
           averageResponseTime: 8,
-          bufferSize: 512
+          bufferSize: 512,
         },
-        pendingOperations: []
+        pendingOperations: [],
       };
 
       uiController.updateDebugInfo(debugInfo);
@@ -432,12 +428,12 @@ describe('UIController Service', () => {
       (createElementSpy.withArgs('a') as any).returns({
         href: '',
         download: '',
-        click: clickSpy
+        click: clickSpy,
       } as any);
 
       global.URL = {
         createObjectURL: sandbox.stub().returns('blob:url'),
-        revokeObjectURL: sandbox.stub()
+        revokeObjectURL: sandbox.stub(),
       } as any;
 
       global.Blob = sandbox.stub().returns({}) as any;
@@ -450,7 +446,7 @@ describe('UIController Service', () => {
     it('should not show debug panel when disabled', async () => {
       const disabledController = new UIController({
         ...mockConfig,
-        enableDebugPanel: false
+        enableDebugPanel: false,
       });
 
       await disabledController.initialize();
@@ -473,7 +469,7 @@ describe('UIController Service', () => {
       uiController.showNotification({
         type: 'info',
         message: 'Test notification',
-        duration: 5000
+        duration: 5000,
       });
 
       const notification = document.querySelector('.notification');
@@ -489,7 +485,7 @@ describe('UIController Service', () => {
         uiController.showNotification({
           type,
           message: `${type} message`,
-          duration: 1000
+          duration: 1000,
         });
 
         const notification = document.querySelector(`.notification-${type}`);
@@ -502,7 +498,7 @@ describe('UIController Service', () => {
       uiController.showNotification({
         type: 'info',
         message: 'Auto-remove test',
-        duration: 50
+        duration: 50,
       });
 
       expect(document.querySelector('.notification')).to.exist;
@@ -521,8 +517,8 @@ describe('UIController Service', () => {
         message: 'Test with actions',
         actions: [
           { label: 'Action 1', action: actionSpy },
-          { label: 'Action 2', action: () => {} }
-        ]
+          { label: 'Action 2', action: () => {} },
+        ],
       });
 
       const actions = document.querySelectorAll('.notification-action');
@@ -536,7 +532,7 @@ describe('UIController Service', () => {
     it('should close notification when close button clicked', () => {
       uiController.showNotification({
         type: 'info',
-        message: 'Closeable notification'
+        message: 'Closeable notification',
       });
 
       const closeButton = document.querySelector('.notification-close') as HTMLElement;
@@ -549,12 +545,12 @@ describe('UIController Service', () => {
     it('should clear all notifications', () => {
       uiController.showNotification({
         type: 'info',
-        message: 'Notification 1'
+        message: 'Notification 1',
       });
 
       uiController.showNotification({
         type: 'warning',
-        message: 'Notification 2'
+        message: 'Notification 2',
       });
 
       expect(document.querySelectorAll('.notification').length).to.equal(2);
@@ -566,12 +562,12 @@ describe('UIController Service', () => {
     it('should not show notifications when disabled', () => {
       const disabledController = new UIController({
         ...mockConfig,
-        enableNotifications: false
+        enableNotifications: false,
       });
 
       disabledController.showNotification({
         type: 'info',
-        message: 'Should not show'
+        message: 'Should not show',
       });
 
       expect(document.querySelector('.notification')).to.not.exist;
@@ -599,7 +595,7 @@ describe('UIController Service', () => {
       const theme = {
         '--terminal-background': '#000000',
         '--terminal-foreground': '#ffffff',
-        '--custom-property': '#ff0000'
+        '--custom-property': '#ff0000',
       };
 
       uiController.updateTheme(theme);
@@ -725,7 +721,7 @@ describe('UIController Service', () => {
 
       uiController.showNotification({
         type: 'info',
-        message: 'Test notification'
+        message: 'Test notification',
       });
 
       uiController.showLoadingState('Loading...');
@@ -754,15 +750,13 @@ describe('UIController Service', () => {
       document.getElementById('terminal-tabs-container')?.remove();
 
       // Should not throw
-      uiController.updateTerminalTabs([
-        { id: 'terminal-1', number: 1, isActive: true }
-      ]);
+      uiController.updateTerminalTabs([{ id: 'terminal-1', number: 1, isActive: true }]);
     });
 
     it('should handle invalid configuration gracefully', () => {
       const invalidConfig = {
         enableDebugPanel: 'invalid',
-        animationDuration: 'not-a-number'
+        animationDuration: 'not-a-number',
       } as any;
 
       const controller = new UIController(invalidConfig);

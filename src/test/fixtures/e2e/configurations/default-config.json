@@ -1,0 +1,14 @@
+{
+  "secondaryTerminal.fontSize": 14,
+  "secondaryTerminal.fontFamily": "Menlo, Monaco, 'Courier New', monospace",
+  "secondaryTerminal.maxTerminals": 5,
+  "secondaryTerminal.shell.linux": "/bin/bash",
+  "secondaryTerminal.shell.osx": "/bin/zsh",
+  "secondaryTerminal.shell.windows": "powershell.exe",
+  "secondaryTerminal.cursorStyle": "block",
+  "secondaryTerminal.cursorBlink": true,
+  "secondaryTerminal.scrollback": 2000,
+  "secondaryTerminal.enablePersistentSessions": true,
+  "secondaryTerminal.enableAIAgentDetection": true,
+  "secondaryTerminal.theme": "auto"
+}

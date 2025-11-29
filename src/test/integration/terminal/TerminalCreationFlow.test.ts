@@ -21,7 +21,7 @@ import {
   getTerminalConfig,
   getShellForPlatform,
   generateTerminalId,
-  normalizeTerminalInfo
+  normalizeTerminalInfo,
 } from '../../../utils/common';
 
 describe('Terminal Creation Flow - Integration TDD Suite', () => {
@@ -38,9 +38,7 @@ describe('Terminal Creation Flow - Integration TDD Suite', () => {
   });
 
   describe('End-to-End Terminal Creation', () => {
-
     describe('RED Phase - Complete Creation Workflow', () => {
-
       it('should successfully create terminal from configuration to instance', async () => {
         // RED: Complete terminal creation should work end-to-end
 
@@ -63,7 +61,7 @@ describe('Terminal Creation Flow - Integration TDD Suite', () => {
         const terminalInfo = normalizeTerminalInfo({
           id: terminalId,
           name: `Terminal ${Date.now()}`,
-          isActive: true
+          isActive: true,
         });
 
         expect(terminalInfo.id).to.equal(terminalId);
@@ -92,13 +90,13 @@ describe('Terminal Creation Flow - Integration TDD Suite', () => {
               enableGitHubCopilotIntegration: false,
               enablePersistentSessions: false,
               persistentSessionScrollback: 500,
-              persistentSessionReviveProcess: false
+              persistentSessionReviveProcess: false,
             };
             return key in customConfig ? customConfig[key] : defaultValue;
           }),
           has: sinon.stub().returns(true),
           inspect: sinon.stub().returns({ defaultValue: undefined }),
-          update: sinon.stub().resolves()
+          update: sinon.stub().resolves(),
         });
 
         const config = getTerminalConfig();
@@ -143,13 +141,10 @@ describe('Terminal Creation Flow - Integration TDD Suite', () => {
           expect(config.defaultDirectory.length).to.be.greaterThan(0);
         }
       });
-
     });
-
   });
 
   describe('Cross-Platform Terminal Creation', () => {
-
     let originalPlatform: NodeJS.Platform;
     let originalEnv: NodeJS.ProcessEnv;
 
@@ -164,7 +159,6 @@ describe('Terminal Creation Flow - Integration TDD Suite', () => {
     });
 
     describe('RED Phase - Platform-Specific Creation', () => {
-
       it('should create Windows terminal with correct shell configuration', () => {
         // RED: Windows terminal creation should use proper shell
         Object.defineProperty(process, 'platform', { value: 'win32' });
@@ -215,20 +209,18 @@ describe('Terminal Creation Flow - Integration TDD Suite', () => {
         expect(shell).to.equal('/bin/bash');
         expect(config).to.be.an('object');
       });
-
     });
-
   });
 
   describe('Terminal Creation Error Handling', () => {
-
     describe('RED Phase - Error Recovery and Reporting', () => {
-
       it('should handle configuration service failures gracefully', () => {
         // RED: Configuration failures should not crash terminal creation
 
         // Mock configuration service failure
-        mockVscode.workspace.getConfiguration.throws(new Error('Configuration service unavailable'));
+        mockVscode.workspace.getConfiguration.throws(
+          new Error('Configuration service unavailable')
+        );
 
         // Creation should still work with fallback behavior
         expect(() => getTerminalConfig()).to.not.throw();
@@ -274,15 +266,11 @@ describe('Terminal Creation Flow - Integration TDD Suite', () => {
           Math.random = originalMathRandom;
         }
       });
-
     });
-
   });
 
   describe('Performance and Resource Management', () => {
-
     describe('RED Phase - Performance Characteristics', () => {
-
       it('should create terminals within acceptable time limits', async () => {
         // RED: Terminal creation should be fast
 
@@ -298,13 +286,13 @@ describe('Terminal Creation Flow - Integration TDD Suite', () => {
             const info = normalizeTerminalInfo({
               id,
               name: `Performance Test ${i}`,
-              isActive: i === 0
+              isActive: i === 0,
             });
             return { config, shell, id, info };
           });
         }
 
-        const results = operations.map(op => op());
+        const results = operations.map((op) => op());
         const endTime = Date.now();
 
         expect(results.length).to.equal(10);
@@ -334,8 +322,8 @@ describe('Terminal Creation Flow - Integration TDD Suite', () => {
             info: normalizeTerminalInfo({
               id: `test-${i}`,
               name: `Bulk Test ${i}`,
-              isActive: false
-            })
+              isActive: false,
+            }),
           });
         }
 
@@ -346,15 +334,11 @@ describe('Terminal Creation Flow - Integration TDD Suite', () => {
         // Memory increase should be reasonable (less than 10MB for 1000 configs)
         expect(memoryIncrease).to.be.lessThan(10 * 1024 * 1024);
       });
-
     });
-
   });
 
   describe('Integration with VS Code APIs', () => {
-
     describe('RED Phase - VS Code Integration', () => {
-
       it('should integrate properly with VS Code workspace API', () => {
         // RED: VS Code workspace integration should work
 
@@ -385,15 +369,11 @@ describe('Terminal Creation Flow - Integration TDD Suite', () => {
           (global as any).vscode = originalVscode;
         }
       });
-
     });
-
   });
 
   describe('Concurrent Terminal Creation', () => {
-
     describe('RED Phase - Concurrency Handling', () => {
-
       it('should handle simultaneous terminal creation requests', async () => {
         // RED: Concurrent creation should work without conflicts
 
@@ -401,19 +381,21 @@ describe('Terminal Creation Flow - Integration TDD Suite', () => {
         const promises = [];
 
         for (let i = 0; i < concurrentCreations; i++) {
-          promises.push(new Promise<any>((resolve) => {
-            setTimeout(() => {
-              const config = getTerminalConfig();
-              const shell = getShellForPlatform();
-              const id = generateTerminalId();
-              const info = normalizeTerminalInfo({
-                id,
-                name: `Concurrent ${i}`,
-                isActive: i === 0
-              });
-              resolve({ config, shell, id, info, index: i });
-            }, Math.random() * 10); // Random timing
-          }));
+          promises.push(
+            new Promise<any>((resolve) => {
+              setTimeout(() => {
+                const config = getTerminalConfig();
+                const shell = getShellForPlatform();
+                const id = generateTerminalId();
+                const info = normalizeTerminalInfo({
+                  id,
+                  name: `Concurrent ${i}`,
+                  isActive: i === 0,
+                });
+                resolve({ config, shell, id, info, index: i });
+              }, Math.random() * 10); // Random timing
+            })
+          );
         }
 
         const results = await Promise.all(promises);
@@ -421,11 +403,11 @@ describe('Terminal Creation Flow - Integration TDD Suite', () => {
         expect(results.length).to.equal(concurrentCreations);
 
         // All IDs should be unique
-        const ids = new Set(results.map(r => r.id));
+        const ids = new Set(results.map((r) => r.id));
         expect(ids.size).to.equal(concurrentCreations);
 
         // All results should be valid
-        results.forEach(result => {
+        results.forEach((result) => {
           expect(result.config).to.be.an('object');
           expect(result.shell).to.be.a('string');
           expect(result.id).to.be.a('string');
@@ -440,29 +422,27 @@ describe('Terminal Creation Flow - Integration TDD Suite', () => {
         const promises = [];
 
         for (let i = 0; i < concurrentAccess; i++) {
-          promises.push(new Promise<any>((resolve) => {
-            const config = getTerminalConfig();
-            resolve(config);
-          }));
+          promises.push(
+            new Promise<any>((resolve) => {
+              const config = getTerminalConfig();
+              resolve(config);
+            })
+          );
         }
 
         const configs = await Promise.all(promises);
 
         // All configurations should be identical
         const firstConfig = configs[0];
-        configs.forEach(config => {
+        configs.forEach((config) => {
           expect(config).to.deep.equal(firstConfig);
         });
       });
-
     });
-
   });
 
   describe('Terminal Creation State Management', () => {
-
     describe('RED Phase - State Consistency', () => {
-
       it('should maintain consistent terminal information normalization', () => {
         // RED: Terminal info normalization should be consistent
 
@@ -470,10 +450,10 @@ describe('Terminal Creation Flow - Integration TDD Suite', () => {
           { id: 'term-1', name: 'Test Terminal 1', isActive: true },
           { id: 'term-2', name: 'Test Terminal 2', isActive: false },
           { id: 'term-3', name: '', isActive: true },
-          { id: '', name: 'Empty ID Test', isActive: false }
+          { id: '', name: 'Empty ID Test', isActive: false },
         ];
 
-        testCases.forEach(testCase => {
+        testCases.forEach((testCase) => {
           const normalized = normalizeTerminalInfo(testCase);
 
           expect(normalized.id).to.equal(testCase.id);
@@ -495,7 +475,7 @@ describe('Terminal Creation Flow - Integration TDD Suite', () => {
           'Very long terminal name that exceeds normal length expectations for testing purposes',
           '終端機', // Unicode characters
           '', // Empty name
-          '   Whitespace Terminal   ' // Leading/trailing whitespace
+          '   Whitespace Terminal   ', // Leading/trailing whitespace
         ];
 
         namePatterns.forEach((name, index) => {
@@ -503,7 +483,7 @@ describe('Terminal Creation Flow - Integration TDD Suite', () => {
           const info = normalizeTerminalInfo({
             id,
             name,
-            isActive: index === 0
+            isActive: index === 0,
           });
 
           expect(info.id).to.equal(id);
@@ -511,15 +491,11 @@ describe('Terminal Creation Flow - Integration TDD Suite', () => {
           expect(info.isActive).to.equal(index === 0);
         });
       });
-
     });
-
   });
 
   describe('Error Recovery and Resilience', () => {
-
     describe('RED Phase - System Resilience', () => {
-
       it('should recover from transient configuration failures', () => {
         // RED: Should handle temporary configuration failures
 
@@ -538,13 +514,13 @@ describe('Terminal Creation Flow - Integration TDD Suite', () => {
               const defaults: { [key: string]: unknown } = {
                 shell: '/bin/bash',
                 fontSize: 14,
-                maxTerminals: 5
+                maxTerminals: 5,
               };
               return key in defaults ? defaults[key] : defaultValue;
             }),
             has: sinon.stub().returns(true),
             inspect: sinon.stub().returns({ defaultValue: undefined }),
-            update: sinon.stub().resolves()
+            update: sinon.stub().resolves(),
           };
         });
 
@@ -558,9 +534,6 @@ describe('Terminal Creation Flow - Integration TDD Suite', () => {
         expect(config).to.be.an('object');
         expect(config.shell).to.equal('/bin/bash');
       });
-
     });
-
   });
-
 });

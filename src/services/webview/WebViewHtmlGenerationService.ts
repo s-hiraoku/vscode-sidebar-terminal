@@ -246,236 +246,107 @@ export class WebViewHtmlGenerationService {
         }
 
         html, body {
+            width: 100% !important;
             height: 100% !important;
+            max-width: none !important; /* 🔧 CRITICAL FIX: No width limit */
             margin: 0 !important;
             padding: 0 !important;
         }
 
         body {
+            width: 100% !important;
+            max-width: none !important; /* 🔧 CRITICAL FIX: No width limit */
             margin: 0;
             padding: 0;
             overflow: hidden;
             background-color: var(--vscode-editor-background, #1e1e1e);
             color: var(--vscode-foreground, #cccccc);
             font-family: var(--vscode-font-family, monospace);
-            height: 100vh;
+            height: 100%;
             display: flex;
             flex-direction: column;
             gap: 0;
+        }
+
+        /* Screen reader only content */
+        .sr-only {
+            position: absolute;
+            left: -10000px;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+        }
+
+        /* Focus visible styles for keyboard navigation */
+        *:focus-visible {
+            outline: 2px solid var(--vscode-focusBorder, #007acc);
+            outline-offset: 2px;
+        }
+
+        /* Skip to main content link */
+        .skip-link {
+            position: absolute;
+            top: -40px;
+            left: 0;
+            background: var(--vscode-button-background, #0e639c);
+            color: var(--vscode-button-foreground, #fff);
+            padding: 8px;
+            text-decoration: none;
+            z-index: 10000;
+        }
+
+        .skip-link:focus {
+            top: 0;
         }
     `;
   }
 
   /**
    * Generate terminal-specific CSS styles
+   *
+   * 🎯 SIMPLE DESIGN: Minimal base styles only.
+   * All terminal container styles are in display-modes.css
    */
   private _getTerminalStyles(): string {
     return `
-        /* Terminal containers */
-        #terminal {
-            flex: 1;
-            width: 100%;
-            background: #000;
-            position: relative;
-            overflow: hidden;
-            margin: 0;
-            padding: 0;
-        }
-
+        /* Terminal background color */
         #terminal-body {
-            flex: 1;
-            width: 100%;
-            height: 100%;
-            background: #000;
-            position: relative;
-            overflow: hidden;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
+            background: var(--vscode-terminal-background, #000);
         }
 
-        .secondary-terminal {
-            width: 100%;
-            height: 100%;
-            position: relative;
+        /* Terminal scrollbar styling */
+        .xterm-viewport::-webkit-scrollbar {
+            width: 10px;
         }
 
-        /* Terminal active border styles */
-        .terminal-container {
-            position: relative;
-            width: 100%;
-            height: 100%;
-            border: 1px solid transparent !important;
-            transition: border-color 0.2s ease-in-out;
+        .xterm-viewport::-webkit-scrollbar-track {
+            background: transparent;
         }
 
-        .terminal-container.active {
-            border-color: var(--vscode-focusBorder, #007acc) !important;
-            border-width: 1px !important;
-            border-style: solid !important;
+        .xterm-viewport::-webkit-scrollbar-thumb {
+            background: var(--vscode-scrollbarSlider-background, rgba(121, 121, 121, 0.4));
+            border-radius: 5px;
         }
 
-        .terminal-container.inactive {
-            border-color: var(--vscode-widget-border, #454545) !important;
-            opacity: 0.9;
+        .xterm-viewport::-webkit-scrollbar-thumb:hover {
+            background: var(--vscode-scrollbarSlider-hoverBackground, rgba(100, 100, 100, 0.7));
         }
 
-        /* Terminal body active border */
-        #terminal-body.terminal-container.active {
-            border-color: var(--vscode-focusBorder, #007acc) !important;
-        }
-
-        /* Individual terminal containers */
-        div[data-terminal-container].terminal-container.active {
-            border-color: var(--vscode-focusBorder, #007acc) !important;
-        }
-
-        /* XTerm.js container fixes */
-        .xterm {
-            margin: 0 !important;
-            padding: 0 !important;
-            height: 100% !important;
-        }
-
-        .xterm-viewport {
-            margin: 0 !important;
-            padding: 0 !important;
-            height: 100% !important;
-        }
-
-        .xterm-screen {
-            margin: 0 !important;
-            padding: 0 !important;
-            height: 100% !important;
-        }
-
-        /* Terminal container fixes */
-        [data-terminal-container] {
-            margin: 0 !important;
-            padding: 2px !important;
-            height: 100% !important;
-            flex: 1 !important;
+        .xterm-viewport::-webkit-scrollbar-thumb:active {
+            background: var(--vscode-scrollbarSlider-activeBackground, rgba(191, 191, 191, 0.4));
         }
     `;
   }
 
   /**
    * Generate split layout CSS styles
+   *
+   * 🎯 SIMPLE DESIGN: All split styles are in display-modes.css
    */
   private _getSplitStyles(): string {
-    return `
-        /* Split layout container */
-        .terminal-layout {
-            width: 100%;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            position: relative;
-        }
-
-        /* Split panes container */
-        .split-container {
-            flex: 1;
-            display: flex;
-            position: relative;
-        }
-
-        .split-container.horizontal {
-            flex-direction: row;
-        }
-
-        .split-container.vertical {
-            flex-direction: column;
-        }
-
-        /* Terminal panes */
-        .terminal-pane {
-            position: relative;
-            background: #000;
-            min-width: 200px;
-            min-height: 100px;
-            display: flex;
-            flex-direction: column;
-            border: 1px solid transparent;
-            transition: border-color 0.2s ease-in-out;
-        }
-
-        .terminal-pane.single {
-            flex: 1;
-        }
-
-        .terminal-pane.split {
-            flex: 1;
-        }
-
-        .terminal-pane.active {
-            border-color: var(--vscode-focusBorder, #007acc);
-        }
-
-        .terminal-pane.inactive {
-            border-color: var(--vscode-widget-border, #454545);
-            opacity: 0.8;
-        }
-
-        /* Resize splitter */
-        .splitter {
-            background: var(--vscode-widget-border, #454545);
-            position: relative;
-            z-index: 10;
-        }
-
-        .splitter.horizontal {
-            width: 4px;
-            cursor: col-resize;
-            min-width: 4px;
-        }
-
-        .splitter.vertical {
-            height: 4px;
-            cursor: row-resize;
-            min-height: 4px;
-        }
-
-        .splitter:hover {
-            background: var(--vscode-focusBorder, #007acc);
-        }
-
-        .splitter.dragging {
-            background: var(--vscode-focusBorder, #007acc);
-        }
-
-        /* Split controls */
-        .split-controls {
-            position: absolute;
-            top: 5px;
-            right: 5px;
-            z-index: 1000;
-            display: flex;
-            gap: 4px;
-        }
-
-        .split-btn {
-            background: rgba(0, 0, 0, 0.7);
-            color: var(--vscode-foreground, #cccccc);
-            border: 1px solid var(--vscode-widget-border, #454545);
-            border-radius: 3px;
-            padding: 4px 8px;
-            font-size: 11px;
-            cursor: pointer;
-            user-select: none;
-        }
-
-        .split-btn:hover {
-            background: rgba(0, 0, 0, 0.9);
-            border-color: var(--vscode-focusBorder, #007acc);
-        }
-
-        .split-btn.active {
-            background: var(--vscode-button-background, #0e639c);
-            border-color: var(--vscode-button-background, #0e639c);
-        }
-    `;
+    return `/* Split styles defined in display-modes.css */`;
   }
 
   /**
@@ -637,32 +508,25 @@ export class WebViewHtmlGenerationService {
    */
   private _generateBodyContent(): string {
     return `
-        <div id="terminal-body">
-            <!-- Simple terminal container -->
+        <div id="terminal-body" role="main" aria-label="Terminal workspace">
+            <!-- Screen reader announcements -->
+            <div role="status" aria-live="polite" aria-atomic="true" class="sr-only" id="sr-status"></div>
+            <div role="alert" aria-live="assertive" aria-atomic="true" class="sr-only" id="sr-alert"></div>
+            <!-- Terminal containers will be added here by JavaScript -->
         </div>
     `;
   }
 
   /**
    * Generate inline scripts for VS Code API initialization
+   *
+   * 🎯 NOTE: acquireVsCodeApi() is called in main.ts (webview.js) at top level
+   * This inline script only monitors script loading - no API acquisition needed here
    */
   private _generateInlineScripts(nonce: string): string {
     return `
         <script nonce="${nonce}">
-            // Acquire VS Code API once and store it globally for webview.js to use
-            try {
-                if (typeof window.acquireVsCodeApi === 'function') {
-                    const vscode = window.acquireVsCodeApi();
-                    window.vscodeApi = vscode;
-                    console.log('✅ VS Code API acquired successfully');
-                } else {
-                    console.error('❌ acquireVsCodeApi not available');
-                }
-            } catch (error) {
-                console.error('❌ Error acquiring VS Code API:', error);
-            }
-
-            // Add script loading event handlers
+            // Script loading monitoring
             document.addEventListener('DOMContentLoaded', function() {
                 const script = document.getElementById('webview-main-script');
                 if (script) {
@@ -684,23 +548,6 @@ export class WebViewHtmlGenerationService {
   private _generateScriptTags(nonce: string, scriptUri: vscode.Uri): string {
     return `
         <script nonce="${nonce}" src="${scriptUri.toString()}" id="webview-main-script"></script>
-    `;
-  }
-
-  /**
-   * Generate loading page styles
-   */
-  private _generateLoadingStyles(): string {
-    return `
-        .loading {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            color: var(--vscode-foreground, #cccccc);
-            font-family: var(--vscode-font-family, monospace);
-            background: var(--vscode-editor-background, #1e1e1e);
-        }
     `;
   }
 

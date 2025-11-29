@@ -5,7 +5,10 @@
 import { describe, it, beforeEach, afterEach } from 'mocha';
 import { expect } from 'chai';
 import * as sinon from 'sinon';
-import { TerminalCoordinator, TerminalCoordinatorFactory } from '../../../webview/services/TerminalCoordinator';
+import {
+  TerminalCoordinator,
+  TerminalCoordinatorFactory,
+} from '../../../webview/services/TerminalCoordinator';
 import { TerminalCoordinatorConfig } from '../../../webview/services/ITerminalCoordinator';
 
 describe('TerminalCoordinator Service', () => {
@@ -43,8 +46,8 @@ describe('TerminalCoordinator Service', () => {
         top: 0,
         left: 0,
         bottom: 600,
-        right: 800
-      })
+        right: 800,
+      }),
     };
 
     global.document = {
@@ -56,12 +59,12 @@ describe('TerminalCoordinator Service', () => {
       head: mockElement,
       addEventListener: sandbox.stub(),
       removeEventListener: sandbox.stub(),
-      createTextNode: sandbox.stub().returns({ textContent: '' })
+      createTextNode: sandbox.stub().returns({ textContent: '' }),
     } as unknown as Document;
 
     global.window = {
       setTimeout: global.setTimeout,
-      clearTimeout: global.clearTimeout
+      clearTimeout: global.clearTimeout,
     } as any;
 
     mockConfig = {
@@ -70,7 +73,7 @@ describe('TerminalCoordinator Service', () => {
       workingDirectory: '/test',
       enablePerformanceOptimization: true,
       bufferSize: 1000,
-      debugMode: true
+      debugMode: true,
     };
 
     coordinator = new TerminalCoordinator(mockConfig);
@@ -107,7 +110,7 @@ describe('TerminalCoordinator Service', () => {
         workingDirectory: '/custom',
         enablePerformanceOptimization: false,
         bufferSize: 2000,
-        debugMode: false
+        debugMode: false,
       });
 
       expect(customCoordinator.getAvailableSlots()).to.equal(10);
@@ -136,7 +139,7 @@ describe('TerminalCoordinator Service', () => {
         initialCommand: 'ls -la',
         workingDirectory: '/custom/path',
         profile: 'development',
-        environmentVariables: { NODE_ENV: 'test' }
+        environmentVariables: { NODE_ENV: 'test' },
       };
 
       const terminalId = await coordinator.createTerminal(options);

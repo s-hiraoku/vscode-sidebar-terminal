@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { terminal as log } from '../../utils/logger';
 import { TerminalEvent } from '../../types/shared';
+import { PERFORMANCE_CONSTANTS } from '../../constants/SystemConstants';
 
 /**
  * Interface for terminal data buffer configuration
@@ -34,9 +35,10 @@ export class TerminalDataBufferService {
 
   constructor(config: BufferConfig = {}) {
     this._config = {
-      flushInterval: config.flushInterval ?? 16, // ~60fps default
-      maxBufferSize: config.maxBufferSize ?? 50,
-      cliAgentFlushInterval: config.cliAgentFlushInterval ?? 4, // ~250fps for CLI agents
+      flushInterval: config.flushInterval ?? PERFORMANCE_CONSTANTS.OUTPUT_BUFFER_FLUSH_INTERVAL_MS, // ~60fps default
+      maxBufferSize: config.maxBufferSize ?? PERFORMANCE_CONSTANTS.MAX_BUFFER_CHUNK_COUNT,
+      cliAgentFlushInterval:
+        config.cliAgentFlushInterval ?? PERFORMANCE_CONSTANTS.CLI_AGENT_FAST_FLUSH_INTERVAL_MS, // ~250fps for CLI agents
     };
 
     log('🚰 [DataBuffer] Service initialized with config:', this._config);
@@ -60,7 +62,10 @@ export class TerminalDataBufferService {
       );
 
       // Immediate flush for large data chunks or full buffers
-      if (data.length >= 1000 || buffer.length >= this._config.maxBufferSize) {
+      if (
+        data.length >= PERFORMANCE_CONSTANTS.IMMEDIATE_FLUSH_THRESHOLD_BYTES ||
+        buffer.length >= this._config.maxBufferSize
+      ) {
         this.flushBuffer(terminalId);
         return;
       }

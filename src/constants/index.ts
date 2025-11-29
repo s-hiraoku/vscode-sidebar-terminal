@@ -1,29 +1,33 @@
 /**
- * アプリケーション定数
+ * Application Constants
+ * Using shared constants to eliminate duplication
  */
 
+import {
+  SHARED_TERMINAL_COMMANDS,
+  SHARED_DELAYS,
+  SHARED_DEFAULTS,
+  PLATFORMS,
+} from '../shared/constants';
+
 export const TERMINAL_CONSTANTS = {
-  // デフォルト値
-  DEFAULT_MAX_TERMINALS: 5,
-  DEFAULT_COLS: 80,
-  DEFAULT_ROWS: 30,
+  // Import shared defaults
+  DEFAULT_MAX_TERMINALS: SHARED_DEFAULTS.MAX_TERMINALS,
+  DEFAULT_COLS: SHARED_DEFAULTS.DEFAULT_COLS,
+  DEFAULT_ROWS: SHARED_DEFAULTS.DEFAULT_ROWS,
+  TERMINAL_NAME_PREFIX: SHARED_DEFAULTS.TERMINAL_NAME_PREFIX,
+  SCROLLBACK_LINES: SHARED_DEFAULTS.SCROLLBACK_LINES,
 
-  // ターミナル設定
-  TERMINAL_NAME_PREFIX: 'Terminal',
-  SCROLLBACK_LINES: 10000,
+  // Import shared timing
+  TERMINAL_REMOVE_DELAY: SHARED_DELAYS.TERMINAL_REMOVE_DELAY,
 
-  // タイミング
-  TERMINAL_REMOVE_DELAY: 2000,
+  // Extension-specific
   NONCE_LENGTH: 32,
 
-  // プラットフォーム固有
-  PLATFORMS: {
-    WINDOWS: 'win32',
-    DARWIN: 'darwin',
-    LINUX: 'linux',
-  } as const,
+  // Import shared platforms
+  PLATFORMS,
 
-  // 設定キー
+  // Extension-specific config keys
   CONFIG_KEYS: {
     SIDEBAR_TERMINAL: 'secondaryTerminal',
     TERMINAL_INTEGRATED: 'terminal.integrated',
@@ -35,7 +39,7 @@ export const TERMINAL_CONSTANTS = {
     SHELL_LINUX: 'shell.linux',
   } as const,
 
-  // イベント名
+  // Extension-specific events
   EVENTS: {
     DATA: 'data',
     EXIT: 'exit',
@@ -44,24 +48,16 @@ export const TERMINAL_CONSTANTS = {
     TERMINAL_REMOVED: 'terminalRemoved',
   } as const,
 
-  // メッセージコマンド
-  COMMANDS: {
-    READY: 'ready',
-    INIT: 'init',
-    INPUT: 'input',
-    OUTPUT: 'output',
-    RESIZE: 'resize',
-    EXIT: 'exit',
-    SPLIT: 'split',
-    CREATE_TERMINAL: 'createTerminal',
-    FOCUS_TERMINAL: 'focusTerminal',
-    TERMINAL_CREATED: 'terminalCreated',
-    TERMINAL_REMOVED: 'terminalRemoved',
-  } as const,
+  // Import shared commands
+  COMMANDS: SHARED_TERMINAL_COMMANDS,
 } as const;
 
+/**
+ * WebView constants
+ * Theme definitions moved to src/webview/types/theme.types.ts
+ */
 export const WEBVIEW_CONSTANTS = {
-  // CSS変数
+  // CSS variables
   CSS_VARS: {
     TAB_INACTIVE_BACKGROUND: 'var(--vscode-tab-inactiveBackground)',
     TAB_ACTIVE_BACKGROUND: 'var(--vscode-tab-activeBackground)',
@@ -69,53 +65,6 @@ export const WEBVIEW_CONSTANTS = {
     TAB_ACTIVE_FOREGROUND: 'var(--vscode-tab-activeForeground)',
     TAB_BORDER: 'var(--vscode-tab-border)',
     EDITOR_BACKGROUND: 'var(--vscode-editor-background)',
-  } as const,
-
-  // デフォルトテーマ
-  DARK_THEME: {
-    background: '#1e1e1e',
-    foreground: '#cccccc',
-    cursor: '#ffffff',
-    cursorAccent: '#000000',
-    black: '#000000',
-    red: '#cd3131',
-    green: '#0dbc79',
-    yellow: '#e5e510',
-    blue: '#2472c8',
-    magenta: '#bc3fbc',
-    cyan: '#11a8cd',
-    white: '#e5e5e5',
-    brightBlack: '#666666',
-    brightRed: '#f14c4c',
-    brightGreen: '#23d18b',
-    brightYellow: '#f5f543',
-    brightBlue: '#3b8eea',
-    brightMagenta: '#d670d6',
-    brightCyan: '#29b8db',
-    brightWhite: '#ffffff',
-  } as const,
-
-  LIGHT_THEME: {
-    background: '#ffffff',
-    foreground: '#333333',
-    cursor: '#000000',
-    cursorAccent: '#ffffff',
-    black: '#000000',
-    red: '#cd3131',
-    green: '#00bc00',
-    yellow: '#949800',
-    blue: '#0451a5',
-    magenta: '#bc05bc',
-    cyan: '#0598bc',
-    white: '#555555',
-    brightBlack: '#666666',
-    brightRed: '#cd3131',
-    brightGreen: '#14ce14',
-    brightYellow: '#b5ba00',
-    brightBlue: '#0451a5',
-    brightMagenta: '#bc05bc',
-    brightCyan: '#0598bc',
-    brightWhite: '#a5a5a5',
   } as const,
 } as const;
 
@@ -144,3 +93,57 @@ export const VSCODE_COMMANDS = {
   WORKBENCH_OPEN_SETTINGS: 'workbench.action.openSettings',
   WORKBENCH_RELOAD_WINDOW: 'workbench.action.reloadWindow',
 } as const;
+
+/**
+ * ドメイン別定数ファイルからの詳細な定数グループをエクスポート
+ * @see https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/226
+ *
+ * リファクタリング: SystemConstants.ts を以下のドメイン別ファイルに分割
+ * - PerformanceConstants.ts: パフォーマンス関連
+ * - TerminalConstants.ts: ターミナル関連
+ * - UIConstants.ts: UI/UX 関連
+ * - CommunicationConstants.ts: 通信・メッセージング関連
+ * - ErrorConstants.ts: エラーハンドリング関連
+ * - TimingConstants.ts: タイミング関連
+ * - ConfigCacheConstants.ts: 設定キャッシュ関連
+ * - EnumConstants.ts: 列挙型定義
+ */
+
+// パフォーマンス関連定数
+export { PERFORMANCE_CONSTANTS, type PerformanceConstantsType } from './PerformanceConstants';
+
+// タイミング関連定数
+export { TIMING_CONSTANTS, type TimingConstantsType } from './TimingConstants';
+
+// UI/UX関連定数
+export { UI_CONSTANTS, type UIConstantsType } from './UIConstants';
+
+// 通信・メッセージング関連定数
+export { COMMUNICATION_CONSTANTS, type CommunicationConstantsType } from './CommunicationConstants';
+
+// エラーハンドリング関連定数
+export { ERROR_CONSTANTS, type ErrorConstantsType } from './ErrorConstants';
+
+// 設定キャッシュ関連定数
+export { CONFIG_CACHE_CONSTANTS, type ConfigCacheConstantsType } from './ConfigCacheConstants';
+
+// システムターミナル定数（詳細版）
+export { TERMINAL_CONSTANTS as SYSTEM_TERMINAL_CONSTANTS, type TerminalConstantsType } from './TerminalConstants';
+
+// 列挙型
+export {
+  SystemStatus,
+  TerminalAction,
+  MessageSeverity,
+  NotificationType,
+  CliAgentStatus,
+  TerminalState,
+  SessionOperation,
+  PerformanceMetric,
+  ResourceType,
+  ConfigurationCategory,
+} from './EnumConstants';
+
+// 後方互換性のため SystemConstants.ts からもエクスポート
+// 新しいコードでは上記のドメイン別インポートを推奨
+export * from './SystemConstants';

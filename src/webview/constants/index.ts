@@ -1,86 +1,24 @@
+/**
+ * WebView terminal constants
+ * Using shared constants from src/shared/constants.ts
+ */
+import { SHARED_TERMINAL_COMMANDS, SHARED_DELAYS, SHARED_SIZES } from '../../shared/constants';
+
 export const TERMINAL_CONSTANTS = {
-  COMMANDS: {
-    READY: 'ready',
-    INIT: 'init',
-    INPUT: 'input',
-    OUTPUT: 'output',
-    RESIZE: 'resize',
-    CLEAR: 'clear',
-    EXIT: 'exit',
-    SPLIT: 'split',
-    TERMINAL_CREATED: 'terminalCreated',
-    TERMINAL_REMOVED: 'terminalRemoved',
-    FOCUS_TERMINAL: 'focusTerminal',
-    GET_SETTINGS: 'getSettings',
-    UPDATE_SETTINGS: 'updateSettings',
-    SETTINGS_RESPONSE: 'settingsResponse',
-    TERMINAL_CLOSED: 'terminalClosed',
-  },
-  DELAYS: {
-    TERMINAL_REMOVE_DELAY: 2000,
-    BUFFER_FLUSH_INTERVAL: 16,
-    RESIZE_DEBOUNCE_DELAY: 150,
-    STATUS_HIDE_DELAY: 3000,
-    ERROR_STATUS_DELAY: 5000,
-    HOVER_STATUS_DELAY: 1000,
-    FADE_DURATION: 200,
-  },
-  SIZES: {
-    MIN_TERMINAL_HEIGHT: 100,
-    STATUS_BAR_HEIGHT: 24,
-    HEADER_HEIGHT: 36,
-    TERMINAL_HEADER_HEIGHT: 32,
-    SPLITTER_HEIGHT: 4,
-    MIN_CONTAINER_WIDTH: 200,
-    MIN_CONTAINER_HEIGHT: 100,
-  },
+  COMMANDS: SHARED_TERMINAL_COMMANDS,
+  DELAYS: SHARED_DELAYS,
+  SIZES: SHARED_SIZES,
 } as const;
 
+/**
+ * Theme constants
+ * @deprecated Import from types/theme.types.ts
+ */
+import { DARK_THEME, LIGHT_THEME } from '../types/theme.types';
+
 export const THEME_CONSTANTS = {
-  DARK_THEME: {
-    background: '#1e1e1e',
-    foreground: '#cccccc',
-    cursor: '#ffffff',
-    cursorAccent: '#000000',
-    black: '#000000',
-    red: '#cd3131',
-    green: '#0dbc79',
-    yellow: '#e5e510',
-    blue: '#2472c8',
-    magenta: '#bc3fbc',
-    cyan: '#11a8cd',
-    white: '#e5e5e5',
-    brightBlack: '#666666',
-    brightRed: '#f14c4c',
-    brightGreen: '#23d18b',
-    brightYellow: '#f5f543',
-    brightBlue: '#3b8eea',
-    brightMagenta: '#d670d6',
-    brightCyan: '#29b8db',
-    brightWhite: '#ffffff',
-  },
-  LIGHT_THEME: {
-    background: '#ffffff',
-    foreground: '#333333',
-    cursor: '#000000',
-    cursorAccent: '#ffffff',
-    black: '#000000',
-    red: '#cd3131',
-    green: '#00bc00',
-    yellow: '#949800',
-    blue: '#0451a5',
-    magenta: '#bc05bc',
-    cyan: '#0598bc',
-    white: '#555555',
-    brightBlack: '#666666',
-    brightRed: '#cd3131',
-    brightGreen: '#14ce14',
-    brightYellow: '#b5ba00',
-    brightBlue: '#0451a5',
-    brightMagenta: '#bc05bc',
-    brightCyan: '#0598bc',
-    brightWhite: '#a5a5a5',
-  },
+  DARK_THEME,
+  LIGHT_THEME,
 } as const;
 
 export const UI_CONSTANTS = {
@@ -103,6 +41,11 @@ export const UI_CONSTANTS = {
     TRANSITION_DURATION: 300,
     FADE_DURATION: 200,
     SLIDE_DURATION: 250,
+  },
+  OPACITY: {
+    SAMPLE_ICON: 0.4,
+    DISABLED: 0.6,
+    HOVER: 0.8,
   },
 } as const;
 

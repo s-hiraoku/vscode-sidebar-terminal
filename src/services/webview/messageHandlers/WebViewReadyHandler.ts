@@ -1,4 +1,4 @@
-import { BaseMessageHandler } from './BaseMessageHandler';
+import { BaseMessageHandler } from '../../../messaging/handlers/BaseMessageHandler';
 import { IMessageHandlerContext } from '../interfaces';
 import { WebviewMessage } from '../../../types/common';
 import { provider as log } from '../../../utils/logger';
@@ -8,12 +8,12 @@ import { TERMINAL_CONSTANTS } from '../../../constants';
  * Handles WebView ready messages and initialization
  */
 export class WebViewReadyHandler extends BaseMessageHandler {
-  protected readonly supportedCommands = [
+  protected override readonly supportedCommands = [
     'webviewReady',
     TERMINAL_CONSTANTS?.COMMANDS?.READY || 'ready',
   ];
 
-  async handle(message: WebviewMessage, context: IMessageHandlerContext): Promise<void> {
+  override async handle(message: WebviewMessage, context: IMessageHandlerContext): Promise<void> {
     this.logMessageHandling(message, 'WebViewReady');
 
     try {
@@ -39,7 +39,7 @@ export class WebViewReadyHandler extends BaseMessageHandler {
         this.ensureMinimumTerminals(context);
       }, 100);
     } catch (error) {
-      await this.handleError(error, message, 'WebViewReady');
+      await this.handleErrorAsync(error, message, 'WebViewReady');
     }
   }
 

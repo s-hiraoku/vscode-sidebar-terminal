@@ -10,10 +10,12 @@ import {
   TerminalInfo,
   TerminalCreationOptions,
   TerminalCoordinatorEvents,
-  TerminalCoordinatorConfig
+  TerminalCoordinatorConfig,
 } from './ITerminalCoordinator';
 import { BaseManager } from '../managers/BaseManager';
 import { SPLIT_CONSTANTS } from '../constants/webview';
+import { safeProcessCwd } from '../../utils/common';
+import { DOMUtils } from '../utils/DOMUtils';
 
 interface InternalTerminalInfo extends TerminalInfo {
   container: HTMLElement;
@@ -71,7 +73,7 @@ export class TerminalCoordinator extends BaseManager implements ITerminalCoordin
       'onTerminalRemoved',
       'onTerminalActivated',
       'onTerminalOutput',
-      'onTerminalResize'
+      'onTerminalResize',
     ];
 
     for (const eventType of eventTypes) {
@@ -98,7 +100,9 @@ export class TerminalCoordinator extends BaseManager implements ITerminalCoordin
   // Terminal lifecycle management
   public async createTerminal(_options: TerminalCreationOptions = {}): Promise<string> {
     if (!this.canCreateTerminal()) {
-      throw new Error(`Cannot create terminal: maximum of ${this.config.maxTerminals} terminals reached`);
+      throw new Error(
+        `Cannot create terminal: maximum of ${this.config.maxTerminals} terminals reached`
+      );
     }
 
     const terminalId = `terminal-${++this.terminalCounter}`;
@@ -129,6 +133,8 @@ export class TerminalCoordinator extends BaseManager implements ITerminalCoordin
 
       // Open terminal in container
       terminal.open(container);
+      // Reset xterm.js inline styles before fit to allow terminal expansion
+      DOMUtils.resetXtermInlineStyles(container);
       fitAddon.fit();
 
       // Setup terminal event handlers
@@ -157,7 +163,6 @@ export class TerminalCoordinator extends BaseManager implements ITerminalCoordin
 
       this.logger(`Terminal created: ${terminalId}`);
       return terminalId;
-
     } catch (error) {
       this.logger(`Failed to create terminal: ${error}`);
       throw error;
@@ -192,7 +197,6 @@ export class TerminalCoordinator extends BaseManager implements ITerminalCoordin
 
       this.logger(`Terminal removed: ${terminalId}`);
       return true;
-
     } catch (error) {
       this.logger(`Failed to remove terminal ${terminalId}: ${error}`);
       return false;
@@ -220,6 +224,8 @@ export class TerminalCoordinator extends BaseManager implements ITerminalCoordin
     (terminalInfo as any).isActive = true;
     terminalInfo.container.style.display = 'block';
     terminalInfo.terminal.focus();
+    // Reset xterm.js inline styles before fit to allow terminal expansion
+    DOMUtils.resetXtermInlineStyles(terminalInfo.container);
     terminalInfo.fitAddon.fit();
 
     // Emit activation event
@@ -242,11 +248,6 @@ export class TerminalCoordinator extends BaseManager implements ITerminalCoordin
   }
 
   private setupTerminalEventHandlers(terminal: Terminal, terminalId: string): void {
-    // Output handler
-    terminal.onData((data: string) => {
-      this.emitEvent('onTerminalOutput', terminalId, data);
-    });
-
     // Resize handler
     terminal.onResize((dimensions) => {
       this.emitEvent('onTerminalResize', terminalId, dimensions.cols, dimensions.rows);
@@ -275,6 +276,8 @@ export class TerminalCoordinator extends BaseManager implements ITerminalCoordin
     const terminal = this.getTerminal(terminalId);
     if (terminal) {
       terminal.write(data);
+      // Auto-scroll to bottom to match VS Code standard terminal behavior
+      terminal.scrollToBottom();
     } else {
       this.logger(`Cannot write to terminal: ${terminalId} not found`);
     }
@@ -284,6 +287,8 @@ export class TerminalCoordinator extends BaseManager implements ITerminalCoordin
     const terminalInfo = this.terminals.get(terminalId);
     if (terminalInfo) {
       terminalInfo.terminal.resize(cols, rows);
+      // Reset xterm.js inline styles before fit to allow terminal expansion
+      DOMUtils.resetXtermInlineStyles(terminalInfo.container);
       terminalInfo.fitAddon.fit();
       this.emitEvent('onTerminalResize', terminalId, cols, rows);
     } else {
@@ -350,7 +355,7 @@ export class TerminalCoordinatorFactory {
     const defaultConfig: TerminalCoordinatorConfig = {
       maxTerminals: SPLIT_CONSTANTS.MAX_TERMINALS || 5,
       defaultShell: '/bin/bash',
-      workingDirectory: process.cwd(),
+      workingDirectory: safeProcessCwd(),
       enablePerformanceOptimization: true,
       bufferSize: 1000,
       debugMode: false,

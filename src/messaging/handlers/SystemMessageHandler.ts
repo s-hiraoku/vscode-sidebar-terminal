@@ -47,7 +47,7 @@ export class SystemMessageHandler extends BaseMessageHandler {
    * Handle init message from extension
    */
   private async handleInitMessage(
-    message: WebviewMessage,
+    _message: WebviewMessage,
     context: IMessageHandlerContext
   ): Promise<void> {
     context.logger.info('Handling init message');

@@ -1,6 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
-
 import { expect } from 'chai';
 import * as sinon from 'sinon';
 import * as vscode from 'vscode';
@@ -41,6 +38,7 @@ describe('CopilotIntegrationCommand', () => {
   describe('handleActivateCopilot', () => {
     beforeEach(() => {
       // Mock workspace folders
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (vscode.workspace as any).workspaceFolders = [
         {
           uri: { fsPath: '/workspace/project' },
@@ -56,6 +54,7 @@ describe('CopilotIntegrationCommand', () => {
         start: { line: 0 },
         end: { line: 0 },
       };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (vscode.window as any).activeTextEditor = {
         document: mockDocument,
         selection: mockSelection,
@@ -69,6 +68,7 @@ describe('CopilotIntegrationCommand', () => {
     });
 
     it('should activate Copilot Chat without file reference when no file is open', () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (vscode.window as any).activeTextEditor = null;
 
       copilotIntegrationCommand.handleActivateCopilot();
@@ -112,6 +112,7 @@ describe('CopilotIntegrationCommand', () => {
         relativePath: 'src/test.ts',
       };
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = (copilotIntegrationCommand as any).formatCopilotFileReference(fileInfo);
 
       expect(result).to.equal('#file:src/test.ts  ');
@@ -127,6 +128,7 @@ describe('CopilotIntegrationCommand', () => {
         },
       };
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = (copilotIntegrationCommand as any).formatCopilotFileReference(fileInfo);
 
       // Line numbers are not included in #file: format
@@ -143,6 +145,7 @@ describe('CopilotIntegrationCommand', () => {
         },
       };
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = (copilotIntegrationCommand as any).formatCopilotFileReference(fileInfo);
 
       // Line numbers are not included in #file: format
@@ -152,6 +155,7 @@ describe('CopilotIntegrationCommand', () => {
 
   describe('isGitHubCopilotIntegrationEnabled', () => {
     it('should return true when setting is enabled', () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = (copilotIntegrationCommand as any).isGitHubCopilotIntegrationEnabled();
       expect(result).to.be.true;
     });
@@ -162,6 +166,7 @@ describe('CopilotIntegrationCommand', () => {
       };
       (vscode.workspace.getConfiguration as sinon.SinonStub).returns(mockConfig);
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = (copilotIntegrationCommand as any).isGitHubCopilotIntegrationEnabled();
       expect(result).to.be.false;
     });
@@ -172,6 +177,7 @@ describe('CopilotIntegrationCommand', () => {
       };
       (vscode.workspace.getConfiguration as sinon.SinonStub).returns(mockConfig);
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = (copilotIntegrationCommand as any).isGitHubCopilotIntegrationEnabled();
       expect(result).to.be.true; // Default value should be true
     });

@@ -1,6 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
-
 import { expect } from 'chai';
 import * as sinon from 'sinon';
 import { JSDOM } from 'jsdom';
@@ -43,11 +40,15 @@ const mockVscode = {
 // Setup test environment
 function setupTestEnvironment() {
   // Mock VS Code module
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (global as any).vscode = mockVscode;
 
   // Mock Node.js modules
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (global as any).require = sinon.stub();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (global as any).module = { exports: {} };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (global as any).process = {
     platform: 'linux',
     env: {
@@ -60,15 +61,20 @@ describe('SecondaryTerminalProvider Extended', () => {
   let sandbox: sinon.SinonSandbox;
   let dom: JSDOM;
   let document: Document;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockProvider: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockWebview: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockWebviewView: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockTerminalManager: any;
 
   beforeEach(() => {
     setupTestEnvironment();
 
     // Mock console before JSDOM creation
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (global as Record<string, unknown>).console = {
       log: sinon.stub(),
       warn: sinon.stub(),
@@ -128,6 +134,7 @@ describe('SecondaryTerminalProvider Extended', () => {
 
     // Set up process.nextTick before JSDOM creation
     const originalProcess = global.process;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (global as any).process = {
       ...originalProcess,
       nextTick: (callback: () => void) => setImmediate(callback),
@@ -136,12 +143,14 @@ describe('SecondaryTerminalProvider Extended', () => {
 
     dom = new JSDOM(`<!DOCTYPE html><html><body></body></html>`);
     document = dom.window.document;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (global as any).document = document;
 
     // Reset webview spies
     if (mockWebview.setState && typeof mockWebview.setState.resetHistory === 'function') {
       mockWebview.setState.resetHistory();
     }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (global as any).window = dom.window;
 
     sandbox = sinon.createSandbox();
@@ -445,7 +454,7 @@ describe('SecondaryTerminalProvider Extended', () => {
       try {
         mockTerminalManager.createTerminal();
       } catch (e) {
-        expect(e.message).to.equal('Terminal creation failed');
+        expect((e as Error).message).to.equal('Terminal creation failed');
       }
     });
 
@@ -459,7 +468,7 @@ describe('SecondaryTerminalProvider Extended', () => {
       const disposeCallback = sinon.spy();
       mockWebviewView.onDidDispose.returns({ dispose: disposeCallback });
 
-      const disposable = mockWebviewView.onDidDispose(() => {});
+      const _disposable = mockWebviewView.onDidDispose(() => {});
 
       expect(mockWebviewView.onDidDispose).to.have.been.called;
     });
@@ -467,9 +476,9 @@ describe('SecondaryTerminalProvider Extended', () => {
 
   describe('Performance optimization', () => {
     it('should debounce terminal output', () => {
-      let outputCount = 0;
+      let _outputCount = 0;
       const debouncedOutput = sinon.spy(() => {
-        outputCount++;
+        _outputCount++;
       });
 
       // Simulate debounced output

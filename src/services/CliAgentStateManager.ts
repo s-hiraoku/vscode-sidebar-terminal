@@ -7,7 +7,7 @@ import { terminal as log } from '../utils/logger';
  */
 export class CliAgentStateManager implements ICliAgentStateManager {
   private _connectedAgentTerminalId: string | null = null;
-  private _connectedAgentType: 'claude' | 'gemini' | 'codex' | null = null;
+  private _connectedAgentType: 'claude' | 'gemini' | 'codex' | 'copilot' | null = null;
   private _disconnectedAgents = new Map<string, DisconnectedAgentInfo>();
 
   private readonly _onStatusChange = new vscode.EventEmitter<{
@@ -19,7 +19,7 @@ export class CliAgentStateManager implements ICliAgentStateManager {
 
   setConnectedAgent(
     terminalId: string,
-    type: 'claude' | 'gemini' | 'codex',
+    type: 'claude' | 'gemini' | 'codex' | 'copilot',
     terminalName?: string
   ): void {
     // 🚨 FIX: Prevent unnecessary state changes for already connected agent
@@ -326,7 +326,7 @@ export class CliAgentStateManager implements ICliAgentStateManager {
     return this._connectedAgentTerminalId;
   }
 
-  getConnectedAgentType(): 'claude' | 'gemini' | 'codex' | null {
+  getConnectedAgentType(): 'claude' | 'gemini' | 'codex' | 'copilot' | null {
     return this._connectedAgentType;
   }
 
@@ -346,7 +346,7 @@ export class CliAgentStateManager implements ICliAgentStateManager {
    */
   forceReconnectAgent(
     terminalId: string,
-    agentType: 'claude' | 'gemini' | 'codex',
+    agentType: 'claude' | 'gemini' | 'codex' | 'copilot',
     terminalName?: string
   ): boolean {
     log(`🔄 [MANUAL-RESET] Force reconnecting ${agentType} agent in terminal ${terminalId}`);

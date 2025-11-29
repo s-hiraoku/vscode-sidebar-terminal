@@ -39,6 +39,7 @@ describe('InputManager', () => {
       getActiveTerminalId: sinon.stub().returns('terminal-1'),
       setActiveTerminalId: sinon.stub(),
       postMessageToExtension: sinon.stub(),
+      getMessageManager: sinon.stub().returns(null),
       getTerminalInstance: sinon.stub().returns({
         terminal: {
           hasSelection: sinon.stub().returns(false),
@@ -46,7 +47,7 @@ describe('InputManager', () => {
       }),
     } as any;
 
-    inputManager = new InputManager();
+    inputManager = new InputManager(mockCoordinator);
   });
 
   afterEach(() => {
@@ -188,6 +189,39 @@ describe('InputManager', () => {
         type: 'alt-click',
         terminalId: testTerminalId,
       });
+    });
+  });
+
+  describe('Input Buffering', () => {
+    it('should batch sequential input when message manager is unavailable', () => {
+      const queueInputData = (inputManager as any).queueInputData.bind(inputManager);
+
+      queueInputData('terminal-1', 'a', false);
+      queueInputData('terminal-1', 'b', false);
+
+      expect(mockCoordinator.postMessageToExtension.callCount).to.equal(0);
+      clock.runAll();
+
+      expect(mockCoordinator.postMessageToExtension.callCount).to.equal(1);
+      const payload = mockCoordinator.postMessageToExtension.getCall(0).args[0] as { data: string };
+      expect(payload.data).to.equal('ab');
+    });
+
+    it('should prefer message manager queue when available', () => {
+      const sendInputStub = sinon.stub();
+      (mockCoordinator.getMessageManager as sinon.SinonStub).returns({
+        sendInput: sendInputStub,
+      });
+
+      const queueInputData = (inputManager as any).queueInputData.bind(inputManager);
+      queueInputData('terminal-1', 'x', false);
+      queueInputData('terminal-1', 'y', false);
+
+      clock.runAll();
+
+      expect(sendInputStub.calledOnce).to.be.true;
+      expect(sendInputStub.getCall(0).args).to.deep.equal(['xy', 'terminal-1']);
+      expect(mockCoordinator.postMessageToExtension.called).to.be.false;
     });
   });
 

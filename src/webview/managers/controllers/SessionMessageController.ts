@@ -43,15 +43,20 @@ export class SessionMessageController {
     this.logger.info(`Restoring terminal session: ${terminalId} (${terminalName})`);
 
     try {
-      if (typeof (coordinator as unknown as { restoreSession?: unknown }).restoreSession === 'function') {
-        const success = await (coordinator as unknown as {
-          restoreSession: (payload: {
-            terminalId: string;
-            terminalName: string;
-            scrollbackData?: string[];
-            sessionRestoreMessage?: string;
-          }) => Promise<boolean>;
-        }).restoreSession({
+      if (
+        typeof (coordinator as unknown as { restoreSession?: unknown }).restoreSession ===
+        'function'
+      ) {
+        const success = await (
+          coordinator as unknown as {
+            restoreSession: (payload: {
+              terminalId: string;
+              terminalName: string;
+              scrollbackData?: string[];
+              sessionRestoreMessage?: string;
+            }) => Promise<boolean>;
+          }
+        ).restoreSession({
           terminalId,
           terminalName,
           scrollbackData: sessionScrollback,
@@ -66,28 +71,36 @@ export class SessionMessageController {
         this.logger.warn(`⚠️ Session restore failed, creating regular terminal: ${terminalId}`);
       }
 
-      await coordinator.createTerminal(terminalId, terminalName, config);
+      await coordinator.createTerminal(terminalId, terminalName, config, undefined, 'extension');
       this.logger.info(`Created terminal for session restore: ${terminalId}`);
 
       if (sessionRestoreMessage || (sessionScrollback && sessionScrollback.length > 0)) {
         setTimeout(() => {
           if (
             'restoreTerminalScrollback' in coordinator &&
-            typeof (coordinator as unknown as {
-              restoreTerminalScrollback: (
-                terminalId: string,
-                message: string,
-                scrollback: string[]
-              ) => void;
-            }).restoreTerminalScrollback === 'function'
+            typeof (
+              coordinator as unknown as {
+                restoreTerminalScrollback: (
+                  terminalId: string,
+                  message: string,
+                  scrollback: string[]
+                ) => void;
+              }
+            ).restoreTerminalScrollback === 'function'
           ) {
-            (coordinator as unknown as {
-              restoreTerminalScrollback: (
-                terminalId: string,
-                message: string,
-                scrollback: string[]
-              ) => void;
-            }).restoreTerminalScrollback(terminalId, sessionRestoreMessage || '', sessionScrollback || []);
+            (
+              coordinator as unknown as {
+                restoreTerminalScrollback: (
+                  terminalId: string,
+                  message: string,
+                  scrollback: string[]
+                ) => void;
+              }
+            ).restoreTerminalScrollback(
+              terminalId,
+              sessionRestoreMessage || '',
+              sessionScrollback || []
+            );
             this.logger.info(`Restored scrollback for terminal: ${terminalId}`);
           } else {
             this.logger.warn('restoreTerminalScrollback method not found');
@@ -97,7 +110,7 @@ export class SessionMessageController {
     } catch (error) {
       this.logger.error(`Failed to restore terminal session ${terminalId}: ${String(error)}`);
       try {
-        await coordinator.createTerminal(terminalId, terminalName, config);
+        await coordinator.createTerminal(terminalId, terminalName, config, undefined, 'extension');
         this.logger.info(`Created fallback terminal: ${terminalId}`);
       } catch (fallbackError) {
         this.logger.error(`Failed to create fallback terminal: ${String(fallbackError)}`);
@@ -121,7 +134,9 @@ export class SessionMessageController {
   handleSessionRestoreCompletedMessage(msg: MessageCommand): void {
     const restoredCount = (msg.restoredCount as number) || 0;
     const skippedCount = (msg.skippedCount as number) || 0;
-    this.logger.info(`Session restore completed: ${restoredCount} restored, ${skippedCount} skipped`);
+    this.logger.info(
+      `Session restore completed: ${restoredCount} restored, ${skippedCount} skipped`
+    );
     showSessionRestoreCompleted(restoredCount, skippedCount);
   }
 
@@ -129,7 +144,9 @@ export class SessionMessageController {
     const error = (msg.error as string) || 'Unknown error';
     const partialSuccess = (msg.partialSuccess as boolean) || false;
     const errorType = (msg.errorType as string) || undefined;
-    this.logger.error(`Session restore error: ${error} (partial: ${partialSuccess}, type: ${errorType})`);
+    this.logger.error(
+      `Session restore error: ${error} (partial: ${partialSuccess}, type: ${errorType})`
+    );
     showSessionRestoreError(error, partialSuccess, errorType);
   }
 

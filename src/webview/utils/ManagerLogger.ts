@@ -50,7 +50,7 @@ export class ManagerLogger {
 
   /**
    * Create a logger instance for a specific manager
-   * @param managerName Name of the manager (e.g., 'TerminalLifecycleManager')
+   * @param managerName Name of the manager (e.g., 'TerminalLifecycleCoordinator')
    * @param emoji Emoji to use for this manager's logs
    * @param config Optional logging configuration
    */
@@ -171,7 +171,7 @@ export class ManagerLogger {
 
       // Log data if provided
       if (data !== undefined) {
-        console.log(`🔍 [${this.managerName}] Data:`, data);
+        baseLog(`🔍 [${this.managerName}] Data:`, data);
       }
 
       // Store in history
@@ -179,6 +179,7 @@ export class ManagerLogger {
     } catch (error) {
       // Fallback to base logger if formatting fails
       baseLog(`❌ ManagerLogger error for ${this.managerName}: ${message}`);
+      // eslint-disable-next-line no-console
       console.error('ManagerLogger error:', error);
     }
   }
@@ -313,3 +314,4 @@ export const splitLogger = ManagerLogger.createLogger('Split', '📱');
 export const messageLogger = ManagerLogger.createLogger('Message', '📨');
 export const notificationLogger = ManagerLogger.createLogger('Notification', '🔔');
 export const configLogger = ManagerLogger.createLogger('Config', '⚙️');
+export const containerLogger = ManagerLogger.createLogger('Container', '📦');

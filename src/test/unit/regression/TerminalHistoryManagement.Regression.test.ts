@@ -62,7 +62,7 @@ describe('Terminal History Management - Regression Tests', () => {
 
           try {
             // Simulate async deletion process
-            await new Promise(resolve => setTimeout(resolve, 50));
+            await new Promise((resolve) => setTimeout(resolve, 50));
 
             const terminal = this.terminals.get(terminalId);
             if (!terminal) {
@@ -74,7 +74,7 @@ describe('Terminal History Management - Regression Tests', () => {
           } finally {
             this.deletionInProgress.delete(terminalId);
           }
-        }
+        },
       };
 
       // Test concurrent deletion requests (regression scenario)
@@ -87,8 +87,8 @@ describe('Terminal History Management - Regression Tests', () => {
       const results = await Promise.all(deletePromises);
 
       // Only one deletion should succeed
-      const successfulDeletions = results.filter(r => r.success);
-      const duplicateDeletions = results.filter(r => r.alreadyInProgress);
+      const successfulDeletions = results.filter((r) => r.success);
+      const duplicateDeletions = results.filter((r) => r.alreadyInProgress);
 
       expect(successfulDeletions).to.have.length(1);
       expect(duplicateDeletions).to.have.length(2);
@@ -156,7 +156,7 @@ describe('Terminal History Management - Regression Tests', () => {
 
         async saveTerminalHistory(terminals: any[]) {
           // FIXED: Ensure scrollback data is properly captured
-          const terminalData = terminals.map(terminal => ({
+          const terminalData = terminals.map((terminal) => ({
             id: terminal.id,
             name: terminal.name,
             number: terminal.number,
@@ -197,7 +197,7 @@ describe('Terminal History Management - Regression Tests', () => {
             restoredTerminals,
             restoredCount: restoredTerminals.length,
           };
-        }
+        },
       };
 
       // Original terminals with history
@@ -222,12 +222,7 @@ describe('Terminal History Management - Regression Tests', () => {
           number: 2,
           cwd: '/tests',
           isActive: false,
-          scrollback: [
-            'npm test',
-            'All tests passed',
-            'coverage: 85%',
-            '$ ',
-          ],
+          scrollback: ['npm test', 'All tests passed', 'coverage: 85%', '$ '],
         },
       ];
 
@@ -242,8 +237,12 @@ describe('Terminal History Management - Regression Tests', () => {
       expect(restoreResult.restoredCount).to.equal(2);
 
       // Verify history is preserved
-      const restoredTerminal1 = restoreResult.restoredTerminals.find((t: any) => t.name === 'Terminal 1');
-      const restoredTerminal2 = restoreResult.restoredTerminals.find((t: any) => t.name === 'Terminal 2');
+      const restoredTerminal1 = restoreResult.restoredTerminals.find(
+        (t: any) => t.name === 'Terminal 1'
+      );
+      const restoredTerminal2 = restoreResult.restoredTerminals.find(
+        (t: any) => t.name === 'Terminal 2'
+      );
 
       expect(restoredTerminal1).to.exist;
       expect(restoredTerminal2).to.exist;
@@ -263,7 +262,10 @@ describe('Terminal History Management - Regression Tests', () => {
 
         configureAltClick(vsCodeSettings: any) {
           // FIXED: Proper VS Code settings integration
-          const altClickMovesCursor = vsCodeSettings.get('terminal.integrated.altClickMovesCursor', false);
+          const altClickMovesCursor = vsCodeSettings.get(
+            'terminal.integrated.altClickMovesCursor',
+            false
+          );
           const multiCursorModifier = vsCodeSettings.get('editor.multiCursorModifier', 'alt');
 
           this.altClickEnabled = altClickMovesCursor && multiCursorModifier === 'alt';
@@ -276,7 +278,7 @@ describe('Terminal History Management - Regression Tests', () => {
 
           this.cursorPosition = { row: event.row, col: event.col };
           return { handled: true, newPosition: this.cursorPosition };
-        }
+        },
       };
 
       // Configure with correct VS Code settings
@@ -357,7 +359,7 @@ describe('Terminal History Management - Regression Tests', () => {
           }
           css += '}';
           return css;
-        }
+        },
       };
 
       // Apply dark theme
@@ -391,7 +393,7 @@ describe('Terminal History Management - Regression Tests', () => {
         log(message: string): void;
       }
 
-      class RefactoredMessageManager {
+      class ConsolidatedMessageManager {
         private coordinator: IManagerCoordinator;
         private messageQueue: any[] = [];
         private isReady: boolean = false;
@@ -447,7 +449,7 @@ describe('Terminal History Management - Regression Tests', () => {
         log: sandbox.stub(),
       };
 
-      const messageManager = new RefactoredMessageManager(mockCoordinator);
+      const messageManager = new ConsolidatedMessageManager(mockCoordinator);
 
       // Queue messages when not ready
       messageManager.postMessage({ command: 'test1' });
@@ -607,7 +609,10 @@ describe('Terminal History Management - Regression Tests', () => {
 
         addPattern(name: string, pattern: string): void {
           // FIXED: Limit number of patterns and track usage
-          if (this.detectionPatterns.size >= this.maxPatterns && !this.detectionPatterns.has(name)) {
+          if (
+            this.detectionPatterns.size >= this.maxPatterns &&
+            !this.detectionPatterns.has(name)
+          ) {
             this.removeOldestPattern();
           }
 

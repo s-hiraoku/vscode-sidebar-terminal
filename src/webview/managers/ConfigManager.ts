@@ -1,10 +1,15 @@
 /**
  * Config Manager - Handles settings management, persistence, and configuration updates
+ *
+ * Note: Font settings are managed by FontSettingsService (single source of truth).
+ * ConfigManager provides getCurrentFontSettings() for compatibility but delegates
+ * to FontSettingsService when available.
  */
 
 import { webview as log } from '../../utils/logger';
 import { PartialTerminalSettings, WebViewFontSettings } from '../../types/shared';
 import { IConfigManager, TerminalInstance } from '../interfaces/ManagerInterfaces';
+import { FontSettingsService } from '../services/FontSettingsService';
 
 // VS Code API interface for settings persistence
 declare const vscode: {
@@ -13,6 +18,9 @@ declare const vscode: {
 };
 
 export class ConfigManager implements IConfigManager {
+  // Font settings service reference (single source of truth)
+  private fontSettingsService: FontSettingsService | null = null;
+
   // Current settings cache
   private currentSettings: PartialTerminalSettings = {
     fontSize: 14,
@@ -23,10 +31,11 @@ export class ConfigManager implements IConfigManager {
     bellSound: false,
     altClickMovesCursor: false,
     multiCursorModifier: 'alt',
+    highlightActiveBorder: true,
   };
 
-  // Current font settings cache
-  private currentFontSettings: WebViewFontSettings = {
+  // Fallback font settings (used only when FontSettingsService is not available)
+  private fallbackFontSettings: WebViewFontSettings = {
     fontSize: 14,
     fontFamily: 'Consolas, "Courier New", monospace',
     fontWeight: 'normal',
@@ -34,6 +43,15 @@ export class ConfigManager implements IConfigManager {
     lineHeight: 1.0,
     letterSpacing: 0,
   };
+
+  /**
+   * Set FontSettingsService reference for delegation
+   * This enables single source of truth for font settings
+   */
+  public setFontSettingsService(service: FontSettingsService): void {
+    this.fontSettingsService = service;
+    log('⚙️ [CONFIG] FontSettingsService connected');
+  }
 
   // Settings validation schema
   private readonly DEFAULTS: Required<PartialTerminalSettings> = {
@@ -53,6 +71,7 @@ export class ConfigManager implements IConfigManager {
     inheritVSCodeProfiles: true,
     enableProfileAutoDetection: true,
     scrollback: 1000,
+    highlightActiveBorder: true,
     bellSound: false,
     altClickMovesCursor: false,
     multiCursorModifier: 'alt',
@@ -185,29 +204,19 @@ export class ConfigManager implements IConfigManager {
 
   /**
    * Apply font settings to all terminals
+   *
+   * @deprecated Use FontSettingsService.updateSettings() instead.
+   * This method is kept for backward compatibility but actual font application
+   * should go through FontSettingsService.
    */
   public applyFontSettings(
     fontSettings: WebViewFontSettings,
-    terminals: Map<string, TerminalInstance>
+    _terminals: Map<string, TerminalInstance>
   ): void {
     const validatedFontSettings = this.validateAndNormalizeFontSettings(fontSettings);
-    this.currentFontSettings = validatedFontSettings;
 
-    terminals.forEach((terminalData, terminalId) => {
-      try {
-        const terminal = terminalData.terminal;
-
-        // Use options property to properly update xterm.js settings (v5.0+ API)
-        terminal.options.fontSize = validatedFontSettings.fontSize;
-        terminal.options.fontFamily = validatedFontSettings.fontFamily;
-
-        log(
-          `⚙️ [CONFIG] Font settings applied to terminal ${terminalId}: ${validatedFontSettings.fontFamily}, ${validatedFontSettings.fontSize}px`
-        );
-      } catch (error) {
-        log(`❌ [CONFIG] Error applying font settings to terminal ${terminalId}:`, error);
-      }
-    });
+    // Update fallback cache for when FontSettingsService is not available
+    this.fallbackFontSettings = validatedFontSettings;
 
     // Update general settings (create new object due to readonly properties)
     this.currentSettings = {
@@ -216,7 +225,9 @@ export class ConfigManager implements IConfigManager {
       fontFamily: validatedFontSettings.fontFamily,
     };
 
-    log('⚙️ [CONFIG] Font settings applied to all terminals');
+    // Note: Actual terminal font application is handled by FontSettingsService
+    // This method only updates ConfigManager's internal caches
+    log('⚙️ [CONFIG] Font settings cache updated (actual application via FontSettingsService)');
   }
 
   /**
@@ -228,9 +239,21 @@ export class ConfigManager implements IConfigManager {
 
   /**
    * Get current font settings
+   *
+   * Delegates to FontSettingsService when available (single source of truth).
+   * Falls back to local cache if service is not connected.
    */
   public getCurrentFontSettings(): WebViewFontSettings {
-    return { ...this.currentFontSettings };
+    // Prefer FontSettingsService (single source of truth)
+    if (this.fontSettingsService) {
+      const settings = this.fontSettingsService.getCurrentSettings();
+      log(`🔤 [CONFIG] getCurrentFontSettings from FontSettingsService: ${settings.fontFamily}, ${settings.fontSize}px`);
+      return settings;
+    }
+
+    // Fallback for backward compatibility
+    log(`🔤 [CONFIG] getCurrentFontSettings FALLBACK: ${this.fallbackFontSettings.fontFamily}, ${this.fallbackFontSettings.fontSize}px`);
+    return { ...this.fallbackFontSettings };
   }
 
   /**
@@ -334,6 +357,10 @@ export class ConfigManager implements IConfigManager {
       typeof settings.enableCliAgentIntegration === 'boolean'
         ? settings.enableCliAgentIntegration
         : this.DEFAULTS.enableCliAgentIntegration;
+    normalized.highlightActiveBorder =
+      typeof settings.highlightActiveBorder === 'boolean'
+        ? settings.highlightActiveBorder
+        : this.DEFAULTS.highlightActiveBorder;
 
     // Shell validation
     if (typeof settings.shell === 'string') {
@@ -422,9 +449,10 @@ export class ConfigManager implements IConfigManager {
 
   /**
    * Update font settings from general settings
+   * Updates the fallback cache for backward compatibility
    */
   private updateFontSettingsFromGeneral(): void {
-    this.currentFontSettings = {
+    this.fallbackFontSettings = {
       fontSize: this.currentSettings.fontSize || this.FONT_DEFAULTS.fontSize,
       fontFamily: this.currentSettings.fontFamily || this.FONT_DEFAULTS.fontFamily,
     };
@@ -448,7 +476,7 @@ export class ConfigManager implements IConfigManager {
     return JSON.stringify(
       {
         settings: this.currentSettings,
-        fontSettings: this.currentFontSettings,
+        fontSettings: this.getCurrentFontSettings(),
         timestamp: new Date().toISOString(),
       },
       null,
