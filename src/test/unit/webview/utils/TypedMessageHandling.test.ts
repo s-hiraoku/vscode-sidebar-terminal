@@ -126,9 +126,8 @@ describe('TypedMessageHandling - 型安全なメッセージシステム', () =>
 
         const commands = router.getRegisteredCommands();
         expect(commands).to.include(MESSAGE_COMMANDS.TERMINAL_CREATE);
-        expect(mockLogger).to.have.been.calledWith(
-          sinon.match.string,
-          sinon.match(MESSAGE_COMMANDS.TERMINAL_CREATE)
+        expect(mockLogger).to.have.been.calledWithMatch(
+          sinon.match.string.and(sinon.match(MESSAGE_COMMANDS.TERMINAL_CREATE))
         );
       });
 
@@ -305,9 +304,8 @@ describe('TypedMessageHandling - 型安全なメッセージシステム', () =>
           sender.sendMessage(MESSAGE_COMMANDS.TERMINAL_CREATE, { terminalId: 'term-1' });
         }).to.not.throw();
 
-        expect(mockLogger).to.have.been.calledWith(
-          sinon.match.string,
-          sinon.match(MESSAGE_COMMANDS.TERMINAL_CREATE)
+        expect(mockLogger).to.have.been.calledWithMatch(
+          sinon.match.string.and(sinon.match(MESSAGE_COMMANDS.TERMINAL_CREATE))
         );
       });
 
@@ -317,9 +315,9 @@ describe('TypedMessageHandling - 型安全なメッセージシステム', () =>
         sender.sendMessage(MESSAGE_COMMANDS.TERMINAL_CREATE, { terminalId: 'term-1' });
 
         // The error should be logged and message queued
-        expect(mockLogger).to.have.been.calledWith(
-          sinon.match(/Failed to send/),
-          sinon.match(MESSAGE_COMMANDS.TERMINAL_CREATE)
+        expect(mockLogger).to.have.been.calledWithMatch(
+          sinon.match(/Failed to send/).and(sinon.match(MESSAGE_COMMANDS.TERMINAL_CREATE)),
+          sinon.match.instanceOf(Error)
         );
       });
     });

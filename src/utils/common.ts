@@ -25,7 +25,7 @@ export function safeProcessCwd(fallback?: string): string {
     }
     // Fallback to home directory instead of root
     return fallback || os.homedir();
-  } catch (e) {
+  } catch {
     return fallback || os.homedir();
   }
 }
