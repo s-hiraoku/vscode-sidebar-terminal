@@ -114,15 +114,46 @@ const originalEmit =
     ? process.emit.bind(process)
     : EventEmitter.prototype.emit.bind(process);
 
-ensureProcessMethod('emit', function (eventName, ...args) {
+// Track recursive emit calls to prevent infinite loops
+let emitDepth = 0;
+const MAX_EMIT_DEPTH = 10;
+
+// Force override process.emit to prevent infinite loops
+const safeEmit = function (eventName, ...args) {
+  // Prevent infinite recursion on unhandledRejection/uncaughtException
+  if (eventName === 'unhandledRejection' || eventName === 'uncaughtException') {
+    emitDepth++;
+    if (emitDepth > MAX_EMIT_DEPTH) {
+      emitDepth = 0;
+      console.error(`⚠️  Prevented infinite ${eventName} loop`);
+      return false;
+    }
+  }
+
   try {
     return originalEmit.call(this, eventName, ...args);
   } catch (e) {
     // If emit fails, log but don't crash
     console.warn(`process.emit failed for event ${eventName}:`, e.message);
     return false;
+  } finally {
+    if (eventName === 'unhandledRejection' || eventName === 'uncaughtException') {
+      emitDepth--;
+    }
   }
-});
+};
+
+// Force replace process.emit with safe version (always override)
+try {
+  Object.defineProperty(process, 'emit', {
+    value: safeEmit,
+    writable: true,
+    configurable: true,
+    enumerable: false,
+  });
+} catch (e) {
+  process.emit = safeEmit;
+}
 
 // Directly patch Mocha's Runner class to handle missing listenerCount
 // Wait for next tick to ensure Mocha is loaded
@@ -156,6 +187,32 @@ setImmediate(() => {
 
       console.log('✅ Patched Mocha Runner._addEventListener to handle missing listenerCount');
     }
+
+    // Patch Runner.unhandled to prevent infinite loop on uncaught exceptions
+    if (Runner && Runner.prototype.unhandled) {
+      const originalUnhandled = Runner.prototype.unhandled;
+      let isHandlingUnhandled = false;
+
+      Runner.prototype.unhandled = function (err) {
+        // Prevent infinite recursion
+        if (isHandlingUnhandled) {
+          console.error('⚠️  Suppressed recursive unhandled error:', err?.message || err);
+          return;
+        }
+
+        isHandlingUnhandled = true;
+        try {
+          return originalUnhandled.call(this, err);
+        } finally {
+          // Use setImmediate to reset flag after event loop tick
+          setImmediate(() => {
+            isHandlingUnhandled = false;
+          });
+        }
+      };
+
+      console.log('✅ Patched Mocha Runner.unhandled to prevent infinite loop');
+    }
   } catch (e) {
     console.warn('⚠️  Failed to patch Mocha Runner:', e.message);
   }
@@ -172,5 +229,27 @@ process.on('uncaughtException', (error) => {
   console.error('Uncaught exception:', error);
   // Log but don't exit in test environment
 });
+
+// Ensure process.stdout and process.stderr exist for Mocha exit handling
+if (!process.stdout) {
+  process.stdout = {
+    write: (data, encoding, callback) => {
+      if (typeof encoding === 'function') callback = encoding;
+      if (callback) setImmediate(callback);
+      return true;
+    },
+    fd: 1,
+  };
+}
+if (!process.stderr) {
+  process.stderr = {
+    write: (data, encoding, callback) => {
+      if (typeof encoding === 'function') callback = encoding;
+      if (callback) setImmediate(callback);
+      return true;
+    },
+    fd: 2,
+  };
+}
 
 module.exports = {};
