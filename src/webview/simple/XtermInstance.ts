@@ -1,0 +1,631 @@
+/**
+ * XtermInstance - Simplified Terminal Wrapper
+ *
+ * VS Code Standard Pattern:
+ * - Single responsibility: manage one xterm.js terminal instance
+ * - Barrier pattern for async initialization
+ * - Clean lifecycle management (create → attach → dispose)
+ *
+ * Replaces:
+ * - TerminalLifecycleCoordinator
+ * - TerminalCreationService
+ * - Multiple addon managers
+ */
+
+import { Terminal, ITerminalOptions } from '@xterm/xterm';
+import { FitAddon } from '@xterm/addon-fit';
+import { WebglAddon } from '@xterm/addon-webgl';
+import { SerializeAddon } from '@xterm/addon-serialize';
+import { TerminalConfig, TerminalTheme } from './types';
+
+/**
+ * Terminal creation result
+ */
+export interface XtermCreateResult {
+  instance: XtermInstance;
+  cols: number;
+  rows: number;
+}
+
+/**
+ * Callback for terminal events
+ */
+export interface XtermCallbacks {
+  onData: (terminalId: string, data: string) => void;
+  onResize: (terminalId: string, cols: number, rows: number) => void;
+  onFocus: (terminalId: string) => void;
+  onTitleChange?: (terminalId: string, title: string) => void;
+}
+
+/**
+ * Default terminal configuration following VS Code patterns
+ */
+const DEFAULT_CONFIG: ITerminalOptions = {
+  fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+  fontSize: 14,
+  lineHeight: 1.2,
+  cursorStyle: 'block',
+  cursorBlink: true,
+  scrollback: 1000,
+  allowProposedApi: true,
+  allowTransparency: true,
+  convertEol: true,
+  scrollOnUserInput: true,
+  macOptionIsMeta: true,
+  macOptionClickForcesSelection: true,
+};
+
+/**
+ * Get VS Code theme colors from CSS variables
+ */
+function getVSCodeTheme(): TerminalTheme {
+  const style = getComputedStyle(document.documentElement);
+  const getColor = (varName: string, fallback: string): string => {
+    return style.getPropertyValue(varName).trim() || fallback;
+  };
+
+  return {
+    background: getColor('--vscode-terminal-background', '#1e1e1e'),
+    foreground: getColor('--vscode-terminal-foreground', '#cccccc'),
+    cursor: getColor('--vscode-terminalCursor-foreground', '#ffffff'),
+    cursorAccent: getColor('--vscode-terminalCursor-background', '#000000'),
+    selectionBackground: getColor('--vscode-terminal-selectionBackground', '#264f78'),
+    black: getColor('--vscode-terminal-ansiBlack', '#000000'),
+    red: getColor('--vscode-terminal-ansiRed', '#cd3131'),
+    green: getColor('--vscode-terminal-ansiGreen', '#0dbc79'),
+    yellow: getColor('--vscode-terminal-ansiYellow', '#e5e510'),
+    blue: getColor('--vscode-terminal-ansiBlue', '#2472c8'),
+    magenta: getColor('--vscode-terminal-ansiMagenta', '#bc3fbc'),
+    cyan: getColor('--vscode-terminal-ansiCyan', '#11a8cd'),
+    white: getColor('--vscode-terminal-ansiWhite', '#e5e5e5'),
+    brightBlack: getColor('--vscode-terminal-ansiBrightBlack', '#666666'),
+    brightRed: getColor('--vscode-terminal-ansiBrightRed', '#f14c4c'),
+    brightGreen: getColor('--vscode-terminal-ansiBrightGreen', '#23d18b'),
+    brightYellow: getColor('--vscode-terminal-ansiBrightYellow', '#f5f543'),
+    brightBlue: getColor('--vscode-terminal-ansiBrightBlue', '#3b8eea'),
+    brightMagenta: getColor('--vscode-terminal-ansiBrightMagenta', '#d670d6'),
+    brightCyan: getColor('--vscode-terminal-ansiBrightCyan', '#29b8db'),
+    brightWhite: getColor('--vscode-terminal-ansiBrightWhite', '#e5e5e5'),
+  };
+}
+
+/**
+ * XtermInstance - Single terminal wrapper
+ *
+ * Lifecycle:
+ * 1. create() - Static factory creates instance
+ * 2. Terminal opened in DOM
+ * 3. Addons loaded
+ * 4. Events registered
+ * 5. dispose() - Clean shutdown
+ */
+export class XtermInstance {
+  public readonly terminal: Terminal;
+  public readonly fitAddon: FitAddon;
+  public readonly serializeAddon: SerializeAddon;
+  public readonly container: HTMLElement;
+
+  private webglAddon: WebglAddon | null = null;
+  private resizeObserver: ResizeObserver | null = null;
+  private disposed = false;
+
+  // Debounce resize to prevent excessive fit() calls
+  private resizeTimer: number | null = null;
+  private readonly RESIZE_DEBOUNCE_MS = 50;
+
+  private constructor(
+    public readonly id: string,
+    public readonly name: string,
+    public readonly number: number,
+    container: HTMLElement,
+    terminal: Terminal,
+    fitAddon: FitAddon,
+    serializeAddon: SerializeAddon
+  ) {
+    this.container = container;
+    this.terminal = terminal;
+    this.fitAddon = fitAddon;
+    this.serializeAddon = serializeAddon;
+  }
+
+  /**
+   * Create new terminal instance (Factory method)
+   *
+   * VS Code Pattern: Async factory with barrier-like behavior
+   * - Container created and attached to DOM first
+   * - Terminal opened after DOM ready
+   * - Returns only when fully initialized
+   */
+  public static async create(
+    id: string,
+    name: string,
+    terminalNumber: number,
+    parentElement: HTMLElement,
+    config: TerminalConfig,
+    callbacks: XtermCallbacks
+  ): Promise<XtermCreateResult> {
+    // 1. Create container element
+    const container = XtermInstance.createContainer(id, name, terminalNumber);
+    const terminalBody = XtermInstance.createTerminalBody(id);
+    container.appendChild(terminalBody);
+
+    // 2. Attach to DOM BEFORE opening terminal (VS Code pattern)
+    parentElement.appendChild(container);
+
+    // 3. Wait for DOM to settle
+    await XtermInstance.waitForNextFrame();
+
+    // 4. Create xterm.js instance with merged config
+    const terminalOptions = XtermInstance.mergeConfig(config);
+    const terminal = new Terminal(terminalOptions);
+
+    // 5. Load core addons
+    const fitAddon = new FitAddon();
+    const serializeAddon = new SerializeAddon();
+    terminal.loadAddon(fitAddon);
+    terminal.loadAddon(serializeAddon);
+
+    // 6. Open terminal in DOM
+    terminal.open(terminalBody);
+
+    // 7. Create instance
+    const instance = new XtermInstance(
+      id,
+      name,
+      terminalNumber,
+      container,
+      terminal,
+      fitAddon,
+      serializeAddon
+    );
+
+    // 8. Try WebGL addon for performance
+    await instance.tryEnableWebGL();
+
+    // 9. Initial fit after DOM is ready
+    await XtermInstance.waitForNextFrame();
+    fitAddon.fit();
+
+    // 10. Setup event handlers
+    instance.setupEventHandlers(callbacks);
+
+    // 11. Setup resize observer
+    instance.setupResizeObserver(callbacks);
+
+    // 12. Focus terminal
+    terminal.focus();
+
+    return {
+      instance,
+      cols: terminal.cols,
+      rows: terminal.rows,
+    };
+  }
+
+  /**
+   * Create terminal container element
+   */
+  private static createContainer(id: string, name: string, number: number): HTMLElement {
+    const container = document.createElement('div');
+    container.id = `terminal-container-${id}`;
+    container.className = 'terminal-container';
+    container.dataset.terminalId = id;
+    container.dataset.terminalNumber = String(number);
+
+    // VS Code standard container styling
+    container.style.cssText = `
+      display: flex;
+      flex-direction: column;
+      flex: 1 1 auto;
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+      position: relative;
+    `;
+
+    // Create header
+    const header = XtermInstance.createHeader(id, name, number);
+    container.appendChild(header);
+
+    return container;
+  }
+
+  /**
+   * Create terminal header with title and controls
+   */
+  private static createHeader(id: string, name: string, number: number): HTMLElement {
+    const header = document.createElement('div');
+    header.className = 'terminal-header';
+    header.dataset.terminalId = id;
+
+    header.style.cssText = `
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 8px;
+      background: var(--vscode-tab-activeBackground, #1e1e1e);
+      border-bottom: 1px solid var(--vscode-panel-border, #454545);
+      min-height: 24px;
+      user-select: none;
+    `;
+
+    // Title section
+    const titleSection = document.createElement('div');
+    titleSection.className = 'terminal-header-title';
+    titleSection.style.cssText = `
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+      overflow: hidden;
+    `;
+
+    // Terminal number badge
+    const badge = document.createElement('span');
+    badge.className = 'terminal-number-badge';
+    badge.textContent = String(number);
+    badge.style.cssText = `
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      border-radius: 3px;
+      background: var(--vscode-badge-background, #4d4d4d);
+      color: var(--vscode-badge-foreground, #ffffff);
+      font-size: 11px;
+      font-weight: 600;
+    `;
+
+    // Terminal name
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'terminal-name';
+    nameSpan.textContent = name;
+    nameSpan.style.cssText = `
+      color: var(--vscode-foreground, #cccccc);
+      font-size: 12px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    `;
+
+    titleSection.appendChild(badge);
+    titleSection.appendChild(nameSpan);
+
+    // Actions section
+    const actions = document.createElement('div');
+    actions.className = 'terminal-header-actions';
+    actions.style.cssText = `
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    `;
+
+    // Close button
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'terminal-close-btn';
+    closeBtn.dataset.terminalId = id;
+    closeBtn.title = 'Close Terminal';
+    closeBtn.innerHTML = '×';
+    closeBtn.style.cssText = `
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      border: none;
+      background: transparent;
+      color: var(--vscode-foreground, #cccccc);
+      cursor: pointer;
+      border-radius: 3px;
+      font-size: 16px;
+      line-height: 1;
+    `;
+
+    closeBtn.addEventListener('mouseover', () => {
+      closeBtn.style.background = 'var(--vscode-toolbar-hoverBackground, #5a5d5e)';
+    });
+    closeBtn.addEventListener('mouseout', () => {
+      closeBtn.style.background = 'transparent';
+    });
+
+    actions.appendChild(closeBtn);
+
+    header.appendChild(titleSection);
+    header.appendChild(actions);
+
+    return header;
+  }
+
+  /**
+   * Create terminal body element (where xterm.js renders)
+   */
+  private static createTerminalBody(id: string): HTMLElement {
+    const body = document.createElement('div');
+    body.id = `terminal-body-${id}`;
+    body.className = 'terminal-body';
+
+    body.style.cssText = `
+      flex: 1 1 auto;
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+      position: relative;
+    `;
+
+    return body;
+  }
+
+  /**
+   * Merge user config with defaults
+   */
+  private static mergeConfig(config: TerminalConfig): ITerminalOptions {
+    const theme = config.theme || getVSCodeTheme();
+
+    return {
+      ...DEFAULT_CONFIG,
+      fontFamily: config.fontFamily || DEFAULT_CONFIG.fontFamily,
+      fontSize: config.fontSize || DEFAULT_CONFIG.fontSize,
+      lineHeight: config.lineHeight || DEFAULT_CONFIG.lineHeight,
+      cursorStyle: config.cursorStyle || DEFAULT_CONFIG.cursorStyle,
+      cursorBlink: config.cursorBlink ?? DEFAULT_CONFIG.cursorBlink,
+      scrollback: config.scrollback || DEFAULT_CONFIG.scrollback,
+      theme,
+    };
+  }
+
+  /**
+   * Wait for next animation frame (barrier pattern)
+   */
+  private static waitForNextFrame(): Promise<void> {
+    return new Promise((resolve) => requestAnimationFrame(() => resolve()));
+  }
+
+  /**
+   * Try to enable WebGL addon for better performance
+   * Falls back silently if WebGL is not available
+   */
+  private async tryEnableWebGL(): Promise<void> {
+    try {
+      this.webglAddon = new WebglAddon();
+
+      // Handle WebGL context loss
+      this.webglAddon.onContextLoss(() => {
+        console.warn(`[XtermInstance] WebGL context lost for ${this.id}`);
+        this.webglAddon?.dispose();
+        this.webglAddon = null;
+      });
+
+      this.terminal.loadAddon(this.webglAddon);
+      console.log(`[XtermInstance] WebGL enabled for ${this.id}`);
+    } catch {
+      console.log(`[XtermInstance] WebGL not available for ${this.id}, using DOM renderer`);
+      this.webglAddon = null;
+    }
+  }
+
+  /**
+   * Setup terminal event handlers
+   */
+  private setupEventHandlers(callbacks: XtermCallbacks): void {
+    // User input
+    this.terminal.onData((data) => {
+      if (!this.disposed) {
+        callbacks.onData(this.id, data);
+      }
+    });
+
+    // Terminal focused
+    this.terminal.textarea?.addEventListener('focus', () => {
+      if (!this.disposed) {
+        callbacks.onFocus(this.id);
+      }
+    });
+
+    // Title change
+    if (callbacks.onTitleChange) {
+      this.terminal.onTitleChange((title) => {
+        if (!this.disposed) {
+          callbacks.onTitleChange!(this.id, title);
+        }
+      });
+    }
+
+    // Container click to focus
+    this.container.addEventListener('click', () => {
+      if (!this.disposed) {
+        this.terminal.focus();
+      }
+    });
+  }
+
+  /**
+   * Setup resize observer with debouncing
+   */
+  private setupResizeObserver(callbacks: XtermCallbacks): void {
+    this.resizeObserver = new ResizeObserver(() => {
+      if (this.disposed) return;
+
+      // Debounce resize
+      if (this.resizeTimer !== null) {
+        window.clearTimeout(this.resizeTimer);
+      }
+
+      this.resizeTimer = window.setTimeout(() => {
+        this.resizeTimer = null;
+        this.performResize(callbacks);
+      }, this.RESIZE_DEBOUNCE_MS);
+    });
+
+    this.resizeObserver.observe(this.container);
+  }
+
+  /**
+   * Perform terminal resize
+   */
+  private performResize(callbacks: XtermCallbacks): void {
+    if (this.disposed) return;
+
+    try {
+      const rect = this.container.getBoundingClientRect();
+
+      // Skip if container is too small
+      if (rect.width < 50 || rect.height < 50) {
+        return;
+      }
+
+      const prevCols = this.terminal.cols;
+      const prevRows = this.terminal.rows;
+
+      this.fitAddon.fit();
+
+      // Notify only if dimensions actually changed
+      if (this.terminal.cols !== prevCols || this.terminal.rows !== prevRows) {
+        callbacks.onResize(this.id, this.terminal.cols, this.terminal.rows);
+      }
+    } catch (error) {
+      console.error(`[XtermInstance] Resize error for ${this.id}:`, error);
+    }
+  }
+
+  /**
+   * Write data to terminal
+   */
+  public write(data: string): void {
+    if (!this.disposed) {
+      this.terminal.write(data);
+    }
+  }
+
+  /**
+   * Clear terminal
+   */
+  public clear(): void {
+    if (!this.disposed) {
+      this.terminal.clear();
+    }
+  }
+
+  /**
+   * Focus terminal
+   */
+  public focus(): void {
+    if (!this.disposed) {
+      this.terminal.focus();
+    }
+  }
+
+  /**
+   * Get terminal dimensions
+   */
+  public getDimensions(): { cols: number; rows: number } {
+    return {
+      cols: this.terminal.cols,
+      rows: this.terminal.rows,
+    };
+  }
+
+  /**
+   * Serialize terminal content (for session persistence)
+   */
+  public serialize(options?: { scrollback?: number }): string {
+    if (this.disposed) return '';
+
+    try {
+      return this.serializeAddon.serialize({
+        scrollback: options?.scrollback ?? 1000,
+      });
+    } catch (error) {
+      console.error(`[XtermInstance] Serialize error for ${this.id}:`, error);
+      return '';
+    }
+  }
+
+  /**
+   * Update terminal theme
+   */
+  public updateTheme(theme: TerminalTheme): void {
+    if (!this.disposed) {
+      this.terminal.options.theme = theme;
+    }
+  }
+
+  /**
+   * Update font settings
+   */
+  public updateFont(fontFamily: string, fontSize: number, lineHeight?: number): void {
+    if (this.disposed) return;
+
+    this.terminal.options.fontFamily = fontFamily;
+    this.terminal.options.fontSize = fontSize;
+    if (lineHeight !== undefined) {
+      this.terminal.options.lineHeight = lineHeight;
+    }
+
+    // Refit after font change
+    requestAnimationFrame(() => {
+      if (!this.disposed) {
+        this.fitAddon.fit();
+      }
+    });
+  }
+
+  /**
+   * Set active state (visual highlight)
+   */
+  public setActive(active: boolean): void {
+    if (this.disposed) return;
+
+    if (active) {
+      this.container.classList.add('active');
+      this.container.style.borderColor = 'var(--vscode-focusBorder, #007fd4)';
+    } else {
+      this.container.classList.remove('active');
+      this.container.style.borderColor = 'transparent';
+    }
+  }
+
+  /**
+   * Dispose terminal and clean up all resources
+   */
+  public dispose(): void {
+    if (this.disposed) return;
+    this.disposed = true;
+
+    console.log(`[XtermInstance] Disposing ${this.id}`);
+
+    // Clear resize timer
+    if (this.resizeTimer !== null) {
+      window.clearTimeout(this.resizeTimer);
+      this.resizeTimer = null;
+    }
+
+    // Disconnect resize observer
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+      this.resizeObserver = null;
+    }
+
+    // Dispose WebGL addon
+    if (this.webglAddon) {
+      try {
+        this.webglAddon.dispose();
+      } catch {
+        // Ignore WebGL dispose errors
+      }
+      this.webglAddon = null;
+    }
+
+    // Dispose terminal
+    try {
+      this.terminal.dispose();
+    } catch (error) {
+      console.error(`[XtermInstance] Error disposing terminal ${this.id}:`, error);
+    }
+
+    // Remove container from DOM
+    if (this.container.parentNode) {
+      this.container.parentNode.removeChild(this.container);
+    }
+  }
+}

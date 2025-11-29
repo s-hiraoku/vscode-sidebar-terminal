@@ -176,11 +176,20 @@ export class TerminalCreationService implements Disposable {
         const terminal = new Terminal(terminalConfig as any);
         terminalLogger.info(`✅ Terminal instance created: ${terminalId}`);
 
+        // Get link modifier from settings (VS Code standard behavior)
+        // When multiCursorModifier is 'alt', links open with Cmd/Ctrl+Click
+        // When multiCursorModifier is 'ctrlCmd', links open with Alt+Click
+        const configManager = this.coordinator.getManagers?.()?.config;
+        const currentSettings = configManager?.getCurrentSettings?.();
+        const multiCursorModifier = currentSettings?.multiCursorModifier ?? 'alt';
+        const linkModifier = multiCursorModifier === 'alt' ? 'alt' : 'ctrlCmd';
+
         // Load all addons using TerminalAddonManager
         const loadedAddons = await this.addonManager.loadAllAddons(terminal, terminalId, {
           enableGpuAcceleration: terminalConfig.enableGpuAcceleration,
           enableSearchAddon: terminalConfig.enableSearchAddon,
           enableUnicode11: terminalConfig.enableUnicode11,
+          linkModifier, // VS Code standard: pass link modifier setting
           linkHandler: (_event, uri) => {
             // Delegate to extension so it can honor workspace trust and external uri handling
             try {
@@ -361,6 +370,8 @@ export class TerminalCreationService implements Disposable {
         this.setupShellIntegration(terminal, terminalId);
 
         // Register file link handlers using TerminalLinkManager
+        // Set link modifier before registering handlers (VS Code standard behavior)
+        this.linkManager.setLinkModifier(linkModifier);
         this.linkManager.registerTerminalLinkHandlers(terminal, terminalId);
 
         // Enable VS Code standard scrollbar using TerminalScrollbarService
