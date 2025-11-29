@@ -1,42 +1,92 @@
-import type { Terminal } from 'xterm';
-import type { FitAddon } from 'xterm-addon-fit';
+/**
+ * Terminal-specific types for WebView components
+ */
 
+import { Terminal } from '@xterm/xterm';
+import { FitAddon } from '@xterm/addon-fit';
+import { TerminalThemeData } from './theme.types';
+
+// CLI Agent status types
+export type CliAgentStatusType = 'connected' | 'disconnected' | 'none';
+
+// Agent type definitions
+export type AgentType = 'claude' | 'gemini' | 'codex' | 'copilot' | 'codeium' | 'other' | null;
+
+// Terminal state types
+export type TerminalState = 'active' | 'inactive' | 'starting' | 'stopping' | 'error';
+
+// Terminal session types
+export interface TerminalSession {
+  id: string;
+  name: string;
+  number: number;
+  state: TerminalState;
+  agentStatus: CliAgentStatusType;
+  agentType: AgentType;
+  createdAt: Date;
+  lastActivity?: Date;
+}
+
+// Terminal theme data
+/**
+ * Terminal theme data
+ * @deprecated Use TerminalTheme from theme.types.ts
+ */
+export type { TerminalThemeData, TerminalTheme } from './theme.types';
+
+// Terminal event types
+export type TerminalEventType =
+  | 'created'
+  | 'destroyed'
+  | 'activated'
+  | 'deactivated'
+  | 'resized'
+  | 'data'
+  | 'title-changed'
+  | 'selection-changed'
+  | 'scroll'
+  | 'agent-detected'
+  | 'agent-status-changed';
+
+// Terminal interaction event types
+export type TerminalInteractionType =
+  | 'click'
+  | 'double-click'
+  | 'right-click'
+  | 'key-press'
+  | 'paste'
+  | 'drag'
+  | 'drop';
+
+// Terminal configuration
 export interface TerminalConfig {
-  readonly fontSize: number;
-  readonly fontFamily: string;
-  readonly theme: TerminalTheme;
-  readonly cursorBlink: boolean;
-  readonly shell?: string;
-  readonly cwd?: string;
-}
-
-export interface TerminalInstance {
-  readonly id: string;
-  readonly name: string;
-  readonly terminal: Terminal;
-  readonly fitAddon: FitAddon;
-  readonly container: HTMLElement;
-  readonly createdAt: Date;
-  isActive: boolean;
-}
-
-export type TerminalTheme = 'auto' | 'dark' | 'light';
-export type SplitDirection = 'horizontal' | 'vertical';
-export type StatusType = 'info' | 'success' | 'error' | 'warning';
-
-export interface TerminalSettings {
+  shell: string;
+  args: string[];
+  maxScrollback: number;
   fontSize: number;
   fontFamily: string;
-  theme?: string;
+  fontWeight?: string;
+  fontWeightBold?: string;
+  lineHeight?: number;
+  letterSpacing?: number;
   cursorBlink: boolean;
-  confirmBeforeKill?: boolean;
-  protectLastTerminal?: boolean;
-  minTerminalCount?: number;
+  cursorStyle: 'block' | 'underline' | 'bar';
+  theme: TerminalThemeData;
+  allowTransparency: boolean;
+  drawBoldTextInBrightColors: boolean;
+  rightClickSelectsWord: boolean;
+  wordSeparator: string;
 }
 
-export interface SplitLayout {
-  direction: SplitDirection;
-  containerCount: number;
-  minHeight: number;
-  splitterSize: number;
-}
+// Export commonly used combinations
+export type TerminalInstance = {
+  id: string;
+  name: string;
+  number: number;
+  terminal: Terminal;
+  fitAddon: FitAddon;
+  container: HTMLElement;
+  isActive: boolean;
+  session: TerminalSession;
+  config: TerminalConfig;
+};

@@ -1,5 +1,6 @@
 import { THEME_CONSTANTS } from '../constants';
 import type { ThemeColors } from '../types/webview.types';
+import { webview as log } from '../../utils/logger';
 
 /**
  * テーマ関連のユーティリティクラス
@@ -16,7 +17,7 @@ export const ThemeUtils = {
       style.getPropertyValue('--vscode-panel-background') ||
       style.backgroundColor;
 
-    console.log('🎨 [THEME] Detected background color:', bgColor);
+    log('🎨 [THEME] Detected background color:', bgColor);
 
     let isDark = true; // Default to dark
 
@@ -56,7 +57,7 @@ export const ThemeUtils = {
       }
     }
 
-    console.log('🎨 [THEME] Theme detected as:', isDark ? 'dark' : 'light');
+    log('🎨 [THEME] Theme detected as:', isDark ? 'dark' : 'light');
     return isDark ? 'dark' : 'light';
   },
 
@@ -69,8 +70,8 @@ export const ThemeUtils = {
     const colors =
       detectedTheme === 'dark' ? THEME_CONSTANTS.DARK_THEME : THEME_CONSTANTS.LIGHT_THEME;
 
-    console.log('🎨 [THEME] Applied theme colors:', colors);
-    return colors;
+    log('🎨 [THEME] Applied theme colors:', colors);
+    return colors as unknown as ThemeColors;
   },
 
   /**
@@ -120,9 +121,6 @@ export const ThemeUtils = {
   generateAccentColor(baseColor: string, factor: number = 0.2): string {
     const brightness = this.calculateBrightness(baseColor);
     const isDark = brightness < 128;
-
-    // 暗い色の場合は明るく、明るい色の場合は暗くする
-    const _adjustment = isDark ? factor : -factor;
 
     // 簡易的な色調整（実際の実装では色空間変換が望ましい）
     return isDark ? this.lightenColor(baseColor, factor) : this.darkenColor(baseColor, factor);

@@ -1,10 +1,10 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import { SidebarTerminalProvider } from '../../providers/SidebarTerminalProvider';
+import { SecondaryTerminalProvider } from '../../providers/SecondaryTerminalProvider';
 import { TerminalManager } from '../../terminals/TerminalManager';
 
 suite('UX Feedback Test Suite', () => {
-  let provider: SidebarTerminalProvider;
+  let provider: SecondaryTerminalProvider;
   let terminalManager: TerminalManager;
   let mockContext: vscode.ExtensionContext;
 
@@ -29,8 +29,8 @@ suite('UX Feedback Test Suite', () => {
       languageModelAccessInformation: {} as vscode.LanguageModelAccessInformation,
     } as unknown as vscode.ExtensionContext;
 
-    terminalManager = new TerminalManager(mockContext);
-    provider = new SidebarTerminalProvider(mockContext, terminalManager);
+    terminalManager = new TerminalManager();
+    provider = new SecondaryTerminalProvider(mockContext, terminalManager);
   });
 
   teardown(() => {
@@ -148,7 +148,7 @@ suite('UX Feedback Test Suite', () => {
         asWebviewUri: (uri: vscode.Uri) => uri,
         cspSource: 'vscode-resource:',
       },
-      viewType: 'sidebarTerminal',
+      viewType: 'secondaryTerminal',
       onDidDispose: () => ({ dispose: () => {} }),
       visible: true,
       onDidChangeVisibility: () => ({ dispose: () => {} }),
@@ -226,7 +226,7 @@ suite('UX Feedback Test Suite', () => {
         asWebviewUri: (uri: vscode.Uri) => uri,
         cspSource: 'vscode-resource:',
       },
-      viewType: 'sidebarTerminal',
+      viewType: 'secondaryTerminal',
       onDidDispose: () => ({ dispose: () => {} }),
       visible: true,
       onDidChangeVisibility: () => ({ dispose: () => {} }),

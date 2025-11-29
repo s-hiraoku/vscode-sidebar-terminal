@@ -1,104 +1,87 @@
+/**
+ * Main entry point for the Secondary Terminal VS Code extension.
+ * This module exports the activation and deactivation functions required by VS Code.
+ *
+ * @module extension
+ */
+
 import * as vscode from 'vscode';
-import { SidebarTerminalProvider } from './providers/SidebarTerminalProvider';
-import { TerminalManager } from './terminals/TerminalManager';
-import { extension as log, logger, LogLevel } from './utils/logger';
+import { ExtensionLifecycle } from './core/ExtensionLifecycle';
 
-let terminalManager: TerminalManager | undefined;
-let sidebarProvider: SidebarTerminalProvider | undefined;
+/**
+ * Singleton instance of the extension lifecycle manager.
+ * @internal
+ */
+const lifecycle = new ExtensionLifecycle();
 
-export function activate(context: vscode.ExtensionContext): void {
-  // Configure logger based on extension mode
-  if (context.extensionMode === vscode.ExtensionMode.Development) {
-    logger.setLevel(LogLevel.DEBUG);
-  } else {
-    logger.setLevel(LogLevel.WARN);
-  }
-
-  log('Sidebar Terminal extension is now active!');
-  log('Extension path:', context.extensionPath);
-
-  try {
-    // Initialize terminal manager
-    terminalManager = new TerminalManager(context);
-
-    // Register the sidebar terminal provider
-    sidebarProvider = new SidebarTerminalProvider(context, terminalManager);
-
-    // Register webview providers for both sidebar and panel
-    const sidebarWebviewProvider = vscode.window.registerWebviewViewProvider(
-      SidebarTerminalProvider.viewType,
-      sidebarProvider,
-      {
-        webviewOptions: {
-          retainContextWhenHidden: true,
-        },
-      }
-    );
-    context.subscriptions.push(sidebarWebviewProvider);
-
-    // Register commands
-    registerCommands(context, sidebarProvider);
-
-    log('Sidebar Terminal extension activated successfully');
-  } catch (error) {
-    log('Failed to activate Sidebar Terminal extension:', error);
-    void vscode.window.showErrorMessage(`Failed to activate Sidebar Terminal: ${String(error)}`);
-  }
+/**
+ * Activates the Secondary Terminal extension.
+ *
+ * This function is called by VS Code when the extension is activated. It initializes
+ * all core components including the terminal manager, session management, command handlers,
+ * and service integrations.
+ *
+ * @param context - The extension context provided by VS Code, containing subscriptions
+ *                  and other extension-specific resources.
+ * @returns A promise that resolves when activation is complete. The promise resolves
+ *          immediately to prevent VS Code's activation spinner from hanging.
+ *
+ * @remarks
+ * The activation process includes:
+ * - Initializing the terminal manager for terminal lifecycle management
+ * - Setting up session persistence for terminal restoration
+ * - Registering all command handlers and keyboard shortcuts
+ * - Initializing shell integration for enhanced terminal features
+ * - Setting up Phase 8 services (decorations and links)
+ * - Configuring WebView providers for the sidebar terminal UI
+ *
+ * @example
+ * ```typescript
+ * // Called automatically by VS Code when extension is activated
+ * export function activate(context: vscode.ExtensionContext): Promise<void> {
+ *   return lifecycle.activate(context);
+ * }
+ * ```
+ *
+ * @throws Will not throw errors; instead logs errors and shows user notifications
+ * @public
+ */
+export function activate(context: vscode.ExtensionContext): Promise<void> {
+  return lifecycle.activate(context);
 }
 
 /**
- * コマンドを登録する
+ * Deactivates the Secondary Terminal extension.
+ *
+ * This function is called by VS Code when the extension is being deactivated or
+ * when VS Code is shutting down. It performs cleanup operations including saving
+ * terminal sessions and disposing of all resources.
+ *
+ * @returns A promise that resolves when deactivation is complete, ensuring all
+ *          cleanup operations have finished.
+ *
+ * @remarks
+ * The deactivation process includes:
+ * - Saving current terminal sessions for restoration on next startup
+ * - Disposing of the standard session manager and cleanup timers
+ * - Disposing of keyboard shortcut service
+ * - Disposing of Phase 8 services (decorations and links)
+ * - Disposing of terminal manager and all terminal instances
+ * - Disposing of sidebar provider and WebView resources
+ * - Cleaning up command handlers
+ * - Disposing of shell integration service
+ *
+ * @example
+ * ```typescript
+ * // Called automatically by VS Code when extension is deactivated
+ * export async function deactivate(): Promise<void> {
+ *   await lifecycle.deactivate();
+ * }
+ * ```
+ *
+ * @throws Will not throw errors; instead logs errors for debugging
+ * @public
  */
-function registerCommands(
-  context: vscode.ExtensionContext,
-  provider: SidebarTerminalProvider
-): void {
-  const commands = [
-    {
-      command: 'sidebarTerminal.killTerminal',
-      callback: () => {
-        log('🔧 [DEBUG] Command executed: killTerminal');
-        provider.killTerminal();
-      },
-    },
-    {
-      command: 'sidebarTerminal.splitTerminal',
-      callback: () => {
-        log('🔧 [DEBUG] Command executed: splitTerminal');
-        provider.splitTerminal();
-      },
-    },
-    {
-      command: 'sidebarTerminal.openSettings',
-      callback: () => {
-        log('🔧 [DEBUG] Command executed: openSettings');
-        provider.openSettings();
-      },
-    },
-  ];
-
-  for (const { command, callback } of commands) {
-    const commandRegistration = vscode.commands.registerCommand(command, callback);
-    context.subscriptions.push(commandRegistration);
-    log('✅ [DEBUG] Command registered:', command);
-  }
-
-  log('✅ [DEBUG] All commands registered successfully');
-}
-
-export function deactivate(): void {
-  log('Deactivating Sidebar Terminal extension...');
-
-  try {
-    if (terminalManager) {
-      terminalManager.dispose();
-      terminalManager = undefined;
-    }
-
-    sidebarProvider = undefined;
-
-    log('Sidebar Terminal extension deactivated successfully');
-  } catch (error) {
-    log('Error during deactivation:', error);
-  }
+export async function deactivate(): Promise<void> {
+  await lifecycle.deactivate();
 }

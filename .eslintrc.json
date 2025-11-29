@@ -6,15 +6,19 @@
     "sourceType": "module",
     "project": "./tsconfig.json"
   },
-  "plugins": ["@typescript-eslint", "prettier"],
+  "plugins": ["@typescript-eslint", "prettier", "eslint-comments"],
   "extends": [
     "eslint:recommended",
     "plugin:@typescript-eslint/recommended",
     "plugin:@typescript-eslint/recommended-requiring-type-checking",
     "plugin:@typescript-eslint/strict",
+    "plugin:eslint-comments/recommended",
     "prettier"
   ],
   "rules": {
+    "eslint-comments/disable-enable-pair": ["error", { "allowWholeFile": false }],
+    "eslint-comments/no-unused-disable": "error",
+    "eslint-comments/require-description": ["error", { "ignore": [] }],
     "prettier/prettier": "error",
     "@typescript-eslint/naming-convention": [
       "warn",
@@ -42,7 +46,36 @@
     "curly": ["warn", "multi-line"],
     "eqeqeq": ["error", "always"],
     "no-throw-literal": "error",
-    "semi": ["error", "always"]
+    "semi": ["error", "always"],
+    "complexity": ["warn", { "max": 10 }],
+    "max-depth": ["warn", { "max": 4 }],
+    "max-nested-callbacks": ["warn", { "max": 3 }],
+    "max-lines-per-function": ["warn", { "max": 50, "skipBlankLines": true, "skipComments": true }],
+    "no-eval": "error",
+    "no-implied-eval": "error",
+    "no-new-func": "error",
+    "no-restricted-properties": [
+      "error",
+      {
+        "object": "*",
+        "property": "innerHTML",
+        "message": "SECURITY: innerHTML is not allowed due to XSS vulnerability risk. Use textContent, createElement, or appendChild instead. See issue #229."
+      }
+    ],
+    "no-console": [
+      "error",
+      {
+        "allow": []
+      }
+    ]
   },
+  "overrides": [
+    {
+      "files": ["src/utils/logger.ts", "src/webview/utils/ManagerLogger.ts", "src/test/**/*.ts", "src/test/**/*.js"],
+      "rules": {
+        "no-console": "off"
+      }
+    }
+  ],
   "ignorePatterns": ["out", "dist", "**/*.d.ts", "webpack.config.js"]
 }

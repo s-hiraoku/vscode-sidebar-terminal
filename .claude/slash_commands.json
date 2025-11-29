@@ -1,0 +1,67 @@
+{
+  "commands": {
+    "release": {
+      "description": "Quality-assured release with automatic error detection and fixing",
+      "usage": "/release [patch|minor|major]",
+      "examples": [
+        "/release patch   # Patch version (0.1.70 → 0.1.71)",
+        "/release minor   # Minor version (0.1.70 → 0.2.0)", 
+        "/release major   # Major version (0.1.70 → 1.0.0)"
+      ],
+      "command": "node commands/release.js",
+      "cwd": ".",
+      "features": [
+        "🔍 Comprehensive quality gate (TypeScript, ESLint, Build, Tests)",
+        "🔧 Automatic error detection and fixing",
+        "📦 Version management with proper Git tagging",
+        "🚀 Automatic GitHub Actions trigger",
+        "🛡️ Prevents broken releases reaching production",
+        "📋 Detailed error reporting and fix suggestions",
+        "✅ One-command release process"
+      ]
+    },
+    "quality": {
+      "description": "Run comprehensive quality checks without releasing",
+      "usage": "/quality",
+      "command": "node commands/release.js --check-only",
+      "cwd": ".",
+      "features": [
+        "🔍 Full quality gate analysis",
+        "📊 Detailed quality report", 
+        "⚠️ Error and warning identification",
+        "💡 Fix recommendations"
+      ]
+    },
+    "fix": {
+      "description": "Automatically fix common code quality issues",
+      "usage": "/fix",
+      "command": "node commands/release.js --fix-only",
+      "cwd": ".",
+      "features": [
+        "🔧 Auto-fix TypeScript compilation errors",
+        "🎨 Auto-fix ESLint issues",
+        "📦 Regenerate missing package-lock.json",
+        "🧹 Code formatting and cleanup"
+      ]
+    }
+  },
+  "aliases": {
+    "/r": "release",
+    "/rel": "release", 
+    "/q": "quality",
+    "/f": "fix"
+  },
+  "workflows": {
+    "complete_release": {
+      "name": "Complete Release Workflow", 
+      "description": "Full quality-assured release process",
+      "steps": [
+        "Run comprehensive quality checks",
+        "Auto-fix detected issues", 
+        "Increment version and create Git tag",
+        "Push to GitHub and trigger CI/CD",
+        "Monitor GitHub Actions success"
+      ]
+    }
+  }
+}

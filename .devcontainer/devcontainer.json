@@ -1,14 +1,22 @@
 {
   "name": "VS Code Extension Dev",
-  "image": "mcr.microsoft.com/devcontainers/typescript-node:20",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:22",
   "features": {
     "ghcr.io/devcontainers/features/node:1": {
       "version": "22"
     },
     "ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {},
     "ghcr.io/devcontainers/features/git:1": {},
-    "ghcr.io/devcontainers/features/github-cli:1": {}
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": true,
+      "configureZshAsDefaultShell": true,
+      "installOhMyZsh": true,
+      "upgradePackages": true
+    }
   },
+  "workspaceMount": "source=${localWorkspaceFolder}/..,target=/workspaces,type=bind,consistency=cached",
+  "workspaceFolder": "/workspaces/vscode-sidebar-terminal",
   "customizations": {
     "vscode": {
       "extensions": [
@@ -33,13 +41,12 @@
       }
     }
   },
-  "forwardPorts": [],
+  "forwardPorts": [3000, 3001, 3002, 3003, 3004, 3005],
   "postCreateCommand": "npm install && npm run compile",
+  "postStartCommand": "sudo chown node:node /workspaces && cp /workspaces/vscode-sidebar-terminal/.devcontainer/setup-terminal.sh /tmp/ && chmod +x /tmp/setup-terminal.sh && bash /tmp/setup-terminal.sh && echo 'export PATH=/usr/local/bin:/home/node/.volta/bin:$PATH' >> /home/node/.zshrc",
   "remoteUser": "node",
   "mounts": [
-    // 拡張機能のデバッグ時にホストのVS Codeと連携
     "source=${localEnv:HOME}/.vscode,target=/home/node/.vscode,type=bind,consistency=cached",
-    // ホストの ~/.claude をコンテナ内の同じパスにマウント
     "source=${localEnv:HOME}/.claude,target=/home/node/.claude,type=bind,consistency=cached"
   ]
 }

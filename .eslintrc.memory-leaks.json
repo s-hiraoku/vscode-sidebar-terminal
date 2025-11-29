@@ -1,0 +1,36 @@
+{
+  "rules": {
+    "no-restricted-syntax": [
+      "warn",
+      {
+        "selector": "CallExpression[callee.property.name=/^on(Did|Will)/]:not(:has(VariableDeclarator))",
+        "message": "Event subscriptions should be stored in a variable for proper disposal. Consider using DisposableStore."
+      },
+      {
+        "selector": "CallExpression[callee.name='setInterval']:not(:has(VariableDeclarator))",
+        "message": "setInterval should be stored in a variable and cleared in dispose(). Track timers in a collection."
+      },
+      {
+        "selector": "CallExpression[callee.name='setTimeout']:not(:has(VariableDeclarator))",
+        "message": "setTimeout should be stored in a variable if it needs cleanup. Consider tracking in a collection."
+      },
+      {
+        "selector": "CallExpression[callee.object.name='window'][callee.property.name='addEventListener']:not(:has(VariableDeclarator))",
+        "message": "addEventListener should be paired with removeEventListener. Store handler reference for cleanup."
+      }
+    ],
+    "no-unused-vars": ["error", {
+      "varsIgnorePattern": "^_disposable|^disposable"
+    }]
+  },
+  "overrides": [
+    {
+      "files": ["*.ts", "*.tsx"],
+      "rules": {
+        "@typescript-eslint/no-unused-vars": ["error", {
+          "varsIgnorePattern": "^_disposable|^disposable"
+        }]
+      }
+    }
+  ]
+}

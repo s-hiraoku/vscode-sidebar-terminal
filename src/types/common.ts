@@ -1,123 +1,25 @@
 /**
  * 共通の型定義とインターフェース
+ *
+ * NOTE: このファイルは後方互換性のために維持されています。
+ * 新しい型は shared.ts に統合され、ここから再エクスポートされます。
  */
 
-// IPty interface for type safety when using node-pty or mocks
-export interface IPty {
-  pid: number;
-  cols: number;
-  rows: number;
-  handleFlowControl?: boolean;
-  onData: (callback: (data: string) => void) => void;
-  onExit: (callback: (exitCode: number, signal?: number) => void) => void;
-  write: (data: string) => void;
-  resize: (cols: number, rows: number) => void;
-  kill: (signal?: string) => void;
-  clear?: () => void;
-}
+// ===== 統合された型システムからの再エクスポート =====
 
-export interface TerminalInfo {
-  id: string;
-  name: string;
-  isActive: boolean;
-}
+// shared.ts から使用されている型のみ再エクスポート
+export {
+  // ターミナル管理型（使用中）
+  TerminalInfo,
+  TerminalInstance,
+  AltClickState,
+  TerminalInteractionEvent,
+  PartialTerminalSettings,
 
-export interface TerminalConfig {
-  fontSize: number;
-  fontFamily: string;
-  maxTerminals: number;
-  shell: string;
-  shellArgs: string[];
-  defaultDirectory?: string;
-}
+  // メッセージ通信型（使用中）
+  WebviewMessage,
+  VsCodeMessage,
+} from './shared';
 
-export interface TerminalSettings {
-  fontSize: number;
-  fontFamily: string;
-  theme?: string;
-  cursorBlink: boolean;
-  confirmBeforeKill?: boolean;
-  protectLastTerminal?: boolean;
-  minTerminalCount?: number;
-  altClickMovesCursor?: boolean;
-  multiCursorModifier?: string;
-}
-
-export interface WebviewMessage {
-  command:
-    | 'init'
-    | 'output'
-    | 'clear'
-    | 'exit'
-    | 'split'
-    | 'terminalCreated'
-    | 'terminalRemoved'
-    | 'settingsResponse'
-    | 'openSettings';
-  config?: TerminalConfig;
-  data?: string;
-  exitCode?: number;
-  terminalId?: string;
-  terminalName?: string;
-  terminals?: TerminalInfo[];
-  activeTerminalId?: string;
-  settings?: TerminalSettings;
-}
-
-export interface VsCodeMessage {
-  command:
-    | 'ready'
-    | 'input'
-    | 'resize'
-    | 'switchTerminal'
-    | 'createTerminal'
-    | 'splitTerminal'
-    | 'clear'
-    | 'getSettings'
-    | 'updateSettings'
-    | 'terminalClosed';
-  data?: string;
-  cols?: number;
-  rows?: number;
-  terminalId?: string;
-  settings?: TerminalSettings;
-}
-
-export interface TerminalInstance {
-  id: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  pty: any; // Using any for node-pty compatibility with both real and mock implementations
-  name: string;
-  isActive: boolean;
-}
-
-export interface TerminalDimensions {
-  cols: number;
-  rows: number;
-}
-
-export interface TerminalEvent {
-  terminalId: string;
-  data?: string;
-  exitCode?: number;
-}
-
-export interface ClaudeCodeState {
-  isActive: boolean;
-  terminalId?: string;
-  startTime?: number;
-  outputVolume?: number;
-}
-
-export interface AltClickState {
-  isEnabled: boolean;
-  isTemporarilyDisabled: boolean;
-  disableReason?: string;
-}
-
-export interface TerminalInteractionEvent {
-  type: 'alt-click' | 'output-detected' | 'claude-code-start' | 'claude-code-end';
-  terminalId: string;
-  timestamp: number;
-  data?: unknown;
-}
+// IPty interface is now defined in node-pty.d.ts for @homebridge/node-pty-prebuilt-multiarch
+// Import IPty from the node-pty module when needed

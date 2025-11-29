@@ -1,13 +1,18 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion */
+
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 import { TerminalManager } from '../../terminals/TerminalManager';
 
 suite('TerminalManager Test Suite', () => {
   let terminalManager: TerminalManager;
-  let mockContext: vscode.ExtensionContext;
+  let _mockContext: vscode.ExtensionContext;
 
   setup(() => {
-    mockContext = {
+    _mockContext = {
       subscriptions: [],
       extensionPath: '',
       extensionUri: vscode.Uri.file(''),
@@ -27,7 +32,7 @@ suite('TerminalManager Test Suite', () => {
       languageModelAccessInformation: {} as vscode.LanguageModelAccessInformation,
     } as unknown as vscode.ExtensionContext;
 
-    terminalManager = new TerminalManager(mockContext);
+    terminalManager = new TerminalManager();
   });
 
   teardown(() => {
@@ -111,5 +116,60 @@ suite('TerminalManager Test Suite', () => {
     });
 
     terminalManager.createTerminal();
+  });
+
+  test('Should handle PTY input correctly', () => {
+    const terminalId = terminalManager.createTerminal();
+    assert.ok(terminalId);
+
+    // Test that PTY input doesn't throw errors
+    assert.doesNotThrow(() => {
+      terminalManager.sendInput('test input', terminalId);
+    });
+
+    // Test that PTY input works with active terminal
+    assert.doesNotThrow(() => {
+      terminalManager.sendInput('test input without id');
+    });
+  });
+
+  test('Should handle PTY resize correctly', () => {
+    const terminalId = terminalManager.createTerminal();
+    assert.ok(terminalId);
+
+    // Test that PTY resize doesn't throw errors
+    assert.doesNotThrow(() => {
+      terminalManager.resize(80, 24, terminalId);
+    });
+
+    // Test that PTY resize works with active terminal
+    assert.doesNotThrow(() => {
+      terminalManager.resize(100, 30);
+    });
+  });
+
+  test('Should validate PTY instance integrity', () => {
+    const terminalId = terminalManager.createTerminal();
+    assert.ok(terminalId);
+
+    const terminals = terminalManager.getTerminals();
+    const terminal = terminals.find((t) => t.id === terminalId);
+    assert.ok(terminal);
+
+    // Ensure PTY instance exists and has required methods
+    assert.ok(terminal.pty || terminal.ptyProcess, 'Terminal should have PTY instance');
+
+    const ptyInstance = terminal.ptyProcess || terminal.pty;
+    assert.ok(ptyInstance, 'PTY instance should exist');
+    assert.strictEqual(
+      typeof (ptyInstance as any).write,
+      'function',
+      'PTY should have write method'
+    );
+    assert.strictEqual(
+      typeof (ptyInstance as any).resize,
+      'function',
+      'PTY should have resize method'
+    );
   });
 });

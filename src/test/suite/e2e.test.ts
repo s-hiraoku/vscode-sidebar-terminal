@@ -25,7 +25,7 @@ suite('E2E Test Suite', () => {
 
   test('Should register terminal view', () => {
     // Check if the terminal view is registered
-    const terminalView = vscode.window.createTreeView('sidebarTerminal', {
+    const terminalView = vscode.window.createTreeView('secondaryTerminal', {
       treeDataProvider: {
         getTreeItem: () => new vscode.TreeItem('test'),
         getChildren: () => [],
@@ -39,7 +39,7 @@ suite('E2E Test Suite', () => {
   test('Should open settings command', async () => {
     // Execute open settings command
     try {
-      await vscode.commands.executeCommand('sidebarTerminal.openSettings');
+      await vscode.commands.executeCommand('secondaryTerminal.openSettings');
       assert.ok(true, 'Command executed successfully');
     } catch (error) {
       assert.fail(`Command execution failed: ${String(error)}`);
@@ -49,7 +49,7 @@ suite('E2E Test Suite', () => {
   test('Should split terminal command', async () => {
     // Execute split terminal command
     try {
-      await vscode.commands.executeCommand('sidebarTerminal.splitTerminal');
+      await vscode.commands.executeCommand('secondaryTerminal.splitTerminal');
       assert.ok(true, 'Split command executed successfully');
     } catch (error) {
       assert.fail(`Split command execution failed: ${String(error)}`);
@@ -59,7 +59,7 @@ suite('E2E Test Suite', () => {
   test('Should open settings command', async () => {
     // Execute open settings command
     try {
-      await vscode.commands.executeCommand('sidebarTerminal.openSettings');
+      await vscode.commands.executeCommand('secondaryTerminal.openSettings');
       assert.ok(true, 'Settings command executed successfully');
     } catch (error) {
       assert.fail(`Settings command execution failed: ${String(error)}`);
@@ -69,7 +69,7 @@ suite('E2E Test Suite', () => {
   test('Should kill terminal command', async () => {
     // Execute kill terminal command
     try {
-      await vscode.commands.executeCommand('sidebarTerminal.killTerminal');
+      await vscode.commands.executeCommand('secondaryTerminal.killTerminal');
       assert.ok(true, 'Kill command executed successfully');
     } catch (error) {
       assert.fail(`Kill command execution failed: ${String(error)}`);
@@ -77,7 +77,7 @@ suite('E2E Test Suite', () => {
   });
 
   test('Should respect configuration changes', async () => {
-    const config = vscode.workspace.getConfiguration('sidebarTerminal');
+    const config = vscode.workspace.getConfiguration('secondaryTerminal');
     const originalFontSize = config.get<number>('fontSize', 14);
 
     // Change configuration
@@ -87,7 +87,7 @@ suite('E2E Test Suite', () => {
     await new Promise((resolve) => setTimeout(resolve, 100));
 
     // Verify change
-    const updatedConfig = vscode.workspace.getConfiguration('sidebarTerminal');
+    const updatedConfig = vscode.workspace.getConfiguration('secondaryTerminal');
     const newFontSize = updatedConfig.get<number>('fontSize', 14);
     assert.strictEqual(newFontSize, 16);
 
@@ -98,9 +98,9 @@ suite('E2E Test Suite', () => {
   test('Should handle multiple terminals', async () => {
     // Create multiple terminals using split
     try {
-      await vscode.commands.executeCommand('sidebarTerminal.splitTerminal');
-      await vscode.commands.executeCommand('sidebarTerminal.splitTerminal');
-      await vscode.commands.executeCommand('sidebarTerminal.splitTerminal');
+      await vscode.commands.executeCommand('secondaryTerminal.splitTerminal');
+      await vscode.commands.executeCommand('secondaryTerminal.splitTerminal');
+      await vscode.commands.executeCommand('secondaryTerminal.splitTerminal');
 
       assert.ok(true, 'Multiple terminals created successfully');
     } catch (error) {
@@ -109,13 +109,13 @@ suite('E2E Test Suite', () => {
   });
 
   test('Should handle terminal limits', async () => {
-    const config = vscode.workspace.getConfiguration('sidebarTerminal');
+    const config = vscode.workspace.getConfiguration('secondaryTerminal');
     const maxTerminals = config.get<number>('maxTerminals', 5);
 
     // Try to create more than the limit using split
     for (let i = 0; i < maxTerminals + 2; i++) {
       try {
-        await vscode.commands.executeCommand('sidebarTerminal.splitTerminal');
+        await vscode.commands.executeCommand('secondaryTerminal.splitTerminal');
       } catch (error) {
         // Expected to fail after reaching limit
       }
@@ -127,7 +127,7 @@ suite('E2E Test Suite', () => {
   suiteTeardown(async () => {
     // Clean up any remaining terminals
     try {
-      await vscode.commands.executeCommand('sidebarTerminal.killTerminal');
+      await vscode.commands.executeCommand('secondaryTerminal.killTerminal');
     } catch {
       // Ignore cleanup errors
     }

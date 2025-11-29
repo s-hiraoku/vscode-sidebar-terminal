@@ -3,7 +3,7 @@
     "module": "CommonJS",
     "target": "ES2022",
     "outDir": "out",
-    "lib": ["ES2022"],
+    "lib": ["ES2022", "DOM"],
     "sourceMap": true,
     "rootDir": "src",
     "strict": true,
@@ -22,6 +22,6 @@
     "noPropertyAccessFromIndexSignature": false,
     "exactOptionalPropertyTypes": false
   },
-  "exclude": ["node_modules", ".vscode-test"],
+  "exclude": ["node_modules", ".vscode-test", "src/integration/IntegratedSecondaryTerminalProvider.ts", "**/__tests__/**"],
   "include": ["src/**/*"]
 }

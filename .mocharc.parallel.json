@@ -1,0 +1,14 @@
+{
+  "require": [
+    "source-map-support/register",
+    "out/test/shared/TestSetup.js"
+  ],
+  "timeout": 10000,
+  "recursive": true,
+  "reporter": "spec",
+  "ui": "bdd",
+  "spec": ["out/test/unit/**/*.test.js"],
+  "parallel": true,
+  "jobs": 4,
+  "retries": 1
+}

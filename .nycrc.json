@@ -9,14 +9,17 @@
     "json"
   ],
   "include": [
-    "src/**/*.ts"
+    "out/src/**/*.js"
   ],
   "exclude": [
+    "out/src/test/**",
+    "out/src/**/*.test.js",
+    "out/src/**/*.spec.js",
     "src/test/**",
     "src/**/*.test.ts",
     "src/**/*.spec.ts",
     "dist/**",
-    "out/**",
+    "out/test/**",
     "node_modules/**",
     "**/*.d.ts"
   ],
