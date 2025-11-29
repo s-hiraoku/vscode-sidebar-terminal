@@ -1063,7 +1063,7 @@
     "@vscode/test-electron": "^2.3.8",
     "@vscode/vsce": "^3.7.1",
     "axe-core": "^4.11.0",
-    "chai": "^4.5.0",
+    "chai": "^6.0.0",
     "chai-as-promised": "^8.0.2",
     "css-loader": "^7.1.2",
     "eslint": "^8.56.0",
