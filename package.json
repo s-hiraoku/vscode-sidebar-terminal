@@ -972,6 +972,36 @@
         "key": "ctrl+shift+p",
         "mac": "cmd+shift+p",
         "when": "view == secondaryTerminal"
+      },
+      {
+        "command": "secondaryTerminal.focusTerminal1",
+        "key": "alt+1",
+        "mac": "alt+1",
+        "when": "terminalFocus && view == secondaryTerminal"
+      },
+      {
+        "command": "secondaryTerminal.focusTerminal2",
+        "key": "alt+2",
+        "mac": "alt+2",
+        "when": "terminalFocus && view == secondaryTerminal"
+      },
+      {
+        "command": "secondaryTerminal.focusTerminal3",
+        "key": "alt+3",
+        "mac": "alt+3",
+        "when": "terminalFocus && view == secondaryTerminal"
+      },
+      {
+        "command": "secondaryTerminal.focusTerminal4",
+        "key": "alt+4",
+        "mac": "alt+4",
+        "when": "terminalFocus && view == secondaryTerminal"
+      },
+      {
+        "command": "secondaryTerminal.focusTerminal5",
+        "key": "alt+5",
+        "mac": "alt+5",
+        "when": "terminalFocus && view == secondaryTerminal"
       }
     ]
   },

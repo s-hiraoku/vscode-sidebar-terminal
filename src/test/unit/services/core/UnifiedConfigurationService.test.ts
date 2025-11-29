@@ -23,19 +23,34 @@ describe('UnifiedConfigurationService', () => {
       update: sandbox.stub(),
     } as any;
 
-    // Mock vscode.workspace.getConfiguration
-    mockWorkspace = sandbox.stub(vscode.workspace, 'getConfiguration').returns(mockWorkspaceConfig);
+    // Configure the existing vscode.workspace.getConfiguration stub from TestSetup.ts
+    // Don't re-stub - instead configure the existing mock's behavior
+    mockWorkspace = vscode.workspace.getConfiguration as sinon.SinonStub;
+    if (typeof mockWorkspace.resetBehavior === 'function') {
+      mockWorkspace.resetBehavior();
+    }
+    if (typeof mockWorkspace.returns === 'function') {
+      mockWorkspace.returns(mockWorkspaceConfig);
+    }
 
-    // Mock onDidChangeConfiguration
-    sandbox.stub(vscode.workspace, 'onDidChangeConfiguration').returns({
-      dispose: sandbox.stub(),
-    } as any);
+    // Configure onDidChangeConfiguration if it's a stub
+    const onDidChangeStub = vscode.workspace.onDidChangeConfiguration as sinon.SinonStub;
+    if (typeof onDidChangeStub.resetBehavior === 'function') {
+      onDidChangeStub.resetBehavior();
+    }
+    if (typeof onDidChangeStub.returns === 'function') {
+      onDidChangeStub.returns({
+        dispose: sandbox.stub(),
+      } as any);
+    }
 
     service = new UnifiedConfigurationService();
   });
 
   afterEach(() => {
-    service.dispose();
+    if (service) {
+      service.dispose();
+    }
     sandbox.restore();
   });
 
@@ -102,9 +117,9 @@ describe('UnifiedConfigurationService', () => {
 
   describe('getWebViewTerminalSettings', () => {
     it('should return WebView-specific settings', () => {
-      // Setup base config mocks
-      mockWorkspaceConfig.get.returns((key: string, defaultValue: any) => {
-        const defaults = {
+      // Setup base config mocks - use callsFake instead of returns for function behavior
+      mockWorkspaceConfig.get.callsFake((key: string, defaultValue: any) => {
+        const defaults: Record<string, unknown> = {
           fontSize: 14,
           fontFamily: 'Consolas, monospace',
           scrollback: 1000,
@@ -114,8 +129,18 @@ describe('UnifiedConfigurationService', () => {
           'cursor.blink': true,
           dynamicSplitDirection: true,
           panelLocation: 'auto',
+          theme: 'auto',
+          cursorBlink: true,
+          maxTerminals: 5,
+          minTerminalCount: 1,
+          protectLastTerminal: true,
+          confirmBeforeKill: false,
+          sendKeybindingsToShell: false,
+          commandsToSkipShell: [],
+          allowChords: true,
+          allowMnemonics: true,
         };
-        return defaults[key as keyof typeof defaults] ?? defaultValue;
+        return defaults[key] ?? defaultValue;
       });
 
       // Mock other sections
@@ -270,9 +295,9 @@ describe('UnifiedConfigurationService', () => {
 
   describe('validateConfiguration', () => {
     it('should validate configuration successfully', () => {
-      // Mock valid configuration
-      mockWorkspaceConfig.get.returns((key: string, defaultValue: any) => {
-        const validConfig = {
+      // Mock valid configuration - use callsFake instead of returns
+      mockWorkspaceConfig.get.callsFake((key: string, defaultValue: any) => {
+        const validConfig: Record<string, unknown> = {
           fontSize: 14,
           fontFamily: 'Consolas, monospace',
           maxTerminals: 5,
@@ -280,8 +305,11 @@ describe('UnifiedConfigurationService', () => {
           shellArgs: ['--login'],
           theme: 'auto',
           cursorBlink: true,
+          minTerminalCount: 1,
+          protectLastTerminal: true,
+          confirmBeforeKill: false,
         };
-        return validConfig[key as keyof typeof validConfig] ?? defaultValue;
+        return validConfig[key] ?? defaultValue;
       });
 
       // Mock other sections for getSidebarTerminalConfig

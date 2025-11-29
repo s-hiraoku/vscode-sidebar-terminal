@@ -13,6 +13,18 @@
 import { WebviewMessage } from '../../../types/common';
 
 /**
+ * Extended message type with common optional fields
+ */
+type ExtendedMessage = WebviewMessage & {
+  terminalId?: string;
+  data?: string;
+  cols?: number;
+  rows?: number;
+  settings?: Record<string, unknown>;
+  [key: string]: unknown;
+};
+
+/**
  * Validation error with details
  */
 export class MessageValidationError extends Error {

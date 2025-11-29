@@ -123,7 +123,9 @@ async function initializeWebView(): Promise<void> {
         if (terminalManager) {
           const diagnostics = terminalManager.exportSystemDiagnostics();
           if (navigator.clipboard) {
-            navigator.clipboard.writeText(JSON.stringify(diagnostics, null, 2)).catch(() => {});
+            navigator.clipboard.writeText(JSON.stringify(diagnostics, null, 2)).catch(() => {
+              // Clipboard write may fail in some environments - non-critical
+            });
           }
         }
       }

@@ -76,6 +76,14 @@ describe('UnifiedConfigurationService', () => {
   let mockWorkspaceConfiguration: sinon.SinonStubbedInstance<vscode.WorkspaceConfiguration>;
 
   beforeEach(() => {
+    // Force dispose any existing singleton instance first
+    try {
+      const existingInstance = UnifiedConfigurationService.getInstance();
+      existingInstance.dispose();
+    } catch {
+      // Ignore if instance doesn't exist or already disposed
+    }
+
     sandbox = sinon.createSandbox();
 
     // Create mock workspace configuration
@@ -86,15 +94,27 @@ describe('UnifiedConfigurationService', () => {
       update: sandbox.stub().resolves(),
     } as any;
 
-    // Mock vscode.workspace.getConfiguration as a proper Sinon stub
-    const getConfigurationStub = sandbox.stub(vscode.workspace, 'getConfiguration');
-    getConfigurationStub.returns(mockWorkspaceConfiguration);
+    // Configure the existing vscode.workspace.getConfiguration stub from TestSetup.ts
+    // Don't re-stub - instead configure the existing mock's behavior
+    const getConfigStub = vscode.workspace.getConfiguration as sinon.SinonStub;
+    if (typeof getConfigStub.resetBehavior === 'function') {
+      getConfigStub.resetBehavior();
+    }
+    if (typeof getConfigStub.returns === 'function') {
+      getConfigStub.returns(mockWorkspaceConfiguration);
+    }
 
-    // Mock vscode.workspace.onDidChangeConfiguration
-    const mockDisposable = { dispose: sandbox.stub() };
-    sandbox.stub(vscode.workspace, 'onDidChangeConfiguration').returns(mockDisposable);
+    // Configure onDidChangeConfiguration if it's a stub
+    const onDidChangeStub = vscode.workspace.onDidChangeConfiguration as sinon.SinonStub;
+    if (typeof onDidChangeStub.resetBehavior === 'function') {
+      onDidChangeStub.resetBehavior();
+    }
+    if (typeof onDidChangeStub.returns === 'function') {
+      const mockDisposable = { dispose: sandbox.stub() };
+      onDidChangeStub.returns(mockDisposable);
+    }
 
-    // Get fresh instance
+    // Get fresh instance - will create a new one since we disposed the old one
     service = getUnifiedConfigurationService();
     service.initialize();
   });
