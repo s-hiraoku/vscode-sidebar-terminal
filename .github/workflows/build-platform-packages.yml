@@ -46,7 +46,7 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: e2e-playwright-report
           path: playwright-report/
@@ -54,7 +54,7 @@ jobs:
 
       - name: Upload test artifacts (screenshots, videos, traces)
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: e2e-test-results
           path: test-results/
@@ -122,7 +122,7 @@ jobs:
           echo "EOF" >> $GITHUB_ENV
 
       - name: Upload TDD Report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: tdd-release-report
           path: tdd-release-report.md
@@ -235,7 +235,7 @@ jobs:
         run: vsce package --target ${{ matrix.target }}
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: vscode-sidebar-terminal-${{ matrix.target }}
           path: '*.vsix'
