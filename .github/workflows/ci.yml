@@ -40,7 +40,7 @@ jobs:
         if: runner.os == 'Windows'
         uses: actions/setup-python@v6
         with:
-          python-version: '3.13'
+          python-version: '3.14'
 
       - name: Configure Windows environment for node-gyp (Windows)
         if: runner.os == 'Windows'
