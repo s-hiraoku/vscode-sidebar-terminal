@@ -73,7 +73,7 @@ if (originalProcess) {
 
   // Special handling for removeListener to prevent Mocha errors
   const originalRemoveListener = originalProcess.removeListener;
-  // eslint-disable-next-line @typescript-eslint/ban-types
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type -- Test environment requires Function type for removeListener
   originalProcess.removeListener = function (event: string, listener: Function) {
     try {
       if (originalRemoveListener && typeof originalRemoveListener === 'function') {

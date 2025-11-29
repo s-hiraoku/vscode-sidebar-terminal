@@ -17,6 +17,11 @@ on:
       - for-publish
   workflow_dispatch:
 
+# Cancel outdated runs when new commits are pushed
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   e2e-tests:
     name: Playwright E2E Tests

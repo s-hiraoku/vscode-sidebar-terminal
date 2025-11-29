@@ -114,6 +114,70 @@ export const THEME_UI_COLORS = {
 } as const;
 
 /**
+ * Parse a color string to RGB values
+ */
+function parseColorToRGB(color: string): { r: number; g: number; b: number } | null {
+  if (!color) return null;
+
+  // Handle hex colors
+  if (color.startsWith('#')) {
+    const hex = color.slice(1);
+    if (hex.length === 3) {
+      const r = hex.charAt(0);
+      const g = hex.charAt(1);
+      const b = hex.charAt(2);
+      return {
+        r: parseInt(r + r, 16),
+        g: parseInt(g + g, 16),
+        b: parseInt(b + b, 16),
+      };
+    } else if (hex.length === 6) {
+      return {
+        r: parseInt(hex.slice(0, 2), 16),
+        g: parseInt(hex.slice(2, 4), 16),
+        b: parseInt(hex.slice(4, 6), 16),
+      };
+    }
+  }
+
+  // Handle rgb/rgba colors
+  const rgbMatch = color.match(/rgba?\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+  if (rgbMatch && rgbMatch[1] && rgbMatch[2] && rgbMatch[3]) {
+    return {
+      r: parseInt(rgbMatch[1], 10),
+      g: parseInt(rgbMatch[2], 10),
+      b: parseInt(rgbMatch[3], 10),
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Calculate relative luminance of a color (0 = black, 1 = white)
+ */
+function getLuminance(r: number, g: number, b: number): number {
+  // Convert to sRGB
+  const toSrgb = (c: number): number => {
+    const srgb = c / 255;
+    return srgb <= 0.03928 ? srgb / 12.92 : Math.pow((srgb + 0.055) / 1.055, 2.4);
+  };
+  // Calculate luminance
+  return 0.2126 * toSrgb(r) + 0.7152 * toSrgb(g) + 0.0722 * toSrgb(b);
+}
+
+/**
+ * Detect if a color is light or dark based on luminance
+ */
+function isLightColor(color: string): boolean {
+  const rgb = parseColorToRGB(color);
+  if (!rgb) return false;
+  const luminance = getLuminance(rgb.r, rgb.g, rgb.b);
+  // Threshold of 0.5 to determine light vs dark
+  return luminance > 0.5;
+}
+
+/**
  * Get terminal theme based on VS Code theme detection
  */
 export function detectVSCodeTheme(settings?: { theme?: string }): TerminalTheme {
@@ -124,12 +188,32 @@ export function detectVSCodeTheme(settings?: { theme?: string }): TerminalTheme 
     return DARK_THEME;
   }
 
-  // VS Code body class detection
-  const body = document.body;
-  const classList = body.classList;
+  // Try CSS variable detection first (most reliable in WebView)
+  if (typeof document !== 'undefined' && typeof getComputedStyle !== 'undefined') {
+    try {
+      const style = getComputedStyle(document.documentElement);
+      const bgColor =
+        style.getPropertyValue('--vscode-terminal-background').trim() ||
+        style.getPropertyValue('--vscode-editor-background').trim();
 
-  if (classList.contains('vscode-light')) {
-    return LIGHT_THEME;
+      if (bgColor && isLightColor(bgColor)) {
+        return LIGHT_THEME;
+      } else if (bgColor) {
+        return DARK_THEME;
+      }
+    } catch {
+      // Fall through to body class detection
+    }
+  }
+
+  // VS Code body class detection as fallback
+  if (typeof document !== 'undefined') {
+    const body = document.body;
+    const classList = body.classList;
+
+    if (classList.contains('vscode-light')) {
+      return LIGHT_THEME;
+    }
   }
 
   // Default to dark theme

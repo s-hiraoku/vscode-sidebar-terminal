@@ -201,7 +201,7 @@ export class WebViewPersistenceService implements IWebViewPersistencePort {
     try {
       const data = localStorage.getItem(WebViewPersistenceService.STORAGE_KEY);
       return data ? data.length : 0;
-    } catch (error) {
+    } catch {
       return 0;
     }
   }
