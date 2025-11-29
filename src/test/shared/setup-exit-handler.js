@@ -26,57 +26,25 @@ if (!Array.isArray(process.argv)) {
   process.argv = originalArgv;
 }
 
-// Patch Mocha's run-helpers.js exitMocha function to handle undefined process objects
-// This must run before any tests to catch the case where process properties become undefined
+// Patch Mocha's run-helpers.js exitMocha function to handle undefined process.argv
+// This must run before any tests to catch the case where process.argv becomes undefined
 try {
   const runHelpers = require('mocha/lib/cli/run-helpers.js');
 
   // Directly patch the exitMocha function if it exists
   if (runHelpers && typeof runHelpers.exitMocha === 'function' && !runHelpers._exitMochaPatched) {
-    // Replace exitMocha entirely with a safe version
+    const originalExitMocha = runHelpers.exitMocha;
+
     runHelpers.exitMocha = function(code) {
-      // Ensure we can exit cleanly
-      try {
-        process.exitCode = code;
-      } catch (e) {
-        // Ignore
+      // Ensure process.argv exists before calling original
+      if (!process.argv || !Array.isArray(process.argv)) {
+        process.argv = originalArgv;
       }
-
-      // Safe write function that handles missing streams
-      const safeWrite = (stream, done) => {
-        if (stream && typeof stream.write === 'function') {
-          try {
-            stream.write('', done);
-          } catch (e) {
-            done();
-          }
-        } else {
-          done();
-        }
-      };
-
-      let draining = 0;
-      const done = () => {
-        if (!draining--) {
-          try {
-            process.exit(code);
-          } catch (e) {
-            // If exit fails, at least log
-            console.error('Failed to exit:', e.message);
-          }
-        }
-      };
-
-      // Try to drain stdout and stderr
-      draining = 2;
-      safeWrite(process.stdout, done);
-      safeWrite(process.stderr, done);
-
-      done();
+      return originalExitMocha.call(this, code);
     };
 
     runHelpers._exitMochaPatched = true;
-    console.log('✅ Patched Mocha exitMocha with safe implementation');
+    console.log('✅ Patched Mocha exitMocha to handle undefined process.argv');
   }
 } catch (e) {
   // Ignore if patching fails
@@ -323,55 +291,45 @@ process.on('uncaughtException', (error) => {
   // Log but don't exit in test environment
 });
 
-// Ensure process.stdout and process.stderr always exist for Mocha exit handling
-// DO NOT use getters - they cause issues with Mocha's exitMocha function
-// Instead, directly verify the streams exist and are valid
-if (!process.stdout || typeof process.stdout.write !== 'function') {
-  const fallbackStdout = {
-    write: (data, encoding, callback) => {
-      if (typeof encoding === 'function') callback = encoding;
-      if (callback) setImmediate(callback);
-      return true;
-    },
-    fd: 1,
-    on: () => fallbackStdout,
-    once: () => fallbackStdout,
-    emit: () => false,
-    end: () => {},
-  };
-  try {
-    Object.defineProperty(process, 'stdout', {
-      value: fallbackStdout,
-      writable: true,
-      configurable: true,
-    });
-  } catch (e) {
-    // Some environments don't allow redefining stdout
-  }
-}
+// Ensure process.stdout and process.stderr exist for Mocha exit handling
+// Save original references
+const originalStdout = process.stdout;
+const originalStderr = process.stderr;
 
-if (!process.stderr || typeof process.stderr.write !== 'function') {
-  const fallbackStderr = {
-    write: (data, encoding, callback) => {
-      if (typeof encoding === 'function') callback = encoding;
-      if (callback) setImmediate(callback);
-      return true;
-    },
-    fd: 2,
-    on: () => fallbackStderr,
-    once: () => fallbackStderr,
-    emit: () => false,
-    end: () => {},
-  };
-  try {
-    Object.defineProperty(process, 'stderr', {
-      value: fallbackStderr,
-      writable: true,
-      configurable: true,
-    });
-  } catch (e) {
-    // Some environments don't allow redefining stderr
-  }
-}
+const createFallbackStream = (fd) => ({
+  write: (data, encoding, callback) => {
+    if (typeof encoding === 'function') callback = encoding;
+    if (callback) setImmediate(callback);
+    return true;
+  },
+  fd,
+  on: () => {},
+  once: () => {},
+  emit: () => {},
+  end: () => {},
+});
+
+// Define stdout and stderr as getters that always return a valid object
+Object.defineProperty(process, 'stdout', {
+  get: function() {
+    return originalStdout || createFallbackStream(1);
+  },
+  set: function(value) {
+    // Allow setting but maintain reference
+  },
+  configurable: true,
+  enumerable: true,
+});
+
+Object.defineProperty(process, 'stderr', {
+  get: function() {
+    return originalStderr || createFallbackStream(2);
+  },
+  set: function(value) {
+    // Allow setting but maintain reference
+  },
+  configurable: true,
+  enumerable: true,
+});
 
 module.exports = {};
