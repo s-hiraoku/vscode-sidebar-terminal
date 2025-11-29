@@ -323,45 +323,55 @@ process.on('uncaughtException', (error) => {
   // Log but don't exit in test environment
 });
 
-// Ensure process.stdout and process.stderr exist for Mocha exit handling
-// Save original references
-const originalStdout = process.stdout;
-const originalStderr = process.stderr;
+// Ensure process.stdout and process.stderr always exist for Mocha exit handling
+// DO NOT use getters - they cause issues with Mocha's exitMocha function
+// Instead, directly verify the streams exist and are valid
+if (!process.stdout || typeof process.stdout.write !== 'function') {
+  const fallbackStdout = {
+    write: (data, encoding, callback) => {
+      if (typeof encoding === 'function') callback = encoding;
+      if (callback) setImmediate(callback);
+      return true;
+    },
+    fd: 1,
+    on: () => fallbackStdout,
+    once: () => fallbackStdout,
+    emit: () => false,
+    end: () => {},
+  };
+  try {
+    Object.defineProperty(process, 'stdout', {
+      value: fallbackStdout,
+      writable: true,
+      configurable: true,
+    });
+  } catch (e) {
+    // Some environments don't allow redefining stdout
+  }
+}
 
-const createFallbackStream = (fd) => ({
-  write: (data, encoding, callback) => {
-    if (typeof encoding === 'function') callback = encoding;
-    if (callback) setImmediate(callback);
-    return true;
-  },
-  fd,
-  on: () => {},
-  once: () => {},
-  emit: () => {},
-  end: () => {},
-});
-
-// Define stdout and stderr as getters that always return a valid object
-Object.defineProperty(process, 'stdout', {
-  get: function() {
-    return originalStdout || createFallbackStream(1);
-  },
-  set: function(value) {
-    // Allow setting but maintain reference
-  },
-  configurable: true,
-  enumerable: true,
-});
-
-Object.defineProperty(process, 'stderr', {
-  get: function() {
-    return originalStderr || createFallbackStream(2);
-  },
-  set: function(value) {
-    // Allow setting but maintain reference
-  },
-  configurable: true,
-  enumerable: true,
-});
+if (!process.stderr || typeof process.stderr.write !== 'function') {
+  const fallbackStderr = {
+    write: (data, encoding, callback) => {
+      if (typeof encoding === 'function') callback = encoding;
+      if (callback) setImmediate(callback);
+      return true;
+    },
+    fd: 2,
+    on: () => fallbackStderr,
+    once: () => fallbackStderr,
+    emit: () => false,
+    end: () => {},
+  };
+  try {
+    Object.defineProperty(process, 'stderr', {
+      value: fallbackStderr,
+      writable: true,
+      configurable: true,
+    });
+  } catch (e) {
+    // Some environments don't allow redefining stderr
+  }
+}
 
 module.exports = {};
