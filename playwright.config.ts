@@ -41,8 +41,8 @@ export default defineConfig({
 
   // Shared settings for all projects
   use: {
-    // Base URL for tests
-    baseURL: 'http://localhost:3000',
+    // Base URL for the test server
+    baseURL: 'http://localhost:3333',
 
     // Collect trace on first retry
     trace: 'on-first-retry',
@@ -68,6 +68,14 @@ export default defineConfig({
   // VS Code extension test setup
   globalSetup: require.resolve('./src/test/e2e/config/global-setup.ts'),
   globalTeardown: require.resolve('./src/test/e2e/config/global-teardown.ts'),
+
+  // Web server to serve test fixtures
+  webServer: {
+    command: 'npx http-server src/test/e2e/fixtures -p 3333 -c-1 --silent -o /standalone-webview.html',
+    url: 'http://localhost:3333/standalone-webview.html',
+    reuseExistingServer: !process.env.CI,
+    timeout: 30 * 1000,
+  },
 
   // Output directory for test artifacts
   outputDir: 'test-results/',

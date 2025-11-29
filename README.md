@@ -491,6 +491,18 @@ The project uses GitHub Actions for automated testing and releases:
 
 ## 📈 Version History
 
+### v0.1.146 - 🏗️ **Registry Pattern & Claude Code Skills**
+- 🎯 **Claude Code Skills**: Added 10 comprehensive skill files for VS Code extension development expertise
+- 🏗️ **Registry Pattern**: Implemented `RegistryBasedMessageHandler`, `ManagerRegistry`, and `CommandRegistry` patterns
+- 🔧 **Code Quality**: Added `StateTracker`, `DebouncedEventBuffer`, and `FontSettingsService` utilities
+- ⚡ **Terminal Architecture**: New `TerminalOperationsCoordinator` and `ResizeHandlingCoordinator`
+- 🐛 **Fixes**: Auto-scroll, terminal resize, styling application, and race condition prevention
+
+### v0.1.145 - 🔧 **Terminal Width Resize Tracking**
+- 🔧 **Resize Fix**: Fixed terminal not following panel width when expanding
+- 🎨 **CSS Flex Layout**: Enhanced flex container styling for reliable width expansion
+- ⚡ **Performance**: Reduced resize debounce from 100ms to 50ms for faster response
+
 ### v0.1.141 (Development) - 🔧 **Scrollback Restoration & Message Queuing**
 - 🔧 **Scrollback Fix**: Fixed critical scrollback restoration issues with proper array/string handling
 - 📨 **Message Queuing**: Added message queuing to prevent loss during WebView initialization

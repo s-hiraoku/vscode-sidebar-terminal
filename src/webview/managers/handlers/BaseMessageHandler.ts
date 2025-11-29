@@ -290,11 +290,11 @@ export abstract class RegistryBasedMessageHandler implements IMessageHandler {
     this.registry.register(
       command,
       (context) => {
-        const { msg, coordinator } = context as {
+        const typedContext = context as unknown as {
           msg: MessageCommand;
           coordinator: IManagerCoordinator;
         };
-        return handler(msg, coordinator);
+        return handler(typedContext.msg, typedContext.coordinator);
       },
       options
     );

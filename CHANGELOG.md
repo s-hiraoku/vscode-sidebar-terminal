@@ -7,6 +7,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.146] - 2025-11-30
+
+### Fixed
+
+- **Lint Errors**: Fixed unused variable and import errors for release
+  - Fixed unused `config` parameters in E2E global setup/teardown
+  - Removed unused `Page` import from standalone-webview.spec.ts
+  - Removed unused `TerminalCreationService` import
+  - Fixed TypeScript type casting in BaseMessageHandler
+
+### Added
+
+- **Claude Code Skills for VS Code Extension Development**: Added comprehensive skill files for expert guidance
+  - `vscode-extension-expert`: Expert-level guidance for VS Code extension development
+  - `vscode-webview-expert`: Comprehensive WebView implementation patterns and security
+  - `xterm-expert`: Terminal rendering optimization and xterm.js best practices
+  - `vscode-terminal-expert`: PTY integration and shell handling based on VS Code patterns
+  - `vscode-tdd-expert`: Test-Driven Development following t-wada methodology
+  - `vscode-extension-debugger`: Debugging and fixing VS Code extension issues
+  - `vscode-extension-refactorer`: Code refactoring with VS Code-specific patterns
+  - `vscode-bug-hunter`: Systematic bug detection and discovery
+  - `vscode-test-setup`: Test infrastructure configuration guidance
+  - `skill-creator`: Guide for creating effective skills
+
+### Refactored
+
+- **Registry Pattern Implementation**: Comprehensive refactoring to registry-based patterns
+  - Created `RegistryBasedMessageHandler` for unified message handling
+  - Converted multiple handlers to registry pattern for better maintainability
+  - Added `ManagerRegistry` and `CommandRegistry` patterns for centralized management
+  - Extracted `SessionRestoreManager` and `TerminalSettingsManager` as specialized managers
+
+- **Code Quality Improvements**
+  - Added `StateTracker` and `DebouncedEventBuffer` utilities for state management
+  - Created `FontSettingsService` for centralized font management
+  - Split `SystemConstants` into domain-specific constant files
+  - Removed debug logging from message handling and font settings application
+  - Improved message routing validation
+
+- **Terminal Architecture Enhancements**
+  - Added `TerminalOperationsCoordinator` and `ResizeHandlingCoordinator` for better separation of concerns
+  - Delegated terminal state tracking to `TerminalOperationsCoordinator`
+  - Added WebView initialization handshake to prevent race conditions
+
+### Fixed
+
+- **Terminal Resize**: Reset additional elements for proper terminal resize behavior
+- **Styling Application**: Made styling application non-fatal during terminal creation
+- **Auto-scroll**: Fixed auto-scroll to bottom after terminal output
+- **Race Conditions**: Added `webviewInitialized` handshake to prevent race conditions during initialization
+
 ## [0.1.145] - 2025-11-28
 
 ### Fixed

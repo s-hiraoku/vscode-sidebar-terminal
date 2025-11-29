@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terminal WebView - E2E Test Fixture</title>
+    <style>
+        /* Reset styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --vscode-foreground: #cccccc;
+            --vscode-editor-background: #1e1e1e;
+            --vscode-panel-background: #1e1e1e;
+            --vscode-panelTitle-activeForeground: #e7e7e7;
+            --vscode-terminal-foreground: #cccccc;
+            --vscode-terminal-background: #1e1e1e;
+            --vscode-terminal-ansiBlack: #000000;
+            --vscode-terminal-ansiRed: #cd3131;
+            --vscode-terminal-ansiGreen: #0dbc79;
+            --vscode-terminal-ansiYellow: #e5e510;
+            --vscode-terminal-ansiBlue: #2472c8;
+            --vscode-terminal-ansiMagenta: #bc3fbc;
+            --vscode-terminal-ansiCyan: #11a8cd;
+            --vscode-terminal-ansiWhite: #e5e5e5;
+            --vscode-terminal-ansiBrightBlack: #666666;
+            --vscode-terminal-ansiBrightRed: #f14c4c;
+            --vscode-terminal-ansiBrightGreen: #23d18b;
+            --vscode-terminal-ansiBrightYellow: #f5f543;
+            --vscode-terminal-ansiBrightBlue: #3b8eea;
+            --vscode-terminal-ansiBrightMagenta: #d670d6;
+            --vscode-terminal-ansiBrightCyan: #29b8db;
+            --vscode-terminal-ansiBrightWhite: #e5e5e5;
+            --vscode-focusBorder: #007fd4;
+            --vscode-button-background: #0e639c;
+            --vscode-button-foreground: #ffffff;
+            --vscode-button-hoverBackground: #1177bb;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: var(--vscode-editor-background);
+            color: var(--vscode-foreground);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+        }
+
+        /* Header styles */
+        #header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 4px 8px;
+            background-color: var(--vscode-panel-background);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            height: 28px;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .terminal-tabs {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .terminal-tab {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            background: transparent;
+            border: none;
+            color: var(--vscode-foreground);
+            cursor: pointer;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+
+        .terminal-tab:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .terminal-tab.active {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .terminal-tab .close-btn {
+            display: none;
+            padding: 0 2px;
+            margin-left: 4px;
+            border-radius: 2px;
+        }
+
+        .terminal-tab:hover .close-btn {
+            display: inline-block;
+        }
+
+        .terminal-tab .close-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .action-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 22px;
+            height: 22px;
+            background: transparent;
+            border: none;
+            color: var(--vscode-foreground);
+            cursor: pointer;
+            border-radius: 3px;
+        }
+
+        .action-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .agent-status {
+            display: none;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+            background: rgba(0, 122, 204, 0.2);
+            color: #3b8eea;
+        }
+
+        .agent-status.active {
+            display: flex;
+        }
+
+        .agent-status.claude-code {
+            background: rgba(255, 149, 0, 0.2);
+            color: #ff9500;
+        }
+
+        .agent-status.github-copilot {
+            background: rgba(0, 122, 204, 0.2);
+            color: #007acc;
+        }
+
+        .agent-status.gemini-cli {
+            background: rgba(52, 168, 83, 0.2);
+            color: #34a853;
+        }
+
+        /* Terminal body */
+        #terminal-body {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: calc(100% - 28px);
+            overflow: hidden;
+        }
+
+        .terminal-container {
+            flex: 1;
+            min-height: 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .terminal-container.hidden {
+            display: none;
+        }
+
+        /* Loading state */
+        #loading-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: var(--vscode-foreground);
+            opacity: 0.7;
+        }
+
+        #loading-indicator.hidden {
+            display: none;
+        }
+
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top-color: var(--vscode-focusBorder);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 12px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* xterm.js styles placeholder */
+        .xterm {
+            font-feature-settings: "liga" 0;
+            position: relative;
+            user-select: none;
+            -ms-user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .xterm.focus,
+        .xterm:focus {
+            outline: none;
+        }
+
+        .xterm .xterm-helpers {
+            position: absolute;
+            top: 0;
+            z-index: 5;
+        }
+
+        .xterm .xterm-screen {
+            position: relative;
+        }
+
+        .xterm .xterm-viewport {
+            background-color: var(--vscode-terminal-background);
+            overflow-y: scroll;
+        }
+
+        /* Notification styles */
+        #notification-container {
+            position: fixed;
+            top: 40px;
+            right: 10px;
+            z-index: 1000;
+        }
+
+        .notification {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            border-radius: 4px;
+            background: var(--vscode-panel-background);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            animation: slideIn 0.2s ease-out;
+        }
+
+        .notification.info {
+            border-left: 3px solid var(--vscode-terminal-ansiBlue);
+        }
+
+        .notification.warning {
+            border-left: 3px solid var(--vscode-terminal-ansiYellow);
+        }
+
+        .notification.error {
+            border-left: 3px solid var(--vscode-terminal-ansiRed);
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        /* Debug panel */
+        #debug-panel {
+            display: none;
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            width: 300px;
+            max-height: 200px;
+            overflow: auto;
+            background: rgba(0, 0, 0, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            padding: 8px;
+            font-size: 11px;
+            font-family: monospace;
+            z-index: 1001;
+        }
+
+        #debug-panel.visible {
+            display: block;
+        }
+
+        #debug-panel h4 {
+            margin-bottom: 8px;
+            color: var(--vscode-terminal-ansiCyan);
+        }
+
+        #debug-panel pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header with terminal tabs and actions -->
+    <div id="header" role="toolbar" aria-label="Terminal toolbar">
+        <div class="header-left">
+            <div class="terminal-tabs" role="tablist" aria-label="Terminal tabs">
+                <button class="terminal-tab active" role="tab" aria-selected="true" data-terminal-id="1">
+                    <span class="tab-icon">⌘</span>
+                    <span class="tab-name">Terminal 1</span>
+                    <span class="close-btn" aria-label="Close terminal">×</span>
+                </button>
+            </div>
+            <div id="agent-status" class="agent-status" role="status" aria-live="polite">
+                <span class="agent-icon">🤖</span>
+                <span class="agent-name">No Agent</span>
+            </div>
+        </div>
+        <div class="header-right">
+            <button id="btn-new-terminal" class="action-btn" aria-label="New Terminal" title="New Terminal">+</button>
+            <button id="btn-split-terminal" class="action-btn" aria-label="Split Terminal" title="Split Terminal">⫿</button>
+            <button id="btn-kill-terminal" class="action-btn" aria-label="Kill Terminal" title="Kill Terminal">🗑</button>
+        </div>
+    </div>
+
+    <!-- Terminal body -->
+    <div id="terminal-body">
+        <div class="terminal-container" data-terminal-id="1" role="region" aria-label="Terminal 1">
+            <div id="loading-indicator">
+                <div class="spinner"></div>
+                <div>Initializing terminal...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification container -->
+    <div id="notification-container" role="alert" aria-live="polite"></div>
+
+    <!-- Debug panel -->
+    <div id="debug-panel" role="complementary" aria-label="Debug information">
+        <h4>Debug Panel (Ctrl+Shift+D)</h4>
+        <pre id="debug-content"></pre>
+    </div>
+
+    <!-- Mock VS Code API and Terminal Manager -->
+    <script>
+        (function() {
+            // Mock VS Code API
+            window.vscode = {
+                postMessage: function(message) {
+                    console.log('[WebView -> Extension]', message);
+                    // Simulate Extension response
+                    handleMockExtensionMessage(message);
+                },
+                getState: function() {
+                    try {
+                        return JSON.parse(localStorage.getItem('vscode-state') || '{}');
+                    } catch (e) {
+                        return {};
+                    }
+                },
+                setState: function(state) {
+                    localStorage.setItem('vscode-state', JSON.stringify(state));
+                }
+            };
+
+            // Mock terminal state
+            window.terminalState = {
+                terminals: [{ id: 1, name: 'Terminal 1', active: true }],
+                maxTerminals: 5,
+                activeTerminalId: 1,
+                agentStatus: null
+            };
+
+            // Handle mock extension messages
+            function handleMockExtensionMessage(message) {
+                const { command, data } = message;
+
+                switch (command) {
+                    case 'createTerminal':
+                        const newId = window.terminalState.terminals.length + 1;
+                        if (newId <= window.terminalState.maxTerminals) {
+                            window.terminalState.terminals.push({
+                                id: newId,
+                                name: `Terminal ${newId}`,
+                                active: true
+                            });
+                            window.terminalState.activeTerminalId = newId;
+                            updateTerminalUI();
+                            simulateExtensionResponse({ command: 'terminalCreated', data: { id: newId } });
+                        } else {
+                            showNotification('Maximum 5 terminals reached', 'warning');
+                        }
+                        break;
+                    case 'killTerminal':
+                        const terminalId = data?.terminalId || window.terminalState.activeTerminalId;
+                        if (window.terminalState.terminals.length > 1) {
+                            window.terminalState.terminals = window.terminalState.terminals.filter(t => t.id !== terminalId);
+                            window.terminalState.activeTerminalId = window.terminalState.terminals[0].id;
+                            updateTerminalUI();
+                            simulateExtensionResponse({ command: 'terminalKilled', data: { id: terminalId } });
+                        }
+                        break;
+                    case 'detectAgent':
+                        // Simulate agent detection
+                        break;
+                }
+            }
+
+            // Simulate extension response
+            function simulateExtensionResponse(response) {
+                window.dispatchEvent(new MessageEvent('message', {
+                    data: response
+                }));
+            }
+
+            // Update terminal UI based on state
+            function updateTerminalUI() {
+                const tabsContainer = document.querySelector('.terminal-tabs');
+                const terminalBody = document.getElementById('terminal-body');
+
+                // Update tabs
+                tabsContainer.innerHTML = window.terminalState.terminals.map(t => `
+                    <button class="terminal-tab ${t.id === window.terminalState.activeTerminalId ? 'active' : ''}"
+                            role="tab"
+                            aria-selected="${t.id === window.terminalState.activeTerminalId}"
+                            data-terminal-id="${t.id}">
+                        <span class="tab-icon">⌘</span>
+                        <span class="tab-name">${t.name}</span>
+                        <span class="close-btn" aria-label="Close terminal">×</span>
+                    </button>
+                `).join('');
+
+                // Re-attach tab click handlers
+                document.querySelectorAll('.terminal-tab').forEach(tab => {
+                    tab.addEventListener('click', function(e) {
+                        if (e.target.classList.contains('close-btn')) {
+                            const id = parseInt(this.dataset.terminalId);
+                            window.vscode.postMessage({ command: 'killTerminal', data: { terminalId: id } });
+                        } else {
+                            window.terminalState.activeTerminalId = parseInt(this.dataset.terminalId);
+                            updateTerminalUI();
+                        }
+                    });
+                });
+
+                // Update debug panel
+                updateDebugPanel();
+            }
+
+            // Show notification
+            function showNotification(message, type = 'info') {
+                const container = document.getElementById('notification-container');
+                const notification = document.createElement('div');
+                notification.className = `notification ${type}`;
+                notification.textContent = message;
+                container.appendChild(notification);
+
+                setTimeout(() => {
+                    notification.remove();
+                }, 3000);
+            }
+            window.showNotification = showNotification;
+
+            // Update debug panel
+            function updateDebugPanel() {
+                const content = document.getElementById('debug-content');
+                content.textContent = JSON.stringify(window.terminalState, null, 2);
+            }
+
+            // Initialize UI handlers
+            document.addEventListener('DOMContentLoaded', function() {
+                // New terminal button
+                document.getElementById('btn-new-terminal').addEventListener('click', function() {
+                    window.vscode.postMessage({ command: 'createTerminal' });
+                });
+
+                // Split terminal button
+                document.getElementById('btn-split-terminal').addEventListener('click', function() {
+                    window.vscode.postMessage({ command: 'createTerminal' });
+                });
+
+                // Kill terminal button
+                document.getElementById('btn-kill-terminal').addEventListener('click', function() {
+                    window.vscode.postMessage({ command: 'killTerminal' });
+                });
+
+                // Tab click handlers
+                document.querySelectorAll('.terminal-tab').forEach(tab => {
+                    tab.addEventListener('click', function(e) {
+                        if (e.target.classList.contains('close-btn')) {
+                            const id = parseInt(this.dataset.terminalId);
+                            window.vscode.postMessage({ command: 'killTerminal', data: { terminalId: id } });
+                        } else {
+                            window.terminalState.activeTerminalId = parseInt(this.dataset.terminalId);
+                            updateTerminalUI();
+                        }
+                    });
+                });
+
+                // Debug panel toggle (Ctrl+Shift+D)
+                document.addEventListener('keydown', function(e) {
+                    if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+                        e.preventDefault();
+                        document.getElementById('debug-panel').classList.toggle('visible');
+                        updateDebugPanel();
+                    }
+                });
+
+                // Simulate terminal ready after short delay
+                setTimeout(function() {
+                    document.getElementById('loading-indicator').classList.add('hidden');
+                    showNotification('Terminal ready', 'info');
+                }, 500);
+
+                // Initial debug panel update
+                updateDebugPanel();
+            });
+
+            // Agent detection simulation
+            window.detectAgent = function(agentName) {
+                const statusEl = document.getElementById('agent-status');
+                const agentNameEl = statusEl.querySelector('.agent-name');
+
+                if (agentName) {
+                    window.terminalState.agentStatus = agentName;
+                    statusEl.classList.add('active');
+
+                    // Set agent-specific class
+                    statusEl.classList.remove('claude-code', 'github-copilot', 'gemini-cli');
+                    if (agentName.toLowerCase().includes('claude')) {
+                        statusEl.classList.add('claude-code');
+                    } else if (agentName.toLowerCase().includes('copilot')) {
+                        statusEl.classList.add('github-copilot');
+                    } else if (agentName.toLowerCase().includes('gemini')) {
+                        statusEl.classList.add('gemini-cli');
+                    }
+
+                    agentNameEl.textContent = agentName;
+                } else {
+                    window.terminalState.agentStatus = null;
+                    statusEl.classList.remove('active');
+                    agentNameEl.textContent = 'No Agent';
+                }
+
+                updateDebugPanel();
+            };
+        })();
+    </script>
+</body>
+</html>

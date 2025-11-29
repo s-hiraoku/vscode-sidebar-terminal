@@ -16,12 +16,58 @@ permissions:
   actions: write
 
 jobs:
+  # E2E Tests - Must pass before release
+  e2e-quality-gate:
+    name: E2E Quality Gate
+    runs-on: ubuntu-latest
+    # Run for tag releases and PRs
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E tests
+        run: npm run test:e2e
+        env:
+          CI: true
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-playwright-report
+          path: playwright-report/
+          retention-days: 30
+
+      - name: Upload test artifacts (screenshots, videos, traces)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-test-results
+          path: test-results/
+          retention-days: 30
+
   pre-release-quality-gate:
     name: Pre-Release TDD Quality Gate
     runs-on: ubuntu-latest
     # Only run quality gate for tag releases
     if: startsWith(github.ref, 'refs/tags/v')
-    
+    # E2E tests must pass first
+    needs: e2e-quality-gate
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -84,6 +130,12 @@ jobs:
   build:
     name: Build ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
+    # For releases, require both E2E and TDD quality gates
+    needs: [e2e-quality-gate, pre-release-quality-gate]
+    if: |
+      always() &&
+      (needs.e2e-quality-gate.result == 'success' || needs.e2e-quality-gate.result == 'skipped') &&
+      (needs.pre-release-quality-gate.result == 'success' || needs.pre-release-quality-gate.result == 'skipped')
     strategy:
       matrix:
         include:
@@ -94,7 +146,7 @@ jobs:
           - os: windows-latest
             target: win32-arm64
             npm_config_cache: ~/.npm
-          
+
           # macOS
           - os: macos-latest
             target: darwin-x64
@@ -102,7 +154,7 @@ jobs:
           - os: macos-latest
             target: darwin-arm64
             npm_config_cache: ~/.npm
-          
+
           # Linux
           - os: ubuntu-latest
             target: linux-x64
@@ -113,7 +165,7 @@ jobs:
           - os: ubuntu-latest
             target: linux-armhf
             npm_config_cache: ~/.npm
-          
+
           # Alpine
           - os: ubuntu-latest
             target: alpine-x64
@@ -199,7 +251,7 @@ jobs:
       pull-requests: write
       packages: write
       actions: write
-    
+
     steps:
       - name: Debug GitHub context
         run: |
@@ -210,7 +262,7 @@ jobs:
           echo "GitHub token permissions: ${{ github.token }}"
           echo "Repository: ${{ github.repository }}"
           echo "Actor: ${{ github.actor }}"
-          
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -243,7 +295,7 @@ jobs:
       issues: write
       pull-requests: write
       packages: write
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

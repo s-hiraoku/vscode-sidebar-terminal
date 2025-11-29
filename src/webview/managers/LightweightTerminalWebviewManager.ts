@@ -12,7 +12,6 @@
 import { Terminal } from '@xterm/xterm';
 import { webview as log } from '../../utils/logger';
 import { SPLIT_CONSTANTS } from '../constants/webview';
-import { TerminalCreationService } from '../services/TerminalCreationService';
 import {
   PartialTerminalSettings,
   WebViewFontSettings,
