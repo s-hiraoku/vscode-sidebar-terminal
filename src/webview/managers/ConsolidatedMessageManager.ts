@@ -347,14 +347,6 @@ export class ConsolidatedMessageManager implements IMessageManager {
     try {
       const messageCommand = message.data as MessageCommand;
 
-      // 🔍 DEBUG: Log ALL incoming messages
-      console.log(`🔍 [MESSAGE-DEBUG] Received: ${messageCommand.command}`, messageCommand);
-
-      // Special debug for font settings
-      if (messageCommand.command === 'fontSettingsUpdate') {
-        console.log('🔤 [FONT-DEBUG] fontSettingsUpdate received in handleMessage:', JSON.stringify(messageCommand));
-      }
-
       this.logger.debug(`Message received: ${messageCommand.command}`);
 
       // Lookup handler in registry

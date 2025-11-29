@@ -1131,20 +1131,9 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
    */
   public applyFontSettings(fontSettings: WebViewFontSettings): void {
     try {
-      // 🔍 DEBUG: Log incoming font settings
-      log(`🔤 [FONT-DEBUG] applyFontSettings called with:`, JSON.stringify(fontSettings));
-
       // Delegate to FontSettingsService (single source of truth)
       const terminals = this.splitManager.getTerminals();
-      log(`🔤 [FONT-DEBUG] Applying to ${terminals.size} terminals`);
-
       this.fontSettingsService.updateSettings(fontSettings, terminals);
-
-      // 🔍 DEBUG: Verify FontSettingsService stored the settings
-      const storedSettings = this.fontSettingsService.getCurrentSettings();
-      log(`🔤 [FONT-DEBUG] FontSettingsService now has: ${storedSettings.fontFamily}, ${storedSettings.fontSize}px`);
-
-      log('🔤 Font settings applied via FontSettingsService');
     } catch (error) {
       log('❌ Error applying font settings:', error);
     }
