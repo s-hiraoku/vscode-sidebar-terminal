@@ -2,6 +2,9 @@
  * Terminal Lifecycle Message Handler
  *
  * Handles terminal creation, deletion, focus, and state management
+ *
+ * Uses registry-based dispatch pattern instead of switch-case
+ * for better maintainability and extensibility.
  */
 
 import { IMessageHandler } from './IMessageHandler';
@@ -11,6 +14,14 @@ import { MessageQueue } from '../../utils/MessageQueue';
 import { ManagerLogger } from '../../utils/ManagerLogger';
 import { hasProperty } from '../../../types/type-guards';
 import { TerminalCreationService } from '../../services/TerminalCreationService';
+
+/**
+ * Handler function type (supports both sync and async)
+ */
+type CommandHandler = (
+  msg: MessageCommand,
+  coordinator: IManagerCoordinator
+) => void | Promise<void>;
 
 interface AckTracker {
   attempt: number;
@@ -32,56 +43,65 @@ interface AckTracker {
 export class TerminalLifecycleMessageHandler implements IMessageHandler {
   private readonly outputGates = new Map<string, { enabled: boolean; buffer: string[] }>();
   private readonly initAckTrackers = new Map<string, AckTracker>();
+  private readonly handlers: Map<string, CommandHandler>;
   private static readonly ACK_INITIAL_DELAY_MS = 200;
   private static readonly ACK_MAX_ATTEMPTS = 4;
+
   constructor(
     private readonly messageQueue: MessageQueue,
     private readonly logger: ManagerLogger
-  ) {}
+  ) {
+    this.handlers = this.buildHandlerRegistry();
+  }
 
   /**
-   * Handle terminal lifecycle related messages
+   * Build handler registry - replaces switch-case pattern
+   */
+  private buildHandlerRegistry(): Map<string, CommandHandler> {
+    const registry = new Map<string, CommandHandler>();
+
+    // Lifecycle commands
+    registry.set('init', (msg, coord) => this.handleInit(msg, coord));
+    registry.set('terminalCreated', (msg, coord) => this.handleTerminalCreated(msg, coord));
+    registry.set('newTerminal', (msg, coord) => this.handleNewTerminal(msg, coord));
+    registry.set('focusTerminal', (msg, coord) => this.handleFocusTerminal(msg, coord));
+    registry.set('terminalRemoved', (msg, coord) => this.handleTerminalRemoved(msg, coord));
+    registry.set('setRestoringSession', (msg, coord) => this.handleSetRestoringSession(msg, coord));
+
+    // Clear commands (aliases)
+    const clearHandler: CommandHandler = (msg, coord) => this.handleClearTerminal(msg, coord);
+    registry.set('clear', clearHandler);
+    registry.set('clearTerminal', clearHandler);
+
+    // State and response commands
+    registry.set('setActiveTerminal', (msg, coord) => this.handleSetActiveTerminal(msg, coord));
+    registry.set('deleteTerminalResponse', (msg, coord) =>
+      this.handleDeleteTerminalResponse(msg, coord)
+    );
+
+    // Output commands
+    registry.set('output', (msg, coord) => this.handleOutput(msg, coord));
+    registry.set('startOutput', (msg, coord) => this.handleStartOutput(msg, coord));
+
+    return registry;
+  }
+
+  /**
+   * Handle terminal lifecycle related messages using registry dispatch
    */
   public async handleMessage(msg: MessageCommand, coordinator: IManagerCoordinator): Promise<void> {
     const command = (msg as { command?: string }).command;
 
-    switch (command) {
-      case 'init':
-        this.handleInit(msg, coordinator);
-        break;
-      case 'terminalCreated':
-        await this.handleTerminalCreated(msg, coordinator);
-        break;
-      case 'newTerminal':
-        this.handleNewTerminal(msg, coordinator);
-        break;
-      case 'focusTerminal':
-        this.handleFocusTerminal(msg, coordinator);
-        break;
-      case 'terminalRemoved':
-        this.handleTerminalRemoved(msg, coordinator);
-        break;
-      case 'setRestoringSession':
-        this.handleSetRestoringSession(msg, coordinator);
-        break;
-      case 'clear':
-      case 'clearTerminal':
-        this.handleClearTerminal(msg, coordinator);
-        break;
-      case 'setActiveTerminal':
-        this.handleSetActiveTerminal(msg, coordinator);
-        break;
-      case 'deleteTerminalResponse':
-        this.handleDeleteTerminalResponse(msg, coordinator);
-        break;
-      case 'output':
-        this.handleOutput(msg, coordinator);
-        break;
-      case 'startOutput':
-        this.handleStartOutput(msg, coordinator);
-        break;
-      default:
-        this.logger.warn(`Unknown terminal lifecycle command: ${command}`);
+    if (!command) {
+      this.logger.warn('Message received without command property');
+      return;
+    }
+
+    const handler = this.handlers.get(command);
+    if (handler) {
+      await handler(msg, coordinator);
+    } else {
+      this.logger.warn(`Unknown terminal lifecycle command: ${command}`);
     }
   }
 
@@ -89,18 +109,7 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
    * Get supported command types
    */
   public getSupportedCommands(): string[] {
-    return [
-      'init',
-      'terminalCreated',
-      'newTerminal',
-      'focusTerminal',
-      'terminalRemoved',
-      'clearTerminal',
-      'setActiveTerminal',
-      'deleteTerminalResponse',
-      'output',
-      'startOutput',
-    ];
+    return Array.from(this.handlers.keys());
   }
 
   /**
@@ -617,6 +626,18 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
    * Clean up resources
    */
   public dispose(): void {
+    // Clear all pending ack trackers
+    for (const tracker of this.initAckTrackers.values()) {
+      if (tracker.timer) {
+        clearTimeout(tracker.timer);
+      }
+    }
+    this.initAckTrackers.clear();
+
+    // Clear output gates
     this.outputGates.clear();
+
+    // Clear handler registry
+    this.handlers.clear();
   }
 }

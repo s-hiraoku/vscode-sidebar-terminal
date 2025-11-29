@@ -2,12 +2,23 @@
  * Serialization Message Handler
  *
  * Handles terminal state serialization and restoration
+ *
+ * Uses registry-based dispatch pattern instead of switch-case
+ * for better maintainability and extensibility.
  */
 
 import { IMessageHandler } from './IMessageHandler';
 import { IManagerCoordinator } from '../../interfaces/ManagerInterfaces';
 import { MessageCommand } from '../messageTypes';
 import { ManagerLogger } from '../../utils/ManagerLogger';
+
+/**
+ * Handler function type (supports both sync and async)
+ */
+type CommandHandler = (
+  msg: MessageCommand,
+  coordinator: IManagerCoordinator
+) => void | Promise<void>;
 
 /**
  * Serialization Message Handler
@@ -19,6 +30,7 @@ import { ManagerLogger } from '../../utils/ManagerLogger';
  * - Save all terminal sessions
  */
 export class SerializationMessageHandler implements IMessageHandler {
+  private readonly handlers: Map<string, CommandHandler>;
   private cachedTerminalRestoreInfo: {
     terminals: Array<Record<string, unknown>>;
     activeTerminalId: string | null;
@@ -26,35 +38,52 @@ export class SerializationMessageHandler implements IMessageHandler {
     timestamp: number;
   } | null = null;
 
-  constructor(private readonly logger: ManagerLogger) {}
+  constructor(private readonly logger: ManagerLogger) {
+    this.handlers = this.buildHandlerRegistry();
+  }
 
   /**
-   * Handle serialization related messages
+   * Build handler registry - replaces switch-case pattern
+   */
+  private buildHandlerRegistry(): Map<string, CommandHandler> {
+    const registry = new Map<string, CommandHandler>();
+
+    registry.set('serializeTerminal', (msg, coord) => this.handleSerializeTerminal(msg, coord));
+    registry.set('restoreSerializedContent', (msg, coord) =>
+      this.handleRestoreSerializedContent(msg, coord)
+    );
+    registry.set('requestTerminalSerialization', (msg, coord) =>
+      this.handleRequestTerminalSerialization(msg, coord)
+    );
+    registry.set('restoreTerminalSerialization', (msg, coord) =>
+      this.handleRestoreTerminalSerialization(msg, coord)
+    );
+    registry.set('terminalRestoreInfo', (msg, coord) =>
+      this.handleTerminalRestoreInfo(msg, coord)
+    );
+    registry.set('saveAllTerminalSessions', (msg, coord) =>
+      this.handleSaveAllTerminalSessions(msg, coord)
+    );
+
+    return registry;
+  }
+
+  /**
+   * Handle serialization related messages using registry dispatch
    */
   public async handleMessage(msg: MessageCommand, coordinator: IManagerCoordinator): Promise<void> {
     const command = (msg as { command?: string }).command;
 
-    switch (command) {
-      case 'serializeTerminal':
-        this.handleSerializeTerminal(msg, coordinator);
-        break;
-      case 'restoreSerializedContent':
-        this.handleRestoreSerializedContent(msg, coordinator);
-        break;
-      case 'requestTerminalSerialization':
-        this.handleRequestTerminalSerialization(msg, coordinator);
-        break;
-      case 'restoreTerminalSerialization':
-        this.handleRestoreTerminalSerialization(msg, coordinator);
-        break;
-      case 'terminalRestoreInfo':
-        this.handleTerminalRestoreInfo(msg, coordinator);
-        break;
-      case 'saveAllTerminalSessions':
-        this.handleSaveAllTerminalSessions(msg, coordinator);
-        break;
-      default:
-        this.logger.warn(`Unknown serialization command: ${command}`);
+    if (!command) {
+      this.logger.warn('Message received without command property');
+      return;
+    }
+
+    const handler = this.handlers.get(command);
+    if (handler) {
+      await handler(msg, coordinator);
+    } else {
+      this.logger.warn(`Unknown serialization command: ${command}`);
     }
   }
 
@@ -62,14 +91,7 @@ export class SerializationMessageHandler implements IMessageHandler {
    * Get supported command types
    */
   public getSupportedCommands(): string[] {
-    return [
-      'serializeTerminal',
-      'restoreSerializedContent',
-      'requestTerminalSerialization',
-      'restoreTerminalSerialization',
-      'terminalRestoreInfo',
-      'saveAllTerminalSessions',
-    ];
+    return Array.from(this.handlers.keys());
   }
 
   /**
@@ -292,8 +314,8 @@ export class SerializationMessageHandler implements IMessageHandler {
       if (notificationManager) {
         notificationManager.showNotificationInTerminal(
           terminalIds.length > 0
-            ? `✅ Saved ${terminalIds.length} terminal session${terminalIds.length === 1 ? '' : 's'}`
-            : 'ℹ️ No terminals available to save',
+            ? `Saved ${terminalIds.length} terminal session${terminalIds.length === 1 ? '' : 's'}`
+            : 'No terminals available to save',
           terminalIds.length > 0 ? 'success' : 'info'
         );
       }
@@ -357,7 +379,7 @@ export class SerializationMessageHandler implements IMessageHandler {
 
           if (serializeAddon) {
             // Use SerializeAddon for color preservation
-            this.logger.info(`✅ Using SerializeAddon for terminal ${terminalId} serialization`);
+            this.logger.info(`Using SerializeAddon for terminal ${terminalId} serialization`);
             const fullContent = serializeAddon.serialize();
             const lines = fullContent.split('\n');
             const startIndex = Math.max(0, lines.length - scrollbackLines);
@@ -365,7 +387,7 @@ export class SerializationMessageHandler implements IMessageHandler {
           } else {
             // Fallback: Extract plain text from buffer
             this.logger.warn(
-              `⚠️ SerializeAddon not available for terminal ${terminalId}, using plain text`
+              `SerializeAddon not available for terminal ${terminalId}, using plain text`
             );
             const buffer = terminalInstance.terminal.buffer.active;
             const lines: string[] = [];
@@ -383,7 +405,7 @@ export class SerializationMessageHandler implements IMessageHandler {
           if (serializedContent.length > 0) {
             serializationData[terminalId] = serializedContent;
             this.logger.info(
-              `✅ Serialized terminal ${terminalId}: ${serializedContent.length} chars (${serializedContent.split('\n').length} lines)`
+              `Serialized terminal ${terminalId}: ${serializedContent.length} chars (${serializedContent.split('\n').length} lines)`
             );
           } else {
             this.logger.warn(`No serialized content for terminal ${terminalId}`);
@@ -403,7 +425,7 @@ export class SerializationMessageHandler implements IMessageHandler {
       });
 
       this.logger.info(
-        `✅ Terminal serialization completed for ${Object.keys(serializationData).length}/${terminalIds.length} terminals`
+        `Terminal serialization completed for ${Object.keys(serializationData).length}/${terminalIds.length} terminals`
       );
     } catch (error) {
       this.logger.error('Error during terminal serialization:', error);
@@ -450,10 +472,10 @@ export class SerializationMessageHandler implements IMessageHandler {
             this.logger.info(`[RESTORE-DEBUG] Getting terminal instance for ${id}...`);
             const terminalInstance = coordinator.getTerminalInstance(id);
             if (!terminalInstance) {
-              this.logger.warn(`❌ [RESTORE-DEBUG] Terminal ${id} not found for restoration`);
+              this.logger.warn(`[RESTORE-DEBUG] Terminal ${id} not found for restoration`);
               return;
             }
-            this.logger.info(`✅ [RESTORE-DEBUG] Terminal instance found for ${id}`);
+            this.logger.info(`[RESTORE-DEBUG] Terminal instance found for ${id}`);
 
             // Convert serialized string to ScrollbackLine array
             const scrollbackLines = serializedContent.split('\n').map((line: string) => ({
@@ -472,23 +494,23 @@ export class SerializationMessageHandler implements IMessageHandler {
             scrollbackLines.forEach((line: any) => {
               terminalInstance.terminal.writeln(line.content);
             });
-            this.logger.info(`✅ [RESTORE-DEBUG] Finished writing to terminal ${id}`);
+            this.logger.info(`[RESTORE-DEBUG] Finished writing to terminal ${id}`);
 
             // Set as active if needed
             if (isActive) {
               coordinator.setActiveTerminalId(id);
-              this.logger.info(`🎯 [RESTORE-DEBUG] Set terminal ${id} as active`);
+              this.logger.info(`[RESTORE-DEBUG] Set terminal ${id} as active`);
             }
 
             restoredCount++;
             this.logger.info(
-              `✅ [RESTORE-DEBUG] Restored terminal ${id}: ${scrollbackLines.length} lines with ANSI colors`
+              `[RESTORE-DEBUG] Restored terminal ${id}: ${scrollbackLines.length} lines with ANSI colors`
             );
           } catch (restoreError) {
-            this.logger.error(`❌ [RESTORE-DEBUG] Error restoring terminal ${id}:`, restoreError);
+            this.logger.error(`[RESTORE-DEBUG] Error restoring terminal ${id}:`, restoreError);
           }
         } else {
-          this.logger.info(`⚠️ [RESTORE-DEBUG] No serialized content for terminal ${id}`);
+          this.logger.info(`[RESTORE-DEBUG] No serialized content for terminal ${id}`);
         }
       });
 
@@ -503,7 +525,7 @@ export class SerializationMessageHandler implements IMessageHandler {
       });
 
       this.logger.info(
-        `✅ Terminal serialization restoration completed: ${restoredCount}/${terminalData.length} terminals`
+        `Terminal serialization restoration completed: ${restoredCount}/${terminalData.length} terminals`
       );
     } catch (error) {
       this.logger.error('Error during terminal serialization restoration:', error);
@@ -533,5 +555,6 @@ export class SerializationMessageHandler implements IMessageHandler {
    */
   public dispose(): void {
     this.cachedTerminalRestoreInfo = null;
+    this.handlers.clear();
   }
 }

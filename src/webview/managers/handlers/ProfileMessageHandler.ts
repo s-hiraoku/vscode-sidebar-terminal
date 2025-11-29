@@ -2,12 +2,20 @@
  * Profile Message Handler
  *
  * Handles terminal profile management messages
+ *
+ * Uses registry-based dispatch pattern instead of switch-case
+ * for better maintainability and extensibility.
  */
 
 import { IMessageHandler } from './IMessageHandler';
 import { IManagerCoordinator } from '../../interfaces/ManagerInterfaces';
 import { MessageCommand } from '../messageTypes';
 import { ManagerLogger } from '../../utils/ManagerLogger';
+
+/**
+ * Handler function type
+ */
+type CommandHandler = (msg: MessageCommand, coordinator: IManagerCoordinator) => void;
 
 /**
  * Profile Message Handler
@@ -17,26 +25,43 @@ import { ManagerLogger } from '../../utils/ManagerLogger';
  * - Handle default profile change notifications
  */
 export class ProfileMessageHandler implements IMessageHandler {
-  constructor(private readonly logger: ManagerLogger) {}
+  private readonly handlers: Map<string, CommandHandler>;
+
+  constructor(private readonly logger: ManagerLogger) {
+    this.handlers = this.buildHandlerRegistry();
+  }
 
   /**
-   * Handle profile related messages
+   * Build handler registry - replaces switch-case pattern
+   */
+  private buildHandlerRegistry(): Map<string, CommandHandler> {
+    const registry = new Map<string, CommandHandler>();
+
+    registry.set('showProfileSelector', (msg, coord) => this.handleShowProfileSelector(msg, coord));
+    registry.set('profilesUpdated', (msg, coord) => this.handleProfilesUpdated(msg, coord));
+    registry.set('defaultProfileChanged', (msg, coord) =>
+      this.handleDefaultProfileChanged(msg, coord)
+    );
+
+    return registry;
+  }
+
+  /**
+   * Handle profile related messages using registry dispatch
    */
   public handleMessage(msg: MessageCommand, coordinator: IManagerCoordinator): void {
     const command = (msg as { command?: string }).command;
 
-    switch (command) {
-      case 'showProfileSelector':
-        this.handleShowProfileSelector(msg, coordinator);
-        break;
-      case 'profilesUpdated':
-        this.handleProfilesUpdated(msg, coordinator);
-        break;
-      case 'defaultProfileChanged':
-        this.handleDefaultProfileChanged(msg, coordinator);
-        break;
-      default:
-        this.logger.warn(`Unknown profile command: ${command}`);
+    if (!command) {
+      this.logger.warn('Message received without command property');
+      return;
+    }
+
+    const handler = this.handlers.get(command);
+    if (handler) {
+      handler(msg, coordinator);
+    } else {
+      this.logger.warn(`Unknown profile command: ${command}`);
     }
   }
 
@@ -44,13 +69,13 @@ export class ProfileMessageHandler implements IMessageHandler {
    * Get supported command types
    */
   public getSupportedCommands(): string[] {
-    return ['showProfileSelector', 'profilesUpdated', 'defaultProfileChanged'];
+    return Array.from(this.handlers.keys());
   }
 
   /**
    * Handle show profile selector message
    */
-  private handleShowProfileSelector(msg: MessageCommand, coordinator: IManagerCoordinator): void {
+  private handleShowProfileSelector(_msg: MessageCommand, coordinator: IManagerCoordinator): void {
     this.logger.info('Show profile selector');
 
     // Forward to ProfileManager if it exists
@@ -79,7 +104,10 @@ export class ProfileMessageHandler implements IMessageHandler {
   /**
    * Handle default profile changed message
    */
-  private handleDefaultProfileChanged(msg: MessageCommand, coordinator: IManagerCoordinator): void {
+  private handleDefaultProfileChanged(
+    msg: MessageCommand,
+    coordinator: IManagerCoordinator
+  ): void {
     this.logger.info('Default profile changed');
 
     // Forward to ProfileManager if it exists
@@ -93,6 +121,6 @@ export class ProfileMessageHandler implements IMessageHandler {
    * Clean up resources
    */
   public dispose(): void {
-    // No resources to clean up
+    this.handlers.clear();
   }
 }
