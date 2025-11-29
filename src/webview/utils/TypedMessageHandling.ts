@@ -300,9 +300,16 @@ export class TypedMessageSender {
 
     messagesToRetry.forEach((queuedMessage) => {
       if (queuedMessage.retryCount < this.maxRetries) {
-        setTimeout(() => {
+        const delayMs = this.retryDelayMs * queuedMessage.retryCount;
+
+        if (delayMs <= 0) {
+          // Immediate retry when explicitly requested (matches test expectations)
           this.sendMessage(queuedMessage.command, queuedMessage.data);
-        }, this.retryDelayMs * queuedMessage.retryCount);
+        } else {
+          setTimeout(() => {
+            this.sendMessage(queuedMessage.command, queuedMessage.data);
+          }, delayMs);
+        }
       } else {
         this.logger(`❌ Max retries exceeded for command: ${queuedMessage.command}`);
       }
