@@ -82,3 +82,98 @@ if (content.includes(patchTarget1)) {
   console.log('⚠️ Could not find patch target in Mocha run-helpers.js');
   console.log('Content preview:', content.substring(0, 2000));
 }
+
+// Patch Runner.js to prevent infinite unhandled loops
+const runnerPath = path.join(
+  __dirname,
+  '..',
+  'node_modules',
+  'mocha',
+  'lib',
+  'runner.js'
+);
+
+if (fs.existsSync(runnerPath)) {
+  let runnerContent = fs.readFileSync(runnerPath, 'utf8');
+
+  // Check if already patched with recursion guard in unhandled function
+  if (!runnerContent.includes('_unhandledDepth')) {
+    // Add recursion depth counter at the start after 'use strict'
+    const useStrictTarget = "'use strict';";
+    const useStrictReplacement = `'use strict';
+
+// PATCHED RUNNER FOR NODE.JS V24 - recursion guard
+var _unhandledDepth = 0;
+var _maxUnhandledDepth = 5;`;
+
+    runnerContent = runnerContent.replace(useStrictTarget, useStrictReplacement);
+
+    // Patch the unhandled function to add recursion guard
+    // Find: this.unhandled = (reason, promise) => {
+    // Replace with version that has recursion guard
+    const unhandledTarget = `this.unhandled = (reason, promise) => {
+      if (isMochaError(reason)) {`;
+    const unhandledReplacement = `this.unhandled = (reason, promise) => {
+      // Recursion guard for Node.js v24 compatibility
+      if (_unhandledDepth > _maxUnhandledDepth) {
+        console.error('Mocha: Suppressed recursive unhandledRejection (depth:', _unhandledDepth, ')');
+        return;
+      }
+      _unhandledDepth++;
+      try {
+      if (isMochaError(reason)) {`;
+
+    if (runnerContent.includes(unhandledTarget)) {
+      runnerContent = runnerContent.replace(unhandledTarget, unhandledReplacement);
+
+      // Find the closing of the unhandled function and add finally block
+      // The function ends with: }; after the try-finally block
+      // We need to close the try block we opened
+      const closingTarget = `        this._addEventListener(process, 'unhandledRejection', this.unhandled);
+        }
+      }
+    };`;
+      const closingReplacement = `        this._addEventListener(process, 'unhandledRejection', this.unhandled);
+        }
+      }
+      } finally {
+        _unhandledDepth--;
+      }
+    };`;
+
+      if (runnerContent.includes(closingTarget)) {
+        runnerContent = runnerContent.replace(closingTarget, closingReplacement);
+        fs.writeFileSync(runnerPath, runnerContent);
+        console.log('✅ Patched Mocha Runner.js unhandled function with recursion guard');
+      } else {
+        // Try alternative closing pattern
+        const altClosingTarget = `this._addEventListener(process, 'unhandledRejection', this.unhandled);
+        }
+      }
+    };`;
+        const altClosingReplacement = `this._addEventListener(process, 'unhandledRejection', this.unhandled);
+        }
+      }
+      } finally {
+        _unhandledDepth--;
+      }
+    };`;
+
+        if (runnerContent.includes(altClosingTarget)) {
+          runnerContent = runnerContent.replace(altClosingTarget, altClosingReplacement);
+          fs.writeFileSync(runnerPath, runnerContent);
+          console.log('✅ Patched Mocha Runner.js unhandled function with recursion guard (alt pattern)');
+        } else {
+          fs.writeFileSync(runnerPath, runnerContent);
+          console.log('⚠️ Partial patch applied - could not find closing pattern');
+        }
+      }
+    } else {
+      console.log('⚠️ Could not find unhandled function pattern in Runner.js');
+    }
+  } else {
+    console.log('✅ Mocha Runner.js already patched with recursion guard');
+  }
+} else {
+  console.log('⚠️ Mocha runner.js not found');
+}
