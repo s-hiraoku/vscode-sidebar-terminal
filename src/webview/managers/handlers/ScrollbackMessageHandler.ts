@@ -11,6 +11,7 @@ import { MessageQueue } from '../../utils/MessageQueue';
 import { ManagerLogger } from '../../utils/ManagerLogger';
 import { Terminal } from '@xterm/xterm';
 import { TerminalCreationService } from '../../services/TerminalCreationService';
+import { StateTracker } from '../../utils/StateTracker';
 
 /**
  * Scrollback line format
@@ -32,12 +33,20 @@ export interface ScrollbackLine {
  */
 export class ScrollbackMessageHandler implements IMessageHandler {
   // Track terminals that have already been restored to prevent duplicate restoration
-  private readonly restoredTerminals = new Set<string>();
+  private readonly restoredTerminals: StateTracker<string>;
 
   constructor(
     private readonly messageQueue: MessageQueue,
     private readonly logger: ManagerLogger
-  ) {}
+  ) {
+    this.restoredTerminals = new StateTracker<string>({
+      debug: false,
+      name: 'restoredTerminals',
+      onAdd: (terminalId) => {
+        this.logger.debug(`Marked terminal as restored: ${terminalId}`);
+      },
+    });
+  }
 
   /**
    * Handle scrollback related messages
@@ -774,6 +783,6 @@ export class ScrollbackMessageHandler implements IMessageHandler {
    * Clean up resources
    */
   public dispose(): void {
-    // No resources to clean up
+    this.restoredTerminals.dispose();
   }
 }

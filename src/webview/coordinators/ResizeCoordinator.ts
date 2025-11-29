@@ -10,6 +10,7 @@
 
 import { webview as log } from '../../utils/logger';
 import { DOMUtils } from '../utils/DOMUtils';
+import { Debouncer } from '../utils/DebouncedEventBuffer';
 
 /**
  * リサイズに必要な外部依存
@@ -20,17 +21,49 @@ export interface IResizeDependencies {
     fitAddon: { fit(): void; proposeDimensions(): { cols?: number; rows?: number } | undefined } | null;
     container: HTMLElement | null;
   }>;
+  /**
+   * PTYプロセスへリサイズを通知
+   * VS Code pattern: fit()後にPTYのcols/rowsを更新する必要がある
+   */
+  notifyResize?(terminalId: string, cols: number, rows: number): void;
 }
 
 export class ResizeCoordinator {
   private parentResizeObserver: ResizeObserver | null = null;
-  private parentResizeTimer: number | null = null;
-  private windowResizeTimer: number | null = null;
-  private bodyResizeTimer: number | null = null;
   private bodyResizeObserver: ResizeObserver | null = null;
   private isInitialized = false;
 
+  // Use Debouncer utility for consistent debouncing
+  private readonly parentResizeDebouncer: Debouncer;
+  private readonly windowResizeDebouncer: Debouncer;
+  private readonly bodyResizeDebouncer: Debouncer;
+
   constructor(private readonly deps: IResizeDependencies) {
+    // Initialize debouncers with appropriate delays
+    this.parentResizeDebouncer = new Debouncer(
+      () => {
+        log(`📐 [RESIZE] Triggering refitAllTerminals after debounce`);
+        this.refitAllTerminals();
+      },
+      { delay: 50, name: 'parentResize' }
+    );
+
+    this.windowResizeDebouncer = new Debouncer(
+      () => {
+        log('📐 Window resize detected - refitting all terminals');
+        this.refitAllTerminals();
+      },
+      { delay: 100, name: 'windowResize' }
+    );
+
+    this.bodyResizeDebouncer = new Debouncer(
+      () => {
+        log('📐 Body resize detected - refitting all terminals');
+        this.refitAllTerminals();
+      },
+      { delay: 100, name: 'bodyResize' }
+    );
+
     log('✅ ResizeCoordinator initialized');
   }
 
@@ -67,14 +100,8 @@ export class ResizeCoordinator {
         const targetId = (entry.target as HTMLElement).id || 'body';
         log(`📐 [RESIZE] ${targetId} resized: ${width}x${height}`);
 
-        if (this.parentResizeTimer !== null) {
-          window.clearTimeout(this.parentResizeTimer);
-        }
-
-        this.parentResizeTimer = window.setTimeout(() => {
-          log(`📐 [RESIZE] Triggering refitAllTerminals after debounce`);
-          this.refitAllTerminals();
-        }, 50);
+        // Use debouncer instead of manual setTimeout
+        this.parentResizeDebouncer.trigger();
       }
     });
 
@@ -95,14 +122,8 @@ export class ResizeCoordinator {
    */
   private setupWindowResizeListener(): void {
     window.addEventListener('resize', () => {
-      if (this.windowResizeTimer !== null) {
-        window.clearTimeout(this.windowResizeTimer);
-      }
-      this.windowResizeTimer = window.setTimeout(() => {
-        log('📐 Window resize detected - refitting all terminals');
-        this.refitAllTerminals();
-        this.windowResizeTimer = null;
-      }, 100);
+      // Use debouncer instead of manual setTimeout
+      this.windowResizeDebouncer.trigger();
     });
     log('🔍 Window resize listener added');
   }
@@ -112,14 +133,8 @@ export class ResizeCoordinator {
    */
   private setupBodyResizeObserver(): void {
     this.bodyResizeObserver = new ResizeObserver(() => {
-      if (this.bodyResizeTimer !== null) {
-        window.clearTimeout(this.bodyResizeTimer);
-      }
-      this.bodyResizeTimer = window.setTimeout(() => {
-        log('📐 Body resize detected - refitting all terminals');
-        this.refitAllTerminals();
-        this.bodyResizeTimer = null;
-      }, 100);
+      // Use debouncer instead of manual setTimeout
+      this.bodyResizeDebouncer.trigger();
     });
     this.bodyResizeObserver.observe(document.body);
     log('🔍 Body ResizeObserver added');
@@ -127,6 +142,10 @@ export class ResizeCoordinator {
 
   /**
    * すべてのターミナルをリフィット
+   *
+   * 🎯 VS Code Pattern: Direct dimension calculation
+   * Instead of relying solely on FitAddon, we calculate dimensions from
+   * the actual container size, ensuring terminals expand to fill available space.
    */
   public refitAllTerminals(): void {
     try {
@@ -140,92 +159,70 @@ export class ResizeCoordinator {
       log(`📐 [DEBUG] terminal-body: ${terminalBody?.clientWidth}x${terminalBody?.clientHeight}`);
       log(`📐 [DEBUG] terminals-wrapper: ${terminalsWrapper?.clientWidth}x${terminalsWrapper?.clientHeight}`);
 
-      // 🔧 CRITICAL FIX: Reset parent container styles ONCE before processing terminals
-      // This ensures all parent containers have their width calculated from CSS
-      if (terminalsWrapper) {
-        terminalsWrapper.style.width = '';
-        terminalsWrapper.style.maxWidth = '';
-      }
-      if (terminalBody) {
-        terminalBody.style.width = '';
-        terminalBody.style.maxWidth = '';
-      }
-
       // 🔧 CRITICAL FIX: Reset ALL terminal container styles first
       // This must happen before ANY fit() calls to allow CSS to recalculate widths
       terminals.forEach((terminalData) => {
         if (terminalData.container) {
-          DOMUtils.resetXtermInlineStyles(terminalData.container, false); // Don't force reflow individually
+          DOMUtils.resetXtermInlineStyles(terminalData.container, false);
         }
       });
 
       // 🔧 CRITICAL FIX: Force a single reflow after all resets
-      // This allows the browser to recalculate all container sizes based on CSS
       // eslint-disable-next-line @typescript-eslint/no-unused-expressions
       document.body.offsetWidth;
 
-      // 🔧 CRITICAL FIX: Use requestAnimationFrame to ensure CSS has been applied
-      // before calling fit() on terminals
+      // 🔧 VS Code Pattern: Use requestAnimationFrame for proper timing
       requestAnimationFrame(() => {
-        // 🔧 DOUBLE-FIT PATTERN: First fit to get xterm to recalculate,
-        // then reset styles and fit again to ensure expansion works
         terminals.forEach((terminalData, terminalId) => {
           if (terminalData.fitAddon && terminalData.terminal) {
             try {
               const container = terminalData.container;
+              if (!container) return;
 
               // デバッグ: fit前
-              log(`📐 [DEBUG] Before fit - ${terminalId}:`);
-              log(`  container: ${container?.clientWidth}x${container?.clientHeight}`);
+              const xtermEl = container.querySelector('.xterm') as HTMLElement;
+              const contentEl = container.querySelector('.terminal-content') as HTMLElement;
+              log(`📐 [DEBUG] Before reset - ${terminalId}:`);
+              log(`  container: ${container.clientWidth}x${container.clientHeight}`);
+              log(`  .terminal-content: ${contentEl?.clientWidth}x${contentEl?.clientHeight}`);
+              log(`  .xterm: ${xtermEl?.clientWidth}x${xtermEl?.clientHeight}`);
+              if (xtermEl) {
+                log(`  .xterm inline style: width=${xtermEl.style.width}, height=${xtermEl.style.height}`);
+              }
 
-              // First fit() - this may be constrained by previous dimensions
+              // 🎯 Single fit() call - VS Code pattern
+              // Reset styles right before fit to ensure clean state
+              DOMUtils.resetXtermInlineStyles(container, true);
+
+              // デバッグ: reset後
+              log(`📐 [DEBUG] After reset - ${terminalId}:`);
+              log(`  container: ${container.clientWidth}x${container.clientHeight}`);
+              log(`  .terminal-content: ${contentEl?.clientWidth}x${contentEl?.clientHeight}`);
+              log(`  .xterm: ${xtermEl?.clientWidth}x${xtermEl?.clientHeight}`);
+
               terminalData.fitAddon.fit();
 
-              log(`📐 [DEBUG] After first fit - ${terminalId}: ${terminalData.terminal.cols}x${terminalData.terminal.rows}`);
+              // 🎯 VS Code Pattern: Notify PTY about new dimensions
+              // This is CRITICAL - without this, the shell process doesn't know about the new size
+              const newCols = terminalData.terminal.cols;
+              const newRows = terminalData.terminal.rows;
+              if (this.deps.notifyResize) {
+                this.deps.notifyResize(terminalId, newCols, newRows);
+                log(`📨 PTY resize notification sent: ${terminalId} (${newCols}x${newRows})`);
+              }
+
+              // デバッグ: fit後
+              log(`📐 [DEBUG] After fit - ${terminalId}:`);
+              log(`  .xterm: ${xtermEl?.clientWidth}x${xtermEl?.clientHeight}`);
+              if (xtermEl) {
+                log(`  .xterm inline style: width=${xtermEl.style.width}, height=${xtermEl.style.height}`);
+              }
+
+              log(`✅ Terminal ${terminalId} refitted: ${newCols}x${newRows}`);
             } catch (error) {
               log(`⚠️ Failed to refit terminal ${terminalId}:`, error);
             }
           }
-        });
-
-        // 🔧 CRITICAL: Second pass - reset styles again and refit
-        // xterm.js may have set new fixed dimensions after first fit()
-        requestAnimationFrame(() => {
-          // Reset all container styles again
-          terminals.forEach((terminalData) => {
-            if (terminalData.container) {
-              DOMUtils.resetXtermInlineStyles(terminalData.container, false);
-            }
-          });
-
-          // Force reflow
-          // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-          document.body.offsetWidth;
-
-          // Second fit() with clean styles
-          terminals.forEach((terminalData, terminalId) => {
-            if (terminalData.fitAddon && terminalData.terminal) {
-              try {
-                const container = terminalData.container;
-                const xtermEl = container?.querySelector('.xterm') as HTMLElement;
-
-                // 寸法提案をログ
-                const proposedDims = terminalData.fitAddon.proposeDimensions();
-                log(`📐 [DEBUG] proposeDimensions (2nd) - ${terminalId}: cols=${proposedDims?.cols}, rows=${proposedDims?.rows}`);
-
-                // Second fit()
-                terminalData.fitAddon.fit();
-
-                // デバッグ: fit後
-                log(`📐 [DEBUG] After second fit - ${terminalId}:`);
-                log(`  .xterm: ${xtermEl?.clientWidth}x${xtermEl?.clientHeight}`);
-
-                log(`✅ Terminal ${terminalId} refitted: ${terminalData.terminal.cols}x${terminalData.terminal.rows}`);
-              } catch (error) {
-                log(`⚠️ Failed to refit terminal ${terminalId} (2nd pass):`, error);
-              }
-            }
-          });
         });
       });
     } catch (error) {
@@ -258,20 +255,10 @@ export class ResizeCoordinator {
       this.bodyResizeObserver = null;
     }
 
-    if (this.parentResizeTimer !== null) {
-      window.clearTimeout(this.parentResizeTimer);
-      this.parentResizeTimer = null;
-    }
-
-    if (this.windowResizeTimer !== null) {
-      window.clearTimeout(this.windowResizeTimer);
-      this.windowResizeTimer = null;
-    }
-
-    if (this.bodyResizeTimer !== null) {
-      window.clearTimeout(this.bodyResizeTimer);
-      this.bodyResizeTimer = null;
-    }
+    // Dispose debouncers (cancels pending operations and cleans up timers)
+    this.parentResizeDebouncer.dispose();
+    this.windowResizeDebouncer.dispose();
+    this.bodyResizeDebouncer.dispose();
 
     this.isInitialized = false;
     log('✅ ResizeCoordinator disposed');
