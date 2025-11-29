@@ -189,17 +189,30 @@ describe('UnifiedConfigurationService', () => {
     it('should clear cache after update', async () => {
       // Cache a value first
       (mockWorkspaceConfiguration.get as sinon.SinonStub).withArgs('fontSize', 14).returns(14);
-      service.get('terminal.integrated', 'fontSize', 14);
+      const initialValue = service.get('terminal.integrated', 'fontSize', 14);
+      expect(initialValue).to.equal(14);
 
-      // Update the value
+      // Get call count after first get (it should be cached now)
+      const callCountAfterCache = (mockWorkspaceConfiguration.get as sinon.SinonStub).callCount;
+
+      // Call again - should use cache (call count unchanged)
+      const cachedValue = service.get('terminal.integrated', 'fontSize', 14);
+      expect(cachedValue).to.equal(14);
+      expect((mockWorkspaceConfiguration.get as sinon.SinonStub).callCount).to.equal(callCountAfterCache);
+
+      // Update the value - this clears the cache
       await service.update('terminal.integrated', 'fontSize', 16);
 
-      // Get the value again (should call VS Code API again)
+      // Get call count after update (update() may call get() internally)
+      const callCountAfterUpdate = (mockWorkspaceConfiguration.get as sinon.SinonStub).callCount;
+
+      // Change the return value and get again - should call VS Code API since cache was cleared
       (mockWorkspaceConfiguration.get as sinon.SinonStub).withArgs('fontSize', 14).returns(16);
       const newValue = service.get('terminal.integrated', 'fontSize', 14);
 
       expect(newValue).to.equal(16);
-      expect(mockWorkspaceConfiguration.get).to.have.been.calledTwice;
+      // Call count should have increased (cache was cleared by update)
+      expect((mockWorkspaceConfiguration.get as sinon.SinonStub).callCount).to.be.greaterThan(callCountAfterUpdate);
     });
 
     it('should fire configuration change event', async () => {
@@ -348,6 +361,14 @@ describe('UnifiedConfigurationService', () => {
       (mockWorkspaceConfiguration.get as sinon.SinonStub)
         .withArgs(CONFIG_KEYS.CURSOR_BLINK, true)
         .returns(false);
+
+      // Mock nested cursor settings
+      (mockWorkspaceConfiguration.get as sinon.SinonStub)
+        .withArgs('cursor.style', 'block')
+        .returns('block');
+      (mockWorkspaceConfiguration.get as sinon.SinonStub)
+        .withArgs('cursor.blink', true)
+        .returns(true);
 
       const settings = service.getWebViewTerminalSettings();
 
@@ -785,11 +806,35 @@ describe('UnifiedConfigurationService', () => {
     });
 
     it('should clear cache on VS Code configuration changes', () => {
+      // Access the service's internal cache for verification
+      const serviceCache = (service as any)._configurationCache as Map<string, any>;
+
+      // Use a dynamic value that can be changed
+      let currentFontSize = 16;
+      (mockWorkspaceConfiguration.get as sinon.SinonStub).callsFake((key: string, defaultValue: any) => {
+        if (key === 'fontSize') {
+          return currentFontSize;
+        }
+        return defaultValue;
+      });
+
       // Get a value to cache it
-      (mockWorkspaceConfiguration.get as sinon.SinonStub).withArgs('fontSize', 14).returns(16);
       const initialValue = service.get('terminal.integrated', 'fontSize', 14);
       expect(initialValue).to.equal(16);
-      expect(mockWorkspaceConfiguration.get).to.have.been.calledOnce;
+
+      // Verify the value was cached
+      expect(serviceCache.has('terminal.integrated.fontSize'), 'Value should be cached').to.be.true;
+
+      // Get call count after initial call
+      const callCountAfterFirstGet = (mockWorkspaceConfiguration.get as sinon.SinonStub).callCount;
+
+      // Getting the same value again should use cache (call count unchanged)
+      const cachedValue = service.get('terminal.integrated', 'fontSize', 14);
+      expect(cachedValue).to.equal(16);
+      expect((mockWorkspaceConfiguration.get as sinon.SinonStub).callCount).to.equal(callCountAfterFirstGet);
+
+      // Change the return value BEFORE calling the event handler
+      currentFontSize = 18;
 
       // Simulate VS Code configuration change event
       const changeEvent = {
@@ -798,14 +843,28 @@ describe('UnifiedConfigurationService', () => {
 
       // Get the registered change handler
       const onDidChangeStub = vscode.workspace.onDidChangeConfiguration as sinon.SinonStub;
+
+      // Verify the stub was called (service registered its handler)
+      expect(onDidChangeStub.callCount, 'onDidChangeConfiguration should have been called').to.be.greaterThan(0);
+
       const onDidChangeHandler = onDidChangeStub.getCall(0).args[0];
+      expect(onDidChangeHandler, 'Handler should exist').to.not.be.undefined;
+      expect(typeof onDidChangeHandler, 'Handler should be a function').to.equal('function');
+
+      // Call the handler to trigger cache clear
       onDidChangeHandler(changeEvent);
 
-      // Getting the value again should call VS Code API (cache cleared)
-      (mockWorkspaceConfiguration.get as sinon.SinonStub).withArgs('fontSize', 14).returns(18);
+      // Verify cache was cleared
+      expect(serviceCache.has('terminal.integrated.fontSize'), 'Cache should be cleared after config change').to.be.false;
+
+      // Get call count after config change event
+      const callCountAfterEvent = (mockWorkspaceConfiguration.get as sinon.SinonStub).callCount;
+
+      // Getting the value again should call VS Code API (cache cleared by event)
       const newValue = service.get('terminal.integrated', 'fontSize', 14);
       expect(newValue).to.equal(18);
-      expect(mockWorkspaceConfiguration.get).to.have.been.calledTwice;
+      // Call count should have increased (cache was cleared)
+      expect((mockWorkspaceConfiguration.get as sinon.SinonStub).callCount).to.be.greaterThan(callCountAfterEvent);
     });
   });
 

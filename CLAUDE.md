@@ -21,6 +21,29 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## CRITICAL: Protecting Local Changes
+
+**NEVER delete or discard uncommitted local changes without explicit user permission.**
+
+When you need to investigate build issues or test changes:
+1. **ALWAYS use `git stash` first** to save uncommitted changes
+2. After investigation, restore with `git stash pop`
+3. **NEVER use `git checkout -- .`** or `git restore .` to discard changes
+4. **NEVER use `git clean`** without explicit user confirmation
+
+Example workflow:
+```bash
+# Save current changes before investigation
+git stash push -m "WIP: saving before investigation"
+
+# Do your investigation...
+
+# Restore changes when done
+git stash pop
+```
+
+If build issues occur, ask the user before discarding any changes.
+
 ## Essential Development Commands
 
 ### Core Development

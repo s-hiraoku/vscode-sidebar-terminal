@@ -303,7 +303,9 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
           if (isDebugEnabled && isDebugEnabled()) {
             log('📨 [PROVIDER] Message data:', message);
           }
-        } catch {}
+        } catch {
+          // Silently ignore logger loading errors - debug logging is non-critical
+        }
 
         // Handle message using MessageRoutingFacade, with fallback for critical commands
         this._messageRouter
@@ -792,7 +794,9 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         if (isDebugEnabled && isDebugEnabled()) {
           log('🎆 [TRACE] Message data:', message);
         }
-      } catch {}
+      } catch {
+        // Silently ignore logger loading errors - debug logging is non-critical
+      }
     }
   }
 

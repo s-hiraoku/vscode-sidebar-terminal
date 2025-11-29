@@ -379,8 +379,10 @@ describe('UnifiedConfigurationService', () => {
 
   describe('resetToDefaults', () => {
     it('should reset configuration to defaults', async () => {
+      // Configure inspect to return a non-falsy value so reset doesn't early return
+      mockWorkspaceConfig.inspect.returns({ defaultValue: 'test' } as any);
       mockWorkspaceConfig.has.returns(true);
-      mockWorkspaceConfig.update.resolves();
+      mockWorkspaceConfig.update.callsFake(() => Promise.resolve());
 
       await service.resetToDefaults('sidebarTerminal');
 
@@ -390,8 +392,10 @@ describe('UnifiedConfigurationService', () => {
 
     it('should handle reset errors gracefully', async () => {
       const error = new Error('Reset failed');
+      // Configure inspect to return a non-falsy value so reset doesn't early return
+      mockWorkspaceConfig.inspect.returns({ defaultValue: 'test' } as any);
       mockWorkspaceConfig.has.returns(true);
-      mockWorkspaceConfig.update.rejects(error);
+      mockWorkspaceConfig.update.callsFake(() => Promise.reject(error));
 
       try {
         await service.resetToDefaults('sidebarTerminal');
