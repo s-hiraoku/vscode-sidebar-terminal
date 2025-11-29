@@ -83,7 +83,7 @@ export class ThemeManager {
 
       const value = getComputedStyle(root).getPropertyValue(property).trim();
       return value || fallback;
-    } catch (error) {
+    } catch {
       return fallback;
     }
   }
