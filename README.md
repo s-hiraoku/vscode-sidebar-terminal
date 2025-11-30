@@ -785,6 +785,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ### Known Limitations
 
+- **Running Processes Not Preserved on Restart**: Unlike VS Code's built-in terminal, running processes (such as Claude Code, Gemini CLI, or other long-running applications) are terminated when VS Code restarts. Only the terminal output history (scrollback) is preserved and restored. This is an architectural limitation - the extension saves terminal metadata and scrollback content, but does not implement PTY process reconnection. **Workaround**: Use terminal multiplexers like `tmux` or `screen` if you need processes to survive VS Code restarts.
 - Some features may be incomplete or have rough edges
 - New releases are frequent as we continuously add functionality
 - Documentation is being updated regularly to keep pace with development

@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.153] - 2025-11-30
+
+### Added
+
+- **Alt+1~5 Keyboard Shortcuts**: Add direct terminal switching with Alt+1~5 shortcuts
+  - Quickly switch between terminals using keyboard shortcuts
+  - Add missing command definitions for keybindings
+
+### Fixed
+
+- **Scrollback Persistence**: Register terminals with persistence service for scrollback saving (#188)
+  - Ensures terminal scrollback content is properly saved and restored
+
+### Changed
+
+- **Local Change Protection**: Add guidelines for protecting uncommitted local changes
+- **Test Improvements**: Fix UnifiedConfigurationService test to use latest handler call
+
 ## [0.1.152] - 2025-11-29
 
 ### Fixed
