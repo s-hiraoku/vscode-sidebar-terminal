@@ -1001,31 +1001,31 @@
       {
         "command": "secondaryTerminal.focusTerminal1",
         "key": "alt+1",
-        "mac": "ctrl+1",
+        "mac": "cmd+alt+1",
         "when": "terminalFocus && view == secondaryTerminal"
       },
       {
         "command": "secondaryTerminal.focusTerminal2",
         "key": "alt+2",
-        "mac": "ctrl+2",
+        "mac": "cmd+alt+2",
         "when": "terminalFocus && view == secondaryTerminal"
       },
       {
         "command": "secondaryTerminal.focusTerminal3",
         "key": "alt+3",
-        "mac": "ctrl+3",
+        "mac": "cmd+alt+3",
         "when": "terminalFocus && view == secondaryTerminal"
       },
       {
         "command": "secondaryTerminal.focusTerminal4",
         "key": "alt+4",
-        "mac": "ctrl+4",
+        "mac": "cmd+alt+4",
         "when": "terminalFocus && view == secondaryTerminal"
       },
       {
         "command": "secondaryTerminal.focusTerminal5",
         "key": "alt+5",
-        "mac": "ctrl+5",
+        "mac": "cmd+alt+5",
         "when": "terminalFocus && view == secondaryTerminal"
       }
     ]
