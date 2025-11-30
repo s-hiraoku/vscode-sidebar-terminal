@@ -847,7 +847,9 @@ describe('UnifiedConfigurationService', () => {
       // Verify the stub was called (service registered its handler)
       expect(onDidChangeStub.callCount, 'onDidChangeConfiguration should have been called').to.be.greaterThan(0);
 
-      const onDidChangeHandler = onDidChangeStub.getCall(0).args[0];
+      // Use the most recent call's handler (not getCall(0) which might be from a previous test)
+      const lastCallIndex = onDidChangeStub.callCount - 1;
+      const onDidChangeHandler = onDidChangeStub.getCall(lastCallIndex).args[0];
       expect(onDidChangeHandler, 'Handler should exist').to.not.be.undefined;
       expect(typeof onDidChangeHandler, 'Handler should be a function').to.equal('function');
 
