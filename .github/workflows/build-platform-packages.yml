@@ -243,7 +243,7 @@ jobs:
     name: Create Release
     needs: build
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: always() && startsWith(github.ref, 'refs/tags/v') && needs.build.result == 'success'
     permissions:
       contents: write
       issues: write
@@ -288,7 +288,7 @@ jobs:
     name: Publish to VS Code Marketplace
     needs: build
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: always() && startsWith(github.ref, 'refs/tags/v') && needs.build.result == 'success'
     permissions:
       contents: read
       issues: write
