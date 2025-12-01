@@ -452,24 +452,31 @@ export class UnifiedConfigurationService implements Disposable {
 
   /**
    * Get font family with VS Code hierarchy
+   * Priority: secondaryTerminal.fontFamily > terminal.integrated.fontFamily > editor.fontFamily > system default
    */
   public getFontFamily(): string {
     this.initialize();
 
     try {
-      // 1. Terminal-specific font
+      // 1. Extension-specific font (highest priority)
+      const extensionFont = this.get('secondaryTerminal', 'fontFamily', '');
+      if (typeof extensionFont === 'string' && extensionFont.trim() && extensionFont.trim() !== 'monospace') {
+        return extensionFont.trim();
+      }
+
+      // 2. Terminal-specific font
       const terminalFont = this.get('terminal.integrated', 'fontFamily', '');
       if (typeof terminalFont === 'string' && terminalFont.trim()) {
         return terminalFont.trim();
       }
 
-      // 2. Editor font fallback
+      // 3. Editor font fallback
       const editorFont = this.get('editor', 'fontFamily', '');
       if (typeof editorFont === 'string' && editorFont.trim()) {
         return editorFont.trim();
       }
 
-      // 3. System default
+      // 4. System default
       return CONFIG_CACHE_CONSTANTS.DEFAULT_FONT_FAMILY;
     } catch (error) {
       log('❌ [UnifiedConfig] Error getting fontFamily:', error);
@@ -479,24 +486,32 @@ export class UnifiedConfigurationService implements Disposable {
 
   /**
    * Get font size with VS Code hierarchy
+   * Priority: secondaryTerminal.fontSize > terminal.integrated.fontSize > editor.fontSize > default(14)
    */
   public getFontSize(): number {
     this.initialize();
 
     try {
-      // 1. Terminal-specific font size
+      // 1. Extension-specific font size (highest priority)
+      const extensionSize = this.get('secondaryTerminal', 'fontSize', 0);
+      // Use extension setting if explicitly set (not default value of 12)
+      if (typeof extensionSize === 'number' && extensionSize > 0 && extensionSize !== 12) {
+        return extensionSize;
+      }
+
+      // 2. Terminal-specific font size
       const terminalSize = this.get('terminal.integrated', 'fontSize', 0);
       if (typeof terminalSize === 'number' && terminalSize > 0) {
         return terminalSize;
       }
 
-      // 2. Editor font size fallback
+      // 3. Editor font size fallback
       const editorSize = this.get('editor', 'fontSize', 0);
       if (typeof editorSize === 'number' && editorSize > 0) {
         return editorSize;
       }
 
-      // 3. Default
+      // 4. Default
       return CONFIG_CACHE_CONSTANTS.DEFAULT_FONT_SIZE;
     } catch (error) {
       log('❌ [UnifiedConfig] Error getting fontSize:', error);

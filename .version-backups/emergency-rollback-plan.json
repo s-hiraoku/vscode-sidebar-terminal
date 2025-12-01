@@ -1,5 +1,5 @@
 {
-  "currentVersion": "0.1.117",
+  "currentVersion": "0.1.152",
   "rollbackProcedure": [
     "1. 🛑 Stop any active development",
     "2. 🔄 Run rollback script",
