@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.1.154] - 2025-12-01
+## [0.1.155] - 2025-12-01
 
 ### Fixed
 
@@ -15,6 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Add `terminal.refresh()` after `fit()` in initial resize to ensure cursor visibility
   - xterm.js requires explicit refresh after fit to properly render cursor
   - Applies to initial resize, delayed resize, and forced resize paths
+
+### Changed
+
+- **Font Settings Priority**: Extension-specific font settings now take priority
+  - Priority order: `secondaryTerminal.fontFamily/fontSize` > `terminal.integrated` > `editor` > system default
+  - Allows users to configure fonts independently from VS Code's built-in terminal
 
 ## [0.1.153] - 2025-11-30
 
