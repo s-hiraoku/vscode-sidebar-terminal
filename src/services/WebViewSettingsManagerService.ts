@@ -233,6 +233,12 @@ export class WebViewSettingsManagerService implements IWebViewSettingsManagerSer
 
   private isFontSettingsChange(event: vscode.ConfigurationChangeEvent): boolean {
     return (
+      event.affectsConfiguration('secondaryTerminal.fontFamily') ||
+      event.affectsConfiguration('secondaryTerminal.fontSize') ||
+      event.affectsConfiguration('secondaryTerminal.fontWeight') ||
+      event.affectsConfiguration('secondaryTerminal.fontWeightBold') ||
+      event.affectsConfiguration('secondaryTerminal.lineHeight') ||
+      event.affectsConfiguration('secondaryTerminal.letterSpacing') ||
       event.affectsConfiguration('terminal.integrated.fontSize') ||
       event.affectsConfiguration('terminal.integrated.fontFamily') ||
       event.affectsConfiguration('terminal.integrated.fontWeight') ||
@@ -240,11 +246,7 @@ export class WebViewSettingsManagerService implements IWebViewSettingsManagerSer
       event.affectsConfiguration('terminal.integrated.lineHeight') ||
       event.affectsConfiguration('terminal.integrated.letterSpacing') ||
       event.affectsConfiguration('editor.fontSize') ||
-      event.affectsConfiguration('editor.fontFamily') ||
-      event.affectsConfiguration('secondaryTerminal.fontWeight') ||
-      event.affectsConfiguration('secondaryTerminal.fontWeightBold') ||
-      event.affectsConfiguration('secondaryTerminal.lineHeight') ||
-      event.affectsConfiguration('secondaryTerminal.letterSpacing')
+      event.affectsConfiguration('editor.fontFamily')
     );
   }
 
