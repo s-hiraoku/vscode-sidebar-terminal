@@ -2,11 +2,11 @@
   "name": "vscode-sidebar-terminal",
   "displayName": "Secondary Terminal",
   "description": "Production-ready VS Code extension with TypeScript-compliant terminal in sidebar, ProcessState/InteractionState management, and comprehensive session management.",
-  "version": "0.1.146",
+  "version": "0.1.155",
   "publisher": "s-hiraoku",
   "sideEffects": false,
   "engines": {
-    "vscode": "^1.74.0",
+    "vscode": "^1.106.0",
     "node": ">=18.0.0"
   },
   "categories": [
@@ -247,6 +247,31 @@
       {
         "command": "secondaryTerminal.showVersion",
         "title": "Show Version",
+        "category": "Secondary Terminal"
+      },
+      {
+        "command": "secondaryTerminal.focusTerminal1",
+        "title": "Focus Terminal 1",
+        "category": "Secondary Terminal"
+      },
+      {
+        "command": "secondaryTerminal.focusTerminal2",
+        "title": "Focus Terminal 2",
+        "category": "Secondary Terminal"
+      },
+      {
+        "command": "secondaryTerminal.focusTerminal3",
+        "title": "Focus Terminal 3",
+        "category": "Secondary Terminal"
+      },
+      {
+        "command": "secondaryTerminal.focusTerminal4",
+        "title": "Focus Terminal 4",
+        "category": "Secondary Terminal"
+      },
+      {
+        "command": "secondaryTerminal.focusTerminal5",
+        "title": "Focus Terminal 5",
         "category": "Secondary Terminal"
       }
     ],
@@ -692,6 +717,14 @@
           "default": false,
           "description": "Controls whether keybindings are automatically sent to the shell instead of being handled by VS Code workbench."
         },
+        "secondaryTerminal.useSimplifiedWebView": {
+          "type": "boolean",
+          "default": false,
+          "description": "[Experimental] Use simplified WebView implementation with improved performance and reduced complexity. Requires extension restart to take effect.",
+          "tags": [
+            "experimental"
+          ]
+        },
         "secondaryTerminal.commandsToSkipShell": {
           "type": "array",
           "items": {
@@ -964,10 +997,41 @@
         "key": "ctrl+shift+p",
         "mac": "cmd+shift+p",
         "when": "view == secondaryTerminal"
+      },
+      {
+        "command": "secondaryTerminal.focusTerminal1",
+        "key": "alt+1",
+        "mac": "cmd+alt+1",
+        "when": "terminalFocus && view == secondaryTerminal"
+      },
+      {
+        "command": "secondaryTerminal.focusTerminal2",
+        "key": "alt+2",
+        "mac": "cmd+alt+2",
+        "when": "terminalFocus && view == secondaryTerminal"
+      },
+      {
+        "command": "secondaryTerminal.focusTerminal3",
+        "key": "alt+3",
+        "mac": "cmd+alt+3",
+        "when": "terminalFocus && view == secondaryTerminal"
+      },
+      {
+        "command": "secondaryTerminal.focusTerminal4",
+        "key": "alt+4",
+        "mac": "cmd+alt+4",
+        "when": "terminalFocus && view == secondaryTerminal"
+      },
+      {
+        "command": "secondaryTerminal.focusTerminal5",
+        "key": "alt+5",
+        "mac": "cmd+alt+5",
+        "when": "terminalFocus && view == secondaryTerminal"
       }
     ]
   },
   "scripts": {
+    "postinstall": "node scripts/patch-mocha.js",
     "vscode:prepublish": "npm run package",
     "compile": "webpack",
     "watch": "webpack --watch",
@@ -1042,7 +1106,8 @@
     "quality:fix": "node commands/release.js --fix-only",
     "docs:generate": "npx typedoc",
     "docs:watch": "npx typedoc --watch",
-    "docs:clean": "rm -rf docs/api"
+    "docs:clean": "rm -rf docs/api",
+    "rebuild:fast": "npm rebuild @homebridge/node-pty-prebuilt-multiarch"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.11.0",
@@ -1054,8 +1119,8 @@
     "@types/glob": "^9.0.0",
     "@types/jsdom": "^27.0.0",
     "@types/mocha": "^10.0.6",
-    "@types/node": "22.x",
-    "@types/sinon": "^17.0.4",
+    "@types/node": "24.x",
+    "@types/sinon": "^21.0.0",
     "@types/sinon-chai": "^4.0.0",
     "@types/vscode": "^1.106.1",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
@@ -1075,6 +1140,7 @@
     "jsdom": "^27.0.0",
     "mocha": "^11.7.5",
     "nyc": "^17.1.0",
+    "picomatch": "^4.0.3",
     "prettier": "^3.7.2",
     "sinon": "^21.0.0",
     "sinon-chai": "^3.7.0",

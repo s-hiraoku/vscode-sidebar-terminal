@@ -34,8 +34,9 @@ export class IMEHandler extends BaseInputHandler implements IIMEHandler {
   // Track composition events for proper sequencing
   private lastCompositionEvent: string | null = null;
 
-  // Hidden textarea reference for IME positioning (VS Code pattern)
-  private hiddenTextarea: HTMLTextAreaElement | null = null;
+  // Note: We no longer create our own hidden textarea
+  // xterm.js has a built-in textarea in .xterm-helper-textarea that handles IME positioning
+  // Creating a separate textarea interferes with xterm.js's CompositionHelper
 
   // State manager for unified state management
   private stateManager: InputStateManager;
@@ -77,6 +78,8 @@ export class IMEHandler extends BaseInputHandler implements IIMEHandler {
 
   /**
    * Setup IME composition handling with VS Code standard pattern
+   * Note: xterm.js handles IME positioning via its internal CompositionHelper
+   * We only track state and hide cursor during composition
    */
   public setupIMEHandling(): void {
     this.logger('Setting up VS Code standard IME composition handling');
@@ -84,8 +87,8 @@ export class IMEHandler extends BaseInputHandler implements IIMEHandler {
     // Ensure cursor styling matches VS Code behavior before events fire
     this.ensureIMECursorStyle();
 
-    // Create hidden textarea for proper IME positioning (VS Code pattern)
-    this.createHiddenTextarea();
+    // Note: We do NOT create our own textarea - xterm.js has a built-in one
+    // that CompositionHelper positions at the cursor location
 
     // Register composition events using the centralized event service
     this.eventService.registerEventHandler(
@@ -165,8 +168,8 @@ export class IMEHandler extends BaseInputHandler implements IIMEHandler {
     // Clear any pending input events to avoid conflicts
     this.clearPendingInputEvents();
 
-    // Position hidden textarea for accurate IME positioning
-    this.positionHiddenTextarea();
+    // Note: xterm.js CompositionHelper automatically positions textarea at cursor
+    // No need to manually position - this is handled by updateCompositionElements()
   }
 
   /**
@@ -235,7 +238,6 @@ export class IMEHandler extends BaseInputHandler implements IIMEHandler {
     setTimeout(() => {
       this.compositionContext = null;
       this.lastCompositionEvent = null;
-      this.hideHiddenTextarea();
 
       // Ensure cursor visibility is restored after cleanup
       this.setIMECursorVisibility(false);
@@ -302,69 +304,9 @@ export class IMEHandler extends BaseInputHandler implements IIMEHandler {
     return this.stateManager.getStateSection('ime').data || null;
   }
 
-  /**
-   * Create hidden textarea for proper IME positioning (VS Code pattern)
-   */
-  private createHiddenTextarea(): void {
-    if (this.hiddenTextarea) {
-      return; // Already created
-    }
-
-    this.hiddenTextarea = document.createElement('textarea');
-    this.hiddenTextarea.style.position = 'absolute';
-    this.hiddenTextarea.style.left = '-9999px';
-    this.hiddenTextarea.style.top = '-9999px';
-    this.hiddenTextarea.style.width = '0px'; // VS Code pattern: 0px width
-    this.hiddenTextarea.style.height = '1px';
-    this.hiddenTextarea.style.opacity = '0';
-    this.hiddenTextarea.style.zIndex = '-1';
-    this.hiddenTextarea.style.padding = '0'; // Remove any padding
-    this.hiddenTextarea.style.border = 'none'; // Remove border
-    this.hiddenTextarea.style.margin = '0'; // Remove margin
-    this.hiddenTextarea.setAttribute('aria-hidden', 'true');
-    this.hiddenTextarea.tabIndex = -1;
-
-    document.body.appendChild(this.hiddenTextarea);
-    this.logger('Created hidden textarea for IME positioning');
-  }
-
-  /**
-   * Position hidden textarea near active terminal for accurate IME positioning
-   */
-  private positionHiddenTextarea(): void {
-    if (!this.hiddenTextarea) {
-      return;
-    }
-
-    // Find active terminal container
-    const activeTerminal = document.querySelector('.terminal-container.active');
-    if (activeTerminal) {
-      const rect = activeTerminal.getBoundingClientRect();
-
-      // Position textarea at the active cursor position (approximate)
-      this.hiddenTextarea.style.left = `${rect.left}px`;
-      this.hiddenTextarea.style.top = `${rect.top + rect.height / 2}px`;
-      this.hiddenTextarea.style.zIndex = '1000';
-
-      // Temporarily make visible for IME (VS Code pattern)
-      this.hiddenTextarea.style.opacity = '0.01';
-
-      this.logger('Positioned hidden textarea for IME');
-    }
-  }
-
-  /**
-   * Hide the textarea after composition ends
-   */
-  private hideHiddenTextarea(): void {
-    if (this.hiddenTextarea) {
-      this.hiddenTextarea.style.left = '-9999px';
-      this.hiddenTextarea.style.top = '-9999px';
-      this.hiddenTextarea.style.zIndex = '-1';
-      this.hiddenTextarea.style.opacity = '0';
-      this.logger('Hidden textarea after composition');
-    }
-  }
+  // Note: createHiddenTextarea, positionHiddenTextarea, hideHiddenTextarea removed
+  // xterm.js has a built-in textarea (.xterm-helper-textarea) that CompositionHelper
+  // automatically positions at the cursor location for IME candidate window
 
   /**
    * Ensure VS Code style cursor rules exist for IME composition
@@ -397,23 +339,23 @@ body.${IMEHandler.IME_ACTIVE_CLASS} .terminal-container .xterm .xterm-cursor-lay
   opacity: 0 !important;
 }
 
-/* Fix composition view positioning - remove all spacing */
-body.${IMEHandler.IME_ACTIVE_CLASS} .terminal-container .xterm .composition-view,
+/*
+ * VS Code Standard: Let xterm.js CompositionHelper handle positioning
+ * xterm.js automatically positions composition-view and textarea at cursor
+ * Do NOT override left/top/width - this breaks IME candidate window positioning
+ */
 .terminal-container .xterm .composition-view {
+  /* Only reset spacing, let xterm.js set position */
   margin: 0 !important;
   padding: 0 !important;
-  margin-left: 0 !important;
-  padding-left: 0 !important;
-  left: 0 !important;
 }
 
-/* Ensure textarea has no spacing that could affect composition view */
-.terminal-container .xterm textarea,
-body.${IMEHandler.IME_ACTIVE_CLASS} .terminal-container .xterm textarea {
+/* Ensure textarea allows xterm.js to control positioning */
+.terminal-container .xterm textarea {
   padding: 0 !important;
   margin: 0 !important;
   border: none !important;
-  width: 0 !important;
+  /* Do NOT set width: 0 - xterm.js needs to set this for IME positioning */
 }`;
 
     (document.head || document.body).appendChild(styleElement);
@@ -461,15 +403,8 @@ body.${IMEHandler.IME_ACTIVE_CLASS} .terminal-container .xterm textarea {
     this.compositionContext = null;
     this.lastCompositionEvent = null;
 
-    // Remove hidden textarea
-    if (this.hiddenTextarea) {
-      try {
-        document.body.removeChild(this.hiddenTextarea);
-      } catch (error) {
-        this.logger(`Error removing hidden textarea: ${error}`);
-      }
-      this.hiddenTextarea = null;
-    }
+    // Note: No need to remove hidden textarea - we don't create one
+    // xterm.js manages its own textarea
 
     // Ensure cursor class is cleared during disposal
     if (document.body) {

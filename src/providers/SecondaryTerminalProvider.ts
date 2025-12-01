@@ -303,7 +303,9 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
           if (isDebugEnabled && isDebugEnabled()) {
             log('📨 [PROVIDER] Message data:', message);
           }
-        } catch {}
+        } catch {
+          // Silently ignore logger loading errors - debug logging is non-critical
+        }
 
         // Handle message using MessageRoutingFacade, with fallback for critical commands
         this._messageRouter
@@ -360,12 +362,22 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   private _initializeWebviewContent(webviewView: vscode.WebviewView): void {
     log('🔧 [PROVIDER] Step 4: Setting webview HTML...');
 
+    // Check if simplified WebView is enabled
+    const useSimplifiedWebView = vscode.workspace
+      .getConfiguration('secondaryTerminal')
+      .get<boolean>('useSimplifiedWebView', false);
+
+    if (useSimplifiedWebView) {
+      log('🔄 [PROVIDER] Using simplified WebView implementation');
+    }
+
     // Generate HTML content
     const htmlContent = this._htmlGenerationService.generateMainHtml({
       webview: webviewView.webview,
       extensionUri: this._extensionContext.extensionUri,
-      includeSplitStyles: true,
-      includeCliAgentStyles: true,
+      includeSplitStyles: !useSimplifiedWebView,
+      includeCliAgentStyles: !useSimplifiedWebView,
+      useSimplifiedWebView,
     });
 
     // Set HTML using lifecycle manager
@@ -782,7 +794,9 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         if (isDebugEnabled && isDebugEnabled()) {
           log('🎆 [TRACE] Message data:', message);
         }
-      } catch {}
+      } catch {
+        // Silently ignore logger loading errors - debug logging is non-critical
+      }
     }
   }
 
@@ -1116,7 +1130,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
       log('[DEBUG] Sending message to WebView:', message);
       void this._sendMessage(message);
-    } catch (error) {
+    } catch {
       // Continue on error
     }
   }
