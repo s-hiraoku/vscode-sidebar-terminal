@@ -21,6 +21,29 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## CRITICAL: Protecting Local Changes
+
+**NEVER delete or discard uncommitted local changes without explicit user permission.**
+
+When you need to investigate build issues or test changes:
+1. **ALWAYS use `git stash` first** to save uncommitted changes
+2. After investigation, restore with `git stash pop`
+3. **NEVER use `git checkout -- .`** or `git restore .` to discard changes
+4. **NEVER use `git clean`** without explicit user confirmation
+
+Example workflow:
+```bash
+# Save current changes before investigation
+git stash push -m "WIP: saving before investigation"
+
+# Do your investigation...
+
+# Restore changes when done
+git stash pop
+```
+
+If build issues occur, ask the user before discarding any changes.
+
 ## Essential Development Commands
 
 ### Core Development
@@ -242,29 +265,34 @@ Agents are specialized AI assistants designed for specific tasks. Using them imp
 
 #### When to Use Agents
 
-- **Research Phase**: Use `vscode-terminal-resolver` to reference VS Code's terminal implementation
-- **Terminal Features**: Use `terminal-implementer` for production-ready terminal code
+- **Terminal Features**: Use `terminal-implementer` for production-ready terminal code (it invokes `terminal-expert` Skill automatically)
 - **Code Analysis**: Use `serena-semantic-search` to find similar implementations in the codebase
 - **Refactoring**: Use `similarity-based-refactoring` to identify patterns and improve code structure
 - **Testing**: Use `tdd-quality-engineer` to implement comprehensive TDD tests
-- **Documentation**: Use `xterm-info-analyzer` for accurate xterm.js API information
+
+#### Skills vs Agents Pattern (Updated)
+
+**Skills** provide domain knowledge (what to do):
+- `terminal-expert` - Unified xterm.js + VS Code terminal knowledge
+- `vscode-extension-expert` - VS Code extension development
+- `mcp-*` Skills - MCP tool usage guidance
+
+**Agents** execute tasks (how to do it) and **invoke Skills for knowledge**:
+- `terminal-implementer` invokes `terminal-expert` Skill before implementing
 
 #### Agent Workflow Example
 
 ```bash
-# 1. Research how VS Code implements the feature
-Task(vscode-terminal-resolver): "How does VS Code handle terminal process lifecycle?"
+# 1. Implement terminal feature (Agent automatically invokes terminal-expert Skill)
+Task(terminal-implementer): "Implement terminal process lifecycle"
 
 # 2. Search for similar implementations in our codebase
 Task(serena-semantic-search): "Find terminal lifecycle management patterns"
 
-# 3. Implement the feature using terminal patterns
-Task(terminal-implementer): "Implement terminal process lifecycle based on VS Code patterns"
-
-# 4. Create comprehensive tests
+# 3. Create comprehensive tests
 Task(tdd-quality-engineer): "Create TDD tests for terminal lifecycle management"
 
-# 5. Refactor for maintainability
+# 4. Refactor for maintainability
 Task(similarity-based-refactoring): "Identify and consolidate duplicate lifecycle code"
 ```
 
@@ -274,6 +302,64 @@ Task(similarity-based-refactoring): "Identify and consolidate duplicate lifecycl
 - **Efficiency**: Specialized knowledge reduces research and implementation time
 - **Quality**: Built-in testing and validation improve code reliability
 - **Maintainability**: Code follows consistent architectural patterns
+
+### MCP Tool Usage via Skills
+
+**When using MCP tools, always invoke the corresponding Skill first to reduce context usage.**
+
+MCP tools consume significant context tokens when loaded directly. Using Skills instead loads only the necessary documentation on demand, saving ~40k tokens.
+
+#### Available MCP Skills
+
+| Skill | MCP Server | Use When |
+|-------|------------|----------|
+| `mcp-deepwiki` | deepwiki | Researching GitHub repositories, understanding library APIs, asking questions about open-source projects |
+| `mcp-brave-search` | brave-search | Searching the web for current information, news, documentation, or local businesses |
+| `mcp-playwright` | playwright | Browser automation, taking screenshots, filling forms, testing web applications |
+| `mcp-firecrawl` | firecrawl | Web scraping, crawling websites, extracting structured data from web pages |
+| `mcp-chrome-devtools` | chrome-devtools | Browser debugging, analyzing performance, inspecting network requests and console |
+
+#### How to Use
+
+Before calling any MCP tool, invoke the corresponding Skill:
+
+```bash
+# Example: Before using DeepWiki MCP
+Skill: mcp-deepwiki
+
+# Then use the tool with proper parameters
+mcp__deepwiki__ask_question({
+  repoName: "microsoft/vscode",
+  question: "How does the terminal handle PTY integration?"
+})
+```
+
+#### Skill Invocation Pattern
+
+```bash
+# Web search
+Skill: mcp-brave-search
+mcp__brave-search__brave_web_search({ query: "xterm.js tutorial" })
+
+# Web scraping
+Skill: mcp-firecrawl
+mcp__firecrawl__firecrawl_scrape({ url: "https://docs.example.com" })
+
+# Browser automation
+Skill: mcp-playwright
+mcp__playwright__browser_navigate({ url: "https://example.com" })
+
+# Browser debugging
+Skill: mcp-chrome-devtools
+mcp__chrome-devtools__take_snapshot({})
+```
+
+#### Benefits
+
+- **Context Savings**: ~40k tokens saved by not loading all MCP tool definitions
+- **On-Demand Loading**: Skills load only when needed
+- **Better Documentation**: Each Skill includes usage examples and best practices
+- **Tool Reference**: `references/tools.md` in each Skill provides detailed parameter documentation
 
 ## Known Issues & Workarounds
 

@@ -1,42 +1,1118 @@
-<testsuites id="" name="" tests="19" failures="0" skipped="0" errors="0" time="12.228228999999999">
-<testsuite name="tests/webview/standalone-webview.spec.ts" timestamp="2025-11-29T05:02:10.231Z" hostname="chromium" tests="19" failures="0" skipped="0" time="16.829" errors="0">
-<testcase name="Standalone WebView Tests › Basic Functionality › should load the WebView page successfully" classname="tests/webview/standalone-webview.spec.ts" time="0.916">
+<testsuites id="" name="" tests="119" failures="19" skipped="98" errors="0" time="16.521913">
+<testsuite name="tests/accessibility/wcag-compliance.spec.ts" timestamp="2025-11-29T09:12:50.848Z" hostname="chromium" tests="21" failures="0" skipped="21" time="0" errors="0">
+<testcase name="WCAG AA Accessibility Compliance › should have no critical accessibility violations on initial load" classname="tests/accessibility/wcag-compliance.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
 </testcase>
-<testcase name="Standalone WebView Tests › Basic Functionality › should display initial terminal tab" classname="tests/webview/standalone-webview.spec.ts" time="0.605">
+<testcase name="WCAG AA Accessibility Compliance › should have proper ARIA attributes on interactive elements" classname="tests/accessibility/wcag-compliance.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
 </testcase>
-<testcase name="Standalone WebView Tests › Basic Functionality › should hide loading indicator after initialization" classname="tests/webview/standalone-webview.spec.ts" time="0.836">
+<testcase name="WCAG AA Accessibility Compliance › should have proper keyboard navigation" classname="tests/accessibility/wcag-compliance.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
 </testcase>
-<testcase name="Standalone WebView Tests › Terminal Tab Management › should create new terminal when clicking + button" classname="tests/webview/standalone-webview.spec.ts" time="0.242">
+<testcase name="WCAG AA Accessibility Compliance › should have sufficient color contrast" classname="tests/accessibility/wcag-compliance.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
 </testcase>
-<testcase name="Standalone WebView Tests › Terminal Tab Management › should switch active terminal when clicking tab" classname="tests/webview/standalone-webview.spec.ts" time="1.279">
+<testcase name="WCAG AA Accessibility Compliance › should have proper heading hierarchy" classname="tests/accessibility/wcag-compliance.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
 </testcase>
-<testcase name="Standalone WebView Tests › Terminal Tab Management › should close terminal when clicking close button" classname="tests/webview/standalone-webview.spec.ts" time="0.66">
+<testcase name="WCAG AA Accessibility Compliance › should have proper form labels" classname="tests/accessibility/wcag-compliance.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
 </testcase>
-<testcase name="Standalone WebView Tests › Terminal Tab Management › should not exceed maximum of 5 terminals" classname="tests/webview/standalone-webview.spec.ts" time="1.041">
+<testcase name="WCAG AA Accessibility Compliance › should have proper semantic HTML" classname="tests/accessibility/wcag-compliance.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
 </testcase>
-<testcase name="Standalone WebView Tests › Action Buttons › should have all action buttons visible" classname="tests/webview/standalone-webview.spec.ts" time="0.136">
+<testcase name="WCAG AA Accessibility Compliance › should have no critical or serious violations" classname="tests/accessibility/wcag-compliance.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
 </testcase>
-<testcase name="Standalone WebView Tests › Action Buttons › should have proper ARIA labels on action buttons" classname="tests/webview/standalone-webview.spec.ts" time="0.947">
+<testcase name="WCAG AA Accessibility Compliance › should have proper live regions for screen readers" classname="tests/accessibility/wcag-compliance.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
 </testcase>
-<testcase name="Standalone WebView Tests › AI Agent Status › should show agent status when agent is detected" classname="tests/webview/standalone-webview.spec.ts" time="0.512">
+<testcase name="WCAG AA Accessibility Compliance › should have proper tab navigation order" classname="tests/accessibility/wcag-compliance.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
 </testcase>
-<testcase name="Standalone WebView Tests › AI Agent Status › should apply correct styling for different agents" classname="tests/webview/standalone-webview.spec.ts" time="0.372">
+<testcase name="WCAG AA Accessibility Compliance › should have proper dialog/modal implementation" classname="tests/accessibility/wcag-compliance.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
 </testcase>
-<testcase name="Standalone WebView Tests › AI Agent Status › should hide agent status when agent disconnects" classname="tests/webview/standalone-webview.spec.ts" time="0.227">
+<testcase name="WCAG AA Accessibility Compliance › should have proper list and listbox implementation" classname="tests/accessibility/wcag-compliance.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
 </testcase>
-<testcase name="Standalone WebView Tests › Debug Panel › should toggle debug panel with Ctrl+Shift+D" classname="tests/webview/standalone-webview.spec.ts" time="1.01">
+<testcase name="WCAG AA Accessibility Compliance › should pass landmark rules" classname="tests/accessibility/wcag-compliance.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
 </testcase>
-<testcase name="Standalone WebView Tests › Debug Panel › should display terminal state in debug panel" classname="tests/webview/standalone-webview.spec.ts" time="0.547">
+<testcase name="WCAG AA Accessibility Compliance › should have proper image alt text" classname="tests/accessibility/wcag-compliance.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
 </testcase>
-<testcase name="Standalone WebView Tests › Accessibility › should have proper ARIA roles" classname="tests/webview/standalone-webview.spec.ts" time="0.317">
+<testcase name="WCAG AA Accessibility Compliance › should count ARIA attributes in use" classname="tests/accessibility/wcag-compliance.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
 </testcase>
-<testcase name="Standalone WebView Tests › Accessibility › should have proper aria-selected on tabs" classname="tests/webview/standalone-webview.spec.ts" time="0.465">
+<testcase name="Keyboard Navigation Tests › should support Tab key navigation" classname="tests/accessibility/wcag-compliance.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
 </testcase>
-<testcase name="Standalone WebView Tests › Notifications › should display notification and auto-dismiss" classname="tests/webview/standalone-webview.spec.ts" time="5.352">
+<testcase name="Keyboard Navigation Tests › should support Escape key to close dialogs" classname="tests/accessibility/wcag-compliance.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
 </testcase>
-<testcase name="Standalone WebView Tests › Notifications › should show info notification on terminal ready" classname="tests/webview/standalone-webview.spec.ts" time="1.171">
+<testcase name="Keyboard Navigation Tests › should support Arrow keys for list navigation" classname="tests/accessibility/wcag-compliance.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
 </testcase>
-<testcase name="Standalone WebView Tests › Keyboard Navigation › should allow tab navigation through action buttons" classname="tests/webview/standalone-webview.spec.ts" time="0.194">
+<testcase name="Keyboard Navigation Tests › should support Enter/Space for button activation" classname="tests/accessibility/wcag-compliance.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Screen Reader Support Tests › should have screen reader only text where needed" classname="tests/accessibility/wcag-compliance.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Screen Reader Support Tests › should hide decorative elements from screen readers" classname="tests/accessibility/wcag-compliance.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="tests/agents/detection.spec.ts" timestamp="2025-11-29T09:12:50.848Z" hostname="chromium" tests="10" failures="0" skipped="10" time="0" errors="0">
+<testcase name="AI Agent Detection › should detect Claude Code agent from startup message @P0 @ai-agent-detection" classname="tests/agents/detection.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="AI Agent Detection › should track Claude Code status transitions @P0 @ai-agent-detection" classname="tests/agents/detection.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="AI Agent Detection › should detect GitHub Copilot agent @P1 @ai-agent-detection" classname="tests/agents/detection.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="AI Agent Detection › should detect GitHub Copilot variants @P1 @ai-agent-detection" classname="tests/agents/detection.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="AI Agent Detection › should detect Gemini CLI agent @P1 @ai-agent-detection" classname="tests/agents/detection.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="AI Agent Detection › should detect different agents in different terminals @P1 @ai-agent-detection" classname="tests/agents/detection.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="AI Agent Detection › should prevent false positives from substring matches @P0 @ai-agent-detection @security" classname="tests/agents/detection.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="AI Agent Detection › should use regex with word boundaries for detection @P0 @ai-agent-detection @security" classname="tests/agents/detection.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="AI Agent Detection › should detect agent within 500ms @P2 @performance" classname="tests/agents/detection.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="AI Agent Detection › should display visual status indicator for detected agent @P1 @ai-agent-detection @visual" classname="tests/agents/detection.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="tests/config/settings.spec.ts" timestamp="2025-11-29T09:12:50.848Z" hostname="chromium" tests="11" failures="0" skipped="11" time="0" errors="0">
+<testcase name="Configuration Settings › should apply font size change @P0 @configuration" classname="tests/config/settings.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Configuration Settings › should apply font family change @P1 @configuration" classname="tests/config/settings.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Configuration Settings › should enforce max terminals limit configuration @P0 @configuration" classname="tests/config/settings.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Configuration Settings › should restore default max terminals limit @P1 @configuration" classname="tests/config/settings.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Configuration Settings › should toggle persistent sessions feature @P1 @configuration" classname="tests/config/settings.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Configuration Settings › should toggle AI agent detection feature @P1 @configuration" classname="tests/config/settings.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Configuration Settings › should configure scrollback line limit @P1 @configuration" classname="tests/config/settings.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Configuration Settings › should configure terminal theme @P1 @configuration" classname="tests/config/settings.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Configuration Settings › should handle invalid configuration values gracefully @P0 @configuration" classname="tests/config/settings.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Configuration Settings › should persist configuration changes @P1 @configuration" classname="tests/config/settings.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Configuration Settings › should handle multiple configuration changes @P1 @configuration" classname="tests/config/settings.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="tests/errors/concurrent-operations.spec.ts" timestamp="2025-11-29T09:12:50.848Z" hostname="chromium" tests="12" failures="0" skipped="12" time="0" errors="0">
+<testcase name="Concurrent Operations › should handle rapid terminal creation without race conditions @P0 @concurrency" classname="tests/errors/concurrent-operations.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Concurrent Operations › should handle rapid terminal deletion without duplicates @P0 @concurrency" classname="tests/errors/concurrent-operations.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Concurrent Operations › should handle simultaneous create and delete @P0 @concurrency" classname="tests/errors/concurrent-operations.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Concurrent Operations › should handle rapid terminal switching @P1 @concurrency" classname="tests/errors/concurrent-operations.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Concurrent Operations › should handle concurrent configuration changes @P1 @concurrency" classname="tests/errors/concurrent-operations.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Concurrent Operations › should handle multiple WebView interactions @P1 @concurrency" classname="tests/errors/concurrent-operations.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Concurrent Operations › should prevent race conditions at max terminal limit @P0 @concurrency" classname="tests/errors/concurrent-operations.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Concurrent Operations › should handle race condition when deleting last terminal @P1 @concurrency" classname="tests/errors/concurrent-operations.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Concurrent Operations › should maintain ID recycling during rapid create-delete cycles @P1 @concurrency" classname="tests/errors/concurrent-operations.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Concurrent Operations › should handle concurrent data writing @P2 @concurrency" classname="tests/errors/concurrent-operations.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Concurrent Operations › should handle session save during operations @P1 @concurrency" classname="tests/errors/concurrent-operations.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Concurrent Operations › should remain stable under high frequency operations @P2 @concurrency @performance" classname="tests/errors/concurrent-operations.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="tests/errors/error-scenarios.spec.ts" timestamp="2025-11-29T09:12:50.848Z" hostname="chromium" tests="10" failures="0" skipped="10" time="0" errors="0">
+<testcase name="Error Scenarios › should handle extension activation failure gracefully @P0 @error-handling" classname="tests/errors/error-scenarios.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Error Scenarios › should handle WebView initialization failure @P0 @error-handling" classname="tests/errors/error-scenarios.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Error Scenarios › should handle PTY process spawn failure @P0 @error-handling" classname="tests/errors/error-scenarios.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Error Scenarios › should handle terminal crash and allow recovery @P0 @error-handling" classname="tests/errors/error-scenarios.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Error Scenarios › should handle session restore failure gracefully @P1 @error-handling" classname="tests/errors/error-scenarios.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Error Scenarios › should reject invalid configuration values @P0 @error-handling" classname="tests/errors/error-scenarios.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Error Scenarios › should handle WebView message failures @P1 @error-handling" classname="tests/errors/error-scenarios.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Error Scenarios › should handle storage quota exceeded @P1 @error-handling" classname="tests/errors/error-scenarios.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Error Scenarios › should handle network timeouts gracefully @P2 @error-handling" classname="tests/errors/error-scenarios.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Error Scenarios › should recover from rapid errors @P1 @error-handling" classname="tests/errors/error-scenarios.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="tests/setup.spec.ts" timestamp="2025-11-29T09:12:50.848Z" hostname="chromium" tests="2" failures="0" skipped="0" time="0.15" errors="0">
+<testcase name="E2E Test Setup › should have Playwright configured correctly" classname="tests/setup.spec.ts" time="0.073">
+</testcase>
+<testcase name="E2E Test Setup › should have test constants defined" classname="tests/setup.spec.ts" time="0.077">
+</testcase>
+</testsuite>
+<testsuite name="tests/terminal/creation.spec.ts" timestamp="2025-11-29T09:12:50.848Z" hostname="chromium" tests="6" failures="0" skipped="6" time="0" errors="0">
+<testcase name="Terminal Creation › should create single terminal with ID 1 @P0 @terminal-lifecycle" classname="tests/terminal/creation.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Terminal Creation › should create multiple terminals up to limit of 5 @P0 @terminal-lifecycle" classname="tests/terminal/creation.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Terminal Creation › should prevent creating more than 5 terminals @P0 @terminal-lifecycle" classname="tests/terminal/creation.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Terminal Creation › should recycle terminal ID when terminal is deleted @P0 @terminal-lifecycle" classname="tests/terminal/creation.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Terminal Creation › should handle rapid terminal creation without race conditions @P1 @terminal-lifecycle" classname="tests/terminal/creation.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Terminal Creation › should create terminal within performance threshold @P2 @performance" classname="tests/terminal/creation.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="tests/terminal/deletion.spec.ts" timestamp="2025-11-29T09:12:50.848Z" hostname="chromium" tests="7" failures="0" skipped="7" time="0" errors="0">
+<testcase name="Terminal Deletion › should delete terminal and switch focus @P0 @terminal-lifecycle" classname="tests/terminal/deletion.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Terminal Deletion › should switch focus when deleting active terminal @P0 @terminal-lifecycle" classname="tests/terminal/deletion.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Terminal Deletion › should delete all terminals sequentially @P0 @terminal-lifecycle" classname="tests/terminal/deletion.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Terminal Deletion › should handle last terminal deletion @P1 @terminal-lifecycle" classname="tests/terminal/deletion.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Terminal Deletion › should prevent duplicate deletion attempts @P0 @terminal-lifecycle" classname="tests/terminal/deletion.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Terminal Deletion › should handle deleting non-existent terminal gracefully @P1 @terminal-lifecycle" classname="tests/terminal/deletion.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Terminal Deletion › should handle rapid deletion without race conditions @P0 @terminal-lifecycle" classname="tests/terminal/deletion.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="tests/visual/ansi-colors.spec.ts" timestamp="2025-11-29T09:12:50.848Z" hostname="chromium" tests="10" failures="0" skipped="10" time="0" errors="0">
+<testcase name="ANSI Color Rendering › should render basic ANSI colors correctly @P0 @visual-regression" classname="tests/visual/ansi-colors.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="ANSI Color Rendering › should render text styling correctly @P0 @visual-regression" classname="tests/visual/ansi-colors.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="ANSI Color Rendering › should render background colors correctly @P0 @visual-regression" classname="tests/visual/ansi-colors.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="ANSI Color Rendering › should support 256-color palette @P1 @visual-regression" classname="tests/visual/ansi-colors.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="ANSI Color Rendering › should support true color (24-bit RGB) @P2 @visual-regression" classname="tests/visual/ansi-colors.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="ANSI Color Rendering › should adapt colors to theme changes @P1 @visual-regression" classname="tests/visual/ansi-colors.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="ANSI Color Rendering › should maintain adequate color contrast @P1 @visual-regression @accessibility" classname="tests/visual/ansi-colors.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="ANSI Color Rendering › should render mixed colored and plain text @P0 @visual-regression" classname="tests/visual/ansi-colors.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="ANSI Color Rendering › should render status indicators correctly @P0 @visual-regression" classname="tests/visual/ansi-colors.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="ANSI Color Rendering › should update visual baselines @P2 @visual-regression @baseline-update" classname="tests/visual/ansi-colors.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="tests/webview/keyboard-input.spec.ts" timestamp="2025-11-29T09:12:50.848Z" hostname="chromium" tests="11" failures="0" skipped="11" time="0" errors="0">
+<testcase name="WebView Keyboard Input › should handle basic text input @P0 @webview-interaction" classname="tests/webview/keyboard-input.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WebView Keyboard Input › should handle special characters input @P0 @webview-interaction" classname="tests/webview/keyboard-input.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WebView Keyboard Input › should handle multi-line input @P1 @webview-interaction" classname="tests/webview/keyboard-input.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WebView Keyboard Input › should handle arrow key navigation @P0 @webview-interaction" classname="tests/webview/keyboard-input.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WebView Keyboard Input › should handle backspace and delete keys @P0 @webview-interaction" classname="tests/webview/keyboard-input.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WebView Keyboard Input › should handle tab key for completion @P1 @webview-interaction" classname="tests/webview/keyboard-input.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WebView Keyboard Input › should copy text with Ctrl+C when text is selected @P0 @webview-interaction" classname="tests/webview/keyboard-input.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WebView Keyboard Input › should send SIGINT with Ctrl+C when no selection @P0 @webview-interaction" classname="tests/webview/keyboard-input.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WebView Keyboard Input › should paste clipboard content with Ctrl+V @P0 @webview-interaction" classname="tests/webview/keyboard-input.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WebView Keyboard Input › should clear screen with Ctrl+L @P1 @webview-interaction" classname="tests/webview/keyboard-input.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WebView Keyboard Input › should handle rapid typing without lag @P2 @performance" classname="tests/webview/keyboard-input.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="tests/webview/standalone-webview.spec.ts" timestamp="2025-11-29T09:12:50.848Z" hostname="chromium" tests="19" failures="19" skipped="0" time="0.127" errors="0">
+<testcase name="Standalone WebView Tests › Basic Functionality › should load the WebView page successfully" classname="tests/webview/standalone-webview.spec.ts" time="0.008">
+<failure message="standalone-webview.spec.ts:25:9 should load the WebView page successfully" type="FAILURE">
+<![CDATA[  [chromium] › tests/webview/standalone-webview.spec.ts:25:9 › Standalone WebView Tests › Basic Functionality › should load the WebView page successfully 
+
+    Error: browserType.launch: Executable doesn't exist at /Users/hiraoku.shinichi/Library/Caches/ms-playwright/chromium_headless_shell-1200/chrome-headless-shell-mac-arm64/chrome-headless-shell
+    ╔═════════════════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright Test or Playwright was just installed or updated. ║
+    ║ Please run the following command to download new browsers:              ║
+    ║                                                                         ║
+    ║     npx playwright install                                              ║
+    ║                                                                         ║
+    ║ <3 Playwright Team                                                      ║
+    ╚═════════════════════════════════════════════════════════════════════════╝
+]]>
+</failure>
+</testcase>
+<testcase name="Standalone WebView Tests › Basic Functionality › should display initial terminal tab" classname="tests/webview/standalone-webview.spec.ts" time="0.008">
+<failure message="standalone-webview.spec.ts:39:9 should display initial terminal tab" type="FAILURE">
+<![CDATA[  [chromium] › tests/webview/standalone-webview.spec.ts:39:9 › Standalone WebView Tests › Basic Functionality › should display initial terminal tab 
+
+    Error: browserType.launch: Executable doesn't exist at /Users/hiraoku.shinichi/Library/Caches/ms-playwright/chromium_headless_shell-1200/chrome-headless-shell-mac-arm64/chrome-headless-shell
+    ╔═════════════════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright Test or Playwright was just installed or updated. ║
+    ║ Please run the following command to download new browsers:              ║
+    ║                                                                         ║
+    ║     npx playwright install                                              ║
+    ║                                                                         ║
+    ║ <3 Playwright Team                                                      ║
+    ╚═════════════════════════════════════════════════════════════════════════╝
+]]>
+</failure>
+</testcase>
+<testcase name="Standalone WebView Tests › Basic Functionality › should hide loading indicator after initialization" classname="tests/webview/standalone-webview.spec.ts" time="0.012">
+<failure message="standalone-webview.spec.ts:52:9 should hide loading indicator after initialization" type="FAILURE">
+<![CDATA[  [chromium] › tests/webview/standalone-webview.spec.ts:52:9 › Standalone WebView Tests › Basic Functionality › should hide loading indicator after initialization 
+
+    Error: browserType.launch: Executable doesn't exist at /Users/hiraoku.shinichi/Library/Caches/ms-playwright/chromium_headless_shell-1200/chrome-headless-shell-mac-arm64/chrome-headless-shell
+    ╔═════════════════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright Test or Playwright was just installed or updated. ║
+    ║ Please run the following command to download new browsers:              ║
+    ║                                                                         ║
+    ║     npx playwright install                                              ║
+    ║                                                                         ║
+    ║ <3 Playwright Team                                                      ║
+    ╚═════════════════════════════════════════════════════════════════════════╝
+]]>
+</failure>
+</testcase>
+<testcase name="Standalone WebView Tests › Terminal Tab Management › should create new terminal when clicking + button" classname="tests/webview/standalone-webview.spec.ts" time="0.008">
+<failure message="standalone-webview.spec.ts:63:9 should create new terminal when clicking + button" type="FAILURE">
+<![CDATA[  [chromium] › tests/webview/standalone-webview.spec.ts:63:9 › Standalone WebView Tests › Terminal Tab Management › should create new terminal when clicking + button 
+
+    Error: browserType.launch: Executable doesn't exist at /Users/hiraoku.shinichi/Library/Caches/ms-playwright/chromium_headless_shell-1200/chrome-headless-shell-mac-arm64/chrome-headless-shell
+    ╔═════════════════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright Test or Playwright was just installed or updated. ║
+    ║ Please run the following command to download new browsers:              ║
+    ║                                                                         ║
+    ║     npx playwright install                                              ║
+    ║                                                                         ║
+    ║ <3 Playwright Team                                                      ║
+    ╚═════════════════════════════════════════════════════════════════════════╝
+]]>
+</failure>
+</testcase>
+<testcase name="Standalone WebView Tests › Terminal Tab Management › should switch active terminal when clicking tab" classname="tests/webview/standalone-webview.spec.ts" time="0.007">
+<failure message="standalone-webview.spec.ts:86:9 should switch active terminal when clicking tab" type="FAILURE">
+<![CDATA[  [chromium] › tests/webview/standalone-webview.spec.ts:86:9 › Standalone WebView Tests › Terminal Tab Management › should switch active terminal when clicking tab 
+
+    Error: browserType.launch: Executable doesn't exist at /Users/hiraoku.shinichi/Library/Caches/ms-playwright/chromium_headless_shell-1200/chrome-headless-shell-mac-arm64/chrome-headless-shell
+    ╔═════════════════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright Test or Playwright was just installed or updated. ║
+    ║ Please run the following command to download new browsers:              ║
+    ║                                                                         ║
+    ║     npx playwright install                                              ║
+    ║                                                                         ║
+    ║ <3 Playwright Team                                                      ║
+    ╚═════════════════════════════════════════════════════════════════════════╝
+]]>
+</failure>
+</testcase>
+<testcase name="Standalone WebView Tests › Terminal Tab Management › should close terminal when clicking close button" classname="tests/webview/standalone-webview.spec.ts" time="0.016">
+<failure message="standalone-webview.spec.ts:104:9 should close terminal when clicking close button" type="FAILURE">
+<![CDATA[  [chromium] › tests/webview/standalone-webview.spec.ts:104:9 › Standalone WebView Tests › Terminal Tab Management › should close terminal when clicking close button 
+
+    Error: browserType.launch: Executable doesn't exist at /Users/hiraoku.shinichi/Library/Caches/ms-playwright/chromium_headless_shell-1200/chrome-headless-shell-mac-arm64/chrome-headless-shell
+    ╔═════════════════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright Test or Playwright was just installed or updated. ║
+    ║ Please run the following command to download new browsers:              ║
+    ║                                                                         ║
+    ║     npx playwright install                                              ║
+    ║                                                                         ║
+    ║ <3 Playwright Team                                                      ║
+    ╚═════════════════════════════════════════════════════════════════════════╝
+]]>
+</failure>
+</testcase>
+<testcase name="Standalone WebView Tests › Terminal Tab Management › should not exceed maximum of 5 terminals" classname="tests/webview/standalone-webview.spec.ts" time="0.002">
+<failure message="standalone-webview.spec.ts:129:9 should not exceed maximum of 5 terminals" type="FAILURE">
+<![CDATA[  [chromium] › tests/webview/standalone-webview.spec.ts:129:9 › Standalone WebView Tests › Terminal Tab Management › should not exceed maximum of 5 terminals 
+
+    Error: browserType.launch: Executable doesn't exist at /Users/hiraoku.shinichi/Library/Caches/ms-playwright/chromium_headless_shell-1200/chrome-headless-shell-mac-arm64/chrome-headless-shell
+    ╔═════════════════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright Test or Playwright was just installed or updated. ║
+    ║ Please run the following command to download new browsers:              ║
+    ║                                                                         ║
+    ║     npx playwright install                                              ║
+    ║                                                                         ║
+    ║ <3 Playwright Team                                                      ║
+    ╚═════════════════════════════════════════════════════════════════════════╝
+]]>
+</failure>
+</testcase>
+<testcase name="Standalone WebView Tests › Action Buttons › should have all action buttons visible" classname="tests/webview/standalone-webview.spec.ts" time="0.013">
+<failure message="standalone-webview.spec.ts:160:9 should have all action buttons visible" type="FAILURE">
+<![CDATA[  [chromium] › tests/webview/standalone-webview.spec.ts:160:9 › Standalone WebView Tests › Action Buttons › should have all action buttons visible 
+
+    Error: browserType.launch: Executable doesn't exist at /Users/hiraoku.shinichi/Library/Caches/ms-playwright/chromium_headless_shell-1200/chrome-headless-shell-mac-arm64/chrome-headless-shell
+    ╔═════════════════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright Test or Playwright was just installed or updated. ║
+    ║ Please run the following command to download new browsers:              ║
+    ║                                                                         ║
+    ║     npx playwright install                                              ║
+    ║                                                                         ║
+    ║ <3 Playwright Team                                                      ║
+    ╚═════════════════════════════════════════════════════════════════════════╝
+]]>
+</failure>
+</testcase>
+<testcase name="Standalone WebView Tests › Action Buttons › should have proper ARIA labels on action buttons" classname="tests/webview/standalone-webview.spec.ts" time="0.003">
+<failure message="standalone-webview.spec.ts:170:9 should have proper ARIA labels on action buttons" type="FAILURE">
+<![CDATA[  [chromium] › tests/webview/standalone-webview.spec.ts:170:9 › Standalone WebView Tests › Action Buttons › should have proper ARIA labels on action buttons 
+
+    Error: browserType.launch: Executable doesn't exist at /Users/hiraoku.shinichi/Library/Caches/ms-playwright/chromium_headless_shell-1200/chrome-headless-shell-mac-arm64/chrome-headless-shell
+    ╔═════════════════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright Test or Playwright was just installed or updated. ║
+    ║ Please run the following command to download new browsers:              ║
+    ║                                                                         ║
+    ║     npx playwright install                                              ║
+    ║                                                                         ║
+    ║ <3 Playwright Team                                                      ║
+    ╚═════════════════════════════════════════════════════════════════════════╝
+]]>
+</failure>
+</testcase>
+<testcase name="Standalone WebView Tests › AI Agent Status › should show agent status when agent is detected" classname="tests/webview/standalone-webview.spec.ts" time="0.004">
+<failure message="standalone-webview.spec.ts:182:9 should show agent status when agent is detected" type="FAILURE">
+<![CDATA[  [chromium] › tests/webview/standalone-webview.spec.ts:182:9 › Standalone WebView Tests › AI Agent Status › should show agent status when agent is detected 
+
+    Error: browserType.launch: Executable doesn't exist at /Users/hiraoku.shinichi/Library/Caches/ms-playwright/chromium_headless_shell-1200/chrome-headless-shell-mac-arm64/chrome-headless-shell
+    ╔═════════════════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright Test or Playwright was just installed or updated. ║
+    ║ Please run the following command to download new browsers:              ║
+    ║                                                                         ║
+    ║     npx playwright install                                              ║
+    ║                                                                         ║
+    ║ <3 Playwright Team                                                      ║
+    ╚═════════════════════════════════════════════════════════════════════════╝
+]]>
+</failure>
+</testcase>
+<testcase name="Standalone WebView Tests › AI Agent Status › should apply correct styling for different agents" classname="tests/webview/standalone-webview.spec.ts" time="0">
+<failure message="standalone-webview.spec.ts:197:9 should apply correct styling for different agents" type="FAILURE">
+<![CDATA[  [chromium] › tests/webview/standalone-webview.spec.ts:197:9 › Standalone WebView Tests › AI Agent Status › should apply correct styling for different agents 
+
+    Error: browserType.launch: Executable doesn't exist at /Users/hiraoku.shinichi/Library/Caches/ms-playwright/chromium_headless_shell-1200/chrome-headless-shell-mac-arm64/chrome-headless-shell
+    ╔═════════════════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright Test or Playwright was just installed or updated. ║
+    ║ Please run the following command to download new browsers:              ║
+    ║                                                                         ║
+    ║     npx playwright install                                              ║
+    ║                                                                         ║
+    ║ <3 Playwright Team                                                      ║
+    ╚═════════════════════════════════════════════════════════════════════════╝
+]]>
+</failure>
+</testcase>
+<testcase name="Standalone WebView Tests › AI Agent Status › should hide agent status when agent disconnects" classname="tests/webview/standalone-webview.spec.ts" time="0.024">
+<failure message="standalone-webview.spec.ts:219:9 should hide agent status when agent disconnects" type="FAILURE">
+<![CDATA[  [chromium] › tests/webview/standalone-webview.spec.ts:219:9 › Standalone WebView Tests › AI Agent Status › should hide agent status when agent disconnects 
+
+    Error: browserType.launch: Executable doesn't exist at /Users/hiraoku.shinichi/Library/Caches/ms-playwright/chromium_headless_shell-1200/chrome-headless-shell-mac-arm64/chrome-headless-shell
+    ╔═════════════════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright Test or Playwright was just installed or updated. ║
+    ║ Please run the following command to download new browsers:              ║
+    ║                                                                         ║
+    ║     npx playwright install                                              ║
+    ║                                                                         ║
+    ║ <3 Playwright Team                                                      ║
+    ╚═════════════════════════════════════════════════════════════════════════╝
+]]>
+</failure>
+</testcase>
+<testcase name="Standalone WebView Tests › Debug Panel › should toggle debug panel with Ctrl+Shift+D" classname="tests/webview/standalone-webview.spec.ts" time="0.006">
+<failure message="standalone-webview.spec.ts:237:9 should toggle debug panel with Ctrl+Shift+D" type="FAILURE">
+<![CDATA[  [chromium] › tests/webview/standalone-webview.spec.ts:237:9 › Standalone WebView Tests › Debug Panel › should toggle debug panel with Ctrl+Shift+D 
+
+    Error: browserType.launch: Executable doesn't exist at /Users/hiraoku.shinichi/Library/Caches/ms-playwright/chromium_headless_shell-1200/chrome-headless-shell-mac-arm64/chrome-headless-shell
+    ╔═════════════════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright Test or Playwright was just installed or updated. ║
+    ║ Please run the following command to download new browsers:              ║
+    ║                                                                         ║
+    ║     npx playwright install                                              ║
+    ║                                                                         ║
+    ║ <3 Playwright Team                                                      ║
+    ╚═════════════════════════════════════════════════════════════════════════╝
+]]>
+</failure>
+</testcase>
+<testcase name="Standalone WebView Tests › Debug Panel › should display terminal state in debug panel" classname="tests/webview/standalone-webview.spec.ts" time="0.006">
+<failure message="standalone-webview.spec.ts:256:9 should display terminal state in debug panel" type="FAILURE">
+<![CDATA[  [chromium] › tests/webview/standalone-webview.spec.ts:256:9 › Standalone WebView Tests › Debug Panel › should display terminal state in debug panel 
+
+    Error: browserType.launch: Executable doesn't exist at /Users/hiraoku.shinichi/Library/Caches/ms-playwright/chromium_headless_shell-1200/chrome-headless-shell-mac-arm64/chrome-headless-shell
+    ╔═════════════════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright Test or Playwright was just installed or updated. ║
+    ║ Please run the following command to download new browsers:              ║
+    ║                                                                         ║
+    ║     npx playwright install                                              ║
+    ║                                                                         ║
+    ║ <3 Playwright Team                                                      ║
+    ╚═════════════════════════════════════════════════════════════════════════╝
+]]>
+</failure>
+</testcase>
+<testcase name="Standalone WebView Tests › Accessibility › should have proper ARIA roles" classname="tests/webview/standalone-webview.spec.ts" time="0.001">
+<failure message="standalone-webview.spec.ts:271:9 should have proper ARIA roles" type="FAILURE">
+<![CDATA[  [chromium] › tests/webview/standalone-webview.spec.ts:271:9 › Standalone WebView Tests › Accessibility › should have proper ARIA roles 
+
+    Error: browserType.launch: Executable doesn't exist at /Users/hiraoku.shinichi/Library/Caches/ms-playwright/chromium_headless_shell-1200/chrome-headless-shell-mac-arm64/chrome-headless-shell
+    ╔═════════════════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright Test or Playwright was just installed or updated. ║
+    ║ Please run the following command to download new browsers:              ║
+    ║                                                                         ║
+    ║     npx playwright install                                              ║
+    ║                                                                         ║
+    ║ <3 Playwright Team                                                      ║
+    ╚═════════════════════════════════════════════════════════════════════════╝
+]]>
+</failure>
+</testcase>
+<testcase name="Standalone WebView Tests › Accessibility › should have proper aria-selected on tabs" classname="tests/webview/standalone-webview.spec.ts" time="0.006">
+<failure message="standalone-webview.spec.ts:289:9 should have proper aria-selected on tabs" type="FAILURE">
+<![CDATA[  [chromium] › tests/webview/standalone-webview.spec.ts:289:9 › Standalone WebView Tests › Accessibility › should have proper aria-selected on tabs 
+
+    Error: browserType.launch: Executable doesn't exist at /Users/hiraoku.shinichi/Library/Caches/ms-playwright/chromium_headless_shell-1200/chrome-headless-shell-mac-arm64/chrome-headless-shell
+    ╔═════════════════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright Test or Playwright was just installed or updated. ║
+    ║ Please run the following command to download new browsers:              ║
+    ║                                                                         ║
+    ║     npx playwright install                                              ║
+    ║                                                                         ║
+    ║ <3 Playwright Team                                                      ║
+    ╚═════════════════════════════════════════════════════════════════════════╝
+]]>
+</failure>
+</testcase>
+<testcase name="Standalone WebView Tests › Notifications › should display notification and auto-dismiss" classname="tests/webview/standalone-webview.spec.ts" time="0.001">
+<failure message="standalone-webview.spec.ts:305:9 should display notification and auto-dismiss" type="FAILURE">
+<![CDATA[  [chromium] › tests/webview/standalone-webview.spec.ts:305:9 › Standalone WebView Tests › Notifications › should display notification and auto-dismiss 
+
+    Error: browserType.launch: Executable doesn't exist at /Users/hiraoku.shinichi/Library/Caches/ms-playwright/chromium_headless_shell-1200/chrome-headless-shell-mac-arm64/chrome-headless-shell
+    ╔═════════════════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright Test or Playwright was just installed or updated. ║
+    ║ Please run the following command to download new browsers:              ║
+    ║                                                                         ║
+    ║     npx playwright install                                              ║
+    ║                                                                         ║
+    ║ <3 Playwright Team                                                      ║
+    ╚═════════════════════════════════════════════════════════════════════════╝
+]]>
+</failure>
+</testcase>
+<testcase name="Standalone WebView Tests › Notifications › should show info notification on terminal ready" classname="tests/webview/standalone-webview.spec.ts" time="0.001">
+<failure message="standalone-webview.spec.ts:324:9 should show info notification on terminal ready" type="FAILURE">
+<![CDATA[  [chromium] › tests/webview/standalone-webview.spec.ts:324:9 › Standalone WebView Tests › Notifications › should show info notification on terminal ready 
+
+    Error: browserType.launch: Executable doesn't exist at /Users/hiraoku.shinichi/Library/Caches/ms-playwright/chromium_headless_shell-1200/chrome-headless-shell-mac-arm64/chrome-headless-shell
+    ╔═════════════════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright Test or Playwright was just installed or updated. ║
+    ║ Please run the following command to download new browsers:              ║
+    ║                                                                         ║
+    ║     npx playwright install                                              ║
+    ║                                                                         ║
+    ║ <3 Playwright Team                                                      ║
+    ╚═════════════════════════════════════════════════════════════════════════╝
+]]>
+</failure>
+</testcase>
+<testcase name="Standalone WebView Tests › Keyboard Navigation › should allow tab navigation through action buttons" classname="tests/webview/standalone-webview.spec.ts" time="0.001">
+<failure message="standalone-webview.spec.ts:337:9 should allow tab navigation through action buttons" type="FAILURE">
+<![CDATA[  [chromium] › tests/webview/standalone-webview.spec.ts:337:9 › Standalone WebView Tests › Keyboard Navigation › should allow tab navigation through action buttons 
+
+    Error: browserType.launch: Executable doesn't exist at /Users/hiraoku.shinichi/Library/Caches/ms-playwright/chromium_headless_shell-1200/chrome-headless-shell-mac-arm64/chrome-headless-shell
+    ╔═════════════════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright Test or Playwright was just installed or updated. ║
+    ║ Please run the following command to download new browsers:              ║
+    ║                                                                         ║
+    ║     npx playwright install                                              ║
+    ║                                                                         ║
+    ║ <3 Playwright Team                                                      ║
+    ╚═════════════════════════════════════════════════════════════════════════╝
+]]>
+</failure>
 </testcase>
 </testsuite>
 </testsuites>
