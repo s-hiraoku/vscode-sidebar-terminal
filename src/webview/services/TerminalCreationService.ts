@@ -683,6 +683,9 @@ export class TerminalCreationService implements Disposable {
           // 🔧 CRITICAL FIX: Reset xterm inline styles BEFORE fit() to allow width expansion
           DOMUtils.resetXtermInlineStyles(container);
           fitAddon.fit();
+          // 🔧 CRITICAL FIX: Call refresh() after fit() to ensure cursor is displayed
+          // xterm.js needs a refresh after initial fit to properly render the cursor
+          terminal.refresh(0, terminal.rows - 1);
           terminalLogger.debug(
             `Terminal initial size: ${terminalId} (${terminal.cols}x${terminal.rows}) after ${retryCount} retries`
           );
@@ -696,6 +699,8 @@ export class TerminalCreationService implements Disposable {
                 // 🔧 FIX: Reset xterm inline styles before delayed fit as well
                 DOMUtils.resetXtermInlineStyles(container);
                 fitAddon.fit();
+                // 🔧 CRITICAL FIX: Refresh again after delayed fit to ensure cursor visibility
+                terminal.refresh(0, terminal.rows - 1);
                 terminalLogger.debug(
                   `Terminal delayed resize: ${terminalId} (${terminal.cols}x${terminal.rows})`
                 );
@@ -721,6 +726,8 @@ export class TerminalCreationService implements Disposable {
             try {
               DOMUtils.resetXtermInlineStyles(container);
               fitAddon.fit();
+              // 🔧 CRITICAL FIX: Refresh to ensure cursor visibility even in forced fit
+              terminal.refresh(0, terminal.rows - 1);
               terminalLogger.info(`Forced fit for small container: ${terminalId}`);
             } catch (e) {
               terminalLogger.error(`Forced fit failed for ${terminalId}:`, e);

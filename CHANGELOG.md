@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.154] - 2025-12-01
+
+### Fixed
+
+- **Cursor Display on Startup**: Fix cursor not appearing on extension restart
+  - Add `terminal.refresh()` after `fit()` in initial resize to ensure cursor visibility
+  - xterm.js requires explicit refresh after fit to properly render cursor
+  - Applies to initial resize, delayed resize, and forced resize paths
+
 ## [0.1.153] - 2025-11-30
 
 ### Added
