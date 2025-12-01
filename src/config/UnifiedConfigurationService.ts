@@ -493,9 +493,10 @@ export class UnifiedConfigurationService implements Disposable {
 
     try {
       // 1. Extension-specific font size (highest priority)
-      const extensionSize = this.get('secondaryTerminal', 'fontSize', 0);
+      const extensionSize = this.get<number>('secondaryTerminal', 'fontSize', 0);
       // Use extension setting if explicitly set (not default value of 12)
-      if (typeof extensionSize === 'number' && extensionSize > 0 && extensionSize !== 12) {
+      // Note: package.json default is 12, so we only use if user changed it
+      if (extensionSize > 0 && extensionSize !== 12) {
         return extensionSize;
       }
 
