@@ -95,6 +95,15 @@ export class KeyboardShortcutService {
         this.runRecentCommand();
       })
     );
+
+    // Terminal Number Direct Focus (Alt+1~5)
+    for (let i = 1; i <= 5; i++) {
+      this._disposables.push(
+        vscode.commands.registerCommand(`secondaryTerminal.focusTerminal${i}`, () => {
+          this.focusTerminalByNumber(i);
+        })
+      );
+    }
   }
 
   /**
@@ -189,6 +198,34 @@ export class KeyboardShortcutService {
       this.sendWebviewCommand('focusTerminal', { terminalId: prevTerminalId });
       log(`🎯 [KEYBOARD] Focused previous terminal: ${prevTerminalId}`);
     }
+  }
+
+  /**
+   * Focus terminal by number (1-5)
+   * If terminal with specified number does not exist, do nothing
+   */
+  private focusTerminalByNumber(number: number): void {
+    const terminals = this._terminalManager.getTerminals();
+
+    // Find terminal with matching number
+    const targetTerminal = terminals.find((t) => t.number === number);
+
+    if (!targetTerminal) {
+      // Terminal does not exist - silently ignore
+      log(`ℹ️ [KEYBOARD] No terminal with number ${number} exists`);
+      return;
+    }
+
+    // Already active - no action needed
+    const activeTerminal = this._terminalManager.getActiveTerminalId();
+    if (activeTerminal === targetTerminal.id) {
+      return;
+    }
+
+    // Set active and notify WebView
+    this._terminalManager.setActiveTerminal(targetTerminal.id);
+    this.sendWebviewCommand('focusTerminal', { terminalId: targetTerminal.id });
+    log(`🎯 [KEYBOARD] Focused terminal ${number}: ${targetTerminal.id}`);
   }
 
   /**

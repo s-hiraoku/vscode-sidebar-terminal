@@ -31,6 +31,9 @@ export class TerminalProcessCoordinator {
   // Initial prompt guards
   private readonly _initialPromptGuards = new Map<string, { dispose: () => void }>();
 
+  // 🔧 FIX: Track launch timeouts to properly clear them
+  private readonly _launchTimeouts = new Map<string, NodeJS.Timeout>();
+
   constructor(
     private readonly _terminals: Map<string, TerminalInstance>,
     private readonly _shellIntegrationService: ShellIntegrationService | null,
@@ -242,26 +245,42 @@ export class TerminalProcessCoordinator {
 
   /**
    * Setup launch timeout monitoring
+   * 🔧 FIX: Track timeout ID to properly clear it when terminal launches successfully
    */
   private setupLaunchTimeout(terminal: TerminalInstance): void {
+    // 🔧 FIX: Clear any existing timeout first to prevent duplicates
+    this.clearLaunchTimeout(terminal);
+
     const timeoutMs = 10000; // 10 seconds timeout
 
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
+      // 🔧 FIX: Remove from tracking after execution
+      this._launchTimeouts.delete(terminal.id);
+
       if (terminal.processState === ProcessState.Launching) {
         log(`⏰ [PROCESS] Terminal ${terminal.id} launch timeout - marking as failed`);
         terminal.processState = ProcessState.KilledDuringLaunch;
         this.notifyProcessStateChange(terminal, ProcessState.KilledDuringLaunch);
       }
     }, timeoutMs);
+
+    // 🔧 FIX: Store timeout ID for later clearing
+    this._launchTimeouts.set(terminal.id, timeoutId);
   }
 
   /**
    * Clear launch timeout (if any)
+   * 🔧 FIX: Actually clear the timeout using tracked timeout ID
    */
   private clearLaunchTimeout(terminal: TerminalInstance): void {
-    // Implementation would clear any active timeout for this terminal
-    // For now, just log the successful launch
-    log(`✅ [PROCESS] Terminal ${terminal.id} launched successfully`);
+    const timeoutId = this._launchTimeouts.get(terminal.id);
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      this._launchTimeouts.delete(terminal.id);
+      log(`✅ [PROCESS] Terminal ${terminal.id} launched successfully, timeout cleared`);
+    } else {
+      log(`✅ [PROCESS] Terminal ${terminal.id} launched successfully`);
+    }
   }
 
   /**
@@ -412,6 +431,14 @@ export class TerminalProcessCoordinator {
       log(`🧹 [TERMINAL] Cleaned up shell initialization flag for: ${terminalId}`);
     }
 
+    // 🔧 FIX: Clean up launch timeout for this terminal
+    const timeoutId = this._launchTimeouts.get(terminalId);
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      this._launchTimeouts.delete(terminalId);
+      log(`🧹 [TERMINAL] Cleaned up launch timeout for: ${terminalId}`);
+    }
+
     // Clean up prompt guard
     this.cleanupInitialPromptGuard(terminalId);
   }
@@ -439,6 +466,16 @@ export class TerminalProcessCoordinator {
       }
     }
     this._initialPromptGuards.clear();
+
+    // 🔧 FIX: Clear all launch timeouts to prevent memory leaks
+    for (const [terminalId, timeoutId] of this._launchTimeouts.entries()) {
+      try {
+        clearTimeout(timeoutId);
+      } catch (error) {
+        log(`⚠️ [TERMINAL] Error clearing launch timeout for ${terminalId}:`, error);
+      }
+    }
+    this._launchTimeouts.clear();
 
     // Clear tracking sets
     this._shellInitialized.clear();

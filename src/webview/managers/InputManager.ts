@@ -1048,6 +1048,155 @@ export class InputManager extends BaseManager implements IInputManager {
     return /[\r\n]/.test(data);
   }
 
+  /**
+   * Check if data from onData should be flushed immediately
+   * Used for processed escape sequences from xterm.js
+   */
+  private shouldFlushImmediatelyFromData(data: string): boolean {
+    if (!data) {
+      return true;
+    }
+
+    // Flush immediately for:
+    // - Enter/Return (\r or \n)
+    // - Control characters (ASCII 0-31)
+    // - Escape sequences (start with \x1b)
+    if (/[\r\n]/.test(data)) {
+      return true;
+    }
+
+    // Control characters (Ctrl+C = \x03, Ctrl+D = \x04, etc.)
+    if (data.length === 1 && data.charCodeAt(0) < 32) {
+      return true;
+    }
+
+    // Escape sequences (arrow keys, function keys, etc.)
+    if (data.startsWith('\x1b')) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * VS Code Standard: Determine if a key should be intercepted for VS Code handling
+   * Returns true if VS Code should handle this key (not sent to shell)
+   * Returns false if key should pass through to shell
+   *
+   * This implements the VS Code terminal keybinding behavior where:
+   * - Most keys go to shell (arrow keys, Ctrl+C for interrupt, etc.)
+   * - Only specific shortcuts are intercepted (Ctrl+Shift+C for copy, Cmd+K for clear, etc.)
+   */
+  private shouldInterceptKeyForVSCode(
+    event: KeyboardEvent,
+    terminal: Terminal,
+    manager: IManagerCoordinator
+  ): boolean {
+    const isMac = navigator.platform.includes('Mac');
+    const ctrlOrCmd = isMac ? event.metaKey : event.ctrlKey;
+
+    // NEVER intercept these - they must go to shell:
+    // - Arrow keys (bash history, cursor movement)
+    // - Tab (completion)
+    // - Regular characters
+    // - Ctrl+C without selection (interrupt)
+    // - Ctrl+D (EOF)
+    // - Ctrl+Z (suspend)
+    // - Ctrl+A, Ctrl+E (line start/end in bash)
+    // - Ctrl+U, Ctrl+K (line editing in bash)
+    // - Ctrl+W (delete word in bash)
+    // - Ctrl+R (reverse search in bash)
+    // - Ctrl+L (clear screen in bash - should go to shell, not VS Code clear)
+
+    // Arrow keys - ALWAYS pass to shell
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) {
+      // Exception: Ctrl+Shift+Arrow for scrolling
+      if (event.ctrlKey && event.shiftKey) {
+        this.handleVSCodeCommand(
+          event.key === 'ArrowUp'
+            ? 'workbench.action.terminal.scrollUp'
+            : 'workbench.action.terminal.scrollDown',
+          manager
+        );
+        return true;
+      }
+      // Pass to shell (bash history, cursor movement)
+      return false;
+    }
+
+    // Tab - ALWAYS pass to shell (completion)
+    if (event.key === 'Tab') {
+      return false;
+    }
+
+    // Ctrl+C: Copy if selection exists, otherwise pass to shell for interrupt
+    if (ctrlOrCmd && event.key === 'c' && !event.shiftKey) {
+      if (terminal.hasSelection()) {
+        this.handleTerminalCopy(manager);
+        return true;
+      }
+      // No selection - pass to shell for SIGINT
+      return false;
+    }
+
+    // Ctrl+V: Paste
+    if (ctrlOrCmd && event.key === 'v' && !event.shiftKey) {
+      this.handleTerminalPaste(manager);
+      return true;
+    }
+
+    // Ctrl+Shift+C: Copy (VS Code style)
+    if (ctrlOrCmd && event.shiftKey && event.key === 'c') {
+      if (terminal.hasSelection()) {
+        this.handleTerminalCopy(manager);
+        return true;
+      }
+      return false;
+    }
+
+    // Ctrl+Shift+V: Paste (VS Code style)
+    if (ctrlOrCmd && event.shiftKey && event.key === 'v') {
+      this.handleTerminalPaste(manager);
+      return true;
+    }
+
+    // Pass these shell-essential keys to shell:
+    // Ctrl+D (EOF), Ctrl+Z (suspend), Ctrl+A, Ctrl+E, Ctrl+U, Ctrl+K, Ctrl+W, Ctrl+R, Ctrl+L
+    const shellEssentialKeys = ['d', 'z', 'a', 'e', 'u', 'k', 'w', 'r', 'l'];
+    if (event.ctrlKey && !event.shiftKey && !event.altKey && !event.metaKey) {
+      if (shellEssentialKeys.includes(event.key.toLowerCase())) {
+        return false; // Pass to shell
+      }
+    }
+
+    // macOS: Cmd+K for clear - intercept this one
+    if (isMac && event.metaKey && event.key === 'k' && !event.shiftKey) {
+      this.handleTerminalClear(manager);
+      return true;
+    }
+
+    // Ctrl+Insert / Shift+Insert for copy/paste (Windows/Linux)
+    if (event.ctrlKey && event.key === 'Insert') {
+      if (terminal.hasSelection()) {
+        this.handleTerminalCopy(manager);
+        return true;
+      }
+      return false;
+    }
+    if (event.shiftKey && event.key === 'Insert') {
+      this.handleTerminalPaste(manager);
+      return true;
+    }
+
+    // F12: Toggle dev tools (should be handled by VS Code, not shell)
+    if (event.key === 'F12') {
+      return true; // Intercept but don't handle - let VS Code handle
+    }
+
+    // All other keys - pass to shell
+    return false;
+  }
+
   private queueInputData(terminalId: string, data: string, flushImmediately: boolean): void {
     if (!terminalId || data.length === 0) {
       return;

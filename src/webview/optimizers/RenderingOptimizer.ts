@@ -118,6 +118,9 @@ export class RenderingOptimizer implements Disposable {
         this.resetXtermInlineStyles(terminalId);
 
         fitAddon.fit();
+        // 🔧 CRITICAL FIX: Refresh terminal after fit to ensure cursor is displayed
+        // This is essential for cursor visibility after resize operations
+        terminal.refresh(0, terminal.rows - 1);
         terminalLogger.debug(`✅ Terminal ${terminalId} resized to ${width}x${height}`);
       } catch (error) {
         terminalLogger.error(`❌ Failed to resize terminal ${terminalId}:`, error);

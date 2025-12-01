@@ -176,11 +176,20 @@ export class TerminalCreationService implements Disposable {
         const terminal = new Terminal(terminalConfig as any);
         terminalLogger.info(`✅ Terminal instance created: ${terminalId}`);
 
+        // Get link modifier from settings (VS Code standard behavior)
+        // When multiCursorModifier is 'alt', links open with Cmd/Ctrl+Click
+        // When multiCursorModifier is 'ctrlCmd', links open with Alt+Click
+        const configManager = this.coordinator.getManagers?.()?.config;
+        const currentSettings = configManager?.getCurrentSettings?.();
+        const multiCursorModifier = currentSettings?.multiCursorModifier ?? 'alt';
+        const linkModifier = multiCursorModifier === 'alt' ? 'alt' : 'ctrlCmd';
+
         // Load all addons using TerminalAddonManager
         const loadedAddons = await this.addonManager.loadAllAddons(terminal, terminalId, {
           enableGpuAcceleration: terminalConfig.enableGpuAcceleration,
           enableSearchAddon: terminalConfig.enableSearchAddon,
           enableUnicode11: terminalConfig.enableUnicode11,
+          linkModifier, // VS Code standard: pass link modifier setting
           linkHandler: (_event, uri) => {
             // Delegate to extension so it can honor workspace trust and external uri handling
             try {
@@ -361,6 +370,8 @@ export class TerminalCreationService implements Disposable {
         this.setupShellIntegration(terminal, terminalId);
 
         // Register file link handlers using TerminalLinkManager
+        // Set link modifier before registering handlers (VS Code standard behavior)
+        this.linkManager.setLinkModifier(linkModifier);
         this.linkManager.registerTerminalLinkHandlers(terminal, terminalId);
 
         // Enable VS Code standard scrollbar using TerminalScrollbarService
@@ -672,6 +683,9 @@ export class TerminalCreationService implements Disposable {
           // 🔧 CRITICAL FIX: Reset xterm inline styles BEFORE fit() to allow width expansion
           DOMUtils.resetXtermInlineStyles(container);
           fitAddon.fit();
+          // 🔧 CRITICAL FIX: Call refresh() after fit() to ensure cursor is displayed
+          // xterm.js needs a refresh after initial fit to properly render the cursor
+          terminal.refresh(0, terminal.rows - 1);
           terminalLogger.debug(
             `Terminal initial size: ${terminalId} (${terminal.cols}x${terminal.rows}) after ${retryCount} retries`
           );
@@ -685,6 +699,8 @@ export class TerminalCreationService implements Disposable {
                 // 🔧 FIX: Reset xterm inline styles before delayed fit as well
                 DOMUtils.resetXtermInlineStyles(container);
                 fitAddon.fit();
+                // 🔧 CRITICAL FIX: Refresh again after delayed fit to ensure cursor visibility
+                terminal.refresh(0, terminal.rows - 1);
                 terminalLogger.debug(
                   `Terminal delayed resize: ${terminalId} (${terminal.cols}x${terminal.rows})`
                 );
@@ -710,6 +726,8 @@ export class TerminalCreationService implements Disposable {
             try {
               DOMUtils.resetXtermInlineStyles(container);
               fitAddon.fit();
+              // 🔧 CRITICAL FIX: Refresh to ensure cursor visibility even in forced fit
+              terminal.refresh(0, terminal.rows - 1);
               terminalLogger.info(`Forced fit for small container: ${terminalId}`);
             } catch (e) {
               terminalLogger.error(`Forced fit failed for ${terminalId}:`, e);
