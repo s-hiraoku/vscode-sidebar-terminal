@@ -133,9 +133,17 @@ export class TerminalCoordinator extends BaseManager implements ITerminalCoordin
 
       // Open terminal in container
       terminal.open(container);
+
+      // 🔧 CRITICAL FIX: Force initial refresh to ensure cursor is displayed on macOS
+      // xterm.js may not render the cursor layer correctly on initial open
+      terminal.refresh(0, terminal.rows - 1);
+
       // Reset xterm.js inline styles before fit to allow terminal expansion
       DOMUtils.resetXtermInlineStyles(container);
       fitAddon.fit();
+
+      // Refresh again after fit to ensure cursor visibility
+      terminal.refresh(0, terminal.rows - 1);
 
       // Setup terminal event handlers
       this.setupTerminalEventHandlers(terminal, terminalId);

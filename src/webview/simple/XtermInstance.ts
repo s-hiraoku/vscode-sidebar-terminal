@@ -301,6 +301,10 @@ export class XtermInstance {
     // 6. Open terminal in DOM
     terminal.open(terminalBody);
 
+    // 🔧 CRITICAL FIX: Force initial refresh to ensure cursor is displayed on macOS
+    // xterm.js may not render the cursor layer correctly on initial open
+    terminal.refresh(0, terminal.rows - 1);
+
     // 7. Create instance
     const instance = new XtermInstance(
       id,

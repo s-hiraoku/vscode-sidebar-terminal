@@ -67,6 +67,8 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     # E2E tests must pass first
     needs: e2e-quality-gate
+    # Timeout after 10 minutes (known Ubuntu test timeout issue)
+    timeout-minutes: 10
 
     steps:
       - name: Checkout code

@@ -323,6 +323,12 @@ export class TerminalCreationService implements Disposable {
         terminal.open(terminalContent);
         terminalLogger.info(`✅ Terminal opened in container: ${terminalId}`);
 
+        // 🔧 CRITICAL FIX: Force initial refresh to ensure cursor is displayed on macOS
+        // xterm.js may not render the cursor layer correctly on initial open,
+        // especially on macOS with WebGL renderer. Immediate refresh fixes this.
+        terminal.refresh(0, terminal.rows - 1);
+        terminalLogger.debug(`🔧 Initial refresh triggered for cursor display: ${terminalId}`);
+
         // 🎯 VS Code Pattern: Apply font and visual settings AFTER terminal.open()
         // xterm.js requires the terminal to be attached to DOM before settings can be applied
         try {
